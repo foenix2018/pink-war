@@ -7,10 +7,20 @@ import { Assembly, bevelBox, limb, ball, matrix, along } from './geo.js';
 // trigger and the thumb runs forward along the left panel, exactly where a real hand holds a handgun.
 export const GRIP = Object.freeze({ halfWidth: .018, halfDepth: .0235, wrist: [.03, .052, .098], forearm: [.1, -.3, .95] });
 
-const finger = (builder, m, joints, radii, level = 1) => {
-  joints.forEach((point, i) => builder.ball(m.fabric, point, [radii[i], radii[i], radii[i]], true, level));
-  for (let i = 0; i < joints.length - 1; i++) builder.limb(m.fabric, joints[i], joints[i + 1], radii[i], radii[i + 1], true, level);
-};
+const digitShapes = new Map(), digitTip = new T.SphereGeometry(1, 10, 8);
+function articulatedDigit(parent, m, id, joints, radius) {
+  let geometry = digitShapes.get(id);
+  if (!geometry) {
+    const base = joints[0], points = joints.map(([x,y,z]) => new T.Vector3(x-base[0],y-base[1],z-base[2]));
+    geometry = new T.TubeGeometry(new T.CatmullRomCurve3(points), 14, radius, 8, false); digitShapes.set(id, geometry);
+  }
+  const pivot = new T.Group(); pivot.position.set(...joints[0]); parent.add(pivot);
+  const mesh = new T.Mesh(geometry, m.fabric), tip = new T.Mesh(digitTip, m.fabric);
+  mesh.castShadow = tip.castShadow = true; mesh.receiveShadow = tip.receiveShadow = true;
+  const end = joints[joints.length-1], base = joints[0];
+  tip.position.set(end[0]-base[0],end[1]-base[1],end[2]-base[2]); tip.scale.setScalar(radius);
+  pivot.add(mesh,tip); return pivot;
+}
 
 // materials: { fabric, plate, trim, glow, accent, metal }
 export function createGloveAssembly(m, { sleeve = true, forearm = GRIP.forearm } = {}) {
@@ -27,15 +37,7 @@ export function createGloveAssembly(m, { sleeve = true, forearm = GRIP.forearm }
   a.box(m.trim, [.006, .07, .02], [.07, .014, .05], [0, -.06, .1], .002);
   a.box(m.glow, [.003, .055, .006], [.0725, .014, .0305], [0, -.06, .1], .001, false);
   // Middle, ring and little finger wrap the front strap from the right panel to the left panel.
-  [[1, 1], [2, .95], [3, .84]].forEach(([k, size]) => {
-    const y = stack[k], s = size;
-    finger(a, m, [[.03, y, -.01], [.022, y, -.0345], [-.021, y, -.0345], [-.0285, y, -.009]], [.0112 * s, .0104 * s, .0098 * s, .0088 * s]);
-    a.ball(m.plate, [-.0285, y, -.009], [.0095 * s, .0095 * s, .0095 * s]);
-  });
-  // Index finger lies on the trigger.
-  finger(a, m, [[.03, .047, -.011], [.026, .045, -.043], [.014, .038, -.055], [.001, .032, -.047]], [.0108, .0098, .0092, .0086]);
-  // Thumb crosses the back strap and lies forward along the left panel.
-  finger(a, m, [[.022, .05, .028], [-.002, .056, .026], [-.024, .054, .004], [-.0275, .052, -.026], [-.0265, .05, -.05]], [.0135, .0125, .0115, .0105, .0095]);
+  // The fingers are separate pivots so the trigger finger, grip and reload gesture can move independently.
   if (sleeve) {
     const [wx, wy, wz] = GRIP.wrist, d = forearm, k = Math.hypot(...d);
     const at = t => [wx + d[0] / k * t, wy + d[1] / k * t, wz + d[2] / k * t];
@@ -55,6 +57,21 @@ export function createGloveAssembly(m, { sleeve = true, forearm = GRIP.forearm }
 export function createGlove(m, { mirror = false, sleeve = true, forearm } = {}) {
   const group = new T.Group(), assembly = createGloveAssembly(m, { sleeve, forearm });
   assembly.mount(group); group.userData.setLevel = level => assembly.setLevel(level); group.userData.assembly = assembly;
+  const stack = [.026, 0, -.0265, -.053], digits = [];
+  [[1,1],[2,.95],[3,.84]].forEach(([k,size],i)=>digits.push(articulatedDigit(group,m,`grip-${i}`,
+    [[.03,stack[k],-.01],[.022,stack[k],-.0345],[-.021,stack[k],-.0345],[-.0285,stack[k],-.009]],.0108*size)));
+  digits.push(articulatedDigit(group,m,'index',[[.03,.047,-.011],[.026,.045,-.043],[.014,.038,-.055],[.001,.032,-.047]],.0098));
+  digits.push(articulatedDigit(group,m,'thumb',[[.022,.05,.028],[-.002,.056,.026],[-.024,.054,.004],[-.0275,.052,-.026],[-.0265,.05,-.05]],.0115));
+  const sign=mirror?-1:1, pose={trigger:0,grip:0,reload:0};
+  group.userData.animate = ({trigger=0,grip=0,reload=0}={},dt=.016,handedness=1) => {
+    const blend=1-Math.exp(-Math.max(0,dt)*24);
+    for(const key of ['trigger','grip','reload'])pose[key]+=(Math.max(0,Math.min(1,Number({trigger,grip,reload}[key])||0))-pose[key])*blend;
+    const {trigger:t,grip:g,reload:r}=pose;
+    const curlSign=sign*handedness;
+    digits[0].rotation.x=-curlSign*(.06+g*.2+r*.13);digits[1].rotation.x=-curlSign*(.06+g*.2+r*.13);digits[2].rotation.x=-curlSign*(.06+g*.2+r*.13);
+    digits[3].rotation.x=-curlSign*(.05+t*.48+r*.2);digits[4].rotation.x=curlSign*(.04+g*.12+r*.26);
+    group.rotation.z=curlSign*r*.12;group.position.set(0,r*.018,-r*.03);
+  };
   if (mirror) group.scale.x = -1;
   return group;
 }

@@ -1,4 +1,8 @@
-# Vérification — Pink war v2.8
+# Vérification — Pink war v2.9
+
+## Doigts animés et rechargement VR — 10 octobre 2026
+
+Les doigts du gant VR sont des formes articulées séparées : l'index suit la pression de la détente, les autres doigts celle de la poignée. Les manettes Touch Plus continuent de piloter la position réelle des mains. La gâchette de la main libre garde son action de recharge ; chaque recharge déclenche une pose de 0,82 seconde où le pistolet se relève vers la verticale, le laser s'éteint temporairement, puis l'arme revient en visée. Le gant libre replie ses doigts durant le geste. La séquence reste visuelle et ne change ni la durée de recharge ni la direction de tir. Aucune nouvelle suite de tests n'a été exécutée pour cette révision.
 
 ## Proportions et recul — 10 octobre 2026
 

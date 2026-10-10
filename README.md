@@ -5,6 +5,7 @@ Jeu de survie 3D en HTML et JavaScript, conçu pour iPhone, ordinateur et casque
 - WebGPU avec secours WebGL2 lorsque WebGPU est absent ou perdu. Le mode casque utilise le moteur WebGLRenderer de Three.js 0.180, dédié au rendu immersif WebXR, avec les mêmes modèles et matériaux.
 - Vue FPS ou troisième personne. Joystick gauche pour se déplacer ; joystick droit pour viser ; tir central.
 - Sélection sur l'accueil : LYLU est un soldat aux épaules plus larges dans un univers bleu ; GHJU est une soldate dans un univers rose. Le choix change immédiatement le modèle, l'armure, les armes, les tirs, le portail, le ciel, les éclairages et les accents de l'interface. Il est mémorisé sur l'appareil.
+- Version 2.9 : en VR, les gants articulent les doigts d'après la pression des gâchettes et de la poignée ; les contrôleurs continuent de suivre les mains. La gâchette de la main libre recharge la batterie et lance un geste bref : le pistolet se redresse à la verticale pendant que l'index de l'autre main presse la détente de recharge. La gâchette de tir reste à la main principale.
 - Version 2.8 : épaules et casques redimensionnés pour une silhouette mieux proportionnée. Les tirs donnent un recul bref à l'arme, visible aussi dans les mains VR ; chaque arme a sa propre intensité. La visée reste entièrement contrôlée par le joueur : aucun accrochage automatique aux ennemis ni projectile à tête chercheuse. LYLU et GHJU gardent un casque intégral opaque ; les visages restent masqués.
 - Version 2.7 : torse et membres profilés, plastrons continus, articulations et bottes affinées. Les ennemis ordinaires, élites et lanceurs possèdent aussi des armures anatomiques et des casques fermés.
 - Le tissu tissé, le métal peint satiné, les bordures métalliques et les visières ont des matériaux distincts ; de petites textures procédurales et des reflets précalculés renforcent le relief. Les mêmes modèles sont utilisés sur téléphone, à la troisième personne et en VR. Les géométries d'ennemis sont partagées et fusionnées : six maillages par ennemi comme en 2.6, avec davantage de triangles pour les nouvelles formes.
@@ -29,12 +30,12 @@ La disposition ci-dessous est celle de la **main de tir droite** (par défaut). 
 | Manette droite (le pistolet) | Le canon suit la main et sert de visée, indépendamment du regard ; le laser et les tirs partent de la bouche du canon |
 | Gâchette droite | Tir ; maintien pour charger THORN/NOVA, relâchement pour un tir partiel ; tir automatique à charge complète |
 | Poignée droite maintenue | Laser renforcé. Le laser reste visible sans elle (réglable) ; tenir le pistolet poignée serrée n’empêche pas de courir |
-| A | Recharger la batterie de l’arme actuelle |
+| A | Recharger la batterie ; l’arme se redresse brièvement |
 | B | Arme débloquée suivante |
 | Joystick droit gauche/droite | Rotation par crans de 30° ou 45°, ou fluide ; recentrer le joystick avant le cran suivant. Haut/bas : sans effet, pour qu’un cran ne change jamais d’arme par erreur |
 | Joystick gauche | Déplacement horizontal, selon le regard ou selon la manette gauche |
 | Clic du joystick gauche maintenu, ou poignée gauche serrée à fond | Courir |
-| Gâchette gauche | Recharger sans lâcher le pistolet. Elle ne tire jamais et ne reprend jamais une pause |
+| Gâchette gauche | Recharger sans lâcher le pistolet ; l'arme se redresse brièvement à la verticale. Elle ne tire jamais et ne reprend jamais une pause |
 | X | Arme débloquée précédente |
 | Y | Pause / reprise |
 | A en pause / fin de partie | Reprendre / rejouer la campagne |
@@ -46,7 +47,7 @@ Ils sont dans la fenêtre **VR** (avant d’entrer dans le casque) et conservés
 
 ### Sensations de tir
 
-Le pistolet recule à chaque tir et le canon se relève brièvement ; la direction du tir reste celle de la manette. Les vibrations dépendent de l’arme (R–9 sec, BLOOM léger, PETAL, THORN et NOVA de plus en plus marqués) et se renforcent pendant la charge. Un tir qui touche, une élimination, un changement d’arme, une recharge et un dégât ont chacun leur impulsion. Les munitions restantes s’affichent sur la culasse du pistolet, en rouge sous le quart de la batterie. L’autre main apparaît sous la forme d’un gantelet, pour voir où elle se trouve. L’afficheur de l’arme indique uniquement le nombre de munitions restantes, y compris pendant une recharge.
+Le pistolet recule à chaque tir et le canon se relève brièvement ; la direction du tir reste celle de la manette. Les doigts du gantelet suivent la détente et la poignée. La gâchette de la main libre fait pivoter l'arme vers le haut pendant le début du rechargement, puis elle revient en position de visée ; l'index du gant libre s'enroule avec la pression. Les manettes continuent de suivre les mains réelles pendant ce geste. Les vibrations dépendent de l’arme (R–9 sec, BLOOM léger, PETAL, THORN et NOVA de plus en plus marqués) et se renforcent pendant la charge. Un tir qui touche, une élimination, un changement d’arme, une recharge et un dégât ont chacun leur impulsion. Les munitions restantes s’affichent sur la culasse du pistolet, en rouge sous le quart de la batterie. L’autre main apparaît sous la forme d’un gantelet, pour voir où elle se trouve. L’afficheur de l’arme indique uniquement le nombre de munitions restantes, y compris pendant une recharge.
 
 ### Performances dans le casque
 

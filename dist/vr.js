@@ -3,6 +3,7 @@ import { clamp, segmentBox, segmentSphere } from './game-logic.js';
 const $ = id => document.getElementById(id);
 const deadzone = v => Math.abs(v || 0) > .16 ? v : 0;
 const pressed = button => !!button?.pressed || (button?.value || 0) > .15;
+const amount = button => clamp(Math.max(button?.pressed ? 1 : 0, Number(button?.value) || 0), 0, 1);
 // A grip used as a sprint key must be squeezed on purpose, not just held.
 const squeezed = button => (button?.value ?? (button?.pressed ? 1 : 0)) > .6;
 const otherHand = hand => hand === 'left' ? 'right' : 'left';
@@ -31,14 +32,14 @@ export function questControls(hand = 'right') {
   const mainF = left ? 'gauche' : 'droite', sideF = left ? 'droite' : 'gauche', mainM = left ? 'gauche' : 'droit', sideM = left ? 'droit' : 'gauche';
   return [
     [`Manette ${mainF}`, 'Pistolet : le canon est la visée'],
-    [`Gâchette ${mainF}`, 'Tirer · maintenir pour charger'],
-    [`Poignée ${mainF}`, 'Renforcer le laser de visée'],
-    [b.reload, 'Recharger la batterie'],
+    [`Gâchette ${mainF}`, 'Tirer ; l’index du gant suit la détente'],
+    [`Poignée ${mainF}`, 'Renforcer le laser et animer la prise'],
+    [b.reload, 'Recharger ; l’arme se redresse brièvement'],
     [b.next, 'Arme suivante'],
     [`Joystick ${mainM}`, 'Rotation (crans ou fluide)'],
     [`Joystick ${sideM}`, 'Se déplacer'],
     [`Clic / poignée ${sideF}`, 'Courir (maintenu)'],
-    [`Gâchette ${sideF}`, 'Recharger, main libre'],
+    [`Gâchette ${sideF}`, 'Recharger ; l’arme se redresse à la verticale'],
     [b.previous, 'Arme précédente'],
     [b.pause, 'Pause / reprise']
   ];
@@ -103,6 +104,7 @@ export class VRController {
     this.controllers = []; this.previous = new Map(); this.phoneYaw = null; this.phonePitch = 0;
     this.headingOrigin = null; this.sensor = false; this.hud = null; this.hudTime = 0; this.busy = false;
     this.snapArmed = true; this.triggerBlocked = true; this.precision = false; this.trackingLost = false;
+    this.handPose = { mainTrigger: 0, sideTrigger: 0, mainGrip: 0, sideGrip: 0 }; this.reloadGesture = 0;
     this.sight = null; this.lastMoveYaw = null;
     this.perf = null; this.shadowTick = 0; this.chargeBuzz = 0; this.scratch = null;
     this.renderControls(); this.bindSettings();
@@ -195,6 +197,7 @@ export class VRController {
   cancelTrigger() {
     const game = this.hooks.game(); game.charge = 0; game.triggerHeld = false; this.triggerBlocked = true;
   }
+  startReloadGesture() { if (this.mode === 'xr') this.reloadGesture = .82; }
   // Show the pistol in the shooting hand and a bare gauntlet in the other one.
   applyRoles() {
     const main = settingsOf(this).hand;
@@ -280,6 +283,7 @@ export class VRController {
       ray.removeFromParent();
     }
     this.controllers = []; this.rig = null; this.session = null; this.mode = 'off'; this.previous.clear(); this.perf = null;
+    this.reloadGesture = 0; this.handPose = { mainTrigger:0, sideTrigger:0, mainGrip:0, sideGrip:0 };
     world.renderer.shadowMap.autoUpdate = true; world.renderer.xr.enabled = false; document.body.classList.remove('xr-mode'); this.hooks.afterExit();
   }
   async enterStereo() {
@@ -344,6 +348,7 @@ export class VRController {
     const sources = xr ? [...(this.session?.inputSources || [])] : [...(navigator.getGamepads?.() || [])].filter(Boolean).map(gamepad => ({ gamepad, handedness: 'both' }));
     const phase = this.hooks.phase?.() || 'playing', actions = new Set();
     const visible = !xr || !this.session?.visibilityState || this.session.visibilityState === 'visible';
+    this.handPose = { mainTrigger: 0, sideTrigger: 0, mainGrip: 0, sideGrip: 0 };
     let rawFire = false, mainTracked = !xr;
     const activeHands = new Set(sources.map(source => source.handedness));
     for (const key of this.previous.keys()) if (!activeHands.has(key.split(':')[0])) this.previous.delete(key);
@@ -358,6 +363,8 @@ export class VRController {
       }
       if (main) {
         mainTracked ||= tracked; rawFire ||= pressed(pad.buttons[xr ? 0 : 7]);
+        this.handPose.mainTrigger = Math.max(this.handPose.mainTrigger, amount(pad.buttons[xr ? 0 : 7]));
+        this.handPose.mainGrip = Math.max(this.handPose.mainGrip, amount(pad.buttons[xr ? 1 : 6]));
         result.precision ||= tracked && pressed(pad.buttons[xr ? 1 : 6]);
         if (xr) {
           const turn = axes[stick] || 0;
@@ -367,6 +374,10 @@ export class VRController {
             if (Math.abs(turn) > .7 && this.snapArmed !== false) { if (tracked) result.snap = Math.sign(turn) * TURN_ANGLE[cfg.turn]; this.snapArmed = false; }
           }
         } else { result.turn += deadzone(axes[2]); result.tilt += deadzone(axes[3]); }
+      }
+      if (xr && side) {
+        this.handPose.sideTrigger = Math.max(this.handPose.sideTrigger, amount(pad.buttons[0]));
+        this.handPose.sideGrip = Math.max(this.handPose.sideGrip, amount(pad.buttons[1]));
       }
       const edge = (key, index) => { const id = `${source.handedness}:${key}`, down = pressed(pad.buttons[index]); if (down && !this.previous.get(id) && tracked) actions.add(key); this.previous.set(id, down); };
       if (main) { edge('reload', xr ? 4 : 0); edge('next', xr ? 5 : 1); }
@@ -414,7 +425,7 @@ export class VRController {
   updateSight() {
     if (!this.sight) return;
     const world = this.hooks.world(), game = this.hooks.game();
-    this.sight.group.visible = (settingsOf(this).laser === 'always' || this.precision) && !this.trackingLost && this.hooks.phase() === 'playing';
+    this.sight.group.visible = (settingsOf(this).laser === 'always' || this.precision) && !this.trackingLost && this.reloadGesture <= 0 && this.hooks.phase() === 'playing';
     if (!this.sight.group.visible) return;
     const aim = this.aim(), hit = traceVRAim(aim.origin, aim.direction, game.enemies, world.obstacles);
     const points = this.sight.beam.geometry.attributes.position;
@@ -448,6 +459,9 @@ export class VRController {
     const game = this.hooks.game();
     if (this.mode === 'xr') {
       const main = settingsOf(this).hand, level = Math.max(1, game.wave), kick = clamp(recoil / .11, 0, 1);
+      this.reloadGesture = Math.max(0, this.reloadGesture - dt);
+      const phase = clamp(1 - this.reloadGesture / .82, 0, 1), smooth = t => t*t*(3-2*t);
+      const reload = phase < .2 ? smooth(phase/.2) : phase < .58 ? 1 : 1-smooth((phase-.58)/.42);
       // updateCamera() already placed the rig this frame while playing.
       if (this.hooks.phase() !== 'playing') this.positionRig();
       for (const c of this.controllers) {
@@ -455,7 +469,13 @@ export class VRController {
         if (c.gun.userData.index !== game.weaponIndex) c.gun.userData.setVariant(game.weaponIndex);
         if (c.level !== level) { c.gun.userData.setLevel(level); c.bare.userData.setLevel(level); c.level = level; }
         c.gun.userData.flash.visible = flash > 0 && isMain;
-        c.gun.position.z = isMain ? kick * .075 : 0; c.gun.rotation.x = isMain ? kick * .22 : 0;
+        c.gun.position.set(0,isMain?reload*.035:0,isMain?kick*.075-reload*.045:0);
+        c.gun.rotation.set(isMain?kick*.22+reload*Math.PI/2:0,0,isMain?reload*.12:0);
+        const fingerPose = isMain
+          ? { trigger:this.handPose.mainTrigger, grip:this.handPose.mainGrip, reload:0 }
+          : { trigger:this.handPose.sideTrigger, grip:this.handPose.sideGrip, reload };
+        c.gun.userData.hand?.userData.animate?.(fingerPose,dt,c.gun.scale.x<0?-1:1);
+        c.bare.userData.animate?.(fingerPose,dt,c.bare.scale.x<0?-1:1);
       }
       const gun = controllerOf(this, main)?.gun; if (gun) this.drawAmmo(gun, game);
       this.updateSight();

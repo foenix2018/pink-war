@@ -240,7 +240,7 @@ function handleEvents() {
     if (event.type === 'equipment') { const equipment=equipmentForCharacter(event.level,character.id);world.setEquipment(event.level);$('equipment-unlock-title').textContent=`${equipment.name} · NIV. ${event.level}`;$('equipment-unlock-detail').textContent=equipment.addition;equipmentUntil=clock+4;$('equipment-unlock').hidden=false; }
     if (event.type === 'clear') { announce('NIVEAU TERMINÉ', '+ BONUS · LA BRÈCHE SE RECHARGE'); tone(420, 700, .25, .07); }
     if (event.type === 'weapon') { world.setWeapon(game.weaponIndex); vr.haptic('weapon'); tone(510, 760, .1, .03); }
-    if (event.type === 'reload') { vr.haptic('reload'); tone(220, 450, .16, .04); }
+    if (event.type === 'reload') { vr.startReloadGesture(); vr.haptic('reload'); tone(220, 450, .16, .04); }
     if (event.type === 'reloaded') { vr.haptic('reloaded'); tone(520, 820, .1, .035); }
     if (event.type === 'spawn') world.burst(event.x, 1, event.z, world.palette.violet, 7);
     if (event.type === 'impact') world.burst(event.x, event.y, event.z, event.hostile?world.palette.violet:world.palette.rose, event.splash>0?22:event.enemy?7:3);
