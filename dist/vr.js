@@ -36,7 +36,6 @@ export function questControls(hand = 'right') {
     [b.reload, 'Recharger la batterie'],
     [b.next, 'Arme suivante'],
     [`Joystick ${mainM}`, 'Rotation (crans ou fluide)'],
-    [`Clic joystick ${mainM}`, 'Afficher / masquer l’aide'],
     [`Joystick ${sideM}`, 'Se déplacer'],
     [`Clic / poignée ${sideF}`, 'Courir (maintenu)'],
     [`Gâchette ${sideF}`, 'Recharger, main libre'],
@@ -104,7 +103,7 @@ export class VRController {
     this.controllers = []; this.previous = new Map(); this.phoneYaw = null; this.phonePitch = 0;
     this.headingOrigin = null; this.sensor = false; this.hud = null; this.hudTime = 0; this.busy = false;
     this.snapArmed = true; this.triggerBlocked = true; this.precision = false; this.trackingLost = false;
-    this.showControls = false; this.helpTime = 0; this.sight = null; this.lastMoveYaw = null;
+    this.sight = null; this.lastMoveYaw = null;
     this.perf = null; this.shadowTick = 0; this.chargeBuzz = 0; this.scratch = null;
     this.renderControls(); this.bindSettings();
     $('vr-button').onclick = $('hud-vr-button').onclick = () => this.open();
@@ -121,7 +120,6 @@ export class VRController {
       const row = document.createElement('div'), term = document.createElement('dt'), detail = document.createElement('dd');
       term.textContent = control; detail.textContent = action; row.append(term, detail); controls.append(row);
     }
-    this.drawControls();
   }
   bindSettings() {
     for (const [key, id] of [['hand', 'vr-hand'], ['turn', 'vr-turn'], ['move', 'vr-move'], ['laser', 'vr-laser']]) {
@@ -150,39 +148,15 @@ export class VRController {
   }
   makeHUD() {
     const { T, camera } = this.hooks.world(), canvas = document.createElement('canvas');
-    canvas.width = 640; canvas.height = 192;
+    canvas.width = 512; canvas.height = 112;
     const texture = new T.CanvasTexture(canvas); texture.colorSpace = T.SRGBColorSpace;
     const material = new T.MeshBasicMaterial({ map: texture, transparent: true, depthTest: false, depthWrite: false, toneMapped: false });
-    const plane = new T.Mesh(new T.PlaneGeometry(.58, .174), material);
-    plane.position.set(0, .25, -.95); plane.renderOrder = 100; plane.frustumCulled = false; camera.add(plane);
+    const plane = new T.Mesh(new T.PlaneGeometry(.42, .091875), material);
+    plane.position.set(0, -.27, -1.05); plane.renderOrder = 100; plane.frustumCulled = false; camera.add(plane);
     this.hud = { canvas, texture, plane }; this.hudTime = 0;
-    if (this.mode === 'xr') {
-      const help = document.createElement('canvas'); help.width = 960; help.height = 620;
-      const helpTexture = new T.CanvasTexture(help); helpTexture.colorSpace = T.SRGBColorSpace;
-      const helpMaterial = new T.MeshBasicMaterial({ map: helpTexture, transparent: true, depthTest: false, depthWrite: false, toneMapped: false });
-      const helpPlane = new T.Mesh(new T.PlaneGeometry(.72, .465), helpMaterial);
-      helpPlane.position.set(0, -.13, -1.05); helpPlane.renderOrder = 101; helpPlane.frustumCulled = false; camera.add(helpPlane);
-      this.hud.help = { canvas: help, texture: helpTexture, plane: helpPlane };
-      this.drawControls();
-    }
-  }
-  drawControls() {
-    if (!this.hud?.help) return;
-    const { canvas, texture } = this.hud.help, c = canvas.getContext('2d'), hand = settingsOf(this).hand, b = buttonNames(hand);
-    c.clearRect(0, 0, canvas.width, canvas.height); c.fillStyle = 'rgba(18,12,26,.93)'; c.fillRect(0, 0, canvas.width, canvas.height);
-    c.fillStyle = this.hooks.world().character?.accent || '#ff9ac3'; c.font = 'bold 29px monospace'; c.fillText('PINK WAR · META QUEST 3', 26, 46);
-    c.font = '20px monospace';
-    questControls(hand).forEach(([control, action], index) => { const y = 90 + index * 33; c.fillStyle = '#fff0f7'; c.fillText(control, 26, y); c.fillStyle = '#dfc5dc'; c.fillText(action, 340, y); });
-    c.font = '19px monospace'; c.fillStyle = '#a8e2db';
-    c.fillText(`En pause : ${b.reload} reprend · ${b.next} quitte la VR`, 26, 536);
-    c.fillText(`Fin de partie : ${b.reload} rejoue · ${b.next} quitte la VR`, 26, 570);
-    texture.needsUpdate = true;
   }
   removeHUD() {
     if (!this.hud) return;
-    if (this.hud.help) {
-      const help = this.hud.help; help.plane.removeFromParent(); help.plane.geometry.dispose(); help.plane.material.dispose(); help.texture.dispose();
-    }
     this.hud.plane.removeFromParent(); this.hud.plane.geometry.dispose(); this.hud.plane.material.dispose(); this.hud.texture.dispose(); this.hud = null;
   }
   makeSight() {
@@ -210,15 +184,12 @@ export class VRController {
   }
   drawAmmo(gun, game) {
     const display = gun.userData.ammo; if (!display) return;
-    const reloading = game.reloadRemaining > 0, capacity = game.weapon.capacity, ammo = game.ammo[game.weaponIndex];
-    const progress = reloading ? 1 - game.reloadRemaining / game.weapon.reload : game.charge, step = Math.round(clamp(progress, 0, 1) * 10);
-    const key = `${ammo}|${capacity}|${reloading}|${step}`; if (key === display.key) return; display.key = key;
+    const capacity = game.weapon.capacity, ammo = game.ammo[game.weaponIndex];
+    const key = `${ammo}|${capacity}`; if (key === display.key) return; display.key = key;
     const c = display.canvas.getContext('2d'), accent = this.hooks.world().character?.accent || '#ff9ac3';
     c.fillStyle = 'rgba(18,12,26,.95)'; c.fillRect(0, 0, 128, 64);
-    c.fillStyle = reloading ? '#a8e2db' : ammo <= capacity / 4 ? '#ff6b8a' : accent; c.textAlign = 'center';
-    c.font = 'bold 38px monospace'; c.fillText(reloading ? '↻' : String(ammo), 64, 40);
-    c.font = '13px monospace'; c.fillStyle = '#dfc5dc'; c.fillText(reloading ? 'RECHARGE' : `/ ${capacity}`, 64, 56);
-    c.fillStyle = '#574158'; c.fillRect(8, 3, 112, 4); c.fillStyle = accent; c.fillRect(8, 3, 112 * step / 10, 4);
+    c.fillStyle = ammo <= capacity / 4 ? '#ff6b8a' : accent; c.textAlign = 'center';
+    c.font = 'bold 52px monospace'; c.fillText(String(ammo), 64, 49);
     display.texture.needsUpdate = true;
   }
   cancelTrigger() {
@@ -251,7 +222,7 @@ export class VRController {
       const world = this.hooks.world(), { T, scene, camera, renderer } = world;
       this.session = session; this.mode = 'xr'; this.rig = new T.Group(); scene.add(this.rig); this.rig.add(camera);
       this.previous.clear(); this.snapArmed = true; this.precision = false; this.trackingLost = false;
-      this.showControls = false; this.helpTime = 8; this.lastMoveYaw = null; this.cancelTrigger();
+      this.lastMoveYaw = null; this.cancelTrigger();
       camera.clearViewOffset();
       camera.position.set(0, 0, 0); camera.rotation.set(0, 0, 0); world.weapon.visible = false; world.soldier.root.visible = false;
       renderer.xr.enabled = true; renderer.xr.setReferenceSpaceType('local-floor');
@@ -324,8 +295,7 @@ export class VRController {
       const granted = await permission.catch(() => 'denied');
       this.mode = 'stereo'; this.headingOrigin = null; this.phoneYaw = null; this.sensor = false;
       this.hooks.begin(); this.makeHUD(); document.body.classList.add('stereo-mode');
-      $('vr-exit').hidden = false; $('stereo-reticle').hidden = false; $('vr-phone-note').hidden = false;
-      $('vr-phone-note').textContent = innerHeight > innerWidth ? 'Tournez le téléphone en paysage pour votre support VR.' : 'Deux yeux · Joysticks ou manette · Capteurs si autorisés';
+      $('vr-exit').hidden = false; $('stereo-reticle').hidden = false;
       const world = this.hooks.world();
       this.orientationHandler = event => {
         if (event.alpha === null || event.beta === null || event.gamma === null) return;
@@ -339,7 +309,6 @@ export class VRController {
         this.phonePitch = clamp(pose.x, -1.2, 1.2); this.sensor = true;
       };
       if (granted === 'granted') window.addEventListener('deviceorientation', this.orientationHandler);
-      else $('vr-phone-note').textContent = 'Capteurs indisponibles · Regardez avec le joystick droit ou une manette.';
       world.resize();
       // Fullscreen is optional; Safari still displays the stereo scene without it.
       document.documentElement.requestFullscreen?.().catch(() => {});
@@ -400,12 +369,10 @@ export class VRController {
         } else { result.turn += deadzone(axes[2]); result.tilt += deadzone(axes[3]); }
       }
       const edge = (key, index) => { const id = `${source.handedness}:${key}`, down = pressed(pad.buttons[index]); if (down && !this.previous.get(id) && tracked) actions.add(key); this.previous.set(id, down); };
-      if (main) { edge('reload', xr ? 4 : 0); edge('next', xr ? 5 : 1); if (xr) edge('help', 3); }
+      if (main) { edge('reload', xr ? 4 : 0); edge('next', xr ? 5 : 1); }
       if (xr && side) { edge('previous', 4); edge('pause', 5); edge('quickReload', 0); }
       if (!xr) edge('pause', 9);
     }
-    if (actions.has('help')) this.showControls = !(this.showControls || this.helpTime > 0);
-    if (actions.has('help')) { this.helpTime = 0; this.hudTime = 0; }
     if (actions.has('pause')) { this.hooks.togglePause(); if (xr) this.cancelTrigger(); }
     else if ((phase === 'paused' || phase === 'over') && actions.has('reload') && xr) { this.hooks.begin(); this.cancelTrigger(); }
     else if ((phase === 'paused' || phase === 'over') && actions.has('next') && xr) { this.cancelTrigger(); this.exit().catch(error => this.fail(error)); }
@@ -491,8 +458,7 @@ export class VRController {
         c.gun.position.z = isMain ? kick * .05 : 0; c.gun.rotation.x = isMain ? kick * .16 : 0;
       }
       const gun = controllerOf(this, main)?.gun; if (gun) this.drawAmmo(gun, game);
-      this.updateSight(); this.helpTime = Math.max(0, this.helpTime - dt);
-      if (this.hud?.help) this.hud.help.plane.visible = this.showControls || this.helpTime > 0 || ['paused', 'over'].includes(this.hooks.phase());
+      this.updateSight();
       // Heavy weapons rumble harder as the charge builds.
       this.chargeBuzz -= dt;
       if (game.charge > 0 && this.chargeBuzz <= 0) { this.haptic('charge', game.charge); this.chargeBuzz = .06; }
@@ -501,21 +467,19 @@ export class VRController {
     }
     this.hudTime -= dt;
     if (this.hud && this.hudTime <= 0) {
-      this.hudTime = .12; const { canvas, texture } = this.hud, c = canvas.getContext('2d'), phase = this.hooks.phase();
-      const hand = settingsOf(this).hand, b = buttonNames(hand), mainName = hand === 'left' ? 'gauche' : 'droite';
-      c.clearRect(0, 0, 640, 192); c.fillStyle = 'rgba(18,12,26,.84)'; c.fillRect(0, 0, 640, 192);
-      const character=this.hooks.world().character;
-      c.fillStyle = character?.accent||'#ff9ac3'; c.font = 'bold 28px monospace'; c.fillText(`${character?.name||'GHJU'} · PINK WAR   ${String(Math.max(1,game.wave)).padStart(2,'0')} / 10`, 22, 38);
-      c.fillStyle = '#fff0f7'; c.font = '23px monospace'; c.fillText(`SANTÉ ${Math.ceil(game.player.hp)}   ${game.weapon.name} ${game.ammo[game.weaponIndex]}/${game.weapon.capacity}`, 22, 75);
-      c.fillStyle = game.regenerating ? '#a8e2db' : character?.accent||'#ff7daa'; c.fillRect(22, 91, game.player.hp / 100 * 590, 5);
-      c.fillStyle = '#dfc5dc'; c.font = '18px monospace';
-      c.fillText(this.trackingLost ? `SUIVI DE LA MANETTE ${mainName.toUpperCase()} INDISPONIBLE` : phase === 'paused' ? `PAUSE · ${b.reload} reprend · ${b.next} quitte la VR` : game.state === 'won' ? 'VICTOIRE · La brèche est fermée' : game.state === 'over' ? `MISSION TERMINÉE · ${b.reload} rejoue / ${b.next} quitte` : game.reloadRemaining > 0 ? `RECHARGE ${game.reloadRemaining.toFixed(1)} S · TIR BLOQUÉ` : game.weapon.chargeTime ? `CHARGE ${Math.round(game.charge*100)}% · Maintenir / relâcher` : `${game.enemies.length+game.toSpawn} ENNEMIS · ${b.reload} recharge / ${b.next} arme`, 22, 127);
-      const progress = game.reloadRemaining > 0 ? 1 - game.reloadRemaining / game.weapon.reload : game.charge;
-      c.fillStyle = '#574158'; c.fillRect(22, 139, 590, 5); c.fillStyle = character?.accent || '#ff7daa'; c.fillRect(22, 139, clamp(progress, 0, 1) * 590, 5);
-      c.fillStyle = '#dfc5dc'; c.font = '17px monospace';
-      c.fillText(this.mode === 'xr' ? this.trackingLost ? `Retrouver le suivi · ${b.reload} / ${b.pause} pour reprendre` : phase === 'over' ? `${b.reload} : nouvelle campagne · ${b.next} : quitter la VR` : this.precision ? `LASER RENFORCÉ · Gâchette tire · ${b.pause} pause` : `Gâchette : tir · ${b.pause} : pause · Clic joystick ${hand === 'left' ? 'gauche' : 'droit'} : aide` : 'RT : tir · A : recharge · B : arme · Menu : pause', 22, 172);
+      this.hudTime = .12; const { canvas, texture } = this.hud, c = canvas.getContext('2d');
+      const hp = clamp(game.player.hp, 0, 100), ammo = game.ammo[game.weaponIndex];
+      const accent = this.hooks.world().character?.accent || '#ff9ac3';
+      c.clearRect(0, 0, canvas.width, canvas.height);
+      c.fillStyle = 'rgba(18,12,26,.72)'; c.fillRect(0, 0, 248, 112); c.fillRect(264, 0, 248, 112);
+      c.textAlign = 'left'; c.fillStyle = '#dfc5dc'; c.font = 'bold 19px monospace';
+      c.fillText('SANTÉ', 20, 28); c.fillText('BALLES', 284, 28);
+      c.font = 'bold 46px monospace'; c.fillStyle = hp <= 25 ? '#ff6b8a' : '#fff0f7';
+      c.fillText(String(Math.ceil(hp)), 20, 80);
+      c.fillStyle = ammo === 0 ? '#ff6b8a' : '#fff0f7'; c.fillText(String(ammo), 284, 80);
+      c.fillStyle = '#574158'; c.fillRect(20, 94, 208, 4);
+      c.fillStyle = hp <= 25 ? '#ff6b8a' : game.regenerating ? '#a8e2db' : accent; c.fillRect(20, 94, hp / 100 * 208, 4);
       texture.needsUpdate = true;
     }
-    if (this.mode === 'stereo' && innerHeight > innerWidth) $('vr-phone-note').textContent = 'Tournez le téléphone en paysage pour votre support VR.';
   }
 }

@@ -1,4 +1,20 @@
-# Vérification — Pink war v2.5
+# Vérification — Pink war v2.6
+
+## Affichage santé et munitions — 10 octobre 2026
+
+La version GitHub `163c43e` de l'utilisateur a été récupérée par avance rapide et confirmée comme déploiement de production READY sur Vercel avant cette modification. Ses 53 tests passent. Les nouvelles mains, les cinq armes détaillées, la cinématique des bras, les armures et les réglages Quest constituent le point de départ de cette version.
+
+L'affichage de combat est limité à la santé et au nombre de munitions restantes. En WebXR et en stéréoscopie, deux petits indicateurs remplacent les panneaux centraux. L'afficheur de l'arme donne seulement le nombre restant, même pendant une recharge. L'aide automatique et le raccourci qui ouvrait son panneau dans le casque ont été retirés ; les commandes se consultent avant l'entrée en VR. Sur téléphone et ordinateur, les informations secondaires et les légendes des commandes sont masquées pendant le combat.
+
+Les 52 tests Node.js passent. Le test de l'ancien panneau d'aide et son assertion en mode gaucher ont été retirés avec cette fonction. Le combat, la progression, la géométrie des modèles, les deux dispositions de manettes, les recharges, les charges, les vibrations et la rotation restent couverts.
+
+Le parcours WebXR émulé sous Chromium/SwiftShader et IWER 2.5 configuré en Quest 3 passe ses 13 étapes. Il atteint le niveau 3 avec les tirs réels de la manette, vérifie les recharges, la pause, les changements d'arme, le déplacement, les rotations, la déconnexion puis la reconnexion du contrôleur et deux entrées immersives LYLU/GHJU. Les textes réellement dessinés dans le HUD sont relevés : SANTÉ, BALLES, la santé courante et les munitions courantes, et seulement une valeur numérique sur l'arme. Le clic du joystick ne fait apparaître aucun panneau. Les deux captures d'œil montrent la scène et les deux indicateurs, avec une variation des pixels supérieure à 29 par canal. Aucun fichier HTTP en échec, erreur de console ou exception JavaScript n'est observé.
+
+Le HTML autonome v2.6 passe aussi le parcours mobile en 390 × 844 et 844 × 390 : sélection LYLU/GHJU, armures 1 et 10, tir tactile FPS, entrée/sortie stéréoscopique et reprise. Les textes visibles de combat ne contiennent ni niveau, score, secteur, tenue, nom d’arme, recharge ni légende des commandes ; les deux indicateurs stéréoscopiques affichent quatre textes correspondant aux deux valeurs et leurs libellés. Un seul fichier HTML est demandé, sans erreur de console ni exception JavaScript. Les captures à plat et à deux yeux ont été inspectées.
+
+Limite : les essais de casque utilisent l'émulateur ; aucun Quest 3 ni iPhone physique n'est disponible pour confirmer le confort, la lisibilité à travers les lentilles et les performances réelles.
+
+# Vérification — Pink war v2.5 (historique)
 
 ## Mains, armes et personnages — 10 octobre 2026
 

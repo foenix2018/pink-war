@@ -10,7 +10,7 @@ function setup(game = { charge:0, triggerHeld:false, reload:()=>true, cycleWeapo
   const right = { handedness:'right', targetRaySpace:{hand:'right'}, gamepad:{axes:[0,0,0,0],buttons:buttons()} };
   let phase = 'playing', exits = 0;
   const state = Object.assign(Object.create(VRController.prototype), {
-    mode:'xr',settings,session:{inputSources:[right,left],visibilityState:'visible'},previous:new Map(),controllers:[],snapArmed:true,triggerBlocked:false,helpTime:0,
+    mode:'xr',settings,session:{inputSources:[right,left],visibilityState:'visible'},previous:new Map(),controllers:[],snapArmed:true,triggerBlocked:false,
     hooks:{game:()=>game,phase:()=>phase,togglePause:()=>{phase=phase==='playing'?'paused':'playing';},pause:()=>{if(phase==='playing')phase='paused';},begin:()=>{phase='playing';},world:()=>({renderer:{xr:{getReferenceSpace:()=>({})}}})},
     exit:async()=>{exits++;},fail:()=>{}
   });
@@ -91,11 +91,6 @@ test('X/B wrap through unlocked weapons and preserve their separate batteries',(
   assert.deepEqual(game.ammo.slice(0,3),[7,18,4]);assert.equal(game.selectWeapon(4),false);
 });
 
-test('right stick click toggles help while Y remains the pause control',()=>{
-  const {state,right,phase}=setup();down(right,3);state.input();assert.equal(state.showControls,true);assert.equal(phase(),'playing');
-  state.input();assert.equal(state.showControls,true);down(right,3,false);state.input();down(right,3);state.input();assert.equal(state.showControls,false);
-});
-
 test('VR aiming transforms the controller through the rig and uses the actual muzzle',()=>{
   const rig=new T.Group();rig.position.set(10,0,20);rig.rotation.y=Math.PI/2;
   const ray=new T.Group();ray.position.set(.3,1.4,-.2);ray.userData.source={handedness:'right'};rig.add(ray);
@@ -170,7 +165,6 @@ test('a left-handed layout mirrors every control: left trigger fires, the right 
   right.gamepad.axes=[0,0,.4,-.8];left.gamepad.axes=[0,0,.9,.9];let input=state.input();
   assert.equal(input.x,.4);assert.equal(input.z,-.8);assert.equal(input.snap,Math.PI/6);assert.equal(input.turn,0);
   down(right,3);assert.equal(state.input().sprint,true);down(right,3,false);
-  down(left,3);state.input();assert.equal(state.showControls,true,'the shooting-hand stick click toggles help');down(left,3,false);state.input();
   down(left,4);state.input();assert.equal(reloads.length,2,'X reloads');down(left,4,false);state.input();
   down(left,5);state.input();assert.deepEqual(cycles,[1],'Y selects the next weapon');down(left,5,false);state.input();
   down(right,4);state.input();assert.deepEqual(cycles,[1,-1],'A selects the previous weapon');down(right,4,false);state.input();

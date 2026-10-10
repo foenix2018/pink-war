@@ -11,7 +11,7 @@ Jeu de survie 3D en HTML et JavaScript, conçu pour iPhone, ordinateur et casque
 - Chaque arme possède sa propre batterie. ↻ ou R recharge ; maintenir le tir avec une batterie vide déclenche aussi la recharge. Les batteries se remplissent au début d’un niveau. Elles fournissent respectivement 12, 24, 10, 6 et 4 tirs. Les recharges prennent du temps ; leur progression se fige pendant la pause.
 - Santé de 100 points, dégâts, vignette rouge et régénération à 18 points par seconde après 5 secondes sans dégât. Les huit murs supplémentaires arrêtent le déplacement, les attaques, les projectiles et les explosions. Les ennemis les contournent grâce à un champ de navigation partagé.
 - Commandes ordinateur : ZQSD/WASD, flèches ou glisser pour viser, Espace pour tirer, R pour recharger, E pour changer d’arme, V pour la vue, Échap pour la pause, Maj pour courir. Trois contacts tactiles peuvent agir simultanément.
-- VR casque : mode WebXR immersif prévu pour Meta Quest 3 et les manettes Touch Plus. La manette de tir se tient comme un pistolet : le canon suit la main, la gâchette tire, un laser et l’affichage des munitions sur l’arme aident à viser. Chaque bouton et chaque joystick des deux manettes a une fonction ; la main de tir, la rotation, la direction du déplacement, le laser et les vibrations se règlent avant d’entrer en VR. Les commandes détaillées sont ci-dessous. Un HUD dans la scène affiche santé, niveau, batterie, charge et aide ; les recharges, pauses et fins de partie sont accessibles avec les manettes.
+- VR casque : mode WebXR immersif prévu pour Meta Quest 3 et les manettes Touch Plus. La manette de tir se tient comme un pistolet : le canon suit la main, la gâchette tire, un laser et l’affichage des munitions sur l’arme aident à viser. Les deux manettes servent au combat ; la main de tir, la rotation, la direction du déplacement, le laser et les vibrations se règlent avant d’entrer en VR. Les commandes détaillées sont ci-dessous. Un HUD discret, en bas du regard, affiche uniquement la santé et les munitions restantes ; les recharges, pauses et fins de partie sont accessibles avec les manettes.
 - VR téléphone : deux caméras espacées de 64 mm, une image pour chaque œil. Utiliser un support VR en paysage. L’orientation utilise les capteurs après autorisation iOS ; sans capteurs, le joystick droit reste disponible. Une manette Bluetooth standard peut fournir déplacement, regard, tir, recharge et pause. Il ne s’agit pas d’une session immersive WebXR sous Safari iPhone.
 - Réglages, sons synthétisés et record conservés sur l’appareil. Aucun compte ou serveur de jeu.
 
@@ -29,7 +29,6 @@ La disposition ci-dessous est celle de la **main de tir droite** (par défaut). 
 | A | Recharger la batterie de l’arme actuelle |
 | B | Arme débloquée suivante |
 | Joystick droit gauche/droite | Rotation par crans de 30° ou 45°, ou fluide ; recentrer le joystick avant le cran suivant. Haut/bas : sans effet, pour qu’un cran ne change jamais d’arme par erreur |
-| Clic du joystick droit | Afficher / masquer les commandes dans le casque |
 | Joystick gauche | Déplacement horizontal, selon le regard ou selon la manette gauche |
 | Clic du joystick gauche maintenu, ou poignée gauche serrée à fond | Courir |
 | Gâchette gauche | Recharger sans lâcher le pistolet. Elle ne tire jamais et ne reprend jamais une pause |
@@ -40,11 +39,11 @@ La disposition ci-dessous est celle de la **main de tir droite** (par défaut). 
 
 ### Réglages du pistolet VR
 
-Ils sont dans la fenêtre **VR** (avant d’entrer dans le casque) et conservés sur l’appareil : **main de tir** (droite ou gauche), **rotation** (crans de 30°, crans de 45° ou fluide), **direction du déplacement** (selon le regard ou selon la manette libre), **laser de visée** (toujours visible ou poignée maintenue) et **vibrations**. La liste des commandes de la fenêtre et du panneau dans le casque suit la main de tir choisie.
+Ils sont dans la fenêtre **VR** (avant d’entrer dans le casque) et conservés sur l’appareil : **main de tir** (droite ou gauche), **rotation** (crans de 30°, crans de 45° ou fluide), **direction du déplacement** (selon le regard ou selon la manette libre), **laser de visée** (toujours visible ou poignée maintenue) et **vibrations**. La liste des commandes de cette fenêtre suit la main de tir choisie.
 
 ### Sensations de tir
 
-Le pistolet recule à chaque tir et le canon se relève brièvement ; la direction du tir reste celle de la manette. Les vibrations dépendent de l’arme (R–9 sec, BLOOM léger, PETAL, THORN et NOVA de plus en plus marqués) et se renforcent pendant la charge. Un tir qui touche, une élimination, un changement d’arme, une recharge et un dégât ont chacun leur impulsion. Les munitions s’affichent sur la culasse du pistolet (rouge sous le quart de la batterie, « recharge » avec progression pendant la recharge, jauge de charge pour THORN et NOVA). L’autre main apparaît sous la forme d’un gantelet, pour voir où elle se trouve.
+Le pistolet recule à chaque tir et le canon se relève brièvement ; la direction du tir reste celle de la manette. Les vibrations dépendent de l’arme (R–9 sec, BLOOM léger, PETAL, THORN et NOVA de plus en plus marqués) et se renforcent pendant la charge. Un tir qui touche, une élimination, un changement d’arme, une recharge et un dégât ont chacun leur impulsion. Les munitions restantes s’affichent sur la culasse du pistolet, en rouge sous le quart de la batterie. L’autre main apparaît sous la forme d’un gantelet, pour voir où elle se trouve. L’afficheur de l’arme indique uniquement le nombre de munitions restantes, y compris pendant une recharge.
 
 ### Performances dans le casque
 
@@ -55,6 +54,10 @@ Les batteries restent propres à chaque arme ; une recharge prend du temps et bl
 La visée part de la bouche du canon suivie en 6DoF, sans modifier la perspective du casque. Le laser indique l’intersection la plus proche, même si elle est un mur. Passer physiquement la main à travers un mur ne permet pas de tirer derrière. Les vibrations sont optionnelles selon l’API du navigateur (`hapticActuators` ou `vibrationActuator`). La session se met en pause si le suivi de la manette de tir ou la visibilité immersive est perdu ; reprendre ensuite avec le bouton de reprise.
 
 Le mapping correspond au [profil officiel Touch Plus](https://raw.githubusercontent.com/immersive-web/webxr-input-profiles/main/packages/assets/profiles/meta-quest-touch-plus/profile.json) et à la [norme WebXR Gamepads](https://immersive-web.github.io/webxr-gamepads-module/). La validation logicielle et les limites des essais sans casque sont documentées dans `VERIFICATION.md`.
+
+## Affichage en partie
+
+La santé et le nombre de balles sont les seules informations affichées pendant le combat, sur téléphone, ordinateur et en VR. Le casque utilise deux petits indicateurs sous la visée ; le compteur de l’arme répète seulement les munitions restantes. Les niveaux, scores, ennemis, noms d’arme, messages de charge/recharge et panneaux d’aide ne recouvrent plus la scène. Les commandes et réglages se consultent dans les menus avant l’entrée en VR. Les vibrations et les sons accompagnent toujours le tir et la recharge.
 
 ## Mains, armes et personnages
 
@@ -100,4 +103,4 @@ LYLU reçoit les mêmes pièces aux mêmes niveaux, avec les tenues Éclaireur, 
 
 ## Héberger sur Vercel
 
-Créer un nouveau projet **pink-war-quest3** en important ce dépôt dans Vercel avec le préréglage **Other**. Le fichier `vercel.json` sert directement le dossier `dist`, sans installation ni compilation. La branche de production est `main`. Le site utilise HTTPS, nécessaire pour WebGPU, les capteurs et WebXR. Une fois le dépôt relié, chaque envoi sur `main` peut mettre à jour le jeu.
+Le projet **pink-war** publie ce dépôt sur [pink-war.vercel.app](https://pink-war.vercel.app). Pour un nouvel hébergement, importer ce dépôt dans Vercel avec le préréglage **Other**. Le fichier `vercel.json` sert directement le dossier `dist`, sans installation ni compilation. La branche de production est `main`. Le site utilise HTTPS, nécessaire pour WebGPU, les capteurs et WebXR. Une fois le dépôt relié, chaque envoi sur `main` peut mettre à jour le jeu.

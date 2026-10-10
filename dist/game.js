@@ -1,4 +1,4 @@
-import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, REGEN_DELAY, clamp, segmentSphere, segmentBox } from './game-logic.js';
+import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, clamp, segmentSphere, segmentBox } from './game-logic.js';
 import { createScene } from './scene.js';
 import { VRController } from './vr.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
@@ -270,13 +270,13 @@ function updateHud() {
   const equipment=equipmentForCharacter(game.wave,character.id);
   $('gear-label').textContent=`TENUE ${String(equipment.level).padStart(2,'0')} · ${equipment.name.toUpperCase()}`;
   $('health-label').textContent = Math.ceil(game.player.hp); $('health-bar').style.width = `${game.player.hp}%`;
-  $('health-status').textContent = game.regenerating ? 'RÉGÉNÉRATION' : game.player.hp<100 ? `À COUVERT · ${Math.ceil(Math.max(0,REGEN_DELAY-(game.time-game.lastDamage)))} S` : 'SANTÉ';
+  $('health-status').textContent = 'SANTÉ';
   document.querySelector('.vitals').classList.toggle('regenerating', game.regenerating);
   document.querySelector('.vitals').classList.toggle('critical', game.player.hp<30);
   $('wave-label').textContent = `NIVEAU ${String(Math.max(1, game.wave)).padStart(2, '0')} / ${MAX_LEVEL}`;
   $('weapon-button').innerHTML = `${game.weapon.name} <span>⌄</span>`;
   $('weapon-button').disabled = game.unlockedWeapons.length < 2;
-  $('ammo-label').innerHTML = `${game.ammo[game.weaponIndex]} <small>/ ${game.weapon.capacity}</small>`;
+  $('ammo-label').textContent = game.ammo[game.weaponIndex];
   const reloading = game.reloadRemaining>0;
   document.querySelector('.fire-area').classList.toggle('reloading', reloading);
   $('reload-button').disabled = reloading || game.ammo[game.weaponIndex]===game.weapon.capacity;
