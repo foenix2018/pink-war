@@ -1,6 +1,6 @@
 import * as T from './vendor/three.webgpu.min.js';
 import { WebGLRenderer } from './vendor/three.module.min.js';
-import { PORTAL, COVER_WALLS, WEAPONS } from './game-logic.js';
+import { PORTAL, COVER_WALLS, CATWALK, WEAPONS } from './game-logic.js';
 import { createCharacterKit, createSoldier as buildSoldier } from './soldier.js';
 import { buildGun } from './weapons.js';
 import { createGlove } from './hands.js';
@@ -105,7 +105,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     batch(mats.rose, [x, h * .7, z + d / 2 + .02], [w * .78, .15, .04]);
     for (let y = 3; y < h - 2; y += 4) for (let xx = -w / 2 + 2; xx < w / 2 - 1; xx += 2.3) { batch(mats.dark, [x + xx, y, z + d / 2 + .025], [.7, 1.7, .05]); if ((Math.round(xx) + y) % 3 === 0) batch(mats.violet, [x + xx, y, z + d / 2 + .06], [.2, .7, .04]); }
   }
-  for (const [x, z, h] of [[-13,-7,1.8],[15,7,2],[23,-11,1.7],[-17,41,1.7],[20,35,2],[-35,2,2.4],[48,-12,1.7]]) {
+  for (const [x, z, h] of [[-13,-7,1.8],[15,7,2],[31,-11,1.7],[-17,41,1.7],[20,35,2],[-35,2,2.4],[48,-12,1.7]]) {
     solid(x,z,4,h,3,mats.dark); batch(mats.steel,[x,h,z],[4.2,.18,3.2]); batch(mats.rose,[x,h*.7,z+1.52],[2,.09,.04]);
   }
   for (const b of COVER_WALLS) {
@@ -121,6 +121,49 @@ export async function createScene(canvas, quality, forceWebGL = false, character
       batch(mats.rose, [b.x - b.hx - .02, 2.25, b.z], [.04, .07, b.hz * 1.8]);
     }
   }
+  // A traversable service bridge: stepped approaches, a level deck, and guarded sides.
+  const bridgeX = CATWALK.x, bridgeWidth = 5.8, stairCount = 12;
+  const stairDepth = (CATWALK.end - CATWALK.landing) / stairCount, stairRise = CATWALK.height / stairCount;
+  const addWalkSurface = (x, z, width, depth, y, height) => obstacles.push({ x, z, hx: width / 2, hz: depth / 2, y, height, walkableSurface: true });
+  for (let i = 1; i <= stairCount; i++) {
+    const upZ = CATWALK.end - (i - .5) * stairDepth, upHeight = i * stairRise;
+    batch(mats.dark, [bridgeX, upHeight / 2, upZ], [bridgeWidth, upHeight, stairDepth]);
+    batch(mats.steel, [bridgeX, upHeight - .025, upZ], [bridgeWidth - .08, .05, stairDepth - .06]);
+    batch(mats.rose, [bridgeX, upHeight + .012, upZ - stairDepth * .36], [bridgeWidth - .45, .025, .045]);
+    addWalkSurface(bridgeX, upZ, bridgeWidth, stairDepth, 0, upHeight);
+
+    const downZ = -CATWALK.landing - (i - .5) * stairDepth, downHeight = (stairCount - i) * stairRise;
+    if (downHeight > 0) {
+      batch(mats.dark, [bridgeX, downHeight / 2, downZ], [bridgeWidth, downHeight, stairDepth]);
+      batch(mats.steel, [bridgeX, downHeight - .025, downZ], [bridgeWidth - .08, .05, stairDepth - .06]);
+      batch(mats.rose, [bridgeX, downHeight + .012, downZ - stairDepth * .36], [bridgeWidth - .45, .025, .045]);
+      addWalkSurface(bridgeX, downZ, bridgeWidth, stairDepth, 0, downHeight);
+    }
+  }
+  const deckLength = CATWALK.landing * 2;
+  batch(mats.dark, [bridgeX, CATWALK.height - .06, 0], [bridgeWidth, .12, deckLength]);
+  batch(mats.steel, [bridgeX, CATWALK.height + .012, 0], [bridgeWidth - .08, .035, deckLength - .08]);
+  addWalkSurface(bridgeX, 0, bridgeWidth, deckLength, CATWALK.height, .12);
+  for (const side of [-1, 1]) {
+    const railX = bridgeX + side * 2.55;
+    // Invisible collision volume keeps the player on the walkway; visible bars follow the stairs.
+    obstacles.push({ x: railX, z: 0, hx: .1, hz: CATWALK.end + .35, height: 2.55 });
+    for (let i = 0; i <= stairCount; i++) {
+      const upZ = CATWALK.end - i * stairDepth, upHeight = i * stairRise;
+      batch(mats.steel, [railX, upHeight + .41, upZ], [.13, .82, .14]);
+      if (i < stairCount) batch(mats.rose, [railX, upHeight + .84, upZ - stairDepth / 2], [.09, .07, stairDepth - .02]);
+      const downZ = -CATWALK.landing - i * stairDepth, downHeight = (stairCount - i) * stairRise;
+      batch(mats.steel, [railX, downHeight + .41, downZ], [.13, .82, .14]);
+      if (i < stairCount) batch(mats.rose, [railX, downHeight + .84, downZ - stairDepth / 2], [.09, .07, stairDepth - .02]);
+    }
+    for (let z = -6; z <= 6; z += 2) {
+      batch(mats.steel, [railX, CATWALK.height + .41, z], [.13, .82, .14]);
+      if (z < 6) batch(mats.rose, [railX, CATWALK.height + .84, z + 1], [.09, .07, 1.96]);
+    }
+  }
+  for (const z of [-6.5, 6.5]) for (const side of [-1, 1]) {
+    batch(mats.structure, [bridgeX + side * 2.22, CATWALK.height / 2, z], [.26, CATWALK.height, .32]);
+  }
   // Tapered distant silhouettes make the enclosure feel like part of a larger city.
   for (let i = 0; i < 28; i++) {
     const angle = i / 28 * Math.PI * 2, radius = 135 + (i % 3) * 15, h = 18 + (i * 17 % 55);
@@ -131,7 +174,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   }
   for (const [mat, items] of batches) {
     const instance = new T.InstancedMesh(geometries.box, mat, items.length); const matrix = new T.Matrix4(), q = new T.Quaternion();
-    items.forEach((item, i) => { q.setFromAxisAngle(v(0,1,0),item.rot); matrix.compose(v(...item.pos), q, v(...item.scale)); instance.setMatrixAt(i,matrix); });
+    items.forEach((item, i) => { if (typeof item.rot === 'number') q.setFromAxisAngle(v(0,1,0),item.rot); else q.setFromEuler(v(item.rot.x||0,item.rot.y||0,item.rot.z||0)); matrix.compose(v(...item.pos), q, v(...item.scale)); instance.setMatrixAt(i,matrix); });
     instance.castShadow = !mat.isMeshBasicMaterial; instance.receiveShadow = !mat.isMeshBasicMaterial; instance.computeBoundingSphere(); scene.add(instance);
   }
 
@@ -214,9 +257,9 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   function resetDynamic(){for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
   function sync(sim,time,dt,moving,recoil=0){
     setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));
-    soldier.root.scale.setScalar(1);soldier.root.position.set(sim.player.x,0,sim.player.z);soldier.root.rotation.y=sim.player.yaw;
+    soldier.root.scale.setScalar(1);soldier.root.position.set(sim.player.x,sim.player.elevation||0,sim.player.z);soldier.root.rotation.y=sim.player.yaw;
     soldier.animate(time,moving,recoil);
-    const present=new Set();for(const e of sim.enemies){present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite, e.ranged);monsters.set(e.id,m);scene.add(m);}m.position.set(e.x,Math.abs(Math.sin(time*8+e.phase))*.025,e.z);m.rotation.y=Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI;m.userData.animate(time,e.phase);}
+    const present=new Set();for(const e of sim.enemies){present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite, e.ranged);monsters.set(e.id,m);scene.add(m);}m.position.set(e.x,(e.elevation||0)+Math.abs(Math.sin(time*8+e.phase))*.025,e.z);m.rotation.y=Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI;m.userData.animate(time,e.phase);}
     for(const[id,m]of monsters){if(!present.has(id)){scene.remove(m);monsters.delete(id);}}
     const active=new Set();for(const b of sim.bullets){active.add(b.id);let m=bulletMeshes.get(b.id);if(!m){m=new T.Group();mesh(geometries.sphere,b.hostile?mats.cyan:mats.pale,m,[0,0,0],[.09,.09,.22],false);mesh(geometries.sphere,b.hostile?mats.violet:mats.rose,m,[0,0,.25],[.08,.08,.38],false);m.scale.setScalar(b.weapon==='nova'?2.3:b.weapon==='thorn'?1.3:b.hostile?1.4:1);bulletMeshes.set(b.id,m);scene.add(m);}m.position.set(b.x,b.y,b.z);m.lookAt(b.x+b.vx,b.y+b.vy,b.z+b.vz);}
     for(const[id,m]of bulletMeshes){if(!active.has(id)){scene.remove(m);bulletMeshes.delete(id);}}

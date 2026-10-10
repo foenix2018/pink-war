@@ -329,7 +329,7 @@ export class VRController {
   }
   positionRig(heading = this.hooks.game().player.yaw) {
     if (!this.rig) return;
-    const game = this.hooks.game(); this.rig.position.set(game.player.x, 0, game.player.z); this.rig.rotation.y = heading; this.rig.updateMatrixWorld(true);
+    const game = this.hooks.game(); this.rig.position.set(game.player.x, game.player.elevation || 0, game.player.z); this.rig.rotation.y = heading; this.rig.updateMatrixWorld(true);
     this.hooks.world().renderer.xr.updateCamera(this.hooks.world().camera);
   }
   // Movement follows the head, or the pointing direction of the free hand when chosen.

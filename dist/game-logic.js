@@ -4,6 +4,7 @@ export const ARENA_SIZE = 200;
 export const PORTAL = Object.freeze({ x: 0, z: -20 });
 export const MAX_LEVEL = 10;
 export const REGEN_DELAY = 5;
+export const CATWALK = Object.freeze({ x: 22.4, halfWidth: 2, end: 20, landing: 8, height: 1.58 });
 export const WEAPONS = Object.freeze([
   Object.freeze({ id: 'r9', name: 'R–9', label: 'Pistolet laser', level: 1, damage: 24, capacity: 12, interval: .2, reload: 1.25, speed: 110, pellets: 1, spread: 0, chargeTime: 0, splash: 0 }),
   Object.freeze({ id: 'bloom', name: 'BLOOM', label: 'Fusil d’assaut', level: 3, damage: 34, capacity: 24, interval: .11, reload: 1.7, speed: 135, pellets: 1, spread: .009, chargeTime: 0, splash: 0 }),
@@ -22,6 +23,13 @@ export const COVER_WALLS = Object.freeze([
   { x: 28, z: 31, hx: 4.5, hz: .55, height: 2.65 },
   { x: -34, z: 39, hx: .55, hz: 5, height: 2.65 }
 ].map(b => Object.freeze({ ...b, cover: true })));
+// Smoothly follows the stair treads so the player and camera rise onto the deck.
+export function walkSurfaceHeight(x, z) {
+  if (Math.abs(x - CATWALK.x) > CATWALK.halfWidth || Math.abs(z) > CATWALK.end) return 0;
+  if (z > CATWALK.landing) return CATWALK.height * (CATWALK.end - z) / (CATWALK.end - CATWALK.landing);
+  if (z < -CATWALK.landing) return CATWALK.height * (z + CATWALK.end) / (CATWALK.end - CATWALK.landing);
+  return CATWALK.height;
+}
 export const levelCount = level => 5 + (clamp(level, 1, MAX_LEVEL) - 1) * 3;
 export const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 
@@ -42,8 +50,8 @@ export function segmentSphere(start, end, center, radius) {
 export function segmentBox(start, end, box) {
   let lo = 0, hi = 1;
   for (const axis of ['x', 'y', 'z']) {
-    const min = axis === 'y' ? 0 : box[axis] - box[axis === 'x' ? 'hx' : 'hz'];
-    const max = axis === 'y' ? box.height : box[axis] + box[axis === 'x' ? 'hx' : 'hz'];
+    const min = axis === 'y' ? (box.y || 0) : box[axis] - box[axis === 'x' ? 'hx' : 'hz'];
+    const max = axis === 'y' ? (box.y || 0) + box.height : box[axis] + box[axis === 'x' ? 'hx' : 'hz'];
     const d = end[axis] - start[axis];
     if (Math.abs(d) < 1e-10) { if (start[axis] < min || start[axis] > max) return null; }
     else { const a = (min - start[axis]) / d, b = (max - start[axis]) / d; lo = Math.max(lo, Math.min(a, b)); hi = Math.min(hi, Math.max(a, b)); if (lo > hi) return null; }
@@ -55,12 +63,14 @@ export function moveInArena(entity, dx, dz, radius, obstacles) {
   const edge = ARENA_SIZE / 2 - radius - 1;
   let x = clamp(entity.x + dx, -edge, edge), z = entity.z;
   for (const b of obstacles) {
+    if (b.walkableSurface) continue;
     if (z > b.z - b.hz - radius && z < b.z + b.hz + radius && x > b.x - b.hx - radius && x < b.x + b.hx + radius) {
       x = dx > 0 ? b.x - b.hx - radius : dx < 0 ? b.x + b.hx + radius : x;
     }
   }
   z = clamp(entity.z + dz, -edge, edge);
   for (const b of obstacles) {
+    if (b.walkableSurface) continue;
     if (x > b.x - b.hx - radius && x < b.x + b.hx + radius && z > b.z - b.hz - radius && z < b.z + b.hz + radius) {
       z = dz > 0 ? b.z - b.hz - radius : dz < 0 ? b.z + b.hz + radius : z;
     }
@@ -77,7 +87,7 @@ class CoverNavigation {
     this.queue = new Int32Array(this.solid.length); this.refreshAt = -1; this.goal = -1;
     for (let z = 0; z < this.size; z++) for (let x = 0; x < this.size; x++) {
       const wx = this.edge + x * 2, wz = this.edge + z * 2;
-      this.solid[z * this.size + x] = obstacles.some(b => Math.abs(wx-b.x) < b.hx+1.3 && Math.abs(wz-b.z) < b.hz+1.3) ? 1 : 0;
+      this.solid[z * this.size + x] = obstacles.some(b => !b.walkableSurface && Math.abs(wx-b.x) < b.hx+1.3 && Math.abs(wz-b.z) < b.hz+1.3) ? 1 : 0;
     }
   }
   point(index) { return { x: this.edge + index % this.size * 2, z: this.edge + Math.floor(index / this.size) * 2 }; }
@@ -115,7 +125,7 @@ class CoverNavigation {
       if(!options.length)break;
       options.sort((a,b)=>this.distance[a]-this.distance[b] || Math.hypot(this.point(a).x-enemy.x,this.point(a).z-enemy.z)-Math.hypot(this.point(b).x-enemy.x,this.point(b).z-enemy.z));
       const next=options[0],p=this.point(next),start={x:enemy.x,y:1,z:enemy.z},end={...p,y:1};
-      if(this.obstacles.some(b=>segmentBox(start,end,{...b,hx:b.hx+enemy.radius+.08,hz:b.hz+enemy.radius+.08})!==null))break;
+      if(this.obstacles.some(b=>!b.walkableSurface&&segmentBox(start,end,{...b,hx:b.hx+enemy.radius+.08,hz:b.hz+enemy.radius+.08})!==null))break;
       target=p;index=next;
     }
     return target;
@@ -126,7 +136,7 @@ export class ArenaGame {
   constructor(obstacles = [], random = Math.random) { this.obstacles = obstacles; this.random = random; this.navigation = new CoverNavigation(obstacles); this.reset(); }
   reset() {
     this.navigation.refreshAt = -1; this.navigation.goal = -1;
-    this.player = { x: 0, z: 22, hp: 100, yaw: 0 };
+    this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0 };
     this.enemies = []; this.bullets = []; this.events = [];
     this.wave = 0; this.score = 0; this.kills = 0; this.time = 0;
     this.state = 'playing'; this.cooldown = 0; this.invulnerable = 0;
@@ -167,7 +177,8 @@ export class ArenaGame {
     const elite = this.wave >= 3 && ordinal % (this.wave >= 8 ? 3 : 5) === 2;
     const ranged = this.wave >= 4 && !elite && ordinal % 4 === 1;
     const angle = this.random() * Math.PI * 2;
-    const enemy = { id: this.nextId++, x: PORTAL.x + Math.cos(angle) * 2.7, z: PORTAL.z + Math.sin(angle) * 2.7 + 4,
+    const x = PORTAL.x + Math.cos(angle) * 2.7, z = PORTAL.z + Math.sin(angle) * 2.7 + 4;
+    const enemy = { id: this.nextId++, x, z, elevation: walkSurfaceHeight(x, z),
       hp: elite ? 80 + this.wave * 10 : 36 + this.wave * 6, elite, ranged,
       speed: (elite ? 4.2 : ranged ? 4 : 5.2) + this.wave * .22, radius: elite ? 1.05 : .8,
       attackTimer: .8 + this.random() * .6, phase: this.random() * Math.PI * 2 };
@@ -234,27 +245,32 @@ export class ArenaGame {
     const speed = input.sprint ? 10 : 7, moveYaw = input.moveYaw ?? yaw;
     moveInArena(this.player, (Math.cos(moveYaw) * ix + Math.sin(moveYaw) * iz) * speed * dt,
       (-Math.sin(moveYaw) * ix + Math.cos(moveYaw) * iz) * speed * dt, .55, this.obstacles);
+    this.player.elevation = walkSurfaceHeight(this.player.x, this.player.z);
     if (this.nextWave >= 0) { this.nextWave -= dt; if (this.nextWave <= 0) this.beginWave(); }
     if (this.toSpawn > 0) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) { this.spawnEnemy(); this.spawnTimer = Math.max(.3, 1.15 - this.wave * .08); } }
     this.navigation.update(this.player, this.time);
     for (const e of this.enemies) {
-      let dx = this.player.x - e.x, dz = this.player.z - e.z; const distance = Math.hypot(dx, dz) || 1;
+      e.elevation = walkSurfaceHeight(e.x, e.z);
+      let dx = this.player.x - e.x, dz = this.player.z - e.z;
+      const horizontalDistance = Math.hypot(dx, dz) || 1, verticalDistance = (this.player.elevation || 0) - e.elevation;
+      const distance = Math.hypot(horizontalDistance, verticalDistance);
       dx /= distance; dz /= distance;
-      const from = { x: e.x, y: 1.3, z: e.z }, to = { x: this.player.x, y: 1.3, z: this.player.z };
+      const from = { x: e.x, y: e.elevation + 1.3, z: e.z }, to = { x: this.player.x, y: (this.player.elevation || 0) + 1.3, z: this.player.z };
       const visible = !this.blocked(from, to);
-      if (this.obstacles.some(b=>segmentBox(from,to,{...b,hx:b.hx+e.radius+.08,hz:b.hz+e.radius+.08})!==null)) {
+      if (this.obstacles.some(b=>!b.walkableSurface&&segmentBox(from,to,{...b,hx:b.hx+e.radius+.08,hz:b.hz+e.radius+.08})!==null)) {
         const waypoint=this.navigation.waypoint(e);
         if(waypoint){dx=waypoint.x-e.x;dz=waypoint.z-e.z;const n=Math.hypot(dx,dz)||1;dx/=n;dz/=n;}
       }
       for (const other of this.enemies) { if (other.id === e.id) continue; const ax = e.x - other.x, az = e.z - other.z, d = Math.hypot(ax, az); if (d > .01 && d < 1.7) { dx += ax / d * .65; dz += az / d * .65; } }
       const norm = Math.hypot(dx, dz) || 1;
-      if (distance > (e.ranged && visible ? 14 : 1.45)) moveInArena(e, dx / norm * e.speed * dt, dz / norm * e.speed * dt, e.radius, this.obstacles);
+      if (horizontalDistance > (e.ranged && visible ? 14 : 1.45)) moveInArena(e, dx / norm * e.speed * dt, dz / norm * e.speed * dt, e.radius, this.obstacles);
+      e.elevation = walkSurfaceHeight(e.x, e.z);
       e.attackTimer -= dt;
       if (distance < 2 && visible && e.attackTimer <= 0) { e.attackTimer = .85; this.damage(e.elite ? 20 + this.wave : 10 + Math.floor(this.wave / 2)); }
       else if (e.ranged && visible && distance < 38 && e.attackTimer <= 0) {
         e.attackTimer = Math.max(1.2, 2.6 - this.wave * .1);
-        const n = Math.hypot(to.x - from.x, to.z - from.z), speed = 18 + this.wave;
-        this.bullets.push({ id: this.nextId++, ...from, vx: (to.x - from.x) / n * speed, vy: 0, vz: (to.z - from.z) / n * speed,
+        const n = Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z), speed = 18 + this.wave;
+        this.bullets.push({ id: this.nextId++, ...from, vx: (to.x - from.x) / n * speed, vy: (to.y - from.y) / n * speed, vz: (to.z - from.z) / n * speed,
           life: 3, damage: 13 + this.wave, hostile: true, weapon: 'enemy', splash: 0 });
         this.event('enemy-shot', from);
       }
@@ -265,10 +281,10 @@ export class ArenaGame {
       const end = { x: b.x + b.vx * dt, y: b.y + b.vy * dt, z: b.z + b.vz * dt };
       let nearest = 1.01, target = null;
       if (b.hostile) {
-        const hit = segmentSphere(start, end, { x: this.player.x, y: 1.25, z: this.player.z }, .62);
+        const hit = segmentSphere(start, end, { x: this.player.x, y: (this.player.elevation || 0) + 1.25, z: this.player.z }, .62);
         if (hit !== null) { nearest = hit; target = this.player; }
       } else for (const e of this.enemies) {
-        const hit = segmentSphere(start, end, { x: e.x, y: e.elite ? 1.35 : 1.15, z: e.z }, e.elite ? 1.3 : 1.05);
+        const hit = segmentSphere(start, end, { x: e.x, y: e.elevation + (e.elite ? 1.35 : 1.15), z: e.z }, e.elite ? 1.3 : 1.05);
         if (hit !== null && hit < nearest) { nearest = hit; target = e; }
       }
       for (const obstacle of this.obstacles) { const t = segmentBox(start, end, obstacle); if (t !== null && t < nearest) { nearest = t; target = null; } }
@@ -280,7 +296,7 @@ export class ArenaGame {
         else if (target) this.damageEnemy(target, b.damage, at);
         if (!b.hostile && b.splash > 0) for (const e of [...this.enemies]) {
           if (e === target) continue;
-          const center = { x: e.x, y: e.elite ? 1.35 : 1.15, z: e.z }, d = Math.hypot(e.x - at.x, e.z - at.z);
+          const center = { x: e.x, y: e.elevation + (e.elite ? 1.35 : 1.15), z: e.z }, d = Math.hypot(e.x - at.x, e.z - at.z, center.y - at.y);
           // Cover also stops blast damage; back off the impact point from a wall.
           const blast = { x: at.x - b.vx * .0001, y: at.y, z: at.z - b.vz * .0001 };
           if (d < b.splash && !this.blocked(blast, center)) this.damageEnemy(e, b.damage * (1 - d / b.splash * .65), center);

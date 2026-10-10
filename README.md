@@ -2,6 +2,8 @@
 
 Jeu de survie 3D en HTML et JavaScript, conçu pour iPhone, ordinateur et casque WebXR. LYLU ou GHJU défend une arène fermée de 200 × 200 mètres, puis ferme la brèche après dix niveaux.
 
+- Version 3.0 : une passerelle métallique traverse le flanc droit de l’arène. Deux escaliers donnent accès au tablier, avec garde-corps et marches visibles. Le déplacement en suit la pente et relève le personnage, la caméra et le casque en FPS, en troisième personne et en VR ; les ennemis peuvent aussi monter et les tirs tiennent compte de la hauteur.
+
 - WebGPU avec secours WebGL2 lorsque WebGPU est absent ou perdu. Le mode casque utilise le moteur WebGLRenderer de Three.js 0.180, dédié au rendu immersif WebXR, avec les mêmes modèles et matériaux.
 - Vue FPS ou troisième personne. Joystick gauche pour se déplacer ; joystick droit pour viser ; tir central.
 - Sélection sur l'accueil : LYLU est un soldat aux épaules plus larges dans un univers bleu ; GHJU est une soldate dans un univers rose. Le choix change immédiatement le modèle, l'armure, les armes, les tirs, le portail, le ciel, les éclairages et les accents de l'interface. Il est mémorisé sur l'appareil.

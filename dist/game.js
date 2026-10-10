@@ -193,10 +193,11 @@ function updateCamera() {
   const cameraYaw = yaw + (vr?.mode==='stereo' && vr.sensor ? vr.phoneYaw : 0), cameraPitch = clamp(pitch + (vr?.mode==='stereo' && vr.sensor ? vr.phonePitch : 0) - recoil * .16, -1.2, 1.2);
   camera.fov = view === 'fps' ? 72 : 64;
   camera.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
-  if (view === 'fps') { camera.position.set(p.x, 1.85, p.z); soldier.root.visible = false; weapon.visible = true; }
+  const elevation = p.elevation || 0;
+  if (view === 'fps') { camera.position.set(p.x, 1.85 + elevation, p.z); soldier.root.visible = false; weapon.visible = true; }
   else {
     soldier.root.visible = true; weapon.visible = false;
-    const distance = 5.1, start = { x: p.x, y: 1.6, z: p.z };
+    const distance = 5.1, start = { x: p.x, y: 1.6 + elevation, z: p.z };
     const end = { x: p.x + Math.sin(yaw) * distance * Math.cos(pitch) + Math.cos(yaw) * .65,
       y: 1.6 - Math.sin(pitch) * distance, z: p.z + Math.cos(yaw) * distance * Math.cos(pitch) - Math.sin(yaw) * .65 };
     let nearest = 1;
@@ -218,7 +219,7 @@ function aim() {
   const far = camera.position.clone().addScaledVector(forward, 160); let target = far, nearest = 1;
   for (const box of world.obstacles) { const hit = segmentBox(camera.position, far, box); if (hit !== null && hit < nearest) { nearest = hit; target = camera.position.clone().lerp(far, hit); } }
   for (const enemy of game.enemies) {
-    const center = { x: enemy.x, y: enemy.elite ? 1.35 : 1.15, z: enemy.z };
+    const center = { x: enemy.x, y: (enemy.elevation || 0) + (enemy.elite ? 1.35 : 1.15), z: enemy.z };
     const hit = segmentSphere(camera.position, far, center, enemy.elite ? 1.3 : 1.05);
     if (hit !== null && hit < nearest) { nearest = hit; target = new T.Vector3(center.x, center.y, center.z); }
   }
