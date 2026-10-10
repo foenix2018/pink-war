@@ -238,18 +238,18 @@ function announce(title, subtitle) {
 }
 function handleEvents() {
   for (const event of game.drainEvents()) {
-    if (event.type === 'shot') { recoil = .09; flashTimer = .07; tone(780, 130, .09, .035, 'sawtooth'); }
+    if (event.type === 'shot') { recoil = .09; flashTimer = .07; vr.haptic('shot'); tone(780, 130, .09, .035, 'sawtooth'); }
     if (event.type === 'wave') { const unlocked=WEAPONS.find(w=>w.level===event.wave); announce(`NIVEAU ${String(event.wave).padStart(2, '0')} / ${MAX_LEVEL}`, unlocked && event.wave>1 ? `${unlocked.name} DÉBLOQUÉE · ${event.count} CRÉATURES` : `${event.count} CRÉATURES · LA BRÈCHE S’OUVRE`); tone(210, 420, .25, .065); tone(420, 630, .25, .06, 'triangle', .2); }
     if (event.type === 'equipment') { const equipment=equipmentForCharacter(event.level,character.id);world.setEquipment(event.level);$('equipment-unlock-title').textContent=`${equipment.name} · NIV. ${event.level}`;$('equipment-unlock-detail').textContent=equipment.addition;equipmentUntil=clock+4;$('equipment-unlock').hidden=false; }
     if (event.type === 'clear') { announce('NIVEAU TERMINÉ', '+ BONUS · LA BRÈCHE SE RECHARGE'); tone(420, 700, .25, .07); }
     if (event.type === 'weapon') { world.setWeapon(game.weaponIndex); tone(510, 760, .1, .03); }
     if (event.type === 'reload') tone(220, 450, .16, .04);
-    if (event.type === 'reloaded') tone(520, 820, .1, .035);
+    if (event.type === 'reloaded') { vr.haptic('reloaded'); tone(520, 820, .1, .035); }
     if (event.type === 'spawn') world.burst(event.x, 1, event.z, world.palette.violet, 7);
     if (event.type === 'impact') world.burst(event.x, event.y, event.z, event.hostile?world.palette.violet:world.palette.rose, event.splash>0?22:event.enemy?7:3);
     if (event.type === 'hit') { const marker = $('hit-marker'); marker.classList.remove('hit'); void marker.offsetWidth; marker.classList.add('hit'); tone(300, 190, .06, .035); }
     if (event.type === 'kill') { world.burst(event.x, event.y, event.z, world.palette.violet, 12); tone(130, 50, .15, .06, 'square'); }
-    if (event.type === 'damage') { damageUntil = clock + .25; tone(80, 35, .18, .08, 'triangle'); }
+    if (event.type === 'damage') { damageUntil = clock + .25; vr.haptic('damage'); tone(80, 35, .18, .08, 'triangle'); }
     if (event.type === 'over') gameOver(false);
     if (event.type === 'win') gameOver(true);
   }
@@ -304,25 +304,26 @@ function bindCanvas() {
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) canvas.addEventListener(type, e => { if (e.pointerId === canvasPointer) { canvasPointer = null; lastDrag = null; } });
 }
 window.addEventListener('rosee-renderer-recovered', () => { $('world').removeAttribute('data-controls-bound'); bindCanvas(); $('renderer-label').textContent = `${world.backend.toUpperCase()} · CONÇU POUR LE TACTILE`; });
-function frame(timestamp) {
+function frame(timestamp, xrFrame) {
   const dt = lastTime ? Math.min((timestamp - lastTime) / 1000, .05) : .016; lastTime = timestamp; clock += dt;
-  const vrInput = vr.active ? vr.input() : {x:0,z:0,turn:0,tilt:0,fire:false};
+  const vrInput = vr.active ? vr.input(xrFrame) : {x:0,z:0,turn:0,tilt:0,snap:0,fire:false,sprint:false};
   world.animatePortal(clock);
   if (phase === 'lobby') world.lobby(clock,Math.max(1,game.wave));
   if (phase === 'outfit') world.outfit(clock,previewLevel,Number($('outfit-rotation').value)*Math.PI/180);
   if (phase === 'playing' && !recovering) {
     const sensitivity = settings.sensitivity;
     yaw -= (look.x * 1.8 + vrInput.turn * 1.6 + (keys.has('ArrowRight') ? 1.4 : 0) - (keys.has('ArrowLeft') ? 1.4 : 0)) * sensitivity * dt;
+    yaw -= vrInput.snap;
     pitch = clamp(pitch + (-look.y * 1.35 - vrInput.tilt * 1.35 + (keys.has('ArrowUp') ? 1.15 : 0) - (keys.has('ArrowDown') ? 1.15 : 0)) * sensitivity * dt, -.85, .7);
     yaw %= Math.PI * 2;
     const x = move.x + vrInput.x + (keys.has('KeyD') ? 1 : 0) - ((keys.has('KeyA') || keys.has('KeyQ')) ? 1 : 0);
     const z = move.y + vrInput.z + (keys.has('KeyS') ? 1 : 0) - ((keys.has('KeyW') || keys.has('KeyZ')) ? 1 : 0);
     const facing = yaw + (vr.mode==='stereo' && vr.sensor ? vr.phoneYaw : 0);
     let moveYaw = facing;
-    if(vr.mode==='xr'){ const forward=world.camera.getWorldDirection(new world.T.Vector3());moveYaw=Math.atan2(-forward.x,-forward.z); }
-    game.step(dt, { x, z, yaw: facing, moveYaw, sprint: keys.has('ShiftLeft') || keys.has('ShiftRight') });
+    if(vr.mode==='xr')moveYaw=vr.movementYaw(facing);
+    game.step(dt, { x, z, yaw: facing, moveYaw, sprint: vrInput.sprint || keys.has('ShiftLeft') || keys.has('ShiftRight') });
     world.sync(game, clock, dt, Math.hypot(x, z) > .1); updateCamera();
-    const firing = !!(firingPointers.size || keys.has('Space') || vrInput.fire);
+    const firing = vr.mode==='xr' ? vrInput.fire : !!(firingPointers.size || keys.has('Space') || vrInput.fire);
     if (game.state==='playing' && (firing || game.charge>0)) { const target=aim(); game.trigger(firing,dt,target.origin,target.direction); }
     else game.triggerHeld=false;
     handleEvents();
@@ -346,8 +347,8 @@ vr = new VRController({
   world:()=>world, game:()=>game, phase:()=>phase, openPanel, pause,
   togglePause:()=>{ if(phase==='playing')pause();else if(phase==='paused')resume(); },
   begin:()=>{ if(phase==='lobby'||phase==='over')start();else resume();selectView('fps');resetInput(); },
-  webGL:async()=>{ if(world.backend==='WebGPU'){recovering=true;world.renderer.setAnimationLoop(null);world=await world.recover();recovering=false;lastTime=0;window.dispatchEvent(new CustomEvent('rosee-renderer-recovered'));world.renderer.setAnimationLoop(frame);} },
-  afterExit:()=>{ resetInput();lastTime=0;if(phase==='paused')$('pause-dialog').showModal();else if(phase==='over')$('end-dialog').showModal();else if(phase==='playing')updateCamera(); }
+  webGL:async()=>{ if(!world.renderer.isWebGLRenderer){recovering=true;world.renderer.setAnimationLoop(null);try{world=await world.recover();window.dispatchEvent(new CustomEvent('rosee-renderer-recovered'));}finally{recovering=false;lastTime=0;world.renderer.setAnimationLoop(frame);}} },
+  afterExit:()=>{ resetInput();lastTime=0;updateCamera();if(phase==='paused')$('pause-dialog').showModal();else if(phase==='over')$('end-dialog').showModal(); }
 });
 try {
   world = await createScene($('world'), settings.quality,false,character.id);world.setCharacter(character.id);game = new ArenaGame(world.obstacles);
@@ -356,7 +357,7 @@ try {
   await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   if (world.lost) { world = await world.recover(); window.dispatchEvent(new CustomEvent('rosee-renderer-recovered')); }
   $('play-label').textContent = 'ENTRER DANS L’ARÈNE'; $('play-button').disabled = false;$('outfit-button').disabled=false;
-  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ phase, view, frames, vr:vr.mode, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
+  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ phase, view, frames, vr:vr.mode, vrPrecision:vr.precision,vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
     inputs: { move: { ...move }, look: { ...look }, firing: firingPointers.size > 0 || keys.has('Space') }, drawCalls: world.renderer.info.render.calls, ...game.snapshot(),equipment:equipmentForCharacter(game.wave,character.id) }) });
   bindCanvas();world.renderer.setAnimationLoop(frame);
 } catch (error) {

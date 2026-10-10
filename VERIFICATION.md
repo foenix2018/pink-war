@@ -1,4 +1,18 @@
-# Vérification — Pink war v2.2
+# Vérification — Pink war v2.3
+
+## Meta Quest 3 — 10 octobre 2026
+
+Les 32 tests Node.js passent : 19 tests du combat et de la campagne, et 13 tests des commandes Quest. Les tests vérifient les rôles gauche/droite indépendamment de l'ordre des contrôleurs, la rotation par crans, les pressions uniques A/B/X/Y, les tirs chargés et partiels, la recharge, la conservation des batteries et l'annulation des charges après pause, changement d'arme ou perte du suivi. Le déplacement suit la direction horizontale de la tête, y compris après une rotation ; regarder verticalement conserve la dernière direction. La visée part de la bouche réelle du canon et s'arrête au premier obstacle ou ennemi. Une main passée à travers une protection ne permet pas de tirer de l'autre côté.
+
+Le parcours navigateur immersif passe sous Chromium/SwiftShader avec IWER 2.5, l'émulateur WebXR de Meta configuré en Quest 3 et deux profils `meta-quest-touch-plus`. Les 13 étapes couvrent l'entrée immersive avec LYLU bleu, le laser de visée par la poignée droite, le tir droit, l'absence de tir avec la gâchette gauche, le déplacement gauche, la rotation droite de 30° sans répétition tant que le joystick reste incliné, l'aide dans le casque, la pause et la recharge figées, ainsi que la reprise sans tir involontaire avec une gâchette maintenue. Les tirs pilotés par la pose de la manette atteignent le niveau 3 après 13 éliminations et débloquent BLOOM ; la simulation n'est jamais modifiée par le script. X et B changent entre les armes débloquées. Déconnecter le contrôleur droit annule le tir et met en pause. B quitte la VR depuis la pause et restaure l'interface à plat ; une seconde entrée immersive avec GHJU rétablit le monde rose.
+
+Les captures ont été inspectées : les deux yeux montrent le décor, les protections, le portail, l'arme et les panneaux de santé et d'aide. La variation mesurée des pixels dépasse 35 par canal dans chacun des yeux. Aucun fichier HTTP en échec, erreur de console ou exception JavaScript n'accompagne ce parcours.
+
+Le rendu casque utilise désormais le `WebGLRenderer` classique de Three.js 0.180. Le test immersif a révélé une incompatibilité de framebuffer dans le secours WebGL du `WebGPURenderer` ; le passage au moteur WebXR classique corrige cette erreur. Le jeu hors casque conserve WebGPU et son secours WebGL2. Toutes les bibliothèques sont livrées localement, sans service externe en cours de partie.
+
+Le HTML autonome v2.3 a également été essayé en affichage mobile 390 × 844 et 844 × 390 : choix des deux personnages, aperçus des armures 1 et 10, retour à l'accueil, lancement FPS, tir tactile et entrée/sortie stéréoscopique. Le navigateur demande un seul fichier HTML, sans erreur. Une session WebXR émulée lancée depuis ce même HTML produit aussi une scène immersive visible, sans erreur.
+
+Limite : l'émulation vérifie le parcours WebXR, les poses et les commandes, mais aucun Quest 3 physique ni iPhone physique n'est disponible. Les autorisations, le confort, le suivi réel, les vibrations et les performances sur ces appareils restent à vérifier sur matériel.
 
 ## LYLU / GHJU — 10 octobre 2026
 

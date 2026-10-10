@@ -1,4 +1,5 @@
 import * as T from './vendor/three.webgpu.min.js';
+import { WebGLRenderer } from './vendor/three.module.min.js';
 import { PORTAL, COVER_WALLS, WEAPONS } from './game-logic.js';
 import { createCharacterKit, createSoldier as buildSoldier, createFirstPersonArm } from './soldier.js';
 import { CHARACTERS, characterForId } from './characters.js';
@@ -20,7 +21,8 @@ const glowTexture = () => canvasTexture(128, 128, (c, w) => {
 export async function createScene(canvas, quality, forceWebGL = false, characterId = 'ghju') {
   let character=characterForId('ghju'),themeApplied=false;
   const palette={...character.palette},themeHalos=[];
-  const renderer = new T.WebGPURenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance', forceWebGL });
+  const Renderer = forceWebGL ? WebGLRenderer : T.WebGPURenderer;
+  const renderer = new Renderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
   let lost = false, recovery = null;
   const configure = instance => {
     instance.outputColorSpace = T.SRGBColorSpace; instance.toneMapping = T.ACESFilmicToneMapping; instance.toneMappingExposure = 1.08;
@@ -31,7 +33,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     };
   };
   configure(renderer);
-  await renderer.init();
+  if (renderer.init) await renderer.init();
   const scene = new T.Scene(); scene.background = new T.Color(0x302439); scene.fog = new T.FogExp2(0x423042, .008);
   const camera = new T.PerspectiveCamera(62, 1, .08, 650); camera.rotation.order = 'YXZ'; scene.add(camera);
   const mats = {
@@ -266,7 +268,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   async function recover() {
     if (recovery) return recovery;
     recovery = (async () => {
-      if (!renderer.backend.isWebGPUBackend) throw new Error('Le périphérique graphique est indisponible.');
+      if (renderer.isWebGLRenderer) throw new Error('Le périphérique graphique est indisponible.');
       const nextCanvas = renderer.domElement.cloneNode(false);
       renderer.dispose();
       // Fresh resources avoid reusing texture state from a destroyed GPU device.
@@ -280,5 +282,5 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     try { return await recovery; } finally { recovery = null; }
   }
   return {T,scene,camera,get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
-    get lost(){return lost;},get backend(){return renderer.backend.isWebGPUBackend?'WebGPU':'WebGL';},render:()=>{if(!lost)renderer.render(scene,camera);}};
+    get lost(){return lost;},get backend(){return renderer.backend?.isWebGPUBackend?'WebGPU':'WebGL';},render:()=>{if(!lost)renderer.render(scene,camera);}};
 }

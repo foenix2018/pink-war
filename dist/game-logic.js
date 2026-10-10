@@ -146,7 +146,7 @@ export class ArenaGame {
     this.weaponIndex = index; this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false;
     this.cooldown = Math.max(this.cooldown, .25); this.event('weapon', { index, name: this.weapon.name }); return true;
   }
-  cycleWeapon() { return this.selectWeapon((this.weaponIndex + 1) % this.unlockedWeapons.length); }
+  cycleWeapon(direction = 1) { const count = this.unlockedWeapons.length; return this.selectWeapon((this.weaponIndex + (direction < 0 ? -1 : 1) + count) % count); }
   reload() {
     if (this.state !== 'playing' || this.reloadRemaining > 0 || this.ammo[this.weaponIndex] >= this.weapon.capacity) return false;
     this.reloadRemaining = this.weapon.reload; this.charge = 0;
