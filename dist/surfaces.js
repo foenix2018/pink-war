@@ -21,6 +21,21 @@ export function createSurfaceDetails() {
     for(let i=0;i<pixels.data.length;i+=4){const value=180+Math.floor(random()*31);pixels.data.set([value,value,value,255],i);}
     c.putImageData(pixels,0,0);
   });
+  // Low-contrast digital camo is baked into the painted plates, while their
+  // palette tint remains character-specific (blue for LYLU, rose for GHJU).
+  const armor=make(128,(c,n)=>{
+    c.fillStyle='#eeeeee';c.fillRect(0,0,n,n);
+    const shades=['#a5a5a5','#bdbdbd','#d5d5d5','#f8f8f8','#858585'];
+    for(let i=0;i<460;i++){
+      const x=Math.floor(random()*n/4)*4,y=Math.floor(random()*n/4)*4;
+      const w=(1+Math.floor(random()*4))*4,h=(1+Math.floor(random()*3))*4;
+      c.fillStyle=shades[Math.floor(random()*shades.length)];c.fillRect(x,y,w,h);
+    }
+    for(let i=0;i<130;i++){
+      const x=Math.floor(random()*n),y=Math.floor(random()*n);
+      c.fillStyle=i%2?'rgba(255,255,255,.34)':'rgba(25,25,25,.22)';c.fillRect(x,y,1+Math.floor(random()*3),1);
+    }
+  });armor.colorSpace=T.SRGBColorSpace;
   const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;
   const c=canvas.getContext('2d'),gradient=c.createLinearGradient(0,0,0,256);
   for(const [stop,color] of [[0,'#7e91ac'],[.35,'#acb8c5'],[.49,'#626c80'],[.58,'#2c3343'],[1,'#101722']])gradient.addColorStop(stop,color);
@@ -31,5 +46,5 @@ export function createSurfaceDetails() {
     c.fillStyle=strip;c.fillRect(x,25,w,100);
   }
   const environment=new T.CanvasTexture(canvas);environment.mapping=T.EquirectangularReflectionMapping;environment.colorSpace=T.SRGBColorSpace;
-  return {fabric,coating,environment};
+  return {fabric,coating,armor,environment};
 }

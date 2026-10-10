@@ -25,6 +25,8 @@ export function createCharacterKit(emblem, surfaces = {}) {
     cyan:new T.MeshBasicMaterial({color:0x9ce7de,toneMapped:false}),
     emblem: new T.MeshBasicMaterial({map:emblem,transparent:true,depthWrite:false,toneMapped:false})
   };
+  materials.rose.map=materials.pearl.map=surfaces.armor||null;
+  materials.rose.needsUpdate=materials.pearl.needsUpdate=true;
   // Materials of the gloved hands: fabric, knuckle plates, trim, light strips, scanner and metal.
   const gloves = { fabric: materials.suit, plate: materials.rose, trim: materials.pearl, glow: materials.glow, accent: materials.cyan, metal: materials.gold };
   return { geometries, materials, gloves, setPalette(colors){for(const [name,color] of Object.entries(colors))materials[name]?.color.setHex(color);} };
@@ -69,6 +71,7 @@ export function createSoldier(kit, createGun, profileInfo) {
     plate(m.pearl,[0,1.615,-.209],[.11,.032,.012],1,[0,0,0]);
     plate(m.steel,[0,1.475,-.216],[.024,.21,.012]);
     plate(m.glow,[0,1.56,-.218],[.009,.04,.006]);
+    for(const x of [-.185,.185])for(const y of [1.39,1.54])sphere(m.steel,[x,y,-.205],[.009,.009,.005]);
     link(m.steel,[0,1.64,.178],[0,1.14,.2],.014,.018);
     for(let i=0;i<4;i++)plate(m.dark,[0,1.56-i*.1,.175+i*.004],[.26,.03,.03],1);
     for(const s of [-1,1]){
@@ -103,7 +106,7 @@ export function createSoldier(kit, createGun, profileInfo) {
     plate(m.dark,[0,1.50,-.222],[.051,.066,.012],2);plate(m.glow,[0,1.50,-.231],[.015,.035,.005],2);
     part(g.ring,m.glow,[0,1.50,-.232],[.032,.032,.032],2,[0,0,0]);
     // Level 3: insignia, radio and antenna.
-    part(g.patch,m.emblem,[.12,1.555,-.247],[1,1,1],3,[0,PI,0]);
+    part(g.patch,m.emblem,[0,1.565,-.235],[1,1,1],1,[0,PI,0]);
     plate(m.dark,[-.26,1.49,.13],[.1,.18,.09],3);link(m.steel,[-.27,1.57,.13],[-.27,1.83,.13],.008,.005,3);
     sphere(m.glow,[-.27,1.83,.13],[.012,.018,.012],3);
     // Level 5: laser-cell utility belt and symmetric medical pouches.
@@ -212,17 +215,19 @@ export function createSoldier(kit, createGun, profileInfo) {
     const upper=new T.Group(),fore=new T.Group();shoulder.add(upper,fore);
     {
       // The shoulder cap and pauldrons stay with the torso; only the arm below them turns.
-      const {plate,part,ell,dome}=builder(shoulder);
+      const {plate,part,ell,dome,sphere}=builder(shoulder);
       ell(m.suit,[s*.002,-.02,0],[.091,.102,.10]);
       dome(m.pearl,[s*.014,.01,0],[masculine?.116:.106,.078,.112],[0,0,s*-.16]);
       plate(m.rose,[s*.055,.017,-.10],[.091,.027,.035],1,[0,0,s*-.15]);
       plate(m.dark,[s*.02,.067,.012],[.085,.014,.035],1,[0,0,s*-.2]);
+      for(const x of [-.035,.035])sphere(m.steel,[s*.014+x,.022,-.102],[.008,.008,.005]);
       // Level 3: layered curved pauldrons, not a single sphere.
       dome(m.steel,[s*.02,.02,0],[.137,.084,.137],[0,0,s*-.2],3);
       dome(m.pearl,[s*.027,.042,-.01],[.125,.078,.125],[0,0,s*-.2],3);
       part(g.ringFlat,m.rose,[s*.027,.017,0],[.125,.125,.125],3,[0,0,s*-.2]);
       ell(m.rose,[s*.079,-.016,.01],[.034,.066,.108],[0,0,s*-.24],3);
       plate(m.glow,[s*.041,.1,-.133],[.07,.007,.005],3);
+      part(g.patch,m.emblem,[s*.032,.046,-.132],[.55,.55,.55],3,[0,PI,s*-.15]);
       // Level 8: gold pauldron rim.
       part(g.ringFlat,m.gold,[s*.027,.042,-.005],[.125,.125,.125],8,[0,0,s*-.2]);
     }
