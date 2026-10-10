@@ -5,7 +5,7 @@ import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
 import { characterForId } from './characters.js';
 
 const $ = id => document.getElementById(id);
-const settings = { sound: false, sensitivity: 1, quality: 'auto' };
+const settings = { sound: true, sensitivity: 1, quality: 'auto' };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('rosee-settings') || '{}')); } catch {}
 settings.sensitivity = clamp(Number(settings.sensitivity) || 1, .4, 2);
 if (!['auto', 'low', 'high'].includes(settings.quality)) settings.quality = 'auto';
@@ -30,6 +30,20 @@ function tone(frequency, end, duration = .1, volume = .055, type = 'triangle', d
   oscillator.type = type; oscillator.frequency.setValueAtTime(frequency, t); oscillator.frequency.exponentialRampToValueAtTime(Math.max(end, 20), t + duration);
   gain.gain.setValueAtTime(volume, t); gain.gain.exponentialRampToValueAtTime(.001, t + duration); oscillator.connect(gain); gain.connect(audioContext.destination);
   oscillator.start(t); oscillator.stop(t + duration + .02); oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+}
+function weaponShotSound(weapon, power = 1) {
+  const charge = .7 + .3 * clamp((power - .3) / .7, 0, 1);
+  if (weapon === 'bloom') {
+    tone(560, 180, .06, .027, 'square'); tone(1420, 620, .042, .014, 'sawtooth', .012);
+  } else if (weapon === 'petal') {
+    tone(1080, 300, .12, .026, 'triangle'); tone(1780, 530, .095, .018, 'sine', .014); tone(2450, 920, .065, .012, 'triangle', .032);
+  } else if (weapon === 'thorn') {
+    tone(330 * charge, 48, .17, .047 * charge, 'sawtooth'); tone(1720 * charge, 210, .105, .023 * charge, 'square', .012);
+  } else if (weapon === 'nova') {
+    tone(210 * charge, 34, .25, .052 * charge, 'sawtooth'); tone(820 * charge, 95, .2, .026 * charge, 'triangle', .018); tone(1380 * charge, 260, .13, .015 * charge, 'sine', .042);
+  } else {
+    tone(1040, 190, .082, .034, 'sawtooth'); tone(290, 72, .055, .021, 'triangle', .006);
+  }
 }
 function syncSound() {
   $('sound-setting').checked = !!settings.sound;
@@ -235,7 +249,7 @@ function handleEvents() {
     if (event.type === 'shot') {
       const kick = { r9: .095, bloom: .035, petal: .09, thorn: .12, nova: .15 }[event.weapon] ?? .09;
       recoil = Math.min(.2, recoil + kick * (event.power ?? 1));
-      flashTimer = .07; vr.haptic('shot', event.weapon); tone(780, 130, .09, .035, 'sawtooth');
+      flashTimer = .07; vr.haptic('shot', event.weapon); weaponShotSound(event.weapon, event.power);
     }
     if (event.type === 'wave') { const unlocked=WEAPONS.find(w=>w.level===event.wave); announce(`NIVEAU ${String(event.wave).padStart(2, '0')} / ${MAX_LEVEL}`, unlocked && event.wave>1 ? `${unlocked.name} DÉBLOQUÉE · ${event.count} CRÉATURES` : `${event.count} CRÉATURES · LA BRÈCHE S’OUVRE`); tone(210, 420, .25, .065); tone(420, 630, .25, .06, 'triangle', .2); }
     if (event.type === 'equipment') { const equipment=equipmentForCharacter(event.level,character.id);world.setEquipment(event.level);$('equipment-unlock-title').textContent=`${equipment.name} · NIV. ${event.level}`;$('equipment-unlock-detail').textContent=equipment.addition;equipmentUntil=clock+4;$('equipment-unlock').hidden=false; }

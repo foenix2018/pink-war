@@ -2,6 +2,7 @@
 
 Jeu de survie 3D en HTML et JavaScript, conçu pour iPhone, ordinateur et casque WebXR. LYLU ou GHJU défend une arène fermée de 200 × 200 mètres, puis ferme la brèche après dix niveaux.
 
+- Version 3.2 : chaque tir possède maintenant sa propre signature sonore synthétisée : impulsion laser pour R–9, rafale électronique pour BLOOM, décharge en éventail pour PETAL, claquement de rail chargé pour THORN et explosion d’énergie profonde pour NOVA. Les sons sont activés par défaut ; le bouton Son permet de les couper ou réactiver, et la puissance sonore de THORN et NOVA suit leur niveau de charge.
 - Version 3.1 : les ennemis alternent entre quatre châssis de robot extraterrestre : traqueur à casque multi-capteurs, scuttler arachnéen à six pattes, spectre élancé à antennes et brute aux cornes et épaules blindées. Les élites renforcent le châssis lourd ; les unités à distance portent un canon intégré. Les formes basses ont une silhouette et une hauteur de visée propres.
 - Version 3.0 : une passerelle métallique traverse le flanc droit de l’arène. Deux escaliers donnent accès au tablier, avec garde-corps et marches visibles. Le déplacement en suit la pente et relève le personnage, la caméra et le casque en FPS, en troisième personne et en VR ; les ennemis peuvent aussi monter et les tirs tiennent compte de la hauteur.
 
@@ -20,7 +21,7 @@ Jeu de survie 3D en HTML et JavaScript, conçu pour iPhone, ordinateur et casque
 - Commandes ordinateur : ZQSD/WASD, flèches ou glisser pour viser, Espace pour tirer, R pour recharger, E pour changer d’arme, V pour la vue, Échap pour la pause, Maj pour courir. Trois contacts tactiles peuvent agir simultanément.
 - VR casque : mode WebXR immersif prévu pour Meta Quest 3 et les manettes Touch Plus. La manette de tir se tient comme un pistolet : le canon suit la main, la gâchette tire, un laser et l’affichage des munitions sur l’arme aident à viser. Les deux manettes servent au combat ; la main de tir, la rotation, la direction du déplacement, le laser et les vibrations se règlent avant d’entrer en VR. Les commandes détaillées sont ci-dessous. Un HUD discret, en bas du regard, affiche uniquement la santé et les munitions restantes ; les recharges, pauses et fins de partie sont accessibles avec les manettes.
 - VR téléphone : deux caméras espacées de 64 mm, une image pour chaque œil. Utiliser un support VR en paysage. L’orientation utilise les capteurs après autorisation iOS ; sans capteurs, le joystick droit reste disponible. Une manette Bluetooth standard peut fournir déplacement, regard, tir, recharge et pause. Il ne s’agit pas d’une session immersive WebXR sous Safari iPhone.
-- Réglages, sons synthétisés et record conservés sur l’appareil. Aucun compte ou serveur de jeu.
+- Réglages, sons synthétisés distincts par arme et record conservés sur l’appareil. Aucun compte ou serveur de jeu.
 
 ## Meta Quest 3 — commandes
 
