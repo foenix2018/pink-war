@@ -1,38 +1,33 @@
 import * as T from './vendor/three.webgpu.min.js';
-import { Assembly, matrix, profile } from './geo.js';
+import { Assembly, matrix, profile, loft, armorPanel } from './geo.js';
+import { addClosedHelmet } from './helmet.js';
 import { createGlove, GRIP } from './hands.js';
 import { WEAPON_FRAME } from './weapons.js';
 
-export function createCharacterKit(emblem) {
+export function createCharacterKit(emblem, surfaces = {}) {
   const geometries = { sphere: new T.SphereGeometry(1, 20, 14), tube: new T.CylinderGeometry(1, 1, 1, 16),
     ring: new T.TorusGeometry(1, .06, 8, 36), halo: new T.TorusGeometry(.32, .008, 6, 52),
-    torso: new T.LatheGeometry([[.22,1.04],[.215,1.15],[.225,1.29],[.285,1.46],[.29,1.55],[.22,1.63],[.12,1.66]].map(p=>new T.Vector2(...p)),24),
-    hair: new T.SphereGeometry(1, 24, 14, 0, Math.PI*2, 0, Math.PI*.43),
-    visor: new T.SphereGeometry(1, 24, 10, Math.PI*1.12, Math.PI*.76, Math.PI*.34, Math.PI*.34),
+    torso: loft([[1.055,.205,.135],[1.13,.197,.134],[1.25,.205,.143],[1.38,.238,.164],[1.49,.255,.171],[1.575,.237,.147],[1.625,.15,.103],[1.658,.079,.074]],24),
+    pelvis: loft([[.905,.16,.105],[.935,.229,.15],[.99,.259,.17],[1.055,.25,.156],[1.10,.208,.134]],24),
+    chest: armorPanel([[-.13,-.145],[.13,-.145],[.205,-.055],[.224,.092],[.15,.143],[.068,.12],[-.068,.12],[-.15,.143],[-.224,.092],[-.205,-.055]],.036,.025),
+    thigh: armorPanel([[-.065,-.155],[.064,-.155],[.088,-.075],[.086,.124],[.045,.158],[-.052,.151],[-.086,.11],[-.085,-.065]],.023,.019),
+    shin: armorPanel([[-.05,-.145],[.05,-.145],[.069,.10],[.051,.14],[-.051,.14],[-.069,.10]],.025,.017),
+    upperArm: armorPanel([[-.044,-.097],[.044,-.097],[.064,.047],[.034,.093],[-.034,.093],[-.064,.047]],.018,.012),
     patch: new T.PlaneGeometry(.13,.06), cone: new T.ConeGeometry(1, 1, 6) };
   geometries.ringFlat=geometries.ring.clone().rotateX(Math.PI/2);
-  geometries.maleHead=geometries.sphere.clone();
-  const face=geometries.maleHead.attributes.position;
-  for(let i=0;i<face.count;i++){
-    const y=face.getY(i),jaw=y<0?Math.sin(-y*Math.PI)*.16:0;
-    face.setXYZ(i,face.getX(i)*(1+jaw),y<-.6?-.6+(y+.6)*.72:y,face.getZ(i)*(1+jaw*.3));
-  }
-  geometries.maleHead.computeVertexNormals();
-  const physical = (color, metalness=.42, roughness=.3) => new T.MeshPhysicalMaterial({ color, metalness, roughness, clearcoat:.6, clearcoatRoughness:.24 });
+  const physical = (color, metalness=.48, roughness=.43) => new T.MeshPhysicalMaterial({ color, metalness, roughness, clearcoat:.22, clearcoatRoughness:.38, roughnessMap:surfaces.coating||null,envMap:surfaces.environment||null,envMapIntensity:.42 });
   const materials = {
-    rose: physical(0xda6798), pearl: physical(0xffd6e7,.26,.24), dark: physical(0x202438,.3,.38),
-    gold: physical(0xdcc392,.68,.25), steel: physical(0x6c607d,.66,.3),
-    suit: new T.MeshStandardMaterial({color:0x2d233b,roughness:.92,metalness:.05}),
-    skin: new T.MeshStandardMaterial({color:0xe5adab,roughness:.6,metalness:0}),
-    hair: new T.MeshStandardMaterial({color:0x8f3e70,roughness:.58,metalness:.12}),
-    visor: physical(0x25132e,.6,.14), glow:new T.MeshBasicMaterial({color:0xff88c2,toneMapped:false}),
+    rose: physical(0xda6798), pearl: physical(0xffd6e7,.32,.46), dark: physical(0x202438,.22,.56),
+    gold: physical(0xdcc392,.78,.34), steel: physical(0x6c607d,.72,.42),
+    suit: new T.MeshStandardMaterial({color:0x2d233b,roughness:.96,metalness:0,bumpMap:surfaces.fabric||null,bumpScale:.0014}),
+    visor: new T.MeshPhysicalMaterial({color:0x110f1a,metalness:.72,roughness:.18,clearcoat:.65,clearcoatRoughness:.13,opacity:1,transparent:false,envMap:surfaces.environment||null,envMapIntensity:.42}), glow:new T.MeshBasicMaterial({color:0xff88c2,toneMapped:false}),
     pale:new T.MeshBasicMaterial({color:0xffe7f4,toneMapped:false}),
     cyan:new T.MeshBasicMaterial({color:0x9ce7de,toneMapped:false}),
     emblem: new T.MeshBasicMaterial({map:emblem,transparent:true,depthWrite:false,toneMapped:false})
   };
   // Materials of the gloved hands: fabric, knuckle plates, trim, light strips, scanner and metal.
-  const gloves = { fabric: materials.dark, plate: materials.rose, trim: materials.pearl, glow: materials.glow, accent: materials.cyan, metal: materials.gold };
-  return { geometries, materials, gloves, setPalette(colors){for(const [name,color] of Object.entries(colors))materials[name].color.setHex(color);} };
+  const gloves = { fabric: materials.suit, plate: materials.rose, trim: materials.pearl, glow: materials.glow, accent: materials.cyan, metal: materials.gold };
+  return { geometries, materials, gloves, setPalette(colors){for(const [name,color] of Object.entries(colors))materials[name]?.color.setHex(color);} };
 }
 
 // Where each weapon is carried (palm position, body space) and where the idle hand rests with a one-handed weapon.
@@ -43,9 +38,9 @@ const UPPER = .31, FORE = .35, CARRY = 1.2;
 // The suit is a few hundred rounded pieces, merged per bone and material. Pieces carry the armour level that
 // unlocks them; changing level re-merges the few meshes of each bone instead of drawing hundreds of instances.
 export function createSoldier(kit, createGun, profileInfo) {
-  const masculine=!!profileInfo?.masculine, side=masculine?.355:.31, width=masculine?1.08:1;
+  const masculine=!!profileInfo?.masculine, side=masculine?.30:.275, width=masculine?1.07:1;
   const root=new T.Group(),body=new T.Group(),head=new T.Group(),hair=new T.Group();root.name=profileInfo?.name||'GHJU';root.add(body);body.add(head);
-  head.position.y=1.84;hair.position.set(0,.12,.13);head.add(hair);
+  head.name='ClosedHelmet';head.position.y=masculine?1.785:1.765;
   const {geometries:g,materials:m}=kit, assemblies=[];
   const builder=bone=>{
     const asm=new Assembly();assemblies.push({asm,bone});
@@ -64,37 +59,38 @@ export function createSoldier(kit, createGun, profileInfo) {
   // ----------------------------------------------------------------- torso
   {
     const {part,sphere,plate,link,add,ell}=builder(body);
-    part(g.torso,m.suit,[0,0,0],[width,1,.66]);
-    sphere(m.suit,[0,.985,0],[masculine?.27:.29,.16,.19]);
+    part(g.torso,m.suit,[0,0,0],[width,1,1]);
+    part(g.pelvis,m.suit,[0,0,0],[masculine?.97:1.035,1,1]);
     // Back panel with a spine ridge and harness bars, front chest shells, pearl shoulder yoke and dark straps.
-    plate(m.rose,[0,1.46,.06],[.49,.34,.22],1,[-.06,0,0]);
+    plate(m.dark,[0,1.46,.15],[.39,.32,.095],1,[-.06,0,0]);
+    part(g.chest,m.rose,[0,1.47,-.166],[width,1,1]);
+    plate(m.steel,[0,1.475,-.216],[.024,.21,.012]);
+    plate(m.glow,[0,1.56,-.218],[.009,.04,.006]);
     link(m.steel,[0,1.64,.178],[0,1.14,.2],.014,.018);
     for(let i=0;i<4;i++)plate(m.dark,[0,1.56-i*.1,.175+i*.004],[.26,.03,.03],1);
     for(const s of [-1,1]){
-      ell(m.rose,[s*.14,1.47,-.125],[.135,.14,.095],[-.14,0,s*-.08]);
-      ell(m.pearl,[s*.14,1.48,-.18],[.1,.095,.04],[-.14,0,s*-.08]);
-      ell(m.pearl,[s*.205,1.585,-.05],[.105,.05,.13],[0,0,s*-.15]);
-      link(m.dark,[s*.2,1.61,.07],[s*.12,1.16,-.15],.025);
-      plate(m.steel,[s*.195,1.25,.02],[.065,.22,.21],1,[0,0,s*.12]);
-      ell(m.rose,[s*.12,1.2,-.125],[.1,.04,.065],[-.1,0,s*-.05]);
+      plate(m.pearl,[s*.135,1.568,-.177],[.16,.025,.045],1,[0,0,s*-.12]);
+      link(m.dark,[s*.2,1.61,.04],[s*.13,1.16,-.125],.017);
+      plate(m.steel,[s*.211,1.265,.018],[.037,.17,.15],1,[0,0,s*.1]);
+      plate(m.rose,[s*.11,1.24,-.132],[.12,.058,.034],1,[-.1,0,s*-.05]);
+      for(let i=0;i<3;i++)plate(m.dark,[s*.192,1.20+i*.05,.076],[.04,.01,.11],1,[0,0,s*.1]);
     }
     // Abdomen bands, belt and buckle.
-    for(const y of [1.17,1.12])plate(m.dark,[0,y,-.12],[.34,.035,.12],1);
-    plate(m.dark,[0,1.07,0],[.52,.07,.38]);plate(m.pearl,[0,1.07,-.205],[.105,.07,.04]);
-    plate(m.glow,[0,1.07,-.23],[.065,.025,.012]);
+    for(const y of [1.205,1.155])plate(m.dark,[0,y,-.132],[.29,.043,.043],1,[-.05,0,0]);
+    plate(m.dark,[0,1.07,0],[.47,.062,.33]);plate(m.pearl,[0,1.07,-.178],[.082,.055,.025]);
+    plate(m.glow,[0,1.07,-.194],[.037,.013,.005]);
     // Neck and collar.
-    link(m.skin,[0,1.64,0],[0,1.74,0],.075,.062);
-    sphere(m.suit,[0,1.69,0],[.095,.12,.085]);
-    part(g.ring,m.pearl,[0,1.635,0],[.13,.13,.13],1,[PI/2,0,0]);
-    // Level 2: sculpted chest plate with a recessed energy core and back brace.
+    link(m.suit,[0,1.63,0],[0,1.72,0],.072,.066);
+    part(g.ring,m.dark,[0,1.644,0],[.087,.087,.087],1,[PI/2,0,0]);
+    // Level 2: one curved composite plastron, with a recessed core and back brace.
+    part(g.chest,m.pearl,[0,1.49,-.19],[width*.94,.81,.58],2);
     for(const s of [-1,1]){
-      ell(m.pearl,[s*.125,1.5,-.175],[.15,.15,.085],[-.14,0,s*-.1],2);
-      plate(m.steel,[s*.18,1.35,-.185],[.12,.11,.075],2,[0,0,s*.35]);
+      plate(m.steel,[s*.15,1.34,-.182],[.11,.067,.035],2,[0,0,s*.15]);
       plate(m.rose,[s*.1,1.44,.20],[.13,.33,.075],2);
-      plate(m.dark,[s*.07,1.52,-.255],[.022,.15,.012],2,[0,0,s*.08]);
+      plate(m.dark,[s*.07,1.52,-.216],[.012,.106,.008],2,[0,0,s*.08]);
     }
-    plate(m.dark,[0,1.50,-.255],[.075,.12,.035],2);plate(m.glow,[0,1.50,-.276],[.025,.08,.01],2);
-    part(g.ring,m.glow,[0,1.50,-.272],[.075,.075,.075],2,[0,0,0]);
+    plate(m.dark,[0,1.50,-.222],[.051,.066,.012],2);plate(m.glow,[0,1.50,-.231],[.015,.035,.005],2);
+    part(g.ring,m.glow,[0,1.50,-.232],[.032,.032,.032],2,[0,0,0]);
     // Level 3: insignia, radio and antenna.
     part(g.patch,m.emblem,[.12,1.555,-.247],[1,1,1],3,[0,PI,0]);
     plate(m.dark,[-.26,1.49,.13],[.1,.18,.09],3);link(m.steel,[-.27,1.57,.13],[-.27,1.83,.13],.008,.005,3);
@@ -131,58 +127,21 @@ export function createSoldier(kit, createGun, profileInfo) {
       sphere(m.pale,[s*.48,1.94,.33],[.022,.029,.023],9);
     }
   }
-  // ----------------------------------------------------------------- head
-  const eyes=builder(head);
+  // ----------------------------------------------------------------- sealed helmet
   {
-    const {part,sphere,plate}=eyes;
-    part(masculine?g.maleHead:g.sphere,m.skin,[0,0,0],[masculine?.185:.18,.23,.175]);
-    sphere(m.skin,[0,-.05,-.168],[.022,.041,.037]);
-    plate(masculine?m.dark:m.rose,[0,-.106,masculine?-.169:-.157],[.064,.009,.015]);
-    for(const s of [-1,1]){
-      sphere(m.dark,[s*.061,.011,-.164],[.034,.017,.013]);sphere(m.pale,[s*.056,.014,-.176],[.008,.008,.004]);
-      plate(m.hair,[s*.06,.056,-.163],[.075,.013,.018],1,[0,0,s*.12]);
-      sphere(m.skin,[s*.171,-.002,.001],[.025,.048,.03]);
-      plate(m.dark,[s*.191,.018,.004],[.052,.105,.09]);
-      plate(m.glow,[s*.22,.024,-.02],[.012,.048,.028]);
-    }
-    if(masculine){
-      part(g.hair,m.hair,[0,.034,.014],[.19,.225,.188]);
-      plate(m.hair,[0,.18,-.07],[.25,.06,.18],1,[.1,0,0]);
-    }else{
-      sphere(m.hair,[0,-.02,.09],[.17,.185,.09]);
-      part(g.hair,m.hair,[0,.017,.012],[.187,.233,.188]);
-      plate(m.hair,[.10,.14,-.13],[.17,.075,.09],1,[.1,0,-.32]);
-    }
-    // Level 6: a curved panoramic visor sits outside the facial features, with a shell, cheek filters and chin guard.
-    part(g.hair,m.pearl,[0,.035,.01],[.202,.245,.202],6);
-    part(g.visor,m.visor,[0,.007,-.033],[.202,.235,.20],6);
-    plate(m.glow,[0,.056,-.232],[.24,.014,.012],6);
-    plate(m.steel,[0,.2,-.02],[.04,.02,.2],6,[.05,0,0]);
-    for(const s of [-1,1]){
-      plate(m.pearl,[s*.18,-.03,.02],[.07,.16,.17],6,[0,0,s*-.08]);
-      plate(m.rose,[s*.08,-.135,-.13],[.12,.08,.08],6,[0,s*.2,0]);
-      plate(m.pale,[s*.1,-.136,-.182],[.04,.015,.012],6);
-      plate(m.steel,[s*.2,.05,.02],[.012,.06,.1],6);
-    }
-    // Level 10: command crown and orbiting halo, wide enough to read from a distance.
+    const asm=new Assembly();assemblies.push({asm,bone:head});
+    addClosedHelmet(asm,{armor:m.rose,trim:m.pearl,visor:m.visor,fabric:m.suit,glow:m.glow,metal:m.steel},{scale:masculine?.86:.84});
+    const {plate,sphere}=builder(head);
+    // Command crest follows the shell rather than extending it into a large crown.
     for(const s of [-1,0,1]){
-      plate(m.gold,[s*.082,.205,-.15],[.06,.12-Math.abs(s)*.025,.045],10,[0,0,s*-.15]);
-      sphere(m.pale,[s*.082,.255-Math.abs(s)*.015,-.178],[.017,.025,.012],10);
+      plate(m.gold,[s*.055,.157,-.095],[.035,.035-Math.abs(s)*.005,.025],10,[0,0,s*-.13]);
+      sphere(m.pale,[s*.055,.17,-.109],[.006,.008,.004],10);
     }
-    plate(m.gold,[0,.17,-.14],[.2,.026,.05],10);
   }
-  const orbit=new T.Group();orbit.position.set(0,.30,.025);head.add(orbit);
+  const orbit=new T.Group();orbit.position.set(0,.236,.025);head.add(orbit);
   {
     const {part}=builder(orbit);
-    part(g.halo,m.glow,[0,0,0],[1,1,1],10,[PI/2-.14,0,0]);
-  }
-  if(!masculine){
-    const {sphere,part}=builder(hair);
-    // Overlapping soft volumes give the ponytail a continuous curved silhouette.
-    sphere(m.pearl,[0,0,.06],[.045,.045,.06]);
-    part(g.sphere,m.hair,[.013,-.09,.12],[.072,.15,.075],1,[-.38,0,0]);
-    part(g.sphere,m.hair,[.018,-.25,.16],[.06,.13,.059],1,[.1,0,0]);
-    sphere(m.hair,[.01,-.34,.15],[.045,.065,.043]);
+    part(g.halo,m.glow,[0,0,0],[.68,.68,.68],10,[PI/2-.14,0,0]);
   }
   // ----------------------------------------------------------------- legs
   const legs=[],knees=[];
@@ -191,10 +150,10 @@ export function createSoldier(kit, createGun, profileInfo) {
     const shin=new T.Group();shin.position.set(0,-.425,0);leg.add(shin);knees.push(shin);
     {
       const {plate,sphere,link,part,ell}=builder(leg);
-      link(m.suit,[0,-.025,0],[0,-.405,0],.128,.098);
-      ell(m.rose,[s*.025,-.185,-.025],[.13,.195,.105]);
-      plate(m.pearl,[s*.043,-.17,-.15],[.13,.26,.065],1,[.05,0,s*-.12]);
-      plate(m.dark,[0,-.31,-.1],[.17,.04,.03],1);
+      part(loft([[-.405,.078,.076],[-.33,.093,.091],[-.21,.117,.11],[-.07,.121,.119],[-.025,.095,.086]],18),m.suit,[0,0,0],[1,1,1]);
+      part(g.thigh,m.rose,[s*.01,-.19,-.132],[1,1,1],1,[.08,0,s*-.05]);
+      plate(m.pearl,[s*.015,-.095,-.159],[.104,.018,.013],1,[.08,0,s*-.05]);
+      plate(m.dark,[0,-.31,-.083],[.147,.026,.026],1);
       // Level 5: thigh strap and plates.
       part(g.ring,m.dark,[0,-.12,0],[.135,.135,.135],5,[PI/2,0,0]);plate(m.pearl,[s*.14,-.15,0],[.08,.16,.16],5);
       // Level 8: separate hip guards follow each moving leg.
@@ -203,16 +162,21 @@ export function createSoldier(kit, createGun, profileInfo) {
     }
     {
       const {plate,sphere,link,part,ell}=builder(shin);
-      sphere(m.dark,[0,0,0],[.118,.11,.115]);link(m.suit,[0,-.03,0],[0,-.37,0],.095,.07);
-      plate(m.rose,[0,-.21,-.045],[.14,.30,.14]);plate(m.pearl,[0,-.18,-.118],[.075,.23,.04]);
+      sphere(m.suit,[0,0,0],[.089,.079,.084]);
+      part(loft([[-.375,.057,.057,.01],[-.31,.064,.068,.016],[-.19,.081,.084,.022],[-.07,.082,.075],[0,.073,.067]],18),m.suit,[0,0,0],[1,1,1]);
+      part(g.shin,m.rose,[0,-.208,-.078],[1,1,1]);
+      ell(m.pearl,[0,.006,-.074],[.078,.063,.028]);
+      plate(m.pearl,[0,-.16,-.098],[.052,.11,.013]);
       // Boot: ankle cuff, shaped upper, toe cap, heel block and a thick sole with light strips.
-      part(g.ring,m.rose,[0,-.36,-.01],[.105,.105,.105],1,[PI/2,0,0]);
-      ell(m.dark,[0,-.44,-.04],[.112,.08,.17]);ell(m.rose,[0,-.447,-.17],[.1,.07,.1]);
-      plate(m.steel,[0,-.492,-.06],[.235,.04,.37]);ell(m.dark,[0,-.455,.075],[.09,.07,.06]);
-      plate(m.glow,[0,-.365,.095],[.06,.045,.015]);plate(m.glow,[0,-.49,-.248],[.12,.012,.012]);
+      part(g.ring,m.dark,[0,-.36,-.01],[.075,.075,.075],1,[PI/2,0,0]);
+      ell(m.dark,[0,-.435,-.041],[.087,.075,.14]);
+      plate(m.rose,[0,-.448,-.131],[.162,.065,.145],1,[.10,0,0]);
+      plate(m.dark,[0,-.492,-.059],[.194,.031,.307]);ell(m.dark,[0,-.455,.064],[.073,.064,.055]);
+      for(const x of [-.065,.065])plate(m.steel,[x,-.478,-.053],[.023,.013,.273]);
+      plate(m.glow,[0,-.365,.076],[.037,.015,.008]);
       // Level 5: pronounced shin shells, articulated knee caps and straps.
-      plate(m.pearl,[0,-.20,-.115],[.20,.34,.08],5,[.04,0,0]);ell(m.rose,[0,.015,-.12],[.105,.075,.065],[0,0,0],5);
-      plate(m.glow,[0,-.20,-.16],[.024,.20,.012],5);
+      part(g.shin,m.pearl,[0,-.208,-.098],[1.07,1.06,.72],5,[.04,0,0]);ell(m.rose,[0,.015,-.097],[.086,.067,.034],[0,0,0],5);
+      plate(m.glow,[0,-.20,-.123],[.009,.17,.005],5);
     }
   }
   // ----------------------------------------------------------------- arms (two bones solved to the weapon)
@@ -223,34 +187,38 @@ export function createSoldier(kit, createGun, profileInfo) {
     {
       // The shoulder cap and pauldrons stay with the torso; only the arm below them turns.
       const {plate,part,ell,dome}=builder(shoulder);
-      ell(m.rose,[s*.012,-.02,0],[masculine?.15:.13,.115,.15]);
+      ell(m.suit,[s*.002,-.02,0],[.091,.102,.10]);
+      dome(m.rose,[s*.014,.01,0],[masculine?.128:.115,.085,.127],[0,0,s*-.16]);
+      plate(m.pearl,[s*.055,.017,-.10],[.091,.027,.035],1,[0,0,s*-.15]);
       // Level 3: layered curved pauldrons, not a single sphere.
-      dome(m.steel,[s*.025,.01,0],[.2,.12,.2],[0,0,s*-.2],3);
-      dome(m.pearl,[s*.035,.05,-.01],[.17,.1,.17],[0,0,s*-.2],3);
-      part(g.ringFlat,m.rose,[s*.03,.012,0],[.2,.2,.2],3,[0,0,s*-.2]);
-      ell(m.rose,[s*.105,-.02,.01],[.07,.095,.15],[0,0,s*-.24],3);
-      plate(m.glow,[s*.045,.125,-.165],[.14,.018,.012],3);
+      dome(m.steel,[s*.02,.02,0],[.155,.097,.155],[0,0,s*-.2],3);
+      dome(m.pearl,[s*.027,.042,-.01],[.144,.089,.144],[0,0,s*-.2],3);
+      part(g.ringFlat,m.rose,[s*.027,.017,0],[.155,.155,.155],3,[0,0,s*-.2]);
+      ell(m.rose,[s*.089,-.016,.01],[.04,.073,.122],[0,0,s*-.24],3);
+      plate(m.glow,[s*.041,.1,-.133],[.07,.007,.005],3);
       // Level 8: gold pauldron rim.
-      part(g.ringFlat,m.gold,[s*.036,.05,-.005],[.17,.17,.17],8,[0,0,s*-.2]);
+      part(g.ringFlat,m.gold,[s*.027,.042,-.005],[.144,.144,.144],8,[0,0,s*-.2]);
     }
     {
-      const {plate,sphere,link,ell}=builder(upper);
-      link(m.suit,[0,-.03,0],[0,-.31,0],.082,.07);
-      ell(m.pearl,[0,-.15,.07],[.068,.115,.055]);
-      sphere(m.dark,[0,-.31,0],[.105,.1,.105]);
-      ell(m.rose,[0,-.31,-.088],[.07,.065,.05]);
+      const {plate,sphere,link,ell,part}=builder(upper);
+      part(loft([[-.31,.056,.06],[-.26,.066,.071],[-.16,.079,.075],[-.07,.082,.076],[-.025,.072,.07]],18),m.suit,[0,0,0],[1,1,1]);
+      part(g.upperArm,m.rose,[0,-.14,.084],[1,1,1],1,[0,PI,0]);
+      plate(m.pearl,[0,-.13,.103],[.051,.051,.012]);
+      sphere(m.suit,[0,-.31,0],[.073,.069,.074]);
+      ell(m.rose,[0,-.31,-.06],[.061,.052,.024]);
     }
     {
       const {plate,sphere,link,part,ell}=builder(fore);
-      link(m.rose,[0,0,0],[0,-.35,0],.085,.062);
-      sphere(m.dark,[0,-.35,0],[.075,.085,.075]);
+      part(loft([[-.35,.043,.047],[-.28,.052,.052],[-.14,.068,.063],[-.04,.064,.057],[0,.056,.053]],18),m.suit,[0,0,0],[1,1,1]);
+      plate(m.rose,[0,-.18,.054],[.087,.20,.035],1,[.065,0,0]);
+      sphere(m.dark,[0,-.35,0],[.05,.046,.05]);
       // Level 4: armoured gauntlet, wrist scanner and hologram (kept small enough not to hide the weapon).
-      link(m.pearl,[0,-.07,0],[0,-.3,0],.11,.088,4);
-      part(g.ring,m.rose,[0,-.075,0],[.115,.115,.115],4,[PI/2,0,0]);part(g.ring,m.rose,[0,-.295,0],[.092,.092,.092],4,[PI/2,0,0]);
-      plate(m.dark,[0,-.2,.085],[.17,.16,.045],4);
-      plate(m.cyan,[0,-.2,.108],[.10,.075,.015],4);
-      part(g.ring,m.gold,[0,-.19,0],[.103,.103,.103],8,[PI/2,0,0]);
-      if(s===-1)plate(m.cyan,[0,-.3,.1],[.10,.045,.07],4,[-.2,0,0]);
+      link(m.pearl,[0,-.07,0],[0,-.3,0],.08,.06,4);
+      part(g.ring,m.rose,[0,-.075,0],[.083,.083,.083],4,[PI/2,0,0]);part(g.ring,m.rose,[0,-.295,0],[.065,.065,.065],4,[PI/2,0,0]);
+      plate(m.dark,[0,-.2,.064],[.103,.12,.025],4);
+      plate(m.cyan,[0,-.2,.08],[.065,.039,.007],4);
+      part(g.ring,m.gold,[0,-.19,0],[.072,.072,.072],8,[PI/2,0,0]);
+      if(s===-1)plate(m.cyan,[0,-.3,.066],[.053,.025,.032],4,[-.2,0,0]);
       part(g.patch,m.emblem,[0,-.12,.12],[.65,.65,.65],10,[0,0,0]);
     }
     arms.push({s,shoulder,upper,fore,elbow:new T.Vector3(),wrist:new T.Vector3()});
@@ -317,6 +285,6 @@ export function createSoldier(kit, createGun, profileInfo) {
   const state={level:0};
   for(const {asm,bone} of assemblies)asm.mount(bone);
   soldierApi.setLevel(1);soldierApi.setWeapon(0);
-  if(masculine)body.scale.set(1.07,1,1.04);
+  if(masculine)body.scale.set(1.02,1,1.03);
   return soldierApi;
 }

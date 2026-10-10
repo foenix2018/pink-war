@@ -1,12 +1,12 @@
 import { characterForId } from './characters.js';
 // Every stage adds real geometry to the previous suit. No stat or health changes.
 export const EQUIPMENT = Object.freeze([
-  { level: 1, id: 'aube', name: 'Aube', addition: 'Tenue tactique nacrée', description: 'Combinaison ajustée, bottes articulées et harnais rose satiné.' },
+  { level: 1, id: 'aube', name: 'Aube', addition: 'Tenue & casque fermé', description: 'Combinaison tissée, armure rose satinée et casque intégral à visière opaque.' },
   { level: 2, id: 'sentinelle', name: 'Sentinelle', addition: 'Plastron composite', description: 'Plaques de poitrine sculptées et renforts dorsaux.' },
   { level: 3, id: 'vigie', name: 'Vigie', addition: 'Épaulières & radio', description: 'Épaulières nacrées, antenne de communication et insigne ROSE–07.' },
   { level: 4, id: 'eclaireuse', name: 'Éclaireuse', addition: 'Gantelets & scanner', description: 'Avant-bras blindés et scanner holographique au poignet.' },
   { level: 5, id: 'rempart', name: 'Rempart', addition: 'Jambières & ceinture', description: 'Genouillères, protège-tibias et poches à cellules laser.' },
-  { level: 6, id: 'spectre', name: 'Spectre', addition: 'Casque & visière', description: 'Casque enveloppant, visière panoramique et filtres lumineux.' },
+  { level: 6, id: 'spectre', name: 'Spectre', addition: 'Casque renforcé & capteurs', description: 'Renforts de tempes, filtres blindés et capteurs sur le casque intégral.' },
   { level: 7, id: 'valkyrie', name: 'Valkyrie', addition: 'Réacteur dorsal', description: 'Module énergétique dorsal avec deux cellules pulsantes.' },
   { level: 8, id: 'aurora', name: 'Aurora', addition: 'Hanches & finition champagne', description: 'Plaques de hanche articulées et bordures métalliques champagne.' },
   { level: 9, id: 'seraphine', name: 'Séraphine', addition: 'Ailes tactiques & balises', description: 'Ailettes dorsales repliées, balises et lignes de lumière rose.' },

@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from '../dist/vendor/three.webgpu.min.js';
-import { bevelBox, Assembly, profile, limb } from '../dist/geo.js';
+import { bevelBox, Assembly, profile, limb, loft } from '../dist/geo.js';
+import { createEnemyFactory } from '../dist/enemies.js';
 import { WEAPON_FRAME, createWeaponModels, buildGun } from '../dist/weapons.js';
 import { createGlove, GRIP } from '../dist/hands.js';
 import { createCharacterKit, createSoldier } from '../dist/soldier.js';
@@ -118,4 +119,49 @@ test('the soldier gains armour with each level and keeps a small number of meshe
   let previous = 0;
   for (let level = 1; level <= 10; level++) { soldier.setLevel(level); assert.equal(soldier.equipmentLevel, level); assert.ok(soldier.visibleParts > previous, `level ${level} adds parts`); previous = soldier.visibleParts; assert.ok(soldier.batchCount < 110); }
   soldier.setLevel(99); assert.equal(soldier.equipmentLevel, 10); soldier.setLevel(0); assert.equal(soldier.equipmentLevel, 1);
+});
+
+test('an anatomical loft is sealed from all directions, with outward-facing end caps', () => {
+  const g=loft([[-.2,.08,.09],[0,.17,.16],[.2,.07,.08]],20);
+  const mesh=new T.Mesh(g,solid(1));mesh.updateMatrixWorld(true);
+  assert.ok(finite(g));
+  for(const direction of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]) {
+    const origin=new T.Vector3(...direction);
+    assert.ok(new T.Raycaster(origin,origin.clone().negate().normalize()).intersectObject(mesh).length,`closed at ${direction}`);
+  }
+});
+
+test('both soldiers keep an opaque, fully enclosing helmet at every armour level', () => {
+  for(const character of CHARACTERS) {
+    const k=kit(),soldier=createSoldier(k,o=>buildGun({mats:mats(),gloves:k.gloves,sleeve:false,makeFlash:flash}),character);
+    assert.equal(k.materials.skin,undefined,'no face geometry or skin material is generated');
+    assert.equal(k.materials.hair,undefined,'hair cannot protrude through the shell');
+    for(let level=1;level<=10;level++) {
+      soldier.setLevel(level);soldier.root.updateMatrixWorld(true);
+      const center=soldier.head.localToWorld(new T.Vector3());
+      for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++) {
+        if(!x&&!y&&!z)continue;
+        const origin=soldier.head.localToWorld(new T.Vector3(x,y,z));
+        const hits=new T.Raycaster(origin,center.clone().sub(origin).normalize()).intersectObject(soldier.head,true);
+        assert.ok(hits.length,`${character.id}/${level}: helmet is closed from ${x},${y},${z}`);
+        assert.ok(hits.every(hit=>!hit.object.material.transparent&&hit.object.material.opacity===1),'visor and shell are fully opaque');
+      }
+    }
+  }
+});
+
+test('all hostile variants share detailed geometry and animate their complete legs without extra draw calls', () => {
+  const material={monster:solid(1),monsterElite:solid(2),monsterFace:solid(3),rose:neon(4),violet:neon(5),cyan:neon(6)},factory=createEnemyFactory(material);
+  for(const elite of [false,true])for(const ranged of [false,true]) {
+    const a=factory.create(elite,ranged),b=factory.create(elite,ranged);
+    assert.equal(a.children.length,6,'six meshes per enemy, as before the graphical update');
+    let triangles=0;
+    a.children.forEach((mesh,i)=>{assert.equal(mesh.geometry,b.children[i].geometry,'geometry is shared within an enemy type');assert.ok(finite(mesh.geometry));triangles+=mesh.geometry.attributes.position.count/3;});
+    assert.ok(triangles<9500,'detail stays within the mobile geometry budget');
+    const before=box(a);assert.ok(before.min.y>=0&&before.max.y<2.8,'boots stay on the ground');
+    a.userData.animate(.2,.4,true);a.updateMatrixWorld(true);
+    assert.ok(a.userData['leg-1'].rotation.x!==0);
+    assert.ok(a.userData['leg-1'].rotation.x===-a.userData.leg1.rotation.x);
+    a.userData.animate(0,0,false);assert.ok(a.userData.leg1.rotation.x===0);
+  }
 });

@@ -5,6 +5,8 @@ import { createCharacterKit, createSoldier as buildSoldier } from './soldier.js'
 import { buildGun } from './weapons.js';
 import { createGlove } from './hands.js';
 import { CHARACTERS, characterForId } from './characters.js';
+import { createSurfaceDetails } from './surfaces.js';
+import { createEnemyFactory } from './enemies.js';
 
 const v = (x, y, z) => new T.Vector3(x, y, z);
 const material = (color, roughness = .6, metalness = .25) => new T.MeshStandardMaterial({ color, roughness, metalness });
@@ -37,6 +39,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   configure(renderer);
   if (renderer.init) await renderer.init();
   const scene = new T.Scene(); scene.background = new T.Color(0x302439); scene.fog = new T.FogExp2(0x423042, .008);
+  const surfaces=createSurfaceDetails();
   const camera = new T.PerspectiveCamera(62, 1, .08, 650); camera.rotation.order = 'YXZ'; scene.add(camera);
   const mats = {
     ground: material(0x292731, .84, .25), tile: material(0x33303d, .73, .2), structure: material(0x393442, .8, .18),
@@ -44,8 +47,14 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     armor: material(0xd96799, .32, .58), armorLight: material(0xf3b1cc, .35, .4), suit: material(0x292235, .87, .12),
     hair: material(0xf1a5cb, .9, .05), visor: material(0x251d39, .15, .85), white: material(palette.white, .5, .45),
     rose: neon(palette.rose), pale: neon(palette.pale), violet: neon(palette.violet), cyan: neon(0x9fe6da),
-    monster: material(0x43345b, .6, .4), monsterElite: material(0x63415a, .5, .55), monsterFace: material(0x211d31, .45, .6)
+    monster: material(0x43345b, .54, .5), monsterElite: material(0x63415a, .42, .65), monsterFace: material(0x211d31, .3, .66)
   };
+  for(const mat of [mats.armor,mats.armorLight,mats.monster,mats.monsterElite])mat.roughnessMap=surfaces.coating;
+  // Reflections belong to character equipment. Keeping them off the floor and buildings saves
+  // a full-screen environment lookup in each eye, while the painted metal and visors keep their finish.
+  for(const mat of [mats.dark,mats.steel,mats.armor,mats.armorLight,mats.visor,mats.monster,mats.monsterElite,mats.monsterFace]) {
+    mat.envMap=surfaces.environment;mat.envMapIntensity=.42;
+  }
   const geometries = { box: new T.BoxGeometry(1, 1, 1), sphere: new T.SphereGeometry(1, 12, 8), ico: new T.IcosahedronGeometry(1, 0),
     cylinder: new T.CylinderGeometry(1, 1, 1, 10), capsule: new T.CapsuleGeometry(.16, .45, 4, 8) };
   const glow = glowTexture();
@@ -154,7 +163,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     c.fillStyle=character.accent;c.font='32px monospace';c.fillText('— 07 —',w/2,103);
   }
   const emblem=canvasTexture(256,128,paintEmblem);
-  const characterKit = createCharacterKit(emblem);
+  const characterKit = createCharacterKit(emblem,surfaces);
   // A bare gloved right hand with its forearm, for the free controller in a headset.
   const createHand = () => createGlove(characterKit.gloves);
   const createGun = (options = {}) => buildGun({ mats, gloves: characterKit.gloves, sleeve: options.sleeve !== false, makeFlash: parent => halo(parent, [0, 0, 0], .6, palette.rose, .7) });
@@ -191,47 +200,8 @@ export async function createScene(canvas, quality, forceWebGL = false, character
 
 
   const monsters=new Map(), bulletMeshes=new Map(), particles=[];
-  const monsterArm=new T.ConeGeometry(.2,.85,5),monsterLeg=new T.ConeGeometry(.22,.8,5),monsterHorn=new T.ConeGeometry(.12,.45,5);
-  // A monster is a dozen small meshes, doubled again for the two eyes of a headset. Its static parts are
-  // baked into one mesh per material and shared by every monster of the same kind; only the legs stay apart.
-  const monsterKits=new Map();
-  function bakeParts(parts){
-    const positions=[],normals=[],uvs=[];
-    for(const part of parts){
-      const geometry=part.geometry.index?part.geometry.toNonIndexed():part.geometry.clone();
-      part.updateMatrix();geometry.applyMatrix4(part.matrix);
-      positions.push(geometry.attributes.position.array);normals.push(geometry.attributes.normal.array);uvs.push(geometry.attributes.uv.array);geometry.dispose();
-    }
-    const join=arrays=>{const out=new Float32Array(arrays.reduce((n,a)=>n+a.length,0));let at=0;for(const a of arrays){out.set(a,at);at+=a.length;}return out;};
-    const merged=new T.BufferGeometry();
-    merged.setAttribute('position',new T.BufferAttribute(join(positions),3));merged.setAttribute('normal',new T.BufferAttribute(join(normals),3));merged.setAttribute('uv',new T.BufferAttribute(join(uvs),2));
-    return merged;
-  }
-  function monsterKit(elite, ranged){
-    const key=(elite?1:0)+(ranged?2:0);let kit=monsterKits.get(key);if(kit)return kit;
-    const template=buildMonster(elite,ranged),groups=new Map();
-    for(const part of template.children){
-      if(part.userData.leg)continue;
-      const id=`${part.material.uuid}|${part.castShadow}`;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(part);
-    }
-    kit=[...groups.values()].map(parts=>({geometry:bakeParts(parts),material:parts[0].material,shadow:parts[0].castShadow}));
-    monsterKits.set(key,kit);return kit;
-  }
-  function createMonster(elite, ranged){
-    const root=new T.Group(),mat=elite?mats.monsterElite:mats.monster;root.scale.setScalar(elite?1.3:1);
-    for(const {geometry,material,shadow} of monsterKit(elite,ranged)){const part=new T.Mesh(geometry,material);part.castShadow=part.receiveShadow=shadow;root.add(part);}
-    for(const s of [-1,1]){const leg=mesh(monsterLeg,mat,root,[s*.27,.4,0]);leg.rotation.x=Math.PI;root.userData['leg'+s]=leg;}
-    return root;
-  }
-  function buildMonster(elite, ranged){
-    const root=new T.Group(), size=elite?1.3:1;root.scale.setScalar(size);const mat=elite?mats.monsterElite:mats.monster;
-    const body=mesh(geometries.ico,mat,root,[0,1.12,0],[.65,.7,.5]);
-    const head=mesh(geometries.ico,mats.monsterFace,root,[0,1.78,-.05],[.4,.36,.34]);
-    if (ranged) { mesh(geometries.sphere,mats.cyan,root,[0,1.12,-.51],[.19,.19,.12],false); box(mats.cyan,root,[0,1.82,-.37],[.45,.08,.04],false); }
-    box(mats.violet,root,[0,1.82,-.33],[.44,.065,.035],false);mesh(geometries.ico,mats.rose,root,[0,1.12,-.46],[.16,.2,.055],false);
-    for(const s of [-1,1]){const arm=mesh(monsterArm,mat,root,[s*.67,1.03,-.1]);arm.rotation.z=s*.32;const leg=mesh(monsterLeg,mat,root,[s*.27,.4,0]);leg.rotation.x=Math.PI;leg.userData.leg=true;const horn=mesh(monsterHorn,mat,root,[s*.24,2.12,.03]);horn.rotation.z=-s*.3;}
-    return root;
-  }
+  const enemyFactory=createEnemyFactory(mats);
+  const createMonster=(elite,ranged)=>enemyFactory.create(elite,ranged);
   // Sparks share two instanced meshes (rose and violet), whatever their number.
   const SPARKS=320,sparkPools=[mats.rose,mats.violet].map(material=>{
     const pool=new T.InstancedMesh(geometries.ico,material,SPARKS);pool.count=0;pool.frustumCulled=false;pool.instanceMatrix.setUsage(T.DynamicDrawUsage);scene.add(pool);return pool;
@@ -246,7 +216,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));
     soldier.root.scale.setScalar(1);soldier.root.position.set(sim.player.x,0,sim.player.z);soldier.root.rotation.y=sim.player.yaw;
     soldier.animate(time,moving);
-    const present=new Set();for(const e of sim.enemies){present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite, e.ranged);monsters.set(e.id,m);scene.add(m);}m.position.set(e.x,Math.abs(Math.sin(time*7+e.phase))*.11,e.z);m.rotation.y=Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI;const swing=Math.sin(time*8+e.phase)*.25;m.userData['leg-1'].rotation.x=Math.PI+swing;m.userData.leg1.rotation.x=Math.PI-swing;}
+    const present=new Set();for(const e of sim.enemies){present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite, e.ranged);monsters.set(e.id,m);scene.add(m);}m.position.set(e.x,Math.abs(Math.sin(time*8+e.phase))*.025,e.z);m.rotation.y=Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI;m.userData.animate(time,e.phase);}
     for(const[id,m]of monsters){if(!present.has(id)){scene.remove(m);monsters.delete(id);}}
     const active=new Set();for(const b of sim.bullets){active.add(b.id);let m=bulletMeshes.get(b.id);if(!m){m=new T.Group();mesh(geometries.sphere,b.hostile?mats.cyan:mats.pale,m,[0,0,0],[.09,.09,.22],false);mesh(geometries.sphere,b.hostile?mats.violet:mats.rose,m,[0,0,.25],[.08,.08,.38],false);m.scale.setScalar(b.weapon==='nova'?2.3:b.weapon==='thorn'?1.3:b.hostile?1.4:1);bulletMeshes.set(b.id,m);scene.add(m);}m.position.set(b.x,b.y,b.z);m.lookAt(b.x+b.vx,b.y+b.vy,b.z+b.vz);}
     for(const[id,m]of bulletMeshes){if(!active.has(id)){scene.remove(m);bulletMeshes.delete(id);}}

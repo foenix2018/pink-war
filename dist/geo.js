@@ -32,6 +32,45 @@ export function ball(center, r, detail = [12, 8]) {
   return g;
 }
 
+// Closed anatomical volume. Each ring is [height, half-width, half-depth, depth-offset].
+// Unlike a stretched sphere, the cross-section follows the chest, waist or helmet independently.
+export function loft(rings, radial = 20) {
+  const vertices = [], uv = [], indices = [];
+  for (let row = 0; row < rings.length; row++) {
+    const [y, rx, rz, z = 0] = rings[row];
+    for (let i = 0; i <= radial; i++) {
+      const a = i / radial * Math.PI * 2;
+      vertices.push(Math.sin(a) * rx, y, z - Math.cos(a) * rz);
+      uv.push(i / radial, row / (rings.length - 1));
+      if (row && i < radial) {
+        const b = row * (radial + 1) + i, a0 = b - radial - 1;
+        indices.push(a0, b, a0 + 1, a0 + 1, b, b + 1);
+      }
+    }
+  }
+  // Seal the two ends even when the last section has a non-zero radius.
+  for (const [row, reverse] of [[0, false], [rings.length - 1, true]]) {
+    const center = vertices.length / 3, [y, , , z = 0] = rings[row];
+    vertices.push(0, y, z); uv.push(.5, .5);
+    for (let i = 0; i < radial; i++) {
+      const a = row * (radial + 1) + i;
+      indices.push(center, reverse ? a + 1 : a, reverse ? a : a + 1);
+    }
+  }
+  const g = new T.BufferGeometry();
+  g.setAttribute('position', new T.Float32BufferAttribute(vertices, 3));
+  g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2));
+  g.setIndex(indices); g.computeVertexNormals();
+  // Copy the seam normals so the joined sides of each ring shade continuously.
+  const n = g.attributes.normal;
+  for (let row = 0; row < rings.length; row++) {
+    const a = row * (radial + 1), b = a + radial;
+    const average = new T.Vector3().fromBufferAttribute(n, a).add(new T.Vector3().fromBufferAttribute(n, b)).normalize();
+    n.setXYZ(a, average.x, average.y, average.z); n.setXYZ(b, average.x, average.y, average.z);
+  }
+  return g;
+}
+
 // Side profile (z forward negative, y up) extruded across the width and softly bevelled: the quickest way to a
 // believable weapon silhouette. Points are [z, y] pairs, in order around the outline.
 export function profile(points, width, bevel = .004) {
@@ -39,6 +78,26 @@ export function profile(points, width, bevel = .004) {
   const depth = Math.max(.001, width - bevel * 2);
   const g = new T.ExtrudeGeometry(shape, { depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 2, curveSegments: 8 });
   g.translate(0, 0, -depth / 2); g.rotateY(-Math.PI / 2);
+  return g;
+}
+
+// Convex hard-surface armour panel, drawn in the frontal (x/y) plane rather than as a breast-shaped sphere.
+export function armorPanel(points, depth = .028, bulge = .015) {
+  const shape = new T.Shape();
+  points.forEach(([x,y],i)=>i?shape.lineTo(x,y):shape.moveTo(x,y));shape.closePath();
+  const g = new T.ExtrudeGeometry(shape,{depth,bevelEnabled:true,bevelThickness:.005,bevelSize:.006,bevelSegments:2,curveSegments:4});
+  g.translate(0,0,-depth/2);
+  const p=g.attributes.position,n=g.attributes.normal,rx=Math.max(...points.map(p=>Math.abs(p[0]))),ry=Math.max(...points.map(p=>Math.abs(p[1])));
+  for(let i=0;i<p.count;i++) {
+    const convex=Math.max(0,1-(p.getX(i)/rx)**2)*Math.max(0,1-(p.getY(i)/ry)**2);
+    p.setZ(i,p.getZ(i)-bulge*convex);
+    if(Math.abs(n.getZ(i))>.9) {
+      const direction=Math.sign(n.getZ(i)),x=p.getX(i),y=p.getY(i);
+      const dx=2*bulge*x/(rx*rx)*Math.max(0,1-(y/ry)**2),dy=2*bulge*y/(ry*ry)*Math.max(0,1-(x/rx)**2);
+      const normal=new T.Vector3(-direction*dx,-direction*dy,direction).normalize();
+      n.setXYZ(i,normal.x,normal.y,normal.z);
+    }
+  }
   return g;
 }
 

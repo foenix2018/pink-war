@@ -1,4 +1,26 @@
-# Vérification — Pink war v2.6
+# Vérification — Pink war v2.7
+
+## Personnages, armures et casques fermés — 10 octobre 2026
+
+La version 2.6 (`b3e81e1`) est le point de départ. Les modèles de LYLU et GHJU ont des proportions plus naturelles : tête moins grande, torse et hanches profilés, plastron continu, épaules affinées, plaques de cuisse et de tibia sculptées, bottes moins massives. Le casque est intégral dès le niveau 1, avec coque fermée, mentonnière et visière opaque. Les géométries de visage et de cheveux ainsi que leurs matériaux sont supprimés. Au niveau 6, le casque reçoit des renforts et des capteurs. Les dix étapes conservent une progression visuelle et les poignets continuent de rejoindre les cinq armes.
+
+Les ennemis ordinaires, élites, lanceurs et élites lanceurs ont des corps, membres, joints, gants et bottes modelés, avec le même casque fermé adapté à leur gabarit. Les jambes tournent à la hanche au lieu de faire pivoter des cônes. Leur rebond vertical est réduit. Les géométries sont générées une seule fois par variante et partagées ; chaque ennemi garde six maillages. Le coût géométrique est de 8 060 à 8 976 triangles par ennemi, supérieur aux anciennes silhouettes très simples.
+
+Les matériaux séparent tissu mat tissé, métal peint satiné, métal de finition et visière réfléchissante opaque. Deux petites textures de surface et une carte de reflets sont générées localement une fois, sans dépendance réseau. Les reflets sont réservés aux personnages, armes et équipements pour éviter leur calcul sur toute la surface du sol dans chaque œil. Aucun post-traitement ni nouvel éclairage dynamique n’est ajouté à l’arène.
+
+Les 55 tests Node.js passent. Les nouveaux tests contrôlent les volumes fermés avec leurs normales orientées vers l’extérieur, puis sondent chaque casque de LYLU et GHJU depuis 26 directions à chacun des dix niveaux : les rayons rencontrent une surface opaque. Ils vérifient aussi le partage des géométries des quatre variantes d’ennemis, le nombre de maillages, le budget géométrique, la pose au sol et le déplacement des jambes. Les tests précédents couvrent toujours les poignets sur chaque poignée, la campagne, les recharges, les armes chargées et les commandes Quest.
+
+Le visualiseur de modèles a rendu LYLU et GHJU aux niveaux 1, 6 et 10, de face, de trois quarts et de dos, puis les quatre variantes d’ennemis. Les captures ont été inspectées, sans exception JavaScript. Le soldat de base mesure environ 1,92 m pour GHJU et 1,95 m pour LYLU ; les accessoires dorsaux du niveau 10 dépassent la tête. Les modèles des soldats demandent 49 à 72 maillages hors arme, sans ajouter de maillage pour chaque petit détail.
+
+Le parcours WebXR sous Chromium/SwiftShader avec IWER 2.5 et les manettes Touch Plus passe ses 13 étapes avec les derniers matériaux : deux entrées immersives LYLU/GHJU, visée laser, tir droit et recharge gauche, recharge temporisée et pause, reprise sans tir involontaire, déplacement, rotation de 30°, HUD minimal, 13 éliminations par les tirs réels jusqu’au niveau 3 et déblocage de BLOOM, changement d’arme, déconnexion/reconnexion puis sortie du casque. Les textures du HUD ne dessinent que SANTÉ, BALLES et leurs deux valeurs ; le compteur de l’arme n’affiche qu’un nombre. Aucun fichier HTTP en échec, erreur de console ou exception JavaScript. Les deux yeux ont une variation de pixels supérieure à 29 par canal.
+
+Le HTML autonome 2.7 est généré avec tous les modules et les textures procédurales. Le parcours mobile en 390 × 844 et 844 × 390 valide les deux personnages, leurs armures 1 et 10, le tir tactile FPS, la vue stéréoscopique, la pause et la reprise. Il ne demande qu’un fichier HTML, sans erreur de console. Les textes secondaires restent masqués en combat. Le dernier passage après la restriction des reflets est consigné dans le rapport local.
+
+La santé et les balles restent les seules informations de combat ; les réglages, commandes, deux univers et dix niveaux d’armure sont conservés.
+
+Limites : ce sont des modèles procéduraux plus détaillés, sans capture humaine ni personnage scanné. Aucun Quest 3 ou iPhone physique n’est disponible : le confort, la cadence et le rendu à travers les lentilles demandent encore un essai sur appareil. Les temps du rendu logiciel SwiftShader ne mesurent pas les performances du Quest 3.
+
+# Vérification — Pink war v2.6 (historique)
 
 ## Affichage santé et munitions — 10 octobre 2026
 

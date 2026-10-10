@@ -4,8 +4,10 @@ Jeu de survie 3D en HTML et JavaScript, conçu pour iPhone, ordinateur et casque
 
 - WebGPU avec secours WebGL2 lorsque WebGPU est absent ou perdu. Le mode casque utilise le moteur WebGLRenderer de Three.js 0.180, dédié au rendu immersif WebXR, avec les mêmes modèles et matériaux.
 - Vue FPS ou troisième personne. Joystick gauche pour se déplacer ; joystick droit pour viser ; tir central.
-- Sélection sur l'accueil : LYLU est un soldat aux épaules larges, à la mâchoire marquée et aux cheveux courts, dans un univers bleu. GHJU conserve la soldate et l'univers rose de la version précédente. Le choix change immédiatement le modèle, l'armure, les armes, les tirs, le portail, le ciel, les éclairages et les accents de l'interface. Il est mémorisé sur l'appareil.
-- Les deux personnages possèdent une silhouette arrondie, un visage, une chevelure et des articulations animées. Leurs plaques et accessoires s'ajoutent automatiquement à chaque niveau : bleu, nacré et titane pour LYLU ; rose, nacré et champagne pour GHJU. Les gantelets évoluent également en FPS et sur les mains des contrôleurs VR.
+- Sélection sur l'accueil : LYLU est un soldat aux épaules plus larges dans un univers bleu ; GHJU est une soldate dans un univers rose. Le choix change immédiatement le modèle, l'armure, les armes, les tirs, le portail, le ciel, les éclairages et les accents de l'interface. Il est mémorisé sur l'appareil.
+- Version 2.7 : proportions plus humaines, torse et membres profilés, plastrons continus, articulations et bottes affinées. LYLU et GHJU portent un casque intégral dès le niveau 1, avec une coque fermée, une mâchoire protégée et une visière opaque. Aucun visage ni cheveu n'est modélisé. Les ennemis ordinaires, élites et lanceurs possèdent aussi des armures anatomiques et des casques fermés.
+- Le tissu tissé, le métal peint satiné, les bordures métalliques et les visières ont des matériaux distincts ; de petites textures procédurales et des reflets précalculés renforcent le relief. Les mêmes modèles sont utilisés sur téléphone, à la troisième personne et en VR. Les géométries d'ennemis sont partagées et fusionnées : six maillages par ennemi comme en 2.6, avec davantage de triangles pour les nouvelles formes.
+- Les plaques et accessoires s'ajoutent automatiquement à chaque niveau : bleu, nacré et titane pour LYLU ; rose, nacré et champagne pour GHJU. Le niveau 6 renforce le casque déjà fermé. Les gantelets évoluent également en FPS et sur les mains des contrôleurs VR. Les dix niveaux d'armure et les cinq prises d'arme restent disponibles.
 - Dix niveaux : 5, 8, 11, 14, 17, 20, 23, 26, 29 puis 32 ennemis, apparus progressivement. Santé, vitesse, fréquence et proportion d’élites augmentent. Les lanceurs de projectiles arrivent au niveau 4. Une victoire clôt le niveau 10, sans niveau 11.
 - Cinq armes : R–9 au niveau 1, BLOOM au 3, PETAL au 5, THORN au 7, NOVA au 9. Une nouvelle arme s’équipe automatiquement. L’arsenal permet de revenir aux précédentes. PETAL disperse du plasma ; les deux dernières armes accumulent une charge et infligent des dégâts de zone. Une charge partielle peut être relâchée ; maintenir tire à pleine puissance.
 - Chaque arme possède sa propre batterie. ↻ ou R recharge ; maintenir le tir avec une batterie vide déclenche aussi la recharge. Les batteries se remplissent au début d’un niveau. Elles fournissent respectivement 12, 24, 10, 6 et 4 tirs. Les recharges prennent du temps ; leur progression se fige pendant la pause.
@@ -74,18 +76,18 @@ Chaque étape conserve les pièces précédentes et ajoute son équipement. Ces 
 
 | Niveau | Tenue | Nouvelle pièce |
 | --- | --- | --- |
-| 1 | Aube | Combinaison ajustée, bottes et harnais satiné |
+| 1 | Aube | Combinaison, plastron, bottes et casque intégral opaque |
 | 2 | Sentinelle | Plastron composite et cœur lumineux |
 | 3 | Vigie | Épaulières, radio et insignes |
 | 4 | Éclaireuse | Gantelets, scanner et écran de poignet |
 | 5 | Rempart | Jambières, genouillères et ceinture à cellules laser |
-| 6 | Spectre | Casque et visière panoramique |
+| 6 | Spectre | Renforts de casque, filtres et capteurs |
 | 7 | Valkyrie | Réacteur dorsal |
 | 8 | Aurora | Protections de hanches et finitions champagne |
 | 9 | Séraphine | Ailettes dorsales et balises lumineuses |
 | 10 | Impératrice | Couronne, halo orbital et insignes de prestige |
 
-Le bouton **Tenue**, disponible à l’accueil, dans le HUD et dans la pause, présente le personnage en 3D. Les dix étapes peuvent être prévisualisées et tournées de face ou de dos. L’aperçu fige la simulation, puis rétablit la tenue réellement gagnée, l’arme et la caméra au retour en jeu. Les commandes de l’atelier restent accessibles par défilement sur les petits écrans.
+Le bouton **Tenue**, disponible à l’accueil et dans la pause, présente le personnage en 3D. Les dix étapes peuvent être prévisualisées et tournées de face ou de dos. L’aperçu fige la simulation, puis rétablit la tenue réellement gagnée, l’arme et la caméra au retour en jeu. Les commandes de l’atelier restent accessibles par défilement sur les petits écrans.
 
 LYLU reçoit les mêmes pièces aux mêmes niveaux, avec les tenues Éclaireur, Atlas, Azur, Séraphin et Impérateur aux étapes 4, 7, 8, 9 et 10. Les insignes portent le nom du personnage choisi. Revenir à l'accueil conserve la tenue de la partie ; choisir l'autre personnage prépare une nouvelle campagne à la tenue Aube. La sélection reste sur l'accueil pour garder une campagne cohérente.
 
