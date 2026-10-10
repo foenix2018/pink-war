@@ -152,7 +152,7 @@ function closeOutfit() {
   $('outfit-dialog').close();document.body.classList.remove('outfit-mode');world.setInspection(false);phase=outfitReturn;
   world.camera.clearViewOffset();world.setEquipment(Math.max(1,game.wave));resetInput();lastTime=0;
   if(phase==='lobby')world.lobby(clock,Math.max(1,game.wave));
-  else{world.sync(game,clock,0,false);updateCamera();if(phase==='paused')$('pause-dialog').showModal();else if(phase==='over')$('end-dialog').showModal();}
+  else{world.sync(game,clock,0);updateCamera();if(phase==='paused')$('pause-dialog').showModal();else if(phase==='over')$('end-dialog').showModal();}
 }
 $('outfit-button').onclick=$('hud-outfit-button').onclick=$('pause-outfit').onclick=openOutfit;
 $('outfit-front').onclick=()=>{$('outfit-rotation').value=180;};$('outfit-back').onclick=()=>{$('outfit-rotation').value=0;};
@@ -352,7 +352,7 @@ function frame(timestamp, xrFrame) {
     if(vr.mode==='xr')moveYaw=vr.movementYaw(facing);
     game.step(dt, { x, z, yaw: facing, moveYaw, sprint: vrInput.sprint || keys.has('ShiftLeft') || keys.has('ShiftRight') });
     const moving = Math.hypot(x, z) > .1;
-    world.sync(game, clock, dt, moving, recoil); updateCamera();
+    world.sync(game, clock, dt); updateCamera();
     const firing = vr.mode==='xr' ? vrInput.fire : !!(firingPointers.size || keys.has('Space') || vrInput.fire);
     if (game.state==='playing' && (firing || game.charge>0)) { const target=aim(); game.trigger(firing,dt,target.origin,target.direction); }
     else game.triggerHeld=false;

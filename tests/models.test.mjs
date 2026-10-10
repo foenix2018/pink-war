@@ -101,7 +101,7 @@ test('soldier arms reach the grip and the foregrip of every weapon', () => {
       const wrist = (arm) => arm.shoulder.localToWorld(arm.wrist.clone());
       const palm = soldier.gun.userData.hand.localToWorld(new T.Vector3(...GRIP.wrist));
       assert.ok(wrist(right).distanceTo(palm) < 1e-3, `${profileInfo.id}/${frame.id}: the right wrist is on the glove`);
-      const other = frame.support ? soldier.gun.userData.support : soldier.root.children.find(c => c.userData.setLevel && c !== soldier.body) || soldier.body.children.find(c => c.userData.setLevel && c !== soldier.gun.parent);
+      const other = frame.support ? soldier.gun.userData.support : soldier.rig.children.find(c => c.userData.setLevel && c !== soldier.gun.parent);
       assert.ok(other, 'a left glove exists');
       const target = other.localToWorld(new T.Vector3(...GRIP.wrist));
       assert.ok(wrist(left).distanceTo(target) < 1e-3, `${profileInfo.id}/${frame.id}: the left wrist is on its glove`);
@@ -111,6 +111,28 @@ test('soldier arms reach the grip and the foregrip of every weapon', () => {
       }
       assert.equal(soldier.weapon, index);
     });
+  }
+});
+
+test('the soldier rig has planted, articulated steps and keeps both hands on the weapon while moving', () => {
+  for (const profileInfo of CHARACTERS) {
+    const k=kit(),soldier=createSoldier(k,o=>buildGun({mats:mats(),gloves:k.gloves,sleeve:false,makeFlash:flash}),profileInfo);
+    const scene=new T.Scene();scene.add(soldier.root);soldier.root.position.z=-.1;
+    soldier.animate(.5,true,0,0,0,.016);soldier.root.updateMatrixWorld(true);
+    assert.equal(soldier.hips.parent,soldier.root);assert.equal(soldier.spine.parent,soldier.hips);assert.equal(soldier.body.parent,soldier.spine);
+    assert.ok(soldier.legs.some(leg=>Math.abs(leg.rotation.x)>.05),'thighs alternate through the step');
+    assert.ok(soldier.knees.some(knee=>knee.rotation.x>.1),'the knees flex during swing');
+    assert.ok(soldier.feet.some(foot=>Math.abs(foot.rotation.x)>.02),'the boot rolls at the ankle');
+    for(const [index,frame] of WEAPON_FRAME.entries()){
+      soldier.root.position.z-=.1;soldier.setWeapon(index);soldier.animate(.5+index*.02,true,0,0,0,.016);soldier.root.updateMatrixWorld(true);
+      const [left,right]=soldier.arms,wrist=arm=>arm.shoulder.localToWorld(arm.wrist.clone());
+      const palm=soldier.gun.userData.hand.localToWorld(new T.Vector3(...GRIP.wrist));
+      const other=frame.support?soldier.gun.userData.support:soldier.rig.children.find(child=>child.userData.setLevel&&child!==soldier.gun.parent);
+      const freePalm=other.localToWorld(new T.Vector3(...GRIP.wrist));
+      assert.ok(wrist(right).distanceTo(palm)<1e-3,`${profileInfo.id}/${frame.id}: weapon hand remains on the grip while walking`);
+      assert.ok(wrist(left).distanceTo(freePalm)<1e-3,`${profileInfo.id}/${frame.id}: support hand remains aligned while walking`);
+    }
+    assert.ok([...soldier.legs,...soldier.knees,...soldier.feet].every(bone=>Number.isFinite(bone.rotation.x)));
   }
 });
 
