@@ -18,14 +18,17 @@ export function addClosedHelmet(assembly, m, { scale = 1, hostile = false } = {}
     assembly.add(geometry,material,matrix(position.map(v=>v*scale),rotation,size.map(v=>v*scale)),true,level);
   const plate = (material,position,size,rotation=[0,0,0],level=1) =>
     assembly.box(material,size.map(v=>v*scale),position.map(v=>v*scale),rotation,.004*scale,true,level);
-  add(shell,m.armor); add(visor,m.visor,[0,.002,-.014],[.177,.207,.193]);
+  add(shell,m.trim); add(visor,m.visor,[0,.002,-.014],[.177,.207,.193]);
   add(chin,m.trim); add(collar,m.fabric,[0,-.212,.012]);
   // Brow, closed jaw, temple locks and recessed ventilation. Small lights replace visible eyes.
   plate(m.trim,[0,.088,-.171],[.22,.023,.046],[.15,0,0]);
+  plate(m.armor,[0,.154,-.082],[.13,.024,.075],[.18,0,0]);
+  plate(m.fabric,[0,.171,-.096],[.078,.01,.023],[.18,0,0]);
   plate(m.fabric,[0,-.141,-.197],[.118,.046,.025],[-.12,0,0]);
   for(const s of [-1,1]) {
-    plate(m.trim,[s*.16,-.015,.012],[.037,.11,.103],[0,0,s*-.12]);
-    plate(m.fabric,[s*.181,-.016,.004],[.014,.059,.066]);
+    plate(m.armor,[s*.16,-.015,.012],[.048,.12,.112],[0,0,s*-.12]);
+    plate(m.trim,[s*.168,-.015,-.047],[.027,.077,.047],[0,0,s*-.12]);
+    plate(m.fabric,[s*.184,-.016,.004],[.014,.059,.066]);
     plate(m.glow,[s*.185,-.016,-.007],[.007,.031,.024]);
     plate(m.armor,[s*.085,-.14,-.153],[.082,.064,.051],[-.2,s*.3,0]);
     for(let i=0;i<3;i++)plate(m.fabric,[s*(.069+i*.017),-.138,-.184],[.005,.025,.01],[-.12,0,0]);

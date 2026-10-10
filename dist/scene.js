@@ -202,8 +202,9 @@ export async function createScene(canvas, quality, forceWebGL = false, character
 
   function paintEmblem(c,w,h){
     c.fillStyle=character.masculine?'#142b42':'#281d33';c.fillRect(0,0,w,h);c.strokeStyle=character.masculine?'#b8d7f6':'#f2bbd4';c.lineWidth=5;c.strokeRect(4,4,w-8,h-8);
-    c.fillStyle=character.masculine?'#e7f5ff':'#ffe7ef';c.font='bold 47px monospace';c.textAlign='center';c.fillText(character.name,w/2,58);
-    c.fillStyle=character.accent;c.font='32px monospace';c.fillText('— 07 —',w/2,103);
+    c.fillStyle=character.accent;c.beginPath();c.moveTo(128,13);c.lineTo(106,39);c.lineTo(84,23);c.lineTo(88,52);c.lineTo(168,52);c.lineTo(172,23);c.lineTo(150,39);c.closePath();c.fill();
+    c.fillStyle=character.masculine?'#e7f5ff':'#ffe7ef';c.font='bold 38px monospace';c.textAlign='center';c.fillText(character.name,w/2,91);
+    c.fillStyle=character.accent;c.font='19px monospace';c.fillText('— 07 —',w/2,116);
   }
   const emblem=canvasTexture(256,128,paintEmblem);
   const characterKit = createCharacterKit(emblem,surfaces);

@@ -63,7 +63,10 @@ export function createSoldier(kit, createGun, profileInfo) {
     part(g.pelvis,m.suit,[0,0,0],[masculine?.97:1.035,1,1]);
     // Back panel with a spine ridge and harness bars, front chest shells, pearl shoulder yoke and dark straps.
     plate(m.dark,[0,1.46,.15],[.39,.32,.095],1,[-.06,0,0]);
-    part(g.chest,m.rose,[0,1.47,-.166],[width,1,1]);
+    part(g.chest,m.pearl,[0,1.47,-.166],[width,1,1]);
+    part(g.chest,m.rose,[0,1.49,-.203],[.54,.67,.32],1);
+    plate(m.dark,[0,1.365,-.201],[.31,.035,.018],1);
+    plate(m.pearl,[0,1.615,-.209],[.11,.032,.012],1,[0,0,0]);
     plate(m.steel,[0,1.475,-.216],[.024,.21,.012]);
     plate(m.glow,[0,1.56,-.218],[.009,.04,.006]);
     link(m.steel,[0,1.64,.178],[0,1.14,.2],.014,.018);
@@ -74,6 +77,14 @@ export function createSoldier(kit, createGun, profileInfo) {
       plate(m.steel,[s*.211,1.265,.018],[.037,.17,.15],1,[0,0,s*.1]);
       plate(m.rose,[s*.11,1.24,-.132],[.12,.058,.034],1,[-.1,0,s*-.05]);
       for(let i=0;i<3;i++)plate(m.dark,[s*.192,1.20+i*.05,.076],[.04,.01,.11],1,[0,0,s*.1]);
+    }
+    // Four hard-shell rifle magazines and their fabric retention loops give the chest rig
+    // the layered, load-bearing silhouette of the LYLU/GHJU field-design references.
+    for(const x of [-.168,-.056,.056,.168]){
+      plate(m.dark,[x,1.274,-.163],[.061,.104,.069],1,[.06,0,0]);
+      plate(m.steel,[x,1.275,-.202],[.043,.077,.012],1,[.06,0,0]);
+      plate(m.rose,[x,1.263,-.211],[.012,.046,.006],1,[.06,0,0]);
+      plate(m.dark,[x,1.324,-.207],[.066,.014,.014],1);
     }
     // Abdomen bands, belt and buckle.
     for(const y of [1.205,1.155])plate(m.dark,[0,y,-.132],[.29,.043,.043],1,[-.05,0,0]);
@@ -100,6 +111,13 @@ export function createSoldier(kit, createGun, profileInfo) {
       plate(m.dark,[s*.27,1.07,.01],[.13,.16,.19],5);plate(m.rose,[s*.285,1.07,-.09],[.095,.11,.035],5);
       link(m.pale,[s*.24,1.13,-.13],[s*.24,1.02,-.13],.018,.018,5);
       plate(m.steel,[s*.355,1.07,.01],[.02,.1,.14],5);
+    }
+    // A compact radio and utility pouches stay visible on the starter loadout.
+    for(const s of [-1,1]){
+      plate(m.dark,[s*.30,1.015,-.005],[.105,.13,.17],1,[0,0,s*-.1]);
+      plate(m.steel,[s*.30,1.018,-.094],[.072,.095,.018],1,[0,0,s*-.1]);
+      plate(m.rose,[s*.30,1.026,-.106],[.012,.05,.006],1);
+      plate(m.dark,[s*.36,1.018,.02],[.018,.07,.12],1,[0,0,s*-.08]);
     }
     // Level 7: a compact reactor, visible in the third-person view.
     plate(m.dark,[0,1.43,.245],[.34,.39,.16],7);plate(m.pearl,[0,1.44,.337],[.28,.31,.07],7);
@@ -151,9 +169,11 @@ export function createSoldier(kit, createGun, profileInfo) {
     {
       const {plate,sphere,link,part,ell}=builder(leg);
       part(loft([[-.405,.078,.076],[-.33,.093,.091],[-.21,.117,.11],[-.07,.121,.119],[-.025,.095,.086]],18),m.suit,[0,0,0],[1,1,1]);
-      part(g.thigh,m.rose,[s*.01,-.19,-.132],[1,1,1],1,[.08,0,s*-.05]);
-      plate(m.pearl,[s*.015,-.095,-.159],[.104,.018,.013],1,[.08,0,s*-.05]);
+      part(g.thigh,m.pearl,[s*.01,-.19,-.132],[1,1,1],1,[.08,0,s*-.05]);
+      plate(m.rose,[s*.012,-.19,-.153],[.025,.235,.012],1,[.08,0,s*-.05]);
+      plate(m.steel,[s*.015,-.095,-.159],[.104,.018,.013],1,[.08,0,s*-.05]);
       plate(m.dark,[0,-.31,-.083],[.147,.026,.026],1);
+      plate(m.steel,[s*.104,-.21,-.093],[.033,.14,.022],1,[0,0,s*-.1]);
       // Level 5: thigh strap and plates.
       part(g.ring,m.dark,[0,-.12,0],[.135,.135,.135],5,[PI/2,0,0]);plate(m.pearl,[s*.14,-.15,0],[.08,.16,.16],5);
       // Level 8: separate hip guards follow each moving leg.
@@ -164,15 +184,21 @@ export function createSoldier(kit, createGun, profileInfo) {
       const {plate,sphere,link,part,ell}=builder(shin);
       sphere(m.suit,[0,0,0],[.089,.079,.084]);
       part(loft([[-.375,.057,.057,.01],[-.31,.064,.068,.016],[-.19,.081,.084,.022],[-.07,.082,.075],[0,.073,.067]],18),m.suit,[0,0,0],[1,1,1]);
-      part(g.shin,m.rose,[0,-.208,-.078],[1,1,1]);
+      part(g.shin,m.pearl,[0,-.208,-.078],[1,1,1]);
+      plate(m.rose,[0,-.208,-.103],[.026,.21,.016],1);
       ell(m.pearl,[0,.006,-.074],[.078,.063,.028]);
       plate(m.pearl,[0,-.16,-.098],[.052,.11,.013]);
       // Boot: ankle cuff, shaped upper, toe cap, heel block and a thick sole with light strips.
       part(g.ring,m.dark,[0,-.36,-.01],[.075,.075,.075],1,[PI/2,0,0]);
       ell(m.dark,[0,-.435,-.041],[.087,.075,.14]);
-      plate(m.rose,[0,-.448,-.131],[.162,.065,.145],1,[.10,0,0]);
+      plate(m.pearl,[0,-.448,-.131],[.162,.065,.145],1,[.10,0,0]);
+      plate(m.rose,[0,-.439,-.204],[.09,.019,.012],1,[.10,0,0]);
       plate(m.dark,[0,-.492,-.059],[.194,.031,.307]);ell(m.dark,[0,-.455,.064],[.073,.064,.055]);
       for(const x of [-.065,.065])plate(m.steel,[x,-.478,-.053],[.023,.013,.273]);
+      for(let i=0;i<4;i++){
+        plate(m.dark,[0,-.409+i*.016,-.105-i*.019],[.105,.008,.014],1,[.08,0,0]);
+        plate(m.pearl,[0,-.519,-.171+i*.075],[.148,.012,.028]);
+      }
       plate(m.glow,[0,-.365,.076],[.037,.015,.008]);
       // Level 5: pronounced shin shells, articulated knee caps and straps.
       part(g.shin,m.pearl,[0,-.208,-.098],[1.07,1.06,.72],5,[.04,0,0]);ell(m.rose,[0,.015,-.097],[.086,.067,.034],[0,0,0],5);
@@ -188,8 +214,9 @@ export function createSoldier(kit, createGun, profileInfo) {
       // The shoulder cap and pauldrons stay with the torso; only the arm below them turns.
       const {plate,part,ell,dome}=builder(shoulder);
       ell(m.suit,[s*.002,-.02,0],[.091,.102,.10]);
-      dome(m.rose,[s*.014,.01,0],[masculine?.116:.106,.078,.112],[0,0,s*-.16]);
-      plate(m.pearl,[s*.055,.017,-.10],[.091,.027,.035],1,[0,0,s*-.15]);
+      dome(m.pearl,[s*.014,.01,0],[masculine?.116:.106,.078,.112],[0,0,s*-.16]);
+      plate(m.rose,[s*.055,.017,-.10],[.091,.027,.035],1,[0,0,s*-.15]);
+      plate(m.dark,[s*.02,.067,.012],[.085,.014,.035],1,[0,0,s*-.2]);
       // Level 3: layered curved pauldrons, not a single sphere.
       dome(m.steel,[s*.02,.02,0],[.137,.084,.137],[0,0,s*-.2],3);
       dome(m.pearl,[s*.027,.042,-.01],[.125,.078,.125],[0,0,s*-.2],3);
@@ -210,7 +237,8 @@ export function createSoldier(kit, createGun, profileInfo) {
     {
       const {plate,sphere,link,part,ell}=builder(fore);
       part(loft([[-.35,.043,.047],[-.28,.052,.052],[-.14,.068,.063],[-.04,.064,.057],[0,.056,.053]],18),m.suit,[0,0,0],[1,1,1]);
-      plate(m.rose,[0,-.18,.054],[.087,.20,.035],1,[.065,0,0]);
+      plate(m.pearl,[0,-.18,.054],[.087,.20,.035],1,[.065,0,0]);
+      plate(m.rose,[0,-.18,.076],[.018,.14,.008],1,[.065,0,0]);
       sphere(m.dark,[0,-.35,0],[.05,.046,.05]);
       // Level 4: armoured gauntlet, wrist scanner and hologram (kept small enough not to hide the weapon).
       link(m.pearl,[0,-.07,0],[0,-.3,0],.08,.06,4);
