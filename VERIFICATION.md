@@ -1,4 +1,16 @@
-# Vérification — Pink war v2.4
+# Vérification — Pink war v2.5
+
+## Mains, armes et personnages — 10 octobre 2026
+
+Les 53 tests Node.js passent : 19 de combat, 25 de commandes VR et 9 nouveaux sur les modèles. Ils vérifient que le biseau d'une boîte garde sa taille en mètres et coupe ses coins, qu'un assemblage émet un maillage par matériau et ne montre que les pièces du niveau, que chaque arme est dessinée autour de la poignée (l'origine est dans le modèle, la bouche du canon est son avant, la crosse reste courte, un seul modèle est visible à la fois, seul le R–9 se tient à une main), que les armes construites deux fois partagent leur géométrie, que le gant entoure la poignée (doigts sur la face avant, pouce côté gauche, dos de la main jusqu'au poignet, gantelet au niveau 4, miroir pour la main gauche) et que, pour les deux personnages et les cinq armes, chaque poignet du soldat tombe sur son gant avec des os qui gardent leur longueur. Ce dernier test a révélé un écart de 2 cm entre le poignet gauche et le gant au repos avec le R–9 : corrigé.
+
+Le parcours WebXR émulé (IWER 2.5.0, Quest 3, Touch Plus) a été rejoué en droitier et en gaucher depuis `dist/`, puis en droitier depuis le HTML autonome v2.5 produit par `tools/build-launcher.py` : tir, recharge à la gâchette de l'autre main, déplacement à 7 et 10 m/s, rotations de 30° et 45°, pause et reprise, sans erreur de console. Les captures montrent le gant droit refermé sur le pistolet, avec l'afficheur de munitions lisible à l'endroit, et le gant gauche de l'autre manette ; en gaucher, le pistolet est en miroir dans la main gauche. Les modes plat et stéréoscopique téléphone démarrent sans erreur, y compris depuis le HTML autonome. Les captures du soldat (visualiseur dédié et atelier de tenues) montrent les deux mains sur la poignée et la poignée avant pour BLOOM et THORN, et le R–9 d'une main avec la main libre à la hanche, aux niveaux 1 et 10 de GHJU et LYLU ; les niveaux intermédiaires n'ont pas été passés en revue un à un.
+
+Mesures dans l'émulateur avec 30 monstres devant le joueur : 538 appels de dessin (550 avant cette passe, 776 avant l'optimisation précédente) pour environ 90 700 triangles, contre 58 500 : les mains et armes plus détaillées coûtent environ 32 000 triangles pour deux yeux, ce qui reste très en deçà de ce que sait afficher un Quest 3. À l'entrée en VR, la scène seule demande 164 appels (194 avant) : la main et l'arme sont fusionnées en quelques maillages.
+
+Limites : l'environnement (bâtiments, protections, sol, portail) et les monstres n'ont pas été retravaillés dans cette passe. Aucun Quest 3 physique n'était disponible : la position de la main sur la poignée de la manette vient du profil Touch Plus d'IWER et reste à confirmer à la main, tout comme la cadence et les vibrations. À la troisième personne, la main d'appui est calculée pour chaque arme mais une arme très longue ramène le fusil vers le corps pour que les deux mains l'atteignent (le fusil THORN est tenu plus près du torse que le R–9).
+
+# Vérification — Pink war v2.4 (historique)
 
 ## Pistolet VR et commandes des deux manettes — 10 octobre 2026
 

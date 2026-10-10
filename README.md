@@ -56,6 +56,15 @@ La visée part de la bouche du canon suivie en 6DoF, sans modifier la perspectiv
 
 Le mapping correspond au [profil officiel Touch Plus](https://raw.githubusercontent.com/immersive-web/webxr-input-profiles/main/packages/assets/profiles/meta-quest-touch-plus/profile.json) et à la [norme WebXR Gamepads](https://immersive-web.github.io/webxr-gamepads-module/). La validation logicielle et les limites des essais sans casque sont documentées dans `VERIFICATION.md`.
 
+## Mains, armes et personnages
+
+La main droite tient toujours l'arme utilisée, comme le gant droit tient la lance dans RLH : en vue FPS, à la troisième personne et en VR. Le gant (paume, dos de la main, trois doigts refermés sur la crosse, index sur la détente, pouce sur le flanc gauche) est modélisé dans le repère de l'arme ; les cinq armes sont dessinées autour de leur poignée, origine à la paume. La main ne peut donc pas flotter à côté de l'arme, quelle que soit l'arme équipée.
+
+- **R–9** se tient à une main. **BLOOM, PETAL, THORN et NOVA** ont une poignée avant : la main libre la saisit avec le même gant, en miroir. À la troisième personne et en vue FPS, les deux mains sont visibles ; en VR, la manette libre est la main libre.
+- À la troisième personne, chaque bras est une chaîne à deux segments résolue vers la poignée et vers la poignée avant (cinématique inverse) : le coude se place tout seul et le poignet tombe exactement sur le gant. Avec le R–9, la main libre se repose à la hanche.
+- Les tirs partent de la bouche réelle de l'arme tenue, en vue FPS comme à la troisième personne.
+- Les armures sont des formes biseautées ou en dôme (pauldrons, gantelets, bottes, ailes, casque, couronne), fusionnées en quelques maillages par os et par matériau. Un changement de niveau recompose seulement les os concernés ; les dix tenues et leurs noms restent ceux de la campagne.
+
 ## Tenues progressives
 
 Chaque étape conserve les pièces précédentes et ajoute son équipement. Ces améliorations sont visuelles ; la santé et les règles de combat restent celles de la campagne. Le tableau ci-dessous présente les noms des tenues de GHJU.
