@@ -1,4 +1,8 @@
-# Vérification — Pink war v2.7
+# Vérification — Pink war v2.8
+
+## Proportions et recul — 10 octobre 2026
+
+Les casques et les épaulières de LYLU et GHJU sont affinés, avec une carrure moins large et plus proche des proportions de leurs torses. Le recul est désormais propre à chaque arme, s'accumule légèrement pendant les rafales et s'efface rapidement. Il se voit sur l'arme et la caméra en jeu, sur le corps à la troisième personne et sur le pistolet tenu en VR. La direction du tir reste celle visée par le joueur ; la correction automatique vers un ennemi est supprimée. Les tirs directs ne sont pas déviés vers une cible. Aucune nouvelle suite de tests n'a été exécutée pour cette révision.
 
 ## Personnages, armures et casques fermés — 10 octobre 2026
 

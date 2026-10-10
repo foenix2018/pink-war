@@ -190,7 +190,7 @@ function updateCamera() {
   world.camera.clearViewOffset();
   if (vr?.mode === 'xr') { vr.positionRig(); return; }
   const { T, camera, soldier, weapon } = world, p = game.player;
-  const cameraYaw = yaw + (vr?.mode==='stereo' && vr.sensor ? vr.phoneYaw : 0), cameraPitch = clamp(pitch + (vr?.mode==='stereo' && vr.sensor ? vr.phonePitch : 0), -1.2, 1.2);
+  const cameraYaw = yaw + (vr?.mode==='stereo' && vr.sensor ? vr.phoneYaw : 0), cameraPitch = clamp(pitch + (vr?.mode==='stereo' && vr.sensor ? vr.phonePitch : 0) - recoil * .16, -1.2, 1.2);
   camera.fov = view === 'fps' ? 72 : 64;
   camera.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
   if (view === 'fps') { camera.position.set(p.x, 1.85, p.z); soldier.root.visible = false; weapon.visible = true; }
@@ -204,7 +204,8 @@ function updateCamera() {
     camera.position.set(start.x + (end.x - start.x) * nearest, Math.max(.35, start.y + (end.y - start.y) * nearest), start.z + (end.z - start.z) * nearest);
   }
   const bob = Math.hypot(move.x, move.y) > .1 || keys.has('KeyW') || keys.has('KeyZ') || keys.has('KeyS');
-  weapon.position.set(.19, -.24 + (bob ? Math.sin(clock * 11) * .012 : 0) - recoil * .3, -.56 + recoil);
+  weapon.position.set(.19, -.24 + (bob ? Math.sin(clock * 11) * .012 : 0) - recoil * .14, -.56 + recoil * .5);
+  weapon.rotation.x = recoil * .9;
   camera.updateProjectionMatrix(); camera.updateMatrixWorld(true);
 }
 function aim() {
@@ -221,16 +222,6 @@ function aim() {
     const hit = segmentSphere(camera.position, far, center, enemy.elite ? 1.3 : 1.05);
     if (hit !== null && hit < nearest) { nearest = hit; target = new T.Vector3(center.x, center.y, center.z); }
   }
-  // Gentle assistance makes a small touch screen practical; solid cover blocks it.
-  if (nearest === 1) {
-    let bestDot = .988;
-    for (const enemy of game.enemies) {
-      const center = new T.Vector3(enemy.x, enemy.elite ? 1.35 : 1.15, enemy.z), offset = center.clone().sub(camera.position);
-      if (offset.length() > 80) continue;
-      const dot = offset.normalize().dot(forward);
-      if (dot > bestDot && !world.obstacles.some(b => { const hit = segmentBox(origin, center, b); return hit !== null && hit < .99; })) { bestDot = dot; target = center; }
-    }
-  }
   const direction = target.clone().sub(origin).normalize(); return { origin, direction };
 }
 
@@ -240,7 +231,11 @@ function announce(title, subtitle) {
 }
 function handleEvents() {
   for (const event of game.drainEvents()) {
-    if (event.type === 'shot') { recoil = .09; flashTimer = .07; vr.haptic('shot', event.weapon); tone(780, 130, .09, .035, 'sawtooth'); }
+    if (event.type === 'shot') {
+      const kick = { r9: .095, bloom: .035, petal: .09, thorn: .12, nova: .15 }[event.weapon] ?? .09;
+      recoil = Math.min(.2, recoil + kick * (event.power ?? 1));
+      flashTimer = .07; vr.haptic('shot', event.weapon); tone(780, 130, .09, .035, 'sawtooth');
+    }
     if (event.type === 'wave') { const unlocked=WEAPONS.find(w=>w.level===event.wave); announce(`NIVEAU ${String(event.wave).padStart(2, '0')} / ${MAX_LEVEL}`, unlocked && event.wave>1 ? `${unlocked.name} DÉBLOQUÉE · ${event.count} CRÉATURES` : `${event.count} CRÉATURES · LA BRÈCHE S’OUVRE`); tone(210, 420, .25, .065); tone(420, 630, .25, .06, 'triangle', .2); }
     if (event.type === 'equipment') { const equipment=equipmentForCharacter(event.level,character.id);world.setEquipment(event.level);$('equipment-unlock-title').textContent=`${equipment.name} · NIV. ${event.level}`;$('equipment-unlock-detail').textContent=equipment.addition;equipmentUntil=clock+4;$('equipment-unlock').hidden=false; }
     if (event.type === 'clear') { announce('NIVEAU TERMINÉ', '+ BONUS · LA BRÈCHE SE RECHARGE'); tone(420, 700, .25, .07); }
@@ -324,14 +319,14 @@ function frame(timestamp, xrFrame) {
     let moveYaw = facing;
     if(vr.mode==='xr')moveYaw=vr.movementYaw(facing);
     game.step(dt, { x, z, yaw: facing, moveYaw, sprint: vrInput.sprint || keys.has('ShiftLeft') || keys.has('ShiftRight') });
-    world.sync(game, clock, dt, Math.hypot(x, z) > .1); updateCamera();
+    world.sync(game, clock, dt, Math.hypot(x, z) > .1, recoil); updateCamera();
     const firing = vr.mode==='xr' ? vrInput.fire : !!(firingPointers.size || keys.has('Space') || vrInput.fire);
     if (game.state==='playing' && (firing || game.charge>0)) { const target=aim(); game.trigger(firing,dt,target.origin,target.direction); }
     else game.triggerHeld=false;
     handleEvents();
     hudTimer -= dt; if (hudTimer <= 0) { if (vr.mode !== 'xr') updateHud(); hudTimer = .1; }
   }
-  flashTimer = Math.max(0, flashTimer - dt); recoil = Math.max(0, recoil - dt * .65);
+  flashTimer = Math.max(0, flashTimer - dt); recoil = Math.max(0, recoil - dt * 2.4);
   world.soldier.gun.userData.flash.visible = phase === 'playing' && flashTimer > 0; world.fpsGun.userData.flash.visible = phase === 'playing' && flashTimer > 0;
   $('crosshair').classList.toggle('shooting', flashTimer > 0); $('damage-flash').classList.toggle('active', phase!=='lobby' && damageUntil > clock);
   $('damage-flash').style.setProperty('--injury',phase==='lobby'?0:Math.max(0,(100-game.player.hp)/100*.65));

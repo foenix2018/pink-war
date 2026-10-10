@@ -17,7 +17,7 @@ with tempfile.TemporaryDirectory(prefix='pink-war-') as temporary:
     html = html.replace('  <link rel="manifest" href="manifest.webmanifest">\n','').replace('class="brand" href="./"','class="brand" href="#"')
     html = html.replace('<script type="module" src="game.js"></script>','<script>\n'+javascript+'\n</script>')
     license_text = (project/'dist/vendor/LICENSE.three.txt').read_text().replace('--','—')
-    html = html.replace('<!doctype html>','<!doctype html>\n<!-- Pink war 2.7 — HTML autonome. Three.js :\n'+license_text+'\n-->')
+    html = html.replace('<!doctype html>','<!doctype html>\n<!-- Pink war 2.8 — HTML autonome. Three.js :\n'+license_text+'\n-->')
     assert 'src="game.js"' not in html and 'href="style.css"' not in html
     output.parent.mkdir(parents=True,exist_ok=True); output.write_text(html)
     print(str(output), output.stat().st_size, 'bytes')

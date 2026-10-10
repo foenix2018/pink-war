@@ -447,7 +447,7 @@ export class VRController {
     if (!this.active) return;
     const game = this.hooks.game();
     if (this.mode === 'xr') {
-      const main = settingsOf(this).hand, level = Math.max(1, game.wave), kick = clamp(recoil / .09, 0, 1);
+      const main = settingsOf(this).hand, level = Math.max(1, game.wave), kick = clamp(recoil / .11, 0, 1);
       // updateCamera() already placed the rig this frame while playing.
       if (this.hooks.phase() !== 'playing') this.positionRig();
       for (const c of this.controllers) {
@@ -455,7 +455,7 @@ export class VRController {
         if (c.gun.userData.index !== game.weaponIndex) c.gun.userData.setVariant(game.weaponIndex);
         if (c.level !== level) { c.gun.userData.setLevel(level); c.bare.userData.setLevel(level); c.level = level; }
         c.gun.userData.flash.visible = flash > 0 && isMain;
-        c.gun.position.z = isMain ? kick * .05 : 0; c.gun.rotation.x = isMain ? kick * .16 : 0;
+        c.gun.position.z = isMain ? kick * .075 : 0; c.gun.rotation.x = isMain ? kick * .22 : 0;
       }
       const gun = controllerOf(this, main)?.gun; if (gun) this.drawAmmo(gun, game);
       this.updateSight();

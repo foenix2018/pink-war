@@ -38,7 +38,7 @@ const UPPER = .31, FORE = .35, CARRY = 1.2;
 // The suit is a few hundred rounded pieces, merged per bone and material. Pieces carry the armour level that
 // unlocks them; changing level re-merges the few meshes of each bone instead of drawing hundreds of instances.
 export function createSoldier(kit, createGun, profileInfo) {
-  const masculine=!!profileInfo?.masculine, side=masculine?.30:.275, width=masculine?1.07:1;
+  const masculine=!!profileInfo?.masculine, side=masculine?.245:.235, width=masculine?1.07:1;
   const root=new T.Group(),body=new T.Group(),head=new T.Group(),hair=new T.Group();root.name=profileInfo?.name||'GHJU';root.add(body);body.add(head);
   head.name='ClosedHelmet';head.position.y=masculine?1.785:1.765;
   const {geometries:g,materials:m}=kit, assemblies=[];
@@ -130,7 +130,7 @@ export function createSoldier(kit, createGun, profileInfo) {
   // ----------------------------------------------------------------- sealed helmet
   {
     const asm=new Assembly();assemblies.push({asm,bone:head});
-    addClosedHelmet(asm,{armor:m.rose,trim:m.pearl,visor:m.visor,fabric:m.suit,glow:m.glow,metal:m.steel},{scale:masculine?.86:.84});
+    addClosedHelmet(asm,{armor:m.rose,trim:m.pearl,visor:m.visor,fabric:m.suit,glow:m.glow,metal:m.steel},{scale:masculine?.76:.74});
     const {plate,sphere}=builder(head);
     // Command crest follows the shell rather than extending it into a large crown.
     for(const s of [-1,0,1]){
@@ -188,16 +188,16 @@ export function createSoldier(kit, createGun, profileInfo) {
       // The shoulder cap and pauldrons stay with the torso; only the arm below them turns.
       const {plate,part,ell,dome}=builder(shoulder);
       ell(m.suit,[s*.002,-.02,0],[.091,.102,.10]);
-      dome(m.rose,[s*.014,.01,0],[masculine?.128:.115,.085,.127],[0,0,s*-.16]);
+      dome(m.rose,[s*.014,.01,0],[masculine?.116:.106,.078,.112],[0,0,s*-.16]);
       plate(m.pearl,[s*.055,.017,-.10],[.091,.027,.035],1,[0,0,s*-.15]);
       // Level 3: layered curved pauldrons, not a single sphere.
-      dome(m.steel,[s*.02,.02,0],[.155,.097,.155],[0,0,s*-.2],3);
-      dome(m.pearl,[s*.027,.042,-.01],[.144,.089,.144],[0,0,s*-.2],3);
-      part(g.ringFlat,m.rose,[s*.027,.017,0],[.155,.155,.155],3,[0,0,s*-.2]);
-      ell(m.rose,[s*.089,-.016,.01],[.04,.073,.122],[0,0,s*-.24],3);
+      dome(m.steel,[s*.02,.02,0],[.137,.084,.137],[0,0,s*-.2],3);
+      dome(m.pearl,[s*.027,.042,-.01],[.125,.078,.125],[0,0,s*-.2],3);
+      part(g.ringFlat,m.rose,[s*.027,.017,0],[.125,.125,.125],3,[0,0,s*-.2]);
+      ell(m.rose,[s*.079,-.016,.01],[.034,.066,.108],[0,0,s*-.24],3);
       plate(m.glow,[s*.041,.1,-.133],[.07,.007,.005],3);
       // Level 8: gold pauldron rim.
-      part(g.ringFlat,m.gold,[s*.027,.042,-.005],[.144,.144,.144],8,[0,0,s*-.2]);
+      part(g.ringFlat,m.gold,[s*.027,.042,-.005],[.125,.125,.125],8,[0,0,s*-.2]);
     }
     {
       const {plate,sphere,link,ell,part}=builder(upper);
@@ -274,10 +274,11 @@ export function createSoldier(kit, createGun, profileInfo) {
     get equipmentLevel(){return state.level;},
     get visibleParts(){return assemblies.reduce((n,{asm})=>n+asm.count,0);},
     get batchCount(){return assemblies.reduce((n,{asm})=>n+asm.meshes.length,0);},
-    animate(time,moving){
+    animate(time,moving,recoil=0){
       const stride=moving?Math.sin(time*10)*.48:0;legs[0].rotation.x=stride;legs[1].rotation.x=-stride;
       knees.forEach((knee,i)=>{knee.rotation.x=moving?Math.max(0,Math.sin(time*10+i*Math.PI))*.42:.06;});
       body.position.y=moving?Math.abs(Math.sin(time*10))*.025:Math.sin(time*2)*.007;
+      const kick=Math.min(1,recoil/.16);body.position.z=kick*.035;body.rotation.x=kick*.035;
       hair.rotation.x=Math.sin(time*3)*.045;hair.rotation.z=Math.sin(time*2)*.025;
       orbit.rotation.y=time*.24;
     }
