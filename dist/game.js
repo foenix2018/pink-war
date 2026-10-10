@@ -204,14 +204,16 @@ function updateCamera() {
     camera.position.set(start.x + (end.x - start.x) * nearest, Math.max(.35, start.y + (end.y - start.y) * nearest), start.z + (end.z - start.z) * nearest);
   }
   const bob = Math.hypot(move.x, move.y) > .1 || keys.has('KeyW') || keys.has('KeyZ') || keys.has('KeyS');
-  weapon.position.set(.25, -.2 + (bob ? Math.sin(clock * 11) * .012 : 0) - recoil * .3, -.65 + recoil);
+  weapon.position.set(.19, -.24 + (bob ? Math.sin(clock * 11) * .012 : 0) - recoil * .3, -.56 + recoil);
   camera.updateProjectionMatrix(); camera.updateMatrixWorld(true);
 }
 function aim() {
   if (vr?.mode==='xr') return vr.aim();
   const { T, camera } = world, forward = new T.Vector3(); camera.getWorldDirection(forward);
-  const origin = view === 'fps' ? camera.localToWorld(new T.Vector3(.25, -.2, -.95)) : new T.Vector3(
-    game.player.x + Math.cos(yaw) * .36 + Math.sin(yaw) * -.92, 1.3, game.player.z - Math.sin(yaw) * .36 + Math.cos(yaw) * -.92);
+  // Shots leave the muzzle of the weapon the hand is holding.
+  const origin = new T.Vector3(), gun = view === 'fps' ? world.fpsGun : world.soldier.gun;
+  if (view !== 'fps') world.soldier.root.updateMatrixWorld(true);
+  gun.userData.flash.updateWorldMatrix(true, false); gun.userData.flash.getWorldPosition(origin);
   const far = camera.position.clone().addScaledVector(forward, 160); let target = far, nearest = 1;
   for (const box of world.obstacles) { const hit = segmentBox(camera.position, far, box); if (hit !== null && hit < nearest) { nearest = hit; target = camera.position.clone().lerp(far, hit); } }
   for (const enemy of game.enemies) {

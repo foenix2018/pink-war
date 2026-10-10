@@ -93,8 +93,9 @@ export function traceVRAim(origin, direction, enemies = [], obstacles = [], rang
   return { point: { x: origin.x + direction.x * distance, y: origin.y + direction.y * distance, z: origin.z + direction.z * distance }, distance, enemy };
 }
 
-// The hand sits where the controller grip is, a little below and behind the target ray.
-const GRIP_MOUNT = Object.freeze({ x: 0, y: .11, z: -.045 });
+// The palm of the glove (the centre of the pistol grip) sits where the controller grip is: a little below and
+// behind the target ray.
+const GRIP_MOUNT = Object.freeze({ x: 0, y: -.016, z: .05 });
 
 // Immersive WebXR uses the headset's poses; phones use two real eye cameras.
 export class VRController {
@@ -229,9 +230,11 @@ export class VRController {
     for (const c of this.controllers) {
       const hand = c.ray.userData.source?.handedness, known = hand === 'left' || hand === 'right';
       c.gun.visible = hand === main; c.bare.visible = known && hand !== main;
-      // The bare glove copies the gun's scale and mirrors for the left hand.
-      const size = (c.bare.userData.size ??= c.bare.scale.x) * 1.05;
+      // Gloves are built for the right hand and mirrored for the left; a mirrored gun keeps its readout upright.
+      const size = c.bare.userData.size ??= c.bare.scale.x;
       c.bare.scale.set(hand === 'left' ? -size : size, size, size);
+      c.gun.scale.x = hand === 'left' ? -1 : 1;
+      if (c.gun.userData.ammo) c.gun.userData.ammo.plane.scale.x = c.gun.scale.x;
     }
   }
   async enterXR() {
@@ -261,9 +264,11 @@ export class VRController {
       if (rate) this.setFrameRate(rate);
       this.controllers = [0, 1].map(index => {
         const ray = renderer.xr.getController(index); this.rig.add(ray);
-        const mount = new T.Group(), gun = world.createGun(), hand = world.createHand(), bare = world.createHand();
+        const mount = new T.Group(), gun = world.createGun(), bare = world.createHand();
+        // The other controller is the free hand: no second glove on the weapon in a headset.
+        gun.userData.showSupport = false; gun.userData.support.visible = false;
         mount.position.set(GRIP_MOUNT.x, GRIP_MOUNT.y, GRIP_MOUNT.z); ray.add(mount);
-        gun.add(hand); gun.userData.hand = hand; gun.scale.setScalar(1.05); gun.visible = bare.visible = false; mount.add(gun, bare);
+        gun.visible = bare.visible = false; mount.add(gun, bare);
         this.makeAmmo(gun);
         // Models held a few centimetres from the eyes gain nothing from the sun's shadow pass.
         mount.traverse(object => { if (object.isMesh) object.castShadow = false; });
@@ -481,7 +486,7 @@ export class VRController {
       for (const c of this.controllers) {
         const isMain = c.ray.userData.source?.handedness === main;
         if (c.gun.userData.index !== game.weaponIndex) c.gun.userData.setVariant(game.weaponIndex);
-        if (c.level !== level) { c.gun.userData.hand?.userData.setLevel(level); c.bare.userData.setLevel(level); c.level = level; }
+        if (c.level !== level) { c.gun.userData.setLevel(level); c.bare.userData.setLevel(level); c.level = level; }
         c.gun.userData.flash.visible = flash > 0 && isMain;
         c.gun.position.z = isMain ? kick * .05 : 0; c.gun.rotation.x = isMain ? kick * .16 : 0;
       }

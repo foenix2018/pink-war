@@ -1,7 +1,9 @@
 import * as T from './vendor/three.webgpu.min.js';
 import { WebGLRenderer } from './vendor/three.module.min.js';
 import { PORTAL, COVER_WALLS, WEAPONS } from './game-logic.js';
-import { createCharacterKit, createSoldier as buildSoldier, createFirstPersonArm } from './soldier.js';
+import { createCharacterKit, createSoldier as buildSoldier } from './soldier.js';
+import { buildGun } from './weapons.js';
+import { createGlove } from './hands.js';
 import { CHARACTERS, characterForId } from './characters.js';
 
 const v = (x, y, z) => new T.Vector3(x, y, z);
@@ -153,35 +155,15 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   }
   const emblem=canvasTexture(256,128,paintEmblem);
   const characterKit = createCharacterKit(emblem);
-  const createHand = () => {const hand=createFirstPersonArm(characterKit);hand.scale.setScalar(character.masculine?1.06:1);return hand;};
-  function createGun(){
-    const g = new T.Group(), variants = [];
-    for (let i = 0; i < WEAPONS.length; i++) {
-      const variant = new T.Group(); g.add(variant); variants.push(variant);
-      const length = [.39, .66, .57, .8, .84][i], width = [.15, .16, .24, .17, .3][i];
-      box(mats.dark, variant, [0,0,-length*.23], [width,.17,length]);
-      box(mats.armorLight, variant, [0,.03,-length*.26], [width+.01,.12,length*.8]);
-      box(mats.steel, variant, [0,-.12,.09], [.12,.24,.12]).rotation.x = -.3;
-      box(mats.rose, variant, [0,.09,-length*.25], [.065,.022,length*.75], false);
-      if (i > 0) { box(mats.dark,variant,[0,-.17,-.12],[.13,.21,.16]); box(mats.rose,variant,[0,-.18,-.205],[.065,.11,.015],false); }
-      const muzzle = -length*.73;
-      const barrel = mesh(new T.CylinderGeometry(i===4?.12:.045,i===4?.12:.045,.15,10),mats.steel,variant,[0,0,muzzle+.07]);barrel.rotation.x=Math.PI/2;
-      mesh(geometries.sphere,mats.rose,variant,[0,0,muzzle-.01],[i===4?.1:.035,i===4?.1:.035,.025],false);
-      if (i === 2) for (const side of [-1,1]) box(mats.steel,variant,[side*.1,0,muzzle+.03],[.065,.09,.12]);
-      if (i === 3) { box(mats.dark,variant,[0,.17,-.17],[.11,.14,.22]); box(mats.violet,variant,[0,.17,-.29],[.075,.065,.02],false); }
-      if (i === 4) for (const side of [-1,1]) { box(mats.armor,variant,[side*.18,0,-.28],[.075,.27,.51]); box(mats.rose,variant,[side*.19,.15,-.28],[.04,.02,.38],false); }
-    }
-    const flash=halo(g,[0,0,-.32],.6,palette.rose,.7);flash.visible=false;g.userData.flash=flash;
-    g.userData.setVariant = index => { variants.forEach((v,i)=>v.visible=i===index); g.userData.index=index; flash.position.z=-[.39,.66,.57,.8,.84][index]*.73-.03; flash.scale.setScalar(index>=3?1: .6); };
-    g.userData.setVariant(0); return g;
-  }
+  // A bare gloved right hand with its forearm, for the free controller in a headset.
+  const createHand = () => createGlove(characterKit.gloves);
+  const createGun = (options = {}) => buildGun({ mats, gloves: characterKit.gloves, sleeve: options.sleeve !== false, makeFlash: parent => halo(parent, [0, 0, 0], .6, palette.rose, .7) });
   const soldiers=Object.fromEntries(CHARACTERS.map(profile=>{
     const model=buildSoldier(characterKit,createGun,profile);model.root.visible=profile.id==='ghju';scene.add(model.root);return [profile.id,model];
   }));
   let soldier=soldiers.ghju;
-  const weapon=new T.Group();const fpsGun=createGun();weapon.add(fpsGun);
-  const firstPersonArm=createHand();weapon.add(firstPersonArm);weapon.position.set(.25,-.2,-.65);camera.add(weapon);weapon.visible=false;
-  function setEquipment(level){soldier.setLevel(level);firstPersonArm.userData.setLevel(level);}
+  const weapon=new T.Group();const fpsGun=createGun();weapon.add(fpsGun);weapon.position.set(.19,-.24,-.56);camera.add(weapon);weapon.visible=false;
+  function setEquipment(level){soldier.setLevel(level);fpsGun.userData.setLevel(level);}
 
   function setCharacter(id){
     const next=characterForId(id);if(themeApplied&&next.id===character.id)return;
@@ -191,7 +173,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
       soldier.root.position.copy(previous.root.position);soldier.root.rotation.copy(previous.root.rotation);soldier.root.scale.copy(previous.root.scale);
       soldier.root.visible=previous.root.visible;previous.root.visible=false;soldier.setLevel(previous.equipmentLevel);
     }
-    soldier.gun.userData.setVariant(fpsGun.userData.index);firstPersonArm.scale.setScalar(character.masculine?1.06:1);
+    soldier.setWeapon(fpsGun.userData.index);
     characterKit.setPalette(character.armor);
     const colors={...character.world,...palette,dark:palette.ink,cyan:character.world.cyan};
     for(const [name,mat] of Object.entries(mats))mat.color.setHex(colors[name]);
@@ -274,7 +256,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
       pool.count=n;pool.visible=n>0;pool.instanceMatrix.needsUpdate=true;
     }
   }
-  function setWeapon(index){ if(fpsGun.userData.index===index)return;fpsGun.userData.setVariant(index);soldier.gun.userData.setVariant(index); }
+  function setWeapon(index){ if(fpsGun.userData.index===index&&soldier.weapon===index)return;fpsGun.userData.setVariant(index);soldier.setWeapon(index); }
   function animatePortal(time){innerRing.rotation.z=time*.2;vortex.rotation.z=-time*.15;portalHalo.material.opacity=.3+Math.sin(time*2)*.055;dust.rotation.y=Math.sin(time*.1)*.06;}
   function lobby(time,level=1){
     camera.clearViewOffset();setEquipment(level);const portrait=innerHeight>innerWidth;
