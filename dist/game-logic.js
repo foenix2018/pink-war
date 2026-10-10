@@ -176,11 +176,16 @@ export class ArenaGame {
     const ordinal = this.spawned++;
     const elite = this.wave >= 3 && ordinal % (this.wave >= 8 ? 3 : 5) === 2;
     const ranged = this.wave >= 4 && !elite && ordinal % 4 === 1;
+    const forms = ['stalker','scuttler','seer','brute'];
+    const form = elite ? 'brute' : forms[(ordinal + this.wave - 1) % forms.length];
     const angle = this.random() * Math.PI * 2;
     const x = PORTAL.x + Math.cos(angle) * 2.7, z = PORTAL.z + Math.sin(angle) * 2.7 + 4;
+    const aimHeight = form === 'scuttler' ? .88 : form === 'seer' ? 1.38 : form === 'brute' ? 1.42 : 1.15;
     const enemy = { id: this.nextId++, x, z, elevation: walkSurfaceHeight(x, z),
-      hp: elite ? 80 + this.wave * 10 : 36 + this.wave * 6, elite, ranged,
-      speed: (elite ? 4.2 : ranged ? 4 : 5.2) + this.wave * .22, radius: elite ? 1.05 : .8,
+      hp: elite ? 80 + this.wave * 10 : 36 + this.wave * 6, elite, ranged, form, aimHeight,
+      speed: (elite ? 3.9 : form === 'scuttler' ? 6 : form === 'seer' ? 4.7 : form === 'brute' ? 4.2 : ranged ? 4 : 5.2) + this.wave * .22,
+      radius: elite ? 1.05 : form === 'scuttler' ? .86 : form === 'brute' ? .95 : .8,
+      hitRadius: form === 'scuttler' ? .91 : form === 'brute' ? 1.18 : form === 'seer' ? .94 : 1.05,
       attackTimer: .8 + this.random() * .6, phase: this.random() * Math.PI * 2 };
     this.enemies.push(enemy); this.toSpawn--; this.event('spawn', { id: enemy.id, x: enemy.x, z: enemy.z });
   }
@@ -250,12 +255,14 @@ export class ArenaGame {
     if (this.toSpawn > 0) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) { this.spawnEnemy(); this.spawnTimer = Math.max(.3, 1.15 - this.wave * .08); } }
     this.navigation.update(this.player, this.time);
     for (const e of this.enemies) {
+      e.aimHeight ??= e.elite ? 1.35 : 1.15;
+      e.hitRadius ??= e.elite ? 1.3 : 1.05;
       e.elevation = walkSurfaceHeight(e.x, e.z);
       let dx = this.player.x - e.x, dz = this.player.z - e.z;
-      const horizontalDistance = Math.hypot(dx, dz) || 1, verticalDistance = (this.player.elevation || 0) - e.elevation;
+      const horizontalDistance = Math.hypot(dx, dz) || 1, verticalDistance = (this.player.elevation || 0) + 1.25 - (e.elevation + e.aimHeight);
       const distance = Math.hypot(horizontalDistance, verticalDistance);
       dx /= distance; dz /= distance;
-      const from = { x: e.x, y: e.elevation + 1.3, z: e.z }, to = { x: this.player.x, y: (this.player.elevation || 0) + 1.3, z: this.player.z };
+      const from = { x: e.x, y: e.elevation + e.aimHeight, z: e.z }, to = { x: this.player.x, y: (this.player.elevation || 0) + 1.25, z: this.player.z };
       const visible = !this.blocked(from, to);
       if (this.obstacles.some(b=>!b.walkableSurface&&segmentBox(from,to,{...b,hx:b.hx+e.radius+.08,hz:b.hz+e.radius+.08})!==null)) {
         const waypoint=this.navigation.waypoint(e);
@@ -284,7 +291,7 @@ export class ArenaGame {
         const hit = segmentSphere(start, end, { x: this.player.x, y: (this.player.elevation || 0) + 1.25, z: this.player.z }, .62);
         if (hit !== null) { nearest = hit; target = this.player; }
       } else for (const e of this.enemies) {
-        const hit = segmentSphere(start, end, { x: e.x, y: e.elevation + (e.elite ? 1.35 : 1.15), z: e.z }, e.elite ? 1.3 : 1.05);
+        const hit = segmentSphere(start, end, { x: e.x, y: e.elevation + e.aimHeight, z: e.z }, e.hitRadius);
         if (hit !== null && hit < nearest) { nearest = hit; target = e; }
       }
       for (const obstacle of this.obstacles) { const t = segmentBox(start, end, obstacle); if (t !== null && t < nearest) { nearest = t; target = null; } }
@@ -296,7 +303,7 @@ export class ArenaGame {
         else if (target) this.damageEnemy(target, b.damage, at);
         if (!b.hostile && b.splash > 0) for (const e of [...this.enemies]) {
           if (e === target) continue;
-          const center = { x: e.x, y: e.elevation + (e.elite ? 1.35 : 1.15), z: e.z }, d = Math.hypot(e.x - at.x, e.z - at.z, center.y - at.y);
+          const center = { x: e.x, y: e.elevation + e.aimHeight, z: e.z }, d = Math.hypot(e.x - at.x, e.z - at.z, center.y - at.y);
           // Cover also stops blast damage; back off the impact point from a wall.
           const blast = { x: at.x - b.vx * .0001, y: at.y, z: at.z - b.vz * .0001 };
           if (d < b.splash && !this.blocked(blast, center)) this.damageEnemy(e, b.damage * (1 - d / b.splash * .65), center);

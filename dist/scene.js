@@ -244,7 +244,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
 
   const monsters=new Map(), bulletMeshes=new Map(), particles=[];
   const enemyFactory=createEnemyFactory(mats);
-  const createMonster=(elite,ranged)=>enemyFactory.create(elite,ranged);
+  const createMonster=(elite,ranged,form)=>enemyFactory.create(elite,ranged,form);
   // Sparks share two instanced meshes (rose and violet), whatever their number.
   const SPARKS=320,sparkPools=[mats.rose,mats.violet].map(material=>{
     const pool=new T.InstancedMesh(geometries.ico,material,SPARKS);pool.count=0;pool.frustumCulled=false;pool.instanceMatrix.setUsage(T.DynamicDrawUsage);scene.add(pool);return pool;
@@ -259,7 +259,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));
     soldier.root.scale.setScalar(1);soldier.root.position.set(sim.player.x,sim.player.elevation||0,sim.player.z);soldier.root.rotation.y=sim.player.yaw;
     soldier.animate(time,moving,recoil);
-    const present=new Set();for(const e of sim.enemies){present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite, e.ranged);monsters.set(e.id,m);scene.add(m);}m.position.set(e.x,(e.elevation||0)+Math.abs(Math.sin(time*8+e.phase))*.025,e.z);m.rotation.y=Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI;m.userData.animate(time,e.phase);}
+    const present=new Set();for(const e of sim.enemies){present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite,e.ranged,e.form);monsters.set(e.id,m);scene.add(m);}m.position.set(e.x,(e.elevation||0)+Math.abs(Math.sin(time*8+e.phase))*.025,e.z);m.rotation.y=Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI;m.userData.animate(time,e.phase);}
     for(const[id,m]of monsters){if(!present.has(id)){scene.remove(m);monsters.delete(id);}}
     const active=new Set();for(const b of sim.bullets){active.add(b.id);let m=bulletMeshes.get(b.id);if(!m){m=new T.Group();mesh(geometries.sphere,b.hostile?mats.cyan:mats.pale,m,[0,0,0],[.09,.09,.22],false);mesh(geometries.sphere,b.hostile?mats.violet:mats.rose,m,[0,0,.25],[.08,.08,.38],false);m.scale.setScalar(b.weapon==='nova'?2.3:b.weapon==='thorn'?1.3:b.hostile?1.4:1);bulletMeshes.set(b.id,m);scene.add(m);}m.position.set(b.x,b.y,b.z);m.lookAt(b.x+b.vx,b.y+b.vy,b.z+b.vz);}
     for(const[id,m]of bulletMeshes){if(!active.has(id)){scene.remove(m);bulletMeshes.delete(id);}}

@@ -219,8 +219,8 @@ function aim() {
   const far = camera.position.clone().addScaledVector(forward, 160); let target = far, nearest = 1;
   for (const box of world.obstacles) { const hit = segmentBox(camera.position, far, box); if (hit !== null && hit < nearest) { nearest = hit; target = camera.position.clone().lerp(far, hit); } }
   for (const enemy of game.enemies) {
-    const center = { x: enemy.x, y: (enemy.elevation || 0) + (enemy.elite ? 1.35 : 1.15), z: enemy.z };
-    const hit = segmentSphere(camera.position, far, center, enemy.elite ? 1.3 : 1.05);
+    const center = { x: enemy.x, y: (enemy.elevation || 0) + (enemy.aimHeight ?? (enemy.elite ? 1.35 : 1.15)), z: enemy.z };
+    const hit = segmentSphere(camera.position, far, center, enemy.hitRadius ?? (enemy.elite ? 1.3 : 1.05));
     if (hit !== null && hit < nearest) { nearest = hit; target = new T.Vector3(center.x, center.y, center.z); }
   }
   const direction = target.clone().sub(origin).normalize(); return { origin, direction };
