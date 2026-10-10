@@ -2,6 +2,7 @@
 
 Jeu de survie 3D en HTML et JavaScript, conçu pour iPhone, ordinateur et casque WebXR. LYLU ou GHJU défend une arène fermée de 200 × 200 mètres, puis ferme la brèche après dix niveaux.
 
+- Version 3.5 : casques tactiques affinés et mieux équipés, gants renforcés avec reliefs de phalanges, doigts animés sur la détente et la poignée en FPS comme à la troisième personne. Le rechargement redresse l’arme et libère brièvement la main d’appui ; huit cellules lumineuses suivent les munitions, la charge et le remplissage. En VR, l’écran de l’arme reprend ces mêmes états sans ajouter d’informations à l’interface de combat.
 - Version 3.4 : camouflage numérique à faible contraste sur les plaques, rivets sur les plastrons et épaulières, écusson couronne au torse et aux épaules dès le premier niveau. Les tissus restent noirs et texturés ; les plaques nacrées et les pièces bleu électrique ou rose reprennent les planches de LYLU et GHJU.
 - Version 3.3 : LYLU et GHJU reprennent le chara design tactique fourni : combinaison noire, plastron et plaques claires contrastées par des pièces bleu électrique ou rose, épaulières superposées, casque fermé à visière, emblème couronne, chargeurs de poitrine, poches utilitaires, genouillères et bottes renforcées. Les silhouettes restent compatibles avec la vue FPS, la troisième personne et la VR.
 - Version 3.2 : chaque tir possède maintenant sa propre signature sonore synthétisée : impulsion laser pour R–9, rafale électronique pour BLOOM, décharge en éventail pour PETAL, claquement de rail chargé pour THORN et explosion d’énergie profonde pour NOVA. Les sons sont activés par défaut ; le bouton Son permet de les couper ou réactiver, et la puissance sonore de THORN et NOVA suit leur niveau de charge.
@@ -53,7 +54,7 @@ Ils sont dans la fenêtre **VR** (avant d’entrer dans le casque) et conservés
 
 ### Sensations de tir
 
-Le pistolet recule à chaque tir et le canon se relève brièvement ; la direction du tir reste celle de la manette. Les doigts du gantelet suivent la détente et la poignée. La gâchette de la main libre fait pivoter l'arme vers le haut pendant le début du rechargement, puis elle revient en position de visée ; l'index du gant libre s'enroule avec la pression. Les manettes continuent de suivre les mains réelles pendant ce geste. Les vibrations dépendent de l’arme (R–9 sec, BLOOM léger, PETAL, THORN et NOVA de plus en plus marqués) et se renforcent pendant la charge. Un tir qui touche, une élimination, un changement d’arme, une recharge et un dégât ont chacun leur impulsion. Les munitions restantes s’affichent sur la culasse du pistolet, en rouge sous le quart de la batterie. L’autre main apparaît sous la forme d’un gantelet, pour voir où elle se trouve. L’afficheur de l’arme indique uniquement le nombre de munitions restantes, y compris pendant une recharge.
+Le pistolet recule à chaque tir et le canon se relève brièvement ; la direction du tir reste celle de la manette. Les doigts du gantelet suivent la détente et la poignée en VR, en FPS et à la troisième personne. La gâchette de la main libre fait pivoter l'arme vers le haut pendant le rechargement, puis elle revient en position de visée ; l'index du gant libre s'enroule avec la pression. Hors VR, le bras suit la poignée pendant le geste. Les manettes continuent de suivre les mains réelles en VR. Les vibrations dépendent de l’arme (R–9 sec, BLOOM léger, PETAL, THORN et NOVA de plus en plus marqués) et se renforcent pendant la charge. Un tir qui touche, une élimination, un changement d’arme, une recharge et un dégât ont chacun leur impulsion. Huit cellules sur l’arme s’éteignent avec les tirs, clignotent à faible charge et se remplissent pendant le rechargement ; elles s’éclaircissent pendant la charge des armes lourdes. L’afficheur VR garde le nombre de munitions et une barre de batterie, y compris pendant une recharge.
 
 ### Performances dans le casque
 
@@ -67,7 +68,7 @@ Le mapping correspond au [profil officiel Touch Plus](https://raw.githubusercont
 
 ## Affichage en partie
 
-La santé et le nombre de balles sont les seules informations affichées pendant le combat, sur téléphone, ordinateur et en VR. Le casque utilise deux petits indicateurs sous la visée ; le compteur de l’arme répète seulement les munitions restantes. Les niveaux, scores, ennemis, noms d’arme, messages de charge/recharge et panneaux d’aide ne recouvrent plus la scène. Les commandes et réglages se consultent dans les menus avant l’entrée en VR. Les vibrations et les sons accompagnent toujours le tir et la recharge.
+La santé et le nombre de balles sont les seules informations affichées dans le HUD pendant le combat, sur téléphone, ordinateur et en VR. Le casque utilise deux petits indicateurs sous la visée ; l’afficheur et les cellules intégrés à l’arme décrivent seulement son état de munitions. Les niveaux, scores, ennemis, noms d’arme, messages de charge/recharge et panneaux d’aide ne recouvrent plus la scène. Les commandes et réglages se consultent dans les menus avant l’entrée en VR. Les vibrations et les sons accompagnent toujours le tir et la recharge.
 
 ## Mains, armes et personnages
 

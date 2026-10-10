@@ -12,7 +12,7 @@ if (!['auto', 'low', 'high'].includes(settings.quality)) settings.quality = 'aut
 let phase = 'lobby', view = 'third', yaw = 0, pitch = -.075, game, world, vr;
 let character=characterForId('ghju');
 try{character=characterForId(localStorage.getItem('pink-war-character'));}catch{}
-let clock = 0, lastTime = 0, hudTimer = 0, flashTimer = 0, recoil = 0, announcementUntil = 0, damageUntil = 0;
+let clock = 0, lastTime = 0, hudTimer = 0, flashTimer = 0, recoil = 0, reloadLift = 0, announcementUntil = 0, damageUntil = 0;
 let outfitReturn = 'lobby', previewLevel = 1, equipmentUntil = 0;
 let canvasPointer = null, lastDrag = null, audioContext = null;
 const move = { x: 0, y: 0, id: null }, look = { x: 0, y: 0, id: null };
@@ -219,9 +219,26 @@ function updateCamera() {
     camera.position.set(start.x + (end.x - start.x) * nearest, Math.max(.35, start.y + (end.y - start.y) * nearest), start.z + (end.z - start.z) * nearest);
   }
   const bob = Math.hypot(move.x, move.y) > .1 || keys.has('KeyW') || keys.has('KeyZ') || keys.has('KeyS');
-  weapon.position.set(.19, -.24 + (bob ? Math.sin(clock * 11) * .012 : 0) - recoil * .14, -.56 + recoil * .5);
-  weapon.rotation.x = recoil * .9;
+  weapon.position.set(.19, -.24 + (bob ? Math.sin(clock * 11) * .012 : 0) - recoil * .14 + reloadLift * .045, -.56 + recoil * .5 - reloadLift * .028);
+  weapon.rotation.set(recoil * .9 + reloadLift * Math.PI / 2, 0, Math.sin(clock * 1.8) * .004);
   camera.updateProjectionMatrix(); camera.updateMatrixWorld(true);
+}
+function reloadPose() {
+  if (!game?.weapon || game.reloadRemaining <= 0) return 0;
+  const progress = clamp(1 - game.reloadRemaining / game.weapon.reload, 0, 1), ease = t => t * t * (3 - 2 * t);
+  return progress < .2 ? ease(progress / .2) : progress < .58 ? 1 : 1 - ease((progress - .58) / .42);
+}
+function updateWeaponVisuals(dt, firing, moving) {
+  const reloading = game.reloadRemaining > 0, reloadProgress = reloading ? clamp(1 - game.reloadRemaining / game.weapon.reload, 0, 1) : 0;
+  reloadLift = reloadPose();
+  const state = { ammo: game.ammo[game.weaponIndex], capacity: game.weapon.capacity, charge: game.weapon.chargeTime ? game.charge : 0,
+    reloadProgress, reloading, time: clock };
+  world.fpsGun.userData.setCombatState?.(state); world.soldier.gun.userData.setCombatState?.(state);
+  const trigger = firing && !reloading && game.state === 'playing' ? 1 : 0;
+  if (vr?.mode !== 'xr') {
+    if (view === 'fps') world.fpsGun.userData.animateHands?.(trigger, trigger ? .34 : .18, reloadLift, dt);
+    else world.soldier.animate(clock, moving, recoil, reloadLift, trigger, dt);
+  }
 }
 function aim() {
   if (vr?.mode==='xr') return vr.aim();
@@ -334,11 +351,12 @@ function frame(timestamp, xrFrame) {
     let moveYaw = facing;
     if(vr.mode==='xr')moveYaw=vr.movementYaw(facing);
     game.step(dt, { x, z, yaw: facing, moveYaw, sprint: vrInput.sprint || keys.has('ShiftLeft') || keys.has('ShiftRight') });
-    world.sync(game, clock, dt, Math.hypot(x, z) > .1, recoil); updateCamera();
+    const moving = Math.hypot(x, z) > .1;
+    world.sync(game, clock, dt, moving, recoil); updateCamera();
     const firing = vr.mode==='xr' ? vrInput.fire : !!(firingPointers.size || keys.has('Space') || vrInput.fire);
     if (game.state==='playing' && (firing || game.charge>0)) { const target=aim(); game.trigger(firing,dt,target.origin,target.direction); }
     else game.triggerHeld=false;
-    handleEvents();
+    handleEvents(); updateWeaponVisuals(dt, firing, moving); updateCamera();
     hudTimer -= dt; if (hudTimer <= 0) { if (vr.mode !== 'xr') updateHud(); hudTimer = .1; }
   }
   flashTimer = Math.max(0, flashTimer - dt); recoil = Math.max(0, recoil - dt * 2.4);

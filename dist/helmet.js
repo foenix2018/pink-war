@@ -8,10 +8,10 @@ export const HELMET_RINGS = Object.freeze([
   [-.055,.17,.178,.004],[.025,.172,.183,.008],[.098,.166,.176,.01],
   [.158,.14,.153,.013],[.194,.098,.112,.015],[.211,.028,.042,.018]
 ].map(Object.freeze));
-const shell = loft(HELMET_RINGS, 28);
-const visor = new T.SphereGeometry(1, 28, 8, Math.PI * 1.12, Math.PI * .76, Math.PI * .37, Math.PI * .26);
-const chin = loft([[-.205,.066,.076,-.041],[-.17,.118,.15,-.042],[-.12,.137,.155,-.034],[-.088,.131,.142,-.038]],20);
-const collar = new T.TorusGeometry(.09,.016,8,24).rotateX(Math.PI/2);
+const shell = loft(HELMET_RINGS, 36);
+const visor = new T.SphereGeometry(1, 36, 14, Math.PI * 1.12, Math.PI * .76, Math.PI * .37, Math.PI * .26);
+const chin = loft([[-.205,.066,.076,-.041],[-.17,.118,.15,-.042],[-.12,.137,.155,-.034],[-.088,.131,.142,-.038]],24);
+const collar = new T.TorusGeometry(.09,.016,10,32).rotateX(Math.PI/2);
 
 export function addClosedHelmet(assembly, m, { scale = 1, hostile = false } = {}) {
   const add = (geometry, material, position = [0,0,0], size = [1,1,1], rotation = [0,0,0], level = 1) =>

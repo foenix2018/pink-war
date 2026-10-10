@@ -7,7 +7,7 @@ import { Assembly, bevelBox, limb, ball, matrix, along } from './geo.js';
 // trigger and the thumb runs forward along the left panel, exactly where a real hand holds a handgun.
 export const GRIP = Object.freeze({ halfWidth: .018, halfDepth: .0235, wrist: [.03, .052, .098], forearm: [.1, -.3, .95] });
 
-const digitShapes = new Map(), digitTip = new T.SphereGeometry(1, 10, 8);
+const digitShapes = new Map(), digitTip = new T.SphereGeometry(1, 12, 8);
 function articulatedDigit(parent, m, id, joints, radius) {
   let geometry = digitShapes.get(id);
   if (!geometry) {
@@ -19,7 +19,13 @@ function articulatedDigit(parent, m, id, joints, radius) {
   mesh.castShadow = tip.castShadow = true; mesh.receiveShadow = tip.receiveShadow = true;
   const end = joints[joints.length-1], base = joints[0];
   tip.position.set(end[0]-base[0],end[1]-base[1],end[2]-base[2]); tip.scale.setScalar(radius);
-  pivot.add(mesh,tip); return pivot;
+  pivot.add(mesh,tip);
+  // A raised, flexible knuckle cap makes each finger read as a padded tactical glove.
+  const joint = joints[Math.min(joints.length-2, Math.ceil((joints.length-1)/2))];
+  const guard = new T.Mesh(digitTip, m.plate);
+  guard.position.set(joint[0]-base[0]+radius*.18,joint[1]-base[1],joint[2]-base[2]);
+  guard.scale.set(radius*1.18,radius*1.12,radius*1.05); guard.castShadow = guard.receiveShadow = true;
+  pivot.add(guard); return pivot;
 }
 
 // materials: { fabric, plate, trim, glow, accent, metal }
@@ -36,6 +42,10 @@ export function createGloveAssembly(m, { sleeve = true, forearm = GRIP.forearm }
   a.box(m.plate, [.012, .082, .056], [.066, .016, .042], [0, -.06, .1], .005);
   a.box(m.trim, [.006, .07, .02], [.07, .014, .05], [0, -.06, .1], .002);
   a.box(m.glow, [.003, .055, .006], [.0725, .014, .0305], [0, -.06, .1], .001, false);
+  // A layered palm heel and fine grip ribs break up the broad glove surface.
+  a.box(m.trim, [.004, .038, .018], [.074, -.012, .038], [0, -.08, .12], .002);
+  a.box(m.plate, [.005, .027, .014], [.074, -.012, .066], [0, -.08, .12], .002);
+  a.box(m.glow, [.003, .016, .004], [.077, -.012, .067], [0, -.08, .12], .001, false);
   // Middle, ring and little finger wrap the front strap from the right panel to the left panel.
   // The fingers are separate pivots so the trigger finger, grip and reload gesture can move independently.
   if (sleeve) {
@@ -44,6 +54,7 @@ export function createGloveAssembly(m, { sleeve = true, forearm = GRIP.forearm }
     // Cuff, then a tapered sleeve with armoured plates. Plates appear with the gauntlet level.
     a.limb(m.fabric, at(-.012), at(.24), .027, .036);
     a.add(new T.TorusGeometry(.03, .0065, 8, 22), m.trim, along(at(.01), d), true);
+    a.add(new T.TorusGeometry(.032, .0028, 6, 22), m.metal, along(at(-.012), d), true);
     a.add(new T.TorusGeometry(.0335, .004, 6, 22), m.glow, along(at(.028), d), false);
     a.add(bevelBox(.052, .016, .13, .006), m.plate, along([wx + d[0] / k * .12, wy + d[1] / k * .12 + .026, wz + d[2] / k * .12], d), true, 4);
     a.add(bevelBox(.04, .012, .09, .005), m.trim, along([wx + d[0] / k * .12, wy + d[1] / k * .12 + .036, wz + d[2] / k * .12], d), true, 4);
@@ -56,13 +67,15 @@ export function createGloveAssembly(m, { sleeve = true, forearm = GRIP.forearm }
 // A ready-to-use glove group at the origin of its weapon. `mirror` makes the left hand.
 export function createGlove(m, { mirror = false, sleeve = true, forearm } = {}) {
   const group = new T.Group(), assembly = createGloveAssembly(m, { sleeve, forearm });
+  const basePosition = new T.Vector3();
   assembly.mount(group); group.userData.setLevel = level => assembly.setLevel(level); group.userData.assembly = assembly;
+  group.userData.setBasePosition = position => { basePosition.set(...position); group.position.copy(basePosition); };
   const stack = [.026, 0, -.0265, -.053], digits = [];
   [[1,1],[2,.95],[3,.84]].forEach(([k,size],i)=>digits.push(articulatedDigit(group,m,`grip-${i}`,
     [[.03,stack[k],-.01],[.022,stack[k],-.0345],[-.021,stack[k],-.0345],[-.0285,stack[k],-.009]],.0108*size)));
   digits.push(articulatedDigit(group,m,'index',[[.03,.047,-.011],[.026,.045,-.043],[.014,.038,-.055],[.001,.032,-.047]],.0098));
   digits.push(articulatedDigit(group,m,'thumb',[[.022,.05,.028],[-.002,.056,.026],[-.024,.054,.004],[-.0275,.052,-.026],[-.0265,.05,-.05]],.0115));
-  const sign=mirror?-1:1, pose={trigger:0,grip:0,reload:0};
+  const sign=mirror?-1:1, pose={trigger:0,grip:0,reload:0};group.userData.pose=pose;
   group.userData.animate = ({trigger=0,grip=0,reload=0}={},dt=.016,handedness=1) => {
     const blend=1-Math.exp(-Math.max(0,dt)*24);
     for(const key of ['trigger','grip','reload'])pose[key]+=(Math.max(0,Math.min(1,Number({trigger,grip,reload}[key])||0))-pose[key])*blend;
@@ -70,7 +83,7 @@ export function createGlove(m, { mirror = false, sleeve = true, forearm } = {}) 
     const curlSign=sign*handedness;
     digits[0].rotation.x=-curlSign*(.06+g*.2+r*.13);digits[1].rotation.x=-curlSign*(.06+g*.2+r*.13);digits[2].rotation.x=-curlSign*(.06+g*.2+r*.13);
     digits[3].rotation.x=-curlSign*(.05+t*.48+r*.2);digits[4].rotation.x=curlSign*(.04+g*.12+r*.26);
-    group.rotation.z=curlSign*r*.12;group.position.set(0,r*.018,-r*.03);
+    group.rotation.z=curlSign*r*.12;group.position.set(basePosition.x,basePosition.y+r*.018,basePosition.z-r*.03);
   };
   if (mirror) group.scale.x = -1;
   return group;

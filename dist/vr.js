@@ -178,20 +178,31 @@ export class VRController {
   }
   // A small slide display keeps the battery readable without looking away from the target.
   makeAmmo(gun) {
-    const { T } = this.hooks.world(), canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 64;
+    const { T } = this.hooks.world(), canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 80;
     const texture = new T.CanvasTexture(canvas); texture.colorSpace = T.SRGBColorSpace;
-    const plane = new T.Mesh(new T.PlaneGeometry(.08, .04), new T.MeshBasicMaterial({ map: texture, toneMapped: false }));
+    const plane = new T.Mesh(new T.PlaneGeometry(.08, .05), new T.MeshBasicMaterial({ map: texture, toneMapped: false }));
     plane.position.set(0, .112, 0); plane.rotation.x = -1.05; plane.frustumCulled = false; gun.add(plane);
     gun.userData.ammo = { canvas, texture, plane, key: '' };
   }
   drawAmmo(gun, game) {
     const display = gun.userData.ammo; if (!display) return;
-    const capacity = game.weapon.capacity, ammo = game.ammo[game.weaponIndex];
-    const key = `${ammo}|${capacity}`; if (key === display.key) return; display.key = key;
+    const capacity = game.weapon.capacity, ammo = game.ammo[game.weaponIndex], reloading = game.reloadRemaining > 0;
+    const reloadProgress = reloading ? clamp(1 - game.reloadRemaining / game.weapon.reload, 0, 1) : 0;
+    const charge = game.weapon.chargeTime ? game.charge : 0, low = ammo <= capacity / 4, blink = Math.floor(performance.now() / 160) % 2 === 0;
+    gun.userData.setCombatState?.({ ammo, capacity, charge, reloadProgress, reloading, time: performance.now() / 1000 });
+    const key = `${ammo}|${capacity}|${Math.round(charge*12)}|${Math.ceil(reloadProgress*8)}|${reloading}|${low&&blink}`;
+    if (key === display.key) return; display.key = key;
     const c = display.canvas.getContext('2d'), accent = this.hooks.world().character?.accent || '#ff9ac3';
-    c.fillStyle = 'rgba(18,12,26,.95)'; c.fillRect(0, 0, 128, 64);
-    c.fillStyle = ammo <= capacity / 4 ? '#ff6b8a' : accent; c.textAlign = 'center';
-    c.font = 'bold 52px monospace'; c.fillText(String(ammo), 64, 49);
+    c.clearRect(0, 0, 128, 80); c.fillStyle = 'rgba(18,12,26,.97)'; c.fillRect(0, 0, 128, 80);
+    c.strokeStyle = 'rgba(255,255,255,.22)'; c.lineWidth = 2; c.strokeRect(2, 2, 124, 76);
+    c.fillStyle = low && blink ? '#ff496b' : '#f5f1f4'; c.textAlign = 'center'; c.font = 'bold 48px monospace'; c.fillText(String(ammo), 64, 49);
+    const filled = Math.max(Math.ceil(ammo / Math.max(1,capacity) * 8), reloading ? Math.ceil(reloadProgress * 8) : 0);
+    for (let i=0;i<8;i++) {
+      c.fillStyle = i < filled ? (low && blink ? '#ff496b' : accent) : 'rgba(255,255,255,.13)';
+      c.fillRect(10 + i*14, 57, 10, 7);
+    }
+    const progress = reloading ? reloadProgress : charge;
+    if (reloading || charge > 0) { c.fillStyle='rgba(255,255,255,.14)';c.fillRect(10,70,108,3);c.fillStyle=reloading?'#f5f1f4':accent;c.fillRect(10,70,108*progress,3); }
     display.texture.needsUpdate = true;
   }
   cancelTrigger() {

@@ -226,6 +226,32 @@ function buildNova(m) {
 
 const BUILDERS = [buildR9, buildBloom, buildPetal, buildThorn, buildNova];
 
+// Small exposed energy cells sit beside each receiver and react to ammunition, charge and reload.
+const BATTERY_LAYOUT = Object.freeze([
+  Object.freeze([.0188, .077, .012, .0115]),
+  Object.freeze([.0242, .086, .008, .018]),
+  Object.freeze([.0392, .080, -.028, .017]),
+  Object.freeze([.0735, .110, -.335, .045]),
+  Object.freeze([.0815, .075, -.025, .038])
+]);
+const BATTERY_COUNT = 8;
+const batteryCellGeometry = new T.BoxGeometry(.0035, .007, .008);
+function attachBatteryRail(model, index, mats, material) {
+  const [x,y,z,step] = BATTERY_LAYOUT[index], length = step * (BATTERY_COUNT - 1) + .012;
+  const shell = new T.Mesh(new T.BoxGeometry(.009, .013, length), mats.dark);
+  shell.position.set(x + .002, y, z - step * (BATTERY_COUNT - 1) * .5);
+  shell.castShadow = true; shell.receiveShadow = true; model.add(shell);
+  const cells = new T.InstancedMesh(batteryCellGeometry, material, BATTERY_COUNT);
+  cells.frustumCulled = false; cells.instanceMatrix.setUsage(T.DynamicDrawUsage);
+  const position = new T.Vector3(), scale = new T.Vector3(1,1,1), rotation = new T.Quaternion(), matrix = new T.Matrix4();
+  for (let i = 0; i < BATTERY_COUNT; i++) {
+    position.set(x + .007, y, z - i * step); matrix.compose(position, rotation, scale); cells.setMatrixAt(i, matrix);
+    cells.setColorAt(i, new T.Color(0x171722));
+  }
+  cells.instanceMatrix.needsUpdate = true; if (cells.instanceColor) cells.instanceColor.needsUpdate = true;
+  model.add(cells); return cells;
+}
+
 // One group per weapon, merged into a handful of meshes each (a few draw calls instead of dozens). The geometry is
 // built once per material set and shared by every gun in the scene.
 const prototypes = new WeakMap();
@@ -245,16 +271,43 @@ export function createWeaponModels(mats) {
 export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   const g = new T.Group(), models = createWeaponModels(mats);
   for (const model of models) { model.visible = false; g.add(model); }
+  const batteryMaterial = new T.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
+  const batteries = models.map((model,index)=>attachBatteryRail(model,index,mats,batteryMaterial));
+  const batteryOff = new T.Color(0x171722), batteryLow = new T.Color(0xff385f), batteryReload = new T.Color(0xffffff);
+  const batteryTint = new T.Color(), batteryCharge = new T.Color(), batteryWhite = new T.Color(0xffffff);
+  let batteryStateKey = '';
   const hand = createGlove(gloves, { sleeve }), support = createGlove(gloves, { mirror: true, sleeve, forearm: [.5, -.55, .66] });
   support.visible = false; g.add(hand, support);
   const flash = makeFlash(g); flash.visible = false;
   Object.assign(g.userData, { flash, hand, support, showSupport: true });
   g.userData.setLevel = level => { hand.userData.setLevel(level); support.userData.setLevel(level); };
+  g.userData.setCombatState = ({ ammo = 0, capacity = 1, charge = 0, reloadProgress = 0, reloading = false, time = 0 } = {}) => {
+    const rail = batteries[g.userData.index]; if (!rail) return;
+    const accent = mats.rose?.color || new T.Color(0xff80b2);
+    const low = ammo > 0 && ammo <= capacity * .25, blink = Math.floor(time * 6) % 2 === 0;
+    const chargeStep = Math.round(charge * BATTERY_COUNT), reloadStep = Math.ceil(reloadProgress * BATTERY_COUNT);
+    const accentHex = accent.getHex(), key = `${g.userData.index}|${ammo}|${capacity}|${chargeStep}|${reloadStep}|${reloading}|${low&&blink}|${accentHex}`;
+    if (key === batteryStateKey) return; batteryStateKey = key;
+    const filled = Math.max(Math.ceil(ammo / Math.max(1,capacity) * BATTERY_COUNT), reloading ? Math.ceil(reloadProgress * BATTERY_COUNT) : 0);
+    const chargeCells = chargeStep, on = batteryTint.copy(accent);
+    batteryCharge.copy(on).lerp(batteryWhite,.25 + .65 * charge);
+    for (let i=0;i<BATTERY_COUNT;i++) {
+      const lit = i < filled, charging = charge > 0 && i < chargeCells;
+      const color = !lit ? batteryOff : low && blink ? batteryLow : reloading && i < reloadStep ? batteryReload : charging ? batteryCharge : on;
+      rail.setColorAt(i,color);
+    }
+    rail.instanceColor.needsUpdate = true;
+  };
+  g.userData.animateHands = (trigger = 0, grip = .18, reload = 0, dt = .016) => {
+    hand.userData.animate?.({ trigger, grip, reload: 0 }, dt);
+    if (support.visible) support.userData.animate?.({ trigger: 0, grip: reload ? 0 : grip, reload }, dt);
+  };
   g.userData.setVariant = index => {
     models.forEach((model, i) => model.visible = i === index);
     const frame = WEAPON_FRAME[index];
     flash.position.set(...frame.muzzle); flash.scale.setScalar(index >= 3 ? 1 : .6);
-    support.visible = g.userData.showSupport && !!frame.support; if (frame.support) support.position.set(...frame.support);
+    support.visible = g.userData.showSupport && !!frame.support;
+    support.userData.setBasePosition?.(frame.support || [0,0,0]);
     g.userData.index = index;
   };
   g.userData.setVariant(0); g.userData.setLevel(1);

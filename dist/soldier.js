@@ -152,12 +152,22 @@ export function createSoldier(kit, createGun, profileInfo) {
   {
     const asm=new Assembly();assemblies.push({asm,bone:head});
     addClosedHelmet(asm,{armor:m.rose,trim:m.pearl,visor:m.visor,fabric:m.suit,glow:m.glow,metal:m.steel},{scale:masculine?.76:.74});
-    const {plate,sphere}=builder(head);
+    const {plate,sphere,link}=builder(head);
     // Command crest follows the shell rather than extending it into a large crown.
     for(const s of [-1,0,1]){
       plate(m.gold,[s*.055,.157,-.095],[.035,.035-Math.abs(s)*.005,.025],10,[0,0,s*-.13]);
       sphere(m.pale,[s*.055,.17,-.109],[.006,.008,.004],10);
     }
+    // Close-fit comms pods, a raised rear rail and paired sensor stalks finish the helmet silhouette.
+    for(const s of [-1,1]){
+      plate(m.dark,[s*.12,.008,.028],[.034,.07,.074],1,[0,0,s*-.1]);
+      plate(m.steel,[s*.143,.008,-.012],[.014,.047,.038],1,[0,0,s*-.1]);
+      plate(m.glow,[s*.152,.008,-.017],[.005,.022,.018],1);
+      link(m.steel,[s*.105,.134,.052],[s*.115,.191,.065],.005,.004,1);
+      sphere(m.pale,[s*.115,.192,.065],[.008,.01,.008],1);
+    }
+    plate(m.dark,[0,.158,.061],[.18,.018,.046],1,[.04,0,0]);
+    plate(m.rose,[0,.169,.059],[.105,.004,.018],1,[.04,0,0]);
   }
   const orbit=new T.Group();orbit.position.set(0,.236,.025);head.add(orbit);
   {
@@ -260,7 +270,9 @@ export function createSoldier(kit, createGun, profileInfo) {
   const mount=new T.Group();body.add(mount);
   const gun=createGun({sleeve:false});gun.scale.setScalar(CARRY);mount.add(gun);
   const rest=createGlove(kit.gloves,{mirror:true,sleeve:false});rest.scale.multiplyScalar(CARRY);rest.rotation.x=-PI/2;rest.position.set(...REST);body.add(rest);rest.visible=false;
+  let weaponIndex=0,currentWeaponPose=-1,currentSupportPose=-1;
   const unit=new T.Vector3(),pole=new T.Vector3(),dir=new T.Vector3(),hint=new T.Vector3(),a=new T.Vector3(),b=new T.Vector3();
+  const poseEuler=new T.Euler(),wristR=new T.Vector3(),wristL=new T.Vector3(),restWrist=new T.Vector3(-GRIP.wrist[0],GRIP.wrist[2],-GRIP.wrist[1]).multiplyScalar(CARRY).add(new T.Vector3(...REST));
   const aim=(group,toward,upHint)=>{
     // Local -y follows `toward`; local +z leans toward `upHint`.
     const y=a.copy(toward).negate().normalize(),z=b.copy(upHint).addScaledVector(y,-upHint.dot(y));
@@ -279,6 +291,22 @@ export function createSoldier(kit, createGun, profileInfo) {
     fore.position.copy(arm.elbow);aim(fore,b.copy(arm.wrist).sub(arm.elbow),hint.set(0,1,0));
     fore.userData.length=arm.wrist.clone().sub(arm.elbow).length();
   }
+  function poseWeapon(reload=0){
+    reload=Math.max(0,Math.min(1,reload));
+    const hand=gun.userData.hand,supportHand=gun.userData.support,support=WEAPON_FRAME[weaponIndex].support,supportPose=support?(supportHand.userData.pose?.reload||0):0;
+    if(Math.abs(reload-currentWeaponPose)<.004&&Math.abs(supportPose-currentSupportPose)<.004)return;
+    currentWeaponPose=reload;currentSupportPose=supportPose;
+    const angle=reload*PI/2;
+    gun.rotation.set(angle,0,0);poseEuler.set(angle,0,0);
+    wristR.set(...GRIP.wrist).multiply(hand.scale).applyEuler(hand.rotation).add(hand.position).applyEuler(poseEuler).multiplyScalar(CARRY).add(mount.position);
+    if(support){
+      wristL.set(...GRIP.wrist).multiply(supportHand.scale).applyEuler(supportHand.rotation).add(supportHand.position).applyEuler(poseEuler).multiplyScalar(CARRY).add(mount.position);
+    }else{
+      wristL.copy(restWrist);
+    }
+    solve(arms[0],wristL);solve(arms[1],wristR);
+    for(const arm of arms)arm.fore.scale.set(1,arm.fore.userData.length/FORE,1);
+  }
   const soldierApi={
     root,body,head,hair,legs,knees,gun,arms,
     // Choose the weapon in the hands: the right palm takes the grip, the free hand takes the support or rests.
@@ -294,10 +322,7 @@ export function createSoldier(kit, createGun, profileInfo) {
       }
       mount.position.copy(p);
       rest.visible=!support;
-      solve(arms[0],wristL());solve(arms[1],wristR());
-      // Stretch each forearm piece between its elbow and wrist.
-      for(const arm of arms)arm.fore.scale.set(1,arm.fore.userData.length/FORE,1);
-      soldierApi.weapon=index;
+      weaponIndex=index;currentWeaponPose=currentSupportPose=-1;soldierApi.weapon=index;poseWeapon(0);
     },
     setLevel(level){
       level=Math.max(1,Math.min(10,Math.floor(Number(level)||1)));if(level===state.level)return;state.level=level;
@@ -307,11 +332,14 @@ export function createSoldier(kit, createGun, profileInfo) {
     get equipmentLevel(){return state.level;},
     get visibleParts(){return assemblies.reduce((n,{asm})=>n+asm.count,0);},
     get batchCount(){return assemblies.reduce((n,{asm})=>n+asm.meshes.length,0);},
-    animate(time,moving,recoil=0){
+    animate(time,moving,recoil=0,reload=0,trigger=0,dt=.016){
       const stride=moving?Math.sin(time*10)*.48:0;legs[0].rotation.x=stride;legs[1].rotation.x=-stride;
       knees.forEach((knee,i)=>{knee.rotation.x=moving?Math.max(0,Math.sin(time*10+i*Math.PI))*.42:.06;});
       body.position.y=moving?Math.abs(Math.sin(time*10))*.025:Math.sin(time*2)*.007;
+      body.rotation.z=moving?Math.sin(time*5)*.012:Math.sin(time*.8)*.004;
+      head.rotation.x=moving?Math.sin(time*10+Math.PI/2)*.012:Math.sin(time*1.6)*.006;
       const kick=Math.min(1,recoil/.16);body.position.z=kick*.035;body.rotation.x=kick*.035;
+      gun.userData.animateHands?.(trigger,kick>.05?.34:.18,reload,dt);poseWeapon(reload);
       hair.rotation.x=Math.sin(time*3)*.045;hair.rotation.z=Math.sin(time*2)*.025;
       orbit.rotation.y=time*.24;
     }
