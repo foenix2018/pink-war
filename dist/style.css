@@ -55,3 +55,4 @@ h1{white-space:nowrap;font-size:clamp(64px,6vw,94px)}.brand-mark,.unit-mark{font
 @media(max-width:360px) and (orientation:portrait){.character-card{padding:9px 8px;gap:7px}.character-card .agent-icon{width:24px}.character-card strong{font-size:16px}.character-card small{font-size:5px}.character-choice-heading>span:last-child{font-size:5px}}
 
 .vr-section-title{font:700 10px monospace;letter-spacing:1.4px;color:var(--rose);margin:24px 0 12px}.quest-controls{margin:0}.quest-controls>div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:14px;padding:9px 0;border-bottom:1px solid var(--border);font-size:11px;line-height:1.5}.quest-controls dt{font-weight:700;color:var(--paper)}.quest-controls dd{margin:0;color:var(--muted)}
+#vr-dialog .setting-row{padding:11px 0}#vr-dialog .setting-row select{max-width:210px}

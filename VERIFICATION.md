@@ -1,4 +1,18 @@
-# Vérification — Pink war v2.3
+# Vérification — Pink war v2.4
+
+## Pistolet VR et commandes des deux manettes — 10 octobre 2026
+
+Les 44 tests Node.js passent : 19 tests du combat et de la campagne, et 25 tests des commandes Quest, dont 12 nouveaux. Ils couvrent la disposition droitier et gaucher (la gâchette gauche tire, le joystick droit déplace, X recharge, Y change d'arme, A revient en arrière, B met en pause), la gâchette de l'autre main qui recharge sans jamais tirer ni reprendre une pause, la poignée libre qui ne court que serrée à fond, la poignée de tir qui n'empêche plus de courir, le joystick de tir sans effet vers le haut ou le bas, les rotations de 30°, de 45° et fluide, la validation des réglages, la liste des commandes selon la main, les vibrations (plan par arme, deux mains pour les dégâts, repli `vibrationActuator`, panne d'un actuateur, réglage coupé), la politique de cadence (90 Hz demandés, fovéation d'abord, puis 80 et 72 Hz, jamais en dessous), la direction de déplacement selon la manette libre (qui a révélé qu'un objet 3D regarde vers +Z : corrigé en lisant l'axe −Z) et le point de départ du tir sur la bouche du canon avec recul sans changement de direction.
+
+Le parcours navigateur immersif sous Chromium/SwiftShader avec IWER 2.5.0, configuré en Quest 3 avec deux manettes `meta-quest-touch-plus`, a été rejoué trois fois (droitier depuis `dist/`, gaucher, droitier depuis le HTML autonome). Résultats identiques : le jeu demande 90 Hz sans erreur (la session émulée annonce 72, 80, 90 et 120 Hz et tourne déjà à 90 Hz par défaut : cela ne prouve pas l'acceptation par Meta Quest Browser) ; le laser est visible sans serrer la poignée ; un tir consomme une charge et envoie une impulsion de 0,3 pendant 22 ms uniquement à la main de tir ; la gâchette de l'autre main lance une recharge de 1,1 s sans tir et vibre dans les deux mains ; le déplacement mesuré sur le temps de simulation est de 7 m/s, 7 m/s avec une poignée serrée à 40 %, 10 m/s avec la poignée serrée à fond et 10 m/s avec le clic du joystick pendant que la poignée de tir est serrée ; la rotation produit −30° (−45° en réglage 45°) ; la pause avec Y (B pour un gaucher) puis la reprise avec A (X) fonctionnent. Aucune erreur de console ni requête en échec, hormis l'avertissement attendu de WebGPU indisponible. Les captures montrent le pistolet avec son afficheur de munitions (« 11 / 12 », puis « recharge ») et un gantelet dans l'autre main.
+
+Les modes hors casque sont inchangés : un parcours mobile 844 × 390 lance une partie, tire, entre et sort de la vue stéréoscopique sans erreur. Les captures de quatre monstres (ordinaire, élite, lanceur, élite lanceur) et d'étincelles, avant et après la fusion des maillages, sont indiscernables.
+
+Mesures d'appels de dessin dans l'émulateur, avec 30 monstres devant le joueur : 776 avant, 550 après (environ −29 %), pour 52 000 puis 58 500 triangles ; la fusion rend le tri par champ de vision moins fin. Un monstre passe d'environ 20 à 12 appels (deux yeux compris). Les chiffres sont des appels de rendu, pas des temps d'image : SwiftShader n'est pas représentatif d'un Quest 3.
+
+Limites : aucun Quest 3 physique n'était disponible. La position du pistolet dans la main vient du décalage entre le rayon de visée et la poignée du profil Touch Plus d'IWER (poignée environ 5 cm derrière et 1,6 cm sous l'origine du rayon) ; à confirmer à la main. Les intensités de vibration, le confort de la rotation fluide et du déplacement selon la manette, la cadence réellement acceptée par Meta Quest Browser et le comportement du repli 90 → 72 Hz sous charge restent à valider sur casque. La logique de repli est testée sur ses décisions, pas sur des temps d'image réels.
+
+# Vérification — Pink war v2.3 (historique)
 
 ## Meta Quest 3 — 10 octobre 2026
 

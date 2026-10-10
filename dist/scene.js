@@ -210,19 +210,56 @@ export async function createScene(canvas, quality, forceWebGL = false, character
 
   const monsters=new Map(), bulletMeshes=new Map(), particles=[];
   const monsterArm=new T.ConeGeometry(.2,.85,5),monsterLeg=new T.ConeGeometry(.22,.8,5),monsterHorn=new T.ConeGeometry(.12,.45,5);
+  // A monster is a dozen small meshes, doubled again for the two eyes of a headset. Its static parts are
+  // baked into one mesh per material and shared by every monster of the same kind; only the legs stay apart.
+  const monsterKits=new Map();
+  function bakeParts(parts){
+    const positions=[],normals=[],uvs=[];
+    for(const part of parts){
+      const geometry=part.geometry.index?part.geometry.toNonIndexed():part.geometry.clone();
+      part.updateMatrix();geometry.applyMatrix4(part.matrix);
+      positions.push(geometry.attributes.position.array);normals.push(geometry.attributes.normal.array);uvs.push(geometry.attributes.uv.array);geometry.dispose();
+    }
+    const join=arrays=>{const out=new Float32Array(arrays.reduce((n,a)=>n+a.length,0));let at=0;for(const a of arrays){out.set(a,at);at+=a.length;}return out;};
+    const merged=new T.BufferGeometry();
+    merged.setAttribute('position',new T.BufferAttribute(join(positions),3));merged.setAttribute('normal',new T.BufferAttribute(join(normals),3));merged.setAttribute('uv',new T.BufferAttribute(join(uvs),2));
+    return merged;
+  }
+  function monsterKit(elite, ranged){
+    const key=(elite?1:0)+(ranged?2:0);let kit=monsterKits.get(key);if(kit)return kit;
+    const template=buildMonster(elite,ranged),groups=new Map();
+    for(const part of template.children){
+      if(part.userData.leg)continue;
+      const id=`${part.material.uuid}|${part.castShadow}`;if(!groups.has(id))groups.set(id,[]);groups.get(id).push(part);
+    }
+    kit=[...groups.values()].map(parts=>({geometry:bakeParts(parts),material:parts[0].material,shadow:parts[0].castShadow}));
+    monsterKits.set(key,kit);return kit;
+  }
   function createMonster(elite, ranged){
+    const root=new T.Group(),mat=elite?mats.monsterElite:mats.monster;root.scale.setScalar(elite?1.3:1);
+    for(const {geometry,material,shadow} of monsterKit(elite,ranged)){const part=new T.Mesh(geometry,material);part.castShadow=part.receiveShadow=shadow;root.add(part);}
+    for(const s of [-1,1]){const leg=mesh(monsterLeg,mat,root,[s*.27,.4,0]);leg.rotation.x=Math.PI;root.userData['leg'+s]=leg;}
+    return root;
+  }
+  function buildMonster(elite, ranged){
     const root=new T.Group(), size=elite?1.3:1;root.scale.setScalar(size);const mat=elite?mats.monsterElite:mats.monster;
     const body=mesh(geometries.ico,mat,root,[0,1.12,0],[.65,.7,.5]);
     const head=mesh(geometries.ico,mats.monsterFace,root,[0,1.78,-.05],[.4,.36,.34]);
     if (ranged) { mesh(geometries.sphere,mats.cyan,root,[0,1.12,-.51],[.19,.19,.12],false); box(mats.cyan,root,[0,1.82,-.37],[.45,.08,.04],false); }
     box(mats.violet,root,[0,1.82,-.33],[.44,.065,.035],false);mesh(geometries.ico,mats.rose,root,[0,1.12,-.46],[.16,.2,.055],false);
-    for(const s of [-1,1]){const arm=mesh(monsterArm,mat,root,[s*.67,1.03,-.1]);arm.rotation.z=s*.32;const leg=mesh(monsterLeg,mat,root,[s*.27,.4,0]);leg.rotation.x=Math.PI;root.userData['leg'+s]=leg;const horn=mesh(monsterHorn,mat,root,[s*.24,2.12,.03]);horn.rotation.z=-s*.3;}
-    root.userData.body=body;return root;
+    for(const s of [-1,1]){const arm=mesh(monsterArm,mat,root,[s*.67,1.03,-.1]);arm.rotation.z=s*.32;const leg=mesh(monsterLeg,mat,root,[s*.27,.4,0]);leg.rotation.x=Math.PI;leg.userData.leg=true;const horn=mesh(monsterHorn,mat,root,[s*.24,2.12,.03]);horn.rotation.z=-s*.3;}
+    return root;
   }
+  // Sparks share two instanced meshes (rose and violet), whatever their number.
+  const SPARKS=320,sparkPools=[mats.rose,mats.violet].map(material=>{
+    const pool=new T.InstancedMesh(geometries.ico,material,SPARKS);pool.count=0;pool.frustumCulled=false;pool.instanceMatrix.setUsage(T.DynamicDrawUsage);scene.add(pool);return pool;
+  });
+  const sparkMatrix=new T.Matrix4(),sparkRotation=new T.Quaternion(),sparkPosition=new T.Vector3(),sparkScale=new T.Vector3();
   function burst(x,y,z,color=palette.rose,count=10){
-    for(let i=0;i<count;i++){const m=mesh(geometries.ico,color===palette.rose?mats.rose:mats.violet,scene,[x,y,z],[.065,.065,.065],false);particles.push({mesh:m,vx:(Math.random()-.5)*7,vy:Math.random()*5,vz:(Math.random()-.5)*7,life:.45+Math.random()*.3,max:.8});}
+    const pool=sparkPools[color===palette.rose?0:1];
+    for(let i=0;i<count&&particles.length<SPARKS;i++)particles.push({pool,x,y,z,vx:(Math.random()-.5)*7,vy:Math.random()*5,vz:(Math.random()-.5)*7,life:.45+Math.random()*.3,max:.8});
   }
-  function resetDynamic(){for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();for(const p of particles)scene.remove(p.mesh);particles.length=0;}
+  function resetDynamic(){for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
   function sync(sim,time,dt,moving){
     setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));
     soldier.root.scale.setScalar(1);soldier.root.position.set(sim.player.x,0,sim.player.z);soldier.root.rotation.y=sim.player.yaw;
@@ -231,7 +268,11 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     for(const[id,m]of monsters){if(!present.has(id)){scene.remove(m);monsters.delete(id);}}
     const active=new Set();for(const b of sim.bullets){active.add(b.id);let m=bulletMeshes.get(b.id);if(!m){m=new T.Group();mesh(geometries.sphere,b.hostile?mats.cyan:mats.pale,m,[0,0,0],[.09,.09,.22],false);mesh(geometries.sphere,b.hostile?mats.violet:mats.rose,m,[0,0,.25],[.08,.08,.38],false);m.scale.setScalar(b.weapon==='nova'?2.3:b.weapon==='thorn'?1.3:b.hostile?1.4:1);bulletMeshes.set(b.id,m);scene.add(m);}m.position.set(b.x,b.y,b.z);m.lookAt(b.x+b.vx,b.y+b.vy,b.z+b.vz);}
     for(const[id,m]of bulletMeshes){if(!active.has(id)){scene.remove(m);bulletMeshes.delete(id);}}
-    for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){scene.remove(p.mesh);particles.splice(i,1);continue;}p.mesh.position.x+=p.vx*dt;p.mesh.position.y+=p.vy*dt;p.mesh.position.z+=p.vz*dt;p.vy-=6*dt;p.mesh.scale.setScalar(.08*p.life/p.max);}
+    for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){particles.splice(i,1);continue;}p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;p.vy-=6*dt;}
+    for(const pool of sparkPools){
+      let n=0;for(const p of particles){if(p.pool!==pool)continue;sparkPosition.set(p.x,p.y,p.z);sparkScale.setScalar(.08*p.life/p.max);sparkMatrix.compose(sparkPosition,sparkRotation,sparkScale);pool.setMatrixAt(n++,sparkMatrix);}
+      pool.count=n;pool.visible=n>0;pool.instanceMatrix.needsUpdate=true;
+    }
   }
   function setWeapon(index){ if(fpsGun.userData.index===index)return;fpsGun.userData.setVariant(index);soldier.gun.userData.setVariant(index); }
   function animatePortal(time){innerRing.rotation.z=time*.2;vortex.rotation.z=-time*.15;portalHalo.material.opacity=.3+Math.sin(time*2)*.055;dust.rotation.y=Math.sin(time*.1)*.06;}
@@ -253,7 +294,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     camera.lookAt(0,portrait?1.45:2.18,7);
     camera.setViewOffset(innerWidth,innerHeight,portrait?0:-innerWidth*.22,portrait?innerHeight*.24:0,innerWidth,innerHeight);camera.updateProjectionMatrix();
   }
-  function setInspection(enabled){for(const m of monsters.values())m.visible=!enabled;for(const m of bulletMeshes.values())m.visible=!enabled;for(const p of particles)p.mesh.visible=!enabled;}
+  function setInspection(enabled){for(const m of monsters.values())m.visible=!enabled;for(const m of bulletMeshes.values())m.visible=!enabled;for(const pool of sparkPools)pool.visible=!enabled&&pool.count>0;}
   function resize(nextQuality=quality){quality=nextQuality;const q=nextQuality;const ratio=q==='low'?1:q==='high'?Math.min(devicePixelRatio,2):Math.min(devicePixelRatio,innerWidth<1000?1.4:1.8);renderer.setPixelRatio(ratio);renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.shadowMap.enabled=q!=='low';}
   resize();
   const stereo = new T.StereoCamera(); stereo.aspect = .5; stereo.eyeSep = .064;

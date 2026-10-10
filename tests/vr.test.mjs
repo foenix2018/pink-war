@@ -2,15 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from '../dist/vendor/three.core.min.js';
 import { ArenaGame } from '../dist/game-logic.js';
-import { VRController, traceVRAim } from '../dist/vr.js';
+import { VRController, traceVRAim, VR_DEFAULTS, sanitizeVRSettings, questControls, buttonNames, hapticPlan, pickFrameRate, perfStep } from '../dist/vr.js';
 
 const buttons = () => Array.from({length:6},()=>({pressed:false,value:0}));
-function setup(game = { charge:0, triggerHeld:false, reload:()=>true, cycleWeapon:()=>true }) {
+function setup(game = { charge:0, triggerHeld:false, reload:()=>true, cycleWeapon:()=>true }, settings = VR_DEFAULTS) {
   const left = { handedness:'left', targetRaySpace:{hand:'left'}, gamepad:{axes:[0,0,0,0],buttons:buttons()} };
   const right = { handedness:'right', targetRaySpace:{hand:'right'}, gamepad:{axes:[0,0,0,0],buttons:buttons()} };
   let phase = 'playing', exits = 0;
   const state = Object.assign(Object.create(VRController.prototype), {
-    mode:'xr',session:{inputSources:[right,left],visibilityState:'visible'},previous:new Map(),controllers:[],snapArmed:true,triggerBlocked:false,helpTime:0,
+    mode:'xr',settings,session:{inputSources:[right,left],visibilityState:'visible'},previous:new Map(),controllers:[],snapArmed:true,triggerBlocked:false,helpTime:0,
     hooks:{game:()=>game,phase:()=>phase,togglePause:()=>{phase=phase==='playing'?'paused':'playing';},pause:()=>{if(phase==='playing')phase='paused';},begin:()=>{phase='playing';},world:()=>({renderer:{xr:{getReferenceSpace:()=>({})}}})},
     exit:async()=>{exits++;},fail:()=>{}
   });
@@ -25,7 +25,7 @@ test('Quest Touch Plus keeps left movement, right trigger and grip independent o
   assert.equal(state.input().fire,false);
   down(right,0);down(left,3);
   let input=state.input();assert.equal(input.x,.4);assert.equal(input.z,-.8);assert.equal(input.fire,true);assert.equal(input.sprint,true);assert.equal(input.turn,0);assert.equal(input.tilt,0);
-  down(right,1);input=state.input();assert.equal(input.precision,true);assert.equal(input.sprint,false);
+  down(right,1);input=state.input();assert.equal(input.precision,true);assert.equal(input.sprint,true,'holding the pistol grip does not stop sprinting');
   down(right,0,false);right.gamepad.buttons[0].value=.4;assert.equal(state.input().fire,true);
 });
 
@@ -135,4 +135,122 @@ test('a headset without a right controller falls back to the head ray for the si
   const state={mode:'xr',controllers:[],hooks:{world:()=>({T,camera})}};
   const aim=VRController.prototype.aim.call(state);assert.equal(aim.origin.y,1.7);assert.ok(aim.direction.y<0);
   state.mode='stereo';assert.equal(VRController.prototype.aim.call(state),null);
+});
+
+test('the left trigger reloads without firing, and never resumes or restarts a paused game',()=>{
+  let reload=0;const {state,left,right,game,phase,setPhase}=setup({charge:.5,triggerHeld:true,reload:()=>{reload++;return true;},cycleWeapon:()=>true});
+  down(left,0);let input=state.input();assert.equal(input.fire,false);assert.equal(reload,1);assert.equal(game.charge,0);
+  state.input();assert.equal(reload,1,'a held trigger reloads once');
+  down(left,0,false);state.input();setPhase('paused');down(left,0);state.input();assert.equal(phase(),'paused');assert.equal(reload,1);
+  down(left,0,false);state.input();setPhase('over');down(left,0);state.input();assert.equal(phase(),'over');
+  down(left,0,false);setPhase('playing');state.input();down(right,0);assert.equal(state.input().fire,true);
+  down(left,0);assert.equal(state.input().fire,false,'firing stops while a reload starts');down(left,0,false);assert.equal(state.input().fire,false,'a trigger held across a reload waits for release');
+  down(right,0,false);state.input();down(right,0);assert.equal(state.input().fire,true);
+});
+
+test('the free-hand grip sprints only when squeezed on purpose, and the stick click still sprints',()=>{
+  const {state,left}=setup();
+  left.gamepad.buttons[1].value=.4;assert.equal(state.input().sprint,false,'a light grip while holding the controller is not a sprint');
+  left.gamepad.buttons[1].pressed=true;assert.equal(state.input().sprint,false,'a runtime that flags any squeeze as pressed does not turn it into a sprint');left.gamepad.buttons[1].pressed=false;
+  left.gamepad.buttons[1].value=.8;assert.equal(state.input().sprint,true);
+  left.gamepad.buttons[1].value=0;down(left,3);assert.equal(state.input().sprint,true);
+});
+
+test('the shooting-hand stick only turns: pushing it up or down changes nothing else',()=>{
+  const switched=[];const {state,right}=setup({charge:0,triggerHeld:false,reload:()=>true,cycleWeapon:d=>{switched.push(d);return true;}});
+  right.gamepad.axes=[0,0,0,-.95];let input=state.input();assert.equal(input.snap,0);assert.equal(input.z,0);assert.deepEqual(switched,[]);
+  right.gamepad.axes=[0,0,.2,.95];input=state.input();assert.equal(input.snap,0);assert.equal(input.z,0);assert.deepEqual(switched,[]);
+});
+
+test('a left-handed layout mirrors every control: left trigger fires, the right hand moves and pauses',()=>{
+  const reloads=[],cycles=[];
+  const {state,left,right,phase,setPhase,exits}=setup({charge:0,triggerHeld:false,reload:()=>{reloads.push(1);return true;},cycleWeapon:d=>{cycles.push(d);return true;}},{...VR_DEFAULTS,hand:'left'});
+  down(right,0);assert.equal(state.input().fire,false,'the right trigger is only a reload now');assert.equal(reloads.length,1);down(right,0,false);state.input();
+  down(left,0);assert.equal(state.input().fire,true);down(left,0,false);
+  right.gamepad.axes=[0,0,.4,-.8];left.gamepad.axes=[0,0,.9,.9];let input=state.input();
+  assert.equal(input.x,.4);assert.equal(input.z,-.8);assert.equal(input.snap,Math.PI/6);assert.equal(input.turn,0);
+  down(right,3);assert.equal(state.input().sprint,true);down(right,3,false);
+  down(left,3);state.input();assert.equal(state.showControls,true,'the shooting-hand stick click toggles help');down(left,3,false);state.input();
+  down(left,4);state.input();assert.equal(reloads.length,2,'X reloads');down(left,4,false);state.input();
+  down(left,5);state.input();assert.deepEqual(cycles,[1],'Y selects the next weapon');down(left,5,false);state.input();
+  down(right,4);state.input();assert.deepEqual(cycles,[1,-1],'A selects the previous weapon');down(right,4,false);state.input();
+  down(right,5);state.input();assert.equal(phase(),'paused','B pauses');down(right,5,false);state.input();
+  down(left,4);state.input();assert.equal(phase(),'playing','X resumes');down(left,4,false);state.input();
+  down(right,5);state.input();down(right,5,false);state.input();down(left,5);state.input();state.input();
+  assert.equal(exits(),1,'Y leaves VR from the pause');
+});
+
+test('snap turns honour 30° and 45°, and smooth turning is continuous',()=>{
+  let ctx=setup(undefined,{...VR_DEFAULTS,turn:'snap45'});ctx.right.gamepad.axes[2]=.9;assert.equal(ctx.state.input().snap,Math.PI/4);
+  ctx=setup(undefined,{...VR_DEFAULTS,turn:'smooth'});ctx.right.gamepad.axes[2]=.5;
+  let input=ctx.state.input();assert.equal(input.snap,0);assert.equal(input.turn,.5);
+  ctx.right.gamepad.axes[2]=-1;input=ctx.state.input();assert.equal(input.turn,-1);assert.equal(input.snap,0);
+  ctx.right.gamepad.axes[2]=.1;assert.equal(ctx.state.input().turn,0,'the dead zone still applies');
+});
+
+test('settings are validated and fall back to the defaults',()=>{
+  assert.deepEqual(sanitizeVRSettings(null),VR_DEFAULTS);
+  assert.deepEqual(sanitizeVRSettings({hand:'left',turn:'smooth',move:'hand',laser:'grip',haptics:false}),{hand:'left',turn:'smooth',move:'hand',laser:'grip',haptics:false});
+  assert.deepEqual(sanitizeVRSettings({hand:'both',turn:'x',move:3,laser:'',haptics:'no'}),VR_DEFAULTS);
+  assert.ok(Object.isFrozen(VR_DEFAULTS));
+});
+
+test('the control list and button names follow the shooting hand',()=>{
+  const right=Object.fromEntries(questControls('right')),left=Object.fromEntries(questControls('left'));
+  assert.equal(right['Gâchette droite'],'Tirer · maintenir pour charger');assert.equal(right.A,'Recharger la batterie');assert.equal(right.Y,'Pause / reprise');
+  assert.equal(left['Gâchette gauche'],'Tirer · maintenir pour charger');assert.equal(left.X,'Recharger la batterie');assert.equal(left.B,'Pause / reprise');
+  assert.ok(left['Joystick droit']==='Se déplacer'&&left['Joystick gauche']==='Rotation (crans ou fluide)');
+  assert.deepEqual(buttonNames('left'),{reload:'X',next:'Y',previous:'A',pause:'B'});
+  for(const hand of ['right','left'])assert.equal(new Set(questControls(hand).map(([control])=>control)).size,questControls(hand).length,'every control is listed once');
+});
+
+test('vibrations: heavy weapons kick harder, both hands feel damage, and the setting can turn them off',()=>{
+  assert.ok(hapticPlan('shot','nova').main[0]>hapticPlan('shot','r9').main[0]);assert.ok(hapticPlan('shot','nova').main[1]>hapticPlan('shot','bloom').main[1]);
+  assert.deepEqual(hapticPlan('shot','unknown'),hapticPlan('shot','r9'));assert.equal(hapticPlan('shot','r9').side,undefined);
+  assert.ok(hapticPlan('charge',1).main[0]>hapticPlan('charge',0).main[0]);assert.deepEqual(hapticPlan('nothing'),{});
+  const calls=[],pad=(name,kind)=>kind==='pulse'?{hapticActuators:[{pulse:(v,d)=>{calls.push([name,v,d]);return Promise.resolve();}}]}:{vibrationActuator:{playEffect:(type,o)=>{calls.push([name,type,o.strongMagnitude,o.duration]);return Promise.resolve();}}};
+  const controllers=[{ray:{userData:{source:{handedness:'right',gamepad:pad('R','pulse')}}}},{ray:{userData:{source:{handedness:'left',gamepad:pad('L','effect')}}}}];
+  const state=Object.assign(Object.create(VRController.prototype),{mode:'xr',settings:VR_DEFAULTS,controllers});
+  state.haptic('shot','thorn');assert.deepEqual(calls,[['R',.8,65]]);
+  calls.length=0;state.haptic('damage');assert.deepEqual(calls,[['R',.6,90],['L','dual-rumble',.6,90]]);
+  calls.length=0;state.settings={...VR_DEFAULTS,hand:'left'};state.haptic('shot','r9');assert.deepEqual(calls,[['L','dual-rumble',.3,22]]);
+  calls.length=0;state.settings={...VR_DEFAULTS,haptics:false};state.haptic('shot','r9');state.haptic('damage');assert.deepEqual(calls,[]);
+  state.settings=VR_DEFAULTS;state.mode='stereo';state.haptic('damage');assert.deepEqual(calls,[]);
+  state.mode='xr';controllers[0].ray.userData.source.gamepad={hapticActuators:[{pulse(){throw new Error('device lost');}}]};assert.doesNotThrow(()=>state.haptic('shot','r9'));
+});
+
+test('frame rate: ask for 90 Hz, cheapen the view first, then step down to 72 Hz and stop',()=>{
+  assert.equal(pickFrameRate([72,80,90,120]),90);assert.equal(pickFrameRate([72,120]),72);assert.equal(pickFrameRate([120]),null);assert.equal(pickFrameRate([]),null);
+  const state={rate:90,rates:[72,80,90,120],foveation:.5};
+  assert.equal(perfStep(state,1/90),null);assert.equal(perfStep(state,1.29/90),null);
+  assert.deepEqual(perfStep(state,1.4/90),{foveation:1});state.foveation=1;
+  assert.deepEqual(perfStep(state,1.4/90),{rate:80});state.rate=80;assert.deepEqual(perfStep(state,1.4/80),{rate:72});
+  state.rate=72;assert.equal(perfStep(state,.05),null,'never below 72 Hz');
+});
+
+test('the free hand can steer movement, and the head takes over when it is missing',()=>{
+  const rig=new T.Group(),camera=new T.PerspectiveCamera();camera.rotation.set(0,.4,0,'YXZ');rig.add(camera);
+  const ray=new T.Group();ray.rotation.y=-1;ray.userData.source={handedness:'left'};rig.add(ray);
+  const state=Object.assign(Object.create(VRController.prototype),{rig,lastMoveYaw:null,settings:{...VR_DEFAULTS,move:'hand'},controllers:[{ray}],hooks:{game:()=>({player:{x:0,z:0,yaw:0}}),world:()=>({T,camera,renderer:{xr:{updateCamera:()=>{}}}})}});
+  assert.ok(Math.abs(state.movementYaw(.5)-(-.5))<1e-8,'follows the left controller');
+  state.settings={...VR_DEFAULTS,move:'hand',hand:'left'};state.lastMoveYaw=null;assert.ok(Math.abs(state.movementYaw(.5)-.9)<1e-8,'a left shooting hand leaves no free left controller: the head is used');
+  state.settings=VR_DEFAULTS;state.lastMoveYaw=null;assert.ok(Math.abs(state.movementYaw(.5)-.9)<1e-8,'head mode ignores the controller');
+});
+
+test('a left shooting hand aims from the left controller',()=>{
+  const camera=new T.PerspectiveCamera(),mk=(hand,x)=>{const ray=new T.Group();ray.position.set(x,1.3,-.4);ray.userData.source={handedness:hand};return ray;};
+  const left=mk('left',-.3),right=mk('right',.3),state=Object.assign(Object.create(VRController.prototype),{mode:'xr',settings:{...VR_DEFAULTS,hand:'left'},controllers:[{ray:right},{ray:left}],hooks:{world:()=>({T,camera})}});
+  let aim=state.aim();assert.ok(Math.abs(aim.origin.x-(-.3))<1e-8);
+  state.settings=VR_DEFAULTS;aim=state.aim();assert.ok(Math.abs(aim.origin.x-.3)<1e-8);
+});
+
+test('the muzzle follows the pistol with a recoil kick and the aim keeps the controller direction',()=>{
+  const camera=new T.PerspectiveCamera();camera.position.set(0,1.7,0);
+  const ray=new T.Group();ray.position.set(.25,1.2,-.3);ray.userData.source={handedness:'right'};
+  const mount=new T.Group();mount.position.set(0,.11,-.045);ray.add(mount);
+  const gun=new T.Group(),flash=new T.Object3D();flash.position.z=-.6;gun.userData.flash=flash;gun.scale.setScalar(1.05);mount.add(gun);
+  const state=Object.assign(Object.create(VRController.prototype),{mode:'xr',settings:VR_DEFAULTS,controllers:[{ray,gun}],hooks:{game:()=>({weaponIndex:0}),world:()=>({T,camera})}});
+  let aim=state.aim();assert.ok(aim.origin.distanceTo(new T.Vector3(.25,1.31,-.975))<1e-6,'the muzzle sits above the grip and in front of it');
+  assert.ok(aim.direction.distanceTo(new T.Vector3(0,0,-1))<1e-8);
+  gun.rotation.x=.16;aim=state.aim();assert.ok(aim.direction.distanceTo(new T.Vector3(0,0,-1))<1e-8,'recoil moves the model only; the shot direction stays on the controller ray');
 });
