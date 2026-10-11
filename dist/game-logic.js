@@ -246,7 +246,9 @@ export class ArenaGame {
       tier: Math.max(1,Math.ceil(this.wave/2)),limpUntil:0,stunnedUntil:0,
       radius: elite ? 1.05 : form === 'scuttler' ? .86 : form === 'brute' ? .95 : .8,
       hitRadius: form === 'scuttler' ? .91 : form === 'brute' ? 1.18 : form === 'seer' ? .94 : 1.05,
-      attackTimer: .8 + this.random() * .6, phase: this.random() * Math.PI * 2 };
+      attackTimer: .8 + this.random() * .6, phase: this.random() * Math.PI * 2,
+      awareness:'patrol',lastSeenAt:-999,lastKnownX:x,lastKnownZ:z,patrolAngle:angle,patrolTimer:.7+this.random()*2,alertedUntil:0 };
+
     this.enemies.push(enemy); this.toSpawn--; this.event('spawn', { id: enemy.id, x: enemy.x, z: enemy.z });
   }
   shoot(origin, direction, charge = 1) {
@@ -293,11 +295,13 @@ export class ArenaGame {
     const armor=target.form?Math.min(.18,Math.max(0,(target.tier||1)-1)*.025):0;
     const effective=amount*multiplier*(1-armor*(zone==='head'?.35:1));
     target.hp -= effective;
+    target.lastKnownX=this.player.x;target.lastKnownZ=this.player.z;
+    target.alertedUntil=this.time+5;target.awareness='search';target.lastSeenAt=this.time;
     if(zone==='limb')target.limpUntil=Math.max(target.limpUntil||0,this.time+2);
     if(zone==='head')target.stunnedUntil=Math.max(target.stunnedUntil||0,this.time+.32);
     this.event('hit', { id: target.id, zone, damage:effective });
     if (target.hp <= 0) { this.score += target.elite ? 250 : target.ranged ? 150 : 100; this.kills++;
-      this.enemies.splice(this.enemies.indexOf(target), 1); this.event('kill', { ...at, elite: target.elite }); }
+      this.enemies.splice(this.enemies.indexOf(target), 1); this.event('kill', { ...at, id:target.id, form:target.form, elite: target.elite, x:target.x, y:target.elevation+target.aimHeight, z:target.z }); }
   }
   step(dt, input = {}) {
     if (this.state !== 'playing') return;
@@ -339,32 +343,78 @@ export class ArenaGame {
       e.aimHeight ??= e.elite ? 1.35 : 1.15;
       e.hitRadius ??= e.elite ? 1.3 : 1.05;
       e.elevation = walkSurfaceHeight(e.x, e.z);
-      let dx = this.player.x - e.x, dz = this.player.z - e.z;
-      const horizontalDistance = Math.hypot(dx, dz) || 1, verticalDistance = (this.player.elevation || 0) + (this.player.crouched?.83:1.25) - (e.elevation + e.aimHeight);
-      const distance = Math.hypot(horizontalDistance, verticalDistance);
-      dx /= distance; dz /= distance;
-      const from = { x: e.x, y: e.elevation + e.aimHeight, z: e.z }, to = { x: this.player.x, y: (this.player.elevation || 0) + (this.player.crouched?.83:1.25), z: this.player.z };
-      const visible = !this.blocked(from, to);
-      if (this.obstacles.some(b=>!b.walkableSurface&&segmentBox(from,to,{...b,hx:b.hx+e.radius+.08,hz:b.hz+e.radius+.08})!==null)) {
-        const waypoint=this.navigation.waypoint(e);
-        if(waypoint){dx=waypoint.x-e.x;dz=waypoint.z-e.z;const n=Math.hypot(dx,dz)||1;dx/=n;dz/=n;}
+      let dx=this.player.x-e.x,dz=this.player.z-e.z;
+      const horizontalDistance=Math.hypot(dx,dz)||1;
+      const eye={x:e.x,y:e.elevation+e.aimHeight,z:e.z};
+      const playerHead={x:this.player.x,y:this.player.elevation+(this.player.crouched?.83:1.25),z:this.player.z};
+      const verticalDistance=playerHead.y-eye.y,distance=Math.hypot(horizontalDistance,verticalDistance);
+      const unobstructed=!this.blocked(eye,playerHead);
+      // Patrol until visual contact. Buildings fully conceal the player;
+      // approaching from behind a patrol has a narrower detection window.
+      const facingX=Math.sin(e.yaw??(e.patrolAngle||0)),facingZ=Math.cos(e.yaw??(e.patrolAngle||0));
+      const directionDot=(facingX*dx+facingZ*dz)/horizontalDistance;
+      const seen=unobstructed && horizontalDistance<(e.elite?50:38)
+        && (horizontalDistance<5 || directionDot>-.28);
+      if(seen){
+        if(e.awareness!=='engaged')this.event('spotted',{id:e.id});
+        e.awareness='engaged';e.lastSeenAt=this.time;e.lastKnownX=this.player.x;e.lastKnownZ=this.player.z;
+        e.alertedUntil=this.time+3.8;
+      }else if(this.time<(e.alertedUntil||0)){
+        e.awareness='search';
+      }else{
+        e.awareness='patrol';
       }
-      for (const other of this.enemies) { if (other.id === e.id) continue; const ax = e.x - other.x, az = e.z - other.z, d = Math.hypot(ax, az); if (d > .01 && d < 1.7) { dx += ax / d * .65; dz += az / d * .65; } }
-      const norm = Math.hypot(dx, dz) || 1;
-      if (horizontalDistance > (e.ranged && visible ? 14 : 1.45)) {
+      let destinationX=e.lastKnownX,destinationZ=e.lastKnownZ;
+      if(e.awareness==='engaged'){destinationX=this.player.x;destinationZ=this.player.z;}
+      else if(e.awareness==='patrol'){
+        // Loiter near the portal, occasionally changing direction. This isn't a
+        // global navigation path to the player: hidden players remain undetected.
+        e.patrolTimer-=dt;
+        if(e.patrolTimer<=0){
+          e.patrolTimer=1.25+this.random()*2.6;
+          e.patrolAngle=(e.patrolAngle||0)+(this.random()-.5)*2.1;
+        }
+        const homeX=PORTAL.x,homeZ=PORTAL.z+4;
+        const offsetX=e.x-homeX,offsetZ=e.z-homeZ;
+        if(Math.hypot(offsetX,offsetZ)>17)e.patrolAngle=Math.atan2(-offsetX,-offsetZ);
+        destinationX=e.x+Math.sin(e.patrolAngle||0)*5;
+        destinationZ=e.z+Math.cos(e.patrolAngle||0)*5;
+      }
+      dx=destinationX-e.x;dz=destinationZ-e.z;
+      const goalDistance=Math.hypot(dx,dz)||1;
+      dx/=goalDistance;dz/=goalDistance;
+      if(this.obstacles.some(b=>!b.walkableSurface&&segmentBox(eye,{x:destinationX,y:eye.y,z:destinationZ},{...b,hx:b.hx+e.radius+.08,hz:b.hz+e.radius+.08})!==null)){
+        if(e.awareness!=='patrol'){
+          const waypoint=this.navigation.waypoint(e);
+          if(waypoint){dx=waypoint.x-e.x;dz=waypoint.z-e.z;const n=Math.hypot(dx,dz)||1;dx/=n;dz/=n;}
+        }else{e.patrolAngle=(e.patrolAngle||0)+Math.PI*.64;e.patrolTimer=.6;}
+      }
+      for(const other of this.enemies){
+        if(other.id===e.id)continue;
+        const ax=e.x-other.x,az=e.z-other.z,d=Math.hypot(ax,az);
+        if(d>.01&&d<1.7){dx+=ax/d*.65;dz+=az/d*.65;}
+      }
+      const norm=Math.hypot(dx,dz)||1;
+      const stopDistance=e.awareness==='engaged' ? (e.ranged?14:1.45) : e.awareness==='search'?1.8:.7;
+      if(goalDistance>stopDistance){
         const injury=e.limpUntil>this.time?.62:1;
-        moveInArena(e, dx / norm * e.speed * dt * injury, dz / norm * e.speed * dt * injury, e.radius, this.obstacles);
+        const searchSpeed=e.awareness==='engaged'?1:e.awareness==='search'?.75:.48;
+        moveInArena(e,dx/norm*e.speed*dt*injury*searchSpeed,dz/norm*e.speed*dt*injury*searchSpeed,e.radius,this.obstacles);
       }
-      e.elevation = walkSurfaceHeight(e.x, e.z);
-      e.yaw=Math.atan2(this.player.x-e.x,this.player.z-e.z)+Math.PI;
-      if(e.stunnedUntil<=this.time)e.attackTimer -= dt;
-      if (distance < 2 && visible && e.attackTimer <= 0) { e.attackTimer = .85; this.damage(e.elite ? 20 + this.wave : 10 + Math.floor(this.wave / 2)); }
-      else if (e.ranged && visible && distance < 38 && e.attackTimer <= 0) {
-        e.attackTimer = Math.max(1.2, 2.6 - this.wave * .1);
-        const n = Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z), speed = 18 + this.wave;
-        this.bullets.push({ id: this.nextId++, ...from, vx: (to.x - from.x) / n * speed, vy: (to.y - from.y) / n * speed, vz: (to.z - from.z) / n * speed,
-          life: 3, damage: 13 + this.wave, hostile: true, weapon: 'enemy', splash: 0 });
-        this.event('enemy-shot', from);
+      e.elevation=walkSurfaceHeight(e.x,e.z);
+      if(e.awareness!=='patrol'&&goalDistance>.15)e.yaw=Math.atan2(dx,dz);
+      else if(e.awareness==='patrol')e.yaw=e.patrolAngle||0;
+      if(e.stunnedUntil<=this.time)e.attackTimer-=dt;
+      // Never attack through walls or while merely searching the last seen position.
+      if(seen&&e.awareness==='engaged'&&distance<2&&e.attackTimer<=0){
+        e.attackTimer=.85;this.damage(e.elite?20+this.wave:10+Math.floor(this.wave/2));
+      }else if(seen&&e.awareness==='engaged'&&e.ranged&&distance<38&&e.attackTimer<=0){
+        e.attackTimer=Math.max(1.2,2.6-this.wave*.1);
+        const n=Math.hypot(playerHead.x-eye.x,playerHead.y-eye.y,playerHead.z-eye.z),speed=18+this.wave;
+        this.bullets.push({id:this.nextId++,...eye,vx:(playerHead.x-eye.x)/n*speed,
+          vy:(playerHead.y-eye.y)/n*speed,vz:(playerHead.z-eye.z)/n*speed,
+          life:3,damage:13+this.wave,hostile:true,weapon:'enemy',splash:0});
+        this.event('enemy-shot',eye);
       }
       if (this.state !== 'playing') break;
     }
