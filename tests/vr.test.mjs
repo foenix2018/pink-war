@@ -29,6 +29,19 @@ test('Quest Touch Plus keeps left movement, right trigger and grip independent o
   down(right,0,false);right.gamepad.buttons[0].value=.4;assert.equal(state.input().fire,true);
 });
 
+test('Quest can deliberately take a nearby beam weapon with the free-hand stick click',()=>{
+  const game={charge:0,triggerHeld:false,reload:()=>true,cycleWeapon:()=>true,nearbyWeapon:()=>({index:1})};
+  const {state,left}=setup(game);
+  down(left,3);let input=state.input();
+  assert.equal(input.pickup,true);assert.equal(input.sprint,false);
+  input=state.input();assert.equal(input.pickup,false,'holding cannot collect repeatedly');
+  down(left,3,false);state.input();
+  game.nearbyWeapon=()=>null;
+  down(left,3);input=state.input();
+  assert.equal(input.sprint,true,'stick click remains sprint when no weapon is nearby');
+  assert.equal(input.pickup,false);
+});
+
 test('Quest right stick rotates continuously with no snap or jerk, including reverse motion',()=>{
   const {state,right}=setup();right.gamepad.axes[2]=.9;
   for(let i=0;i<50;i++){const input=state.input();assert.equal(input.turn,.9);assert.equal(input.snap,0);}
