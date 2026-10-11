@@ -137,7 +137,7 @@ export function createEnemyFactory(mats) {
         }
       }
       const helmet=new EnemyAssembly();
-      addClosedHelmet(helmet,{armor,trim:armor,visor:dark,fabric:dark,glow,metal:armor},{scale:form==='brute'?1.2:form==='seer'?1.04:1.13,hostile:true});
+      addClosedHelmet(helmet,{armor,trim:armor,visor:dark,fabric:dark,glow,metal:armor},{scale:form==='brute'?1.2:form==='seer'?1.04:1.13,hostile:true,lowDetail:true});
       for(const item of helmet.items)a.add(item.geometry,item.material,matrix([0,1.865,-.032]),item.shadow);
       // Three sealed sensor lamps replace human eyes and define each alien's faceplate.
       for(const s of [-1,1])a.add(sensor,glow,matrix([s*.073,1.895,-.238],[0,0,0],[.034,.027,.012]),false);
