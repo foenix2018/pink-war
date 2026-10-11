@@ -122,9 +122,9 @@ test('limb hit zones rotate with enemies so side shots remain accurately located
 test('crouch toggles, lowers speed, keeps grounded trajectory, and refuses a jump while crouched', () => {
   const g=new ArenaGame();g.nextWave=999;
   g.step(.02,{crouchToggle:true});assert.equal(g.player.crouched,true);
-  const original=g.player.z;g.step(.4,{z:-1,jump:true,sprint:true});
+  const original=g.player.z;for(let n=0;n<8;n++)g.step(.05,{z:-1,jump:true,sprint:true});
   assert.equal(g.player.grounded,true);assert.equal(g.player.verticalSpeed,0);
-  assert.ok(Math.abs(g.player.z-original-1.2)<.08);
+  assert.ok(Math.abs(g.player.z-original+1.2)<.08);
   g.step(.02,{crouchToggle:true,jump:false});
   assert.equal(g.player.crouched,false);
   g.step(.02,{jump:true});assert.equal(g.player.grounded,false);
