@@ -165,7 +165,7 @@ export class ArenaGame {
   constructor(obstacles = [], random = Math.random) { this.obstacles = obstacles; this.random = random; this.navigation = new CoverNavigation(obstacles); this.reset(); }
   reset() {
     this.navigation.refreshAt = -1; this.navigation.goal = -1;
-    this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0, verticalSpeed: 0, grounded: true, jumpHeld: false };
+    this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0, verticalSpeed: 0, grounded: true, jumpHeld: false, crouched:false };
     this.enemies = []; this.bullets = []; this.events = [];
     this.wave = 0; this.score = 0; this.kills = 0; this.time = 0;
     this.state = 'playing'; this.cooldown = 0; this.invulnerable = 0;
@@ -314,9 +314,10 @@ export class ArenaGame {
     if (magnitude > 1) { ix /= magnitude; iz /= magnitude; }
     // RLH-inspired locomotion: jump is an edge-triggered ballistic state, independent of frame rate.
     const p = this.player, jumpDown = !!input.jump;
-    if (jumpDown && !p.jumpHeld && p.grounded) { p.grounded = false; p.verticalSpeed = 7.25; this.event('jump'); }
+    if(input.crouchToggle) { p.crouched=!p.crouched;this.event('crouch',{active:p.crouched}); }
+    if (jumpDown && !p.jumpHeld && p.grounded && !p.crouched) { p.grounded = false; p.verticalSpeed = 7.25; this.event('jump'); }
     p.jumpHeld = jumpDown;
-    const speed = input.sprint ? 10 : 7, moveYaw = input.moveYaw ?? yaw;
+    const speed = p.crouched ? 3.0 : input.sprint ? 10 : 7, moveYaw = input.moveYaw ?? yaw;
     moveInArena(p, (Math.cos(moveYaw) * ix + Math.sin(moveYaw) * iz) * speed * dt,
       (-Math.sin(moveYaw) * ix + Math.cos(moveYaw) * iz) * speed * dt, .55, this.obstacles);
     let floor = walkSurfaceHeight(p.x, p.z);
@@ -339,10 +340,10 @@ export class ArenaGame {
       e.hitRadius ??= e.elite ? 1.3 : 1.05;
       e.elevation = walkSurfaceHeight(e.x, e.z);
       let dx = this.player.x - e.x, dz = this.player.z - e.z;
-      const horizontalDistance = Math.hypot(dx, dz) || 1, verticalDistance = (this.player.elevation || 0) + 1.25 - (e.elevation + e.aimHeight);
+      const horizontalDistance = Math.hypot(dx, dz) || 1, verticalDistance = (this.player.elevation || 0) + (this.player.crouched?.83:1.25) - (e.elevation + e.aimHeight);
       const distance = Math.hypot(horizontalDistance, verticalDistance);
       dx /= distance; dz /= distance;
-      const from = { x: e.x, y: e.elevation + e.aimHeight, z: e.z }, to = { x: this.player.x, y: (this.player.elevation || 0) + 1.25, z: this.player.z };
+      const from = { x: e.x, y: e.elevation + e.aimHeight, z: e.z }, to = { x: this.player.x, y: (this.player.elevation || 0) + (this.player.crouched?.83:1.25), z: this.player.z };
       const visible = !this.blocked(from, to);
       if (this.obstacles.some(b=>!b.walkableSurface&&segmentBox(from,to,{...b,hx:b.hx+e.radius+.08,hz:b.hz+e.radius+.08})!==null)) {
         const waypoint=this.navigation.waypoint(e);
