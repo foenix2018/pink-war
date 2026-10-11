@@ -12,14 +12,19 @@ const shell = loft(HELMET_RINGS, 36);
 const visor = new T.SphereGeometry(1, 36, 14, Math.PI * 1.12, Math.PI * .76, Math.PI * .37, Math.PI * .26);
 const chin = loft([[-.205,.066,.076,-.041],[-.17,.118,.15,-.042],[-.12,.137,.155,-.034],[-.088,.131,.142,-.038]],24);
 const collar = new T.TorusGeometry(.09,.016,10,32).rotateX(Math.PI/2);
+// Enemy-only distant LOD. Player helmets retain the full original geometry.
+const shellLow = loft(HELMET_RINGS,16);
+const visorLow = new T.SphereGeometry(1,14,8,Math.PI*1.12,Math.PI*.76,Math.PI*.37,Math.PI*.26);
+const chinLow = loft([[-.205,.066,.076,-.041],[-.17,.118,.15,-.042],[-.12,.137,.155,-.034],[-.088,.131,.142,-.038]],12);
+const collarLow = new T.TorusGeometry(.09,.016,6,14).rotateX(Math.PI/2);
 
-export function addClosedHelmet(assembly, m, { scale = 1, hostile = false } = {}) {
+export function addClosedHelmet(assembly, m, { scale = 1, hostile = false, lowDetail = false } = {}) {
   const add = (geometry, material, position = [0,0,0], size = [1,1,1], rotation = [0,0,0], level = 1) =>
     assembly.add(geometry,material,matrix(position.map(v=>v*scale),rotation,size.map(v=>v*scale)),true,level);
   const plate = (material,position,size,rotation=[0,0,0],level=1) =>
     assembly.box(material,size.map(v=>v*scale),position.map(v=>v*scale),rotation,.004*scale,true,level);
-  add(shell,m.trim); add(visor,m.visor,[0,.002,-.014],[.177,.207,.193]);
-  add(chin,m.trim); add(collar,m.fabric,[0,-.212,.012]);
+  add(lowDetail?shellLow:shell,m.trim); add(lowDetail?visorLow:visor,m.visor,[0,.002,-.014],[.177,.207,.193]);
+  add(lowDetail?chinLow:chin,m.trim); add(lowDetail?collarLow:collar,m.fabric,[0,-.212,.012]);
   // Brow, closed jaw, temple locks and recessed ventilation. Small lights replace visible eyes.
   plate(m.trim,[0,.088,-.171],[.22,.023,.046],[.15,0,0]);
   plate(m.armor,[0,.154,-.082],[.13,.024,.075],[.18,0,0]);
