@@ -354,7 +354,7 @@ export class VRController {
     return this.lastMoveYaw ?? heading;
   }
   input(frame) {
-    const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, fire: false, sprint: false, precision: false };
+    const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, fire: false, sprint: false, precision: false, jump: false };
     const xr = this.mode === 'xr', cfg = settingsOf(this), mainHand = cfg.hand, sideHand = otherHand(mainHand);
     const sources = xr ? [...(this.session?.inputSources || [])] : [...(navigator.getGamepads?.() || [])].filter(Boolean).map(gamepad => ({ gamepad, handedness: 'both' }));
     const phase = this.hooks.phase?.() || 'playing', actions = new Set();
@@ -392,8 +392,8 @@ export class VRController {
       }
       const edge = (key, index) => { const id = `${source.handedness}:${key}`, down = pressed(pad.buttons[index]); if (down && !this.previous.get(id) && tracked) actions.add(key); this.previous.set(id, down); };
       if (main) { edge('reload', xr ? 4 : 0); edge('next', xr ? 5 : 1); }
-      if (xr && side) { edge('previous', 4); edge('pause', 5); edge('quickReload', 0); }
-      if (!xr) edge('pause', 9);
+      if (xr && side) { edge('previous', 4); edge('pause', 5); edge('jump', 0); }
+      if (!xr) { edge('pause', 9); edge('jump', 6); }
     }
     if (actions.has('pause')) { this.hooks.togglePause(); if (xr) this.cancelTrigger(); }
     else if ((phase === 'paused' || phase === 'over') && actions.has('reload') && xr) { this.hooks.begin(); this.cancelTrigger(); }
@@ -401,13 +401,14 @@ export class VRController {
     else if (phase === 'playing') {
       const game = this.hooks.game();
       if (actions.has('next') || actions.has('previous')) { if (game.cycleWeapon(actions.has('next') ? 1 : -1) && xr) this.cancelTrigger(); }
-      else if (actions.has('reload') || actions.has('quickReload')) { if (game.reload() && xr) this.cancelTrigger(); }
+      else if (actions.has('reload')) { if (game.reload() && xr) this.cancelTrigger(); }
     }
     this.trackingLost = xr && !mainTracked;
     if (xr && (!visible || !mainTracked)) { this.cancelTrigger(); this.hooks.pause?.(); }
     const playing = (this.hooks.phase?.() || phase) === 'playing';
-    if (!playing) { result.x = result.z = result.turn = result.tilt = result.snap = 0; result.sprint = result.precision = false; if (xr) this.cancelTrigger(); }
+    if (!playing) { result.x = result.z = result.turn = result.tilt = result.snap = 0; result.sprint = result.precision = false; result.jump = false; if (xr) this.cancelTrigger(); }
     if (!rawFire) this.triggerBlocked = false;
+    result.jump = playing && actions.has('jump');
     result.fire = playing && mainTracked && rawFire && (!xr || !this.triggerBlocked);
     this.precision = result.precision && playing;
     return result;
