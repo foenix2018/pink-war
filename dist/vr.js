@@ -38,7 +38,8 @@ export function questControls(hand = 'right') {
     [b.next, 'Arme suivante'],
     [`Joystick ${mainM}`, 'Rotation fluide'],
     [`Joystick ${sideM}`, 'Se déplacer'],
-    [`Clic / poignée ${sideF}`, 'Courir (maintenu) · clic pour prendre une arme proche'],
+    [`Poignée ${sideF}`, 'Courir (maintenu)'],
+    [`Clic joystick ${sideF}`, 'Accroupissement · près d’un faisceau : récupérer une arme'],
     [`Gâchette ${sideF}`, 'Recharger ; l’arme se redresse à la verticale'],
     [b.previous, 'Arme précédente'],
     [b.pause, 'Pause / reprise']
@@ -354,7 +355,7 @@ export class VRController {
     return this.lastMoveYaw ?? heading;
   }
   input(frame) {
-    const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, fire: false, sprint: false, precision: false, jump: false, pickup: false };
+    const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, fire: false, sprint: false, precision: false, jump: false, pickup: false, crouchToggle: false };
     const xr = this.mode === 'xr', cfg = settingsOf(this), mainHand = cfg.hand, sideHand = otherHand(mainHand);
     const sources = xr ? [...(this.session?.inputSources || [])] : [...(navigator.getGamepads?.() || [])].filter(Boolean).map(gamepad => ({ gamepad, handedness: 'both' }));
     const phase = this.hooks.phase?.() || 'playing', actions = new Set();
@@ -370,7 +371,7 @@ export class VRController {
       const stick = xr && axes.length >= 4 ? 2 : 0;
       if (side && tracked) {
         result.x += deadzone(axes[stick]); result.z += deadzone(axes[stick + 1]);
-        result.sprint ||= (xr ? (!this.hooks.game()?.nearbyWeapon?.() && pressed(pad.buttons[3])) : pressed(pad.buttons[10])) || (xr && squeezed(pad.buttons[1]));
+        result.sprint ||= (xr ? squeezed(pad.buttons[1]) : pressed(pad.buttons[10]));
       }
       if (main) {
         mainTracked ||= tracked; rawFire ||= pressed(pad.buttons[xr ? 0 : 7]);
@@ -388,8 +389,8 @@ export class VRController {
       }
       const edge = (key, index) => { const id = `${source.handedness}:${key}`, down = pressed(pad.buttons[index]); if (down && !this.previous.get(id) && tracked) actions.add(key); this.previous.set(id, down); };
       if (main) { edge('reload', xr ? 4 : 0); edge('next', xr ? 5 : 1); }
-      if (xr && side) { edge('previous', 4); edge('pause', 5); edge('quickReload', 0); if(this.hooks.game()?.nearbyWeapon?.())edge('pickup', 3); }
-      if (!xr) { edge('pause', 9); edge('jump', 6); edge('pickup', 2); }
+      if (xr && side) { edge('previous', 4); edge('pause', 5); edge('quickReload', 0); if(this.hooks.game()?.nearbyWeapon?.())edge('pickup', 3); else edge('crouch', 3); }
+      if (!xr) { edge('pause', 9); edge('jump', 6); edge('pickup', 2); edge('crouch', 11); }
     }
     if (actions.has('pause')) { this.hooks.togglePause(); if (xr) this.cancelTrigger(); }
     else if ((phase === 'paused' || phase === 'over') && actions.has('reload') && xr) { this.hooks.begin(); this.cancelTrigger(); }
@@ -404,7 +405,7 @@ export class VRController {
     const playing = (this.hooks.phase?.() || phase) === 'playing';
     if (!playing) { result.x = result.z = result.turn = result.tilt = result.snap = 0; result.sprint = result.precision = false; result.jump = false;result.pickup = false; if (xr) this.cancelTrigger(); }
     if (!rawFire) this.triggerBlocked = false;
-    result.jump = playing && actions.has('jump');result.pickup = playing && actions.has('pickup');
+    result.jump = playing && actions.has('jump');result.pickup = playing && actions.has('pickup');result.crouchToggle=playing && actions.has('crouch');
     result.fire = playing && mainTracked && rawFire && (!xr || !this.triggerBlocked);
     this.precision = result.precision && playing;
     return result;
