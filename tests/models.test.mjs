@@ -136,6 +136,27 @@ test('the soldier rig has planted, articulated steps and keeps both hands on the
   }
 });
 
+test('RLH-derived joints are anatomical, planted, and respond to crouched fire', () => {
+  for (const profileInfo of CHARACTERS) {
+    const k=kit(),soldier=createSoldier(k,()=>buildGun({mats:mats(),gloves:k.gloves,sleeve:false,makeFlash:flash}),profileInfo);
+    const positions=()=>soldier.jointPositions();
+    soldier.animate(.1,false,0,0,0,.016,{crouched:false});const standing=positions();
+    for(let i=0;i<18;i++)soldier.animate(.12+i*.016,false,0,0,1,.016,{crouched:true,firing:true});
+    const low=positions();
+    for(const side of ['left','right']){
+      assert.ok(standing[side+'Hip'].y-low[side+'Hip'].y>.17,side+' hip lowers');
+      assert.ok(Math.abs(low[side+'Ankle'].y-standing[side+'Ankle'].y)<.09,side+' ankle stays grounded');
+      assert.ok(low[side+'Knee'].y<standing[side+'Knee'].y,side+' knee bends');
+      assert.ok(low[side+'Shoulder'].distanceTo(low[side+'Elbow'])>.12,'shoulder-elbow is non-zero');
+      assert.ok(low[side+'Elbow'].distanceTo(low[side+'Wrist'])>.12,'elbow-wrist is non-zero');
+    }
+    for(const position of Object.values(low))assert.ok([position.x,position.y,position.z].every(Number.isFinite));
+    soldier.animate(1,true,0,0,1,.05,{crouched:true,firing:true});
+    const stepping=positions();
+    assert.notDeepEqual(stepping.leftKnee.toArray(),low.leftKnee.toArray(),'low armed locomotion is animated');
+  }
+});
+
 test('the soldier gains armour with each level and keeps a small number of meshes', () => {
   const k = kit(), soldier = createSoldier(k, o => buildGun({ mats: mats(), gloves: k.gloves, sleeve: false, makeFlash: flash }), CHARACTERS[1]);
   let previous = 0;
