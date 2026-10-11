@@ -383,11 +383,14 @@ function frame(timestamp, xrFrame) {
     crouchCameraBlend+=(Number(game.player.crouched)-crouchCameraBlend)*Math.min(1,dt*8);
     if(pickupQueued||vrInput.pickup){game.collectWeapon();pickupQueued=false;}
     const moving = Math.hypot(x, z) > .1;
-    world.sync(game, clock, dt); updateCamera();
+    world.sync(game, clock, dt);
     const firing = vr.mode==='xr' ? vrInput.fire : !!(firingPointers.size || keys.has('Space') || vrInput.fire);
+    // Pose the authentic IK skeleton BEFORE raycasting. In 3P the projectile now leaves the
+    // current crouched/armed muzzle instead of the preceding frame's hand positions.
+    updateWeaponVisuals(dt, firing, moving); updateCamera();
     if (game.state==='playing' && (firing || game.charge>0)) { const target=aim(); game.trigger(firing,dt,target.origin,target.direction); }
     else game.triggerHeld=false;
-    handleEvents(); updateWeaponVisuals(dt, firing, moving); updateCamera();
+    handleEvents(); updateCamera();
     hudTimer -= dt; if (hudTimer <= 0) { if (vr.mode !== 'xr') updateHud(); hudTimer = .1; }
   }
   flashTimer = Math.max(0, flashTimer - dt); recoil = Math.max(0, recoil - dt * 2.4);
