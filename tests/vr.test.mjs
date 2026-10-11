@@ -23,7 +23,7 @@ test('Quest Touch Plus keeps left movement, right trigger and grip independent o
   left.gamepad.axes=[.9,.9,.4,-.8];right.gamepad.axes=[.9,.9,.6,.9];
   down(left,0); // The left trigger never fires.
   assert.equal(state.input().fire,false);
-  down(right,0);down(left,3);
+  down(right,0);left.gamepad.buttons[1].value=.8;
   let input=state.input();assert.equal(input.x,.4);assert.equal(input.z,-.8);assert.equal(input.fire,true);assert.equal(input.sprint,true);assert.equal(input.turn,.6);assert.equal(input.tilt,0);
   down(right,1);input=state.input();assert.equal(input.precision,true);assert.equal(input.sprint,true,'holding the pistol grip does not stop sprinting');
   down(right,0,false);right.gamepad.buttons[0].value=.4;assert.equal(state.input().fire,true);
@@ -38,7 +38,7 @@ test('Quest can deliberately take a nearby beam weapon with the free-hand stick 
   down(left,3,false);state.input();
   game.nearbyWeapon=()=>null;
   down(left,3);input=state.input();
-  assert.equal(input.sprint,true,'stick click remains sprint when no weapon is nearby');
+  assert.equal(input.crouchToggle,true,'stick click toggles crouching when no weapon is nearby');
   assert.equal(input.pickup,false);
 });
 
@@ -154,12 +154,12 @@ test('the left trigger reloads without firing, and never resumes or restarts a p
   down(right,0,false);state.input();down(right,0);assert.equal(state.input().fire,true);
 });
 
-test('the free-hand grip sprints only when squeezed on purpose, and the stick click still sprints',()=>{
+test('the free-hand grip sprints when squeezed, and the stick click enters crouch stance',()=>{
   const {state,left}=setup();
   left.gamepad.buttons[1].value=.4;assert.equal(state.input().sprint,false,'a light grip while holding the controller is not a sprint');
   left.gamepad.buttons[1].pressed=true;assert.equal(state.input().sprint,false,'a runtime that flags any squeeze as pressed does not turn it into a sprint');left.gamepad.buttons[1].pressed=false;
   left.gamepad.buttons[1].value=.8;assert.equal(state.input().sprint,true);
-  left.gamepad.buttons[1].value=0;down(left,3);assert.equal(state.input().sprint,true);
+  left.gamepad.buttons[1].value=0;down(left,3);const input=state.input();assert.equal(input.sprint,false);assert.equal(input.crouchToggle,true);
 });
 
 test('the shooting-hand stick only turns: pushing it up or down changes nothing else',()=>{
