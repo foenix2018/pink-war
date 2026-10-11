@@ -7,6 +7,9 @@ import { createGlove } from './hands.js';
 import { CHARACTERS, characterForId } from './characters.js';
 import { createSurfaceDetails } from './surfaces.js';
 import { createEnemyFactory } from './enemies.js';
+import { createRuinedCity, paintRuinSky } from './world-art.js';
+import { createTraversalArt } from './traversal-art.js';
+import { createCombatFX } from './combat-fx.js';
 
 const v = (x, y, z) => new T.Vector3(x, y, z);
 const material = (color, roughness = .6, metalness = .25) => new T.MeshStandardMaterial({ color, roughness, metalness });
@@ -25,7 +28,7 @@ const glowTexture = () => canvasTexture(128, 128, (c, w) => {
 export async function createScene(canvas, quality, forceWebGL = false, characterId = 'ghju') {
   let character=characterForId('ghju'),themeApplied=false;
   const palette={...character.palette},themeHalos=[];
-  const Renderer = forceWebGL ? WebGLRenderer : T.WebGPURenderer;
+  const Renderer = forceWebGL || !navigator.gpu ? WebGLRenderer : T.WebGPURenderer;
   const renderer = new Renderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
   let lost = false, recovery = null;
   const configure = instance => {
@@ -67,146 +70,46 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     const s = new T.Sprite(m); s.position.set(...pos); s.scale.set(size, size, 1); parent.add(s);themeHalos.push(s);return s;
   }
 
-  function paintSky(c,w,h) {
-    const g = c.createLinearGradient(0, 0, 0, h);[0,.37,.53,.62,.72,1].forEach((stop,i)=>g.addColorStop(stop,character.world.sky[i]));c.fillStyle = g; c.fillRect(0, 0, w, h);
-    let seed = 17; const rand = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-    for (let i = 0; i < 250; i++) { const x = rand() * w, y = rand() * h * .47; c.fillStyle = `rgba(${character.world.star},${rand() * .65 + .15})`; c.beginPath(); c.arc(x, y, rand() * .6 + .3, 0, 7); c.fill(); }
+  function paintSky(c,w,h) { paintRuinSky(c,w,h,character.masculine); }
+  const skyTexture = canvasTexture(2048,1024,paintSky);
+  const sky = new T.Mesh(new T.SphereGeometry(490, 32, 16), new T.MeshBasicMaterial({ map: skyTexture, side: T.BackSide, fog: false, dithering: true })); scene.add(sky);
+  const hemisphere=new T.HemisphereLight(0xd3ded8,0x66736b,1.8);scene.add(hemisphere);
+  const sun = new T.DirectionalLight(0xffeedb, 3.0); sun.position.set(-30, 50, 20); sun.castShadow = true;
+  sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = -40; sun.shadow.camera.right = 40; sun.shadow.camera.top = 40; sun.shadow.camera.bottom = -40; sun.shadow.camera.near = 1; sun.shadow.camera.far = 135; sun.shadow.bias = -.0015; sun.shadow.normalBias = .045; scene.add(sun);scene.add(sun.target);
+  function trackShadows(x,z,elevation=0){
+    // The 80 m shadow window follows play, retaining close detail across all districts.
+    const texel=80/1024,sx=Math.round(x/texel)*texel,sz=Math.round(z/texel)*texel;
+    sun.position.set(sx-30,elevation+50,sz+20);sun.target.position.set(sx,elevation,sz);
   }
-  const skyTexture = canvasTexture(1024,512,paintSky);
-  const sky = new T.Mesh(new T.SphereGeometry(490, 32, 16), new T.MeshBasicMaterial({ map: skyTexture, side: T.BackSide, fog: false })); scene.add(sky);
-  const moon=mesh(new T.SphereGeometry(1, 32, 20), new T.MeshBasicMaterial({ color: 0xe3b6c6, fog: false }), scene, [-122, 84, -240], [24, 24, 24], false);
-  const moonRing = mesh(new T.TorusGeometry(33, .1, 5, 80), new T.MeshBasicMaterial({ color: 0xc794bc, transparent: true, opacity: .5, fog: false }), scene, [-122, 84, -240], [1, 1, 1], false); moonRing.rotation.set(.25, .1, -.55);
-  const hemisphere=new T.HemisphereLight(0xcfb7db,0x442737,2.25);scene.add(hemisphere);
-  const sun = new T.DirectionalLight(0xffd7da, 3.4); sun.position.set(-30, 50, 20); sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = -40; sun.shadow.camera.right = 40; sun.shadow.camera.top = 40; sun.shadow.camera.bottom = -40; sun.shadow.camera.near = 1; sun.shadow.camera.far = 135; sun.shadow.bias = -.0015; sun.shadow.normalBias = .045; scene.add(sun);
-  const rim = new T.DirectionalLight(0x996acf, 1.8); rim.position.set(30, 12, -35); scene.add(rim);
-  mesh(new T.PlaneGeometry(200, 200), mats.ground, scene, [0, -.05, 0], [1, 1, 1]).rotation.x = -Math.PI / 2;
-
-  // Static geometry is batched by material to keep draw calls low on mobile.
+  const rim = new T.DirectionalLight(0xa3bdc7, 1.0); rim.position.set(30, 12, -35); scene.add(rim);
   const batches = new Map(); const obstacles = [];
   const batch = (mat, pos, scale, rot = 0) => { if (!batches.has(mat)) batches.set(mat, []); batches.get(mat).push({ pos, scale, rot }); };
-  const solid = (x, z, w, h, d, mat = mats.structure) => { batch(mat, [x, h / 2, z], [w, h, d]); obstacles.push({ x, z, hx: w / 2, hz: d / 2, height: h }); };
-  for (let i = -100; i <= 100; i += 10) { batch(mats.tile, [i, .008, 0], [.055, .015, 200]); batch(mats.tile, [0, .008, i], [200, .015, .055]); }
-  for (const x of [-7, 7]) { batch(mats.steel, [x, .03, -4], [.3, .035, 130]); batch(mats.rose, [x, .045, -4], [.065, .02, 130]); }
-  for (let z = -85; z < 90; z += 9) { batch(mats.white, [0, .02, z], [.14, .015, 2.5]); }
-  for (let i = -90; i <= 90; i += 10) {
-    for (const side of [-1, 1]) {
-      batch(mats.dark, [side * 99.5, 1, i], [1, 2, 10]); batch(mats.dark, [i, 1, side * 99.5], [10, 2, 1]);
-      batch(mats.rose, [side * 99.4, 2.08, i], [.15, .12, 10]); batch(mats.rose, [i, 2.08, side * 99.4], [10, .12, .15]);
-      batch(mats.structure, [side * 99, 3, i], [1.4, 6, 1.4]); batch(mats.structure, [i, 3, side * 99], [1.4, 6, 1.4]);
-    }
-  }
-  const fenceMat = new T.MeshBasicMaterial({ color: 0xff77ac, transparent: true, opacity: .065, side: T.DoubleSide, depthWrite: false });
-  for (let side = -1; side <= 1; side += 2) { box(fenceMat, scene, [side * 99, 3, 0], [.04, 6, 198], false); box(fenceMat, scene, [0, 3, side * 99], [198, 6, .04], false); }
-  const structures = [ [-31,-21,12,15,12], [29,-32,9,24,10], [-25,24,8,9,8], [38,17,12,17,10], [-52,-56,17,30,12], [52,-61,13,35,14], [-66,28,17,22,13], [66,52,13,18,16], [12,66,10,10,9], [-25,65,10,15,12], [0,-73,16,23,10] ];
-  for (const [x,z,w,h,d] of structures) {
-    solid(x,z,w,h,d); batch(mats.dark, [x, h - 1, z], [w + 1, 1, d + 1]);
-    batch(mats.steel, [x - w / 2 - .02, h / 2, z + d / 2], [.22, h, .22]);
-    batch(mats.rose, [x, h * .7, z + d / 2 + .02], [w * .78, .15, .04]);
-    for (let y = 3; y < h - 2; y += 4) for (let xx = -w / 2 + 2; xx < w / 2 - 1; xx += 2.3) { batch(mats.dark, [x + xx, y, z + d / 2 + .025], [.7, 1.7, .05]); if ((Math.round(xx) + y) % 3 === 0) batch(mats.violet, [x + xx, y, z + d / 2 + .06], [.2, .7, .04]); }
-  }
-  for (const [x, z, h] of [[-13,-7,1.8],[15,7,2],[31,-11,1.7],[-17,41,1.7],[20,35,2],[-35,2,2.4],[48,-12,1.7]]) {
-    solid(x,z,4,h,3,mats.dark); batch(mats.steel,[x,h,z],[4.2,.18,3.2]); batch(mats.rose,[x,h*.7,z+1.52],[2,.09,.04]);
-  }
-  for (const b of COVER_WALLS) {
-    solid(b.x, b.z, b.hx * 2, b.height, b.hz * 2, mats.lightStone);
-    Object.assign(obstacles[obstacles.length - 1], { cover: true });
-    batch(mats.steel, [b.x, b.height + .04, b.z], [b.hx * 2 + .12, .18, b.hz * 2 + .12]);
-    if (b.hx > b.hz) {
-      batch(mats.rose, [b.x, 2.25, b.z + b.hz + .02], [b.hx * 1.8, .07, .04]);
-      batch(mats.rose, [b.x, 2.25, b.z - b.hz - .02], [b.hx * 1.8, .07, .04]);
-      for (let x = -b.hx + .4; x < b.hx; x += 1.4) batch(mats.dark, [b.x + x, 1.2, b.z + b.hz + .02], [.035, 1.8, .04]);
-    } else {
-      batch(mats.rose, [b.x + b.hx + .02, 2.25, b.z], [.04, .07, b.hz * 1.8]);
-      batch(mats.rose, [b.x - b.hx - .02, 2.25, b.z], [.04, .07, b.hz * 1.8]);
-    }
-  }
-  // V3.7 — TECHNICAL ARENA: service yards, equipment and readable movement lanes.
-  // All decoration uses the existing instanced materials. Only solid, walk-blocking
-  // machinery goes into obstacles, so the enemy navigation grid stays consistent.
-  const freightUnits=[
-    [-62,-2,7.3,3,3.2],[-62,11,7.3,3,3.2],[-46,0,7.3,3,3.2],[-46,15,7.3,3,3.2],
-    [53,1,7.3,3,3.2],[70,1,7.3,3,3.2],[53,19,7.3,3,3.2],[70,19,7.3,3,3.2]
-  ];
-  for(const [x,z,w,h,d] of freightUnits){
-    solid(x,z,w,h,d,mats.dark);
-    batch(mats.steel,[x,h+.04,z],[w+.11,.08,d+.12]);
-    for(const side of [-1,1]){
-      batch(mats.steel,[x+side*w*.48,h*.5,z],[.085,h,d+.13]);
-      batch(mats.steel,[x,h*.5,z+side*d*.49],[w+.13,h,.075]);
-      for(let j=-3;j<=3;j++)batch(mats.lightStone,[x+j*w/8,h*.51,z+side*(d*.5+.045)],[.037,h*.78,.026]);
-      batch(mats.rose,[x,h*.75,z+side*(d*.5+.08)],[w*.34,.035,.018]);
-    }
-    for(let j=-2;j<=2;j++)batch(mats.steel,[x+j*w/6,h+.09,z],[.03,.02,d*.88]);
-  }
-  // Low steel parapets may be reached with a running jump (about 1 m high).
-  for(const [x,z,w,d] of [[-18,35,3.3,1.25],[17,44,3.5,1.25],[-36,48,3.4,1.3],[35,-45,3.8,1.2]]){
-    solid(x,z,w,1.0,d,mats.lightStone);
-    batch(mats.steel,[x,1.04,z],[w+.10,.09,d+.08]);
-    batch(mats.rose,[x,.78,z+d*.5+.025],[w*.8,.07,.03]);
-    for(let k=-1;k<=1;k++)batch(mats.dark,[x+k*w*.3,.47,z+d*.5+.035],[.055,.7,.025]);
-  }
-  // Generator banks / high-voltage cabinets: solid machinery with access aisles.
-  for(const [x,z,angle] of [[-26,-51,0],[-26,-61,0],[40,55,0],[55,55,0],[-75,64,0]]){
-    solid(x,z,5.2,2.35,2.8,mats.structure);
-    batch(mats.steel,[x,2.39,z],[5.5,.16,3.1]);
-    for(const side of [-1,1]){
-      batch(mats.lightStone,[x+side*2.62,1.2,z],[.09,2,2.4]);
-      for(let j=-2;j<=2;j++)batch(mats.dark,[x+side*2.68,.95,z+j*.38],[.035,1,.18]);
-    }
-    batch(mats.rose,[x,1.9,z+1.43],[2,.07,.03]);
-    batch(mats.white,[x,1.51,z+1.44],[.2,.24,.025]);
-  }
-  // Perimeter service conduit, heat exchangers, overhead cable trays and beacons.
-  for(const row of [-77,77]){
-    for(let x=-82;x<=82;x+=10){
-      batch(mats.steel,[x,2.5,row],[.16,5,.16]);
-      batch(mats.dark,[x,4.95,row],[.46,.22,.46]);
-      batch(mats.rose,[x,4.7,row],[.12,.18,.12]);
-      if(x<82)for(const offset of [-.19,.19])batch(mats.steel,[x+5,4.3,row+offset],[9.8,.065,.07]);
-    }
-  }
-  for(const [x,z] of [[-36,-51],[40,55],[74,-42]]){
-    // Offset supports make the ventilation runs recognisable even at low resolution.
-    for(let i=0;i<7;i++){
-      batch(mats.steel,[x+i*.52,1.4,z],[.42,.48,.65]);
-      batch(mats.dark,[x+i*.52,1.4,z+.35],[.33,.32,.05]);
-    }
-    batch(mats.lightStone,[x+1.55,1.8,z],[4.1,.12,.9]);
-  }
-  // Service-lane striping and technical ground pads; non-colliding geometry.
-  for(const x of [-84,-39,39,84]){
-    for(let z=-84;z<=84;z+=6){
-      batch(mats.tile,[x,.007,z],[.13,.012,2.6]);
-      if(z%12===0)batch(mats.rose,[x+1.2,.013,z],[.18,.012,1.1]);
-    }
-  }
-  for(const [x,z] of [[-30,-55],[50,55],[-55,4],[60,10]]){
-    for(let k=-2;k<=2;k++)batch(mats.lightStone,[x+k*.53,.018,z],[.20,.012,4.6]);
-    for(const side of [-1,1])batch(mats.rose,[x+side*3,.019,z],[.08,.015,5.3]);
-  }
+  const city = createRuinedCity(scene, obstacles, COVER_WALLS, palette.rose, quality);
+  const cityMats = city.materials;
+  const traversal = createTraversalArt(scene, obstacles, cityMats);
+  const combatFX = createCombatFX(T, scene, palette);
   // A traversable service bridge: stepped approaches, a level deck, and guarded sides.
   const bridgeX = CATWALK.x, bridgeWidth = 5.8, stairCount = 12;
   const stairDepth = (CATWALK.end - CATWALK.landing) / stairCount, stairRise = CATWALK.height / stairCount;
-  const addWalkSurface = (x, z, width, depth, y, height) => obstacles.push({ x, z, hx: width / 2, hz: depth / 2, y, height, walkableSurface: true });
+  const addWalkSurface = (x, z, width, depth, y, height) => obstacles.push({ x, z, hx: width / 2, hz: depth / 2, y, height, walkableSurface: true, surface: 'metal' });
   for (let i = 1; i <= stairCount; i++) {
     const upZ = CATWALK.end - (i - .5) * stairDepth, upHeight = i * stairRise;
-    batch(mats.dark, [bridgeX, upHeight / 2, upZ], [bridgeWidth, upHeight, stairDepth]);
-    batch(mats.steel, [bridgeX, upHeight - .025, upZ], [bridgeWidth - .08, .05, stairDepth - .06]);
-    batch(mats.rose, [bridgeX, upHeight + .012, upZ - stairDepth * .36], [bridgeWidth - .45, .025, .045]);
+    batch(cityMats.black, [bridgeX, upHeight / 2, upZ], [bridgeWidth, upHeight, stairDepth]);
+    batch(cityMats.steel, [bridgeX, upHeight - .025, upZ], [bridgeWidth - .08, .05, stairDepth - .06]);
+    batch(cityMats.yellow, [bridgeX, upHeight + .012, upZ - stairDepth * .36], [bridgeWidth - .45, .025, .045]);
     addWalkSurface(bridgeX, upZ, bridgeWidth, stairDepth, 0, upHeight);
 
     const downZ = -CATWALK.landing - (i - .5) * stairDepth, downHeight = (stairCount - i) * stairRise;
     if (downHeight > 0) {
-      batch(mats.dark, [bridgeX, downHeight / 2, downZ], [bridgeWidth, downHeight, stairDepth]);
-      batch(mats.steel, [bridgeX, downHeight - .025, downZ], [bridgeWidth - .08, .05, stairDepth - .06]);
-      batch(mats.rose, [bridgeX, downHeight + .012, downZ - stairDepth * .36], [bridgeWidth - .45, .025, .045]);
+      batch(cityMats.black, [bridgeX, downHeight / 2, downZ], [bridgeWidth, downHeight, stairDepth]);
+      batch(cityMats.steel, [bridgeX, downHeight - .025, downZ], [bridgeWidth - .08, .05, stairDepth - .06]);
+      batch(cityMats.yellow, [bridgeX, downHeight + .012, downZ - stairDepth * .36], [bridgeWidth - .45, .025, .045]);
       addWalkSurface(bridgeX, downZ, bridgeWidth, stairDepth, 0, downHeight);
     }
   }
   const deckLength = CATWALK.landing * 2;
-  batch(mats.dark, [bridgeX, CATWALK.height - .06, 0], [bridgeWidth, .12, deckLength]);
-  batch(mats.steel, [bridgeX, CATWALK.height + .012, 0], [bridgeWidth - .08, .035, deckLength - .08]);
+  batch(cityMats.black, [bridgeX, CATWALK.height - .06, 0], [bridgeWidth, .12, deckLength]);
+  batch(cityMats.steel, [bridgeX, CATWALK.height + .012, 0], [bridgeWidth - .08, .035, deckLength - .08]);
   addWalkSurface(bridgeX, 0, bridgeWidth, deckLength, CATWALK.height, .12);
   for (const side of [-1, 1]) {
     const railX = bridgeX + side * 2.55;
@@ -214,27 +117,19 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     obstacles.push({ x: railX, z: 0, hx: .1, hz: CATWALK.end + .35, height: 2.55 });
     for (let i = 0; i <= stairCount; i++) {
       const upZ = CATWALK.end - i * stairDepth, upHeight = i * stairRise;
-      batch(mats.steel, [railX, upHeight + .41, upZ], [.13, .82, .14]);
-      if (i < stairCount) batch(mats.rose, [railX, upHeight + .84, upZ - stairDepth / 2], [.09, .07, stairDepth - .02]);
+      batch(cityMats.steel, [railX, upHeight + .41, upZ], [.13, .82, .14]);
+      if (i < stairCount) batch(cityMats.yellow, [railX, upHeight + .84, upZ - stairDepth / 2], [.09, .07, stairDepth - .02]);
       const downZ = -CATWALK.landing - i * stairDepth, downHeight = (stairCount - i) * stairRise;
-      batch(mats.steel, [railX, downHeight + .41, downZ], [.13, .82, .14]);
-      if (i < stairCount) batch(mats.rose, [railX, downHeight + .84, downZ - stairDepth / 2], [.09, .07, stairDepth - .02]);
+      batch(cityMats.steel, [railX, downHeight + .41, downZ], [.13, .82, .14]);
+      if (i < stairCount) batch(cityMats.yellow, [railX, downHeight + .84, downZ - stairDepth / 2], [.09, .07, stairDepth - .02]);
     }
     for (let z = -6; z <= 6; z += 2) {
-      batch(mats.steel, [railX, CATWALK.height + .41, z], [.13, .82, .14]);
-      if (z < 6) batch(mats.rose, [railX, CATWALK.height + .84, z + 1], [.09, .07, 1.96]);
+      batch(cityMats.steel, [railX, CATWALK.height + .41, z], [.13, .82, .14]);
+      if (z < 6) batch(cityMats.yellow, [railX, CATWALK.height + .84, z + 1], [.09, .07, 1.96]);
     }
   }
   for (const z of [-6.5, 6.5]) for (const side of [-1, 1]) {
-    batch(mats.structure, [bridgeX + side * 2.22, CATWALK.height / 2, z], [.26, CATWALK.height, .32]);
-  }
-  // Tapered distant silhouettes make the enclosure feel like part of a larger city.
-  for (let i = 0; i < 28; i++) {
-    const angle = i / 28 * Math.PI * 2, radius = 135 + (i % 3) * 15, h = 18 + (i * 17 % 55);
-    batch(mats.structure, [Math.cos(angle)*radius,h/2,Math.sin(angle)*radius], [9+(i%4)*3,h,11], angle*.1);
-  }
-  for (const x of [-14, 14]) for (const z of [-42, -5, 28, 58]) {
-    solid(x,z,.6,5,.6,mats.dark); batch(mats.rose,[x,4.3,z],[.68,1,.68]); halo(scene,[x,4.4,z],3.5,palette.rose,.25);
+    batch(cityMats.concrete, [bridgeX + side * 2.22, CATWALK.height / 2, z], [.26, CATWALK.height, .32]);
   }
   for (const [mat, items] of batches) {
     const instance = new T.InstancedMesh(geometries.box, mat, items.length); const matrix = new T.Matrix4(), q = new T.Quaternion();
@@ -294,10 +189,10 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     characterKit.setPalette(character.armor);
     const colors={...character.world,...palette,dark:palette.ink,cyan:character.world.cyan};
     for(const [name,mat] of Object.entries(mats))mat.color.setHex(colors[name]);
-    scene.background.setHex(character.world.background);scene.fog.color.setHex(character.world.fog);
-    hemisphere.color.setHex(character.world.skyLight);hemisphere.groundColor.setHex(character.world.groundLight);
-    sun.color.setHex(character.world.sun);rim.color.setHex(character.world.rim);moon.material.color.setHex(character.world.moon);moonRing.material.color.setHex(character.world.moonRing);
-    fenceMat.color.setHex(character.world.fence);portalLight.color.setHex(palette.hot);dust.material.color.setHex(palette.pale);
+    scene.background.setHex(0x9ba89f);scene.fog.color.setHex(character.masculine?0x9caeb0:0xadb1a4);scene.fog.density=.0072;
+    hemisphere.color.setHex(0xd3ded8);hemisphere.groundColor.setHex(0x66736b);
+    sun.color.setHex(0xffeedb);rim.color.setHex(0xa3bdc7);city.setAccent(palette.rose);combatFX.setAccent(palette.rose);
+    portalLight.color.setHex(palette.hot);dust.material.color.setHex(palette.pale);
     for(const sprite of themeHalos)sprite.material.color.setHex(palette.rose);
     for(const [texture,paint] of [[skyTexture,paintSky],[portalTexture,paintPortal],[emblem,paintEmblem]]){
       const canvas=texture.image;paint(canvas.getContext('2d'),canvas.width,canvas.height);texture.needsUpdate=true;
@@ -431,13 +326,14 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     const pool=sparkPools[color===palette.rose?0:1];
     for(let i=0;i<count&&particles.length<SPARKS;i++)particles.push({pool,x,y,z,vx:(Math.random()-.5)*7,vy:Math.random()*5,vz:(Math.random()-.5)*7,life:.45+Math.random()*.3,max:.8});
   }
-  function resetDynamic(){for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();portal.visible=true;for(const death of deaths){scene.remove(death.fx);death.mat.dispose();death.haloMat.dispose();}deaths.length=0;for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
+  function resetDynamic(){combatFX.reset();traversal.update(0);for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();portal.visible=true;for(const death of deaths){scene.remove(death.fx);death.mat.dispose();death.haloMat.dispose();}deaths.length=0;for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
   function sync(sim,time,dt){
+    traversal.update(sim.time);combatFX.update(dt,camera);trackShadows(sim.player.x,sim.player.z,sim.player.elevation||0);
     setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));updateStations(sim,time);syncSecondaryPortals(sim,sim.time);
     for(const event of sim.events||[])if(event.type==='kill')beginDeath(event.id,time);
     updateDeaths(time);
     soldier.root.scale.setScalar(soldier.heightScale);soldier.root.position.set(sim.player.x,(sim.player.elevation||0)-.0276894*soldier.heightScale,sim.player.z);soldier.root.rotation.y=sim.player.yaw;
-    const present=new Set();for(const e of sim.enemies){present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite,e.ranged,e.form);monsters.set(e.id,m);scene.add(m);}m.position.set(e.x,(e.elevation||0)+Math.abs(Math.sin(time*8+e.phase))*.025,e.z);m.rotation.y=e.yaw??(Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI);m.userData.animate(time,e.phase,e.limpUntil<=time);}
+    const present=new Set();for(const e of sim.enemies){present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite,e.ranged,e.form);monsters.set(e.id,m);scene.add(m);}m.position.set(e.x,e.elevation||0,e.z);m.rotation.y=e.yaw??(Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI);m.userData.animate(time,e.phase,e.limpUntil<=time);}
     for(const[id,m]of monsters){if(!present.has(id)){scene.remove(m);monsters.delete(id);}}
     const active=new Set();for(const b of sim.bullets){active.add(b.id);let m=bulletMeshes.get(b.id);if(!m){m=new T.Group();mesh(geometries.sphere,b.hostile?mats.cyan:mats.pale,m,[0,0,0],[.09,.09,.22],false);mesh(geometries.sphere,b.hostile?mats.violet:mats.rose,m,[0,0,.25],[.08,.08,.38],false);m.scale.setScalar(b.weapon==='nova'?2.3:b.weapon==='thorn'?1.3:b.hostile?1.4:1);bulletMeshes.set(b.id,m);scene.add(m);}m.position.set(b.x,b.y,b.z);m.lookAt(b.x+b.vx,b.y+b.vy,b.z+b.vz);}
     for(const[id,m]of bulletMeshes){if(!active.has(id)){scene.remove(m);bulletMeshes.delete(id);}}
@@ -448,9 +344,9 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     }
   }
   function setWeapon(index){ if(fpsGun.userData.index===index&&soldier.weapon===index)return;fpsGun.userData.setVariant(index);soldier.setWeapon(index); }
-  function animatePortal(time){innerRing.rotation.z=time*.2;vortex.rotation.z=-time*.15;portalHalo.material.opacity=.3+Math.sin(time*2)*.055;dust.rotation.y=Math.sin(time*.1)*.06;}
+  function animatePortal(time){city.update(time);innerRing.rotation.z=time*.2;vortex.rotation.z=-time*.15;portalHalo.material.opacity=.3+Math.sin(time*2)*.055;dust.rotation.y=Math.sin(time*.1)*.06;}
   function lobby(time,level=1){
-    camera.clearViewOffset();setEquipment(level);portal.visible=true;const portrait=innerHeight>innerWidth;
+    trackShadows(0,7);camera.clearViewOffset();setEquipment(level);portal.visible=true;const portrait=innerHeight>innerWidth;
     soldier.root.scale.setScalar((portrait?1.2:2.6)*soldier.heightScale);soldier.root.position.set(portrait?0:3.1,0,7);soldier.root.rotation.y=Math.PI-.28;
     soldier.animate(time,false,0,0,0,.016,{preview:true});soldier.root.visible=true;weapon.visible=false;
     if(portrait){
@@ -460,14 +356,14 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     camera.updateProjectionMatrix();
   }
   function outfit(time,level,angle){
-    setEquipment(level);setWeapon(0);portal.visible=true;soldier.root.visible=true;weapon.visible=false;
+    trackShadows(0,7);setEquipment(level);setWeapon(0);portal.visible=true;soldier.root.visible=true;weapon.visible=false;
     const portrait=innerHeight>innerWidth,scale=portrait?1.6:2.1;
     soldier.root.scale.setScalar(scale*soldier.heightScale);soldier.root.position.set(0,0,7);soldier.root.rotation.y=angle;soldier.animate(time,false,0,0,0,.016,{preview:true});
     camera.fov=portrait?48:38;camera.position.set(0,portrait?1.8:2.7,portrait?16.4:16);
     camera.lookAt(0,portrait?1.45:2.18,7);
     camera.setViewOffset(innerWidth,innerHeight,portrait?0:-innerWidth*.22,portrait?innerHeight*.24:0,innerWidth,innerHeight);camera.updateProjectionMatrix();
   }
-  function setInspection(enabled){for(const m of monsters.values())m.visible=!enabled;for(const m of bulletMeshes.values())m.visible=!enabled;for(const pool of sparkPools)pool.visible=!enabled&&pool.count>0;}
+  function setInspection(enabled){combatFX.setVisible?.(!enabled);for(const m of monsters.values())m.visible=!enabled;for(const m of bulletMeshes.values())m.visible=!enabled;for(const pool of sparkPools)pool.visible=!enabled&&pool.count>0;}
   function resize(nextQuality=quality){quality=nextQuality;const q=nextQuality;const ratio=q==='low'?1:q==='high'?Math.min(devicePixelRatio,2):Math.min(devicePixelRatio,innerWidth<1000?1.4:1.8);renderer.setPixelRatio(ratio);renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.shadowMap.enabled=q!=='low';}
   resize();
   const stereo = new T.StereoCamera(); stereo.aspect = .5; stereo.eyeSep = .064;
@@ -495,6 +391,6 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     })();
     try { return await recovery; } finally { recovery = null; }
   }
-  return {T,scene,camera,get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
+  return {T,scene,camera,get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:combatFX.impact,impactStats:combatFX.stats,resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
     get lost(){return lost;},get backend(){return renderer.backend?.isWebGPUBackend?'WebGPU':'WebGL';},render:()=>{if(!lost)renderer.render(scene,camera);}};
 }

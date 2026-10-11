@@ -219,18 +219,61 @@ test('both soldiers keep an opaque, fully enclosing helmet at every armour level
   }
 });
 
-test('all hostile variants share detailed geometry and animate their complete legs without extra draw calls', () => {
+test('all hostile chassis share three geometry batches while keeping independent skeletons', () => {
   const material={monster:solid(1),monsterElite:solid(2),monsterFace:solid(3),rose:neon(4),violet:neon(5),cyan:neon(6)},factory=createEnemyFactory(material);
-  for(const elite of [false,true])for(const ranged of [false,true]) {
-    const a=factory.create(elite,ranged),b=factory.create(elite,ranged);
-    assert.equal(a.children.length,6,'six meshes per enemy, as before the graphical update');
+  for(const form of ['stalker','scuttler','brute','seer'])for(const elite of [false,true])for(const ranged of [false,true]) {
+    const a=factory.create(elite,ranged,form),b=factory.create(elite,ranged,form);
+    const meshes=a.children.filter(child=>child.isMesh),otherMeshes=b.children.filter(child=>child.isMesh);
+    assert.equal(meshes.length,3,`${form}: body, armour and emissive fittings stay within three draw calls`);
+    assert.notEqual(a.userData.skeleton,b.userData.skeleton,'enemies must animate independently');
+    assert.equal(a.userData.legs.length,form==='scuttler'?6:2);
     let triangles=0;
-    a.children.forEach((mesh,i)=>{assert.equal(mesh.geometry,b.children[i].geometry,'geometry is shared within an enemy type');assert.ok(finite(mesh.geometry));triangles+=mesh.geometry.attributes.position.count/3;});
-    assert.ok(triangles<9500,'detail stays within the mobile geometry budget');
-    const before=box(a);assert.ok(before.min.y>=0&&before.max.y<2.8,'boots stay on the ground');
-    a.userData.animate(.2,.4,true);a.updateMatrixWorld(true);
-    assert.ok(a.userData['leg-1'].rotation.x!==0);
-    assert.ok(a.userData['leg-1'].rotation.x===-a.userData.leg1.rotation.x);
-    a.userData.animate(0,0,false);assert.ok(a.userData.leg1.rotation.x===0);
+    meshes.forEach((mesh,i)=>{
+      assert.ok(mesh.isSkinnedMesh);assert.equal(mesh.skeleton,a.userData.skeleton);
+      assert.equal(mesh.geometry,otherMeshes[i].geometry,'geometry is shared within an enemy type');
+      assert.ok(finite(mesh.geometry));triangles+=mesh.geometry.attributes.position.count/3;
+      const weights=mesh.geometry.attributes.skinWeight,indices=mesh.geometry.attributes.skinIndex;
+      for(let vertex=0;vertex<weights.count;vertex++){
+        assert.equal(weights.getX(vertex)+weights.getY(vertex)+weights.getZ(vertex)+weights.getW(vertex),1);
+        assert.ok(indices.getX(vertex)<a.userData.skeleton.bones.length,'every rigid armour plate follows a real joint');
+      }
+    });
+    assert.ok(triangles<11000,`${form}: detailed geometry stays within the mobile budget (${triangles})`);
+    a.userData.animate(0,0,false);a.updateMatrixWorld(true);
+    const bounds=box(a),scale=a.scale.y;
+    assert.ok(bounds.min.y>=-.005,'feet do not penetrate a level floor');
+    assert.ok(bounds.max.y/scale<(form==='scuttler'?1.2:2.4),'each chassis preserves its combat silhouette');
+    const otherPose=b.userData.skeleton.bones.map(joint=>joint.quaternion.toArray());
+    for(let frame=1;frame<=15;frame++){a.position.z-=.04;a.userData.animate(frame*.016,.4,true);}
+    assert.deepEqual(b.userData.skeleton.bones.map(joint=>joint.quaternion.toArray()),otherPose,'moving one clone leaves another untouched');
+  }
+});
+
+test('enemy knees and ankles plant feet through locomotion and settle when the actor stops',()=>{
+  const material={monster:solid(1),monsterElite:solid(2),monsterFace:solid(3),rose:neon(4),violet:neon(5),cyan:neon(6)},factory=createEnemyFactory(material);
+  const point=new T.Vector3();
+  for(const form of ['stalker','scuttler','brute','seer']){
+    const actor=factory.create(false,false,form),crawler=form==='scuttler';actor.position.y=4.8;
+    actor.userData.animate(0,.3,true);
+    let kneeMotion=false,lifted=false;
+    for(let frame=1;frame<=100;frame++){
+      actor.position.z-=.04;actor.userData.animate(frame*.016,.3,true);actor.updateMatrixWorld(true);
+      const floor=actor.position.y+(crawler?.075:.125)*actor.scale.y;
+      const feet=actor.userData.legs.map(leg=>leg.foot.getWorldPosition(point).y);
+      assert.ok(feet.every(y=>y>=floor-1e-5),`${form}: ankles never dip under their support surface`);
+      assert.ok(feet.filter(y=>Math.abs(y-floor)<1e-5).length>=(crawler?3:1),`${form}: each stride keeps a supporting foot or tripod`);
+      if(feet.some(y=>y>floor+.03))lifted=true;
+      if(actor.userData.legs.some(leg=>Math.abs(leg.lower.rotation.x)>.02||Math.abs(leg.lower.rotation.z)>.02))kneeMotion=true;
+    }
+    assert.ok(lifted&&kneeMotion,`${form}: legs bend and clear the ground during swing`);
+    // The scene may still pass moving=true while AI waits to attack. Position is
+    // the authority: no treadmill gait after velocity decays to rest.
+    for(let frame=101;frame<=200;frame++)actor.userData.animate(frame*.016,.3,true);
+    assert.equal(actor.userData.motionSpeed,0);
+    const stoppedPhase=actor.userData.gaitPhase;
+    actor.userData.animate(3.22,.3,true);assert.equal(actor.userData.gaitPhase,stoppedPhase);
+    actor.updateMatrixWorld(true);
+    const floor=actor.position.y+(crawler?.075:.125)*actor.scale.y;
+    for(const leg of actor.userData.legs)assert.ok(Math.abs(leg.foot.getWorldPosition(point).y-floor)<1e-5,`${form}: all feet settle flat`);
   }
 });

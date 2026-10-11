@@ -1,191 +1,271 @@
 import * as T from './vendor/three.webgpu.min.js';
-import { Assembly, loft, armorPanel, matrix, bevelBox, limb as lightweightLimb, ball as lightweightBall } from './geo.js';
-import { addClosedHelmet } from './helmet.js';
+import { Assembly, loft, armorPanel, matrix, merge, bevelBox, limb as lightweightLimb } from './geo.js';
 
-const stalkerTorso = loft([[.83,.24,.19],[.99,.28,.22],[1.16,.34,.25],[1.39,.40,.27],[1.57,.42,.26],[1.70,.30,.19],[1.78,.12,.11]],18);
-const bruteTorso = loft([[.78,.32,.24],[.98,.40,.29],[1.18,.49,.32],[1.43,.55,.31],[1.62,.46,.26],[1.76,.30,.19],[1.82,.12,.11]],20);
-const seerTorso = loft([[.79,.19,.17],[1.02,.23,.19],[1.24,.26,.21],[1.48,.29,.22],[1.67,.24,.18],[1.82,.15,.12],[1.9,.09,.08]],18);
-const crawlerShell = loft([[.48,.25,.34],[.58,.37,.48],[.75,.43,.53],[.91,.38,.45],[1.02,.24,.31]],22);
-const chest = armorPanel([[-.20,-.22],[.20,-.22],[.35,-.06],[.38,.16],[.23,.24],[-.23,.24],[-.38,.16],[-.35,-.06]],.04,.035);
-const thigh = loft([[-.40,.11,.106],[-.32,.14,.14],[-.18,.168,.163],[-.035,.16,.15],[0,.123,.12]],14);
-const calf = loft([[-.80,.086,.10,.018],[-.71,.10,.12,.027],[-.59,.135,.144,.036],[-.44,.12,.115],[-.37,.113,.11]],14);
-const shin = armorPanel([[-.075,-.18],[.075,-.18],[.104,.12],[.072,.17],[-.072,.17],[-.104,.12]],.023,.017);
-const hand = loft([[-.16,.06,.037],[-.11,.083,.046],[-.025,.071,.039],[.02,.04,.03]],12);
-const ring = new T.TorusGeometry(.12,.011,6,18);
-const sensor = new T.SphereGeometry(1,8,6);
-const detailSphere = new T.SphereGeometry(1,9,6);
-const detailDome = new T.SphereGeometry(1,10,5,0,Math.PI*2,0,Math.PI/2);
+const stalkerTorso=loft([[.88,.22,.17],[1.03,.25,.20],[1.23,.32,.23],[1.46,.39,.255],[1.63,.34,.22],[1.73,.16,.13]],18);
+const bruteTorso=loft([[.84,.29,.22],[1.04,.39,.26],[1.26,.47,.31],[1.50,.51,.29],[1.67,.38,.23],[1.78,.17,.13]],20);
+const seerTorso=loft([[.88,.16,.15],[1.10,.20,.18],[1.31,.24,.20],[1.56,.26,.205],[1.73,.19,.15],[1.85,.09,.08]],18);
+const crawlerShell=loft([[.48,.25,.34],[.58,.37,.48],[.75,.43,.53],[.91,.38,.45],[1.02,.24,.31]],22);
+const chest=armorPanel([[-.18,-.20],[.18,-.20],[.33,-.04],[.35,.13],[.21,.22],[-.21,.22],[-.35,.13],[-.33,-.04]],.028,.055);
+const thigh=loft([[-.36,.078,.084],[-.28,.111,.116],[-.11,.143,.136],[0,.115,.11]],14);
+const calf=loft([[-.355,.065,.073,.012],[-.28,.087,.10,.025],[-.13,.117,.115,.025],[-.035,.10,.093]],14);
+const foot=loft([[-.118,.086,.158,-.058],[-.09,.10,.165,-.061],[-.038,.093,.142,-.038],[.034,.075,.089,.016]],14);
+const shinPlate=armorPanel([[-.054,-.15],[.054,-.15],[.085,.10],[.06,.155],[-.06,.155],[-.085,.10]],.016,.022);
+const sensor=new T.SphereGeometry(1,10,7),shellSphere=new T.SphereGeometry(1,12,8);
+const shellDome=new T.SphereGeometry(1,14,7,0,Math.PI*2,0,Math.PI/2);
+const ring=new T.TorusGeometry(.12,.012,5,16);
+const headShell=loft([[-.18,.065,.075,-.035],[-.11,.14,.17,-.019],[.015,.164,.205,.003],[.14,.12,.163,.035],[.205,.036,.074,.06]],18);
+const headFace=loft([[-.12,.054,.04,-.181],[-.02,.12,.035,-.197],[.084,.112,.032,-.174],[.115,.061,.025,-.149]],16);
 
-// Reduced bevel subdivisions preserve the hostile silhouettes while staying within the mobile triangle budget.
+// Rounded volumes carry the silhouette. Small fittings are merged; no material or
+// geometry is allocated per animation frame, even when a portal spawns a full wave.
 class EnemyAssembly extends Assembly {
-  box(material,size,position=[0,0,0],rotation=[0,0,0],radius=.006,shadow=true,level=1,maxLevel=10){
-    return this.add(bevelBox(size[0],size[1],size[2],radius,1),material,matrix(position,rotation),shadow,level,maxLevel);
+  box(material,size,position=[0,0,0],rotation=[0,0,0],radius=.006,shadow=true){
+    return this.add(bevelBox(...size,radius,1),material,matrix(position,rotation),shadow);
   }
-  limb(material,a,b,r1,r2=r1,shadow=true,level=1,maxLevel=10){
-    return this.add(lightweightLimb(a,b,r1,r2,6),material,null,shadow,level,maxLevel);
+  limb(material,a,b,r1,r2=r1,shadow=true){
+    return this.add(lightweightLimb(a,b,r1,r2,8),material,null,shadow);
   }
-  ball(material,center,r,shadow=true,level=1,maxLevel=10){
-    return this.add(lightweightBall(center,r,[8,6]),material,null,shadow,level,maxLevel);
+  ellipsoid(material,position,radii,rotation=[0,0,0],shadow=true){
+    return this.add(shellSphere,material,matrix(position,rotation,radii),shadow);
   }
-  ellipsoid(material,center,radii,rotation=[0,0,0],shadow=true,level=1,maxLevel=10){
-    return this.add(detailSphere,material,matrix(center,rotation,radii),shadow,level,maxLevel);
-  }
-  dome(material,center,radii,rotation=[0,0,0],shadow=true,level=1,maxLevel=10){
-    return this.add(detailDome,material,matrix(center,rotation,radii),shadow,level,maxLevel);
+  dome(material,position,radii,rotation=[0,0,0],shadow=true){
+    return this.add(shellDome,material,matrix(position,rotation,radii),shadow);
   }
 }
 
-// Each alien chassis is assembled once, merged by material, and shared by every matching enemy.
-// The four silhouettes keep the cost close to the original six meshes per creature.
-export function createEnemyFactory(mats) {
-  const cache=new Map();
-  function bipedLeg(armor) {
-    const group=new T.Group(),leg=new EnemyAssembly();
-    leg.add(thigh,armor);leg.add(calf,armor);
-    leg.ball(armor,[0,-.395,-.007],[.137,.127,.131]);
-    leg.add(shin,armor,matrix([0,-.605,-.119]));
-    leg.box(armor,[.218,.104,.316],[0,-.846,-.069],[.08,0,0],.004);
-    leg.box(armor,[.228,.034,.328],[0,-.906,-.074],[0,0,0],.004);
-    leg.box(armor,[.16,.084,.048],[0,-.397,-.128],[.08,0,0],.004);
-    const meshes=leg.build(group);
-    return meshes[0].geometry;
+// Rigid skin weights articulate armour at real pivots, without multiplying draw
+// calls for every knee or crawler leg. Each variant shares these immutable buffers;
+// only its inexpensive bone transforms belong to an individual enemy.
+function bakeRig(assemblies){
+  const batches=new Map();
+  for(const {assembly,bone} of assemblies)for(const item of assembly.items){
+    const key=`${item.material.uuid}:${item.shadow}`;
+    if(!batches.has(key))batches.set(key,[]);
+    batches.get(key).push({...item,bone});
   }
-  function template(elite,ranged,form) {
+  return [...batches.values()].map(items=>{
+    const geometry=merge(items.map(item=>item.geometry)),count=geometry.attributes.position.count;
+    const indices=new Uint16Array(count*4),weights=new Float32Array(count*4);let offset=0;
+    for(const item of items)for(let i=0;i<item.geometry.attributes.position.count;i++){
+      indices[offset*4]=item.bone;weights[offset*4]=1;offset++;
+    }
+    geometry.setAttribute('skinIndex',new T.Uint16BufferAttribute(indices,4));
+    geometry.setAttribute('skinWeight',new T.Float32BufferAttribute(weights,4));geometry.computeBoundingSphere();
+    return {geometry,material:items[0].material,shadow:items[0].shadow};
+  });
+}
+
+export function createEnemyFactory(mats){
+  const cache=new Map();
+  function template(elite,ranged,form){
     const key=`${form}:${elite?1:0}:${ranged?1:0}`;if(cache.has(key))return cache.get(key);
-    const body=new T.Group(),a=new EnemyAssembly(),armor=elite?mats.monsterElite:mats.monster,dark=mats.monsterFace;
-    const glow=ranged?mats.cyan:form==='scuttler'?mats.rose:form==='seer'?mats.pale:mats.violet;
-    const crawler=form==='scuttler';
-    let legMeshes=[];
+    const armor=elite?mats.monsterElite:mats.monster,dark=mats.monsterFace;
+    const glow=ranged?mats.cyan:form==='scuttler'?mats.rose:form==='seer'?(mats.pale||mats.cyan):mats.violet;
+    const bones=[],assemblies=[],legRig=[],armRig=[];
+    function bone(name,position,parent=-1){bones.push({name,position,parent});return bones.length-1;}
+    function assembly(index){const a=new EnemyAssembly();assemblies.push({assembly:a,bone:index});return a;}
+    const crawler=form==='scuttler',pelvis=bone('pelvis',[0,crawler?.73:.93,0]);
+    const thorax=crawler?pelvis:bone('thorax',[0,.47,0],pelvis),a=assembly(thorax);
 
-    if(crawler) {
-      a.add(crawlerShell,armor);
-      // Overlapping carapace shields, exposed cable gaps and a triple-sensor alien head.
-      for(let i=0;i<4;i++) {
-        const z=.27-i*.19,scale=1-i*.12;
-        a.dome(armor,[0,.91-i*.015,z],[.33*scale,.12,.17],[.10,0,0]);
-        a.limb(dark,[0,1.0-i*.01,z+.05],[0,1.17-i*.01,z+.055],.046*scale,.009,false);
+    if(crawler){
+      a.add(crawlerShell,dark);
+      // Overlapping beetle-like plates surround a former municipal maintenance
+      // chassis: cables, sockets and optical tools show its industrial origin.
+      for(let i=0;i<4;i++){
+        const z=.31-i*.19,scale=1-i*.12;
+        a.dome(armor,[0,.90-i*.012,z],[.38*scale,.16,.21],[.13,0,0]);
+        a.limb(dark,[0,1.02-i*.01,z+.04],[0,1.15-i*.01,z+.06],.033*scale,.011);
       }
-      a.dome(armor,[0,.94,-.48],[.255,.185,.26],[.13,0,0]);
-      a.box(dark,[.29,.105,.12],[0,.83,-.63],[.15,0,0],.012);
-      for(const s of [-1,1]) {
-        a.limb(dark,[s*.10,.80,-.58],[s*.21,.59,-.79],.043,.018,false);
-        a.limb(armor,[s*.21,.59,-.79],[s*.27,.47,-.91],.024,.007,false);
+      a.dome(armor,[0,.89,-.48],[.26,.19,.255],[.13,0,0]);
+      a.ellipsoid(dark,[0,.81,-.64],[.16,.10,.062]);
+      for(const s of [-1,0,1])a.add(sensor,glow,matrix([s*.089,.92,-.673],[0,0,0],[s===0?.036:.026,.028,.017]),false);
+      for(const s of [-1,1]){
+        a.limb(dark,[s*.12,.75,-.55],[s*.19,.59,-.75],.036,.024);
+        a.limb(armor,[s*.19,.59,-.75],[s*.25,.48,-.88],.034,.007);
+        a.limb(dark,[s*.28,.73,.21],[s*.30,.74,-.40],.021);
       }
-      for(const s of [-1,0,1]) {
-        a.add(sensor,glow,matrix([s*.095,.985,-.675],[0,0,0],[s===0?.043:.034,.03,.018]),false);
+      for(const side of [-1,1])for(const [row,z] of [.28,-.02,-.32].entries()){
+        const hip=[side*.27,.69,z],knee=[side*(row===1?.53:.59),.43,z+(row-1)*.17],ankle=[side*.73,.075,z+(row-1)*.31];
+        const upper=bone(`leg-${side}-${row}-hip`,[hip[0],hip[1]-.73,hip[2]],pelvis);
+        const lower=bone(`leg-${side}-${row}-knee`,knee.map((v,i)=>v-hip[i]),upper);
+        const toe=bone(`leg-${side}-${row}-foot`,ankle.map((v,i)=>v-knee[i]),lower);
+        const u=assembly(upper),l=assembly(lower),f=assembly(toe);
+        u.ellipsoid(dark,hip,[.075,.074,.082]);u.limb(armor,hip,knee,.075,.048);
+        u.limb(dark,[hip[0],hip[1]+.025,hip[2]+.075],[knee[0],knee[1]+.025,knee[2]+.075],.016,.013);
+        l.ellipsoid(dark,knee,[.078,.075,.083]);l.limb(armor,knee,ankle,.060,.024);
+        l.limb(dark,[knee[0],knee[1]-.025,knee[2]+.041],[ankle[0],ankle[1]+.12,ankle[2]+.041],.018,.012);
+        f.ellipsoid(dark,ankle,[.075,.035,.095]);f.limb(armor,ankle,[side*.82,.045,ankle[2]-.11],.036,.005);
+        legRig.push({upper,lower,foot:toe,side,row,hip,knee,ankle});
       }
-      a.add(ring,dark,matrix([0,.77,-.625],[0,0,0],[.82,.82,.82]));
-      a.add(sensor,glow,matrix([0,.77,-.642],[0,0,0],[.052,.052,.018]),false);
-
-      // Six jointed legs flare out from the low shell, giving the crawler a wide silhouette.
-      const legs=new EnemyAssembly(),legGroup=new T.Group();
-      for(const side of [-1,1]) for(const [row,z] of [.28,-.02,-.32].entries()) {
-        const hip=[side*.27,.69,z],knee=[side*(row===1?.53:.59),.43,z+(row-1)*.17],foot=[side*.73,.075,z+(row-1)*.31];
-        legs.limb(dark,hip,knee,.075,.053);legs.ball(armor,knee,[.085,.076,.082]);
-        legs.limb(armor,knee,foot,.059,.025);legs.ball(dark,foot,[.075,.04,.105]);
-        legs.limb(armor,foot,[side*.82,.045,foot[2]-.11],.035,.006,false);
-        legs.box(glow,[.042,.012,.08],[side*.62,.31,knee[2]],[0,0,side*.48],.003,false);
+      if(ranged){
+        a.ellipsoid(armor,[0,.98,.28],[.19,.16,.30],[.17,0,0]);
+        a.limb(dark,[0,1.04,.19],[0,1.04,-.25],.079,.053);
+        a.add(sensor,glow,matrix([0,1.04,-.28],[0,0,0],[.05,.05,.021]),false);
       }
-      legMeshes=legs.build(legGroup).map(mesh=>({geometry:mesh.geometry,material:mesh.material,shadow:mesh.castShadow}));
-      body.userData.legMotion=legGroup;
-      body.add(legGroup);
-      if(ranged) {
-        a.box(armor,[.31,.22,.38],[0,.97,.34],[.12,0,0],.01);
-        a.limb(dark,[0,1.0,.18],[0,1.0,-.24],.09,.07);
-        a.add(sensor,glow,matrix([0,1.0,-.27],[0,0,0],[.075,.075,.025]),false);
-      }
-    } else {
+    }else{
       const torso=form==='brute'?bruteTorso:form==='seer'?seerTorso:stalkerTorso;
-      const chestScale=form==='brute'?[1.36,1.08,1.12]:form==='seer'?[.82,1.1,.9]:[1,1,1];
-      a.add(torso,armor);
-      a.add(chest,armor,matrix([0,1.40,-.235],[0,0,0],chestScale));
-      for(let i=0;i<(form==='seer'?5:3);i++)a.box(dark,[.41-i*.035,.045,.04],[0,1.14-i*.082,-.238+i*.018],[.06,0,0],.004);
-      a.box(armor,[form==='brute'?.58:.48,.38,.11],[0,1.44,.246],[0,0,0],.004);
-      // A row of vertebra-like plates makes the back read as a machine, not cloth armour.
-      for(let i=0;i<5;i++) {
-        const y=1.08+i*.145,z=.31+i*.018,half=form==='brute'?.13:.085;
-        a.box(dark,[half*2,.095,.07],[0,y,z],[0,0,0],.008);
-        if(i%2===0)a.box(glow,[.035,.035,.022],[0,y,z+.041],[0,0,0],.003,false);
+      const chestScale=form==='brute'?[1.38,1.11,1.13]:form==='seer'?[.80,1.12,.90]:[1,1,1];
+      a.add(torso,dark);a.add(chest,armor,matrix([0,1.43,-.22],[.035,0,0],chestScale));
+      // Separated rib shells and a narrow flexible waist replace the solid barrel.
+      for(const side of [-1,1])for(let i=0;i<3;i++){
+        a.ellipsoid(armor,[side*(.19-i*.015),1.20-i*.098,-.10+i*.024],[.13,.048,.145],[.08,0,side*-.11]);
       }
-      for(const s of [-1,1]) {
-        const shoulder=form==='brute'?.62:form==='seer'?.36:.45;
-        const handX=form==='brute'?.72:.61;
-        a.limb(dark,[s*.22,1.71,.168],[s*.13,1.04,.207],.016);
-        a.limb(armor,[s*.09,1.61,.32],[s*.09,1.22,.32],.052);
-        a.dome(armor,[s*shoulder,1.58,0],form==='brute'?[.32,.23,.28]:[.225,.13,.215],[0,0,s*-.16]);
-        a.limb(armor,[s*shoulder,1.54,0],[s*(handX-.03),1.22,-.055],form==='brute'?.145:.112,.099);
-        a.limb(dark,[s*(handX-.03),1.22,-.055],[s*handX,1.12,-.11],.097,.092);
-        a.limb(armor,[s*handX,1.14,-.108],[s*(handX+.01),.94,-.208],.105,.075);
-        a.add(hand,dark,matrix([s*(handX+.015),.91,-.21],[.3,0,s*-.1]));
-        a.box(dark,[.11,.055,.19],[s*(shoulder+.08),1.65,-.018],[0,0,s*-.18],.004);
-        a.box(glow,[.061,.012,.012],[s*shoulder,1.67,-.12],[0,0,s*-.18],.002,false);
-        a.box(dark,[.13,.08,.039],[s*(handX+.01),1.105,-.178],[.22,0,0],.004);
-        if(elite||form==='brute') {
-          a.box(armor,[.11,.22,.23],[s*(shoulder+.05),1.63,.024],[0,0,s*-.3],.006);
-          a.box(glow,[.014,.12,.019],[s*(shoulder+.11),1.64,-.092],[0,0,s*-.3],.002,false);
-        }
-        if(form==='brute') {
-          a.limb(dark,[s*.23,1.96,.02],[s*.44,2.17,.06],.09,.012);
-          a.limb(armor,[s*.23,1.96,.02],[s*.34,2.24,.10],.075,.005);
-          a.dome(dark,[s*.47,1.54,-.02],[.12,.09,.13],[0,0,s*.38]);
-        }
-        if(form==='seer') {
-          a.limb(dark,[s*.105,2.00,.015],[s*.13,2.29,.08],.045,.006);
-          a.add(sensor,glow,matrix([s*.13,2.29,.08],[0,0,0],[.024,.043,.024]),false);
-          a.limb(dark,[s*.34,1.49,.10],[s*.51,1.08,.17],.035,.008,false);
-          a.limb(armor,[s*.51,1.08,.17],[s*.48,.91,.32],.023,.005,false);
+      for(let i=0;i<5;i++){
+        a.ellipsoid(armor,[0,1.04+i*.14,.22+i*.015],[form==='brute'?.13:.09,.062,.073]);
+        if(i%2===0)a.add(sensor,glow,matrix([0,1.04+i*.14,.293+i*.015],[0,0,0],[.024,.018,.008]),false);
+      }
+      a.add(ring,dark,matrix([0,1.31,-.295],[0,0,0],[.83,.83,.83]));
+      a.add(sensor,glow,matrix([0,1.31,-.308],[0,0,0],[.058,.058,.016]),false);
+      for(const s of [-1,1]){
+        a.limb(dark,[s*.23,1.64,.17],[s*.15,1.02,.20],.022);
+        a.limb(armor,[s*.095,1.59,.27],[s*.095,1.25,.28],.046,.043);
+        a.ellipsoid(armor,[s*.18,1.00,-.035],[.14,.15,.16]);
+      }
+      const neck=bone('sensor-head',[0,.465,-.032],thorax),h=assembly(neck);
+      const headScale=form==='brute'?[1.18,1.03,1.10]:form==='seer'?[.82,1.19,1.12]:[1,1,1];
+      h.add(headShell,armor,matrix([0,1.865,-.032],[0,0,0],headScale));
+      h.add(headFace,dark,matrix([0,1.865,-.032],[0,0,0],headScale));
+      h.limb(dark,[0,1.69,.02],[0,1.87,.02],.077,.069);
+      for(const s of [-1,1]){
+        h.ellipsoid(dark,[s*.158,1.84,.005],[.033,.07,.082]);
+        h.add(sensor,glow,matrix([s*.07,1.91,-.257],[0,0,0],[.039,.020,.017]),false);
+        h.limb(armor,[s*.072,1.76,-.16],[s*.042,1.71,-.19],.021,.009);
+        if(form==='brute'){
+          h.dome(armor,[s*.18,1.99,.015],[.16,.085,.21],[0,0,s*-.4]);
+          h.limb(dark,[s*.20,1.96,.06],[s*.32,2.16,.11],.065,.013);
+        }else if(form==='seer'){
+          h.limb(dark,[s*.115,2.00,.035],[s*.13,2.26,.10],.029,.009);
+          h.add(sensor,glow,matrix([s*.13,2.27,.10],[0,0,0],[.020,.034,.020]),false);
+        }else{
+          h.limb(armor,[s*.14,1.96,.015],[s*.24,2.05,.10],.046,.009);
         }
       }
-      const helmet=new EnemyAssembly();
-      addClosedHelmet(helmet,{armor,trim:armor,visor:dark,fabric:dark,glow,metal:armor},{scale:form==='brute'?1.2:form==='seer'?1.04:1.13,hostile:true,lowDetail:true});
-      for(const item of helmet.items)a.add(item.geometry,item.material,matrix([0,1.865,-.032]),item.shadow);
-      // Three sealed sensor lamps replace human eyes and define each alien's faceplate.
-      for(const s of [-1,1])a.add(sensor,glow,matrix([s*.073,1.895,-.238],[0,0,0],[.034,.027,.012]),false);
-      a.add(sensor,glow,matrix([0,2.005,-.218],[0,0,0],[.022,.035,.013]),false);
-      a.add(ring,dark,matrix([0,1.23,-.291]));
-      a.add(sensor,glow,matrix([0,1.23,-.306],[0,0,0],[.059,.059,.012]),false);
-      if(form==='stalker') for(const s of [-1,1]) {
-        a.limb(dark,[s*.18,1.83,-.02],[s*.28,1.98,-.1],.045,.006);
-        a.limb(armor,[s*.28,1.98,-.1],[s*.36,1.94,-.12],.026,.004);
+      // Articulated manipulator arms retain paired fingers and hydraulic elbows.
+      for(const s of [-1,1]){
+        const shoulder=form==='brute'?.59:form==='seer'?.34:.43,handX=form==='brute'?.72:form==='seer'?.48:.60;
+        const shoulderAt=[s*shoulder,1.58,0],elbowAt=[s*(handX-.03),1.23,-.055],wristAt=[s*handX,.95,-.19];
+        const upper=bone(`arm-${s}-shoulder`,[shoulderAt[0],.18,0],thorax);
+        const lower=bone(`arm-${s}-elbow`,elbowAt.map((v,i)=>v-shoulderAt[i]),upper);
+        const wrist=bone(`arm-${s}-wrist`,wristAt.map((v,i)=>v-elbowAt[i]),lower);
+        const u=assembly(upper),l=assembly(lower),f=assembly(wrist),large=form==='brute';
+        u.ellipsoid(dark,shoulderAt,[.105,.105,.105]);
+        u.dome(armor,[shoulderAt[0],1.61,0],large?[.28,.20,.26]:[.20,.125,.19],[0,0,s*-.19]);
+        u.limb(armor,[s*(shoulder+.005),1.50,0],[elbowAt[0],1.27,-.055],large?.123:.088,.067);
+        u.limb(dark,[s*(shoulder+.045),1.51,.07],[elbowAt[0]+s*.04,1.27,.028],.022,.017);
+        l.ellipsoid(dark,elbowAt,[.084,.078,.082]);
+        l.limb(armor,[elbowAt[0],1.19,-.071],wristAt,large?.117:.095,.051);
+        l.limb(dark,[elbowAt[0]+s*.055,1.19,-.015],[wristAt[0]+s*.04,.99,-.13],.021,.015);
+        f.ellipsoid(dark,[wristAt[0],.92,-.203],[.071,.075,.047]);
+        for(const finger of [-1,1]){
+          f.limb(armor,[wristAt[0]+finger*.045,.90,-.208],[wristAt[0]+finger*.052,.82,-.24],.022,.016);
+          f.limb(dark,[wristAt[0]+finger*.052,.82,-.24],[wristAt[0]+finger*.037,.81,-.29],.016,.007);
+        }
+        if(elite||large){u.dome(armor,[s*(shoulder+.07),1.66,.025],[.21,.12,.19],[.15,0,s*-.25]);}
+        armRig.push({upper,lower,wrist,side:s});
       }
-      if(form==='seer') {
-        a.box(dark,[.24,.09,.12],[0,1.78,.23],[.12,0,0],.01);
-        for(let i=0;i<3;i++)a.limb(armor,[0,1.77,.27+i*.055],[0,2.13+i*.08,.31+i*.04],.065-i*.014,.004);
+      for(const s of [-1,1]){
+        const x=s*.225,upper=bone(`leg-${s}-hip`,[x,0,0],pelvis),lower=bone(`leg-${s}-knee`,[0,-.415,0],upper),ankle=bone(`leg-${s}-ankle`,[0,-.39,0],lower);
+        const u=assembly(upper),l=assembly(lower),f=assembly(ankle);
+        u.ellipsoid(dark,[x,.90,0],[.112,.098,.11]);u.add(thigh,armor,matrix([x,.93,0]));
+        u.limb(dark,[x+s*.07,.84,.058],[x+s*.07,.58,.056],.025,.018);
+        l.ellipsoid(dark,[x,.515,0],[.11,.105,.108]);l.add(calf,armor,matrix([x,.515,0]));
+        l.dome(armor,[x,.51,-.082],[.11,.081,.08],[Math.PI/2,0,0]);
+        l.add(shinPlate,armor,matrix([x,.29,-.086]));
+        l.limb(dark,[x+s*.07,.465,.07],[x+s*.054,.18,.05],.019,.014);
+        f.ellipsoid(dark,[x,.126,.006],[.081,.072,.079]);f.add(foot,armor,matrix([x,.125,0]));
+        f.ellipsoid(dark,[x,.025,-.073],[.103,.02,.166]);
+        legRig.push({upper,lower,foot:ankle,side:s});
       }
-      if(ranged) {
-        // The ranged form carries an integrated shoulder rail-cannon and power spine.
-        a.box(armor,[.32,.32,.29],[.38,1.63,.23],[.08,0,-.18],.008);
-        a.limb(dark,[.42,1.66,.16],[.42,1.66,-.31],.082,.065);
-        a.add(sensor,glow,matrix([.42,1.66,-.34],[0,0,0],[.068,.068,.022]),false);
-        a.box(glow,[.04,.24,.03],[.15,1.62,.39],[0,0,0],.003,false);
+      if(ranged){
+        a.ellipsoid(armor,[.35,1.66,.19],[.16,.16,.23],[.09,0,-.13]);
+        a.limb(dark,[.37,1.69,.12],[.37,1.69,-.32],.083,.059);
+        a.add(ring,armor,matrix([.37,1.69,-.28],[0,0,0],[.65,.65,.65]));
+        a.add(sensor,glow,matrix([.37,1.69,-.345],[0,0,0],[.054,.054,.018]),false);
       }
     }
-    a.build(body);
-    let bipedLegs=[];
-    if(!crawler)bipedLegs=[bipedLeg(armor),bipedLeg(armor)];
-    const result={body:body.children.filter(part=>part.isMesh).map(mesh=>({geometry:mesh.geometry,material:mesh.material,shadow:mesh.castShadow})),legs:bipedLegs,crawlerLegs:legMeshes};
+    const result={parts:bakeRig(assemblies),bones,legRig,armRig,pelvis,thorax};
     cache.set(key,result);return result;
   }
-  function create(elite=false,ranged=false,form='stalker') {
+
+  function create(elite=false,ranged=false,form='stalker'){
     if(!['stalker','scuttler','brute','seer'].includes(form))form='stalker';
-    const kit=template(elite,ranged,form),root=new T.Group();
-    root.name=({stalker:'Portal stalker',scuttler:'Portal scuttler',brute:'Portal brute',seer:'Portal seer'})[form];
-    root.userData.form=form;root.scale.setScalar(elite?1.3:form==='scuttler'?.98:form==='seer'?1.04:1);
-    for(const part of kit.body){const mesh=new T.Mesh(part.geometry,part.material);mesh.castShadow=mesh.receiveShadow=part.shadow;root.add(mesh);}
-    if(form==='scuttler') {
-      const legs=new T.Group();legs.name='six articulated legs';
-      for(const part of kit.crawlerLegs){const mesh=new T.Mesh(part.geometry,part.material);mesh.castShadow=mesh.receiveShadow=part.shadow;legs.add(mesh);}
-      root.add(legs);root.userData.legMotion=legs;
-    } else for(const [i,s] of [-1,1].entries()) {
-      const leg=new T.Mesh(kit.legs[i],elite?mats.monsterElite:mats.monster);
-      leg.position.set(s*.225,.93,0);leg.castShadow=leg.receiveShadow=true;root.add(leg);root.userData['leg'+s]=leg;
+    const kit=template(elite,ranged,form),root=new T.Group(),crawler=form==='scuttler';
+    root.name=({stalker:'AI pursuit chassis',scuttler:'AI maintenance crawler',brute:'AI siege chassis',seer:'AI reconnaissance chassis'})[form];
+    root.userData.form=form;
+    const joints=kit.bones.map(spec=>{const b=new T.Bone();b.name=spec.name;b.position.set(...spec.position);return b;});
+    kit.bones.forEach((spec,i)=>(spec.parent<0?root:joints[spec.parent]).add(joints[i]));root.updateMatrixWorld(true);
+    const skeleton=new T.Skeleton(joints);
+    root.addEventListener('removed',()=>skeleton.dispose());
+    for(const part of kit.parts){
+      const mesh=new T.SkinnedMesh(part.geometry,part.material);root.add(mesh);mesh.bind(skeleton,new T.Matrix4());
+      mesh.castShadow=part.shadow&&!part.material.isMeshBasicMaterial;mesh.receiveShadow=part.shadow;
+      // Gait stays inside a small, fixed culling margin; no CPU vertex bounds work per frame.
+      mesh.boundingSphere=part.geometry.boundingSphere.clone();mesh.boundingSphere.radius+=.22;
     }
+    root.scale.setScalar(elite?1.3:crawler?.98:form==='seer'?1.04:1);
+    const legs=kit.legRig.map(spec=>({...spec,upper:joints[spec.upper],lower:joints[spec.lower],foot:joints[spec.foot]}));
+    const arms=kit.armRig.map(spec=>({...spec,upper:joints[spec.upper],lower:joints[spec.lower],wrist:joints[spec.wrist]}));
+    root.userData.skeleton=skeleton;root.userData.legs=legs;
+    if(!crawler)for(const leg of legs)root.userData['leg'+leg.side]=leg.upper;
+    const pelvis=joints[kit.pelvis],thorax=joints[kit.thorax],head=joints.find(joint=>joint.name==='sensor-head');
+    const direction=new T.Vector3(),bend=new T.Vector3(),knee=new T.Vector3(),target=new T.Vector3(),hip=new T.Vector3();
+    const q=new T.Quaternion(),inverse=new T.Quaternion();
+    // Cached bind directions let six independent two-link chains solve each foot
+    // target. Alternating tripods keep three points of contact throughout a step.
+    if(crawler)for(const leg of legs){
+      leg.upperBind=new T.Vector3(...leg.knee).sub(new T.Vector3(...leg.hip));leg.upperLength=leg.upperBind.length();leg.upperBind.normalize();
+      leg.lowerBind=new T.Vector3(...leg.ankle).sub(new T.Vector3(...leg.knee));leg.lowerLength=leg.lowerBind.length();leg.lowerBind.normalize();
+    }
+    let previousTime=null,previousX=0,previousZ=0,motionSpeed=0,cycle=0;
     root.userData.animate=(time,phase=0,moving=true)=>{
-      const swing=moving?Math.sin(time*8+phase)*.25:0;
-      if(form==='scuttler') {
-        root.userData.legMotion.rotation.x=moving?Math.sin(time*9+phase)*.075:0;
-        root.userData.legMotion.rotation.z=moving?Math.sin(time*9+phase+Math.PI/2)*.035:0;
-      } else {root.userData['leg-1'].rotation.x=swing;root.userData.leg1.rotation.x=-swing;}
+      // Infer real travelled distance: a stunned enemy or a shooter holding its
+      // position must settle into an idle stance instead of walking in place.
+      const elapsed=previousTime===null?0:time-previousTime,dt=Math.min(.1,Math.max(0,elapsed));
+      if(previousTime===null||elapsed<=0){cycle=phase;motionSpeed=0;}
+      else{
+        const distance=Math.hypot(root.position.x-previousX,root.position.z-previousZ);
+        const measured=moving&&distance<1.5?Math.min(5,distance/elapsed):0;
+        motionSpeed+= (measured-motionSpeed)*(1-Math.exp(-dt*18));
+        if(!moving||motionSpeed<.015)motionSpeed=0;
+      }
+      previousTime=time;previousX=root.position.x;previousZ=root.position.z;
+      const amount=Math.min(1,motionSpeed/.4),pace=Math.min(1,motionSpeed/2.7);
+      const stride=crawler?.17:form==='brute'?.14+pace*.12:.14+pace*.16;
+      cycle+=motionSpeed*dt*Math.PI/(2*stride);
+      root.userData.motionSpeed=motionSpeed;root.userData.gaitPhase=cycle;
+      if(crawler){
+        const bob=-amount*.04+Math.sin(cycle*2)*.006*amount;pelvis.position.y=.73+bob;
+        for(const leg of legs){
+          const gait=cycle+((leg.row+(leg.side===1?1:0))%2)*Math.PI,step=Math.cos(gait)*amount,lift=Math.max(0,Math.sin(gait))*.12*amount;
+          hip.set(leg.hip[0],leg.hip[1]+bob,leg.hip[2]);target.set(leg.side*.66,leg.ankle[1]+lift,leg.ankle[2]+step*stride);
+          direction.copy(target).sub(hip);const distance=Math.min(direction.length(),leg.upperLength+leg.lowerLength-.0001);direction.normalize();
+          const along=(leg.upperLength**2-leg.lowerLength**2+distance**2)/(2*distance),height=Math.sqrt(Math.max(0,leg.upperLength**2-along**2));
+          bend.set(leg.side,.2,0).addScaledVector(direction,-direction.dot(bend)).normalize();
+          knee.copy(hip).addScaledVector(direction,along).addScaledVector(bend,height);
+          direction.copy(knee).sub(hip).normalize();leg.upper.quaternion.setFromUnitVectors(leg.upperBind,direction);
+          inverse.copy(leg.upper.quaternion).invert();direction.copy(target).sub(knee).normalize().applyQuaternion(inverse);
+          leg.lower.quaternion.setFromUnitVectors(leg.lowerBind,direction);
+          q.copy(leg.upper.quaternion).multiply(leg.lower.quaternion);leg.foot.quaternion.copy(q).invert();
+        }
+      }else{
+        const gait=Math.sin(cycle)*amount;pelvis.position.y=.909-pace*.048+Math.cos(cycle*2)*.004*amount;
+        thorax.rotation.set(.012+pace*.032,-gait*.024,gait*.012);
+        if(head){head.rotation.y=gait*.018+Math.sin(time*.65+phase)*.06*(1-amount);head.rotation.x=-thorax.rotation.x*.6;}
+        for(const leg of legs){
+          const step=cycle+(leg.side===1?Math.PI:0),swing=Math.sin(step)*amount;
+          const z=Math.cos(step)*stride*amount,lift=Math.max(0,swing)*(.07+pace*.025);
+          const drop=pelvis.position.y-(.125+lift),distance=Math.min(.8049,Math.hypot(drop,z));
+          const hipBend=Math.acos(T.MathUtils.clamp((.415**2+distance**2-.39**2)/(2*.415*distance),-1,1));
+          leg.upper.rotation.x=Math.atan2(-z,drop)+hipBend;
+          leg.lower.rotation.x=-Math.acos(T.MathUtils.clamp((distance**2-.415**2-.39**2)/(2*.415*.39),-1,1));
+          leg.foot.rotation.x=-leg.upper.rotation.x-leg.lower.rotation.x+(lift>0?swing*.13:0);
+        }
+        for(const arm of arms){
+          arm.upper.rotation.x=gait*arm.side*(form==='brute'?.065:.115);
+          arm.upper.rotation.z=arm.side*.015;arm.lower.rotation.x=-.025-Math.max(0,gait*arm.side)*.075;
+          arm.wrist.rotation.x=-arm.lower.rotation.x*.4;
+        }
+      }
     };
     return root;
   }

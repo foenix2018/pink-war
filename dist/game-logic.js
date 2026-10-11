@@ -1,4 +1,5 @@
 import { equipmentForLevel } from './equipment.js';
+import { PLATFORMS, STAIRS, LIFTS, insideSurface, traversalSurfaces, liftHeightAt } from './world-layout.js';
 // World units are metres. The playable arena is exactly 200 × 200 m.
 export const ARENA_SIZE = 200;
 export const PORTAL = Object.freeze({ x: 0, z: -20 });
@@ -12,7 +13,7 @@ export function chooseWavePortals(obstacles=[],random=Math.random,wave=1,player=
   const count=wave<3?1:wave<6?2:3;
   const available=PORTAL_SITES.filter(p=>
     Math.hypot(p.x-player.x,p.z-player.z)>17 &&
-    obstacles.every(b=>b.walkableSurface||Math.abs(p.x-b.x)>b.hx+9||Math.abs(p.z-b.z)>b.hz+8)
+    obstacles.every(b=>(b.walkableSurface&&!b.traversal)||Math.abs(p.x-b.x)>b.hx+9||Math.abs(p.z-b.z)>b.hz+8)
   );
   if(!available.length)available.push(PORTAL);
   const chosen=[];
@@ -47,11 +48,11 @@ export const COVER_WALLS = Object.freeze([
   { x: -34, z: 39, hx: .55, hz: 5, height: 2.65 }
 ].map(b => Object.freeze({ ...b, cover: true })));
 // Smoothly follows the stair treads so the player and camera rise onto the deck.
-export function walkSurfaceHeight(x, z) {
-  if (Math.abs(x - CATWALK.x) > CATWALK.halfWidth || Math.abs(z) > CATWALK.end) return 0;
-  if (z > CATWALK.landing) return CATWALK.height * (CATWALK.end - z) / (CATWALK.end - CATWALK.landing);
-  if (z < -CATWALK.landing) return CATWALK.height * (z + CATWALK.end) / (CATWALK.end - CATWALK.landing);
-  return CATWALK.height;
+export function walkSurfaceHeight(x, z, time=0, maxHeight=Infinity) {
+  const heights=[0,...traversalSurfaces(x,z,time).map(s=>s.height)];
+  if(Math.abs(x-CATWALK.x)<=CATWALK.halfWidth && Math.abs(z)<=CATWALK.end)
+    heights.push(Math.abs(z)>CATWALK.landing ? CATWALK.height*(CATWALK.end-Math.abs(z))/(CATWALK.end-CATWALK.landing) : CATWALK.height);
+  return Math.max(0,...heights.filter(height=>height<=maxHeight+.001));
 }
 export const levelCount = level => 5 + (clamp(level, 1, MAX_LEVEL) - 1) * 3;
 export const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -86,15 +87,19 @@ export function moveInArena(entity, dx, dz, radius, obstacles) {
   const edge = ARENA_SIZE / 2 - radius - 1;
   let x = clamp(entity.x + dx, -edge, edge), z = entity.z;
   for (const b of obstacles) {
-    if (b.walkableSurface || (Number.isFinite(entity.elevation) && entity.elevation > b.height + .02)) continue;
-    if (z > b.z - b.hz - radius && z < b.z + b.hz + radius && x > b.x - b.hx - radius && x < b.x + b.hx + radius) {
+    if (b.walkableSurface || ((entity.elevation||0) >= (b.y||0)+b.height-.02) || ((entity.elevation||0)+(entity.crouched?.95:1.8) < (b.y||0))) continue;
+    const near=b.x-b.hx-radius,far=b.x+b.hx+radius;
+    const crosses=(x>near&&x<far)||(dx>0&&entity.x<=near&&x>=near)||(dx<0&&entity.x>=far&&x<=far);
+    if (z > b.z - b.hz - radius && z < b.z + b.hz + radius && crosses) {
       x = dx > 0 ? b.x - b.hx - radius : dx < 0 ? b.x + b.hx + radius : x;
     }
   }
   z = clamp(entity.z + dz, -edge, edge);
   for (const b of obstacles) {
-    if (b.walkableSurface || (Number.isFinite(entity.elevation) && entity.elevation > b.height + .02)) continue;
-    if (x > b.x - b.hx - radius && x < b.x + b.hx + radius && z > b.z - b.hz - radius && z < b.z + b.hz + radius) {
+    if (b.walkableSurface || ((entity.elevation||0) >= (b.y||0)+b.height-.02) || ((entity.elevation||0)+(entity.crouched?.95:1.8) < (b.y||0))) continue;
+    const near=b.z-b.hz-radius,far=b.z+b.hz+radius;
+    const crosses=(z>near&&z<far)||(dz>0&&entity.z<=near&&z>=near)||(dz<0&&entity.z>=far&&z<=far);
+    if (x > b.x - b.hx - radius && x < b.x + b.hx + radius && crosses) {
       z = dz > 0 ? b.z - b.hz - radius : dz < 0 ? b.z + b.hz + radius : z;
     }
   }
@@ -139,7 +144,7 @@ class CoverNavigation {
     this.queue = new Int32Array(this.solid.length); this.refreshAt = -1; this.goal = -1;
     for (let z = 0; z < this.size; z++) for (let x = 0; x < this.size; x++) {
       const wx = this.edge + x * 2, wz = this.edge + z * 2;
-      this.solid[z * this.size + x] = obstacles.some(b => !b.walkableSurface && Math.abs(wx-b.x) < b.hx+1.3 && Math.abs(wz-b.z) < b.hz+1.3) ? 1 : 0;
+      this.solid[z * this.size + x] = obstacles.some(b => !b.walkableSurface && (b.y||0)<2 && Math.abs(wx-b.x) < b.hx+1.3 && Math.abs(wz-b.z) < b.hz+1.3) ? 1 : 0;
     }
   }
   point(index) { return { x: this.edge + index % this.size * 2, z: this.edge + Math.floor(index / this.size) * 2 }; }
@@ -185,7 +190,13 @@ class CoverNavigation {
 }
 
 export class ArenaGame {
-  constructor(obstacles = [], random = Math.random) { this.obstacles = obstacles; this.random = random; this.navigation = new CoverNavigation(obstacles); this.reset(); }
+  constructor(obstacles = [], random = Math.random) { this.obstacles = obstacles; this.random = random; this.navigation = new CoverNavigation(obstacles); this.stairNavigation=STAIRS.map(()=>new CoverNavigation(obstacles)); this.reset(); }
+  replaceObstacles(obstacles) {
+    // Renderer recovery / entering WebXR rebuilds the scene. Keep aiming and
+    // simulation on the same moving lift and gate colliders after that switch.
+    this.obstacles=obstacles;this.updateLifts(this.time);
+    this.navigation=new CoverNavigation(obstacles);this.stairNavigation=STAIRS.map(()=>new CoverNavigation(obstacles));
+  }
   reset() {
     this.navigation.refreshAt = -1; this.navigation.goal = -1;
     this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0, verticalSpeed: 0, grounded: true, jumpHeld: false, crouched:false };
@@ -198,6 +209,40 @@ export class ArenaGame {
     this.ownedWeapons = new Set([0]); this.weaponOffers = [];
     this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false;
     this.lastDamage = 0; this.regenerating = false;
+    for(const nav of this.stairNavigation){nav.refreshAt=-1;nav.goal=-1;}
+    this.updateLifts(0);
+  }
+  updateLifts(previousTime) {
+    for(const lift of LIFTS){
+      const height=liftHeightAt(lift,this.time),delta=height-liftHeightAt(lift,previousTime);
+      for(const entity of [this.player,...this.enemies])if(entity.onLift===lift.id && entity.grounded && insideSurface(entity.x,entity.z,lift))entity.elevation+=delta;
+      for(const obstacle of this.obstacles){
+        if(obstacle.liftId===lift.id && obstacle.walkableSurface)obstacle.y=height-obstacle.height;
+        if(obstacle.liftGateId===lift.id){const open=Math.abs(height-obstacle.gateFloor)<.08;obstacle.y=obstacle.gateFloor+(open?2.4:0);obstacle.height=open?.18:1.15;}
+      }
+    }
+  }
+  settle(entity,dt,isPlayer=false) {
+    const previous=entity.elevation||0;
+    let floor=walkSurfaceHeight(entity.x,entity.z,this.time,previous+.3);
+    for(const b of this.obstacles){
+      const top=(b.y||0)+b.height;
+      if(!b.walkableSurface && b.height<=1.35 && top<=previous+.12 && Math.abs(entity.x-b.x)<b.hx && Math.abs(entity.z-b.z)<b.hz)floor=Math.max(floor,top);
+    }
+    if(entity.grounded && previous-floor>.32){entity.grounded=false;entity.verticalSpeed=0;}
+    if(entity.grounded){entity.elevation=floor;entity.verticalSpeed=0;}
+    else{
+      entity.verticalSpeed=Math.max(-18,(entity.verticalSpeed||0)-18*dt);
+      entity.elevation=previous+entity.verticalSpeed*dt;
+      const bodyHeight=entity.crouched?.95:1.8;
+      if(entity.verticalSpeed>0)for(const b of this.obstacles){
+        const underside=b.y||0;
+        if(b.walkableSurface && Math.abs(entity.x-b.x)<b.hx && Math.abs(entity.z-b.z)<b.hz && previous+bodyHeight<=underside && entity.elevation+bodyHeight>underside){entity.elevation=underside-bodyHeight;entity.verticalSpeed=0;}
+      }
+      if(entity.elevation<=floor){entity.elevation=floor;entity.verticalSpeed=0;entity.grounded=true;if(isPlayer)this.event('land');}
+    }
+    entity.onLift=null;
+    if(entity.grounded)for(const l of LIFTS)if(insideSurface(entity.x,entity.z,l) && Math.abs(entity.elevation-liftHeightAt(l,this.time))<.025){entity.onLift=l.id;break;}
   }
   get equipment() { return equipmentForLevel(this.wave); }
   get weapon() { return WEAPONS[this.weaponIndex]; }
@@ -232,9 +277,9 @@ export class ArenaGame {
       Math.abs(point.x-b.x)>b.hx+1.4||Math.abs(point.z-b.z)>b.hz+1.4);
     const chosen=candidates.find(point=>clear(point)&&!this.blocked(
       {x:p.x,y:p.elevation+1.5,z:p.z},
-      {x:point.x,y:walkSurfaceHeight(point.x,point.z)+1.7,z:point.z}
+      {x:point.x,y:walkSurfaceHeight(point.x,point.z,this.time,p.elevation+.3)+1.7,z:point.z}
     ))||candidates.find(clear)||{x:p.x,z:p.z};
-    const offer={index,x:chosen.x,z:chosen.z,elevation:walkSurfaceHeight(chosen.x,chosen.z),createdAt:this.time};
+    const offer={index,x:chosen.x,z:chosen.z,elevation:walkSurfaceHeight(chosen.x,chosen.z,this.time,p.elevation+.3),createdAt:this.time};
     this.weaponOffers.push(offer);this.event('weapon-offer',{...offer,name:WEAPONS[index].name});
   }
   nearbyWeapon(maxDistance=2.65) {
@@ -279,7 +324,7 @@ export class ArenaGame {
     const x=site.x+Math.sin(site.yaw||0)*3.2+Math.cos(angle)*.95;
     const z=site.z+Math.cos(site.yaw||0)*3.2+Math.sin(angle)*.95;
     const aimHeight = form === 'scuttler' ? .88 : form === 'seer' ? 1.38 : form === 'brute' ? 1.42 : 1.15;
-    const enemy = { id: this.nextId++, x, z, elevation: walkSurfaceHeight(x, z),
+    const enemy = { id: this.nextId++, x, z, elevation: walkSurfaceHeight(x, z,this.time,.3),grounded:true,verticalSpeed:0,
       hp: elite ? 95 + this.wave * 25 : 42 + this.wave * 14, elite, ranged, form, aimHeight,
       speed: Math.max(1.5,2.85 - (this.wave-1)*.09 + (elite ? -.018 : form === 'scuttler' ? .025 : form === 'seer' ? .012 : form === 'brute' ? -.015 : 0)),
       tier: Math.max(1,Math.ceil(this.wave/2)),limpUntil:0,stunnedUntil:0,
@@ -306,7 +351,7 @@ export class ArenaGame {
       const vx = nx + rx * sx, vy = ny + sy, vz = nz + rz * sx, n = Math.hypot(vx, vy, vz);
       this.bullets.push({ id: this.nextId++, x: origin.x, y: origin.y, z: origin.z,
         vx: vx / n * w.speed, vy: vy / n * w.speed, vz: vz / n * w.speed, life: 2.4,
-        damage: w.damage * power, splash: w.splash * power, weapon: w.id, hostile: false });
+        damage: w.damage * power, splash: w.splash * power, power, weapon: w.id, hostile: false });
     }
     this.ammo[this.weaponIndex]--; this.cooldown = w.interval; this.charge = 0;
     this.event('shot', { weapon: w.id, power }); return true;
@@ -345,7 +390,7 @@ export class ArenaGame {
   }
   step(dt, input = {}) {
     if (this.state !== 'playing') return;
-    dt = clamp(dt, 0, .05); this.time += dt;
+    dt = clamp(dt, 0, .05); const previousTime=this.time;this.time += dt;this.updateLifts(previousTime);
     this.cooldown = Math.max(0, this.cooldown - dt); this.invulnerable = Math.max(0, this.invulnerable - dt);
     if (this.reloadRemaining > 0) {
       this.reloadRemaining = Math.max(0, this.reloadRemaining - dt);
@@ -364,18 +409,7 @@ export class ArenaGame {
     const speed = p.crouched ? 3.0 : input.sprint ? 10 : 7, moveYaw = input.moveYaw ?? yaw;
     moveInArena(p, (Math.cos(moveYaw) * ix + Math.sin(moveYaw) * iz) * speed * dt,
       (-Math.sin(moveYaw) * ix + Math.cos(moveYaw) * iz) * speed * dt, .55, this.obstacles);
-    let floor = walkSurfaceHeight(p.x, p.z);
-    // Shallow service blocks may be vaulted: land on their top instead of falling into them.
-    for (const b of this.obstacles) {
-      if (b.walkableSurface || b.height > 1.35 || b.height <= floor) continue;
-      if (Math.abs(p.x-b.x) < b.hx && Math.abs(p.z-b.z) < b.hz && p.elevation >= b.height - .12) floor=Math.max(floor,b.height);
-    }
-    if (p.grounded) { p.elevation=floor; p.verticalSpeed=0; }
-    else {
-      p.verticalSpeed=Math.max(-18,p.verticalSpeed-18*dt);
-      p.elevation+=p.verticalSpeed*dt;
-      if (p.elevation <= floor) { p.elevation=floor; p.verticalSpeed=0; p.grounded=true; this.event('land'); }
-    }
+    this.settle(p,dt,true);
     if (this.nextWave >= 0) { this.nextWave -= dt; if (this.nextWave <= 0) this.beginWave(); }
     if (this.toSpawn > 0) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) {
       const available=this.activePortals.filter(p=>p.openedAt<=this.time);
@@ -386,7 +420,7 @@ export class ArenaGame {
     for (const e of this.enemies) {
       e.aimHeight ??= e.elite ? 1.35 : 1.15;
       e.hitRadius ??= e.elite ? 1.3 : 1.05;
-      e.elevation = walkSurfaceHeight(e.x, e.z);
+      e.grounded ??= true;e.elevation ??= 0;
       let dx=this.player.x-e.x,dz=this.player.z-e.z;
       const horizontalDistance=Math.hypot(dx,dz)||1;
       const eye={x:e.x,y:e.elevation+e.aimHeight,z:e.z};
@@ -425,11 +459,33 @@ export class ArenaGame {
         destinationX=e.x+Math.sin(e.patrolAngle||0)*5;
         destinationZ=e.z+Math.cos(e.patrolAngle||0)*5;
       }
+      // An alerted ground unit approaches the bottom of the stairs, then climbs.
+      // It never snaps onto a balcony just because it walked underneath it.
+      const upper=PLATFORMS.find(deck=>insideSurface(this.player.x,this.player.z,deck) && this.player.elevation>=deck.height-.35);
+      let stairRoute=false;
+      if(upper && e.elevation<upper.height-.3 && e.awareness!=='patrol'){
+        const si=STAIRS.findIndex(s=>s.platform===upper.id),stair=STAIRS[si];
+        if(e.stairRoute!==stair.id||e.stairDirection!=='up'){e.stairRoute=stair.id;e.stairStage=0;e.stairDirection='up';}
+        if(e.stairStage===0 && Math.hypot(e.x-stair.x,e.z-(stair.bottomZ+1))<1.7)e.stairStage=1;
+        if(e.stairStage===0){
+          const target={x:stair.x,z:stair.bottomZ+1};this.stairNavigation[si].update(target,this.time);
+          const waypoint=this.stairNavigation[si].waypoint(e)||target;destinationX=waypoint.x;destinationZ=waypoint.z;
+        }else{destinationX=stair.x;destinationZ=stair.topZ-.8;}
+        stairRoute=true;
+      }else{
+        const deck=PLATFORMS.find(p=>insideSurface(e.x,e.z,p)&&e.elevation>=p.height-.35);
+        const stair=deck?STAIRS.find(s=>s.platform===deck.id):e.stairDirection==='down'?STAIRS.find(s=>s.id===e.stairRoute):null;
+        if(stair && e.elevation>.3 && this.player.elevation<e.elevation-.4 && e.awareness!=='patrol'){
+          if(e.stairRoute!==stair.id||e.stairDirection!=='down'){e.stairRoute=stair.id;e.stairStage=0;e.stairDirection='down';}
+          if(e.stairStage===0&&Math.hypot(e.x-stair.x,e.z-(stair.topZ-.6))<1.1)e.stairStage=1;
+          destinationX=stair.x;destinationZ=e.stairStage===0?stair.topZ-.6:stair.bottomZ+1;stairRoute=true;
+        }else{e.stairRoute=null;e.stairStage=0;e.stairDirection=null;}
+      }
       dx=destinationX-e.x;dz=destinationZ-e.z;
       const goalDistance=Math.hypot(dx,dz)||1;
       dx/=goalDistance;dz/=goalDistance;
       if(this.obstacles.some(b=>!b.walkableSurface&&segmentBox(eye,{x:destinationX,y:eye.y,z:destinationZ},{...b,hx:b.hx+e.radius+.08,hz:b.hz+e.radius+.08})!==null)){
-        if(e.awareness!=='patrol'){
+        if(e.awareness!=='patrol'&&!stairRoute){
           const waypoint=this.navigation.waypoint(e);
           if(waypoint){dx=waypoint.x-e.x;dz=waypoint.z-e.z;const n=Math.hypot(dx,dz)||1;dx/=n;dz/=n;}
         }else{e.patrolAngle=(e.patrolAngle||0)+Math.PI*.64;e.patrolTimer=.6;}
@@ -440,13 +496,13 @@ export class ArenaGame {
         if(d>.01&&d<1.7){dx+=ax/d*.65;dz+=az/d*.65;}
       }
       const norm=Math.hypot(dx,dz)||1;
-      const stopDistance=e.awareness==='engaged' ? (e.ranged?14:1.45) : e.awareness==='search'?1.8:.7;
+      const stopDistance=stairRoute?.15:e.awareness==='engaged' ? (e.ranged?14:1.45) : e.awareness==='search'?1.8:.7;
       if(goalDistance>stopDistance){
         const injury=e.limpUntil>this.time?.62:1;
         const searchSpeed=e.awareness==='engaged'?1:e.awareness==='search'?.75:.48;
         moveInArena(e,dx/norm*e.speed*dt*injury*searchSpeed,dz/norm*e.speed*dt*injury*searchSpeed,e.radius,this.obstacles);
       }
-      e.elevation=walkSurfaceHeight(e.x,e.z);
+      this.settle(e,dt);
       if(e.awareness!=='patrol'&&goalDistance>.15)e.yaw=Math.atan2(dx,dz)+Math.PI;
       else if(e.awareness==='patrol')e.yaw=(e.patrolAngle||0)+Math.PI;
       if(e.stunnedUntil<=this.time)e.attackTimer-=dt;
@@ -466,7 +522,7 @@ export class ArenaGame {
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const b = this.bullets[i], start = { x: b.x, y: b.y, z: b.z };
       const end = { x: b.x + b.vx * dt, y: b.y + b.vy * dt, z: b.z + b.vz * dt };
-      let nearest = 1.01, target = null, zone='torso',multiplier=1;
+      let nearest = 1.01, target = null, zone='torso',multiplier=1,surface='concrete',hitBox=null;
       if (b.hostile) {
         const hit = segmentSphere(start, end, { x: this.player.x, y: (this.player.elevation || 0) + 1.25, z: this.player.z }, .62);
         if (hit !== null) { nearest = hit; target = this.player; }
@@ -474,11 +530,16 @@ export class ArenaGame {
         const hit = traceEnemyHit(start,end,e);
         if (hit && hit.t < nearest) { nearest = hit.t; target = e;zone=hit.zone;multiplier=hit.multiplier; }
       }
-      for (const obstacle of this.obstacles) { const t = segmentBox(start, end, obstacle); if (t !== null && t < nearest) { nearest = t; target = null; } }
-      if (end.y < .06 && start.y >= .06) { const t = (start.y - .06) / (start.y - end.y); if (t < nearest) { nearest = t; target = null; } }
+      for (const obstacle of this.obstacles) { const t = segmentBox(start, end, obstacle); if (t !== null && t < nearest) { nearest = t; target = null;hitBox=obstacle;surface=obstacle.surface||'concrete'; } }
+      if (end.y < .06 && start.y >= .06) { const t = (start.y - .06) / (start.y - end.y); if (t < nearest) { nearest = t; target = null;hitBox=null;surface='ground'; } }
       if (nearest <= 1) {
         const at = { x: start.x + (end.x - start.x) * nearest, y: start.y + (end.y - start.y) * nearest, z: start.z + (end.z - start.z) * nearest };
-        this.event('impact', { ...at, enemy: !!target, hostile: b.hostile, splash: b.splash });
+        let normal={x:0,y:1,z:0};
+        if(hitBox){
+          const faces=[['x',hitBox.x-hitBox.hx,-1],['x',hitBox.x+hitBox.hx,1],['y',hitBox.y||0,-1],['y',(hitBox.y||0)+hitBox.height,1],['z',hitBox.z-hitBox.hz,-1],['z',hitBox.z+hitBox.hz,1]];
+          faces.sort((a,c)=>Math.abs(at[a[0]]-a[1])-Math.abs(at[c[0]]-c[1]));normal={x:0,y:0,z:0};normal[faces[0][0]]=faces[0][2];
+        }
+        this.event('impact', { ...at, enemy: !!target, hostile: b.hostile, splash: b.splash,weapon:b.weapon,power:b.power||1,surface:target?'robot':surface,normal,direction:{x:b.vx,y:b.vy,z:b.vz} });
         if (target === this.player) this.damage(b.damage);
         else if (target) this.damageEnemy(target, b.damage, at, zone, multiplier);
         if (!b.hostile && b.splash > 0) for (const e of [...this.enemies]) {

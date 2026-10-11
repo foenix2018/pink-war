@@ -1,0 +1,300 @@
+import * as T from './vendor/three.webgpu.min.js';
+import { bevelBox, merge } from './geo.js';
+
+// The city is built from a small set of instanced, weathered surfaces. Its neutral
+// materials remain legible in both character palettes and in the two Quest views.
+function randomSource(seed = 4107) {
+  return () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+}
+function texture(size, paint, repeat = 1) {
+  const canvas = document.createElement('canvas'); canvas.width = canvas.height = size;
+  paint(canvas.getContext('2d'), size, randomSource());
+  const map = new T.CanvasTexture(canvas); map.colorSpace = T.SRGBColorSpace;
+  map.wrapS = map.wrapT = T.RepeatWrapping; map.repeat.set(repeat, repeat); map.anisotropy = 4;
+  return map;
+}
+function weatherTexture(kind) {
+  return texture(512, (c, n, rand) => {
+    const base = kind === 'road' ? [75,80,79] : kind === 'metal' ? [117,119,117] : [157,159,156];
+    const pixels = c.createImageData(n,n);
+    for (let y=0;y<n;y++) for (let x=0;x<n;x++) {
+      const index=(y*n+x)*4, grain=(rand()-.5)*37;
+      const mottling=Math.sin(x*.033+Math.sin(y*.047))*7+Math.sin(y*.027+x*.012)*6;
+      for(let k=0;k<3;k++)pixels.data[index+k]=base[k]+grain+mottling;
+      pixels.data[index+3]=255;
+    }
+    c.putImageData(pixels,0,0);
+    for(let i=0;i<60;i++) {
+      const x=rand()*n,y=rand()*n,r=12+rand()*110;
+      const g=c.createRadialGradient(x,y,0,x,y,r);
+      g.addColorStop(0,kind==='metal'?'rgba(70,35,17,.26)':'rgba(33,41,33,.12)');g.addColorStop(1,'rgba(25,30,22,0)');
+      c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2);
+    }
+    // Hairline fractures, branch cracks and runoff are visible at hand distance.
+    for(let i=0;i<(kind==='road'?22:12);i++) {
+      let x=rand()*n,y=rand()*n;c.beginPath();c.moveTo(x,y);
+      for(let j=0;j<10;j++){x+=(rand()-.55)*37;y+=8+rand()*13;c.lineTo(x,y);}
+      c.strokeStyle=kind==='metal'?'rgba(79,42,21,.26)':'rgba(28,32,29,.48)';c.lineWidth=rand()*1.4+.5;c.stroke();
+    }
+    if(kind!=='road')for(let i=0;i<24;i++) {
+      const x=rand()*n,y=rand()*n;
+      const g=c.createLinearGradient(x,y,x,y+140);g.addColorStop(0,'rgba(38,42,33,.19)');g.addColorStop(1,'rgba(38,42,33,0)');
+      c.fillStyle=g;c.fillRect(x,y,1+rand()*7,70+rand()*140);
+    }
+    for(let i=0;i<450;i++){c.fillStyle=rand()>.6?'rgba(220,221,197,.19)':'rgba(20,26,23,.18)';c.fillRect(rand()*n,rand()*n,rand()*2+.5,rand()*2+.5);}
+  });
+}
+
+// Overcast dawn, smoke banks and filtered sunlight replace the uniform neon sky.
+export function paintRuinSky(c,w,h,blue=false) {
+  const g=c.createLinearGradient(0,0,0,h);
+  const colors=blue?['#293942','#576b74','#b4b6a7','#ded0ac','#9da69a','#697b77']:['#333c42','#666f73','#b7b4a5','#e2ccad','#a0a69b','#6b7a74'];
+  [0,.29,.44,.54,.7,1].forEach((stop,i)=>g.addColorStop(stop,colors[i]));c.fillStyle=g;c.fillRect(0,0,w,h);
+  const rand=randomSource(85);
+  for(let layer=0;layer<3;layer++)for(let i=0;i<18;i++) {
+    const x=rand()*w,y=h*(.13+rand()*.37),rx=w*(.055+rand()*.115),ry=h*(.021+rand()*.032);
+    const grad=c.createRadialGradient(x,y,0,x,y,rx);
+    grad.addColorStop(0,layer===0?'rgba(43,54,62,.12)':'rgba(216,217,206,.075)');grad.addColorStop(1,'rgba(150,154,146,0)');
+    c.save();c.translate(x,y);c.scale(1,ry/rx);c.translate(-x,-y);c.fillStyle=grad;c.fillRect(x-rx,y-rx,rx*2,rx*2);c.restore();
+  }
+  const sun=c.createRadialGradient(w*.26,h*.46,0,w*.26,h*.46,w*.105);
+  sun.addColorStop(0,'rgba(255,235,195,.65)');sun.addColorStop(.12,'rgba(255,227,180,.21)');sun.addColorStop(1,'rgba(255,231,190,0)');
+  c.fillStyle=sun;c.fillRect(0,0,w,h);
+}
+
+function damagedBlock(seed) {
+  const geometry=new T.BoxGeometry(1,1,1,3,3,3);const p=geometry.attributes.position;
+  for(let i=0;i<p.count;i++) {
+    const x=p.getX(i),y=p.getY(i),z=p.getZ(i);
+    const noise=Math.sin(x*43+y*17+z*61+seed*7)*.5+.5;
+    const wear=.015+noise*.025;
+    p.setXYZ(i,x*(1-wear),y>.45?y-noise*.045:y,z*(1-wear));
+  }
+  geometry.computeVertexNormals();return geometry;
+}
+
+export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, quality='medium') {
+  const group=new T.Group();group.name='Ruined megacity — reclaimed districts';scene.add(group);
+  const rand=randomSource(4107), concreteMap=weatherTexture('concrete'), metalMap=weatherTexture('metal'), roadMap=weatherTexture('road');
+  const std=(color,roughness=.9,metalness=.04,map=concreteMap)=>new T.MeshStandardMaterial({color,roughness,metalness,map,bumpMap:map,bumpScale:map===metalMap?.018:.047});
+  const m={concrete:std(0xb0b5b5),chalk:std(0xc3c7c5),char:std(0x5f6668),road:std(0xa2aaa7,.96,.025,roadMap),
+    steel:std(0x727d7a,.7,.58,metalMap),rust:std(0x917055,.94,.25,metalMap),black:std(0x252e2c,.92,.15,metalMap),
+    dirt:std(0x615d46,1,0,roadMap),bark:std(0x555548,1,0,concreteMap),leaf:std(0x4c6244,.95,0,null),leafLight:std(0x6b7950,.97,0,null),
+    deadLeaf:std(0x8c8763,1,0,null),yellow:std(0xb0a26a,.86,.15,metalMap),accent:new T.MeshBasicMaterial({color:accent,toneMapped:false}),
+    glass:new T.MeshStandardMaterial({color:0x233638,roughness:.4,metalness:.6}),lamp:new T.MeshBasicMaterial({color:0xf4d5a2,toneMapped:false})};
+  m.leaf.flatShading=true;m.leafLight.flatShading=true;
+  // Cutout foliage has individual leaf silhouettes instead of solid green polyhedra.
+  // Three crossed cards remain readable from both headset eyes with a fixed small budget.
+  const foliageMap=texture(512,(c,n,r)=>{
+    c.clearRect(0,0,n,n);
+    for(let i=0;i<100;i++){
+      const angle=r()*Math.PI*2,reach=Math.sqrt(r())*205,x=n/2+Math.cos(angle)*reach,y=n/2+Math.sin(angle)*reach*.9;
+      c.strokeStyle='rgba(76,84,53,.85)';c.lineWidth=1.3;c.beginPath();c.moveTo(n/2,n/2+160);c.quadraticCurveTo(n/2,y,x,y);c.stroke();
+      const len=12+r()*25,w=5+r()*11;c.save();c.translate(x,y);c.rotate(angle+r()*1.4);
+      c.beginPath();c.moveTo(0,-len);c.bezierCurveTo(w,-len*.6,w*.9,len*.36,0,len*.7);c.bezierCurveTo(-w,len*.36,-w,-len*.6,0,-len);c.closePath();
+      const shade=c.createLinearGradient(-w,0,w,0);shade.addColorStop(0,`rgb(${63+r()*22},${84+r()*25},${44+r()*18})`);shade.addColorStop(.55,`rgb(${100+r()*25},${127+r()*21},${70+r()*24})`);shade.addColorStop(1,'#55663c');c.fillStyle=shade;c.fill();
+      c.strokeStyle='rgba(169,178,114,.4)';c.lineWidth=.7;c.beginPath();c.moveTo(0,-len*.8);c.lineTo(0,len*.62);c.stroke();c.restore();
+    }
+  });
+  m.foliage=new T.MeshStandardMaterial({map:foliageMap,roughness:.94,metalness:0,alphaTest:.42,side:T.DoubleSide});
+  m.foliageLight=m.foliage.clone();m.foliageLight.color.setHex(0xbac9aa);
+
+  roadMap.repeat.set(18,18);
+  const geometry={block:damagedBlock(1),broken:damagedBlock(4),slab:damagedBlock(9),box:new T.BoxGeometry(1,1,1),
+    rounded:bevelBox(1,1,1,.06,1),cylinder:new T.CylinderGeometry(1,1,1,12),taper:new T.CylinderGeometry(.68,1,1,10),
+    sphere:new T.SphereGeometry(1,12,7),stone:new T.IcosahedronGeometry(1,0),leaves:new T.IcosahedronGeometry(1,1),
+    ring:new T.TorusGeometry(1,.07,5,20)};
+  const foliageCards=Array.from({length:3},(_,i)=>new T.PlaneGeometry(2,2).rotateY(i*Math.PI/3));
+  geometry.leaves.dispose();geometry.leaves=merge(foliageCards);for(const card of foliageCards)card.dispose();
+  const batches=new Map(),custom=new Map();
+  const add=(shape,mat,position,scale=[1,1,1],rotation=[0,0,0])=>{
+    const key=`${shape}/${mat.uuid}`;if(!batches.has(key))batches.set(key,{geometry:geometry[shape],mat,items:[]});
+    const quat=rotation.isQuaternion?rotation:new T.Quaternion().setFromEuler(new T.Euler(...rotation));
+    batches.get(key).items.push(new T.Matrix4().compose(new T.Vector3(...position),quat,new T.Vector3(...scale)));
+  };
+  const cube=(mat,pos,scale,rot=[0,0,0],shape='block')=>add(shape,mat,pos,scale,rot);
+  const rod=(mat,a,b,r=.07,r2=r)=>{const start=new T.Vector3(...a),end=new T.Vector3(...b),d=end.clone().sub(start);add(r===r2?'cylinder':'taper',mat,start.add(end).multiplyScalar(.5).toArray(),[r,d.length(),r],new T.Quaternion().setFromUnitVectors(new T.Vector3(0,1,0),d.normalize()));};
+  const cable=(points,r=.055,mat=m.black)=>{
+    const curve=new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p)));
+    if(!custom.has(mat))custom.set(mat,[]);custom.get(mat).push(new T.TubeGeometry(curve,18,r,5,false));
+  };
+  const solid=(x,z,w,h,d,extra={})=>obstacles.push({x,z,hx:w/2,hz:d/2,height:h,surface:'concrete',...extra});
+  // Distant terrain continues behind the arena wall so the skyline is grounded.
+  const hinterland=new T.Mesh(new T.PlaneGeometry(620,620),m.dirt);hinterland.rotation.x=-Math.PI/2;hinterland.position.y=-.08;hinterland.receiveShadow=true;group.add(hinterland);
+  const ground=new T.Mesh(new T.PlaneGeometry(200,200),m.road);ground.rotation.x=-Math.PI/2;ground.position.y=-.045;ground.receiveShadow=true;group.add(ground);
+  // Worn civic road: seams, aggregate and irregular pavement; no luminous grid.
+  for(let z=-94;z<=94;z+=6) {
+    if(rand()>.16)cube(m.chalk,[0,.006,z],[.13,.009,1.75],[0,0,0],'box');
+    for(const x of [-8.8,8.8])cube(m.concrete,[x,.025,z],[2.05,.10,5.7],[0,(rand()-.5)*.026,0],'slab');
+  }
+  for(const x of [-7.55,7.55])cube(m.chalk,[x,.007,0],[.07,.012,190],[0,0,0],'box');
+  // Crack seams and patches indicate the street's previous function.
+  for(let i=0;i<48;i++) {
+    const x=(rand()-.5)*178,z=(rand()-.5)*178;
+    add('stone',m.dirt,[x,-.033,z],[1+rand()*3,.05,1+rand()*5],[0,rand()*6.28,0]);
+  }
+  function ivy(x,y,z,width,height,face=0) {
+    for(let j=0;j<Math.ceil(width*1.3);j++) {
+      const xx=x+(rand()-.5)*width,top=y+rand()*.8,bottom=Math.max(.1,top-height*(.4+rand()*.6));
+      rod(m.bark,[xx,top,z],[xx+Math.sin(j)*.28,bottom,z+.1],.035);
+      for(let yy=bottom;yy<top;yy+=.47+rand()*.5)add('leaves',j%3?m.foliage:m.foliageLight,[xx+Math.sin(yy*3)*.2,yy,z],[.28+rand()*.23,.37+rand()*.4,.13+rand()*.1],[0,face,rand()*.8]);
+    }
+  }
+  const structures=[[-31,-21,12,15,12],[29,-32,9,24,10],[-25,24,8,9,8],[38,17,12,17,10],[-52,-56,17,30,12],[52,-61,13,35,14],[-66,28,17,22,13],[66,52,13,18,16],[12,66,10,10,9],[-25,65,10,15,12],[0,-73,16,23,10]];
+  structures.forEach(([x,z,w,h,d],index)=>{
+    solid(x,z,w,h,d);
+    // A recessed, closed interior behind structural floors avoids deceptive open doorways.
+    cube(m.char,[x,h*.43,z],[w*.86,h*.86,d*.86],[0,0,0],index%2?'broken':'block');
+    const floors=Math.floor(h/3.65);
+    for(let i=0;i<=floors;i++) {
+      const y=.35+i*3.65,fractured=i>=floors-1;
+      cube(i===floors?m.chalk:m.concrete,[x+(fractured?((index%3)-1)*w*.11:0),y,z],[w*(fractured?.68:1),.33,d*(i===floors?.71:1)],[fractured?.025*((index%3)-1):0,0,fractured?.035*((index%2)*2-1):0]);
+      for(const side of [-1,1]) {
+        for(let xx=-w/2+.45;xx<w/2;xx+=w/3){const columnHeight=i<floors?3.65:.65+Math.abs(Math.sin(xx*2+index))*1.15;cube(m.concrete,[x+xx,y+columnHeight/2,z+side*(d/2-.31)],[.48,columnHeight,.65]);}
+        if(i<floors)for(let k=0;k<3;k++) {
+          const xx=x-w*.34+k*w*.33;
+          if((i+k+index)%4!==0)cube((i+k)%4===0?m.rust:m.glass,[xx,y+1.6,z+side*(d*.46)],[w*.25,2.16,.06],[0,0,0],'box');
+          if((i+k+index)%3===0)cube(m.concrete,[xx,y+.58,z+side*(d*.49)],[w*.28,.93,.18]);
+        }
+      }
+      for(const side of [-1,1]){const panelHeight=i<floors?3.65:1.1;cube(m.char,[x+side*(w*.46),y+panelHeight/2,z],[.45,panelHeight,d*.9]);}
+    }
+    // Lost roof sections, snapped uprights, exposed rebar and collapsed slab edges.
+    for(let k=0;k<3;k++) {
+      const xx=x-w*.33+k*w*.31,hh=1+(index+k)%3;
+      cube(k%2?m.char:m.concrete,[xx,h-hh*.5,z-d*.38],[w*.25,hh,d*.16],[0,0,(k-1)*.025]);
+      for(let j=0;j<3;j++)rod(m.rust,[xx+(j-1)*.4,h-.9,z-d*.42],[xx+(j-1)*.48+.15,h+.25+rand()*.5,z-d*.42],.032);
+    }
+    cube(m.chalk,[x+w*.14,h*.82,z+d*.31],[w*.47,.26,d*.30],[.15,.07,-.12]);
+    if(x<0)ivy(x,h*.65,z+d*.502,w*.84,h*.65);
+    if(index%3===1){const roof=.515+floors*3.65;add('cylinder',m.steel,[x,roof+1.3,z],[w*.12,2.6,w*.12]);rod(m.rust,[x,roof+2.5,z],[x+.3,roof+6.7,z],.07);}
+    // Wall-mounted conduits expose the surviving electrical systems.
+    rod(m.steel,[x+w*.43,.5,z+d*.51],[x+w*.43,h*.75,z+d*.51],.12);
+    if(index%2===0)cube(m.accent,[x+w*.43,h*.67,z+d*.54],[.1,.6,.065],[0,0,0],'box');
+  });
+  // Cover uses exactly the combat footprint; chips remain inside the collision face.
+  for(const wall of coverWalls) {
+    const {x,z,hx,hz,height:h}=wall;solid(x,z,hx*2,h,hz*2,{cover:true});
+    cube(m.concrete,[x,h/2,z],[hx*2,h,hz*2]);
+    const horizontal=hx>hz,length=horizontal?hx*2:hz*2;
+    for(let i=0;i<length;i+=1.1) {
+      const p=horizontal?[x-hx+.55+i,h-.09,z]:[x,h-.09,z-hz+.55+i];
+      add('stone',m.chalk,p,[horizontal?.38:.22,.17,horizontal?.22:.38],[.2,i*.13,.2]);
+    }
+    for(const side of [-1,1]) {
+      const p=horizontal?[x,h*.55,z+side*(hz+.009)]:[x+side*(hx+.009),h*.55,z];
+      cube(m.char,p,horizontal?[length*.7,.11,.016]:[.016,.11,length*.7],[0,0,0],'box');
+    }
+    // Small identification light, not a continuous neon stripe.
+    cube(m.accent,horizontal?[x-hx+.32,h*.67,z+hz+.023]:[x+hx+.023,h*.67,z-hz+.32],horizontal?[.14,.14,.016]:[.016,.14,.14],[0,0,0],'box');
+  }
+  // Bent, sanded crash barriers retain the useful low cover from the previous map.
+  for(const [x,z,w,h,d] of [[-13,-7,4,1.8,3],[15,7,4,2,3],[31,-11,4,1.7,3],[-17,41,4,1.7,3],[20,35,4,2,3],[-35,2,4,2.4,3],[48,-12,4,1.7,3],[-18,35,3.3,1,1.25],[17,44,3.5,1,1.25],[-36,48,3.4,1,1.3],[35,-45,3.8,1,1.2]]) {
+    solid(x,z,w,h,d);cube(m.concrete,[x,h*.46,z],[w,h*.92,d]);
+    cube(m.rust,[x,h*.9,z],[w*.91,.16,d*.9],[0,.015,.015],'rounded');
+  }
+  // East: cylindrical condensers, pressure vessels and a still-powered service yard.
+  for(const [x,z,w,h,d] of [[53,1,7.3,3,3.2],[70,1,7.3,3,3.2],[53,19,7.3,3,3.2],[70,19,7.3,3,3.2],[-62,-2,7.3,3,3.2],[-62,11,7.3,3,3.2],[-46,0,7.3,3,3.2],[-46,15,7.3,3,3.2]]) {
+    solid(x,z,w,h,d,{surface:'metal'});cube(m.char,[x,.31,z],[w,.6,d]);
+    // Horizontal tanks break up the former rectangular freight silhouettes.
+    add('cylinder',x>0?m.steel:m.rust,[x,1.7,z],[1.24,w*.88,1.24],[0,0,Math.PI/2]);
+    for(const side of [-1,1]) {
+      add('sphere',x>0?m.steel:m.rust,[x+side*w*.44,1.7,z],[.34,1.24,1.24]);
+      add('ring',m.black,[x+side*w*.29,1.7,z],[1.27,1.27,1.27],[0,Math.PI/2,0]);
+      cube(m.char,[x+side*w*.29,.62,z],[.35,1.1,d*.92]);
+    }
+    rod(m.rust,[x,2.9,z],[x,3,z],.25);
+    if(x<0)ivy(x,2.85,z+1.28,w*.6,2.7);
+  }
+  for(const [x,z] of [[-26,-51],[-26,-61],[40,55],[55,55],[-75,64]]) {
+    solid(x,z,5.2,2.35,2.8,{surface:'metal'});cube(m.char,[x,.34,z],[5.2,.65,2.8]);
+    for(let i=-1;i<=1;i++) {
+      add('cylinder',m.steel,[x+i*1.47,1.35,z],[.57,1.8,.57]);
+      add('sphere',m.steel,[x+i*1.47,2.13,z],[.57,.2,.57]);
+      for(let y=.8;y<2;y+=.23)add('ring',m.black,[x+i*1.47,y,z],[.60,.60,.60],[Math.PI/2,0,0]);
+    }
+    cube(m.accent,[x,1.4,z+1.12],[.55,.08,.04],[0,0,0],'box');
+  }
+  // Service pipes and sagging cables connect installations above head height.
+  for(const z of [-77,77])for(let x=-82;x<=78;x+=20) {
+    rod(m.rust,[x,0,z],[x,5.5,z],.12);rod(m.rust,[x-1.2,5.25,z],[x+1.2,5.25,z],.1);
+    if(x<78)for(const offset of [-.4,.4])cable([[x,5.2,z+offset],[x+10,4.4,z+offset],[x+20,5.2,z+offset]],.045);
+  }
+  cable([[-31,12,-15],[-15,8,-8],[6,8,-13],[29,15,-27]],.075);
+  cable([[38,13,12],[45,7,5],[53,3.1,1]],.10,m.rust);
+  cable([[-25,7,28],[-38,4,30],[-56,12,34]],.055);
+  // West: mature volunteer trees and undergrowth reclaim the archive courtyards.
+  function tree(x,z,height,index) {
+    solid(x,z,.9,height,.9,{surface:'wood'});
+    const lean=(rand()-.5)*1.1;
+    rod(m.bark,[x,0,z],[x+lean,height*.67,z+.2],.38,.23);
+    for(let j=0;j<5;j++) {
+      const angle=j*2.4+index,reach=height*(.20+rand()*.15),tip=[x+lean+Math.sin(angle)*reach,height*(.64+rand()*.25),z+Math.cos(angle)*reach];
+      rod(m.bark,[x+lean*.6,height*.44,z+.1],tip,.105,.06);
+      for(let k=0;k<4;k++)add('leaves',(k+j)%3?m.foliage:m.foliageLight,[tip[0]+(rand()-.5)*2,tip[1]+rand(),tip[2]+(rand()-.5)*2],[1.1+rand(),.65+rand()*.6,1.1+rand()],[rand()*.4,rand()*6,rand()*.5]);
+    }
+  }
+  [[-40,27,8],[-39,50,10],[-64,49,8],[-72,42,11],[-79,25,8],[-43,-40,9],[-68,-67,10],[-18,54,7],[81,-35,7],[79,47,8]].forEach((p,i)=>tree(...p,i));
+  const grassGeometry=new T.BufferGeometry();
+  grassGeometry.setAttribute('position',new T.Float32BufferAttribute([-.1,0,0,.07,0,0,.18,.7,0,0,0,-.1,0,0,.1,.05,.56,.02,-.05,0,-.05,.04,0,.1,-.12,.45,.07],3));
+  grassGeometry.computeVertexNormals();geometry.grass=grassGeometry;
+  m.leaf.side=T.DoubleSide;m.deadLeaf.side=T.DoubleSide;
+  for(let i=0;i<(quality==='low'?450:950);i++) {
+    // Keep central combat lanes clear; vegetation is densest around the ruins.
+    const x=(rand()>.24?-1:1)*(18+rand()*73),z=(rand()-.5)*183;
+    if(x>0&&rand()>.25)continue;
+    const scale=.4+rand()*.9;add('grass',i%5===0?m.deadLeaf:m.leaf,[x,.025,z],[scale,scale,scale],[0,rand()*6.28,0]);
+  }
+  // Rubble is shallow and non-blocking; large wrecks use their own collision volume.
+  for(let i=0;i<360;i++) {
+    const host=structures[i%structures.length],angle=rand()*Math.PI*2;
+    const x=host[0]+Math.cos(angle)*(host[2]*.6+rand()*3),z=host[1]+Math.sin(angle)*(host[4]*.6+rand()*3),size=.06+rand()*.29;
+    add('stone',i%4?m.concrete:m.rust,[x,size*.26,z],[size,.15+size*.3,size*.7],[rand(),rand()*6,rand()]);
+  }
+  for(const [x,z,angle] of [[-38,58,.2],[76,37,-.5],[-72,-30,.1]]) {
+    solid(x,z,4.3,1.45,2.2,{surface:'metal'});cube(m.rust,[x,.6,z],[4.2,.75,2.1],[0,0,-.045],'rounded');
+    cube(m.black,[x-.35,1.04,z],[1.85,.83,1.83],[0,0,-.07],'rounded');
+    cube(m.glass,[x-.35,1.26,z+.92],[1.42,.45,.025],[0,0,-.07],'box');
+    for(const side of [-1,1])for(const xx of [-1.4,1.3])add('cylinder',m.black,[x+xx,.4,z+side*1.04],[.45,.18,.45],[Math.PI/2,0,0]);
+    ivy(x,1.44,z+1.05,3.7,1.5);
+  }
+  // A breached retaining wall encloses the play space; the city continues beyond it.
+  for(let i=-90;i<=90;i+=10)for(const side of [-1,1]) {
+    cube(m.concrete,[side*99.5,1.1,i],[1,2.2,10]);cube(m.concrete,[i,1.1,side*99.5],[10,2.2,1]);
+    rod(m.rust,[side*99,2,i],[side*99,3.3+rand(),i],.055);rod(m.rust,[i,2,side*99],[i,3.3+rand(),side*99],.055);
+  }
+  for(let i=0;i<35;i++) {
+    const angle=i/35*Math.PI*2,radius=130+i%4*11,h=16+(i*17%49),x=Math.cos(angle)*radius,z=Math.sin(angle)*radius,w=9+i%4*3;
+    cube(m.char,[x,h*.47,z],[w,h*.94,10],[0,angle*.1,0],i%2?'block':'broken');
+    for(let y=5;y<h;y+=5)cube(m.concrete,[x,y,z],[w+.5,.3,10.5],[0,angle*.1,0]);
+    if(i%3===0)rod(m.black,[x,h*.94-.2,z],[x+1,h+11,z],.12);
+    if(i%4===0)add('cylinder',m.char,[x+w*.6,h*.35,z],[w*.36,h*.7,w*.36]);
+  }
+  // Diegetic wayfinding identifies the districts without adding a combat HUD.
+  function sign(text,sub,x,y,z,yaw=0) {
+    const map=texture(512,c=>{
+      c.fillStyle='#273a37';c.fillRect(0,0,512,512);c.strokeStyle='#a3aaa0';c.lineWidth=8;c.strokeRect(16,116,480,266);
+      c.fillStyle='#c8d0bd';c.textAlign='left';c.font='bold 48px sans-serif';c.fillText(text,40,224);
+      c.fillStyle='#91a88f';c.font='24px monospace';c.fillText(sub,42,274);c.fillStyle='#cebd8a';c.fillRect(42,307,110,7);
+      const rand=randomSource(25);for(let i=0;i<420;i++){c.fillStyle='rgba(29,34,26,.18)';c.fillRect(rand()*512,rand()*512,rand()*19,1+rand()*4);}
+    });
+    const signMat=new T.MeshStandardMaterial({map,roughness:.93,metalness:.12});const sign=new T.Mesh(new T.PlaneGeometry(4,4),signMat);sign.position.set(x,y,z);sign.rotation.y=yaw;group.add(sign);
+  }
+  sign('ARCHIVES','OUEST / ACCÈS 04',-31,5.9,-14.91);
+  sign('SECTEUR 07','RELAIS / RÉSEAU ACTIF',0,6,-67.91);
+  sign('MAINTENANCE','EST / ÉNERGIE',38,5.6,22.09);
+  // Shared pools limit the static city to a few dozen material/geometry draws.
+  let instances=0;
+  for(const {geometry,mat,items} of batches.values()) {
+    const mesh=new T.InstancedMesh(geometry,mat,items.length);items.forEach((matrix,i)=>mesh.setMatrixAt(i,matrix));
+    mesh.castShadow=!mat.isMeshBasicMaterial&&geometry!==grassGeometry;mesh.receiveShadow=!mat.isMeshBasicMaterial;mesh.computeBoundingSphere();group.add(mesh);instances+=items.length;
+  }
+  for(const [mat,list] of custom){const mesh=new T.Mesh(merge(list),mat);mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);for(const part of list)part.dispose();}
+  // Sparse, slow-moving dust makes light and distance readable with one draw call.
+  const dustGeometry=new T.BufferGeometry(),positions=new Float32Array(160*3);
+  for(let i=0;i<160;i++){positions[i*3]=(rand()-.5)*180;positions[i*3+1]=.7+rand()*15;positions[i*3+2]=(rand()-.5)*180;}
+  dustGeometry.setAttribute('position',new T.BufferAttribute(positions,3));
+  const dust=new T.Points(dustGeometry,new T.PointsMaterial({color:0xd7c7a5,size:.026,opacity:.37,transparent:true,depthWrite:false}));group.add(dust);
+  group.userData.instances=instances;group.userData.districts=['Brèche centrale','Archives envahies','Maintenance','Relais'];
+  return {group,materials:m,update(time){dust.position.x=Math.sin(time*.025)*2.5;dust.position.y=Math.sin(time*.06)*.25;},setAccent(color){m.accent.color.setHex(color);}};
+}
