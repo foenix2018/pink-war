@@ -24,7 +24,7 @@ test('Quest Touch Plus keeps left movement, right trigger and grip independent o
   down(left,0); // The left trigger never fires.
   assert.equal(state.input().fire,false);
   down(right,0);down(left,3);
-  let input=state.input();assert.equal(input.x,.4);assert.equal(input.z,-.8);assert.equal(input.fire,true);assert.equal(input.sprint,true);assert.equal(input.turn,0);assert.equal(input.tilt,0);
+  let input=state.input();assert.equal(input.x,.4);assert.equal(input.z,-.8);assert.equal(input.fire,true);assert.equal(input.sprint,true);assert.equal(input.turn,.6);assert.equal(input.tilt,0);
   down(right,1);input=state.input();assert.equal(input.precision,true);assert.equal(input.sprint,true,'holding the pistol grip does not stop sprinting');
   down(right,0,false);right.gamepad.buttons[0].value=.4;assert.equal(state.input().fire,true);
 });
@@ -67,7 +67,7 @@ test('loss of the right pose or a blurred session cancels a heavy charge and pau
 });
 
 test('charged weapon uses the right trigger hold and releases a partial shot, then recharges with A',()=>{
-  const game=new ArenaGame([],()=>.5);game.wave=7;game.nextWave=-1;game.toSpawn=0;game.selectWeapon(3);game.cooldown=0;game.drainEvents();
+  const game=new ArenaGame([],()=>.5);game.wave=7;game.nextWave=-1;game.toSpawn=0;game.ownedWeapons.add(3);game.selectWeapon(3);game.cooldown=0;game.drainEvents();
   const {state,right}=setup(game),origin={x:0,y:1.4,z:0},direction={x:0,y:0,z:-1};
   down(right,0);
   for(let i=0;i<8;i++){game.step(.05);game.trigger(state.input().fire,.05,origin,direction);}
@@ -80,7 +80,7 @@ test('charged weapon uses the right trigger hold and releases a partial shot, th
 });
 
 test('X/B wrap through unlocked weapons and preserve their separate batteries',()=>{
-  const game=new ArenaGame();game.wave=5;game.nextWave=-1;game.ammo[0]=7;game.ammo[1]=18;game.ammo[2]=4;
+  const game=new ArenaGame();game.wave=5;game.nextWave=-1;game.ammo[0]=7;game.ammo[1]=18;game.ammo[2]=4;game.ownedWeapons.add(1);game.ownedWeapons.add(2);
   const {state,left,right}=setup(game);
   down(left,4);state.input();assert.equal(game.weaponIndex,2);
   down(left,4,false);state.input();down(left,4);state.input();assert.equal(game.weaponIndex,1);
@@ -161,7 +161,7 @@ test('a left-handed layout mirrors every control: left trigger fires, the right 
   down(right,0);assert.equal(state.input().fire,false,'the right trigger is only a reload now');assert.equal(reloads.length,1);down(right,0,false);state.input();
   down(left,0);assert.equal(state.input().fire,true);down(left,0,false);
   right.gamepad.axes=[0,0,.4,-.8];left.gamepad.axes=[0,0,.9,.9];let input=state.input();
-  assert.equal(input.x,.4);assert.equal(input.z,-.8);assert.equal(input.snap,Math.PI/6);assert.equal(input.turn,0);
+  assert.equal(input.x,.4);assert.equal(input.z,-.8);assert.equal(input.snap,0);assert.equal(input.turn,.9);
   down(right,3);assert.equal(state.input().sprint,true);down(right,3,false);
   down(left,4);state.input();assert.equal(reloads.length,2,'X reloads');down(left,4,false);state.input();
   down(left,5);state.input();assert.deepEqual(cycles,[1],'Y selects the next weapon');down(left,5,false);state.input();
