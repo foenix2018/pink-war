@@ -95,7 +95,7 @@ export function createGlove(m, { mirror = false, sleeve = true, forearm } = {}) 
     for(let i=0;i<3;i++){
       const closure=.38+g*.48+r*.12;
       digits[i].rotation.x=-curlSign*(.11+closure*(1-i*.09));
-      digits[i].userData.knuckle.rotation.x=-curlSign*(.24+closure*.72);
+      digits[i].userData.knuckle.rotation.x=-curlSign*(.24+closure*.72*(1-i*.08));
       digits[i].rotation.y=curlSign*(i-1)*.035;
     }
     digits[3].rotation.x=-curlSign*(.03+t*.20+r*.24);
