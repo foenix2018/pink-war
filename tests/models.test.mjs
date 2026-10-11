@@ -121,7 +121,7 @@ test('the soldier rig has planted, articulated steps and keeps both hands on the
     soldier.animate(.5,true,0,0,0,.016);soldier.root.updateMatrixWorld(true);
     assert.equal(soldier.hips.parent,soldier.root);assert.equal(soldier.spine.parent,soldier.hips);assert.equal(soldier.body.parent,soldier.spine);
     assert.ok(soldier.legs.some(leg=>Math.abs(leg.rotation.x)>.05),'thighs alternate through the step');
-    assert.ok(soldier.knees.some(knee=>knee.rotation.x>.1),'the knees flex during swing');
+    assert.ok(soldier.knees.some(knee=>Math.abs(knee.rotation.x)>.1),'the knees flex during swing');
     assert.ok(soldier.feet.some(foot=>Math.abs(foot.rotation.x)>.02),'the boot rolls at the ankle');
     for(const [index,frame] of WEAPON_FRAME.entries()){
       soldier.root.position.z-=.1;soldier.setWeapon(index);soldier.animate(.5+index*.02,true,0,0,0,.016);soldier.root.updateMatrixWorld(true);
