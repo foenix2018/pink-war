@@ -106,7 +106,7 @@ export class VRController {
     this.headingOrigin = null; this.sensor = false; this.hud = null; this.hudTime = 0; this.busy = false;
     this.snapArmed = true; this.triggerBlocked = true; this.precision = false; this.trackingLost = false;
     this.handPose = { mainTrigger: 0, sideTrigger: 0, mainGrip: 0, sideGrip: 0 }; this.reloadGesture = 0;
-    this.sight = null; this.lastMoveYaw = null;
+    this.sight = null; this.pauseBoard=null; this.lastMoveYaw = null;
     this.perf = null; this.shadowTick = 0; this.chargeBuzz = 0; this.scratch = null;
     this.renderControls(); this.bindSettings();
     $('vr-button').onclick = $('hud-vr-button').onclick = () => this.open();
@@ -161,6 +161,38 @@ export class VRController {
   removeHUD() {
     if (!this.hud) return;
     this.hud.plane.removeFromParent(); this.hud.plane.geometry.dispose(); this.hud.plane.material.dispose(); this.hud.texture.dispose(); this.hud = null;
+  }
+  // HTML dialogs cannot render inside an immersive XR framebuffer.
+  // A static canvas guide is attached to the tracked head and shown only during pause.
+  makePauseBoard(){
+    if(this.pauseBoard||this.mode!=='xr')return;
+    const {T,camera}=this.hooks.world(),canvas=document.createElement('canvas');
+    canvas.width=1024;canvas.height=768;
+    const ctx=canvas.getContext('2d');
+    ctx.fillStyle='#121a29';ctx.fillRect(0,0,1024,768);
+    ctx.strokeStyle='#f58cbb';ctx.lineWidth=5;ctx.strokeRect(15,15,994,738);
+    ctx.fillStyle='#ff9eca';ctx.font='bold 46px sans-serif';
+    ctx.fillText('PINK WAR  /  PAUSE',57,77);
+    ctx.fillStyle='#e7edf8';ctx.font='24px sans-serif';
+    ctx.fillText('Commandes des manettes Touch Plus',58,119);
+    const rows=questControls(settingsOf(this).hand).slice(1);
+    rows.forEach(([key,value],i)=>{
+      const y=163+i*44;
+      ctx.fillStyle='#a9d9fd';ctx.font='bold 22px sans-serif';ctx.fillText(key,58,y,340);
+      ctx.fillStyle='#e8deef';ctx.font='21px sans-serif';ctx.fillText(value,390,y,565);
+    });
+    ctx.fillStyle='#ffb3d5';ctx.font='bold 23px sans-serif';
+    ctx.fillText('PAUSE : bouton menu libre  •  REPRENDRE : même bouton ou A',58,716,935);
+    const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
+    const material=new T.MeshBasicMaterial({map:texture,transparent:false,depthTest:false,depthWrite:false,toneMapped:false});
+    const panel=new T.Mesh(new T.PlaneGeometry(1.3,.975),material);
+    panel.position.set(0,-.02,-1.65);panel.renderOrder=160;panel.frustumCulled=false;panel.visible=false;
+    camera.add(panel);this.pauseBoard={panel,texture};
+  }
+  removePauseBoard(){
+    if(!this.pauseBoard)return;
+    const {panel,texture}=this.pauseBoard;panel.removeFromParent();panel.geometry.dispose();panel.material.dispose();texture.dispose();
+    this.pauseBoard=null;
   }
   makeSight() {
     const { T, scene, palette } = this.hooks.world();
@@ -263,7 +295,7 @@ export class VRController {
         ray.addEventListener('connected', connected); ray.addEventListener('disconnected', disconnected);
         return { ray, mount, gun, bare, level: 0, connected, disconnected };
       });
-      this.hooks.begin(); this.makeHUD(); this.makeSight(); document.body.classList.add('xr-mode');
+      this.hooks.begin(); this.makeHUD(); this.makeSight(); this.makePauseBoard();document.body.classList.add('xr-mode');
       this.positionRig();
       session.addEventListener('end', () => this.finishXR(), { once: true });
       session.addEventListener('visibilitychange', () => { if (session.visibilityState !== 'visible') { this.cancelTrigger(); this.hooks.pause(); } });
@@ -284,7 +316,7 @@ export class VRController {
   }
   finishXR() {
     if (this.mode !== 'xr') return;
-    const world = this.hooks.world(); this.removeHUD(); this.removeSight(); this.cancelTrigger();
+    const world = this.hooks.world(); this.removeHUD(); this.removeSight();this.removePauseBoard();this.cancelTrigger();
     world.scene.add(world.camera);
     this.rig?.removeFromParent();
     for (const { ray, gun, connected, disconnected } of this.controllers) {
@@ -465,6 +497,7 @@ export class VRController {
   }
   update(dt, flash, recoil = 0) {
     if (!this.active) return;
+    if(this.pauseBoard)this.pauseBoard.panel.visible=this.mode==='xr'&&this.hooks.phase()==='paused';
     const game = this.hooks.game();
     if (this.mode === 'xr') {
       const main = settingsOf(this).hand, level = Math.max(1, game.wave), kick = clamp(recoil / .11, 0, 1);
