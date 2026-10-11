@@ -307,6 +307,44 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   setCharacter(characterId);
 
 
+  // Holographic armories: emerging light pillar, rising circular plinth and an actual weapon model.
+  // Only 4 weapon stations exist at most; no update to the static instanced environment.
+  const weaponStations=new Map();
+  function makeStation(offer) {
+    const base=new T.Group();base.position.set(offer.x,offer.elevation||0,offer.z);scene.add(base);
+    const platform=mesh(new T.CylinderGeometry(.83,.9,.16,24),mats.steel,base,[0,.08,0]);
+    const rim=mesh(new T.TorusGeometry(.75,.055,8,40),mats.rose,base,[0,.19,0],[1,1,1],false);rim.rotation.x=-Math.PI/2;
+    const beam=mesh(new T.CylinderGeometry(.59,.74,4.2,22,1,true),
+      new T.MeshBasicMaterial({color:palette.rose,transparent:true,opacity:.16,depthWrite:false,side:T.DoubleSide,blending:T.AdditiveBlending}),base,[0,2.1,0],[1,1,1],false);
+    const core=mesh(new T.CylinderGeometry(.045,.045,3.6,8),mats.pale,base,[0,1.9,0],[1,1,1],false);
+    const ring=mesh(new T.TorusGeometry(.56,.024,6,28),mats.pale,base,[0,1.1,0],[1,1,1],false);ring.rotation.x=-Math.PI/2;
+    const float=new T.Group();base.add(float);
+    // Reuse the real in-game weapon geometry, but hide its glove grips for an unmanned pickup.
+    const item=createGun({sleeve:false});item.userData.setVariant(offer.index);
+    item.userData.hand.visible=false;item.userData.support.visible=false;
+    item.scale.setScalar(1.65);float.add(item);
+    return {base,beam,core,ring,float,offer};
+  }
+  function updateStations(sim,time) {
+    const visible=new Set();
+    for(const offer of sim.weaponOffers||[]){
+      visible.add(offer.index);let station=weaponStations.get(offer.index);
+      if(!station){station=makeStation(offer);weaponStations.set(offer.index,station);}
+      const grow=Math.min(1,(time-(offer.createdAt||0))*1.2);
+      const ease=grow*grow*(3-2*grow);
+      station.base.position.set(offer.x,offer.elevation||0,offer.z);
+      station.float.position.set(0,ease*(1.37+Math.sin(time*1.6+offer.index)*.11),0);
+      station.float.rotation.y=time*.65+offer.index;
+      station.beam.scale.y=Math.max(.001,ease);station.beam.position.y=2.1*ease;
+      station.beam.material.opacity=.10+.05*Math.sin(time*2.7);
+      station.ring.rotation.z=time*.45;
+      station.core.scale.y=Math.max(.001,ease);
+    }
+    for(const [index,station] of weaponStations)if(!visible.has(index)){
+      scene.remove(station.base);station.base.traverse(child=>{if(child===station.beam)child.material.dispose();});
+      weaponStations.delete(index);
+    }
+  }
   const monsters=new Map(), bulletMeshes=new Map(), particles=[];
   const enemyFactory=createEnemyFactory(mats);
   const createMonster=(elite,ranged,form)=>enemyFactory.create(elite,ranged,form);
@@ -319,11 +357,11 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     const pool=sparkPools[color===palette.rose?0:1];
     for(let i=0;i<count&&particles.length<SPARKS;i++)particles.push({pool,x,y,z,vx:(Math.random()-.5)*7,vy:Math.random()*5,vz:(Math.random()-.5)*7,life:.45+Math.random()*.3,max:.8});
   }
-  function resetDynamic(){for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
+  function resetDynamic(){for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
   function sync(sim,time,dt){
-    setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));
+    setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));updateStations(sim,time);
     soldier.root.scale.setScalar(1);soldier.root.position.set(sim.player.x,sim.player.elevation||0,sim.player.z);soldier.root.rotation.y=sim.player.yaw;
-    const present=new Set();for(const e of sim.enemies){present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite,e.ranged,e.form);monsters.set(e.id,m);scene.add(m);}m.position.set(e.x,(e.elevation||0)+Math.abs(Math.sin(time*8+e.phase))*.025,e.z);m.rotation.y=Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI;m.userData.animate(time,e.phase);}
+    const present=new Set();for(const e of sim.enemies){present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite,e.ranged,e.form);monsters.set(e.id,m);scene.add(m);}m.position.set(e.x,(e.elevation||0)+Math.abs(Math.sin(time*8+e.phase))*.025,e.z);m.rotation.y=Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI;m.userData.animate(time,e.phase,e.limpUntil<=time);}
     for(const[id,m]of monsters){if(!present.has(id)){scene.remove(m);monsters.delete(id);}}
     const active=new Set();for(const b of sim.bullets){active.add(b.id);let m=bulletMeshes.get(b.id);if(!m){m=new T.Group();mesh(geometries.sphere,b.hostile?mats.cyan:mats.pale,m,[0,0,0],[.09,.09,.22],false);mesh(geometries.sphere,b.hostile?mats.violet:mats.rose,m,[0,0,.25],[.08,.08,.38],false);m.scale.setScalar(b.weapon==='nova'?2.3:b.weapon==='thorn'?1.3:b.hostile?1.4:1);bulletMeshes.set(b.id,m);scene.add(m);}m.position.set(b.x,b.y,b.z);m.lookAt(b.x+b.vx,b.y+b.vy,b.z+b.vz);}
     for(const[id,m]of bulletMeshes){if(!active.has(id)){scene.remove(m);bulletMeshes.delete(id);}}
