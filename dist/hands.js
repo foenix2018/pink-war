@@ -8,24 +8,34 @@ import { Assembly, bevelBox, limb, ball, matrix, along } from './geo.js';
 export const GRIP = Object.freeze({ halfWidth: .018, halfDepth: .0235, wrist: [.03, .052, .098], forearm: [.1, -.3, .95] });
 
 const digitShapes = new Map(), digitTip = new T.SphereGeometry(1, 12, 8);
-function articulatedDigit(parent, m, id, joints, radius) {
-  let geometry = digitShapes.get(id);
-  if (!geometry) {
-    const base = joints[0], points = joints.map(([x,y,z]) => new T.Vector3(x-base[0],y-base[1],z-base[2]));
-    geometry = new T.TubeGeometry(new T.CatmullRomCurve3(points), 14, radius, 8, false); digitShapes.set(id, geometry);
+function articulatedDigit(parent,m,id,joints,radius){
+  // Two true flexion pivots per finger: proximal phalanx and distal knuckle.
+  // The former single rigid tube could not wrap a weapon trigger believably.
+  const split=Math.max(1,Math.floor((joints.length-1)/2));
+  const base=joints[0],middle=joints[split],end=joints[joints.length-1];
+  function section(name,subset,origin,r){
+    const key=id+'-'+name;
+    let geometry=digitShapes.get(key);
+    if(!geometry){
+      const pts=subset.map(p=>new T.Vector3(p[0]-origin[0],p[1]-origin[1],p[2]-origin[2]));
+      geometry=new T.TubeGeometry(new T.CatmullRomCurve3(pts),9,r,7,false);
+      digitShapes.set(key,geometry);
+    }
+    const skin=new T.Mesh(geometry,m.fabric);skin.castShadow=skin.receiveShadow=true;
+    return skin;
   }
-  const pivot = new T.Group(); pivot.position.set(...joints[0]); parent.add(pivot);
-  const mesh = new T.Mesh(geometry, m.fabric), tip = new T.Mesh(digitTip, m.fabric);
-  mesh.castShadow = tip.castShadow = true; mesh.receiveShadow = tip.receiveShadow = true;
-  const end = joints[joints.length-1], base = joints[0];
-  tip.position.set(end[0]-base[0],end[1]-base[1],end[2]-base[2]); tip.scale.setScalar(radius);
-  pivot.add(mesh,tip);
-  // A raised, flexible knuckle cap makes each finger read as a padded tactical glove.
-  const joint = joints[Math.min(joints.length-2, Math.ceil((joints.length-1)/2))];
-  const guard = new T.Mesh(digitTip, m.plate);
-  guard.position.set(joint[0]-base[0]+radius*.18,joint[1]-base[1],joint[2]-base[2]);
-  guard.scale.set(radius*1.18,radius*1.12,radius*1.05); guard.castShadow = guard.receiveShadow = true;
-  pivot.add(guard); return pivot;
+  const root=new T.Group();root.position.set(...base);parent.add(root);
+  root.add(section('proximal',joints.slice(0,split+1),base,radius));
+  const knuckle=new T.Group();knuckle.position.set(middle[0]-base[0],middle[1]-base[1],middle[2]-base[2]);root.add(knuckle);
+  knuckle.add(section('distal',joints.slice(split),middle,radius*.91));
+  const tip=new T.Mesh(digitTip,m.fabric);tip.castShadow=tip.receiveShadow=true;
+  tip.position.set(end[0]-middle[0],end[1]-middle[1],end[2]-middle[2]);
+  tip.scale.setScalar(radius*.92);knuckle.add(tip);
+  const guard=new T.Mesh(digitTip,m.plate);guard.castShadow=true;
+  guard.position.set(knuckle.position.x+radius*.2,knuckle.position.y,knuckle.position.z);
+  guard.scale.set(radius*1.18,radius*1.14,radius*1.06);root.add(guard);
+  root.userData.knuckle=knuckle;
+  return root;
 }
 
 // materials: { fabric, plate, trim, glow, accent, metal }
@@ -81,10 +91,20 @@ export function createGlove(m, { mirror = false, sleeve = true, forearm } = {}) 
     for(const key of ['trigger','grip','reload'])pose[key]+=(Math.max(0,Math.min(1,Number({trigger,grip,reload}[key])||0))-pose[key])*blend;
     const {trigger:t,grip:g,reload:r}=pose;
     const curlSign=sign*handedness;
-    digits[0].rotation.x=-curlSign*(.06+g*.2+r*.13);digits[1].rotation.x=-curlSign*(.06+g*.2+r*.13);digits[2].rotation.x=-curlSign*(.06+g*.2+r*.13);
-    digits[3].rotation.x=-curlSign*(.05+t*.48+r*.2);digits[4].rotation.x=curlSign*(.04+g*.12+r*.26);
+    // Subtle phase offsets stop the three gripping fingers bending in robotic unison.
+    for(let i=0;i<3;i++){
+      const closure=.38+g*.48+r*.12;
+      digits[i].rotation.x=-curlSign*(.11+closure*(1-i*.09));
+      digits[i].userData.knuckle.rotation.x=-curlSign*(.24+closure*.72);
+      digits[i].rotation.y=curlSign*(i-1)*.035;
+    }
+    digits[3].rotation.x=-curlSign*(.03+t*.20+r*.24);
+    digits[3].userData.knuckle.rotation.x=-curlSign*(.08+t*.72+r*.12);
+    digits[4].rotation.x=curlSign*(.08+g*.12+r*.22);
+    digits[4].userData.knuckle.rotation.x=curlSign*(.18+g*.22+r*.16);
     group.rotation.z=curlSign*r*.12;group.position.set(basePosition.x,basePosition.y+r*.018,basePosition.z-r*.03);
   };
+  group.userData.fingerJoints=digits.map(d=>d.userData.knuckle);
   if (mirror) group.scale.x = -1;
   return group;
 }
