@@ -64,7 +64,7 @@ const createGun=(options={})=>buildGun({
 const subjects=new Map();
 for(const id of ['lylu','ghju']){
   const model=createSoldier(kit,createGun,characterForId(id));
-  scene.add(model.root);model.root.visible=id==='ghju';
+  scene.add(model.root);model.root.scale.setScalar(model.heightScale);model.root.visible=id==='ghju';
   model.animate(0,false);
   subjects.set(id,model);
 }
@@ -99,7 +99,7 @@ function setMotion(motion){
 }
 function updateStatus(){
   const model=subjects.get(state.character);
-  $('status').textContent=`${characterForId(state.character).name} · ${model.equipmentLevel}e armure · ${model.visibleParts} pièces · ${state.motion==='idle'?'repos':state.motion==='walk'?'marche':state.motion==='run'?'course':state.motion==='jump'?'saut':state.motion==='crouch'?'accroupi':state.motion==='walkFire'?'marche + tir':state.motion==='runFire'?'course + tir':state.motion==='crouchWalk'?'déplacement accroupi':'visée'}`;
+  $('status').textContent=`${characterForId(state.character).name} · ${model.targetHeight.toFixed(2).replace('.',',')} m · ${model.equipmentLevel}e armure · ${model.visibleParts} pièces · ${state.motion==='idle'?'repos':state.motion==='walk'?'marche':state.motion==='run'?'course':state.motion==='jump'?'saut':state.motion==='crouch'?'accroupi':state.motion==='walkFire'?'marche + tir':state.motion==='runFire'?'course + tir':state.motion==='crouchWalk'?'déplacement accroupi':'visée'}`;
 }
 for(const button of document.querySelectorAll('[data-character]'))button.addEventListener('click',()=>setCharacter(button.dataset.character));
 for(const button of document.querySelectorAll('[data-motion]'))button.addEventListener('click',()=>setMotion(button.dataset.motion));
@@ -196,6 +196,6 @@ requestAnimationFrame(tick);
 window.__PINKWAR_CHARACTER_LAB=Object.freeze({
  snapshot:()=>({character:state.character,motion:state.motion,level:state.level,weapon:state.weapon,showBones:state.showBones,
   frames:frame,zoom:state.zoom,articulations:jointNames, jointPositions:()=>Object.fromEntries(Object.entries(subjects.get(state.character).jointPositions()).map(([k,v])=>[k,v.toArray()])),
-  visibleParts:subjects.get(state.character).visibleParts,visibleMeshes:subjects.get(state.character).batchCount}),
+  visibleParts:subjects.get(state.character).visibleParts,visibleMeshes:subjects.get(state.character).batchCount,physicalHeight:subjects.get(state.character).targetHeight}),
  selectCharacter:setCharacter,selectMotion:setMotion
 });
