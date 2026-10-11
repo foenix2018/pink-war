@@ -9,8 +9,8 @@ const squeezed = button => (button?.value ?? (button?.pressed ? 1 : 0)) > .6;
 const otherHand = hand => hand === 'left' ? 'right' : 'left';
 
 // Touch Plus uses xr-standard: trigger 0, squeeze 1, stick 3, A/X 4, B/Y 5.
-export const VR_DEFAULTS = Object.freeze({ hand: 'right', turn: 'snap30', move: 'head', laser: 'always', haptics: true });
-const CHOICES = Object.freeze({ hand: ['right', 'left'], turn: ['snap30', 'snap45', 'smooth'], move: ['head', 'hand'], laser: ['always', 'grip'] });
+export const VR_DEFAULTS = Object.freeze({ hand: 'right', turn: 'smooth', move: 'head', laser: 'always', haptics: true });
+const CHOICES = Object.freeze({ hand: ['right', 'left'], turn: ['smooth'], move: ['head', 'hand'], laser: ['always', 'grip'] });
 const SETTINGS_KEY = 'pink-war-vr';
 const TURN_ANGLE = Object.freeze({ snap30: Math.PI / 6, snap45: Math.PI / 4 });
 export function sanitizeVRSettings(raw) {
@@ -36,7 +36,7 @@ export function questControls(hand = 'right') {
     [`Poignée ${mainF}`, 'Renforcer le laser et animer la prise'],
     [b.reload, 'Recharger la batterie'],
     [b.next, 'Arme suivante'],
-    [`Joystick ${mainM}`, 'Rotation (crans ou fluide)'],
+    [`Joystick ${mainM}`, 'Rotation fluide'],
     [`Joystick ${sideM}`, 'Se déplacer'],
     [`Clic / poignée ${sideF}`, 'Courir (maintenu)'],
     [`Gâchette ${sideF}`, 'Recharger ; l’arme se redresse à la verticale'],
@@ -379,11 +379,7 @@ export class VRController {
         result.precision ||= tracked && pressed(pad.buttons[xr ? 1 : 6]);
         if (xr) {
           const turn = axes[stick] || 0;
-          if (cfg.turn === 'smooth') { if (tracked) result.turn += deadzone(turn); }
-          else {
-            if (Math.abs(turn) < .25) this.snapArmed = true;
-            if (Math.abs(turn) > .7 && this.snapArmed !== false) { if (tracked) result.snap = Math.sign(turn) * TURN_ANGLE[cfg.turn]; this.snapArmed = false; }
-          }
+          if (tracked) result.turn += deadzone(turn); // continuous angular velocity, never snap-turns
         } else { result.turn += deadzone(axes[2]); result.tilt += deadzone(axes[3]); }
       }
       if (xr && side) {
