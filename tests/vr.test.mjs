@@ -175,7 +175,7 @@ test('a left-handed layout mirrors every control: left trigger fires, the right 
   down(left,0);assert.equal(state.input().fire,true);down(left,0,false);
   right.gamepad.axes=[0,0,.4,-.8];left.gamepad.axes=[0,0,.9,.9];let input=state.input();
   assert.equal(input.x,.4);assert.equal(input.z,-.8);assert.equal(input.snap,0);assert.equal(input.turn,.9);
-  down(right,3);assert.equal(state.input().sprint,true);down(right,3,false);
+  down(right,3);let movement=state.input();assert.equal(movement.sprint,false);assert.equal(movement.crouchToggle,true);down(right,3,false);
   down(left,4);state.input();assert.equal(reloads.length,2,'X reloads');down(left,4,false);state.input();
   down(left,5);state.input();assert.deepEqual(cycles,[1],'Y selects the next weapon');down(left,5,false);state.input();
   down(right,4);state.input();assert.deepEqual(cycles,[1,-1],'A selects the previous weapon');down(right,4,false);state.input();
