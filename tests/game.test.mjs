@@ -26,6 +26,30 @@ test('swept collision detects a fast laser that crosses a whole monster', () => 
   assert.equal(segmentSphere({ x: 5, y: 1, z: 10 }, { x: 5, y: 1, z: -10 }, { x: 0, y: 1, z: 0 }, 1), null);
   assert.equal(segmentBox({ x: 0, y: 1, z: 8 }, { x: 0, y: 1, z: -8 }, { x: 0, z: 0, hx: 2, hz: 2, height: 3 }), .375);
 });
+test('a lethal shot preserves the enemy ID and location for laser dissolution',()=>{
+  const game=new ArenaGame();game.nextWave=999;
+  const e={...enemy(831,10),form:'stalker',elevation:0,aimHeight:1.15,tier:1,limpUntil:0,stunnedUntil:0};
+  game.enemies=[e];
+  game.damageEnemy(e,100,{x:0,y:1,z:10},'head',2.2);
+  const kill=game.drainEvents().find(event=>event.type==='kill');
+  assert.equal(kill.id,831);assert.equal(kill.form,'stalker');
+  assert.equal(kill.x,0);assert.equal(kill.z,10);
+  assert.equal(game.enemies.length,0);
+});
+
+test('uncollected weapons appear nearby, visible and stay on the radar until acquired',()=>{
+  const game=new ArenaGame([{x:5,z:22,hx:2,hz:2,height:6}]);
+  game.wave=3;game.offerWeapon(1);
+  assert.equal(game.weaponOffers.length,1);
+  const station=game.weaponOffers[0];
+  assert.ok(Math.hypot(station.x-game.player.x,station.z-game.player.z)<9);
+  assert.ok(!game.blocked({x:game.player.x,y:1.5,z:game.player.z},{x:station.x,y:1.7,z:station.z}));
+  assert.equal(game.weaponIndex,0,'player is free to refuse');
+  game.player.x=station.x;game.player.z=station.z;
+  assert.equal(game.collectWeapon(),true);
+  assert.equal(game.weaponOffers.length,0);
+});
+
 test('two pink laser hits defeat a monster and award a score', () => {
   const g = new ArenaGame(); g.nextWave = 999; g.enemies = [enemy(999, 13)];
   assert.equal(g.shoot({ x: 0, y: 1.15, z: 22 }, { x: 0, y: 0, z: -1 }), true);
