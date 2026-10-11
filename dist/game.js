@@ -4,9 +4,10 @@ import { VRController } from './vr.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
 import { characterForId } from './characters.js';
 import { playLaserShot } from './laser-sound.js';
+import { createMusicBed } from './music.js';
 
 const $ = id => document.getElementById(id);
-const settings = { sound: true, sensitivity: 1, quality: 'auto' };
+const settings = { sound: true, music: true, sensitivity: 1, quality: 'auto' };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('rosee-settings') || '{}')); } catch {}
 settings.sensitivity = clamp(Number(settings.sensitivity) || 1, .4, 2);
 if (!['auto', 'low', 'high'].includes(settings.quality)) settings.quality = 'auto';
@@ -16,6 +17,7 @@ try{character=characterForId(localStorage.getItem('pink-war-character'));}catch{
 let clock = 0, lastTime = 0, hudTimer = 0, flashTimer = 0, recoil = 0, reloadLift = 0, announcementUntil = 0, damageUntil = 0;
 let outfitReturn = 'lobby', previewLevel = 1, equipmentUntil = 0;
 let canvasPointer = null, lastDrag = null, audioContext = null;
+const musicBed=createMusicBed();
 const move = { x: 0, y: 0, id: null }, look = { x: 0, y: 0, id: null };
 const keys = new Set(), firingPointers = new Set();
 let jumpQueued = false, pickupQueued = false,crouchQueued=false;
@@ -24,6 +26,8 @@ const persist = () => { try { localStorage.setItem('rosee-settings', JSON.string
 const timeString = time => `${String(Math.floor(time / 60)).padStart(2, '0')}:${String(Math.floor(time % 60)).padStart(2, '0')}`;
 
 function audioReady() {
+  musicBed.setEnabled(settings.music!==false);
+  if(phase==='playing')musicBed.start();
   if (!settings.sound) return;
   try { audioContext ||= new (window.AudioContext || window.webkitAudioContext)(); if (audioContext.state === 'suspended') audioContext.resume().catch(() => {}); } catch {}
 }
@@ -37,6 +41,7 @@ function tone(frequency, end, duration = .1, volume = .055, type = 'triangle', d
 function weaponShotSound(weapon,power=1){if(settings.sound)playLaserShot(audioContext,weapon,power);}
 function syncSound() {
   $('sound-setting').checked = !!settings.sound;
+  $('music-setting').checked=settings.music!==false;
   $('sound-button').ariaLabel = settings.sound ? 'Désactiver le son' : 'Activer le son';
   $('sound-button').title = $('sound-button').ariaLabel;
   $('sound-button').innerHTML = settings.sound ? '<svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4V5Zm4 4a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4V5Zm5 4 5 6m0-6-5 6"/></svg>';
@@ -44,6 +49,7 @@ function syncSound() {
 syncSound(); $('sensitivity').value = settings.sensitivity; $('quality').value = settings.quality;
 $('sound-button').onclick = () => { settings.sound = !settings.sound; syncSound(); audioReady(); persist(); };
 $('sound-setting').onchange = e => { settings.sound = e.target.checked; syncSound(); audioReady(); persist(); };
+$('music-setting').onchange=e=>{settings.music=e.target.checked;musicBed.setEnabled(settings.music);if(settings.music&&phase==='playing')musicBed.start();persist();};
 $('sensitivity').oninput = e => { settings.sensitivity = Number(e.target.value); persist(); };
 $('quality').onchange = e => { settings.quality = e.target.value; world?.resize(settings.quality); persist(); };
 
@@ -110,7 +116,7 @@ function selectView(next) {
 for (const button of document.querySelectorAll('[data-view]')) button.onclick = () => selectView(button.dataset.view);
 selectView(view); $('view-button').onclick = () => selectView(view === 'fps' ? 'third' : 'fps');
 
-function pause() { if (phase !== 'playing') return; phase = 'paused'; resetInput(); if (vr?.mode !== 'xr') $('pause-dialog').showModal(); }
+function pause() { musicBed.pause(); if (phase !== 'playing') return; phase = 'paused'; resetInput(); if (vr?.mode !== 'xr') $('pause-dialog').showModal(); }
 function resume() { if (phase !== 'paused') return; for (const d of document.querySelectorAll('dialog[open]')) d.close(); phase = 'playing'; resetInput(); audioReady(); }
 function openPanel(id) { if (phase === 'playing') { phase = 'paused'; resetInput(); } for (const d of document.querySelectorAll('dialog[open]')) d.close(); $(id).showModal(); }
 function closePanel(dialog) { if(dialog.id==='outfit-dialog'){closeOutfit();return;} dialog.close(); if (phase === 'paused') $('pause-dialog').showModal(); }
@@ -154,7 +160,7 @@ $('outfit-front').onclick=()=>{$('outfit-rotation').value=180;};$('outfit-back')
 async function home() {
   if (vr?.active) await vr.exit();
   for (const d of document.querySelectorAll('dialog[open]')) d.close(); phase = 'lobby'; resetInput();
-  document.body.classList.remove('playing'); $('game-hud').hidden = true; world.resetDynamic();
+  document.body.classList.remove('playing'); $('game-hud').hidden = true; musicBed.pause();world.resetDynamic();
   $('damage-flash').style.setProperty('--injury', '0'); $('damage-flash').classList.remove('active'); $('wave-announcement').classList.remove('show');
 }
 $('quit-button').onclick = home; $('end-home').onclick = home;
@@ -292,7 +298,7 @@ function handleEvents() {
   }
 }
 function gameOver(won = false) {
-  phase = 'over'; resetInput(); let best = game.score;
+  musicBed.pause(); phase = 'over'; resetInput(); let best = game.score;
   try { best = Math.max(game.score, Number(localStorage.getItem('rosee-best')) || 0); localStorage.setItem('rosee-best', String(best)); } catch {}
   $('end-eyebrow').textContent = won ? 'MISSION ACCOMPLIE / NIVEAU 10' : 'TRANSMISSION INTERROMPUE';
   $('end-title').innerHTML = won ? `La brèche est fermée.<br>Le ${character.colorWord} a gagné.` : 'Chaque aube<br>est un nouveau départ.';
@@ -434,7 +440,7 @@ try {
   await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   if (world.lost) { world = await world.recover(); window.dispatchEvent(new CustomEvent('rosee-renderer-recovered')); }
   $('play-label').textContent = 'ENTRER DANS L’ARÈNE'; $('play-button').disabled = false;$('outfit-button').disabled=false;
-  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ phase, view, frames, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
+  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ phase, view, frames, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:musicBed.enabled,musicPlaying:musicBed.playing,musicFailed:musicBed.failed,previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
     inputs: { move: { ...move }, look: { ...look }, firing: firingPointers.size > 0 || keys.has('Space') }, drawCalls: world.renderer.info.render.calls, ...game.snapshot(),equipment:equipmentForCharacter(game.wave,character.id) }) });
   bindCanvas();world.renderer.setAnimationLoop(frame);
 } catch (error) {
