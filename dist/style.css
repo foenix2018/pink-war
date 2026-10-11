@@ -114,3 +114,16 @@ h1{white-space:nowrap;font-size:clamp(64px,6vw,94px)}.brand-mark,.unit-mark{font
 .crouch-control{background:rgba(25,38,50,.78);color:#d9eef9;border-color:#709dbf;touch-action:manipulation}
 .crouch-control.active,.crouch-control[aria-pressed="true"]{background:#557d9d;color:white;box-shadow:0 0 12px #80bdff66}
 @media(max-width:900px) and (orientation:landscape){.fire-row{gap:4px}.crouch-control,.jump-control{width:31px;height:32px;flex:0 0 31px}.fire-area{min-width:175px}}
+
+/* Functional mid-combat help, designed for both iPhone and desktop. */
+.pause-dialog{width:min(740px,calc(100vw - 24px));padding:26px 30px}
+.pause-dialog h2{font-size:clamp(25px,4vw,38px);margin:10px 0}
+.pause-commands{max-height:min(43vh,365px);overflow-y:auto;overscroll-behavior:contain;margin-top:15px;padding:15px;background:#100f1cbf;border:1px solid var(--border);border-radius:9px}
+.pause-commands h3{font:700 12px monospace;letter-spacing:1.2px;color:var(--rose);margin:0 0 14px}
+.pause-commands-columns{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.pause-commands h4{font-size:12px;margin:0 0 10px;color:var(--paper)}
+.pause-commands dl{display:grid;grid-template-columns:1fr 1.25fr;gap:7px 10px;font-size:10px;line-height:1.4;margin:0}
+.pause-commands dt{color:#a3a7b7}.pause-commands dd{margin:0;color:#fff;font-weight:600}
+.pause-commands p{font-size:10px;line-height:1.55;color:#c6bfcd}
+.pause-dialog .solid-button{margin-top:10px;padding:14px}.pause-dialog .secondary-button{margin-top:7px;padding:12px}
+@media(max-width:560px){.pause-dialog{padding:17px 16px}.pause-commands{max-height:43dvh;padding:10px}.pause-commands-columns{grid-template-columns:1fr;gap:14px}.pause-commands dl{grid-template-columns:1fr 1fr;font-size:10px}.pause-dialog h2{font-size:27px}}
