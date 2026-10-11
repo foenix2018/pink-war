@@ -38,7 +38,7 @@ export function questControls(hand = 'right') {
     [b.next, 'Arme suivante'],
     [`Joystick ${mainM}`, 'Rotation fluide'],
     [`Joystick ${sideM}`, 'Se déplacer'],
-    [`Clic / poignée ${sideF}`, 'Courir (maintenu)'],
+    [`Clic / poignée ${sideF}`, 'Courir (maintenu) · clic pour prendre une arme proche'],
     [`Gâchette ${sideF}`, 'Recharger ; l’arme se redresse à la verticale'],
     [b.previous, 'Arme précédente'],
     [b.pause, 'Pause / reprise']
@@ -370,7 +370,7 @@ export class VRController {
       const stick = xr && axes.length >= 4 ? 2 : 0;
       if (side && tracked) {
         result.x += deadzone(axes[stick]); result.z += deadzone(axes[stick + 1]);
-        result.sprint ||= pressed(pad.buttons[xr ? 3 : 10]) || (xr && squeezed(pad.buttons[1]));
+        result.sprint ||= (xr ? (!this.hooks.game()?.nearbyWeapon?.() && pressed(pad.buttons[3])) : pressed(pad.buttons[10])) || (xr && squeezed(pad.buttons[1]));
       }
       if (main) {
         mainTracked ||= tracked; rawFire ||= pressed(pad.buttons[xr ? 0 : 7]);
@@ -388,7 +388,7 @@ export class VRController {
       }
       const edge = (key, index) => { const id = `${source.handedness}:${key}`, down = pressed(pad.buttons[index]); if (down && !this.previous.get(id) && tracked) actions.add(key); this.previous.set(id, down); };
       if (main) { edge('reload', xr ? 4 : 0); edge('next', xr ? 5 : 1); }
-      if (xr && side) { edge('previous', 4); edge('pause', 5); edge('quickReload', 0); }
+      if (xr && side) { edge('previous', 4); edge('pause', 5); edge('quickReload', 0); if(this.hooks.game()?.nearbyWeapon?.())edge('pickup', 3); }
       if (!xr) { edge('pause', 9); edge('jump', 6); edge('pickup', 2); }
     }
     if (actions.has('pause')) { this.hooks.togglePause(); if (xr) this.cancelTrigger(); }
