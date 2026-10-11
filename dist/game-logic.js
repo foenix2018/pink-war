@@ -63,14 +63,14 @@ export function moveInArena(entity, dx, dz, radius, obstacles) {
   const edge = ARENA_SIZE / 2 - radius - 1;
   let x = clamp(entity.x + dx, -edge, edge), z = entity.z;
   for (const b of obstacles) {
-    if (b.walkableSurface) continue;
+    if (b.walkableSurface || (Number.isFinite(entity.elevation) && entity.elevation > b.height + .02)) continue;
     if (z > b.z - b.hz - radius && z < b.z + b.hz + radius && x > b.x - b.hx - radius && x < b.x + b.hx + radius) {
       x = dx > 0 ? b.x - b.hx - radius : dx < 0 ? b.x + b.hx + radius : x;
     }
   }
   z = clamp(entity.z + dz, -edge, edge);
   for (const b of obstacles) {
-    if (b.walkableSurface) continue;
+    if (b.walkableSurface || (Number.isFinite(entity.elevation) && entity.elevation > b.height + .02)) continue;
     if (x > b.x - b.hx - radius && x < b.x + b.hx + radius && z > b.z - b.hz - radius && z < b.z + b.hz + radius) {
       z = dz > 0 ? b.z - b.hz - radius : dz < 0 ? b.z + b.hz + radius : z;
     }
@@ -136,7 +136,7 @@ export class ArenaGame {
   constructor(obstacles = [], random = Math.random) { this.obstacles = obstacles; this.random = random; this.navigation = new CoverNavigation(obstacles); this.reset(); }
   reset() {
     this.navigation.refreshAt = -1; this.navigation.goal = -1;
-    this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0 };
+    this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0, verticalSpeed: 0, grounded: true, jumpHeld: false };
     this.enemies = []; this.bullets = []; this.events = [];
     this.wave = 0; this.score = 0; this.kills = 0; this.time = 0;
     this.state = 'playing'; this.cooldown = 0; this.invulnerable = 0;
@@ -247,10 +247,25 @@ export class ArenaGame {
     const yaw = input.yaw ?? this.player.yaw; this.player.yaw = yaw;
     let ix = input.x || 0, iz = input.z || 0; const magnitude = Math.hypot(ix, iz);
     if (magnitude > 1) { ix /= magnitude; iz /= magnitude; }
+    // RLH-inspired locomotion: jump is an edge-triggered ballistic state, independent of frame rate.
+    const p = this.player, jumpDown = !!input.jump;
+    if (jumpDown && !p.jumpHeld && p.grounded) { p.grounded = false; p.verticalSpeed = 7.25; this.event('jump'); }
+    p.jumpHeld = jumpDown;
     const speed = input.sprint ? 10 : 7, moveYaw = input.moveYaw ?? yaw;
-    moveInArena(this.player, (Math.cos(moveYaw) * ix + Math.sin(moveYaw) * iz) * speed * dt,
+    moveInArena(p, (Math.cos(moveYaw) * ix + Math.sin(moveYaw) * iz) * speed * dt,
       (-Math.sin(moveYaw) * ix + Math.cos(moveYaw) * iz) * speed * dt, .55, this.obstacles);
-    this.player.elevation = walkSurfaceHeight(this.player.x, this.player.z);
+    let floor = walkSurfaceHeight(p.x, p.z);
+    // Shallow service blocks may be vaulted: land on their top instead of falling into them.
+    for (const b of this.obstacles) {
+      if (b.walkableSurface || b.height > 1.35 || b.height <= floor) continue;
+      if (Math.abs(p.x-b.x) < b.hx && Math.abs(p.z-b.z) < b.hz && p.elevation >= b.height - .12) floor=Math.max(floor,b.height);
+    }
+    if (p.grounded) { p.elevation=floor; p.verticalSpeed=0; }
+    else {
+      p.verticalSpeed=Math.max(-18,p.verticalSpeed-18*dt);
+      p.elevation+=p.verticalSpeed*dt;
+      if (p.elevation <= floor) { p.elevation=floor; p.verticalSpeed=0; p.grounded=true; this.event('land'); }
+    }
     if (this.nextWave >= 0) { this.nextWave -= dt; if (this.nextWave <= 0) this.beginWave(); }
     if (this.toSpawn > 0) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) { this.spawnEnemy(); this.spawnTimer = Math.max(.3, 1.15 - this.wave * .08); } }
     this.navigation.update(this.player, this.time);
