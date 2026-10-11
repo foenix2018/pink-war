@@ -361,7 +361,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   function sync(sim,time,dt){
     setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));updateStations(sim,time);
     soldier.root.scale.setScalar(1);soldier.root.position.set(sim.player.x,sim.player.elevation||0,sim.player.z);soldier.root.rotation.y=sim.player.yaw;
-    const present=new Set();for(const e of sim.enemies){present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite,e.ranged,e.form);monsters.set(e.id,m);scene.add(m);}m.position.set(e.x,(e.elevation||0)+Math.abs(Math.sin(time*8+e.phase))*.025,e.z);m.rotation.y=Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI;m.userData.animate(time,e.phase,e.limpUntil<=time);}
+    const present=new Set();for(const e of sim.enemies){present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite,e.ranged,e.form);monsters.set(e.id,m);scene.add(m);}m.position.set(e.x,(e.elevation||0)+Math.abs(Math.sin(time*8+e.phase))*.025,e.z);m.rotation.y=e.yaw??(Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI);m.userData.animate(time,e.phase,e.limpUntil<=time);}
     for(const[id,m]of monsters){if(!present.has(id)){scene.remove(m);monsters.delete(id);}}
     const active=new Set();for(const b of sim.bullets){active.add(b.id);let m=bulletMeshes.get(b.id);if(!m){m=new T.Group();mesh(geometries.sphere,b.hostile?mats.cyan:mats.pale,m,[0,0,0],[.09,.09,.22],false);mesh(geometries.sphere,b.hostile?mats.violet:mats.rose,m,[0,0,.25],[.08,.08,.38],false);m.scale.setScalar(b.weapon==='nova'?2.3:b.weapon==='thorn'?1.3:b.hostile?1.4:1);bulletMeshes.set(b.id,m);scene.add(m);}m.position.set(b.x,b.y,b.z);m.lookAt(b.x+b.vx,b.y+b.vy,b.z+b.vz);}
     for(const[id,m]of bulletMeshes){if(!active.has(id)){scene.remove(m);bulletMeshes.delete(id);}}
@@ -376,7 +376,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   function lobby(time,level=1){
     camera.clearViewOffset();setEquipment(level);const portrait=innerHeight>innerWidth;
     soldier.root.scale.setScalar(portrait?1.2:2.6);soldier.root.position.set(portrait?0:3.1,0,7);soldier.root.rotation.y=Math.PI-.28;
-    soldier.animate(time,false);soldier.root.visible=true;weapon.visible=false;
+    soldier.animate(time,false,0,0,0,.016,{preview:true});soldier.root.visible=true;weapon.visible=false;
     if(portrait){
       camera.fov=48;camera.position.set(0,1.6,16.4);camera.lookAt(0,1.28,7);
       camera.setViewOffset(innerWidth,innerHeight,0,innerHeight*.21,innerWidth,innerHeight);
@@ -386,7 +386,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   function outfit(time,level,angle){
     setEquipment(level);setWeapon(0);soldier.root.visible=true;weapon.visible=false;
     const portrait=innerHeight>innerWidth,scale=portrait?1.6:2.1;
-    soldier.root.scale.setScalar(scale);soldier.root.position.set(0,0,7);soldier.root.rotation.y=angle;soldier.animate(time,false);
+    soldier.root.scale.setScalar(scale);soldier.root.position.set(0,0,7);soldier.root.rotation.y=angle;soldier.animate(time,false,0,0,0,.016,{preview:true});
     camera.fov=portrait?48:38;camera.position.set(0,portrait?1.8:2.7,portrait?16.4:16);
     camera.lookAt(0,portrait?1.45:2.18,7);
     camera.setViewOffset(innerWidth,innerHeight,portrait?0:-innerWidth*.22,portrait?innerHeight*.24:0,innerWidth,innerHeight);camera.updateProjectionMatrix();
