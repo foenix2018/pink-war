@@ -392,7 +392,7 @@ export class VRController {
       }
       const edge = (key, index) => { const id = `${source.handedness}:${key}`, down = pressed(pad.buttons[index]); if (down && !this.previous.get(id) && tracked) actions.add(key); this.previous.set(id, down); };
       if (main) { edge('reload', xr ? 4 : 0); edge('next', xr ? 5 : 1); }
-      if (xr && side) { edge('previous', 4); edge('pause', 5); edge('jump', 0); }
+      if (xr && side) { edge('previous', 4); edge('pause', 5); edge('quickReload', 0); }
       if (!xr) { edge('pause', 9); edge('jump', 6); }
     }
     if (actions.has('pause')) { this.hooks.togglePause(); if (xr) this.cancelTrigger(); }
@@ -401,7 +401,7 @@ export class VRController {
     else if (phase === 'playing') {
       const game = this.hooks.game();
       if (actions.has('next') || actions.has('previous')) { if (game.cycleWeapon(actions.has('next') ? 1 : -1) && xr) this.cancelTrigger(); }
-      else if (actions.has('reload')) { if (game.reload() && xr) this.cancelTrigger(); }
+      else if (actions.has('reload') || actions.has('quickReload')) { if (game.reload() && xr) this.cancelTrigger(); }
     }
     this.trackingLost = xr && !mainTracked;
     if (xr && (!visible || !mainTracked)) { this.cancelTrigger(); this.hooks.pause?.(); }
