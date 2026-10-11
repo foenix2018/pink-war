@@ -379,6 +379,46 @@ export async function createScene(canvas, quality, forceWebGL = false, character
       if(p>=1){scene.remove(d.fx);d.mat.dispose();d.haloMat.dispose();deaths.splice(i,1);}
     }
   }
+  // Secondary breaches are independent visual gates created only for an active wave.
+  // Shared low-poly geometry keeps draw calls and VRAM bounded on Quest/iPhone.
+  const secondaryPortals=new Map();
+  const breachRingGeometry=new T.TorusGeometry(2.45,.20,7,34);
+  const breachHaloGeometry=new T.TorusGeometry(2.83,.045,5,40);
+  const breachSurfaceGeometry=new T.PlaneGeometry(4.6,4.6);
+  function buildSecondaryPortal(site) {
+    const group=new T.Group();group.position.set(site.x,0,site.z);group.rotation.y=site.yaw||0;
+    scene.add(group);
+    const gate=new T.Group();gate.position.y=2.9;group.add(gate);
+    const ring=mesh(breachRingGeometry,mats.steel,gate,[0,0,0],[1,1,1],false);
+    const outline=mesh(breachHaloGeometry,mats.rose,gate,[0,0,.08],[1,1,1],false);
+    const vortexMat=new T.MeshBasicMaterial({map:portalTexture,transparent:true,side:T.DoubleSide,
+      depthWrite:false,blending:T.AdditiveBlending,toneMapped:false,opacity:0});
+    const surface=mesh(breachSurfaceGeometry,vortexMat,gate,[0,0,-.025],[1,1,1],false);
+    const floorRing=mesh(breachHaloGeometry,mats.pale,group,[0,.10,0],[.65,.65,.65],false);
+    floorRing.rotation.x=-Math.PI/2;
+    const light=new T.PointLight(palette.hot,6,10,2);light.position.set(0,2.8,.7);group.add(light);
+    return {group,gate,ring,outline,surface,vortexMat,floorRing,light,site};
+  }
+  function syncSecondaryPortals(sim,time) {
+    const present=new Set();
+    portal.visible=!sim.wave||sim.activePortals.some(p=>p.x===PORTAL.x&&p.z===PORTAL.z&&time>=p.openedAt);
+    for(const site of sim.activePortals||[]){
+      if(site.x===PORTAL.x&&site.z===PORTAL.z)continue;
+      present.add(site.id);
+      let display=secondaryPortals.get(site.id);
+      if(!display){display=buildSecondaryPortal(site);secondaryPortals.set(site.id,display);}
+      const t=time-site.openedAt,open=Math.max(0,Math.min(1,t/.72)),ease=open*open*(3-2*open);
+      display.group.visible=t>=0;
+      display.gate.scale.set(1,Math.max(.001,ease),1);
+      display.surface.material.opacity=.88*ease*(.9+.1*Math.sin(time*3.4));
+      display.outline.rotation.z=time*.19;
+      display.floorRing.scale.setScalar(.62+.12*Math.sin(time*4));
+      display.light.intensity=6*ease;
+    }
+    for(const [id,display] of secondaryPortals)if(!present.has(id)){
+      scene.remove(display.group);display.vortexMat.dispose();secondaryPortals.delete(id);
+    }
+  }
   const monsters=new Map(), bulletMeshes=new Map(), particles=[];
   const enemyFactory=createEnemyFactory(mats);
   const createMonster=(elite,ranged,form)=>enemyFactory.create(elite,ranged,form);
@@ -391,9 +431,9 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     const pool=sparkPools[color===palette.rose?0:1];
     for(let i=0;i<count&&particles.length<SPARKS;i++)particles.push({pool,x,y,z,vx:(Math.random()-.5)*7,vy:Math.random()*5,vz:(Math.random()-.5)*7,life:.45+Math.random()*.3,max:.8});
   }
-  function resetDynamic(){for(const death of deaths){scene.remove(death.fx);death.mat.dispose();death.haloMat.dispose();}deaths.length=0;for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
+  function resetDynamic(){for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();portal.visible=true;for(const death of deaths){scene.remove(death.fx);death.mat.dispose();death.haloMat.dispose();}deaths.length=0;for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
   function sync(sim,time,dt){
-    setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));updateStations(sim,time);
+    setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));updateStations(sim,time);syncSecondaryPortals(sim,time);
     for(const event of sim.events||[])if(event.type==='kill')beginDeath(event.id,time);
     updateDeaths(time);
     soldier.root.scale.setScalar(1);soldier.root.position.set(sim.player.x,sim.player.elevation||0,sim.player.z);soldier.root.rotation.y=sim.player.yaw;
@@ -410,7 +450,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   function setWeapon(index){ if(fpsGun.userData.index===index&&soldier.weapon===index)return;fpsGun.userData.setVariant(index);soldier.setWeapon(index); }
   function animatePortal(time){innerRing.rotation.z=time*.2;vortex.rotation.z=-time*.15;portalHalo.material.opacity=.3+Math.sin(time*2)*.055;dust.rotation.y=Math.sin(time*.1)*.06;}
   function lobby(time,level=1){
-    camera.clearViewOffset();setEquipment(level);const portrait=innerHeight>innerWidth;
+    camera.clearViewOffset();setEquipment(level);portal.visible=true;const portrait=innerHeight>innerWidth;
     soldier.root.scale.setScalar(portrait?1.2:2.6);soldier.root.position.set(portrait?0:3.1,0,7);soldier.root.rotation.y=Math.PI-.28;
     soldier.animate(time,false,0,0,0,.016,{preview:true});soldier.root.visible=true;weapon.visible=false;
     if(portrait){
@@ -420,7 +460,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     camera.updateProjectionMatrix();
   }
   function outfit(time,level,angle){
-    setEquipment(level);setWeapon(0);soldier.root.visible=true;weapon.visible=false;
+    setEquipment(level);setWeapon(0);portal.visible=true;soldier.root.visible=true;weapon.visible=false;
     const portrait=innerHeight>innerWidth,scale=portrait?1.6:2.1;
     soldier.root.scale.setScalar(scale);soldier.root.position.set(0,0,7);soldier.root.rotation.y=angle;soldier.animate(time,false,0,0,0,.016,{preview:true});
     camera.fov=portrait?48:38;camera.position.set(0,portrait?1.8:2.7,portrait?16.4:16);
