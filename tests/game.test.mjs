@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ArenaGame, ARENA_SIZE, segmentSphere, segmentBox, moveInArena, MAX_LEVEL, WEAPONS, COVER_WALLS, REGEN_DELAY, levelCount } from '../dist/game-logic.js';
+import { ArenaGame, ARENA_SIZE, segmentSphere, segmentBox, moveInArena, MAX_LEVEL, WEAPONS, COVER_WALLS, REGEN_DELAY, levelCount, traceEnemyHit } from '../dist/game-logic.js';
 
 const enemy = (id, z, x = 0) => ({ id, x, z, hp: 40, speed: 0, radius: .8, elite: false, attackTimer: 20, phase: 0 });
 const advance = (game, seconds, input = {}) => { for (let t = 0; t < seconds; t += .02) game.step(.02, input); };
@@ -70,11 +70,19 @@ test('all ten levels have increasing counts, speed, health and ranged enemies', 
   g.step(.02); assert.equal(g.state,'won'); assert.equal(g.wave,10);
   g.beginWave(); assert.equal(g.wave,10); const time=g.time;g.step(.05);assert.equal(g.time,time);
 });
-test('weapons unlock at the correct levels, auto-equip, and preserve individual batteries', () => {
+test('weapons appear at their scheduled levels, remain optional, and keep individual batteries', () => {
   const g=new ArenaGame(); assert.equal(g.selectWeapon(1),false);
   for(let level=1;level<=9;level++) {
-    g.beginWave(); const latest=WEAPONS.findLast(w=>w.level<=level);
-    assert.equal(g.weapon.id,latest.id);
+    g.beginWave();
+    const offeredIndex=WEAPONS.findIndex(w=>w.level===level);
+    if(offeredIndex>0) {
+      const offer=g.weaponOffers.find(w=>w.index===offeredIndex);
+      assert.ok(offer,'a new weapon appears in the world');
+      assert.equal(g.weaponIndex,level===3?0:offeredIndex-1,'no forced weapon switch');
+      g.player.x=offer.x;g.player.z=offer.z;
+      assert.equal(g.collectWeapon(),true);
+      assert.equal(g.weaponIndex,offeredIndex);
+    }
     assert.equal(g.unlockedWeapons.length,Math.ceil(level/2));
   }
   assert.equal(g.selectWeapon(0),true);g.cooldown=0;
@@ -82,6 +90,33 @@ test('weapons unlock at the correct levels, auto-equip, and preserve individual 
   g.selectWeapon(4);assert.equal(g.ammo[4],4);g.selectWeapon(0);assert.equal(g.ammo[0],11);
   assert.ok(WEAPONS[4].damage>WEAPONS[0].damage*10);
 });
+
+test('an uncollected gun stays available even after the next wave and cannot be selected early', () => {
+  const g=new ArenaGame();
+  for(let i=0;i<5;i++)g.beginWave();
+  assert.equal(g.weaponIndex,0);
+  assert.deepEqual(g.weaponOffers.map(o=>o.index),[1,2]);
+  assert.equal(g.selectWeapon(2),false);
+  const offer=g.weaponOffers[0];g.player.x=offer.x;g.player.z=offer.z;
+  assert.equal(g.collectWeapon(),true);assert.equal(g.weaponIndex,1);
+  assert.deepEqual(g.weaponOffers.map(o=>o.index),[2]);
+  g.reset();assert.equal(g.weaponOffers.length,0);assert.deepEqual(g.unlockedWeapons.map(w=>w.id),['r9']);
+});
+
+test('head, torso and limb produce distinct zones, multipliers and reactions', () => {
+  const e={id:1,x:0,z:0,elevation:0,form:'stalker',hp:160,tier:3,limpUntil:0,stunnedUntil:0};
+  const head=traceEnemyHit({x:0,y:1.93,z:-2},{x:0,y:1.93,z:2},e);
+  const chest=traceEnemyHit({x:0,y:1.25,z:-2},{x:0,y:1.25,z:2},e);
+  const leg=traceEnemyHit({x:.62,y:.47,z:-2},{x:.62,y:.47,z:2},e);
+  assert.equal(head.zone,'head');assert.equal(chest.zone,'torso');assert.equal(leg.zone,'limb');
+  assert.ok(head.multiplier>chest.multiplier&&chest.multiplier>leg.multiplier);
+  const g=new ArenaGame();g.enemies=[e];g.time=7;
+  g.damageEnemy(e,10,{x:0,y:1.9,z:0},'head',head.multiplier);
+  assert.ok(e.hp<140&&e.stunnedUntil>7);
+  g.damageEnemy(e,10,{x:.62,y:.47,z:0},'limb',leg.multiplier);
+  assert.ok(e.limpUntil>7);
+});
+
 test('a depleted battery prevents firing, then reload restores charges and cannot be spammed', () => {
   const g=new ArenaGame();g.nextWave=999;
   const origin={x:0,y:2,z:22}, direction={x:1,y:0,z:0};
@@ -135,6 +170,10 @@ test('a complete campaign reaches victory after 185 real projectile kills and fi
   const origin={x:0,y:1.35,z:60};
   for(let i=0;i<35000 && g.state==='playing';i++) {
     g.step(.02,{x:Math.sin(g.time*.45),z:Math.cos(g.time*.45)});
+    // The simulated player actively visits the beam and chooses each offered weapon.
+    if(g.weaponOffers.length){const offer=g.weaponOffers[0],old={x:g.player.x,z:g.player.z};
+      g.player.x=offer.x;g.player.z=offer.z;g.collectWeapon();g.player.x=old.x;g.player.z=old.z;
+    }
     origin.x=g.player.x;origin.z=g.player.z;
     const target=g.enemies.reduce((best,e)=>!best||e.z>best.z?e:best,null);
     if(target)g.trigger(true,.02,origin,{x:target.x-origin.x,y:(target.elite?1.35:1.15)-origin.y,z:target.z-origin.z});
