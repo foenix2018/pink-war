@@ -118,7 +118,7 @@ function selectView(next) {
 for (const button of document.querySelectorAll('[data-view]')) button.onclick = () => selectView(button.dataset.view);
 selectView(view); $('view-button').onclick = () => selectView(view === 'fps' ? 'third' : 'fps');
 
-function pause() { musicBed.pause(); if (phase !== 'playing') return; phase = 'paused'; resetInput(); if (vr?.mode !== 'xr') $('pause-dialog').showModal(); }
+function pause() { if (phase !== 'playing') return; musicBed.pause(); phase = 'paused'; resetInput(); if (vr?.mode !== 'xr') $('pause-dialog').showModal(); }
 function resume() { if (phase !== 'paused') return; for (const d of document.querySelectorAll('dialog[open]')) d.close(); phase = 'playing'; resetInput(); audioReady(); }
 function openPanel(id) { if (phase === 'playing') { phase = 'paused'; resetInput(); } for (const d of document.querySelectorAll('dialog[open]')) d.close(); $(id).showModal(); }
 function closePanel(dialog) { if(dialog.id==='outfit-dialog'){closeOutfit();return;} dialog.close(); if (phase === 'paused') $('pause-dialog').showModal(); }
