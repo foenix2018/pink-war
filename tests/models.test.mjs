@@ -15,6 +15,17 @@ const box = object => new T.Box3().setFromObject(object);
 const kit = () => createCharacterKit(new T.Texture());
 const flash = parent => { const sprite = new T.Object3D(); parent.add(sprite); return sprite; };
 
+test('glove digits have individually driven knuckle pivots and visible trigger flexion',()=>{
+  const k=kit(),hand=createGlove(k.gloves);
+  assert.equal(hand.userData.fingerJoints.length,5);
+  const before=hand.userData.fingerJoints[3].rotation.x;
+  for(let i=0;i<15;i++)hand.userData.animate({trigger:1,grip:.85},.016);
+  assert.ok(Math.abs(hand.userData.fingerJoints[3].rotation.x-before)>.28);
+  assert.ok(Math.abs(hand.userData.fingerJoints[0].rotation.x)>.1);
+  const first=hand.userData.fingerJoints[0].rotation.x,last=hand.userData.fingerJoints[2].rotation.x;
+  assert.notEqual(first,last,'finger curl is staggered rather than uniform');
+});
+
 test('bevelBox keeps its metric size, rounds its corners and has unit normals', () => {
   const g = bevelBox(.4, .1, .2, .03, 3); g.computeBoundingBox();
   const { min, max } = g.boundingBox;
