@@ -47,7 +47,7 @@ export function createSoldier(kit, createGun, profileInfo) {
   root.add(hips);hips.add(spine);spine.add(body);body.add(rig);rig.add(head);
   head.name='ClosedHelmet';head.position.y=masculine?1.785:1.775;
   // Anatomical readability: human-sized head, broad enough hips and legs, not stick limbs.
-  head.scale.setScalar(.94);
+  head.scale.setScalar(1.07);
   const {geometries:g,materials:m}=kit, assemblies=[];
   const builder=(bone,offsetY=0)=>{
     const asm=new Assembly();assemblies.push({asm,bone});
@@ -186,8 +186,8 @@ export function createSoldier(kit, createGun, profileInfo) {
   // ----------------------------------------------------------------- legs
   const legs=[],knees=[],feet=[];
   for(const s of [-1,1]){
-    const leg=new T.Group();leg.name=s<0?'LeftThigh':'RightThigh';leg.position.set(s*(masculine?.188:.181),0,0);leg.scale.set(1.09,1,1.09);hips.add(leg);legs.push(leg);
-    const shin=new T.Group();shin.name=s<0?'LeftShin':'RightShin';shin.position.set(0,-.425,0);shin.scale.set(1.045,1,1.06);leg.add(shin);knees.push(shin);
+    const leg=new T.Group();leg.name=s<0?'LeftThigh':'RightThigh';leg.position.set(s*(masculine?.188:.181),0,0);leg.scale.set(1.01,1,1.015);hips.add(leg);legs.push(leg);
+    const shin=new T.Group();shin.name=s<0?'LeftShin':'RightShin';shin.position.set(0,-.425,0);shin.scale.set(1.01,1,1.02);leg.add(shin);knees.push(shin);
     {
       const {plate,sphere,link,part,ell}=builder(leg);
       part(loft([[-.405,.078,.076],[-.33,.093,.091],[-.21,.117,.11],[-.07,.121,.119],[-.025,.095,.086]],18),m.suit,[0,0,0],[1,1,1]);
