@@ -213,7 +213,8 @@ function updateCamera() {
   camera.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
   const elevation = p.elevation || 0;
   // Camera follows the same crouch transition as the real soldier pelvis, not a sudden teleport.
-  const cameraEye=1.85-.67*crouchCameraBlend, cameraShoulder=1.6-.53*crouchCameraBlend;
+  const cameraEye=(character.masculine?1.71:1.61)-.55*crouchCameraBlend;
+  const cameraShoulder=(character.masculine?1.49:1.41)-.45*crouchCameraBlend;
   if (view === 'fps') { camera.position.set(p.x, cameraEye + elevation, p.z); soldier.root.visible = false; weapon.visible = true; }
   else {
     soldier.root.visible = true; weapon.visible = false;
@@ -355,7 +356,14 @@ function updateHud() {
   c.fillText('TECH',cx+45*scale,cy+54*scale-12);
   c.restore();
   c.fillStyle = radarTheme.wall; for (const b of world.obstacles) c.fillRect(cx + (b.x - b.hx) * scale, cy + (b.z - b.hz) * scale, b.hx * 2 * scale, b.hz * 2 * scale);
-  c.strokeStyle = character.masculine?character.accent:'#ff8ebe'; c.beginPath(); c.arc(cx + PORTAL.x * scale, cy + PORTAL.z * scale, 6, 0, Math.PI * 2); c.stroke();
+  // Every opened breach gets its own tactical marker, including emerging ones.
+  for(const gate of game.activePortals){
+    const px=cx+gate.x*scale,pz=cy+gate.z*scale,active=game.time>=gate.openedAt;
+    c.save();c.strokeStyle=active?'#fa8fd5':'#85758e';c.lineWidth=active?2:1;
+    c.beginPath();c.arc(px,pz,active?5:3,0,Math.PI*2);c.stroke();
+    if(active){c.fillStyle='#ffd1f0';c.font='bold 8px monospace';c.fillText('BRÈCHE',px,pz-9);}
+    c.restore();
+  }
   // Weapon beacons are marked on the tactical radar until deliberately collected.
   for(const offer of game.weaponOffers){
     const x=cx+offer.x*scale,z=cy+offer.z*scale,pulse=4+2*Math.sin(clock*6);
