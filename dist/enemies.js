@@ -1,5 +1,5 @@
 import * as T from './vendor/three.webgpu.min.js';
-import { Assembly, loft, armorPanel, matrix, bevelBox } from './geo.js';
+import { Assembly, loft, armorPanel, matrix, bevelBox, limb as lightweightLimb, ball as lightweightBall } from './geo.js';
 import { addClosedHelmet } from './helmet.js';
 
 const stalkerTorso = loft([[.83,.24,.19],[.99,.28,.22],[1.16,.34,.25],[1.39,.40,.27],[1.57,.42,.26],[1.70,.30,.19],[1.78,.12,.11]],18);
@@ -12,12 +12,26 @@ const calf = loft([[-.80,.086,.10,.018],[-.71,.10,.12,.027],[-.59,.135,.144,.036
 const shin = armorPanel([[-.075,-.18],[.075,-.18],[.104,.12],[.072,.17],[-.072,.17],[-.104,.12]],.023,.017);
 const hand = loft([[-.16,.06,.037],[-.11,.083,.046],[-.025,.071,.039],[.02,.04,.03]],12);
 const ring = new T.TorusGeometry(.12,.011,6,18);
-const sensor = new T.SphereGeometry(1,12,8);
+const sensor = new T.SphereGeometry(1,8,6);
+const detailSphere = new T.SphereGeometry(1,9,6);
+const detailDome = new T.SphereGeometry(1,10,5,0,Math.PI*2,0,Math.PI/2);
 
 // Reduced bevel subdivisions preserve the hostile silhouettes while staying within the mobile triangle budget.
 class EnemyAssembly extends Assembly {
   box(material,size,position=[0,0,0],rotation=[0,0,0],radius=.006,shadow=true,level=1,maxLevel=10){
     return this.add(bevelBox(size[0],size[1],size[2],radius,1),material,matrix(position,rotation),shadow,level,maxLevel);
+  }
+  limb(material,a,b,r1,r2=r1,shadow=true,level=1,maxLevel=10){
+    return this.add(lightweightLimb(a,b,r1,r2,6),material,null,shadow,level,maxLevel);
+  }
+  ball(material,center,r,shadow=true,level=1,maxLevel=10){
+    return this.add(lightweightBall(center,r,[8,6]),material,null,shadow,level,maxLevel);
+  }
+  ellipsoid(material,center,radii,rotation=[0,0,0],shadow=true,level=1,maxLevel=10){
+    return this.add(detailSphere,material,matrix(center,rotation,radii),shadow,level,maxLevel);
+  }
+  dome(material,center,radii,rotation=[0,0,0],shadow=true,level=1,maxLevel=10){
+    return this.add(detailDome,material,matrix(center,rotation,radii),shadow,level,maxLevel);
   }
 }
 
