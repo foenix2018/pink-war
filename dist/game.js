@@ -3,6 +3,7 @@ import { createScene } from './scene.js';
 import { VRController } from './vr.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
 import { characterForId } from './characters.js';
+import { playLaserShot } from './laser-sound.js';
 
 const $ = id => document.getElementById(id);
 const settings = { sound: true, sensitivity: 1, quality: 'auto' };
@@ -17,7 +18,7 @@ let outfitReturn = 'lobby', previewLevel = 1, equipmentUntil = 0;
 let canvasPointer = null, lastDrag = null, audioContext = null;
 const move = { x: 0, y: 0, id: null }, look = { x: 0, y: 0, id: null };
 const keys = new Set(), firingPointers = new Set();
-let jumpQueued = false, pickupQueued = false;
+let jumpQueued = false, pickupQueued = false,crouchQueued=false;
 const persist = () => { try { localStorage.setItem('rosee-settings', JSON.stringify(settings)); } catch {} };
 const timeString = time => `${String(Math.floor(time / 60)).padStart(2, '0')}:${String(Math.floor(time % 60)).padStart(2, '0')}`;
 
@@ -32,20 +33,7 @@ function tone(frequency, end, duration = .1, volume = .055, type = 'triangle', d
   gain.gain.setValueAtTime(volume, t); gain.gain.exponentialRampToValueAtTime(.001, t + duration); oscillator.connect(gain); gain.connect(audioContext.destination);
   oscillator.start(t); oscillator.stop(t + duration + .02); oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
 }
-function weaponShotSound(weapon, power = 1) {
-  const charge = .7 + .3 * clamp((power - .3) / .7, 0, 1);
-  if (weapon === 'bloom') {
-    tone(560, 180, .06, .027, 'square'); tone(1420, 620, .042, .014, 'sawtooth', .012);
-  } else if (weapon === 'petal') {
-    tone(1080, 300, .12, .026, 'triangle'); tone(1780, 530, .095, .018, 'sine', .014); tone(2450, 920, .065, .012, 'triangle', .032);
-  } else if (weapon === 'thorn') {
-    tone(330 * charge, 48, .17, .047 * charge, 'sawtooth'); tone(1720 * charge, 210, .105, .023 * charge, 'square', .012);
-  } else if (weapon === 'nova') {
-    tone(210 * charge, 34, .25, .052 * charge, 'sawtooth'); tone(820 * charge, 95, .2, .026 * charge, 'triangle', .018); tone(1380 * charge, 260, .13, .015 * charge, 'sine', .042);
-  } else {
-    tone(1040, 190, .082, .034, 'sawtooth'); tone(290, 72, .055, .021, 'triangle', .006);
-  }
-}
+function weaponShotSound(weapon,power=1){if(settings.sound)playLaserShot(audioContext,weapon,power);}
 function syncSound() {
   $('sound-setting').checked = !!settings.sound;
   $('sound-button').ariaLabel = settings.sound ? 'Désactiver le son' : 'Activer le son';
@@ -84,7 +72,7 @@ for(const button of document.querySelectorAll('[data-character]'))button.onclick
 selectCharacter(character.id,false);
 
 function resetInput() {
-  keys.clear(); firingPointers.clear(); jumpQueued = false; pickupQueued = false; canvasPointer = null; lastDrag = null;
+  keys.clear(); firingPointers.clear(); jumpQueued = false; pickupQueued = false;crouchQueued=false; canvasPointer = null; lastDrag = null;
   for (const s of [move, look]) { s.x = 0; s.y = 0; s.id = null; }
   for (const id of ['move-stick', 'look-stick']) $(id).querySelector('.joystick-knob').style.transform = '';
   $('fire-button').classList.remove('firing');
@@ -107,6 +95,7 @@ function attachJoystick(id, state) {
 attachJoystick('move-stick', move); attachJoystick('look-stick', look);
 $('fire-button').addEventListener('pointerdown', e => { if (phase !== 'playing') return; e.preventDefault(); audioReady(); firingPointers.add(e.pointerId); try { e.target.closest('button').setPointerCapture(e.pointerId); } catch {} $('fire-button').classList.add('firing'); });
 for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) $('fire-button').addEventListener(type, e => { firingPointers.delete(e.pointerId); if (!firingPointers.size) $('fire-button').classList.remove('firing'); });
+$('crouch-button').addEventListener('click',()=>{if(phase==='playing')crouchQueued=true;});
 $('pickup-button').addEventListener('click', () => { if(phase === 'playing')pickupQueued = true; });
 $('jump-button').addEventListener('pointerdown', e => { if (phase !== 'playing') return; e.preventDefault(); jumpQueued = true; });
 $('jump-button').addEventListener('click', e => { if (e.detail === 0 && phase === 'playing') jumpQueued = true; });
@@ -198,6 +187,7 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyR' && !e.repeat) game.reload();
   if (e.code === 'KeyE' && !e.repeat) game.cycleWeapon();
   if (e.code === 'KeyF' && !e.repeat) pickupQueued = true;
+  if (e.code === 'KeyC' && !e.repeat) crouchQueued=true;
   keys.add(e.code);
 });
 window.addEventListener('keyup', e => keys.delete(e.code));
@@ -213,12 +203,12 @@ function updateCamera() {
   camera.fov = view === 'fps' ? 72 : 64;
   camera.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
   const elevation = p.elevation || 0;
-  if (view === 'fps') { camera.position.set(p.x, 1.85 + elevation, p.z); soldier.root.visible = false; weapon.visible = true; }
+  if (view === 'fps') { camera.position.set(p.x, (p.crouched?1.18:1.85) + elevation, p.z); soldier.root.visible = false; weapon.visible = true; }
   else {
     soldier.root.visible = true; weapon.visible = false;
-    const distance = 5.1, start = { x: p.x, y: 1.6 + elevation, z: p.z };
+    const distance = 5.1, start = { x: p.x, y: (p.crouched?1.07:1.6) + elevation, z: p.z };
     const end = { x: p.x + Math.sin(yaw) * distance * Math.cos(pitch) + Math.cos(yaw) * .65,
-      y: 1.6 - Math.sin(pitch) * distance, z: p.z + Math.cos(yaw) * distance * Math.cos(pitch) - Math.sin(yaw) * .65 };
+      y: (p.crouched?1.07:1.6) - Math.sin(pitch) * distance, z: p.z + Math.cos(yaw) * distance * Math.cos(pitch) - Math.sin(yaw) * .65 };
     let nearest = 1;
     for (const box of world.obstacles) { const hit = segmentBox(start, end, { ...box, hx: box.hx + .2, hz: box.hz + .2 }); if (hit !== null) nearest = Math.min(nearest, Math.max(.09, hit - .05)); }
     camera.position.set(start.x + (end.x - start.x) * nearest, Math.max(.35, start.y + (end.y - start.y) * nearest), start.z + (end.z - start.z) * nearest);
@@ -242,7 +232,7 @@ function updateWeaponVisuals(dt, firing, moving) {
   const trigger = firing && !reloading && game.state === 'playing' ? 1 : 0;
   if (vr?.mode !== 'xr') {
     if (view === 'fps') world.fpsGun.userData.animateHands?.(trigger, trigger ? .34 : .18, reloadLift, dt);
-    else world.soldier.animate(clock, moving, recoil, reloadLift, trigger, dt, { airborne: !game.player.grounded, verticalSpeed: game.player.verticalSpeed });
+    else world.soldier.animate(clock, moving, recoil, reloadLift, trigger, dt, { airborne: !game.player.grounded, verticalSpeed: game.player.verticalSpeed, crouched:game.player.crouched, firing:trigger>0, sprint:keys.has('ShiftLeft')||keys.has('ShiftRight') });
   }
 }
 function aim() {
@@ -311,6 +301,8 @@ function updateHud() {
   $('wave-label').textContent = `NIVEAU ${String(Math.max(1, game.wave)).padStart(2, '0')} / ${MAX_LEVEL}`;
   $('weapon-button').innerHTML = `${game.weapon.name} <span>⌄</span>`;
   $('weapon-button').disabled = game.unlockedWeapons.length < 2;
+  $('crouch-button').setAttribute('aria-pressed',String(!!game.player.crouched));
+  $('crouch-button').classList.toggle('active',!!game.player.crouched);
   const nearby=game.nearbyWeapon();const pickup=$('pickup-button');
   pickup.hidden=!nearby;pickup.textContent=nearby?`RÉCUPÉRER ${WEAPONS[nearby.index].name} · F / X`:'';
   $('ammo-label').textContent = game.ammo[game.weaponIndex];
@@ -375,7 +367,8 @@ function frame(timestamp, xrFrame) {
     let moveYaw = facing;
     if(vr.mode==='xr')moveYaw=vr.movementYaw(facing);
     const jump = jumpQueued || vrInput.jump || keys.has('KeyJ'); jumpQueued = false;
-    game.step(dt, { x, z, yaw: facing, moveYaw, sprint: vrInput.sprint || keys.has('ShiftLeft') || keys.has('ShiftRight'), jump });
+    const crouchToggle=crouchQueued||vrInput.crouchToggle;crouchQueued=false;
+    game.step(dt, { x, z, yaw: facing, moveYaw, sprint: vrInput.sprint || keys.has('ShiftLeft') || keys.has('ShiftRight'), jump,crouchToggle });
     if(pickupQueued||vrInput.pickup){game.collectWeapon();pickupQueued=false;}
     const moving = Math.hypot(x, z) > .1;
     world.sync(game, clock, dt); updateCamera();
