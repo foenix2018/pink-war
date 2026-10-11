@@ -300,7 +300,8 @@ export function createSoldier(kit, createGun, profileInfo) {
     const reach=UPPER+FORE-.004,d=Math.min(Math.max(to.length(),Math.abs(UPPER-FORE)+.01),reach);
     unit.copy(to).normalize();
     const along=(UPPER*UPPER-FORE*FORE+d*d)/(2*d),h=Math.sqrt(Math.max(0,UPPER*UPPER-along*along));
-    pole.set(s*.55,-.8,.3);pole.addScaledVector(unit,-pole.dot(unit)).normalize();
+    // RLH V692: elbow guide deliberately outside the torso, instead of under the armpit.
+    pole.set(s*.65,-.28,.27);pole.addScaledVector(unit,-pole.dot(unit)).normalize();
     arm.elbow.copy(unit).multiplyScalar(along).addScaledVector(pole,h);
     arm.wrist.copy(unit).multiplyScalar(d);
     upper.position.set(0,0,0);aim(upper,arm.elbow,hint.set(s*.4,.5,-.1));
@@ -324,8 +325,55 @@ export function createSoldier(kit, createGun, profileInfo) {
     gun.rotation.set(angle,0,0);poseEuler.set(angle,0,0);
     solveArms();
   }
+  // Adapted from RLH firefighter-motion V692: pinned feet and a two-segment knee solver.
+  // Pink War is procedural (not Mixamo): each computed thigh/shin angle drives an actual pivot.
+  const thighLength=.425,shinLength=.36,ankleRest=.185;
+  function resolveLeg(index,ankleY,ankleZ,footRoll){
+    const hipY=hips.position.y;
+    let dy=ankleY-hipY,dz=ankleZ;
+    const dist=Math.max(.001,Math.hypot(dy,dz));
+    const reach=thighLength+shinLength-.009;
+    const clamped=Math.min(reach,Math.max(Math.abs(thighLength-shinLength)+.008,dist));
+    const ny=dy/dist,nz=dz/dist;
+    const along=(thighLength*thighLength-shinLength*shinLength+clamped*clamped)/(2*clamped);
+    const bend=Math.sqrt(Math.max(0,thighLength*thighLength-along*along));
+    // Knees track forward in local -Z, ankles remain at ground height during stance.
+    const ky=ny*along-nz*bend,kz=nz*along+ny*bend;
+    const upper=Math.atan2(-kz,-ky);
+    const lower=Math.atan2(-(nz*clamped-kz),-(ny*clamped-ky));
+    legs[index].rotation.x=upper;
+    knees[index].rotation.x=lower-upper;
+    feet[index].rotation.x=footRoll-lower;
+    legs[index].rotation.z=0;
+    knees[index].rotation.y=0;
+  }
+  const stanceCycle=(phase,beta,stride,lift)=>{
+    const p=(phase%1+1)%1;
+    if(p<beta){
+      const u=p/beta,e=Math.max(0,(u-.72)/.28);
+      return {z:stride*(.5-u),y:0,roll:-.045+.18*e*e*(3-2*e)};
+    }
+    const t=(p-beta)/(1-beta),smooth=t*t*(3-2*t);
+    return {z:stride*(-.5+smooth),y:lift*Math.sin(Math.PI*t)**2,roll:.15*(1-smooth)-.08*smooth};
+  };
   const soldierApi={
     root,hips,spine,body,rig,head,hair,legs,knees,feet,gun,arms,
+    // Expose calculated joints for the lab; elbow/wrist are virtual IK pivots, not forearm origins.
+    jointPositions(){
+      root.updateWorldMatrix(true,true);
+      const at=o=>o.getWorldPosition(new T.Vector3());
+      const joints={pelvis:at(hips),chest:rig.localToWorld(new T.Vector3(0,1.45,0)),head:at(head)};
+      for(let i=0;i<2;i++){
+        const side=i===0?'left':'right',arm=arms[i];
+        joints[side+'Hip']=at(legs[i]);joints[side+'Knee']=at(knees[i]);
+        joints[side+'Ankle']=at(feet[i]);
+        joints[side+'Toe']=feet[i].localToWorld(new T.Vector3(0,-.16,-.14));
+        joints[side+'Shoulder']=at(arm.shoulder);
+        joints[side+'Elbow']=arm.shoulder.localToWorld(arm.elbow.clone());
+        joints[side+'Wrist']=arm.shoulder.localToWorld(arm.wrist.clone());
+      }
+      return joints;
+    },
     // Choose the weapon in the hands: the right palm takes the grip, the free hand takes the support or rests.
     setWeapon(index){
       gun.userData.setVariant(index);
@@ -367,59 +415,57 @@ export function createSoldier(kit, createGun, profileInfo) {
       // RLH firefighter-motion V692 uses grounded stance/swing phases, pelvis counter-rotation
       // and stable IK grips. Adapt that kinematic model to Pink War's lightweight joint hierarchy.
       const speed=Math.hypot(vx,vz), airborne=!!flight?.airborne, rising=(flight?.verticalSpeed||0)>0;
-      const targetWeight=moving&&!airborne?Math.min(1,speed/4.6):0;
-      this._gaitWeight=firstSample ? targetWeight : (this._gaitWeight??0)+(targetWeight-(this._gaitWeight??0))*Math.min(1,elapsed*11);
-      if(this._gaitPhase===undefined)this._gaitPhase=time*8.7;
-      if(speed>.08&&!airborne){
-        const stride=speed>8?1.75:1.42;
-        this._gaitPhase+=Math.hypot(vx,vz)*elapsed/stride*PI*2*(forward<-.12?-1:1);
-      }
-      const phase=this._gaitPhase,step=this._gaitWeight,run=speed>8,stance=run?.43:.63;
-      const cycle=offset=>{
-        const p=((phase/(2*PI)+offset)%1+1)%1;
-        if(p<stance){const u=p/stance;return {support:true,lift:0,roll:-.06+.31*Math.max(0,(u-.68)/.32),swing:Math.sin(phase+offset*2*PI)};}
-        const u=(p-stance)/(1-stance),ease=u*u*(3-2*u);
-        return {support:false,lift:Math.sin(Math.PI*u)**2,roll:.26*(1-ease)-.08*ease,swing:Math.sin(phase+offset*2*PI)};
-      };
-      const left=cycle(0),right=cycle(.5),opposition=Math.sin(phase);
-      const lean=step*(run?.045:.018),sway=step*Math.sin(phase)*.015;
-      const idle=1-step;
-      const breathe=Math.sin(time*1.85)*.004;
-      hips.position.y=.97-step*(run?.012:.007)*(1-Math.cos(phase*2));
-      hips.position.x=idle*Math.sin(time*.75)*.013+step*Math.sin(phase)*.011;
-      hips.rotation.set(lean+step*Math.sin(phase)*.015, step*opposition*.045, sway);
-      spine.rotation.set(-lean*.55, -hips.rotation.y*.6, -sway*.72+step*Math.max(-1,Math.min(1,lateral/7))*.018);
-      const strideAmplitude=step*(run?.47:.34);
-      legs[0].rotation.x=left.swing*strideAmplitude;
-      legs[1].rotation.x=right.swing*strideAmplitude;
-      knees[0].rotation.x=.06+left.lift*step*(run?.64:.53);
-      knees[1].rotation.x=.06+right.lift*step*(run?.64:.53);
-      feet[0].rotation.x=left.roll*step;
-      feet[1].rotation.x=right.roll*step;
+      const crouched=!!flight?.crouched,aiming=!!flight?.firing||trigger>.1||!!flight?.aim;
+      const run=!crouched&&(!!flight?.sprint||speed>8);
+      const targetWeight=moving&&!airborne?Math.min(1,speed/(crouched?2.6:4.5)):0;
+      this._gaitWeight=(this._gaitWeight??0)+(targetWeight-(this._gaitWeight??0))*Math.min(1,elapsed*9);
+      const step=this._gaitWeight;
+      if(this._gaitPhase===undefined)this._gaitPhase=0;
+      const strideLength=crouched?.16:run?.42:.29;
+      const cycleRate=Math.max(.01,speed)/Math.max(.15,strideLength);
+      if(speed>.06&&!airborne)this._gaitPhase+=cycleRate*elapsed*PI*2*(forward<-.25?-1:1);
+      const phase=this._gaitPhase/(2*PI),beta=crouched?.7:run?.4:.63;
+      const l=stanceCycle(phase,beta,strideLength*step,(crouched?.035:run?.13:.075)*step);
+      const r=stanceCycle(phase+.5,beta,strideLength*step,(crouched?.035:run?.13:.075)*step);
+      const sway=Math.sin(this._gaitPhase)*step;
+      // Smooth blending of standing -> low shooting stance, no pose teleport.
+      this._low=(this._low??0)+(Number(crouched)-(this._low??0))*Math.min(1,elapsed*8);
+      const low=this._low;
+      const ready=aiming||!!flight?.aim;
+      const hipHeight=.97-low*.265-step*(run?.07:.048)*(1-low*.8);
+      const bob=step*(run?.011:.007)*(1-Math.cos(this._gaitPhase*2));
+      const breathe=Math.sin(time*1.6)*.005;
+      hips.position.set((low*.022)+sway*.009,hipHeight-bob,low*.06);
+      hips.rotation.set((ready?.065:.016)+low*.085+sway*.01,sway*.048,sway*.015);
+      spine.rotation.set(low*.19+(ready?.058:0)-hips.rotation.x*.42,-hips.rotation.y*.65,-sway*.012);
+      body.position.y=breathe+step*Math.abs(sway)*.004;
+      body.rotation.set((ready?.024:0)+recoil*.16,0,-sway*.012);
+      head.rotation.x=-low*.18+Math.sin(time*1.35)*.005;
+      head.rotation.y=turn*.028+(1-step)*Math.sin(time*.67)*.008;
       if(airborne){
-        hips.position.y=.97;hips.rotation.set(rising?-.075:.085,0,0);
-        spine.rotation.set(rising?-.08:.04,0,0);
-        legs[0].rotation.x=rising?-.35:.19;legs[1].rotation.x=rising?-.23:.28;
-        knees[0].rotation.x=rising?.64:.37;knees[1].rotation.x=rising?.57:.34;
-        feet[0].rotation.x=-.17;feet[1].rotation.x=-.12;
+        hips.position.y=.92;
+        hips.rotation.x=rising?-.07:.08;
+        spine.rotation.x=rising?-.09:.04;
+        resolveLeg(0,ankleRest+.23,-.13,-.12);
+        resolveLeg(1,ankleRest+.19,.06,-.05);
+      } else {
+        resolveLeg(0,ankleRest+l.y,l.z,l.roll*step);
+        resolveLeg(1,ankleRest+r.y,r.z,r.roll*step);
       }
-      body.position.y=breathe+step*Math.abs(opposition)*.006;
-      body.rotation.z=-sway*.7+idle*Math.sin(time*.75)*.009;
-      head.rotation.x=(airborne?-.024:step*Math.sin(phase+PI/2)*.012)+Math.sin(time*1.55)*.004;
-      head.rotation.y=turn*.024+idle*Math.sin(time*.65)*.013;
-      arms.forEach(({s,shoulder},i)=>{
-        const armPhase=i===0?left.swing:right.swing;
-        shoulder.rotation.x=airborne?-.035:step*armPhase*.022+idle*Math.sin(time*1.55+i*.65)*.008;
-        shoulder.rotation.z=step*(s*armPhase*.014-Math.max(-1,Math.min(1,lateral/7))*.017);
-      });
+      // Arms remain weapon-bound through two-bone IK while shoulders absorb stride/recoil.
+      for(let i=0;i<arms.length;i++){
+        const arm=arms[i],opposition=i===0?1:-1;
+        arm.shoulder.rotation.set(step*opposition*Math.sin(this._gaitPhase)*.017,
+          step*sway*opposition*.017,-opposition*low*.045-step*sway*.016);
+      }
       const kick=Math.min(1,recoil/.16);
-      body.position.z=kick*.035;
-      body.rotation.x=kick*.035+lean*.12;
+      body.position.z=kick*.025;
       if(this._weaponAnchor){
         mount.position.copy(this._weaponAnchor);
-        mount.position.y+=breathe+step*Math.sin(phase)*.004;
-        mount.position.x+=idle*Math.sin(time*.75)*.006;
-        if(flight?.preview){mount.position.y-=.25;mount.position.x+=.075;mount.position.z+=.13;}
+        mount.position.y+=breathe-low*.1+step*sway*.007;
+        mount.position.z+=low*.18+(ready?-.025:0);
+        mount.position.x+=step*sway*.009;
+        if(flight?.preview){mount.position.y-=.24;mount.position.x+=.07;mount.position.z+=.12;}
       }
       gun.userData.animateHands?.(trigger,kick>.05?.34:.18,reload,dt);poseWeapon(reload);solveArms();
       hair.rotation.x=Math.sin(time*3)*.045;hair.rotation.z=Math.sin(time*2)*.025;
