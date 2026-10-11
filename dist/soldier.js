@@ -40,7 +40,7 @@ const UPPER = .31, FORE = .35, CARRY = 1.2;
 // The suit is a few hundred rounded pieces, merged per bone and material. Pieces carry the armour level that
 // unlocks them; changing level re-merges the few meshes of each bone instead of drawing hundreds of instances.
 export function createSoldier(kit, createGun, profileInfo) {
-  const masculine=!!profileInfo?.masculine, side=masculine?.257:.243, width=masculine?1.085:1.035;
+  const masculine=!!profileInfo?.masculine, side=masculine?.257:.243, width=masculine?1.05:1.015;
   const root=new T.Group(),hips=new T.Group(),spine=new T.Group(),body=new T.Group(),rig=new T.Group(),head=new T.Group(),hair=new T.Group();
   root.name=profileInfo?.name||'GHJU';hips.name='Pelvis';spine.name='Spine';body.name='ChestPivot';rig.name='ArmorRig';
   hips.position.y=.97;spine.position.y=.03;rig.position.y=-1;
@@ -243,7 +243,7 @@ export function createSoldier(kit, createGun, profileInfo) {
       // The shoulder cap and pauldrons stay with the torso; only the arm below them turns.
       const {plate,part,ell,dome,sphere}=builder(shoulder);
       ell(m.suit,[s*.002,-.02,0],[.091,.102,.10]);
-      dome(m.pearl,[s*.014,.01,0],[masculine?.116:.106,.078,.112],[0,0,s*-.16]);
+      dome(m.pearl,[s*.014,.01,0],[masculine?.109:.101,.078,.11],[0,0,s*-.16]);
       plate(m.rose,[s*.055,.017,-.10],[.091,.027,.035],1,[0,0,s*-.15]);
       plate(m.dark,[s*.02,.067,.012],[.085,.014,.035],1,[0,0,s*-.2]);
       for(const x of [-.035,.035])sphere(m.steel,[s*.014+x,.022,-.102],[.008,.008,.005]);
@@ -419,6 +419,7 @@ export function createSoldier(kit, createGun, profileInfo) {
         mount.position.copy(this._weaponAnchor);
         mount.position.y+=breathe+step*Math.sin(phase)*.004;
         mount.position.x+=idle*Math.sin(time*.75)*.006;
+        if(flight?.preview){mount.position.y-=.25;mount.position.x+=.075;mount.position.z+=.13;}
       }
       gun.userData.animateHands?.(trigger,kick>.05?.34:.18,reload,dt);poseWeapon(reload);solveArms();
       hair.rotation.x=Math.sin(time*3)*.045;hair.rotation.z=Math.sin(time*2)*.025;
