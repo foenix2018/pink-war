@@ -108,7 +108,7 @@ attachJoystick('move-stick', move); attachJoystick('look-stick', look);
 $('fire-button').addEventListener('pointerdown', e => { if (phase !== 'playing') return; e.preventDefault(); audioReady(); firingPointers.add(e.pointerId); try { e.target.closest('button').setPointerCapture(e.pointerId); } catch {} $('fire-button').classList.add('firing'); });
 for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) $('fire-button').addEventListener(type, e => { firingPointers.delete(e.pointerId); if (!firingPointers.size) $('fire-button').classList.remove('firing'); });
 $('jump-button').addEventListener('pointerdown', e => { if (phase !== 'playing') return; e.preventDefault(); jumpQueued = true; });
-$('jump-button').addEventListener('click', () => { if (phase === 'playing') jumpQueued = true; });
+$('jump-button').addEventListener('click', e => { if (e.detail === 0 && phase === 'playing') jumpQueued = true; });
 
 function selectView(next) {
   view = vr?.active ? 'fps' : next;
