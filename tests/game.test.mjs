@@ -107,7 +107,7 @@ test('head, torso and limb produce distinct zones, multipliers and reactions', (
   const e={id:1,x:0,z:0,elevation:0,form:'stalker',hp:160,tier:3,limpUntil:0,stunnedUntil:0};
   const head=traceEnemyHit({x:0,y:1.93,z:-2},{x:0,y:1.93,z:2},e);
   const chest=traceEnemyHit({x:0,y:1.25,z:-2},{x:0,y:1.25,z:2},e);
-  const leg=traceEnemyHit({x:.62,y:.47,z:-2},{x:.62,y:.47,z:2},e);
+  const leg=traceEnemyHit({x:.2,y:.47,z:-2},{x:.2,y:.47,z:2},e);
   assert.equal(head.zone,'head');assert.equal(chest.zone,'torso');assert.equal(leg.zone,'limb');
   assert.ok(head.multiplier>chest.multiplier&&chest.multiplier>leg.multiplier);
   const g=new ArenaGame();g.enemies=[e];g.time=7;
@@ -127,7 +127,7 @@ test('a depleted battery prevents firing, then reload restores charges and canno
   advance(g,.6);assert.equal(g.reloadRemaining,0);assert.equal(g.ammo[0],12);assert.equal(g.shoot(origin,direction),true);
 });
 test('holding a heavy weapon charges it; early release is weaker and empty hold auto-reloads', () => {
-  const g=new ArenaGame();g.wave=9;g.selectWeapon(4);g.cooldown=0;g.nextWave=999;
+  const g=new ArenaGame();g.wave=9;g.ownedWeapons.add(4);g.selectWeapon(4);g.cooldown=0;g.nextWave=999;
   const origin={x:0,y:2,z:22},direction={x:1,y:0,z:0};
   for(let i=0;i<10;i++)g.trigger(true,.02,origin,direction);
   assert.ok(g.charge>.18);assert.equal(g.bullets.length,0);g.trigger(false,.02,origin,direction);
@@ -159,7 +159,7 @@ test('protective walls stop hostile projectiles and permit recovery behind them'
   assert.ok(g.player.hp<before);assert.equal(g.regenerating,false);
 });
 test('NOVA damages groups but splash cannot pass through a wall', () => {
-  const g=new ArenaGame([{x:2,z:10,hx:.3,hz:4,height:3}]);g.nextWave=999;g.wave=9;g.selectWeapon(4);g.cooldown=0;
+  const g=new ArenaGame([{x:2,z:10,hx:.3,hz:4,height:3}]);g.nextWave=999;g.wave=9;g.ownedWeapons.add(4);g.selectWeapon(4);g.cooldown=0;
   g.enemies=[enemy(91,10,0),enemy(92,10,-2),enemy(93,10,3.5)];
   g.shoot({x:0,y:1.15,z:15},{x:0,y:0,z:-1});advance(g,.12);
   assert.equal(g.enemies.some(e=>e.id===91),false);assert.equal(g.enemies.some(e=>e.id===92),false);
