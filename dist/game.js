@@ -321,6 +321,19 @@ function updateHud() {
   c.clearRect(0, 0, size, size); c.fillStyle = radarTheme.background; c.fillRect(0, 0, size, size);
   c.strokeStyle = radarTheme.frame; c.lineWidth = 1; c.strokeRect(20, 20, 140, 140);
   c.strokeStyle = radarTheme.grid; for (let n = 20; n <= 160; n += 35) { c.beginPath(); c.moveTo(n, 20); c.lineTo(n, 160); c.moveTo(20, n); c.lineTo(160, n); c.stroke(); }
+  // Tactical map: 25 m sectors, industrial area names and a short-range sweep.
+  c.save();c.lineWidth=.7;c.strokeStyle=radarTheme.frame;c.setLineDash([3,4]);
+  for(const [wx,wz,ww,dd] of [[-55,7,31,40],[61,10,39,37],[45,54,36,20],[-30,-55,23,30]]){
+    c.strokeRect(cx+(wx-ww/2)*scale,cy+(wz-dd/2)*scale,ww*scale,dd*scale);
+  }
+  c.setLineDash([]);c.strokeStyle=radarTheme.grid;
+  c.beginPath();c.arc(cx+game.player.x*scale,cy+game.player.z*scale,24,0,Math.PI*2);c.stroke();
+  c.font='bold 9px monospace';c.textAlign='center';c.fillStyle=radarTheme.player;
+  c.fillText('N',cx,14);c.fillText('S',cx,175);
+  c.fillText('FRET',cx-55*scale,cy+7*scale-12);
+  c.fillText('INDUS',cx+61*scale,cy+10*scale-12);
+  c.fillText('TECH',cx+45*scale,cy+54*scale-12);
+  c.restore();
   c.fillStyle = radarTheme.wall; for (const b of world.obstacles) c.fillRect(cx + (b.x - b.hx) * scale, cy + (b.z - b.hz) * scale, b.hx * 2 * scale, b.hz * 2 * scale);
   c.strokeStyle = character.masculine?character.accent:'#ff8ebe'; c.beginPath(); c.arc(cx + PORTAL.x * scale, cy + PORTAL.z * scale, 6, 0, Math.PI * 2); c.stroke();
   for (const e of game.enemies) { c.fillStyle = e.elite ? radarTheme.elite : radarTheme.enemy; c.beginPath(); c.arc(cx + e.x * scale, cy + e.z * scale, 2.6, 0, Math.PI * 2); c.fill(); }
