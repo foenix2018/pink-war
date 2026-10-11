@@ -103,6 +103,22 @@ test('an uncollected gun stays available even after the next wave and cannot be 
   g.reset();assert.equal(g.weaponOffers.length,0);assert.deepEqual(g.unlockedWeapons.map(w=>w.id),['r9']);
 });
 
+test('weapons can be skipped without breaking cyclic weapon selection',()=>{
+  const g=new ArenaGame();
+  g.ownedWeapons.add(2);g.ownedWeapons.add(4);
+  assert.deepEqual(g.unlockedWeapons.map(w=>w.id),['r9','petal','nova']);
+  assert.equal(g.cycleWeapon(),true);assert.equal(g.weaponIndex,2);
+  assert.equal(g.cycleWeapon(),true);assert.equal(g.weaponIndex,4);
+  assert.equal(g.cycleWeapon(),true);assert.equal(g.weaponIndex,0);
+  assert.equal(g.cycleWeapon(-1),true);assert.equal(g.weaponIndex,4);
+});
+
+test('limb hit zones rotate with enemies so side shots remain accurately located',()=>{
+  const enemy={id:1,x:0,z:0,elevation:0,yaw:Math.PI/2,form:'stalker',hp:100,tier:2};
+  const strike=traceEnemyHit({x:-2,y:1.22,z:-.54},{x:2,y:1.22,z:-.54},enemy);
+  assert.ok(strike);assert.equal(strike.zone,'limb');
+});
+
 test('head, torso and limb produce distinct zones, multipliers and reactions', () => {
   const e={id:1,x:0,z:0,elevation:0,form:'stalker',hp:160,tier:3,limpUntil:0,stunnedUntil:0};
   const head=traceEnemyHit({x:0,y:1.93,z:-2},{x:0,y:1.93,z:2},e);
