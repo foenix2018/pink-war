@@ -32,9 +32,9 @@ export function questControls(hand = 'right') {
   const mainF = left ? 'gauche' : 'droite', sideF = left ? 'droite' : 'gauche', mainM = left ? 'gauche' : 'droit', sideM = left ? 'droit' : 'gauche';
   return [
     [`Manette ${mainF}`, 'Pistolet : le canon est la visée'],
-    [`Gâchette ${mainF}`, 'Tirer ; l’index du gant suit la détente'],
+    [`Gâchette ${mainF}`, 'Tirer · maintenir pour charger'],
     [`Poignée ${mainF}`, 'Renforcer le laser et animer la prise'],
-    [b.reload, 'Recharger ; l’arme se redresse brièvement'],
+    [b.reload, 'Recharger la batterie'],
     [b.next, 'Arme suivante'],
     [`Joystick ${mainM}`, 'Rotation (crans ou fluide)'],
     [`Joystick ${sideM}`, 'Se déplacer'],
