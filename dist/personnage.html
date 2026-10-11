@@ -74,7 +74,11 @@ button{font:inherit;cursor:pointer}
   <div class="group">
     <span class="group-title">Animation</span>
     <div class="segment" data-cols="3" id="motions"><button data-motion="idle" aria-pressed="true">Repos</button><button data-motion="walk" aria-pressed="false">Marche</button><button data-motion="run" aria-pressed="false">Course</button></div>
-    <div class="actions" style="margin-top:7px"><button data-motion="jump" id="jump">Saut</button><button data-motion="aim" id="aim">Visée</button><button data-motion="idle" id="stop">Stop</button></div>
+    <div class="actions" style="margin-top:7px"><button data-motion="jump" id="jump">Saut</button><button data-motion="aim" id="aim">Visée</button><button data-motion="crouch" id="crouch">Accroupi</button></div>
+  </div>
+  <div class="group">
+    <span class="group-title">Combat en déplacement</span>
+    <div class="actions"><button data-motion="walkFire">Marche + tir</button><button data-motion="runFire">Course + tir</button><button data-motion="crouchWalk">Accroupi + tir</button></div>
   </div>
   <div class="group">
     <span class="group-title">Orientation</span>
@@ -95,7 +99,7 @@ button{font:inherit;cursor:pointer}
     <label for="grid" style="margin:0">Repères de sol</label><input type="checkbox" id="grid" checked>
   </div>
   <div class="footer">
-    Glisser pour tourner · Molette ou pincement pour zoomer.
+    Glisser pour tourner · Pincer pour zoomer · cyan = vraies articulations.
     <div id="status" role="status">Initialisation du vrai squelette…</div>
   </div>
 </aside>
