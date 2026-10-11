@@ -4,7 +4,7 @@ import { createCharacterKit, createSoldier } from './soldier.js';
 import { buildGun } from './weapons.js';
 import { createSurfaceDetails } from './surfaces.js';
 import { characterForId } from './characters.js';
-import { playLaserShot } from './laser-sound.js';
+import { playLaserShot, loadRealLaserSample } from './laser-sound.js';
 
 const $ = id => document.getElementById(id);
 const clamp = (n,a,b)=>Math.max(a,Math.min(b,n));
@@ -111,6 +111,7 @@ $('sound-preview').addEventListener('click',async()=>{
   try{
     previewAudio ||= new (window.AudioContext||window.webkitAudioContext)();
     if(previewAudio.state!=='running')await previewAudio.resume();
+    await loadRealLaserSample(previewAudio);
     playLaserShot(previewAudio,['r9','bloom','petal','thorn','nova'][state.weapon],1);
   }catch(error){console.warn('Essai audio laser non disponible',error);}
 });
