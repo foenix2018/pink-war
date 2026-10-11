@@ -2,6 +2,29 @@ import { equipmentForLevel } from './equipment.js';
 // World units are metres. The playable arena is exactly 200 × 200 m.
 export const ARENA_SIZE = 200;
 export const PORTAL = Object.freeze({ x: 0, z: -20 });
+// Breach sites are spread around the city. Only collision-free ones can open.
+export const PORTAL_SITES = Object.freeze([
+  PORTAL,{x:-58,z:-17},{x:57,z:-13},{x:-72,z:63},{x:73,z:77},
+  {x:40,z:-76},{x:-43,z:-78},{x:6,z:84},{x:-81,z:-47},{x:80,z:-52},
+  {x:-50,z:72},{x:41,z:41},{x:6,z:-52},{x:-82,z:12}
+].map(point=>Object.freeze({...point})));
+export function chooseWavePortals(obstacles=[],random=Math.random,wave=1,player={x:0,z:22},time=0) {
+  const count=wave<3?1:wave<6?2:3;
+  const available=PORTAL_SITES.filter(p=>
+    Math.hypot(p.x-player.x,p.z-player.z)>17 &&
+    obstacles.every(b=>b.walkableSurface||Math.abs(p.x-b.x)>b.hx+9||Math.abs(p.z-b.z)>b.hz+8)
+  );
+  if(!available.length)available.push(PORTAL);
+  const chosen=[];
+  while(chosen.length<count&&available.length) {
+    const index=Math.min(available.length-1,Math.floor(Math.min(.999999,Math.max(0,random()))*available.length));
+    const [point]=available.splice(index,1);
+    const yaw=Math.atan2(player.x-point.x,player.z-point.z);
+    chosen.push({id:wave*10+chosen.length,x:point.x,z:point.z,yaw,
+      openedAt:time+(chosen.length===0?0:Math.min(3,(chosen.length-1)*1.45 + random()*.65))});
+  }
+  return chosen;
+}
 export const MAX_LEVEL = 10;
 export const REGEN_DELAY = 5;
 export const CATWALK = Object.freeze({ x: 22.4, halfWidth: 2, end: 20, landing: 8, height: 1.58 });
@@ -170,6 +193,7 @@ export class ArenaGame {
     this.wave = 0; this.score = 0; this.kills = 0; this.time = 0;
     this.state = 'playing'; this.cooldown = 0; this.invulnerable = 0;
     this.nextWave = .75; this.spawnTimer = 0; this.toSpawn = 0; this.nextId = 1;
+    this.activePortals=[];
     this.weaponIndex = 0; this.ammo = WEAPONS.map(w => w.capacity);
     this.ownedWeapons = new Set([0]); this.weaponOffers = [];
     this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false;
@@ -235,6 +259,8 @@ export class ArenaGame {
     if (this.wave >= MAX_LEVEL || this.state !== 'playing') return;
     this.wave++; this.toSpawn = levelCount(this.wave); this.spawned = 0;
     this.spawnTimer = 0; this.nextWave = -1;
+    this.activePortals=chooseWavePortals(this.obstacles,this.random,this.wave,this.player,this.time);
+    this.event('portals',{count:this.activePortals.length,sites:this.activePortals.map(p=>({...p}))});
     this.ammo = WEAPONS.map(w => w.capacity); this.reloadRemaining = 0; this.charge = 0;
     const offered = WEAPONS.findIndex(w => w.level === this.wave);
     if (offered > 0) this.offerWeapon(offered);
@@ -248,12 +274,16 @@ export class ArenaGame {
     const forms = ['stalker','scuttler','seer','brute'];
     const form = elite ? 'brute' : forms[(ordinal + this.wave - 1) % forms.length];
     const angle = this.random() * Math.PI * 2;
-    const x = PORTAL.x + Math.cos(angle) * 2.7, z = PORTAL.z + Math.sin(angle) * 2.7 + 4;
+    const available=this.activePortals.filter(p=>p.openedAt<=this.time);
+    const site=available.length?available[ordinal%available.length]:this.activePortals[0]||PORTAL;
+    const x=site.x+Math.sin(site.yaw||0)*3.2+Math.cos(angle)*.95;
+    const z=site.z+Math.cos(site.yaw||0)*3.2+Math.sin(angle)*.95;
     const aimHeight = form === 'scuttler' ? .88 : form === 'seer' ? 1.38 : form === 'brute' ? 1.42 : 1.15;
     const enemy = { id: this.nextId++, x, z, elevation: walkSurfaceHeight(x, z),
-      hp: elite ? 80 + this.wave * 10 : 36 + this.wave * 6, elite, ranged, form, aimHeight,
-      speed: 3.8 + this.wave * .22 + (elite ? .03 : form === 'scuttler' ? .04 : form === 'seer' ? .02 : form === 'brute' ? -.01 : 0),
+      hp: elite ? 95 + this.wave * 25 : 42 + this.wave * 14, elite, ranged, form, aimHeight,
+      speed: Math.max(1.5,2.85 - (this.wave-1)*.09 + (elite ? -.16 : form === 'scuttler' ? .23 : form === 'seer' ? .03 : form === 'brute' ? -.15 : 0)),
       tier: Math.max(1,Math.ceil(this.wave/2)),limpUntil:0,stunnedUntil:0,
+      homeX:site.x,homeZ:site.z,portalId:site.id,
       radius: elite ? 1.05 : form === 'scuttler' ? .86 : form === 'brute' ? .95 : .8,
       hitRadius: form === 'scuttler' ? .91 : form === 'brute' ? 1.18 : form === 'seer' ? .94 : 1.05,
       attackTimer: .8 + this.random() * .6, phase: this.random() * Math.PI * 2,
@@ -347,7 +377,11 @@ export class ArenaGame {
       if (p.elevation <= floor) { p.elevation=floor; p.verticalSpeed=0; p.grounded=true; this.event('land'); }
     }
     if (this.nextWave >= 0) { this.nextWave -= dt; if (this.nextWave <= 0) this.beginWave(); }
-    if (this.toSpawn > 0) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) { this.spawnEnemy(); this.spawnTimer = Math.max(.3, 1.15 - this.wave * .08); } }
+    if (this.toSpawn > 0) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) {
+      const available=this.activePortals.filter(p=>p.openedAt<=this.time);
+      if(available.length){this.spawnEnemy();this.spawnTimer=Math.max(.3,1.15-this.wave*.08);}
+      else this.spawnTimer=.1;
+    } }
     this.navigation.update(this.player, this.time);
     for (const e of this.enemies) {
       e.aimHeight ??= e.elite ? 1.35 : 1.15;
@@ -385,7 +419,7 @@ export class ArenaGame {
           e.patrolTimer=1.25+this.random()*2.6;
           e.patrolAngle=(e.patrolAngle||0)+(this.random()-.5)*2.1;
         }
-        const homeX=PORTAL.x,homeZ=PORTAL.z+4;
+        const homeX=e.homeX??PORTAL.x,homeZ=(e.homeZ??PORTAL.z)+4;
         const offsetX=e.x-homeX,offsetZ=e.z-homeZ;
         if(Math.hypot(offsetX,offsetZ)>17)e.patrolAngle=Math.atan2(-offsetX,-offsetZ);
         destinationX=e.x+Math.sin(e.patrolAngle||0)*5;
@@ -469,5 +503,5 @@ export class ArenaGame {
   snapshot() { return { equipment: this.equipment, state: this.state, player: { ...this.player }, wave: this.wave, maxLevel: MAX_LEVEL, score: this.score, kills: this.kills, time: this.time,
     weaponIndex: this.weaponIndex, weapon: { ...this.weapon }, unlockedWeapons: this.unlockedWeapons.map(w => w.id),weaponOffers:this.weaponOffers.map(offer=>({...offer})), ammo: this.ammo[this.weaponIndex],
     reloadRemaining: this.reloadRemaining, charge: this.charge, regenerating: this.regenerating, regenIn: Math.max(0, REGEN_DELAY - (this.time - this.lastDamage)),
-    toSpawn: this.toSpawn, nextWave: this.nextWave, enemies: this.enemies.map(e => ({ ...e })), bullets: this.bullets.map(b => ({ ...b })) }; }
+    toSpawn: this.toSpawn, nextWave: this.nextWave, activePortals:this.activePortals.map(p=>({...p})), enemies: this.enemies.map(e => ({ ...e })), bullets: this.bullets.map(b => ({ ...b })) }; }
 }
