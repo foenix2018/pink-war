@@ -91,18 +91,30 @@ export function createGlove(m, { mirror = false, sleeve = true, forearm } = {}) 
     for(const key of ['trigger','grip','reload'])pose[key]+=(Math.max(0,Math.min(1,Number({trigger,grip,reload}[key])||0))-pose[key])*blend;
     const {trigger:t,grip:g,reload:r}=pose;
     const curlSign=sign*handedness;
-    // Subtle phase offsets stop the three gripping fingers bending in robotic unison.
+    // Independent MCP + PIP flexion, anchored at the real grip finger rows.
+    // X curls the fingers vertically; Y wraps the fingertips around the front of the grip.
     for(let i=0;i<3;i++){
-      const closure=.38+g*.48+r*.12;
-      digits[i].rotation.x=-curlSign*(.11+closure*(1-i*.09));
-      digits[i].userData.knuckle.rotation.x=-curlSign*(.24+closure*.72*(1-i*.08));
-      digits[i].rotation.y=curlSign*(i-1)*.035;
+      const closure=.39+g*.39+r*.08, stagger=1-i*.10;
+      const finger=digits[i],middle=finger.userData.knuckle;
+      finger.rotation.x=-curlSign*(.13+closure*.54*stagger);
+      middle.rotation.x=-curlSign*(.17+closure*.53*(1-i*.07));
+      finger.rotation.y=curlSign*(-.085+closure*.21)*(1-i*.065);
+      middle.rotation.y=curlSign*(-.08+closure*.33);
+      finger.rotation.z=curlSign*(i-1)*.025;
     }
-    digits[3].rotation.x=-curlSign*(.03+t*.20+r*.24);
-    digits[3].userData.knuckle.rotation.x=-curlSign*(.08+t*.72+r*.12);
-    digits[4].rotation.x=curlSign*(.08+g*.12+r*.22);
-    digits[4].userData.knuckle.rotation.x=curlSign*(.18+g*.22+r*.16);
-    group.rotation.z=curlSign*r*.12;group.position.set(basePosition.x,basePosition.y+r*.018,basePosition.z-r*.03);
+    // Index stays directly on the trigger: the distal knuckle, not the entire palm, pulls it.
+    const index=digits[3],indexKnuckle=index.userData.knuckle;
+    index.rotation.x=-curlSign*(.09+t*.12+r*.045);
+    index.rotation.y=-curlSign*(.06+t*.13);
+    indexKnuckle.rotation.x=-curlSign*(.16+t*.64+r*.06);
+    indexKnuckle.rotation.y=-curlSign*(.04+t*.18);
+    const thumb=digits[4],thumbKnuckle=thumb.userData.knuckle;
+    thumb.rotation.x=curlSign*(.10+g*.12+r*.07);
+    thumb.rotation.y=curlSign*(.06+g*.06);
+    thumbKnuckle.rotation.x=curlSign*(.21+g*.20+r*.08);
+    thumbKnuckle.rotation.y=curlSign*(.1+g*.06);
+    group.rotation.z=curlSign*r*.09;
+    group.position.set(basePosition.x,basePosition.y+r*.014,basePosition.z-r*.02);
   };
   group.userData.fingerJoints=digits.map(d=>d.userData.knuckle);
   if (mirror) group.scale.x = -1;
