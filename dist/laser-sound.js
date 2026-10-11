@@ -8,6 +8,23 @@ export const LASER_PROFILES=Object.freeze({
   thorn:Object.freeze({pitch:1220,end:110,duration:.31,body:155,thump:55,noise:.42,volume:.112,decay:.34}),
   nova:Object.freeze({pitch:930,end:62,duration:.51,body:100,thump:37,noise:.53,volume:.122,decay:.56})
 });
+
+// Real CC0 WAV by teckpow, OpenGameArt (dist/audio/laser-shooting-cc0.wav).
+// Synthesized layers remain as fallbacks and provide distinct weapon signatures.
+const liveSamples=new WeakMap();
+export const REAL_LASER_SAMPLE='audio/laser-shooting-cc0.wav';
+export async function loadRealLaserSample(ctx,load=globalThis.fetch){
+ if(!ctx||!load)return false;
+ let item=liveSamples.get(ctx);
+ if(item)return item.then(()=>true).catch(()=>false);
+ item=Promise.resolve().then(()=>load(REAL_LASER_SAMPLE))
+  .then(r=>{if(!r.ok)throw Error('Laser sample missing');return r.arrayBuffer();})
+  .then(bytes=>ctx.decodeAudioData(bytes)).then(buffer=>{liveSamples.set(ctx,Promise.resolve(buffer));return buffer;})
+  .catch(error=>{liveSamples.delete(ctx);throw error;});
+ liveSamples.set(ctx,item);
+ return item.then(()=>true).catch(()=>false);
+}
+
 const noiseCache=new WeakMap();
 function noiseBuffer(ctx){
   if(noiseCache.has(ctx))return noiseCache.get(ctx);
@@ -37,6 +54,18 @@ function oscillator(ctx,output,time,wave,start,end,length,amp){
 export function playLaserShot(ctx,weapon='r9',power=1){
   if(!ctx||ctx.state!=='running')return false;
   const p=LASER_PROFILES[weapon]||LASER_PROFILES.r9;
+  const samplePromise=liveSamples.get(ctx);
+  if(samplePromise)samplePromise.then(buffer=>{
+    if(ctx.state!=='running')return;
+    const sample=ctx.createBufferSource(),gain=ctx.createGain();
+    sample.buffer=buffer;
+    const rates={r9:1,bloom:.85,petal:1.38,thorn:.65,nova:.5};
+    sample.playbackRate.value=rates[weapon]||1;
+    gain.gain.value=Math.min(.15,.068*power);
+    sample.connect(gain);gain.connect(ctx.destination);
+    sample.start();
+    sample.onended=()=>{sample.disconnect();gain.disconnect();};
+  }).catch(()=>{});
   const strength=Math.max(.25,Math.min(1,Number(power)||1));
   const t=ctx.currentTime+.003;
   const output=ctx.createGain(),filter=ctx.createBiquadFilter(),compress=ctx.createDynamicsCompressor();
