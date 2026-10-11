@@ -69,3 +69,7 @@ h1{white-space:nowrap;font-size:clamp(64px,6vw,94px)}.brand-mark,.unit-mark{font
  .fire-row{gap:7px}
  .jump-control{width:34px;height:34px}
 }
+
+/* V3.7: keep the launch CTA clear of the bottom sector statistics at laptop resolutions. */
+@media (min-width:901px) and (max-height:800px){.intro{top:9%}}
+.lobby-bottom{pointer-events:none}
