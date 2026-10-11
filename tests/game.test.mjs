@@ -215,11 +215,22 @@ test('a complete campaign reaches victory after 185 real projectile kills and fi
   g.reset();assert.equal(g.snapshot().equipment.level,1);assert.deepEqual(g.snapshot().equipment.unlocked,['aube']);
 });
 
-test('monsters flank protective walls rather than remaining stuck forever', () => {
-  const g=new ArenaGame(COVER_WALLS,()=>.5);g.nextWave=-1;g.wave=1;g.toSpawn=1;g.spawned=0;
-  g.player.x=-5.6;g.player.z=20;g.spawnEnemy();advance(g,4);
-  assert.equal(g.player.hp,100); // Safe while the monster is still on the other side.
-  advance(g,25);assert.ok(g.player.hp<100);
-  assert.ok(Math.hypot(g.enemies[0].x-g.player.x,g.enemies[0].z-g.player.z)<2);
+test('monsters cannot see through solid cover, and search temporarily after being spotted',()=>{
+  const wall={x:0,z:8,hx:7,hz:1,height:6};
+  const g=new ArenaGame([wall],()=>.5);g.nextWave=999;g.wave=4;
+  g.player.x=0;g.player.z=16;
+  g.enemies=[{...enemy(99,-2),form:'stalker',speed:4,aimHeight:1.15,
+    awareness:'patrol',patrolAngle:0,patrolTimer:1,attackTimer:0,
+    lastSeenAt:-999,alertedUntil:0,lastKnownX:0,lastKnownZ:-2,
+    radius:.8,hitRadius:1,stunnedUntil:0,limpUntil:0,elevation:0}];
+  advance(g,5);
+  assert.equal(g.player.hp,100,'wall completely blocks sight and firing');
+  assert.equal(g.enemies[0].awareness,'patrol','hidden player is not automatically tracked');
+  const foe=g.enemies[0];g.player.x=foe.x+1;g.player.z=foe.z+3;
+  foe.yaw=Math.atan2(g.player.x-foe.x,g.player.z-foe.z);
+  g.step(.02);assert.equal(foe.awareness,'engaged','enemy recognizes a visible player');
+  g.player.x=0;g.player.z=16;g.step(.02);
+  assert.equal(foe.awareness,'search','enemy investigates last visible location');
+  advance(g,5);assert.equal(foe.awareness,'patrol','searching eventually ends');
   g.reset();assert.equal(g.navigation.refreshAt,-1);
 });
