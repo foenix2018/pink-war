@@ -3,7 +3,7 @@ import { createScene } from './scene.js';
 import { VRController } from './vr.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
 import { characterForId } from './characters.js';
-import { playLaserShot } from './laser-sound.js';
+import { playLaserShot,loadRealLaserSample } from './laser-sound.js';
 import { createMusicBed } from './music.js';
 
 const $ = id => document.getElementById(id);
@@ -27,9 +27,11 @@ const timeString = time => `${String(Math.floor(time / 60)).padStart(2, '0')}:${
 
 function audioReady() {
   musicBed.setEnabled(settings.music!==false);
+  if(settings.sound&&audioContext?.state==='running')loadRealLaserSample(audioContext).catch(()=>{});
   if(phase==='playing')musicBed.start();
   if (!settings.sound) return;
-  try { audioContext ||= new (window.AudioContext || window.webkitAudioContext)(); if (audioContext.state === 'suspended') audioContext.resume().catch(() => {}); } catch {}
+  try { audioContext ||= new (window.AudioContext || window.webkitAudioContext)(); if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
+    loadRealLaserSample(audioContext).catch(()=>{}); } catch {}
 }
 function tone(frequency, end, duration = .1, volume = .055, type = 'triangle', delay = 0) {
   if (!settings.sound || !audioContext || audioContext.state !== 'running') return;
