@@ -281,7 +281,7 @@ export class ArenaGame {
     const aimHeight = form === 'scuttler' ? .88 : form === 'seer' ? 1.38 : form === 'brute' ? 1.42 : 1.15;
     const enemy = { id: this.nextId++, x, z, elevation: walkSurfaceHeight(x, z),
       hp: elite ? 95 + this.wave * 25 : 42 + this.wave * 14, elite, ranged, form, aimHeight,
-      speed: Math.max(1.5,2.85 - (this.wave-1)*.09 + (elite ? -.16 : form === 'scuttler' ? .23 : form === 'seer' ? .03 : form === 'brute' ? -.15 : 0)),
+      speed: Math.max(1.5,2.85 - (this.wave-1)*.09 + (elite ? -.018 : form === 'scuttler' ? .025 : form === 'seer' ? .012 : form === 'brute' ? -.015 : 0)),
       tier: Math.max(1,Math.ceil(this.wave/2)),limpUntil:0,stunnedUntil:0,
       homeX:site.x,homeZ:site.z,portalId:site.id,
       radius: elite ? 1.05 : form === 'scuttler' ? .86 : form === 'brute' ? .95 : .8,
