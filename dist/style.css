@@ -109,3 +109,8 @@ h1{white-space:nowrap;font-size:clamp(64px,6vw,94px)}.brand-mark,.unit-mark{font
 .view-switch button,.view-switch button.selected{width:100%;min-width:0;padding:10px 6px;white-space:nowrap}
 .view-switch svg{flex-shrink:0}
 @media(max-width:900px) and (orientation:portrait){.view-switch button,.view-switch button.selected{font-size:12px;gap:7px}}
+
+/* Pink War — combat crouched, including small devices */
+.crouch-control{background:rgba(25,38,50,.78);color:#d9eef9;border-color:#709dbf;touch-action:manipulation}
+.crouch-control.active,.crouch-control[aria-pressed="true"]{background:#557d9d;color:white;box-shadow:0 0 12px #80bdff66}
+@media(max-width:900px) and (orientation:landscape){.fire-row{gap:4px}.crouch-control,.jump-control{width:31px;height:32px;flex:0 0 31px}.fire-area{min-width:175px}}
