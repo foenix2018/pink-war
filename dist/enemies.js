@@ -1,5 +1,5 @@
 import * as T from './vendor/three.webgpu.min.js';
-import { Assembly, loft, armorPanel, matrix } from './geo.js';
+import { Assembly, loft, armorPanel, matrix, bevelBox } from './geo.js';
 import { addClosedHelmet } from './helmet.js';
 
 const stalkerTorso = loft([[.83,.24,.19],[.99,.28,.22],[1.16,.34,.25],[1.39,.40,.27],[1.57,.42,.26],[1.70,.30,.19],[1.78,.12,.11]],18);
@@ -14,12 +14,19 @@ const hand = loft([[-.16,.06,.037],[-.11,.083,.046],[-.025,.071,.039],[.02,.04,.
 const ring = new T.TorusGeometry(.12,.011,6,18);
 const sensor = new T.SphereGeometry(1,12,8);
 
+// Reduced bevel subdivisions preserve the hostile silhouettes while staying within the mobile triangle budget.
+class EnemyAssembly extends Assembly {
+  box(material,size,position=[0,0,0],rotation=[0,0,0],radius=.006,shadow=true,level=1,maxLevel=10){
+    return this.add(bevelBox(size[0],size[1],size[2],radius,1),material,matrix(position,rotation),shadow,level,maxLevel);
+  }
+}
+
 // Each alien chassis is assembled once, merged by material, and shared by every matching enemy.
 // The four silhouettes keep the cost close to the original six meshes per creature.
 export function createEnemyFactory(mats) {
   const cache=new Map();
   function bipedLeg(armor) {
-    const group=new T.Group(),leg=new Assembly();
+    const group=new T.Group(),leg=new EnemyAssembly();
     leg.add(thigh,armor);leg.add(calf,armor);
     leg.ball(armor,[0,-.395,-.007],[.137,.127,.131]);
     leg.add(shin,armor,matrix([0,-.605,-.119]));
@@ -31,7 +38,7 @@ export function createEnemyFactory(mats) {
   }
   function template(elite,ranged,form) {
     const key=`${form}:${elite?1:0}:${ranged?1:0}`;if(cache.has(key))return cache.get(key);
-    const body=new T.Group(),a=new Assembly(),armor=elite?mats.monsterElite:mats.monster,dark=mats.monsterFace;
+    const body=new T.Group(),a=new EnemyAssembly(),armor=elite?mats.monsterElite:mats.monster,dark=mats.monsterFace;
     const glow=ranged?mats.cyan:form==='scuttler'?mats.rose:form==='seer'?mats.pale:mats.violet;
     const crawler=form==='scuttler';
     let legMeshes=[];
@@ -57,7 +64,7 @@ export function createEnemyFactory(mats) {
       a.add(sensor,glow,matrix([0,.77,-.642],[0,0,0],[.052,.052,.018]),false);
 
       // Six jointed legs flare out from the low shell, giving the crawler a wide silhouette.
-      const legs=new Assembly(),legGroup=new T.Group();
+      const legs=new EnemyAssembly(),legGroup=new T.Group();
       for(const side of [-1,1]) for(const [row,z] of [.28,-.02,-.32].entries()) {
         const hip=[side*.27,.69,z],knee=[side*(row===1?.53:.59),.43,z+(row-1)*.17],foot=[side*.73,.075,z+(row-1)*.31];
         legs.limb(dark,hip,knee,.075,.053);legs.ball(armor,knee,[.085,.076,.082]);
@@ -115,7 +122,7 @@ export function createEnemyFactory(mats) {
           a.limb(armor,[s*.51,1.08,.17],[s*.48,.91,.32],.023,.005,false);
         }
       }
-      const helmet=new Assembly();
+      const helmet=new EnemyAssembly();
       addClosedHelmet(helmet,{armor,trim:armor,visor:dark,fabric:dark,glow,metal:armor},{scale:form==='brute'?1.2:form==='seer'?1.04:1.13,hostile:true});
       for(const item of helmet.items)a.add(item.geometry,item.material,matrix([0,1.865,-.032]),item.shadow);
       // Three sealed sensor lamps replace human eyes and define each alien's faceplate.
