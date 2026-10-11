@@ -73,3 +73,28 @@ h1{white-space:nowrap;font-size:clamp(64px,6vw,94px)}.brand-mark,.unit-mark{font
 /* V3.7: keep the launch CTA clear of the bottom sector statistics at laptop resolutions. */
 @media (min-width:901px) and (max-height:800px){.intro{top:9%}}
 .lobby-bottom{pointer-events:none}
+
+/* Pink War 3.8 — simpler, legible mobile lobby. Original button IDs and actions preserved. */
+.intro{z-index:6}
+.character-choice-heading,.play-note,.description,.scene-caption,.character-label{display:none!important}
+.character-choice,.view-choice{max-width:390px;margin-bottom:12px}
+.character-cards{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:4px;border:1px solid var(--border);border-radius:16px;background:rgba(17,17,28,.70)}
+.character-card,.character-card.selected{height:47px;min-height:47px;display:flex;align-items:center;justify-content:center;border:0;border-radius:12px;background:transparent;box-shadow:none;padding:0}
+.character-card.selected{background:color-mix(in srgb,var(--rose) 24%,transparent);outline:1px solid var(--rose)}
+.character-switch-label{font:700 15px Arial,sans-serif;letter-spacing:2px;color:var(--paper)}
+.character-card.selected .character-switch-label{color:var(--rose)}
+.view-choice>.field-label{display:none}
+.view-switch{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border:1px solid var(--border);border-radius:16px;max-width:390px;background:rgba(17,17,28,.70)}
+.view-switch button,.view-switch button.selected{border-radius:12px;font-size:13px;min-height:42px}
+.lobby-bottom{pointer-events:none}
+.lobby-bottom .bottom-meta{border-top:0;opacity:.68}
+@media (min-width:901px){.intro{top:19%;max-width:440px}.character-choice,.view-choice{width:365px}}
+@media (max-width:900px) and (orientation:portrait){
+ .intro{bottom:max(60px,env(safe-area-inset-bottom));top:auto;left:7%;width:86%;max-width:none}
+ .intro h1{font-size:clamp(38px,9vw,64px);margin:8px 0}
+ .intro .tagline{margin-bottom:18px}
+ .character-choice,.view-choice{width:100%;max-width:none;margin-bottom:10px}
+ .character-card,.character-card.selected{height:48px;min-height:48px}
+ .play-button{height:52px;margin-top:8px}
+ .lobby-bottom{display:none}
+}
