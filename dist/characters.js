@@ -6,14 +6,14 @@ const blue = {
 };
 export const CHARACTERS = Object.freeze([
   Object.freeze({id:'lylu',name:'LYLU',masculine:true,universe:'blue',universeName:'UNIVERS BLEU',colorWord:'bleu',accent:'#79bbff',finish:'titane',palette:Object.freeze(blue),
-    armor:Object.freeze({rose:0x347fed,pearl:0xeaf4ff,dark:0x111a28,gold:0xc3d7ed,steel:0x637c99,suit:0x141c28,skin:0xd8a78d,hair:0x253345,visor:0x07172a,glow:0x45a5ff,pale:0xf1f8ff,cyan:0x8ee7f2}),
+    armor:Object.freeze({rose:0x347fed,pearl:0xeaf4ff,dark:0x111a28,gold:0xc3d7ed,steel:0x637c99,suit:0x141c28,skin:0xd8a78d,hair:0x253345,visor:0x07172a,lens:0x175db0,glow:0x45a5ff,pale:0xf1f8ff,cyan:0x8ee7f2}),
     world:Object.freeze({background:0x192b45,fog:0x2b415c,ground:0x1b2b3d,tile:0x2c4057,structure:0x2b3d54,lightStone:0x526f89,armor:0x387cc0,armorLight:0xb2d4f3,suit:0x15263b,hair:0x253345,visor:0x091d35,monster:0x293e62,monsterElite:0x31597a,monsterFace:0x112338,cyan:0x9fe6ef,moon:0xbbdcf2,moonRing:0x7cbaed,skyLight:0xbad9f5,groundLight:0x1a3151,sun:0xd8ebff,rim:0x548bdf,fence:0x69b6ff,
       sky:['#071329','#152c49','#38689a','#81b4d8','#2d5179','#142b44'],
       portal:['rgba(231,247,255,.86)','rgba(124,196,255,.72)','rgba(66,107,222,.47)','rgba(83,161,255,.36)','rgba(181,224,255,.85)','rgba(74,149,255,0)'],portalLine:'160,215,255',star:'220,238,255'}),
     radar:Object.freeze({background:'#15253b',frame:'#547391',grid:'#243c57',wall:'#6e89a5',elite:'#76c9ff',enemy:'#a7caff',player:'#edf8ff'}),
     outfitNames:Object.freeze({4:'Éclaireur',7:'Atlas',8:'Azur',9:'Séraphin',10:'Impérateur'})}),
   Object.freeze({id:'ghju',name:'GHJU',masculine:false,universe:'pink',universeName:'UNIVERS ROSE',colorWord:'rose',accent:'#ff80b2',finish:'champagne',palette:Object.freeze(pink),
-    armor:Object.freeze({rose:0xf04494,pearl:0xffedf5,dark:0x17141e,gold:0xf0d7b6,steel:0x807986,suit:0x1c1822,skin:0xe5adab,hair:0x8f3e70,visor:0x180e1b,glow:0xff53a6,pale:0xfff6fa,cyan:0x9ce7de}),
+    armor:Object.freeze({rose:0xf04494,pearl:0xffedf5,dark:0x17141e,gold:0xf0d7b6,steel:0x807986,suit:0x1c1822,skin:0xe5adab,hair:0x8f3e70,visor:0x180e1b,lens:0x9e185d,glow:0xff53a6,pale:0xfff6fa,cyan:0x9ce7de}),
     world:Object.freeze({background:0x302439,fog:0x423042,ground:0x292731,tile:0x33303d,structure:0x393442,lightStone:0x796673,armor:0xd96799,armorLight:0xf3b1cc,suit:0x292235,hair:0xf1a5cb,visor:0x251d39,monster:0x43345b,monsterElite:0x63415a,monsterFace:0x211d31,cyan:0x9fe6da,moon:0xe3b6c6,moonRing:0xc794bc,skyLight:0xcfb7db,groundLight:0x442737,sun:0xffd7da,rim:0x996acf,fence:0xff77ac,
       sky:['#0d1025','#292438','#765065','#d1909f','#5c4158','#282235'],
       portal:['rgba(255,239,250,.86)','rgba(250,139,201,.72)','rgba(163,80,197,.47)','rgba(255,112,188,.36)','rgba(255,194,225,.85)','rgba(255,91,174,0)'],portalLine:'255,198,234',star:'255,231,241'}),
