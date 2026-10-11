@@ -11,7 +11,7 @@ export const LASER_PROFILES=Object.freeze({
 
 // Real CC0 WAV by teckpow, OpenGameArt (dist/audio/laser-shooting-cc0.wav).
 // Synthesized layers remain as fallbacks and provide distinct weapon signatures.
-const liveSamples=new WeakMap();
+const liveSamples=new WeakMap(),decodedSamples=new WeakMap();
 export const REAL_LASER_SAMPLE='audio/laser-shooting-cc0.wav';
 export async function loadRealLaserSample(ctx,load=globalThis.fetch){
  if(!ctx||!load)return false;
@@ -19,7 +19,7 @@ export async function loadRealLaserSample(ctx,load=globalThis.fetch){
  if(item)return item.then(()=>true).catch(()=>false);
  item=Promise.resolve().then(()=>load(REAL_LASER_SAMPLE))
   .then(r=>{if(!r.ok)throw Error('Laser sample missing');return r.arrayBuffer();})
-  .then(bytes=>ctx.decodeAudioData(bytes)).then(buffer=>{liveSamples.set(ctx,Promise.resolve(buffer));return buffer;})
+  .then(bytes=>ctx.decodeAudioData(bytes)).then(buffer=>{decodedSamples.set(ctx,buffer);liveSamples.set(ctx,Promise.resolve(buffer));return buffer;})
   .catch(error=>{liveSamples.delete(ctx);throw error;});
  liveSamples.set(ctx,item);
  return item.then(()=>true).catch(()=>false);
@@ -54,22 +54,24 @@ function oscillator(ctx,output,time,wave,start,end,length,amp){
 export function playLaserShot(ctx,weapon='r9',power=1){
   if(!ctx||ctx.state!=='running')return false;
   const p=LASER_PROFILES[weapon]||LASER_PROFILES.r9;
-  const samplePromise=liveSamples.get(ctx);
-  if(samplePromise)samplePromise.then(buffer=>{
-    if(ctx.state!=='running')return;
-    const sample=ctx.createBufferSource(),gain=ctx.createGain();
-    sample.buffer=buffer;
-    const rates={r9:1,bloom:.85,petal:1.38,thorn:.65,nova:.5};
-    sample.playbackRate.value=rates[weapon]||1;
-    gain.gain.value=Math.min(.15,.068*power);
-    sample.connect(gain);gain.connect(ctx.destination);
-    sample.start();
-    sample.onended=()=>{sample.disconnect();gain.disconnect();};
-  }).catch(()=>{});
+  // The downloaded CC0 sample is played immediately, not deferred to a promise after the shot.
+  const real=decodedSamples.get(ctx);
+  if(real){
+    const sample=ctx.createBufferSource(),gain=ctx.createGain(),compressor=ctx.createDynamicsCompressor();
+    sample.buffer=real;
+    const rates={r9:1.12,bloom:.92,petal:1.24,thorn:.74,nova:.56};
+    sample.playbackRate.value=(rates[weapon]||1)*(1+.015*Math.sin(ctx.currentTime*97));
+    const peak={r9:.16,bloom:.115,petal:.17,thorn:.20,nova:.23}[weapon]||.16;
+    gain.gain.value=peak*Math.max(.3,Math.min(1,Number(power)||1));
+    compressor.threshold.value=-13;compressor.ratio.value=2.7;
+    sample.connect(gain);gain.connect(compressor);compressor.connect(ctx.destination);
+    sample.start(ctx.currentTime);
+    sample.onended=()=>{sample.disconnect();gain.disconnect();compressor.disconnect();};
+  }
   const strength=Math.max(.25,Math.min(1,Number(power)||1));
   const t=ctx.currentTime+.003;
   const output=ctx.createGain(),filter=ctx.createBiquadFilter(),compress=ctx.createDynamicsCompressor();
-  output.gain.value=.5;
+  output.gain.value=.65;
   filter.type='lowpass';filter.frequency.setValueAtTime(9000,t);
   filter.frequency.exponentialRampToValueAtTime(1350,t+p.decay);
   compress.threshold.value=-18;compress.knee.value=12;compress.ratio.value=3;
@@ -83,7 +85,9 @@ export function playLaserShot(ctx,weapon='r9',power=1){
   const detune=1+Math.sin(t*4217)*.009;
   oscillator(ctx,tail,t,'sawtooth',p.pitch*detune,p.end,p.duration,p.volume*strength*.63);
   oscillator(ctx,tail,t+.008,'sine',p.body*2.35,p.body*.83,p.duration*.83,p.volume*strength*.9);
-  oscillator(ctx,tail,t,'triangle',p.thump*2.8,p.thump,p.duration*.72,p.volume*strength*.7);
+  oscillator(ctx,tail,t,'triangle',p.thump*2.8,p.thump,p.duration*.72,p.volume*strength*.86);
+  // A short, physical recoil pulse under the upper-frequency laser discharge.
+  oscillator(ctx,tail,t,'sine',160,48,Math.min(.145,p.duration*.75),p.volume*strength*.84);
   if(weapon==='petal'||weapon==='nova')oscillator(ctx,tail,t+.018,'sine',p.pitch*.64,p.end*.58,p.decay*.8,p.volume*strength*.34);
   const noise=ctx.createBufferSource(),band=ctx.createBiquadFilter(),ng=ctx.createGain();
   noise.buffer=noiseBuffer(ctx);
@@ -94,7 +98,7 @@ export function playLaserShot(ctx,weapon='r9',power=1){
   noise.start(t);noise.stop(t+Math.min(.18,p.duration+.015));
   noise.onended=()=>{noise.disconnect();band.disconnect();ng.disconnect();};
   // A quiet 'capacitor' click gives the start of each shot definition in a busy battle mix.
-  oscillator(ctx,tail,t,'square',4700,850,.018,p.volume*.15);
+  oscillator(ctx,tail,t,'square',4700,850,.018,p.volume*.24);
   // End-of-voice cleanup happens on the longest oscillator, without timers.
   const cleanup=ctx.createOscillator();cleanup.frequency.value=20;const silent=ctx.createGain();silent.gain.value=0;
   cleanup.connect(silent);silent.connect(output);cleanup.start(stop);cleanup.stop(stop+.01);
