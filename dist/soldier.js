@@ -213,7 +213,7 @@ export function createSoldier(kit, createGun, profileInfo) {
   // ----------------------------------------------------------------- sealed helmet
   {
     const asm=new Assembly();assemblies.push({asm,bone:head});
-    addClosedHelmet(asm,{armor:m.rose,trim:m.pearl,visor:m.visor,fabric:m.suit,glow:m.glow,metal:m.steel},{scale:masculine?.76:.74});
+    addClosedHelmet(asm,{armor:m.rose,trim:m.pearl,visor:m.visor,lens:m.lens,fabric:m.suit,glow:m.glow,metal:m.steel},{scale:masculine?.76:.74});
     const {plate,sphere,link}=builder(head);
     // Command crest follows the shell rather than extending it into a large crown.
     for(const s of [-1,0,1]){
