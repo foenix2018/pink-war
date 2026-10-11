@@ -41,6 +41,10 @@ const UPPER = .31, FORE = .35, CARRY = 1.2;
 // unlocks them; changing level re-merges the few meshes of each bone instead of drawing hundreds of instances.
 export function createSoldier(kit, createGun, profileInfo) {
   const masculine=!!profileInfo?.masculine, side=masculine?.257:.243, width=masculine?1.05:1.015;
+  // Heights are measured from the boots to the top of the suit, including antennae.
+  const measuredUnscaledHeight=masculine?1.9728206886417337:1.9628380986029441;
+  const targetHeight=masculine?1.80:1.70;
+  const heightScale=targetHeight/measuredUnscaledHeight;
   const root=new T.Group(),hips=new T.Group(),spine=new T.Group(),body=new T.Group(),rig=new T.Group(),head=new T.Group(),hair=new T.Group();
   root.name=profileInfo?.name||'GHJU';hips.name='Pelvis';spine.name='Spine';body.name='ChestPivot';rig.name='ArmorRig';
   hips.position.y=.97;spine.position.y=.03;rig.position.y=-1;
@@ -154,8 +158,16 @@ export function createSoldier(kit, createGun, profileInfo) {
     }
   }
   {
-    const {part}=builder(hips,-.97);
-    part(g.pelvis,m.suit,[0,0,0],[masculine?1.03:1.075,1,1]);
+    const {part,ell,plate}=builder(hips,-.97);
+    // Continuous, tapered anatomical pelvis bridges the two femur sockets.
+    // Hip shells do not float with the weapon or detach when the thigh rotates.
+    part(g.pelvis,m.suit,[0,0,0],[masculine?1.035:1.065,1,1]);
+    ell(m.suit,[0,.91,0],[masculine?.205:.224,.105,.135]);
+    ell(m.dark,[0,.973,-.09],[masculine?.19:.203,.069,.072]);
+    for(const side of [-1,1]){
+      ell(m.suit,[side*(masculine?.155:.165),.884,0],[.094,.098,.112]);
+      plate(m.dark,[side*.175,.963,-.038],[.085,.036,.09],1,[0,0,side*-.09]);
+    }
   }
   // ----------------------------------------------------------------- sealed helmet
   {
@@ -186,11 +198,12 @@ export function createSoldier(kit, createGun, profileInfo) {
   // ----------------------------------------------------------------- legs
   const legs=[],knees=[],feet=[];
   for(const s of [-1,1]){
-    const leg=new T.Group();leg.name=s<0?'LeftThigh':'RightThigh';leg.position.set(s*(masculine?.188:.181),0,0);leg.scale.set(1.01,1,1.015);hips.add(leg);legs.push(leg);
+    const leg=new T.Group();leg.name=s<0?'LeftThigh':'RightThigh';leg.position.set(s*(masculine?.155:.165),0,0);leg.scale.set(1.01,1,1.015);hips.add(leg);legs.push(leg);
     const shin=new T.Group();shin.name=s<0?'LeftShin':'RightShin';shin.position.set(0,-.425,0);shin.scale.set(1.01,1,1.02);leg.add(shin);knees.push(shin);
     {
       const {plate,sphere,link,part,ell}=builder(leg);
       part(loft([[-.405,.078,.076],[-.33,.093,.091],[-.21,.117,.11],[-.07,.121,.119],[-.025,.095,.086]],18),m.suit,[0,0,0],[1,1,1]);
+      ell(m.suit,[s*.002,-.061,-.025],[.099,.146,.11]);
       part(g.thigh,m.pearl,[s*.01,-.19,-.132],[1,1,1],1,[.08,0,s*-.05]);
       plate(m.rose,[s*.012,-.19,-.153],[.025,.235,.012],1,[.08,0,s*-.05]);
       plate(m.steel,[s*.015,-.095,-.159],[.104,.018,.013],1,[.08,0,s*-.05]);
@@ -358,6 +371,7 @@ export function createSoldier(kit, createGun, profileInfo) {
   };
   const soldierApi={
     root,hips,spine,body,rig,head,hair,legs,knees,feet,gun,arms,
+    targetHeight,heightScale,measuredUnscaledHeight,
     // Expose calculated joints for the lab; elbow/wrist are virtual IK pivots, not forearm origins.
     jointPositions(){
       root.updateWorldMatrix(true,true);
