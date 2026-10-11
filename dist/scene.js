@@ -121,6 +121,70 @@ export async function createScene(canvas, quality, forceWebGL = false, character
       batch(mats.rose, [b.x - b.hx - .02, 2.25, b.z], [.04, .07, b.hz * 1.8]);
     }
   }
+  // V3.7 — TECHNICAL ARENA: service yards, equipment and readable movement lanes.
+  // All decoration uses the existing instanced materials. Only solid, walk-blocking
+  // machinery goes into obstacles, so the enemy navigation grid stays consistent.
+  const freightUnits=[
+    [-62,-2,7.3,3,3.2],[-62,11,7.3,3,3.2],[-46,0,7.3,3,3.2],[-46,15,7.3,3,3.2],
+    [53,1,7.3,3,3.2],[70,1,7.3,3,3.2],[53,19,7.3,3,3.2],[70,19,7.3,3,3.2]
+  ];
+  for(const [x,z,w,h,d] of freightUnits){
+    solid(x,z,w,h,d,mats.dark);
+    batch(mats.steel,[x,h+.04,z],[w+.11,.08,d+.12]);
+    for(const side of [-1,1]){
+      batch(mats.steel,[x+side*w*.48,h*.5,z],[.085,h,d+.13]);
+      batch(mats.steel,[x,h*.5,z+side*d*.49],[w+.13,h,.075]);
+      for(let j=-3;j<=3;j++)batch(mats.lightStone,[x+j*w/8,h*.51,z+side*(d*.5+.045)],[.037,h*.78,.026]);
+      batch(mats.rose,[x,h*.75,z+side*(d*.5+.08)],[w*.34,.035,.018]);
+    }
+    for(let j=-2;j<=2;j++)batch(mats.steel,[x+j*w/6,h+.09,z],[.03,.02,d*.88]);
+  }
+  // Low steel parapets may be reached with a running jump (about 1 m high).
+  for(const [x,z,w,d] of [[-18,35,3.3,1.25],[17,44,3.5,1.25],[-36,48,3.4,1.3],[35,-45,3.8,1.2]]){
+    solid(x,z,w,1.0,d,mats.lightStone);
+    batch(mats.steel,[x,1.04,z],[w+.10,.09,d+.08]);
+    batch(mats.rose,[x,.78,z+d*.5+.025],[w*.8,.07,.03]);
+    for(let k=-1;k<=1;k++)batch(mats.dark,[x+k*w*.3,.47,z+d*.5+.035],[.055,.7,.025]);
+  }
+  // Generator banks / high-voltage cabinets: solid machinery with access aisles.
+  for(const [x,z,angle] of [[-26,-51,0],[-26,-61,0],[40,55,0],[55,55,0],[-75,64,0]]){
+    solid(x,z,5.2,2.35,2.8,mats.structure);
+    batch(mats.steel,[x,2.39,z],[5.5,.16,3.1]);
+    for(const side of [-1,1]){
+      batch(mats.lightStone,[x+side*2.62,1.2,z],[.09,2,2.4]);
+      for(let j=-2;j<=2;j++)batch(mats.dark,[x+side*2.68,.95,z+j*.38],[.035,1,.18]);
+    }
+    batch(mats.rose,[x,1.9,z+1.43],[2,.07,.03]);
+    batch(mats.white,[x,1.51,z+1.44],[.2,.24,.025]);
+  }
+  // Perimeter service conduit, heat exchangers, overhead cable trays and beacons.
+  for(const row of [-77,77]){
+    for(let x=-82;x<=82;x+=10){
+      batch(mats.steel,[x,2.5,row],[.16,5,.16]);
+      batch(mats.dark,[x,4.95,row],[.46,.22,.46]);
+      batch(mats.rose,[x,4.7,row],[.12,.18,.12]);
+      if(x<82)for(const offset of [-.19,.19])batch(mats.steel,[x+5,4.3,row+offset],[9.8,.065,.07]);
+    }
+  }
+  for(const [x,z] of [[-36,-51],[40,55],[74,-42]]){
+    // Offset supports make the ventilation runs recognisable even at low resolution.
+    for(let i=0;i<7;i++){
+      batch(mats.steel,[x+i*.52,1.4,z],[.42,.48,.65]);
+      batch(mats.dark,[x+i*.52,1.4,z+.35],[.33,.32,.05]);
+    }
+    batch(mats.lightStone,[x+1.55,1.8,z],[4.1,.12,.9]);
+  }
+  // Service-lane striping and technical ground pads; non-colliding geometry.
+  for(const x of [-84,-39,39,84]){
+    for(let z=-84;z<=84;z+=6){
+      batch(mats.tile,[x,.007,z],[.13,.012,2.6]);
+      if(z%12===0)batch(mats.rose,[x+1.2,.013,z],[.18,.012,1.1]);
+    }
+  }
+  for(const [x,z] of [[-30,-55],[50,55],[-55,4],[60,10]]){
+    for(let k=-2;k<=2;k++)batch(mats.lightStone,[x+k*.53,.018,z],[.20,.012,4.6]);
+    for(const side of [-1,1])batch(mats.rose,[x+side*3,.019,z],[.08,.015,5.3]);
+  }
   // A traversable service bridge: stepped approaches, a level deck, and guarded sides.
   const bridgeX = CATWALK.x, bridgeWidth = 5.8, stairCount = 12;
   const stairDepth = (CATWALK.end - CATWALK.landing) / stairCount, stairRise = CATWALK.height / stairCount;
