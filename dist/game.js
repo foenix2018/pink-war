@@ -1,4 +1,4 @@
-import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, clamp, segmentSphere, segmentBox } from './game-logic.js';
+import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, clamp, segmentSphere, segmentBox, traceEnemyHit } from './game-logic.js';
 import { createScene } from './scene.js';
 import { VRController } from './vr.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
@@ -17,7 +17,7 @@ let outfitReturn = 'lobby', previewLevel = 1, equipmentUntil = 0;
 let canvasPointer = null, lastDrag = null, audioContext = null;
 const move = { x: 0, y: 0, id: null }, look = { x: 0, y: 0, id: null };
 const keys = new Set(), firingPointers = new Set();
-let jumpQueued = false;
+let jumpQueued = false, pickupQueued = false;
 const persist = () => { try { localStorage.setItem('rosee-settings', JSON.stringify(settings)); } catch {} };
 const timeString = time => `${String(Math.floor(time / 60)).padStart(2, '0')}:${String(Math.floor(time % 60)).padStart(2, '0')}`;
 
@@ -84,7 +84,7 @@ for(const button of document.querySelectorAll('[data-character]'))button.onclick
 selectCharacter(character.id,false);
 
 function resetInput() {
-  keys.clear(); firingPointers.clear(); jumpQueued = false; canvasPointer = null; lastDrag = null;
+  keys.clear(); firingPointers.clear(); jumpQueued = false; pickupQueued = false; canvasPointer = null; lastDrag = null;
   for (const s of [move, look]) { s.x = 0; s.y = 0; s.id = null; }
   for (const id of ['move-stick', 'look-stick']) $(id).querySelector('.joystick-knob').style.transform = '';
   $('fire-button').classList.remove('firing');
@@ -107,6 +107,7 @@ function attachJoystick(id, state) {
 attachJoystick('move-stick', move); attachJoystick('look-stick', look);
 $('fire-button').addEventListener('pointerdown', e => { if (phase !== 'playing') return; e.preventDefault(); audioReady(); firingPointers.add(e.pointerId); try { e.target.closest('button').setPointerCapture(e.pointerId); } catch {} $('fire-button').classList.add('firing'); });
 for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) $('fire-button').addEventListener(type, e => { firingPointers.delete(e.pointerId); if (!firingPointers.size) $('fire-button').classList.remove('firing'); });
+$('pickup-button').addEventListener('click', () => { if(phase === 'playing')pickupQueued = true; });
 $('jump-button').addEventListener('pointerdown', e => { if (phase !== 'playing') return; e.preventDefault(); jumpQueued = true; });
 $('jump-button').addEventListener('click', e => { if (e.detail === 0 && phase === 'playing') jumpQueued = true; });
 
@@ -180,7 +181,7 @@ $('weapon-button').onclick = () => { if(phase==='playing') game.cycleWeapon(); }
 $('arsenal-button').onclick = () => {
   $('weapon-list').replaceChildren();
   WEAPONS.forEach((w,index) => {
-    const button = document.createElement('button'), available = w.level <= Math.max(1,game.wave);
+    const button = document.createElement('button'), available = game.ownedWeapons.has(index);
     button.className = 'weapon-card' + (game.weaponIndex===index ? ' selected' : ''); button.disabled = !available;
     button.innerHTML = `<span><strong>${w.name}</strong><small>${w.label} · ${w.capacity} charges${w.chargeTime?' · tir chargé':''}</small></span><b>${available?(game.weaponIndex===index?'ÉQUIPÉE':'ÉQUIPER'):`NIVEAU ${w.level}`}</b>`;
     button.onclick = () => { game.selectWeapon(index); world.setWeapon(game.weaponIndex); updateHud(); resume(); };
@@ -196,6 +197,7 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyV' && !e.repeat) selectView(view === 'fps' ? 'third' : 'fps');
   if (e.code === 'KeyR' && !e.repeat) game.reload();
   if (e.code === 'KeyE' && !e.repeat) game.cycleWeapon();
+  if (e.code === 'KeyF' && !e.repeat) pickupQueued = true;
   keys.add(e.code);
 });
 window.addEventListener('keyup', e => keys.delete(e.code));
@@ -254,8 +256,8 @@ function aim() {
   for (const box of world.obstacles) { const hit = segmentBox(camera.position, far, box); if (hit !== null && hit < nearest) { nearest = hit; target = camera.position.clone().lerp(far, hit); } }
   for (const enemy of game.enemies) {
     const center = { x: enemy.x, y: (enemy.elevation || 0) + (enemy.aimHeight ?? (enemy.elite ? 1.35 : 1.15)), z: enemy.z };
-    const hit = segmentSphere(camera.position, far, center, enemy.hitRadius ?? (enemy.elite ? 1.3 : 1.05));
-    if (hit !== null && hit < nearest) { nearest = hit; target = new T.Vector3(center.x, center.y, center.z); }
+    const hit = traceEnemyHit(camera.position,far,enemy);
+    if (hit && hit.t < nearest) { nearest = hit.t; target = camera.position.clone().lerp(far,hit.t); }
   }
   const direction = target.clone().sub(origin).normalize(); return { origin, direction };
 }
@@ -271,7 +273,8 @@ function handleEvents() {
       recoil = Math.min(.2, recoil + kick * (event.power ?? 1));
       flashTimer = .07; vr.haptic('shot', event.weapon); weaponShotSound(event.weapon, event.power);
     }
-    if (event.type === 'wave') { const unlocked=WEAPONS.find(w=>w.level===event.wave); announce(`NIVEAU ${String(event.wave).padStart(2, '0')} / ${MAX_LEVEL}`, unlocked && event.wave>1 ? `${unlocked.name} DÉBLOQUÉE · ${event.count} CRÉATURES` : `${event.count} CRÉATURES · LA BRÈCHE S’OUVRE`); tone(210, 420, .25, .065); tone(420, 630, .25, .06, 'triangle', .2); }
+    if (event.type === 'weapon-offer') { tone(360, 820, .45, .03, 'sine'); }
+    if (event.type === 'wave') { const offered=WEAPONS.find(w=>w.level===event.wave); announce(`NIVEAU ${String(event.wave).padStart(2, '0')} / ${MAX_LEVEL}`, offered && event.wave>1 ? `${offered.name} DISPONIBLE AU FAISCEAU · APPROCHEZ-VOUS` : `${event.count} CRÉATURES · LA BRÈCHE S’OUVRE`); tone(210, 420, .25, .065); tone(420, 630, .25, .06, 'triangle', .2); }
     if (event.type === 'equipment') { const equipment=equipmentForCharacter(event.level,character.id);world.setEquipment(event.level);$('equipment-unlock-title').textContent=`${equipment.name} · NIV. ${event.level}`;$('equipment-unlock-detail').textContent=equipment.addition;equipmentUntil=clock+4;$('equipment-unlock').hidden=false; }
     if (event.type === 'clear') { announce('NIVEAU TERMINÉ', '+ BONUS · LA BRÈCHE SE RECHARGE'); tone(420, 700, .25, .07); }
     if (event.type === 'weapon') { world.setWeapon(game.weaponIndex); vr.haptic('weapon'); tone(510, 760, .1, .03); }
@@ -281,7 +284,7 @@ function handleEvents() {
     if (event.type === 'reloaded') { vr.haptic('reloaded'); tone(520, 820, .1, .035); }
     if (event.type === 'spawn') world.burst(event.x, 1, event.z, world.palette.violet, 7);
     if (event.type === 'impact') world.burst(event.x, event.y, event.z, event.hostile?world.palette.violet:world.palette.rose, event.splash>0?22:event.enemy?7:3);
-    if (event.type === 'hit') { vr.haptic('hit'); const marker = $('hit-marker'); marker.classList.remove('hit'); void marker.offsetWidth; marker.classList.add('hit'); tone(300, 190, .06, .035); }
+    if (event.type === 'hit') { vr.haptic('hit'); if(event.zone==='head')tone(1300,680,.075,.032); const marker = $('hit-marker'); marker.classList.remove('hit'); void marker.offsetWidth; marker.classList.add('hit'); tone(300, 190, .06, .035); }
     if (event.type === 'kill') { vr.haptic('kill'); world.burst(event.x, event.y, event.z, world.palette.violet, 12); tone(130, 50, .15, .06, 'square'); }
     if (event.type === 'damage') { damageUntil = clock + .25; vr.haptic('damage'); tone(80, 35, .18, .08, 'triangle'); }
     if (event.type === 'over') gameOver(false);
@@ -308,6 +311,8 @@ function updateHud() {
   $('wave-label').textContent = `NIVEAU ${String(Math.max(1, game.wave)).padStart(2, '0')} / ${MAX_LEVEL}`;
   $('weapon-button').innerHTML = `${game.weapon.name} <span>⌄</span>`;
   $('weapon-button').disabled = game.unlockedWeapons.length < 2;
+  const nearby=game.nearbyWeapon();const pickup=$('pickup-button');
+  pickup.hidden=!nearby;pickup.textContent=nearby?`RÉCUPÉRER ${WEAPONS[nearby.index].name} · F / X`:'';
   $('ammo-label').textContent = game.ammo[game.weaponIndex];
   const reloading = game.reloadRemaining>0;
   document.querySelector('.fire-area').classList.toggle('reloading', reloading);
@@ -371,6 +376,7 @@ function frame(timestamp, xrFrame) {
     if(vr.mode==='xr')moveYaw=vr.movementYaw(facing);
     const jump = jumpQueued || vrInput.jump || keys.has('KeyJ'); jumpQueued = false;
     game.step(dt, { x, z, yaw: facing, moveYaw, sprint: vrInput.sprint || keys.has('ShiftLeft') || keys.has('ShiftRight'), jump });
+    if(pickupQueued||vrInput.pickup){game.collectWeapon();pickupQueued=false;}
     const moving = Math.hypot(x, z) > .1;
     world.sync(game, clock, dt); updateCamera();
     const firing = vr.mode==='xr' ? vrInput.fire : !!(firingPointers.size || keys.has('Space') || vrInput.fire);
