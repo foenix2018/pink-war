@@ -87,6 +87,7 @@ export function traceEnemyHit(start, end, enemy) {
     return t===null?null:{t,zone:'torso',multiplier:1};
   }
   const elite=enemy.elite?1.13:1;
+  const yaw=enemy.yaw||0,cos=Math.cos(yaw),sin=Math.sin(yaw);
   const crawl=enemy.form==='scuttler';
   const zones=crawl?[
     ['head',0,.85,-.44,.28,2.1],
@@ -100,7 +101,7 @@ export function traceEnemyHit(start, end, enemy) {
   ];
   let best=null;
   for(const [zone,ox,oy,oz,r,multiplier] of zones) {
-    const hit=segmentSphere(start,end,{x:enemy.x+ox*elite,y:height+oy*elite,z:enemy.z+oz*elite},r*elite);
+    const hit=segmentSphere(start,end,{x:enemy.x+(ox*cos+oz*sin)*elite,y:height+oy*elite,z:enemy.z+(-ox*sin+oz*cos)*elite},r*elite);
     if(hit!==null && (best===null || hit<best.t))best={t:hit,zone,multiplier};
   }
   return best;
@@ -349,6 +350,7 @@ export class ArenaGame {
         moveInArena(e, dx / norm * e.speed * dt * injury, dz / norm * e.speed * dt * injury, e.radius, this.obstacles);
       }
       e.elevation = walkSurfaceHeight(e.x, e.z);
+      e.yaw=Math.atan2(this.player.x-e.x,this.player.z-e.z)+Math.PI;
       if(e.stunnedUntil<=this.time)e.attackTimer -= dt;
       if (distance < 2 && visible && e.attackTimer <= 0) { e.attackTimer = .85; this.damage(e.elite ? 20 + this.wave : 10 + Math.floor(this.wave / 2)); }
       else if (e.ranged && visible && distance < 38 && e.attackTimer <= 0) {
