@@ -125,6 +125,21 @@ test('soldier arms reach the grip and the foregrip of every weapon', () => {
   }
 });
 
+test('both equipped avatars have calibrated human heights and aligned hip sockets',()=>{
+  for(const profileInfo of CHARACTERS){
+    const k=kit(),soldier=createSoldier(k,o=>buildGun({mats:mats(),gloves:k.gloves,sleeve:false,makeFlash:flash}),profileInfo);
+    soldier.root.scale.setScalar(soldier.heightScale);
+    soldier.animate(.1,false,0,0,0,.016);
+    const b=box(soldier.root),measured=b.max.y-b.min.y;
+    const desired=profileInfo.masculine?1.80:1.70;
+    assert.ok(Math.abs(measured-desired)<.016,profileInfo.id+' should be life-size');
+    const j=soldier.jointPositions();
+    assert.ok(Math.abs(j.leftHip.x+j.rightHip.x)<.012,'pelvis should be centered');
+    assert.ok(Math.abs(j.leftHip.x)<.19&&Math.abs(j.rightHip.x)<.19,'hip sockets should not float outside pelvis');
+    assert.ok(j.leftKnee.y<j.leftHip.y&&j.leftAnkle.y<j.leftKnee.y,'leg joints in anatomical order');
+  }
+});
+
 test('the soldier rig has planted, articulated steps and keeps both hands on the weapon while moving', () => {
   for (const profileInfo of CHARACTERS) {
     const k=kit(),soldier=createSoldier(k,o=>buildGun({mats:mats(),gloves:k.gloves,sleeve:false,makeFlash:flash}),profileInfo);
