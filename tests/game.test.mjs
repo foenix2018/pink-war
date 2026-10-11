@@ -82,12 +82,12 @@ test('contact damage ends the game, and reset starts a clean round', () => {
 });
 
 
-test('all ten levels have increasing counts, speed, health and ranged enemies', () => {
+test('all ten levels keep enemy counts while health increases and speed decreases', () => {
   assert.equal(MAX_LEVEL, 10); assert.deepEqual(Array.from({length:10},(_,i)=>levelCount(i+1)), [5,8,11,14,17,20,23,26,29,32]);
-  const g = new ArenaGame([],()=>.5); let previousHP=0, previousSpeed=0;
+  const g = new ArenaGame([],()=>.5); let previousHP=0, previousSpeed=Infinity;
   for(let level=1;level<=10;level++) {
     g.beginWave(); g.spawnEnemy(); const e=g.enemies.at(-1);
-    assert.ok(e.hp>previousHP); assert.ok(e.speed>previousSpeed); previousHP=e.hp;previousSpeed=e.speed;
+    assert.ok(e.hp>previousHP); assert.ok(e.speed<previousSpeed); previousHP=e.hp;previousSpeed=e.speed;
     g.spawnEnemy(); if(level>=4)assert.equal(g.enemies.at(-1).ranged,true);
     g.enemies=[]; g.toSpawn=0;
   }
