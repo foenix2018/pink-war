@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ArenaGame, ARENA_SIZE, segmentSphere, segmentBox, moveInArena, MAX_LEVEL, WEAPONS, COVER_WALLS, REGEN_DELAY, levelCount, traceEnemyHit } from '../dist/game-logic.js';
+import { ArenaGame, ARENA_SIZE, segmentSphere, segmentBox, moveInArena, MAX_LEVEL, WEAPONS, COVER_WALLS, REGEN_DELAY, levelCount, traceEnemyHit, PORTAL_SITES, chooseWavePortals } from '../dist/game-logic.js';
 
 const enemy = (id, z, x = 0) => ({ id, x, z, hp: 40, speed: 0, radius: .8, elite: false, attackTimer: 20, phase: 0 });
 const advance = (game, seconds, input = {}) => { for (let t = 0; t < seconds; t += .02) game.step(.02, input); };
@@ -81,6 +81,32 @@ test('contact damage ends the game, and reset starts a clean round', () => {
   const elapsed = g.time;g.step(.02);assert.equal(g.time, elapsed);g.reset();assert.equal(g.player.hp, 100);assert.equal(g.wave, 0);assert.equal(g.score, 0);assert.equal(g.enemies.length, 0);
 });
 
+
+test('random breach sites change across runs, avoid buildings and preserve enemy counts',()=>{
+  assert.ok(PORTAL_SITES.length>=10,'sectors cover the entire arena');
+  const obstacles=[{x:57,z:-13,hx:9,hz:10,height:10},{x:-72,z:63,hx:9,hz:7,height:10}];
+  const p={x:0,z:22};
+  const a=chooseWavePortals(obstacles,()=>.02,9,p,10);
+  const b=chooseWavePortals(obstacles,()=>.89,9,p,10);
+  assert.equal(a.length,3);assert.equal(b.length,3);
+  assert.notDeepEqual(a.map(v=>[v.x,v.z]),b.map(v=>[v.x,v.z]));
+  for(const site of [...a,...b]){
+    assert.ok(site.x>=-99&&site.x<=99&&site.z>=-99&&site.z<=99);
+    assert.ok(obstacles.every(w=>Math.abs(site.x-w.x)>w.hx+8||Math.abs(site.z-w.z)>w.hz+8));
+  }
+  const g=new ArenaGame(obstacles,()=>.5);
+  for(let level=1;level<=10;level++){
+    g.beginWave();
+    assert.equal(g.toSpawn,levelCount(level));
+    assert.equal(g.activePortals.length,level<3?1:level<6?2:3);
+    assert.ok(g.activePortals.every(site=>Number.isFinite(site.openedAt)));
+    for(let n=0;n<levelCount(level);n++)g.spawnEnemy();
+    assert.equal(g.toSpawn,0);
+    assert.equal(g.enemies.length,levelCount(level));
+    assert.ok(g.enemies.every(e=>g.activePortals.some(site=>site.id===e.portalId)));
+    g.enemies=[];
+  }
+});
 
 test('all ten levels keep enemy counts while health increases and speed decreases', () => {
   assert.equal(MAX_LEVEL, 10); assert.deepEqual(Array.from({length:10},(_,i)=>levelCount(i+1)), [5,8,11,14,17,20,23,26,29,32]);
