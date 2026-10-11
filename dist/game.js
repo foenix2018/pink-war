@@ -277,7 +277,7 @@ function announce(title, subtitle) {
 function handleEvents() {
   for (const event of game.drainEvents()) {
     if (event.type === 'shot') {
-      const kick = { r9: .095, bloom: .035, petal: .09, thorn: .12, nova: .15 }[event.weapon] ?? .09;
+      const kick = { r9: .12, bloom: .06, petal: .12, thorn: .16, nova: .19 }[event.weapon] ?? .09;
       recoil = Math.min(.2, recoil + kick * (event.power ?? 1));
       flashTimer = .07; vr.haptic('shot', event.weapon); weaponShotSound(event.weapon, event.power);
     }
