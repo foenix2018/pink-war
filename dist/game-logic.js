@@ -361,7 +361,8 @@ export class ArenaGame {
       const unobstructed=!this.blocked(eye,playerHead);
       // Patrol until visual contact. Buildings fully conceal the player;
       // approaching from behind a patrol has a narrower detection window.
-      const facingX=Math.sin(e.yaw??(e.patrolAngle||0)),facingZ=Math.cos(e.yaw??(e.patrolAngle||0));
+      const facing=e.yaw===undefined?(e.patrolAngle||0):e.yaw-Math.PI;
+      const facingX=Math.sin(facing),facingZ=Math.cos(facing);
       const directionDot=(facingX*dx+facingZ*dz)/horizontalDistance;
       const seen=unobstructed && horizontalDistance<(e.elite?50:38)
         && (horizontalDistance<5 || directionDot>-.28);
@@ -412,8 +413,8 @@ export class ArenaGame {
         moveInArena(e,dx/norm*e.speed*dt*injury*searchSpeed,dz/norm*e.speed*dt*injury*searchSpeed,e.radius,this.obstacles);
       }
       e.elevation=walkSurfaceHeight(e.x,e.z);
-      if(e.awareness!=='patrol'&&goalDistance>.15)e.yaw=Math.atan2(dx,dz);
-      else if(e.awareness==='patrol')e.yaw=e.patrolAngle||0;
+      if(e.awareness!=='patrol'&&goalDistance>.15)e.yaw=Math.atan2(dx,dz)+Math.PI;
+      else if(e.awareness==='patrol')e.yaw=(e.patrolAngle||0)+Math.PI;
       if(e.stunnedUntil<=this.time)e.attackTimer-=dt;
       // Never attack through walls or while merely searching the last seen position.
       if(seen&&e.awareness==='engaged'&&distance<2&&e.attackTimer<=0){
