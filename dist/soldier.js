@@ -347,7 +347,7 @@ export function createSoldier(kit, createGun, profileInfo) {
     get equipmentLevel(){return state.level;},
     get visibleParts(){return assemblies.reduce((n,{asm})=>n+asm.count,0);},
     get batchCount(){return assemblies.reduce((n,{asm})=>n+asm.meshes.length,0);},
-    animate(time,moving,recoil=0,reload=0,trigger=0,dt=.016){
+    animate(time,moving,recoil=0,reload=0,trigger=0,dt=.016,flight=null){
       const elapsed=Math.max(.001,Math.min(.08,dt||.016));
       const firstSample=!this._lastRootPosition;if(firstSample)this._lastRootPosition=root.position.clone();
       let vx=0,vz=0;
@@ -361,26 +361,54 @@ export function createSoldier(kit, createGun, profileInfo) {
       this._lastYaw=yaw;
       const turn=Math.max(-1,Math.min(1,turnDelta/elapsed/3));
       const forward=-(vx*Math.sin(yaw)+vz*Math.cos(yaw)),lateral=vx*Math.cos(yaw)-vz*Math.sin(yaw);
-      const speed=Math.hypot(vx,vz),weight=moving?Math.min(1, speed/4.2):0,backwards=forward<-.12?-1:1;
-      const phase=time*(7.1+Math.min(speed,10)*.28)*backwards,step=weight;
-      const swing=Math.sin(phase),opposite=Math.sin(phase+PI);
-      hips.rotation.z=step*Math.sin(phase*.5)*.025;
-      hips.rotation.x=step*Math.sin(phase)*.018;
-      spine.rotation.z=-hips.rotation.z*.68+step*Math.max(-1,Math.min(1,lateral/7))*.025;
-      spine.rotation.x=-hips.rotation.x*.55;
-      spine.rotation.y=-turn*.045;
-      legs[0].rotation.x=swing*step*.46;legs[1].rotation.x=opposite*step*.46;
-      knees.forEach((knee,i)=>{const lift=Math.max(0,i===0?swing:opposite);knee.rotation.x=.035+lift*step*.68;});
-      feet.forEach((foot,i)=>{const lift=Math.max(0,i===0?swing:opposite);foot.rotation.x=step*(lift*.30-.035);});
-      body.position.y=Math.sin(time*2)*.004+Math.abs(swing)*step*.012;
-      body.rotation.z=step*Math.sin(phase)*-.018;
-      head.rotation.x=step*Math.sin(phase+PI/2)*.014+Math.sin(time*1.6)*.004;head.rotation.y=turn*.018;
+      // RLH firefighter-motion V692 uses grounded stance/swing phases, pelvis counter-rotation
+      // and stable IK grips. Adapt that kinematic model to Pink War's lightweight joint hierarchy.
+      const speed=Math.hypot(vx,vz), airborne=!!flight?.airborne, rising=(flight?.verticalSpeed||0)>0;
+      const targetWeight=moving&&!airborne?Math.min(1,speed/4.6):0;
+      this._gaitWeight=(this._gaitWeight??0)+(targetWeight-(this._gaitWeight??0))*Math.min(1,elapsed*11);
+      if(this._gaitPhase===undefined)this._gaitPhase=0;
+      if(speed>.08&&!airborne){
+        const stride=speed>8?1.5:1.15;
+        this._gaitPhase+=Math.hypot(vx,vz)*elapsed/stride*PI*2*(forward<-.12?-1:1);
+      }
+      const phase=this._gaitPhase,step=this._gaitWeight,run=speed>8,stance=run?.43:.63;
+      const cycle=offset=>{
+        const p=((phase/(2*PI)+offset)%1+1)%1;
+        if(p<stance){const u=p/stance;return {support:true,lift:0,roll:-.06+.31*Math.max(0,(u-.68)/.32),swing:Math.sin(phase+offset*2*PI)};}
+        const u=(p-stance)/(1-stance),ease=u*u*(3-2*u);
+        return {support:false,lift:Math.sin(Math.PI*u)**2,roll:.26*(1-ease)-.08*ease,swing:Math.sin(phase+offset*2*PI)};
+      };
+      const left=cycle(0),right=cycle(.5),opposition=Math.sin(phase);
+      const lean=step*(run?.075:.032),sway=step*Math.sin(phase)*.024;
+      hips.position.y=.97-step*(run?.019:.011)*(1-Math.cos(phase*2));
+      hips.rotation.set(lean+step*Math.sin(phase)*.015, step*opposition*.045, sway);
+      spine.rotation.set(-lean*.55, -hips.rotation.y*.6, -sway*.72+step*Math.max(-1,Math.min(1,lateral/7))*.018);
+      const strideAmplitude=step*(run?.64:.48);
+      legs[0].rotation.x=left.swing*strideAmplitude;
+      legs[1].rotation.x=right.swing*strideAmplitude;
+      knees[0].rotation.x=.045+left.lift*step*(run?.85:.69);
+      knees[1].rotation.x=.045+right.lift*step*(run?.85:.69);
+      feet[0].rotation.x=left.roll*step;
+      feet[1].rotation.x=right.roll*step;
+      if(airborne){
+        hips.position.y=.97;hips.rotation.set(rising?-.075:.085,0,0);
+        spine.rotation.set(rising?-.08:.04,0,0);
+        legs[0].rotation.x=rising?-.35:.19;legs[1].rotation.x=rising?-.23:.28;
+        knees[0].rotation.x=rising?.64:.37;knees[1].rotation.x=rising?.57:.34;
+        feet[0].rotation.x=-.17;feet[1].rotation.x=-.12;
+      }
+      body.position.y=Math.sin(time*1.7)*.004+step*Math.abs(opposition)*.009;
+      body.rotation.z=-sway*.7;
+      head.rotation.x=(airborne?-.024:step*Math.sin(phase+PI/2)*.012)+Math.sin(time*1.55)*.004;
+      head.rotation.y=turn*.024;
       arms.forEach(({s,shoulder},i)=>{
-        const armPhase=i===0?swing:opposite;
-        shoulder.rotation.x=step*armPhase*.025;
-        shoulder.rotation.z=step*(s*armPhase*.018-Math.max(-1,Math.min(1,lateral/7))*.018);
+        const armPhase=i===0?left.swing:right.swing;
+        shoulder.rotation.x=airborne?-.035:step*armPhase*.024;
+        shoulder.rotation.z=step*(s*armPhase*.014-Math.max(-1,Math.min(1,lateral/7))*.017);
       });
-      const kick=Math.min(1,recoil/.16);body.position.z=kick*.035;body.rotation.x=kick*.035;
+      const kick=Math.min(1,recoil/.16);
+      body.position.z=kick*.035;
+      body.rotation.x=kick*.035+lean*.12;
       gun.userData.animateHands?.(trigger,kick>.05?.34:.18,reload,dt);poseWeapon(reload);solveArms();
       hair.rotation.x=Math.sin(time*3)*.045;hair.rotation.z=Math.sin(time*2)*.025;
       orbit.rotation.y=time*.24;
