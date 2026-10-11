@@ -19,6 +19,7 @@ let canvasPointer = null, lastDrag = null, audioContext = null;
 const move = { x: 0, y: 0, id: null }, look = { x: 0, y: 0, id: null };
 const keys = new Set(), firingPointers = new Set();
 let jumpQueued = false, pickupQueued = false,crouchQueued=false;
+let crouchCameraBlend=0, currentSprinting=false;
 const persist = () => { try { localStorage.setItem('rosee-settings', JSON.stringify(settings)); } catch {} };
 const timeString = time => `${String(Math.floor(time / 60)).padStart(2, '0')}:${String(Math.floor(time % 60)).padStart(2, '0')}`;
 
@@ -160,7 +161,7 @@ $('quit-button').onclick = home; $('end-home').onclick = home;
 function start() {
   if (!world) return;
   for (const d of document.querySelectorAll('dialog[open]')) d.close(); game.reset(); world.resetDynamic(); phase = 'playing'; yaw = 0; pitch = -.075;
-  flashTimer = 0; recoil = 0; damageUntil = 0; announcementUntil = 0;equipmentUntil=0; resetInput(); audioReady();
+  flashTimer = 0; recoil = 0; damageUntil = 0; announcementUntil = 0;equipmentUntil=0;crouchCameraBlend=0;currentSprinting=false; resetInput(); audioReady();
   world.setWeapon(0);world.setEquipment(1);
   document.body.classList.add('playing'); $('game-hud').hidden = false; $('game-tip').style.opacity = '1'; updateHud();
 }
@@ -203,12 +204,14 @@ function updateCamera() {
   camera.fov = view === 'fps' ? 72 : 64;
   camera.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
   const elevation = p.elevation || 0;
-  if (view === 'fps') { camera.position.set(p.x, (p.crouched?1.18:1.85) + elevation, p.z); soldier.root.visible = false; weapon.visible = true; }
+  // Camera follows the same crouch transition as the real soldier pelvis, not a sudden teleport.
+  const cameraEye=1.85-.67*crouchCameraBlend, cameraShoulder=1.6-.53*crouchCameraBlend;
+  if (view === 'fps') { camera.position.set(p.x, cameraEye + elevation, p.z); soldier.root.visible = false; weapon.visible = true; }
   else {
     soldier.root.visible = true; weapon.visible = false;
-    const distance = 5.1, start = { x: p.x, y: (p.crouched?1.07:1.6) + elevation, z: p.z };
+    const distance = 5.1, start = { x: p.x, y: cameraShoulder + elevation, z: p.z };
     const end = { x: p.x + Math.sin(yaw) * distance * Math.cos(pitch) + Math.cos(yaw) * .65,
-      y: (p.crouched?1.07:1.6) - Math.sin(pitch) * distance, z: p.z + Math.cos(yaw) * distance * Math.cos(pitch) - Math.sin(yaw) * .65 };
+      y: cameraShoulder - Math.sin(pitch) * distance, z: p.z + Math.cos(yaw) * distance * Math.cos(pitch) - Math.sin(yaw) * .65 };
     let nearest = 1;
     for (const box of world.obstacles) { const hit = segmentBox(start, end, { ...box, hx: box.hx + .2, hz: box.hz + .2 }); if (hit !== null) nearest = Math.min(nearest, Math.max(.09, hit - .05)); }
     camera.position.set(start.x + (end.x - start.x) * nearest, Math.max(.35, start.y + (end.y - start.y) * nearest), start.z + (end.z - start.z) * nearest);
@@ -230,9 +233,16 @@ function updateWeaponVisuals(dt, firing, moving) {
     reloadProgress, reloading, time: clock };
   world.fpsGun.userData.setCombatState?.(state); world.soldier.gun.userData.setCombatState?.(state);
   const trigger = firing && !reloading && game.state === 'playing' ? 1 : 0;
+  // The actual shared LYLU/GHJU rig now receives locomotion on EVERY desktop/mobile view.
+  // In FPS it is invisible, but its cycle remains synchronized when the player switches to 3P.
+  // WebXR deliberately keeps the player mesh hidden: tracked controllers own the visible hands.
   if (vr?.mode !== 'xr') {
+    world.soldier.animate(clock, moving, recoil, reloadLift, trigger, dt, {
+      airborne: !game.player.grounded, verticalSpeed: game.player.verticalSpeed,
+      crouched: game.player.crouched, firing: trigger>0,
+      sprint: currentSprinting, aim: !!(firing||game.charge>0)
+    });
     if (view === 'fps') world.fpsGun.userData.animateHands?.(trigger, trigger ? .34 : .18, reloadLift, dt);
-    else world.soldier.animate(clock, moving, recoil, reloadLift, trigger, dt, { airborne: !game.player.grounded, verticalSpeed: game.player.verticalSpeed, crouched:game.player.crouched, firing:trigger>0, sprint:keys.has('ShiftLeft')||keys.has('ShiftRight') });
   }
 }
 function aim() {
@@ -368,7 +378,9 @@ function frame(timestamp, xrFrame) {
     if(vr.mode==='xr')moveYaw=vr.movementYaw(facing);
     const jump = jumpQueued || vrInput.jump || keys.has('KeyJ'); jumpQueued = false;
     const crouchToggle=crouchQueued||vrInput.crouchToggle;crouchQueued=false;
-    game.step(dt, { x, z, yaw: facing, moveYaw, sprint: vrInput.sprint || keys.has('ShiftLeft') || keys.has('ShiftRight'), jump,crouchToggle });
+    currentSprinting=vrInput.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight');
+    game.step(dt, { x, z, yaw: facing, moveYaw, sprint: currentSprinting, jump,crouchToggle });
+    crouchCameraBlend+=(Number(game.player.crouched)-crouchCameraBlend)*Math.min(1,dt*8);
     if(pickupQueued||vrInput.pickup){game.collectWeapon();pickupQueued=false;}
     const moving = Math.hypot(x, z) > .1;
     world.sync(game, clock, dt); updateCamera();
@@ -406,7 +418,7 @@ try {
   await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   if (world.lost) { world = await world.recover(); window.dispatchEvent(new CustomEvent('rosee-renderer-recovered')); }
   $('play-label').textContent = 'ENTRER DANS L’ARÈNE'; $('play-button').disabled = false;$('outfit-button').disabled=false;
-  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ phase, view, frames, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
+  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ phase, view, frames, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
     inputs: { move: { ...move }, look: { ...look }, firing: firingPointers.size > 0 || keys.has('Space') }, drawCalls: world.renderer.info.render.calls, ...game.snapshot(),equipment:equipmentForCharacter(game.wave,character.id) }) });
   bindCanvas();world.renderer.setAnimationLoop(frame);
 } catch (error) {
