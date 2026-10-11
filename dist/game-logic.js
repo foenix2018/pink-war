@@ -186,7 +186,12 @@ export class ArenaGame {
     this.weaponIndex = index; this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false;
     this.cooldown = Math.max(this.cooldown, .25); this.event('weapon', { index, name: this.weapon.name }); return true;
   }
-  cycleWeapon(direction = 1) { const count = this.unlockedWeapons.length; return this.selectWeapon((this.weaponIndex + (direction < 0 ? -1 : 1) + count) % count); }
+  cycleWeapon(direction = 1) {
+    const slots=WEAPONS.map((_,index)=>this.ownedWeapons.has(index)?index:-1).filter(index=>index>=0);
+    if(slots.length<2)return false;
+    const at=slots.indexOf(this.weaponIndex),offset=direction<0?-1:1;
+    return this.selectWeapon(slots[(Math.max(0,at)+offset+slots.length)%slots.length]);
+  }
   // Weapons rise from a tactical holographic pedestal. Acquiring one is a deliberate action.
   offerWeapon(index) {
     if(this.ownedWeapons.has(index)||this.weaponOffers.some(offer=>offer.index===index))return;
