@@ -4,6 +4,7 @@ import { createCharacterKit, createSoldier } from './soldier.js';
 import { buildGun } from './weapons.js';
 import { createSurfaceDetails } from './surfaces.js';
 import { characterForId } from './characters.js';
+import { playLaserShot } from './laser-sound.js';
 
 const $ = id => document.getElementById(id);
 const clamp = (n,a,b)=>Math.max(a,Math.min(b,n));
@@ -105,6 +106,14 @@ for(const button of document.querySelectorAll('[data-motion]'))button.addEventLi
 for(const button of document.querySelectorAll('[data-angle]'))button.addEventListener('click',()=>{state.angle=Number(button.dataset.angle);});
 $('level').addEventListener('input',e=>{state.level=Number(e.target.value);$('level-value').textContent=state.level;subjects.get(state.character).setLevel(state.level);updateStatus();});
 $('weapon').addEventListener('change',e=>{state.weapon=Number(e.target.value);subjects.get(state.character).setWeapon(state.weapon);updateStatus();});
+let previewAudio;
+$('sound-preview').addEventListener('click',async()=>{
+  try{
+    previewAudio ||= new (window.AudioContext||window.webkitAudioContext)();
+    if(previewAudio.state!=='running')await previewAudio.resume();
+    playLaserShot(previewAudio,['r9','bloom','petal','thorn','nova'][state.weapon],1);
+  }catch(error){console.warn('Essai audio laser non disponible',error);}
+});
 $('bones').addEventListener('change',e=>{state.showBones=e.target.checked;markers.visible=state.showBones;});
 $('grid').addEventListener('change',e=>{grid.visible=ground.visible=e.target.checked;});
 
