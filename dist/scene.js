@@ -314,16 +314,17 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     const base=new T.Group();base.position.set(offer.x,offer.elevation||0,offer.z);scene.add(base);
     const platform=mesh(new T.CylinderGeometry(.83,.9,.16,24),mats.steel,base,[0,.08,0]);
     const rim=mesh(new T.TorusGeometry(.75,.055,8,40),mats.rose,base,[0,.19,0],[1,1,1],false);rim.rotation.x=-Math.PI/2;
-    const beam=mesh(new T.CylinderGeometry(.59,.74,4.2,22,1,true),
-      new T.MeshBasicMaterial({color:palette.rose,transparent:true,opacity:.16,depthWrite:false,side:T.DoubleSide,blending:T.AdditiveBlending}),base,[0,2.1,0],[1,1,1],false);
-    const core=mesh(new T.CylinderGeometry(.045,.045,3.6,8),mats.pale,base,[0,1.9,0],[1,1,1],false);
-    const ring=mesh(new T.TorusGeometry(.56,.024,6,28),mats.pale,base,[0,1.1,0],[1,1,1],false);ring.rotation.x=-Math.PI/2;
+    const beam=mesh(new T.CylinderGeometry(.65,.78,7.5,22,1,true),
+      new T.MeshBasicMaterial({color:palette.rose,transparent:true,opacity:.29,depthWrite:false,side:T.DoubleSide,blending:T.AdditiveBlending}),base,[0,3.85,0],[1,1,1],false);
+    const core=mesh(new T.CylinderGeometry(.038,.038,6.8,8),mats.pale,base,[0,3.45,0],[1,1,1],false);
+    const ring=mesh(new T.TorusGeometry(.72,.055,6,36),mats.pale,base,[0,1.1,0],[1,1,1],false);ring.rotation.x=-Math.PI/2;
+    const beacon=mesh(new T.TorusGeometry(.8,.08,8,32),mats.rose,base,[0,6.8,0],[1,1,1],false);beacon.rotation.x=-Math.PI/2;
     const float=new T.Group();base.add(float);
     // Reuse the real in-game weapon geometry, but hide its glove grips for an unmanned pickup.
     const item=createGun({sleeve:false});item.userData.setVariant(offer.index);
     item.userData.hand.visible=false;item.userData.support.visible=false;
     item.scale.setScalar(1.65);float.add(item);
-    return {base,beam,core,ring,float,offer};
+    return {base,beam,core,ring,beacon,float,offer};
   }
   function updateStations(sim,time) {
     const visible=new Set();
@@ -335,9 +336,10 @@ export async function createScene(canvas, quality, forceWebGL = false, character
       station.base.position.set(offer.x,offer.elevation||0,offer.z);
       station.float.position.set(0,ease*(1.37+Math.sin(time*1.6+offer.index)*.11),0);
       station.float.rotation.y=time*.65+offer.index;
-      station.beam.scale.y=Math.max(.001,ease);station.beam.position.y=2.1*ease;
-      station.beam.material.opacity=.10+.05*Math.sin(time*2.7);
+      station.beam.scale.y=Math.max(.001,ease);station.beam.position.y=3.85*ease;
+      station.beam.material.opacity=.23+.07*Math.sin(time*2.7);
       station.ring.rotation.z=time*.45;
+      station.beacon.position.y=6.8*ease;station.beacon.scale.setScalar(.8+.22*Math.sin(time*3));
       station.core.scale.y=Math.max(.001,ease);
     }
     for(const [index,station] of weaponStations)if(!visible.has(index)){
