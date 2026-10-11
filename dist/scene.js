@@ -345,6 +345,38 @@ export async function createScene(canvas, quality, forceWebGL = false, character
       weaponStations.delete(index);
     }
   }
+  // A defeated enemy is dissolved by a vertical plasma extraction beam.
+  // Reuse the original (already GPU-resident) enemy mesh briefly before releasing it.
+  const deaths=[],deathColumnGeo=new T.CylinderGeometry(.22,.57,3.6,12,1,true);
+  const deathHaloGeo=new T.TorusGeometry(.62,.055,6,24);
+  function beginDeath(id,time){
+    const original=monsters.get(id);if(!original)return;
+    monsters.delete(id);
+    const origin=original.position.clone(),fx=new T.Group();fx.position.copy(origin);scene.add(fx);
+    original.position.set(0,0,0);fx.add(original);
+    const mat=new T.MeshBasicMaterial({color:palette.rose,transparent:true,opacity:.42,depthWrite:false,side:T.DoubleSide,blending:T.AdditiveBlending});
+    const column=new T.Mesh(deathColumnGeo,mat);column.position.y=1.6;column.renderOrder=9;fx.add(column);
+    const haloMat=new T.MeshBasicMaterial({color:palette.pale,transparent:true,opacity:.92,depthWrite:false});
+    const halo=new T.Mesh(deathHaloGeo,haloMat);halo.rotation.x=-Math.PI/2;halo.position.y=.2;fx.add(halo);
+    deaths.push({fx,original,column,halo,mat,haloMat,start:time});
+    burst(origin.x,origin.y+1.4,origin.z,palette.rose,21);
+    if(deaths.length>14){const old=deaths.shift();scene.remove(old.fx);old.mat.dispose();old.haloMat.dispose();}
+  }
+  function updateDeaths(time){
+    for(let i=deaths.length-1;i>=0;i--){
+      const d=deaths[i],p=Math.min(1,Math.max(0,(time-d.start)/.75));
+      d.original.scale.set(1+.22*p,Math.max(.001,1-p*p),1+.22*p);
+      d.original.position.y=p*.68;
+      d.original.rotation.y+=.07;
+      d.original.visible=p<.75;
+      d.column.scale.set(1+.28*Math.sin(time*39),1+.15*p,1+.28*Math.sin(time*39));
+      d.column.material.opacity=.43*(1-p);
+      d.halo.position.y=.15+3.2*p;
+      d.halo.scale.setScalar(.7+1.6*p);
+      d.halo.material.opacity=.9*(1-p);
+      if(p>=1){scene.remove(d.fx);d.mat.dispose();d.haloMat.dispose();deaths.splice(i,1);}
+    }
+  }
   const monsters=new Map(), bulletMeshes=new Map(), particles=[];
   const enemyFactory=createEnemyFactory(mats);
   const createMonster=(elite,ranged,form)=>enemyFactory.create(elite,ranged,form);
@@ -357,9 +389,11 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     const pool=sparkPools[color===palette.rose?0:1];
     for(let i=0;i<count&&particles.length<SPARKS;i++)particles.push({pool,x,y,z,vx:(Math.random()-.5)*7,vy:Math.random()*5,vz:(Math.random()-.5)*7,life:.45+Math.random()*.3,max:.8});
   }
-  function resetDynamic(){for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
+  function resetDynamic(){for(const death of deaths){scene.remove(death.fx);death.mat.dispose();death.haloMat.dispose();}deaths.length=0;for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
   function sync(sim,time,dt){
     setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));updateStations(sim,time);
+    for(const event of sim.events||[])if(event.type==='kill')beginDeath(event.id,time);
+    updateDeaths(time);
     soldier.root.scale.setScalar(1);soldier.root.position.set(sim.player.x,sim.player.elevation||0,sim.player.z);soldier.root.rotation.y=sim.player.yaw;
     const present=new Set();for(const e of sim.enemies){present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite,e.ranged,e.form);monsters.set(e.id,m);scene.add(m);}m.position.set(e.x,(e.elevation||0)+Math.abs(Math.sin(time*8+e.phase))*.025,e.z);m.rotation.y=e.yaw??(Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI);m.userData.animate(time,e.phase,e.limpUntil<=time);}
     for(const[id,m]of monsters){if(!present.has(id)){scene.remove(m);monsters.delete(id);}}
