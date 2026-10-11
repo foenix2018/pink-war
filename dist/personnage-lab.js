@@ -90,7 +90,7 @@ function setCharacter(id){
   updateStatus();
 }
 function setMotion(motion){
-  if(!['idle','walk','run','jump','aim'].includes(motion))return;
+  if(!['idle','walk','run','jump','aim','crouch','walkFire','runFire','crouchWalk'].includes(motion))return;
   state.motion=motion;
   state.jumpStart=state.clock;
   $('motions').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.motion===motion)));
@@ -98,7 +98,7 @@ function setMotion(motion){
 }
 function updateStatus(){
   const model=subjects.get(state.character);
-  $('status').textContent=`${characterForId(state.character).name} · ${model.equipmentLevel}e armure · ${model.visibleParts} pièces · ${state.motion==='idle'?'repos':state.motion==='walk'?'marche':state.motion==='run'?'course':state.motion==='jump'?'saut':'visée'}`;
+  $('status').textContent=`${characterForId(state.character).name} · ${model.equipmentLevel}e armure · ${model.visibleParts} pièces · ${state.motion==='idle'?'repos':state.motion==='walk'?'marche':state.motion==='run'?'course':state.motion==='jump'?'saut':state.motion==='crouch'?'accroupi':state.motion==='walkFire'?'marche + tir':state.motion==='runFire'?'course + tir':state.motion==='crouchWalk'?'déplacement accroupi':'visée'}`;
 }
 for(const button of document.querySelectorAll('[data-character]'))button.addEventListener('click',()=>setCharacter(button.dataset.character));
 for(const button of document.querySelectorAll('[data-motion]'))button.addEventListener('click',()=>setMotion(button.dataset.motion));
@@ -108,23 +108,22 @@ $('weapon').addEventListener('change',e=>{state.weapon=Number(e.target.value);su
 $('bones').addEventListener('change',e=>{state.showBones=e.target.checked;markers.visible=state.showBones;});
 $('grid').addEventListener('change',e=>{grid.visible=ground.visible=e.target.checked;});
 
+// The debugging overlay uses the actual THREE.Object3D pivots and IK elbows/wrists.
+const jointNames=['pelvis','chest','head','leftShoulder','leftElbow','leftWrist','rightShoulder','rightElbow','rightWrist','leftHip','leftKnee','leftAnkle','leftToe','rightHip','rightKnee','rightAnkle','rightToe'];
+const jointLinks=[[0,1],[1,2],[1,3],[3,4],[4,5],[1,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16]];
 const markerMat=new T.MeshBasicMaterial({color:0x80faff,depthTest:false,toneMapped:false});
 const lineMat=new T.LineBasicMaterial({color:0x80faff,transparent:true,opacity:.8,depthTest:false});
 const markers=new T.Group();scene.add(markers);markers.visible=false;
-const jointBalls=[],jointGeom=new T.SphereGeometry(.021,8,6);
-for(let i=0;i<15;i++){const ball=new T.Mesh(jointGeom,markerMat);ball.renderOrder=12;markers.add(ball);jointBalls.push(ball);}
-const links=[[0,1],[1,2],[0,3],[3,4],[4,5],[0,6],[6,7],[7,8],[1,9],[9,10],[1,11],[11,12],[12,13],[1,14]];
-const linePositions=new Float32Array(links.length*6);
+const jointBalls=[],jointGeom=new T.SphereGeometry(.017,8,6);
+for(let i=0;i<jointNames.length;i++){const ball=new T.Mesh(jointGeom,markerMat);ball.renderOrder=12;markers.add(ball);jointBalls.push(ball);}
+const linePositions=new Float32Array(jointLinks.length*6);
 const lineGeometry=new T.BufferGeometry();lineGeometry.setAttribute('position',new T.BufferAttribute(linePositions,3).setUsage(T.DynamicDrawUsage));
 const lines=new T.LineSegments(lineGeometry,lineMat);lines.renderOrder=11;markers.add(lines);
 function refreshSkeleton(model){
   if(!state.showBones)return;
-  model.root.updateMatrixWorld(true);
-  const joints=[model.hips,model.spine,model.head,...model.legs.slice(0,1),...model.knees.slice(0,1),...model.feet.slice(0,1),
-    ...model.legs.slice(1),...model.knees.slice(1),...model.feet.slice(1),model.arms[0].shoulder,model.arms[0].upper,model.arms[1].shoulder,
-    model.arms[1].upper,model.arms[1].fore,model.arms[0].fore];
-  const points=joints.map((j,i)=>{const v=new T.Vector3();j.getWorldPosition(v);jointBalls[i].position.copy(v);return v;});
-  links.forEach(([a,b],i)=>{linePositions.set(points[a].toArray(),i*6);linePositions.set(points[b].toArray(),i*6+3);});
+  const positions=model.jointPositions();
+  const coords=jointNames.map((name,i)=>{const p=positions[name];jointBalls[i].position.copy(p);return p;});
+  jointLinks.forEach(([a,b],i)=>{linePositions.set(coords[a].toArray(),i*6);linePositions.set(coords[b].toArray(),i*6+3);});
   lineGeometry.attributes.position.needsUpdate=true;lineGeometry.computeBoundingSphere();
 }
 
@@ -160,7 +159,7 @@ setCharacter('ghju');setMotion('idle');
 function tick(now){
  const dt=last?clamp((now-last)*.001,.001,.05):.016;last=now;state.clock+=dt;
  const model=subjects.get(state.character),root=model.root;
- const speed=state.motion==='walk'?3.2:state.motion==='run'?9:0;
+ const speed=['walk','walkFire'].includes(state.motion)?3.2:['run','runFire'].includes(state.motion)?9:state.motion==='crouchWalk'?2.2:0;
  // Drive the real rig's displacement-driven animation without translating it out of the viewer.
  if(speed)model._lastRootPosition=new T.Vector3(root.position.x,root.position.y,root.position.z+speed*dt);
  const airborne=state.motion==='jump';
@@ -171,7 +170,7 @@ function tick(now){
    else {height=Math.max(0,7.25*elapsed-9*elapsed*elapsed);velocity=7.25-18*elapsed;}
  }
  root.position.y=height;
- model.animate(state.clock,!!speed,0,0,state.motion==='aim'?1:0,dt,{airborne,verticalSpeed:velocity,preview:state.motion==='idle'});
+ model.animate(state.clock,!!speed,0,0,['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion)?1:0,dt,{airborne,verticalSpeed:velocity,crouched:['crouch','crouchWalk'].includes(state.motion),firing:['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion),sprint:['run','runFire'].includes(state.motion),preview:state.motion==='idle'});
  refreshSkeleton(model);
  const w=canvas.clientWidth,h=canvas.clientHeight;
  const focal=(w<800&&h>w)?0.63:1.1;
@@ -186,7 +185,7 @@ function tick(now){
 requestAnimationFrame(tick);
 window.__PINKWAR_CHARACTER_LAB=Object.freeze({
  snapshot:()=>({character:state.character,motion:state.motion,level:state.level,weapon:state.weapon,showBones:state.showBones,
-  frames:frame,articulations:['Pelvis','Spine','ClosedHelmet','LeftThigh','RightThigh','LeftShin','RightShin','LeftFoot','RightFoot','LeftShoulder','RightShoulder'],
+  frames:frame,articulations:jointNames, jointPositions:()=>Object.fromEntries(Object.entries(subjects.get(state.character).jointPositions()).map(([k,v])=>[k,v.toArray()])),
   visibleParts:subjects.get(state.character).visibleParts,visibleMeshes:subjects.get(state.character).batchCount}),
  selectCharacter:setCharacter,selectMotion:setMotion
 });
