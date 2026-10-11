@@ -48,7 +48,7 @@ export function questControls(hand = 'right') {
 export const QUEST_CONTROLS = Object.freeze(questControls('right'));
 
 // [strength, milliseconds] for each hand; heavier weapons kick harder.
-const SHOT_HAPTIC = Object.freeze({ r9: [.3, 22], bloom: [.22, 16], petal: [.55, 40], thorn: [.8, 65], nova: [1, 110] });
+const SHOT_HAPTIC = Object.freeze({ r9: [.72, 48], bloom: [.62, 40], petal: [.83, 74], thorn: [1, 120], nova: [1, 165] });
 export function hapticPlan(type, arg) {
   switch (type) {
     case 'shot': return { main: SHOT_HAPTIC[arg] || SHOT_HAPTIC.r9 };
