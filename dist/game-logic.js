@@ -196,10 +196,20 @@ export class ArenaGame {
   offerWeapon(index) {
     if(this.ownedWeapons.has(index)||this.weaponOffers.some(offer=>offer.index===index))return;
     const p=this.player;
-    const offsets=[[4,1],[-4,1],[0,4],[0,-4],[6,-3],[-6,-3]];
-    const chosen=offsets.map(([dx,dz])=>({x:clamp(p.x+dx,-94,94),z:clamp(p.z+dz,-94,94)}))
-      .find(point=>this.obstacles.every(b=>b.walkableSurface||Math.abs(point.x-b.x)>b.hx+1.4||Math.abs(point.z-b.z)>b.hz+1.4))
-      ||{x:clamp(p.x+2,-90,90),z:clamp(p.z+3,-90,90)};
+    // Candidate pedestals are just ahead or to the side of the player,
+    // on open ground and within their immediate line of sight.
+    const dirX=Math.sin(p.yaw||0),dirZ=-Math.cos(p.yaw||0);
+    const offsets=[[0,4],[2.6,3],[-2.6,3],[4,1],[-4,1],[0,-4],[5,-3],[-5,-3]];
+    const candidates=offsets.map(([side,forward])=>({
+      x:clamp(p.x+dirX*forward+dirZ*side,-94,94),
+      z:clamp(p.z+dirZ*forward-dirX*side,-94,94)
+    }));
+    const clear=point=>this.obstacles.every(b=>b.walkableSurface||
+      Math.abs(point.x-b.x)>b.hx+1.4||Math.abs(point.z-b.z)>b.hz+1.4);
+    const chosen=candidates.find(point=>clear(point)&&!this.blocked(
+      {x:p.x,y:p.elevation+1.5,z:p.z},
+      {x:point.x,y:walkSurfaceHeight(point.x,point.z)+1.7,z:point.z}
+    ))||candidates.find(clear)||{x:p.x,z:p.z};
     const offer={index,x:chosen.x,z:chosen.z,elevation:walkSurfaceHeight(chosen.x,chosen.z),createdAt:this.time};
     this.weaponOffers.push(offer);this.event('weapon-offer',{...offer,name:WEAPONS[index].name});
   }
