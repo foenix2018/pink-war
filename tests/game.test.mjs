@@ -119,6 +119,17 @@ test('limb hit zones rotate with enemies so side shots remain accurately located
   assert.ok(strike);assert.equal(strike.zone,'limb');
 });
 
+test('crouch toggles, lowers speed, keeps grounded trajectory, and refuses a jump while crouched', () => {
+  const g=new ArenaGame();g.nextWave=999;
+  g.step(.02,{crouchToggle:true});assert.equal(g.player.crouched,true);
+  const original=g.player.z;g.step(.4,{z:-1,jump:true,sprint:true});
+  assert.equal(g.player.grounded,true);assert.equal(g.player.verticalSpeed,0);
+  assert.ok(Math.abs(g.player.z-original-1.2)<.08);
+  g.step(.02,{crouchToggle:true,jump:false});
+  assert.equal(g.player.crouched,false);
+  g.step(.02,{jump:true});assert.equal(g.player.grounded,false);
+});
+
 test('head, torso and limb produce distinct zones, multipliers and reactions', () => {
   const e={id:1,x:0,z:0,elevation:0,form:'stalker',hp:160,tier:3,limpUntil:0,stunnedUntil:0};
   const head=traceEnemyHit({x:0,y:1.93,z:-2},{x:0,y:1.93,z:2},e);
