@@ -68,7 +68,7 @@ for(const id of ['lylu','ghju']){
   model.animate(0,false);
   subjects.set(id,model);
 }
-const state={character:'ghju',motion:'idle',level:1,weapon:0,angle:0,elevation:.12,zoom:3.9,showBones:false,jumpStart:0,clock:0};
+const state={character:'ghju',motion:'idle',level:1,weapon:0,angle:0,elevation:.12,zoom:matchMedia('(max-width:800px) and (orientation:portrait)').matches?6.0:3.9,showBones:false,jumpStart:0,clock:0};
 const color=new T.Color();
 function setCharacter(id){
   if(!subjects.has(id))return;
@@ -182,7 +182,8 @@ function tick(now){
  model.animate(state.clock,!!speed,0,0,['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion)?1:0,dt,{airborne,verticalSpeed:velocity,crouched:['crouch','crouchWalk'].includes(state.motion),firing:['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion),sprint:['run','runFire'].includes(state.motion),preview:state.motion==='idle'});
  refreshSkeleton(model);
  const w=canvas.clientWidth,h=canvas.clientHeight;
- const focal=(w<800&&h>w)?0.63:1.1;
+ // Portrait inspection keeps the entire boot-to-helmet silhouette above the mobile control drawer.
+ const focal=(w<800&&h>w)?0.32:1.1;
  camera.position.set(Math.sin(state.angle)*Math.cos(state.elevation)*state.zoom,
     focal+Math.sin(state.elevation)*state.zoom,
     -Math.cos(state.angle)*Math.cos(state.elevation)*state.zoom);
@@ -194,7 +195,7 @@ function tick(now){
 requestAnimationFrame(tick);
 window.__PINKWAR_CHARACTER_LAB=Object.freeze({
  snapshot:()=>({character:state.character,motion:state.motion,level:state.level,weapon:state.weapon,showBones:state.showBones,
-  frames:frame,articulations:jointNames, jointPositions:()=>Object.fromEntries(Object.entries(subjects.get(state.character).jointPositions()).map(([k,v])=>[k,v.toArray()])),
+  frames:frame,zoom:state.zoom,articulations:jointNames, jointPositions:()=>Object.fromEntries(Object.entries(subjects.get(state.character).jointPositions()).map(([k,v])=>[k,v.toArray()])),
   visibleParts:subjects.get(state.character).visibleParts,visibleMeshes:subjects.get(state.character).batchCount}),
  selectCharacter:setCharacter,selectMotion:setMotion
 });
