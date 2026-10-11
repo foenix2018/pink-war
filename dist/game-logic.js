@@ -78,6 +78,34 @@ export function moveInArena(entity, dx, dz, radius, obstacles) {
   entity.x = clamp(x, -edge, edge); entity.z = clamp(z, -edge, edge);
 }
 
+// Zoned raycast keeps head / torso / extremities distinct in 3D, including in WebXR.
+// Old simulation fixtures (without a 'form') retain the original single hit sphere.
+export function traceEnemyHit(start, end, enemy) {
+  const height=enemy.elevation||0;
+  if(!enemy.form) {
+    const t=segmentSphere(start,end,{x:enemy.x,y:height+(enemy.aimHeight||1.15),z:enemy.z},enemy.hitRadius||1.05);
+    return t===null?null:{t,zone:'torso',multiplier:1};
+  }
+  const elite=enemy.elite?1.13:1;
+  const crawl=enemy.form==='scuttler';
+  const zones=crawl?[
+    ['head',0,.85,-.44,.28,2.1],
+    ['torso',0,.79,.07,.51,1],
+    ['limb',-.61,.43,.14,.28,.65],['limb',.61,.43,.14,.28,.65]
+  ]:[
+    ['head',0,1.88,-.05,.28,2.2],
+    ['torso',0,1.27,0,.54,1],
+    ['limb',-.54,1.22,0,.23,.65],['limb',.54,1.22,0,.23,.65],
+    ['limb',-.2,.55,0,.29,.65],['limb',.2,.55,0,.29,.65]
+  ];
+  let best=null;
+  for(const [zone,ox,oy,oz,r,multiplier] of zones) {
+    const hit=segmentSphere(start,end,{x:enemy.x+ox*elite,y:height+oy*elite,z:enemy.z+oz*elite},r*elite);
+    if(hit!==null && (best===null || hit<best.t))best={t:hit,zone,multiplier};
+  }
+  return best;
+}
+
 // A shared navigation field lets a crowd actually go around cover. Rebuilding it
 // twice per second costs far less than finding a separate path for each monster.
 class CoverNavigation {
@@ -142,21 +170,46 @@ export class ArenaGame {
     this.state = 'playing'; this.cooldown = 0; this.invulnerable = 0;
     this.nextWave = .75; this.spawnTimer = 0; this.toSpawn = 0; this.nextId = 1;
     this.weaponIndex = 0; this.ammo = WEAPONS.map(w => w.capacity);
+    this.ownedWeapons = new Set([0]); this.weaponOffers = [];
     this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false;
     this.lastDamage = 0; this.regenerating = false;
   }
   get equipment() { return equipmentForLevel(this.wave); }
   get weapon() { return WEAPONS[this.weaponIndex]; }
-  get unlockedWeapons() { return WEAPONS.filter(w => w.level <= Math.max(1, this.wave)); }
+  get unlockedWeapons() { return WEAPONS.filter((w,i) => this.ownedWeapons.has(i)); }
   event(type, data = {}) { this.events.push({ type, ...data }); }
   drainEvents() { const e = this.events; this.events = []; return e; }
   blocked(start, end) { return this.obstacles.some(b => segmentBox(start, end, b) !== null); }
   selectWeapon(index) {
-    if (this.state !== 'playing' || !WEAPONS[index] || WEAPONS[index].level > Math.max(1, this.wave) || index === this.weaponIndex) return false;
+    if (this.state !== 'playing' || !WEAPONS[index] || !this.ownedWeapons.has(index) || index === this.weaponIndex) return false;
     this.weaponIndex = index; this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false;
     this.cooldown = Math.max(this.cooldown, .25); this.event('weapon', { index, name: this.weapon.name }); return true;
   }
   cycleWeapon(direction = 1) { const count = this.unlockedWeapons.length; return this.selectWeapon((this.weaponIndex + (direction < 0 ? -1 : 1) + count) % count); }
+  // Weapons rise from a tactical holographic pedestal. Acquiring one is a deliberate action.
+  offerWeapon(index) {
+    if(this.ownedWeapons.has(index)||this.weaponOffers.some(offer=>offer.index===index))return;
+    const p=this.player;
+    const offsets=[[4,1],[-4,1],[0,4],[0,-4],[6,-3],[-6,-3]];
+    const chosen=offsets.map(([dx,dz])=>({x:clamp(p.x+dx,-94,94),z:clamp(p.z+dz,-94,94)}))
+      .find(point=>this.obstacles.every(b=>b.walkableSurface||Math.abs(point.x-b.x)>b.hx+1.4||Math.abs(point.z-b.z)>b.hz+1.4))
+      ||{x:clamp(p.x+2,-90,90),z:clamp(p.z+3,-90,90)};
+    const offer={index,x:chosen.x,z:chosen.z,elevation:walkSurfaceHeight(chosen.x,chosen.z),createdAt:this.time};
+    this.weaponOffers.push(offer);this.event('weapon-offer',{...offer,name:WEAPONS[index].name});
+  }
+  nearbyWeapon(maxDistance=2.65) {
+    return this.weaponOffers.find(offer=>Math.hypot(this.player.x-offer.x,this.player.z-offer.z)<=maxDistance
+      &&Math.abs(this.player.elevation-offer.elevation)<1.6)||null;
+  }
+  collectWeapon() {
+    if(this.state!=='playing')return false;
+    const offer=this.nearbyWeapon();if(!offer)return false;
+    this.weaponOffers.splice(this.weaponOffers.indexOf(offer),1);
+    this.ownedWeapons.add(offer.index);
+    this.event('unlock',{index:offer.index,name:WEAPONS[offer.index].name});
+    this.selectWeapon(offer.index);
+    return true;
+  }
   reload() {
     if (this.state !== 'playing' || this.reloadRemaining > 0 || this.ammo[this.weaponIndex] >= this.weapon.capacity) return false;
     this.reloadRemaining = this.weapon.reload; this.charge = 0;
@@ -167,8 +220,8 @@ export class ArenaGame {
     this.wave++; this.toSpawn = levelCount(this.wave); this.spawned = 0;
     this.spawnTimer = 0; this.nextWave = -1;
     this.ammo = WEAPONS.map(w => w.capacity); this.reloadRemaining = 0; this.charge = 0;
-    const unlocked = WEAPONS.findIndex(w => w.level === this.wave);
-    if (unlocked > 0) { this.selectWeapon(unlocked); this.event('unlock', { index: unlocked, name: this.weapon.name }); }
+    const offered = WEAPONS.findIndex(w => w.level === this.wave);
+    if (offered > 0) this.offerWeapon(offered);
     this.event('equipment', this.equipment);
     this.event('wave', { wave: this.wave, count: this.toSpawn });
   }
@@ -184,6 +237,7 @@ export class ArenaGame {
     const enemy = { id: this.nextId++, x, z, elevation: walkSurfaceHeight(x, z),
       hp: elite ? 80 + this.wave * 10 : 36 + this.wave * 6, elite, ranged, form, aimHeight,
       speed: 3.8 + this.wave * .22 + (elite ? .03 : form === 'scuttler' ? .04 : form === 'seer' ? .02 : form === 'brute' ? -.01 : 0),
+      tier: Math.max(1,Math.ceil(this.wave/2)),limpUntil:0,stunnedUntil:0,
       radius: elite ? 1.05 : form === 'scuttler' ? .86 : form === 'brute' ? .95 : .8,
       hitRadius: form === 'scuttler' ? .91 : form === 'brute' ? 1.18 : form === 'seer' ? .94 : 1.05,
       attackTimer: .8 + this.random() * .6, phase: this.random() * Math.PI * 2 };
@@ -228,9 +282,14 @@ export class ArenaGame {
     this.lastDamage = this.time; this.regenerating = false; this.event('damage', { hp: this.player.hp });
     if (this.player.hp <= 0) { this.state = 'over'; this.charge = 0; this.event('over'); }
   }
-  damageEnemy(target, amount, at) {
+  damageEnemy(target, amount, at, zone='torso',multiplier=1) {
     if (!this.enemies.includes(target)) return;
-    target.hp -= amount; this.event('hit', { id: target.id });
+    const armor=target.form?Math.min(.18,Math.max(0,(target.tier||1)-1)*.025):0;
+    const effective=amount*multiplier*(1-armor*(zone==='head'?.35:1));
+    target.hp -= effective;
+    if(zone==='limb')target.limpUntil=Math.max(target.limpUntil||0,this.time+2);
+    if(zone==='head')target.stunnedUntil=Math.max(target.stunnedUntil||0,this.time+.32);
+    this.event('hit', { id: target.id, zone, damage:effective });
     if (target.hp <= 0) { this.score += target.elite ? 250 : target.ranged ? 150 : 100; this.kills++;
       this.enemies.splice(this.enemies.indexOf(target), 1); this.event('kill', { ...at, elite: target.elite }); }
   }
@@ -285,9 +344,12 @@ export class ArenaGame {
       }
       for (const other of this.enemies) { if (other.id === e.id) continue; const ax = e.x - other.x, az = e.z - other.z, d = Math.hypot(ax, az); if (d > .01 && d < 1.7) { dx += ax / d * .65; dz += az / d * .65; } }
       const norm = Math.hypot(dx, dz) || 1;
-      if (horizontalDistance > (e.ranged && visible ? 14 : 1.45)) moveInArena(e, dx / norm * e.speed * dt, dz / norm * e.speed * dt, e.radius, this.obstacles);
+      if (horizontalDistance > (e.ranged && visible ? 14 : 1.45)) {
+        const injury=e.limpUntil>this.time?.62:1;
+        moveInArena(e, dx / norm * e.speed * dt * injury, dz / norm * e.speed * dt * injury, e.radius, this.obstacles);
+      }
       e.elevation = walkSurfaceHeight(e.x, e.z);
-      e.attackTimer -= dt;
+      if(e.stunnedUntil<=this.time)e.attackTimer -= dt;
       if (distance < 2 && visible && e.attackTimer <= 0) { e.attackTimer = .85; this.damage(e.elite ? 20 + this.wave : 10 + Math.floor(this.wave / 2)); }
       else if (e.ranged && visible && distance < 38 && e.attackTimer <= 0) {
         e.attackTimer = Math.max(1.2, 2.6 - this.wave * .1);
@@ -301,13 +363,13 @@ export class ArenaGame {
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const b = this.bullets[i], start = { x: b.x, y: b.y, z: b.z };
       const end = { x: b.x + b.vx * dt, y: b.y + b.vy * dt, z: b.z + b.vz * dt };
-      let nearest = 1.01, target = null;
+      let nearest = 1.01, target = null, zone='torso',multiplier=1;
       if (b.hostile) {
         const hit = segmentSphere(start, end, { x: this.player.x, y: (this.player.elevation || 0) + 1.25, z: this.player.z }, .62);
         if (hit !== null) { nearest = hit; target = this.player; }
       } else for (const e of this.enemies) {
-        const hit = segmentSphere(start, end, { x: e.x, y: e.elevation + e.aimHeight, z: e.z }, e.hitRadius);
-        if (hit !== null && hit < nearest) { nearest = hit; target = e; }
+        const hit = traceEnemyHit(start,end,e);
+        if (hit && hit.t < nearest) { nearest = hit.t; target = e;zone=hit.zone;multiplier=hit.multiplier; }
       }
       for (const obstacle of this.obstacles) { const t = segmentBox(start, end, obstacle); if (t !== null && t < nearest) { nearest = t; target = null; } }
       if (end.y < .06 && start.y >= .06) { const t = (start.y - .06) / (start.y - end.y); if (t < nearest) { nearest = t; target = null; } }
@@ -315,7 +377,7 @@ export class ArenaGame {
         const at = { x: start.x + (end.x - start.x) * nearest, y: start.y + (end.y - start.y) * nearest, z: start.z + (end.z - start.z) * nearest };
         this.event('impact', { ...at, enemy: !!target, hostile: b.hostile, splash: b.splash });
         if (target === this.player) this.damage(b.damage);
-        else if (target) this.damageEnemy(target, b.damage, at);
+        else if (target) this.damageEnemy(target, b.damage, at, zone, multiplier);
         if (!b.hostile && b.splash > 0) for (const e of [...this.enemies]) {
           if (e === target) continue;
           const center = { x: e.x, y: e.elevation + e.aimHeight, z: e.z }, d = Math.hypot(e.x - at.x, e.z - at.z, center.y - at.y);
@@ -336,7 +398,7 @@ export class ArenaGame {
     }
   }
   snapshot() { return { equipment: this.equipment, state: this.state, player: { ...this.player }, wave: this.wave, maxLevel: MAX_LEVEL, score: this.score, kills: this.kills, time: this.time,
-    weaponIndex: this.weaponIndex, weapon: { ...this.weapon }, unlockedWeapons: this.unlockedWeapons.map(w => w.id), ammo: this.ammo[this.weaponIndex],
+    weaponIndex: this.weaponIndex, weapon: { ...this.weapon }, unlockedWeapons: this.unlockedWeapons.map(w => w.id),weaponOffers:this.weaponOffers.map(offer=>({...offer})), ammo: this.ammo[this.weaponIndex],
     reloadRemaining: this.reloadRemaining, charge: this.charge, regenerating: this.regenerating, regenIn: Math.max(0, REGEN_DELAY - (this.time - this.lastDamage)),
     toSpawn: this.toSpawn, nextWave: this.nextWave, enemies: this.enemies.map(e => ({ ...e })), bullets: this.bullets.map(b => ({ ...b })) }; }
 }
