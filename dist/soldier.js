@@ -40,12 +40,14 @@ const UPPER = .31, FORE = .35, CARRY = 1.2;
 // The suit is a few hundred rounded pieces, merged per bone and material. Pieces carry the armour level that
 // unlocks them; changing level re-merges the few meshes of each bone instead of drawing hundreds of instances.
 export function createSoldier(kit, createGun, profileInfo) {
-  const masculine=!!profileInfo?.masculine, side=masculine?.245:.235, width=masculine?1.07:1;
+  const masculine=!!profileInfo?.masculine, side=masculine?.257:.243, width=masculine?1.085:1.035;
   const root=new T.Group(),hips=new T.Group(),spine=new T.Group(),body=new T.Group(),rig=new T.Group(),head=new T.Group(),hair=new T.Group();
   root.name=profileInfo?.name||'GHJU';hips.name='Pelvis';spine.name='Spine';body.name='ChestPivot';rig.name='ArmorRig';
   hips.position.y=.97;spine.position.y=.03;rig.position.y=-1;
   root.add(hips);hips.add(spine);spine.add(body);body.add(rig);rig.add(head);
-  head.name='ClosedHelmet';head.position.y=masculine?1.785:1.765;
+  head.name='ClosedHelmet';head.position.y=masculine?1.785:1.775;
+  // Anatomical readability: human-sized head, broad enough hips and legs, not stick limbs.
+  head.scale.setScalar(.94);
   const {geometries:g,materials:m}=kit, assemblies=[];
   const builder=(bone,offsetY=0)=>{
     const asm=new Assembly();assemblies.push({asm,bone});
@@ -153,7 +155,7 @@ export function createSoldier(kit, createGun, profileInfo) {
   }
   {
     const {part}=builder(hips,-.97);
-    part(g.pelvis,m.suit,[0,0,0],[masculine?.97:1.035,1,1]);
+    part(g.pelvis,m.suit,[0,0,0],[masculine?1.03:1.075,1,1]);
   }
   // ----------------------------------------------------------------- sealed helmet
   {
@@ -184,8 +186,8 @@ export function createSoldier(kit, createGun, profileInfo) {
   // ----------------------------------------------------------------- legs
   const legs=[],knees=[],feet=[];
   for(const s of [-1,1]){
-    const leg=new T.Group();leg.name=s<0?'LeftThigh':'RightThigh';leg.position.set(s*.17,0,0);hips.add(leg);legs.push(leg);
-    const shin=new T.Group();shin.name=s<0?'LeftShin':'RightShin';shin.position.set(0,-.425,0);leg.add(shin);knees.push(shin);
+    const leg=new T.Group();leg.name=s<0?'LeftThigh':'RightThigh';leg.position.set(s*(masculine?.188:.181),0,0);leg.scale.set(1.09,1,1.09);hips.add(leg);legs.push(leg);
+    const shin=new T.Group();shin.name=s<0?'LeftShin':'RightShin';shin.position.set(0,-.425,0);shin.scale.set(1.045,1,1.06);leg.add(shin);knees.push(shin);
     {
       const {plate,sphere,link,part,ell}=builder(leg);
       part(loft([[-.405,.078,.076],[-.33,.093,.091],[-.21,.117,.11],[-.07,.121,.119],[-.025,.095,.086]],18),m.suit,[0,0,0],[1,1,1]);
@@ -336,6 +338,7 @@ export function createSoldier(kit, createGun, profileInfo) {
         if(Math.max(left,right)<=UPPER+FORE-.01)break;p.z+=.01;
       }
       mount.position.copy(p);
+      this._weaponAnchor=p.clone();
       rest.visible=!support;
       weaponIndex=index;currentWeaponPose=currentSupportPose=-1;soldierApi.weapon=index;poseWeapon(0);
     },
@@ -368,7 +371,7 @@ export function createSoldier(kit, createGun, profileInfo) {
       this._gaitWeight=firstSample ? targetWeight : (this._gaitWeight??0)+(targetWeight-(this._gaitWeight??0))*Math.min(1,elapsed*11);
       if(this._gaitPhase===undefined)this._gaitPhase=time*8.7;
       if(speed>.08&&!airborne){
-        const stride=speed>8?1.5:1.15;
+        const stride=speed>8?1.75:1.42;
         this._gaitPhase+=Math.hypot(vx,vz)*elapsed/stride*PI*2*(forward<-.12?-1:1);
       }
       const phase=this._gaitPhase,step=this._gaitWeight,run=speed>8,stance=run?.43:.63;
@@ -379,15 +382,18 @@ export function createSoldier(kit, createGun, profileInfo) {
         return {support:false,lift:Math.sin(Math.PI*u)**2,roll:.26*(1-ease)-.08*ease,swing:Math.sin(phase+offset*2*PI)};
       };
       const left=cycle(0),right=cycle(.5),opposition=Math.sin(phase);
-      const lean=step*(run?.075:.032),sway=step*Math.sin(phase)*.024;
-      hips.position.y=.97-step*(run?.019:.011)*(1-Math.cos(phase*2));
+      const lean=step*(run?.045:.018),sway=step*Math.sin(phase)*.015;
+      const idle=1-step;
+      const breathe=Math.sin(time*1.85)*.004;
+      hips.position.y=.97-step*(run?.012:.007)*(1-Math.cos(phase*2));
+      hips.position.x=idle*Math.sin(time*.75)*.013+step*Math.sin(phase)*.011;
       hips.rotation.set(lean+step*Math.sin(phase)*.015, step*opposition*.045, sway);
       spine.rotation.set(-lean*.55, -hips.rotation.y*.6, -sway*.72+step*Math.max(-1,Math.min(1,lateral/7))*.018);
-      const strideAmplitude=step*(run?.64:.48);
+      const strideAmplitude=step*(run?.47:.34);
       legs[0].rotation.x=left.swing*strideAmplitude;
       legs[1].rotation.x=right.swing*strideAmplitude;
-      knees[0].rotation.x=.045+left.lift*step*(run?.85:.69);
-      knees[1].rotation.x=.045+right.lift*step*(run?.85:.69);
+      knees[0].rotation.x=.06+left.lift*step*(run?.64:.53);
+      knees[1].rotation.x=.06+right.lift*step*(run?.64:.53);
       feet[0].rotation.x=left.roll*step;
       feet[1].rotation.x=right.roll*step;
       if(airborne){
@@ -397,18 +403,23 @@ export function createSoldier(kit, createGun, profileInfo) {
         knees[0].rotation.x=rising?.64:.37;knees[1].rotation.x=rising?.57:.34;
         feet[0].rotation.x=-.17;feet[1].rotation.x=-.12;
       }
-      body.position.y=Math.sin(time*1.7)*.004+step*Math.abs(opposition)*.009;
-      body.rotation.z=-sway*.7;
+      body.position.y=breathe+step*Math.abs(opposition)*.006;
+      body.rotation.z=-sway*.7+idle*Math.sin(time*.75)*.009;
       head.rotation.x=(airborne?-.024:step*Math.sin(phase+PI/2)*.012)+Math.sin(time*1.55)*.004;
-      head.rotation.y=turn*.024;
+      head.rotation.y=turn*.024+idle*Math.sin(time*.65)*.013;
       arms.forEach(({s,shoulder},i)=>{
         const armPhase=i===0?left.swing:right.swing;
-        shoulder.rotation.x=airborne?-.035:step*armPhase*.024;
+        shoulder.rotation.x=airborne?-.035:step*armPhase*.022+idle*Math.sin(time*1.55+i*.65)*.008;
         shoulder.rotation.z=step*(s*armPhase*.014-Math.max(-1,Math.min(1,lateral/7))*.017);
       });
       const kick=Math.min(1,recoil/.16);
       body.position.z=kick*.035;
       body.rotation.x=kick*.035+lean*.12;
+      if(this._weaponAnchor){
+        mount.position.copy(this._weaponAnchor);
+        mount.position.y+=breathe+step*Math.sin(phase)*.004;
+        mount.position.x+=idle*Math.sin(time*.75)*.006;
+      }
       gun.userData.animateHands?.(trigger,kick>.05?.34:.18,reload,dt);poseWeapon(reload);solveArms();
       hair.rotation.x=Math.sin(time*3)*.045;hair.rotation.z=Math.sin(time*2)*.025;
       orbit.rotation.y=time*.24;
