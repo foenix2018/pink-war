@@ -321,7 +321,12 @@ function updateHud() {
   $('reload-button').disabled = reloading || game.ammo[game.weaponIndex]===game.weapon.capacity;
   $('fire-caption').innerHTML = reloading ? `RECHARGE ${game.reloadRemaining.toFixed(1)} S` : game.weapon.chargeTime ? 'TIR CHARGÉ <small>MAINTENIR · RELÂCHER</small>' : 'TIR LASER <small>MAINTENIR · ESPACE</small>';
   $('charge-bar').style.width = `${(reloading ? 1-game.reloadRemaining/game.weapon.reload : game.charge)*100}%`;
-  $('enemy-label').textContent = game.nextWave > 0 && game.wave > 0 ? `NIVEAU SUIVANT DANS ${Math.ceil(game.nextWave)} S` : `${game.enemies.length + game.toSpawn} CRÉATURES À REPOUSSER`;
+  const pending=game.weaponOffers[0];
+  const distanceToWeapon=pending?Math.round(Math.hypot(pending.x-game.player.x,pending.z-game.player.z)):0;
+  $('enemy-label').textContent=pending
+    ? `ARME ${WEAPONS[pending.index].name} · FAISCEAU À ${distanceToWeapon} M`
+    : game.nextWave > 0 && game.wave > 0 ? `NIVEAU SUIVANT DANS ${Math.ceil(game.nextWave)} S`
+    : `${game.enemies.length + game.toSpawn} CRÉATURES À REPOUSSER`;
   $('score-label').textContent = String(game.score).padStart(5, '0'); $('time-label').textContent = timeString(game.time);
   const radar = $('radar'), c = radar.getContext('2d'), size = radar.width, scale = .7, cx = size / 2, cy = size / 2;
   const radarTheme=character.radar;
@@ -343,6 +348,14 @@ function updateHud() {
   c.restore();
   c.fillStyle = radarTheme.wall; for (const b of world.obstacles) c.fillRect(cx + (b.x - b.hx) * scale, cy + (b.z - b.hz) * scale, b.hx * 2 * scale, b.hz * 2 * scale);
   c.strokeStyle = character.masculine?character.accent:'#ff8ebe'; c.beginPath(); c.arc(cx + PORTAL.x * scale, cy + PORTAL.z * scale, 6, 0, Math.PI * 2); c.stroke();
+  // Weapon beacons are marked on the tactical radar until deliberately collected.
+  for(const offer of game.weaponOffers){
+    const x=cx+offer.x*scale,z=cy+offer.z*scale,pulse=4+2*Math.sin(clock*6);
+    c.save();c.strokeStyle='#ffe8a9';c.fillStyle='#fff7c2';c.lineWidth=2;
+    c.beginPath();c.arc(x,z,pulse,0,Math.PI*2);c.stroke();
+    c.fillRect(x-2,z-2,4,4);c.font='bold 9px monospace';c.fillText('ARME',x,z-10);
+    c.restore();
+  }
   for (const e of game.enemies) { c.fillStyle = e.elite ? radarTheme.elite : radarTheme.enemy; c.beginPath(); c.arc(cx + e.x * scale, cy + e.z * scale, 2.6, 0, Math.PI * 2); c.fill(); }
   c.save(); c.translate(cx + game.player.x * scale, cy + game.player.z * scale); c.rotate(-yaw); c.fillStyle = radarTheme.player; c.beginPath(); c.moveTo(0, -6); c.lineTo(4, 4); c.lineTo(0, 2); c.lineTo(-4, 4); c.closePath(); c.fill(); c.restore();
   if (game.time > 9) $('game-tip').style.opacity = '0';
