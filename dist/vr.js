@@ -1,4 +1,4 @@
-import { clamp, segmentBox, segmentSphere } from './game-logic.js';
+import { clamp, segmentBox, segmentSphere, traceEnemyHit } from './game-logic.js';
 
 const $ = id => document.getElementById(id);
 const deadzone = v => Math.abs(v || 0) > .16 ? v : 0;
@@ -82,8 +82,8 @@ export function traceVRAim(origin, direction, enemies = [], obstacles = [], rang
   const end = { x: origin.x + direction.x * range, y: origin.y + direction.y * range, z: origin.z + direction.z * range };
   let nearest = 1, enemy = null;
   for (const e of enemies) {
-    const hit = segmentSphere(origin, end, { x: e.x, y: e.elite ? 1.35 : 1.15, z: e.z }, e.elite ? 1.3 : 1.05);
-    if (hit !== null && hit < nearest) { nearest = hit; enemy = e; }
+    const hit = traceEnemyHit(origin,end,e);
+    if (hit && hit.t < nearest) { nearest = hit.t; enemy = e; }
   }
   for (const wall of obstacles) {
     const hit = segmentBox(origin, end, wall);
@@ -354,7 +354,7 @@ export class VRController {
     return this.lastMoveYaw ?? heading;
   }
   input(frame) {
-    const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, fire: false, sprint: false, precision: false, jump: false };
+    const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, fire: false, sprint: false, precision: false, jump: false, pickup: false };
     const xr = this.mode === 'xr', cfg = settingsOf(this), mainHand = cfg.hand, sideHand = otherHand(mainHand);
     const sources = xr ? [...(this.session?.inputSources || [])] : [...(navigator.getGamepads?.() || [])].filter(Boolean).map(gamepad => ({ gamepad, handedness: 'both' }));
     const phase = this.hooks.phase?.() || 'playing', actions = new Set();
@@ -389,7 +389,7 @@ export class VRController {
       const edge = (key, index) => { const id = `${source.handedness}:${key}`, down = pressed(pad.buttons[index]); if (down && !this.previous.get(id) && tracked) actions.add(key); this.previous.set(id, down); };
       if (main) { edge('reload', xr ? 4 : 0); edge('next', xr ? 5 : 1); }
       if (xr && side) { edge('previous', 4); edge('pause', 5); edge('quickReload', 0); }
-      if (!xr) { edge('pause', 9); edge('jump', 6); }
+      if (!xr) { edge('pause', 9); edge('jump', 6); edge('pickup', 2); }
     }
     if (actions.has('pause')) { this.hooks.togglePause(); if (xr) this.cancelTrigger(); }
     else if ((phase === 'paused' || phase === 'over') && actions.has('reload') && xr) { this.hooks.begin(); this.cancelTrigger(); }
@@ -402,9 +402,9 @@ export class VRController {
     this.trackingLost = xr && !mainTracked;
     if (xr && (!visible || !mainTracked)) { this.cancelTrigger(); this.hooks.pause?.(); }
     const playing = (this.hooks.phase?.() || phase) === 'playing';
-    if (!playing) { result.x = result.z = result.turn = result.tilt = result.snap = 0; result.sprint = result.precision = false; result.jump = false; if (xr) this.cancelTrigger(); }
+    if (!playing) { result.x = result.z = result.turn = result.tilt = result.snap = 0; result.sprint = result.precision = false; result.jump = false;result.pickup = false; if (xr) this.cancelTrigger(); }
     if (!rawFire) this.triggerBlocked = false;
-    result.jump = playing && actions.has('jump');
+    result.jump = playing && actions.has('jump');result.pickup = playing && actions.has('pickup');
     result.fire = playing && mainTracked && rawFire && (!xr || !this.triggerBlocked);
     this.precision = result.precision && playing;
     return result;
