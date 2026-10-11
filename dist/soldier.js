@@ -365,8 +365,8 @@ export function createSoldier(kit, createGun, profileInfo) {
       // and stable IK grips. Adapt that kinematic model to Pink War's lightweight joint hierarchy.
       const speed=Math.hypot(vx,vz), airborne=!!flight?.airborne, rising=(flight?.verticalSpeed||0)>0;
       const targetWeight=moving&&!airborne?Math.min(1,speed/4.6):0;
-      this._gaitWeight=(this._gaitWeight??0)+(targetWeight-(this._gaitWeight??0))*Math.min(1,elapsed*11);
-      if(this._gaitPhase===undefined)this._gaitPhase=0;
+      this._gaitWeight=firstSample ? targetWeight : (this._gaitWeight??0)+(targetWeight-(this._gaitWeight??0))*Math.min(1,elapsed*11);
+      if(this._gaitPhase===undefined)this._gaitPhase=time*8.7;
       if(speed>.08&&!airborne){
         const stride=speed>8?1.5:1.15;
         this._gaitPhase+=Math.hypot(vx,vz)*elapsed/stride*PI*2*(forward<-.12?-1:1);
