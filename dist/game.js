@@ -17,6 +17,7 @@ let outfitReturn = 'lobby', previewLevel = 1, equipmentUntil = 0;
 let canvasPointer = null, lastDrag = null, audioContext = null;
 const move = { x: 0, y: 0, id: null }, look = { x: 0, y: 0, id: null };
 const keys = new Set(), firingPointers = new Set();
+let jumpQueued = false;
 const persist = () => { try { localStorage.setItem('rosee-settings', JSON.stringify(settings)); } catch {} };
 const timeString = time => `${String(Math.floor(time / 60)).padStart(2, '0')}:${String(Math.floor(time % 60)).padStart(2, '0')}`;
 
@@ -83,7 +84,7 @@ for(const button of document.querySelectorAll('[data-character]'))button.onclick
 selectCharacter(character.id,false);
 
 function resetInput() {
-  keys.clear(); firingPointers.clear(); canvasPointer = null; lastDrag = null;
+  keys.clear(); firingPointers.clear(); jumpQueued = false; canvasPointer = null; lastDrag = null;
   for (const s of [move, look]) { s.x = 0; s.y = 0; s.id = null; }
   for (const id of ['move-stick', 'look-stick']) $(id).querySelector('.joystick-knob').style.transform = '';
   $('fire-button').classList.remove('firing');
@@ -106,6 +107,8 @@ function attachJoystick(id, state) {
 attachJoystick('move-stick', move); attachJoystick('look-stick', look);
 $('fire-button').addEventListener('pointerdown', e => { if (phase !== 'playing') return; e.preventDefault(); audioReady(); firingPointers.add(e.pointerId); try { e.target.closest('button').setPointerCapture(e.pointerId); } catch {} $('fire-button').classList.add('firing'); });
 for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) $('fire-button').addEventListener(type, e => { firingPointers.delete(e.pointerId); if (!firingPointers.size) $('fire-button').classList.remove('firing'); });
+$('jump-button').addEventListener('pointerdown', e => { if (phase !== 'playing') return; e.preventDefault(); jumpQueued = true; });
+$('jump-button').addEventListener('click', () => { if (phase === 'playing') jumpQueued = true; });
 
 function selectView(next) {
   view = vr?.active ? 'fps' : next;
@@ -237,7 +240,7 @@ function updateWeaponVisuals(dt, firing, moving) {
   const trigger = firing && !reloading && game.state === 'playing' ? 1 : 0;
   if (vr?.mode !== 'xr') {
     if (view === 'fps') world.fpsGun.userData.animateHands?.(trigger, trigger ? .34 : .18, reloadLift, dt);
-    else world.soldier.animate(clock, moving, recoil, reloadLift, trigger, dt);
+    else world.soldier.animate(clock, moving, recoil, reloadLift, trigger, dt, { airborne: !game.player.grounded, verticalSpeed: game.player.verticalSpeed });
   }
 }
 function aim() {
@@ -272,6 +275,8 @@ function handleEvents() {
     if (event.type === 'equipment') { const equipment=equipmentForCharacter(event.level,character.id);world.setEquipment(event.level);$('equipment-unlock-title').textContent=`${equipment.name} · NIV. ${event.level}`;$('equipment-unlock-detail').textContent=equipment.addition;equipmentUntil=clock+4;$('equipment-unlock').hidden=false; }
     if (event.type === 'clear') { announce('NIVEAU TERMINÉ', '+ BONUS · LA BRÈCHE SE RECHARGE'); tone(420, 700, .25, .07); }
     if (event.type === 'weapon') { world.setWeapon(game.weaponIndex); vr.haptic('weapon'); tone(510, 760, .1, .03); }
+    if (event.type === 'jump') tone(165, 110, .075, .012);
+    if (event.type === 'land') tone(105, 55, .075, .013);
     if (event.type === 'reload') { vr.startReloadGesture(); vr.haptic('reload'); tone(220, 450, .16, .04); }
     if (event.type === 'reloaded') { vr.haptic('reloaded'); tone(520, 820, .1, .035); }
     if (event.type === 'spawn') world.burst(event.x, 1, event.z, world.palette.violet, 7);
@@ -335,7 +340,8 @@ function bindCanvas() {
 window.addEventListener('rosee-renderer-recovered', () => { $('world').removeAttribute('data-controls-bound'); bindCanvas(); $('renderer-label').textContent = `${world.backend.toUpperCase()} · CONÇU POUR LE TACTILE`; });
 function frame(timestamp, xrFrame) {
   const dt = lastTime ? Math.min((timestamp - lastTime) / 1000, .05) : .016; lastTime = timestamp; clock += dt;
-  const vrInput = vr.active ? vr.input(xrFrame) : {x:0,z:0,turn:0,tilt:0,snap:0,fire:false,sprint:false};
+  // The standard Bluetooth/USB gamepad is available outside VR as well.
+  const vrInput = vr.input(xrFrame);
   world.animatePortal(clock);
   if (phase === 'lobby') world.lobby(clock,Math.max(1,game.wave));
   if (phase === 'outfit') world.outfit(clock,previewLevel,Number($('outfit-rotation').value)*Math.PI/180);
@@ -350,7 +356,8 @@ function frame(timestamp, xrFrame) {
     const facing = yaw + (vr.mode==='stereo' && vr.sensor ? vr.phoneYaw : 0);
     let moveYaw = facing;
     if(vr.mode==='xr')moveYaw=vr.movementYaw(facing);
-    game.step(dt, { x, z, yaw: facing, moveYaw, sprint: vrInput.sprint || keys.has('ShiftLeft') || keys.has('ShiftRight') });
+    const jump = jumpQueued || vrInput.jump || keys.has('KeyJ'); jumpQueued = false;
+    game.step(dt, { x, z, yaw: facing, moveYaw, sprint: vrInput.sprint || keys.has('ShiftLeft') || keys.has('ShiftRight'), jump });
     const moving = Math.hypot(x, z) > .1;
     world.sync(game, clock, dt); updateCamera();
     const firing = vr.mode==='xr' ? vrInput.fire : !!(firingPointers.size || keys.has('Space') || vrInput.fire);
