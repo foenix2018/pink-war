@@ -29,14 +29,12 @@ test('Quest Touch Plus keeps left movement, right trigger and grip independent o
   down(right,0,false);right.gamepad.buttons[0].value=.4;assert.equal(state.input().fire,true);
 });
 
-test('Quest rotation snaps once per stick gesture, including an opposite gesture',()=>{
+test('Quest right stick rotates continuously with no snap or jerk, including reverse motion',()=>{
   const {state,right}=setup();right.gamepad.axes[2]=.9;
-  assert.equal(state.input().snap,Math.PI/6);
-  for(let i=0;i<50;i++)assert.equal(state.input().snap,0);
-  right.gamepad.axes[2]=-.9;assert.equal(state.input().snap,0);
-  right.gamepad.axes[2]=.2;assert.equal(state.input().snap,0);
-  right.gamepad.axes[2]=-.9;assert.equal(state.input().snap,-Math.PI/6);
-  right.gamepad.axes[2]=0;state.input();right.gamepad.axes[2]=.5;assert.equal(state.input().snap,0);
+  for(let i=0;i<50;i++){const input=state.input();assert.equal(input.turn,.9);assert.equal(input.snap,0);}
+  right.gamepad.axes[2]=-.9;assert.equal(state.input().turn,-.9);
+  right.gamepad.axes[2]=.2;assert.equal(state.input().turn,.2);
+  right.gamepad.axes[2]=0;assert.equal(state.input().turn,0);
 });
 
 test('A recharges, B selects next and X previous only on fresh presses; changing cancels a charge',()=>{
@@ -174,12 +172,13 @@ test('a left-handed layout mirrors every control: left trigger fires, the right 
   assert.equal(exits(),1,'Y leaves VR from the pause');
 });
 
-test('snap turns honour 30° and 45°, and smooth turning is continuous',()=>{
-  let ctx=setup(undefined,{...VR_DEFAULTS,turn:'snap45'});ctx.right.gamepad.axes[2]=.9;assert.equal(ctx.state.input().snap,Math.PI/4);
-  ctx=setup(undefined,{...VR_DEFAULTS,turn:'smooth'});ctx.right.gamepad.axes[2]=.5;
+test('old saved snap settings migrate to continuous rotation',()=>{
+  const cfg=sanitizeVRSettings({...VR_DEFAULTS,turn:'snap45'});
+  assert.equal(cfg.turn,'smooth');
+  const ctx=setup(undefined,cfg);ctx.right.gamepad.axes[2]=.5;
   let input=ctx.state.input();assert.equal(input.snap,0);assert.equal(input.turn,.5);
   ctx.right.gamepad.axes[2]=-1;input=ctx.state.input();assert.equal(input.turn,-1);assert.equal(input.snap,0);
-  ctx.right.gamepad.axes[2]=.1;assert.equal(ctx.state.input().turn,0,'the dead zone still applies');
+  ctx.right.gamepad.axes[2]=.1;assert.equal(ctx.state.input().turn,0,'deadzone retained');
 });
 
 test('settings are validated and fall back to the defaults',()=>{
@@ -193,7 +192,7 @@ test('the control list and button names follow the shooting hand',()=>{
   const right=Object.fromEntries(questControls('right')),left=Object.fromEntries(questControls('left'));
   assert.equal(right['Gâchette droite'],'Tirer · maintenir pour charger');assert.equal(right.A,'Recharger la batterie');assert.equal(right.Y,'Pause / reprise');
   assert.equal(left['Gâchette gauche'],'Tirer · maintenir pour charger');assert.equal(left.X,'Recharger la batterie');assert.equal(left.B,'Pause / reprise');
-  assert.ok(left['Joystick droit']==='Se déplacer'&&left['Joystick gauche']==='Rotation (crans ou fluide)');
+  assert.ok(left['Joystick droit']==='Se déplacer'&&left['Joystick gauche']==='Rotation fluide');
   assert.deepEqual(buttonNames('left'),{reload:'X',next:'Y',previous:'A',pause:'B'});
   for(const hand of ['right','left'])assert.equal(new Set(questControls(hand).map(([control])=>control)).size,questControls(hand).length,'every control is listed once');
 });
