@@ -1,10 +1,10 @@
 import * as T from './vendor/three.webgpu.min.js';
 import { Assembly } from './geo.js';
-import { PLATFORMS, STAIRS, LIFTS, liftHeightAt, createTraversalObstacles } from './world-layout.js';
+import { PLATFORMS, STAIRS, LIFTS, BRIDGES, BRIDGE_LANDINGS, BRIDGE_APPROACHES, bridgeSegments, liftHeightAt, createTraversalObstacles } from './world-layout.js';
 
 // Both geometry and collision use the same metre-based layout as locomotion.
 export function createTraversalArt(scene, obstacles, mats) {
-  const root=new T.Group();root.name='Reclaimed terraces and operational freight lifts';scene.add(root);
+  const root=new T.Group();root.name='Terraces, elevated bridges, ramps and freight lifts';scene.add(root);
   obstacles.push(...createTraversalObstacles());
   const fixed=new Assembly();
   const block=(mat,size,pos,r=.025)=>fixed.box(mat,size,pos,[0,0,0],r);
@@ -40,7 +40,13 @@ export function createTraversalArt(scene, obstacles, mats) {
     rail([stair.x+stair.halfWidth,p.z+p.hz],[p.x+p.hx,p.z+p.hz],y);
     for(const side of [-1,1]) {
       const x=p.x+side*p.hx,liftSide=Math.sign(lift.x-p.x)===side;
-      if(!liftSide)rail([x,p.z-p.hz],[x,p.z+p.hz],y);
+      if(!liftSide && (p.id==='garden'&&side===1 || p.id==='relay'&&side===-1)){
+        // Leave a physical opening at the existing terrace for the new elevated bridge.
+        const gap=2.05;
+        rail([x,p.z-p.hz],[x,p.z-gap],y);
+        rail([x,p.z+gap],[x,p.z+p.hz],y);
+      }
+      else if(!liftSide)rail([x,p.z-p.hz],[x,p.z+p.hz],y);
       else {rail([x,p.z-p.hz],[x,lift.z-lift.hz],y);rail([x,lift.z+lift.hz],[x,p.z+p.hz],y);}
     }
     // Terrace planting stays shallow; all walkable circulation remains unobstructed.
@@ -99,6 +105,130 @@ export function createTraversalArt(scene, obstacles, mats) {
       const t=i/5,z=near-length*t,height=rise*t;
       rod(mats.rust,[left+.23,.07,z],[left+.23,height-.02,z],.061);
       rod(mats.rust,[right-.23,.07,z],[right-.23,height-.02,z],.061);
+    }
+  }
+  // NEW: actual elevated links. Visual deck segments correspond exactly to
+  // the walkable surfaces in world-layout.js; no hidden floor spans the broken gap.
+  function bridgeRail(a,b,height){
+    rod(mats.steel,[a[0],height+1.04,a[1]],[b[0],height+1.04,b[1]],.046);
+    rod(mats.rust,[a[0],height+.53,a[1]],[b[0],height+.53,b[1]],.032);
+    const n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/2));
+    for(let i=0;i<=n;i++){
+      const t=i/n,x=a[0]+(b[0]-a[0])*t,z=a[1]+(b[1]-a[1])*t;
+      rod(mats.steel,[x,height+.08,z],[x,height+1.07,z],.045);
+    }
+  }
+  for(const deck of BRIDGE_LANDINGS){
+    const h=deck.height;
+    block(mats.black,[deck.hx*2,.22,deck.hz*2],[deck.x,h-.11,deck.z],.035);
+    block(mats.steel,[deck.hx*2-.11,.035,deck.hz*2-.12],[deck.x,h+.012,deck.z],.006);
+    for(const sign of [-1,1]){
+      const z=deck.z+sign*(deck.hz-.1);
+      block(mats.yellow,[deck.hx*2-.28,.018,.13],[deck.x,h+.032,z],.002);
+      bridgeRail([deck.x-deck.hx,z],[deck.x+deck.hx,z],h);
+    }
+    for(const side of [-1,1])for(const end of [-1,1]){
+      const x=deck.x+side*(deck.hx-.38),z=deck.z+end*(deck.hz-.39);
+      block(mats.rust,[.24,h-.32,.24],[x,(h-.32)/2,z],.02);
+      // Supports use their true footprints and don't block elevated entrances.
+      collision(x,z,.12,.12,0,h-.28);
+      rod(mats.steel,[x,Math.max(.1,h-2.2),z],[deck.x+side*(deck.hx-.06),h-.16,z],.075);
+    }
+    // Low industrial crates offer tactical cover without sealing the center aisle.
+    const coverX=deck.x+(.82),coverZ=deck.z-1.17;
+    block(mats.rust,[1.22,.76,.85],[coverX,h+.4,coverZ],.045);
+    block(mats.steel,[1.26,.045,.88],[coverX,h+.80,coverZ],.006);
+    collision(coverX,coverZ,.61,.425,h+.025,.775);
+    for(let i=0;i<4;i++){
+      const z=deck.z-1.5+i*.95;
+      block(mats.black,[deck.hx*2-.32,.015,.045],[deck.x,h+.041,z],.002);
+    }
+  }
+  for(const bridge of BRIDGES){
+    const dx=bridge.x2-bridge.x1,half=bridge.halfWidth,h=bridge.height;
+    for(const [a,b] of bridgeSegments(bridge)){
+      const xA=bridge.x1+dx*a,xB=bridge.x1+dx*b,span=Math.abs(xB-xA),mid=(xA+xB)/2;
+      block(mats.black,[span,.20,half*2],[mid,h-.1,bridge.z],.025);
+      block(mats.steel,[span-.035,.02,half*2-.12],[mid,h+.01,bridge.z],.002);
+      // Structural I-beams are visible from the street.
+      for(const side of [-1,1]){
+        const z=bridge.z+side*(half-.18);
+        block(mats.rust,[span,.23,.16],[mid,h-.31,z],.007);
+        block(mats.steel,[span,.045,.20],[mid,h-.44,z],.005);
+        bridgeRail([xA,bridge.z+side*(half+.08)],[xB,bridge.z+side*(half+.08)],h);
+      }
+      // Cross-grating / worn yellow safety markers.
+      const ribCount=Math.max(3,Math.ceil(span/.68));
+      for(let i=1;i<ribCount;i++){
+        const x=xA+(xB-xA)*i/ribCount;
+        block(mats.black,[.038,.016,half*2-.20],[x,h+.029,bridge.z],.003);
+      }
+      for(let i=1;i<Math.ceil(span/3);i++){
+        const x=xA+(xB-xA)*i/Math.ceil(span/3);
+        rod(mats.rust,[x,h-.45,bridge.z-half+.20],[x,h-.45,bridge.z+half-.20],.047);
+      }
+      // Site-built underdeck supports at stable span positions.
+      for(const t of [.26,.78]){
+        const x=xA+(xB-xA)*t;
+        for(const side of [-1,1]){
+          const z=bridge.z+side*(half-.42);
+          rod(mats.rust,[x,.06,z],[x,h-.24,z],.115);
+          rod(mats.steel,[x,Math.max(.12,h-2.3),z],[x+side*.62,h-.20,bridge.z+side*(half-.10)],.068);
+          collision(x,z,.115,.115,0,h-.20);
+        }
+      }
+      // Small emissive lamps with no extra point lights (Quest performance).
+      for(let i=1;i<Math.ceil(span/3.5);i++){
+        const x=xA+(xB-xA)*i/Math.ceil(span/3.5);
+        block(mats.accent,[.28,.045,.11],[x,h+1.075,bridge.z+half+.08],.004);
+        block(mats.accent,[.28,.045,.11],[x,h+1.075,bridge.z-half-.08],.004);
+      }
+    }
+    if(bridge.damage){
+      const xA=bridge.x1+dx*bridge.gapFrom,xB=bridge.x1+dx*bridge.gapTo;
+      // Broken sections have *no* hidden collision panel, no rail spanning the hole.
+      for(const x of [xA,xB]){
+        block(mats.yellow,[.11,.022,half*2-.16],[x,h+.035,bridge.z],.003);
+        for(const side of [-1,1]){
+          const z=bridge.z+side*(half-.2);
+          rod(mats.rust,[x,h-.08,z],[x+(x===xA?.8:-.8),h-1.13,z],.065);
+        }
+      }
+    }
+  }
+  for(const ramp of BRIDGE_APPROACHES){
+    const left=ramp.x-ramp.halfWidth,right=ramp.x+ramp.halfWidth;
+    const near=ramp.bottomZ,far=ramp.topZ,rise=ramp.height,length=near-far;
+    const geo=new T.BufferGeometry();
+    geo.setAttribute('position',new T.Float32BufferAttribute([
+      left,0,near,right,0,near,right,rise,far,
+      left,0,near,right,rise,far,left,rise,far
+    ],3));
+    geo.setAttribute('uv',new T.Float32BufferAttribute([0,0,1,0,1,length/2,0,0,1,length/2,0,length/2],2));
+    geo.computeVertexNormals();
+    const inclined=new T.Mesh(geo,mats.steel);
+    inclined.name='Ramp to ruined footbridge';inclined.receiveShadow=true;
+    root.add(inclined);
+    for(const side of [-1,1]){
+      const x=ramp.x+side*(ramp.halfWidth+.08);
+      rod(mats.rust,[x,.05,near],[x,rise-.15,far],.11);
+      rod(mats.steel,[x,1.1,near],[x,rise+1.1,far],.047);
+      rod(mats.steel,[x,.55,near],[x,rise+.55,far],.029);
+      for(let i=0;i<=Math.ceil(length/1.8);i++){
+        const t=i/Math.ceil(length/1.8),z=near-t*length,y=rise*t;
+        rod(mats.steel,[x,y+.1,z],[x,y+1.1,z],.045);
+      }
+    }
+    for(let i=1;i<Math.ceil(length/.8);i++){
+      const t=i/Math.ceil(length/.8),z=near-t*length,y=rise*t;
+      block(mats.yellow,[ramp.halfWidth*2-.3,.018,.05],[ramp.x,y+.019,z],.003);
+    }
+    for(const t of [.28,.57,.82]){
+      const z=near-t*length,y=rise*t;
+      for(const side of [-1,1]){
+        const x=ramp.x+side*(ramp.halfWidth-.24);
+        rod(mats.rust,[x,.06,z],[x,Math.max(.07,y-.10),z],.075);
+      }
     }
   }
   const moving=[];
