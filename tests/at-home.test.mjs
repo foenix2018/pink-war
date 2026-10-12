@@ -29,6 +29,26 @@ test('Room geometry is required before spawning a combat enemy',()=>{
   assert.match(js,/initiateRoomCapture/);
   assert.match(js,/zone|ZONE/);
 });
+test('AT HOME reuses the original Pink War gameplay asset modules',()=>{
+  const assets=readFileSync(new URL('../dist/at-home-assets.js',import.meta.url),'utf8');
+  assert.match(assets,/from '.\/enemies\.js'/);
+  assert.match(assets,/from '.\/soldier\.js'/);
+  assert.match(assets,/from '.\/weapons\.js'/);
+  assert.match(assets,/from '.\/world-art\.js'/);
+  assert.match(assets,/createEnemyFactory\(player\.mats\)/);
+  assert.match(assets,/createSoldier\(companionKit\.kit/);
+  assert.match(assets,/buildGun\(/);
+  assert.match(assets,/createRuinedRoomMaterials\(/);
+  assert.match(js,/WEAPONS\[weaponIndex\]/);
+  assert.match(js,/hitbox\.userData\.bot/);
+  assert.match(js,/colorWrite:false, depthWrite:true/);
+  assert.match(js,/assets\.projectRuin/);
+});
+test('AT HOME room asset module passes Node syntax check',()=>{
+  const check=spawnSync(process.execPath,['--check','dist/at-home-assets.js'],{encoding:'utf8'});
+  assert.equal(check.status,0,check.stderr);
+});
+
 test('AT HOME JavaScript passes Node syntax check',()=>{
   const check=spawnSync(process.execPath,['--check','dist/at-home.js'],{encoding:'utf8'});
   assert.equal(check.status,0,check.stderr);
