@@ -25,7 +25,7 @@ test('AR mode is passthrough, never an opaque virtual world',()=>{
 test('Room geometry is required before spawning a combat enemy',()=>{
   assert.match(js,/some\(record => record\.isFloor\)/);
   assert.match(js,/clearLineOfSight/);
-  assert.match(js,/raycaster\.intersectObjects\(targets\.concat\(blockers\(\)\)/);
+  assert.match(js,/raycaster\.intersectObjects\(bots\.map\(bot=>bot\.hitbox\)\.concat\(blockers\(\)\),false\)/);
   assert.match(js,/initiateRoomCapture/);
   assert.match(js,/zone|ZONE/);
 });
