@@ -1,5 +1,6 @@
 import { clamp, segmentBox, segmentSphere, traceEnemyHit } from './game-logic.js';
 import { portalIndicators } from './portal-indicator.js';
+import { DesktopGamepadInput, desktopAxis } from './desktop-input.js';
 
 const $ = id => document.getElementById(id);
 const deadzone = v => Math.abs(v || 0) > .16 ? v : 0;
@@ -396,7 +397,9 @@ export class VRController {
   input(frame) {
     const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, fire: false, sprint: false, precision: false, jump: false, pickup: false, crouchToggle: false };
     const xr = this.mode === 'xr', cfg = settingsOf(this), mainHand = cfg.hand, sideHand = otherHand(mainHand);
-    const sources = xr ? [...(this.session?.inputSources || [])] : [...(navigator.getGamepads?.() || [])].filter(Boolean).map(gamepad => ({ gamepad, handedness: 'both' }));
+    const desktop = xr ? null : (this.desktopGamepads ||= new DesktopGamepadInput()).select(navigator.getGamepads?.() || []);
+    if (!xr && this.desktopPadKey !== this.desktopGamepads.activeKey) { this.previous.clear(); this.desktopPadKey = this.desktopGamepads.activeKey; }
+    const sources = xr ? [...(this.session?.inputSources || [])] : desktop ? [{ gamepad: desktop, handedness: 'both' }] : [];
     const phase = this.hooks.phase?.() || 'playing', actions = new Set();
     const visible = !xr || !this.session?.visibilityState || this.session.visibilityState === 'visible';
     this.handPose = { mainTrigger: 0, sideTrigger: 0, mainGrip: 0, sideGrip: 0 };
@@ -408,8 +411,9 @@ export class VRController {
       const axes = pad.axes || [], main = !xr || source.handedness === mainHand, side = !xr || source.handedness === sideHand;
       const tracked = visible && (!xr || !frame || !!frame.getPose(source.targetRaySpace, this.hooks.world().renderer.xr.getReferenceSpace()));
       const stick = xr && axes.length >= 4 ? 2 : 0;
+      const axis = xr ? deadzone : desktopAxis;
       if (side && tracked) {
-        result.x += deadzone(axes[stick]); result.z += deadzone(axes[stick + 1]);
+        result.x += axis(axes[stick]); result.z += axis(axes[stick + 1]);
         result.sprint ||= (xr ? squeezed(pad.buttons[1]) : pressed(pad.buttons[10]));
       }
       if (main) {
@@ -420,7 +424,7 @@ export class VRController {
         if (xr) {
           const turn = axes[stick] || 0;
           if (tracked) result.turn += deadzone(turn); // continuous angular velocity, never snap-turns
-        } else { result.turn += deadzone(axes[2]); result.tilt += deadzone(axes[3]); }
+        } else { result.turn += axis(axes[2]); result.tilt += axis(axes[3]); }
       }
       if (xr && side) {
         this.handPose.sideTrigger = Math.max(this.handPose.sideTrigger, amount(pad.buttons[0]));

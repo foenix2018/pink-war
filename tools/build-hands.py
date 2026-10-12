@@ -13,5 +13,5 @@ with tempfile.TemporaryDirectory(prefix='pink-hands-') as temp:
     html=html.replace('<script type="module" src="mains-lab.js"></script>','<script>'+js+'</script>')
     html=html.replace('href="icon.svg"','href="data:image/svg+xml,'+urllib.parse.quote((project/'dist/icon.svg').read_text(),safe='')+'"').replace('href="./"','href="https://pink-war.vercel.app"')
     license_text=(project/'dist/vendor/LICENSE.three.txt').read_text().replace('--','—')
-    html=html.replace('<!doctype html>','<!doctype html>\n<!-- Pink war 3.19 : atelier des gants dérivés du fichier RLH V40 fourni.\n'+license_text+'\n-->')
+    html=html.replace('<!doctype html>','<!doctype html>\n<!-- Pink war 3.20 : atelier des gants dérivés du fichier RLH V40 fourni.\n'+license_text+'\n-->')
     output.parent.mkdir(parents=True,exist_ok=True);output.write_text(html);print(output,output.stat().st_size,'bytes')

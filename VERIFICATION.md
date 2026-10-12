@@ -1,3 +1,13 @@
+# Vérification — Pink war v3.20
+
+Le recul involontaire a été reproduit sur la 3.19 avec un périphérique HID non standard dont l’axe vertical au repos vaut +1 : le joueur se déplaçait de 7 mètres en une seconde sans commande clavier. Les entrées ordinateur acceptent désormais uniquement les manettes à disposition standard, après un premier retour des sticks et boutons au neutre. Une seule manette est retenue à la fois ; la zone morte de 20 % absorbe une petite dérive. Les relâchements hors de la zone du joystick et les mouvements de souris sans bouton appuyé annulent l’entrée. Les sources WebXR restent traitées séparément, avec leur disposition et zone morte existantes.
+
+Les 121 tests passent, dont cinq nouveaux tests de régression pour les périphériques non standard, la connexion avec stick incliné, la reconnexion, le choix entre deux manettes, les petites dérives et les actions lors du changement de manette. Les tests des commandes Quest passent également.
+
+Dans Chromium, dix contrôles du jeu confirment l’absence de déplacement au repos en FPS et troisième personne, W/Z vers l’avant, S vers l’arrière, l’arrêt au relâchement, la remise à zéro hors joystick, la souris sans bouton, la manette standard avec stick incliné à la connexion, les petites dérives et la perte de focus. Vingt contrôles clavier supplémentaires passent : W/Z/S/A/Q/D, les deux Maj à 10 m/s, les quatre flèches de visée, C, J, Espace, R, F, E, V et Échap. Les répétitions de C/E/V ne déclenchent pas plusieurs actions ; J maintenu ne répète pas le saut ; relâcher Espace arrête les tirs. La recharge va jusqu’à la batterie pleine et Échap pause/reprise restitue un joueur immobile. Aucune exception JavaScript n’a été observée.
+
+Pour tester F et E sans jouer plusieurs niveaux, l’arsenal et le minuteur de vague ont été préparés uniquement dans le navigateur de vérification ; les commandes elles-mêmes utilisent les vrais événements clavier. Ce parcours ne constitue pas une nouvelle vérification de progression de campagne. Le rendu de test utilise SwiftShader avec résolution réduite. Aucun essai sur matériel Quest ou iPhone physique n’a été réalisé pour cette correction.
+
 # Vérification — Pink war v3.19
 
 La base publiée de l’utilisateur, `32bcd09` (3.18), a été récupérée puis fusionnée avec le pompier en cours, sans conflit. Les 31 commits intervenus depuis la 3.15 sont conservés : lune, éclairage nocturne, textures PBR avec secours local, rampes, trois passerelles, brèche réelle, IA d’accès et commandes Quest X / clic du joystick libre.

@@ -102,6 +102,7 @@ function resetInput() {
 }
 function attachJoystick(id, state) {
   const area = $(id), ring = area.querySelector('.joystick-ring'), knob = area.querySelector('.joystick-knob');
+  const release = e => { if (e.pointerId !== state.id) return; state.x = 0; state.y = 0; state.id = null; knob.style.transform = ''; };
   function update(e) {
     const r = ring.getBoundingClientRect(), radius = r.width * .32;
     let x = e.clientX - r.left - r.width / 2, y = e.clientY - r.top - r.height / 2; const distance = Math.hypot(x, y);
@@ -109,10 +110,10 @@ function attachJoystick(id, state) {
     state.x = Math.abs(x / radius) < .08 ? 0 : x / radius; state.y = Math.abs(y / radius) < .08 ? 0 : y / radius;
     knob.style.transform = `translate(${x}px, ${y}px)`;
   }
-  area.addEventListener('pointerdown', e => { if (phase !== 'playing' || state.id !== null) return; e.preventDefault(); state.id = e.pointerId; try { area.setPointerCapture(e.pointerId); } catch {} update(e); });
-  area.addEventListener('pointermove', e => { if (e.pointerId !== state.id) return; e.preventDefault(); update(e); });
-  const release = e => { if (e.pointerId !== state.id) return; state.x = 0; state.y = 0; state.id = null; knob.style.transform = ''; };
+  area.addEventListener('pointerdown', e => { if (phase !== 'playing' || state.id !== null || (e.pointerType === 'mouse' && e.button !== 0)) return; e.preventDefault(); state.id = e.pointerId; try { area.setPointerCapture(e.pointerId); } catch {} update(e); });
+  area.addEventListener('pointermove', e => { if (e.pointerId !== state.id) return; if (e.pointerType === 'mouse' && e.buttons === 0) { release(e); return; } e.preventDefault(); update(e); });
   for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) area.addEventListener(event, release);
+  for (const event of ['pointerup', 'pointercancel']) window.addEventListener(event, release);
 }
 attachJoystick('move-stick', move); attachJoystick('look-stick', look);
 $('fire-button').addEventListener('pointerdown', e => { if (phase !== 'playing') return; e.preventDefault(); audioReady(); firingPointers.add(e.pointerId); try { e.target.closest('button').setPointerCapture(e.pointerId); } catch {} $('fire-button').classList.add('firing'); });
