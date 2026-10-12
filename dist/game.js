@@ -5,7 +5,7 @@ import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
 import { characterForId } from './characters.js';
 import { playLaserShot,loadRealLaserSample,playLaserImpact,setLaserAudioEnabled,disposeLaserAudio,playWeaponAction,setWeaponCharge } from './laser-sound.js';
 import { createAmbience } from './ambience.js';
-import { ACTIVE_INSTALLATIONS } from './world-layout.js';
+import { ACTIVE_INSTALLATIONS, BRIDGES, BRIDGE_LANDINGS, BRIDGE_APPROACHES, bridgeSegments } from './world-layout.js';
 import { createMusicBed } from './music.js';
 import { portalIndicators } from './portal-indicator.js';
 import { createWeaponFeel } from './weapon-feel.js';
@@ -381,7 +381,23 @@ function updateHud() {
   c.fillText('INDUS',cx+61*scale,cy+10*scale-12);
   c.fillText('TECH',cx+45*scale,cy+54*scale-12);
   c.restore();
-  c.fillStyle = radarTheme.wall; for (const b of world.obstacles) c.fillRect(cx + (b.x - b.hx) * scale, cy + (b.z - b.hz) * scale, b.hx * 2 * scale, b.hz * 2 * scale);
+  // Distinguish solid ground cover from elevated, walkable steel: raised
+  // bridges must not look like impassable walls on the tactical radar.
+  c.fillStyle=radarTheme.wall;
+  for(const b of world.obstacles){
+    if(b.walkableSurface||b.bridgeRail||(b.y||0)>2.2)continue;
+    c.fillRect(cx+(b.x-b.hx)*scale,cy+(b.z-b.hz)*scale,b.hx*2*scale,b.hz*2*scale);
+  }
+  c.save();c.fillStyle=character.accent;c.globalAlpha=.47;
+  for(const deck of BRIDGE_LANDINGS)
+    c.fillRect(cx+(deck.x-deck.hx)*scale,cy+(deck.z-deck.hz)*scale,deck.hx*2*scale,deck.hz*2*scale);
+  for(const ramp of BRIDGE_APPROACHES)
+    c.fillRect(cx+(ramp.x-ramp.halfWidth)*scale,cy+ramp.topZ*scale,ramp.halfWidth*2*scale,(ramp.bottomZ-ramp.topZ)*scale);
+  for(const bridge of BRIDGES)for(const [a,b] of bridgeSegments(bridge)){
+    const x1=bridge.x1+(bridge.x2-bridge.x1)*a,x2=bridge.x1+(bridge.x2-bridge.x1)*b;
+    c.fillRect(cx+Math.min(x1,x2)*scale,cy+(bridge.z-bridge.halfWidth)*scale,Math.abs(x2-x1)*scale,bridge.halfWidth*2*scale);
+  }
+  c.restore();
   // Every opened breach gets its own tactical marker, including emerging ones.
   for(const gate of game.activePortals){
     const px=cx+gate.x*scale,pz=cy+gate.z*scale,active=game.time>=gate.openedAt;
