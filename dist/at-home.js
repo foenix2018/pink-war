@@ -40,7 +40,7 @@ const direction = new THREE.Vector3(), head = new THREE.Vector3();
 const orientation = new THREE.Quaternion();
 let session = null, audio = null, mode = 'idle', startTime = 0, roomCaptureAsked = false;
 let hp = 100, score = 0, wave = 1, shotCooldown = 0, enemyCooldown = 0, lastTime = 0;
-let scanMessage = 'EN ATTENTE DU SCAN';
+let scanMessage = 'EN ATTENTE DU SCAN', bWasDown = false;
 const surfaces = new Map(), meshes = new Map(), bots = [], tracers = [];
 const controllers = [renderer.xr.getController(0), renderer.xr.getController(1)];
 const pistolGroups = [];
@@ -242,7 +242,7 @@ function createBot(position) {
   eye.position.set(0,1.2,-.19); group.add(eye);
   const ring = new THREE.Mesh(new THREE.TorusGeometry(.34,.025,5,24), bright);
   ring.rotation.x = Math.PI/2; ring.position.y=.19; group.add(ring);
-  const hitbox = new THREE.Mesh(new THREE.SphereGeometry(.38,8,6), new THREE.MeshBasicMaterial({visible:false}));
+  const hitbox = new THREE.Mesh(new THREE.SphereGeometry(.38,8,6), new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false,side:THREE.DoubleSide}));
   hitbox.position.y = .9;
   group.add(hitbox);
   scene.add(group);
@@ -352,7 +352,7 @@ function onSelect(event) {
   else if (mode === 'combat') shoot(event);
 }
 function onSessionEnd() {
-  session = null; mode='idle';roomCaptureAsked=false;
+  session = null; mode='idle';roomCaptureAsked=false;bWasDown=false;
   document.body.classList.remove('in-xr');
   endButton.hidden=true;
   clearBots();
@@ -384,6 +384,11 @@ function tick(ms, frame) {
   const seconds=ms/1000;
   lastTime=seconds;
   if (session) {
+    // Oculus Touch: B (right controller, standard gamepad index 5) exits safely.
+    const right = Array.from(session.inputSources || []).find(input => input.handedness === 'right');
+    const bPressed = !!right?.gamepad?.buttons?.[5]?.pressed;
+    if (bPressed && !bWasDown) session.end().catch(() => {});
+    bWasDown = bPressed;
     if (frame) {
       updateBoard();
       updateSurfaces(frame);
