@@ -1,5 +1,5 @@
 import { equipmentForLevel } from './equipment.js';
-import { PLATFORMS, STAIRS, LIFTS, BRIDGE_APPROACHES, insideSurface, traversalSurfaces, liftHeightAt } from './world-layout.js';
+import { PLATFORMS, STAIRS, LIFTS, BRIDGES, BRIDGE_APPROACHES, insideSurface, traversalSurfaces, liftHeightAt } from './world-layout.js';
 // World units are metres. The playable arena is exactly 200 × 200 m.
 export const ARENA_SIZE = 200;
 export const PORTAL = Object.freeze({ x: 0, z: -20 });
@@ -197,6 +197,20 @@ export function elevatedRouteForSurface(id,x=0) {
   if(['ruin-deck','ruin-approach'].includes(id))return 'ruin-approach';
   // A broken crossing never creates an imaginary traversable shortcut.
   if(id==='ruin-link')return x< -15.7?'garden-stairs':'ruin-approach';
+  return null;
+}
+// Enemy navigation must never treat an intentionally destroyed span as solid.
+// Falling from a 5m high bridge to pursue the opposite bank is not tactical AI.
+export function brokenBridgeDetour(enemy,player) {
+  for(const bridge of BRIDGES){
+    if(!bridge.damage)continue;
+    if((enemy.elevation||0)<bridge.height-.38||(player.elevation||0)<bridge.height-.38)continue;
+    if(Math.abs(enemy.z-bridge.z)>bridge.halfWidth+.7||Math.abs(player.z-bridge.z)>bridge.halfWidth+.7)continue;
+    const start=bridge.x1+(bridge.x2-bridge.x1)*bridge.gapFrom;
+    const end=bridge.x1+(bridge.x2-bridge.x1)*bridge.gapTo;
+    if(enemy.x<start-.15&&player.x>end+.15)return 'garden-stairs';
+    if(enemy.x>end+.15&&player.x<start-.15)return 'ruin-approach';
+  }
   return null;
 }
 export class ArenaGame {
@@ -476,7 +490,22 @@ export class ArenaGame {
         .sort((a,b)=>Math.abs(a.height-this.player.elevation)-Math.abs(b.height-this.player.elevation))[0];
       const playerRoute=playerSurface&&elevatedRouteForSurface(playerSurface.id,this.player.x);
       let stairRoute=false;
-      if(playerRoute && e.elevation<this.player.elevation-.3 && e.awareness!=='patrol'){
+      if(e.awareness!=='patrol'&&!e.bridgeDetour)
+        e.bridgeDetour=brokenBridgeDetour(e,this.player);
+      if(e.bridgeDetour&&e.elevation<=.3)e.bridgeDetour=null;
+      if(e.bridgeDetour&&e.awareness!=='patrol'){
+        // Descend the ramp on the enemy's own bank, then navigate across the
+        // street and climb the other approach rather than walking over air.
+        const stair=ELEVATED_ROUTES.find(route=>route.id===e.bridgeDetour);
+        if(e.stairRoute!==stair.id||e.stairDirection!=='down'){
+          e.stairRoute=stair.id;e.stairStage=0;e.stairDirection='down';
+        }
+        if(e.stairStage===0&&Math.hypot(e.x-stair.x,e.z-(stair.topZ-.6))<1.3)
+          e.stairStage=1;
+        destinationX=stair.x;
+        destinationZ=e.stairStage===0?stair.topZ-.6:stair.bottomZ+1;
+        stairRoute=true;
+      }else if(playerRoute && e.elevation<this.player.elevation-.3 && e.awareness!=='patrol'){
         const si=ELEVATED_ROUTES.findIndex(route=>route.id===playerRoute),stair=ELEVATED_ROUTES[si];
         if(e.stairRoute!==stair.id||e.stairDirection!=='up'){e.stairRoute=stair.id;e.stairStage=0;e.stairDirection='up';}
         if(e.stairStage===0 && Math.hypot(e.x-stair.x,e.z-(stair.bottomZ+1))<1.7)e.stairStage=1;
