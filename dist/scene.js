@@ -77,15 +77,15 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   // The moon is a camera-relative celestial backdrop, not a world obstacle.
   // The depth buffer still lets buildings and smoke geometry occlude its glow.
   const moon = createMoon(scene, glow);
-  const hemisphere=new T.HemisphereLight(0xd3ded8,0x66736b,1.8);scene.add(hemisphere);
-  const sun = new T.DirectionalLight(0xffeedb, 3.0); sun.position.set(-30, 50, 20); sun.castShadow = true;
+  const hemisphere=new T.HemisphereLight(0xa9c9e5,0x344058,1.32);scene.add(hemisphere);
+  const sun = new T.DirectionalLight(0xb5d7ff, 2.25); sun.position.set(-30, 50, 20); sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = -40; sun.shadow.camera.right = 40; sun.shadow.camera.top = 40; sun.shadow.camera.bottom = -40; sun.shadow.camera.near = 1; sun.shadow.camera.far = 135; sun.shadow.bias = -.0015; sun.shadow.normalBias = .045; scene.add(sun);scene.add(sun.target);
   function trackShadows(x,z,elevation=0){
     // The 80 m shadow window follows play, retaining close detail across all districts.
     const texel=80/1024,sx=Math.round(x/texel)*texel,sz=Math.round(z/texel)*texel;
     sun.position.set(sx-30,elevation+50,sz+20);sun.target.position.set(sx,elevation,sz);
   }
-  const rim = new T.DirectionalLight(0xa3bdc7, 1.0); rim.position.set(30, 12, -35); scene.add(rim);
+  const rim = new T.DirectionalLight(0x9abfff, 1.08); rim.position.set(30, 12, -35); scene.add(rim);
   const batches = new Map(); const obstacles = [];
   const batch = (mat, pos, scale, rot = 0) => { if (!batches.has(mat)) batches.set(mat, []); batches.get(mat).push({ pos, scale, rot }); };
   const city = createRuinedCity(scene, obstacles, COVER_WALLS, palette.rose, quality);
@@ -193,9 +193,9 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     characterKit.setPalette(character.armor);
     const colors={...character.world,...palette,dark:palette.ink,cyan:character.world.cyan};
     for(const [name,mat] of Object.entries(mats))mat.color.setHex(colors[name]);
-    scene.background.setHex(0x9ba89f);scene.fog.color.setHex(character.masculine?0x9caeb0:0xadb1a4);scene.fog.density=.0072;
-    hemisphere.color.setHex(0xd3ded8);hemisphere.groundColor.setHex(0x66736b);
-    sun.color.setHex(0xffeedb);rim.color.setHex(0xa3bdc7);city.setAccent(palette.rose);combatFX.setAccent(palette.rose);
+    scene.background.setHex(character.masculine?0x16243c:0x261d32);scene.fog.color.setHex(character.masculine?0x263750:0x463b50);scene.fog.density=.0067;
+    hemisphere.color.setHex(0xa9c9e5);hemisphere.groundColor.setHex(0x344058);
+    sun.color.setHex(0xb5d7ff);rim.color.setHex(0x9abfff);city.setAccent(palette.rose);combatFX.setAccent(palette.rose);
     portalLight.color.setHex(palette.hot);dust.material.color.setHex(palette.pale);
     for(const sprite of themeHalos)sprite.material.color.setHex(palette.rose);
     for(const [texture,paint] of [[skyTexture,paintSky],[portalTexture,paintPortal],[emblem,paintEmblem]]){
