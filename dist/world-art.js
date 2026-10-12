@@ -47,6 +47,21 @@ function weatherTexture(kind) {
 }
 
 // Overcast dawn, smoke banks and filtered sunlight replace the uniform neon sky.
+// The same weathered texture generators as the city, shared by AT HOME room projections.
+// Do not instantiate the entire 200 m ruined city inside a small real-world room.
+export function createRuinedRoomMaterials(accent=0xff80b2) {
+  const concrete=weatherTexture('concrete');
+  const metal=weatherTexture('metal');
+  const road=weatherTexture('road');
+  return {
+    concrete:new T.MeshBasicMaterial({map:concrete,color:0xd4d4d4,transparent:true,opacity:.29,side:T.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1}),
+    metal:new T.MeshBasicMaterial({map:metal,color:0xd1c5c6,transparent:true,opacity:.35,side:T.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1}),
+    road:new T.MeshBasicMaterial({map:road,color:0xdddddd,transparent:true,opacity:.21,side:T.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1}),
+    glow:new T.MeshBasicMaterial({color:accent,transparent:true,opacity:.84,depthWrite:false,side:T.DoubleSide,toneMapped:false}),
+    concreteMap:concrete,metalMap:metal,roadMap:road
+  };
+}
+
 export function paintRuinSky(c,w,h,blue=false) {
   const g=c.createLinearGradient(0,0,0,h);
   const colors=blue?['#071526','#12243a','#263d58','#53728c','#30445b','#15283d']:['#130e22','#272238','#493a55','#7e6478','#423951','#1b2236'];
