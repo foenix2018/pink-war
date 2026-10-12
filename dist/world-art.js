@@ -101,6 +101,38 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
     dirt:std(0x615d46,1,0,roadMap),bark:std(0x555548,1,0,concreteMap),leaf:std(0x4c6244,.95,0,null),leafLight:std(0x6b7950,.97,0,null),
     deadLeaf:std(0x8c8763,1,0,null),yellow:std(0xb0a26a,.86,.15,metalMap),accent:new T.MeshBasicMaterial({color:accent,toneMapped:false}),
     glass:new T.MeshStandardMaterial({color:0x233638,roughness:.4,metalness:.6}),lamp:new T.MeshBasicMaterial({color:0xf4d5a2,toneMapped:false})};
+  // Real CC0 Poly Haven PBR material sets, opt-in per rendering quality. The original
+  // generated maps remain usable immediately and whenever CDN access is unavailable.
+  // WebGL and WebGPU share material objects; no extra draw calls are introduced.
+  const pbrStatus={loaded:0,failed:0,requested:0,source:'Poly Haven · CC0'};
+  const textureLoader=new T.TextureLoader();
+  textureLoader.setCrossOrigin('anonymous');
+  const maxAnisotropy=quality==='high'?4:2;
+  function loadPbr(asset,kind,materials,repeat=1){
+    const base='https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/'+asset+'/'+asset+'_';
+    const destinations=materials.filter(Boolean);
+    for(const [suffix,property] of [['diff','map'],['nor_dx','normalMap'],['rough','roughnessMap']]){
+      pbrStatus.requested++;
+      textureLoader.load(base+suffix+'_1k.jpg',tex=>{
+        tex.wrapS=tex.wrapT=T.RepeatWrapping;tex.repeat.set(repeat,repeat);tex.anisotropy=maxAnisotropy;
+        if(property==='map')tex.colorSpace=T.SRGBColorSpace;
+        for(const mat of destinations){
+          // A normal map supersedes procedural bump; simultaneous bump distorts silhouettes.
+          if(property==='normalMap'){mat.bumpMap=null;mat.bumpScale=0;mat.normalScale=new T.Vector2(.52,.52);}
+          mat[property]=tex;mat.needsUpdate=true;
+        }
+        pbrStatus.loaded++;
+      },undefined,()=>{pbrStatus.failed++;});
+    }
+  }
+  // 1K source imagery is shared across whole batches and stays independent of the
+  // number of concrete, street or metal instances.
+  if(quality!=='minimal'){
+    loadPbr('asphalt_03','road',[m.road,m.dirt,m.wet],18);
+    loadPbr('concrete_floor','concrete',[m.concrete,m.chalk,m.char,m.bark],3);
+    loadPbr('broken_brick_wall','brick',[m.brick=m.concrete.clone()],3);
+    loadPbr('rusty_metal_sheet','metal',[m.rust,m.steel,m.black,m.yellow],3);
+  }
   m.leaf.flatShading=true;m.leafLight.flatShading=true;
   // Cutout foliage has individual leaf silhouettes instead of solid green polyhedra.
   // Three crossed cards remain readable from both headset eyes with a fixed small budget.
@@ -262,7 +294,7 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
   // Cover uses exactly the combat footprint; chips remain inside the collision face.
   for(const wall of coverWalls) {
     const {x,z,hx,hz,height:h}=wall;solid(x,z,hx*2,h,hz*2,{cover:true});
-    cube(m.concrete,[x,h/2,z],[hx*2,h,hz*2]);
+    cube(m.brick||m.concrete,[x,h/2,z],[hx*2,h,hz*2]);
     const horizontal=hx>hz,length=horizontal?hx*2:hz*2;
     for(let i=0;i<length;i+=1.1) {
       const p=horizontal?[x-hx+.55+i,h-.09,z]:[x,h-.09,z-hz+.55+i];
@@ -405,5 +437,5 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
   dustGeometry.setAttribute('position',new T.BufferAttribute(positions,3));
   const dust=new T.Points(dustGeometry,new T.PointsMaterial({color:0xd7c7a5,size:.026,opacity:.37,transparent:true,depthWrite:false}));group.add(dust);
   group.userData.instances=instances;group.userData.districts=['Brèche centrale','Archives envahies','Maintenance','Relais'];
-  return {group,materials:m,update(time){dust.position.x=Math.sin(time*.025)*2.5;dust.position.y=Math.sin(time*.06)*.25;},setAccent(color){m.accent.color.setHex(color);}};
+  return {group,materials:m,pbrStatus,update(time){dust.position.x=Math.sin(time*.025)*2.5;dust.position.y=Math.sin(time*.06)*.25;},setAccent(color){m.accent.color.setHex(color);}};
 }
