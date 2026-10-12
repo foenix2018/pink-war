@@ -26,8 +26,8 @@ const controllerOf = (controller, hand) => (controller.controllers || []).find(c
 const padOf = (controller, hand) => controllerOf(controller, hand)?.ray.userData.source.gamepad;
 
 // Buttons are assigned by role: the shooting hand owns reload / next weapon, the other hand moves,
-// reloads, switches back and pauses. A left-handed layout simply mirrors the controllers.
-export const buttonNames = hand => hand === 'left' ? { reload: 'X', next: 'Y', previous: 'A', pause: 'B' } : { reload: 'A', next: 'B', previous: 'X', pause: 'Y' };
+// jumps, crouches and pauses. A left-handed layout simply mirrors the controllers.
+export const buttonNames = hand => hand === 'left' ? { reload: 'X', next: 'Y', jump: 'A', pause: 'B' } : { reload: 'A', next: 'B', jump: 'X', pause: 'Y' };
 export function questControls(hand = 'right') {
   const left = hand === 'left', b = buttonNames(hand);
   const mainF = left ? 'gauche' : 'droite', sideF = left ? 'droite' : 'gauche', mainM = left ? 'gauche' : 'droit', sideM = left ? 'droit' : 'gauche';
@@ -40,9 +40,9 @@ export function questControls(hand = 'right') {
     [`Joystick ${mainM}`, 'Rotation fluide'],
     [`Joystick ${sideM}`, 'Se déplacer'],
     [`Poignée ${sideF}`, 'Courir (maintenu)'],
-    [`Clic joystick ${sideF}`, 'Accroupissement · près d’un faisceau : récupérer une arme'],
+    [`Clic joystick ${sideF}`, 'S’accroupir / se relever · près d’un faisceau : récupérer une arme'],
+    [b.jump, 'Sauter (pression brève)'],
     [`Gâchette ${sideF}`, 'Recharger ; l’arme se redresse à la verticale'],
-    [b.previous, 'Arme précédente'],
     [b.pause, 'Pause / reprise']
   ];
 }
@@ -428,7 +428,7 @@ export class VRController {
       }
       const edge = (key, index) => { const id = `${source.handedness}:${key}`, down = pressed(pad.buttons[index]); if (down && !this.previous.get(id) && tracked) actions.add(key); this.previous.set(id, down); };
       if (main) { edge('reload', xr ? 4 : 0); edge('next', xr ? 5 : 1); }
-      if (xr && side) { edge('previous', 4); edge('pause', 5); edge('quickReload', 0); if(this.hooks.game()?.nearbyWeapon?.())edge('pickup', 3); else edge('crouch', 3); }
+      if (xr && side) { edge('jump', 4); edge('pause', 5); edge('quickReload', 0); if(this.hooks.game()?.nearbyWeapon?.())edge('pickup', 3); else edge('crouch', 3); }
       if (!xr) { edge('pause', 9); edge('jump', 6); edge('pickup', 2); edge('crouch', 11); }
     }
     if (actions.has('pause')) { this.hooks.togglePause(); if (xr) this.cancelTrigger(); }
@@ -436,7 +436,7 @@ export class VRController {
     else if ((phase === 'paused' || phase === 'over') && actions.has('next') && xr) { this.cancelTrigger(); this.exit().catch(error => this.fail(error)); }
     else if (phase === 'playing') {
       const game = this.hooks.game();
-      if (actions.has('next') || actions.has('previous')) { if (game.cycleWeapon(actions.has('next') ? 1 : -1) && xr) this.cancelTrigger(); }
+      if (actions.has('next')) { if (game.cycleWeapon(1) && xr) this.cancelTrigger(); }
       else if (actions.has('reload') || actions.has('quickReload')) { if (game.reload() && xr) this.cancelTrigger(); }
     }
     this.trackingLost = xr && !mainTracked;
