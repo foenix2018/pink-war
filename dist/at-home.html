@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#14101d">
+<title>Pink War — AT HOME</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+:root{color-scheme:dark;--pink:#ff80b2;--blue:#79bbff}
+*{box-sizing:border-box}body{margin:0;background:#100f18;color:#f9eaf4;font:15px/1.6 system-ui,-apple-system,sans-serif;min-height:100dvh}
+#at-home-world{position:fixed;inset:0;width:100vw;height:100dvh;display:block;z-index:0;pointer-events:none}
+.layout{position:relative;z-index:1;max-width:940px;margin:auto;padding:clamp(18px,4vw,56px)}
+.header{display:flex;justify-content:space-between;align-items:center;gap:12px;font:700 13px monospace;letter-spacing:.13em}
+a{color:inherit}.back{color:#e5bad0;text-decoration:none;border:1px solid #635064;border-radius:8px;padding:9px 14px}.back:hover{border-color:var(--pink)}
+.eyebrow{margin-top:clamp(45px,9vh,100px);font:700 12px monospace;letter-spacing:.2em;color:var(--pink)}
+h1{font:900 clamp(56px,12vw,125px)/.9 system-ui;letter-spacing:-.08em;margin:14px 0 26px}
+h1 span{color:var(--pink)}
+.lead{font-size:clamp(16px,2.2vw,20px);max-width:660px;color:#e0cadd}
+.panel{margin:30px 0;border:1px solid #70506e;background:rgba(32,25,45,.87);border-radius:16px;padding:clamp(16px,3vw,28px)}
+.status{font:700 12px/1.5 monospace;color:#f1bbd4}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0 12px}
+button{border-radius:10px;padding:14px 20px;border:0;background:var(--pink);color:#251623;font:800 13px monospace;letter-spacing:.03em;cursor:pointer;min-height:48px}
+button:disabled{background:#655861;color:#cab9c7;cursor:not-allowed}button.secondary{background:transparent;color:#f5dae9;border:1px solid #815b75}
+ul{padding-left:21px;color:#d5c9d1}li{margin-bottom:7px}
+small{color:#b7a5b4}strong{color:#fff}
+body.in-xr .layout{display:none}
+@media(max-width:500px){.header{font-size:10px}h1{font-size:59px}.actions button{width:100%}}
+</style>
+</head>
+<body>
+<canvas id="at-home-world" aria-label="Pink War AT HOME — réalité mixte"></canvas>
+<main class="layout">
+ <header class="header"><div>PINK WAR <span style="color:#ff80b2">/ AT HOME</span></div><a class="back" href="./">← JEU CLASSIQUE</a></header>
+ <p class="eyebrow">META QUEST 3 / RÉALITÉ MIXTE</p>
+ <h1>AT <span>HOME.</span></h1>
+ <p class="lead">Ton salon devient une arène Pink War. Garde tes meubles visibles en passthrough : le casque repère les murs et surfaces pour placer les ennemis et bloquer les tirs.</p>
+ <section class="panel" aria-label="Configuration de l'arène">
+  <div id="at-home-status" class="status" role="status">Vérification de la compatibilité WebXR…</div>
+  <div class="actions"><button id="at-home-enter" type="button" disabled>ENTRER DANS MON ARÈNE →</button><button id="at-home-end" class="secondary" type="button" hidden>QUITTER LA SESSION</button></div>
+  <p><strong>Avant de commencer :</strong> dans ton Quest 3, lance la configuration de l'espace (Space Setup), dégage les obstacles dangereux et conserve la limite de sécurité du casque.</p>
+  <ul><li>En casque : gâchette gauche = demander le scan si nécessaire ; gâchette droite = commencer puis tirer.</li><li>Un sol détecté est indispensable avant l'apparition des ennemis. Aucun terrain n'est inventé si l'accès spatial est refusé.</li><li>Reste sur place ou marche lentement dans un espace dégagé. Ne cours pas, ne saute pas, ne t'appuie pas sur un meuble virtuel.</li><li>Bouton B de la manette droite = quitter la session.</li></ul>
+  <small id="at-home-character">Personnage : GHJU · Univers rose. Le choix est repris depuis l'accueil.</small>
+ </section>
+</main>
+<script type="module" src="at-home.js"></script>
+</body>
+</html>
