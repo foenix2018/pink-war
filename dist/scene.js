@@ -10,6 +10,7 @@ import { createEnemyFactory } from './enemies.js';
 import { createRuinedCity, paintRuinSky } from './world-art.js';
 import { createTraversalArt } from './traversal-art.js';
 import { createCombatFX } from './combat-fx.js';
+import { createMoon } from './moon.js';
 
 const v = (x, y, z) => new T.Vector3(x, y, z);
 const material = (color, roughness = .6, metalness = .25) => new T.MeshStandardMaterial({ color, roughness, metalness });
@@ -73,6 +74,9 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   function paintSky(c,w,h) { paintRuinSky(c,w,h,character.masculine); }
   const skyTexture = canvasTexture(2048,1024,paintSky);
   const sky = new T.Mesh(new T.SphereGeometry(490, 32, 16), new T.MeshBasicMaterial({ map: skyTexture, side: T.BackSide, fog: false, dithering: true })); scene.add(sky);
+  // The moon is a camera-relative celestial backdrop, not a world obstacle.
+  // The depth buffer still lets buildings and smoke geometry occlude its glow.
+  const moon = createMoon(scene, glow);
   const hemisphere=new T.HemisphereLight(0xd3ded8,0x66736b,1.8);scene.add(hemisphere);
   const sun = new T.DirectionalLight(0xffeedb, 3.0); sun.position.set(-30, 50, 20); sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = -40; sun.shadow.camera.right = 40; sun.shadow.camera.top = 40; sun.shadow.camera.bottom = -40; sun.shadow.camera.near = 1; sun.shadow.camera.far = 135; sun.shadow.bias = -.0015; sun.shadow.normalBias = .045; scene.add(sun);scene.add(sun.target);
@@ -369,7 +373,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   const stereo = new T.StereoCamera(); stereo.aspect = .5; stereo.eyeSep = .064;
   function renderStereo() {
     if (lost) return;
-    camera.updateMatrixWorld(true); stereo.update(camera);
+    camera.updateMatrixWorld(true); moon.update(camera); stereo.update(camera);
     renderer.setScissorTest(true);
     renderer.setViewport(0,0,innerWidth/2,innerHeight); renderer.setScissor(0,0,innerWidth/2,innerHeight); renderer.render(scene,stereo.cameraL);
     renderer.setViewport(innerWidth/2,0,innerWidth/2,innerHeight); renderer.setScissor(innerWidth/2,0,innerWidth/2,innerHeight); renderer.render(scene,stereo.cameraR);
@@ -391,6 +395,6 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     })();
     try { return await recovery; } finally { recovery = null; }
   }
-  return {T,scene,camera,get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:combatFX.impact,impactStats:combatFX.stats,resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
-    get lost(){return lost;},get backend(){return renderer.backend?.isWebGPUBackend?'WebGPU':'WebGL';},render:()=>{if(!lost)renderer.render(scene,camera);}};
+  return {T,scene,camera,moon,get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:combatFX.impact,impactStats:combatFX.stats,resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
+    get lost(){return lost;},get backend(){return renderer.backend?.isWebGPUBackend?'WebGPU':'WebGL';},render:()=>{if(!lost){camera.updateWorldMatrix(true,false);moon.update(camera);renderer.render(scene,camera);}}};
 }
