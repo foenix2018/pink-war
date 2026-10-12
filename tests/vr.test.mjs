@@ -50,14 +50,14 @@ test('Quest right stick rotates continuously with no snap or jerk, including rev
   right.gamepad.axes[2]=0;assert.equal(state.input().turn,0);
 });
 
-test('A recharges, B selects next and X previous only on fresh presses; changing cancels a charge',()=>{
+test('A recharges, B selects next and left X jumps on fresh press',()=>{
   let reload=0;const directions=[];
   const {state,left,right,game}=setup({charge:.6,triggerHeld:true,reload:()=>{reload++;return true;},cycleWeapon:direction=>{directions.push(direction);return true;}});
   down(right,0);down(right,4);assert.equal(state.input().fire,false);assert.equal(game.charge,0);assert.equal(game.triggerHeld,false);
   state.input();assert.equal(reload,1);
   down(right,4,false);down(right,0,false);state.input();down(right,0);assert.equal(state.input().fire,true);
   down(right,5);assert.equal(state.input().fire,false);state.input();assert.deepEqual(directions,[1]);
-  down(right,5,false);state.input();down(left,4);state.input();state.input();assert.deepEqual(directions,[1,-1]);
+  down(right,5,false);state.input();down(left,4);assert.equal(state.input().jump,true);assert.equal(state.input().jump,false);assert.deepEqual(directions,[1]);
 });
 
 test('Y pauses and A resumes without firing a held trigger; B exits from the pause',async()=>{
@@ -92,12 +92,12 @@ test('charged weapon uses the right trigger hold and releases a partial shot, th
   down(right,0,false);state.input();for(let i=0;i<100;i++)game.step(.05);assert.equal(game.ammo[3],6);
 });
 
-test('X/B wrap through unlocked weapons and preserve their separate batteries',()=>{
+test('B cycles unlocked weapons, X jumps without changing weapon batteries',()=>{
   const game=new ArenaGame();game.wave=5;game.nextWave=-1;game.ammo[0]=7;game.ammo[1]=18;game.ammo[2]=4;game.ownedWeapons.add(1);game.ownedWeapons.add(2);
   const {state,left,right}=setup(game);
-  down(left,4);state.input();assert.equal(game.weaponIndex,2);
-  down(left,4,false);state.input();down(left,4);state.input();assert.equal(game.weaponIndex,1);
-  down(left,4,false);state.input();down(right,5);state.input();assert.equal(game.weaponIndex,2);
+  down(left,4);assert.equal(state.input().jump,true);assert.equal(game.weaponIndex,0);
+  down(left,4,false);state.input();down(right,5);state.input();assert.equal(game.weaponIndex,1);
+  down(right,5,false);state.input();down(right,5);state.input();assert.equal(game.weaponIndex,2);
   down(right,5,false);state.input();down(right,5);state.input();assert.equal(game.weaponIndex,0);
   assert.deepEqual(game.ammo.slice(0,3),[7,18,4]);assert.equal(game.selectWeapon(4),false);
 });
@@ -178,7 +178,7 @@ test('a left-handed layout mirrors every control: left trigger fires, the right 
   down(right,3);let movement=state.input();assert.equal(movement.sprint,false);assert.equal(movement.crouchToggle,true);down(right,3,false);
   down(left,4);state.input();assert.equal(reloads.length,2,'X reloads');down(left,4,false);state.input();
   down(left,5);state.input();assert.deepEqual(cycles,[1],'Y selects the next weapon');down(left,5,false);state.input();
-  down(right,4);state.input();assert.deepEqual(cycles,[1,-1],'A selects the previous weapon');down(right,4,false);state.input();
+  down(right,4);state.input();assert.deepEqual(cycles,[1],'A no longer switches weapons');assert.equal(state.input().jump,false,'jump is edge-triggered');down(right,4,false);state.input();
   down(right,5);state.input();assert.equal(phase(),'paused','B pauses');down(right,5,false);state.input();
   down(left,4);state.input();assert.equal(phase(),'playing','X resumes');down(left,4,false);state.input();
   down(right,5);state.input();down(right,5,false);state.input();down(left,5);state.input();state.input();
@@ -206,7 +206,7 @@ test('the control list and button names follow the shooting hand',()=>{
   assert.equal(right['Gâchette droite'],'Tirer · maintenir pour charger');assert.equal(right.A,'Recharger la batterie');assert.equal(right.Y,'Pause / reprise');
   assert.equal(left['Gâchette gauche'],'Tirer · maintenir pour charger');assert.equal(left.X,'Recharger la batterie');assert.equal(left.B,'Pause / reprise');
   assert.ok(left['Joystick droit']==='Se déplacer'&&left['Joystick gauche']==='Rotation fluide');
-  assert.deepEqual(buttonNames('left'),{reload:'X',next:'Y',previous:'A',pause:'B'});
+  assert.deepEqual(buttonNames('left'),{reload:'X',next:'Y',jump:'A',pause:'B'});
   for(const hand of ['right','left'])assert.equal(new Set(questControls(hand).map(([control])=>control)).size,questControls(hand).length,'every control is listed once');
 });
 
