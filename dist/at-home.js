@@ -2,7 +2,9 @@
 // The headset's spatial data stays inside this WebXR session; it is never uploaded.
 import * as THREE from './vendor/three.module.min.js';
 import { characterForId } from './characters.js';
-import { playLaserShot, loadRealLaserSample } from './laser-sound.js';
+import { playLaserShot, loadRealLaserSample, playLaserImpact, playWeaponAction } from './laser-sound.js';
+import { WEAPONS } from './game-logic.js';
+import { createMusicBed } from './music.js';
 
 const $ = id => document.getElementById(id);
 const status = $('at-home-status');
@@ -40,10 +42,13 @@ const direction = new THREE.Vector3(), head = new THREE.Vector3();
 const orientation = new THREE.Quaternion();
 let session = null, audio = null, mode = 'idle', startTime = 0, roomCaptureAsked = false;
 let hp = 100, score = 0, wave = 1, shotCooldown = 0, enemyCooldown = 0, lastTime = 0;
+let assets=null, assetsLoading=null, weaponIndex=0, ammo=WEAPONS[0].capacity, reloadUntil=0, triggerStarted=0, triggerHeld=false;
+let lastLeftX=false,lastLeftY=false,lastRightA=false, decorEnabled=true, muzzleUntil=0;
+const music=createMusicBed();
 let scanMessage = 'EN ATTENTE DU SCAN', bWasDown = false;
 const surfaces = new Map(), meshes = new Map(), bots = [], tracers = [];
 const controllers = [renderer.xr.getController(0), renderer.xr.getController(1)];
-const pistolGroups = [];
+const mounts = [];
 const wireMaterial = new THREE.LineBasicMaterial({ color:tint, transparent:true, opacity:.5, depthWrite:false });
 const blockerMaterial = new THREE.MeshBasicMaterial({
   color:0xffffff, colorWrite:false, depthWrite:false, side:THREE.DoubleSide
@@ -65,10 +70,10 @@ function drawBoard() {
   const count = [...surfaces.values()].filter(s => s.isFloor).length;
   const top = mode === 'combat' ? 'COMBAT   /   ' + hero.name : 'AT HOME   /   ' + hero.name;
   const middle = mode === 'combat'
-    ? 'VAGUE ' + wave + '  |  SCORE ' + score + '  |  VIE ' + hp
+    ? 'V'+wave+'  SCORE '+score+'  VIE '+hp+'  '+WEAPONS[weaponIndex].name+' '+ammo+'/'+WEAPONS[weaponIndex].capacity
     : scanMessage;
-  const bottom = mode === 'combat' ? 'TIR : GACHETTE DROITE    |    B : QUITTER'
-    : count ? 'GACHETTE DROITE : COMMENCER' : 'GACHETTE GAUCHE : SCAN  |  B : QUITTER';
+  const bottom = mode === 'combat' ? 'TIR DROIT  |  A RECHARGE  |  Y ARME  |  B SORTIR'
+    : count ? 'GACHETTE DROITE : COMMENCER' : 'GACHETTE GAUCHE : SCAN  |  B : SORTIR';
   const next = top + '\n' + middle + '\n' + bottom;
   if (next === lastBoardText) return;
   lastBoardText = next;
@@ -119,6 +124,7 @@ function planeGeometry(polygon) {
   return g;
 }
 function discardSurface(record) {
+  assets?.disposeDecor(record);
   scene.remove(record.collider);
   scene.remove(record.outline);
   record.collider.geometry.dispose();
@@ -165,7 +171,10 @@ function updateSurfaces(frame) {
       const area = Math.abs(record.polygon.reduce((acc, p, i, all) => {
         const next = all[(i + 1) % all.length]; return acc + p.x * next.z - next.x * p.z;
       }, 0)) * .5;
+      const wasFloor=record.isFloor;
       record.isFloor = horizontal && area > .6 && ys[0] < head.y - .6 && ys[0] > head.y - 2.5;
+      if (assets && (updated || !record.decor || wasFloor!==record.isFloor))
+        assets.projectRuin(record,decorEnabled);
       record.outline.material = wireMaterial;
     }
   }
@@ -230,31 +239,31 @@ function pickSpawn() {
   return null;
 }
 function createBot(position) {
-  const group = new THREE.Group();
+  if (!assets) return null;
+  // The exact AI machines from the main game's enemy factory.
+  const forms=['stalker','scuttler','seer','brute','probe'];
+  const form=forms[Math.min(forms.length-1,Math.floor((wave-1)/2))];
+  const elite=wave>=6 && Math.random()<.25, ranged=form==='seer'||form==='probe';
+  const group=assets.makeEnemy(form,elite,ranged);
   group.position.copy(position);
-  const shell = new THREE.MeshStandardMaterial({color:0x262638,metalness:.6,roughness:.34});
-  const bright = new THREE.MeshBasicMaterial({color:violet});
-  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(.21,.34,4,9), shell);
-  torso.position.y = .72; group.add(torso);
-  const headPiece = new THREE.Mesh(new THREE.IcosahedronGeometry(.24,1), shell);
-  headPiece.position.y = 1.17; group.add(headPiece);
-  const eye = new THREE.Mesh(new THREE.BoxGeometry(.32,.055,.08), bright);
-  eye.position.set(0,1.2,-.19); group.add(eye);
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(.34,.025,5,24), bright);
-  ring.rotation.x = Math.PI/2; ring.position.y=.19; group.add(ring);
-  const hitbox = new THREE.Mesh(new THREE.SphereGeometry(.38,8,6), new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false,side:THREE.DoubleSide}));
-  hitbox.position.y = .9;
-  group.add(hitbox);
-  scene.add(group);
-  const bot = { group, hitbox, life:2, attackAt:performance.now()/1000+4, born:performance.now()/1000 };
-  hitbox.userData.bot = bot;
+  if (form==='probe') group.position.y+=.65;
+  group.rotation.y=Math.atan2(head.x-position.x,head.z-position.z)+Math.PI;
+  const hitbox=new THREE.Mesh(new THREE.SphereGeometry(form==='probe'?.55:form==='brute'?.57:.39,10,8),
+    new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false,side:THREE.DoubleSide}));
+  hitbox.position.y=form==='probe'?.65:form==='scuttler'?.66:1.05;
+  group.add(hitbox);scene.add(group);
+  const now=performance.now()/1000;
+  const bot={group,hitbox,life:form==='brute'?120:form==='probe'?55:65,
+    form,attackAt:now+4,born:now};
+  hitbox.userData.bot=bot;
   bots.push(bot);
   return bot;
 }
 function removeBot(bot) {
+  if(!bot || !bots.includes(bot))return;
   scene.remove(bot.group);
-  for (const child of bot.group.children) { child.geometry?.dispose(); child.material?.dispose(); }
-  bots.splice(bots.indexOf(bot), 1);
+  bot.hitbox.removeFromParent();bot.hitbox.geometry.dispose();bot.hitbox.material.dispose();
+  bots.splice(bots.indexOf(bot),1);
 }
 function clearBots() { while (bots.length) removeBot(bots[0]); }
 function beam(from,to,color) {
@@ -265,32 +274,48 @@ function beam(from,to,color) {
 function haptic(input) {
   try { const pad = input?.gamepad; const actuator = pad?.hapticActuators?.[0] || pad?.vibrationActuator; actuator?.pulse?.(.55,55); } catch {}
 }
-function shoot(event) {
-  const now = performance.now()/1000;
-  if (now - shotCooldown < .18) return;
-  shotCooldown = now;
-  const source = event?.inputSource;
-  const pose = source && event.frame?.getPose(source.targetRaySpace, renderer.xr.getReferenceSpace());
-  if (!pose) return;
-  const o = pose.transform.position, q = pose.transform.orientation;
-  const origin = new THREE.Vector3(o.x,o.y,o.z);
+function selectWeapon(index) {
+  if (!assets) return;
+  const available=WEAPONS.map((w,i)=>w.level<=wave?i:-1).filter(i=>i>=0);
+  if(!available.includes(index))index=available[0]||0;
+  weaponIndex=index;ammo=WEAPONS[index].capacity;reloadUntil=0;triggerStarted=0;
+  assets.setWeapon(index,Math.min(wave,10));
+  info('ARME : '+WEAPONS[index].name);
+}
+function nextWeapon() {
+  const unlocked=WEAPONS.map((w,i)=>w.level<=wave?i:-1).filter(i=>i>=0);
+  selectWeapon(unlocked[(unlocked.indexOf(weaponIndex)+1)%unlocked.length]);
+}
+function beginReload(now=performance.now()/1000) {
+  if(mode!=='combat'||!assets||reloadUntil>now||ammo===WEAPONS[weaponIndex].capacity)return;
+  reloadUntil=now+WEAPONS[weaponIndex].reload;
+  try{playWeaponAction(audio,'reload',WEAPONS[weaponIndex].id);}catch{}
+  info('RECHARGE : '+WEAPONS[weaponIndex].name);
+}
+function shoot(source,frame,charge=1) {
+  const now=performance.now()/1000, weapon=WEAPONS[weaponIndex];
+  if (mode!=='combat'||!assets||now-shotCooldown<weapon.interval||now<reloadUntil) return;
+  if(ammo<=0){beginReload(now);return;}
+  const pose=source&&frame?.getPose(source.targetRaySpace,renderer.xr.getReferenceSpace());
+  if(!pose)return;
+  shotCooldown=now;ammo--;
+  const o=pose.transform.position,q=pose.transform.orientation;
+  const origin=new THREE.Vector3(o.x,o.y,o.z);
   direction.set(0,0,-1).applyQuaternion(new THREE.Quaternion(q.x,q.y,q.z,q.w)).normalize();
   raycaster.set(origin,direction);raycaster.near=0;raycaster.far=12;
-  const targets = bots.map(bot => bot.hitbox);
-  const hits = raycaster.intersectObjects(targets.concat(blockers()), false);
-  const first = hits[0];
-  const target = first ? first.point : origin.clone().addScaledVector(direction,7);
+  const hit=raycaster.intersectObjects(bots.map(bot=>bot.hitbox).concat(blockers()),false)[0];
+  const target=hit?hit.point:origin.clone().addScaledVector(direction,Math.min(12,8+wave));
   beam(origin,target,tint);
-  if (first?.object?.userData.bot) {
-    const bot = first.object.userData.bot;
-    bot.life -= 1;
-    if (bot.life <= 0) {
-      removeBot(bot); score += 100;
-      if (score > 0 && score % 500 === 0) wave++;
-    }
+  muzzleUntil=now+.075;
+  if(hit?.object?.userData.bot){
+    const bot=hit.object.userData.bot;
+    bot.life-=weapon.damage*(weapon.chargeTime?Math.min(1,charge):1);
+    if(bot.life<=0){removeBot(bot);score+=100;if(score>0&&score%500===0)wave++;}
+    try{playLaserImpact(audio,weapon.id);}catch{}
   }
-  try { if (audio?.state === 'suspended') audio.resume().catch(()=>{}); playLaserShot(audio,'r9',1); } catch {}
+  try{if(audio?.state==='suspended')audio.resume().catch(()=>{});playLaserShot(audio,weapon.id,Math.min(1,charge));}catch{}
   haptic(source);
+  if(ammo===0 && !weapon.chargeTime)beginReload(now);
 }
 function startCombat() {
   if (![...surfaces.values()].some(record => record.isFloor)) {
@@ -299,31 +324,44 @@ function startCombat() {
   }
   const point = pickSpawn();
   if (!point) { info('ZONE DE SOL TROP ETROITE OU MASQUEE'); return; }
-  hp=100;score=0;wave=1;enemyCooldown=0;
-  clearBots();createBot(point);
+  if(!assets){info('CHARGEMENT DES PERSONNAGES ET ARMES');return;}
+  hp=100;score=0;wave=1;enemyCooldown=0;triggerHeld=false;
+  clearBots();selectWeapon(0);createBot(point);
+  const companionPoint=pickSpawn();
+  if(companionPoint)assets.placeCompanion(companionPoint,head);
+  else assets.companion.root.visible=false;
+  assets.placePortal(point,head);
+  music.start(audio);
   mode='combat'; info('COMBAT LANCE');
 }
 function updateCombat(seconds) {
   if (mode !== 'combat') return;
-  for (const bot of bots) {
+  for (const bot of [...bots]) {
     const p=bot.group.position;
-    bot.group.children[0].rotation.z = Math.sin(seconds*3+bot.born)*.07;
-    bot.group.children[3].rotation.z += .016;
+    // Preserve the original skinned enemy locomotion instead of animating primitives.
+    bot.group.userData.animate?.(seconds,seconds*.4,false,{
+      limpUntil:0,chargeProgress:0,lastShotAt:-99
+    },seconds);
+    bot.group.rotation.y=Math.atan2(head.x-p.x,head.z-p.z)+Math.PI;
     if (seconds >= bot.attackAt) {
-      bot.attackAt = seconds + Math.max(2.5, 5-wave*.15);
-      const origin = p.clone().add(new THREE.Vector3(0,1.15,0));
-      if (clearLineOfSight(origin,head)) {
-        // The hit is simulated; it does not require or encourage physically dodging.
-        hp = Math.max(0, hp - 5);
-        beam(origin,head,0xff6378);
-        if (!hp) { mode='finished'; info('FIN DE PARTIE : GACHETTE POUR REJOUER'); }
+      bot.attackAt=seconds+Math.max(2.5,5-wave*.15);
+      const origin=p.clone().add(new THREE.Vector3(0,bot.form==='probe'?.95:1.15,0));
+      if(clearLineOfSight(origin,head)){
+        hp=Math.max(0,hp-5);beam(origin,head,0xff6378);
+        if(!hp){mode='finished';music.pause();info('FIN DE PARTIE : GACHETTE POUR REJOUER');}
       }
     }
   }
-  if (bots.length < Math.min(wave+1,3) && seconds > enemyCooldown) {
+  if(bots.length<Math.min(wave+1,3) && seconds>enemyCooldown){
     const point=pickSpawn();
-    if (point) { createBot(point); enemyCooldown=seconds+3.5; }
+    if(point){createBot(point);enemyCooldown=seconds+3.5;}
   }
+  if(reloadUntil && seconds>=reloadUntil){reloadUntil=0;ammo=WEAPONS[weaponIndex].capacity;}
+  assets?.animate(seconds,Math.min(.07,seconds-lastTime),wave,{
+    ammo,capacity:WEAPONS[weaponIndex].capacity,
+    reloading:reloadUntil>0,reloadProgress:reloadUntil?Math.max(0,1-(reloadUntil-seconds)/WEAPONS[weaponIndex].reload):0,
+    time:seconds,trigger:triggerHeld?1:0,flash:seconds<muzzleUntil
+  });
 }
 async function initiateScan() {
   if (!session || roomCaptureAsked) return;
@@ -342,17 +380,25 @@ async function initiateScan() {
   }
 }
 function onSelect(event) {
-  if (!session || session.visibilityState === 'hidden') return;
-  const hand = event.inputSource?.handedness;
-  if (hand === 'left') {
-    if (mode !== 'combat') initiateScan();
-    return;
+  if(!session || session.visibilityState!=='visible')return;
+  const hand=event.inputSource?.handedness;
+  if(hand==='left'){if(mode!=='combat')initiateScan();return;}
+  if(hand!=='right')return;
+  if(mode==='ready'||mode==='finished'){startCombat();return;}
+  if(mode!=='combat')return;
+  triggerHeld=true;triggerStarted=performance.now()/1000;
+  if(!WEAPONS[weaponIndex].chargeTime)shoot(event.inputSource,event.frame);
+}
+function onSelectEnd(event) {
+  if(event.inputSource?.handedness!=='right')return;
+  if(mode==='combat'&&WEAPONS[weaponIndex].chargeTime&&triggerStarted){
+    const charged=(performance.now()/1000-triggerStarted)/WEAPONS[weaponIndex].chargeTime;
+    if(charged>=.18)shoot(event.inputSource,event.frame,charged);
   }
-  if (mode === 'ready' || mode === 'finished') startCombat();
-  else if (mode === 'combat') shoot(event);
+  triggerHeld=false;triggerStarted=0;
 }
 function onSessionEnd() {
-  session = null; mode='idle';roomCaptureAsked=false;bWasDown=false;
+  session = null; mode='idle';roomCaptureAsked=false;bWasDown=false;triggerHeld=false;music.pause();assets?.hideDecor();lastLeftX=false;lastLeftY=false;lastRightA=false;
   document.body.classList.remove('in-xr');
   endButton.hidden=true;
   clearBots();
@@ -363,46 +409,79 @@ function onSessionEnd() {
   for (const item of tracers) { scene.remove(item.object);item.object.geometry.dispose();item.object.material.dispose(); }
   tracers.length=0;
   board.visible=false;
-  pistolGroups.forEach(g=>g.visible=false);
+  for(const mount of mounts){mount.gun?.removeFromParent();mount.free?.removeFromParent();}
   info('SESSION TERMINEE. RELANCER AT HOME POUR REJOUER.');
   button.disabled=false;
 }
-for (let i=0;i<controllers.length;i++) {
-  const controller = controllers[i];
-  scene.add(controller);
-  const pistol = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(.045,.075,.16),
-    new THREE.MeshStandardMaterial({color:0x3e354c,metalness:.6,roughness:.25}));
-  body.position.set(0,-.035,-.10);
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.18,8),
-    new THREE.MeshBasicMaterial({color:tint}));
-  barrel.rotation.x=Math.PI/2;barrel.position.z=-.2;
-  pistol.add(body,barrel);controller.add(pistol);pistolGroups.push(pistol);
-  pistol.visible=false;
+for(let i=0;i<controllers.length;i++){
+  const ray=controllers[i],mount=new THREE.Group();
+  mount.position.set(0,-.016,.05);
+  ray.add(mount);scene.add(ray);
+  const entry={ray,mount,source:null};
+  ray.addEventListener('connected',event=>{entry.source=event.data;updateControllerRoles();});
+  ray.addEventListener('disconnected',()=>{entry.source=null;updateControllerRoles();});
+  mounts.push(entry);
+}
+function updateControllerRoles(){
+  if(!assets)return;
+  for(const entry of mounts){
+    entry.mount.remove(assets.gun,assets.freeHand);
+    if(entry.source?.handedness==='right'){
+      entry.mount.add(assets.gun);assets.gun.visible=!!session;
+    }else if(entry.source?.handedness==='left'){
+      entry.mount.add(assets.freeHand);assets.freeHand.visible=!!session;
+      assets.freeHand.scale.x=-Math.abs(assets.freeHand.scale.x);
+    }
+  }
 }
 function tick(ms, frame) {
-  const seconds=ms/1000;
+  const seconds=ms/1000,dt=Math.min(.075,Math.max(0,seconds-lastTime));
   lastTime=seconds;
-  if (session) {
-    // Oculus Touch: B (right controller, standard gamepad index 5) exits safely.
-    const right = Array.from(session.inputSources || []).find(input => input.handedness === 'right');
-    const bPressed = !!right?.gamepad?.buttons?.[5]?.pressed;
-    if (bPressed && !bWasDown) session.end().catch(() => {});
-    bWasDown = bPressed;
-    if (frame) {
-      updateBoard();
-      updateSurfaces(frame);
+  if(session){
+    const inputs=Array.from(session.inputSources || []);
+    const right=inputs.find(input=>input.handedness==='right');
+    const left=inputs.find(input=>input.handedness==='left');
+    const padR=right?.gamepad,padL=left?.gamepad;
+    const b=!!padR?.buttons?.[5]?.pressed;
+    if(b&&!bWasDown)session.end().catch(()=>{});
+    bWasDown=b;
+    const a=!!padR?.buttons?.[4]?.pressed;
+    if(a&&!lastRightA)beginReload(seconds);
+    lastRightA=a;
+    const y=!!padL?.buttons?.[5]?.pressed;
+    if(y&&!lastLeftY&&mode==='combat')nextWeapon();
+    lastLeftY=y;
+    const x=!!padL?.buttons?.[4]?.pressed;
+    if(x&&!lastLeftX){
+      decorEnabled=!decorEnabled;
+      for(const record of surfaces.values())assets?.projectRuin(record,decorEnabled);
+      info(decorEnabled?'DECORS PINK WAR ACTIVES':'DECORS MASQUES : PASSTHROUGH');
     }
-    const count=[...surfaces.values()].filter(v=>v.isFloor).length;
-    if (mode==='ready') {
-      if (count) {
-        if (scanMessage !== 'SOL REPERE : PRET A JOUER') info('SOL REPERE : PRET A JOUER');
-      } else if (seconds-startTime > 3 && scanMessage==='DETECTION DES SURFACES') {
-        info('AUCUN SOL : SCANNER AVEC GACHETTE GAUCHE');
+    lastLeftX=x;
+    if(frame){
+      updateBoard();updateSurfaces(frame);
+      const held=!!padR?.buttons?.[0]?.pressed;
+      if(mode==='combat'&&held&&right&&!WEAPONS[weaponIndex].chargeTime){
+        shoot(right,frame);
+      }
+      // Fully charged energy weapons discharge automatically just like the classic game.
+      if(mode==='combat'&&held&&right&&WEAPONS[weaponIndex].chargeTime&&triggerStarted
+          &&seconds-triggerStarted>=WEAPONS[weaponIndex].chargeTime){
+        shoot(right,frame,1);
+        triggerStarted=seconds;
       }
     }
+    const count=[...surfaces.values()].filter(v=>v.isFloor).length;
+    if(mode==='ready'){
+      if(!assets)info('CHARGEMENT DES MODELES PINK WAR');
+      else if(count){
+        if(scanMessage!=='SOL REPERE : PRET A JOUER')info('SOL REPERE : PRET A JOUER');
+      }else if(seconds-startTime>3&&scanMessage==='DETECTION DES SURFACES')
+        info('AUCUN SOL : SCANNER AVEC GACHETTE GAUCHE');
+    }
     updateCombat(seconds);
-    for (let i=tracers.length-1;i>=0;i--) if (seconds>=tracers[i].until) {
+    if(assets&&mode!=='combat')assets.animate(seconds,dt,wave,{time:seconds});
+    for(let i=tracers.length-1;i>=0;i--)if(seconds>=tracers[i].until){
       const item=tracers.splice(i,1)[0];
       scene.remove(item.object);item.object.geometry.dispose();item.object.material.dispose();
     }
@@ -410,6 +489,7 @@ function tick(ms, frame) {
   }
   renderer.render(scene,camera);
 }
+
 renderer.setAnimationLoop(tick);
 window.addEventListener('resize',()=>{
   camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
@@ -437,6 +517,7 @@ async function enter() {
     xrSession=await request;
     xrSession.addEventListener('end',onSessionEnd,{once:true});
     xrSession.addEventListener('selectstart',onSelect);
+    xrSession.addEventListener('selectend',onSelectEnd);
     xrSession.addEventListener('visibilitychange',()=>{
       if (xrSession.visibilityState!=='visible' && mode==='combat') {
         mode='ready'; clearBots(); info('PAUSE : VERIFIER VOTRE ENVIRONNEMENT');
@@ -450,7 +531,18 @@ async function enter() {
     info('DETECTION DES SURFACES');
     document.body.classList.add('in-xr');
     endButton.hidden=false;
-    pistolGroups.forEach(g=>g.visible=true);
+    if(!assets){
+      assetsLoading ||= import('./at-home-assets.js')
+        .then(module=>module.createAtHomeAssets(scene,hero))
+        .then(pack=>{
+          assets=pack;assetsLoading=null;updateControllerRoles();
+          for(const record of surfaces.values())assets.projectRuin(record,decorEnabled);
+          info('MODELES PINK WAR CHARGES. CHERCHEZ LE SOL.');
+        }).catch(err=>{
+          assetsLoading=null;console.error('AT HOME asset load failed',err);
+          info('MODELES PINK WAR INDISPONIBLES : '+(err?.message||'chargement impossible'));
+        });
+    }else updateControllerRoles();
   } catch (error) {
     if (xrSession) await xrSession.end().catch(()=>{});
     if (session===xrSession) onSessionEnd();
