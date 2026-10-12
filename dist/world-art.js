@@ -48,7 +48,7 @@ function weatherTexture(kind) {
 // Overcast dawn, smoke banks and filtered sunlight replace the uniform neon sky.
 export function paintRuinSky(c,w,h,blue=false) {
   const g=c.createLinearGradient(0,0,0,h);
-  const colors=blue?['#293942','#576b74','#b4b6a7','#ded0ac','#9da69a','#697b77']:['#333c42','#666f73','#b7b4a5','#e2ccad','#a0a69b','#6b7a74'];
+  const colors=blue?['#071526','#12243a','#263d58','#53728c','#30445b','#15283d']:['#130e22','#272238','#493a55','#7e6478','#423951','#1b2236'];
   [0,.29,.44,.54,.7,1].forEach((stop,i)=>g.addColorStop(stop,colors[i]));c.fillStyle=g;c.fillRect(0,0,w,h);
   const rand=randomSource(85);
   // Broken, overlapping cloud shelves leave a warm opening above the horizon.
@@ -71,7 +71,7 @@ export function paintRuinSky(c,w,h,blue=false) {
     c.save();c.translate(x,y);c.scale(1,ry/rx);c.translate(-x,-y);c.fillStyle=grad;c.fillRect(x-rx,y-rx,rx*2,rx*2);c.restore();
   }
   const sun=c.createRadialGradient(w*.26,h*.46,0,w*.26,h*.46,w*.105);
-  sun.addColorStop(0,'rgba(255,235,195,.65)');sun.addColorStop(.12,'rgba(255,227,180,.21)');sun.addColorStop(1,'rgba(255,231,190,0)');
+  sun.addColorStop(0,'rgba(147,184,218,.18)');sun.addColorStop(.12,'rgba(120,152,197,.09)');sun.addColorStop(1,'rgba(95,128,164,0)');
   c.fillStyle=sun;c.fillRect(0,0,w,h);
   // Wind draws distant industrial smoke into thin, uneven strata.
   for(let i=0;i<9;i++) {
