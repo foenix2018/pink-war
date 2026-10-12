@@ -23,5 +23,7 @@ jobs:
           node --check dist/scene.js
           node --check dist/vr.js
           node --check dist/at-home.js
+          node --check dist/at-home-assets.js
+          node --check dist/world-art.js
       - name: Tests unitaires
         run: npm test
