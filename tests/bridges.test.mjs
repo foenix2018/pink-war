@@ -103,3 +103,24 @@ test('AI detours around the broken span but not on intact bridges or the same ba
  assert.equal(brokenBridgeDetour(a,{...far,z:far.z+8}),null);
  assert.equal(brokenBridgeDetour({...a,x:-22},{...far,x:-20}),null);
 });
+
+test('an alerted machine actually walks down, around and back up to reach the opposite broken bridge bank',()=>{
+ const game=new ArenaGame(createTraversalObstacles(),()=>.5);
+ game.nextWave=999;game.wave=4;game.toSpawn=0;
+ game.player.x=-8.6;game.player.z=39;game.player.elevation=4.8;game.player.grounded=true;
+ const enemy={id:57,x:-20,z:39,elevation:4.8,grounded:true,verticalSpeed:0,speed:5,radius:.6,
+   form:'stalker',elite:false,ranged:false,hp:99999,attackTimer:999,phase:0,
+   aimHeight:1.15,yaw:Math.PI/2,homeX:-20,homeZ:39,stunnedUntil:0,limpUntil:0,
+   alertedUntil:999,awareness:'engaged',lastKnownX:game.player.x,lastKnownZ:game.player.z,lastSeenAt:0};
+ game.enemies=[enemy];
+ let bottom=false,ascended=false,airCrossing=false;
+ for(let i=0;i<640;i++){
+   game.step(.05,{});
+   if(enemy.elevation<.05&&enemy.z>54)bottom=true;
+   if(bottom&&enemy.elevation>4.55&&enemy.x>-11&&enemy.x< -5)ascended=true;
+   if(enemy.elevation>3.5&&enemy.x> -15.7 && enemy.x< -12.8)airCrossing=true;
+ }
+ assert.ok(bottom,'AI descended the existing garden ramp');
+ assert.ok(ascended,'AI ascended the new ruin approach to reach the player');
+ assert.equal(airCrossing,false,'AI never cheated across the missing deck at high elevation');
+});
