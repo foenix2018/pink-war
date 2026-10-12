@@ -154,6 +154,18 @@ test('the left trigger reloads without firing, and never resumes or restarts a p
   down(right,0,false);state.input();down(right,0);assert.equal(state.input().fire,true);
 });
 
+test('Quest left X jumps independently of left-stick crouch and right-hand fire',()=>{
+ const {state,left,right}=setup();
+ down(left,4);let input=state.input();
+ assert.equal(input.jump,true);assert.equal(input.crouchToggle,false);assert.equal(input.fire,false);
+ assert.equal(state.input().jump,false,'holding X must not re-trigger');
+ down(left,4,false);state.input();
+ down(left,3);input=state.input();
+ assert.equal(input.jump,false);assert.equal(input.crouchToggle,true);
+ down(left,3,false);state.input();
+ down(right,0);down(left,4);input=state.input();
+ assert.equal(input.fire,true);assert.equal(input.jump,true);
+});
 test('the free-hand grip sprints when squeezed, and the stick click enters crouch stance',()=>{
   const {state,left}=setup();
   left.gamepad.buttons[1].value=.4;assert.equal(state.input().sprint,false,'a light grip while holding the controller is not a sprint');
