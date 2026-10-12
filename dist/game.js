@@ -309,7 +309,9 @@ function handleEvents() {
     if (event.type === 'land') tone(105, 55, .075, .013);
     if (event.type === 'reload') { reloadInserted=false;vr.startReloadGesture(); vr.haptic('reload');if(settings.sound){if(game.ammo[game.weaponIndex]===0)playWeaponAction(audioContext,game.weapon.id,'empty');playWeaponAction(audioContext,game.weapon.id,'reload-out');} }
     if (event.type === 'reloaded') { vr.haptic('reloaded');if(settings.sound)playWeaponAction(audioContext,game.weapon.id,'reload-ready'); }
-    if (event.type === 'spawn') world.burst(event.x, 1, event.z, world.palette.violet, 7);
+    if (event.type === 'spawn') world.burst(event.x, event.y??1, event.z, world.palette.violet, 7);
+    if (event.type === 'probe-charge') { const d=Math.hypot(event.x-game.player.x,event.z-game.player.z);tone(760,1300,.35,.022/(1+d*.065),'sine'); }
+    if (event.type === 'enemy-shot'&&event.form==='probe') { const d=Math.hypot(event.x-game.player.x,event.z-game.player.z);tone(250,85,.18,.032/(1+d*.065),'sawtooth'); }
     if (event.type === 'impact') {
       world.impact?.(event);
       if(settings.sound){
@@ -487,7 +489,7 @@ function frame(timestamp, xrFrame) {
   const heading=listenerHeading();
   ambience?.update(dt,{active:audioActive,position:game.player,yaw:heading,
     moving:phase==='playing',elevation:game.player.elevation,onLift:!!game.player.onLift,
-    grounded:game.player.grounded,crouched:game.player.crouched});
+    grounded:game.player.grounded,crouched:game.player.crouched,probes:game.enemies});
   let threat=clock-lastShotAt<1.2?.18:0;
   for(const enemy of game.enemies)if(enemy.awareness==='engaged')threat+=Math.max(0,1-Math.hypot(enemy.x-game.player.x,enemy.z-game.player.z)/36)*.3;
   musicBed.update(dt,{active:audioActive,threat:Math.min(1,threat),intermission:game.wave>0&&game.nextWave>0});

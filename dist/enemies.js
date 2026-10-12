@@ -13,6 +13,7 @@ const shinPlate=armorPanel([[-.054,-.15],[.054,-.15],[.085,.10],[.06,.155],[-.06
 const sensor=new T.SphereGeometry(1,10,7),shellSphere=new T.SphereGeometry(1,12,8);
 const shellDome=new T.SphereGeometry(1,14,7,0,Math.PI*2,0,Math.PI/2);
 const ring=new T.TorusGeometry(.12,.012,5,16);
+const probeDuct=new T.TorusGeometry(.205,.038,6,24),probeRim=new T.TorusGeometry(.19,.022,6,24);
 const headShell=loft([[-.18,.065,.075,-.035],[-.11,.14,.17,-.019],[.015,.164,.205,.003],[.14,.12,.163,.035],[.205,.036,.074,.06]],18);
 const headFace=loft([[-.12,.054,.04,-.181],[-.02,.12,.035,-.197],[.084,.112,.032,-.174],[.115,.061,.025,-.149]],16);
 
@@ -61,13 +62,41 @@ export function createEnemyFactory(mats){
     const key=`${form}:${elite?1:0}:${ranged?1:0}`;if(cache.has(key))return cache.get(key);
     const armor=elite?mats.monsterElite:mats.monster,dark=mats.monsterFace;
     const glow=ranged?mats.cyan:form==='scuttler'?mats.rose:form==='seer'?(mats.pale||mats.cyan):mats.violet;
-    const bones=[],assemblies=[],legRig=[],armRig=[];
+    const bones=[],assemblies=[],legRig=[],armRig=[],rotors=[];let probeHead=null,probeSignal=null;
     function bone(name,position,parent=-1){bones.push({name,position,parent});return bones.length-1;}
     function assembly(index){const a=new EnemyAssembly();assemblies.push({assembly:a,bone:index});return a;}
-    const crawler=form==='scuttler',pelvis=bone('pelvis',[0,crawler?.73:.93,0]);
-    const thorax=crawler?pelvis:bone('thorax',[0,.47,0],pelvis),a=assembly(thorax);
+    const probe=form==='probe',crawler=form==='scuttler',pelvis=bone('pelvis',[0,probe?.55:crawler?.73:.93,0]);
+    const thorax=(probe||crawler)?pelvis:bone('thorax',[0,.47,0],pelvis),a=assembly(thorax);
 
-    if(crawler){
+    if(probe){
+      // Rounded optical hull and four ducted fans: a surveillance machine,
+      // with an exposed iris rather than a humanoid face or a cubic body.
+      a.ellipsoid(dark,[0,.55,0],[.42,.31,.49]);
+      a.dome(armor,[0,.62,.06],[.40,.28,.41],[0,0,0]);
+      a.dome(armor,[0,.47,.03],[.35,.24,.39],[Math.PI,0,0]);
+      a.add(ring,armor,matrix([0,.55,0],[Math.PI/2,0,0],[3.5,3.5,3.5]));
+      for(const side of [-1,1]){
+        a.limb(dark,[side*.21,.78,.10],[side*.26,1.02,.15],.016,.008);
+        a.add(sensor,glow,matrix([side*.26,1.02,.15],[0,0,0],[.016,.018,.016]),false);
+        for(const z of [-.42,.42]){
+          const x=side*.61;
+          a.limb(armor,[side*.24,.52,z*.45],[x,.49,z],.048,.034);
+          a.limb(dark,[side*.28,.46,z*.45],[x,.44,z],.020,.013);
+          a.add(probeDuct,armor,matrix([x,.49,z],[Math.PI/2,0,0]));
+          a.add(ring,glow,matrix([x,.476,z],[Math.PI/2,0,0],[1.53,1.53,1.53]),false);
+          const rotor=bone('fan-'+side+'-'+z,[x,-.06,z],pelvis),r=assembly(rotor);rotors.push({index:rotor,side:z*side>0?1:-1});
+          r.ellipsoid(dark,[x,.49,z],[.037,.028,.037]);
+          for(const angle of [0,Math.PI/2])r.box(dark,[.31,.017,.035],[x,.49,z],[0,angle,0],.009);
+        }
+      }
+      probeHead=bone('optical-gimbal',[0,0,-.35],pelvis);const h=assembly(probeHead);
+      h.ellipsoid(dark,[0,.55,-.40],[.21,.20,.18]);
+      h.add(probeRim,armor,matrix([0,.55,-.49],[0,0,0]));
+      h.add(sensor,dark,matrix([0,.55,-.50],[0,0,0],[.16,.16,.045]));
+      probeSignal=bone('charged-iris',[0,0,-.18],probeHead);const s=assembly(probeSignal);
+      s.add(sensor,glow,matrix([0,.55,-.53],[0,0,0],[.071,.071,.017]),false);
+      s.add(ring,glow,matrix([0,.55,-.527],[0,0,0],[.79,.79,.79]),false);
+    }else if(crawler){
       a.add(crawlerShell,dark);
       // Overlapping beetle-like plates surround a former municipal maintenance
       // chassis: cables, sockets and optical tools show its industrial origin.
@@ -183,14 +212,14 @@ export function createEnemyFactory(mats){
         a.add(sensor,glow,matrix([.37,1.69,-.345],[0,0,0],[.054,.054,.018]),false);
       }
     }
-    const result={parts:bakeRig(assemblies),bones,legRig,armRig,pelvis,thorax};
+    const result={parts:bakeRig(assemblies),bones,legRig,armRig,pelvis,thorax,rotors,probeHead,probeSignal};
     cache.set(key,result);return result;
   }
 
   function create(elite=false,ranged=false,form='stalker'){
-    if(!['stalker','scuttler','brute','seer'].includes(form))form='stalker';
-    const kit=template(elite,ranged,form),root=new T.Group(),crawler=form==='scuttler';
-    root.name=({stalker:'AI pursuit chassis',scuttler:'AI maintenance crawler',brute:'AI siege chassis',seer:'AI reconnaissance chassis'})[form];
+    if(!['stalker','scuttler','brute','seer','probe'].includes(form))form='stalker';
+    const kit=template(elite,ranged,form),root=new T.Group(),crawler=form==='scuttler',probe=form==='probe';
+    root.name=({stalker:'AI pursuit chassis',scuttler:'AI maintenance crawler',brute:'AI siege chassis',seer:'AI reconnaissance chassis',probe:'S-03 flying surveillance probe'})[form];
     root.userData.form=form;
     const joints=kit.bones.map(spec=>{const b=new T.Bone();b.name=spec.name;b.position.set(...spec.position);return b;});
     kit.bones.forEach((spec,i)=>(spec.parent<0?root:joints[spec.parent]).add(joints[i]));root.updateMatrixWorld(true);
@@ -202,11 +231,11 @@ export function createEnemyFactory(mats){
       // Gait stays inside a small, fixed culling margin; no CPU vertex bounds work per frame.
       mesh.boundingSphere=part.geometry.boundingSphere.clone();mesh.boundingSphere.radius+=.22;
     }
-    root.scale.setScalar(elite?1.3:crawler?.98:form==='seer'?1.04:1);
+    root.scale.setScalar(elite?(probe?1.13:1.3):crawler?.98:form==='seer'?1.04:1);
     const legs=kit.legRig.map(spec=>({...spec,upper:joints[spec.upper],lower:joints[spec.lower],foot:joints[spec.foot]}));
     const arms=kit.armRig.map(spec=>({...spec,upper:joints[spec.upper],lower:joints[spec.lower],wrist:joints[spec.wrist]}));
     root.userData.skeleton=skeleton;root.userData.legs=legs;
-    if(!crawler)for(const leg of legs)root.userData['leg'+leg.side]=leg.upper;
+    if(!crawler&&!probe)for(const leg of legs)root.userData['leg'+leg.side]=leg.upper;
     const pelvis=joints[kit.pelvis],thorax=joints[kit.thorax],head=joints.find(joint=>joint.name==='sensor-head');
     const direction=new T.Vector3(),bend=new T.Vector3(),knee=new T.Vector3(),target=new T.Vector3(),hip=new T.Vector3();
     const q=new T.Quaternion(),inverse=new T.Quaternion();
@@ -217,7 +246,17 @@ export function createEnemyFactory(mats){
       leg.lowerBind=new T.Vector3(...leg.ankle).sub(new T.Vector3(...leg.knee));leg.lowerLength=leg.lowerBind.length();leg.lowerBind.normalize();
     }
     let previousTime=null,previousX=0,previousZ=0,motionSpeed=0,cycle=0;
-    root.userData.animate=(time,phase=0,moving=true)=>{
+    root.userData.animate=(time,phase=0,moving=true,flight={},simulationTime=time)=>{
+      if(probe){
+        const damaged=(flight.limpUntil||0)>simulationTime;
+        pelvis.rotation.set(Math.sin(time*2+phase)*.018,0,Math.sin(time*1.7+phase)*.025+(damaged?.06:0));
+        pelvis.position.y=.55+Math.sin(time*2.1+phase)*.018;
+        for(const [i,rotor] of kit.rotors.entries())joints[rotor.index].rotation.y=time*(damaged&&i===0?12:42)*rotor.side+phase;
+        joints[kit.probeHead].rotation.x=T.MathUtils.clamp(flight.aimPitch||0,-.55,.4);
+        const charge=T.MathUtils.clamp(flight.chargeProgress||0,0,1),flash=simulationTime-(flight.lastShotAt??-99)<.13?1:0;
+        joints[kit.probeSignal].scale.setScalar(1+charge*(.35+.15*Math.sin(time*27))+flash*.7);
+        return;
+      }
       // Infer real travelled distance: a stunned enemy or a shooter holding its
       // position must settle into an idle stance instead of walking in place.
       const elapsed=previousTime===null?0:time-previousTime,dt=Math.min(.1,Math.max(0,elapsed));

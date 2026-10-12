@@ -253,7 +253,7 @@ test('a complete campaign reaches victory after 185 real projectile kills and fi
     }
     origin.x=g.player.x;origin.z=g.player.z;
     const target=g.enemies.reduce((best,e)=>!best||e.z>best.z?e:best,null);
-    if(target)g.trigger(true,.02,origin,{x:target.x-origin.x,y:(target.elite?1.35:1.15)-origin.y,z:target.z-origin.z});
+    if(target)g.trigger(true,.02,origin,{x:target.x-origin.x,y:(target.elevation||0)+(target.aimHeight??(target.elite?1.35:1.15))-origin.y,z:target.z-origin.z});
     else g.trigger(false,.02,origin,{x:0,y:0,z:-1});
     const events=g.drainEvents();
     unlocks.push(...events.filter(e=>e.type==='unlock').map(e=>e.name));

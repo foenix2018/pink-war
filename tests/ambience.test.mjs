@@ -66,6 +66,17 @@ test('footsteps follow traveled distance, not joystick intent; jumping and lifts
   ambience.dispose();
 });
 
+test('a nearby flying probe changes the spatial hum without adding persistent audio sources',()=>{
+  const {ctx,nodes,calls}=audioMock(),ambience=createAmbience(ctx);
+  ambience.update(.05,{active:true,position:{x:0,z:0}});const count=nodes.length,starts=calls.starts;
+  for(let i=0;i<10;i++){ctx.tick(.1);ambience.update(.1,{active:true,position:{x:0,z:0},probes:[{form:'probe',x:3,z:-3,elevation:2.7}]});}
+  assert.ok(nodes.some(n=>n.kind==='oscillator'&&n.frequency.value>130),'nearby propellers raise the mechanical frequency');
+  assert.equal(nodes.length,count);assert.equal(calls.starts,starts);
+  for(let i=0;i<10;i++){ctx.tick(.1);ambience.update(.1,{active:true,position:{x:0,z:0},probes:[]});}
+  assert.ok(nodes.some(n=>n.kind==='oscillator'&&n.frequency.value>56&&n.frequency.value<58),'destroyed probe leaves the environmental hum');
+  ambience.dispose();
+});
+
 test('environment event sources finish, context suspension schedules no creaks',()=>{
   const {ctx,calls}=audioMock(),ambience=createAmbience(ctx,{installations:[{x:0,z:0}]});
   for(let i=0;i<180;i++){ctx.tick(.1);ambience.update(.1,{active:true,position:{x:0,z:0},onLift:true});}

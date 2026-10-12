@@ -99,7 +99,7 @@ export function createAmbience(ctx,{installations=[]}={}){
     osc.connect(gain);const pan=connectPan(gain,(random()*2-1)*.6);
     remember(osc,[osc,gain,...(pan?[pan]:[])]);osc.start(t);osc.stop(t+duration+.01);creaks++;
   }
-  function update(dt,{active:nextActive=false,position=null,moving=false,elevation=0,onLift=false,grounded=true,crouched=false,yaw=0,shelter=0}={}){
+  function update(dt,{active:nextActive=false,position=null,moving=false,elevation=0,onLift=false,grounded=true,crouched=false,yaw=0,shelter=0,probes=[]}={}){
     if(disposed)return;
     const wasReady=ready();active=!!nextActive;
     if(!ready()){if(wasReady||graph)mute();return;}
@@ -123,9 +123,16 @@ export function createAmbience(ctx,{installations=[]}={}){
         const proximity=clamp(1-distance/35,0,1);
         if(proximity>machinery){machinery=proximity;sourceBearing=Math.atan2(source.x-finite(position.x),-(source.z-finite(position.z)));}
       }
-      target(graph.droneGain.gain,.001+machinery*.007,t,.3);
+      let nearbyProbe=0;
+      if(position)for(const probe of probes){
+        if(probe.form!=='probe')continue;
+        const distance=Math.hypot(probe.x-finite(position.x),probe.z-finite(position.z),(probe.elevation||0)+.55-finite(elevation)-1.25);
+        const proximity=clamp(1-distance/26,0,1);
+        if(proximity>nearbyProbe){nearbyProbe=proximity;sourceBearing=Math.atan2(probe.x-finite(position.x),-(probe.z-finite(position.z)));}
+      }
+      target(graph.droneGain.gain,.001+machinery*.007+nearbyProbe*.018,t,.3);
       if(graph.machinePan)target(graph.machinePan.pan,Math.sin(sourceBearing-finite(yaw))*.65,t,.25);
-      target(graph.drone.frequency,57+Math.sin(elapsed*.4)*.3,t,.4);
+      target(graph.drone.frequency,57+nearbyProbe*125+Math.sin(elapsed*.4)*.3,t,.4);
       target(graph.liftGain.gain,onLift?.022:0,t,.12);
       target(graph.lift.frequency,onLift?104+Math.sin(elapsed*1.3)*3:78,t,.16);
     }

@@ -1,5 +1,6 @@
 import { equipmentForLevel } from './equipment.js';
 import { PLATFORMS, STAIRS, LIFTS, BRIDGES, BRIDGE_APPROACHES, insideSurface, traversalSurfaces, liftHeightAt } from './world-layout.js';
+import { PROBE, updateProbe } from './aerial-probes.js';
 // World units are metres. The playable arena is exactly 200 × 200 m.
 export const ARENA_SIZE = 200;
 export const PORTAL = Object.freeze({ x: 0, z: -20 });
@@ -117,7 +118,11 @@ export function traceEnemyHit(start, end, enemy) {
   const elite=enemy.elite?1.13:1;
   const yaw=enemy.yaw||0,cos=Math.cos(yaw),sin=Math.sin(yaw);
   const crawl=enemy.form==='scuttler';
-  const zones=crawl?[
+  const zones=enemy.form==='probe'?[
+    ['head',0,.55,-.48,.18,2.4],['torso',0,.55,0,.44,1],
+    ['limb',-.61,.49,-.42,.24,.7],['limb',.61,.49,-.42,.24,.7],
+    ['limb',-.61,.49,.42,.24,.7],['limb',.61,.49,.42,.24,.7]
+  ]:crawl?[
     ['head',0,.85,-.44,.28,2.1],
     ['torso',0,.79,.07,.51,1],
     ['limb',-.61,.43,.14,.28,.65],['limb',.61,.43,.14,.28,.65]
@@ -339,26 +344,28 @@ export class ArenaGame {
   spawnEnemy() {
     const ordinal = this.spawned++;
     const elite = this.wave >= 3 && ordinal % (this.wave >= 8 ? 3 : 5) === 2;
-    const ranged = this.wave >= 4 && !elite && ordinal % 4 === 1;
+    const probe = this.wave >= 3 && !elite && (ordinal % 6 === 3 || (this.wave >= 7 && ordinal > 0 && ordinal % 6 === 0));
+    const ranged = probe || (this.wave >= 4 && !elite && ordinal % 4 === 1);
     const forms = ['stalker','scuttler','seer','brute'];
-    const form = elite ? 'brute' : forms[(ordinal + this.wave - 1) % forms.length];
+    const form = probe ? 'probe' : elite ? 'brute' : forms[(ordinal + this.wave - 1) % forms.length];
     const angle = this.random() * Math.PI * 2;
     const available=this.activePortals.filter(p=>p.openedAt<=this.time);
     const site=available.length?available[ordinal%available.length]:this.activePortals[0]||PORTAL;
     const x=site.x+Math.sin(site.yaw||0)*3.2+Math.cos(angle)*.95;
     const z=site.z+Math.cos(site.yaw||0)*3.2+Math.sin(angle)*.95;
-    const aimHeight = form === 'scuttler' ? .88 : form === 'seer' ? 1.38 : form === 'brute' ? 1.42 : 1.15;
-    const enemy = { id: this.nextId++, x, z, elevation: walkSurfaceHeight(x, z,this.time,.3),grounded:true,verticalSpeed:0,
-      hp: elite ? 95 + this.wave * 25 : 42 + this.wave * 14, elite, ranged, form, aimHeight,
-      speed: Math.max(1.5,2.85 - (this.wave-1)*.09 + (elite ? -.018 : form === 'scuttler' ? .025 : form === 'seer' ? .012 : form === 'brute' ? -.015 : 0)),
+    const aimHeight = probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : form === 'seer' ? 1.38 : form === 'brute' ? 1.42 : 1.15;
+    const homeHeight = walkSurfaceHeight(x, z,this.time,.3);
+    const enemy = { id: this.nextId++, x, z, elevation: homeHeight + (probe ? PROBE.hover : 0),grounded:!probe,verticalSpeed:0,homeHeight,
+      hp: probe ? Math.round((42 + this.wave * 14) * .7) : elite ? 95 + this.wave * 25 : 42 + this.wave * 14, elite, ranged, form, aimHeight,
+      speed: probe ? 3.6 + this.wave * .07 : Math.max(1.5,2.85 - (this.wave-1)*.09 + (elite ? -.018 : form === 'scuttler' ? .025 : form === 'seer' ? .012 : form === 'brute' ? -.015 : 0)),
       tier: Math.max(1,Math.ceil(this.wave/2)),limpUntil:0,stunnedUntil:0,
       homeX:site.x,homeZ:site.z,portalId:site.id,
-      radius: elite ? 1.05 : form === 'scuttler' ? .86 : form === 'brute' ? .95 : .8,
-      hitRadius: form === 'scuttler' ? .91 : form === 'brute' ? 1.18 : form === 'seer' ? .94 : 1.05,
+      radius: probe ? PROBE.radius : elite ? 1.05 : form === 'scuttler' ? .86 : form === 'brute' ? .95 : .8,
+      hitRadius: probe ? .44 : form === 'scuttler' ? .91 : form === 'brute' ? 1.18 : form === 'seer' ? .94 : 1.05,
       attackTimer: .8 + this.random() * .6, phase: this.random() * Math.PI * 2,
       awareness:'patrol',lastSeenAt:-999,lastKnownX:x,lastKnownZ:z,patrolAngle:angle,patrolTimer:.7+this.random()*2,alertedUntil:0 };
 
-    this.enemies.push(enemy); this.toSpawn--; this.event('spawn', { id: enemy.id, x: enemy.x, z: enemy.z });
+    this.enemies.push(enemy); this.toSpawn--; this.event('spawn', { id: enemy.id, x: enemy.x, y: enemy.elevation + enemy.aimHeight, z: enemy.z });
   }
   shoot(origin, direction, charge = 1) {
     if (this.state !== 'playing' || this.cooldown > 0 || this.reloadRemaining > 0 || this.ammo[this.weaponIndex] <= 0) return false;
@@ -442,6 +449,7 @@ export class ArenaGame {
     } }
     this.navigation.update(this.player, this.time);
     for (const e of this.enemies) {
+      if(e.form==='probe'){updateProbe(this,e,dt,segmentBox);continue;}
       e.aimHeight ??= e.elite ? 1.35 : 1.15;
       e.hitRadius ??= e.elite ? 1.3 : 1.05;
       e.grounded ??= true;e.elevation ??= 0;
@@ -569,7 +577,7 @@ export class ArenaGame {
       const end = { x: b.x + b.vx * dt, y: b.y + b.vy * dt, z: b.z + b.vz * dt };
       let nearest = 1.01, target = null, zone='torso',multiplier=1,surface='concrete',hitBox=null;
       if (b.hostile) {
-        const hit = segmentSphere(start, end, { x: this.player.x, y: (this.player.elevation || 0) + 1.25, z: this.player.z }, .62);
+        const hit = segmentSphere(start, end, { x: this.player.x, y: (this.player.elevation || 0) + (this.player.crouched?.58:1.25), z: this.player.z }, this.player.crouched?.46:.62);
         if (hit !== null) { nearest = hit; target = this.player; }
       } else for (const e of this.enemies) {
         const hit = traceEnemyHit(start,end,e);
