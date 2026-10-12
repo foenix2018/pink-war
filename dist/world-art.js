@@ -51,6 +51,19 @@ export function paintRuinSky(c,w,h,blue=false) {
   const colors=blue?['#293942','#576b74','#b4b6a7','#ded0ac','#9da69a','#697b77']:['#333c42','#666f73','#b7b4a5','#e2ccad','#a0a69b','#6b7a74'];
   [0,.29,.44,.54,.7,1].forEach((stop,i)=>g.addColorStop(stop,colors[i]));c.fillStyle=g;c.fillRect(0,0,w,h);
   const rand=randomSource(85);
+  // Broken, overlapping cloud shelves leave a warm opening above the horizon.
+  // These are baked into the existing sky map, with no additional VR render pass.
+  for(let bank=0;bank<7;bank++) {
+    const cx=(bank/7+.035)*w,cy=h*(.21+rand()*.18),span=w*(.06+rand()*.06);
+    for(let puff=0;puff<13;puff++) {
+      const x=cx+(rand()-.5)*span*2,y=cy+(rand()-.5)*h*.042,rx=span*(.25+rand()*.42),ry=h*(.008+rand()*.022);
+      for(const wrap of [-w,0,w]) {
+        const cloud=c.createRadialGradient(x+wrap,y,rx*.15,x+wrap,y,rx);
+        cloud.addColorStop(0,puff%3?'rgba(42,53,61,.11)':'rgba(227,224,203,.13)');cloud.addColorStop(1,'rgba(85,100,105,0)');
+        c.save();c.translate(x+wrap,y);c.scale(1,ry/rx);c.translate(-x-wrap,-y);c.fillStyle=cloud;c.fillRect(x+wrap-rx,y-rx,rx*2,rx*2);c.restore();
+      }
+    }
+  }
   for(let layer=0;layer<3;layer++)for(let i=0;i<18;i++) {
     const x=rand()*w,y=h*(.13+rand()*.37),rx=w*(.055+rand()*.115),ry=h*(.021+rand()*.032);
     const grad=c.createRadialGradient(x,y,0,x,y,rx);
@@ -60,6 +73,12 @@ export function paintRuinSky(c,w,h,blue=false) {
   const sun=c.createRadialGradient(w*.26,h*.46,0,w*.26,h*.46,w*.105);
   sun.addColorStop(0,'rgba(255,235,195,.65)');sun.addColorStop(.12,'rgba(255,227,180,.21)');sun.addColorStop(1,'rgba(255,231,190,0)');
   c.fillStyle=sun;c.fillRect(0,0,w,h);
+  // Wind draws distant industrial smoke into thin, uneven strata.
+  for(let i=0;i<9;i++) {
+    const x=(.08+i*.109)*w,y=h*(.45+rand()*.025),length=w*(.04+rand()*.075);
+    const smoke=c.createLinearGradient(x,y,x+length,y-h*.018);smoke.addColorStop(0,'rgba(66,71,68,0)');smoke.addColorStop(.35,'rgba(66,71,68,.12)');smoke.addColorStop(1,'rgba(66,71,68,0)');
+    c.fillStyle=smoke;c.beginPath();c.moveTo(x,y);c.bezierCurveTo(x+length*.2,y-h*.017,x+length*.55,y-h*.008,x+length,y-h*.026);c.lineTo(x+length,y-h*.008);c.bezierCurveTo(x+length*.5,y,x+length*.25,y+h*.006,x,y+h*.004);c.closePath();c.fill();
+  }
 }
 
 function damagedBlock(seed) {
@@ -99,11 +118,43 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
   m.foliage=new T.MeshStandardMaterial({map:foliageMap,roughness:.94,metalness:0,alphaTest:.42,side:T.DoubleSide});
   m.foliageLight=m.foliage.clone();m.foliageLight.color.setHex(0xbac9aa);
 
+  const scarMap=texture(512,(c,n,r)=>{
+    c.clearRect(0,0,n,n);
+    const paths=[];
+    // A subsided asphalt fissure, with broken aggregate at the lip rather than a painted line.
+    for(let branch=0;branch<7;branch++) {
+      let x=branch?220+r()*90:235,y=branch?80+r()*260:32;const path=[[x,y]],steps=branch?4:15;
+      for(let j=0;j<steps;j++){x+=(r()-.5)*43+(branch%2?12:-8);y+=14+r()*19;path.push([x,y]);}
+      paths.push(path);
+    }
+    for(const [lineWidth,color,offset] of [[13,'rgba(80,70,49,.35)',0],[6,'rgba(137,133,108,.6)',2],[3,'rgba(25,29,27,.92)',0]]) {
+      c.strokeStyle=color;c.lineWidth=lineWidth;c.lineJoin='round';
+      for(const path of paths){c.beginPath();path.forEach(([x,y],i)=>i?c.lineTo(x+offset,y+offset):c.moveTo(x+offset,y+offset));c.stroke();}
+    }
+    for(const path of paths)for(const [x,y] of path)for(let i=0;i<5;i++){
+      const xx=x+(r()-.5)*25,yy=y+(r()-.5)*19;c.fillStyle=r()>.45?'rgba(144,144,119,.55)':'rgba(32,38,30,.7)';c.fillRect(xx,yy,1+r()*4,1+r()*3);
+    }
+  });
+  m.scar=new T.MeshStandardMaterial({map:scarMap,alphaTest:.16,roughness:1,metalness:0,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
+  // Damp asphalt stays close to the surrounding road's albedo. A very dark,
+  // metallic polygon looked like a hole or a painted rectangle at street level.
+  m.wet=std(0x96a092,.78,.025,roadMap);
+  // The shared road texture spans 200 m on the ground but only a few metres on
+  // a puddle; keep its bump amplitude small so its grain does not become ridges.
+  m.wet.bumpScale=.001;
+
   roadMap.repeat.set(18,18);
   const geometry={block:damagedBlock(1),broken:damagedBlock(4),slab:damagedBlock(9),box:new T.BoxGeometry(1,1,1),
     rounded:bevelBox(1,1,1,.06,1),cylinder:new T.CylinderGeometry(1,1,1,12),taper:new T.CylinderGeometry(.68,1,1,10),
     sphere:new T.SphereGeometry(1,12,7),stone:new T.IcosahedronGeometry(1,0),leaves:new T.IcosahedronGeometry(1,1),
-    ring:new T.TorusGeometry(1,.07,5,20)};
+    ring:new T.TorusGeometry(1,.07,5,20),decal:new T.PlaneGeometry(1,1),puddle:new T.CircleGeometry(1,24)};
+  const puddlePositions=geometry.puddle.attributes.position;
+  for(let i=1;i<puddlePositions.count;i++) {
+    const angle=Math.atan2(puddlePositions.getY(i),puddlePositions.getX(i));
+    const edge=.82+Math.sin(angle*3+.4)*.09+Math.sin(angle*7)*.045;
+    puddlePositions.setXY(i,puddlePositions.getX(i)*edge,puddlePositions.getY(i)*edge);
+  }
+  geometry.puddle.computeBoundingSphere();
   const foliageCards=Array.from({length:3},(_,i)=>new T.PlaneGeometry(2,2).rotateY(i*Math.PI/3));
   geometry.leaves.dispose();geometry.leaves=merge(foliageCards);for(const card of foliageCards)card.dispose();
   const batches=new Map(),custom=new Map();
@@ -133,6 +184,22 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
     const x=(rand()-.5)*178,z=(rand()-.5)*178;
     add('stone',m.dirt,[x,-.033,z],[1+rand()*3,.05,1+rand()*5],[0,rand()*6.28,0]);
   }
+  // Human-scale street furniture grounds the larger ruins. Everything here is
+  // flush with the road or within the existing 10 cm pavement, so routes stay open.
+  for(let z=-86;z<91;z+=19)for(const side of [-1,1]) {
+    const x=side*7.3;
+    cube(m.black,[x,-.018,z],[.52,.04,.95],[0,0,0],'box');
+    for(let j=0;j<7;j++)cube(m.steel,[x,.011,z-.4+j*.13],[.47,.035,.035],[0,0,0],'box');
+    cube(m.concrete,[side*7.79,.065,z],[.22,.12,1.38],[0,0,0],'slab');
+  }
+  for(let i=0;i<(quality==='low'?31:52);i++) {
+    const x=(rand()-.5)*178,z=(rand()-.5)*179;
+    add('decal',m.scar,[x,-.024,z],[1.4+rand()*3,2.2+rand()*5,1],[-Math.PI/2,0,rand()*Math.PI*2]);
+  }
+  for(const [x,z,sx,sz] of [[3,12,1.6,3.4],[-4,-8,2.5,1.5],[-5,39,1.4,3],[-21,14,1.7,1.2],[46,-18,2.3,1.1],[-54,54,2.3,1.8]]) {
+    add('puddle',m.wet,[x,-.028,z],[sx,sz,1],[-Math.PI/2,0,rand()*6.28]);
+    add('decal',m.scar,[x+.6,-.01,z+.3],[sx*2,sz*2,1],[-Math.PI/2,0,rand()*6.28]);
+  }
   function ivy(x,y,z,width,height,face=0) {
     for(let j=0;j<Math.ceil(width*1.3);j++) {
       const xx=x+(rand()-.5)*width,top=y+rand()*.8,bottom=Math.max(.1,top-height*(.4+rand()*.6));
@@ -155,6 +222,13 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
           const xx=x-w*.34+k*w*.33;
           if((i+k+index)%4!==0)cube((i+k)%4===0?m.rust:m.glass,[xx,y+1.6,z+side*(d*.46)],[w*.25,2.16,.06],[0,0,0],'box');
           if((i+k+index)%3===0)cube(m.concrete,[xx,y+.58,z+side*(d*.49)],[w*.28,.93,.18]);
+          // Recessed mullions, broken shutters and deep sills restore a readable
+          // building scale at street level without opening false passages.
+          if(i<3) {
+            cube(m.black,[xx,y+1.52,z+side*d*.475],[.055,2.26,.08],[0,0,0],'box');
+            cube(m.concrete,[xx,y+.52,z+side*d*.473],[w*.28,.09,.27],[0,0,0],'slab');
+            if((i+k+index)%5===0)for(let slat=0;slat<4;slat++)cube(m.steel,[xx,y+1.14+slat*.24,z+side*d*.48],[w*.23,.065,.14],[.12,0,slat===3?.05:0],'box');
+          }
         }
       }
       for(const side of [-1,1]){const panelHeight=i<floors?3.65:1.1;cube(m.char,[x+side*(w*.46),y+panelHeight/2,z],[.45,panelHeight,d*.9]);}
@@ -171,6 +245,19 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
     // Wall-mounted conduits expose the surviving electrical systems.
     rod(m.steel,[x+w*.43,.5,z+d*.51],[x+w*.43,h*.75,z+d*.51],.12);
     if(index%2===0)cube(m.accent,[x+w*.43,h*.67,z+d*.54],[.1,.6,.065],[0,0,0],'box');
+    // Ducts and maintenance access occupy the building footprint. Their curves
+    // and small fittings break the repeated slab/column silhouette.
+    const ductX=x-w*.34,ductZ=z+d*.475,ductY=3.1+(index%3)*.5;
+    cube(m.steel,[ductX,ductY,ductZ],[1.45,.87,.38],[0,0,0],'rounded');
+    for(let slat=0;slat<6;slat++)cube(m.black,[ductX,ductY-.29+slat*.116,z+d*.497],[1.2,.035,.025],[0,0,0],'box');
+    cable([[ductX+.72,ductY,ductZ],[ductX+1.25,ductY,ductZ],[ductX+1.5,ductY+.3,ductZ],[ductX+1.5,Math.min(h*.75,ductY+4),ductZ]],.115,m.steel);
+    for(let level=1;level<=3;level++)cube(m.rust,[x+w*.43,level*h*.18,z+d*.508],[.37,.06,.21],[0,0,0],'box');
+    if(index%3===2) {
+      const roof=.515+floors*3.65;
+      add('sphere',m.steel,[x-w*.16,roof+.85,z],[1.4,.24,1.4],[.32,0,.18]);
+      rod(m.black,[x-w*.16,roof,z],[x-w*.16+.32,roof+1.55,z+.4],.075);
+      cube(m.black,[x+w*.16,roof+.2,z-d*.17],[1.8,.35,1.5],[0,0,0],'rounded');
+    }
   });
   // Cover uses exactly the combat footprint; chips remain inside the collision face.
   for(const wall of coverWalls) {
@@ -250,13 +337,35 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
     const host=structures[i%structures.length],angle=rand()*Math.PI*2;
     const x=host[0]+Math.cos(angle)*(host[2]*.6+rand()*3),z=host[1]+Math.sin(angle)*(host[4]*.6+rand()*3),size=.06+rand()*.29;
     add('stone',i%4?m.concrete:m.rust,[x,size*.26,z],[size,.15+size*.3,size*.7],[rand(),rand()*6,rand()]);
+    if(i%7===0&&x<0)add('leaves',m.foliage,[x,.16,z],[.23+rand()*.16,.19+rand()*.14,.23+rand()*.14],[0,rand()*6.28,.2]);
   }
-  for(const [x,z,angle] of [[-38,58,.2],[76,37,-.5],[-72,-30,.1]]) {
-    solid(x,z,4.3,1.45,2.2,{surface:'metal'});cube(m.rust,[x,.6,z],[4.2,.75,2.1],[0,0,-.045],'rounded');
-    cube(m.black,[x-.35,1.04,z],[1.85,.83,1.83],[0,0,-.07],'rounded');
-    cube(m.glass,[x-.35,1.26,z+.92],[1.42,.45,.025],[0,0,-.07],'box');
-    for(const side of [-1,1])for(const xx of [-1.4,1.3])add('cylinder',m.black,[x+xx,.4,z+side*1.04],[.45,.18,.45],[Math.PI/2,0,0]);
-    ivy(x,1.44,z+1.05,3.7,1.5);
+  for(const [x,z,index] of [[-38,58,0],[76,37,1],[-72,-30,2]]) {
+    solid(x,z,4.3,1.45,2.2,{surface:'metal'});
+    cube(m.black,[x,.37,z],[3.8,.37,1.82],[0,0,0],'rounded');
+    cube(index===1?m.char:m.rust,[x,.66,z],[4.1,.39,1.96],[0,0,-.026],'rounded');
+    // Separate bonnet, cabin, pillars and bumpers make a damaged vehicle read as
+    // a vehicle rather than two stacked blocks. All parts stay inside its collider.
+    cube(m.rust,[x+1.28,.87,z],[1.37,.13,1.83],[0,.012,index===2?.085:-.025],'rounded');
+    cube(m.black,[x-.40,1.03,z],[1.42,.39,1.5],[0,0,0],'rounded');
+    cube(m.char,[x-.43,1.38,z],[1.48,.1,1.70],[0,0,-.035],'rounded');
+    cube(m.glass,[x+.49,1.10,z],[.035,.52,1.53],[0,0,.57],'box');
+    cube(m.glass,[x-1.32,1.05,z],[.03,.41,1.56],[0,0,-.62],'box');
+    for(const side of [-1,1]) {
+      cube(m.glass,[x-.4,1.13,z+side*.839],[1.5,.31,.02],[0,0,-.035],'box');
+      for(const xx of [-1.09,-.40,.26])cube(m.rust,[x+xx,1.12,z+side*.85],[.065,.44,.06],[0,0,xx>.1?.35:0],'box');
+      cube(m.black,[x-.43,.74,z+side*.985],[.026,.34,.013],[0,0,0],'box');
+      for(const xx of [-.77,.08])cube(m.steel,[x+xx,.875,z+side*.993],[.16,.035,.03],[0,0,0],'box');
+      for(const xx of [-1.4,1.3]) {
+        add('cylinder',m.black,[x+xx,.4,z+side*1.005],[.39,.15,.39],[Math.PI/2,0,0]);
+        add('cylinder',m.steel,[x+xx,.4,z+side*1.086],[.22,.014,.22],[Math.PI/2,0,0]);
+        add('cylinder',m.black,[x+xx,.4,z+side*1.097],[.095,.009,.095],[Math.PI/2,0,0]);
+      }
+      cube(m.chalk,[x+1.98,.70,z+side*.69],[.1,.12,.36],[0,0,0],'rounded');
+      cube(m.rust,[x-1.98,.71,z+side*.66],[.08,.14,.36],[0,0,0],'rounded');
+    }
+    for(const side of [-1,1])cube(m.black,[x+side*2.04,.48,z],[.13,.18,1.86],[0,0,0],'rounded');
+    for(let slat=0;slat<5;slat++)cube(m.black,[x+2.078,.68,z-.36+slat*.18],[.025,.12,.065],[0,0,0],'box');
+    ivy(x,1.4,z+1.02,3.2,1.4);
   }
   // A breached retaining wall encloses the play space; the city continues beyond it.
   for(let i=-90;i<=90;i+=10)for(const side of [-1,1]) {
@@ -287,7 +396,7 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
   let instances=0;
   for(const {geometry,mat,items} of batches.values()) {
     const mesh=new T.InstancedMesh(geometry,mat,items.length);items.forEach((matrix,i)=>mesh.setMatrixAt(i,matrix));
-    mesh.castShadow=!mat.isMeshBasicMaterial&&geometry!==grassGeometry;mesh.receiveShadow=!mat.isMeshBasicMaterial;mesh.computeBoundingSphere();group.add(mesh);instances+=items.length;
+    mesh.castShadow=!mat.isMeshBasicMaterial&&geometry!==grassGeometry&&mat!==m.scar&&mat!==m.wet;mesh.receiveShadow=!mat.isMeshBasicMaterial;mesh.computeBoundingSphere();group.add(mesh);instances+=items.length;
   }
   for(const [mat,list] of custom){const mesh=new T.Mesh(merge(list),mat);mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);for(const part of list)part.dispose();}
   // Sparse, slow-moving dust makes light and distance readable with one draw call.

@@ -29,7 +29,7 @@ function envelope(param,time,level,duration){
 
 export function createAmbience(ctx,{installations=[]}={}){
   let enabled=true,active=false,disposed=false,graph=null,audible=false,elapsed=0,nextCreak=13;
-  let lastPosition=null,stride=0,foot=0,steps=0,creaks=0,lastParameterUpdate=-1;
+  let lastPosition=null,stride=0,foot=0,steps=0,creaks=0,lastParameterUpdate=-1,gustStrength=0;
   const voices=new Set(),persistent=[];
   const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
   let seed=14281;
@@ -49,18 +49,23 @@ export function createAmbience(ctx,{installations=[]}={}){
     const master=ctx.createGain();master.gain.value=0;master.connect(ctx.destination);
     const noise=ctx.createBufferSource(),wind=ctx.createBiquadFilter(),windGain=ctx.createGain();
     noise.buffer=noiseBuffer(ctx);noise.loop=true;wind.type='lowpass';wind.frequency.value=620;wind.Q.value=.35;
-    windGain.gain.value=.035;noise.connect(wind);wind.connect(windGain);windGain.connect(master);
+    windGain.gain.value=.035;noise.connect(wind);wind.connect(windGain);
+    const windPan=ctx.createStereoPanner?.(),machinePan=ctx.createStereoPanner?.();
+    windGain.connect(windPan||master);windPan?.connect(master);
+    const howl=ctx.createBiquadFilter(),howlGain=ctx.createGain();
+    howl.type='bandpass';howl.frequency.value=340;howl.Q.value=2.2;howlGain.gain.value=.006;
+    noise.connect(howl);howl.connect(howlGain);howlGain.connect(windPan||master);
     const high=ctx.createBiquadFilter(),leaves=ctx.createGain();
     high.type='bandpass';high.frequency.value=2400;high.Q.value=.6;leaves.gain.value=.017;
     noise.connect(high);high.connect(leaves);leaves.connect(master);
     const drone=ctx.createOscillator(),droneGain=ctx.createGain();
     drone.type='sine';drone.frequency.value=57;droneGain.gain.value=.002;
-    drone.connect(droneGain);droneGain.connect(master);
+    drone.connect(droneGain);droneGain.connect(machinePan||master);machinePan?.connect(master);
     const lift=ctx.createOscillator(),liftGain=ctx.createGain();
     lift.type='sine';lift.frequency.value=93;liftGain.gain.value=0;
     lift.connect(liftGain);liftGain.connect(master);
-    graph={master,wind,windGain,leaves,drone,droneGain,lift,liftGain,
-      nodes:[master,noise,wind,windGain,high,leaves,drone,droneGain,lift,liftGain]};
+    graph={master,wind,windGain,windPan,machinePan,howl,howlGain,leaves,drone,droneGain,lift,liftGain,
+      nodes:[master,noise,wind,windGain,high,leaves,howl,howlGain,drone,droneGain,lift,liftGain,...[windPan,machinePan].filter(Boolean)]};
     persistent.push(noise,drone,lift);noise.start();drone.start();lift.start();
     target(master.gain,.85,ctx.currentTime,.45);audible=true;
   }
@@ -94,7 +99,7 @@ export function createAmbience(ctx,{installations=[]}={}){
     osc.connect(gain);const pan=connectPan(gain,(random()*2-1)*.6);
     remember(osc,[osc,gain,...(pan?[pan]:[])]);osc.start(t);osc.stop(t+duration+.01);creaks++;
   }
-  function update(dt,{active:nextActive=false,position=null,moving=false,elevation=0,onLift=false,grounded=true,crouched=false}={}){
+  function update(dt,{active:nextActive=false,position=null,moving=false,elevation=0,onLift=false,grounded=true,crouched=false,yaw=0,shelter=0}={}){
     if(disposed)return;
     const wasReady=ready();active=!!nextActive;
     if(!ready()){if(wasReady||graph)mute();return;}
@@ -103,17 +108,23 @@ export function createAmbience(ctx,{installations=[]}={}){
     // Control-rate updates (10 Hz) avoid creating automation events every XR frame.
     if(elapsed-lastParameterUpdate>=.1){
       lastParameterUpdate=elapsed;
-      const gust=.5+.28*Math.sin(elapsed*.23)+.19*Math.sin(elapsed*.61+1.1);
+      const gust=clamp(.46+.28*Math.sin(elapsed*.19)+.19*Math.sin(elapsed*.53+1.1)+.12*Math.sin(elapsed*1.07),0,1);
+      gustStrength=gust;const exposure=1-clamp(finite(shelter),0,1)*.74;
       const height=clamp(finite(elevation)/14,0,1),t=ctx.currentTime;
-      target(graph.windGain.gain,.021+gust*.027+height*.011,t,.45);
+      target(graph.windGain.gain,(.021+gust*.037+height*.015)*exposure,t,.7);
+      if(graph.windPan)target(graph.windPan.pan,Math.sin(-.65-finite(yaw))*.45,t,.35);
+      target(graph.howlGain.gain,(.002+gust*gust*.013+height*.003)*exposure,t,.8);
+      target(graph.howl.frequency,270+gust*190,t,1.1);
       target(graph.wind.frequency,430+gust*540,t,.6);
-      target(graph.leaves.gain,(1-height*.8)*(.011+gust*.01),t,.5);
-      let machinery=.12;
+      target(graph.leaves.gain,(1-height*.8)*(.011+gust*.013)*exposure,t,.5);
+      let machinery=.12,sourceBearing=0;
       if(position)for(const source of installations){
         const distance=Math.hypot(finite(position.x)-source.x,finite(position.z)-source.z);
-        machinery=Math.max(machinery,clamp(1-distance/35,0,1));
+        const proximity=clamp(1-distance/35,0,1);
+        if(proximity>machinery){machinery=proximity;sourceBearing=Math.atan2(source.x-finite(position.x),-(source.z-finite(position.z)));}
       }
       target(graph.droneGain.gain,.001+machinery*.007,t,.3);
+      if(graph.machinePan)target(graph.machinePan.pan,Math.sin(sourceBearing-finite(yaw))*.65,t,.25);
       target(graph.drone.frequency,57+Math.sin(elapsed*.4)*.3,t,.4);
       target(graph.liftGain.gain,onLift?.022:0,t,.12);
       target(graph.lift.frequency,onLift?104+Math.sin(elapsed*1.3)*3:78,t,.16);
@@ -145,6 +156,6 @@ export function createAmbience(ctx,{installations=[]}={}){
     },
     get enabled(){return enabled;},
     get playing(){return ready()&&!!graph;},
-    get stats(){return {steps,creaks,voices:voices.size,persistentSources:graph?persistent.length:0};}
+    get stats(){return {steps,creaks,voices:voices.size,persistentSources:graph?persistent.length:0,gustStrength};}
   };
 }

@@ -1,4 +1,5 @@
 import { clamp, segmentBox, segmentSphere, traceEnemyHit } from './game-logic.js';
+import { portalIndicators } from './portal-indicator.js';
 
 const $ = id => document.getElementById(id);
 const deadzone = v => Math.abs(v || 0) > .16 ? v : 0;
@@ -157,9 +158,15 @@ export class VRController {
     const plane = new T.Mesh(new T.PlaneGeometry(.42, .091875), material);
     plane.position.set(0, -.27, -1.05); plane.renderOrder = 100; plane.frustumCulled = false; camera.add(plane);
     this.hud = { canvas, texture, plane }; this.hudTime = 0;
+    const portalCanvas=document.createElement('canvas');portalCanvas.width=512;portalCanvas.height=32;
+    const portalTexture=new T.CanvasTexture(portalCanvas);portalTexture.colorSpace=T.SRGBColorSpace;
+    const portalPlane=new T.Mesh(new T.PlaneGeometry(.50,.03125),new T.MeshBasicMaterial({map:portalTexture,transparent:true,depthTest:false,depthWrite:false,toneMapped:false}));
+    portalPlane.position.set(0,.25,-1.05);portalPlane.renderOrder=100;portalPlane.frustumCulled=false;camera.add(portalPlane);
+    this.hud.portal={canvas:portalCanvas,texture:portalTexture,plane:portalPlane};
   }
   removeHUD() {
     if (!this.hud) return;
+    if(this.hud.portal){const {plane,texture}=this.hud.portal;plane.removeFromParent();plane.geometry.dispose();plane.material.dispose();texture.dispose();}
     this.hud.plane.removeFromParent(); this.hud.plane.geometry.dispose(); this.hud.plane.material.dispose(); this.hud.texture.dispose(); this.hud = null;
   }
   // HTML dialogs cannot render inside an immersive XR framebuffer.
@@ -217,12 +224,12 @@ export class VRController {
     plane.position.set(0, .112, 0); plane.rotation.x = -1.05; plane.frustumCulled = false; gun.add(plane);
     gun.userData.ammo = { canvas, texture, plane, key: '' };
   }
-  drawAmmo(gun, game) {
+  drawAmmo(gun, game, feel=null) {
     const display = gun.userData.ammo; if (!display) return;
     const capacity = game.weapon.capacity, ammo = game.ammo[game.weaponIndex], reloading = game.reloadRemaining > 0;
     const reloadProgress = reloading ? clamp(1 - game.reloadRemaining / game.weapon.reload, 0, 1) : 0;
     const charge = game.weapon.chargeTime ? game.charge : 0, low = ammo <= capacity / 4, blink = Math.floor(performance.now() / 160) % 2 === 0;
-    gun.userData.setCombatState?.({ ammo, capacity, charge, reloadProgress, reloading, time: performance.now() / 1000 });
+    gun.userData.setCombatState?.({ ammo, capacity, charge, reloadProgress, reloading, time: performance.now() / 1000,heat:feel?.heat||0,kick:feel?.kick||0,impulse:feel?.impulse||0 });
     const key = `${ammo}|${capacity}|${Math.round(charge*12)}|${Math.ceil(reloadProgress*8)}|${reloading}|${low&&blink}`;
     if (key === display.key) return; display.key = key;
     const c = display.canvas.getContext('2d'), accent = this.hooks.world().character?.accent || '#ff9ac3';
@@ -319,10 +326,10 @@ export class VRController {
     const world = this.hooks.world(); this.removeHUD(); this.removeSight();this.removePauseBoard();this.cancelTrigger();
     world.scene.add(world.camera);
     this.rig?.removeFromParent();
-    for (const { ray, gun, connected, disconnected } of this.controllers) {
+    for (const { ray, gun, bare, connected, disconnected } of this.controllers) {
       ray.removeEventListener('connected', connected); ray.removeEventListener('disconnected', disconnected);
       const { ammo, flash } = gun.userData;
-      gun.removeFromParent(); flash.material.dispose();
+      gun.removeFromParent();gun.userData.disposeDynamic?.();bare?.userData.dispose?.();flash.material.dispose();
       if (ammo) { ammo.plane.geometry.dispose(); ammo.plane.material.dispose(); ammo.texture.dispose(); }
       ray.removeFromParent();
     }
@@ -495,14 +502,14 @@ export class VRController {
     if (step.foveation) { perf.foveation = step.foveation; this.hooks.world().renderer.xr.setFoveation?.(step.foveation); }
     if (step.rate) { perf.rate = step.rate; this.setFrameRate(step.rate); }
   }
-  update(dt, flash, recoil = 0) {
+  update(dt, flash, recoil = 0, feel = null) {
     if (!this.active) return;
     if(this.pauseBoard)this.pauseBoard.panel.visible=this.mode==='xr'&&this.hooks.phase()==='paused';
     const game = this.hooks.game();
     if (this.mode === 'xr') {
       const main = settingsOf(this).hand, level = Math.max(1, game.wave), kick = clamp(recoil / .11, 0, 1);
       this.reloadGesture = Math.max(0, this.reloadGesture - dt);
-      const phase = clamp(1 - this.reloadGesture / .82, 0, 1), smooth = t => t*t*(3-2*t);
+      const phase = game.reloadRemaining>0?clamp(1-game.reloadRemaining/game.weapon.reload,0,1):1, smooth = t => t*t*(3-2*t);
       const reload = phase < .2 ? smooth(phase/.2) : phase < .58 ? 1 : 1-smooth((phase-.58)/.42);
       // updateCamera() already placed the rig this frame while playing.
       if (this.hooks.phase() !== 'playing') this.positionRig();
@@ -510,16 +517,17 @@ export class VRController {
         const isMain = c.ray.userData.source?.handedness === main;
         if (c.gun.userData.index !== game.weaponIndex) c.gun.userData.setVariant(game.weaponIndex);
         if (c.level !== level) { c.gun.userData.setLevel(level); c.bare.userData.setLevel(level); c.level = level; }
-        c.gun.userData.flash.visible = flash > 0 && isMain;
-        c.gun.position.set(0,isMain?reload*.035:0,isMain?kick*.075-reload*.045:0);
-        c.gun.rotation.set(isMain?kick*.22+reload*Math.PI/2:0,0,isMain?reload*.12:0);
+        c.gun.userData.flash.visible = flash > 0 && isMain && this.hooks.phase()==='playing';
+        const handSign=main==='left'?-1:1;
+        c.gun.position.set(isMain?(feel?.yaw||0)*.10*handSign:0,isMain?reload*.035-(feel?.kick||0)*.13:0,isMain?(feel?.kick??kick*.075)-reload*.045:0);
+        c.gun.rotation.set(isMain?(feel?.pitch??kick*.22)+reload*Math.PI/2:0,isMain?(feel?.yaw||0)*handSign:0,isMain?reload*.12:0);
         const fingerPose = isMain
           ? { trigger:this.handPose.mainTrigger, grip:this.handPose.mainGrip, reload:0 }
-          : { trigger:this.handPose.sideTrigger, grip:this.handPose.sideGrip, reload };
+          : { trigger:this.handPose.sideTrigger, grip:this.handPose.sideGrip, reload,relax:(1-this.handPose.sideGrip)*(1-this.handPose.sideTrigger)*(1-reload)*.65 };
         c.gun.userData.hand?.userData.animate?.(fingerPose,dt,c.gun.scale.x<0?-1:1);
         c.bare.userData.animate?.(fingerPose,dt,c.bare.scale.x<0?-1:1);
       }
-      const gun = controllerOf(this, main)?.gun; if (gun) this.drawAmmo(gun, game);
+      const gun = controllerOf(this, main)?.gun; if (gun) this.drawAmmo(gun, game,feel);
       this.updateSight();
       // Heavy weapons rumble harder as the charge builds.
       this.chargeBuzz -= dt;
@@ -542,6 +550,18 @@ export class VRController {
       c.fillStyle = '#574158'; c.fillRect(20, 94, 208, 4);
       c.fillStyle = hp <= 25 ? '#ff6b8a' : game.regenerating ? '#a8e2db' : accent; c.fillRect(20, 94, hp / 100 * 208, 4);
       texture.needsUpdate = true;
+      if(this.hud.portal){
+        const world=this.hooks.world(),portal=this.hud.portal,p=portal.canvas.getContext('2d');
+        this.scratch ||= {};const forward=this.scratch.portalForward ||= new world.T.Vector3();world.camera.getWorldDirection(forward);
+        const dots=portalIndicators(game.activePortals,game.player,Math.atan2(-forward.x,-forward.z),game.time,game.state);
+        p.clearRect(0,0,512,32);portal.plane.visible=this.hooks.phase()==='playing'&&dots.length>0;
+        for(const [index,dot] of dots.entries()){
+          const x=256+dot.offset*235,y=12+index*2;p.globalAlpha=dot.opacity;p.beginPath();p.arc(x,y,3.7,0,Math.PI*2);
+          p.fillStyle=dot.pending||dot.behind?'#18222e':accent;p.fill();p.strokeStyle='#f4f5fa';p.lineWidth=1;p.stroke();
+          if(dot.behind){p.beginPath();p.moveTo(x-2,y+6);p.lineTo(x,y+8);p.lineTo(x+2,y+6);p.stroke();}
+        }
+        p.globalAlpha=1;portal.texture.needsUpdate=true;
+      }
     }
   }
 }

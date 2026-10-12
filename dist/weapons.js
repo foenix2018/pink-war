@@ -249,7 +249,7 @@ function attachBatteryRail(model, index, mats, material) {
     cells.setColorAt(i, new T.Color(0x171722));
   }
   cells.instanceMatrix.needsUpdate = true; if (cells.instanceColor) cells.instanceColor.needsUpdate = true;
-  model.add(cells); return cells;
+  cells.userData.shell=shell;model.add(cells); return cells;
 }
 
 // One group per weapon, merged into a handful of meshes each (a few draw calls instead of dozens). The geometry is
@@ -279,11 +279,22 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   const hand = createGlove(gloves, { sleeve }), support = createGlove(gloves, { mirror: true, sleeve, forearm: [.5, -.55, .66] });
   support.visible = false; g.add(hand, support);
   const flash = makeFlash(g); flash.visible = false;
+  // Small moving emitter collars and residual heat make the discharge visible
+  // at the barrel rather than a large floating light in front of the hand.
+  const collar=new T.Mesh(new T.CylinderGeometry(.012,.014,.014,12),mats.steel);collar.rotation.x=Math.PI/2;g.add(collar);
+  const heatMaterial=new T.MeshBasicMaterial({color:mats.rose.color,transparent:true,opacity:0,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false});
+  const heatRing=new T.Mesh(new T.TorusGeometry(.012,.0018,6,20),heatMaterial);g.add(heatRing);
+  const emitterRadii=[.0105,.0165,.031,.029,.062];
   Object.assign(g.userData, { flash, hand, support, showSupport: true });
   g.userData.setLevel = level => { hand.userData.setLevel(level); support.userData.setLevel(level); };
-  g.userData.setCombatState = ({ ammo = 0, capacity = 1, charge = 0, reloadProgress = 0, reloading = false, time = 0 } = {}) => {
+  g.userData.setCombatState = ({ ammo = 0, capacity = 1, charge = 0, reloadProgress = 0, reloading = false, time = 0,heat=0,kick=0,impulse=0 } = {}) => {
     const rail = batteries[g.userData.index]; if (!rail) return;
     const accent = mats.rose?.color || new T.Color(0xff80b2);
+    const frame=WEAPON_FRAME[g.userData.index],radius=emitterRadii[g.userData.index];
+    collar.position.set(frame.muzzle[0],frame.muzzle[1],frame.muzzle[2]+.009+Math.min(.014,kick*.16));
+    collar.scale.set(radius/.012,1,radius/.012);
+    heatRing.position.set(frame.muzzle[0],frame.muzzle[1],frame.muzzle[2]-.001);heatRing.scale.setScalar(radius/.012);
+    heatMaterial.color.copy(accent);heatMaterial.opacity=Math.min(.8,heat*.25+charge*.45+impulse*.4);heatRing.visible=heatMaterial.opacity>.015;
     const low = ammo > 0 && ammo <= capacity * .25, blink = Math.floor(time * 6) % 2 === 0;
     const chargeStep = Math.round(charge * BATTERY_COUNT), reloadStep = Math.ceil(reloadProgress * BATTERY_COUNT);
     const accentHex = accent.getHex(), key = `${g.userData.index}|${ammo}|${capacity}|${chargeStep}|${reloadStep}|${reloading}|${low&&blink}|${accentHex}`;
@@ -305,11 +316,20 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   g.userData.setVariant = index => {
     models.forEach((model, i) => model.visible = i === index);
     const frame = WEAPON_FRAME[index];
-    flash.position.set(...frame.muzzle); flash.scale.setScalar(index >= 3 ? 1 : .6);
+    flash.position.set(...frame.muzzle); flash.scale.setScalar([.14,.12,.25,.19,.38][index]);
+    collar.position.set(frame.muzzle[0],frame.muzzle[1],frame.muzzle[2]+.009);collar.scale.set(emitterRadii[index]/.012,1,emitterRadii[index]/.012);
+    heatRing.visible=false;
     support.visible = g.userData.showSupport && !!frame.support;
     support.userData.setBasePosition?.(frame.support || [0,0,0]);
     g.userData.index = index;
   };
   g.userData.setVariant(0); g.userData.setLevel(1);
+  let disposed=false;
+  g.userData.disposeDynamic=()=>{
+    if(disposed)return;disposed=true;
+    hand.userData.dispose?.();support.userData.dispose?.();
+    for(const rail of batteries){rail.dispose();rail.userData.shell.geometry.dispose();}
+    batteryMaterial.dispose();collar.geometry.dispose();heatRing.geometry.dispose();heatMaterial.dispose();
+  };
   return g;
 }

@@ -3,10 +3,12 @@ import { createScene } from './scene.js';
 import { VRController } from './vr.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
 import { characterForId } from './characters.js';
-import { playLaserShot,loadRealLaserSample,playLaserImpact,setLaserAudioEnabled,disposeLaserAudio } from './laser-sound.js';
+import { playLaserShot,loadRealLaserSample,playLaserImpact,setLaserAudioEnabled,disposeLaserAudio,playWeaponAction,setWeaponCharge } from './laser-sound.js';
 import { createAmbience } from './ambience.js';
 import { ACTIVE_INSTALLATIONS } from './world-layout.js';
 import { createMusicBed } from './music.js';
+import { portalIndicators } from './portal-indicator.js';
+import { createWeaponFeel } from './weapon-feel.js';
 
 const $ = id => document.getElementById(id);
 const settings = { sound: true, music: true, sensitivity: 1, quality: 'auto' };
@@ -20,6 +22,9 @@ let clock = 0, lastTime = 0, hudTimer = 0, flashTimer = 0, recoil = 0, reloadLif
 let outfitReturn = 'lobby', previewLevel = 1, equipmentUntil = 0;
 let canvasPointer = null, lastDrag = null, audioContext = null, ambience = null;
 const musicBed=createMusicBed();
+const weaponFeel=createWeaponFeel();
+let portalForward=null;
+let reloadInserted=false,lastShotAt=-99;
 const move = { x: 0, y: 0, id: null }, look = { x: 0, y: 0, id: null };
 const keys = new Set(), firingPointers = new Set();
 let jumpQueued = false, pickupQueued = false,crouchQueued=false;
@@ -31,13 +36,15 @@ function audioReady() {
   musicBed.setEnabled(settings.music!==false);
   ambience?.setEnabled(settings.sound);
   if(audioContext)setLaserAudioEnabled(audioContext,settings.sound);
-  if(settings.sound&&audioContext?.state==='running')loadRealLaserSample(audioContext).catch(()=>{});
-  if(phase==='playing')musicBed.start();
-  if (!settings.sound) return;
-  try { audioContext ||= new (window.AudioContext || window.webkitAudioContext)(); if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
+  if (!settings.sound && settings.music===false) return;
+  try { audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+    musicBed.setContext(audioContext);
+    if (audioContext.state === 'suspended') audioContext.resume().then(()=>{if(phase==='playing')musicBed.start(audioContext);}).catch(() => {});
     ambience ||= createAmbience(audioContext,{installations:ACTIVE_INSTALLATIONS});
     ambience.setEnabled(settings.sound);setLaserAudioEnabled(audioContext,settings.sound);
-    loadRealLaserSample(audioContext).catch(()=>{}); } catch {}
+    if(settings.sound)loadRealLaserSample(audioContext).catch(()=>{});
+    if(phase==='playing')musicBed.start(audioContext);
+  } catch {}
 }
 function tone(frequency, end, duration = .1, volume = .055, type = 'triangle', delay = 0) {
   if (!settings.sound || !audioContext || audioContext.state !== 'running') return;
@@ -57,7 +64,7 @@ function syncSound() {
 syncSound(); $('sensitivity').value = settings.sensitivity; $('quality').value = settings.quality;
 $('sound-button').onclick = () => { settings.sound = !settings.sound; syncSound(); audioReady(); persist(); };
 $('sound-setting').onchange = e => { settings.sound = e.target.checked; syncSound(); audioReady(); persist(); };
-$('music-setting').onchange=e=>{settings.music=e.target.checked;musicBed.setEnabled(settings.music);if(settings.music&&phase==='playing')musicBed.start();persist();};
+$('music-setting').onchange=e=>{settings.music=e.target.checked;audioReady();persist();};
 $('sensitivity').oninput = e => { settings.sensitivity = Number(e.target.value); persist(); };
 $('quality').onchange = e => { settings.quality = e.target.value; world?.resize(settings.quality); persist(); };
 
@@ -126,12 +133,13 @@ selectView(view); $('view-button').onclick = () => selectView(view === 'fps' ? '
 
 function pause() { if (phase !== 'playing') return; musicBed.pause();ambience?.pause(); phase = 'paused'; resetInput(); if (vr?.mode !== 'xr') $('pause-dialog').showModal(); }
 function resume() { if (phase !== 'paused') return; for (const d of document.querySelectorAll('dialog[open]')) d.close(); phase = 'playing'; resetInput(); audioReady(); }
-function openPanel(id) { if (phase === 'playing') { phase = 'paused'; resetInput(); } for (const d of document.querySelectorAll('dialog[open]')) d.close(); $(id).showModal(); }
+function openPanel(id) { if (phase === 'playing') { phase = 'paused'; resetInput();musicBed.pause();ambience?.pause(); } for (const d of document.querySelectorAll('dialog[open]')) d.close(); $(id).showModal(); }
 function closePanel(dialog) { if(dialog.id==='outfit-dialog'){closeOutfit();return;} dialog.close(); if (phase === 'paused') $('pause-dialog').showModal(); }
 $('pause-button').onclick = pause; $('resume-button').onclick = resume;
 $('how-button').onclick = () => openPanel('help-dialog'); $('settings-button').onclick = () => openPanel('settings-dialog'); $('pause-help').onclick = () => openPanel('help-dialog');
 $('lore-button').onclick=()=>openPanel('lore-dialog');
 $('pause-lore').onclick=()=>openPanel('lore-dialog');
+$('pause-settings').onclick=()=>openPanel('settings-dialog');
 for (const button of document.querySelectorAll('.close-dialog')) button.onclick = () => closePanel(button.closest('dialog'));
 for (const dialog of document.querySelectorAll('dialog')) {
   dialog.addEventListener('cancel', e => { e.preventDefault(); if (dialog.id === 'outfit-dialog') closeOutfit(); else if (dialog.id === 'pause-dialog') resume(); else if (dialog.id !== 'end-dialog') closePanel(dialog); });
@@ -177,7 +185,7 @@ $('quit-button').onclick = home; $('end-home').onclick = home;
 function start() {
   if (!world) return;
   for (const d of document.querySelectorAll('dialog[open]')) d.close(); game.reset(); world.resetDynamic(); phase = 'playing'; yaw = 0; pitch = -.075;
-  flashTimer = 0; recoil = 0; damageUntil = 0; announcementUntil = 0;equipmentUntil=0;crouchCameraBlend=0;currentSprinting=false; resetInput(); audioReady();
+  weaponFeel.reset();reloadInserted=false;lastShotAt=-99;flashTimer = 0; recoil = 0; damageUntil = 0; announcementUntil = 0;equipmentUntil=0;crouchCameraBlend=0;currentSprinting=false; resetInput(); audioReady();
   world.setWeapon(0);world.setEquipment(1);
   document.body.classList.add('playing'); $('game-hud').hidden = false; $('game-tip').style.opacity = '1'; updateHud();
 }
@@ -210,14 +218,15 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup', e => keys.delete(e.code));
 window.addEventListener('blur', () => { resetInput(); if (phase === 'playing' && vr?.mode !== 'xr') pause(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { resetInput(); if (phase === 'playing' && vr?.mode !== 'xr') pause(); } });
-window.addEventListener('pagehide',event=>{ambience?.pause();if(!event.persisted){ambience?.dispose();if(audioContext)disposeLaserAudio(audioContext);}});
+window.addEventListener('pagehide',event=>{ambience?.pause();musicBed.pause();if(!event.persisted){ambience?.dispose();musicBed.dispose();if(audioContext)disposeLaserAudio(audioContext);}});
 window.addEventListener('resize', () => { world?.resize(settings.quality); resetInput(); });
 
 function updateCamera() {
   world.camera.clearViewOffset();
   if (vr?.mode === 'xr') { vr.positionRig(); return; }
   const { T, camera, soldier, weapon } = world, p = game.player;
-  const cameraYaw = yaw + (vr?.mode==='stereo' && vr.sensor ? vr.phoneYaw : 0), cameraPitch = clamp(pitch + (vr?.mode==='stereo' && vr.sensor ? vr.phonePitch : 0) - recoil * .16, -1.2, 1.2);
+  const feel=weaponFeel.state,flatScreen=vr?.mode!=='stereo';
+  const cameraYaw = yaw + (vr?.mode==='stereo' && vr.sensor ? vr.phoneYaw : 0)+(flatScreen?feel.yaw*.06:0), cameraPitch = clamp(pitch + (vr?.mode==='stereo' && vr.sensor ? vr.phonePitch : 0) + (flatScreen?feel.pitch*.2:0), -1.2, 1.2);
   camera.fov = view === 'fps' ? 72 : 64;
   camera.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
   const elevation = p.elevation || 0;
@@ -229,14 +238,14 @@ function updateCamera() {
     soldier.root.visible = true; weapon.visible = false;
     const distance = 5.1, start = { x: p.x, y: cameraShoulder + elevation, z: p.z };
     const end = { x: p.x + Math.sin(yaw) * distance * Math.cos(pitch) + Math.cos(yaw) * .65,
-      y: cameraShoulder - Math.sin(pitch) * distance, z: p.z + Math.cos(yaw) * distance * Math.cos(pitch) - Math.sin(yaw) * .65 };
+      y: cameraShoulder + elevation - Math.sin(pitch) * distance, z: p.z + Math.cos(yaw) * distance * Math.cos(pitch) - Math.sin(yaw) * .65 };
     let nearest = 1;
     for (const box of world.obstacles) { const hit = segmentBox(start, end, { ...box, hx: box.hx + .2, hz: box.hz + .2 }); if (hit !== null) nearest = Math.min(nearest, Math.max(.09, hit - .05)); }
     camera.position.set(start.x + (end.x - start.x) * nearest, Math.max(.35, start.y + (end.y - start.y) * nearest), start.z + (end.z - start.z) * nearest);
   }
   const bob = Math.hypot(move.x, move.y) > .1 || keys.has('KeyW') || keys.has('KeyZ') || keys.has('KeyS');
-  weapon.position.set(.19, -.24 + (bob ? Math.sin(clock * 11) * .012 : 0) - recoil * .14 + reloadLift * .045, -.56 + recoil * .5 - reloadLift * .028);
-  weapon.rotation.set(recoil * .9 + reloadLift * Math.PI / 2, 0, Math.sin(clock * 1.8) * .004);
+  weapon.position.set(.19+feel.yaw*.15, -.24 + (bob ? Math.sin(clock * 11) * .009 : 0) - feel.kick*.18 + reloadLift * .045, -.56 + feel.kick - reloadLift * .028);
+  weapon.rotation.set(feel.pitch + reloadLift * Math.PI / 2,feel.yaw,Math.sin(clock * 1.8) * .003-feel.yaw*.35);
   camera.updateProjectionMatrix(); camera.updateMatrixWorld(true);
 }
 function reloadPose() {
@@ -248,7 +257,7 @@ function updateWeaponVisuals(dt, firing, moving) {
   const reloading = game.reloadRemaining > 0, reloadProgress = reloading ? clamp(1 - game.reloadRemaining / game.weapon.reload, 0, 1) : 0;
   reloadLift = reloadPose();
   const state = { ammo: game.ammo[game.weaponIndex], capacity: game.weapon.capacity, charge: game.weapon.chargeTime ? game.charge : 0,
-    reloadProgress, reloading, time: clock };
+    reloadProgress, reloading, time: clock,heat:weaponFeel.state.heat,kick:weaponFeel.state.kick,impulse:weaponFeel.state.impulse };
   world.fpsGun.userData.setCombatState?.(state); world.soldier.gun.userData.setCombatState?.(state);
   const trigger = firing && !reloading && game.state === 'playing' ? 1 : 0;
   // The actual shared LYLU/GHJU rig now receives locomotion on EVERY desktop/mobile view.
@@ -287,26 +296,25 @@ function announce(title, subtitle) {
 function handleEvents() {
   for (const event of game.drainEvents()) {
     if (event.type === 'shot') {
-      const kick = { r9: .12, bloom: .06, petal: .12, thorn: .16, nova: .19 }[event.weapon] ?? .09;
-      recoil = Math.min(.2, recoil + kick * (event.power ?? 1));
-      flashTimer = .07; vr.haptic('shot', event.weapon); weaponShotSound(event.weapon, event.power);
+      const feel=weaponFeel.fire(event.weapon,event.power,game.player.crouched);
+      lastShotAt=clock;recoil=feel.pitch;flashTimer=feel.flash;vr.haptic('shot', event.weapon); weaponShotSound(event.weapon, event.power);
     }
     if (event.type === 'weapon-offer') { tone(360, 820, .45, .03, 'sine'); }
     if (event.type === 'wave') { const offered=WEAPONS.find(w=>w.level===event.wave); announce(`NIVEAU ${String(event.wave).padStart(2, '0')} / ${MAX_LEVEL}`, offered && event.wave>1 ? `${offered.name} DISPONIBLE AU FAISCEAU · APPROCHEZ-VOUS` : `${event.count} CRÉATURES · LA BRÈCHE S’OUVRE`); tone(210, 420, .25, .065); tone(420, 630, .25, .06, 'triangle', .2); }
     if (event.type === 'equipment') { const equipment=equipmentForCharacter(event.level,character.id);world.setEquipment(event.level);$('equipment-unlock-title').textContent=`${equipment.name} · NIV. ${event.level}`;$('equipment-unlock-detail').textContent=equipment.addition;equipmentUntil=clock+4;$('equipment-unlock').hidden=false; }
     if (event.type === 'clear') { announce('NIVEAU TERMINÉ', '+ BONUS · LA BRÈCHE SE RECHARGE'); tone(420, 700, .25, .07); }
-    if (event.type === 'weapon') { world.setWeapon(game.weaponIndex); vr.haptic('weapon'); tone(510, 760, .1, .03); }
+    if (event.type === 'weapon') { weaponFeel.reset();recoil=0;flashTimer=0;world.setWeapon(game.weaponIndex); vr.haptic('weapon'); tone(510, 760, .1, .03); }
     if (event.type === 'jump') tone(165, 110, .075, .012);
     if (event.type === 'land') tone(105, 55, .075, .013);
-    if (event.type === 'reload') { vr.startReloadGesture(); vr.haptic('reload'); tone(220, 450, .16, .04); }
-    if (event.type === 'reloaded') { vr.haptic('reloaded'); tone(520, 820, .1, .035); }
+    if (event.type === 'reload') { reloadInserted=false;vr.startReloadGesture(); vr.haptic('reload');if(settings.sound){if(game.ammo[game.weaponIndex]===0)playWeaponAction(audioContext,game.weapon.id,'empty');playWeaponAction(audioContext,game.weapon.id,'reload-out');} }
+    if (event.type === 'reloaded') { vr.haptic('reloaded');if(settings.sound)playWeaponAction(audioContext,game.weapon.id,'reload-ready'); }
     if (event.type === 'spawn') world.burst(event.x, 1, event.z, world.palette.violet, 7);
     if (event.type === 'impact') {
       world.impact?.(event);
       if(settings.sound){
         const dx=event.x-game.player.x,dz=event.z-game.player.z;
         const distance=Math.hypot(dx,dz,event.y-game.player.elevation-1.3);
-        const pan=(dx*Math.cos(yaw)-dz*Math.sin(yaw))/Math.max(1,distance);
+        const heading=listenerHeading(),pan=(dx*Math.cos(heading)-dz*Math.sin(heading))/Math.max(1,distance);
         playLaserImpact(audioContext,{surface:event.surface,distance,pan,splash:event.splash,power:event.power});
       }
     }
@@ -328,6 +336,7 @@ function gameOver(won = false) {
   if (vr?.mode !== 'xr') $('end-dialog').showModal();
 }
 function updateHud() {
+  updatePortalHUD();
   const equipment=equipmentForCharacter(game.wave,character.id);
   $('gear-label').textContent=`TENUE ${String(equipment.level).padStart(2,'0')} · ${equipment.name.toUpperCase()}`;
   $('health-label').textContent = Math.ceil(game.player.hp); $('health-bar').style.width = `${game.player.hp}%`;
@@ -393,6 +402,23 @@ function updateHud() {
   c.save(); c.translate(cx + game.player.x * scale, cy + game.player.z * scale); c.rotate(-yaw); c.fillStyle = radarTheme.player; c.beginPath(); c.moveTo(0, -6); c.lineTo(4, 4); c.lineTo(0, 2); c.lineTo(-4, 4); c.closePath(); c.fill(); c.restore();
   if (game.time > 9) $('game-tip').style.opacity = '0';
 }
+function updatePortalHUD(){
+  if(!world||!game)return;
+  const heading=listenerHeading();
+  const dots=portalIndicators(game.activePortals,game.player,heading,game.time,game.state),strip=$('portal-indicator');
+  strip.hidden=!dots.length;
+  while(strip.children.length<dots.length){const dot=document.createElement('i');dot.className='portal-dot';strip.append(dot);}
+  [...strip.children].forEach((dot,i)=>{
+    const marker=dots[i];dot.hidden=!marker;if(!marker)return;
+    dot.style.left=`${50+marker.offset*46}%`;dot.style.opacity=String(marker.opacity);
+    dot.style.marginTop=`${i*2}px`;dot.classList.toggle('behind',marker.behind);dot.classList.toggle('pending',marker.pending);
+    dot.title=`${marker.pending?'Brèche en formation':'Brèche active'}${marker.behind?' · derrière':''}`;
+  });
+}
+function listenerHeading(){
+  portalForward ||= new world.T.Vector3();world.camera.getWorldDirection(portalForward);
+  return Math.atan2(-portalForward.x,-portalForward.z);
+}
 let frames = 0, recovering = false;
 function bindCanvas() {
   // Rebind drag input after a graphics recovery replaces the canvas context.
@@ -406,6 +432,7 @@ function bindCanvas() {
 window.addEventListener('rosee-renderer-recovered', () => { $('world').removeAttribute('data-controls-bound'); bindCanvas(); $('renderer-label').textContent = `${world.backend.toUpperCase()} · CONÇU POUR LE TACTILE`; });
 function frame(timestamp, xrFrame) {
   const dt = lastTime ? Math.min((timestamp - lastTime) / 1000, .05) : .016; lastTime = timestamp; clock += dt;
+  const feel=weaponFeel.update(dt);recoil=feel.pitch;flashTimer=feel.flash;
   // The standard Bluetooth/USB gamepad is available outside VR as well.
   const vrInput = vr.input(xrFrame);
   world.animatePortal(clock);
@@ -439,14 +466,20 @@ function frame(timestamp, xrFrame) {
     handleEvents(); updateCamera();
     hudTimer -= dt; if (hudTimer <= 0) { if (vr.mode !== 'xr') updateHud(); hudTimer = .1; }
   }
-  ambience?.update(dt,{active:phase==='playing'&&!recovering&&!document.hidden,position:game.player,
+  const audioActive=phase==='playing'&&!recovering&&!document.hidden;
+  const heading=listenerHeading();
+  ambience?.update(dt,{active:audioActive,position:game.player,yaw:heading,
     moving:phase==='playing',elevation:game.player.elevation,onLift:!!game.player.onLift,
     grounded:game.player.grounded,crouched:game.player.crouched});
-  flashTimer = Math.max(0, flashTimer - dt); recoil = Math.max(0, recoil - dt * 2.4);
+  let threat=clock-lastShotAt<1.2?.18:0;
+  for(const enemy of game.enemies)if(enemy.awareness==='engaged')threat+=Math.max(0,1-Math.hypot(enemy.x-game.player.x,enemy.z-game.player.z)/36)*.3;
+  musicBed.update(dt,{active:audioActive,threat:Math.min(1,threat),intermission:game.wave>0&&game.nextWave>0});
+  if(audioContext)setWeaponCharge(audioContext,game.weapon.id,game.charge,audioActive&&settings.sound&&game.charge>.015);
+  if(audioActive&&game.reloadRemaining>0&&!reloadInserted&&1-game.reloadRemaining/game.weapon.reload>=.58){reloadInserted=true;if(settings.sound)playWeaponAction(audioContext,game.weapon.id,'reload-in');}
   world.soldier.gun.userData.flash.visible = phase === 'playing' && flashTimer > 0; world.fpsGun.userData.flash.visible = phase === 'playing' && flashTimer > 0;
   $('crosshair').classList.toggle('shooting', flashTimer > 0); $('damage-flash').classList.toggle('active', phase!=='lobby' && damageUntil > clock);
   $('damage-flash').style.setProperty('--injury',phase==='lobby'?0:Math.max(0,(100-game.player.hp)/100*.65));
-  vr.update(dt,flashTimer,recoil);
+  vr.update(dt,flashTimer,recoil,weaponFeel.state);
   if(clock>equipmentUntil)$('equipment-unlock').hidden=true;
   if (clock > announcementUntil) $('wave-announcement').classList.remove('show');
   if (world.lost && !recovering) {
@@ -470,7 +503,7 @@ try {
   await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   if (world.lost) { world = await world.recover();game?.replaceObstacles(world.obstacles); window.dispatchEvent(new CustomEvent('rosee-renderer-recovered')); }
   $('play-label').textContent = 'ENTRER DANS L’ARÈNE'; $('play-button').disabled = false;$('outfit-button').disabled=false;
-  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ phase, view, frames, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:musicBed.enabled,musicPlaying:musicBed.playing,musicFailed:musicBed.failed,previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
+  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ phase, view, frames, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:musicBed.enabled,musicPlaying:musicBed.playing,musicFailed:musicBed.failed,musicSection:musicBed.section,musicVoices:musicBed.stats.voices,audioState:audioContext?.state||'idle',weaponFeedback:{...weaponFeel.state},previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
     inputs: { move: { ...move }, look: { ...look }, firing: firingPointers.size > 0 || keys.has('Space') }, drawCalls: world.renderer.info.render.calls, ...game.snapshot(),equipment:equipmentForCharacter(game.wave,character.id) }) });
   bindCanvas();world.renderer.setAnimationLoop(frame);
 } catch (error) {

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bundle Pink war into one HTML file; core gameplay works offline, optional music streams online."""
+"""Bundle Pink war into one HTML file; gameplay and synthesized audio run offline."""
 import pathlib, re, subprocess, sys, tempfile, urllib.parse
 
 project = pathlib.Path(__file__).resolve().parents[1]
@@ -17,7 +17,7 @@ with tempfile.TemporaryDirectory(prefix='pink-war-') as temporary:
     html = html.replace('  <link rel="manifest" href="manifest.webmanifest">\n','').replace('class="brand" href="./"','class="brand" href="#"')
     html = html.replace('<script type="module" src="game.js"></script>','<script>\n'+javascript+'\n</script>')
     license_text = (project/'dist/vendor/LICENSE.three.txt').read_text().replace('--','—')
-    html = html.replace('<!doctype html>','<!doctype html>\n<!-- Pink war 3.13 — HTML autonome. Three.js :\n'+license_text+'\n-->')
+    html = html.replace('<!doctype html>','<!doctype html>\n<!-- Pink war 3.14 — HTML autonome. Three.js :\n'+license_text+'\n-->')
     assert 'src="game.js"' not in html and 'href="style.css"' not in html
     output.parent.mkdir(parents=True,exist_ok=True); output.write_text(html)
     print(str(output), output.stat().st_size, 'bytes')

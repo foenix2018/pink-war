@@ -26,6 +26,53 @@ test('glove digits have individually driven knuckle pivots and visible trigger f
   assert.notEqual(first,last,'finger curl is staggered rather than uniform');
 });
 
+test('continuous glove skins share buffers while all fifteen phalanges animate independently',()=>{
+  const k=kit(),right=createGlove(k.gloves),left=createGlove(k.gloves,{mirror:true});
+  const skins=hand=>hand.children.filter(child=>child.isSkinnedMesh);
+  assert.equal(right.userData.skeleton.bones.length,16,'palm plus three joints per digit');
+  assert.equal(right.userData.digitBones.length,5);
+  assert.ok(right.userData.digitBones.every(chain=>chain.length===3));
+  assert.notEqual(right.userData.skeleton,left.userData.skeleton);
+  assert.equal(skins(right).length,3,'one shared skin buffer per material');
+  for(const [i,mesh] of skins(right).entries()){
+    const g=mesh.geometry,weights=g.attributes.skinWeight,indices=g.attributes.skinIndex;
+    assert.equal(g,skins(left)[i].geometry,'left and right reuse immutable geometry');
+    assert.ok(finite(g));assert.equal(weights.count,g.attributes.position.count);
+    for(let v=0;v<weights.count;v++){
+      const sum=weights.getX(v)+weights.getY(v)+weights.getZ(v)+weights.getW(v);
+      assert.ok(Math.abs(sum-1)<1e-6,'skin weights remain normalized at flexion creases');
+      for(const read of ['getX','getY','getZ','getW'])assert.ok(indices[read](v)<16);
+    }
+  }
+  const skin=skins(right)[0],index=skin.geometry.attributes.skinIndex;
+  const start=new T.Vector3(.034,0,-.005),surface=new T.Vector3().fromBufferAttribute(skin.geometry.attributes.position,0),normal=new T.Vector3().fromBufferAttribute(skin.geometry.attributes.normal,0);
+  assert.ok(surface.sub(start).dot(normal)>0,'the closed finger skin faces outwards and renders with ordinary front-face culling');
+  const vertices=Array.from({length:index.count},(_,v)=>v).filter(v=>index.getX(v)>=11&&index.getX(v)<=12);
+  assert.ok(vertices.length,'index PIP and DIP carry the trigger-pad surface');
+  right.updateMatrixWorld(true);right.userData.skeleton.update();
+  const before=vertices.map(vertex=>skin.getVertexPosition(vertex,new T.Vector3()));
+  const untouched=left.userData.skeleton.bones.map(bone=>bone.quaternion.toArray());
+  for(let i=0;i<12;i++)right.userData.animate({trigger:1,grip:.8},.016);
+  right.updateMatrixWorld(true);right.userData.skeleton.update();
+  assert.ok(Math.max(...vertices.map((vertex,i)=>skin.getVertexPosition(vertex,new T.Vector3()).distanceTo(before[i])))>.005,'pressing the trigger deforms visible skin');
+  assert.deepEqual(left.userData.skeleton.bones.map(bone=>bone.quaternion.toArray()),untouched,'animating one glove leaves the other untouched');
+  for(let i=0;i<12;i++)left.userData.animate({trigger:1,grip:.8},.016);
+  for(let i=0;i<16;i++)assert.deepEqual(left.userData.skeleton.bones[i].quaternion.toArray(),right.userData.skeleton.bones[i].quaternion.toArray(),'mirroring the group already mirrors anatomical flexion');
+  for(let i=0;i<18;i++)left.userData.animate({relax:1},.016);
+  left.updateMatrixWorld(true);left.userData.skeleton.update();
+  for(const mesh of skins(left))for(let v=0;v<mesh.geometry.attributes.position.count;v++){
+    const point=mesh.getVertexPosition(v,new T.Vector3());
+    assert.ok(mesh.boundingBox.containsPoint(point)&&mesh.boundingSphere.containsPoint(point),'opening the free hand stays inside skin culling and raycast bounds');
+  }
+  right.userData.skeleton.computeBoneTexture();
+  let disposed=0;right.userData.skeleton.boneTexture.addEventListener('dispose',()=>disposed++);
+  let sharedDisposed=0;skin.geometry.addEventListener('dispose',()=>sharedDisposed++);
+  right.userData.dispose();right.userData.dispose();
+  assert.equal(disposed,1,'private bone texture is released once on VR exit');
+  assert.equal(sharedDisposed,0,'other gloves keep their shared geometry');
+  assert.ok(finite(skins(left)[0].geometry),'an independent glove remains usable after disposal');
+});
+
 test('bevelBox keeps its metric size, rounds its corners and has unit normals', () => {
   const g = bevelBox(.4, .1, .2, .03, 3); g.computeBoundingBox();
   const { min, max } = g.boundingBox;
@@ -159,6 +206,28 @@ test('the soldier rig has planted, articulated steps and keeps both hands on the
       assert.ok(wrist(left).distanceTo(freePalm)<1e-3,`${profileInfo.id}/${frame.id}: support hand remains aligned while walking`);
     }
     assert.ok([...soldier.legs,...soldier.knees,...soldier.feet].every(bone=>Number.isFinite(bone.rotation.x)));
+  }
+});
+
+test('recoil travels through braced shoulders and recovers while wrists stay on all weapon grips',()=>{
+  for(const profileInfo of CHARACTERS){
+    const k=kit(),soldier=createSoldier(k,()=>buildGun({mats:mats(),gloves:k.gloves,sleeve:false,makeFlash:flash}),profileInfo);
+    for(const [index,frame] of WEAPON_FRAME.entries()){
+      soldier.setWeapon(index);soldier.animate(.1,false,0,0,0,.016,{firing:true});
+      soldier.animate(.116,false,.16,.3,1,.016,{firing:true});
+      const kick=soldier._recoilBody;assert.ok(kick>.3);
+      assert.ok(soldier.arms.every(arm=>arm.shoulder.position.z>0),'both shoulders absorb the impulse');
+      for(let n=0;n<25;n++){
+        soldier.animate(.132+n*.016,false,0,.3,0,.016,{firing:true});
+        soldier.root.updateMatrixWorld(true);
+        const [left,right]=soldier.arms,palm=soldier.gun.userData.hand.localToWorld(new T.Vector3(...GRIP.wrist));
+        const other=frame.support?soldier.gun.userData.support:soldier.rig.children.find(child=>child.userData.setLevel&&child!==soldier.gun.parent);
+        const freePalm=other.localToWorld(new T.Vector3(...GRIP.wrist));
+        assert.ok(right.shoulder.localToWorld(right.wrist.clone()).distanceTo(palm)<1e-3,`${profileInfo.id}/${frame.id}: firing wrist`);
+        assert.ok(left.shoulder.localToWorld(left.wrist.clone()).distanceTo(freePalm)<1e-3,`${profileInfo.id}/${frame.id}: supporting wrist`);
+      }
+      assert.ok(soldier._recoilBody<kick*.01,'shoulders return naturally after the gun settles');
+    }
   }
 });
 

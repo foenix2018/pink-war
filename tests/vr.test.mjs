@@ -260,3 +260,12 @@ test('the muzzle follows the pistol with a recoil kick and the aim keeps the con
   assert.ok(aim.direction.distanceTo(new T.Vector3(0,0,-1))<1e-8);
   gun.rotation.x=.16;aim=state.aim();assert.ok(aim.direction.distanceTo(new T.Vector3(0,0,-1))<1e-8,'recoil moves the model only; the shot direction stays on the controller ray');
 });
+test('the VR portal strip and health display release all resources on headset exit',()=>{
+  const original=globalThis.document;globalThis.document={createElement:()=>({width:0,height:0})};
+  try{
+    const camera=new T.PerspectiveCamera(),state=Object.assign(Object.create(VRController.prototype),{hooks:{world:()=>({T,camera})}});
+    state.makeHUD();assert.equal(camera.children.length,2);assert.ok(state.hud.portal);
+    let disposed=0;for(const item of [state.hud,state.hud.portal])for(const resource of [item.plane.geometry,item.plane.material,item.texture])resource.addEventListener('dispose',()=>disposed++);
+    state.removeHUD();assert.equal(camera.children.length,0);assert.equal(disposed,6);assert.equal(state.hud,null);assert.doesNotThrow(()=>state.removeHUD());
+  }finally{globalThis.document=original;}
+});
