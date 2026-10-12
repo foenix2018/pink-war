@@ -289,7 +289,7 @@ function nextWeapon() {
 function beginReload(now=performance.now()/1000) {
   if(mode!=='combat'||!assets||reloadUntil>now||ammo===WEAPONS[weaponIndex].capacity)return;
   reloadUntil=now+WEAPONS[weaponIndex].reload;
-  try{playWeaponAction(audio,'reload',WEAPONS[weaponIndex].id);}catch{}
+  try{playWeaponAction(audio,WEAPONS[weaponIndex].id,'reload');}catch{}
   info('RECHARGE : '+WEAPONS[weaponIndex].name);
 }
 function shoot(source,frame,charge=1) {
@@ -311,7 +311,7 @@ function shoot(source,frame,charge=1) {
     const bot=hit.object.userData.bot;
     bot.life-=weapon.damage*(weapon.chargeTime?Math.min(1,charge):1);
     if(bot.life<=0){removeBot(bot);score+=100;if(score>0&&score%500===0)wave++;}
-    try{playLaserImpact(audio,weapon.id);}catch{}
+    try{playLaserImpact(audio,{surface:'metal',distance:Math.min(12,target.distanceTo(origin)),power:1,splash:weapon.splash});}catch{}
   }
   try{if(audio?.state==='suspended')audio.resume().catch(()=>{});playLaserShot(audio,weapon.id,Math.min(1,charge));}catch{}
   haptic(source);
@@ -334,7 +334,7 @@ function startCombat() {
   music.start(audio);
   mode='combat'; info('COMBAT LANCE');
 }
-function updateCombat(seconds) {
+function updateCombat(seconds,dt) {
   if (mode !== 'combat') return;
   for (const bot of [...bots]) {
     const p=bot.group.position;
@@ -357,7 +357,7 @@ function updateCombat(seconds) {
     if(point){createBot(point);enemyCooldown=seconds+3.5;}
   }
   if(reloadUntil && seconds>=reloadUntil){reloadUntil=0;ammo=WEAPONS[weaponIndex].capacity;}
-  assets?.animate(seconds,Math.min(.07,seconds-lastTime),wave,{
+  assets?.animate(seconds,dt,wave,{
     ammo,capacity:WEAPONS[weaponIndex].capacity,
     reloading:reloadUntil>0,reloadProgress:reloadUntil?Math.max(0,1-(reloadUntil-seconds)/WEAPONS[weaponIndex].reload):0,
     time:seconds,trigger:triggerHeld?1:0,flash:seconds<muzzleUntil
@@ -479,7 +479,8 @@ function tick(ms, frame) {
       }else if(seconds-startTime>3&&scanMessage==='DETECTION DES SURFACES')
         info('AUCUN SOL : SCANNER AVEC GACHETTE GAUCHE');
     }
-    updateCombat(seconds);
+    updateCombat(seconds,dt);
+    if(mode==='combat')music.update(dt,{threat:Math.min(1,.2+wave*.13)});
     if(assets&&mode!=='combat')assets.animate(seconds,dt,wave,{time:seconds});
     for(let i=tracers.length-1;i>=0;i--)if(seconds>=tracers[i].until){
       const item=tracers.splice(i,1)[0];
@@ -525,7 +526,7 @@ async function enter() {
     });
     xrSession.addEventListener('inputsourceschange',()=>{});
     session=xrSession;
-    roomCaptureAsked=false;mode='ready';
+    roomCaptureAsked=false;mode='ready';lastTime=0;
     await renderer.xr.setSession(xrSession);
     startTime=performance.now()/1000;
     info('DETECTION DES SURFACES');
