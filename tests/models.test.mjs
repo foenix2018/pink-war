@@ -294,7 +294,7 @@ test('both soldiers keep an opaque, fully enclosing helmet at every armour level
 
 test('all hostile chassis share three geometry batches while keeping independent skeletons', () => {
   const material={monster:solid(1),monsterElite:solid(2),monsterFace:solid(3),rose:neon(4),violet:neon(5),cyan:neon(6)},factory=createEnemyFactory(material);
-  for(const form of ['stalker','scuttler','brute','seer'])for(const elite of [false,true])for(const ranged of [false,true]) {
+  for(const form of ['stalker','scuttler','brute','seer','listener','bulwark'])for(const elite of [false,true])for(const ranged of [false,true]) {
     const a=factory.create(elite,ranged,form),b=factory.create(elite,ranged,form);
     const meshes=a.children.filter(child=>child.isMesh),otherMeshes=b.children.filter(child=>child.isMesh);
     assert.equal(meshes.length,3,`${form}: body, armour and emissive fittings stay within three draw calls`);
@@ -325,7 +325,7 @@ test('all hostile chassis share three geometry batches while keeping independent
 test('enemy knees and ankles plant feet through locomotion and settle when the actor stops',()=>{
   const material={monster:solid(1),monsterElite:solid(2),monsterFace:solid(3),rose:neon(4),violet:neon(5),cyan:neon(6)},factory=createEnemyFactory(material);
   const point=new T.Vector3();
-  for(const form of ['stalker','scuttler','brute','seer']){
+  for(const form of ['stalker','scuttler','brute','seer','listener','bulwark']){
     const actor=factory.create(false,false,form),crawler=form==='scuttler';actor.position.y=4.8;
     actor.userData.animate(0,.3,true);
     let kneeMotion=false,lifted=false;

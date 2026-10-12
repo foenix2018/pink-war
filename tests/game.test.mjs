@@ -95,10 +95,10 @@ test('random breach sites change across runs, avoid buildings and preserve enemy
     assert.ok(obstacles.every(w=>Math.abs(site.x-w.x)>w.hx+8||Math.abs(site.z-w.z)>w.hz+8));
   }
   const g=new ArenaGame(obstacles,()=>.5);
-  for(let level=1;level<=10;level++){
+  for(let level=1;level<=MAX_LEVEL;level++){
     g.beginWave();
     assert.equal(g.toSpawn,levelCount(level));
-    assert.equal(g.activePortals.length,level<3?1:level<6?2:3);
+    assert.equal(g.activePortals.length,level<3?1:level<6?2:level<11?3:level<16?4:5);
     assert.ok(g.activePortals.every(site=>Number.isFinite(site.openedAt)));
     for(let n=0;n<levelCount(level);n++)g.spawnEnemy();
     assert.equal(g.toSpawn,0);
@@ -108,17 +108,18 @@ test('random breach sites change across runs, avoid buildings and preserve enemy
   }
 });
 
-test('all ten levels keep enemy counts while health increases and speed decreases', () => {
-  assert.equal(MAX_LEVEL, 10); assert.deepEqual(Array.from({length:10},(_,i)=>levelCount(i+1)), [5,8,11,14,17,20,23,26,29,32]);
-  const g = new ArenaGame([],()=>.5); let previousHP=0, previousSpeed=Infinity;
-  for(let level=1;level<=10;level++) {
+test('twenty campaign levels increase enemy health and movement speed', () => {
+  assert.equal(MAX_LEVEL,20); assert.deepEqual(Array.from({length:20},(_,i)=>levelCount(i+1)),Array.from({length:20},(_,i)=>5+i*3));
+  const g = new ArenaGame([],()=>.5); let previousHP=0, previousSpeed=0;
+  for(let level=1;level<=MAX_LEVEL;level++) {
     g.beginWave(); g.spawnEnemy(); const e=g.enemies.at(-1);
-    assert.ok(e.hp>previousHP); assert.ok(e.speed<previousSpeed); previousHP=e.hp;previousSpeed=e.speed;
+    const baseSpeed=e.speed/(e.form==='scuttler'?1.12:e.form==='bulwark'?.7:1);
+    assert.ok(e.hp>previousHP); assert.ok(baseSpeed>previousSpeed); previousHP=e.hp;previousSpeed=baseSpeed;
     g.spawnEnemy(); if(level>=4)assert.equal(g.enemies.at(-1).ranged,true);
     g.enemies=[]; g.toSpawn=0;
   }
-  g.step(.02); assert.equal(g.state,'won'); assert.equal(g.wave,10);
-  g.beginWave(); assert.equal(g.wave,10); const time=g.time;g.step(.05);assert.equal(g.time,time);
+  g.step(.02); assert.equal(g.state,'won'); assert.equal(g.wave,MAX_LEVEL);
+  g.beginWave(); assert.equal(g.wave,MAX_LEVEL); const time=g.time;g.step(.05);assert.equal(g.time,time);
 });
 test('weapons appear at their scheduled levels, remain optional, and keep individual batteries', () => {
   const g=new ArenaGame(); assert.equal(g.selectWeapon(1),false);
@@ -242,26 +243,34 @@ test('NOVA damages groups but splash cannot pass through a wall', () => {
   assert.equal(g.enemies.some(e=>e.id===91),false);assert.equal(g.enemies.some(e=>e.id===92),false);
   assert.equal(g.enemies.find(e=>e.id===93).hp,40);
 });
-test('a complete campaign reaches victory after 185 real projectile kills and five unlocks', () => {
-  const g=new ArenaGame([],()=>.5);g.player.z=60;let unlocks=[],equipmentStages=[];
+test('a complete campaign reaches level 20 after 670 real projectile kills and five weapons', () => {
+  const g=new ArenaGame([],()=>.5);g.player.z=60;let unlocks=[],equipmentStages=[];const previousTargets=new Map();
   const origin={x:0,y:1.35,z:60};
-  for(let i=0;i<35000 && g.state==='playing';i++) {
-    g.step(.02,{x:Math.sin(g.time*.45),z:Math.cos(g.time*.45)});
+  for(let i=0;i<130000 && g.state==='playing';i++) {
+    const closest=g.enemies.reduce((best,e)=>!best||Math.hypot(e.x-g.player.x,e.z-g.player.z)<Math.hypot(best.x-g.player.x,best.z-g.player.z)?e:best,null);
+    const distance=closest?Math.hypot(g.player.x-closest.x,g.player.z-closest.z):999;
+    const goal={x:Math.sin(g.time*.13)*70,z:Math.cos(g.time*.13)*70};
+    const radial=closest?Math.max(-1,Math.min(1,(distance-25)/8)):0;
+    const dx=closest?(closest.x-g.player.x)/distance*radial-(closest.z-g.player.z)/distance*.8:goal.x-g.player.x;
+    const dz=closest?(closest.z-g.player.z)/distance*radial+(closest.x-g.player.x)/distance*.8:goal.z-g.player.z,n=Math.hypot(dx,dz)||1;
+    g.step(.02,{x:dx/n,z:dz/n,sprint:true,jump:g.bullets.some(b=>b.hostile&&Math.hypot(b.x-g.player.x,b.z-g.player.z)<6)});
     // The simulated player actively visits the beam and chooses each offered weapon.
     if(g.weaponOffers.length){const offer=g.weaponOffers[0],old={x:g.player.x,z:g.player.z};
       g.player.x=offer.x;g.player.z=offer.z;g.collectWeapon();g.player.x=old.x;g.player.z=old.z;
     }
-    origin.x=g.player.x;origin.z=g.player.z;
-    const target=g.enemies.reduce((best,e)=>!best||e.z>best.z?e:best,null);
-    if(target)g.trigger(!g.weapon.semiAuto||!g.triggerHeld,.02,origin,{x:target.x-origin.x,y:(target.elevation||0)+(target.aimHeight??(target.elite?1.35:1.15))-origin.y,z:target.z-origin.z});
+    origin.x=g.player.x;origin.z=g.player.z;origin.y=g.player.elevation+1.35;
+    const target=g.enemies.reduce((best,e)=>!best||Math.hypot(e.x-origin.x,e.z-origin.z)<Math.hypot(best.x-origin.x,best.z-origin.z)?e:best,null);
+    if(target){const old=previousTargets.get(target.id)||target,travel=Math.hypot(target.x-origin.x,target.z-origin.z)/g.weapon.speed;
+      g.trigger(!g.weapon.semiAuto||!g.triggerHeld,.02,origin,{x:target.x+(target.x-old.x)/.02*travel-origin.x,y:(target.elevation||0)+(target.form==='probe'?.55:target.form==='scuttler'?.85:1.88)*(target.elite?1.13:1)-origin.y,z:target.z+(target.z-old.z)/.02*travel-origin.z});}
     else g.trigger(false,.02,origin,{x:0,y:0,z:-1});
+    for(const e of g.enemies)previousTargets.set(e.id,{x:e.x,z:e.z});
     const events=g.drainEvents();
     unlocks.push(...events.filter(e=>e.type==='unlock').map(e=>e.name));
     equipmentStages.push(...events.filter(e=>e.type==='equipment').map(e=>e.level));
   }
-  assert.equal(g.state,'won');assert.equal(g.wave,10);assert.equal(g.kills,185);assert.ok(g.player.hp>0);
+  assert.equal(g.state,'won',JSON.stringify({wave:g.wave,kills:g.kills,time:g.time,hp:g.player.hp,toSpawn:g.toSpawn}));assert.equal(g.wave,MAX_LEVEL);assert.equal(g.kills,670);assert.ok(g.player.hp>0);
   assert.deepEqual(unlocks,['BLOOM','LANCE','THORN','NOVA']);assert.equal(g.unlockedWeapons.length,5);
-  assert.deepEqual(equipmentStages,[1,2,3,4,5,6,7,8,9,10]);assert.equal(g.snapshot().equipment.name,'Impératrice');assert.equal(g.snapshot().equipment.unlocked.length,10);
+  assert.deepEqual(equipmentStages,Array.from({length:MAX_LEVEL},(_,i)=>Math.min(i+1,10)));assert.equal(g.snapshot().equipment.name,'Impératrice');assert.equal(g.snapshot().equipment.unlocked.length,10);
   g.reset();assert.equal(g.snapshot().equipment.level,1);assert.deepEqual(g.snapshot().equipment.unlocked,['aube']);
 });
 

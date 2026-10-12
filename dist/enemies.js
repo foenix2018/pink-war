@@ -13,6 +13,7 @@ const shinPlate=armorPanel([[-.054,-.15],[.054,-.15],[.085,.10],[.06,.155],[-.06
 const sensor=new T.SphereGeometry(1,10,7),shellSphere=new T.SphereGeometry(1,12,8);
 const shellDome=new T.SphereGeometry(1,14,7,0,Math.PI*2,0,Math.PI/2);
 const ring=new T.TorusGeometry(.12,.012,5,16);
+const acousticRing=new T.TorusGeometry(.12,.012,4,10),bolt=new T.SphereGeometry(1,6,4);
 const probeDuct=new T.TorusGeometry(.205,.038,6,24),probeRim=new T.TorusGeometry(.19,.022,6,24);
 const headShell=loft([[-.18,.065,.075,-.035],[-.11,.14,.17,-.019],[.015,.164,.205,.003],[.14,.12,.163,.035],[.205,.036,.074,.06]],18);
 const headFace=loft([[-.12,.054,.04,-.181],[-.02,.12,.035,-.197],[.084,.112,.032,-.174],[.115,.061,.025,-.149]],16);
@@ -132,8 +133,9 @@ export function createEnemyFactory(mats){
         a.add(sensor,glow,matrix([0,1.04,-.28],[0,0,0],[.05,.05,.021]),false);
       }
     }else{
-      const torso=form==='brute'?bruteTorso:form==='seer'?seerTorso:stalkerTorso;
-      const chestScale=form==='brute'?[1.38,1.11,1.13]:form==='seer'?[.80,1.12,.90]:[1,1,1];
+      const heavy=['brute','bulwark'].includes(form),sensitive=['seer','listener'].includes(form);
+      const torso=heavy?bruteTorso:sensitive?seerTorso:stalkerTorso;
+      const chestScale=heavy?[1.38,1.11,1.13]:sensitive?[.80,1.12,.90]:[1,1,1];
       a.add(torso,dark);a.add(chest,armor,matrix([0,1.43,-.22],[.035,0,0],chestScale));
       // Separated rib shells and a narrow flexible waist replace the solid barrel.
       for(const side of [-1,1])for(let i=0;i<3;i++){
@@ -145,13 +147,26 @@ export function createEnemyFactory(mats){
       }
       a.add(ring,dark,matrix([0,1.31,-.295],[0,0,0],[.83,.83,.83]));
       a.add(sensor,glow,matrix([0,1.31,-.308],[0,0,0],[.058,.058,.016]),false);
+      // Exposed conduits, raised seams and rivets make the existing armour readable up close.
+      for(const s of [-1,1])for(let i=0;i<3;i++){
+        a.add(bolt,dark,matrix([s*(heavy?.37:.27),1.25+i*.10,-.235],[0,0,0],[.014,.014,.014]));
+        a.limb(dark,[s*.22,1.03+i*.07,.21],[s*.30,1.08+i*.07,.25],.011,.009);
+      }
+      if(form==='listener')for(const s of [-1,1]){
+        // Acoustic dishes and three sensor hoops identify this long-range tracker.
+        a.limb(armor,[s*.16,1.62,.13],[s*.45,1.88,.19],.04,.025);
+        a.add(sensor,dark,matrix([s*.47,1.9,.19],[0,0,0],[.18,.09,.18]));
+        a.add(acousticRing,armor,matrix([s*.47,1.9,.10],[0,0,0],[1.5,1.5,1.5]));
+        a.add(bolt,glow,matrix([s*.47,1.9,.09],[0,0,0],[.027,.027,.014]),false);
+        if(s===1)a.add(acousticRing,armor,matrix([0,1.79,.25],[0,Math.PI/2,0],[1.4,1.4,1.4]));
+      }
       for(const s of [-1,1]){
         a.limb(dark,[s*.23,1.64,.17],[s*.15,1.02,.20],.022);
         a.limb(armor,[s*.095,1.59,.27],[s*.095,1.25,.28],.046,.043);
         a.ellipsoid(armor,[s*.18,1.00,-.035],[.14,.15,.16]);
       }
       const neck=bone('sensor-head',[0,.465,-.032],thorax),h=assembly(neck);
-      const headScale=form==='brute'?[1.18,1.03,1.10]:form==='seer'?[.82,1.19,1.12]:[1,1,1];
+      const headScale=heavy?[1.18,1.03,1.10]:sensitive?[.82,1.19,1.12]:[1,1,1];
       h.add(headShell,armor,matrix([0,1.865,-.032],[0,0,0],headScale));
       h.add(headFace,dark,matrix([0,1.865,-.032],[0,0,0],headScale));
       h.limb(dark,[0,1.69,.02],[0,1.87,.02],.077,.069);
@@ -159,10 +174,10 @@ export function createEnemyFactory(mats){
         h.ellipsoid(dark,[s*.158,1.84,.005],[.033,.07,.082]);
         h.add(sensor,glow,matrix([s*.07,1.91,-.257],[0,0,0],[.039,.020,.017]),false);
         h.limb(armor,[s*.072,1.76,-.16],[s*.042,1.71,-.19],.021,.009);
-        if(form==='brute'){
+        if(heavy){
           h.dome(armor,[s*.18,1.99,.015],[.16,.085,.21],[0,0,s*-.4]);
           h.limb(dark,[s*.20,1.96,.06],[s*.32,2.16,.11],.065,.013);
-        }else if(form==='seer'){
+        }else if(sensitive){
           h.limb(dark,[s*.115,2.00,.035],[s*.13,2.26,.10],.029,.009);
           h.add(sensor,glow,matrix([s*.13,2.27,.10],[0,0,0],[.020,.034,.020]),false);
         }else{
@@ -171,12 +186,12 @@ export function createEnemyFactory(mats){
       }
       // Articulated manipulator arms retain paired fingers and hydraulic elbows.
       for(const s of [-1,1]){
-        const shoulder=form==='brute'?.59:form==='seer'?.34:.43,handX=form==='brute'?.72:form==='seer'?.48:.60;
+        const shoulder=heavy?.59:sensitive?.34:.43,handX=heavy?.72:sensitive?.48:.60;
         const shoulderAt=[s*shoulder,1.58,0],elbowAt=[s*(handX-.03),1.23,-.055],wristAt=[s*handX,.95,-.19];
         const upper=bone(`arm-${s}-shoulder`,[shoulderAt[0],.18,0],thorax);
         const lower=bone(`arm-${s}-elbow`,elbowAt.map((v,i)=>v-shoulderAt[i]),upper);
         const wrist=bone(`arm-${s}-wrist`,wristAt.map((v,i)=>v-elbowAt[i]),lower);
-        const u=assembly(upper),l=assembly(lower),f=assembly(wrist),large=form==='brute';
+        const u=assembly(upper),l=assembly(lower),f=assembly(wrist),large=heavy;
         u.ellipsoid(dark,shoulderAt,[.105,.105,.105]);
         u.dome(armor,[shoulderAt[0],1.61,0],large?[.28,.20,.26]:[.20,.125,.19],[0,0,s*-.19]);
         u.limb(armor,[s*(shoulder+.005),1.50,0],[elbowAt[0],1.27,-.055],large?.123:.088,.067);
@@ -184,6 +199,12 @@ export function createEnemyFactory(mats){
         l.ellipsoid(dark,elbowAt,[.084,.078,.082]);
         l.limb(armor,[elbowAt[0],1.19,-.071],wristAt,large?.117:.095,.051);
         l.limb(dark,[elbowAt[0]+s*.055,1.19,-.015],[wristAt[0]+s*.04,.99,-.13],.021,.015);
+        if(form==='bulwark'){
+          // A layered ballistic forearm plate, tied to its elbow rather than floating.
+          l.add(chest,armor,matrix([s*.74,1.15,-.20],[0,s*.18,0],[.72,1.45,.9]));
+          l.add(chest,dark,matrix([s*.74,1.15,-.225],[0,s*.18,0],[.56,1.22,.92]));
+          for(let i=0;i<2;i++)l.limb(armor,[s*.74-.11,1+i*.15,-.29],[s*.74+.11,1+i*.15,-.29],.014);
+        }
         f.ellipsoid(dark,[wristAt[0],.92,-.203],[.071,.075,.047]);
         for(const finger of [-1,1]){
           f.limb(armor,[wristAt[0]+finger*.045,.90,-.208],[wristAt[0]+finger*.052,.82,-.24],.022,.016);
@@ -217,9 +238,9 @@ export function createEnemyFactory(mats){
   }
 
   function create(elite=false,ranged=false,form='stalker'){
-    if(!['stalker','scuttler','brute','seer','probe'].includes(form))form='stalker';
+    if(!['stalker','scuttler','brute','seer','probe','listener','bulwark'].includes(form))form='stalker';
     const kit=template(elite,ranged,form),root=new T.Group(),crawler=form==='scuttler',probe=form==='probe';
-    root.name=({stalker:'AI pursuit chassis',scuttler:'AI maintenance crawler',brute:'AI siege chassis',seer:'AI reconnaissance chassis',probe:'S-03 flying surveillance probe'})[form];
+    root.name=({stalker:'AI pursuit chassis',scuttler:'AI maintenance crawler',brute:'AI siege chassis',seer:'AI reconnaissance chassis',probe:'S-03 flying surveillance probe',listener:'E-06 acoustic tracker',bulwark:'B-11 armoured suppression unit'})[form];
     root.userData.form=form;
     const joints=kit.bones.map(spec=>{const b=new T.Bone();b.name=spec.name;b.position.set(...spec.position);return b;});
     kit.bones.forEach((spec,i)=>(spec.parent<0?root:joints[spec.parent]).add(joints[i]));root.updateMatrixWorld(true);

@@ -195,6 +195,12 @@ function start() {
   document.body.classList.add('playing'); $('game-hud').hidden = false; $('game-tip').style.opacity = '1'; updateHud();
 }
 $('play-button').onclick = start; $('retry-button').onclick = start;
+function continueSurvival(){
+  if(!game.startEndless())return;
+  for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
+  phase='playing';resetInput();lastTime=0;audioReady();updateHud();
+}
+$('survival-button').onclick=continueSurvival;
 $('reload-button').onclick = () => { if(phase==='playing') game.reload(); };
 $('weapon-button').onclick = () => { if(phase==='playing') game.cycleWeapon(); };
 $('arsenal-button').onclick = () => {
@@ -310,7 +316,7 @@ function handleEvents() {
       lastShotAt=clock;recoil=feel.pitch;flashTimer=feel.flash;vr.haptic('shot', event.weapon); weaponShotSound(event.weapon, event.power);
     }
     if (event.type === 'weapon-offer') { tone(360, 820, .45, .03, 'sine'); }
-    if (event.type === 'wave') { const offered=WEAPONS.find(w=>w.level===event.wave); announce(`NIVEAU ${String(event.wave).padStart(2, '0')} / ${MAX_LEVEL}`, offered && event.wave>1 ? `${offered.name} DISPONIBLE AU FAISCEAU · APPROCHEZ-VOUS` : `${event.count} CRÉATURES · LA BRÈCHE S’OUVRE`); tone(210, 420, .25, .065); tone(420, 630, .25, .06, 'triangle', .2); }
+    if (event.type === 'wave') { const offered=WEAPONS.find(w=>w.level===event.wave); announce(game.endless?`SURVIE / VAGUE ${event.wave}`:`NIVEAU ${String(event.wave).padStart(2, '0')} / ${MAX_LEVEL}`, offered && event.wave>1 ? `${offered.name} DISPONIBLE AU FAISCEAU · APPROCHEZ-VOUS` : `${event.count} CRÉATURES · LA BRÈCHE S’OUVRE`); tone(210, 420, .25, .065); tone(420, 630, .25, .06, 'triangle', .2); }
     if (event.type === 'equipment') { const equipment=equipmentForCharacter(event.level,character.id);world.setEquipment(event.level);$('equipment-unlock-title').textContent=`${equipment.name} · NIV. ${event.level}`;$('equipment-unlock-detail').textContent=equipment.addition;equipmentUntil=clock+4;$('equipment-unlock').hidden=false; }
     if (event.type === 'clear') { announce('NIVEAU TERMINÉ', '+ BONUS · LA BRÈCHE SE RECHARGE'); tone(420, 700, .25, .07); }
     if (event.type === 'weapon') { weaponFeel.reset();recoil=0;flashTimer=0;world.setWeapon(game.weaponIndex); vr.haptic('weapon'); tone(510, 760, .1, .03); }
@@ -340,9 +346,10 @@ function handleEvents() {
 function gameOver(won = false) {
   musicBed.pause();ambience?.pause(); phase = 'over'; resetInput(); let best = game.score;
   try { best = Math.max(game.score, Number(localStorage.getItem('rosee-best')) || 0); localStorage.setItem('rosee-best', String(best)); } catch {}
-  $('end-eyebrow').textContent = won ? 'MISSION ACCOMPLIE / NIVEAU 10' : 'TRANSMISSION INTERROMPUE';
+  $('end-eyebrow').textContent = won ? `MISSION ACCOMPLIE / NIVEAU ${MAX_LEVEL}` : 'TRANSMISSION INTERROMPUE';
   $('end-title').innerHTML = won ? `La brèche est fermée.<br>Le ${character.colorWord} a gagné.` : 'Chaque aube<br>est un nouveau départ.';
-  $('end-message').textContent = won ? `Vous avez survécu aux dix niveaux. ${character.name} rentre ${character.masculine?'victorieux':'victorieuse'}.` : 'La brèche a gagné cette bataille. La prochaine est à vous.';
+  $('end-message').textContent = won ? `Vous avez survécu aux ${MAX_LEVEL} niveaux. Continuez en survie ou rejouez la campagne.` : 'La brèche a gagné cette bataille. La prochaine est à vous.';
+  $('survival-button').hidden=!won;
   $('retry-button').textContent = won ? 'REJOUER LA CAMPAGNE →' : 'UNE NOUVELLE AUBE →';
   $('end-score').textContent = game.score; $('end-wave').textContent = game.wave; $('end-time').textContent = timeString(game.time); $('best-label').textContent = best;
   if (vr?.mode !== 'xr') $('end-dialog').showModal();
@@ -355,7 +362,7 @@ function updateHud() {
   $('health-status').textContent = 'SANTÉ';
   document.querySelector('.vitals').classList.toggle('regenerating', game.regenerating);
   document.querySelector('.vitals').classList.toggle('critical', game.player.hp<30);
-  $('wave-label').textContent = `NIVEAU ${String(Math.max(1, game.wave)).padStart(2, '0')} / ${MAX_LEVEL}`;
+  $('wave-label').textContent = game.endless?`SURVIE / VAGUE ${game.wave}`:`NIVEAU ${String(Math.max(1, game.wave)).padStart(2, '0')} / ${MAX_LEVEL}`;
   $('weapon-button').innerHTML = `${game.weapon.name} <span>⌄</span>`;
   $('weapon-button').disabled = game.unlockedWeapons.length < 2;
   $('crouch-button').setAttribute('aria-pressed',String(!!game.player.crouched));
@@ -528,7 +535,7 @@ function frame(timestamp, xrFrame) {
 vr = new VRController({
   world:()=>world, game:()=>game, phase:()=>phase, openPanel, pause,
   togglePause:()=>{ if(phase==='playing')pause();else if(phase==='paused')resume(); },
-  begin:()=>{ if(phase==='lobby'||phase==='over')start();else resume();selectView('fps');resetInput(); },
+  begin:()=>{ if(phase==='over'&&game.state==='won')continueSurvival();else if(phase==='lobby'||phase==='over')start();else resume();selectView('fps');resetInput(); },
   webGL:async()=>{ if(!world.renderer.isWebGLRenderer){recovering=true;world.renderer.setAnimationLoop(null);try{world=await world.recover();game?.replaceObstacles(world.obstacles);window.dispatchEvent(new CustomEvent('rosee-renderer-recovered'));}finally{recovering=false;lastTime=0;world.renderer.setAnimationLoop(frame);}} },
   afterExit:()=>{ resetInput();lastTime=0;updateHud();updateCamera();if(phase==='paused')$('pause-dialog').showModal();else if(phase==='over')$('end-dialog').showModal(); }
 });

@@ -1,0 +1,14 @@
+Pink War 3.23 — Kenney CC0 sound recordings
+
+Primary sources:
+https://kenney.nl/assets/sci-fi-sounds
+https://kenney.nl/assets/digital-audio
+License: CC0 1.0 Universal (public domain), https://creativecommons.org/publicdomain/zero/1.0/
+
+Downloaded 2026-10-12 from licensed mirrors:
+laserLarge_000/001/002.ogg: https://github.com/euuuuuuan/voidclad-public/tree/main/assets/sfx/kenney
+laserSmall_001.ogg (laser.ogg): https://github.com/manuel-palacio/brickstorm/blob/main/CREDITS.md
+laser1.ogg: https://github.com/pythonarcade/arcade/tree/master/arcade/resources/sounds
+Included mirror license: ARCADE-LICENSE.txt (Kenney CC0)
+
+Derived WAVs: mono 44100 Hz PCM 16-bit, normalized with ffmpeg loudnorm -20 LUFS/-3 dBTP. Per-weapon runtime gain, modest pitch variation, discharge envelope, mechanical and bass layers, short early reflections. manifest.json records original and converted SHA-256 and duration. No franchise audio is included. Original OGGs archived in source/.

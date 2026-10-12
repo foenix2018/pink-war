@@ -1,0 +1,57 @@
+[
+  {
+    "weapon": "r9",
+    "source_file": "laserSmall_001.ogg",
+    "source_sha256": "ab87913aba9790a0c5fa173d086267ba521ad522fcad2252271db49988313cf5",
+    "file": "audio/kenney/r9.wav",
+    "sha256": "676b3a2c9b10dd96f52c02646c103e16ba2e025150b7bd2686165307825af2ea",
+    "seconds": 0.244444,
+    "license": "CC0-1.0",
+    "author": "Kenney",
+    "source": "https://kenney.nl/assets/sci-fi-sounds"
+  },
+  {
+    "weapon": "bloom",
+    "source_file": "laser1.ogg",
+    "source_sha256": "57f0ca591846e341b2e89af3321959f8e820626e510b2130274c824a133a5f97",
+    "file": "audio/kenney/bloom.wav",
+    "sha256": "41db62a97c19a415546827583241b7760ce33965dbbe27955c957a35df697c6c",
+    "seconds": 1.607596,
+    "license": "CC0-1.0",
+    "author": "Kenney",
+    "source": "https://kenney.nl/assets/digital-audio"
+  },
+  {
+    "weapon": "lance",
+    "source_file": "laserLarge_000.ogg",
+    "source_sha256": "a56d95794cd732d6c2d66ce488c14cf557fe526c282897c9a77675c2bd9b77e6",
+    "file": "audio/kenney/lance.wav",
+    "sha256": "69408fbdfe0f661066402fd90246bb54e87d1e2c92e9e2a1f57485ed301e2db4",
+    "seconds": 0.676644,
+    "license": "CC0-1.0",
+    "author": "Kenney",
+    "source": "https://kenney.nl/assets/sci-fi-sounds"
+  },
+  {
+    "weapon": "thorn",
+    "source_file": "laserLarge_001.ogg",
+    "source_sha256": "e678aca631495b7dfef4ac625f0349875ccac81a60f538d530e072241af3e4bd",
+    "file": "audio/kenney/thorn.wav",
+    "sha256": "a1ac7c48735cb72bfb4ead43bf0d81c4a0b23b0491bace29476eadfe000111c3",
+    "seconds": 0.720998,
+    "license": "CC0-1.0",
+    "author": "Kenney",
+    "source": "https://kenney.nl/assets/sci-fi-sounds"
+  },
+  {
+    "weapon": "nova",
+    "source_file": "laserLarge_002.ogg",
+    "source_sha256": "e5e0b6ccc4d5720c8174a3e5b7cc6f9be3057352a89cbb2e99a00efc6fe5cc11",
+    "file": "audio/kenney/nova.wav",
+    "sha256": "00ada92e7b997b4092865b80ba45718d427c95fdacf0d71dfbe8d8fadee3322b",
+    "seconds": 0.743583,
+    "license": "CC0-1.0",
+    "author": "Kenney",
+    "source": "https://kenney.nl/assets/sci-fi-sounds"
+  }
+]

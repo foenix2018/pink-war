@@ -55,6 +55,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     monster: material(0x43345b, .54, .5), monsterElite: material(0x63415a, .42, .65), monsterFace: material(0x211d31, .3, .66)
   };
   for(const mat of [mats.armor,mats.armorLight,mats.monster,mats.monsterElite])mat.roughnessMap=surfaces.coating;
+  for(const mat of [mats.monster,mats.monsterElite]){mat.map=surfaces.machine;mat.bumpMap=surfaces.machine;mat.bumpScale=.004;}
   // Reflections belong to character equipment. Keeping them off the floor and buildings saves
   // a full-screen environment lookup in each eye, while the painted metal and visors keep their finish.
   for(const mat of [mats.dark,mats.steel,mats.armor,mats.armorLight,mats.visor,mats.monster,mats.monsterElite,mats.monsterFace]) {
@@ -350,7 +351,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     }
   }
   function setWeapon(index){ if(fpsGun.userData.index===index&&soldier.weapon===index)return;fpsGun.userData.setVariant(index);soldier.setWeapon(index); }
-  function animatePortal(time){city.update(time);innerRing.rotation.z=time*.2;vortex.rotation.z=-time*.15;portalHalo.material.opacity=.3+Math.sin(time*2)*.055;dust.rotation.y=Math.sin(time*.1)*.06;}
+  function animatePortal(time){city.update(time);sky.rotation.y=time*.00035;innerRing.rotation.z=time*.2;vortex.rotation.z=-time*.15;portalHalo.material.opacity=.3+Math.sin(time*2)*.055;dust.rotation.y=Math.sin(time*.1)*.06;}
   function lobby(time,level=1){
     trackShadows(0,7);camera.clearViewOffset();setEquipment(level);portal.visible=true;const portrait=innerHeight>innerWidth;
     soldier.root.scale.setScalar((portrait?1.2:2.6)*soldier.heightScale);soldier.root.position.set(portrait?0:3.1,0,7);soldier.root.rotation.y=Math.PI-.28;

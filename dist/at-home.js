@@ -4,6 +4,7 @@ import * as THREE from './vendor/three.module.min.js';
 import { characterForId } from './characters.js';
 import { playLaserShot, loadRealLaserSample, playLaserImpact, playWeaponAction } from './laser-sound.js';
 import { WEAPONS } from './game-logic.js';
+import { syncTrackedHands } from './xr-hands.js';
 import { createMusicBed } from './music.js';
 
 const $ = id => document.getElementById(id);
@@ -45,11 +46,21 @@ let hp = 100, score = 0, wave = 1, shotCooldown = 0, enemyCooldown = 0, lastTime
 let assets=null, assetsLoading=null, assetError='', weaponIndex=0, ammo=WEAPONS[0].capacity, reloadUntil=0, triggerStarted=0, triggerHeld=false;
 const ammoByWeapon=WEAPONS.map(weapon=>weapon.capacity);
 let lastLeftX=false,lastLeftY=false,lastRightA=false, decorEnabled=true, muzzleUntil=0;
+let semiPressFired=false;
 const music=createMusicBed();
 let scanMessage = 'EN ATTENTE DU SCAN', bWasDown = false;
 const surfaces = new Map(), meshes = new Map(), bots = [], tracers = [];
 const controllers = [renderer.xr.getController(0), renderer.xr.getController(1)];
 const mounts = [];
+const controllerHandState={trigger:0,grip:0,offTrigger:0,offGrip:0};
+function roomNoise(kind,position,radius){
+  const now=performance.now()/1000;
+  for(const bot of bots){
+    const ear=bot.group.position.clone().add(new THREE.Vector3(0,bot.form==='probe'?.95:1.15,0));
+    const reach=radius*(bot.form==='listener'?1.65:1)*(clearLineOfSight(position,ear)?1:.43);
+    if(ear.distanceTo(position)<reach){bot.lastSound=position.clone();bot.heardUntil=now+6;}
+  }
+}
 const wireMaterial = new THREE.LineBasicMaterial({ color:tint, transparent:true, opacity:.5, depthWrite:false });
 const blockerMaterial = new THREE.MeshBasicMaterial({
   color:0xffffff, colorWrite:false, depthWrite:true, side:THREE.DoubleSide
@@ -242,8 +253,8 @@ function pickSpawn() {
 function createBot(position) {
   if (!assets) return null;
   // The exact AI machines from the main game's enemy factory.
-  const forms=['stalker','scuttler','seer','brute','probe'];
-  const form=forms[Math.min(forms.length-1,Math.floor((wave-1)/2))];
+  const forms=['stalker','scuttler','seer','brute','probe',...(wave>=6?['listener']:[]),...(wave>=11?['bulwark']:[])];
+  const form=forms[(score/100+bots.length)%forms.length|0];
   const elite=wave>=6 && Math.random()<.25, ranged=form==='seer'||form==='probe';
   const group=assets.makeEnemy(form,elite,ranged);
   group.position.copy(position);
@@ -280,7 +291,7 @@ function selectWeapon(index) {
   const available=WEAPONS.map((w,i)=>w.level<=wave?i:-1).filter(i=>i>=0);
   if(!available.includes(index))index=available[0]||0;
   ammoByWeapon[weaponIndex]=ammo;
-  weaponIndex=index;ammo=ammoByWeapon[index];reloadUntil=0;triggerStarted=0;
+  weaponIndex=index;ammo=ammoByWeapon[index];reloadUntil=0;triggerStarted=0;semiPressFired=false;
   assets.setWeapon(index,Math.min(wave,10));
   info('ARME : '+WEAPONS[index].name);
 }
@@ -291,18 +302,21 @@ function nextWeapon() {
 function beginReload(now=performance.now()/1000) {
   if(mode!=='combat'||!assets||reloadUntil>now||ammo===WEAPONS[weaponIndex].capacity)return;
   reloadUntil=now+WEAPONS[weaponIndex].reload;
-  try{playWeaponAction(audio,WEAPONS[weaponIndex].id,'reload');}catch{}
+  roomNoise('reload',head,8);
+  try{playWeaponAction(audio,WEAPONS[weaponIndex].id,'reload-out');}catch{}
   info('RECHARGE : '+WEAPONS[weaponIndex].name);
 }
 function shoot(source,frame,charge=1) {
   const now=performance.now()/1000, weapon=WEAPONS[weaponIndex];
   if (mode!=='combat'||!assets||now-shotCooldown<weapon.interval||now<reloadUntil) return;
+  if(weapon.semiAuto&&semiPressFired)return;
   if(ammo<=0){beginReload(now);return;}
   const pose=source&&frame?.getPose(source.targetRaySpace,renderer.xr.getReferenceSpace());
   if(!pose)return;
-  shotCooldown=now;ammo--;ammoByWeapon[weaponIndex]=ammo;
+  shotCooldown=now;ammo--;ammoByWeapon[weaponIndex]=ammo;semiPressFired=true;
   const o=pose.transform.position,q=pose.transform.orientation;
   const origin=new THREE.Vector3(o.x,o.y,o.z);
+  roomNoise('shot',origin,{r9:46,bloom:55,lance:90,thorn:110,nova:130}[weapon.id]);
   direction.set(0,0,-1).applyQuaternion(new THREE.Quaternion(q.x,q.y,q.z,q.w)).normalize();
   raycaster.set(origin,direction);raycaster.near=0;raycaster.far=12;
   const hit=raycaster.intersectObjects(bots.map(bot=>bot.hitbox).concat(blockers()),false)[0];
@@ -345,12 +359,15 @@ function updateCombat(seconds,dt) {
     bot.group.userData.animate?.(seconds,seconds*.4,false,{
       limpUntil:0,chargeProgress:0,lastShotAt:-99
     },seconds);
-    bot.group.rotation.y=Math.atan2(head.x-p.x,head.z-p.z)+Math.PI;
+    const eye=p.clone().add(new THREE.Vector3(0,bot.form==='probe'?.95:1.15,0));
+    const visible=clearLineOfSight(eye,head);
+    const attention=visible?head:seconds<(bot.heardUntil||0)?bot.lastSound:null;
+    if(attention)bot.group.rotation.y=Math.atan2(attention.x-p.x,attention.z-p.z)+Math.PI;
     if (seconds >= bot.attackAt) {
       bot.attackAt=seconds+Math.max(2.5,5-wave*.15);
       const origin=p.clone().add(new THREE.Vector3(0,bot.form==='probe'?.95:1.15,0));
-      if(clearLineOfSight(origin,head)){
-        hp=Math.max(0,hp-5);beam(origin,head,0xff6378);
+      if(visible){
+        hp=Math.max(0,hp-Math.min(18,5+Math.floor(wave*.65)));beam(origin,head,0xff6378);
         if(!hp){mode='finished';music.pause();info('FIN DE PARTIE : GACHETTE POUR REJOUER');}
       }
     }
@@ -363,7 +380,7 @@ function updateCombat(seconds,dt) {
   assets?.animate(seconds,dt,wave,{
     ammo,capacity:WEAPONS[weaponIndex].capacity,
     reloading:reloadUntil>0,reloadProgress:reloadUntil?Math.max(0,1-(reloadUntil-seconds)/WEAPONS[weaponIndex].reload):0,
-    time:seconds,trigger:triggerHeld?1:0,flash:seconds<muzzleUntil
+    time:seconds,flash:seconds<muzzleUntil,...controllerHandState
   });
 }
 async function initiateScan() {
@@ -389,7 +406,7 @@ function onSelect(event) {
   if(hand!=='right')return;
   if(mode==='ready'||mode==='finished'){startCombat();return;}
   if(mode!=='combat')return;
-  triggerHeld=true;triggerStarted=performance.now()/1000;
+  triggerHeld=true;triggerStarted=performance.now()/1000;semiPressFired=false;
   if(!WEAPONS[weaponIndex].chargeTime)shoot(event.inputSource,event.frame);
 }
 function onSelectEnd(event) {
@@ -398,7 +415,7 @@ function onSelectEnd(event) {
     const charged=(performance.now()/1000-triggerStarted)/WEAPONS[weaponIndex].chargeTime;
     if(charged>=.18)shoot(event.inputSource,event.frame,charged);
   }
-  triggerHeld=false;triggerStarted=0;
+  triggerHeld=false;triggerStarted=0;semiPressFired=false;
 }
 function onSessionEnd() {
   session = null; mode='idle';roomCaptureAsked=false;bWasDown=false;triggerHeld=false;music.pause();assets?.hideDecor();lastLeftX=false;lastLeftY=false;lastRightA=false;
@@ -412,21 +429,25 @@ function onSessionEnd() {
   for (const item of tracers) { scene.remove(item.object);item.object.geometry.dispose();item.object.material.dispose(); }
   tracers.length=0;
   board.visible=false;
-  for(const mount of mounts){mount.gun?.removeFromParent();mount.free?.removeFromParent();}
+  for(const mount of mounts){mount.anchor.visible=false;mount.source=null;mount.ray.userData.source=null;}
+  assets?.gun.removeFromParent();assets?.freeHand.removeFromParent();
   info('SESSION TERMINEE. RELANCER AT HOME POUR REJOUER.');
   button.disabled=false;
 }
 for(let i=0;i<controllers.length;i++){
-  const ray=controllers[i],mount=new THREE.Group();
+  const ray=controllers[i],anchor=new THREE.Group(),mount=new THREE.Group();
+  anchor.name='Tracked AT HOME grip';anchor.matrixAutoUpdate=false;anchor.visible=false;
+  scene.add(anchor);anchor.add(mount);
   mount.position.set(0,-.016,.05);
-  ray.add(mount);scene.add(ray);
-  const entry={ray,mount,source:null};
+  scene.add(ray);
+  const entry={ray,anchor,mount,source:null};
   ray.addEventListener('connected',event=>{entry.source=event.data;updateControllerRoles();});
   ray.addEventListener('disconnected',()=>{entry.source=null;updateControllerRoles();});
   mounts.push(entry);
 }
 function updateControllerRoles(){
   if(!assets)return;
+  assets.gun.visible=assets.freeHand.visible=false;
   for(const entry of mounts){
     entry.mount.remove(assets.gun,assets.freeHand);
     if(entry.source?.handedness==='right'){
@@ -445,6 +466,8 @@ function tick(ms, frame) {
     const right=inputs.find(input=>input.handedness==='right');
     const left=inputs.find(input=>input.handedness==='left');
     const padR=right?.gamepad,padL=left?.gamepad;
+    controllerHandState.trigger=padR?.buttons?.[0]?.value||0;controllerHandState.grip=padR?.buttons?.[1]?.value||0;
+    controllerHandState.offTrigger=padL?.buttons?.[0]?.value||0;controllerHandState.offGrip=padL?.buttons?.[1]?.value||0;
     const b=!!padR?.buttons?.[5]?.pressed;
     if(b&&!bWasDown)session.end().catch(()=>{});
     bWasDown=b;
@@ -462,6 +485,8 @@ function tick(ms, frame) {
     }
     lastLeftX=x;
     if(frame){
+      syncTrackedHands(mounts,session,frame,renderer.xr.getReferenceSpace());
+      updateControllerRoles();
       updateBoard();updateSurfaces(frame);
       const held=!!padR?.buttons?.[0]?.pressed;
       if(mode==='combat'&&held&&right&&!WEAPONS[weaponIndex].chargeTime){
@@ -484,7 +509,7 @@ function tick(ms, frame) {
     }
     updateCombat(seconds,dt);
     if(mode==='combat')music.update(dt,{threat:Math.min(1,.2+wave*.13)});
-    if(assets&&mode!=='combat')assets.animate(seconds,dt,wave,{time:seconds});
+    if(assets&&mode!=='combat')assets.animate(seconds,dt,wave,{time:seconds,...controllerHandState});
     for(let i=tracers.length-1;i>=0;i--)if(seconds>=tracers[i].until){
       const item=tracers.splice(i,1)[0];
       scene.remove(item.object);item.object.geometry.dispose();item.object.material.dispose();
@@ -527,7 +552,7 @@ async function enter() {
         mode='ready'; clearBots(); info('PAUSE : VERIFIER VOTRE ENVIRONNEMENT');
       }
     });
-    xrSession.addEventListener('inputsourceschange',()=>{});
+    xrSession.addEventListener('inputsourceschange',()=>updateControllerRoles());
     session=xrSession;
     roomCaptureAsked=false;mode='ready';lastTime=0;
     await renderer.xr.setSession(xrSession);

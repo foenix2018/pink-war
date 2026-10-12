@@ -1,6 +1,7 @@
 import { equipmentForLevel } from './equipment.js';
 import { PLATFORMS, STAIRS, LIFTS, BRIDGES, BRIDGE_APPROACHES, insideSurface, traversalSurfaces, liftHeightAt } from './world-layout.js';
 import { PROBE, updateProbe } from './aerial-probes.js';
+import { NOISE_RADIUS, SHOT_RADIUS, propagateNoise, soundWaypoint } from './hearing.js';
 // World units are metres. The playable arena is exactly 200 × 200 m.
 export const ARENA_SIZE = 200;
 export const PORTAL = Object.freeze({ x: 0, z: -20 });
@@ -11,7 +12,7 @@ export const PORTAL_SITES = Object.freeze([
   {x:-50,z:72},{x:41,z:41},{x:6,z:-52},{x:-82,z:12}
 ].map(point=>Object.freeze({...point})));
 export function chooseWavePortals(obstacles=[],random=Math.random,wave=1,player={x:0,z:22},time=0) {
-  const count=wave<3?1:wave<6?2:3;
+  const count=wave<3?1:wave<6?2:wave<11?3:wave<16?4:5;
   const available=PORTAL_SITES.filter(p=>
     Math.hypot(p.x-player.x,p.z-player.z)>17 &&
     obstacles.every(b=>(b.walkableSurface&&!b.traversal)||Math.abs(p.x-b.x)>b.hx+9||Math.abs(p.z-b.z)>b.hz+8)
@@ -27,7 +28,8 @@ export function chooseWavePortals(obstacles=[],random=Math.random,wave=1,player=
   }
   return chosen;
 }
-export const MAX_LEVEL = 10;
+export const MAX_LEVEL = 20;
+export const MAX_ACTIVE_ENEMIES = 18;
 export const REGEN_DELAY = 5;
 export const CATWALK = Object.freeze({ x: 22.4, halfWidth: 2, end: 20, landing: 8, height: 1.58 });
 export const WEAPONS = Object.freeze([
@@ -55,7 +57,7 @@ export function walkSurfaceHeight(x, z, time=0, maxHeight=Infinity) {
     heights.push(Math.abs(z)>CATWALK.landing ? CATWALK.height*(CATWALK.end-Math.abs(z))/(CATWALK.end-CATWALK.landing) : CATWALK.height);
   return Math.max(0,...heights.filter(height=>height<=maxHeight+.001));
 }
-export const levelCount = level => 5 + (clamp(level, 1, MAX_LEVEL) - 1) * 3;
+export const levelCount = level => Math.min(128,5 + (Math.max(1,Math.floor(level)) - 1) * 3);
 export const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 
 export function segmentSphere(start, end, center, radius) {
@@ -132,10 +134,11 @@ export function traceEnemyHit(start, end, enemy) {
     ['limb',-.54,1.22,0,.23,.65],['limb',.54,1.22,0,.23,.65],
     ['limb',-.2,.55,0,.29,.65],['limb',.2,.55,0,.29,.65]
   ];
+  if(enemy.form==='bulwark')for(const zone of zones)if(zone[0]==='limb'&&zone[2]>1){zone[1]=Math.sign(zone[1])*.74;zone[2]=1.15;zone[3]=-.18;zone[4]=.34;}
   let best=null;
   for(const [zone,ox,oy,oz,r,multiplier] of zones) {
     const hit=segmentSphere(start,end,{x:enemy.x+(ox*cos+oz*sin)*elite,y:height+oy*elite,z:enemy.z+(-ox*sin+oz*cos)*elite},r*elite);
-    if(hit!==null && (best===null || hit<best.t))best={t:hit,zone,multiplier};
+    if(hit!==null && (best===null || hit<best.t))best={t:hit,zone,multiplier:multiplier*(enemy.form==='bulwark'&&zone==='torso'?.72:1)};
   }
   return best;
 }
@@ -231,6 +234,7 @@ export class ArenaGame {
     this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0, verticalSpeed: 0, grounded: true, jumpHeld: false, crouched:false };
     this.enemies = []; this.bullets = []; this.events = [];
     this.wave = 0; this.score = 0; this.kills = 0; this.time = 0;
+    this.endless=false;this.footstepDistance=0;
     this.state = 'playing'; this.cooldown = 0; this.invulnerable = 0;
     this.nextWave = .75; this.spawnTimer = 0; this.toSpawn = 0; this.nextId = 1;
     this.activePortals=[];
@@ -277,6 +281,24 @@ export class ArenaGame {
   get weapon() { return WEAPONS[this.weaponIndex]; }
   get unlockedWeapons() { return WEAPONS.filter((w,i) => this.ownedWeapons.has(i)); }
   event(type, data = {}) { this.events.push({ type, ...data }); }
+  emitNoise(kind,radius,position={x:this.player.x,y:this.player.elevation+1,z:this.player.z}) {
+    const heard=propagateNoise(this.enemies,{...position,elevation:this.player.elevation,kind,radius},this.obstacles,segmentBox,this.time);
+    for(const listener of this.enemies)if(listener.form==='listener'&&heard.includes(listener.id)&&this.time>=(listener.relayAt||0)){
+      listener.relayAt=this.time+4;listener.listenerPulseUntil=this.time+.6;
+      for(const ally of this.enemies)if(ally.id!==listener.id&&ally.awareness!=='engaged'&&Math.hypot(ally.x-listener.x,ally.z-listener.z)<18){
+        ally.awareness='search';ally.lastKnownX=position.x;ally.lastKnownZ=position.z;
+        ally.lastKnownHeight=this.player.elevation;ally.alertedUntil=Math.max(ally.alertedUntil||0,this.time+4);
+      }
+      this.event('enemy-scan',{x:listener.x,y:listener.elevation+1.8,z:listener.z});
+    }
+    if(heard.length)this.event('heard',{kind,ids:heard,position:{...position}});
+    return heard;
+  }
+  startEndless() {
+    if(this.state!=='won')return false;
+    this.endless=true;this.state='playing';this.nextWave=4;this.player.hp=100;
+    this.event('survival');return true;
+  }
   drainEvents() { const e = this.events; this.events = []; return e; }
   blocked(start, end) { return this.obstacles.some(b => segmentBox(start, end, b) !== null); }
   selectWeapon(index) {
@@ -327,10 +349,11 @@ export class ArenaGame {
   reload() {
     if (this.state !== 'playing' || this.reloadRemaining > 0 || this.ammo[this.weaponIndex] >= this.weapon.capacity) return false;
     this.reloadRemaining = this.weapon.reload; this.charge = 0;this.semiPending=false;
+    this.emitNoise('reload',NOISE_RADIUS.reload);
     this.event('reload', { duration: this.reloadRemaining }); return true;
   }
   beginWave() {
-    if (this.wave >= MAX_LEVEL || this.state !== 'playing') return;
+    if ((!this.endless && this.wave >= MAX_LEVEL) || this.state !== 'playing') return;
     this.wave++; this.toSpawn = levelCount(this.wave); this.spawned = 0;
     this.spawnTimer = 0; this.nextWave = -1;
     this.activePortals=chooseWavePortals(this.obstacles,this.random,this.wave,this.player,this.time);
@@ -343,27 +366,28 @@ export class ArenaGame {
   }
   spawnEnemy() {
     const ordinal = this.spawned++;
-    const elite = this.wave >= 3 && ordinal % (this.wave >= 8 ? 3 : 5) === 2;
-    const probe = this.wave >= 3 && !elite && (ordinal % 6 === 3 || (this.wave >= 7 && ordinal > 0 && ordinal % 6 === 0));
-    const ranged = probe || (this.wave >= 4 && !elite && ordinal % 4 === 1);
+    const special=this.wave>=11&&ordinal%7===5?'bulwark':this.wave>=6&&ordinal%7===4?'listener':null;
+    const elite = !special && this.wave >= 3 && ordinal % (this.wave >= 8 ? 3 : 5) === 2;
+    const probe = !special && this.wave >= 3 && !elite && (ordinal % 6 === 3 || (this.wave >= 7 && ordinal > 0 && ordinal % 6 === 0));
+    const ranged = probe || !!special || (this.wave >= 4 && !elite && ordinal % 4 === 1);
     const forms = ['stalker','scuttler','seer','brute'];
-    const form = probe ? 'probe' : elite ? 'brute' : forms[(ordinal + this.wave - 1) % forms.length];
+    const form = special || (probe ? 'probe' : elite ? 'brute' : forms[(ordinal + this.wave - 1) % forms.length]);
     const angle = this.random() * Math.PI * 2;
     const available=this.activePortals.filter(p=>p.openedAt<=this.time);
     const site=available.length?available[ordinal%available.length]:this.activePortals[0]||PORTAL;
     const x=site.x+Math.sin(site.yaw||0)*3.2+Math.cos(angle)*.95;
     const z=site.z+Math.cos(site.yaw||0)*3.2+Math.sin(angle)*.95;
-    const aimHeight = probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : form === 'seer' ? 1.38 : form === 'brute' ? 1.42 : 1.15;
+    const aimHeight = probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : ['seer','listener'].includes(form) ? 1.38 : ['brute','bulwark'].includes(form) ? 1.42 : 1.15;
     const homeHeight = walkSurfaceHeight(x, z,this.time,.3);
     const enemy = { id: this.nextId++, x, z, elevation: homeHeight + (probe ? PROBE.hover : 0),grounded:!probe,verticalSpeed:0,homeHeight,
       hp: probe ? Math.round((42 + this.wave * 14) * .7) : elite ? 95 + this.wave * 25 : 42 + this.wave * 14, elite, ranged, form, aimHeight,
-      speed: probe ? 3.6 + this.wave * .07 : Math.max(1.5,2.85 - (this.wave-1)*.09 + (elite ? -.018 : form === 'scuttler' ? .025 : form === 'seer' ? .012 : form === 'brute' ? -.015 : 0)),
+      speed: probe ? Math.min(5,3.6 + this.wave * .07) : Math.min(4.3,2.4+(this.wave-1)*.055)*(form==='bulwark'?.7:form==='scuttler'?1.12:1),
       tier: Math.max(1,Math.ceil(this.wave/2)),limpUntil:0,stunnedUntil:0,
       homeX:site.x,homeZ:site.z,portalId:site.id,
       radius: probe ? PROBE.radius : elite ? 1.05 : form === 'scuttler' ? .86 : form === 'brute' ? .95 : .8,
       hitRadius: probe ? .44 : form === 'scuttler' ? .91 : form === 'brute' ? 1.18 : form === 'seer' ? .94 : 1.05,
       attackTimer: .8 + this.random() * .6, phase: this.random() * Math.PI * 2,
-      awareness:'patrol',lastSeenAt:-999,lastKnownX:x,lastKnownZ:z,patrolAngle:angle,patrolTimer:.7+this.random()*2,alertedUntil:0 };
+      awareness:'patrol',lastSeenAt:-999,lastKnownX:x,lastKnownZ:z,lastKnownHeight:homeHeight,patrolAngle:angle,patrolTimer:.7+this.random()*2,alertedUntil:0 };
 
     this.enemies.push(enemy); this.toSpawn--; this.event('spawn', { id: enemy.id, x: enemy.x, y: enemy.elevation + enemy.aimHeight, z: enemy.z });
   }
@@ -383,10 +407,11 @@ export class ArenaGame {
       const vx = nx + rx * sx, vy = ny + sy, vz = nz + rz * sx, n = Math.hypot(vx, vy, vz);
       this.bullets.push({ id: this.nextId++, x: origin.x, y: origin.y, z: origin.z,
         vx: vx / n * w.speed, vy: vy / n * w.speed, vz: vz / n * w.speed, life: 2.4,
-        originX:origin.x,originY:origin.y,originZ:origin.z,
+        originX:origin.x,originY:origin.y,originZ:origin.z,originElevation:this.player.elevation,
         damage: w.damage * power, splash: w.splash * power, power, weapon: w.id, hostile: false });
     }
     this.ammo[this.weaponIndex]--; this.cooldown = w.interval; this.charge = 0;
+    this.emitNoise('shot',SHOT_RADIUS[w.id]*(.75+.25*power),origin);
     this.event('shot', { weapon: w.id, power,bulletId,origin:{...origin},direction:{x:nx,y:ny,z:nz} }); return true;
   }
   trigger(held, dt, origin, direction) {
@@ -417,12 +442,12 @@ export class ArenaGame {
     this.lastDamage = this.time; this.regenerating = false; this.event('damage', { hp: this.player.hp });
     if (this.player.hp <= 0) { this.state = 'over'; this.charge = 0; this.event('over'); }
   }
-  damageEnemy(target, amount, at, zone='torso',multiplier=1) {
+  damageEnemy(target, amount, at, zone='torso',multiplier=1,source=this.player) {
     if (!this.enemies.includes(target)) return;
     const armor=target.form?Math.min(.18,Math.max(0,(target.tier||1)-1)*.025):0;
     const effective=amount*multiplier*(1-armor*(zone==='head'?.35:1));
     target.hp -= effective;
-    target.lastKnownX=this.player.x;target.lastKnownZ=this.player.z;
+    target.lastKnownX=source.x;target.lastKnownZ=source.z;target.lastKnownHeight=source.elevation??this.player.elevation;
     target.alertedUntil=this.time+5;target.awareness='search';target.lastSeenAt=this.time;
     if(zone==='limb')target.limpUntil=Math.max(target.limpUntil||0,this.time+2);
     if(zone==='head')target.stunnedUntil=Math.max(target.stunnedUntil||0,this.time+.32);
@@ -449,13 +474,22 @@ export class ArenaGame {
     if (jumpDown && !p.jumpHeld && p.grounded && !p.crouched) { p.grounded = false; p.verticalSpeed = 7.25; this.event('jump'); }
     p.jumpHeld = jumpDown;
     const speed = p.crouched ? 3.0 : input.sprint ? 10 : 7, moveYaw = input.moveYaw ?? yaw;
+    const oldX=p.x,oldZ=p.z,wasGrounded=p.grounded;
     moveInArena(p, (Math.cos(moveYaw) * ix + Math.sin(moveYaw) * iz) * speed * dt,
       (-Math.sin(moveYaw) * ix + Math.cos(moveYaw) * iz) * speed * dt, .55, this.obstacles);
     this.settle(p,dt,true);
+    if(!wasGrounded&&p.grounded)this.emitNoise('land',NOISE_RADIUS.land);
+    if(p.grounded){
+      this.footstepDistance+=Math.hypot(p.x-oldX,p.z-oldZ);
+      if(this.footstepDistance>(p.crouched?1.25:input.sprint?1.9:1.65)){
+        this.footstepDistance=0;const kind=p.crouched?'crouch':input.sprint?'sprint':'step';
+        this.emitNoise(kind,NOISE_RADIUS[kind]);
+      }
+    }
     if (this.nextWave >= 0) { this.nextWave -= dt; if (this.nextWave <= 0) this.beginWave(); }
-    if (this.toSpawn > 0) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) {
+    if (this.toSpawn > 0 && this.enemies.length<MAX_ACTIVE_ENEMIES) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) {
       const available=this.activePortals.filter(p=>p.openedAt<=this.time);
-      if(available.length){this.spawnEnemy();this.spawnTimer=Math.max(.3,1.15-this.wave*.08);}
+      if(available.length){this.spawnEnemy();this.spawnTimer=Math.max(.35,1.15-this.wave*.045);}
       else this.spawnTimer=.1;
     } }
     this.navigation.update(this.player, this.time);
@@ -479,7 +513,7 @@ export class ArenaGame {
         && (horizontalDistance<5 || directionDot>-.28);
       if(seen){
         if(e.awareness!=='engaged')this.event('spotted',{id:e.id});
-        e.awareness='engaged';e.lastSeenAt=this.time;e.lastKnownX=this.player.x;e.lastKnownZ=this.player.z;
+        e.awareness='engaged';e.lastSeenAt=this.time;e.lastKnownX=this.player.x;e.lastKnownZ=this.player.z;e.lastKnownHeight=this.player.elevation;
         e.alertedUntil=this.time+3.8;
       }else if(this.time<(e.alertedUntil||0)){
         e.awareness='search';
@@ -487,6 +521,7 @@ export class ArenaGame {
         e.awareness='patrol';
       }
       let destinationX=e.lastKnownX,destinationZ=e.lastKnownZ;
+      const pursuit=e.awareness==='engaged'?this.player:{x:e.lastKnownX,z:e.lastKnownZ,elevation:e.lastKnownHeight||0};
       if(e.awareness==='engaged'){destinationX=this.player.x;destinationZ=this.player.z;}
       else if(e.awareness==='patrol'){
         // Loiter near the portal, occasionally changing direction. This isn't a
@@ -504,13 +539,13 @@ export class ArenaGame {
       }
       // An alerted ground unit approaches the bottom of the stairs, then climbs.
       // It never snaps onto a balcony just because it walked underneath it.
-      const playerSurface=traversalSurfaces(this.player.x,this.player.z,this.time)
-        .filter(surface=>surface.height>2&&Math.abs(surface.height-this.player.elevation)<.37)
-        .sort((a,b)=>Math.abs(a.height-this.player.elevation)-Math.abs(b.height-this.player.elevation))[0];
-      const playerRoute=playerSurface&&elevatedRouteForSurface(playerSurface.id,this.player.x);
+      const playerSurface=traversalSurfaces(pursuit.x,pursuit.z,this.time)
+        .filter(surface=>surface.height>2&&Math.abs(surface.height-pursuit.elevation)<.37)
+        .sort((a,b)=>Math.abs(a.height-pursuit.elevation)-Math.abs(b.height-pursuit.elevation))[0];
+      const playerRoute=playerSurface&&elevatedRouteForSurface(playerSurface.id,pursuit.x);
       let stairRoute=false;
       if(e.awareness!=='patrol'&&!e.bridgeDetour)
-        e.bridgeDetour=brokenBridgeDetour(e,this.player);
+        e.bridgeDetour=brokenBridgeDetour(e,pursuit);
       if(e.bridgeDetour&&e.elevation<=.3)e.bridgeDetour=null;
       if(e.bridgeDetour&&e.awareness!=='patrol'){
         // Descend the ramp on the enemy's own bank, then navigate across the
@@ -524,7 +559,7 @@ export class ArenaGame {
         destinationX=stair.x;
         destinationZ=e.stairStage===0?stair.topZ-.6:stair.bottomZ+1;
         stairRoute=true;
-      }else if(playerRoute && e.elevation<this.player.elevation-.3 && e.awareness!=='patrol'){
+      }else if(playerRoute && e.elevation<pursuit.elevation-.3 && e.awareness!=='patrol'){
         const si=ELEVATED_ROUTES.findIndex(route=>route.id===playerRoute),stair=ELEVATED_ROUTES[si];
         if(e.stairRoute!==stair.id||e.stairDirection!=='up'){e.stairRoute=stair.id;e.stairStage=0;e.stairDirection='up';}
         if(e.stairStage===0 && Math.hypot(e.x-stair.x,e.z-(stair.bottomZ+1))<1.7)e.stairStage=1;
@@ -539,7 +574,7 @@ export class ArenaGame {
         const enemyRoute=enemySurface&&elevatedRouteForSurface(enemySurface.id,e.x);
         const stair=enemyRoute?ELEVATED_ROUTES.find(route=>route.id===enemyRoute):
           e.stairDirection==='down'?ELEVATED_ROUTES.find(route=>route.id===e.stairRoute):null;
-        if(stair && e.elevation>.3 && this.player.elevation<e.elevation-.4 && e.awareness!=='patrol'){
+        if(stair && e.elevation>.3 && pursuit.elevation<e.elevation-.4 && e.awareness!=='patrol'){
           if(e.stairRoute!==stair.id||e.stairDirection!=='down'){e.stairRoute=stair.id;e.stairStage=0;e.stairDirection='down';}
           if(e.stairStage===0&&Math.hypot(e.x-stair.x,e.z-(stair.topZ-.6))<1.1)e.stairStage=1;
           destinationX=stair.x;destinationZ=e.stairStage===0?stair.topZ-.6:stair.bottomZ+1;stairRoute=true;
@@ -550,8 +585,9 @@ export class ArenaGame {
       dx/=goalDistance;dz/=goalDistance;
       if(this.obstacles.some(b=>!b.walkableSurface&&segmentBox(eye,{x:destinationX,y:eye.y,z:destinationZ},{...b,hx:b.hx+e.radius+.08,hz:b.hz+e.radius+.08})!==null)){
         if(e.awareness!=='patrol'&&!stairRoute){
-          const waypoint=this.navigation.waypoint(e);
+          const waypoint=e.awareness==='engaged'?this.navigation.waypoint(e):soundWaypoint(e,{x:destinationX,z:destinationZ},this.obstacles,segmentBox);
           if(waypoint){dx=waypoint.x-e.x;dz=waypoint.z-e.z;const n=Math.hypot(dx,dz)||1;dx/=n;dz/=n;}
+          else { e.patrolAngle=(e.patrolAngle||0)+.6;dx=Math.sin(e.patrolAngle);dz=Math.cos(e.patrolAngle); }
         }else{e.patrolAngle=(e.patrolAngle||0)+Math.PI*.64;e.patrolTimer=.6;}
       }
       for(const other of this.enemies){
@@ -605,13 +641,13 @@ export class ArenaGame {
         }
         this.event('impact', { ...at, bulletId:b.id, enemy: !!target, hostile: b.hostile, splash: b.splash,weapon:b.weapon,power:b.power||1,surface:target?'robot':surface,normal,direction:{x:b.vx,y:b.vy,z:b.vz} });
         if (target === this.player) this.damage(b.damage);
-        else if (target) this.damageEnemy(target, b.damage, at, zone, multiplier);
+        else if (target) this.damageEnemy(target, b.damage, at, zone, multiplier,{x:b.originX??this.player.x,z:b.originZ??this.player.z,elevation:b.originElevation??this.player.elevation});
         if (!b.hostile && b.splash > 0) for (const e of [...this.enemies]) {
           if (e === target) continue;
           const center = { x: e.x, y: e.elevation + e.aimHeight, z: e.z }, d = Math.hypot(e.x - at.x, e.z - at.z, center.y - at.y);
           // Cover also stops blast damage; back off the impact point from a wall.
           const blast = { x: at.x - b.vx * .0001, y: at.y, z: at.z - b.vz * .0001 };
-          if (d < b.splash && !this.blocked(blast, center)) this.damageEnemy(e, b.damage * (1 - d / b.splash * .65), center);
+          if (d < b.splash && !this.blocked(blast, center)) this.damageEnemy(e, b.damage * (1 - d / b.splash * .65), center,'torso',1,{x:b.originX??this.player.x,z:b.originZ??this.player.z,elevation:b.originElevation??this.player.elevation});
         }
         this.bullets.splice(i, 1);
       } else {
@@ -621,11 +657,11 @@ export class ArenaGame {
     }
     if (this.wave > 0 && this.toSpawn === 0 && this.enemies.length === 0 && this.nextWave < 0 && this.state === 'playing') {
       this.score += 250 + this.wave * 50; this.event('clear', { wave: this.wave });
-      if (this.wave === MAX_LEVEL) { this.state = 'won'; this.charge = 0; this.bullets = []; this.score += 2000; this.event('win'); }
+      if (!this.endless && this.wave === MAX_LEVEL) { this.state = 'won'; this.charge = 0; this.bullets = []; this.score += 2000; this.event('win'); }
       else this.nextWave = 5;
     }
   }
-  snapshot() { return { equipment: this.equipment, state: this.state, player: { ...this.player }, wave: this.wave, maxLevel: MAX_LEVEL, score: this.score, kills: this.kills, time: this.time,
+  snapshot() { return { equipment: this.equipment, state: this.state, player: { ...this.player }, wave: this.wave, maxLevel: MAX_LEVEL, endless:this.endless, score: this.score, kills: this.kills, time: this.time,
     weaponIndex: this.weaponIndex, weapon: { ...this.weapon }, unlockedWeapons: this.unlockedWeapons.map(w => w.id),weaponOffers:this.weaponOffers.map(offer=>({...offer})), ammo: this.ammo[this.weaponIndex],
     reloadRemaining: this.reloadRemaining, charge: this.charge, regenerating: this.regenerating, regenIn: Math.max(0, REGEN_DELAY - (this.time - this.lastDamage)),
     toSpawn: this.toSpawn, nextWave: this.nextWave, activePortals:this.activePortals.map(p=>({...p})), enemies: this.enemies.map(e => ({ ...e })), bullets: this.bullets.map(b => ({ ...b })) }; }

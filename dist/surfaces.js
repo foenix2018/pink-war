@@ -36,6 +36,17 @@ export function createSurfaceDetails() {
       c.fillStyle=i%2?'rgba(255,255,255,.34)':'rgba(25,25,25,.22)';c.fillRect(x,y,1+Math.floor(random()*3),1);
     }
   });armor.colorSpace=T.SRGBColorSpace;
+  const machine=make(256,(c,n)=>{
+    c.fillStyle='#dedfdf';c.fillRect(0,0,n,n);
+    for(let i=0;i<420;i++){
+      const x=random()*n,y=random()*n;c.strokeStyle=i%3?'rgba(53,64,70,.13)':'rgba(255,255,255,.4)';
+      c.lineWidth=.4+random();c.beginPath();c.moveTo(x,y);c.lineTo(x+1+random()*22,y+(random()-.5)*4);c.stroke();
+    }
+    for(let i=0;i<18;i++){
+      const x=random()*n,y=random()*n,r=5+random()*30,g=c.createRadialGradient(x,y,0,x,y,r);
+      g.addColorStop(0,'rgba(55,47,34,.19)');g.addColorStop(1,'rgba(55,47,34,0)');c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2);
+    }
+  });machine.colorSpace=T.SRGBColorSpace;
   const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;
   const c=canvas.getContext('2d'),gradient=c.createLinearGradient(0,0,0,256);
   for(const [stop,color] of [[0,'#7e91ac'],[.35,'#acb8c5'],[.49,'#626c80'],[.58,'#2c3343'],[1,'#101722']])gradient.addColorStop(stop,color);
@@ -46,5 +57,5 @@ export function createSurfaceDetails() {
     c.fillStyle=strip;c.fillRect(x,25,w,100);
   }
   const environment=new T.CanvasTexture(canvas);environment.mapping=T.EquirectangularReflectionMapping;environment.colorSpace=T.SRGBColorSpace;
-  return {fabric,coating,armor,environment};
+  return {fabric,coating,armor,machine,environment};
 }

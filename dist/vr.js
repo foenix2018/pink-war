@@ -1,6 +1,7 @@
 import { clamp, segmentBox, segmentSphere, traceEnemyHit } from './game-logic.js';
 import { portalIndicators } from './portal-indicator.js';
 import { DesktopGamepadInput, desktopAxis } from './desktop-input.js';
+import { syncTrackedHands } from './xr-hands.js';
 
 const $ = id => document.getElementById(id);
 const deadzone = v => Math.abs(v || 0) > .16 ? v : 0;
@@ -195,7 +196,7 @@ export class VRController {
     const material=new T.MeshBasicMaterial({map:texture,transparent:false,depthTest:false,depthWrite:false,toneMapped:false});
     const panel=new T.Mesh(new T.PlaneGeometry(1.3,.975),material);
     panel.position.set(0,-.02,-1.65);panel.renderOrder=160;panel.frustumCulled=false;panel.visible=false;
-    camera.add(panel);this.pauseBoard={panel,texture};
+    camera.add(panel);this.pauseBoard={panel,texture,canvas,guide:ctx.getImageData(0,0,1024,768),over:false};
   }
   removePauseBoard(){
     if(!this.pauseBoard)return;
@@ -290,10 +291,12 @@ export class VRController {
       if (rate) this.setFrameRate(rate);
       this.controllers = [0, 1].map(index => {
         const ray = renderer.xr.getController(index); this.rig.add(ray);
-        const mount = new T.Group(), gun = world.createGun(), bare = world.createHand();
+        const anchor = new T.Group(), mount = new T.Group(), gun = world.createGun(), bare = world.createHand();
+        anchor.name = 'Tracked controller grip'; anchor.matrixAutoUpdate = false; anchor.visible = false;
+        this.rig.add(anchor); anchor.add(mount);
         // The other controller is the free hand: no second glove on the weapon in a headset.
         gun.userData.showSupport = false; gun.userData.support.visible = false;
-        mount.position.set(GRIP_MOUNT.x, GRIP_MOUNT.y, GRIP_MOUNT.z); ray.add(mount);
+        mount.position.set(GRIP_MOUNT.x, GRIP_MOUNT.y, GRIP_MOUNT.z);
         gun.visible = bare.visible = false; mount.add(gun, bare);
         this.makeAmmo(gun);
         // Models held a few centimetres from the eyes gain nothing from the sun's shadow pass.
@@ -301,7 +304,7 @@ export class VRController {
         const connected = e => { ray.userData.source = e.data; this.applyRoles(); this.triggerBlocked = true; };
         const disconnected = () => { const wasMain = ray.userData.source?.handedness === settingsOf(this).hand; ray.userData.source = null; this.applyRoles(); if (wasMain) { this.cancelTrigger(); this.hooks.pause(); } };
         ray.addEventListener('connected', connected); ray.addEventListener('disconnected', disconnected);
-        return { ray, mount, gun, bare, level: 0, connected, disconnected };
+        return { ray, anchor, mount, gun, bare, source:null, level: 0, connected, disconnected };
       });
       this.hooks.begin(); this.makeHUD(); this.makeSight(); this.makePauseBoard();document.body.classList.add('xr-mode');
       this.positionRig();
@@ -395,6 +398,11 @@ export class VRController {
     return this.lastMoveYaw ?? heading;
   }
   input(frame) {
+    if(this.mode==='xr')frame ||= this.hooks.world().renderer.xr.getFrame?.();
+    if (this.mode === 'xr' && frame && this.controllers?.length) {
+      syncTrackedHands(this.controllers,this.session,frame,this.hooks.world().renderer.xr.getReferenceSpace());
+      this.applyRoles();
+    }
     const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, fire: false, sprint: false, precision: false, aim:false, jump: false, pickup: false, crouchToggle: false };
     const xr = this.mode === 'xr', cfg = settingsOf(this), mainHand = cfg.hand, sideHand = otherHand(mainHand);
     const desktop = xr ? null : (this.desktopGamepads ||= new DesktopGamepadInput()).select(navigator.getGamepads?.() || []);
@@ -511,8 +519,21 @@ export class VRController {
   }
   update(dt, flash, recoil = 0, feel = null) {
     if (!this.active) return;
-    if(this.pauseBoard)this.pauseBoard.panel.visible=this.mode==='xr'&&this.hooks.phase()==='paused';
+    if(this.pauseBoard)this.pauseBoard.panel.visible=this.mode==='xr'&&['paused','over'].includes(this.hooks.phase());
     const game = this.hooks.game();
+    if(this.pauseBoard&&this.pauseBoard.over!==(this.hooks.phase()==='over')){
+      const board=this.pauseBoard,c=board.canvas.getContext('2d');board.over=this.hooks.phase()==='over';
+      if(!board.over)c.putImageData(board.guide,0,0);
+      else{
+        const won=game.state==='won',b=buttonNames(settingsOf(this).hand);
+        c.fillStyle='#121a29';c.fillRect(0,0,1024,768);c.textAlign='center';
+        c.fillStyle='#ffb3d5';c.font='bold 58px sans-serif';c.fillText(won?'CAMPAGNE TERMINÉE':'TRANSMISSION PERDUE',512,250,940);
+        c.fillStyle='#eef3fc';c.font='34px sans-serif';c.fillText(won?'20 niveaux · Les machines reviennent.':'Une nouvelle aube vous attend.',512,330);
+        c.font='bold 38px sans-serif';c.fillText(`${b.reload} : ${won?'CONTINUER EN SURVIE':'REJOUER'}`,512,450);
+        c.font='30px sans-serif';c.fillText(`${b.next} : QUITTER LE CASQUE`,512,520);c.textAlign='left';
+      }
+      board.texture.needsUpdate=true;
+    }
     if (this.mode === 'xr') {
       const main = settingsOf(this).hand, level = Math.max(1, game.wave), kick = clamp(recoil / .11, 0, 1);
       this.reloadGesture = Math.max(0, this.reloadGesture - dt);

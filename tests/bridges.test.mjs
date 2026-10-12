@@ -111,7 +111,7 @@ test('an alerted machine actually walks down, around and back up to reach the op
  const enemy={id:57,x:-20,z:39,elevation:4.8,grounded:true,verticalSpeed:0,speed:5,radius:.6,
    form:'stalker',elite:false,ranged:false,hp:99999,attackTimer:999,phase:0,
    aimHeight:1.15,yaw:Math.PI/2,homeX:-20,homeZ:39,stunnedUntil:0,limpUntil:0,
-   alertedUntil:999,awareness:'engaged',lastKnownX:game.player.x,lastKnownZ:game.player.z,lastSeenAt:0};
+   alertedUntil:999,awareness:'engaged',lastKnownX:game.player.x,lastKnownZ:game.player.z,lastKnownHeight:game.player.elevation,lastSeenAt:0};
  game.enemies=[enemy];
  let bottom=false,ascended=false,airCrossing=false;
  for(let i=0;i<640;i++){

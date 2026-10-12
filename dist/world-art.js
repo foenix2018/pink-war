@@ -14,14 +14,15 @@ function texture(size, paint, repeat = 1) {
   map.wrapS = map.wrapT = T.RepeatWrapping; map.repeat.set(repeat, repeat); map.anisotropy = 4;
   return map;
 }
-function weatherTexture(kind) {
-  return texture(512, (c, n, rand) => {
+function weatherTexture(kind,detail=512) {
+  return texture(detail, (c, n, rand) => {
     const base = kind === 'road' ? [75,80,79] : kind === 'metal' ? [117,119,117] : [157,159,156];
     const pixels = c.createImageData(n,n);
     for (let y=0;y<n;y++) for (let x=0;x<n;x++) {
       const index=(y*n+x)*4, grain=(rand()-.5)*37;
       const mottling=Math.sin(x*.033+Math.sin(y*.047))*7+Math.sin(y*.027+x*.012)*6;
-      for(let k=0;k<3;k++)pixels.data[index+k]=base[k]+grain+mottling;
+      const grainScale=kind==='road'?Math.sin(x*.49+y*.35)*6:Math.sin(x*.16)*Math.cos(y*.19)*3;
+      for(let k=0;k<3;k++)pixels.data[index+k]=base[k]+grain+mottling+grainScale;
       pixels.data[index+3]=255;
     }
     c.putImageData(pixels,0,0);
@@ -67,6 +68,39 @@ export function paintRuinSky(c,w,h,blue=false) {
   const colors=blue?['#071526','#12243a','#263d58','#53728c','#30445b','#15283d']:['#130e22','#272238','#493a55','#7e6478','#423951','#1b2236'];
   [0,.29,.44,.54,.7,1].forEach((stop,i)=>g.addColorStop(stop,colors[i]));c.fillStyle=g;c.fillRect(0,0,w,h);
   const rand=randomSource(85);
+  // Periodic fractal cloud density: shaded continuous volumes, baked once.
+  // Horizontal lattice wrapping removes the seam in the spherical sky.
+  const cw=512,ch=256,cloudCanvas=document.createElement('canvas');cloudCanvas.width=cw;cloudCanvas.height=ch;
+  const cloudContext=cloudCanvas.getContext('2d'),pixels=cloudContext.createImageData(cw,ch);
+  const lattice=(x,y,period)=>{
+    x=((x%period)+period)%period;
+    const n=Math.sin(x*127.1+y*311.7+81.6)*43758.5453;return n-Math.floor(n);
+  };
+  function noise(x,y,period){
+    const ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,sx=fx*fx*(3-2*fx),sy=fy*fy*(3-2*fy);
+    const a=lattice(ix,iy,period),b=lattice(ix+1,iy,period),d=lattice(ix,iy+1,period),e=lattice(ix+1,iy+1,period);
+    return (a+(b-a)*sx)*(1-sy)+(d+(e-d)*sx)*sy;
+  }
+  function density(x,y){
+    let value=0,weight=0;
+    for(let octave=0;octave<5;octave++){
+      const scale=2**octave,amp=.5**octave;
+      value+=noise(x*8*scale,y*19*scale,8*scale)*amp;weight+=amp;
+    }
+    return value/weight;
+  }
+  for(let y=0;y<ch*.53;y++)for(let x=0;x<cw;x++){
+    const nx=x/cw,ny=y/ch,d=density(nx,ny),edge=Math.max(0,Math.min(1,(d-.43)*6));
+    const lighting=Math.max(0,Math.min(1,.5+(density(nx-.004,ny-.008)-d)*6));
+    const fade=Math.min(1,Math.max(0,(.53-ny)*14)),i=(y*cw+x)*4;
+    pixels.data[i]=28+lighting*70;pixels.data[i+1]=blue?43+lighting*70:34+lighting*67;
+    pixels.data[i+2]=blue?59+lighting*73:51+lighting*68;pixels.data[i+3]=edge*fade*176;
+  }
+  cloudContext.putImageData(pixels,0,0);c.drawImage(cloudCanvas,0,0,w,h);
+  for(let i=0;i<230;i++){
+    const x=rand()*w,y=rand()*h*.32,alpha=(.14+rand()*.4)*(1-Math.min(1,density(x/w,y/h)*1.2));
+    c.fillStyle=`rgba(213,225,243,${alpha})`;c.beginPath();c.arc(x,y,.4+rand()*.9,0,Math.PI*2);c.fill();
+  }
   // Broken, overlapping cloud shelves leave a warm opening above the horizon.
   // These are baked into the existing sky map, with no additional VR render pass.
   for(let bank=0;bank<7;bank++) {
@@ -110,7 +144,7 @@ function damagedBlock(seed) {
 
 export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, quality='medium') {
   const group=new T.Group();group.name='Ruined megacity — reclaimed districts';scene.add(group);
-  const rand=randomSource(4107), concreteMap=weatherTexture('concrete'), metalMap=weatherTexture('metal'), roadMap=weatherTexture('road');
+  const rand=randomSource(4107), detail=quality==='high'?1024:512,concreteMap=weatherTexture('concrete',detail), metalMap=weatherTexture('metal',detail), roadMap=weatherTexture('road',detail);
   const std=(color,roughness=.9,metalness=.04,map=concreteMap)=>new T.MeshStandardMaterial({color,roughness,metalness,map,bumpMap:map,bumpScale:map===metalMap?.018:.047});
   const m={concrete:std(0xb0b5b5),chalk:std(0xc3c7c5),char:std(0x5f6668),road:std(0xa2aaa7,.96,.025,roadMap),
     steel:std(0x727d7a,.7,.58,metalMap),rust:std(0x917055,.94,.25,metalMap),black:std(0x252e2c,.92,.15,metalMap),
@@ -134,7 +168,7 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
         if(property==='map')tex.colorSpace=T.SRGBColorSpace;
         for(const mat of destinations){
           // A normal map supersedes procedural bump; simultaneous bump distorts silhouettes.
-          if(property==='normalMap'){mat.bumpMap=null;mat.bumpScale=0;mat.normalScale=new T.Vector2(.52,.52);}
+          if(property==='normalMap'){mat.bumpMap=null;mat.bumpScale=0;mat.normalScale=new T.Vector2(.52,-.52);}
           mat[property]=tex;mat.needsUpdate=true;
         }
         pbrStatus.loaded++;
@@ -193,8 +227,8 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
 
   roadMap.repeat.set(18,18);
   const geometry={block:damagedBlock(1),broken:damagedBlock(4),slab:damagedBlock(9),box:new T.BoxGeometry(1,1,1),
-    rounded:bevelBox(1,1,1,.06,1),cylinder:new T.CylinderGeometry(1,1,1,12),taper:new T.CylinderGeometry(.68,1,1,10),
-    sphere:new T.SphereGeometry(1,12,7),stone:new T.IcosahedronGeometry(1,0),leaves:new T.IcosahedronGeometry(1,1),
+    rounded:bevelBox(1,1,1,.06,2),cylinder:new T.CylinderGeometry(1,1,1,24),taper:new T.CylinderGeometry(.68,1,1,20),
+    sphere:new T.SphereGeometry(1,20,12),stone:new T.IcosahedronGeometry(1,1),leaves:new T.IcosahedronGeometry(1,1),
     ring:new T.TorusGeometry(1,.07,5,20),decal:new T.PlaneGeometry(1,1),puddle:new T.CircleGeometry(1,24)};
   const puddlePositions=geometry.puddle.attributes.position;
   for(let i=1;i<puddlePositions.count;i++) {
@@ -473,10 +507,11 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
   sign('SECTEUR 07','RELAIS / RÉSEAU ACTIF',0,6,-67.91);
   sign('MAINTENANCE','EST / ÉNERGIE',38,5.6,22.09);
   // Shared pools limit the static city to a few dozen material/geometry draws.
-  let instances=0;
+  let instances=0;const windBatches=[],windMatrix=new T.Matrix4();let windAt=-1;
   for(const {geometry,mat,items} of batches.values()) {
     const mesh=new T.InstancedMesh(geometry,mat,items.length);items.forEach((matrix,i)=>mesh.setMatrixAt(i,matrix));
     mesh.castShadow=!mat.isMeshBasicMaterial&&geometry!==grassGeometry&&mat!==m.scar&&mat!==m.wet;mesh.receiveShadow=!mat.isMeshBasicMaterial;mesh.computeBoundingSphere();group.add(mesh);instances+=items.length;
+    if(mat===m.foliage||mat===m.foliageLight){mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);mesh.boundingSphere.radius+=.4;windBatches.push({mesh,items});}
   }
   for(const [mat,list] of custom){const mesh=new T.Mesh(merge(list),mat);mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);for(const part of list)part.dispose();}
   // Sparse, slow-moving dust makes light and distance readable with one draw call.
@@ -485,5 +520,15 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
   dustGeometry.setAttribute('position',new T.BufferAttribute(positions,3));
   const dust=new T.Points(dustGeometry,new T.PointsMaterial({color:0xd7c7a5,size:.026,opacity:.37,transparent:true,depthWrite:false}));group.add(dust);
   group.userData.instances=instances;group.userData.districts=['Brèche centrale','Archives envahies','Maintenance','Relais'];
-  return {group,materials:m,pbrStatus,stats:{interiorBuildings:structures.length,outerBuildings:OUTER_BUILDINGS.length,perimeterWalls:PERIMETER_WALLS.length},update(time){dust.position.x=Math.sin(time*.025)*2.5;dust.position.y=Math.sin(time*.06)*.25;},setAccent(color){m.accent.color.setHex(color);}};
+  return {group,materials:m,pbrStatus,stats:{interiorBuildings:structures.length,outerBuildings:OUTER_BUILDINGS.length,perimeterWalls:PERIMETER_WALLS.length,windFoliage:true,sky:'fractal night clouds'},update(time){
+    dust.position.x=Math.sin(time*.025)*2.5;dust.position.y=Math.sin(time*.06)*.25;
+    if(time>=windAt){
+      windAt=time+1/15;
+      for(const {mesh,items} of windBatches){
+        items.forEach((base,i)=>{windMatrix.copy(base);const wave=Math.sin(time*.9+base.elements[12]*.13+base.elements[14]*.07)*.026;
+          windMatrix.elements[4]+=wave*base.elements[5];windMatrix.elements[6]+=wave*.4*base.elements[5];mesh.setMatrixAt(i,windMatrix);});
+        mesh.instanceMatrix.needsUpdate=true;
+      }
+    }
+  },setAccent(color){m.accent.color.setHex(color);}};
 }

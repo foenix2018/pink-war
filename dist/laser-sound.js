@@ -9,8 +9,8 @@ export const LASER_PROFILES=Object.freeze({
   nova:Object.freeze({pitch:930,end:62,duration:.51,body:100,thump:37,noise:.58,volume:.165,decay:.56,mechanism:640,weight:1.8})
 });
 
-// Real CC0 WAV by teckpow, OpenGameArt (dist/audio/laser-shooting-cc0.wav).
-// Synthesized layers remain as fallbacks and provide distinct weapon signatures.
+// Five independent Kenney CC0 recordings; mono PCM WAV also decodes on iPhone.
+// Synthesized layers retain mechanical transients, bass and an offline fallback.
 const liveSamples=new WeakMap(),decodedSamples=new WeakMap();
 // A shared, quiet pair of early reflections suggests the surrounding ruined city.
 // No feedback loop: rapid fire cannot accumulate into an increasingly loud reverb tail.
@@ -50,15 +50,20 @@ export function disposeLaserAudio(ctx){
   state.voices.clear();state.charge=null;
   for(const node of state.nodes)node.disconnect();spaces.delete(ctx);
 }
-export const REAL_LASER_SAMPLE='audio/laser-shooting-cc0.wav';
+export const LASER_SAMPLES=Object.freeze(Object.fromEntries(
+  ['r9','bloom','lance','thorn','nova'].map(id=>[id,globalThis.__PINKWAR_AUDIO_SAMPLES?.[id]||`audio/kenney/${id}.wav`])
+));
+export const REAL_LASER_SAMPLE=LASER_SAMPLES.r9;
 export async function loadRealLaserSample(ctx,load=globalThis.fetch){
  if(!ctx||!load)return false;
  let item=liveSamples.get(ctx);
  if(item)return item.then(()=>true).catch(()=>false);
- item=Promise.resolve().then(()=>load(REAL_LASER_SAMPLE))
-  .then(r=>{if(!r.ok)throw Error('Laser sample missing');return r.arrayBuffer();})
-  .then(bytes=>ctx.decodeAudioData(bytes)).then(buffer=>{decodedSamples.set(ctx,buffer);liveSamples.set(ctx,Promise.resolve(buffer));return buffer;})
-  .catch(error=>{liveSamples.delete(ctx);throw error;});
+ const buffers=decodedSamples.get(ctx)||new Map();decodedSamples.set(ctx,buffers);
+ item=Promise.all(Object.entries(LASER_SAMPLES).map(async([id,url])=>{
+   if(buffers.has(id))return true;
+   const response=await load(url);if(!response.ok)throw Error('Laser sample missing: '+id);
+   const buffer=await ctx.decodeAudioData(await response.arrayBuffer());buffers.set(id,buffer);return true;
+ })).catch(error=>{liveSamples.delete(ctx);throw error;});
  liveSamples.set(ctx,item);
  return item.then(()=>true).catch(()=>false);
 }
@@ -100,24 +105,29 @@ export function playLaserShot(ctx,weapon='r9',power=1){
   stopCharge(space,ctx.currentTime);
   const p=LASER_PROFILES[weapon]||LASER_PROFILES.r9;
   // The downloaded CC0 sample is played immediately, not deferred to a promise after the shot.
-  const real=decodedSamples.get(ctx);
+  const real=decodedSamples.get(ctx)?.get(weapon);
   if(real){
     const sample=ctx.createBufferSource(),gain=ctx.createGain(),compressor=ctx.createDynamicsCompressor();
     sample.buffer=real;
-    const rates={r9:1.12,bloom:.92,lance:1.24,thorn:.74,nova:.56};
+    const rates={r9:1,bloom:1.08,lance:1.15,thorn:.9,nova:.8};
     sample.playbackRate.value=(rates[weapon]||1)*(1+.015*Math.sin(ctx.currentTime*97));
-    const peak={r9:.042,bloom:.032,lance:.048,thorn:.055,nova:.064}[weapon]||.16;
+    const peak={r9:.32,bloom:.23,lance:.34,thorn:.37,nova:.4}[weapon]||.3;
     gain.gain.value=peak*Math.max(.3,Math.min(1,Number(power)||1));
     compressor.threshold.value=-13;compressor.ratio.value=2.7;
     sample.connect(gain);gain.connect(compressor);compressor.connect(space.master);
     if(space.reflections)compressor.connect(space.reflections);
-    sample.start(ctx.currentTime);
+    const duration=real.duration/sample.playbackRate.value;
+    const playLength=Math.min(duration,weapon==='bloom'?.12:weapon==='r9'?.27:.8);
+    gain.gain.setValueAtTime(gain.gain.value,ctx.currentTime);
+    gain.gain.setValueAtTime(gain.gain.value,ctx.currentTime+Math.max(.005,playLength-(weapon==='bloom'?.025:.06)));
+    gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+playLength);
+    sample.start(ctx.currentTime);sample.stop(ctx.currentTime+playLength+.005);
     remember(space,sample,[sample,gain,compressor]);
   }
   const strength=Math.max(.25,Math.min(1,Number(power)||1));
   const t=ctx.currentTime+.003;
   const output=ctx.createGain(),filter=ctx.createBiquadFilter(),compress=ctx.createDynamicsCompressor();
-  output.gain.value=.65;
+  output.gain.value=real?.32:.65;
   filter.type='lowpass';filter.frequency.setValueAtTime(9000,t);
   filter.frequency.exponentialRampToValueAtTime(1350,t+p.decay);
   compress.threshold.value=-18;compress.knee.value=12;compress.ratio.value=3;
