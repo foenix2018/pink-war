@@ -42,7 +42,8 @@ const direction = new THREE.Vector3(), head = new THREE.Vector3();
 const orientation = new THREE.Quaternion();
 let session = null, audio = null, mode = 'idle', startTime = 0, roomCaptureAsked = false;
 let hp = 100, score = 0, wave = 1, shotCooldown = 0, enemyCooldown = 0, lastTime = 0;
-let assets=null, assetsLoading=null, weaponIndex=0, ammo=WEAPONS[0].capacity, reloadUntil=0, triggerStarted=0, triggerHeld=false;
+let assets=null, assetsLoading=null, assetError='', weaponIndex=0, ammo=WEAPONS[0].capacity, reloadUntil=0, triggerStarted=0, triggerHeld=false;
+const ammoByWeapon=WEAPONS.map(weapon=>weapon.capacity);
 let lastLeftX=false,lastLeftY=false,lastRightA=false, decorEnabled=true, muzzleUntil=0;
 const music=createMusicBed();
 let scanMessage = 'EN ATTENTE DU SCAN', bWasDown = false;
@@ -51,7 +52,7 @@ const controllers = [renderer.xr.getController(0), renderer.xr.getController(1)]
 const mounts = [];
 const wireMaterial = new THREE.LineBasicMaterial({ color:tint, transparent:true, opacity:.5, depthWrite:false });
 const blockerMaterial = new THREE.MeshBasicMaterial({
-  color:0xffffff, colorWrite:false, depthWrite:false, side:THREE.DoubleSide
+  color:0xffffff, colorWrite:false, depthWrite:true, side:THREE.DoubleSide
 });
 
 const canvas = document.createElement('canvas');
@@ -278,7 +279,8 @@ function selectWeapon(index) {
   if (!assets) return;
   const available=WEAPONS.map((w,i)=>w.level<=wave?i:-1).filter(i=>i>=0);
   if(!available.includes(index))index=available[0]||0;
-  weaponIndex=index;ammo=WEAPONS[index].capacity;reloadUntil=0;triggerStarted=0;
+  ammoByWeapon[weaponIndex]=ammo;
+  weaponIndex=index;ammo=ammoByWeapon[index];reloadUntil=0;triggerStarted=0;
   assets.setWeapon(index,Math.min(wave,10));
   info('ARME : '+WEAPONS[index].name);
 }
@@ -298,7 +300,7 @@ function shoot(source,frame,charge=1) {
   if(ammo<=0){beginReload(now);return;}
   const pose=source&&frame?.getPose(source.targetRaySpace,renderer.xr.getReferenceSpace());
   if(!pose)return;
-  shotCooldown=now;ammo--;
+  shotCooldown=now;ammo--;ammoByWeapon[weaponIndex]=ammo;
   const o=pose.transform.position,q=pose.transform.orientation;
   const origin=new THREE.Vector3(o.x,o.y,o.z);
   direction.set(0,0,-1).applyQuaternion(new THREE.Quaternion(q.x,q.y,q.z,q.w)).normalize();
@@ -326,6 +328,7 @@ function startCombat() {
   if (!point) { info('ZONE DE SOL TROP ETROITE OU MASQUEE'); return; }
   if(!assets){info('CHARGEMENT DES PERSONNAGES ET ARMES');return;}
   hp=100;score=0;wave=1;enemyCooldown=0;triggerHeld=false;
+  ammoByWeapon.splice(0,ammoByWeapon.length,...WEAPONS.map(weapon=>weapon.capacity));
   clearBots();selectWeapon(0);createBot(point);
   const companionPoint=pickSpawn();
   if(companionPoint)assets.placeCompanion(companionPoint,head);
@@ -356,7 +359,7 @@ function updateCombat(seconds,dt) {
     const point=pickSpawn();
     if(point){createBot(point);enemyCooldown=seconds+3.5;}
   }
-  if(reloadUntil && seconds>=reloadUntil){reloadUntil=0;ammo=WEAPONS[weaponIndex].capacity;}
+  if(reloadUntil && seconds>=reloadUntil){reloadUntil=0;ammo=WEAPONS[weaponIndex].capacity;ammoByWeapon[weaponIndex]=ammo;}
   assets?.animate(seconds,dt,wave,{
     ammo,capacity:WEAPONS[weaponIndex].capacity,
     reloading:reloadUntil>0,reloadProgress:reloadUntil?Math.max(0,1-(reloadUntil-seconds)/WEAPONS[weaponIndex].reload):0,
@@ -473,7 +476,7 @@ function tick(ms, frame) {
     }
     const count=[...surfaces.values()].filter(v=>v.isFloor).length;
     if(mode==='ready'){
-      if(!assets)info('CHARGEMENT DES MODELES PINK WAR');
+      if(!assets && !assetError)info('CHARGEMENT DES MODELES PINK WAR');
       else if(count){
         if(scanMessage!=='SOL REPERE : PRET A JOUER')info('SOL REPERE : PRET A JOUER');
       }else if(seconds-startTime>3&&scanMessage==='DETECTION DES SURFACES')
@@ -536,12 +539,12 @@ async function enter() {
       assetsLoading ||= import('./at-home-assets.js')
         .then(module=>module.createAtHomeAssets(scene,hero))
         .then(pack=>{
-          assets=pack;assetsLoading=null;updateControllerRoles();
+          assets=pack;assetsLoading=null;assetError='';updateControllerRoles();
           for(const record of surfaces.values())assets.projectRuin(record,decorEnabled);
           info('MODELES PINK WAR CHARGES. CHERCHEZ LE SOL.');
         }).catch(err=>{
-          assetsLoading=null;console.error('AT HOME asset load failed',err);
-          info('MODELES PINK WAR INDISPONIBLES : '+(err?.message||'chargement impossible'));
+          assetsLoading=null;assetError=err?.message||'chargement impossible';console.error('AT HOME asset load failed',err);
+          info('MODELES PINK WAR INDISPONIBLES : '+assetError);
         });
     }else updateControllerRoles();
   } catch (error) {
