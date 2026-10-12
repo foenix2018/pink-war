@@ -4,7 +4,7 @@ import {
   BRIDGES, BRIDGE_LANDINGS, BRIDGE_APPROACHES, PLATFORMS, STAIRS,
   bridgeContains, bridgeSegments, traversalSurfaces, createTraversalObstacles
 } from '../dist/world-layout.js';
-import { ArenaGame, walkSurfaceHeight, elevatedRouteForSurface } from '../dist/game-logic.js';
+import { ArenaGame, walkSurfaceHeight, elevatedRouteForSurface, brokenBridgeDetour } from '../dist/game-logic.js';
 
 const EPS=1e-7;
 test('three structurally connected footbridges use the same geometries for visual spans and player floors',()=>{
@@ -91,4 +91,15 @@ test('jumping across broken crossing is possible, while simply walking off cause
  for(let i=0;i<70;i++)jumped.step(.016,{x:1,moveYaw:0,yaw:0,jump:i===0});
  assert.ok(jumped.player.x>b.x1+(b.x2-b.x1)*b.gapTo,'run-jump reaches far side');
  assert.ok(jumped.player.elevation>b.height-1.2,'jump can reach intact far deck');
+});
+
+test('AI detours around the broken span but not on intact bridges or the same bank',()=>{
+ const b=BRIDGES.find(b=>b.damage);
+ const a={x:-19,z:b.z,elevation:b.height};
+ const far={x:-10.8,z:b.z,elevation:b.height};
+ assert.equal(brokenBridgeDetour(a,far),'garden-stairs');
+ assert.equal(brokenBridgeDetour(far,a),'ruin-approach');
+ assert.equal(brokenBridgeDetour({...a,elevation:0},far),null);
+ assert.equal(brokenBridgeDetour(a,{...far,z:far.z+8}),null);
+ assert.equal(brokenBridgeDetour({...a,x:-22},{...far,x:-20}),null);
 });
