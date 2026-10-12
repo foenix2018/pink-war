@@ -22,5 +22,6 @@ jobs:
           node --check dist/soldier.js
           node --check dist/scene.js
           node --check dist/vr.js
+          node --check dist/at-home.js
       - name: Tests unitaires
         run: npm test
