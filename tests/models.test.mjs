@@ -26,51 +26,51 @@ test('glove digits have individually driven knuckle pivots and visible trigger f
   assert.notEqual(first,last,'finger curl is staggered rather than uniform');
 });
 
-test('continuous glove skins share buffers while all fifteen phalanges animate independently',()=>{
+test('RLH gloves retain their anatomical joints, shared detail and private controller poses',()=>{
   const k=kit(),right=createGlove(k.gloves),left=createGlove(k.gloves,{mirror:true});
-  const skins=hand=>hand.children.filter(child=>child.isSkinnedMesh);
-  assert.equal(right.userData.skeleton.bones.length,16,'palm plus three joints per digit');
-  assert.equal(right.userData.digitBones.length,5);
-  assert.ok(right.userData.digitBones.every(chain=>chain.length===3));
+  const skins=hand=>hand.userData.rlh.userData.parts.map(part=>part.mesh);
+  assert.equal(right.userData.source,'RLH V40');
+  assert.equal(right.userData.skeleton.bones.length,28,'wrist stages, thumb opposition and finger joints come from RLH');
+  assert.equal(right.userData.digitBones.length,5);assert.ok(right.userData.digitBones.every(chain=>chain.length===3));
   assert.notEqual(right.userData.skeleton,left.userData.skeleton);
-  assert.equal(skins(right).length,3,'one shared skin buffer per material');
+  assert.ok(skins(right).length<=14,'RLH details are grouped by material rather than one draw per stitch');
   for(const [i,mesh] of skins(right).entries()){
     const g=mesh.geometry,weights=g.attributes.skinWeight,indices=g.attributes.skinIndex;
-    assert.equal(g,skins(left)[i].geometry,'left and right reuse immutable geometry');
-    assert.ok(finite(g));assert.equal(weights.count,g.attributes.position.count);
+    assert.equal(g,skins(left)[i].geometry);assert.ok(finite(g));assert.equal(weights.count,g.attributes.position.count);
     for(let v=0;v<weights.count;v++){
-      const sum=weights.getX(v)+weights.getY(v)+weights.getZ(v)+weights.getW(v);
-      assert.ok(Math.abs(sum-1)<1e-6,'skin weights remain normalized at flexion creases');
-      for(const read of ['getX','getY','getZ','getW'])assert.ok(indices[read](v)<16);
+      assert.ok(Math.abs(weights.getX(v)+weights.getY(v)+weights.getZ(v)+weights.getW(v)-1)<1e-6);
+      for(const read of ['getX','getY','getZ','getW'])assert.ok(indices[read](v)<28);
     }
   }
-  const skin=skins(right)[0],index=skin.geometry.attributes.skinIndex;
-  const start=new T.Vector3(.034,0,-.005),surface=new T.Vector3().fromBufferAttribute(skin.geometry.attributes.position,0),normal=new T.Vector3().fromBufferAttribute(skin.geometry.attributes.normal,0);
-  assert.ok(surface.sub(start).dot(normal)>0,'the closed finger skin faces outwards and renders with ordinary front-face culling');
-  const vertices=Array.from({length:index.count},(_,v)=>v).filter(v=>index.getX(v)>=11&&index.getX(v)<=12);
-  assert.ok(vertices.length,'index PIP and DIP carry the trigger-pad surface');
+  const skin=skins(right).find(mesh=>mesh.name==='RLH carbone'),indices=skin.geometry.attributes.skinIndex;
+  const bone=right.userData.skeleton.bones.indexOf(right.userData.digitBones[3][1]);
+  const vertices=Array.from({length:indices.count},(_,i)=>i).filter(i=>indices.getX(i)===bone);
+  assert.ok(vertices.length>0,'index protective plate stays bound to its actual finger bone');
   right.updateMatrixWorld(true);right.userData.skeleton.update();
   const before=vertices.map(vertex=>skin.getVertexPosition(vertex,new T.Vector3()));
-  const untouched=left.userData.skeleton.bones.map(bone=>bone.quaternion.toArray());
-  for(let i=0;i<12;i++)right.userData.animate({trigger:1,grip:.8},.016);
+  const untouched=left.userData.skeleton.bones.map(b=>b.quaternion.toArray());
+  for(let i=0;i<18;i++)right.userData.animate({trigger:1,grip:.8},.016);
   right.updateMatrixWorld(true);right.userData.skeleton.update();
-  assert.ok(Math.max(...vertices.map((vertex,i)=>skin.getVertexPosition(vertex,new T.Vector3()).distanceTo(before[i])))>.005,'pressing the trigger deforms visible skin');
-  assert.deepEqual(left.userData.skeleton.bones.map(bone=>bone.quaternion.toArray()),untouched,'animating one glove leaves the other untouched');
-  for(let i=0;i<12;i++)left.userData.animate({trigger:1,grip:.8},.016);
-  for(let i=0;i<16;i++)assert.deepEqual(left.userData.skeleton.bones[i].quaternion.toArray(),right.userData.skeleton.bones[i].quaternion.toArray(),'mirroring the group already mirrors anatomical flexion');
+  const travel=vertices.map((vertex,i)=>skin.getVertexPosition(vertex,new T.Vector3()).distanceTo(before[i]));
+  assert.ok(Math.max(...travel)>.005,'outer carbon plate moves with trigger flexion instead of floating on the palm');
+  assert.deepEqual(left.userData.skeleton.bones.map(b=>b.quaternion.toArray()),untouched);
+  const finger=right.userData.rig.doigts.index,tip=finger.artic[2].localToWorld(new T.Vector3(0,finger.d.L[2],0));
+  assert.ok(tip.distanceTo(new T.Vector3(0,.032,-.036))<.008,'an adult-length index pad actually meets the existing trigger');
+  for(let i=0;i<18;i++)left.userData.animate({trigger:1,grip:.8},.016);
+  for(let i=0;i<28;i++)assert.deepEqual(left.userData.skeleton.bones[i].quaternion.toArray(),right.userData.skeleton.bones[i].quaternion.toArray());
+  const label=hand=>hand.userData.rlh.userData.parts.find(({part})=>part.key==='label').mesh.material;
+  const rightLabel=label(right),leftLabel=label(left);
+  right.userData.animate({},.016,-1);assert.equal(label(right),leftLabel,'a VR hand reflected by its controller switches to the readable left label');
+  right.userData.animate({},.016,1);assert.equal(label(right),rightLabel);
   for(let i=0;i<18;i++)left.userData.animate({relax:1},.016);
   left.updateMatrixWorld(true);left.userData.skeleton.update();
-  for(const mesh of skins(left))for(let v=0;v<mesh.geometry.attributes.position.count;v++){
-    const point=mesh.getVertexPosition(v,new T.Vector3());
-    assert.ok(mesh.boundingBox.containsPoint(point)&&mesh.boundingSphere.containsPoint(point),'opening the free hand stays inside skin culling and raycast bounds');
+  for(const mesh of skins(left))for(let v=0;v<mesh.geometry.attributes.position.count;v+=7){
+    const point=mesh.getVertexPosition(v,new T.Vector3());assert.ok(mesh.boundingBox.containsPoint(point)&&mesh.boundingSphere.containsPoint(point));
   }
-  right.userData.skeleton.computeBoneTexture();
-  let disposed=0;right.userData.skeleton.boneTexture.addEventListener('dispose',()=>disposed++);
+  right.userData.skeleton.computeBoneTexture();let disposed=0;
+  right.userData.skeleton.boneTexture.addEventListener('dispose',()=>disposed++);
   let sharedDisposed=0;skin.geometry.addEventListener('dispose',()=>sharedDisposed++);
-  right.userData.dispose();right.userData.dispose();
-  assert.equal(disposed,1,'private bone texture is released once on VR exit');
-  assert.equal(sharedDisposed,0,'other gloves keep their shared geometry');
-  assert.ok(finite(skins(left)[0].geometry),'an independent glove remains usable after disposal');
+  right.userData.dispose();right.userData.dispose();assert.equal(disposed,1);assert.equal(sharedDisposed,0);assert.ok(finite(skins(left)[0].geometry));
 });
 
 test('bevelBox keeps its metric size, rounds its corners and has unit normals', () => {

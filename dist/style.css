@@ -139,3 +139,5 @@ h1{white-space:nowrap;font-size:clamp(64px,6vw,94px)}.brand-mark,.unit-mark{font
 .portal-dot.behind::after{content:"";position:absolute;top:8px;left:1px;width:3px;height:3px;border-right:1px solid #fff;border-bottom:1px solid #fff;transform:rotate(45deg)}
 .portal-dot[hidden],.portal-indicator[hidden]{display:none}
 @media(max-height:500px){.portal-indicator{top:calc(18px + env(safe-area-inset-top,0px));width:28vw}.portal-dot{width:6px;height:6px}}
+
+.hands-menu-button{text-decoration:none}.pause-dialog a.hands-menu-button{display:block;text-align:center}

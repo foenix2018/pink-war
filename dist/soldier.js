@@ -1,7 +1,7 @@
 import * as T from './vendor/three.webgpu.min.js';
 import { Assembly, matrix, profile, loft, armorPanel } from './geo.js';
 import { addClosedHelmet } from './helmet.js';
-import { createGlove, GRIP } from './hands.js';
+import { createGlove, GRIP, syncGloveMaterials } from './hands.js';
 import { WEAPON_FRAME } from './weapons.js';
 
 export function createCharacterKit(emblem, surfaces = {}) {
@@ -40,7 +40,7 @@ export function createCharacterKit(emblem, surfaces = {}) {
   materials.rose.needsUpdate=materials.pearl.needsUpdate=true;
   // Materials of the gloved hands: fabric, knuckle plates, trim, light strips, scanner and metal.
   const gloves = { fabric: materials.suit, plate: materials.rose, trim: materials.pearl, glow: materials.glow, accent: materials.cyan, metal: materials.gold };
-  return { geometries, materials, gloves, setPalette(colors){for(const [name,color] of Object.entries(colors))materials[name]?.color.setHex(color);} };
+  return { geometries, materials, gloves, setPalette(colors){for(const [name,color] of Object.entries(colors))materials[name]?.color.setHex(color);syncGloveMaterials(gloves);} };
 }
 
 // Where each weapon is carried (palm position, body space) and where the idle hand rests with a one-handed weapon.

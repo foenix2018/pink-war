@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#141922">
+  <title>Pink war — Atelier des mains RLH</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="mains.css">
+</head>
+<body>
+  <canvas id="hands-world" aria-label="Gants gauche et droit en trois dimensions"></canvas>
+  <header><a href="./" class="brand">PINK <b>WAR</b></a><span>ATELIER DES MAINS</span><a href="./">Retour au jeu ↗</a></header>
+  <button id="menu-toggle" class="menu-toggle" aria-label="Afficher ou masquer les réglages" aria-expanded="true">☰</button>
+  <aside id="hand-panel">
+    <p class="eyebrow">GANTS RLH · GAUCHE & DROIT</p>
+    <h1>Les mains,<br>en détail.</h1>
+    <p class="intro">Paume en cuir, tissu tissé, coutures et protections articulées. Les gants sont isolés du personnage pour les examiner librement.</p>
+    <fieldset><legend>PERSONNAGE</legend><div class="two"><button data-character="ghju" aria-pressed="true">GHJU · ROSE</button><button data-character="lylu" aria-pressed="false">LYLU · BLEU</button></div></fieldset>
+    <fieldset><legend>GANT AFFICHÉ</legend><div class="three"><button data-side="G" aria-pressed="false">Gauche</button><button data-side="D" aria-pressed="false">Droit</button><button data-side="GD" aria-pressed="true">La paire</button></div></fieldset>
+    <fieldset><legend>POSE</legend><div class="two"><button data-pose="rest" aria-pressed="true">Repos naturel</button><button data-pose="open" aria-pressed="false">Main ouverte</button><button data-pose="grip" aria-pressed="false">Préhension</button><button data-pose="fist" aria-pressed="false">Poing fermé</button><button data-pose="pinch" aria-pressed="false">Pince</button><button data-pose="point" aria-pressed="false">Pointer</button></div></fieldset>
+    <fieldset><legend>ARTICULATIONS</legend><label>Index<input id="index-flex" type="range" min="0" max="100" value="13"></label><label>Prise des doigts<input id="grip-flex" type="range" min="0" max="100" value="20"></label><label>Pouce<input id="thumb-flex" type="range" min="0" max="100" value="15"></label><label>Flexion du poignet<input id="wrist-flex" type="range" min="-38" max="38" value="0"></label></fieldset>
+    <fieldset><legend>VUE</legend><div class="two"><button data-camera="back">Dos des gants</button><button data-camera="palm">Paumes</button><button data-camera="side">Profil</button><button id="demo-button" aria-pressed="false">Mouvement auto</button></div></fieldset>
+    <p class="note">Glisse pour tourner. Pince ou utilise la molette pour zoomer. Ces mêmes gants équipent GHJU et LYLU dans le jeu.</p>
+  </aside>
+  <div class="caption"><span id="hand-caption">GHJU · GANTS GAUCHE & DROIT</span><small>Modèles 3D issus de ton fichier RLH V40</small></div>
+  <div id="hands-error" class="error" hidden>Le rendu n’a pas démarré. Ouvre cette page dans un navigateur récent.</div>
+  <script type="module" src="mains-lab.js"></script>
+</body>
+</html>

@@ -1,4 +1,14 @@
-# Vérification — Pink war v2.9
+# Vérification — Pink war v3.15
+
+Les modèles procéduraux du fichier RLH V40 fourni remplacent les anciens gants. L’atelier `/mains.html` expose les deux couleurs, les côtés, six poses, les doigts, le pouce et le poignet. Les modèles du jeu utilisent les mêmes géométries avec un raccord de poignet conservant les prises et la cinématique des bras. Les protections qui étaient détachées des phalanges dans le fichier source leur sont désormais attachées ; les plages de profil des protections sont interpolées pour obtenir un vrai maillage. Les manchettes complètes sont réservées aux vues FPS/VR, une variante courte raccorde le corps en troisième personne.
+
+Les 103 tests passent, puis les 19 tests des modèles passent à nouveau après la correction des étiquettes du mode gaucher. Ils vérifient les 28 os, le partage de géométries, l’indépendance des poses, les poids de déformation, la protection de l’index entraînée par la phalange, la proximité de l’index avec la détente (moins de 8 mm), les limites de visibilité en main ouverte, les poignets des deux personnages sur les cinq armes, et la libération indépendante des squelettes.
+
+L’atelier a été examiné de dos et côté paume, en rose et en bleu. Le HTML autonome de l’atelier fonctionne en 390 × 844 et 844 × 390 : une seule requête pour le HTML, aucun module, texture ou CDN supplémentaire ; changement de personnage, poing fermé, choix droite/gauche et masquage du panneau sans erreur. Les captures sont des rendus des modèles effectifs. Le parcours du jeu sur ordinateur valide FPS/3P, tir 12 → 11, recul, recharge à 12, pause/reprise. Le parcours tactile valide les mêmes actions ; son dernier contrôle utilise un rendu réduit pour le moteur logiciel SwiftShader. Une attente de recharge avait expiré à 0,067 seconde de simulation restante, sans erreur du jeu : la charge de rendu logiciel expliquait le délai. Le HTML autonome du jeu démarre avec la musique locale sans erreur.
+
+Le parcours WebXR avec IWER 2.5 et le profil Quest 3 valide les gants aux deux manettes, le tir droit 12 → 11, la recharge à la gâchette gauche puis le retour à 12 et la sortie immersive, sans erreur ni requête en échec. Les poses relevées montrent les 28 os par main et le geste de la main libre pendant la recharge. Ce parcours utilise un framebuffer réduit sur SwiftShader ; les captures de l’atelier utilisent leur résolution normale. Aucun casque Quest 3 ni iPhone physique n’est disponible ; les temps du rendu logiciel ne mesurent pas les performances ou le confort sur ces appareils. Le rendu est procédural, sans scan de mains.
+
+# Vérification — Pink war v2.9 (historique)
 
 ## Doigts animés et rechargement VR — 10 octobre 2026
 
