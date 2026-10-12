@@ -98,7 +98,7 @@ test('laser reflection network is shared; impact material/distance and immediate
   assert.equal(playLaserImpact(ctx,{surface:'concrete',splash:4,distance:10}),true);
   setLaserAudioEnabled(ctx,false);assert.equal(nodes[0].gain.value,0);
   assert.equal(playLaserShot(ctx,'nova'),false);assert.equal(playLaserImpact(ctx),false);
-  setLaserAudioEnabled(ctx,true);assert.equal(playLaserShot(ctx,'petal'),true);
+  setLaserAudioEnabled(ctx,true);assert.equal(playLaserShot(ctx,'lance'),true);
   assert.equal(calls.buffers,1,'shots and impacts share one cached noise sample');
   ctx.tick(3);
   assert.equal(nodes.filter(n=>!n.disconnected).length,7,'finished shots retain only the shared reflection network');

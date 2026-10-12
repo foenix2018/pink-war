@@ -32,8 +32,8 @@ export const REGEN_DELAY = 5;
 export const CATWALK = Object.freeze({ x: 22.4, halfWidth: 2, end: 20, landing: 8, height: 1.58 });
 export const WEAPONS = Object.freeze([
   Object.freeze({ id: 'r9', name: 'R–9', label: 'Pistolet laser', level: 1, damage: 24, capacity: 12, interval: .2, reload: 1.25, speed: 110, pellets: 1, spread: 0, chargeTime: 0, splash: 0 }),
-  Object.freeze({ id: 'bloom', name: 'BLOOM', label: 'Fusil d’assaut', level: 3, damage: 34, capacity: 24, interval: .11, reload: 1.7, speed: 135, pellets: 1, spread: .009, chargeTime: 0, splash: 0 }),
-  Object.freeze({ id: 'petal', name: 'PETAL', label: 'Fusil à plasma', level: 5, damage: 28, capacity: 10, interval: .5, reload: 1.9, speed: 100, pellets: 7, spread: .035, chargeTime: 0, splash: 0 }),
+  Object.freeze({ id: 'bloom', name: 'BLOOM', label: 'Mitraillette laser', level: 3, damage: 34, capacity: 24, interval: .11, reload: 1.7, speed: 135, pellets: 1, spread: .009, chargeTime: 0, splash: 0 }),
+  Object.freeze({ id: 'lance', name: 'LANCE', label: 'Sniper photonique', level: 5, damage: 160, capacity: 5, interval: .85, reload: 2.15, speed: 280, pellets: 1, spread: 0, semiAuto:true, chargeTime: 0, splash: 0 }),
   Object.freeze({ id: 'thorn', name: 'THORN', label: 'Canon à rail', level: 7, damage: 190, capacity: 6, interval: .28, reload: 2.1, speed: 200, pellets: 1, spread: 0, chargeTime: .7, splash: 1.8 }),
   Object.freeze({ id: 'nova', name: 'NOVA', label: 'Canon à énergie', level: 9, damage: 340, capacity: 4, interval: .4, reload: 2.4, speed: 80, pellets: 1, spread: 0, chargeTime: 1.05, splash: 5 })
 ]);
@@ -236,7 +236,7 @@ export class ArenaGame {
     this.activePortals=[];
     this.weaponIndex = 0; this.ammo = WEAPONS.map(w => w.capacity);
     this.ownedWeapons = new Set([0]); this.weaponOffers = [];
-    this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false;
+    this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false; this.semiPending=false;
     this.lastDamage = 0; this.regenerating = false;
     for(const nav of this.stairNavigation){nav.refreshAt=-1;nav.goal=-1;}
     this.updateLifts(0);
@@ -281,7 +281,7 @@ export class ArenaGame {
   blocked(start, end) { return this.obstacles.some(b => segmentBox(start, end, b) !== null); }
   selectWeapon(index) {
     if (this.state !== 'playing' || !WEAPONS[index] || !this.ownedWeapons.has(index) || index === this.weaponIndex) return false;
-    this.weaponIndex = index; this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false;
+    this.weaponIndex = index; this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false; this.semiPending=false;
     this.cooldown = Math.max(this.cooldown, .25); this.event('weapon', { index, name: this.weapon.name }); return true;
   }
   cycleWeapon(direction = 1) {
@@ -326,7 +326,7 @@ export class ArenaGame {
   }
   reload() {
     if (this.state !== 'playing' || this.reloadRemaining > 0 || this.ammo[this.weaponIndex] >= this.weapon.capacity) return false;
-    this.reloadRemaining = this.weapon.reload; this.charge = 0;
+    this.reloadRemaining = this.weapon.reload; this.charge = 0;this.semiPending=false;
     this.event('reload', { duration: this.reloadRemaining }); return true;
   }
   beginWave() {
@@ -371,6 +371,7 @@ export class ArenaGame {
     if (this.state !== 'playing' || this.cooldown > 0 || this.reloadRemaining > 0 || this.ammo[this.weaponIndex] <= 0) return false;
     const length = Math.hypot(direction.x, direction.y, direction.z);
     if (length < .001) return false;
+    const bulletId=this.nextId;
     const w = this.weapon, power = w.chargeTime ? .3 + .7 * clamp(charge, 0, 1) : 1;
     const nx = direction.x / length, ny = direction.y / length, nz = direction.z / length;
     const flat = Math.hypot(nx, nz) || 1, rx = -nz / flat, rz = nx / flat;
@@ -382,14 +383,24 @@ export class ArenaGame {
       const vx = nx + rx * sx, vy = ny + sy, vz = nz + rz * sx, n = Math.hypot(vx, vy, vz);
       this.bullets.push({ id: this.nextId++, x: origin.x, y: origin.y, z: origin.z,
         vx: vx / n * w.speed, vy: vy / n * w.speed, vz: vz / n * w.speed, life: 2.4,
+        originX:origin.x,originY:origin.y,originZ:origin.z,
         damage: w.damage * power, splash: w.splash * power, power, weapon: w.id, hostile: false });
     }
     this.ammo[this.weaponIndex]--; this.cooldown = w.interval; this.charge = 0;
-    this.event('shot', { weapon: w.id, power }); return true;
+    this.event('shot', { weapon: w.id, power,bulletId,origin:{...origin},direction:{x:nx,y:ny,z:nz} }); return true;
   }
   trigger(held, dt, origin, direction) {
     const w = this.weapon;
-    if (!w.chargeTime) { if (held) this.shoot(origin, direction); this.charge = 0; }
+    if (!w.chargeTime) {
+      if(w.semiAuto){
+        if(held&&!this.triggerHeld)this.semiPending=true;
+        if(!held)this.semiPending=false;
+        // Keep one held press through the equip/cadence delay. A successful
+        // discharge consumes it; holding cannot create another shot.
+        if(held&&this.semiPending&&this.shoot(origin,direction))this.semiPending=false;
+      }else if(held)this.shoot(origin,direction);
+      this.charge=0;
+    }
     else if (this.reloadRemaining <= 0 && this.cooldown <= 0 && this.ammo[this.weaponIndex] > 0) {
       if (held) {
         this.charge = clamp(this.charge + dt / w.chargeTime, 0, 1);
@@ -592,7 +603,7 @@ export class ArenaGame {
           const faces=[['x',hitBox.x-hitBox.hx,-1],['x',hitBox.x+hitBox.hx,1],['y',hitBox.y||0,-1],['y',(hitBox.y||0)+hitBox.height,1],['z',hitBox.z-hitBox.hz,-1],['z',hitBox.z+hitBox.hz,1]];
           faces.sort((a,c)=>Math.abs(at[a[0]]-a[1])-Math.abs(at[c[0]]-c[1]));normal={x:0,y:0,z:0};normal[faces[0][0]]=faces[0][2];
         }
-        this.event('impact', { ...at, enemy: !!target, hostile: b.hostile, splash: b.splash,weapon:b.weapon,power:b.power||1,surface:target?'robot':surface,normal,direction:{x:b.vx,y:b.vy,z:b.vz} });
+        this.event('impact', { ...at, bulletId:b.id, enemy: !!target, hostile: b.hostile, splash: b.splash,weapon:b.weapon,power:b.power||1,surface:target?'robot':surface,normal,direction:{x:b.vx,y:b.vy,z:b.vz} });
         if (target === this.player) this.damage(b.damage);
         else if (target) this.damageEnemy(target, b.damage, at, zone, multiplier);
         if (!b.hostile && b.splash > 0) for (const e of [...this.enemies]) {

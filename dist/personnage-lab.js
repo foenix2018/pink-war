@@ -99,7 +99,7 @@ function setMotion(motion){
 }
 function updateStatus(){
   const model=subjects.get(state.character);
-  $('status').textContent=`${characterForId(state.character).name} · ${model.targetHeight.toFixed(2).replace('.',',')} m · ${model.equipmentLevel}e armure · ${model.visibleParts} pièces · ${state.motion==='idle'?'repos':state.motion==='walk'?'marche':state.motion==='run'?'course':state.motion==='jump'?'saut':state.motion==='crouch'?'accroupi':state.motion==='walkFire'?'Rifle Walk':state.motion==='runFire'?'course + tir':state.motion==='crouchWalk'?'déplacement accroupi':'Idle Rifle'}`;
+  $('status').textContent=`${model.armor.name} · ${characterForId(state.character).name} · ${model.targetHeight.toFixed(2).replace('.',',')} m · ${model.equipmentLevel}e armure · ${model.visibleParts} pièces · ${state.motion==='idle'?'repos':state.motion==='walk'?'marche':state.motion==='run'?'course':state.motion==='jump'?'saut':state.motion==='crouch'?'accroupi':state.motion==='walkFire'?'Rifle Walk':state.motion==='runFire'?'course + tir':state.motion==='crouchWalk'?'déplacement accroupi':'Idle Rifle'}`;
 }
 for(const button of document.querySelectorAll('[data-character]'))button.addEventListener('click',()=>setCharacter(button.dataset.character));
 for(const button of document.querySelectorAll('[data-motion]'))button.addEventListener('click',()=>setMotion(button.dataset.motion));
@@ -112,7 +112,7 @@ $('sound-preview').addEventListener('click',async()=>{
     previewAudio ||= new (window.AudioContext||window.webkitAudioContext)();
     if(previewAudio.state!=='running')await previewAudio.resume();
     await loadRealLaserSample(previewAudio);
-    playLaserShot(previewAudio,['r9','bloom','petal','thorn','nova'][state.weapon],1);
+    playLaserShot(previewAudio,['r9','bloom','lance','thorn','nova'][state.weapon],1);
   }catch(error){console.warn('Essai audio laser non disponible',error);}
 });
 $('bones').addEventListener('change',e=>{state.showBones=e.target.checked;markers.visible=state.showBones;});
@@ -198,6 +198,6 @@ window.__PINKWAR_CHARACTER_LAB=Object.freeze({
  snapshot:()=>({character:state.character,motion:state.motion,level:state.level,weapon:state.weapon,showBones:state.showBones,
   frames:frame,zoom:state.zoom,articulations:jointNames, jointPositions:()=>Object.fromEntries(Object.entries(subjects.get(state.character).jointPositions()).map(([k,v])=>[k,v.toArray()])),
   visibleParts:subjects.get(state.character).visibleParts,visibleMeshes:subjects.get(state.character).batchCount,physicalHeight:subjects.get(state.character).targetHeight,
-  nativeMotion:subjects.get(state.character).nativeMotion,nativeClips:Object.fromEntries(Object.entries(subjects.get(state.character).actor.actions).map(([name,a])=>[name,{duration:a.getClip().duration,weight:a.getEffectiveWeight(),time:a.time}]))}),
+  armorName:subjects.get(state.character).armor.name,armorGeneration:subjects.get(state.character).armor.generation,armorPieces:subjects.get(state.character).armor.count,nativeMotion:subjects.get(state.character).nativeMotion,nativeClips:Object.fromEntries(Object.entries(subjects.get(state.character).actor.actions).map(([name,a])=>[name,{duration:a.getClip().duration,weight:a.getEffectiveWeight(),time:a.time}]))}),
  selectCharacter:setCharacter,selectMotion:setMotion
 });

@@ -3,7 +3,7 @@
 export const IMPACT_PROFILES = Object.freeze({
   r9: Object.freeze({ sparks: 8, debris: 4, dust: 3, speed: 4.1, flash: .15 }),
   bloom: Object.freeze({ sparks: 6, debris: 3, dust: 2, speed: 5.2, flash: .12 }),
-  petal: Object.freeze({ sparks: 5, debris: 3, dust: 2, speed: 3.8, flash: .13 }),
+  lance: Object.freeze({ sparks: 12, debris: 4, dust: 3, speed: 7.0, flash: .21 }),
   thorn: Object.freeze({ sparks: 17, debris: 7, dust: 6, speed: 7.1, flash: .30 }),
   nova: Object.freeze({ sparks: 24, debris: 12, dust: 11, speed: 8.4, flash: .48 })
 });

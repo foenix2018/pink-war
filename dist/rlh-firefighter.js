@@ -3,7 +3,7 @@ import {decompressSync} from './vendor/fflate.module.js';
 import {RLH_FIREFIGHTER_GZIP} from './rlh-firefighter-data.js';
 import {createGlove,GRIP} from './hands.js';
 import {WEAPON_FRAME} from './weapons.js';
-import {Assembly} from './geo.js';
+import {createAegisArmor} from './aegis-armor.js';
 
 let cached;
 const kits=new WeakMap(),clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
@@ -25,9 +25,9 @@ export function syncRLHFirefighterMaterials(kit){
   const m=kits.get(kit);if(!m)return;
   const base=kit.materials;
   m.helmet.color.copy(base.rose.color);m.band.color.copy(base.rose.color);
-  m.fabric.color.copy(base.suit.color).lerp(base.rose.color,.17);
+  m.fabric.color.copy(base.suit.color).lerp(base.rose.color,.045);
   m.visor.color.copy(base.visor.color);m.visor.emissive.copy(base.rose.color).multiplyScalar(.012);
-  m.reflect.color.copy(base.pearl.color);m.stitch.color.copy(base.pearl.color);
+  m.reflect.color.copy(base.pearl.color).multiplyScalar(.58);m.stitch.color.copy(base.pearl.color);
 }
 function materials(kit){
   if(kits.has(kit))return kits.get(kit);
@@ -84,17 +84,7 @@ export function createRLHSoldier(kit,createGun,profile){
   const legs=['LeftUpLeg','RightUpLeg'].map(bone),knees=['LeftLeg','RightLeg'].map(bone),feet=['LeftFoot','RightFoot'].map(bone);
   const mount=new T.Group(),gun=createGun({sleeve:false}),rest=createGlove(kit.gloves,{mirror:true,sleeve:false});rest.name='Free RLH hand';root.add(mount,rest);mount.add(gun);gun.scale.setScalar(.88);
   const arms=['Left','Right'].map(side=>({side,shoulder:bone(side+'Arm'),upper:bone(side+'Arm'),fore:bone(side+'ForeArm'),hand:bone(side+'Hand'),elbow:new T.Vector3(),wrist:new T.Vector3()}));
-  const upgrades=[],add=(parent,level,build)=>{const a=new Assembly();build(a);a.mount(parent);upgrades.push({a,level});a.setLevel(1);};
-  const m=kit.materials;
-  // Small gear additions preserve the RLH jacket, straps, boots and ARI silhouette.
-  for(let level=2;level<=10;level++){
-    const parent=level===4?arms[0].fore:level===5?knees[0]:level>=8?head:body;
-    add(parent,level,a=>{const placements={2:[0,.12,-.15],3:[-.12,.12,-.15],4:[0,.08,-.045],5:[0,.08,-.045],6:[0,-.025,-.15],7:[.12,.12,-.15],8:[-.13,.02,-.035],9:[.13,.02,-.035],10:[0,.12,-.10]};const [x,y,z]=placements[level];
-      a.box(m.dark,[.055,.075,.02],[x,y,z],[0,0,0],.007,true,level);
-      a.box(level>=8?m.gold:m.rose,[.033,.038,.005],[x,y,z-.013],[0,0,0],.005,true,level);
-      if(level===2||level===6||level===10)a.box(m.glow,[.021,.008,.004],[x,y,z-.017],[0,0,0],.001,true,level);
-    });
-  }
+  const armor=createAegisArmor(actor,kit,profile);
   const chestRest=body.getWorldPosition(new T.Vector3());let level=1,weapon=0,anchor=new T.Vector3(),low=0,gait=0,recoilBody=0;
   const soleSamples=[];
   for(const mesh of actor.parts){if(mesh.name!=='RLH rubber')continue;const p=mesh.geometry.attributes.position;
@@ -119,15 +109,15 @@ export function createRLHSoldier(kit,createGun,profile){
   function solveArms(){fitMount();const targets=wristTargets();for(let i=0;i<2;i++){const arm=arms[i];
     if(i!==0||WEAPON_FRAME[weapon].support){const pole=root.localToWorld(new T.Vector3(i===0?-.55:.55,1.05,.15));solveChain(arm.upper,arm.fore,arm.hand,targets[i],pole);const glove=i===0?gun.userData.support:gun.userData.hand;arm.hand.quaternion.copy(arm.hand.parent.getWorldQuaternion(new T.Quaternion()).invert().multiply(glove.getWorldQuaternion(new T.Quaternion())).multiply(glove.userData.rlh.quaternion));arm.hand.updateWorldMatrix(false,true);}
     arm.elbow.copy(arm.shoulder.worldToLocal(arm.fore.getWorldPosition(new T.Vector3())));arm.wrist.copy(arm.shoulder.worldToLocal(arm.hand.getWorldPosition(new T.Vector3())));arm.upper.userData.length=arm.fore.position.length();arm.fore.userData.length=arm.hand.position.length();}}
-  const api={root,hips,spine,body,rig:root,head,hair:new T.Group(),legs,knees,feet,gun,freeHand:rest,arms,pennants:[],actor,nativeSkeleton:actor.skeleton,targetHeight,heightScale:targetHeight/2,measuredUnscaledHeight:2,weapon:0,
+  const api={root,hips,spine,body,rig:root,head,hair:new T.Group(),legs,knees,feet,gun,freeHand:rest,arms,pennants:[],actor,armor,nativeSkeleton:actor.skeleton,targetHeight,heightScale:targetHeight/2,measuredUnscaledHeight:2,weapon:0,
     jointPositions(){root.updateWorldMatrix(true,true);const at=o=>o.getWorldPosition(new T.Vector3()),out={pelvis:at(hips),chest:at(body),head:at(head)};for(let i=0;i<2;i++){const side=i===0?'left':'right',prefix=i===0?'Left':'Right';out[side+'Hip']=at(legs[i]);out[side+'Knee']=at(knees[i]);out[side+'Ankle']=at(feet[i]);out[side+'Toe']=at(bone(prefix+'ToeBase'));out[side+'Shoulder']=at(arms[i].upper);out[side+'Elbow']=at(arms[i].fore);out[side+'Wrist']=at(arms[i].hand);}return out;},
     setWeapon(index){weapon=index;this.weapon=index;gun.userData.setVariant(index);rest.visible=!WEAPON_FRAME[index].support;
       anchor.set(.19,1.29,-.32);root.updateMatrixWorld(true);
       for(let j=0;j<75;j++){mount.position.copy(anchor);root.updateMatrixWorld(true);const ws=wristTargets();let fits=true;for(let i=0;i<2;i++){if(i===0&&!WEAPON_FRAME[index].support)continue;const arm=arms[i],p=arm.upper.getWorldPosition(new T.Vector3()),reach=(arm.fore.position.length()+arm.hand.position.length())*root.getWorldScale(new T.Vector3()).y;if(p.distanceTo(ws[i])>reach-.012)fits=false;}if(fits)break;anchor.z+=.008;}
       mount.position.copy(anchor);attachFreeHand();solveArms();
     },
-    setLevel(n){level=clamp(Math.floor(Number(n)||1),1,10);for(const {a} of upgrades)a.setLevel(level);gun.userData.setLevel(level);rest.userData.setLevel(level);},
-    get equipmentLevel(){return level;},get visibleParts(){return data.stats.sourceMeshes+upgrades.reduce((s,{a})=>s+a.count,0);},get batchCount(){return actor.parts.length+upgrades.reduce((s,{a})=>s+a.meshes.length,0);},
+    setLevel(n){level=clamp(Math.floor(Number(n)||1),1,10);armor.setLevel(level);gun.userData.setLevel(level);rest.userData.setLevel(level);},
+    get equipmentLevel(){return level;},get visibleParts(){return data.stats.sourceMeshes+armor.count;},get batchCount(){return actor.parts.length+armor.parts.length;},
     animate(time,moving,recoil=0,reload=0,trigger=0,dt=.016,flight={}){
       dt=clamp(dt,.001,.08);let speed=0;if(this._lastRootPosition&&moving)speed=root.position.distanceTo(this._lastRootPosition)/dt;else if(moving)speed=7;this._lastRootPosition=root.position.clone();
       const run=!!flight?.sprint||speed>8,aiming=trigger>.1||!!flight?.firing||!!flight?.aim,motion=moving?(run?'run':aiming?'walkRifle':'walk'):aiming?'rifle':'idle';this.nativeMotion=motion;
@@ -148,7 +138,7 @@ export function createRLHSoldier(kit,createGun,profile){
       gun.userData.animateHands(trigger,.18+recoilBody*.3,reload,dt);rest.userData.animate({relax:.65},dt);attachFreeHand();
       solveArms();actor.skeleton.update();
     },
-    dispose(){actor.dispose();rest.userData.dispose();gun.userData.disposeDynamic?.();}
+    dispose(){armor.dispose();actor.dispose();rest.userData.dispose();gun.userData.disposeDynamic?.();}
   };
   api.setWeapon(0);api.setLevel(1);api.animate(0,false);
   root.updateMatrixWorld(true);const standingBounds=new T.Box3().setFromObject(root,true);api.measuredUnscaledHeight=standingBounds.max.y-standingBounds.min.y;api.heightScale=targetHeight/api.measuredUnscaledHeight;return api;

@@ -2,7 +2,7 @@ const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export const FIRING_FEEL=Object.freeze({
   r9:{kick:.042,pitch:.10,yaw:.018,returnSpeed:25,flash:.045,heat:.20},
   bloom:{kick:.023,pitch:.057,yaw:.012,returnSpeed:29,flash:.032,heat:.12},
-  petal:{kick:.080,pitch:.155,yaw:.025,returnSpeed:21,flash:.075,heat:.32},
+  lance:{kick:.095,pitch:.145,yaw:.007,returnSpeed:20,flash:.06,heat:.34},
   thorn:{kick:.096,pitch:.18,yaw:.008,returnSpeed:19,flash:.06,heat:.42},
   nova:{kick:.115,pitch:.215,yaw:.026,returnSpeed:16,flash:.10,heat:.55}
 });

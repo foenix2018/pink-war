@@ -8,6 +8,7 @@ import { createAmbience } from './ambience.js';
 import { ACTIVE_INSTALLATIONS, BRIDGES, BRIDGE_LANDINGS, BRIDGE_APPROACHES, bridgeSegments } from './world-layout.js';
 import { createMusicBed } from './music.js';
 import { portalIndicators } from './portal-indicator.js';
+import { OPTICS } from './weapons.js';
 import { createWeaponFeel } from './weapon-feel.js';
 
 const $ = id => document.getElementById(id);
@@ -27,8 +28,9 @@ let portalForward=null;
 let reloadInserted=false,lastShotAt=-99;
 const move = { x: 0, y: 0, id: null }, look = { x: 0, y: 0, id: null };
 const keys = new Set(), firingPointers = new Set();
-let jumpQueued = false, pickupQueued = false,crouchQueued=false;
-let crouchCameraBlend=0, currentSprinting=false;
+let jumpQueued = false, pickupQueued = false,crouchQueued=false,firePressQueued=false;
+let crouchCameraBlend=0, currentSprinting=false, aimBlend=0, aiming=false, mouseAim=false;
+const aimPointers=new Set();
 const persist = () => { try { localStorage.setItem('rosee-settings', JSON.stringify(settings)); } catch {} };
 const timeString = time => `${String(Math.floor(time / 60)).padStart(2, '0')}:${String(Math.floor(time % 60)).padStart(2, '0')}`;
 
@@ -94,11 +96,11 @@ for(const button of document.querySelectorAll('[data-character]'))button.onclick
 selectCharacter(character.id,false);
 
 function resetInput() {
-  keys.clear(); firingPointers.clear(); jumpQueued = false; pickupQueued = false;crouchQueued=false; canvasPointer = null; lastDrag = null;
+  keys.clear(); firingPointers.clear(); aimPointers.clear(); firePressQueued=false; mouseAim=false; aiming=false; aimBlend=0; document.body.classList.remove('scoped','aiming'); $('aim-button')?.setAttribute('aria-pressed','false'); jumpQueued = false; pickupQueued = false;crouchQueued=false; canvasPointer = null; lastDrag = null;
   for (const s of [move, look]) { s.x = 0; s.y = 0; s.id = null; }
   for (const id of ['move-stick', 'look-stick']) $(id).querySelector('.joystick-knob').style.transform = '';
   $('fire-button').classList.remove('firing');
-  if (game) { game.charge = 0; game.triggerHeld = false; }
+  if (game) { game.charge = 0; game.triggerHeld = false;game.semiPending=false; }
 }
 function attachJoystick(id, state) {
   const area = $(id), ring = area.querySelector('.joystick-ring'), knob = area.querySelector('.joystick-knob');
@@ -116,10 +118,12 @@ function attachJoystick(id, state) {
   for (const event of ['pointerup', 'pointercancel']) window.addEventListener(event, release);
 }
 attachJoystick('move-stick', move); attachJoystick('look-stick', look);
-$('fire-button').addEventListener('pointerdown', e => { if (phase !== 'playing') return; e.preventDefault(); audioReady(); firingPointers.add(e.pointerId); try { e.target.closest('button').setPointerCapture(e.pointerId); } catch {} $('fire-button').classList.add('firing'); });
+$('fire-button').addEventListener('pointerdown', e => { if (phase !== 'playing') return; e.preventDefault(); audioReady(); firePressQueued=true; firingPointers.add(e.pointerId); try { e.target.closest('button').setPointerCapture(e.pointerId); } catch {} $('fire-button').classList.add('firing'); });
 for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) $('fire-button').addEventListener(type, e => { firingPointers.delete(e.pointerId); if (!firingPointers.size) $('fire-button').classList.remove('firing'); });
 $('crouch-button').addEventListener('click',()=>{if(phase==='playing')crouchQueued=true;});
 $('pickup-button').addEventListener('click', () => { if(phase === 'playing')pickupQueued = true; });
+$('aim-button').addEventListener('pointerdown',e=>{if(phase!=='playing')return;e.preventDefault();aimPointers.add(e.pointerId);try{e.currentTarget.setPointerCapture(e.pointerId);}catch{}});
+for(const type of ['pointerup','pointercancel','lostpointercapture'])$('aim-button').addEventListener(type,e=>aimPointers.delete(e.pointerId));
 $('jump-button').addEventListener('pointerdown', e => { if (phase !== 'playing') return; e.preventDefault(); jumpQueued = true; });
 $('jump-button').addEventListener('click', e => { if (e.detail === 0 && phase === 'playing') jumpQueued = true; });
 
@@ -214,9 +218,11 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyE' && !e.repeat) game.cycleWeapon();
   if (e.code === 'KeyF' && !e.repeat) pickupQueued = true;
   if (e.code === 'KeyC' && !e.repeat) crouchQueued=true;
-  keys.add(e.code);
+  keys.add(e.code);if(e.code==='Space'&&!e.repeat)firePressQueued=true;
 });
 window.addEventListener('keyup', e => keys.delete(e.code));
+window.addEventListener('pointerup',e=>{if(e.button===2)mouseAim=false;});
+window.addEventListener('pointercancel',()=>{mouseAim=false;aimPointers.clear();});
 window.addEventListener('blur', () => { resetInput(); if (phase === 'playing' && vr?.mode !== 'xr') pause(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { resetInput(); if (phase === 'playing' && vr?.mode !== 'xr') pause(); } });
 window.addEventListener('pagehide',event=>{ambience?.pause();musicBed.pause();if(!event.persisted){ambience?.dispose();musicBed.dispose();if(audioContext)disposeLaserAudio(audioContext);}});
@@ -228,7 +234,8 @@ function updateCamera() {
   const { T, camera, soldier, weapon } = world, p = game.player;
   const feel=weaponFeel.state,flatScreen=vr?.mode!=='stereo';
   const cameraYaw = yaw + (vr?.mode==='stereo' && vr.sensor ? vr.phoneYaw : 0)+(flatScreen?feel.yaw*.06:0), cameraPitch = clamp(pitch + (vr?.mode==='stereo' && vr.sensor ? vr.phonePitch : 0) + (flatScreen?feel.pitch*.2:0), -1.2, 1.2);
-  camera.fov = view === 'fps' ? 72 : 64;
+  const optic=OPTICS[game.weapon.id],normalFov=view==='fps'?72:64;
+  camera.fov=normalFov+(optic?(optic.fov-normalFov)*aimBlend:0);
   camera.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
   const elevation = p.elevation || 0;
   // Camera follows the same crouch transition as the real soldier pelvis, not a sudden teleport.
@@ -245,7 +252,8 @@ function updateCamera() {
     camera.position.set(start.x + (end.x - start.x) * nearest, Math.max(.35, start.y + (end.y - start.y) * nearest), start.z + (end.z - start.z) * nearest);
   }
   const bob = Math.hypot(move.x, move.y) > .1 || keys.has('KeyW') || keys.has('KeyZ') || keys.has('KeyS');
-  weapon.position.set(.19+feel.yaw*.15, -.24 + (bob ? Math.sin(clock * 11) * .009 : 0) - feel.kick*.18 + reloadLift * .045, -.56 + feel.kick - reloadLift * .028);
+  const sightY=optic?.y??.178;
+  weapon.position.set(.19*(1-aimBlend)+feel.yaw*.15, -.24+(.24-sightY)*aimBlend + (bob ? Math.sin(clock * 11) * .009 : 0) - feel.kick*.18 + reloadLift * .045, -.56+.07*aimBlend + feel.kick - reloadLift * .028);
   weapon.rotation.set(feel.pitch + reloadLift * Math.PI / 2,feel.yaw,Math.sin(clock * 1.8) * .003-feel.yaw*.35);
   camera.updateProjectionMatrix(); camera.updateMatrixWorld(true);
 }
@@ -268,7 +276,7 @@ function updateWeaponVisuals(dt, firing, moving) {
     world.soldier.animate(clock, moving, recoil, reloadLift, trigger, dt, {
       airborne: !game.player.grounded, verticalSpeed: game.player.verticalSpeed,
       crouched: game.player.crouched, firing: trigger>0,
-      sprint: currentSprinting, aim: !!(firing||game.charge>0)
+      sprint: currentSprinting, aim: !!(aiming||firing||game.charge>0)
     });
     if (view === 'fps') world.fpsGun.userData.animateHands?.(trigger, trigger ? .34 : .18, reloadLift, dt);
   }
@@ -297,7 +305,8 @@ function announce(title, subtitle) {
 function handleEvents() {
   for (const event of game.drainEvents()) {
     if (event.type === 'shot') {
-      const feel=weaponFeel.fire(event.weapon,event.power,game.player.crouched);
+      world.laserShot?.(event);
+      const feel=weaponFeel.fire(event.weapon,event.power,game.player.crouched||aiming);
       lastShotAt=clock;recoil=feel.pitch;flashTimer=feel.flash;vr.haptic('shot', event.weapon); weaponShotSound(event.weapon, event.power);
     }
     if (event.type === 'weapon-offer') { tone(360, 820, .45, .03, 'sine'); }
@@ -444,7 +453,9 @@ function bindCanvas() {
   const canvas = $('world');
   if (canvas.dataset.controlsBound) return;
   canvas.dataset.controlsBound = 'true';
-  canvas.addEventListener('pointerdown', e => { if (phase !== 'playing' || canvasPointer !== null) return; e.preventDefault(); canvasPointer = e.pointerId; lastDrag = { x: e.clientX, y: e.clientY }; try { canvas.setPointerCapture(e.pointerId); } catch {} });
+  canvas.addEventListener('contextmenu',e=>e.preventDefault());
+  canvas.addEventListener('pointerdown',e=>{if(e.button===2&&phase==='playing'){e.preventDefault();mouseAim=true;}});
+  canvas.addEventListener('pointerdown', e => { if ((e.pointerType==='mouse'&&e.button!==0)||phase !== 'playing' || canvasPointer !== null) return; e.preventDefault(); canvasPointer = e.pointerId; lastDrag = { x: e.clientX, y: e.clientY }; try { canvas.setPointerCapture(e.pointerId); } catch {} });
   canvas.addEventListener('pointermove', e => { if (phase !== 'playing' || e.pointerId !== canvasPointer || !lastDrag) return; yaw -= (e.clientX - lastDrag.x) * .004 * settings.sensitivity; pitch = clamp(pitch - (e.clientY - lastDrag.y) * .004 * settings.sensitivity, -.85, .7); lastDrag = { x: e.clientX, y: e.clientY }; });
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) canvas.addEventListener(type, e => { if (e.pointerId === canvasPointer) { canvasPointer = null; lastDrag = null; } });
 }
@@ -470,7 +481,11 @@ function frame(timestamp, xrFrame) {
     if(vr.mode==='xr')moveYaw=vr.movementYaw(facing);
     const jump = jumpQueued || vrInput.jump || keys.has('KeyJ'); jumpQueued = false;
     const crouchToggle=crouchQueued||vrInput.crouchToggle;crouchQueued=false;
-    currentSprinting=vrInput.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight');
+    aiming=!!OPTICS[game.weapon.id]&&!game.reloadRemaining&&(vr.mode==='xr'?vrInput.aim:mouseAim||aimPointers.size>0||vrInput.precision);
+    aimBlend+=(Number(aiming)-aimBlend)*(1-Math.exp(-dt*14));
+    document.body.classList.toggle('aiming',aiming);document.body.classList.toggle('scoped',aiming&&game.weapon.id==='lance'&&vr.mode==='off');
+    $('aim-button').setAttribute('aria-pressed',String(aiming));
+    currentSprinting=!aiming&&(vrInput.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight'));
     game.step(dt, { x, z, yaw: facing, moveYaw, sprint: currentSprinting, jump,crouchToggle });
     crouchCameraBlend+=(Number(game.player.crouched)-crouchCameraBlend)*Math.min(1,dt*8);
     if(pickupQueued||vrInput.pickup){game.collectWeapon();pickupQueued=false;}
@@ -480,9 +495,11 @@ function frame(timestamp, xrFrame) {
     // Pose the authentic IK skeleton BEFORE raycasting. In 3P the projectile now leaves the
     // current crouched/armed muzzle instead of the preceding frame's hand positions.
     updateWeaponVisuals(dt, firing, moving); updateCamera();
+    if(game.weapon.semiAuto&&firePressQueued)game.triggerHeld=false;firePressQueued=false;
     if (game.state==='playing' && (firing || game.charge>0)) { const target=aim(); game.trigger(firing,dt,target.origin,target.direction); }
-    else game.triggerHeld=false;
+    else {game.triggerHeld=false;game.semiPending=false;}
     handleEvents(); updateCamera();
+    world.fpsGun.userData.setSight?.(aiming,world.camera);
     hudTimer -= dt; if (hudTimer <= 0) { if (vr.mode !== 'xr') updateHud(); hudTimer = .1; }
   }
   const audioActive=phase==='playing'&&!recovering&&!document.hidden;
@@ -522,7 +539,7 @@ try {
   await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   if (world.lost) { world = await world.recover();game?.replaceObstacles(world.obstacles); window.dispatchEvent(new CustomEvent('rosee-renderer-recovered')); }
   $('play-label').textContent = 'ENTRER DANS L’ARÈNE'; $('play-button').disabled = false;$('outfit-button').disabled=false;
-  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ phase, view, frames, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelSource:world.soldier.actor?.data.source,modelNativeMotion:world.soldier.nativeMotion,modelNativeBones:world.soldier.nativeSkeleton?.bones.length,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:musicBed.enabled,musicPlaying:musicBed.playing,musicFailed:musicBed.failed,musicSection:musicBed.section,musicVoices:musicBed.stats.voices,audioState:audioContext?.state||'idle',weaponFeedback:{...weaponFeel.state},previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
+  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ phase, view, frames, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,aiming,aimBlend,cameraFov:world.camera.fov,laserEffects:world.laserStats?.(),city:world.cityStats?.(),vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelSource:world.soldier.actor?.data.source,modelNativeMotion:world.soldier.nativeMotion,modelNativeBones:world.soldier.nativeSkeleton?.bones.length,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:musicBed.enabled,musicPlaying:musicBed.playing,musicFailed:musicBed.failed,musicSection:musicBed.section,musicVoices:musicBed.stats.voices,audioState:audioContext?.state||'idle',weaponFeedback:{...weaponFeel.state},previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
     inputs: { move: { ...move }, look: { ...look }, firing: firingPointers.size > 0 || keys.has('Space') }, drawCalls: world.renderer.info.render.calls, ...game.snapshot(),equipment:equipmentForCharacter(game.wave,character.id) }) });
   bindCanvas();world.renderer.setAnimationLoop(frame);
 } catch (error) {

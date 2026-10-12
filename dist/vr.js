@@ -43,14 +43,14 @@ export function questControls(hand = 'right') {
     [`Poignée ${sideF}`, 'Courir (maintenu)'],
     [`Clic joystick ${sideF}`, 'S’accroupir / se relever · près d’un faisceau : récupérer une arme'],
     [b.jump, 'Sauter (pression brève)'],
-    [`Gâchette ${sideF}`, 'Recharger ; l’arme se redresse à la verticale'],
+    [`Gâchette ${sideF}`, 'Viser avec l’optique · maintenir'],
     [b.pause, 'Pause / reprise']
   ];
 }
 export const QUEST_CONTROLS = Object.freeze(questControls('right'));
 
 // [strength, milliseconds] for each hand; heavier weapons kick harder.
-const SHOT_HAPTIC = Object.freeze({ r9: [.72, 48], bloom: [.62, 40], petal: [.83, 74], thorn: [1, 120], nova: [1, 165] });
+const SHOT_HAPTIC = Object.freeze({ r9: [.72, 48], bloom: [.62, 40], lance: [.83, 74], thorn: [1, 120], nova: [1, 165] });
 export function hapticPlan(type, arg) {
   switch (type) {
     case 'shot': return { main: SHOT_HAPTIC[arg] || SHOT_HAPTIC.r9 };
@@ -247,7 +247,7 @@ export class VRController {
     display.texture.needsUpdate = true;
   }
   cancelTrigger() {
-    const game = this.hooks.game(); game.charge = 0; game.triggerHeld = false; this.triggerBlocked = true;
+    const game = this.hooks.game(); game.charge = 0; game.triggerHeld = false;game.semiPending=false; this.triggerBlocked = true;
   }
   startReloadGesture() { if (this.mode === 'xr') this.reloadGesture = .82; }
   // Show the pistol in the shooting hand and a bare gauntlet in the other one.
@@ -395,7 +395,7 @@ export class VRController {
     return this.lastMoveYaw ?? heading;
   }
   input(frame) {
-    const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, fire: false, sprint: false, precision: false, jump: false, pickup: false, crouchToggle: false };
+    const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, fire: false, sprint: false, precision: false, aim:false, jump: false, pickup: false, crouchToggle: false };
     const xr = this.mode === 'xr', cfg = settingsOf(this), mainHand = cfg.hand, sideHand = otherHand(mainHand);
     const desktop = xr ? null : (this.desktopGamepads ||= new DesktopGamepadInput()).select(navigator.getGamepads?.() || []);
     if (!xr && this.desktopPadKey !== this.desktopGamepads.activeKey) { this.previous.clear(); this.desktopPadKey = this.desktopGamepads.activeKey; }
@@ -429,11 +429,13 @@ export class VRController {
       if (xr && side) {
         this.handPose.sideTrigger = Math.max(this.handPose.sideTrigger, amount(pad.buttons[0]));
         this.handPose.sideGrip = Math.max(this.handPose.sideGrip, amount(pad.buttons[1]));
+        result.aim ||= tracked && pressed(pad.buttons[0]);
+        result.precision ||= result.aim;
       }
       const edge = (key, index) => { const id = `${source.handedness}:${key}`, down = pressed(pad.buttons[index]); if (down && !this.previous.get(id) && tracked) actions.add(key); this.previous.set(id, down); };
       if (main) { edge('reload', xr ? 4 : 0); edge('next', xr ? 5 : 1); }
-      if (xr && side) { edge('jump', 4); edge('pause', 5); edge('quickReload', 0); if(this.hooks.game()?.nearbyWeapon?.())edge('pickup', 3); else edge('crouch', 3); }
-      if (!xr) { edge('pause', 9); edge('jump', 6); edge('pickup', 2); edge('crouch', 11); }
+      if (xr && side) { edge('jump', 4); edge('pause', 5); if(this.hooks.game()?.nearbyWeapon?.())edge('pickup', 3); else edge('crouch', 3); }
+      if (!xr) { edge('pause', 9); edge('jump', 3); edge('pickup', 2); edge('crouch', 11); }
     }
     if (actions.has('pause')) { this.hooks.togglePause(); if (xr) this.cancelTrigger(); }
     else if ((phase === 'paused' || phase === 'over') && actions.has('reload') && xr) { this.hooks.begin(); this.cancelTrigger(); }
@@ -441,16 +443,17 @@ export class VRController {
     else if (phase === 'playing') {
       const game = this.hooks.game();
       if (actions.has('next')) { if (game.cycleWeapon(1) && xr) this.cancelTrigger(); }
-      else if (actions.has('reload') || actions.has('quickReload')) { if (game.reload() && xr) this.cancelTrigger(); }
+      else if (actions.has('reload')) { if (game.reload() && xr) this.cancelTrigger(); }
     }
     this.trackingLost = xr && !mainTracked;
     if (xr && (!visible || !mainTracked)) { this.cancelTrigger(); this.hooks.pause?.(); }
     const playing = (this.hooks.phase?.() || phase) === 'playing';
-    if (!playing) { result.x = result.z = result.turn = result.tilt = result.snap = 0; result.sprint = result.precision = false; result.jump = false;result.pickup = false; if (xr) this.cancelTrigger(); }
+    if (!playing) { result.x = result.z = result.turn = result.tilt = result.snap = 0; result.sprint = result.precision = result.aim = false; result.jump = false;result.pickup = false; if (xr) this.cancelTrigger(); }
     if (!rawFire) this.triggerBlocked = false;
     result.jump = playing && actions.has('jump');result.pickup = playing && actions.has('pickup');result.crouchToggle=playing && actions.has('crouch');
     result.fire = playing && mainTracked && rawFire && (!xr || !this.triggerBlocked);
     this.precision = result.precision && playing;
+    this.aiming = xr ? result.aim && playing : result.precision && playing;
     return result;
   }
   // The returned vectors are reused: read them before calling aim() again.
@@ -532,6 +535,7 @@ export class VRController {
         c.bare.userData.animate?.(fingerPose,dt,c.bare.scale.x<0?-1:1);
       }
       const gun = controllerOf(this, main)?.gun; if (gun) this.drawAmmo(gun, game,feel);
+      gun?.userData.setSight?.(this.aiming && !game.reloadRemaining,this.hooks.world().camera);
       this.updateSight();
       // Heavy weapons rumble harder as the charge builds.
       this.chargeBuzz -= dt;

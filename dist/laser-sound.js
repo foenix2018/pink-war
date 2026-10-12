@@ -4,7 +4,7 @@
 export const LASER_PROFILES=Object.freeze({
   r9:Object.freeze({pitch:970,end:205,duration:.115,body:260,thump:130,noise:.25,volume:.14,decay:.14,mechanism:1850,weight:1}),
   bloom:Object.freeze({pitch:740,end:162,duration:.092,body:155,thump:96,noise:.33,volume:.115,decay:.115,mechanism:2240,weight:.85}),
-  petal:Object.freeze({pitch:1450,end:315,duration:.24,body:410,thump:165,noise:.52,volume:.135,decay:.28,mechanism:1360,weight:1.35}),
+  lance:Object.freeze({pitch:2600,end:680,duration:.19,body:860,thump:135,noise:.20,volume:.14,decay:.38,mechanism:1640,weight:1.45}),
   thorn:Object.freeze({pitch:1220,end:110,duration:.31,body:155,thump:55,noise:.42,volume:.155,decay:.34,mechanism:980,weight:1.55}),
   nova:Object.freeze({pitch:930,end:62,duration:.51,body:100,thump:37,noise:.58,volume:.165,decay:.56,mechanism:640,weight:1.8})
 });
@@ -104,9 +104,9 @@ export function playLaserShot(ctx,weapon='r9',power=1){
   if(real){
     const sample=ctx.createBufferSource(),gain=ctx.createGain(),compressor=ctx.createDynamicsCompressor();
     sample.buffer=real;
-    const rates={r9:1.12,bloom:.92,petal:1.24,thorn:.74,nova:.56};
+    const rates={r9:1.12,bloom:.92,lance:1.24,thorn:.74,nova:.56};
     sample.playbackRate.value=(rates[weapon]||1)*(1+.015*Math.sin(ctx.currentTime*97));
-    const peak={r9:.042,bloom:.032,petal:.048,thorn:.055,nova:.064}[weapon]||.16;
+    const peak={r9:.042,bloom:.032,lance:.048,thorn:.055,nova:.064}[weapon]||.16;
     gain.gain.value=peak*Math.max(.3,Math.min(1,Number(power)||1));
     compressor.threshold.value=-13;compressor.ratio.value=2.7;
     sample.connect(gain);gain.connect(compressor);compressor.connect(space.master);
@@ -135,7 +135,7 @@ export function playLaserShot(ctx,weapon='r9',power=1){
   oscillator(ctx,tail,t,'triangle',p.thump*2.8,p.thump,p.duration*.72,p.volume*strength*.86,space);
   // A short, physical recoil pulse under the upper-frequency laser discharge.
   oscillator(ctx,tail,t,'sine',160,48,Math.min(.145,p.duration*.75),p.volume*strength*p.weight*1.06,space);
-  if(weapon==='petal'||weapon==='nova')oscillator(ctx,tail,t+.018,'sine',p.pitch*.64,p.end*.58,p.decay*.8,p.volume*strength*.34,space);
+  if(weapon==='lance'||weapon==='nova')oscillator(ctx,tail,t+.018,'sine',p.pitch*.64,p.end*.58,p.decay*.8,p.volume*strength*.34,space);
   const noise=ctx.createBufferSource(),band=ctx.createBiquadFilter(),ng=ctx.createGain();
   noise.buffer=noiseBuffer(ctx);
   band.type='bandpass';band.Q.value=1.25;

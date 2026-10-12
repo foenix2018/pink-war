@@ -156,7 +156,7 @@ test('an uncollected gun stays available even after the next wave and cannot be 
 test('weapons can be skipped without breaking cyclic weapon selection',()=>{
   const g=new ArenaGame();
   g.ownedWeapons.add(2);g.ownedWeapons.add(4);
-  assert.deepEqual(g.unlockedWeapons.map(w=>w.id),['r9','petal','nova']);
+  assert.deepEqual(g.unlockedWeapons.map(w=>w.id),['r9','lance','nova']);
   assert.equal(g.cycleWeapon(),true);assert.equal(g.weaponIndex,2);
   assert.equal(g.cycleWeapon(),true);assert.equal(g.weaponIndex,4);
   assert.equal(g.cycleWeapon(),true);assert.equal(g.weaponIndex,0);
@@ -253,14 +253,14 @@ test('a complete campaign reaches victory after 185 real projectile kills and fi
     }
     origin.x=g.player.x;origin.z=g.player.z;
     const target=g.enemies.reduce((best,e)=>!best||e.z>best.z?e:best,null);
-    if(target)g.trigger(true,.02,origin,{x:target.x-origin.x,y:(target.elevation||0)+(target.aimHeight??(target.elite?1.35:1.15))-origin.y,z:target.z-origin.z});
+    if(target)g.trigger(!g.weapon.semiAuto||!g.triggerHeld,.02,origin,{x:target.x-origin.x,y:(target.elevation||0)+(target.aimHeight??(target.elite?1.35:1.15))-origin.y,z:target.z-origin.z});
     else g.trigger(false,.02,origin,{x:0,y:0,z:-1});
     const events=g.drainEvents();
     unlocks.push(...events.filter(e=>e.type==='unlock').map(e=>e.name));
     equipmentStages.push(...events.filter(e=>e.type==='equipment').map(e=>e.level));
   }
   assert.equal(g.state,'won');assert.equal(g.wave,10);assert.equal(g.kills,185);assert.ok(g.player.hp>0);
-  assert.deepEqual(unlocks,['BLOOM','PETAL','THORN','NOVA']);assert.equal(g.unlockedWeapons.length,5);
+  assert.deepEqual(unlocks,['BLOOM','LANCE','THORN','NOVA']);assert.equal(g.unlockedWeapons.length,5);
   assert.deepEqual(equipmentStages,[1,2,3,4,5,6,7,8,9,10]);assert.equal(g.snapshot().equipment.name,'Impératrice');assert.equal(g.snapshot().equipment.unlocked.length,10);
   g.reset();assert.equal(g.snapshot().equipment.level,1);assert.deepEqual(g.snapshot().equipment.unlocked,['aube']);
 });

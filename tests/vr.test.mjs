@@ -143,15 +143,16 @@ test('a headset without a right controller falls back to the head ray for the si
   state.mode='stereo';assert.equal(VRController.prototype.aim.call(state),null);
 });
 
-test('the left trigger reloads without firing, and never resumes or restarts a paused game',()=>{
-  let reload=0;const {state,left,right,game,phase,setPhase}=setup({charge:.5,triggerHeld:true,reload:()=>{reload++;return true;},cycleWeapon:()=>true});
-  down(left,0);let input=state.input();assert.equal(input.fire,false);assert.equal(reload,1);assert.equal(game.charge,0);
-  state.input();assert.equal(reload,1,'a held trigger reloads once');
-  down(left,0,false);state.input();setPhase('paused');down(left,0);state.input();assert.equal(phase(),'paused');assert.equal(reload,1);
-  down(left,0,false);state.input();setPhase('over');down(left,0);state.input();assert.equal(phase(),'over');
-  down(left,0,false);setPhase('playing');state.input();down(right,0);assert.equal(state.input().fire,true);
-  down(left,0);assert.equal(state.input().fire,false,'firing stops while a reload starts');down(left,0,false);assert.equal(state.input().fire,false,'a trigger held across a reload waits for release');
-  down(right,0,false);state.input();down(right,0);assert.equal(state.input().fire,true);
+test('the left trigger aims independently of right fire, A reload, pause and tracking',()=>{
+  let reloads=0;const {state,left,right,game,phase,setPhase}=setup({charge:.5,triggerHeld:true,reload:()=>{reloads++;return true;},cycleWeapon:()=>true});
+  down(left,0);let input=state.input();assert.equal(input.aim,true);assert.equal(input.precision,true);assert.equal(input.fire,false);assert.equal(reloads,0);assert.equal(game.charge,.5);
+  down(right,0);input=state.input();assert.equal(input.aim,true);assert.equal(input.fire,true,'aim and fire work together');
+  down(right,4);input=state.input();assert.equal(input.fire,false);assert.equal(reloads,1);assert.equal(game.charge,0);
+  down(right,4,false);down(right,0,false);state.input();down(right,0);assert.equal(state.input().fire,true);
+  const lost={getPose:space=>space.hand==='left'?null:{}};
+  assert.equal(state.input(lost).aim,false,'an untracked free hand cannot enable aim');
+  setPhase('paused');input=state.input();assert.equal(input.aim,false);assert.equal(input.fire,false);assert.equal(phase(),'paused');assert.equal(reloads,1);
+  setPhase('over');assert.equal(state.input().aim,false);assert.equal(phase(),'over');
 });
 
 test('Quest left X jumps independently of left-stick crouch and right-hand fire',()=>{
@@ -165,6 +166,17 @@ test('Quest left X jumps independently of left-stick crouch and right-hand fire'
  down(left,3,false);state.input();
  down(right,0);down(left,4);input=state.input();
  assert.equal(input.fire,true);assert.equal(input.jump,true);
+});
+
+test('desktop left trigger aims without jumping and Y jumps on a fresh press',()=>{
+ const previous=Object.getOwnPropertyDescriptor(globalThis,'navigator');
+ const pad={id:'Standard',index:0,connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:16},()=>({pressed:false,value:0}))};
+ Object.defineProperty(globalThis,'navigator',{configurable:true,value:{getGamepads:()=>[pad]}});
+ try{
+  const {state}=setup();state.mode='off';state.input();
+  pad.buttons[6]={pressed:true,value:1};let input=state.input();assert.equal(input.precision,true);assert.equal(input.jump,false);
+  pad.buttons[3]={pressed:true,value:1};input=state.input();assert.equal(input.jump,true);assert.equal(state.input().jump,false);
+ }finally{if(previous)Object.defineProperty(globalThis,'navigator',previous);else delete globalThis.navigator;}
 });
 test('the free-hand grip sprints when squeezed, and the stick click enters crouch stance',()=>{
   const {state,left}=setup();
@@ -183,12 +195,12 @@ test('the shooting-hand stick only turns: pushing it up or down changes nothing 
 test('a left-handed layout mirrors every control: left trigger fires, the right hand moves and pauses',()=>{
   const reloads=[],cycles=[];
   const {state,left,right,phase,setPhase,exits}=setup({charge:0,triggerHeld:false,reload:()=>{reloads.push(1);return true;},cycleWeapon:d=>{cycles.push(d);return true;}},{...VR_DEFAULTS,hand:'left'});
-  down(right,0);assert.equal(state.input().fire,false,'the right trigger is only a reload now');assert.equal(reloads.length,1);down(right,0,false);state.input();
+  down(right,0);const aimed=state.input();assert.equal(aimed.fire,false,'the free trigger aims');assert.equal(aimed.aim,true);assert.equal(reloads.length,0);down(right,0,false);state.input();
   down(left,0);assert.equal(state.input().fire,true);down(left,0,false);
   right.gamepad.axes=[0,0,.4,-.8];left.gamepad.axes=[0,0,.9,.9];let input=state.input();
   assert.equal(input.x,.4);assert.equal(input.z,-.8);assert.equal(input.snap,0);assert.equal(input.turn,.9);
   down(right,3);let movement=state.input();assert.equal(movement.sprint,false);assert.equal(movement.crouchToggle,true);down(right,3,false);
-  down(left,4);state.input();assert.equal(reloads.length,2,'X reloads');down(left,4,false);state.input();
+  down(left,4);state.input();assert.equal(reloads.length,1,'X reloads');down(left,4,false);state.input();
   down(left,5);state.input();assert.deepEqual(cycles,[1],'Y selects the next weapon');down(left,5,false);state.input();
   down(right,4);state.input();assert.deepEqual(cycles,[1],'A no longer switches weapons');assert.equal(state.input().jump,false,'jump is edge-triggered');down(right,4,false);state.input();
   down(right,5);state.input();assert.equal(phase(),'paused','B pauses');down(right,5,false);state.input();

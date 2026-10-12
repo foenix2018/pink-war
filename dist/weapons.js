@@ -8,12 +8,28 @@ import { createGlove } from './hands.js';
 export const WEAPON_FRAME = Object.freeze([
   Object.freeze({ id: 'r9', muzzle: Object.freeze([0, .077, -.207]), support: null, length: .27 }),
   Object.freeze({ id: 'bloom', muzzle: Object.freeze([0, .082, -.6]), support: Object.freeze([0, -.05, -.228]), length: .8 }),
-  Object.freeze({ id: 'petal', muzzle: Object.freeze([0, .076, -.485]), support: Object.freeze([0, -.052, -.215]), length: .68 }),
+  Object.freeze({ id: 'lance', muzzle: Object.freeze([0, .085, -.88]), support: Object.freeze([0, -.052, -.30]), length: 1.10 }),
   Object.freeze({ id: 'thorn', muzzle: Object.freeze([0, .108, -.85]), support: Object.freeze([0, -.05, -.34]), length: 1.05 }),
   Object.freeze({ id: 'nova', muzzle: Object.freeze([0, .11, -.655]), support: Object.freeze([0, -.058, -.29]), length: .9 })
 ]);
 
 const PI = Math.PI;
+export const OPTICS = Object.freeze({
+  bloom:Object.freeze({y:.178,z:-.032,radius:.018,fov:55}),
+  lance:Object.freeze({y:.180,z:-.023,radius:.019,fov:22})
+});
+const opticGlassGeometry=new T.CircleGeometry(1,32),opticDotGeometry=new T.CircleGeometry(.00075,16);
+const opticRingGeometry=new T.RingGeometry(.0068,.0074,32);
+function attachOptic(model,index) {
+  const cfg=OPTICS[WEAPON_FRAME[index].id];if(!cfg)return null;
+  const glassMaterial=new T.MeshPhysicalMaterial({color:0x8ec4d5,metalness:.1,roughness:.12,transparent:true,opacity:.14,side:T.DoubleSide,depthWrite:false});
+  const glass=new T.Mesh(opticGlassGeometry,glassMaterial);glass.scale.setScalar(cfg.radius);glass.position.set(0,cfg.y,cfg.z);model.add(glass);
+  const reticle=new T.Group(),material=new T.MeshBasicMaterial({color:0xff655c,toneMapped:false,side:T.DoubleSide});
+  const dot=new T.Mesh(opticDotGeometry,material);reticle.add(dot);
+  if(index===1)reticle.add(new T.Mesh(opticRingGeometry,material));
+  reticle.visible=false;model.add(reticle);
+  return {cfg,reticle,glassMaterial,material};
+}
 const both = fn => [-1, 1].forEach(fn);
 const torus = (r, tube, arc = PI * 2, radial = 6, tubular = 20) => new T.TorusGeometry(r, tube, radial, tubular, arc);
 const disc = (r, seg = 16) => new T.CircleGeometry(r, seg);
@@ -91,9 +107,9 @@ function buildBloom(m) {
   a.add(profile([[.09, .118], [.095, .06], [.06, .044], [-.21, .044], [-.225, .062], [-.225, .118]], .046, .005), m.armorLight);
   both(s => { a.box(m.dark, [.003, .04, .13], [s * .0238, .086, -.07], [0, 0, 0], .0015); a.box(m.rose, [.0025, .004, .1], [s * .0242, .072, -.07], [0, 0, 0], .0008, false); });
   rail(a, m, .1245, .08, -.2, .028);
-  a.box(m.dark, [.034, .03, .05], [0, .143, -.01], [0, 0, 0], .007);
-  shaft(a, m.dark, .152, [[0, -.036], [.021, -.036], [.021, -.0], [.0, 0.0]], 18);
-  a.add(disc(.0175), m.cyan, matrix([0, .152, -.0365], [0, PI, 0]), false);
+  a.box(m.dark,[.038,.02,.045],[0,.142,-.047],[0,0,0],.004);
+  ring(a,m.dark,.178,-.034,.023,.004);
+  ring(a,m.steel,.178,-.052,.022,.002);
   // Ribbed handguard with a half shell on top and glowing flutes.
   a.box(m.dark, [.062, .062, .31], [0, .084, -.38], [0, 0, 0], .01);
   a.box(m.armorLight, [.066, .024, .28], [0, .108, -.38], [0, 0, 0], .009);
@@ -115,44 +131,32 @@ function buildBloom(m) {
   return a;
 }
 
-// ---------------------------------------------------------------- PETAL
-function buildPetal(m) {
-  const a = new Assembly();
-  pistolGrip(a, m); triggerGroup(a, m);
-  // Chunky receiver with round side caps.
-  a.add(profile([[.085, .11], [.09, .058], [.05, .042], [-.15, .042], [-.17, .056], [-.18, .112]], .072, .009), m.armorLight);
-  both(s => {
-    a.add(new T.CylinderGeometry(.034, .034, .008, 20), m.steel, matrix([s * .0385, .08, -.03], [0, 0, PI / 2]));
-    a.add(new T.CylinderGeometry(.021, .021, .0095, 18), m.rose, matrix([s * .0392, .08, -.03], [0, 0, PI / 2]), false);
-    for (let i = 0; i < 4; i++) bolt(a, m, s * .0395, .08 + Math.cos(i * PI / 2) * .028, -.03 + Math.sin(i * PI / 2) * .028);
+// ---------------------------------------------------------------- LANCE
+function buildLance(m) {
+  const a=new Assembly();pistolGrip(a,m);triggerGroup(a,m);
+  a.add(profile([[.11,.12],[.12,.05],[.04,.041],[-.29,.041],[-.33,.070],[-.30,.12]],.052,.005),m.armorLight);
+  both(sign=>{
+    a.box(m.dark,[.004,.042,.25],[sign*.027,.082,-.12],[0,0,0],.002);
+    a.box(m.rose,[.003,.005,.20],[sign*.030,.077,-.11],[0,0,0],.001,false);
   });
-  // Plasma tank above the barrel: banded, with a glowing violet slit.
-  shaft(a, m.dark, .142, [[0, .04], [.03, .04], [.034, .0], [.034, -.2], [.03, -.24], [0, -.24]], 20);
-  [.02, -.05, -.12, -.19].forEach(z => ring(a, m.steel, .142, z, .0355, .0045));
-  both(s => a.box(m.violet, [.003, .018, .15], [s * .0345, .142, -.1], [0, 0, 0], .001, false));
-  a.box(m.dark, [.03, .028, .05], [0, .12, -.02], [0, 0, 0], .005);
-  // Barrel shroud with petal fins and a muzzle flower of seven emitters.
-  shaft(a, m.dark, .076, [[0, -.17], [.05, -.17], [.052, -.2], [.05, -.42], [0, -.42]], 22);
-  for (let i = 0; i < 6; i++) {
-    const t = i / 6 * PI * 2;
-    a.box(m.armor, [.01, .034, .17], [Math.cos(t) * .056, .076 + Math.sin(t) * .056, -.32], [0, 0, t], .003);
-    a.box(m.rose, [.004, .016, .15], [Math.cos(t) * .0605, .076 + Math.sin(t) * .0605, -.32], [0, 0, t], .001, false);
-  }
-  shaft(a, m.dark, .076, [[0, -.41], [.058, -.41], [.058, -.46], [.05, -.478], [0, -.478]], 24);
-  ring(a, m.armor, .076, -.47, .054, .0065, 0);
-  shaft(a, m.rose, .076, [[0, -.462], [.013, -.462], [.013, -.488], [0, -.488]], 12);
-  for (let i = 0; i < 6; i++) {
-    const t = i / 6 * PI * 2, x = Math.cos(t) * .031, y = .076 + Math.sin(t) * .031;
-    shaft(a, m.violet, y, [[0, -.462], [.0095, -.462], [.0095, -.485], [0, -.485]], 10, x);
-    shaft(a, m.steel, y, [[0, -.44], [.0125, -.44], [.0125, -.463], [0, -.463]], 10, x);
-  }
-  // Pump forend and a short stock.
-  a.box(m.dark, [.076, .056, .15], [0, .02, -.215], [0, 0, 0], .014);
-  a.box(m.armor, [.082, .02, .13], [0, -.012, -.215], [0, 0, 0], .008);
-  for (let i = 0; i < 5; i++) a.box(m.rose, [.084, .004, .005], [0, .034, -.165 - i * .02], [0, 0, 0], .001, false);
-  foregrip(a, m, -.215, -.052, false);
-  a.add(profile([[.09, .105], [.12, .1], [.13, .035], [.09, .04]], .05, .007), m.dark);
-  a.add(profile([[.125, .1], [.138, -.04], [.112, -.045], [.108, .1]], .062, .008), m.armor);
+  rail(a,m,.127,.10,-.28,.024);
+  // Open optical housing, a long single emitter and a compact recoil stock.
+  shaft(a,m.dark,.18,[[.020,-.025],[.028,-.025],[.030,-.22],[.024,-.245],[.020,-.245],[.020,-.025]],24);
+  [-.036,-.11,-.22].forEach(z=>ring(a,m.steel,.18,z,.030,.004));
+  a.box(m.dark,[.022,.032,.052],[0,.145,-.12],[0,0,0],.004);
+  a.box(m.dark,[.056,.053,.27],[0,.083,-.40],[0,0,0],.008);
+  both(sign=>{
+    a.box(m.armor,[.005,.04,.24],[sign*.031,.09,-.41],[0,0,0],.002);
+    a.box(m.rose,[.003,.004,.23],[sign*.034,.075,-.41],[0,0,0],.001,false);
+  });
+  shaft(a,m.steel,.085,[[0,-.53],[.013,-.53],[.013,-.805],[.010,-.88],[0,-.88]],18);
+  for(let i=0;i<7;i++)ring(a,m.dark,.085,-.56-i*.035,.017,.004);
+  shaft(a,m.dark,.085,[[.008,-.803],[.024,-.803],[.021,-.875],[.008,-.88],[.008,-.803]],20);
+  ring(a,m.rose,.085,-.878,.016,.003,0,false);
+  a.add(profile([[-.10,.04],[-.11,-.071],[-.042,-.073],[-.044,.04]],.036,.004),m.steel);
+  foregrip(a,m,-.30,-.052);
+  a.add(profile([[.12,.105],[.15,.105],[.172,.08],[.177,-.02],[.14,-.021],[.13,.04]],.047,.005),m.dark);
+  a.box(m.armor,[.052,.12,.031],[0,.036,.174],[.1,0,0],.006);
   return a;
 }
 
@@ -224,13 +228,13 @@ function buildNova(m) {
   return a;
 }
 
-const BUILDERS = [buildR9, buildBloom, buildPetal, buildThorn, buildNova];
+const BUILDERS = [buildR9, buildBloom, buildLance, buildThorn, buildNova];
 
 // Small exposed energy cells sit beside each receiver and react to ammunition, charge and reload.
 const BATTERY_LAYOUT = Object.freeze([
   Object.freeze([.0188, .077, .012, .0115]),
   Object.freeze([.0242, .086, .008, .018]),
-  Object.freeze([.0392, .080, -.028, .017]),
+  Object.freeze([.031, .082, -.04, .026]),
   Object.freeze([.0735, .110, -.335, .045]),
   Object.freeze([.0815, .075, -.025, .038])
 ]);
@@ -271,6 +275,21 @@ export function createWeaponModels(mats) {
 export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   const g = new T.Group(), models = createWeaponModels(mats);
   for (const model of models) { model.visible = false; g.add(model); }
+  const optics=models.map(attachOptic),eye=new T.Vector3(),target=new T.Vector3();
+  g.userData.optics=optics;
+  g.userData.setSight=(active,camera)=>{
+    for(const optic of optics)if(optic)optic.reticle.visible=false;
+    const optic=optics[g.userData.index];g.userData.aiming=!!active&&!!optic;
+    if(!g.userData.aiming||!camera)return;
+    g.updateWorldMatrix(true,true);camera.getWorldPosition(eye);g.worldToLocal(eye);
+    // Zero the optical reticle to the barrel at 100 m. Off-axis eyes lose the
+    // reticle outside the aperture; enabling aim never rotates a tracked hand.
+    const frame=WEAPON_FRAME[g.userData.index];target.set(0,frame.muzzle[1],frame.muzzle[2]-100);
+    const t=(optic.cfg.z-eye.z)/(target.z-eye.z);eye.lerp(target,t);
+    const dx=eye.x,dy=eye.y-optic.cfg.y;
+    optic.reticle.visible=eye.z<=optic.cfg.z+.002&&Math.hypot(dx,dy)<optic.cfg.radius*.88;
+    optic.reticle.position.set(dx,optic.cfg.y+dy,optic.cfg.z+.0005);
+  };
   const batteryMaterial = new T.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
   const batteries = models.map((model,index)=>attachBatteryRail(model,index,mats,batteryMaterial));
   const batteryOff = new T.Color(0x171722), batteryLow = new T.Color(0xff385f), batteryReload = new T.Color(0xffffff);
@@ -329,6 +348,7 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
     if(disposed)return;disposed=true;
     hand.userData.dispose?.();support.userData.dispose?.();
     for(const rail of batteries){rail.dispose();rail.userData.shell.geometry.dispose();}
+    for(const optic of optics)if(optic){optic.glassMaterial.dispose();optic.material.dispose();}
     batteryMaterial.dispose();collar.geometry.dispose();heatRing.geometry.dispose();heatMaterial.dispose();
   };
   return g;

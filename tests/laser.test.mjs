@@ -19,7 +19,7 @@ function audioMock(){
 }
 
 test('five weapons have separate cinematic plasma envelopes and multilayer synthesis',()=>{
-  assert.deepEqual(Object.keys(LASER_PROFILES),['r9','bloom','petal','thorn','nova']);
+  assert.deepEqual(Object.keys(LASER_PROFILES),['r9','bloom','lance','thorn','nova']);
   assert.equal(LASER_PROFILES.nova.duration>LASER_PROFILES.r9.duration,true);
   assert.equal(playLaserShot(null),false);
   for(const id of Object.keys(LASER_PROFILES)){

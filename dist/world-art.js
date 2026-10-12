@@ -1,4 +1,5 @@
 import * as T from './vendor/three.webgpu.min.js';
+import { PERIMETER_WALLS, OUTER_BUILDINGS } from './city-layout.js';
 import { bevelBox, merge } from './geo.js';
 
 // The city is built from a small set of instanced, weathered surfaces. Its neutral
@@ -399,17 +400,49 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
     for(let slat=0;slat<5;slat++)cube(m.black,[x+2.078,.68,z-.36+slat*.18],[.025,.12,.065],[0,0,0],'box');
     ivy(x,1.4,z+1.02,3.2,1.4);
   }
-  // A breached retaining wall encloses the play space; the city continues beyond it.
-  for(let i=-90;i<=90;i+=10)for(const side of [-1,1]) {
-    cube(m.concrete,[side*99.5,1.1,i],[1,2.2,10]);cube(m.concrete,[i,1.1,side*99.5],[10,2.2,1]);
-    rod(m.rust,[side*99,2,i],[side*99,3.3+rand(),i],.055);rod(m.rust,[i,2,side*99],[i,3.3+rand(),side*99],.055);
+  // A continuous civic containment wall. Flat structural slabs match the
+  // collision footprint; damaged cladding never creates false holes at corners.
+  for(const wall of PERIMETER_WALLS) {
+    obstacles.push({...wall});
+    cube(m.concrete,[wall.x,wall.height/2,wall.z],[wall.hx*2,wall.height,wall.hz*2],[0,0,0],'box');
+    const vertical=wall.hz>wall.hx;
+    for(let along=-96;along<=96;along+=8) {
+      const x=vertical?wall.x:along,z=vertical?along:wall.z;
+      cube(m.char,[x,wall.height*.49,z],[vertical?1.12:.22,wall.height,vertical?.22:1.12],[0,0,0],'box');
+      rod(m.rust,[x,wall.height,z],[x,wall.height+.36,z],.035);
+      if(along%24===0)cube(m.lamp,[vertical?x-Math.sign(x)*.56:x,3.15,vertical?z:z-Math.sign(z)*.56],vertical?[.03,.08,.32]:[.32,.08,.03],[0,0,0],'box');
+    }
+    cube(m.chalk,[wall.x,wall.height+.065,wall.z],[wall.hx*2+.08,.13,wall.hz*2+.08],[0,0,0],'box');
   }
-  for(let i=0;i<35;i++) {
-    const angle=i/35*Math.PI*2,radius=130+i%4*11,h=16+(i*17%49),x=Math.cos(angle)*radius,z=Math.sin(angle)*radius,w=9+i%4*3;
-    cube(m.char,[x,h*.47,z],[w,h*.94,10],[0,angle*.1,0],i%2?'block':'broken');
-    for(let y=5;y<h;y+=5)cube(m.concrete,[x,y,z],[w+.5,.3,10.5],[0,angle*.1,0]);
-    if(i%3===0)rod(m.black,[x,h*.94-.2,z],[x+1,h+11,z],.12);
-    if(i%4===0)add('cylinder',m.char,[x+w*.6,h*.35,z],[w*.36,h*.7,w*.36]);
+  // 64 buildings outside the combat zone. Varied setbacks, infill, broken
+  // glazing, roof installations and functioning service lamps give them scale.
+  for(const building of OUTER_BUILDINGS) {
+    const {id:i,x,z,width:w,depth:d,height:h,near,shape}=building;
+    cube(m.char,[x,h*.43,z],[w*.92,h*.86,d*.92],[0,0,0],i%2?'block':'broken');
+    const floors=Math.floor(h/3.6),step=near?1:2;
+    for(let floor=0;floor<=floors;floor+=step) {
+      const y=.4+floor*3.6,top=floor>=floors-1;
+      cube(m.concrete,[x,y,z],[w*(top?.72:1),.27,d*(top?.76:1)],[0,0,top?.017*(shape-1):0]);
+      if(floor>=floors)continue;
+      for(const sign of [-1,1])for(let bay=0;bay<4;bay++) {
+        const xx=x-w*.375+bay*w*.25;
+        cube((floor+bay+i)%7===0?m.rust:m.glass,[xx,y+1.7,z+sign*d*.465],[w*.18,2.25,.10],[0,0,0],'box');
+        cube(m.concrete,[xx-w*.11,y+1.7,z+sign*d*.477],[.20,3.2,.24],[0,0,0],'box');
+      }
+      if(near&&floor%3===1)cube(m.char,[x+w*.18,y+.5,z+d*.49],[w*.44,.5,.24]);
+    }
+    // Setbacks and rounded service towers make silhouettes less repetitive.
+    if(shape===0)cube(m.chalk,[x+w*.17,h*.8,z],[w*.44,h*.24,d*.54]);
+    if(shape===1)add('cylinder',m.steel,[x+w*.29,h+1.25,z-d*.17],[w*.10,2.5,w*.10]);
+    if(shape===2){cube(m.black,[x-w*.16,h+.3,z],[w*.36,.65,d*.36],[0,0,0],'rounded');rod(m.steel,[x,h,z],[x+.2,h+4.6,z],.08);}
+    if(shape===3){cube(m.char,[x-w*.20,h*.79,z+d*.18],[w*.4,h*.21,d*.38]);add('cylinder',m.char,[x+w*.37,h*.28,z],[w*.12,h*.56,w*.12]);}
+    if(near) {
+      const faceZ=z+(z>0?-1:1)*d*.49;
+      cube(m.black,[x,1.6,faceZ],[1.65,2.7,.17],[0,0,0],'box');
+      cube(m.lamp,[x,3.17,faceZ],[1.30,.06,.20],[0,0,0],'box');
+      for(const sign of [-1,1])rod(m.steel,[x+sign*w*.4,.2,z+d*.5],[x+sign*w*.4,h*.73,z+d*.5],.065);
+      if(i%7===0)ivy(x,h*.62,z+d*.503,w*.53,h*.62);
+    }
   }
   // Diegetic wayfinding identifies the districts without adding a combat HUD.
   function sign(text,sub,x,y,z,yaw=0) {
@@ -437,5 +470,5 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
   dustGeometry.setAttribute('position',new T.BufferAttribute(positions,3));
   const dust=new T.Points(dustGeometry,new T.PointsMaterial({color:0xd7c7a5,size:.026,opacity:.37,transparent:true,depthWrite:false}));group.add(dust);
   group.userData.instances=instances;group.userData.districts=['Brèche centrale','Archives envahies','Maintenance','Relais'];
-  return {group,materials:m,pbrStatus,update(time){dust.position.x=Math.sin(time*.025)*2.5;dust.position.y=Math.sin(time*.06)*.25;},setAccent(color){m.accent.color.setHex(color);}};
+  return {group,materials:m,pbrStatus,stats:{interiorBuildings:structures.length,outerBuildings:OUTER_BUILDINGS.length,perimeterWalls:PERIMETER_WALLS.length},update(time){dust.position.x=Math.sin(time*.025)*2.5;dust.position.y=Math.sin(time*.06)*.25;},setAccent(color){m.accent.color.setHex(color);}};
 }

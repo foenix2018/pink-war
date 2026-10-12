@@ -25,8 +25,8 @@ export function createSurfaceDetails() {
   // palette tint remains character-specific (blue for LYLU, rose for GHJU).
   const armor=make(128,(c,n)=>{
     c.fillStyle='#eeeeee';c.fillRect(0,0,n,n);
-    const shades=['#a5a5a5','#bdbdbd','#d5d5d5','#f8f8f8','#858585'];
-    for(let i=0;i<460;i++){
+    const shades=['#dedede','#e5e5e5','#eaeaea','#f4f4f4','#d7d7d7'];
+    for(let i=0;i<74;i++){
       const x=Math.floor(random()*n/4)*4,y=Math.floor(random()*n/4)*4;
       const w=(1+Math.floor(random()*4))*4,h=(1+Math.floor(random()*3))*4;
       c.fillStyle=shades[Math.floor(random()*shades.length)];c.fillRect(x,y,w,h);
