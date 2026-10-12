@@ -1,3 +1,9 @@
+# Pink War V3.16 — Lune et commandes Quest
+
+- Une pleine lune très grande et lumineuse est visible dans le ciel des scènes FPS, 3P et WebXR. Texture lunaire procédurale avec cratères, maria et halo atmosphérique. Aucun chargement Internet ni asset sous licence externe. Géométrie simple et texture 768 px pour Quest 3.
+- Quest droitier : **X sur la manette gauche = sauter**, **clic du joystick gauche = accroupir / se relever**, ou ramasser l'arme lorsqu'on est à portée. En mode gaucher les fonctions se reflètent sur la manette droite.
+- Les propositions de textures Poly Haven CC0 (asphalte, béton, briques, métal) restent **à valider avant intégration**.
+
 # Pink war
 
 Jeu de survie 3D en HTML et JavaScript, conçu pour iPhone, ordinateur et casque WebXR. LYLU ou GHJU défend une arène fermée de 200 × 200 mètres, puis ferme la brèche après dix niveaux.
