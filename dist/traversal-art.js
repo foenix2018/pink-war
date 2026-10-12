@@ -49,26 +49,56 @@ export function createTraversalArt(scene, obstacles, mats) {
       fixed.ball(mats.leaf,[x,y+.17,z],[.39,.21,.42]);
     }
   }
-  for(const s of STAIRS) {
-    const steps=Math.ceil(s.height/.2),depth=(s.bottomZ-s.topZ)/steps;
-    for(let i=0;i<steps;i++) {
-      const top=s.height*(i+1)/steps,z=s.bottomZ-depth*(i+.5);
-      block(mats.steel,[s.halfWidth*2,.16,depth-.01],[s.x,top-.08,z],.013);
-      block(mats.yellow,[s.halfWidth*2-.15,.018,.045],[s.x,top+.014,z+depth*.37],.003);
-      // Closed risers are only the tread height, so the service space below stays open.
-      block(mats.black,[s.halfWidth*2,.2,.055],[s.x,top-.12,z+depth*.5],.003);
-    }
+  // Sloped walkways: continuous steel deck follows the exact traversalSurfaces height.
+  // Separate shallow anti-slip strips provide the look of steps without imposing
+  // stair-block geometry that mismatches the player's continuous ramp collision.
+  for(const stair of STAIRS) {
+    const length=stair.bottomZ-stair.topZ, rise=stair.height;
+    const slope=rise/length,width=stair.halfWidth*2;
+    if(length<=0||rise<=0)throw Error('Invalid stair incline '+stair.id);
+    const face=new T.BufferGeometry();
+    const left=stair.x-stair.halfWidth,right=stair.x+stair.halfWidth;
+    const y0=0,y1=rise,near=stair.bottomZ,far=stair.topZ;
+    face.setAttribute('position',new T.Float32BufferAttribute([
+      left,y0,near, right,y0,near, right,y1,far,
+      left,y0,near, right,y1,far, left,y1,far
+    ],3));
+    face.setAttribute('uv',new T.Float32BufferAttribute([
+      0,0, 1,0, 1,length/2,
+      0,0, 1,length/2, 0,length/2
+    ],2));
+    face.computeVertexNormals();
+    const deck=new T.Mesh(face,mats.steel);deck.name='Rampe accessible '+stair.id;
+    deck.material.side=T.DoubleSide;deck.receiveShadow=true;root.add(deck);
+    // Steel substructure, with a true continuous guide beam between landings.
     for(const side of [-1,1]) {
-      const x=s.x+side*(s.halfWidth+.07);
-      rod(mats.rust,[x,.04,s.bottomZ],[x,s.height-.04,s.topZ],.14);
-      rod(mats.steel,[x,1.04,s.bottomZ],[x,s.height+1.04,s.topZ],.052);
-      rod(mats.steel,[x,.51,s.bottomZ],[x,s.height+.51,s.topZ],.034);
-      for(let i=0;i<=steps;i+=3) {
-        const y=s.height*i/steps,z=s.bottomZ-i*depth;
-        rod(mats.steel,[x,y,z],[x,y+1.08,z],.042);
+      const edgeX=stair.x+side*(stair.halfWidth+.07);
+      rod(mats.rust,[edgeX,.045,near],[edgeX,rise-.04,far],.105);
+      rod(mats.steel,[edgeX,1.05,near],[edgeX,rise+1.05,far],.052);
+      rod(mats.steel,[edgeX,.54,near],[edgeX,rise+.54,far],.031);
+      const segments=Math.ceil(length/2);
+      for(let i=0;i<=segments;i++){
+        const t=i/segments,z=near-length*t,y=rise*t;
+        rod(mats.steel,[edgeX,y,z],[edgeX,y+1.06,z],.043);
       }
-      // Segment barriers follow the ramp height and leave both landings open.
-      for(let i=0;i<steps;i++)collision(x,s.bottomZ-depth*(i+.5),.07,depth*.5,s.height*i/steps,1.13);
+      // Colliders track the incline and do not obstruct the entry/exit landings.
+      const strips=Math.ceil(length/.45),depth=length/strips;
+      for(let i=0;i<strips;i++){
+        const u=(i+.5)/strips,z=near-u*length,y=rise*u;
+        collision(edgeX,z,.075,depth/2,y,.95);
+      }
+    }
+    // Tactile ribs rest on the incline rather than floating above displaced treads.
+    const strips=Math.ceil(length/.75);
+    for(let i=1;i<strips;i++){
+      const t=i/strips,z=near-length*t,top=rise*t;
+      block(mats.yellow,[width-.24,.012,.049],[stair.x,top+.018,z],.003);
+    }
+    // Close the gap beneath the incline with light supporting trusses.
+    for(let i=1;i<5;i++){
+      const t=i/5,z=near-length*t,height=rise*t;
+      rod(mats.rust,[left+.23,.07,z],[left+.23,height-.02,z],.061);
+      rod(mats.rust,[right-.23,.07,z],[right-.23,height-.02,z],.061);
     }
   }
   const moving=[];
