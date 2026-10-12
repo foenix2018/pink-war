@@ -1,13 +1,8 @@
-# Pink War V3.16 — Lune et commandes Quest
-
-- Une pleine lune très grande et lumineuse est visible dans le ciel des scènes FPS, 3P et WebXR. Texture lunaire procédurale avec cratères, maria et halo atmosphérique. Aucun chargement Internet ni asset sous licence externe. Géométrie simple et texture 768 px pour Quest 3.
-- Quest droitier : **X sur la manette gauche = sauter**, **clic du joystick gauche = accroupir / se relever**, ou ramasser l'arme lorsqu'on est à portée. En mode gaucher les fonctions se reflètent sur la manette droite.
-- Les propositions de textures Poly Haven CC0 (asphalte, béton, briques, métal) restent **à valider avant intégration**.
-
 # Pink war
 
 Jeu de survie 3D en HTML et JavaScript, conçu pour iPhone, ordinateur et casque WebXR. LYLU ou GHJU défend une arène fermée de 200 × 200 mètres, puis ferme la brèche après dix niveaux.
 
+- Version 3.19 — pompier RLH complet : vraie tenue Mixamo, veste et pantalon à bandes réfléchissantes, bottes sculptées, harnais et appareil respiratoire, casque F1 XF fermé bleu pour LYLU et rose pour GHJU, masque G1 opaque. Les gants RLH V40 restent utilisés sur les cinq armes et dans le casque. Squelette indépendant de 34 os par acteur, géométries partagées en 11 lots, cinq clips RLH : idle, walk, run, rifle et walkRifle. Les poses armées utilisent Idle Rifle au repos et Rifle Walk en déplacement, avec transitions progressives ; les bras rejoignent les prises sans modifier leur longueur, y compris en recharge verticale et accroupi. Les neuf améliorations de tenue sont adaptées à cette silhouette de pompier. L’atelier [personnage.html](dist/personnage.html) permet de vérifier les deux héros, les animations et les accessoires. Les ajouts de la 3.18 sont conservés.
 - Version 3.18 — trois nouvelles passerelles dans la ville : Jardin à +4,8 m (Archives), Relais à +7,2 m (Machines), liaison des Ruines à +4,8 m interrompue par un véritable vide de 2,88 m franchissable au saut. Nouveaux quais métalliques et rampe d'accès au sol, poutrelles, supports, grilles, garde-corps, bandes d'avertissement, éclairage technique sans projecteur dynamique supplémentaire et caisses de protection sur les quais. Surfaces de collision et rendus alimentés par les mêmes coordonnées; passerelle brisée sans plancher invisible. Les ennemis utilisent les accès en pente et détournent leur trajet via le sol lorsque le joueur est sur l'autre rive de la brèche. Radar revu pour afficher les passages surélevés sans les confondre avec des murs. Tests automatisés de liaisons, franchissement, collisions et IA.
 - Version 3.17 — Textures PBR CC0 Poly Haven 1K (asphalte, béton, brique cassée, métal rouillé) : couleur, normal map et rugosité chargées à la demande, avec textures procédurales de secours sans Internet, sans nouveaux appels de rendu sur les bâtiments. Rampes d'accès aux deux terrasses refaites : plan incliné continu aligné sur la simulation, renforts, bandes antidérapantes et garde-corps adaptés. Éclairage nocturne bleuté et brume accordés à la grande lune. Tests de continuité de rampe, raccords et collisions.
 - Version 3.16 — grande lune cratérisée avec halo dans le ciel et rendu compatible PC/iPhone/Quest ; commandes Quest Touch Plus sur manette gauche : X pour sauter, clic du joystick pour s'accroupir ou ramasser près d'une arme. Pré-sélection de textures PBR CC0 présentée avant intégration, textures du décor inchangées.
@@ -51,7 +46,7 @@ Jeu de survie 3D en HTML et JavaScript, conçu pour iPhone, ordinateur et casque
 
 Ouvrir l’adresse HTTPS du jeu dans **Meta Quest Browser**, choisir LYLU ou GHJU, cliquer sur **VR**, régler le pistolet si besoin, puis **Entrer en VR · Meta Quest 3** et autoriser la session immersive. Le casque suit les mouvements de tête ; le jeu utilise la vue FPS. Le mode téléphone à deux yeux reste distinct.
 
-La disposition ci-dessous est celle de la **main de tir droite** (par défaut). Avec une main de tir gauche, tout est inversé : la gâchette gauche tire, X recharge, Y change d’arme, le joystick gauche tourne, le joystick droit déplace, A revient à l’arme précédente et B met en pause.
+La disposition ci-dessous est celle de la **main de tir droite** (par défaut). Avec une main de tir gauche, tout est inversé : la gâchette gauche tire, X recharge, Y change d’arme, le joystick gauche tourne, le joystick droit déplace, A saute et B met en pause.
 
 | Commande Touch Plus | Action |
 | --- | --- |
@@ -60,18 +55,19 @@ La disposition ci-dessous est celle de la **main de tir droite** (par défaut). 
 | Poignée droite maintenue | Laser renforcé. Le laser reste visible sans elle (réglable) ; tenir le pistolet poignée serrée n’empêche pas de courir |
 | A | Recharger la batterie ; l’arme se redresse brièvement |
 | B | Arme débloquée suivante |
-| Joystick droit gauche/droite | Rotation par crans de 30° ou 45°, ou fluide ; recentrer le joystick avant le cran suivant. Haut/bas : sans effet, pour qu’un cran ne change jamais d’arme par erreur |
+| Joystick droit gauche/droite | Rotation fluide ; haut/bas sans effet |
 | Joystick gauche | Déplacement horizontal, selon le regard ou selon la manette gauche |
-| Clic du joystick gauche maintenu, ou poignée gauche serrée à fond | Courir |
+| Poignée gauche serrée à fond | Courir |
+| Clic du joystick gauche | S’accroupir / se relever ; ramasser à proximité d’une arme disponible |
 | Gâchette gauche | Recharger sans lâcher le pistolet ; l'arme se redresse brièvement à la verticale. Elle ne tire jamais et ne reprend jamais une pause |
-| X | Arme débloquée précédente |
+| X | Sauter |
 | Y | Pause / reprise |
 | A en pause / fin de partie | Reprendre / rejouer la campagne |
 | B en pause / fin de partie | Quitter la VR |
 
 ### Réglages du pistolet VR
 
-Ils sont dans la fenêtre **VR** (avant d’entrer dans le casque) et conservés sur l’appareil : **main de tir** (droite ou gauche), **rotation** (crans de 30°, crans de 45° ou fluide), **direction du déplacement** (selon le regard ou selon la manette libre), **laser de visée** (toujours visible ou poignée maintenue) et **vibrations**. La liste des commandes de cette fenêtre suit la main de tir choisie.
+Ils sont dans la fenêtre **VR** (avant d’entrer dans le casque) et conservés sur l’appareil : **main de tir** (droite ou gauche), **direction du déplacement** (selon le regard ou selon la manette libre), **laser de visée** (toujours visible ou poignée maintenue) et **vibrations**. La rotation est fluide. La liste des commandes de cette fenêtre suit la main de tir choisie.
 
 ### Sensations de tir
 
@@ -156,3 +152,17 @@ Le rendu reste procédural : cette étape remplace la scène géométrique propr
 ## Audio de la 3.14
 
 « Les villes silencieuses » est une composition synthétique originale locale à 66 BPM : exploration, tension, combat et interlude. La musique utilise le contexte audio déverrouillé par une action du joueur, se coupe pendant la pause et dispose de son interrupteur indépendant. Elle ne nécessite aucun téléchargement. Le vent et les bruits de structures restent des effets sonores ; les cinq armes ont une impulsion, un corps grave, une signature de décharge et des étapes de recharge. Le WAV laser CC0 reste une couche supplémentaire du jeu web ; le HTML autonome conserve la synthèse locale. L’ancienne boucle distante reste documentée dans l’historique des versions antérieures.
+
+## Reproduction du pompier RLH
+
+Le fichier local `dist/rlh-firefighter-data.js` contient les maillages et les cinq clips natifs récupérés dans le projet RLH. Aucune récupération de FBX, modèle ou CDN n’est nécessaire au lancement. La tenue adaptée garde ses plis, sangles, bottes et équipements d’origine ; le casque et le masque ne laissent voir aucun visage. Le corps représente 243 308 triangles regroupés en 11 lots de matériau, hors gants/arme/accessoires. Il est caché en FPS et en VR ; ces vues continuent d’utiliser leurs mains RLH suivies indépendamment. Le fichier de données base64 pèse environ 7,4 Mio avant compression HTTP. Un essai sur Quest réel reste nécessaire pour mesurer les performances.
+
+Pour reconstruire les données depuis la copie du projet RLH (Playwright et Chromium nécessaires), démarrer le serveur local puis exécuter :
+
+```sh
+npm start
+node tools/export-rlh-firefighter.cjs /chemin/vers/RLH /tmp/rlh-dressed-object.json
+node tools/bake-rlh-firefighter.mjs /chemin/vers/RLH /tmp/rlh-dressed-object.json
+```
+
+L’export conserve les transformations des géométries et les os natifs, retire les mains d’origine remplacées par les gants V40, fusionne les détails par matériau, puis compresse les données. Les empreintes SHA-256 des sources RLH sont incluses. Les commandes `python3 tools/build-character.py` et `python3 tools/build-launcher.py` produisent respectivement l’atelier isolé et le jeu en HTML autonome. Les textures Internet du décor restent optionnelles, avec le secours procédural de la 3.18.

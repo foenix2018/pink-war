@@ -94,12 +94,12 @@ function setMotion(motion){
   if(!['idle','walk','run','jump','aim','crouch','walkFire','runFire','crouchWalk'].includes(motion))return;
   state.motion=motion;
   state.jumpStart=state.clock;
-  $('motions').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.motion===motion)));
+  document.querySelectorAll('[data-motion]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.motion===motion)));
   updateStatus();
 }
 function updateStatus(){
   const model=subjects.get(state.character);
-  $('status').textContent=`${characterForId(state.character).name} · ${model.targetHeight.toFixed(2).replace('.',',')} m · ${model.equipmentLevel}e armure · ${model.visibleParts} pièces · ${state.motion==='idle'?'repos':state.motion==='walk'?'marche':state.motion==='run'?'course':state.motion==='jump'?'saut':state.motion==='crouch'?'accroupi':state.motion==='walkFire'?'marche + tir':state.motion==='runFire'?'course + tir':state.motion==='crouchWalk'?'déplacement accroupi':'visée'}`;
+  $('status').textContent=`${characterForId(state.character).name} · ${model.targetHeight.toFixed(2).replace('.',',')} m · ${model.equipmentLevel}e armure · ${model.visibleParts} pièces · ${state.motion==='idle'?'repos':state.motion==='walk'?'marche':state.motion==='run'?'course':state.motion==='jump'?'saut':state.motion==='crouch'?'accroupi':state.motion==='walkFire'?'Rifle Walk':state.motion==='runFire'?'course + tir':state.motion==='crouchWalk'?'déplacement accroupi':'Idle Rifle'}`;
 }
 for(const button of document.querySelectorAll('[data-character]'))button.addEventListener('click',()=>setCharacter(button.dataset.character));
 for(const button of document.querySelectorAll('[data-motion]'))button.addEventListener('click',()=>setMotion(button.dataset.motion));
@@ -197,6 +197,7 @@ requestAnimationFrame(tick);
 window.__PINKWAR_CHARACTER_LAB=Object.freeze({
  snapshot:()=>({character:state.character,motion:state.motion,level:state.level,weapon:state.weapon,showBones:state.showBones,
   frames:frame,zoom:state.zoom,articulations:jointNames, jointPositions:()=>Object.fromEntries(Object.entries(subjects.get(state.character).jointPositions()).map(([k,v])=>[k,v.toArray()])),
-  visibleParts:subjects.get(state.character).visibleParts,visibleMeshes:subjects.get(state.character).batchCount,physicalHeight:subjects.get(state.character).targetHeight}),
+  visibleParts:subjects.get(state.character).visibleParts,visibleMeshes:subjects.get(state.character).batchCount,physicalHeight:subjects.get(state.character).targetHeight,
+  nativeMotion:subjects.get(state.character).nativeMotion,nativeClips:Object.fromEntries(Object.entries(subjects.get(state.character).actor.actions).map(([name,a])=>[name,{duration:a.getClip().duration,weight:a.getEffectiveWeight(),time:a.time}]))}),
  selectCharacter:setCharacter,selectMotion:setMotion
 });

@@ -11,7 +11,7 @@ import { CHARACTERS } from '../dist/characters.js';
 const neon = c => new T.MeshBasicMaterial({ color: c }), solid = c => new T.MeshStandardMaterial({ color: c });
 const mats = () => ({ dark: solid(1), steel: solid(2), armor: solid(3), armorLight: solid(4), rose: neon(5), pale: neon(6), violet: neon(7), cyan: neon(8) });
 const finite = geometry => Array.from(geometry.attributes.position.array).every(Number.isFinite);
-const box = object => new T.Box3().setFromObject(object);
+const box = object => { object.updateMatrixWorld(true); return new T.Box3().setFromObject(object,true); };
 const kit = () => createCharacterKit(new T.Texture());
 const flash = parent => { const sprite = new T.Object3D(); parent.add(sprite); return sprite; };
 
@@ -164,8 +164,8 @@ test('soldier arms reach the grip and the foregrip of every weapon', () => {
       const target = other.localToWorld(new T.Vector3(...GRIP.wrist));
       assert.ok(wrist(left).distanceTo(target) < 1e-3, `${profileInfo.id}/${frame.id}: the left wrist is on its glove`);
       for (const arm of soldier.arms) {
-        assert.ok(Math.abs(arm.elbow.length() - .31) < 1e-4, 'upper arm keeps its length');
-        assert.ok(Math.abs(arm.wrist.clone().sub(arm.elbow).length() - .35) < 1e-4, 'forearm keeps its length');
+        assert.ok(Math.abs(arm.elbow.length() - arm.fore.position.length()) < 1e-4, 'native upper arm keeps its length');
+        assert.ok(Math.abs(arm.wrist.clone().sub(arm.elbow).length() - arm.hand.position.length()) < 1e-4, 'native forearm keeps its length');
       }
       assert.equal(soldier.weapon, index);
     });
@@ -192,7 +192,7 @@ test('the soldier rig has planted, articulated steps and keeps both hands on the
     const k=kit(),soldier=createSoldier(k,o=>buildGun({mats:mats(),gloves:k.gloves,sleeve:false,makeFlash:flash}),profileInfo);
     const scene=new T.Scene();scene.add(soldier.root);soldier.root.position.z=-.1;
     soldier.animate(.5,true,0,0,0,.016);soldier.root.updateMatrixWorld(true);
-    assert.equal(soldier.hips.parent,soldier.root);assert.equal(soldier.spine.parent,soldier.hips);assert.equal(soldier.body.parent,soldier.spine);
+    assert.ok(soldier.hips.parent===soldier.root);assert.ok(soldier.spine.parent===soldier.hips);assert.ok(soldier.body.parent===soldier.actor.bone('Spine1'),'RLH retains its intermediate spine bone');
     assert.ok(soldier.legs.some(leg=>Math.abs(leg.rotation.x)>.05),'thighs alternate through the step');
     assert.ok(soldier.knees.some(knee=>Math.abs(knee.rotation.x)>.1),'the knees flex during swing');
     assert.ok(soldier.feet.some(foot=>Math.abs(foot.rotation.x)>.02),'the boot rolls at the ankle');
@@ -216,7 +216,7 @@ test('recoil travels through braced shoulders and recovers while wrists stay on 
       soldier.setWeapon(index);soldier.animate(.1,false,0,0,0,.016,{firing:true});
       soldier.animate(.116,false,.16,.3,1,.016,{firing:true});
       const kick=soldier._recoilBody;assert.ok(kick>.3);
-      assert.ok(soldier.arms.every(arm=>arm.shoulder.position.z>0),'both shoulders absorb the impulse');
+      assert.ok(Math.abs(soldier.body.rotation.x)>.006,'the native upper torso absorbs the impulse');
       for(let n=0;n<25;n++){
         soldier.animate(.132+n*.016,false,0,.3,0,.016,{firing:true});
         soldier.root.updateMatrixWorld(true);
@@ -274,13 +274,17 @@ test('both soldiers keep an opaque, fully enclosing helmet at every armour level
     const k=kit(),soldier=createSoldier(k,o=>buildGun({mats:mats(),gloves:k.gloves,sleeve:false,makeFlash:flash}),character);
     assert.equal(k.materials.skin,undefined,'no face geometry or skin material is generated');
     assert.equal(k.materials.hair,undefined,'hair cannot protrude through the shell');
+    const helmetParts=soldier.actor.parts.filter(mesh=>['RLH helmet','RLH visor','RLH pearl','RLH detail','RLH rubber'].includes(mesh.name));
+    const geometry=helmetParts.map(mesh=>mesh.geometry);
     for(let level=1;level<=10;level++) {
       soldier.setLevel(level);soldier.root.updateMatrixWorld(true);
+      helmetParts.forEach((mesh,i)=>{assert.equal(mesh.geometry,geometry[i],'level upgrades retain the enclosing RLH shell');assert.ok(!mesh.material.transparent&&mesh.material.opacity===1);});
+      if(level!==1&&level!==10)continue;
       const center=soldier.head.localToWorld(new T.Vector3());
       for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++) {
         if(!x&&!y&&!z)continue;
         const origin=soldier.head.localToWorld(new T.Vector3(x,y,z));
-        const hits=new T.Raycaster(origin,center.clone().sub(origin).normalize()).intersectObject(soldier.head,true);
+        const hits=new T.Raycaster(origin,center.clone().sub(origin).normalize()).intersectObjects(helmetParts,false);
         assert.ok(hits.length,`${character.id}/${level}: helmet is closed from ${x},${y},${z}`);
         assert.ok(hits.every(hit=>!hit.object.material.transparent&&hit.object.material.opacity===1),'visor and shell are fully opaque');
       }
@@ -345,4 +349,45 @@ test('enemy knees and ankles plant feet through locomotion and settle when the a
     const floor=actor.position.y+(crawler?.075:.125)*actor.scale.y;
     for(const leg of actor.userData.legs)assert.ok(Math.abs(leg.foot.getWorldPosition(point).y-floor)<1e-5,`${form}: all feet settle flat`);
   }
+});
+
+test('the complete RLH body keeps native Idle Rifle and Rifle Walk clips with independent poses',()=>{
+  const k=kit(),make=()=>createSoldier(k,()=>buildGun({mats:mats(),gloves:k.gloves,sleeve:false,makeFlash:flash}),CHARACTERS[1]),a=make(),b=make();
+  assert.equal(a.nativeSkeleton.bones.length,34);
+  assert.ok(a.actor.data.source.includes('RLH Mixamo'));
+  assert.notEqual(a.nativeSkeleton,b.nativeSkeleton);
+  a.actor.parts.forEach((part,i)=>assert.equal(part.geometry,b.actor.parts[i].geometry));
+  const rifle=a.actor.actions.rifle,walkRifle=a.actor.actions.walkRifle;
+  assert.ok(Math.abs(rifle.getClip().duration-3.10)<.001);
+  assert.ok(Math.abs(walkRifle.getClip().duration-1.366667)<.001);
+  assert.ok(rifle.getClip().tracks.length>=29&&walkRifle.getClip().tracks.length>=35);
+  const unchanged=b.nativeSkeleton.bones.map(bone=>bone.quaternion.toArray());
+  for(let i=0;i<40;i++)a.animate(i*.016,false,0,0,1,.016,{aim:true});
+  assert.equal(a.nativeMotion,'rifle');assert.ok(rifle.getEffectiveWeight()>.99);
+  const still=a.jointPositions().leftKnee.clone();
+  for(let i=0;i<40;i++){a.root.position.z-=.07;a.animate(.64+i*.016,true,0,0,1,.016,{aim:true});}
+  assert.equal(a.nativeMotion,'walkRifle');assert.ok(walkRifle.getEffectiveWeight()>.99);
+  assert.ok(Math.abs(a.jointPositions().leftKnee.y-still.y)>.005,'the original armed stride actually bends the leg');
+  assert.deepEqual(b.nativeSkeleton.bones.map(bone=>bone.quaternion.toArray()),unchanged);
+  k.setPalette(CHARACTERS[0].armor);assert.equal(a.actor.parts.find(p=>p.name==='RLH helmet').material.color.getHex(),CHARACTERS[0].armor.rose);
+  k.setPalette(CHARACTERS[1].armor);assert.equal(a.actor.parts.find(p=>p.name==='RLH helmet').material.color.getHex(),CHARACTERS[1].armor.rose);
+  a.dispose();b.dispose();
+});
+
+test('native RLH wrists meet the five guns throughout vertical recharge and crouched armed walking',()=>{
+  const k=kit(),soldier=createSoldier(k,()=>buildGun({mats:mats(),gloves:k.gloves,sleeve:false,makeFlash:flash}),CHARACTERS[0]);soldier.root.scale.setScalar(soldier.heightScale);soldier.root.rotation.y=.8;
+  for(const [index,frame] of WEAPON_FRAME.entries()){
+    soldier.setWeapon(index);
+    for(let i=0;i<25;i++){
+      soldier.root.position.z-=.04;soldier.animate(i*.016,true,.1,Math.sin(i/24*Math.PI),1,.016,{crouched:i>10,firing:true});soldier.root.updateMatrixWorld(true);
+      const targets=[frame.support?soldier.gun.userData.support:soldier.freeHand,soldier.gun.userData.hand];
+      soldier.arms.forEach((arm,j)=>{
+        const wrist=arm.hand.getWorldPosition(new T.Vector3()),glove=targets[j].localToWorld(new T.Vector3(...GRIP.wrist));
+        assert.ok(wrist.distanceTo(glove)<.001,frame.id+': wrist stays attached during the vertical recharge');
+        if(j===1||frame.support){const expected=targets[j].getWorldQuaternion(new T.Quaternion()).multiply(targets[j].userData.rlh.quaternion);assert.ok(arm.hand.getWorldQuaternion(new T.Quaternion()).normalize().angleTo(expected.normalize())<1e-5,'the native cuff follows the glove rotation, including vertical recharge');}
+        assert.ok(Math.abs(arm.fore.position.length()-arm.upper.userData.length)<1e-6,'bone lengths never stretch');
+      });
+    }
+  }
+  soldier.dispose();
 });

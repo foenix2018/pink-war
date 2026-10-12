@@ -1,16 +1,16 @@
 import { characterForId } from './characters.js';
 // Every stage adds real geometry to the previous suit. No stat or health changes.
 export const EQUIPMENT = Object.freeze([
-  { level: 1, id: 'aube', name: 'Aube', addition: 'Tenue & casque fermé', description: 'Combinaison tissée, armure rose satinée et casque intégral à visière opaque.' },
-  { level: 2, id: 'sentinelle', name: 'Sentinelle', addition: 'Plastron composite', description: 'Plaques de poitrine sculptées et renforts dorsaux.' },
-  { level: 3, id: 'vigie', name: 'Vigie', addition: 'Épaulières & radio', description: 'Épaulières nacrées, antenne de communication et insigne ROSE–07.' },
-  { level: 4, id: 'eclaireuse', name: 'Éclaireuse', addition: 'Gantelets & scanner', description: 'Avant-bras blindés et scanner holographique au poignet.' },
-  { level: 5, id: 'rempart', name: 'Rempart', addition: 'Jambières & ceinture', description: 'Genouillères, protège-tibias et poches à cellules laser.' },
-  { level: 6, id: 'spectre', name: 'Spectre', addition: 'Casque renforcé & capteurs', description: 'Renforts de tempes, filtres blindés et capteurs sur le casque intégral.' },
-  { level: 7, id: 'valkyrie', name: 'Valkyrie', addition: 'Réacteur dorsal', description: 'Module énergétique dorsal avec deux cellules pulsantes.' },
-  { level: 8, id: 'aurora', name: 'Aurora', addition: 'Hanches & finition champagne', description: 'Plaques de hanche articulées et bordures métalliques champagne.' },
-  { level: 9, id: 'seraphine', name: 'Séraphine', addition: 'Ailes tactiques & balises', description: 'Ailettes dorsales repliées, balises et lignes de lumière rose.' },
-  { level: 10, id: 'imperatrice', name: 'Impératrice', addition: 'Couronne & halo orbital', description: 'Couronne de commandement, halo holographique et finitions de prestige.' }
+  { level: 1, id: 'aube', name: 'Aube', addition: 'Tenue RLH & casque fermé', description: 'Veste de pompier, pantalon à bandes réfléchissantes, bottes en cuir, harnais et appareil respiratoire RLH. Casque rose et masque opaques.' },
+  { level: 2, id: 'sentinelle', name: 'Sentinelle', addition: 'Balise de poitrine', description: 'Balise énergétique lumineuse fixée au harnais.' },
+  { level: 3, id: 'vigie', name: 'Vigie', addition: 'Module de communication', description: 'Module de communication compact à gauche du harnais.' },
+  { level: 4, id: 'eclaireuse', name: 'Éclaireuse', addition: 'Gantelets & scanner', description: 'Gantelets renforcés et scanner au poignet gauche.' },
+  { level: 5, id: 'rempart', name: 'Rempart', addition: 'Protection de genou', description: 'Renfort technique sur le genou gauche, conservant la liberté du pantalon.' },
+  { level: 6, id: 'spectre', name: 'Spectre', addition: 'Cellule de secours', description: 'Cellule lumineuse supplémentaire sur le harnais respiratoire.' },
+  { level: 7, id: 'valkyrie', name: 'Valkyrie', addition: 'Module énergétique', description: 'Module énergétique compact à droite de la poitrine.' },
+  { level: 8, id: 'aurora', name: 'Aurora', addition: 'Capteur & finition champagne', description: 'Capteur de casque avec finition champagne.' },
+  { level: 9, id: 'seraphine', name: 'Séraphine', addition: 'Balise de casque', description: 'Balise de casque métallisée pour les missions avancées.' },
+  { level: 10, id: 'imperatrice', name: 'Impératrice', addition: 'Insigne de commandement', description: 'Insigne lumineux de commandement sur le casque fermé.' }
 ].map(stage => Object.freeze(stage)));
 
 export function equipmentForLevel(level) {

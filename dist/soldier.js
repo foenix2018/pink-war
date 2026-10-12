@@ -3,6 +3,7 @@ import { Assembly, matrix, profile, loft, armorPanel } from './geo.js';
 import { addClosedHelmet } from './helmet.js';
 import { createGlove, GRIP, syncGloveMaterials } from './hands.js';
 import { WEAPON_FRAME } from './weapons.js';
+import { createRLHSoldier, syncRLHFirefighterMaterials } from './rlh-firefighter.js';
 
 export function createCharacterKit(emblem, surfaces = {}) {
   const geometries = { sphere: new T.SphereGeometry(1, 20, 14), tube: new T.CylinderGeometry(1, 1, 1, 16),
@@ -40,7 +41,7 @@ export function createCharacterKit(emblem, surfaces = {}) {
   materials.rose.needsUpdate=materials.pearl.needsUpdate=true;
   // Materials of the gloved hands: fabric, knuckle plates, trim, light strips, scanner and metal.
   const gloves = { fabric: materials.suit, plate: materials.rose, trim: materials.pearl, glow: materials.glow, accent: materials.cyan, metal: materials.gold };
-  return { geometries, materials, gloves, setPalette(colors){for(const [name,color] of Object.entries(colors))materials[name]?.color.setHex(color);syncGloveMaterials(gloves);} };
+  const kit={ geometries, materials, gloves, setPalette(colors){for(const [name,color] of Object.entries(colors))materials[name]?.color.setHex(color);syncGloveMaterials(gloves);syncRLHFirefighterMaterials(kit);} };return kit;
 }
 
 // Where each weapon is carried (palm position, body space) and where the idle hand rests with a one-handed weapon.
@@ -50,7 +51,8 @@ const UPPER = .31, FORE = .35, CARRY = 1.2;
 
 // The suit is a few hundred rounded pieces, merged per bone and material. Pieces carry the armour level that
 // unlocks them; changing level re-merges the few meshes of each bone instead of drawing hundreds of instances.
-export function createSoldier(kit, createGun, profileInfo) {
+export const createSoldier=createRLHSoldier;
+export function createLegacySoldier(kit, createGun, profileInfo) {
   const masculine=!!profileInfo?.masculine, side=masculine?.257:.243, width=masculine?1.05:1.015;
   // Heights are measured from the boots to the top of the suit, including antennae.
   const measuredUnscaledHeight=masculine?1.9728206886417337:1.9628380986029441;
