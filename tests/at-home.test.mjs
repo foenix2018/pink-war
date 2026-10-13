@@ -13,19 +13,19 @@ test('AT HOME is linked twice from the original Pink War lobby',()=>{
   assert.match(home,/id="at-home-enter"/);
   assert.match(home,/src="at-home\.js"/);
 });
-test('AR mode is passthrough, never an opaque virtual world',()=>{
+test('AT HOME uses an AR session so the player can return to passthrough from the immersive laboratory',()=>{
   assert.match(js,/requestSession\('immersive-ar'/);
-  assert.match(js,/alpha: true/);
-  assert.match(js,/renderer\.setClearColor\(0x000000, 0\)/);
+  assert.match(js,/alpha:true/);
+  assert.match(js,/renderer\.setClearColor\(0x000000,0\)/);
   assert.match(js,/['"]plane-detection['"]/);
   assert.match(js,/['"]mesh-detection['"]/);
   assert.match(js,/frame\.detectedPlanes/);
   assert.match(js,/frame\.detectedMeshes/);
 });
 test('Room geometry is required before spawning a combat enemy',()=>{
-  assert.match(js,/some\(record => record\.isFloor\)/);
+  assert.match(js,/new RoomGame\(room\)/);
   assert.match(js,/clearLineOfSight/);
-  assert.match(js,/raycaster\.intersectObjects\(bots\.map\(bot=>bot\.hitbox\)\.concat\(blockers\(\)\),false\)/);
+  assert.match(js,/hasFloor:\(\)=>floors\(\)\.length>0/);
   assert.match(js,/initiateRoomCapture/);
   assert.match(js,/zone|ZONE/);
 });
@@ -39,9 +39,8 @@ test('AT HOME reuses the original Pink War gameplay asset modules',()=>{
   assert.match(assets,/createSoldier\(companionKit\.kit/);
   assert.match(assets,/buildGun\(/);
   assert.match(assets,/createRuinedRoomMaterials\(/);
-  assert.match(js,/WEAPONS\[weaponIndex\]/);
-  assert.match(js,/hitbox\.userData\.bot/);
-  assert.match(js,/colorWrite:false, depthWrite:true/);
+  assert.match(js,/game\.weapon/);
+  assert.match(js,/colorWrite:false,depthWrite:true/);
   assert.match(js,/assets\.projectRuin/);
 });
 test('AT HOME room asset module passes Node syntax check',()=>{

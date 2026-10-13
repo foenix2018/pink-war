@@ -32,15 +32,16 @@ body.in-xr .layout{display:none}
 <canvas id="at-home-world" aria-label="Pink War AT HOME — réalité mixte"></canvas>
 <main class="layout">
  <header class="header"><div>PINK WAR <span style="color:#ff80b2">/ AT HOME</span></div><a class="back" href="./">← JEU CLASSIQUE</a></header>
- <p class="eyebrow">META QUEST 3 / RÉALITÉ MIXTE</p>
+ <p class="eyebrow">META QUEST 3 / LABORATOIRE DE L’IA / V.3.27</p>
  <h1>AT <span>HOME.</span></h1>
- <p class="lead">Ton salon rejoint l’univers de Pink War : vrais modèles des armes, des machines ennemies et de GHJU/LYLU, portail de la Brèche et textures des ruines projetées sur les surfaces scannées. Les meubles restent visibles en passthrough.</p>
+ <p class="lead">Ta maison devient un ancien laboratoire de l’IA. Ses murs, son sol et ses meubles prennent les matières des ruines de Pink War, sous le ciel de la mégapole. Repousse les machines qui sortent des brèches et récupère les armes livrées au fil des vingt vagues.</p>
  <section class="panel" aria-label="Configuration de l'arène">
   <div id="at-home-status" class="status" role="status">Vérification de la compatibilité WebXR…</div>
   <div class="actions"><button id="at-home-enter" type="button" disabled>ENTRER DANS MON ARÈNE →</button><button id="at-home-end" class="secondary" type="button" hidden>QUITTER LA SESSION</button></div>
-  <p><strong>Avant de commencer :</strong> dans ton Quest 3, lance la configuration de l'espace (Space Setup), dégage les obstacles dangereux et conserve la limite de sécurité du casque.</p>
-  <ul><li><strong>Gâchette droite</strong> : commencer, viser et tirer avec l’arme originale du jeu. <strong>Gâchette gauche</strong> : demander le scan si nécessaire.</li><li><strong>A droite</strong> : recharger. <strong>Y gauche</strong> : changer d’arme parmi les armes débloquées (R–9, BLOOM, LANCE, THORN, NOVA). <strong>X gauche</strong> : afficher/masquer les textures des ruines.</li><li>Un sol détecté est indispensable avant l'apparition des ennemis. Aucun terrain n'est inventé si l'accès spatial est refusé.</li><li>Reste sur place ou marche lentement dans un espace dégagé. Ne cours pas, ne saute pas, ne t'appuie pas sur un meuble virtuel.</li><li><strong>B droite</strong> : quitter immédiatement la session. La sécurité réelle du casque et les déplacements lents restent prioritaires.</li></ul>
-  <small id="at-home-character">Personnage : GHJU · Univers rose. Le choix est repris depuis l'accueil.</small><p><small>Mode expérimental WebXR : les éléments détectables et la qualité de l’occlusion dépendent de la version du navigateur Quest et du Space Setup. L’environnement d’origine est adapté à l’échelle de la pièce, pas reproduit entièrement.</small></p>
+  <label for="at-home-immersion">Décor de la maison</label> <select id="at-home-immersion" style="padding:9px;background:#17212b;color:white;border:1px solid #6d8291;border-radius:8px"><option value="full">Laboratoire immersif · transformation complète</option><option value="mixed">Réalité mixte · maison visible</option></select>
+  <p>Configure la maison dans <strong>Space Setup</strong> du Quest. Le décor reprend la géométrie détectée : les meubles et les murs servent de couvert. Le scan reste dans la session.</p>
+  <ul><li><strong>Gâchette droite</strong> : commencer et tirer ; maintenir pour déployer AURORA. <strong>Gâchette gauche</strong> : viser avec BLOOM ×2 / LANCE ×4, ou scanner avant le combat.</li><li><strong>A droite</strong> : recharger. <strong>Y gauche</strong> : changer d’arme acquise. <strong>Clic du joystick gauche</strong> : récupérer l’arme près de son socle.</li><li>Les six armes arrivent aux mêmes niveaux que dans l’arène. Entre les vagues, profite de la pause et de la régénération de santé.</li><li><strong>X gauche</strong> : retrouver immédiatement la maison en passthrough. <strong>B droite</strong> : quitter la session.</li><li>Le déplacement suit tes pas réels dans la limite du casque. Le combat commence après la détection d’un sol.</li></ul>
+  <small id="at-home-character">Personnage : GHJU · Le choix est repris depuis l’accueil.</small><p><small>La fidélité du décor dépend du scan fourni par le Quest. Les parties non détectées ne deviennent pas des obstacles physiques dans le jeu.</small></p>
  </section>
 </main>
 <script type="module" src="at-home.js"></script>

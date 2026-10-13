@@ -122,7 +122,7 @@ export function traceEnemyHit(start, end, enemy) {
     const t=segmentSphere(start,end,{x:enemy.x,y:height+(enemy.aimHeight||1.15),z:enemy.z},enemy.hitRadius||1.05);
     return t===null?null:{t,zone:'torso',multiplier:1};
   }
-  const elite=enemyScale(enemy.form,enemy.elite);
+  const elite=enemyScale(enemy.form,enemy.elite)*(enemy.roomScale||1);
   const yaw=enemy.yaw||0,cos=Math.cos(yaw),sin=Math.sin(yaw);
   const crawl=enemy.form==='scuttler';
   const zones=enemy.form==='probe'?[

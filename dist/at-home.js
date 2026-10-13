@@ -1,636 +1,254 @@
-// Pink War / AT HOME. Mixed reality is intentionally separate from the classic arena.
-// The headset's spatial data stays inside this WebXR session; it is never uploaded.
+// Pink War AT HOME: the scanned house becomes an abandoned AI laboratory.
+// Spatial data stays inside the session; walking uses native headset tracking.
 import * as THREE from './vendor/three.module.min.js';
 import { characterForId } from './characters.js';
+import { WEAPONS } from './game-logic.js';
+import { RoomGame } from './room-game.js';
+import { classifyRoomSurface, insideRoomPolygon, roomBounds, roomFloorAt, createRoomNavigation } from './room-layout.js';
 import { playLaserShot, loadRealLaserSample, playLaserImpact, playWeaponAction } from './laser-sound.js';
-import { WEAPONS,segmentBox,traceEnemyHit } from './game-logic.js';
-import { sweepBlade,bladeBulletContact } from './blade-combat.js';
 import { createSaberSound } from './saber-sound.js';
 import { syncTrackedHands } from './xr-hands.js';
 import { createMusicBed } from './music.js';
+import { createAmbience } from './ambience.js';
+import { createWeaponFeel } from './weapon-feel.js';
+import { createLaserFX } from './laser-fx.js';
+import { createMagnifiedSight } from './magnified-sight.js';
 
-const $ = id => document.getElementById(id);
-const status = $('at-home-status');
-const button = $('at-home-enter');
-const endButton = $('at-home-end');
-let characterId = 'ghju';
-try { characterId = localStorage.getItem('pink-war-character') || characterId; } catch {}
-const hero = characterForId(characterId);
-$('at-home-character').textContent = 'Personnage : ' + hero.name + ' · ' + hero.universeName;
-document.documentElement.style.setProperty('--pink', hero.accent);
-
-const scene = new THREE.Scene();
-scene.background = null;
-const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, .02, 30);
-scene.add(new THREE.HemisphereLight(0xd7e8ff, 0x352641, 2.1));
-const key = new THREE.DirectionalLight(0xffffff, 1.8);
-key.position.set(1, 3, 2);
-scene.add(key);
-const renderer = new THREE.WebGLRenderer({
-  canvas: $('at-home-world'), alpha: true, antialias: true,
-  powerPreference: 'high-performance'
-});
-renderer.setClearColor(0x000000, 0);
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
-renderer.setSize(innerWidth, innerHeight, false);
-renderer.xr.enabled = true;
-renderer.xr.setReferenceSpaceType('local-floor');
-renderer.xr.setFoveation?.(.5);
-
-const tint = new THREE.Color(hero.palette.rose);
-const violet = new THREE.Color(hero.palette.violet);
-const raycaster = new THREE.Raycaster();
-const v0 = new THREE.Vector3(), v1 = new THREE.Vector3(), v2 = new THREE.Vector3();
-const direction = new THREE.Vector3(), head = new THREE.Vector3();
-const orientation = new THREE.Quaternion();
-let session = null, audio = null, mode = 'idle', startTime = 0, roomCaptureAsked = false;
-let hp = 100, score = 0, wave = 1, shotCooldown = 0, enemyCooldown = 0, lastTime = 0;
-let assets=null, assetsLoading=null, assetError='', weaponIndex=0, ammo=WEAPONS[0].capacity, reloadUntil=0, triggerStarted=0, triggerHeld=false;
-const ammoByWeapon=WEAPONS.map(weapon=>weapon.capacity);
-let lastLeftX=false,lastLeftY=false,lastRightA=false, decorEnabled=true, muzzleUntil=0;
-let semiPressFired=false;
-let saberAudio=null,previousBlade=null,bladeSpeed=0,manualStrikeUntil=0,saberSwingSound=false,nextBotId=1;
-const bladeHitTimes=new Map(),bladeLight=new THREE.PointLight(hero.palette.rose,0,3.2,2);scene.add(bladeLight);
-const music=createMusicBed();
-let scanMessage = 'EN ATTENTE DU SCAN', bWasDown = false;
-const surfaces = new Map(), meshes = new Map(), bots = [], tracers = [];
-const controllers = [renderer.xr.getController(0), renderer.xr.getController(1)];
-const mounts = [];
-const controllerHandState={trigger:0,grip:0,offTrigger:0,offGrip:0};
-function roomNoise(kind,position,radius){
-  const now=performance.now()/1000;
-  for(const bot of bots){
-    const ear=bot.group.position.clone().add(new THREE.Vector3(0,bot.form==='probe'?.95:1.15,0));
-    const reach=radius*(bot.form==='listener'?1.65:1)*(clearLineOfSight(position,ear)?1:.43);
-    if(ear.distanceTo(position)<reach){bot.lastSound=position.clone();bot.heardUntil=now+6;}
+const $=id=>document.getElementById(id),status=$('at-home-status'),button=$('at-home-enter');
+let characterId='ghju';try{characterId=localStorage.getItem('pink-war-character')||characterId;}catch{}
+const hero=characterForId(characterId);document.documentElement.style.setProperty('--pink',hero.accent);
+$('at-home-character').textContent=hero.name+' · Laboratoire de l’IA · Après la chute';
+const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.025,650);
+scene.background=null;scene.add(camera,new THREE.HemisphereLight(0xc3d8ed,0x263239,1.8));
+const key=new THREE.DirectionalLight(0xdee9f0,2.1);key.position.set(2,5,3);scene.add(key);
+const renderer=new THREE.WebGLRenderer({canvas:$('at-home-world'),alpha:true,antialias:true,powerPreference:'high-performance'});
+renderer.setClearColor(0x000000,0);renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.setSize(innerWidth,innerHeight,false);
+renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
+renderer.xr.enabled=true;renderer.xr.setReferenceSpaceType('local-floor');renderer.xr.setFoveation?.(.65);
+const raycaster=new THREE.Raycaster(),head=new THREE.Vector3(),direction=new THREE.Vector3(),orientation=new THREE.Quaternion(),tmp=new THREE.Vector3();
+let session=null,mode='idle',assets=null,assetsLoading=null,assetError='',audio=null,ambience=null,saberAudio=null,scope=null;
+let lastTime=0,startTime=0,roomCaptureAsked=false,decorEnabled=true,fullImmersion=true,roomDirty=true,navigation=null,navigationFloorY=null,lastRoomBuild=-99;
+let frames=0,fireBlocked=true,lastTrigger=false,scanMessage='',announcementUntil=0,muzzleUntil=0;
+const surfaces=new Map(),meshes=new Map(),bots=new Map(),bolts=new Map();
+const mounts=[],controllerHandState={trigger:0,grip:0,offTrigger:0,offGrip:0},previousButtons=new Map();
+const music=createMusicBed(),feel=createWeaponFeel(),laser=createLaserFX(THREE,scene,hero.palette);
+const blockerMaterial=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:true,side:THREE.DoubleSide});
+const outlineMat=new THREE.LineBasicMaterial({color:hero.palette.rose,transparent:true,opacity:.38,depthWrite:false});
+const bladeLight=new THREE.PointLight(hero.palette.rose,0,3.2,2);scene.add(bladeLight);
+const hostileGeo=new THREE.CylinderGeometry(.012,.012,1,6),hostileMat=new THREE.MeshBasicMaterial({color:0xff657f,toneMapped:false});
+const opticalEye=new THREE.PerspectiveCamera();opticalEye.matrixAutoUpdate=false;
+function info(text){scanMessage=text;status.textContent=text;}
+function surfaceRecords(){return [...surfaces.values(),...meshes.values()];}
+function floors(){return surfaceRecords().filter(r=>r.isFloor&&r.polygon?.length>=3);}
+function blockers(){return surfaceRecords().map(r=>r.collider);}
+function traceRoom(a,b,objects=blockers()){
+ const length=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z);if(length<.001)return null;
+ raycaster.set(tmp.set(a.x,a.y,a.z),direction.set(b.x-a.x,b.y-a.y,b.z-a.z).divideScalar(length));raycaster.near=.012;raycaster.far=length;
+ const hit=raycaster.intersectObjects(objects,false)[0];if(!hit)return null;
+ const normal=hit.face?.normal.clone().transformDirection(hit.object.matrixWorld)||new THREE.Vector3(0,1,0);
+ return {t:hit.distance/length,point:{x:hit.point.x,y:hit.point.y,z:hit.point.z},normal:{x:normal.x,y:normal.y,z:normal.z},surface:'metal'};
+}
+function clearLineOfSight(a,b){return !traceRoom(a,b);}
+function canStand(p,radius=.33){
+ const all=floors(),y=roomFloorAt(p,all);if(y===null)return false;
+ const nonFloor=surfaceRecords().filter(r=>!r.isFloor).map(r=>r.collider);
+ for(const [dx,dz] of [[0,0],[radius,0],[-radius,0],[0,radius],[0,-radius]]){
+  const q={x:p.x+dx,z:p.z+dz,y:y+.08};if(roomFloorAt(q,all)===null)return false;
+  if(traceRoom(q,{...q,y:y+1.95},nonFloor))return false;
+  if((dx||dz)&&traceRoom({x:p.x,y:y+.75,z:p.z},{...q,y:y+.75},nonFloor))return false;
+  if(!traceRoom({...q,y:y+.35},{...q,y:y-.12},all.map(f=>f.collider)))return false;
+ }return true;
+}
+function findPoint({purpose,head:viewer=head,avoid=[],portal=null}={}){
+ const all=floors();if(!all.length)return null;const bounds=roomBounds(all);if(!bounds)return null;
+ const min=purpose==='weapon'?.65:1.6,max=purpose==='weapon'?1.6:16;
+ for(let i=0;i<140;i++){
+  const point=portal?{x:portal.x+(Math.random()-.5)*1.2,z:portal.z+(Math.random()-.5)*1.2,y:portal.elevation}:
+   {x:bounds.minX+Math.random()*(bounds.maxX-bounds.minX),z:bounds.minZ+Math.random()*(bounds.maxZ-bounds.minZ),y:roomFloorAt({...viewer,y:viewer.y-.65},all)??bounds.floorY};
+  const y=roomFloorAt(point,all);if(y===null)continue;point.y=y;
+  const d=Math.hypot(point.x-viewer.x,point.z-viewer.z);if(d<min||d>max||!canStand(point,purpose==='weapon'?.23:.4))continue;
+  if(avoid.some(other=>Math.hypot(other.x-point.x,other.z-point.z)<(purpose==='portal'?1.5:.85)))continue;
+  if(purpose==='weapon'&&!clearLineOfSight(viewer,{...point,y:y+1}))continue;
+  if(navigation&&!navigation.reachable(point,viewer))continue;return point;
+ }return null;
+}
+const room={hasFloor:()=>floors().length>0,floorAt:p=>roomFloorAt({...p,y:p.y-.65},floors()),freeArea:()=>navigation?.freeArea()||8,
+ ceilingAt:p=>Math.min(p.y+2.6,...surfaceRecords().filter(r=>r.kind==='ceiling'&&r.polygon[0].y>p.y+.4&&insideRoomPolygon(p,r.polygon)).map(r=>r.polygon.reduce((sum,v)=>sum+v.y,0)/r.polygon.length)),
+ findPoint,canStand,trace:traceRoom,waypoint:(from,target)=>navigation?.waypoint(from,target)};
+const game=new RoomGame(room);
+function makeBoard(width,height,size){
+ const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+ const texture=new THREE.CanvasTexture(canvas),plane=new THREE.Mesh(new THREE.PlaneGeometry(...size),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthTest:false,depthWrite:false,toneMapped:false}));
+ plane.renderOrder=100;plane.frustumCulled=false;plane.visible=false;scene.add(plane);return {canvas,texture,plane,key:''};
+}
+const hud=makeBoard(512,112,[.42,.092]),board=makeBoard(768,240,[1.10,.34]),announcement=makeBoard(768,128,[.73,.12]);
+function announce(text){announcementUntil=game.time+4;const c=announcement.canvas.getContext('2d');c.clearRect(0,0,768,128);c.fillStyle='#15212bdd';c.fillRect(0,0,768,128);c.fillStyle=hero.accent;c.font='bold 34px monospace';c.textAlign='center';c.fillText(text,384,77);announcement.texture.needsUpdate=true;}
+function placeBoard(item,offset,distance){item.plane.position.copy(head).addScaledVector(direction.set(0,0,-1).applyQuaternion(orientation),distance);item.plane.position.y+=offset;item.plane.quaternion.copy(orientation);}
+function updateBoards(){
+ hud.plane.visible=mode==='combat';board.plane.visible=!!session&&mode!=='combat';announcement.plane.visible=mode==='combat'&&game.time<announcementUntil;
+ placeBoard(hud,-.27,1.05);placeBoard(board,-.42,1.4);placeBoard(announcement,.22,1.4);
+ const ammo=game.ammo[game.weaponIndex],key=Math.ceil(game.player.hp)+'|'+ammo+'|'+game.weapon.melee+'|'+Math.ceil(game.reloadRemaining*4);
+ if(key!==hud.key){hud.key=key;const c=hud.canvas.getContext('2d');c.clearRect(0,0,512,112);c.fillStyle='#111a28dd';c.fillRect(0,0,244,112);c.fillRect(264,0,248,112);c.fillStyle='#bfcddd';c.font='bold 17px sans-serif';c.fillText('SANTÉ',20,26);c.fillText(game.weapon.melee?'ÉNERGIE':'BALLES',284,26);c.fillStyle=game.player.hp<30?'#ff637f':'white';c.font='bold 50px sans-serif';c.fillText(String(Math.ceil(game.player.hp)),18,83);c.fillStyle='white';c.fillText(game.weapon.melee?'∞':String(ammo),282,83);c.fillStyle=hero.accent;c.fillRect(20,98,Math.max(0,204*game.player.hp/100),4);hud.texture.needsUpdate=true;}
+ const text=mode==='finished'?(game.state==='won'?'LABORATOIRE SÉCURISÉ':'SIGNAL PERDU'):'LABORATOIRE DE L’IA';
+ const boardKey=text+scanMessage;if(boardKey!==board.key){board.key=boardKey;const c=board.canvas.getContext('2d');c.clearRect(0,0,768,240);c.fillStyle='#111c29e8';c.fillRect(0,0,768,240);c.fillStyle=hero.accent;c.font='bold 34px monospace';c.fillText(text,24,62);c.fillStyle='white';c.font='25px monospace';c.fillText(scanMessage.slice(0,49),24,126);c.fillStyle='#aebdc9';c.font='22px monospace';c.fillText(mode==='paused'?'GÂCHETTE DROITE : REPRENDRE':'B : QUITTER   /   X : PASSTHROUGH',24,196);board.texture.needsUpdate=true;}
+}
+function poseObject(object,pose){object.position.copy(pose.transform.position);object.quaternion.copy(pose.transform.orientation);object.updateMatrixWorld(true);}
+function planeGeometry(polygon){
+ if(!polygon||polygon.length<3)return null;
+ const normal=new THREE.Vector3();for(let i=1;i<polygon.length-1&&normal.lengthSq()<1e-8;i++)normal.subVectors(polygon[i],polygon[0]).cross(new THREE.Vector3().subVectors(polygon[i+1],polygon[0]));
+ const axis=[Math.abs(normal.x),Math.abs(normal.y),Math.abs(normal.z)].indexOf(Math.max(Math.abs(normal.x),Math.abs(normal.y),Math.abs(normal.z)));
+ const axes=axis===0?['z','y']:axis===1?['x','z']:['x','y'];
+ const faces=THREE.ShapeUtils.triangulateShape(polygon.map(p=>new THREE.Vector2(p[axes[0]],p[axes[1]])),[]);
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(polygon.flatMap(p=>[p.x,p.y,p.z]),3));g.setIndex(faces.flat());g.computeVertexNormals();return g;
+}
+function discardSurface(record){assets?.disposeDecor(record);record.collider.removeFromParent();record.outline?.removeFromParent();record.collider.geometry.dispose();record.outline?.geometry.dispose();roomDirty=true;}
+function updateSurfaces(frame){
+ const ref=renderer.xr.getReferenceSpace();if(!ref||!frame)return;
+ const detected=frame.detectedPlanes||session?.detectedPlanes;
+ if(detected){for(const [source,record] of surfaces)if(!detected.has(source)){discardSurface(record);surfaces.delete(source);}
+  let count=0;for(const plane of detected){if(++count>65)break;const pose=frame.getPose(plane.planeSpace,ref);if(!pose||plane.polygon?.length<3)continue;
+   let record=surfaces.get(plane),changed=!record||record.changed!==plane.lastChangedTime;
+   if(changed){const geometry=planeGeometry(plane.polygon);if(!geometry)continue;if(record)discardSurface(record);
+    const collider=new THREE.Mesh(geometry,blockerMaterial),outline=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(plane.polygon.map(p=>new THREE.Vector3(p.x,p.y,p.z))),outlineMat);scene.add(collider,outline);
+    record={collider,outline,changed:plane.lastChangedTime,kind:'object',isFloor:false,polygon:[]};surfaces.set(plane,record);roomDirty=true;}
+   poseObject(record.collider,pose);poseObject(record.outline,pose);
+   record.polygon=plane.polygon.map(p=>record.collider.localToWorld(new THREE.Vector3(p.x,p.y,p.z)));
+   const kind=classifyRoomSurface(record.polygon,plane.semanticLabel||'');if(kind!==record.kind){record.kind=kind;roomDirty=true;changed=true;}record.isFloor=kind==='floor';
+   record.outline.visible=!decorEnabled||mode==='ready';if(assets&&(changed||!record.decor))assets.projectRuin(record,decorEnabled,head);
   }
-}
-const wireMaterial = new THREE.LineBasicMaterial({ color:tint, transparent:true, opacity:.5, depthWrite:false });
-const blockerMaterial = new THREE.MeshBasicMaterial({
-  color:0xffffff, colorWrite:false, depthWrite:true, side:THREE.DoubleSide
-});
-
-const canvas = document.createElement('canvas');
-canvas.width = 768; canvas.height = 272;
-const ctx = canvas.getContext('2d');
-const texture = new THREE.CanvasTexture(canvas);
-const board = new THREE.Mesh(new THREE.PlaneGeometry(1.25, .44),
-  new THREE.MeshBasicMaterial({ map:texture, transparent:true, depthTest:false, depthWrite:false }));
-board.renderOrder = 100;
-board.visible = false;
-scene.add(board);
-let lastBoardText = '';
-function info(line) { scanMessage = line; status.textContent = line; lastBoardText = ''; }
-function drawBoard() {
-  if (!session) return;
-  const count = [...surfaces.values()].filter(s => s.isFloor).length;
-  const top = mode === 'combat' ? 'COMBAT   /   ' + hero.name : 'AT HOME   /   ' + hero.name;
-  const middle = mode === 'combat'
-    ? 'V'+wave+'  SCORE '+score+'  VIE '+hp+'  '+WEAPONS[weaponIndex].name+' '+ammo+'/'+WEAPONS[weaponIndex].capacity
-    : scanMessage;
-  const bottom = mode === 'combat' ? 'TIR DROIT  |  A RECHARGE  |  Y ARME  |  B SORTIR'
-    : count ? 'GACHETTE DROITE : COMMENCER' : 'GACHETTE GAUCHE : SCAN  |  B : SORTIR';
-  const next = top + '\n' + middle + '\n' + bottom;
-  if (next === lastBoardText) return;
-  lastBoardText = next;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if(mode==='combat'){
-    ctx.fillStyle='rgba(15,23,34,.84)';ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle='#bdcadd';ctx.font='bold 28px sans-serif';ctx.fillText('SANTÉ',38,67);ctx.fillText(WEAPONS[weaponIndex].melee?'LAME ACTIVE':'CELLULES',427,67);
-    ctx.fillStyle=hp<30?'#ff738f':'#f5f9ff';ctx.font='bold 90px sans-serif';ctx.fillText(String(hp),38,181);
-    ctx.fillStyle='#f5f9ff';ctx.fillText(WEAPONS[weaponIndex].melee?'∞':String(ammo),427,181);
-    ctx.fillStyle='#d6e5fb22';ctx.fillRect(38,219,300,9);ctx.fillStyle='#'+tint.getHexString();ctx.fillRect(38,219,hp*3,9);texture.needsUpdate=true;return;
+ }
+ const detectedMeshes=frame.detectedMeshes;
+ if(detectedMeshes){for(const [source,record] of meshes)if(!detectedMeshes.has(source)){discardSurface(record);meshes.delete(source);}
+  let count=0;for(const mesh of detectedMeshes){if(++count>14)break;if(!mesh.vertices||!mesh.indices||mesh.vertices.length>30000||mesh.indices.length>45000)continue;
+   const pose=frame.getPose(mesh.meshSpace,ref);if(!pose)continue;let record=meshes.get(mesh),changed=!record||record.changed!==mesh.lastChangedTime;
+   if(changed){if(record)discardSurface(record);const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(mesh.vertices.slice(),3));g.setIndex(new THREE.BufferAttribute(mesh.indices.slice(),1));g.computeVertexNormals();
+    const collider=new THREE.Mesh(g,blockerMaterial);scene.add(collider);record={collider,changed:mesh.lastChangedTime,kind:'mesh',isFloor:mesh.semanticLabel==='floor',polygon:[]};meshes.set(mesh,record);roomDirty=true;}
+   poseObject(record.collider,pose);
+   if(record.isFloor){const b=new THREE.Box3().setFromObject(record.collider);record.polygon=[new THREE.Vector3(b.min.x,b.min.y,b.min.z),new THREE.Vector3(b.max.x,b.min.y,b.min.z),new THREE.Vector3(b.max.x,b.min.y,b.max.z),new THREE.Vector3(b.min.x,b.min.y,b.max.z)];}
+   if(assets&&(changed||!record.decor))assets.projectRuin(record,decorEnabled,head);
   }
-  ctx.fillStyle = 'rgba(16,12,25,.8)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.lineWidth = 5;
-  ctx.strokeStyle = '#' + tint.getHexString();
-  ctx.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
-  ctx.fillStyle = '#' + tint.getHexString();
-  ctx.font = 'bold 43px monospace';
-  ctx.fillText(top, 28, 71);
-  ctx.fillStyle = '#fff2fb';
-  ctx.font = 'bold 31px monospace';
-  ctx.fillText(middle.slice(0, 44), 28, 142);
-  ctx.fillStyle = '#d1bac9';
-  ctx.font = '25px monospace';
-  ctx.fillText(bottom, 28, 214);
-  texture.needsUpdate = true;
+ }
+ const roomClock=performance.now()/1000;
+ const currentFloor=room.floorAt(head);if(currentFloor!==navigationFloorY)roomDirty=true;
+ if(roomDirty&&roomClock-lastRoomBuild>.25){roomDirty=false;lastRoomBuild=roomClock;navigationFloorY=currentFloor;const bounds=roomBounds(floors());navigation=createRoomNavigation(bounds?{...bounds,floorY:currentFloor??bounds.floorY}:null,canStand);assets?.architecture.setRoom(bounds);assets?.architecture.setEnabled(decorEnabled,fullImmersion);}
 }
-function updateBoard() {
-  if (!session) return;
-  const xrCamera = renderer.xr.getCamera(camera);
-  xrCamera.getWorldPosition(head);
-  xrCamera.getWorldQuaternion(orientation);
-  direction.set(0, 0, -1).applyQuaternion(orientation);
-  board.position.copy(head).addScaledVector(direction, 1.35);
-  board.position.y -= .48;
-  board.quaternion.copy(orientation);
-  board.visible = true;
-  board.scale.setScalar(mode==='combat'?.42:1);
-  drawBoard();
+function edge(key,down){const old=previousButtons.get(key)||false;previousButtons.set(key,down);return down&&!old;}
+function cancelFire(){game.triggerHeld=false;game.semiPending=false;game.charge=0;game.bladePrevious=null;fireBlocked=true;scope?.release();}
+function startCombat(){
+ if(mode==='paused'){game.running=true;mode='combat';cancelFire();info('SIGNAL RÉTABLI');return;}
+ if(!assets){info(assetError||'CHARGEMENT DES ARMES ET DES MACHINES');return;}
+ if(!game.start(head)){info(floors().length?'ZONE DE SOL TROP ÉTROITE OU MASQUÉE':'SOL NON DÉTECTÉ : GÂCHETTE GAUCHE POUR SCANNER');return;}
+ clearBots();assets.syncOffers([]);assets.setPortals([],head);feel.reset();laser.reset();mode='combat';cancelFire();music.start(audio);
+ const point=findPoint({purpose:'companion',head});if(point)assets.placeCompanion(new THREE.Vector3(point.x,point.y,point.z),head);else assets.companion.root.visible=false;
+ info('INTRUSION DANS LE LABORATOIRE');announce('INTRUSION / '+hero.name);
 }
-function poseObject(object, pose) {
-  object.position.set(pose.transform.position.x, pose.transform.position.y, pose.transform.position.z);
-  const q = pose.transform.orientation;
-  object.quaternion.set(q.x, q.y, q.z, q.w);
-  object.updateMatrixWorld(true);
+function clearBots(){for(const model of bots.values())model.removeFromParent();bots.clear();for(const mesh of bolts.values())mesh.removeFromParent();bolts.clear();}
+function syncModels(){
+ for(const [id,model] of bots)if(!game.enemies.some(e=>e.id===id)){model.removeFromParent();bots.delete(id);}
+ for(const e of game.enemies){let model=bots.get(e.id);if(!model){model=assets.makeEnemy(e.form,e.elite,e.ranged);model.scale.multiplyScalar(e.roomScale||1);scene.add(model);bots.set(e.id,model);}model.position.set(e.x,e.elevation,e.z);model.rotation.y=e.yaw;model.userData.animate(game.time,e.phase,e.moving,e,game.time);}
+ for(const [id,model] of bolts)if(!game.bullets.some(b=>b.id===id&&b.hostile)){model.removeFromParent();bolts.delete(id);}
+ for(const b of game.bullets)if(b.hostile){let model=bolts.get(b.id);if(!model){model=new THREE.Mesh(hostileGeo,hostileMat);scene.add(model);bolts.set(b.id,model);}model.position.set(b.x,b.y,b.z);model.scale.y=.28;model.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(b.vx,b.vy,b.vz).normalize());}
+ assets.syncOffers(game.weaponOffers);for(const item of assets.offers.values())item.label.lookAt(head);
 }
-function planeGeometry(polygon) {
-  if (!polygon || polygon.length < 3) return null;
-  const vertices = [], indices = [];
-  for (const p of polygon) vertices.push(p.x, p.y, p.z);
-  for (let i = 2; i < polygon.length; i++) indices.push(0, i - 1, i);
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-  g.setIndex(indices);
-  g.computeVertexNormals();
-  return g;
+function processEvents(){
+ for(const event of game.drainEvents()){
+  if(event.type==='wave'){announce('BRÈCHE / VAGUE '+String(event.wave).padStart(2,'0'));assets.setPortals(game.activePortals,head);assets.setWeapon(game.weaponIndex,Math.min(10,game.wave));}
+  if(event.type==='wave-clear')announce('VAGUE '+event.wave+' REPOUSSÉE');
+  if(event.type==='room-blocked')announce('BRÈCHE EN ATTENTE / ZONE DE SOL');
+  if(event.type==='weapon-offer')announce(event.name+' / LIVRAISON DISPONIBLE');
+  if(event.type==='unlock')announce(event.name+' / ACQUISE');
+  if(event.type==='weapon'){assets.setWeapon(event.index,Math.min(10,Math.max(1,game.wave)));feel.reset();scope?.release();cancelFire();}
+  if(event.type==='shot'){feel.fire(event.weapon,event.power,controllerHandState.offGrip>.5);laser.shot(event);muzzleUntil=game.time+.075;try{playLaserShot(audio,event.weapon,event.power);}catch{}haptic();}
+  if(event.type==='reload'){try{playWeaponAction(audio,game.weapon.id,'reload-out');}catch{}}
+  if(event.type==='reloaded'){try{playWeaponAction(audio,game.weapon.id,'reload-in');}catch{}}
+  if(event.type==='impact'){laser.impact(event);try{playLaserImpact(audio,{surface:event.surface,distance:Math.hypot(event.x-head.x,event.y-head.y,event.z-head.z),splash:event.splash,power:event.power});}catch{}}
+  if(event.type==='blade-hit'||event.type==='blade-parry'){saberAudio?.impact(event.type==='blade-parry');haptic();}
+  if(event.type==='over'||event.type==='won'){mode='finished';music.pause();cancelFire();info('GÂCHETTE DROITE : REJOUER');}
+ }
 }
-function discardSurface(record) {
-  assets?.disposeDecor(record);
-  scene.remove(record.collider);
-  scene.remove(record.outline);
-  record.collider.geometry.dispose();
-  record.outline.geometry.dispose();
-}
-function createOutline(polygon) {
-  const g = new THREE.BufferGeometry().setFromPoints(polygon.map(p => new THREE.Vector3(p.x, p.y, p.z)));
-  return new THREE.LineLoop(g, wireMaterial);
-}
-function updateSurfaces(frame) {
-  const ref = renderer.xr.getReferenceSpace();
-  if (!ref || !frame) return;
-  const detected = frame.detectedPlanes || session?.detectedPlanes;
-  if (detected) {
-    for (const [plane, record] of surfaces) {
-      if (!detected.has(plane)) { discardSurface(record); surfaces.delete(plane); }
-    }
-    let inspected = 0;
-    for (const plane of detected) {
-      if (++inspected > 65) break;
-      const pose = frame.getPose(plane.planeSpace, ref);
-      if (!pose || !plane.polygon || plane.polygon.length < 3) continue;
-      let record = surfaces.get(plane);
-      const updated = !record || record.changed !== plane.lastChangedTime;
-      if (updated) {
-        const geometry = planeGeometry(plane.polygon);
-        if (!geometry) continue;
-        if (record) discardSurface(record);
-        const collider = new THREE.Mesh(geometry, blockerMaterial);
-        const outline = createOutline(plane.polygon);
-        poseObject(collider, pose);
-        poseObject(outline, pose);
-        scene.add(collider, outline);
-        record = { collider, outline, changed:plane.lastChangedTime, isFloor:false, polygon:[] };
-        surfaces.set(plane, record);
-      } else {
-        poseObject(record.collider, pose);
-        poseObject(record.outline, pose);
-      }
-      // Surface classification uses real world heights, not a guessed furniture label.
-      record.polygon = plane.polygon.map(p => record.collider.localToWorld(new THREE.Vector3(p.x, p.y, p.z)));
-      const ys = record.polygon.map(p => p.y);
-      const horizontal = Math.max(...ys) - Math.min(...ys) < .18;
-      const area = Math.abs(record.polygon.reduce((acc, p, i, all) => {
-        const next = all[(i + 1) % all.length]; return acc + p.x * next.z - next.x * p.z;
-      }, 0)) * .5;
-      const wasFloor=record.isFloor;
-      record.isFloor = horizontal && area > .6 && ys[0] < head.y - .6 && ys[0] > head.y - 2.5;
-      if (assets && (updated || !record.decor || wasFloor!==record.isFloor))
-        assets.projectRuin(record,decorEnabled);
-      record.outline.material = wireMaterial;
-    }
-  }
-  const detectedMeshes = frame.detectedMeshes;
-  if (detectedMeshes) {
-    for (const [mesh, record] of meshes) {
-      if (!detectedMeshes.has(mesh)) {
-        scene.remove(record.collider); record.collider.geometry.dispose(); meshes.delete(mesh);
-      }
-    }
-    let inspected = 0;
-    for (const mesh of detectedMeshes) {
-      if (++inspected > 14) break;
-      if (!mesh.vertices || !mesh.indices || mesh.vertices.length > 30000 || mesh.indices.length > 45000) continue;
-      const pose = frame.getPose(mesh.meshSpace, ref);
-      if (!pose) continue;
-      let record = meshes.get(mesh);
-      if (!record || record.changed !== mesh.lastChangedTime) {
-        if (record) { scene.remove(record.collider); record.collider.geometry.dispose(); }
-        const g = new THREE.BufferGeometry();
-        g.setAttribute('position', new THREE.BufferAttribute(mesh.vertices.slice(), 3));
-        g.setIndex(new THREE.BufferAttribute(mesh.indices.slice(), 1));
-        const collider = new THREE.Mesh(g, blockerMaterial);
-        scene.add(collider);
-        record = { collider, changed:mesh.lastChangedTime };
-        meshes.set(mesh, record);
-      }
-      poseObject(record.collider, pose);
-    }
-  }
-}
-function blockers() {
-  return [...surfaces.values()].map(v => v.collider).concat([...meshes.values()].map(v => v.collider));
-}
-function clearLineOfSight(origin, target) {
-  direction.subVectors(target, origin);
-  const length = direction.length();
-  if (length < .15) return true;
-  raycaster.set(origin, direction.multiplyScalar(1 / length));
-  raycaster.far = Math.max(.01, length - .2);
-  return raycaster.intersectObjects(blockers(), false).length === 0;
-}
-function pickSpawn() {
-  const floors = [...surfaces.values()].filter(v => v.isFloor && v.polygon.length >= 3);
-  if (!floors.length) return null;
-  for (let k = 0; k < 100; k++) {
-    const floor = floors[Math.floor(Math.random() * floors.length)];
-    const points = floor.polygon;
-    const triangle = 1 + Math.floor(Math.random() * (points.length - 2));
-    let a = Math.random(), b = Math.random();
-    if (a + b > 1) { a = 1-a; b = 1-b; }
-    const p = points[0].clone()
-      .addScaledVector(v0.subVectors(points[triangle],points[0]), a)
-      .addScaledVector(v1.subVectors(points[triangle+1],points[0]), b);
-    const distance = Math.hypot(p.x-head.x, p.z-head.z);
-    if (distance < 1.6 || distance > 4.2) continue;
-    const aimPoint = p.clone(); aimPoint.y += .9;
-    if (!clearLineOfSight(head, aimPoint)) continue;
-    if (bots.some(bot => bot.group.position.distanceTo(p) < .9)) continue;
-    return p;
-  }
-  return null;
-}
-function createBot(position) {
-  if (!assets) return null;
-  // The exact AI machines from the main game's enemy factory.
-  const forms=['stalker','scuttler','seer','brute','probe',...(wave>=6?['listener']:[]),...(wave>=11?['bulwark']:[])];
-  const form=forms[(score/100+bots.length)%forms.length|0];
-  const elite=wave>=6 && Math.random()<.25, ranged=form==='seer'||form==='probe';
-  const group=assets.makeEnemy(form,elite,ranged);
-  group.position.copy(position);
-  if (form==='probe') group.position.y+=.65;
-  group.rotation.y=Math.atan2(head.x-position.x,head.z-position.z)+Math.PI;
-  const hitbox=new THREE.Mesh(new THREE.SphereGeometry(form==='probe'?.55:form==='brute'?.57:.39,10,8),
-    new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false,side:THREE.DoubleSide}));
-  hitbox.position.y=form==='probe'?.65:form==='scuttler'?.66:1.05;
-  group.add(hitbox);scene.add(group);
-  const now=performance.now()/1000;
-  const bot={id:nextBotId++,group,hitbox,life:form==='brute'?120:form==='probe'?55:65,elite,
-    form,attackAt:now+4,born:now};
-  hitbox.userData.bot=bot;
-  bots.push(bot);
-  return bot;
-}
-function removeBot(bot) {
-  if(!bot || !bots.includes(bot))return;
-  scene.remove(bot.group);
-  bot.hitbox.removeFromParent();bot.hitbox.geometry.dispose();bot.hitbox.material.dispose();
-  bots.splice(bots.indexOf(bot),1);
-}
-function clearBots() { while (bots.length) removeBot(bots[0]); }
-function beam(from,to,color) {
-  const g = new THREE.BufferGeometry().setFromPoints([from.clone(), to.clone()]);
-  const l = new THREE.Line(g, new THREE.LineBasicMaterial({color,transparent:true,opacity:.9}));
-  scene.add(l); tracers.push({object:l,until:performance.now()/1000+.17});
-}
-function haptic(input) {
-  try { const pad = input?.gamepad; const actuator = pad?.hapticActuators?.[0] || pad?.vibrationActuator; actuator?.pulse?.(.55,55); } catch {}
-}
-function selectWeapon(index) {
-  if (!assets) return;
-  const available=WEAPONS.map((w,i)=>w.level<=wave?i:-1).filter(i=>i>=0);
-  if(!available.includes(index))index=available[0]||0;
-  ammoByWeapon[weaponIndex]=ammo;
-  weaponIndex=index;ammo=ammoByWeapon[index];reloadUntil=0;triggerStarted=0;semiPressFired=false;previousBlade=null;bladeHitTimes.clear();
-  assets.setWeapon(index,Math.min(wave,10));
-  info('ARME : '+WEAPONS[index].name);
-}
-function nextWeapon() {
-  const unlocked=WEAPONS.map((w,i)=>w.level<=wave?i:-1).filter(i=>i>=0);
-  selectWeapon(unlocked[(unlocked.indexOf(weaponIndex)+1)%unlocked.length]);
-}
-function beginReload(now=performance.now()/1000) {
-  if(mode!=='combat'||!assets||reloadUntil>now||ammo===WEAPONS[weaponIndex].capacity)return;
-  if(WEAPONS[weaponIndex].melee)return;
-  reloadUntil=now+WEAPONS[weaponIndex].reload;
-  roomNoise('reload',head,8);
-  try{playWeaponAction(audio,WEAPONS[weaponIndex].id,'reload-out');}catch{}
-  info('RECHARGE : '+WEAPONS[weaponIndex].name);
-}
-function shoot(source,frame,charge=1) {
-  const now=performance.now()/1000, weapon=WEAPONS[weaponIndex];
-  if (mode!=='combat'||!assets||now-shotCooldown<weapon.interval||now<reloadUntil) return;
-  if(weapon.semiAuto&&semiPressFired)return;
-  if(weapon.melee){shotCooldown=now;semiPressFired=true;manualStrikeUntil=now+.22;saberSwingSound=true;roomNoise('blade-swing',head,14);haptic(source);return;}
-  if(ammo<=0){beginReload(now);return;}
-  const pose=source&&frame?.getPose(source.targetRaySpace,renderer.xr.getReferenceSpace());
-  if(!pose)return;
-  shotCooldown=now;ammo--;ammoByWeapon[weaponIndex]=ammo;semiPressFired=true;
-  const o=pose.transform.position,q=pose.transform.orientation;
-  const origin=new THREE.Vector3(o.x,o.y,o.z);
-  roomNoise('shot',origin,{r9:46,bloom:55,lance:90,thorn:110,nova:130}[weapon.id]);
-  direction.set(0,0,-1).applyQuaternion(new THREE.Quaternion(q.x,q.y,q.z,q.w)).normalize();
-  raycaster.set(origin,direction);raycaster.near=0;raycaster.far=12;
-  const hit=raycaster.intersectObjects(bots.map(bot=>bot.hitbox).concat(blockers()),false)[0];
-  const target=hit?hit.point:origin.clone().addScaledVector(direction,Math.min(12,8+wave));
-  beam(origin,target,tint);
-  muzzleUntil=now+.075;
-  if(hit?.object?.userData.bot){
-    const bot=hit.object.userData.bot;
-    bot.life-=weapon.damage*(weapon.chargeTime?Math.min(1,charge):1);
-    if(bot.life<=0){removeBot(bot);score+=100;if(score>0&&score%500===0)wave++;}
-    try{playLaserImpact(audio,{surface:'metal',distance:Math.min(12,target.distanceTo(origin)),power:1,splash:weapon.splash});}catch{}
-  }
-  try{if(audio?.state==='suspended')audio.resume().catch(()=>{});playLaserShot(audio,weapon.id,Math.min(1,charge));}catch{}
-  haptic(source);
-  if(ammo===0 && !weapon.chargeTime)beginReload(now);
-}
-function startCombat() {
-  if (![...surfaces.values()].some(record => record.isFloor)) {
-    info('SOL NON DETECTE : LANCER LE SCAN');
-    return;
-  }
-  const point = pickSpawn();
-  if (!point) { info('ZONE DE SOL TROP ETROITE OU MASQUEE'); return; }
-  if(!assets){info('CHARGEMENT DES PERSONNAGES ET ARMES');return;}
-  hp=100;score=0;wave=1;enemyCooldown=0;triggerHeld=false;
-  ammoByWeapon.splice(0,ammoByWeapon.length,...WEAPONS.map(weapon=>weapon.capacity));
-  clearBots();selectWeapon(0);createBot(point);
-  const companionPoint=pickSpawn();
-  if(companionPoint)assets.placeCompanion(companionPoint,head);
-  else assets.companion.root.visible=false;
-  assets.placePortal(point,head);
-  music.start(audio);
-  mode='combat'; info('COMBAT LANCE');
-}
-function updateCombat(seconds,dt) {
-  if (mode !== 'combat') return;
-  for (const bot of [...bots]) {
-    const p=bot.group.position;
-    // Preserve the original skinned enemy locomotion instead of animating primitives.
-    bot.group.userData.animate?.(seconds,seconds*.4,false,{
-      limpUntil:0,chargeProgress:0,lastShotAt:-99
-    },seconds);
-    const eye=p.clone().add(new THREE.Vector3(0,bot.form==='probe'?.95:1.15,0));
-    const visible=clearLineOfSight(eye,head);
-    const attention=visible?head:seconds<(bot.heardUntil||0)?bot.lastSound:null;
-    if(attention)bot.group.rotation.y=Math.atan2(attention.x-p.x,attention.z-p.z)+Math.PI;
-    if (seconds >= bot.attackAt) {
-      bot.attackAt=seconds+Math.max(1.3,3.5-wave*.085);
-      const origin=p.clone().add(new THREE.Vector3(0,bot.form==='probe'?.95:1.15,0));
-      if(visible){
-        const segment=assets?.gun.userData.getBladeSegment?.();
-        const contact=WEAPONS[weaponIndex].melee&&controllerHandState.offTrigger>.15&&segment?.extension>.95?bladeBulletContact(origin,head,segment.base,segment.tip,.10):null;
-        if(contact){beam(origin,new THREE.Vector3(contact.point.x,contact.point.y,contact.point.z),tint);saberAudio?.impact();}
-        else{hp=Math.max(0,hp-Math.min(18,5+Math.floor(wave*.65)));beam(origin,head,0xff6378);}
-        if(!hp){mode='finished';music.pause();info('FIN DE PARTIE : GACHETTE POUR REJOUER');}
-      }
-    }
-  }
-  if(bots.length<Math.min(wave+1,3) && seconds>enemyCooldown){
-    const point=pickSpawn();
-    if(point){createBot(point);enemyCooldown=seconds+3.5;}
-  }
-  if(reloadUntil && seconds>=reloadUntil){reloadUntil=0;ammo=WEAPONS[weaponIndex].capacity;ammoByWeapon[weaponIndex]=ammo;}
-  assets?.animate(seconds,dt,wave,{
-    ammo,capacity:WEAPONS[weaponIndex].capacity,
-    reloading:reloadUntil>0,reloadProgress:reloadUntil?Math.max(0,1-(reloadUntil-seconds)/WEAPONS[weaponIndex].reload):0,
-    time:seconds,flash:seconds<muzzleUntil,...controllerHandState
-  });
-  updateRoomBlade(seconds,dt);
-}
-function updateRoomBlade(seconds,dt){
-  const segment=WEAPONS[weaponIndex].melee?assets?.gun.userData.getBladeSegment?.():null;
-  if(!segment||segment.extension<.95){previousBlade=null;bladeSpeed=0;return;}
-  bladeSpeed=previousBlade&&dt>0?Math.min(12,Math.hypot(segment.tip.x-previousBlade.tip.x,segment.tip.y-previousBlade.tip.y,segment.tip.z-previousBlade.tip.z)/dt):0;
-  if((bladeSpeed>.65||seconds<manualStrikeUntil)&&clearLineOfSight(head,new THREE.Vector3(segment.base.x,segment.base.y,segment.base.z))){
-    const targets=bots.map(bot=>({id:bot.id,x:bot.group.position.x,z:bot.group.position.z,elevation:bot.group.position.y,form:bot.form,elite:bot.elite}));
-    for(const hit of sweepBlade(previousBlade,segment,targets,[],head,segmentBox,traceEnemyHit)){
-      const bot=bots.find(b=>b.id===hit.enemy.id);if(!bot||seconds-(bladeHitTimes.get(bot.id)??-99)<.48)continue;
-      const point=new THREE.Vector3(hit.point.x,hit.point.y,hit.point.z),base=new THREE.Vector3(segment.base.x,segment.base.y,segment.base.z);
-      if(!clearLineOfSight(base,point))continue;bladeHitTimes.set(bot.id,seconds);bot.life-=WEAPONS[weaponIndex].damage*hit.multiplier;saberAudio?.impact();
-      if(bot.life<=0){removeBot(bot);score+=100;if(score%500===0)wave++;}
-    }
-  }
-  previousBlade={base:{...segment.base},tip:{...segment.tip},extension:segment.extension};
-  for(const [id,at] of bladeHitTimes)if(seconds-at>3)bladeHitTimes.delete(id);
-}
-async function initiateScan() {
-  if (!session || roomCaptureAsked) return;
-  roomCaptureAsked=true;
-  if (typeof session.initiateRoomCapture !== 'function') {
-    info('SCAN INDISPONIBLE : CONFIGURER L ESPACE QUEST');
-    return;
-  }
-  info('AUTORISER LE SCAN DANS LE CASQUE');
-  try {
-    await session.initiateRoomCapture();
-    info('SCAN TERMINE : RECHERCHE DU SOL');
-  } catch (error) {
-    info('SCAN REFUSE OU ANNULE : VERIFIER SPACE SETUP');
-    console.warn('Pink War AT HOME room capture', error);
-  }
-}
-function onSelect(event) {
-  if(!session || session.visibilityState!=='visible')return;
-  const hand=event.inputSource?.handedness;
-  if(hand==='left'){if(mode!=='combat')initiateScan();return;}
-  if(hand!=='right')return;
-  if(mode==='ready'||mode==='finished'){startCombat();return;}
-  if(mode!=='combat')return;
-  triggerHeld=true;triggerStarted=performance.now()/1000;semiPressFired=false;
-  if(!WEAPONS[weaponIndex].chargeTime)shoot(event.inputSource,event.frame);
-}
-function onSelectEnd(event) {
-  if(event.inputSource?.handedness!=='right')return;
-  if(mode==='combat'&&WEAPONS[weaponIndex].chargeTime&&triggerStarted){
-    const charged=(performance.now()/1000-triggerStarted)/WEAPONS[weaponIndex].chargeTime;
-    if(charged>=.18)shoot(event.inputSource,event.frame,charged);
-  }
-  triggerHeld=false;triggerStarted=0;semiPressFired=false;
-}
-function onSessionEnd() {
-  saberAudio?.update({active:false,equipped:false});bladeLight.intensity=0;previousBlade=null;bladeHitTimes.clear();
-  session = null; mode='idle';roomCaptureAsked=false;bWasDown=false;triggerHeld=false;music.pause();assets?.hideDecor();lastLeftX=false;lastLeftY=false;lastRightA=false;
-  document.body.classList.remove('in-xr');
-  endButton.hidden=true;
-  clearBots();
-  for (const record of surfaces.values()) discardSurface(record);
-  surfaces.clear();
-  for (const record of meshes.values()) { scene.remove(record.collider); record.collider.geometry.dispose(); }
-  meshes.clear();
-  for (const item of tracers) { scene.remove(item.object);item.object.geometry.dispose();item.object.material.dispose(); }
-  tracers.length=0;
-  board.visible=false;
-  for(const mount of mounts){mount.anchor.visible=false;mount.source=null;mount.ray.userData.source=null;}
-  assets?.gun.removeFromParent();assets?.freeHand.removeFromParent();
-  info('SESSION TERMINEE. RELANCER AT HOME POUR REJOUER.');
-  button.disabled=false;
-}
-for(let i=0;i<controllers.length;i++){
-  const ray=controllers[i],anchor=new THREE.Group(),mount=new THREE.Group();
-  anchor.name='Tracked AT HOME grip';anchor.matrixAutoUpdate=false;anchor.visible=false;
-  scene.add(anchor);anchor.add(mount);
-  mount.position.set(0,-.016,.05);
-  scene.add(ray);
-  const entry={ray,anchor,mount,source:null};
-  ray.addEventListener('connected',event=>{entry.source=event.data;updateControllerRoles();});
-  ray.addEventListener('disconnected',()=>{entry.source=null;updateControllerRoles();});
-  mounts.push(entry);
+function haptic(){try{const source=mounts.find(m=>m.source?.handedness==='right')?.source;source?.gamepad?.hapticActuators?.[0]?.pulse?.(.55,55)?.catch?.(()=>{});}catch{}}
+for(let i=0;i<2;i++){
+ const ray=renderer.xr.getController(i),anchor=new THREE.Group(),mount=new THREE.Group();anchor.matrixAutoUpdate=false;anchor.visible=false;mount.position.set(0,-.016,.05);scene.add(anchor,ray);anchor.add(mount);
+ const entry={ray,anchor,mount,source:null};ray.addEventListener('connected',event=>{entry.source=event.data;updateControllerRoles();});ray.addEventListener('disconnected',()=>{entry.source=null;cancelFire();updateControllerRoles();});mounts.push(entry);
 }
 function updateControllerRoles(){
-  if(!assets)return;
-  assets.gun.visible=assets.freeHand.visible=false;
-  for(const entry of mounts){
-    entry.mount.remove(assets.gun,assets.freeHand);
-    if(entry.source?.handedness==='right'){
-      entry.mount.add(assets.gun);assets.gun.visible=!!session;
-    }else if(entry.source?.handedness==='left'){
-      entry.mount.add(assets.freeHand);assets.freeHand.visible=!!session;
-      assets.freeHand.scale.x=-Math.abs(assets.freeHand.scale.x);
-    }
-  }
+ if(!assets)return;assets.gun.visible=assets.freeHand.visible=false;
+ for(const entry of mounts){entry.mount.remove(assets.gun,assets.freeHand);if(entry.source?.handedness==='right'){entry.mount.add(assets.gun);assets.gun.visible=!!session;}else if(entry.source?.handedness==='left'){entry.mount.add(assets.freeHand);assets.freeHand.visible=!!session;}}
 }
-function tick(ms, frame) {
-  const seconds=ms/1000,dt=Math.min(.075,Math.max(0,seconds-lastTime));
-  lastTime=seconds;
-  if(session){
-    const inputs=Array.from(session.inputSources || []);
-    const right=inputs.find(input=>input.handedness==='right');
-    const left=inputs.find(input=>input.handedness==='left');
-    const padR=right?.gamepad,padL=left?.gamepad;
-    controllerHandState.trigger=padR?.buttons?.[0]?.value||0;controllerHandState.grip=padR?.buttons?.[1]?.value||0;
-    controllerHandState.offTrigger=padL?.buttons?.[0]?.value||0;controllerHandState.offGrip=padL?.buttons?.[1]?.value||0;
-    const b=!!padR?.buttons?.[5]?.pressed;
-    if(b&&!bWasDown)session.end().catch(()=>{});
-    bWasDown=b;
-    const a=!!padR?.buttons?.[4]?.pressed;
-    if(a&&!lastRightA)beginReload(seconds);
-    lastRightA=a;
-    const y=!!padL?.buttons?.[5]?.pressed;
-    if(y&&!lastLeftY&&mode==='combat')nextWeapon();
-    lastLeftY=y;
-    const x=!!padL?.buttons?.[4]?.pressed;
-    if(x&&!lastLeftX){
-      decorEnabled=!decorEnabled;
-      for(const record of surfaces.values())assets?.projectRuin(record,decorEnabled);
-      info(decorEnabled?'DECORS PINK WAR ACTIVES':'DECORS MASQUES : PASSTHROUGH');
-    }
-    lastLeftX=x;
-    if(frame){
-      syncTrackedHands(mounts,session,frame,renderer.xr.getReferenceSpace());
-      updateControllerRoles();
-      updateBoard();updateSurfaces(frame);
-      const held=!!padR?.buttons?.[0]?.pressed;
-      if(mode==='combat'&&held&&right&&!WEAPONS[weaponIndex].chargeTime){
-        shoot(right,frame);
-      }
-      // Fully charged energy weapons discharge automatically just like the classic game.
-      if(mode==='combat'&&held&&right&&WEAPONS[weaponIndex].chargeTime&&triggerStarted
-          &&seconds-triggerStarted>=WEAPONS[weaponIndex].chargeTime){
-        shoot(right,frame,1);
-        triggerStarted=seconds;
-      }
-    }
-    const count=[...surfaces.values()].filter(v=>v.isFloor).length;
-    if(mode==='ready'){
-      if(!assets && !assetError)info('CHARGEMENT DES MODELES PINK WAR');
-      else if(count){
-        if(scanMessage!=='SOL REPERE : PRET A JOUER')info('SOL REPERE : PRET A JOUER');
-      }else if(seconds-startTime>3&&scanMessage==='DETECTION DES SURFACES')
-        info('AUCUN SOL : SCANNER AVEC GACHETTE GAUCHE');
-    }
-    updateCombat(seconds,dt);
-    if(mode==='combat')music.update(dt,{threat:Math.min(1,.2+wave*.13)});
-    if(assets&&mode!=='combat')assets.animate(seconds,dt,wave,{time:seconds,...controllerHandState});
-    const blade=assets?.gun.userData.getBladeSegment?.();bladeLight.intensity=blade&&assets.gun.visible?2.4*blade.extension:0;
-    if(blade)bladeLight.position.set((blade.base.x+blade.tip.x)/2,(blade.base.y+blade.tip.y)/2,(blade.base.z+blade.tip.z)/2);
-    saberAudio?.update({active:mode==='combat'&&session.visibilityState==='visible',equipped:!!WEAPONS[weaponIndex].melee,extended:!!WEAPONS[weaponIndex].melee&&controllerHandState.trigger>.15,speed:bladeSpeed,swing:saberSwingSound});saberSwingSound=false;
-    for(let i=tracers.length-1;i>=0;i--)if(seconds>=tracers[i].until){
-      const item=tracers.splice(i,1)[0];
-      scene.remove(item.object);item.object.geometry.dispose();item.object.material.dispose();
-    }
-    drawBoard();
-  }
-  renderer.render(scene,camera);
+function sightEye(){
+ const array=renderer.xr.getCamera(camera),source=array.cameras?.find(c=>c.viewport?.x>0)||array.cameras?.[0]||array;
+ opticalEye.matrix.copy(source.matrixWorld);opticalEye.matrixWorld.copy(source.matrixWorld);opticalEye.matrixWorldInverse.copy(source.matrixWorld).invert();opticalEye.projectionMatrix.copy(source.projectionMatrix);opticalEye.projectionMatrixInverse.copy(source.projectionMatrixInverse);return opticalEye;
 }
-
+function tick(ms,frame){
+ const seconds=ms/1000,dt=Math.min(.05,Math.max(0,seconds-lastTime));lastTime=seconds;const feedback=feel.update(dt);
+ if(session){
+  const pose=frame?.getViewerPose(renderer.xr.getReferenceSpace());if(pose){head.copy(pose.transform.position);orientation.copy(pose.transform.orientation);}
+  const active=session.visibilityState==='visible'&&!!pose;if(!pose&&mode==='combat')cancelFire();
+  const right=[...session.inputSources].find(s=>s.handedness==='right'),left=[...session.inputSources].find(s=>s.handedness==='left'),padR=right?.gamepad,padL=left?.gamepad;
+  Object.assign(controllerHandState,{trigger:padR?.buttons?.[0]?.value||0,grip:padR?.buttons?.[1]?.value||0,offTrigger:padL?.buttons?.[0]?.value||0,offGrip:padL?.buttons?.[1]?.value||0});
+  if(edge('exit',!!padR?.buttons?.[5]?.pressed)){session.end().catch(()=>{});return;}
+  if(active&&edge('reload',!!padR?.buttons?.[4]?.pressed)&&mode==='combat')game.reload();
+  if(active&&edge('weapon',!!padL?.buttons?.[5]?.pressed)&&mode==='combat')game.cycleWeapon();
+  if(active&&edge('collect',!!padL?.buttons?.[3]?.pressed)&&mode==='combat')game.collectWeapon();
+  if(active&&edge('decor',!!padL?.buttons?.[4]?.pressed)){decorEnabled=!decorEnabled;assets?.architecture.setEnabled(decorEnabled,fullImmersion);for(const record of surfaceRecords())if(record.decor)record.decor.visible=decorEnabled;}
+  if(frame){syncTrackedHands(mounts,session,frame,renderer.xr.getReferenceSpace());updateControllerRoles();updateSurfaces(frame);}
+  const held=controllerHandState.trigger>.15,main=mounts.find(m=>m.source?.handedness==='right');if(!held)fireBlocked=false;
+  if(held&&!lastTrigger&&active&&mode!=='combat')startCombat();lastTrigger=held;
+  if(assets){
+   const reload=game.reloadRemaining?1-game.reloadRemaining/game.weapon.reload:0;
+   assets.gun.rotation.set(feedback.pitch-(game.weapon.melee?.55:0)+reload*Math.PI/2,feedback.yaw,game.weapon.melee?-.06:0);
+   assets.gun.position.set(feedback.yaw*.1,.028*(+!!game.weapon.melee)-feedback.kick*.13,feedback.kick-(game.weapon.melee?.036:0));
+   assets.animate(game.time,dt,Math.max(1,game.wave),{ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,reloading:game.reloadRemaining>0,reloadProgress:reload,
+    time:game.time,flash:game.time<muzzleUntil,heat:feedback.heat,kick:feedback.kick,impulse:feedback.impulse,...controllerHandState,trigger:active&&main?.anchor.visible&&!fireBlocked?controllerHandState.trigger:0});
+   if(active&&mode==='combat'){
+    game.setHead(head,dt);game.updateBlade(assets.gun.userData.getBladeSegment(),dt,controllerHandState.offTrigger>.15,head);game.step(dt);
+    assets.gun.updateWorldMatrix(true,true);const muzzle=assets.gun.userData.flash.position,origin=assets.gun.localToWorld(muzzle.clone()),aim=new THREE.Vector3(0,0,-1).transformDirection(assets.gun.matrixWorld);
+    game.trigger(!fireBlocked&&!!main?.anchor.visible&&held,dt,origin,aim);processEvents();syncModels();
+   }
+   const eye=sightEye(),aiming=active&&mode==='combat'&&controllerHandState.offTrigger>.15&&!game.reloadRemaining;
+   assets.gun.userData.setSight?.(aiming,eye);
+   if(aiming&&assets.gun.userData.optics?.[game.weaponIndex]){scope ||=createMagnifiedSight(256);scope.render({renderer,scene,gun:assets.gun,eyeCamera:eye,active:true,hide:[...mounts.map(m=>m.anchor),hud.plane,board.plane,announcement.plane]});}else scope?.release();
+   assets.architecture.update(game.time,eye);
+   const blade=assets.gun.userData.getBladeSegment();bladeLight.intensity=active&&assets.gun.visible&&blade?2.4*blade.extension:0;if(blade)bladeLight.position.set((blade.base.x+blade.tip.x)/2,(blade.base.y+blade.tip.y)/2,(blade.base.z+blade.tip.z)/2);
+   saberAudio?.update({active:active&&mode==='combat',equipped:game.weapon.melee,extended:!fireBlocked&&held,speed:game.bladeSpeed,swing:game.weapon.melee&&game.bladePhase<.08});
+  }
+  if(mode==='ready'){if(!assets)info(assetError||'CHARGEMENT DU LABORATOIRE');else if(floors().length)info('LABORATOIRE MODÉLISÉ : GÂCHETTE DROITE');else if(seconds-startTime>2)info('SOL NON DÉTECTÉ : GÂCHETTE GAUCHE POUR SCANNER');}
+  if(active&&mode==='combat')music.update(dt,{active:true,threat:Math.min(1,game.enemies.length/Math.max(1,game.maxActive)),intermission:game.roomPhase==='between'});
+  ambience?.update(dt,{active:active&&mode==='combat',position:head,moving:true,grounded:true,elevation:game.player.elevation,probes:game.enemies});
+  laser.update(game.bullets,dt);updateBoards();
+ }renderer.render(scene,camera);frames++;
+}
+async function initiateScan(){
+ if(!session||roomCaptureAsked)return;roomCaptureAsked=true;
+ if(typeof session.initiateRoomCapture!=='function'){info('CONFIGURE LE SCAN DANS SPACE SETUP DU QUEST');roomCaptureAsked=false;return;}
+ info('SCAN DE LA MAISON EN COURS');try{await session.initiateRoomCapture();roomDirty=true;info('SCAN TERMINÉ : RECHERCHE DU SOL');}catch{info('SCAN ANNULÉ : TU PEUX RÉESSAYER');}finally{roomCaptureAsked=false;}
+}
+function onSelect(event){if(session?.visibilityState!=='visible')return;if(event.inputSource?.handedness==='left'&&mode!=='combat')initiateScan();if(event.inputSource?.handedness==='right'&&mode!=='combat')startCombat();}
+function onSessionEnd(){
+ session=null;mode='idle';game.stop();cancelFire();game.enemies=[];game.bullets=[];game.activePortals=[];game.weaponOffers=[];game.toSpawn=0;game.pendingOffers.clear();scope?.dispose();scope=null;music.pause();ambience?.pause();saberAudio?.update({active:false});bladeLight.intensity=0;clearBots();laser.reset();assets?.hideDecor();
+ for(const record of surfaceRecords())discardSurface(record);surfaces.clear();meshes.clear();navigation=null;roomDirty=true;lastRoomBuild=-99;
+ for(const item of [hud,board,announcement])item.plane.visible=false;for(const mount of mounts){mount.source=null;mount.anchor.visible=false;mount.ray.userData.source=null;}
+ assets?.gun.removeFromParent();assets?.freeHand.removeFromParent();previousButtons.clear();lastTrigger=false;roomCaptureAsked=false;
+ document.body.classList.remove('in-xr');$('at-home-end').hidden=true;button.disabled=false;info('SESSION TERMINÉE · RELANCER AT HOME');
+}
+async function enter(){
+ if(!navigator.xr||session)return;let request;
+ try{request=navigator.xr.requestSession('immersive-ar',{requiredFeatures:['local-floor'],optionalFeatures:['bounded-floor','plane-detection','mesh-detection']});}catch(error){info(error.message);return;}
+ button.disabled=true;
+ try{audio ||=new (window.AudioContext||window.webkitAudioContext)();audio.resume().catch(()=>{});saberAudio ||=createSaberSound(audio);ambience ||=createAmbience(audio);loadRealLaserSample(audio).catch(()=>{});}catch{}
+ let opened;try{
+  opened=await request;session=opened;mode='ready';lastTime=0;startTime=performance.now()/1000;roomDirty=true;lastRoomBuild=-99;game.stop();
+  opened.addEventListener('end',onSessionEnd,{once:true});opened.addEventListener('selectstart',onSelect);opened.addEventListener('inputsourceschange',updateControllerRoles);
+  opened.addEventListener('visibilitychange',()=>{if(opened.visibilityState!=='visible'&&mode==='combat'){mode='paused';game.stop();cancelFire();music.pause();ambience?.pause();info('GÂCHETTE DROITE : REPRENDRE');}});
+  await renderer.xr.setSession(opened);document.body.classList.add('in-xr');$('at-home-end').hidden=false;info('DÉTECTION DE LA MAISON');
+  if(!assets){assetsLoading ||=import('./at-home-assets.js').then(m=>m.createAtHomeAssets(scene,hero)).then(pack=>{assets=pack;assetsLoading=null;assetError='';updateControllerRoles();for(const r of surfaceRecords())assets.projectRuin(r,decorEnabled,head);roomDirty=true;lastRoomBuild=-99;}).catch(error=>{assetsLoading=null;assetError='MODÈLES INDISPONIBLES : '+error.message;console.error('AT HOME',error);});}else updateControllerRoles();
+ }catch(error){if(opened)await opened.end().catch(()=>{});if(session===opened)onSessionEnd();button.disabled=false;info('ACCÈS À LA RÉALITÉ MIXTE INDISPONIBLE : '+error.message);}
+}
+button.addEventListener('click',enter);$('at-home-end').addEventListener('click',()=>session?.end().catch(()=>{}));
+$('at-home-immersion')?.addEventListener('change',e=>{fullImmersion=e.target.value==='full';});
+window.addEventListener('keydown',e=>{if(e.key==='Escape')session?.end().catch(()=>{});});
+window.addEventListener('resize',()=>{if(renderer.xr.isPresenting)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight,false);});
 renderer.setAnimationLoop(tick);
-window.addEventListener('resize',()=>{
-  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight,false);
-});
-
-async function enter() {
-  if (!navigator.xr || session) return;
-  // This call must happen immediately inside the click gesture.
-  let request;
-  try {
-    request = navigator.xr.requestSession('immersive-ar', {
-      requiredFeatures:['local-floor'],
-      optionalFeatures:['bounded-floor','plane-detection','mesh-detection']
-    });
-  } catch (error) { info('IMPOSSIBLE DE DEMARRER LE MODE AR : ' + error.message); return; }
-  button.disabled=true;
-  try {
-    audio ||= new (window.AudioContext || window.webkitAudioContext)();
-    saberAudio ||=createSaberSound(audio);
-    audio.resume().catch(()=>{});
-    loadRealLaserSample(audio).catch(()=>{});
-  } catch {}
-  let xrSession;
-  try {
-    xrSession=await request;
-    xrSession.addEventListener('end',onSessionEnd,{once:true});
-    xrSession.addEventListener('selectstart',onSelect);
-    xrSession.addEventListener('selectend',onSelectEnd);
-    xrSession.addEventListener('visibilitychange',()=>{
-      if (xrSession.visibilityState!=='visible' && mode==='combat') {
-        mode='ready'; clearBots(); info('PAUSE : VERIFIER VOTRE ENVIRONNEMENT');
-      }
-    });
-    xrSession.addEventListener('inputsourceschange',()=>updateControllerRoles());
-    session=xrSession;
-    roomCaptureAsked=false;mode='ready';lastTime=0;
-    await renderer.xr.setSession(xrSession);
-    startTime=performance.now()/1000;
-    info('DETECTION DES SURFACES');
-    document.body.classList.add('in-xr');
-    endButton.hidden=false;
-    if(!assets){
-      assetsLoading ||= import('./at-home-assets.js')
-        .then(module=>module.createAtHomeAssets(scene,hero))
-        .then(pack=>{
-          assets=pack;assetsLoading=null;assetError='';updateControllerRoles();
-          for(const record of surfaces.values())assets.projectRuin(record,decorEnabled);
-          info('MODELES PINK WAR CHARGES. CHERCHEZ LE SOL.');
-        }).catch(err=>{
-          assetsLoading=null;assetError=err?.message||'chargement impossible';console.error('AT HOME asset load failed',err);
-          info('MODELES PINK WAR INDISPONIBLES : '+assetError);
-        });
-    }else updateControllerRoles();
-  } catch (error) {
-    if (xrSession) await xrSession.end().catch(()=>{});
-    if (session===xrSession) onSessionEnd();
-    info('ECHEC D ACCES A LA REALITE MIXTE : ' + (error.message||'permission refusee'));
-    button.disabled=false;
-  }
-}
-button.addEventListener('click',enter);
-endButton.addEventListener('click',()=>session?.end().catch(()=>{}));
-window.addEventListener('keydown',e=>{if(e.key==='Escape'&&session)session.end().catch(()=>{});});
-async function checkSupport(){
-  if (!navigator.xr || !window.isSecureContext) {
-    info('AT HOME NECESSITE LE NAVIGATEUR META QUEST ET HTTPS.');
-    return;
-  }
-  try {
-    const ok=await navigator.xr.isSessionSupported('immersive-ar');
-    if (!ok) { info('CE NAVIGATEUR NE PREND PAS EN CHARGE LE PASSTHROUGH WEBXR.');return; }
-    info('QUEST COMPATIBLE. PREPARER SPACE SETUP AVANT DE LANCER.');
-    button.disabled=false;
-  } catch { info('IMPOSSIBLE DE VERIFIER LE SUPPORT WEBXR.'); }
-}
+async function checkSupport(){if(!navigator.xr||!window.isSecureContext){info('OUVRE AT HOME DANS LE NAVIGATEUR QUEST 3');return;}try{if(await navigator.xr.isSessionSupported('immersive-ar')){button.disabled=false;info('QUEST COMPATIBLE · PRÉPARE LE SCAN DE LA MAISON');}else info('RÉALITÉ MIXTE INDISPONIBLE SUR CE NAVIGATEUR');}catch{info('SUPPORT WEBXR INDISPONIBLE');}}
 checkSupport();
+window.__PINKWAR_HOME=Object.freeze({snapshot:()=>({version:'3.27',mode,frames,character:hero.id,floors:floors().length,surfaces:surfaces.size,meshes:meshes.size,decor:assets?.architecture.stats(),hands:mounts.filter(m=>m.anchor.visible).length,laser:laser.stats(),scope:scope?.stats(),...game.snapshot()})});

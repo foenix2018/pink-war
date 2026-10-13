@@ -49,15 +49,16 @@ function weatherTexture(kind,detail=512) {
 
 // Overcast dawn, smoke banks and filtered sunlight replace the uniform neon sky.
 // The same weathered texture generators as the city, shared by AT HOME room projections.
-// Do not instantiate the entire 200 m ruined city inside a small real-world room.
-export function createRuinedRoomMaterials(accent=0xff80b2) {
+// The city can extend the backdrop; room combat still uses only detected geometry.
+export function createRuinedRoomMaterials(accent=0xff80b2,{opaque=false}={}) {
   const concrete=weatherTexture('concrete');
   const metal=weatherTexture('metal');
   const road=weatherTexture('road');
+  const material=(map,color,roughness,metalness,opacity)=>new T.MeshStandardMaterial({map,color,roughness,metalness,bumpMap:map,bumpScale:map===metal?.007:.014,transparent:!opaque,opacity:opaque?1:opacity,side:T.DoubleSide,depthWrite:opaque,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
   return {
-    concrete:new T.MeshBasicMaterial({map:concrete,color:0xd4d4d4,transparent:true,opacity:.29,side:T.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1}),
-    metal:new T.MeshBasicMaterial({map:metal,color:0xd1c5c6,transparent:true,opacity:.35,side:T.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1}),
-    road:new T.MeshBasicMaterial({map:road,color:0xdddddd,transparent:true,opacity:.21,side:T.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1}),
+    concrete:material(concrete,0xb9c3c5,.88,.04,.29),
+    metal:material(metal,0x7a8c97,.6,.57,.35),
+    road:material(road,0xb0b9b5,.91,.09,.21),
     glow:new T.MeshBasicMaterial({color:accent,transparent:true,opacity:.84,depthWrite:false,side:T.DoubleSide,toneMapped:false}),
     concreteMap:concrete,metalMap:metal,roadMap:road
   };
@@ -339,6 +340,17 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
       add('sphere',m.steel,[x-w*.16,roof+.85,z],[1.4,.24,1.4],[.32,0,.18]);
       rod(m.black,[x-w*.16,roof,z],[x-w*.16+.32,roof+1.55,z+.4],.075);
       cube(m.black,[x+w*.16,roof+.2,z-d*.17],[1.8,.35,1.5],[0,0,0],'rounded');
+    }
+    if(index===1){
+      // The same abandoned AI installation seen from the home laboratory.
+      // Closed security shutters stay inside the existing solid building footprint.
+      const labSign=texture(512,(c,n)=>{c.fillStyle='#14262d';c.fillRect(0,0,n,n);c.fillStyle='#aec3c8';c.font='bold 56px monospace';c.fillText('LAB / IA',40,210);c.fillStyle='#748e91';c.font='26px monospace';c.fillText('ARCHIVES SOUS TENSION',40,274);c.strokeStyle='#af9863';c.lineWidth=9;c.strokeRect(15,135,482,196);},1);
+      const signMat=new T.MeshBasicMaterial({map:labSign,transparent:true,side:T.DoubleSide});
+      if(!custom.has(signMat))custom.set(signMat,[]);custom.get(signMat).push(new T.PlaneGeometry(3.5,1.75).translate(x,3.15,z+d*.503));
+      cube(m.steel,[x,1.25,z+d*.485],[2.05,2.45,.16],[0,0,0],'rounded');
+      for(let i=0;i<9;i++)cube(m.black,[x, .3+i*.235,z+d*.503],[1.94,.035,.04],[0,0,0],'box');
+      for(const side of [-1,1])cable([[x+side*1.35,.5,z+d*.495],[x+side*1.35,2.5,z+d*.495],[x+side*.85,3.9,z+d*.495]],.07,m.steel);
+      ivy(x-w*.32,3.4,z+d*.504,1.3,2.8);
     }
   });
   // Cover uses exactly the combat footprint; chips remain inside the collision face.

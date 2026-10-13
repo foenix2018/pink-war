@@ -16,6 +16,10 @@ L’aire de jeu reste délimitée à 200 × 200 m. Les noms de secteurs suivants
 
 Les signes d’activité électrique, les mécanismes et les bruits d’installations mettent en scène un monde qui continue de fonctionner après ses habitants. Le rose et le bleu restent des signatures des personnages et de leurs équipements ; ils ne recolorent pas toute la maçonnerie.
 
+## AT HOME — canon confirmé
+
+La maison scannée représente un ancien laboratoire de l’IA, encore partiellement alimenté après la guerre. Son sol, ses murs et ses meubles sont habillés en installations du laboratoire. Les brèches y font arriver les machines hostiles par vagues ; les livraisons d’armes suivent la progression de l’arène. Le personnage choisi reste GHJU ou LYLU. L’origine précise des recherches du laboratoire reste à définir.
+
 ## Questions ouvertes
 
 - Quel objectif conduit les deux personnages dans la première carte ?
@@ -24,4 +28,4 @@ Les signes d’activité électrique, les mécanismes et les bruits d’installa
 - Combien de temps s’est écoulé depuis la chute ?
 - Que reste-t-il des communautés humaines ?
 
-La survie en dix niveaux est déjà jouable. Les quêtes de retrouvailles, dialogues, révélations et factions ne sont pas encore implémentés. Les décisions sur ces éléments seront ajoutées ici après validation de leur direction narrative.
+La survie en vingt niveaux est déjà jouable. Les quêtes de retrouvailles, dialogues, révélations et factions ne sont pas encore implémentés. Les décisions sur ces éléments seront ajoutées ici après validation de leur direction narrative.

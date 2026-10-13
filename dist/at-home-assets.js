@@ -7,6 +7,8 @@ import { createGlove } from './hands.js';
 import { createSurfaceDetails } from './surfaces.js';
 import { createRuinedRoomMaterials } from './world-art.js';
 import { characterForId } from './characters.js';
+import { createRoomArchitecture } from './room-art.js';
+import { WEAPONS } from './game-logic.js';
 
 function emblemTexture(profile) {
   const canvas=document.createElement('canvas');
@@ -26,7 +28,7 @@ function enemyMaterials(profile, surface) {
   const standard=(color,roughness=.56,metalness=.4)=>new T.MeshStandardMaterial({color,roughness,metalness,roughnessMap:surface.coating});
   const basic=color=>new T.MeshBasicMaterial({color,toneMapped:false});
   return {
-    steel:standard(w.steel),dark:standard(p.ink),rose:basic(p.rose),pale:basic(p.pale),
+    steel:standard(p.steel),dark:standard(p.ink),rose:basic(p.rose),pale:basic(p.pale),
     violet:basic(p.violet),cyan:basic(w.cyan),
     monster:standard(w.monster,.54,.5),
     monsterElite:standard(w.monsterElite,.42,.65),
@@ -63,8 +65,11 @@ export async function createAtHomeAssets(scene, hero) {
   // Their sibling is the real animated character model, not a substitute mannequin.
   const companion=createSoldier(companionKit.kit,companionKit.makeGun,other);
   companion.root.visible=false;scene.add(companion.root);
-  const ruin=createRuinedRoomMaterials(hero.palette.rose);
-  const generated = new Set();
+  const ruin=createRuinedRoomMaterials(hero.palette.rose,{opaque:true});
+  const architecture=createRoomArchitecture(scene,hero,ruin);
+  const portals=new Map(),offers=new Map();
+  const pickupMat=new T.MeshBasicMaterial({color:hero.palette.rose,transparent:true,opacity:.55,side:T.DoubleSide,depthWrite:false,toneMapped:false});
+  const pickupBase=new T.CylinderGeometry(.28,.32,.10,24),pickupBeam=new T.CylinderGeometry(.014,.014,1.4,8);
   const portalMaterial=new T.MeshBasicMaterial({color:hero.palette.rose,transparent:true,opacity:.8,depthWrite:false,side:T.DoubleSide,blending:T.AdditiveBlending,toneMapped:false});
   const innerMaterial=new T.MeshBasicMaterial({color:hero.palette.violet,transparent:true,opacity:.38,depthWrite:false,side:T.DoubleSide,blending:T.AdditiveBlending,toneMapped:false});
   const portal=new T.Group();
@@ -82,7 +87,7 @@ export async function createAtHomeAssets(scene, hero) {
   let lastCompanionAnimation=-1;
 
   return {
-    hero,other,player,gun,freeHand,portal,companion,
+    hero,other,player,gun,freeHand,portal,companion,architecture,portals,offers,
     makeEnemy(form='stalker',elite=false,ranged=false) {
       return enemyFactory.create(elite,ranged,form);
     },
@@ -93,6 +98,7 @@ export async function createAtHomeAssets(scene, hero) {
       companion.setWeapon(index);
     },
     animate(time,dt,level,gunState={}) {
+      if(time<lastCompanionAnimation)lastCompanionAnimation=-1;
       const idx=gun.userData.index || 0;
       gun.userData.setCombatState?.({...gunState,bladeHeld:idx===5&&(gunState.trigger||0)>.15});
       gun.userData.animateHands?.(gunState.trigger||0,gunState.grip??.64,gunState.reload||0,dt);
@@ -105,6 +111,8 @@ export async function createAtHomeAssets(scene, hero) {
       }
       inner.rotation.z=time*.19;
       ring.rotation.z=-time*.055;
+      for(const [id,gate] of portals){gate.children[1].rotation.z=time*.19+id;gate.scale.setScalar(Math.min(.85,Math.max(.02,(time-gate.userData.openedAt+1)*.75)));}
+      for(const item of offers.values()){item.gun.rotation.y=time*.32;item.gun.position.y=1.03+Math.sin(time*2)*.035;}
       portalMaterial.opacity=.56+Math.sin(time*2.1)*.09;
     },
     placeCompanion(point,lookAt) {
@@ -119,35 +127,35 @@ export async function createAtHomeAssets(scene, hero) {
       portal.lookAt(lookAt.x,point.y+1.1,lookAt.z);
       portal.visible=true;
     },
-    hideDecor() { portal.visible=false;companion.root.visible=false; },
-    // Furniture and scanned walls become the original game's cracked concrete/metal
-    // in a transparent overlay. Real-world passthrough remains visible for safety.
-    projectRuin(record, immersive=true) {
-      if (!record?.collider?.geometry) return;
-      const previous=record.decor;
-      if (previous) { record.collider.remove(previous); previous.geometry.dispose(); record.decor=null; }
-      if (!immersive) return;
-      const geometry=record.collider.geometry.clone();
-      const panel=new T.Mesh(geometry,record.isFloor?ruin.road:ruin.concrete);
-      panel.name='Pink War ruin texture on detected real surface';
-      const n=geometry.getAttribute('normal');
-      if (n?.count) panel.position.set(n.getX(0),n.getY(0),n.getZ(0)).multiplyScalar(.009);
-      panel.renderOrder=3;
-      record.collider.add(panel);record.decor=panel;
+    setPortals(sites,lookAt){
+      for(const gate of portals.values())if(gate!==portal)gate.removeFromParent();portals.clear();portal.visible=false;
+      sites.forEach((site,i)=>{const gate=i===0?portal:portal.clone();if(i)scene.add(gate);
+        gate.position.set(site.x,site.elevation,site.z);gate.rotation.y=site.yaw;gate.visible=true;gate.scale.setScalar(.02);gate.userData.openedAt=site.openedAt;portals.set(site.id,gate);});
+    },
+    syncOffers(list){
+      for(const [index,item] of offers)if(!list.some(o=>o.index===index)){item.root.removeFromParent();item.gun.userData.disposeDynamic?.();offers.delete(index);item.label.geometry.dispose();item.label.material.map.dispose();item.label.material.dispose();}
+      for(const offer of list)if(!offers.has(offer.index)){
+        const root=new T.Group(),display=player.makeGun({sleeve:false});display.userData.setVariant(offer.index);display.userData.hand.visible=display.userData.support.visible=false;display.userData.showSupport=false;display.scale.setScalar(.7);display.position.y=1.03;root.add(display);
+        const base=new T.Mesh(pickupBase,ruin.metal),beam=new T.Mesh(pickupBeam,pickupMat);base.position.y=.05;beam.position.y=.75;root.add(base,beam);
+        const cv=document.createElement('canvas');cv.width=512;cv.height=160;const c=cv.getContext('2d');c.fillStyle='#14212be8';c.fillRect(0,0,512,160);c.fillStyle=hero.accent;c.font='bold 44px monospace';c.textAlign='center';c.fillText(WEAPONS[offer.index].name,256,58);c.fillStyle='white';c.font='21px monospace';c.fillText('CLIC JOYSTICK GAUCHE · PRENDRE',256,118);
+        const map=new T.CanvasTexture(cv);map.colorSpace=T.SRGBColorSpace;const label=new T.Mesh(new T.PlaneGeometry(.8,.25),new T.MeshBasicMaterial({map,side:T.DoubleSide,transparent:true}));label.position.set(0,1.43,0);root.add(label);
+        root.position.set(offer.x,offer.elevation,offer.z);scene.add(root);offers.set(offer.index,{root,gun:display,label});
+      }
+    },
+    hideDecor() { portal.visible=false;companion.root.visible=false;for(const gate of portals.values())gate.visible=false;this.syncOffers([]);architecture.setEnabled(false); },
+    projectRuin(record, immersive=true,viewer) {
+      architecture.project(record,viewer);if(record.decor)record.decor.visible=immersive;
     },
     disposeDecor(record) {
-      if (record?.decor) {
-        record.collider.remove(record.decor);
-        record.decor.geometry.dispose();
-        record.decor=null;
-      }
+      architecture.disposeDecor(record);
     },
     dispose() {
       this.hideDecor();gun.userData.disposeDynamic?.();freeHand.userData.dispose?.();
-      companion.dispose?.();scene.remove(companion.root,portal);
+      companion.dispose?.();scene.remove(companion.root,portal);architecture.dispose();
       for(const material of [ruin.concrete,ruin.metal,ruin.road,ruin.glow,portalMaterial,innerMaterial]) material.dispose();
       for(const name of ['concreteMap','metalMap','roadMap']) ruin[name]?.dispose?.();
       for(const geometry of new Set(portal.children.map(child=>child.geometry))) geometry?.dispose();
+      pickupBase.dispose();pickupBeam.dispose();pickupMat.dispose();
     }
   };
 }
