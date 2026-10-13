@@ -324,8 +324,8 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   Object.defineProperty(g.userData,'blade',{get:()=>blade});
   Object.assign(g.userData, { flash, hand, support, showSupport: true });
   g.userData.setLevel = level => { hand.userData.setLevel(level); support.userData.setLevel(level); };
-  g.userData.setCombatState = ({ ammo = 0, capacity = 1, charge = 0, reloadProgress = 0, reloading = false, time = 0,heat=0,kick=0,impulse=0 } = {}) => {
-    blade?.update(time,g.userData.index===5,mats.rose.color);
+  g.userData.setCombatState = ({ ammo = 0, capacity = 1, charge = 0, reloadProgress = 0, reloading = false, time = 0,heat=0,kick=0,impulse=0,bladeHeld=false } = {}) => {
+    blade?.update(time,g.userData.index===5&&!!bladeHeld,mats.rose.color);
     collar.visible=g.userData.index!==5;
     if(g.userData.index===5){heatRing.visible=false;flash.visible=false;return;}
     const rail = batteries[g.userData.index]; if (!rail) return;
@@ -358,7 +358,7 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
     models.forEach((model, i) => model.visible = i === index);
     const frame = WEAPON_FRAME[index];
     if(index===5&&!blade){blade=createEnergyBlade(mats.rose.color);g.add(blade.root);}
-    if(index!==5)blade?.update(0,false);
+    if(index!==5)blade?.reset?.();
     flash.position.set(...frame.muzzle); flash.scale.setScalar([.14,.12,.25,.19,.38,0][index]);
     collar.position.set(frame.muzzle[0],frame.muzzle[1],frame.muzzle[2]+.009);collar.scale.set(emitterRadii[index]/.012,1,emitterRadii[index]/.012);
     heatRing.visible=false;

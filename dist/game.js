@@ -26,6 +26,7 @@ let clock = 0, lastTime = 0, hudTimer = 0, flashTimer = 0, recoil = 0, reloadLif
 let outfitReturn = 'lobby', previewLevel = 1, equipmentUntil = 0;
 let canvasPointer = null, lastDrag = null, audioContext = null, ambience = null;
 let saberAudio=null,saberSwingSound=false;
+let lastWeaponSlot=0,holsterRemaining=0;
 let bladeHead=null;
 const musicBed=createMusicBed();
 const weaponFeel=createWeaponFeel();
@@ -279,7 +280,8 @@ function updateWeaponVisuals(dt, firing, moving) {
   const reloading = game.reloadRemaining > 0, reloadProgress = reloading ? clamp(1 - game.reloadRemaining / game.weapon.reload, 0, 1) : 0;
   reloadLift = reloadPose();
   const state = { ammo: game.ammo[game.weaponIndex], capacity: game.weapon.capacity, charge: game.weapon.chargeTime ? game.charge : 0,
-    reloadProgress, reloading, time: game.time,heat:weaponFeel.state.heat,kick:weaponFeel.state.kick,impulse:weaponFeel.state.impulse };
+    reloadProgress, reloading, time: game.time,heat:weaponFeel.state.heat,kick:weaponFeel.state.kick,impulse:weaponFeel.state.impulse,
+    bladeHeld:!!game.weapon.melee&&!!firing };
   world.fpsGun.userData.setCombatState?.(state); world.soldier.gun.userData.setCombatState?.(state);
   const trigger = firing && !reloading && game.state === 'playing' ? 1 : 0;
   // The actual shared LYLU/GHJU rig now receives locomotion on EVERY desktop/mobile view.
@@ -380,14 +382,14 @@ function updateHud() {
   pickup.hidden=!nearby;pickup.textContent=nearby?`RÉCUPÉRER ${WEAPONS[nearby.index].name} · F / X`:'';
   $('ammo-label').textContent = game.weapon.melee?'∞':game.ammo[game.weaponIndex];
   $('ammo-capacity').textContent = game.weapon.melee?'':`/ ${game.weapon.capacity}`;
-  $('ammo-state').textContent = game.weapon.melee?'LAME ACTIVE':game.reloadRemaining>0?'RECHARGE':'CELLULES';
+  $('ammo-state').textContent = game.weapon.melee?(game.triggerHeld?'LAME ACTIVE':'LAME RÉTRACTÉE'):game.reloadRemaining>0?'RECHARGE':'CELLULES';
   document.body.classList.toggle('blade-equipped',!!game.weapon.melee);document.body.classList.toggle('blade-guard',!!game.bladeGuard);
   document.querySelector('.weapon-tag').classList.toggle('ammo-low',!game.weapon.melee&&game.ammo[game.weaponIndex]<=game.weapon.capacity*.25);
   $('aim-button').ariaLabel=game.weapon.melee?'Parer avec la lame':'Viser avec l’optique';$('aim-button').title=game.weapon.melee?'Parade : clic droit / gâchette gauche':'Visée : clic droit / gâchette gauche';
   const reloading = game.reloadRemaining>0;
   document.querySelector('.fire-area').classList.toggle('reloading', reloading);
   $('reload-button').disabled = reloading || game.ammo[game.weaponIndex]===game.weapon.capacity;
-  $('fire-caption').innerHTML = game.weapon.melee?'COUPE <small>ESPACE / GÂCHETTE DROITE</small>':reloading ? `RECHARGE ${game.reloadRemaining.toFixed(1)} S` : game.weapon.chargeTime ? 'TIR CHARGÉ <small>MAINTENIR · RELÂCHER</small>' : 'TIR LASER <small>MAINTENIR · ESPACE</small>';
+  $('fire-caption').innerHTML = game.weapon.melee?'MAINTENIR LA LAME <small>ESPACE / GÂCHETTE DROITE</small>':reloading ? `RECHARGE ${game.reloadRemaining.toFixed(1)} S` : game.weapon.chargeTime ? 'TIR CHARGÉ <small>MAINTENIR · RELÂCHER</small>' : 'TIR LASER <small>MAINTENIR · ESPACE</small>';
   $('charge-bar').style.width = `${(reloading ? 1-game.reloadRemaining/game.weapon.reload : game.charge)*100}%`;
   const pending=game.weaponOffers[0];
   const distanceToWeapon=pending?Math.round(Math.hypot(pending.x-game.player.x,pending.z-game.player.z)):0;
@@ -514,17 +516,42 @@ function frame(timestamp, xrFrame) {
     if(pickupQueued||vrInput.pickup){game.collectWeapon();pickupQueued=false;}
     const moving = Math.hypot(x, z) > .1;
     world.sync(game, clock, dt);
+    // Track the outgoing saber separately from the new firearm. The player sees
+    // AURORA descend to the bottom-left before the new weapon appears.
+    if(game.weaponIndex!==lastWeaponSlot){
+      if(lastWeaponSlot===5&&game.weaponIndex!==5&&world.holsterGun){
+        holsterRemaining=.48;
+        const blade=world.holsterGun.userData.blade;
+        blade?.deployInstant(game.time);
+      }
+      lastWeaponSlot=game.weaponIndex;
+    }
+    if(world.holsterGun){
+      holsterRemaining=Math.max(0,holsterRemaining-dt);
+      const t=1-holsterRemaining/.48,active=holsterRemaining>0&&(vr.mode==='xr'||view==='fps');
+      world.holsterGun.visible=active;
+      if(active){
+        world.holsterGun.position.set(-.25-.27*t,-.24-.56*t,-.56+.09*t);
+        world.holsterGun.rotation.set(.12+.28*t,0,-.22-1.3*t);
+        world.holsterGun.userData.setCombatState({time:game.time,bladeHeld:false});
+      }
+    }
     const firing = vr.mode==='xr' ? vrInput.fire : !!(firingPointers.size || keys.has('Space') || vrInput.fire || game.weapon.semiAuto&&firePressQueued);
     // Pose the authentic IK skeleton BEFORE raycasting. In 3P the projectile now leaves the
     // current crouched/armed muzzle instead of the preceding frame's hand positions.
     updateWeaponVisuals(dt, firing, moving); updateCamera();
+    // Firearms appear once the outgoing hilt has passed the belt line.
+    if(vr.mode!=='xr'&&view==='fps')world.fpsGun.visible=holsterRemaining<=.21;
     if(game.weapon.semiAuto&&firePressQueued)game.triggerHeld=false;firePressQueued=false;
+    // Release is a real state transition for AURORA: never leave a sword active
+    // after the trigger, headset tracking or scene focus is released.
     if (game.state==='playing' && (firing || game.charge>0)) { const target=aim(); game.trigger(firing,dt,target.origin,target.direction); }
+    else if(game.weapon.melee){game.trigger(false,dt,null,null);}
     else {game.triggerHeld=false;game.semiPending=false;}
     handleEvents(); updateCamera();
     if(game.weapon.melee){
       const gun=vr.mode==='xr'?vr.heldGun():view==='fps'?world.fpsGun:world.soldier.gun;
-      if(vr.mode==='xr')gun?.userData.setCombatState?.({time:game.time});
+      if(vr.mode==='xr')gun?.userData.setCombatState?.({time:game.time,bladeHeld:!!game.triggerHeld});
       bladeHead ||=new world.T.Vector3();world.camera.getWorldPosition(bladeHead);
       game.updateBlade(gun?.userData.getBladeSegment?.(),dt,vr.mode==='xr'?vrInput.aim:mouseAim||aimPointers.size>0||vrInput.precision,bladeHead);
       handleEvents();
@@ -532,8 +559,10 @@ function frame(timestamp, xrFrame) {
     world.fpsGun.userData.setSight?.(aiming,world.camera);
     hudTimer -= dt; if (hudTimer <= 0) { if (vr.mode !== 'xr') updateHud(); hudTimer = .1; }
   }
+  if(phase!=='playing'&&world?.holsterGun){world.holsterGun.visible=false;holsterRemaining=0;lastWeaponSlot=game.weaponIndex;}
   const audioActive=phase==='playing'&&!recovering&&!document.hidden;
-  saberAudio?.update({active:audioActive,equipped:!!game.weapon.melee,sound:settings.sound,speed:game.bladeSpeed,swing:saberSwingSound});saberSwingSound=false;
+  saberAudio?.update({active:audioActive,equipped:!!game.weapon.melee,extended:!!game.weapon.melee&&!!game.triggerHeld,
+    sound:settings.sound,speed:game.bladeSpeed,swing:saberSwingSound});saberSwingSound=false;
   const heading=listenerHeading();
   ambience?.update(dt,{active:audioActive,position:game.player,yaw:heading,
     moving:phase==='playing',elevation:game.player.elevation,onLift:!!game.player.onLift,

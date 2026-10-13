@@ -36,8 +36,8 @@ export function questControls(hand = 'right') {
   const mainF = left ? 'gauche' : 'droite', sideF = left ? 'droite' : 'gauche', mainM = left ? 'gauche' : 'droit', sideM = left ? 'droit' : 'gauche';
   return [
     [`Manette ${mainF}`, 'Pistolet : le canon est la visée'],
-    [`Gâchette ${mainF}`, 'Tirer · maintenir pour charger'],
-    [`Poignée ${mainF}`, 'Renforcer le laser et animer la prise'],
+    [`Gâchette ${mainF}`, 'Tirer · AURORA : maintenir pour déployer la lame'],
+    [`Poignée ${mainF}`, 'Saisir fermement la garde · stabiliser les armes'],
     [b.reload, 'Recharger la batterie'],
     [b.next, 'Arme suivante'],
     [`Joystick ${mainM}`, 'Rotation fluide'],
@@ -131,7 +131,7 @@ export class VRController {
     }
   }
   bindSettings() {
-    for (const [key, id] of [['hand', 'vr-hand'], ['turn', 'vr-turn'], ['move', 'vr-move'], ['laser', 'vr-laser']]) {
+    for (const [key, id] of [['hand', 'vr-hand'], ['turn', 'vr-turn'], ['move', 'vr-move']]) {
       const field = $(id); if (!field) continue;
       field.value = this.settings[key];
       field.onchange = () => this.change({ [key]: field.value });
@@ -234,7 +234,7 @@ export class VRController {
     const capacity = game.weapon.capacity, ammo = game.ammo[game.weaponIndex], reloading = game.reloadRemaining > 0;
     const reloadProgress = reloading ? clamp(1 - game.reloadRemaining / game.weapon.reload, 0, 1) : 0;
     const charge = game.weapon.chargeTime ? game.charge : 0, low = !game.weapon.melee && ammo <= capacity / 4, blink = Math.floor(performance.now() / 160) % 2 === 0;
-    gun.userData.setCombatState?.({ ammo, capacity, charge, reloadProgress, reloading, time: game.time,heat:feel?.heat||0,kick:feel?.kick||0,impulse:feel?.impulse||0 });
+    gun.userData.setCombatState?.({ ammo, capacity, charge, reloadProgress, reloading, time: game.time,heat:feel?.heat||0,kick:feel?.kick||0,impulse:feel?.impulse||0,bladeHeld:!!game.weapon.melee&&!!game.triggerHeld });
     const key = `${ammo}|${capacity}|${Math.round(charge*12)}|${Math.ceil(reloadProgress*8)}|${reloading}|${low&&blink}`;
     if (key === display.key) return; display.key = key;
     const c = display.canvas.getContext('2d'), accent = this.hooks.world().character?.accent || '#ff9ac3';
@@ -348,7 +348,8 @@ export class VRController {
         ray.addEventListener('connected', connected); ray.addEventListener('disconnected', disconnected);
         return { ray, anchor, mount, gun, bare, jumpPanel,source:null, level: 0, connected, disconnected };
       });
-      this.hooks.begin(); this.makeHUD(); this.makeSight(); this.makePauseBoard();document.body.classList.add('xr-mode');
+      // No artificial laser pointer or floating target marker in immersive VR.
+      this.hooks.begin(); this.makeHUD(); this.removeSight(); this.makePauseBoard();document.body.classList.add('xr-mode');
       this.positionRig();
       session.addEventListener('end', () => this.finishXR(), { once: true });
       session.addEventListener('visibilitychange', () => { if (session.visibilityState !== 'visible') { this.cancelTrigger(); this.hooks.pause(); } });
@@ -534,21 +535,8 @@ export class VRController {
     } else if (main) origin.addScaledVector(direction, .34);
     return { origin, direction };
   }
-  updateSight() {
-    if (!this.sight) return;
-    const world = this.hooks.world(), game = this.hooks.game();
-    this.sight.group.visible = !this.hooks.game().weapon.melee && (settingsOf(this).laser === 'always' || this.precision) && !this.trackingLost && this.reloadGesture <= 0 && this.hooks.phase() === 'playing';
-    if (!this.sight.group.visible) return;
-    const aim = this.aim(), hit = traceVRAim(aim.origin, aim.direction, game.enemies, world.obstacles);
-    const points = this.sight.beam.geometry.attributes.position;
-    points.setXYZ(0, aim.origin.x, aim.origin.y, aim.origin.z); points.setXYZ(1, hit.point.x, hit.point.y, hit.point.z); points.needsUpdate = true;
-    this.sight.marker.position.set(hit.point.x, hit.point.y, hit.point.z);
-    this.sight.marker.quaternion.copy(world.camera.getWorldQuaternion(this.scratch.quaternion));
-    this.sight.marker.scale.setScalar(clamp(hit.distance * .0025, .008, .25));
-    const color = hit.enemy ? 0xa8e2db : world.palette.rose;
-    this.sight.beam.material.color.setHex(color); this.sight.marker.material.color.setHex(color);
-    this.sight.beam.material.opacity = this.precision ? .6 : .2;
-  }
+  // No auxiliary targeting beam in XR: aim follows the real weapon in hand.
+  updateSight() { if(this.sight)this.sight.group.visible=false; }
   haptic(type, arg) {
     if (this.mode !== 'xr' || settingsOf(this).haptics === false) return;
     const plan = hapticPlan(type, arg), main = settingsOf(this).hand;
@@ -596,10 +584,19 @@ export class VRController {
         if (c.level !== level) { c.gun.userData.setLevel(level); c.bare.userData.setLevel(level); c.level = level; }
         c.gun.userData.flash.visible = flash > 0 && isMain && this.hooks.phase()==='playing';
         const handSign=main==='left'?-1:1;
-        c.gun.position.set(isMain?(feel?.yaw||0)*.10*handSign:0,isMain?reload*.035-(feel?.kick||0)*.13:0,isMain?(feel?.kick??kick*.075)-reload*.045:0);
-        c.gun.rotation.set(isMain?(feel?.pitch??kick*.22)+reload*Math.PI/2:0,isMain?(feel?.yaw||0)*handSign:0,isMain?reload*.12:0);
+        // AURORA: tracked palm closes around the central grip, below the emitter guard.
+        // Keep the sword above the fist and slightly angled into the player's view.
+        const sword=isMain&&game.weapon.melee;
+        c.gun.position.set(isMain?(feel?.yaw||0)*.10*handSign:0,
+          isMain?reload*.035-(feel?.kick||0)*.13+(sword?.028:0):0,
+          isMain?(feel?.kick??kick*.075)-reload*.045-(sword?.036:0):0);
+        c.gun.rotation.set(isMain?(feel?.pitch??kick*.22)+reload*Math.PI/2-(sword?.28:0):0,
+          isMain?(feel?.yaw||0)*handSign:0,
+          isMain?reload*.12+(sword?-.06*handSign:0):0);
+        if(isMain&&this.hooks.world().holsterGun?.visible)
+          c.gun.visible=this.hooks.world().holsterGun.position.y<-.56;
         const fingerPose = isMain
-          ? { trigger:this.handPose.mainTrigger, grip:this.handPose.mainGrip, reload:0 }
+          ? { trigger:this.handPose.mainTrigger, grip:game.weapon.melee?.94:this.handPose.mainGrip, reload:0 }
           : { trigger:this.handPose.sideTrigger, grip:this.handPose.sideGrip, reload,relax:(1-this.handPose.sideGrip)*(1-this.handPose.sideTrigger)*(1-reload)*.65 };
         c.gun.userData.hand?.userData.animate?.(fingerPose,dt,c.gun.scale.x<0?-1:1);
         c.bare.userData.animate?.(fingerPose,dt,c.bare.scale.x<0?-1:1);

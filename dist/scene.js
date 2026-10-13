@@ -188,6 +188,12 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   }));
   let soldier=soldiers.ghju;
   const weapon=new T.Group();const fpsGun=createGun();weapon.add(fpsGun);weapon.position.set(.19,-.24,-.56);camera.add(weapon);weapon.visible=false;
+  // A separate camera-relative sword survives the instant model switch: the
+  // outgoing hilt travels to the lower left before the replacement weapon rises.
+  const holsterGun=createGun();holsterGun.userData.setVariant(5);
+  holsterGun.visible=false;camera.add(holsterGun);
+  holsterGun.position.set(-.24,-.22,-.53);
+
   function setEquipment(level){soldier.setLevel(level);fpsGun.userData.setLevel(level);}
 
   function setCharacter(id){
@@ -405,5 +411,6 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     try { return await recovery; } finally { recovery = null; }
   }
   return {T,scene,camera,moon,get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>city.stats,resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
+    holsterGun,
     get lost(){return lost;},get backend(){return renderer.backend?.isWebGPUBackend?'WebGPU':'WebGL';},render:()=>{if(!lost){camera.updateWorldMatrix(true,false);moon.update(camera);lightBlade();renderer.render(scene,camera);}}};
 }
