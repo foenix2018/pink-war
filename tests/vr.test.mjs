@@ -241,8 +241,8 @@ test('settings are validated and fall back to the defaults',()=>{
 
 test('the control list and button names follow the shooting hand',()=>{
   const right=Object.fromEntries(questControls('right')),left=Object.fromEntries(questControls('left'));
-  assert.equal(right['Gâchette droite'],'Tirer · maintenir pour charger');assert.equal(right.A,'Recharger la batterie');assert.equal(right.Y,'Pause / reprise');
-  assert.equal(left['Gâchette gauche'],'Tirer · maintenir pour charger');assert.equal(left.X,'Recharger la batterie');assert.equal(left.B,'Pause / reprise');
+  assert.equal(right['Gâchette droite'],'Tirer · AURORA : maintenir pour déployer la lame');assert.equal(right.A,'Recharger la batterie');assert.equal(right.Y,'Pause / reprise');
+  assert.equal(left['Gâchette gauche'],'Tirer · AURORA : maintenir pour déployer la lame');assert.equal(left.X,'Recharger la batterie');assert.equal(left.B,'Pause / reprise');
   assert.ok(left['Joystick droit']==='Se déplacer'&&left['Joystick gauche']==='Rotation fluide');
   assert.deepEqual(buttonNames('left'),{reload:'X',next:'Y',jump:'A',pause:'B'});
   for(const hand of ['right','left'])assert.equal(new Set(questControls(hand).map(([control])=>control)).size,questControls(hand).length,'every control is listed once');
