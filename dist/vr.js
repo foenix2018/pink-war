@@ -510,23 +510,8 @@ export class VRController {
     } else if (main) origin.addScaledVector(direction, .34);
     return { origin, direction };
   }
-  updateSight() {
-    if (!this.sight) return;
-    this.sight.group.visible=false;
-    return;
-    const world = this.hooks.world(), game = this.hooks.game();
-    this.sight.group.visible = !this.hooks.game().weapon.melee && (settingsOf(this).laser === 'always' || this.precision) && !this.trackingLost && this.reloadGesture <= 0 && this.hooks.phase() === 'playing';
-    if (!this.sight.group.visible) return;
-    const aim = this.aim(), hit = traceVRAim(aim.origin, aim.direction, game.enemies, world.obstacles);
-    const points = this.sight.beam.geometry.attributes.position;
-    points.setXYZ(0, aim.origin.x, aim.origin.y, aim.origin.z); points.setXYZ(1, hit.point.x, hit.point.y, hit.point.z); points.needsUpdate = true;
-    this.sight.marker.position.set(hit.point.x, hit.point.y, hit.point.z);
-    this.sight.marker.quaternion.copy(world.camera.getWorldQuaternion(this.scratch.quaternion));
-    this.sight.marker.scale.setScalar(clamp(hit.distance * .0025, .008, .25));
-    const color = hit.enemy ? 0xa8e2db : world.palette.rose;
-    this.sight.beam.material.color.setHex(color); this.sight.marker.material.color.setHex(color);
-    this.sight.beam.material.opacity = this.precision ? .6 : .2;
-  }
+  // No auxiliary targeting beam in XR: aim follows the real weapon in hand.
+  updateSight() { if(this.sight)this.sight.group.visible=false; }
   haptic(type, arg) {
     if (this.mode !== 'xr' || settingsOf(this).haptics === false) return;
     const plan = hapticPlan(type, arg), main = settingsOf(this).hand;
