@@ -233,7 +233,7 @@ export class VRController {
     const capacity = game.weapon.capacity, ammo = game.ammo[game.weaponIndex], reloading = game.reloadRemaining > 0;
     const reloadProgress = reloading ? clamp(1 - game.reloadRemaining / game.weapon.reload, 0, 1) : 0;
     const charge = game.weapon.chargeTime ? game.charge : 0, low = !game.weapon.melee && ammo <= capacity / 4, blink = Math.floor(performance.now() / 160) % 2 === 0;
-    gun.userData.setCombatState?.({ ammo, capacity, charge, reloadProgress, reloading, time: game.time,heat:feel?.heat||0,kick:feel?.kick||0,impulse:feel?.impulse||0 });
+    gun.userData.setCombatState?.({ ammo, capacity, charge, reloadProgress, reloading, time: game.time,heat:feel?.heat||0,kick:feel?.kick||0,impulse:feel?.impulse||0,bladeHeld:!!game.weapon.melee&&!!game.triggerHeld });
     const key = `${ammo}|${capacity}|${Math.round(charge*12)}|${Math.ceil(reloadProgress*8)}|${reloading}|${low&&blink}`;
     if (key === display.key) return; display.key = key;
     const c = display.canvas.getContext('2d'), accent = this.hooks.world().character?.accent || '#ff9ac3';
