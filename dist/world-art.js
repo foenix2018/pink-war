@@ -143,7 +143,7 @@ function damagedBlock(seed) {
   geometry.computeVertexNormals();return geometry;
 }
 
-export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, quality='medium') {
+export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, quality='medium', {perimeter=true}={}) {
   const group=new T.Group();group.name='Ruined megacity — reclaimed districts';scene.add(group);
   const rand=randomSource(4107), detail=quality==='high'?1024:512,concreteMap=weatherTexture('concrete',detail), metalMap=weatherTexture('metal',detail), roadMap=weatherTexture('road',detail);
   const std=(color,roughness=.9,metalness=.04,map=concreteMap)=>new T.MeshStandardMaterial({color,roughness,metalness,map,bumpMap:map,bumpScale:map===metalMap?.018:.047});
@@ -463,7 +463,7 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
   }
   // A continuous civic containment wall. Flat structural slabs match the
   // collision footprint; damaged cladding never creates false holes at corners.
-  for(const wall of PERIMETER_WALLS) {
+  for(const wall of perimeter?PERIMETER_WALLS:[]) {
     obstacles.push({...wall});
     cube(m.concrete,[wall.x,wall.height/2,wall.z],[wall.hx*2,wall.height,wall.hz*2],[0,0,0],'box');
     const vertical=wall.hz>wall.hx;
@@ -532,7 +532,7 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
   dustGeometry.setAttribute('position',new T.BufferAttribute(positions,3));
   const dust=new T.Points(dustGeometry,new T.PointsMaterial({color:0xd7c7a5,size:.026,opacity:.37,transparent:true,depthWrite:false}));group.add(dust);
   group.userData.instances=instances;group.userData.districts=['Brèche centrale','Archives envahies','Maintenance','Relais'];
-  return {group,materials:m,pbrStatus,stats:{interiorBuildings:structures.length,outerBuildings:OUTER_BUILDINGS.length,perimeterWalls:PERIMETER_WALLS.length,windFoliage:true,sky:'fractal night clouds'},update(time){
+  return {group,materials:m,pbrStatus,stats:{interiorBuildings:structures.length,outerBuildings:OUTER_BUILDINGS.length,perimeterWalls:perimeter?PERIMETER_WALLS.length:0,windFoliage:true,sky:'fractal night clouds'},update(time){
     dust.position.x=Math.sin(time*.025)*2.5;dust.position.y=Math.sin(time*.06)*.25;
     if(time>=windAt){
       windAt=time+1/15;

@@ -273,7 +273,22 @@ function attachBatteryRail(model, index, mats, material) {
 // One group per weapon, merged into a handful of meshes each (a few draw calls instead of dozens). The geometry is
 // built once per material set and shared by every gun in the scene.
 const prototypes = new WeakMap();
+const metalSets = new WeakMap();
+function weaponMetals(source) {
+  if(metalSets.has(source))return metalSets.get(source);
+  const set={...source};
+  for(const [name,metalness,roughness,intensity] of [['steel',.92,.24,1.15],['dark',.62,.36,.8],['armor',.78,.3,.95],['armorLight',.86,.26,1.05]]){
+    const material=source[name].clone();material.name='Weapon metal — '+name;
+    material.metalness=metalness;material.roughness=roughness;material.envMapIntensity=intensity;
+    // Palette changes still reach cached guns. Receiver shells use exposed
+    // steel; the coloured anodised inserts retain GHJU/LYLU's signature.
+    material.color=name==='armorLight'?source.steel.color:source[name].color;
+    set[name]=material;
+  }
+  metalSets.set(source,set);metalSets.set(set,set);return set;
+}
 export function createWeaponModels(mats) {
+  mats=weaponMetals(mats);
   if (!prototypes.has(mats)) {
     prototypes.set(mats, BUILDERS.map((build, index) => {
       const group = new T.Group(); build(mats).build(group);
@@ -287,6 +302,7 @@ export function createWeaponModels(mats) {
 // The weapon in the right hand: every model is drawn around the grip (the palm), so the glove holds it by
 // construction. Heavy weapons add a second glove on the foregrip. `makeFlash(parent)` supplies the muzzle glow.
 export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
+  mats=weaponMetals(mats);
   const g = new T.Group(), models = createWeaponModels(mats);
   for (const model of models) { model.visible = false; g.add(model); }
   const optics=models.map(attachOptic),eye=new T.Vector3(),target=new T.Vector3();
@@ -311,7 +327,7 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   const batteryOff = new T.Color(0x171722), batteryLow = new T.Color(0xff385f), batteryReload = new T.Color(0xffffff);
   const batteryTint = new T.Color(), batteryCharge = new T.Color(), batteryWhite = new T.Color(0xffffff);
   let batteryStateKey = '';
-  const hand = createGlove(gloves, { sleeve }), support = createGlove(gloves, { mirror: true, sleeve, forearm: [.5, -.55, .66] });
+  const hand = createGlove(gloves, { sleeve }), support = createGlove(gloves, { mirror: true, sleeve });
   support.visible = false; g.add(hand, support);
   const flash = makeFlash(g); flash.visible = false;
   // Small moving emitter collars and residual heat make the discharge visible

@@ -255,9 +255,9 @@ test('vibrations: heavy weapons kick harder, both hands feel damage, and the set
   const calls=[],pad=(name,kind)=>kind==='pulse'?{hapticActuators:[{pulse:(v,d)=>{calls.push([name,v,d]);return Promise.resolve();}}]}:{vibrationActuator:{playEffect:(type,o)=>{calls.push([name,type,o.strongMagnitude,o.duration]);return Promise.resolve();}}};
   const controllers=[{ray:{userData:{source:{handedness:'right',gamepad:pad('R','pulse')}}}},{ray:{userData:{source:{handedness:'left',gamepad:pad('L','effect')}}}}];
   const state=Object.assign(Object.create(VRController.prototype),{mode:'xr',settings:VR_DEFAULTS,controllers});
-  state.haptic('shot','thorn');assert.deepEqual(calls,[['R',1,120]]);
-  calls.length=0;state.haptic('damage');assert.deepEqual(calls,[['R',.6,90],['L','dual-rumble',.6,90]]);
-  calls.length=0;state.settings={...VR_DEFAULTS,hand:'left'};state.haptic('shot','r9');assert.deepEqual(calls,[['L','dual-rumble',.72,48]]);
+  state.haptic('shot','thorn');assert.deepEqual(calls,[['R',1,145]]);
+  calls.length=0;state.haptic('damage');assert.deepEqual(calls,[['R',.8,110],['L','dual-rumble',.8,110]]);
+  calls.length=0;state.settings={...VR_DEFAULTS,hand:'left'};state.haptic('shot','r9');assert.deepEqual(calls,[['L','dual-rumble',.88,65]]);
   calls.length=0;state.settings={...VR_DEFAULTS,haptics:false};state.haptic('shot','r9');state.haptic('damage');assert.deepEqual(calls,[]);
   state.settings=VR_DEFAULTS;state.mode='stereo';state.haptic('damage');assert.deepEqual(calls,[]);
   state.mode='xr';controllers[0].ray.userData.source.gamepad={hapticActuators:[{pulse(){throw new Error('device lost');}}]};assert.doesNotThrow(()=>state.haptic('shot','r9'));

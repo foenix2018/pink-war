@@ -5,7 +5,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mix=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
 
 // The same weapon, battery, recoil-event and damage rules as the arena, with
-// movement/spawning supplied exclusively by the detected real room.
+// native player tracking and enemy spawning supplied by the room/field adapter.
 export class RoomGame extends ArenaGame {
   constructor(room,random=Math.random){super([],random);this.room=room;this.running=false;this.pendingOffers=new Set();this.maxActive=3;this.head={x:0,y:1.65,z:0};this.roomPhase='ready';}
   start(head){
@@ -66,7 +66,7 @@ export class RoomGame extends ArenaGame {
     const ranged=['seer','probe','listener','bulwark'].includes(form)||(this.wave>=5&&form==='brute');
     const roomScale=Math.min(1,Math.max(.6,((this.room.ceilingAt?.(point)??2.6)-point.y-.15)/((probe?1.95:form==='scuttler'?1.1:2.32)*enemyScale(form,elite))));
     const e={id:this.nextId++,x:point.x,z:point.z,elevation:point.y+(probe?.85:0),groundY:point.y,form,elite,ranged,
-      hp:Math.round(enemyDurability(this.wave,form,elite)*.72),speed:Math.min(.75,.32+this.wave*.021)*(form==='scuttler'?1.12:form==='bulwark'?.65:1),
+      hp:Math.round(enemyDurability(this.wave,form,elite)*.72),speed:(this.room.outdoor?Math.min(2.6,1.6+this.wave*.05):Math.min(.75,.32+this.wave*.021))*(form==='scuttler'?1.12:form==='bulwark'?.65:1),
       roomScale,radius:(probe?.38:elite?.44:.33)*roomScale,aimHeight:(probe?.55:form==='scuttler'?.85:1.88)*enemyScale(form,elite)*roomScale,tier:Math.ceil(this.wave/2),
       yaw:Math.atan2(this.head.x-point.x,this.head.z-point.z)+Math.PI,attackTimer:1.5,stunnedUntil:0,limpUntil:0,phase:this.random()*6.28,awareness:'engaged',portalId:site.id};
     this.enemies.push(e);this.toSpawn--;this.spawned++;this.event('spawn',{id:e.id,x:e.x,y:e.elevation+e.aimHeight,z:e.z});return true;
@@ -110,7 +110,7 @@ export class RoomGame extends ArenaGame {
       e.moving=false;
       if(target){
         const waypoint=this.room.waypoint?.(e,target)||target,dx=waypoint.x-e.x,dz=waypoint.z-e.z,n=Math.hypot(dx,dz)||1;
-        if(distance>(e.ranged?2.0:.92)&&e.stunnedUntil<=this.time){const speed=e.speed*(e.limpUntil>this.time?.6:1),p={x:e.x+dx/n*speed*dt,y:e.groundY,z:e.z+dz/n*speed*dt};
+        if(distance>(e.ranged?(this.room.outdoor?7:2.0):.92)&&e.stunnedUntil<=this.time){const speed=e.speed*(e.limpUntil>this.time?.6:1),p={x:e.x+dx/n*speed*dt,y:e.groundY,z:e.z+dz/n*speed*dt};
           if(this.room.canStand(p,e.radius)&&!this.blocked(eye,{x:p.x,y:eye.y,z:p.z})){e.x=p.x;e.z=p.z;e.moving=true;}}
         e.yaw=Math.atan2(target.x-e.x,target.z-e.z)+Math.PI;
       }

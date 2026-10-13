@@ -3,10 +3,11 @@ import { createRLHGlove, syncRLHMaterials } from './rlh-gloves.js';
 
 // Keep the exact weapon/IK attachment frame. The imported RLH model has its own
 // anatomical wrist origin; this adapter aligns that origin with the game's wrist.
-export const GRIP=Object.freeze({halfWidth:.018,halfDepth:.0235,wrist:[.03,.052,.098],forearm:[.1,-.3,.95]});
+export const GRIP=Object.freeze({halfWidth:.018,halfDepth:.0235,wrist:[.03,.052,.098],forearm:[0,Math.sin(.35),Math.cos(.35)]});
 const basis=new T.Matrix4().makeBasis(new T.Vector3(0,-1,0),new T.Vector3(0,0,-1),new T.Vector3(1,0,0));
 const orientation=new T.Quaternion().setFromRotationMatrix(basis).premultiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),-.35));
 const clamp=n=>Math.max(0,Math.min(1,Number(n)||0));
+const trackedForearmGeometry=new T.CapsuleGeometry(.045,.3,4,16);
 export const syncGloveMaterials=syncRLHMaterials;
 
 export function createGlove(materials,{mirror=false,sleeve=true,forearm=GRIP.forearm}={}){
@@ -16,6 +17,8 @@ export function createGlove(materials,{mirror=false,sleeve=true,forearm=GRIP.for
   if(mirror)group.scale.x=-1;
   group.name='Pink war RLH '+(mirror?'gauche':'droit');
   const rig=model.userData.rig,localDirection=new T.Vector3(...forearm).normalize().applyQuaternion(orientation.clone().invert());
+  // The cuff extends opposite the palm axis. A downwards default cuff bent
+  // both wrists by about forty degrees despite neutral wrist bones.
   rig.forearm.quaternion.setFromUnitVectors(new T.Vector3(0,-1,0),localDirection);
   const order=['middle','ring','pinky','index'];
   const digitBones=[...order.map(name=>rig.doigts[name].artic),rig.pouce.artic];
@@ -23,6 +26,10 @@ export function createGlove(materials,{mirror=false,sleeve=true,forearm=GRIP.for
   Object.assign(group.userData,{source:'RLH V40',rlh:model,rig,skeleton:model.userData.skeleton,pose,digitBones,fingerJoints:digitBones.map(chain=>chain[1]),assembly:model.userData.assembly,
     setLevel:level=>model.userData.setLevel(level),
     setBasePosition(position){base.set(...position);group.position.copy(base);},
+    extendForearm(){
+      if(group.userData.extendedForearm)return;
+      const arm=new T.Mesh(trackedForearmGeometry,materials.fabric);arm.name='Tracked forearm inside RLH cuff';arm.position.y=-.3;arm.scale.set(1.12,1,.87);rig.forearm.add(arm);group.userData.extendedForearm=arm;
+    },
     dispose:()=>model.userData.dispose()
   });
   group.userData.animate=({trigger=0,grip=0,reload=0,relax=0}={},dt=.016,handedness=1)=>{

@@ -18,7 +18,7 @@ Les signes d’activité électrique, les mécanismes et les bruits d’installa
 
 ## AT HOME — canon confirmé
 
-La maison scannée représente un ancien laboratoire de l’IA, encore partiellement alimenté après la guerre. Son sol, ses murs et ses meubles sont habillés en installations du laboratoire. Les brèches y font arriver les machines hostiles par vagues ; les livraisons d’armes suivent la progression de l’arène. Le personnage choisi reste GHJU ou LYLU. L’origine précise des recherches du laboratoire reste à définir.
+La maison scannée représente un ancien laboratoire de l’IA, encore partiellement alimenté après la guerre. La maison garde son ancrage réel ; son sol et ses meubles bas sont habillés en installations du laboratoire. Le décor s’ouvre à ciel libre sans murs ni plafond virtuels autour du joueur. Les brèches apparaissent dans le terrain virtuel à distance et les machines hostiles approchent par vagues ; les livraisons d’armes suivent la progression de l’arène. Le personnage choisi reste GHJU ou LYLU. L’origine précise des recherches du laboratoire reste à définir.
 
 ## Questions ouvertes
 

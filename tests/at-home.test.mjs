@@ -40,7 +40,7 @@ test('AT HOME reuses the original Pink War gameplay asset modules',()=>{
   assert.match(assets,/buildGun\(/);
   assert.match(assets,/createRuinedRoomMaterials\(/);
   assert.match(js,/game\.weapon/);
-  assert.match(js,/colorWrite:false,depthWrite:true/);
+  assert.match(js,/colorWrite:false,depthWrite:false/);
   assert.match(js,/assets\.projectRuin/);
 });
 test('AT HOME room asset module passes Node syntax check',()=>{

@@ -13,6 +13,8 @@ import { createAmbience } from './ambience.js';
 import { createWeaponFeel } from './weapon-feel.js';
 import { createLaserFX } from './laser-fx.js';
 import { createMagnifiedSight } from './magnified-sight.js';
+import { createHomeBattlefield } from './home-battlefield.js';
+import { hapticPlan, buzz } from './haptics.js';
 
 const $=id=>document.getElementById(id),status=$('at-home-status'),button=$('at-home-enter');
 let characterId='ghju';try{characterId=localStorage.getItem('pink-war-character')||characterId;}catch{}
@@ -28,11 +30,12 @@ renderer.xr.enabled=true;renderer.xr.setReferenceSpaceType('local-floor');render
 const raycaster=new THREE.Raycaster(),head=new THREE.Vector3(),direction=new THREE.Vector3(),orientation=new THREE.Quaternion(),tmp=new THREE.Vector3();
 let session=null,mode='idle',assets=null,assetsLoading=null,assetError='',audio=null,ambience=null,saberAudio=null,scope=null;
 let lastTime=0,startTime=0,roomCaptureAsked=false,decorEnabled=true,fullImmersion=true,roomDirty=true,navigation=null,navigationFloorY=null,lastRoomBuild=-99;
-let frames=0,fireBlocked=true,lastTrigger=false,scanMessage='',announcementUntil=0,muzzleUntil=0;
+let frames=0,fireBlocked=true,lastTrigger=false,scanMessage='',announcementUntil=0,muzzleUntil=0,refreshScan=false;
 const surfaces=new Map(),meshes=new Map(),bots=new Map(),bolts=new Map();
 const mounts=[],controllerHandState={trigger:0,grip:0,offTrigger:0,offGrip:0},previousButtons=new Map();
 const music=createMusicBed(),feel=createWeaponFeel(),laser=createLaserFX(THREE,scene,hero.palette);
-const blockerMaterial=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:true,side:THREE.DoubleSide});
+const blockerMaterial=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false,side:THREE.DoubleSide});
+blockerMaterial.visible=false; // Keep ray collisions without drawing an invisible occlusion screen.
 const outlineMat=new THREE.LineBasicMaterial({color:hero.palette.rose,transparent:true,opacity:.38,depthWrite:false});
 const bladeLight=new THREE.PointLight(hero.palette.rose,0,3.2,2);scene.add(bladeLight);
 const hostileGeo=new THREE.CylinderGeometry(.012,.012,1,6),hostileMat=new THREE.MeshBasicMaterial({color:0xff657f,toneMapped:false});
@@ -40,7 +43,7 @@ const opticalEye=new THREE.PerspectiveCamera();opticalEye.matrixAutoUpdate=false
 function info(text){scanMessage=text;status.textContent=text;}
 function surfaceRecords(){return [...surfaces.values(),...meshes.values()];}
 function floors(){return surfaceRecords().filter(r=>r.isFloor&&r.polygon?.length>=3);}
-function blockers(){return surfaceRecords().map(r=>r.collider);}
+function blockers(){return surfaceRecords().filter(r=>r.isFloor||r.isCover).map(r=>r.collider);}
 function traceRoom(a,b,objects=blockers()){
  const length=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z);if(length<.001)return null;
  raycaster.set(tmp.set(a.x,a.y,a.z),direction.set(b.x-a.x,b.y-a.y,b.z-a.z).divideScalar(length));raycaster.near=.012;raycaster.far=length;
@@ -51,7 +54,7 @@ function traceRoom(a,b,objects=blockers()){
 function clearLineOfSight(a,b){return !traceRoom(a,b);}
 function canStand(p,radius=.33){
  const all=floors(),y=roomFloorAt(p,all);if(y===null)return false;
- const nonFloor=surfaceRecords().filter(r=>!r.isFloor).map(r=>r.collider);
+ const nonFloor=surfaceRecords().filter(r=>r.isCover).map(r=>r.collider);
  for(const [dx,dz] of [[0,0],[radius,0],[-radius,0],[0,radius],[0,-radius]]){
   const q={x:p.x+dx,z:p.z+dz,y:y+.08};if(roomFloorAt(q,all)===null)return false;
   if(traceRoom(q,{...q,y:y+1.95},nonFloor))return false;
@@ -72,9 +75,10 @@ function findPoint({purpose,head:viewer=head,avoid=[],portal=null}={}){
   if(navigation&&!navigation.reachable(point,viewer))continue;return point;
  }return null;
 }
-const room={hasFloor:()=>floors().length>0,floorAt:p=>roomFloorAt({...p,y:p.y-.65},floors()),freeArea:()=>navigation?.freeArea()||8,
+const scannedRoom={hasFloor:()=>floors().length>0,floorAt:p=>roomFloorAt({...p,y:p.y-.65},floors()),freeArea:()=>navigation?.freeArea()||8,
  ceilingAt:p=>Math.min(p.y+2.6,...surfaceRecords().filter(r=>r.kind==='ceiling'&&r.polygon[0].y>p.y+.4&&insideRoomPolygon(p,r.polygon)).map(r=>r.polygon.reduce((sum,v)=>sum+v.y,0)/r.polygon.length)),
  findPoint,canStand,trace:traceRoom,waypoint:(from,target)=>navigation?.waypoint(from,target)};
+const room=createHomeBattlefield({room:scannedRoom,obstacles:()=>assets?.architecture.obstacles||[],forward:()=>new THREE.Vector3(0,0,-1).applyQuaternion(orientation)});
 const game=new RoomGame(room);
 function makeBoard(width,height,size){
  const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
@@ -105,32 +109,38 @@ function discardSurface(record){assets?.disposeDecor(record);record.collider.rem
 function updateSurfaces(frame){
  const ref=renderer.xr.getReferenceSpace();if(!ref||!frame)return;
  const detected=frame.detectedPlanes||session?.detectedPlanes;
- if(detected){for(const [source,record] of surfaces)if(!detected.has(source)){discardSurface(record);surfaces.delete(source);}
-  let count=0;for(const plane of detected){if(++count>65)break;const pose=frame.getPose(plane.planeSpace,ref);if(!pose||plane.polygon?.length<3)continue;
+ if(refreshScan&&detected&&[...detected].some(p=>p.semanticLabel==='floor')){for(const record of surfaceRecords())discardSurface(record);surfaces.clear();meshes.clear();navigationFloorY=null;room.resetRoom();assets?.architecture.resetRoom();refreshScan=false;}
+ if(detected){ // A temporarily empty detection set while walking is not a new room scan.
+  let count=0;for(const plane of detected){if(++count>65)break;if(!surfaces.has(plane)&&surfaces.size>=65)continue;const pose=frame.getPose(plane.planeSpace,ref);if(!pose||plane.polygon?.length<3)continue;
    let record=surfaces.get(plane),changed=!record||record.changed!==plane.lastChangedTime;
    if(changed){const geometry=planeGeometry(plane.polygon);if(!geometry)continue;if(record)discardSurface(record);
     const collider=new THREE.Mesh(geometry,blockerMaterial),outline=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(plane.polygon.map(p=>new THREE.Vector3(p.x,p.y,p.z))),outlineMat);scene.add(collider,outline);
     record={collider,outline,changed:plane.lastChangedTime,kind:'object',isFloor:false,polygon:[]};surfaces.set(plane,record);roomDirty=true;}
    poseObject(record.collider,pose);poseObject(record.outline,pose);
    record.polygon=plane.polygon.map(p=>record.collider.localToWorld(new THREE.Vector3(p.x,p.y,p.z)));
-   const kind=classifyRoomSurface(record.polygon,plane.semanticLabel||'');if(kind!==record.kind){record.kind=kind;roomDirty=true;changed=true;}record.isFloor=kind==='floor';
-   record.outline.visible=!decorEnabled||mode==='ready';if(assets&&(changed||!record.decor))assets.projectRuin(record,decorEnabled,head);
+   const kind=classifyRoomSurface(record.polygon,plane.semanticLabel||'');if(kind!==record.kind){record.kind=kind;roomDirty=true;changed=true;}record.isFloor=kind==='floor';record.isCover=kind==='object';
+   record.outline.visible=false;if(assets&&(changed||!record.decor))assets.projectRuin(record,decorEnabled,head);
   }
  }
  const detectedMeshes=frame.detectedMeshes;
- if(detectedMeshes){for(const [source,record] of meshes)if(!detectedMeshes.has(source)){discardSurface(record);meshes.delete(source);}
-  let count=0;for(const mesh of detectedMeshes){if(++count>14)break;if(!mesh.vertices||!mesh.indices||mesh.vertices.length>30000||mesh.indices.length>45000)continue;
+ if(detectedMeshes){
+  let count=0;for(const mesh of detectedMeshes){if(++count>14)break;if(!meshes.has(mesh)&&meshes.size>=14)continue;if(!mesh.vertices||!mesh.indices||mesh.vertices.length>30000||mesh.indices.length>45000)continue;
    const pose=frame.getPose(mesh.meshSpace,ref);if(!pose)continue;let record=meshes.get(mesh),changed=!record||record.changed!==mesh.lastChangedTime;
    if(changed){if(record)discardSurface(record);const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(mesh.vertices.slice(),3));g.setIndex(new THREE.BufferAttribute(mesh.indices.slice(),1));g.computeVertexNormals();
-    const collider=new THREE.Mesh(g,blockerMaterial);scene.add(collider);record={collider,changed:mesh.lastChangedTime,kind:'mesh',isFloor:mesh.semanticLabel==='floor',polygon:[]};meshes.set(mesh,record);roomDirty=true;}
+    const collider=new THREE.Mesh(g,blockerMaterial);scene.add(collider);record={collider,changed:mesh.lastChangedTime,kind:['wall','ceiling'].includes(mesh.semanticLabel)?mesh.semanticLabel:'mesh',isFloor:mesh.semanticLabel==='floor',isCover:false,polygon:[]};meshes.set(mesh,record);roomDirty=true;}
    poseObject(record.collider,pose);
+   const meshBox=new THREE.Box3().setFromObject(record.collider);record.isCover=!record.isFloor&&!['wall','ceiling'].includes(record.kind)&&meshBox.max.y-meshBox.min.y<1.8;
    if(record.isFloor){const b=new THREE.Box3().setFromObject(record.collider);record.polygon=[new THREE.Vector3(b.min.x,b.min.y,b.min.z),new THREE.Vector3(b.max.x,b.min.y,b.min.z),new THREE.Vector3(b.max.x,b.min.y,b.max.z),new THREE.Vector3(b.min.x,b.min.y,b.max.z)];}
    if(assets&&(changed||!record.decor))assets.projectRuin(record,decorEnabled,head);
   }
  }
  const roomClock=performance.now()/1000;
- const currentFloor=room.floorAt(head);if(currentFloor!==navigationFloorY)roomDirty=true;
- if(roomDirty&&roomClock-lastRoomBuild>.25){roomDirty=false;lastRoomBuild=roomClock;navigationFloorY=currentFloor;const bounds=roomBounds(floors());navigation=createRoomNavigation(bounds?{...bounds,floorY:currentFloor??bounds.floorY}:null,canStand);assets?.architecture.setRoom(bounds);assets?.architecture.setEnabled(decorEnabled,fullImmersion);}
+ const currentFloor=scannedRoom.floorAt(head);if(currentFloor!==null&&(navigationFloorY===null||Math.abs(currentFloor-navigationFloorY)>.08))roomDirty=true;
+ if(roomDirty&&roomClock-lastRoomBuild>.25){
+  roomDirty=false;lastRoomBuild=roomClock;const bounds=roomBounds(floors());navigationFloorY=currentFloor??navigationFloorY??bounds?.floorY??null;
+  const anchored=bounds?{...bounds,floorY:navigationFloorY??bounds.floorY}:null;
+  navigation=createRoomNavigation(anchored,canStand);assets?.architecture.setRoom(anchored);if(anchored)room.setRoom(anchored);assets?.architecture.setEnabled(decorEnabled,fullImmersion);
+ }
 }
 function edge(key,down){const old=previousButtons.get(key)||false;previousButtons.set(key,down);return down&&!old;}
 function cancelFire(){game.triggerHeld=false;game.semiPending=false;game.charge=0;game.bladePrevious=null;fireBlocked=true;scope?.release();}
@@ -158,15 +168,20 @@ function processEvents(){
   if(event.type==='weapon-offer')announce(event.name+' / LIVRAISON DISPONIBLE');
   if(event.type==='unlock')announce(event.name+' / ACQUISE');
   if(event.type==='weapon'){assets.setWeapon(event.index,Math.min(10,Math.max(1,game.wave)));feel.reset();scope?.release();cancelFire();}
-  if(event.type==='shot'){feel.fire(event.weapon,event.power,controllerHandState.offGrip>.5);laser.shot(event);muzzleUntil=game.time+.075;try{playLaserShot(audio,event.weapon,event.power);}catch{}haptic();}
-  if(event.type==='reload'){try{playWeaponAction(audio,game.weapon.id,'reload-out');}catch{}}
-  if(event.type==='reloaded'){try{playWeaponAction(audio,game.weapon.id,'reload-in');}catch{}}
+  if(event.type==='shot'){feel.fire(event.weapon,event.power,controllerHandState.offGrip>.5);laser.shot(event);muzzleUntil=game.time+.075;try{playLaserShot(audio,event.weapon,event.power);}catch{}haptic('shot',event.weapon);}
+  if(event.type==='reload'){haptic('reload');try{playWeaponAction(audio,game.weapon.id,'reload-out');}catch{}}
+  if(event.type==='reloaded'){haptic('reloaded');try{playWeaponAction(audio,game.weapon.id,'reload-in');}catch{}}
   if(event.type==='impact'){laser.impact(event);try{playLaserImpact(audio,{surface:event.surface,distance:Math.hypot(event.x-head.x,event.y-head.y,event.z-head.z),splash:event.splash,power:event.power});}catch{}}
-  if(event.type==='blade-hit'||event.type==='blade-parry'){saberAudio?.impact(event.type==='blade-parry');haptic();}
+  if(event.type==='blade-hit'||event.type==='blade-parry'){saberAudio?.impact(event.type==='blade-parry');haptic(event.type==='blade-parry'?'parry':'hit');}
+  if(event.type==='damage')haptic('damage');
+  if(event.type==='weapon')haptic('weapon');
   if(event.type==='over'||event.type==='won'){mode='finished';music.pause();cancelFire();info('GÂCHETTE DROITE : REJOUER');}
  }
 }
-function haptic(){try{const source=mounts.find(m=>m.source?.handedness==='right')?.source;source?.gamepad?.hapticActuators?.[0]?.pulse?.(.55,55)?.catch?.(()=>{});}catch{}}
+function haptic(type,arg){
+ try{if(JSON.parse(localStorage.getItem('pink-war-vr')||'{}').haptics===false)return;}catch{}
+ const plan=hapticPlan(type,arg);for(const entry of mounts){const pulse=entry.source?.handedness==='right'?plan.main:plan.side;if(pulse)buzz(entry.source?.gamepad,pulse);}
+}
 for(let i=0;i<2;i++){
  const ray=renderer.xr.getController(i),anchor=new THREE.Group(),mount=new THREE.Group();anchor.matrixAutoUpdate=false;anchor.visible=false;mount.position.set(0,-.016,.05);scene.add(anchor,ray);anchor.add(mount);
  const entry={ray,anchor,mount,source:null};ray.addEventListener('connected',event=>{entry.source=event.data;updateControllerRoles();});ray.addEventListener('disconnected',()=>{entry.source=null;cancelFire();updateControllerRoles();});mounts.push(entry);
@@ -183,7 +198,8 @@ function tick(ms,frame){
  const seconds=ms/1000,dt=Math.min(.05,Math.max(0,seconds-lastTime));lastTime=seconds;const feedback=feel.update(dt);
  if(session){
   const pose=frame?.getViewerPose(renderer.xr.getReferenceSpace());if(pose){head.copy(pose.transform.position);orientation.copy(pose.transform.orientation);}
-  const active=session.visibilityState==='visible'&&!!pose;if(!pose&&mode==='combat')cancelFire();
+  const active=session.visibilityState==='visible'&&!!pose;
+  if(active&&mode==='paused'){game.running=true;mode='combat';cancelFire();music.start(audio);info('SIGNAL RÉTABLI');}if(!pose&&mode==='combat')cancelFire();
   const right=[...session.inputSources].find(s=>s.handedness==='right'),left=[...session.inputSources].find(s=>s.handedness==='left'),padR=right?.gamepad,padL=left?.gamepad;
   Object.assign(controllerHandState,{trigger:padR?.buttons?.[0]?.value||0,grip:padR?.buttons?.[1]?.value||0,offTrigger:padL?.buttons?.[0]?.value||0,offGrip:padL?.buttons?.[1]?.value||0});
   if(edge('exit',!!padR?.buttons?.[5]?.pressed)){session.end().catch(()=>{});return;}
@@ -221,14 +237,14 @@ function tick(ms,frame){
 async function initiateScan(){
  if(!session||roomCaptureAsked)return;roomCaptureAsked=true;
  if(typeof session.initiateRoomCapture!=='function'){info('CONFIGURE LE SCAN DANS SPACE SETUP DU QUEST');roomCaptureAsked=false;return;}
- info('SCAN DE LA MAISON EN COURS');try{await session.initiateRoomCapture();roomDirty=true;info('SCAN TERMINÉ : RECHERCHE DU SOL');}catch{info('SCAN ANNULÉ : TU PEUX RÉESSAYER');}finally{roomCaptureAsked=false;}
+ info('SCAN DE LA MAISON EN COURS');try{await session.initiateRoomCapture();refreshScan=true;roomDirty=true;info('SCAN TERMINÉ : RECHERCHE DU SOL');}catch{info('SCAN ANNULÉ : TU PEUX RÉESSAYER');}finally{roomCaptureAsked=false;}
 }
 function onSelect(event){if(session?.visibilityState!=='visible')return;if(event.inputSource?.handedness==='left'&&mode!=='combat')initiateScan();if(event.inputSource?.handedness==='right'&&mode!=='combat')startCombat();}
 function onSessionEnd(){
  session=null;mode='idle';game.stop();cancelFire();game.enemies=[];game.bullets=[];game.activePortals=[];game.weaponOffers=[];game.toSpawn=0;game.pendingOffers.clear();scope?.dispose();scope=null;music.pause();ambience?.pause();saberAudio?.update({active:false});bladeLight.intensity=0;clearBots();laser.reset();assets?.hideDecor();
- for(const record of surfaceRecords())discardSurface(record);surfaces.clear();meshes.clear();navigation=null;roomDirty=true;lastRoomBuild=-99;
+ for(const record of surfaceRecords())discardSurface(record);surfaces.clear();meshes.clear();navigation=null;navigationFloorY=null;room.resetRoom();roomDirty=true;lastRoomBuild=-99;
  for(const item of [hud,board,announcement])item.plane.visible=false;for(const mount of mounts){mount.source=null;mount.anchor.visible=false;mount.ray.userData.source=null;}
- assets?.gun.removeFromParent();assets?.freeHand.removeFromParent();previousButtons.clear();lastTrigger=false;roomCaptureAsked=false;
+ assets?.gun.removeFromParent();assets?.freeHand.removeFromParent();previousButtons.clear();lastTrigger=false;roomCaptureAsked=false;refreshScan=false;
  document.body.classList.remove('in-xr');$('at-home-end').hidden=true;button.disabled=false;info('SESSION TERMINÉE · RELANCER AT HOME');
 }
 async function enter(){
@@ -237,9 +253,9 @@ async function enter(){
  button.disabled=true;
  try{audio ||=new (window.AudioContext||window.webkitAudioContext)();audio.resume().catch(()=>{});saberAudio ||=createSaberSound(audio);ambience ||=createAmbience(audio);loadRealLaserSample(audio).catch(()=>{});}catch{}
  let opened;try{
-  opened=await request;session=opened;mode='ready';lastTime=0;startTime=performance.now()/1000;roomDirty=true;lastRoomBuild=-99;game.stop();
+  opened=await request;session=opened;mode='ready';decorEnabled=true;lastTime=0;startTime=performance.now()/1000;roomDirty=true;lastRoomBuild=-99;game.stop();
   opened.addEventListener('end',onSessionEnd,{once:true});opened.addEventListener('selectstart',onSelect);opened.addEventListener('inputsourceschange',updateControllerRoles);
-  opened.addEventListener('visibilitychange',()=>{if(opened.visibilityState!=='visible'&&mode==='combat'){mode='paused';game.stop();cancelFire();music.pause();ambience?.pause();info('GÂCHETTE DROITE : REPRENDRE');}});
+  opened.addEventListener('visibilitychange',()=>{if(opened.visibilityState==='hidden'&&mode==='combat'){mode='paused';game.stop();cancelFire();music.pause();ambience?.pause();info('GÂCHETTE DROITE : REPRENDRE');}});
   await renderer.xr.setSession(opened);document.body.classList.add('in-xr');$('at-home-end').hidden=false;info('DÉTECTION DE LA MAISON');
   if(!assets){assetsLoading ||=import('./at-home-assets.js').then(m=>m.createAtHomeAssets(scene,hero)).then(pack=>{assets=pack;assetsLoading=null;assetError='';updateControllerRoles();for(const r of surfaceRecords())assets.projectRuin(r,decorEnabled,head);roomDirty=true;lastRoomBuild=-99;}).catch(error=>{assetsLoading=null;assetError='MODÈLES INDISPONIBLES : '+error.message;console.error('AT HOME',error);});}else updateControllerRoles();
  }catch(error){if(opened)await opened.end().catch(()=>{});if(session===opened)onSessionEnd();button.disabled=false;info('ACCÈS À LA RÉALITÉ MIXTE INDISPONIBLE : '+error.message);}
@@ -251,4 +267,4 @@ window.addEventListener('resize',()=>{if(renderer.xr.isPresenting)return;camera.
 renderer.setAnimationLoop(tick);
 async function checkSupport(){if(!navigator.xr||!window.isSecureContext){info('OUVRE AT HOME DANS LE NAVIGATEUR QUEST 3');return;}try{if(await navigator.xr.isSessionSupported('immersive-ar')){button.disabled=false;info('QUEST COMPATIBLE · PRÉPARE LE SCAN DE LA MAISON');}else info('RÉALITÉ MIXTE INDISPONIBLE SUR CE NAVIGATEUR');}catch{info('SUPPORT WEBXR INDISPONIBLE');}}
 checkSupport();
-window.__PINKWAR_HOME=Object.freeze({snapshot:()=>({version:'3.27',mode,frames,character:hero.id,floors:floors().length,surfaces:surfaces.size,meshes:meshes.size,decor:assets?.architecture.stats(),hands:mounts.filter(m=>m.anchor.visible).length,laser:laser.stats(),scope:scope?.stats(),...game.snapshot()})});
+window.__PINKWAR_HOME=Object.freeze({snapshot:()=>({version:'3.28',mode,frames,character:hero.id,floors:floors().length,surfaces:surfaces.size,meshes:meshes.size,decor:assets?.architecture.stats(),battlefield:room.stats(),hands:mounts.filter(m=>m.anchor.visible).length,laser:laser.stats(),scope:scope?.stats(),...game.snapshot()})});

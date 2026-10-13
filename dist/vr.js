@@ -3,6 +3,8 @@ import { portalIndicators } from './portal-indicator.js';
 import { DesktopGamepadInput, desktopAxis } from './desktop-input.js';
 import { syncTrackedHands } from './xr-hands.js';
 import { createMagnifiedSight } from './magnified-sight.js';
+import { hapticPlan, buzz } from './haptics.js';
+export { hapticPlan } from './haptics.js';
 
 const $ = id => document.getElementById(id);
 const deadzone = v => Math.abs(v || 0) > .16 ? v : 0;
@@ -50,31 +52,6 @@ export function questControls(hand = 'right') {
   ];
 }
 export const QUEST_CONTROLS = Object.freeze(questControls('right'));
-
-// [strength, milliseconds] for each hand; heavier weapons kick harder.
-const SHOT_HAPTIC = Object.freeze({ r9: [.72, 48], bloom: [.62, 40], lance: [.83, 74], thorn: [1, 120], nova: [1, 165] });
-export function hapticPlan(type, arg) {
-  switch (type) {
-    case 'shot': return { main: arg==='aurora'?[.5,60]:SHOT_HAPTIC[arg] || SHOT_HAPTIC.r9 };
-    case 'jump': return { side:[.22,35] };
-    case 'parry': return { main:[.8,75],side:[.24,30] };
-    case 'charge': return { main: [.08 + .4 * clamp(arg || 0, 0, 1), 40] };
-    case 'hit': return { main: [.12, 18] };
-    case 'kill': return { main: [.4, 40] };
-    case 'weapon': return { main: [.2, 35] };
-    case 'reload': return { main: [.18, 30], side: [.18, 30] };
-    case 'reloaded': return { main: [.35, 45], side: [.35, 45] };
-    case 'damage': return { main: [.6, 90], side: [.6, 90] };
-    default: return {};
-  }
-}
-function buzz(pad, [strength, duration]) {
-  try {
-    const actuator = pad?.hapticActuators?.[0];
-    if (actuator?.pulse) actuator.pulse(strength, duration)?.catch?.(() => {});
-    else pad?.vibrationActuator?.playEffect?.('dual-rumble', { duration, strongMagnitude: strength, weakMagnitude: strength })?.catch?.(() => {});
-  } catch {}
-}
 
 // Quest runs best at a steady 90 Hz; lower the cost first, then the refresh rate, never below 72 Hz.
 export const pickFrameRate = rates => rates.filter(rate => rate <= 90).sort((a, b) => b - a)[0] || null;
@@ -307,6 +284,7 @@ export class VRController {
       this.controllers = [0, 1].map(index => {
         const ray = renderer.xr.getController(index); this.rig.add(ray);
         const anchor = new T.Group(), mount = new T.Group(), gun = world.createGun(), bare = world.createHand();
+        gun.userData.hand.userData.extendForearm();bare.userData.extendForearm();
         anchor.name = 'Tracked controller grip'; anchor.matrixAutoUpdate = false; anchor.visible = false;
         this.rig.add(anchor); anchor.add(mount);
         // The other controller is the free hand: no second glove on the weapon in a headset.

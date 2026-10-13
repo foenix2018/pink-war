@@ -25,7 +25,7 @@ function emblemTexture(profile) {
 }
 function enemyMaterials(profile, surface) {
   const w=profile.world,p=profile.palette;
-  const standard=(color,roughness=.56,metalness=.4)=>new T.MeshStandardMaterial({color,roughness,metalness,roughnessMap:surface.coating});
+  const standard=(color,roughness=.56,metalness=.4)=>new T.MeshStandardMaterial({color,roughness,metalness,roughnessMap:surface.coating,envMap:surface.environment,envMapIntensity:.6});
   const basic=color=>new T.MeshBasicMaterial({color,toneMapped:false});
   return {
     steel:standard(p.steel),dark:standard(p.ink),rose:basic(p.rose),pale:basic(p.pale),
@@ -61,6 +61,7 @@ export async function createAtHomeAssets(scene, hero) {
   gun.userData.showSupport=false;gun.userData.support.visible=false;
   gun.userData.setVariant(0);
   const freeHand=createGlove(player.kit.gloves,{mirror:true});
+  gun.userData.hand.userData.extendForearm();freeHand.userData.extendForearm();
   // The player sees their actual Pink War gun/gloves in first person.
   // Their sibling is the real animated character model, not a substitute mannequin.
   const companion=createSoldier(companionKit.kit,companionKit.makeGun,other);
@@ -142,7 +143,7 @@ export async function createAtHomeAssets(scene, hero) {
         root.position.set(offer.x,offer.elevation,offer.z);scene.add(root);offers.set(offer.index,{root,gun:display,label});
       }
     },
-    hideDecor() { portal.visible=false;companion.root.visible=false;for(const gate of portals.values())gate.visible=false;this.syncOffers([]);architecture.setEnabled(false); },
+    hideDecor() { portal.visible=false;companion.root.visible=false;for(const gate of portals.values())gate.visible=false;this.syncOffers([]);architecture.resetRoom(); },
     projectRuin(record, immersive=true,viewer) {
       architecture.project(record,viewer);if(record.decor)record.decor.visible=immersive;
     },
