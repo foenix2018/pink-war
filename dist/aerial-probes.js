@@ -2,6 +2,7 @@
 // Flight is simulated in three dimensions; roofs and catwalk undersides remain
 // solid, and projectiles keep their locked direction after the warning.
 import { hostileShotProfile, predictShot } from './enemy-fire.js';
+import { enemyVolley } from './enemy-combat.js';
 export const PROBE = Object.freeze({radius: .9, height: 1.08, aimHeight: .55, hover: 2.7, windup: .7});
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 
@@ -90,7 +91,7 @@ export function updateProbe(game, e, dt, segmentBox) {
       // A moved player can dodge. A new wall in the original line stops the shot.
       if (!game.blocked(origin, shot)) {
         game.bullets.push({id: game.nextId++, ...origin, vx: x / distance * speed, vy: y / distance * speed, vz: z / distance * speed,
-          life: 3, damage: 8 + Math.floor(game.wave * .6), hostile: true, weapon: 'probe', splash: 0});
+          life: 3, damage: enemyVolley(game.wave,'probe').damage, hostile: true, weapon: 'probe', splash: 0});
         e.lastShotAt = game.time; game.event('enemy-shot', {...origin, form: 'probe'});
       }
       e.chargeProgress = 0; e.lockedTarget = null; e.attackTimer = hostileShotProfile(game.wave,'probe').interval;

@@ -519,7 +519,7 @@ function template(sleeve){
   for(const group of groups.values()){
     const geometry=merge(group.parts),n=geometry.attributes.position.count,indices=new Uint16Array(n*4),weights=new Float32Array(n*4);
     for(let i=0;i<n;i++){indices[i*4]=group.indices[i];weights[i*4]=1;}
-    geometry.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(indices,4));geometry.setAttribute('skinWeight',new THREE.Float32BufferAttribute(weights,4));
+    geometry.setAttribute('skinIndex',new THREE.Float32BufferAttribute(indices,4));geometry.setAttribute('skinWeight',new THREE.Float32BufferAttribute(weights,4));
     geometry.computeBoundingBox();geometry.computeBoundingSphere();parts.push({...group,geometry});
     group.parts.forEach(g=>g.dispose());delete parts[parts.length-1].parts;delete parts[parts.length-1].indices;
   }

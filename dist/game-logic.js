@@ -4,7 +4,8 @@ import { PROBE, updateProbe } from './aerial-probes.js';
 import { NOISE_RADIUS, SHOT_RADIUS, propagateNoise, soundWaypoint } from './hearing.js';
 import { tryJump } from './locomotion.js';
 import { hostileShotProfile, predictShot } from './enemy-fire.js';
-import { sweepBlade, bladeBulletContact } from './blade-combat.js';
+import { enemyDurability, enemyVolley, rangedMuzzle, enemyScale } from './enemy-combat.js';
+import { sweepBlade, bladeBulletContact, reflectedVelocity } from './blade-combat.js';
 // World units are metres. The playable arena is exactly 200 × 200 m.
 export const ARENA_SIZE = 200;
 export const PORTAL = Object.freeze({ x: 0, z: -20 });
@@ -121,7 +122,7 @@ export function traceEnemyHit(start, end, enemy) {
     const t=segmentSphere(start,end,{x:enemy.x,y:height+(enemy.aimHeight||1.15),z:enemy.z},enemy.hitRadius||1.05);
     return t===null?null:{t,zone:'torso',multiplier:1};
   }
-  const elite=enemy.elite?1.13:1;
+  const elite=enemyScale(enemy.form,enemy.elite);
   const yaw=enemy.yaw||0,cos=Math.cos(yaw),sin=Math.sin(yaw);
   const crawl=enemy.form==='scuttler';
   const zones=enemy.form==='probe'?[
@@ -377,9 +378,9 @@ export class ArenaGame {
     const special=this.wave>=11&&ordinal%7===5?'bulwark':this.wave>=6&&ordinal%7===4?'listener':null;
     const elite = !special && this.wave >= 3 && ordinal % (this.wave >= 8 ? 3 : 5) === 2;
     const probe = !special && this.wave >= 3 && !elite && (ordinal % 6 === 3 || (this.wave >= 7 && ordinal > 0 && ordinal % 6 === 0));
-    const ranged = probe || !!special || (this.wave >= 4 && !elite && ordinal % 4 === 1);
     const forms = ['stalker','scuttler','seer','brute'];
     const form = special || (probe ? 'probe' : elite ? 'brute' : forms[(ordinal + this.wave - 1) % forms.length]);
+    const ranged = probe || !!special || form==='seer' || (this.wave>=3&&ordinal%3===1) || (this.wave>=5&&form==='brute');
     const angle = this.random() * Math.PI * 2;
     const available=this.activePortals.filter(p=>p.openedAt<=this.time);
     const site=available.length?available[ordinal%available.length]:this.activePortals[0]||PORTAL;
@@ -388,7 +389,7 @@ export class ArenaGame {
     const aimHeight = probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : ['seer','listener'].includes(form) ? 1.38 : ['brute','bulwark'].includes(form) ? 1.42 : 1.15;
     const homeHeight = walkSurfaceHeight(x, z,this.time,.3);
     const enemy = { id: this.nextId++, x, z, elevation: homeHeight + (probe ? PROBE.hover : 0),grounded:!probe,verticalSpeed:0,homeHeight,
-      hp: probe ? Math.round((42 + this.wave * 14) * .7) : elite ? 95 + this.wave * 25 : 42 + this.wave * 14, elite, ranged, form, aimHeight,
+      hp: enemyDurability(this.wave,form,elite), elite, ranged, form, aimHeight,
       speed: probe ? Math.min(5,3.6 + this.wave * .07) : Math.min(4.3,2.4+(this.wave-1)*.055)*(form==='bulwark'?.7:form==='scuttler'?1.12:1),
       tier: Math.max(1,Math.ceil(this.wave/2)),limpUntil:0,stunnedUntil:0,
       homeX:site.x,homeZ:site.z,portalId:site.id,
@@ -631,6 +632,9 @@ export class ArenaGame {
         const ax=e.x-other.x,az=e.z-other.z,d=Math.hypot(ax,az);
         if(d>.01&&d<1.7){dx+=ax/d*.65;dz+=az/d*.65;}
       }
+      if(e.ranged&&seen&&!stairRoute&&distance>8&&distance<28){
+        const n=Math.hypot(dx,dz)||1,oldX=dx/n,oldZ=dz/n,side=(e.id%2?1:-1)*.32;dx+=oldZ*side;dz-=oldX*side;
+      }
       const norm=Math.hypot(dx,dz)||1;
       const stopDistance=stairRoute?.15:e.awareness==='engaged' ? (e.ranged?14:1.45) : e.awareness==='search'?1.8:.7;
       if(goalDistance>stopDistance){
@@ -639,32 +643,44 @@ export class ArenaGame {
         moveInArena(e,dx/norm*e.speed*dt*injury*searchSpeed,dz/norm*e.speed*dt*injury*searchSpeed,e.radius,this.obstacles);
       }
       this.settle(e,dt);
-      if(e.awareness!=='patrol'&&goalDistance>.15)e.yaw=Math.atan2(dx,dz)+Math.PI;
+      if(e.ranged&&seen)e.yaw=Math.atan2(this.player.x-e.x,this.player.z-e.z)+Math.PI;
+      else if(e.awareness!=='patrol'&&goalDistance>.15)e.yaw=Math.atan2(dx,dz)+Math.PI;
       else if(e.awareness==='patrol')e.yaw=(e.patrolAngle||0)+Math.PI;
-      if(e.stunnedUntil<=this.time)e.attackTimer-=dt;
+      if((e.stunnedUntil||0)<=this.time)e.attackTimer-=dt;
+      if(!seen||e.stunnedUntil>this.time){e.burstRemaining=0;e.chargeProgress=0;}
+      else e.chargeProgress=e.ranged&&e.attackTimer>0&&e.attackTimer<.25?1-e.attackTimer/.25:0;
       // Never attack through walls or while merely searching the last seen position.
-      if(seen&&e.awareness==='engaged'&&distance<2&&e.attackTimer<=0){
+      if(seen&&e.awareness==='engaged'&&distance<2&&e.attackTimer<=0&&(e.stunnedUntil||0)<=this.time){
         e.attackTimer=.85;this.damage(e.elite?20+this.wave:10+Math.floor(this.wave/2));
-      }else if(seen&&e.awareness==='engaged'&&e.ranged&&distance<38&&e.attackTimer<=0){
+      }else if(seen&&e.awareness==='engaged'&&e.ranged&&distance<38&&e.attackTimer<=0&&(e.stunnedUntil||0)<=this.time){
         const profile=hostileShotProfile(this.wave,e.form),speed=profile.speed;
-        e.attackTimer=profile.interval;
-        const target=predictShot(eye,playerHead,this.playerVelocity,speed,profile.lead);
-        const n=Math.hypot(target.x-eye.x,target.y-eye.y,target.z-eye.z)||1;
-        this.bullets.push({id:this.nextId++,...eye,vx:(target.x-eye.x)/n*speed,
-          vy:(target.y-eye.y)/n*speed,vz:(target.z-eye.z)/n*speed,
-          life:3,damage:13+this.wave,hostile:true,weapon:'enemy',splash:0});
-        this.event('enemy-shot',eye);
+        const volley=enemyVolley(this.wave,e.form),muzzle=rangedMuzzle(e);
+        const target=predictShot(muzzle,playerHead,this.playerVelocity,speed,profile.lead);
+        if(!this.blocked(eye,muzzle)&&!this.blocked(muzzle,target)){
+          const n=Math.hypot(target.x-muzzle.x,target.y-muzzle.y,target.z-muzzle.z)||1;
+          this.bullets.push({id:this.nextId++,...muzzle,vx:(target.x-muzzle.x)/n*speed,
+            vy:(target.y-muzzle.y)/n*speed,vz:(target.z-muzzle.z)/n*speed,
+            life:3,damage:volley.damage,hostile:true,weapon:'enemy',splash:0});
+          e.burstRemaining=e.burstRemaining>0?e.burstRemaining-1:volley.count-1;
+          e.attackTimer=e.burstRemaining>0?volley.gap:profile.interval;e.lastShotAt=this.time;e.chargeProgress=0;
+          e.aimPitch=Math.atan2(target.y-muzzle.y,Math.hypot(target.x-muzzle.x,target.z-muzzle.z));
+          this.event('enemy-shot',{...muzzle,form:e.form,id:e.id});
+        }else{e.attackTimer=.3;e.burstRemaining=0;}
       }
       if (this.state !== 'playing') break;
     }
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const b = this.bullets[i], start = { x: b.x, y: b.y, z: b.z };
       const end = { x: b.x + b.vx * dt, y: b.y + b.vy * dt, z: b.z + b.vz * dt };
-      if(b.hostile&&this.weapon.melee&&this.bladePrevious&&this.bladeGuard){
-        const contact=bladeBulletContact(start,end,this.bladePrevious.base,this.bladePrevious.tip,.10);
+      if(b.hostile&&this.weapon.melee&&this.bladePrevious?.extension>.95){
+        const contact=bladeBulletContact(start,end,this.bladePrevious.base,this.bladePrevious.tip,this.bladeGuard?.10:.075);
         const playerHit=segmentSphere(start,end,{x:this.player.x,y:this.player.elevation+(this.player.crouched?.58:1.25),z:this.player.z},this.player.crouched?.46:.62);
         if(contact&&(playerHit===null||contact.t<=playerHit)&&!this.blocked(start,contact.point)&&!this.blocked(this.bladeEye||{x:this.player.x,y:this.player.elevation+1.35,z:this.player.z},contact.point)){
-          this.bullets.splice(i,1);this.event('blade-parry',{...contact.point,surface:'metal',weapon:'aurora',power:1,normal:{x:0,y:1,z:0}});continue;
+          const reflected=reflectedVelocity({x:b.vx,y:b.vy,z:b.vz},this.bladePrevious,contact),speed=Math.hypot(reflected.x,reflected.y,reflected.z)||1;
+          b.vx=reflected.x;b.vy=reflected.y;b.vz=reflected.z;b.hostile=false;b.reflected=true;b.weapon='aurora';b.power=1;
+          b.x=contact.point.x+b.vx/speed*.04;b.y=contact.point.y+b.vy/speed*.04;b.z=contact.point.z+b.vz/speed*.04;
+          b.originX=contact.point.x;b.originY=contact.point.y;b.originZ=contact.point.z;b.life=Math.max(b.life,1.2);
+          this.event('blade-parry',{...contact.point,bulletId:b.id,surface:'metal',weapon:'aurora',power:1,normal:reflected.normal,direction:{x:b.vx,y:b.vy,z:b.vz}});continue;
         }
       }
       let nearest = 1.01, target = null, zone='torso',multiplier=1,surface='concrete',hitBox=null;

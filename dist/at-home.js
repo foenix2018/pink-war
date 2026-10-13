@@ -547,7 +547,7 @@ function tick(ms, frame) {
     if(assets&&mode!=='combat')assets.animate(seconds,dt,wave,{time:seconds,...controllerHandState});
     const blade=assets?.gun.userData.getBladeSegment?.();bladeLight.intensity=blade&&assets.gun.visible?2.4*blade.extension:0;
     if(blade)bladeLight.position.set((blade.base.x+blade.tip.x)/2,(blade.base.y+blade.tip.y)/2,(blade.base.z+blade.tip.z)/2);
-    saberAudio?.update({active:mode==='combat'&&session.visibilityState==='visible',equipped:!!WEAPONS[weaponIndex].melee,speed:bladeSpeed,swing:saberSwingSound});saberSwingSound=false;
+    saberAudio?.update({active:mode==='combat'&&session.visibilityState==='visible',equipped:!!WEAPONS[weaponIndex].melee,extended:!!WEAPONS[weaponIndex].melee&&controllerHandState.trigger>.15,speed:bladeSpeed,swing:saberSwingSound});saberSwingSound=false;
     for(let i=tracers.length-1;i>=0;i--)if(seconds>=tracers[i].until){
       const item=tracers.splice(i,1)[0];
       scene.remove(item.object);item.object.geometry.dispose();item.object.material.dispose();

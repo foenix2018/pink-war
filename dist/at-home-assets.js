@@ -94,7 +94,7 @@ export async function createAtHomeAssets(scene, hero) {
     },
     animate(time,dt,level,gunState={}) {
       const idx=gun.userData.index || 0;
-      gun.userData.setCombatState?.(gunState);
+      gun.userData.setCombatState?.({...gunState,bladeHeld:idx===5&&(gunState.trigger||0)>.15});
       gun.userData.animateHands?.(gunState.trigger||0,gunState.grip??.64,gunState.reload||0,dt);
       const offGrip=gunState.offGrip||0,offTrigger=gunState.offTrigger||0;
       freeHand.userData.animate?.({trigger:offTrigger,grip:offGrip,relax:(1-offGrip)*(1-offTrigger)*.5},dt);

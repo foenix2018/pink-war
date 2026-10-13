@@ -15,7 +15,9 @@ export function rlhFirefighterData(){
   for(const part of data.parts){
     const g=new T.BufferGeometry();
     for(const [key,size] of [['position',3],['normal',3],['uv',2],['color',3],['skinWeight',4]]){g.setAttribute(key,new T.BufferAttribute(array(part[key],Float32Array),size));delete part[key];}
-    g.setAttribute('skinIndex',new T.Uint16BufferAttribute(array(part.skinIndex,Uint16Array),4));g.setIndex(new T.BufferAttribute(array(part.index,Uint32Array),1));delete part.skinIndex;delete part.index;
+    // Float indices keep shared rigs compatible with WebGL after WebGPU has
+    // rendered them: WebGPU otherwise promotes Uint16 to Uint32 in-place.
+    g.setAttribute('skinIndex',new T.Float32BufferAttribute(array(part.skinIndex,Uint16Array),4));g.setIndex(new T.BufferAttribute(array(part.index,Uint32Array),1));delete part.skinIndex;delete part.index;
     g.computeBoundingBox();g.computeBoundingSphere();part.geometry=g;
   }
   for(const clip of data.clips){clip.tracks=clip.tracks.map(t=>new (t.type==='vector'?T.VectorKeyframeTrack:T.QuaternionKeyframeTrack)(t.name,array(t.times,Float32Array),array(t.values,Float32Array)));clip.animation=new T.AnimationClip(clip.name,clip.duration,clip.tracks);}
@@ -40,7 +42,7 @@ export function createRLHFirefighterActor(kit,{includeGloves=true}={}){
   for(let i=0;i<bones.length;i++){const parent=data.bones[i].parent;(parent<0?root:bones[parent]).add(bones[i]);}
   root.updateMatrixWorld(true);
   const skeleton=new T.Skeleton(bones,data.bones.map(b=>new T.Matrix4().fromArray(b.inverse))),m=materials(kit),parts=[];
-  for(const part of data.parts){const mesh=new T.SkinnedMesh(part.geometry,m[part.key]);mesh.name='RLH '+part.key;root.add(mesh);mesh.bind(skeleton,new T.Matrix4());mesh.castShadow=true;mesh.receiveShadow=true;mesh.boundingBox=new T.Box3(new T.Vector3(-1,-.2,-1),new T.Vector3(1,2.35,1));mesh.boundingSphere=new T.Sphere(new T.Vector3(0,1,0),1.8);parts.push(mesh);}
+  for(const part of data.parts){const mesh=new T.SkinnedMesh(part.geometry,m[part.key]);mesh.name='RLH '+part.key;root.add(mesh);mesh.bind(skeleton,new T.Matrix4());mesh.castShadow=true;mesh.receiveShadow=true;mesh.frustumCulled=false;mesh.boundingBox=new T.Box3(new T.Vector3(-1,-.2,-1),new T.Vector3(1,2.35,1));mesh.boundingSphere=new T.Sphere(new T.Vector3(0,1,0),1.8);parts.push(mesh);}
   const byName=new Map(bones.map(b=>[b.name,b])),bone=name=>byName.get('mixamorig'+name);
   const mixer=new T.AnimationMixer(root),actions=Object.fromEntries(data.clips.map(c=>{const a=mixer.clipAction(c.animation);a.play();a.enabled=true;a.setEffectiveWeight(c.name==='idle'?1:0);return [c.name,a];}));
   let state='idle';const weights=Object.fromEntries(Object.keys(actions).map(key=>[key,key==='idle'?1:0]));

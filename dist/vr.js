@@ -221,34 +221,12 @@ export class VRController {
     for (const mesh of [this.sight.beam, this.sight.marker]) { mesh.geometry.dispose(); mesh.material.dispose(); }
     this.sight = null;
   }
-  // A small slide display keeps the battery readable without looking away from the target.
-  makeAmmo(gun) {
-    const { T } = this.hooks.world(), canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 80;
-    const texture = new T.CanvasTexture(canvas); texture.colorSpace = T.SRGBColorSpace;
-    const plane = new T.Mesh(new T.PlaneGeometry(.08, .05), new T.MeshBasicMaterial({ map: texture, toneMapped: false }));
-    plane.position.set(0, .112, 0); plane.rotation.x = -1.05; plane.frustumCulled = false; gun.add(plane);
-    gun.userData.ammo = { canvas, texture, plane, key: '' };
-  }
-  drawAmmo(gun, game, feel=null) {
-    const display = gun.userData.ammo; if (!display) return;
+  // Weapon animations remain active without a numeric display on the gun.
+  updateWeaponState(gun, game, feel=null) {
     const capacity = game.weapon.capacity, ammo = game.ammo[game.weaponIndex], reloading = game.reloadRemaining > 0;
     const reloadProgress = reloading ? clamp(1 - game.reloadRemaining / game.weapon.reload, 0, 1) : 0;
-    const charge = game.weapon.chargeTime ? game.charge : 0, low = !game.weapon.melee && ammo <= capacity / 4, blink = Math.floor(performance.now() / 160) % 2 === 0;
+    const charge = game.weapon.chargeTime ? game.charge : 0;
     gun.userData.setCombatState?.({ ammo, capacity, charge, reloadProgress, reloading, time: game.time,heat:feel?.heat||0,kick:feel?.kick||0,impulse:feel?.impulse||0,bladeHeld:!!game.weapon.melee&&!!game.triggerHeld });
-    const key = `${ammo}|${capacity}|${Math.round(charge*12)}|${Math.ceil(reloadProgress*8)}|${reloading}|${low&&blink}`;
-    if (key === display.key) return; display.key = key;
-    const c = display.canvas.getContext('2d'), accent = this.hooks.world().character?.accent || '#ff9ac3';
-    c.clearRect(0, 0, 128, 80); c.fillStyle = 'rgba(18,12,26,.97)'; c.fillRect(0, 0, 128, 80);
-    c.strokeStyle = 'rgba(255,255,255,.22)'; c.lineWidth = 2; c.strokeRect(2, 2, 124, 76);
-    c.fillStyle = low && blink ? '#ff496b' : '#f5f1f4'; c.textAlign = 'center'; c.font = 'bold 48px monospace'; c.fillText(game.weapon.melee?'∞':String(ammo), 64, 49);
-    const filled = game.weapon.melee?8:Math.max(Math.ceil(ammo / Math.max(1,capacity) * 8), reloading ? Math.ceil(reloadProgress * 8) : 0);
-    for (let i=0;i<8;i++) {
-      c.fillStyle = i < filled ? (low && blink ? '#ff496b' : accent) : 'rgba(255,255,255,.13)';
-      c.fillRect(10 + i*14, 57, 10, 7);
-    }
-    const progress = reloading ? reloadProgress : charge;
-    if (reloading || charge > 0) { c.fillStyle='rgba(255,255,255,.14)';c.fillRect(10,70,108,3);c.fillStyle=reloading?'#f5f1f4':accent;c.fillRect(10,70,108*progress,3); }
-    display.texture.needsUpdate = true;
   }
   cancelTrigger() {
     const game = this.hooks.game(); game.charge = 0; game.triggerHeld = false;game.semiPending=false; this.triggerBlocked = true;
@@ -335,7 +313,7 @@ export class VRController {
         gun.userData.showSupport = false; gun.userData.support.visible = false;
         mount.position.set(GRIP_MOUNT.x, GRIP_MOUNT.y, GRIP_MOUNT.z);
         gun.visible = bare.visible = false; mount.add(gun, bare);
-        this.makeAmmo(gun);
+        // Combat state still animates, without a numeric display on the gun.
         const jumpCanvas=document.createElement('canvas');jumpCanvas.width=192;jumpCanvas.height=128;
         const jumpTexture=new T.CanvasTexture(jumpCanvas);jumpTexture.colorSpace=T.SRGBColorSpace;
         const jumpPlane=new T.Mesh(new T.PlaneGeometry(.082,.055),new T.MeshBasicMaterial({map:jumpTexture,side:T.DoubleSide,toneMapped:false}));
@@ -590,7 +568,7 @@ export class VRController {
         c.gun.position.set(isMain?(feel?.yaw||0)*.10*handSign:0,
           isMain?reload*.035-(feel?.kick||0)*.13+(sword?.028:0):0,
           isMain?(feel?.kick??kick*.075)-reload*.045-(sword?.036:0):0);
-        c.gun.rotation.set(isMain?(feel?.pitch??kick*.22)+reload*Math.PI/2-(sword?.28:0):0,
+        c.gun.rotation.set(isMain?(feel?.pitch??kick*.22)+reload*Math.PI/2-(sword?.55:0):0,
           isMain?(feel?.yaw||0)*handSign:0,
           isMain?reload*.12+(sword?-.06*handSign:0):0);
         if(isMain&&this.hooks.world().holsterGun?.visible)
@@ -601,7 +579,7 @@ export class VRController {
         c.gun.userData.hand?.userData.animate?.(fingerPose,dt,c.gun.scale.x<0?-1:1);
         c.bare.userData.animate?.(fingerPose,dt,c.bare.scale.x<0?-1:1);
       }
-      const gun = controllerOf(this, main)?.gun; if (gun) this.drawAmmo(gun, game,feel);
+      const gun = controllerOf(this, main)?.gun; if (gun) this.updateWeaponState(gun, game,feel);
       gun?.userData.setSight?.(this.aiming && !game.reloadRemaining,this.sightEye());
       this.updateSight();
       // Heavy weapons rumble harder as the charge builds.

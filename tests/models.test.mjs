@@ -36,6 +36,7 @@ test('RLH gloves retain their anatomical joints, shared detail and private contr
   assert.ok(skins(right).length<=14,'RLH details are grouped by material rather than one draw per stitch');
   for(const [i,mesh] of skins(right).entries()){
     const g=mesh.geometry,weights=g.attributes.skinWeight,indices=g.attributes.skinIndex;
+    assert.ok(indices.array instanceof Float32Array,'shared gloves remain drawable after the WebGPU to WebGL transition');
     assert.equal(g,skins(left)[i].geometry);assert.ok(finite(g));assert.equal(weights.count,g.attributes.position.count);
     for(let v=0;v<weights.count;v++){
       assert.ok(Math.abs(weights.getX(v)+weights.getY(v)+weights.getZ(v)+weights.getW(v)-1)<1e-6);
@@ -306,6 +307,7 @@ test('all hostile chassis share three geometry batches while keeping independent
       assert.equal(mesh.geometry,otherMeshes[i].geometry,'geometry is shared within an enemy type');
       assert.ok(finite(mesh.geometry));triangles+=mesh.geometry.attributes.position.count/3;
       const weights=mesh.geometry.attributes.skinWeight,indices=mesh.geometry.attributes.skinIndex;
+      assert.ok(indices.array instanceof Float32Array,'shared enemy indices stay compatible with both renderers');
       for(let vertex=0;vertex<weights.count;vertex++){
         assert.equal(weights.getX(vertex)+weights.getY(vertex)+weights.getZ(vertex)+weights.getW(vertex),1);
         assert.ok(indices.getX(vertex)<a.userData.skeleton.bones.length,'every rigid armour plate follows a real joint');
@@ -356,7 +358,8 @@ test('the complete RLH body keeps native Idle Rifle and Rifle Walk clips with in
   assert.equal(a.nativeSkeleton.bones.length,34);
   assert.ok(a.actor.data.source.includes('RLH Mixamo'));
   assert.notEqual(a.nativeSkeleton,b.nativeSkeleton);
-  a.actor.parts.forEach((part,i)=>assert.equal(part.geometry,b.actor.parts[i].geometry));
+  a.actor.parts.forEach((part,i)=>{assert.equal(part.geometry,b.actor.parts[i].geometry);assert.ok(part.geometry.attributes.skinIndex.array instanceof Float32Array);});
+  a.armor.parts.forEach(part=>assert.ok(part.geometry.attributes.skinIndex.array instanceof Float32Array));
   const rifle=a.actor.actions.rifle,walkRifle=a.actor.actions.walkRifle;
   assert.ok(Math.abs(rifle.getClip().duration-3.10)<.001);
   assert.ok(Math.abs(walkRifle.getClip().duration-1.366667)<.001);

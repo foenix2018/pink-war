@@ -184,7 +184,7 @@ function tick(now){
  }
  root.position.y=height;
  model.animate(state.clock,!!speed,0,0,['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion)?1:0,dt,{airborne,verticalSpeed:velocity,crouched:['crouch','crouchWalk'].includes(state.motion),firing:['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion),sprint:['run','runFire'].includes(state.motion),preview:state.motion==='idle',saberSwing:state.weapon===5&&state.motion==='aim'?bladeSwingPose((state.clock%1.2)/.6):null});
- model.gun.userData.setCombatState?.({time:state.clock});
+ model.gun.userData.setCombatState?.({time:state.clock,bladeHeld:state.weapon===5});
  refreshSkeleton(model);
  const w=canvas.clientWidth,h=canvas.clientHeight;
  // Portrait inspection keeps the entire boot-to-helmet silhouette above the mobile control drawer.

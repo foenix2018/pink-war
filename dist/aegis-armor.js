@@ -119,7 +119,7 @@ function template(data,masculine) {
       const geometry=merge(list.map(item=>item.geometry)),count=geometry.attributes.position.count;
       const indices=new Uint16Array(count*4),weights=new Float32Array(count*4);let offset=0;
       for(const item of list){for(let i=0;i<item.geometry.attributes.position.count;i++){indices[offset*4]=item.bone;weights[offset*4]=1;offset++;}}
-      geometry.setAttribute('skinIndex',new T.Uint16BufferAttribute(indices,4));geometry.setAttribute('skinWeight',new T.Float32BufferAttribute(weights,4));
+      geometry.setAttribute('skinIndex',new T.Float32BufferAttribute(indices,4));geometry.setAttribute('skinWeight',new T.Float32BufferAttribute(weights,4));
       geometry.computeBoundingBox();geometry.computeBoundingSphere();parts.push({key,geometry});
     }
     const result={parts,count:items.filter(item=>item.level<=level).length};levels.set(level,result);return result;
@@ -135,7 +135,7 @@ export function createAegisArmor(actor,kit,profile) {
       for(const mesh of this.parts)mesh.removeFromParent();this.parts=[];
       const stage=source.forLevel(n);this.count=stage.count;this.level=n;
       for(const part of stage.parts) {
-        const mesh=new T.SkinnedMesh(part.geometry,kit.materials[part.key]);mesh.name='AÉGIS '+part.key;
+        const mesh=new T.SkinnedMesh(part.geometry,kit.materials[part.key]);mesh.name='AÉGIS '+part.key;mesh.frustumCulled=false;
         mesh.userData.suit=AEGIS.name;mesh.userData.level=n;
         root.add(mesh);mesh.bind(actor.skeleton,new T.Matrix4());mesh.castShadow=part.key!=='glow';mesh.receiveShadow=true;
         mesh.boundingBox=new T.Box3(new T.Vector3(-1,-.2,-1),new T.Vector3(1,2.35,1));mesh.boundingSphere=new T.Sphere(new T.Vector3(0,1,0),1.8);

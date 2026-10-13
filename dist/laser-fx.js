@@ -3,7 +3,7 @@
 export const LASER_TRAILS=Object.freeze({
   r9:{radius:.008,length:1.9,light:105},bloom:{radius:.006,length:2.8,light:85},
   lance:{radius:.006,length:5.8,light:180},thorn:{radius:.008,length:4.4,light:210},
-  nova:{radius:.030,length:1.35,light:240}
+  nova:{radius:.030,length:1.35,light:240},aurora:{radius:.013,length:2.8,light:145}
 });
 export function createLaserFX(T,scene,palette={}) {
   const group=new T.Group();group.name='Laser cores, halos and pulse lights';scene.add(group);

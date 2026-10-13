@@ -1,5 +1,6 @@
 import * as T from './vendor/three.webgpu.min.js';
 import { Assembly, loft, armorPanel, matrix, merge, bevelBox, limb as lightweightLimb } from './geo.js';
+import { enemyScale } from './enemy-combat.js';
 
 const stalkerTorso=loft([[.88,.22,.17],[1.03,.25,.20],[1.23,.32,.23],[1.46,.39,.255],[1.63,.34,.22],[1.73,.16,.13]],18);
 const bruteTorso=loft([[.84,.29,.22],[1.04,.39,.26],[1.26,.47,.31],[1.50,.51,.29],[1.67,.38,.23],[1.78,.17,.13]],20);
@@ -13,6 +14,7 @@ const shinPlate=armorPanel([[-.054,-.15],[.054,-.15],[.085,.10],[.06,.155],[-.06
 const sensor=new T.SphereGeometry(1,10,7),shellSphere=new T.SphereGeometry(1,12,8);
 const shellDome=new T.SphereGeometry(1,14,7,0,Math.PI*2,0,Math.PI/2);
 const ring=new T.TorusGeometry(.12,.012,5,16);
+const barrelRing=new T.TorusGeometry(.12,.012,3,10);
 const acousticRing=new T.TorusGeometry(.12,.012,4,10),bolt=new T.SphereGeometry(1,6,4);
 const probeDuct=new T.TorusGeometry(.205,.038,6,24),probeRim=new T.TorusGeometry(.19,.022,6,24);
 const headShell=loft([[-.18,.065,.075,-.035],[-.11,.14,.17,-.019],[.015,.164,.205,.003],[.14,.12,.163,.035],[.205,.036,.074,.06]],18);
@@ -51,7 +53,7 @@ function bakeRig(assemblies){
     for(const item of items)for(let i=0;i<item.geometry.attributes.position.count;i++){
       indices[offset*4]=item.bone;weights[offset*4]=1;offset++;
     }
-    geometry.setAttribute('skinIndex',new T.Uint16BufferAttribute(indices,4));
+    geometry.setAttribute('skinIndex',new T.Float32BufferAttribute(indices,4));
     geometry.setAttribute('skinWeight',new T.Float32BufferAttribute(weights,4));geometry.computeBoundingSphere();
     return {geometry,material:items[0].material,shadow:items[0].shadow};
   });
@@ -63,7 +65,7 @@ export function createEnemyFactory(mats){
     const key=`${form}:${elite?1:0}:${ranged?1:0}`;if(cache.has(key))return cache.get(key);
     const armor=elite?mats.monsterElite:mats.monster,dark=mats.monsterFace;
     const glow=ranged?mats.cyan:form==='scuttler'?mats.rose:form==='seer'?(mats.pale||mats.cyan):mats.violet;
-    const bones=[],assemblies=[],legRig=[],armRig=[],rotors=[];let probeHead=null,probeSignal=null;
+    const bones=[],assemblies=[],legRig=[],armRig=[],rotors=[];let probeHead=null,probeSignal=null,groundGun=null,gunSignal=null;
     function bone(name,position,parent=-1){bones.push({name,position,parent});return bones.length-1;}
     function assembly(index){const a=new EnemyAssembly();assemblies.push({assembly:a,bone:index});return a;}
     const probe=form==='probe',crawler=form==='scuttler',pelvis=bone('pelvis',[0,probe?.55:crawler?.73:.93,0]);
@@ -148,7 +150,7 @@ export function createEnemyFactory(mats){
       a.add(ring,dark,matrix([0,1.31,-.295],[0,0,0],[.83,.83,.83]));
       a.add(sensor,glow,matrix([0,1.31,-.308],[0,0,0],[.058,.058,.016]),false);
       // Exposed conduits, raised seams and rivets make the existing armour readable up close.
-      for(const s of [-1,1])for(let i=0;i<3;i++){
+      for(const s of [-1,1])for(let i=0;i<2;i++){
         a.add(bolt,dark,matrix([s*(heavy?.37:.27),1.25+i*.10,-.235],[0,0,0],[.014,.014,.014]));
         a.limb(dark,[s*.22,1.03+i*.07,.21],[s*.30,1.08+i*.07,.25],.011,.009);
       }
@@ -199,6 +201,7 @@ export function createEnemyFactory(mats){
         l.ellipsoid(dark,elbowAt,[.084,.078,.082]);
         l.limb(armor,[elbowAt[0],1.19,-.071],wristAt,large?.117:.095,.051);
         l.limb(dark,[elbowAt[0]+s*.055,1.19,-.015],[wristAt[0]+s*.04,.99,-.13],.021,.015);
+        l.limb(armor,[elbowAt[0]+s*.07,1.17,-.04],[wristAt[0]+s*.055,1.01,-.13],.008,.006);
         if(form==='bulwark'){
           // A layered ballistic forearm plate, tied to its elbow rather than floating.
           l.add(chest,armor,matrix([s*.74,1.15,-.20],[0,s*.18,0],[.72,1.45,.9]));
@@ -227,13 +230,16 @@ export function createEnemyFactory(mats){
         legRig.push({upper,lower,foot:ankle,side:s});
       }
       if(ranged){
-        a.ellipsoid(armor,[.35,1.66,.19],[.16,.16,.23],[.09,0,-.13]);
-        a.limb(dark,[.37,1.69,.12],[.37,1.69,-.32],.083,.059);
-        a.add(ring,armor,matrix([.37,1.69,-.28],[0,0,0],[.65,.65,.65]));
-        a.add(sensor,glow,matrix([.37,1.69,-.345],[0,0,0],[.054,.054,.018]),false);
+        groundGun=bone('aimed-shoulder-weapon',[.37,.29,-.01],thorax);const cannon=assembly(groundGun);
+        cannon.ellipsoid(armor,[.35,1.66,.19],[.16,.16,.23],[.09,0,-.13]);
+        cannon.limb(dark,[.37,1.69,.12],[.37,1.69,-.32],.083,.059);
+        cannon.add(ring,armor,matrix([.37,1.69,-.28],[0,0,0],[.65,.65,.65]));
+        cannon.add(barrelRing,armor,matrix([.37,1.69,-.16],[0,0,0],[.62,.62,.62]));
+        gunSignal=bone('weapon-ready-emitter',[0,0,-.335],groundGun);
+        assembly(gunSignal).add(sensor,glow,matrix([.37,1.69,-.345],[0,0,0],[.054,.054,.018]),false);
       }
     }
-    const result={parts:bakeRig(assemblies),bones,legRig,armRig,pelvis,thorax,rotors,probeHead,probeSignal};
+    const result={parts:bakeRig(assemblies),bones,legRig,armRig,pelvis,thorax,rotors,probeHead,probeSignal,groundGun,gunSignal};
     cache.set(key,result);return result;
   }
 
@@ -252,7 +258,7 @@ export function createEnemyFactory(mats){
       // Gait stays inside a small, fixed culling margin; no CPU vertex bounds work per frame.
       mesh.boundingSphere=part.geometry.boundingSphere.clone();mesh.boundingSphere.radius+=.22;
     }
-    root.scale.setScalar(elite?(probe?1.13:1.3):crawler?.98:form==='seer'?1.04:1);
+    root.scale.setScalar(enemyScale(form,elite));
     const legs=kit.legRig.map(spec=>({...spec,upper:joints[spec.upper],lower:joints[spec.lower],foot:joints[spec.foot]}));
     const arms=kit.armRig.map(spec=>({...spec,upper:joints[spec.upper],lower:joints[spec.lower],wrist:joints[spec.wrist]}));
     root.userData.skeleton=skeleton;root.userData.legs=legs;
@@ -268,6 +274,12 @@ export function createEnemyFactory(mats){
     }
     let previousTime=null,previousX=0,previousZ=0,motionSpeed=0,cycle=0;
     root.userData.animate=(time,phase=0,moving=true,flight={},simulationTime=time)=>{
+      if(kit.groundGun!==null){
+        const pulse=simulationTime-(flight.lastShotAt??-99)<.12?1:0;
+        joints[kit.groundGun].rotation.x=T.MathUtils.clamp(flight.aimPitch||0,-.55,.4);
+        joints[kit.groundGun].position.z=-.01+pulse*.05;
+        joints[kit.gunSignal].scale.setScalar(1+(flight.chargeProgress||0)*.45+pulse*.9);
+      }
       if(probe){
         const damaged=(flight.limpUntil||0)>simulationTime;
         pelvis.rotation.set(Math.sin(time*2+phase)*.018,0,Math.sin(time*1.7+phase)*.025+(damaged?.06:0));

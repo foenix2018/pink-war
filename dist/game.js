@@ -254,9 +254,9 @@ function updateCamera() {
   // Camera follows the same crouch transition as the real soldier pelvis, not a sudden teleport.
   const cameraEye=(character.masculine?1.71:1.61)-.55*crouchCameraBlend;
   const cameraShoulder=(character.masculine?1.49:1.41)-.45*crouchCameraBlend;
-  if (view === 'fps') { camera.position.set(p.x, cameraEye + elevation, p.z); soldier.root.visible = false; weapon.visible = true; }
+  if (view === 'fps') { camera.position.set(p.x, cameraEye + elevation, p.z); world.setPlayerVisible(false); weapon.visible = true; }
   else {
-    soldier.root.visible = true; weapon.visible = false;
+    world.setPlayerVisible(true); weapon.visible = false;
     const distance = 5.1, start = { x: p.x, y: cameraShoulder + elevation, z: p.z };
     const end = { x: p.x + Math.sin(yaw) * distance * Math.cos(pitch) + Math.cos(yaw) * .65,
       y: cameraShoulder + elevation - Math.sin(pitch) * distance, z: p.z + Math.cos(yaw) * distance * Math.cos(pitch) - Math.sin(yaw) * .65 };

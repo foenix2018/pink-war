@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ArenaGame, ARENA_SIZE, segmentSphere, segmentBox, moveInArena, MAX_LEVEL, WEAPONS, COVER_WALLS, REGEN_DELAY, levelCount, traceEnemyHit, PORTAL_SITES, chooseWavePortals } from '../dist/game-logic.js';
+import { enemyDurability } from '../dist/enemy-combat.js';
 
 const enemy = (id, z, x = 0) => ({ id, x, z, hp: 40, speed: 0, radius: .8, elite: false, attackTimer: 20, phase: 0 });
 const advance = (game, seconds, input = {}) => { for (let t = 0; t < seconds; t += .02) game.step(.02, input); };
@@ -110,12 +111,16 @@ test('random breach sites change across runs, avoid buildings and preserve enemy
 
 test('twenty campaign levels increase enemy health and movement speed', () => {
   assert.equal(MAX_LEVEL,20); assert.deepEqual(Array.from({length:20},(_,i)=>levelCount(i+1)),Array.from({length:20},(_,i)=>5+i*3));
-  const g = new ArenaGame([],()=>.5); let previousHP=0, previousSpeed=0;
+  const g = new ArenaGame([],()=>.5); let previousSpeed=0;
   for(let level=1;level<=MAX_LEVEL;level++) {
     g.beginWave(); g.spawnEnemy(); const e=g.enemies.at(-1);
     const baseSpeed=e.speed/(e.form==='scuttler'?1.12:e.form==='bulwark'?.7:1);
-    assert.ok(e.hp>previousHP); assert.ok(baseSpeed>previousSpeed); previousHP=e.hp;previousSpeed=baseSpeed;
-    g.spawnEnemy(); if(level>=4)assert.equal(g.enemies.at(-1).ranged,true);
+    assert.equal(e.hp,enemyDurability(level,e.form,e.elite));
+    for(const form of ['stalker','scuttler','seer','brute','probe','listener','bulwark'])for(const elite of [false,true])
+      if(level>1)assert.ok(enemyDurability(level,form,elite)>enemyDurability(level-1,form,elite),'the same chassis gets tougher at every level');
+    assert.ok(baseSpeed>previousSpeed); previousSpeed=baseSpeed;
+    for(let i=1;i<levelCount(level);i++)g.spawnEnemy();
+    assert.ok(g.enemies.some(e=>e.ranged),'every wave contains shooting enemies');
     g.enemies=[]; g.toSpawn=0;
   }
   g.step(.02); assert.equal(g.state,'won'); assert.equal(g.wave,MAX_LEVEL);
@@ -252,11 +257,34 @@ test('a complete campaign reaches level 20 after 670 real projectile kills and s
   for(let i=0;i<130000 && g.state==='playing';i++) {
     const closest=g.enemies.reduce((best,e)=>!best||Math.hypot(e.x-g.player.x,e.z-g.player.z)<Math.hypot(best.x-g.player.x,best.z-g.player.z)?e:best,null);
     const distance=closest?Math.hypot(g.player.x-closest.x,g.player.z-closest.z):999;
+    // Choose sustained fire at medium range and the precision weapon farther
+    // away. Hysteresis avoids losing time to constant equipment transitions.
+    if(g.ownedWeapons.has(4)){
+      if(distance>45)g.selectWeapon(2);
+      else if(distance<35||![1,2].includes(g.weaponIndex))g.selectWeapon(1);
+    }
     const goal={x:Math.sin(g.time*.13)*70,z:Math.cos(g.time*.13)*70};
-    const radial=closest?Math.max(-1,Math.min(1,(distance-25)/8)):0;
-    const dx=closest?(closest.x-g.player.x)/distance*radial-(closest.z-g.player.z)/distance*.8:goal.x-g.player.x;
-    const dz=closest?(closest.z-g.player.z)/distance*radial+(closest.x-g.player.x)/distance*.8:goal.z-g.player.z,n=Math.hypot(dx,dz)||1;
-    g.step(.02,{x:dx/n,z:dz/n,sprint:true,jump:g.bullets.some(b=>b.hostile&&Math.hypot(b.x-g.player.x,b.z-g.player.z)<6)});
+    const preferredDistance=g.player.hp<75?43:32;
+    const radial=closest?Math.max(-1,Math.min(1,(distance-preferredDistance)/8)):0;
+    let dx=closest?(closest.x-g.player.x)/distance*radial-(closest.z-g.player.z)/distance*.8:goal.x-g.player.x;
+    let dz=closest?(closest.z-g.player.z)/distance*radial+(closest.x-g.player.x)/distance*.8:goal.z-g.player.z;
+    if(Math.abs(g.player.x)>80)dx-=Math.sign(g.player.x)*1.2;
+    if(Math.abs(g.player.z)>80)dz-=Math.sign(g.player.z)*1.2;
+    // Choose a nearby evasive direction from actual incoming trajectories. This
+    // pilot gets no health reset, invulnerability or modification of enemy fire.
+    const heading=Math.atan2(dx,dz),bolts=g.bullets.filter(b=>b.hostile&&Math.hypot(b.x-g.player.x,b.z-g.player.z)<35);
+    let best=-Infinity;
+    for(const offset of [0,-.4,.4,-.8,.8,-1.2,1.2,Math.PI]){
+      const x=Math.sin(heading+offset),z=Math.cos(heading+offset);let score=2*Math.cos(offset);
+      if(Math.abs(g.player.x+x*10)>92||Math.abs(g.player.z+z*10)>92)score-=20;
+      for(const b of bolts){const rx=b.x-g.player.x,rz=b.z-g.player.z,vx=b.vx-x*10,vz=b.vz-z*10;
+        const t=Math.max(0,Math.min(.75,-(rx*vx+rz*vz)/(vx*vx+vz*vz||1))),d=Math.hypot(rx+vx*t,rz+vz*t);
+        score-=5/(d*d+.1);
+      }
+      if(score>best){best=score;dx=x;dz=z;}
+    }
+    const n=1;
+    g.step(.02,{x:dx/n,z:dz/n,sprint:true,jump:bolts.length>0&&Math.floor(g.time/.35)%2===0});
     // The simulated player actively visits the beam and chooses each offered weapon.
     if(g.weaponOffers.length){const offer=g.weaponOffers[0],old={x:g.player.x,z:g.player.z};
       g.player.x=offer.x;g.player.z=offer.z;g.collectWeapon();g.player.x=old.x;g.player.z=old.z;if(g.weapon.melee)g.selectWeapon(0);
@@ -264,7 +292,8 @@ test('a complete campaign reaches level 20 after 670 real projectile kills and s
     origin.x=g.player.x;origin.z=g.player.z;origin.y=g.player.elevation+1.35;
     const target=g.enemies.reduce((best,e)=>!best||Math.hypot(e.x-origin.x,e.z-origin.z)<Math.hypot(best.x-origin.x,best.z-origin.z)?e:best,null);
     if(target){const old=previousTargets.get(target.id)||target,travel=Math.hypot(target.x-origin.x,target.z-origin.z)/g.weapon.speed;
-      g.trigger(!g.weapon.semiAuto||!g.triggerHeld,.02,origin,{x:target.x+(target.x-old.x)/.02*travel-origin.x,y:(target.elevation||0)+(target.form==='probe'?.55:target.form==='scuttler'?.85:1.88)*(target.elite?1.13:1)-origin.y,z:target.z+(target.z-old.z)/.02*travel-origin.z});}
+      const scale=target.elite?(target.form==='probe'?1.13:1.3):target.form==='scuttler'?.98:target.form==='seer'?1.04:1;
+      g.trigger(!g.weapon.semiAuto||!g.triggerHeld,.02,origin,{x:target.x+(target.x-old.x)/.02*travel-origin.x,y:(target.elevation||0)+(target.form==='probe'?.55:target.form==='scuttler'?.85:1.88)*scale-origin.y,z:target.z+(target.z-old.z)/.02*travel-origin.z});}
     else g.trigger(false,.02,origin,{x:0,y:0,z:-1});
     for(const e of g.enemies)previousTargets.set(e.id,{x:e.x,z:e.z});
     const events=g.drainEvents();
