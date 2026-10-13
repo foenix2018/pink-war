@@ -56,11 +56,14 @@ test('a physical guard intercepts the bullet before the player and cannot block 
  assert.equal(bladeBulletContact({x:1,y:1,z:0},{x:1,y:2,z:0},{x:0,y:0,z:0},{x:0,y:2,z:0}),null);
 });
 test('sabre audio ignites once, reuses its hum and stops on pause/mute/dispose',()=>{
- const {ctx,nodes,calls}=audioMock(),sound=createSaberSound(ctx);sound.update({active:true,equipped:true});assert.equal(sound.humming,true);
- const starts=calls.starts;for(let i=0;i<50;i++){ctx.tick(.02);sound.update({active:true,equipped:true});}assert.equal(calls.starts,starts);
- sound.update({active:true,equipped:true,speed:4});assert.ok(calls.starts>starts);ctx.tick(.5);
+ const {ctx,nodes,calls}=audioMock(),sound=createSaberSound(ctx);sound.update({active:true,equipped:true,extended:false});assert.equal(sound.humming,false,'holstered blade remains silent');sound.update({active:true,equipped:true,extended:true});assert.equal(sound.humming,true);
+ const starts=calls.starts;for(let i=0;i<50;i++){ctx.tick(.02);sound.update({active:true,equipped:true,extended:true});}assert.equal(calls.starts,starts);
+ sound.update({active:true,equipped:true,extended:true,speed:4});assert.ok(calls.starts>starts);ctx.tick(.5);
  sound.update({active:false,equipped:true});assert.equal(sound.humming,false);const paused=calls.starts;
- sound.update({active:true,equipped:true});assert.equal(calls.starts,paused+2,'resume restarts only hum, without another ignition');
- sound.update({active:true,equipped:true,sound:false});assert.equal(sound.humming,false);
+ sound.update({active:true,equipped:true,extended:true});assert.equal(calls.starts,paused+3,'resume restarts the hum and ignition when trigger remains held');
+ sound.update({active:true,equipped:true,extended:true,sound:false});assert.equal(sound.humming,false);
+ const pcm=sound.ignitionPCM,rev=sound.shutdownPCM;
+ assert.equal(pcm.length,rev.length);
+ for(let i=0;i<pcm.length;i+=97)assert.equal(pcm[i],rev[pcm.length-1-i],'off must be exactly reversed on');
  sound.dispose();assert.ok(nodes.every(n=>n.disconnected));
 });
