@@ -29,7 +29,7 @@ export function createSaberSound(ctx){
   function power(on){
     if(!enabled||ctx.state!=='running')return;
     const src=ctx.createBufferSource(),gain=ctx.createGain();src.buffer=voltage[on?'on':'off'];
-    gain.gain.value=.13;src.connect(gain).connect(bus);
+    gain.gain.value=.13;src.connect(gain);gain.connect(bus);
     src.start();track(src,[src,gain]);
   }
   function tone(from,to,duration,volume,type='sawtooth'){
@@ -38,7 +38,7 @@ export function createSaberSound(ctx){
     osc.type=type;osc.frequency.setValueAtTime(from,now);osc.frequency.exponentialRampToValueAtTime(Math.max(38,to),now+duration);
     filter.type='lowpass';filter.frequency.value=1800;
     g.gain.setValueAtTime(.0001,now);g.gain.linearRampToValueAtTime(volume,now+.007);g.gain.exponentialRampToValueAtTime(.0001,now+duration);
-    osc.connect(filter).connect(g).connect(bus);osc.start();osc.stop(now+duration+.01);track(osc,[osc,filter,g]);
+    osc.connect(filter);filter.connect(g);g.connect(bus);osc.start();osc.stop(now+duration+.01);track(osc,[osc,filter,g]);
   }
   function stopHum(){
     if(!hum)return;
@@ -51,7 +51,7 @@ export function createSaberSound(ctx){
     const a=ctx.createOscillator(),b=ctx.createOscillator(),low=ctx.createBiquadFilter(),gain=ctx.createGain();
     a.type='sawtooth';b.type='triangle';a.frequency.value=81;b.frequency.value=163;
     low.type='lowpass';low.frequency.value=500;gain.gain.value=.018;
-    a.connect(low);b.connect(low);low.connect(gain).connect(bus);a.start();b.start();
+    a.connect(low);b.connect(low);low.connect(gain);gain.connect(bus);a.start();b.start();
     hum={sources:[a,b],nodes:[a,b,low,gain],a,b,low,gain};
   }
   function swingSound(speed){
