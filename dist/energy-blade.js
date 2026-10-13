@@ -20,6 +20,9 @@ export function createEnergyBlade(color=0xff80b2){
     const length=Math.max(.001,extension);
     core.scale.y=halo.scale.y=length;core.position.y=halo.position.y=BLADE_LENGTH*length/2;
     halo.scale.x=halo.scale.z=1+Math.sin(time*73)*.065;
+  },reset(){
+    progress=0;extension=0;lastTime=null;root.visible=false;
+    core.scale.y=halo.scale.y=.001;core.position.y=halo.position.y=.0005;
   },get extension(){return extension;},segment(){
     root.updateWorldMatrix(true,false);root.localToWorld(base.set(0,0,0));root.localToWorld(tip.set(0,BLADE_LENGTH*extension,0));
     return {base:{x:base.x,y:base.y,z:base.z},tip:{x:tip.x,y:tip.y,z:tip.z},extension};
