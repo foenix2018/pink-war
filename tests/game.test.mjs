@@ -126,15 +126,16 @@ test('weapons appear at their scheduled levels, remain optional, and keep indivi
   for(let level=1;level<=9;level++) {
     g.beginWave();
     const offeredIndex=WEAPONS.findIndex(w=>w.level===level);
+    const previousWeapon=g.weaponIndex;
     if(offeredIndex>0) {
       const offer=g.weaponOffers.find(w=>w.index===offeredIndex);
       assert.ok(offer,'a new weapon appears in the world');
-      assert.equal(g.weaponIndex,level===3?0:offeredIndex-1,'no forced weapon switch');
+      assert.equal(g.weaponIndex,previousWeapon,'no forced weapon switch');
       g.player.x=offer.x;g.player.z=offer.z;
       assert.equal(g.collectWeapon(),true);
       assert.equal(g.weaponIndex,offeredIndex);
     }
-    assert.equal(g.unlockedWeapons.length,Math.ceil(level/2));
+    assert.equal(g.unlockedWeapons.length,WEAPONS.filter(w=>w.level<=level).length);
   }
   assert.equal(g.selectWeapon(0),true);g.cooldown=0;
   g.shoot({x:0,y:1,z:22},{x:0,y:0,z:-1});assert.equal(g.ammo[0],11);
@@ -146,9 +147,11 @@ test('an uncollected gun stays available even after the next wave and cannot be 
   const g=new ArenaGame();
   for(let i=0;i<5;i++)g.beginWave();
   assert.equal(g.weaponIndex,0);
-  assert.deepEqual(g.weaponOffers.map(o=>o.index),[1,2]);
+  assert.deepEqual(g.weaponOffers.map(o=>o.index),[5,1,2]);
   assert.equal(g.selectWeapon(2),false);
   const offer=g.weaponOffers[0];g.player.x=offer.x;g.player.z=offer.z;
+  assert.equal(g.collectWeapon(),true);assert.equal(g.weaponIndex,5);
+  assert.deepEqual(g.weaponOffers.map(o=>o.index),[1,2]);
   assert.equal(g.collectWeapon(),true);assert.equal(g.weaponIndex,1);
   assert.deepEqual(g.weaponOffers.map(o=>o.index),[2]);
   g.reset();assert.equal(g.weaponOffers.length,0);assert.deepEqual(g.unlockedWeapons.map(w=>w.id),['r9']);
@@ -243,7 +246,7 @@ test('NOVA damages groups but splash cannot pass through a wall', () => {
   assert.equal(g.enemies.some(e=>e.id===91),false);assert.equal(g.enemies.some(e=>e.id===92),false);
   assert.equal(g.enemies.find(e=>e.id===93).hp,40);
 });
-test('a complete campaign reaches level 20 after 670 real projectile kills and five weapons', () => {
+test('a complete campaign reaches level 20 after 670 real projectile kills and six unlocked weapons', () => {
   const g=new ArenaGame([],()=>.5);g.player.z=60;let unlocks=[],equipmentStages=[];const previousTargets=new Map();
   const origin={x:0,y:1.35,z:60};
   for(let i=0;i<130000 && g.state==='playing';i++) {
@@ -256,7 +259,7 @@ test('a complete campaign reaches level 20 after 670 real projectile kills and f
     g.step(.02,{x:dx/n,z:dz/n,sprint:true,jump:g.bullets.some(b=>b.hostile&&Math.hypot(b.x-g.player.x,b.z-g.player.z)<6)});
     // The simulated player actively visits the beam and chooses each offered weapon.
     if(g.weaponOffers.length){const offer=g.weaponOffers[0],old={x:g.player.x,z:g.player.z};
-      g.player.x=offer.x;g.player.z=offer.z;g.collectWeapon();g.player.x=old.x;g.player.z=old.z;
+      g.player.x=offer.x;g.player.z=offer.z;g.collectWeapon();g.player.x=old.x;g.player.z=old.z;if(g.weapon.melee)g.selectWeapon(0);
     }
     origin.x=g.player.x;origin.z=g.player.z;origin.y=g.player.elevation+1.35;
     const target=g.enemies.reduce((best,e)=>!best||Math.hypot(e.x-origin.x,e.z-origin.z)<Math.hypot(best.x-origin.x,best.z-origin.z)?e:best,null);
@@ -269,7 +272,7 @@ test('a complete campaign reaches level 20 after 670 real projectile kills and f
     equipmentStages.push(...events.filter(e=>e.type==='equipment').map(e=>e.level));
   }
   assert.equal(g.state,'won',JSON.stringify({wave:g.wave,kills:g.kills,time:g.time,hp:g.player.hp,toSpawn:g.toSpawn}));assert.equal(g.wave,MAX_LEVEL);assert.equal(g.kills,670);assert.ok(g.player.hp>0);
-  assert.deepEqual(unlocks,['BLOOM','LANCE','THORN','NOVA']);assert.equal(g.unlockedWeapons.length,5);
+  assert.deepEqual(unlocks,['AURORA','BLOOM','LANCE','THORN','NOVA']);assert.equal(g.unlockedWeapons.length,6);
   assert.deepEqual(equipmentStages,Array.from({length:MAX_LEVEL},(_,i)=>Math.min(i+1,10)));assert.equal(g.snapshot().equipment.name,'Impératrice');assert.equal(g.snapshot().equipment.unlocked.length,10);
   g.reset();assert.equal(g.snapshot().equipment.level,1);assert.deepEqual(g.snapshot().equipment.unlocked,['aube']);
 });

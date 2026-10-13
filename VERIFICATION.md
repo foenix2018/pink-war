@@ -1,4 +1,20 @@
-# Vérification — Pink War v3.22
+# Vérification — Pink War v3.24
+
+Parcours vérifié : appui clavier, tactile ou Touch Plus → locomotion/tir dans ArenaGame → collision avec le monde ou les ennemis → mains, lame, effets lumineux, audio et HUD. Le jeu est statique : aucune API ou base de données n’intervient dans ce parcours. Base : `d7e107d`; GitHub vérifié avant publication, sans nouvelle modification utilisateur à incorporer.
+
+- 161 tests automatisés : campagne complète à 20 niveaux et 670 éliminations, six armes, squelette et animations RLH, champs de collision, double saut et rebond mural, prédiction ennemie sans guidage, balayage de lame, couvert et parade avant contact avec le joueur. La sélection du bouton de saut VR consomme la gâchette jusqu’à son relâchement, pour les deux mains de tir.
+- Chromium/WebGL : clic gauche coupe, clic droit pare, deux appuis J sautent ; deux appuis tactiles distincts donnent le double saut. Santé et munitions, joysticks et boutons restent dans l’écran à 390 × 844, 844 × 390 et 320 × 700. Le sabre se déploie et active une lumière réelle. Aucune exception JavaScript lors des parcours.
+- IWER Meta Quest 3 : les deux mains RLH à 28 os restent visibles, le bouton ↑ est sur la main libre, deux appuis X donnent le double saut ; sélectionner le bouton au poignet ne tire pas. Déplacer physiquement la manette balaie la lame et inflige des dégâts au robot croisé ; la gâchette gauche tient la parade. Le rayon d’arme à feu se masque avec AURORA et les panneaux sont retirés en sortie de VR.
+- AudioContext hors ligne : allumage, bourdonnement, mouvement, choc et extinction audibles, sans saturation. Le son d’AURORA est une synthèse originale locale ; les cinq armes à projectiles gardent leurs propres enregistrements Kenney CC0.
+- AT HOME : chargement des mains d’origine, suivi du sabre et éclairage local, sortie de session correcte. En l’absence de sol détecté, le combat reste bloqué. Le mapping et le sol réels restent ceux de cette page ; aucun saut virtuel n’est appliqué dans une pièce physique.
+
+Captures : `dist/evolutions/sabre-hud-324.png` (ville complète) et `sabre-vr-324.png` (mains isolées en simulation). Rendu logiciel Chromium à résolution réduite ; les décors sont masqués après capture pour les cas de commandes. Les tests WebXR ne mesurent ni les performances d’un casque physique ni le scan d’une vraie pièce. Un essai sur Quest 3 et Safari iPhone reste nécessaire pour mesurer le confort et la cadence sur ces appareils.
+
+Les trois HTML autonomes ont également démarré sans requête externe autorisée ; l’atelier personnage sélectionne AURORA et l’atelier des gants conserve ses deux mains RLH.
+
+Les rapports JSON, les trois HTML autonomes et l’archive de sources sont dans `/workspace/livraison`. L’état READY de Vercel et le commit publié seront consignés dans le rapport de livraison après publication.
+
+## Historique — Pink War v3.22
 
 Base de développement : `6803407`. Les nouvelles mises à jour utilisateur `294c951`, `ebdf21a`, `f4a742d` et `5dd2105` sont intégrées : accueil AT HOME, script de passthrough, scan spatial et combat à l’échelle de la pièce. Ces fichiers restent distincts du jeu classique. Leurs imports de palette et de son sont compatibles ; le script est vérifié syntaxiquement. La page AT HOME se charge sans exception dans Chromium ; le navigateur sans WebXR garde le bouton désactivé et affiche le message de compatibilité. Les liens AT HOME ajoutés au lobby restent présents et le HTML autonome les dirige vers l’adresse hébergée. Le scan d’une pièce réelle ne fait pas partie des essais sur casque simulé. Le fichier du pompier RLH et les données d'animation ne sont pas modifiés : 34 os et 11 lots de peau d'origine, casque F1 XF bleu/rose et masque fermé, vêtements, bottes, harnais, appareil respiratoire et mains RLH V40 sont conservés. AÉGIS ajoute des plaques profilées originales, liées aux os natifs. LYLU a un plastron plus large, GHJU une coupe plus étroite. Les dix niveaux ajoutent des pièces ; les géométries sont partagées par profil/niveau, les poses restent privées, et le corps complet avec armure reste à 16 lots au maximum. Aucun asset de Halo, Mass Effect ou des modèles externes proposés n'est importé. `/propositions.html` renvoie maintenant à l'atelier original.
 

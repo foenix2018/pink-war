@@ -60,6 +60,20 @@ test('A recharges, B selects next and left X jumps on fresh press',()=>{
   down(right,5,false);state.input();down(left,4);assert.equal(state.input().jump,true);assert.equal(state.input().jump,false);assert.deepEqual(directions,[1]);
 });
 
+test('the wrist jump selection consumes the trigger until release and never fires or repeats while held',()=>{
+  const {state,right}=setup();state.jumpButtonHit=()=>true;
+  down(right,0);let input=state.input();assert.equal(input.jump,true);assert.equal(input.fire,false);
+  input=state.input();assert.equal(input.jump,false);assert.equal(input.fire,false);
+  state.jumpButtonHit=()=>false;assert.equal(state.input().fire,false,'moving the held ray away cannot fire');
+  down(right,0,false);state.input();down(right,0);assert.equal(state.input().fire,true);
+});
+
+test('a left shooting hand selects the jump wrist with its own trigger; A still jumps from the free hand',()=>{
+  const {state,left,right}=setup(undefined,{...VR_DEFAULTS,hand:'left'});state.jumpButtonHit=()=>true;
+  down(left,0);const input=state.input();assert.equal(input.jump,true);assert.equal(input.fire,false);
+  down(left,0,false);state.input();down(right,4);assert.equal(state.input().jump,true);
+});
+
 test('Y pauses and A resumes without firing a held trigger; B exits from the pause',async()=>{
   const {state,left,right,game,phase,exits}=setup();game.charge=.5;game.triggerHeld=true;
   down(right,0);down(left,5);assert.equal(state.input().fire,false);assert.equal(phase(),'paused');assert.equal(game.charge,0);

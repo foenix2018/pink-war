@@ -135,6 +135,7 @@ export function createRLHSoldier(kit,createGun,profile){
       mount.position.copy(anchor).add(delta);mount.position.y-=low*.06;mount.position.z+=recoil*.08;
       if(flight?.preview){mount.position.y-=.14;mount.position.z+=.10;}
       gun.rotation.x=clamp(reload)*Math.PI/2+recoil*.17;
+      if(WEAPON_FRAME[weapon].melee){const slash=flight?.saberSwing||{};gun.rotation.set((slash.x||0)-.12,slash.y||0,slash.z||0);}else{gun.rotation.y=gun.rotation.z=0;}
       gun.userData.animateHands(trigger,.18+recoilBody*.3,reload,dt);rest.userData.animate({relax:.65},dt);attachFreeHand();
       solveArms();actor.skeleton.update();
     },

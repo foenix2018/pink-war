@@ -2,6 +2,9 @@ import { equipmentForLevel } from './equipment.js';
 import { PLATFORMS, STAIRS, LIFTS, BRIDGES, BRIDGE_APPROACHES, insideSurface, traversalSurfaces, liftHeightAt } from './world-layout.js';
 import { PROBE, updateProbe } from './aerial-probes.js';
 import { NOISE_RADIUS, SHOT_RADIUS, propagateNoise, soundWaypoint } from './hearing.js';
+import { tryJump } from './locomotion.js';
+import { hostileShotProfile, predictShot } from './enemy-fire.js';
+import { sweepBlade, bladeBulletContact } from './blade-combat.js';
 // World units are metres. The playable arena is exactly 200 × 200 m.
 export const ARENA_SIZE = 200;
 export const PORTAL = Object.freeze({ x: 0, z: -20 });
@@ -37,7 +40,8 @@ export const WEAPONS = Object.freeze([
   Object.freeze({ id: 'bloom', name: 'BLOOM', label: 'Mitraillette laser', level: 3, damage: 34, capacity: 24, interval: .11, reload: 1.7, speed: 135, pellets: 1, spread: .009, chargeTime: 0, splash: 0 }),
   Object.freeze({ id: 'lance', name: 'LANCE', label: 'Sniper photonique', level: 5, damage: 160, capacity: 5, interval: .85, reload: 2.15, speed: 280, pellets: 1, spread: 0, semiAuto:true, chargeTime: 0, splash: 0 }),
   Object.freeze({ id: 'thorn', name: 'THORN', label: 'Canon à rail', level: 7, damage: 190, capacity: 6, interval: .28, reload: 2.1, speed: 200, pellets: 1, spread: 0, chargeTime: .7, splash: 1.8 }),
-  Object.freeze({ id: 'nova', name: 'NOVA', label: 'Canon à énergie', level: 9, damage: 340, capacity: 4, interval: .4, reload: 2.4, speed: 80, pellets: 1, spread: 0, chargeTime: 1.05, splash: 5 })
+  Object.freeze({ id: 'nova', name: 'NOVA', label: 'Canon à énergie', level: 9, damage: 340, capacity: 4, interval: .4, reload: 2.4, speed: 80, pellets: 1, spread: 0, chargeTime: 1.05, splash: 5 }),
+  Object.freeze({ id:'aurora',name:'AURORA',label:'Sabre à énergie',level:2,damage:155,capacity:0,interval:.48,reload:0,speed:0,pellets:0,spread:0,semiAuto:true,chargeTime:0,splash:0,melee:true })
 ]);
 // Low enough to hide behind, tall enough to stop standing-height shots.
 export const COVER_WALLS = Object.freeze([
@@ -231,7 +235,9 @@ export class ArenaGame {
   }
   reset() {
     this.navigation.refreshAt = -1; this.navigation.goal = -1;
-    this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0, verticalSpeed: 0, grounded: true, jumpHeld: false, crouched:false };
+    this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0, verticalSpeed: 0, grounded: true, jumpHeld: false, crouched:false,airJumps:0,jumpImpulseX:0,jumpImpulseZ:0,lastGroundedAt:0 };
+    this.playerVelocity={x:0,y:0,z:0};
+    this.bladePrevious=null;this.bladeHitTimes=new Map();this.bladeSlashAt=-99;this.bladeSlashSide=1;this.bladeSpeed=0;this.bladeGuard=false;this.bladeHumAt=0;
     this.enemies = []; this.bullets = []; this.events = [];
     this.wave = 0; this.score = 0; this.kills = 0; this.time = 0;
     this.endless=false;this.footstepDistance=0;
@@ -304,6 +310,7 @@ export class ArenaGame {
   selectWeapon(index) {
     if (this.state !== 'playing' || !WEAPONS[index] || !this.ownedWeapons.has(index) || index === this.weaponIndex) return false;
     this.weaponIndex = index; this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false; this.semiPending=false;
+    this.bladePrevious=null;this.bladeHitTimes.clear();this.bladeSlashAt=-99;this.bladeSpeed=0;this.bladeGuard=false;
     this.cooldown = Math.max(this.cooldown, .25); this.event('weapon', { index, name: this.weapon.name }); return true;
   }
   cycleWeapon(direction = 1) {
@@ -347,6 +354,7 @@ export class ArenaGame {
     return true;
   }
   reload() {
+    if(this.weapon.melee)return false;
     if (this.state !== 'playing' || this.reloadRemaining > 0 || this.ammo[this.weaponIndex] >= this.weapon.capacity) return false;
     this.reloadRemaining = this.weapon.reload; this.charge = 0;this.semiPending=false;
     this.emitNoise('reload',NOISE_RADIUS.reload);
@@ -392,6 +400,11 @@ export class ArenaGame {
     this.enemies.push(enemy); this.toSpawn--; this.event('spawn', { id: enemy.id, x: enemy.x, y: enemy.elevation + enemy.aimHeight, z: enemy.z });
   }
   shoot(origin, direction, charge = 1) {
+    if(this.weapon.melee){
+      if(this.state!=='playing'||this.cooldown>0)return false;
+      this.cooldown=this.weapon.interval;this.bladeSlashAt=this.time;this.bladeSlashSide*=-1;
+      this.emitNoise('blade-swing',14,origin);this.event('blade-swing',{weapon:'aurora',origin:{...origin}});return true;
+    }
     if (this.state !== 'playing' || this.cooldown > 0 || this.reloadRemaining > 0 || this.ammo[this.weaponIndex] <= 0) return false;
     const length = Math.hypot(direction.x, direction.y, direction.z);
     if (length < .001) return false;
@@ -416,6 +429,7 @@ export class ArenaGame {
   }
   trigger(held, dt, origin, direction) {
     const w = this.weapon;
+    if(w.melee){if(held&&!this.triggerHeld)this.semiPending=true;if(!held)this.semiPending=false;if(held&&this.semiPending&&this.shoot(origin,direction))this.semiPending=false;this.triggerHeld=held;return;}
     if (!w.chargeTime) {
       if(w.semiAuto){
         if(held&&!this.triggerHeld)this.semiPending=true;
@@ -441,6 +455,25 @@ export class ArenaGame {
     this.player.hp = Math.max(0, this.player.hp - amount); this.invulnerable = .3;
     this.lastDamage = this.time; this.regenerating = false; this.event('damage', { hp: this.player.hp });
     if (this.player.hp <= 0) { this.state = 'over'; this.charge = 0; this.event('over'); }
+  }
+  get bladePhase(){return this.weapon.melee?Math.max(0,Math.min(1,(this.time-this.bladeSlashAt)/.42)):1;}
+  updateBlade(segment,dt,guard=false,head=null){
+    this.bladeGuard=!!guard;
+    if(!this.weapon.melee||this.state!=='playing'||!segment||segment.extension<.95){this.bladePrevious=null;this.bladeSpeed=0;return;}
+    const previous=this.bladePrevious;
+    this.bladeEye=head?{x:head.x,y:head.y,z:head.z}:{x:this.player.x,y:this.player.elevation+1.35,z:this.player.z};
+    this.bladeSpeed=previous&&dt>0?Math.min(12,Math.hypot(segment.tip.x-previous.tip.x-this.playerVelocity.x*dt,segment.tip.y-previous.tip.y-this.playerVelocity.y*dt,segment.tip.z-previous.tip.z-this.playerVelocity.z*dt)/dt):0;
+    if(this.time>=this.bladeHumAt){this.emitNoise('blade-hum',6);this.bladeHumAt=this.time+1.5;}
+    if(this.bladeSpeed>.65||this.bladePhase<1){
+      const eye=this.bladeEye;
+      for(const hit of sweepBlade(previous,segment,this.enemies,this.obstacles,eye,segmentBox,traceEnemyHit)){
+        if(this.time-(this.bladeHitTimes.get(hit.enemy.id)??-99)<.48)continue;
+        this.bladeHitTimes.set(hit.enemy.id,this.time);this.damageEnemy(hit.enemy,this.weapon.damage,hit.point,hit.zone,hit.multiplier);
+        this.event('blade-hit',{...hit.point,surface:'robot',weapon:'aurora',power:1,normal:{x:0,y:1,z:0}});
+      }
+    }
+    this.bladePrevious={base:{...segment.base},tip:{...segment.tip},extension:segment.extension};
+    for(const [id,at] of this.bladeHitTimes)if(this.time-at>3)this.bladeHitTimes.delete(id);
   }
   damageEnemy(target, amount, at, zone='torso',multiplier=1,source=this.player) {
     if (!this.enemies.includes(target)) return;
@@ -471,13 +504,16 @@ export class ArenaGame {
     // RLH-inspired locomotion: jump is an edge-triggered ballistic state, independent of frame rate.
     const p = this.player, jumpDown = !!input.jump;
     if(input.crouchToggle) { p.crouched=!p.crouched;this.event('crouch',{active:p.crouched}); }
-    if (jumpDown && !p.jumpHeld && p.grounded && !p.crouched) { p.grounded = false; p.verticalSpeed = 7.25; this.event('jump'); }
+    if (jumpDown && !p.jumpHeld) { const kind=tryJump(p,this.obstacles,this.time);if(kind){this.event('jump',{kind});this.emitNoise('jump',14);} }
     p.jumpHeld = jumpDown;
     const speed = p.crouched ? 3.0 : input.sprint ? 10 : 7, moveYaw = input.moveYaw ?? yaw;
-    const oldX=p.x,oldZ=p.z,wasGrounded=p.grounded;
+    const oldX=p.x,oldZ=p.z,oldY=p.elevation,wasGrounded=p.grounded;
     moveInArena(p, (Math.cos(moveYaw) * ix + Math.sin(moveYaw) * iz) * speed * dt,
       (-Math.sin(moveYaw) * ix + Math.cos(moveYaw) * iz) * speed * dt, .55, this.obstacles);
+    if(p.jumpImpulseX||p.jumpImpulseZ){moveInArena(p,p.jumpImpulseX*dt,p.jumpImpulseZ*dt,.55,this.obstacles);p.jumpImpulseX*=Math.exp(-dt*5);p.jumpImpulseZ*=Math.exp(-dt*5);}
     this.settle(p,dt,true);
+    if(p.grounded){p.airJumps=0;p.jumpImpulseX=p.jumpImpulseZ=0;p.lastGroundedAt=this.time;}
+    if(dt>0)this.playerVelocity={x:(p.x-oldX)/dt,y:(p.elevation-oldY)/dt,z:(p.z-oldZ)/dt};
     if(!wasGrounded&&p.grounded)this.emitNoise('land',NOISE_RADIUS.land);
     if(p.grounded){
       this.footstepDistance+=Math.hypot(p.x-oldX,p.z-oldZ);
@@ -610,10 +646,12 @@ export class ArenaGame {
       if(seen&&e.awareness==='engaged'&&distance<2&&e.attackTimer<=0){
         e.attackTimer=.85;this.damage(e.elite?20+this.wave:10+Math.floor(this.wave/2));
       }else if(seen&&e.awareness==='engaged'&&e.ranged&&distance<38&&e.attackTimer<=0){
-        e.attackTimer=Math.max(1.2,2.6-this.wave*.1);
-        const n=Math.hypot(playerHead.x-eye.x,playerHead.y-eye.y,playerHead.z-eye.z),speed=18+this.wave;
-        this.bullets.push({id:this.nextId++,...eye,vx:(playerHead.x-eye.x)/n*speed,
-          vy:(playerHead.y-eye.y)/n*speed,vz:(playerHead.z-eye.z)/n*speed,
+        const profile=hostileShotProfile(this.wave,e.form),speed=profile.speed;
+        e.attackTimer=profile.interval;
+        const target=predictShot(eye,playerHead,this.playerVelocity,speed,profile.lead);
+        const n=Math.hypot(target.x-eye.x,target.y-eye.y,target.z-eye.z)||1;
+        this.bullets.push({id:this.nextId++,...eye,vx:(target.x-eye.x)/n*speed,
+          vy:(target.y-eye.y)/n*speed,vz:(target.z-eye.z)/n*speed,
           life:3,damage:13+this.wave,hostile:true,weapon:'enemy',splash:0});
         this.event('enemy-shot',eye);
       }
@@ -622,6 +660,13 @@ export class ArenaGame {
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const b = this.bullets[i], start = { x: b.x, y: b.y, z: b.z };
       const end = { x: b.x + b.vx * dt, y: b.y + b.vy * dt, z: b.z + b.vz * dt };
+      if(b.hostile&&this.weapon.melee&&this.bladePrevious&&this.bladeGuard){
+        const contact=bladeBulletContact(start,end,this.bladePrevious.base,this.bladePrevious.tip,.10);
+        const playerHit=segmentSphere(start,end,{x:this.player.x,y:this.player.elevation+(this.player.crouched?.58:1.25),z:this.player.z},this.player.crouched?.46:.62);
+        if(contact&&(playerHit===null||contact.t<=playerHit)&&!this.blocked(start,contact.point)&&!this.blocked(this.bladeEye||{x:this.player.x,y:this.player.elevation+1.35,z:this.player.z},contact.point)){
+          this.bullets.splice(i,1);this.event('blade-parry',{...contact.point,surface:'metal',weapon:'aurora',power:1,normal:{x:0,y:1,z:0}});continue;
+        }
+      }
       let nearest = 1.01, target = null, zone='torso',multiplier=1,surface='concrete',hitBox=null;
       if (b.hostile) {
         const hit = segmentSphere(start, end, { x: this.player.x, y: (this.player.elevation || 0) + (this.player.crouched?.58:1.25), z: this.player.z }, this.player.crouched?.46:.62);

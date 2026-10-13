@@ -1,6 +1,7 @@
 import * as T from './vendor/three.webgpu.min.js';
 import { Assembly, bevelBox, profile, turned, matrix } from './geo.js';
 import { createGlove } from './hands.js';
+import { createEnergyBlade } from './energy-blade.js';
 
 // Every weapon is modelled in one frame: the origin is the centre of its pistol grip (where the palm rests),
 // -z is the barrel direction, +y is up. The gloved hand (hands.js) is built in the same frame, so any weapon
@@ -10,7 +11,8 @@ export const WEAPON_FRAME = Object.freeze([
   Object.freeze({ id: 'bloom', muzzle: Object.freeze([0, .082, -.6]), support: Object.freeze([0, -.05, -.228]), length: .8 }),
   Object.freeze({ id: 'lance', muzzle: Object.freeze([0, .085, -.88]), support: Object.freeze([0, -.052, -.30]), length: 1.10 }),
   Object.freeze({ id: 'thorn', muzzle: Object.freeze([0, .108, -.85]), support: Object.freeze([0, -.05, -.34]), length: 1.05 }),
-  Object.freeze({ id: 'nova', muzzle: Object.freeze([0, .11, -.655]), support: Object.freeze([0, -.058, -.29]), length: .9 })
+  Object.freeze({ id: 'nova', muzzle: Object.freeze([0, .11, -.655]), support: Object.freeze([0, -.058, -.29]), length: .9 }),
+  Object.freeze({ id:'aurora',muzzle:Object.freeze([0,.14,0]),support:null,length:1.22,melee:true })
 ]);
 
 const PI = Math.PI;
@@ -228,7 +230,18 @@ function buildNova(m) {
   return a;
 }
 
-const BUILDERS = [buildR9, buildBloom, buildLance, buildThorn, buildNova];
+function buildAurora(m){
+  const a=new Assembly();
+  a.limb(m.dark,[0,-.115,0],[0,.13,0],.023,.026);
+  a.limb(m.steel,[0,-.108,0],[0,-.084,0],.030,.030);
+  a.limb(m.armorLight,[0,.078,0],[0,.137,0],.035,.029);
+  for(let i=0;i<6;i++)a.add(torus(.025,.0025,PI*2,5,18),m.steel,matrix([0,-.07+i*.022,0],[PI/2,0,0]));
+  both(s=>{a.box(m.armor,[.008,.095,.017],[s*.026,.014,0],[0,0,0],.002);a.box(m.rose,[.002,.073,.007],[s*.031,.014,0],[0,0,0],.001,false);});
+  a.ball(m.pale,[0,.145,0],[.025,.009,.025],false);
+  a.box(m.rose,[.009,.016,.004],[0,.042,-.027],[0,0,0],.001,false);
+  return a;
+}
+const BUILDERS = [buildR9, buildBloom, buildLance, buildThorn, buildNova,buildAurora];
 
 // Small exposed energy cells sit beside each receiver and react to ammunition, charge and reload.
 const BATTERY_LAYOUT = Object.freeze([
@@ -241,6 +254,7 @@ const BATTERY_LAYOUT = Object.freeze([
 const BATTERY_COUNT = 8;
 const batteryCellGeometry = new T.BoxGeometry(.0035, .007, .008);
 function attachBatteryRail(model, index, mats, material) {
+  if(WEAPON_FRAME[index].melee)return null;
   const [x,y,z,step] = BATTERY_LAYOUT[index], length = step * (BATTERY_COUNT - 1) + .012;
   const shell = new T.Mesh(new T.BoxGeometry(.009, .013, length), mats.dark);
   shell.position.set(x + .002, y, z - step * (BATTERY_COUNT - 1) * .5);
@@ -303,10 +317,15 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   const collar=new T.Mesh(new T.CylinderGeometry(.012,.014,.014,12),mats.steel);collar.rotation.x=Math.PI/2;g.add(collar);
   const heatMaterial=new T.MeshBasicMaterial({color:mats.rose.color,transparent:true,opacity:0,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false});
   const heatRing=new T.Mesh(new T.TorusGeometry(.012,.0018,6,20),heatMaterial);g.add(heatRing);
-  const emitterRadii=[.0105,.0165,.031,.029,.062];
+  const emitterRadii=[.0105,.0165,.031,.029,.062,.023];let blade=null;
+  g.userData.getBladeSegment=()=>g.userData.index===5?blade?.segment():null;
+  Object.defineProperty(g.userData,'blade',{get:()=>blade});
   Object.assign(g.userData, { flash, hand, support, showSupport: true });
   g.userData.setLevel = level => { hand.userData.setLevel(level); support.userData.setLevel(level); };
   g.userData.setCombatState = ({ ammo = 0, capacity = 1, charge = 0, reloadProgress = 0, reloading = false, time = 0,heat=0,kick=0,impulse=0 } = {}) => {
+    blade?.update(time,g.userData.index===5,mats.rose.color);
+    collar.visible=g.userData.index!==5;
+    if(g.userData.index===5){heatRing.visible=false;flash.visible=false;return;}
     const rail = batteries[g.userData.index]; if (!rail) return;
     const accent = mats.rose?.color || new T.Color(0xff80b2);
     const frame=WEAPON_FRAME[g.userData.index],radius=emitterRadii[g.userData.index];
@@ -333,9 +352,12 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
     if (support.visible) support.userData.animate?.({ trigger: 0, grip: reload ? 0 : grip, reload }, dt);
   };
   g.userData.setVariant = index => {
+    if(!WEAPON_FRAME[index])return;
     models.forEach((model, i) => model.visible = i === index);
     const frame = WEAPON_FRAME[index];
-    flash.position.set(...frame.muzzle); flash.scale.setScalar([.14,.12,.25,.19,.38][index]);
+    if(index===5&&!blade){blade=createEnergyBlade(mats.rose.color);g.add(blade.root);}
+    if(index!==5)blade?.update(0,false);
+    flash.position.set(...frame.muzzle); flash.scale.setScalar([.14,.12,.25,.19,.38,0][index]);
     collar.position.set(frame.muzzle[0],frame.muzzle[1],frame.muzzle[2]+.009);collar.scale.set(emitterRadii[index]/.012,1,emitterRadii[index]/.012);
     heatRing.visible=false;
     support.visible = g.userData.showSupport && !!frame.support;
@@ -347,7 +369,8 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   g.userData.disposeDynamic=()=>{
     if(disposed)return;disposed=true;
     hand.userData.dispose?.();support.userData.dispose?.();
-    for(const rail of batteries){rail.dispose();rail.userData.shell.geometry.dispose();}
+    for(const rail of batteries)if(rail){rail.dispose();rail.userData.shell.geometry.dispose();}
+    blade?.dispose();
     for(const optic of optics)if(optic){optic.glassMaterial.dispose();optic.material.dispose();}
     batteryMaterial.dispose();collar.geometry.dispose();heatRing.geometry.dispose();heatMaterial.dispose();
   };

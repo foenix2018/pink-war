@@ -1,6 +1,7 @@
 // S-03: former municipal surveillance probes now controlled by the hostile AI.
 // Flight is simulated in three dimensions; roofs and catwalk undersides remain
 // solid, and projectiles keep their locked direction after the warning.
+import { hostileShotProfile, predictShot } from './enemy-fire.js';
 export const PROBE = Object.freeze({radius: .9, height: 1.08, aimHeight: .55, hover: 2.7, windup: .7});
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 
@@ -85,19 +86,20 @@ export function updateProbe(game, e, dt, segmentBox) {
       const pitch = Math.atan2(shot.y-e.elevation-PROBE.aimHeight,horizontal),reach=.35+.18*Math.cos(pitch);
       const origin = {x:e.x+(shot.x-e.x)/horizontal*reach,y:e.elevation+PROBE.aimHeight+.18*Math.sin(pitch),z:e.z+(shot.z-e.z)/horizontal*reach};
       const x = shot.x - origin.x, y = shot.y - origin.y, z = shot.z - origin.z;
-      const distance = Math.hypot(x, y, z) || 1, speed = 16 + game.wave * .5;
+      const distance = Math.hypot(x, y, z) || 1, speed = hostileShotProfile(game.wave,'probe').speed;
       // A moved player can dodge. A new wall in the original line stops the shot.
       if (!game.blocked(origin, shot)) {
         game.bullets.push({id: game.nextId++, ...origin, vx: x / distance * speed, vy: y / distance * speed, vz: z / distance * speed,
           life: 3, damage: 8 + Math.floor(game.wave * .6), hostile: true, weapon: 'probe', splash: 0});
         e.lastShotAt = game.time; game.event('enemy-shot', {...origin, form: 'probe'});
       }
-      e.chargeProgress = 0; e.lockedTarget = null; e.attackTimer = Math.max(1.25, 2.8 - game.wave * .1);
+      e.chargeProgress = 0; e.lockedTarget = null; e.attackTimer = hostileShotProfile(game.wave,'probe').interval;
     }
   } else {
     e.attackTimer = (e.attackTimer || 0) - dt;
     if (e.attackTimer <= 0) {
-      e.lockedTarget = {...target}; e.chargeRemaining = PROBE.windup; e.chargeProgress = .01;
+      const profile=hostileShotProfile(game.wave,'probe');
+      e.lockedTarget = predictShot(eye,target,game.playerVelocity,profile.speed,profile.lead); e.chargeRemaining = PROBE.windup; e.chargeProgress = .01;
       game.event('probe-charge', {...eye, id: e.id});
     }
   }

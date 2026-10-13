@@ -102,18 +102,18 @@ test('a profile is extruded across its width, with the outline along z and y', (
 
 test('every weapon is drawn around the grip: the origin is inside the model and the muzzle is its front', () => {
   const models = createWeaponModels(mats());
-  assert.equal(models.length, 5); assert.equal(WEAPON_FRAME.length, 5);
+  assert.equal(models.length,6);assert.equal(WEAPON_FRAME.length,6);
   models.forEach((model, index) => {
     const frame = WEAPON_FRAME[index], b = box(model);
     assert.ok(b.containsPoint(new T.Vector3(0, 0, 0)), `${frame.id}: the palm is inside the weapon's bounds`);
-    assert.ok(Math.abs(b.min.z - frame.muzzle[2]) < .03, `${frame.id}: the muzzle is at the front of the model`);
+    if(!frame.melee)assert.ok(Math.abs(b.min.z - frame.muzzle[2]) < .03, `${frame.id}: the muzzle is at the front of the model`);
     assert.ok(frame.muzzle[1] > 0 && frame.muzzle[1] < b.max.y + 1e-6, `${frame.id}: the barrel sits above the grip`);
     assert.ok(b.max.z < .21, `${frame.id}: the stock stays short of the shooter's face`);
     let meshes = 0; model.traverse(o => { if (o.isMesh) { meshes++; assert.ok(finite(o.geometry)); } });
     assert.ok(meshes >= 3 && meshes <= 9, `${frame.id}: merged into a handful of meshes (${meshes})`);
     if (frame.support) assert.ok(frame.support[2] < -.15 && frame.support[2] > b.min.z, `${frame.id}: the free hand holds the front half`);
   });
-  assert.equal(WEAPON_FRAME.filter(f => !f.support).length, 1, 'only the pistol is one-handed');
+  assert.equal(WEAPON_FRAME.filter(f=>!f.support).length,2,'pistol and sabre are one-handed');
 });
 
 test('weapons built twice share their geometry', () => {
@@ -374,7 +374,7 @@ test('the complete RLH body keeps native Idle Rifle and Rifle Walk clips with in
   a.dispose();b.dispose();
 });
 
-test('native RLH wrists meet the five guns throughout vertical recharge and crouched armed walking',()=>{
+test('native RLH wrists meet the six weapons throughout vertical recharge and crouched armed walking',()=>{
   const k=kit(),soldier=createSoldier(k,()=>buildGun({mats:mats(),gloves:k.gloves,sleeve:false,makeFlash:flash}),CHARACTERS[0]);soldier.root.scale.setScalar(soldier.heightScale);soldier.root.rotation.y=.8;
   for(const [index,frame] of WEAPON_FRAME.entries()){
     soldier.setWeapon(index);

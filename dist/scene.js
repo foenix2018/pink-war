@@ -95,6 +95,12 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   const traversal = createTraversalArt(scene, obstacles, cityMats);
   const combatFX = createCombatFX(T, scene, palette);
   const laserFX=createLaserFX(T,scene,palette);
+  const bladeLight=new T.PointLight(palette.rose,0,3.2,2);bladeLight.castShadow=false;scene.add(bladeLight);
+  function lightBlade(){
+    let active=null;scene.traverseVisible(o=>{if(!active&&o.userData.getBladeSegment&&o.userData.index===5)active=o.userData.getBladeSegment();});
+    bladeLight.intensity=active&&active.extension>.1?2.4*active.extension:0;
+    if(active){bladeLight.position.set((active.base.x+active.tip.x)/2,(active.base.y+active.tip.y)/2,(active.base.z+active.tip.z)/2);bladeLight.color.setHex(palette.rose);}
+  }
   // A traversable service bridge: stepped approaches, a level deck, and guarded sides.
   const bridgeX = CATWALK.x, bridgeWidth = 5.8, stairCount = 12;
   const stairDepth = (CATWALK.end - CATWALK.landing) / stairCount, stairRise = CATWALK.height / stairCount;
@@ -376,7 +382,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   const stereo = new T.StereoCamera(); stereo.aspect = .5; stereo.eyeSep = .064;
   function renderStereo() {
     if (lost) return;
-    camera.updateMatrixWorld(true); moon.update(camera); stereo.update(camera);
+    camera.updateMatrixWorld(true); moon.update(camera); stereo.update(camera);lightBlade();
     renderer.setScissorTest(true);
     renderer.setViewport(0,0,innerWidth/2,innerHeight); renderer.setScissor(0,0,innerWidth/2,innerHeight); renderer.render(scene,stereo.cameraL);
     renderer.setViewport(innerWidth/2,0,innerWidth/2,innerHeight); renderer.setScissor(innerWidth/2,0,innerWidth/2,innerHeight); renderer.render(scene,stereo.cameraR);
@@ -399,5 +405,5 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     try { return await recovery; } finally { recovery = null; }
   }
   return {T,scene,camera,moon,get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>city.stats,resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
-    get lost(){return lost;},get backend(){return renderer.backend?.isWebGPUBackend?'WebGPU':'WebGL';},render:()=>{if(!lost){camera.updateWorldMatrix(true,false);moon.update(camera);renderer.render(scene,camera);}}};
+    get lost(){return lost;},get backend(){return renderer.backend?.isWebGPUBackend?'WebGPU':'WebGL';},render:()=>{if(!lost){camera.updateWorldMatrix(true,false);moon.update(camera);lightBlade();renderer.render(scene,camera);}}};
 }

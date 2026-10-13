@@ -43,8 +43,8 @@ export function questControls(hand = 'right') {
     [`Joystick ${sideM}`, 'Se déplacer'],
     [`Poignée ${sideF}`, 'Courir (maintenu)'],
     [`Clic joystick ${sideF}`, 'S’accroupir / se relever · près d’un faisceau : récupérer une arme'],
-    [b.jump, 'Sauter (pression brève)'],
-    [`Gâchette ${sideF}`, 'Viser avec l’optique · maintenir'],
+    [b.jump, 'Saut · second appui : double saut / rebond mural'],
+    [`Gâchette ${sideF}`, 'Viser avec l’optique · parade avec AURORA'],
     [b.pause, 'Pause / reprise']
   ];
 }
@@ -54,7 +54,9 @@ export const QUEST_CONTROLS = Object.freeze(questControls('right'));
 const SHOT_HAPTIC = Object.freeze({ r9: [.72, 48], bloom: [.62, 40], lance: [.83, 74], thorn: [1, 120], nova: [1, 165] });
 export function hapticPlan(type, arg) {
   switch (type) {
-    case 'shot': return { main: SHOT_HAPTIC[arg] || SHOT_HAPTIC.r9 };
+    case 'shot': return { main: arg==='aurora'?[.5,60]:SHOT_HAPTIC[arg] || SHOT_HAPTIC.r9 };
+    case 'jump': return { side:[.22,35] };
+    case 'parry': return { main:[.8,75],side:[.24,30] };
     case 'charge': return { main: [.08 + .4 * clamp(arg || 0, 0, 1), 40] };
     case 'hit': return { main: [.12, 18] };
     case 'kill': return { main: [.4, 40] };
@@ -230,15 +232,15 @@ export class VRController {
     const display = gun.userData.ammo; if (!display) return;
     const capacity = game.weapon.capacity, ammo = game.ammo[game.weaponIndex], reloading = game.reloadRemaining > 0;
     const reloadProgress = reloading ? clamp(1 - game.reloadRemaining / game.weapon.reload, 0, 1) : 0;
-    const charge = game.weapon.chargeTime ? game.charge : 0, low = ammo <= capacity / 4, blink = Math.floor(performance.now() / 160) % 2 === 0;
-    gun.userData.setCombatState?.({ ammo, capacity, charge, reloadProgress, reloading, time: performance.now() / 1000,heat:feel?.heat||0,kick:feel?.kick||0,impulse:feel?.impulse||0 });
+    const charge = game.weapon.chargeTime ? game.charge : 0, low = !game.weapon.melee && ammo <= capacity / 4, blink = Math.floor(performance.now() / 160) % 2 === 0;
+    gun.userData.setCombatState?.({ ammo, capacity, charge, reloadProgress, reloading, time: game.time,heat:feel?.heat||0,kick:feel?.kick||0,impulse:feel?.impulse||0 });
     const key = `${ammo}|${capacity}|${Math.round(charge*12)}|${Math.ceil(reloadProgress*8)}|${reloading}|${low&&blink}`;
     if (key === display.key) return; display.key = key;
     const c = display.canvas.getContext('2d'), accent = this.hooks.world().character?.accent || '#ff9ac3';
     c.clearRect(0, 0, 128, 80); c.fillStyle = 'rgba(18,12,26,.97)'; c.fillRect(0, 0, 128, 80);
     c.strokeStyle = 'rgba(255,255,255,.22)'; c.lineWidth = 2; c.strokeRect(2, 2, 124, 76);
-    c.fillStyle = low && blink ? '#ff496b' : '#f5f1f4'; c.textAlign = 'center'; c.font = 'bold 48px monospace'; c.fillText(String(ammo), 64, 49);
-    const filled = Math.max(Math.ceil(ammo / Math.max(1,capacity) * 8), reloading ? Math.ceil(reloadProgress * 8) : 0);
+    c.fillStyle = low && blink ? '#ff496b' : '#f5f1f4'; c.textAlign = 'center'; c.font = 'bold 48px monospace'; c.fillText(game.weapon.melee?'∞':String(ammo), 64, 49);
+    const filled = game.weapon.melee?8:Math.max(Math.ceil(ammo / Math.max(1,capacity) * 8), reloading ? Math.ceil(reloadProgress * 8) : 0);
     for (let i=0;i<8;i++) {
       c.fillStyle = i < filled ? (low && blink ? '#ff496b' : accent) : 'rgba(255,255,255,.13)';
       c.fillRect(10 + i*14, 57, 10, 7);
@@ -262,7 +264,18 @@ export class VRController {
       c.bare.scale.set(hand === 'left' ? -size : size, size, size);
       c.gun.scale.x = hand === 'left' ? -1 : 1;
       if (c.gun.userData.ammo) c.gun.userData.ammo.plane.scale.x = c.gun.scale.x;
+      if(c.jumpPanel){c.jumpPanel.plane.visible=known&&hand!==main;const label=buttonNames(main).jump;if(c.jumpPanel.label!==label){c.jumpPanel.label=label;const x=c.jumpPanel.canvas.getContext('2d');x.clearRect(0,0,192,128);x.fillStyle='#142032';x.fillRect(2,2,188,124);x.strokeStyle=this.hooks.world().character?.accent||'#ff98bf';x.lineWidth=5;x.strokeRect(3,3,186,122);x.fillStyle='#f5f9ff';x.textAlign='center';x.font='bold 44px sans-serif';x.fillText(label+' ↑',96,56);x.font='bold 22px sans-serif';x.fillText('SAUT',96,99);c.jumpPanel.texture.needsUpdate=true;}}
     }
+  }
+  heldGun(){return controllerOf(this,settingsOf(this).hand)?.gun||null;}
+  jumpButtonHit(){
+    const main=controllerOf(this,settingsOf(this).hand),side=controllerOf(this,otherHand(settingsOf(this).hand));
+    if(!main||!side?.jumpPanel?.plane.visible)return false;
+    const world=this.hooks.world(),T=world.T,ray=this.jumpRay ||= new T.Raycaster();
+    this.jumpPoint ||= new T.Vector3();this.jumpDirection ||= new T.Vector3();this.jumpQuaternion ||= new T.Quaternion();
+    main.ray.updateWorldMatrix(true,false);side.jumpPanel.plane.updateWorldMatrix(true,false);
+    main.ray.getWorldPosition(this.jumpPoint);main.ray.getWorldQuaternion(this.jumpQuaternion);this.jumpDirection.set(0,0,-1).applyQuaternion(this.jumpQuaternion);
+    ray.set(this.jumpPoint,this.jumpDirection);ray.near=.02;ray.far=2;return ray.intersectObject(side.jumpPanel.plane,false).length>0;
   }
   async enterXR() {
     if (this.busy || this.active || !navigator.xr || !this.hooks.world()) return;
@@ -299,12 +312,17 @@ export class VRController {
         mount.position.set(GRIP_MOUNT.x, GRIP_MOUNT.y, GRIP_MOUNT.z);
         gun.visible = bare.visible = false; mount.add(gun, bare);
         this.makeAmmo(gun);
+        const jumpCanvas=document.createElement('canvas');jumpCanvas.width=192;jumpCanvas.height=128;
+        const jumpTexture=new T.CanvasTexture(jumpCanvas);jumpTexture.colorSpace=T.SRGBColorSpace;
+        const jumpPlane=new T.Mesh(new T.PlaneGeometry(.082,.055),new T.MeshBasicMaterial({map:jumpTexture,side:T.DoubleSide,toneMapped:false}));
+        jumpPlane.position.set(-.035,.105,.075);jumpPlane.rotation.x=-.9;mount.add(jumpPlane);
+        const jumpPanel={canvas:jumpCanvas,texture:jumpTexture,plane:jumpPlane,label:''};
         // Models held a few centimetres from the eyes gain nothing from the sun's shadow pass.
         mount.traverse(object => { if (object.isMesh) object.castShadow = false; });
         const connected = e => { ray.userData.source = e.data; this.applyRoles(); this.triggerBlocked = true; };
         const disconnected = () => { const wasMain = ray.userData.source?.handedness === settingsOf(this).hand; ray.userData.source = null; this.applyRoles(); if (wasMain) { this.cancelTrigger(); this.hooks.pause(); } };
         ray.addEventListener('connected', connected); ray.addEventListener('disconnected', disconnected);
-        return { ray, anchor, mount, gun, bare, source:null, level: 0, connected, disconnected };
+        return { ray, anchor, mount, gun, bare, jumpPanel,source:null, level: 0, connected, disconnected };
       });
       this.hooks.begin(); this.makeHUD(); this.makeSight(); this.makePauseBoard();document.body.classList.add('xr-mode');
       this.positionRig();
@@ -330,11 +348,12 @@ export class VRController {
     const world = this.hooks.world(); this.removeHUD(); this.removeSight();this.removePauseBoard();this.cancelTrigger();
     world.scene.add(world.camera);
     this.rig?.removeFromParent();
-    for (const { ray, gun, bare, connected, disconnected } of this.controllers) {
+    for (const { ray, gun, bare, jumpPanel,connected, disconnected } of this.controllers) {
       ray.removeEventListener('connected', connected); ray.removeEventListener('disconnected', disconnected);
       const { ammo, flash } = gun.userData;
       gun.removeFromParent();gun.userData.disposeDynamic?.();bare?.userData.dispose?.();flash.material.dispose();
       if (ammo) { ammo.plane.geometry.dispose(); ammo.plane.material.dispose(); ammo.texture.dispose(); }
+      if(jumpPanel){jumpPanel.plane.geometry.dispose();jumpPanel.plane.material.dispose();jumpPanel.texture.dispose();}
       ray.removeFromParent();
     }
     this.controllers = []; this.rig = null; this.session = null; this.mode = 'off'; this.previous.clear(); this.perf = null;
@@ -430,6 +449,11 @@ export class VRController {
         this.handPose.mainGrip = Math.max(this.handPose.mainGrip, amount(pad.buttons[xr ? 1 : 6]));
         result.precision ||= tracked && pressed(pad.buttons[xr ? 1 : 6]);
         if (xr) {
+          const uiKey=source.handedness+':ui',uiDown=pressed(pad.buttons[0]);
+          if(uiDown&&tracked&&phase==='playing'&&this.jumpButtonHit()){
+            if(!this.previous.get(uiKey))actions.add('jump');this.cancelTrigger();
+          }
+          this.previous.set(uiKey,uiDown);
           const turn = axes[stick] || 0;
           if (tracked) result.turn += deadzone(turn); // continuous angular velocity, never snap-turns
         } else { result.turn += axis(axes[2]); result.tilt += axis(axes[3]); }
@@ -488,7 +512,7 @@ export class VRController {
   updateSight() {
     if (!this.sight) return;
     const world = this.hooks.world(), game = this.hooks.game();
-    this.sight.group.visible = (settingsOf(this).laser === 'always' || this.precision) && !this.trackingLost && this.reloadGesture <= 0 && this.hooks.phase() === 'playing';
+    this.sight.group.visible = !this.hooks.game().weapon.melee && (settingsOf(this).laser === 'always' || this.precision) && !this.trackingLost && this.reloadGesture <= 0 && this.hooks.phase() === 'playing';
     if (!this.sight.group.visible) return;
     const aim = this.aim(), hit = traceVRAim(aim.origin, aim.direction, game.enemies, world.obstacles);
     const points = this.sight.beam.geometry.attributes.position;
@@ -570,13 +594,15 @@ export class VRController {
       const hp = clamp(game.player.hp, 0, 100), ammo = game.ammo[game.weaponIndex];
       const accent = this.hooks.world().character?.accent || '#ff9ac3';
       c.clearRect(0, 0, canvas.width, canvas.height);
-      c.fillStyle = 'rgba(18,12,26,.72)'; c.fillRect(0, 0, 248, 112); c.fillRect(264, 0, 248, 112);
-      c.textAlign = 'left'; c.fillStyle = '#dfc5dc'; c.font = 'bold 19px monospace';
-      c.fillText('SANTÉ', 20, 28); c.fillText('BALLES', 284, 28);
-      c.font = 'bold 46px monospace'; c.fillStyle = hp <= 25 ? '#ff6b8a' : '#fff0f7';
+      c.fillStyle = 'rgba(14,22,33,.82)';
+      for(const x of [0,264]){c.beginPath();c.roundRect(x,0,248,112,10);c.fill();c.strokeStyle='rgba(220,232,249,.18)';c.lineWidth=1;c.stroke();}
+      c.textAlign = 'left'; c.fillStyle = '#bdcadd'; c.font = '600 16px sans-serif';
+      c.fillText('SANTÉ', 20, 28); c.fillText(game.weapon.melee?'ÉNERGIE':'BALLES', 284, 28);
+      c.font = 'bold 46px sans-serif'; c.fillStyle = hp <= 25 ? '#ff6b8a' : '#f4f7fc';
       c.fillText(String(Math.ceil(hp)), 20, 80);
-      c.fillStyle = ammo === 0 ? '#ff6b8a' : '#fff0f7'; c.fillText(String(ammo), 284, 80);
-      c.fillStyle = '#574158'; c.fillRect(20, 94, 208, 4);
+      c.fillStyle = ammo === 0 && !game.weapon.melee ? '#ff6b8a' : '#f4f7fc'; c.fillText(game.weapon.melee?'∞':String(ammo), 284, 80);
+      if(!game.weapon.melee){c.fillStyle='#9cabc1';c.font='20px sans-serif';c.fillText('/ '+game.weapon.capacity,370,80);}
+      c.fillStyle = '#334256'; c.fillRect(20, 94, 208, 4);
       c.fillStyle = hp <= 25 ? '#ff6b8a' : game.regenerating ? '#a8e2db' : accent; c.fillRect(20, 94, hp / 100 * 208, 4);
       texture.needsUpdate = true;
       if(this.hud.portal){

@@ -5,6 +5,8 @@ import { buildGun } from './weapons.js';
 import { createSurfaceDetails } from './surfaces.js';
 import { characterForId } from './characters.js';
 import { playLaserShot, loadRealLaserSample } from './laser-sound.js';
+import { createSaberSound } from './saber-sound.js';
+import { bladeSwingPose } from './blade-combat.js';
 
 const $ = id => document.getElementById(id);
 const clamp = (n,a,b)=>Math.max(a,Math.min(b,n));
@@ -106,11 +108,12 @@ for(const button of document.querySelectorAll('[data-motion]'))button.addEventLi
 for(const button of document.querySelectorAll('[data-angle]'))button.addEventListener('click',()=>{state.angle=Number(button.dataset.angle);});
 $('level').addEventListener('input',e=>{state.level=Number(e.target.value);$('level-value').textContent=state.level;subjects.get(state.character).setLevel(state.level);updateStatus();});
 $('weapon').addEventListener('change',e=>{state.weapon=Number(e.target.value);subjects.get(state.character).setWeapon(state.weapon);updateStatus();});
-let previewAudio;
+let previewAudio,previewSaber;
 $('sound-preview').addEventListener('click',async()=>{
   try{
     previewAudio ||= new (window.AudioContext||window.webkitAudioContext)();
     if(previewAudio.state!=='running')await previewAudio.resume();
+    if(state.weapon===5){previewSaber ||=createSaberSound(previewAudio);previewSaber.ignite();return;}
     await loadRealLaserSample(previewAudio);
     playLaserShot(previewAudio,['r9','bloom','lance','thorn','nova'][state.weapon],1);
   }catch(error){console.warn('Essai audio laser non disponible',error);}
@@ -180,7 +183,8 @@ function tick(now){
    else {height=Math.max(0,7.25*elapsed-9*elapsed*elapsed);velocity=7.25-18*elapsed;}
  }
  root.position.y=height;
- model.animate(state.clock,!!speed,0,0,['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion)?1:0,dt,{airborne,verticalSpeed:velocity,crouched:['crouch','crouchWalk'].includes(state.motion),firing:['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion),sprint:['run','runFire'].includes(state.motion),preview:state.motion==='idle'});
+ model.animate(state.clock,!!speed,0,0,['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion)?1:0,dt,{airborne,verticalSpeed:velocity,crouched:['crouch','crouchWalk'].includes(state.motion),firing:['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion),sprint:['run','runFire'].includes(state.motion),preview:state.motion==='idle',saberSwing:state.weapon===5&&state.motion==='aim'?bladeSwingPose((state.clock%1.2)/.6):null});
+ model.gun.userData.setCombatState?.({time:state.clock});
  refreshSkeleton(model);
  const w=canvas.clientWidth,h=canvas.clientHeight;
  // Portrait inspection keeps the entire boot-to-helmet silhouette above the mobile control drawer.

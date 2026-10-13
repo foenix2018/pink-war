@@ -3,7 +3,9 @@
 import * as THREE from './vendor/three.module.min.js';
 import { characterForId } from './characters.js';
 import { playLaserShot, loadRealLaserSample, playLaserImpact, playWeaponAction } from './laser-sound.js';
-import { WEAPONS } from './game-logic.js';
+import { WEAPONS,segmentBox,traceEnemyHit } from './game-logic.js';
+import { sweepBlade,bladeBulletContact } from './blade-combat.js';
+import { createSaberSound } from './saber-sound.js';
 import { syncTrackedHands } from './xr-hands.js';
 import { createMusicBed } from './music.js';
 
@@ -47,6 +49,8 @@ let assets=null, assetsLoading=null, assetError='', weaponIndex=0, ammo=WEAPONS[
 const ammoByWeapon=WEAPONS.map(weapon=>weapon.capacity);
 let lastLeftX=false,lastLeftY=false,lastRightA=false, decorEnabled=true, muzzleUntil=0;
 let semiPressFired=false;
+let saberAudio=null,previousBlade=null,bladeSpeed=0,manualStrikeUntil=0,saberSwingSound=false,nextBotId=1;
+const bladeHitTimes=new Map(),bladeLight=new THREE.PointLight(hero.palette.rose,0,3.2,2);scene.add(bladeLight);
 const music=createMusicBed();
 let scanMessage = 'EN ATTENTE DU SCAN', bWasDown = false;
 const surfaces = new Map(), meshes = new Map(), bots = [], tracers = [];
@@ -90,6 +94,13 @@ function drawBoard() {
   if (next === lastBoardText) return;
   lastBoardText = next;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if(mode==='combat'){
+    ctx.fillStyle='rgba(15,23,34,.84)';ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#bdcadd';ctx.font='bold 28px sans-serif';ctx.fillText('SANTÉ',38,67);ctx.fillText(WEAPONS[weaponIndex].melee?'LAME ACTIVE':'CELLULES',427,67);
+    ctx.fillStyle=hp<30?'#ff738f':'#f5f9ff';ctx.font='bold 90px sans-serif';ctx.fillText(String(hp),38,181);
+    ctx.fillStyle='#f5f9ff';ctx.fillText(WEAPONS[weaponIndex].melee?'∞':String(ammo),427,181);
+    ctx.fillStyle='#d6e5fb22';ctx.fillRect(38,219,300,9);ctx.fillStyle='#'+tint.getHexString();ctx.fillRect(38,219,hp*3,9);texture.needsUpdate=true;return;
+  }
   ctx.fillStyle = 'rgba(16,12,25,.8)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.lineWidth = 5;
@@ -116,6 +127,7 @@ function updateBoard() {
   board.position.y -= .48;
   board.quaternion.copy(orientation);
   board.visible = true;
+  board.scale.setScalar(mode==='combat'?.42:1);
   drawBoard();
 }
 function poseObject(object, pose) {
@@ -265,7 +277,7 @@ function createBot(position) {
   hitbox.position.y=form==='probe'?.65:form==='scuttler'?.66:1.05;
   group.add(hitbox);scene.add(group);
   const now=performance.now()/1000;
-  const bot={group,hitbox,life:form==='brute'?120:form==='probe'?55:65,
+  const bot={id:nextBotId++,group,hitbox,life:form==='brute'?120:form==='probe'?55:65,elite,
     form,attackAt:now+4,born:now};
   hitbox.userData.bot=bot;
   bots.push(bot);
@@ -291,7 +303,7 @@ function selectWeapon(index) {
   const available=WEAPONS.map((w,i)=>w.level<=wave?i:-1).filter(i=>i>=0);
   if(!available.includes(index))index=available[0]||0;
   ammoByWeapon[weaponIndex]=ammo;
-  weaponIndex=index;ammo=ammoByWeapon[index];reloadUntil=0;triggerStarted=0;semiPressFired=false;
+  weaponIndex=index;ammo=ammoByWeapon[index];reloadUntil=0;triggerStarted=0;semiPressFired=false;previousBlade=null;bladeHitTimes.clear();
   assets.setWeapon(index,Math.min(wave,10));
   info('ARME : '+WEAPONS[index].name);
 }
@@ -301,6 +313,7 @@ function nextWeapon() {
 }
 function beginReload(now=performance.now()/1000) {
   if(mode!=='combat'||!assets||reloadUntil>now||ammo===WEAPONS[weaponIndex].capacity)return;
+  if(WEAPONS[weaponIndex].melee)return;
   reloadUntil=now+WEAPONS[weaponIndex].reload;
   roomNoise('reload',head,8);
   try{playWeaponAction(audio,WEAPONS[weaponIndex].id,'reload-out');}catch{}
@@ -310,6 +323,7 @@ function shoot(source,frame,charge=1) {
   const now=performance.now()/1000, weapon=WEAPONS[weaponIndex];
   if (mode!=='combat'||!assets||now-shotCooldown<weapon.interval||now<reloadUntil) return;
   if(weapon.semiAuto&&semiPressFired)return;
+  if(weapon.melee){shotCooldown=now;semiPressFired=true;manualStrikeUntil=now+.22;saberSwingSound=true;roomNoise('blade-swing',head,14);haptic(source);return;}
   if(ammo<=0){beginReload(now);return;}
   const pose=source&&frame?.getPose(source.targetRaySpace,renderer.xr.getReferenceSpace());
   if(!pose)return;
@@ -364,10 +378,13 @@ function updateCombat(seconds,dt) {
     const attention=visible?head:seconds<(bot.heardUntil||0)?bot.lastSound:null;
     if(attention)bot.group.rotation.y=Math.atan2(attention.x-p.x,attention.z-p.z)+Math.PI;
     if (seconds >= bot.attackAt) {
-      bot.attackAt=seconds+Math.max(2.5,5-wave*.15);
+      bot.attackAt=seconds+Math.max(1.3,3.5-wave*.085);
       const origin=p.clone().add(new THREE.Vector3(0,bot.form==='probe'?.95:1.15,0));
       if(visible){
-        hp=Math.max(0,hp-Math.min(18,5+Math.floor(wave*.65)));beam(origin,head,0xff6378);
+        const segment=assets?.gun.userData.getBladeSegment?.();
+        const contact=WEAPONS[weaponIndex].melee&&controllerHandState.offTrigger>.15&&segment?.extension>.95?bladeBulletContact(origin,head,segment.base,segment.tip,.10):null;
+        if(contact){beam(origin,new THREE.Vector3(contact.point.x,contact.point.y,contact.point.z),tint);saberAudio?.impact();}
+        else{hp=Math.max(0,hp-Math.min(18,5+Math.floor(wave*.65)));beam(origin,head,0xff6378);}
         if(!hp){mode='finished';music.pause();info('FIN DE PARTIE : GACHETTE POUR REJOUER');}
       }
     }
@@ -382,6 +399,23 @@ function updateCombat(seconds,dt) {
     reloading:reloadUntil>0,reloadProgress:reloadUntil?Math.max(0,1-(reloadUntil-seconds)/WEAPONS[weaponIndex].reload):0,
     time:seconds,flash:seconds<muzzleUntil,...controllerHandState
   });
+  updateRoomBlade(seconds,dt);
+}
+function updateRoomBlade(seconds,dt){
+  const segment=WEAPONS[weaponIndex].melee?assets?.gun.userData.getBladeSegment?.():null;
+  if(!segment||segment.extension<.95){previousBlade=null;bladeSpeed=0;return;}
+  bladeSpeed=previousBlade&&dt>0?Math.min(12,Math.hypot(segment.tip.x-previousBlade.tip.x,segment.tip.y-previousBlade.tip.y,segment.tip.z-previousBlade.tip.z)/dt):0;
+  if((bladeSpeed>.65||seconds<manualStrikeUntil)&&clearLineOfSight(head,new THREE.Vector3(segment.base.x,segment.base.y,segment.base.z))){
+    const targets=bots.map(bot=>({id:bot.id,x:bot.group.position.x,z:bot.group.position.z,elevation:bot.group.position.y,form:bot.form,elite:bot.elite}));
+    for(const hit of sweepBlade(previousBlade,segment,targets,[],head,segmentBox,traceEnemyHit)){
+      const bot=bots.find(b=>b.id===hit.enemy.id);if(!bot||seconds-(bladeHitTimes.get(bot.id)??-99)<.48)continue;
+      const point=new THREE.Vector3(hit.point.x,hit.point.y,hit.point.z),base=new THREE.Vector3(segment.base.x,segment.base.y,segment.base.z);
+      if(!clearLineOfSight(base,point))continue;bladeHitTimes.set(bot.id,seconds);bot.life-=WEAPONS[weaponIndex].damage*hit.multiplier;saberAudio?.impact();
+      if(bot.life<=0){removeBot(bot);score+=100;if(score%500===0)wave++;}
+    }
+  }
+  previousBlade={base:{...segment.base},tip:{...segment.tip},extension:segment.extension};
+  for(const [id,at] of bladeHitTimes)if(seconds-at>3)bladeHitTimes.delete(id);
 }
 async function initiateScan() {
   if (!session || roomCaptureAsked) return;
@@ -418,6 +452,7 @@ function onSelectEnd(event) {
   triggerHeld=false;triggerStarted=0;semiPressFired=false;
 }
 function onSessionEnd() {
+  saberAudio?.update({active:false,equipped:false});bladeLight.intensity=0;previousBlade=null;bladeHitTimes.clear();
   session = null; mode='idle';roomCaptureAsked=false;bWasDown=false;triggerHeld=false;music.pause();assets?.hideDecor();lastLeftX=false;lastLeftY=false;lastRightA=false;
   document.body.classList.remove('in-xr');
   endButton.hidden=true;
@@ -510,6 +545,9 @@ function tick(ms, frame) {
     updateCombat(seconds,dt);
     if(mode==='combat')music.update(dt,{threat:Math.min(1,.2+wave*.13)});
     if(assets&&mode!=='combat')assets.animate(seconds,dt,wave,{time:seconds,...controllerHandState});
+    const blade=assets?.gun.userData.getBladeSegment?.();bladeLight.intensity=blade&&assets.gun.visible?2.4*blade.extension:0;
+    if(blade)bladeLight.position.set((blade.base.x+blade.tip.x)/2,(blade.base.y+blade.tip.y)/2,(blade.base.z+blade.tip.z)/2);
+    saberAudio?.update({active:mode==='combat'&&session.visibilityState==='visible',equipped:!!WEAPONS[weaponIndex].melee,speed:bladeSpeed,swing:saberSwingSound});saberSwingSound=false;
     for(let i=tracers.length-1;i>=0;i--)if(seconds>=tracers[i].until){
       const item=tracers.splice(i,1)[0];
       scene.remove(item.object);item.object.geometry.dispose();item.object.material.dispose();
@@ -538,6 +576,7 @@ async function enter() {
   button.disabled=true;
   try {
     audio ||= new (window.AudioContext || window.webkitAudioContext)();
+    saberAudio ||=createSaberSound(audio);
     audio.resume().catch(()=>{});
     loadRealLaserSample(audio).catch(()=>{});
   } catch {}
