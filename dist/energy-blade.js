@@ -20,6 +20,10 @@ export function createEnergyBlade(color=0xff80b2){
     const length=Math.max(.001,extension);
     core.scale.y=halo.scale.y=length;core.position.y=halo.position.y=BLADE_LENGTH*length/2;
     halo.scale.x=halo.scale.z=1+Math.sin(time*73)*.065;
+  },deployInstant(time){
+    // A copied outgoing saber is already open at the start of holstering.
+    progress=1;extension=1;lastTime=time;root.visible=true;
+    core.scale.y=halo.scale.y=1;core.position.y=halo.position.y=BLADE_LENGTH/2;
   },reset(){
     progress=0;extension=0;lastTime=null;root.visible=false;
     core.scale.y=halo.scale.y=.001;core.position.y=halo.position.y=.0005;
