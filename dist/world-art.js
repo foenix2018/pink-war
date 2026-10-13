@@ -1,5 +1,6 @@
 import * as T from './vendor/three.webgpu.min.js';
 import { PERIMETER_WALLS, OUTER_BUILDINGS } from './city-layout.js';
+import { createBoundaryFence } from './boundary-fence.js';
 import { bevelBox, merge } from './geo.js';
 
 // The city is built from a small set of instanced, weathered surfaces. Its neutral
@@ -461,20 +462,10 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
     for(let slat=0;slat<5;slat++)cube(m.black,[x+2.078,.68,z-.36+slat*.18],[.025,.12,.065],[0,0,0],'box');
     ivy(x,1.4,z+1.02,3.2,1.4);
   }
-  // A continuous civic containment wall. Flat structural slabs match the
-  // collision footprint; damaged cladding never creates false holes at corners.
-  for(const wall of perimeter?PERIMETER_WALLS:[]) {
-    obstacles.push({...wall});
-    cube(m.concrete,[wall.x,wall.height/2,wall.z],[wall.hx*2,wall.height,wall.hz*2],[0,0,0],'box');
-    const vertical=wall.hz>wall.hx;
-    for(let along=-96;along<=96;along+=8) {
-      const x=vertical?wall.x:along,z=vertical?along:wall.z;
-      cube(m.char,[x,wall.height*.49,z],[vertical?1.12:.22,wall.height,vertical?.22:1.12],[0,0,0],'box');
-      rod(m.rust,[x,wall.height,z],[x,wall.height+.36,z],.035);
-      if(along%24===0)cube(m.lamp,[vertical?x-Math.sign(x)*.56:x,3.15,vertical?z:z-Math.sign(z)*.56],vertical?[.03,.08,.32]:[.32,.08,.03],[0,0,0],'box');
-    }
-    cube(m.chalk,[wall.x,wall.height+.065,wall.z],[wall.hx*2+.08,.13,wall.hz*2+.08],[0,0,0],'box');
-  }
+  // Continuous hip-height rails replace the opaque containment slabs.
+  const fence=perimeter?createBoundaryFence(T,group,{material:m.steel,height:1.05}):null;
+  if(fence){PERIMETER_WALLS.forEach(w=>obstacles.push({...w}));fence.setPolygon([{x:-99.1,y:0,z:-99.1},{x:99.1,y:0,z:-99.1},{x:99.1,y:0,z:99.1},{x:-99.1,y:0,z:99.1}]);}
+
   // 64 buildings outside the combat zone. Varied setbacks, infill, broken
   // glazing, roof installations and functioning service lamps give them scale.
   for(const building of OUTER_BUILDINGS) {
@@ -532,7 +523,7 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
   dustGeometry.setAttribute('position',new T.BufferAttribute(positions,3));
   const dust=new T.Points(dustGeometry,new T.PointsMaterial({color:0xd7c7a5,size:.026,opacity:.37,transparent:true,depthWrite:false}));group.add(dust);
   group.userData.instances=instances;group.userData.districts=['Brèche centrale','Archives envahies','Maintenance','Relais'];
-  return {group,materials:m,pbrStatus,stats:{interiorBuildings:structures.length,outerBuildings:OUTER_BUILDINGS.length,perimeterWalls:perimeter?PERIMETER_WALLS.length:0,windFoliage:true,sky:'fractal night clouds'},update(time){
+  return {group,materials:m,pbrStatus,fence,stats:{interiorBuildings:structures.length,outerBuildings:OUTER_BUILDINGS.length,perimeterWalls:perimeter?PERIMETER_WALLS.length:0,perimeterHeight:perimeter?1.05:0,perimeterKind:perimeter?'waist-fence':'open',windFoliage:true,sky:'fractal night clouds'},update(time){
     dust.position.x=Math.sin(time*.025)*2.5;dust.position.y=Math.sin(time*.06)*.25;
     if(time>=windAt){
       windAt=time+1/15;

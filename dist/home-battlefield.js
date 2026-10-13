@@ -19,7 +19,7 @@ export function createHomeBattlefield({room,obstacles=()=>[],forward=()=>({x:0,z
  function insideHouse(p){return bounds&&p.x>=bounds.minX&&p.x<=bounds.maxX&&p.z>=bounds.minZ&&p.z<=bounds.maxZ;}
  function canStand(p,r=.33){
   if(!center||Math.hypot(p.x-center.x,p.z-center.z)>radius-r)return false;
-  if(insideHouse(p)&&!room.canStand(p,r))return false;
+  if(insideHouse(p)&&!(room.canStandOnField||room.canStand)(p,r))return false;
   return !boxes().some(b=>p.x>b.x-b.hx-r&&p.x<b.x+b.hx+r&&p.z>b.z-b.hz-r&&p.z<b.z+b.hz+r&&center.y<b.y+b.height&&center.y+1.95>b.y);
  }
  function setRoom(next){
@@ -32,7 +32,7 @@ export function createHomeBattlefield({room,obstacles=()=>[],forward=()=>({x:0,z
   if(purpose==='weapon'||purpose==='companion')return room.findPoint({purpose,head,avoid});
   const f=forward(),yaw=Math.atan2(f.x,f.z),first=avoid.length===0;
   for(let i=0;i<180;i++){
-   const angle=yaw+(first?(random()-.5)*1.8:(random()-.5)*Math.PI*2),distance=Math.max(15,Math.hypot(bounds.maxX-bounds.minX,bounds.maxZ-bounds.minZ)/2+8)+random()*7;
+   const angle=yaw+(first&&i<60?(random()-.5)*1.8:(random()-.5)*Math.PI*2),distance=Math.max(15,Math.hypot(bounds.maxX-bounds.minX,bounds.maxZ-bounds.minZ)/2+8)+random()*7;
    const p=portal?{x:portal.x+(random()-.5)*1.1,y:portal.elevation,z:portal.z+(random()-.5)*1.1}:{x:center.x+Math.sin(angle)*distance,y:center.y,z:center.z+Math.cos(angle)*distance};
    if(Math.hypot(p.x-head.x,p.z-head.z)<(purpose==='portal'?12:10)||!canStand(p,.4))continue;
    if(avoid.some(a=>Math.hypot(a.x-p.x,a.z-p.z)<(purpose==='portal'?8:.85)))continue;

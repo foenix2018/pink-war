@@ -23,15 +23,16 @@ test('LANCE is a precise single-shot sniper, has its own battery and cannot fire
   assert.equal(game.reload(),true);for(let i=0;i<50;i++)game.step(.05);assert.equal(game.ammo[2],5);
 });
 
-test('continuous perimeter blocks movement and shots along all edges and at every corner',()=>{
+test('waist-high fences block movement and low shots at all edges while high shots pass above',()=>{
   for(let i=0;i<360;i++){
-    const angle=i*Math.PI/180,end={x:Math.cos(angle)*145,y:1.6,z:Math.sin(angle)*145};
-    assert.ok(PERIMETER_WALLS.some(w=>segmentBox({x:0,y:1.6,z:0},end,w)!==null),'no radial gap at '+i);
+    const angle=i*Math.PI/180,end={x:Math.cos(angle)*145,y:.6,z:Math.sin(angle)*145};
+    assert.ok(PERIMETER_WALLS.some(w=>segmentBox({x:0,y:.6,z:0},end,w)!==null),'no radial gap at '+i);
+    assert.equal(PERIMETER_WALLS.some(w=>segmentBox({x:0,y:1.6,z:0},{...end,y:1.6},w)!==null),false);
     const p={x:0,z:0};moveInArena(p,end.x*10,end.z*10,.55,PERIMETER_WALLS);
     assert.ok(Math.abs(p.x)<=98.45&&Math.abs(p.z)<=98.45);
   }
   const game=new ArenaGame(PERIMETER_WALLS,()=>.5);game.nextWave=999;
-  game.shoot({x:0,y:1.6,z:98},{x:0,y:0,z:1});game.step(.05);
+  game.shoot({x:0,y:.6,z:98},{x:0,y:0,z:1});game.step(.05);
   assert.equal(game.bullets.length,0);assert.ok(game.drainEvents().some(e=>e.type==='impact'&&e.z===99));
 });
 

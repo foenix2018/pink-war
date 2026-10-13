@@ -1,10 +1,10 @@
 // Shared footprints: rendering and combat use the same continuous perimeter.
 export const PERIMETER_WALLS=Object.freeze([
-  {x:-99.5,z:0,hx:.5,hz:100,height:4.2},
-  {x:99.5,z:0,hx:.5,hz:100,height:4.2},
-  {x:0,z:-99.5,hx:100,hz:.5,height:4.2},
-  {x:0,z:99.5,hx:100,hz:.5,height:4.2}
-].map(w=>Object.freeze({...w,perimeter:true,surface:'concrete'})));
+  {x:-99.1,z:0,hx:.1,hz:100,height:1.05},
+  {x:99.1,z:0,hx:.1,hz:100,height:1.05},
+  {x:0,z:-99.1,hx:100,hz:.1,height:1.05},
+  {x:0,z:99.1,hx:100,hz:.1,height:1.05}
+].map(w=>Object.freeze({...w,perimeter:true,surface:'metal'})));
 
 // Whole footprints stay outside the playable square, including at corners.
 // Close civic blocks and more distant towers give the skyline depth.

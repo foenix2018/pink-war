@@ -9,7 +9,7 @@ const mix=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
 export class RoomGame extends ArenaGame {
   constructor(room,random=Math.random){super([],random);this.room=room;this.running=false;this.pendingOffers=new Set();this.maxActive=3;this.head={x:0,y:1.65,z:0};this.roomPhase='ready';}
   start(head){
-    if(!this.room.hasFloor()||!this.room.findPoint({purpose:'portal',head}))return false;
+    if(!this.room.hasFloor())return false;
     super.reset();this.pendingOffers.clear();this.running=true;this.roomPhase='between';this.nextWave=1.5;
     this.head={...head};this.player.x=head.x;this.player.z=head.z;this.player.elevation=this.room.floorAt(head)??0;
     this.maxActive=clamp(Math.floor((this.room.freeArea?.()||12)/5),1,6);return true;

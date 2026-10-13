@@ -14,5 +14,5 @@ with tempfile.TemporaryDirectory(prefix='pink-character-') as temp:
     html=(project/'dist/personnage.html').read_text().replace('<script type="module" src="./personnage-lab.js"></script>','<script>'+js+'</script>')
     html=html.replace('href="./icon.svg"','href="data:image/svg+xml,'+urllib.parse.quote((project/'dist/icon.svg').read_text(),safe='')+'"').replace('href="./index.html"','href="https://pink-war.vercel.app"').replace('href="evolutions.html"','href="https://pink-war.vercel.app/evolutions.html"')
     license_text='\n'.join((project/('dist/vendor/'+name)).read_text() for name in ['LICENSE.three.txt','LICENSE.fflate.txt']).replace('--','—')
-    html=html.replace('<!doctype html>','<!doctype html>\n<!-- Pink war 3.28 : pompier RLH, armures AÉGIS originales, casque fermé et animations Mixamo.\n'+license_text+'\n-->')
+    html=html.replace('<!doctype html>','<!doctype html>\n<!-- Pink war 3.29 : pompier RLH, armures AÉGIS originales, casque fermé et animations Mixamo.\n'+license_text+'\n-->')
     output.parent.mkdir(parents=True,exist_ok=True);output.write_text(html);print(output,output.stat().st_size,'bytes')

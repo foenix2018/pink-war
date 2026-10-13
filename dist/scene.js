@@ -348,7 +348,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   }
   function resetDynamic(){combatFX.reset();laserFX.reset();traversal.update(0);for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();portal.visible=true;for(const death of deaths){scene.remove(death.fx);death.mat.dispose();death.haloMat.dispose();}deaths.length=0;for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
   function sync(sim,time,dt){
-    traversal.update(sim.time);combatFX.update(dt,camera);laserFX.update(sim.bullets,dt);trackShadows(sim.player.x,sim.player.z,sim.player.elevation||0);
+    city.fence?.update({...sim.player,y:(sim.player.elevation||0)+(sim.player.crouched?1.05:1.65)},.65,1.2);traversal.update(sim.time);combatFX.update(dt,camera);laserFX.update(sim.bullets,dt);trackShadows(sim.player.x,sim.player.z,sim.player.elevation||0);
     setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));updateStations(sim,time);syncSecondaryPortals(sim,sim.time);
     for(const event of sim.events||[])if(event.type==='kill')beginDeath(event.id,time);
     updateDeaths(time);
@@ -411,7 +411,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     })();
     try { return await recovery; } finally { recovery = null; }
   }
-  return {T,scene,camera,moon,get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>city.stats,resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
+  return {T,scene,camera,moon,get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>({...city.stats,boundary:city.fence?.stats()}),resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
     holsterGun,setPlayerVisible,
     get lost(){return lost;},get backend(){return renderer.backend?.isWebGPUBackend?'WebGPU':'WebGL';},render:()=>{if(!lost){camera.updateWorldMatrix(true,false);moon.update(camera);lightBlade();renderer.render(scene,camera);}}};
 }

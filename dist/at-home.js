@@ -15,6 +15,7 @@ import { createLaserFX } from './laser-fx.js';
 import { createMagnifiedSight } from './magnified-sight.js';
 import { createHomeBattlefield } from './home-battlefield.js';
 import { hapticPlan, buzz } from './haptics.js';
+import { createBoundaryFence } from './boundary-fence.js';
 
 const $=id=>document.getElementById(id),status=$('at-home-status'),button=$('at-home-enter');
 let characterId='ghju';try{characterId=localStorage.getItem('pink-war-character')||characterId;}catch{}
@@ -28,6 +29,9 @@ renderer.setClearColor(0x000000,0);renderer.setPixelRatio(Math.min(devicePixelRa
 renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
 renderer.xr.enabled=true;renderer.xr.setReferenceSpaceType('local-floor');renderer.xr.setFoveation?.(.65);
 const raycaster=new THREE.Raycaster(),head=new THREE.Vector3(),direction=new THREE.Vector3(),orientation=new THREE.Quaternion(),tmp=new THREE.Vector3();
+let boundedSpace=null,zoneRecord=null,playPolygon=[],playAreaSource='',startRequested=false;
+const homeFenceMaterial=new THREE.MeshBasicMaterial({color:hero.palette.rose,transparent:true,opacity:.32,depthWrite:false,toneMapped:false});
+const boundary=createBoundaryFence(THREE,scene,{material:homeFenceMaterial});
 let session=null,mode='idle',assets=null,assetsLoading=null,assetError='',audio=null,ambience=null,saberAudio=null,scope=null;
 let lastTime=0,startTime=0,roomCaptureAsked=false,decorEnabled=true,fullImmersion=true,roomDirty=true,navigation=null,navigationFloorY=null,lastRoomBuild=-99;
 let frames=0,fireBlocked=true,lastTrigger=false,scanMessage='',announcementUntil=0,muzzleUntil=0,refreshScan=false;
@@ -41,9 +45,10 @@ const bladeLight=new THREE.PointLight(hero.palette.rose,0,3.2,2);scene.add(blade
 const hostileGeo=new THREE.CylinderGeometry(.012,.012,1,6),hostileMat=new THREE.MeshBasicMaterial({color:0xff657f,toneMapped:false});
 const opticalEye=new THREE.PerspectiveCamera();opticalEye.matrixAutoUpdate=false;
 function info(text){scanMessage=text;status.textContent=text;}
-function surfaceRecords(){return [...surfaces.values(),...meshes.values()];}
-function floors(){return surfaceRecords().filter(r=>r.isFloor&&r.polygon?.length>=3);}
-function blockers(){return surfaceRecords().filter(r=>r.isFloor||r.isCover).map(r=>r.collider);}
+function detectedRecords(){return [...surfaces.values(),...meshes.values()];}
+function surfaceRecords(){return zoneRecord?[...detectedRecords(),zoneRecord]:detectedRecords();}
+function floors(){const real=detectedRecords().filter(r=>r.isFloor&&r.polygon?.length>=3);return real.length?real:zoneRecord?[zoneRecord]:[];}
+function blockers(){const supported=new Set(floors());return surfaceRecords().filter(r=>supported.has(r)||r.isCover).map(r=>r.collider);}
 function traceRoom(a,b,objects=blockers()){
  const length=Math.hypot(b.x-a.x,b.y-a.y,b.z-a.z);if(length<.001)return null;
  raycaster.set(tmp.set(a.x,a.y,a.z),direction.set(b.x-a.x,b.y-a.y,b.z-a.z).divideScalar(length));raycaster.near=.012;raycaster.far=length;
@@ -52,24 +57,31 @@ function traceRoom(a,b,objects=blockers()){
  return {t:hit.distance/length,point:{x:hit.point.x,y:hit.point.y,z:hit.point.z},normal:{x:normal.x,y:normal.y,z:normal.z},surface:'metal'};
 }
 function clearLineOfSight(a,b){return !traceRoom(a,b);}
-function canStand(p,radius=.33){
- const all=floors(),y=roomFloorAt(p,all);if(y===null)return false;
- const nonFloor=surfaceRecords().filter(r=>r.isCover).map(r=>r.collider);
+function canStandOnField(p,radius=.33){
+ const nonFloor=detectedRecords().filter(r=>r.isCover).map(r=>r.collider),y=p.y;
  for(const [dx,dz] of [[0,0],[radius,0],[-radius,0],[0,radius],[0,-radius]]){
-  const q={x:p.x+dx,z:p.z+dz,y:y+.08};if(roomFloorAt(q,all)===null)return false;
+  const q={x:p.x+dx,z:p.z+dz,y:y+.08};
   if(traceRoom(q,{...q,y:y+1.95},nonFloor))return false;
   if((dx||dz)&&traceRoom({x:p.x,y:y+.75,z:p.z},{...q,y:y+.75},nonFloor))return false;
+ }return true;
+}
+function canStand(p,radius=.33){
+ const all=floors(),y=roomFloorAt(p,all);if(y===null||!canStandOnField({...p,y},radius))return false;
+ for(const [dx,dz] of [[0,0],[radius,0],[-radius,0],[0,radius],[0,-radius]]){
+  const q={x:p.x+dx,z:p.z+dz,y:y+.08};if(roomFloorAt(q,all)===null)return false;
   if(!traceRoom({...q,y:y+.35},{...q,y:y-.12},all.map(f=>f.collider)))return false;
  }return true;
 }
+
 function findPoint({purpose,head:viewer=head,avoid=[],portal=null}={}){
- const all=floors();if(!all.length)return null;const bounds=roomBounds(all);if(!bounds)return null;
+ const all=floors();if(!all.length)return null;const bounds=purpose==='weapon'&&playPolygon.length>=3?roomBounds([{polygon:playPolygon}]):roomBounds(all);if(!bounds)return null;
  const min=purpose==='weapon'?.65:1.6,max=purpose==='weapon'?1.6:16;
  for(let i=0;i<140;i++){
   const point=portal?{x:portal.x+(Math.random()-.5)*1.2,z:portal.z+(Math.random()-.5)*1.2,y:portal.elevation}:
    {x:bounds.minX+Math.random()*(bounds.maxX-bounds.minX),z:bounds.minZ+Math.random()*(bounds.maxZ-bounds.minZ),y:roomFloorAt({...viewer,y:viewer.y-.65},all)??bounds.floorY};
   const y=roomFloorAt(point,all);if(y===null)continue;point.y=y;
   const d=Math.hypot(point.x-viewer.x,point.z-viewer.z);if(d<min||d>max||!canStand(point,purpose==='weapon'?.23:.4))continue;
+  if(purpose==='weapon'&&playPolygon.length>=3&&!insideRoomPolygon(point,playPolygon))continue;
   if(avoid.some(other=>Math.hypot(other.x-point.x,other.z-point.z)<(purpose==='portal'?1.5:.85)))continue;
   if(purpose==='weapon'&&!clearLineOfSight(viewer,{...point,y:y+1}))continue;
   if(navigation&&!navigation.reachable(point,viewer))continue;return point;
@@ -77,7 +89,7 @@ function findPoint({purpose,head:viewer=head,avoid=[],portal=null}={}){
 }
 const scannedRoom={hasFloor:()=>floors().length>0,floorAt:p=>roomFloorAt({...p,y:p.y-.65},floors()),freeArea:()=>navigation?.freeArea()||8,
  ceilingAt:p=>Math.min(p.y+2.6,...surfaceRecords().filter(r=>r.kind==='ceiling'&&r.polygon[0].y>p.y+.4&&insideRoomPolygon(p,r.polygon)).map(r=>r.polygon.reduce((sum,v)=>sum+v.y,0)/r.polygon.length)),
- findPoint,canStand,trace:traceRoom,waypoint:(from,target)=>navigation?.waypoint(from,target)};
+ findPoint,canStand,canStandOnField,trace:traceRoom,waypoint:(from,target)=>navigation?.waypoint(from,target)};
 const room=createHomeBattlefield({room:scannedRoom,obstacles:()=>assets?.architecture.obstacles||[],forward:()=>new THREE.Vector3(0,0,-1).applyQuaternion(orientation)});
 const game=new RoomGame(room);
 function makeBoard(width,height,size){
@@ -106,10 +118,26 @@ function planeGeometry(polygon){
  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(polygon.flatMap(p=>[p.x,p.y,p.z]),3));g.setIndex(faces.flat());g.computeVertexNormals();return g;
 }
 function discardSurface(record){assets?.disposeDecor(record);record.collider.removeFromParent();record.outline?.removeFromParent();record.collider.geometry.dispose();record.outline?.geometry.dispose();roomDirty=true;}
+function updatePlayArea(frame){
+ if(!session)return;let points=null;
+ if(boundedSpace?.boundsGeometry?.length>=3&&frame){try{
+  const pose=frame.getPose(boundedSpace,renderer.xr.getReferenceSpace());if(pose){const transform=new THREE.Matrix4().fromArray(pose.transform.matrix);points=[...boundedSpace.boundsGeometry].map(p=>new THREE.Vector3(p.x,p.y,p.z).applyMatrix4(transform));}
+ }catch{}}
+ if(points){
+  const changed=!zoneRecord||playAreaSource!=='quest-boundary'||points.length!==playPolygon.length||points.some((p,i)=>p.distanceTo(new THREE.Vector3(playPolygon[i].x,playPolygon[i].y,playPolygon[i].z))>.04);
+  if(changed){playPolygon=points.map(p=>({x:p.x,y:p.y,z:p.z}));playAreaSource='quest-boundary';if(zoneRecord)discardSurface(zoneRecord);
+   const collider=new THREE.Mesh(planeGeometry(playPolygon),blockerMaterial);scene.add(collider);zoneRecord={collider,kind:'floor',isFloor:true,isCover:false,polygon:playPolygon,invisibleFloor:true};roomDirty=true;boundary.setPolygon(playPolygon);}
+ }
+ if(playAreaSource!=='quest-boundary'){
+  const all=floors(),at=roomFloorAt({x:head.x,y:head.y-.65,z:head.z},all),record=all.find(r=>insideRoomPolygon(head,r.polygon)&&Math.abs(r.polygon[0].y-at)<.15)||all[0];
+  if(record){playPolygon=record.polygon.map(p=>({x:p.x,y:p.y,z:p.z}));playAreaSource='scanned-floor';boundary.setPolygon(playPolygon);}
+ }
+ boundary.root.visible=!!session&&decorEnabled&&playPolygon.length>=3;boundary.update(head,.25,.8);
+}
 function updateSurfaces(frame){
  const ref=renderer.xr.getReferenceSpace();if(!ref||!frame)return;
  const detected=frame.detectedPlanes||session?.detectedPlanes;
- if(refreshScan&&detected&&[...detected].some(p=>p.semanticLabel==='floor')){for(const record of surfaceRecords())discardSurface(record);surfaces.clear();meshes.clear();navigationFloorY=null;room.resetRoom();assets?.architecture.resetRoom();refreshScan=false;}
+ if(refreshScan&&detected&&[...detected].some(p=>p.semanticLabel==='floor')){for(const record of surfaceRecords())discardSurface(record);surfaces.clear();meshes.clear();zoneRecord=null;navigationFloorY=null;room.resetRoom();assets?.architecture.resetRoom();refreshScan=false;}
  if(detected){ // A temporarily empty detection set while walking is not a new room scan.
   let count=0;for(const plane of detected){if(++count>65)break;if(!surfaces.has(plane)&&surfaces.size>=65)continue;const pose=frame.getPose(plane.planeSpace,ref);if(!pose||plane.polygon?.length<3)continue;
    let record=surfaces.get(plane),changed=!record||record.changed!==plane.lastChangedTime;
@@ -138,17 +166,19 @@ function updateSurfaces(frame){
  const currentFloor=scannedRoom.floorAt(head);if(currentFloor!==null&&(navigationFloorY===null||Math.abs(currentFloor-navigationFloorY)>.08))roomDirty=true;
  if(roomDirty&&roomClock-lastRoomBuild>.25){
   roomDirty=false;lastRoomBuild=roomClock;const bounds=roomBounds(floors());navigationFloorY=currentFloor??navigationFloorY??bounds?.floorY??null;
-  const anchored=bounds?{...bounds,floorY:navigationFloorY??bounds.floorY}:null;
+  const area=playPolygon.length>=3?roomBounds([{polygon:playPolygon}]):bounds;
+  const anchored=area?{...area,floorY:navigationFloorY??area.floorY}:null;
   navigation=createRoomNavigation(anchored,canStand);assets?.architecture.setRoom(anchored);if(anchored)room.setRoom(anchored);assets?.architecture.setEnabled(decorEnabled,fullImmersion);
  }
 }
 function edge(key,down){const old=previousButtons.get(key)||false;previousButtons.set(key,down);return down&&!old;}
 function cancelFire(){game.triggerHeld=false;game.semiPending=false;game.charge=0;game.bladePrevious=null;fireBlocked=true;scope?.release();}
+function requestCombat(){startRequested=true;startCombat();}
 function startCombat(){
- if(mode==='paused'){game.running=true;mode='combat';cancelFire();info('SIGNAL RÉTABLI');return;}
+ if(mode==='paused'){startRequested=false;game.running=true;mode='combat';cancelFire();info('SIGNAL RÉTABLI');return;}
  if(!assets){info(assetError||'CHARGEMENT DES ARMES ET DES MACHINES');return;}
  if(!game.start(head)){info(floors().length?'ZONE DE SOL TROP ÉTROITE OU MASQUÉE':'SOL NON DÉTECTÉ : GÂCHETTE GAUCHE POUR SCANNER');return;}
- clearBots();assets.syncOffers([]);assets.setPortals([],head);feel.reset();laser.reset();mode='combat';cancelFire();music.start(audio);
+ startRequested=false;clearBots();assets.syncOffers([]);assets.setPortals([],head);feel.reset();laser.reset();mode='combat';cancelFire();music.start(audio);
  const point=findPoint({purpose:'companion',head});if(point)assets.placeCompanion(new THREE.Vector3(point.x,point.y,point.z),head);else assets.companion.root.visible=false;
  info('INTRUSION DANS LE LABORATOIRE');announce('INTRUSION / '+hero.name);
 }
@@ -203,13 +233,14 @@ function tick(ms,frame){
   const right=[...session.inputSources].find(s=>s.handedness==='right'),left=[...session.inputSources].find(s=>s.handedness==='left'),padR=right?.gamepad,padL=left?.gamepad;
   Object.assign(controllerHandState,{trigger:padR?.buttons?.[0]?.value||0,grip:padR?.buttons?.[1]?.value||0,offTrigger:padL?.buttons?.[0]?.value||0,offGrip:padL?.buttons?.[1]?.value||0});
   if(edge('exit',!!padR?.buttons?.[5]?.pressed)){session.end().catch(()=>{});return;}
-  if(active&&edge('reload',!!padR?.buttons?.[4]?.pressed)&&mode==='combat')game.reload();
+  if(active&&edge('reload',!!padR?.buttons?.[4]?.pressed)){if(mode==='combat')game.reload();else requestCombat();}
   if(active&&edge('weapon',!!padL?.buttons?.[5]?.pressed)&&mode==='combat')game.cycleWeapon();
   if(active&&edge('collect',!!padL?.buttons?.[3]?.pressed)&&mode==='combat')game.collectWeapon();
-  if(active&&edge('decor',!!padL?.buttons?.[4]?.pressed)){decorEnabled=!decorEnabled;assets?.architecture.setEnabled(decorEnabled,fullImmersion);for(const record of surfaceRecords())if(record.decor)record.decor.visible=decorEnabled;}
-  if(frame){syncTrackedHands(mounts,session,frame,renderer.xr.getReferenceSpace());updateControllerRoles();updateSurfaces(frame);}
+  if(active&&edge('decor',!!padL?.buttons?.[4]?.pressed)){decorEnabled=!decorEnabled;assets?.architecture.setEnabled(decorEnabled,fullImmersion);}
+  if(frame){syncTrackedHands(mounts,session,frame,renderer.xr.getReferenceSpace());updateControllerRoles();updatePlayArea(frame);updateSurfaces(frame);updatePlayArea(frame);}
   const held=controllerHandState.trigger>.15,main=mounts.find(m=>m.source?.handedness==='right');if(!held)fireBlocked=false;
-  if(held&&!lastTrigger&&active&&mode!=='combat')startCombat();lastTrigger=held;
+  if(held&&!lastTrigger&&active&&mode!=='combat')requestCombat();lastTrigger=held;
+  if(startRequested&&active&&mode!=='combat'&&assets&&floors().length)startCombat();
   if(assets){
    const reload=game.reloadRemaining?1-game.reloadRemaining/game.weapon.reload:0;
    assets.gun.rotation.set(feedback.pitch-(game.weapon.melee?.55:0)+reload*Math.PI/2,feedback.yaw,game.weapon.melee?-.06:0);
@@ -228,7 +259,7 @@ function tick(ms,frame){
    const blade=assets.gun.userData.getBladeSegment();bladeLight.intensity=active&&assets.gun.visible&&blade?2.4*blade.extension:0;if(blade)bladeLight.position.set((blade.base.x+blade.tip.x)/2,(blade.base.y+blade.tip.y)/2,(blade.base.z+blade.tip.z)/2);
    saberAudio?.update({active:active&&mode==='combat',equipped:game.weapon.melee,extended:!fireBlocked&&held,speed:game.bladeSpeed,swing:game.weapon.melee&&game.bladePhase<.08});
   }
-  if(mode==='ready'){if(!assets)info(assetError||'CHARGEMENT DU LABORATOIRE');else if(floors().length)info('LABORATOIRE MODÉLISÉ : GÂCHETTE DROITE');else if(seconds-startTime>2)info('SOL NON DÉTECTÉ : GÂCHETTE GAUCHE POUR SCANNER');}
+  if(mode==='ready'){if(!assets)info(assetError||'CHARGEMENT DU LABORATOIRE');else if(floors().length)info(playAreaSource==='quest-boundary'?'ZONE QUEST PRÊTE : A OU GÂCHETTE DROITE':'SOL SCANNÉ PRÊT : A OU GÂCHETTE DROITE');else if(seconds-startTime>2)info(startRequested?'DÉMARRAGE EN ATTENTE : SCAN GÂCHETTE GAUCHE':'SOL NON DÉTECTÉ : GÂCHETTE GAUCHE POUR SCANNER');}
   if(active&&mode==='combat')music.update(dt,{active:true,threat:Math.min(1,game.enemies.length/Math.max(1,game.maxActive)),intermission:game.roomPhase==='between'});
   ambience?.update(dt,{active:active&&mode==='combat',position:head,moving:true,grounded:true,elevation:game.player.elevation,probes:game.enemies});
   laser.update(game.bullets,dt);updateBoards();
@@ -239,10 +270,10 @@ async function initiateScan(){
  if(typeof session.initiateRoomCapture!=='function'){info('CONFIGURE LE SCAN DANS SPACE SETUP DU QUEST');roomCaptureAsked=false;return;}
  info('SCAN DE LA MAISON EN COURS');try{await session.initiateRoomCapture();refreshScan=true;roomDirty=true;info('SCAN TERMINÉ : RECHERCHE DU SOL');}catch{info('SCAN ANNULÉ : TU PEUX RÉESSAYER');}finally{roomCaptureAsked=false;}
 }
-function onSelect(event){if(session?.visibilityState!=='visible')return;if(event.inputSource?.handedness==='left'&&mode!=='combat')initiateScan();if(event.inputSource?.handedness==='right'&&mode!=='combat')startCombat();}
+function onSelect(event){if(session?.visibilityState!=='visible')return;if(event.inputSource?.handedness==='left'&&mode!=='combat')initiateScan();if(event.inputSource?.handedness==='right'&&mode!=='combat')requestCombat();}
 function onSessionEnd(){
  session=null;mode='idle';game.stop();cancelFire();game.enemies=[];game.bullets=[];game.activePortals=[];game.weaponOffers=[];game.toSpawn=0;game.pendingOffers.clear();scope?.dispose();scope=null;music.pause();ambience?.pause();saberAudio?.update({active:false});bladeLight.intensity=0;clearBots();laser.reset();assets?.hideDecor();
- for(const record of surfaceRecords())discardSurface(record);surfaces.clear();meshes.clear();navigation=null;navigationFloorY=null;room.resetRoom();roomDirty=true;lastRoomBuild=-99;
+ for(const record of surfaceRecords())discardSurface(record);surfaces.clear();meshes.clear();zoneRecord=null;boundedSpace=null;playPolygon=[];playAreaSource='';startRequested=false;boundary.setPolygon([]);navigation=null;navigationFloorY=null;room.resetRoom();roomDirty=true;lastRoomBuild=-99;
  for(const item of [hud,board,announcement])item.plane.visible=false;for(const mount of mounts){mount.source=null;mount.anchor.visible=false;mount.ray.userData.source=null;}
  assets?.gun.removeFromParent();assets?.freeHand.removeFromParent();previousButtons.clear();lastTrigger=false;roomCaptureAsked=false;refreshScan=false;
  document.body.classList.remove('in-xr');$('at-home-end').hidden=true;button.disabled=false;info('SESSION TERMINÉE · RELANCER AT HOME');
@@ -256,8 +287,8 @@ async function enter(){
   opened=await request;session=opened;mode='ready';decorEnabled=true;lastTime=0;startTime=performance.now()/1000;roomDirty=true;lastRoomBuild=-99;game.stop();
   opened.addEventListener('end',onSessionEnd,{once:true});opened.addEventListener('selectstart',onSelect);opened.addEventListener('inputsourceschange',updateControllerRoles);
   opened.addEventListener('visibilitychange',()=>{if(opened.visibilityState==='hidden'&&mode==='combat'){mode='paused';game.stop();cancelFire();music.pause();ambience?.pause();info('GÂCHETTE DROITE : REPRENDRE');}});
-  await renderer.xr.setSession(opened);document.body.classList.add('in-xr');$('at-home-end').hidden=false;info('DÉTECTION DE LA MAISON');
-  if(!assets){assetsLoading ||=import('./at-home-assets.js').then(m=>m.createAtHomeAssets(scene,hero)).then(pack=>{assets=pack;assetsLoading=null;assetError='';updateControllerRoles();for(const r of surfaceRecords())assets.projectRuin(r,decorEnabled,head);roomDirty=true;lastRoomBuild=-99;}).catch(error=>{assetsLoading=null;assetError='MODÈLES INDISPONIBLES : '+error.message;console.error('AT HOME',error);});}else updateControllerRoles();
+  await renderer.xr.setSession(opened);try{boundedSpace=await opened.requestReferenceSpace('bounded-floor');}catch{}document.body.classList.add('in-xr');$('at-home-end').hidden=false;info('DÉTECTION DE LA MAISON');
+  if(!assets){assetsLoading ||=import('./at-home-assets.js').then(m=>m.createAtHomeAssets(scene,hero)).then(pack=>{assets=pack;assetsLoading=null;assetError='';updateControllerRoles();for(const r of surfaceRecords())if(!r.invisibleFloor)assets.projectRuin(r,decorEnabled,head);roomDirty=true;lastRoomBuild=-99;}).catch(error=>{assetsLoading=null;assetError='MODÈLES INDISPONIBLES : '+error.message;console.error('AT HOME',error);});}else updateControllerRoles();
  }catch(error){if(opened)await opened.end().catch(()=>{});if(session===opened)onSessionEnd();button.disabled=false;info('ACCÈS À LA RÉALITÉ MIXTE INDISPONIBLE : '+error.message);}
 }
 button.addEventListener('click',enter);$('at-home-end').addEventListener('click',()=>session?.end().catch(()=>{}));
@@ -267,4 +298,4 @@ window.addEventListener('resize',()=>{if(renderer.xr.isPresenting)return;camera.
 renderer.setAnimationLoop(tick);
 async function checkSupport(){if(!navigator.xr||!window.isSecureContext){info('OUVRE AT HOME DANS LE NAVIGATEUR QUEST 3');return;}try{if(await navigator.xr.isSessionSupported('immersive-ar')){button.disabled=false;info('QUEST COMPATIBLE · PRÉPARE LE SCAN DE LA MAISON');}else info('RÉALITÉ MIXTE INDISPONIBLE SUR CE NAVIGATEUR');}catch{info('SUPPORT WEBXR INDISPONIBLE');}}
 checkSupport();
-window.__PINKWAR_HOME=Object.freeze({snapshot:()=>({version:'3.28',mode,frames,character:hero.id,floors:floors().length,surfaces:surfaces.size,meshes:meshes.size,decor:assets?.architecture.stats(),battlefield:room.stats(),hands:mounts.filter(m=>m.anchor.visible).length,laser:laser.stats(),scope:scope?.stats(),...game.snapshot()})});
+window.__PINKWAR_HOME=Object.freeze({snapshot:()=>({version:'3.29',mode,frames,character:hero.id,floors:floors().length,surfaces:surfaces.size,meshes:meshes.size,decor:assets?.architecture.stats(),battlefield:room.stats(),playArea:{source:playAreaSource,polygon:playPolygon,boundary:boundary.stats()},startRequested,hands:mounts.filter(m=>m.anchor.visible).length,laser:laser.stats(),scope:scope?.stats(),...game.snapshot()})});
