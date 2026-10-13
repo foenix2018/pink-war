@@ -17,8 +17,8 @@ export const WEAPON_FRAME = Object.freeze([
 
 const PI = Math.PI;
 export const OPTICS = Object.freeze({
-  bloom:Object.freeze({y:.178,z:-.032,radius:.018,fov:55}),
-  lance:Object.freeze({y:.180,z:-.023,radius:.019,fov:22})
+  bloom:Object.freeze({y:.178,z:-.032,radius:.018,magnification:2}),
+  lance:Object.freeze({y:.180,z:-.023,radius:.019,magnification:4})
 });
 const opticGlassGeometry=new T.CircleGeometry(1,32),opticDotGeometry=new T.CircleGeometry(.00075,16);
 const opticRingGeometry=new T.RingGeometry(.0068,.0074,32);
@@ -30,7 +30,7 @@ function attachOptic(model,index) {
   const dot=new T.Mesh(opticDotGeometry,material);reticle.add(dot);
   if(index===1)reticle.add(new T.Mesh(opticRingGeometry,material));
   reticle.visible=false;model.add(reticle);
-  return {cfg,reticle,glassMaterial,material};
+  return {cfg,reticle,glass,glassMaterial,material,eyeDistance:0};
 }
 const both = fn => [-1, 1].forEach(fn);
 const torus = (r, tube, arc = PI * 2, radial = 6, tubular = 20) => new T.TorusGeometry(r, tube, radial, tubular, arc);
@@ -296,12 +296,14 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
     const optic=optics[g.userData.index];g.userData.aiming=!!active&&!!optic;
     if(!g.userData.aiming||!camera)return;
     g.updateWorldMatrix(true,true);camera.getWorldPosition(eye);g.worldToLocal(eye);
+    optic.eyeDistance=eye.z-optic.cfg.z;
+    if(optic.eyeDistance<=.035)return;
     // Zero the optical reticle to the barrel at 100 m. Off-axis eyes lose the
     // reticle outside the aperture; enabling aim never rotates a tracked hand.
     const frame=WEAPON_FRAME[g.userData.index];target.set(0,frame.muzzle[1],frame.muzzle[2]-100);
     const t=(optic.cfg.z-eye.z)/(target.z-eye.z);eye.lerp(target,t);
     const dx=eye.x,dy=eye.y-optic.cfg.y;
-    optic.reticle.visible=eye.z<=optic.cfg.z+.002&&Math.hypot(dx,dy)<optic.cfg.radius*.88;
+    optic.reticle.visible=Math.hypot(dx,dy)<optic.cfg.radius*.88;
     optic.reticle.position.set(dx,optic.cfg.y+dy,optic.cfg.z+.0005);
   };
   const batteryMaterial = new T.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });

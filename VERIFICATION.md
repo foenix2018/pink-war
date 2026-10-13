@@ -1,4 +1,14 @@
-# Vérification — Pink War v3.24
+# Vérification — Pink War v3.25
+
+Parcours : gâchette de visée → pose de l’optique et œil dominant → rendu local grossi → texture affichée dans la lentille, puis rendu stéréo normal. Sur PC/mobile, le maintien de visée réduit la projection selon un rapport ×2 (BLOOM) ou ×4 (LANCE), avec une sensibilité plus fine. Base publiée `bb676f4`, aucune nouvelle modification distante lors du contrôle initial.
+
+- Tests d’optique : rapports exacts en FPS/3P et à différentes distances d’œil, cadence bornée à 30 Hz, cible de rendu unique et taille plafonnée à 512 pixels, framebuffer/viewport/scissor/ombres/XR restaurés y compris après exception, image naturelle en main gauche, nettoyage idempotent.
+- IWER Meta Quest 3 : vraie texture lue sur le GPU, 616 pixels de cible en BLOOM ×2 contre 2184 en LANCE ×4 à distance égale. Aucun changement de position ou FOV de tête. La gâchette droite tire pendant le maintien gauche ; relâcher retire l’image grossie. X saute toujours, le panneau de poignet reste visible et la sortie libère le rendu d’optique.
+- Chromium : grossissement FPS et troisième personne ×2/×4 mesuré à partir du FOV réel ; déclenchement et arrêt par clic droit et bouton tactile. Aucune exception JavaScript pendant ces parcours.
+
+Captures réelles : `dist/evolutions/vr-optique-325.png` et `sniper-zoom-325.png`. Les cas de mesure utilisent une cible géométrique et masquent les décors pour le rendu logiciel ; la ville est rétablie pour les captures. Les ressources de texture Internet optionnelles peuvent être indisponibles dans l’environnement de test ; le décor utilise alors son secours procédural. Aucun essai de performance sur Quest 3 ou iPhone physique. Le mode AT HOME conserve son scan et ses commandes existantes ; le nouvel affichage optique vise le jeu classique.
+
+## Historique — Pink War v3.24
 
 Parcours vérifié : appui clavier, tactile ou Touch Plus → locomotion/tir dans ArenaGame → collision avec le monde ou les ennemis → mains, lame, effets lumineux, audio et HUD. Le jeu est statique : aucune API ou base de données n’intervient dans ce parcours. Base : `d7e107d`; GitHub vérifié avant publication, sans nouvelle modification utilisateur à incorporer.
 

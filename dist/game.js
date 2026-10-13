@@ -12,6 +12,7 @@ import { OPTICS } from './weapons.js';
 import { createWeaponFeel } from './weapon-feel.js';
 import { bladeSwingPose } from './blade-combat.js';
 import { createSaberSound } from './saber-sound.js';
+import { magnifiedFov, aimSensitivity } from './optics.js';
 
 const $ = id => document.getElementById(id);
 const settings = { sound: true, music: true, sensitivity: 1, quality: 'auto' };
@@ -246,7 +247,7 @@ function updateCamera() {
   const feel=weaponFeel.state,flatScreen=vr?.mode!=='stereo';
   const cameraYaw = yaw + (vr?.mode==='stereo' && vr.sensor ? vr.phoneYaw : 0)+(flatScreen?feel.yaw*.06:0), cameraPitch = clamp(pitch + (vr?.mode==='stereo' && vr.sensor ? vr.phonePitch : 0) + (flatScreen?feel.pitch*.2:0), -1.2, 1.2);
   const optic=OPTICS[game.weapon.id],normalFov=view==='fps'?72:64;
-  camera.fov=normalFov+(optic?(optic.fov-normalFov)*aimBlend:0);
+  camera.fov=normalFov+(optic?(magnifiedFov(normalFov,optic.magnification)-normalFov)*aimBlend:0);
   camera.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
   const elevation = p.elevation || 0;
   // Camera follows the same crouch transition as the real soldier pelvis, not a sudden teleport.
@@ -477,7 +478,7 @@ function bindCanvas() {
   canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===0&&phase==='playing'){firingPointers.add(e.pointerId);firePressQueued=true;audioReady();}});
   canvas.addEventListener('pointerdown',e=>{if(e.button===2&&phase==='playing'){e.preventDefault();mouseAim=true;}});
   canvas.addEventListener('pointerdown', e => { if ((e.pointerType==='mouse'&&e.button!==0)||phase !== 'playing' || canvasPointer !== null) return; e.preventDefault(); canvasPointer = e.pointerId; lastDrag = { x: e.clientX, y: e.clientY }; try { canvas.setPointerCapture(e.pointerId); } catch {} });
-  canvas.addEventListener('pointermove', e => { if (phase !== 'playing' || e.pointerId !== canvasPointer || !lastDrag) return; yaw -= (e.clientX - lastDrag.x) * .004 * settings.sensitivity; pitch = clamp(pitch - (e.clientY - lastDrag.y) * .004 * settings.sensitivity, -.85, .7); lastDrag = { x: e.clientX, y: e.clientY }; });
+  canvas.addEventListener('pointermove', e => { if (phase !== 'playing' || e.pointerId !== canvasPointer || !lastDrag) return; const fine=aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend);yaw -= (e.clientX - lastDrag.x) * .004 * settings.sensitivity*fine; pitch = clamp(pitch - (e.clientY - lastDrag.y) * .004 * settings.sensitivity*fine, -.85, .7); lastDrag = { x: e.clientX, y: e.clientY }; });
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) canvas.addEventListener(type, e => { if (e.pointerId === canvasPointer) { canvasPointer = null; lastDrag = null; } });
 }
 window.addEventListener('rosee-renderer-recovered', () => { $('world').removeAttribute('data-controls-bound'); bindCanvas(); $('renderer-label').textContent = `${world.backend.toUpperCase()} · CONÇU POUR LE TACTILE`; });
@@ -490,7 +491,7 @@ function frame(timestamp, xrFrame) {
   if (phase === 'lobby') world.lobby(clock,Math.max(1,game.wave));
   if (phase === 'outfit') world.outfit(clock,previewLevel,Number($('outfit-rotation').value)*Math.PI/180);
   if (phase === 'playing' && !recovering) {
-    const sensitivity = settings.sensitivity;
+    const sensitivity = settings.sensitivity*(vr.mode==='xr'?1:aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend));
     yaw -= (look.x * 1.8 + vrInput.turn * 1.6 + (keys.has('ArrowRight') ? 1.4 : 0) - (keys.has('ArrowLeft') ? 1.4 : 0)) * sensitivity * dt;
     yaw -= vrInput.snap;
     pitch = clamp(pitch + (-look.y * 1.35 - vrInput.tilt * 1.35 + (keys.has('ArrowUp') ? 1.15 : 0) - (keys.has('ArrowDown') ? 1.15 : 0)) * sensitivity * dt, -.85, .7);
@@ -552,11 +553,12 @@ function frame(timestamp, xrFrame) {
     recovering = true; resetInput();
     world.recover().then(next => { world = next;game.replaceObstacles(world.obstacles); window.dispatchEvent(new CustomEvent('rosee-renderer-recovered')); if(vr.mode==='stereo'){vr.removeHUD();vr.makeHUD();} recovering = false; lastTime=0;world.renderer.setAnimationLoop(frame); }).catch(error => { console.error('Rétablissement 3D', error); phase = 'error'; $('loading-error').hidden = false; });
   }
-  if (!recovering) try { if(vr.mode==='stereo')world.renderStereo();else world.render(); frames++; } catch (error) { console.error('Rendu interrompu', error); phase = 'error'; $('loading-error').hidden = false; }
+  if (!recovering) try { vr.renderScope();if(vr.mode==='stereo')world.renderStereo();else world.render(); frames++; } catch (error) { console.error('Rendu interrompu', error); phase = 'error'; $('loading-error').hidden = false; }
 }
 
 vr = new VRController({
   world:()=>world, game:()=>game, phase:()=>phase, openPanel, pause,
+  quality:()=>settings.quality,
   togglePause:()=>{ if(phase==='playing')pause();else if(phase==='paused')resume(); },
   begin:()=>{ if(phase==='over'&&game.state==='won')continueSurvival();else if(phase==='lobby'||phase==='over')start();else resume();selectView('fps');resetInput(); },
   webGL:async()=>{ if(!world.renderer.isWebGLRenderer){recovering=true;world.renderer.setAnimationLoop(null);try{world=await world.recover();game?.replaceObstacles(world.obstacles);window.dispatchEvent(new CustomEvent('rosee-renderer-recovered'));}finally{recovering=false;lastTime=0;world.renderer.setAnimationLoop(frame);}} },

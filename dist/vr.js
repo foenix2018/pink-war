@@ -2,6 +2,7 @@ import { clamp, segmentBox, segmentSphere, traceEnemyHit } from './game-logic.js
 import { portalIndicators } from './portal-indicator.js';
 import { DesktopGamepadInput, desktopAxis } from './desktop-input.js';
 import { syncTrackedHands } from './xr-hands.js';
+import { createMagnifiedSight } from './magnified-sight.js';
 
 const $ = id => document.getElementById(id);
 const deadzone = v => Math.abs(v || 0) > .16 ? v : 0;
@@ -44,7 +45,7 @@ export function questControls(hand = 'right') {
     [`Poignée ${sideF}`, 'Courir (maintenu)'],
     [`Clic joystick ${sideF}`, 'S’accroupir / se relever · près d’un faisceau : récupérer une arme'],
     [b.jump, 'Saut · second appui : double saut / rebond mural'],
-    [`Gâchette ${sideF}`, 'Viser avec l’optique · parade avec AURORA'],
+    [`Gâchette ${sideF}`, 'Viser · BLOOM ×2 / LANCE ×4 · parade AURORA'],
     [b.pause, 'Pause / reprise']
   ];
 }
@@ -268,6 +269,29 @@ export class VRController {
     }
   }
   heldGun(){return controllerOf(this,settingsOf(this).hand)?.gun||null;}
+  sightEye(){
+    const world=this.hooks.world(),cameras=world.renderer.xr.getCamera?.(world.camera)?.cameras;
+    const source=cameras?.[settingsOf(this).hand==='left'?0:1]||cameras?.[0];
+    if(!source)return world.camera;
+    // XR eye cameras have no Object3D parent: WebXRManager writes their world
+    // matrices explicitly. getWorldPosition() would replace that world pose
+    // with the local reference-space pose. Sample a private camera instead.
+    const eye=this.opticalEye ||=new world.T.PerspectiveCamera();eye.matrixAutoUpdate=false;
+    eye.matrix.copy(source.matrixWorld);eye.matrixWorld.copy(source.matrixWorld);
+    eye.matrixWorldInverse.copy(source.matrixWorld).invert();
+    eye.projectionMatrix.copy(source.projectionMatrix);eye.projectionMatrixInverse.copy(source.projectionMatrixInverse);
+    eye.near=source.near;eye.far=source.far;eye.fov=source.fov;return eye;
+  }
+  renderScope(){
+    const gun=this.mode==='xr'?this.heldGun():null;
+    const active=!!gun&&this.aiming&&!this.trackingLost&&!this.hooks.game().reloadRemaining&&this.hooks.phase()==='playing';
+    if(!active||!gun?.userData.optics?.[gun.userData.index]){this.scope?.release();return;}
+    const quality=this.hooks.quality?.();
+    this.scope ||=createMagnifiedSight(quality==='low'?256:quality==='high'?512:384);
+    const world=this.hooks.world();
+    this.scope.render({renderer:world.renderer,scene:world.scene,gun,eyeCamera:this.sightEye(),active,
+      hide:[this.rig,world.weapon,world.soldier.root,this.sight?.group],beforeRender:camera=>world.moon?.update(camera)});
+  }
   jumpButtonHit(){
     const main=controllerOf(this,settingsOf(this).hand),side=controllerOf(this,otherHand(settingsOf(this).hand));
     if(!main||!side?.jumpPanel?.plane.visible)return false;
@@ -345,6 +369,7 @@ export class VRController {
   }
   finishXR() {
     if (this.mode !== 'xr') return;
+    this.scope?.dispose();this.scope=null;this.opticalEye=null;
     const world = this.hooks.world(); this.removeHUD(); this.removeSight();this.removePauseBoard();this.cancelTrigger();
     world.scene.add(world.camera);
     this.rig?.removeFromParent();
@@ -580,7 +605,7 @@ export class VRController {
         c.bare.userData.animate?.(fingerPose,dt,c.bare.scale.x<0?-1:1);
       }
       const gun = controllerOf(this, main)?.gun; if (gun) this.drawAmmo(gun, game,feel);
-      gun?.userData.setSight?.(this.aiming && !game.reloadRemaining,this.hooks.world().camera);
+      gun?.userData.setSight?.(this.aiming && !game.reloadRemaining,this.sightEye());
       this.updateSight();
       // Heavy weapons rumble harder as the charge builds.
       this.chargeBuzz -= dt;
