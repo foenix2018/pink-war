@@ -521,7 +521,7 @@ function frame(timestamp, xrFrame) {
       if(lastWeaponSlot===5&&game.weaponIndex!==5&&world.holsterGun){
         holsterRemaining=.48;
         const blade=world.holsterGun.userData.blade;
-        blade?.reset();blade?.update(game.time-.24,true);blade?.update(game.time,true);
+        blade?.deployInstant(game.time);
       }
       lastWeaponSlot=game.weaponIndex;
     }
