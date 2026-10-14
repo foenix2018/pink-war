@@ -45,7 +45,7 @@ export function questControls(hand = 'right') {
     [`Joystick ${mainM}`, 'Rotation fluide'],
     [`Joystick ${sideM}`, 'Se déplacer'],
     [`Poignée ${sideF}`, 'Courir (maintenu)'],
-    [`Clic joystick ${sideF}`, 'S’accroupir / se relever · près d’un faisceau : récupérer une arme'],
+    [`Clic joystick ${sideF}`, 'Terminal / arme proche : interagir · sinon : s’accroupir'],
     [b.jump, 'Saut · second appui : double saut / rebond mural'],
     [`Gâchette ${sideF}`, 'Viser · BLOOM ×2 / LANCE ×4 · parade AURORA'],
     [b.pause, 'Pause / reprise']
@@ -446,9 +446,15 @@ export class VRController {
         result.aim ||= tracked && pressed(pad.buttons[0]);
         result.precision ||= result.aim;
       }
-      const edge = (key, index) => { const id = `${source.handedness}:${key}`, down = pressed(pad.buttons[index]); if (down && !this.previous.get(id) && tracked) actions.add(key); this.previous.set(id, down); };
+      const edge = (key, index, action = key) => { const id = `${source.handedness}:${key}`, down = pressed(pad.buttons[index]); if (down && !this.previous.get(id) && tracked) actions.add(action); this.previous.set(id, down); };
       if (main) { edge('reload', xr ? 4 : 0); edge('next', xr ? 5 : 1); }
-      if (xr && side) { edge('jump', 4); edge('pause', 5); if(this.hooks.game()?.nearbyWeapon?.())edge('pickup', 3); else edge('crouch', 3); }
+      if (xr && side) {
+        edge('jump', 4); edge('pause', 5);
+        const game = this.hooks.game(), interaction = game?.getInteraction?.() || game?.nearbyWeapon?.();
+        // Track the physical click, not its contextual action. Consuming a terminal
+        // or pickup while the stick stays held must never cause a second crouch.
+        edge('stick', 3, interaction ? 'pickup' : 'crouch');
+      }
       if (!xr) { edge('pause', 9); edge('jump', 3); edge('pickup', 2); edge('crouch', 11); }
     }
     if (actions.has('pause')) { this.hooks.togglePause(); if (xr) this.cancelTrigger(); }
@@ -518,11 +524,11 @@ export class VRController {
       const board=this.pauseBoard,c=board.canvas.getContext('2d');board.over=this.hooks.phase()==='over';
       if(!board.over)c.putImageData(board.guide,0,0);
       else{
-        const won=game.state==='won',b=buttonNames(settingsOf(this).hand);
+        const won=game.state==='won',campaign=game.mode==='campaign',b=buttonNames(settingsOf(this).hand);
         c.fillStyle='#121a29';c.fillRect(0,0,1024,768);c.textAlign='center';
-        c.fillStyle='#ffb3d5';c.font='bold 58px sans-serif';c.fillText(won?'CAMPAGNE TERMINÉE':'TRANSMISSION PERDUE',512,250,940);
-        c.fillStyle='#eef3fc';c.font='34px sans-serif';c.fillText(won?'20 niveaux · Les machines reviennent.':'Une nouvelle aube vous attend.',512,330);
-        c.font='bold 38px sans-serif';c.fillText(`${b.reload} : ${won?'CONTINUER EN SURVIE':'REJOUER'}`,512,450);
+        c.fillStyle='#ffb3d5';c.font='bold 58px sans-serif';c.fillText(won?(campaign?'NIVEAU 1 TERMINÉ':'CAMPAGNE TERMINÉE'):'TRANSMISSION PERDUE',512,250,940);
+        c.fillStyle='#eef3fc';c.font='34px sans-serif';c.fillText(won?(campaign?'Le dernier signal · À suivre…':'20 niveaux · Les machines reviennent.'):'Une nouvelle aube vous attend.',512,330,940);
+        c.font='bold 38px sans-serif';c.fillText(`${b.reload} : ${campaign?'REJOUER LE NIVEAU 1':won?'CONTINUER EN SURVIE':'REJOUER'}`,512,450,940);
         c.font='30px sans-serif';c.fillText(`${b.next} : QUITTER LE CASQUE`,512,520);c.textAlign='left';
       }
       board.texture.needsUpdate=true;

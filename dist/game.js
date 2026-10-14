@@ -13,6 +13,7 @@ import { createWeaponFeel } from './weapon-feel.js';
 import { bladeSwingPose } from './blade-combat.js';
 import { createSaberSound } from './saber-sound.js';
 import { magnifiedFov, aimSensitivity } from './optics.js';
+import { CampaignLevel1 } from './campaign-level1.js';
 
 const $ = id => document.getElementById(id);
 const settings = { sound: true, music: true, sensitivity: 1, quality: 'auto' };
@@ -21,6 +22,16 @@ settings.sensitivity = clamp(Number(settings.sensitivity) || 1, .4, 2);
 if (!['auto', 'low', 'high'].includes(settings.quality)) settings.quality = 'auto';
 let phase = 'lobby', view = 'third', yaw = 0, pitch = -.075, game, world, vr;
 let character=characterForId('ghju');
+let selectedMode='campaign',launchBusy=false;
+function selectMode(mode){
+  if(phase!=='lobby'||launchBusy)return;
+  selectedMode=mode==='arena'?'arena':'campaign';
+  for(const button of document.querySelectorAll('[data-mode]'))button.setAttribute('aria-pressed',String(button.dataset.mode===selectedMode));
+  $('mission-title').textContent=selectedMode==='campaign'?'01 — Le dernier signal':'Survie — Les brèches';
+  $('mission-description').textContent=selectedMode==='campaign'?'Un laboratoire oublié. Une archive humaine. Une trace de votre famille.':'Vingt vagues de machines, six armes et des équipements à récupérer.';
+  if(world)$('play-label').textContent=selectedMode==='campaign'?'JOUER LE NIVEAU 1':'LANCER LA SURVIE';
+}
+for(const button of document.querySelectorAll('[data-mode]'))button.onclick=()=>selectMode(button.dataset.mode);
 try{character=characterForId(localStorage.getItem('pink-war-character'));}catch{}
 let clock = 0, lastTime = 0, hudTimer = 0, flashTimer = 0, recoil = 0, reloadLift = 0, announcementUntil = 0, damageUntil = 0;
 let outfitReturn = 'lobby', previewLevel = 1, equipmentUntil = 0;
@@ -191,15 +202,33 @@ async function home() {
   if (vr?.active) await vr.exit();
   for (const d of document.querySelectorAll('dialog[open]')) d.close(); phase = 'lobby'; resetInput();
   document.body.classList.remove('playing'); $('game-hud').hidden = true; musicBed.pause();ambience?.pause();world.resetDynamic();
+  saberAudio?.update({active:false,equipped:false});
+  world.setCampaignActive(false);selectMode(selectedMode);
   $('damage-flash').style.setProperty('--injury', '0'); $('damage-flash').classList.remove('active'); $('wave-announcement').classList.remove('show');
 }
 $('quit-button').onclick = home; $('end-home').onclick = home;
-function start() {
-  if (!world) return;
-  for (const d of document.querySelectorAll('dialog[open]')) d.close(); game.reset(); world.resetDynamic(); phase = 'playing'; yaw = 0; pitch = -.075;
+async function start() {
+  if (!world||launchBusy) return;
+  launchBusy=true;
+  for (const d of document.querySelectorAll('dialog[open]')) d.close();
+  world.setCampaignActive(selectedMode==='campaign');
+  game=selectedMode==='campaign'?new CampaignLevel1(world.obstacles,Math.random,character.id):new ArenaGame(world.obstacles);
+  world.resetDynamic(); phase = 'loading'; yaw = 0; pitch = -.075;
   weaponFeel.reset();reloadInserted=false;lastShotAt=-99;flashTimer = 0; recoil = 0; damageUntil = 0; announcementUntil = 0;equipmentUntil=0;crouchCameraBlend=0;currentSprinting=false; resetInput(); audioReady();
   world.setWeapon(0);world.setEquipment(1);
-  document.body.classList.add('playing'); $('game-hud').hidden = false; $('game-tip').style.opacity = '1'; updateHud();
+  lastWeaponSlot=0;holsterRemaining=0;
+  try{
+    if(!vr?.active){
+      $('loading-title').textContent=selectedMode==='campaign'?'Le dernier signal':'Les brèches';
+      $('loading-status').textContent='Préparation du secteur…';$('loading-screen').hidden=false;
+      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+      world.campaignArt.update(game,clock);world.sync(game,clock,0);updateCamera();
+      await world.renderer.compileAsync(world.scene,world.camera);
+    }
+    phase='playing';lastTime=0;audioReady();
+    document.body.classList.add('playing'); $('game-hud').hidden = false; $('game-tip').style.opacity = '1'; updateHud();
+  }catch(error){console.error('Chargement du niveau',error);phase='error';$('loading-error').hidden=false;}
+  finally{launchBusy=false;$('loading-screen').hidden=true;}
 }
 $('play-button').onclick = start; $('retry-button').onclick = start;
 function continueSurvival(){
@@ -319,6 +348,10 @@ function announce(title, subtitle) {
 }
 function handleEvents() {
   for (const event of game.drainEvents()) {
+    if(event.type==='campaign'){
+      if(vr.mode!=='xr')announce(event.title,event.subtitle);
+      tone(410,680,.16,.025,'sine');
+    }
     if (event.type === 'shot') {
       world.laserShot?.(event);
       const feel=weaponFeel.fire(event.weapon,event.power,game.player.crouched||aiming);
@@ -327,9 +360,9 @@ function handleEvents() {
     if(event.type==='blade-swing'){saberSwingSound=true;vr.haptic('shot','aurora');}
     if(event.type==='blade-hit'||event.type==='blade-parry'){world.impact({...event,enemy:event.type==='blade-hit'});if(settings.sound)saberAudio?.impact();vr.haptic(event.type==='blade-parry'?'parry':'hit');}
     if (event.type === 'weapon-offer') { tone(360, 820, .45, .03, 'sine'); }
-    if (event.type === 'wave') { const offered=WEAPONS.find(w=>w.level===event.wave); announce(game.endless?`SURVIE / VAGUE ${event.wave}`:`NIVEAU ${String(event.wave).padStart(2, '0')} / ${MAX_LEVEL}`, offered && event.wave>1 ? `${offered.name} DISPONIBLE AU FAISCEAU · APPROCHEZ-VOUS` : `${event.count} CRÉATURES · LA BRÈCHE S’OUVRE`); tone(210, 420, .25, .065); tone(420, 630, .25, .06, 'triangle', .2); }
+    if (event.type === 'wave') { const offered=WEAPONS.find(w=>w.level===event.wave); if(game.mode!=='campaign')announce(game.endless?`SURVIE / VAGUE ${event.wave}`:`NIVEAU ${String(event.wave).padStart(2, '0')} / ${MAX_LEVEL}`, offered && event.wave>1 ? `${offered.name} DISPONIBLE AU FAISCEAU · APPROCHEZ-VOUS` : `${event.count} CRÉATURES · LA BRÈCHE S’OUVRE`); tone(210, 420, .25, .065); tone(420, 630, .25, .06, 'triangle', .2); }
     if (event.type === 'equipment') { const equipment=equipmentForCharacter(event.level,character.id);world.setEquipment(event.level);$('equipment-unlock-title').textContent=`${equipment.name} · NIV. ${event.level}`;$('equipment-unlock-detail').textContent=equipment.addition;equipmentUntil=clock+4;$('equipment-unlock').hidden=false; }
-    if (event.type === 'clear') { announce('NIVEAU TERMINÉ', '+ BONUS · LA BRÈCHE SE RECHARGE'); tone(420, 700, .25, .07); }
+    if (event.type === 'clear'&&game.mode!=='campaign') { announce('NIVEAU TERMINÉ', '+ BONUS · LA BRÈCHE SE RECHARGE'); tone(420, 700, .25, .07); }
     if (event.type === 'weapon') { weaponFeel.reset();recoil=0;flashTimer=0;world.setWeapon(game.weaponIndex); vr.haptic('weapon'); tone(510, 760, .1, .03); }
     if (event.type === 'jump') {tone(event.kind==='wall'?240:165,110,.075,.012);vr.haptic('jump');}
     if (event.type === 'land') tone(105, 55, .075, .013);
@@ -362,6 +395,12 @@ function gameOver(won = false) {
   $('end-message').textContent = won ? `Vous avez survécu aux ${MAX_LEVEL} niveaux. Continuez en survie ou rejouez la campagne.` : 'La brèche a gagné cette bataille. La prochaine est à vous.';
   $('survival-button').hidden=!won;
   $('retry-button').textContent = won ? 'REJOUER LA CAMPAGNE →' : 'UNE NOUVELLE AUBE →';
+  if(game.mode==='campaign'){
+    $('end-eyebrow').textContent=won?'NIVEAU 1 TERMINÉ / ARCHIVE SAUVEGARDÉE':'LE DERNIER SIGNAL / ESSAI INTERROMPU';
+    $('end-title').innerHTML=won?'Une trace.<br>Un espoir.':'Le signal<br>vous attend.';
+    $('end-message').textContent=won?`Une intervention récente porte l’indicatif ${character.id==='ghju'?'LYLU':'GHJU'}. Destination suivante : les archives de Vesper. Le niveau 1 s’arrête ici ; la suite viendra après vos essais.`:'Reprenez depuis l’entrée du laboratoire. Activez le courant, consultez l’archive, puis rejoignez le relais en hauteur.';
+    $('survival-button').hidden=true;$('retry-button').textContent='REJOUER LE NIVEAU 1 →';
+  }
   $('end-score').textContent = game.score; $('end-wave').textContent = game.wave; $('end-time').textContent = timeString(game.time); $('best-label').textContent = best;
   if (vr?.mode !== 'xr') $('end-dialog').showModal();
 }
@@ -380,6 +419,8 @@ function updateHud() {
   $('crouch-button').classList.toggle('active',!!game.player.crouched);
   const nearby=game.nearbyWeapon();const pickup=$('pickup-button');
   pickup.hidden=!nearby;pickup.textContent=nearby?`RÉCUPÉRER ${WEAPONS[nearby.index].name} · F / X`:'';
+  const interaction=game.getInteraction?.();
+  if(interaction){pickup.hidden=false;pickup.textContent=`${interaction.label} · F`;pickup.ariaLabel=interaction.label;}
   $('ammo-label').textContent = game.weapon.melee?'∞':game.ammo[game.weaponIndex];
   $('ammo-capacity').textContent = game.weapon.melee?'':`/ ${game.weapon.capacity}`;
   $('ammo-state').textContent = game.weapon.melee?(game.triggerHeld?'LAME ACTIVE':'LAME RÉTRACTÉE'):game.reloadRemaining>0?'RECHARGE':'CELLULES';
@@ -489,6 +530,9 @@ function frame(timestamp, xrFrame) {
   const feel=weaponFeel.update(dt);recoil=feel.pitch;flashTimer=feel.flash;
   // The standard Bluetooth/USB gamepad is available outside VR as well.
   const vrInput = vr.input(xrFrame);
+  // Illustrated menus do not need a full city render behind their opaque image.
+  // Keep polling the controllers so the same entry actions remain responsive.
+  if((phase==='lobby'||phase==='loading')&&!vr.active)return;
   world.animatePortal(clock);
   if (phase === 'lobby') world.lobby(clock,Math.max(1,game.wave));
   if (phase === 'outfit') world.outfit(clock,previewLevel,Number($('outfit-rotation').value)*Math.PI/180);
@@ -516,6 +560,7 @@ function frame(timestamp, xrFrame) {
     if(pickupQueued||vrInput.pickup){game.collectWeapon();pickupQueued=false;}
     const moving = Math.hypot(x, z) > .1;
     world.sync(game, clock, dt);
+    world.campaignArt.update(game,clock);
     // Track the outgoing saber separately from the new firearm. The player sees
     // AURORA descend to the bottom-left before the new weapon appears.
     if(game.weaponIndex!==lastWeaponSlot){
@@ -589,20 +634,22 @@ vr = new VRController({
   world:()=>world, game:()=>game, phase:()=>phase, openPanel, pause,
   quality:()=>settings.quality,
   togglePause:()=>{ if(phase==='playing')pause();else if(phase==='paused')resume(); },
-  begin:()=>{ if(phase==='over'&&game.state==='won')continueSurvival();else if(phase==='lobby'||phase==='over')start();else resume();selectView('fps');resetInput(); },
+  begin:()=>{ if(phase==='over'&&game.state==='won'&&game.mode!=='campaign')continueSurvival();else if(phase==='lobby'||phase==='over')start();else resume();selectView('fps');resetInput(); },
   webGL:async()=>{ if(!world.renderer.isWebGLRenderer){recovering=true;world.renderer.setAnimationLoop(null);try{world=await world.recover();game?.replaceObstacles(world.obstacles);window.dispatchEvent(new CustomEvent('rosee-renderer-recovered'));}finally{recovering=false;lastTime=0;world.renderer.setAnimationLoop(frame);}} },
   afterExit:()=>{ resetInput();lastTime=0;updateHud();updateCamera();if(phase==='paused')$('pause-dialog').showModal();else if(phase==='over')$('end-dialog').showModal(); }
 });
 try {
   world = await createScene($('world'), settings.quality,false,character.id);world.setCharacter(character.id);game = new ArenaGame(world.obstacles);
   $('renderer-label').textContent = `${world.backend.toUpperCase()} · CONÇU POUR LE TACTILE`;
-  world.lobby(0); await world.renderer.compileAsync(world.scene, world.camera); world.render();
+  $('loading-status').textContent='Préparation du laboratoire et des équipements…';
+  world.setCampaignActive(true);world.lobby(0); await world.renderer.compileAsync(world.scene, world.camera);world.setCampaignActive(false); world.render();
   await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   if (world.lost) { world = await world.recover();game?.replaceObstacles(world.obstacles); window.dispatchEvent(new CustomEvent('rosee-renderer-recovered')); }
-  $('play-label').textContent = 'ENTRER DANS L’ARÈNE'; $('play-button').disabled = false;$('outfit-button').disabled=false;
-  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ version:"3.29",phase, view, frames, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,aiming,aimBlend,cameraFov:world.camera.fov,laserEffects:world.laserStats?.(),city:world.cityStats?.(),vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelSource:world.soldier.actor?.data.source,modelNativeMotion:world.soldier.nativeMotion,modelNativeBones:world.soldier.nativeSkeleton?.bones.length,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:musicBed.enabled,musicPlaying:musicBed.playing,musicFailed:musicBed.failed,musicSection:musicBed.section,musicVoices:musicBed.stats.voices,audioState:audioContext?.state||'idle',weaponFeedback:{...weaponFeel.state},previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
-    inputs: { move: { ...move }, look: { ...look }, firing: firingPointers.size > 0 || keys.has('Space') }, drawCalls: world.renderer.info.render.calls, ...game.snapshot(),equipment:equipmentForCharacter(game.wave,character.id) }) });
+  selectMode(selectedMode);$('loading-screen').hidden=true;$('play-button').disabled = false;$('outfit-button').disabled=false;
+  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ version:"3.30",phase, view, frames, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,aiming,aimBlend,cameraFov:world.camera.fov,laserEffects:world.laserStats?.(),city:world.cityStats?.(),vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelSource:world.soldier.actor?.data.source,modelNativeMotion:world.soldier.nativeMotion,modelNativeBones:world.soldier.nativeSkeleton?.bones.length,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:musicBed.enabled,musicPlaying:musicBed.playing,musicFailed:musicBed.failed,musicSection:musicBed.section,musicVoices:musicBed.stats.voices,audioState:audioContext?.state||'idle',weaponFeedback:{...weaponFeel.state},previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
+    selectedMode,campaignArt:world.campaignArt.stats(),inputs: { move: { ...move }, look: { ...look }, firing: firingPointers.size > 0 || keys.has('Space') }, drawCalls: world.renderer.info.render.calls, ...game.snapshot(),equipment:equipmentForCharacter(game.wave,character.id) }) });
   bindCanvas();world.renderer.setAnimationLoop(frame);
 } catch (error) {
+  $('loading-screen').hidden=true;
   console.error('Initialisation 3D', error); $('play-label').textContent = 'RENDU 3D INDISPONIBLE'; $('renderer-label').textContent = 'VÉRIFIEZ VOTRE NAVIGATEUR'; $('loading-error').hidden = false;
 }

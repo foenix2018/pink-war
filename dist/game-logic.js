@@ -233,8 +233,10 @@ export class ArenaGame {
     // simulation on the same moving lift and gate colliders after that switch.
     this.obstacles=obstacles;this.updateLifts(this.time);
     this.navigation=new CoverNavigation(obstacles);this.stairNavigation=ELEVATED_ROUTES.map(()=>new CoverNavigation(obstacles));
+    this.searchFields=new Map();
   }
   reset() {
+    this.searchFields=new Map();
     this.navigation.refreshAt = -1; this.navigation.goal = -1;
     this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0, verticalSpeed: 0, grounded: true, jumpHeld: false, crouched:false,airJumps:0,jumpImpulseX:0,jumpImpulseZ:0,lastGroundedAt:0 };
     this.playerVelocity={x:0,y:0,z:0};
@@ -399,6 +401,19 @@ export class ArenaGame {
       awareness:'patrol',lastSeenAt:-999,lastKnownX:x,lastKnownZ:z,lastKnownHeight:homeHeight,patrolAngle:angle,patrolTimer:.7+this.random()*2,alertedUntil:0 };
 
     this.enemies.push(enemy); this.toSpawn--; this.event('spawn', { id: enemy.id, x: enemy.x, y: enemy.elevation + enemy.aimHeight, z: enemy.z });
+  }
+  searchWaypoint(enemy,target) {
+    // Search uses the last sound/visual contact, never the hidden player's live
+    // position. Share bounded fields for nearby destinations instead of turning
+    // in place when a local corner cannot clear several successive obstacles.
+    const key=this.navigation.index(target.x,target.z);
+    let field=this.searchFields.get(key);
+    if(!field){
+      if(this.searchFields.size>=6)this.searchFields.delete(this.searchFields.keys().next().value);
+      field=new CoverNavigation(this.obstacles);this.searchFields.set(key,field);
+    }
+    field.update(target,this.time);
+    return field.waypoint(enemy)||soundWaypoint(enemy,target,this.obstacles,segmentBox);
   }
   shoot(origin, direction, charge = 1) {
     if(this.weapon.melee){
@@ -622,7 +637,7 @@ export class ArenaGame {
       dx/=goalDistance;dz/=goalDistance;
       if(this.obstacles.some(b=>!b.walkableSurface&&segmentBox(eye,{x:destinationX,y:eye.y,z:destinationZ},{...b,hx:b.hx+e.radius+.08,hz:b.hz+e.radius+.08})!==null)){
         if(e.awareness!=='patrol'&&!stairRoute){
-          const waypoint=e.awareness==='engaged'?this.navigation.waypoint(e):soundWaypoint(e,{x:destinationX,z:destinationZ},this.obstacles,segmentBox);
+          const waypoint=e.awareness==='engaged'?this.navigation.waypoint(e):this.searchWaypoint(e,{x:destinationX,z:destinationZ});
           if(waypoint){dx=waypoint.x-e.x;dz=waypoint.z-e.z;const n=Math.hypot(dx,dz)||1;dx/=n;dz/=n;}
           else { e.patrolAngle=(e.patrolAngle||0)+.6;dx=Math.sin(e.patrolAngle);dz=Math.cos(e.patrolAngle); }
         }else{e.patrolAngle=(e.patrolAngle||0)+Math.PI*.64;e.patrolTimer=.6;}

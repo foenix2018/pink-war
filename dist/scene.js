@@ -12,6 +12,7 @@ import { createTraversalArt } from './traversal-art.js';
 import { createLaserFX } from './laser-fx.js';
 import { createCombatFX } from './combat-fx.js';
 import { createMoon } from './moon.js';
+import { createCampaignArt } from './campaign-art.js';
 
 const v = (x, y, z) => new T.Vector3(x, y, z);
 const material = (color, roughness = .6, metalness = .25) => new T.MeshStandardMaterial({ color, roughness, metalness });
@@ -403,6 +404,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
       renderer.dispose();
       // Fresh resources avoid reusing texture state from a destroyed GPU device.
       const next = await createScene(nextCanvas, quality, true,character.id);
+      next.setCampaignActive(campaignActive);
       next.camera.position.copy(camera.position); next.camera.rotation.copy(camera.rotation); next.camera.fov = camera.fov; next.camera.updateProjectionMatrix();
       next.soldier.root.position.copy(soldier.root.position); next.soldier.root.rotation.copy(soldier.root.rotation); next.soldier.root.scale.copy(soldier.root.scale);
       await next.renderer.compileAsync(next.scene, next.camera);
@@ -411,7 +413,15 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     })();
     try { return await recovery; } finally { recovery = null; }
   }
-  return {T,scene,camera,moon,get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>({...city.stats,boundary:city.fence?.stats()}),resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
+  const campaignArt=createCampaignArt(T,scene,obstacles,{quality});
+  let campaignActive=false;
+  function setCampaignActive(enabled){
+    campaignActive=!!enabled;
+    for(let i=obstacles.length-1;i>=0;i--)if(obstacles[i].campaign)obstacles.splice(i,1);
+    if(campaignActive)obstacles.push(...campaignArt.obstacles);
+    campaignArt.setVisible(campaignActive);
+  }
+  return {T,scene,camera,moon,campaignArt,setCampaignActive,get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>({...city.stats,boundary:city.fence?.stats()}),resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
     holsterGun,setPlayerVisible,
     get lost(){return lost;},get backend(){return renderer.backend?.isWebGPUBackend?'WebGPU':'WebGL';},render:()=>{if(!lost){camera.updateWorldMatrix(true,false);moon.update(camera);lightBlade();renderer.render(scene,camera);}}};
 }
