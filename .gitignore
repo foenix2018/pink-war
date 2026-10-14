@@ -6,3 +6,5 @@ qa/
 .openai/
 .env
 .env.*
+*.blend1
+__pycache__/

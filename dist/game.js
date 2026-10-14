@@ -1,5 +1,5 @@
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, clamp, segmentSphere, segmentBox, traceEnemyHit } from './game-logic.js';
-import { createScene } from './scene.js?v=3.31';
+import { createScene } from './scene.js?v=3.32';
 import { VRController } from './vr.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
 import { characterForId } from './characters.js';
@@ -31,7 +31,7 @@ function selectMode(mode){
   selectedMode=mode==='arena'?'arena':'campaign';
   for(const button of document.querySelectorAll('[data-mode]'))button.setAttribute('aria-pressed',String(button.dataset.mode===selectedMode));
   $('mission-title').textContent=selectedMode==='campaign'?'01 — Le dernier signal':'Survie — Les brèches';
-  $('mission-description').textContent=selectedMode==='campaign'?'Un laboratoire oublié. Une archive humaine. Une trace de votre famille.':'Vingt vagues de machines, six armes et des équipements à récupérer.';
+  $('mission-description').textContent=selectedMode==='campaign'?'Laboratoire abandonné, rue sous surveillance et relais en hauteur. Une trace de votre famille.':'Vingt vagues de machines, six armes et des équipements à récupérer.';
   if(world)$('play-label').textContent=selectedMode==='campaign'?'JOUER LE NIVEAU 1':'LANCER LA SURVIE';
 }
 for(const button of document.querySelectorAll('[data-mode]'))button.onclick=()=>selectMode(button.dataset.mode);

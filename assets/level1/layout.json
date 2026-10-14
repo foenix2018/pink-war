@@ -1,0 +1,1531 @@
+{
+  "id": "vesper-secours-07",
+  "name": "Le dernier signal \u2014 Quartier des secours",
+  "obstacles": [
+    {
+      "x": -24,
+      "z": 59,
+      "hx": 9.0,
+      "hz": 14.0,
+      "y": 0,
+      "height": 19,
+      "surface": "concrete",
+      "campaign": true,
+      "building": true
+    },
+    {
+      "x": 27,
+      "z": 63,
+      "hx": 10.0,
+      "hz": 15.0,
+      "y": 0,
+      "height": 24,
+      "surface": "concrete",
+      "campaign": true,
+      "building": true
+    },
+    {
+      "x": -23,
+      "z": 20,
+      "hx": 10.0,
+      "hz": 17.0,
+      "y": 0,
+      "height": 28,
+      "surface": "concrete",
+      "campaign": true,
+      "building": true
+    },
+    {
+      "x": 25,
+      "z": 34,
+      "hx": 10.0,
+      "hz": 12.0,
+      "y": 0,
+      "height": 21,
+      "surface": "concrete",
+      "campaign": true,
+      "building": true
+    },
+    {
+      "x": -23,
+      "z": -23,
+      "hx": 10.0,
+      "hz": 18.5,
+      "y": 0,
+      "height": 31,
+      "surface": "concrete",
+      "campaign": true,
+      "building": true
+    },
+    {
+      "x": 35,
+      "z": -23,
+      "hx": 5.0,
+      "hz": 16.0,
+      "y": 0,
+      "height": 17,
+      "surface": "concrete",
+      "campaign": true,
+      "building": true
+    },
+    {
+      "x": -12,
+      "z": -54,
+      "hx": 12.0,
+      "hz": 6.0,
+      "y": 0,
+      "height": 18,
+      "surface": "concrete",
+      "campaign": true,
+      "building": true
+    },
+    {
+      "x": 29,
+      "z": -57,
+      "hx": 9.0,
+      "hz": 3.0,
+      "y": 0,
+      "height": 12,
+      "surface": "concrete",
+      "campaign": true,
+      "building": true
+    },
+    {
+      "x": -10,
+      "z": 60,
+      "hx": 0.275,
+      "hz": 10.0,
+      "y": 0,
+      "height": 5.4,
+      "surface": "concrete",
+      "campaign": true
+    },
+    {
+      "x": 10,
+      "z": 60,
+      "hx": 0.275,
+      "hz": 10.0,
+      "y": 0,
+      "height": 5.4,
+      "surface": "concrete",
+      "campaign": true
+    },
+    {
+      "x": -6.65,
+      "z": 50,
+      "hx": 3.35,
+      "hz": 0.275,
+      "y": 0,
+      "height": 5.4,
+      "surface": "concrete",
+      "campaign": true
+    },
+    {
+      "x": 6.65,
+      "z": 50,
+      "hx": 3.35,
+      "hz": 0.275,
+      "y": 0,
+      "height": 5.4,
+      "surface": "concrete",
+      "campaign": true
+    },
+    {
+      "x": -6.65,
+      "z": 70,
+      "hx": 3.35,
+      "hz": 0.275,
+      "y": 0,
+      "height": 5.4,
+      "surface": "concrete",
+      "campaign": true
+    },
+    {
+      "x": 6.65,
+      "z": 70,
+      "hx": 3.35,
+      "hz": 0.275,
+      "y": 0,
+      "height": 5.4,
+      "surface": "concrete",
+      "campaign": true
+    },
+    {
+      "x": -8.4,
+      "z": 54,
+      "hx": 0.9,
+      "hz": 1.5,
+      "y": 0,
+      "height": 1.1,
+      "surface": "metal",
+      "campaign": true,
+      "labFurniture": true
+    },
+    {
+      "x": 8.3,
+      "z": 66,
+      "hx": 0.85,
+      "hz": 1.5,
+      "y": 0,
+      "height": 1.3,
+      "surface": "metal",
+      "campaign": true,
+      "labFurniture": true
+    },
+    {
+      "x": -8.3,
+      "z": 67,
+      "hx": 0.75,
+      "hz": 1.0,
+      "y": 0,
+      "height": 1.8,
+      "surface": "metal",
+      "campaign": true,
+      "labFurniture": true
+    },
+    {
+      "x": -7,
+      "z": 42,
+      "hx": 2.5,
+      "hz": 0.55,
+      "y": 0,
+      "height": 1.1,
+      "surface": "concrete",
+      "campaign": true,
+      "cover": true
+    },
+    {
+      "x": 8,
+      "z": 39,
+      "hx": 1.5,
+      "hz": 0.5,
+      "y": 0,
+      "height": 1.15,
+      "surface": "concrete",
+      "campaign": true,
+      "cover": true
+    },
+    {
+      "x": -5,
+      "z": 22,
+      "hx": 1.4,
+      "hz": 3.0,
+      "y": 0,
+      "height": 1.7,
+      "surface": "concrete",
+      "campaign": true,
+      "cover": true
+    },
+    {
+      "x": 9,
+      "z": 16,
+      "hx": 1.6,
+      "hz": 0.6,
+      "y": 0,
+      "height": 1.05,
+      "surface": "concrete",
+      "campaign": true,
+      "cover": true
+    },
+    {
+      "x": 24,
+      "z": -4,
+      "hx": 2.0,
+      "hz": 0.6,
+      "y": 0,
+      "height": 1.2,
+      "surface": "concrete",
+      "campaign": true,
+      "cover": true
+    },
+    {
+      "x": 12,
+      "z": -13,
+      "hx": 1.5,
+      "hz": 0.55,
+      "y": 0,
+      "height": 1.05,
+      "surface": "concrete",
+      "campaign": true,
+      "cover": true
+    },
+    {
+      "x": -6,
+      "z": 61.65,
+      "hx": 0.825,
+      "hz": 0.3,
+      "y": 0,
+      "height": 2.1,
+      "surface": "metal",
+      "campaign": true,
+      "campaignTerminal": "power"
+    },
+    {
+      "x": 0,
+      "z": 54.45,
+      "hx": 1.3,
+      "hz": 0.3,
+      "y": 0,
+      "height": 1.93,
+      "surface": "metal",
+      "campaign": true,
+      "campaignTerminal": "archive"
+    },
+    {
+      "x": 18,
+      "z": -44.55,
+      "hx": 1.3,
+      "hz": 0.3,
+      "y": 4.8,
+      "height": 1.93,
+      "surface": "metal",
+      "campaign": true,
+      "campaignTerminal": "exit"
+    },
+    {
+      "x": 18,
+      "z": -45,
+      "hx": 8.0,
+      "hz": 5.0,
+      "y": 4.58,
+      "height": 0.22,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 6,
+      "z": -43,
+      "hx": 4.0,
+      "hz": 1.7,
+      "y": 4.58,
+      "height": 0.22,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 18,
+      "z": -18.458333333333332,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 0.01999999999999999,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -18.458333333333332,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 0.24,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -18.458333333333332,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 0.24,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -19.375,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 0.21999999999999997,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -19.375,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 0.43999999999999995,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -19.375,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 0.43999999999999995,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -20.291666666666668,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 0.42,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -20.291666666666668,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 0.64,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -20.291666666666668,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 0.64,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -21.208333333333332,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 0.6199999999999999,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -21.208333333333332,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 0.84,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -21.208333333333332,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 0.84,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -22.125,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 0.8200000000000001,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -22.125,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 1.04,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -22.125,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 1.04,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -23.041666666666664,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 1.02,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -23.041666666666664,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 1.24,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -23.041666666666664,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 1.24,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -23.958333333333332,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 1.2200000000000002,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -23.958333333333332,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 1.4400000000000002,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -23.958333333333332,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 1.4400000000000002,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -24.875,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 1.42,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -24.875,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 1.64,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -24.875,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 1.64,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -25.791666666666664,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 1.6199999999999999,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -25.791666666666664,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 1.8399999999999999,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -25.791666666666664,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 1.8399999999999999,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -26.708333333333332,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 1.82,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -26.708333333333332,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 2.04,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -26.708333333333332,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 2.04,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -27.625,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 2.0199999999999996,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -27.625,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 2.2399999999999998,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -27.625,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 2.2399999999999998,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -28.541666666666664,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 2.2199999999999998,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -28.541666666666664,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 2.44,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -28.541666666666664,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 2.44,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -29.458333333333332,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 2.42,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -29.458333333333332,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 2.64,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -29.458333333333332,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 2.64,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -30.375,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 2.62,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -30.375,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 2.8400000000000003,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -30.375,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 2.8400000000000003,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -31.291666666666664,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 2.82,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -31.291666666666664,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 3.04,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -31.291666666666664,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 3.04,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -32.20833333333333,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 3.0199999999999996,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -32.20833333333333,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 3.2399999999999998,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -32.20833333333333,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 3.2399999999999998,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -33.125,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 3.2199999999999998,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -33.125,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 3.44,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -33.125,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 3.44,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -34.041666666666664,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 3.4199999999999995,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -34.041666666666664,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 3.6399999999999997,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -34.041666666666664,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 3.6399999999999997,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -34.95833333333333,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 3.62,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -34.95833333333333,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 3.8400000000000003,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -34.95833333333333,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 3.8400000000000003,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -35.875,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 3.82,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -35.875,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 4.04,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -35.875,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 4.04,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -36.791666666666664,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 4.0200000000000005,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -36.791666666666664,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 4.24,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -36.791666666666664,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 4.24,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -37.70833333333333,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 4.22,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -37.70833333333333,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 4.4399999999999995,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -37.70833333333333,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 4.4399999999999995,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -38.625,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 4.42,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -38.625,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 4.64,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -38.625,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 4.64,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -39.541666666666664,
+      "hx": 2.6,
+      "hz": 0.4583333333333333,
+      "y": 4.62,
+      "height": 0.18,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "traversal": true
+    },
+    {
+      "x": 15.32,
+      "z": -39.541666666666664,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 4.84,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 20.68,
+      "z": -39.541666666666664,
+      "hx": 0.05,
+      "hz": 0.4583333333333333,
+      "y": 4.84,
+      "height": 1.02,
+      "surface": "metal",
+      "campaign": true,
+      "traversal": true,
+      "rail": true
+    },
+    {
+      "x": 10,
+      "z": -47.4,
+      "hx": 0.06,
+      "hz": 2.6000000000000014,
+      "y": 4.84,
+      "height": 1.06,
+      "surface": "metal",
+      "campaign": true,
+      "rail": true
+    },
+    {
+      "x": 10,
+      "z": -40.6,
+      "hx": 0.06,
+      "hz": 0.6000000000000014,
+      "y": 4.84,
+      "height": 1.06,
+      "surface": "metal",
+      "campaign": true,
+      "rail": true
+    },
+    {
+      "x": 26,
+      "z": -49.05,
+      "hx": 0.06,
+      "hz": 0.9499999999999993,
+      "y": 4.84,
+      "height": 1.06,
+      "surface": "metal",
+      "campaign": true,
+      "rail": true
+    },
+    {
+      "x": 26,
+      "z": -40.95,
+      "hx": 0.06,
+      "hz": 0.9499999999999993,
+      "y": 4.84,
+      "height": 1.06,
+      "surface": "metal",
+      "campaign": true,
+      "rail": true
+    },
+    {
+      "x": 2,
+      "z": -43.0,
+      "hx": 0.06,
+      "hz": 1.7000000000000028,
+      "y": 4.84,
+      "height": 1.06,
+      "surface": "metal",
+      "campaign": true,
+      "rail": true
+    },
+    {
+      "x": 10,
+      "z": -43.0,
+      "hx": 0.06,
+      "hz": 1.7000000000000028,
+      "y": 4.84,
+      "height": 1.06,
+      "surface": "metal",
+      "campaign": true,
+      "rail": true
+    },
+    {
+      "x": 18,
+      "z": -50,
+      "hx": 8.0,
+      "hz": 0.06,
+      "y": 4.84,
+      "height": 1.06,
+      "surface": "metal",
+      "campaign": true,
+      "rail": true
+    },
+    {
+      "x": 12,
+      "z": -40,
+      "hx": 2.0,
+      "hz": 0.06,
+      "y": 4.84,
+      "height": 1.06,
+      "surface": "metal",
+      "campaign": true,
+      "rail": true
+    },
+    {
+      "x": 24,
+      "z": -40,
+      "hx": 2.0,
+      "hz": 0.06,
+      "y": 4.84,
+      "height": 1.06,
+      "surface": "metal",
+      "campaign": true,
+      "rail": true
+    },
+    {
+      "x": 29,
+      "z": -45,
+      "hx": 3.0,
+      "hz": 3.0,
+      "y": -0.2,
+      "height": 0.2,
+      "surface": "metal",
+      "campaign": true,
+      "walkableSurface": true,
+      "liftId": "l1-lift",
+      "traversal": true
+    },
+    {
+      "x": -35,
+      "z": 10,
+      "hx": 0.07,
+      "hz": 72.0,
+      "y": 0,
+      "height": 1.05,
+      "surface": "metal",
+      "campaign": true,
+      "fence": true
+    },
+    {
+      "x": 42,
+      "z": 10,
+      "hx": 0.07,
+      "hz": 72.0,
+      "y": 0,
+      "height": 1.05,
+      "surface": "metal",
+      "campaign": true,
+      "fence": true
+    },
+    {
+      "x": 3.5,
+      "z": -62,
+      "hx": 38.5,
+      "hz": 0.07,
+      "y": 0,
+      "height": 1.05,
+      "surface": "metal",
+      "campaign": true,
+      "fence": true
+    },
+    {
+      "x": 3.5,
+      "z": 82,
+      "hx": 38.5,
+      "hz": 0.07,
+      "y": 0,
+      "height": 1.05,
+      "surface": "metal",
+      "campaign": true,
+      "fence": true
+    }
+  ],
+  "buildings": [
+    [
+      -24,
+      59,
+      18,
+      28,
+      19
+    ],
+    [
+      27,
+      63,
+      20,
+      30,
+      24
+    ],
+    [
+      -23,
+      20,
+      20,
+      34,
+      28
+    ],
+    [
+      25,
+      34,
+      20,
+      24,
+      21
+    ],
+    [
+      -23,
+      -23,
+      20,
+      37,
+      31
+    ],
+    [
+      35,
+      -23,
+      10,
+      32,
+      17
+    ],
+    [
+      -12,
+      -54,
+      24,
+      12,
+      18
+    ],
+    [
+      29,
+      -57,
+      18,
+      6,
+      12
+    ]
+  ],
+  "stairs": [
+    {
+      "id": "l1-stairs",
+      "x": 18,
+      "halfWidth": 2.6,
+      "topZ": -40,
+      "bottomZ": -18,
+      "height": 4.8
+    }
+  ],
+  "decks": [
+    {
+      "id": "l1-relay",
+      "x": 18,
+      "z": -45,
+      "hx": 8,
+      "hz": 5,
+      "height": 4.8
+    },
+    {
+      "id": "l1-bridge",
+      "x": 6,
+      "z": -43,
+      "hx": 4,
+      "hz": 1.7,
+      "height": 4.8
+    }
+  ],
+  "lifts": [
+    {
+      "id": "l1-lift",
+      "x": 29,
+      "z": -45,
+      "hx": 3,
+      "hz": 3,
+      "height": 4.8,
+      "offset": 0
+    }
+  ],
+  "route": [
+    [
+      0,
+      72,
+      0
+    ],
+    [
+      0,
+      67,
+      0
+    ],
+    [
+      -6,
+      63,
+      0
+    ],
+    [
+      0,
+      56.5,
+      0
+    ],
+    [
+      2.3,
+      56.5,
+      0
+    ],
+    [
+      2.3,
+      51.5,
+      0
+    ],
+    [
+      0,
+      47,
+      0
+    ],
+    [
+      0,
+      29,
+      0
+    ],
+    [
+      0,
+      13,
+      0
+    ],
+    [
+      18,
+      13,
+      0
+    ],
+    [
+      18,
+      6,
+      0
+    ],
+    [
+      18,
+      -17,
+      0
+    ],
+    [
+      18,
+      -40,
+      4.8
+    ],
+    [
+      18,
+      -43,
+      4.8
+    ]
+  ],
+  "bounds": {
+    "minX": -35,
+    "maxX": 42,
+    "minZ": -62,
+    "maxZ": 82
+  },
+  "portals": [
+    [
+      0,
+      33
+    ],
+    [
+      -5,
+      45
+    ],
+    [
+      7,
+      22
+    ],
+    [
+      18,
+      0
+    ],
+    [
+      18,
+      -14
+    ],
+    [
+      5,
+      -8
+    ]
+  ]
+}

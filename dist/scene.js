@@ -96,9 +96,12 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   const rim = new T.DirectionalLight(0x9abfff, 1.08); rim.position.set(30, 12, -35); scene.add(rim);
   const batches = new Map(); const obstacles = [];
   const batch = (mat, pos, scale, rot = 0) => { if (!batches.has(mat)) batches.set(mat, []); batches.get(mat).push({ pos, scale, rot }); };
+  const arenaRoot=new T.Group();arenaRoot.name='Carte Survie / indépendante';scene.add(arenaRoot);
+  const beforeArena=new Set(scene.children);
   const city = createRuinedCity(scene, obstacles, COVER_WALLS, palette.rose, profile.artQuality);
   const cityMats = city.materials;
   const traversal = createTraversalArt(scene, obstacles, cityMats);
+  for(const child of [...scene.children])if(!beforeArena.has(child))arenaRoot.add(child);
   const combatFX = createCombatFX(T, scene, palette);
   const laserFX=createLaserFX(T,scene,palette);
   const bladeLight=new T.PointLight(palette.rose,0,3.2,2);bladeLight.castShadow=false;scene.add(bladeLight);
@@ -153,7 +156,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   for (const [mat, items] of batches) {
     const instance = new T.InstancedMesh(geometries.box, mat, items.length); const matrix = new T.Matrix4(), q = new T.Quaternion();
     items.forEach((item, i) => { if (typeof item.rot === 'number') q.setFromAxisAngle(v(0,1,0),item.rot); else q.setFromEuler(v(item.rot.x||0,item.rot.y||0,item.rot.z||0)); matrix.compose(v(...item.pos), q, v(...item.scale)); instance.setMatrixAt(i,matrix); });
-    instance.castShadow = !mat.isMeshBasicMaterial; instance.receiveShadow = !mat.isMeshBasicMaterial; instance.computeBoundingSphere(); scene.add(instance);
+    instance.castShadow = !mat.isMeshBasicMaterial; instance.receiveShadow = !mat.isMeshBasicMaterial; instance.computeBoundingSphere(); arenaRoot.add(instance);
   }
 
   const portal = new T.Group(); portal.position.set(PORTAL.x,0,PORTAL.z); scene.add(portal);
@@ -354,7 +357,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   }
   function resetDynamic(){combatFX.reset();laserFX.reset();traversal.update(0);for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();portal.visible=true;for(const death of deaths){scene.remove(death.fx);death.mat.dispose();death.haloMat.dispose();}deaths.length=0;for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
   function sync(sim,time,dt){
-    city.fence?.update({...sim.player,y:(sim.player.elevation||0)+(sim.player.crouched?1.05:1.65)},.65,1.2);traversal.update(sim.time);combatFX.update(dt,camera);laserFX.update(sim.bullets,dt);trackShadows(sim.player.x,sim.player.z,sim.player.elevation||0);
+    if(!campaignActive)city.fence?.update({...sim.player,y:(sim.player.elevation||0)+(sim.player.crouched?1.05:1.65)},.65,1.2);traversal.update(sim.time);campaignArt.updateLift(sim.time);combatFX.update(dt,camera);laserFX.update(sim.bullets,dt);trackShadows(sim.player.x,sim.player.z,sim.player.elevation||0);
     setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));updateStations(sim,time);syncSecondaryPortals(sim,sim.time);
     for(const event of sim.events||[])if(event.type==='kill')beginDeath(event.id,time);
     updateDeaths(time);
@@ -425,14 +428,19 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     try { return await recovery; } finally { recovery = null; }
   }
   const campaignArt=createCampaignArt(T,scene,obstacles,{quality:profile.artQuality});
+  const arenaObstacles=[...obstacles];
   let campaignActive=false;
   function setCampaignActive(enabled){
     campaignActive=!!enabled;
-    for(let i=obstacles.length-1;i>=0;i--)if(obstacles[i].campaign)obstacles.splice(i,1);
-    if(campaignActive)obstacles.push(...campaignArt.obstacles);
+    obstacles.splice(0,obstacles.length,...(campaignActive?campaignArt.obstacles:arenaObstacles));
+    arenaRoot.visible=!campaignActive;
+    scene.fog.color.setHex(campaignActive?0x526466:character.world.fog);
+    scene.fog.density=campaignActive?.006:.008;
+    hemisphere.color.setHex(campaignActive?0xc4ceca:0xa9c9e5);hemisphere.groundColor.setHex(campaignActive?0x414833:0x344058);
+    sun.color.setHex(campaignActive?0xffdeb7:0xb5d7ff);rim.color.setHex(campaignActive?0xa6bbb7:0x9abfff);
     campaignArt.setVisible(campaignActive);
   }
-  return {T,scene,camera,moon,campaignArt,setCampaignActive,graphics:{...profile,initialFailure:prepared.initialFailure},warm:()=>warmRenderer(renderer,scene,camera),get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>({...city.stats,boundary:city.fence?.stats()}),resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
+  return {T,scene,camera,moon,campaignArt,setCampaignActive,graphics:{...profile,initialFailure:prepared.initialFailure},warm:()=>warmRenderer(renderer,scene,camera),get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>campaignActive?{...campaignArt.stats(),map:'vesper-secours-07'}:{...city.stats,boundary:city.fence?.stats()},resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
     holsterGun,setPlayerVisible,
     get lost(){return lost;},get backend(){return renderer.backend?.isWebGPUBackend?'WebGPU':'WebGL';},render:()=>{if(!lost){camera.updateWorldMatrix(true,false);moon.update(camera);lightBlade();renderer.render(scene,camera);}}};
 }

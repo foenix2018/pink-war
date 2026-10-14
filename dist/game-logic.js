@@ -227,12 +227,12 @@ export function brokenBridgeDetour(enemy,player) {
   return null;
 }
 export class ArenaGame {
-  constructor(obstacles = [], random = Math.random) { this.obstacles = obstacles; this.random = random; this.navigation = new CoverNavigation(obstacles); this.stairNavigation=ELEVATED_ROUTES.map(()=>new CoverNavigation(obstacles)); this.reset(); }
+  constructor(obstacles = [], random = Math.random, traversal = null) { this.traversal=traversal;this.routes=traversal?.routes||ELEVATED_ROUTES;this.lifts=traversal?.lifts||LIFTS;this.obstacles = obstacles; this.random = random; this.navigation = new CoverNavigation(obstacles); this.stairNavigation=this.routes.map(()=>new CoverNavigation(obstacles)); this.reset(); }
   replaceObstacles(obstacles) {
     // Renderer recovery / entering WebXR rebuilds the scene. Keep aiming and
     // simulation on the same moving lift and gate colliders after that switch.
     this.obstacles=obstacles;this.updateLifts(this.time);
-    this.navigation=new CoverNavigation(obstacles);this.stairNavigation=ELEVATED_ROUTES.map(()=>new CoverNavigation(obstacles));
+    this.navigation=new CoverNavigation(obstacles);this.stairNavigation=this.routes.map(()=>new CoverNavigation(obstacles));
     this.searchFields=new Map();
   }
   reset() {
@@ -254,8 +254,11 @@ export class ArenaGame {
     for(const nav of this.stairNavigation){nav.refreshAt=-1;nav.goal=-1;}
     this.updateLifts(0);
   }
+  surfacesAt(x,z,time=this.time) { return this.traversal?.surfaces(x,z,time)||traversalSurfaces(x,z,time); }
+  surfaceHeight(x,z,time=this.time,max=Infinity) { return this.traversal?.height(x,z,time,max)??walkSurfaceHeight(x,z,time,max); }
+  routeForSurface(id,x=0) { return this.traversal?.routeForSurface(id,x)??elevatedRouteForSurface(id,x); }
   updateLifts(previousTime) {
-    for(const lift of LIFTS){
+    for(const lift of this.lifts){
       const height=liftHeightAt(lift,this.time),delta=height-liftHeightAt(lift,previousTime);
       for(const entity of [this.player,...this.enemies])if(entity.onLift===lift.id && entity.grounded && insideSurface(entity.x,entity.z,lift))entity.elevation+=delta;
       for(const obstacle of this.obstacles){
@@ -266,7 +269,7 @@ export class ArenaGame {
   }
   settle(entity,dt,isPlayer=false) {
     const previous=entity.elevation||0;
-    let floor=walkSurfaceHeight(entity.x,entity.z,this.time,previous+.3);
+    let floor=this.surfaceHeight(entity.x,entity.z,this.time,previous+.3);
     for(const b of this.obstacles){
       const top=(b.y||0)+b.height;
       if(!b.walkableSurface && b.height<=1.35 && top<=previous+.12 && Math.abs(entity.x-b.x)<b.hx && Math.abs(entity.z-b.z)<b.hz)floor=Math.max(floor,top);
@@ -284,7 +287,7 @@ export class ArenaGame {
       if(entity.elevation<=floor){entity.elevation=floor;entity.verticalSpeed=0;entity.grounded=true;if(isPlayer)this.event('land');}
     }
     entity.onLift=null;
-    if(entity.grounded)for(const l of LIFTS)if(insideSurface(entity.x,entity.z,l) && Math.abs(entity.elevation-liftHeightAt(l,this.time))<.025){entity.onLift=l.id;break;}
+    if(entity.grounded)for(const l of this.lifts)if(insideSurface(entity.x,entity.z,l) && Math.abs(entity.elevation-liftHeightAt(l,this.time))<.025){entity.onLift=l.id;break;}
   }
   get equipment() { return equipmentForLevel(this.wave); }
   get weapon() { return WEAPONS[this.weaponIndex]; }
@@ -338,9 +341,9 @@ export class ArenaGame {
       Math.abs(point.x-b.x)>b.hx+1.4||Math.abs(point.z-b.z)>b.hz+1.4);
     const chosen=candidates.find(point=>clear(point)&&!this.blocked(
       {x:p.x,y:p.elevation+1.5,z:p.z},
-      {x:point.x,y:walkSurfaceHeight(point.x,point.z,this.time,p.elevation+.3)+1.7,z:point.z}
+      {x:point.x,y:this.surfaceHeight(point.x,point.z,this.time,p.elevation+.3)+1.7,z:point.z}
     ))||candidates.find(clear)||{x:p.x,z:p.z};
-    const offer={index,x:chosen.x,z:chosen.z,elevation:walkSurfaceHeight(chosen.x,chosen.z,this.time,p.elevation+.3),createdAt:this.time};
+    const offer={index,x:chosen.x,z:chosen.z,elevation:this.surfaceHeight(chosen.x,chosen.z,this.time,p.elevation+.3),createdAt:this.time};
     this.weaponOffers.push(offer);this.event('weapon-offer',{...offer,name:WEAPONS[index].name});
   }
   nearbyWeapon(maxDistance=2.65) {
@@ -389,7 +392,7 @@ export class ArenaGame {
     const x=site.x+Math.sin(site.yaw||0)*3.2+Math.cos(angle)*.95;
     const z=site.z+Math.cos(site.yaw||0)*3.2+Math.sin(angle)*.95;
     const aimHeight = probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : ['seer','listener'].includes(form) ? 1.38 : ['brute','bulwark'].includes(form) ? 1.42 : 1.15;
-    const homeHeight = walkSurfaceHeight(x, z,this.time,.3);
+    const homeHeight = this.surfaceHeight(x, z,this.time,.3);
     const enemy = { id: this.nextId++, x, z, elevation: homeHeight + (probe ? PROBE.hover : 0),grounded:!probe,verticalSpeed:0,homeHeight,
       hp: enemyDurability(this.wave,form,elite), elite, ranged, form, aimHeight,
       speed: probe ? Math.min(5,3.6 + this.wave * .07) : Math.min(4.3,2.4+(this.wave-1)*.055)*(form==='bulwark'?.7:form==='scuttler'?1.12:1),
@@ -591,18 +594,18 @@ export class ArenaGame {
       }
       // An alerted ground unit approaches the bottom of the stairs, then climbs.
       // It never snaps onto a balcony just because it walked underneath it.
-      const playerSurface=traversalSurfaces(pursuit.x,pursuit.z,this.time)
+      const playerSurface=this.surfacesAt(pursuit.x,pursuit.z,this.time)
         .filter(surface=>surface.height>2&&Math.abs(surface.height-pursuit.elevation)<.37)
         .sort((a,b)=>Math.abs(a.height-pursuit.elevation)-Math.abs(b.height-pursuit.elevation))[0];
-      const playerRoute=playerSurface&&elevatedRouteForSurface(playerSurface.id,pursuit.x);
+      const playerRoute=playerSurface&&this.routeForSurface(playerSurface.id,pursuit.x);
       let stairRoute=false;
       if(e.awareness!=='patrol'&&!e.bridgeDetour)
-        e.bridgeDetour=brokenBridgeDetour(e,pursuit);
+        e.bridgeDetour=this.traversal?null:brokenBridgeDetour(e,pursuit);
       if(e.bridgeDetour&&e.elevation<=.3)e.bridgeDetour=null;
       if(e.bridgeDetour&&e.awareness!=='patrol'){
         // Descend the ramp on the enemy's own bank, then navigate across the
         // street and climb the other approach rather than walking over air.
-        const stair=ELEVATED_ROUTES.find(route=>route.id===e.bridgeDetour);
+        const stair=this.routes.find(route=>route.id===e.bridgeDetour);
         if(e.stairRoute!==stair.id||e.stairDirection!=='down'){
           e.stairRoute=stair.id;e.stairStage=0;e.stairDirection='down';
         }
@@ -612,7 +615,7 @@ export class ArenaGame {
         destinationZ=e.stairStage===0?stair.topZ-.6:stair.bottomZ+1;
         stairRoute=true;
       }else if(playerRoute && e.elevation<pursuit.elevation-.3 && e.awareness!=='patrol'){
-        const si=ELEVATED_ROUTES.findIndex(route=>route.id===playerRoute),stair=ELEVATED_ROUTES[si];
+        const si=this.routes.findIndex(route=>route.id===playerRoute),stair=this.routes[si];
         if(e.stairRoute!==stair.id||e.stairDirection!=='up'){e.stairRoute=stair.id;e.stairStage=0;e.stairDirection='up';}
         if(e.stairStage===0 && Math.hypot(e.x-stair.x,e.z-(stair.bottomZ+1))<1.7)e.stairStage=1;
         if(e.stairStage===0){
@@ -621,11 +624,11 @@ export class ArenaGame {
         }else{destinationX=stair.x;destinationZ=stair.topZ-.8;}
         stairRoute=true;
       }else{
-        const enemySurface=traversalSurfaces(e.x,e.z,this.time)
+        const enemySurface=this.surfacesAt(e.x,e.z,this.time)
           .filter(surface=>surface.height>2&&Math.abs(surface.height-e.elevation)<.37)[0];
-        const enemyRoute=enemySurface&&elevatedRouteForSurface(enemySurface.id,e.x);
-        const stair=enemyRoute?ELEVATED_ROUTES.find(route=>route.id===enemyRoute):
-          e.stairDirection==='down'?ELEVATED_ROUTES.find(route=>route.id===e.stairRoute):null;
+        const enemyRoute=enemySurface&&this.routeForSurface(enemySurface.id,e.x);
+        const stair=enemyRoute?this.routes.find(route=>route.id===enemyRoute):
+          e.stairDirection==='down'?this.routes.find(route=>route.id===e.stairRoute):null;
         if(stair && e.elevation>.3 && pursuit.elevation<e.elevation-.4 && e.awareness!=='patrol'){
           if(e.stairRoute!==stair.id||e.stairDirection!=='down'){e.stairRoute=stair.id;e.stairStage=0;e.stairDirection='down';}
           if(e.stairStage===0&&Math.hypot(e.x-stair.x,e.z-(stair.topZ-.6))<1.1)e.stairStage=1;

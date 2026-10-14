@@ -132,7 +132,7 @@ test('pause and death freeze objective timers, and replay clears the finite enco
   assert.equal(game.ammo[0], 12);
 });
 
-test('all four encounter forms can be defeated with actual R9 projectiles, then require the terrace to finish', () => {
+test('two scripted patrols can be defeated with actual R9 projectiles before the elevated ending', () => {
   const game = new CampaignLevel1([], random);
   game.invulnerable = 1000;
   archive(game);
@@ -161,7 +161,8 @@ test('all four encounter forms can be defeated with actual R9 projectiles, then 
   assert.deepEqual(forms, ['probe', 'stalker', 'scuttler', 'seer']);
   assert.equal(game.kills, 4);
   assert.equal(game.toSpawn, 0);
-  assert.equal(game.stage, 'exit');
+  assert.equal(game.stage, 'crossing');
+  assert.ok(game.weaponOffers.some(o=>o.index===1));
   assert.equal(game.state, 'playing');
   assert.equal(game.completed, false);
   const events = game.drainEvents();
@@ -171,6 +172,17 @@ test('all four encounter forms can be defeated with actual R9 projectiles, then 
   assert.equal(game.enemies.length, 0);
   assert.equal(game.wave, 1);
   assert.equal(game.activePortals.length, 0);
+  at(game, LEVEL1.junction,0);advance(game,.1);
+  assert.equal(game.stage,'combat2');
+  attempts=0;
+  while(game.stage==='combat2'&&attempts++<6000){
+    const target=game.enemies[0];if(target){target.speed=0;target.stunnedUntil=1000;if(game.ammo[0]===0)game.reload();
+      const scale=enemyScale(target.form,target.elite);const origin={x:game.player.x,y:game.player.elevation+1.45,z:game.player.z};
+      const y=target.elevation+(target.form==='probe'?.55:target.form==='scuttler'?.79:1.27)*scale;
+      game.shoot(origin,{x:target.x-origin.x,y:y-origin.y,z:target.z-origin.z});
+    }game.step(.025);
+  }
+  assert.ok(attempts<6000);assert.equal(game.kills,8);assert.equal(game.stage,'exit');
   at(game, LEVEL1.exit);
   assert.equal(game.interact(), true);
   const end = game.drainEvents();

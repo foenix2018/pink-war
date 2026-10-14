@@ -1,4 +1,18 @@
-# Vérification — Pink War v3.31
+# Vérification — Pink War v3.32
+
+Demande : construire un premier niveau militaire futuriste dans l’esprit Pink War, différent de l’arène. Base 3.31 (`3a7374c`) ; dépôt distant identique au début et avant publication.
+
+- Blender 4.3.2 utilisé pour produire une scène originale éditable, un GLB et les maillages locaux compressés. 159 124 triangles répartis en dix matériaux statiques ; collision/source communes en mètres. Laboratoire ouvert, rue, cours, véhicule de secours, viaduc détruit, bâtiments, végétation, escaliers, passerelle et ascenseur vers le relais à 4,8 m.
+- La campagne remplace entièrement les obstacles de l’arène et masque son décor. Physique de hauteur et routes de poursuite propres à la mission, conservées après reconstruction du moteur. Le mode Survie restaure la carte initiale ; AT HOME conserve sa défense et sa zone réelle.
+- Deux combats de quatre robots, séparés par une traversée de rue et la récupération facultative de BLOOM. Portails distants et accessibles, tirs sans guidage, couverts physiques, archive humaine de l’autre personnage et clôture du niveau au relais en hauteur. Santé et munitions restent au HUD. La clôture basse conserve son avertissement rouge à proximité.
+
+**Résultats** : 222 tests Node réussis, dont six nouveaux contrôles sur la géométrie physique du niveau : parcours complet des portes jusqu’au relais, absence des anciens sols invisibles, transport par l’ascenseur et sortie sur terrasse, tous les sites de portails connectés, deux patrouilles réellement éliminées par projectiles sur la carte avec ses colliders, robot au sol montant par le nouvel escalier. Les huit contrôles de campagne existants couvrent aussi la lecture protégée, les interactions par distance/étage/visibilité, les deux patrouilles sur scène isolée, l’absence de guidage et les tirs arrêtés par les obstacles.
+
+Sept contrôles navigateur réussis : carte Blender effectivement rendue, arène/colliders désactivés, mouvement W, terminaux F, trois captures du jeu, fin préparée, restauration de Survie et lancement tactile LYLU/WebGL. Six contrôles Quest/IWER réussis : entrée immersive, interaction aux deux terminaux par stick libre, tir R9 à la gâchette droite, bilan préparé et rejeu par A. Deux contrôles complémentaires passent : clôture basse avec avertissement rouge, puis perte réelle du contexte WebGL et reconstruction de la carte Blender avec archive/santé 73/batterie 8 conservées et arène toujours désactivée. Les six contrôles du HTML autonome passent : accueil différé, accès dans trois formats mobiles, fonds incorporés et vraie partie WebGL sur la nouvelle carte, avec toutes les requêtes externes bloquées. Rapports et scripts de vérification joints à la livraison.
+
+**Limites** : tests navigateur dans Chromium/SwiftShader ; appareil iPhone représenté par viewport tactile et user agent, Quest par IWER. Aucun iPhone/Safari/WebKit ou Quest physique disponible ; aucune fréquence d’images sur matériel réel annoncée. Captures PC à pixel ratio 1, positions préparées et vraie image WebGL ; tests mobiles et Quest à résolution réduite. La navigation `file:` est interdite par l’administrateur du navigateur d’exécution ; le fichier autonome est servi localement avec requêtes externes bloquées. Son fonctionnement dans l’Aperçu de Fichiers iOS n’est pas démontré. Le lien HTTPS reste la voie principale sur iPhone. Première version jouable du décor, pas une promesse de qualité photoréaliste AAA.
+
+# Historique — Pink War v3.31
 
 Demande : sur iPhone, un décor déjà affiché est couvert par « Le rendu 3D n’a pas démarré », avec difficultés depuis Safari, le navigateur intégré et le HTML téléchargé. Base : 3.30 (`cfbd063`), sans changement distant supplémentaire. Le détail de l’exception du téléphone n’a pas été fourni : ces essais valident les corrections des voies d’échec présentes dans le code, pas l’identification certaine de l’erreur physique.
 

@@ -16,7 +16,7 @@ function refresh(){
   for(const b of document.querySelectorAll('[data-mode]'))b.setAttribute('aria-pressed',String(b.dataset.mode===mode));
   for(const b of document.querySelectorAll('[data-view]')){const yes=b.dataset.view===view;b.classList.toggle('selected',yes);b.setAttribute('aria-pressed',String(yes));}
   $('mission-title').textContent=mode==='campaign'?'01 — Le dernier signal':'Survie — Les brèches';
-  $('mission-description').textContent=mode==='campaign'?'Un laboratoire oublié. Une archive humaine. Une trace de votre famille.':'Vingt vagues de machines et six armes à récupérer.';
+  $('mission-description').textContent=mode==='campaign'?'Laboratoire abandonné, rue sous surveillance et relais en hauteur. Une trace de votre famille.':'Vingt vagues de machines et six armes à récupérer.';
   $('play-label').textContent=loading?'CHARGEMENT…':mode==='campaign'?'JOUER LE NIVEAU 1':'LANCER LA SURVIE';
   $('play-button').disabled=loading;
   $('sound-setting').checked=!!settings.sound;$('music-setting').checked=settings.music!==false;
@@ -46,7 +46,7 @@ async function begin(intent='play'){
   if(settings.sound||settings.music!==false)try{const Audio=window.AudioContext||window.webkitAudioContext;
     window.__PINKWAR_BOOT_AUDIO ||=new Audio();window.__PINKWAR_BOOT_AUDIO.resume().catch(()=>{});}catch{}
   try{
-    modulePromise ||=import('./game.js?v=3.31');await modulePromise;
+    modulePromise ||=import('./game.js?v=3.32');await modulePromise;
     for(const d of document.querySelectorAll('dialog'))d.removeEventListener('cancel',earlyCancel);
     if(!window.__PINKWAR||window.__PINKWAR.snapshot().phase==='error')throw new Error('Initialisation interrompue.');
     loading=false;

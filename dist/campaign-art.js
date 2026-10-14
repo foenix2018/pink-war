@@ -1,174 +1,69 @@
-// Level 1: a human maintenance annex inside Vesper. Geometry and colliders are
-// kept together; callers activate .obstacles only while the campaign is active.
-// No native XR pose, world scale, HUD or shared city material is changed here.
-export function createCampaignArt(T, scene, _worldObstacles, {quality='auto'}={}) {
-  const root=new T.Group();root.name='VESPER — Annexe de maintenance / niveau 1';root.visible=false;scene.add(root);
-  const obstacles=[],ownedGeometry=new Set(),ownedMaterials=new Set(),ownedTextures=new Set(),batches=new Map();
-  const screens=[],waypoints=[],tmp=new T.Object3D();let disposed=false,lastState='',stage='power',currentObjective=null;
-  const ownGeo=g=>(ownedGeometry.add(g),g),ownMat=m=>(ownedMaterials.add(m),m);
-  let seed=329031;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
-  function texture(width,height,paint) {
-    const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
-    const context=canvas.getContext('2d');paint(context,width,height);
-    const map=new T.CanvasTexture(canvas);map.colorSpace=T.SRGBColorSpace;map.anisotropy=4;ownedTextures.add(map);return {canvas,context,map};
-  }
-  const metal=texture(256,256,(c,w,h)=>{
-    c.fillStyle='#a6a59f';c.fillRect(0,0,w,h);
-    for(let i=0;i<2600;i++){const a=random()*.10;c.fillStyle=`rgba(25,31,30,${a})`;c.fillRect(random()*w,random()*h,2+random()*40,.5+random()*2);}
-    for(let i=0;i<50;i++){c.fillStyle=`rgba(90,50,22,${.07+random()*.16})`;c.beginPath();c.ellipse(random()*w,random()*h,1+random()*8,2+random()*19,0,0,Math.PI*2);c.fill();}
-  }).map;
-  metal.wrapS=metal.wrapT=T.RepeatWrapping;
-  const concrete=texture(256,256,(c,w,h)=>{
-    c.fillStyle='#9b9e92';c.fillRect(0,0,w,h);
-    for(let i=0;i<4200;i++){const light=random()>.5; c.fillStyle=light?'rgba(222,221,201,.12)':'rgba(32,40,36,.10)';c.fillRect(random()*w,random()*h,1+random()*4,1+random()*3);}
-    c.strokeStyle='rgba(30,42,34,.26)';c.lineWidth=1.2;
-    for(let i=0;i<6;i++){let x=random()*w,y=random()*h;c.beginPath();c.moveTo(x,y);for(let j=0;j<7;j++){x+=(random()-.5)*22;y+=random()*15;c.lineTo(x,y);}c.stroke();}
-  }).map;
-  concrete.wrapS=concrete.wrapT=T.RepeatWrapping;
-  const std=(color,roughness,metalness,map)=>ownMat(new T.MeshStandardMaterial({color,roughness,metalness,map,bumpMap:map,bumpScale:map===metal?.008:.019}));
-  const m={concrete:std(0x6f776d,.98,.02,concrete),steel:std(0x708282,.47,.72,metal),rust:std(0x64442f,.86,.32,metal),dark:std(0x141c1b,.83,.27,metal),floor:std(0x3a4b46,.93,.12,concrete),paper:std(0xbbb99a,.99,0),leaf:std(0x324c30,.98,0),leafLight:std(0x576947,.98,0),amber:ownMat(new T.MeshBasicMaterial({color:0xe4b765,toneMapped:false})),inactive:ownMat(new T.MeshBasicMaterial({color:0x30493d,toneMapped:false}))};
-  const geo={box:ownGeo(new T.BoxGeometry(1,1,1)),rod:ownGeo(new T.CylinderGeometry(1,1,1,8)),stone:ownGeo(new T.IcosahedronGeometry(1,0)),plane:ownGeo(new T.PlaneGeometry(1,1))};
-  function add(shape,mat,pos,scale=[1,1,1],rotation=[0,0,0]) {
-    const key=shape+mat.uuid;if(!batches.has(key))batches.set(key,{geometry:geo[shape],material:mat,matrices:[]});
-    tmp.position.set(...pos);tmp.scale.set(...scale);
-    rotation.isQuaternion?tmp.quaternion.copy(rotation):tmp.rotation.set(...rotation);tmp.updateMatrix();batches.get(key).matrices.push(tmp.matrix.clone());
-  }
-  const box=(mat,x,y,z,w,h,d)=>add('box',mat,[x,y,z],[w,h,d]);
-  function rod(mat,a,b,r=.04) {const from=new T.Vector3(...a),to=new T.Vector3(...b),delta=to.clone().sub(from);add('rod',mat,from.add(to).multiplyScalar(.5).toArray(),[r,delta.length(),r],new T.Quaternion().setFromUnitVectors(new T.Vector3(0,1,0),delta.normalize()));}
-  function solid(x,z,w,d,y,height,surface='metal'){const collider={x,z,hx:w/2,hz:d/2,y,height,surface,campaign:true};obstacles.push(collider);return collider;}
-  function wall(x,z,w,h,d){box(m.concrete,x,h/2,z,w,h,d);solid(x,z,w,d,0,h,'concrete');}
-  function cable(points,r=.028){for(let i=1;i<points.length;i++)rod(m.dark,points[i-1],points[i],r);}
-  function ivy(x,z,top,bottom,side=1){
-    let previous=[x,top,z];for(let y=top-.24;y>bottom;y-=.29){const point=[x+Math.sin(y*2.1)*.10,y,z+side*.015];rod(m.rust,previous,point,.014);previous=point;for(const s of [-1,1])add('stone',random()>.45?m.leaf:m.leafLight,[point[0]+s*.095,y+.03,point[2]+side*.06],[.12,.055,.16],[.5,s*.8,y]);}
-  }
-  // Asymmetric east side fits the existing city block (x >= 7, z >= 61.5).
-  // Both ends have a six-metre opening, so the lab is a traversable ruin.
-  wall(-8.8,59.5,.42,3.35,17);wall(6.45,59.5,.35,2.6,17);
-  wall(-5.9,51,5.8,1.16,.42);wall(4.7,51,3.4,1.16,.42);
-  wall(-5.9,68,5.8,1.10,.42);wall(4.7,68,3.4,1.10,.42);
-  for(const [x,z] of [[-8.8,51],[-8.8,59.5],[-8.8,68],[6.45,51],[6.45,59.5],[6.45,68],[-3.05,51],[3.05,51],[-3.05,68],[3.05,68]]){
-    box(m.steel,x,2,z,.24,4,.24);solid(x,z,.24,.24,0,4);
-    box(m.rust,x,.12,z,.42,.24,.42);
-  }
-  for(const z of [51,59.5,68]){box(m.rust,-1.15,4,z,15.6,.24,.22);solid(-1.15,z,15.6,.22,3.88,.24);}
-  for(const x of [-8.8,6.45]){box(m.steel,x,3.96,59.5,.23,.22,17.3);solid(x,59.5,.23,17.3,3.85,.22);}
-  // Roof fragments, never a full enclosure; canopy shadows frame the terminals.
-  for(const [x,z,w,d] of [[-6.5,53,4.2,3.6],[-7.1,63,3,4.3],[4.7,54,3.4,5.2]]){
-    box(m.concrete,x,4.05,z,w,.16,d);solid(x,z,w,d,3.97,.16,'concrete');
-    for(let i=0;i<3;i++)rod(m.rust,[x-w*.4+i*w*.38,4.14,z+d/2],[x-w*.4+i*w*.38+.17,4.25,z+d/2+.55],.022);
-  }
-  // Flush slab: player remains on the existing y=0 locomotion plane.
-  box(m.floor,-1.15,.006,59.5,15.2,.012,16.75);
-  for(const x of [-7,-3,1,5])box(m.dark,x,.014,59.5,.025,.008,16.4);
-  for(const z of [53,57,61,65])box(m.dark,-1.15,.014,z,14.9,.008,.025);
-  // Broken wall edges and low rubble remain within the solid wall footprints.
-  for(let i=0;i<20;i++) {
-    const side=i%2?1:-1,x=side===1?6.44:-8.78,z=51.5+random()*15.8;
-    add('stone',i%3?m.concrete:m.rust,[x,side===1?2.57:3.32,z],[.15,.12+random()*.12,.22],[0,random()*3,0]);
-  }
-  // Furniture does not obstruct either door or the two terminal approaches.
-  for(const [x,z,w] of [[-7.5,54.3,1.1],[5.3,57.5,1.2]]){
-    box(m.steel,x,.80,z,w,.10,2.3);solid(x,z,w,2.3,0,.85);
-    for(const dx of [-w*.4,w*.4])for(const dz of [-.95,.95])box(m.dark,x+dx,.38,z+dz,.065,.76,.065);
-    box(m.rust,x,.98,z-.5,w*.7,.25,.66);solid(x,z-.5,w*.7,.66,.85,.25);
-    add('plane',m.paper,[x,.858,z+.35],[w*.65,.43,1],[-Math.PI/2,0,.2]);
-  }
-  for(const [x,z] of [[-7.55,66.5],[5.1,64.7]]){
-    box(m.dark,x,.47,z,1.3,.94,.75);box(m.steel,x,.94,z,1.33,.05,.78);solid(x,z,1.33,.78,0,.97);
-    for(let i=0;i<4;i++)box(m.rust,x,.20+i*.20,z+.381,1.1,.045,.02);
-  }
-  // Conduits link the isolated power cabinet and archive, visibly bypassing the city network.
-  cable([[-6,1.3,61.4],[-8.5,1.3,61.4],[-8.5,3.2,61.4],[-8.5,3.3,54.6],[-3,3.45,54.6],[0,3.2,54.6],[0,1.2,54.3]],.055);
-  cable([[-8.45,3.3,66],[-6.9,2.9,65.5],[-5.8,2.4,65.1],[-4.8,2.75,64.8],[-3.7,3.45,64.5]],.023);
-  for(const z of [52.3,55.2,59,66.2])ivy(-8.55,z,3.85,.8,1);
-  for(const x of [4.6,5.3,6])ivy(x,51.27,3.1,.65,1);
+import {LEVEL1_MAP,createLevel1Obstacles} from './level1-layout.js';
+import {MESH_DATA,MESH_INFO} from './levels/vesper-01-mesh.js';
+import {inflateSync} from './vendor/fflate.module.js';
+import {createBoundaryFence} from './boundary-fence.js';
+import {liftHeightAt} from './world-layout.js';
 
-  function panel(name,x,y,z,w,h,{yaw=0,width=1024,height=512}={}) {
-    const data=texture(width,height,()=>{}),material=ownMat(new T.MeshBasicMaterial({map:data.map,toneMapped:false}));
-    const mesh=new T.Mesh(ownGeo(new T.PlaneGeometry(w,h)),material);mesh.position.set(x,y,z);mesh.rotation.y=yaw;mesh.name=name;root.add(mesh);
-    const screen={name,...data,mesh,paint(lines,caption,accent='#dfb26c'){
-      const c=data.context,ww=data.canvas.width,hh=data.canvas.height;
-      c.fillStyle='#071813';c.fillRect(0,0,ww,hh);c.fillStyle='#12291f';c.fillRect(12,12,ww-24,hh-24);
-      c.fillStyle=accent;c.fillRect(24,24,6,hh-48);c.font=`600 ${Math.round(hh*.067)}px sans-serif`;c.fillText(caption,52,hh*.13,ww-96);
-      c.strokeStyle='#486454';c.lineWidth=2;c.beginPath();c.moveTo(52,hh*.19);c.lineTo(ww-44,hh*.19);c.stroke();
-      lines.forEach((line,i)=>{c.fillStyle=i===0?'#e5eee0':'#b8cfbd';c.font=`${i===0?'600 ':''}${Math.round(hh*(lines.length>5?.060:.072))}px sans-serif`;c.fillText(line,52,hh*(.31+i*(lines.length>5?.11:.14)),ww-96);});
-      data.map.needsUpdate=true;
-    }};screens.push(screen);return screen;
+// Independent Blender-built map. Geometry is bundled locally, including in the
+// standalone HTML: no CDN, GLTF loader or late asset request is needed to play.
+export function createCampaignArt(T,scene,_unused,{quality='auto'}={}){
+ const root=new T.Group();root.name='VESPER / SECOURS 07 — carte narrative Blender';root.visible=false;scene.add(root);
+ const obstacles=createLevel1Obstacles(),geometries=[],materials=[],textures=[],screens=[],routes=[];
+ let stage='power',lastState='',disposed=false,currentObjective=null;
+ const ownG=g=>(geometries.push(g),g),ownM=m=>(materials.push(m),m);
+ let seed=33207;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+ function paintTexture(w,h,paint){const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const context=canvas.getContext('2d');paint(context,w,h);const map=new T.CanvasTexture(canvas);map.colorSpace=T.SRGBColorSpace;textures.push(map);return{canvas,context,map};}
+ function weather(metal=false){const t=paintTexture(256,256,(c,w,h)=>{c.fillStyle=metal?'#b0b5b4':'#b6bfb3';c.fillRect(0,0,w,h);for(let k=0;k<4200;k++){c.fillStyle=rand()>.5?'rgba(25,40,31,.18)':'rgba(244,238,210,.12)';c.fillRect(rand()*w,rand()*h,metal?2+rand()*32:1+rand()*4,1+rand()*3);}c.strokeStyle='rgba(37,41,35,.25)';for(let k=0;k<8;k++){let x=rand()*w,y=rand()*h;c.beginPath();c.moveTo(x,y);for(let j=0;j<6;j++){x+=(rand()-.5)*18;y+=rand()*14;c.lineTo(x,y);}c.stroke();}}).map;t.wrapS=t.wrapT=T.RepeatWrapping;return t;}
+ const stone=weather(),metal=weather(true);
+ const colors={concrete:0x80918a,steel:0x657f80,rust:0x7a4a2a,dark:0x152829,glass:0x384849,leaf:0x485b38,bark:0x4e3c27,amber:0xe2a65b,road:0x33494a,white:0xb0bbb1};
+ const maps={};for(const [name,color] of Object.entries(colors)){const isMetal=['steel','dark','rust'].includes(name),textured=!['leaf','bark','glass','amber'].includes(name);maps[name]=ownM(name==='amber'?new T.MeshBasicMaterial({color,toneMapped:false}):new T.MeshStandardMaterial({color,roughness:isMetal?.46:name==='glass'?.48:.96,metalness:isMetal?.68:name==='glass'?.20:.03,map:textured?(isMetal?metal:stone):null,bumpMap:textured?(isMetal?metal:stone):null,bumpScale:isMetal?.008:.035}));}
+ for(const [name,encoded] of Object.entries(MESH_DATA)){
+  const raw=atob(encoded),bytes=new Uint8Array(raw.length);for(let k=0;k<raw.length;k++)bytes[k]=raw.charCodeAt(k);
+  const decoded=inflateSync(bytes);const data=new T.InterleavedBuffer(new Float32Array(decoded.buffer,decoded.byteOffset,decoded.byteLength/4),8),g=ownG(new T.BufferGeometry());
+  g.setAttribute('position',new T.InterleavedBufferAttribute(data,3,0));g.setAttribute('normal',new T.InterleavedBufferAttribute(data,3,3));g.setAttribute('uv',new T.InterleavedBufferAttribute(data,2,6));g.computeBoundingSphere();
+  const mesh=new T.Mesh(g,maps[name]);mesh.name='Blender / '+name;mesh.castShadow=quality!=='low'&&name!=='amber';mesh.receiveShadow=true;root.add(mesh);
+ }
+ const puddleMat=ownM(new T.MeshStandardMaterial({color:0x435854,roughness:.20,metalness:.30,transparent:true,opacity:.38,depthWrite:false}));
+ for(const [x,z,sx,sz] of [[-3,47,2.5,1.5],[5,28,2,3],[21,8,2.8,1.8],[-2,64,1.5,2]]){const o=new T.Mesh(ownG(new T.CircleGeometry(1,18)),puddleMat);o.rotation.x=-Math.PI/2;o.position.set(x,.018,z);o.scale.set(sx,sz,1);root.add(o);}
+ const boundary=createBoundaryFence(T,root,{material:maps.steel});const bounds=LEVEL1_MAP.bounds;boundary.setPolygon([{x:bounds.minX,z:bounds.minZ},{x:bounds.maxX,z:bounds.minZ},{x:bounds.maxX,z:bounds.maxZ},{x:bounds.minX,z:bounds.maxZ}]);
+ // Static rails are already in Blender. Retain the shared proximity warning.
+ boundary.root.children[0].visible=false;
+ const boxGeo=ownG(new T.BoxGeometry(1,1,1));
+ function box(mat,x,y,z,w,h,d,parent=root){const o=new T.Mesh(boxGeo,mat);o.position.set(x,y,z);o.scale.set(w,h,d);o.receiveShadow=true;o.castShadow=quality!=='low';parent.add(o);return o;}
+ function solid(x,z,w,d,y,height,id){if(obstacles.some(b=>b.campaignTerminal===id))return;obstacles.push({x,z,hx:w/2,hz:d/2,y,height,surface:'metal',campaign:true,campaignTerminal:id});}
+ function panel(title,x,y,z,w=2.4,h=1,width=768,height=320){
+  const data=paintTexture(width,height,()=>{}),mesh=new T.Mesh(ownG(new T.PlaneGeometry(w,h)),ownM(new T.MeshBasicMaterial({map:data.map,toneMapped:false})));mesh.position.set(x,y,z);root.add(mesh);
+  const s={mesh,paint(lines,caption=title){const c=data.context;c.fillStyle='#071918';c.fillRect(0,0,width,height);c.fillStyle='#dbb073';c.fillRect(14,16,5,height-32);c.font='600 25px sans-serif';c.fillText(caption,33,42,width-60);lines.forEach((line,i)=>{c.fillStyle=i===0?'#eef0df':'#b5d0c6';c.font='22px sans-serif';c.fillText(line,33,83+i*39,width-60);});data.map.needsUpdate=true;}};screens.push(s);return s;
+ }
+ function terminal(x,y,z,id){box(maps.dark,x,y+.5,z,1.2,1,.55);box(maps.steel,x,y+1.4,z,2.6,1.05,.25);solid(x,z,2.6,.6,y,1.93,id);box(maps.dark,x,y+1,z+.2,1.8,.10,.65);return panel('MÉMOIRE HUMAINE / HORS RÉSEAU',x,y+1.4,z+.142);}
+ box(maps.dark,-6,1.05,61.65,1.65,2.1,.6);solid(-6,61.65,1.65,.6,0,2.1,'power');
+ const power=panel('ALIMENTATION / CIRCUIT ISOLÉ',-6,1.55,61.97,1.55,.95);
+ const archive=terminal(0,0,54.45,'archive'),exit=terminal(18,4.8,-44.55,'exit');
+ panel('VESPER / SECOURS 07',0,4.9,70.31,6,.72).paint(['ANNEXE DES ARCHIVES · ACCÈS MANUEL']);
+ panel('RUE DES ÉVACUATIONS',9,3.3,22,5,.8).paint(['RELAIS NORD ↑ · ORDRE CONTRÔLE LA RUE']);
+ panel('RELAIS DES ARCHIVES',18,7.1,-49.8,5,.8).paint(['ESCALIER / ASCENSEUR DE SERVICE']);
+ // Route studs are physically fixed to the ground; no additional permanent HUD.
+ const routeMat=ownM(new T.MeshBasicMaterial({color:0xdab66b,toneMapped:false}));
+ for(let i=1;i<LEVEL1_MAP.route.length;i++){const a=LEVEL1_MAP.route[i-1],b=LEVEL1_MAP.route[i],n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/2.6);for(let k=0;k<n;k++){const t=k/n,o=box(routeMat,a[0]+(b[0]-a[0])*t,a[2]+(b[2]-a[2])*t+.025,a[1]+(b[1]-a[1])*t,.10,.02,.26);routes.push({o,segment:i});}}
+ const marker=new T.Mesh(ownG(new T.OctahedronGeometry(.10)),routeMat);root.add(marker);
+ const objective=panel('OBJECTIF',0,2.6,55,2.5,.58,768,160);
+ const carriage=new T.Group();root.add(carriage);const lift=LEVEL1_MAP.lifts[0];
+ box(maps.steel,lift.x,-.10,lift.z,6,.20,6,carriage);
+ for(const side of [-1,1]){box(maps.steel,lift.x+side*2.92,.55,lift.z,.10,1.1,6,carriage);box(maps.amber,lift.x+side*2.9,1.07,lift.z,.045,.07,5.9,carriage);}
+ function updateLift(time){if(root.visible)carriage.position.y=liftHeightAt(lift,time);}
+ function update(game,time=0){const s=game?.campaign;if(!s||!root.visible)return;stage=s.stage;currentObjective=s.objective;updateLift(game.time);boundary.update({...game.player,y:game.player.elevation+1.65},.55,1.2);
+  const key=[stage,s.sibling,...s.archive].join('|');if(key!==lastState){lastState=key;
+   power.paint(stage==='power'?['Courant coupé. Réarmer le circuit.','F / clic du stick libre : interagir']:['CIRCUIT LOCAL : ACTIF','Réseau ORDRE : DÉCONNECTÉ']);
+   archive.paint(stage==='power'?['Mémoire hors tension.','Boîtier de secours à gauche.']:stage==='archive'?['Journal humain retrouvé.','F / clic du stick libre : lire']:s.archive);
+   exit.paint(stage==='complete'?[`Passage de ${s.sibling} confirmé.`,'DESTINATION : ARCHIVES VÉGÉTALES','NIVEAU 1 TERMINÉ']:[`Trace de ${s.sibling} enregistrée.`,'F / clic du stick libre : consulter']);
+   for(const r of routes)r.o.visible=stage==='power'?r.segment<=3:stage==='archive'?r.segment===4:['crossing','exit'].includes(stage)?r.segment>=5:false;
+   objective.mesh.visible=!!s.objective;
+   if(s.objective){const p=s.objective.position;objective.mesh.position.set(p.x,p.y+2.7,p.z+.22);objective.paint(['F / CLIC STICK LIBRE'],s.objective.label);}
   }
-  function fixedSign(title,lines,x,y,z,w=3.6,h=1.05,yaw=0){const p=panel(title,x,y,z,w,h,{yaw,width:1024,height:320});p.paint(lines,title);return p;}
-  // Front marker sits above the open doorway, not across its walkable opening.
-  box(m.dark,0,3.48,68.02,6,.78,.13);solid(0,68.02,6,.13,3.09,.78);
-  fixedSign('VESPER  /  SECOURS & MAINTENANCE',['ANNEXE 07 · TERMINAUX HORS RÉSEAU'],0,3.48,68.093,5.65,.67);
-  fixedSign('ARCHIVES VÉGÉTALES',['← ESCALIER OUEST  /  ASCENSEUR DE SERVICE'],-5.5,1.74,68.235,4.55,.95);
-
-  box(m.dark,-6,1.05,61.65,1.65,2.10,.60);solid(-6,61.65,1.65,.60,0,2.10).campaignTerminal='power';
-  box(m.steel,-6,1.55,61.963,1.54,.97,.07);
-  const powerScreen=panel('Tableau électrique local',-6,1.55,62.005,1.41,.83);
-  for(const x of [-6.45,-6.15,-5.85,-5.55]){box(m.steel,x,.57,61.97,.15,.4,.045);box(m.rust,x,.56,62.02,.09,.17,.07);}
-  box(m.amber,-6.66,1.97,62.01,.09,.09,.025);
-
-  function terminal(x,y,z,name,id){
-    box(m.dark,x,y+.5,z,.96,1,.56);solid(x,z,.96,.56,y,1).campaignTerminal=id;
-    box(m.steel,x,y+1.43,z,2.66,1.15,.27);solid(x,z,2.66,.27,y+.855,1.15).campaignTerminal=id;
-    box(m.dark,x,y+1.43,z+.149,2.50,1,.055);
-    const screen=panel(name,x,y+1.43,z+.184,2.39,.91,{width:1024,height:448});
-    box(m.dark,x,y+.98,z+.27,1.74,.075,.5);solid(x,z+.27,1.74,.5,y+.94,.08).campaignTerminal=id;
-    for(let row=0;row<3;row++)for(let key=0;key<14;key++)box(m.steel,x-.66+key*.102,y+1.025,z+.12+row*.092,.077,.008,.065);
-    return screen;
-  }
-  const archiveScreen=terminal(0,0,54.45,'Archive humaine — laboratoire','archive');
-  const exitScreen=terminal(-48,4.8,38.55,'Relais des Archives végétales','exit');
-  // A modest mast identifies the exit without requiring a permanent HUD arrow.
-  box(m.steel,-49.7,6.20,38.55,.08,2.8,.08);solid(-49.7,38.55,.08,.08,4.8,2.8);
-  fixedSign('RELAIS 01',['ARCHIVES VÉGÉTALES'],-48,7.02,38.56,3.5,.80);
-  box(m.steel,-44.75,1.28,63,.07,2.56,.07);solid(-44.75,63,.07,.07,0,2.56);
-  fixedSign('RELAIS 01',['ESCALIER ↑'],-44.75,2.20,63.04,2,.65);
-  // Ground studs are environmental route markers, never a view-locked overlay.
-  const routes={power:[[0,71],[0,65],[-4.7,63.8]],archive:[[-4.7,63.8],[0,61],[0,57]],exit:[[0,57],[0,71.9],[-17,73],[-34,73],[-48,65],[-48,62],[-48,46],[-48,41.3]]};
-  for(const [route,points] of Object.entries(routes))for(let i=1;i<points.length;i++){
-    const a=points[i-1],b=points[i],steps=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/2.4));
-    for(let k=0;k<steps;k++){const t=k/steps,x=a[0]+(b[0]-a[0])*t,z=a[1]+(b[1]-a[1])*t,y=x===-48&&z<=62&&z>=46?(62-z)/16*4.8:z<46&&x===-48?4.8:0;waypoints.push({route,x,y:y+.035,z});}
-  }
-  const routeMaterial=ownMat(new T.MeshBasicMaterial({color:0xd2ad69,toneMapped:false})),routeColor=new T.Color(0xd2ad69);
-  const routeMesh=new T.InstancedMesh(geo.box,routeMaterial,waypoints.length);routeMesh.name='Repères locaux du parcours';routeMesh.frustumCulled=false;root.add(routeMesh);
-  function setRoute(target){let count=0;for(const p of waypoints)if(p.route===target){tmp.position.set(p.x,p.y,p.z);tmp.rotation.set(0,0,0);tmp.scale.set(.17,.03,.35);tmp.updateMatrix();routeMesh.setMatrixAt(count++,tmp.matrix);}routeMesh.count=count;routeMesh.instanceMatrix.needsUpdate=true;}
-  const markerMat=ownMat(new T.MeshBasicMaterial({color:0xe8c27a,toneMapped:false}));
-  const marker=new T.Mesh(ownGeo(new T.OctahedronGeometry(.12,0)),markerMat);marker.name='Terminal actif — repère dans le monde';root.add(marker);
-  const objectiveSign=panel('Objectif au terminal',0,2.56,54.8,2.40,.55,{width:1024,height:256});
-  // Batch shared resources: bounded draw calls even when the headset uses two eyes.
-  for(const {geometry,material,matrices} of batches.values()){
-    const mesh=new T.InstancedMesh(geometry,material,matrices.length);matrices.forEach((matrix,i)=>mesh.setMatrixAt(i,matrix));mesh.castShadow=quality!=='low';mesh.receiveShadow=true;mesh.computeBoundingSphere();root.add(mesh);
-  }
-  function update(game,time=0){
-    const state=game?.campaign||game?.snapshot?.()?.campaign;if(!state||!root.visible)return;
-    stage=state.stage;currentObjective=state.objective||null;
-    const key=[stage,state.sibling,...(state.archive||[])].join('|');
-    if(key!==lastState){
-      lastState=key;
-      const hint='F · INTERAGIR · clic du stick libre';
-      powerScreen.paint(stage==='power'?['Alimentation locale coupée.','Réarmer le circuit isolé.',hint]:['Circuit local : ACTIF','Réseau ORDRE : DÉCONNECTÉ','Archive humaine accessible.'],'MAINTENANCE / ALIMENTATION');
-      if(stage==='power')archiveScreen.paint(['Mémoire hors tension.','Réarmer le tableau à gauche.','Aucune connexion extérieure.'],'ARCHIVE LOCALE / ISOLÉE');
-      else if(stage==='archive')archiveScreen.paint(['Un journal humain a été retrouvé.','Consulter la dernière intervention.',hint],'ARCHIVE LOCALE / ISOLÉE');
-      else {
-        const archive=state.archive?.length?state.archive:['INTERVENTION : '+(state.sibling||'INDICATIF HUMAIN'),'Relais végétal remis sous tension.','Prends l’escalier extérieur.','Retrouve le terminal sur la terrasse.'];
-        // Preserve the human archive during the breach/combat; no flickering text.
-        archiveScreen.paint(archive.slice(0,6),'JOURNAL HUMAIN / COPIE LOCALE');
-      }
-      exitScreen.paint(stage==='complete'?['Passage de '+(state.sibling||'votre proche')+' confirmé.','Destination : les archives de Vesper.','NIVEAU 1 TERMINÉ']:[`Trace de ${state.sibling||'votre proche'} en mémoire.`,'Consulter le journal de passage.',hint],'RELAIS 01 / MÉMOIRE LOCALE');
-      const target=state.objective?.id||stage;
-      setRoute(['power','archive','exit'].includes(stage)?stage:null);
-      objectiveSign.mesh.visible=!!state.objective&&['power','archive','exit'].includes(stage);
-      if(objectiveSign.mesh.visible){
-        const p=state.objective.position;objectiveSign.mesh.position.set(p.x,p.y+2.7,p.z+.23);
-        objectiveSign.paint([hint],state.objective.label||target.toUpperCase());
-      }
-    }
-    marker.visible=!!state.objective&&['power','archive','exit'].includes(stage);
-    if(marker.visible){const p=state.objective.position;marker.position.set(p.x,p.y+3.10+Math.sin(time*2)*.045,p.z+.15);marker.rotation.y=time*.6;}
-    routeMaterial.color.copy(routeColor).multiplyScalar(.82+Math.sin(time*1.7)*.06);
-  }
-  function setVisible(enabled){root.visible=!!enabled;if(enabled)lastState='';else{marker.visible=false;objectiveSign.mesh.visible=false;}}
-  function stats(){return {visible:root.visible,stage,colliders:obstacles.length,staticBatches:batches.size,drawCalls:root.children.filter(o=>o.isMesh).length,terminals:3,objective:currentObjective?.id||null,routeStuds:routeMesh.count,footprint:{minX:-9.01,maxX:6.625,minZ:50.79,maxZ:68.21},ceiling:4.05};}
-  function dispose(){if(disposed)return;disposed=true;scene.remove(root);root.traverse(mesh=>{if(mesh.isInstancedMesh)mesh.dispose();});for(const g of ownedGeometry)g.dispose();for(const m of ownedMaterials)m.dispose();for(const t of ownedTextures)t.dispose();root.clear();obstacles.length=0;}
-  return {root,obstacles,setVisible,update,dispose,stats};
+  marker.visible=!!s.objective;if(s.objective){const p=s.objective.position;marker.position.set(p.x,p.y+3.2+Math.sin(time*2)*.05,p.z);marker.rotation.y=time*.5;}
+ }
+ function setVisible(enabled){root.visible=!!enabled;lastState='';}
+ function stats(){return{visible:root.visible,stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:3,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:2,boundary:boundary.stats()};}
+ function dispose(){if(disposed)return;disposed=true;boundary.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
+ return{root,obstacles,update,setVisible,stats,dispose,updateLift};
 }

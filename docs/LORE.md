@@ -1,6 +1,6 @@
 # Pink War — bible narrative
 
-Canon du premier chapitre, établi à partir des choix de l’utilisateur et de l’histoire écrite ensemble. Les chapitres suivants décrivent la direction de la campagne ; seule la mission 1 est livrée en 3.30.
+Canon du premier chapitre, établi à partir des choix de l’utilisateur et de l’histoire écrite ensemble. Les chapitres suivants décrivent la direction de la campagne ; seule la mission 1 est livrée, avec sa carte dédiée en 3.32.
 
 ## Vesper avant la chute
 
@@ -36,7 +36,9 @@ L’archive indique une intervention récente de l’autre personnage sur le rel
 
 La remise sous tension est détectée. Un portail s’ouvre à distance. Une sonde volante sort en premier, suivie d’un traqueur, d’une unité basse et d’un fusilier. Le joueur utilise le R9 et les protections du laboratoire pour les repousser.
 
-Après le combat, les repères ambre mènent vers le relais ouest. L’escalier extérieur et l’ascenseur de service donnent accès à la terrasse. Son terminal confirme le passage du frère ou de la sœur et la destination suivante : les archives de Vesper. Le niveau se termine sur cette découverte.
+Après le premier combat, une arme BLOOM récupérée devient disponible. Les repères ambre mènent à travers la rue des évacuations. ORDRE déploie une seconde patrouille au carrefour nord : fusilier, sonde, unité basse et machine lourde. Il faut utiliser les protections et les véhicules de secours abandonnés pour franchir ce verrou.
+
+Après ce second combat, la route mène au relais nord. L’escalier extérieur et l’ascenseur de service donnent accès à la terrasse. Son terminal confirme le passage du frère ou de la sœur et la destination suivante : les archives de Vesper. Le niveau se termine sur cette découverte.
 
 Les permanents du HUD restent la santé et les munitions. Les objectifs et textes sont placés dans les écrans du monde ; les indications contextuelles n’apparaissent qu’à proximité. La carte réelle, les collisions et le dénivelé déterminent les interactions.
 
