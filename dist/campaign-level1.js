@@ -42,6 +42,7 @@ export class CampaignLevel1 extends ArenaGame {
     this.completed = false;
     this.stage = 'power';
     this.setStage('power');
+    this.openingSpawned=0;this.ensureOpeningPatrol();
     return this;
   }
 
@@ -78,7 +79,7 @@ export class CampaignLevel1 extends ArenaGame {
       title: text[0], subtitle: text[1], characterId: this.characterId,
       sibling: this.sibling, archive: this.archiveLines,
       objective: target ? { ...target, position: { ...target.position } } : null,
-      encounter:this.encounter+1,spawned:this.spawned+this.encounter*4,total:8,
+      encounter:this.encounter+1,spawned:this.spawned+this.encounter*4+this.openingSpawned,total:10,opening:this.openingSpawned,
       remaining: this.toSpawn + this.enemies.length,
       portal: this.activePortals[0] ? { ...this.activePortals[0] } : null,
       completed: this.completed
@@ -110,6 +111,9 @@ export class CampaignLevel1 extends ArenaGame {
     if (objective.id === 'power') this.setStage('archive');
     else if (objective.id === 'archive') {
       this.archiveRead = true;
+      // An isolated power surge stalls nearby robots while the human log is read.
+      this.invulnerable=Math.max(this.invulnerable,5);
+      for(const e of this.enemies)e.stunnedUntil=Math.max(e.stunnedUntil||0,this.time+5);
       this.archiveReadUntil = this.time + 5;
       this.setStage('breach');
     } else if (objective.id === 'exit') {
@@ -164,12 +168,8 @@ export class CampaignLevel1 extends ArenaGame {
     return true;
   }
 
-  spawnEnemy() {
-    if (this.state !== 'playing' || !['combat','combat2'].includes(this.stage) || this.toSpawn <= 0
-      || this.spawned >= ENCOUNTERS[this.encounter].length || this.time + 1e-8 < this.nextSpawnAt) return false;
-    const site = this.activePortals[0];
-    if (!site || !this.portalIsClear(site)) return false;
-    const form = ENCOUNTERS[this.encounter][this.spawned], probe = form === 'probe';
+  makeEnemy(form,site) {
+    const probe=form==='probe';
     const homeHeight = this.surfaceHeight(site.x, site.z, this.time, .3);
     const enemy = {
       id: this.nextId++, x: site.x, z: site.z,
@@ -188,6 +188,28 @@ export class CampaignLevel1 extends ArenaGame {
       lastKnownHeight: this.player.elevation, alertedUntil: this.time + 15,
       patrolAngle: site.yaw, patrolTimer: 2
     };
+    return enemy;
+  }
+
+  ensureOpeningPatrol() {
+    // No terminal prerequisites: a sentry is visible through the laboratory door
+    // from the start. Spawn only in real clear geometry and retry if rebuilding.
+    const sites=[{x:3,z:61,form:'probe'},{x:2.2,z:47,form:'stalker'}];
+    for(let i=this.openingSpawned;i<sites.length;i++){
+      const site=sites[i];if(!this.portalIsClear(site))break;
+      const e=this.makeEnemy(site.form,{...site,id:0,yaw:0});
+      Object.assign(e,{opening:true,awareness:'patrol',lastKnownX:site.x,lastKnownZ:site.z,lastKnownHeight:0,alertedUntil:0,stunnedUntil:this.time+2});
+      this.enemies.push(e);this.openingSpawned++;
+    }
+  }
+
+  spawnEnemy() {
+    if (this.state !== 'playing' || !['combat','combat2'].includes(this.stage) || this.toSpawn <= 0
+      || this.spawned >= ENCOUNTERS[this.encounter].length || this.time + 1e-8 < this.nextSpawnAt) return false;
+    const site = this.activePortals[0];
+    if (!site || !this.portalIsClear(site)) return false;
+    const form = ENCOUNTERS[this.encounter][this.spawned], probe = form === 'probe';
+    const enemy=this.makeEnemy(form,site);
     this.enemies.push(enemy);
     this.spawned++;
     this.toSpawn--;
@@ -201,6 +223,7 @@ export class CampaignLevel1 extends ArenaGame {
     if (this.state !== 'playing') return;
     // Only scheduling is replaced. Damage, projectile hits, recoil timing,
     // navigation, regeneration, stairs and lifts all remain shared with ArenaGame.
+    if(this.stage==='power'||this.stage==='archive')this.ensureOpeningPatrol();
     this.nextWave = Infinity;
     this.spawnTimer = Infinity;
     try { super.step(clamp(dt, 0, .05), input); }

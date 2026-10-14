@@ -1,6 +1,6 @@
 # Pink War — bible narrative
 
-Canon du premier chapitre, établi à partir des choix de l’utilisateur et de l’histoire écrite ensemble. Les chapitres suivants décrivent la direction de la campagne ; seule la mission 1 est livrée, avec sa carte dédiée en 3.32.
+Canon du premier chapitre, établi à partir des choix de l’utilisateur et de l’histoire écrite ensemble. Les chapitres suivants décrivent la direction de la campagne ; seule la mission 1 est livrée, avec sa carte dédiée et sa patrouille d’occupation en 3.33.
 
 ## Vesper avant la chute
 
@@ -30,7 +30,7 @@ Les cellules alimentent les armes, la chaleur et le recul rendent les tirs lisib
 
 ## Mission 1 — Le dernier signal
 
-Le personnage rejoint l’annexe de maintenance d’un ancien laboratoire de l’IA. Un boîtier local et un terminal humain ont survécu, déconnectés du réseau. Il faut rétablir leur courant.
+Le personnage rejoint l’annexe de maintenance d’un ancien laboratoire de l’IA. Un boîtier local et un terminal humain ont survécu, déconnectés du réseau. Il faut rétablir leur courant. Une sonde et un gardien d’ORDRE occupent déjà la zone : la menace est visible avant l’activation des archives. Le circuit isolé provoque une brève perturbation locale de leurs actuateurs pendant la lecture du journal.
 
 L’archive indique une intervention récente de l’autre personnage sur le relais des Archives végétales : « Si tu me cherches : prends l’escalier extérieur. Retrouve le terminal sur la terrasse. » Cette trace est enregistrée localement. Elle ne vient pas d’ORDRE et ne signifie pas encore des retrouvailles.
 

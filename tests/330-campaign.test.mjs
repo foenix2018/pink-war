@@ -16,31 +16,30 @@ const archive = game => {
   at(game, LEVEL1.archive); assert.equal(game.interact(), true);
 };
 
-test('level 1 has ordered local objectives, five safe reading seconds and a real portal windup', () => {
+test('level 1 starts occupied, then preserves ordered objectives and the portal windup', () => {
   const game = new CampaignLevel1([], random);
   assert.equal(game.mode, 'campaign');
   assert.equal(game.stage, 'power');
   assert.equal(game.player.z, 72);
   assert.equal(game.getInteraction(), null);
-  advance(game, 12);
-  assert.equal(game.enemies.length, 0);
+  game.invulnerable=1000;advance(game, 12);
+  assert.equal(game.enemies.filter(e=>e.opening).length, 2);
   assert.equal(game.activePortals.length, 0);
   at(game, LEVEL1.archive);
   assert.equal(game.interact(), false, 'the archive has no power yet');
   archive(game);
   advance(game, 4.9);
   assert.equal(game.stage, 'breach');
-  assert.equal(game.enemies.length, 0);
+  assert.equal(game.enemies.filter(e=>!e.opening).length, 0);
   assert.equal(game.activePortals.length, 0);
   advance(game, .2);
   assert.equal(game.stage, 'combat');
   assert.equal(game.activePortals.length, 1);
   assert.equal(game.toSpawn, 4);
   advance(game, 2.8);
-  assert.equal(game.enemies.length, 0);
+  assert.equal(game.enemies.filter(e=>!e.opening).length, 0);
   advance(game, .3);
-  assert.equal(game.enemies[0].form, 'probe');
-  assert.equal(game.enemies[0].grounded, false);
+  const portalEnemy=game.enemies.find(e=>!e.opening);assert.equal(portalEnemy.form, 'probe');assert.equal(portalEnemy.grounded,false);
 });
 
 test('interactions reject distance, the wrong floor and solid walls, including the final elevated terminal', () => {
@@ -97,17 +96,17 @@ test('approaching the expected portal while reading chooses another distant reac
 });
 
 test('a blocked map defers the breach without spawning at the player and recovers after obstacles change', () => {
-  const game = new CampaignLevel1([], random);
+  const game = new CampaignLevel1([], random);game.invulnerable=1000;
   archive(game);
   game.replaceObstacles([{ x: 0, z: 0, hx: 99, hz: 99, height: 9 }]);
   advance(game, 9);
   assert.equal(game.stage, 'breach');
-  assert.equal(game.enemies.length, 0);
+  assert.equal(game.enemies.filter(e=>!e.opening).length, 0);
   assert.equal(game.activePortals.length, 0);
   game.replaceObstacles([]);
   advance(game, .1);
   assert.equal(game.stage, 'combat');
-  assert.equal(game.enemies.length, 0);
+  assert.equal(game.enemies.filter(e=>!e.opening).length, 0);
 });
 
 test('pause and death freeze objective timers, and replay clears the finite encounter', () => {
@@ -120,11 +119,11 @@ test('pause and death freeze objective timers, and replay clears the finite enco
   assert.equal(game.interact(), false);
   assert.equal(game.activePortals.length, 0);
   game.state = 'playing';
-  game.damage(100);
+  game.invulnerable=0;game.damage(100);
   advance(game, 20);
   assert.equal(game.state, 'over');
   assert.equal(game.time, time);
-  assert.equal(game.enemies.length, 0);
+  assert.equal(game.enemies.filter(e=>!e.opening).length, 0);
   game.reset('lylu');
   assert.equal(game.player.hp, 100);
   assert.equal(game.stage, 'power');
@@ -158,8 +157,8 @@ test('two scripted patrols can be defeated with actual R9 projectiles before the
     game.step(.025);
   }
   assert.ok(attempts < 6000, 'all four real collision models can be shot');
-  assert.deepEqual(forms, ['probe', 'stalker', 'scuttler', 'seer']);
-  assert.equal(game.kills, 4);
+  assert.deepEqual(forms, ['probe','stalker','probe', 'stalker', 'scuttler', 'seer']);
+  assert.equal(game.kills, 6);
   assert.equal(game.toSpawn, 0);
   assert.equal(game.stage, 'crossing');
   assert.ok(game.weaponOffers.some(o=>o.index===1));
@@ -182,7 +181,7 @@ test('two scripted patrols can be defeated with actual R9 projectiles before the
       game.shoot(origin,{x:target.x-origin.x,y:y-origin.y,z:target.z-origin.z});
     }game.step(.025);
   }
-  assert.ok(attempts<6000);assert.equal(game.kills,8);assert.equal(game.stage,'exit');
+  assert.ok(attempts<6000);assert.equal(game.kills,10);assert.equal(game.stage,'exit');
   at(game, LEVEL1.exit);
   assert.equal(game.interact(), true);
   const end = game.drainEvents();
@@ -201,7 +200,7 @@ test('two scripted patrols can be defeated with actual R9 projectiles before the
 test('a missed laser remains a miss and current cover blocks campaign shots', () => {
   const game = new CampaignLevel1([], random);
   archive(game); advance(game, 8.2);
-  const enemy = game.enemies[0];
+  const enemy = game.enemies.find(e=>!e.opening);
   enemy.stunnedUntil = 1000; enemy.speed = 0;
   const hp = enemy.hp;
   const origin = { x: game.player.x, y: 1.4, z: game.player.z };

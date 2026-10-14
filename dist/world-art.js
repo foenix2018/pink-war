@@ -144,7 +144,7 @@ function damagedBlock(seed) {
   geometry.computeVertexNormals();return geometry;
 }
 
-export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, quality='medium', {perimeter=true}={}) {
+export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, quality='medium', {perimeter=true,deferPbr=false}={}) {
   const group=new T.Group();group.name='Ruined megacity — reclaimed districts';scene.add(group);
   const rand=randomSource(4107), detail=quality==='high'?1024:512,concreteMap=weatherTexture('concrete',detail), metalMap=weatherTexture('metal',detail), roadMap=weatherTexture('road',detail);
   const std=(color,roughness=.9,metalness=.04,map=concreteMap)=>new T.MeshStandardMaterial({color,roughness,metalness,map,bumpMap:map,bumpScale:map===metalMap?.018:.047});
@@ -179,12 +179,13 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
   }
   // 1K source imagery is shared across whole batches and stays independent of the
   // number of concrete, street or metal instances.
-  if(quality!=='minimal'){
+  let pbrStarted=false;function enablePbr(){if(pbrStarted||quality==='minimal')return;pbrStarted=true;
     loadPbr('asphalt_03','road',[m.road,m.dirt,m.wet],18);
     loadPbr('concrete_floor','concrete',[m.concrete,m.chalk,m.char,m.bark],3);
     loadPbr('broken_brick_wall','brick',[m.brick=m.concrete.clone()],3);
     loadPbr('rusty_metal_sheet','metal',[m.rust,m.steel,m.black,m.yellow],3);
   }
+  if(!deferPbr)enablePbr();
   m.leaf.flatShading=true;m.leafLight.flatShading=true;
   // Cutout foliage has individual leaf silhouettes instead of solid green polyhedra.
   // Three crossed cards remain readable from both headset eyes with a fixed small budget.
@@ -523,7 +524,7 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
   dustGeometry.setAttribute('position',new T.BufferAttribute(positions,3));
   const dust=new T.Points(dustGeometry,new T.PointsMaterial({color:0xd7c7a5,size:.026,opacity:.37,transparent:true,depthWrite:false}));group.add(dust);
   group.userData.instances=instances;group.userData.districts=['Brèche centrale','Archives envahies','Maintenance','Relais'];
-  return {group,materials:m,pbrStatus,fence,stats:{interiorBuildings:structures.length,outerBuildings:OUTER_BUILDINGS.length,perimeterWalls:perimeter?PERIMETER_WALLS.length:0,perimeterHeight:perimeter?1.05:0,perimeterKind:perimeter?'waist-fence':'open',windFoliage:true,sky:'fractal night clouds'},update(time){
+  return {group,materials:m,pbrStatus,enablePbr,fence,stats:{interiorBuildings:structures.length,outerBuildings:OUTER_BUILDINGS.length,perimeterWalls:perimeter?PERIMETER_WALLS.length:0,perimeterHeight:perimeter?1.05:0,perimeterKind:perimeter?'waist-fence':'open',windFoliage:true,sky:'fractal night clouds'},update(time){
     dust.position.x=Math.sin(time*.025)*2.5;dust.position.y=Math.sin(time*.06)*.25;
     if(time>=windAt){
       windAt=time+1/15;

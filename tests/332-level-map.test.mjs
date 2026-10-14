@@ -7,7 +7,7 @@ import {liftHeightAt} from '../dist/world-layout.js';
 const step=(g,seconds,input={})=>{for(let i=0;i<seconds/.025;i++)g.step(.025,input);};
 function walk(g,x,z){let k=0;while(Math.hypot(g.player.x-x,g.player.z-z)>.12&&k++<10000){const dx=x-g.player.x,dz=z-g.player.z,n=Math.hypot(dx,dz);g.step(.025,{x:dx/n,z:dz/n,yaw:0});}assert.ok(k<10000,`walkable route to ${x},${z}, at ${g.player.x},${g.player.z}`);}
 test('complete physical route from outside lab through doors and street climbs to terminal',()=>{
- const g=new CampaignLevel1(createLevel1Obstacles());
+ const g=new CampaignLevel1(createLevel1Obstacles());g.invulnerable=1000;
  // use the actual shared input names, same as PC/touch/VR
  for(const p of [[0,67],[-6,63.6],[0,63.6],[0,56.5],[2.3,56.5],[2.3,51.5],[0,47],[0,29],[0,13],[18,13],[18,6],[18,-17],[18,-39],[18,-43]])walk(g,...p);
  assert.ok(Math.abs(g.player.elevation-4.8)<.02);g.setStage('exit');assert.equal(g.getInteraction()?.id,'exit');assert.equal(g.interact(),true);
@@ -35,11 +35,11 @@ test('the new map supports both patrols with actual projectile hits and cover in
  walk(g,2.3,56.5);walk(g,2.3,51.5);walk(g,0,47);
  function defeat(stage){let n=0;while(g.stage===stage&&n++<9000){for(const e of g.enemies){e.speed=0;e.stunnedUntil=1000;}const e=g.enemies[0];if(e){if(g.ammo[0]===0)g.reload();const y=e.elevation+(e.form==='probe'?.55:e.form==='scuttler'?.79:1.27)*(e.form==='seer'?1.04:e.form==='scuttler'?.98:1);const origin={x:g.player.x,y:g.player.elevation+1.45,z:g.player.z};g.shoot(origin,{x:e.x-origin.x,y:y-origin.y,z:e.z-origin.z});}g.step(.025);}assert.ok(n<9000,`patrol ${stage} has a shootable route`);}
  step(g,6);defeat('combat');assert.equal(g.stage,'crossing');
- walk(g,0,29);walk(g,0,13);walk(g,18,13);walk(g,18,6);assert.equal(g.stage,'combat2');defeat('combat2');assert.equal(g.kills,8);
+ walk(g,0,29);walk(g,0,13);walk(g,18,13);walk(g,18,6);assert.equal(g.stage,'combat2');defeat('combat2');assert.equal(g.kills,10);
  walk(g,18,-17);walk(g,18,-39);walk(g,18,-43);assert.equal(g.interact(),true);assert.equal(g.state,'won');
 });
 test('an alerted ground robot uses the mission stairs instead of the arena routes',()=>{
  const g=new CampaignLevel1(createLevel1Obstacles(),()=>.5);g.invulnerable=1000;Object.assign(g.player,{x:18,z:-43,elevation:4.8});g.encounter=1;g.stage='combat2';g.activePortals=[{id:101,x:18,z:-14,yaw:0}];g.toSpawn=1;g.nextSpawnAt=0;g.spawnEnemy();
- const e=g.enemies[0];Object.assign(e,{x:18,z:-16,lastKnownX:18,lastKnownZ:-43,lastKnownHeight:4.8,awareness:'search',alertedUntil:1000});g.toSpawn=0;g.spawned=4;
+ const e=g.enemies.find(e=>!e.opening);Object.assign(e,{x:18,z:-16,lastKnownX:18,lastKnownZ:-43,lastKnownHeight:4.8,awareness:'search',alertedUntil:1000});g.toSpawn=0;g.spawned=4;
  step(g,30);assert.ok(e.elevation>4.5,`robot climbs own map stairs, got ${e.elevation} at ${e.x},${e.z}`);
 });

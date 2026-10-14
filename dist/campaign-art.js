@@ -1,5 +1,7 @@
+import {createPolyHavenLayer} from './polyhaven-level1.js';
 import {LEVEL1_MAP,createLevel1Obstacles} from './level1-layout.js';
-import {MESH_DATA,MESH_INFO} from './levels/vesper-01-mesh.js';
+import {SURFACE_DATA,SURFACE_INFO} from './levels/vesper-01-textures.js';
+import {MESH_DATA,MESH_INFO,MESH_INDEX_DATA} from './levels/vesper-01-mesh.js';
 import {inflateSync} from './vendor/fflate.module.js';
 import {createBoundaryFence} from './boundary-fence.js';
 import {liftHeightAt} from './world-layout.js';
@@ -13,14 +15,25 @@ export function createCampaignArt(T,scene,_unused,{quality='auto'}={}){
  const ownG=g=>(geometries.push(g),g),ownM=m=>(materials.push(m),m);
  let seed=33207;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  function paintTexture(w,h,paint){const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const context=canvas.getContext('2d');paint(context,w,h);const map=new T.CanvasTexture(canvas);map.colorSpace=T.SRGBColorSpace;textures.push(map);return{canvas,context,map};}
- function weather(metal=false){const t=paintTexture(256,256,(c,w,h)=>{c.fillStyle=metal?'#b0b5b4':'#b6bfb3';c.fillRect(0,0,w,h);for(let k=0;k<4200;k++){c.fillStyle=rand()>.5?'rgba(25,40,31,.18)':'rgba(244,238,210,.12)';c.fillRect(rand()*w,rand()*h,metal?2+rand()*32:1+rand()*4,1+rand()*3);}c.strokeStyle='rgba(37,41,35,.25)';for(let k=0;k<8;k++){let x=rand()*w,y=rand()*h;c.beginPath();c.moveTo(x,y);for(let j=0;j<6;j++){x+=(rand()-.5)*18;y+=rand()*14;c.lineTo(x,y);}c.stroke();}}).map;t.wrapS=t.wrapT=T.RepeatWrapping;return t;}
- const stone=weather(),metal=weather(true);
- const colors={concrete:0x80918a,steel:0x657f80,rust:0x7a4a2a,dark:0x152829,glass:0x384849,leaf:0x485b38,bark:0x4e3c27,amber:0xe2a65b,road:0x33494a,white:0xb0bbb1};
- const maps={};for(const [name,color] of Object.entries(colors)){const isMetal=['steel','dark','rust'].includes(name),textured=!['leaf','bark','glass','amber'].includes(name);maps[name]=ownM(name==='amber'?new T.MeshBasicMaterial({color,toneMapped:false}):new T.MeshStandardMaterial({color,roughness:isMetal?.46:name==='glass'?.48:.96,metalness:isMetal?.68:name==='glass'?.20:.03,map:textured?(isMetal?metal:stone):null,bumpMap:textured?(isMetal?metal:stone):null,bumpScale:isMetal?.008:.035}));}
+ const pending=[],loader=new T.TextureLoader();let loadedMaps=0;
+ function surface(name,type){const url=SURFACE_DATA[name]?.[type];if(!url)return null;
+  let resolve,reject;const wait=new Promise((ok,fail)=>{resolve=ok;reject=fail});pending.push(wait);
+  const tex=loader.load(url,t=>{if(quality==='low'&&t.image.width>256){const c=document.createElement('canvas');c.width=c.height=256;c.getContext('2d').drawImage(t.image,0,0,256,256);t.image=c;t.needsUpdate=true;}loadedMaps++;resolve();},undefined,reject);
+  tex.wrapS=tex.wrapT=T.RepeatWrapping;tex.anisotropy=quality==='low'?2:4;if(type==='color')tex.colorSpace=T.SRGBColorSpace;textures.push(tex);return tex;
+ }
+ const names=['concrete','plaster','brick','road','steel','rust','car-blue','car-cream'];
+ const maps={};for(const name of names){const col=surface(name,'color'),height=surface(name,'height'),pbr=surface(name,'surface');maps[name]=ownM(new T.MeshStandardMaterial({color:0xffffff,map:col,bumpMap:height,bumpScale:['rust','brick'].includes(name)?.07:.025,roughnessMap:pbr,metalnessMap:pbr,roughness:1,metalness:1}));}
+ maps.dark=ownM(new T.MeshStandardMaterial({color:0x151b1b,roughness:.65,metalness:.38}));
+ maps.white=maps.plaster;maps.bark=ownM(new T.MeshStandardMaterial({color:0x473729,roughness:.98}));
+ maps.foliage=ownM(new T.MeshStandardMaterial({color:0xffffff,map:surface('foliage','color'),alphaTest:.42,side:T.DoubleSide,roughness:.98,metalness:0}));
+ maps.leaf=maps.foliage;
+ maps.glass=ownM(new T.MeshStandardMaterial({color:0x6f827d,roughness:.34,metalness:.18,transparent:true,opacity:.36,side:T.DoubleSide,depthWrite:false}));
+ maps.amber=ownM(new T.MeshBasicMaterial({color:0xe2a65b,toneMapped:false}));
+ const ready=Promise.all(pending);const pbr=createPolyHavenLayer(T,maps,{quality});
  for(const [name,encoded] of Object.entries(MESH_DATA)){
   const raw=atob(encoded),bytes=new Uint8Array(raw.length);for(let k=0;k<raw.length;k++)bytes[k]=raw.charCodeAt(k);
   const decoded=inflateSync(bytes);const data=new T.InterleavedBuffer(new Float32Array(decoded.buffer,decoded.byteOffset,decoded.byteLength/4),8),g=ownG(new T.BufferGeometry());
-  g.setAttribute('position',new T.InterleavedBufferAttribute(data,3,0));g.setAttribute('normal',new T.InterleavedBufferAttribute(data,3,3));g.setAttribute('uv',new T.InterleavedBufferAttribute(data,2,6));g.computeBoundingSphere();
+  g.setAttribute('position',new T.InterleavedBufferAttribute(data,3,0));g.setAttribute('normal',new T.InterleavedBufferAttribute(data,3,3));g.setAttribute('uv',new T.InterleavedBufferAttribute(data,2,6));const encodedIndex=MESH_INDEX_DATA[name];if(encodedIndex){const rawIndex=atob(encodedIndex),indexBytes=new Uint8Array(rawIndex.length);for(let k=0;k<rawIndex.length;k++)indexBytes[k]=rawIndex.charCodeAt(k);const dataIndex=inflateSync(indexBytes);g.setIndex(new T.BufferAttribute(new Uint32Array(dataIndex.buffer,dataIndex.byteOffset,dataIndex.byteLength/4),1));}g.computeBoundingSphere();
   const mesh=new T.Mesh(g,maps[name]);mesh.name='Blender / '+name;mesh.castShadow=quality!=='low'&&name!=='amber';mesh.receiveShadow=true;root.add(mesh);
  }
  const puddleMat=ownM(new T.MeshStandardMaterial({color:0x435854,roughness:.20,metalness:.30,transparent:true,opacity:.38,depthWrite:false}));
@@ -62,8 +75,8 @@ export function createCampaignArt(T,scene,_unused,{quality='auto'}={}){
   }
   marker.visible=!!s.objective;if(s.objective){const p=s.objective.position;marker.position.set(p.x,p.y+3.2+Math.sin(time*2)*.05,p.z);marker.rotation.y=time*.5;}
  }
- function setVisible(enabled){root.visible=!!enabled;lastState='';}
- function stats(){return{visible:root.visible,stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:3,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:2,boundary:boundary.stats()};}
- function dispose(){if(disposed)return;disposed=true;boundary.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
- return{root,obstacles,update,setVisible,stats,dispose,updateLift};
+ function setVisible(enabled){root.visible=!!enabled;lastState='';if(enabled)pbr.start();}
+ function stats(){return{visible:root.visible,stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:3,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:2,boundary:boundary.stats(),pbr:pbr.stats()};}
+ function dispose(){if(disposed)return;disposed=true;pbr.dispose();boundary.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
+ return{root,obstacles,update,setVisible,stats,dispose,updateLift,ready};
 }

@@ -98,7 +98,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   const batch = (mat, pos, scale, rot = 0) => { if (!batches.has(mat)) batches.set(mat, []); batches.get(mat).push({ pos, scale, rot }); };
   const arenaRoot=new T.Group();arenaRoot.name='Carte Survie / indépendante';scene.add(arenaRoot);
   const beforeArena=new Set(scene.children);
-  const city = createRuinedCity(scene, obstacles, COVER_WALLS, palette.rose, profile.artQuality);
+  const city = createRuinedCity(scene, obstacles, COVER_WALLS, palette.rose, profile.artQuality,{deferPbr:true});
   const cityMats = city.materials;
   const traversal = createTraversalArt(scene, obstacles, cityMats);
   for(const child of [...scene.children])if(!beforeArena.has(child))arenaRoot.add(child);
@@ -438,9 +438,9 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     scene.fog.density=campaignActive?.006:.008;
     hemisphere.color.setHex(campaignActive?0xc4ceca:0xa9c9e5);hemisphere.groundColor.setHex(campaignActive?0x414833:0x344058);
     sun.color.setHex(campaignActive?0xffdeb7:0xb5d7ff);rim.color.setHex(campaignActive?0xa6bbb7:0x9abfff);
-    campaignArt.setVisible(campaignActive);
+    campaignArt.setVisible(campaignActive);if(!campaignActive)city.enablePbr();
   }
-  return {T,scene,camera,moon,campaignArt,setCampaignActive,graphics:{...profile,initialFailure:prepared.initialFailure},warm:()=>warmRenderer(renderer,scene,camera),get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>campaignActive?{...campaignArt.stats(),map:'vesper-secours-07'}:{...city.stats,boundary:city.fence?.stats()},resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
+  return {T,scene,camera,moon,campaignArt,setCampaignActive,graphics:{...profile,initialFailure:prepared.initialFailure},warm:async()=>{await campaignArt.ready;await warmRenderer(renderer,scene,camera)},get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>campaignActive?{...campaignArt.stats(),map:'vesper-secours-07'}:{...city.stats,boundary:city.fence?.stats()},resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
     holsterGun,setPlayerVisible,
     get lost(){return lost;},get backend(){return renderer.backend?.isWebGPUBackend?'WebGPU':'WebGL';},render:()=>{if(!lost){camera.updateWorldMatrix(true,false);moon.update(camera);lightBlade();renderer.render(scene,camera);}}};
 }

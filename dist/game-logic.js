@@ -155,9 +155,10 @@ class CoverNavigation {
     this.size = 99; this.cell = 2; this.edge = -98; this.obstacles = obstacles;
     this.solid = new Uint8Array(this.size * this.size); this.distance = new Int16Array(this.solid.length);
     this.queue = new Int32Array(this.solid.length); this.refreshAt = -1; this.goal = -1;
+    const groundSolids=obstacles.filter(b=>!b.walkableSurface&&(b.y||0)<2);
     for (let z = 0; z < this.size; z++) for (let x = 0; x < this.size; x++) {
       const wx = this.edge + x * 2, wz = this.edge + z * 2;
-      this.solid[z * this.size + x] = obstacles.some(b => !b.walkableSurface && (b.y||0)<2 && Math.abs(wx-b.x) < b.hx+1.3 && Math.abs(wz-b.z) < b.hz+1.3) ? 1 : 0;
+      this.solid[z * this.size + x] = groundSolids.some(b => Math.abs(wx-b.x) < b.hx+1.3 && Math.abs(wz-b.z) < b.hz+1.3) ? 1 : 0;
     }
   }
   point(index) { return { x: this.edge + index % this.size * 2, z: this.edge + Math.floor(index / this.size) * 2 }; }

@@ -51,7 +51,7 @@ test('the iPhone route never constructs a GPU renderer and WebGL does not await 
 });
 test('safe restart uses the hosted game for a downloaded file and keeps the current host for previews',()=>{
   const file=new URL(compatibleLaunchURL('file:///private/mobile/Pink_war.html'));
-  assert.equal(file.origin,'https://pink-war.vercel.app');assert.equal(file.searchParams.get('renderer'),'webgl');assert.equal(file.searchParams.get('v'),'3.32');
+  assert.equal(file.origin,'https://pink-war.vercel.app');assert.equal(file.searchParams.get('renderer'),'webgl');assert.equal(file.searchParams.get('v'),'3.33');
   const hosted=new URL(compatibleLaunchURL('https://preview.example/index.html?foo=bar'));
   assert.equal(hosted.origin,'https://preview.example');assert.equal(hosted.searchParams.get('foo'),'bar');
 });

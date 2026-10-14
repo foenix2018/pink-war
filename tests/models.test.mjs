@@ -293,12 +293,12 @@ test('both soldiers keep an opaque, fully enclosing helmet at every armour level
   }
 });
 
-test('all hostile chassis share three geometry batches while keeping independent skeletons', () => {
+test('hostile chassis share a bounded number of geometry batches while keeping independent skeletons', () => {
   const material={monster:solid(1),monsterElite:solid(2),monsterFace:solid(3),rose:neon(4),violet:neon(5),cyan:neon(6)},factory=createEnemyFactory(material);
   for(const form of ['stalker','scuttler','brute','seer','listener','bulwark'])for(const elite of [false,true])for(const ranged of [false,true]) {
     const a=factory.create(elite,ranged,form),b=factory.create(elite,ranged,form);
     const meshes=a.children.filter(child=>child.isMesh),otherMeshes=b.children.filter(child=>child.isMesh);
-    assert.equal(meshes.length,3,`${form}: body, armour and emissive fittings stay within three draw calls`);
+    assert.ok(meshes.length<=5,`${form}: shared armour, mechanisms, servos, caution paint and optics remain within five draw calls`);
     assert.notEqual(a.userData.skeleton,b.userData.skeleton,'enemies must animate independently');
     assert.equal(a.userData.legs.length,form==='scuttler'?6:2);
     let triangles=0;
