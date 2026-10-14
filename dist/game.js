@@ -1,5 +1,5 @@
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, clamp, segmentSphere, segmentBox, traceEnemyHit } from './game-logic.js';
-import { createScene } from './scene.js';
+import { createScene } from './scene.js?v=3.31';
 import { VRController } from './vr.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
 import { characterForId } from './characters.js';
@@ -14,15 +14,18 @@ import { bladeSwingPose } from './blade-combat.js';
 import { createSaberSound } from './saber-sound.js';
 import { magnifiedFov, aimSensitivity } from './optics.js';
 import { CampaignLevel1 } from './campaign-level1.js';
+import {GAME_VERSION,showLaunchError} from './launch-ui.js';
 
 const $ = id => document.getElementById(id);
 const settings = { sound: true, music: true, sensitivity: 1, quality: 'auto' };
 try { Object.assign(settings, JSON.parse(localStorage.getItem('rosee-settings') || '{}')); } catch {}
+const boot=window.__PINKWAR_BOOT_OPTIONS;
+if(boot?.settings)Object.assign(settings,boot.settings);
 settings.sensitivity = clamp(Number(settings.sensitivity) || 1, .4, 2);
 if (!['auto', 'low', 'high'].includes(settings.quality)) settings.quality = 'auto';
-let phase = 'lobby', view = 'third', yaw = 0, pitch = -.075, game, world, vr;
+let phase = 'lobby', view = boot?.view==='fps'?'fps':'third', yaw = 0, pitch = -.075, game, world, vr;
 let character=characterForId('ghju');
-let selectedMode='campaign',launchBusy=false;
+let selectedMode=boot?.mode==='arena'?'arena':'campaign',launchBusy=false;
 function selectMode(mode){
   if(phase!=='lobby'||launchBusy)return;
   selectedMode=mode==='arena'?'arena':'campaign';
@@ -33,9 +36,10 @@ function selectMode(mode){
 }
 for(const button of document.querySelectorAll('[data-mode]'))button.onclick=()=>selectMode(button.dataset.mode);
 try{character=characterForId(localStorage.getItem('pink-war-character'));}catch{}
+if(boot?.characterId)character=characterForId(boot.characterId);
 let clock = 0, lastTime = 0, hudTimer = 0, flashTimer = 0, recoil = 0, reloadLift = 0, announcementUntil = 0, damageUntil = 0;
 let outfitReturn = 'lobby', previewLevel = 1, equipmentUntil = 0;
-let canvasPointer = null, lastDrag = null, audioContext = null, ambience = null;
+let canvasPointer = null, lastDrag = null, audioContext = window.__PINKWAR_BOOT_AUDIO||null, ambience = null;
 let saberAudio=null,saberSwingSound=false;
 let lastWeaponSlot=0,holsterRemaining=0;
 let bladeHead=null;
@@ -223,11 +227,11 @@ async function start() {
       $('loading-status').textContent='Préparation du secteur…';$('loading-screen').hidden=false;
       await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
       world.campaignArt.update(game,clock);world.sync(game,clock,0);updateCamera();
-      await world.renderer.compileAsync(world.scene,world.camera);
+      await world.warm();
     }
     phase='playing';lastTime=0;audioReady();
     document.body.classList.add('playing'); $('game-hud').hidden = false; $('game-tip').style.opacity = '1'; updateHud();
-  }catch(error){console.error('Chargement du niveau',error);phase='error';$('loading-error').hidden=false;}
+  }catch(error){console.error('Chargement du niveau',error);await recoverGraphics(error,'préparation du niveau');}
   finally{launchBusy=false;$('loading-screen').hidden=true;}
 }
 $('play-button').onclick = start; $('retry-button').onclick = start;
@@ -511,7 +515,40 @@ function listenerHeading(){
   portalForward ||= new world.T.Vector3();world.camera.getWorldDirection(portalForward);
   return Math.atan2(-portalForward.x,-portalForward.z);
 }
-let frames = 0, recovering = false;
+let frames = 0, recovering = false,recoveryPromise=null,recoveryAttempts=0;
+async function recoverGraphics(error,stage='rendu'){
+  if(recoveryPromise)return recoveryPromise;
+  if(!world||!game||recoveryAttempts>=2){
+    recovering=false;phase='error';resetInput();musicBed.pause();ambience?.pause();
+    showLaunchError(error,stage,world?.backend);return false;
+  }
+  recoveryAttempts++;recovering=true;
+  const returnPhase=phase==='loading'?'playing':phase;
+  resetInput();saberAudio?.update({active:false,equipped:false});
+  $('loading-status').textContent='Rétablissement automatique du rendu…';
+  if(!vr.active)$('loading-screen').hidden=false;
+  recoveryPromise=(async()=>{
+    try{
+      if(vr.mode==='xr')await vr.exit();
+      const next=await world.recover({quality:'low'});world=next;game.replaceObstacles(world.obstacles);
+      window.dispatchEvent(new CustomEvent('rosee-renderer-recovered'));
+      if(vr.mode==='stereo'){vr.removeHUD();vr.makeHUD();}
+      world.campaignArt.update(game,clock);
+      if(returnPhase==='playing'||returnPhase==='paused'||returnPhase==='over'){world.sync(game,clock,0);updateCamera();}
+      else if(returnPhase==='outfit')world.outfit(clock,previewLevel,Number($('outfit-rotation').value)*Math.PI/180);
+      else world.lobby(clock,Math.max(1,game.wave));
+      await world.warm();world.render();
+      phase=returnPhase;lastTime=0;recovering=false;$('loading-error').hidden=true;
+      if(phase==='playing'){document.body.classList.add('playing');$('game-hud').hidden=false;audioReady();}
+      updateHud();world.renderer.setAnimationLoop(frame);return true;
+    }catch(failure){
+      console.error('Rétablissement 3D',failure);recovering=false;phase='error';musicBed.pause();ambience?.pause();
+      showLaunchError(failure,'rétablissement',world?.backend);return false;
+    }finally{$('loading-screen').hidden=true;recoveryPromise=null;}
+  })();
+  return recoveryPromise;
+}
+window.addEventListener('pink-war-context-lost',()=>{if(world&&!recovering)void recoverGraphics(new Error('Le contexte graphique a été perdu.'));});
 function bindCanvas() {
   // Rebind drag input after a graphics recovery replaces the canvas context.
   const canvas = $('world');
@@ -526,6 +563,10 @@ function bindCanvas() {
 }
 window.addEventListener('rosee-renderer-recovered', () => { $('world').removeAttribute('data-controls-bound'); bindCanvas(); $('renderer-label').textContent = `${world.backend.toUpperCase()} · CONÇU POUR LE TACTILE`; });
 function frame(timestamp, xrFrame) {
+  try{stepFrame(timestamp,xrFrame);}catch(error){console.error('Rendu interrompu',error);void recoverGraphics(error);}
+}
+function stepFrame(timestamp, xrFrame) {
+  if(recovering||phase==='error')return;
   const dt = lastTime ? Math.min((timestamp - lastTime) / 1000, .05) : .016; lastTime = timestamp; clock += dt;
   const feel=weaponFeel.update(dt);recoil=feel.pitch;flashTimer=feel.flash;
   // The standard Bluetooth/USB gamepad is available outside VR as well.
@@ -624,10 +665,9 @@ function frame(timestamp, xrFrame) {
   if(clock>equipmentUntil)$('equipment-unlock').hidden=true;
   if (clock > announcementUntil) $('wave-announcement').classList.remove('show');
   if (world.lost && !recovering) {
-    recovering = true; resetInput();
-    world.recover().then(next => { world = next;game.replaceObstacles(world.obstacles); window.dispatchEvent(new CustomEvent('rosee-renderer-recovered')); if(vr.mode==='stereo'){vr.removeHUD();vr.makeHUD();} recovering = false; lastTime=0;world.renderer.setAnimationLoop(frame); }).catch(error => { console.error('Rétablissement 3D', error); phase = 'error'; $('loading-error').hidden = false; });
+    void recoverGraphics(new Error('Le périphérique graphique a été perdu.'));return;
   }
-  if (!recovering) try { vr.renderScope();if(vr.mode==='stereo')world.renderStereo();else world.render(); frames++; } catch (error) { console.error('Rendu interrompu', error); phase = 'error'; $('loading-error').hidden = false; }
+  if (!recovering) { vr.renderScope();if(vr.mode==='stereo')world.renderStereo();else world.render(); frames++; }
 }
 
 vr = new VRController({
@@ -642,14 +682,18 @@ try {
   world = await createScene($('world'), settings.quality,false,character.id);world.setCharacter(character.id);game = new ArenaGame(world.obstacles);
   $('renderer-label').textContent = `${world.backend.toUpperCase()} · CONÇU POUR LE TACTILE`;
   $('loading-status').textContent='Préparation du laboratoire et des équipements…';
-  world.setCampaignActive(true);world.lobby(0); await world.renderer.compileAsync(world.scene, world.camera);world.setCampaignActive(false); world.render();
-  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  if (world.lost) { world = await world.recover();game?.replaceObstacles(world.obstacles); window.dispatchEvent(new CustomEvent('rosee-renderer-recovered')); }
+  if(boot?.intent!=='play'){
+    world.lobby(0);
+    try{await world.warm();world.render();}catch(error){world=await world.recover({quality:'low'});game.replaceObstacles(world.obstacles);world.lobby(0);await world.warm();world.render();}
+  }
   selectMode(selectedMode);$('loading-screen').hidden=true;$('play-button').disabled = false;$('outfit-button').disabled=false;
-  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ version:"3.30",phase, view, frames, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,aiming,aimBlend,cameraFov:world.camera.fov,laserEffects:world.laserStats?.(),city:world.cityStats?.(),vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelSource:world.soldier.actor?.data.source,modelNativeMotion:world.soldier.nativeMotion,modelNativeBones:world.soldier.nativeSkeleton?.bones.length,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:musicBed.enabled,musicPlaying:musicBed.playing,musicFailed:musicBed.failed,musicSection:musicBed.section,musicVoices:musicBed.stats.voices,audioState:audioContext?.state||'idle',weaponFeedback:{...weaponFeel.state},previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
+  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ version:GAME_VERSION,phase, view, frames,recovering,recoveryAttempts,graphics:world.graphics, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,aiming,aimBlend,cameraFov:world.camera.fov,laserEffects:world.laserStats?.(),city:world.cityStats?.(),vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelSource:world.soldier.actor?.data.source,modelNativeMotion:world.soldier.nativeMotion,modelNativeBones:world.soldier.nativeSkeleton?.bones.length,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:musicBed.enabled,musicPlaying:musicBed.playing,musicFailed:musicBed.failed,musicSection:musicBed.section,musicVoices:musicBed.stats.voices,audioState:audioContext?.state||'idle',weaponFeedback:{...weaponFeel.state},previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
     selectedMode,campaignArt:world.campaignArt.stats(),inputs: { move: { ...move }, look: { ...look }, firing: firingPointers.size > 0 || keys.has('Space') }, drawCalls: world.renderer.info.render.calls, ...game.snapshot(),equipment:equipmentForCharacter(game.wave,character.id) }) });
   bindCanvas();world.renderer.setAnimationLoop(frame);
+  $('launch-status').textContent=`V. ${GAME_VERSION} · prêt à lancer`;
+  if(boot?.intent==='play')await start();
+  else if(boot?.intent==='vr')await vr.open();
+  else if(boot?.intent==='outfit')openOutfit();
 } catch (error) {
-  $('loading-screen').hidden=true;
-  console.error('Initialisation 3D', error); $('play-label').textContent = 'RENDU 3D INDISPONIBLE'; $('renderer-label').textContent = 'VÉRIFIEZ VOTRE NAVIGATEUR'; $('loading-error').hidden = false;
+  console.error('Initialisation 3D', error);showLaunchError(error,'initialisation',world?.backend);
 }

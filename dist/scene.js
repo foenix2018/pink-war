@@ -13,6 +13,7 @@ import { createLaserFX } from './laser-fx.js';
 import { createCombatFX } from './combat-fx.js';
 import { createMoon } from './moon.js';
 import { createCampaignArt } from './campaign-art.js';
+import { graphicsProfile,renderPixelRatio,createCompatibleRenderer,warmRenderer } from './renderer-policy.js';
 
 const v = (x, y, z) => new T.Vector3(x, y, z);
 const material = (color, roughness = .6, metalness = .25) => new T.MeshStandardMaterial({ color, roughness, metalness });
@@ -31,19 +32,23 @@ const glowTexture = () => canvasTexture(128, 128, (c, w) => {
 export async function createScene(canvas, quality, forceWebGL = false, characterId = 'ghju') {
   let character=characterForId('ghju'),themeApplied=false;
   const palette={...character.palette},themeHalos=[];
-  const Renderer = forceWebGL || !navigator.gpu ? WebGLRenderer : T.WebGPURenderer;
-  const renderer = new Renderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
-  let lost = false, recovery = null;
+  const deviceEnvironment={userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu,
+    rendererHint:new URLSearchParams(location.search).get('renderer')};
+  const profile=graphicsProfile(deviceEnvironment,quality,forceWebGL);
+  const prepared=await createCompatibleRenderer({canvas,WebGPU:T.WebGPURenderer,WebGL:WebGLRenderer,profile});
+  canvas=prepared.canvas;const renderer=prepared.renderer;
+  let lost = false, recovery = null,released=false;
   const configure = instance => {
     instance.outputColorSpace = T.SRGBColorSpace; instance.toneMapping = T.ACESFilmicToneMapping; instance.toneMappingExposure = 1.08;
-    instance.shadowMap.enabled = true; instance.shadowMap.type = T.PCFShadowMap;
+    instance.shadowMap.enabled = profile.shadows; instance.shadowMap.type = T.PCFShadowMap;
     instance.onDeviceLost = info => {
       instance._isDeviceLost = true;
-      if (instance === renderer) { lost = true; console.warn('Rétablissement automatique du rendu 3D.', info.reason || 'device lost'); }
+      if (instance === renderer&&!released) { lost = true; console.warn('Rétablissement automatique du rendu 3D.', info.reason || 'device lost'); }
     };
   };
   configure(renderer);
-  if (renderer.init) await renderer.init();
+  const contextLost=event=>{event.preventDefault();if(!released){lost=true;window.dispatchEvent(new CustomEvent('pink-war-context-lost'));}};
+  canvas.addEventListener('webglcontextlost',contextLost);
   const scene = new T.Scene(); scene.background = new T.Color(0x302439); scene.fog = new T.FogExp2(0x423042, .008);
   const surfaces=createSurfaceDetails();
   const camera = new T.PerspectiveCamera(62, 1, .08, 650); camera.rotation.order = 'YXZ'; scene.add(camera);
@@ -75,7 +80,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   }
 
   function paintSky(c,w,h) { paintRuinSky(c,w,h,character.masculine); }
-  const skyTexture = canvasTexture(2048,1024,paintSky);
+  const skyTexture = canvasTexture(profile.skyWidth,profile.skyWidth/2,paintSky);
   const sky = new T.Mesh(new T.SphereGeometry(490, 32, 16), new T.MeshBasicMaterial({ map: skyTexture, side: T.BackSide, fog: false, dithering: true })); scene.add(sky);
   // The moon is a camera-relative celestial backdrop, not a world obstacle.
   // The depth buffer still lets buildings and smoke geometry occlude its glow.
@@ -91,7 +96,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   const rim = new T.DirectionalLight(0x9abfff, 1.08); rim.position.set(30, 12, -35); scene.add(rim);
   const batches = new Map(); const obstacles = [];
   const batch = (mat, pos, scale, rot = 0) => { if (!batches.has(mat)) batches.set(mat, []); batches.get(mat).push({ pos, scale, rot }); };
-  const city = createRuinedCity(scene, obstacles, COVER_WALLS, palette.rose, quality);
+  const city = createRuinedCity(scene, obstacles, COVER_WALLS, palette.rose, profile.artQuality);
   const cityMats = city.materials;
   const traversal = createTraversalArt(scene, obstacles, cityMats);
   const combatFX = createCombatFX(T, scene, palette);
@@ -385,7 +390,12 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     camera.setViewOffset(innerWidth,innerHeight,portrait?0:-innerWidth*.22,portrait?innerHeight*.24:0,innerWidth,innerHeight);camera.updateProjectionMatrix();
   }
   function setInspection(enabled){combatFX.setVisible?.(!enabled);for(const m of monsters.values())m.visible=!enabled;for(const m of bulletMeshes.values())m.visible=!enabled;for(const pool of sparkPools)pool.visible=!enabled&&pool.count>0;}
-  function resize(nextQuality=quality){quality=nextQuality;const q=nextQuality;const ratio=q==='low'?1:q==='high'?Math.min(devicePixelRatio,2):Math.min(devicePixelRatio,innerWidth<1000?1.4:1.8);renderer.setPixelRatio(ratio);renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.shadowMap.enabled=q!=='low';}
+  function resize(nextQuality=quality){
+    quality=nextQuality;const current=graphicsProfile(deviceEnvironment,quality,forceWebGL);
+    const ratio=renderPixelRatio(current,devicePixelRatio,innerWidth,innerHeight);
+    renderer.setPixelRatio(ratio);renderer.setSize(innerWidth,innerHeight,false);
+    camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.shadowMap.enabled=current.shadows;
+  }
   resize();
   const stereo = new T.StereoCamera(); stereo.aspect = .5; stereo.eyeSep = .064;
   function renderStereo() {
@@ -396,24 +406,25 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     renderer.setViewport(innerWidth/2,0,innerWidth/2,innerHeight); renderer.setScissor(innerWidth/2,0,innerWidth/2,innerHeight); renderer.render(scene,stereo.cameraR);
     renderer.setScissorTest(false); renderer.setViewport(0,0,innerWidth,innerHeight);
   }
-  async function recover() {
+  async function recover({quality:nextQuality=quality}={}) {
     if (recovery) return recovery;
     recovery = (async () => {
-      if (renderer.isWebGLRenderer) throw new Error('Le périphérique graphique est indisponible.');
       const nextCanvas = renderer.domElement.cloneNode(false);
-      renderer.dispose();
+      nextCanvas.removeAttribute('data-controls-bound');released=true;
+      canvas.removeEventListener('webglcontextlost',contextLost);renderer.setAnimationLoop(null);
+      renderer.dispose();renderer.forceContextLoss?.();
       // Fresh resources avoid reusing texture state from a destroyed GPU device.
-      const next = await createScene(nextCanvas, quality, true,character.id);
+      const next = await createScene(nextCanvas, nextQuality, true,character.id);
       next.setCampaignActive(campaignActive);
       next.camera.position.copy(camera.position); next.camera.rotation.copy(camera.rotation); next.camera.fov = camera.fov; next.camera.updateProjectionMatrix();
       next.soldier.root.position.copy(soldier.root.position); next.soldier.root.rotation.copy(soldier.root.rotation); next.soldier.root.scale.copy(soldier.root.scale);
-      await next.renderer.compileAsync(next.scene, next.camera);
+      await next.warm();
       renderer.domElement.replaceWith(nextCanvas);
       return next;
     })();
     try { return await recovery; } finally { recovery = null; }
   }
-  const campaignArt=createCampaignArt(T,scene,obstacles,{quality});
+  const campaignArt=createCampaignArt(T,scene,obstacles,{quality:profile.artQuality});
   let campaignActive=false;
   function setCampaignActive(enabled){
     campaignActive=!!enabled;
@@ -421,7 +432,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     if(campaignActive)obstacles.push(...campaignArt.obstacles);
     campaignArt.setVisible(campaignActive);
   }
-  return {T,scene,camera,moon,campaignArt,setCampaignActive,get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>({...city.stats,boundary:city.fence?.stats()}),resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
+  return {T,scene,camera,moon,campaignArt,setCampaignActive,graphics:{...profile,initialFailure:prepared.initialFailure},warm:()=>warmRenderer(renderer,scene,camera),get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>({...city.stats,boundary:city.fence?.stats()}),resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
     holsterGun,setPlayerVisible,
     get lost(){return lost;},get backend(){return renderer.backend?.isWebGPUBackend?'WebGPU':'WebGL';},render:()=>{if(!lost){camera.updateWorldMatrix(true,false);moon.update(camera);lightBlade();renderer.render(scene,camera);}}};
 }
