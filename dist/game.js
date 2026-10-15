@@ -14,6 +14,7 @@ import { bladeSwingPose } from './blade-combat.js';
 import { createSaberSound } from './saber-sound.js';
 import { magnifiedFov, aimSensitivity } from './optics.js';
 import { CampaignLevel1 } from './campaign-level1.js';
+import { ShootingRangeGame } from './shooting-range.js';
 import {GAME_VERSION,showLaunchError} from './launch-ui.js';
 
 const $ = id => document.getElementById(id);
@@ -25,14 +26,14 @@ settings.sensitivity = clamp(Number(settings.sensitivity) || 1, .4, 2);
 if (!['auto', 'low', 'high'].includes(settings.quality)) settings.quality = 'auto';
 let phase = 'lobby', view = boot?.view==='fps'?'fps':'third', yaw = 0, pitch = -.075, game, world, vr;
 let character=characterForId('ghju');
-let selectedMode=boot?.mode==='arena'?'arena':'campaign',launchBusy=false;
+let selectedMode=['arena','training','campaign'].includes(boot?.mode)?boot.mode:'campaign',launchBusy=false;
 function selectMode(mode){
   if(phase!=='lobby'||launchBusy)return;
-  selectedMode=mode==='arena'?'arena':'campaign';
+  selectedMode=['campaign','arena','training'].includes(mode)?mode:'campaign';
   for(const button of document.querySelectorAll('[data-mode]'))button.setAttribute('aria-pressed',String(button.dataset.mode===selectedMode));
-  $('mission-title').textContent=selectedMode==='campaign'?'01 — Le dernier signal':'Survie — Les brèches';
-  $('mission-description').textContent=selectedMode==='campaign'?'Laboratoire abandonné, rue sous surveillance et relais en hauteur. Une trace de votre famille.':'Vingt vagues de machines, six armes et des équipements à récupérer.';
-  if(world)$('play-label').textContent=selectedMode==='campaign'?'JOUER LE NIVEAU 1':'LANCER LA SURVIE';
+  $('mission-title').textContent=selectedMode==='campaign'?'01 — Le dernier signal':selectedMode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
+  $('mission-description').textContent=selectedMode==='campaign'?'Laboratoire abandonné, rue sous surveillance et relais en hauteur. Une trace de votre famille.':selectedMode==='arena'?'Vingt vagues de machines, six armes et des équipements à récupérer.':'Cibles fixes, proches et lointaines ; trajectoires latérales et avant-arrière ; accélération continue. Mesurez votre précision.';
+  if(world)$('play-label').textContent=selectedMode==='campaign'?'JOUER LE NIVEAU 1':selectedMode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
 }
 for(const button of document.querySelectorAll('[data-mode]'))button.onclick=()=>selectMode(button.dataset.mode);
 try{character=characterForId(localStorage.getItem('pink-war-character'));}catch{}
@@ -207,7 +208,7 @@ async function home() {
   for (const d of document.querySelectorAll('dialog[open]')) d.close(); phase = 'lobby'; resetInput();
   document.body.classList.remove('playing'); $('game-hud').hidden = true; musicBed.pause();ambience?.pause();world.resetDynamic();
   saberAudio?.update({active:false,equipped:false});
-  world.setCampaignActive(false);selectMode(selectedMode);
+  world.setRangeActive(false);world.setCampaignActive(false);selectMode(selectedMode);
   $('damage-flash').style.setProperty('--injury', '0'); $('damage-flash').classList.remove('active'); $('wave-announcement').classList.remove('show');
 }
 $('quit-button').onclick = home; $('end-home').onclick = home;
@@ -216,14 +217,16 @@ async function start() {
   launchBusy=true;
   for (const d of document.querySelectorAll('dialog[open]')) d.close();
   world.setCampaignActive(selectedMode==='campaign');
-  game=selectedMode==='campaign'?new CampaignLevel1(world.obstacles,Math.random,character.id):new ArenaGame(world.obstacles);
+  world.setRangeActive(selectedMode==='training');
+  game=selectedMode==='campaign'?new CampaignLevel1(world.obstacles,Math.random,character.id):
+    selectedMode==='training'?new ShootingRangeGame(world.obstacles):new ArenaGame(world.obstacles);
   world.resetDynamic(); phase = 'loading'; yaw = 0; pitch = -.075;
   weaponFeel.reset();reloadInserted=false;lastShotAt=-99;flashTimer = 0; recoil = 0; damageUntil = 0; announcementUntil = 0;equipmentUntil=0;crouchCameraBlend=0;currentSprinting=false; resetInput(); audioReady();
   world.setWeapon(0);world.setEquipment(1);
   lastWeaponSlot=0;holsterRemaining=0;
   try{
     if(!vr?.active){
-      $('loading-title').textContent=selectedMode==='campaign'?'Le dernier signal':'Les brèches';
+      $('loading-title').textContent=selectedMode==='campaign'?'Le dernier signal':selectedMode==='training'?'Stand de tir':'Les brèches';
       $('loading-status').textContent='Préparation du secteur…';$('loading-screen').hidden=false;
       await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
       world.campaignArt.update(game,clock);world.sync(game,clock,0);updateCamera();
@@ -361,6 +364,13 @@ function handleEvents() {
       const feel=weaponFeel.fire(event.weapon,event.power,game.player.crouched||aiming);
       lastShotAt=clock;recoil=feel.pitch;flashTimer=feel.flash;vr.haptic('shot', event.weapon); weaponShotSound(event.weapon, event.power);
     }
+    if(event.type==='training-hit'){
+      world.burst(event.x,event.y,event.z,world.palette.rose,event.bullseye?18:9);
+      if(vr.mode!=='xr')announce(event.bullseye?'PLEIN CENTRE !':'CIBLE TOUCHÉE',`+${event.points} PTS · SÉRIE ×${event.combo}`);
+      vr.haptic('hit');tone(event.bullseye?980:650,340,.095,.035,'triangle');
+    }
+    if(event.type==='training-stage'){if(vr.mode!=='xr')announce(event.label,'NOUVEL EXERCICE · VITESSE CROISSANTE');tone(460,820,.24,.03,'sine');}
+    if(event.type==='training-escaped'){tone(240,130,.09,.01,'triangle');}
     if(event.type==='blade-swing'){saberSwingSound=true;vr.haptic('shot','aurora');}
     if(event.type==='blade-hit'||event.type==='blade-parry'){world.impact({...event,enemy:event.type==='blade-hit'});if(settings.sound)saberAudio?.impact();vr.haptic(event.type==='blade-parry'?'parry':'hit');}
     if (event.type === 'weapon-offer') { tone(360, 820, .45, .03, 'sine'); }
@@ -409,6 +419,18 @@ function gameOver(won = false) {
   if (vr?.mode !== 'xr') $('end-dialog').showModal();
 }
 function updateHud() {
+  const train=game?.mode==='training';
+  $('training-hud').hidden=!train;
+  if(train){
+    const stage=game.trainingLevel;
+    $('training-stage').textContent=`EXERCICE ${stage.number}/5 · ${stage.label}`;
+    $('training-score').textContent=String(game.score).padStart(5,'0');
+    $('training-accuracy').textContent=game.trainingAccuracy+' %';
+    $('training-hits').textContent=`${game.trainingHits} / ${game.trainingShots}`;
+    $('training-combo').textContent=`×${game.trainingCombo}`;
+    $('training-speed').textContent=game.trainingLevel.number===5?`×${game.time<0?1:Math.min(4,1+game.time/45).toFixed(1)}`:
+      `${Math.ceil(stage.remaining)} s avant la suite`;
+  }
   updatePortalHUD();
   const equipment=equipmentForCharacter(game.wave,character.id);
   $('gear-label').textContent=`TENUE ${String(equipment.level).padStart(2,'0')} · ${equipment.name.toUpperCase()}`;
@@ -530,7 +552,10 @@ async function recoverGraphics(error,stage='rendu'){
   recoveryPromise=(async()=>{
     try{
       if(vr.mode==='xr')await vr.exit();
-      const next=await world.recover({quality:'low'});world=next;game.replaceObstacles(world.obstacles);
+      const next=await world.recover({quality:'low'});world=next;
+      world.setCampaignActive(selectedMode==='campaign');
+      world.setRangeActive(selectedMode==='training');
+      game.replaceObstacles(world.obstacles);
       window.dispatchEvent(new CustomEvent('rosee-renderer-recovered'));
       if(vr.mode==='stereo'){vr.removeHUD();vr.makeHUD();}
       world.campaignArt.update(game,clock);
@@ -688,7 +713,7 @@ try {
   }
   selectMode(selectedMode);$('loading-screen').hidden=true;$('play-button').disabled = false;$('outfit-button').disabled=false;
   window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ version:GAME_VERSION,phase, view, frames,recovering,recoveryAttempts,graphics:world.graphics, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,aiming,aimBlend,cameraFov:world.camera.fov,laserEffects:world.laserStats?.(),city:world.cityStats?.(),vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelSource:world.soldier.actor?.data.source,modelNativeMotion:world.soldier.nativeMotion,modelNativeBones:world.soldier.nativeSkeleton?.bones.length,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:musicBed.enabled,musicPlaying:musicBed.playing,musicFailed:musicBed.failed,musicSection:musicBed.section,musicVoices:musicBed.stats.voices,audioState:audioContext?.state||'idle',weaponFeedback:{...weaponFeel.state},previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
-    selectedMode,campaignArt:world.campaignArt.stats(),inputs: { move: { ...move }, look: { ...look }, firing: firingPointers.size > 0 || keys.has('Space') }, drawCalls: world.renderer.info.render.calls, ...game.snapshot(),equipment:equipmentForCharacter(game.wave,character.id) }) });
+    selectedMode,training:game.mode==='training'?game.snapshot().training:null,rangeTargets:world.rangeArt.targetCount,campaignArt:world.campaignArt.stats(),inputs: { move: { ...move }, look: { ...look }, firing: firingPointers.size > 0 || keys.has('Space') }, drawCalls: world.renderer.info.render.calls, ...game.snapshot(),equipment:equipmentForCharacter(game.wave,character.id) }) });
   bindCanvas();world.renderer.setAnimationLoop(frame);
   $('launch-status').textContent=`V. ${GAME_VERSION} · prêt à lancer`;
   if(boot?.intent==='play')await start();
