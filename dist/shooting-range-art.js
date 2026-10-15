@@ -20,6 +20,11 @@ export function createShootingRangeArt(T,scene){
     padding:new T.MeshStandardMaterial({color:0x151b20,roughness:.96}),
     canopy:new T.MeshStandardMaterial({color:0x313d4a,roughness:.82,metalness:.33})
   };
+  // Indoor illumination: sunlight no longer reaches the range through the roof,
+  // so a dedicated diffuse fill is necessary to see weapons and wall panels.
+  const indoorFill=new T.AmbientLight(0xb7cfda,1.35);
+  indoorFill.name='Eclairage diffus du stand';
+  root.add(indoorFill);
   const obstacles=[];
   const box=(name,x,y,z,w,h,d,mat=mats.metal)=>{
     const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),mat);
