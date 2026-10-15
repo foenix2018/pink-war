@@ -4,7 +4,7 @@ import {GAME_VERSION,showLaunchError,compatibleLaunchURL} from './launch-ui.js';
 // This menu has no Three.js or character imports. It is usable before the user
 // chooses to download/build the 3D scene, including inside an iPhone web view.
 const $=id=>document.getElementById(id);
-let character='ghju',mode='campaign',view='third',trainingWeapon=0,loading=false,modulePromise=null;
+let character='ghju',mode='campaign',view='fps',trainingWeapon=0,loading=false,modulePromise=null;
 const settings={sound:true,music:true,sensitivity:1,quality:'auto'};
 try{character=localStorage.getItem('pink-war-character')==='lylu'?'lylu':'ghju';Object.assign(settings,JSON.parse(localStorage.getItem('rosee-settings')||'{}'));const stored=Number(localStorage.getItem('pink-war-training-weapon'));if(Number.isInteger(stored)&&stored>=0&&stored<5)trainingWeapon=stored;}catch{}
 const profile=graphicsProfile(navigator,settings.quality);
@@ -14,9 +14,6 @@ function refresh(){
   document.documentElement.dataset.universe=character==='lylu'?'blue':'pink';
   for(const b of document.querySelectorAll('[data-character]')){const yes=b.dataset.character===character;b.classList.toggle('selected',yes);b.setAttribute('aria-pressed',String(yes));}
   for(const b of document.querySelectorAll('[data-mode]'))b.setAttribute('aria-pressed',String(b.dataset.mode===mode));
-  $('training-weapon-choice').hidden=mode!=='training';
-  for(const b of document.querySelectorAll('[data-training-weapon]'))b.setAttribute('aria-pressed',String(Number(b.dataset.trainingWeapon)===trainingWeapon));
-  for(const b of document.querySelectorAll('[data-view]')){const yes=b.dataset.view===view;b.classList.toggle('selected',yes);b.setAttribute('aria-pressed',String(yes));}
   $('mission-title').textContent=mode==='campaign'?'01 — Le dernier signal':mode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
   $('mission-description').textContent=mode==='campaign'?'Laboratoire abandonné, rue sous surveillance et relais en hauteur. Une trace de votre famille.':mode==='arena'?'Vingt vagues de machines et six armes à récupérer.':'Cibles fixes de 15 à 60 mètres, cibles mobiles latérales et avant-arrière. Vitesse croissante, score et précision.';
   $('play-label').textContent=loading?'CHARGEMENT…':mode==='campaign'?'JOUER LE NIVEAU 1':mode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
@@ -27,8 +24,6 @@ function refresh(){
 }
 for(const b of document.querySelectorAll('[data-character]'))b.onclick=()=>{if(!loading){character=b.dataset.character;save();refresh();}};
 for(const b of document.querySelectorAll('[data-mode]'))b.onclick=()=>{if(!loading){mode=b.dataset.mode;refresh();}};
-for(const b of document.querySelectorAll('[data-training-weapon]'))b.onclick=()=>{if(loading)return;trainingWeapon=Number(b.dataset.trainingWeapon);try{localStorage.setItem('pink-war-training-weapon',String(trainingWeapon));}catch{}refresh();};
-for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>{if(!loading){view=b.dataset.view;refresh();}};
 function panel(id){for(const d of document.querySelectorAll('dialog[open]'))d.close();$(id).showModal();}
 $('how-button').onclick=()=>panel('help-dialog');$('lore-button').onclick=()=>panel('lore-dialog');$('settings-button').onclick=()=>panel('settings-dialog');
 for(const b of document.querySelectorAll('.close-dialog'))b.onclick=()=>b.closest('dialog').close();
@@ -49,7 +44,7 @@ async function begin(intent='play'){
   if(settings.sound||settings.music!==false)try{const Audio=window.AudioContext||window.webkitAudioContext;
     window.__PINKWAR_BOOT_AUDIO ||=new Audio();window.__PINKWAR_BOOT_AUDIO.resume().catch(()=>{});}catch{}
   try{
-    modulePromise ||=import('./game.js?v=3.36');await modulePromise;
+    modulePromise ||=import('./game.js?v=3.37');await modulePromise;
     for(const d of document.querySelectorAll('dialog'))d.removeEventListener('cancel',earlyCancel);
     if(!window.__PINKWAR||window.__PINKWAR.snapshot().phase==='error')throw new Error('Initialisation interrompue.');
     loading=false;
