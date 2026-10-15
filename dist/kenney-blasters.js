@@ -12,7 +12,7 @@ function getMaterial(){
     ?new T.TextureLoader().load(new URL('./assets/kenney/colormap.png',import.meta.url).href):null;
   if(texture){texture.colorSpace=T.SRGBColorSpace;texture.flipY=false;}
   sharedMaterial=new T.MeshStandardMaterial({
-    map:texture,metalness:.27,roughness:.53,side:T.DoubleSide
+    map:texture,color:0x8796a4,metalness:.52,roughness:.41,side:T.DoubleSide
   });
   return sharedMaterial;
 }
@@ -128,7 +128,7 @@ export function installKenneyBlasters(models,originals,frames,onLoad){
     const originalLength=[.42,.786,.908,1.31,.862][i];
     const minFront=[-.2601,-.34811,-.45394,-.655,-.43104][i];
     const maxY=[.1134,.17895,.18595,.1325,.18595][i];
-    const scalar=frame.length/originalLength;
+    const scalar=frame.length/originalLength * [1,.91,.85,.89,.88][i];
     skin.scale.setScalar(scalar);
     skin.position.set(0,frame.muzzle[1]-maxY*scalar,frame.muzzle[2]-minFront*scalar);
     skin.traverse(o=>{if(o.isMesh)o.castShadow=false;});
