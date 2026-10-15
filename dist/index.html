@@ -42,6 +42,16 @@
         </div>
       </div>
       <div class="view-choice" aria-label="Choisir la perspective"><span class="field-label">VUE</span><div class="view-switch"><button data-view="fps"><svg viewBox="0 0 24 24"><path d="M12 3v4m0 10v4M3 12h4m10 0h4"/><circle cx="12" cy="12" r="5"/></svg> FPS</button><button data-view="third" class="selected" aria-pressed="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="3"/><path d="M6 21v-4a6 6 0 0 1 12 0v4"/></svg> 3e personne</button></div></div>
+      <div id="training-weapon-choice" class="training-weapon-choice" hidden aria-label="Choisir l'arme avant le stand de tir">
+        <span class="field-label">CHOISIR L’ARME DE DÉPART · STAND DE TIR</span>
+        <div class="training-weapon-grid" role="group" aria-label="Armes de qualification">
+          <button type="button" data-training-weapon="0" aria-pressed="true">R9<small>PISTOLET</small></button>
+          <button type="button" data-training-weapon="1" aria-pressed="false">BLOOM<small>CARABINE</small></button>
+          <button type="button" data-training-weapon="2" aria-pressed="false">LANCE<small>PRÉCISION</small></button>
+          <button type="button" data-training-weapon="3" aria-pressed="false">THORN<small>ÉNERGIE</small></button>
+          <button type="button" data-training-weapon="4" aria-pressed="false">NOVA<small>LOURDE</small></button>
+        </div>
+      </div>
       <button id="play-button" class="play-button"><span class="play-icon"><svg viewBox="0 0 24 24"><path d="M5 19 19 5M5 5h14v14"/></svg></span><span id="play-label">JOUER LE NIVEAU 1</span><span class="play-arrow">→</span></button>
       <span id="launch-status" class="launch-status" role="status">V. 3.35 · prêt à lancer</span><a id="online-launch" class="online-launch" href="https://pink-war.vercel.app/?v=3.35" hidden>JOUER EN LIGNE →</a>
       <noscript><p>Ouvrez Pink War en ligne dans Safari : <a href="https://pink-war.vercel.app/?v=3.35">Jouer à Pink War</a>.</p></noscript>
