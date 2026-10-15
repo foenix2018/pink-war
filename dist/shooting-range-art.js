@@ -5,6 +5,8 @@ import { targetPosition,TRAINING_BARRIER } from './shooting-range.js';
 // Deterministic, locally generated PBR detail. Five shared 512px maps keep Quest
 // memory and draw calls bounded, even across the full 100-metre indoor range.
 function rangeSurface(T,kind,repeatX=1,repeatY=1){
+  // Non-browser geometry tests and server tools have no canvas; materials stay valid.
+  if(typeof document==='undefined')return null;
   const n=512,canvas=document.createElement('canvas');canvas.width=canvas.height=n;
   const c=canvas.getContext('2d'),pixels=c.createImageData(n,n);
   let seed=kind.split('').reduce((v,ch)=>(v*31+ch.charCodeAt(0))|0,8471);
@@ -214,7 +216,7 @@ export function createShootingRangeArt(T,scene){
     for(const item of targetGroups.values())item.carrier.removeFromParent();
     targetGroups.clear();root.removeFromParent();
     root.traverse(node=>{if(node.isMesh&&node.geometry!==circle&&node.geometry!==ring)node.geometry.dispose();});
-    circle.dispose();ring.dispose();Object.values(mats).forEach(m=>m.dispose());textures.forEach(t=>t.dispose());
+    circle.dispose();ring.dispose();Object.values(mats).forEach(m=>m.dispose());textures.forEach(t=>t?.dispose());
   }
   return {root,obstacles,update,dispose,get targetCount(){return targetGroups.size;}};
 }
