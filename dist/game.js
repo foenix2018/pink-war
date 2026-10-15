@@ -251,7 +251,8 @@ $('arsenal-button').onclick = () => {
   WEAPONS.forEach((w,index) => {
     const button = document.createElement('button'), available = game.ownedWeapons.has(index);
     button.className = 'weapon-card' + (game.weaponIndex===index ? ' selected' : ''); button.disabled = !available;
-    button.innerHTML = `<span><strong>${w.name}</strong><small>${w.label} · ${w.melee?'énergie continue · parade':`${w.capacity} charges`}${w.chargeTime?' · tir chargé':''}</small></span><b>${available?(game.weaponIndex===index?'ÉQUIPÉE':'ÉQUIPER'):`NIVEAU ${w.level}`}</b>`;
+    const kenney=world.fpsGun.userData.kenneyAssets,kenneyReady=!w.melee&&!!kenney?.loadedByIndex?.[index];
+    button.innerHTML = `<span><strong>${w.name}</strong><small>${w.label} · ${w.melee?'énergie continue · parade':`${w.capacity} charges`}${w.chargeTime?' · tir chargé':''}<br>${w.melee?'Sabre AURORA':kenneyReady?'NOUVEAU MODÈLE 3D KENNEY · CC0':'MODÈLE CLASSIQUE / EN CHARGEMENT'}</small></span><b>${available?(game.weaponIndex===index?'ÉQUIPÉE':'ÉQUIPER'):`NIVEAU ${w.level}`}</b>`;
     button.onclick = () => { game.selectWeapon(index); world.setWeapon(game.weaponIndex); updateHud(); resume(); };
     $('weapon-list').append(button);
   });
@@ -427,6 +428,7 @@ function updateHud() {
     $('training-score').textContent=String(game.score).padStart(5,'0');
     $('training-accuracy').textContent=game.trainingAccuracy+' %';
     $('training-hits').textContent=`${game.trainingHits} / ${game.trainingShots}`;
+    $('training-arsenal').textContent=`ARMES 3D KENNEY · ${world.fpsGun.userData.kenneyAssets?.loaded||0}/5 CHARGÉES`;
     $('training-combo').textContent=`×${game.trainingCombo}`;
     $('training-speed').textContent=game.trainingLevel.number===5?`×${game.time<0?1:Math.min(4,1+game.time/45).toFixed(1)}`:
       `${Math.ceil(stage.remaining)} s avant la suite`;
