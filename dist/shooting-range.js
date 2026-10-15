@@ -2,6 +2,7 @@ import { ArenaGame, WEAPONS } from './game-logic.js';
 
 // Shooting range: target-only simulation with the unchanged Pink War weapon
 // handling, audio and VR aiming. Distances are from the firing line z=22.
+export const TRAINING_BARRIER=Object.freeze({z:19.12,stopZ:19.80,height:1.13,width:25.5});
 export const TRAINING_STAGES=Object.freeze([
   Object.freeze({id:'near',label:'CIBLES FIXES · 15 M',duration:20,kind:'fixed-near'}),
   Object.freeze({id:'far',label:'CIBLES FIXES · 40 À 60 M',duration:20,kind:'fixed-far'}),
@@ -43,7 +44,7 @@ const noTerrain=Object.freeze({
   surfaces:()=>[],height:()=>0,routeForSurface:()=>null
 });
 export class ShootingRangeGame extends ArenaGame {
-  constructor(obstacles=[],random=Math.random){
+  constructor(obstacles=[],random=Math.random,initialWeapon=0){
     super(obstacles,random,noTerrain);
     this.mode='training';this.targets=[];this.targetSerial=1;
     this.trainingHits=0;this.trainingShots=0;this.trainingEscapes=0;
@@ -52,6 +53,7 @@ export class ShootingRangeGame extends ArenaGame {
     this.player.x=0;this.player.z=22;this.player.yaw=0;
     this.ownedWeapons=new Set(WEAPONS.map((_,i)=>i).filter(i=>!WEAPONS[i].melee));
     this.ammo=WEAPONS.map(w=>w.capacity);
+    this.weaponIndex=Number.isInteger(initialWeapon)&&initialWeapon>=0&&initialWeapon<5?initialWeapon:0;
     this.state='playing';
   }
   get trainingAccuracy(){return this.trainingShots?Math.round(this.trainingHits/this.trainingShots*100):100;}
@@ -90,6 +92,13 @@ export class ShootingRangeGame extends ArenaGame {
     const beforeStage=this.trainingLevel.number;
     this.nextWave=-1;this.toSpawn=0;this.wave=0;
     super.step(dt,input);
+    // Safety officer's firing line: nobody can run or jump into the live lanes.
+    // Clamp any movement, including sprint and airborne controller movement.
+    if(this.player.z<TRAINING_BARRIER.stopZ){
+      this.player.z=TRAINING_BARRIER.stopZ;
+      this.player.jumpImpulseZ=Math.max(0,this.player.jumpImpulseZ||0);
+      if(this.playerVelocity)this.playerVelocity.z=0;
+    }
     this.nextWave=-1;this.toSpawn=0;this.wave=0;
     if(this.trainingLevel.number!==beforeStage){
       this.event('training-stage',{stage:this.trainingLevel.number,label:this.trainingLevel.label});
