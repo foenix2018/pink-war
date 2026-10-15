@@ -1,6 +1,6 @@
 // Low-draw-call indoor/outdoor range for desktop, mobile and WebXR.
 // No dependency on the survival city, no new texture downloads.
-import { targetPosition } from './shooting-range.js';
+import { targetPosition,TRAINING_BARRIER } from './shooting-range.js';
 
 export function createShootingRangeArt(T,scene){
   const root=new T.Group();root.name='PINK WAR / champ de tir';root.visible=false;scene.add(root);
@@ -31,7 +31,7 @@ export function createShootingRangeArt(T,scene){
   // line so jumping or sprinting cannot vault this barrier.
   exportBarrier();
   function exportBarrier(){
-    const z=19.12;
+    const z=TRAINING_BARRIER.z;
     box('GARDE-CORPS DE SÉCURITÉ / TRAVERSE TAILLE',0,1.015,z,25.5,.17,.19,mats.warning);
     box('Profil anti-impact',0,.89,z,25.5,.075,.22,mats.padding);
     box('Rail inférieur',0,.19,z,25.5,.07,.09,mats.metal);
