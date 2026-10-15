@@ -2,6 +2,7 @@ import * as T from './vendor/three.webgpu.min.js';
 import { Assembly, bevelBox, profile, turned, matrix } from './geo.js';
 import { createGlove } from './hands.js';
 import { createEnergyBlade } from './energy-blade.js';
+import { installKenneyBlasters } from './kenney-blasters.js';
 
 // Every weapon is modelled in one frame: the origin is the centre of its pistol grip (where the palm rests),
 // -z is the barrel direction, +y is up. The gloved hand (hands.js) is built in the same frame, so any weapon
@@ -304,6 +305,7 @@ export function createWeaponModels(mats) {
 export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   mats=weaponMetals(mats);
   const g = new T.Group(), models = createWeaponModels(mats);
+  const originalWeaponMeshes=models.map(model=>[...model.children]);
   for (const model of models) { model.visible = false; g.add(model); }
   const optics=models.map(attachOptic),eye=new T.Vector3(),target=new T.Vector3();
   g.userData.optics=optics;
@@ -382,6 +384,8 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
     support.userData.setBasePosition?.(frame.support || [0,0,0]);
     g.userData.index = index;
   };
+  g.userData.kenneyAssets=installKenneyBlasters(models,originalWeaponMeshes,WEAPON_FRAME,
+    (index,skin)=>{g.userData.kenneyVersion=(g.userData.kenneyVersion||0)+1;});
   g.userData.setVariant(0); g.userData.setLevel(1);
   let disposed=false;
   g.userData.disposeDynamic=()=>{
