@@ -71,6 +71,54 @@ function cached(letter){
   }
   return sources.get(letter);
 }
+// A tactical upgrade built on top of each *real* Kenney mesh: knurled barrel,
+// vented heat shroud, optic rail, durable flank panels and an active power cell.
+// No CDN and no opaque black placeholder geometry.
+let upgradeMats=null;
+function tacticalMaterials(){
+  if(!upgradeMats)upgradeMats={
+    anodized:new T.MeshStandardMaterial({color:0x212d3b,metalness:.80,roughness:.35}),
+    ceramic:new T.MeshStandardMaterial({color:0x536775,metalness:.56,roughness:.34}),
+    dark:new T.MeshStandardMaterial({color:0x0d1720,metalness:.45,roughness:.58}),
+    glow:new T.MeshStandardMaterial({color:0x8fe4ed,emissive:0x1e879c,emissiveIntensity:2.2,roughness:.28}),
+  };
+  return upgradeMats;
+}
+export function upgradeKenneyWeapon(model,frame,index){
+  if(index<0||index>4)return null;
+  const mat=tacticalMaterials(),group=new T.Group();
+  group.name='Tactical MKII / '+frame.id;
+  const mkBox=(label,material,x,y,z,w,h,d)=>{
+    const m=new T.Mesh(new T.BoxGeometry(w,h,d),material);
+    m.name=label;m.position.set(x,y,z);group.add(m);return m;
+  };
+  const length=Math.abs(frame.muzzle[2]),front=frame.muzzle[2],mid=front*.48,wide=index===4?.066:index===3?.050:.036;
+  // Rigid receiver, shaped side armor and a machined rail along the barrel.
+  mkBox('Reinforced receiver backbone',mat.anodized,0,.079,mid*.52,wide*1.38,.022,length*.40);
+  mkBox('Raised optic mount',mat.ceramic,0,.148,mid*.53,.028,.016,Math.min(.20,length*.45));
+  if(index===1||index===2){
+    mkBox('Enclosed sight hood',mat.dark,0,.179,mid*.58,.056,.045,.065);
+    mkBox('Lens tint',mat.glow,0,.181,mid*.58-.034,.037,.026,.004);
+  }
+  for(const sign of [-1,1]){
+    mkBox('Ceramic flank plating',mat.ceramic,sign*(wide+.007),.069,mid*.70,.009,.045,Math.max(.075,length*.33));
+    mkBox('Recessed power-channel',mat.glow,sign*(wide+.014),.055,mid*.7,.003,.007,Math.max(.04,length*.25));
+    for(let i=0;i<4;i++){
+      mkBox('Cooled exhaust vent',mat.dark,sign*(wide+.0145),.088,mid*.72-i*.025,.004,.016,.011);
+    }
+    // Grip-to-frame reinforced buttresses; these leave the actual handle clear.
+    mkBox('Grip reinforcement',mat.anodized,sign*.022,-.045,.006,.012,.065,.046);
+  }
+  // Plasma emitter shields, visibly concentric to the real muzzle.
+  const emitter=new T.Mesh(new T.CylinderGeometry(index===4?.067:.023,index===4?.057:.020,.055,12),mat.anodized);
+  emitter.name='Machined emitter barrel';emitter.rotation.x=Math.PI/2;
+  emitter.position.set(0,frame.muzzle[1],front+.025);group.add(emitter);
+  const ring=new T.Mesh(new T.TorusGeometry(index===4?.061:.021,.004,7,18),mat.glow);
+  ring.name='Emitter luminescent ring';ring.position.set(0,frame.muzzle[1],front-.003);group.add(ring);
+  model.add(group);
+  return group;
+}
+
 export function installKenneyBlasters(models,originals,frames,onLoad){
   const letters=['b','g','d','f','p'];
   const progress={loaded:0,total:5,failed:0,loadedByIndex:[false,false,false,false,false]};
@@ -85,6 +133,7 @@ export function installKenneyBlasters(models,originals,frames,onLoad){
     skin.position.set(0,frame.muzzle[1]-maxY*scalar,frame.muzzle[2]-minFront*scalar);
     skin.traverse(o=>{if(o.isMesh)o.castShadow=false;});
     models[i].add(skin);
+    upgradeKenneyWeapon(models[i],frame,i);
     for(const old of originals[i])old.visible=false;
     progress.loaded++;progress.loadedByIndex[i]=true;onLoad?.(i,skin);
   }).catch(e=>{progress.failed++;console.warn('Kenney blaster non disponible, arme native conservée',letters[i],e.message);});
