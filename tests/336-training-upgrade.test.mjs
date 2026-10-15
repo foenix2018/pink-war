@@ -53,12 +53,15 @@ test('every Kenney firearm receives non-floating tactical details centered on it
  }
 });
 
-test('the weapon selection is visible before a session and respects direct VR boot',()=>{
+test('weapon selection is inside the range, and direct VR boot is preserved',()=>{
  const html=readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
  const entry=readFileSync(new URL('../dist/entry.js',import.meta.url),'utf8');
  const main=readFileSync(new URL('../dist/game.js',import.meta.url),'utf8');
  const vr=readFileSync(new URL('../dist/vr.js',import.meta.url),'utf8');
- assert.equal((html.match(/data-training-weapon="[0-4]"/g)||[]).length,5);
+ assert.equal((html.match(/data-range-weapon="[0-4]"/g)||[]).length,5);
+ assert.ok(!html.includes('id="training-weapon-choice"'));
+ assert.ok(html.includes('id="range-weapon-selector"'));
+ assert.ok(main.includes("game?.mode!=='training'"));
  assert.ok(entry.includes('trainingWeaponIndex:trainingWeapon'));
  assert.ok(main.includes('new ShootingRangeGame(world.obstacles,Math.random,trainingWeaponIndex)'));
  assert.ok(vr.includes('world.createGun({sleeve:false})'));
