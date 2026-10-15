@@ -191,7 +191,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   const emblem=canvasTexture(256,128,paintEmblem);
   const characterKit = createCharacterKit(emblem,surfaces);
   // A bare gloved right hand with its forearm, for the free controller in a headset.
-  const createHand = () => createGlove(characterKit.gloves);
+  const createHand = (options = {}) => createGlove(characterKit.gloves,options);
   const createGun = (options = {}) => buildGun({ mats, gloves: characterKit.gloves, sleeve: options.sleeve !== false, makeFlash: parent => halo(parent, [0, 0, 0], .6, palette.rose, .7) });
   const soldiers=Object.fromEntries(CHARACTERS.map(profile=>{
     const model=buildSoldier(characterKit,createGun,profile);model.root.visible=profile.id==='ghju';scene.add(model.root);return [profile.id,model];
