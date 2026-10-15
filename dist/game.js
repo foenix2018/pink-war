@@ -24,7 +24,7 @@ const boot=window.__PINKWAR_BOOT_OPTIONS;
 if(boot?.settings)Object.assign(settings,boot.settings);
 settings.sensitivity = clamp(Number(settings.sensitivity) || 1, .4, 2);
 if (!['auto', 'low', 'high'].includes(settings.quality)) settings.quality = 'auto';
-let phase = 'lobby', view = boot?.view==='fps'?'fps':'third', yaw = 0, pitch = -.075, game, world, vr;
+let phase = 'lobby', view = boot?.view==='third'?'third':'fps', yaw = 0, pitch = -.075, game, world, vr;
 let character=characterForId('ghju');
 let selectedMode=['arena','training','campaign'].includes(boot?.mode)?boot.mode:'campaign',launchBusy=false;
 let trainingWeaponIndex=Number.isInteger(boot?.trainingWeaponIndex)&&boot.trainingWeaponIndex>=0&&boot.trainingWeaponIndex<5?boot.trainingWeaponIndex:0;
@@ -32,18 +32,22 @@ function selectMode(mode){
   if(phase!=='lobby'||launchBusy)return;
   selectedMode=['campaign','arena','training'].includes(mode)?mode:'campaign';
   for(const button of document.querySelectorAll('[data-mode]'))button.setAttribute('aria-pressed',String(button.dataset.mode===selectedMode));
-  $('training-weapon-choice').hidden=selectedMode!=='training';
-  for(const b of document.querySelectorAll('[data-training-weapon]'))b.setAttribute('aria-pressed',String(Number(b.dataset.trainingWeapon)===trainingWeaponIndex));
   $('mission-title').textContent=selectedMode==='campaign'?'01 — Le dernier signal':selectedMode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
   $('mission-description').textContent=selectedMode==='campaign'?'Laboratoire abandonné, rue sous surveillance et relais en hauteur. Une trace de votre famille.':selectedMode==='arena'?'Vingt vagues de machines, six armes et des équipements à récupérer.':'Cibles fixes, proches et lointaines ; trajectoires latérales et avant-arrière ; accélération continue. Mesurez votre précision.';
   if(world)$('play-label').textContent=selectedMode==='campaign'?'JOUER LE NIVEAU 1':selectedMode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
 }
 for(const button of document.querySelectorAll('[data-mode]'))button.onclick=()=>selectMode(button.dataset.mode);
-for(const button of document.querySelectorAll('[data-training-weapon]'))button.onclick=()=>{
-  if(phase!=='lobby'||launchBusy)return;
-  trainingWeaponIndex=Number(button.dataset.trainingWeapon);
-  try{localStorage.setItem('pink-war-training-weapon',String(trainingWeaponIndex));}catch{}
-  selectMode(selectedMode);
+// The range armory only exists in-game: a touch/click station for the five weapons.
+for(const button of document.querySelectorAll('[data-range-weapon]'))button.onclick=()=>{
+  if(phase!=='playing'||game?.mode!=='training')return;
+  const index=Number(button.dataset.rangeWeapon);
+  if(!Number.isInteger(index)||!game.ownedWeapons.has(index))return;
+  if(game.selectWeapon(index)){
+    trainingWeaponIndex=index;
+    try{localStorage.setItem('pink-war-training-weapon',String(index));}catch{}
+    world.setWeapon(game.weaponIndex);
+    updateHud();
+  }
 };
 try{character=characterForId(localStorage.getItem('pink-war-character'));}catch{}
 if(boot?.characterId)character=characterForId(boot.characterId);
@@ -431,6 +435,11 @@ function gameOver(won = false) {
 function updateHud() {
   const train=game?.mode==='training';
   $('training-hud').hidden=!train;
+  for(const button of document.querySelectorAll('[data-range-weapon]')){
+    const selected=train&&Number(button.dataset.rangeWeapon)===game.weaponIndex;
+    button.setAttribute('aria-pressed',String(selected));
+    button.classList.toggle('selected',selected);
+  }
   if(train){
     const stage=game.trainingLevel;
     $('training-stage').textContent=`EXERCICE ${stage.number}/5 · ${stage.label}`;
