@@ -5,11 +5,17 @@ import * as T from './vendor/three.webgpu.min.js';
 // A failed asset leaves the original native weapon visible and fully functional.
 export const KENNEY_WEAPON_ASSETS=Object.freeze(['b','g','d','f','p'].map(id=>'blaster-'+id+'.glb'));
 const sources=new Map();
-const texture=new T.TextureLoader().load(new URL('./assets/kenney/colormap.png',import.meta.url).href);
-texture.colorSpace=T.SRGBColorSpace;texture.flipY=false;
-const material=new T.MeshStandardMaterial({
-  map:texture,metalness:.27,roughness:.53,side:T.DoubleSide
-});
+let sharedMaterial=null;
+function getMaterial(){
+  if(sharedMaterial)return sharedMaterial;
+  const texture=typeof document!=='undefined'
+    ?new T.TextureLoader().load(new URL('./assets/kenney/colormap.png',import.meta.url).href):null;
+  if(texture){texture.colorSpace=T.SRGBColorSpace;texture.flipY=false;}
+  sharedMaterial=new T.MeshStandardMaterial({
+    map:texture,metalness:.27,roughness:.53,side:T.DoubleSide
+  });
+  return sharedMaterial;
+}
 const COMPONENTS=Object.freeze({5120:{bytes:1,read:'getInt8'},5121:{bytes:1,read:'getUint8'},
   5122:{bytes:2,read:'getInt16'},5123:{bytes:2,read:'getUint16'},
   5125:{bytes:4,read:'getUint32'},5126:{bytes:4,read:'getFloat32'}});
@@ -41,7 +47,7 @@ export function parseKenneyGLB(buffer){
       if(primitive.attributes.TEXCOORD_0!==undefined)geometry.setAttribute('uv',new T.Float32BufferAttribute(unpackAccessor(json,data,binStart,primitive.attributes.TEXCOORD_0),2));
       if(primitive.indices!==undefined)geometry.setIndex(unpackAccessor(json,data,binStart,primitive.indices));
       if(!geometry.hasAttribute('normal'))geometry.computeVertexNormals();
-      const mesh=new T.Mesh(geometry,material);mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);
+      const mesh=new T.Mesh(geometry,getMaterial());mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);
     }
     return group;
   });
