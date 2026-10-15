@@ -73,7 +73,7 @@ function cached(letter){
 }
 export function installKenneyBlasters(models,originals,frames,onLoad){
   const letters=['b','g','d','f','p'];
-  const progress={loaded:0,total:5,failed:0};
+  const progress={loaded:0,total:5,failed:0,loadedByIndex:[false,false,false,false,false]};
   for(let i=0;i<5;i++)cached(letters[i]).then(master=>{
     const skin=master.clone(true),frame=frames[i];
     skin.name='Kenney CC0 / '+frames[i].id;
@@ -86,7 +86,7 @@ export function installKenneyBlasters(models,originals,frames,onLoad){
     skin.traverse(o=>{if(o.isMesh)o.castShadow=false;});
     models[i].add(skin);
     for(const old of originals[i])old.visible=false;
-    progress.loaded++;onLoad?.(i,skin);
+    progress.loaded++;progress.loadedByIndex[i]=true;onLoad?.(i,skin);
   }).catch(e=>{progress.failed++;console.warn('Kenney blaster non disponible, arme native conservée',letters[i],e.message);});
   return progress;
 }
