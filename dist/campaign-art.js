@@ -22,8 +22,8 @@ export function createCampaignArt(T,scene,_unused,{quality='auto'}={}){
   tex.wrapS=tex.wrapT=T.RepeatWrapping;tex.anisotropy=quality==='low'?2:4;if(type==='color')tex.colorSpace=T.SRGBColorSpace;textures.push(tex);return tex;
  }
  const names=['concrete','plaster','brick','road','steel','rust','car-blue','car-cream'];
- const maps={};for(const name of names){const col=surface(name,'color'),height=surface(name,'height'),pbr=surface(name,'surface');maps[name]=ownM(new T.MeshStandardMaterial({color:0xffffff,map:col,bumpMap:height,bumpScale:['rust','brick'].includes(name)?.07:.025,roughnessMap:pbr,metalnessMap:pbr,roughness:1,metalness:1}));}
- maps.dark=ownM(new T.MeshStandardMaterial({color:0x151b1b,roughness:.65,metalness:.38}));
+ const maps={};for(const name of names){const col=surface(name,'color'),height=surface(name,'height'),pbr=surface(name,'surface');maps[name]=ownM(new T.MeshStandardMaterial({color:0xffffff,map:col,bumpMap:height,bumpScale:['rust','brick'].includes(name)?.085:['road','concrete','plaster'].includes(name)?.046:.035,roughnessMap:pbr,metalnessMap:pbr,roughness:1,metalness:1}));}
+ maps.dark=ownM(new T.MeshStandardMaterial({color:0x313b3a,map:maps.steel.map,bumpMap:maps.steel.bumpMap,bumpScale:.022,roughness:.72,metalness:.38}));
  maps.white=maps.plaster;maps.bark=ownM(new T.MeshStandardMaterial({color:0x473729,roughness:.98}));
  maps.foliage=ownM(new T.MeshStandardMaterial({color:0xffffff,map:surface('foliage','color'),alphaTest:.42,side:T.DoubleSide,roughness:.98,metalness:0}));
  maps.leaf=maps.foliage;
