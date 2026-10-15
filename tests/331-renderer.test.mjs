@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {graphicsProfile,renderPixelRatio,createCompatibleRenderer,warmRenderer} from '../dist/renderer-policy.js';
-import {compatibleLaunchURL} from '../dist/launch-ui.js';
+import {compatibleLaunchURL,GAME_VERSION} from '../dist/launch-ui.js';
 
 test('iPhone and desktop-mode iPad choose WebGL even when WebGPU exists; desktop and Quest retain their route',()=>{
   const iphone=graphicsProfile({userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X)',gpu:{},maxTouchPoints:5},'high');
@@ -51,7 +51,7 @@ test('the iPhone route never constructs a GPU renderer and WebGL does not await 
 });
 test('safe restart uses the hosted game for a downloaded file and keeps the current host for previews',()=>{
   const file=new URL(compatibleLaunchURL('file:///private/mobile/Pink_war.html'));
-  assert.equal(file.origin,'https://pink-war.vercel.app');assert.equal(file.searchParams.get('renderer'),'webgl');assert.equal(file.searchParams.get('v'),'3.33');
+  assert.equal(file.origin,'https://pink-war.vercel.app');assert.equal(file.searchParams.get('renderer'),'webgl');assert.equal(file.searchParams.get('v'),GAME_VERSION);
   const hosted=new URL(compatibleLaunchURL('https://preview.example/index.html?foo=bar'));
   assert.equal(hosted.origin,'https://preview.example');assert.equal(hosted.searchParams.get('foo'),'bar');
 });
