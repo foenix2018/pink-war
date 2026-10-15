@@ -329,6 +329,12 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   const batteryOff = new T.Color(0x171722), batteryLow = new T.Color(0xff385f), batteryReload = new T.Color(0xffffff);
   const batteryTint = new T.Color(), batteryCharge = new T.Color(), batteryWhite = new T.Color(0xffffff);
   let batteryStateKey = '';
+  // Calibrated palm offsets follow the actual Kenney trigger grips, not the
+  // high receiver shell. AURORA remains a neutral centered cylindrical grip.
+  const GRIP_CALIBRATION=[
+    [0,-.018,.016],[0,-.054,.012],[0,-.061,.018],
+    [0,-.052,.015],[0,-.076,.008],[0,0,0]
+  ];
   const hand = createGlove(gloves, { sleeve }), support = createGlove(gloves, { mirror: true, sleeve });
   support.visible = false; g.add(hand, support);
   const flash = makeFlash(g); flash.visible = false;
@@ -382,10 +388,14 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
     heatRing.visible=false;
     support.visible = g.userData.showSupport && !!frame.support;
     support.userData.setBasePosition?.(frame.support || [0,0,0]);
+    hand.userData.setBasePosition?.(g.userData.kenneyAssets?.loadedByIndex?.[index] ? GRIP_CALIBRATION[index]:[0,0,0]);
     g.userData.index = index;
   };
   g.userData.kenneyAssets=installKenneyBlasters(models,originalWeaponMeshes,WEAPON_FRAME,
-    (index,skin)=>{g.userData.kenneyVersion=(g.userData.kenneyVersion||0)+1;});
+    (index,skin)=>{
+      g.userData.kenneyVersion=(g.userData.kenneyVersion||0)+1;
+      if(g.userData.index===index)hand.userData.setBasePosition?.(GRIP_CALIBRATION[index]);
+    });
   g.userData.setVariant(0); g.userData.setLevel(1);
   let disposed=false;
   g.userData.disposeDynamic=()=>{
