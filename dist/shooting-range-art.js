@@ -2,13 +2,74 @@
 // No dependency on the survival city, no new texture downloads.
 import { targetPosition,TRAINING_BARRIER } from './shooting-range.js';
 
+// Deterministic, locally generated PBR detail. Five shared 512px maps keep Quest
+// memory and draw calls bounded, even across the full 100-metre indoor range.
+function rangeSurface(T,kind,repeatX=1,repeatY=1){
+  const n=512,canvas=document.createElement('canvas');canvas.width=canvas.height=n;
+  const c=canvas.getContext('2d'),pixels=c.createImageData(n,n);
+  let seed=kind.split('').reduce((v,ch)=>(v*31+ch.charCodeAt(0))|0,8471);
+  const random=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return (seed>>>0)/4294967296;};
+  const base=kind==='floor'?213:kind==='wall'?207:kind==='padding'?183:kind==='canopy'?192:224;
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+    const i=(y*n+x)*4,grain=(random()-.5)*41;
+    const stains=Math.sin(x*.034+Math.sin(y*.023)*3)*9+Math.sin(y*.051+x*.007)*6;
+    const scratches=kind==='metal'?Math.sin(x*.38)*7:kind==='padding'?Math.sin(x*.17)*6:0;
+    const value=Math.min(255,Math.max(75,base+grain+stains+scratches));
+    pixels.data[i]=Math.max(0,value-(kind==='metal'?8:3));
+    pixels.data[i+1]=value;pixels.data[i+2]=Math.min(255,value+3);
+    pixels.data[i+3]=255;
+  }
+  c.putImageData(pixels,0,0);
+  for(let i=0;i<75;i++){
+    const x=random()*n,y=random()*n,r=12+random()*75;
+    const g=c.createRadialGradient(x,y,0,x,y,r);
+    g.addColorStop(0,kind==='metal'?'rgba(95,49,25,.27)':'rgba(15,19,25,.19)');
+    g.addColorStop(1,'rgba(0,0,0,0)');
+    c.fillStyle=g;c.fillRect(x-r,y-r,2*r,2*r);
+  }
+  c.lineCap='round';
+  if(kind==='floor'||kind==='wall'||kind==='canopy'){
+    c.strokeStyle='rgba(20,27,34,.37)';c.lineWidth=2.2;
+    for(let x=0;x<=n;x+=128){c.beginPath();c.moveTo(x,0);c.lineTo(x,n);c.stroke();}
+    for(let y=0;y<=n;y+=128){c.beginPath();c.moveTo(0,y);c.lineTo(n,y);c.stroke();}
+    for(let j=0;j<26;j++){
+      let x=random()*n,y=random()*n;c.beginPath();c.moveTo(x,y);
+      for(let k=0;k<5;k++){x+=(random()-.5)*20;y+=random()*11;c.lineTo(x,y);}
+      c.strokeStyle='rgba(22,28,33,.4)';c.lineWidth=.55+random();c.stroke();
+    }
+  }
+  if(kind==='metal'){
+    for(let j=0;j<85;j++){
+      const x=random()*n,y=random()*n;
+      c.fillStyle=random()>.6?'rgba(180,95,53,.25)':'rgba(27,34,38,.33)';
+      c.fillRect(x,y,1+random()*24,.5+random()*3);
+    }
+  }
+  if(kind==='padding'){
+    c.fillStyle='rgba(15,26,32,.3)';
+    for(let x=0;x<n;x+=13)c.fillRect(x,0,2,n);
+  }
+  const tex=new T.CanvasTexture(canvas);tex.colorSpace=T.SRGBColorSpace;
+  tex.wrapS=tex.wrapT=T.RepeatWrapping;tex.repeat.set(repeatX,repeatY);tex.anisotropy=4;
+  return tex;
+}
+
 export function createShootingRangeArt(T,scene){
   const root=new T.Group();root.name='PINK WAR / champ de tir';root.visible=false;scene.add(root);
+  const textures=[
+    rangeSurface(T,'floor',8,30),rangeSurface(T,'wall',20,3),
+    rangeSurface(T,'metal',2,2),rangeSurface(T,'padding',3,2),
+    rangeSurface(T,'canopy',8,30)
+  ];
+  const [floorMap,wallMap,metalMap,paddingMap,canopyMap]=textures;
+  const textured=(color,map,roughness,metalness,bumpScale)=>new T.MeshStandardMaterial({
+    color,map,bumpMap:map,bumpScale,roughness,metalness
+  });
   const mats={
-    floor:new T.MeshStandardMaterial({color:0x303940,roughness:.88,metalness:.14}),
-    wall:new T.MeshStandardMaterial({color:0x222c34,roughness:.91,metalness:.16}),
-    metal:new T.MeshStandardMaterial({color:0x68717a,roughness:.37,metalness:.78}),
-    trim:new T.MeshStandardMaterial({color:0x151b24,roughness:.57,metalness:.6}),
+    floor:textured(0x4b5b64,floorMap,.92,.06,.017),
+    wall:textured(0x394b58,wallMap,.93,.06,.024),
+    metal:textured(0xb4bec5,metalMap,.46,.69,.014),
+    trim:textured(0x37444d,metalMap,.68,.47,.011),
     yellow:new T.MeshBasicMaterial({color:0xefbe67}),
     rose:new T.MeshBasicMaterial({color:0xff7aae}),
     cyan:new T.MeshBasicMaterial({color:0x70dfea}),
@@ -17,8 +78,8 @@ export function createShootingRangeArt(T,scene){
     red:new T.MeshBasicMaterial({color:0xff526f}),
     warning:new T.MeshBasicMaterial({color:0xffc74c}),
     light:new T.MeshBasicMaterial({color:0xb6ebff}),
-    padding:new T.MeshStandardMaterial({color:0x151b20,roughness:.96}),
-    canopy:new T.MeshStandardMaterial({color:0x313d4a,roughness:.82,metalness:.33})
+    padding:textured(0x35444c,paddingMap,.96,.02,.012),
+    canopy:textured(0x596977,canopyMap,.88,.16,.019)
   };
   // Indoor illumination: sunlight no longer reaches the range through the roof,
   // so a dedicated diffuse fill is necessary to see weapons and wall panels.
@@ -153,7 +214,7 @@ export function createShootingRangeArt(T,scene){
     for(const item of targetGroups.values())item.carrier.removeFromParent();
     targetGroups.clear();root.removeFromParent();
     root.traverse(node=>{if(node.isMesh&&node.geometry!==circle&&node.geometry!==ring)node.geometry.dispose();});
-    circle.dispose();ring.dispose();Object.values(mats).forEach(m=>m.dispose());
+    circle.dispose();ring.dispose();Object.values(mats).forEach(m=>m.dispose());textures.forEach(t=>t.dispose());
   }
   return {root,obstacles,update,dispose,get targetCount(){return targetGroups.size;}};
 }
