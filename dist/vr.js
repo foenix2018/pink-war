@@ -81,6 +81,9 @@ export function traceVRAim(origin, direction, enemies = [], obstacles = [], rang
 // The palm of the glove (the centre of the pistol grip) sits where the controller grip is: a little below and
 // behind the target ray.
 const GRIP_MOUNT = Object.freeze({ x: 0, y: -.012, z: .018 });
+// Where the shooting glove sits on the mount, whatever the weapon: each blaster slides so that its own grip is in
+// that palm (weapons.js KENNEY_HOLD), and recoil or a reload turns the weapon about the hand.
+const TRACKED_PALM = Object.freeze({ x: .015, y: -.014, z: .024 });
 
 // Immersive WebXR uses the headset's poses; phones use two real eye cameras.
 export class VRController {
@@ -559,6 +562,8 @@ export class VRController {
         c.gun.rotation.set(isMain?(feel?.pitch??kick*.22)+reload*Math.PI/2-(sword?.55:0):0,
           isMain?(feel?.yaw||0)*handSign:0,
           isMain?reload*.12+(sword?-.06*handSign:0):0);
+        const palm=c.gun.userData.palm,held=palm&&((this.scratch||={}).palm||=palm.clone());
+        if(palm)c.gun.position.sub(held.copy(palm).applyEuler(c.gun.rotation)).add(TRACKED_PALM);
         // Re-evaluate visibility every frame; a previous saber swap must
         // never hide the following weapon permanently.
         const holster=this.hooks.world().holsterGun;
@@ -574,7 +579,7 @@ export class VRController {
       // remains independently tracked instead of snapping unrealistically.
       const primary=controllerOf(this,main),secondary=controllerOf(this,otherHand(main));
       if(primary?.gun&&secondary?.bare){
-        const fore=WEAPON_FRAME[game.weaponIndex]?.support,hand=primary.gun.userData.support;
+        const fore=primary.gun.userData.supportPoint||WEAPON_FRAME[game.weaponIndex]?.support,hand=primary.gun.userData.support;
         let linked=false;
         if(fore&&primary.gun.visible&&this.handPose.sideGrip>.55&&secondary.anchor.visible){
           const world=this.hooks.world(),target=new world.T.Vector3(...fore);
@@ -583,7 +588,7 @@ export class VRController {
           linked=target.distanceTo(wrist)<.24;
         }
         primary.gun.userData.showSupport=linked;
-        if(hand){hand.visible=linked; if(linked){hand.userData.setBasePosition?.(fore);hand.userData.animate?.({grip:.98,trigger:0,reload:0},dt);}}
+        if(hand){hand.visible=linked; if(linked){hand.userData.setBasePosition?.(fore);hand.userData.animate?.({grip:.98,trigger:0,reload:0,wrap:true},dt);}}
         secondary.bare.visible=!linked&&secondary.anchor.visible;
       }
       const gun = controllerOf(this, main)?.gun; if (gun) this.updateWeaponState(gun, game,feel);

@@ -15,6 +15,22 @@ export const WEAPON_FRAME = Object.freeze([
   Object.freeze({ id: 'nova', muzzle: Object.freeze([0, .11, -.655]), support: Object.freeze([0, -.058, -.29]), length: .9 }),
   Object.freeze({ id:'aurora',muzzle:Object.freeze([0,.14,0]),support:null,length:1.22,melee:true })
 ]);
+// The Kenney blasters are placed by their muzzle, so their own pistol grips are not at the origin, and they are
+// toy-wide (grips 4.3 to 7.2 cm across). `slim` narrows each one (x only) to a 3.6 cm grip, which the glove's
+// fingers close round with their tips on its left face.
+// Measured on the meshes (weapon frame, metres): `palm` puts the index in the trigger guard, the fingers round
+// the front of the grip and the palm on its right face; `rake` tilts the hand like the grip; `support` closes the
+// free hand on the front of the magazine (or of the block under the barrel).
+export const KENNEY_HOLD = Object.freeze([
+  { slim: .78, palm: [0, -.068, 0], rake: -.26, support: null },
+  { slim: .56, palm: [0, -.135, -.064], rake: -.3, support: [-.018, -.146, -.325] },
+  { slim: .5, palm: [0, -.135, -.284], rake: -.3, support: [0, -.165, -.54] },
+  { slim: .84, palm: [-.004, -.025, -.149], rake: -.3, support: [0, -.09, -.342] },
+  { slim: .64, palm: [0, -.069, -.079], rake: -.3, support: [-.029, -.12, -.349] }
+].map(hold => Object.freeze({ ...hold, palm: Object.freeze(hold.palm), support: hold.support && Object.freeze(hold.support) })));
+// Forearm directions in the weapon frame: down, back and outward, towards each elbow. The eye is above and behind
+// the hands, so the open end of a cuff faces away from it.
+const KENNEY_CUFF = Object.freeze([.28, -.72, .62]), KENNEY_SUPPORT_CUFF = Object.freeze([-.22, -.88, .42]);
 
 const PI = Math.PI;
 export const OPTICS = Object.freeze({
@@ -313,7 +329,8 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
     for(const optic of optics)if(optic)optic.reticle.visible=false;
     const optic=optics[g.userData.index];g.userData.aiming=!!active&&!!optic;
     if(!g.userData.aiming||!camera)return;
-    g.updateWorldMatrix(true,true);camera.getWorldPosition(eye);g.worldToLocal(eye);
+    // In the model's own frame: a slimmed Kenney blaster is narrower than the weapon frame.
+    const model=models[g.userData.index];g.updateWorldMatrix(true,true);camera.getWorldPosition(eye);model.worldToLocal(eye);
     optic.eyeDistance=eye.z-optic.cfg.z;
     if(optic.eyeDistance<=.035)return;
     // Zero the optical reticle to the barrel at 100 m. Off-axis eyes lose the
@@ -321,7 +338,7 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
     const frame=WEAPON_FRAME[g.userData.index];target.set(0,frame.muzzle[1],frame.muzzle[2]-100);
     const t=(optic.cfg.z-eye.z)/(target.z-eye.z);eye.lerp(target,t);
     const dx=eye.x,dy=eye.y-optic.cfg.y;
-    optic.reticle.visible=Math.hypot(dx,dy)<optic.cfg.radius*.88;
+    optic.reticle.visible=Math.hypot(dx*model.scale.x,dy)<optic.cfg.radius*.88;
     optic.reticle.position.set(dx,optic.cfg.y+dy,optic.cfg.z+.0005);
   };
   const batteryMaterial = new T.MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
@@ -329,12 +346,6 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   const batteryOff = new T.Color(0x171722), batteryLow = new T.Color(0xff385f), batteryReload = new T.Color(0xffffff);
   const batteryTint = new T.Color(), batteryCharge = new T.Color(), batteryWhite = new T.Color(0xffffff);
   let batteryStateKey = '';
-  // Calibrated palm offsets follow the actual Kenney trigger grips, not the
-  // high receiver shell. AURORA remains a neutral centered cylindrical grip.
-  const GRIP_CALIBRATION=[
-    [.015,-.014,.024],[.027,-.045,.022],[.032,-.043,.033],
-    [.029,-.042,.027],[.032,-.063,.025],[0,0,0]
-  ];
   const hand = createGlove(gloves, { sleeve }), support = createGlove(gloves, { mirror: true, sleeve });
   support.visible = false; g.add(hand, support);
   const flash = makeFlash(g); flash.visible = false;
@@ -375,27 +386,40 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   };
   g.userData.animateHands = (trigger = 0, grip = .18, reload = 0, dt = .016) => {
     hand.userData.animate?.({ trigger, grip, reload: 0 }, dt);
-    if (support.visible) support.userData.animate?.({ trigger: 0, grip: reload ? 0 : grip, reload }, dt);
+    // The free hand has no trigger: its index closes round the foregrip with the other fingers.
+    if (support.visible) support.userData.animate?.({ trigger: 0, grip: reload ? 0 : grip, reload, wrap: !reload }, dt);
   };
+  const supportCuff=[...KENNEY_SUPPORT_CUFF];supportCuff[0]=-supportCuff[0];
+  const handCuff=new T.Vector3(),rakeAxis=new T.Vector3(1,0,0);
+  g.userData.palm=new T.Vector3();
   g.userData.setVariant = index => {
     if(!WEAPON_FRAME[index])return;
     models.forEach((model, i) => model.visible = i === index);
-    const frame = WEAPON_FRAME[index];
+    const frame = WEAPON_FRAME[index],hold=g.userData.kenneyAssets?.loadedByIndex?.[index]?KENNEY_HOLD[index]:null;
     if(index===5&&!blade){blade=createEnergyBlade(mats.rose.color);g.add(blade.root);}
     if(index!==5)blade?.reset?.();
     flash.position.set(...frame.muzzle); flash.scale.setScalar([.14,.12,.25,.19,.38,0][index]);
     collar.position.set(frame.muzzle[0],frame.muzzle[1],frame.muzzle[2]+.009);collar.scale.set(emitterRadii[index]/.012,1,emitterRadii[index]/.012);
     heatRing.visible=false;
     support.visible = g.userData.showSupport && !!frame.support;
-    support.userData.setBasePosition?.(frame.support || [0,0,0]);
-    hand.userData.setBasePosition?.(g.userData.kenneyAssets?.loadedByIndex?.[index] ? GRIP_CALIBRATION[index]:[0,0,0]);
+    g.userData.supportPoint=hold?.support||frame.support;
+    support.userData.setBasePosition?.(g.userData.supportPoint || [0,0,0]);
+    // The palm closes on the blaster's own grip: raked like it, the cuff heading back towards the elbow
+    // (never up at the eye, where its open end would show).
+    g.userData.palm.set(...(hold?.palm||[0,0,0]));
+    hand.userData.setBasePosition?.(g.userData.palm.toArray());hand.rotation.x=hold?.rake||0;
+    hand.userData.setForearm?.(hold?handCuff.set(...KENNEY_CUFF).applyAxisAngle(rakeAxis,-hold.rake).toArray():undefined);
+    support.userData.setForearm?.(hold?supportCuff:undefined);
     g.userData.index = index;
   };
   g.userData.kenneyAssets=installKenneyBlasters(models,originalWeaponMeshes,WEAPON_FRAME,
     (index,skin)=>{
       g.userData.kenneyVersion=(g.userData.kenneyVersion||0)+1;
-      if(g.userData.index===index)hand.userData.setBasePosition?.(GRIP_CALIBRATION[index]);
-    });
+      // The sight stays round on a slimmed blaster.
+      const optic=optics[index],slim=models[index].scale.x;
+      if(optic){optic.glass.scale.x=optic.cfg.radius/slim;optic.reticle.scale.x=1/slim;}
+      if(g.userData.index===index)g.userData.setVariant(index);
+    },KENNEY_HOLD);
   g.userData.setVariant(0); g.userData.setLevel(1);
   let disposed=false;
   g.userData.disposeDynamic=()=>{

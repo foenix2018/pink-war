@@ -13,7 +13,7 @@ export function createLaserFX(T,scene,palette={}) {
   const haloMaterial=new T.MeshBasicMaterial({color:accent,transparent:true,opacity:.28,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false});
   const core=new T.InstancedMesh(geometry,coreMaterial,capacity),halo=new T.InstancedMesh(geometry,haloMaterial,capacity);
   for(const mesh of [core,halo]){mesh.count=0;mesh.visible=false;mesh.frustumCulled=false;mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);group.add(mesh);}
-  const lights=Array.from({length:3},()=>{const light=new T.PointLight(accent,0,7,2);light.castShadow=false;light.userData.life=0;group.add(light);return light;});
+  const lights=Array.from({length:3},()=>{const light=new T.PointLight(accent,0,5,2);light.castShadow=false;light.userData.life=0;group.add(light);return light;});
   const up=new T.Vector3(0,1,0),a=new T.Vector3(),b=new T.Vector3(),delta=new T.Vector3(),mid=new T.Vector3(),scale=new T.Vector3(),q=new T.Quaternion(),matrix=new T.Matrix4();
   let cursor=0,clock=0,disposed=false;
   function illuminate(p,energy,life=.09) {
@@ -25,14 +25,15 @@ export function createLaserFX(T,scene,palette={}) {
     if(disposed||!event.origin)return;
     const p=LASER_TRAILS[event.weapon]||LASER_TRAILS.r9;
     history.set(event.bulletId,{...event.origin,weapon:event.weapon,at:clock});
-    illuminate(event.origin,p.light*(event.power||1));
+    // A muzzle a few decimetres from a wall must not flood it: the flash is a fraction of the impact light.
+    illuminate(event.origin,p.light*.28*(event.power||1),.06);
   }
   function impact(event) {
     if(disposed||event.hostile)return;
     const previous=history.get(event.bulletId),profile=LASER_TRAILS[event.weapon]||LASER_TRAILS.r9;
     if(previous){residuals.push({from:previous,to:{x:event.x,y:event.y,z:event.z},profile,life:.075});if(residuals.length>capacity)residuals.shift();history.delete(event.bulletId);}
     const normal=event.normal||{x:0,y:1,z:0};
-    illuminate({x:event.x+normal.x*.08,y:event.y+normal.y*.08,z:event.z+normal.z*.08},profile.light*.7,.12);
+    illuminate({x:event.x+normal.x*.08,y:event.y+normal.y*.08,z:event.z+normal.z*.08},profile.light*.5,.12);
   }
   function renderTrail(from,to,profile,index,fade=1) {
     a.set(from.x,from.y,from.z);b.set(to.x,to.y,to.z);delta.subVectors(b,a);

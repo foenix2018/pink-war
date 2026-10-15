@@ -13,9 +13,9 @@ function rangeSurface(T,kind,repeatX=1,repeatY=1){
   const random=()=>{seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;return (seed>>>0)/4294967296;};
   const base=kind==='floor'?213:kind==='wall'?207:kind==='padding'?183:kind==='canopy'?192:224;
   for(let y=0;y<n;y++)for(let x=0;x<n;x++){
-    const i=(y*n+x)*4,grain=(random()-.5)*41;
+    const i=(y*n+x)*4,grain=(random()-.5)*(kind==='padding'?8:24);
     const stains=Math.sin(x*.034+Math.sin(y*.023)*3)*9+Math.sin(y*.051+x*.007)*6;
-    const scratches=kind==='metal'?Math.sin(x*.38)*7:kind==='padding'?Math.sin(x*.17)*6:0;
+    const scratches=kind==='metal'?Math.sin(x*.38)*7:0;
     const value=Math.min(255,Math.max(75,base+grain+stains+scratches));
     pixels.data[i]=Math.max(0,value-(kind==='metal'?8:3));
     pixels.data[i+1]=value;pixels.data[i+2]=Math.min(255,value+3);
@@ -48,14 +48,32 @@ function rangeSurface(T,kind,repeatX=1,repeatY=1){
     }
   }
   if(kind==='padding'){
-    c.fillStyle='rgba(15,26,32,.3)';
-    for(let x=0;x<n;x+=13)c.fillRect(x,0,2,n);
+    // Perforated acoustic panels: framed 256 px tiles, regular micro-holes and a soft fabric weave.
+    c.fillStyle='rgba(12,20,26,.18)';
+    for(let y=4;y<n;y+=8)for(let x=4+(y/8%2)*4;x<n;x+=8){c.beginPath();c.arc(x,y,1.35,0,Math.PI*2);c.fill();}
+    c.strokeStyle='rgba(8,14,18,.55)';c.lineWidth=5;
+    for(let v=0;v<=n;v+=256){c.beginPath();c.moveTo(v,0);c.lineTo(v,n);c.stroke();c.beginPath();c.moveTo(0,v);c.lineTo(n,v);c.stroke();}
+    c.strokeStyle='rgba(255,255,255,.08)';c.lineWidth=2;
+    for(let v=4;v<=n;v+=256){c.beginPath();c.moveTo(v,0);c.lineTo(v,n);c.stroke();c.beginPath();c.moveTo(0,v);c.lineTo(n,v);c.stroke();}
   }
   const tex=new T.CanvasTexture(canvas);tex.colorSpace=T.SRGBColorSpace;
   tex.wrapS=tex.wrapT=T.RepeatWrapping;tex.repeat.set(repeatX,repeatY);tex.anisotropy=4;
   return tex;
 }
 
+// Worn diagonal safety chevrons; `repeat` tiles them along a long rail.
+function hazardStripes(T,repeat){
+  if(typeof document==='undefined')return null;
+  const w=256,h=64,canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+  const c=canvas.getContext('2d');c.fillStyle='#e8b94a';c.fillRect(0,0,w,h);
+  c.fillStyle='#14181d';
+  for(let x=-h;x<w+h;x+=64){c.beginPath();c.moveTo(x,h);c.lineTo(x+32,h);c.lineTo(x+32+h,0);c.lineTo(x+h,0);c.closePath();c.fill();}
+  let seed=2741;const random=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
+  for(let i=0;i<260;i++){c.fillStyle=random()>.5?'rgba(255,248,220,.10)':'rgba(30,24,16,.16)';c.fillRect(random()*w,random()*h,1+random()*7,1+random()*2);}
+  c.fillStyle='rgba(0,0,0,.25)';c.fillRect(0,0,w,3);c.fillRect(0,h-3,w,3);
+  const tex=new T.CanvasTexture(canvas);tex.colorSpace=T.SRGBColorSpace;tex.wrapS=tex.wrapT=T.RepeatWrapping;tex.repeat.set(repeat,1);tex.anisotropy=4;
+  return tex;
+}
 export function createShootingRangeArt(T,scene){
   const root=new T.Group();root.name='PINK WAR / champ de tir';root.visible=false;scene.add(root);
   const textures=[
@@ -64,6 +82,7 @@ export function createShootingRangeArt(T,scene){
     rangeSurface(T,'canopy',8,30)
   ];
   const [floorMap,wallMap,metalMap,paddingMap,canopyMap]=textures;
+  const hazardMap=hazardStripes(T,70);textures.push(hazardMap);
   const textured=(color,map,roughness,metalness,bumpScale)=>new T.MeshStandardMaterial({
     color,map,bumpMap:map,bumpScale,roughness,metalness
   });
@@ -81,7 +100,8 @@ export function createShootingRangeArt(T,scene){
     warning:new T.MeshBasicMaterial({color:0xffc74c}),
     light:new T.MeshBasicMaterial({color:0xb6ebff}),
     padding:textured(0x35444c,paddingMap,.96,.02,.012),
-    canopy:textured(0x596977,canopyMap,.88,.16,.019)
+    canopy:textured(0x596977,canopyMap,.88,.16,.019),
+    hazard:new T.MeshStandardMaterial({color:0xffffff,map:hazardMap,emissive:0x3a2c08,roughness:.55,metalness:.12})
   };
   // Indoor illumination: sunlight no longer reaches the range through the roof,
   // so a dedicated diffuse fill is necessary to see weapons and wall panels.
@@ -100,7 +120,7 @@ export function createShootingRangeArt(T,scene){
   exportBarrier();
   function exportBarrier(){
     const z=TRAINING_BARRIER.z;
-    box('GARDE-CORPS DE SÉCURITÉ / TRAVERSE TAILLE',0,1.015,z,25.5,.17,.19,mats.warning);
+    box('GARDE-CORPS DE SÉCURITÉ / TRAVERSE TAILLE',0,1.015,z,25.5,.17,.19,mats.hazard);
     box('Profil anti-impact',0,.89,z,25.5,.075,.22,mats.padding);
     box('Rail inférieur',0,.19,z,25.5,.07,.09,mats.metal);
     for(let x=-12;x<=12.01;x+=2.3){

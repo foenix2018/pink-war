@@ -3,6 +3,7 @@ import { WebGLRenderer } from './vendor/three.module.min.js';
 import { PORTAL, COVER_WALLS, CATWALK, WEAPONS } from './game-logic.js';
 import { createCharacterKit, createSoldier as buildSoldier } from './soldier.js';
 import { buildGun } from './weapons.js';
+import { setKenneyAccent } from './kenney-blasters.js';
 import { createGlove } from './hands.js';
 import { CHARACTERS, characterForId } from './characters.js';
 import { createSurfaceDetails } from './surfaces.js';
@@ -221,7 +222,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     for(const [name,mat] of Object.entries(mats))mat.color.setHex(colors[name]);
     scene.background.setHex(character.masculine?0x16243c:0x261d32);scene.fog.color.setHex(character.masculine?0x263750:0x463b50);scene.fog.density=.0067;
     hemisphere.color.setHex(0xa9c9e5);hemisphere.groundColor.setHex(0x344058);
-    sun.color.setHex(0xb5d7ff);rim.color.setHex(0x9abfff);city.setAccent(palette.rose);combatFX.setAccent(palette.rose);laserFX.setAccent(palette.rose);
+    sun.color.setHex(0xb5d7ff);rim.color.setHex(0x9abfff);city.setAccent(palette.rose);combatFX.setAccent(palette.rose);laserFX.setAccent(palette.rose);setKenneyAccent(palette.rose);
     portalLight.color.setHex(palette.hot);dust.material.color.setHex(palette.pale);
     for(const sprite of themeHalos)sprite.material.color.setHex(palette.rose);
     for(const [texture,paint] of [[skyTexture,paintSky],[portalTexture,paintPortal],[emblem,paintEmblem]]){

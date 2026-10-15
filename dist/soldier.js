@@ -477,8 +477,10 @@ export function createLegacySoldier(kit, createGun, profileInfo) {
     setWeapon(index){
       gun.userData.setVariant(index);
       const frame=WEAPON_FRAME[index],p=new T.Vector3(...STANCE[index]),support=frame.support;
-      const wristR=()=>p.clone().add(new T.Vector3(...GRIP.wrist).multiplyScalar(CARRY));
-      const wristL=()=>support?p.clone().add(new T.Vector3(-GRIP.wrist[0]+support[0],GRIP.wrist[1]+support[1],GRIP.wrist[2]+support[2]).multiplyScalar(CARRY)):new T.Vector3(-GRIP.wrist[0],GRIP.wrist[2],-GRIP.wrist[1]).multiplyScalar(CARRY).add(new T.Vector3(...REST));
+      // Wrists where the gloves actually are on this weapon (its own grip and foregrip).
+      const wristOf=glove=>new T.Vector3(...GRIP.wrist).multiply(glove.scale).applyEuler(glove.rotation).add(glove.position).multiplyScalar(CARRY);
+      const wristR=()=>p.clone().add(wristOf(gun.userData.hand));
+      const wristL=()=>support?p.clone().add(wristOf(gun.userData.support)):new T.Vector3(-GRIP.wrist[0],GRIP.wrist[2],-GRIP.wrist[1]).multiplyScalar(CARRY).add(new T.Vector3(...REST));
       // Pull the weapon toward the body until both hands can reach it.
       for(let i=0;i<40;i++){
         const left=wristL().sub(arms[0].shoulder.position).length(),right=wristR().sub(arms[1].shoulder.position).length();

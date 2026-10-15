@@ -5,14 +5,41 @@ import * as T from './vendor/three.webgpu.min.js';
 // A failed asset leaves the original native weapon visible and fully functional.
 export const KENNEY_WEAPON_ASSETS=Object.freeze(['b','g','d','f','p'].map(id=>'blaster-'+id+'.glb'));
 const sources=new Map();
-let sharedMaterial=null;
+let sharedMaterial=null,paletteCanvas=null,paletteTexture=null,paletteSource=null,paletteAccent=0xff80b2;
+// The Kenney palette is a grid of flat swatches (red, mustard, royal blue, green…). Pink War repaints it once:
+// neutral swatches become blued gunmetal, light ones machined ceramic, and saturated ones the universe's paint
+// (rose for GHJU, blue for LYLU) in two depths, so the five weapons read as one family of military hardware.
+export function themeKenneyPixel(r,g,b,accentHue=.92){
+  const max=Math.max(r,g,b)/255,min=Math.min(r,g,b)/255,l=(max+min)/2,d=max-min;
+  const s=d===0?0:d/(1-Math.abs(2*l-1));
+  let h=0;if(d){const R=r/255,G=g/255,B=b/255;h=max===R?((G-B)/d+6)%6:max===G?(B-R)/d+2:(R-G)/d+4;h/=6;}
+  let hue,sat,light;
+  if(l<.05){hue=.58;sat=.2;light=.035;}
+  else if(s<.22||l<.3){hue=.585;sat=.13;light=.09+l*.5;}
+  else if(l>.84){hue=accentHue;sat=.1;light=.74+(l-.84)*.8;}
+  else{const warm=h<.17||h>.9;hue=accentHue;sat=warm?.38:.2;light=warm?.3+l*.28:.14+l*.26;}
+  const q=light<.5?light*(1+sat):light+sat-light*sat,p=2*light-q;
+  const channel=t=>{t=(t%1+1)%1;return Math.round(255*(t<1/6?p+(q-p)*6*t:t<.5?q:t<2/3?p+(q-p)*(2/3-t)*6:p));};
+  return [channel(hue+1/3),channel(hue),channel(hue-1/3)];
+}
+function paintPalette(){
+  if(!paletteCanvas||!paletteSource)return;
+  const c=paletteCanvas.getContext('2d',{willReadFrequently:true});c.drawImage(paletteSource,0,0,paletteCanvas.width,paletteCanvas.height);
+  const image=c.getImageData(0,0,paletteCanvas.width,paletteCanvas.height),data=image.data,hue=new T.Color(paletteAccent).getHSL({}).h;
+  for(let i=0;i<data.length;i+=4){const [r,g,b]=themeKenneyPixel(data[i],data[i+1],data[i+2],hue);data[i]=r;data[i+1]=g;data[i+2]=b;}
+  c.putImageData(image,0,0);paletteTexture.needsUpdate=true;
+}
+export function setKenneyAccent(hex){paletteAccent=hex;paintPalette();}
 function getMaterial(){
   if(sharedMaterial)return sharedMaterial;
-  const texture=typeof document!=='undefined'
-    ?new T.TextureLoader().load(new URL('./assets/kenney/colormap.png',import.meta.url).href):null;
-  if(texture){texture.colorSpace=T.SRGBColorSpace;texture.flipY=false;}
+  if(typeof document!=='undefined'){
+    paletteCanvas=document.createElement('canvas');paletteCanvas.width=paletteCanvas.height=512;
+    paletteTexture=new T.CanvasTexture(paletteCanvas);paletteTexture.colorSpace=T.SRGBColorSpace;paletteTexture.flipY=false;
+    const image=new Image();image.onload=()=>{paletteSource=image;paintPalette();};
+    image.src=new URL('./assets/kenney/colormap.png',import.meta.url).href;
+  }
   sharedMaterial=new T.MeshStandardMaterial({
-    map:texture,color:0x8796a4,metalness:.52,roughness:.41,side:T.DoubleSide
+    map:paletteTexture,color:0xffffff,metalness:.58,roughness:.36,side:T.DoubleSide
   });
   return sharedMaterial;
 }
@@ -84,7 +111,7 @@ function tacticalMaterials(){
   };
   return upgradeMats;
 }
-export function upgradeKenneyWeapon(model,frame,index){
+export function upgradeKenneyWeapon(model,frame,index,hold=null){
   if(index<0||index>4)return null;
   const mat=tacticalMaterials(),group=new T.Group();
   group.name='Tactical MKII / '+frame.id;
@@ -106,8 +133,9 @@ export function upgradeKenneyWeapon(model,frame,index){
     for(let i=0;i<4;i++){
       mkBox('Cooled exhaust vent',mat.dark,sign*(wide+.0145),.088,mid*.72-i*.025,.004,.016,.011);
     }
-    // Grip-to-frame reinforced buttresses; these leave the actual handle clear.
-    mkBox('Grip reinforcement',mat.anodized,sign*.022,-.045,.006,.012,.065,.046);
+    // Grip-to-frame reinforced buttresses, at the top of the blaster's own grip rather than in mid-air.
+    const palm=hold?.palm||[0,0,0];
+    mkBox('Grip reinforcement',mat.anodized,sign*.022,palm[1]+.023,palm[2]+.006,.012,.065,.046);
   }
   // Plasma emitter shields, visibly concentric to the real muzzle.
   const emitter=new T.Mesh(new T.CylinderGeometry(index===4?.067:.023,index===4?.057:.020,.055,12),mat.anodized);
@@ -115,11 +143,13 @@ export function upgradeKenneyWeapon(model,frame,index){
   emitter.position.set(0,frame.muzzle[1],front+.025);group.add(emitter);
   const ring=new T.Mesh(new T.TorusGeometry(index===4?.061:.021,.004,7,18),mat.glow);
   ring.name='Emitter luminescent ring';ring.position.set(0,frame.muzzle[1],front-.003);group.add(ring);
+  // The model may be slimmed in x (KENNEY_HOLD): the round emitter stays round.
+  emitter.scale.x=ring.scale.x=1/(hold?.slim||1);
   model.add(group);
   return group;
 }
 
-export function installKenneyBlasters(models,originals,frames,onLoad){
+export function installKenneyBlasters(models,originals,frames,onLoad,holds=[]){
   const letters=['b','g','d','f','p'];
   const progress={loaded:0,total:5,failed:0,loadedByIndex:[false,false,false,false,false]};
   for(let i=0;i<5;i++)cached(letters[i]).then(master=>{
@@ -132,8 +162,8 @@ export function installKenneyBlasters(models,originals,frames,onLoad){
     skin.scale.setScalar(scalar);
     skin.position.set(0,frame.muzzle[1]-maxY*scalar,frame.muzzle[2]-minFront*scalar);
     skin.traverse(o=>{if(o.isMesh)o.castShadow=false;});
-    models[i].add(skin);
-    upgradeKenneyWeapon(models[i],frame,i);
+    models[i].add(skin);models[i].scale.x=holds[i]?.slim||1;
+    upgradeKenneyWeapon(models[i],frame,i,holds[i]);
     for(const old of originals[i])old.visible=false;
     progress.loaded++;progress.loadedByIndex[i]=true;onLoad?.(i,skin);
   }).catch(e=>{progress.failed++;console.warn('Kenney blaster non disponible, arme native conservée',letters[i],e.message);});

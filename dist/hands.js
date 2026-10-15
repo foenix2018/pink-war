@@ -19,23 +19,27 @@ export function createGlove(materials,{mirror=false,sleeve=true,forearm=GRIP.for
   const rig=model.userData.rig,localDirection=new T.Vector3(...forearm).normalize().applyQuaternion(orientation.clone().invert());
   // The cuff extends opposite the palm axis. A downwards default cuff bent
   // both wrists by about forty degrees despite neutral wrist bones.
-  rig.forearm.quaternion.setFromUnitVectors(new T.Vector3(0,-1,0),localDirection);
+  const cuffAxis=new T.Vector3(0,-1,0),toModel=orientation.clone().invert();
+  rig.forearm.quaternion.setFromUnitVectors(cuffAxis,localDirection);
   const order=['middle','ring','pinky','index'];
   const digitBones=[...order.map(name=>rig.doigts[name].artic),rig.pouce.artic];
   const pose={trigger:0,grip:0,reload:0,relax:0};
   Object.assign(group.userData,{source:'RLH V40',rlh:model,rig,skeleton:model.userData.skeleton,pose,digitBones,fingerJoints:digitBones.map(chain=>chain[1]),assembly:model.userData.assembly,
     setLevel:level=>model.userData.setLevel(level),
     setBasePosition(position){base.set(...position);group.position.copy(base);},
+    // Points the cuff along the forearm (a direction in this glove's frame, before mirroring).
+    setForearm(direction=forearm){localDirection.set(...direction).normalize().applyQuaternion(toModel);rig.forearm.quaternion.setFromUnitVectors(cuffAxis,localDirection);},
     extendForearm(){
       if(group.userData.extendedForearm)return;
       const arm=new T.Mesh(trackedForearmGeometry,materials.fabric);arm.name='Tracked forearm inside RLH cuff';arm.position.y=-.3;arm.scale.set(1.12,1,.87);rig.forearm.add(arm);group.userData.extendedForearm=arm;
     },
     dispose:()=>model.userData.dispose()
   });
-  group.userData.animate=({trigger=0,grip=0,reload=0,relax=0}={},dt=.016,handedness=1)=>{
+  // `wrap`: a hand on a foregrip has no trigger; its index closes round it like the other fingers.
+  group.userData.animate=({trigger=0,grip=0,reload=0,relax=0,wrap=false}={},dt=.016,handedness=1)=>{
     Object.assign(pose,{trigger:clamp(trigger),grip:clamp(grip),reload:clamp(reload),relax:clamp(relax)});
     const {trigger:t,grip:g,reload:r,relax:open}=pose;
-    const closed={index:.28+t*.20,middle:.82+g*.05,ring:.85+g*.04,pinky:.82+g*.03,thumbCurl:.55+g*.08,thumbOpp:.80+g*.08,spread:.02,wristFlex:0,wristSide:0};
+    const closed={index:wrap?.8+g*.05:.28+t*.20,middle:.82+g*.05,ring:.85+g*.04,pinky:.82+g*.03,thumbCurl:.55+g*.08,thumbOpp:.80+g*.08,spread:.02,wristFlex:0,wristSide:0};
     const relaxed={index:.13,middle:.17,ring:.21,pinky:.28,thumbCurl:.15,thumbOpp:.25,spread:.20};
     const opened={index:.03,middle:.03,ring:.04,pinky:.06,thumbCurl:.05,thumbOpp:.10,spread:.85};
     for(const key of Object.keys(relaxed)){
@@ -48,7 +52,7 @@ export function createGlove(materials,{mirror=false,sleeve=true,forearm=GRIP.for
     rig.pose(closed);rig.maj(dt);
     // The RLH index is full adult length. Its three angles are fitted to the
     // existing trigger guard, rather than shrinking the finger to fit the gun.
-    const pull=clamp((rig.etat.index-.28)/.20),held=1-Math.min(1,open/.65+r*.8);
+    const pull=clamp((rig.etat.index-.28)/.20),held=wrap?0:1-Math.min(1,open/.65+r*.8);
     const index=rig.doigts.index.artic,angles=[.08+pull*.035,-(.80+pull*.30),-(.71+pull*.04)];
     for(let i=0;i<3;i++)index[i].rotation.x=index[i].rotation.x*(1-held)+angles[i]*held;
     const sign=(mirror?-1:1)*handedness;
