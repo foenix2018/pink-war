@@ -96,10 +96,10 @@ export function createShootingRangeArt(T,scene){
     box('Marqueur de poste lumineux',x,4.26,20.1,1.25,.11,.10,mats.yellow);
   }
   // Secondary bullet-trap panels behind each drill distance.
-  for(const z of [4,-23,-46,-61]){
+  for(const z of [-61]){
     box('Blindage arrière des couloirs',0,2.55,z,25.6,4.45,.18,mats.wall);
     for(let lane=-2;lane<=2;lane++)
-      box('Plaque d'absorption',lane*4.6,2.55,z+.11,3.8,3.4,.07,mats.padding);
+      box('Plaque acoustique',lane*4.6,2.55,z+.11,3.8,3.4,.07,mats.padding);
   }
   // Distinct training area behind the player does not block the VR controllers.
   box('Fond stand',0,2.25,36,27,4.5,.3,mats.wall);
