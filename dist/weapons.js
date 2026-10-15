@@ -332,8 +332,8 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   // Calibrated palm offsets follow the actual Kenney trigger grips, not the
   // high receiver shell. AURORA remains a neutral centered cylindrical grip.
   const GRIP_CALIBRATION=[
-    [0,-.018,.016],[0,-.054,.012],[0,-.061,.018],
-    [0,-.052,.015],[0,-.076,.008],[0,0,0]
+    [.015,-.014,.024],[.027,-.045,.022],[.032,-.043,.033],
+    [.029,-.042,.027],[.032,-.063,.025],[0,0,0]
   ];
   const hand = createGlove(gloves, { sleeve }), support = createGlove(gloves, { mirror: true, sleeve });
   support.visible = false; g.add(hand, support);
