@@ -30,13 +30,22 @@
 
 #training-arsenal{color:#83d7ed;font-size:10px;letter-spacing:.04em;opacity:.9}
 
-/* Pre-session weapon choice; never renders during story or survival. */
-.training-weapon-choice{width:min(440px,100%);margin:5px 0 12px;}
-.training-weapon-choice[hidden]{display:none!important;}
-.training-weapon-choice .field-label{margin-bottom:5px;color:#b6dce7;}
-.training-weapon-grid{display:flex;gap:4px;width:100%;}
-.training-weapon-grid button{min-width:0;flex:1;background:#111e29dd;color:#b7c9d4;border:1px solid #668ca165;border-radius:5px;font-weight:800;font-size:10px;padding:8px 2px;}
-.training-weapon-grid button small{display:block;color:#91aeb8;font-weight:600;font-size:7px;margin-top:4px;letter-spacing:.02em;}
-.training-weapon-grid button[aria-pressed="true"]{background:#21414b;color:#fbffff;border-color:#86ecf0;box-shadow:inset 0 0 0 1px #86ecf044;}
-.training-weapon-grid button[aria-pressed="true"] small{color:#9ee3ed;}
-@media(max-width:650px){.training-weapon-choice{margin:4px 0 8px;}.training-weapon-grid button{padding:5px 1px;font-size:9px}.training-weapon-grid button small{font-size:6px}}
+
+/* In-range armory: never shown in the lobby or other game modes. */
+.range-weapon-selector{margin-top:9px;padding-top:9px;border-top:1px solid #98d2db3c;pointer-events:auto}
+.range-weapon-caption{display:block;font-size:10px;letter-spacing:.12em;color:#d4e2e9}
+.range-weapon-buttons{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:7px}
+.range-weapon-buttons button{appearance:none;touch-action:manipulation;min-height:34px;padding:6px 3px;
+  border:1px solid #7796a187;border-radius:6px;background:#152937;color:#bed1db;
+  font:800 11px/1.2 system-ui,sans-serif;letter-spacing:.03em;cursor:pointer}
+.range-weapon-buttons button[aria-pressed="true"]{background:linear-gradient(135deg,#277284,#244553);
+  border-color:#9df5fa;color:#fff;box-shadow:inset 0 0 0 1px #bcf9ff65,0 0 16px #43e6f530}
+.range-weapon-buttons button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.range-weapon-selector>small{display:block;color:#9dc7d4;font-size:9px;margin-top:6px;font-weight:500;letter-spacing:0}
+@media(max-width:600px){
+  .range-weapon-selector{margin-top:5px;padding-top:5px}
+  .range-weapon-caption{font-size:9px}
+  .range-weapon-buttons{gap:3px;margin-top:5px}
+  .range-weapon-buttons button{font-size:9px;min-height:29px;padding:5px 1px}
+  .range-weapon-selector>small{font-size:8px}
+}

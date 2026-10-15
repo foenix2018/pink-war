@@ -25,6 +25,9 @@ jobs:
           node --check dist/at-home.js
           node --check dist/at-home-assets.js
           node --check dist/world-art.js
+          node --check dist/shooting-range-art.js
+          node --check dist/campaign-art.js
+          node --check dist/entry.js
           node --check dist/xr-hands.js
           node --check dist/hearing.js
           node --check dist/laser-sound.js

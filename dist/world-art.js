@@ -20,9 +20,9 @@ function weatherTexture(kind,detail=512) {
     const base = kind === 'road' ? [75,80,79] : kind === 'metal' ? [117,119,117] : [157,159,156];
     const pixels = c.createImageData(n,n);
     for (let y=0;y<n;y++) for (let x=0;x<n;x++) {
-      const index=(y*n+x)*4, grain=(rand()-.5)*37;
-      const mottling=Math.sin(x*.033+Math.sin(y*.047))*7+Math.sin(y*.027+x*.012)*6;
-      const grainScale=kind==='road'?Math.sin(x*.49+y*.35)*6:Math.sin(x*.16)*Math.cos(y*.19)*3;
+      const index=(y*n+x)*4, grain=(rand()-.5)*53;
+      const mottling=Math.sin(x*.033+Math.sin(y*.047))*12+Math.sin(y*.027+x*.012)*9;
+      const grainScale=kind==='road'?Math.sin(x*.49+y*.35)*9:Math.sin(x*.16)*Math.cos(y*.19)*5;
       for(let k=0;k<3;k++)pixels.data[index+k]=base[k]+grain+mottling+grainScale;
       pixels.data[index+3]=255;
     }
@@ -45,6 +45,25 @@ function weatherTexture(kind,detail=512) {
       c.fillStyle=g;c.fillRect(x,y,1+rand()*7,70+rand()*140);
     }
     for(let i=0;i<450;i++){c.fillStyle=rand()>.6?'rgba(220,221,197,.19)':'rgba(20,26,23,.18)';c.fillRect(rand()*n,rand()*n,rand()*2+.5,rand()*2+.5);}
+    // Chips, worn edges, rust streaks and aggregates: baked once, no shader cost.
+    for(let i=0;i<(kind==='road'?950:620);i++){
+      const x=rand()*n,y=rand()*n,size=.5+rand()*2.8;
+      c.fillStyle=rand()>.65?'rgba(220,226,213,.32)':'rgba(19,25,26,.3)';
+      c.fillRect(x,y,size,size*(.5+rand()));
+    }
+    if(kind==='metal'){
+      for(let i=0;i<54;i++){
+        const x=rand()*n,y=rand()*n,length=4+rand()*76;
+        c.strokeStyle=rand()>.5?'rgba(149,73,40,.36)':'rgba(22,31,35,.26)';
+        c.lineWidth=.5+rand()*2;c.beginPath();c.moveTo(x,y);c.lineTo(x+rand()*4-2,y+length);c.stroke();
+      }
+    }else{
+      for(let i=0;i<(kind==='road'?34:18);i++){
+        let x=rand()*n,y=rand()*n;c.beginPath();c.moveTo(x,y);
+        for(let j=0;j<4;j++){x+=(rand()-.5)*22;y+=6+rand()*22;c.lineTo(x,y);}
+        c.lineWidth=.65+rand()*1.3;c.strokeStyle='rgba(19,28,31,.33)';c.stroke();
+      }
+    }
   });
 }
 
@@ -57,9 +76,9 @@ export function createRuinedRoomMaterials(accent=0xff80b2,{opaque=false}={}) {
   const road=weatherTexture('road');
   const material=(map,color,roughness,metalness,opacity)=>new T.MeshStandardMaterial({map,color,roughness,metalness,bumpMap:map,bumpScale:map===metal?.007:.014,transparent:!opaque,opacity:opaque?1:opacity,side:T.DoubleSide,depthWrite:opaque,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
   return {
-    concrete:material(concrete,0xb9c3c5,.88,.04,.29),
-    metal:material(metal,0x7a8c97,.6,.57,.35),
-    road:material(road,0xb0b9b5,.91,.09,.21),
+    concrete:material(concrete,0xb9c3c5,.88,.04,.43),
+    metal:material(metal,0x7a8c97,.6,.57,.47),
+    road:material(road,0xb0b9b5,.91,.09,.34),
     glow:new T.MeshBasicMaterial({color:accent,transparent:true,opacity:.84,depthWrite:false,side:T.DoubleSide,toneMapped:false}),
     concreteMap:concrete,metalMap:metal,roadMap:road
   };
