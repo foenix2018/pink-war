@@ -34,6 +34,26 @@ export function chooseWavePortals(obstacles=[],random=Math.random,wave=1,player=
 }
 export const MAX_LEVEL = 20;
 export const MAX_ACTIVE_ENEMIES = 18;
+// Engaged melee units within PACK_RANGE of the player share out slots round it (keeping their angular order), so
+// they flank instead of queuing; a shooter closer than RANGED_RETREAT backs away while firing.
+export const PACK_RANGE = 7, SLOT_RADIUS = 1.3, RANGED_RETREAT = 9;
+// Survival kill streaks: each kill within COMBO_WINDOW of the previous one raises the multiplier by a quarter, up
+// to double points. The first kill of a streak scores as usual.
+export const COMBO_WINDOW = 4, PICKUP_LIFE = 14, PICKUP_RADIUS = 1.2, PICKUP_HEAL = 35, MAX_PICKUPS = 4;
+export const comboMultiplier = count => 1 + Math.min(4, Math.max(0, count - 1)) * .25;
+export function meleePack(enemies, player) {
+  const slots = new Map(), members = enemies.filter(e => e.form !== 'probe' && !e.ranged && e.awareness === 'engaged'
+    && Math.abs((e.elevation || 0) - (player.elevation || 0)) < .5 && Math.hypot(e.x - player.x, e.z - player.z) < PACK_RANGE);
+  if (members.length < 2) return slots;
+  const bearing = e => Math.atan2(e.x - player.x, e.z - player.z);
+  let sx = 0, sz = 0; for (const e of members) { sx += Math.sin(bearing(e)); sz += Math.cos(bearing(e)); }
+  const centre = Math.atan2(sx, sz), offset = e => Math.atan2(Math.sin(bearing(e) - centre), Math.cos(bearing(e) - centre));
+  members.sort((a, b) => offset(a) - offset(b) || a.id - b.id);
+  const spacing = Math.min(1.1, Math.PI * 2 / members.length);
+  members.forEach((e, i) => { const a = centre + (i - (members.length - 1) / 2) * spacing;
+    slots.set(e, { x: player.x + Math.sin(a) * SLOT_RADIUS, z: player.z + Math.cos(a) * SLOT_RADIUS }); });
+  return slots;
+}
 export const REGEN_DELAY = 5;
 export const CATWALK = Object.freeze({ x: 22.4, halfWidth: 2, end: 20, landing: 8, height: 1.58 });
 export const WEAPONS = Object.freeze([
@@ -244,6 +264,7 @@ export class ArenaGame {
     this.bladePrevious=null;this.bladeHitTimes=new Map();this.bladeSlashAt=-99;this.bladeSlashSide=1;this.bladeSpeed=0;this.bladeGuard=false;this.bladeHumAt=0;
     this.enemies = []; this.bullets = []; this.events = [];
     this.wave = 0; this.score = 0; this.kills = 0; this.time = 0;
+    this.combo = 0; this.comboUntil = -1; this.bestCombo = 0; this.pickups = [];
     this.endless=false;this.footstepDistance=0;
     this.state = 'playing'; this.cooldown = 0; this.invulnerable = 0;
     this.nextWave = .75; this.spawnTimer = 0; this.toSpawn = 0; this.nextId = 1;
@@ -504,9 +525,36 @@ export class ArenaGame {
     target.alertedUntil=this.time+5;target.awareness='search';target.lastSeenAt=this.time;
     if(zone==='limb')target.limpUntil=Math.max(target.limpUntil||0,this.time+2);
     if(zone==='head')target.stunnedUntil=Math.max(target.stunnedUntil||0,this.time+.32);
+    target.hitAt=this.time;target.hitZone=zone;
     this.event('hit', { id: target.id, zone, damage:effective });
-    if (target.hp <= 0) { this.score += target.elite ? 250 : target.ranged ? 150 : 100; this.kills++;
-      this.enemies.splice(this.enemies.indexOf(target), 1); this.event('kill', { ...at, id:target.id, form:target.form, elite: target.elite, x:target.x, y:target.elevation+target.aimHeight, z:target.z }); }
+    if (target.hp <= 0) {
+      this.combo = this.time <= this.comboUntil ? this.combo + 1 : 1; this.comboUntil = this.time + COMBO_WINDOW;
+      this.bestCombo = Math.max(this.bestCombo, this.combo);
+      const multiplier = comboMultiplier(this.combo);
+      this.score += Math.round((target.elite ? 250 : target.ranged ? 150 : 100) * multiplier); this.kills++;
+      this.enemies.splice(this.enemies.indexOf(target), 1); this.event('kill', { ...at, id:target.id, form:target.form, elite: target.elite, x:target.x, y:target.elevation+target.aimHeight, z:target.z, combo:this.combo });
+      if (this.combo > 1) this.event('combo', { count: this.combo, multiplier });
+      this.dropPickup(target);
+    }
+  }
+  // Survival only: an elite, or every fifth kill, leaves a pickup where it fell: a medkit when the player is
+  // hurt, otherwise an energy cell that refills the weapon in hand. No dice: the run stays reproducible.
+  get survival() { return this.constructor === ArenaGame; }
+  dropPickup(target) {
+    if (!this.survival || this.pickups.length >= MAX_PICKUPS || !(target.elite || this.kills % 5 === 0)) return;
+    const pickup = { id: this.nextId++, kind: this.player.hp < 70 ? 'heal' : 'cell', x: target.x, y: target.elevation || 0, z: target.z, until: this.time + PICKUP_LIFE };
+    this.pickups.push(pickup); this.event('pickup-drop', { ...pickup });
+  }
+  collectPickups() {
+    for (let i = this.pickups.length - 1; i >= 0; i--) {
+      const pickup = this.pickups[i];
+      if (this.time > pickup.until) { this.pickups.splice(i, 1); continue; }
+      if (Math.hypot(pickup.x - this.player.x, pickup.z - this.player.z) > PICKUP_RADIUS || Math.abs(pickup.y - this.player.elevation) > 1.4) continue;
+      this.pickups.splice(i, 1);
+      if (pickup.kind === 'heal') this.player.hp = Math.min(100, this.player.hp + PICKUP_HEAL);
+      else if (!this.weapon.melee) { this.ammo[this.weaponIndex] = this.weapon.capacity; this.reloadRemaining = 0; }
+      this.event('pickup', { kind: pickup.kind, x: pickup.x, y: pickup.y + .6, z: pickup.z });
+    }
   }
   step(dt, input = {}) {
     if (this.state !== 'playing') return;
@@ -542,6 +590,7 @@ export class ArenaGame {
         this.emitNoise(kind,NOISE_RADIUS[kind]);
       }
     }
+    if (this.pickups.length) this.collectPickups();
     if (this.nextWave >= 0) { this.nextWave -= dt; if (this.nextWave <= 0) this.beginWave(); }
     if (this.toSpawn > 0 && this.enemies.length<MAX_ACTIVE_ENEMIES) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) {
       const available=this.activePortals.filter(p=>p.openedAt<=this.time);
@@ -549,6 +598,7 @@ export class ArenaGame {
       else this.spawnTimer=.1;
     } }
     this.navigation.update(this.player, this.time);
+    const pack=meleePack(this.enemies,this.player);
     for (const e of this.enemies) {
       if(e.form==='probe'){updateProbe(this,e,dt,segmentBox);continue;}
       e.aimHeight ??= e.elite ? 1.35 : 1.15;
@@ -636,6 +686,11 @@ export class ArenaGame {
           destinationX=stair.x;destinationZ=e.stairStage===0?stair.topZ-.6:stair.bottomZ+1;stairRoute=true;
         }else{e.stairRoute=null;e.stairStage=0;e.stairDirection=null;}
       }
+      // Engaged melee units close in on their own slot round the player instead of queuing behind each other.
+      let slot=!stairRoute&&e.awareness==='engaged'?pack.get(e):null;
+      // A slot behind a wall or a crate is no slot: that unit goes straight for the player.
+      if(slot&&this.obstacles.some(b=>!b.walkableSurface&&segmentBox({x:this.player.x,y:eye.y,z:this.player.z},{x:slot.x,y:eye.y,z:slot.z},{...b,hx:b.hx+e.radius,hz:b.hz+e.radius})!==null))slot=null;
+      if(slot){destinationX=slot.x;destinationZ=slot.z;}
       dx=destinationX-e.x;dz=destinationZ-e.z;
       const goalDistance=Math.hypot(dx,dz)||1;
       dx/=goalDistance;dz/=goalDistance;
@@ -651,14 +706,20 @@ export class ArenaGame {
         const ax=e.x-other.x,az=e.z-other.z,d=Math.hypot(ax,az);
         if(d>.01&&d<1.7){dx+=ax/d*.65;dz+=az/d*.65;}
       }
-      if(e.ranged&&seen&&!stairRoute&&distance>8&&distance<28){
-        const n=Math.hypot(dx,dz)||1,oldX=dx/n,oldZ=dz/n,side=(e.id%2?1:-1)*.32;dx+=oldZ*side;dz-=oldX*side;
+      // A shooter caught at close range on the player's own level backs off while keeping its aim on the player
+      // (never back down a stair it has just climbed).
+      const retreat=e.ranged&&seen&&e.awareness==='engaged'&&!stairRoute&&horizontalDistance<RANGED_RETREAT
+        &&Math.abs(e.elevation-this.player.elevation)<.15;
+      if(retreat){dx=-(this.player.x-e.x)/horizontalDistance;dz=-(this.player.z-e.z)/horizontalDistance;}
+      if(e.ranged&&seen&&!stairRoute&&(retreat||distance>8&&distance<28)){
+        // Shooters weave: the strafe side switches every few seconds, out of step from one unit to the next.
+        const n=Math.hypot(dx,dz)||1,oldX=dx/n,oldZ=dz/n,side=(Math.floor(this.time/2.6+e.id*.37)%2?1:-1)*.32;dx+=oldZ*side;dz-=oldX*side;
       }
       const norm=Math.hypot(dx,dz)||1;
-      const stopDistance=stairRoute?.15:e.awareness==='engaged' ? (e.ranged?14:1.45) : e.awareness==='search'?1.8:.7;
-      if(goalDistance>stopDistance){
+      const stopDistance=stairRoute?.15:slot?.3:e.awareness==='engaged' ? (e.ranged?14:1.45) : e.awareness==='search'?1.8:.7;
+      if(goalDistance>stopDistance||retreat){
         const injury=e.limpUntil>this.time?.62:1;
-        const searchSpeed=e.awareness==='engaged'?1:e.awareness==='search'?.75:.48;
+        const searchSpeed=retreat?.8:e.awareness==='engaged'?1:e.awareness==='search'?.75:.48;
         moveInArena(e,dx/norm*e.speed*dt*injury*searchSpeed,dz/norm*e.speed*dt*injury*searchSpeed,e.radius,this.obstacles);
       }
       this.settle(e,dt);
@@ -744,5 +805,6 @@ export class ArenaGame {
   snapshot() { return { equipment: this.equipment, state: this.state, player: { ...this.player }, wave: this.wave, maxLevel: MAX_LEVEL, endless:this.endless, score: this.score, kills: this.kills, time: this.time,
     weaponIndex: this.weaponIndex, weapon: { ...this.weapon }, unlockedWeapons: this.unlockedWeapons.map(w => w.id),weaponOffers:this.weaponOffers.map(offer=>({...offer})), ammo: this.ammo[this.weaponIndex],
     reloadRemaining: this.reloadRemaining, charge: this.charge, regenerating: this.regenerating, regenIn: Math.max(0, REGEN_DELAY - (this.time - this.lastDamage)),
-    toSpawn: this.toSpawn, nextWave: this.nextWave, activePortals:this.activePortals.map(p=>({...p})), enemies: this.enemies.map(e => ({ ...e })), bullets: this.bullets.map(b => ({ ...b })) }; }
+    toSpawn: this.toSpawn, nextWave: this.nextWave, activePortals:this.activePortals.map(p=>({...p})), enemies: this.enemies.map(e => ({ ...e })), bullets: this.bullets.map(b => ({ ...b })),
+    combo: this.time <= this.comboUntil ? this.combo : 0, comboRemaining: Math.max(0, this.comboUntil - this.time), bestCombo: this.bestCombo, pickups: this.pickups.map(p => ({ ...p })) }; }
 }

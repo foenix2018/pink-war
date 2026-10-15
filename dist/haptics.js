@@ -8,6 +8,8 @@ export function hapticPlan(type,arg){
   case 'charge':return {main:[.12+.5*Math.max(0,Math.min(1,Number(arg)||0)),45]};
   case 'hit':return {main:[.2,22]};
   case 'kill':return {main:[.5,50]};
+  case 'combo':return {main:[Math.min(1,.35+.12*(Math.max(2,Number(arg)||2)-2)),70]};
+  case 'pickup':return {main:[.45,60],side:[.45,60]};
   case 'weapon':return {main:[.3,45]};
   case 'reload':return {main:[.3,45],side:[.3,45]};
   case 'reloaded':return {main:[.5,65],side:[.5,65]};

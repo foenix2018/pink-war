@@ -357,17 +357,33 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     const pool=sparkPools[color===palette.rose?0:1];
     for(let i=0;i<count&&particles.length<SPARKS;i++)particles.push({pool,x,y,z,vx:(Math.random()-.5)*7,vy:Math.random()*5,vz:(Math.random()-.5)*7,life:.45+Math.random()*.3,max:.8});
   }
-  function resetDynamic(){rangeArt.update(null);combatFX.reset();laserFX.reset();traversal.update(0);for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();portal.visible=!rangeActive;for(const death of deaths){scene.remove(death.fx);death.mat.dispose();death.haloMat.dispose();}deaths.length=0;for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
+  // Survival pickups: a rose medical cross or an energy cell, turning above a ground ring.
+  const pickupMeshes=new Map(),pickupRing=new T.TorusGeometry(.42,.025,4,28);
+  function makePickup(kind){
+    const g=new T.Group(),heal=kind==='heal',core=heal?mats.rose:mats.cyan;
+    if(heal){mesh(geometries.box,core,g,[0,0,0],[.36,.11,.11],false);mesh(geometries.box,core,g,[0,0,0],[.11,.36,.11],false);mesh(geometries.box,mats.white,g,[0,0,0],[.2,.2,.07],false);}
+    else{mesh(geometries.cylinder,mats.steel,g,[0,0,0],[.085,.3,.085],false);mesh(geometries.cylinder,core,g,[0,0,0],[.095,.13,.095],false);mesh(geometries.cylinder,mats.pale,g,[0,.18,0],[.035,.06,.035],false);}
+    const ring=mesh(pickupRing,core,g,[0,-.5,0],[1,1,1],false);ring.rotation.x=-Math.PI/2;ring.userData.ground=true;
+    return g;
+  }
+  function resetDynamic(){for(const m of pickupMeshes.values())scene.remove(m);pickupMeshes.clear();rangeArt.update(null);combatFX.reset();laserFX.reset();traversal.update(0);for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();portal.visible=!rangeActive;for(const death of deaths){scene.remove(death.fx);death.mat.dispose();death.haloMat.dispose();}deaths.length=0;for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
   function sync(sim,time,dt){
     if(!campaignActive)city.fence?.update({...sim.player,y:(sim.player.elevation||0)+(sim.player.crouched?1.05:1.65)},.65,1.2);traversal.update(sim.time);campaignArt.updateLift(sim.time);combatFX.update(dt,camera);laserFX.update(sim.bullets,dt);trackShadows(sim.player.x,sim.player.z,sim.player.elevation||0);
     setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));updateStations(sim,time);syncSecondaryPortals(sim,sim.time);rangeArt.update(rangeActive?sim:null);
     for(const event of sim.events||[])if(event.type==='kill')beginDeath(event.id,time);
     updateDeaths(time);
     soldier.root.scale.setScalar(soldier.heightScale);soldier.root.position.set(sim.player.x,sim.player.elevation||0,sim.player.z);soldier.root.rotation.y=sim.player.yaw;
-    const present=new Set();for(const e of sim.enemies){present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite,e.ranged,e.form);monsters.set(e.id,m);scene.add(m);}m.position.set(e.x,e.elevation||0,e.z);m.rotation.y=e.yaw??(Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI);m.userData.animate(time,e.phase,e.limpUntil<=time,e,sim.time);}
+    const present=new Set();for(const e of sim.enemies){present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite,e.ranged,e.form);m.rotation.order='YXZ';monsters.set(e.id,m);scene.add(m);}m.position.set(e.x,e.elevation||0,e.z);m.rotation.y=e.yaw??(Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI);m.userData.animate(time,e.phase,e.limpUntil<=time,e,sim.time);
+      // A hit rocks the body back, away from the shooter, for a fifth of a second (harder on a head shot).
+      const sinceHit=sim.time-(e.hitAt??-9);m.rotation.x=sinceHit<.22?Math.sin(sinceHit/.22*Math.PI)*(e.hitZone==='head'?.2:.11):0;}
     for(const[id,m]of monsters){if(!present.has(id)){scene.remove(m);monsters.delete(id);}}
     const active=new Set();for(const b of sim.bullets){if(!b.hostile)continue;active.add(b.id);let m=bulletMeshes.get(b.id);if(!m){m=new T.Group();const width=b.hostile?.028:({r9:.012,bloom:.010,lance:.022,thorn:.008,nova:.065}[b.weapon]||.015);const rail=b.weapon==='thorn',plasma=b.weapon==='nova';mesh(geometries.sphere,b.hostile?mats.cyan:mats.pale,m,[0,0,0],[width,width,rail?.16:plasma?.11:.055],false);mesh(geometries.sphere,b.hostile?mats.violet:mats.rose,m,[0,0,-.10],[width*1.6,width*1.6,rail?.22:plasma?.14:.10],false);m.scale.setScalar(.75+(b.power||1)*.25);bulletMeshes.set(b.id,m);scene.add(m);}m.position.set(b.x,b.y,b.z);m.lookAt(b.x+b.vx,b.y+b.vy,b.z+b.vz);}
     for(const[id,m]of bulletMeshes){if(!active.has(id)){scene.remove(m);bulletMeshes.delete(id);}}
+    const live=new Set();for(const p of sim.pickups||[]){live.add(p.id);let m=pickupMeshes.get(p.id);if(!m){m=makePickup(p.kind);pickupMeshes.set(p.id,m);scene.add(m);}
+      // Blinks during its last 2.5 s; the ring stays on the floor while the item bobs.
+      const left=p.until-sim.time,bob=Math.sin(time*3+p.id)*.07;m.visible=left>2.5||Math.floor(left*6)%2===0;
+      m.position.set(p.x,p.y+.6+bob,p.z);m.rotation.y=time*1.8;for(const c of m.children)if(c.userData.ground)c.position.y=-.58-bob;}
+    for(const[id,m]of pickupMeshes)if(!live.has(id)){scene.remove(m);pickupMeshes.delete(id);}
     for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){particles.splice(i,1);continue;}p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;p.vy-=6*dt;}
     for(const pool of sparkPools){
       let n=0;for(const p of particles){if(p.pool!==pool)continue;sparkPosition.set(p.x,p.y,p.z);sparkScale.setScalar(.08*p.life/p.max);sparkMatrix.compose(sparkPosition,sparkRotation,sparkScale);pool.setMatrixAt(n++,sparkMatrix);}

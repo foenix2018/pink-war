@@ -1,3 +1,19 @@
+# Vérification — Pink War v3.38
+
+Demandes : vérifier la livraison 3.37 ; améliorer textures, armes, positions, ennemis, mode de jeu et effets ; vérifier que la main est bien sur la poignée et bien orientée, retirer l'avant-bras. Base 3.37 (`7ddf0ce`).
+
+- Main : sur les cinq blasters Kenney, la main était posée sur la crosse ou le haut de la carcasse (10 à 30 cm de la vraie poignée). Poignées, pontets et chargeurs mesurés par lancer de rayons sur les maillages ; nouvelle table `KENNEY_HOLD` (paume, inclinaison, main libre, affinage en largeur). Doigts visibles autour de la poignée en FPS et en VR ; manchettes vers les coudes, ouverture plus visible depuis l'œil ; avant-bras FPS retiré.
+- VR : paume constante sur la manette (`TRACKED_PALM`), l'arme se décale et tourne autour de la main au recul et au rechargement ; main libre calée sur la poignée avant mesurée, index refermé.
+- Ennemis : encerclement par emplacements autour du joueur (ordre angulaire conservé, emplacement derrière un mur abandonné), repli des tireurs à moins de 9 m sur le même niveau, esquive latérale alternée, recul du buste à l'impact.
+- Survie : multiplicateur de série, bonus soin/cellule déterministes, badge HUD, sons et vibrations. Campagne et stand ne lâchent pas de bonus.
+- Textures et effets : palette Kenney repeinte (métal bleuté, céramique, teinte de l'univers), lumière de tir réduite, cloisons du stand à l'échelle (panneau acoustique), garde-corps à chevrons.
+
+**Résultats Node** : 261 tests réussis, dont 15 nouveaux (prise mesurée et manchettes, main libre refermée, butées de poignée, encerclement, repli et esquive des tireurs, horodatage d'impact, séries, bonus, expiration, limites par mode).
+
+**Vérification navigateur** (Chromium/SwiftShader) : FPS sur les cinq armes, troisième personne, Survie avec série et bonus ramassé, stand de tir ; IWER Quest 3 : cinq armes tenues, parcours complet tir/recharge/déplacements/pause identique à la 3.37. Aucune erreur console.
+
+**Limites** : pas de Quest ni d'iPhone physiques ; poses VR émulées. À la troisième personne, la crosse des armes longues peut traverser le buste selon la posture (non visible depuis la caméra de jeu).
+
 # Vérification — Pink War v3.33
 
 Demandes : ennemis visibles, architecture abandonnée plus crédible, voitures rouillées, végétation, robots réalistes ; continuer la recherche Poly Haven. Choix utilisateur : mélanger vieux immeubles et installations futuristes. Base 3.32 (`7aa7bd1`).

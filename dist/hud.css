@@ -27,3 +27,10 @@
 }
 @media(max-width:360px) and (orientation:portrait){.joystick-ring{width:82px;height:82px}.touch-controls{left:12px;right:12px;gap:4px;grid-template-columns:minmax(0,1fr) 72px minmax(0,1fr)}.vitals{left:12px;width:124px}.weapon-tag{right:12px;width:139px}.fire-row{gap:5px}.mini-control{width:40px;height:40px;flex-basis:40px}}
 .xr-mode .game-hud{display:none!important}
+
+/* Survival streak badge (and pickup notice) under the top edge, clear of the crosshair. */
+.combo-label{position:fixed;left:50%;top:max(66px,calc(env(safe-area-inset-top) + 54px));transform:translateX(-50%);padding:7px 15px 9px;border-radius:999px;background:#101722d6;border:1px solid #ff80b266;color:#ffe3ef;font:700 12px/1 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.13em;white-space:nowrap;pointer-events:none;overflow:hidden;box-shadow:0 6px 22px #0004}
+.combo-label::after{content:"";position:absolute;left:0;bottom:0;height:2px;width:calc(var(--left,1) * 100%);background:#ff80b2}
+.combo-label[hidden]{display:none}
+.combo-label.pickup{border-color:#9fe6da88;color:#e6fffb}.combo-label.pickup::after{display:none}
+.stereo-mode .combo-label{display:none}

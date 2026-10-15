@@ -83,6 +83,8 @@ export function createShootingRangeArt(T,scene){
   ];
   const [floorMap,wallMap,metalMap,paddingMap,canopyMap]=textures;
   const hazardMap=hazardStripes(T,70);textures.push(hazardMap);
+  // Lane partitions are 2.8 m panels: their own acoustic texture at that scale, not the 103 m ceiling's.
+  const partitionMap=rangeSurface(T,'padding',1,1);textures.push(partitionMap);
   const textured=(color,map,roughness,metalness,bumpScale)=>new T.MeshStandardMaterial({
     color,map,bumpMap:map,bumpScale,roughness,metalness
   });
@@ -101,6 +103,7 @@ export function createShootingRangeArt(T,scene){
     light:new T.MeshBasicMaterial({color:0xb6ebff}),
     padding:textured(0x35444c,paddingMap,.96,.02,.012),
     canopy:textured(0x596977,canopyMap,.88,.16,.019),
+    partition:textured(0x46566a,partitionMap,.9,.05,.01),
     hazard:new T.MeshStandardMaterial({color:0xffffff,map:hazardMap,emissive:0x3a2c08,roughness:.55,metalness:.12})
   };
   // Indoor illumination: sunlight no longer reaches the range through the roof,
@@ -179,7 +182,7 @@ export function createShootingRangeArt(T,scene){
     box('Tapis amortissant',x,.933,22.25,2.51,.025,.66,mats.padding);
     for(const side of [-1,1]){
       box('Support de tablette',x+side*1.27,.46,22.25,.10,.92,.11,mats.trim);
-      box('Séparateur des postes de tir',x+side*2.15,1.42,20.65,.10,2.8,2.8,mats.canopy);
+      box('Séparateur des postes de tir',x+side*2.15,1.42,20.65,.10,2.8,2.8,mats.partition);
     }
     box('Marqueur de poste lumineux',x,4.26,20.1,1.25,.11,.10,mats.yellow);
   }

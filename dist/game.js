@@ -1,4 +1,4 @@
-import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, clamp, segmentSphere, segmentBox, traceEnemyHit } from './game-logic.js';
+import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, clamp, segmentSphere, segmentBox, traceEnemyHit, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
 import { createScene } from './scene.js?v=3.36';
 import { VRController } from './vr.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
@@ -51,7 +51,7 @@ for(const button of document.querySelectorAll('[data-range-weapon]'))button.oncl
 };
 try{character=characterForId(localStorage.getItem('pink-war-character'));}catch{}
 if(boot?.characterId)character=characterForId(boot.characterId);
-let clock = 0, lastTime = 0, hudTimer = 0, flashTimer = 0, recoil = 0, reloadLift = 0, announcementUntil = 0, damageUntil = 0;
+let clock = 0, lastTime = 0, hudTimer = 0, flashTimer = 0, recoil = 0, reloadLift = 0, announcementUntil = 0, damageUntil = 0, pickupNotice = null;
 let outfitReturn = 'lobby', previewLevel = 1, equipmentUntil = 0;
 let canvasPointer = null, lastDrag = null, audioContext = window.__PINKWAR_BOOT_AUDIO||null, ambience = null;
 let saberAudio=null,saberSwingSound=false;
@@ -234,7 +234,7 @@ async function start() {
   game=selectedMode==='campaign'?new CampaignLevel1(world.obstacles,Math.random,character.id):
     selectedMode==='training'?new ShootingRangeGame(world.obstacles,Math.random,trainingWeaponIndex):new ArenaGame(world.obstacles);
   world.resetDynamic(); phase = 'loading'; yaw = 0; pitch = -.075;
-  weaponFeel.reset();reloadInserted=false;lastShotAt=-99;flashTimer = 0; recoil = 0; damageUntil = 0; announcementUntil = 0;equipmentUntil=0;crouchCameraBlend=0;currentSprinting=false; resetInput(); audioReady();
+  weaponFeel.reset();reloadInserted=false;lastShotAt=-99;flashTimer = 0; recoil = 0; damageUntil = 0; announcementUntil = 0;pickupNotice=null;equipmentUntil=0;crouchCameraBlend=0;currentSprinting=false; resetInput(); audioReady();
   world.setWeapon(game.weaponIndex);world.setEquipment(1);
   lastWeaponSlot=0;holsterRemaining=0;
   try{
@@ -410,6 +410,15 @@ function handleEvents() {
     }
     if (event.type === 'hit') { vr.haptic('hit'); if(event.zone==='head')tone(1300,680,.075,.032); const marker = $('hit-marker'); marker.classList.remove('hit'); void marker.offsetWidth; marker.classList.add('hit'); tone(300, 190, .06, .035); }
     if (event.type === 'kill') { vr.haptic('kill'); world.burst(event.x, event.y, event.z, world.palette.violet, 12); tone(130, 50, .15, .06, 'square'); }
+    if (event.type === 'combo') {
+      vr.haptic('combo',event.count);tone(380+event.count*80,760+event.count*110,.13,.03,'triangle');
+    }
+    if (event.type === 'pickup-drop') { world.burst(event.x, event.y + .6, event.z, event.kind==='heal'?world.palette.rose:world.palette.pale, 10); tone(620, 980, .14, .018, 'sine'); }
+    if (event.type === 'pickup') {
+      world.burst(event.x, event.y, event.z, event.kind==='heal'?world.palette.rose:world.palette.pale, 18); vr.haptic('pickup');
+      tone(event.kind==='heal'?520:700, event.kind==='heal'?1040:1400, .2, .035, 'sine');
+      pickupNotice={text:event.kind==='heal'?`SOIN +${PICKUP_HEAL}`:'CELLULE · ARME RECHARGÉE',until:clock+1.6};
+    }
     if (event.type === 'damage') { damageUntil = clock + .25; vr.haptic('damage'); tone(80, 35, .18, .08, 'triangle'); }
     if (event.type === 'over') gameOver(false);
     if (event.type === 'win') gameOver(true);
@@ -484,7 +493,12 @@ function updateHud() {
     ? `ARME ${WEAPONS[pending.index].name} · FAISCEAU À ${distanceToWeapon} M`
     : game.nextWave > 0 && game.wave > 0 ? `NIVEAU SUIVANT DANS ${Math.ceil(game.nextWave)} S`
     : `${game.enemies.length + game.toSpawn} CRÉATURES À REPOUSSER`;
-  $('score-label').textContent = String(game.score).padStart(5, '0'); $('time-label').textContent = timeString(game.time);
+  $('score-label').textContent = String(game.score).padStart(5, '0');
+  // Streak badge: a just-collected pickup takes it over for a moment, then the kill streak and its fading window.
+  const streak=game.time<=game.comboUntil?game.combo:0,badge=$('combo-label'),notice=pickupNotice&&clock<pickupNotice.until;
+  badge.hidden=!notice&&streak<2;badge.classList.toggle('pickup',!!notice);
+  if(notice)badge.textContent=pickupNotice.text;
+  else if(streak>=2){badge.textContent=`SÉRIE ×${streak} · POINTS ×${comboMultiplier(streak).toLocaleString('fr-FR')}`;badge.style.setProperty('--left',String(Math.max(0,game.comboUntil-game.time)/COMBO_WINDOW));} $('time-label').textContent = timeString(game.time);
   const radar = $('radar'), c = radar.getContext('2d'), size = radar.width, scale = .7, cx = size / 2, cy = size / 2;
   const radarTheme=character.radar;
   c.clearRect(0, 0, size, size); c.fillStyle = radarTheme.background; c.fillRect(0, 0, size, size);
