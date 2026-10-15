@@ -2,6 +2,7 @@ import { clamp, segmentBox, segmentSphere, traceEnemyHit } from './game-logic.js
 import { portalIndicators } from './portal-indicator.js';
 import { DesktopGamepadInput, desktopAxis } from './desktop-input.js';
 import { syncTrackedHands } from './xr-hands.js';
+import { WEAPON_FRAME } from './weapons.js';
 import { createMagnifiedSight } from './magnified-sight.js';
 import { hapticPlan, buzz } from './haptics.js';
 export { hapticPlan } from './haptics.js';
@@ -555,13 +556,32 @@ export class VRController {
         c.gun.rotation.set(isMain?(feel?.pitch??kick*.22)+reload*Math.PI/2-(sword?.55:0):0,
           isMain?(feel?.yaw||0)*handSign:0,
           isMain?reload*.12+(sword?-.06*handSign:0):0);
-        if(isMain&&this.hooks.world().holsterGun?.visible)
-          c.gun.visible=this.hooks.world().holsterGun.position.y<-.56;
+        // Re-evaluate visibility every frame; a previous saber swap must
+        // never hide the following weapon permanently.
+        const holster=this.hooks.world().holsterGun;
+        c.gun.visible=isMain&&(!holster?.visible||holster.position.y<-.56);
         const fingerPose = isMain
-          ? { trigger:this.handPose.mainTrigger, grip:game.weapon.melee?.94:this.handPose.mainGrip, reload:0 }
+          ? { trigger:this.handPose.mainTrigger, grip:Math.max(.92,this.handPose.mainGrip), reload:0 }
           : { trigger:this.handPose.sideTrigger, grip:this.handPose.sideGrip, reload,relax:(1-this.handPose.sideGrip)*(1-this.handPose.sideTrigger)*(1-reload)*.65 };
         c.gun.userData.hand?.userData.animate?.(fingerPose,dt,c.gun.scale.x<0?-1:1);
         c.bare.userData.animate?.(fingerPose,dt,c.bare.scale.x<0?-1:1);
+      }
+      // A tracked off-hand reaches a real two-handed foregrip and can lock to
+      // the exact grip mesh when the user squeezes. Away from it, the glove
+      // remains independently tracked instead of snapping unrealistically.
+      const primary=controllerOf(this,main),secondary=controllerOf(this,otherHand(main));
+      if(primary?.gun&&secondary?.bare){
+        const fore=WEAPON_FRAME[game.weaponIndex]?.support,hand=primary.gun.userData.support;
+        let linked=false;
+        if(fore&&primary.gun.visible&&this.handPose.sideGrip>.55&&secondary.anchor.visible){
+          const world=this.hooks.world(),target=new world.T.Vector3(...fore);
+          primary.gun.updateWorldMatrix(true,true);primary.gun.localToWorld(target);
+          const wrist=new world.T.Vector3();secondary.anchor.getWorldPosition(wrist);
+          linked=target.distanceTo(wrist)<.24;
+        }
+        primary.gun.userData.showSupport=linked;
+        if(hand){hand.visible=linked; if(linked){hand.userData.setBasePosition?.(fore);hand.userData.animate?.({grip:.98,trigger:0,reload:0},dt);}}
+        secondary.bare.visible=!linked&&secondary.anchor.visible;
       }
       const gun = controllerOf(this, main)?.gun; if (gun) this.updateWeaponState(gun, game,feel);
       gun?.userData.setSight?.(this.aiming && !game.reloadRemaining,this.sightEye());
