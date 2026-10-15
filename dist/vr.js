@@ -80,7 +80,7 @@ export function traceVRAim(origin, direction, enemies = [], obstacles = [], rang
 
 // The palm of the glove (the centre of the pistol grip) sits where the controller grip is: a little below and
 // behind the target ray.
-const GRIP_MOUNT = Object.freeze({ x: 0, y: -.016, z: .05 });
+const GRIP_MOUNT = Object.freeze({ x: 0, y: -.012, z: .018 });
 
 // Immersive WebXR uses the headset's poses; phones use two real eye cameras.
 export class VRController {
@@ -284,8 +284,11 @@ export class VRController {
       if (rate) this.setFrameRate(rate);
       this.controllers = [0, 1].map(index => {
         const ray = renderer.xr.getController(index); this.rig.add(ray);
-        const anchor = new T.Group(), mount = new T.Group(), gun = world.createGun(), bare = world.createHand();
-        gun.userData.hand.userData.extendForearm();bare.userData.extendForearm();
+        const anchor = new T.Group(), mount = new T.Group(),
+          gun = world.createGun({sleeve:false}), bare = world.createHand({sleeve:false});
+        // Quest Touch Plus already tracks the wrist. Only the short glove cuff
+        // is rendered: the extra capsule forearm intersected the controller
+        // and appeared as a floating or broken arm.
         anchor.name = 'Tracked controller grip'; anchor.matrixAutoUpdate = false; anchor.visible = false;
         this.rig.add(anchor); anchor.add(mount);
         // The other controller is the free hand: no second glove on the weapon in a headset.
