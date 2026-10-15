@@ -87,9 +87,14 @@ export class ShootingRangeGame extends ArenaGame {
     return result;
   }
   step(dt,input={}){
+    const beforeStage=this.trainingLevel.number;
     this.nextWave=-1;this.toSpawn=0;this.wave=0;
     super.step(dt,input);
     this.nextWave=-1;this.toSpawn=0;this.wave=0;
+    if(this.trainingLevel.number!==beforeStage){
+      this.event('training-stage',{stage:this.trainingLevel.number,label:this.trainingLevel.label});
+      this.targetDelay=.05;
+    }
     for(let i=this.targets.length-1;i>=0;i--){
       const target=this.targets[i];
       if(target.hit){this.targets.splice(i,1);continue;}
