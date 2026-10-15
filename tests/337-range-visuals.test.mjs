@@ -41,7 +41,7 @@ test('matériaux du stand texturés et adaptés aux appareils mobiles',()=>{
   assert.match(art,/new T.CanvasTexture\(canvas\)/);
   assert.match(art,/tex\.wrapS=tex\.wrapT=T.RepeatWrapping/);
   assert.match(art,/bumpMap:map/);
-  assert.match(art,/textures\.forEach\(t=>t\.dispose\(\)\)/);
+  assert.match(art,/textures\.forEach\(t=>t\?\.dispose\(\)\)/);
   assert.match(css,/\.range-weapon-selector\{[^}]*pointer-events:auto/);
   assert.match(css,/\.range-weapon-buttons button\[aria-pressed="true"\]/);
   assert.doesNotMatch(css,/\.training-weapon-choice/);
