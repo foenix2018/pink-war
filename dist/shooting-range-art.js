@@ -14,7 +14,11 @@ export function createShootingRangeArt(T,scene){
     cyan:new T.MeshBasicMaterial({color:0x70dfea}),
     white:new T.MeshBasicMaterial({color:0xf5f6ec}),
     black:new T.MeshBasicMaterial({color:0x111923}),
-    red:new T.MeshBasicMaterial({color:0xff526f})
+    red:new T.MeshBasicMaterial({color:0xff526f}),
+    warning:new T.MeshBasicMaterial({color:0xffc74c}),
+    light:new T.MeshBasicMaterial({color:0xb6ebff}),
+    padding:new T.MeshStandardMaterial({color:0x151b20,roughness:.96}),
+    canopy:new T.MeshStandardMaterial({color:0x313d4a,roughness:.82,metalness:.33})
   };
   const obstacles=[];
   const box=(name,x,y,z,w,h,d,mat=mats.metal)=>{
@@ -22,6 +26,25 @@ export function createShootingRangeArt(T,scene){
     mesh.name=name;mesh.position.set(x,y,z);mesh.receiveShadow=true;root.add(mesh);return mesh;
   };
   const collision=(x,z,w,d,y=0,h=3)=>obstacles.push({x,z,hx:w/2,hz:d/2,y,height:h,surface:'metal'});
+  // Professional qualification bay. Shooter stands BEHIND a continuous,
+  // waist-height safety railing. The simulation also enforces the shooting
+  // line so jumping or sprinting cannot vault this barrier.
+  exportBarrier();
+  function exportBarrier(){
+    const z=19.12;
+    box('GARDE-CORPS DE SÉCURITÉ / TRAVERSE TAILLE',0,1.015,z,25.5,.17,.19,mats.warning);
+    box('Profil anti-impact',0,.89,z,25.5,.075,.22,mats.padding);
+    box('Rail inférieur',0,.19,z,25.5,.07,.09,mats.metal);
+    for(let x=-12;x<=12.01;x+=2.3){
+      box('Poteau de la ligne de feu',x,.545,z,.11,1.09,.13,mats.metal);
+      box('Bandes rétro-réfléchissantes',x,1.035,z+.103,.1,.04,.015,mats.yellow);
+    }
+    collision(0,z,25.5,.22,0,1.13);
+    // Black-and-yellow safety marks are in the protected shooter area.
+    for(let x=-12;x<=12;x+=1.3){
+      box('Rayures de la ligne de sécurité',x,.025,20.12,.61,.018,.09,(Math.round(x*10)%2?mats.yellow:mats.warning));
+    }
+  }
   // Protected shooting lanes with a real stop wall behind the 60-m targets.
   box('Plateforme de tir',0,-.115,-13,27,.22,103,mats.floor);
   box('Mur arrêt-tirs',0,3,-64,27,6,.48,mats.wall);collision(0,-64,27,.48,0,6);
@@ -49,6 +72,34 @@ export function createShootingRangeArt(T,scene){
       const x=lane*4.6;
       box('Rail de cible',x,3.5,z,3.65,.075,.09,mats.trim);
     }
+  }
+  // Covered acoustic enclosure, visible on every lane. All ceiling components
+  // remain above the unobstructed sight line; the safety rail is waist-height.
+  box('Plafond pare-balles acoustique',0,5.05,-13,27,.30,103,mats.canopy);
+  for(let z=31;z>=-59;z-=8){
+    box('Poutre du plafond',0,4.73,z,26.9,.23,.34,mats.metal);
+    box('Luminaires LED suspendus',0,4.57,z,23.4,.075,.12,mats.light);
+    for(const side of [-1,1]){
+      box('Panneaux antibruit',side*13.24,2.50,z,.08,2.55,6.2,mats.padding);
+      box('Liseré de balisage',side*12.95,.55,z,.05,.04,5.7,mats.cyan);
+    }
+  }
+  // One individual work station per lane, with padded shelves at the waist.
+  for(let lane=-2;lane<=2;lane++){
+    const x=lane*4.6;
+    box('Tablette de préparation',x,.87,22.25,2.75,.10,.74,mats.metal);
+    box('Tapis amortissant',x,.933,22.25,2.51,.025,.66,mats.padding);
+    for(const side of [-1,1]){
+      box('Support de tablette',x+side*1.27,.46,22.25,.10,.92,.11,mats.trim);
+      box('Séparateur des postes de tir',x+side*2.15,1.42,20.65,.10,2.8,2.8,mats.canopy);
+    }
+    box('Marqueur de poste lumineux',x,4.26,20.1,1.25,.11,.10,mats.yellow);
+  }
+  // Secondary bullet-trap panels behind each drill distance.
+  for(const z of [4,-23,-46,-61]){
+    box('Blindage arrière des couloirs',0,2.55,z,25.6,4.45,.18,mats.wall);
+    for(let lane=-2;lane<=2;lane++)
+      box('Plaque d'absorption',lane*4.6,2.55,z+.11,3.8,3.4,.07,mats.padding);
   }
   // Distinct training area behind the player does not block the VR controllers.
   box('Fond stand',0,2.25,36,27,4.5,.3,mats.wall);
