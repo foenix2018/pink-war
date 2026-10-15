@@ -326,7 +326,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   }
   function syncSecondaryPortals(sim,time) {
     const present=new Set();
-    portal.visible=!sim.wave||sim.activePortals.some(p=>p.x===PORTAL.x&&p.z===PORTAL.z&&time>=p.openedAt);
+    portal.visible=!rangeActive&&(!sim.wave||sim.activePortals.some(p=>p.x===PORTAL.x&&p.z===PORTAL.z&&time>=p.openedAt));
     for(const site of sim.activePortals||[]){
       if(site.x===PORTAL.x&&site.z===PORTAL.z)continue;
       present.add(site.id);
@@ -356,7 +356,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     const pool=sparkPools[color===palette.rose?0:1];
     for(let i=0;i<count&&particles.length<SPARKS;i++)particles.push({pool,x,y,z,vx:(Math.random()-.5)*7,vy:Math.random()*5,vz:(Math.random()-.5)*7,life:.45+Math.random()*.3,max:.8});
   }
-  function resetDynamic(){rangeArt.update(null);combatFX.reset();laserFX.reset();traversal.update(0);for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();portal.visible=true;for(const death of deaths){scene.remove(death.fx);death.mat.dispose();death.haloMat.dispose();}deaths.length=0;for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
+  function resetDynamic(){rangeArt.update(null);combatFX.reset();laserFX.reset();traversal.update(0);for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();portal.visible=!rangeActive;for(const death of deaths){scene.remove(death.fx);death.mat.dispose();death.haloMat.dispose();}deaths.length=0;for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
   function sync(sim,time,dt){
     if(!campaignActive)city.fence?.update({...sim.player,y:(sim.player.elevation||0)+(sim.player.crouched?1.05:1.65)},.65,1.2);traversal.update(sim.time);campaignArt.updateLift(sim.time);combatFX.update(dt,camera);laserFX.update(sim.bullets,dt);trackShadows(sim.player.x,sim.player.z,sim.player.elevation||0);
     setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));updateStations(sim,time);syncSecondaryPortals(sim,sim.time);rangeArt.update(rangeActive?sim:null);
@@ -420,6 +420,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
       // Fresh resources avoid reusing texture state from a destroyed GPU device.
       const next = await createScene(nextCanvas, nextQuality, true,character.id);
       next.setCampaignActive(campaignActive);
+      next.setRangeActive(rangeActive);
       next.camera.position.copy(camera.position); next.camera.rotation.copy(camera.rotation); next.camera.fov = camera.fov; next.camera.updateProjectionMatrix();
       next.soldier.root.position.copy(soldier.root.position); next.soldier.root.rotation.copy(soldier.root.rotation); next.soldier.root.scale.copy(soldier.root.scale);
       await next.warm();
@@ -442,10 +443,15 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     hemisphere.color.setHex(campaignActive?0xc4ceca:0xa9c9e5);hemisphere.groundColor.setHex(campaignActive?0x414833:0x344058);
     sun.color.setHex(campaignActive?0xffdeb7:0xb5d7ff);rim.color.setHex(campaignActive?0xa6bbb7:0x9abfff);
     campaignArt.setVisible(campaignActive&&!rangeActive);if(!campaignActive&&!rangeActive)city.enablePbr();
+    if(!rangeActive){portal.visible=true;dust.visible=true;}
   }
   function setRangeActive(enabled){
     rangeActive=!!enabled;
     rangeArt.root.visible=rangeActive;
+    // The original portal and its particles are NOT children of arenaRoot.
+    // Hide both explicitly; otherwise the survival gateway remains on the firing line.
+    portal.visible=!rangeActive;
+    dust.visible=!rangeActive;
     if(rangeActive)campaignActive=false;
     campaignArt.setVisible(campaignActive&&!rangeActive);
     arenaRoot.visible=!campaignActive&&!rangeActive;
