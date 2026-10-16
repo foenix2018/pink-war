@@ -22,11 +22,13 @@ export const WEAPON_FRAME = Object.freeze([
 // the front of the grip and the palm on its right face; `rake` tilts the hand like the grip; `support` closes the
 // free hand on the front of the magazine (or of the block under the barrel).
 export const KENNEY_HOLD = Object.freeze([
-  { slim: .78, palm: [0, -.068, 0], rake: -.26, support: null },
-  { slim: .56, palm: [0, -.135, -.064], rake: -.3, support: [-.018, -.146, -.325] },
-  { slim: .5, palm: [0, -.135, -.284], rake: -.3, support: [0, -.165, -.54] },
-  { slim: .84, palm: [-.004, -.025, -.149], rake: -.3, support: [0, -.09, -.342] },
-  { slim: .64, palm: [0, -.069, -.079], rake: -.3, support: [-.029, -.12, -.349] }
+  // X offsets put the palm OUTSIDE the grip's right flank, not through its
+  // centreline; the index curls inward around the real GLB trigger guard.
+  { slim: .78, palm: [.026, -.068, 0], rake: -.26, support: null },
+  { slim: .56, palm: [.027, -.135, -.064], rake: -.3, support: [-.036, -.146, -.325] },
+  { slim: .5, palm: [.027, -.135, -.284], rake: -.3, support: [-.032, -.165, -.54] },
+  { slim: .84, palm: [.028, -.025, -.149], rake: -.3, support: [-.038, -.09, -.342] },
+  { slim: .64, palm: [.027, -.069, -.079], rake: -.3, support: [-.039, -.12, -.349] }
 ].map(hold => Object.freeze({ ...hold, palm: Object.freeze(hold.palm), support: hold.support && Object.freeze(hold.support) })));
 // Forearm directions in the weapon frame: down, back and outward, towards each elbow. The eye is above and behind
 // the hands, so the open end of a cuff faces away from it.
