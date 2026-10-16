@@ -22,7 +22,7 @@ test('laser bullets project instanced colored light onto the ground, aligned to 
   assert.equal(fx.stats().groundGlows,1);
   fx.impact({bulletId:27,weapon:'r9',x:3,y:0,z:-13,normal:{x:0,y:1,z:0}});
   fx.update([],.02);assert.ok(fx.stats().groundGlows>=1);
-  fx.update([],.3);assert.equal(fx.stats().groundGlows,0);
+  for(let i=0;i<4;i++)fx.update([],.08);assert.equal(fx.stats().groundGlows,0);
   fx.dispose();
 });
 
