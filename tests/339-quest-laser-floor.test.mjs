@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as T from '../dist/vendor/three.core.min.js';
-import {createLaserFX} from '../dist/laser-fx.js';
+import {createLaserFX,IMPACT_GLOW} from '../dist/laser-fx.js';
 import {parseKenneyGLB} from '../dist/kenney-blasters.js';
 import {KENNEY_HOLD,WEAPON_FRAME} from '../dist/weapons.js';
 
@@ -50,4 +50,32 @@ test('Quest control mapping and trigger meanings do not collide with aiming',asy
  assert.ok(help['Gâchette INDEX droite'].includes('Tirer'));
  assert.ok(help['Gâchette MAJEUR droite'].includes('Viser'));
  assert.ok(!help['Gâchette INDEX gauche'].includes('Viser'));
+});
+
+test('contact laser glow is attached to wall or floor and grows with weapon energy',()=>{
+ const scene=new T.Scene(),fx=createLaserFX(T,scene,{rose:0xff43c4});
+ const halo=scene.getObjectByName('Laser / point d impact lumineux coloré sur surface');
+ const core=scene.getObjectByName('Laser / cœur blanc incandescent sur impact');
+ assert.ok(halo?.isInstancedMesh&&core?.isInstancedMesh);
+ const matrix=new T.Matrix4(),position=new T.Vector3(),rotation=new T.Quaternion(),scale=new T.Vector3();
+ let previous=0;
+ for(const weapon of ['r9','bloom','lance','thorn','nova']){
+   fx.reset();
+   fx.impact({weapon,x:4,y:1.2,z:-13,normal:{x:1,y:0,z:0},surface:'metal',power:1});
+   fx.update([],.016);
+   assert.equal(halo.count,1);assert.equal(core.count,1);
+   halo.getMatrixAt(0,matrix);matrix.decompose(position,rotation,scale);
+   assert.ok(Math.abs(position.x-4.017)<.0001,'impact anchored immediately above the hit surface');
+   assert.ok(Math.abs(position.y-1.2)<.0001);
+   const oriented=new T.Vector3(0,0,1).applyQuaternion(rotation);
+   assert.ok(oriented.distanceTo(new T.Vector3(1,0,0))<.0001,'disc aligns with wall normal');
+   assert.ok(scale.x>previous,'bigger weapon has wider light spot');
+   assert.ok(Math.abs(IMPACT_GLOW[weapon]-scale.x/(1+.35*(.016/.42)))<.015);
+   previous=scale.x;
+ }
+ // Enemy highlights fade faster, so they don't float after the enemy moves.
+ fx.reset();fx.impact({weapon:'nova',x:0,y:1.4,z:0,surface:'robot',normal:{x:0,y:0,z:1}});
+ fx.update([],.08);assert.equal(fx.stats().impactGlows,1);
+ fx.update([],.08);fx.update([],.08);assert.equal(fx.stats().impactGlows,0);
+ fx.dispose();
 });
