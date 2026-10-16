@@ -14,6 +14,26 @@ export function createLaserFX(T,scene,palette={}) {
   const core=new T.InstancedMesh(geometry,coreMaterial,capacity),halo=new T.InstancedMesh(geometry,haloMaterial,capacity);
   for(const mesh of [core,halo]){mesh.count=0;mesh.visible=false;mesh.frustumCulled=false;mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);group.add(mesh);}
   const lights=Array.from({length:3},()=>{const light=new T.PointLight(accent,0,5,2);light.castShadow=false;light.userData.life=0;group.add(light);return light;});
+  // Moving luminous footprint beneath each laser projectile, like a colored
+  // shadow cast on the pavement. Fixed instanced budget; no actual shadow maps.
+  const glowSize=64,texels=new Uint8Array(glowSize*glowSize*4);
+  for(let y=0;y<glowSize;y++)for(let x=0;x<glowSize;x++){
+    const dx=(x+.5-glowSize/2)/(glowSize/2),dy=(y+.5-glowSize/2)/(glowSize/2);
+    const r=Math.hypot(dx,dy),falloff=Math.max(0,Math.exp(-r*r*5.2)-Math.exp(-5.2));
+    const i=(y*glowSize+x)*4;texels[i]=255;texels[i+1]=255;texels[i+2]=255;
+    texels[i+3]=Math.round(240*falloff);
+  }
+  const footprintTexture=new T.DataTexture(texels,glowSize,glowSize,T.RGBAFormat);footprintTexture.needsUpdate=true;
+  const footprintMaterial=new T.MeshBasicMaterial({map:footprintTexture,color:0xffffff,transparent:true,
+    depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2,
+    blending:T.AdditiveBlending,side:T.DoubleSide,toneMapped:false,fog:false});
+  const footprintGeometry=new T.PlaneGeometry(1,1);
+  const footprintCapacity=20,footprints=new T.InstancedMesh(footprintGeometry,footprintMaterial,footprintCapacity);
+  footprints.name='Laser / taches de lumière projetées au sol';
+  footprints.rotation.x=-Math.PI/2;footprints.frustumCulled=false;footprints.count=0;footprints.visible=false;
+  footprints.instanceMatrix.setUsage(T.DynamicDrawUsage);group.add(footprints);
+  const footprintColor=new T.Color(),footprintRotation=new T.Quaternion(),footprintPos=new T.Vector3(),footprintScale=new T.Vector3(),footprintMatrix=new T.Matrix4();
+  const groundAfterglow=[];
   const up=new T.Vector3(0,1,0),a=new T.Vector3(),b=new T.Vector3(),delta=new T.Vector3(),mid=new T.Vector3(),scale=new T.Vector3(),q=new T.Quaternion(),matrix=new T.Matrix4();
   let cursor=0,clock=0,disposed=false;
   function illuminate(p,energy,life=.09) {
@@ -34,6 +54,10 @@ export function createLaserFX(T,scene,palette={}) {
     if(previous){residuals.push({from:previous,to:{x:event.x,y:event.y,z:event.z},profile,life:.075});if(residuals.length>capacity)residuals.shift();history.delete(event.bulletId);}
     const normal=event.normal||{x:0,y:1,z:0};
     illuminate({x:event.x+normal.x*.08,y:event.y+normal.y*.08,z:event.z+normal.z*.08},profile.light*.5,.12);
+    if(event.y>=-.15&&event.y<2.6){
+      groundAfterglow.push({x:event.x,z:event.z,size:Math.min(2.4,.65+profile.radius*12),life:.19,max:.19});
+      if(groundAfterglow.length>footprintCapacity)groundAfterglow.shift();
+    }
   }
   function renderTrail(from,to,profile,index,fade=1) {
     a.set(from.x,from.y,from.z);b.set(to.x,to.y,to.z);delta.subVectors(b,a);
@@ -54,11 +78,36 @@ export function createLaserFX(T,scene,palette={}) {
     for(let i=residuals.length-1;i>=0;i--){const p=residuals[i];p.life-=dt;if(p.life<=0){residuals.splice(i,1);continue;}if(count<capacity)count=renderTrail(p.from,p.to,p.profile,count,p.life/.075);}
     for(const [id,p] of history)if(clock-p.at>3)history.delete(id);
     for(const mesh of [core,halo]){mesh.count=count;mesh.visible=count>0;mesh.instanceMatrix.needsUpdate=true;}
+    // Render live moving glows directly below laser projectiles. Height controls
+    // spread and intensity: near-ground shots cast tight, saturated pools.
+    let projected=0;
+    const paint=(x,z,diameter,strength)=>{
+      if(projected>=footprintCapacity)return;
+      footprintPos.set(x,.035,z);footprintScale.set(diameter,diameter,1);
+      footprintMatrix.compose(footprintPos,footprintRotation,footprintScale);
+      footprints.setMatrixAt(projected,footprintMatrix);
+      footprintColor.copy(accent).multiplyScalar(strength);
+      footprints.setColorAt(projected,footprintColor);projected++;
+    };
+    for(const bullet of bullets){
+      if(bullet.hostile||!Number.isFinite(bullet.y)||bullet.y<0||projected>=footprintCapacity)continue;
+      const height=Math.max(0,bullet.y);
+      const diameter=Math.min(2.75,.8+height*.36+(bullet.weapon==='nova'?.5:0));
+      paint(bullet.x,bullet.z,diameter,Math.max(.22,1.4-height*.16));
+    }
+    for(let i=groundAfterglow.length-1;i>=0;i--){
+      const g=groundAfterglow[i];g.life-=dt;
+      if(g.life<=0){groundAfterglow.splice(i,1);continue;}
+      paint(g.x,g.z,g.size*(1+(1-g.life/g.max)*.35),g.life/g.max);
+    }
+    footprints.count=projected;footprints.visible=projected>0;
+    footprints.instanceMatrix.needsUpdate=true;
+    if(footprints.instanceColor)footprints.instanceColor.needsUpdate=true;
     for(const light of lights){light.userData.life=Math.max(0,light.userData.life-dt);light.intensity=light.userData.life?light.userData.energy*(light.userData.life/light.userData.max)**2:0;}
   }
-  function reset(){history.clear();residuals.length=0;for(const m of [core,halo]){m.count=0;m.visible=false;}for(const light of lights){light.intensity=0;light.userData.life=0;}}
+  function reset(){history.clear();residuals.length=0;groundAfterglow.length=0;footprints.count=0;footprints.visible=false;for(const m of [core,halo]){m.count=0;m.visible=false;}for(const light of lights){light.intensity=0;light.userData.life=0;}}
   return {shot,impact,update,reset,setAccent(color){accent.setHex(color);haloMaterial.color.copy(accent);for(const l of lights)l.color.copy(accent);},
-    stats:()=>({trails:core.count,capacity,lightCount:lights.length,activeLights:lights.filter(l=>l.intensity>0).length,cachedProjectiles:history.size}),
-    dispose(){if(disposed)return;disposed=true;reset();group.removeFromParent();core.dispose();halo.dispose();geometry.dispose();coreMaterial.dispose();haloMaterial.dispose();}
+    stats:()=>({trails:core.count,capacity,groundGlows:footprints.count,lightCount:lights.length,activeLights:lights.filter(l=>l.intensity>0).length,cachedProjectiles:history.size}),
+    dispose(){if(disposed)return;disposed=true;reset();group.removeFromParent();core.dispose();halo.dispose();footprints.dispose();footprintGeometry.dispose();footprintMaterial.dispose();footprintTexture.dispose();geometry.dispose();coreMaterial.dispose();haloMaterial.dispose();}
   };
 }
