@@ -175,7 +175,7 @@ export class VRController {
       ctx.fillStyle='#e8deef';ctx.font='21px sans-serif';ctx.fillText(value,390,y,565);
     });
     ctx.fillStyle='#ffb3d5';ctx.font='bold 23px sans-serif';
-    ctx.fillText('PAUSE : bouton menu libre  •  REPRENDRE : même bouton ou A',58,716,935);
+    ctx.fillText('X : PAUSE / REPRENDRE  •  A : SAUT  •  B : RECHARGER  •  Y : ARME',58,716,935);
     const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
     const material=new T.MeshBasicMaterial({map:texture,transparent:false,depthTest:false,depthWrite:false,toneMapped:false});
     const panel=new T.Mesh(new T.PlaneGeometry(1.3,.975),material);
@@ -224,7 +224,7 @@ export class VRController {
       c.bare.scale.set(hand === 'left' ? -size : size, size, size);
       c.gun.scale.x = hand === 'left' ? -1 : 1;
       if (c.gun.userData.ammo) c.gun.userData.ammo.plane.scale.x = c.gun.scale.x;
-      if(c.jumpPanel){c.jumpPanel.plane.visible=known&&hand!==main;const label=buttonNames(main).jump;if(c.jumpPanel.label!==label){c.jumpPanel.label=label;const x=c.jumpPanel.canvas.getContext('2d');x.clearRect(0,0,192,128);x.fillStyle='#142032';x.fillRect(2,2,188,124);x.strokeStyle=this.hooks.world().character?.accent||'#ff98bf';x.lineWidth=5;x.strokeRect(3,3,186,122);x.fillStyle='#f5f9ff';x.textAlign='center';x.font='bold 44px sans-serif';x.fillText(label+' ↑',96,56);x.font='bold 22px sans-serif';x.fillText('SAUT',96,99);c.jumpPanel.texture.needsUpdate=true;}}
+      if(c.jumpPanel){c.jumpPanel.plane.visible=false;const label=buttonNames(main).jump;if(c.jumpPanel.label!==label){c.jumpPanel.label=label;const x=c.jumpPanel.canvas.getContext('2d');x.clearRect(0,0,192,128);x.fillStyle='#142032';x.fillRect(2,2,188,124);x.strokeStyle=this.hooks.world().character?.accent||'#ff98bf';x.lineWidth=5;x.strokeRect(3,3,186,122);x.fillStyle='#f5f9ff';x.textAlign='center';x.font='bold 44px sans-serif';x.fillText(label+' ↑',96,56);x.font='bold 22px sans-serif';x.fillText('SAUT',96,99);c.jumpPanel.texture.needsUpdate=true;}}
     }
   }
   heldGun(){return controllerOf(this,settingsOf(this).hand)?.gun||null;}
@@ -298,7 +298,8 @@ export class VRController {
         gun.userData.showSupport = false; gun.userData.support.visible = false;
         mount.position.set(GRIP_MOUNT.x, GRIP_MOUNT.y, GRIP_MOUNT.z);
         gun.visible = bare.visible = false; mount.add(gun, bare);
-        // Combat state still animates, without a numeric display on the gun.
+        // The old wrist-button was a selectable trigger target and no longer
+        // jumps. The physical right-hand A key is now the sole jump control.
         const jumpCanvas=document.createElement('canvas');jumpCanvas.width=192;jumpCanvas.height=128;
         const jumpTexture=new T.CanvasTexture(jumpCanvas);jumpTexture.colorSpace=T.SRGBColorSpace;
         const jumpPlane=new T.Mesh(new T.PlaneGeometry(.082,.055),new T.MeshBasicMaterial({map:jumpTexture,side:T.DoubleSide,toneMapped:false}));
