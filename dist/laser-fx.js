@@ -27,10 +27,10 @@ export function createLaserFX(T,scene,palette={}) {
   const footprintMaterial=new T.MeshBasicMaterial({map:footprintTexture,color:0xffffff,transparent:true,
     depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2,
     blending:T.AdditiveBlending,side:T.DoubleSide,toneMapped:false,fog:false});
-  const footprintGeometry=new T.PlaneGeometry(1,1);
+  const footprintGeometry=new T.PlaneGeometry(1,1);footprintGeometry.rotateX(-Math.PI/2);
   const footprintCapacity=20,footprints=new T.InstancedMesh(footprintGeometry,footprintMaterial,footprintCapacity);
   footprints.name='Laser / taches de lumière projetées au sol';
-  footprints.rotation.x=-Math.PI/2;footprints.frustumCulled=false;footprints.count=0;footprints.visible=false;
+  footprints.frustumCulled=false;footprints.count=0;footprints.visible=false;
   footprints.instanceMatrix.setUsage(T.DynamicDrawUsage);group.add(footprints);
   const footprintColor=new T.Color(),footprintRotation=new T.Quaternion(),footprintPos=new T.Vector3(),footprintScale=new T.Vector3(),footprintMatrix=new T.Matrix4();
   const groundAfterglow=[];
