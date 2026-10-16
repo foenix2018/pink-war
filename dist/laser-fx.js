@@ -5,6 +5,10 @@ export const LASER_TRAILS=Object.freeze({
   lance:{radius:.006,length:5.8,light:180},thorn:{radius:.008,length:4.4,light:210},
   nova:{radius:.030,length:1.35,light:240},aurora:{radius:.013,length:2.8,light:145}
 });
+// Approximate diameter (m) of the illuminated point of contact.
+export const IMPACT_GLOW=Object.freeze({
+  r9:.18,bloom:.21,lance:.44,thorn:.68,nova:1.30,aurora:.40
+});
 export function createLaserFX(T,scene,palette={}) {
   const group=new T.Group();group.name='Laser cores, halos and pulse lights';scene.add(group);
   const accent=new T.Color(palette.rose??0xff80b2),history=new Map(),residuals=[];
@@ -34,6 +38,26 @@ export function createLaserFX(T,scene,palette={}) {
   footprints.instanceMatrix.setUsage(T.DynamicDrawUsage);group.add(footprints);
   const footprintColor=new T.Color(),footprintRotation=new T.Quaternion(),footprintPos=new T.Vector3(),footprintScale=new T.Vector3(),footprintMatrix=new T.Matrix4();
   const groundAfterglow=[];
+  // Contact glow lies on the STRUCK surface itself, not on the ground only:
+  // a cylinder of plasma on concrete, metal, robot armor, or a moving target.
+  // Two instanced batches: feathered colored corona + tiny white-hot center.
+  const contactCapacity=28,contactGeometry=new T.PlaneGeometry(1,1);
+  const contactOuterMaterial=new T.MeshBasicMaterial({map:footprintTexture,color:0xffffff,
+    transparent:true,depthWrite:false,depthTest:true,side:T.DoubleSide,
+    blending:T.AdditiveBlending,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2,toneMapped:false});
+  const contactInnerMaterial=contactOuterMaterial.clone();
+  const contactOuter=new T.InstancedMesh(contactGeometry,contactOuterMaterial,contactCapacity);
+  const contactInner=new T.InstancedMesh(contactGeometry,contactInnerMaterial,contactCapacity);
+  for(const [i,mesh] of [contactOuter,contactInner].entries()){
+    mesh.name=i?'Laser / cœur blanc incandescent sur impact':'Laser / point d impact lumineux coloré sur surface';
+    mesh.count=0;mesh.visible=false;mesh.frustumCulled=false;
+    mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);group.add(mesh);
+  }
+  const contactMarks=[];
+  const normalAxis=new T.Vector3(0,0,1),contactNormal=new T.Vector3(),
+    contactPosition=new T.Vector3(),contactQuaternion=new T.Quaternion(),contactScale=new T.Vector3(),
+    contactMatrix=new T.Matrix4(),contactTint=new T.Color(),contactWhite=new T.Color(0xfff9ef);
+
   const up=new T.Vector3(0,1,0),a=new T.Vector3(),b=new T.Vector3(),delta=new T.Vector3(),mid=new T.Vector3(),scale=new T.Vector3(),q=new T.Quaternion(),matrix=new T.Matrix4();
   let cursor=0,clock=0,disposed=false;
   function illuminate(p,energy,life=.09) {
@@ -54,6 +78,19 @@ export function createLaserFX(T,scene,palette={}) {
     if(previous){residuals.push({from:previous,to:{x:event.x,y:event.y,z:event.z},profile,life:.075});if(residuals.length>capacity)residuals.shift();history.delete(event.bulletId);}
     const normal=event.normal||{x:0,y:1,z:0};
     illuminate({x:event.x+normal.x*.08,y:event.y+normal.y*.08,z:event.z+normal.z*.08},profile.light*.5,.12);
+    if([event.x,event.y,event.z].every(Number.isFinite)){
+      const raw=event.normal;
+      contactNormal.set(raw?.x??-event.direction?.x??0,raw?.y??-event.direction?.y??1,raw?.z??-event.direction?.z??0);
+      if(!Number.isFinite(contactNormal.lengthSq())||contactNormal.lengthSq()<1e-5)contactNormal.set(0,1,0);
+      contactNormal.normalize();
+      const diameter=(IMPACT_GLOW[event.weapon]||IMPACT_GLOW.r9)*
+        Math.max(.68,Math.min(1.6,Number(event.power)||1))*
+        (1+Math.min(5,Math.max(0,event.splash||0))*.075);
+      contactMarks.push({x:event.x+contactNormal.x*.017,y:event.y+contactNormal.y*.017,z:event.z+contactNormal.z*.017,
+        nx:contactNormal.x,ny:contactNormal.y,nz:contactNormal.z,
+        diameter,life:event.surface==='robot'?.19:.42,max:event.surface==='robot'?.19:.42});
+      if(contactMarks.length>contactCapacity)contactMarks.shift();
+    }
     if(event.y>=-.15&&event.y<2.6){
       groundAfterglow.push({x:event.x,z:event.z,size:Math.min(2.4,.65+profile.radius*12),life:.19,max:.19});
       if(groundAfterglow.length>footprintCapacity)groundAfterglow.shift();
@@ -103,11 +140,34 @@ export function createLaserFX(T,scene,palette={}) {
     footprints.count=projected;footprints.visible=projected>0;
     footprints.instanceMatrix.needsUpdate=true;
     if(footprints.instanceColor)footprints.instanceColor.needsUpdate=true;
+    let countContacts=0;
+    for(let i=contactMarks.length-1;i>=0;i--){
+      const mark=contactMarks[i];mark.life-=dt;
+      if(mark.life<=0){contactMarks.splice(i,1);continue;}
+      const fade=mark.life/mark.max;
+      contactPosition.set(mark.x,mark.y,mark.z);
+      contactNormal.set(mark.nx,mark.ny,mark.nz);
+      contactQuaternion.setFromUnitVectors(normalAxis,contactNormal);
+      for(const [mesh,radius,tint,brightness] of [
+        [contactOuter,mark.diameter*(1+.35*(1-fade)),accent,.9*fade],
+        [contactInner,mark.diameter*.28,contactWhite,1.5*fade]]){
+        contactScale.set(radius,radius,1);
+        contactMatrix.compose(contactPosition,contactQuaternion,contactScale);
+        mesh.setMatrixAt(countContacts,contactMatrix);
+        contactTint.copy(tint).multiplyScalar(brightness);
+        mesh.setColorAt(countContacts,contactTint);
+      }
+      countContacts++;
+    }
+    for(const mesh of [contactOuter,contactInner]){
+      mesh.count=countContacts;mesh.visible=countContacts>0;
+      if(countContacts){mesh.instanceMatrix.needsUpdate=true;mesh.instanceColor.needsUpdate=true;}
+    }
     for(const light of lights){light.userData.life=Math.max(0,light.userData.life-dt);light.intensity=light.userData.life?light.userData.energy*(light.userData.life/light.userData.max)**2:0;}
   }
-  function reset(){history.clear();residuals.length=0;groundAfterglow.length=0;footprints.count=0;footprints.visible=false;for(const m of [core,halo]){m.count=0;m.visible=false;}for(const light of lights){light.intensity=0;light.userData.life=0;}}
+  function reset(){history.clear();residuals.length=0;groundAfterglow.length=0;contactMarks.length=0;for(const m of [contactOuter,contactInner]){m.count=0;m.visible=false;}footprints.count=0;footprints.visible=false;for(const m of [core,halo]){m.count=0;m.visible=false;}for(const light of lights){light.intensity=0;light.userData.life=0;}}
   return {shot,impact,update,reset,setAccent(color){accent.setHex(color);haloMaterial.color.copy(accent);for(const l of lights)l.color.copy(accent);},
-    stats:()=>({trails:core.count,capacity,groundGlows:footprints.count,lightCount:lights.length,activeLights:lights.filter(l=>l.intensity>0).length,cachedProjectiles:history.size}),
-    dispose(){if(disposed)return;disposed=true;reset();group.removeFromParent();core.dispose();halo.dispose();footprints.dispose();footprintGeometry.dispose();footprintMaterial.dispose();footprintTexture.dispose();geometry.dispose();coreMaterial.dispose();haloMaterial.dispose();}
+    stats:()=>({trails:core.count,capacity,groundGlows:footprints.count,impactGlows:contactOuter.count,lightCount:lights.length,activeLights:lights.filter(l=>l.intensity>0).length,cachedProjectiles:history.size}),
+    dispose(){if(disposed)return;disposed=true;reset();group.removeFromParent();core.dispose();halo.dispose();footprints.dispose();contactOuter.dispose();contactInner.dispose();contactGeometry.dispose();contactOuterMaterial.dispose();contactInnerMaterial.dispose();footprintGeometry.dispose();footprintMaterial.dispose();footprintTexture.dispose();geometry.dispose();coreMaterial.dispose();haloMaterial.dispose();}
   };
 }
