@@ -84,7 +84,7 @@ export class ShootingRangeGame extends ArenaGame {
       this.trainingBestCombo=Math.max(this.trainingCombo,this.trainingBestCombo);
       const bonus=Math.min(5,this.trainingCombo)*10;
       this.score+=best.points+bonus;
-      this.event('training-hit',{id:best.target.id,x:best.point.x,y:best.point.y,z:best.point.z,points:best.points+bonus,bullseye:best.bullseye,combo:this.trainingCombo});
+      this.event('training-hit',{id:best.target.id,x:best.point.x,y:best.point.y,z:best.point.z,weapon:this.weapon.id,power:charge,surface:'metal',normal:{x:0,y:0,z:1},points:best.points+bonus,bullseye:best.bullseye,combo:this.trainingCombo});
     }else{this.trainingCombo=0;this.event('training-miss',{});}
     return result;
   }
