@@ -379,6 +379,7 @@ function handleEvents() {
       lastShotAt=clock;recoil=feel.pitch;flashTimer=feel.flash;vr.haptic('shot', event.weapon); weaponShotSound(event.weapon, event.power);
     }
     if(event.type==='training-hit'){
+      world.impact?.(event); // laser decal on the actual hit point of the moving target
       world.burst(event.x,event.y,event.z,world.palette.rose,event.bullseye?18:9);
       if(vr.mode!=='xr')announce(event.bullseye?'PLEIN CENTRE !':'CIBLE TOUCHÉE',`+${event.points} PTS · SÉRIE ×${event.combo}`);
       vr.haptic('hit');tone(event.bullseye?980:650,340,.095,.035,'triangle');
