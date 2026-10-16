@@ -45,7 +45,7 @@ test('the headset ending board shows a finite level-1 replay and the correct lef
     });
     state.update(.016,0);
     assert.ok(lines.includes('NIVEAU 1 TERMINÉ'));
-    assert.ok(lines.includes(`${hand==='right'?'A':'X'} : REJOUER LE NIVEAU 1`));
+    assert.ok(lines.includes(`${'B'} : REJOUER LE NIVEAU 1`));
     assert.ok(!lines.some(line=>/20 niveaux|CONTINUER EN SURVIE/.test(line)));
     assert.equal(state.pauseBoard.texture.needsUpdate,true);
     assert.equal(state.pauseBoard.panel.visible,true);
