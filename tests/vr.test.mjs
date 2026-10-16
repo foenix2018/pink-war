@@ -50,39 +50,33 @@ test('Quest right stick rotates continuously with no snap or jerk, including rev
   right.gamepad.axes[2]=0;assert.equal(state.input().turn,0);
 });
 
-test('A recharges, B selects next and left X jumps on fresh press',()=>{
-  let reload=0;const directions=[];
-  const {state,left,right,game}=setup({charge:.6,triggerHeld:true,reload:()=>{reload++;return true;},cycleWeapon:direction=>{directions.push(direction);return true;}});
-  down(right,0);down(right,4);assert.equal(state.input().fire,false);assert.equal(game.charge,0);assert.equal(game.triggerHeld,false);
-  state.input();assert.equal(reload,1);
-  down(right,4,false);down(right,0,false);state.input();down(right,0);assert.equal(state.input().fire,true);
-  down(right,5);assert.equal(state.input().fire,false);state.input();assert.deepEqual(directions,[1]);
-  down(right,5,false);state.input();down(left,4);assert.equal(state.input().jump,true);assert.equal(state.input().jump,false);assert.deepEqual(directions,[1]);
+test('Quest A jumps, B reloads, Y changes weapon and X pauses using physical buttons',()=>{
+  let reloads=0,changes=0;const {state,left,right,game,phase}=setup({charge:0,triggerHeld:false,reload:()=>{reloads++;return true;},cycleWeapon:()=>{changes++;return true;}});
+  down(right,4);assert.equal(state.input().jump,true);assert.equal(state.input().jump,false);
+  down(right,4,false);state.input();
+  down(right,5);state.input();assert.equal(reloads,1);
+  down(left,5);state.input();assert.equal(changes,1);
+  down(left,4);state.input();assert.equal(phase(),'paused');
 });
-
-test('the wrist jump selection consumes the trigger until release and never fires or repeats while held',()=>{
-  const {state,right}=setup();state.jumpButtonHit=()=>true;
-  down(right,0);let input=state.input();assert.equal(input.jump,true);assert.equal(input.fire,false);
-  input=state.input();assert.equal(input.jump,false);assert.equal(input.fire,false);
-  state.jumpButtonHit=()=>false;assert.equal(state.input().fire,false,'moving the held ray away cannot fire');
-  down(right,0,false);state.input();down(right,0);assert.equal(state.input().fire,true);
+test('the right INDEX trigger fires even when the controller aims over the old wrist jump UI',()=>{
+ const {state,right}=setup();state.jumpButtonHit=()=>true;
+ down(right,0);let input=state.input();assert.equal(input.jump,false);assert.equal(input.fire,true);
+ assert.equal(state.input().fire,true);assert.equal(state.input().jump,false);
+ down(right,0,false);assert.equal(state.input().fire,false);
 });
-
-test('a left shooting hand selects the jump wrist with its own trigger; A still jumps from the free hand',()=>{
-  const {state,left,right}=setup(undefined,{...VR_DEFAULTS,hand:'left'});state.jumpButtonHit=()=>true;
-  down(left,0);const input=state.input();assert.equal(input.jump,true);assert.equal(input.fire,false);
-  down(left,0,false);state.input();down(right,4);assert.equal(state.input().jump,true);
+test('optional left-handed shooting still uses physical right A to jump',()=>{
+ const {state,left,right}=setup(undefined,{...VR_DEFAULTS,hand:'left'});state.jumpButtonHit=()=>true;
+ down(left,0);let input=state.input();assert.equal(input.jump,false);assert.equal(input.fire,true);
+ down(right,4);input=state.input();assert.equal(input.jump,true);
 });
-
-test('Y pauses and A resumes without firing a held trigger; B exits from the pause',async()=>{
-  const {state,left,right,game,phase,exits}=setup();game.charge=.5;game.triggerHeld=true;
-  down(right,0);down(left,5);assert.equal(state.input().fire,false);assert.equal(phase(),'paused');assert.equal(game.charge,0);
-  state.input();assert.equal(phase(),'paused');down(left,5,false);state.input();
-  down(right,4);assert.equal(state.input().fire,false);assert.equal(phase(),'playing');
-  down(right,4,false);down(right,0,false);state.input();down(right,0);assert.equal(state.input().fire,true);
-  down(left,5);state.input();assert.equal(phase(),'paused');down(right,5);state.input();state.input();await Promise.resolve();assert.equal(exits(),1);
+test('X pauses and resumes without a held trigger firing',()=>{
+ const {state,left,right,game,phase}=setup();game.charge=.5;game.triggerHeld=true;
+ down(right,0);down(left,4);assert.equal(state.input().fire,false);assert.equal(phase(),'paused');assert.equal(game.charge,0);
+ state.input();assert.equal(phase(),'paused');
+ down(left,4,false);state.input();
+ down(left,4);assert.equal(state.input().fire,false);assert.equal(phase(),'playing');
+ down(right,0,false);state.input();down(right,0);assert.equal(state.input().fire,true);
 });
-
 test('loss of the right pose or a blurred session cancels a heavy charge and pauses safely',()=>{
   const {state,right,game,phase,setPhase}=setup();game.charge=.6;game.triggerHeld=true;down(right,0);
   const frame={getPose:space=>space.hand==='right'?null:{}};
@@ -93,7 +87,7 @@ test('loss of the right pose or a blurred session cancels a heavy charge and pau
   down(right,0,false);state.input();down(right,0);assert.equal(state.input().fire,true);
 });
 
-test('charged weapon uses the right trigger hold and releases a partial shot, then recharges with A',()=>{
+test('charged weapon uses the right trigger hold and releases a partial shot, then recharges with B',()=>{
   const game=new ArenaGame([],()=>.5);game.wave=7;game.nextWave=-1;game.toSpawn=0;game.ownedWeapons.add(3);game.selectWeapon(3);game.cooldown=0;game.drainEvents();
   const {state,right}=setup(game),origin={x:0,y:1.4,z:0},direction={x:0,y:0,z:-1};
   down(right,0);
@@ -101,21 +95,19 @@ test('charged weapon uses the right trigger hold and releases a partial shot, th
   assert.equal(game.ammo[3],6);assert.ok(game.charge>.08 && game.charge<1);
   down(right,0,false);game.trigger(state.input().fire,.05,origin,direction);
   assert.equal(game.ammo[3],5);const shot=game.drainEvents().find(e=>e.type==='shot');assert.ok(shot.power>.3 && shot.power<1);
-  down(right,4);state.input();assert.ok(game.reloadRemaining>0);
-  down(right,4,false);down(right,0);game.step(.05);game.trigger(state.input().fire,.05,origin,direction);assert.equal(game.ammo[3],5);
+  down(right,5);state.input();assert.ok(game.reloadRemaining>0);
+  down(right,5,false);down(right,0);game.step(.05);game.trigger(state.input().fire,.05,origin,direction);assert.equal(game.ammo[3],5);
   down(right,0,false);state.input();for(let i=0;i<100;i++)game.step(.05);assert.equal(game.ammo[3],6);
 });
 
-test('B cycles unlocked weapons, X jumps without changing weapon batteries',()=>{
+test('Y cycles unlocked weapons, A jumps without changing weapon batteries',()=>{
   const game=new ArenaGame();game.wave=5;game.nextWave=-1;game.ammo[0]=7;game.ammo[1]=18;game.ammo[2]=4;game.ownedWeapons.add(1);game.ownedWeapons.add(2);
   const {state,left,right}=setup(game);
-  down(left,4);assert.equal(state.input().jump,true);assert.equal(game.weaponIndex,0);
-  down(left,4,false);state.input();down(right,5);state.input();assert.equal(game.weaponIndex,1);
-  down(right,5,false);state.input();down(right,5);state.input();assert.equal(game.weaponIndex,2);
-  down(right,5,false);state.input();down(right,5);state.input();assert.equal(game.weaponIndex,0);
+  down(right,4);assert.equal(state.input().jump,true);assert.equal(game.weaponIndex,0);
+  down(right,4,false);state.input();
+  for(let i=0;i<3;i++){down(left,5);state.input();assert.equal(game.weaponIndex,(i+1)%3);down(left,5,false);state.input();}
   assert.deepEqual(game.ammo.slice(0,3),[7,18,4]);assert.equal(game.selectWeapon(4),false);
 });
-
 test('VR aiming transforms the controller through the rig and uses the actual muzzle',()=>{
   const rig=new T.Group();rig.position.set(10,0,20);rig.rotation.y=Math.PI/2;
   const ray=new T.Group();ray.position.set(.3,1.4,-.2);ray.userData.source={handedness:'right'};rig.add(ray);
@@ -157,31 +149,27 @@ test('a headset without a right controller falls back to the head ray for the si
   state.mode='stereo';assert.equal(VRController.prototype.aim.call(state),null);
 });
 
-test('the left trigger aims independently of right fire, A reload, pause and tracking',()=>{
-  let reloads=0;const {state,left,right,game,phase,setPhase}=setup({charge:.5,triggerHeld:true,reload:()=>{reloads++;return true;},cycleWeapon:()=>true});
-  down(left,0);let input=state.input();assert.equal(input.aim,true);assert.equal(input.precision,true);assert.equal(input.fire,false);assert.equal(reloads,0);assert.equal(game.charge,.5);
-  down(right,0);input=state.input();assert.equal(input.aim,true);assert.equal(input.fire,true,'aim and fire work together');
-  down(right,4);input=state.input();assert.equal(input.fire,false);assert.equal(reloads,1);assert.equal(game.charge,0);
-  down(right,4,false);down(right,0,false);state.input();down(right,0);assert.equal(state.input().fire,true);
-  const lost={getPose:space=>space.hand==='left'?null:{}};
-  assert.equal(state.input(lost).aim,false,'an untracked free hand cannot enable aim');
-  setPhase('paused');input=state.input();assert.equal(input.aim,false);assert.equal(input.fire,false);assert.equal(phase(),'paused');assert.equal(reloads,1);
-  setPhase('over');assert.equal(state.input().aim,false);assert.equal(phase(),'over');
+test('right middle-finger GRIP aims independently of right index fire; left trigger does not aim',()=>{
+ let reloads=0;const {state,left,right,game,phase,setPhase}=setup({charge:.5,triggerHeld:true,reload:()=>{reloads++;return true;},cycleWeapon:()=>true});
+ down(left,0);let input=state.input();assert.equal(input.aim,false);assert.equal(input.precision,false);assert.equal(input.fire,false);
+ down(right,1);input=state.input();assert.equal(input.aim,true);assert.equal(input.precision,true);assert.equal(input.fire,false);
+ down(right,0);input=state.input();assert.equal(input.aim,true);assert.equal(input.fire,true);
+ down(right,5);input=state.input();assert.equal(input.fire,false);assert.equal(reloads,1);assert.equal(game.charge,0);
+ down(right,5,false);down(right,0,false);state.input();down(right,0);assert.equal(state.input().fire,true);
+ const lost={getPose:space=>space.hand==='right'?null:{}};
+ assert.equal(state.input(lost).aim,false,'an untracked right aiming hand cannot aim');
+ setPhase('paused');input=state.input();assert.equal(input.aim,false);assert.equal(input.fire,false);assert.equal(phase(),'paused');
+ setPhase('over');assert.equal(state.input().aim,false);
 });
-
-test('Quest left X jumps independently of left-stick crouch and right-hand fire',()=>{
+test('Quest right A jumps independently of left-stick crouch and right-hand fire',()=>{
  const {state,left,right}=setup();
- down(left,4);let input=state.input();
- assert.equal(input.jump,true);assert.equal(input.crouchToggle,false);assert.equal(input.fire,false);
- assert.equal(state.input().jump,false,'holding X must not re-trigger');
- down(left,4,false);state.input();
- down(left,3);input=state.input();
- assert.equal(input.jump,false);assert.equal(input.crouchToggle,true);
+ down(right,4);let input=state.input();assert.equal(input.jump,true);assert.equal(input.crouchToggle,false);assert.equal(input.fire,false);
+ assert.equal(state.input().jump,false,'holding A must not re-trigger');
+ down(right,4,false);state.input();
+ down(left,3);input=state.input();assert.equal(input.jump,false);assert.equal(input.crouchToggle,true);
  down(left,3,false);state.input();
- down(right,0);down(left,4);input=state.input();
- assert.equal(input.fire,true);assert.equal(input.jump,true);
+ down(right,0);down(right,4);input=state.input();assert.equal(input.fire,true);assert.equal(input.jump,true);
 });
-
 test('desktop left trigger aims without jumping and Y jumps on a fresh press',()=>{
  const previous=Object.getOwnPropertyDescriptor(globalThis,'navigator');
  const pad={id:'Standard',index:0,connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:16},()=>({pressed:false,value:0}))};
@@ -206,23 +194,19 @@ test('the shooting-hand stick only turns: pushing it up or down changes nothing 
   right.gamepad.axes=[0,0,.2,.95];input=state.input();assert.equal(input.snap,0);assert.equal(input.z,0);assert.deepEqual(switched,[]);
 });
 
-test('a left-handed layout mirrors every control: left trigger fires, the right hand moves and pauses',()=>{
-  const reloads=[],cycles=[];
-  const {state,left,right,phase,setPhase,exits}=setup({charge:0,triggerHeld:false,reload:()=>{reloads.push(1);return true;},cycleWeapon:d=>{cycles.push(d);return true;}},{...VR_DEFAULTS,hand:'left'});
-  down(right,0);const aimed=state.input();assert.equal(aimed.fire,false,'the free trigger aims');assert.equal(aimed.aim,true);assert.equal(reloads.length,0);down(right,0,false);state.input();
-  down(left,0);assert.equal(state.input().fire,true);down(left,0,false);
-  right.gamepad.axes=[0,0,.4,-.8];left.gamepad.axes=[0,0,.9,.9];let input=state.input();
-  assert.equal(input.x,.4);assert.equal(input.z,-.8);assert.equal(input.snap,0);assert.equal(input.turn,.9);
-  down(right,3);let movement=state.input();assert.equal(movement.sprint,false);assert.equal(movement.crouchToggle,true);down(right,3,false);
-  down(left,4);state.input();assert.equal(reloads.length,1,'X reloads');down(left,4,false);state.input();
-  down(left,5);state.input();assert.deepEqual(cycles,[1],'Y selects the next weapon');down(left,5,false);state.input();
-  down(right,4);state.input();assert.deepEqual(cycles,[1],'A no longer switches weapons');assert.equal(state.input().jump,false,'jump is edge-triggered');down(right,4,false);state.input();
-  down(right,5);state.input();assert.equal(phase(),'paused','B pauses');down(right,5,false);state.input();
-  down(left,4);state.input();assert.equal(phase(),'playing','X resumes');down(left,4,false);state.input();
-  down(right,5);state.input();down(right,5,false);state.input();down(left,5);state.input();state.input();
-  assert.equal(exits(),1,'Y leaves VR from the pause');
+test('left-handed option changes aiming hand, but physical A/B/X/Y buttons stay mapped',()=>{
+ const reloads=[],cycles=[];
+ const {state,left,right,phase}=setup({charge:0,triggerHeld:false,reload:()=>{reloads.push(1);return true;},cycleWeapon:d=>{cycles.push(d);return true;}},{...VR_DEFAULTS,hand:'left'});
+ down(left,0);assert.equal(state.input().fire,true);down(left,0,false);
+ down(left,1);assert.equal(state.input().aim,true);down(left,1,false);state.input();
+ right.gamepad.axes=[0,0,.4,-.8];left.gamepad.axes=[0,0,.9,.9];let input=state.input();
+ assert.equal(input.x,.4);assert.equal(input.z,-.8);assert.equal(input.turn,.9);
+ down(right,4);assert.equal(state.input().jump,true);down(right,4,false);state.input();
+ down(right,5);state.input();assert.equal(reloads.length,1);down(right,5,false);state.input();
+ down(left,5);state.input();assert.deepEqual(cycles,[1]);down(left,5,false);state.input();
+ down(left,4);state.input();assert.equal(phase(),'paused');down(left,4,false);state.input();
+ down(left,4);state.input();assert.equal(phase(),'playing');
 });
-
 test('old saved snap settings migrate to continuous rotation',()=>{
   const cfg=sanitizeVRSettings({...VR_DEFAULTS,turn:'snap45'});
   assert.equal(cfg.turn,'smooth');
@@ -239,15 +223,17 @@ test('settings are validated and fall back to the defaults',()=>{
   assert.ok(Object.isFrozen(VR_DEFAULTS));
 });
 
-test('the control list and button names follow the shooting hand',()=>{
-  const right=Object.fromEntries(questControls('right')),left=Object.fromEntries(questControls('left'));
-  assert.equal(right['Gâchette droite'],'Tirer · AURORA : maintenir pour déployer la lame');assert.equal(right.A,'Recharger la batterie');assert.equal(right.Y,'Pause / reprise');
-  assert.equal(left['Gâchette gauche'],'Tirer · AURORA : maintenir pour déployer la lame');assert.equal(left.X,'Recharger la batterie');assert.equal(left.B,'Pause / reprise');
-  assert.ok(left['Joystick droit']==='Se déplacer'&&left['Joystick gauche']==='Rotation fluide');
-  assert.deepEqual(buttonNames('left'),{reload:'X',next:'Y',jump:'A',pause:'B'});
-  for(const hand of ['right','left'])assert.equal(new Set(questControls(hand).map(([control])=>control)).size,questControls(hand).length,'every control is listed once');
+test('Quest tutorial spells out right index firing, right middle-finger aiming and A/B/Y/X mapping',()=>{
+  for(const hand of ['right','left']){
+    const controls=Object.fromEntries(questControls(hand));
+    assert.equal(controls['Gâchette INDEX droite'],'Tirer · AURORA : maintenir pour déployer la lame');
+    assert.equal(controls['Gâchette MAJEUR droite'],'Viser · BLOOM ×2 / LANCE ×4 · parade AURORA');
+    assert.equal(controls.A,'Saut · second appui : double saut / rebond mural');
+    assert.equal(controls.B,'Recharger la batterie');assert.equal(controls.Y,'Arme suivante');assert.equal(controls.X,'Pause / reprise');
+    assert.equal(new Set(questControls(hand).map(([name])=>name)).size,questControls(hand).length);
+  }
+  assert.deepEqual(buttonNames(),{reload:'B',next:'Y',jump:'A',pause:'X'});
 });
-
 test('vibrations: heavy weapons kick harder, both hands feel damage, and the setting can turn them off',()=>{
   assert.ok(hapticPlan('shot','nova').main[0]>hapticPlan('shot','r9').main[0]);assert.ok(hapticPlan('shot','nova').main[1]>hapticPlan('shot','bloom').main[1]);
   assert.deepEqual(hapticPlan('shot','unknown'),hapticPlan('shot','r9'));assert.equal(hapticPlan('shot','r9').side,undefined);
