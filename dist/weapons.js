@@ -328,7 +328,7 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   g.userData.setSight=(active,camera)=>{
     for(const optic of optics)if(optic)optic.reticle.visible=false;
     const optic=optics[g.userData.index];g.userData.aiming=!!active&&!!optic;
-    if(!g.userData.aiming||!camera)return;
+    if(!g.userData.aiming||!camera||g.userData.kenneyAssets?.loadedByIndex?.[g.userData.index])return;
     // In the model's own frame: a slimmed Kenney blaster is narrower than the weapon frame.
     const model=models[g.userData.index];g.updateWorldMatrix(true,true);camera.getWorldPosition(eye);model.worldToLocal(eye);
     optic.eyeDistance=eye.z-optic.cfg.z;
@@ -417,7 +417,10 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
       g.userData.kenneyVersion=(g.userData.kenneyVersion||0)+1;
       // The sight stays round on a slimmed blaster.
       const optic=optics[index],slim=models[index].scale.x;
-      if(optic){optic.glass.scale.x=optic.cfg.radius/slim;optic.reticle.scale.x=1/slim;}
+      if(optic){optic.glass.visible=false;optic.reticle.visible=false;}
+      // These cell rails belonged to the procedural receivers and otherwise
+      // float alongside the Kenney model. The real GLB is a closed assembly.
+      const rail=batteries[index];if(rail){rail.visible=false;rail.userData.shell.visible=false;}
       if(g.userData.index===index)g.userData.setVariant(index);
     },KENNEY_HOLD);
   g.userData.setVariant(0); g.userData.setLevel(1);
