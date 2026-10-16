@@ -163,7 +163,9 @@ export function installKenneyBlasters(models,originals,frames,onLoad,holds=[]){
     skin.position.set(0,frame.muzzle[1]-maxY*scalar,frame.muzzle[2]-minFront*scalar);
     skin.traverse(o=>{if(o.isMesh)o.castShadow=false;});
     models[i].add(skin);models[i].scale.x=holds[i]?.slim||1;
-    upgradeKenneyWeapon(models[i],frame,i,holds[i]);
+    // Do not graft generic receiver/rail/optic blocks over a different Kenney
+    // silhouette: on narrow grips these used to visibly FLOAT in free space.
+    // The original GLB's own linked meshes are complete and sufficient.
     for(const old of originals[i])old.visible=false;
     progress.loaded++;progress.loadedByIndex[i]=true;onLoad?.(i,skin);
   }).catch(e=>{progress.failed++;console.warn('Kenney blaster non disponible, arme native conservée',letters[i],e.message);});
