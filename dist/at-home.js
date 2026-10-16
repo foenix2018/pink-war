@@ -202,7 +202,7 @@ function processEvents(){
   if(event.type==='reload'){haptic('reload');try{playWeaponAction(audio,game.weapon.id,'reload-out');}catch{}}
   if(event.type==='reloaded'){haptic('reloaded');try{playWeaponAction(audio,game.weapon.id,'reload-in');}catch{}}
   if(event.type==='impact'){laser.impact(event);try{playLaserImpact(audio,{surface:event.surface,distance:Math.hypot(event.x-head.x,event.y-head.y,event.z-head.z),splash:event.splash,power:event.power});}catch{}}
-  if(event.type==='blade-hit'||event.type==='blade-parry'){saberAudio?.impact(event.type==='blade-parry');haptic(event.type==='blade-parry'?'parry':'hit');}
+  if(event.type==='blade-hit'||event.type==='blade-parry'){laser.impact({...event,weapon:'aurora',enemy:event.type==='blade-hit'});saberAudio?.impact(event.type==='blade-parry');haptic(event.type==='blade-parry'?'parry':'hit');}
   if(event.type==='damage')haptic('damage');
   if(event.type==='weapon')haptic('weapon');
   if(event.type==='over'||event.type==='won'){mode='finished';music.pause();cancelFire();info('GÂCHETTE DROITE : REJOUER');}
