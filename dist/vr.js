@@ -31,16 +31,16 @@ const settingsOf = controller => controller.settings || VR_DEFAULTS;
 const controllerOf = (controller, hand) => (controller.controllers || []).find(c => c.ray.userData.source?.handedness === hand);
 const padOf = (controller, hand) => controllerOf(controller, hand)?.ray.userData.source.gamepad;
 
-// Buttons are assigned by role: the shooting hand owns reload / next weapon, the other hand moves,
-// jumps, crouches and pauses. A left-handed layout simply mirrors the controllers.
-export const buttonNames = hand => hand === 'left' ? { reload: 'X', next: 'Y', jump: 'A', pause: 'B' } : { reload: 'A', next: 'B', jump: 'X', pause: 'Y' };
+// Physical Touch Plus buttons are fixed: A jump, B reload, Y weapon, X pause.
+// Aim and fire belong to the right controller: middle-finger squeeze and index trigger.
+export const buttonNames = () => ({ reload:'B', next:'Y', jump:'A', pause:'X' });
 export function questControls(hand = 'right') {
   const left = hand === 'left', b = buttonNames(hand);
   const mainF = left ? 'gauche' : 'droite', sideF = left ? 'droite' : 'gauche', mainM = left ? 'gauche' : 'droit', sideM = left ? 'droit' : 'gauche';
   return [
-    [`Manette ${mainF}`, 'Pistolet : le canon est la visée'],
-    [`Gâchette ${mainF}`, 'Tirer · AURORA : maintenir pour déployer la lame'],
-    [`Poignée ${mainF}`, 'Saisir fermement la garde · stabiliser les armes'],
+    ['Manette droite', 'Pistolet : le canon est la visée'],
+    ['Gâchette INDEX droite', 'Tirer · AURORA : maintenir pour déployer la lame'],
+    ['Gâchette MAJEUR droite', 'Viser · BLOOM ×2 / LANCE ×4 · parade AURORA'],
     [b.reload, 'Recharger la batterie'],
     [b.next, 'Arme suivante'],
     [`Joystick ${mainM}`, 'Rotation fluide'],
@@ -48,7 +48,7 @@ export function questControls(hand = 'right') {
     [`Poignée ${sideF}`, 'Courir (maintenu)'],
     [`Clic joystick ${sideF}`, 'Terminal / arme proche : interagir · sinon : s’accroupir'],
     [b.jump, 'Saut · second appui : double saut / rebond mural'],
-    [`Gâchette ${sideF}`, 'Viser · BLOOM ×2 / LANCE ×4 · parade AURORA'],
+    ['Gâchette INDEX gauche', 'Main libre / interaction'],
     [b.pause, 'Pause / reprise']
   ];
 }
@@ -437,12 +437,8 @@ export class VRController {
         this.handPose.mainTrigger = Math.max(this.handPose.mainTrigger, amount(pad.buttons[xr ? 0 : 7]));
         this.handPose.mainGrip = Math.max(this.handPose.mainGrip, amount(pad.buttons[xr ? 1 : 6]));
         result.precision ||= tracked && pressed(pad.buttons[xr ? 1 : 6]);
+        if(xr)result.aim ||= tracked && pressed(pad.buttons[1]);
         if (xr) {
-          const uiKey=source.handedness+':ui',uiDown=pressed(pad.buttons[0]);
-          if(uiDown&&tracked&&phase==='playing'&&this.jumpButtonHit()){
-            if(!this.previous.get(uiKey))actions.add('jump');this.cancelTrigger();
-          }
-          this.previous.set(uiKey,uiDown);
           const turn = axes[stick] || 0;
           if (tracked) result.turn += deadzone(turn); // continuous angular velocity, never snap-turns
         } else { result.turn += axis(axes[2]); result.tilt += axis(axes[3]); }
@@ -450,13 +446,13 @@ export class VRController {
       if (xr && side) {
         this.handPose.sideTrigger = Math.max(this.handPose.sideTrigger, amount(pad.buttons[0]));
         this.handPose.sideGrip = Math.max(this.handPose.sideGrip, amount(pad.buttons[1]));
-        result.aim ||= tracked && pressed(pad.buttons[0]);
-        result.precision ||= result.aim;
+        // Left index trigger does not aim: right middle-finger grip owns aiming.
       }
       const edge = (key, index, action = key) => { const id = `${source.handedness}:${key}`, down = pressed(pad.buttons[index]); if (down && !this.previous.get(id) && tracked) actions.add(action); this.previous.set(id, down); };
-      if (main) { edge('reload', xr ? 4 : 0); edge('next', xr ? 5 : 1); }
+      if(xr&&source.handedness==='right'){edge('jump',4);edge('reload',5);}
+      if(xr&&source.handedness==='left'){edge('pause',4);edge('next',5);}
+      if(!xr&&main){edge('reload',0);edge('next',1);}
       if (xr && side) {
-        edge('jump', 4); edge('pause', 5);
         const game = this.hooks.game(), interaction = game?.getInteraction?.() || game?.nearbyWeapon?.();
         // Track the physical click, not its contextual action. Consuming a terminal
         // or pickup while the stick stays held must never cause a second crouch.
@@ -465,8 +461,8 @@ export class VRController {
       if (!xr) { edge('pause', 9); edge('jump', 3); edge('pickup', 2); edge('crouch', 11); }
     }
     if (actions.has('pause')) { this.hooks.togglePause(); if (xr) this.cancelTrigger(); }
-    else if ((phase === 'paused' || phase === 'over') && actions.has('reload') && xr) { this.hooks.begin(); this.cancelTrigger(); }
-    else if ((phase === 'paused' || phase === 'over') && actions.has('next') && xr) { this.cancelTrigger(); this.exit().catch(error => this.fail(error)); }
+    else if (phase === 'over' && actions.has('reload') && xr) { this.hooks.begin(); this.cancelTrigger(); }
+    else if (phase === 'over' && actions.has('next') && xr) { this.cancelTrigger(); this.exit().catch(error => this.fail(error)); }
     else if (phase === 'playing') {
       const game = this.hooks.game();
       if (actions.has('next')) { if (game.cycleWeapon(1) && xr) this.cancelTrigger(); }
