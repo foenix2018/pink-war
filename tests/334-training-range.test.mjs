@@ -38,7 +38,10 @@ test('training mode fires current Pink War guns, tracks score, and has no enemy 
  const origin={x:0,y:1.6,z:22};
  const direction={x:pos.x,y:pos.y-1.6,z:pos.z-22};
  game.shoot(origin,direction);
- assert.equal(game.trainingHits,1);assert.equal(game.trainingShots,1);
+ assert.equal(game.trainingShots,1);
+ assert.equal(game.trainingHits,0,'a target cannot fall at trigger time');
+ for(let i=0;i<7;i++)game.step(.05,{});
+ assert.equal(game.trainingHits,1,'impact is counted at laser arrival');
  assert.ok(game.score>=150);assert.equal(game.trainingAccuracy,100);
  game.cooldown=0;game.shoot(origin,{x:0,y:0,z:1});
  assert.equal(game.trainingShots,2);assert.equal(game.trainingAccuracy,50);
