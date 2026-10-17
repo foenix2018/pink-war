@@ -94,7 +94,7 @@ test('AÉGIS armour follows native bones, shares geometry and gains protections 
         assert.equal(mesh.geometry,b.armor.parts[i].geometry);assert.equal(mesh.skeleton,a.nativeSkeleton);assert.notEqual(mesh.skeleton,b.nativeSkeleton);
       }
     }
-    const mesh=a.armor.parts.find(p=>p.name==='AÉGIS pearl'),g=mesh.geometry,indices=g.attributes.skinIndex;
+    const mesh=a.armor.parts.find(p=>p.name==='AÉGIS III pearl'),g=mesh.geometry,indices=g.attributes.skinIndex;
     const foreIndex=a.nativeSkeleton.bones.indexOf(a.actor.bone('LeftForeArm'));
     const vertex=Array.from({length:indices.count},(_,i)=>i).find(i=>indices.getX(i)===foreIndex);assert.ok(Number.isInteger(vertex));
     a.root.updateMatrixWorld(true);a.nativeSkeleton.update();const initial=mesh.getVertexPosition(vertex,new T.Vector3());

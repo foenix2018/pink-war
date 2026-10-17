@@ -275,11 +275,11 @@ test('both soldiers keep an opaque, fully enclosing helmet at every armour level
     const k=kit(),soldier=createSoldier(k,o=>buildGun({mats:mats(),gloves:k.gloves,sleeve:false,makeFlash:flash}),character);
     assert.equal(k.materials.skin,undefined,'no face geometry or skin material is generated');
     assert.equal(k.materials.hair,undefined,'hair cannot protrude through the shell');
-    const helmetParts=soldier.actor.parts.filter(mesh=>['RLH helmet','RLH visor','RLH pearl','RLH detail','RLH rubber'].includes(mesh.name));
-    const geometry=helmetParts.map(mesh=>mesh.geometry);
     for(let level=1;level<=10;level++) {
       soldier.setLevel(level);soldier.root.updateMatrixWorld(true);
-      helmetParts.forEach((mesh,i)=>{assert.equal(mesh.geometry,geometry[i],'level upgrades retain the enclosing RLH shell');assert.ok(!mesh.material.transparent&&mesh.material.opacity===1);});
+      const helmetParts=soldier.armor.parts;
+      assert.ok(soldier.armor.template.items.some(i=>i.tag==='closed-helmet'),'the rendered replacement includes a complete opaque shell');
+      helmetParts.forEach(mesh=>assert.ok(!mesh.material.transparent&&mesh.material.opacity===1));
       if(level!==1&&level!==10)continue;
       const center=soldier.head.localToWorld(new T.Vector3());
       for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++) {
@@ -287,6 +287,7 @@ test('both soldiers keep an opaque, fully enclosing helmet at every armour level
         const origin=soldier.head.localToWorld(new T.Vector3(x,y,z));
         const hits=new T.Raycaster(origin,center.clone().sub(origin).normalize()).intersectObjects(helmetParts,false);
         assert.ok(hits.length,`${character.id}/${level}: helmet is closed from ${x},${y},${z}`);
+        assert.ok(hits.some(hit=>hit.point.distanceTo(center)<.25),'the actual rendered helmet encloses its head center');
         assert.ok(hits.every(hit=>!hit.object.material.transparent&&hit.object.material.opacity===1),'visor and shell are fully opaque');
       }
     }

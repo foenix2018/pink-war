@@ -42,7 +42,7 @@ export const OPTICS = Object.freeze({
 const opticGlassGeometry=new T.CircleGeometry(1,32),opticDotGeometry=new T.CircleGeometry(.00075,16);
 const opticRingGeometry=new T.RingGeometry(.0068,.0074,32);
 function attachOptic(model,index) {
-  const cfg=OPTICS[WEAPON_FRAME[index].id];if(!cfg)return null;
+  const source=OPTICS[WEAPON_FRAME[index].id];if(!source)return null;const cfg={...source};
   const glassMaterial=new T.MeshPhysicalMaterial({color:0x8ec4d5,metalness:.1,roughness:.12,transparent:true,opacity:.14,side:T.DoubleSide,depthWrite:false});
   const glass=new T.Mesh(opticGlassGeometry,glassMaterial);glass.scale.setScalar(cfg.radius);glass.position.set(0,cfg.y,cfg.z);model.add(glass);
   const reticle=new T.Group(),material=new T.MeshBasicMaterial({color:0xff655c,toneMapped:false,side:T.DoubleSide});
@@ -324,20 +324,22 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   mats=weaponMetals(mats);
   const g = new T.Group(), models = createWeaponModels(mats);
   const originalWeaponMeshes=models.map(model=>[...model.children]);
+  g.userData.weaponModels=models;
   for (const model of models) { model.visible = false; g.add(model); }
   const optics=models.map(attachOptic),eye=new T.Vector3(),target=new T.Vector3();
   g.userData.optics=optics;
   g.userData.setSight=(active,camera)=>{
     for(const optic of optics)if(optic)optic.reticle.visible=false;
     const optic=optics[g.userData.index];g.userData.aiming=!!active&&!!optic;
-    if(!g.userData.aiming||!camera||g.userData.kenneyAssets?.loadedByIndex?.[g.userData.index])return;
+    const loaded=g.userData.kenneyAssets?.loadedByIndex?.[g.userData.index];
+    if(!g.userData.aiming||!camera||loaded&&!models[g.userData.index].userData.authoredOptic)return;
     // In the model's own frame: a slimmed Kenney blaster is narrower than the weapon frame.
     const model=models[g.userData.index];g.updateWorldMatrix(true,true);camera.getWorldPosition(eye);model.worldToLocal(eye);
     optic.eyeDistance=eye.z-optic.cfg.z;
     if(optic.eyeDistance<=.035)return;
     // Zero the optical reticle to the barrel at 100 m. Off-axis eyes lose the
     // reticle outside the aperture; enabling aim never rotates a tracked hand.
-    const frame=WEAPON_FRAME[g.userData.index];target.set(0,frame.muzzle[1],frame.muzzle[2]-100);
+    const frame=WEAPON_FRAME[g.userData.index],muzzle=models[g.userData.index].userData.muzzle||frame.muzzle;target.set(0,muzzle[1],muzzle[2]-100);
     const t=(optic.cfg.z-eye.z)/(target.z-eye.z);eye.lerp(target,t);
     const dx=eye.x,dy=eye.y-optic.cfg.y;
     optic.reticle.visible=Math.hypot(dx*model.scale.x,dy)<optic.cfg.radius*.88;
@@ -354,8 +356,10 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   // Small moving emitter collars and residual heat make the discharge visible
   // at the barrel rather than a large floating light in front of the hand.
   const collar=new T.Mesh(new T.CylinderGeometry(.012,.014,.014,12),mats.steel);collar.rotation.x=Math.PI/2;g.add(collar);
+  collar.name='Dynamic emitter collar';
   const heatMaterial=new T.MeshBasicMaterial({color:mats.rose.color,transparent:true,opacity:0,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false});
   const heatRing=new T.Mesh(new T.TorusGeometry(.012,.0018,6,20),heatMaterial);g.add(heatRing);
+  heatRing.name='Barrel heat ring';
   const emitterRadii=[.0105,.0165,.031,.029,.062,.023];let blade=null;
   g.userData.getBladeSegment=()=>g.userData.index===5?blade?.segment():null;
   Object.defineProperty(g.userData,'blade',{get:()=>blade});
@@ -363,14 +367,14 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   g.userData.setLevel = level => { hand.userData.setLevel(level); support.userData.setLevel(level); };
   g.userData.setCombatState = ({ ammo = 0, capacity = 1, charge = 0, reloadProgress = 0, reloading = false, time = 0,heat=0,kick=0,impulse=0,bladeHeld=false } = {}) => {
     blade?.update(time,g.userData.index===5&&!!bladeHeld,mats.rose.color);
-    collar.visible=g.userData.index!==5;
+    collar.visible=g.userData.index!==5&&!models[g.userData.index].userData.integratedEmitter;
     if(g.userData.index===5){heatRing.visible=false;flash.visible=false;return;}
     const rail = batteries[g.userData.index]; if (!rail) return;
     const accent = mats.rose?.color || new T.Color(0xff80b2);
-    const frame=WEAPON_FRAME[g.userData.index],radius=emitterRadii[g.userData.index];
-    collar.position.set(frame.muzzle[0],frame.muzzle[1],frame.muzzle[2]+.009+Math.min(.014,kick*.16));
+    const frame=WEAPON_FRAME[g.userData.index],muzzle=models[g.userData.index].userData.muzzle||frame.muzzle,radius=models[g.userData.index].userData.integratedEmitter?[.012,.017,.014,.022,.030][g.userData.index]:emitterRadii[g.userData.index];
+    collar.position.set(muzzle[0],muzzle[1],muzzle[2]+.009+Math.min(.014,kick*.16));
     collar.scale.set(radius/.012,1,radius/.012);
-    heatRing.position.set(frame.muzzle[0],frame.muzzle[1],frame.muzzle[2]-.001);heatRing.scale.setScalar(radius/.012);
+    heatRing.position.set(muzzle[0],muzzle[1],muzzle[2]-.001);heatRing.scale.setScalar(radius/.012);
     heatMaterial.color.copy(accent);heatMaterial.opacity=Math.min(.8,heat*.25+charge*.45+impulse*.4);heatRing.visible=heatMaterial.opacity>.015;
     const low = ammo > 0 && ammo <= capacity * .25, blink = Math.floor(time * 6) % 2 === 0;
     const chargeStep = Math.round(charge * BATTERY_COUNT), reloadStep = Math.ceil(reloadProgress * BATTERY_COUNT);
@@ -400,7 +404,9 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
     const frame = WEAPON_FRAME[index],hold=g.userData.kenneyAssets?.loadedByIndex?.[index]?KENNEY_HOLD[index]:null;
     if(index===5&&!blade){blade=createEnergyBlade(mats.rose.color);g.add(blade.root);}
     if(index!==5)blade?.reset?.();
-    flash.position.set(...frame.muzzle); flash.scale.setScalar([.14,.12,.25,.19,.38,0][index]);
+    const muzzle=models[index].userData.muzzle||frame.muzzle;
+    flash.position.set(...muzzle); flash.scale.setScalar([.14,.12,.25,.19,.38,0][index]);
+    collar.visible=index!==5&&!models[index].userData.integratedEmitter;
     collar.position.set(frame.muzzle[0],frame.muzzle[1],frame.muzzle[2]+.009);collar.scale.set(emitterRadii[index]/.012,1,emitterRadii[index]/.012);
     heatRing.visible=false;
     support.visible = g.userData.showSupport && !!frame.support;
@@ -419,7 +425,11 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
       g.userData.kenneyVersion=(g.userData.kenneyVersion||0)+1;
       // The sight stays round on a slimmed blaster.
       const optic=optics[index],slim=models[index].scale.x;
-      if(optic){optic.glass.visible=false;optic.reticle.visible=false;}
+      if(optic){
+        if(skin.userData.optic){Object.assign(optic.cfg,skin.userData.optic);optic.glass.position.set(0,optic.cfg.y,optic.cfg.z);optic.glass.scale.setScalar(optic.cfg.radius);optic.glass.visible=true;models[index].userData.authoredOptic=true;}
+        else optic.glass.visible=false;
+        optic.reticle.visible=false;
+      }
       // These cell rails belonged to the procedural receivers and otherwise
       // float alongside the Kenney model. The real GLB is a closed assembly.
       const rail=batteries[index];if(rail){rail.visible=false;rail.userData.shell.visible=false;}

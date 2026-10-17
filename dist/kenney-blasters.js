@@ -1,10 +1,12 @@
 import * as T from './vendor/three.webgpu.min.js';
+import {equipmentSurfaces} from './equipment-surfaces.js';
 
-// Actual CC0 geometry and palette from Kenney Blaster Kit 2.1.
-// Embedded in the Pink War deployment: never loads assets from a third-party CDN.
-// A failed asset leaves the original native weapon visible and fully functional.
+// Original Pink War IV models, with intact CC0 Kenney Blaster Kit 2.1 fallback.
+// Local assets only; the autonomous HTML embeds the five production models.
+// A failed asset leaves the native weapon visible and fully functional.
 export const KENNEY_WEAPON_ASSETS=Object.freeze(['b','g','d','f','p'].map(id=>'blaster-'+id+'.glb'));
 export const MK3_WEAPON_ASSETS=Object.freeze(['b','g','d','f','p'].map(id=>'blaster-'+id+'-mk3.glb'));
+export const MK4_WEAPON_ASSETS=Object.freeze(['b','g','d','f','p'].map(id=>'blaster-'+id+'-mk4.glb'));
 const sources=new Map();
 let sharedMaterial=null,paletteCanvas=null,paletteTexture=null,paletteSource=null,paletteAccent=0xff80b2,surfaceCanvas=null,surfaceTexture=null;
 // The Kenney palette is a grid of flat swatches (red, mustard, royal blue, green…). Pink War repaints it once:
@@ -37,7 +39,7 @@ function paintPalette(){
   c.putImageData(image,0,0);paletteTexture.needsUpdate=true;
   sc.putImageData(surface,0,0);surfaceTexture.needsUpdate=true;
 }
-export function setKenneyAccent(hex){paletteAccent=hex;paintPalette();}
+export function setKenneyAccent(hex){paletteAccent=hex;paintPalette();for(const [name,m] of detailMaterials){if(name==='PW_MK4_paint')m.color.setHex(hex).multiplyScalar(.72);if(name==='PW_MK4_energy'){m.color.setHex(hex);m.emissive.setHex(hex).multiplyScalar(.30);}}}
 function getMaterial(){
   if(sharedMaterial)return sharedMaterial;
   if(typeof document!=='undefined'){
@@ -56,6 +58,18 @@ function getMaterial(){
 }
 const detailMaterials=new Map();
 function modelMaterial(name=''){
+  if(name.startsWith('PW_MK4_')){
+    if(!detailMaterials.has(name)){
+      const maps=equipmentSurfaces(),kind=name.slice(7),p=kind==='ceramic'?{color:0xbfc7cb,metalness:.48,roughness:.48}:
+        kind==='rubber'?{color:0x151b22,metalness:.08,roughness:.95}:
+        kind==='paint'?{color:new T.Color(paletteAccent).multiplyScalar(.72),metalness:.64,roughness:.48}:
+        kind==='energy'?{color:paletteAccent,emissive:new T.Color(paletteAccent).multiplyScalar(.3),emissiveIntensity:1.5,metalness:.4,roughness:.3}:
+        kind==='glass'?{color:0x255475,metalness:.8,roughness:.1}:
+        {color:0x485765,metalness:.88,roughness:.42};
+      const m=new T.MeshStandardMaterial({...p,map:kind==='glass'||kind==='energy'?null:maps.metal,roughnessMap:kind==='glass'?null:maps.rough,bumpMap:kind==='rubber'?maps.cloth:maps.rough,bumpScale:kind==='rubber'?.0003:.00008});m.name=name;detailMaterials.set(name,m);
+    }
+    return detailMaterials.get(name);
+  }
   if(!name.startsWith('PW_MK3_'))return getMaterial();
   if(!detailMaterials.has(name)){
     const p=name.endsWith('alloy')?{color:0x687b82,metalness:.88,roughness:.30}:
@@ -102,7 +116,7 @@ export function parseKenneyGLB(buffer){
     return group;
   });
   function node(id){
-    const def=json.nodes[id],group=new T.Group();group.name=def.name||'Pièce du blaster';
+    const def=json.nodes[id],group=new T.Group();group.name=def.name||'Pièce du blaster';Object.assign(group.userData,def.extras);
     if(def.translation)group.position.fromArray(def.translation);
     if(def.rotation)group.quaternion.fromArray(def.rotation);
     if(def.scale)group.scale.fromArray(def.scale);
@@ -112,11 +126,12 @@ export function parseKenneyGLB(buffer){
   }
   const root=new T.Group();
   for(const id of json.scenes[json.scene||0].nodes)root.add(node(id));
+  root.traverse(o=>{if(o.userData.pinkWarFrame)Object.assign(root.userData,o.userData);});
   return root;
 }
 function cached(letter){
   if(!sources.has(letter)){
-    const file='blaster-'+letter+'-mk3.glb',embedded=globalThis.__PINKWAR_BLASTER_ASSETS?.[file];
+    const file='blaster-'+letter+'-mk4.glb',embedded=globalThis.__PINKWAR_BLASTER_ASSETS?.[file];
     const read=async path=>{const r=await fetch(new URL(path,import.meta.url).href);if(!r.ok)throw Error('Blaster '+r.status);return r.arrayBuffer();};
     const request=embedded?Promise.resolve(Uint8Array.from(atob(embedded),c=>c.charCodeAt(0)).buffer):
       read('./assets/pink-war/'+file).catch(()=>read('./assets/kenney/blaster-'+letter+'.glb'));
@@ -181,19 +196,22 @@ export function applyBlasterEnvironment(root,environment){
 }
 export function installKenneyBlasters(models,originals,frames,onLoad,holds=[],environment=null){
   const letters=['b','g','d','f','p'];
-  const progress={loaded:0,total:5,failed:0,revision:'3.40',loadedByIndex:[false,false,false,false,false]};
+  const progress={loaded:0,total:5,failed:0,revision:'3.41',loadedByIndex:[false,false,false,false,false]};
   for(let i=0;i<5;i++)cached(letters[i]).then(master=>{
     const skin=master.clone(true),frame=frames[i];
-    skin.name='Kenney CC0 / '+frames[i].id;
+    skin.name=(skin.userData.pinkWarFrame?'Pink War IV / ':'Kenney CC0 / ')+frames[i].id;
     applyBlasterEnvironment(skin,environment);
     const originalLength=[.42,.786,.908,1.31,.862][i];
     const minFront=[-.2601,-.34811,-.45394,-.655,-.43104][i];
     const maxY=[.1134,.17895,.18595,.1325,.18595][i];
     const scalar=frame.length/originalLength * [1,.91,.85,.89,.88][i];
-    skin.scale.setScalar(scalar);
-    skin.position.set(0,frame.muzzle[1]-maxY*scalar,frame.muzzle[2]-minFront*scalar);
+    if(!skin.userData.pinkWarFrame){skin.scale.setScalar(scalar);skin.position.set(0,frame.muzzle[1]-maxY*scalar,frame.muzzle[2]-minFront*scalar);}
     skin.traverse(o=>{if(o.isMesh)o.castShadow=false;});
-    models[i].add(skin);models[i].scale.x=holds[i]?.slim||1;
+    models[i].add(skin);models[i].scale.x=skin.userData.pinkWarFrame?1:holds[i]?.slim||1;
+    // The last-resort Kenney mesh uses its own measured emitter height too.
+    const oldTipY=[-.0150,.00327,-.08985,.06411,-.08356],oldTipMax=[.04015,.04032,-.00644,.07233,.02023];
+    models[i].userData.muzzle=skin.userData.pinkWarFrame?[...skin.userData.muzzle]:[0,(oldTipY[i]+oldTipMax[i])/2,frame.muzzle[2]];
+    models[i].userData.integratedEmitter=true;
     // Do not graft generic receiver/rail/optic blocks over a different Kenney
     // silhouette: on narrow grips these used to visibly FLOAT in free space.
     // The original GLB's own linked meshes are complete and sufficient.

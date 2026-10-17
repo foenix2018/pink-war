@@ -4,6 +4,7 @@ import { addClosedHelmet } from './helmet.js';
 import { createGlove, GRIP, syncGloveMaterials } from './hands.js';
 import { WEAPON_FRAME } from './weapons.js';
 import { createRLHSoldier, syncRLHFirefighterMaterials } from './rlh-firefighter.js';
+import { equipmentSurfaces } from './equipment-surfaces.js';
 
 export function createCharacterKit(emblem, surfaces = {}) {
   const geometries = { sphere: new T.SphereGeometry(1, 20, 14), tube: new T.CylinderGeometry(1, 1, 1, 16),
@@ -38,6 +39,10 @@ export function createCharacterKit(emblem, surfaces = {}) {
     emblem: new T.MeshBasicMaterial({map:emblem,transparent:true,depthWrite:false,toneMapped:false})
   };
   materials.rose.map=materials.pearl.map=surfaces.armor||null;
+  const equipment=equipmentSurfaces();
+  for(const key of ['rose','pearl','dark','steel']){materials[key].map=equipment.metal;materials[key].roughnessMap=equipment.rough;materials[key].bumpMap=equipment.rough;materials[key].bumpScale=.00012;}
+  materials.suit.bumpMap=equipment.cloth;materials.suit.bumpScale=.0006;
+  materials.lens.emissiveIntensity=.45;
   materials.rose.needsUpdate=materials.pearl.needsUpdate=true;
   // Materials of the gloved hands: fabric, knuckle plates, trim, light strips, scanner and metal.
   const gloves = { fabric: materials.suit, plate: materials.rose, trim: materials.pearl, glow: materials.glow, accent: materials.cyan, metal: materials.gold };

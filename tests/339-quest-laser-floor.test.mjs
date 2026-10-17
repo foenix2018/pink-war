@@ -31,7 +31,8 @@ test('all five Kenney guns show only their connected source GLB, not floating pr
  assert.doesNotMatch(src,/\n    upgradeKenneyWeapon\(models\[i\]/);
  const weaponSrc=readFileSync(new URL('../dist/weapons.js',import.meta.url),'utf8');
  assert.match(weaponSrc,/rail\.visible=false;rail\.userData\.shell\.visible=false/);
- assert.match(weaponSrc,/optic\.glass\.visible=false;optic\.reticle\.visible=false/);
+ assert.match(weaponSrc,/if\(skin\.userData\.optic\)/,'only an asset with a measured optical mount enables its lens');
+ assert.match(weaponSrc,/else optic\.glass\.visible=false/,'legacy Kenney fallback still hides unsupported floating glass');
  for(const id of ['b','g','d','f','p']){
    const bytes=readFileSync(new URL('../dist/assets/kenney/blaster-'+id+'.glb',import.meta.url));
    const parsed=parseKenneyGLB(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength));

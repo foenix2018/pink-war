@@ -1,0 +1,87 @@
+[
+  {
+    "id": "r9",
+    "file": "blaster-b-mk4.glb",
+    "triangles": 8528,
+    "source": "Original Pink War geometry",
+    "revision": "3.41",
+    "muzzle": [
+      0,
+      0.045,
+      -0.207
+    ],
+    "palm": [
+      0.026,
+      -0.068,
+      0
+    ]
+  },
+  {
+    "id": "bloom",
+    "file": "blaster-g-mk4.glb",
+    "triangles": 11052,
+    "source": "Original Pink War geometry",
+    "revision": "3.41",
+    "muzzle": [
+      0,
+      -0.02,
+      -0.6
+    ],
+    "palm": [
+      0.027,
+      -0.135,
+      -0.064
+    ]
+  },
+  {
+    "id": "lance",
+    "file": "blaster-d-mk4.glb",
+    "triangles": 13516,
+    "source": "Original Pink War geometry",
+    "revision": "3.41",
+    "muzzle": [
+      0,
+      -0.02,
+      -0.88
+    ],
+    "palm": [
+      0.027,
+      -0.135,
+      -0.284
+    ]
+  },
+  {
+    "id": "thorn",
+    "file": "blaster-f-mk4.glb",
+    "triangles": 12184,
+    "source": "Original Pink War geometry",
+    "revision": "3.41",
+    "muzzle": [
+      0,
+      0.08,
+      -0.85
+    ],
+    "palm": [
+      0.028,
+      -0.025,
+      -0.149
+    ]
+  },
+  {
+    "id": "nova",
+    "file": "blaster-p-mk4.glb",
+    "triangles": 12280,
+    "source": "Original Pink War geometry",
+    "revision": "3.41",
+    "muzzle": [
+      0,
+      0.04,
+      -0.655
+    ],
+    "palm": [
+      0.027,
+      -0.069,
+      -0.079
+    ]
+  }
+]

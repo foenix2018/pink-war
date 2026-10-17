@@ -7,6 +7,7 @@ import { characterForId } from './characters.js';
 import { playLaserShot, loadRealLaserSample } from './laser-sound.js';
 import { createSaberSound } from './saber-sound.js';
 import { bladeSwingPose } from './blade-combat.js';
+import {setKenneyAccent} from './kenney-blasters.js';
 
 const $ = id => document.getElementById(id);
 const clamp = (n,a,b)=>Math.max(a,Math.min(b,n));
@@ -77,6 +78,7 @@ function setCharacter(id){
   state.character=id;
   const profile=characterForId(id);
   kit.setPalette(profile.armor);
+  setKenneyAccent(profile.armor.rose);
   paintEmblem(profile);
   for(const [name,mat] of Object.entries(mats)){
     const col=name==='dark'?profile.palette.ink:name==='cyan'?profile.world.cyan:(profile.world[name]??profile.palette[name]);

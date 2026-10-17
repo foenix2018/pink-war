@@ -29,13 +29,15 @@ test('combat bracers stay on the neutral forearm and leave every animated digit 
   }
  }
 });
-test('soldier equipment replaces the air bottle without mutating RLH body, helmet, bones or clips',()=>{
+test('the fitted soldier replaces rescue clothing while preserving RLH source bones and clips',()=>{
  const data=rlhFirefighterData(),sourceCounts=data.parts.map(p=>p.geometry.index.count);
  for(const profile of CHARACTERS){
   const {kit,gun}=setup();kit.setPalette(profile.armor);const soldier=createSoldier(kit,gun,profile);
-  assert.equal(soldier.armor.generation,2);assert.equal(soldier.nativeSkeleton.bones.length,34);
+  assert.equal(soldier.armor.generation,3);assert.equal(soldier.nativeSkeleton.bones.length,34);
   assert.deepEqual(data.parts.map(p=>p.geometry.index.count),sourceCounts,'cached source meshes must survive the military conversion');
   assert.equal(soldier.actor.parts.find(m=>m.name==='RLH helmet').geometry,data.parts.find(p=>p.key==='helmet').geometry);
+  assert.ok(soldier.actor.parts.every(m=>m.parent===null),'firefighter jacket, rescue tank and helmet are absent from the rendered scene');
+  assert.ok(soldier.armor.parts.every(m=>m.parent===soldier.root),'complete replacement suit follows the live rig');
   assert.ok(soldier.actor.parts.reduce((n,m)=>n+(m.geometry.userData.removedRescuePackTriangles||0),0)>500,'external firefighter bottle is removed from the rendered skin');
   assert.equal(soldier.actor.parts.find(m=>m.name==='RLH reflect').material.color.getHex(),profile.armor.suit,'reflective rescue strips blend into the undersuit');
   assert.ok(soldier.actor.actions.rifle&&soldier.actor.actions.walkRifle);
