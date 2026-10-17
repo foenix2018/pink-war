@@ -136,8 +136,8 @@ export function createShootingRangeArt(T,scene){
     c.fillStyle=color;c.font='bold 50px monospace';c.textAlign='center';c.fillText(label,256,61,490);
     c.fillStyle='#d3dde3';c.font='bold 25px monospace';c.fillText(sub,256,103,490);
     const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
-    const material=new T.MeshBasicMaterial({map:texture,side:T.DoubleSide,roughness:1});
-    const panel=new T.Mesh(new T.PlaneGeometry(w,h),material);panel.position.set(x,y,z);root.add(panel);
+    const material=new T.MeshBasicMaterial({map:texture,side:T.DoubleSide});
+    const panel=new T.Mesh(new T.PlaneGeometry(w,h),material);panel.position.set(x,y,z);if(z>34)panel.rotation.y=Math.PI;root.add(panel);
     signs.push({panel,texture,material});return panel;
   }
   // Professional qualification bay. Shooter stands BEHIND a continuous,
@@ -283,7 +283,7 @@ export function createShootingRangeArt(T,scene){
       item.target.scale.setScalar(t.radius*Math.min(1,Math.max(.025,(sim.time-t.born)*7)));
       item.target.rotation.y=Math.sin((sim.time-t.born)*2)*.035;
       // The plate only folds down when a confirmed impact was registered.
-      item.target.rotation.x=-1.42*eased;
+      item.target.rotation.x=hitMotion>0?-1.42*eased:0;
       item.target.position.y=-.47*t.radius*eased;
       item.pole.position.set(0,-pos.y*.5,-.22);
       item.pole.scale.y=Math.max(.05,pos.y/2);
