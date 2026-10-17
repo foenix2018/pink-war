@@ -49,3 +49,56 @@
   .range-weapon-buttons button{font-size:9px;min-height:29px;padding:5px 1px}
   .range-weapon-selector>small{font-size:8px}
 }
+
+/* V3.43: keep the sight picture unobstructed.
+   Results are anchored upper-left; the armory is a short independent strip.
+   In narrow/portrait screens they stack along the very top, never the reticle. */
+.training-hud{
+  position:fixed;top:max(14px,env(safe-area-inset-top));
+  left:max(13px,env(safe-area-inset-left));right:auto;
+  transform:none;width:248px;max-width:none;
+  padding:8px 11px 7px;text-align:left;border-radius:9px;
+  background:linear-gradient(115deg,#0b1926ee,#132333d9);
+}
+.training-hud>strong{font-size:10px;letter-spacing:.035em}
+.training-hud .training-stats{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;text-align:left;margin-top:4px}
+.training-hud .training-stats span{font-size:9px}
+.training-hud .training-stats b{display:inline;margin-left:4px;font-size:13px;line-height:1.2}
+.training-hud>small{font-size:9px;margin-top:3px}
+.training-hud .range-weapon-selector{
+ position:fixed;top:max(47px,calc(env(safe-area-inset-top) + 33px));
+ left:50vw;transform:translateX(-50%);
+ width:min(440px,calc(100vw - 335px));
+ max-width:440px;box-sizing:border-box;margin:0;padding:7px 9px 6px;
+ text-align:center;border:1px solid #8ed8e255;border-radius:9px;
+ background:linear-gradient(110deg,#0e1e2de9,#15283bcf);
+ box-shadow:0 8px 24px #0006;pointer-events:auto;
+}
+.training-hud .range-weapon-caption{font-size:9px;letter-spacing:.07em}
+.training-hud .range-weapon-buttons{gap:4px;margin-top:3px}
+.training-hud .range-weapon-buttons button{min-height:28px;padding:4px 2px;font-size:9px}
+.training-hud .range-weapon-selector>small{font-size:8px;margin-top:3px}
+@media (max-width:790px){
+ .training-hud{
+   top:max(52px,calc(env(safe-area-inset-top) + 36px));
+   left:2vw;width:96vw;max-width:96vw;padding:6px 9px;
+   text-align:center;border-radius:8px;
+ }
+ .training-hud>strong{font-size:10px}
+ .training-hud .training-stats{display:flex;justify-content:space-around;gap:4px;margin-top:2px}
+ .training-hud .training-stats span{font-size:8px}
+ .training-hud .training-stats b{font-size:12px;margin-left:1px}
+ .training-hud>small{display:inline-block;margin:2px 5px 0;font-size:8px}
+ .training-hud .range-weapon-selector{
+   top:max(146px,calc(env(safe-area-inset-top) + 130px));left:50vw;
+   width:96vw;max-width:96vw;padding:3px 6px 4px;
+ }
+ .training-hud .range-weapon-caption{font-size:8px}
+ .training-hud .range-weapon-buttons{gap:3px;margin-top:3px}
+ .training-hud .range-weapon-buttons button{min-height:25px;font-size:9px}
+ .training-hud .range-weapon-selector>small{display:none}
+}
+@media(max-height:520px) and (max-width:790px){
+ .training-hud{top:47px}
+ .training-hud .range-weapon-selector{top:123px}
+}
