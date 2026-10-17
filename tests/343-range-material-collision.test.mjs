@@ -47,6 +47,11 @@ test('untouched targets stay up, fold ONLY after a hit and remain visible for th
  assert.ok(group);assert.equal(group.children[0].rotation.x,0);
  const pos=targetPosition(target,sim.time);
  sim.shoot({x:0,y:1.6,z:22},{x:pos.x,y:pos.y-1.6,z:pos.z-22});
+ assert.equal(target.hit,false,'target must remain upright while laser travels');
+ assert.equal(sim.pendingHits.length,1);
+ sim.step(.05);art.update(sim);
+ assert.equal(group.children[0].rotation.x,0,'target still upright before bullet contact');
+ for(let i=0;i<4;i++)sim.step(.05);
  assert.ok(target.hit);assert.ok(sim.targets.includes(target));
  sim.step(.14);art.update(sim);
  assert.ok(group.children[0].rotation.x<-.05,'plate falls down visibly only after impact');
@@ -65,4 +70,22 @@ test('difficulty switches automatically but does not retract targets during a st
  assert.equal(sim.trainingLevel.number,2);
  assert.equal(sim.targets.length,1,'old targets retired only on announced drill transition');
  assert.equal(sim.targets[0].kind,'fixed-far');
+});
+
+
+test('a distant target waits for the actual finite-speed laser impact before reacting',()=>{
+ const game=new ShootingRangeGame([],()=>.5);
+ game.time=20.1;game.step(.05,{});
+ const target=game.targets[0];
+ assert.equal(target.kind,'fixed-far');
+ const pos=targetPosition(target,game.time),origin={x:0,y:1.6,z:22};
+ const fired=game.shoot(origin,{x:pos.x,y:pos.y-1.6,z:pos.z-22});
+ assert.equal(fired,true);
+ assert.equal(game.trainingHits,0);
+ assert.ok(game.pendingHits[0].due-game.time>.3,'projectile must cross 40-60 m before touching');
+ for(let i=0;i<5;i++)game.step(.05,{});
+ assert.equal(game.trainingHits,0,'distant plate still standing before laser arrival');
+ for(let i=0;i<10;i++)game.step(.05,{});
+ assert.equal(game.trainingHits,1);
+ assert.equal(target.hit,true);
 });
