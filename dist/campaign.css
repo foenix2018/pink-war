@@ -64,3 +64,16 @@
 #loading-error details{margin-top:16px;font:12px/1.5 system-ui;color:#b6c7d1}#loading-error summary{cursor:pointer}
 #loading-error pre{white-space:pre-wrap;word-break:break-word;font:11px/1.5 monospace;user-select:text;color:#c1c8d5}
 #copy-game-status{display:block;white-space:pre-wrap;word-break:break-word;font:10px/1.5 monospace;margin-top:10px;color:#bdd7d2}
+
+/* Three destinations stay available before the 3D engine loads. */
+.mode-choice{align-items:stretch}.mode-choice>button,.mode-choice>.mode-home{flex:1;text-align:center}
+.mode-home{display:flex;align-items:center;justify-content:center;text-decoration:none;color:#98a9af;padding:10px 8px;font:700 10px/1.5 system-ui;letter-spacing:.05em;border-bottom:2px solid transparent}
+.mode-home:hover,.mode-home:focus-visible{color:#fff;border-color:var(--rose)}
+/* A quiet bearing above the sights; health and ammunition remain the only readouts. */
+.objective-guide{position:absolute;z-index:14;left:calc(50% + var(--direction,0)*min(100px,22vw));top:calc(50% - 54px);width:8px;height:8px;transform:translate(-50%,-50%);pointer-events:none;color:#ffe1a2}
+.objective-guide i{display:block;width:7px;height:7px;border-radius:50%;background:#ffe5ac;box-shadow:0 0 0 2px #142025cc,0 0 10px #e7bd6970}
+.objective-guide b{position:absolute;top:-5px;left:10px;font:700 15px/1 system-ui;text-shadow:0 1px 3px #000}
+.objective-guide.behind i{background:transparent;border:1.5px solid #ffe5ac}.objective-guide.arrived i{box-shadow:0 0 0 3px #edc57740,0 0 8px #edc57790}
+.objective-guide[hidden]{display:none}
+
+.training-shortcut{display:block;font-size:9px;letter-spacing:.07em;margin:-3px 0 12px;padding:6px 0;color:#b7c8d7}.mode-home{min-height:38px}

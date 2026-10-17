@@ -2,7 +2,8 @@ import * as THREE from './vendor/three.webgpu.min.js';
 import { merge } from './geo.js';
 // Adapted from the user-supplied RLH gants pompier G D WebGPU V40.html.
 // Source SHA256: d8a7383c815755b25ddd70da5725ee56c8643de03a76895c1e2cc5ad53361abb
-// Original palm loft, leather overlays, seams, long cuff and joint dimensions are retained.
+// Original palm loft, leather overlays, seams and joints are retained. The cuff
+// now carries original AÉGIS combat armour, sharing the same anatomical axis.
 const TUILE=40; // tuiles par mètre
 function cvTex(w,h,draw,srgb=true){
   if(typeof document==='undefined')return new THREE.Texture();
@@ -200,7 +201,9 @@ const MANCHETTE=(()=>[
   {y:-.048,w:.0515,cz:.001,db:.0340,dp:.0320,n:2.2},
   {y:-.090,w:.0585,cz:.001,db:.0410,dp:.0390,n:2.15},
   {y:-.128,w:.0640,cz:.001,db:.0460,dp:.0440,n:2.12},
-  {y:-.142,w:.0655,cz:.001,db:.0475,dp:.0455,n:2.1}
+  {y:-.142,w:.0640,cz:.001,db:.0460,dp:.0430,n:2.3},
+  {y:-.190,w:.0670,cz:.001,db:.0480,dp:.0450,n:2.3},
+  {y:-.242,w:.0640,cz:.001,db:.0450,dp:.0420,n:2.25}
 ].sort((a,b)=>a.y-b.y))();
 export const RLH_DIGITS={
   index :{x:-.0335,y:.110,z:.000,r:.0104,L:[.044,.027,.023],ecart:-.07,repos:.10},
@@ -229,59 +232,61 @@ function buildSourceGlove(M,labelMaterial,{sleeve=true}={}){
   const main=new THREE.Bone(); main.name=pref+'main'; poignetB.add(main);
   const protections=new THREE.Bone(); protections.name=pref+'protections';
 
-  /* ---------- manchette (gantelet long) ---------- */
-  maille(loft(MANCHETTE,{y0:sleeve?-.142:-.024,y1:.004,ny:26,nt:64,sx}),M.textile2,avantBras,{nom:pref+'manchette_ext'});
-  maille(loft(MANCHETTE,{y0:sleeve?-.142:-.024,y1:-.004,ny:18,nt:56,sx,off:-.0022}),M.doublure,avantBras,{nom:pref+'manchette_doublure',ombre:false});
-  /* fronces élastiques discrètes à l'entrée du poignet (pas d'anneau visible) */
-  for(let i=0;i<12;i++){
-    const t=i/12*Math.PI*2, a=pointLoft(MANCHETTE,t,-.004,.0006,sx), b=pointLoft(MANCHETTE,t+.05,-.016,.0006,sx);
-    const q=new THREE.CatmullRomCurve3([a,a.clone().lerp(b,.5).add(new THREE.Vector3(0,0,0)),b]);
-    maille(new THREE.TubeGeometry(q,6,.0011,5,false),M.textile2,avantBras,{ombre:false});
-  }
-  /* bandes jaune / gris / jaune, épousant la manchette */
-  const bandes=[[-.071,-.063,M.hiVis],[-.084,-.072,M.reflect],[-.093,-.085,M.hiVis]];
-  for(const [a,b,m] of (sleeve?bandes:[])){
-    maille(loft(MANCHETTE,{y0:a,y1:b,ny:3,nt:72,sx,off:.0009}),m,avantBras,{nom:pref+'bande'});
-  }
-  for(const y of (sleeve?[-.0625,-.0935]:[])){
-    const pts=[]; for(let j=0;j<=72;j++) pts.push(pointLoft(MANCHETTE,j/72*Math.PI*2,y,.0014,sx));
-    couture(avantBras,pts);
-  }
+  /* ---------- AÉGIS sleeve: tapered shell / flexible wrist ---------- */
+  // The native forearm bone remains separate from the two flexing wrist bones.
+  // No piece crosses the palm or changes the hand/weapon attachment frame.
+  const sleeveEnd=sleeve?-.242:-.024;
+  maille(loft(MANCHETTE,{y0:sleeveEnd,y1:.004,ny:sleeve?24:6,nt:40,sx}),M.caout,avantBras,{nom:pref+'joint_avant_bras'});
+  maille(loft(MANCHETTE,{y0:sleeveEnd,y1:-.004,ny:12,nt:32,sx,off:-.0022}),M.doublure,avantBras,{nom:pref+'manchette_doublure',ombre:false});
+  // Three narrow rubber bellows preserve a natural, straight wrist transition.
+  for(const y of [-.026,-.017,-.008])maille(loft(MANCHETTE,{y0:y,y1:y+.004,ny:2,nt:36,sx,off:.001}),M.textile2,avantBras,{nom:pref+'joint_souple'});
   if(sleeve){
-  /* ourlet caoutchouté de l'ouverture */
-  maille(loft(MANCHETTE,{y0:-.1435,y1:-.135,ny:3,nt:72,sx,off:.0014}),M.caout,avantBras,{nom:pref+'ourlet'});
-  maille(loft(MANCHETTE,{y0:-.1435,y1:-.136,ny:2,nt:64,sx,off:-.0034}),M.caout,avantBras,{ombre:false});
-  {
-    const pts=[]; for(let j=0;j<=72;j++) pts.push(pointLoft(MANCHETTE,j/72*Math.PI*2,-.1325,.0012,sx)); couture(avantBras,pts);
-  }
-  }
-  /* serrage de poignet : sangle velcro sur le dos + patte côté auriculaire */
-  maille(loft(MANCHETTE,{y0:-.034,y1:-.016,ny:4,nt:34,t0:.18,t1:Math.PI-.18,sx,off:.0016}),M.velcro,avantBras,{nom:pref+'sangle'});
-  for(const y of [-.0335,-.0165]){
-    const pts=[]; for(let j=0;j<=30;j++) pts.push(pointLoft(MANCHETTE,.18+j/30*(Math.PI-.36),y,.0024,sx)); couture(avantBras,pts);
-  }
-  const patte=new THREE.Bone(); patte.name=pref+'patte_serrage';
-  const pp=pointLoft(MANCHETTE,.12,-.025,.002,sx); patte.position.copy(pp); patte.rotation.set(...R(0,0,-.10)); avantBras.add(patte);
-  maille(new THREE.BoxGeometry(.020,.018,.0028),M.caout,patte,{p:P(.009,0,.003)});
-  maille(new THREE.CylinderGeometry(.009,.009,.003,20),M.caout,patte,{p:P(.019,0,.003),r:[Math.PI/2,0,0]});
-  maille(new THREE.BoxGeometry(.004,.020,.0012),M.hiVis,patte,{p:P(.0215,0,.0048)});
-  if(sleeve){
-  /* tirette d'enfilage (boucle textile au bas, côté auriculaire) */
-  {
-    const a=pointLoft(MANCHETTE,-.35,-.132,.001,sx), b=pointLoft(MANCHETTE,-.15,-.132,.001,sx);
-    const m=a.clone().lerp(b,.5); m.y-=.026; m.x+=sx*.006;
-    const q=new THREE.CatmullRomCurve3([a,a.clone().lerp(m,.55).setY(a.y-.016),m,b.clone().lerp(m,.55).setY(b.y-.016),b]);
-    maille(new THREE.TubeGeometry(q,24,.0024,8,false),M.textile,avantBras,{nom:pref+'tirette'});
-  }
-  }
-  // Pink War identification replaces the source EN659 label (no certification claim).
-  if(sleeve){
-    const g=loft(MANCHETTE,{y0:-.123,y1:-.107,ny:3,nt:20,t0:Math.PI/2-.42,t1:Math.PI/2+.42,sx,off:.0012});
+    // Curved shell segments follow anatomical cross-sections instead of boxes.
+    // Folded edge strips and sealed ends give each plate genuine thickness.
+    const shell=(mat,y0,y1,t0,t1,off=.003,name='plaque')=>{
+      const pieces=[loft(MANCHETTE,{y0,y1,ny:10,nt:22,t0,t1,sx,off}),
+        loft(MANCHETTE,{y0,y1,ny:10,nt:22,t0:t1,t1:t0,sx,off:off-.002})];
+      for(const y of [y0,y1]){
+        const vertices=[],uv=[],idx=[];
+        for(let j=0;j<=22;j++)for(const o of [off-.002,off]){
+          const p=pointLoft(MANCHETTE,t0+(t1-t0)*j/22,y,o,sx);vertices.push(p.x,p.y,p.z);uv.push(j/22,o);
+        }
+        for(let j=0;j<22;j++){const a=j*2;idx.push(a,a+1,a+2,a+1,a+3,a+2);}
+        const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();pieces.push(g);
+      }
+      for(const t of [t0,t1]){
+        const vertices=[],uv=[],idx=[];
+        for(let j=0;j<=10;j++)for(const o of [off-.002,off]){const y=y0+(y1-y0)*j/10,p=pointLoft(MANCHETTE,t,y,o,sx);vertices.push(p.x,p.y,p.z);uv.push(j/10,o);}
+        for(let j=0;j<10;j++){const a=j*2;idx.push(a,a+1,a+2,a+1,a+3,a+2);}
+        const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();pieces.push(g);
+      }
+      const geometry=merge(pieces);pieces.forEach(g=>g.dispose());return maille(geometry,mat,avantBras,{nom:pref+name});
+    };
+    shell(M.reflect,-.222,-.046,.20,Math.PI-.20,.004,'blindage_titane');
+    shell(M.carbone,-.207,-.050,Math.PI+.30,Math.PI*2-.30,.003,'protection_interne');
+    // Offset overlapping plates give a segmented, manufactured silhouette.
+    shell(M.matelasse,-.218,-.125,.62,Math.PI-.62,.007,'plaque_identite');
+    shell(M.carbone,-.117,-.049,.52,Math.PI-.52,.007,'plaque_poignet');
+    shell(M.hiVis,-.205,-.140,1.41,1.73,.010,'incrustation_unite');
+    for(const t of [.26,Math.PI-.26]){
+      const pts=Array.from({length:13},(_,i)=>pointLoft(MANCHETTE,t,-.207+i*.012,.006,sx));
+      maille(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),12,.0017,5,false),M.metal,avantBras,{nom:pref+'arete_metal'});
+      for(const y of [-.194,-.064]){
+        const p=pointLoft(MANCHETTE,t,y,.007,sx);
+        maille(new THREE.SphereGeometry(.0028,8,5),M.metal,avantBras,{p:p.toArray(),nom:pref+'vis'});
+      }
+    }
+    // A low-profile elbow lip replaces the flared firefighter cuff/hi-vis band.
+    shell(M.caout,-.241,-.226,.12,Math.PI*2+.12,.0006,'joint_coude');
+    const g=loft(MANCHETTE,{y0:-.196,y1:-.180,ny:2,nt:12,t0:1.05,t1:1.38,sx,off:.010});
     const uv=g.attributes.uv,pz=g.attributes.position;let umin=Infinity,umax=-Infinity;
     for(let i=0;i<uv.count;i++){umin=Math.min(umin,uv.getX(i));umax=Math.max(umax,uv.getX(i));}
-    for(let i=0;i<uv.count;i++)uv.setXY(i,1-(uv.getX(i)-umin)/(umax-umin),(pz.getY(i)+.123)/.016);
-    maille(g,labelMaterial,avantBras,{nom:pref+'etiquette',ombre:false});
+    for(let i=0;i<uv.count;i++)uv.setXY(i,1-(uv.getX(i)-umin)/(umax-umin),(pz.getY(i)+.196)/.016);
+    maille(g,labelMaterial,avantBras,{nom:pref+'identification_tactique',ombre:false});
   }
+  const patte=new THREE.Bone();patte.name=pref+'patte_serrage';
+  patte.position.copy(pointLoft(MANCHETTE,.12,-.025,.002,sx));avantBras.add(patte);
+  maille(new THREE.CylinderGeometry(.005,.005,.003,12),M.metal,patte,{r:[Math.PI/2,0,0],nom:pref+'verrou_poignet'});
   /* ---------- corps de la main ---------- */
   maille(loft(RLH_PALM_SECTIONS,{y0:-.014,y1:.124,ny:30,nt:64,sx,capHaut:true}),M.textile,main,{nom:pref+'corps'});
   /* éminence thénar (base du pouce, côté paume) */
@@ -465,10 +470,10 @@ export function syncRLHMaterials(gloves){
   const set=materialSets.get(gloves);if(!set)return;
   const accent=gloves.plate.color,white=gloves.trim.color,fabric=gloves.fabric.color;
   const M=set.materials;
-  M.textile.color.copy(fabric).lerp(accent,.39);M.textile2.color.copy(fabric).lerp(accent,.23);
+  M.textile.color.copy(fabric).lerp(accent,.08);M.textile2.color.copy(fabric).lerp(accent,.06);
   M.hiVis.color.copy(accent);M.hiVis.emissive.copy(accent).multiplyScalar(.05);
-  M.matelasse.color.copy(accent).lerp(white,.18);M.fil.color.copy(white).multiplyScalar(.75);
-  M.reflect.color.copy(white);M.metal.color.copy(gloves.metal.color);
+  M.matelasse.color.copy(accent).lerp(white,.08);M.fil.color.copy(white).multiplyScalar(.75);
+  M.reflect.color.copy(white).multiplyScalar(.78);M.metal.color.copy(white).multiplyScalar(.60);
   const name=accent.b>accent.r?'LYLU':'GHJU',hex='#'+accent.getHexString();
   for(const [side,label] of Object.entries(set.labels))paintLabel(label.map,hex,name,side);
 }
@@ -483,9 +488,9 @@ function materialSet(gloves){
     cuirF:standard({color:0xb4bdc6,map:t.cuirF,bumpMap:t.cuirBump,bumpScale:.00040,roughness:.69,metalness:.02}),
     carbone:standard({color:0xbfc8d0,map:t.carbone,bumpMap:t.carboneBump,bumpScale:.00015,roughness:.60,metalness:.16}),
     caout:standard({color:0x282d32,roughness:.85}),
-    reflect:standard({map:t.reflect,roughness:.36,metalness:.32}),
+    reflect:standard({map:t.reflect,roughness:.28,metalness:.82,envMap:gloves.trim.envMap||null,envMapIntensity:.85}),
     hiVis:standard({roughness:.6,emissiveIntensity:.1}),
-    matelasse:standard({map:t.textile2,bumpMap:t.carboneBump,bumpScale:.00028,roughness:.86}),
+    matelasse:standard({roughness:.37,metalness:.65,envMap:gloves.plate.envMap||null,envMapIntensity:.65}),
     velcro:standard({map:t.velcro,roughness:.98}),fil:standard({roughness:.90}),metal:standard({roughness:.35,metalness:.8})
   };
   const labels={};for(const side of ['D','G']){
@@ -502,7 +507,7 @@ function template(sleeve){
   const model=buildSourceGlove(M,label,{sleeve});
   if(sleeve){
     // A narrow titanium wrist clasp is the existing level-four gauntlet upgrade.
-    const mesh=maille(loft(MANCHETTE,{y0:-.041,y1:-.037,ny:2,nt:40,sx:1,off:.0013}),M.metal,model.racine.children[0],{nom:'RLH premium clasp'});mesh.userData.minLevel=4;
+    const mesh=maille(loft(MANCHETTE,{y0:-.112,y1:-.052,ny:6,nt:5,t0:1.48,t1:1.66,sx:1,off:.010}),M.metal,model.racine.children[0],{nom:'AÉGIS canal renforce'});mesh.userData.minLevel=4;
   }
   model.racine.updateMatrixWorld(true);
   const bones=[],meshes=[];model.racine.traverse(o=>{if(o.isBone){if(!o.name)o.name='RLH_joint_'+bones.length;bones.push(o);}else if(o.isMesh)meshes.push(o);});
@@ -558,12 +563,12 @@ export function createRLHGlove(gloves,{mirror=false,sleeve=true}={}){
     // A fist and open thumb stay inside a conservative fixed bounding volume.
     // The long RLH cuff also rotates toward the game's forearm, independently
     // of wrist flexion. Include that swept volume in the culling bounds.
-    mesh.boundingBox=new THREE.Box3(new THREE.Vector3(-.22,sleeve?-.24:-.07,-.24),new THREE.Vector3(.22,.25,.24));
-    mesh.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,.02,0),.34);
+    mesh.boundingBox=new THREE.Box3(new THREE.Vector3(-.28,sleeve?-.29:-.07,-.29),new THREE.Vector3(.22,.25,.24));
+    mesh.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,.02,0),.39);
     group.add(mesh);meshes.push({mesh,part});
   }
   const rig=controlRig(root);let disposed=false,level=1,side=mirror?'G':'D';
-  Object.assign(group.userData,{source:'RLH V40',skeleton,rig,parts:meshes,materials:set.materials,
+  Object.assign(group.userData,{source:'RLH V40',armor:'AEGIS-II',skeleton,rig,parts:meshes,materials:set.materials,
     setSide(next){if(next===side||!set.labels[next])return;side=next;for(const {mesh,part} of meshes)if(part.key==='label')mesh.material=set.labels[side];},
     setLevel(n){level=Math.max(1,Math.min(10,Math.floor(n||1)));for(const {mesh,part} of meshes)mesh.visible=part.level<=level;},
     dispose(){if(disposed)return;disposed=true;skeleton.dispose();},

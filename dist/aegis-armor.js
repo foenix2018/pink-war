@@ -1,10 +1,10 @@
 import * as T from './vendor/three.webgpu.min.js';
-import { armorPanel, bevelBox, ball, limb, matrix, bake, merge } from './geo.js';
+import { armorPanel, bevelBox, ball, limb, loft, matrix, bake, merge } from './geo.js';
 
 // Original Pink War suit. Geometry is authored in the RLH bind pose, then rigidly
 // skinned to its real bones. Cloth, finger rigs and native animations remain RLH.
 // Broad military sci-fi influences only: no franchise meshes, marks or textures.
-export const AEGIS = Object.freeze({ name:'AÉGIS', generation:1 });
+export const AEGIS = Object.freeze({ name:'AÉGIS', generation:2 });
 const templateCache=new WeakMap();
 
 function template(data,masculine) {
@@ -60,12 +60,12 @@ function template(data,masculine) {
     const arm=side+'Arm',fore=side+'ForeArm',leg=side+'UpLeg',knee=side+'Leg',foot=side+'Foot';
     plate(arm,'pearl',shoulder,[sign*.258,1.458,-.015],[masculine?1.13:1,.96,1],[0,sign*-.77,sign*-.10]);
     plate(arm,'rose',shoulder,[sign*.270,1.471,-.035],[masculine?.91:.80,.71,.5],[0,sign*-.77,sign*-.10]);
-    limbPlate(leg,knee,'pearl',thigh,.102,[1,1,.72],.51,5);
-    limbPlate(leg,knee,'rose',thigh,.120,[.43,.83,.45],.51,5);
-    limbPlate(knee,foot,'pearl',shin,.082,[1,1,.77],.51,7);
-    limbPlate(knee,foot,'rose',shin,.099,[.36,.89,.45],.51,7);
-    limbPlate(fore,side+'Hand','dark',forearm,.064,[1.16,1.10,1],.49,4);
-    limbPlate(fore,side+'Hand','pearl',forearm,.080,[.86,.88,.65],.49,4);
+    limbPlate(leg,knee,'pearl',thigh,.102,[1,1,.72],.51,1);
+    limbPlate(leg,knee,'rose',thigh,.120,[.43,.83,.45],.51,1);
+    limbPlate(knee,foot,'pearl',shin,.082,[1,1,.77],.51,1);
+    limbPlate(knee,foot,'rose',shin,.099,[.36,.89,.45],.51,1);
+    limbPlate(fore,side+'Hand','dark',forearm,.064,[1.16,1.10,1],.49,1);
+    limbPlate(fore,side+'Hand','pearl',forearm,.080,[.86,.88,.65],.49,1);
     // Source leather boot and sole remain visible around an articulated instep.
     const boot=at(foot);
     plate(foot,'rose',[[-.066,-.04],[.067,-.04],[.08,.017],[.036,.041],[-.038,.041],[-.08,.017]],
@@ -85,13 +85,30 @@ function template(data,masculine) {
     // Level 9: reinforced bracer flanges, without a plate on the flexing palm.
     limbPlate(fore,side+'Hand','rose',forearm,.097,[.36,.9,.5],.49,9);
   }
-  // Native ARI bottle/harness is retained: new side rails turn the rescue pack
-  // into a compact life-support assembly rather than an unrelated magic backpack.
+  // Compact original field power pack replaces the fire brigade air cylinder.
+  // Rounded profile / curved shoulders keep the rear silhouette close to the
+  // spine and retain flexible clearance at the waist.
+  add('Spine2','dark',loft([[1.145,.105,.033,.19],[1.19,.144,.054,.19],[1.45,.145,.064,.19],[1.56,.106,.035,.19]],18));
+  plate('Spine2','pearl',[[-.096,-.15],[.096,-.15],[.126,-.06],[.124,.10],[.07,.145],[-.07,.145],[-.124,.10],[-.126,-.06]],
+    [0,1.37,.253],[1,1,.85],[0,Math.PI,0]);
+  plate('Spine2','rose',[[-.035,-.114],[.035,-.114],[.058,.072],[0,.112],[-.058,.072]],
+    [0,1.37,.280],[1,1,.55],[0,Math.PI,0]);
   for(const sign of [-1,1]) {
-    link('Spine2','dark',[sign*.102,1.49,.295],[sign*.095,1.245,.30],.018,.014);
-    box('Spine2','rose',[.036,.17,.030],[sign*.112,1.382,.298]);
-    box('Spine2','glow',[.014,.007,.004],[sign*.112,1.458,.318], [0,0,0],6);
-    box('Spine2','pearl',[.045,.051,.030],[sign*.136,1.342,.265],[0,0,0],6);
+    // Dark vent grilles sit inside the armour, below low recessed cell lights.
+    for(let i=0;i<4;i++)box('Spine2','dark',[.034,.008,.007],[sign*.082,1.32+i*.024,.283]);
+    box('Spine2','glow',[.009,.038,.004],[sign*.108,1.458,.271],[0,0,0],6);
+    box('Spine2','pearl',[.036,.051,.024],[sign*.142,1.342,.208],[0,0,0],6);
+    // A real load-bearing combat belt with individual angled energy magazines.
+    const hip=at(sign<0?'LeftUpLeg':'RightUpLeg');
+    plate('Hips','dark',[[-.045,-.054],[.042,-.054],[.051,.034],[.029,.060],[-.029,.060],[-.052,.034]],
+      [sign*.170,1.02,-.165],[1,1,1],[0,sign*.24,0]);
+    for(let i=0;i<2;i++){
+      box('Hips','pearl',[.028,.079,.028],[sign*(.108+i*.043),1.045,-.181],[.09,sign*.12,0]);
+      box('Hips','rose',[.013,.047,.006],[sign*(.108+i*.043),1.05,-.200],[.09,sign*.12,0]);
+    }
+    // Overlapping hip guard and shoulder trim read as field armour from level 1.
+    plate(sign<0?'LeftUpLeg':'RightUpLeg','dark',[[-.041,-.09],[.041,-.09],[.060,.04],[0,.075],[-.060,.04]],
+      [hip.x+sign*.067,hip.y-.097,hip.z-.070],[1,1,.75],[0,sign*-.65,0]);
   }
   box('Spine2','dark',[.070,.046,.025],[0,1.376,-.205],[0,0,0],2);
   box('Spine2','glow',[.034,.004,.004],[0,1.379,-.221],[0,0,0],2);

@@ -1,0 +1,7 @@
+# Arsenal MK III — 3.40
+
+Sources : les cinq GLB Kenney Blaster Kit 2.1 déjà présents en production 3.39. Licence CC0, fichiers originaux conservés dans `dist/assets/kenney`. Les dérivés Pink War sont construits localement par `tools/build-blaster-mk3.py` avec Blender 4.3.2 ; aucune nouvelle dépendance réseau de jeu.
+
+Le chanfrein suit les véritables arêtes. Des rayons contre le maillage d’origine placent les panneaux de refroidissement sur la surface ; les manchons sont centrés sur l’extrémité existante du canon. Poignées, magasins, transformations et repères de prise en main 3.39 restent conservés. Métal usiné, céramique, renfoncements et lentilles ont leurs réponses de matériau distinctes. Une carte de surface distingue le caoutchouc, les pièces anodisées et le métal nu ; les armes reprennent les réflexions déjà utilisées par les équipements du jeu. Chaque arme est regroupée en cinq matériaux maximum et reste sous 8 000 triangles ; le manifeste `dist/assets/pink-war/models.json` donne les valeurs réelles.
+
+Les modèles MK III sont chargés depuis le même site. En cas d’échec, les originaux Kenney restent disponibles, puis l’arme procédurale intégrée sert de secours. L’export HTML incorpore les cinq dérivés et leur palette, ainsi que les sons, pour le jeu hors ligne. Les clips de recharge, le recul, les grossissements, la balistique, les dégâts et les impacts lumineux suivent la logique de production existante.

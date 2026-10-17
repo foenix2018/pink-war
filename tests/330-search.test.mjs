@@ -11,7 +11,7 @@ test('a ground robot follows the last heard position around nested cover without
     {x:4,z:5,hx:1,hz:5,height:3}
   ];
   const g=new CampaignLevel1(walls,()=>.5);
-  g.stage='combat';g.spawned=1;g.toSpawn=3;
+  g.enemies=[];g.openingSpawned=8;g.stage='combat';g.spawned=1;g.toSpawn=3;
   g.activePortals=[{id:101,x:0,z:0,yaw:0,openedAt:0}];g.nextSpawnAt=0;
   g.spawnEnemy();const e=g.enemies.find(e=>!e.opening);
   e.lastKnownX=0;e.lastKnownZ=20;e.lastKnownHeight=0;e.alertedUntil=100;

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DesktopGamepadInput, desktopAxis } from '../dist/desktop-input.js';
+import { DesktopGamepadInput, desktopAxis, DESKTOP_BUTTONS } from '../dist/desktop-input.js';
 import { VRController } from '../dist/vr.js';
 import { ArenaGame } from '../dist/game-logic.js';
 
@@ -57,8 +57,8 @@ test('switching desktop controllers treats a held action as one fresh press', ()
     const controller = Object.assign(Object.create(VRController.prototype), {mode: 'off', previous: new Map(), hooks: {
       phase: () => 'playing', game: () => ({reload: () => {reloads++; return true;}})
     }});
-    controller.input(); a.buttons[0].pressed = true; controller.input(); controller.input(); assert.equal(reloads, 1);
-    b.buttons[0].pressed = true; a.buttons[0].pressed = false; controller.input(); controller.input(); assert.equal(reloads, 2);
+    controller.input(); a.buttons[DESKTOP_BUTTONS.reload].pressed = true; controller.input(); controller.input(); assert.equal(reloads, 1);
+    b.buttons[DESKTOP_BUTTONS.reload].pressed = true; a.buttons[DESKTOP_BUTTONS.reload].pressed = false; controller.input(); controller.input(); assert.equal(reloads, 2);
   } finally {
     if (descriptor) Object.defineProperty(navigator, 'getGamepads', descriptor);
     else delete navigator.getGamepads;

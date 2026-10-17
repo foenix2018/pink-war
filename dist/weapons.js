@@ -424,7 +424,7 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
       // float alongside the Kenney model. The real GLB is a closed assembly.
       const rail=batteries[index];if(rail){rail.visible=false;rail.userData.shell.visible=false;}
       if(g.userData.index===index)g.userData.setVariant(index);
-    },KENNEY_HOLD);
+    },KENNEY_HOLD,mats.steel.envMap);
   g.userData.setVariant(0); g.userData.setLevel(1);
   let disposed=false;
   g.userData.disposeDynamic=()=>{

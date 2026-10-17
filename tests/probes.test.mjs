@@ -84,11 +84,11 @@ test('probe hit zones follow airborne height: iris critical, hull normal, fans r
   assert.equal(traceEnemyHit({x:0,y:1.55,z:-2},{x:0,y:1.55,z:2},p),null,'no invisible ground-level humanoid hitbox');
 });
 
-test('probe visuals share five bounded batches, articulate fans and iris, and keep private skeletons',()=>{
+test('probe visuals share six bounded batches including private alert optics, articulate fans and iris, and keep private skeletons',()=>{
   const solid=()=>new T.MeshStandardMaterial(),glow=()=>new T.MeshBasicMaterial();
   const factory=createEnemyFactory({monster:solid(),monsterElite:solid(),monsterFace:solid(),cyan:glow(),rose:glow(),violet:glow()});
   const a=factory.create(false,true,'probe'),b=factory.create(false,true,'probe');
-  const meshes=a.children.filter(c=>c.isMesh),other=b.children.filter(c=>c.isMesh);assert.equal(meshes.length,5);
+  const meshes=a.children.filter(c=>c.isMesh),other=b.children.filter(c=>c.isMesh);assert.equal(meshes.length,6);
   for(let i=0;i<meshes.length;i++)assert.equal(meshes[i].geometry,other[i].geometry);
   assert.notEqual(a.userData.skeleton,b.userData.skeleton);assert.equal(a.userData.legs.length,0);
   const untouched=b.userData.skeleton.bones.map(bone=>bone.quaternion.toArray());

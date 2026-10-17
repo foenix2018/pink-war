@@ -1,5 +1,6 @@
 import * as T from './vendor/three.webgpu.min.js';
 import { createRLHGlove, syncRLHMaterials } from './rlh-gloves.js';
+import { loft, armorPanel, bake, matrix, merge } from './geo.js';
 
 // Keep the exact weapon/IK attachment frame. The imported RLH model has its own
 // anatomical wrist origin; this adapter aligns that origin with the game's wrist.
@@ -7,7 +8,11 @@ export const GRIP=Object.freeze({halfWidth:.018,halfDepth:.0235,wrist:[.03,.052,
 const basis=new T.Matrix4().makeBasis(new T.Vector3(0,-1,0),new T.Vector3(0,0,-1),new T.Vector3(1,0,0));
 const orientation=new T.Quaternion().setFromRotationMatrix(basis).premultiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),-.35));
 const clamp=n=>Math.max(0,Math.min(1,Number(n)||0));
-const trackedForearmGeometry=new T.CapsuleGeometry(.045,.3,4,16);
+// Anatomical transition toward the elbow, shared by both tracked hands. Its
+// radius meets the AÉGIS sleeve rather than emerging as a detached capsule.
+const trackedForearmGeometry=loft([[-.43,.037,.031],[-.40,.048,.037],[-.32,.060,.044],[-.235,.064,.045]],18);
+const trackedElbowPlate=armorPanel([[-.034,-.047],[.034,-.047],[.049,.020],[.031,.051],[-.031,.051],[-.049,.020]],.009,.008);
+const trackedPlateGeometry=merge([bake(trackedElbowPlate,matrix([0,-.351,.046],[0,Math.PI,0])),bake(trackedElbowPlate,matrix([0,-.285,.049],[0,Math.PI,0],[.83,.58,.75]))]);
 export const syncGloveMaterials=syncRLHMaterials;
 
 export function createGlove(materials,{mirror=false,sleeve=true,forearm=GRIP.forearm}={}){
@@ -31,7 +36,10 @@ export function createGlove(materials,{mirror=false,sleeve=true,forearm=GRIP.for
     setForearm(direction=forearm){localDirection.set(...direction).normalize().applyQuaternion(toModel);rig.forearm.quaternion.setFromUnitVectors(cuffAxis,localDirection);},
     extendForearm(){
       if(group.userData.extendedForearm)return;
-      const arm=new T.Mesh(trackedForearmGeometry,materials.fabric);arm.name='Tracked forearm inside RLH cuff';arm.position.y=-.3;arm.scale.set(1.12,1,.87);rig.forearm.add(arm);group.userData.extendedForearm=arm;
+      const arm=new T.Group();arm.name='AÉGIS articulated forearm';
+      const undersuit=new T.Mesh(trackedForearmGeometry,materials.fabric),plates=new T.Mesh(trackedPlateGeometry,materials.trim);
+      undersuit.name='AÉGIS elbow undersuit';plates.name='AÉGIS overlapping elbow armour';
+      arm.add(undersuit,plates);rig.forearm.add(arm);group.userData.extendedForearm=arm;
     },
     dispose:()=>model.userData.dispose()
   });

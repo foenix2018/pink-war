@@ -170,14 +170,14 @@ test('Quest right A jumps independently of left-stick crouch and right-hand fire
  down(left,3,false);state.input();
  down(right,0);down(right,4);input=state.input();assert.equal(input.fire,true);assert.equal(input.jump,true);
 });
-test('desktop left trigger aims without jumping and Y jumps on a fresh press',()=>{
+test('desktop left trigger aims without jumping and Cross/A jumps on a fresh press',()=>{
  const previous=Object.getOwnPropertyDescriptor(globalThis,'navigator');
  const pad={id:'Standard',index:0,connected:true,mapping:'standard',axes:[0,0,0,0],buttons:Array.from({length:16},()=>({pressed:false,value:0}))};
  Object.defineProperty(globalThis,'navigator',{configurable:true,value:{getGamepads:()=>[pad]}});
  try{
   const {state}=setup();state.mode='off';state.input();
   pad.buttons[6]={pressed:true,value:1};let input=state.input();assert.equal(input.precision,true);assert.equal(input.jump,false);
-  pad.buttons[3]={pressed:true,value:1};input=state.input();assert.equal(input.jump,true);assert.equal(state.input().jump,false);
+  pad.buttons[0]={pressed:true,value:1};input=state.input();assert.equal(input.jump,true);assert.equal(state.input().jump,false);
  }finally{if(previous)Object.defineProperty(globalThis,'navigator',previous);else delete globalThis.navigator;}
 });
 test('the free-hand grip sprints when squeezed, and the stick click enters crouch stance',()=>{
@@ -288,7 +288,7 @@ test('the VR portal strip and health display release all resources on headset ex
   const original=globalThis.document;globalThis.document={createElement:()=>({width:0,height:0})};
   try{
     const camera=new T.PerspectiveCamera(),state=Object.assign(Object.create(VRController.prototype),{hooks:{world:()=>({T,camera})}});
-    state.makeHUD();assert.equal(camera.children.length,2);assert.ok(state.hud.portal);
+    state.makeHUD();assert.equal(camera.children.length,3);assert.ok(state.hud.portal);
     let disposed=0;for(const item of [state.hud,state.hud.portal])for(const resource of [item.plane.geometry,item.plane.material,item.texture])resource.addEventListener('dispose',()=>disposed++);
     state.removeHUD();assert.equal(camera.children.length,0);assert.equal(disposed,6);assert.equal(state.hud,null);assert.doesNotThrow(()=>state.removeHUD());
   }finally{globalThis.document=original;}

@@ -10,12 +10,15 @@ with tempfile.TemporaryDirectory(prefix='pink-war-') as temporary:
     javascript = '(async () => {\n' + bundle.read_text() + '\n})();'
     samples={id:'data:audio/wav;base64,'+base64.b64encode((project/('dist/audio/kenney/'+id+'.wav')).read_bytes()).decode() for id in ['r9','bloom','lance','thorn','nova']}
     javascript='globalThis.__PINKWAR_AUDIO_SAMPLES='+json.dumps(samples)+';\n'+javascript
+    blasters={p.name:base64.b64encode(p.read_bytes()).decode() for p in (project/'dist/assets/pink-war').glob('*.glb')}
+    palette='data:image/png;base64,'+base64.b64encode((project/'dist/assets/kenney/colormap.png').read_bytes()).decode()
+    javascript='globalThis.__PINKWAR_BLASTER_ASSETS='+json.dumps(blasters)+';\nglobalThis.__PINKWAR_BLASTER_PALETTE='+json.dumps(palette)+';\n'+javascript
     check = pathlib.Path(temporary) / 'check.js'; check.write_text(javascript)
     subprocess.run(['node','--check',str(check)], check=True)
     javascript = re.sub(r'</script', r'<\/script', javascript, flags=re.IGNORECASE)
     html = (project / 'dist/index.html').read_text()
-    html = re.sub(r'(src|href)="(entry\.js|(?:style|hud|campaign)\.css)\?[^"]*"', r'\1="\2"', html)
-    for stylesheet in ['style.css', 'hud.css', 'campaign.css']:
+    html = re.sub(r'(src|href)="(entry\.js|(?:style|hud|campaign|training)\.css)\?[^"]*"', r'\1="\2"', html)
+    for stylesheet in ['style.css', 'hud.css', 'campaign.css', 'training.css']:
         link = '<link rel="stylesheet" href="'+stylesheet+'">'
         if link in html:
             html = html.replace(link, '<style>\n'+(project/'dist'/stylesheet).read_text()+'\n</style>')
@@ -38,9 +41,9 @@ with tempfile.TemporaryDirectory(prefix='pink-war-') as temporary:
     html = html.replace('href="icon.svg"','href="data:image/svg+xml,'+urllib.parse.quote((project/'dist/icon.svg').read_text(),safe='')+'"')
     html = html.replace('  <link rel="manifest" href="manifest.webmanifest">\n','').replace('class="brand" href="./"','class="brand" href="#"')
     html = html.replace('href="mains.html"','href="https://pink-war.vercel.app/mains.html"').replace('href="personnage.html"','href="https://pink-war.vercel.app/personnage.html"').replace('href="propositions.html"','href="https://pink-war.vercel.app/propositions.html"').replace('href="at-home.html"','href="https://pink-war.vercel.app/at-home.html"')
-    html = html.replace('<script type="module" src="entry.js"></script>','<script>\n'+javascript+'\n</script>')
+    html = html.replace('<script type="module" src="entry.js"></script>','<script type="module">\n'+javascript+'\n</script>')
     license_text = '\n'.join((project/('dist/vendor/'+name)).read_text() for name in ['LICENSE.three.txt','LICENSE.fflate.txt']).replace('--','—')
-    html = html.replace('<!doctype html>','<!doctype html>\n<!-- Pink war 3.33 — HTML autonome. Three.js :\n'+license_text+'\n-->')
+    html = html.replace('<!doctype html>','<!doctype html>\n<!-- Pink war 3.40 — HTML autonome. Three.js :\n'+license_text+'\n-->')
     assert 'src="entry.js"' not in html and 'href="style.css"' not in html
     output.parent.mkdir(parents=True,exist_ok=True); output.write_text(html)
     print(str(output), output.stat().st_size, 'bytes')

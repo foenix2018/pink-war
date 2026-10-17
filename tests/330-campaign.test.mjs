@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CampaignLevel1, LEVEL1 } from '../dist/campaign-level1.js';
+import { CampaignLevel1, LEVEL1, LEVEL1_ENCOUNTERS } from '../dist/campaign-level1.js';
 import { COVER_WALLS, segmentBox } from '../dist/game-logic.js';
 import { createTraversalObstacles } from '../dist/world-layout.js';
 import { enemyScale } from '../dist/enemy-combat.js';
@@ -23,7 +23,7 @@ test('level 1 starts occupied, then preserves ordered objectives and the portal 
   assert.equal(game.player.z, 72);
   assert.equal(game.getInteraction(), null);
   game.invulnerable=1000;advance(game, 12);
-  assert.equal(game.enemies.filter(e=>e.opening).length, 2);
+  assert.equal(game.enemies.filter(e=>e.opening).length, 8);
   assert.equal(game.activePortals.length, 0);
   at(game, LEVEL1.archive);
   assert.equal(game.interact(), false, 'the archive has no power yet');
@@ -35,8 +35,11 @@ test('level 1 starts occupied, then preserves ordered objectives and the portal 
   advance(game, .2);
   assert.equal(game.stage, 'combat');
   assert.equal(game.activePortals.length, 1);
-  assert.equal(game.toSpawn, 4);
-  advance(game, 2.8);
+  assert.equal(game.toSpawn, 8);
+  advance(game, 3.1);
+  assert.equal(game.enemies.filter(e=>!e.opening).length,0,'8 active initial enemies cap portal additions');
+  game.enemies=[]; // isolate the delayed portal spawn after the population-cap check
+  advance(game, 0);
   assert.equal(game.enemies.filter(e=>!e.opening).length, 0);
   advance(game, .3);
   const portalEnemy=game.enemies.find(e=>!e.opening);assert.equal(portalEnemy.form, 'probe');assert.equal(portalEnemy.grounded,false);
@@ -131,75 +134,45 @@ test('pause and death freeze objective timers, and replay clears the finite enco
   assert.equal(game.ammo[0], 12);
 });
 
-test('two scripted patrols can be defeated with actual R9 projectiles before the elevated ending', () => {
-  const game = new CampaignLevel1([], random);
-  game.invulnerable = 1000;
-  archive(game);
-  advance(game, 5.1);
-  const forms = [], recorded = new Set();
-  let attempts = 0;
-  // Aim at the physical torso of each model. Projectiles retain their direction;
-  // this test uses no damageEnemy shortcut, hit-assist or injected kills.
-  while (game.stage === 'combat' && attempts++ < 6000) {
-    for (const enemy of game.enemies) {
-      if (!recorded.has(enemy.id)) { recorded.add(enemy.id); forms.push(enemy.form); }
-      enemy.speed = 0;
-      enemy.stunnedUntil = 1000;
+test('all 32 enemies are defeated with real R9 projectiles across the longer finite mission', () => {
+  const game=new CampaignLevel1([],random);game.invulnerable=1000;
+  archive(game);advance(game,5.1);
+  const observed=new Set();
+  function defeat(stage){let attempts=0;
+    while(game.stage===stage&&attempts++<12000){
+      assert.ok(game.enemies.length<=8,'bounded simultaneous AI load');
+      for(const e of game.enemies){observed.add(e.form);e.speed=0;e.stunnedUntil=1000;}
+      const target=game.enemies[0];
+      if(target){
+        if(game.ammo[0]===0)game.reload();
+        const scale=enemyScale(target.form,target.elite),origin={x:game.player.x,y:game.player.elevation+1.45,z:game.player.z};
+        const y=target.elevation+(target.form==='probe'?.55:target.form==='scuttler'?.79:1.27)*scale;
+        game.shoot(origin,{x:target.x-origin.x,y:y-origin.y,z:target.z-origin.z});
+      }
+      game.step(.025);
     }
-    const target = game.enemies[0];
-    if (target) {
-      if (game.ammo[0] === 0) game.reload();
-      const scale = enemyScale(target.form, target.elite);
-      const torso = { x: target.x, y: target.elevation + (target.form === 'probe' ? .55 : target.form === 'scuttler' ? .79 : 1.27) * scale, z: target.z };
-      const origin = { x: game.player.x, y: game.player.elevation + 1.45, z: game.player.z };
-      game.shoot(origin, { x: torso.x - origin.x, y: torso.y - origin.y, z: torso.z - origin.z });
-    }
-    game.step(.025);
+    assert.ok(attempts<12000,`${stage} can be completed with physical bullets`);
   }
-  assert.ok(attempts < 6000, 'all four real collision models can be shot');
-  assert.deepEqual(forms, ['probe','stalker','probe', 'stalker', 'scuttler', 'seer']);
-  assert.equal(game.kills, 6);
-  assert.equal(game.toSpawn, 0);
-  assert.equal(game.stage, 'crossing');
+  defeat('combat');assert.equal(game.kills,16);assert.equal(game.stage,'investigation');
   assert.ok(game.weaponOffers.some(o=>o.index===1));
-  assert.equal(game.state, 'playing');
-  assert.equal(game.completed, false);
-  const events = game.drainEvents();
-  assert.equal(events.filter(e => e.type === 'clear').length, 1);
-  assert.equal(events.some(e => e.type === 'win'), false);
-  advance(game, 30);
-  assert.equal(game.enemies.length, 0);
-  assert.equal(game.wave, 1);
-  assert.equal(game.activePortals.length, 0);
-  at(game, LEVEL1.junction,0);advance(game,.1);
-  assert.equal(game.stage,'combat2');
-  attempts=0;
-  while(game.stage==='combat2'&&attempts++<6000){
-    const target=game.enemies[0];if(target){target.speed=0;target.stunnedUntil=1000;if(game.ammo[0]===0)game.reload();
-      const scale=enemyScale(target.form,target.elite);const origin={x:game.player.x,y:game.player.elevation+1.45,z:game.player.z};
-      const y=target.elevation+(target.form==='probe'?.55:target.form==='scuttler'?.79:1.27)*scale;
-      game.shoot(origin,{x:target.x-origin.x,y:y-origin.y,z:target.z-origin.z});
-    }game.step(.025);
-  }
-  assert.ok(attempts<6000);assert.equal(game.kills,10);assert.equal(game.stage,'exit');
-  at(game, LEVEL1.exit);
-  assert.equal(game.interact(), true);
-  const end = game.drainEvents();
-  assert.equal(end.filter(e => e.type === 'campaign-complete').length, 1);
-  assert.equal(end.filter(e => e.type === 'win').length, 1);
-  assert.equal(game.startEndless(), false);
-  assert.equal(game.beginWave(), false);
-  assert.equal(game.spawnEnemy(), false);
-  assert.equal(game.interact(), false);
-  const finished = game.snapshot();
-  advance(game, 30);
-  assert.deepEqual(game.snapshot(), finished);
-  assert.equal(finished.campaign.stage, 'complete');
+  at(game,LEVEL1.investigation);assert.equal(game.interact(),true);assert.equal(game.investigationRead,true);
+  at(game,LEVEL1.junction,0);advance(game,.1);assert.equal(game.stage,'combat2');
+  defeat('combat2');assert.equal(game.kills,24);assert.equal(game.stage,'sabotage');
+  assert.ok(game.weaponOffers.some(o=>o.index===2));
+  at(game,LEVEL1.sabotage);assert.equal(game.interact(),true);assert.equal(game.sabotaged,true);
+  defeat('combat3');assert.equal(game.kills,32);assert.equal(game.stage,'exit');
+  assert.deepEqual([...observed].sort(),['probe','stalker','scuttler','seer','brute','listener','bulwark'].sort());
+  assert.equal(game.campaign.total,32);assert.equal(game.campaign.spawned,32);
+  const preEnd=game.drainEvents();assert.equal(preEnd.filter(e=>e.type==='clear').length,3);assert.equal(preEnd.some(e=>e.type==='win'),false);
+  at(game,LEVEL1.exit);assert.equal(game.interact(),true);
+  const end=game.drainEvents();assert.equal(end.filter(e=>e.type==='campaign-complete').length,1);assert.equal(end.filter(e=>e.type==='win').length,1);
+  assert.equal(game.startEndless(),false);assert.equal(game.beginWave(),false);assert.equal(game.spawnEnemy(),false);assert.equal(game.interact(),false);
+  const finished=game.snapshot();advance(game,30);assert.deepEqual(game.snapshot(),finished);assert.equal(finished.campaign.stage,'complete');
 });
 
 test('a missed laser remains a miss and current cover blocks campaign shots', () => {
   const game = new CampaignLevel1([], random);
-  archive(game); advance(game, 8.2);
+  archive(game);game.enemies=[]; advance(game, 8.2);
   const enemy = game.enemies.find(e=>!e.opening);
   enemy.stunnedUntil = 1000; enemy.speed = 0;
   const hp = enemy.hp;

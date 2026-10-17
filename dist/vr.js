@@ -1,6 +1,7 @@
 import { clamp, segmentBox, segmentSphere, traceEnemyHit } from './game-logic.js';
 import { portalIndicators } from './portal-indicator.js';
-import { DesktopGamepadInput, desktopAxis } from './desktop-input.js';
+import { createObjectiveGuide, objectiveIndicator } from './objective-guidance.js';
+import { DesktopGamepadInput, desktopAxis, DESKTOP_BUTTONS } from './desktop-input.js';
 import { syncTrackedHands } from './xr-hands.js';
 import { WEAPON_FRAME } from './weapons.js';
 import { createMagnifiedSight } from './magnified-sight.js';
@@ -149,9 +150,11 @@ export class VRController {
     const portalPlane=new T.Mesh(new T.PlaneGeometry(.50,.03125),new T.MeshBasicMaterial({map:portalTexture,transparent:true,depthTest:false,depthWrite:false,toneMapped:false}));
     portalPlane.position.set(0,.25,-1.05);portalPlane.renderOrder=100;portalPlane.frustumCulled=false;camera.add(portalPlane);
     this.hud.portal={canvas:portalCanvas,texture:portalTexture,plane:portalPlane};
+    this.hud.objective=createObjectiveGuide(T,camera);
   }
   removeHUD() {
     if (!this.hud) return;
+    this.hud.objective?.dispose();
     if(this.hud.portal){const {plane,texture}=this.hud.portal;plane.removeFromParent();plane.geometry.dispose();plane.material.dispose();texture.dispose();}
     this.hud.plane.removeFromParent(); this.hud.plane.geometry.dispose(); this.hud.plane.material.dispose(); this.hud.texture.dispose(); this.hud = null;
   }
@@ -414,7 +417,8 @@ export class VRController {
     }
     const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, fire: false, sprint: false, precision: false, aim:false, jump: false, pickup: false, crouchToggle: false };
     const xr = this.mode === 'xr', cfg = settingsOf(this), mainHand = cfg.hand, sideHand = otherHand(mainHand);
-    const desktop = xr ? null : (this.desktopGamepads ||= new DesktopGamepadInput()).select(navigator.getGamepads?.() || []);
+    const focused=typeof document==='undefined'||(!document.hidden&&(!document.hasFocus||document.hasFocus()));
+    const desktop = xr ? null : (this.desktopGamepads ||= new DesktopGamepadInput()).select(navigator.getGamepads?.() || [],{focused});
     if (!xr && this.desktopPadKey !== this.desktopGamepads.activeKey) { this.previous.clear(); this.desktopPadKey = this.desktopGamepads.activeKey; }
     const sources = xr ? [...(this.session?.inputSources || [])] : desktop ? [{ gamepad: desktop, handedness: 'both' }] : [];
     const phase = this.hooks.phase?.() || 'playing', actions = new Set();
@@ -431,13 +435,13 @@ export class VRController {
       const axis = xr ? deadzone : desktopAxis;
       if (side && tracked) {
         result.x += axis(axes[stick]); result.z += axis(axes[stick + 1]);
-        result.sprint ||= (xr ? squeezed(pad.buttons[1]) : pressed(pad.buttons[10]));
+        result.sprint ||= (xr ? squeezed(pad.buttons[1]) : pressed(pad.buttons[DESKTOP_BUTTONS.sprint]));
       }
       if (main) {
-        mainTracked ||= tracked; rawFire ||= pressed(pad.buttons[xr ? 0 : 7]);
-        this.handPose.mainTrigger = Math.max(this.handPose.mainTrigger, amount(pad.buttons[xr ? 0 : 7]));
-        this.handPose.mainGrip = Math.max(this.handPose.mainGrip, amount(pad.buttons[xr ? 1 : 6]));
-        result.precision ||= tracked && pressed(pad.buttons[xr ? 1 : 6]);
+        mainTracked ||= tracked; rawFire ||= pressed(pad.buttons[xr ? 0 : DESKTOP_BUTTONS.fire]);
+        this.handPose.mainTrigger = Math.max(this.handPose.mainTrigger, amount(pad.buttons[xr ? 0 : DESKTOP_BUTTONS.fire]));
+        this.handPose.mainGrip = Math.max(this.handPose.mainGrip, amount(pad.buttons[xr ? 1 : DESKTOP_BUTTONS.aim]));
+        result.precision ||= tracked && pressed(pad.buttons[xr ? 1 : DESKTOP_BUTTONS.aim]);
         if(xr)result.aim ||= tracked && pressed(pad.buttons[1]);
         if (xr) {
           const turn = axes[stick] || 0;
@@ -452,14 +456,14 @@ export class VRController {
       const edge = (key, index, action = key) => { const id = `${source.handedness}:${key}`, down = pressed(pad.buttons[index]); if (down && !this.previous.get(id) && tracked) actions.add(action); this.previous.set(id, down); };
       if(xr&&source.handedness==='right'){edge('jump',4);edge('reload',5);}
       if(xr&&source.handedness==='left'){edge('pause',4);edge('next',5);}
-      if(!xr&&main){edge('reload',0);edge('next',1);}
+      if(!xr&&main){edge('reload',DESKTOP_BUTTONS.reload);edge('next',DESKTOP_BUTTONS.next);}
       if (xr && side) {
         const game = this.hooks.game(), interaction = game?.getInteraction?.() || game?.nearbyWeapon?.();
         // Track the physical click, not its contextual action. Consuming a terminal
         // or pickup while the stick stays held must never cause a second crouch.
         edge('stick', 3, interaction ? 'pickup' : 'crouch');
       }
-      if (!xr) { edge('pause', 9); edge('jump', 3); edge('pickup', 2); edge('crouch', 11); }
+      if (!xr) { edge('pause', DESKTOP_BUTTONS.pause); edge('jump', DESKTOP_BUTTONS.jump); edge('pickup', DESKTOP_BUTTONS.interact); edge('crouch', DESKTOP_BUTTONS.crouch); }
     }
     if (actions.has('pause')) { this.hooks.togglePause(); if (xr) this.cancelTrigger(); }
     else if (phase === 'over' && actions.has('reload') && xr) { this.hooks.begin(); this.cancelTrigger(); }
@@ -597,6 +601,17 @@ export class VRController {
       this.trackPerformance(dt);
       if ((this.shadowTick ^= 1) === 0) this.hooks.world().renderer.shadowMap.needsUpdate = true;
     }
+    if(this.hud?.objective){
+      const world=this.hooks.world(),scratch=this.scratch||={},forward=scratch.objectiveForward ||=new world.T.Vector3();
+      const head=scratch.objectiveHead ||=new world.T.Vector3();
+      world.camera.getWorldDirection(forward);world.camera.getWorldPosition(head);
+      // Head translation matters in room-scale VR; height remains the player's
+      // floor level so looking/crouching cannot invent a different storey.
+      const hint=this.hooks.phase()==='playing'?objectiveIndicator(game.guidance?.(),
+        {x:head.x,elevation:game.player.elevation,z:head.z},Math.atan2(-forward.x,-forward.z),game.state):null;
+      this.hud.objective.update(hint);
+      this.hud.objectiveHint=hint;
+    }
     this.hudTime -= dt;
     if (this.hud && this.hudTime <= 0) {
       this.hudTime = .12; const { canvas, texture } = this.hud, c = canvas.getContext('2d');
@@ -630,7 +645,7 @@ export class VRController {
         const world=this.hooks.world(),portal=this.hud.portal,p=portal.canvas.getContext('2d');
         this.scratch ||= {};const forward=this.scratch.portalForward ||= new world.T.Vector3();world.camera.getWorldDirection(forward);
         const dots=portalIndicators(game.activePortals,game.player,Math.atan2(-forward.x,-forward.z),game.time,game.state);
-        p.clearRect(0,0,512,32);portal.plane.visible=this.hooks.phase()==='playing'&&dots.length>0;
+        p.clearRect(0,0,512,32);portal.plane.visible=this.hooks.phase()==='playing'&&!this.hud.objectiveHint&&dots.length>0;
         for(const [index,dot] of dots.entries()){
           const x=256+dot.offset*235,y=12+index*2;p.globalAlpha=dot.opacity;p.beginPath();p.arc(x,y,3.7,0,Math.PI*2);
           p.fillStyle=dot.pending||dot.behind?'#18222e':accent;p.fill();p.strokeStyle='#f4f5fa';p.lineWidth=1;p.stroke();

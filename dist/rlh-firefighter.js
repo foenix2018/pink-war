@@ -26,23 +26,39 @@ export function rlhFirefighterData(){
 export function syncRLHFirefighterMaterials(kit){
   const m=kits.get(kit);if(!m)return;
   const base=kit.materials;
-  m.helmet.color.copy(base.rose.color);m.band.color.copy(base.rose.color);
+  m.helmet.color.copy(base.rose.color);m.band.color.copy(base.suit.color);
   m.fabric.color.copy(base.suit.color).lerp(base.rose.color,.045);
   m.visor.color.copy(base.visor.color);m.visor.emissive.copy(base.rose.color).multiplyScalar(.012);
-  m.reflect.color.copy(base.pearl.color).multiplyScalar(.58);m.stitch.color.copy(base.pearl.color);
+  m.reflect.color.copy(base.suit.color);m.stitch.color.copy(base.pearl.color);
 }
 function materials(kit){
   if(kits.has(kit))return kits.get(kit);
   const surface=kit.materials.steel.envMap,solid=p=>new T.MeshStandardMaterial({vertexColors:true,side:T.DoubleSide,...p});
-  const m={fabric:solid({roughness:.93,bumpMap:kit.materials.suit.bumpMap,bumpScale:.00035}),band:solid({roughness:.55}),reflect:solid({roughness:.35,metalness:.15}),rubber:solid({color:0x22282f,roughness:.9}),detail:solid({color:0xffffff,roughness:.72}),leather:solid({color:0x242a30,roughness:.67}),stitch:solid({roughness:.85}),metal:solid({color:0x9aa6b3,roughness:.32,metalness:.85,envMap:surface,envMapIntensity:.4}),pearl:solid({color:0xbcc6cd,roughness:.45}),helmet:new T.MeshPhysicalMaterial({vertexColors:true,side:T.DoubleSide,roughness:.26,metalness:.2,clearcoat:.65,clearcoatRoughness:.3,envMap:surface,envMapIntensity:.45}),visor:new T.MeshPhysicalMaterial({vertexColors:true,side:T.DoubleSide,color:0x101827,roughness:.17,metalness:.6,clearcoat:.65,emissive:0x000000,envMap:surface,envMapIntensity:.4})};
+  const m={fabric:solid({roughness:.93,bumpMap:kit.materials.suit.bumpMap,bumpScale:.00035}),band:solid({roughness:.91,bumpMap:kit.materials.suit.bumpMap,bumpScale:.00035}),reflect:solid({roughness:.93,metalness:0,bumpMap:kit.materials.suit.bumpMap,bumpScale:.00035}),rubber:solid({color:0x22282f,roughness:.9}),detail:solid({color:0xffffff,roughness:.72}),leather:solid({color:0x242a30,roughness:.67}),stitch:solid({roughness:.85}),metal:solid({color:0x9aa6b3,roughness:.32,metalness:.85,envMap:surface,envMapIntensity:.4}),pearl:solid({color:0xbcc6cd,roughness:.45}),helmet:new T.MeshPhysicalMaterial({vertexColors:true,side:T.DoubleSide,roughness:.26,metalness:.2,clearcoat:.65,clearcoatRoughness:.3,envMap:surface,envMapIntensity:.45}),visor:new T.MeshPhysicalMaterial({vertexColors:true,side:T.DoubleSide,color:0x101827,roughness:.17,metalness:.6,clearcoat:.65,emissive:0x000000,envMap:surface,envMapIntensity:.4})};
   kits.set(kit,m);syncRLHFirefighterMaterials(kit);return m;
 }
-export function createRLHFirefighterActor(kit,{includeGloves=true}={}){
+const militaryGeometries=new WeakMap();
+function militaryGeometry(part){
+  if(militaryGeometries.has(part))return militaryGeometries.get(part);
+  const source=part.geometry,p=source.attributes.position,index=source.index,indices=[];
+  let removed=0;
+  for(let t=0;t<index.count;t+=3){
+    const ids=[index.getX(t),index.getX(t+1),index.getX(t+2)];
+    // Only the external breathing cylinder/harness is removed. The original
+    // jacket is entirely in front of z=.184, and the helmet ends at z=.148.
+    const pack=ids.every(i=>p.getZ(i)>.185&&p.getY(i)>1.04&&p.getY(i)<1.72&&Math.abs(p.getX(i))<.24);
+    if(pack){removed++;continue;}indices.push(...ids);
+  }
+  const geometry=removed?source.clone():source;
+  if(removed){geometry.setIndex(indices);geometry.userData.removedRescuePackTriangles=removed;}
+  militaryGeometries.set(part,geometry);return geometry;
+}
+export function createRLHFirefighterActor(kit,{includeGloves=true,military=false}={}){
   const data=rlhFirefighterData(),root=new T.Group(),bones=data.bones.map(b=>{const bone=new T.Bone();bone.name=b.name;bone.position.fromArray(b.p);bone.quaternion.fromArray(b.q);return bone;});root.name='RLH pompier complet';
   for(let i=0;i<bones.length;i++){const parent=data.bones[i].parent;(parent<0?root:bones[parent]).add(bones[i]);}
   root.updateMatrixWorld(true);
   const skeleton=new T.Skeleton(bones,data.bones.map(b=>new T.Matrix4().fromArray(b.inverse))),m=materials(kit),parts=[];
-  for(const part of data.parts){const mesh=new T.SkinnedMesh(part.geometry,m[part.key]);mesh.name='RLH '+part.key;root.add(mesh);mesh.bind(skeleton,new T.Matrix4());mesh.castShadow=true;mesh.receiveShadow=true;mesh.frustumCulled=false;mesh.boundingBox=new T.Box3(new T.Vector3(-1,-.2,-1),new T.Vector3(1,2.35,1));mesh.boundingSphere=new T.Sphere(new T.Vector3(0,1,0),1.8);parts.push(mesh);}
+  for(const part of data.parts){const mesh=new T.SkinnedMesh(military?militaryGeometry(part):part.geometry,m[part.key]);mesh.name='RLH '+part.key;root.add(mesh);mesh.bind(skeleton,new T.Matrix4());mesh.castShadow=true;mesh.receiveShadow=true;mesh.frustumCulled=false;mesh.boundingBox=new T.Box3(new T.Vector3(-1,-.2,-1),new T.Vector3(1,2.35,1));mesh.boundingSphere=new T.Sphere(new T.Vector3(0,1,0),1.8);parts.push(mesh);}
   const byName=new Map(bones.map(b=>[b.name,b])),bone=name=>byName.get('mixamorig'+name);
   const mixer=new T.AnimationMixer(root),actions=Object.fromEntries(data.clips.map(c=>{const a=mixer.clipAction(c.animation);a.play();a.enabled=true;a.setEffectiveWeight(c.name==='idle'?1:0);return [c.name,a];}));
   let state='idle';const weights=Object.fromEntries(Object.keys(actions).map(key=>[key,key==='idle'?1:0]));
@@ -79,7 +95,7 @@ function solveChain(upper,lower,end,target,pole){
 }
 
 export function createRLHSoldier(kit,createGun,profile){
-  const actor=createRLHFirefighterActor(kit,{includeGloves:false}),{root,bone,data}=actor,targetHeight=profile?.masculine?1.8:1.7;
+  const actor=createRLHFirefighterActor(kit,{includeGloves:false,military:true}),{root,bone,data}=actor,targetHeight=profile?.masculine?1.8:1.7;
   root.name=profile?.name||'GHJU';for(const glove of actor.gloves)glove.removeFromParent();
   const hips=bone('Hips'),spine=bone('Spine'),body=bone('Spine2'),headBone=bone('Head'),head=new T.Group();head.name='ClosedHelmet';headBone.add(head);
   root.updateMatrixWorld(true);head.position.copy(headBone.worldToLocal(new T.Vector3(...data.helmetCenter)));

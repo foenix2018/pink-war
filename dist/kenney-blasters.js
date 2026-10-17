@@ -4,8 +4,9 @@ import * as T from './vendor/three.webgpu.min.js';
 // Embedded in the Pink War deployment: never loads assets from a third-party CDN.
 // A failed asset leaves the original native weapon visible and fully functional.
 export const KENNEY_WEAPON_ASSETS=Object.freeze(['b','g','d','f','p'].map(id=>'blaster-'+id+'.glb'));
+export const MK3_WEAPON_ASSETS=Object.freeze(['b','g','d','f','p'].map(id=>'blaster-'+id+'-mk3.glb'));
 const sources=new Map();
-let sharedMaterial=null,paletteCanvas=null,paletteTexture=null,paletteSource=null,paletteAccent=0xff80b2;
+let sharedMaterial=null,paletteCanvas=null,paletteTexture=null,paletteSource=null,paletteAccent=0xff80b2,surfaceCanvas=null,surfaceTexture=null;
 // The Kenney palette is a grid of flat swatches (red, mustard, royal blue, green…). Pink War repaints it once:
 // neutral swatches become blued gunmetal, light ones machined ceramic, and saturated ones the universe's paint
 // (rose for GHJU, blue for LYLU) in two depths, so the five weapons read as one family of military hardware.
@@ -26,8 +27,15 @@ function paintPalette(){
   if(!paletteCanvas||!paletteSource)return;
   const c=paletteCanvas.getContext('2d',{willReadFrequently:true});c.drawImage(paletteSource,0,0,paletteCanvas.width,paletteCanvas.height);
   const image=c.getImageData(0,0,paletteCanvas.width,paletteCanvas.height),data=image.data,hue=new T.Color(paletteAccent).getHSL({}).h;
-  for(let i=0;i<data.length;i+=4){const [r,g,b]=themeKenneyPixel(data[i],data[i+1],data[i+2],hue);data[i]=r;data[i+1]=g;data[i+2]=b;}
+  const sc=surfaceCanvas.getContext('2d'),surface=sc.createImageData(image.width,image.height),packed=surface.data;
+  for(let i=0;i<data.length;i+=4){
+    const max=Math.max(data[i],data[i+1],data[i+2]),min=Math.min(data[i],data[i+1],data[i+2]);
+    const rubber=max<65,bare=max-min<35&&max>150;
+    packed[i]=255;packed[i+1]=Math.round(255*(rubber?.76:bare?.28:.39));packed[i+2]=Math.round(255*(rubber?.18:bare?.92:.70));packed[i+3]=255;
+    const [r,g,b]=themeKenneyPixel(data[i],data[i+1],data[i+2],hue);data[i]=r;data[i+1]=g;data[i+2]=b;
+  }
   c.putImageData(image,0,0);paletteTexture.needsUpdate=true;
+  sc.putImageData(surface,0,0);surfaceTexture.needsUpdate=true;
 }
 export function setKenneyAccent(hex){paletteAccent=hex;paintPalette();}
 function getMaterial(){
@@ -35,13 +43,28 @@ function getMaterial(){
   if(typeof document!=='undefined'){
     paletteCanvas=document.createElement('canvas');paletteCanvas.width=paletteCanvas.height=512;
     paletteTexture=new T.CanvasTexture(paletteCanvas);paletteTexture.colorSpace=T.SRGBColorSpace;paletteTexture.flipY=false;
+    surfaceCanvas=document.createElement('canvas');surfaceCanvas.width=surfaceCanvas.height=512;
+    surfaceTexture=new T.CanvasTexture(surfaceCanvas);surfaceTexture.flipY=false;
     const image=new Image();image.onload=()=>{paletteSource=image;paintPalette();};
-    image.src=new URL('./assets/kenney/colormap.png',import.meta.url).href;
+    image.src=globalThis.__PINKWAR_BLASTER_PALETTE||new URL('./assets/kenney/colormap.png',import.meta.url).href;
   }
   sharedMaterial=new T.MeshStandardMaterial({
-    map:paletteTexture,color:0xffffff,metalness:.58,roughness:.36,side:T.DoubleSide
+    map:paletteTexture,color:0xffffff,metalness:surfaceTexture?1:.70,roughness:surfaceTexture?1:.36,
+    roughnessMap:surfaceTexture,metalnessMap:surfaceTexture,side:T.DoubleSide
   });
   return sharedMaterial;
+}
+const detailMaterials=new Map();
+function modelMaterial(name=''){
+  if(!name.startsWith('PW_MK3_'))return getMaterial();
+  if(!detailMaterials.has(name)){
+    const p=name.endsWith('alloy')?{color:0x687b82,metalness:.88,roughness:.30}:
+      name.endsWith('ceramic')?{color:0x8e989a,metalness:.48,roughness:.46}:
+      name.endsWith('energy')?{color:0x61cad5,emissive:0x146775,emissiveIntensity:1.2,roughness:.27,metalness:.45}:
+      {color:0x18252b,metalness:.55,roughness:.52};
+    const m=new T.MeshStandardMaterial(p);m.name=name;detailMaterials.set(name,m);
+  }
+  return detailMaterials.get(name);
 }
 const COMPONENTS=Object.freeze({5120:{bytes:1,read:'getInt8'},5121:{bytes:1,read:'getUint8'},
   5122:{bytes:2,read:'getInt16'},5123:{bytes:2,read:'getUint16'},
@@ -74,7 +97,7 @@ export function parseKenneyGLB(buffer){
       if(primitive.attributes.TEXCOORD_0!==undefined)geometry.setAttribute('uv',new T.Float32BufferAttribute(unpackAccessor(json,data,binStart,primitive.attributes.TEXCOORD_0),2));
       if(primitive.indices!==undefined)geometry.setIndex(unpackAccessor(json,data,binStart,primitive.indices));
       if(!geometry.hasAttribute('normal'))geometry.computeVertexNormals();
-      const mesh=new T.Mesh(geometry,getMaterial());mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);
+      const mesh=new T.Mesh(geometry,modelMaterial(json.materials?.[primitive.material]?.name));mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);
     }
     return group;
   });
@@ -93,8 +116,11 @@ export function parseKenneyGLB(buffer){
 }
 function cached(letter){
   if(!sources.has(letter)){
-    const url=new URL('./assets/kenney/blaster-'+letter+'.glb',import.meta.url).href;
-    sources.set(letter,fetch(url).then(r=>{if(!r.ok)throw Error('Kenney '+r.status);return r.arrayBuffer();}).then(parseKenneyGLB));
+    const file='blaster-'+letter+'-mk3.glb',embedded=globalThis.__PINKWAR_BLASTER_ASSETS?.[file];
+    const read=async path=>{const r=await fetch(new URL(path,import.meta.url).href);if(!r.ok)throw Error('Blaster '+r.status);return r.arrayBuffer();};
+    const request=embedded?Promise.resolve(Uint8Array.from(atob(embedded),c=>c.charCodeAt(0)).buffer):
+      read('./assets/pink-war/'+file).catch(()=>read('./assets/kenney/blaster-'+letter+'.glb'));
+    sources.set(letter,request.then(parseKenneyGLB));
   }
   return sources.get(letter);
 }
@@ -149,12 +175,17 @@ export function upgradeKenneyWeapon(model,frame,index,hold=null){
   return group;
 }
 
-export function installKenneyBlasters(models,originals,frames,onLoad,holds=[]){
+export function applyBlasterEnvironment(root,environment){
+  if(!environment)return;
+  root.traverse(o=>{if(o.isMesh&&o.material.envMap!==environment){o.material.envMap=environment;o.material.envMapIntensity=.65;o.material.needsUpdate=true;}});
+}
+export function installKenneyBlasters(models,originals,frames,onLoad,holds=[],environment=null){
   const letters=['b','g','d','f','p'];
-  const progress={loaded:0,total:5,failed:0,loadedByIndex:[false,false,false,false,false]};
+  const progress={loaded:0,total:5,failed:0,revision:'3.40',loadedByIndex:[false,false,false,false,false]};
   for(let i=0;i<5;i++)cached(letters[i]).then(master=>{
     const skin=master.clone(true),frame=frames[i];
     skin.name='Kenney CC0 / '+frames[i].id;
+    applyBlasterEnvironment(skin,environment);
     const originalLength=[.42,.786,.908,1.31,.862][i];
     const minFront=[-.2601,-.34811,-.45394,-.655,-.43104][i];
     const maxY=[.1134,.17895,.18595,.1325,.18595][i];

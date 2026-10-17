@@ -298,7 +298,7 @@ test('hostile chassis share a bounded number of geometry batches while keeping i
   for(const form of ['stalker','scuttler','brute','seer','listener','bulwark'])for(const elite of [false,true])for(const ranged of [false,true]) {
     const a=factory.create(elite,ranged,form),b=factory.create(elite,ranged,form);
     const meshes=a.children.filter(child=>child.isMesh),otherMeshes=b.children.filter(child=>child.isMesh);
-    assert.ok(meshes.length<=5,`${form}: shared armour, mechanisms, servos, caution paint and optics remain within five draw calls`);
+    assert.ok(meshes.length<=6,`${form}: shared armour, mechanisms, servos, caution paint and optics with per-enemy alert optics remain within six draw calls`);
     assert.notEqual(a.userData.skeleton,b.userData.skeleton,'enemies must animate independently');
     assert.equal(a.userData.legs.length,form==='scuttler'?6:2);
     let triangles=0;

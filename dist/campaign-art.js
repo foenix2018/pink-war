@@ -5,6 +5,8 @@ import {MESH_DATA,MESH_INFO,MESH_INDEX_DATA} from './levels/vesper-01-mesh.js';
 import {inflateSync} from './vendor/fflate.module.js';
 import {createBoundaryFence} from './boundary-fence.js';
 import {liftHeightAt} from './world-layout.js';
+import {bevelBox} from './geo.js';
+import {LEVEL1_STORY,createLevel1Story} from './level1-story.js';
 
 // Independent Blender-built map. Geometry is bundled locally, including in the
 // standalone HTML: no CDN, GLTF loader or late asset request is needed to play.
@@ -43,15 +45,23 @@ export function createCampaignArt(T,scene,_unused,{quality='auto'}={}){
  boundary.root.children[0].visible=false;
  const boxGeo=ownG(new T.BoxGeometry(1,1,1));
  function box(mat,x,y,z,w,h,d,parent=root){const o=new T.Mesh(boxGeo,mat);o.position.set(x,y,z);o.scale.set(w,h,d);o.receiveShadow=true;o.castShadow=quality!=='low';parent.add(o);return o;}
+ function shell(mat,x,y,z,w,h,d){const o=new T.Mesh(ownG(bevelBox(w,h,d,.045,1)),mat);o.position.set(x,y,z);o.receiveShadow=true;o.castShadow=quality!=='low';root.add(o);return o;}
  function solid(x,z,w,d,y,height,id){if(obstacles.some(b=>b.campaignTerminal===id))return;obstacles.push({x,z,hx:w/2,hz:d/2,y,height,surface:'metal',campaign:true,campaignTerminal:id});}
  function panel(title,x,y,z,w=2.4,h=1,width=768,height=320){
   const data=paintTexture(width,height,()=>{}),mesh=new T.Mesh(ownG(new T.PlaneGeometry(w,h)),ownM(new T.MeshBasicMaterial({map:data.map,toneMapped:false})));mesh.position.set(x,y,z);root.add(mesh);
   const s={mesh,paint(lines,caption=title){const c=data.context;c.fillStyle='#071918';c.fillRect(0,0,width,height);c.fillStyle='#dbb073';c.fillRect(14,16,5,height-32);c.font='600 25px sans-serif';c.fillText(caption,33,42,width-60);lines.forEach((line,i)=>{c.fillStyle=i===0?'#eef0df':'#b5d0c6';c.font='22px sans-serif';c.fillText(line,33,83+i*39,width-60);});data.map.needsUpdate=true;}};screens.push(s);return s;
  }
- function terminal(x,y,z,id){box(maps.dark,x,y+.5,z,1.2,1,.55);box(maps.steel,x,y+1.4,z,2.6,1.05,.25);solid(x,z,2.6,.6,y,1.93,id);box(maps.dark,x,y+1,z+.2,1.8,.10,.65);return panel('MÉMOIRE HUMAINE / HORS RÉSEAU',x,y+1.4,z+.142);}
+ function terminal(x,y,z,id){shell(maps.dark,x,y+.5,z,1.2,1,.55);shell(maps.steel,x,y+1.4,z,2.6,1.05,.25);solid(x,z,2.6,.6,y,1.93,id);const desk=shell(maps.dark,x,y+1,z+.2,1.8,.10,.65);desk.rotation.x=.12;return panel('MÉMOIRE HUMAINE / HORS RÉSEAU',x,y+1.4,z+.142);}
  box(maps.dark,-6,1.05,61.65,1.65,2.1,.6);solid(-6,61.65,1.65,.6,0,2.1,'power');
  const power=panel('ALIMENTATION / CIRCUIT ISOLÉ',-6,1.55,61.97,1.55,.95);
  const archive=terminal(0,0,54.45,'archive'),exit=terminal(18,4.8,-44.55,'exit');
+ const story=createLevel1Story(T,root,maps,{quality});obstacles.push(...story.colliders);
+ for(const beat of LEVEL1_STORY.beats){
+  const sign=panel(beat.title,beat.x,beat.id==='occupation'?3.05:2.65,beat.z+.16,2.4,1.25,768,320);sign.paint(beat.lines);
+ }
+ const investigation=terminal(-21,0,19.45,'investigation'),sabotage=terminal(5,0,-8.55,'sabotage');
+ panel('ATELIER / MÉMOIRE LOCALE',-21,2.8,19.60,3.1,.55).paint(['ARCHIVES HUMAINES · RÉSEAU ISOLÉ']);
+ panel('ORDRE / BALISE DE SURVEILLANCE',5,2.8,-8.4,3.1,.55).paint(['COUPURE MANUELLE · CIRCUIT HAUTE TENSION']);
  panel('VESPER / SECOURS 07',0,4.9,70.31,6,.72).paint(['ANNEXE DES ARCHIVES · ACCÈS MANUEL']);
  panel('RUE DES ÉVACUATIONS',9,3.3,22,5,.8).paint(['RELAIS NORD ↑ · ORDRE CONTRÔLE LA RUE']);
  panel('RELAIS DES ARCHIVES',18,7.1,-49.8,5,.8).paint(['ESCALIER / ASCENSEUR DE SERVICE']);
@@ -64,11 +74,13 @@ export function createCampaignArt(T,scene,_unused,{quality='auto'}={}){
  box(maps.steel,lift.x,-.10,lift.z,6,.20,6,carriage);
  for(const side of [-1,1]){box(maps.steel,lift.x+side*2.92,.55,lift.z,.10,1.1,6,carriage);box(maps.amber,lift.x+side*2.9,1.07,lift.z,.045,.07,5.9,carriage);}
  function updateLift(time){if(root.visible)carriage.position.y=liftHeightAt(lift,time);}
- function update(game,time=0){const s=game?.campaign;if(!s||!root.visible)return;stage=s.stage;currentObjective=s.objective;updateLift(game.time);boundary.update({...game.player,y:game.player.elevation+1.65},.55,1.2);
+ function update(game,time=0){const s=game?.campaign;if(!s||!root.visible)return;stage=s.stage;currentObjective=s.objective;story.update(game);updateLift(game.time);boundary.update({...game.player,y:game.player.elevation+1.65},.55,1.2);
   const key=[stage,s.sibling,...s.archive].join('|');if(key!==lastState){lastState=key;
    power.paint(stage==='power'?['Courant coupé. Réarmer le circuit.','F / clic du stick libre : interagir']:['CIRCUIT LOCAL : ACTIF','Réseau ORDRE : DÉCONNECTÉ']);
    archive.paint(stage==='power'?['Mémoire hors tension.','Boîtier de secours à gauche.']:stage==='archive'?['Journal humain retrouvé.','F / clic du stick libre : lire']:s.archive);
    exit.paint(stage==='complete'?[`Passage de ${s.sibling} confirmé.`,'DESTINATION : ARCHIVES VÉGÉTALES','NIVEAU 1 TERMINÉ']:[`Trace de ${s.sibling} enregistrée.`,'F / clic du stick libre : consulter']);
+   investigation.paint(s.investigationRead?[`MESSAGE HUMAIN : ${s.sibling}`,'La balise d’ORDRE verrouille le relais.','Coupe-la dans la rue au nord-est.']:['Un journal a survécu dans cet atelier.','F / clic du stick libre : consulter']);
+   sabotage.paint(s.sabotaged?['BALISE : HORS SERVICE','La voie du relais est ouverte.']:['SURVEILLANCE ORDRE : ACTIVE','F / clic du stick libre : saboter'],'BALISE ORDRE / COUPURE MANUELLE');
    for(const r of routes)r.o.visible=stage==='power'?r.segment<=3:stage==='archive'?r.segment===4:['crossing','exit'].includes(stage)?r.segment>=5:false;
    objective.mesh.visible=!!s.objective;
    if(s.objective){const p=s.objective.position;objective.mesh.position.set(p.x,p.y+2.7,p.z+.22);objective.paint(['F / CLIC STICK LIBRE'],s.objective.label);}
@@ -76,7 +88,7 @@ export function createCampaignArt(T,scene,_unused,{quality='auto'}={}){
   marker.visible=!!s.objective;if(s.objective){const p=s.objective.position;marker.position.set(p.x,p.y+3.2+Math.sin(time*2)*.05,p.z);marker.rotation.y=time*.5;}
  }
  function setVisible(enabled){root.visible=!!enabled;lastState='';if(enabled)pbr.start();}
- function stats(){return{visible:root.visible,stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:3,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:2,boundary:boundary.stats(),pbr:pbr.stats()};}
- function dispose(){if(disposed)return;disposed=true;pbr.dispose();boundary.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
+ function stats(){return{visible:root.visible,story:story.stats(),stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:5,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:3,boundary:boundary.stats(),pbr:pbr.stats()};}
+ function dispose(){if(disposed)return;disposed=true;pbr.dispose();boundary.dispose();story.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
  return{root,obstacles,update,setVisible,stats,dispose,updateLift,ready};
 }
