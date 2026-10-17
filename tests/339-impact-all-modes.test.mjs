@@ -13,7 +13,8 @@ test('Histoire, Survie, Entrainement use the shared impact visuals for hit event
  assert.match(game,/world\.impact\(\{\.\.\.event,enemy:event\.type==='blade-hit'\}\)/);
  assert.match(scene,/laserFX=createLaserFX\(T,scene,palette\)/);
  assert.match(scene,/impact:event=>\{combatFX\.impact\(event\);laserFX\.impact\(event\);\}/);
- assert.match(training,/this\.event\('training-hit',\{id:best\.target\.id[^\n]*weapon:this\.weapon\.id/);
+ assert.match(training,/this\.event\('training-hit',\{id:target\.id/);
+ assert.match(training,/weapon:pending\.weapon,power:pending\.power/);
 });
 
 test('AT HOME uses the SAME contact lighting for laser shots and blade impacts',()=>{
