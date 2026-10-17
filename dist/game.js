@@ -1,5 +1,5 @@
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, clamp, segmentSphere, segmentBox, traceEnemyHit, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
-import { createScene } from './scene.js?v=3.41';
+import { createScene } from './scene.js?v=3.42';
 import { VRController } from './vr.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
 import { characterForId } from './characters.js';

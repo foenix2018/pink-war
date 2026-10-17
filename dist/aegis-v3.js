@@ -1,9 +1,10 @@
 import * as T from './vendor/three.webgpu.min.js';
-import {armorPanel,bevelBox,ball,limb,loft,matrix,bake,merge} from './geo.js';
+import {bevelBox,ball,limb,loft,matrix,bake,merge} from './geo.js';
+import {profiledPanel} from './armor-profiles.js';
 
 // Original full tactical suit on the preserved RLH skeleton. The old rescue
 // jacket and F1 helmet are replaced, not hidden under another oversized shell.
-export const AEGIS=Object.freeze({name:'AÉGIS III',generation:3});
+export const AEGIS=Object.freeze({name:'AÉGIS III',generation:3,revision:'3.42'});
 const cache=new WeakMap();
 function template(data,masculine){
   let variants=cache.get(data);if(!variants){variants=new Map();cache.set(data,variants);}if(variants.has(masculine))return variants.get(masculine);
@@ -11,23 +12,23 @@ function template(data,masculine){
   const at=name=>new T.Vector3().setFromMatrixPosition(new T.Matrix4().fromArray(data.bones[bones.get(name)].inverse).invert());
   const add=(bone,key,g,p=[0,0,0],r=[0,0,0],s=[1,1,1],level=1,tag='',blend=false)=>items.push({bone:bones.get(bone),key,geometry:bake(g,matrix(p,r,s)),level,tag,blend});
   const box=(b,k,size,p,r=[0,0,0],level=1)=>add(b,k,bevelBox(...size,Math.min(...size)*.18,1),p,r,[1,1,1],level);
-  const plate=(b,k,outline,p,s=[1,1,1],r=[0,0,0],level=1,tag='')=>add(b,k,armorPanel(outline,.012,.008),p,r,s,level,tag);
+  const plate=(b,k,outline,p,s=[1,1,1],r=[0,0,0],level=1,tag='')=>add(b,k,profiledPanel(outline,{depth:.013,bulge:k==='pearl'?.018:k==='dark'?.009:.006,round:.10}),p,r,s,level,tag);
   const link=(b,k,a,c,r1,r2=r1,level=1)=>items.push({bone:bones.get(b),key:k,geometry:bake(limb(a,c,r1,r2,16)),level});
-  const ell=(b,k,p,r,level=1)=>add(b,k,ball([0,0,0],r,[20,12]),p,[0,0,0],[1,1,1],level);
+  const ell=(b,k,p,r,level=1)=>add(b,k,ball([0,0,0],r,[16,10]),p,[0,0,0],[1,1,1],level);
   const width=masculine?1.03:.94;
   // A fitted woven undersuit: chest, obliques and pelvis have separate human
   // cross-sections; weighted spine rings bend below the rigid chest harness.
-  add('Spine','suit',loft([[1.025,.163,.100],[1.08,.165,.105],[1.17,.148,.101],[1.27,.169,.110],[1.39,.199,.122],[1.49,.210,.124],[1.54,.175,.105],[1.575,.071,.068]],28),[0,0,0],[0,0,0],[width,1,1],1,'undersuit',true);
+  add('Spine','suit',loft([[1.025,.163,.100],[1.08,.165,.105],[1.17,.148,.101],[1.27,.168,.111],[1.39,.202,.127],[1.47,.214,.129],[1.515,.198,.117],[1.55,.147,.090],[1.575,.071,.068]],28),[0,0,0],[0,0,0],[width,1,1],1,'undersuit',true);
   add('Hips','suit',loft([[.88,.115,.085],[.93,.183,.108],[1.005,.184,.119],[1.065,.162,.107]],24),[0,0,0],[0,0,0],[width,1,1]);
   link('Neck','suit',[0,1.54,.024],[0,1.657,.024],.070,.060);
   for(let j=0;j<5;j++)add('Neck','dark',new T.TorusGeometry(.062,.003,5,24).rotateX(Math.PI/2),[0,1.58+j*.014,.024]);
-  const chest=[[-.125,-.121],[.125,-.121],[.177,-.057],[.188,.064],[.147,.115],[.061,.092],[-.061,.092],[-.147,.115],[-.188,.064],[-.177,-.057]];
+  const chest=[[-.117,-.121],[.117,-.121],[.168,-.064],[.193,.047],[.174,.091],[.131,.116],[.061,.095],[-.061,.095],[-.131,.116],[-.174,.091],[-.193,.047],[-.168,-.064]];
   plate('Spine2','dark',chest,[0,1.419,-.130],[width*1.06,1.1,1.5]);
   plate('Spine2','pearl',chest,[0,1.427,-.147],[width,1,1]);
   // Recessed dark chest computer and small universe crown, like the reference.
-  plate('Spine2','dark',[[-.077,-.066],[.077,-.066],[.093,.054],[.071,.077],[-.071,.077],[-.093,.054]],[0,1.439,-.172],[1,1,.65]);
+  plate('Spine2','dark',[[-.073,-.066],[.073,-.066],[.089,.044],[.063,.072],[-.063,.072],[-.089,.044]],[0,1.439,-.183],[1,1,.65]);
   const crown=[[-.105,-.052],[.105,-.052],[.126,.062],[.057,.012],[0,.108],[-.057,.012],[-.126,.062]];
-  plate('Spine2','rose',crown,[0,1.449,-.185],[.41,.41,.23]);
+  plate('Spine2','rose',crown,[0,1.449,-.202],[.38,.38,.23]);
   for(const s of [-1,1]){
     plate('Spine2','rose',[[-.016,-.09],[.016,-.09],[.018,.075],[-.018,.075]],[s*.146*width,1.426,-.165],[1,1,.4],[0,s*.25,s*-.12]);
     link('Spine2','dark',[s*.157,1.548,-.071],[s*.141,1.25,-.143],.015,.014);
@@ -55,32 +56,32 @@ function template(data,masculine){
   function limbPlate(bone,end,key,outline,front,scale=[1,1,1],t=.5,level=1,tag=''){
     const a=at(bone),b=at(end),y=a.clone().sub(b).normalize(),z=new T.Vector3(0,0,1);z.addScaledVector(y,-z.dot(y)).normalize();const x=y.clone().cross(z).normalize();
     const m=new T.Matrix4().makeBasis(x,y,z).setPosition(a.lerp(b,t).addScaledVector(z,-front));
-    items.push({bone:bones.get(bone),key,geometry:bake(armorPanel(outline,.013,.011),m.multiply(new T.Matrix4().makeScale(...scale))),level,tag});
+    items.push({bone:bones.get(bone),key,geometry:bake(profiledPanel(outline,{depth:.014,bulge:key==='pearl'?.018:.008,round:.12}),m.multiply(new T.Matrix4().makeScale(...scale))),level,tag});
   }
-  const shoulder=[[-.060,-.083],[.058,-.078],[.078,-.018],[.069,.056],[.024,.086],[-.050,.072],[-.074,.015]];
+  const shoulder=[[-.052,-.079],[.047,-.082],[.073,-.034],[.079,.018],[.055,.066],[.010,.088],[-.045,.075],[-.071,.032],[-.073,-.018]];
   const thigh=[[-.045,-.105],[.041,-.107],[.065,-.047],[.062,.082],[.035,.109],[-.042,.10],[-.062,.040],[-.059,-.04]];
   const shin=[[-.034,-.126],[.035,-.12],[.053,.080],[.032,.123],[-.034,.123],[-.051,.07]];
   const bracer=[[-.033,-.074],[.027,-.074],[.043,.039],[.026,.079],[-.03,.074],[-.043,.032]];
   for(const [side,s] of [['Left',-1],['Right',1]]){
     const arm=side+'Arm',fore=side+'ForeArm',hand=side+'Hand',leg=side+'UpLeg',knee=side+'Leg',foot=side+'Foot';
-    sleeve(arm,fore,[[0,.068,.064],[.12,.074,.067],[.45,.066,.061],[.72,.061,.057],[1,.047,.047]]);
-    sleeve(fore,hand,[[0,.048,.046],[.18,.054,.050],[.50,.048,.044],[.85,.037,.035],[1,.035,.033]]);
+    sleeve(arm,fore,[[0,.068,.064],[.12,.074,.067],[.38,.069,.063],[.60,.061,.057],[.70,.064,.058],[.77,.057,.054],[.84,.060,.055],[.92,.049,.048],[1,.047,.047]]);
+    sleeve(fore,hand,[[0,.048,.046],[.10,.051,.050],[.22,.055,.051],[.40,.052,.047],[.62,.044,.040],[.85,.037,.035],[1,.035,.033]]);
     ell(fore,'suit',at(fore).toArray(),[.049,.049,.047]);
-    sleeve(leg,knee,[[0,.093,.095],[.12,.096,.099],[.40,.084,.089],[.67,.071,.076],[1,.055,.059]]);
+    sleeve(leg,knee,[[0,.093,.095],[.12,.096,.099],[.37,.087,.090],[.58,.076,.080],[.68,.079,.081],[.75,.068,.074],[.83,.071,.075],[1,.055,.059]]);
     sleeve(knee,foot,[[0,.057,.060],[.22,.070,.071],[.45,.068,.065],[.75,.051,.047],[1,.043,.043]]);
     ell(knee,'dark',at(knee).toArray(),[.058,.059,.060]);
     const hip=at(leg),kn=at(knee),ankle=at(foot);
     plate(arm,'dark',shoulder,[s*.216,1.479,.016],[1.09,1.06,1.4],[.06,s*-.65,s*-.14]);
     plate(arm,'pearl',shoulder,[s*.219,1.482,-.001],[1.0,1,.9],[.06,s*-.65,s*-.14]);
-    plate(arm,'rose',shoulder,[s*.228,1.492,-.018],[.56,.61,.25],[.06,s*-.65,s*-.14]);
+    plate(arm,'rose',shoulder,[s*.234,1.492,-.024],[.51,.58,.25],[.06,s*-.65,s*-.14]);
     // Small curved shoulder badge; shoulder is never as wide as the helmet.
-    plate(arm,'pearl',crown,[s*.232,1.495,-.032],[.18,.18,.1],[.06,s*-.65,s*-.14]);
+    plate(arm,'pearl',crown,[s*.241,1.495,-.039],[.16,.16,.1],[.06,s*-.65,s*-.14]);
     limbPlate(fore,hand,'dark',bracer,.043,[1.18,1.10,1],.48);
     limbPlate(fore,hand,'pearl',bracer,.057,[1,.94,.68],.48);
     limbPlate(fore,hand,'rose',bracer,.073,[.25,.77,.25],.48);
     limbPlate(leg,knee,'dark',thigh,.083,[1.13,1.1,1.1],.50);
     limbPlate(leg,knee,'pearl',thigh,.096,[1,1,.7],.50);
-    limbPlate(leg,knee,'rose',thigh,.110,[.23,.76,.22],.50);
+    limbPlate(leg,knee,'rose',thigh,.118,[.23,.76,.22],.50);
     // Narrow bands wrap the cloth with soft edges, rather than floating boxes.
     for(const t of [.22,.75]){
       const p=hip.clone().lerp(kn,t);add(leg,'dark',loft([[-.014,.089-t*.026,.098-t*.031],[.014,.089-t*.026,.098-t*.031]],20),p.toArray());
@@ -97,6 +98,9 @@ function template(data,masculine){
     plate(foot,'pearl',[[-.047,-.023],[.047,-.023],[.052,.020],[.030,.033],[-.030,.033],[-.052,.020]],[bx,.09,ankle.z-.156],[1,1,.65],[.65,0,0]);
     for(let j=0;j<3;j++)box(foot,'dark',[.092,.010,.013],[bx,.135-j*.018,ankle.z-.073-j*.022],[.65,0,0]);
     box(foot,'rose',[.026,.033,.008],[bx,.185,ankle.z-.048]);
+    // Flush fasteners and flexible elbow cuffs have a purpose and a substrate.
+    const fastener=new T.CylinderGeometry(.0035,.0035,.0025,8).rotateX(Math.PI/2);
+    for(const [x,y,z] of [[s*.157,1.48,-.169],[s*.128,1.342,-.165],[kn.x+s*.028,kn.y+.027,kn.z-.089]])add(y<1?knee:'Spine2','steel',fastener,[x,y,z]);
     // Later tiers add functional reinforcements while preserving the silhouette.
     limbPlate(arm,fore,'pearl',bracer,.065,[1,.8,.65],.58,3);
     limbPlate(leg,knee,'steel',thigh,.122,[.18,.85,.3],.50,5);

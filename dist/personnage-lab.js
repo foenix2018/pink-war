@@ -204,6 +204,6 @@ window.__PINKWAR_CHARACTER_LAB=Object.freeze({
  snapshot:()=>({character:state.character,motion:state.motion,level:state.level,weapon:state.weapon,showBones:state.showBones,
   frames:frame,zoom:state.zoom,articulations:jointNames, jointPositions:()=>Object.fromEntries(Object.entries(subjects.get(state.character).jointPositions()).map(([k,v])=>[k,v.toArray()])),
   visibleParts:subjects.get(state.character).visibleParts,visibleMeshes:subjects.get(state.character).batchCount,physicalHeight:subjects.get(state.character).targetHeight,
-  armorName:subjects.get(state.character).armor.name,armorGeneration:subjects.get(state.character).armor.generation,armorPieces:subjects.get(state.character).armor.count,nativeMotion:subjects.get(state.character).nativeMotion,nativeClips:Object.fromEntries(Object.entries(subjects.get(state.character).actor.actions).map(([name,a])=>[name,{duration:a.getClip().duration,weight:a.getEffectiveWeight(),time:a.time}]))}),
+  armorName:subjects.get(state.character).armor.name,armorRevision:subjects.get(state.character).armor.revision,armorGeneration:subjects.get(state.character).armor.generation,armorPieces:subjects.get(state.character).armor.count,nativeMotion:subjects.get(state.character).nativeMotion,nativeClips:Object.fromEntries(Object.entries(subjects.get(state.character).actor.actions).map(([name,a])=>[name,{duration:a.getClip().duration,weight:a.getEffectiveWeight(),time:a.time}]))}),
  selectCharacter:setCharacter,selectMotion:setMotion
 });
