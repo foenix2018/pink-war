@@ -49,6 +49,7 @@ export class ShootingRangeGame extends ArenaGame {
     this.mode='training';this.targets=[];this.targetSerial=1;
     this.trainingHits=0;this.trainingShots=0;this.trainingEscapes=0;
     this.trainingCombo=0;this.trainingBestCombo=0;this.targetDelay=.2;
+    this.targetTransition=.46;
     this.wave=0;this.nextWave=-1;this.toSpawn=0;
     this.player.x=0;this.player.z=22;this.player.yaw=0;
     this.ownedWeapons=new Set(WEAPONS.map((_,i)=>i).filter(i=>!WEAPONS[i].melee));
@@ -65,7 +66,9 @@ export class ShootingRangeGame extends ArenaGame {
     const z=kind==='fixed-near'?7:far?(-20-this.random()*22):-18;
     const radius=kind==='fixed-near'?.83:kind==='fixed-far'?.72:.78;
     const x=(this.random()-.5)*11,y=1.5+(this.random()-.5)*.6;
-    const target={id:this.targetSerial++,kind,born:this.time,life:Math.max(1.65,5.2/Math.sqrt(trainingSpeed(this.time))),
+    // Do not retract a target merely because the shooter needs time to aim.
+    // Targets remain until a confirmed impact or a clearly announced drill change.
+    const target={id:this.targetSerial++,kind,born:this.time,life:Infinity,
       x,y,z,radius,range:kind==='lateral'?Math.min(2.6,Math.max(.6,8-Math.abs(x))):kind==='depth'?Math.min(5,Math.max(1.3,Math.abs(z)-9)):0,
       phase:0,speed:trainingSpeed(this.time),hit:false,expired:false};
     this.targets.push(target);this.event('training-appear',{id:target.id,kind});return target;
@@ -80,7 +83,7 @@ export class ShootingRangeGame extends ArenaGame {
       if(hit&&(!best||hit.distance<best.distance))best=hit;
     }
     if(best){
-      best.target.hit=true;this.trainingHits++;this.trainingCombo++;
+      best.target.hit=true;best.target.hitAt=this.time;this.trainingHits++;this.trainingCombo++;
       this.trainingBestCombo=Math.max(this.trainingCombo,this.trainingBestCombo);
       const bonus=Math.min(5,this.trainingCombo)*10;
       this.score+=best.points+bonus;
@@ -102,21 +105,23 @@ export class ShootingRangeGame extends ArenaGame {
     this.nextWave=-1;this.toSpawn=0;this.wave=0;
     if(this.trainingLevel.number!==beforeStage){
       this.event('training-stage',{stage:this.trainingLevel.number,label:this.trainingLevel.label});
+      // A timed drill transition is explicitly announced; old targets
+      // are replaced only here, not spontaneously while the player aims.
+      this.targets=this.targets.filter(target=>target.hit);
       this.targetDelay=.05;
+      this.trainingCombo=0;
     }
     for(let i=this.targets.length-1;i>=0;i--){
       const target=this.targets[i];
-      if(target.hit){this.targets.splice(i,1);continue;}
-      if(this.time-target.born>target.life){
-        target.expired=true;this.targets.splice(i,1);this.trainingEscapes++;this.trainingCombo=0;
-        this.event('training-escaped',{id:target.id});
-      }
+      // Keep the struck plate in the scene long enough to visibly fold down.
+      if(target.hit&&this.time-(target.hitAt??this.time)>.48)this.targets.splice(i,1);
     }
     this.targetDelay-=dt;
+    const live=this.targets.filter(t=>!t.hit).length;
     const maxTargets=this.time<45?1:this.time<100?2:3;
-    if(this.targetDelay<=0&&this.targets.length<maxTargets){
+    if(this.targetDelay<=0&&live<maxTargets){
       this.makeTarget();
-      this.targetDelay=Math.max(.22,.95/trainingSpeed(this.time));
+      this.targetDelay=Math.max(.24,1.12/trainingSpeed(this.time));
     }
   }
   snapshot(){
