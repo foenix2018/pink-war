@@ -34,7 +34,7 @@ test('the waist-high rail blocks movement even with sprinting and jumping',()=>{
 test('five-sided shooting booth has lane partitions, industrial ceiling and a backstop',()=>{
  const art=createShootingRangeArt(T,new T.Scene());
  const nodes=art.root.children.map(x=>x.name);
- assert.ok(nodes.filter(x=>x==='Séparateur des postes de tir').length>=10);
+ assert.ok(nodes.filter(x=>x==='Séparateur entre deux postes').length===4);
  assert.ok(nodes.includes('Plafond pare-balles acoustique'));
  assert.ok(nodes.includes('Mur arrêt-tirs'));
  assert.ok(nodes.includes('Piège à balles')||nodes.includes('Blindage arrière des couloirs'));
