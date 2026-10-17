@@ -117,6 +117,29 @@ export function createShootingRangeArt(T,scene){
     mesh.name=name;mesh.position.set(x,y,z);mesh.receiveShadow=true;root.add(mesh);return mesh;
   };
   const collision=(x,z,w,d,y=0,h=3)=>obstacles.push({x,z,hx:w/2,hz:d/2,y,height:h,surface:'metal'});
+  // Every waist-high desk, partition and enclosure wall gets a collider in
+  // the SAME coordinates as the mesh. Keep walkable floor paint non-solid.
+  const solid=(name,x,y,z,w,h,d,material=mats.metal)=>{
+    const mesh=box(name,x,y,z,w,h,d,material);
+    collision(x,z,w,d,y-h/2,h);
+    return mesh;
+  };
+  // Local stencilled signage, one canvas per graphic, no network textures.
+  const signs=[];
+  function sign(label,sub,x,y,z,w=2.15,h=.48,color='#8be1f5'){
+    if(typeof document==='undefined')return null;
+    const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;
+    const c=canvas.getContext('2d');
+    const grad=c.createLinearGradient(0,0,512,128);grad.addColorStop(0,'#152936');grad.addColorStop(1,'#243f4d');
+    c.fillStyle=grad;c.fillRect(0,0,512,128);
+    c.strokeStyle='#536979';c.lineWidth=6;c.strokeRect(5,5,502,118);
+    c.fillStyle=color;c.font='bold 50px monospace';c.textAlign='center';c.fillText(label,256,61,490);
+    c.fillStyle='#d3dde3';c.font='bold 25px monospace';c.fillText(sub,256,103,490);
+    const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
+    const material=new T.MeshBasicMaterial({map:texture,side:T.DoubleSide,roughness:1});
+    const panel=new T.Mesh(new T.PlaneGeometry(w,h),material);panel.position.set(x,y,z);root.add(panel);
+    signs.push({panel,texture,material});return panel;
+  }
   // Professional qualification bay. Shooter stands BEHIND a continuous,
   // waist-height safety railing. The simulation also enforces the shooting
   // line so jumping or sprinting cannot vault this barrier.
@@ -138,10 +161,18 @@ export function createShootingRangeArt(T,scene){
   }
   // Protected shooting lanes with a real stop wall behind the 60-m targets.
   box('Plateforme de tir',0,-.115,-13,27,.22,103,mats.floor);
-  box('Mur arrêt-tirs',0,3,-64,27,6,.48,mats.wall);collision(0,-64,27,.48,0,6);
+  solid('Mur arrêt-tirs',0,3,-64,27,6,.48,mats.wall);
+  // Impact wall: overlapping armored plates, staggered ribs and angled
+  // ballistic shields break up the old flat infinite corridor.
+  for(const z of [-63.55,-61.9]){
+    for(let lane=-2;lane<=2;lane++){
+      box('Caisson absorbeur balistique',lane*4.6,2.35,z,4.15,3.9,.12,mats.padding);
+      for(let y of [.5,1.52,2.54,3.56])
+        box('Raidisseur pare-balles',lane*4.6,y,z+.11,4.18,.055,.045,mats.trim);
+    }
+  }
   for(const side of [-1,1]){
-    box('Mur latéral',side*13.5,1.85,-13,.28,3.7,103,mats.wall);
-    collision(side*13.5,-13,.28,103,0,3.7);
+    solid('Mur latéral',side*13.5,1.85,-13,.28,3.7,103,mats.wall);
     box('Bande de sécurité',side*12.2,.015,-13,.12,.016,100,mats.yellow);
     // Repeating steel gantries give a recognizable indoor-training perspective.
     for(let z=16;z>=-58;z-=10){
@@ -149,19 +180,24 @@ export function createShootingRangeArt(T,scene){
       box('Projecteur technique',side*11.95,3.65,z,.26,.14,.18,mats.cyan);
     }
   }
+  // Rear access walkway is unobstructed. Each lane has a clear 4.6 m bay.
   for(let lane=-2;lane<=2;lane++){
     const x=lane*4.6;
     box('Ligne de tir',x,.023,17,2.8,.02,.13,mats.yellow);
     box('Marquage de pas de tir',x,.022,19,3,.014,.07,mats.white);
-    box('Garde au sol',x,.06,24,.13,.11,2.8,mats.trim);
+    box('Couloir de cheminement arrière',x,.016,30.4,3.65,.012,.09,mats.cyan);
+    box('Plaque acier antidérapante',x,.009,22.65,3.35,.014,1.4,mats.trim);
     for(let z=7;z>=-54;z-=9)
       box('Marquage de voie',x-2.2,.011,z,.035,.013,2.6,mats.yellow);
+    sign('POSTE 0'+(lane+3),'TIR / SÉCURITÉ',x,3.82,19.25,1.84,.43);
   }
-  for(const z of [7,-19,-40]){
+  for(const [z,distance] of [[7,'15 M'],[-19,'40 M'],[-40,'60 M']]){
     box('Traverse horizontale',0,3.8,z,25,.11,.11,mats.metal);
     for(let lane=-2;lane<=2;lane++){
       const x=lane*4.6;
       box('Rail de cible',x,3.5,z,3.65,.075,.09,mats.trim);
+      // Overhead electronic distance indicator belongs to the downrange rig.
+      sign(distance,'ZONE DE CIBLES',x,3.27,z+.2,1.42,.35,'#f3c96a');
     }
   }
   // Covered acoustic enclosure, visible on every lane. All ceiling components
@@ -175,17 +211,31 @@ export function createShootingRangeArt(T,scene){
       box('Liseré de balisage',side*12.95,.55,z,.05,.04,5.7,mats.cyan);
     }
   }
-  // One individual work station per lane, with padded shelves at the waist.
+  // Workbenches are moved BEHIND the user (z=26): the original ones sat
+  // directly around the spawn and were ghost objects with no collisions.
   for(let lane=-2;lane<=2;lane++){
     const x=lane*4.6;
-    box('Tablette de préparation',x,.87,22.25,2.75,.10,.74,mats.metal);
-    box('Tapis amortissant',x,.933,22.25,2.51,.025,.66,mats.padding);
+    solid('Tablette de préparation',x,.95,26,2.40,.16,.79,mats.metal);
+    box('Tapis amortissant',x,1.045,26,2.20,.025,.65,mats.padding);
     for(const side of [-1,1]){
-      box('Support de tablette',x+side*1.27,.46,22.25,.10,.92,.11,mats.trim);
-      box('Séparateur des postes de tir',x+side*2.15,1.42,20.65,.10,2.8,2.8,mats.partition);
+      solid('Support de tablette',x+side*1.08,.45,26,.10,.90,.12,mats.trim);
+      box('Rangement de munitions',x+side*.82,.67,26.1,.38,.26,.32,mats.trim);
     }
+    box('Console de sécurité et minuterie',x,1.20,26,.85,.28,.12,mats.black);
+    box('Bandeau lumineux de console',x,1.21,26.065,.71,.045,.026,mats.cyan);
     box('Marqueur de poste lumineux',x,4.26,20.1,1.25,.11,.10,mats.yellow);
   }
+  // Only four *unique* separators between the five lanes. These are
+  // full-height, 3.5 m deep acoustic shields with matching physical colliders.
+  for(let lane=-2;lane<=1;lane++){
+    const x=(lane+.5)*4.6;
+    solid('Séparateur entre deux postes',x,1.39,21.30,.15,2.78,3.25,mats.partition);
+    box('Cadre de protection du séparateur',x,2.8,21.30,.21,.09,3.31,mats.metal);
+    box('Bande LED séparateur',x,1.76,22.975,.035,.035,.07,mats.cyan);
+  }
+  // Behind the rear desks there is a marked access route, not an infinite room.
+  for(const x of [-11.8,11.8])box('Marquage de circulation',x,.025,31,.06,.015,9,mats.yellow);
+  sign('STAND DE TIR','ACCES REGLEMENTE  /  5 COULOIRS',0,3.38,35.73,5.5,.75,'#ffd58b');
   // Secondary bullet-trap panels behind each drill distance.
   for(const z of [-61]){
     box('Blindage arrière des couloirs',0,2.55,z,25.6,4.45,.18,mats.wall);
@@ -193,7 +243,8 @@ export function createShootingRangeArt(T,scene){
       box('Plaque acoustique',lane*4.6,2.55,z+.11,3.8,3.4,.07,mats.padding);
   }
   // Distinct training area behind the player does not block the VR controllers.
-  box('Fond stand',0,2.25,36,27,4.5,.3,mats.wall);
+  solid('Fond stand',0,2.25,36,27,4.5,.3,mats.wall);
+  // Floor stays a walkable surface, never an X/Z blocking collider.
   const targetGroups=new Map();
   const circle=new T.CircleGeometry(1,28);
   const ring=new T.TorusGeometry(1,.07,7,36);
@@ -227,8 +278,13 @@ export function createShootingRangeArt(T,scene){
       const item=targetGroups.get(t.id)||makeTarget(t.id);
       const pos=targetPosition(t,sim.time);
       item.carrier.position.set(pos.x,pos.y,pos.z);
+      const hitMotion=t.hit?Math.min(1,Math.max(0,(sim.time-(t.hitAt??sim.time))/.34)):0;
+      const eased=hitMotion*hitMotion*(3-2*hitMotion);
       item.target.scale.setScalar(t.radius*Math.min(1,Math.max(.025,(sim.time-t.born)*7)));
       item.target.rotation.y=Math.sin((sim.time-t.born)*2)*.035;
+      // The plate only folds down when a confirmed impact was registered.
+      item.target.rotation.x=-1.42*eased;
+      item.target.position.y=-.47*t.radius*eased;
       item.pole.position.set(0,-pos.y*.5,-.22);
       item.pole.scale.y=Math.max(.05,pos.y/2);
       item.foot.position.set(0,-pos.y+.035,-.22);
@@ -237,7 +293,8 @@ export function createShootingRangeArt(T,scene){
   }
   function dispose(){
     for(const item of targetGroups.values())item.carrier.removeFromParent();
-    targetGroups.clear();root.removeFromParent();
+    targetGroups.clear();for(const sign of signs){sign.panel.removeFromParent();sign.panel.geometry.dispose();sign.material.dispose();sign.texture.dispose();}
+    signs.length=0;root.removeFromParent();
     root.traverse(node=>{if(node.isMesh&&node.geometry!==circle&&node.geometry!==ring)node.geometry.dispose();});
     circle.dispose();ring.dispose();Object.values(mats).forEach(m=>m.dispose());textures.forEach(t=>t?.dispose());
   }
