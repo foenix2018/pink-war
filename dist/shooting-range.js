@@ -1,4 +1,4 @@
-import { ArenaGame, WEAPONS } from './game-logic.js';
+import { ArenaGame, WEAPONS, segmentBox } from './game-logic.js';
 
 // Shooting range: target-only simulation with the unchanged Pink War weapon
 // handling, audio and VR aiming. Distances are from the firing line z=22.
@@ -50,6 +50,7 @@ export class ShootingRangeGame extends ArenaGame {
     this.trainingHits=0;this.trainingShots=0;this.trainingEscapes=0;
     this.trainingCombo=0;this.trainingBestCombo=0;this.targetDelay=.2;
     this.targetTransition=.46;
+    this.pendingHits=[];
     this.wave=0;this.nextWave=-1;this.toSpawn=0;
     this.player.x=0;this.player.z=22;this.player.yaw=0;
     this.ownedWeapons=new Set(WEAPONS.map((_,i)=>i).filter(i=>!WEAPONS[i].melee));
@@ -74,27 +75,67 @@ export class ShootingRangeGame extends ArenaGame {
     this.targets.push(target);this.event('training-appear',{id:target.id,kind});return target;
   }
   shoot(origin,direction,charge=1){
+    const before=this.bullets.length;
     const result=super.shoot(origin,direction,charge);
     if(!result||this.weapon.melee)return result;
     this.trainingShots++;
+    // Pink War fires finite-speed laser projectiles. Predict where moving
+    // plates will be at the actual projectile arrival, not at trigger time.
     let best=null;
-    for(const target of this.targets){
-      const hit=traceTrainingTarget(origin,direction,target,this.time);
-      if(hit&&(!best||hit.distance<best.distance))best=hit;
+    const spawned=this.bullets.slice(before);
+    for(const b of spawned)for(const target of this.targets){
+      if(target.hit)continue;
+      if(b.vz>=-.0001)continue;
+      let travel=(target.z-b.z)/b.vz;
+      if(travel<=0||travel>b.life)continue;
+      for(let i=0;i<4;i++){
+        const predicted=targetPosition(target,this.time+travel);
+        travel=(predicted.z-b.z)/b.vz;
+      }
+      if(travel<=0||travel>b.life)continue;
+      const start={x:b.x,y:b.y,z:b.z};
+      const hit=traceTrainingTarget(start,{x:b.vx,y:b.vy,z:b.vz},target,this.time+travel);
+      if(!hit)continue;
+      // A hard partition, safety rail or wall takes precedence over a target.
+      if(this.obstacles.some(obstacle=>{
+        const t=segmentBox(start,hit.point,obstacle);
+        return t!==null&&t<.999;
+      }))continue;
+      if(!best||travel<best.travel)best={hit,travel,bulletId:b.id};
     }
     if(best){
-      best.target.hit=true;best.target.hitAt=this.time;this.trainingHits++;this.trainingCombo++;
-      this.trainingBestCombo=Math.max(this.trainingCombo,this.trainingBestCombo);
-      const bonus=Math.min(5,this.trainingCombo)*10;
-      this.score+=best.points+bonus;
-      this.event('training-hit',{id:best.target.id,x:best.point.x,y:best.point.y,z:best.point.z,weapon:this.weapon.id,power:charge,surface:'metal',normal:{x:0,y:0,z:1},points:best.points+bonus,bullseye:best.bullseye,combo:this.trainingCombo});
+      this.pendingHits.push({id:best.hit.target.id,due:this.time+best.travel,
+        bulletId:best.bulletId,hit:best.hit,weapon:this.weapon.id,power:charge});
     }else{this.trainingCombo=0;this.event('training-miss',{});}
     return result;
   }
   step(dt,input={}){
     const beforeStage=this.trainingLevel.number;
     this.nextWave=-1;this.toSpawn=0;this.wave=0;
+    const arriving=[];
+    const nextTime=this.time+Math.max(0,Math.min(.05,dt));
+    for(let i=this.pendingHits.length-1;i>=0;i--){
+      const pending=this.pendingHits[i];
+      if(pending.due>nextTime+1e-7)continue;
+      this.pendingHits.splice(i,1);
+      const target=this.targets.find(t=>t.id===pending.id&&!t.hit);
+      if(!target)continue;
+      const bulletIndex=this.bullets.findIndex(b=>b.id===pending.bulletId);
+      if(bulletIndex>=0)this.bullets.splice(bulletIndex,1);
+      arriving.push({pending,target});
+    }
     super.step(dt,input);
+    for(const {pending,target} of arriving){
+      if(!this.targets.includes(target)||target.hit)continue;
+      target.hit=true;target.hitAt=this.time;this.trainingHits++;this.trainingCombo++;
+      this.trainingBestCombo=Math.max(this.trainingCombo,this.trainingBestCombo);
+      const bonus=Math.min(5,this.trainingCombo)*10;
+      this.score+=pending.hit.points+bonus;
+      const hit=pending.hit;
+      this.event('training-hit',{id:target.id,x:hit.point.x,y:hit.point.y,z:hit.point.z,
+        weapon:pending.weapon,power:pending.power,surface:'metal',normal:{x:0,y:0,z:1},
+        points:hit.points+bonus,bullseye:hit.bullseye,combo:this.trainingCombo});
+    }
     // Safety officer's firing line: nobody can run or jump into the live lanes.
     // Clamp any movement, including sprint and airborne controller movement.
     if(this.player.z<TRAINING_BARRIER.stopZ){
