@@ -1,6 +1,6 @@
 /* Vesper campaign: original illustrated menu/loading screens, live 3D in play. */
 #welcome-art{position:fixed;inset:0;z-index:1;pointer-events:none;background:#101923}
-#welcome-art img{width:100%;height:100%;object-fit:cover;object-position:70% center}
+#welcome-art img{width:100%;height:100%;object-fit:cover;object-position:73% center}
 .scene-shade{z-index:1;background:linear-gradient(90deg,#071016eb 0%,#071016b8 31%,#09101920 64%),linear-gradient(0deg,#080f1abb,transparent 38%)}
 .grain{z-index:1}.playing #welcome-art,.outfit-mode #welcome-art{display:none}.playing .scene-shade,.outfit-mode .scene-shade{visibility:hidden}
 .intro{top:110px;bottom:48px;left:6.5%;width:398px;max-width:42vw;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#74808070 transparent;padding:5px 12px 12px 2px;touch-action:pan-y}
@@ -20,7 +20,7 @@
 .art-credit{position:absolute;bottom:24px;right:30px;font:8px/1.5 monospace;letter-spacing:.14em;color:#bbc8c8a6;pointer-events:none;text-shadow:0 1px 4px #000}
 .lobby-art-credit{bottom:55px;right:5%}.lobby-bottom{bottom:18px}.lobby-bottom .bottom-meta{color:#c0caca;letter-spacing:.1em}
 #loading-screen{position:fixed;inset:0;z-index:90;background:#0a1418;overflow:hidden;pointer-events:auto}
-#loading-screen>img{position:absolute;width:100%;height:100%;object-fit:cover;object-position:center}
+#loading-screen>img{position:absolute;width:100%;height:100%;object-fit:cover;object-position:72% center}
 #loading-screen:after{content:'';position:absolute;inset:0;background:linear-gradient(0deg,#071117f2,transparent 83%),linear-gradient(90deg,#060e16aa,transparent 80%)}
 .loading-copy{position:absolute;z-index:1;left:7%;bottom:12%;width:min(580px,85vw)}
 .loading-copy h2{font:600 clamp(34px,5.2vw,70px)/1.05 system-ui;letter-spacing:-.05em;margin:16px 0;color:#fff8ee}
@@ -33,6 +33,7 @@
 @media(prefers-reduced-motion:reduce){.loading-track i{animation:none;width:100%;opacity:.6}}
 @media(min-width:901px) and (max-height:760px){.intro{top:92px;bottom:35px}.intro h1{font-size:52px;margin:8px 0}.intro .tagline{margin-bottom:12px}.mission-intro{margin-bottom:10px}.character-card,.character-card.selected,.view-switch button,.view-switch button.selected{height:35px;min-height:35px}.play-button{height:44px;margin-top:8px}.mission-intro h2{font-size:18px}}
 @media(max-width:900px) and (orientation:portrait){
+ #welcome-art img{object-position:100% center}
  .masthead{padding:18px 18px}.header-actions{gap:4px}.header-actions>a.hands-menu-button:first-child,.header-actions #how-button,.header-divider{display:none}
  .intro{top:auto;bottom:max(22px,env(safe-area-inset-bottom));left:6%;width:88%;max-width:none;max-height:calc(100dvh - 100px);padding-right:4px;overflow-y:auto}
  .intro h1{font-size:46px;margin:8px 0}.intro>.eyebrow{font-size:8px}.intro .tagline{font-size:12px;margin-bottom:14px}
@@ -41,7 +42,7 @@
  .character-choice,.view-choice{margin-bottom:8px}.character-card,.character-card.selected,.view-switch button,.view-switch button.selected{height:37px;min-height:37px}
  .play-button{height:48px;margin-top:9px}.lore-link{font-size:8px;margin-top:6px;padding-bottom:4px}.scene-shade{background:linear-gradient(0deg,#061018fa,#061018b5 54%,#06101805 92%)}
  .art-credit.lobby-art-credit{top:80px;bottom:auto;right:6%;font-size:6px}.loading-copy{bottom:15%;left:7%;width:86%}.loading-copy p{font-size:12px}
- #loading-screen>img{object-position:70% center}
+ #loading-screen>img{object-position:80% center}
 }
 @media(max-width:900px) and (orientation:landscape){
  .masthead{padding:12px 22px}.intro{top:69px;bottom:14px;left:5%;width:355px;max-width:47vw;padding-right:8px}

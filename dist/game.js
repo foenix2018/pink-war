@@ -1,5 +1,5 @@
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, clamp, segmentSphere, segmentBox, traceEnemyHit, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
-import { createScene } from './scene.js?v=3.46';
+import { createScene } from './scene.js?v=3.47';
 import { VRController } from './vr.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
 import { characterForId } from './characters.js';
@@ -17,6 +17,7 @@ import { magnifiedFov, aimSensitivity, flatSightPose } from './optics.js';
 import { CampaignLevel1 } from './campaign-level1.js';
 import { ShootingRangeGame } from './shooting-range.js';
 import {GAME_VERSION,showLaunchError} from './launch-ui.js';
+import {syncMenuArtwork} from './menu-art.js';
 
 const $ = id => document.getElementById(id);
 const settings = { sound: true, music: true, sensitivity: 1, quality: 'auto' };
@@ -32,6 +33,7 @@ let trainingWeaponIndex=Number.isInteger(boot?.trainingWeaponIndex)&&boot.traini
 function selectMode(mode){
   if(phase!=='lobby'||launchBusy)return;
   selectedMode=['campaign','arena','training'].includes(mode)?mode:'campaign';
+  syncMenuArtwork(character.id,selectedMode);
   for(const button of document.querySelectorAll('[data-mode]'))button.setAttribute('aria-pressed',String(button.dataset.mode===selectedMode));
   $('mission-title').textContent=selectedMode==='campaign'?'01 — Le dernier signal':selectedMode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
   $('mission-description').textContent=selectedMode==='campaign'?'Ancien poste de secours, évacuation interrompue, journal clandestin et relais ORDRE à saboter. Retrouver une trace de votre famille.':selectedMode==='arena'?'Vingt vagues de machines, six armes et des équipements à récupérer.':'Cibles fixes, proches et lointaines ; trajectoires latérales et avant-arrière ; accélération continue. Mesurez votre précision.';
@@ -110,6 +112,7 @@ $('quality').onchange = e => { settings.quality = e.target.value; world?.resize(
 function selectCharacter(id,save=true){
   if(phase!=='lobby')return;
   const next=characterForId(id),changed=next.id!==character.id;character=next;
+  syncMenuArtwork(character.id,selectedMode);
   document.documentElement.dataset.universe=character.universe;
   for(const button of document.querySelectorAll('[data-character]')){
     const selected=button.dataset.character===character.id;button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));
