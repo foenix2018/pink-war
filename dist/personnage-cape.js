@@ -1,4 +1,5 @@
-import { addCapeToOriginalSoldier } from './personnage-cape-addon.js?v=4';
+import { addCapeToOriginalSoldier } from './personnage-cape-addon.js?v=5';
+import { attachShadowConcept } from './personnage-shadow-concept.js?v=1';
 import * as T from './vendor/three.webgpu.min.js';
 import { WebGLRenderer } from './vendor/three.module.min.js';
 import { createCharacterKit, createSoldier } from './soldier.js';
@@ -67,21 +68,35 @@ const createGun=(options={})=>buildGun({
   makeFlash:parent=>{const flash=new T.Object3D();parent.add(flash);return flash;}
 });
 const capeParts=new Map();
+const shadowParts=new Map();
 const subjects=new Map();
 for(const id of ['lylu','ghju']){
   const model=createSoldier(kit,createGun,characterForId(id));
   scene.add(model.root);model.root.scale.setScalar(model.heightScale);model.root.visible=id==='ghju';
   model.animate(0,false);
+  // Masquer l'ancien casque et monter les plaques/visière Shadow avant la cape.
+  shadowParts.set(id,attachShadowConcept(model,characterForId(id)));
   capeParts.set(id,addCapeToOriginalSoldier(model,characterForId(id)));
   subjects.set(id,model);
 }
-const state={character:'ghju',motion:'idle',level:1,weapon:0,angle:Math.PI,elevation:.12,zoom:matchMedia('(max-width:800px) and (orientation:portrait)').matches?6.0:3.9,showBones:false,capeEnabled:true,capeWind:.60,jumpStart:0,clock:0};
+const state={character:'ghju',motion:'idle',level:7,weapon:0,angle:Math.PI,elevation:.12,zoom:matchMedia('(max-width:800px) and (orientation:portrait)').matches?6.0:3.9,showBones:false,capeEnabled:true,capeWind:.60,jumpStart:0,clock:0};
 const color=new T.Color();
 function setCharacter(id){
   if(!subjects.has(id))return;
   state.character=id;
   const profile=characterForId(id);
-  kit.setPalette(profile.armor);
+  // Palette Shadow Unit dans la visionneuse uniquement, non propagée au jeu.
+  kit.setPalette({...profile.armor,
+    rose:0x242730,pearl:0x6a6f77,dark:0x17191f,steel:0x444951,
+    suit:0x101117,visor:0x070911,lens:profile.masculine?0x113458:0x370b29
+  });
+  // Les matériaux perlés de l'AÉGIS sont aussi partagés entre deux armures.
+  // Appliquer l'assombrissement APRES setPalette évite le retour au rose pastel.
+  for(const [name,value] of [['rose',0x22252c],['pearl',0x646872],
+    ['dark',0x12151a],['steel',0x444954]]){
+    if(kit.armorMaterials[name]?.color)kit.armorMaterials[name].color.setHex(value);
+    if(kit.materials[name]?.color)kit.materials[name].color.setHex(value);
+  }
   setKenneyAccent(profile.armor.rose);
   paintEmblem(profile);
   for(const [name,mat] of Object.entries(mats)){
