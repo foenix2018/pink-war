@@ -40,6 +40,6 @@ export function createHomeBattlefield({room,obstacles=()=>[],forward=()=>({x:0,z
    if(navigation&&!navigation.reachable(p,head))continue;return p;
   }return null;
  }
- return {outdoor:true,setRoom,resetRoom(){bounds=center=navigation=null;},findPoint,canStand,trace,hasFloor:room.hasFloor,floorAt:room.floorAt,freeArea:()=>36,
+ return {outdoor:true,coverBoxes:boxes,setRoom,resetRoom(){bounds=center=navigation=null;},findPoint,canStand,trace,hasFloor:room.hasFloor,floorAt:room.floorAt,freeArea:()=>36,
   ceilingAt:p=>p.y+8,waypoint:(from,target)=>navigation?.waypoint(from,target),stats:()=>({center,radius,portalsMinDistance:12,openAir:true})};
 }

@@ -1,6 +1,6 @@
 export function enemyDurability(wave, form = 'stalker', elite = false) {
   const base=elite?95+wave*25:42+wave*14;
-  const frame=form==='bulwark'?1.85:form==='brute'?1.6:form==='probe'?.82:form==='seer'?1.25:1.3;
+  const frame=form==='synth'?1.42:form==='bulwark'?1.85:form==='brute'?1.6:form==='probe'?.82:form==='seer'?1.25:1.3;
   return Math.round(base*(frame+Math.min(.25,Math.max(0,wave-1)*.015)));
 }
 export function enemyVolley(wave, form='stalker') {

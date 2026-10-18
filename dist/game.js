@@ -1,5 +1,5 @@
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, clamp, segmentSphere, segmentBox, traceEnemyHit, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
-import { createScene } from './scene.js?v=3.42';
+import { createScene } from './scene.js?v=3.44';
 import { VRController } from './vr.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
 import { characterForId } from './characters.js';
@@ -13,7 +13,7 @@ import { OPTICS } from './weapons.js';
 import { createWeaponFeel } from './weapon-feel.js';
 import { bladeSwingPose } from './blade-combat.js';
 import { createSaberSound } from './saber-sound.js';
-import { magnifiedFov, aimSensitivity } from './optics.js';
+import { magnifiedFov, aimSensitivity, flatSightPose } from './optics.js';
 import { CampaignLevel1 } from './campaign-level1.js';
 import { ShootingRangeGame } from './shooting-range.js';
 import {GAME_VERSION,showLaunchError} from './launch-ui.js';
@@ -301,7 +301,7 @@ function updateCamera() {
   const { T, camera, soldier, weapon } = world, p = game.player;
   const feel=weaponFeel.state,flatScreen=vr?.mode!=='stereo';
   const cameraYaw = yaw + (vr?.mode==='stereo' && vr.sensor ? vr.phoneYaw : 0)+(flatScreen?feel.yaw*.06:0), cameraPitch = clamp(pitch + (vr?.mode==='stereo' && vr.sensor ? vr.phonePitch : 0) + (flatScreen?feel.pitch*.2:0), -1.2, 1.2);
-  const optic=OPTICS[game.weapon.id],normalFov=view==='fps'?72:64;
+  const optic=world.fpsGun.userData.optics?.[game.weaponIndex]?.cfg||OPTICS[game.weapon.id],normalFov=view==='fps'?72:64;
   camera.fov=normalFov+(optic?(magnifiedFov(normalFov,optic.magnification)-normalFov)*aimBlend:0);
   camera.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
   const elevation = p.elevation || 0;
@@ -319,8 +319,8 @@ function updateCamera() {
     camera.position.set(start.x + (end.x - start.x) * nearest, Math.max(.35, start.y + (end.y - start.y) * nearest), start.z + (end.z - start.z) * nearest);
   }
   const bob = Math.hypot(move.x, move.y) > .1 || keys.has('KeyW') || keys.has('KeyZ') || keys.has('KeyS');
-  const sightY=optic?.y??.178;
-  weapon.position.set(.19*(1-aimBlend)+feel.yaw*.15, -.24+(.24-sightY)*aimBlend + (bob ? Math.sin(clock * 11) * .009 : 0) - feel.kick*.18 + reloadLift * .045, -.56+.07*aimBlend + feel.kick - reloadLift * .028);
+  const ads=flatSightPose(optic,aimBlend);
+  weapon.position.set(ads.x+feel.yaw*.15, ads.y + (bob ? Math.sin(clock * 11) * .009*(1-aimBlend) : 0) - feel.kick*.18 + reloadLift * .045, ads.z + feel.kick - reloadLift * .028);
   weapon.rotation.set(feel.pitch + reloadLift * Math.PI / 2,feel.yaw,Math.sin(clock * 1.8) * .003-feel.yaw*.35);
   if(game.weapon.melee){const slash=bladeSwingPose(game.bladePhase,game.bladeSlashSide);weapon.rotation.x=slash.x-.12;weapon.rotation.y=slash.y;weapon.rotation.z=slash.z;}
   camera.updateProjectionMatrix(); camera.updateMatrixWorld(true);

@@ -1,5 +1,6 @@
 import * as T from './vendor/three.webgpu.min.js';
 import {equipmentSurfaces} from './equipment-surfaces.js';
+import {pearlMetal,tintPearl} from './pearl-metal.js';
 
 // Original Pink War IV models, with intact CC0 Kenney Blaster Kit 2.1 fallback.
 // Local assets only; the autonomous HTML embeds the five production models.
@@ -39,7 +40,7 @@ function paintPalette(){
   c.putImageData(image,0,0);paletteTexture.needsUpdate=true;
   sc.putImageData(surface,0,0);surfaceTexture.needsUpdate=true;
 }
-export function setKenneyAccent(hex){paletteAccent=hex;paintPalette();for(const [name,m] of detailMaterials){if(name==='PW_MK4_paint')m.color.setHex(hex).multiplyScalar(.72);if(name==='PW_MK4_energy'){m.color.setHex(hex);m.emissive.setHex(hex).multiplyScalar(.30);}}}
+export function setKenneyAccent(hex){paletteAccent=hex;paintPalette();for(const [name,m] of detailMaterials){if(name==='PW_MK4_paint'||name==='PW_MK4_ceramic')tintPearl(m,hex,name.endsWith('ceramic'));if(name==='PW_MK4_energy'){m.color.setHex(hex);m.emissive.setHex(hex).multiplyScalar(.30);}}}
 function getMaterial(){
   if(sharedMaterial)return sharedMaterial;
   if(typeof document!=='undefined'){
@@ -60,13 +61,14 @@ const detailMaterials=new Map();
 function modelMaterial(name=''){
   if(name.startsWith('PW_MK4_')){
     if(!detailMaterials.has(name)){
-      const maps=equipmentSurfaces(),kind=name.slice(7),p=kind==='ceramic'?{color:0xbfc7cb,metalness:.48,roughness:.48}:
+      const maps=equipmentSurfaces(),kind=name.slice(7),p=kind==='ceramic'?pearlMetal(paletteAccent,true):
         kind==='rubber'?{color:0x151b22,metalness:.08,roughness:.95}:
-        kind==='paint'?{color:new T.Color(paletteAccent).multiplyScalar(.72),metalness:.64,roughness:.48}:
+        kind==='paint'?pearlMetal(paletteAccent):
         kind==='energy'?{color:paletteAccent,emissive:new T.Color(paletteAccent).multiplyScalar(.3),emissiveIntensity:1.5,metalness:.4,roughness:.3}:
         kind==='glass'?{color:0x255475,metalness:.8,roughness:.1}:
         {color:0x485765,metalness:.88,roughness:.42};
-      const m=new T.MeshStandardMaterial({...p,map:kind==='glass'||kind==='energy'?null:maps.metal,roughnessMap:kind==='glass'?null:maps.rough,bumpMap:kind==='rubber'?maps.cloth:maps.rough,bumpScale:kind==='rubber'?.0003:.00008});m.name=name;detailMaterials.set(name,m);
+      const Material=['ceramic','paint'].includes(kind)?T.MeshPhysicalMaterial:T.MeshStandardMaterial;
+      const m=new Material({...p,map:kind==='glass'||kind==='energy'?null:maps.metal,roughnessMap:kind==='glass'?null:maps.rough,bumpMap:kind==='rubber'?maps.cloth:maps.rough,bumpScale:kind==='rubber'?.0003:.00008});m.name=name;detailMaterials.set(name,m);
     }
     return detailMaterials.get(name);
   }
@@ -196,7 +198,7 @@ export function applyBlasterEnvironment(root,environment){
 }
 export function installKenneyBlasters(models,originals,frames,onLoad,holds=[],environment=null){
   const letters=['b','g','d','f','p'];
-  const progress={loaded:0,total:5,failed:0,revision:'3.41',loadedByIndex:[false,false,false,false,false]};
+  const progress={loaded:0,total:5,failed:0,revision:'3.44',loadedByIndex:[false,false,false,false,false]};
   for(let i=0;i<5;i++)cached(letters[i]).then(master=>{
     const skin=master.clone(true),frame=frames[i];
     skin.name=(skin.userData.pinkWarFrame?'Pink War IV / ':'Kenney CC0 / ')+frames[i].id;

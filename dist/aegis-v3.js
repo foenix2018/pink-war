@@ -4,7 +4,7 @@ import {profiledPanel} from './armor-profiles.js';
 
 // Original full tactical suit on the preserved RLH skeleton. The old rescue
 // jacket and F1 helmet are replaced, not hidden under another oversized shell.
-export const AEGIS=Object.freeze({name:'AÉGIS III',generation:3,revision:'3.42'});
+export const AEGIS=Object.freeze({name:'AÉGIS III',generation:3,revision:'3.44'});
 const cache=new WeakMap();
 function template(data,masculine){
   let variants=cache.get(data);if(!variants){variants=new Map();cache.set(data,variants);}if(variants.has(masculine))return variants.get(masculine);
@@ -12,7 +12,7 @@ function template(data,masculine){
   const at=name=>new T.Vector3().setFromMatrixPosition(new T.Matrix4().fromArray(data.bones[bones.get(name)].inverse).invert());
   const add=(bone,key,g,p=[0,0,0],r=[0,0,0],s=[1,1,1],level=1,tag='',blend=false)=>items.push({bone:bones.get(bone),key,geometry:bake(g,matrix(p,r,s)),level,tag,blend});
   const box=(b,k,size,p,r=[0,0,0],level=1)=>add(b,k,bevelBox(...size,Math.min(...size)*.18,1),p,r,[1,1,1],level);
-  const plate=(b,k,outline,p,s=[1,1,1],r=[0,0,0],level=1,tag='')=>add(b,k,profiledPanel(outline,{depth:.013,bulge:k==='pearl'?.018:k==='dark'?.009:.006,round:.10}),p,r,s,level,tag);
+  const plate=(b,k,outline,p,s=[1,1,1],r=[0,0,0],level=1,tag='')=>add(b,k,profiledPanel(outline,{depth:.013,bulge:k==='pearl'?.018:k==='dark'?.009:.006,round:.17}),p,r,s,level,tag);
   const link=(b,k,a,c,r1,r2=r1,level=1)=>items.push({bone:bones.get(b),key:k,geometry:bake(limb(a,c,r1,r2,16)),level});
   const ell=(b,k,p,r,level=1)=>add(b,k,ball([0,0,0],r,[16,10]),p,[0,0,0],[1,1,1],level);
   const width=masculine?1.03:.94;
@@ -56,7 +56,7 @@ function template(data,masculine){
   function limbPlate(bone,end,key,outline,front,scale=[1,1,1],t=.5,level=1,tag=''){
     const a=at(bone),b=at(end),y=a.clone().sub(b).normalize(),z=new T.Vector3(0,0,1);z.addScaledVector(y,-z.dot(y)).normalize();const x=y.clone().cross(z).normalize();
     const m=new T.Matrix4().makeBasis(x,y,z).setPosition(a.lerp(b,t).addScaledVector(z,-front));
-    items.push({bone:bones.get(bone),key,geometry:bake(profiledPanel(outline,{depth:.014,bulge:key==='pearl'?.018:.008,round:.12}),m.multiply(new T.Matrix4().makeScale(...scale))),level,tag});
+    items.push({bone:bones.get(bone),key,geometry:bake(profiledPanel(outline,{depth:.014,bulge:key==='pearl'?.018:.008,round:.18}),m.multiply(new T.Matrix4().makeScale(...scale))),level,tag});
   }
   const shoulder=[[-.052,-.079],[.047,-.082],[.073,-.034],[.079,.018],[.055,.066],[.010,.088],[-.045,.075],[-.071,.032],[-.073,-.018]];
   const thigh=[[-.045,-.105],[.041,-.107],[.065,-.047],[.062,.082],[.035,.109],[-.042,.10],[-.062,.040],[-.059,-.04]];
@@ -159,7 +159,7 @@ export function createAegisArmor(actor,kit,profile){
   const source=template(actor.data,!!profile?.masculine),root=actor.root;
   const api={...AEGIS,parts:[],level:0,count:0,template:source,
     setLevel(n){n=Math.max(1,Math.min(10,Math.floor(Number(n)||1)));if(n===this.level)return;for(const m of this.parts)m.removeFromParent();this.parts=[];const stage=source.forLevel(n);this.count=stage.count;this.level=n;
-      for(const p of stage.parts){const mesh=new T.SkinnedMesh(p.geometry,kit.materials[p.key]);mesh.name='AÉGIS III '+p.key;mesh.frustumCulled=false;mesh.userData.suit=AEGIS.name;mesh.userData.level=n;root.add(mesh);mesh.bind(actor.skeleton,new T.Matrix4());mesh.castShadow=p.key!=='glow';mesh.receiveShadow=true;mesh.boundingBox=new T.Box3(new T.Vector3(-1,-.2,-1),new T.Vector3(1,2.35,1));mesh.boundingSphere=new T.Sphere(new T.Vector3(0,1,0),1.8);this.parts.push(mesh);}
+      for(const p of stage.parts){const mesh=new T.SkinnedMesh(p.geometry,(kit.armorMaterials||kit.materials)[p.key]);mesh.name='AÉGIS III '+p.key;mesh.frustumCulled=false;mesh.userData.suit=AEGIS.name;mesh.userData.level=n;root.add(mesh);mesh.bind(actor.skeleton,new T.Matrix4());mesh.castShadow=p.key!=='glow';mesh.receiveShadow=true;mesh.boundingBox=new T.Box3(new T.Vector3(-1,-.2,-1),new T.Vector3(1,2.35,1));mesh.boundingSphere=new T.Sphere(new T.Vector3(0,1,0),1.8);this.parts.push(mesh);}
     },dispose(){for(const m of this.parts)m.removeFromParent();this.parts=[];}
   };api.setLevel(1);return api;
 }

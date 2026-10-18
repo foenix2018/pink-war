@@ -75,7 +75,8 @@ test('difficulty switches automatically but does not retract targets during a st
 
 test('a distant target waits for the actual finite-speed laser impact before reacting',()=>{
  const game=new ShootingRangeGame([],()=>.5);
- game.time=20.1;game.step(.05,{});
+ // Allow the range’s existing initial appearance delay before testing flight time.
+ game.time=20.1;for(let i=0;i<6;i++)game.step(.05,{});
  const target=game.targets[0];
  assert.equal(target.kind,'fixed-far');
  const pos=targetPosition(target,game.time),origin={x:0,y:1.6,z:22};

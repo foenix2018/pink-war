@@ -4,7 +4,7 @@
     "file": "blaster-b-mk4.glb",
     "triangles": 8528,
     "source": "Original Pink War geometry",
-    "revision": "3.41",
+    "revision": "3.44",
     "muzzle": [
       0,
       0.045,
@@ -19,9 +19,9 @@
   {
     "id": "bloom",
     "file": "blaster-g-mk4.glb",
-    "triangles": 11052,
+    "triangles": 11172,
     "source": "Original Pink War geometry",
-    "revision": "3.41",
+    "revision": "3.44",
     "muzzle": [
       0,
       -0.02,
@@ -36,9 +36,9 @@
   {
     "id": "lance",
     "file": "blaster-d-mk4.glb",
-    "triangles": 13516,
+    "triangles": 12572,
     "source": "Original Pink War geometry",
-    "revision": "3.41",
+    "revision": "3.44",
     "muzzle": [
       0,
       -0.02,
@@ -55,7 +55,7 @@
     "file": "blaster-f-mk4.glb",
     "triangles": 12184,
     "source": "Original Pink War geometry",
-    "revision": "3.41",
+    "revision": "3.44",
     "muzzle": [
       0,
       0.08,
@@ -72,7 +72,7 @@
     "file": "blaster-p-mk4.glb",
     "triangles": 12280,
     "source": "Original Pink War geometry",
-    "revision": "3.41",
+    "revision": "3.44",
     "muzzle": [
       0,
       0.04,

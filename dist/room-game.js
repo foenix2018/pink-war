@@ -1,4 +1,6 @@
 import { ArenaGame, WEAPONS, MAX_LEVEL, REGEN_DELAY, levelCount, traceEnemyHit, segmentSphere } from './game-logic.js';
+import {tacticalOrder} from './tactical-enemies.js';
+import {segmentBox} from './game-logic.js';
 import { enemyDurability, enemyVolley, rangedMuzzle, enemyScale } from './enemy-combat.js';
 import { bladeBulletContact, reflectedVelocity, sweepBlade } from './blade-combat.js';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -60,10 +62,10 @@ export class RoomGame extends ArenaGame {
   spawnEnemy(){
     const ordinal=this.spawned,site=this.activePortals[ordinal%this.activePortals.length];if(!site||site.openedAt>this.time)return false;
     const point=this.room.findPoint({purpose:'enemy',head:this.head,portal:site,avoid:this.enemies});if(!point)return false;
-    const special=this.wave>=11&&ordinal%7===5?'bulwark':this.wave>=6&&ordinal%7===4?'listener':null;
+    const special=this.room.outdoor&&this.wave>=3&&ordinal%7===1?'synth':this.wave>=11&&ordinal%7===5?'bulwark':this.wave>=6&&ordinal%7===4?'listener':null;
     const elite=!special&&this.wave>=3&&ordinal%5===2,probe=!special&&!elite&&this.wave>=3&&ordinal%6===3;
     const form=special||(probe?'probe':elite?'brute':['stalker','scuttler','seer','brute'][(ordinal+this.wave-1)%4]);
-    const ranged=['seer','probe','listener','bulwark'].includes(form)||(this.wave>=5&&form==='brute');
+    const ranged=['seer','probe','listener','bulwark','synth'].includes(form)||(this.wave>=5&&form==='brute');
     const roomScale=Math.min(1,Math.max(.6,((this.room.ceilingAt?.(point)??2.6)-point.y-.15)/((probe?1.95:form==='scuttler'?1.1:2.32)*enemyScale(form,elite))));
     const e={id:this.nextId++,x:point.x,z:point.z,elevation:point.y+(probe?.85:0),groundY:point.y,form,elite,ranged,
       hp:Math.round(enemyDurability(this.wave,form,elite)*.72),speed:(this.room.outdoor?Math.min(2.6,1.6+this.wave*.05):Math.min(.75,.32+this.wave*.021))*(form==='scuttler'?1.12:form==='bulwark'?.65:1),
@@ -103,21 +105,25 @@ export class RoomGame extends ArenaGame {
     }
   }
   moveEnemies(dt){
+    const coverBoxes=this.enemies.some(e=>e.form==='synth')?(this.room.coverBoxes?.()||[]):[];
     for(const e of this.enemies){
       const eye={x:e.x,y:e.elevation+e.aimHeight,z:e.z},seen=!this.blocked(eye,this.head),distance=Math.hypot(this.head.x-e.x,this.head.z-e.z);
       e.awareness=seen?'engaged':e.alertedUntil>this.time?'search':'patrol';
-      const target=seen?this.head:e.alertedUntil>this.time?{x:e.lastKnownX,z:e.lastKnownZ}:null;
+      if(seen&&e.form==='synth'){e.lastKnownX=this.head.x;e.lastKnownZ=this.head.z;e.lastKnownHeight=this.player.elevation;e.alertedUntil=this.time+10;}
+      let target=seen?this.head:e.alertedUntil>this.time?{x:e.lastKnownX,z:e.lastKnownZ}:null;
+      const order=tacticalOrder(e,{time:this.time,seen,threat:{x:e.lastKnownX,y:(e.lastKnownHeight||0)+1.25,z:e.lastKnownZ},obstacles:coverBoxes,allies:this.enemies,segmentBox});
+      if(order)target={...order.point,y:e.groundY};
       e.moving=false;
       if(target){
         const waypoint=this.room.waypoint?.(e,target)||target,dx=waypoint.x-e.x,dz=waypoint.z-e.z,n=Math.hypot(dx,dz)||1;
-        if(distance>(e.ranged?(this.room.outdoor?7:2.0):.92)&&e.stunnedUntil<=this.time){const speed=e.speed*(e.limpUntil>this.time?.6:1),p={x:e.x+dx/n*speed*dt,y:e.groundY,z:e.z+dz/n*speed*dt};
+        if((order?Math.hypot(target.x-e.x,target.z-e.z)>order.stopDistance:distance>(e.ranged?(this.room.outdoor?7:2.0):.92))&&e.stunnedUntil<=this.time){const speed=e.speed*(e.limpUntil>this.time?.6:1),p={x:e.x+dx/n*speed*dt,y:e.groundY,z:e.z+dz/n*speed*dt};
           if(this.room.canStand(p,e.radius)&&!this.blocked(eye,{x:p.x,y:eye.y,z:p.z})){e.x=p.x;e.z=p.z;e.moving=true;}}
-        e.yaw=Math.atan2(target.x-e.x,target.z-e.z)+Math.PI;
+        e.yaw=Math.atan2((order?e.lastKnownX:target.x)-e.x,(order?e.lastKnownZ:target.z)-e.z)+Math.PI;
       }
       if(e.form==='probe')e.elevation=e.groundY+.85+Math.sin(this.time*1.4+e.phase)*.09;
       if(e.stunnedUntil>this.time){e.chargeProgress=0;e.lockedTarget=null;e.burstRemaining=0;continue;}
       e.attackTimer-=dt;
-      if(!seen){e.chargeProgress=0;e.lockedTarget=null;e.burstRemaining=0;continue;}
+      if(!seen||order&&!order.canFire){e.chargeProgress=0;e.lockedTarget=null;e.burstRemaining=0;continue;}
       if(!e.ranged&&distance<1&&e.attackTimer<=0){this.damage(7+Math.floor(this.wave*.5));e.attackTimer=1.4;}
       if(e.ranged&&e.attackTimer<.65){e.lockedTarget||={...this.head};e.chargeProgress=clamp(1-e.attackTimer/.65,0,1);}
       if(e.ranged&&e.attackTimer<=0){
@@ -125,7 +131,7 @@ export class RoomGame extends ArenaGame {
         if(!this.blocked(muzzle,target)){
           const speed=Math.min(14,8+this.wave*.25),dx=target.x-muzzle.x,dy=target.y-.15-muzzle.y,dz=target.z-muzzle.z,n=Math.hypot(dx,dy,dz)||1;
           this.bullets.push({id:this.nextId++,...muzzle,vx:dx/n*speed,vy:dy/n*speed,vz:dz/n*speed,life:2.5,damage:6+Math.floor(this.wave*.55),hostile:true,weapon:'enemy',splash:0});
-          e.lastShotAt=this.time;e.aimPitch=Math.atan2(dy,Math.hypot(dx,dz));this.event('enemy-shot',{...muzzle,form:e.form});
+          e.lastShotAt=this.time;if(e.tactics)e.tactics.shots++;e.aimPitch=Math.atan2(dy,Math.hypot(dx,dz));this.event('enemy-shot',{...muzzle,form:e.form});
           const volley=enemyVolley(this.wave,e.form);e.burstRemaining=e.burstRemaining>0?e.burstRemaining-1:volley.count-1;
           e.attackTimer=e.burstRemaining>0?.18:Math.max(1.35,3.1-this.wave*.06);
         }else e.attackTimer=.5;

@@ -43,13 +43,15 @@ const opticGlassGeometry=new T.CircleGeometry(1,32),opticDotGeometry=new T.Circl
 const opticRingGeometry=new T.RingGeometry(.0068,.0074,32);
 function attachOptic(model,index) {
   const source=OPTICS[WEAPON_FRAME[index].id];if(!source)return null;const cfg={...source};
-  const glassMaterial=new T.MeshPhysicalMaterial({color:0x8ec4d5,metalness:.1,roughness:.12,transparent:true,opacity:.14,side:T.DoubleSide,depthWrite:false});
+  const glassMaterial=new T.MeshPhysicalMaterial({color:0x8ec4d5,metalness:.1,roughness:.12,transparent:true,opacity:.07,side:T.DoubleSide,depthWrite:false});
   const glass=new T.Mesh(opticGlassGeometry,glassMaterial);glass.scale.setScalar(cfg.radius);glass.position.set(0,cfg.y,cfg.z);model.add(glass);
   const reticle=new T.Group(),material=new T.MeshBasicMaterial({color:0xff655c,toneMapped:false,side:T.DoubleSide});
   const dot=new T.Mesh(opticDotGeometry,material);reticle.add(dot);
   if(index===1)reticle.add(new T.Mesh(opticRingGeometry,material));
+  let hairMaterial=null;
+  if(index===2){const lines=[];for(const s of [-1,1]){lines.push(s*.0025,0,0,s*.016,0,0,0,s*.0025,0,0,s*.016,0);for(let j=1;j<=3;j++){const p=s*j*.004;lines.push(p,-.001,0,p,.001,0,-.001,p,0,.001,p,0);}}const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(lines,3));hairMaterial=new T.LineBasicMaterial({color:0xe6b18b,toneMapped:false});reticle.add(new T.LineSegments(geo,hairMaterial));}
   reticle.visible=false;model.add(reticle);
-  return {cfg,reticle,glass,glassMaterial,material,eyeDistance:0};
+  return {cfg,reticle,glass,glassMaterial,material,hairMaterial,eyeDistance:0};
 }
 const both = fn => [-1, 1].forEach(fn);
 const torus = (r, tube, arc = PI * 2, radial = 6, tubular = 20) => new T.TorusGeometry(r, tube, radial, tubular, arc);
@@ -442,7 +444,7 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
     hand.userData.dispose?.();support.userData.dispose?.();
     for(const rail of batteries)if(rail){rail.dispose();rail.userData.shell.geometry.dispose();}
     blade?.dispose();
-    for(const optic of optics)if(optic){optic.glassMaterial.dispose();optic.material.dispose();}
+    for(const optic of optics)if(optic){optic.glassMaterial.dispose();optic.material.dispose();optic.hairMaterial?.dispose();for(const child of optic.reticle.children)if(child.isLineSegments)child.geometry.dispose();}
     batteryMaterial.dispose();collar.geometry.dispose();heatRing.geometry.dispose();heatMaterial.dispose();
   };
   return g;

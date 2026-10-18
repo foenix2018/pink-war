@@ -2,6 +2,7 @@
 import * as T from './vendor/three.webgpu.min.js';
 import { createEnemyFactory } from './enemies.js';
 import { createCharacterKit, createSoldier } from './soldier.js';
+import {setKenneyAccent} from './kenney-blasters.js';
 import { buildGun } from './weapons.js';
 import { createGlove } from './hands.js';
 import { createSurfaceDetails } from './surfaces.js';
@@ -52,7 +53,7 @@ function prepareCharacter(profile,surface) {
 }
 
 export async function createAtHomeAssets(scene, hero) {
-  const surface=createSurfaceDetails();
+  const surface=createSurfaceDetails();setKenneyAccent(hero.palette.rose);
   const player=prepareCharacter(hero,surface);
   const other=characterForId(hero.id==='ghju'?'lylu':'ghju');
   const companionKit=prepareCharacter(other,surface);

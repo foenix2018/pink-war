@@ -18,13 +18,13 @@ export const LEVEL1 = Object.freeze({
 
 export const LEVEL1_ENCOUNTERS = Object.freeze([
   Object.freeze(['probe','stalker','scuttler','seer','stalker','probe','scuttler','seer']),
-  Object.freeze(['seer','probe','scuttler','brute','stalker','listener','probe','seer']),
-  Object.freeze(['probe','brute','listener','scuttler','seer','stalker','probe','bulwark'])
+  Object.freeze(['synth','probe','scuttler','brute','stalker','listener','probe','seer']),
+  Object.freeze(['probe','brute','listener','scuttler','synth','stalker','probe','bulwark'])
 ]);
 const ENCOUNTERS=LEVEL1_ENCOUNTERS;
 const OPENING_SITES=Object.freeze([
   {x:3,z:61,form:'probe'},{x:2.2,z:47,form:'stalker'},
-  {x:-3,z:46,form:'scuttler'},{x:5,z:45,form:'seer'},
+  {x:-3,z:46,form:'scuttler'},{x:5,z:45,form:'synth'},
   {x:0,z:39,form:'stalker'},{x:4,z:34,form:'probe'},
   {x:-2,z:30,form:'stalker'},{x:5,z:25,form:'seer'}
 ]);
@@ -211,7 +211,7 @@ export class CampaignLevel1 extends ArenaGame {
       id: this.nextId++, x: site.x, z: site.z,
       elevation: homeHeight + (probe ? PROBE.hover : 0), homeHeight,
       grounded: !probe, verticalSpeed: 0, form, elite: false,
-      ranged: probe || ['seer','brute','listener','bulwark'].includes(form), hp: enemyDurability(1+this.encounter, form, false),
+      ranged: probe || ['seer','brute','listener','bulwark','synth'].includes(form), hp: enemyDurability(1+this.encounter, form, false),
       aimHeight: probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : ['seer','listener'].includes(form) ? 1.38 : ['brute','bulwark'].includes(form)?1.42:1.15,
       radius: probe ? PROBE.radius : form === 'scuttler' ? .86 : form==='bulwark'?.95:.8,
       hitRadius: probe ? .44 : form === 'scuttler' ? .91 : form === 'seer' ? .94 : 1.05,

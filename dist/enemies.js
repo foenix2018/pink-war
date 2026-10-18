@@ -6,6 +6,7 @@ import {enemyAlertState,ENEMY_OPTICS} from './enemy-alert.js';
 import {profiledPanel} from './armor-profiles.js';
 
 export const ENEMY_PROFILES=Object.freeze({
+ synth:Object.freeze({name:'Synthétique N-08 / tacticien autonome',silhouette:'humanoid / ivory shell / exposed tendons / adaptive cover'}),
  stalker:Object.freeze({name:'Poursuivant / châssis de sécurité',silhouette:'compact / chest keel / paired optics'}),
  seer:Object.freeze({name:'Sentinelle / optique longue portée',silhouette:'slender / cyclopean sensor / swept head'}),
  brute:Object.freeze({name:'Brute / châssis de siège',silhouette:'broad / recessed head / heavy shoulders'}),
@@ -90,11 +91,12 @@ export function createEnemyFactory(mats){
   const heavyFrame=frame.clone();heavyFrame.color.setHex(0x74858f);
   const mechanism=mats.monsterFace.clone();mechanism.color.setHex(0x18242c);mechanism.map=color;mechanism.bumpMap=height;mechanism.bumpScale=.0008;mechanism.roughness=.48;mechanism.metalness=.85;
   const servo=new T.MeshStandardMaterial({color:0x909d9b,roughness:.30,metalness:.88,envMap:mats.monster.envMap,envMapIntensity:.45});
+  const synthShell=new T.MeshPhysicalMaterial({color:0xd6e1e3,metalness:.46,roughness:.30,clearcoat:.65,clearcoatRoughness:.24,envMap:mats.monster.envMap,envMapIntensity:.5});
   const hazard=new T.MeshStandardMaterial({color:0x9c7d34,roughness:.72,metalness:.4});
 
   function template(elite,ranged,form){
     const key=`${form}:${elite?1:0}:${ranged?1:0}`;if(cache.has(key))return cache.get(key);
-    const armor=elite?heavyFrame:frame,dark=mechanism;
+    const armor=form==='synth'?synthShell:elite?heavyFrame:frame,dark=mechanism;
     const glow=ranged?mats.cyan:form==='scuttler'?mats.rose:form==='seer'?(mats.pale||mats.cyan):mats.violet;
     const optics=new T.MeshBasicMaterial({color:ENEMY_OPTICS.idle,toneMapped:false});optics.name='ORDRE independent optics';
     const bones=[],assemblies=[],legRig=[],armRig=[],rotors=[];let probeHead=null,probeSignal=null,groundGun=null,gunSignal=null;
@@ -172,6 +174,63 @@ export function createEnemyFactory(mats){
         a.ellipsoid(armor,[0,.98,.28],[.19,.16,.30],[.17,0,0]);
         a.limb(dark,[0,1.04,.19],[0,1.04,-.25],.079,.053);
         a.add(sensor,glow,matrix([0,1.04,-.28],[0,0,0],[.05,.05,.021]),false);
+      }
+    }else if(form==='synth'){
+      // Original civilian synthetic repurposed by ORDRE: smooth asymmetric
+      // ceramic breastplate, an unreadable face and exposed actuator tendons.
+      a.add(loft([[1.01,.13,.105],[1.12,.145,.12],[1.29,.18,.13],[1.48,.24,.16],[1.61,.235,.15],[1.68,.11,.09]],24),dark);
+      a.add(chest,armor,matrix([0,1.43,-.15],[.025,0,0],[.66,.95,.68]));
+      for(const side of [-1,1]){
+        a.add(ribShell,armor,matrix([side*.115,1.13,-.12],[.12,side*-.35,0],[.8,.8,.8]));
+        a.limb(servo,[side*.07,1.03,.12],[side*.12,1.50,.16],.014,.019);
+        a.add(pectoral,armor,matrix([side*.15,1.53,-.167],[0,side*-.2,0],[.7,.7,.6]));
+        for(let i=0;i<3;i++)a.limb(dark,[side*.13,1.12+i*.10,.12],[side*.2,1.26+i*.07,.08],.009,.009);
+      }
+      for(let i=0;i<4;i++)a.add(jointShield,servo,matrix([0,1.12+i*.115,.14],[0,Math.PI,0],[.5,.65,.6]));
+      a.box(glow,[.015,.075,.005],[.085,1.48,-.193],[0,0,-.15],.003,false);
+      const neck=bone('sensor-head',[0,.465,-.032],thorax),h=assembly(neck);
+      h.limb(dark,[0,1.65,0],[0,1.83,0],.048,.042);
+      for(const side of [-1,1])h.limb(servo,[side*.035,1.69,.015],[side*.05,1.83,-.04],.009,.012);
+      h.add(headShell,armor,matrix([0,1.865,-.032],[0,0,0],[.90,1.04,.85]));
+      h.add(profiledPanel([[-.10,-.06],[.10,-.06],[.105,.035],[.07,.06],[-.07,.06],[-.105,.035]],{depth:.01,bulge:.006,round:.2}),dark,matrix([0,1.905,-.211]));
+      for(const side of [-1,1]){
+        h.add(sensor,optics,matrix([side*.064,1.91,-.231],[0,0,0],[.026,.010,.012]),false);
+        h.add(jointShield,armor,matrix([side*.065,1.81,-.18],[0,side*-.4,side*.16],[.60,.68,.6]));
+        h.add(ring,servo,matrix([side*.135,1.86,.01],[0,Math.PI/2,0],[.3,.3,.3]));
+      }
+      for(const side of [-1,1]){
+        const shoulder=[side*.29,1.59,0],elbow=[side*.37,1.25,-.035],wrist=[side*.40,.97,-.12];
+        const upper=bone(`arm-${side}-shoulder`,[shoulder[0],.19,0],thorax),lower=bone(`arm-${side}-elbow`,elbow.map((v,i)=>v-shoulder[i]),upper),hand=bone(`arm-${side}-wrist`,wrist.map((v,i)=>v-elbow[i]),lower);
+        const u=assembly(upper),l=assembly(lower),f=assembly(hand);
+        u.ellipsoid(dark,shoulder,[.085,.085,.085]);u.dome(armor,[side*.30,1.62,0],[.12,.10,.12],[0,0,side*-.25]);
+        u.limb(armor,[side*.31,1.54,0],[side*.36,1.30,-.03],.067,.046);
+        u.limb(servo,[side*.34,1.53,.055],[side*.40,1.28,.02],.012,.011);
+        l.ellipsoid(dark,elbow,[.058,.058,.059]);l.add(ring,servo,matrix(elbow,[0,Math.PI/2,0],[.35,.35,.35]));
+        l.limb(armor,[side*.37,1.22,-.04],wrist,.066,.038);
+        l.limb(dark,[side*.40,1.20,.015],[side*.44,1.01,-.10],.015,.012);
+        f.ellipsoid(dark,wrist,[.045,.055,.035]);
+        for(let j=0;j<4;j++){
+          const x=wrist[0]+(j-1.5)*.018;
+          f.limb(servo,[x,.94,-.13],[x,.89,-.16],.008,.007);f.limb(dark,[x,.89,-.16],[x,.875,-.19],.007,.005);
+        }
+        armRig.push({upper,lower,wrist:hand,side});
+        const x=side*.17,hip=bone(`leg-${side}-hip`,[x,0,0],pelvis),knee=bone(`leg-${side}-knee`,[0,-.415,0],hip),ankle=bone(`leg-${side}-ankle`,[0,-.39,0],knee);
+        const v=assembly(hip),c=assembly(knee),b=assembly(ankle);
+        v.ellipsoid(dark,[x,.91,0],[.087,.08,.075]);v.add(thigh,armor,matrix([x,.93,0],[0,0,0],[.79,1,.80]));
+        v.limb(servo,[x+side*.055,.83,.045],[x+side*.055,.57,.05],.013,.010);
+        c.ellipsoid(dark,[x,.515,0],[.078,.076,.075]);c.add(calf,armor,matrix([x,.515,0],[0,0,0],[.74,1,.80]));
+        c.add(shinPlate,armor,matrix([x,.29,-.073],[0,0,0],[.76,1,.7]));
+        c.limb(servo,[x-side*.04,.45,.06],[x-side*.04,.17,.05],.010,.009);
+        b.ellipsoid(dark,[x,.126,0],[.065,.065,.06]);b.add(foot,armor,matrix([x,.125,0],[0,0,0],[.8,1,.85]));
+        b.ellipsoid(dark,[x,.025,-.062],[.079,.02,.14]);legRig.push({upper:hip,lower:knee,foot:ankle,side});
+      }
+      if(ranged){
+        groundGun=bone('aimed-shoulder-weapon',[.37,.29,-.01],thorax);const c=assembly(groundGun);
+        c.limb(dark,[.37,1.69,.11],[.37,1.69,-.32],.055,.037);
+        c.limb(armor,[.37,1.69,.075],[.37,1.69,-.22],.065,.047);
+        c.add(barrelRing,servo,matrix([.37,1.69,-.31],[0,0,0],[.34,.34,.34]));
+        gunSignal=bone('weapon-ready-emitter',[0,0,-.335],groundGun);
+        assembly(gunSignal).add(sensor,glow,matrix([.37,1.69,-.345],[0,0,0],[.029,.029,.01]),false);
       }
     }else{
       const heavy=['brute','bulwark'].includes(form),sensitive=['seer','listener'].includes(form);
@@ -304,10 +363,10 @@ export function createEnemyFactory(mats){
   }
 
   function create(elite=false,ranged=false,form='stalker'){
-    if(!['stalker','scuttler','brute','seer','probe','listener','bulwark'].includes(form))form='stalker';
+    if(!['stalker','scuttler','brute','seer','probe','listener','bulwark','synth'].includes(form))form='stalker';
     const kit=template(elite,ranged,form),root=new T.Group(),crawler=form==='scuttler',probe=form==='probe';
-    root.name=({stalker:'AI pursuit chassis',scuttler:'AI maintenance crawler',brute:'AI siege chassis',seer:'AI reconnaissance chassis',probe:'S-03 flying surveillance probe',listener:'E-06 acoustic tracker',bulwark:'B-11 armoured suppression unit'})[form];
-    root.userData.form=form;root.userData.designRevision='3.42';root.userData.profile=ENEMY_PROFILES[form];root.userData.surfaceStyle='profiled alloy / ceramic edges / worn mechanisms / reactive optics';
+    root.name=({synth:'N-08 adaptive synthetic',stalker:'AI pursuit chassis',scuttler:'AI maintenance crawler',brute:'AI siege chassis',seer:'AI reconnaissance chassis',probe:'S-03 flying surveillance probe',listener:'E-06 acoustic tracker',bulwark:'B-11 armoured suppression unit'})[form];
+    root.userData.form=form;root.userData.designRevision=form==='synth'?'3.44':'3.42';root.userData.profile=ENEMY_PROFILES[form];root.userData.surfaceStyle='profiled alloy / ceramic edges / worn mechanisms / reactive optics';
     const joints=kit.bones.map(spec=>{const b=new T.Bone();b.name=spec.name;b.position.set(...spec.position);return b;});
     kit.bones.forEach((spec,i)=>(spec.parent<0?root:joints[spec.parent]).add(joints[i]));root.updateMatrixWorld(true);
     const skeleton=new T.Skeleton(joints);

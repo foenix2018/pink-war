@@ -81,7 +81,8 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     const s = new T.Sprite(m); s.position.set(...pos); s.scale.set(size, size, 1); parent.add(s);themeHalos.push(s);return s;
   }
 
-  function paintSky(c,w,h) { paintRuinSky(c,w,h,character.masculine); }
+  let campaignSky=false;
+  function paintSky(c,w,h) { paintRuinSky(c,w,h,character.masculine,{dusk:campaignSky}); }
   const skyTexture = canvasTexture(profile.skyWidth,profile.skyWidth/2,paintSky);
   const sky = new T.Mesh(new T.SphereGeometry(490, 32, 16), new T.MeshBasicMaterial({ map: skyTexture, side: T.BackSide, fog: false, dithering: true })); scene.add(sky);
   // The moon is a camera-relative celestial backdrop, not a world obstacle.
@@ -453,10 +454,11 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   let campaignActive=false,rangeActive=false;
   function setCampaignActive(enabled){
     campaignActive=!!enabled;
+    if(campaignSky!==campaignActive){campaignSky=campaignActive;const c=skyTexture.image;paintSky(c.getContext('2d'),c.width,c.height);skyTexture.needsUpdate=true;}
     obstacles.splice(0,obstacles.length,...(campaignActive?campaignArt.obstacles:arenaObstacles));
     arenaRoot.visible=!campaignActive&&!rangeActive;
-    scene.fog.color.setHex(campaignActive?0x526466:character.world.fog);
-    scene.fog.density=campaignActive?.006:.008;
+    scene.fog.color.setHex(campaignActive?0x847572:character.world.fog);
+    scene.fog.density=campaignActive?.0058:.008;
     hemisphere.color.setHex(campaignActive?0xc4ceca:0xa9c9e5);hemisphere.groundColor.setHex(campaignActive?0x414833:0x344058);
     sun.color.setHex(campaignActive?0xffdeb7:0xb5d7ff);rim.color.setHex(campaignActive?0xa6bbb7:0x9abfff);
     campaignArt.setVisible(campaignActive&&!rangeActive);if(!campaignActive&&!rangeActive)city.enablePbr();
@@ -473,8 +475,8 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     campaignArt.setVisible(campaignActive&&!rangeActive);
     arenaRoot.visible=!campaignActive&&!rangeActive;
     obstacles.splice(0,obstacles.length,...(rangeActive?rangeObstacles:campaignActive?campaignArt.obstacles:arenaObstacles));
-    scene.fog.color.setHex(rangeActive?0x26333f:campaignActive?0x526466:character.world.fog);
-    scene.fog.density=rangeActive?.0046:campaignActive?.006:.008;
+    scene.fog.color.setHex(rangeActive?0x26333f:campaignActive?0x847572:character.world.fog);
+    scene.fog.density=rangeActive?.0046:campaignActive?.0058:.008;
     if(rangeActive){hemisphere.color.setHex(0xcad8e1);sun.color.setHex(0xd2e6ff);}
   }
   return {T,scene,camera,moon,campaignArt,rangeArt,setRangeActive,setCampaignActive,graphics:{...profile,initialFailure:prepared.initialFailure},warm:async()=>{await campaignArt.ready;await warmRenderer(renderer,scene,camera)},get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>campaignActive?{...campaignArt.stats(),map:'vesper-secours-07'}:{...city.stats,boundary:city.fence?.stats()},resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,

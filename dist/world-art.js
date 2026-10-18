@@ -84,9 +84,9 @@ export function createRuinedRoomMaterials(accent=0xff80b2,{opaque=false}={}) {
   };
 }
 
-export function paintRuinSky(c,w,h,blue=false) {
+export function paintRuinSky(c,w,h,blue=false,{dusk=false}={}) {
   const g=c.createLinearGradient(0,0,0,h);
-  const colors=blue?['#071526','#12243a','#263d58','#53728c','#30445b','#15283d']:['#130e22','#272238','#493a55','#7e6478','#423951','#1b2236'];
+  const colors=dusk?['#192330','#3e4252','#8b6a70','#dbad89','#6e6470','#262d3c']:blue?['#071526','#12243a','#263d58','#53728c','#30445b','#15283d']:['#130e22','#272238','#493a55','#7e6478','#423951','#1b2236'];
   [0,.29,.44,.54,.7,1].forEach((stop,i)=>g.addColorStop(stop,colors[i]));c.fillStyle=g;c.fillRect(0,0,w,h);
   const rand=randomSource(85);
   // Periodic fractal cloud density: shaded continuous volumes, baked once.
@@ -118,7 +118,7 @@ export function paintRuinSky(c,w,h,blue=false) {
     pixels.data[i+2]=blue?59+lighting*73:51+lighting*68;pixels.data[i+3]=edge*fade*176;
   }
   cloudContext.putImageData(pixels,0,0);c.drawImage(cloudCanvas,0,0,w,h);
-  for(let i=0;i<230;i++){
+  for(let i=0;i<(dusk?25:230);i++){
     const x=rand()*w,y=rand()*h*.32,alpha=(.14+rand()*.4)*(1-Math.min(1,density(x/w,y/h)*1.2));
     c.fillStyle=`rgba(213,225,243,${alpha})`;c.beginPath();c.arc(x,y,.4+rand()*.9,0,Math.PI*2);c.fill();
   }
@@ -142,7 +142,7 @@ export function paintRuinSky(c,w,h,blue=false) {
     c.save();c.translate(x,y);c.scale(1,ry/rx);c.translate(-x,-y);c.fillStyle=grad;c.fillRect(x-rx,y-rx,rx*2,rx*2);c.restore();
   }
   const sun=c.createRadialGradient(w*.26,h*.46,0,w*.26,h*.46,w*.105);
-  sun.addColorStop(0,'rgba(147,184,218,.18)');sun.addColorStop(.12,'rgba(120,152,197,.09)');sun.addColorStop(1,'rgba(95,128,164,0)');
+  sun.addColorStop(0,dusk?'rgba(255,220,166,.65)':'rgba(147,184,218,.18)');sun.addColorStop(.12,dusk?'rgba(255,176,111,.22)':'rgba(120,152,197,.09)');sun.addColorStop(1,'rgba(95,128,164,0)');
   c.fillStyle=sun;c.fillRect(0,0,w,h);
   // Wind draws distant industrial smoke into thin, uneven strata.
   for(let i=0;i<9;i++) {

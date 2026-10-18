@@ -1,3 +1,4 @@
+import {tacticalOrder} from './tactical-enemies.js';
 import { equipmentForLevel } from './equipment.js';
 import { PLATFORMS, STAIRS, LIFTS, BRIDGES, BRIDGE_APPROACHES, insideSurface, traversalSurfaces, liftHeightAt } from './world-layout.js';
 import { PROBE, updateProbe } from './aerial-probes.js';
@@ -402,7 +403,7 @@ export class ArenaGame {
   }
   spawnEnemy() {
     const ordinal = this.spawned++;
-    const special=this.wave>=11&&ordinal%7===5?'bulwark':this.wave>=6&&ordinal%7===4?'listener':null;
+    const special=this.wave>=3&&ordinal%7===1?'synth':this.wave>=11&&ordinal%7===5?'bulwark':this.wave>=6&&ordinal%7===4?'listener':null;
     const elite = !special && this.wave >= 3 && ordinal % (this.wave >= 8 ? 3 : 5) === 2;
     const probe = !special && this.wave >= 3 && !elite && (ordinal % 6 === 3 || (this.wave >= 7 && ordinal > 0 && ordinal % 6 === 0));
     const forms = ['stalker','scuttler','seer','brute'];
@@ -416,7 +417,7 @@ export class ArenaGame {
     const aimHeight = probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : ['seer','listener'].includes(form) ? 1.38 : ['brute','bulwark'].includes(form) ? 1.42 : 1.15;
     const homeHeight = this.surfaceHeight(x, z,this.time,.3);
     const enemy = { id: this.nextId++, x, z, elevation: homeHeight + (probe ? PROBE.hover : 0),grounded:!probe,verticalSpeed:0,homeHeight,
-      hp: enemyDurability(this.wave,form,elite), elite, ranged, form, aimHeight,
+      hp: enemyDurability(this.wave,form,elite), elite, ranged:ranged||form==='synth', form, aimHeight,
       speed: probe ? Math.min(5,3.6 + this.wave * .07) : Math.min(4.3,2.4+(this.wave-1)*.055)*(form==='bulwark'?.7:form==='scuttler'?1.12:1),
       tier: Math.max(1,Math.ceil(this.wave/2)),limpUntil:0,stunnedUntil:0,
       homeX:site.x,homeZ:site.z,portalId:site.id,
@@ -620,7 +621,7 @@ export class ArenaGame {
       if(seen){
         if(e.awareness!=='engaged')this.event('spotted',{id:e.id});
         e.awareness='engaged';e.lastSeenAt=this.time;e.lastKnownX=this.player.x;e.lastKnownZ=this.player.z;e.lastKnownHeight=this.player.elevation;
-        e.alertedUntil=this.time+3.8;
+        e.alertedUntil=this.time+(e.form==='synth'?10:3.8);
       }else if(this.time<(e.alertedUntil||0)){
         e.awareness='search';
       }else{
@@ -691,12 +692,14 @@ export class ArenaGame {
       // A slot behind a wall or a crate is no slot: that unit goes straight for the player.
       if(slot&&this.obstacles.some(b=>!b.walkableSurface&&segmentBox({x:this.player.x,y:eye.y,z:this.player.z},{x:slot.x,y:eye.y,z:slot.z},{...b,hx:b.hx+e.radius,hz:b.hz+e.radius})!==null))slot=null;
       if(slot){destinationX=slot.x;destinationZ=slot.z;}
+      const order=!stairRoute?tacticalOrder(e,{time:this.time,seen,threat:{x:e.lastKnownX,y:(e.lastKnownHeight||0)+1.25,z:e.lastKnownZ},obstacles:this.obstacles,allies:this.enemies,segmentBox}):null;
+      if(order){destinationX=order.point.x;destinationZ=order.point.z;}
       dx=destinationX-e.x;dz=destinationZ-e.z;
       const goalDistance=Math.hypot(dx,dz)||1;
       dx/=goalDistance;dz/=goalDistance;
       if(this.obstacles.some(b=>!b.walkableSurface&&segmentBox(eye,{x:destinationX,y:eye.y,z:destinationZ},{...b,hx:b.hx+e.radius+.08,hz:b.hz+e.radius+.08})!==null)){
         if(e.awareness!=='patrol'&&!stairRoute){
-          const waypoint=e.awareness==='engaged'?this.navigation.waypoint(e):this.searchWaypoint(e,{x:destinationX,z:destinationZ});
+          const waypoint=e.awareness==='engaged'&&!order?this.navigation.waypoint(e):this.searchWaypoint(e,{x:destinationX,z:destinationZ});
           if(waypoint){dx=waypoint.x-e.x;dz=waypoint.z-e.z;const n=Math.hypot(dx,dz)||1;dx/=n;dz/=n;}
           else { e.patrolAngle=(e.patrolAngle||0)+.6;dx=Math.sin(e.patrolAngle);dz=Math.cos(e.patrolAngle); }
         }else{e.patrolAngle=(e.patrolAngle||0)+Math.PI*.64;e.patrolTimer=.6;}
@@ -708,31 +711,32 @@ export class ArenaGame {
       }
       // A shooter caught at close range on the player's own level backs off while keeping its aim on the player
       // (never back down a stair it has just climbed).
-      const retreat=e.ranged&&seen&&e.awareness==='engaged'&&!stairRoute&&horizontalDistance<RANGED_RETREAT
+      const retreat=!order&&e.ranged&&seen&&e.awareness==='engaged'&&!stairRoute&&horizontalDistance<RANGED_RETREAT
         &&Math.abs(e.elevation-this.player.elevation)<.15;
       if(retreat){dx=-(this.player.x-e.x)/horizontalDistance;dz=-(this.player.z-e.z)/horizontalDistance;}
-      if(e.ranged&&seen&&!stairRoute&&(retreat||distance>8&&distance<28)){
+      if(!order&&e.ranged&&seen&&!stairRoute&&(retreat||distance>8&&distance<28)){
         // Shooters weave: the strafe side switches every few seconds, out of step from one unit to the next.
         const n=Math.hypot(dx,dz)||1,oldX=dx/n,oldZ=dz/n,side=(Math.floor(this.time/2.6+e.id*.37)%2?1:-1)*.32;dx+=oldZ*side;dz-=oldX*side;
       }
       const norm=Math.hypot(dx,dz)||1;
-      const stopDistance=stairRoute?.15:slot?.3:e.awareness==='engaged' ? (e.ranged?14:1.45) : e.awareness==='search'?1.8:.7;
+      const stopDistance=order?order.stopDistance:stairRoute?.15:slot?.3:e.awareness==='engaged' ? (e.ranged?14:1.45) : e.awareness==='search'?1.8:.7;
       if(goalDistance>stopDistance||retreat){
         const injury=e.limpUntil>this.time?.62:1;
         const searchSpeed=retreat?.8:e.awareness==='engaged'?1:e.awareness==='search'?.75:.48;
         moveInArena(e,dx/norm*e.speed*dt*injury*searchSpeed,dz/norm*e.speed*dt*injury*searchSpeed,e.radius,this.obstacles);
       }
       this.settle(e,dt);
-      if(e.ranged&&seen)e.yaw=Math.atan2(this.player.x-e.x,this.player.z-e.z)+Math.PI;
+      if(order)e.yaw=Math.atan2(e.lastKnownX-e.x,e.lastKnownZ-e.z)+Math.PI;
+      else if(e.ranged&&seen)e.yaw=Math.atan2(this.player.x-e.x,this.player.z-e.z)+Math.PI;
       else if(e.awareness!=='patrol'&&goalDistance>.15)e.yaw=Math.atan2(dx,dz)+Math.PI;
       else if(e.awareness==='patrol')e.yaw=(e.patrolAngle||0)+Math.PI;
       if((e.stunnedUntil||0)<=this.time)e.attackTimer-=dt;
       if(!seen||e.stunnedUntil>this.time){e.burstRemaining=0;e.chargeProgress=0;}
       else e.chargeProgress=e.ranged&&e.attackTimer>0&&e.attackTimer<.25?1-e.attackTimer/.25:0;
       // Never attack through walls or while merely searching the last seen position.
-      if(seen&&e.awareness==='engaged'&&distance<2&&e.attackTimer<=0&&(e.stunnedUntil||0)<=this.time){
+      if((!order||order.canFire)&&seen&&e.awareness==='engaged'&&distance<2&&e.attackTimer<=0&&(e.stunnedUntil||0)<=this.time){
         e.attackTimer=.85;this.damage(e.elite?20+this.wave:10+Math.floor(this.wave/2));
-      }else if(seen&&e.awareness==='engaged'&&e.ranged&&distance<38&&e.attackTimer<=0&&(e.stunnedUntil||0)<=this.time){
+      }else if((!order||order.canFire)&&seen&&e.awareness==='engaged'&&e.ranged&&distance<38&&e.attackTimer<=0&&(e.stunnedUntil||0)<=this.time){
         const profile=hostileShotProfile(this.wave,e.form),speed=profile.speed;
         const volley=enemyVolley(this.wave,e.form),muzzle=rangedMuzzle(e);
         const target=predictShot(muzzle,playerHead,this.playerVelocity,speed,profile.lead);
@@ -742,7 +746,7 @@ export class ArenaGame {
             vy:(target.y-muzzle.y)/n*speed,vz:(target.z-muzzle.z)/n*speed,
             life:3,damage:volley.damage,hostile:true,weapon:'enemy',splash:0});
           e.burstRemaining=e.burstRemaining>0?e.burstRemaining-1:volley.count-1;
-          e.attackTimer=e.burstRemaining>0?volley.gap:profile.interval;e.lastShotAt=this.time;e.chargeProgress=0;
+          e.attackTimer=e.burstRemaining>0?volley.gap:profile.interval;e.lastShotAt=this.time;e.chargeProgress=0;if(e.tactics)e.tactics.shots++;
           e.aimPitch=Math.atan2(target.y-muzzle.y,Math.hypot(target.x-muzzle.x,target.z-muzzle.z));
           this.event('enemy-shot',{...muzzle,form:e.form,id:e.id});
         }else{e.attackTimer=.3;e.burstRemaining=0;}

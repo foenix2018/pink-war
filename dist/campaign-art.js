@@ -1,3 +1,4 @@
+import {createVesperSystems} from './vesper-systems.js';
 import {createPolyHavenLayer} from './polyhaven-level1.js';
 import {LEVEL1_MAP,createLevel1Obstacles} from './level1-layout.js';
 import {SURFACE_DATA,SURFACE_INFO} from './levels/vesper-01-textures.js';
@@ -55,6 +56,7 @@ export function createCampaignArt(T,scene,_unused,{quality='auto'}={}){
  box(maps.dark,-6,1.05,61.65,1.65,2.1,.6);solid(-6,61.65,1.65,.6,0,2.1,'power');
  const power=panel('ALIMENTATION / CIRCUIT ISOLÉ',-6,1.55,61.97,1.55,.95);
  const archive=terminal(0,0,54.45,'archive'),exit=terminal(18,4.8,-44.55,'exit');
+ const systems=createVesperSystems(T,root,maps,{quality});obstacles.push(...systems.colliders);
  const story=createLevel1Story(T,root,maps,{quality});obstacles.push(...story.colliders);
  for(const beat of LEVEL1_STORY.beats){
   const sign=panel(beat.title,beat.x,beat.id==='occupation'?3.05:2.65,beat.z+.16,2.4,1.25,768,320);sign.paint(beat.lines);
@@ -74,7 +76,7 @@ export function createCampaignArt(T,scene,_unused,{quality='auto'}={}){
  box(maps.steel,lift.x,-.10,lift.z,6,.20,6,carriage);
  for(const side of [-1,1]){box(maps.steel,lift.x+side*2.92,.55,lift.z,.10,1.1,6,carriage);box(maps.amber,lift.x+side*2.9,1.07,lift.z,.045,.07,5.9,carriage);}
  function updateLift(time){if(root.visible)carriage.position.y=liftHeightAt(lift,time);}
- function update(game,time=0){const s=game?.campaign;if(!s||!root.visible)return;stage=s.stage;currentObjective=s.objective;story.update(game);updateLift(game.time);boundary.update({...game.player,y:game.player.elevation+1.65},.55,1.2);
+ function update(game,time=0){const s=game?.campaign;if(!s||!root.visible)return;stage=s.stage;currentObjective=s.objective;story.update(game);systems.update(game,time);updateLift(game.time);boundary.update({...game.player,y:game.player.elevation+1.65},.55,1.2);
   const key=[stage,s.sibling,...s.archive].join('|');if(key!==lastState){lastState=key;
    power.paint(stage==='power'?['Courant coupé. Réarmer le circuit.','F / clic du stick libre : interagir']:['CIRCUIT LOCAL : ACTIF','Réseau ORDRE : DÉCONNECTÉ']);
    archive.paint(stage==='power'?['Mémoire hors tension.','Boîtier de secours à gauche.']:stage==='archive'?['Journal humain retrouvé.','F / clic du stick libre : lire']:s.archive);
@@ -88,7 +90,7 @@ export function createCampaignArt(T,scene,_unused,{quality='auto'}={}){
   marker.visible=!!s.objective;if(s.objective){const p=s.objective.position;marker.position.set(p.x,p.y+3.2+Math.sin(time*2)*.05,p.z);marker.rotation.y=time*.5;}
  }
  function setVisible(enabled){root.visible=!!enabled;lastState='';if(enabled)pbr.start();}
- function stats(){return{visible:root.visible,story:story.stats(),stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:5,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:3,boundary:boundary.stats(),pbr:pbr.stats()};}
- function dispose(){if(disposed)return;disposed=true;pbr.dispose();boundary.dispose();story.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
+ function stats(){return{visible:root.visible,systems:systems.stats(),story:story.stats(),stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:5,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:3,boundary:boundary.stats(),pbr:pbr.stats()};}
+ function dispose(){if(disposed)return;disposed=true;pbr.dispose();boundary.dispose();story.dispose();systems.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
  return{root,obstacles,update,setVisible,stats,dispose,updateLift,ready};
 }

@@ -18,7 +18,7 @@ M={k:material(k,*a) for k,a in {'alloy':((.19,.23,.27),.87,.32),'ceramic':((.7,.
 def finish(o,mat,bevel=.003):
  o.data.materials.append(M[mat])
  if bevel:
-  b=o.modifiers.new('Machined edge radius','BEVEL');b.width=bevel;b.segments=3;b.harden_normals=True
+  b=o.modifiers.new('Machined edge radius','BEVEL');b.width=bevel*(1.18 if mat in ['ceramic','paint','alloy'] else 1);b.segments=3;b.harden_normals=True
   o.modifiers.new('Weighted surface normals','WEIGHTED_NORMAL')
  return o
 def mesh(name,verts,faces,mat,bevel=.003):
@@ -45,12 +45,31 @@ def housing(name,rings,mat,n=16):
  for z,cy,rx,ry in rings:
   for j in range(n):
    a=j*math.tau/n;c,s=math.cos(a),math.sin(a)
-   vs.append((math.copysign(abs(c)**.58,c)*rx,cy+math.copysign(abs(s)**.58,s)*ry,z))
+   vs.append((math.copysign(abs(c)**.68,c)*rx,cy+math.copysign(abs(s)**.68,s)*ry,z))
  fs=[tuple(reversed(range(n))),tuple(range((len(rings)-1)*n,len(rings)*n))]
  for r in range(len(rings)-1):
   for j in range(n):fs.append((r*n+j,r*n+(j+1)%n,(r+1)*n+(j+1)%n,(r+1)*n+j))
  o=mesh(name,vs,fs,mat,0)
  for p in o.data.polygons:p.use_smooth=len(p.vertices)==4
+ return o
+def optical_shell(name,rings,mat,n=24):
+ # A true annular shell: front and rear caps have a hole, never a solid disc.
+ vs=[]
+ for z,cy,rx,ry,ix,iy in rings:
+  for xr,yr in [(rx,ry),(ix,iy)]:
+   for j in range(n):
+    a=j*math.tau/n;vs.append((math.cos(a)*xr,cy+math.sin(a)*yr,z))
+ fs=[]
+ for r in range(len(rings)-1):
+  for j in range(n):
+   k=(j+1)%n;a=r*n*2;b=(r+1)*n*2
+   fs.extend([(a+j,a+k,b+k,b+j),(a+n+k,a+n+j,b+n+j,b+n+k)])
+ for r in [0,len(rings)-1]:
+  a=r*n*2
+  for j in range(n):
+   k=(j+1)%n;fs.append((a+j,a+n+j,a+n+k,a+k))
+ o=mesh(name,vs,fs,mat,0)
+ for p in o.data.polygons:p.use_smooth=True
  return o
 def screw(x,y,z):tube('Flush hex fastener',(x,y,z),(x+math.copysign(.0018,x),y,z),.0038,.0038,'alloy',8)
 report=[]
@@ -112,14 +131,12 @@ for i in range(5):
   if i==2:
    sy=railY+.052
    for z in [sightZ+.035,sightZ-.065]:tube('Scope mount',(0,railY+.007,z),(0,sy-.004,z),.011,.011,'alloy',12)
-   tube('Optical tube',(0,sy,sightZ+.095),(0,sy,sightZ-.13),.022,.028,'rubber')
-   tube('Objective surround',(0,sy,sightZ-.10),(0,sy,sightZ-.145),.029,.031,'alloy')
-   tube('Objective lens',(0,sy,sightZ-.146),(0,sy,sightZ-.147),.025,.025,'glass')
-   tube('Eyepiece',(0,sy,sightZ+.065),(0,sy,sightZ+.105),.026,.027,'rubber')
+   optical_shell('Open optical tube',[(sightZ+.095,sy,.025,.025,.021,.021),(sightZ-.13,sy,.029,.029,.024,.024)],'rubber')
+   optical_shell('Open objective surround',[(sightZ-.10,sy,.030,.030,.024,.024),(sightZ-.145,sy,.031,.031,.025,.025)],'alloy')
+   optical_shell('Open eyepiece',[(sightZ+.065,sy,.027,.027,.021,.021),(sightZ+.105,sy,.029,.029,.0215,.0215)],'rubber')
    optic=dict(y=sy,z=sightZ+.107,radius=.021,magnification=4)
   else:
-   housing('Reflex sight hood',[(sightZ+.024,railY+.035,.026,.028),(sightZ-.025,railY+.035,.025,.026)],'rubber')
-   profile('Reflex rear lens',[(sightZ+.025,railY+.017),(sightZ+.025,railY+.054),(sightZ+.026,railY+.054),(sightZ+.026,railY+.017)],.037,'glass',bevel=0)
+   optical_shell('Open reflex sight hood',[(sightZ+.024,railY+.035,.026,.028,.021,.023),(sightZ-.025,railY+.035,.025,.027,.021,.023)],'rubber')
    optic=dict(y=railY+.035,z=sightZ+.028,radius=.018,magnification=2)
  if i in [3,4]:
   # Capacitor cells are recessed into a saddle that touches the main chassis.
@@ -144,7 +161,7 @@ for i in range(5):
  file=OUT/f'blaster-{LETTERS[i]}-mk4.glb'
  bpy.ops.export_scene.gltf(filepath=str(file),export_format='GLB',export_apply=True,export_extras=True,export_cameras=False,export_lights=False)
  obj.data.calc_loop_triangles();n=len(obj.data.loop_triangles)
- report.append(dict(id=IDS[i],file=file.name,triangles=n,source='Original Pink War geometry',revision='3.41',muzzle=[0,my,mz],palm=PALMS[i]))
+ report.append(dict(id=IDS[i],file=file.name,triangles=n,source='Original Pink War geometry',revision='3.44',muzzle=[0,my,mz],palm=PALMS[i]))
  print('MK4',json.dumps(report[-1]),flush=True)
  if i==2:bpy.ops.wm.save_as_mainfile(filepath=str(OUT/'pink-war-lance-mk4.blend'))
 (OUT/'models-mk4.json').write_text(json.dumps(report,indent=2)+'\n')

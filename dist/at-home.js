@@ -248,11 +248,11 @@ function tick(ms,frame){
    assets.animate(game.time,dt,Math.max(1,game.wave),{ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,reloading:game.reloadRemaining>0,reloadProgress:reload,
     time:game.time,flash:game.time<muzzleUntil,heat:feedback.heat,kick:feedback.kick,impulse:feedback.impulse,...controllerHandState,trigger:active&&main?.anchor.visible&&!fireBlocked?controllerHandState.trigger:0});
    if(active&&mode==='combat'){
-    game.setHead(head,dt);game.updateBlade(assets.gun.userData.getBladeSegment(),dt,controllerHandState.offTrigger>.15,head);game.step(dt);
+    game.setHead(head,dt);game.updateBlade(assets.gun.userData.getBladeSegment(),dt,(controllerHandState.offTrigger>.15||controllerHandState.grip>.15),head);game.step(dt);
     assets.gun.updateWorldMatrix(true,true);const muzzle=assets.gun.userData.flash.position,origin=assets.gun.localToWorld(muzzle.clone()),aim=new THREE.Vector3(0,0,-1).transformDirection(assets.gun.matrixWorld);
     game.trigger(!fireBlocked&&!!main?.anchor.visible&&held,dt,origin,aim);processEvents();syncModels();
    }
-   const eye=sightEye(),aiming=active&&mode==='combat'&&controllerHandState.offTrigger>.15&&!game.reloadRemaining;
+   const eye=sightEye(),aiming=active&&mode==='combat'&&(controllerHandState.offTrigger>.15||controllerHandState.grip>.15)&&!game.reloadRemaining;
    assets.gun.userData.setSight?.(aiming,eye);
    if(aiming&&assets.gun.userData.optics?.[game.weaponIndex]){scope ||=createMagnifiedSight(256);scope.render({renderer,scene,gun:assets.gun,eyeCamera:eye,active:true,hide:[...mounts.map(m=>m.anchor),hud.plane,board.plane,announcement.plane]});}else scope?.release();
    assets.architecture.update(game.time,eye);
@@ -298,4 +298,4 @@ window.addEventListener('resize',()=>{if(renderer.xr.isPresenting)return;camera.
 renderer.setAnimationLoop(tick);
 async function checkSupport(){if(!navigator.xr||!window.isSecureContext){info('OUVRE AT HOME DANS LE NAVIGATEUR QUEST 3');return;}try{if(await navigator.xr.isSessionSupported('immersive-ar')){button.disabled=false;info('QUEST COMPATIBLE · PRÉPARE LE SCAN DE LA MAISON');}else info('RÉALITÉ MIXTE INDISPONIBLE SUR CE NAVIGATEUR');}catch{info('SUPPORT WEBXR INDISPONIBLE');}}
 checkSupport();
-window.__PINKWAR_HOME=Object.freeze({snapshot:()=>({version:'3.42',mode,frames,character:hero.id,floors:floors().length,surfaces:surfaces.size,meshes:meshes.size,decor:assets?.architecture.stats(),battlefield:room.stats(),playArea:{source:playAreaSource,polygon:playPolygon,boundary:boundary.stats()},startRequested,hands:mounts.filter(m=>m.anchor.visible).length,laser:laser.stats(),scope:scope?.stats(),...game.snapshot()})});
+window.__PINKWAR_HOME=Object.freeze({snapshot:()=>({version:'3.44',mode,frames,character:hero.id,floors:floors().length,surfaces:surfaces.size,meshes:meshes.size,decor:assets?.architecture.stats(),battlefield:room.stats(),playArea:{source:playAreaSource,polygon:playPolygon,boundary:boundary.stats()},startRequested,hands:mounts.filter(m=>m.anchor.visible).length,laser:laser.stats(),scope:scope?.stats(),...game.snapshot()})});
