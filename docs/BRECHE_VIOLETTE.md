@@ -25,3 +25,12 @@ Reproduction avec les vrais tirs R9 : cinq châssis ordinaires éliminables en 3
 Le gardien dispose désormais de 360 PV et d'une réduction de dégâts maximale de 55 %, réduite à chaque stabilisateur neutralisé (0 % après le troisième). Les dégâts restent toujours possibles, y compris sans toucher aux stabilisateurs. Une indication explique le blindage lorsqu'il est touché. L'extraction demande encore la neutralisation des trois stabilisateurs. Les modules hauts ont des collisions alignées sur leur géométrie et se désactivent après quatre impacts ; ils changent aussi de couleur. L'interaction de proximité reste disponible.
 
 Tests de projectiles : cinq types ordinaires, dégâts du gardien avec et sans blindage, destruction de chacun des trois modules hauts, élimination complète du gardien au R9 avec rechargements même sous blindage. Pas de validation visuelle navigateur ou casque disponible.
+
+
+## Révision 3.51 — collisions et volumes
+
+Les grands conteneurs et plafonds participent à la physique verticale de la campagne : atterrissage sur les dessus, arrêt des sauts sous les plafonds. Collisions ajoutées aux piliers et à la couronne basse du réacteur, montants de sortie, fourches du chariot et cages des stabilisateurs. Les deux cloisons qui coupaient la passerelle sont ouvertes à son gabarit ; une rampe de descente rejoint la cour. Platelages et garde-corps des deux rampes ont une collision. Le portail du gardien est déplacé à z=-67 pour éviter le pilier désormais solide.
+
+Réduction de l'aspect cubique : 257 pièces chanfreinées, générateurs cylindriques, roues et moyeux, brides, colliers, câbles courbes, cadres obliques, plaques superposées, rochers plus lisses. Les arêtes sont calculées en mètres avant fusion des maillages ; les UV suivent les dimensions. Les décors reçoivent et projettent désormais les ombres lorsque le profil graphique les active — ils ne le faisaient pas auparavant. Dix lots statiques et environ 69 000 triangles avant les personnages ; ce n'est pas une certification de rendu AAA.
+
+Tests : collision des piliers/montants/fourches, atterrissage sur un conteneur de 3 m, arrêt contre le plafond du tunnel, parcours physique complet de la passerelle depuis le hangar jusqu'à la cour. Conservation des tests de dégâts, stabilisateurs et portails. Le rendu visuel et les performances sur appareils physiques restent à vérifier, faute de navigateur de QA et de casque disponibles.

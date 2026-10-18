@@ -1,4 +1,4 @@
-export const GAME_VERSION='3.50';
+export const GAME_VERSION='3.51';
 export function compatibleLaunchURL(current=location.href){
   const url=new URL(current);
   const target=url.protocol==='file:'?new URL('https://pink-war.vercel.app/'):url;
