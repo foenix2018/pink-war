@@ -6,7 +6,7 @@ import { characterForId } from './characters.js';
 import { playLaserShot,loadRealLaserSample,playLaserImpact,setLaserAudioEnabled,disposeLaserAudio,playWeaponAction,setWeaponCharge } from './laser-sound.js';
 import { createAmbience } from './ambience.js';
 import { ACTIVE_INSTALLATIONS, BRIDGES, BRIDGE_LANDINGS, BRIDGE_APPROACHES, bridgeSegments } from './world-layout.js';
-import { createMusicBed } from './music.js';
+import { createMusicBed } from './music-tracks.js';
 import { portalIndicators } from './portal-indicator.js';
 import { objectiveIndicator } from './objective-guidance.js';
 import { OPTICS } from './weapons.js';
@@ -59,6 +59,7 @@ let saberAudio=null,saberSwingSound=false;
 let lastWeaponSlot=0,holsterRemaining=0;
 let bladeHead=null;
 const musicBed=createMusicBed();
+const lobbyTrack=window.__PINKWAR_LOBBY_MUSIC||null;
 const weaponFeel=createWeaponFeel();
 let portalForward=null;
 let reloadInserted=false,lastShotAt=-99;
@@ -72,6 +73,8 @@ const timeString = time => `${String(Math.floor(time / 60)).padStart(2, '0')}:${
 
 function audioReady() {
   musicBed.setEnabled(settings.music!==false);
+  lobbyTrack?.setEnabled(settings.music!==false);
+  if(phase==='lobby'&&settings.music!==false)lobbyTrack?.start();
   ambience?.setEnabled(settings.sound);
   if(audioContext)setLaserAudioEnabled(audioContext,settings.sound);
   if (!settings.sound && settings.music===false) return;
@@ -222,7 +225,9 @@ $('outfit-front').onclick=()=>{$('outfit-rotation').value=180;};$('outfit-back')
 async function home() {
   if (vr?.active) await vr.exit();
   for (const d of document.querySelectorAll('dialog[open]')) d.close(); phase = 'lobby'; resetInput();
-  document.body.classList.remove('playing'); $('game-hud').hidden = true; musicBed.pause();ambience?.pause();world.resetDynamic();
+  document.body.classList.remove('playing'); $('game-hud').hidden = true; musicBed.pause();ambience?.pause();
+  if(settings.music!==false)lobbyTrack?.start();
+  world.resetDynamic();
   saberAudio?.update({active:false,equipped:false});
   world.setRangeActive(false);world.setCampaignActive(false);selectMode(selectedMode);
   $('damage-flash').style.setProperty('--injury', '0'); $('damage-flash').classList.remove('active'); $('wave-announcement').classList.remove('show');
@@ -237,6 +242,7 @@ async function start() {
   world.setRangeActive(selectedMode==='training');
   game=selectedMode==='campaign'?new CampaignLevel1(world.obstacles,Math.random,character.id):
     selectedMode==='training'?new ShootingRangeGame(world.obstacles,Math.random,trainingWeaponIndex):new ArenaGame(world.obstacles);
+  lobbyTrack?.pause();
   world.resetDynamic(); phase = 'loading'; yaw = 0; pitch = -.075;
   weaponFeel.reset();reloadInserted=false;lastShotAt=-99;flashTimer = 0; recoil = 0; damageUntil = 0; announcementUntil = 0;pickupNotice=null;equipmentUntil=0;crouchCameraBlend=0;currentSprinting=false; resetInput(); audioReady();
   world.setWeapon(game.weaponIndex);world.setEquipment(1);
@@ -292,7 +298,7 @@ window.addEventListener('pointerup',e=>{firingPointers.delete(e.pointerId);if(e.
 window.addEventListener('pointercancel',e=>{firingPointers.delete(e.pointerId);mouseAim=false;aimPointers.clear();});
 window.addEventListener('blur', () => { resetInput(); if (phase === 'playing' && vr?.mode !== 'xr') pause(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { resetInput(); if (phase === 'playing' && vr?.mode !== 'xr') pause(); } });
-window.addEventListener('pagehide',event=>{ambience?.pause();musicBed.pause();saberAudio?.update({active:false,equipped:!!game?.weapon.melee});if(!event.persisted){ambience?.dispose();musicBed.dispose();saberAudio?.dispose();if(audioContext)disposeLaserAudio(audioContext);}});
+window.addEventListener('pagehide',event=>{lobbyTrack?.pause();ambience?.pause();musicBed.pause();saberAudio?.update({active:false,equipped:!!game?.weapon.melee});if(!event.persisted){lobbyTrack?.dispose();ambience?.dispose();musicBed.dispose();saberAudio?.dispose();if(audioContext)disposeLaserAudio(audioContext);}});
 window.addEventListener('resize', () => { world?.resize(settings.quality); resetInput(); });
 
 function updateCamera() {
