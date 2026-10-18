@@ -6,7 +6,7 @@ import * as T from './vendor/three.webgpu.min.js';
  * Coordonnées exprimées dans le repère d'origine du soldat (~2 m avant échelle).
  */
 export function addCapeToOriginalSoldier(model, profile) {
-  const columns=24, rows=32;
+  const columns=24, rows=40;
   const vertices=(columns+1)*(rows+1);
   const positions=new Float32Array(vertices*3);
   const uv=new Float32Array(vertices*2), indices=[];
@@ -23,7 +23,7 @@ export function addCapeToOriginalSoldier(model, profile) {
     }
   }
 
-  // Noir mat sans logo ni dessin. Uniquement deux liserés roses et l'ourlet.
+  // Tissu noir mat sans logo. Liseré rose GHJU, bleu LYLU, y compris l'ourlet.
   const sheet=document.createElement('canvas');
   sheet.width=512; sheet.height=1024;
   const ctx=sheet.getContext('2d');
@@ -32,7 +32,9 @@ export function addCapeToOriginalSoldier(model, profile) {
   black.addColorStop(.45,'#0c0c0f');
   black.addColorStop(1,'#17171b');
   ctx.fillStyle=black; ctx.fillRect(0,0,512,1024);
-  ctx.fillStyle='#f24797';
+  const piping=profile.masculine?'#62b8ff':'#f24797';
+  const pipingHex=profile.masculine?0x62b8ff:0xf24797;
+  ctx.fillStyle=piping;
   ctx.fillRect(0,0,9,1024);
   ctx.fillRect(503,0,9,1024);
   ctx.fillRect(0,1015,512,9);
@@ -51,14 +53,14 @@ export function addCapeToOriginalSoldier(model, profile) {
     emissive:0x141419,emissiveIntensity:.22
   });
   const cloth=new T.Mesh(geometry,fabric);
-  cloth.name='AÉGIS / Cape noire et liseré rose';
+  cloth.name='AÉGIS / Cape rectangulaire noire, bordure '+(profile.masculine?'bleue':'rose');
   cloth.castShadow=true;
   cloth.receiveShadow=true;
   cloth.frustumCulled=false;
 
   // Bordures en vraies lignes 3D : restent lisibles lorsque la cape est vue de profil.
   const borderMaterial=new T.LineBasicMaterial({
-    color:0xff4596,transparent:false,depthTest:true,toneMapped:false
+    color:pipingHex,transparent:false,depthTest:true,toneMapped:false
   });
   function border(count, name) {
     const data=new Float32Array(count*3);
@@ -70,9 +72,9 @@ export function addCapeToOriginalSoldier(model, profile) {
     cloth.add(line);
     return {data,geometry:g};
   }
-  const leftEdge=border(rows+1,'Liseré rose gauche');
-  const rightEdge=border(rows+1,'Liseré rose droit');
-  const lowerEdge=border(columns+1,'Ourlet rose');
+  const leftEdge=border(rows+1,'Liseré '+(profile.masculine?'bleu':'rose')+' gauche');
+  const rightEdge=border(rows+1,'Liseré '+(profile.masculine?'bleu':'rose')+' droit');
+  const lowerEdge=border(columns+1,'Ourlet '+(profile.masculine?'bleu':'rose'));
 
   // Le bloc dorsal du modèle AÉGIS V3 est sur Spine2, centré environ en
   // x=0, y=1.413, z=.162 et sa partie basse est à y~1.297.
@@ -95,70 +97,69 @@ export function addCapeToOriginalSoldier(model, profile) {
   cloth.position.set(0,0,0);
   cloth.rotation.set(0,0,0);
 
-  // Suivi amorti des plis : oscillation lente en haut, inertie croissante
-  // vers l'ourlet et onde plus rapide lors de la course.
+
+  // Animations continues amorties (mouvement d'ensemble + vague se propageant
+  // le long du tissu). Le haut reste parfaitement fixe sous le bloc dorsal.
   const sway=new Float32Array(rows+1);
   const swayVelocity=new Float32Array(rows+1);
   const billow=new Float32Array(rows+1);
   const billowVelocity=new Float32Array(rows+1);
-  let previousTime=null;
-  function update(time, motion='idle', wind=.6) {
+  let previousTime=null, activitySmooth=.12;
+  function update(time,motion='idle',wind=.6) {
     const dt=previousTime==null?.016:Math.max(.001,Math.min(.04,time-previousTime));
     previousTime=time;
-    const active=motion==='run'||motion==='runFire'?1:
-      motion==='walk'||motion==='walkFire'||motion==='crouchWalk'?.50:
-      motion==='jump'?.78:.12;
-    const strength=Math.max(0,Math.min(1,wind))*active;
-
+    const targetActivity=
+      motion==='run'||motion==='runFire'?1:
+      motion==='walk'||motion==='walkFire'||motion==='crouchWalk'?.52:
+      motion==='jump'?.76:.12;
+    // Pas de rupture de vitesse lors des changements marche/course/repos.
+    activitySmooth+=(targetActivity-activitySmooth)*(1-Math.exp(-dt*3.1));
+    const strength=Math.max(0,Math.min(1,wind))*activitySmooth;
     for(let j=1;j<=rows;j++) {
-      const v=j/rows;
-      const lag=v*v;
-      const targetSway=
-        Math.sin(time*(1.35+active*1.3)-v*2.7)*(.006+.045*strength)*lag;
-      const targetBillow=
-        Math.sin(time*(1.85+active*1.4)-v*3.6)*(.004+.045*strength)*lag;
-      const spring=22-9*v, damping=8-2*v;
-      const continuity=6;
-      const ax=(targetSway-sway[j])*spring-swayVelocity[j]*damping+
-        (sway[j-1]-sway[j])*continuity;
-      const az=(targetBillow-billow[j])*spring-billowVelocity[j]*damping+
-        (billow[j-1]-billow[j])*continuity;
-      swayVelocity[j]+=ax*dt;
-      billowVelocity[j]+=az*dt;
+      const v=j/rows,lag=Math.pow(v,1.50);
+      // Ondulation retardée depuis l'attache : l'ourlet garde son inertie.
+      const targetSway=lag*(
+        (.011+.072*strength)*Math.sin(time*(1.0+activitySmooth)-v*3.0) +
+        .010*Math.sin(time*.52-v*1.4));
+      const targetBillow=lag*(
+        .012+.065*strength +
+        (.008+.045*strength)*Math.sin(time*(1.22+activitySmooth*.65)-v*3.6));
+      // Ressort amorti avec transmission vers les rangées inférieures.
+      const spring=19-5*v, damping=7.6-2.7*v, transfer=9;
+      const lateral=(targetSway-sway[j])*spring-swayVelocity[j]*damping+
+        (sway[j-1]-sway[j])*transfer;
+      const depth=(targetBillow-billow[j])*spring-billowVelocity[j]*damping+
+        (billow[j-1]-billow[j])*transfer;
+      swayVelocity[j]+=lateral*dt;
+      billowVelocity[j]+=depth*dt;
       sway[j]+=swayVelocity[j]*dt;
       billow[j]+=billowVelocity[j]*dt;
     }
-    // Bord supérieur entièrement fixé (aucune ondulation qui le détache).
-    sway[0]=billow[0]=swayVelocity[0]=billowVelocity[0]=0;
+    sway[0]=0;billow[0]=0;swayVelocity[0]=0;billowVelocity[0]=0;
 
     for(let j=0;j<=rows;j++) {
-      const v=j/rows;
-      const spread=.137+.42*Math.pow(v,.87);
-      const lag=Math.pow(v,1.35);
+      const v=j/rows,lag=Math.pow(v,1.4);
+      // RECTANGLE : largeur de 41 cm constante du col jusqu'à l'ourlet,
+      // avec seulement une rondeur microscopique au milieu.
+      const width=.415+.008*Math.sin(Math.PI*v);
       for(let i=0;i<=columns;i++) {
-        const u=i/columns;
-        const edge=2*u-1;
-        const n=(j*(columns+1)+i)*3;
-        const folds=(Math.sin(u*Math.PI*5.5+v*3.0-time*(1.05+active))*.008 +
-          Math.sin(u*Math.PI*3.2-v*4.3+time*.8)*.004)*lag*(.25+strength);
-
-        // Évasement du tissu en bas, sous l'armure, sans traverser le bassin.
-        positions[n]=edge*spread*.5+sway[j]+folds;
-        positions[n+1]=-.785*v+.017*(edge*edge)*lag+
-          Math.sin(time*2.05-v*4.6+edge*2.3)*.004*strength*lag;
-        // Courbure transversale pour éviter une feuille plane invisible de profil.
-        // Les bords viennent près du dos, le centre forme un volume textile.
-        positions[n+2]=
-          -.022*edge*edge*lag+.052*(1-edge*edge)*lag+
-          .014*v+billow[j]+folds*.8;
+        const u=i/columns,edge=2*u-1,n=(j*(columns+1)+i)*3;
+        // Deux plis verticaux amples, sans vibrations rapides.
+        const fold=Math.sin(u*Math.PI*3.2+v*1.8-time*.72)
+          *(.0035+.005*strength)*lag;
+        // Les coutures verticales suivent la même largeur : effet rectangulaire.
+        positions[n]=edge*width*.5+sway[j]+fold;
+        positions[n+1]=-.785*v
+          +.008*lag*Math.sin(time*1.05-v*2.9+edge*1.1)*(strength+.10);
+        // Douce courbure pour donner du volume dans les vues de profil.
+        positions[n+2]=.030*v+.037*(1-edge*edge)*lag+billow[j]+fold*.45;
       }
     }
-
     geometry.attributes.position.needsUpdate=true;
     geometry.computeVertexNormals();
+    // Les liserés 3D suivent précisément la géométrie déformée.
     for(let j=0;j<=rows;j++){
-      const a=(j*(columns+1))*3;
-      const b=(j*(columns+1)+columns)*3;
+      const a=j*(columns+1)*3,b=(j*(columns+1)+columns)*3;
       leftEdge.data.set(positions.subarray(a,a+3),j*3);
       rightEdge.data.set(positions.subarray(b,b+3),j*3);
     }
@@ -166,7 +167,8 @@ export function addCapeToOriginalSoldier(model, profile) {
       const a=(rows*(columns+1)+i)*3;
       lowerEdge.data.set(positions.subarray(a,a+3),i*3);
     }
-    for(const strip of [leftEdge,rightEdge,lowerEdge])strip.geometry.attributes.position.needsUpdate=true;
+    for(const strip of [leftEdge,rightEdge,lowerEdge])
+      strip.geometry.attributes.position.needsUpdate=true;
   }
   update(0,'idle',.60);
 
