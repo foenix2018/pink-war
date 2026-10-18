@@ -1,11 +1,10 @@
 import * as T from './vendor/three.webgpu.min.js';
 
 /**
- * Cape d'essayage Pink War : le soldat AÉGIS, ses bones et ses matériaux
- * sont chargés depuis le jeu d'origine. Seule la cape est nouvelle.
+ * Cape et tabard tissés, attachés au squelette natif de Pink War.
  * Coordonnées exprimées dans le repère d'origine du soldat (~2 m avant échelle).
  */
-export function addCapeToOriginalSoldier(model, profile) {
+export function addCapeToOriginalSoldier(model, profile, {front=false}={}) {
   const columns=24, rows=40;
   const vertices=(columns+1)*(rows+1);
   const positions=new Float32Array(vertices*3);
@@ -23,24 +22,22 @@ export function addCapeToOriginalSoldier(model, profile) {
     }
   }
 
-  // Tissu noir mat sans logo. Liseré rose GHJU, bleu LYLU, y compris l'ourlet.
-  const sheet=document.createElement('canvas');
-  sheet.width=512; sheet.height=1024;
-  const ctx=sheet.getContext('2d');
-  const black=ctx.createLinearGradient(0,0,512,1024);
-  black.addColorStop(0,'#16171b');
-  black.addColorStop(.45,'#0c0c0f');
-  black.addColorStop(1,'#17171b');
-  ctx.fillStyle=black; ctx.fillRect(0,0,512,1024);
-  const piping=profile.masculine?'#62b8ff':'#f24797';
-  const pipingHex=profile.masculine?0x62b8ff:0xf24797;
-  ctx.fillStyle=piping;
-  ctx.fillRect(0,0,9,1024);
-  ctx.fillRect(503,0,9,1024);
-  ctx.fillRect(0,1015,512,9);
-  const texture=new T.CanvasTexture(sheet);
+  // Woven black fabric, authored locally; the neon piping is real geometry.
+  const size=128, pixels=new Uint8Array(size*size*4);
+  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+    const i=(y*size+x)*4;
+    const diagonal=((x+y)%12<2)||((x-y+size)%12<2);
+    const thread=(x%3===0||y%3===0)?3:0;
+    const c=diagonal?30:15+thread;
+    pixels.set([c,c,c+2,255],i);
+  }
+  const texture=new T.DataTexture(pixels,size,size);
+  texture.wrapS=texture.wrapT=T.RepeatWrapping;
+  texture.repeat.set(3,9);texture.needsUpdate=true;
   texture.colorSpace=T.SRGBColorSpace;
-  texture.anisotropy=4;
+  texture.anisotropy=4;texture.generateMipmaps=true;
+  texture.minFilter=T.LinearMipmapLinearFilter;texture.magFilter=T.LinearFilter;
+  const pipingHex=profile.masculine?0x62b8ff:0xff1688;
 
   const geometry=new T.BufferGeometry();
   const vertexAttribute=new T.BufferAttribute(positions,3).setUsage(T.DynamicDrawUsage);
@@ -49,18 +46,18 @@ export function addCapeToOriginalSoldier(model, profile) {
   geometry.setIndex(indices);
 
   const fabric=new T.MeshStandardMaterial({
-    map:texture,side:T.DoubleSide,roughness:.98,metalness:0,
-    emissive:0x141419,emissiveIntensity:.22
+    map:texture,color:0x949498,side:T.DoubleSide,roughness:.98,metalness:0,
+    emissive:0x000000,emissiveIntensity:0
   });
   const cloth=new T.Mesh(geometry,fabric);
-  cloth.name='AÉGIS / Cape rectangulaire noire, bordure '+(profile.masculine?'bleue':'rose');
+  cloth.name=(front?'Shadow / tabard frontal tissé, bordure ':'Shadow / cape dorsale tissée, bordure ')+(profile.masculine?'bleue':'rose');
   cloth.castShadow=true;
   cloth.receiveShadow=true;
   cloth.frustumCulled=false;
 
   // Bordures en vraies lignes 3D : restent lisibles lorsque la cape est vue de profil.
   const borderMaterial=new T.LineBasicMaterial({
-    color:pipingHex,transparent:false,depthTest:true,toneMapped:false
+    color:pipingHex,transparent:false,depthTest:true,toneMapped:false,linewidth:1
   });
   function border(count, name) {
     const data=new Float32Array(count*3);
@@ -75,24 +72,22 @@ export function addCapeToOriginalSoldier(model, profile) {
   const leftEdge=border(rows+1,'Liseré '+(profile.masculine?'bleu':'rose')+' gauche');
   const rightEdge=border(rows+1,'Liseré '+(profile.masculine?'bleu':'rose')+' droit');
   const lowerEdge=border(columns+1,'Ourlet '+(profile.masculine?'bleu':'rose'));
+  const ribbonMaterial=new T.MeshBasicMaterial({color:pipingHex,side:T.DoubleSide,toneMapped:false});
+  const ribbons=[rows+1,rows+1,columns+1].map(count=>{
+    const g=new T.BufferGeometry(),a=new Float32Array(count*6),indices=[];
+    for(let i=0;i<count-1;i++){const n=i*2;indices.push(n,n+1,n+2,n+1,n+3,n+2);}
+    g.setAttribute('position',new T.BufferAttribute(a,3).setUsage(T.DynamicDrawUsage));g.setIndex(indices);
+    const mesh=new T.Mesh(g,ribbonMaterial);mesh.frustumCulled=false;cloth.add(mesh);return {g,a};
+  });
 
-  // Le point de fixation d'origine V4 est relevé derrière les épaules :
-  // y=1.535, z=.166, caché par la protection dorsale (y 1.30–1.55).
-  // En allongeant le tissu, le bas reste au même niveau qu'avant.
-  // La cape est désormais aussi étroite que le boîtier (34 cm).
-
-  //
-  // Les coordonnées AÉGIS sont celles du modèle racine, et non les coordonnées
-  // locales de l'os animé. Convertir explicitement position et orientation
-  // avant de créer la filiation évite le déport causé par l'orientation du bone.
-  model.root.updateMatrixWorld(true);
+  // Both panels sit outside the shell. They follow the chest without changing
+  // the native skeleton; their bottom rows carry the fabric's inertia.
   const anchor=new T.Group();
-  anchor.name='Fixation sous module dorsal, repère Spine2';
-  const desiredPoint=model.root.localToWorld(new T.Vector3(0,1.535,.166));
-  const rootQuaternion=model.root.getWorldQuaternion(new T.Quaternion());
-  const bodyQuaternion=model.body.getWorldQuaternion(new T.Quaternion());
-  anchor.position.copy(model.body.worldToLocal(desiredPoint));
-  anchor.quaternion.copy(bodyQuaternion.invert().multiply(rootQuaternion));
+  anchor.name=front?'Tabard / fixation sous le sternum':'Cape / fixation sous les plaques dorsales';
+  const bodyIndex=model.actor.bones.indexOf(model.body);
+  const bindInverse=new T.Matrix4().fromArray(model.actor.data.bones[bodyIndex].inverse);
+  const frame=bindInverse.multiply(new T.Matrix4().makeTranslation(0,front?1.32:1.48,front?-.216:.184));
+  frame.decompose(anchor.position,anchor.quaternion,anchor.scale);
   model.body.add(anchor);
   anchor.add(cloth);
   cloth.position.set(0,0,0);
@@ -106,7 +101,7 @@ export function addCapeToOriginalSoldier(model, profile) {
   const billow=new Float32Array(rows+1);
   const billowVelocity=new Float32Array(rows+1);
   let previousTime=null, activitySmooth=.12;
-  function update(time,motion='idle',wind=.6) {
+  function update(time,motion='idle',wind=.6,{symmetric=false}={}) {
     const dt=previousTime==null?.016:Math.max(.001,Math.min(.04,time-previousTime));
     previousTime=time;
     const targetActivity=
@@ -142,18 +137,18 @@ export function addCapeToOriginalSoldier(model, profile) {
       const v=j/rows,lag=Math.pow(v,1.4);
       // RECTANGLE : largeur de ~34 cm du haut jusqu'à l'ourlet,
       // avec seulement une rondeur microscopique au milieu.
-      const width=.338+.003*Math.sin(Math.PI*v);
+      const width=front?(.265+.060*v):(.340+.080*v);
       for(let i=0;i<=columns;i++) {
         const u=i/columns,edge=2*u-1,n=(j*(columns+1)+i)*3;
         // Deux plis verticaux amples, sans vibrations rapides.
-        const fold=Math.sin(u*Math.PI*3.2+v*1.8-time*.72)
-          *(.0035+.005*strength)*lag;
+        const fold=symmetric?.0025*Math.sin(v*Math.PI)*Math.cos(edge*Math.PI*2):
+          Math.sin(u*Math.PI*3.2+v*1.8-time*.72)*(.0035+.005*strength)*lag;
         // Les coutures verticales suivent la même largeur : effet rectangulaire.
-        positions[n]=edge*width*.5+sway[j]+fold;
-        positions[n+1]=-1.035*v
-          +.008*lag*Math.sin(time*1.05-v*2.9+edge*1.1)*(strength+.10);
+        positions[n]=edge*width*.5+(symmetric?0:sway[j]+fold);
+        positions[n+1]=-(front?.84:1.035)*v
+          +(symmetric?0:.008*lag*Math.sin(time*1.05-v*2.9+edge*1.1)*(strength+.10));
         // Douce courbure pour donner du volume dans les vues de profil.
-        positions[n+2]=.025*v+.035*(1-edge*edge)*lag+billow[j]+fold*.45;
+        positions[n+2]=(front?-1:1)*((front?.025*v:.080*Math.min(1,v/.22))+.025*(1-edge*edge)*lag+billow[j]+fold*.45);
       }
     }
     geometry.attributes.position.needsUpdate=true;
@@ -168,8 +163,20 @@ export function addCapeToOriginalSoldier(model, profile) {
       const a=(rows*(columns+1)+i)*3;
       lowerEdge.data.set(positions.subarray(a,a+3),i*3);
     }
-    for(const strip of [leftEdge,rightEdge,lowerEdge])
+    const strips=[leftEdge,rightEdge,lowerEdge];
+    for(let k=0;k<strips.length;k++){
+      const strip=strips[k],{g,a}=ribbons[k];
       strip.geometry.attributes.position.needsUpdate=true;
+      for(let i=0;i<strip.data.length/3;i++){
+        const p=i*3,n=i*6;
+        for(let side=0;side<2;side++){
+          a[n+side*3]=strip.data[p]+(k<2?(side-.5)*.005:0);
+          a[n+side*3+1]=strip.data[p+1]+(k===2?(side-.5)*.005:0);
+          a[n+side*3+2]=strip.data[p+2]+(front?-.001:.001);
+        }
+      }
+      g.attributes.position.needsUpdate=true;
+    }
   }
   update(0,'idle',.60);
 
@@ -177,6 +184,8 @@ export function addCapeToOriginalSoldier(model, profile) {
     anchor,update,
     dispose(){
       for(const strip of [leftEdge,rightEdge,lowerEdge])strip.geometry.dispose();
+      for(const {g} of ribbons)g.dispose();ribbonMaterial.dispose();
+      anchor.removeFromParent();
       borderMaterial.dispose(); geometry.dispose();fabric.dispose();texture.dispose();
     }
   };

@@ -1,5 +1,8 @@
-import { addCapeToOriginalSoldier } from './personnage-cape-addon.js?v=5';
-import { attachShadowConcept } from './personnage-shadow-concept.js?v=6';
+import {createStudioBloom} from './studio-bloom.js';
+import {createGlove} from './hands.js';
+import {poseUnarmedForInspection} from './rlh-firefighter.js';
+import { addCapeToOriginalSoldier } from './personnage-cape-addon.js?v=3.46';
+import { attachShadowConcept } from './personnage-shadow-concept.js?v=3.46';
 import * as T from './vendor/three.webgpu.min.js';
 import { WebGLRenderer } from './vendor/three.module.min.js';
 import { createCharacterKit, createSoldier } from './soldier.js';
@@ -21,9 +24,12 @@ renderer.toneMapping = T.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.16;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = T.PCFSoftShadowMap;
+const studioBloom=createStudioBloom(renderer);
 const scene = new T.Scene();
 scene.background = new T.Color(0x171c28);
 const camera = new T.PerspectiveCamera(42,1,.04,80);
+const helmetCamera=new T.OrthographicCamera(-.20,.20,.20,-.20,.02,20);
+const cameraTarget=new T.Vector3();
 const ambient = new T.HemisphereLight(0xf7eaff,0x1d2633,2.45);scene.add(ambient);
 const key = new T.DirectionalLight(0xffe8f4,3.3);key.position.set(-3,6,-5);key.castShadow = true;
 key.shadow.mapSize.set(1024,1024);
@@ -32,12 +38,28 @@ key.shadow.camera.near=.1;key.shadow.camera.far=20;key.shadow.bias=-.0006;scene.
 const fill = new T.DirectionalLight(0x86bbff,1.45);fill.position.set(4,3,3);scene.add(fill);
 const accents = new T.DirectionalLight(0xff7dba,1.1);accents.position.set(-3,2,3);scene.add(accents);
 const floor = new T.Mesh(new T.PlaneGeometry(50,50),new T.MeshStandardMaterial({color:0x202833,roughness:.88,metalness:.05}));
-floor.rotation.x=-Math.PI/2;floor.position.y=-.06;floor.receiveShadow=true;scene.add(floor);
-const grid = new T.GridHelper(8,16,0x6a7899,0x303c52);grid.position.y=-.049;grid.material.transparent=true;grid.material.opacity=.26;scene.add(grid);
+floor.rotation.x=-Math.PI/2;floor.position.y=.015;floor.receiveShadow=true;scene.add(floor);
+const grid = new T.GridHelper(8,16,0x6a7899,0x303c52);grid.position.y=-.049;grid.material.transparent=true;grid.material.opacity=.08;scene.add(grid);
 const ground = new T.Mesh(new T.CylinderGeometry(.9,.92,.055,64),new T.MeshStandardMaterial({color:0x252d3b,roughness:.6,metalness:.2}));
 ground.position.y=-.04;ground.receiveShadow=true;scene.add(ground);
 
+// Softbox environment gives the graphite armour broad, controlled reflections.
+// This is generated locally; it does not depend on a studio HDR download.
+const studioWidth=256,studioHeight=128,studioPixels=new Float32Array(studioWidth*studioHeight*4);
+for(let y=0;y<studioHeight;y++)for(let x=0;x<studioWidth;x++){
+ const u=x/studioWidth,v=y/studioHeight;
+ const softbox=(cx,cy,w,h)=>Math.exp(-Math.pow((u-cx)/w,8)-Math.pow((v-cy)/h,8));
+ const energy=.14+3.3*softbox(.17,.39,.075,.23)+2.2*softbox(.74,.38,.055,.22)+1.3*softbox(.5,.16,.22,.045);
+ const i=(y*studioWidth+x)*4;
+ studioPixels.set([energy,energy*.96,energy*1.02,1],i);
+}
+const studioEnvironment=new T.DataTexture(studioPixels,studioWidth,studioHeight,T.RGBAFormat,T.FloatType);
+studioEnvironment.mapping=T.EquirectangularReflectionMapping;studioEnvironment.needsUpdate=true;
+scene.environment=studioEnvironment;
+scene.fog=new T.FogExp2(0x171c28,.085);
+grid.visible=false;ground.visible=false;
 const surfaces=createSurfaceDetails();
+surfaces.environment=studioEnvironment;
 const standard=(color,roughness=.5,metalness=.4)=>new T.MeshStandardMaterial({color,roughness,metalness});
 const neon=color=>new T.MeshBasicMaterial({color,toneMapped:false});
 const mats={
@@ -68,8 +90,10 @@ const createGun=(options={})=>buildGun({
   makeFlash:parent=>{const flash=new T.Object3D();parent.add(flash);return flash;}
 });
 const capeParts=new Map();
+const tabardParts=new Map();
 const shadowParts=new Map();
 const subjects=new Map();
+const inspectionHands=new Map();
 for(const id of ['lylu','ghju']){
   const model=createSoldier(kit,createGun,characterForId(id));
   scene.add(model.root);model.root.scale.setScalar(model.heightScale);model.root.visible=id==='ghju';
@@ -77,9 +101,14 @@ for(const id of ['lylu','ghju']){
   // Masquer l'ancien casque et monter les plaques/visière Shadow avant la cape.
   shadowParts.set(id,attachShadowConcept(model,characterForId(id)));
   capeParts.set(id,addCapeToOriginalSoldier(model,characterForId(id)));
+  tabardParts.set(id,addCapeToOriginalSoldier(model,characterForId(id),{front:true}));
+  model.root.traverse(o=>{if(o.isMesh&&o.material?.isMeshStandardMaterial){o.material.envMap=surfaces.environment;o.material.envMapIntensity=o.material.userData.studioReflection??(o.material.name==='Shadow dark visor'?.18:.65);}});
+  const gloves=[createGlove(kit.gloves,{mirror:true,sleeve:false}),createGlove(kit.gloves,{sleeve:false})];
+  for(const glove of gloves){glove.visible=false;model.root.add(glove);}
+  inspectionHands.set(id,gloves);
   subjects.set(id,model);
 }
-const state={character:'ghju',motion:'idle',level:7,weapon:0,angle:Math.PI,elevation:.12,zoom:matchMedia('(max-width:800px) and (orientation:portrait)').matches?6.0:3.9,showBones:false,capeEnabled:true,capeWind:.60,jumpStart:0,clock:0};
+const state={character:'ghju',motion:'idle',level:7,weapon:-1,angle:0,elevation:.015,focus:'body',headSpan:.19,zoom:matchMedia('(max-width:800px) and (orientation:portrait)').matches?6.0:3.05,showBones:false,capeEnabled:true,capeWind:.60,jumpStart:0,clock:0};
 const color=new T.Color();
 function setCharacter(id){
   if(!subjects.has(id))return;
@@ -103,13 +132,13 @@ function setCharacter(id){
     const col=name==='dark'?profile.palette.ink:name==='cyan'?profile.world.cyan:(profile.world[name]??profile.palette[name]);
     if(col!==undefined&&mat.color)mat.color.setHex(col);
   }
-  floor.material.color.setHex(profile.masculine?0x1c2939:0x29232e);
-  ground.material.color.setHex(profile.masculine?0x1d3a54:0x382536);
+  floor.material.color.setHex(0x171920);
+  ground.material.color.setHex(0x1c1e26);
   accents.color.setHex(profile.masculine?0x73b6ff:0xff80b2);
   document.documentElement.style.setProperty('--accent',profile.accent);
   for(const [key,m] of subjects){m.root.visible=key===id;}
   subjects.get(id).setLevel(state.level);
-  subjects.get(id).setWeapon(state.weapon);
+  subjects.get(id).setWeapon(Math.max(0,state.weapon));
   $('characters').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.character===id)));
   updateStatus();
 }
@@ -122,16 +151,25 @@ function setMotion(motion){
 }
 function updateStatus(){
   const model=subjects.get(state.character);
+  $('sound-preview').disabled=state.weapon<0;
   const stage=equipmentForCharacter(state.level,state.character);$('stage-name').textContent=stage.name+' · NIVEAU '+stage.level;$('stage-description').textContent=stage.description;
   $('status').textContent=`${model.armor.name} · ${characterForId(state.character).name} · ${model.targetHeight.toFixed(2).replace('.',',')} m · ${model.equipmentLevel}e armure · ${model.visibleParts} pièces · ${state.motion==='idle'?'repos':state.motion==='walk'?'marche':state.motion==='run'?'course':state.motion==='jump'?'saut':state.motion==='crouch'?'accroupi':state.motion==='walkFire'?'Rifle Walk':state.motion==='runFire'?'course + tir':state.motion==='crouchWalk'?'déplacement accroupi':'Idle Rifle'}`;
 }
 for(const button of document.querySelectorAll('[data-character]'))button.addEventListener('click',()=>setCharacter(button.dataset.character));
 for(const button of document.querySelectorAll('[data-motion]'))button.addEventListener('click',()=>setMotion(button.dataset.motion));
 for(const button of document.querySelectorAll('[data-angle]'))button.addEventListener('click',()=>{state.angle=Number(button.dataset.angle);});
+function setFocus(focus){
+  if(!['body','helmet'].includes(focus))return;
+  state.focus=focus;state.elevation=focus==='helmet'?0:.015;
+  document.querySelectorAll('[data-focus]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.focus===focus)));
+  updateHelmetProjection();
+}
+for(const button of document.querySelectorAll('[data-focus]'))button.addEventListener('click',()=>setFocus(button.dataset.focus));
 $('level').addEventListener('input',e=>{state.level=Number(e.target.value);$('level-value').textContent=state.level;subjects.get(state.character).setLevel(state.level);updateStatus();});
-$('weapon').addEventListener('change',e=>{state.weapon=Number(e.target.value);subjects.get(state.character).setWeapon(state.weapon);updateStatus();});
+$('weapon').addEventListener('change',e=>{state.weapon=Number(e.target.value);subjects.get(state.character).setWeapon(Math.max(0,state.weapon));updateStatus();});
 let previewAudio,previewSaber;
 $('sound-preview').addEventListener('click',async()=>{
+  if(state.weapon<0)return;
   try{
     previewAudio ||= new (window.AudioContext||window.webkitAudioContext)();
     if(previewAudio.state!=='running')await previewAudio.resume();
@@ -180,22 +218,44 @@ canvas.addEventListener('pointermove',e=>{
  } else if(pointerPositions.size>=2) {
   const [a,b]=[...pointerPositions.values()];
   const distance=Math.hypot(a.x-b.x,a.y-b.y);
-  if(previousPinch)state.zoom=clamp(state.zoom*previousPinch/Math.max(10,distance),2.3,7.2);
+  if(previousPinch)zoomView(previousPinch/Math.max(10,distance));
   previousPinch=distance;
  }
 });
 for(const name of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(name,e=>{pointerPositions.delete(e.pointerId);previousPinch=0;});
-canvas.addEventListener('wheel',e=>{e.preventDefault();state.zoom=clamp(state.zoom*Math.exp(e.deltaY*.001),2.3,7.2);},{passive:false});
+canvas.addEventListener('wheel',e=>{e.preventDefault();zoomView(Math.exp(e.deltaY*.001));},{passive:false});
 let frame=0,last=0;
+function updateHelmetProjection(){
+ // Fit the helmet into the area beside/above the controls. A symmetric
+ // orthographic view remains useful even on a narrow portrait screen.
+ const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight);
+ const panel=document.querySelector('.control')?.getBoundingClientRect();
+ const visible=panel?.width>0&&panel?.height>0,drawer=visible&&panel.width>w*.7;
+ const left=visible?16:0,top=visible?64:0;
+ const right=visible&&!drawer?Math.max(left+1,panel.left-16):w-left;
+ const bottom=drawer?Math.max(top+1,panel.top-16):h-left;
+ const scale=state.headSpan*2/Math.max(1,Math.min(right-left,bottom-top));
+ const cx=(w/2-(left+right)/2)*scale,cy=((top+bottom)/2-h/2)*scale;
+ helmetCamera.left=cx-w*scale/2;helmetCamera.right=cx+w*scale/2;
+ helmetCamera.top=cy+h*scale/2;helmetCamera.bottom=cy-h*scale/2;helmetCamera.updateProjectionMatrix();
+}
+function zoomView(factor){
+ if(state.focus==='helmet'){state.headSpan=clamp(state.headSpan*factor,.12,.36);updateHelmetProjection();}
+ else state.zoom=clamp(state.zoom*factor,2.3,7.2);
+}
 function resize(){
  const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight),dpr=Math.min(window.devicePixelRatio||1,2);
- renderer.setPixelRatio(dpr);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+ renderer.setPixelRatio(dpr);renderer.setSize(w,h,false);studioBloom.resize(Math.round(w*dpr),Math.round(h*dpr));camera.aspect=w/h;camera.updateProjectionMatrix();
+ updateHelmetProjection();
 }
 window.addEventListener('resize',resize);resize();
 setCharacter('ghju');setMotion('idle');
 function tick(now){
  const dt=last?clamp((now-last)*.001,.001,.05):.016;last=now;state.clock+=dt;
  const model=subjects.get(state.character),root=model.root;
+ shadowParts.get(state.character).restoreAttachments();
+ model.gun.visible=true;
+ for(const glove of inspectionHands.get(state.character))glove.visible=false;
  const speed=['walk','walkFire'].includes(state.motion)?3.2:['run','runFire'].includes(state.motion)?9:state.motion==='crouchWalk'?2.2:0;
  // Drive the real rig's displacement-driven animation without translating it out of the viewer.
  if(speed)model._lastRootPosition=new T.Vector3(root.position.x,root.position.y,root.position.z+speed*dt);
@@ -209,24 +269,37 @@ function tick(now){
  root.position.y=height;
  model.animate(state.clock,!!speed,0,0,['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion)?1:0,dt,{airborne,verticalSpeed:velocity,crouched:['crouch','crouchWalk'].includes(state.motion),firing:['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion),sprint:['run','runFire'].includes(state.motion),preview:state.motion==='idle',saberSwing:state.weapon===5&&state.motion==='aim'?bladeSwingPose((state.clock%1.2)/.6):null});
  model.gun.userData.setCombatState?.({time:state.clock,bladeHeld:state.weapon===5});
- capeParts.get(state.character).update(state.clock,state.motion,state.capeWind);
+ if(state.weapon<0){
+   if(state.motion==='idle'){
+     poseUnarmedForInspection(model,inspectionHands.get(state.character),dt);
+     shadowParts.get(state.character).syncInspectionSymmetry();
+   }
+   else for(const child of model.gun.children)if(child!==model.gun.userData.hand)child.visible=false;
+ }
+ const symmetric=state.weapon<0&&state.motion==='idle';
+ capeParts.get(state.character).update(state.clock,state.motion,state.capeWind,{symmetric});
+ tabardParts.get(state.character).update(state.clock,state.motion,state.capeWind*.55,{symmetric});
  refreshSkeleton(model);
  const w=canvas.clientWidth,h=canvas.clientHeight;
  // Portrait inspection keeps the entire boot-to-helmet silhouette above the mobile control drawer.
- const focal=(w<800&&h>w)?0.32:1.1;
- camera.position.set(Math.sin(state.angle)*Math.cos(state.elevation)*state.zoom,
-    focal+Math.sin(state.elevation)*state.zoom,
-    -Math.cos(state.angle)*Math.cos(state.elevation)*state.zoom);
- camera.lookAt(0,focal,0);
- renderer.render(scene,camera);
+ const focal=(w<800&&h>w)?0.32:.82;
+ const activeCamera=state.focus==='helmet'?helmetCamera:camera;
+ if(state.focus==='helmet')shadowParts.get(state.character).helmet.getWorldPosition(cameraTarget);
+ else cameraTarget.set(0,focal,0);
+ const distance=state.focus==='helmet'?1:state.zoom;
+ activeCamera.position.set(cameraTarget.x+Math.sin(state.angle)*Math.cos(state.elevation)*distance,
+   cameraTarget.y+Math.sin(state.elevation)*distance,
+   cameraTarget.z-Math.cos(state.angle)*Math.cos(state.elevation)*distance);
+ activeCamera.lookAt(cameraTarget);
+ studioBloom.render(scene,activeCamera);
  frame++;
  requestAnimationFrame(tick);
 }
 requestAnimationFrame(tick);
 window.__PINKWAR_CHARACTER_LAB=Object.freeze({
- snapshot:()=>({character:state.character,motion:state.motion,level:state.level,weapon:state.weapon,showBones:state.showBones,
-  frames:frame,zoom:state.zoom,articulations:jointNames, jointPositions:()=>Object.fromEntries(Object.entries(subjects.get(state.character).jointPositions()).map(([k,v])=>[k,v.toArray()])),
+ snapshot:()=>({character:state.character,motion:state.motion,level:state.level,weapon:state.weapon,focus:state.focus,showBones:state.showBones,
+  frames:frame,zoom:state.zoom,headSpan:state.headSpan,articulations:jointNames, jointPositions:()=>Object.fromEntries(Object.entries(subjects.get(state.character).jointPositions()).map(([k,v])=>[k,v.toArray()])),
   visibleParts:subjects.get(state.character).visibleParts,visibleMeshes:subjects.get(state.character).batchCount,physicalHeight:subjects.get(state.character).targetHeight,
   armorModules:[...subjects.get(state.character).armor.modules],armorTriangles:subjects.get(state.character).armor.parts.reduce((n,p)=>n+p.geometry.attributes.position.count/3,0),armorName:subjects.get(state.character).armor.name,armorRevision:subjects.get(state.character).armor.revision,armorGeneration:subjects.get(state.character).armor.generation,armorPieces:subjects.get(state.character).armor.count,nativeMotion:subjects.get(state.character).nativeMotion,nativeClips:Object.fromEntries(Object.entries(subjects.get(state.character).actor.actions).map(([name,a])=>[name,{duration:a.getClip().duration,weight:a.getEffectiveWeight(),time:a.time}]))}),
- selectCharacter:setCharacter,selectMotion:setMotion
+ selectCharacter:setCharacter,selectMotion:setMotion,selectFocus:setFocus
 });

@@ -94,6 +94,52 @@ function solveChain(upper,lower,end,target,pole){
   orient(upper,lower,elbow);orient(lower,end,wrist);return {elbow,wrist,upperLength:a,foreLength:b};
 }
 
+// Neutral inspection stance only. Gameplay continues to use the weapon IK.
+export function poseUnarmedForInspection(model,gloves,dt=.016){
+  const {root,actor}=model;
+  // Inspection is a stable, exactly frontal stance, rather than a random
+  // frame of the breathing/weapon animation. Movement selections stay native.
+  for(let i=0;i<actor.bones.length;i++){
+    actor.bones[i].position.fromArray(actor.data.bones[i].p);
+    actor.bones[i].quaternion.fromArray(actor.data.bones[i].q);
+  }
+  root.updateMatrixWorld(true);
+  for(let i=0;i<2;i++){
+    const sign=i===0?-1:1,foot=model.feet[i];
+    const orientation=foot.getWorldQuaternion(new T.Quaternion());
+    const target=root.worldToLocal(foot.getWorldPosition(new T.Vector3()));
+    target.x=sign*.185;
+    solveChain(model.legs[i],model.knees[i],foot,root.localToWorld(target),
+      root.localToWorld(new T.Vector3(sign*.22,.54,-.35)));
+    foot.quaternion.copy(foot.parent.getWorldQuaternion(new T.Quaternion()).invert().multiply(orientation));
+  }
+  for(let i=0;i<2;i++){
+    const side=i===0?'Left':'Right',sign=i===0?-1:1;
+    const upper=actor.bone(side+'Arm'),fore=actor.bone(side+'ForeArm'),hand=actor.bone(side+'Hand');
+    const target=root.localToWorld(new T.Vector3(sign*.315,1.005,-.020));
+    const pole=root.localToWorld(new T.Vector3(sign*.43,1.18,.045));
+    solveChain(upper,fore,hand,target,pole);
+    const glove=gloves[i];
+    glove.userData.animate({relax:.85},dt);
+    root.updateMatrixWorld(true);
+    const p=root.worldToLocal(hand.getWorldPosition(new T.Vector3()));
+    glove.quaternion.copy(root.getWorldQuaternion(new T.Quaternion()).invert()
+      .multiply(hand.getWorldQuaternion(new T.Quaternion()))
+      .multiply(glove.userData.rlh.quaternion.clone().invert()));
+    glove.userData.setBasePosition(p.sub(new T.Vector3(...GRIP.wrist)
+      .multiply(glove.scale).applyQuaternion(glove.quaternion)).toArray());
+    glove.visible=true;
+  }
+  // The glove adapter uses one right-hand mesh plus an outer reflection for
+  // the left hand. Mirror the complete neutral frame so their resting shapes
+  // agree as well as their wrist attachment points.
+  gloves[1].updateWorldMatrix(true,false);
+  const leftFrame=new T.Matrix4().makeScale(-1,1,1)
+    .multiply(root.matrixWorld.clone().invert()).multiply(gloves[1].matrixWorld);
+  leftFrame.decompose(gloves[0].position,gloves[0].quaternion,gloves[0].scale);
+  model.gun.visible=false;model.freeHand.visible=false;
+}
+
 export function createRLHSoldier(kit,createGun,profile){
   const actor=createRLHFirefighterActor(kit,{includeGloves:false,military:true}),{root,bone,data}=actor,targetHeight=profile?.masculine?1.8:1.7;
   // Retain the source rig/clips intact for native animation and foot samples;

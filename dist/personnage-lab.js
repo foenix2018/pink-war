@@ -1,3 +1,4 @@
+import {installShadowUnit,applyShadowMaterials} from './shadow-unit-game.js';
 import * as T from './vendor/three.webgpu.min.js';
 import { WebGLRenderer } from './vendor/three.module.min.js';
 import { createCharacterKit, createSoldier } from './soldier.js';
@@ -70,6 +71,7 @@ for(const id of ['lylu','ghju']){
   const model=createSoldier(kit,createGun,characterForId(id));
   scene.add(model.root);model.root.scale.setScalar(model.heightScale);model.root.visible=id==='ghju';
   model.animate(0,false);
+  installShadowUnit(model,characterForId(id));
   subjects.set(id,model);
 }
 const state={character:'ghju',motion:'idle',level:1,weapon:0,angle:0,elevation:.12,zoom:matchMedia('(max-width:800px) and (orientation:portrait)').matches?6.0:3.9,showBones:false,jumpStart:0,clock:0};
@@ -78,7 +80,7 @@ function setCharacter(id){
   if(!subjects.has(id))return;
   state.character=id;
   const profile=characterForId(id);
-  kit.setPalette(profile.armor);
+  applyShadowMaterials(kit,profile);
   setKenneyAccent(profile.armor.rose);
   paintEmblem(profile);
   for(const [name,mat] of Object.entries(mats)){

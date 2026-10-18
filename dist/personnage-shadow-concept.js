@@ -1,24 +1,53 @@
+import {buildShadowHelmet} from './shadow-helmet.js';
+import {reflectedGeometry,symmetricGeometry,mirrorAttachmentFrame} from './shadow-symmetry.js';
 import * as T from './vendor/three.webgpu.min.js';
+import {merge,bevelBox} from './geo.js';
 
-// Shadow Unit : prototype Three.js propre à la visionneuse HTML.
-// Reconstitue les volumes du concept (pas un fichier 3D extrait de l'illustration).
-// Les animations/meshes AÉGIS de la version du jeu ne sont pas modifiées.
+// Shared reference armour: fitted to the native bones for both game and viewer.
 export function attachShadowConcept(model, profile) {
+  // Author attachment transforms in the rig's bind pose, never in the transient
+  // weapon IK pose active when the scene happens to instantiate this soldier.
+  const pose=model.actor.bones.map(b=>({p:b.position.clone(),q:b.quaternion.clone()}));
+  for(let i=0;i<model.actor.bones.length;i++){
+    model.actor.bones[i].position.fromArray(model.actor.data.bones[i].p);
+    model.actor.bones[i].quaternion.fromArray(model.actor.data.bones[i].q);
+  }
+  model.root.updateMatrixWorld(true);
   const blue=!!profile.masculine;
-  const accent=blue?0x51b5ff:0xff3795;
+  const accent=blue?0x51b5ff:0xff148b;
   const dark=new T.MeshStandardMaterial({color:0x191c23,roughness:.48,metalness:.67,flatShading:true,side:T.DoubleSide});
   const graphite=new T.MeshStandardMaterial({color:0x2b2e36,roughness:.40,metalness:.73,flatShading:true,side:T.DoubleSide});
   const steel=new T.MeshStandardMaterial({color:0x595e6a,roughness:.48,metalness:.72,side:T.DoubleSide});
   const black=new T.MeshStandardMaterial({color:0x080a0f,roughness:.65,metalness:.33,side:T.DoubleSide});
   const glass=new T.MeshPhysicalMaterial({
-    color:blue?0x0b2849:0x320b22,metalness:.65,roughness:.13,
-    clearcoat:1,clearcoatRoughness:.05,side:T.DoubleSide,
+    color:blue?0x12345b:0x6c153e,metalness:.65,roughness:.12,
+    clearcoat:.6,clearcoatRoughness:.06,side:T.DoubleSide,
     emissive:blue?0x051a29:0x200714,emissiveIntensity:.26
   });
+  glass.name='Shadow dark visor';glass.userData.studioReflection=.60;
   const light=new T.MeshBasicMaterial({color:accent,toneMapped:false,side:T.DoubleSide});
   const dim=new T.MeshBasicMaterial({color:blue?0x2269b6:0x9a205d,toneMapped:false,side:T.DoubleSide});
+  // Fine machining grain and occasional hairline scratches, shared by the
+  // metal plates. Keep the contrast low so the silhouette remains readable.
+  const texSize=256,texels=new Uint8Array(texSize*texSize*4);
+  const hash=(x,y)=>{let n=Math.imul(x+17,374761393)^Math.imul(y+31,668265263);n=Math.imul(n^(n>>>13),1274126177);return (n^(n>>>16))>>>0;};
+  for(let y=0;y<texSize;y++)for(let x=0;x<texSize;x++){
+    const noise=hash(x,y)%13,grain=hash(0,y)%7;
+    const scratch=(hash(Math.floor(x/23),y)%997<3&&x%23<16)?22:0;
+    const c=Math.min(255,216+noise+grain+scratch),i=(y*texSize+x)*4;
+    texels.set([c,c,c,255],i);
+  }
+  const finish=new T.DataTexture(texels,texSize,texSize);finish.needsUpdate=true;
+  finish.wrapS=finish.wrapT=T.RepeatWrapping;
+  for(const material of [dark,graphite,steel]){
+    material.map=finish;material.bumpMap=finish;material.bumpScale=.00013;
+  }
   const disposables=[dark,graphite,steel,black,glass,light,dim];
-  const geometries=[];
+  const geometries=[],attachmentGroups=[];
+  const environment=model.armor.parts.find(p=>p.material?.envMap)?.material.envMap;
+  if(environment)for(const material of [dark,graphite,steel,black,glass]){
+    material.envMap=environment;material.envMapIntensity=.65;
+  }
   function part(parent,geom,mat,pos=[0,0,0],rotation=[0,0,0]) {
     const o=new T.Mesh(geom,mat);
     o.position.set(...pos);o.rotation.set(...rotation);
@@ -29,11 +58,33 @@ export function attachShadowConcept(model, profile) {
   function block(p,w,h,d,mat,x,y,z,rot=[0,0,0]) {
     return part(p,new T.BoxGeometry(w,h,d),mat,[x,y,z],rot);
   }
+  // Closed hard-surface plates: perimeter bevel, sloped shoulder and a raised
+  // central field. The front is genuinely sculpted, rather than a flat decal.
   function shape(p,outline,mat,pos,rot=[0,0,0],depth=.006) {
-    const s=new T.Shape();
-    outline.forEach(([x,y],i)=>i?s.lineTo(x,y):s.moveTo(x,y));
-    s.closePath();
-    return part(p,new T.ExtrudeGeometry(s,{depth,steps:1,bevelEnabled:false}),mat,pos,rot);
+    const n=outline.length,cx=outline.reduce((s,v)=>s+v[0],0)/n,
+      cy=outline.reduce((s,v)=>s+v[1],0)/n;
+    const facing=(pos[2]>.06?1:-1)*(Math.cos(rot[1])>=0?1:-1);
+    const rise=Math.min(.028,depth+.010),vertices=[],indices=[];
+    const rings=[[1,0],[.96,.003],[.74,rise]];
+    for(const [scale,z] of rings)for(const [x,y] of outline)
+      vertices.push(cx+(x-cx)*scale,cy+(y-cy)*scale,z*facing);
+    for(let row=1;row<rings.length;row++)for(let i=0;i<n;i++){
+      const a=(row-1)*n+i,b=(row-1)*n+(i+1)%n,c=row*n+i,d=row*n+(i+1)%n;
+      indices.push(a,b,c,b,d,c);
+    }
+    const center=vertices.length/3;vertices.push(cx,cy,rise*facing);
+    for(let i=0;i<n;i++)indices.push((rings.length-1)*n+i,(rings.length-1)*n+(i+1)%n,center);
+    // Seal the underside to give the plate a real edge in profile.
+    const back=vertices.length/3;vertices.push(cx,cy,-.003*facing);
+    for(let i=0;i<n;i++)indices.push((i+1)%n,i,back);
+    const area=outline.reduce((sum,[x,y],i)=>{const next=outline[(i+1)%n];return sum+x*next[1]-next[0]*y;},0);
+    if(Math.sign(area)!==facing)for(let i=0;i<indices.length;i+=3)[indices[i+1],indices[i+2]]=[indices[i+2],indices[i+1]];
+    const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(vertices,3));g.setIndex(indices);
+    const rx=Math.max(...outline.map(v=>Math.abs(v[0]-cx)),.001),ry=Math.max(...outline.map(v=>Math.abs(v[1]-cy)),.001);
+    const uv=[];for(let i=0;i<vertices.length;i+=3)uv.push(.5+(vertices[i]-cx)/(2*rx),.5+(vertices[i+1]-cy)/(2*ry));
+    g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));
+    const flat=g.toNonIndexed();flat.computeVertexNormals();g.dispose();
+    return part(p,flat,mat,pos,rot);
   }
   function path(p,points,mat=light,r=.0034) {
     const curve=new T.CatmullRomCurve3(points.map(v=>new T.Vector3(...v)));
@@ -47,17 +98,20 @@ export function attachShadowConcept(model, profile) {
     const group=new T.Group();
     group.position.copy(bone.worldToLocal(point));
     group.quaternion.copy(boneRotation.invert().multiply(rootRotation));
-    bone.add(group);
+    bone.add(group);attachmentGroups.push(group);
     return group;
   }
 
-  // Masque les triangles du casque AÉGIS d'origine uniquement dans cette copie
-  // prévisualisée ; tout le reste de l'armure et le rig natif sont conservés.
+  // Retain the native flexible suit and skeleton; replace the old rigid shell.
   const headIndex=model.actor.bones.findIndex(b=>b.name==='mixamorigHead');
   const filteredGeometries=new Set();
-  function hideAegisHead() {
+  function hideReplacedArmor() {
     if(headIndex<0)return;
     for(const mesh of model.armor.parts){
+      // Legacy pastel plates must not poke through the new reference shell.
+      // Keep the flexible suit; obsolete armour, exoskeleton rods and lights
+      // would otherwise protrude asymmetrically through the replacement shell.
+      mesh.visible=mesh.name.endsWith(' suit');
       const original=mesh.geometry;
       if(original.userData?.shadowHelmetFiltered)continue;
       const skin=original.getAttribute('skinIndex');
@@ -90,15 +144,16 @@ export function attachShadowConcept(model, profile) {
       filteredGeometries.clear();
     }
     originalSetLevel(n);
-    hideAegisHead();
+    hideReplacedArmor();
   };
-  hideAegisHead();
+  hideReplacedArmor();
 
   // Nouveau casque à facettes : volume resserré au menton, épaissi au front.
   // La géométrie reprend les proportions du casque de référence, sans réemployer
   // la coque ronde d'AÉGIS. Vue de face = -Z.
   const helmet=boneAnchor(model.actor.bone('Head'),[0,1.751,.018]);
   helmet.name='Shadow V6 / casque tactique polygonal';
+  helmet.scale.setScalar(.73);
 
   function facetHull(rings,steps=16){
     const verts=[],indices=[];
@@ -109,135 +164,52 @@ export function attachShadowConcept(model, profile) {
         verts.push(w*Math.cos(a)*oct,y,Math.sin(a)*d*oct+offset);
         if(j>0){
           const n=j*steps+i,nn=j*steps+(i+1)%steps,p=n-steps,pn=nn-steps;
-          indices.push(p,pn,n,pn,nn,n);
+          indices.push(p,n,pn,pn,n,nn);
         }
       }
     }
     const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(verts,3));
     g.setIndex(indices);const non=g.toNonIndexed();non.computeVertexNormals();g.dispose();return non;
   }
-  part(helmet,facetHull([
-    [-.175,.084,.109,.016],[-.127,.126,.136,.010],[-.080,.151,.164,.003],
-    [-.026,.170,.170,.006],[.041,.171,.168,.010],[.096,.149,.152,.013],
-    [.145,.108,.108,.013],[.169,.048,.047,.011]
-  ],16),dark);
-  // Panneaux à relief superposés, de la calotte jusqu'à l'avant frontal.
-  shape(helmet,[[-.095,-.050],[-.116,.007],[-.063,.113],[-.010,.133],[.010,.133],
-    [.063,.113],[.116,.007],[.095,-.050]],graphite,[0,.020,-.132],[.16,0,0],.010);
-  shape(helmet,[[-.061,-.029],[-.072,.059],[-.016,.104],[.016,.104],
-    [.072,.059],[.061,-.029]],dark,[0,.058,-.153],[.23,0,0],.012);
-  shape(helmet,[[-.037,-.020],[-.045,.052],[-.012,.075],[.012,.075],
-    [.045,.052],[.037,-.020]],steel,[0,.122,-.096],[.43,0,0],.0025);
-  block(helmet,.072,.012,.012,light,0,.134,-.079,[.12,0,0]);
-  for(const s of [-1,1]){
-    shape(helmet,[[-.055,-.042],[-.069,.047],[-.012,.093],[.052,.066],
-      [.068,.003],[.035,-.061]],graphite,[s*.116,.040,-.083],[.1,s*.42,s*-.05],.010);
-    // Tuiles ventilo-temporales et antennes encastrées, non flottantes.
-    shape(helmet,[[-.045,-.061],[-.052,.036],[.011,.074],[.050,.026],
-      [.040,-.058]],steel,[s*.105,-.056,.091],[.10,s*-.45,0],.006);
-    block(helmet,.025,.016,.018,black,s*.120,.068,-.119,[0,s*-.35,0]);
-    path(helmet,[[s*.036,.106,-.153],[s*.090,.072,-.156],
-      [s*.131,.034,-.129],[s*.146,.007,-.113]],light,.0045);
-    path(helmet,[[s*.112,-.100,-.111],[s*.155,-.073,-.085]],dim,.003);
-    // Écouteur compact et épais, avec anneau directionnel rose/bleu.
-    part(helmet,new T.CylinderGeometry(.055,.055,.024,24),black,
-      [s*.165,-.032,.016],[0,0,Math.PI/2]);
-    part(helmet,new T.TorusGeometry(.046,.006,7,32),light,
-      [s*.184,-.032,.016],[0,Math.PI/2,0]);
-    part(helmet,new T.CylinderGeometry(.028,.028,.009,24),graphite,
-      [s*.190,-.032,.016],[0,0,Math.PI/2]);
-    part(helmet,new T.TorusGeometry(.020,.0025,7,24),dim,
-      [s*.197,-.032,.016],[0,Math.PI/2,0]);
-  }
-
-  // Visière RAPETISSÉE en hauteur, découpée par des bords anguleux ;
-  // le verre va de +.014 à -.066, alors que l'ancienne visière
-  // (-.088..+.046) faisait presque la moitié du casque.
-  const sections=[{y:.026,w:.86,depth:.184},
-                  {y:.016,w:1.0,depth:.188},
-                  {y:-.045,w:1.0,depth:.190},
-                  {y:-.073,w:.77,depth:.170}];
-  const lensVerts=[],lensIdx=[],count=30;
-  for(let row=0;row<sections.length;row++){
-    const {y,w,depth}=sections[row];
-    for(let i=0;i<=count;i++){
-      const a=(i/count-.5)*2.14;
-      const x=Math.sin(a)*.160*w;
-      const z=-depth*Math.cos(a)-.006;
-      lensVerts.push(x,y,z);
-      if(row&&i<count){const n=row*(count+1)+i,p=n-(count+1);
-        lensIdx.push(p,n,p+1,p+1,n,n+1);}
-    }
-  }
-  const lens=new T.BufferGeometry();
-  lens.setAttribute('position',new T.Float32BufferAttribute(lensVerts,3));
-  lens.setIndex(lensIdx);lens.computeVertexNormals();
-  part(helmet,lens,glass);
-  // Haut de visière à épaisseur maîtrisée, encadrement en alliage, pas une "sangle".
-  path(helmet,[[-.123,.032,-.121],[-.088,.033,-.166],
-    [0,.035,-.194],[.088,.033,-.166],[.123,.032,-.121]],dark,.007);
-  path(helmet,[[-.124,.028,-.125],[-.088,.029,-.171],
-    [0,.030,-.200],[.088,.029,-.171],[.124,.028,-.125]],light,.0028);
-  path(helmet,[[-.107,-.072,-.126],[-.079,-.075,-.160],
-    [0,-.082,-.184],[.079,-.075,-.160],[.107,-.072,-.126]],graphite,.008);
-  // Masque inférieur géométrique articulé, en plusieurs couches et facettes.
-  shape(helmet,[[-.114,.003],[-.095,.052],[-.035,.073],[.035,.073],
-    [.095,.052],[.114,.003],[.083,-.066],[0,-.088],[-.083,-.066]],
-    dark,[0,-.128,-.133],[.05,0,0],.022);
-  shape(helmet,[[-.085,.007],[-.055,.060],[0,.068],[.055,.060],
-    [.085,.007],[.055,-.051],[0,-.071],[-.055,-.051]],
-    graphite,[0,-.131,-.158],[.05,0,0],.012);
-  for(const s of [-1,1]){
-    shape(helmet,[[-.025,-.053],[-.034,.026],[-.012,.047],
-      [.019,.036],[.036,-.015]],steel,[s*.071,-.132,-.162],[0,s*-.20,0],.006);
-    path(helmet,[[s*.117,-.081,-.116],
-      [s*.123,-.113,-.129],[s*.095,-.151,-.166]],dim,.0034);
-  }
-  block(helmet,.066,.068,.025,black,0,-.133,-.182);
-  for(const x of [-.016,.016])
-    block(helmet,.006,.057,.015,light,x,-.137,-.204);
-  block(helmet,.038,.014,.023,graphite,0,-.174,-.196);
-
-  // Détails fermés au dos, la même géométrie reste cohérente pendant la rotation.
-  for(const s of [-1,1]){
-    shape(helmet,[[-.057,-.032],[-.068,.033],[.011,.077],[.065,.028],
-      [.044,-.052]],graphite,[s*.088,.076,.102],[.10,s*-.28,0],.006);
-    block(helmet,.018,.009,.010,light,s*.105,.132,.080);
-  }
-  shape(helmet,[[-.094,-.033],[-.082,.063],[-.030,.096],[.030,.096],
-    [.082,.063],[.094,-.033]],graphite,[0,.027,.172],[0,Math.PI,0],.009);
-  block(helmet,.072,.010,.015,light,0,.096,.180);
-  for(let i=0;i<4;i++)
-    block(helmet,.022,.004,.008,black,-.046+i*.030,.142,-.027,[.10,0,0]);
+  buildShadowHelmet(helmet,{
+    part,shape,block,path,materials:{dark,graphite,black,steel,glass,light,dim},disposables
+  });
 
   // Plastron Shadow : volume anguleux et profond placé DEVANT l'armure AÉGIS.
   // La version précédente mettait les plaques à z=-.136, donc sous la coque.
   const spine=boneAnchor(model.actor.bone('Spine2'),[0,1.432,0]);
   spine.name='Shadow V6 / thorax sculpté';
-  // Dos : module existant conservé, finition sombre avec bande LED discrète.
-  shape(spine,[[-.172,-.104],[.172,-.104],[.187,.046],[.134,.131],
-    [-.134,.131],[-.187,.046]],dark,[0,-.005,.172],[0,0,0],.008);
-  shape(spine,[[-.145,-.089],[.145,-.089],[.148,.041],[.105,.088],
-    [-.105,.088],[-.148,.041]],steel,[0,-.005,.183],[0,0,0],.004);
-  block(spine,.101,.192,.029,black,0,-.013,.200);
-  for(let j=0;j<5;j++)block(spine,.057,.005,.004,dark,0,-.077+j*.029,.220);
-  block(spine,.084,.011,.007,light,0,.103,.215);
+  // Rear reference: two broad gunmetal scapular plates, central vent cassette.
+  for(const sign of [-1,1]){
+    const outline=[[.060,-.110],[.153,-.100],[.205,-.057],[.213,.067],
+      [.159,.125],[.081,.143],[.058,.105]].map(([x,y])=>[sign*x,y]);
+    shape(spine,outline,dark,[0,-.005,.178],[0,0,0],.022);
+    shape(spine,outline.map(([x,y])=>[x*.91,y*.87]),steel,[0,-.002,.204],[0,0,0],.009);
+    path(spine,[[sign*.193,.047,.220],[sign*.196,-.070,.221]],light,.004);
+    block(spine,.028,.031,.012,graphite,sign*.197,.079,.222);
+  }
+  shape(spine,[[-.066,-.118],[.066,-.118],[.069,.126],[.054,.145],
+    [-.054,.145],[-.069,.126]],black,[0,0,.221],[0,0,0],.024);
+  block(spine,.074,.012,.008,light,0,.110,.267);
+  for(let j=0;j<6;j++){
+    block(spine,.078,.009,.008,graphite,0,.065-j*.028,.268);
+    block(spine,.070,.004,.005,black,0,.067-j*.028,.274);
+  }
 
   // Collier articulé sous le casque : trois plaques et contacts lumineux.
   shape(spine,[[-.099,-.032],[-.101,.021],[-.053,.041],[.053,.041],
     [.101,.021],[.099,-.032]],black,[0,.128,-.153],[.04,0,0],.014);
   block(spine,.068,.012,.008,graphite,0,.159,-.157);
   for(const side of [-1,1]){
-    shape(spine,[[-.072,-.052],[-.079,.032],[-.047,.093],
-      [.033,.101],[.091,.041],[.082,-.064]],dark,
-      [side*.109,.027,-.210],[0,side*-.11,0],.014);
-    // Les plaques gris canon sont visibles au-dessus du plastron noir.
-    shape(spine,[[-.063,-.054],[-.070,.027],[-.028,.073],
-      [.031,.075],[.072,.028],[.060,-.058]],steel,
-      [side*.108,.030,-.232],[0,side*-.12,0],.006);
-    shape(spine,[[-.048,-.031],[-.047,.023],[-.013,.054],
-      [.048,.027],[.048,-.038]],graphite,
-      [side*.11,.027,-.241],[0,side*-.12,0],.006);
+    const wing=[[.056,-.059],[.130,-.103],[.192,-.033],[.214,.061],
+      [.169,.117],[.091,.133],[.055,.083]].map(([x,y])=>[side*x*.88,y]);
+    shape(spine,wing,dark,[0,.012,-.202],[0,side*-.06,0],.014);
+    const inset=wing.map(([x,y])=>[side*.111+(x-side*.111)*.88,.013+(y-.013)*.86]);
+    shape(spine,inset,steel,[0,.012,-.222],[0,side*-.06,0],.012);
+    // A separate inset facet interrupts the wide plate like the reference's
+    // diagonal shoulder-to-sternum bevel, without a floating overlay.
+    shape(spine,[[side*.075,.080],[side*.097,.113],[side*.173,.095],
+      [side*.191,.047],[side*.137,.062]],graphite,[0,.012,-.234],[0,side*-.06,0],.003);
     // Bande de lumière suit le biseau, encadrant la cage thoracique.
     path(spine,[[side*.158,.093,-.222],[side*.181,.030,-.240],
       [side*.178,-.034,-.237],[side*.129,-.089,-.235]],light,.004);
@@ -257,7 +229,7 @@ export function attachShadowConcept(model, profile) {
     [0,.015,-.271],[0,0,0],.005);
   block(spine,.077,.017,.011,light,0,.103,-.281);
   for(let j=0;j<4;j++)
-    block(spine,.062-j*.005,.005,.006,black,0,.048-j*.029,-.281);
+    block(spine,.062-j*.005,.005,.006,black,0,.048-j*.029,-.296);
   // Le bouclier inférieur du sternum relie le thorax aux abdominaux.
   shape(spine,[[-.093,.031],[-.043,.062],[.043,.062],[.093,.031],
     [.067,-.049],[0,-.069],[-.067,-.049]],steel,
@@ -271,26 +243,180 @@ export function attachShadowConcept(model, profile) {
   for(const side of [-1,1]){
     const sideName=side<0?'Left':'Right';
     const shoulder=boneAnchor(model.actor.bone(sideName+'Arm'),
-      [side*.211,1.478,-.001]);
+      [side*.250,1.510,-.015]);
     shoulder.name='Shadow V6 / épaule '+sideName;
-    shape(shoulder,[[-.085,-.050],[-.091,.014],[-.047,.066],
-      [.020,.079],[.086,.018],[.067,-.055]],graphite,
+    shoulder.scale.setScalar(.90);
+    shape(shoulder,[[-.090,-.068],[-.096,.014],[-.047,.084],
+      [.020,.096],[.094,.018],[.073,-.080]],graphite,
       [0,0,-.021],[.17,side*.17,side*.17],.011);
     shape(shoulder,[[-.066,-.036],[-.064,.017],[-.016,.056],
       [.029,.053],[.063,.002],[.046,-.044]],steel,
       [0,.009,-.035],[.17,side*.12,side*.12],.004);
     path(shoulder,[[-.047,.050,-.041],[-.013,.065,-.042],
       [.038,.045,-.040]],light,.0055);
+    const cap=part(shoulder,facetHull([[-.078,.074,.060,.013],
+      [-.020,.098,.080,.013],[.043,.080,.070,.013],[.081,.034,.032,.013]],12),dark);
+    cap.position.z=.031;
+    path(shoulder,[[-.049,.058,.084],[-.012,.083,.091],[.039,.062,.083]],light,.005);
     // Le dernier bord entre cuirasse et articulation reste noir, non fluorescent.
     path(shoulder,[[-.052,-.035,-.045],[.051,-.035,-.045]],dark,.003);
   }
+  // Place each hard-surface shell in the limb's anatomical frame; bind it to
+  // that bone, leaving the elbow, knee and wrist flexible during animation.
+  const limbGroups=[];
+  function limbShell(side,start,end,offset){
+    const bone=model.actor.bone(side+start),next=model.actor.bone(side+end);
+    model.root.updateMatrixWorld(true);
+    const a=model.root.worldToLocal(bone.getWorldPosition(new T.Vector3()));
+    const b=model.root.worldToLocal(next.getWorldPosition(new T.Vector3()));
+    const y=a.clone().sub(b).normalize(),z=new T.Vector3(0,0,1);
+    z.addScaledVector(y,-z.dot(y)).normalize();
+    const x=y.clone().cross(z).normalize();
+    const center=a.clone().lerp(b,.5).addScaledVector(z,-offset);
+    const group=boneAnchor(bone,center.toArray());
+    group.quaternion.multiply(new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(x,y,z)));
+    group.name='Shadow / '+side+' '+start;limbGroups.push(group);return group;
+  }
+  const shield=[[-.048,-.110],[.036,-.117],[.066,-.033],[.062,.074],
+    [.026,.107],[-.042,.098],[-.068,.038],[-.060,-.051]];
+  function shieldLayer(group,outline,material,z,scale=1){
+    return shape(group,outline.map(([x,y])=>[x*scale,y*scale]),material,[0,0,z],[0,0,0],.014);
+  }
+  for(const side of ['Left','Right']){
+    const sign=side==='Left'?-1:1;
+    const upper=limbShell(side,'Arm','ForeArm',.064);
+    shieldLayer(upper,shield,dark,-.006,.84);
+    shieldLayer(upper,shield,dark,.129,.90);
+    shieldLayer(upper,shield,graphite,-.022,.70);
+    path(upper,[[sign*.037,.062,-.031],[sign*.043,-.017,-.031]],dim,.003);
+    const fore=limbShell(side,'ForeArm','Hand',.067);
+    part(fore,facetHull([[-.108,.035,.035,.067],[-.074,.049,.046,.067],
+      [.018,.061,.055,.067],[.075,.049,.045,.067],[.095,.038,.036,.067]],12),dark);
+    shieldLayer(fore,shield,dark,0,1.04);
+    shieldLayer(fore,shield,graphite,.126,.98);
+    path(fore,[[sign*.046,.066,.147],[sign*.054,.008,.148],
+      [sign*.037,-.055,.147]],light,.0035);
+    shieldLayer(fore,shield,graphite,-.017,.87);
+    shape(fore,[[-.028,-.085],[.014,-.079],[.038,.018],[.024,.075],
+      [-.021,.062],[-.035,-.005]],steel,[0,0,-.034],[0,0,0],.008);
+    path(fore,[[sign*.044,.061,-.039],[sign*.052,.009,-.040],
+      [sign*.036,-.052,-.040]],light,.0038);
+    for(const y of [-.072,.059]){
+      block(fore,.050,.006,.009,black,0,y,-.058);
+      for(const x of [-.029,.029])part(fore,new T.CylinderGeometry(.0035,.0035,.003,6),steel,
+        [x,y,-.058],[Math.PI/2,0,0]);
+    }
+
+    const thigh=limbShell(side,'UpLeg','Leg',.101);
+    part(thigh,facetHull([[-.134,.051,.054,.101],[-.080,.075,.066,.101],
+      [.058,.087,.076,.101],[.119,.071,.065,.101]],12),dark);
+    shieldLayer(thigh,shield,dark,0,1.24);
+    shieldLayer(thigh,shield,graphite,.185,1.15);
+    shieldLayer(thigh,shield,graphite,-.018,1.08);
+    shape(thigh,[[-.042,-.105],[.017,-.114],[.048,-.023],
+      [.039,.085],[-.025,.101],[-.051,.027]],steel,[0,0,-.034],[0,0,0],.009);
+    path(thigh,[[sign*.060,.081,-.033],[sign*.065,-.035,-.033],
+      [sign*.049,-.102,-.032]],light,.0036);
+    const shin=limbShell(side,'Leg','Foot',.073);
+    const greave=[[-.044,-.157],[.032,-.153],[.066,.042],[.050,.133],
+      [.014,.155],[-.045,.135],[-.069,.043]];
+    part(shin,facetHull([[-.159,.034,.035,.073],[-.095,.044,.044,.073],
+      [.030,.066,.063,.073],[.110,.063,.060,.073],[.142,.044,.044,.073]],12),dark);
+    shieldLayer(shin,greave,dark,0);
+    shieldLayer(shin,greave,graphite,.140,.95);
+    for(const edge of [-1,1])path(shin,[[edge*.052,.088,.158],
+      [edge*.056,.026,.158],[edge*.036,-.083,.158]],light,.0035);
+    shieldLayer(shin,greave,graphite,-.018,.86);
+    shape(shin,[[-.025,-.129],[.011,-.132],[.042,.051],[.015,.126],
+      [-.032,.098],[-.040,.017]],steel,[0,0,-.034],[0,0,0],.008);
+    for(const edge of [-1,1])path(shin,[[edge*.055,.085,-.026],
+      [edge*.060,.026,-.027],[edge*.039,-.080,-.027]],light,.0032);
+    const kneeBone=model.actor.bone(side+'Leg');
+    const kneePoint=model.root.worldToLocal(kneeBone.getWorldPosition(new T.Vector3()));
+    const knee=boneAnchor(kneeBone,[kneePoint.x,kneePoint.y+.005,kneePoint.z-.074]);
+    knee.name='Shadow / '+side+' Knee';limbGroups.push(knee);
+    const kneecap=[[-.055,-.039],[.044,-.045],[.066,.011],[.033,.050],[-.038,.046],[-.064,.005]];
+    shape(knee,kneecap,dark,[0,0,0],[0,0,0],.016);
+    shape(knee,kneecap.map(([x,y])=>[x*.75,y*.70]),graphite,[0,0,-.023],[0,0,0],.006);
+    const hipBone=model.actor.bone('Hips');
+    const pouch=boneAnchor(hipBone,[sign*.194,1.021,-.062]);
+    pouch.name='Shadow / '+side+' Hip';limbGroups.push(pouch);
+    part(pouch,bevelBox(.071,.111,.045,.005),dark);
+    block(pouch,.059,.014,.008,graphite,0,.043,-.027);
+    block(pouch,.006,.035,.005,light,sign*.019,.003,-.028);
+    const footBone=model.actor.bone(side+'Foot');
+    const footPosition=model.root.worldToLocal(footBone.getWorldPosition(new T.Vector3()));
+    const boot=boneAnchor(footBone,[footPosition.x,footPosition.y-.006,footPosition.z-.09]);
+    boot.name='Shadow / segmented boot '+side;limbGroups.push(boot);
+    part(boot,bevelBox(.130,.030,.310,.008),dark,[0,-.083,.010]);
+    part(boot,facetHull([[-.071,.041,.055,.090],[-.020,.051,.063,.090],
+      [.059,.048,.057,.090],[.074,.043,.048,.090]],16),dark);
+    part(boot,bevelBox(.102,.061,.126,.008),graphite,[0,-.044,.101]);
+    part(boot,bevelBox(.125,.065,.156,.009),graphite,[0,-.039,-.064]);
+    shape(boot,[[-.060,-.025],[.060,-.025],[.065,.013],[.042,.033],
+      [-.042,.033],[-.065,.013]],dark,[0,-.029,-.146],[0,0,0],.008);
+    block(boot,.043,.013,.006,light,0,-.024,-.163);
+    block(boot,.105,.034,.178,dark,0,-.012,-.022);
+    for(let j=0;j<3;j++){
+      block(boot,.099-j*.006,.022,.046,graphite,0,.016+j*.016,-.076+j*.047,[-.17,0,0]);
+      block(boot,.056,.004,.004,black,0,.029+j*.016,-.081+j*.047);
+    }
+    block(boot,.042,.012,.006,light,0,.009,-.114);
+    block(boot,.032,.009,.006,light,0,.075,.009);
+  }
+  // Keep the detailed silhouette economical: one draw per material and bone,
+  // rather than one draw for every bolt, vent and bevelled panel.
+  for(const group of attachmentGroups){
+    const batches=new Map();
+    for(const mesh of [...group.children]){
+      if(!mesh.isMesh)continue;
+      mesh.updateMatrix();
+      const baked=mesh.geometry.clone().applyMatrix4(mesh.matrix);
+      if(!batches.has(mesh.material))batches.set(mesh.material,[]);
+      batches.get(mesh.material).push(baked);mesh.removeFromParent();
+    }
+    for(const [material,parts] of batches){
+      part(group,merge(parts),material);
+      for(const geometry of parts)geometry.dispose();
+    }
+  }
+  // Centre pieces are authored from one half; paired limbs reuse the exact
+  // same mesh reflected across the character's sagittal plane.
+  for(const group of [helmet,spine])for(const mesh of group.children){
+    mesh.geometry=symmetricGeometry(mesh.geometry);geometries.push(mesh.geometry);
+  }
+  const mirrorPairs=[];
+  for(const right of attachmentGroups.filter(g=>g.name.includes('Right'))){
+    const left=attachmentGroups.find(g=>g.name===right.name.replace('Right','Left'));
+    if(!left)throw new Error('Missing mirrored armour attachment: '+right.name);
+    for(const child of [...left.children])child.removeFromParent();
+    mirrorAttachmentFrame(right,left,model.root);
+    for(const mesh of right.children)part(left,reflectedGeometry(mesh.geometry),mesh.material);
+    mirrorPairs.push({left,right,position:left.position.clone(),quaternion:left.quaternion.clone(),scale:left.scale.clone()});
+  }
+  for(let i=0;i<pose.length;i++){
+    model.actor.bones[i].position.copy(pose[i].p);
+    model.actor.bones[i].quaternion.copy(pose[i].q);
+  }
+  model.root.updateMatrixWorld(true);
   return {
-    helmet,spine,
+    helmet,spine,limbGroups,mirrorPairs,
+    restoreAttachments(){
+      for(const pair of mirrorPairs){
+        pair.left.position.copy(pair.position);pair.left.quaternion.copy(pair.quaternion);pair.left.scale.copy(pair.scale);
+      }
+    },
+    syncInspectionSymmetry(){
+      for(const {right,left} of mirrorPairs)mirrorAttachmentFrame(right,left,model.root);
+    },
+
     dispose(){
+      for(const group of attachmentGroups)group.removeFromParent();
       for(const g of geometries)g.dispose();
       for(const g of filteredGeometries)g.dispose();
       filteredGeometries.clear();
       for(const m of disposables)m.dispose();
+      finish.dispose();
     }
   };
 }

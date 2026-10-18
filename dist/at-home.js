@@ -2,6 +2,7 @@
 // Spatial data stays inside the session; walking uses native headset tracking.
 import * as THREE from './vendor/three.module.min.js';
 import { characterForId } from './characters.js';
+import { GAME_VERSION } from './launch-ui.js';
 import { WEAPONS } from './game-logic.js';
 import { RoomGame } from './room-game.js';
 import { classifyRoomSurface, insideRoomPolygon, roomBounds, roomFloorAt, createRoomNavigation } from './room-layout.js';
@@ -298,4 +299,4 @@ window.addEventListener('resize',()=>{if(renderer.xr.isPresenting)return;camera.
 renderer.setAnimationLoop(tick);
 async function checkSupport(){if(!navigator.xr||!window.isSecureContext){info('OUVRE AT HOME DANS LE NAVIGATEUR QUEST 3');return;}try{if(await navigator.xr.isSessionSupported('immersive-ar')){button.disabled=false;info('QUEST COMPATIBLE · PRÉPARE LE SCAN DE LA MAISON');}else info('RÉALITÉ MIXTE INDISPONIBLE SUR CE NAVIGATEUR');}catch{info('SUPPORT WEBXR INDISPONIBLE');}}
 checkSupport();
-window.__PINKWAR_HOME=Object.freeze({snapshot:()=>({version:'3.45',mode,frames,character:hero.id,floors:floors().length,surfaces:surfaces.size,meshes:meshes.size,decor:assets?.architecture.stats(),battlefield:room.stats(),playArea:{source:playAreaSource,polygon:playPolygon,boundary:boundary.stats()},startRequested,hands:mounts.filter(m=>m.anchor.visible).length,laser:laser.stats(),scope:scope?.stats(),...game.snapshot()})});
+window.__PINKWAR_HOME=Object.freeze({snapshot:()=>({version:GAME_VERSION,mode,frames,character:hero.id,floors:floors().length,surfaces:surfaces.size,meshes:meshes.size,decor:assets?.architecture.stats(),battlefield:room.stats(),playArea:{source:playAreaSource,polygon:playPolygon,boundary:boundary.stats()},startRequested,hands:mounts.filter(m=>m.anchor.visible).length,laser:laser.stats(),scope:scope?.stats(),...game.snapshot()})});
