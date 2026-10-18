@@ -2,6 +2,7 @@
 import * as T from './vendor/three.webgpu.min.js';
 import { createEnemyFactory } from './enemies.js';
 import { createCharacterKit, createSoldier } from './soldier.js';
+import {installShadowUnit,applyShadowMaterials} from './shadow-unit-game.js';
 import {setKenneyAccent} from './kenney-blasters.js';
 import { buildGun } from './weapons.js';
 import { createGlove } from './hands.js';
@@ -66,6 +67,8 @@ export async function createAtHomeAssets(scene, hero) {
   // The player sees their actual Pink War gun/gloves in first person.
   // Their sibling is the real animated character model, not a substitute mannequin.
   const companion=createSoldier(companionKit.kit,companionKit.makeGun,other);
+  installShadowUnit(companion,other);
+  applyShadowMaterials(companionKit.kit,other);
   companion.root.visible=false;scene.add(companion.root);
   const ruin=createRuinedRoomMaterials(hero.palette.rose,{opaque:true});
   const architecture=createRoomArchitecture(scene,hero,ruin);
