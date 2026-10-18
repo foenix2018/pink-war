@@ -13,7 +13,7 @@ test('six zones wait for portal waves, relays, guardian shield and finite extrac
  clearWave(g);visit(g,{x:0,z:-3});step(g);assert.equal(g.stage,'courtyard');assert.equal(g.pendingSpawns.length,7);
  visit(g,BREACH.relays[0]);assert.equal(g.interact(),false);clearWave(g);
  for(const p of BREACH.relays){visit(g,p);assert.equal(g.interact(),true);}
- assert.equal(g.stage,'reactor');emerge(g);const boss=g.enemies[0],hp=boss.hp;g.damageEnemy(boss,900,{x:boss.x,y:1,z:boss.z});assert.equal(boss.hp,hp);
+ assert.equal(g.stage,'reactor');emerge(g);const boss=g.enemies[0],hp=boss.hp;g.damageEnemy(boss,24,{x:boss.x,y:1,z:boss.z});assert.ok(boss.hp<hp&&boss.hp>0);
  for(const p of BREACH.stabilizers){visit(g,p);assert.equal(g.interact(),true);}
  g.damageEnemy(boss,900,{x:boss.x,y:1,z:boss.z});assert.equal(g.enemies.length,0);step(g);assert.equal(g.stage,'extraction');
  visit(g,BREACH.exit);assert.equal(g.interact(),true);assert.equal(g.state,'won');assert.equal(g.completed,true);

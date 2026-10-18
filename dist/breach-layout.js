@@ -28,4 +28,5 @@ for(const p of BREACH_PROPS)b(p.x,p.z,p.w,p.d,0,p.h,'prop',{propType:p.type});
 for(const x of [-8,8])b(x,-49,.96,27,0,.93,'coolant');
 b(0,-48,3.2,3.2,0,11,'core');
 for(const p of [...BREACH.relays,...BREACH.stabilizers])b(p.x,p.z-1.4,1.6,1.2,0,1.5,'terminal');
+for(const [i,p] of BREACH.stabilizers.entries())b(p.x,p.z-1.6,1.1,.22,2.25,.5,'stabilizer-module',{stabilizerId:i});
 return a;}

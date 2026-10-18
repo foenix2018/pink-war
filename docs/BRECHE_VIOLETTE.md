@@ -16,3 +16,12 @@ Cinq familles de textures locales 512², relief par bump mapping et UV à échel
 Chaque groupe arrive maintenant par des portails physiques, ouverts 1,6 seconde avant la première sortie ; espacement des arrivées d’au moins 1,35 seconde, maximum cinq adversaires actifs, blocage si le point de sortie est occupé. Aucun ennemi créé instantanément au changement de secteur, gardien compris. Les objectifs attendent aussi les adversaires encore en transit. Les points de reprise rétablissent la séquence de portail. Les portails de renfort se referment après le dernier passage ; celui d’extraction reste ouvert.
 
 Vérification : quatre tests ciblés de mission et de portails, suite complète, construction/déchargement de la scène avec Three.js. Rendu navigateur et essais sur casque toujours non validés.
+
+
+## Correctif 3.50 — dégâts du gardien et cibles des stabilisateurs
+
+Reproduction avec les vrais tirs R9 : cinq châssis ordinaires éliminables en 3 à 7 impacts au torse dans la fixture. En revanche le gardien rejetait tout dégât avant les stabilisateurs ; les modules lumineux hauts ne recevaient aucun impact, leur géométrie n'ayant pas de collision à 2,5 m. Les deux blocages sont reproduits par des tests qui échouaient avant la correction.
+
+Le gardien dispose désormais de 360 PV et d'une réduction de dégâts maximale de 55 %, réduite à chaque stabilisateur neutralisé (0 % après le troisième). Les dégâts restent toujours possibles, y compris sans toucher aux stabilisateurs. Une indication explique le blindage lorsqu'il est touché. L'extraction demande encore la neutralisation des trois stabilisateurs. Les modules hauts ont des collisions alignées sur leur géométrie et se désactivent après quatre impacts ; ils changent aussi de couleur. L'interaction de proximité reste disponible.
+
+Tests de projectiles : cinq types ordinaires, dégâts du gardien avec et sans blindage, destruction de chacun des trois modules hauts, élimination complète du gardien au R9 avec rechargements même sous blindage. Pas de validation visuelle navigateur ou casque disponible.

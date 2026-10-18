@@ -9,7 +9,7 @@ const glow=color=>{const m=new T.MeshBasicMaterial({color,toneMapped:false});ms.
 const geom=(w,h,d)=>{const g=new T.BoxGeometry(w,h,d);gs.push(g);return g;};const cube=geom(1,1,1);
 function box(m,x,y,z,w,h,d){const o=new T.Mesh(cube,m);o.position.set(x,y,z);o.scale.set(w,h,d);root.add(o);return o;}
 box(ground,0,-.21,-1,54,.4,180);
-for(const b of obstacles.filter(b=>b.kind!=='core'&&b.kind!=='prop'&&b.kind!=='coolant'))box(b.kind==='crate'?crate:b.kind==='wall'?wall:steel,b.x,b.y+b.height/2,b.z,b.hx*2,b.height,b.hz*2);
+for(const b of obstacles.filter(b=>b.kind!=='core'&&b.kind!=='prop'&&b.kind!=='coolant'&&b.kind!=='stabilizer-module'))box(b.kind==='crate'?crate:b.kind==='wall'?wall:steel,b.x,b.y+b.height/2,b.z,b.hx*2,b.height,b.hz*2);
 for(const b of obstacles.filter(b=>b.kind==='crate')){for(const s of [-1,1])box(steel,b.x+s*(b.hx-.12),b.height/2,b.z,.12,b.height+.04,b.hz*2+.04);box(blue,b.x,.1,b.z+b.hz+.025,b.hx*1.6,.05,.03);}
 for(const r of ramps){const length=r.bottomZ-r.topZ,mesh=box(steel,r.x,r.height/2-.12,(r.bottomZ+r.topZ)/2,r.halfWidth*2,.24,Math.hypot(length,r.height));mesh.rotation.x=Math.atan2(r.height,length);}
 // Repeated ribs, gantries, cables and floor seams read at human scale.
@@ -52,15 +52,15 @@ for(let z=36;z>21;z-=.65){const y=(37-z)/16*4;box(dark,15,y+.025,z,4.8,.025,.08)
 for(let z=20;z>-5;z-=.45)box(dark,15,4.015,z,4.8,.025,.055);
 // Reactor coolant conduits, shields and a marked emergency exit frame.
 for(const x of [-8,8]){const o=new T.Mesh(pipeGeo,steel);o.rotation.x=Math.PI/2;o.scale.set(3,27,3);o.position.set(x,.45,-49);root.add(o);}
-for(const p of BREACH.stabilizers){box(yellow,p.x,0.06,p.z-1.4,3,.08,2.4);for(const x of [-1,1])box(steel,p.x+x,1.7,p.z-1.6,.15,3.2,.16);box(violet,p.x,2.5,p.z-1.6,1.1,.5,.22);}
+const stabilizerModules=[];for(const p of BREACH.stabilizers){box(yellow,p.x,0.06,p.z-1.4,3,.08,2.4);for(const x of [-1,1])box(steel,p.x+x,1.7,p.z-1.6,.15,3.2,.16);stabilizerModules.push(box(violet,p.x,2.5,p.z-1.6,1.1,.5,.22));}
 for(const x of [-4,4])box(steel,x,3.1,-85,.5,6.2,.7);box(blue,0,6.2,-85,8.5,.18,.7);sign('EXTRACTION / SECTEUR 02',0,7.1,-85,9);
 // Merge static meshes per material. UVs tile in metres, even on the 180 m floor.
-const dynamic=new Set([core,...rings,...indicators,...alarm,...labels]);const batches=new Map();
+const dynamic=new Set([core,...stabilizerModules,...rings,...indicators,...alarm,...labels]);const batches=new Map();
 for(const o of [...root.children])if(o.isMesh&&!dynamic.has(o)){if(!batches.has(o.material))batches.set(o.material,[]);batches.get(o.material).push(o);}
 for(const [material,list] of batches){const positions=[],normals=[],uvs=[];
  for(const o of list){o.updateMatrix();const g=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();
  if(o.geometry===cube&&material.map){const uv=g.attributes.uv;for(let i=0;i<uv.count;i++){const f=Math.floor(i/6),u=f<2?o.scale.z:o.scale.x,v=f<2?o.scale.y:f<4?o.scale.z:o.scale.y;uv.setXY(i,uv.getX(i)*u/2,uv.getY(i)*v/2);}}
  g.applyMatrix4(o.matrix);positions.push(...g.attributes.position.array);normals.push(...g.attributes.normal.array);uvs.push(...g.attributes.uv.array);g.dispose();root.remove(o);}
  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(positions,3));g.setAttribute('normal',new T.Float32BufferAttribute(normals,3));g.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));g.computeBoundingSphere();gs.push(g);root.add(new T.Mesh(g,material));}
-return {root,obstacles,ready:Promise.resolve(),setVisible(v){root.visible=v;},update(game,time){if(!root.visible)return;const s=game.campaign;core.scale.x=core.scale.z=1+Math.sin(time*2)*.035;rings.forEach((r,i)=>r.rotation.z=time*.1*(i+1));indicators.forEach((o,i)=>o.material=(i<2?s.relays[i]:s.stabilizers[i-2])?blue:violet);alarm.forEach(o=>o.visible=s.stage==='extraction'&&Math.sin(time*8)>0);light.intensity=s.stage==='extraction'?45+Math.sin(time*9)*20:55;},updateLift(){},stats(){return {map:'breche-violette-01',visible:root.visible,zones:6,colliders:obstacles.length,relays:2,stabilizers:3,alternatePaths:2,surfaceFamilies:5,industrialProps:BREACH_PROPS.length,staticBatches:batches.size};},dispose(){scene.remove(root);gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());ts.forEach(t=>t.dispose());}};
+return {root,obstacles,ready:Promise.resolve(),setVisible(v){root.visible=v;},update(game,time){if(!root.visible)return;const s=game.campaign;stabilizerModules.forEach((o,i)=>o.material=s.stabilizers[i]?blue:violet);core.scale.x=core.scale.z=1+Math.sin(time*2)*.035;rings.forEach((r,i)=>r.rotation.z=time*.1*(i+1));indicators.forEach((o,i)=>o.material=(i<2?s.relays[i]:s.stabilizers[i-2])?blue:violet);alarm.forEach(o=>o.visible=s.stage==='extraction'&&Math.sin(time*8)>0);light.intensity=s.stage==='extraction'?45+Math.sin(time*9)*20:55;},updateLift(){},stats(){return {map:'breche-violette-01',visible:root.visible,zones:6,colliders:obstacles.length,relays:2,stabilizers:3,alternatePaths:2,surfaceFamilies:5,industrialProps:BREACH_PROPS.length,staticBatches:batches.size};},dispose(){scene.remove(root);gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());ts.forEach(t=>t.dispose());}};
 }
