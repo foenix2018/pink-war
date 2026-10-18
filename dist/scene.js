@@ -2,6 +2,7 @@ import * as T from './vendor/three.webgpu.min.js';
 import { WebGLRenderer } from './vendor/three.module.min.js';
 import { PORTAL, COVER_WALLS, CATWALK, WEAPONS } from './game-logic.js';
 import { createCharacterKit, createSoldier as buildSoldier } from './soldier.js';
+import { installShadowUnit, applyShadowMaterials } from './shadow-unit-game.js';
 import { buildGun } from './weapons.js';
 import { setKenneyAccent } from './kenney-blasters.js';
 import { createGlove } from './hands.js';
@@ -196,7 +197,9 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   const createHand = (options = {}) => createGlove(characterKit.gloves,options);
   const createGun = (options = {}) => buildGun({ mats, gloves: characterKit.gloves, sleeve: options.sleeve !== false, makeFlash: parent => halo(parent, [0, 0, 0], .6, palette.rose, .7) });
   const soldiers=Object.fromEntries(CHARACTERS.map(profile=>{
-    const model=buildSoldier(characterKit,createGun,profile);model.root.visible=profile.id==='ghju';scene.add(model.root);return [profile.id,model];
+    const model=buildSoldier(characterKit,createGun,profile);
+    installShadowUnit(model,profile);
+    model.root.visible=profile.id==='ghju';scene.add(model.root);return [profile.id,model];
   }));
   let soldier=soldiers.ghju;
   function setPlayerVisible(visible){for(const [id,model] of Object.entries(soldiers))model.root.visible=!!visible&&id===character.id;}
@@ -218,7 +221,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
       soldier.root.visible=previous.root.visible;previous.root.visible=false;soldier.setLevel(previous.equipmentLevel);
     }
     soldier.setWeapon(fpsGun.userData.index);
-    characterKit.setPalette(character.armor);
+    applyShadowMaterials(characterKit,character);
     const colors={...character.world,...palette,dark:palette.ink,cyan:character.world.cyan};
     for(const [name,mat] of Object.entries(mats))mat.color.setHex(colors[name]);
     scene.background.setHex(character.masculine?0x16243c:0x261d32);scene.fog.color.setHex(character.masculine?0x263750:0x463b50);scene.fog.density=.0067;
