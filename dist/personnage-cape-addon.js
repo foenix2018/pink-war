@@ -76,10 +76,11 @@ export function addCapeToOriginalSoldier(model, profile) {
   const rightEdge=border(rows+1,'Liseré '+(profile.masculine?'bleu':'rose')+' droit');
   const lowerEdge=border(columns+1,'Ourlet '+(profile.masculine?'bleu':'rose'));
 
-  // Le bloc dorsal du modèle AÉGIS V3 est sur Spine2, centré environ en
-  // x=0, y=1.413, z=.162 et sa partie basse est à y~1.297.
-  // La couture supérieure est juste SOUS le bloc, avec un léger recouvrement,
-  // dans l'axe du dos plutôt que dans le vide à l'arrière.
+  // Le point de fixation d'origine V4 est relevé derrière les épaules :
+  // y=1.535, z=.166, caché par la protection dorsale (y 1.30–1.55).
+  // En allongeant le tissu, le bas reste au même niveau qu'avant.
+  // La cape est désormais aussi étroite que le boîtier (34 cm).
+
   //
   // Les coordonnées AÉGIS sont celles du modèle racine, et non les coordonnées
   // locales de l'os animé. Convertir explicitement position et orientation
@@ -87,7 +88,7 @@ export function addCapeToOriginalSoldier(model, profile) {
   model.root.updateMatrixWorld(true);
   const anchor=new T.Group();
   anchor.name='Fixation sous module dorsal, repère Spine2';
-  const desiredPoint=model.root.localToWorld(new T.Vector3(0,1.282,.150));
+  const desiredPoint=model.root.localToWorld(new T.Vector3(0,1.535,.166));
   const rootQuaternion=model.root.getWorldQuaternion(new T.Quaternion());
   const bodyQuaternion=model.body.getWorldQuaternion(new T.Quaternion());
   anchor.position.copy(model.body.worldToLocal(desiredPoint));
@@ -139,9 +140,9 @@ export function addCapeToOriginalSoldier(model, profile) {
 
     for(let j=0;j<=rows;j++) {
       const v=j/rows,lag=Math.pow(v,1.4);
-      // RECTANGLE : largeur de 41 cm constante du col jusqu'à l'ourlet,
+      // RECTANGLE : largeur de ~34 cm du haut jusqu'à l'ourlet,
       // avec seulement une rondeur microscopique au milieu.
-      const width=.415+.008*Math.sin(Math.PI*v);
+      const width=.338+.003*Math.sin(Math.PI*v);
       for(let i=0;i<=columns;i++) {
         const u=i/columns,edge=2*u-1,n=(j*(columns+1)+i)*3;
         // Deux plis verticaux amples, sans vibrations rapides.
@@ -149,10 +150,10 @@ export function addCapeToOriginalSoldier(model, profile) {
           *(.0035+.005*strength)*lag;
         // Les coutures verticales suivent la même largeur : effet rectangulaire.
         positions[n]=edge*width*.5+sway[j]+fold;
-        positions[n+1]=-.785*v
+        positions[n+1]=-1.035*v
           +.008*lag*Math.sin(time*1.05-v*2.9+edge*1.1)*(strength+.10);
         // Douce courbure pour donner du volume dans les vues de profil.
-        positions[n+2]=.030*v+.037*(1-edge*edge)*lag+billow[j]+fold*.45;
+        positions[n+2]=.025*v+.035*(1-edge*edge)*lag+billow[j]+fold*.45;
       }
     }
     geometry.attributes.position.needsUpdate=true;
