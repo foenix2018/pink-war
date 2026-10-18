@@ -15,7 +15,7 @@ import { createLaserFX } from './laser-fx.js';
 import { createCombatFX } from './combat-fx.js';
 import { createShootingRangeArt } from './shooting-range-art.js';
 import { createMoon } from './moon.js';
-import { createCampaignArt } from './campaign-art.js';
+import { createCampaignArt } from './breach-art.js';
 import { graphicsProfile,renderPixelRatio,createCompatibleRenderer,warmRenderer } from './renderer-policy.js';
 
 const v = (x, y, z) => new T.Vector3(x, y, z);
@@ -460,10 +460,10 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     if(campaignSky!==campaignActive){campaignSky=campaignActive;const c=skyTexture.image;paintSky(c.getContext('2d'),c.width,c.height);skyTexture.needsUpdate=true;}
     obstacles.splice(0,obstacles.length,...(campaignActive?campaignArt.obstacles:arenaObstacles));
     arenaRoot.visible=!campaignActive&&!rangeActive;
-    scene.fog.color.setHex(campaignActive?0x847572:character.world.fog);
+    scene.fog.color.setHex(campaignActive?0x171329:character.world.fog);
     scene.fog.density=campaignActive?.0058:.008;
-    hemisphere.color.setHex(campaignActive?0xc4ceca:0xa9c9e5);hemisphere.groundColor.setHex(campaignActive?0x414833:0x344058);
-    sun.color.setHex(campaignActive?0xffdeb7:0xb5d7ff);rim.color.setHex(campaignActive?0xa6bbb7:0x9abfff);
+    hemisphere.color.setHex(campaignActive?0x9eafff:0xa9c9e5);hemisphere.groundColor.setHex(campaignActive?0x414833:0x344058);
+    sun.color.setHex(campaignActive?0x9ebaff:0xb5d7ff);rim.color.setHex(campaignActive?0xa6bbb7:0x9abfff);
     campaignArt.setVisible(campaignActive&&!rangeActive);if(!campaignActive&&!rangeActive)city.enablePbr();
     if(!rangeActive){portal.visible=true;dust.visible=true;}
   }
@@ -478,7 +478,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     campaignArt.setVisible(campaignActive&&!rangeActive);
     arenaRoot.visible=!campaignActive&&!rangeActive;
     obstacles.splice(0,obstacles.length,...(rangeActive?rangeObstacles:campaignActive?campaignArt.obstacles:arenaObstacles));
-    scene.fog.color.setHex(rangeActive?0x26333f:campaignActive?0x847572:character.world.fog);
+    scene.fog.color.setHex(rangeActive?0x26333f:campaignActive?0x171329:character.world.fog);
     scene.fog.density=rangeActive?.0046:campaignActive?.0058:.008;
     if(rangeActive){hemisphere.color.setHex(0xcad8e1);sun.color.setHex(0xd2e6ff);}
   }
