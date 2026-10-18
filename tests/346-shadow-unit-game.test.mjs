@@ -16,9 +16,11 @@ const makeCanvas=()=>({
   })
 });
 const previousDocument=globalThis.document;
-globalThis.document={createElement(tag){assert.equal(tag,'canvas');return makeCanvas();}};
-
-test.after(()=>{if(previousDocument===undefined)delete globalThis.document;else globalThis.document=previousDocument;});
+const makeDocument=()=>({createElement(tag){assert.equal(tag,'canvas');return makeCanvas();}});
+const restoreDocument=()=>{
+  if(previousDocument===undefined)delete globalThis.document;
+  else globalThis.document=previousDocument;
+};
 
 const createHero=profile=>{
   const kit=createCharacterKit(new T.Texture());
@@ -33,7 +35,10 @@ const createHero=profile=>{
 
 for(const profile of CHARACTERS){
   test('Shadow Unit '+profile.id+' remains attached to real AEGIS bones in every tier',()=>{
+    // Preserve the original headless test environment while the RLH rig and
+    // gloves bake their procedural maps. Stub DOM only for the cape texture.
     const {kit,soldier}=createHero(profile);
+    globalThis.document=makeDocument();
     applyShadowMaterials(kit,profile);
     const entry=installShadowUnit(soldier,profile);
     assert.equal(installShadowUnit(soldier,profile),entry,'install once');
@@ -63,5 +68,6 @@ for(const profile of CHARACTERS){
     const edges=entry.cape.anchor.children[0].children;
     assert.equal(edges[0].material.color.getHex(),profile.masculine?0x62b8ff:0xf24797);
     soldier.dispose();
+    restoreDocument();
   });
 }
