@@ -316,7 +316,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   const breachHaloGeometry=new T.TorusGeometry(2.83,.045,5,40);
   const breachSurfaceGeometry=new T.PlaneGeometry(4.6,4.6);
   function buildSecondaryPortal(site) {
-    const group=new T.Group();group.position.set(site.x,0,site.z);group.rotation.y=site.yaw||0;
+    const group=new T.Group();group.position.set(site.x,site.y||0,site.z);group.rotation.y=site.yaw||0;
     scene.add(group);
     const gate=new T.Group();gate.position.y=2.9;group.add(gate);
     const ring=mesh(breachRingGeometry,mats.steel,gate,[0,0,0],[1,1,1],false);

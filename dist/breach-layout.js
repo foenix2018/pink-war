@@ -1,3 +1,15 @@
+export const BREACH_PROPS=[
+ {type:'forklift',x:-22,z:43,w:2.4,d:4,h:2.5},
+ {type:'cargo',x:21,z:55,w:5,d:5,h:3},
+ {type:'generator',x:-22,z:-5,w:3,d:5,h:2.4},
+ {type:'generator',x:22,z:-13,w:3,d:5,h:2.4},
+ {type:'cabinet',x:-22,z:-39,w:2,d:4,h:3.6},
+ {type:'cabinet',x:22,z:-59,w:2,d:4,h:3.6},
+ {type:'drums',x:-18,z:-30,w:3,d:2,h:1.3},
+ {type:'drums',x:17,z:69,w:3,d:2,h:1.3},
+ {type:'cargo',x:-19,z:-80,w:4,d:4,h:2},
+ {type:'cargo',x:19,z:-79,w:4,d:4,h:2}
+];
 export const BREACH={start:{x:0,z:78,y:0},relays:[{x:-17,z:-8,y:0},{x:17,z:-8,y:0}],stabilizers:[{x:-12,z:-43,y:0},{x:12,z:-43,y:0},{x:0,z:-61,y:0}],exit:{x:0,z:-85,y:0}};
 export const ramps=[{id:'breach-ramp',x:15,halfWidth:2.5,bottomZ:37,topZ:21,height:4}];
 export const decks=[{id:'breach-deck',x:15,z:8,hx:2.5,hz:13,height:4}];
@@ -12,6 +24,8 @@ for(const [x,z,w,d,h] of [[-15,51,7,10,3],[15,45,7,9,3],[-5,43,4,4,1.2],[7,53,4,
 // Low route is roofed, upper route is reached by a real walkable slope.
 b(-18,17,1,30,0,4,'wall');b(-8,17,1,30,0,4,'wall');b(-13,17,10,30,3.5,.4,'steel');
 for(const d of decks){b(d.x,d.z,d.hx*2,d.hz*2,3.75,.25,'steel',{walkableSurface:true});for(const x of [d.x-d.hx,d.x+d.hx])b(x,d.z,.12,d.hz*2,4,1.1,'rail');}
+for(const p of BREACH_PROPS)b(p.x,p.z,p.w,p.d,0,p.h,'prop',{propType:p.type});
+for(const x of [-8,8])b(x,-49,.96,27,0,.93,'coolant');
 b(0,-48,3.2,3.2,0,11,'core');
 for(const p of [...BREACH.relays,...BREACH.stabilizers])b(p.x,p.z-1.4,1.6,1.2,0,1.5,'terminal');
 return a;}
