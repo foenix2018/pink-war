@@ -1,4 +1,4 @@
-import { addCapeToOriginalSoldier } from './personnage-cape-addon.js?v=2';
+import { addCapeToOriginalSoldier } from './personnage-cape-addon.js?v=3';
 import * as T from './vendor/three.webgpu.min.js';
 import { WebGLRenderer } from './vendor/three.module.min.js';
 import { createCharacterKit, createSoldier } from './soldier.js';
