@@ -26,4 +26,4 @@ function frame(){const w=innerWidth,h=innerHeight;renderer.setPixelRatio(Math.mi
   camera.position.set(Math.sin(angle)*distance*Math.cos(elevation),target.y+Math.sin(elevation)*distance,target.z+Math.cos(angle)*distance*Math.cos(elevation));camera.lookAt(target);if(w>700)camera.setViewOffset(w,h,120,0,w,h);else camera.setViewOffset(w,h,0,100,w,h);
   renderer.render(scene,camera);frames++;$('status').textContent=`${gun.userData.kenneyAssets.loaded}/5 armes · Métal, céramique, polymère · Inspection libre`;requestAnimationFrame(frame);
 }requestAnimationFrame(frame);
-window.__PINKWAR_ARMORY=Object.freeze({selectWeapon,selectCharacter:palette,snapshot:()=>({version:'3.44',frames,weapon,loaded:gun.userData.kenneyAssets.loaded,muzzle:gun.userData.flash.position.toArray()})});
+window.__PINKWAR_ARMORY=Object.freeze({selectWeapon,selectCharacter:palette,snapshot:()=>({version:'3.45',frames,weapon,loaded:gun.userData.kenneyAssets.loaded,muzzle:gun.userData.flash.position.toArray()})});

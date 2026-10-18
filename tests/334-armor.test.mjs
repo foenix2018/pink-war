@@ -33,7 +33,7 @@ test('the fitted soldier replaces rescue clothing while preserving RLH source bo
  const data=rlhFirefighterData(),sourceCounts=data.parts.map(p=>p.geometry.index.count);
  for(const profile of CHARACTERS){
   const {kit,gun}=setup();kit.setPalette(profile.armor);const soldier=createSoldier(kit,gun,profile);
-  assert.equal(soldier.armor.generation,3);assert.equal(soldier.nativeSkeleton.bones.length,34);
+  assert.equal(soldier.armor.generation,4);assert.equal(soldier.nativeSkeleton.bones.length,34);
   assert.deepEqual(data.parts.map(p=>p.geometry.index.count),sourceCounts,'cached source meshes must survive the military conversion');
   assert.equal(soldier.actor.parts.find(m=>m.name==='RLH helmet').geometry,data.parts.find(p=>p.key==='helmet').geometry);
   assert.ok(soldier.actor.parts.every(m=>m.parent===null),'firefighter jacket, rescue tank and helmet are absent from the rendered scene');

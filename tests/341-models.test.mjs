@@ -45,7 +45,7 @@ test('live installation keeps measured hand positions and removes the floating l
  }finally{globalThis.fetch=previous;}
 });
 test('the soldier’s replacement suit stays human sized, skinned and under seven material batches',()=>{
- for(const profile of CHARACTERS){const k=kit();k.setPalette(profile.armor);const s=createSoldier(k,()=>make(k),profile);assert.equal(s.armor.generation,3);assert.equal(s.nativeSkeleton.bones.length,34);assert.ok(s.heightScale>.89&&s.heightScale<1.01);assert.ok(s.armor.parts.length<=7);
+ for(const profile of CHARACTERS){const k=kit();k.setPalette(profile.armor);const s=createSoldier(k,()=>make(k),profile);assert.equal(s.armor.generation,4);assert.equal(s.nativeSkeleton.bones.length,34);assert.ok(s.heightScale>.89&&s.heightScale<1.01);assert.ok(s.armor.parts.length<=7);
   let triangles=0;for(const p of s.armor.parts){assert.equal(p.skeleton,s.nativeSkeleton);triangles+=p.geometry.attributes.position.count/3;assert.ok(p.material.map||['suit','glow','lens'].some(k=>p.name.endsWith(k)));const w=p.geometry.attributes.skinWeight;for(let j=0;j<w.count;j++)assert.ok(Math.abs(w.getX(j)+w.getY(j)+w.getZ(j)+w.getW(j)-1)<1e-6,'every visible vertex has a complete binding; no unassigned fragments');}
   assert.ok(triangles<20000);assert.ok(s.actor.parts.every(m=>!m.parent));assert.ok(s.armor.template.items.some(p=>p.tag==='visor'));s.dispose();
  }

@@ -6,6 +6,7 @@ import { WEAPON_FRAME } from './weapons.js';
 import { createRLHSoldier, syncRLHFirefighterMaterials } from './rlh-firefighter.js';
 import { equipmentSurfaces } from './equipment-surfaces.js';
 import {pearlMetal,tintPearl} from './pearl-metal.js';
+import {armorSurfaceAtlas} from './armor-surface.js';
 
 export function createCharacterKit(emblem, surfaces = {}) {
   const geometries = { sphere: new T.SphereGeometry(1, 20, 14), tube: new T.CylinderGeometry(1, 1, 1, 16),
@@ -49,7 +50,7 @@ export function createCharacterKit(emblem, surfaces = {}) {
   const gloves = { fabric: materials.suit, plate: materials.rose, trim: materials.pearl, glow: materials.glow, accent: materials.cyan, metal: materials.gold };
   // Separate shell materials preserve the approved RLH gloves and cloth finish.
   const armorMaterials={...materials};
-  for(const key of ['rose','pearl']){const m=materials[key].clone();Object.assign(m,pearlMetal(0xe52d83,key==='pearl'));m.color=pearlMetal(0xe52d83,key==='pearl').color;m.name='AÉGIS pearlescent '+key;armorMaterials[key]=m;}
+  for(const key of ['rose','pearl']){const m=materials[key].clone();Object.assign(m,pearlMetal(0xe52d83,key==='pearl'));m.color=pearlMetal(0xe52d83,key==='pearl').color;m.name='AÉGIS pearlescent '+key;m.map=armorSurfaceAtlas();armorMaterials[key]=m;}
   const kit={geometries,materials,armorMaterials,gloves,setPalette(colors){
     for(const [name,color] of Object.entries(colors))materials[name]?.color.setHex(color);
     tintPearl(armorMaterials.rose,colors.rose);tintPearl(armorMaterials.pearl,colors.rose,true);

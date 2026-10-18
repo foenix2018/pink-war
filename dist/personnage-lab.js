@@ -7,6 +7,7 @@ import { characterForId } from './characters.js';
 import { playLaserShot, loadRealLaserSample } from './laser-sound.js';
 import { createSaberSound } from './saber-sound.js';
 import { bladeSwingPose } from './blade-combat.js';
+import {equipmentForCharacter} from './equipment.js';
 import {setKenneyAccent} from './kenney-blasters.js';
 
 const $ = id => document.getElementById(id);
@@ -103,6 +104,7 @@ function setMotion(motion){
 }
 function updateStatus(){
   const model=subjects.get(state.character);
+  const stage=equipmentForCharacter(state.level,state.character);$('stage-name').textContent=stage.name+' · NIVEAU '+stage.level;$('stage-description').textContent=stage.description;
   $('status').textContent=`${model.armor.name} · ${characterForId(state.character).name} · ${model.targetHeight.toFixed(2).replace('.',',')} m · ${model.equipmentLevel}e armure · ${model.visibleParts} pièces · ${state.motion==='idle'?'repos':state.motion==='walk'?'marche':state.motion==='run'?'course':state.motion==='jump'?'saut':state.motion==='crouch'?'accroupi':state.motion==='walkFire'?'Rifle Walk':state.motion==='runFire'?'course + tir':state.motion==='crouchWalk'?'déplacement accroupi':'Idle Rifle'}`;
 }
 for(const button of document.querySelectorAll('[data-character]'))button.addEventListener('click',()=>setCharacter(button.dataset.character));
@@ -204,6 +206,6 @@ window.__PINKWAR_CHARACTER_LAB=Object.freeze({
  snapshot:()=>({character:state.character,motion:state.motion,level:state.level,weapon:state.weapon,showBones:state.showBones,
   frames:frame,zoom:state.zoom,articulations:jointNames, jointPositions:()=>Object.fromEntries(Object.entries(subjects.get(state.character).jointPositions()).map(([k,v])=>[k,v.toArray()])),
   visibleParts:subjects.get(state.character).visibleParts,visibleMeshes:subjects.get(state.character).batchCount,physicalHeight:subjects.get(state.character).targetHeight,
-  armorName:subjects.get(state.character).armor.name,armorRevision:subjects.get(state.character).armor.revision,armorGeneration:subjects.get(state.character).armor.generation,armorPieces:subjects.get(state.character).armor.count,nativeMotion:subjects.get(state.character).nativeMotion,nativeClips:Object.fromEntries(Object.entries(subjects.get(state.character).actor.actions).map(([name,a])=>[name,{duration:a.getClip().duration,weight:a.getEffectiveWeight(),time:a.time}]))}),
+  armorModules:[...subjects.get(state.character).armor.modules],armorTriangles:subjects.get(state.character).armor.parts.reduce((n,p)=>n+p.geometry.attributes.position.count/3,0),armorName:subjects.get(state.character).armor.name,armorRevision:subjects.get(state.character).armor.revision,armorGeneration:subjects.get(state.character).armor.generation,armorPieces:subjects.get(state.character).armor.count,nativeMotion:subjects.get(state.character).nativeMotion,nativeClips:Object.fromEntries(Object.entries(subjects.get(state.character).actor.actions).map(([name,a])=>[name,{duration:a.getClip().duration,weight:a.getEffectiveWeight(),time:a.time}]))}),
  selectCharacter:setCharacter,selectMotion:setMotion
 });

@@ -1,20 +1,21 @@
 import * as T from './vendor/three.webgpu.min.js';
 import {bevelBox,ball,limb,loft,matrix,bake,merge} from './geo.js';
 import {profiledPanel} from './armor-profiles.js';
+import {appendAegisModules,armorFitting} from './aegis-modules.js';
 
 // Original full tactical suit on the preserved RLH skeleton. The old rescue
 // jacket and F1 helmet are replaced, not hidden under another oversized shell.
-export const AEGIS=Object.freeze({name:'AÉGIS III',generation:3,revision:'3.44'});
+export const AEGIS=Object.freeze({name:'AÉGIS IV',generation:4,revision:'3.45'});
 const cache=new WeakMap();
 function template(data,masculine){
   let variants=cache.get(data);if(!variants){variants=new Map();cache.set(data,variants);}if(variants.has(masculine))return variants.get(masculine);
   const bones=new Map(data.bones.map((b,i)=>[b.name.replace('mixamorig',''),i])),items=[];
   const at=name=>new T.Vector3().setFromMatrixPosition(new T.Matrix4().fromArray(data.bones[bones.get(name)].inverse).invert());
   const add=(bone,key,g,p=[0,0,0],r=[0,0,0],s=[1,1,1],level=1,tag='',blend=false)=>items.push({bone:bones.get(bone),key,geometry:bake(g,matrix(p,r,s)),level,tag,blend});
-  const box=(b,k,size,p,r=[0,0,0],level=1)=>add(b,k,bevelBox(...size,Math.min(...size)*.18,1),p,r,[1,1,1],level);
+  const box=(b,k,size,p,r=[0,0,0],level=1)=>add(b,k,(Math.min(...size)<=.018?armorFitting(size):bevelBox(...size,Math.min(...size)*.18,1)),p,r,[1,1,1],level);
   const plate=(b,k,outline,p,s=[1,1,1],r=[0,0,0],level=1,tag='')=>add(b,k,profiledPanel(outline,{depth:.013,bulge:k==='pearl'?.018:k==='dark'?.009:.006,round:.17}),p,r,s,level,tag);
   const link=(b,k,a,c,r1,r2=r1,level=1)=>items.push({bone:bones.get(b),key:k,geometry:bake(limb(a,c,r1,r2,16)),level});
-  const ell=(b,k,p,r,level=1)=>add(b,k,ball([0,0,0],r,[16,10]),p,[0,0,0],[1,1,1],level);
+  const ell=(b,k,p,r,level=1)=>add(b,k,ball([0,0,0],r,[12,8]),p,[0,0,0],[1,1,1],level);
   const width=masculine?1.03:.94;
   // A fitted woven undersuit: chest, obliques and pelvis have separate human
   // cross-sections; weighted spine rings bend below the rigid chest harness.
@@ -35,10 +36,7 @@ function template(data,masculine){
     for(const y of [1.50,1.31])box('Spine2','steel',[.040,.022,.012],[s*.15,y,-.160],[0,0,s*-.06]);
     box('Spine2','glow',[.004,.033,.002],[s*.109,1.485,-.178]);
     plate('Spine2','pearl',[[-.049,-.018],[.049,-.018],[.055,.014],[.028,.030],[-.040,.027]],[s*.113,1.55,-.095],[1,1,.6],[.13,s*-.16,s*-.19]);
-    // Soft cargo pouches, retention strap and flush buckle at the abdomen.
-    box('Spine1','suit',[.070,.112,.044],[s*.102,1.258,-.125],[.1,0,s*.035]);
-    box('Spine1','dark',[.073,.022,.012],[s*.102,1.295,-.152]);
-    box('Spine1','steel',[.016,.023,.008],[s*.102,1.273,-.160]);
+
   }
   for(let j=0;j<3;j++)plate('Spine','dark',[[-.103,-.016],[.103,-.016],[.118,.012],[-.118,.012]],[0,1.198-j*.045,-.110],[width,1,.5]);
   // Waist belt follows the hips instead of a rectangular slab through them.
@@ -101,11 +99,7 @@ function template(data,masculine){
     // Flush fasteners and flexible elbow cuffs have a purpose and a substrate.
     const fastener=new T.CylinderGeometry(.0035,.0035,.0025,8).rotateX(Math.PI/2);
     for(const [x,y,z] of [[s*.157,1.48,-.169],[s*.128,1.342,-.165],[kn.x+s*.028,kn.y+.027,kn.z-.089]])add(y<1?knee:'Spine2','steel',fastener,[x,y,z]);
-    // Later tiers add functional reinforcements while preserving the silhouette.
-    limbPlate(arm,fore,'pearl',bracer,.065,[1,.8,.65],.58,3);
-    limbPlate(leg,knee,'steel',thigh,.122,[.18,.85,.3],.50,5);
-    link(leg,'steel',[hip.x+s*.090,hip.y-.08,.02],[kn.x+s*.067,kn.y+.08,.02],.006,.006,7);
-    limbPlate(fore,hand,'rose',bracer,.082,[.12,.84,.3],.48,9);
+
   }
   // Compact rear protection, attached to the torso; no air tank or long coat.
   plate('Spine2','dark',chest,[0,1.415,.125],[width*.97,1.03,1],[0,Math.PI,0]);
@@ -138,11 +132,9 @@ function template(data,masculine){
     const cap=new T.BufferGeometry();cap.setAttribute('position',new T.Float32BufferAttribute(pv,3));cap.setAttribute('uv',new T.Float32BufferAttribute(pu,2));cap.setIndex(pi);cap.computeVertexNormals();add('Head','rose',cap);
   }
   plate('Head','rose',crown,[0,hy+.106,hz-.094],[.17,.17,.15],[.40,0,0]);
-  box('Spine2','steel',[.032,.041,.014],[-.176,1.472,-.137],[0,0,-.12],2);
-  box('LeftForeArm','glow',[.024,.028,.005],[-.309,1.105,-.044],[0,0,-.18],4);
-  box('Spine2','rose',[.036,.056,.015],[.147,1.46,.154],[0,0,0],6);
-  for(const s of [-1,1])box('Head','steel',[.014,.025,.033],[s*.111,hy+.055,hz+.042],[0,0,0],8);
-  plate('Spine2','steel',crown,[0,1.449,-.190],[.13,.13,.14],[0,0,0],10);
+  appendAegisModules({add,at,bones,items,width,masculine});
+  // Only printed patches use the atlas labels; other shells retain the complete grain tile.
+  for(const item of items)if(['rose','pearl'].includes(item.key)&&!item.geometry.userData.armorStencil){const uv=item.geometry.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,.015+uv.getX(i)*.46,.015+uv.getY(i)*.46);}
   const levels=new Map();
   const result={items,forLevel(level){
     if(levels.has(level))return levels.get(level);const groups=new Map();for(const item of items)if(item.level<=level){if(!groups.has(item.key))groups.set(item.key,[]);groups.get(item.key).push(item);}
@@ -152,14 +144,14 @@ function template(data,masculine){
         if(item.blend){const y=item.geometry.attributes.position.getY(j),t=Math.max(0,Math.min(1,(y-1.24)/.16));indices[offset*4]=bones.get(y<1.24?'Spine':'Spine1');indices[offset*4+1]=bones.get(y<1.24?'Spine1':'Spine2');weights[offset*4]=1-(y<1.24?Math.max(0,Math.min(1,(y-1.10)/.14)):t);weights[offset*4+1]=1-weights[offset*4];}
       }
       g.setAttribute('skinIndex',new T.Float32BufferAttribute(indices,4));g.setAttribute('skinWeight',new T.Float32BufferAttribute(weights,4));g.computeBoundingBox();g.computeBoundingSphere();parts.push({key,geometry:g});
-    }const stage={parts,count:items.filter(i=>i.level<=level).length};levels.set(level,stage);return stage;
+    }const active=items.filter(i=>i.level<=level),stage={parts,count:active.length,modules:[...new Set(active.map(i=>i.tag).filter(Boolean))]};levels.set(level,stage);return stage;
   }};variants.set(masculine,result);return result;
 }
 export function createAegisArmor(actor,kit,profile){
   const source=template(actor.data,!!profile?.masculine),root=actor.root;
   const api={...AEGIS,parts:[],level:0,count:0,template:source,
-    setLevel(n){n=Math.max(1,Math.min(10,Math.floor(Number(n)||1)));if(n===this.level)return;for(const m of this.parts)m.removeFromParent();this.parts=[];const stage=source.forLevel(n);this.count=stage.count;this.level=n;
-      for(const p of stage.parts){const mesh=new T.SkinnedMesh(p.geometry,(kit.armorMaterials||kit.materials)[p.key]);mesh.name='AÉGIS III '+p.key;mesh.frustumCulled=false;mesh.userData.suit=AEGIS.name;mesh.userData.level=n;root.add(mesh);mesh.bind(actor.skeleton,new T.Matrix4());mesh.castShadow=p.key!=='glow';mesh.receiveShadow=true;mesh.boundingBox=new T.Box3(new T.Vector3(-1,-.2,-1),new T.Vector3(1,2.35,1));mesh.boundingSphere=new T.Sphere(new T.Vector3(0,1,0),1.8);this.parts.push(mesh);}
+    setLevel(n){n=Math.max(1,Math.min(10,Math.floor(Number(n)||1)));if(n===this.level)return;for(const m of this.parts)m.removeFromParent();this.parts=[];const stage=source.forLevel(n);this.count=stage.count;this.level=n;this.modules=stage.modules;
+      for(const p of stage.parts){const mesh=new T.SkinnedMesh(p.geometry,(kit.armorMaterials||kit.materials)[p.key]);mesh.name=AEGIS.name+' '+p.key;mesh.frustumCulled=false;mesh.userData.suit=AEGIS.name;mesh.userData.level=n;root.add(mesh);mesh.bind(actor.skeleton,new T.Matrix4());mesh.castShadow=p.key!=='glow';mesh.receiveShadow=true;mesh.boundingBox=new T.Box3(new T.Vector3(-1,-.2,-1),new T.Vector3(1,2.35,1));mesh.boundingSphere=new T.Sphere(new T.Vector3(0,1,0),1.8);this.parts.push(mesh);}
     },dispose(){for(const m of this.parts)m.removeFromParent();this.parts=[];}
   };api.setLevel(1);return api;
 }

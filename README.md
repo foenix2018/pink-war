@@ -2,6 +2,8 @@
 
 Jeu 3D en HTML et JavaScript, conçu pour iPhone, ordinateur et casque WebXR. La campagne commence par un niveau narratif complet, « Le dernier signal ». GHJU ou LYLU traverse le quartier des secours de Vesper, construit dans Blender, pour retrouver une trace de son frère ou de sa sœur. Le mode Survie conserve les vingt vagues et les six armes de l’arène de 200 × 200 mètres ; AT HOME reste accessible sur Quest.
 
+- Version 3.45 — armures AÉGIS IV pour GHJU et LYLU : châssis de départ plus complet, dix paliers de protections réellement visibles, abdomen segmenté, coques enveloppantes aux avant-bras, cuissards, module dorsal, exosquelette et capteurs de casque. Nacre rose/bleue, marquages de série et gants RLH conservés. Sept lots de rendu par armure, 15 674 à 22 344 triangles. Les paliers suivent la progression de l’Arène ; le niveau narratif 1 garde la tenue de départ. [Comparer les dix niveaux en 3D](https://pink-war.vercel.app/personnage.html) · [Aperçus](https://pink-war.vercel.app/evolutions.html) · [Modèles et vérifications](docs/MODELES_345.md).
+
 - Version 3.44 — métal nacré rose/bleu sur les armes et armures, bords adoucis et gants conservés. Vraies ouvertures optiques Blender ; épaulé aligné sur les GLB, zoom BLOOM ×2 / LANCE ×4, réticule gradué. Nouveau synthétique N-08 qui choisit un abri, attend, sort pour tirer puis se replie, en Histoire, Arène et AT HOME extérieur. Diagnostics ambrés, racks, claviers, 27 câbles courbés, cuivre arraché, arcs électriques et ciel de fin de journée en Histoire. Les mises à jour du stand de tir de la base `696ac05` sont conservées. [Aperçus](https://pink-war.vercel.app/evolutions.html) · [Modèles et vérifications](docs/MODELES_344.md).
 
 - Version 3.42 — profilage des héros et des sept châssis hostiles : armures à surfaces réellement galbées, épaulières enveloppantes, articulations textiles affinées, taille et cuissards redessinés. Têtes mécaniques, côtes blindées, hanches profilées, sentinelle cyclope, pavillons acoustiques concaves, boucliers de rempart et carapace segmentée du rampant. Gants RLH et armes IV de la 3.41 conservés. Capteurs rouges toujours commandés par la perception réelle ; atelier des ennemis doté d’un aperçu Patrouille/Bruit entendu/Engagement. [Aperçus](https://pink-war.vercel.app/evolutions.html) · [Modèles et validation](docs/MODELES_342.md).
@@ -137,24 +139,24 @@ Depuis la 3.38, les blasters Kenney (placés par leur bouche) sont tenus par **l
 - **R–9 et AURORA** se tiennent à une main. **BLOOM, LANCE, THORN et NOVA** ont une poignée avant : la main libre la saisit avec le même gant, en miroir. À la troisième personne et en vue FPS, les deux mains sont visibles ; en VR, la manette libre est la main libre.
 - À la troisième personne, chaque bras est une chaîne à deux segments résolue vers la poignée et vers la poignée avant (cinématique inverse) : le coude se place tout seul et le poignet tombe exactement sur le gant. Avec le R–9, la main libre se repose à la hanche.
 - Les tirs partent de la bouche réelle de l'arme tenue, en vue FPS comme à la troisième personne.
-- Les armures sont des formes biseautées ou en dôme (pauldrons, gantelets, bottes, ailes, casque, couronne), fusionnées en quelques maillages par os et par matériau. Un changement de niveau recompose seulement les os concernés ; les dix tenues et leurs noms restent ceux de la campagne.
+- AÉGIS IV utilise des coques galbées et des profils chanfreinés, fusionnés en sept peaux par matériau sur le squelette RLH. Chaque palier possède une géométrie partagée mise en cache ; changer de tenue conserve le squelette et les clips de l’acteur.
 
 ## Tenues progressives
 
-Chaque étape conserve les pièces précédentes et ajoute son équipement. Ces améliorations sont visuelles ; la santé et les règles de combat restent celles de la campagne. Le tableau ci-dessous présente les noms des tenues de GHJU.
+AÉGIS IV conserve les pièces précédentes à chaque palier et ajoute son équipement. Les dix paliers suivent les dix premières vagues de l’Arène ; l’équipement reste au palier 10 pour les vagues suivantes. Le niveau narratif 1 utilise la tenue Aube. Tous les paliers peuvent être examinés dans l’atelier et le menu Tenue. Ces améliorations sont visuelles ; la santé et les règles de combat restent celles de la campagne. Le tableau ci-dessous présente les noms des tenues de GHJU.
 
 | Niveau | Tenue | Nouvelle pièce |
 | --- | --- | --- |
-| 1 | Aube | Combinaison, plastron, bottes et casque intégral opaque |
-| 2 | Sentinelle | Plastron composite et cœur lumineux |
-| 3 | Vigie | Épaulières, radio et insignes |
-| 4 | Éclaireuse | Gantelets, scanner et écran de poignet |
-| 5 | Rempart | Jambières, genouillères et ceinture à cellules laser |
-| 6 | Spectre | Renforts de casque, filtres et capteurs |
-| 7 | Valkyrie | Réacteur dorsal |
-| 8 | Aurora | Protections de hanches et finitions champagne |
-| 9 | Séraphine | Ailettes dorsales et balises lumineuses |
-| 10 | Impératrice | Couronne, halo orbital et insignes de prestige |
+| 1 | Aube | Châssis complet : col, bassin, torse, bras, jambes et casque fermé |
+| 2 | Sentinelle | Trois lames abdominales et protections obliques des flancs |
+| 3 | Vigie | Coques de biceps, talons et chevilles renforcés |
+| 4 | Éclaireuse | Coques enveloppantes aux avant-bras et scanner encastré |
+| 5 | Rempart | Cuissards latéraux et joues des genouillères |
+| 6 | Spectre | Module dorsal énergétique compact et filtres du col |
+| 7 | Valkyrie | Rails et actionneurs séparés au genou et à la cheville |
+| 8 | Aurora | Capteurs de tempe, module arrière et cadre de visière |
+| 9 | Séraphine | Épaulières à couches et brassards d’assaut |
+| 10 | Impératrice | Renforts pectoraux, hanches, dos et insignes de commandement |
 
 Le bouton **Tenue**, disponible à l’accueil et dans la pause, présente le personnage en 3D. Les dix étapes peuvent être prévisualisées et tournées de face ou de dos. L’aperçu fige la simulation, puis rétablit la tenue réellement gagnée, l’arme et la caméra au retour en jeu. Les commandes de l’atelier restent accessibles par défilement sur les petits écrans.
 
