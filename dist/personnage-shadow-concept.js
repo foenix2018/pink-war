@@ -62,10 +62,14 @@ export function attachShadowConcept(model, profile) {
       if(original.userData?.shadowHelmetFiltered)continue;
       const skin=original.getAttribute('skinIndex');
       const idx=original.getIndex();
-      if(!skin||!idx)continue;
+      const count=idx?idx.count:original.getAttribute('position')?.count||0;
+      if(!skin||!count)continue;
       const keep=[];let removed=0;
-      for(let i=0;i<idx.count;i+=3){
-        const a=idx.getX(i),b=idx.getX(i+1),c=idx.getX(i+2);
+      // AÉGIS IV armour batches are NON-INDEXED! Indexing-only logic never
+      // removed the old round helmet and left it inside the new Shadow shell.
+      // Build an index list for both indexed and non-indexed geometries.
+      for(let i=0;i<count;i+=3){
+        const a=idx?idx.getX(i):i,b=idx?idx.getX(i+1):i+1,c=idx?idx.getX(i+2):i+2;
         if(skin.getX(a)===headIndex&&skin.getX(b)===headIndex&&skin.getX(c)===headIndex)removed++;
         else keep.push(a,b,c);
       }
