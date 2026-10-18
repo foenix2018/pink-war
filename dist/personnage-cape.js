@@ -1,5 +1,5 @@
 import { addCapeToOriginalSoldier } from './personnage-cape-addon.js?v=5';
-import { attachShadowConcept } from './personnage-shadow-concept.js?v=1';
+import { attachShadowConcept } from './personnage-shadow-concept.js?v=6';
 import * as T from './vendor/three.webgpu.min.js';
 import { WebGLRenderer } from './vendor/three.module.min.js';
 import { createCharacterKit, createSoldier } from './soldier.js';
