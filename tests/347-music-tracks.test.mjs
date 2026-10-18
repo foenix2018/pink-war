@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,statSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
 import {MUSIC_TRACKS,createLobbyTrack,createMusicBed} from '../dist/music-tracks.js';
 
 class FakeAudio{
@@ -21,6 +22,12 @@ test.after(()=>{if(oldAudio===undefined)delete globalThis.Audio;else globalThis.
 test('MP3 tracks are local paths: song with vocals on menu, instrumental during combat',()=>{
   assert.match(MUSIC_TRACKS.lobby,/\/assets\/music\/under-violet-light\.mp3$/);
   assert.match(MUSIC_TRACKS.game,/\/assets\/music\/velvet-siege\.mp3$/);
+});
+test('compressed audio assets must be committed before the music PR can ship',()=>{
+  for(const src of Object.values(MUSIC_TRACKS)){
+    const size=statSync(fileURLToPath(src)).size;
+    assert.ok(size>100_000&&size<3_000_000,'MP3 must be valid compressed track');
+  }
 });
 test('lobby music respects user gesture, user mute and pause',()=>{
   const track=createLobbyTrack(),a=FakeAudio.all.at(-1);
