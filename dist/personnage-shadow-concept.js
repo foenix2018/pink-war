@@ -196,39 +196,79 @@ export function attachShadowConcept(model, profile) {
   for(let i=0;i<4;i++)
     block(helmet,.022,.004,.008,black,-.046+i*.030,.142,-.027,[.10,0,0]);
 
-  // Armure "Shadow" : accents lumineux et nouveaux cache-joints 3D,
-  // fixés aux os du personnage pour rester animés.
+  // Plastron Shadow : volume anguleux et profond placé DEVANT l'armure AÉGIS.
+  // La version précédente mettait les plaques à z=-.136, donc sous la coque.
   const spine=boneAnchor(model.actor.bone('Spine2'),[0,1.432,0]);
-  spine.name='Shadow Unit / plastrons et module arrière';
-  // Bord du boîtier dorsal; celui-ci reste visible au-dessus de la cape.
-  shape(spine,[[-.169,-.102],[.169,-.102],[.188,.049],[.142,.123],
-    [-.142,.123],[-.188,.049]],dark,[0,-.006,.171],[0,0,0],.008);
-  shape(spine,[[-.140,-.085],[.140,-.085],[.148,.042],[.110,.089],
-    [-.110,.089],[-.148,.042]],steel,[0,-.006,.182],[0,0,0],.004);
-  block(spine,.110,.203,.035,black,0,-.010,.196);
-  for(let j=0;j<5;j++)block(spine,.056,.006,.004,graphite,0,-.078+j*.032,.218);
-  block(spine,.091,.014,.007,light,0,.102,.205);
+  spine.name='Shadow V6 / thorax sculpté';
+  // Dos : module existant conservé, finition sombre avec bande LED discrète.
+  shape(spine,[[-.172,-.104],[.172,-.104],[.187,.046],[.134,.131],
+    [-.134,.131],[-.187,.046]],dark,[0,-.005,.172],[0,0,0],.008);
+  shape(spine,[[-.145,-.089],[.145,-.089],[.148,.041],[.105,.088],
+    [-.105,.088],[-.148,.041]],steel,[0,-.005,.183],[0,0,0],.004);
+  block(spine,.101,.192,.029,black,0,-.013,.200);
+  for(let j=0;j<5;j++)block(spine,.057,.005,.004,dark,0,-.077+j*.029,.220);
+  block(spine,.084,.011,.007,light,0,.103,.215);
+
+  // Collier articulé sous le casque : trois plaques et contacts lumineux.
+  shape(spine,[[-.099,-.032],[-.101,.021],[-.053,.041],[.053,.041],
+    [.101,.021],[.099,-.032]],black,[0,.128,-.153],[.04,0,0],.014);
+  block(spine,.068,.012,.008,graphite,0,.159,-.157);
   for(const side of [-1,1]){
-    path(spine,[[side*.158,.104,.181],[side*.176,.051,.186],
-      [side*.177,-.056,.190]],light,.004);
-    // Finition plus sombre du plastron et des rainures sur poitrine.
-    shape(spine,[[-.093,-.079],[-.111,.024],[-.057,.106],
-      [.046,.113],[.095,.047],[.069,-.092]],graphite,
-      [side*.105,.015,-.136],[.14,side*.16,0],.008);
+    shape(spine,[[-.072,-.052],[-.079,.032],[-.047,.093],
+      [.033,.101],[.091,.041],[.082,-.064]],dark,
+      [side*.109,.027,-.210],[0,side*-.11,0],.014);
+    // Les plaques gris canon sont visibles au-dessus du plastron noir.
+    shape(spine,[[-.063,-.054],[-.070,.027],[-.028,.073],
+      [.031,.075],[.072,.028],[.060,-.058]],steel,
+      [side*.108,.030,-.232],[0,side*-.12,0],.006);
+    shape(spine,[[-.048,-.031],[-.047,.023],[-.013,.054],
+      [.048,.027],[.048,-.038]],graphite,
+      [side*.11,.027,-.241],[0,side*-.12,0],.006);
+    // Bande de lumière suit le biseau, encadrant la cage thoracique.
+    path(spine,[[side*.158,.093,-.222],[side*.181,.030,-.240],
+      [side*.178,-.034,-.237],[side*.129,-.089,-.235]],light,.004);
+    path(spine,[[side*.100,-.101,-.237],[side*.166,-.078,-.245]],dim,.003);
+    // Fixations visibles pour apporter la richesse hard-surface de la référence.
+    for(const y of [.100,-.091]){
+      part(spine,new T.CylinderGeometry(.006,.006,.004,8),black,
+        [side*.118,y,-.249],[Math.PI/2,0,0]);
+    }
   }
+  // Noyau central en forme de bouclier, LED horizontale et ouïes.
+  shape(spine,[[-.069,-.088],[-.079,.077],[-.046,.127],
+    [.046,.127],[.079,.077],[.069,-.088]],black,
+    [0,.017,-.254],[0,0,0],.016);
+  shape(spine,[[-.055,-.072],[-.057,.066],[-.037,.082],
+    [.037,.082],[.057,.066],[.055,-.072]],graphite,
+    [0,.015,-.271],[0,0,0],.005);
+  block(spine,.077,.017,.011,light,0,.103,-.281);
+  for(let j=0;j<4;j++)
+    block(spine,.062-j*.005,.005,.006,black,0,.048-j*.029,-.281);
+  // Le bouclier inférieur du sternum relie le thorax aux abdominaux.
+  shape(spine,[[-.093,.031],[-.043,.062],[.043,.062],[.093,.031],
+    [.067,-.049],[0,-.069],[-.067,-.049]],steel,
+    [0,-.161,-.205],[.07,0,0],.008);
+  shape(spine,[[-.076,.021],[-.038,.052],[.038,.052],
+    [.076,.021],[.051,-.034],[0,-.052],[-.051,-.034]],graphite,
+    [0,-.169,-.216],[.07,0,0],.007);
+
+  // Micro-protections sur les articulations : épaulettes plus ajustées et
+  // symétriques, sans grands rectangles flottant autour des bras.
   for(const side of [-1,1]){
     const sideName=side<0?'Left':'Right';
-    const shoulder=boneAnchor(model.actor.bone(sideName+'Arm'),[side*.215,1.479,.006]);
-    shoulder.name='Shadow / épaulette '+sideName;
-    shape(shoulder,[[-.110,-.054],[-.112,.050],[-.051,.102],
-      [.054,.096],[.120,.014],[.109,-.067]],
-      graphite,[0,0,-.004],[.15,side*.18,side*.23],.012);
-    path(shoulder,[[-.069,.062,-.011],[-.018,.081,-.012],
-      [.057,.060,-.012]],light,.006);
-    // Détails des avant-bras, fins pour ne pas gêner la préhension.
-    const forearm=boneAnchor(model.actor.bone(sideName+'ForeArm'),[side*.350,1.16,-.030]);
-    forearm.name='Shadow / avant-bras '+sideName;
-    path(forearm,[[0,.064,-.044],[0,.015,-.058],[0,-.045,-.051]],light,.0044);
+    const shoulder=boneAnchor(model.actor.bone(sideName+'Arm'),
+      [side*.211,1.478,-.001]);
+    shoulder.name='Shadow V6 / épaule '+sideName;
+    shape(shoulder,[[-.085,-.050],[-.091,.014],[-.047,.066],
+      [.020,.079],[.086,.018],[.067,-.055]],graphite,
+      [0,0,-.021],[.17,side*.17,side*.17],.011);
+    shape(shoulder,[[-.066,-.036],[-.064,.017],[-.016,.056],
+      [.029,.053],[.063,.002],[.046,-.044]],steel,
+      [0,.009,-.035],[.17,side*.12,side*.12],.004);
+    path(shoulder,[[-.047,.050,-.041],[-.013,.065,-.042],
+      [.038,.045,-.040]],light,.0055);
+    // Le dernier bord entre cuirasse et articulation reste noir, non fluorescent.
+    path(shoulder,[[-.052,-.035,-.045],[.051,-.035,-.045]],dark,.003);
   }
   return {
     helmet,spine,
