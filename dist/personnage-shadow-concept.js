@@ -54,6 +54,7 @@ export function attachShadowConcept(model, profile) {
   // Masque les triangles du casque AÉGIS d'origine uniquement dans cette copie
   // prévisualisée ; tout le reste de l'armure et le rig natif sont conservés.
   const headIndex=model.actor.bones.findIndex(b=>b.name==='mixamorigHead');
+  const filteredGeometries=new Set();
   function hideAegisHead() {
     if(headIndex<0)return;
     for(const mesh of model.armor.parts){
@@ -73,11 +74,20 @@ export function attachShadowConcept(model, profile) {
         filtered.setIndex(keep);
         filtered.userData.shadowHelmetFiltered=true;
         mesh.geometry=filtered;
+        filteredGeometries.add(filtered);
       }
     }
   }
   const originalSetLevel=model.setLevel.bind(model);
-  model.setLevel=(n)=>{originalSetLevel(n);hideAegisHead();};
+  model.setLevel=(n)=>{
+    const next=Math.max(1,Math.min(10,Math.floor(Number(n)||1)));
+    if(next!==model.equipmentLevel){
+      for(const geometry of filteredGeometries)geometry.dispose();
+      filteredGeometries.clear();
+    }
+    originalSetLevel(n);
+    hideAegisHead();
+  };
   hideAegisHead();
 
   // Nouveau casque à facettes : volume resserré au menton, épaissi au front.
@@ -274,6 +284,8 @@ export function attachShadowConcept(model, profile) {
     helmet,spine,
     dispose(){
       for(const g of geometries)g.dispose();
+      for(const g of filteredGeometries)g.dispose();
+      filteredGeometries.clear();
       for(const m of disposables)m.dispose();
     }
   };
