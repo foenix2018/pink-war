@@ -2,7 +2,7 @@ import {BREACH_INSTALLATIONS,breachShelter} from './breach-dressing-layout.js';
 import {assistedAim,firingView} from './aim-assist.js';
 import {createSurfaceSteps,walkingSurface} from './surface-steps.js';
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, clamp, segmentSphere, segmentBox, traceEnemyHit, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
-import { createScene } from './scene.js?v=3.47';
+import { createScene } from './scene.js?v=3.54';
 import { VRController } from './vr.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
 import { characterForId } from './characters.js';

@@ -1,3 +1,4 @@
+import {createContactShadows} from './contact-shadows.js';
 import {createBreachDressing} from './breach-dressing.js';
 import {bevelBox} from './geo.js';
 import {createBreachTextures} from './breach-textures.js';
@@ -82,12 +83,12 @@ for(const z of [63,36,-28,-72])for(const side of [-1,1]){const o=box(steel,side*
 // Hose connections and flange rings tie the cooling system into its machinery.
 for(const x of [-8,8]){for(const z of [-60,-55,-49,-43,-38])collar(x,.45,z,.54,steel,'z');cable([[x,.5,-61],[x,.8,-64],[x*.55,1.1,-65],[0,1.4,-63]],.085);}
 for(const p of BREACH.stabilizers){cylinder(steel,p.x,.65,p.z-1.6,.48,1.1);collar(p.x,1.2,p.z-1.6,.52);cable([[p.x-.55,.15,p.z-1.7],[p.x-.8,1,p.z-1.7],[p.x-.4,2.1,p.z-1.7]]);}
-// Narrow shadow pads visually anchor large machines without new lights or blur passes.
-const shadowMat=new T.MeshBasicMaterial({color:0x030611,transparent:true,opacity:.28,depthWrite:false});ms.push(shadowMat);
-for(const p of BREACH_PROPS){const g=new T.CircleGeometry(Math.max(p.w,p.d)*.62,24);gs.push(g);const o=new T.Mesh(g,shadowMat);o.rotation.x=-Math.PI/2;o.position.set(p.x,.012,p.z);root.add(o);}
 const dressing=createBreachDressing(T,root,{box,cylinder,cable,collar,solidDetail,obstacles,materials:{steel,wall,crate,ground,rock,rubber,yellow,dark,blue,violet,red},ownG:g=>(gs.push(g),g),ownM:m=>(ms.push(m),m),ownT:t=>(ts.push(t),t)});
+// Grounded equipment keeps a soft contact even in compatible / low quality.
+const contactItems=obstacles.filter(b=>(b.y||0)<.08&&b.height>.3&&b.hx<6&&b.hz<7&&b.kind!=='ramp-slab').map(b=>({x:b.x,z:b.z,y:.018,w:b.hx*2+.8,d:b.hz*2+.8}));
+const contactShadows=createContactShadows(T,root,Math.max(1,contactItems.length));contactShadows.update(contactItems);
 // Merge static meshes per material. UVs tile in metres, even on the 180 m floor.
-const dynamic=new Set([core,...stabilizerModules,...rings,...indicators,...alarm,...dressing.dynamic]);const batches=new Map();
+const dynamic=new Set([contactShadows.mesh,core,...stabilizerModules,...rings,...indicators,...alarm,...dressing.dynamic]);const batches=new Map();
 for(const o of [...root.children])if(o.isMesh&&!dynamic.has(o)){if(!batches.has(o.material))batches.set(o.material,[]);batches.get(o.material).push(o);}
 for(const [material,list] of batches){const positions=[],normals=[],uvs=[];
  for(const o of list){o.updateMatrix();const g=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();
@@ -96,5 +97,5 @@ for(const [material,list] of batches){const positions=[],normals=[],uvs=[];
  g.applyMatrix4(o.matrix);for(const v of g.attributes.position.array)positions.push(v);for(const v of g.attributes.normal.array)normals.push(v);for(const v of g.attributes.uv.array)uvs.push(v);g.dispose();root.remove(o);}
  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(positions,3));g.setAttribute('normal',new T.Float32BufferAttribute(normals,3));g.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));g.computeBoundingSphere();gs.push(g);root.add(new T.Mesh(g,material));}
 root.traverse(o=>{if(o.isMesh&&!o.material.isMeshBasicMaterial){o.castShadow=true;o.receiveShadow=true;}});
-return {root,obstacles,ready:Promise.resolve(),setVisible(v){root.visible=v;},update(game,time){if(!root.visible)return;const s=game.campaign;energyMap.offset.x=(game.time||0)*.025;dressing.update(game,game.time||0);stabilizerModules.forEach((o,i)=>o.material=s.stabilizers[i]?blue:violet);core.scale.x=core.scale.z=1+Math.sin(time*2)*.035;rings.forEach((r,i)=>r.rotation.z=time*.1*(i+1));indicators.forEach((o,i)=>o.material=(i<2?s.relays[i]:s.stabilizers[i-2])?blue:violet);alarm.forEach(o=>o.visible=s.stage==='extraction'&&Math.sin(time*8)>0);light.intensity=s.stage==='extraction'?45+Math.sin(time*9)*20:55;},updateLift(){},stats(){return {map:'breche-violette-01',visible:root.visible,zones:6,colliders:obstacles.length,relays:2,stabilizers:3,alternatePaths:2,surfaceFamilies:7,industrialProps:BREACH_PROPS.length+dressing.stats().equipment,dressing:dressing.stats(),floatingSigns:0,staticBatches:batches.size,beveledPieces};},dispose(){scene.remove(root);gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());ts.forEach(t=>t.dispose());}};
+return {root,obstacles,ready:Promise.resolve(),setVisible(v){root.visible=v;},update(game,time){if(!root.visible)return;const s=game.campaign;energyMap.offset.x=(game.time||0)*.025;dressing.update(game,game.time||0);stabilizerModules.forEach((o,i)=>o.material=s.stabilizers[i]?blue:violet);core.scale.x=core.scale.z=1+Math.sin(time*2)*.035;rings.forEach((r,i)=>r.rotation.z=time*.1*(i+1));indicators.forEach((o,i)=>o.material=(i<2?s.relays[i]:s.stabilizers[i-2])?blue:violet);alarm.forEach(o=>o.visible=s.stage==='extraction'&&Math.sin(time*8)>0);light.intensity=s.stage==='extraction'?45+Math.sin(time*9)*20:55;},updateLift(){},stats(){return {map:'breche-violette-01',visible:root.visible,zones:6,colliders:obstacles.length,relays:2,stabilizers:3,alternatePaths:2,surfaceFamilies:7,industrialProps:BREACH_PROPS.length+dressing.stats().equipment,dressing:dressing.stats(),floatingSigns:0,staticBatches:batches.size,beveledPieces};},dispose(){contactShadows.dispose();scene.remove(root);gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());ts.forEach(t=>t.dispose());}};
 }
