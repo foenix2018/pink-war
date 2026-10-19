@@ -1,3 +1,4 @@
+import {createBreachDressing} from './breach-dressing.js';
 import {bevelBox} from './geo.js';
 import {createBreachTextures} from './breach-textures.js';
 import {breachSolids,BREACH,ramps,BREACH_PROPS,BREACH_GROUND_SURFACES} from './breach-layout.js';
@@ -17,7 +18,15 @@ function cable(points,r=.055){const curve=new T.CatmullRomCurve3(points.map(p=>n
 
 const floorMaterials={metal:ground,concrete:mat(0xc0c8cc,{map:surface.maps.concrete,roughness:.9,metalness:.04,bumpMap:surface.maps.concrete,bumpScale:.035}),tarmac:mat(0xc2c9d1,{map:surface.maps.tarmac,roughness:.95,metalness:.02,bumpMap:surface.maps.tarmac,bumpScale:.025})};
 for(const s of BREACH_GROUND_SURFACES)box(floorMaterials[s.surface],0,-.21,(s.minZ+s.maxZ)/2,54,.4,s.maxZ-s.minZ);
-for(const b of obstacles.filter(b=>b.kind!=='core'&&b.kind!=='prop'&&b.kind!=='coolant'&&b.kind!=='stabilizer-module'&&b.kind!=='reactor-post'&&b.kind!=='reactor-ring'&&b.kind!=='ramp-slab'))box(b.kind==='crate'?crate:b.kind==='wall'?wall:steel,b.x,b.y+b.height/2,b.z,b.hx*2,b.height,b.hz*2);
+for(const b of obstacles.filter(b=>!['core','prop','coolant','stabilizer-module','reactor-post','reactor-ring','ramp-slab'].includes(b.kind))){
+ box(b.kind==='crate'?crate:b.kind==='wall'?wall:steel,b.x,b.y+b.height/2,b.z,b.hx*2,b.height,b.hz*2);
+ if(b.kind==='wall'&&b.height>=7&&b.hx>3&&b.hz<1){
+  for(const side of [-1,1]){const z=b.z+side*(b.hz+.045);box(dark,b.x,b.y+1.45,z,b.hx*2-.2,2.75,.065);
+   for(let x=b.x-b.hx+1.7;x<b.x+b.hx-1;x+=3.2){box(steel,x,b.y+4.7,z,2.7,2.6,.12);box(dark,x,b.y+4.7,z+side*.075,2.43,2.24,.05);for(let y=b.y+3.9;y<b.y+5.5;y+=.35)box(wall,x,y,z+side*.115,2.1,.055,.025);}
+   box(steel,b.x,b.y+2.9,z,b.hx*2,.12,.18);box(blue,b.x,b.y+6.6,z+side*.03,Math.min(3,b.hx),.055,.02);}
+ }
+}
+
 for(const b of obstacles.filter(b=>b.kind==='crate')){for(const s of [-1,1])box(steel,b.x+s*(b.hx-.12),b.height/2,b.z,.12,b.height+.04,b.hz*2+.04);box(blue,b.x,.1,b.z+b.hz+.025,b.hx*1.6,.05,.03);}
 for(const r of ramps){const length=r.bottomZ-r.topZ,mesh=box(steel,r.x,r.height/2-.12,(r.bottomZ+r.topZ)/2,r.halfWidth*2,.24,Math.hypot(length,r.height));mesh.rotation.x=(r.descending?-1:1)*Math.atan2(r.height,length);}
 // Repeated ribs, gantries, cables and floor seams read at human scale.
@@ -25,12 +34,11 @@ for(let z=83;z>-90;z-=6){for(const x of [-25.9,25.9]){box(blue,x-.22*Math.sign(x
 for(const z of [61,48,35,-29,-42,-56,-71]){box(steel,0,9,z,53,.45,.6);for(const x of [-20,-12,12,20])box(steel,x,7.4,z,.14,3,.14);}
 // Massive reactor, visible from arrival through the industrial spine.
 const ringGeo=new T.TorusGeometry(6,.28,8,64);gs.push(ringGeo);const rings=[];for(const y of [2,6,10]){const o=new T.Mesh(ringGeo,steel);o.rotation.x=Math.PI/2;o.position.set(0,y,-48);root.add(o);rings.push(o);}
-const coreGeo=new T.CylinderGeometry(1.6,1.6,11,24);gs.push(coreGeo);const core=new T.Mesh(coreGeo,violet);core.position.set(0,5.5,-48);root.add(core);for(let i=0;i<8;i++){const a=i*Math.PI/4,x=Math.cos(a)*7,z=-48+Math.sin(a)*7;cylinder(steel,x,5,z,.42,10);for(const y of [.35,3.5,6.5,9.5])collar(x,y,z,.46);}
+const energyCanvas=document.createElement('canvas');energyCanvas.width=256;energyCanvas.height=512;const ec=energyCanvas.getContext('2d');ec.fillStyle='#241142';ec.fillRect(0,0,256,512);for(let i=0;i<36;i++){ec.fillStyle=i%4?'#8547c1':'#c4b1ed';ec.fillRect((i*71)%256,0,1+i%4,512);}for(let y=0;y<512;y+=31){ec.fillStyle='#3c1e62';ec.fillRect(0,y,256,4);}const energyMap=new T.CanvasTexture(energyCanvas);energyMap.wrapS=energyMap.wrapT=T.RepeatWrapping;energyMap.colorSpace=T.SRGBColorSpace;ts.push(energyMap);const energyMat=new T.MeshBasicMaterial({map:energyMap,color:0xe6c5ff,transparent:true,opacity:.92,toneMapped:false});ms.push(energyMat);
+const coreGeo=new T.CylinderGeometry(1.6,1.6,11,32);gs.push(coreGeo);const core=new T.Mesh(coreGeo,energyMat);core.position.set(0,5.5,-48);root.add(core);for(let i=0;i<8;i++){const a=i*Math.PI/4+Math.PI/8,x=Math.cos(a)*7,z=-48+Math.sin(a)*7;cylinder(steel,x,5,z,.42,10);for(const y of [.35,3.5,6.5,9.5])collar(x,y,z,.46);}
+for(const phase of [0,Math.PI]){const points=[];for(let i=0;i<=80;i++){const a=i/80*Math.PI*6+phase;points.push(new T.Vector3(Math.cos(a)*1.65,i/80*10.6+.2,-48+Math.sin(a)*1.65));}const geo=new T.TubeGeometry(new T.CatmullRomCurve3(points),80,.035,5,false);gs.push(geo);const filament=new T.Mesh(geo,blue);root.add(filament);}
 const light=new T.PointLight(0xa03dff,55,29,2);light.position.set(0,5,-48);root.add(light);
-const labels=[];function sign(text,x,y,z,w=8){const cv=document.createElement('canvas');cv.width=1024;cv.height=160;const ctx=cv.getContext('2d');ctx.fillStyle='#09101e';ctx.fillRect(0,0,1024,160);ctx.fillStyle='#70dfff';ctx.fillRect(0,0,12,160);ctx.font='bold 51px sans-serif';ctx.fillText(text,32,95,960);const t=new T.CanvasTexture(cv);ts.push(t);const m=glow(0xffffff);m.map=t;const g=new T.PlaneGeometry(w,w*160/1024);gs.push(g);const o=new T.Mesh(g,m);o.position.set(x,y,z);root.add(o);labels.push(o);}
-for(const [text,z] of [['01 / ARRIVÉE',77],['02 / TRANSIT',62],['03 / DEUX ITINÉRAIRES',35],['04 / RELAIS ÉNERGIE',-1],['05 / CŒUR VIOLET',-28],['06 / EXTRACTION',-73]])sign(text,0,6,z);
-sign('TUNNEL ←     PASSERELLE →',0,3.4,32,10);sign('CACHE / MAINTENANCE',-22,1.8,29,3);sign('RÉSERVE / SECTEUR 07',22,1.8,-65,3);
-const indicators=[...BREACH.relays,...BREACH.stabilizers].map((p,i)=>{sign(i<2?`RELAIS ${i+1}`:`STABILISATEUR ${i-1}`,p.x,2.5,p.z-1.4,3);return box(violet,p.x,1.6,p.z-1.4,.9,.12,.7);});
+const indicators=[...BREACH.relays,...BREACH.stabilizers].map(p=>box(violet,p.x,1.6,p.z-1.4,.9,.12,.7));
 // A rocky alien silhouette beyond the open roof; deterministic placement.
 const rg=new T.IcosahedronGeometry(1,2);gs.push(rg);for(let i=0;i<55;i++){const o=new T.Mesh(rg,rock);o.position.set((i%2?1:-1)*(34+i%9),3+i%7,85-i*3.3);o.scale.set(7+i%5,8+i%13,9);root.add(o);}
 const alarm=[];for(let z=-32;z>-89;z-=8)for(const x of [-5,5])alarm.push(box(red,x,3,z,.22,.22,.22));
@@ -52,7 +60,6 @@ for(const p of BREACH_PROPS){
 // Hangar: overhead crane and suspended cable drums, no obstruction at eye level.
 for(const x of [-22,22])box(yellow,x,7.8,49,.45,.65,24);
 box(yellow,0,7.7,46,44,.6,1.2);box(dark,2,7,46,3,1.2,2);box(steel,2,5.3,46,.06,2.5,.06);box(yellow,2,4,46,.65,.25,.4);
-sign('TRANSIT / CARGO 04',-15,2.3,56.02,5);sign('DANGER · HAUTE TENSION',-22,3.2,-1.9,3);
 // Sidewall service pipes, valves and ventilators create depth and scale.
 const pipeGeo=new T.CylinderGeometry(.16,.16,1,10);gs.push(pipeGeo);
 for(const x of [-25,25])for(const y of [4.8,5.4,6]){const o=new T.Mesh(pipeGeo,steel);o.rotation.x=Math.PI/2;o.scale.y=170;o.position.set(x,y,-1);root.add(o);}
@@ -63,7 +70,7 @@ for(let z=20;z>-5;z-=.45)box(dark,15,4.015,z,4.8,.025,.055);
 // Reactor coolant conduits, shields and a marked emergency exit frame.
 for(const x of [-8,8]){const o=new T.Mesh(pipeGeo,steel);o.rotation.x=Math.PI/2;o.scale.set(3,27,3);o.position.set(x,.45,-49);root.add(o);}
 const stabilizerModules=[];for(const p of BREACH.stabilizers){box(yellow,p.x,0.06,p.z-1.4,3,.08,2.4);stabilizerModules.push(box(violet,p.x,2.5,p.z-1.6,1.1,.5,.22));}
-box(blue,0,6.2,-85,8.5,.18,.7);sign('EXTRACTION / SECTEUR 02',0,7.1,-85,9);
+box(blue,0,6.2,-85,8.5,.18,.7);
 // Layered hull plating, angled braces and recessed luminaires replace flat blocks.
 for(let z=78;z>-85;z-=12)for(const side of [-1,1]){
  const x=side*26;box(dark,x,1.15,z,.18,1.9,8);box(steel,x-side*.13,.22,z,.24,.22,8.3);
@@ -78,8 +85,9 @@ for(const p of BREACH.stabilizers){cylinder(steel,p.x,.65,p.z-1.6,.48,1.1);colla
 // Narrow shadow pads visually anchor large machines without new lights or blur passes.
 const shadowMat=new T.MeshBasicMaterial({color:0x030611,transparent:true,opacity:.28,depthWrite:false});ms.push(shadowMat);
 for(const p of BREACH_PROPS){const g=new T.CircleGeometry(Math.max(p.w,p.d)*.62,24);gs.push(g);const o=new T.Mesh(g,shadowMat);o.rotation.x=-Math.PI/2;o.position.set(p.x,.012,p.z);root.add(o);}
+const dressing=createBreachDressing(T,root,{box,cylinder,cable,collar,solidDetail,obstacles,materials:{steel,wall,crate,ground,rock,rubber,yellow,dark,blue,violet,red},ownG:g=>(gs.push(g),g),ownM:m=>(ms.push(m),m),ownT:t=>(ts.push(t),t)});
 // Merge static meshes per material. UVs tile in metres, even on the 180 m floor.
-const dynamic=new Set([core,...stabilizerModules,...rings,...indicators,...alarm,...labels]);const batches=new Map();
+const dynamic=new Set([core,...stabilizerModules,...rings,...indicators,...alarm,...dressing.dynamic]);const batches=new Map();
 for(const o of [...root.children])if(o.isMesh&&!dynamic.has(o)){if(!batches.has(o.material))batches.set(o.material,[]);batches.get(o.material).push(o);}
 for(const [material,list] of batches){const positions=[],normals=[],uvs=[];
  for(const o of list){o.updateMatrix();const g=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();
@@ -88,5 +96,5 @@ for(const [material,list] of batches){const positions=[],normals=[],uvs=[];
  g.applyMatrix4(o.matrix);for(const v of g.attributes.position.array)positions.push(v);for(const v of g.attributes.normal.array)normals.push(v);for(const v of g.attributes.uv.array)uvs.push(v);g.dispose();root.remove(o);}
  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(positions,3));g.setAttribute('normal',new T.Float32BufferAttribute(normals,3));g.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));g.computeBoundingSphere();gs.push(g);root.add(new T.Mesh(g,material));}
 root.traverse(o=>{if(o.isMesh&&!o.material.isMeshBasicMaterial){o.castShadow=true;o.receiveShadow=true;}});
-return {root,obstacles,ready:Promise.resolve(),setVisible(v){root.visible=v;},update(game,time){if(!root.visible)return;const s=game.campaign;stabilizerModules.forEach((o,i)=>o.material=s.stabilizers[i]?blue:violet);core.scale.x=core.scale.z=1+Math.sin(time*2)*.035;rings.forEach((r,i)=>r.rotation.z=time*.1*(i+1));indicators.forEach((o,i)=>o.material=(i<2?s.relays[i]:s.stabilizers[i-2])?blue:violet);alarm.forEach(o=>o.visible=s.stage==='extraction'&&Math.sin(time*8)>0);light.intensity=s.stage==='extraction'?45+Math.sin(time*9)*20:55;},updateLift(){},stats(){return {map:'breche-violette-01',visible:root.visible,zones:6,colliders:obstacles.length,relays:2,stabilizers:3,alternatePaths:2,surfaceFamilies:7,industrialProps:BREACH_PROPS.length,staticBatches:batches.size,beveledPieces};},dispose(){scene.remove(root);gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());ts.forEach(t=>t.dispose());}};
+return {root,obstacles,ready:Promise.resolve(),setVisible(v){root.visible=v;},update(game,time){if(!root.visible)return;const s=game.campaign;energyMap.offset.x=(game.time||0)*.025;dressing.update(game,game.time||0);stabilizerModules.forEach((o,i)=>o.material=s.stabilizers[i]?blue:violet);core.scale.x=core.scale.z=1+Math.sin(time*2)*.035;rings.forEach((r,i)=>r.rotation.z=time*.1*(i+1));indicators.forEach((o,i)=>o.material=(i<2?s.relays[i]:s.stabilizers[i-2])?blue:violet);alarm.forEach(o=>o.visible=s.stage==='extraction'&&Math.sin(time*8)>0);light.intensity=s.stage==='extraction'?45+Math.sin(time*9)*20:55;},updateLift(){},stats(){return {map:'breche-violette-01',visible:root.visible,zones:6,colliders:obstacles.length,relays:2,stabilizers:3,alternatePaths:2,surfaceFamilies:7,industrialProps:BREACH_PROPS.length+dressing.stats().equipment,dressing:dressing.stats(),floatingSigns:0,staticBatches:batches.size,beveledPieces};},dispose(){scene.remove(root);gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());ts.forEach(t=>t.dispose());}};
 }

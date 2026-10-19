@@ -41,7 +41,7 @@ b(0,-48,3.2,3.2,0,11,'core');
 for(const p of [...BREACH.relays,...BREACH.stabilizers])b(p.x,p.z-1.4,1.6,1.2,0,1.5,'terminal');
 for(const [i,p] of BREACH.stabilizers.entries())b(p.x,p.z-1.6,1.1,.22,2.25,.5,'stabilizer-module',{stabilizerId:i});
 // Former decorative structures now have the same solid dimensions as their meshes.
-for(let i=0;i<8;i++){const angle=i*Math.PI/4;b(Math.cos(angle)*7,-48+Math.sin(angle)*7,.84,.84,0,10,'reactor-post');}
+for(let i=0;i<8;i++){const angle=i*Math.PI/4+Math.PI/8;b(Math.cos(angle)*7,-48+Math.sin(angle)*7,.84,.84,0,10,'reactor-post');}
 for(const x of [-4,4])b(x,-85,.5,.7,0,6.2,'detail');
 for(const p of BREACH.stabilizers)for(const x of [-1,1])b(p.x+x,p.z-1.6,.15,.16,.1,3.2,'detail');
 for(let z=83;z>-90;z-=6)for(const x of [-25.9,25.9])b(x,z,.4,.5,0,8,'detail');

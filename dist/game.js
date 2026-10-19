@@ -1,3 +1,4 @@
+import {BREACH_INSTALLATIONS,breachShelter} from './breach-dressing-layout.js';
 import {assistedAim,firingView} from './aim-assist.js';
 import {createSurfaceSteps,walkingSurface} from './surface-steps.js';
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, clamp, segmentSphere, segmentBox, traceEnemyHit, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
@@ -449,7 +450,7 @@ function gameOver(won = false) {
   $('survival-button').hidden=!won;
   $('retry-button').textContent = won ? 'REJOUER LA CAMPAGNE →' : 'UNE NOUVELLE AUBE →';
   if(game.mode==='campaign'){
-    $('end-eyebrow').textContent=won?'NIVEAU 1 TERMINÉ / ARCHIVE SAUVEGARDÉE':'LA BRÈCHE VIOLETTE / ESSAI INTERROMPU';
+    $('end-eyebrow').textContent=won?'NIVEAU 1 TERMINÉ / STATION NEUTRALISÉE':'LA BRÈCHE VIOLETTE / ESSAI INTERROMPU';
     $('end-title').innerHTML=won?'Réacteur coupé.<br>Extraction réussie.':'Le signal<br>vous attend.';
     $('end-message').textContent=won?`La Brèche Violette est neutralisée. Votre équipe a franchi le portail. Le Level 2 reste à construire.`:'Traversez le hangar, activez les deux relais puis neutralisez les trois stabilisateurs et le gardien.';
     $('survival-button').hidden=true;$('retry-button').textContent='REJOUER LE NIVEAU 1 →';
@@ -737,6 +738,7 @@ function stepFrame(timestamp, xrFrame) {
     sound:settings.sound,speed:game.bladeSpeed,swing:saberSwingSound});saberSwingSound=false;
   const heading=listenerHeading();
   ambience?.update(dt,{active:audioActive,position:game.player,yaw:heading,
+    installations:game.mode==='campaign'?BREACH_INSTALLATIONS:ACTIVE_INSTALLATIONS,alarm:game.mode==='campaign'&&game.stage==='extraction',shelter:game.mode==='campaign'?breachShelter(game.player):0,
     moving:phase==='playing',elevation:game.player.elevation,onLift:!!game.player.onLift,
     grounded:game.player.grounded,crouched:game.player.crouched,surface:walkingSurface(game),probes:game.enemies});
   let threat=clock-lastShotAt<1.2?.18:0;

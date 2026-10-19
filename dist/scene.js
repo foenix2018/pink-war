@@ -462,6 +462,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     arenaRoot.visible=!campaignActive&&!rangeActive;
     scene.fog.color.setHex(campaignActive?0x171329:character.world.fog);
     scene.fog.density=campaignActive?.0058:.008;
+    hemisphere.intensity=campaignActive?.92:1.32;sun.intensity=campaignActive?1.8:2.25;rim.intensity=campaignActive?.72:1.08;
     hemisphere.color.setHex(campaignActive?0x9eafff:0xa9c9e5);hemisphere.groundColor.setHex(campaignActive?0x414833:0x344058);
     sun.color.setHex(campaignActive?0x9ebaff:0xb5d7ff);rim.color.setHex(campaignActive?0xa6bbb7:0x9abfff);
     campaignArt.setVisible(campaignActive&&!rangeActive);if(!campaignActive&&!rangeActive)city.enablePbr();

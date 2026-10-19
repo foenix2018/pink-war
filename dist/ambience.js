@@ -28,7 +28,7 @@ function envelope(param,time,level,duration){
 }
 
 export function createAmbience(ctx,{installations=[],footsteps=null}={}){
-  let enabled=true,active=false,disposed=false,graph=null,audible=false,elapsed=0,nextCreak=13;
+  let enabled=true,active=false,disposed=false,graph=null,audible=false,elapsed=0,nextCreak=13,nextAlarm=0;
   let lastPosition=null,stride=0,foot=0,steps=0,creaks=0,lastParameterUpdate=-1,gustStrength=0;
   const voices=new Set(),persistent=[];
   const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
@@ -100,7 +100,7 @@ export function createAmbience(ctx,{installations=[],footsteps=null}={}){
     osc.connect(gain);const pan=connectPan(gain,(random()*2-1)*.6);
     remember(osc,[osc,gain,...(pan?[pan]:[])]);osc.start(t);osc.stop(t+duration+.01);creaks++;
   }
-  function update(dt,{active:nextActive=false,position=null,moving=false,elevation=0,onLift=false,grounded=true,crouched=false,yaw=0,shelter=0,probes=[],surface=null}={}){
+  function update(dt,{active:nextActive=false,position=null,moving=false,elevation=0,onLift=false,grounded=true,crouched=false,yaw=0,shelter=0,probes=[],surface=null,installations:localInstallations=installations,alarm=false}={}){
     if(disposed)return;
     const wasReady=ready();active=!!nextActive;
     if(!ready()){if(wasReady||graph)mute();return;}
@@ -119,7 +119,7 @@ export function createAmbience(ctx,{installations=[],footsteps=null}={}){
       target(graph.wind.frequency,430+gust*540,t,.6);
       target(graph.leaves.gain,(1-height*.8)*(.011+gust*.013)*exposure,t,.5);
       let machinery=.12,sourceBearing=0;
-      if(position)for(const source of installations){
+      if(position)for(const source of localInstallations){
         const distance=Math.hypot(finite(position.x)-source.x,finite(position.z)-source.z);
         const proximity=clamp(1-distance/35,0,1);
         if(proximity>machinery){machinery=proximity;sourceBearing=Math.atan2(source.x-finite(position.x),-(source.z-finite(position.z)));}
@@ -150,6 +150,7 @@ export function createAmbience(ctx,{installations=[],footsteps=null}={}){
       }else stride=0;
       lastPosition={x,z};
     }else {lastPosition=null;stride=0;}
+    if(alarm&&elapsed>=nextAlarm&&voices.size<6){const t=ctx.currentTime,osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.setValueAtTime(490,t);osc.frequency.linearRampToValueAtTime(690,t+.22);envelope(gain.gain,t,.009,.46);osc.connect(gain);gain.connect(graph.master);remember(osc,[osc,gain]);osc.start(t);osc.stop(t+.49);nextAlarm=elapsed+1.1;}
     if(elapsed>=nextCreak){creak();nextCreak=elapsed+15+random()*14;}
   }
   return {
