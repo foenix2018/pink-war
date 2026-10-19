@@ -1,3 +1,10 @@
+export const BREACH_GROUND_SURFACES=[
+ {minZ:63,maxZ:90,surface:'tarmac'},
+ {minZ:0,maxZ:63,surface:'concrete'},
+ {minZ:-28,maxZ:0,surface:'tarmac'},
+ {minZ:-72,maxZ:-28,surface:'metal'},
+ {minZ:-92,maxZ:-72,surface:'concrete'}
+];
 export const BREACH_PROPS=[
  {type:'forklift',x:-22,z:43,w:2.4,d:4,h:2.5},
  {type:'cargo',x:21,z:55,w:5,d:5,h:3},

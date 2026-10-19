@@ -27,7 +27,7 @@ function envelope(param,time,level,duration){
   param.exponentialRampToValueAtTime(.0001,time+duration);
 }
 
-export function createAmbience(ctx,{installations=[]}={}){
+export function createAmbience(ctx,{installations=[],footsteps=null}={}){
   let enabled=true,active=false,disposed=false,graph=null,audible=false,elapsed=0,nextCreak=13;
   let lastPosition=null,stride=0,foot=0,steps=0,creaks=0,lastParameterUpdate=-1,gustStrength=0;
   const voices=new Set(),persistent=[];
@@ -74,8 +74,9 @@ export function createAmbience(ctx,{installations=[]}={}){
     audible=false;
     lastPosition=null;stride=0;
   }
-  function footstep(metal,speed,crouched){
+  function footstep(metal,speed,crouched,surface){
     if(!ready()||voices.size>7)return;
+    if(footsteps?.play(surface|| (metal?'metal':'concrete'),{destination:graph.master,speed,crouched,foot})){foot++;steps++;return;}
     const t=ctx.currentTime,source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
     source.buffer=noiseBuffer(ctx);filter.type='lowpass';filter.frequency.value=metal?2800:950;filter.Q.value=.65;
     const duration=metal?.16:.115,volume=(crouched?.018:.027)*clamp(speed/5,.65,1.35);
@@ -99,7 +100,7 @@ export function createAmbience(ctx,{installations=[]}={}){
     osc.connect(gain);const pan=connectPan(gain,(random()*2-1)*.6);
     remember(osc,[osc,gain,...(pan?[pan]:[])]);osc.start(t);osc.stop(t+duration+.01);creaks++;
   }
-  function update(dt,{active:nextActive=false,position=null,moving=false,elevation=0,onLift=false,grounded=true,crouched=false,yaw=0,shelter=0,probes=[]}={}){
+  function update(dt,{active:nextActive=false,position=null,moving=false,elevation=0,onLift=false,grounded=true,crouched=false,yaw=0,shelter=0,probes=[],surface=null}={}){
     if(disposed)return;
     const wasReady=ready();active=!!nextActive;
     if(!ready()){if(wasReady||graph)mute();return;}
@@ -144,7 +145,7 @@ export function createAmbience(ctx,{installations=[]}={}){
         if(distance<Math.max(1.5,dt*16)){
           stride+=distance;
           const stepDistance=crouched?.95:1.55;
-          if(stride>=stepDistance){stride%=stepDistance;footstep(elevation>1.2,distance/dt,crouched);}
+          if(stride>=stepDistance){stride%=stepDistance;footstep(surface?surface==='metal':elevation>1.2,distance/dt,crouched,surface);}
         }else stride=0;
       }else stride=0;
       lastPosition={x,z};

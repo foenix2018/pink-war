@@ -1,6 +1,6 @@
 import {bevelBox} from './geo.js';
 import {createBreachTextures} from './breach-textures.js';
-import {breachSolids,BREACH,ramps,BREACH_PROPS} from './breach-layout.js';
+import {breachSolids,BREACH,ramps,BREACH_PROPS,BREACH_GROUND_SURFACES} from './breach-layout.js';
 export function createCampaignArt(T,scene){
 const root=new T.Group();root.name='LA BRÈCHE VIOLETTE';root.visible=false;scene.add(root);const obstacles=breachSolids(),gs=[],ms=[],ts=[];
 const surface=createBreachTextures(T);ts.push(...surface.owned);
@@ -15,7 +15,8 @@ function cylinder(m,x,y,z,r,length,rotation=null){const g=new T.CylinderGeometry
 function collar(x,y,z,r,material=steel,axis='y'){const g=new T.TorusGeometry(r,.07,6,24);gs.push(g);const o=new T.Mesh(g,material);o.position.set(x,y,z);if(axis==='y')o.rotation.x=Math.PI/2;if(axis==='x')o.rotation.y=Math.PI/2;root.add(o);return o;}
 function cable(points,r=.055){const curve=new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p)));const g=new T.TubeGeometry(curve,18,r,6,false);gs.push(g);const o=new T.Mesh(g,rubber);root.add(o);return o;}
 
-box(ground,0,-.21,-1,54,.4,180);
+const floorMaterials={metal:ground,concrete:mat(0xc0c8cc,{map:surface.maps.concrete,roughness:.9,metalness:.04,bumpMap:surface.maps.concrete,bumpScale:.035}),tarmac:mat(0xc2c9d1,{map:surface.maps.tarmac,roughness:.95,metalness:.02,bumpMap:surface.maps.tarmac,bumpScale:.025})};
+for(const s of BREACH_GROUND_SURFACES)box(floorMaterials[s.surface],0,-.21,(s.minZ+s.maxZ)/2,54,.4,s.maxZ-s.minZ);
 for(const b of obstacles.filter(b=>b.kind!=='core'&&b.kind!=='prop'&&b.kind!=='coolant'&&b.kind!=='stabilizer-module'&&b.kind!=='reactor-post'&&b.kind!=='reactor-ring'&&b.kind!=='ramp-slab'))box(b.kind==='crate'?crate:b.kind==='wall'?wall:steel,b.x,b.y+b.height/2,b.z,b.hx*2,b.height,b.hz*2);
 for(const b of obstacles.filter(b=>b.kind==='crate')){for(const s of [-1,1])box(steel,b.x+s*(b.hx-.12),b.height/2,b.z,.12,b.height+.04,b.hz*2+.04);box(blue,b.x,.1,b.z+b.hz+.025,b.hx*1.6,.05,.03);}
 for(const r of ramps){const length=r.bottomZ-r.topZ,mesh=box(steel,r.x,r.height/2-.12,(r.bottomZ+r.topZ)/2,r.halfWidth*2,.24,Math.hypot(length,r.height));mesh.rotation.x=(r.descending?-1:1)*Math.atan2(r.height,length);}
@@ -87,5 +88,5 @@ for(const [material,list] of batches){const positions=[],normals=[],uvs=[];
  g.applyMatrix4(o.matrix);for(const v of g.attributes.position.array)positions.push(v);for(const v of g.attributes.normal.array)normals.push(v);for(const v of g.attributes.uv.array)uvs.push(v);g.dispose();root.remove(o);}
  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(positions,3));g.setAttribute('normal',new T.Float32BufferAttribute(normals,3));g.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));g.computeBoundingSphere();gs.push(g);root.add(new T.Mesh(g,material));}
 root.traverse(o=>{if(o.isMesh&&!o.material.isMeshBasicMaterial){o.castShadow=true;o.receiveShadow=true;}});
-return {root,obstacles,ready:Promise.resolve(),setVisible(v){root.visible=v;},update(game,time){if(!root.visible)return;const s=game.campaign;stabilizerModules.forEach((o,i)=>o.material=s.stabilizers[i]?blue:violet);core.scale.x=core.scale.z=1+Math.sin(time*2)*.035;rings.forEach((r,i)=>r.rotation.z=time*.1*(i+1));indicators.forEach((o,i)=>o.material=(i<2?s.relays[i]:s.stabilizers[i-2])?blue:violet);alarm.forEach(o=>o.visible=s.stage==='extraction'&&Math.sin(time*8)>0);light.intensity=s.stage==='extraction'?45+Math.sin(time*9)*20:55;},updateLift(){},stats(){return {map:'breche-violette-01',visible:root.visible,zones:6,colliders:obstacles.length,relays:2,stabilizers:3,alternatePaths:2,surfaceFamilies:5,industrialProps:BREACH_PROPS.length,staticBatches:batches.size,beveledPieces};},dispose(){scene.remove(root);gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());ts.forEach(t=>t.dispose());}};
+return {root,obstacles,ready:Promise.resolve(),setVisible(v){root.visible=v;},update(game,time){if(!root.visible)return;const s=game.campaign;stabilizerModules.forEach((o,i)=>o.material=s.stabilizers[i]?blue:violet);core.scale.x=core.scale.z=1+Math.sin(time*2)*.035;rings.forEach((r,i)=>r.rotation.z=time*.1*(i+1));indicators.forEach((o,i)=>o.material=(i<2?s.relays[i]:s.stabilizers[i-2])?blue:violet);alarm.forEach(o=>o.visible=s.stage==='extraction'&&Math.sin(time*8)>0);light.intensity=s.stage==='extraction'?45+Math.sin(time*9)*20:55;},updateLift(){},stats(){return {map:'breche-violette-01',visible:root.visible,zones:6,colliders:obstacles.length,relays:2,stabilizers:3,alternatePaths:2,surfaceFamilies:7,industrialProps:BREACH_PROPS.length,staticBatches:batches.size,beveledPieces};},dispose(){scene.remove(root);gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());ts.forEach(t=>t.dispose());}};
 }

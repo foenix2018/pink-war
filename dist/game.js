@@ -1,3 +1,5 @@
+import {assistedAim,firingView} from './aim-assist.js';
+import {createSurfaceSteps,walkingSurface} from './surface-steps.js';
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, clamp, segmentSphere, segmentBox, traceEnemyHit, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
 import { createScene } from './scene.js?v=3.47';
 import { VRController } from './vr.js';
@@ -56,7 +58,7 @@ try{character=characterForId(localStorage.getItem('pink-war-character'));}catch{
 if(boot?.characterId)character=characterForId(boot.characterId);
 let clock = 0, lastTime = 0, hudTimer = 0, flashTimer = 0, recoil = 0, reloadLift = 0, announcementUntil = 0, damageUntil = 0, pickupNotice = null;
 let outfitReturn = 'lobby', previewLevel = 1, equipmentUntil = 0;
-let canvasPointer = null, lastDrag = null, audioContext = window.__PINKWAR_BOOT_AUDIO||null, ambience = null;
+let canvasPointer = null, lastDrag = null, audioContext = window.__PINKWAR_BOOT_AUDIO||null, ambience = null, surfaceSteps = null;
 let saberAudio=null,saberSwingSound=false;
 let lastWeaponSlot=0,holsterRemaining=0;
 let bladeHead=null;
@@ -67,6 +69,8 @@ let reloadInserted=false,lastShotAt=-99;
 const move = { x: 0, y: 0, id: null }, look = { x: 0, y: 0, id: null };
 const keys = new Set(), firingPointers = new Set();
 let jumpQueued = false, pickupQueued = false,crouchQueued=false,firePressQueued=false;
+let fireZoomBlend=0;
+const touchAim=!!navigator.maxTouchPoints||matchMedia('(pointer:coarse)').matches;
 let crouchCameraBlend=0, currentSprinting=false, aimBlend=0, aiming=false, mouseAim=false;
 const aimPointers=new Set();
 const persist = () => { try { localStorage.setItem('rosee-settings', JSON.stringify(settings)); } catch {} };
@@ -80,7 +84,8 @@ function audioReady() {
   try { audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
     musicBed.setContext(audioContext);
     if (audioContext.state === 'suspended') audioContext.resume().then(()=>{if(phase==='playing')musicBed.start(audioContext);}).catch(() => {});
-    ambience ||= createAmbience(audioContext,{installations:ACTIVE_INSTALLATIONS});
+    surfaceSteps ||= createSurfaceSteps(audioContext);if(settings.sound)surfaceSteps.load();
+    ambience ||= createAmbience(audioContext,{installations:ACTIVE_INSTALLATIONS,footsteps:surfaceSteps});
     saberAudio ||= createSaberSound(audioContext);
     ambience.setEnabled(settings.sound);setLaserAudioEnabled(audioContext,settings.sound);
     if(settings.sound)loadRealLaserSample(audioContext).catch(()=>{});
@@ -138,7 +143,7 @@ selectCharacter(character.id,false);
 function resetInput() {
   vr?.desktopGamepads?.reset();
   if(vr&&vr.mode!=='xr'){vr.previous?.clear();vr.desktopPadKey=null;}
-  keys.clear(); firingPointers.clear(); aimPointers.clear(); firePressQueued=false; mouseAim=false; aiming=false; aimBlend=0; document.body.classList.remove('scoped','aiming'); $('aim-button')?.setAttribute('aria-pressed','false'); jumpQueued = false; pickupQueued = false;crouchQueued=false; canvasPointer = null; lastDrag = null;
+  keys.clear(); firingPointers.clear(); aimPointers.clear(); firePressQueued=false; mouseAim=false; aiming=false; aimBlend=0; fireZoomBlend=0; document.body.classList.remove('scoped','aiming'); $('aim-button')?.setAttribute('aria-pressed','false'); jumpQueued = false; pickupQueued = false;crouchQueued=false; canvasPointer = null; lastDrag = null;
   for (const s of [move, look]) { s.x = 0; s.y = 0; s.id = null; }
   for (const id of ['move-stick', 'look-stick']) $(id).querySelector('.joystick-knob').style.transform = '';
   $('fire-button').classList.remove('firing');
@@ -297,7 +302,7 @@ window.addEventListener('pointerup',e=>{firingPointers.delete(e.pointerId);if(e.
 window.addEventListener('pointercancel',e=>{firingPointers.delete(e.pointerId);mouseAim=false;aimPointers.clear();});
 window.addEventListener('blur', () => { resetInput(); if (phase === 'playing' && vr?.mode !== 'xr') pause(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { resetInput(); if (phase === 'playing' && vr?.mode !== 'xr') pause(); } });
-window.addEventListener('pagehide',event=>{ambience?.pause();musicBed.pause();saberAudio?.update({active:false,equipped:!!game?.weapon.melee});if(!event.persisted){ambience?.dispose();musicBed.dispose();saberAudio?.dispose();if(audioContext)disposeLaserAudio(audioContext);}});
+window.addEventListener('pagehide',event=>{ambience?.pause();musicBed.pause();saberAudio?.update({active:false,equipped:!!game?.weapon.melee});if(!event.persisted){ambience?.dispose();surfaceSteps?.dispose();musicBed.dispose();saberAudio?.dispose();if(audioContext)disposeLaserAudio(audioContext);}});
 window.addEventListener('resize', () => { world?.resize(settings.quality); resetInput(); });
 
 function updateCamera() {
@@ -307,7 +312,8 @@ function updateCamera() {
   const feel=weaponFeel.state,flatScreen=vr?.mode!=='stereo';
   const cameraYaw = yaw + (vr?.mode==='stereo' && vr.sensor ? vr.phoneYaw : 0)+(flatScreen?feel.yaw*.06:0), cameraPitch = clamp(pitch + (vr?.mode==='stereo' && vr.sensor ? vr.phonePitch : 0) + (flatScreen?feel.pitch*.2:0), -1.2, 1.2);
   const optic=world.fpsGun.userData.optics?.[game.weaponIndex]?.cfg||OPTICS[game.weapon.id],normalFov=view==='fps'?72:64;
-  camera.fov=normalFov+(optic?(magnifiedFov(normalFov,optic.magnification)-normalFov)*aimBlend:0);
+  const baseFov=normalFov+(optic?(magnifiedFov(normalFov,optic.magnification)-normalFov)*aimBlend:0);
+  const fireView=firingView(baseFov,vr?.mode==='off'?fireZoomBlend:0,aimBlend);camera.fov=fireView.fov;
   camera.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
   const elevation = p.elevation || 0;
   // Camera follows the same crouch transition as the real soldier pelvis, not a sudden teleport.
@@ -325,7 +331,7 @@ function updateCamera() {
   }
   const bob = Math.hypot(move.x, move.y) > .1 || keys.has('KeyW') || keys.has('KeyZ') || keys.has('KeyS');
   const ads=flatSightPose(optic,aimBlend);
-  weapon.position.set(ads.x+feel.yaw*.15, ads.y + (bob ? Math.sin(clock * 11) * .009*(1-aimBlend) : 0) - feel.kick*.18 + reloadLift * .045, ads.z + feel.kick - reloadLift * .028);
+  weapon.position.set(ads.x+fireView.x+feel.yaw*.15, ads.y+fireView.y + (bob ? Math.sin(clock * 11) * .009*(1-aimBlend) : 0) - feel.kick*.18 + reloadLift * .045, ads.z+fireView.z + feel.kick - reloadLift * .028);
   weapon.rotation.set(feel.pitch + reloadLift * Math.PI / 2,feel.yaw,Math.sin(clock * 1.8) * .003-feel.yaw*.35);
   if(game.weapon.melee){const slash=bladeSwingPose(game.bladePhase,game.bladeSlashSide);weapon.rotation.x=slash.x-.12;weapon.rotation.y=slash.y;weapon.rotation.z=slash.z;}
   camera.updateProjectionMatrix(); camera.updateMatrixWorld(true);
@@ -369,7 +375,7 @@ function aim() {
     const hit = traceEnemyHit(camera.position,far,enemy);
     if (hit && hit.t < nearest) { nearest = hit.t; target = camera.position.clone().lerp(far,hit.t); }
   }
-  const direction = target.clone().sub(origin).normalize(); return { origin, direction };
+  const direction = target.clone().sub(origin).normalize();const adjusted=assistedAim({camera:camera.position,forward,origin,direction,enemies:game.enemies,obstacles:world.obstacles,touch:touchAim,enabled:vr?.mode==='off'&&!game.weapon.melee});direction.set(adjusted.x,adjusted.y,adjusted.z);return { origin, direction };
 }
 
 function announce(title, subtitle) {
@@ -701,6 +707,8 @@ function stepFrame(timestamp, xrFrame) {
       }
     }
     const firing = vr.mode==='xr' ? vrInput.fire : !!(firingPointers.size || keys.has('Space') || vrInput.fire || game.weapon.semiAuto&&firePressQueued);
+    const zoomHeld=vr.mode==='off'&&view==='fps'&&!game.reloadRemaining&&(firing||clock-lastShotAt<.14);
+    fireZoomBlend+=(Number(zoomHeld)-fireZoomBlend)*(1-Math.exp(-dt*(zoomHeld?12:9)));
     // Pose the authentic IK skeleton BEFORE raycasting. In 3P the projectile now leaves the
     // current crouched/armed muzzle instead of the preceding frame's hand positions.
     updateWeaponVisuals(dt, firing, moving); updateCamera();
@@ -730,7 +738,7 @@ function stepFrame(timestamp, xrFrame) {
   const heading=listenerHeading();
   ambience?.update(dt,{active:audioActive,position:game.player,yaw:heading,
     moving:phase==='playing',elevation:game.player.elevation,onLift:!!game.player.onLift,
-    grounded:game.player.grounded,crouched:game.player.crouched,probes:game.enemies});
+    grounded:game.player.grounded,crouched:game.player.crouched,surface:walkingSurface(game),probes:game.enemies});
   let threat=clock-lastShotAt<1.2?.18:0;
   for(const enemy of game.enemies)if(enemy.awareness==='engaged')threat+=Math.max(0,1-Math.hypot(enemy.x-game.player.x,enemy.z-game.player.z)/36)*.3;
   musicBed.update(dt,{active:audioActive,threat:Math.min(1,threat),intermission:game.wave>0&&game.nextWave>0});
@@ -765,7 +773,7 @@ try {
     try{await world.warm();world.render();}catch(error){world=await world.recover({quality:'low'});game.replaceObstacles(world.obstacles);world.lobby(0);await world.warm();world.render();}
   }
   selectMode(selectedMode);$('loading-screen').hidden=true;$('play-button').disabled = false;$('outfit-button').disabled=false;
-  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ version:GAME_VERSION,phase, view, frames,recovering,recoveryAttempts,graphics:world.graphics, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,aiming,aimBlend,cameraFov:world.camera.fov,laserEffects:world.laserStats?.(),city:world.cityStats?.(),vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelSource:world.soldier.actor?.data.source,modelNativeMotion:world.soldier.nativeMotion,modelNativeBones:world.soldier.nativeSkeleton?.bones.length,modelShadowUnit:world.soldier.shadowUnit?{profile:world.soldier.shadowUnit.profile,helmet:world.soldier.shadowUnit.armour.helmet.name,cape:world.soldier.shadowUnit.cape.anchor.visible,tabard:world.soldier.shadowUnit.tabard.anchor.visible}:null,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:musicBed.enabled,musicPlaying:musicBed.playing,musicFailed:musicBed.failed,musicSection:musicBed.section,musicVoices:musicBed.stats.voices,audioState:audioContext?.state||'idle',weaponFeedback:{...weaponFeel.state},previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
+  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ version:GAME_VERSION,phase, view, frames,recovering,recoveryAttempts,graphics:world.graphics, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,aiming,aimBlend,fireZoomBlend,footsteps:surfaceSteps?.stats(),walkingSurface:walkingSurface(game),cameraFov:world.camera.fov,laserEffects:world.laserStats?.(),city:world.cityStats?.(),vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelSource:world.soldier.actor?.data.source,modelNativeMotion:world.soldier.nativeMotion,modelNativeBones:world.soldier.nativeSkeleton?.bones.length,modelShadowUnit:world.soldier.shadowUnit?{profile:world.soldier.shadowUnit.profile,helmet:world.soldier.shadowUnit.armour.helmet.name,cape:world.soldier.shadowUnit.cape.anchor.visible,tabard:world.soldier.shadowUnit.tabard.anchor.visible}:null,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:musicBed.enabled,musicPlaying:musicBed.playing,musicFailed:musicBed.failed,musicSection:musicBed.section,musicVoices:musicBed.stats.voices,audioState:audioContext?.state||'idle',weaponFeedback:{...weaponFeel.state},previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
     selectedMode,guidance:game.guidance?.()||null,weaponModels:{...world.fpsGun.userData.kenneyAssets},training:game.mode==='training'?game.snapshot().training:null,rangeTargets:world.rangeArt.targetCount,campaignArt:world.campaignArt.stats(),inputs: { move: { ...move }, look: { ...look }, firing: firingPointers.size > 0 || keys.has('Space') }, drawCalls: world.renderer.info.render.calls, ...game.snapshot(),equipment:equipmentForCharacter(game.wave,character.id) }) });
   bindCanvas();world.renderer.setAnimationLoop(frame);
   $('launch-status').textContent=`V. ${GAME_VERSION} · prêt à lancer`;

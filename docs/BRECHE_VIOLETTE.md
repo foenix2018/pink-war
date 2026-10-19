@@ -34,3 +34,14 @@ Les grands conteneurs et plafonds participent à la physique verticale de la cam
 Réduction de l'aspect cubique : 257 pièces chanfreinées, générateurs cylindriques, roues et moyeux, brides, colliers, câbles courbes, cadres obliques, plaques superposées, rochers plus lisses. Les arêtes sont calculées en mètres avant fusion des maillages ; les UV suivent les dimensions. Les décors reçoivent et projettent désormais les ombres lorsque le profil graphique les active — ils ne le faisaient pas auparavant. Dix lots statiques et environ 69 000 triangles avant les personnages ; ce n'est pas une certification de rendu AAA.
 
 Tests : collision des piliers/montants/fourches, atterrissage sur un conteneur de 3 m, arrêt contre le plafond du tunnel, parcours physique complet de la passerelle depuis le hangar jusqu'à la cour. Conservation des tests de dégâts, stabilisateurs et portails. Le rendu visuel et les performances sur appareils physiques restent à vérifier, faute de navigateur de QA et de casque disponibles.
+
+
+## Révision 3.52 — visée écran et pas de surface
+
+PC et tactile : assistance de direction des projectiles dans un cône étroit de 1,4° à la souris et 2,2° au tactile, correction plafonnée à 0,28° / 0,45° par tir. Elle conserve un tir déjà aligné, exige une ligne de vue depuis la caméra et la bouche de l'arme, et ne s'applique pas au casque ou au sabre. Pas de déplacement automatique de caméra ni de verrouillage de tête.
+
+Tir écran : réduction progressive du FOV de 4,5 % au maximum et rapprochement de l'arme de 1,8 cm. Le supplément diminue pendant une visée optique et s'efface au relâchement/rechargement. Les six armes utilisent la même transition ; les vues XR et stéréoscopiques restent inchangées.
+
+Pas : neuf courts échantillons mono PCM 22,05 kHz (environ 71 Ko en tout), trois variantes pour métal, béton et adaptation tarmac. Crédits complets et licences dans dist/audio/footsteps/PROVENANCE.md, accessibles depuis l'aide. Les fichiers proviennent de Footsteps on different surfaces (congusbongus), avec enregistrements Eelke, swuing et Ali_6868. La variante tarmac est un mix adapté de béton et de gravier. Les sons suivent la distance réellement parcourue, le contact au sol et la surface sous les pieds, avec variation de hauteur et de volume ; pause, mute et saut les arrêtent. Le niveau distingue désormais aussi visuellement ses sols béton, tarmac et métal. Chargement audio en arrière-plan et secours synthétique en cas d'échec.
+
+Tests ciblés : limites de correction, cible masquée depuis la caméra ou le canon, tir déjà aligné, FOV, identification des sols et passerelles, décodage/lecture/arrêt des neuf fichiers et absence de pas à l'arrêt/en saut. Pas d'essai auditif sur iPhone physique ou de validation navigateur disponible.
