@@ -7,7 +7,8 @@ export function graphicsProfile(environment={},quality='auto',forceWebGL=false){
   const phone=!headset&&(ios||/Android.*Mobile/i.test(ua));
   const compatible=environment.rendererHint==='webgl';
   return {ios,phone,compatible,preferWebGL:forceWebGL||ios||compatible||!environment.gpu,
-    antialias:!phone&&!compatible,shadows:!phone&&!compatible&&quality!=='low',
+    antialias:!phone&&!compatible,shadows:!compatible&&quality!=='low',
+    shadowMapSize:phone||headset?512:quality==='high'?2048:1024,shadowSpan:phone||headset?32:48,
     pixelRatioCap:phone?(quality==='high'?1.15:1):compatible?1:quality==='low'?1:quality==='high'?2:1.8,
     maxPixels:phone?750000:compatible?1100000:Infinity,
     artQuality:phone||compatible?'low':quality,skyWidth:phone||compatible||quality==='low'?1024:2048};

@@ -1,3 +1,4 @@
+import {createContactShadows,contactShadowPose} from './contact-shadows.js';
 import * as T from './vendor/three.webgpu.min.js';
 import { WebGLRenderer } from './vendor/three.module.min.js';
 import { PORTAL, COVER_WALLS, CATWALK, WEAPONS } from './game-logic.js';
@@ -15,7 +16,7 @@ import { createLaserFX } from './laser-fx.js';
 import { createCombatFX } from './combat-fx.js';
 import { createShootingRangeArt } from './shooting-range-art.js';
 import { createMoon } from './moon.js';
-import { createCampaignArt } from './campaign-art.js';
+import { createCampaignArt } from './breach-art.js';
 import { graphicsProfile,renderPixelRatio,createCompatibleRenderer,warmRenderer } from './renderer-policy.js';
 
 const v = (x, y, z) => new T.Vector3(x, y, z);
@@ -91,10 +92,12 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   const moon = createMoon(scene, glow);
   const hemisphere=new T.HemisphereLight(0xa9c9e5,0x344058,1.32);scene.add(hemisphere);
   const sun = new T.DirectionalLight(0xb5d7ff, 2.25); sun.position.set(-30, 50, 20); sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = -40; sun.shadow.camera.right = 40; sun.shadow.camera.top = 40; sun.shadow.camera.bottom = -40; sun.shadow.camera.near = 1; sun.shadow.camera.far = 135; sun.shadow.bias = -.0015; sun.shadow.normalBias = .045; scene.add(sun);scene.add(sun.target);
+  sun.shadow.mapSize.set(profile.shadowMapSize, profile.shadowMapSize); sun.shadow.camera.left = -40; sun.shadow.camera.right = 40; sun.shadow.camera.top = 40; sun.shadow.camera.bottom = -40; sun.shadow.camera.near = 1; sun.shadow.camera.far = 135; sun.shadow.bias = -.00035; sun.shadow.normalBias = .035; sun.shadow.radius=2; scene.add(sun);scene.add(sun.target);
+  let shadowSettings=profile;
+  const actorShadows=createContactShadows(T,scene,96);
   function trackShadows(x,z,elevation=0){
-    // The 80 m shadow window follows play, retaining close detail across all districts.
-    const texel=80/1024,sx=Math.round(x/texel)*texel,sz=Math.round(z/texel)*texel;
+    // Snap the local shadow window to texels to reduce crawling while walking.
+    const texel=shadowSettings.shadowSpan/shadowSettings.shadowMapSize,sx=Math.round(x/texel)*texel,sz=Math.round(z/texel)*texel;
     sun.position.set(sx-30,elevation+50,sz+20);sun.target.position.set(sx,elevation,sz);
   }
   const rim = new T.DirectionalLight(0x9abfff, 1.08); rim.position.set(30, 12, -35); scene.add(rim);
@@ -316,7 +319,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   const breachHaloGeometry=new T.TorusGeometry(2.83,.045,5,40);
   const breachSurfaceGeometry=new T.PlaneGeometry(4.6,4.6);
   function buildSecondaryPortal(site) {
-    const group=new T.Group();group.position.set(site.x,0,site.z);group.rotation.y=site.yaw||0;
+    const group=new T.Group();group.position.set(site.x,site.y||0,site.z);group.rotation.y=site.yaw||0;
     scene.add(group);
     const gate=new T.Group();gate.position.y=2.9;group.add(gate);
     const ring=mesh(breachRingGeometry,mats.steel,gate,[0,0,0],[1,1,1],false);
@@ -370,13 +373,15 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     const ring=mesh(pickupRing,core,g,[0,-.5,0],[1,1,1],false);ring.rotation.x=-Math.PI/2;ring.userData.ground=true;
     return g;
   }
-  function resetDynamic(){for(const m of pickupMeshes.values())scene.remove(m);pickupMeshes.clear();rangeArt.update(null);combatFX.reset();laserFX.reset();traversal.update(0);for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();portal.visible=!rangeActive;for(const death of deaths){scene.remove(death.fx);death.mat.dispose();death.haloMat.dispose();}deaths.length=0;for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
+  function resetDynamic(){actorShadows.clear();for(const m of pickupMeshes.values())scene.remove(m);pickupMeshes.clear();rangeArt.update(null);combatFX.reset();laserFX.reset();traversal.update(0);for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();portal.visible=!rangeActive;for(const death of deaths){scene.remove(death.fx);death.mat.dispose();death.haloMat.dispose();}deaths.length=0;for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
   function sync(sim,time,dt){
     if(!campaignActive)city.fence?.update({...sim.player,y:(sim.player.elevation||0)+(sim.player.crouched?1.05:1.65)},.65,1.2);traversal.update(sim.time);campaignArt.updateLift(sim.time);combatFX.update(dt,camera);laserFX.update(sim.bullets,dt);trackShadows(sim.player.x,sim.player.z,sim.player.elevation||0);
     setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));updateStations(sim,time);syncSecondaryPortals(sim,sim.time);rangeArt.update(rangeActive?sim:null);
     for(const event of sim.events||[])if(event.type==='kill')beginDeath(event.id,time);
     updateDeaths(time);
     soldier.root.scale.setScalar(soldier.heightScale);soldier.root.position.set(sim.player.x,sim.player.elevation||0,sim.player.z);soldier.root.rotation.y=sim.player.yaw;
+    const contacts=[...sim.enemies,sim.player].map(e=>{const p=contactShadowPose(e,(...args)=>sim.surfaceHeight(...args),sim.time);return {...p,w:(e.elite?2:1.25)*p.scale,d:(e.elite?1.6:.95)*p.scale};});
+    actorShadows.update(contacts);
     const present=new Set();for(const e of sim.enemies){present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite,e.ranged,e.form);m.rotation.order='YXZ';monsters.set(e.id,m);scene.add(m);}m.position.set(e.x,e.elevation||0,e.z);m.rotation.y=e.yaw??(Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI);m.userData.animate(time,e.phase,e.limpUntil<=time,e,sim.time);
       // A hit rocks the body back, away from the shooter, for a fifth of a second (harder on a head shot).
       const sinceHit=sim.time-(e.hitAt??-9);m.rotation.x=sinceHit<.22?Math.sin(sinceHit/.22*Math.PI)*(e.hitZone==='head'?.2:.11):0;}
@@ -414,12 +419,15 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     camera.lookAt(0,portrait?1.45:2.18,7);
     camera.setViewOffset(innerWidth,innerHeight,portrait?0:-innerWidth*.22,portrait?innerHeight*.24:0,innerWidth,innerHeight);camera.updateProjectionMatrix();
   }
-  function setInspection(enabled){combatFX.setVisible?.(!enabled);for(const m of monsters.values())m.visible=!enabled;for(const m of bulletMeshes.values())m.visible=!enabled;for(const pool of sparkPools)pool.visible=!enabled&&pool.count>0;}
+  function setInspection(enabled){actorShadows.mesh.visible=!enabled;combatFX.setVisible?.(!enabled);for(const m of monsters.values())m.visible=!enabled;for(const m of bulletMeshes.values())m.visible=!enabled;for(const pool of sparkPools)pool.visible=!enabled&&pool.count>0;}
   function resize(nextQuality=quality){
     quality=nextQuality;const current=graphicsProfile(deviceEnvironment,quality,forceWebGL);
     const ratio=renderPixelRatio(current,devicePixelRatio,innerWidth,innerHeight);
     renderer.setPixelRatio(ratio);renderer.setSize(innerWidth,innerHeight,false);
     camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.shadowMap.enabled=current.shadows;
+    shadowSettings=current;
+    if(sun.shadow.mapSize.x!==current.shadowMapSize){sun.shadow.map?.dispose();sun.shadow.map=null;sun.shadow.mapSize.set(current.shadowMapSize,current.shadowMapSize);}
+    const half=current.shadowSpan/2;Object.assign(sun.shadow.camera,{left:-half,right:half,top:half,bottom:-half});sun.shadow.camera.updateProjectionMatrix();sun.shadow.needsUpdate=true;
   }
   resize();
   const stereo = new T.StereoCamera(); stereo.aspect = .5; stereo.eyeSep = .064;
@@ -436,7 +444,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     recovery = (async () => {
       const nextCanvas = renderer.domElement.cloneNode(false);
       nextCanvas.removeAttribute('data-controls-bound');released=true;
-      canvas.removeEventListener('webglcontextlost',contextLost);renderer.setAnimationLoop(null);
+      canvas.removeEventListener('webglcontextlost',contextLost);renderer.setAnimationLoop(null);actorShadows.dispose();
       renderer.dispose();renderer.forceContextLoss?.();
       // Fresh resources avoid reusing texture state from a destroyed GPU device.
       const next = await createScene(nextCanvas, nextQuality, true,character.id);
@@ -460,10 +468,11 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     if(campaignSky!==campaignActive){campaignSky=campaignActive;const c=skyTexture.image;paintSky(c.getContext('2d'),c.width,c.height);skyTexture.needsUpdate=true;}
     obstacles.splice(0,obstacles.length,...(campaignActive?campaignArt.obstacles:arenaObstacles));
     arenaRoot.visible=!campaignActive&&!rangeActive;
-    scene.fog.color.setHex(campaignActive?0x847572:character.world.fog);
+    scene.fog.color.setHex(campaignActive?0x171329:character.world.fog);
     scene.fog.density=campaignActive?.0058:.008;
-    hemisphere.color.setHex(campaignActive?0xc4ceca:0xa9c9e5);hemisphere.groundColor.setHex(campaignActive?0x414833:0x344058);
-    sun.color.setHex(campaignActive?0xffdeb7:0xb5d7ff);rim.color.setHex(campaignActive?0xa6bbb7:0x9abfff);
+    hemisphere.intensity=campaignActive?.72:1.12;sun.intensity=campaignActive?1.8:2.25;rim.intensity=campaignActive?.48:.82;
+    hemisphere.color.setHex(campaignActive?0x9eafff:0xa9c9e5);hemisphere.groundColor.setHex(campaignActive?0x414833:0x344058);
+    sun.color.setHex(campaignActive?0x9ebaff:0xb5d7ff);rim.color.setHex(campaignActive?0xa6bbb7:0x9abfff);
     campaignArt.setVisible(campaignActive&&!rangeActive);if(!campaignActive&&!rangeActive)city.enablePbr();
     if(!rangeActive){portal.visible=true;dust.visible=true;}
   }
@@ -478,7 +487,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     campaignArt.setVisible(campaignActive&&!rangeActive);
     arenaRoot.visible=!campaignActive&&!rangeActive;
     obstacles.splice(0,obstacles.length,...(rangeActive?rangeObstacles:campaignActive?campaignArt.obstacles:arenaObstacles));
-    scene.fog.color.setHex(rangeActive?0x26333f:campaignActive?0x847572:character.world.fog);
+    scene.fog.color.setHex(rangeActive?0x26333f:campaignActive?0x171329:character.world.fog);
     scene.fog.density=rangeActive?.0046:campaignActive?.0058:.008;
     if(rangeActive){hemisphere.color.setHex(0xcad8e1);sun.color.setHex(0xd2e6ff);}
   }

@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {BreachLevel1} from '../dist/breach-level1.js';
+import {breachSolids} from '../dist/breach-layout.js';
+import {moveInArena} from '../dist/game-logic.js';
+const game=()=>{const g=new BreachLevel1(breachSolids(),()=>.5);g.state='playing';g.invulnerable=999;return g;};
+test('tall container supports a landing instead of letting the player fall inside it',()=>{const g=game();Object.assign(g.player,{x:-15,z:51,elevation:3.2,verticalSpeed:-6,grounded:false});g.settle(g.player,.05,true);assert.equal(g.player.elevation,3);assert.equal(g.player.grounded,true);});
+test('tunnel roof stops upward motion at its underside',()=>{const g=game();Object.assign(g.player,{x:-13,z:17,elevation:1.5,verticalSpeed:6,grounded:false});g.settle(g.player,.05,true);assert.ok(g.player.elevation+1.8<=3.5001);assert.equal(g.player.verticalSpeed,0);});
+test('reactor posts, exit frame and forklift forks stop horizontal traversal',()=>{const solids=breachSolids();for(const b of solids.filter(b=>b.kind==='reactor-post'||b.kind==='detail')){const entity={x:b.x+b.hx+1,z:b.z,elevation:b.y};moveInArena(entity,-3,0,.55,[b]);assert.ok(entity.x>=b.x+b.hx+.55-.001,JSON.stringify(b));}});
+test('the whole upper route is walkable through both bulkheads and down to the courtyard',()=>{const g=game();Object.assign(g.player,{x:15,z:40,elevation:0,grounded:true});let max=0;for(let n=0;n<220;n++){moveInArena(g.player,0,-.3,.55,g.obstacles);g.settle(g.player,.05,true);max=Math.max(max,g.player.elevation);if(g.player.z<-24)break;}assert.ok(g.player.z<-24,JSON.stringify(g.player));assert.ok(max>=3.99);assert.ok(g.player.elevation<.25,JSON.stringify(g.player));});

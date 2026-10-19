@@ -1,0 +1,25 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as T from '../dist/vendor/three.module.min.js';
+import {createCampaignArt} from '../dist/breach-art.js';
+import {BreachLevel1} from '../dist/breach-level1.js';
+import {BREACH} from '../dist/breach-layout.js';
+import {BREACH_DRESSING,BREACH_LOGS} from '../dist/breach-dressing-layout.js';
+import {moveInArena} from '../dist/game-logic.js';
+const gradient={addColorStop(){}};
+const context=new Proxy({createRadialGradient:()=>gradient},{get:(o,k)=>o[k]||(()=>{}),set:(o,k,v)=>(o[k]=v,true)});
+globalThis.document={createElement:()=>({getContext:()=>context})};
+const scene=new T.Scene(),art=createCampaignArt(T,scene);art.setVisible(true);
+const make=()=>{const g=new BreachLevel1(art.obstacles,()=>.5);g.state='playing';g.invulnerable=999;return g;};
+const visit=(g,p)=>Object.assign(g.player,{x:p.x,z:p.z,elevation:p.y||0});
+const clear=g=>{g.enemies=[];while(g.pendingSpawns.length){g.time=g.pendingSpawns[0].at+.1;g.emergeReinforcements();assert.equal(g.enemies.length,1);g.enemies=[];}};
+test.after(()=>{art.dispose();assert.ok(!scene.children.includes(art.root));});
+test('each sector has equipment and finite complete geometry',()=>{assert.equal(new Set(BREACH_DRESSING.map(p=>p.zone)).size,6);const stats=art.stats();assert.ok(stats.dressing.computers>=12);assert.ok(stats.dressing.cableRuns>=20);art.root.traverse(o=>{if(o.geometry)for(const a of Object.values(o.geometry.attributes))assert.ok(Array.from(a.array).every(Number.isFinite));});});
+test('all mission stages and interactions remain possible with the full dressed map',()=>{const g=make();visit(g,{x:0,z:59});g.step(.01);clear(g);g.step(.01);clear(g);visit(g,{x:0,z:-3});g.step(.01);clear(g);for(const p of BREACH.relays){visit(g,p);assert.ok(g.interact());}assert.equal(g.stage,'reactor');g.time=g.pendingSpawns[0].at+.1;g.emergeReinforcements();assert.ok(g.enemies[0].guardian);for(const p of BREACH.stabilizers){visit(g,p);assert.ok(g.interact());}g.enemies=[];g.step(.01);assert.equal(g.stage,'extraction');visit(g,BREACH.exit);assert.ok(g.interact());assert.equal(g.state,'won');});
+test('computer logs can be consulted without advancing or resetting mission state',()=>{for(const log of BREACH_LOGS){const g=make();visit(g,log);assert.equal(g.getInteraction()?.id,'log-'+log.id);assert.ok(g.interact());assert.equal(g.stage,'arrival');assert.ok(g.drainEvents().some(e=>e.type==='campaign'&&e.title===log.title));}});
+test('the high route stays open after installing the equipment and roof structures',()=>{const g=make();visit(g,{x:15,z:40});for(let i=0;i<220&&g.player.z>=-24;i++){moveInArena(g.player,0,-.3,.55,g.obstacles);g.settle(g.player,.05,true);}assert.ok(g.player.z<-24);assert.ok(g.player.elevation<.25);});
+test('screen and effects updates are bounded, mission aware, and disposal releases the root',()=>{const g=make();for(const stage of ['arrival','courtyard','reactor','extraction']){g.stage=stage;g.time+=1;art.update(g,g.time);}assert.ok(art.stats().dressing.steamSprites<=12);assert.ok(art.stats().dressing.sparkParticles<=36);});
+test('review camera positions stand outside the solid equipment and walls',()=>{for(const [x,z] of [[0,78],[-21,60],[-21,30],[0,-2],[-1,-30.5],[-17,-73.7]]){const collision=art.obstacles.find(b=>!b.walkableSurface&&(b.y||0)<1.8&&Math.abs(x-b.x)<b.hx+.55&&Math.abs(z-b.z)<b.hz+.55);assert.ok(!collision,JSON.stringify({x,z,collision}));}});
+test('extraction alarm is a bounded sound that does not restart while paused',async()=>{const {createAmbience}=await import('../dist/ambience.js');const {audioMock}=await import('./audio-mock.mjs');const {ctx,calls}=audioMock();const a=createAmbience(ctx);a.update(.1,{active:true,alarm:false});assert.equal(calls.starts,3);a.update(.1,{active:true,alarm:true});assert.equal(calls.starts,4);a.pause();for(let i=0;i<20;i++){ctx.tick(.1);a.update(.1,{active:false,alarm:true});}assert.equal(calls.starts,4);a.dispose();});
+
+test('equipment contacts survive static mesh merging as one instanced pool',()=>{const contacts=art.root.getObjectByName('Ombres de contact douces');assert.ok(contacts?.isInstancedMesh);assert.ok(contacts.count>=25);assert.equal(contacts.castShadow,false);});

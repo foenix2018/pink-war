@@ -5,7 +5,7 @@ import {compatibleLaunchURL,GAME_VERSION} from '../dist/launch-ui.js';
 
 test('iPhone and desktop-mode iPad choose WebGL even when WebGPU exists; desktop and Quest retain their route',()=>{
   const iphone=graphicsProfile({userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X)',gpu:{},maxTouchPoints:5},'high');
-  assert.equal(iphone.preferWebGL,true);assert.equal(iphone.antialias,false);assert.equal(iphone.shadows,false);assert.equal(iphone.artQuality,'low');
+  assert.equal(iphone.preferWebGL,true);assert.equal(iphone.antialias,false);assert.equal(iphone.shadows,true);assert.equal(iphone.artQuality,'low');
   assert.equal(iphone.skyWidth,1024);assert.equal(iphone.pixelRatioCap,1.15);
   assert.equal(graphicsProfile({userAgent:'Mozilla/5.0 Macintosh',platform:'MacIntel',maxTouchPoints:5,gpu:{}}).preferWebGL,true);
   const desktop=graphicsProfile({userAgent:'Mozilla/5.0 Macintosh',platform:'MacIntel',maxTouchPoints:0,gpu:{}});

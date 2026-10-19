@@ -1,0 +1,56 @@
+[
+  {
+    "file": "metal-0.wav",
+    "duration": 0.23,
+    "bytes": 10206,
+    "sha256": "56bc780908957bf00c4243bfac7e2bd9355732beccc2262e20c5480f8127bf18"
+  },
+  {
+    "file": "metal-1.wav",
+    "duration": 0.346,
+    "bytes": 15284,
+    "sha256": "19e805a9cf6e8c23ce78d5d1f2bfa585d1128db99c9b4340e878809b9e4fb736"
+  },
+  {
+    "file": "metal-2.wav",
+    "duration": 0.227,
+    "bytes": 10052,
+    "sha256": "e63f92d2072638c6d2bd0d3091606be16a6dac53226a615d0e2ded1dd1894b64"
+  },
+  {
+    "file": "concrete-0.wav",
+    "duration": 0.096,
+    "bytes": 4280,
+    "sha256": "6848e9ca08024ae1fbb5a37aebca129bbe9116643d198dd6d36a6d5c1c41a07d"
+  },
+  {
+    "file": "concrete-1.wav",
+    "duration": 0.094,
+    "bytes": 4196,
+    "sha256": "5385896f8ee80d2d0a2a026034ac394b6ff2e1a546d7620104731034c91d9627"
+  },
+  {
+    "file": "concrete-2.wav",
+    "duration": 0.099,
+    "bytes": 4398,
+    "sha256": "b67a3f57e989f1187fca967747f61223904dc55d117a61362dc76f4c5d7816e1"
+  },
+  {
+    "file": "tarmac-0.wav",
+    "duration": 0.186,
+    "bytes": 8232,
+    "sha256": "453fe1eeb1f244943111bc11cd56d789cbe9f21047f215f306a3a16fb28e4dff"
+  },
+  {
+    "file": "tarmac-1.wav",
+    "duration": 0.118,
+    "bytes": 5226,
+    "sha256": "51066668ee919acd069c6a33c9157c0157b103b09409bcd163506ccb531c501e"
+  },
+  {
+    "file": "tarmac-2.wav",
+    "duration": 0.206,
+    "bytes": 9120,
+    "sha256": "389214f43dec7da219ae6b0efa8a9f8ce25594d18cef3b5c9e35a6588c105d81"
+  }
+]
