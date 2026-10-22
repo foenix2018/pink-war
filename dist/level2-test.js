@@ -3,7 +3,7 @@
 // imported unchanged from the production game. The cyberpunk world is new.
 import * as T from './vendor/three.webgpu.min.js';
 import {WebGLRenderer} from './vendor/three.module.min.js';
-import {ArenaGame,WEAPONS,clamp,segmentBox} from './game-logic.js';
+import {ArenaGame,WEAPONS,clamp,segmentBox,traceEnemyHit} from './game-logic.js';
 import {createPinkWarsInput,createPinkWarsTouch} from './level2-input.js';
 import {createWeaponFeel} from './weapon-feel.js';
 import {playLaserShot,playWeaponAction,playLaserImpact,setLaserAudioEnabled} from './laser-sound.js';
@@ -517,16 +517,35 @@ function gameTick(dt){
  game.step(dt,{x,z,yaw,moveYaw:yaw,sprint,jump,crouchToggle});
  weaponFeel.update(dt);
  snapCamera();
- const direction=new T.Vector3();camera.getWorldDirection(direction);
- const aim={origin:{x:camera.position.x,y:camera.position.y-.12,z:camera.position.z},
-  direction:{x:direction.x,y:direction.y,z:direction.z}};
  const firing=heldFire||touch.fire||controls.fire;
+ // Same two-stage raycast as Pink Wars' game.js: center reticle selects a
+ // visible target; projectile origin is the ACTUAL held weapon muzzle.
+ updateOriginalSoldier(dt,Math.hypot(x,z)>.1,sprint,firing);
+ const forward=new T.Vector3();camera.getWorldDirection(forward);
+ const far=camera.position.clone().addScaledVector(forward,160);
+ let near=1,target=far;
+ for(const box of collisions){
+   const hit=segmentBox(camera.position,far,box);
+   if(hit!==null&&hit<near){near=hit;target=camera.position.clone().lerp(far,hit);}
+ }
+ for(const e of game.enemies){
+   const hit=traceEnemyHit(camera.position,far,e);
+   if(hit&&hit.t<near){near=hit.t;target=camera.position.clone().lerp(far,hit.t);}
+ }
+ const gun=view==='third'?playerRig?.model?.gun:weapon;
+ const muzzle=gun?.userData?.flash;
+ const origin=new T.Vector3();
+ if(muzzle){
+  try{muzzle.updateWorldMatrix(true,false);muzzle.getWorldPosition(origin);}
+  catch{origin.copy(camera.position).addScaledVector(forward,.23);}
+ }else origin.copy(camera.position).addScaledVector(forward,.23);
+ const shotDirection=target.clone().sub(origin).normalize();
+ const aim={origin,direction:shotDirection};
  if(game.weapon.semiAuto&&firePressQueued)game.triggerHeld=false;
  firePressQueued=false;
  if(firing||game.charge>0)game.trigger(firing,dt,aim.origin,aim.direction);
  else if(game.weapon.melee)game.trigger(false,dt,aim.origin,aim.direction);
  else{game.triggerHeld=false;game.semiPending=false;}
- updateOriginalSoldier(dt,Math.hypot(x,z)>.1,sprint,firing);
  updateEnemies(dt);
  const events=game.drainEvents();
  for(const e of events){
