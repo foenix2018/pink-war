@@ -720,7 +720,7 @@ function resume(){
   game.enemies=[];game.bullets=[];game.time=0;game.kills=0;game.nextWave=Infinity;game.toSpawn=0;}
  for(const o of enemyMeshes.values())scene.remove(o);enemyMeshes.clear();
  for(const o of shotMeshes.values())scene.remove(o);shotMeshes.clear();
- yaw=0;pitch=0;stage=0;heldFire=false;mouseAim=false;aimBlend=0;jumpQueued=false;crouchQueued=false;firePressQueued=false;keys.clear();pinkControls.reset();touchControls?.reset();weaponFeel.reset();
+ yaw=0;pitch=0;stage=0;lastMinimalHudStage=-1;heldFire=false;mouseAim=false;aimBlend=0;jumpQueued=false;crouchQueued=false;firePressQueued=false;keys.clear();pinkControls.reset();touchControls?.reset();weaponFeel.reset();
  $('name').textContent='PINK WARS · '+characterId.toUpperCase()+' · M02';
  if(!touchControls?.root)canvas.requestPointerLock?.().catch?.(()=>{});
 }
