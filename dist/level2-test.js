@@ -46,10 +46,15 @@ function solid(x,y,z,w,h,d,m,collide=true,shadow=true){
  if(collide)collisions.push({x,z,hx:w/2,hz:d/2,y:y-h/2,height:h,surface:m===materials.iron?'metal':'concrete'});
  return o;
 }
+const beamGeometryCache=new Map();
 function beam(a,b,r=.04,m=materials.iron,radial=6){
  const p=new T.Vector3(...a),q=new T.Vector3(...b),d=new T.Vector3().subVectors(q,p);
- const o=new T.Mesh(new T.CylinderGeometry(r,r,d.length(),radial),m);
- o.position.copy(p).add(q).multiplyScalar(.5);o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),d.normalize());root.add(o);return o;
+ const key=r+':'+radial;
+ if(!beamGeometryCache.has(key))beamGeometryCache.set(key,new T.CylinderGeometry(r,r,1,radial));
+ const o=new T.Mesh(beamGeometryCache.get(key),m);
+ const length=d.length();o.position.copy(p).add(q).multiplyScalar(.5);
+ o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),d.normalize());o.scale.y=length;
+ o.userData.staticBeam=true;root.add(o);return o;
 }
 function plate(x,y,z,w,h,m,rotate=0){const o=new T.Mesh(plane,m);o.position.set(x,y,z);o.scale.set(w,h,1);o.rotation.y=rotate;root.add(o);return o;}
 function walkway(x,z,w,d,height,id='deck'){
@@ -287,14 +292,14 @@ function weather(){
 function optimizeStaticBoxes(){
  const groups=new Map();
  for(const mesh of [...root.children]){
-  if(!mesh.userData.staticBox||mesh.userData.isCollider||!mesh.visible)continue;
-  const key=mesh.material.uuid+':'+String(mesh.castShadow);
+  if(!(mesh.userData.staticBox||mesh.userData.staticBeam)||mesh.userData.isCollider||!mesh.visible)continue;
+  const key=mesh.geometry.uuid+':'+mesh.material.uuid+':'+String(mesh.castShadow);
   if(!groups.has(key))groups.set(key,[]);
   groups.get(key).push(mesh);
  }
  for(const items of groups.values()){
   if(items.length<5)continue;
-  const inst=new T.InstancedMesh(cube,items[0].material,items.length);
+  const inst=new T.InstancedMesh(items[0].geometry,items[0].material,items.length);
   inst.name='M02 / optimized structural instances';
   inst.castShadow=items[0].castShadow;
   inst.receiveShadow=true;
