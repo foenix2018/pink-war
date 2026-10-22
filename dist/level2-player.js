@@ -35,7 +35,7 @@ export async function installPinkWarsSoldier(T,scene,characterId,materials){
  model.root.scale.setScalar(model.heightScale);
  model.root.visible=false;
  scene.add(model.root);
- return {model,character,kit,dispose(){
+ return {model,character,kit,createGun,dispose(){
    scene.remove(model.root);model.dispose();logo.dispose();
  }};
 }
