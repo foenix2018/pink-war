@@ -6,6 +6,7 @@ import {WebGLRenderer} from './vendor/three.module.min.js';
 import {ArenaGame,WEAPONS,clamp,segmentBox} from './game-logic.js';
 import {createPinkWarsInput,createPinkWarsTouch} from './level2-input.js';
 import {createWeaponFeel} from './weapon-feel.js';
+import {playLaserShot,playWeaponAction,playLaserImpact,setLaserAudioEnabled} from './laser-sound.js';
 import {aimSensitivity,magnifiedFov,flatSightPose} from './optics.js';
 import {OPTICS} from './weapons.js';
 import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './renderer-policy.js';
@@ -28,8 +29,19 @@ let canvas=main,renderer,scene,camera,game,weapon,clock=0,running=false,started=
 let yaw=0,pitch=0,weaponKick=0,stage=0,reported=-1;
 let noticeUntil=0,signal=0,rain,enemyFactory,root,architecture,pbrController,atmosphere;
 let view='fps',aimBlend=0,mouseAim=false,playerRig=null,touchControls=null,paused=false;
-let jumpQueued=false,crouchQueued=false,firePressQueued=false,weaponReady=false;
+let jumpQueued=false,crouchQueued=false,firePressQueued=false,weaponReady=false,audioCtx=null,hitUntil=0;
 const weaponFeel=createWeaponFeel(),pinkControls=createPinkWarsInput();
+let enableAudio=true;try{enableAudio=JSON.parse(localStorage.getItem('rosee-settings')||'{}').sound!==false;}catch{}
+function audioReady(){
+ if(!enableAudio||audioCtx)return;
+ try{
+  const Context=window.AudioContext||window.webkitAudioContext;
+  if(!Context)return;audioCtx=new Context();
+  audioCtx.resume?.().catch?.(()=>{});
+  setLaserAudioEnabled(audioCtx,true);
+ }catch(error){console.warn('M02 audio fallback',error);}
+}
+
 const keys=new Set(),enemyMeshes=new Map(),shotMeshes=new Map();
 const collisions=[],floors=[],beacons=[],lightSources=[],decals=[];
 const field={minX:-42,maxX:42,minZ:-81,maxZ:79};
@@ -518,8 +530,17 @@ function gameTick(dt){
  updateEnemies(dt);
  const events=game.drainEvents();
  for(const e of events){
-  if(e.type==='shot'){weaponFeel.fire(game.weapon.id,e.power||1,aimBlend>.5);weaponKick=Math.min(.25,weaponKick+.085);}
+  if(e.type==='shot'){
+    weaponFeel.fire(e.weapon||game.weapon.id,e.power||1,aimBlend>.5);
+    weaponKick=Math.min(.25,weaponKick+.085);
+    if(enableAudio&&audioCtx)try{playLaserShot(audioCtx,e.weapon||game.weapon.id,e.power||1);}catch{}
+   }
   if(e.type==='damage'){$('damage').style.boxShadow='inset 0 0 105px #c52c5e77';}
+  if(e.type==='hit')hitUntil=clock+.12;
+  if(e.type==='weapon')weaponFeel.reset();
+  if(e.type==='reload'&&audioCtx)try{playWeaponAction(audioCtx,game.weapon.id,'reload-out');}catch{}
+  if(e.type==='reloaded'&&audioCtx)try{playWeaponAction(audioCtx,game.weapon.id,'reload-ready');}catch{}
+  if(e.type==='impact'&&audioCtx)try{playLaserImpact(audioCtx,{surface:e.surface,distance:Math.hypot(e.x-game.player.x,e.z-game.player.z),power:e.power});}catch{}
   if(e.type==='kill'){notice('CIBLE NEUTRALISÉE');}
   if(e.type==='over'){running=false;shade.style.display='grid';$('start').textContent='RECOMMENCER LE TEST →';$('status').textContent='Intervention interrompue — santé épuisée';document.exitPointerLock?.();}
  }
@@ -547,6 +568,7 @@ function updateHUD(){
  const near=Math.hypot(game.player.x-o.x,game.player.z-o.z)<3.3&&Math.abs(game.player.elevation-o.y)<1.8;
  $('prompt').style.display=near?'block':'none';$('prompt').textContent='F / R3 : '+o.label;
  if(clock>noticeUntil)$('notice').style.display='none';
+ $('crosshair').style.filter=clock<hitUntil?'drop-shadow(0 0 7px #ffffff) brightness(3)':'';
 }
 function animation(t){
  requestAnimationFrame(animation);
@@ -625,7 +647,7 @@ async function boot(){
   if(prepared.initialFailure)console.warn('M02: WebGPU unavailable:',prepared.initialFailure);
   bootStep='prêt';hud.hidden=false;started=true;requestAnimationFrame(animation);
   touchControls=createPinkWarsTouch(canvas,{
-   onFire:down=>{heldFire=down;if(down)firePressQueued=true;},
+   onFire:down=>{if(down)audioReady();heldFire=down;if(down)firePressQueued=true;},
    onJump:()=>{jumpQueued=true;},
    onInteract:()=>interact(),
    onNext:()=>game.cycleWeapon(),
@@ -633,7 +655,7 @@ async function boot(){
    onCrouch:()=>{crouchQueued=true;},
    onView:()=>changeView(),
    onPause:()=>pauseMission(),
-   onAim:down=>{mouseAim=down;}
+   onAim:down=>{if(down)audioReady();mouseAim=down;}
   });
   resume();
   // Authentic production character is loaded after the first playable frame.
@@ -662,7 +684,7 @@ function resume(){
  $('name').textContent='PINK WARS · '+characterId.toUpperCase()+' · M02';
  if(!touchControls?.root)canvas.requestPointerLock?.().catch?.(()=>{});
 }
-startButton.addEventListener('click',()=>{if(started)resume();else{startButton.disabled=true;boot();}});
+startButton.addEventListener('click',()=>{audioReady();if(started)resume();else{startButton.disabled=true;boot();}});
 quality.addEventListener('change',()=>{
  // Rebuild once on setting change so PBR resolution, sprite counts, weather
  // and shadow budget are all updated consistently, not only pixel ratio.
