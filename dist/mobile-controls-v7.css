@@ -91,3 +91,63 @@
   body.playing .game-hud #reload-button { left: calc(50% - 72px); }
   body.playing .game-hud #crouch-button { left: calc(50% - 72px); }
 }
+
+/* Universal mobile contract for Mission 02 (identical positioning to M01).
+   Left movement, right half drag camera, center ADS, jump above, fire right. */
+@media (pointer:coarse) {
+  #m02-touch-controls {position:fixed;inset:0;z-index:5;display:block;pointer-events:none;touch-action:none}
+  #m02-touch-controls #m02-move {position:fixed;left:max(12px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));pointer-events:auto;touch-action:none}
+  #m02-touch-controls #m02-move .m02-stick-ring {width:112px;height:112px;border-radius:50%;background:#0717229c;border:1px solid #79cde7aa}
+  #m02-touch-controls #m02-move small {display:none}
+  #m02-touch-controls #m02-look {display:none!important}
+  #m02-touch-controls .m02-actions {position:fixed;inset:0;display:block;width:100%;max-width:none;min-width:0;margin:0;padding:0;pointer-events:none;touch-action:none;transform:none}
+  #m02-touch-controls .m02-actions button {
+    position:fixed;display:grid;place-items:center;pointer-events:auto;touch-action:none;
+    min-width:0;width:48px;height:48px;min-height:0;padding:0;border-radius:50%;
+    border:1px solid #88cde2aa;background:#071e2dd9;color:#d6f2f9;
+    font:800 10px system-ui;z-index:5
+  }
+  #m02-touch-controls .m02-actions button[data-m02="aim"] {
+    left:50%;right:auto;top:auto;bottom:max(21px,calc(env(safe-area-inset-bottom) + 8px));
+    width:56px;height:56px;transform:translateX(-50%);border-color:#8dcff0
+  }
+  #m02-touch-controls .m02-actions button[data-m02="jump"] {
+    left:50%;right:auto;top:auto;bottom:max(91px,calc(env(safe-area-inset-bottom) + 78px));
+    width:56px;height:56px;transform:translateX(-50%);border-color:#8dcff0
+  }
+  #m02-touch-controls .m02-actions button[data-m02="fire"] {
+    right:max(12px,env(safe-area-inset-right));left:auto;top:auto;
+    bottom:max(22px,calc(env(safe-area-inset-bottom) + 7px));
+    width:78px;height:78px;border-color:#ff9abf;background:rgba(175,38,92,.7);font-size:15px
+  }
+  #m02-touch-controls .m02-actions button[data-m02="interact"] {
+    right:max(24px,calc(env(safe-area-inset-right) + 13px));left:auto;top:auto;
+    bottom:max(111px,calc(env(safe-area-inset-bottom) + 97px));width:56px;height:56px
+  }
+  #m02-touch-controls .m02-actions button[data-m02="next"] {
+    right:max(90px,calc(env(safe-area-inset-right) + 83px));left:auto;top:auto;
+    bottom:max(21px,calc(env(safe-area-inset-bottom) + 8px));width:46px;height:46px
+  }
+  #m02-touch-controls .m02-actions button[data-m02="reload"] {
+    left:calc(50% - 88px);right:auto;top:auto;
+    bottom:max(25px,calc(env(safe-area-inset-bottom) + 10px));width:49px;height:49px
+  }
+  #m02-touch-controls .m02-actions button[data-m02="crouch"] {
+    left:calc(50% - 86px);right:auto;top:auto;
+    bottom:max(92px,calc(env(safe-area-inset-bottom) + 80px));width:46px;height:46px;font-size:9px
+  }
+  #m02-touch-controls .m02-actions button[data-m02="view"] {
+    right:max(92px,calc(env(safe-area-inset-right) + 80px));left:auto;top:auto;
+    bottom:max(111px,calc(env(safe-area-inset-bottom) + 97px));width:46px;height:46px
+  }
+  #m02-touch-controls .m02-actions button[data-m02="pause"] {
+    right:max(12px,env(safe-area-inset-right));left:auto;top:max(62px,calc(env(safe-area-inset-top) + 48px));
+    bottom:auto;width:40px;height:40px
+  }
+  #bottom {bottom:max(166px,calc(env(safe-area-inset-bottom) + 148px))}
+}
+@media(pointer:coarse) and (max-width:390px) {
+  #m02-touch-controls #m02-move .m02-stick-ring {width:100px;height:100px}
+  #m02-touch-controls .m02-actions button[data-m02="reload"],
+  #m02-touch-controls .m02-actions button[data-m02="crouch"] {left:calc(50% - 72px)}
+}
