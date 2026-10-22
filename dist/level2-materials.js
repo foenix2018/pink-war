@@ -5,10 +5,10 @@
 // If the network or CORS fails, procedural albedo keeps the mission playable.
 // Direct asset references: https://polyhaven.com/a/{asset}
 export const PBR_ASSETS=Object.freeze({
- asphalt: Object.freeze({asset:'asphalt_02',hex:0x717c86,repeat:[2,8],roughness:.79,metalness:.03}),
- concrete: Object.freeze({asset:'concrete',hex:0x8a97a7,repeat:[2,3],roughness:.86,metalness:.06}),
- blueMetal: Object.freeze({asset:'blue_metal_plate',hex:0xaebbc8,repeat:[2,2],roughness:.49,metalness:.64}),
- chequer: Object.freeze({asset:'metal_plate',hex:0x9badae,repeat:[2,3],roughness:.61,metalness:.77}),
+ asphalt: Object.freeze({asset:'asphalt_02',hex:0x717c86,repeat:[8,56],roughness:.79,metalness:.03}),
+ concrete: Object.freeze({asset:'concrete',hex:0x8a97a7,repeat:[4,8],roughness:.86,metalness:.06}),
+ blueMetal: Object.freeze({asset:'blue_metal_plate',hex:0xaebbc8,repeat:[3,4],roughness:.49,metalness:.64}),
+ chequer: Object.freeze({asset:'metal_plate',hex:0x9badae,repeat:[8,3],roughness:.61,metalness:.77}),
  rust: Object.freeze({asset:'rusty_metal_05',hex:0xa5b5b1,repeat:[2,2],roughness:.83,metalness:.46})
 });
 const src=name=>'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/'+name+'/'+name+'_diff_1k.jpg';
