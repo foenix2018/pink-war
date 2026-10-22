@@ -8,14 +8,13 @@ import {DesktopGamepadInput,desktopAxis} from './desktop-input.js';
 import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './renderer-policy.js';
 import {createEnemyFactory} from './enemies.js';
 import {buildGun} from './weapons.js';
-import {createCharacterKit} from './soldier.js';
 
 const $=id=>document.getElementById(id);
 const main=$('game'),shade=$('shade'),startButton=$('start'),status=$('status');
 const quality=$('quality'),hud=$('hud');
 const low=()=>quality.value==='low';
 const rng=(()=>{let s=220102;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};})();
-let canvas=main,renderer,scene,camera,game,weapon,clock=0,running=false,started=false,last=0,fpsTime=0,frames=0;
+let canvas=main,renderer,scene,camera,game,weapon,clock=0,running=false,started=false,last=0,fpsTime=0,frames=0,framePending=false,recovering=false;
 let yaw=0,pitch=0,weaponKick=0,stage=0,reported=-1;
 let noticeUntil=0,signal=0, rain,enemyFactory,root;
 const keys=new Set(),input=new DesktopGamepadInput(),enemyMeshes=new Map(),shotMeshes=new Map();
@@ -40,6 +39,7 @@ const materials={
 const cube=new T.BoxGeometry(1,1,1), plane=new T.PlaneGeometry(1,1);
 function solid(x,y,z,w,h,d,m,collide=true,shadow=true){
  const o=new T.Mesh(cube,m);o.position.set(x,y,z);o.scale.set(w,h,d);o.receiveShadow=shadow;o.castShadow=shadow&&!low();root.add(o);
+ o.userData.isCollider=collide;o.userData.staticBox=true;
  if(collide)collisions.push({x,z,hx:w/2,hz:d/2,y:y-h/2,height:h,surface:m===materials.iron?'metal':'concrete'});
  return o;
 }
@@ -281,6 +281,29 @@ function weather(){
  rain=new T.LineSegments(geo,new T.LineBasicMaterial({color:0x7cbdd6,transparent:true,opacity:low()?.19:.27,depthWrite:false}));
  root.add(rain);
 }
+function optimizeStaticBoxes(){
+ const groups=new Map();
+ for(const mesh of [...root.children]){
+  if(!mesh.userData.staticBox||mesh.userData.isCollider||!mesh.visible)continue;
+  const key=mesh.material.uuid+':'+String(mesh.castShadow);
+  if(!groups.has(key))groups.set(key,[]);
+  groups.get(key).push(mesh);
+ }
+ for(const items of groups.values()){
+  if(items.length<5)continue;
+  const inst=new T.InstancedMesh(cube,items[0].material,items.length);
+  inst.name='M02 / optimized structural instances';
+  inst.castShadow=items[0].castShadow;
+  inst.receiveShadow=true;
+  for(let i=0;i<items.length;i++){
+   const it=items[i];it.updateMatrix();
+   inst.setMatrixAt(i,it.matrix);
+   root.remove(it);
+  }
+  inst.instanceMatrix.needsUpdate=true;inst.computeBoundingSphere();
+  root.add(inst);
+ }
+}
 function createEnvironment(){
  scene.background=new T.Color(0x06111d);scene.fog=new T.FogExp2(0x091b2b,low()?.008:.010);
  root=new T.Group();root.name='M02 / W02 LES BAS-NIVEAUX';scene.add(root);
@@ -293,7 +316,7 @@ function createEnvironment(){
   const lamp=new T.PointLight(z%3===0?0xe69b5a:0x5bd6ec,low()?1.1:1.8,18,2);
   lamp.position.set(x,6.5,z);scene.add(lamp);lightSources.push(lamp);
  }
- street();blockBuildings();stairsAndSkybridges();props();weather();
+ street();blockBuildings();stairsAndSkybridges();props();weather();optimizeStaticBoxes();
 }
 function enemyMaterials(){
  return {monster:materials.wall,monsterFace:materials.black,cyan:materials.cyan,rose:materials.rose,violet:materials.blue,pale:materials.white};
@@ -303,10 +326,9 @@ function setupPlayer(){
  Object.assign(game.player,{x:0,z:72,elevation:0,yaw:0,hp:100,grounded:true});
  game.wave=2;game.nextWave=Infinity;game.toSpawn=0;game.spawnTimer=Infinity;
  game.ownedWeapons=new Set([0,1,2]);game.ammo=WEAPONS.map(w=>w.capacity);
- const icon=canvasTexture(128,64,(c,w,h)=>{c.fillStyle='#160e28';c.fillRect(0,0,w,h);c.fillStyle='#ff80b9';c.font='900 22px sans-serif';c.fillText('GHJU',28,40);});
- const kit=createCharacterKit(icon);
- const pm={...materials,armor:kit.materials?.rose||materials.wall,armorLight:kit.materials?.pearl||materials.plaster,steel:materials.iron,rose:materials.rose,pale:materials.white};
- weapon=buildGun({mats:pm,gloves:kit.gloves,makeFlash:()=>{const o=new T.Mesh(new T.SphereGeometry(.07,8,6),materials.rose);o.visible=false;return o;}});
+ const pm={...materials,armor:mat(0xb64472,.38,.72),armorLight:mat(0xdec3cf,.35,.68),steel:materials.iron,rose:materials.rose,pale:materials.white,violet:materials.blue};
+ const gloves={fabric:mat(0x222736,.9,.08),plate:pm.armor,trim:pm.armorLight,glow:materials.rose,accent:materials.cyan,metal:materials.iron};
+ weapon=buildGun({mats:pm,gloves,makeFlash:()=>{const o=new T.Mesh(new T.SphereGeometry(.07,8,6),materials.rose);o.visible=false;return o;}});
  camera.add(weapon);weapon.position.set(.23,-.30,-.59);weapon.rotation.set(-.07,-.045,-.09);
  weapon.userData.setVariant(0);
  enemyFactory=createEnemyFactory(enemyMaterials());
@@ -424,8 +446,27 @@ function animation(t){
  if(!renderer||!scene)return;
  clock+=dt;
  if(running)gameTick(dt);
- if(scene&&camera)renderer.renderAsync?.(scene,camera)??renderer.render(scene,camera);
+ if(scene&&camera&&!framePending&&!recovering){
+   try{
+     const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);
+     if(result&&typeof result.then==='function'){
+       framePending=true;
+       result.then(()=>{framePending=false;}).catch(err=>{
+         framePending=false;onRenderFailure(err);
+       });
+     }
+   }catch(err){onRenderFailure(err);}
+ }
  frames++;fpsTime+=dt;if(fpsTime>.5){$('fps').textContent=Math.round(frames/fpsTime);frames=0;fpsTime=0;}
+}
+function onRenderFailure(error){
+ if(recovering)return;
+ console.error('M02 render failed',error);
+ recovering=true;running=false;shade.style.display='grid';
+ $('status').textContent='Échec du rendu : '+(error?.message||String(error))+' · Essaye le mode compatibilité.';
+ $('start').textContent='RÉESSAYER EN WEBGL →';
+ $('start').disabled=false;
+ $('start').onclick=()=>location.assign('level2-test.html?renderer=webgl');
 }
 function resize(){
  if(!renderer)return;const width=innerWidth,height=innerHeight;
@@ -437,7 +478,7 @@ async function boot(){
  status.textContent='Préparation du secteur et du moteur existant…';startButton.disabled=true;
  try{
   const environment={userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu};
-  const profile=graphicsProfile(environment,low()?'low':'auto');
+  const profile=graphicsProfile(environment,low()?'low':'auto',new URLSearchParams(location.search).get('renderer')==='webgl'||low());
   const prepared=await createCompatibleRenderer({canvas,WebGPU:T.WebGPURenderer,WebGL:WebGLRenderer,profile});
   canvas=prepared.canvas;renderer=prepared.renderer;
   renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
