@@ -419,7 +419,7 @@ function snapCamera(){
 }
 function changeView(){
  view=view==='fps'?'third':'fps';
- if(!playerRig&&view==='third')notice('CHARGEMENT DE GHJU / LYLU…');
+ if(!playerRig&&view==='third'){view='fps';notice('PERSONNAGE SHADOW UNIT EN COURS DE CHARGEMENT');}
  snapCamera();
 }
 function updateOriginalSoldier(dt,moving,sprint,firing){
@@ -448,7 +448,7 @@ function unpauseMission(){
  if(!touchControls?.root)canvas.requestPointerLock?.().catch?.(()=>{});
 }
 async function loadAuthenticSoldier(){
- if(weaponReady||low())return;weaponReady=true;
+ if(weaponReady)return;weaponReady=true;
  try{
   const model=await installPinkWarsSoldier(T,scene,characterId,materials);
   playerRig=model;model.model.root.visible=view==='third';model.model.setWeapon(game.weaponIndex);
@@ -624,7 +624,21 @@ async function boot(){
   $('renderer').textContent=(renderer.isWebGLRenderer?'WebGL / repli':'WebGPU')+' · PBR';
   if(prepared.initialFailure)console.warn('M02: WebGPU unavailable:',prepared.initialFailure);
   bootStep='prêt';hud.hidden=false;started=true;requestAnimationFrame(animation);
+  touchControls=createPinkWarsTouch(canvas,{
+   onFire:down=>{heldFire=down;if(down)firePressQueued=true;},
+   onJump:()=>{jumpQueued=true;},
+   onInteract:()=>interact(),
+   onNext:()=>game.cycleWeapon(),
+   onReload:()=>game.reload(),
+   onCrouch:()=>{crouchQueued=true;},
+   onView:()=>changeView(),
+   onPause:()=>pauseMission(),
+   onAim:down=>{mouseAim=down;}
+  });
   resume();
+  // Authentic production character is loaded after the first playable frame.
+  // If decoding a dense rig fails, the mission keeps functioning.
+  void loadAuthenticSoldier();
  }catch(error){
   console.error('[M02] boot failed at '+bootStep,error);
   status.textContent='Impossible de lancer ('+bootStep+') : '+(error?.message||error);
@@ -637,15 +651,16 @@ async function boot(){
  }
 }
 function resume(){
+ if(paused){unpauseMission();return;}
  running=true;shade.style.display='none';startButton.disabled=false;
  if(game){game.reset();game.wave=2;game.ownedWeapons=new Set([0,1,2]);game.ammo=WEAPONS.map(w=>w.capacity);}
  if(game){game.player.x=0;game.player.z=72;game.player.elevation=0;game.player.hp=100;game.state='playing';
   game.enemies=[];game.bullets=[];game.time=0;game.kills=0;game.nextWave=Infinity;game.toSpawn=0;}
  for(const o of enemyMeshes.values())scene.remove(o);enemyMeshes.clear();
  for(const o of shotMeshes.values())scene.remove(o);shotMeshes.clear();
- yaw=0;pitch=0;stage=0;heldFire=false;keyCrouchQueued=false;keys.clear();
+ yaw=0;pitch=0;stage=0;heldFire=false;mouseAim=false;aimBlend=0;jumpQueued=false;crouchQueued=false;firePressQueued=false;keys.clear();pinkControls.reset();touchControls?.reset();weaponFeel.reset();
  $('name').textContent='PINK WARS · '+characterId.toUpperCase()+' · M02';
- canvas.requestPointerLock?.().catch?.(()=>{});
+ if(!touchControls?.root)canvas.requestPointerLock?.().catch?.(()=>{});
 }
 startButton.addEventListener('click',()=>{if(started)resume();else{startButton.disabled=true;boot();}});
 quality.addEventListener('change',()=>{
@@ -657,21 +672,47 @@ quality.addEventListener('change',()=>{
 });
 window.addEventListener('resize',resize);
 window.addEventListener('keydown',e=>{
+ if(['INPUT','SELECT','TEXTAREA'].includes(e.target?.tagName))return;
+ if(e.code==='Escape'){e.preventDefault();if(paused)unpauseMission();else pauseMission();return;}
+ if(!running)return;
  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
- keys.add(e.code);if(!running)return;
+ keys.add(e.code);
  if(e.repeat)return;
- if(e.code==='KeyE')interact();
+ if(e.code==='KeyJ'){jumpQueued=true;}
+ if(e.code==='KeyF')interact();
+ if(e.code==='KeyE')game.cycleWeapon();
  if(e.code==='KeyR')game.reload();
- if(e.code==='KeyC')keyCrouchQueued=true;
+ if(e.code==='KeyC')crouchQueued=true;
+ if(e.code==='KeyV')changeView();
+ if(e.code==='Space')firePressQueued=true;
  if(/^Digit[123]$/.test(e.code))game.selectWeapon(Number(e.code.slice(-1))-1);
 });
 window.addEventListener('keyup',e=>keys.delete(e.code));
-window.addEventListener('blur',()=>{keys.clear();heldFire=false;});
-document.addEventListener('mousemove',e=>{
- if(document.pointerLockElement!==canvas||!running)return;
- yaw-=e.movementX*.0020;pitch=clamp(pitch-e.movementY*.002,-1.2,1.2);
+window.addEventListener('blur',()=>{keys.clear();heldFire=false;mouseAim=false;pinkControls.reset();touchControls?.reset();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){keys.clear();heldFire=false;mouseAim=false;pinkControls.reset();touchControls?.reset();}});
+window.addEventListener('contextmenu',e=>{if(e.target===canvas)e.preventDefault();});
+window.addEventListener('mousemove',e=>{
+ if(!running||document.pointerLockElement!==canvas)return;
+ const sensitivity=aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend);
+ yaw-=e.movementX*.004*sensitivity;
+ pitch=clamp(pitch-e.movementY*.004*sensitivity,-.85,.7);
 });
-window.addEventListener('mousedown',e=>{if(!running||(e.target!==canvas&&document.pointerLockElement!==canvas))return;if(e.button===0)heldFire=true;if(document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch?.(()=>{});});
-window.addEventListener('mouseup',e=>{if(e.button===0)heldFire=false;});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){heldFire=false;keys.clear();}});
+let dragPointer=null,dragX=0,dragY=0;
+window.addEventListener('pointerdown',e=>{
+ if(!running||e.target!==canvas)return;
+ if(e.button===2){mouseAim=true;e.preventDefault();return;}
+ if(e.button!==0)return;
+ heldFire=true;firePressQueued=true;
+ dragPointer=e.pointerId;dragX=e.clientX;dragY=e.clientY;
+ if(e.pointerType==='mouse'&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch?.(()=>{});
+});
+window.addEventListener('pointermove',e=>{
+ if(!running||e.pointerId!==dragPointer||document.pointerLockElement===canvas)return;
+ const sensitivity=aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend);
+ yaw-=(e.clientX-dragX)*.004*sensitivity;pitch=clamp(pitch-(e.clientY-dragY)*.004*sensitivity,-.85,.7);
+ dragX=e.clientX;dragY=e.clientY;
+});
+for(const name of ['pointerup','pointercancel']){
+ window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
+}
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
