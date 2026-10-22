@@ -589,7 +589,15 @@ function gameTick(dt){
  for(const b of beacons){b.halo.rotation.z+=dt*.4;b.dot.position.y=1.6+Math.sin(game.time*2)*.13;}
  updateHUD();
 }
+let lastMinimalHudStage=-1;
 function updateHUD(){
+ if(stage!==lastMinimalHudStage){
+   lastMinimalHudStage=stage;
+   document.body.classList.add('pw-objective-open');
+   document.body.classList.remove('pw-graphics-open');
+   clearTimeout(window.__pwM02ObjectiveTimeout);
+   window.__pwM02ObjectiveTimeout=setTimeout(()=>document.body.classList.remove('pw-objective-open'),3600);
+ }
  const o=objectives[stage]||objectives[3];
  $('objective').textContent=(stage+1)+'/4 · '+o.label;
  $('hint').textContent=o.description;
