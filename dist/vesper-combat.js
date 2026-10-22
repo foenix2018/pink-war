@@ -19,6 +19,7 @@ import {createAICompanion} from './ai-companions.js';
 import {installPhotographicSurfaces,PHOTO_SURFACES} from './photographic-surfaces.js';
 import {attachCampaignStory} from './story-chapters.js';
 import {DesktopGamepadInput} from './desktop-input.js';
+import {createFireBuffer} from './fire-input.js';
 
 export function buildVesperGeometry(source){
   const data=source.data(),count=data.vertices.length/12,uv=new Float32Array(count*2),groups=new Map();
@@ -118,8 +119,9 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const enemyFactory=createEnemyFactory({monster:materials.wall,monsterFace:materials.black,cyan:materials.cyan,rose:materials.rose,violet:materials.blue,pale:materials.white});
   const enemyModels=new Map(),feel=createWeaponFeel(),effects=createCampaignCombatEffects(T,scene,characterId);
   const gamepadInput=new DesktopGamepadInput();
+  const fireInput=createFireBuffer();
   const companion=createAICompanion(T,scene,characterId);companion.root.visible=false;
-  let rig=null,gun=null,ready=false,pending=false,lastTime=0,lastPosition=null,held=false,pendingShot=false,ads=0,phase=0,portalTimer=-1,spawnQueue=[],lastSpawn=0,completed=false,portalSite={x:0,z:32};
+  let rig=null,gun=null,ready=false,pending=false,lastTime=0,lastPosition=null,held=false,ads=0,phase=0,portalTimer=-1,spawnQueue=[],lastSpawn=0,completed=false,portalSite={x:0,z:32};
   // Actual RLH hands and production weapon geometry are already present while
   // the full canonical soldier rig decodes; there is no CSS weapon substitute.
   gun=buildGun({mats:starterMaterials,gloves:starterGloves,makeFlash:parent=>{
@@ -195,7 +197,9 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     if(moving&&game.time-(lastPosition.noiseAt||0)>.45){game.emitNoise(s.sprint?'sprint':s.crouching?'crouch':'step',s.sprint?28:s.crouching?2:12);lastPosition.noiseAt=game.time;}
     lastPosition={...foot,noiseAt:lastPosition?.noiseAt||0};
     feel.update(dt);const a=aim();
-    game.trigger((held||pendingShot)&&!s.free,dt,a.origin,a.direction);pendingShot=false;
+    const ammoBefore=game.ammo[game.weaponIndex],bladeBefore=game.bladeSlashAt;
+    game.trigger(fireInput.requested(held,game.weapon,game.time)&&!s.free,dt,a.origin,a.direction);
+    if(game.ammo[game.weaponIndex]<ammoBefore||game.bladeSlashAt!==bladeBefore)fireInput.consume();
     if(game.weapon.melee)game.updateBlade(gun?.userData.getBladeSegment?.(),dt,s.aiming,camera.position);
     if(spawnQueue.length&&game.time>=lastSpawn&&game.enemies.length<8){
       const form=spawnQueue[0];
@@ -224,7 +228,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       if(event.type==='reload'&&sound&&audio)playWeaponAction(audio,game.weapon.id,'reload-out');
       if(event.type==='reloaded'&&sound&&audio)playWeaponAction(audio,game.weapon.id,'reload-ready');
       if(event.type==='over'){
-        held=pendingShot=false;music.pause();ambience?.pause();document.exitPointerLock?.();
+        held=false;fireInput.reset();music.pause();ambience?.pause();document.exitPointerLock?.();
         const dialog=document.createElement('dialog');dialog.innerHTML='<h2>SIGNAL PERDU</h2><p>ORDRE a repris le secteur.</p><button>REJOUER LA MISSION</button> <a href="./index.html">RETOUR AU MENU</a>';
         dialog.querySelector('button').onclick=()=>location.reload();document.body.append(dialog);dialog.showModal();
       }
@@ -284,12 +288,12 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     get ambienceEnabled(){return ambientEnabled&&sound;},
     toggleAmbience(){ambientEnabled=!ambientEnabled;if(ambientEnabled)audioReady();return ambientEnabled&&sound;},
     start(){ready=true;audioReady();music.start(audio);patrol();void loadRig();},
-    fire(down){if(down&&!held){audioReady();pendingShot=true;}held=!!down;},
+    fire(down){if(down&&!held){audioReady();fireInput.press(game.time);if(game.weapon.semiAuto)game.triggerHeld=false;}held=!!down;},
     reload(){audioReady();game.reload();},
     cycle(delta=1){const n=WEAPONS.length;game.selectWeapon((game.weaponIndex+delta+n)%n);},
     select(index){game.selectWeapon(index);},
     interact:onInteract,
-    pause(){held=pendingShot=false;gamepadInput.reset();music.pause();ambience?.pause();saber?.update({active:false});},
+    pause(){held=false;fireInput.reset();gamepadInput.reset();music.pause();ambience?.pause();saber?.update({active:false});},
     gamepad(devices){return gamepadInput.select(devices,{focused:!document.hidden});},
     resize(width,height){
       const requested=getState().quality,quality=requested==='performance'?'low':requested==='ultra'?'high':'auto';
@@ -306,7 +310,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       try{const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);if(result?.then){pending=true;result.then(()=>pending=false).catch(error=>{pending=false;onFailure(error);});}}
       catch(error){onFailure(error);}
     },
-    snapshot(){return {revision:'3.48',characterId,phase,ready,time:game.time,held,pendingShot,state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
+    snapshot(){return {revision:'3.48',characterId,phase,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
       capacity:game.weapon.capacity,enemies:game.enemies.length,hostileProjectiles:game.bullets.filter(b=>b.hostile).length,shots:game.bullets.filter(b=>!b.hostile).length,
       kills:game.kills,rig:!!rig,gun:!!gun,backend:renderer.isWebGLRenderer?'webgl':'webgpu',triangles:terrain.triangles,
       pbr:{...pbr.stats},effects:effects.stats(),companion:companion.snapshot(),position:{...getState().position},

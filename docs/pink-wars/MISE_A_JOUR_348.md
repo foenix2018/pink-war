@@ -25,7 +25,7 @@ annoncent des renforts avec délai ; au maximum huit ennemis actifs.
 Les capacités reviennent aux valeurs de production : R9 12, BLOOM 24,
 LANCE 5, THORN 6, NOVA 4. THORN/NOVA conservent charge et impact de zone.
 AURORA garde le contact de lame et la parade. Le HUD montre santé et cellules,
-sans compteur ajouté à l'arme. Un appui court sur tir est mémorisé entre images.
+sans compteur ajouté à l'arme. Un appui court sur tir est mémorisé entre images et pendant 350 ms lors du délai d’équipement/cadence. Il ne prolonge jamais artificiellement la charge de THORN/NOVA et expire avant la fin d’un rechargement.
 
 Le R9, BLOOM, LANCE, THORN, NOVA et AURORA utilisent les vraies géométries
 et les gants animés. Les effets partagés dessinent faisceaux, empreintes et

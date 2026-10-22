@@ -20,6 +20,7 @@ import {showChapter2Finale} from './story-chapters.js';
 import {createCampaignCombatEffects} from './campaign-combat-effects.js';
 import {createAICompanion} from './ai-companions.js';
 import {createAmbience} from './ambience.js';
+import {createFireBuffer} from './fire-input.js';
 
 const $=id=>document.getElementById(id);
 const characterId=new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju';
@@ -34,6 +35,7 @@ let noticeUntil=0,signal=0,rain,enemyFactory,root,architecture,pbrController,atm
 let view='fps',aimBlend=0,mouseAim=false,playerRig=null,touchControls=null,paused=false;
 let jumpQueued=false,crouchQueued=false,firePressQueued=false,weaponReady=false,audioCtx=null,hitUntil=0;
 const weaponFeel=createWeaponFeel(),pinkControls=createPinkWarsInput();
+const fireInput=createFireBuffer();
 let enableAudio=true;try{enableAudio=JSON.parse(localStorage.getItem('rosee-settings')||'{}').sound!==false;}catch{}
 let combatEffects=null,companion=null,environmentAudio=null;
 function audioReady(){
@@ -459,7 +461,7 @@ function updateOriginalSoldier(dt,moving,sprint,firing){
 }
 function pauseMission(){
  if(!running||paused)return;
- paused=true;running=false;heldFire=false;mouseAim=false;
+ paused=true;running=false;heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
  touchControls?.reset();pinkControls.reset();document.exitPointerLock?.();
  shade.style.display='grid';$('start').textContent='REPRENDRE LA MISSION →';
  $('status').textContent='PAUSE · PINK WARS / NIVEAU 2';
@@ -537,7 +539,8 @@ function gameTick(dt){
  game.step(dt,{x,z,yaw,moveYaw:yaw,sprint,jump,crouchToggle});
  weaponFeel.update(dt);
  snapCamera();
- const firing=heldFire||touch.fire||controls.fire||firePressQueued;
+ if(firePressQueued)fireInput.press(game.time);
+ const firing=fireInput.requested(heldFire||touch.fire||controls.fire,game.weapon,game.time);
  // Same two-stage raycast as Pink Wars' game.js: center reticle selects a
  // visible target; projectile origin is the ACTUAL held weapon muzzle.
  updateOriginalSoldier(dt,Math.hypot(x,z)>.1,sprint,firing);
@@ -563,9 +566,11 @@ function gameTick(dt){
  const aim={origin,direction:shotDirection};
  if(game.weapon.semiAuto&&firePressQueued)game.triggerHeld=false;
  firePressQueued=false;
+ const ammoBefore=game.ammo[game.weaponIndex],bladeBefore=game.bladeSlashAt;
  if(firing||game.charge>0)game.trigger(firing,dt,aim.origin,aim.direction);
  else if(game.weapon.melee)game.trigger(false,dt,aim.origin,aim.direction);
  else{game.triggerHeld=false;game.semiPending=false;}
+ if(game.ammo[game.weaponIndex]<ammoBefore||game.bladeSlashAt!==bladeBefore)fireInput.consume();
  updateEnemies(dt);
  const events=game.drainEvents();
  for(const e of events){
@@ -740,6 +745,7 @@ function resume(){
  for(const o of enemyMeshes.values())scene.remove(o);enemyMeshes.clear();
  for(const o of shotMeshes.values())scene.remove(o);shotMeshes.clear();
  combatEffects?.reset();companion?.reset();
+ fireInput.reset();
  yaw=0;pitch=0;stage=0;lastMinimalHudStage=-1;heldFire=false;mouseAim=false;aimBlend=0;jumpQueued=false;crouchQueued=false;firePressQueued=false;keys.clear();pinkControls.reset();touchControls?.reset();weaponFeel.reset();
  $('name').textContent='PINK WARS · '+characterId.toUpperCase()+' · M02';
  if(!touchControls?.root)canvas.requestPointerLock?.().catch?.(()=>{});
@@ -770,8 +776,8 @@ window.addEventListener('keydown',e=>{
  if(/^Digit[123]$/.test(e.code))game.selectWeapon(Number(e.code.slice(-1))-1);
 });
 window.addEventListener('keyup',e=>keys.delete(e.code));
-window.addEventListener('blur',()=>{keys.clear();heldFire=false;mouseAim=false;pinkControls.reset();touchControls?.reset();});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){keys.clear();heldFire=false;mouseAim=false;pinkControls.reset();touchControls?.reset();}});
+window.addEventListener('blur',()=>{keys.clear();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();pinkControls.reset();touchControls?.reset();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){keys.clear();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();pinkControls.reset();touchControls?.reset();}});
 window.addEventListener('contextmenu',e=>{if(e.target===canvas)e.preventDefault();});
 window.addEventListener('mousemove',e=>{
  if(!running||document.pointerLockElement!==canvas)return;
