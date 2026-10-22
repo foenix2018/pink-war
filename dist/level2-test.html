@@ -49,6 +49,7 @@ body.aiming #crosshair{opacity:.23;transform:translate(-50%,-50%) scale(.52)}
 @media(pointer:coarse){#m02-touch-controls{display:block}#help{display:none}#vitals,#weapon{font-size:14px}#bottom{bottom:150px}}
 @media(pointer:coarse) and (max-height:480px){#m02-touch-controls .m02-stick-ring{width:84px;height:84px}#m02-touch-controls .m02-actions{bottom:115px}}
 </style>
+<link rel="stylesheet" href="mobile-controls-v7.css?v=m01-m02-unified-1">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -60,9 +61,9 @@ body.aiming #crosshair{opacity:.23;transform:translate(-50%,-50%) scale(.52)}
   <div id="help">PINK WARS · ZQSD / WASD marcher · souris / flèches viser · clic gauche / Espace tirer · clic droit viser · J sauter / double saut · F action · E changer d’arme · V changer de vue · C s’accroupir · R recharger · Maj courir · Échap pause · manette : Croix/A sauter, R2 tirer, L2 viser, R3 interagir</div>
 </div>
 <select id="quality" aria-label="Qualité graphique"><option value="normal">QUALITÉ NORMALE</option><option value="low">PERFORMANCE</option></select>
-<div id="shade"><div class="panel"><div class="kicker">PINK WARS / LA FRACTURE · PROTOTYPE M02</div><h1>Sous <em>les Néons</em></h1><p>Les Bas-Niveaux de Vesper. Une enclave doit être évacuée. Traverse les ruelles, infiltre la galerie marchande, emprunte les escaliers et les passerelles, puis rejoins la tour de transit.</p><p class="small">Prototype séparé du niveau 1. Physique, collisions, projectiles, santé et IA réutilisent les modules de Pink Wars. Les combattants HELIX sont temporairement représentés par les châssis ennemis existants.</p><button id="start" class="primary">LANCER LE TEST →</button><a href="./level2-test.html?renderer=webgl" style="display:inline-block;color:#a9f4fa;font-size:13px;margin-bottom:15px">Mode compatibilité WebGL (si écran noir)</a><div id="status" class="small">Clavier / souris / manette PC · rendu WebGPU avec repli WebGL selon l'appareil</div></div></div>
+<div id="shade"><div class="panel"><div class="kicker">PINK WARS / LA FRACTURE · PROTOTYPE M02</div><h1>Sous <em>les Néons</em></h1><p>Les Bas-Niveaux de Vesper. Une enclave doit être évacuée. Traverse les ruelles, infiltre la galerie marchande, emprunte les escaliers et les passerelles, puis rejoins la tour de transit.</p><p class="small">Mission 02 : commandes communes au niveau 1. Physique, collisions, projectiles, santé et IA réutilisent les modules de Pink Wars. Les combattants HELIX sont temporairement représentés par les châssis ennemis existants.</p><button id="start" class="primary">LANCER LE TEST →</button><a href="./level2-test.html?renderer=webgl" style="display:inline-block;color:#a9f4fa;font-size:13px;margin-bottom:15px">Mode compatibilité WebGL (si écran noir)</a><div id="status" class="small">Clavier / souris / manette PC · rendu WebGPU avec repli WebGL selon l'appareil</div></div></div>
 <script type="module">
-import('./level2-test.js?v=m02-controls-1').catch(error=>{
+import('./level2-test.js?v=m01-m02-unified-1').catch(error=>{
  const status=document.getElementById('status'),button=document.getElementById('start');
  if(status)status.textContent='Erreur de chargement : '+(error?.message||String(error))+' — Essaye le mode compatibilité WebGL.';
  if(button){button.disabled=false;button.textContent='RECHARGER LE TEST →';button.addEventListener('click',()=>location.reload());}
