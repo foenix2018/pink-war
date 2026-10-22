@@ -10,6 +10,7 @@ import {createEnemyFactory} from './enemies.js';
 import {buildGun} from './weapons.js';
 import {createDistrictArchitecture} from './level2-architecture.js';
 import {installLeanPBR} from './level2-materials.js';
+import {createStreetAtmosphere} from './level2-atmosphere.js';
 import {showChapter2Finale} from './story-chapters.js';
 
 const $=id=>document.getElementById(id);
@@ -20,7 +21,7 @@ const low=()=>quality.value==='low';
 const rng=(()=>{let s=220102;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};})();
 let canvas=main,renderer,scene,camera,game,weapon,clock=0,running=false,started=false,last=0,fpsTime=0,frames=0,framePending=false,recovering=false,bootStep='modules';
 let yaw=0,pitch=0,weaponKick=0,stage=0,reported=-1;
-let noticeUntil=0,signal=0, rain,enemyFactory,root,architecture,pbrController;
+let noticeUntil=0,signal=0, rain,enemyFactory,root,architecture,pbrController,atmosphere;
 const keys=new Set(),input=new DesktopGamepadInput(),enemyMeshes=new Map(),shotMeshes=new Map();
 const collisions=[],floors=[],beacons=[],lightSources=[],decals=[];
 const field={minX:-42,maxX:42,minZ:-81,maxZ:79};
@@ -33,7 +34,7 @@ const objectives=[
 function mat(hex,rough=.8,metal=.1){return new T.MeshStandardMaterial({color:hex,roughness:rough,metalness:metal});}
 function glow(hex){return new T.MeshBasicMaterial({color:hex,toneMapped:false});}
 const materials={
- asphalt:mat(0x111d26,.33,.34),road:mat(0x26323b,.52,.26),concrete:mat(0x2e3743,.9,.04),
+ asphalt:mat(0x667781,.40,.08),road:mat(0x35424c,.67,.40),concrete:mat(0x68767c,.83,.035),
  dark:mat(0x121a25,.58,.62),iron:mat(0x3b4752,.45,.76),wall:mat(0x344350,.78,.21),
  plaster:mat(0x63727b,.88,.08),rust:mat(0x514138,.84,.58),glass:mat(0x213e4a,.16,.56),
  black:mat(0x071019,.69,.32),warning:mat(0x94754d,.66,.32),
@@ -140,6 +141,12 @@ function tower(side,z,idx){
 }
 function street(){
  solid(0,-.16,0,22,.3,158,materials.asphalt,false);
+ // Continuous tileable asphalt skin fixes the stretched UVs of the 158 m road.
+ // The underlying collision plane is unchanged, and the atlas is shared.
+ const asphaltSkin=new T.Mesh(new T.PlaneGeometry(19.8,157.6),materials.asphalt);
+ asphaltSkin.name='M02 / wet asphalt continuous UV surface';
+ asphaltSkin.rotation.x=-Math.PI/2;asphaltSkin.position.set(0,.007,0);
+ asphaltSkin.receiveShadow=true;root.add(asphaltSkin);
  // Inset pavement, drainage and regularly spaced utility grates.
  for(const side of [-1,1]){
   solid(side*10,0,0,2.7,.12,158,materials.concrete,false);
@@ -153,16 +160,7 @@ function street(){
   solid(0,.013,z,.10,.014,2.5,materials.warning,false,false);
   if(z%18===-16||z%18===2)solid(0,.013,z,17,.015,.07,materials.iron,false,false);
  }
- for(let i=0;i<42;i++){
-  const x=(rng()-.5)*14,z=(rng()-.5)*145,w=.6+rng()*2.5,d=.3+rng()*1.8;
-  const o=new T.Mesh(new T.CircleGeometry(1,22),new T.MeshStandardMaterial({color:i%3?0x1d414d:0x4d382e,metalness:.7,roughness:.16,transparent:true,opacity:.47,depthWrite:false}));
-  o.rotation.x=-Math.PI/2;o.position.set(x,.018,z);o.scale.set(w,d,1);root.add(o);decals.push(o);
- }
- // Screen-space shimmer avoided: thin ground strips fake neon reflection at low GPU cost.
- for(let i=0;i<24;i++){
-  const x=(rng()-.5)*14,z=-66+i*5.5,w=.8+rng()*2;
-  solid(x,.022,z,w,.009,.06,i%3?materials.cyan:materials.amber,false,false);
- }
+ // Rain ripples and stretched neon ground reflections use instanced batches.
 }
 function blockBuildings(){
  for(let i=0;i<7;i++)for(const side of [-1,1]){
@@ -327,6 +325,8 @@ function createEnvironment(){
   lamp.position.set(x,6.5,z);scene.add(lamp);lightSources.push(lamp);
  }
  street();blockBuildings();stairsAndSkybridges();props();architecture.decorate();weather();optimizeStaticBoxes();
+ try{atmosphere=createStreetAtmosphere(T,root,{performance:low()});}
+ catch(error){console.warn('M02 atmosphere disabled for compatibility:',error);}
 }
 function enemyMaterials(){
  return {monster:materials.wall,monsterFace:materials.black,cyan:materials.cyan,rose:materials.rose,violet:materials.blue,pale:materials.white};
@@ -478,6 +478,7 @@ function animation(t){
  const dt=Math.min(.040,Math.max(0,(t-last)/1000));last=t;
  if(!renderer||!scene)return;
  clock+=dt;
+ atmosphere?.update(clock);
  if(running)try{gameTick(dt);}catch(error){
   console.error('M02 simulation failure:',error);
   running=false;shade.style.display='grid';status.textContent='Erreur de mission : '+(error?.message||String(error));
