@@ -370,7 +370,7 @@ function gamepadInput(){
  yaw-=desktopAxis(a[2])*.055;pitch=clamp(pitch-desktopAxis(a[3])*.033,-1.25,1.18);
  return {x:desktopAxis(a[0]),z:desktopAxis(a[1]),jump:down(0),fire:down(7),sprint:down(10),reload:down(2),interact:down(11),crouch:down(1)};
 }
-let lastGamepadInteract=false,lastGamepadReload=false,lastGamepadCrouch=false,heldFire=false;
+let lastGamepadInteract=false,lastGamepadReload=false,lastGamepadCrouch=false,heldFire=false,keyCrouchQueued=false;
 function gameTick(dt){
  const pad=gamepadInput();
  const x=(keys.has('KeyD')?1:0)-(keys.has('KeyA')||keys.has('KeyQ')?1:0)+(pad.x||0);
@@ -379,9 +379,9 @@ function gameTick(dt){
  const crouch=pad.crouch&&!lastGamepadCrouch;lastGamepadCrouch=!!pad.crouch;
  const interaction=pad.interact&&!lastGamepadInteract;lastGamepadInteract=!!pad.interact;
  const reload=pad.reload&&!lastGamepadReload;lastGamepadReload=!!pad.reload;
- if(crouch)game.player.crouchToggle=true;if(reload)game.reload();if(interaction)interact();
+ if(reload)game.reload();if(interaction)interact();
  game.nextWave=Infinity;game.toSpawn=0;
- game.step(dt,{x,z,yaw,moveYaw:yaw,sprint,jump,crouchToggle:!!crouch});
+ game.step(dt,{x,z,yaw,moveYaw:yaw,sprint,jump,crouchToggle:!!crouch||keyCrouchQueued});keyCrouchQueued=false;
  snapCamera();
  const direction=new T.Vector3();camera.getWorldDirection(direction);
  const aim={origin:{x:camera.position.x,y:camera.position.y-.12,z:camera.position.z},
@@ -455,12 +455,12 @@ async function boot(){
 }
 function resume(){
  running=true;shade.style.display='none';startButton.disabled=false;
- if(game?.state!=='playing'){setupPlayer();stage=0;}
+ if(game){game.reset();game.wave=2;game.ownedWeapons=new Set([0,1,2]);game.ammo=WEAPONS.map(w=>w.capacity);}
  if(game){game.player.x=0;game.player.z=72;game.player.elevation=0;game.player.hp=100;game.state='playing';
   game.enemies=[];game.bullets=[];game.time=0;game.kills=0;game.nextWave=Infinity;game.toSpawn=0;}
  for(const o of enemyMeshes.values())scene.remove(o);enemyMeshes.clear();
  for(const o of shotMeshes.values())scene.remove(o);shotMeshes.clear();
- yaw=0;pitch=0;stage=0;heldFire=false;keys.clear();
+ yaw=0;pitch=0;stage=0;heldFire=false;keyCrouchQueued=false;keys.clear();
  canvas.requestPointerLock?.().catch?.(()=>{});
 }
 startButton.addEventListener('click',()=>started?resume():boot());
@@ -472,7 +472,7 @@ window.addEventListener('keydown',e=>{
  if(e.repeat)return;
  if(e.code==='KeyE')interact();
  if(e.code==='KeyR')game.reload();
- if(e.code==='KeyC')game.player.crouchToggle=true;
+ if(e.code==='KeyC')keyCrouchQueued=true;
  if(/^Digit[123]$/.test(e.code))game.selectWeapon(Number(e.code.slice(-1))-1);
 });
 window.addEventListener('keyup',e=>keys.delete(e.code));
