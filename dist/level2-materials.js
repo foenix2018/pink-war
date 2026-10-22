@@ -74,7 +74,7 @@ export function installLeanPBR(T,materials,architecture,{performance=false,onPro
    asphalt:[materials.asphalt],
    concrete:[materials.concrete,materials.wall,materials.plaster,architecture?.pbrTargets?.ceramic,architecture?.pbrTargets?.dirty],
    blueMetal:[materials.dark,materials.iron,architecture?.pbrTargets?.brushed,architecture?.pbrTargets?.darkTrim,architecture?.pbrTargets?.pastel],
-   chequer:[materials.warning],
+   chequer:[materials.road],
    rust:[materials.rust,architecture?.pbrTargets?.copper]
  };
  const size=performance?256:512;
