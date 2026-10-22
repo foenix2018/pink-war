@@ -7,7 +7,7 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
   const prism=(x,y,z,w,h,d,mat,top=1)=>{
     const mesh=new T.Mesh(new T.CylinderGeometry(top,1,h,8,1,false,Math.PI/8),mat);
     mesh.scale.set(w*.48,1,d*.48);mesh.position.set(x,y+h/2,z);
-    mesh.castShadow=!low();mesh.receiveShadow=true;root.add(mesh);
+    mesh.castShadow=!low;mesh.receiveShadow=true;root.add(mesh);
     return mesh;
   };
   const cyl=(x,y,z,r,h,mat,seg=12)=>{
@@ -22,6 +22,8 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
   const brushed=new T.MeshStandardMaterial({color:0x283544,roughness:.41,metalness:.77});
   const glass=new T.MeshPhysicalMaterial({color:0x173847,metalness:.13,roughness:.13,transparent:true,opacity:.75,depthWrite:true});
   const copper=new T.MeshStandardMaterial({color:0x765c49,roughness:.55,metalness:.7});
+  const runoff=new T.MeshBasicMaterial({color:0x101b27,transparent:true,opacity:.19,depthWrite:false});
+  const oxidation=new T.MeshStandardMaterial({color:0x63524c,roughness:.89,metalness:.25});
   const dirty=new T.MeshStandardMaterial({color:0x41545b,metalness:.12,roughness:.92});
   const warm=new T.MeshBasicMaterial({color:0xffc38b,toneMapped:false});
   const violet=new T.MeshBasicMaterial({color:0xa567ef,toneMapped:false});
@@ -122,6 +124,14 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
     }
     for(const zz of [z-d*.42,z-d*.22,z+d*.22,z+d*.42])facadeFin(front-side*.55,height*.48,zz,height*.80,side,idx%2?C.cyan:C.amber);
     techWrap(front,z,side,height,d);
+    // Localized rain trails and corroded panel seams break the texture repeat.
+    // They share two materials and are instanced with the other static boxes.
+    for(let n=0;n<11;n++){
+      const nz=z-d*.43+n*(d*.86/10),ey=4.2+(n%5)*3.25;
+      const streakLength=.85+(n%4)*.48;
+      thin(front-side*.72,ey,nz,.06,streakLength,.14,n%4===0?oxidation:runoff);
+      if(n%3===0)thin(front-side*.72,ey+streakLength*.58,nz,.09,.035,.52,brushed);
+    }
     // External circulation and fire stairs read as real accessible envelopes.
     if(idx%3===0){
       const sx=front-side*1.70;
@@ -259,5 +269,5 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
     advertisement('HELIX',-11.9,13.1,-39,4,6.8,-1,'#f56577');
     advertisement('VESPER',13.5,15.5,29,3,7,1,'#73f7ee');
   }
-  return {residentialTower,occupiedMarket,decorate(){neonMonorail();narrativeClutter();}};
+  return {residentialTower,occupiedMarket,pbrTargets:{ceramic,brushed,dirty,copper,darkTrim,pastel},decorate(){neonMonorail();narrativeClutter();}};
 }
