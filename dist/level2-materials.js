@@ -1,17 +1,18 @@
 // PINK WARS / W02 lean CC0 PBR surface atlas.
-// CC0 source files are served by Poly Haven at only 1K; uploaded GPU maps are
-// resized once to 512px desktop / 256px Performance with normal/displacement,
-// transmission, reflection probes, and parallax deliberately disabled.
-// If the network or CORS fails, procedural albedo keeps the mission playable.
+// Local CC0 photo sets (Poly Haven, source 1K, packaged at 512px) are resized
+// once to 512px desktop / 256px Performance. Desktop receives albedo, normal
+// and roughness; mobile omits normals. No displacement, transmission or SSR.
+// If a local image fails, procedural albedo keeps the mission playable.
 // Direct asset references: https://polyhaven.com/a/{asset}
 export const PBR_ASSETS=Object.freeze({
- asphalt: Object.freeze({asset:'asphalt_02',hex:0xbac4c7,repeat:[8,56],roughness:.43,metalness:.07}),
- concrete: Object.freeze({asset:'concrete',hex:0xb8baba,repeat:[4,8],roughness:.82,metalness:.025}),
- blueMetal: Object.freeze({asset:'blue_metal_plate',hex:0xaebfc9,repeat:[3,4],roughness:.52,metalness:.59}),
- chequer: Object.freeze({asset:'metal_plate',hex:0xc3c7c3,repeat:[8,3],roughness:.60,metalness:.66}),
- rust: Object.freeze({asset:'rusty_metal_05',hex:0xd0b6ab,repeat:[2,2],roughness:.82,metalness:.32})
+ asphalt: Object.freeze({asset:'asphalt_03',hex:0xbac4c7,repeat:[8,56],roughness:.43,metalness:.07}),
+ concrete: Object.freeze({asset:'concrete_floor',hex:0xb8baba,repeat:[4,8],roughness:.82,metalness:.025}),
+ blueMetal: Object.freeze({asset:'corrugated_iron',hex:0xaebfc9,repeat:[3,4],roughness:.52,metalness:.59}),
+ chequer: Object.freeze({asset:'corrugated_iron',hex:0xc3c7c3,repeat:[8,3],roughness:.60,metalness:.66}),
+ rust: Object.freeze({asset:'rusty_painted_metal',hex:0xd0b6ab,repeat:[2,2],roughness:.82,metalness:.32})
 });
 const src=name=>'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/'+name+'/'+name+'_diff_1k.jpg';
+const localSource=(name,channel='diff')=>'./assets/cc0/'+name+'_'+channel+'_512.jpg';
 function proceduralCanvas(size,kind){
  const c=document.createElement('canvas');c.width=c.height=size;
  const ctx=c.getContext('2d');const data=ctx.createImageData(size,size);let seed=kind.split('').reduce((n,c)=>Math.imul(n,31)+c.charCodeAt(0)|0,46730);
@@ -48,11 +49,11 @@ function image(url){
    img.src=url;
  });
 }
-function apply(T,source,size,targets,profile){
+function apply(T,source,size,targets,profile,channel='diff'){
  const texture=new T.CanvasTexture(downsample(source,size));
  texture.name='M02 PBR albedo / '+profile.asset;
  texture.wrapS=texture.wrapT=T.RepeatWrapping;
- texture.colorSpace=T.SRGBColorSpace;
+ texture.colorSpace=channel==='diff'?T.SRGBColorSpace:T.NoColorSpace;
  texture.generateMipmaps=true;
  texture.minFilter=T.LinearMipmapLinearFilter;
  texture.magFilter=T.LinearFilter;
@@ -61,7 +62,9 @@ function apply(T,source,size,targets,profile){
  for(const material of targets){
    // Keep same texture instance across all compatible meshes for GPU economy.
    if(!material?.isMeshStandardMaterial&&!material?.isMeshPhysicalMaterial)continue;
-   material.map=texture;
+   if(channel==='normal'){material.normalMap=texture;material.normalScale.set(.3,.3);}
+   else if(channel==='rough')material.roughnessMap=texture;
+   else material.map=texture;
    material.color.setHex(profile.hex);
    material.roughness=profile.roughness;
    material.metalness=profile.metalness;
@@ -79,7 +82,7 @@ export function installLeanPBR(T,materials,architecture,{performance=false,onPro
  };
  const size=performance?256:512;
  const textures=[];
- const stats={ready:0,requested:Object.keys(targets).length,loadedFromSource:0,fallback:0,size,totalEstimatedGPUMiB:Math.round(Object.keys(targets).length*size*size*4*1.34/1048576*10)/10};
+ const stats={ready:0,requested:Object.keys(targets).length,loadedFromSource:0,fallback:0,size,totalEstimatedGPUMiB:Math.round(Object.keys(targets).length*size*size*4*1.34*(performance?2:3)/1048576*10)/10};
  onProgress({...stats});
  // Parallel, bounded loading. No PBR network promise blocks the level boot.
  const jobs=Object.entries(targets).map(async ([key,materials])=>{
@@ -87,13 +90,19 @@ export function installLeanPBR(T,materials,architecture,{performance=false,onPro
    try {
      // Prevent one slow host from delaying the rest of the game.
      // Requests may continue in browser cache, but this material keeps its fallback.
-     texSource=await Promise.race([image(src(PBR_ASSETS[key].asset)),new Promise((_,reject)=>setTimeout(()=>reject(new Error('PBR timeout')),8500))]);
+     texSource=await Promise.race([image(localSource(PBR_ASSETS[key].asset)),new Promise((_,reject)=>setTimeout(()=>reject(new Error('PBR timeout')),4000))]);
      stats.loadedFromSource++;
    } catch {
      texSource=proceduralCanvas(size,key);
      stats.fallback++;
    }
    textures.push(apply(T,texSource,size,materials,PBR_ASSETS[key]));
+   // A missing optional relief map never blocks a playable frame. Mobile keeps
+   // roughness and albedo; desktop also receives the scanned surface normals.
+   await Promise.allSettled((performance?['rough']:['normal','rough']).map(async channel=>{
+     const source=await image(localSource(PBR_ASSETS[key].asset,channel));
+     textures.push(apply(T,source,size,materials,PBR_ASSETS[key],channel));
+   }));
    stats.ready++;
    onProgress({...stats});
    return key;

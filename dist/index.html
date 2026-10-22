@@ -7,7 +7,7 @@
   <meta name="description" content="GHJU et LYLU, frère et sœur séparés par une guerre entre humains et IA. Explorez une mégapole en ruines avec escaliers, ascenseurs et machines hostiles sur mobile, ordinateur et Quest.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Pink War — Le dernier signal · Niveau 1</title>
+  <title>PINK WARS — LA FRACTURE</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="style.css?v=3.47"><link rel="stylesheet" href="hud.css?v=3.47"><link rel="stylesheet" href="campaign.css?v=3.47"><link rel="stylesheet" href="training.css?v=3.47">
@@ -16,7 +16,7 @@
 <body>
   <canvas id="world" aria-label="Arène 3D de Pink war"></canvas>
   <div id="welcome-art" aria-hidden="true"><img data-character-art data-ghju-src="art/accueil.webp?v=3.47" data-lylu-src="art/accueil-lylu.webp?v=3.47" src="art/accueil.webp?v=3.47" alt="" fetchpriority="high" decoding="async"></div>
-  <div id="loading-screen" hidden role="status" aria-live="polite"><img data-character-art data-ghju-src="art/chargement.webp?v=3.47" data-lylu-src="art/chargement-lylu.webp?v=3.47" src="art/chargement.webp?v=3.47" alt="" decoding="async"><div class="loading-copy"><span class="eyebrow">PINK WAR / VESPER</span><h2 id="loading-title">Le dernier signal</h2><p id="loading-description">Un terminal hors réseau conserve peut-être la trace de votre frère.</p><div class="loading-track" aria-hidden="true"><i></i></div><small id="loading-status">Chargement des équipements et du secteur…</small></div><span class="art-credit">ILLUSTRATION D’AMBIANCE · V.3.47</span></div>
+  <div id="loading-screen" hidden role="status" aria-live="polite"><img data-character-art data-ghju-src="art/chargement.webp?v=3.47" data-lylu-src="art/chargement-lylu.webp?v=3.47" src="art/chargement.webp?v=3.47" alt="" decoding="async"><div class="loading-copy"><span class="eyebrow">PINK WAR / VESPER</span><h2 id="loading-title">Le dernier signal</h2><p id="loading-description">Un terminal hors réseau conserve peut-être la trace de votre frère.</p><div class="loading-track" aria-hidden="true"><i></i></div><small id="loading-status">Chargement des équipements et du secteur…</small></div><span class="art-credit">ILLUSTRATION D’AMBIANCE · V.3.48</span></div>
   <div class="scene-shade" aria-hidden="true"></div>
   <div class="grain" aria-hidden="true"></div>
   <header class="masthead" id="masthead">
@@ -44,14 +44,14 @@
         </div>
       </div>
       <button id="play-button" class="play-button"><span class="play-icon"><svg viewBox="0 0 24 24"><path d="M5 19 19 5M5 5h14v14"/></svg></span><span id="play-label">JOUER LE NIVEAU 1</span><span class="play-arrow">→</span></button>
-      <span id="launch-status" class="launch-status" role="status">V. 3.47 · prêt à lancer</span><a id="online-launch" class="online-launch" href="https://pink-war.vercel.app/?v=3.47" hidden>JOUER EN LIGNE →</a>
-      <noscript><p>Ouvrez Pink War en ligne dans Safari : <a href="https://pink-war.vercel.app/?v=3.47">Jouer à Pink War</a>.</p></noscript>
+      <span id="launch-status" class="launch-status" role="status">V. 3.47 · prêt à lancer</span><a id="online-launch" class="online-launch" href="https://pink-war.vercel.app/?v=3.48" hidden>JOUER EN LIGNE →</a>
+      <noscript><p>Ouvrez Pink War en ligne dans Safari : <a href="https://pink-war.vercel.app/?v=3.48">Jouer à Pink War</a>.</p></noscript>
       <button id="lore-button" class="text-button lore-link">APRÈS LA CHUTE · L’HISTOIRE ↗</button><p class="play-note"><span class="small-cross">+</span> GRATUIT · SANS INSTALLATION · TACTILE & CLAVIER</p>
     </div>
-    <span class="art-credit lobby-art-credit">VESPER · ILLUSTRATION D’AMBIANCE · V.3.47</span>
+    <span class="art-credit lobby-art-credit">VESPER · ILLUSTRATION D’AMBIANCE · V.3.48</span>
     <div class="character-label" aria-hidden="true"><span class="label-line"></span><div><small>UNITÉ D’INTERVENTION</small><strong id="lobby-character-name">GHJU</strong><span><i></i> <b id="character-ready">PRÊTE AU COMBAT</b></span></div></div>
     <div class="scene-caption" aria-hidden="true"><span>SECTEUR 07</span><strong>LA BRÈCHE</strong><small>48° 07′ N &nbsp; / &nbsp; ZONE CONFINÉE</small></div>
-      <div class="lobby-bottom"><div class="bottom-meta"><span>PROTOTYPE JOUABLE <b>V.3.47</b></span><span id="renderer-label">CHARGEMENT 3D</span></div></div>
+      <div class="lobby-bottom"><div class="bottom-meta"><span>PROTOTYPE JOUABLE <b>V.3.48</b></span><span id="renderer-label">CHARGEMENT 3D</span></div></div>
   </main>
   <section id="game-hud" class="game-hud" hidden aria-label="Commandes du jeu">
     <aside id="training-hud" class="training-hud" hidden aria-label="Tableau de résultat du stand de tir">
@@ -109,6 +109,6 @@
   <div id="scope-overlay" aria-hidden="true"><i></i></div>
   <button id="vr-exit" class="vr-exit" aria-label="Quitter la VR" title="Quitter la VR" hidden>×</button><div id="stereo-reticle" class="stereo-reticle" hidden aria-hidden="true"><i></i><i></i></div><div id="vr-phone-note" class="vr-phone-note" hidden></div>
   <div id="loading-error" class="loading-error" role="alert" hidden><strong id="loading-error-title">Le chargement a été interrompu.</strong><p id="loading-error-message">Relancez le jeu en mode compatible.</p><a id="compatible-retry" class="solid-button" href="?v=3.47&amp;renderer=webgl">RELANCER EN MODE COMPATIBLE →</a><button id="copy-game-link" class="secondary-button">COPIER LE LIEN DU JEU</button><details><summary>Détail de l’erreur</summary><pre id="loading-error-detail"></pre><button id="copy-diagnostic" class="secondary-button">COPIER LE DIAGNOSTIC</button></details><small id="copy-game-status" role="status"></small></div>
-  <script type="module" src="entry.js?v=m02-prod-gameplay-v7-1"></script>
+  <script type="module" src="entry.js?v=3.48"></script>
 </body>
 </html>

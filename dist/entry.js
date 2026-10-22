@@ -45,12 +45,12 @@ async function begin(intent='play'){
   // restent accessibles par ?classic=1 ou via le lancement VR.
   if(mode==='campaign' && intent==='play' && !new URLSearchParams(location.search).has('classic')){
     save();
-    location.assign('./vesper-level1-v7.html?source=campaign&character='+encodeURIComponent(character));
+    location.assign('./vesper-level1-v7.html?source=campaign&v=3.48&character='+encodeURIComponent(character));
     return;
   }
   if(mode==='campaign2'){
     if(intent==='vr'){showLaunchError(new Error('La mission 02 est actuellement disponible en mode écran PC / Mac. La version WebXR est en cours d’intégration.'),'niveau 2');return;}
-    save();location.assign('./level2-test.html?source=campaign&character='+encodeURIComponent(character));return;
+    save();location.assign('./level2-test.html?source=campaign&v=3.48&character='+encodeURIComponent(character));return;
   }
   loading=true;refresh();
   for(const d of document.querySelectorAll('dialog[open]'))d.close();
@@ -61,7 +61,7 @@ async function begin(intent='play'){
   if(settings.sound||settings.music!==false)try{const Audio=window.AudioContext||window.webkitAudioContext;
     window.__PINKWAR_BOOT_AUDIO ||=new Audio();window.__PINKWAR_BOOT_AUDIO.resume().catch(()=>{});}catch{}
   try{
-    modulePromise ||=import('./game.js?v=3.47-vesper-v7-touch');await modulePromise;
+    modulePromise ||=import('./game.js?v=3.48');await modulePromise;
     for(const d of document.querySelectorAll('dialog'))d.removeEventListener('cancel',earlyCancel);
     if(!window.__PINKWAR||window.__PINKWAR.snapshot().phase==='error')throw new Error('Initialisation interrompue.');
     loading=false;

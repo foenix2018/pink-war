@@ -17,6 +17,9 @@ import {installLeanPBR} from './level2-materials.js';
 import {createStreetAtmosphere} from './level2-atmosphere.js';
 import {installPinkWarsSoldier} from './level2-player.js';
 import {showChapter2Finale} from './story-chapters.js';
+import {createCampaignCombatEffects} from './campaign-combat-effects.js';
+import {createAICompanion} from './ai-companions.js';
+import {createAmbience} from './ambience.js';
 
 const $=id=>document.getElementById(id);
 const characterId=new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju';
@@ -32,13 +35,16 @@ let view='fps',aimBlend=0,mouseAim=false,playerRig=null,touchControls=null,pause
 let jumpQueued=false,crouchQueued=false,firePressQueued=false,weaponReady=false,audioCtx=null,hitUntil=0;
 const weaponFeel=createWeaponFeel(),pinkControls=createPinkWarsInput();
 let enableAudio=true;try{enableAudio=JSON.parse(localStorage.getItem('rosee-settings')||'{}').sound!==false;}catch{}
+let combatEffects=null,companion=null,environmentAudio=null;
 function audioReady(){
- if(!enableAudio||audioCtx)return;
+ if(!enableAudio)return;
+ if(audioCtx){void audioCtx.resume?.().catch?.(()=>{});return;}
  try{
   const Context=window.AudioContext||window.webkitAudioContext;
   if(!Context)return;audioCtx=new Context();
   audioCtx.resume?.().catch?.(()=>{});
   setLaserAudioEnabled(audioCtx,true);
+  environmentAudio=createAmbience(audioCtx);
  }catch(error){console.warn('M02 audio fallback',error);}
 }
 
@@ -62,6 +68,7 @@ const materials={
  rose:glow(0xff4fa1),blue:glow(0x4ba8ff),white:glow(0xc2e5eb)
 };
 const cube=new T.BoxGeometry(1,1,1), plane=new T.PlaneGeometry(1,1);
+const projectileCore=new T.SphereGeometry(.07,6,4);
 function solid(x,y,z,w,h,d,m,collide=true,shadow=true){
  const o=new T.Mesh(cube,m);o.position.set(x,y,z);o.scale.set(w,h,d);o.receiveShadow=shadow;o.castShadow=shadow&&!low();root.add(o);
  o.userData.isCollider=collide;o.userData.staticBox=true;
@@ -374,6 +381,8 @@ function setupPlayer(){
   Object.assign(weapon.userData,{index:0,setVariant(index){this.index=index;},setCombatState(){}});
  }
  camera.add(weapon);weapon.position.set(.23,-.30,-.59);weapon.rotation.set(-.07,-.045,-.09);
+ combatEffects=createCampaignCombatEffects(T,scene,characterId);
+ companion=createAICompanion(T,scene,characterId);
  try {enemyFactory=createEnemyFactory(enemyMaterials());}
  catch(error){console.warn('M02 / enemy visuals degraded:',error);enemyFactory=null;}
 
@@ -496,7 +505,7 @@ function updateEnemies(dt){
  const active=new Set();
  for(const b of game.bullets){
   active.add(b.id);let mesh=shotMeshes.get(b.id);
-  if(!mesh){mesh=new T.Mesh(new T.SphereGeometry(b.hostile?.07:.09,6,4),b.hostile?materials.red:materials.cyan);shotMeshes.set(b.id,mesh);scene.add(mesh);}
+  if(!mesh){mesh=new T.Mesh(projectileCore,b.hostile?materials.red:materials.cyan);shotMeshes.set(b.id,mesh);scene.add(mesh);}
   mesh.position.set(b.x,b.y,b.z);
  }
  for(const [id,o] of shotMeshes)if(!active.has(id)){scene.remove(o);shotMeshes.delete(id);}
@@ -528,7 +537,7 @@ function gameTick(dt){
  game.step(dt,{x,z,yaw,moveYaw:yaw,sprint,jump,crouchToggle});
  weaponFeel.update(dt);
  snapCamera();
- const firing=heldFire||touch.fire||controls.fire;
+ const firing=heldFire||touch.fire||controls.fire||firePressQueued;
  // Same two-stage raycast as Pink Wars' game.js: center reticle selects a
  // visible target; projectile origin is the ACTUAL held weapon muzzle.
  updateOriginalSoldier(dt,Math.hypot(x,z)>.1,sprint,firing);
@@ -560,6 +569,7 @@ function gameTick(dt){
  updateEnemies(dt);
  const events=game.drainEvents();
  for(const e of events){
+  combatEffects?.event(e);
   if(e.type==='shot'){
     weaponFeel.fire(e.weapon||game.weapon.id,e.power||1,aimBlend>.5);
     weaponKick=Math.min(.25,weaponKick+.085);
@@ -574,6 +584,9 @@ function gameTick(dt){
   if(e.type==='kill'){notice('CIBLE NEUTRALISÉE');}
   if(e.type==='over'){running=false;shade.style.display='grid';$('start').textContent='RECOMMENCER LE TEST →';$('status').textContent='Intervention interrompue — santé épuisée';document.exitPointerLock?.();}
  }
+ combatEffects?.update(game,dt,camera);
+ companion?.update(dt,{game,camera,active:stage>=1});
+ environmentAudio?.update(dt,{active:running,position:game.player,moving:Math.hypot(x,z)>.1,grounded:game.player.grounded,elevation:game.player.elevation,yaw,probes:game.enemies});
  if(game.player.hp>0)$('damage').style.boxShadow='inset 0 0 '+(100-game.player.hp)*1.2+'px #c52c5e44';
  weaponKick=Math.max(0,weaponKick-dt*.7);
  const ads=flatSightPose(OPTICS[game.weapon.id],aimBlend);
@@ -668,11 +681,14 @@ async function boot(){
  try{
   const environment={userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu};
   const profile=graphicsProfile(environment,low()?'low':'auto',new URLSearchParams(location.search).get('renderer')==='webgl'||low());
+  if(profile.phone&&!new URLSearchParams(location.search).has('quality'))quality.value='low';
   const prepared=await createCompatibleRenderer({canvas,WebGPU:T.WebGPURenderer,WebGL:WebGLRenderer,profile});
   bootStep='création de la scène';status.textContent='Création du quartier cyberpunk…';
   canvas=prepared.canvas;renderer=prepared.renderer;
+  renderer.onDeviceLost=info=>onRenderFailure(new Error('Périphérique graphique perdu : '+(info?.message||info?.reason||'WebGPU')));
+  canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();onRenderFailure(new Error('Contexte WebGL perdu'));});
   renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
-  renderer.shadowMap.enabled=!low();renderer.shadowMap.type=T.PCFSoftShadowMap;
+  renderer.shadowMap.enabled=profile.shadows&&!low();renderer.shadowMap.type=T.PCFShadowMap;
   scene=new T.Scene();camera=new T.PerspectiveCamera(67,innerWidth/innerHeight,.08,320);
   scene.add(camera);createEnvironment();
   bootStep='jouabilité';status.textContent='Installation des commandes et des armes…';
@@ -685,6 +701,9 @@ async function boot(){
   }});}catch(error){console.warn('M02/PBR optional fallback:',error);}
   $('renderer').textContent=(renderer.isWebGLRenderer?'WebGL / repli':'WebGPU')+' · PBR';
   if(prepared.initialFailure)console.warn('M02: WebGPU unavailable:',prepared.initialFailure);
+  bootStep='préparation du premier rendu';status.textContent='Préparation des lumières et du premier rendu…';
+  snapCamera();
+  if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);
   bootStep='prêt';hud.hidden=false;started=true;requestAnimationFrame(animation);
   touchControls=createPinkWarsTouch(canvas,{
    onFire:down=>{if(down)audioReady();heldFire=down;if(down)firePressQueued=true;},
@@ -720,6 +739,7 @@ function resume(){
   game.enemies=[];game.bullets=[];game.time=0;game.kills=0;game.nextWave=Infinity;game.toSpawn=0;}
  for(const o of enemyMeshes.values())scene.remove(o);enemyMeshes.clear();
  for(const o of shotMeshes.values())scene.remove(o);shotMeshes.clear();
+ combatEffects?.reset();companion?.reset();
  yaw=0;pitch=0;stage=0;lastMinimalHudStage=-1;heldFire=false;mouseAim=false;aimBlend=0;jumpQueued=false;crouchQueued=false;firePressQueued=false;keys.clear();pinkControls.reset();touchControls?.reset();weaponFeel.reset();
  $('name').textContent='PINK WARS · '+characterId.toUpperCase()+' · M02';
  if(!touchControls?.root)canvas.requestPointerLock?.().catch?.(()=>{});
@@ -779,3 +799,7 @@ for(const name of ['pointerup','pointercancel']){
  window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
 }
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
+window.__PINK_M02=Object.freeze({snapshot:()=>({revision:'3.48',running,stage,characterId,health:game?.player.hp,
+ weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
+ backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,companion:companion?.snapshot(),pbr:pbrController?.stats,
+ effects:combatEffects?.stats()})});

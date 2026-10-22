@@ -1,5 +1,5 @@
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, clamp, segmentSphere, segmentBox, traceEnemyHit, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
-import { createScene } from './scene.js?v=3.47';
+import { createScene } from './scene.js?v=3.48';
 import { VRController } from './vr.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
 import { characterForId } from './characters.js';
@@ -19,9 +19,11 @@ import {attachCampaignStory} from './story-chapters.js';
 import { ShootingRangeGame } from './shooting-range.js';
 import {GAME_VERSION,showLaunchError} from './launch-ui.js';
 import {syncMenuArtwork} from './menu-art.js';
+import {createAICompanion} from './ai-companions.js';
 
 const $ = id => document.getElementById(id);
 const settings = { sound: true, music: true, sensitivity: 1, quality: 'auto' };
+let narrativeCompanion=null,companionScene=null,companionHero=null;
 try { Object.assign(settings, JSON.parse(localStorage.getItem('rosee-settings') || '{}')); } catch {}
 const boot=window.__PINKWAR_BOOT_OPTIONS;
 if(boot?.settings)Object.assign(settings,boot.settings);
@@ -750,7 +752,16 @@ function stepFrame(timestamp, xrFrame) {
   if (world.lost && !recovering) {
     void recoverGraphics(new Error('Le périphérique graphique a été perdu.'));return;
   }
-  if (!recovering) { vr.renderScope();if(vr.mode==='stereo')world.renderStereo();else world.render(); frames++; }
+  if(!recovering){
+    if(companionScene!==world.scene||companionHero!==character.id){
+      narrativeCompanion?.dispose();narrativeCompanion=createAICompanion(world.T,world.scene,character.id);
+      companionScene=world.scene;companionHero=character.id;
+    }
+    const active=phase==='playing'&&game.mode==='campaign'&&!['power','archive'].includes(game.stage);
+    const companionCamera=vr.mode==='xr'?world.renderer.xr.getCamera(world.camera):world.camera;
+    narrativeCompanion.update(dt,{game,camera:companionCamera,active});
+    vr.renderScope();if(vr.mode==='stereo')world.renderStereo();else world.render();frames++;
+  }
 }
 
 vr = new VRController({

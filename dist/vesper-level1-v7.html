@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><title>PINK WARS — Le Dernier Signal | Démo 3D WebGPU</title><style>
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><title>PINK WARS — LA FRACTURE · Le Dernier Signal</title><style>
 :root{font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Arial,sans-serif;color:#e9f3f8;background:#081019;--pink:#ec4c91;--cyan:#7ad7fb;--line:rgba(156,187,205,.19)}
 *{box-sizing:border-box}html,body{height:100%;margin:0;overflow:hidden}body{background:#07111b;touch-action:none}button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,select:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}canvas#view{position:fixed;inset:0;width:100%;height:100%;display:block;outline:none;background:linear-gradient(#354a5a,#121e2b 65%,#121417)}
 #game{position:fixed;inset:0;pointer-events:none}
@@ -29,7 +29,10 @@ body:not(.rainOn) #rainCurtain{display:none}
   #touchControls #touchButtons #btnJump{left:50%;bottom:max(101px,calc(env(safe-area-inset-bottom) + 79px));transform:translateX(-50%);border-color:#7acffc}
   #touchControls #touchButtons #btnFireMobile{right:max(14px,env(safe-area-inset-right));bottom:max(26px,env(safe-area-inset-bottom));width:75px;height:75px;border-color:#fa72ad;background:rgba(148,23,78,.7);color:white}
   #touchControls #touchButtons #btnUse{right:max(19px,env(safe-area-inset-right));bottom:max(115px,calc(env(safe-area-inset-bottom) + 95px));width:56px;height:56px}
-  #touchControls #touchButtons #btnRun{left:max(137px,calc(env(safe-area-inset-left) + 132px));bottom:max(25px,env(safe-area-inset-bottom));width:51px;height:51px;font-size:9px}
+  #touchControls #touchButtons #btnRun{left:auto;right:max(24px,env(safe-area-inset-right));bottom:max(184px,calc(env(safe-area-inset-bottom) + 170px));width:44px;height:44px;font-size:8px}
+  #touchControls #touchButtons #btnReloadMobile{right:max(110px,calc(env(safe-area-inset-right) + 100px));bottom:max(95px,calc(env(safe-area-inset-bottom) + 86px));width:48px;height:48px}
+  #touchControls #touchButtons #btnNextMobile{right:max(110px,calc(env(safe-area-inset-right) + 100px));bottom:max(26px,env(safe-area-inset-bottom));width:48px;height:48px;font-size:9px}
+  #touchControls #touchButtons #btnPauseMobile{right:max(62px,calc(env(safe-area-inset-right) + 54px));top:max(13px,env(safe-area-inset-top));width:38px;height:38px;border-radius:9px}
   #touchControls .mobileView{pointer-events:none;position:fixed;right:15px;top:38%;bottom:auto;opacity:.5;font-size:10px}
   #touchControls #btnAimMobile:active,#touchControls #btnFireMobile:active{background:#a63678}
   #controlsPanel{z-index:6}
@@ -81,15 +84,16 @@ body:not(.rainOn) #rainCurtain{display:none}
  <div id="bottom"><div class="bottomLeft"><div id="sector">SECTEUR SECOURS</div><div id="coords">X 2.0 Y 0.0 Z 54.0</div></div><div class="bottomRight"><div><span class="key">Z Q S D</span> ou <span class="key">W A S D</span> marcher · <span class="key">SOURIS</span> regarder</div><div class="hint"><span class="key">MAJ</span> courir · <span class="key">J</span> sauter · <span class="key">F</span> action · <span class="key">E</span> arme · <span class="key">ESPACE</span> tirer · <span class="key">V</span> caméra libre · <span class="key">M</span> plan · <span class="key">H</span> aide · <span class="key">P</span> photo · <span class="key">F1–F7</span> lieux · <span class="key">1–6</span> armes · <span class="key">R</span> recharger · <span class="key">CLIC</span> tirer</div></div></div>
  <div id="touchControls"><div id="stick" aria-label="Joystick virtuel"><div id="nub"></div></div><div class="mobileView">Glisser à droite pour regarder</div><div id="touchButtons"><button id="btnRun">COURIR</button><button id="btnUse">UTIL.</button><button id="btnJump">SAUT</button></div></div>
 </div>
-<div id="intro"><div class="introCard"><div class="introMeta">DÉMONSTRATION AUTONOME / LEVEL DESIGN 01 · V7</div><h1><span class="pink">PINK</span><br>WARS</h1><div class="subtitle">LE DERNIER SIGNAL</div><p class="lead">Parcourez les ruines du quartier des secours de Vesper. Entrez dans l'annexe médicale, fouillez l'atelier, empruntez les escaliers du relais A3 et approchez-vous des installations d’ORDRE. </p><div class="featureRow"><div class="feature">Architecture visitable</div><div class="feature">Végétation et ruines</div><div class="feature">Drones en mouvement</div><div class="feature">Fracture animée</div><div class="feature">WebGPU / WebGL2 • FPS · matériaux CC0</div><div class="feature">7 points de visite · V4</div><div class="feature">Portes praticables</div></div><button id="start" class="startBtn" disabled>ENTRER DANS VESPER →</button><p style="margin-top:14px"><a href="./index.html" style="color:#b9d5e5;text-decoration:underline">↩ Retour au menu Pink Wars</a></p><div id="bootInfo">Initialisation…</div><div class="notice">Version 7 : architecture enrichie, auvents et façades modulaires, structures métalliques, rue plus dense, drones, véhicules et végétation, ombres directionnelles. Prototype original de conception et d'exploration. WebGPU est utilisé lorsque votre navigateur et votre carte graphique le permettent, sinon repli automatique WebGL2.</div></div></div>
-<div id="help"><div class="helpCard"><div class="eyebrow">PINK WARS / ASSISTANCE EXPLORATION</div><h2>Visiter le niveau 1</h2><div class="helpGrid"><div><p><code>ZQSD / WASD</code> : déplacements<br><code>Souris</code> : orientation, cliquer dans le jeu pour verrouiller le pointeur<br><code>Maj</code> : courir<br><code>J</code> : sauter / double saut<br><code>F</code> : activer un terminal<br><code>E</code> : arme suivante<br><code>Espace</code> : tirer</p></div><div><p><code>V</code> : caméra libre (survoler le niveau)<br><code>Espace / Ctrl</code> : monter/descendre en caméra libre<br><code>M</code> : afficher le plan<br><code>H</code> : afficher l'aide<br><code>F1–F7</code> : téléportation · <code>1–6</code> : armes · <code>R</code> : recharger · <code>C</code> : accroupir · <code>Clic gauche</code> : tirer · <code>Clic droit</code> : viser · <code>Molette</code> : arme suivante · <code>Manette</code> : sticks pour bouger/regarder, L2 viser, R2 tirer, Croix sauter, Carré recharger, Triangle arme, Rond accroupir, R3 interagir<br><code>P</code> : mode photo<br><code>Échap</code> : libérer le pointeur</p></div></div><p style="font-size:13px;line-height:1.65;color:#b5cbd8">Points d'intérêt : annexe médicale, atelier, terrasse Archives A3, passerelle ORDRE, Fracture au nord. Les terminaux déclenchent de courts messages narratifs ; les armes disposent d’un tir de démonstration sur drones, sans IA de combat ni dégâts réciproques.</p><button id="helpClose">RETOURNER À VESPER</button></div></div>
+<div id="intro"><div class="introCard"><div class="introMeta">PINK WARS / LA FRACTURE · MISSION 01</div><h1><span class="pink">PINK</span><br>WARS</h1><div class="subtitle">LE DERNIER SIGNAL</div><p class="lead">Parcourez les ruines du quartier des secours de Vesper. Entrez dans l'annexe médicale, fouillez l'atelier, empruntez les escaliers du relais A3 et approchez-vous des installations d’ORDRE. </p><div class="featureRow"><div class="feature">Architecture visitable</div><div class="feature">Végétation et ruines</div><div class="feature">Drones en mouvement</div><div class="feature">Fracture animée</div><div class="feature">WebGPU / WebGL2 • FPS · matériaux CC0</div><div class="feature">7 points de visite · V4</div><div class="feature">Portes praticables</div></div><button id="start" class="startBtn" disabled>ENTRER DANS VESPER →</button><p style="margin-top:14px"><a href="./index.html" style="color:#b9d5e5;text-decoration:underline">↩ Retour au menu Pink Wars</a></p><div id="bootInfo">Initialisation…</div><div class="notice">Version 7 : architecture enrichie, auvents et façades modulaires, structures métalliques, rue plus dense, drones, véhicules et végétation, ombres directionnelles. Le quartier des secours est occupé par ORDRE. Rétablis le circuit isolé, retrouve l’archive et gagne le relais A3. WebGPU est utilisé lorsque votre navigateur et votre carte graphique le permettent, sinon repli automatique WebGL2.</div></div></div>
+<div id="help"><div class="helpCard"><div class="eyebrow">PINK WARS / ASSISTANCE EXPLORATION</div><h2>Visiter le niveau 1</h2><div class="helpGrid"><div><p><code>ZQSD / WASD</code> : déplacements<br><code>Souris</code> : orientation, cliquer dans le jeu pour verrouiller le pointeur<br><code>Maj</code> : courir<br><code>J</code> : sauter / double saut<br><code>F</code> : activer un terminal<br><code>E</code> : arme suivante<br><code>Espace</code> : tirer</p></div><div><p><code>V</code> : caméra libre (survoler le niveau)<br><code>Espace / Ctrl</code> : monter/descendre en caméra libre<br><code>M</code> : afficher le plan<br><code>H</code> : afficher l'aide<br><code>F1–F7</code> : téléportation · <code>1–6</code> : armes · <code>R</code> : recharger · <code>C</code> : accroupir · <code>Clic gauche</code> : tirer · <code>Clic droit</code> : viser · <code>Molette</code> : arme suivante · <code>Manette</code> : sticks pour bouger/regarder, L2 viser, R2 tirer, Croix sauter, Carré recharger, Triangle arme, Rond accroupir, R3 interagir<br><code>P</code> : mode photo<br><code>Échap</code> : libérer le pointeur</p></div></div><p style="font-size:13px;line-height:1.65;color:#b5cbd8">Points d'intérêt : annexe médicale, atelier, terrasse Archives A3, passerelle ORDRE, Fracture au nord. Les terminaux déclenchent de courts messages narratifs ; les tirs consomment des cellules, les robots entendent les bruits et ripostent. Utilise les abris pour rompre leur ligne de vue.</p><button id="helpClose">RETOURNER À VESPER</button></div></div>
 <script>'use strict';
 /* PINK WARS — Le Dernier Signal — procedural visitable 3D prototype — V3 MATERIALS / SHADOWS / AMBIENCE.
    Renderer: native WebGPU; WebGL2 backup. No dependency, textures built in canvas. */
 const $ = id => document.getElementById(id);
 let canvas=$('view'); const mini=$('minimap'), mapCtx=mini.getContext('2d');
-let renderer, gpuKind='—', started=false, pv=new Float32Array(16), aspect=1;
-let quality='equilibre', timeOfDay=0.43, isFree=false, mapOpen=false, flashlight=true;
+let renderer, combatWorld=null, gpuKind='—', started=false, pv=new Float32Array(16), aspect=1;
+const requestedQuality=new URLSearchParams(location.search).get('quality');
+let quality=['performance','equilibre','ultra'].includes(requestedQuality)?requestedQuality:/iPhone|iPad|iPod|Android.*Mobile/i.test(navigator.userAgent)?'performance':'equilibre', timeOfDay=0.43, isFree=false, mapOpen=false, flashlight=true;
 let yaw=-.47, pitch=-0.035, position={x:2,y:1.73,z:54}, velocityY=0, groundY=0, grounded=true;
 let last=0, fpsAcc=0, fpsCount=0, fps=0, noticeTime=0, missionIndex=0;
 const keys=new Set(), collide=[], stairs=[], decks=[], interactions=[], drones=[], beacons=[], worldBounds={minX:-77,maxX:77,minZ:-123,maxZ:71};
@@ -420,7 +424,7 @@ function a3Tower(){
  for(let i=0;i<9;i++){const xx=-34+i*2;staticMesh.box(xx,5.2,-40,.7,.65,.6,'black',1);staticMesh.box(xx,5.51,-40,.49,.10,.55,choice(['amber','blue']),choice([7,6]));}
  staticMesh.box(-25,22.5,-30,.5,7,.5,'steel',1);
  staticMesh.sphere(-25,26,-30,1,1,1,'blue',MAT.CYAN,5,8);
- interactions.push({x:-17.5,y:5,z:-29.5,r:3,title:'Terminal des Archives A3',action:'archives',message:'RELAIS NORD — Signal humain retrouvé. GHJU / LYLU ont laissé une trace hors réseau. Prochaine destination : les Archives végétales de Vesper.'});
+ interactions.push({x:-17.5,y:5,z:-29.5,r:3,title:'Terminal des Archives A3',action:'archives',message:'RELAIS NORD — Une trace humaine confirme le passage de ton frère ou de ta sœur. Prochaine piste : les Bas-Niveaux de Vesper.'});
 }
 function overpass(){
  const z=-56;
@@ -1578,14 +1582,14 @@ const lightPVGL=matMul(ortho(-165,165,-155,155,1,480),lightView);
 // Clip z in WebGPU must lie in [0,1], unlike OpenGL [-1,1].
 const clipFix=new Float32Array([1,0,0,0, 0,1,0,0, 0,0,.5,0, 0,0,.5,1]);
 const lightPVGPU=matMul(clipFix,lightPVGL);
-function resize(){if(!renderer)return;const ratio=(quality==='performance'?.75:quality==='ultra'?1.45:1)*Math.min(window.devicePixelRatio||1,1.8),w=Math.min(2600,Math.max(640,Math.floor(innerWidth*ratio))),h=Math.min(1700,Math.max(400,Math.floor(innerHeight*ratio)));aspect=w/h;renderer.resize(w,h);}
+function resize(){if(!renderer)return;if(renderer.managedResolution){aspect=innerWidth/innerHeight;renderer.resize(innerWidth,innerHeight);return;}const ratio=(quality==='performance'?.75:quality==='ultra'?1.45:1)*Math.min(window.devicePixelRatio||1,1.8),w=Math.min(2600,Math.max(640,Math.floor(innerWidth*ratio))),h=Math.min(1700,Math.max(400,Math.floor(innerHeight*ratio)));aspect=w/h;renderer.resize(w,h);}
 function groundAt(x,z,oldY=0){let h=0;
  for(const st of stairs)if(x>=st.x1&&x<=st.x2&&z<=st.zStart&&z>=st.zEnd)h=Math.max(h,st.height*clamp((st.zStart-z)/(st.zStart-st.zEnd),0,1));
  for(const dk of decks)if(x>=dk.x1&&x<=dk.x2&&z>=dk.z1&&z<=dk.z2&&oldY>dk.h-1.5)h=Math.max(h,dk.h);
  return h;
 }
 function blockedAt(x,y,z){for(const c of collide){if(y-1.5>c.y2||y<c.y1)continue; if(x+playerRadius>c.x1&&x-playerRadius<c.x2&&z+playerRadius>c.z1&&z-playerRadius<c.z2)return true}return false;}
-let airborne=false, liftCool=0,jumpLatch=false;
+let airborne=false, liftCool=0,jumpLatch=false,jumpQueued=false;
 function physics(dt){
  const f={x:Math.sin(yaw),z:-Math.cos(yaw)},r={x:Math.cos(yaw),z:Math.sin(yaw)};
  let ax=0,az=0;
@@ -1601,8 +1605,11 @@ function physics(dt){
  if(!blockedAt(nx,position.y,nz))position.x=nx,position.z=nz;
  else{if(!blockedAt(nx,position.y,position.z))position.x=nx;if(!blockedAt(position.x,position.y,nz))position.z=nz}
  const desiredGround=groundAt(position.x,position.z,position.y-eyeHeight),actualHeight=position.y-eyeHeight;
+ const jumpWasHeld=keys.has('KeyJ');
+ if(jumpQueued){jumpLatch=false;keys.add('KeyJ');}
  if(!keys.has('KeyJ'))jumpLatch=false;
  if(keys.has('KeyJ')&&!jumpLatch && (grounded||jumpCount<2)){velocityY=jumpCount===0?6.3:5.8;grounded=false;airborne=true;jumpCount++;jumpLatch=true;}
+ if(jumpQueued&&!jumpWasHeld)keys.delete('KeyJ');jumpQueued=false;
  velocityY-=17.5*dt;position.y+=velocityY*dt;
  const targetGround=desiredGround+eyeHeight;
  if(position.y<=targetGround || (grounded&&targetGround>position.y&&targetGround-position.y<.35)){position.y=targetGround;velocityY=0;grounded=true;airborne=false;jumpCount=0;}
@@ -1610,7 +1617,8 @@ function physics(dt){
  if(grounded&&position.y>targetGround+.3){grounded=false}
 }
 function activeInteraction(){let best=null,min=Infinity;for(const p of interactions){let dist=Math.hypot(position.x-p.x,position.z-p.z,(position.y-eyeHeight-p.y)*1.25);if(dist<p.r&&dist<min){best=p;min=dist}}return best;}
-function interact(){const p=activeInteraction();if(!p||isFree)return;
+function interact(){const p=activeInteraction();if(!p||isFree||gamePaused)return;
+ if(combatWorld&&!combatWorld.interact(p.action))return;
  if(p.action==='lift'){position.x=-11;position.z=-22;position.y=6.8;velocityY=0;grounded=true;notify(p.message);return;}
  if(p.action==='power'){missionIndex=Math.max(missionIndex,1)}
  if(p.action==='archive'){missionIndex=Math.max(missionIndex,2)}
@@ -1632,9 +1640,10 @@ const GAME_WEAPONS=[
  {name:'AURORA',mag:0,damage:95,cooldown:380,reload:0,color:'#54c6ff'}
 ];
 let weaponIndex=0,ammo=GAME_WEAPONS.map(w=>w.mag),isAiming=false,firing=false,gamePaused=false,weaponCooldown=0,reloadFinish=0,lastHit=0,score=0,shots=0,hits=0,jumpCount=0,lastGamepadButtons=[],gamepadMove={x:0,y:0},padLook={x:0,y:0},padRun=false,gamepadAiming=false,crouching=false,gunKick=0,hitMarkers=0;
-function changeWeapon(delta){if(isFree)return;weaponIndex=(weaponIndex+delta+GAME_WEAPONS.length)%GAME_WEAPONS.length;reloadFinish=0;updateWeaponUI();notify('ÉQUIPÉ : '+GAME_WEAPONS[weaponIndex].name,1100);}
-function reloadWeapon(){const w=GAME_WEAPONS[weaponIndex];if(reloadFinish||w.mag===0||ammo[weaponIndex]===w.mag)return;reloadFinish=performance.now()+w.reload;notify('RECHARGEMENT • '+w.name,Math.min(w.reload,1000));}
+function changeWeapon(delta){if(isFree)return;if(combatWorld){combatWorld.cycle(delta);weaponIndex=combatWorld.snapshot().weaponIndex;return;}weaponIndex=(weaponIndex+delta+GAME_WEAPONS.length)%GAME_WEAPONS.length;reloadFinish=0;updateWeaponUI();notify('ÉQUIPÉ : '+GAME_WEAPONS[weaponIndex].name,1100);}
+function reloadWeapon(){if(combatWorld){combatWorld.reload();return;}const w=GAME_WEAPONS[weaponIndex];if(reloadFinish||w.mag===0||ammo[weaponIndex]===w.mag)return;reloadFinish=performance.now()+w.reload;notify('RECHARGEMENT • '+w.name,Math.min(w.reload,1000));}
 function shoot(){if(!started||isFree||gamePaused||document.getElementById('help').classList.contains('show'))return;
+ if(combatWorld){combatWorld.fire(true);return;}
  const now=performance.now(),w=GAME_WEAPONS[weaponIndex];if(now<weaponCooldown||reloadFinish)return;
  if(w.mag>0&&ammo[weaponIndex]<=0){reloadWeapon();return;}
  weaponCooldown=now+w.cooldown;if(w.mag>0)ammo[weaponIndex]--;shots++;gunKick=1;lastHit=now;
@@ -1651,7 +1660,7 @@ function shoot(){if(!started||isFree||gamePaused||document.getElementById('help'
  if(best!==null){hits++;score+=w.damage;hitMarkers=now+190;const drone=drones[best];drone.phase+=1.6;drone.x+=((best%2)?-1:1)*1.8;document.getElementById('hitCross').classList.add('active');}
  updateWeaponUI();
 }
-function updateWeaponUI(){const w=GAME_WEAPONS[weaponIndex];let el=document.getElementById('pwAmmo');if(el)el.textContent=w.mag===0?'∞':String(ammo[weaponIndex]).padStart(2,'0')+' / '+w.mag;
+function updateWeaponUI(){if(combatWorld){const s=combatWorld.snapshot();if($('pwAmmo'))$('pwAmmo').textContent=s.capacity?s.ammo+' / '+s.capacity:'LAME';if($('pwWeapon'))$('pwWeapon').textContent=s.weapon.toUpperCase();return;}const w=GAME_WEAPONS[weaponIndex];let el=document.getElementById('pwAmmo');if(el)el.textContent=w.mag===0?'∞':String(ammo[weaponIndex]).padStart(2,'0')+' / '+w.mag;
  if(document.getElementById('pwWeapon'))document.getElementById('pwWeapon').textContent=w.name;
  if(document.getElementById('pwScore'))document.getElementById('pwScore').textContent=String(score);
  if(document.getElementById('weaponVis'))document.getElementById('weaponVis').style.setProperty('--glow',w.color);
@@ -1673,13 +1682,14 @@ function initCombatUI(){const sheet=document.createElement('style');sheet.textCo
  .photoMode #combatHud,.photoMode #weaponVis,.photoMode #hitCross{display:none!important}
  @media(pointer:coarse){#weaponVis{transform:scale(.60);transform-origin:bottom right;right:13px}#combatHud{left:10px;bottom:160px}}
  `;document.head.append(sheet);
- const c=document.createElement('div');c.id='combatHud';c.innerHTML='<div class="combatBox"><div class="combSub">ARME / <span id="pwWeapon">R9</span></div><div id="pwAmmo" class="ammoBig">32 / 32</div></div><div class="combatBox"><div class="combSub">SANTÉ</div><div class="ammoBig">100 <span style="color:#43b8e9">▰▰▰</span></div><div class="combSub" hidden>POINTS <span id="pwScore">0</span></div></div>';
+  const c=document.createElement('div');c.id='combatHud';c.setAttribute('aria-label','Santé et munitions');c.innerHTML='<div class="combatBox"><div class="combSub">ARME / <span id="pwWeapon">R9</span></div><div id="pwAmmo" class="ammoBig">12 / 12</div></div><div class="combatBox"><div class="combSub">SANTÉ</div><div class="ammoBig"><span id="pwHealth">100</span></div><div class="combSub" hidden>POINTS <span id="pwScore">0</span></div></div>';
  document.body.append(c);const g=document.createElement('div');g.id='weaponVis';g.innerHTML='<div class="gunMag"></div><div class="gunBody"></div><div class="gunRail"></div><div class="gunBarrel"></div><div class="gunLed"></div><div id="gunFlash"></div>';document.body.append(g);const h=document.createElement('div');h.id='hitCross';h.textContent='×';document.body.append(h);updateWeaponUI();}
-function pollGamepad(dt){const gp=navigator.getGamepads?.()?.find(Boolean);gamepadMove.x=0;gamepadMove.y=0;padLook.x=0;padLook.y=0;padRun=false;gamepadAiming=false;if(!gp)return;
+let padFiring=false;
+function pollGamepad(dt){const devices=navigator.getGamepads?.()||[],gp=combatWorld?combatWorld.gamepad(devices):Array.from(devices).find(Boolean);gamepadMove.x=0;gamepadMove.y=0;padLook.x=0;padLook.y=0;padRun=false;gamepadAiming=false;padFiring=false;if(!gp){lastGamepadButtons=[];return;}
  const d=v=>Math.abs(v)>.14?v:0, btn=i=>gp.buttons[i]?.pressed||false,edge=i=>btn(i)&&!lastGamepadButtons[i];
  gamepadMove.x=d(gp.axes[0]||0);gamepadMove.y=d(gp.axes[1]||0);padLook.x=d(gp.axes[2]||0);padLook.y=d(gp.axes[3]||0);padRun=btn(10);gamepadAiming=btn(6);
  yaw+=padLook.x*dt*1.9;pitch=clamp(pitch-padLook.y*dt*1.55,-1.46,1.46);
- if(btn(7))shoot();if(edge(0)){keys.add('Space');setTimeout(()=>keys.delete('Space'),75);}if(edge(2))reloadWeapon();if(edge(3))changeWeapon(1);if(edge(1))crouching=!crouching;if(edge(11))interact();if(edge(9))gamePaused=!gamePaused;
+ padFiring=btn(7);if(edge(0))jumpQueued=true;if(edge(2))reloadWeapon();if(edge(3))changeWeapon(1);if(edge(1))crouching=!crouching;if(edge(11)){document.getElementById('help').classList.remove('show');interact();}if(edge(9)){gamePaused=!gamePaused;combatWorld?.pause();}
  lastGamepadButtons=gp.buttons.map(b=>b.pressed);
 }
 
@@ -1695,14 +1705,18 @@ function inputSetup(){
   if(ev.code==='KeyH'){$('help').classList.toggle('show')}
   if(ev.code==='KeyL'){flashlight=!flashlight;notify('Éclairage individuel '+(flashlight?'ACTIVÉ':'DÉSACTIVÉ'))}
   if(ev.code==='KeyP'){document.body.classList.toggle('photoMode')}
-  if(ev.code.startsWith('Digit')&&ev.code!=='Digit0'&&+ev.code.slice(5)<=6){weaponIndex=Number(ev.code.slice(5))-1;reloadFinish=0;updateWeaponUI();}
+  if(ev.code.startsWith('Digit')&&ev.code!=='Digit0'&&+ev.code.slice(5)<=6){weaponIndex=Number(ev.code.slice(5))-1;reloadFinish=0;combatWorld?.select(weaponIndex);if(!combatWorld)updateWeaponUI();}
   if(/^F[1-7]$/.test(ev.code)){ev.preventDefault();goToStop(Number(ev.code.slice(1))-1);}
   if(ev.code==='KeyR')reloadWeapon();
+  if(ev.code==='KeyJ')jumpQueued=true;
+  if(ev.code==='Space')shoot();
   if(ev.code==='KeyC'||ev.code==='ControlLeft')crouching=!crouching;
-  if(ev.code==='Escape'){gamePaused=!gamePaused;notify(gamePaused?'PAUSE — Échap pour reprendre':'REPRISE',1300);}
+  if(ev.code==='Escape'){gamePaused=!gamePaused;combatWorld?.pause();notify(gamePaused?'PAUSE — Échap pour reprendre':'REPRISE',1300);}
 
  });
- document.addEventListener('keyup',ev=>keys.delete(ev.code));window.addEventListener('blur',()=>keys.clear());
+ document.addEventListener('keyup',ev=>keys.delete(ev.code));
+ const cancelInputs=()=>{keys.clear();firing=isAiming=padFiring=padRun=jumpQueued=false;touch.moveX=touch.moveY=0;touch.sprint=false;touchLook=null;combatWorld?.pause();};
+ window.addEventListener('blur',cancelInputs);document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelInputs();});
  canvas.addEventListener('mousedown',ev=>{if(ev.button===0){firing=true;shoot()}if(ev.button===2)isAiming=true;});
  document.addEventListener('mouseup',ev=>{if(ev.button===0)firing=false;if(ev.button===2)isAiming=false;});
  canvas.addEventListener('contextmenu',ev=>ev.preventDefault());
@@ -1717,14 +1731,21 @@ function inputSetup(){
  function moveStick(ev){const b=stick.getBoundingClientRect(),cx=b.left+b.width/2,cy=b.top+b.height/2;touch.moveX=clamp((ev.clientX-cx)/(b.width*.41),-1,1);touch.moveY=clamp((ev.clientY-cy)/(b.height*.41),-1,1);$('nub').style.transform=`translate(${touch.moveX*37}px,${touch.moveY*37}px)`}
  const end=ev=>{if(stickId===ev.pointerId){stickId=null;touch.moveX=0;touch.moveY=0;$('nub').style.transform=''}};
  stick.addEventListener('pointerup',end);stick.addEventListener('pointercancel',end);
- $('btnJump').onpointerdown=e=>{e.preventDefault();keys.add('KeyJ');try{e.currentTarget.setPointerCapture(e.pointerId)}catch{}};for(const t of ['pointerup','pointercancel','lostpointercapture'])$('btnJump').addEventListener(t,()=>keys.delete('KeyJ'));
+ $('btnJump').onpointerdown=e=>{e.preventDefault();jumpQueued=true;keys.add('KeyJ');try{e.currentTarget.setPointerCapture(e.pointerId)}catch{}};for(const t of ['pointerup','pointercancel','lostpointercapture'])$('btnJump').addEventListener(t,()=>keys.delete('KeyJ'));
  $('btnUse').onclick=interact;const tb=document.getElementById('touchButtons');if(tb){const fire=document.createElement('button');fire.textContent='TIR';fire.style.borderColor='#e6579d';fire.onpointerdown=e=>{e.preventDefault();firing=true;shoot();try{fire.setPointerCapture(e.pointerId)}catch{}};for(const type of ['pointerup','pointercancel','lostpointercapture'])fire.addEventListener(type,()=>{firing=false;});fire.id='btnFireMobile';fire.setAttribute('aria-label','Tirer');tb.prepend(fire);const aim=document.createElement('button');aim.id='btnAimMobile';aim.textContent='VISER';aim.setAttribute('aria-label','Viser');aim.onpointerdown=e=>{e.preventDefault();isAiming=true;try{aim.setPointerCapture(e.pointerId)}catch{}};for(const t of ['pointerup','pointercancel','lostpointercapture'])aim.addEventListener(t,()=>isAiming=false);tb.append(aim);}
  $('btnRun').onpointerdown=e=>{touch.sprint=true;try{e.currentTarget.setPointerCapture(e.pointerId)}catch{}};for(const type of ['pointerup','pointercancel','lostpointercapture'])$('btnRun').addEventListener(type,()=>touch.sprint=false);
- $('quality').addEventListener('change',e=>{quality=e.target.value;resize()});
+ const actions=document.getElementById('touchButtons');
+ for(const [id,label,description,action] of [
+  ['btnReloadMobile','↻','Recharger',reloadWeapon],
+  ['btnNextMobile','ARME','Arme suivante',()=>changeWeapon(1)],
+  ['btnPauseMobile','Ⅱ','Pause / reprendre',()=>{gamePaused=!gamePaused;combatWorld?.pause();document.getElementById('btnPauseMobile').textContent=gamePaused?'▶':'Ⅱ';}]
+ ]){const button=document.createElement('button');button.id=id;button.textContent=label;button.setAttribute('aria-label',description);button.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();action();});actions.append(button);}
+ $('quality').value=quality;
+ $('quality').addEventListener('change',e=>{quality=e.target.value;if(combatWorld){const url=new URL(location.href);url.searchParams.set('quality',quality);location.assign(url.href);}else resize();});
  $('lighting').addEventListener('input',e=>{timeOfDay=+e.target.value;$('lightingName').textContent=timeOfDay>.66?'JOUR':timeOfDay>.39?'CRÉPUSCULE':'NUIT'});
  $('start').onclick=start;
  $('helpClose').onclick=()=>$('help').classList.remove('show');
- $('teleport').onclick=()=>goToStop(0);
+ $('teleport').onclick=()=>{if(combatWorld)location.reload();else goToStop(0);};
  $('toggleMode').onclick=()=>{isFree=!isFree;notify(isFree?'Caméra libre activée.':'Exploration à pied activée.');$('cameraMode').textContent=isFree?'CAMÉRA LIBRE':'EXPLORATION'};
  $('helpOpen').onclick=()=>$('help').classList.add('show');
  setGuides();window.addEventListener('resize',resize);
@@ -1762,7 +1783,20 @@ function sceneUI(t){if(t-lastUiTime<180)return;lastUiTime=t;
 }
 let lastUiTime=0;
 function render(t){if(!started)return;const sec=t/1000,dt=Math.min(.045,(t-last)/1000||.016);last=t;
- if(!gamePaused){pollGamepad(dt);if(keys.has('ArrowRight'))yaw-=dt*1.4;if(keys.has('ArrowLeft'))yaw+=dt*1.4;if(keys.has('ArrowUp'))pitch=clamp(pitch+dt*1.15,-1.4,1.4);if(keys.has('ArrowDown'))pitch=clamp(pitch-dt*1.15,-1.4,1.4);physics(dt);if((firing||keys.has('Space')||keys.has('KeyT'))&&!isFree)shoot();}if(reloadFinish&&t>reloadFinish){ammo[weaponIndex]=GAME_WEAPONS[weaponIndex].mag;reloadFinish=0;updateWeaponUI();}if(hitMarkers&&t>hitMarkers){document.getElementById('hitCross')?.classList.remove('active');hitMarkers=0;} gunKick=Math.max(0,gunKick-dt*7);if(document.getElementById('weaponVis')){document.getElementById('weaponVis').style.setProperty('--kick',(gunKick*20).toFixed(1)+'px');document.getElementById('weaponVis').style.setProperty('--ads',(isAiming||gamepadAiming)?.87:1);}const forward=[Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch)];
+ pollGamepad(dt);
+ if(!gamePaused){
+  if(keys.has('ArrowRight'))yaw+=dt*1.4;if(keys.has('ArrowLeft'))yaw-=dt*1.4;
+  if(keys.has('ArrowUp'))pitch=clamp(pitch+dt*1.15,-1.4,1.4);if(keys.has('ArrowDown'))pitch=clamp(pitch-dt*1.15,-1.4,1.4);
+  if(!combatWorld||combatWorld.playing)physics(dt);
+  if((firing||keys.has('Space')||keys.has('KeyT')||padFiring)&&!isFree&&!$('help').classList.contains('show'))shoot();
+  else combatWorld?.fire(false);
+  combatWorld?.update(dt);
+ }
+ if(!combatWorld&&reloadFinish&&t>reloadFinish){ammo[weaponIndex]=GAME_WEAPONS[weaponIndex].mag;reloadFinish=0;updateWeaponUI();}
+ if(hitMarkers&&t>hitMarkers){document.getElementById('hitCross')?.classList.remove('active');hitMarkers=0;}
+ gunKick=Math.max(0,gunKick-dt*7);
+ if(document.getElementById('weaponVis')){document.getElementById('weaponVis').style.setProperty('--kick',(gunKick*20).toFixed(1)+'px');document.getElementById('weaponVis').style.setProperty('--ads',(isAiming||gamepadAiming)?.87:1);}
+ const forward=[Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch)];
  const eye=[position.x,position.y-(crouching&&!isFree?.42:0),position.z],target=eye.map((v,i)=>v+forward[i]);pv=matMul(perspective((isAiming||gamepadAiming)?0.80:1.12,aspect,.09,430),lookAt(eye,target));
  renderer.draw(sec);fpsAcc+=dt;fpsCount++;if(fpsAcc>.6){fps=fpsCount/fpsAcc;fpsAcc=0;fpsCount=0}
  sceneUI(t);requestAnimationFrame(render);
@@ -1827,11 +1861,32 @@ async function boot(){try{
  await new Promise(r=>setTimeout(r,80));
  buildScene();const atlas=createAtlas();const materialAtlas=await v5LoadMaterial();
  $('bootInfo').textContent='Initialisation du moteur WebGPU…';
- try{renderer=await createWebGPU(atlas,materialAtlas);gpuKind='WebGPU'}catch(e){console.warn('WebGPU indisponible, repli WebGL2 :',e);if(canvas.getContext('webgl2')===null){const newCanvas=canvas.cloneNode(false);canvas.replaceWith(newCanvas);canvas=newCanvas;}renderer=await createWebGL(atlas,materialAtlas);gpuKind='WebGL 2';}
+ if(!new URLSearchParams(location.search).has('visit')){
+  const {createVesperCombat}=await import('./vesper-combat.js?v=3.48');
+  let renderFailed=false;
+  const fail=error=>{
+   console.warn('Vesper / échec du rendu, repli compatible :',error);
+   if(renderFailed)return;renderFailed=true;gamePaused=true;combatWorld?.pause();
+   const retry=new URL(location.href);
+   if(retry.searchParams.get('renderer')!=='webgl'){retry.searchParams.set('renderer','webgl');location.replace(retry.href);}
+   else{console.error('Vesper render',error);$('intro').classList.remove('gone');$('bootInfo').textContent='Rendu interrompu. Recharge le secteur pour reprendre.';$('start').disabled=false;$('start').textContent='RECHARGER LE SECTEUR →';$('start').onclick=()=>location.reload();}
+  };
+  combatWorld=await createVesperCombat({canvas,staticMesh,portalMesh,signAtlas:atlas,collide,stairs,decks,interactions,notify,
+   getState:()=>({position,yaw,pitch,aiming:isAiming||gamepadAiming,crouching,grounded,sprint:touch.sprint||padRun||keys.has('ShiftLeft'),free:isFree,day:timeOfDay,shadows:shadowsEnabled,quality,flashlight}),
+   onCanvas:value=>{canvas=value;},onFailure:fail});
+  renderer=combatWorld;gpuKind=renderer.kind;
+  document.body.classList.add('pw-live-combat');
+  const style=document.createElement('style');style.textContent='body.pw-live-combat #weaponVis,body.pw-live-combat #sources{display:none!important}#combatHud{z-index:4}body.pw-live-combat #intro.gone{pointer-events:none}';document.head.append(style);
+  window.__PINK_VESPER={snapshot:()=>combatWorld.snapshot()};
+ }else{
+  try{renderer=await createWebGPU(atlas,materialAtlas);gpuKind='WebGPU'}catch(e){console.warn('WebGPU indisponible, repli WebGL2 :',e);if(canvas.getContext('webgl2')===null){const newCanvas=canvas.cloneNode(false);canvas.replaceWith(newCanvas);canvas=newCanvas;}renderer=await createWebGL(atlas,materialAtlas);gpuKind='WebGL 2';}
+ }
  $('renderer').textContent=gpuKind;initCombatUI();inputSetup();resize();$('bootInfo').textContent='Prêt à explorer · '+gpuKind;
- $('start').disabled=false;refreshObjective();if($('materialMode').value==='photo')applyCC0Materials();$('materialMode').addEventListener('change',e=>toggleSurfaceMode(e.target.value));
+ $('start').disabled=false;refreshObjective();
+ if(combatWorld){$('materialStatus').textContent='Surfaces photographiques embarquées · disponibles hors ligne';$('materialMode').options[0].textContent='Photo CC0 · embarqué';$('materialMode').disabled=true;$('audioToggle').textContent=combatWorld.ambienceEnabled?'🔊 Ambiance sonore : active':'🔇 Ambiance sonore : désactivée';}
+ else{if($('materialMode').value==='photo')applyCC0Materials();$('materialMode').addEventListener('change',e=>toggleSurfaceMode(e.target.value));}
  }catch(e){console.error(e);$('bootInfo').textContent='Erreur : '+e.message+' — essayer un navigateur prenant en charge WebGPU ou WebGL2';$('bootInfo').style.color='#ff778b';}}
-function start(){started=true;$('intro').classList.add('gone');if(!matchMedia('(pointer: coarse)').matches)canvas.requestPointerLock?.();last=performance.now();requestAnimationFrame(render);}
+function start(){if(started)return;started=true;combatWorld?.start();$('intro').classList.add('gone');if(!matchMedia('(pointer: coarse)').matches)canvas.requestPointerLock?.().catch?.(()=>{});last=performance.now();requestAnimationFrame(render);}
 boot();
 </script><script>
 (() => {
@@ -1841,6 +1896,7 @@ boot();
  shadows?.addEventListener('change',()=>{shadowsEnabled=shadows.checked;});
  rain?.addEventListener('change',()=>{atmosphericRain=rain.checked;document.body.classList.toggle('rainOn',atmosphericRain);});
  audioBtn?.addEventListener('click',async()=>{
+   if(combatWorld){const enabled=combatWorld.toggleAmbience();audioBtn.textContent=enabled?'🔊 Ambiance sonore : active':'🔇 Ambiance sonore : désactivée';return;}
   if(ambient){await ambient.ctx.close();ambient=null;audioBtn.textContent='🔇 Ambiance sonore : désactivée';return;}
   try{
     // Locally synthesised distant turbines and rain; no network/audio assets, disabled by default.

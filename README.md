@@ -1,5 +1,7 @@
 # Pink war
 
+Version 3.48 : combat rétabli sur le level design Vesper V7, santé et munitions au HUD, vraies armes et gants Shadow Unit, lumières de tir et textures photographiques CC0 locales. [Détail de la livraison](docs/pink-wars/MISE_A_JOUR_348.md).
+
 Jeu 3D en HTML et JavaScript, conçu pour iPhone, ordinateur et casque WebXR. La campagne commence par un niveau narratif complet, « Le dernier signal ». GHJU ou LYLU traverse le quartier des secours de Vesper, construit dans Blender, pour retrouver une trace de son frère ou de sa sœur. Le mode Survie conserve les vingt vagues et les six armes de l’arène de 200 × 200 mètres ; AT HOME reste accessible sur Quest.
 
 - Version 3.47 — fonds d’accueil et de chargement repris pour la tenue Shadow Unit : graphite, visière fermée, tabard et cape aux liserés roses GHJU ou bleus LYLU. Les illustrations suivent le personnage choisi, les ruines de Vesper et la recherche d’un journal humain sur un terminal hors réseau. Recadrage mobile conservé, illustrations WebP et textes de mission en HTML. [Jouer](https://pink-war.vercel.app/?v=3.47).
