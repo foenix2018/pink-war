@@ -481,7 +481,7 @@ document.addEventListener('mousemove',e=>{
  if(document.pointerLockElement!==canvas||!running)return;
  yaw-=e.movementX*.0020;pitch=clamp(pitch-e.movementY*.002,-1.2,1.2);
 });
-canvas.addEventListener('mousedown',e=>{if(!running)return;if(e.button===0)heldFire=true;if(document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch?.(()=>{});});
+window.addEventListener('mousedown',e=>{if(!running||(e.target!==canvas&&document.pointerLockElement!==canvas))return;if(e.button===0)heldFire=true;if(document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch?.(()=>{});});
 window.addEventListener('mouseup',e=>{if(e.button===0)heldFire=false;});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){heldFire=false;keys.clear();}});
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
