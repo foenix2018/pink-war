@@ -464,7 +464,14 @@ async function loadAuthenticSoldier(){
  try{
   const model=await installPinkWarsSoldier(T,scene,characterId,materials);
   playerRig=model;model.model.root.visible=view==='third';model.model.setWeapon(game.weaponIndex);
-  console.info('M02 original Shadow Unit character loaded:',characterId);
+  // Reuse the same original gloved weapon and optics as level 1 in FPS.
+  const canonicalGun=model.createGun();
+  canonicalGun.userData.setVariant(game.weaponIndex);
+  weapon.removeFromParent();
+  weapon=canonicalGun;camera.add(weapon);
+  weapon.position.set(.19,-.24,-.56);
+  snapCamera();
+  console.info('M02 original Shadow Unit and FPS weapon loaded:',characterId);
  }catch(error){console.warn('M02 authentic rig optional fallback',error);}
 }
 function updateEnemies(dt){
@@ -570,7 +577,9 @@ function gameTick(dt){
  weapon.rotation.set(weaponFeel.state.pitch,weaponFeel.state.yaw,-weaponFeel.state.yaw*.35);
  weapon.userData.setSight?.(aimBlend>.55,camera);
  weapon.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,
-  charge:game.charge,reloading:game.reloadRemaining>0,reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0});
+  charge:game.charge,reloading:game.reloadRemaining>0,reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,
+  heat:weaponFeel.state.heat,kick:weaponFeel.state.kick,impulse:weaponFeel.state.impulse});
+ weapon.userData.animateHands?.(Number(firing),firing?.34:.18,game.reloadRemaining>0?.8:0,dt);
  if(weapon.userData.index!==game.weaponIndex)weapon.userData.setVariant(game.weaponIndex);
  if(rain)rain.position.y=-(game.time*9%18);
  for(const b of beacons){b.halo.rotation.z+=dt*.4;b.dot.position.y=1.6+Math.sin(game.time*2)*.13;}
