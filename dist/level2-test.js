@@ -8,15 +8,18 @@ import {DesktopGamepadInput,desktopAxis} from './desktop-input.js';
 import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './renderer-policy.js';
 import {createEnemyFactory} from './enemies.js';
 import {buildGun} from './weapons.js';
+import {createDistrictArchitecture} from './level2-architecture.js';
+import {showChapter2Finale} from './story-chapters.js';
 
 const $=id=>document.getElementById(id);
+const characterId=new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju';
 const main=$('game'),shade=$('shade'),startButton=$('start'),status=$('status');
 const quality=$('quality'),hud=$('hud');
 const low=()=>quality.value==='low';
 const rng=(()=>{let s=220102;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};})();
 let canvas=main,renderer,scene,camera,game,weapon,clock=0,running=false,started=false,last=0,fpsTime=0,frames=0,framePending=false,recovering=false;
 let yaw=0,pitch=0,weaponKick=0,stage=0,reported=-1;
-let noticeUntil=0,signal=0, rain,enemyFactory,root;
+let noticeUntil=0,signal=0, rain,enemyFactory,root,architecture;
 const keys=new Set(),input=new DesktopGamepadInput(),enemyMeshes=new Map(),shotMeshes=new Map();
 const collisions=[],floors=[],beacons=[],lightSources=[],decals=[];
 const field={minX:-42,maxX:42,minZ:-81,maxZ:79};
@@ -158,8 +161,8 @@ function street(){
 function blockBuildings(){
  for(let i=0;i<7;i++)for(const side of [-1,1]){
   const z=65-i*22;
-  if((i===2&&side===-1)||(i===3&&side===1)){shopInterior(side,z);continue;}
-  tower(side,z,i+(side>0?4:0));
+  if((i===2&&side===-1)||(i===3&&side===1)){architecture.occupiedMarket(side,z);continue;}
+  architecture.residentialTower(side,z,i+(side>0?4:0));
  }
  // Distant volumetric skyline for dense city silhouette.
  for(let i=0;i<80;i++){
@@ -307,6 +310,7 @@ function optimizeStaticBoxes(){
 function createEnvironment(){
  scene.background=new T.Color(0x06111d);scene.fog=new T.FogExp2(0x091b2b,low()?.008:.010);
  root=new T.Group();root.name='M02 / W02 LES BAS-NIVEAUX';scene.add(root);
+ architecture=createDistrictArchitecture({T,root,materials,solid,beam,sign,collisions,low:low(),rng});
  const ambient=new T.HemisphereLight(0x739cbd,0x0b1018,2.0);scene.add(ambient);
  const moon=new T.DirectionalLight(0x86abc9,2.0);moon.position.set(-18,44,21);scene.add(moon);
  moon.castShadow=!low();moon.shadow.mapSize.set(low()?512:1024,low()?512:1024);
@@ -316,7 +320,7 @@ function createEnvironment(){
   const lamp=new T.PointLight(z%3===0?0xe69b5a:0x5bd6ec,low()?1.1:1.8,18,2);
   lamp.position.set(x,6.5,z);scene.add(lamp);lightSources.push(lamp);
  }
- street();blockBuildings();stairsAndSkybridges();props();weather();optimizeStaticBoxes();
+ street();blockBuildings();stairsAndSkybridges();props();architecture.decorate();weather();optimizeStaticBoxes();
 }
 function enemyMaterials(){
  return {monster:materials.wall,monsterFace:materials.black,cyan:materials.cyan,rose:materials.rose,violet:materials.blue,pale:materials.white};
@@ -361,9 +365,7 @@ function interact(){
   stage=2;notice('ARCHIVES HELIX SAISIES — REJOINDRE LE PONT +12 M');
  }
  else if(stage===2){stage=3;notice('ACCÈS TRANSIT DÉVERROUILLÉ — DESCENDRE');}
- else if(stage===3){running=false;shade.style.display='grid';$('start').textContent='RECOMMENCER LE TEST →';
-  $('status').textContent='M02 / objectif accompli · '+game.kills+' hostiles neutralisés · '+Math.floor(game.time)+' s';
-  document.exitPointerLock?.();}
+ else if(stage===3){running=false;document.exitPointerLock?.();showChapter2Finale({characterId,onReplay:resume});}
 }
 function snapCamera(){
  const p=game.player;camera.position.set(p.x,p.elevation+(p.crouched?1.0:1.68),p.z);
@@ -502,6 +504,7 @@ function resume(){
  for(const o of enemyMeshes.values())scene.remove(o);enemyMeshes.clear();
  for(const o of shotMeshes.values())scene.remove(o);shotMeshes.clear();
  yaw=0;pitch=0;stage=0;heldFire=false;keyCrouchQueued=false;keys.clear();
+ $('name').textContent='PINK WARS · '+characterId.toUpperCase()+' · M02';
  canvas.requestPointerLock?.().catch?.(()=>{});
 }
 startButton.addEventListener('click',()=>started?resume():boot());
