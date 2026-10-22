@@ -23,7 +23,7 @@ export function createPinkWarsInput(){
     actions[action]=!!state;
   }
   return {
-   moveX:desktopAxis(normalized[0])+(held(keys,...PINK_WARS_KEYS.right)?1:0)-(held(keys,...PINK_WARS_KEYS.left)?1:0),
+   moveX:desktopAxis(normalized[0])+(held(keys,PINK_WARS_KEYS.right)?1:0)-(held(keys,...PINK_WARS_KEYS.left)?1:0),
    moveZ:desktopAxis(normalized[1])+(keys.has(PINK_WARS_KEYS.back)?1:0)-(held(keys,...PINK_WARS_KEYS.forward)?1:0),
    lookX:desktopAxis(normalized[2])*1.6+(keys.has('ArrowRight')?1.4:0)-(keys.has('ArrowLeft')?1.4:0),
    lookY:desktopAxis(normalized[3])*1.35+(keys.has('ArrowDown')?1.15:0)-(keys.has('ArrowUp')?1.15:0),
