@@ -17,6 +17,7 @@ const $=id=>document.getElementById(id);
 const characterId=new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju';
 const main=$('game'),shade=$('shade'),startButton=$('start'),status=$('status');
 const quality=$('quality'),hud=$('hud');
+if(new URLSearchParams(location.search).get('quality')==='low')quality.value='low';
 const low=()=>quality.value==='low';
 const rng=(()=>{let s=220102;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};})();
 let canvas=main,renderer,scene,camera,game,weapon,clock=0,running=false,started=false,last=0,fpsTime=0,frames=0,framePending=false,recovering=false,bootStep='modules';
@@ -478,7 +479,9 @@ function animation(t){
  const dt=Math.min(.040,Math.max(0,(t-last)/1000));last=t;
  if(!renderer||!scene)return;
  clock+=dt;
- atmosphere?.update(clock);
+ if(atmosphere)try{atmosphere.update(clock);}catch(error){
+   console.warn('M02 optional atmosphere frame disabled:',error);atmosphere=null;
+ }
  if(running)try{gameTick(dt);}catch(error){
   console.error('M02 simulation failure:',error);
   running=false;shade.style.display='grid';status.textContent='Erreur de mission : '+(error?.message||String(error));
@@ -566,7 +569,13 @@ function resume(){
  canvas.requestPointerLock?.().catch?.(()=>{});
 }
 startButton.addEventListener('click',()=>{if(started)resume();else{startButton.disabled=true;boot();}});
-quality.addEventListener('change',()=>{if(!started)return;renderer.shadowMap.enabled=!low();resize();});
+quality.addEventListener('change',()=>{
+ // Rebuild once on setting change so PBR resolution, sprite counts, weather
+ // and shadow budget are all updated consistently, not only pixel ratio.
+ if(!started)return;
+ const url=new URL(location.href);url.searchParams.set('quality',quality.value);
+ location.assign(url.href);
+});
 window.addEventListener('resize',resize);
 window.addEventListener('keydown',e=>{
  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
