@@ -482,41 +482,53 @@ function updateEnemies(dt){
  }
  for(const [id,o] of shotMeshes)if(!active.has(id)){scene.remove(o);shotMeshes.delete(id);}
 }
-function gamepadInput(){
- const pad=input.select(navigator.getGamepads?.()||[],{focused:!document.hidden});if(!pad)return {};
- const a=pad.axes;const b=pad.buttons,down=i=>b[i]?.pressed||b[i]?.value>.5;
- yaw-=desktopAxis(a[2])*.055;pitch=clamp(pitch-desktopAxis(a[3])*.033,-1.25,1.18);
- return {x:desktopAxis(a[0]),z:desktopAxis(a[1]),jump:down(0),fire:down(7),sprint:down(10),reload:down(2),interact:down(11),crouch:down(1)};
-}
-let lastGamepadInteract=false,lastGamepadReload=false,lastGamepadCrouch=false,heldFire=false,keyCrouchQueued=false;
+let heldFire=false;
 function gameTick(dt){
- const pad=gamepadInput();
- const x=(keys.has('KeyD')?1:0)-(keys.has('KeyA')||keys.has('KeyQ')?1:0)+(pad.x||0);
- const z=(keys.has('KeyS')?1:0)-(keys.has('KeyW')||keys.has('KeyZ')?1:0)+(pad.z||0);
- const jump=keys.has('Space')||pad.jump,sprint=keys.has('ShiftLeft')||keys.has('ShiftRight')||pad.sprint;
- const crouch=pad.crouch&&!lastGamepadCrouch;lastGamepadCrouch=!!pad.crouch;
- const interaction=pad.interact&&!lastGamepadInteract;lastGamepadInteract=!!pad.interact;
- const reload=pad.reload&&!lastGamepadReload;lastGamepadReload=!!pad.reload;
- if(reload)game.reload();if(interaction)interact();
+ const controls=pinkControls.read(dt,keys,navigator.getGamepads?.()||[],{focused:!document.hidden});
+ const touch=touchControls?.state||{x:0,z:0,lookX:0,lookY:0,fire:false,aim:false};
+ const sensitivity=aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend);
+ yaw-=(controls.lookX*1.8+touch.lookX*1.8)*sensitivity*dt;
+ pitch=clamp(pitch-(controls.lookY+touch.lookY)*1.35*sensitivity*dt,-.85,.7);
+ const x=controls.moveX+touch.x,z=controls.moveZ+touch.z;
+ const aiming=!!OPTICS[game.weapon.id]&&game.reloadRemaining<=0&&(mouseAim||touch.aim||controls.aim);
+ aimBlend+=(Number(aiming)-aimBlend)*(1-Math.exp(-dt*14));
+ document.body.classList.toggle('aiming',aiming);
+ const sprint=!aiming&&controls.sprint;
+ if(controls.pause){pauseMission();return;}
+ if(controls.next)game.cycleWeapon();
+ if(controls.reload)game.reload();
+ if(controls.interact)interact();
+ const crouchToggle=controls.crouchToggle||crouchQueued;crouchQueued=false;
+ if(jumpQueued)game.player.jumpHeld=false;
+ const jump=controls.jump||jumpQueued;jumpQueued=false;
  game.nextWave=Infinity;game.toSpawn=0;
- game.step(dt,{x,z,yaw,moveYaw:yaw,sprint,jump,crouchToggle:!!crouch||keyCrouchQueued});keyCrouchQueued=false;
+ game.step(dt,{x,z,yaw,moveYaw:yaw,sprint,jump,crouchToggle});
+ weaponFeel.update(dt);
  snapCamera();
  const direction=new T.Vector3();camera.getWorldDirection(direction);
  const aim={origin:{x:camera.position.x,y:camera.position.y-.12,z:camera.position.z},
   direction:{x:direction.x,y:direction.y,z:direction.z}};
- const firing=heldFire||!!pad.fire;
- game.trigger(firing,dt,aim.origin,aim.direction);
- if(game.weapon.melee)game.trigger(false,dt,aim.origin,aim.direction);
+ const firing=heldFire||touch.fire||controls.fire;
+ if(game.weapon.semiAuto&&firePressQueued)game.triggerHeld=false;
+ firePressQueued=false;
+ if(firing||game.charge>0)game.trigger(firing,dt,aim.origin,aim.direction);
+ else if(game.weapon.melee)game.trigger(false,dt,aim.origin,aim.direction);
+ else{game.triggerHeld=false;game.semiPending=false;}
+ updateOriginalSoldier(dt,Math.hypot(x,z)>.1,sprint,firing);
  updateEnemies(dt);
  const events=game.drainEvents();
  for(const e of events){
-  if(e.type==='shot'){weaponKick=Math.min(.25,weaponKick+.085);}
+  if(e.type==='shot'){weaponFeel.fire(game.weapon.id,e.power||1,aimBlend>.5);weaponKick=Math.min(.25,weaponKick+.085);}
   if(e.type==='damage'){$('damage').style.boxShadow='inset 0 0 105px #c52c5e77';}
   if(e.type==='kill'){notice('CIBLE NEUTRALISÉE');}
   if(e.type==='over'){running=false;shade.style.display='grid';$('start').textContent='RECOMMENCER LE TEST →';$('status').textContent='Intervention interrompue — santé épuisée';document.exitPointerLock?.();}
  }
  if(game.player.hp>0)$('damage').style.boxShadow='inset 0 0 '+(100-game.player.hp)*1.2+'px #c52c5e44';
- weaponKick=Math.max(0,weaponKick-dt*.7);weapon.position.z=-.59+weaponKick;
+ weaponKick=Math.max(0,weaponKick-dt*.7);
+ const ads=flatSightPose(OPTICS[game.weapon.id],aimBlend);
+ weapon.position.set(ads.x+weaponFeel.state.yaw*.15,ads.y-weaponFeel.state.kick*.18,ads.z+weaponFeel.state.kick);
+ weapon.rotation.set(weaponFeel.state.pitch,weaponFeel.state.yaw,-weaponFeel.state.yaw*.35);
+ weapon.userData.setSight?.(aimBlend>.55,camera);
  weapon.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,
   charge:game.charge,reloading:game.reloadRemaining>0,reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0});
  if(weapon.userData.index!==game.weaponIndex)weapon.userData.setVariant(game.weaponIndex);
@@ -533,7 +545,7 @@ function updateHUD(){
  $('ammo').textContent=game.weapon.melee?'LAME':game.ammo[game.weaponIndex]+' / '+game.weapon.capacity;
  $('position').textContent='X '+game.player.x.toFixed(1)+' / Z '+game.player.z.toFixed(1)+' / ALT '+game.player.elevation.toFixed(1)+' m';
  const near=Math.hypot(game.player.x-o.x,game.player.z-o.z)<3.3&&Math.abs(game.player.elevation-o.y)<1.8;
- $('prompt').style.display=near?'block':'none';$('prompt').textContent='E / MANETTE : '+o.label;
+ $('prompt').style.display=near?'block':'none';$('prompt').textContent='F / R3 : '+o.label;
  if(clock>noticeUntil)$('notice').style.display='none';
 }
 function animation(t){
