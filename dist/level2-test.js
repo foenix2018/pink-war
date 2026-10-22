@@ -9,6 +9,7 @@ import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './rende
 import {createEnemyFactory} from './enemies.js';
 import {buildGun} from './weapons.js';
 import {createDistrictArchitecture} from './level2-architecture.js';
+import {installLeanPBR} from './level2-materials.js';
 import {showChapter2Finale} from './story-chapters.js';
 
 const $=id=>document.getElementById(id);
@@ -19,7 +20,7 @@ const low=()=>quality.value==='low';
 const rng=(()=>{let s=220102;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};})();
 let canvas=main,renderer,scene,camera,game,weapon,clock=0,running=false,started=false,last=0,fpsTime=0,frames=0,framePending=false,recovering=false;
 let yaw=0,pitch=0,weaponKick=0,stage=0,reported=-1;
-let noticeUntil=0,signal=0, rain,enemyFactory,root,architecture;
+let noticeUntil=0,signal=0, rain,enemyFactory,root,architecture,pbrController;
 const keys=new Set(),input=new DesktopGamepadInput(),enemyMeshes=new Map(),shotMeshes=new Map();
 const collisions=[],floors=[],beacons=[],lightSources=[],decals=[];
 const field={minX:-42,maxX:42,minZ:-81,maxZ:79};
@@ -217,9 +218,9 @@ function stairsAndSkybridges(){
   walkway(eastX,z,2.55,step+.06,h,'east-stair-'+i);
   if(i%6===0)for(const side of [-1,1])beam([eastX+side*1.23,h+.02,z],[eastX+side*1.23,h+1.10,z],.045,materials.iron);
  }
- solid(eastX,11.87,-12.5,2.9,.26,12,materials.iron,false);
+ solid(eastX,11.87,-12.5,2.9,.26,12,materials.road,false);
  walkway(eastX,-12.5,2.9,12,12,'upper-east');
- solid(0,11.85,-18,22,.3,3.05,materials.iron,false);
+ solid(0,11.85,-18,22,.3,3.05,materials.road,false);
  walkway(0,-18,22,3.05,12,'crossbridge');
  for(let side of [-1,1]){
   const x=side*1.38;
@@ -242,7 +243,7 @@ function stairsAndSkybridges(){
   solid(roofX,h+.01,z,2.4,.03,.36,materials.iron,false);
   walkway(roofX,z,2.4,.40,h,'roof-stair-'+i);
  }
- solid(-9,24.85,-51,15,.30,13.5,materials.iron,false);
+ solid(-9,24.85,-51,15,.30,13.5,materials.road,false);
  walkway(-9,-51,15,13.5,25,'roof');
  for(let z=-57;z<-44;z+=2){
   beam([-16.25,25,z],[-16.25,26.2,z],.06,materials.iron);
@@ -494,7 +495,12 @@ async function boot(){
   renderer.shadowMap.enabled=!low();renderer.shadowMap.type=T.PCFSoftShadowMap;
   scene=new T.Scene();camera=new T.PerspectiveCamera(67,innerWidth/innerHeight,.08,320);
   scene.add(camera);createEnvironment();setupPlayer();resize();
-  $('renderer').textContent=renderer.isWebGLRenderer?'WebGL / repli':'WebGPU';
+  const useWebGL=!!renderer.isWebGLRenderer;
+  pbrController=installLeanPBR(T,materials,architecture,{performance:low()||profile.phone,onProgress:state=>{
+    const renderMode=useWebGL?'WebGL':'WebGPU';
+    $('renderer').textContent=renderMode+' · PBR '+state.ready+'/'+state.requested+(state.fallback?' · '+state.fallback+' hors-ligne':'');
+  }});
+  $('renderer').textContent=(renderer.isWebGLRenderer?'WebGL / repli':'WebGPU')+' · PBR chargement';
   if(prepared.initialFailure)console.warn('M02: WebGPU unavailable:',prepared.initialFailure);
   hud.hidden=false;started=true;requestAnimationFrame(animation);
   resume();
