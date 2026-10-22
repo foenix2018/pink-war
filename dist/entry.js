@@ -41,6 +41,13 @@ $('sensitivity').oninput=e=>{settings.sensitivity=Number(e.target.value);save();
 $('quality').onchange=e=>{settings.quality=e.target.value;save();};
 async function begin(intent='play'){
   if(loading)return;
+  // Niveau 1 Vesper V7 — écran et tactile. La campagne classique et WebXR
+  // restent accessibles par ?classic=1 ou via le lancement VR.
+  if(mode==='campaign' && intent==='play' && !new URLSearchParams(location.search).has('classic')){
+    save();
+    location.assign('./vesper-level1-v7.html?source=campaign&character='+encodeURIComponent(character));
+    return;
+  }
   if(mode==='campaign2'){
     if(intent==='vr'){showLaunchError(new Error('La mission 02 est actuellement disponible en mode écran PC / Mac. La version WebXR est en cours d’intégration.'),'niveau 2');return;}
     save();location.assign('./level2-test.html?source=campaign&character='+encodeURIComponent(character));return;
