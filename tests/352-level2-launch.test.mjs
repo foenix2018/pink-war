@@ -80,5 +80,5 @@ test('M02 boot reports its stage and can fall back to WebGL',()=>{
  assert.match(js,/createCompatibleRenderer/);
  assert.match(js,/showChapter2Finale/);
  const html=text('level2-test.html');
- assert.match(html,/m02-launch-5/);
+ assert.match(html,/m02-graphics-3/);
 });
