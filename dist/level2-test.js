@@ -3,14 +3,18 @@
 // imported unchanged from the production game. The cyberpunk world is new.
 import * as T from './vendor/three.webgpu.min.js';
 import {WebGLRenderer} from './vendor/three.module.min.js';
-import {ArenaGame,WEAPONS,clamp} from './game-logic.js';
-import {DesktopGamepadInput,desktopAxis} from './desktop-input.js';
+import {ArenaGame,WEAPONS,clamp,segmentBox} from './game-logic.js';
+import {createPinkWarsInput,createPinkWarsTouch} from './level2-input.js';
+import {createWeaponFeel} from './weapon-feel.js';
+import {aimSensitivity,magnifiedFov,flatSightPose} from './optics.js';
+import {OPTICS} from './weapons.js';
 import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './renderer-policy.js';
 import {createEnemyFactory} from './enemies.js';
 import {buildGun} from './weapons.js';
 import {createDistrictArchitecture} from './level2-architecture.js';
 import {installLeanPBR} from './level2-materials.js';
 import {createStreetAtmosphere} from './level2-atmosphere.js';
+import {installPinkWarsSoldier} from './level2-player.js';
 import {showChapter2Finale} from './story-chapters.js';
 
 const $=id=>document.getElementById(id);
@@ -22,8 +26,11 @@ const low=()=>quality.value==='low';
 const rng=(()=>{let s=220102;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};})();
 let canvas=main,renderer,scene,camera,game,weapon,clock=0,running=false,started=false,last=0,fpsTime=0,frames=0,framePending=false,recovering=false,bootStep='modules';
 let yaw=0,pitch=0,weaponKick=0,stage=0,reported=-1;
-let noticeUntil=0,signal=0, rain,enemyFactory,root,architecture,pbrController,atmosphere;
-const keys=new Set(),input=new DesktopGamepadInput(),enemyMeshes=new Map(),shotMeshes=new Map();
+let noticeUntil=0,signal=0,rain,enemyFactory,root,architecture,pbrController,atmosphere;
+let view='fps',aimBlend=0,mouseAim=false,playerRig=null,touchControls=null,paused=false;
+let jumpQueued=false,crouchQueued=false,firePressQueued=false,weaponReady=false;
+const weaponFeel=createWeaponFeel(),pinkControls=createPinkWarsInput();
+const keys=new Set(),enemyMeshes=new Map(),shotMeshes=new Map();
 const collisions=[],floors=[],beacons=[],lightSources=[],decals=[];
 const field={minX:-42,maxX:42,minZ:-81,maxZ:79};
 const objectives=[
@@ -390,8 +397,63 @@ function interact(){
  else if(stage===3){running=false;document.exitPointerLock?.();showChapter2Finale({characterId,onReplay:resume});}
 }
 function snapCamera(){
- const p=game.player;camera.position.set(p.x,p.elevation+(p.crouched?1.0:1.68),p.z);
- camera.rotation.set(pitch,yaw,0,'YXZ');
+ const p=game.player,eye=characterId==='lylu'?1.71:1.61,optic=OPTICS[game.weapon.id],normal=view==='fps'?72:64;
+ camera.fov=normal+(optic?(magnifiedFov(normal,optic.magnification)-normal)*aimBlend:0);
+ camera.rotation.set(pitch+weaponFeel.state.pitch*.18,yaw+weaponFeel.state.yaw*.07,0,'YXZ');
+ if(view==='fps')camera.position.set(p.x,p.elevation+eye-(p.crouched?.55:0),p.z);
+ else{
+  const start={x:p.x,y:p.elevation+eye-.2-(p.crouched?.45:0),z:p.z},dist=5.1;
+  const end={x:p.x+Math.sin(yaw)*dist*Math.cos(pitch)+Math.cos(yaw)*.65,y:start.y-Math.sin(pitch)*dist,
+    z:p.z+Math.cos(yaw)*dist*Math.cos(pitch)-Math.sin(yaw)*.65};
+  let nearest=1;
+  for(const box of collisions){
+   if(box.walkableSurface)continue;
+   const t=segmentBox(start,end,{...box,hx:box.hx+.2,hz:box.hz+.2});
+   if(t!==null)nearest=Math.min(nearest,Math.max(.09,t-.05));
+  }
+  camera.position.set(start.x+(end.x-start.x)*nearest,Math.max(.35,start.y+(end.y-start.y)*nearest),start.z+(end.z-start.z)*nearest);
+ }
+ camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
+ weapon.visible=view==='fps';
+ if(playerRig?.model)playerRig.model.root.visible=view==='third';
+}
+function changeView(){
+ view=view==='fps'?'third':'fps';
+ if(!playerRig&&view==='third')notice('CHARGEMENT DE GHJU / LYLU…');
+ snapCamera();
+}
+function updateOriginalSoldier(dt,moving,sprint,firing){
+ const model=playerRig?.model;if(!model)return;
+ try{
+  model.root.position.set(game.player.x,game.player.elevation,game.player.z);
+  model.root.rotation.y=yaw;
+  if(model.weapon!==game.weaponIndex)model.setWeapon(game.weaponIndex);
+  model.gun.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,
+    reloading:game.reloadRemaining>0,reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,charge:game.charge});
+  model.animate(game.time,moving,weaponFeel.state.pitch,0,Number(firing),dt,{
+    airborne:!game.player.grounded,verticalSpeed:game.player.verticalSpeed,crouched:game.player.crouched,
+    firing:!!firing,sprint,aim:aimBlend>.2
+  });
+ }catch(error){console.warn('M02 authentic animation fallback',error);scene.remove(model.root);playerRig=null;}
+}
+function pauseMission(){
+ if(!running||paused)return;
+ paused=true;running=false;heldFire=false;mouseAim=false;
+ touchControls?.reset();pinkControls.reset();document.exitPointerLock?.();
+ shade.style.display='grid';$('start').textContent='REPRENDRE LA MISSION →';
+ $('status').textContent='PAUSE · PINK WARS / NIVEAU 2';
+}
+function unpauseMission(){
+ if(!paused)return;paused=false;running=true;shade.style.display='none';
+ if(!touchControls?.root)canvas.requestPointerLock?.().catch?.(()=>{});
+}
+async function loadAuthenticSoldier(){
+ if(weaponReady||low())return;weaponReady=true;
+ try{
+  const model=await installPinkWarsSoldier(T,scene,characterId,materials);
+  playerRig=model;model.model.root.visible=view==='third';model.model.setWeapon(game.weaponIndex);
+  console.info('M02 original Shadow Unit character loaded:',characterId);
+ }catch(error){console.warn('M02 authentic rig optional fallback',error);}
 }
 function updateEnemies(dt){
  const live=new Set();
