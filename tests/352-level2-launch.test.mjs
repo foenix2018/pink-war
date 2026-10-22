@@ -40,7 +40,8 @@ test('W02 advanced architecture constructs tower, market and transit decor witho
      this.userData={};this.castShadow=false;this.receiveShadow=false;
    }
  }
- const T={Mesh,MeshStandardMaterial:Material,MeshBasicMaterial:Material,MeshPhysicalMaterial:Material,
+ const Group=class extends Mesh{add(...children){this.children=(this.children||[]).concat(children);}};
+ const T={Mesh,Group,MeshStandardMaterial:Material,MeshBasicMaterial:Material,MeshPhysicalMaterial:Material,
    CylinderGeometry:Geometry,TorusGeometry:Geometry,PlaneGeometry:Geometry,
    BoxGeometry:Geometry,OctahedronGeometry:Geometry,CanvasTexture:Geometry,
    DoubleSide:2,SRGBColorSpace:'sRGB'};
