@@ -34,19 +34,54 @@ body:not(.rainOn) #rainCurtain{display:none}
   #touchControls #btnAimMobile:active,#touchControls #btnFireMobile:active{background:#a63678}
   #controlsPanel{z-index:6}
 }
+</style>
+<style id="pw-v7-clean-hud">
+/* HUD de combat seulement. Les aides et le debug restent disponibles via les boutons discrets. */
+#game .top,#game #bottom,#game .mobileView{display:none!important}
+#game #controlsPanel,#game #objectivePanel{display:none}
+#game #controlsPanel.open{display:block;max-height:min(80dvh,680px);overflow-y:auto;z-index:8}
+#game #objectivePanel.open{display:block;z-index:6;top:62px;left:max(12px,env(safe-area-inset-left));width:min(340px,calc(100vw - 90px))}
+#game #quickSettings,#game #quickObjective{
+ position:absolute;top:max(13px,env(safe-area-inset-top));width:38px;height:38px;
+ z-index:7;display:grid;place-items:center;border:1px solid #648e9b8f;
+ background:#071925bd;color:#c4e9f0;border-radius:9px;font-size:21px;
+ pointer-events:auto;touch-action:manipulation;backdrop-filter:blur(8px)
+}
+#game #quickSettings{right:max(13px,env(safe-area-inset-right))}
+#game #quickObjective{left:max(13px,env(safe-area-inset-left))}
+#game #controlsPanel{top:61px;right:max(13px,env(safe-area-inset-right))}
+#game #toast .eyebrow{display:none}
+#game #toast{padding:10px 14px;max-width:min(420px,calc(100vw - 28px));top:17%}
+#game #toastText{font-size:12px;line-height:1.38}
+#game #prompt{min-width:0;padding:8px 12px;top:58%;max-width:min(340px,82vw)}
+#game #prompt .eyebrow{font-size:9px}
+#game #promptTitle{font-size:12px}
+#combatHud .combatBox:last-child .combSub:last-child{display:none}
+#combatHud .combatBox{padding:7px 10px;border-radius:7px;background:rgba(2,11,19,.76)}
+#combatHud .combSub{letter-spacing:.05em;font-size:9px}
+#combatHud .ammoBig{font-size:20px}
+@media (pointer:coarse){
+ #game #controlsPanel.open{max-width:min(255px,88vw);top:max(62px,calc(env(safe-area-inset-top) + 47px));}
+ #game #objectivePanel.open{top:max(62px,calc(env(safe-area-inset-top) + 47px));}
+ #combatHud{left:max(10px,env(safe-area-inset-left));bottom:max(156px,calc(env(safe-area-inset-bottom) + 146px));gap:7px!important}
+ #combatHud .combatBox{padding:5px 8px}
+ #combatHud .ammoBig{font-size:16px}
+ #game #prompt{top:46%}
+}
+.photoMode #quickSettings,.photoMode #quickObjective{display:none!important}
 </style></head><body>
 <canvas id="view" aria-label="Environnement 3D de Vesper"></canvas>
 <div id="rainCurtain"></div><div id="game" aria-label="Commandes de la visite 3D"><div id="vignette"></div>
  <div class="top"><div><div class="logo"><em>PINK</em> WARS <span style="font-size:10px;color:#a9c9d9;letter-spacing:.1em">/ VISITE 3D</span></div><div class="smallcap">VESPER / LE DERNIER SIGNAL / SECTEUR 03</div></div><div class="topright"><div class="chip"><span class="dot"></span><strong id="renderer">INITIALISATION</strong> <span id="fps">— FPS</span></div><div id="cameraMode" class="chip">EXPLORATION</div></div></div>
- <div id="objectivePanel"><div class="eyebrow">MISSION 01 <span style="float:right" id="objCount">00/04</span></div><div id="objective">Réarmer le circuit de l’annexe de secours</div></div>
+ <button id="quickObjective" aria-label="Afficher le prochain objectif" title="Objectif" onclick="document.getElementById('objectivePanel').classList.toggle('open');document.getElementById('controlsPanel').classList.remove('open')">◎</button><button id="quickSettings" aria-label="Ouvrir les paramètres et la carte" title="Réglages" onclick="document.getElementById('controlsPanel').classList.toggle('open');document.getElementById('objectivePanel').classList.remove('open')">⚙</button><div id="objectivePanel"><div class="eyebrow">MISSION 01 <span style="float:right" id="objCount">00/04</span></div><div id="objective">Réarmer le circuit de l’annexe de secours</div></div>
  <div id="controlsPanel"><div class="ctrlTitle">Paramètres graphiques</div><div class="group"><label for="quality">Qualité</label><select id="quality"><option value="performance">Performance</option><option value="equilibre" selected>Équilibré</option><option value="ultra">Ultra</option></select></div><div class="group"><label for="materialMode">Matériaux</label><select id="materialMode"><option value="offline" selected>Industriel HD · embarqué</option><option value="photo">Photo CC0 · option réseau</option></select><div id="materialStatus" style="color:#8fbac6;font:10px/1.6 monospace;margin-top:6px">Atlas embarqué • chargement CC0 facultatif</div></div><div class="group"><label for="lighting">Lumière <strong id="lightingName">NUIT URBAINE</strong></label><input id="lighting" type="range" min="0" max="1" step="0.01" value="0.43"></div><div class="group"><label for="shadowsToggle">Ombres projetées <input id="shadowsToggle" type="checkbox" checked style="width:19px;height:19px"></label><label for="rainToggle">Pluie atmosphérique <input id="rainToggle" type="checkbox" checked style="width:19px;height:19px"></label></div><div class="ctrlBtns"><button id="toggleMode" class="miniBtn">Caméra libre</button><button id="teleport" class="miniBtn">Recommencer</button><button id="helpOpen" class="miniBtn">Commandes</button><button id="mapPanelBtn" class="miniBtn" onclick="document.getElementById('mapPanel').classList.toggle('show')">Plan / M</button></div><div class="tourPanel"><div class="ctrlTitle">Visite guidée · 7 étapes</div><div class="group"><label for="visitSelect">Destination</label><select id="visitSelect"></select></div><div class="tourBtns"><button id="visitGo" class="miniBtn">S'y rendre</button><button id="visitNext" class="miniBtn">Étape suiv.</button><button id="hudToggle" class="miniBtn" style="grid-column:span 2">Mode photo / P</button><button id="audioToggle" class="miniBtn" style="grid-column:span 2">🔇 Ambiance sonore : désactivée</button></div><div class="tourHint">Raccourcis 1–7 : voyager entre les points d'intérêt.</div></div></div>
- <div id="crosshair"></div><div id="prompt"><div class="eyebrow">[ E ] INTERAGIR</div><div id="promptTitle"></div></div>
+ <div id="crosshair"></div><div id="prompt"><div class="eyebrow">[ F ] ACTION</div><div id="promptTitle"></div></div>
  <div id="toast"><div class="eyebrow">SIGNAL LOCAL</div><div id="toastText"></div></div>
  <div id="mapPanel"><div class="ctrlTitle" style="margin-bottom:9px">CARTE TACTIQUE / VESPER</div><canvas id="minimap" width="320" height="320"></canvas><div class="mapHint">Points roses : terminaux · Triangle : position</div></div>
  <div id="bottom"><div class="bottomLeft"><div id="sector">SECTEUR SECOURS</div><div id="coords">X 2.0 Y 0.0 Z 54.0</div></div><div class="bottomRight"><div><span class="key">Z Q S D</span> ou <span class="key">W A S D</span> marcher · <span class="key">SOURIS</span> regarder</div><div class="hint"><span class="key">MAJ</span> courir · <span class="key">J</span> sauter · <span class="key">F</span> action · <span class="key">E</span> arme · <span class="key">ESPACE</span> tirer · <span class="key">V</span> caméra libre · <span class="key">M</span> plan · <span class="key">H</span> aide · <span class="key">P</span> photo · <span class="key">F1–F7</span> lieux · <span class="key">1–6</span> armes · <span class="key">R</span> recharger · <span class="key">CLIC</span> tirer</div></div></div>
  <div id="touchControls"><div id="stick" aria-label="Joystick virtuel"><div id="nub"></div></div><div class="mobileView">Glisser à droite pour regarder</div><div id="touchButtons"><button id="btnRun">COURIR</button><button id="btnUse">UTIL.</button><button id="btnJump">SAUT</button></div></div>
 </div>
-<div id="intro"><div class="introCard"><div class="introMeta">DÉMONSTRATION AUTONOME / LEVEL DESIGN 01 · V7</div><h1><span class="pink">PINK</span><br>WARS</h1><div class="subtitle">LE DERNIER SIGNAL</div><p class="lead">Parcourez les ruines du quartier des secours de Vesper. Entrez dans l'annexe médicale, fouillez l'atelier, empruntez les escaliers du relais A3 et approchez-vous des installations d’ORDRE. Une visite de level design, avec tir d’entraînement sur les drones, avant intégration au jeu.</p><div class="featureRow"><div class="feature">Architecture visitable</div><div class="feature">Végétation et ruines</div><div class="feature">Drones en mouvement</div><div class="feature">Fracture animée</div><div class="feature">WebGPU / WebGL2 • FPS · matériaux CC0</div><div class="feature">7 points de visite · V4</div><div class="feature">Portes praticables</div></div><button id="start" class="startBtn" disabled>ENTRER DANS VESPER →</button><p style="margin-top:14px"><a href="./index.html" style="color:#b9d5e5;text-decoration:underline">↩ Retour au menu Pink Wars</a></p><div id="bootInfo">Initialisation…</div><div class="notice">Version 7 : architecture enrichie, auvents et façades modulaires, structures métalliques, rue plus dense, drones, véhicules et végétation, ombres directionnelles. Prototype original de conception et d'exploration. Le niveau définitif de Pink Wars n'est pas modifié. WebGPU est utilisé lorsque votre navigateur et votre carte graphique le permettent, sinon repli automatique WebGL2.</div></div></div>
+<div id="intro"><div class="introCard"><div class="introMeta">DÉMONSTRATION AUTONOME / LEVEL DESIGN 01 · V7</div><h1><span class="pink">PINK</span><br>WARS</h1><div class="subtitle">LE DERNIER SIGNAL</div><p class="lead">Parcourez les ruines du quartier des secours de Vesper. Entrez dans l'annexe médicale, fouillez l'atelier, empruntez les escaliers du relais A3 et approchez-vous des installations d’ORDRE. </p><div class="featureRow"><div class="feature">Architecture visitable</div><div class="feature">Végétation et ruines</div><div class="feature">Drones en mouvement</div><div class="feature">Fracture animée</div><div class="feature">WebGPU / WebGL2 • FPS · matériaux CC0</div><div class="feature">7 points de visite · V4</div><div class="feature">Portes praticables</div></div><button id="start" class="startBtn" disabled>ENTRER DANS VESPER →</button><p style="margin-top:14px"><a href="./index.html" style="color:#b9d5e5;text-decoration:underline">↩ Retour au menu Pink Wars</a></p><div id="bootInfo">Initialisation…</div><div class="notice">Version 7 : architecture enrichie, auvents et façades modulaires, structures métalliques, rue plus dense, drones, véhicules et végétation, ombres directionnelles. Prototype original de conception et d'exploration. WebGPU est utilisé lorsque votre navigateur et votre carte graphique le permettent, sinon repli automatique WebGL2.</div></div></div>
 <div id="help"><div class="helpCard"><div class="eyebrow">PINK WARS / ASSISTANCE EXPLORATION</div><h2>Visiter le niveau 1</h2><div class="helpGrid"><div><p><code>ZQSD / WASD</code> : déplacements<br><code>Souris</code> : orientation, cliquer dans le jeu pour verrouiller le pointeur<br><code>Maj</code> : courir<br><code>J</code> : sauter / double saut<br><code>F</code> : activer un terminal<br><code>E</code> : arme suivante<br><code>Espace</code> : tirer</p></div><div><p><code>V</code> : caméra libre (survoler le niveau)<br><code>Espace / Ctrl</code> : monter/descendre en caméra libre<br><code>M</code> : afficher le plan<br><code>H</code> : afficher l'aide<br><code>F1–F7</code> : téléportation · <code>1–6</code> : armes · <code>R</code> : recharger · <code>C</code> : accroupir · <code>Clic gauche</code> : tirer · <code>Clic droit</code> : viser · <code>Molette</code> : arme suivante · <code>Manette</code> : sticks pour bouger/regarder, L2 viser, R2 tirer, Croix sauter, Carré recharger, Triangle arme, Rond accroupir, R3 interagir<br><code>P</code> : mode photo<br><code>Échap</code> : libérer le pointeur</p></div></div><p style="font-size:13px;line-height:1.65;color:#b5cbd8">Points d'intérêt : annexe médicale, atelier, terrasse Archives A3, passerelle ORDRE, Fracture au nord. Les terminaux déclenchent de courts messages narratifs ; les armes disposent d’un tir de démonstration sur drones, sans IA de combat ni dégâts réciproques.</p><button id="helpClose">RETOURNER À VESPER</button></div></div>
 <script>'use strict';
 /* PINK WARS — Le Dernier Signal — procedural visitable 3D prototype — V3 MATERIALS / SHADOWS / AMBIENCE.
@@ -1586,7 +1621,7 @@ function interact(){const p=activeInteraction();if(!p||isFree)return;
 
 function notify(message,ms=4000){$('toastText').textContent=message;$('toast').classList.add('show');noticeTime=performance.now()+ms;}
 const objectives=['Réarmer le circuit de l’annexe de secours','Lire les archives médicales hors réseau','Neutraliser la balise de surveillance ORDRE','Atteindre le relais A3 sur la terrasse','Exploration libre — archives sécurisées'];
-function refreshObjective(){$('objective').textContent=objectives[missionIndex];$('objCount').textContent=`0${Math.min(4,missionIndex)}/04`;}
+function refreshObjective(){$('objective').textContent=objectives[missionIndex];$('objCount').textContent=`0${Math.min(4,missionIndex)}/04`;const brief=$('objectivePanel');brief.classList.add('open');clearTimeout(window.__pwVesperBrief);window.__pwVesperBrief=setTimeout(()=>brief.classList.remove('open'),3800);}
 let touch={moveX:0,moveY:0,sprint:false}, touchLook=null;
 const GAME_WEAPONS=[
  {name:'R9',mag:32,damage:18,cooldown:120,reload:1150,color:'#a2d7eb'},
@@ -1638,7 +1673,7 @@ function initCombatUI(){const sheet=document.createElement('style');sheet.textCo
  .photoMode #combatHud,.photoMode #weaponVis,.photoMode #hitCross{display:none!important}
  @media(pointer:coarse){#weaponVis{transform:scale(.60);transform-origin:bottom right;right:13px}#combatHud{left:10px;bottom:160px}}
  `;document.head.append(sheet);
- const c=document.createElement('div');c.id='combatHud';c.innerHTML='<div class="combatBox"><div class="combSub">ARME / <span id="pwWeapon">R9</span></div><div id="pwAmmo" class="ammoBig">32 / 32</div></div><div class="combatBox"><div class="combSub">PV / SHIELD</div><div class="ammoBig">100 <span style="color:#43b8e9">▰▰▰</span></div><div class="combSub">POINTS <span id="pwScore">0</span></div></div>';
+ const c=document.createElement('div');c.id='combatHud';c.innerHTML='<div class="combatBox"><div class="combSub">ARME / <span id="pwWeapon">R9</span></div><div id="pwAmmo" class="ammoBig">32 / 32</div></div><div class="combatBox"><div class="combSub">SANTÉ</div><div class="ammoBig">100 <span style="color:#43b8e9">▰▰▰</span></div><div class="combSub" hidden>POINTS <span id="pwScore">0</span></div></div>';
  document.body.append(c);const g=document.createElement('div');g.id='weaponVis';g.innerHTML='<div class="gunMag"></div><div class="gunBody"></div><div class="gunRail"></div><div class="gunBarrel"></div><div class="gunLed"></div><div id="gunFlash"></div>';document.body.append(g);const h=document.createElement('div');h.id='hitCross';h.textContent='×';document.body.append(h);updateWeaponUI();}
 function pollGamepad(dt){const gp=navigator.getGamepads?.()?.find(Boolean);gamepadMove.x=0;gamepadMove.y=0;padLook.x=0;padLook.y=0;padRun=false;gamepadAiming=false;if(!gp)return;
  const d=v=>Math.abs(v)>.14?v:0, btn=i=>gp.buttons[i]?.pressed||false,edge=i=>btn(i)&&!lastGamepadButtons[i];
