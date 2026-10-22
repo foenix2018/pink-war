@@ -43,11 +43,11 @@ body:not(.rainOn) #rainCurtain{display:none}
  <div id="crosshair"></div><div id="prompt"><div class="eyebrow">[ E ] INTERAGIR</div><div id="promptTitle"></div></div>
  <div id="toast"><div class="eyebrow">SIGNAL LOCAL</div><div id="toastText"></div></div>
  <div id="mapPanel"><div class="ctrlTitle" style="margin-bottom:9px">CARTE TACTIQUE / VESPER</div><canvas id="minimap" width="320" height="320"></canvas><div class="mapHint">Points roses : terminaux · Triangle : position</div></div>
- <div id="bottom"><div class="bottomLeft"><div id="sector">SECTEUR SECOURS</div><div id="coords">X 2.0 Y 0.0 Z 54.0</div></div><div class="bottomRight"><div><span class="key">Z Q S D</span> ou <span class="key">W A S D</span> marcher · <span class="key">SOURIS</span> regarder</div><div class="hint"><span class="key">MAJ</span> courir · <span class="key">ESPACE</span> sauter · <span class="key">E</span> interact. · <span class="key">V</span> caméra libre · <span class="key">M</span> plan · <span class="key">H</span> aide · <span class="key">P</span> photo · <span class="key">F1–F7</span> lieux · <span class="key">1–6</span> armes · <span class="key">R</span> recharger · <span class="key">CLIC</span> tirer</div></div></div>
+ <div id="bottom"><div class="bottomLeft"><div id="sector">SECTEUR SECOURS</div><div id="coords">X 2.0 Y 0.0 Z 54.0</div></div><div class="bottomRight"><div><span class="key">Z Q S D</span> ou <span class="key">W A S D</span> marcher · <span class="key">SOURIS</span> regarder</div><div class="hint"><span class="key">MAJ</span> courir · <span class="key">J</span> sauter · <span class="key">F</span> action · <span class="key">E</span> arme · <span class="key">ESPACE</span> tirer · <span class="key">V</span> caméra libre · <span class="key">M</span> plan · <span class="key">H</span> aide · <span class="key">P</span> photo · <span class="key">F1–F7</span> lieux · <span class="key">1–6</span> armes · <span class="key">R</span> recharger · <span class="key">CLIC</span> tirer</div></div></div>
  <div id="touchControls"><div id="stick" aria-label="Joystick virtuel"><div id="nub"></div></div><div class="mobileView">Glisser à droite pour regarder</div><div id="touchButtons"><button id="btnRun">COURIR</button><button id="btnUse">UTIL.</button><button id="btnJump">SAUT</button></div></div>
 </div>
 <div id="intro"><div class="introCard"><div class="introMeta">DÉMONSTRATION AUTONOME / LEVEL DESIGN 01 · V7</div><h1><span class="pink">PINK</span><br>WARS</h1><div class="subtitle">LE DERNIER SIGNAL</div><p class="lead">Parcourez les ruines du quartier des secours de Vesper. Entrez dans l'annexe médicale, fouillez l'atelier, empruntez les escaliers du relais A3 et approchez-vous des installations d’ORDRE. Une visite de level design, avec tir d’entraînement sur les drones, avant intégration au jeu.</p><div class="featureRow"><div class="feature">Architecture visitable</div><div class="feature">Végétation et ruines</div><div class="feature">Drones en mouvement</div><div class="feature">Fracture animée</div><div class="feature">WebGPU / WebGL2 • FPS · matériaux CC0</div><div class="feature">7 points de visite · V4</div><div class="feature">Portes praticables</div></div><button id="start" class="startBtn" disabled>ENTRER DANS VESPER →</button><p style="margin-top:14px"><a href="./index.html" style="color:#b9d5e5;text-decoration:underline">↩ Retour au menu Pink Wars</a></p><div id="bootInfo">Initialisation…</div><div class="notice">Version 7 : architecture enrichie, auvents et façades modulaires, structures métalliques, rue plus dense, drones, véhicules et végétation, ombres directionnelles. Prototype original de conception et d'exploration. Le niveau définitif de Pink Wars n'est pas modifié. WebGPU est utilisé lorsque votre navigateur et votre carte graphique le permettent, sinon repli automatique WebGL2.</div></div></div>
-<div id="help"><div class="helpCard"><div class="eyebrow">PINK WARS / ASSISTANCE EXPLORATION</div><h2>Visiter le niveau 1</h2><div class="helpGrid"><div><p><code>ZQSD / WASD</code> : déplacements<br><code>Souris</code> : orientation, cliquer dans le jeu pour verrouiller le pointeur<br><code>Maj</code> : courir<br><code>Espace</code> : sauter<br><code>E</code> : activer un terminal</p></div><div><p><code>V</code> : caméra libre (survoler le niveau)<br><code>Espace / Ctrl</code> : monter/descendre en caméra libre<br><code>M</code> : afficher le plan<br><code>H</code> : afficher l'aide<br><code>F1–F7</code> : téléportation · <code>1–6</code> : armes · <code>R</code> : recharger · <code>C</code> : accroupir · <code>Clic gauche</code> : tirer · <code>Clic droit</code> : viser · <code>Molette</code> : arme suivante · <code>Manette</code> : sticks pour bouger/regarder, L2 viser, R2 tirer, Croix sauter, Carré recharger, Triangle arme, Rond accroupir, R3 interagir<br><code>P</code> : mode photo<br><code>Échap</code> : libérer le pointeur</p></div></div><p style="font-size:13px;line-height:1.65;color:#b5cbd8">Points d'intérêt : annexe médicale, atelier, terrasse Archives A3, passerelle ORDRE, Fracture au nord. Les terminaux déclenchent de courts messages narratifs ; les armes disposent d’un tir de démonstration sur drones, sans IA de combat ni dégâts réciproques.</p><button id="helpClose">RETOURNER À VESPER</button></div></div>
+<div id="help"><div class="helpCard"><div class="eyebrow">PINK WARS / ASSISTANCE EXPLORATION</div><h2>Visiter le niveau 1</h2><div class="helpGrid"><div><p><code>ZQSD / WASD</code> : déplacements<br><code>Souris</code> : orientation, cliquer dans le jeu pour verrouiller le pointeur<br><code>Maj</code> : courir<br><code>J</code> : sauter / double saut<br><code>F</code> : activer un terminal<br><code>E</code> : arme suivante<br><code>Espace</code> : tirer</p></div><div><p><code>V</code> : caméra libre (survoler le niveau)<br><code>Espace / Ctrl</code> : monter/descendre en caméra libre<br><code>M</code> : afficher le plan<br><code>H</code> : afficher l'aide<br><code>F1–F7</code> : téléportation · <code>1–6</code> : armes · <code>R</code> : recharger · <code>C</code> : accroupir · <code>Clic gauche</code> : tirer · <code>Clic droit</code> : viser · <code>Molette</code> : arme suivante · <code>Manette</code> : sticks pour bouger/regarder, L2 viser, R2 tirer, Croix sauter, Carré recharger, Triangle arme, Rond accroupir, R3 interagir<br><code>P</code> : mode photo<br><code>Échap</code> : libérer le pointeur</p></div></div><p style="font-size:13px;line-height:1.65;color:#b5cbd8">Points d'intérêt : annexe médicale, atelier, terrasse Archives A3, passerelle ORDRE, Fracture au nord. Les terminaux déclenchent de courts messages narratifs ; les armes disposent d’un tir de démonstration sur drones, sans IA de combat ni dégâts réciproques.</p><button id="helpClose">RETOURNER À VESPER</button></div></div>
 <script>'use strict';
 /* PINK WARS — Le Dernier Signal — procedural visitable 3D prototype — V3 MATERIALS / SHADOWS / AMBIENCE.
    Renderer: native WebGPU; WebGL2 backup. No dependency, textures built in canvas. */
@@ -1554,10 +1554,10 @@ let airborne=false, liftCool=0,jumpLatch=false;
 function physics(dt){
  const f={x:Math.sin(yaw),z:-Math.cos(yaw)},r={x:Math.cos(yaw),z:Math.sin(yaw)};
  let ax=0,az=0;
- if(keys.has('KeyW')||keys.has('KeyZ')||keys.has('ArrowUp')){ax+=f.x;az+=f.z}
- if(keys.has('KeyS')||keys.has('ArrowDown')){ax-=f.x;az-=f.z}
- if(keys.has('KeyA')||keys.has('KeyQ')||keys.has('ArrowLeft')){ax-=r.x;az-=r.z}
- if(keys.has('KeyD')||keys.has('ArrowRight')){ax+=r.x;az+=r.z}
+ if(keys.has('KeyW')||keys.has('KeyZ')){ax+=f.x;az+=f.z}
+ if(keys.has('KeyS')){ax-=f.x;az-=f.z}
+ if(keys.has('KeyA')||keys.has('KeyQ')){ax-=r.x;az-=r.z}
+ if(keys.has('KeyD')){ax+=r.x;az+=r.z}
  ax+=f.x*clamp(-touch.moveY-gamepadMove.y,-1,1)+r.x*clamp(touch.moveX+gamepadMove.x,-1,1);az+=f.z*clamp(-touch.moveY-gamepadMove.y,-1,1)+r.z*clamp(touch.moveX+gamepadMove.x,-1,1);
  const a=Math.hypot(ax,az);if(a>1){ax/=a;az/=a}
  const speed=moveSpeed*(keys.has('ShiftLeft')||touch.sprint||padRun?1.65:1)*(crouching?.55:1)*(isFree?2.5:1);
@@ -1566,8 +1566,8 @@ function physics(dt){
  if(!blockedAt(nx,position.y,nz))position.x=nx,position.z=nz;
  else{if(!blockedAt(nx,position.y,position.z))position.x=nx;if(!blockedAt(position.x,position.y,nz))position.z=nz}
  const desiredGround=groundAt(position.x,position.z,position.y-eyeHeight),actualHeight=position.y-eyeHeight;
- if(!keys.has('Space'))jumpLatch=false;
- if(keys.has('Space')&&!jumpLatch && (grounded||jumpCount<2)){velocityY=jumpCount===0?6.3:5.8;grounded=false;airborne=true;jumpCount++;jumpLatch=true;}
+ if(!keys.has('KeyJ'))jumpLatch=false;
+ if(keys.has('KeyJ')&&!jumpLatch && (grounded||jumpCount<2)){velocityY=jumpCount===0?6.3:5.8;grounded=false;airborne=true;jumpCount++;jumpLatch=true;}
  velocityY-=17.5*dt;position.y+=velocityY*dt;
  const targetGround=desiredGround+eyeHeight;
  if(position.y<=targetGround || (grounded&&targetGround>position.y&&targetGround-position.y<.35)){position.y=targetGround;velocityY=0;grounded=true;airborne=false;jumpCount=0;}
@@ -1653,11 +1653,12 @@ function inputSetup(){
   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(ev.code))ev.preventDefault();
   if(!started)return;keys.add(ev.code);
   if(ev.repeat)return;
-  if(ev.code==='KeyE')interact();
+  if(ev.code==='KeyF')interact();
+  if(ev.code==='KeyE')changeWeapon(1);
   if(ev.code==='KeyV'){isFree=!isFree;notify(isFree?'Caméra libre : WASD / ZQSD, Espace pour monter, Ctrl pour descendre.':'Mode exploration FPS réactivé.');$('cameraMode').textContent=isFree?'CAMÉRA LIBRE':'EXPLORATION';}
   if(ev.code==='KeyM'){mapOpen=!mapOpen;$('mapPanel').classList.toggle('show',mapOpen)}
   if(ev.code==='KeyH'){$('help').classList.toggle('show')}
-  if(ev.code==='KeyF'){flashlight=!flashlight;notify('Éclairage individuel '+(flashlight?'ACTIVÉ':'DÉSACTIVÉ'))}
+  if(ev.code==='KeyL'){flashlight=!flashlight;notify('Éclairage individuel '+(flashlight?'ACTIVÉ':'DÉSACTIVÉ'))}
   if(ev.code==='KeyP'){document.body.classList.toggle('photoMode')}
   if(ev.code.startsWith('Digit')&&ev.code!=='Digit0'&&+ev.code.slice(5)<=6){weaponIndex=Number(ev.code.slice(5))-1;reloadFinish=0;updateWeaponUI();}
   if(/^F[1-7]$/.test(ev.code)){ev.preventDefault();goToStop(Number(ev.code.slice(1))-1);}
@@ -1681,7 +1682,7 @@ function inputSetup(){
  function moveStick(ev){const b=stick.getBoundingClientRect(),cx=b.left+b.width/2,cy=b.top+b.height/2;touch.moveX=clamp((ev.clientX-cx)/(b.width*.41),-1,1);touch.moveY=clamp((ev.clientY-cy)/(b.height*.41),-1,1);$('nub').style.transform=`translate(${touch.moveX*37}px,${touch.moveY*37}px)`}
  const end=ev=>{if(stickId===ev.pointerId){stickId=null;touch.moveX=0;touch.moveY=0;$('nub').style.transform=''}};
  stick.addEventListener('pointerup',end);stick.addEventListener('pointercancel',end);
- $('btnJump').onclick=()=>{keys.add('Space');setTimeout(()=>keys.delete('Space'),130)};
+ $('btnJump').onpointerdown=e=>{e.preventDefault();keys.add('KeyJ');try{e.currentTarget.setPointerCapture(e.pointerId)}catch{}};for(const t of ['pointerup','pointercancel','lostpointercapture'])$('btnJump').addEventListener(t,()=>keys.delete('KeyJ'));
  $('btnUse').onclick=interact;const tb=document.getElementById('touchButtons');if(tb){const fire=document.createElement('button');fire.textContent='TIR';fire.style.borderColor='#e6579d';fire.onpointerdown=e=>{e.preventDefault();firing=true;shoot();try{fire.setPointerCapture(e.pointerId)}catch{}};for(const type of ['pointerup','pointercancel','lostpointercapture'])fire.addEventListener(type,()=>{firing=false;});fire.id='btnFireMobile';fire.setAttribute('aria-label','Tirer');tb.prepend(fire);const aim=document.createElement('button');aim.id='btnAimMobile';aim.textContent='VISER';aim.setAttribute('aria-label','Viser');aim.onpointerdown=e=>{e.preventDefault();isAiming=true;try{aim.setPointerCapture(e.pointerId)}catch{}};for(const t of ['pointerup','pointercancel','lostpointercapture'])aim.addEventListener(t,()=>isAiming=false);tb.append(aim);}
  $('btnRun').onpointerdown=e=>{touch.sprint=true;try{e.currentTarget.setPointerCapture(e.pointerId)}catch{}};for(const type of ['pointerup','pointercancel','lostpointercapture'])$('btnRun').addEventListener(type,()=>touch.sprint=false);
  $('quality').addEventListener('change',e=>{quality=e.target.value;resize()});
@@ -1726,7 +1727,7 @@ function sceneUI(t){if(t-lastUiTime<180)return;lastUiTime=t;
 }
 let lastUiTime=0;
 function render(t){if(!started)return;const sec=t/1000,dt=Math.min(.045,(t-last)/1000||.016);last=t;
- if(!gamePaused){pollGamepad(dt);physics(dt);if((firing||keys.has('KeyT'))&&!isFree)shoot();}if(reloadFinish&&t>reloadFinish){ammo[weaponIndex]=GAME_WEAPONS[weaponIndex].mag;reloadFinish=0;updateWeaponUI();}if(hitMarkers&&t>hitMarkers){document.getElementById('hitCross')?.classList.remove('active');hitMarkers=0;} gunKick=Math.max(0,gunKick-dt*7);if(document.getElementById('weaponVis')){document.getElementById('weaponVis').style.setProperty('--kick',(gunKick*20).toFixed(1)+'px');document.getElementById('weaponVis').style.setProperty('--ads',(isAiming||gamepadAiming)?.87:1);}const forward=[Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch)];
+ if(!gamePaused){pollGamepad(dt);if(keys.has('ArrowRight'))yaw-=dt*1.4;if(keys.has('ArrowLeft'))yaw+=dt*1.4;if(keys.has('ArrowUp'))pitch=clamp(pitch+dt*1.15,-1.4,1.4);if(keys.has('ArrowDown'))pitch=clamp(pitch-dt*1.15,-1.4,1.4);physics(dt);if((firing||keys.has('Space')||keys.has('KeyT'))&&!isFree)shoot();}if(reloadFinish&&t>reloadFinish){ammo[weaponIndex]=GAME_WEAPONS[weaponIndex].mag;reloadFinish=0;updateWeaponUI();}if(hitMarkers&&t>hitMarkers){document.getElementById('hitCross')?.classList.remove('active');hitMarkers=0;} gunKick=Math.max(0,gunKick-dt*7);if(document.getElementById('weaponVis')){document.getElementById('weaponVis').style.setProperty('--kick',(gunKick*20).toFixed(1)+'px');document.getElementById('weaponVis').style.setProperty('--ads',(isAiming||gamepadAiming)?.87:1);}const forward=[Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch)];
  const eye=[position.x,position.y-(crouching&&!isFree?.42:0),position.z],target=eye.map((v,i)=>v+forward[i]);pv=matMul(perspective((isAiming||gamepadAiming)?0.80:1.12,aspect,.09,430),lookAt(eye,target));
  renderer.draw(sec);fpsAcc+=dt;fpsCount++;if(fpsAcc>.6){fps=fpsCount/fpsAcc;fpsAcc=0;fpsCount=0}
  sceneUI(t);requestAnimationFrame(render);
