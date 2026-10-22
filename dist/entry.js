@@ -19,9 +19,9 @@ function refresh(){
   $('character-description').textContent=character==='lylu'?'LYLU cherche sa sœur GHJU dans les ruines de Vesper.':'GHJU cherche son frère LYLU dans les ruines de Vesper.';
   for(const b of document.querySelectorAll('[data-character]')){const yes=b.dataset.character===character;b.classList.toggle('selected',yes);b.setAttribute('aria-pressed',String(yes));}
   for(const b of document.querySelectorAll('[data-mode]'))b.setAttribute('aria-pressed',String(b.dataset.mode===mode));
-  $('mission-title').textContent=mode==='campaign'?'01 — Le dernier signal':mode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
-  $('mission-description').textContent=mode==='campaign'?'Laboratoire abandonné, rue sous surveillance et relais en hauteur. Une trace de votre famille.':mode==='arena'?'Vingt vagues de machines et six armes à récupérer.':'Cibles fixes de 15 à 60 mètres, cibles mobiles latérales et avant-arrière. Vitesse croissante, score et précision.';
-  $('play-label').textContent=loading?'CHARGEMENT…':mode==='campaign'?'JOUER LE NIVEAU 1':mode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
+  $('mission-title').textContent=mode==='campaign2'?'02 — Sous les Néons':mode==='campaign'?'01 — Le dernier signal':mode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
+  $('mission-description').textContent=mode==='campaign2'?'Bas-Niveaux de Vesper : enclave, marché cyberpunk, HELIX et tour de transit. Sauver les civils ou récupérer les preuves.':mode==='campaign'?'Laboratoire abandonné, rue sous surveillance et relais en hauteur. Une trace de votre famille.':mode==='arena'?'Vingt vagues de machines et six armes à récupérer.':'Cibles fixes de 15 à 60 mètres, cibles mobiles latérales et avant-arrière. Vitesse croissante, score et précision.';
+  $('play-label').textContent=loading?'CHARGEMENT…':mode==='campaign2'?'JOUER LE NIVEAU 2':mode==='campaign'?'JOUER LE NIVEAU 1':mode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
   $('play-button').disabled=loading;
   $('sound-setting').checked=!!settings.sound;$('music-setting').checked=settings.music!==false;
   $('sensitivity').value=settings.sensitivity;$('quality').value=['auto','low','high'].includes(settings.quality)?settings.quality:'auto';
@@ -40,7 +40,12 @@ $('music-setting').onchange=e=>{settings.music=e.target.checked;save();};
 $('sensitivity').oninput=e=>{settings.sensitivity=Number(e.target.value);save();};
 $('quality').onchange=e=>{settings.quality=e.target.value;save();};
 async function begin(intent='play'){
-  if(loading)return;loading=true;refresh();
+  if(loading)return;
+  if(mode==='campaign2'){
+    if(intent==='vr'){showLaunchError(new Error('La mission 02 est actuellement disponible en mode écran PC / Mac. La version WebXR est en cours d’intégration.'),'niveau 2');return;}
+    save();location.assign('./level2-test.html?source=campaign&character='+encodeURIComponent(character));return;
+  }
+  loading=true;refresh();
   for(const d of document.querySelectorAll('dialog[open]'))d.close();
   $('loading-error').hidden=true;$('loading-screen').hidden=false;
   $('loading-status').textContent='Chargement du décor et des équipements…';
