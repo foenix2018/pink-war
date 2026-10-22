@@ -330,9 +330,11 @@ function setupPlayer(){
  Object.assign(game.player,{x:0,z:72,elevation:0,yaw:0,hp:100,grounded:true});
  game.wave=2;game.nextWave=Infinity;game.toSpawn=0;game.spawnTimer=Infinity;
  game.ownedWeapons=new Set([0,1,2]);game.ammo=WEAPONS.map(w=>w.capacity);
- const pm={...materials,armor:mat(0xb64472,.38,.72),armorLight:mat(0xdec3cf,.35,.68),steel:materials.iron,rose:materials.rose,pale:materials.white,violet:materials.blue};
- const gloves={fabric:mat(0x222736,.9,.08),plate:pm.armor,trim:pm.armorLight,glow:materials.rose,accent:materials.cyan,metal:materials.iron};
- weapon=buildGun({mats:pm,gloves,makeFlash:()=>{const o=new T.Mesh(new T.SphereGeometry(.07,8,6),materials.rose);o.visible=false;return o;}});
+ const lylu=characterId==='lylu';
+ const heroGlow=lylu?glow(0x4da8ff):glow(0xff4fa1);
+ const pm={...materials,armor:mat(lylu?0x356fa6:0xb64472,.38,.72),armorLight:mat(lylu?0xb6d9e8:0xdec3cf,.35,.68),steel:materials.iron,rose:heroGlow,pale:materials.white,violet:materials.blue};
+ const gloves={fabric:mat(0x222736,.9,.08),plate:pm.armor,trim:pm.armorLight,glow:heroGlow,accent:materials.cyan,metal:materials.iron};
+ weapon=buildGun({mats:pm,gloves,makeFlash:()=>{const o=new T.Mesh(new T.SphereGeometry(.07,8,6),heroGlow);o.visible=false;return o;}});
  camera.add(weapon);weapon.position.set(.23,-.30,-.59);weapon.rotation.set(-.07,-.045,-.09);
  weapon.userData.setVariant(0);
  enemyFactory=createEnemyFactory(enemyMaterials());
