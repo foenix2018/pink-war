@@ -320,7 +320,7 @@ function createEnvironment(){
  const moon=new T.DirectionalLight(0x86abc9,2.0);moon.position.set(-18,44,21);scene.add(moon);
  moon.castShadow=!low();moon.shadow.mapSize.set(low()?512:1024,low()?512:1024);
  Object.assign(moon.shadow.camera,{left:-48,right:48,top:48,bottom:-48,near:.1,far:125});
- for(let z=53;z>-57;z-=19){
+ for(let z=53;z>-57;z+=low()?-38:-19){
   const x=(Math.round(z)%2===0?1:-1)*8.4;
   const lamp=new T.PointLight(z%3===0?0xe69b5a:0x5bd6ec,low()?1.1:1.8,18,2);
   lamp.position.set(x,6.5,z);scene.add(lamp);lightSources.push(lamp);
@@ -479,6 +479,11 @@ function animation(t){
  const dt=Math.min(.040,Math.max(0,(t-last)/1000));last=t;
  if(!renderer||!scene)return;
  clock+=dt;
+ // Subtle transformer instability, without extra lights or shadow maps.
+ for(let i=0;i<lightSources.length;i++){
+   const flicker=1+.025*Math.sin(clock*.73+i*3.12);
+   lightSources[i].intensity=(low()?1.04:1.66)*flicker;
+ }
  if(atmosphere)try{atmosphere.update(clock);}catch(error){
    console.warn('M02 optional atmosphere frame disabled:',error);atmosphere=null;
  }
