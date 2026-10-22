@@ -1,6 +1,6 @@
 import {graphicsProfile} from './renderer-policy.js';
 import {GAME_VERSION,showLaunchError,compatibleLaunchURL} from './launch-ui.js';
-import {syncMenuArtwork} from './menu-art.js';
+import {syncMenuArtwork} from './menu-art.js?v=m02-prod-cover-1';
 
 // This menu has no Three.js or character imports. It is usable before the user
 // chooses to download/build the 3D scene, including inside an iPhone web view.

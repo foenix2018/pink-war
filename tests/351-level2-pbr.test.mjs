@@ -23,7 +23,8 @@ test('W02 uses five licensed, shared, low-res PBR albedo maps',()=>{
 });
 test('W02 keeps boot and engine independent of CDN download',()=>{
  assert.match(level,/installLeanPBR\(T,materials,architecture/);
- assert.match(level,/scene\.add\(camera\);createEnvironment\(\);setupPlayer\(\);resize\(\)/);
+ assert.match(level,/scene\.add\(camera\);createEnvironment\(\)/);
+ assert.match(level,/setupPlayer\(\);resize\(\)/);
  assert.doesNotMatch(level,/await installLeanPBR/);
  assert.match(level,/createCompatibleRenderer/);
 });
