@@ -58,7 +58,7 @@ test('M02 uses original production weapon/optics/audio, character rig and touch 
  assert.match(js,/e\.code==='KeyF'\)interact\(\)/);
  assert.match(js,/e\.code==='KeyE'\)game\.cycleWeapon\(\)/);
  assert.match(js,/e\.code==='KeyJ'/);
- assert.match(html,/data-m02/); // touch actions are authored by JS
+ assert.match(html,/m02-touch-controls/); // touch actions use module-generated controls and HTML-scoped CSS
  assert.match(input,/data-m02="jump"/);
  assert.match(input,/data-m02="interact"/);
  assert.match(input,/data-m02="aim"/);
