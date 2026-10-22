@@ -37,17 +37,17 @@ export function createPinkWarsInput(){
  }
  return {read,reset(){input.reset();previous.clear();}};
 }
-// An actual two-stick mobile input, matching Pink Wars' original touch control
-// direction and pointer capture semantics.
+// Shared Pink Wars / RLH mobile input: left movement stick, right half swipe-camera.
+// Keep gamepad/keyboard mappings from DesktopGamepadInput unchanged.
 export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onReload,onCrouch,onView,onPause,onAim}={}){
  const touch=(window.matchMedia?.('(pointer:coarse)')?.matches??(navigator.maxTouchPoints>0));
  if(!touch)return {state:{x:0,z:0,lookX:0,lookY:0,fire:false,aim:false},reset(){}};
  const root=document.createElement('div');root.id='m02-touch-controls';
  root.innerHTML='<div class="m02-stick" id="m02-move" aria-label="Déplacement"><div class="m02-stick-ring"><span class="m02-stick-knob"></span></div><small>SE DÉPLACER</small></div>'+
-   '<div class="m02-stick" id="m02-look" aria-label="Regarder"><div class="m02-stick-ring"><span class="m02-stick-knob"></span></div><small>REGARDER</small></div>'+
+   
    '<div class="m02-actions"><button data-m02="aim">VISER</button><button data-m02="fire">TIR</button><button data-m02="jump">↑ SAUT</button><button data-m02="interact">F · ACTION</button><button data-m02="next">ARME</button><button data-m02="reload">↻</button><button data-m02="crouch">ACCROUPI</button><button data-m02="view">VUE</button><button data-m02="pause">Ⅱ</button></div>';
  document.body.append(root);
- const state={x:0,z:0,lookX:0,lookY:0,fire:false,aim:false};
+ const state={x:0,z:0,lookX:0,lookY:0,lookDX:0,lookDY:0,fire:false,aim:false};
  const bindStick=(id,ax,az)=>{
   const element=root.querySelector(id),ring=element.querySelector('.m02-stick-ring'),knob=element.querySelector('.m02-stick-knob');
   let pointer=null;
@@ -63,7 +63,22 @@ export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onRelo
   element.addEventListener('pointermove',e=>{if(e.pointerId!==pointer)return;e.preventDefault();set(e);});
   for(const name of ['pointerup','pointercancel','lostpointercapture'])element.addEventListener(name,release);
  };
- bindStick('#m02-move','x','z');bindStick('#m02-look','lookX','lookY');
+ bindStick('#m02-move','x','z');
+ // A free swipe on the right half looks around; it never fires.
+ let lookPointer=null,lookLastX=0,lookLastY=0;
+ host.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='mouse'||e.clientX<innerWidth*.5||lookPointer!==null)return;
+  lookPointer=e.pointerId;lookLastX=e.clientX;lookLastY=e.clientY;
+  try{host.setPointerCapture(e.pointerId)}catch{}
+ });
+ host.addEventListener('pointermove',e=>{
+  if(e.pointerId!==lookPointer)return;
+  state.lookDX+=Math.max(-90,Math.min(90,e.clientX-lookLastX));
+  state.lookDY+=Math.max(-90,Math.min(90,e.clientY-lookLastY));
+  lookLastX=e.clientX;lookLastY=e.clientY;
+ });
+ const endLook=e=>{if(e.pointerId===lookPointer)lookPointer=null;};
+ for(const name of ['pointerup','pointercancel','lostpointercapture'])host.addEventListener(name,endLook);
  const actions={jump:onJump,interact:onInteract,next:onNext,reload:onReload,crouch:onCrouch,view:onView,pause:onPause};
  for(const b of root.querySelectorAll('button')){
   const name=b.dataset.m02;
@@ -79,5 +94,5 @@ export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onRelo
    else if(name==='aim'){state.aim=false;onAim?.(false);}
   });
  }
- return {state,root,reset(){state.x=state.z=state.lookX=state.lookY=0;state.aim=state.fire=false;onFire?.(false);onAim?.(false);}};
+ return {state,root,reset(){state.x=state.z=state.lookX=state.lookY=state.lookDX=state.lookDY=0;state.aim=state.fire=false;lookPointer=null;onFire?.(false);onAim?.(false);}};
 }
