@@ -151,3 +151,12 @@
   #m02-touch-controls .m02-actions button[data-m02="reload"],
   #m02-touch-controls .m02-actions button[data-m02="crouch"] {left:calc(50% - 72px)}
 }
+
+/* Quiet gameplay: instructions live in the menu/help, not across the playfield.
+   Never hide health, ammo, objective compass, hit indicators or actual controls. */
+body.playing #game-tip{display:none!important}
+@media(pointer:coarse){
+ body.playing .game-hud .control-label{display:none!important}
+ body.playing .game-hud #game-view-label{display:none!important}
+ body.playing .game-hud .wave-hud small{display:none!important}
+}
