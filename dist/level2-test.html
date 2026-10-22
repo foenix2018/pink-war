@@ -49,8 +49,33 @@ body.aiming #crosshair{opacity:.23;transform:translate(-50%,-50%) scale(.52)}
 @media(pointer:coarse){#m02-touch-controls{display:block}#help{display:none}#vitals,#weapon{font-size:14px}#bottom{bottom:150px}}
 @media(pointer:coarse) and (max-height:480px){#m02-touch-controls .m02-stick-ring{width:84px;height:84px}#m02-touch-controls .m02-actions{bottom:115px}}
 </style>
-<link rel="stylesheet" href="mobile-controls-v7.css?v=m01-m02-unified-1">
-</head>
+<link rel="stylesheet" href="mobile-controls-v7.css?v=m01-m02-min-hud-2">
+
+<style id="pw-m02-minimal-hud">
+/* M02 HUD: only health, weapon/ammo, reticle, contextual messages, mobile actions. */
+#hud #name,#hud #hint,#hud #stats,#hud #help{display:none!important}
+#hud #top{pointer-events:none;top:max(60px,calc(env(safe-area-inset-top) + 47px));left:max(13px,env(safe-area-inset-left));right:auto}
+#hud #objective{display:none;margin:0;padding:10px 13px;border-left:2px solid #f17aa9;
+ max-width:min(320px,calc(100vw - 72px));background:rgba(4,17,26,.86);font-size:12px;line-height:1.4}
+body.pw-objective-open #hud #objective{display:block}
+#quality{display:none!important;right:max(13px,env(safe-area-inset-right));top:max(62px,calc(env(safe-area-inset-top) + 46px));z-index:7}
+body.pw-graphics-open #quality{display:block!important}
+.pw-minimal-action{position:fixed;z-index:7;top:max(13px,env(safe-area-inset-top));
+ width:38px;height:38px;display:grid;place-items:center;background:rgba(5,25,37,.83);
+ color:#c7e7f0;border:1px solid #71bac588;border-radius:9px;font-size:20px;
+ pointer-events:auto;touch-action:manipulation}
+#pwMission{left:max(13px,env(safe-area-inset-left))}
+#pwSettings{right:max(13px,env(safe-area-inset-right))}
+#hud #notice{font-size:12px;line-height:1.4;max-width:min(350px,calc(100vw - 28px));text-align:center}
+#hud #prompt{font-size:11px;padding:7px 10px;max-width:86vw;letter-spacing:0;top:45%}
+#hud #bottom{left:max(14px,env(safe-area-inset-left));right:max(14px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom))}
+#hud #vitals,#hud #weapon{font-size:16px;background:rgba(4,18,30,.68);padding:5px 9px;border-radius:6px}
+@media(pointer:coarse){
+ #hud #bottom{bottom:max(172px,calc(env(safe-area-inset-bottom) + 153px))}
+ #hud #vitals,#hud #weapon{font-size:13px;padding:5px 7px}
+ #hud #prompt{top:41%}
+}
+</style></head>
 <body>
 <canvas id="game"></canvas>
 <div id="damage"></div>
@@ -60,10 +85,10 @@ body.aiming #crosshair{opacity:.23;transform:translate(-50%,-50%) scale(.52)}
   <div id="bottom"><div id="vitals">SANTÉ <span id="hp">100</span></div><div id="weapon">R–9 <span id="ammo">12 / 12</span></div></div>
   <div id="help">PINK WARS · ZQSD / WASD marcher · souris / flèches viser · clic gauche / Espace tirer · clic droit viser · J sauter / double saut · F action · E changer d’arme · V changer de vue · C s’accroupir · R recharger · Maj courir · Échap pause · manette : Croix/A sauter, R2 tirer, L2 viser, R3 interagir</div>
 </div>
-<select id="quality" aria-label="Qualité graphique"><option value="normal">QUALITÉ NORMALE</option><option value="low">PERFORMANCE</option></select>
+<button id="pwMission" class="pw-minimal-action" aria-label="Afficher l’objectif" title="Objectif" onclick="document.body.classList.toggle('pw-objective-open');document.body.classList.remove('pw-graphics-open')">◎</button><button id="pwSettings" class="pw-minimal-action" aria-label="Afficher les réglages" title="Réglages" onclick="document.body.classList.toggle('pw-graphics-open');document.body.classList.remove('pw-objective-open')">⚙</button><select id="quality" aria-label="Qualité graphique"><option value="normal">QUALITÉ NORMALE</option><option value="low">PERFORMANCE</option></select>
 <div id="shade"><div class="panel"><div class="kicker">PINK WARS / LA FRACTURE · PROTOTYPE M02</div><h1>Sous <em>les Néons</em></h1><p>Les Bas-Niveaux de Vesper. Une enclave doit être évacuée. Traverse les ruelles, infiltre la galerie marchande, emprunte les escaliers et les passerelles, puis rejoins la tour de transit.</p><p class="small">Mission 02 : commandes communes au niveau 1. Physique, collisions, projectiles, santé et IA réutilisent les modules de Pink Wars. Les combattants HELIX sont temporairement représentés par les châssis ennemis existants.</p><button id="start" class="primary">LANCER LE TEST →</button><a href="./level2-test.html?renderer=webgl" style="display:inline-block;color:#a9f4fa;font-size:13px;margin-bottom:15px">Mode compatibilité WebGL (si écran noir)</a><div id="status" class="small">Clavier / souris / manette PC · rendu WebGPU avec repli WebGL selon l'appareil</div></div></div>
 <script type="module">
-import('./level2-test.js?v=m01-m02-unified-1').catch(error=>{
+import('./level2-test.js?v=m01-m02-min-hud-2').catch(error=>{
  const status=document.getElementById('status'),button=document.getElementById('start');
  if(status)status.textContent='Erreur de chargement : '+(error?.message||String(error))+' — Essaye le mode compatibilité WebGL.';
  if(button){button.disabled=false;button.textContent='RECHARGER LE TEST →';button.addEventListener('click',()=>location.reload());}
