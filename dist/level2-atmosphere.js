@@ -44,7 +44,7 @@ export function createStreetAtmosphere(T,root,{performance=false,seed=2196}={}){
    batch.name='M02 / neon reflection atlas batch '+palette;
    batch.frustumCulled=false;
    for(let i=0;i<quantity;i++){
-     const z=64-(i*quantity+palette*3)*132/(quantity*3)+rand()*3;
+     const z=64-(i*3+palette)*132/(quantity*3)+rand()*3;
      const x=(rand()-.5)*15;
      const w=.7+rand()*2.0,d=1.6+rand()*4;
      matrix.compose(p.set(x,.034,z),q,scale.set(w,d,1));
