@@ -7,7 +7,7 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
   const prism=(x,y,z,w,h,d,mat,top=1)=>{
     const mesh=new T.Mesh(new T.CylinderGeometry(top,1,h,8,1,false,Math.PI/8),mat);
     mesh.scale.set(w*.48,1,d*.48);mesh.position.set(x,y+h/2,z);
-    mesh.castShadow=!low();mesh.receiveShadow=true;root.add(mesh);
+    mesh.castShadow=!low;mesh.receiveShadow=true;root.add(mesh);
     return mesh;
   };
   const cyl=(x,y,z,r,h,mat,seg=12)=>{
@@ -259,5 +259,5 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
     advertisement('HELIX',-11.9,13.1,-39,4,6.8,-1,'#f56577');
     advertisement('VESPER',13.5,15.5,29,3,7,1,'#73f7ee');
   }
-  return {residentialTower,occupiedMarket,decorate(){neonMonorail();narrativeClutter();}};
+  return {residentialTower,occupiedMarket,pbrTargets:{ceramic,brushed,dirty,copper,darkTrim,pastel},decorate(){neonMonorail();narrativeClutter();}};
 }
