@@ -40,7 +40,7 @@ export function createPinkWarsInput(){
 // An actual two-stick mobile input, matching Pink Wars' original touch control
 // direction and pointer capture semantics.
 export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onReload,onCrouch,onView,onPause,onAim}={}){
- const touch=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+ const touch=(window.matchMedia?.('(pointer:coarse)')?.matches??(navigator.maxTouchPoints>0));
  if(!touch)return {state:{x:0,z:0,lookX:0,lookY:0,fire:false,aim:false},reset(){}};
  const root=document.createElement('div');root.id='m02-touch-controls';
  root.innerHTML='<div class="m02-stick" id="m02-move" aria-label="Déplacement"><div class="m02-stick-ring"><span class="m02-stick-knob"></span></div><small>SE DÉPLACER</small></div>'+
