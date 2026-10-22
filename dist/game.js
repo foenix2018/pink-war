@@ -18,7 +18,7 @@ import { CampaignLevel1 } from './campaign-level1.js';
 import {attachCampaignStory} from './story-chapters.js';
 import { ShootingRangeGame } from './shooting-range.js';
 import {GAME_VERSION,showLaunchError} from './launch-ui.js';
-import {syncMenuArtwork} from './menu-art.js';
+import {syncMenuArtwork} from './menu-art.js?v=m02-cover-2';
 
 const $ = id => document.getElementById(id);
 const settings = { sound: true, music: true, sensitivity: 1, quality: 'auto' };
