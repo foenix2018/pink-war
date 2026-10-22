@@ -1,0 +1,93 @@
+/* PINK WARS — règle mobile RLH, 22 octobre 2026.
+   Main droite = caméra par glissement sur le canvas. Aucun second joystick.
+   Milieu = visée maintenue ; saut immédiatement au-dessus ; tir à droite.
+   Clavier, manettes et XR ne sont pas concernés. */
+@media (pointer:coarse) {
+  body.playing .game-hud .touch-controls {
+    position: fixed; inset: 0; display: block;
+    pointer-events: none; z-index: 6; touch-action: none;
+  }
+  body.playing .game-hud #look-stick { display: none !important; }
+  body.playing .game-hud #move-stick {
+    position: absolute; left: max(12px, env(safe-area-inset-left));
+    bottom: max(16px, env(safe-area-inset-bottom));
+    width: 116px; min-width: 0; height: 116px; gap: 0;
+    pointer-events: auto; touch-action: none; z-index: 3;
+  }
+  body.playing .game-hud #move-stick .control-label { display: none; }
+  body.playing .game-hud #move-stick .joystick-ring {
+    width: 116px; height: 116px; position: relative;
+    background: rgba(4,17,27,.47); border-color: rgba(141,211,235,.44);
+  }
+  body.playing .game-hud #move-stick .joystick-knob {
+    width: 48px; height: 48px; left: 34px; top: 34px;
+  }
+  body.playing .game-hud .fire-area {
+    position: fixed; inset: 0; display: block;
+    width: 100%; transform: none; pointer-events: none;
+    min-width: 0; margin: 0; padding: 0; bottom: auto;
+  }
+  body.playing .game-hud .fire-row {
+    position: absolute; inset: 0; display: block;
+    pointer-events: none; margin: 0; padding: 0;
+  }
+  body.playing .game-hud .fire-row button { pointer-events: auto; touch-action: none; }
+  body.playing .game-hud #aim-button,
+  body.playing .game-hud #jump-button {
+    position: absolute; left: 50%; right: auto;
+    transform: translateX(-50%); display: grid; place-items: center;
+    margin: 0; width: 56px; height: 56px; border-radius: 50%;
+    background: rgba(7,29,43,.82); border: 1px solid #8dcff0;
+    color: #e0f6ff; box-shadow: 0 0 18px #04152490;
+    z-index: 4;
+  }
+  body.playing .game-hud #aim-button {
+    bottom: max(21px, calc(env(safe-area-inset-bottom) + 8px));
+  }
+  body.playing .game-hud #jump-button {
+    bottom: max(91px, calc(env(safe-area-inset-bottom) + 78px));
+  }
+  body.playing .game-hud #fire-button {
+    position: absolute; display: grid; place-items: center;
+    right: max(12px, env(safe-area-inset-right)); left: auto; top: auto;
+    bottom: max(22px, calc(env(safe-area-inset-bottom) + 7px));
+    width: 78px; height: 78px; border-radius: 50%;
+    background: rgba(175,38,92,.6); border: 1px solid #ff9abf;
+    z-index: 4;
+  }
+  body.playing .game-hud #reload-button {
+    position: absolute; left: calc(50% - 88px); right: auto; top: auto;
+    bottom: max(25px, calc(env(safe-area-inset-bottom) + 10px));
+    width: 49px; height: 49px; z-index: 3;
+  }
+  body.playing .game-hud #crouch-button {
+    position: absolute; left: calc(50% - 86px); right: auto; top: auto;
+    bottom: max(92px, calc(env(safe-area-inset-bottom) + 80px));
+    width: 45px; height: 45px; z-index: 3;
+  }
+  body.playing .game-hud #arsenal-button {
+    position: absolute; right: max(27px, calc(env(safe-area-inset-right) + 14px));
+    left: auto; top: auto;
+    bottom: max(112px, calc(env(safe-area-inset-bottom) + 96px));
+    width: 50px; height: 50px; z-index: 3;
+  }
+  body.playing .game-hud .fire-area > .control-label,
+  body.playing .game-hud .fire-area > .charge-track {
+    display: none !important;
+  }
+  body.playing .game-hud .weapon-tag {
+    position: absolute; left: auto; right: max(9px, env(safe-area-inset-right));
+    top: auto; bottom: max(175px, calc(env(safe-area-inset-bottom) + 159px));
+    transform: none; margin: 0; z-index: 3;
+    pointer-events: auto;
+  }
+  body.playing .game-hud .weapon-tag button { pointer-events: auto; }
+  /* Les zones non occupées par les contrôles laissent passer les gestes au canvas. */
+}
+@media (pointer:coarse) and (max-width:390px) {
+  body.playing .game-hud #move-stick { width: 101px; height: 101px; }
+  body.playing .game-hud #move-stick .joystick-ring { width: 101px; height: 101px; }
+  body.playing .game-hud #move-stick .joystick-knob { left: 26.5px; top: 26.5px; }
+  body.playing .game-hud #reload-button { left: calc(50% - 72px); }
+  body.playing .game-hud #crouch-button { left: calc(50% - 72px); }
+}
