@@ -18,7 +18,7 @@ const main=$('game'),shade=$('shade'),startButton=$('start'),status=$('status');
 const quality=$('quality'),hud=$('hud');
 const low=()=>quality.value==='low';
 const rng=(()=>{let s=220102;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};})();
-let canvas=main,renderer,scene,camera,game,weapon,clock=0,running=false,started=false,last=0,fpsTime=0,frames=0,framePending=false,recovering=false;
+let canvas=main,renderer,scene,camera,game,weapon,clock=0,running=false,started=false,last=0,fpsTime=0,frames=0,framePending=false,recovering=false,bootStep='modules';
 let yaw=0,pitch=0,weaponKick=0,stage=0,reported=-1;
 let noticeUntil=0,signal=0, rain,enemyFactory,root,architecture,pbrController;
 const keys=new Set(),input=new DesktopGamepadInput(),enemyMeshes=new Map(),shotMeshes=new Map();
@@ -340,10 +340,23 @@ function setupPlayer(){
  const heroGlow=lylu?glow(0x4da8ff):glow(0xff4fa1);
  const pm={...materials,armor:mat(lylu?0x356fa6:0xb64472,.38,.72),armorLight:mat(lylu?0xb6d9e8:0xdec3cf,.35,.68),steel:materials.iron,rose:heroGlow,pale:materials.white,violet:materials.blue};
  const gloves={fabric:mat(0x222736,.9,.08),plate:pm.armor,trim:pm.armorLight,glow:heroGlow,accent:materials.cyan,metal:materials.iron};
- weapon=buildGun({mats:pm,gloves,makeFlash:()=>{const o=new T.Mesh(new T.SphereGeometry(.07,8,6),heroGlow);o.visible=false;return o;}});
+ // The high-detail weapon is optional: a shader/GLB issue must not stop the mission.
+ try {
+  weapon=buildGun({mats:pm,gloves,makeFlash:()=>{const o=new T.Mesh(new T.SphereGeometry(.07,8,6),heroGlow);o.visible=false;return o;}});
+  weapon.userData.setVariant(0);
+ } catch(error){
+  console.warn('M02 / weapon detail degraded, game remains playable:',error);
+  weapon=new T.Group();
+  const fallback=new T.Mesh(new T.BoxGeometry(.115,.17,.48),pm.armor);
+  fallback.position.set(0,-.015,-.12);weapon.add(fallback);
+  const muzzle=new T.Mesh(new T.CylinderGeometry(.038,.035,.34,10),pm.steel);
+  muzzle.rotation.x=Math.PI/2;muzzle.position.set(0,.025,-.34);weapon.add(muzzle);
+  Object.assign(weapon.userData,{index:0,setVariant(index){this.index=index;},setCombatState(){}});
+ }
  camera.add(weapon);weapon.position.set(.23,-.30,-.59);weapon.rotation.set(-.07,-.045,-.09);
- weapon.userData.setVariant(0);
- enemyFactory=createEnemyFactory(enemyMaterials());
+ try {enemyFactory=createEnemyFactory(enemyMaterials());}
+ catch(error){console.warn('M02 / enemy visuals degraded:',error);enemyFactory=null;}
+
 }
 function createEnemies(){
  game.toSpawn=5;game.spawned=0;
@@ -383,7 +396,17 @@ function updateEnemies(dt){
  const live=new Set();
  for(const e of game.enemies){
   live.add(e.id);let model=enemyMeshes.get(e.id);
-  if(!model){model=enemyFactory.create(e.elite,e.ranged,e.form);enemyMeshes.set(e.id,model);scene.add(model);}
+  if(!model){
+   try{model=enemyFactory?.create(e.elite,e.ranged,e.form);}catch(err){console.warn('M02 enemy model fallback:',err);}
+   if(!model){
+    model=new T.Group();
+    const chassis=new T.Mesh(new T.CapsuleGeometry(.39,1.05,5,8),materials.dark);
+    chassis.position.y=1.04;model.add(chassis);
+    const eye=new T.Mesh(new T.BoxGeometry(.48,.13,.12),materials.red);
+    eye.position.set(0,1.5,-.38);model.add(eye);
+   }
+   enemyMeshes.set(e.id,model);scene.add(model);
+  }
   model.position.set(e.x,e.elevation,e.z);model.rotation.y=e.yaw||0;
   model.userData.animate?.(clock,e.phase,true,e,game.time);
  }
@@ -455,7 +478,11 @@ function animation(t){
  const dt=Math.min(.040,Math.max(0,(t-last)/1000));last=t;
  if(!renderer||!scene)return;
  clock+=dt;
- if(running)gameTick(dt);
+ if(running)try{gameTick(dt);}catch(error){
+  console.error('M02 simulation failure:',error);
+  running=false;shade.style.display='grid';status.textContent='Erreur de mission : '+(error?.message||String(error));
+  startButton.disabled=false;startButton.textContent='RECOMMENCER LE NIVEAU 2 →';
+ }
  if(scene&&camera&&!framePending&&!recovering){
    try{
      const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);
@@ -474,9 +501,16 @@ function onRenderFailure(error){
  console.error('M02 render failed',error);
  recovering=true;running=false;shade.style.display='grid';
  $('status').textContent='Échec du rendu : '+(error?.message||String(error))+' · Essaye le mode compatibilité.';
- $('start').textContent='RÉESSAYER EN WEBGL →';
+ const url=new URL(location.href);
+ if(url.searchParams.get('renderer')!=='webgl'){
+  $('status').textContent='Le moteur WebGPU a échoué. Relancement automatique en compatibilité WebGL…';
+  url.searchParams.set('renderer','webgl');
+  location.replace(url.href);
+  return;
+ }
+ $('start').textContent='RELANCER LE NIVEAU 2 →';
  $('start').disabled=false;
- $('start').onclick=()=>location.assign('level2-test.html?renderer=webgl');
+ $('start').onclick=()=>location.reload();
 }
 function resize(){
  if(!renderer)return;const width=innerWidth,height=innerHeight;
@@ -485,28 +519,38 @@ function resize(){
  renderer.setPixelRatio(renderPixelRatio(profile,devicePixelRatio,width,height));renderer.setSize(width,height,false);
 }
 async function boot(){
- status.textContent='Préparation du secteur et du moteur existant…';startButton.disabled=true;
+ bootStep='initialisation graphique';status.textContent='Préparation du secteur et du moteur existant…';startButton.disabled=true;
  try{
   const environment={userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu};
   const profile=graphicsProfile(environment,low()?'low':'auto',new URLSearchParams(location.search).get('renderer')==='webgl'||low());
   const prepared=await createCompatibleRenderer({canvas,WebGPU:T.WebGPURenderer,WebGL:WebGLRenderer,profile});
+  bootStep='création de la scène';status.textContent='Création du quartier cyberpunk…';
   canvas=prepared.canvas;renderer=prepared.renderer;
   renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
   renderer.shadowMap.enabled=!low();renderer.shadowMap.type=T.PCFSoftShadowMap;
   scene=new T.Scene();camera=new T.PerspectiveCamera(67,innerWidth/innerHeight,.08,320);
-  scene.add(camera);createEnvironment();setupPlayer();resize();
+  scene.add(camera);createEnvironment();
+  bootStep='jouabilité';status.textContent='Installation des commandes et des armes…';
+  setupPlayer();resize();
   const useWebGL=!!renderer.isWebGLRenderer;
-  pbrController=installLeanPBR(T,materials,architecture,{performance:low()||profile.phone,onProgress:state=>{
+  bootStep='matériaux';
+  try{pbrController=installLeanPBR(T,materials,architecture,{performance:low()||profile.phone,onProgress:state=>{
     const renderMode=useWebGL?'WebGL':'WebGPU';
     $('renderer').textContent=renderMode+' · PBR '+state.ready+'/'+state.requested+(state.fallback?' · '+state.fallback+' hors-ligne':'');
-  }});
-  $('renderer').textContent=(renderer.isWebGLRenderer?'WebGL / repli':'WebGPU')+' · PBR chargement';
+  }});}catch(error){console.warn('M02/PBR optional fallback:',error);}
+  $('renderer').textContent=(renderer.isWebGLRenderer?'WebGL / repli':'WebGPU')+' · PBR';
   if(prepared.initialFailure)console.warn('M02: WebGPU unavailable:',prepared.initialFailure);
-  hud.hidden=false;started=true;requestAnimationFrame(animation);
+  bootStep='prêt';hud.hidden=false;started=true;requestAnimationFrame(animation);
   resume();
  }catch(error){
-  console.error(error);status.textContent='Impossible de lancer : '+(error?.message||error);
-  startButton.textContent='RÉESSAYER';startButton.disabled=false;
+  console.error('[M02] boot failed at '+bootStep,error);
+  status.textContent='Impossible de lancer ('+bootStep+') : '+(error?.message||error);
+  startButton.textContent='RECOMMENCER LE CHARGEMENT →';startButton.disabled=false;
+  if(new URLSearchParams(location.search).get('renderer')!=='webgl'){
+    const retry=new URL(location.href);retry.searchParams.set('renderer','webgl');
+    status.textContent+=' · Ouverture automatique du mode compatible…';
+    location.replace(retry.href);
+  }
  }
 }
 function resume(){
@@ -520,7 +564,7 @@ function resume(){
  $('name').textContent='PINK WARS · '+characterId.toUpperCase()+' · M02';
  canvas.requestPointerLock?.().catch?.(()=>{});
 }
-startButton.addEventListener('click',()=>started?resume():boot());
+startButton.addEventListener('click',()=>{if(started)resume();else{startButton.disabled=true;boot();}});
 quality.addEventListener('change',()=>{if(!started)return;renderer.shadowMap.enabled=!low();resize();});
 window.addEventListener('resize',resize);
 window.addEventListener('keydown',e=>{
