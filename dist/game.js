@@ -15,6 +15,7 @@ import { bladeSwingPose } from './blade-combat.js';
 import { createSaberSound } from './saber-sound.js';
 import { magnifiedFov, aimSensitivity, flatSightPose } from './optics.js';
 import { CampaignLevel1 } from './campaign-level1.js';
+import {attachCampaignStory} from './story-chapters.js';
 import { ShootingRangeGame } from './shooting-range.js';
 import {GAME_VERSION,showLaunchError} from './launch-ui.js';
 import {syncMenuArtwork} from './menu-art.js';
@@ -28,16 +29,16 @@ settings.sensitivity = clamp(Number(settings.sensitivity) || 1, .4, 2);
 if (!['auto', 'low', 'high'].includes(settings.quality)) settings.quality = 'auto';
 let phase = 'lobby', view = boot?.view==='third'?'third':'fps', yaw = 0, pitch = -.075, game, world, vr;
 let character=characterForId('ghju');
-let selectedMode=['arena','training','campaign'].includes(boot?.mode)?boot.mode:'campaign',launchBusy=false;
+let selectedMode=['arena','training','campaign','campaign2'].includes(boot?.mode)?boot.mode:'campaign',launchBusy=false;
 let trainingWeaponIndex=Number.isInteger(boot?.trainingWeaponIndex)&&boot.trainingWeaponIndex>=0&&boot.trainingWeaponIndex<5?boot.trainingWeaponIndex:0;
 function selectMode(mode){
   if(phase!=='lobby'||launchBusy)return;
-  selectedMode=['campaign','arena','training'].includes(mode)?mode:'campaign';
+  selectedMode=['campaign','campaign2','arena','training'].includes(mode)?mode:'campaign';
   syncMenuArtwork(character.id,selectedMode);
   for(const button of document.querySelectorAll('[data-mode]'))button.setAttribute('aria-pressed',String(button.dataset.mode===selectedMode));
-  $('mission-title').textContent=selectedMode==='campaign'?'01 — Le dernier signal':selectedMode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
-  $('mission-description').textContent=selectedMode==='campaign'?'Ancien poste de secours, évacuation interrompue, journal clandestin et relais ORDRE à saboter. Retrouver une trace de votre famille.':selectedMode==='arena'?'Vingt vagues de machines, six armes et des équipements à récupérer.':'Cibles fixes, proches et lointaines ; trajectoires latérales et avant-arrière ; accélération continue. Mesurez votre précision.';
-  if(world)$('play-label').textContent=selectedMode==='campaign'?'JOUER LE NIVEAU 1':selectedMode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
+  $('mission-title').textContent=selectedMode==='campaign2'?'02 — Sous les Néons':selectedMode==='campaign'?'01 — Le dernier signal':selectedMode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
+  $('mission-description').textContent=selectedMode==='campaign2'?'Bas-Niveaux de Vesper : marchés, ruelles pluvieuses, enclave de secours et archives HELIX.':selectedMode==='campaign'?'Ancien poste de secours, évacuation interrompue, journal clandestin et relais ORDRE à saboter. Retrouver une trace de votre famille.':selectedMode==='arena'?'Vingt vagues de machines, six armes et des équipements à récupérer.':'Cibles fixes, proches et lointaines ; trajectoires latérales et avant-arrière ; accélération continue. Mesurez votre précision.';
+  if(world)$('play-label').textContent=selectedMode==='campaign2'?'JOUER LE NIVEAU 2':selectedMode==='campaign'?'JOUER LE NIVEAU 1':selectedMode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
 }
 for(const button of document.querySelectorAll('[data-mode]'))button.onclick=()=>selectMode(button.dataset.mode);
 // The range armory only exists in-game: a touch/click station for the five weapons.
@@ -232,6 +233,9 @@ async function home() {
 }
 $('quit-button').onclick = home; $('end-home').onclick = home;
 async function start() {
+  if(selectedMode==='campaign2'){
+    location.assign('./level2-test.html?character='+encodeURIComponent(character.id)+'&source=campaign');return;
+  }
   if (!world||launchBusy) return;
   launchBusy=true;
   selectView('fps');
@@ -433,6 +437,8 @@ function handleEvents() {
   }
 }
 function gameOver(won = false) {
+  $('end-dialog')?.querySelector('.pw-story-card')?.remove();
+  $('end-dialog')?.querySelector('.pw-story-next')?.remove();
   musicBed.pause();ambience?.pause(); phase = 'over'; resetInput(); let best = game.score;
   try { best = Math.max(game.score, Number(localStorage.getItem('rosee-best')) || 0); localStorage.setItem('rosee-best', String(best)); } catch {}
   $('end-eyebrow').textContent = won ? `MISSION ACCOMPLIE / NIVEAU ${MAX_LEVEL}` : 'TRANSMISSION INTERROMPUE';
@@ -443,8 +449,9 @@ function gameOver(won = false) {
   if(game.mode==='campaign'){
     $('end-eyebrow').textContent=won?'NIVEAU 1 TERMINÉ / ARCHIVE SAUVEGARDÉE':'LE DERNIER SIGNAL / ESSAI INTERROMPU';
     $('end-title').innerHTML=won?'Une trace.<br>Un espoir.':'Le signal<br>vous attend.';
-    $('end-message').textContent=won?`Une intervention récente porte l’indicatif ${character.id==='ghju'?'LYLU':'GHJU'}. Destination suivante : les archives de Vesper. Le niveau 1 s’arrête ici ; la suite viendra après vos essais.`:'Reprenez depuis l’entrée du laboratoire. Activez le courant, consultez l’archive, puis rejoignez le relais en hauteur.';
+    $('end-message').textContent=won?`Une intervention récente porte l’indicatif ${character.id==='ghju'?'LYLU':'GHJU'}. Destination suivante : les Bas-Niveaux de Vesper. Le niveau 2 est désormais accessible.`:'Reprenez depuis l’entrée du laboratoire. Activez le courant, consultez l’archive, puis rejoignez le relais en hauteur.';
     $('survival-button').hidden=true;$('retry-button').textContent='REJOUER LE NIVEAU 1 →';
+    if(won)attachCampaignStory($('end-dialog'),{level:1,characterId:character.id});
   }
   $('end-score').textContent = game.score; $('end-wave').textContent = game.wave; $('end-time').textContent = timeString(game.time); $('best-label').textContent = best;
   if (vr?.mode !== 'xr') $('end-dialog').showModal();
