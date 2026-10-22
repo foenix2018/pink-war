@@ -508,6 +508,10 @@ function gameTick(dt){
  const sensitivity=aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend);
  yaw-=(controls.lookX*1.8+touch.lookX*1.8)*sensitivity*dt;
  pitch=clamp(pitch-(controls.lookY+touch.lookY)*1.35*sensitivity*dt,-.85,.7);
+ // Right-half mobile swipe is delta-based (same semantics as the mouse).
+ yaw-=(touch.lookDX||0)*.004*sensitivity;
+ pitch=clamp(pitch-(touch.lookDY||0)*.004*sensitivity,-.85,.7);
+ touch.lookDX=touch.lookDY=0;
  const x=controls.moveX+touch.x,z=controls.moveZ+touch.z;
  const aiming=!!OPTICS[game.weapon.id]&&game.reloadRemaining<=0&&(mouseAim||touch.aim||controls.aim);
  aimBlend+=(Number(aiming)-aimBlend)*(1-Math.exp(-dt*14));
@@ -751,7 +755,8 @@ let dragPointer=null,dragX=0,dragY=0;
 window.addEventListener('pointerdown',e=>{
  if(!running||e.target!==canvas)return;
  if(e.button===2){mouseAim=true;e.preventDefault();return;}
- if(e.button!==0)return;
+ if(e.button!==0||e.pointerType!=='mouse')return;
+ // On phones, the canvas is a camera surface, not a fire trigger.
  heldFire=true;firePressQueued=true;
  dragPointer=e.pointerId;dragX=e.clientX;dragY=e.clientY;
  if(e.pointerType==='mouse'&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch?.(()=>{});
