@@ -1,8 +1,8 @@
 import {createStudioBloom} from './studio-bloom.js';
 import {createGlove} from './hands.js';
 import {poseUnarmedForInspection} from './rlh-firefighter.js';
-import { addCapeToOriginalSoldier } from './personnage-cape-addon.js?v=3.46';
-import { attachShadowConcept } from './personnage-shadow-concept.js?v=3.46';
+import { addCapeToOriginalSoldier } from './personnage-cape-addon.js?v=3.55';
+import { attachShadowConcept } from './personnage-shadow-concept.js?v=3.55';
 import * as T from './vendor/three.webgpu.min.js';
 import { WebGLRenderer } from './vendor/three.module.min.js';
 import { createCharacterKit, createSoldier } from './soldier.js';
@@ -249,7 +249,13 @@ function resize(){
  updateHelmetProjection();
 }
 window.addEventListener('resize',resize);resize();
-setCharacter('ghju');setMotion('idle');
+const inspectionQuery=new URLSearchParams(location.search);
+if(inspectionQuery.has('level')){
+ state.level=clamp(Math.round(Number(inspectionQuery.get('level')))||1,1,10);
+ $('level').value=state.level;$('level-value').textContent=state.level;
+}
+if(inspectionQuery.get('view')==='profile')state.angle=Math.PI/2;
+setCharacter(inspectionQuery.get('character')==='lylu'?'lylu':'ghju');setMotion('idle');
 function tick(now){
  const dt=last?clamp((now-last)*.001,.001,.05):.016;last=now;state.clock+=dt;
  const model=subjects.get(state.character),root=model.root;
@@ -297,7 +303,7 @@ function tick(now){
 }
 requestAnimationFrame(tick);
 window.__PINKWAR_CHARACTER_LAB=Object.freeze({
- snapshot:()=>({character:state.character,motion:state.motion,level:state.level,weapon:state.weapon,focus:state.focus,showBones:state.showBones,
+ snapshot:()=>({character:state.character,motion:state.motion,level:state.level,weapon:state.weapon,focus:state.focus,angle:state.angle,showBones:state.showBones,
   frames:frame,zoom:state.zoom,headSpan:state.headSpan,articulations:jointNames, jointPositions:()=>Object.fromEntries(Object.entries(subjects.get(state.character).jointPositions()).map(([k,v])=>[k,v.toArray()])),
   visibleParts:subjects.get(state.character).visibleParts,visibleMeshes:subjects.get(state.character).batchCount,physicalHeight:subjects.get(state.character).targetHeight,
   armorModules:[...subjects.get(state.character).armor.modules],armorTriangles:subjects.get(state.character).armor.parts.reduce((n,p)=>n+p.geometry.attributes.position.count/3,0),armorName:subjects.get(state.character).armor.name,armorRevision:subjects.get(state.character).armor.revision,armorGeneration:subjects.get(state.character).armor.generation,armorPieces:subjects.get(state.character).armor.count,nativeMotion:subjects.get(state.character).nativeMotion,nativeClips:Object.fromEntries(Object.entries(subjects.get(state.character).actor.actions).map(([name,a])=>[name,{duration:a.getClip().duration,weight:a.getEffectiveWeight(),time:a.time}]))}),

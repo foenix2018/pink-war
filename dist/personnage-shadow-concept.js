@@ -1,7 +1,7 @@
 import {buildShadowHelmet} from './shadow-helmet.js';
 import {reflectedGeometry,symmetricGeometry,mirrorAttachmentFrame} from './shadow-symmetry.js';
 import * as T from './vendor/three.webgpu.min.js';
-import {merge,bevelBox} from './geo.js';
+import {merge,bevelBox,loft} from './geo.js';
 
 // Shared reference armour: fitted to the native bones for both game and viewer.
 export function attachShadowConcept(model, profile) {
@@ -175,10 +175,16 @@ export function attachShadowConcept(model, profile) {
     part,shape,block,path,materials:{dark,graphite,black,steel,glass,light,dim},disposables
   });
 
-  // Plastron Shadow : volume anguleux et profond placé DEVANT l'armure AÉGIS.
-  // La version précédente mettait les plaques à z=-.136, donc sous la coque.
+  // Fit the plates to the retained undersuit, which is only 26 cm deep.
+  // The former stand-off was authored over an AEGIS shell that is now hidden.
   const spine=boneAnchor(model.actor.bone('Spine2'),[0,1.432,0]);
   spine.name='Shadow V6 / thorax sculpté';
+  const lining=part(spine,loft([
+    [-.140,.161,.119],[-.105,.184,.129],[-.042,.211,.139],
+    [.038,.220,.141],[.083,.204,.129],[.120,.154,.103],[.143,.077,.077]
+  ],28),black);
+  lining.name='Shadow / cuirasse ajustée et retours latéraux';
+  lining.userData.fittedThorax=true;
   // Rear reference: two broad gunmetal scapular plates, central vent cassette.
   for(const sign of [-1,1]){
     const outline=[[.060,-.110],[.153,-.100],[.205,-.057],[.213,.067],
@@ -372,6 +378,16 @@ export function attachShadowConcept(model, profile) {
       if(!mesh.isMesh)continue;
       mesh.updateMatrix();
       const baked=mesh.geometry.clone().applyMatrix4(mesh.matrix);
+      if(group===spine&&!mesh.userData.fittedThorax){
+        const p=baked.attributes.position;
+        for(let i=0;i<p.count;i++){
+          // Wrap the lateral wings around the rib cage, rather than leaving
+          // two flat shields suspended in front of and behind the soldier.
+          const wrap=Math.sqrt(Math.max(.16,1-(p.getX(i)/.245)**2));
+          p.setZ(i,p.getZ(i)*.65*wrap);
+        }
+        baked.computeVertexNormals();
+      }
       if(!batches.has(mesh.material))batches.set(mesh.material,[]);
       batches.get(mesh.material).push(baked);mesh.removeFromParent();
     }

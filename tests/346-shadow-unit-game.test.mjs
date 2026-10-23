@@ -36,7 +36,8 @@ const createHero=profile=>{
 };
 
 for(const profile of CHARACTERS){
-  test('Shadow Unit '+profile.id+' remains attached to real AEGIS bones in every tier',()=>{
+  test('Shadow Unit '+profile.id+' remains attached to real AEGIS bones in every tier',t=>{
+    t.after(restoreDocument);
     // Preserve the original headless test environment while the RLH rig and
     // gloves bake their procedural maps. Stub DOM only for the cape texture.
     const {kit,soldier}=createHero(profile);
@@ -59,7 +60,8 @@ for(const profile of CHARACTERS){
     const bodyIndex=soldier.actor.bones.indexOf(soldier.body);
     const bindBody=new T.Matrix4().fromArray(soldier.actor.data.bones[bodyIndex].inverse).invert();
     const top=new T.Vector3().setFromMatrixPosition(bindBody.multiply(entry.cape.anchor.matrix));
-    assert.ok(top.distanceTo(new T.Vector3(0,1.48,.184))<1e-5,'cape is centred behind the shoulders in bind space');
+    assert.ok(Math.abs(top.x)<1e-5&&Math.abs(top.y-1.48)<1e-5&&top.z>.13&&top.z<.15,
+      'cape seam is centred against the fitted back, below the scapular plates');
     assert.equal(entry.armour.helmet.name,'Shadow V6 / casque tactique polygonal');
     assert.ok(entry.cape.anchor.children.length,'black cape is present');
 
@@ -89,7 +91,6 @@ for(const profile of CHARACTERS){
     capeMesh.geometry.computeBoundingBox();tabardMesh.geometry.computeBoundingBox();
     assert.ok(capeMesh.geometry.boundingBox.getSize(new T.Vector3()).x>.40,
       'rear cape covers the back instead of the former narrow strip');
-    assert.ok(tabardMesh.geometry.boundingBox.max.z<=.001,'tabard billows toward the front');
     let disposed=0;
     capeMesh.geometry.addEventListener('dispose',()=>disposed++);
     tabardMesh.geometry.addEventListener('dispose',()=>disposed++);
@@ -103,6 +104,65 @@ for(const profile of CHARACTERS){
 }
 
 for(const profile of CHARACTERS){
+  test('Shadow cloth '+profile.id+' stays fitted in profile while the chest and hips move',()=>{
+    const {soldier}=createHero(profile);
+    const entry=installShadowUnit(soldier,profile);
+    const setBindPose=()=>{
+      for(let i=0;i<soldier.actor.bones.length;i++){
+        soldier.actor.bones[i].position.fromArray(soldier.actor.data.bones[i].p);
+        soldier.actor.bones[i].quaternion.fromArray(soldier.actor.data.bones[i].q);
+      }
+      soldier.root.updateMatrixWorld(true);
+    };
+    setBindPose();
+    for(const direction of [-1,1]){
+      const ray=new T.Raycaster(new T.Vector3(.105,1.45,direction),new T.Vector3(0,0,-direction));
+      const hit=ray.intersectObject(entry.armour.spine,true)[0];
+      assert.ok(hit&&Math.abs(hit.point.z)<.19&&Math.abs(hit.point.z)>.11,
+        'front and back plates are fitted to the undersuit instead of the hidden old shell');
+    }
+    const hip=soldier.actor.bone('Hips'),samples=[];
+    for(const [front,cloth] of [[false,entry.cape],[true,entry.tabard]]){
+      cloth.update(0,'idle',0,{symmetric:true});
+      const mesh=cloth.anchor.children[0],p=mesh.geometry.attributes.position;
+      mesh.updateWorldMatrix(true,false);
+      const top=[],waistRow=front?12:16,waistIndex=waistRow*25+12;
+      for(let i=0;i<25;i++)top.push(new T.Vector3().fromBufferAttribute(p,i));
+      const waist=hip.worldToLocal(mesh.localToWorld(new T.Vector3().fromBufferAttribute(p,waistIndex)));
+      // These samples were formerly 10–18 cm away from the actual waist.
+      const inverseRoot=soldier.root.matrixWorld.clone().invert();
+      const rootPoint=new T.Vector3().fromBufferAttribute(p,waistIndex).applyMatrix4(mesh.matrixWorld).applyMatrix4(inverseRoot);
+      assert.ok(Math.abs(rootPoint.z)>.11&&Math.abs(rootPoint.z)<.145,
+        'front and rear fabric lie within a small clearance of the waist');
+      const shoulderDepth=top[12].clone().applyMatrix4(mesh.matrixWorld).applyMatrix4(inverseRoot).z;
+      const edgeDepth=top[0].clone().applyMatrix4(mesh.matrixWorld).applyMatrix4(inverseRoot).z;
+      assert.ok(Math.abs(shoulderDepth)-Math.abs(edgeDepth)>.025,'attachment seam wraps around the torso');
+      samples.push({cloth,mesh,p,top,waist,waistIndex,front});
+    }
+    // Include a placed/scaled/rotated actor, as in the lobby and companion.
+    soldier.root.position.set(9,.7,-12);soldier.root.rotation.y=.73;
+    soldier.root.scale.setScalar(soldier.heightScale);
+    let clock=0;
+    for(const motion of [{},{sprint:true},{crouched:true},{airborne:true,verticalSpeed:2}]){
+      for(let frame=0;frame<12;frame++){
+        clock+=.04;
+        soldier.animate(clock,!!motion.sprint||!!motion.crouched,0,0,0,.04,motion);
+        for(const sample of samples){
+          const {cloth,mesh,p,top,waist,waistIndex}=sample;
+          // Wind can move the free hem, never the attachment seam.
+          cloth.update(clock,motion.sprint?'run':motion.crouched?'crouchWalk':'idle',1);
+          mesh.updateWorldMatrix(true,false);
+          for(let i=0;i<25;i++)assert.ok(top[i].distanceTo(new T.Vector3().fromBufferAttribute(p,i))<1e-5,
+            'every top stitch remains fixed to the chest in every pose');
+          const current=hip.worldToLocal(mesh.localToWorld(new T.Vector3().fromBufferAttribute(p,waistIndex)));
+          assert.ok(current.distanceTo(waist)<.025,'waist follows the pelvis instead of cantilevering from the chest');
+          assert.ok(p.array.every(Number.isFinite));
+        }
+      }
+    }
+    soldier.dispose();
+  });
+
   test('unarmed inspection '+profile.id+' keeps hands on wrists without stretching the native arms',()=>{
     const {kit,soldier}=createHero(profile);
     soldier.root.scale.setScalar(soldier.heightScale);

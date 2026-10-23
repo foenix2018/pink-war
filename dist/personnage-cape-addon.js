@@ -80,19 +80,59 @@ export function addCapeToOriginalSoldier(model, profile, {front=false}={}) {
     const mesh=new T.Mesh(g,ribbonMaterial);mesh.frustumCulled=false;cloth.add(mesh);return {g,a};
   });
 
-  // Both panels sit outside the shell. They follow the chest without changing
-  // the native skeleton; their bottom rows carry the fabric's inertia.
+  const direction=front?-1:1,topHeight=front?1.32:1.48,length=front?.84:1.035;
+  // Cross-sections of the fitted cuirass, waist and belt in the rig's bind
+  // frame. The cloth wraps around them instead of hanging on a distant plane.
+  const sections=[
+    [.95,.184,.127],[1.06,.182,.130],[1.17,.148,.108],
+    [1.27,.168,.118],[1.32,.184,.130],[1.39,.211,.140],[1.48,.220,.141]
+  ];
+  function surface(y,x){
+    let a=sections[0],b=a;
+    for(let i=1;i<sections.length;i++){
+      b=sections[i];if(y<=b[0])break;a=b;
+    }
+    const t=a===b?0:T.MathUtils.clamp((y-a[0])/(b[0]-a[0]),0,1);
+    const width=T.MathUtils.lerp(a[1],b[1],t),depth=T.MathUtils.lerp(a[2],b[2],t);
+    return direction*(depth*Math.sqrt(Math.max(.12,1-(x/width)**2))+.004);
+  }
+  // The top seam is buried under the lower/front and scapular/back plates.
   const anchor=new T.Group();
   anchor.name=front?'Tabard / fixation sous le sternum':'Cape / fixation sous les plaques dorsales';
   const bodyIndex=model.actor.bones.indexOf(model.body);
   const bindInverse=new T.Matrix4().fromArray(model.actor.data.bones[bodyIndex].inverse);
-  const frame=bindInverse.multiply(new T.Matrix4().makeTranslation(0,front?1.32:1.48,front?-.216:.184));
+  const frame=bindInverse.clone().multiply(new T.Matrix4().makeTranslation(0,topHeight,surface(topHeight,0)));
   frame.decompose(anchor.position,anchor.quaternion,anchor.scale);
   model.body.add(anchor);
   anchor.add(cloth);
   cloth.position.set(0,0,0);
   cloth.rotation.set(0,0,0);
 
+  const hip=model.actor.bone('Hips'),hipIndex=model.actor.bones.indexOf(hip);
+  const hipBindInverse=new T.Matrix4().fromArray(model.actor.data.bones[hipIndex].inverse);
+  const inverseRoot=new T.Matrix4(),bodySkin=new T.Matrix4(),hipSkin=new T.Matrix4(),toAnchor=new T.Matrix4();
+  const point=new T.Vector3(),upperPoint=new T.Vector3(),lowerPoint=new T.Vector3();
+  // Four inexpensive capsules keep the free fabric outside the moving legs.
+  // No raycasts, triangle traversal or per-vertex allocations in the XR loop.
+  const capsules=[];
+  for(const side of ['Left','Right'])for(const [a,b,r] of [
+    ['UpLeg','Leg',front?.172:.132],['Leg','Foot',front?.133:.096]
+  ]){
+    capsules.push({a:model.actor.bone(side+a),b:model.actor.bone(side+b),r,
+      start:new T.Vector3(),end:new T.Vector3()});
+  }
+  function avoidLegs(p){
+    for(const {start:a,end:b,r} of capsules){
+      const dx=b.x-a.x,dy=b.y-a.y,den=dx*dx+dy*dy;
+      const t=den<1e-10?0:T.MathUtils.clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/den,0,1);
+      const x=a.x+dx*t,y=a.y+dy*t,z=T.MathUtils.lerp(a.z,b.z,t);
+      const d2=(p.x-x)**2+(p.y-y)**2;
+      if(d2<r*r){
+        const boundary=z+direction*(Math.sqrt(r*r-d2)+.005);
+        p.z=direction>0?Math.max(p.z,boundary):Math.min(p.z,boundary);
+      }
+    }
+  }
 
   // Animations continues amorties (mouvement d'ensemble + vague se propageant
   // le long du tissu). Le haut reste parfaitement fixe sous le bloc dorsal.
@@ -133,22 +173,53 @@ export function addCapeToOriginalSoldier(model, profile, {front=false}={}) {
     }
     sway[0]=0;billow[0]=0;swayVelocity[0]=0;billowVelocity[0]=0;
 
+    model.root.updateMatrixWorld(true);
+    inverseRoot.copy(model.root.matrixWorld).invert();
+    bodySkin.multiplyMatrices(inverseRoot,model.body.matrixWorld).multiply(bindInverse);
+    hipSkin.multiplyMatrices(inverseRoot,hip.matrixWorld).multiply(hipBindInverse);
+    toAnchor.copy(anchor.matrixWorld).invert().multiply(model.root.matrixWorld);
+    for(const c of capsules){
+      c.start.setFromMatrixPosition(c.a.matrixWorld).applyMatrix4(inverseRoot);
+      c.end.setFromMatrixPosition(c.b.matrixWorld).applyMatrix4(inverseRoot);
+    }
+    if(symmetric)for(let i=0;i<2;i++)for(const end of ['start','end']){
+      const a=capsules[i][end],b=capsules[i+2][end];
+      const x=(Math.abs(a.x)+Math.abs(b.x))*.5,y=(a.y+b.y)*.5,z=(a.z+b.z)*.5;
+      a.set(-x,y,z);b.set(x,y,z);
+    }
+
     for(let j=0;j<=rows;j++) {
       const v=j/rows,lag=Math.pow(v,1.4);
-      // RECTANGLE : largeur de ~34 cm du haut jusqu'à l'ourlet,
-      // avec seulement une rondeur microscopique au milieu.
+      const y=topHeight-length*v;
+      const release=T.MathUtils.smoothstep(1.22-y,0,.30);
       const width=front?(.265+.060*v):(.340+.080*v);
       for(let i=0;i<=columns;i++) {
         const u=i/columns,edge=2*u-1,n=(j*(columns+1)+i)*3;
         // Deux plis verticaux amples, sans vibrations rapides.
-        const fold=symmetric?.0025*Math.sin(v*Math.PI)*Math.cos(edge*Math.PI*2):
-          Math.sin(u*Math.PI*3.2+v*1.8-time*.72)*(.0035+.005*strength)*lag;
-        // Les coutures verticales suivent la même largeur : effet rectangulaire.
-        positions[n]=edge*width*.5+(symmetric?0:sway[j]+fold);
-        positions[n+1]=-(front?.84:1.035)*v
-          +(symmetric?0:.008*lag*Math.sin(time*1.05-v*2.9+edge*1.1)*(strength+.10));
-        // Douce courbure pour donner du volume dans les vues de profil.
-        positions[n+2]=(front?-1:1)*((front?.025*v:.080*Math.min(1,v/.22))+.025*(1-edge*edge)*lag+billow[j]+fold*.45);
+        const fold=(symmetric?.0025*Math.sin(v*Math.PI)*Math.cos(edge*Math.PI*2):
+          Math.sin(u*Math.PI*3.2+v*1.8-time*.72)*(.0035+.005*strength)*lag)*release;
+        const x=edge*width*.5;
+        const z=surface(Math.max(.95,y),x);
+        point.set(x,y,z);
+        if(y>=1.06){
+          // Share the bend between chest and pelvis. A crouch must not make
+          // the whole metre of cape rotate as a rigid extension of the chest.
+          const chestWeight=T.MathUtils.smoothstep(y,1.06,front?1.32:1.39);
+          upperPoint.copy(point).applyMatrix4(bodySkin);
+          lowerPoint.copy(point).applyMatrix4(hipSkin);
+          point.copy(lowerPoint).lerp(upperPoint,chestWeight);
+        }else{
+          point.set(x,1.06,surface(1.06,x)).applyMatrix4(hipSkin);
+          point.y+=y-1.06;
+          point.z+=z-surface(1.06,x);
+        }
+        if(!symmetric){
+          point.x+=(sway[j]+fold)*release;
+          point.y+=.008*lag*Math.sin(time*1.05-v*2.9+edge*1.1)*(strength+.10)*release;
+        }
+        point.z+=direction*(billow[j]+fold*.45)*release;
+        if(y<1.06)avoidLegs(point);
+        point.applyMatrix4(toAnchor).toArray(positions,n);
       }
     }
     geometry.attributes.position.needsUpdate=true;

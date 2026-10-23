@@ -1,7 +1,7 @@
 // Shared Pink War Shadow Unit skin for the playable GHJU/LYLU soldiers.
 // The base Mixamo/RLH rig, weapon hands and combat logic remain unchanged.
-import {attachShadowConcept} from './personnage-shadow-concept.js';
-import {addCapeToOriginalSoldier} from './personnage-cape-addon.js';
+import {attachShadowConcept} from './personnage-shadow-concept.js?v=3.55';
+import {addCapeToOriginalSoldier} from './personnage-cape-addon.js?v=3.55';
 
 export function applyShadowMaterials(kit,profile){
   // Keep both teams' glow/accent colors while replacing the pale AÉGIS shell
