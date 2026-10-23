@@ -287,6 +287,8 @@ export class CampaignLevel1 extends ArenaGame {
 
   objectiveTarget() {
     if(this.state!=='playing'||this.completed)return null;
+    const offer=this.weaponOffers.find(o=>!this.ownedWeapons.has(o.index));
+    if(offer)return {x:offer.x,z:offer.z,y:offer.elevation,id:'weapon-'+offer.index,label:'RÉCUPÉRER L’ÉQUIPEMENT',kind:'weapon'};
     const objective=this.campaign.objective;
     if(objective)return {...objective.position,id:objective.id,label:objective.label,kind:'objective'};
     if(this.stage==='breach')return {...LEVEL1.archive,id:'archive',label:'LIRE LE JOURNAL',kind:'objective'};

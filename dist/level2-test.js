@@ -590,7 +590,7 @@ function gameTick(dt){
   if(e.type==='over'){running=false;shade.style.display='grid';$('start').textContent='RECOMMENCER LE TEST →';$('status').textContent='Intervention interrompue — santé épuisée';document.exitPointerLock?.();}
  }
  combatEffects?.update(game,dt,camera);
- companion?.update(dt,{game,camera,active:stage>=1});
+ companion?.update(dt,{game,camera,active:false});
  environmentAudio?.update(dt,{active:running,position:game.player,moving:Math.hypot(x,z)>.1,grounded:game.player.grounded,elevation:game.player.elevation,yaw,probes:game.enemies});
  if(game.player.hp>0)$('damage').style.boxShadow='inset 0 0 '+(100-game.player.hp)*1.2+'px #c52c5e44';
  weaponKick=Math.max(0,weaponKick-dt*.7);

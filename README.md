@@ -1,6 +1,6 @@
-# Pink war
+# Pink Wars — La Fracture
 
-Version 3.49 : première reprise de l’ambiance W01, lumière matinale réduite, ombres mobiles, façade médicale ouverte et toit effondré, épaves uniques et surfaces d’usure. Départ dans l’annexe et passage par l’atelier rétablis. [Détail et limites](docs/pink-wars/MISE_A_JOUR_349.md) · [Jouer](https://pink-war.vercel.app/?v=3.49).
+Version 3.50 : M01 revient à la carte de référence du book avec le combat commun écran/WebXR, les journaux de GHJU/LYLU, les récupérations BLOOM/LANCE, l’escalier et le monte-charge à 4,8 m. Matériaux photographiques locaux, usure et traces de l’évacuation. [Détail et limites](docs/pink-wars/MISE_A_JOUR_350.md) · [Jouer](https://pink-war.vercel.app/?v=3.50).
 
 Jeu 3D en HTML et JavaScript, conçu pour iPhone, ordinateur et casque WebXR. La campagne commence par le prototype narratif « Le dernier signal ». GHJU ou LYLU traverse le quartier des secours de Vesper, pour retrouver une trace de son frère ou de sa sœur. Le mode Survie conserve les vingt vagues et les six armes de l’arène de 200 × 200 mètres ; AT HOME reste accessible sur Quest.
 

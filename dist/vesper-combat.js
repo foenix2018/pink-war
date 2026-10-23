@@ -1,26 +1,30 @@
-// Vesper V7's approved geometry + the production Pink Wars simulation and rigs.
-// The map builder still owns every wall, door, stair and prop coordinate.
+// M01's book reference map, production combat, and locked Shadow Unit rigs.
+// The V7 page supplies controls; it no longer substitutes its visit map for M01.
 import * as T from './vendor/three.webgpu.min.js';
 import {WebGLRenderer} from './vendor/three.module.min.js';
-import {ArenaGame,WEAPONS,segmentBox,traceEnemyHit} from './game-logic.js';
-import {enemyDurability} from './enemy-combat.js';
+import {WEAPONS,segmentBox,traceEnemyHit} from './game-logic.js';
+import {CampaignLevel1,LEVEL1} from './campaign-level1.js';
+import {createCampaignArt} from './campaign-art.js';
+import {LEVEL1_MAP} from './level1-layout.js';
+import {createM01Salvage} from './m01-salvage.js';
+import {missionJournal,showMissionJournal} from './m01-narrative.js';
+import {readM01Checkpoint,writeM01Checkpoint,restoreM01Checkpoint} from './m01-checkpoint.js';
 import {createEnemyFactory} from './enemies.js';
 import {installPinkWarsSoldier} from './level2-player.js';
 import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './renderer-policy.js';
 import {createWeaponFeel} from './weapon-feel.js';
-import {OPTICS,buildGun} from './weapons.js';
+import {OPTICS,buildGun,createWeaponModels} from './weapons.js';
 import {magnifiedFov,flatSightPose} from './optics.js';
 import {playLaserShot,playLaserImpact,playWeaponAction,setLaserAudioEnabled} from './laser-sound.js';
 import {createSaberSound} from './saber-sound.js';
 import {createAmbience} from './ambience.js';
 import {createMusicBed} from './music.js';
 import {createCampaignCombatEffects} from './campaign-combat-effects.js';
-import {createAICompanion} from './ai-companions.js';
-import {installPhotographicSurfaces,PHOTO_SURFACES} from './photographic-surfaces.js';
+import {PHOTO_SURFACES} from './photographic-surfaces.js';
 import {attachCampaignStory} from './story-chapters.js';
 import {DesktopGamepadInput} from './desktop-input.js';
 import {createFireBuffer} from './fire-input.js';
-import {createVesperAtmosphere,createVesperArt,replacementTriangles,vesperArtColliders} from './vesper-art.js';
+import {createVesperAtmosphere,replacementTriangles} from './vesper-art.js';
 
 export function buildVesperGeometry(source,{art=false}={}){
   const skip=replacementTriangles(source,art);
@@ -68,7 +72,7 @@ export function buildVesperGeometry(source,{art=false}={}){
   return {geometry,ids,triangles:index.length/3};
 }
 
-export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas,collide,stairs,decks,interactions,getState,notify,onCanvas,onFailure}){
+export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas,collide,stairs,decks,interactions,getState,setPlayer,notify,onCanvas,onFailure}){
   const params=new URLSearchParams(location.search),characterId=params.get('character')==='lylu'?'lylu':'ghju';
   const requestedQuality=getState().quality==='performance'?'low':getState().quality==='ultra'?'high':'auto';
   const profile=graphicsProfile({userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu},requestedQuality,params.get('renderer')==='webgl');
@@ -85,54 +89,24 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const torchTarget=new T.Object3D();torchTarget.position.set(0,0,-5);camera.add(torchTarget);
   const torch=new T.SpotLight(0xffefd4,22,22,.38,.72,2);torch.target=torchTarget;camera.add(torch);
   const atmosphere=createVesperAtmosphere(T,scene,renderer,profile);
-  // The native player and the production ballistics share the exact same
-  // opened facade; no invisible full-wall proxy remains across a broken bay.
-  const artColliders=vesperArtColliders(collide);collide.splice(0,collide.length,...artColliders);
-  const signTexture=new T.CanvasTexture(signAtlas);signTexture.colorSpace=T.SRGBColorSpace;
-  const photoTargets={concrete:[],asphalt:[],metal:[],rust:[],brick:[]};
-  function meshFor(source,name){
-    const {geometry,ids,triangles}=buildVesperGeometry(source,{art:source===staticMesh});
-    const mats=ids.map(id=>{
-      if(id===30)return new T.MeshStandardMaterial({map:signTexture,color:0x9d9b8e,roughness:.85,side:T.DoubleSide});
-      const luminous=[5,6,7,11,12].includes(id);
-      const material=new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,side:T.DoubleSide,
-        roughness:id===1?.68:id===9?.28:.9,metalness:id===1?.42:id===9?.08:.02,
-        emissive:id===5||id===11?0xff3598:id===6?0x48bfff:id===7?0xffad52:id===12?0xff3a2d:0x000000,emissiveIntensity:id===11?.42:id===7?.055:luminous?.012:0});
-      material.shadowSide=T.FrontSide;
-      if(id===3){material.color.setHex(0x283537);material.roughness=.35;material.metalness=.22;}
-      if(id===14){material.color.setHex(0x7a7365);material.roughness=.98;}
-      if(!luminous&&![3,4,8,14,15].includes(id))photoTargets[id===2||id===9?'asphalt':id===1?'metal':id===17?'rust':id===13?'brick':'concrete'].push(material);
-      return material;
-    });
-    const mesh=new T.Mesh(geometry,mats);mesh.name=name;mesh.receiveShadow=true;mesh.castShadow=!profile.phone;scene.add(mesh);
-    return {mesh,triangles};
-  }
-  const terrain=meshFor(staticMesh,'M01 / Vesper V7 reference geometry');
-  const gate=meshFor(portalMesh,'M01 / industrial Fracture');gate.mesh.position.set(0,11,-111);gate.mesh.visible=false; // The giant Fracture reveal belongs to later acts, not W01.
-  // The independent legacy visit has its own page. Combat needs its final GPU
-  // geometry and semantic ranges, not the old duplicated JS number arrays.
-  if(Array.isArray(staticMesh.v))staticMesh.v.length=0;
-  if(Array.isArray(staticMesh.i))staticMesh.i.length=0;
-  const art=createVesperArt(T,scene,{collide,ranges:staticMesh.artRanges,performance:profile.phone||requestedQuality==='low'});
-  for(const key of Object.keys(photoTargets))photoTargets[key].push(...(art.pbrTargets[key]||[]));
-  new T.TextureLoader().load('./assets/cc0/vesper-brick_diff_512.jpg',texture=>{
-    texture.wrapS=texture.wrapT=T.RepeatWrapping;texture.colorSpace=T.SRGBColorSpace;
-    for(const material of photoTargets.brick){material.map=texture;material.roughness=.94;material.metalness=0;material.needsUpdate=true;}
-  });
-  const pbr=installPhotographicSurfaces(T,photoTargets,{performance:profile.phone||requestedQuality==='low',weathered:true});
-  for(const [x,y,z,color,power,range] of [[-19,4,12,0xe5ba7c,24,11],[23,5,16,0xffc38c,30,14],[-20,8,-28,0xd8c4a4,20,12],[0,10,-104,0xff69a8,48,22]]){
-    const light=new T.PointLight(color,power,range,2);light.position.set(x,y,z);scene.add(light);
-  }
-  const obstacles=collide.map(c=>({x:(c.x1+c.x2)/2,z:(c.z1+c.z2)/2,y:Math.max(0,c.y1),hx:(c.x2-c.x1)/2,hz:(c.z2-c.z1)/2,
-    height:c.y2-Math.max(0,c.y1),surface:/métal|metal|atelier|pont/.test(c.label||'')?'metal':'concrete'})).filter(c=>c.height>.05);
-  const traversal={routes:[],lifts:[],surfaces(x,z){
-    const list=[];
-    for(const d of decks)if(x>=d.x1&&x<=d.x2&&z>=d.z1&&z<=d.z2)list.push({id:'v7-deck',height:d.h});
-    for(const s of stairs)if(x>=s.x1&&x<=s.x2&&z<=s.zStart&&z>=s.zEnd)list.push({id:'v7-stair',height:s.height*Math.max(0,Math.min(1,(s.zStart-z)/(s.zStart-s.zEnd)))});
-    return list;
-  },height(x,z,t,max=Infinity){return Math.max(0,...this.surfaces(x,z).filter(s=>s.height<=max+.01).map(s=>s.height));},routeForSurface(){return null;}};
-  const game=new ArenaGame(obstacles,Math.random,traversal);game.reset();game.wave=2;game.nextWave=Infinity;game.toSpawn=0;game.spawnTimer=Infinity;
-  game.ownedWeapons=new Set([0,1,2,3,4,5]);game.ammo=WEAPONS.map(w=>w.capacity);
+  const missionArt=createCampaignArt(T,scene,null,{quality:profile.phone||requestedQuality==='low'?'low':requestedQuality,photographic:true});
+  missionArt.setVisible(true);
+  const dressing=missionArt.dressing;
+  const salvage=await createM01Salvage(T,missionArt.root,{performance:profile.phone||requestedQuality==='low'});
+  const obstacles=missionArt.obstacles;obstacles.push(...salvage.colliders);
+  const game=new CampaignLevel1(obstacles,Math.random,characterId);
+  const checkpoint=readM01Checkpoint(characterId);
+  if(params.get('resume')==='1'&&checkpoint)restoreM01Checkpoint(game,checkpoint);
+  // One simulation owns stairs, lifts, navigation, collisions and ballistics.
+  collide.splice(0,collide.length,...obstacles.map(o=>({x1:o.x-o.hx,x2:o.x+o.hx,y1:o.y||0,y2:(o.y||0)+o.height,z1:o.z-o.hz,z2:o.z+o.hz,label:o.surface})));
+  stairs.splice(0,stairs.length,...LEVEL1_MAP.stairs.map(s=>({x1:s.x-s.halfWidth,x2:s.x+s.halfWidth,zStart:s.bottomZ,zEnd:s.topZ,height:s.height})));
+  decks.splice(0,decks.length,...LEVEL1_MAP.decks.map(d=>({x1:d.x-d.hx,x2:d.x+d.hx,z1:d.z-d.hz,z2:d.z+d.hz,h:d.height})));
+  interactions.length=0;
+  const terrain={triangles:missionArt.stats().triangles};
+  const art=missionArt,pbr={stats:missionArt.stats().pbr};
+  const gate={mesh:new T.Group()};
+  setPlayer?.(game.player);
+  await missionArt.ready;
   const standard=(color,roughness=.6,metalness=.45)=>new T.MeshStandardMaterial({color,roughness,metalness});
   const materials={wall:standard(0x697886),black:standard(0x101820),dark:standard(0x202936),iron:standard(0x7b8991,.3,.85),
     cyan:new T.MeshBasicMaterial({color:0x75dfff}),rose:new T.MeshBasicMaterial({color:0xff70b9}),blue:new T.MeshBasicMaterial({color:0x65aaff}),white:standard(0xb4c6cb)};
@@ -143,8 +117,8 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const enemyModels=new Map(),feel=createWeaponFeel(),effects=createCampaignCombatEffects(T,scene,characterId);
   const gamepadInput=new DesktopGamepadInput();
   const fireInput=createFireBuffer();
-  const companion=createAICompanion(T,scene,characterId);companion.root.visible=false;
-  let rig=null,gun=null,ready=false,pending=false,lastTime=0,lastPosition=null,held=false,ads=0,phase=0,workshopRead=false,portalTimer=-1,spawnQueue=[],lastSpawn=0,completed=false,portalSite={x:0,z:32};
+  let rig=null,gun=null,ready=false,pending=false,lastTime=0,held=false,ads=0,completed=false,lastStage=game.stage,journalOpen=false,checkpointPending=false;
+  const offerModels=new Map();
   // Actual RLH hands and production weapon geometry are already present while
   // the full canonical soldier rig decodes; there is no CSS weapon substitute.
   gun=buildGun({mats:starterMaterials,gloves:starterGloves,makeFlash:parent=>{
@@ -161,16 +135,6 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       if(audio.state!=='running')void audio.resume().catch(()=>{});
     }catch(error){console.warn('Vesper audio',error);}
   }
-  function spawn(x,z,form='synth',elite=false){
-    const clear=(a,b)=>!obstacles.some(o=>!o.walkableSurface&&o.y<2&&o.y+o.height>.3&&Math.abs(a-o.x)<o.hx+.85&&Math.abs(b-o.z)<o.hz+.85);
-    if(!clear(x,z))return false;
-    game.activePortals=[{id:800,x,z,yaw:0}];game.toSpawn=1;game.spawnEnemy();game.toSpawn=0;game.activePortals=[];
-    const e=game.enemies.at(-1);if(!e)return false;
-    Object.assign(e,{x,z,homeX:x,homeZ:z,form,ranged:true,elite,hp:enemyDurability(2,form,elite),radius:form==='probe'?.44:.8,
-      aimHeight:form==='probe'?.3:1.4,hitRadius:form==='probe'?.44:1.05,elevation:form==='probe'?2.1:0,awareness:'patrol',lastKnownX:x,lastKnownZ:z});
-    return true;
-  }
-  function patrol(){for(const p of [[-1,39,'synth'],[6,27,'stalker'],[-3,2,'scuttler'],[4,-13,'probe'],[3,-42,'seer'],[-4,-59,'bulwark'],[6,-5,'synth'],[-6,-25,'stalker']])spawn(...p);}
   const gateLight=new T.PointLight(0xff3e9e,0,24,2);scene.add(gateLight);
   const tacticalGate=new T.Group();tacticalGate.name='ORDRE / industrial reinforcement portal';tacticalGate.visible=false;scene.add(tacticalGate);
   const rim=new T.Mesh(new T.TorusGeometry(1.4,.16,8,36),materials.iron);tacticalGate.add(rim);
@@ -180,25 +144,26 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const objectiveMarker=document.createElement('div');objectiveMarker.setAttribute('aria-label','Direction de l’objectif');
   objectiveMarker.style.cssText='position:fixed;top:max(42px,env(safe-area-inset-top));width:5px;height:5px;border-radius:50%;background:#d8c6a0;opacity:.75;pointer-events:none;z-index:4';document.body.append(objectiveMarker);
   function objective(){
-    if(phase===0)return {x:-8,z:10.5,text:'Réarmer le circuit de l’annexe de secours'};
-    if(phase===1)return {x:-26,z:15,text:'Consulter le journal humain hors réseau'};
-    if(phase===2&&!workshopRead)return {x:22,z:20,text:'Atelier : retrouver la liaison câblée vers A3'};
-    if(phase===2)return {x:7,z:-48,text:'Carrefour : neutraliser la balise ORDRE'};
-    if(phase===3&&game.enemies.length){
-      const foe=game.enemies.reduce((a,b)=>Math.hypot(a.x-game.player.x,a.z-game.player.z)<Math.hypot(b.x-game.player.x,b.z-game.player.z)?a:b);
-      return {x:foe.x,z:foe.z,text:'Sécuriser le carrefour avant de rejoindre le relais'};
-    }
-    if(phase===3&&spawnQueue.length)return {...portalSite,text:'Repousser les derniers renforts ORDRE'};
-    return {x:-17.5,z:-29.5,text:'Escalier ou monte-charge : rejoindre le relais A3'};
+    const guide=game.guidance();
+    return {...(guide||game.player),valid:!!guide,text:game.campaign.subtitle};
   }
-  function reinforcements(){
-    portalTimer=game.time+3.5;lastSpawn=portalTimer;
-    // Eight opening patrols, then three bounded groups of eight. Queue, do not
-    // overwrite, if an efficient player reaches the next console early.
-    spawnQueue.push('probe','synth','stalker','scuttler','seer','brute','synth','bulwark');
-    portalSite=phase>=3?{x:0,z:-72}:{x:0,z:32};tacticalGate.position.set(portalSite.x,1.6,portalSite.z);tacticalGate.visible=true;
-    gateLight.position.set(portalSite.x,3,portalSite.z);gateLight.intensity=48;
-    notify('PORTE ORDRE À DISTANCE — RENFORTS EN APPROCHE',2600);
+  function contextAction(){
+    const terminal=game.getInteraction();
+    if(terminal)return {action:terminal.id,title:terminal.label};
+    const offer=game.nearbyWeapon();
+    return offer?{action:'weapon',title:'RÉCUPÉRER '+WEAPONS[offer.index].name}:null;
+  }
+  function syncOffers(){
+    for(const offer of game.weaponOffers){
+      if(!offerModels.has(offer.index)){
+        const pedestal=new T.Group();pedestal.name='M01 / récupération '+WEAPONS[offer.index].name;
+        const base=new T.Mesh(new T.CylinderGeometry(.50,.56,.14,16),materials.iron);pedestal.add(base);
+        const model=createWeaponModels(starterMaterials)[offer.index];
+        model.scale.setScalar(.66);model.position.y=.85;pedestal.add(model);scene.add(pedestal);offerModels.set(offer.index,pedestal);
+      }
+      const model=offerModels.get(offer.index);model.position.set(offer.x,offer.elevation+.08,offer.z);model.children[1].rotation.y=game.time*.32;
+    }
+    for(const [index,model] of offerModels)if(!game.weaponOffers.some(o=>o.index===index)){model.removeFromParent();offerModels.delete(index);}
   }
   const v=new T.Vector3(),forward=new T.Vector3(),origin=new T.Vector3(),end=new T.Vector3();
   function aim(){
@@ -228,39 +193,41 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     camera.updateMatrixWorld(true);
   }
   function update(dt,s){
-    if(!ready||completed)return;
+    if(!ready||completed||journalOpen)return;
     syncCamera(s,dt);
-    const p=game.player,foot={x:s.position.x,z:s.position.z,elevation:s.position.y-1.73};
-    Object.assign(p,foot,{yaw:-s.yaw,crouched:s.crouching,grounded:s.grounded});
-    game.nextWave=Infinity;game.toSpawn=0;game.step(dt,{yaw:-s.yaw});Object.assign(p,foot);
-    const moving=!!lastPosition&&Math.hypot(p.x-lastPosition.x,p.z-lastPosition.z)>.025;
-    if(moving&&game.time-(lastPosition.noiseAt||0)>.45){game.emitNoise(s.sprint?'sprint':s.crouching?'crouch':'step',s.sprint?28:s.crouching?2:12);lastPosition.noiseAt=game.time;}
-    lastPosition={...foot,noiseAt:lastPosition?.noiseAt||0};
+    const p=game.player;
+    if(!s.free){
+      p.crouched=s.crouching;
+      game.step(dt,{...(s.input||{}),yaw:-s.yaw});
+      setPlayer?.(p);
+      syncCamera(getState(),dt);
+    }
+    const moving=Math.hypot(game.playerVelocity?.x||0,game.playerVelocity?.z||0)>.25;
     feel.update(dt);const a=aim();
     const ammoBefore=game.ammo[game.weaponIndex],bladeBefore=game.bladeSlashAt;
     game.trigger(fireInput.requested(held,game.weapon,game.time)&&!s.free,dt,a.origin,a.direction);
     if(game.ammo[game.weaponIndex]<ammoBefore||game.bladeSlashAt!==bladeBefore)fireInput.consume();
     if(game.weapon.melee)game.updateBlade(gun?.userData.getBladeSegment?.(),dt,s.aiming,camera.position);
-    if(spawnQueue.length&&game.time>=lastSpawn&&game.enemies.length<8){
-      const form=spawnQueue[0];
-      for(const [dx,dz] of [[0,0],[-1.8,-1],[1.8,1],[0,-3]])if(spawn(portalSite.x+dx,portalSite.z+dz,form)){
-        const foe=game.enemies.at(-1);foe.awareness='search';foe.alertedUntil=game.time+12;
-        foe.lastKnownX=game.player.x;foe.lastKnownZ=game.player.z;spawnQueue.shift();break;
-      }
-      lastSpawn=game.time+.9;
-    }
-    gateLight.intensity=portalTimer>game.time?38+10*Math.sin(game.time*5):spawnQueue.length?18:0;
-    tacticalGate.visible=gateLight.intensity>0;membrane.rotation.z=game.time*.35;portalMarker.hidden=!tacticalGate.visible;
-    if(tacticalGate.visible){
-      const bearing=Math.atan2(portalSite.x-p.x,-(portalSite.z-p.z))-s.yaw;
+    const portal=game.activePortals[0];
+    tacticalGate.visible=!!portal;portalMarker.hidden=!portal;
+    if(portal){
+      tacticalGate.position.set(portal.x,1.6,portal.z);gateLight.position.set(portal.x,2,portal.z);
+      gateLight.intensity=game.time<game.nextSpawnAt?24+6*Math.sin(game.time*5):12;
+      membrane.rotation.z=game.time*.35;
+      const bearing=Math.atan2(portal.x-p.x,-(portal.z-p.z))-s.yaw;
       const angle=Math.atan2(Math.sin(bearing),Math.cos(bearing));portalMarker.style.left=(50+Math.max(-42,Math.min(42,angle*30)))+'%';
+    }else gateLight.intensity=0;
+    missionArt.update(game,game.time);syncOffers();
+    if(lastStage!==game.stage){
+      lastStage=game.stage;notify(game.campaign.title+' — '+game.campaign.subtitle,4200);
+      checkpointPending=true;
     }
+    if(checkpointPending&&writeM01Checkpoint(game))checkpointPending=false;
     for(const e of game.enemies){
       if(!enemyModels.has(e.id)){const model=enemyFactory.create(e.elite,e.ranged,e.form);model.traverse(o=>{if(o.isMesh){o.castShadow=profile.shadows;o.receiveShadow=true;}});enemyModels.set(e.id,model);scene.add(model);}
       const model=enemyModels.get(e.id);model.position.set(e.x,e.elevation,e.z);model.rotation.y=e.yaw||0;model.userData.animate?.(game.time,e.phase,true,e,game.time);
     }
     for(const [id,model] of enemyModels)if(!game.enemies.some(e=>e.id===id)){scene.remove(model);enemyModels.delete(id);}
-    companion.update(dt,{game,camera,active:phase>=2&&!s.free});
     for(const event of game.drainEvents()){
       effects.event(event);
       if(event.type==='shot'){feel.fire(event.weapon,event.power,ads>.5);if(sound&&audio)playLaserShot(audio,event.weapon,event.power);}
@@ -272,11 +239,16 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
         const dialog=document.createElement('dialog');dialog.innerHTML='<h2>SIGNAL PERDU</h2><p>ORDRE a repris le secteur.</p><button>REJOUER LA MISSION</button> <a href="./index.html">RETOUR AU MENU</a>';
         dialog.querySelector('button').onclick=()=>location.reload();document.body.append(dialog);dialog.showModal();
       }
-      if(event.type==='companion-assist')notify(companion.name+' · '+(event.kind==='heal'?'SOIN LOCAL':event.kind==='shield'?'INTERCEPTION':'APPUI TACTIQUE'),1000);
+      if(event.type==='win')finishMission();
+      if(event.type==='unlock')notify('ÉQUIPEMENT RÉCUPÉRÉ · '+event.name,3000);
     }
     const target=objective(),bearing=Math.atan2(target.x-p.x,-(target.z-p.z))-s.yaw;
     const objectiveAngle=Math.atan2(Math.sin(bearing),Math.cos(bearing));
-    objectiveMarker.style.left=(50+Math.max(-42,Math.min(42,objectiveAngle*30)))+'%';objectiveMarker.hidden=completed||s.free;
+    objectiveMarker.style.left=(50+Math.max(-42,Math.min(42,objectiveAngle*30)))+'%';objectiveMarker.hidden=completed||s.free||!target.valid;
+    const behind=Math.abs(objectiveAngle)>Math.PI/2,altitude=(target.y||0)-p.elevation;
+    objectiveMarker.textContent=behind?(objectiveAngle<0?'‹':'›'):Math.abs(altitude)>.6?(altitude>0?'↑':'↓'):'';
+    objectiveMarker.style.background=objectiveMarker.textContent?'transparent':'#d8c6a0';
+    objectiveMarker.style.font='18px/7px system-ui';
     effects.update(game,dt,camera);
     if(gun?.userData.flash)gun.userData.flash.visible=feel.state.kick>.025&&!game.weapon.melee;
     const active=game.state==='playing';
@@ -291,33 +263,25 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     try{rig=await installPinkWarsSoldier(T,scene,characterId,materials);const previous=gun;gun=rig.createGun();camera.add(gun);gun.userData.setVariant(game.weaponIndex);previous?.removeFromParent();}
     catch(error){console.error('Vesper / canonical rig',error);notify('ÉQUIPEMENT EN COURS DE CHARGEMENT · TIR DISPONIBLE',2500);}
   }
-  function onInteract(action){
-    if(completed||game.state!=='playing')return false;
-    if(action==='power'&&phase===0){phase=1;return true;}
-    if(action==='archive'){
-      if(phase<1){notify('RÉTABLIR LE COURANT DE L’ANNEXE');return false;}
-      game.invulnerable=Math.max(game.invulnerable,5);
-      for(const e of game.enemies)if(Math.hypot(e.x-game.player.x,e.z-game.player.z)<25)e.stunnedUntil=game.time+5;
-      const firstRead=phase<2;phase=Math.max(phase,2);if(firstRead)reinforcements();
-      notify(companion.name.toUpperCase()+' · LIAISON LOCALE INDÉPENDANTE D’ORDRE',2600);return true;
+  function finishMission(){
+    if(completed)return;completed=true;held=false;music.pause();ambience?.pause();document.exitPointerLock?.();
+    const dialog=document.createElement('dialog');dialog.id='end-dialog';
+    dialog.innerHTML='<h2>LE DERNIER SIGNAL</h2><p>Destination confirmée : Archives végétales.</p><button id="retry-button">RETOUR AU MENU</button>';
+    document.body.append(dialog);attachCampaignStory(dialog,{level:1,characterId});
+    dialog.querySelector('#retry-button').onclick=()=>location.assign('./index.html');dialog.showModal();
+  }
+  function onInteract(){
+    if(completed||game.state!=='playing'||getState().free||journalOpen)return false;
+    const terminal=game.getInteraction(),offer=game.nearbyWeapon();
+    if(!terminal&&!offer)return false;
+    const action=terminal?.id||'weapon';
+    if(!game.collectWeapon())return false;
+    const entry=missionJournal(action,characterId);
+    if(entry){
+      journalOpen=true;held=false;fireInput.reset();game.state='paused';document.exitPointerLock?.();
+      showMissionJournal(entry,{sound,onClose(){journalOpen=false;game.state='playing';}});
     }
-    if(action==='workshop'){
-      if(phase<2){notify('RELEVER D’ABORD LE JOURNAL DU CENTRE MÉDICAL');return false;}
-      if(!workshopRead)reinforcements();workshopRead=true;
-      notify('LIAISON CÂBLÉE A3 — COUPER LA BALISE DU CARREFOUR');return true;
-    }
-    if(action==='beacon'){
-      if(phase>=2&&!workshopRead){notify('ATELIER : IDENTIFIER D’ABORD LA LIAISON CÂBLÉE VERS A3');return false;}
-      if(phase<2){notify('CONSULTER D’ABORD L’ARCHIVE HUMAINE');return false;}
-      if(phase<3){phase=3;reinforcements();}return true;
-    }
-    if(action==='archives'){
-      if(phase<3){notify('NEUTRALISER LA BALISE ORDRE AVANT D’UTILISER LE RELAIS');return false;}
-      if(game.enemies.length||spawnQueue.length){notify('SÉCURISER LE QUARTIER AVANT D’UTILISER LE RELAIS');return false;}
-      phase=4;completed=true;held=false;music.pause();ambience?.pause();document.exitPointerLock?.();
-      const dialog=document.createElement('dialog');dialog.id='end-dialog';dialog.innerHTML='<h2>LE DERNIER SIGNAL</h2><p>Une trace humaine. Une nouvelle destination.</p><button id="retry-button">RETOUR AU MENU</button>';
-      document.body.append(dialog);attachCampaignStory(dialog,{level:1,characterId});dialog.querySelector('#retry-button').onclick=()=>location.assign('./index.html');dialog.showModal();
-    }
+    if(game.completed)finishMission();
     return true;
   }
   // Validate a real terrain frame while the loading card is still displayed.
@@ -333,15 +297,20 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     }
   }catch(error){onFailure(error);throw error;}
   return {
-    kind:renderer.isWebGLRenderer?'WebGL 2 · COMBAT V8':'WebGPU · COMBAT V8',managedResolution:true,
+    kind:renderer.isWebGLRenderer?'WebGL 2 · M01':'WebGPU · M01',managedResolution:true,canonical:true,
+    get paused(){return journalOpen;},
+    get interaction(){return contextAction();},
+    get layout(){return LEVEL1_MAP;},
+    restart(){location.assign(location.pathname+'?character='+characterId+'&v=3.50');},
+    get checkpoint(){return checkpoint;},
     get objective(){return objective().text;},
     get playing(){return game.state==='playing'&&!completed;},
     get ambienceEnabled(){return ambientEnabled&&sound;},
     toggleAmbience(){ambientEnabled=!ambientEnabled;if(ambientEnabled)audioReady();return ambientEnabled&&sound;},
-    start(){ready=true;audioReady();music.start(audio);patrol();void loadRig();},
+    start(){ready=true;audioReady();music.start(audio);notify('VESPER · 2196 — SEPT ANS APRÈS LA CHUTE',3800);void loadRig();},
     fire(down){if(down&&!held){audioReady();fireInput.press(game.time);if(game.weapon.semiAuto)game.triggerHeld=false;}held=!!down;},
     reload(){audioReady();game.reload();},
-    cycle(delta=1){const n=WEAPONS.length;game.selectWeapon((game.weaponIndex+delta+n)%n);},
+    cycle(delta=1){game.cycleWeapon(delta);},
     select(index){game.selectWeapon(index);},
     interact:onInteract,
     pause(){held=false;fireInput.reset();gamepadInput.reset();music.pause();ambience?.pause();saber?.update({active:false});},
@@ -360,10 +329,12 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       try{const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);if(result?.then){pending=true;result.then(()=>pending=false).catch(error=>{pending=false;onFailure(error);});}}
       catch(error){onFailure(error);}
     },
-    snapshot(){return {revision:'3.49',characterId,phase,workshopRead,reinforcements:spawnQueue.length,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
-      capacity:game.weapon.capacity,enemies:game.enemies.length,hostileProjectiles:game.bullets.filter(b=>b.hostile).length,shots:game.bullets.filter(b=>!b.hostile).length,
+    snapshot(){return {revision:'3.50',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
+      capacity:game.weapon.capacity,ownedWeapons:[...game.ownedWeapons],offers:game.weaponOffers.map(o=>({...o})),campaign:game.campaign,journalOpen,
+      enemies:game.enemies.length,hostileProjectiles:game.bullets.filter(b=>b.hostile).length,shots:game.bullets.filter(b=>!b.hostile).length,
       kills:game.kills,rig:!!rig,gun:!!gun,backend:renderer.isWebGLRenderer?'webgl':'webgpu',triangles:terrain.triangles,
-      art:{...art.stats},lighting:{exposure:renderer.toneMappingExposure,ambient:atmosphere.ambient.intensity,sun:atmosphere.sun.intensity},pbr:{...pbr.stats},effects:effects.stats(),companion:companion.snapshot(),position:{...getState().position},
+      art:missionArt.stats(),dressing:dressing.stats,salvage:salvage.stats,lighting:{exposure:renderer.toneMappingExposure,ambient:atmosphere.ambient.intensity,sun:atmosphere.sun.intensity},pbr:missionArt.stats().pbr,effects:effects.stats(),companion:{name:characterId==='lylu'?'Cara':'Gaby',visible:false,materializationMission:7},position:{...getState().position},
       hostiles:game.enemies.map(e=>({id:e.id,x:e.x,y:e.elevation+e.aimHeight,z:e.z,hp:e.hp,awareness:e.awareness})),render:renderer.info.render};}
+
   };
 }

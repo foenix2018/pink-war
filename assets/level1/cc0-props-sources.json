@@ -1,0 +1,85 @@
+{
+  "license": "CC0-1.0",
+  "mirror": "https://github.com/AetherRadar/operation-steel-tide",
+  "revision": "d6a33b932e00fb9016dea407eca3f909aeaf2dcb",
+  "sourceFiles": [
+    {
+      "path": "assets/models/quaternius_downtown_city/T_RedBrick_BaseColor.png",
+      "sha256": "bc7d87ef508165388dbd07b37ad09932d1948bbfefbcabf179eb1c13ef4c1445"
+    },
+    {
+      "path": "assets/models/quaternius_downtown_city/T_RedBrick_Normal.png",
+      "sha256": "fc46074f8ea62e99239261efddf27992ab0de88066a994a67f05d1e49c97f0bb"
+    },
+    {
+      "path": "assets/models/quaternius_downtown_city/T_RedBrick_ORM.png",
+      "sha256": "1354cb33d74ae24ccc77c61b41a82542a2c2355179e6f02d14ea075279d9f495"
+    },
+    {
+      "path": "assets/models/quaternius_downtown_city/QUATERNIUS_LICENSE.txt",
+      "sha256": "40e0a81bfbb91f1305fd1c052ce590956a9dbac07572612d8552ef75bd970435"
+    },
+    {
+      "path": "assets/models/old_military_crate/old_military_crate.gltf",
+      "sha256": "ef4b69dca61542c4d724c4807233161129150220695742b5137ed65d8d2e1f24"
+    },
+    {
+      "path": "assets/models/old_military_crate/old_military_crate.bin",
+      "sha256": "80eb5ad690aaa6f4f401df0f8e323666bf8f3f9943c7cb703eb37002f5084ce1"
+    },
+    {
+      "path": "assets/models/old_military_crate/textures/old_military_crate_diff_1k.jpg",
+      "sha256": "9e74a72787364fee09a450e442db97a687d237051e98f8ed709af516434e895d"
+    },
+    {
+      "path": "assets/models/old_military_crate/textures/old_military_crate_nor_gl_1k.jpg",
+      "sha256": "88935171626be79c4a44d0c52a33bc8d88b7b232ae48157d639a9ada0ab6e92b"
+    },
+    {
+      "path": "assets/models/old_military_crate/textures/old_military_crate_arm_1k.jpg",
+      "sha256": "7b3a94f18f15783d9940fe4bd25316e8daffd0bdcbdfbe3e234b3cbb636bf5da"
+    },
+    {
+      "path": "assets/models/polyhaven_residential_street/metal_trash_can/metal_trash_can_rust.glb",
+      "sha256": "8379f4732bd93b02bd6739564dd8efdcbae3aa7a8cba3f7a7dbb6bab97f18165"
+    }
+  ],
+  "brickSurface": {
+    "author": "Quaternius",
+    "source": "https://quaternius.com/packs/downtowncitymegakit.html",
+    "license": "CC0-1.0",
+    "files": {
+      "diff": "m01-brick-diff_512.jpg",
+      "normal": "m01-brick-normal_512.jpg",
+      "orm": "m01-brick-orm_512.jpg"
+    },
+    "note": "Authored PBR surface, not a photo scan. Maps resized to 512px; 2m tiling at runtime."
+  },
+  "conversion": "Rigid nodes baked, one closed crate variant, rusted bin variant, original UVs; photos reduced to 512px. No gameplay code or level reused.",
+  "models": [
+    {
+      "id": "crate",
+      "source": "https://polyhaven.com/a/old_military_crate",
+      "author": "Jack Mava",
+      "license": "CC0-1.0",
+      "size": [
+        0.8153856992721558,
+        0.300932839512825,
+        0.5376246571540833
+      ],
+      "triangles": 10476
+    },
+    {
+      "id": "bin",
+      "source": "https://polyhaven.com/a/metal_trash_can",
+      "author": "GurJas Studios",
+      "license": "CC0-1.0",
+      "size": [
+        0.7732658269047223,
+        0.9061573890940053,
+        0.5490132087288657
+      ],
+      "triangles": 7532
+    }
+  ]
+}

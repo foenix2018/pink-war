@@ -16,6 +16,7 @@ import { createCombatFX } from './combat-fx.js';
 import { createShootingRangeArt } from './shooting-range-art.js';
 import { createMoon } from './moon.js';
 import { createCampaignArt } from './campaign-art.js';
+import { VESPER_SUN } from './vesper-art.js';
 import { graphicsProfile,renderPixelRatio,createCompatibleRenderer,warmRenderer } from './renderer-policy.js';
 
 const v = (x, y, z) => new T.Vector3(x, y, z);
@@ -86,6 +87,9 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   function paintSky(c,w,h) { paintRuinSky(c,w,h,character.masculine,{dusk:campaignSky}); }
   const skyTexture = canvasTexture(profile.skyWidth,profile.skyWidth/2,paintSky);
   const sky = new T.Mesh(new T.SphereGeometry(490, 32, 16), new T.MeshBasicMaterial({ map: skyTexture, side: T.BackSide, fog: false, dithering: true })); scene.add(sky);
+  let morningReady=false;
+  const morningSky=new T.TextureLoader().load('./assets/cc0/vesper-morning-sky.webp',()=>{morningReady=true;if(campaignSky){sky.material.map=morningSky;sky.material.needsUpdate=true;}},undefined,()=>{});
+  morningSky.colorSpace=T.SRGBColorSpace;
   // The moon is a camera-relative celestial backdrop, not a world obstacle.
   // The depth buffer still lets buildings and smoke geometry occlude its glow.
   const moon = createMoon(scene, glow);
@@ -95,7 +99,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   function trackShadows(x,z,elevation=0){
     // The 80 m shadow window follows play, retaining close detail across all districts.
     const texel=80/1024,sx=Math.round(x/texel)*texel,sz=Math.round(z/texel)*texel;
-    sun.position.set(sx-30,elevation+50,sz+20);sun.target.position.set(sx,elevation,sz);
+    sun.position.set(sx+(campaignSky?VESPER_SUN.x:-30),elevation+(campaignSky?VESPER_SUN.y:50),sz+(campaignSky?VESPER_SUN.z:20));sun.target.position.set(sx,elevation,sz);
   }
   const rim = new T.DirectionalLight(0x9abfff, 1.08); rim.position.set(30, 12, -35); scene.add(rim);
   const batches = new Map(); const obstacles = [];
@@ -450,7 +454,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     })();
     try { return await recovery; } finally { recovery = null; }
   }
-  const campaignArt=createCampaignArt(T,scene,obstacles,{quality:profile.artQuality});
+  const campaignArt=createCampaignArt(T,scene,obstacles,{quality:profile.artQuality,photographic:true});
   const arenaObstacles=[...obstacles];
   const rangeArt=createShootingRangeArt(T,scene);
   const rangeObstacles=[...rangeArt.obstacles];
@@ -460,7 +464,12 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     if(campaignSky!==campaignActive){campaignSky=campaignActive;const c=skyTexture.image;paintSky(c.getContext('2d'),c.width,c.height);skyTexture.needsUpdate=true;}
     obstacles.splice(0,obstacles.length,...(campaignActive?campaignArt.obstacles:arenaObstacles));
     arenaRoot.visible=!campaignActive&&!rangeActive;
-    scene.fog.color.setHex(campaignActive?0x847572:character.world.fog);
+    scene.fog.color.setHex(campaignActive?0x747b79:character.world.fog);
+    renderer.toneMappingExposure=campaignActive?.84:1.08;
+    hemisphere.intensity=campaignActive?.62:1.32;sun.intensity=campaignActive?1.36:2.25;rim.intensity=campaignActive?.18:1.08;
+    sun.shadow.camera.far=campaignActive?235:135;sun.shadow.camera.updateProjectionMatrix();
+    sky.material.map=campaignActive&&morningReady?morningSky:skyTexture;sky.material.needsUpdate=true;
+    moon.group.visible=!campaignActive;
     scene.fog.density=campaignActive?.0058:.008;
     hemisphere.color.setHex(campaignActive?0xc4ceca:0xa9c9e5);hemisphere.groundColor.setHex(campaignActive?0x414833:0x344058);
     sun.color.setHex(campaignActive?0xffdeb7:0xb5d7ff);rim.color.setHex(campaignActive?0xa6bbb7:0x9abfff);
@@ -480,7 +489,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     obstacles.splice(0,obstacles.length,...(rangeActive?rangeObstacles:campaignActive?campaignArt.obstacles:arenaObstacles));
     scene.fog.color.setHex(rangeActive?0x26333f:campaignActive?0x847572:character.world.fog);
     scene.fog.density=rangeActive?.0046:campaignActive?.0058:.008;
-    if(rangeActive){hemisphere.color.setHex(0xcad8e1);sun.color.setHex(0xd2e6ff);}
+    if(rangeActive){hemisphere.color.setHex(0xcad8e1);sun.color.setHex(0xd2e6ff);renderer.toneMappingExposure=1.08;hemisphere.intensity=1.32;sun.intensity=2.25;rim.intensity=1.08;sky.material.map=skyTexture;moon.group.visible=true;}
   }
   return {T,scene,camera,moon,campaignArt,rangeArt,setRangeActive,setCampaignActive,graphics:{...profile,initialFailure:prepared.initialFailure},warm:async()=>{await campaignArt.ready;await warmRenderer(renderer,scene,camera)},get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>campaignActive?{...campaignArt.stats(),map:'vesper-secours-07'}:{...city.stats,boundary:city.fence?.stats()},resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
     holsterGun,setPlayerVisible,

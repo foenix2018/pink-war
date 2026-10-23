@@ -757,7 +757,8 @@ function stepFrame(timestamp, xrFrame) {
       narrativeCompanion?.dispose();narrativeCompanion=createAICompanion(world.T,world.scene,character.id);
       companionScene=world.scene;companionHero=character.id;
     }
-    const active=phase==='playing'&&game.mode==='campaign'&&!['power','archive'].includes(game.stage);
+    // M01 retains the audio signatures; physical companions debut in M07.
+    const active=false;
     const companionCamera=vr.mode==='xr'?world.renderer.xr.getCamera(world.camera):world.camera;
     narrativeCompanion.update(dt,{game,camera:companionCamera,active});
     vr.renderScope();if(vr.mode==='stereo')world.renderStereo();else world.render();frames++;

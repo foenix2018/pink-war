@@ -28,3 +28,11 @@ Ces deux fichiers restent locaux. Le miroir, les empreintes des sources et les t
 
 
 Les fichiers `vesper-{concrete,asphalt,steel,paint}_diff_512.jpg` sont des compositions des masques d’usure originaux de `assets/level1/textures/` et du grain mesuré des textures CC0 précédentes. `vesper-brick_diff_512.jpg` reprend la brique originale du projet. Ils ne sont pas présentés comme des scans de Poly Haven. Les entrées `originalCompositions` du manifeste identifient leurs entrées et le script de cuisson.
+
+## W01 / usure 3.50
+
+`m01-leak-mask.png` et `m01-moss-mask.png` sont des masques d’usure originaux, calculés à partir du grain de Concrete Floor (CC0) et de bruit déterministe. Ils ne sont pas de nouveaux scans. Générateur : `tools/build-m01-weathering.py`. Les géométries de détails sont originales.
+
+Deux accessoires Poly Haven sont livrés dans `m01-salvage.json`, avec leurs textures PBR 512 px : [Old Military Crate](https://polyhaven.com/a/old_military_crate), Jack Mava, et [Metal Trash Can](https://polyhaven.com/a/metal_trash_can), GurJas Studios. Licence CC0 1.0. Source glTF de la caisse fermée et variante rouillée du conteneur ; transformations rigides intégrées, UV conservées. Le manifeste `assets/level1/cc0-props-sources.json` consigne les fichiers et empreintes du miroir public, épinglé au commit source. Aucune scène, carte ou code d’un autre jeu n’est repris.
+
+La surface de brique `m01-brick-{diff,normal,orm}_512.jpg` provient du **Downtown City MegaKit**, Quaternius, https://quaternius.com/packs/downtowncitymegakit.html, CC0 1.0 Universal. Les trois cartes originales `T_RedBrick_{BaseColor,Normal,ORM}.png` sont réduites à 512 px. Il s’agit d’une surface PBR créée par l’auteur, et non d’un scan photographique. Empreintes et licence source dans `assets/level1/cc0-props-sources.json`.

@@ -8,10 +8,12 @@ import {createBoundaryFence} from './boundary-fence.js';
 import {liftHeightAt} from './world-layout.js';
 import {bevelBox} from './geo.js';
 import {LEVEL1_STORY,createLevel1Story} from './level1-story.js';
+import {installPhotographicSurfaces} from './photographic-surfaces.js';
+import {createM01Dressing} from './m01-dressing.js';
 
 // Independent Blender-built map. Geometry is bundled locally, including in the
 // standalone HTML: no CDN, GLTF loader or late asset request is needed to play.
-export function createCampaignArt(T,scene,_unused,{quality='auto'}={}){
+export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=false}={}){
  const root=new T.Group();root.name='VESPER / SECOURS 07 — carte narrative Blender';root.visible=false;scene.add(root);
  const obstacles=createLevel1Obstacles(),geometries=[],materials=[],textures=[],screens=[],routes=[];
  let stage='power',lastState='',disposed=false,currentObjective=null;
@@ -32,7 +34,28 @@ export function createCampaignArt(T,scene,_unused,{quality='auto'}={}){
  maps.leaf=maps.foliage;
  maps.glass=ownM(new T.MeshStandardMaterial({color:0x6f827d,roughness:.34,metalness:.18,transparent:true,opacity:.36,side:T.DoubleSide,depthWrite:false}));
  maps.amber=ownM(new T.MeshBasicMaterial({color:0xe2a65b,toneMapped:false}));
- const ready=Promise.all(pending);const pbr=createPolyHavenLayer(T,maps,{quality});
+ // The canonical map can use the locally shipped scans. It never waits for
+ // Poly Haven's CDN, and the original embedded maps remain the fallback.
+ const photos=photographic?installPhotographicSurfaces(T,{concrete:[maps.concrete,maps.plaster],asphalt:[maps.road],metal:[maps.steel],rust:[maps.rust]},
+  {performance:quality==='low',weathered:true}):null;
+ if(photos)for(const name of ['concrete','plaster','road','steel','rust']){maps[name].bumpMap=null;maps[name].metalnessMap=null;}
+ if(photographic){
+  // Quaternius CC0 brick, authored PBR rather than a photo scan. Two metres
+  // per tile keeps courses and mortar at a physical scale on the original UVs.
+  maps.brick.bumpMap=null;maps.brick.metalnessMap=null;maps.brick.metalness=0;maps.brick.roughness=.94;
+  for(const [channel,slot]of [['diff','map'],['orm','roughnessMap'],...(quality==='low'?[]:[['normal','normalMap']])]){
+   pending.push(new Promise(resolve=>{
+    loader.load('./assets/cc0/m01-brick-'+channel+'_512.jpg',texture=>{
+     texture.wrapS=texture.wrapT=T.RepeatWrapping;texture.repeat.setScalar(.5);texture.anisotropy=quality==='low'?2:4;
+     texture.colorSpace=channel==='diff'?T.SRGBColorSpace:T.NoColorSpace;textures.push(texture);maps.brick[slot]=texture;
+     if(channel==='normal')maps.brick.normalScale.set(.36,.36);maps.brick.needsUpdate=true;resolve();
+    },undefined,()=>resolve());
+   }));
+  }
+ }
+ const ready=Promise.all([...pending,...(photos?[photos.done]:[])]);
+ const pbr=photos?{start(){},stats:()=>({...photos.stats,source:'Local Poly Haven / CC0'}),dispose:()=>photos.dispose()}:createPolyHavenLayer(T,maps,{quality});
+ const dressing=photographic?createM01Dressing(T,root,maps,{performance:quality==='low'}):null;
  for(const [name,encoded] of Object.entries(MESH_DATA)){
   const raw=atob(encoded),bytes=new Uint8Array(raw.length);for(let k=0;k<raw.length;k++)bytes[k]=raw.charCodeAt(k);
   const decoded=inflateSync(bytes);const data=new T.InterleavedBuffer(new Float32Array(decoded.buffer,decoded.byteOffset,decoded.byteLength/4),8),g=ownG(new T.BufferGeometry());
@@ -91,6 +114,6 @@ export function createCampaignArt(T,scene,_unused,{quality='auto'}={}){
  }
  function setVisible(enabled){root.visible=!!enabled;lastState='';if(enabled)pbr.start();}
  function stats(){return{visible:root.visible,systems:systems.stats(),story:story.stats(),stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:5,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:3,boundary:boundary.stats(),pbr:pbr.stats()};}
- function dispose(){if(disposed)return;disposed=true;pbr.dispose();boundary.dispose();story.dispose();systems.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
- return{root,obstacles,update,setVisible,stats,dispose,updateLift,ready};
+ function dispose(){if(disposed)return;disposed=true;pbr.dispose();dressing?.dispose();boundary.dispose();story.dispose();systems.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
+ return{root,obstacles,update,setVisible,stats,dispose,updateLift,ready,materials:maps,dressing};
 }

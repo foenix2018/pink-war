@@ -14,7 +14,7 @@ export function chapterStory(level,characterId='ghju',choice='escort'){
  if(level===1)return {
    heading:'La voix dans le relais',
    text:'Une archive hors réseau confirme le passage de '+sibling(characterId)+
-   '. Avant de disparaître, une dernière transmission désigne les Bas-Niveaux de Vesper. Sous les néons, quelqu’un détient la suite du message.',
+   '. La piste mène aux Archives végétales. Leur accès direct est coupé : le relais indique un passage par les Bas-Niveaux de Vesper. Sous les néons, la recherche continue.',
    next:'02 — SOUS LES NÉONS',
    eyebrow:'FIN DE MISSION · LE DERNIER SIGNAL'
  };
