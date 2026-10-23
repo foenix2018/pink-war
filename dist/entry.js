@@ -1,6 +1,7 @@
 import {graphicsProfile} from './renderer-policy.js';
 import {GAME_VERSION,showLaunchError,compatibleLaunchURL} from './launch-ui.js';
 import {syncMenuArtwork} from './menu-art.js?v=m02-prod-cover-1';
+import {showStoryPrologue} from './story-prologue.js';
 
 // This menu has no Three.js or character imports. It is usable before the user
 // chooses to download/build the 3D scene, including inside an iPhone web view.
@@ -39,18 +40,22 @@ $('sound-setting').onchange=e=>{settings.sound=e.target.checked;save();};
 $('music-setting').onchange=e=>{settings.music=e.target.checked;save();};
 $('sensitivity').oninput=e=>{settings.sensitivity=Number(e.target.value);save();};
 $('quality').onchange=e=>{settings.quality=e.target.value;save();};
-async function begin(intent='play'){
+async function begin(intent='play',afterPrologue=false){
   if(loading)return;
+  if(mode==='campaign'&&['play','vr'].includes(intent)&&!afterPrologue){
+    loading=true;refresh();save();for(const d of document.querySelectorAll('dialog[open]'))d.close();
+    showStoryPrologue({characterId:character,...settings,onComplete:()=>{loading=false;begin(intent,true);}});return;
+  }
   // Niveau 1 Vesper V7 — écran et tactile. La campagne classique et WebXR
   // restent accessibles par ?classic=1 ou via le lancement VR.
   if(mode==='campaign' && intent==='play' && !new URLSearchParams(location.search).has('classic')){
     save();
-    location.assign('./vesper-level1-v7.html?source=campaign&v=3.50&character='+encodeURIComponent(character));
+    location.assign('./vesper-level1-v7.html?source=campaign&prologue=done&v=3.51&character='+encodeURIComponent(character));
     return;
   }
   if(mode==='campaign2'){
     if(intent==='vr'){showLaunchError(new Error('La mission 02 est actuellement disponible en mode écran PC / Mac. La version WebXR est en cours d’intégration.'),'niveau 2');return;}
-    save();location.assign('./level2-test.html?source=campaign&v=3.50&character='+encodeURIComponent(character));return;
+    save();location.assign('./level2-test.html?source=campaign&v=3.51&character='+encodeURIComponent(character));return;
   }
   loading=true;refresh();
   for(const d of document.querySelectorAll('dialog[open]'))d.close();
@@ -61,7 +66,7 @@ async function begin(intent='play'){
   if(settings.sound||settings.music!==false)try{const Audio=window.AudioContext||window.webkitAudioContext;
     window.__PINKWAR_BOOT_AUDIO ||=new Audio();window.__PINKWAR_BOOT_AUDIO.resume().catch(()=>{});}catch{}
   try{
-    modulePromise ||=import('./game.js?v=3.50');await modulePromise;
+    modulePromise ||=import('./game.js?v=3.51');await modulePromise;
     for(const d of document.querySelectorAll('dialog'))d.removeEventListener('cancel',earlyCancel);
     if(!window.__PINKWAR||window.__PINKWAR.snapshot().phase==='error')throw new Error('Initialisation interrompue.');
     loading=false;
@@ -74,6 +79,9 @@ async function begin(intent='play'){
 }
 $('play-button').onclick=()=>begin('play');$('vr-button').onclick=()=>begin('vr');
 $('outfit-button').disabled=false;$('outfit-button').onclick=()=>begin('outfit');
+const replay=document.createElement('button');replay.type='button';replay.textContent='REVOIR LE PROLOGUE';replay.id='replay-prologue';
+replay.onclick=()=>{for(const d of document.querySelectorAll('dialog[open]'))d.close();showStoryPrologue({characterId:character,...settings,replay:true});};
+$('lore-dialog').append(replay);
 $('loading-screen').hidden=true;
 $('online-launch').hidden=location.protocol!=='file:';
 refresh();

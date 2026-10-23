@@ -1,5 +1,6 @@
 import { ArenaGame, WEAPONS, MAX_LEVEL, REGEN_DELAY, levelCount, traceEnemyHit, segmentSphere } from './game-logic.js';
 import {tacticalOrder} from './tactical-enemies.js';
+import {squadOrder,relayVisualContact,clearSquadFiringLane} from './enemy-squads.js';
 import {segmentBox} from './game-logic.js';
 import { enemyDurability, enemyVolley, rangedMuzzle, enemyScale } from './enemy-combat.js';
 import { bladeBulletContact, reflectedVelocity, sweepBlade } from './blade-combat.js';
@@ -105,18 +106,19 @@ export class RoomGame extends ArenaGame {
     }
   }
   moveEnemies(dt){
-    const coverBoxes=this.enemies.some(e=>e.form==='synth')?(this.room.coverBoxes?.()||[]):[];
+    const coverBoxes=this.room.coverBoxes?.()||[];
     for(const e of this.enemies){
       const eye={x:e.x,y:e.elevation+e.aimHeight,z:e.z},seen=!this.blocked(eye,this.head),distance=Math.hypot(this.head.x-e.x,this.head.z-e.z);
       e.awareness=seen?'engaged':e.alertedUntil>this.time?'search':'patrol';
-      if(seen&&e.form==='synth'){e.lastKnownX=this.head.x;e.lastKnownZ=this.head.z;e.lastKnownHeight=this.player.elevation;e.alertedUntil=this.time+10;}
+      if(seen){e.lastKnownX=this.head.x;e.lastKnownZ=this.head.z;e.lastKnownHeight=this.player.elevation;e.alertedUntil=this.time+10;}
       let target=seen?this.head:e.alertedUntil>this.time?{x:e.lastKnownX,z:e.lastKnownZ}:null;
-      const order=tacticalOrder(e,{time:this.time,seen,threat:{x:e.lastKnownX,y:(e.lastKnownHeight||0)+1.25,z:e.lastKnownZ},obstacles:coverBoxes,allies:this.enemies,segmentBox});
+      const tacticContext={time:this.time,seen,threat:{x:e.lastKnownX,y:(e.lastKnownHeight||0)+1.25,z:e.lastKnownZ},obstacles:coverBoxes,allies:this.enemies,segmentBox};
+      relayVisualContact(e,tacticContext);const order=tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext);e.combatPose=order?.state||'advance';
       if(order)target={...order.point,y:e.groundY};
       e.moving=false;
       if(target){
         const waypoint=this.room.waypoint?.(e,target)||target,dx=waypoint.x-e.x,dz=waypoint.z-e.z,n=Math.hypot(dx,dz)||1;
-        if((order?Math.hypot(target.x-e.x,target.z-e.z)>order.stopDistance:distance>(e.ranged?(this.room.outdoor?7:2.0):.92))&&e.stunnedUntil<=this.time){const speed=e.speed*(e.limpUntil>this.time?.6:1),p={x:e.x+dx/n*speed*dt,y:e.groundY,z:e.z+dz/n*speed*dt};
+        if((order?Math.hypot(target.x-e.x,target.z-e.z)>order.stopDistance:distance>(e.ranged?(this.room.outdoor?7:2.0):.92))&&e.stunnedUntil<=this.time){const speed=e.speed*(e.limpUntil>this.time?.6:1)*(order?.speedScale??1),p={x:e.x+dx/n*speed*dt,y:e.groundY,z:e.z+dz/n*speed*dt};
           if(this.room.canStand(p,e.radius)&&!this.blocked(eye,{x:p.x,y:eye.y,z:p.z})){e.x=p.x;e.z=p.z;e.moving=true;}}
         e.yaw=Math.atan2((order?e.lastKnownX:target.x)-e.x,(order?e.lastKnownZ:target.z)-e.z)+Math.PI;
       }
@@ -128,7 +130,7 @@ export class RoomGame extends ArenaGame {
       if(e.ranged&&e.attackTimer<.65){e.lockedTarget||={...this.head};e.chargeProgress=clamp(1-e.attackTimer/.65,0,1);}
       if(e.ranged&&e.attackTimer<=0){
         const muzzle=e.form==='probe'?{...eye}:rangedMuzzle(e),target=e.lockedTarget||this.head;
-        if(!this.blocked(muzzle,target)){
+        if(!this.blocked(muzzle,target)&&clearSquadFiringLane(e,muzzle,target,this.enemies)){
           const speed=Math.min(14,8+this.wave*.25),dx=target.x-muzzle.x,dy=target.y-.15-muzzle.y,dz=target.z-muzzle.z,n=Math.hypot(dx,dy,dz)||1;
           this.bullets.push({id:this.nextId++,...muzzle,vx:dx/n*speed,vy:dy/n*speed,vz:dz/n*speed,life:2.5,damage:6+Math.floor(this.wave*.55),hostile:true,weapon:'enemy',splash:0});
           e.lastShotAt=this.time;if(e.tactics)e.tactics.shots++;e.aimPitch=Math.atan2(dy,Math.hypot(dx,dz));this.event('enemy-shot',{...muzzle,form:e.form});

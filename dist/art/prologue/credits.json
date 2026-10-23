@@ -1,0 +1,42 @@
+{
+  "title": "Pink Wars — La Fracture / Prologue",
+  "revision": "3.51",
+  "source": "Illustrations originales générées pour Pink Wars, à partir du storyboard officiel et des rendus de production GHJU/LYLU. Aucun asset ni personnage de Halo ou Mass Effect utilisé.",
+  "productionReferences": [
+    "livraison/captures_346/ghju/001.png",
+    "livraison/captures_346/lylu/001.png"
+  ],
+  "processing": "Conversion PNG vers WebP 1600 × 900 maximum, qualité 84.",
+  "assets": [
+    {
+      "file": "01-vesper.webp",
+      "storyboard": "P00-01",
+      "bytes": 308450
+    },
+    {
+      "file": "02-secours.webp",
+      "storyboard": "P00-02",
+      "bytes": 172758
+    },
+    {
+      "file": "03-ordre.webp",
+      "storyboard": "P00-03",
+      "bytes": 235858
+    },
+    {
+      "file": "04-evacuation.webp",
+      "storyboard": "P00-04",
+      "bytes": 192906
+    },
+    {
+      "file": "05-separation.webp",
+      "storyboard": "P00-05",
+      "bytes": 141506
+    },
+    {
+      "file": "06-signal.webp",
+      "storyboard": "P00-06",
+      "bytes": 272758
+    }
+  ]
+}

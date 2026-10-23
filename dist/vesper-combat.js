@@ -131,7 +131,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   function audioReady(){
     if(!sound&&!musicEnabled)return;
     try{
-      if(!audio){const C=window.AudioContext||window.webkitAudioContext;if(!C)return;audio=new C();setLaserAudioEnabled(audio,true);ambience=createAmbience(audio);saber=createSaberSound(audio);music.setContext(audio);}
+      if(!audio){const C=window.AudioContext||window.webkitAudioContext;if(!C)return;audio=window.__PINKWAR_BOOT_AUDIO||new C();setLaserAudioEnabled(audio,true);ambience=createAmbience(audio);saber=createSaberSound(audio);music.setContext(audio);}
       if(audio.state!=='running')void audio.resume().catch(()=>{});
     }catch(error){console.warn('Vesper audio',error);}
   }
@@ -301,7 +301,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     get paused(){return journalOpen;},
     get interaction(){return contextAction();},
     get layout(){return LEVEL1_MAP;},
-    restart(){location.assign(location.pathname+'?character='+characterId+'&v=3.50');},
+    restart(){location.assign(location.pathname+'?prologue=done&character='+characterId+'&v=3.51');},
     get checkpoint(){return checkpoint;},
     get objective(){return objective().text;},
     get playing(){return game.state==='playing'&&!completed;},
@@ -329,7 +329,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       try{const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);if(result?.then){pending=true;result.then(()=>pending=false).catch(error=>{pending=false;onFailure(error);});}}
       catch(error){onFailure(error);}
     },
-    snapshot(){return {revision:'3.50',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
+    snapshot(){return {revision:'3.51',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
       capacity:game.weapon.capacity,ownedWeapons:[...game.ownedWeapons],offers:game.weaponOffers.map(o=>({...o})),campaign:game.campaign,journalOpen,
       enemies:game.enemies.length,hostileProjectiles:game.bullets.filter(b=>b.hostile).length,shots:game.bullets.filter(b=>!b.hostile).length,
       kills:game.kills,rig:!!rig,gun:!!gun,backend:renderer.isWebGLRenderer?'webgl':'webgpu',triangles:terrain.triangles,

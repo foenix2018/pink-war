@@ -1,4 +1,5 @@
 import {tacticalOrder} from './tactical-enemies.js';
+import {squadOrder,relayVisualContact,clearSquadFiringLane,registerIncomingFire} from './enemy-squads.js';
 import { equipmentForLevel } from './equipment.js';
 import { PLATFORMS, STAIRS, LIFTS, BRIDGES, BRIDGE_APPROACHES, insideSurface, traversalSurfaces, liftHeightAt } from './world-layout.js';
 import { PROBE, updateProbe } from './aerial-probes.js';
@@ -526,7 +527,7 @@ export class ArenaGame {
     target.alertedUntil=this.time+5;target.awareness='search';target.lastSeenAt=this.time;
     if(zone==='limb')target.limpUntil=Math.max(target.limpUntil||0,this.time+2);
     if(zone==='head')target.stunnedUntil=Math.max(target.stunnedUntil||0,this.time+.32);
-    target.hitAt=this.time;target.hitZone=zone;
+    target.hitAt=this.time;target.hitZone=zone;target.suppressedUntil=this.time+1.6;
     this.event('hit', { id: target.id, zone, damage:effective });
     if (target.hp <= 0) {
       this.combo = this.time <= this.comboUntil ? this.combo + 1 : 1; this.comboUntil = this.time + COMBO_WINDOW;
@@ -692,7 +693,10 @@ export class ArenaGame {
       // A slot behind a wall or a crate is no slot: that unit goes straight for the player.
       if(slot&&this.obstacles.some(b=>!b.walkableSurface&&segmentBox({x:this.player.x,y:eye.y,z:this.player.z},{x:slot.x,y:eye.y,z:slot.z},{...b,hx:b.hx+e.radius,hz:b.hz+e.radius})!==null))slot=null;
       if(slot){destinationX=slot.x;destinationZ=slot.z;}
-      const order=!stairRoute?tacticalOrder(e,{time:this.time,seen,threat:{x:e.lastKnownX,y:(e.lastKnownHeight||0)+1.25,z:e.lastKnownZ},obstacles:this.obstacles,allies:this.enemies,segmentBox}):null;
+      const tacticContext={time:this.time,seen,threat:{x:e.lastKnownX,y:(e.lastKnownHeight||0)+1.25,z:e.lastKnownZ},obstacles:this.obstacles,allies:this.enemies,segmentBox};
+      relayVisualContact(e,tacticContext);
+      const order=!stairRoute?(tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext)):null;
+      e.combatPose=order?.state||'advance';
       if(order){destinationX=order.point.x;destinationZ=order.point.z;}
       dx=destinationX-e.x;dz=destinationZ-e.z;
       const goalDistance=Math.hypot(dx,dz)||1;
@@ -720,8 +724,8 @@ export class ArenaGame {
       }
       const norm=Math.hypot(dx,dz)||1;
       const stopDistance=order?order.stopDistance:stairRoute?.15:slot?.3:e.awareness==='engaged' ? (e.ranged?14:1.45) : e.awareness==='search'?1.8:.7;
-      if(goalDistance>stopDistance||retreat){
-        const injury=e.limpUntil>this.time?.62:1;
+      if((goalDistance>stopDistance||retreat)&&(e.stunnedUntil||0)<=this.time){
+        const injury=(e.limpUntil>this.time?.62:1)*(order?.speedScale??1);
         const searchSpeed=retreat?.8:e.awareness==='engaged'?1:e.awareness==='search'?.75:.48;
         moveInArena(e,dx/norm*e.speed*dt*injury*searchSpeed,dz/norm*e.speed*dt*injury*searchSpeed,e.radius,this.obstacles);
       }
@@ -740,7 +744,7 @@ export class ArenaGame {
         const profile=hostileShotProfile(this.wave,e.form),speed=profile.speed;
         const volley=enemyVolley(this.wave,e.form),muzzle=rangedMuzzle(e);
         const target=predictShot(muzzle,playerHead,this.playerVelocity,speed,profile.lead);
-        if(!this.blocked(eye,muzzle)&&!this.blocked(muzzle,target)){
+        if(!this.blocked(eye,muzzle)&&!this.blocked(muzzle,target)&&clearSquadFiringLane(e,muzzle,target,this.enemies)){
           const n=Math.hypot(target.x-muzzle.x,target.y-muzzle.y,target.z-muzzle.z)||1;
           this.bullets.push({id:this.nextId++,...muzzle,vx:(target.x-muzzle.x)/n*speed,
             vy:(target.y-muzzle.y)/n*speed,vz:(target.z-muzzle.z)/n*speed,
@@ -777,6 +781,7 @@ export class ArenaGame {
       }
       for (const obstacle of this.obstacles) { const t = segmentBox(start, end, obstacle); if (t !== null && t < nearest) { nearest = t; target = null;hitBox=obstacle;surface=obstacle.surface||'concrete'; } }
       if (end.y < .06 && start.y >= .06) { const t = (start.y - .06) / (start.y - end.y); if (t < nearest) { nearest = t; target = null;hitBox=null;surface='ground'; } }
+      if(!b.hostile){const t=Math.min(1,nearest);registerIncomingFire(this.enemies,start,{x:start.x+(end.x-start.x)*t,y:start.y+(end.y-start.y)*t,z:start.z+(end.z-start.z)*t},this.time,(a,c)=>this.blocked(a,c));}
       if (nearest <= 1) {
         const at = { x: start.x + (end.x - start.x) * nearest, y: start.y + (end.y - start.y) * nearest, z: start.z + (end.z - start.z) * nearest };
         let normal={x:0,y:1,z:0};

@@ -1,6 +1,6 @@
 import * as T from './vendor/three.webgpu.min.js';
 import { Assembly, loft, matrix, merge, bevelBox, limb as lightweightLimb } from './geo.js';
-import {SURFACE_DATA} from './levels/vesper-01-textures.js';
+import {equipmentSurfaces} from './equipment-surfaces.js';
 import { enemyScale } from './enemy-combat.js';
 import {enemyAlertState,ENEMY_OPTICS} from './enemy-alert.js';
 import {profiledPanel} from './armor-profiles.js';
@@ -42,6 +42,10 @@ const acousticRing=new T.TorusGeometry(.12,.012,4,10),bolt=new T.SphereGeometry(
 const probeDuct=new T.TorusGeometry(.205,.038,6,24),probeRim=new T.TorusGeometry(.19,.022,6,24);
 const headShell=loft([[-.18,.052,.066,-.025],[-.11,.111,.145,-.005],[.015,.147,.185,.012],[.115,.133,.171,.039],[.18,.082,.119,.062],[.205,.032,.068,.072]],20);
 const headFace=loft([[-.12,.054,.04,-.181],[-.02,.12,.035,-.197],[.084,.112,.032,-.174],[.115,.061,.025,-.149]],16);
+const visor=profiledPanel([[-.117,-.028],[.117,-.028],[.13,.027],[.095,.052],[-.095,.052],[-.13,.027]],{depth:.009,bulge:.009,round:.12});
+const brow=profiledPanel([[-.13,-.014],[.13,-.014],[.148,.009],[.107,.034],[-.107,.034],[-.148,.009]],{depth:.012,bulge:.012,round:.16});
+const pauldron=profiledPanel([[-.12,-.085],[.11,-.10],[.17,.025],[.115,.10],[-.075,.12],[-.16,.035]],{depth:.026,bulge:.043,round:.16});
+const vambrace=profiledPanel([[-.046,-.115],[.045,-.115],[.085,.075],[.055,.13],[-.06,.13],[-.084,.055]],{depth:.018,bulge:.023,round:.14});
 
 // Rounded volumes carry the silhouette. Small fittings are merged; no material or
 // geometry is allocated per animation frame, even when a portal spawns a full wave.
@@ -84,14 +88,12 @@ function bakeRig(assemblies){
 }
 
 export function createEnemyFactory(mats){
-  const cache=new Map(),loader=new T.TextureLoader();
-  const detail=type=>{if(typeof document==='undefined')return null;const t=loader.load(SURFACE_DATA.steel[type]);t.wrapS=t.wrapT=T.RepeatWrapping;if(type==='color')t.colorSpace=T.SRGBColorSpace;return t;};
-  const color=detail('color'),height=detail('height'),surface=detail('surface');
-  const frame=mats.monster.clone();frame.color.setHex(0xa1b0b6);frame.map=color;frame.bumpMap=height;frame.bumpScale=.0014;frame.roughnessMap=surface;frame.metalnessMap=surface;frame.roughness=.84;frame.metalness=.88;
-  const heavyFrame=frame.clone();heavyFrame.color.setHex(0x74858f);
-  const mechanism=mats.monsterFace.clone();mechanism.color.setHex(0x18242c);mechanism.map=color;mechanism.bumpMap=height;mechanism.bumpScale=.0008;mechanism.roughness=.48;mechanism.metalness=.85;
+  const cache=new Map(),surface=equipmentSurfaces();
+  const frame=new T.MeshPhysicalMaterial({color:0x879da7,map:surface.metal,roughnessMap:surface.rough,bumpMap:surface.rough,bumpScale:.00035,roughness:.51,metalness:.66,clearcoat:.35,clearcoatRoughness:.34,envMap:mats.monster.envMap,envMapIntensity:.4});
+  const heavyFrame=frame.clone();heavyFrame.color.setHex(0x536c7a);heavyFrame.roughness=.57;
+  const mechanism=new T.MeshStandardMaterial({color:0x17222c,map:surface.metal,bumpMap:surface.rough,bumpScale:.0004,roughness:.67,metalness:.58,envMap:mats.monster.envMap,envMapIntensity:.3});
   const servo=new T.MeshStandardMaterial({color:0x909d9b,roughness:.30,metalness:.88,envMap:mats.monster.envMap,envMapIntensity:.45});
-  const synthShell=new T.MeshPhysicalMaterial({color:0xd6e1e3,metalness:.46,roughness:.30,clearcoat:.65,clearcoatRoughness:.24,envMap:mats.monster.envMap,envMapIntensity:.5});
+  const synthShell=new T.MeshPhysicalMaterial({color:0xc5d4d7,map:surface.metal,roughnessMap:surface.rough,bumpMap:surface.rough,bumpScale:.00025,metalness:.38,roughness:.42,clearcoat:.5,clearcoatRoughness:.32,envMap:mats.monster.envMap,envMapIntensity:.4});
   const hazard=new T.MeshStandardMaterial({color:0x9c7d34,roughness:.72,metalness:.4});
 
   function template(elite,ranged,form){
@@ -193,6 +195,7 @@ export function createEnemyFactory(mats){
       for(const side of [-1,1])h.limb(servo,[side*.035,1.69,.015],[side*.05,1.83,-.04],.009,.012);
       h.add(headShell,armor,matrix([0,1.865,-.032],[0,0,0],[.90,1.04,.85]));
       h.add(profiledPanel([[-.10,-.06],[.10,-.06],[.105,.035],[.07,.06],[-.07,.06],[-.105,.035]],{depth:.01,bulge:.006,round:.2}),dark,matrix([0,1.905,-.211]));
+      h.add(brow,armor,matrix([0,1.968,-.196],[0,0,0],[.89,.8,.8]));
       for(const side of [-1,1]){
         h.add(sensor,optics,matrix([side*.064,1.91,-.231],[0,0,0],[.026,.010,.012]),false);
         h.add(jointShield,armor,matrix([side*.065,1.81,-.18],[0,side*-.4,side*.16],[.60,.68,.6]));
@@ -250,9 +253,9 @@ export function createEnemyFactory(mats){
       for(const side of [-1,1])for(let i=0;i<3;i++){
         a.add(ribShell,armor,matrix([side*(.13-i*.008),1.20-i*.085,-.18+i*.018],[.08,side*-.30,side*-.12]));
       }
-      for(let i=0;i<5;i++){
-        a.ellipsoid(armor,[0,1.04+i*.14,.22+i*.015],[form==='brute'?.13:.09,.062,.073]);
-        if(i%2===0)a.add(sensor,glow,matrix([0,1.04+i*.14,.293+i*.015],[0,0,0],[.024,.018,.008]),false);
+      for(let i=0;i<3;i++){
+        a.add(jointShield,armor,matrix([0,1.15+i*.20,.26],[0,Math.PI,0],[heavy?1.8:1.3,1.4,1.4]));
+        if(i===1)a.add(sensor,glow,matrix([0,1.35,.31],[0,0,0],[.014,.016,.008]),false);
       }
       a.add(jointShield,dark,matrix([0,1.305,-.282],[0,0,0],[1.1,1.2,.8]));
       for(let i=0;i<3;i++)a.box(glow,[.052-i*.009,.006,.003],[0,1.325-i*.020,-.312],[0,0,0],.001,false);
@@ -276,7 +279,9 @@ export function createEnemyFactory(mats){
       const neck=bone('sensor-head',[0,.465,-.032],thorax),h=assembly(neck);
       const headScale=form==='bulwark'?[1.10,.94,1.10]:heavy?[1.18,1.03,1.10]:sensitive?[.82,1.19,1.12]:[1,1,1];
       h.add(headShell,armor,matrix([0,1.865,-.032],[0,0,0],headScale));
-      h.add(headFace,dark,matrix([0,1.865,-.032],[0,0,0],headScale));
+      // A sealed optical visor and continuous jaw, rather than teeth or a face.
+      h.add(visor,dark,matrix([0,1.905,-.219],[0,0,0],[headScale[0],1,1]));
+      h.add(brow,armor,matrix([0,1.975,-.205],[0,0,0],[headScale[0],1,1]));
       h.limb(servo,[0,1.69,.02],[0,1.84,.02],.061,.051);
       for(const yy of [1.72,1.77,1.81])h.add(ring,dark,matrix([0,yy,.02],[Math.PI/2,0,0],[.48,.48,.48]));
       for(const s of [-1,1]){
@@ -294,8 +299,8 @@ export function createEnemyFactory(mats){
           h.add(cowl,servo,matrix([s*.13,1.99,-.005],[0,s*-.50,s*-.12],[.40,.65,1.0]));
         }
       }
-      h.add(jointShield,servo,matrix([0,1.805,-.248],[.12,0,0],[.62,.55,.45]));
-      for(let j=0;j<4;j++)h.box(dark,[.005,.027,.002],[-.033+j*.022,1.805,-.267],[.12,0,0],.001);
+      h.add(jointShield,armor,matrix([0,1.807,-.225],[.12,0,0],[.91,.66,.55]));
+      h.box(dark,[.066,.009,.004],[0,1.782,-.25],[.12,0,0],.001);
       if(form==='seer'){
         h.add(ring,dark,matrix([0,1.918,-.291],[0,0,0],[.53,.53,.53]));
         h.add(sensor,optics,matrix([0,1.918,-.315],[0,0,0],[.049,.049,.019]),false);
@@ -309,12 +314,13 @@ export function createEnemyFactory(mats){
         const wrist=bone(`arm-${s}-wrist`,wristAt.map((v,i)=>v-elbowAt[i]),lower);
         const u=assembly(upper),l=assembly(lower),f=assembly(wrist),large=heavy;
         u.ellipsoid(dark,shoulderAt,[.105,.105,.105]);
-        u.dome(armor,[shoulderAt[0],1.61,0],large?[.28,.20,.26]:[.20,.125,.19],[0,0,s*-.19]);
+        u.add(pauldron,armor,matrix([shoulderAt[0],1.61,-.055],[-.18,s*-.28,s*-.19],large?[1.65,1.4,1.5]:[1.2,1.05,1.3]));
         u.limb(armor,[s*(shoulder+.005),1.50,0],[elbowAt[0],1.27,-.055],large?.123:.088,.067);
         u.limb(dark,[s*(shoulder+.045),1.51,.07],[elbowAt[0]+s*.04,1.27,.028],.022,.017);
         l.ellipsoid(dark,elbowAt,[.084,.078,.082]);
         l.add(ring,servo,matrix([elbowAt[0]+s*.069,elbowAt[1],elbowAt[2]],[0,Math.PI/2,0],[.48,.48,.48]));
         l.limb(armor,[elbowAt[0],1.19,-.071],wristAt,large?.117:.095,.051);
+        if(form!=='bulwark')l.add(vambrace,armor,matrix([wristAt[0]-s*.025,1.075,-.175],[.3,s*.12,s*.08],[large?1.2:1,1,1]));
         l.limb(dark,[elbowAt[0]+s*.055,1.19,-.015],[wristAt[0]+s*.04,.99,-.13],.021,.015);
         l.limb(armor,[elbowAt[0]+s*.07,1.17,-.04],[wristAt[0]+s*.055,1.01,-.13],.008,.006);
         if(form==='bulwark'){
@@ -329,7 +335,7 @@ export function createEnemyFactory(mats){
           f.add(bolt,dark,matrix([wristAt[0]+finger*.044,.83,-.24],[0,0,0],[.014,.014,.014]));
           f.limb(dark,[wristAt[0]+finger*.044,.83,-.24],[wristAt[0]+finger*.032,.81,-.29],.012,.009);
         }
-        if(elite||large){u.dome(armor,[s*(shoulder+.07),1.66,.025],[.21,.12,.19],[.15,0,s*-.25]);}
+        if(elite||large)u.add(pauldron,armor,matrix([s*(shoulder+.035),1.69,.025],[-1.1,s*-.2,s*-.25],[1.05,.82,1]));
         armRig.push({upper,lower,wrist,side:s});
       }
       for(const s of [-1,1]){
@@ -350,7 +356,7 @@ export function createEnemyFactory(mats){
       }
       if(ranged){
         groundGun=bone('aimed-shoulder-weapon',[.37,.29,-.01],thorax);const cannon=assembly(groundGun);
-        cannon.ellipsoid(armor,[.35,1.66,.19],[.16,.16,.23],[.09,0,-.13]);
+        cannon.ellipsoid(armor,[.35,1.66,.15],[.12,.095,.20],[.09,0,-.13]);
         cannon.limb(dark,[.37,1.69,.12],[.37,1.69,-.32],.083,.059);
         cannon.add(ring,armor,matrix([.37,1.69,-.28],[0,0,0],[.65,.65,.65]));
         cannon.add(barrelRing,armor,matrix([.37,1.69,-.16],[0,0,0],[.62,.62,.62]));
@@ -366,7 +372,7 @@ export function createEnemyFactory(mats){
     if(!['stalker','scuttler','brute','seer','probe','listener','bulwark','synth'].includes(form))form='stalker';
     const kit=template(elite,ranged,form),root=new T.Group(),crawler=form==='scuttler',probe=form==='probe';
     root.name=({synth:'N-08 adaptive synthetic',stalker:'AI pursuit chassis',scuttler:'AI maintenance crawler',brute:'AI siege chassis',seer:'AI reconnaissance chassis',probe:'S-03 flying surveillance probe',listener:'E-06 acoustic tracker',bulwark:'B-11 armoured suppression unit'})[form];
-    root.userData.form=form;root.userData.designRevision=form==='synth'?'3.44':'3.42';root.userData.profile=ENEMY_PROFILES[form];root.userData.surfaceStyle='profiled alloy / ceramic edges / worn mechanisms / reactive optics';
+    root.userData.form=form;root.userData.designRevision='3.51';root.userData.profile=ENEMY_PROFILES[form];root.userData.surfaceStyle='satin military alloy / sealed optical helmet / overlapping ceramic plates / articulated actuators';
     const joints=kit.bones.map(spec=>{const b=new T.Bone();b.name=spec.name;b.position.set(...spec.position);return b;});
     kit.bones.forEach((spec,i)=>(spec.parent<0?root:joints[spec.parent]).add(joints[i]));root.updateMatrixWorld(true);
     const skeleton=new T.Skeleton(joints);
@@ -442,8 +448,11 @@ export function createEnemyFactory(mats){
           q.copy(leg.upper.quaternion).multiply(leg.lower.quaternion);leg.foot.quaternion.copy(q).invert();
         }
       }else{
-        const gait=Math.sin(cycle)*amount;pelvis.position.y=.909-pace*.048+Math.cos(cycle*2)*.004*amount;
-        thorax.rotation.set(.012+pace*.032,-gait*.024,gait*.012);
+        const pose=flight.combatPose||flight.tactics?.state,covered=['cover','return','relocate'].includes(pose),guard=pose==='guard',windup=pose==='windup';
+        const brace=covered?.085:windup?.06:guard?.035:0,aiming=alert==='engaged'&&!!flight.ranged;
+        const recoil=Math.max(0,1-(simulationTime-(flight.lastShotAt??-99))/.16);
+        const gait=Math.sin(cycle)*amount;pelvis.position.y=.909-pace*.048-brace+Math.cos(cycle*2)*.004*amount;
+        thorax.rotation.set(.012+pace*.032+(covered?.045:0)-recoil*.018,-gait*.024,(pose==='peek'?.035:0)+gait*.012);
         if(head){head.rotation.y=gait*.018+(alert==='idle'?Math.sin(time*.65+phase)*.06*(1-amount):0);head.rotation.x=-thorax.rotation.x*.6+(alert==='engaged'?T.MathUtils.clamp(flight.aimPitch||0,-.18,.18):0);}
         for(const leg of legs){
           const step=cycle+(leg.side===1?Math.PI:0),swing=Math.sin(step)*amount;
@@ -455,8 +464,8 @@ export function createEnemyFactory(mats){
           leg.foot.rotation.x=-leg.upper.rotation.x-leg.lower.rotation.x+(lift>0?swing*.13:0);
         }
         for(const arm of arms){
-          arm.upper.rotation.x=gait*arm.side*(form==='brute'?.065:.115);
-          arm.upper.rotation.z=arm.side*.015;arm.lower.rotation.x=-.025-Math.max(0,gait*arm.side)*.075;
+          arm.upper.rotation.x=gait*arm.side*(aiming?.035:form==='brute'?.065:.115)+(guard?.23:covered?.12:aiming?.08:0);
+          arm.upper.rotation.z=arm.side*(guard?-.1:.015);arm.lower.rotation.x=(guard?.85:aiming?.38:covered?.26:.06)+Math.max(0,gait*arm.side)*.035;
           arm.wrist.rotation.x=-arm.lower.rotation.x*.4;
         }
       }
