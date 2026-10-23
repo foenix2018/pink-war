@@ -77,7 +77,7 @@ body:not(.rainOn) #rainCurtain{display:none}
 <div id="rainCurtain"></div><div id="game" aria-label="Commandes de la visite 3D"><div id="vignette"></div>
  <div class="top"><div><div class="logo"><em>PINK</em> WARS <span style="font-size:10px;color:#a9c9d9;letter-spacing:.1em">/ VISITE 3D</span></div><div class="smallcap">VESPER / LE DERNIER SIGNAL / SECTEUR 03</div></div><div class="topright"><div class="chip"><span class="dot"></span><strong id="renderer">INITIALISATION</strong> <span id="fps">— FPS</span></div><div id="cameraMode" class="chip">EXPLORATION</div></div></div>
  <button id="quickObjective" aria-label="Afficher le prochain objectif" title="Objectif" onclick="document.getElementById('objectivePanel').classList.toggle('open');document.getElementById('controlsPanel').classList.remove('open')">◎</button><button id="quickSettings" aria-label="Ouvrir les paramètres et la carte" title="Réglages" onclick="document.getElementById('controlsPanel').classList.toggle('open');document.getElementById('objectivePanel').classList.remove('open')">⚙</button><div id="objectivePanel"><div class="eyebrow">MISSION 01 <span style="float:right" id="objCount">00/04</span></div><div id="objective">Réarmer le circuit de l’annexe de secours</div></div>
- <div id="controlsPanel"><div class="ctrlTitle">Paramètres graphiques</div><div class="group"><label for="quality">Qualité</label><select id="quality"><option value="performance">Performance</option><option value="equilibre" selected>Équilibré</option><option value="ultra">Ultra</option></select></div><div class="group"><label for="materialMode">Matériaux</label><select id="materialMode"><option value="offline" selected>Industriel HD · embarqué</option><option value="photo">Photo CC0 · option réseau</option></select><div id="materialStatus" style="color:#8fbac6;font:10px/1.6 monospace;margin-top:6px">Atlas embarqué • chargement CC0 facultatif</div></div><div class="group"><label for="lighting">Lumière <strong id="lightingName">NUIT URBAINE</strong></label><input id="lighting" type="range" min="0" max="1" step="0.01" value="0.43"></div><div class="group"><label for="shadowsToggle">Ombres projetées <input id="shadowsToggle" type="checkbox" checked style="width:19px;height:19px"></label><label for="rainToggle">Pluie atmosphérique <input id="rainToggle" type="checkbox" checked style="width:19px;height:19px"></label></div><div class="ctrlBtns"><button id="toggleMode" class="miniBtn">Caméra libre</button><button id="teleport" class="miniBtn">Recommencer</button><button id="helpOpen" class="miniBtn">Commandes</button><button id="mapPanelBtn" class="miniBtn" onclick="document.getElementById('mapPanel').classList.toggle('show')">Plan / M</button></div><div class="tourPanel"><div class="ctrlTitle">Visite guidée · 7 étapes</div><div class="group"><label for="visitSelect">Destination</label><select id="visitSelect"></select></div><div class="tourBtns"><button id="visitGo" class="miniBtn">S'y rendre</button><button id="visitNext" class="miniBtn">Étape suiv.</button><button id="hudToggle" class="miniBtn" style="grid-column:span 2">Mode photo / P</button><button id="audioToggle" class="miniBtn" style="grid-column:span 2">🔇 Ambiance sonore : désactivée</button></div><div class="tourHint">Raccourcis 1–7 : voyager entre les points d'intérêt.</div></div></div>
+ <div id="controlsPanel"><div class="ctrlTitle">Paramètres graphiques</div><div class="group"><label for="quality">Qualité</label><select id="quality"><option value="performance">Performance</option><option value="equilibre" selected>Équilibré</option><option value="ultra">Ultra</option></select></div><div class="group"><label for="materialMode">Matériaux</label><select id="materialMode"><option value="offline" selected>Industriel HD · embarqué</option><option value="photo">Photo CC0 · option réseau</option></select><div id="materialStatus" style="color:#8fbac6;font:10px/1.6 monospace;margin-top:6px">Atlas embarqué • chargement CC0 facultatif</div></div><div class="group"><label for="lighting">Lumière <strong id="lightingName">MATIN VOILÉ</strong></label><input id="lighting" type="range" min="0" max="1" step="0.01" value="0.43"></div><div class="group"><label for="shadowsToggle">Ombres projetées <input id="shadowsToggle" type="checkbox" checked style="width:19px;height:19px"></label><label for="rainToggle">Pluie atmosphérique <input id="rainToggle" type="checkbox" style="width:19px;height:19px"></label></div><div class="ctrlBtns"><button id="toggleMode" class="miniBtn">Caméra libre</button><button id="teleport" class="miniBtn">Recommencer</button><button id="helpOpen" class="miniBtn">Commandes</button><button id="mapPanelBtn" class="miniBtn" onclick="document.getElementById('mapPanel').classList.toggle('show')">Plan / M</button></div><div class="tourPanel"><div class="ctrlTitle">Visite guidée · 7 étapes</div><div class="group"><label for="visitSelect">Destination</label><select id="visitSelect"></select></div><div class="tourBtns"><button id="visitGo" class="miniBtn">S'y rendre</button><button id="visitNext" class="miniBtn">Étape suiv.</button><button id="hudToggle" class="miniBtn" style="grid-column:span 2">Mode photo / P</button><button id="audioToggle" class="miniBtn" style="grid-column:span 2">🔇 Ambiance sonore : désactivée</button></div><div class="tourHint">Raccourcis 1–7 : voyager entre les points d'intérêt.</div></div></div>
  <div id="crosshair"></div><div id="prompt"><div class="eyebrow">[ F ] ACTION</div><div id="promptTitle"></div></div>
  <div id="toast"><div class="eyebrow">SIGNAL LOCAL</div><div id="toastText"></div></div>
  <div id="mapPanel"><div class="ctrlTitle" style="margin-bottom:9px">CARTE TACTIQUE / VESPER</div><canvas id="minimap" width="320" height="320"></canvas><div class="mapHint">Points roses : terminaux · Triangle : position</div></div>
@@ -93,8 +93,9 @@ const $ = id => document.getElementById(id);
 let canvas=$('view'); const mini=$('minimap'), mapCtx=mini.getContext('2d');
 let renderer, combatWorld=null, gpuKind='—', started=false, pv=new Float32Array(16), aspect=1;
 const requestedQuality=new URLSearchParams(location.search).get('quality');
-let quality=['performance','equilibre','ultra'].includes(requestedQuality)?requestedQuality:/iPhone|iPad|iPod|Android.*Mobile/i.test(navigator.userAgent)?'performance':'equilibre', timeOfDay=0.43, isFree=false, mapOpen=false, flashlight=true;
-let yaw=-.47, pitch=-0.035, position={x:2,y:1.73,z:54}, velocityY=0, groundY=0, grounded=true;
+let quality=['performance','equilibre','ultra'].includes(requestedQuality)?requestedQuality:/iPhone|iPad|iPod|Android.*Mobile/i.test(navigator.userAgent)?'performance':'equilibre', timeOfDay=0.43, isFree=false, mapOpen=false, flashlight=false;
+const referenceVisit=new URLSearchParams(location.search).has('visit');
+let yaw=referenceVisit?-.47:.14, pitch=-0.035, position=referenceVisit?{x:2,y:1.73,z:54}:{x:-26,y:1.765,z:23}, velocityY=0, groundY=0, grounded=true;
 let last=0, fpsAcc=0, fpsCount=0, fps=0, noticeTime=0, missionIndex=0;
 const keys=new Set(), collide=[], stairs=[], decks=[], interactions=[], drones=[], beacons=[], worldBounds={minX:-77,maxX:77,minZ:-123,maxZ:71};
 const playerRadius=.34, eyeHeight=1.73, moveSpeed=4.2;
@@ -106,7 +107,7 @@ function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 function lerp(a,b,t){return a+(b-a)*t;}
 const colors={concrete:[.34,.37,.40],dark:[.18,.23,.27],graphite:[.13,.18,.23],stone:[.44,.44,.44],light:[.66,.69,.68],black:[.055,.08,.115],moss:[.15,.24,.17],green:[.20,.34,.23],dry:[.41,.40,.28],rust:[.44,.24,.19],steel:[.34,.39,.43],silver:[.60,.67,.71],white:[.78,.84,.82],red:[.85,.13,.20],pink:[1,.10,.56],blue:[.20,.75,1],amber:[1,.62,.22],road:[.13,.17,.21],soil:[.24,.26,.23],water:[.18,.24,.29]};
 const MAT={CONCRETE:0,METAL:1,ROAD:2,WINDOW:3,PLANT:4,PINK:5,CYAN:6,AMBER:7,SOIL:8,WET:9,WHITE:10,RIFT:11,RED:12,SIGN:30};
-const SHADOW_SIZE=1024; let shadowsEnabled=true, atmosphericRain=true, ambientAudio=null;
+const SHADOW_SIZE=1024; let shadowsEnabled=true, atmosphericRain=false, ambientAudio=null;
 // Geometry builder: 12 float vertex (position, normal, color, UV, material index).
 class Mesh{
  constructor(){this.v=[];this.i=[];this.vertexCount=0;}
@@ -247,25 +248,27 @@ function rescueBuilding(){
  staticMesh.plane(x,0.035,z,34,41,'concrete',MAT.CONCRETE);
  wallSegment(-45,4.25,32,1.3,8.5,41,'concrete');
  // Eastern facade has a real 6 m opening toward the street, not an invisible wall.
- wallSegment(-12,4.25,17.75,1.1,8.5,12.5,'concrete');
- wallSegment(-12,4.25,43,1.1,8.5,19,'concrete');
+ captureDecoration('annexFacade',()=>wallSegment(-12,4.25,17.75,1.1,8.5,12.5,'concrete'));
+ captureDecoration('annexFacade',()=>wallSegment(-12,4.25,43,1.1,8.5,19,'concrete'));
  staticMesh.box(-12,7.6,28.4,1.2,1.8,7.3,'steel',1);
  for(const zz of [24.6,32.0])staticMesh.box(-11.9,3.3,zz,.42,6.4,.32,'graphite',1);
  staticMesh.box(-11.6,6.0,28.3,.19,.22,6.6,'blue',MAT.CYAN);
  wallSegment(-29,4.25,52.5,34,8.5,1.25,'dark');
  wallSegment(-39.5,4.25,11.5,13.5,8.5,1.15,'concrete');
  wallSegment(-17,4.25,11.5,10.5,8.5,1.15,'concrete');
- wallSegment(-29,8.65,32,34,1.0,41,'concrete',false);
+ captureDecoration('annexRoof',()=>wallSegment(-29,8.65,32,34,1.0,41,'concrete',false));
  for(const XX of [-44,-35,-25,-16])for(const ZZ of [13,32,50]){
   staticMesh.box(XX,4.0,ZZ,.55,8,.55,'steel',1);
  }
  for(let i=0;i<8;i++){
   const zz=14+i*5.2;if(zz>23&&zz<34)continue;
+  captureDecoration('annexWindow',()=>{
   staticMesh.box(-12.72,6.4,zz,.17,2.6,3.4,'black',MAT.WINDOW);
   staticMesh.box(-12.48,6.4,zz,.12,2.2,3,'blue',MAT.WINDOW);
+  });
  }
  // Both east and south entrances are truly open in collision AND geometry.
- staticMesh.box(-29,9.4,31,34,.3,41,'rust',1);
+ captureDecoration('annexRoof',()=>staticMesh.box(-29,9.4,31,34,.3,41,'rust',1));
  for(let i=0;i<8;i++)for(const XX of [-44,-12]){
   const ZZ=14+i*5.1;staticMesh.line([XX,8.6,ZZ],[XX,8.65+between(.5,2.5),ZZ],.08,'rust',1);
  }
@@ -1214,6 +1217,25 @@ function v5SceneArt(){
 }
 // === END V5 ART PASS ===
 
+function captureDecoration(kind,fn,args=[]){
+ const start=staticMesh.i.length,result=fn();
+ (staticMesh.artRanges||(staticMesh.artRanges=[])).push({start,end:staticMesh.i.length,kind,args});
+ return result;
+}
+function markDecorativeRange(fn,kind){return function(...args){return captureDecoration(kind,()=>fn(...args),args);};}
+for(const kind of ['brokenVehicle','v4Car','v5PodVehicle','foliage','v4Vegetation','junkAndDetails','distantCity','v4SegmentedTower','v4FrontageUpgrade','v5FacadeRibs']){
+ // Lexical function bindings remain available to the independent visit engine.
+ if(kind==='brokenVehicle')brokenVehicle=markDecorativeRange(brokenVehicle,kind);
+ else if(kind==='v4Car')v4Car=markDecorativeRange(v4Car,kind);
+ else if(kind==='v5PodVehicle')v5PodVehicle=markDecorativeRange(v5PodVehicle,kind);
+ else if(kind==='foliage')foliage=markDecorativeRange(foliage,kind);
+ else if(kind==='v4Vegetation')v4Vegetation=markDecorativeRange(v4Vegetation,kind);
+ else if(kind==='junkAndDetails')junkAndDetails=markDecorativeRange(junkAndDetails,kind);
+ else if(kind==='distantCity')distantCity=markDecorativeRange(distantCity,kind);
+ else if(kind==='v4SegmentedTower')v4SegmentedTower=markDecorativeRange(v4SegmentedTower,kind);
+ else if(kind==='v4FrontageUpgrade')v4FrontageUpgrade=markDecorativeRange(v4FrontageUpgrade,kind);
+ else if(kind==='v5FacadeRibs')v5FacadeRibs=markDecorativeRange(v5FacadeRibs,kind);
+}
 function buildScene(){
  road();distantCity();rescueBuilding();workshop();a3Tower();overpass();pylons();portalAndFaction();signalPosts();
  // extra industrial warehouses with detailed doors, slots, vents, conduits
@@ -1628,8 +1650,8 @@ function interact(){const p=activeInteraction();if(!p||isFree||gamePaused)return
 }
 
 function notify(message,ms=4000){$('toastText').textContent=message;$('toast').classList.add('show');noticeTime=performance.now()+ms;}
-const objectives=['Réarmer le circuit de l’annexe de secours','Lire les archives médicales hors réseau','Neutraliser la balise de surveillance ORDRE','Atteindre le relais A3 sur la terrasse','Exploration libre — archives sécurisées'];
-function refreshObjective(){$('objective').textContent=objectives[missionIndex];$('objCount').textContent=`0${Math.min(4,missionIndex)}/04`;const brief=$('objectivePanel');brief.classList.add('open');clearTimeout(window.__pwVesperBrief);window.__pwVesperBrief=setTimeout(()=>brief.classList.remove('open'),3800);}
+const objectives=['Réarmer le circuit de l’annexe de secours','Lire les archives médicales hors réseau','Relever la liaison câblée de l’atelier, puis neutraliser la balise ORDRE','Atteindre le relais A3 sur la terrasse','Exploration libre — archives sécurisées'];
+function refreshObjective(){$('objective').textContent=combatWorld?.objective||objectives[missionIndex];$('objCount').textContent=`0${Math.min(4,missionIndex)}/04`;const brief=$('objectivePanel');brief.classList.add('open');clearTimeout(window.__pwVesperBrief);window.__pwVesperBrief=setTimeout(()=>brief.classList.remove('open'),3800);}
 let touch={moveX:0,moveY:0,sprint:false}, touchLook=null;
 const GAME_WEAPONS=[
  {name:'R9',mag:32,damage:18,cooldown:120,reload:1150,color:'#a2d7eb'},
@@ -1862,7 +1884,7 @@ async function boot(){try{
  buildScene();const atlas=createAtlas();const materialAtlas=await v5LoadMaterial();
  $('bootInfo').textContent='Initialisation du moteur WebGPU…';
  if(!new URLSearchParams(location.search).has('visit')){
-  const {createVesperCombat}=await import('./vesper-combat.js?v=3.48');
+  const {createVesperCombat}=await import('./vesper-combat.js?v=3.49');
   let renderFailed=false;
   const fail=error=>{
    console.warn('Vesper / échec du rendu, repli compatible :',error);
@@ -1892,7 +1914,7 @@ boot();
 (() => {
  const shadows=document.getElementById('shadowsToggle');
  const rain=document.getElementById('rainToggle');const audioBtn=document.getElementById('audioToggle');let ambient=null;
- document.body.classList.add('rainOn');
+ document.body.classList.toggle('rainOn',rain?.checked===true);
  shadows?.addEventListener('change',()=>{shadowsEnabled=shadows.checked;});
  rain?.addEventListener('change',()=>{atmosphericRain=rain.checked;document.body.classList.toggle('rainOn',atmosphericRain);});
  audioBtn?.addEventListener('click',async()=>{

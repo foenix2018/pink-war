@@ -121,6 +121,85 @@
       "mirror": "https://github.com/AetherRadar/operation-steel-tide/blob/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/rusty_painted_metal_rough_1k.jpg",
       "sourceSha256": "2d1c355c793c5886ef9dcecfc06da354e30218a84a9fe28de37741d2f2ed5aaa",
       "bytes": 15923
+    },
+    {
+      "file": "vesper-morning-sky.webp",
+      "asset": "kloppenheim_06_puresky",
+      "license": "CC0-1.0",
+      "source": "https://polyhaven.com/a/kloppenheim_06_puresky",
+      "mirror": "https://github.com/AetherRadar/operation-steel-tide/blob/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/kloppenheim_06_puresky_1k.hdr",
+      "sourceSha256": "206c67e3a1b992282821cf06662bdd69bbb4915c1c4444a66338a40d6a7d4e34",
+      "bytes": 14764,
+      "resolution": [
+        1024,
+        512
+      ],
+      "processing": "RGBE to SDR, tools/build-vesper-sky.py"
+    },
+    {
+      "file": "gravel_embedded_concrete_diff_512.jpg",
+      "asset": "gravel_embedded_concrete",
+      "license": "CC0-1.0",
+      "source": "https://polyhaven.com/a/gravel_embedded_concrete",
+      "mirror": "https://github.com/AetherRadar/operation-steel-tide/blob/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/gravel_embedded_concrete_diff_1k.jpg",
+      "sourceSha256": "3ea5b493379c4d30c02c04b93361d3e34f91ed04058ffb4ea915702f1cd17049",
+      "bytes": 85715
+    }
+  ],
+  "originalCompositions": [
+    {
+      "file": "vesper-concrete_diff_512.jpg",
+      "sourceKind": "Original Pink Wars wear masks with local CC0 fine grain; brick is original only",
+      "inputs": [
+        "assets/level1/textures/plaster-color.png",
+        "dist/assets/cc0/concrete_floor_diff_512.jpg"
+      ],
+      "tool": "tools/build-vesper-surfaces.py",
+      "sha256": "f390bdd6e0a7aaa2dad9d9010bef387188581725696167385c5203458ab5b95c",
+      "bytes": 55609
+    },
+    {
+      "file": "vesper-asphalt_diff_512.jpg",
+      "sourceKind": "Original Pink Wars wear masks with local CC0 fine grain; brick is original only",
+      "inputs": [
+        "assets/level1/textures/road-color.png",
+        "dist/assets/cc0/asphalt_03_diff_512.jpg"
+      ],
+      "tool": "tools/build-vesper-surfaces.py",
+      "sha256": "253882c8a4a1d39acaacc7fe9c83767bab5e5287acd40b9fd89de62a46c861c5",
+      "bytes": 37894
+    },
+    {
+      "file": "vesper-steel_diff_512.jpg",
+      "sourceKind": "Original Pink Wars wear masks with local CC0 fine grain; brick is original only",
+      "inputs": [
+        "assets/level1/textures/steel-color.png",
+        "dist/assets/cc0/rusty_painted_metal_diff_512.jpg"
+      ],
+      "tool": "tools/build-vesper-surfaces.py",
+      "sha256": "2ff2ba775e95ab17461c0b29c19411aa76b6934758a710d539d76535b9c9bb82",
+      "bytes": 23486
+    },
+    {
+      "file": "vesper-paint_diff_512.jpg",
+      "sourceKind": "Original Pink Wars wear masks with local CC0 fine grain; brick is original only",
+      "inputs": [
+        "assets/level1/textures/car-cream-color.png",
+        "dist/assets/cc0/rusty_painted_metal_diff_512.jpg"
+      ],
+      "tool": "tools/build-vesper-surfaces.py",
+      "sha256": "4df99c64dff0c86f27308c670e271b0cd5c8c4400911149046fd802085468965",
+      "bytes": 34376
+    },
+    {
+      "file": "vesper-brick_diff_512.jpg",
+      "sourceKind": "Original Pink Wars wear masks with local CC0 fine grain; brick is original only",
+      "inputs": [
+        "assets/level1/textures/brick-color.png"
+      ],
+      "tool": "tools/build-vesper-surfaces.py",
+      "sha256": "78bac43979d9c83fb9e633251e0d7536d4a022fd5aca4cf23ebcfb3b605cc745",
+      "bytes": 29920
     }
   ]
 }

@@ -20,8 +20,10 @@ import {installPhotographicSurfaces,PHOTO_SURFACES} from './photographic-surface
 import {attachCampaignStory} from './story-chapters.js';
 import {DesktopGamepadInput} from './desktop-input.js';
 import {createFireBuffer} from './fire-input.js';
+import {createVesperAtmosphere,createVesperArt,replacementTriangles,vesperArtColliders} from './vesper-art.js';
 
-export function buildVesperGeometry(source){
+export function buildVesperGeometry(source,{art=false}={}){
+  const skip=replacementTriangles(source,art);
   const data=source.data(),count=data.vertices.length/12,uv=new Float32Array(count*2),groups=new Map();
   const geometry=new T.BufferGeometry(),colors=new Float32Array(count*3),positions=new Float32Array(count*3),normals=new Float32Array(count*3);
   geometry.setAttribute('position',new T.BufferAttribute(positions,3));
@@ -31,7 +33,10 @@ export function buildVesperGeometry(source){
     const k=i*12,m=Math.round(data.vertices[k+11]),x=data.vertices[k],y=data.vertices[k+1],z=data.vertices[k+2];
     for(let j=0;j<3;j++){positions[i*3+j]=data.vertices[k+j];normals[i*3+j]=data.vertices[k+3+j];}
     const photographed=[0,1,2,9,10,13].includes(m),mean=(data.vertices[k+6]+data.vertices[k+7]+data.vertices[k+8])/3;
-    for(let j=0;j<3;j++)colors[i*3+j]=photographed?.82+(data.vertices[k+6+j]-mean)*.65:data.vertices[k+6+j];
+    for(let j=0;j<3;j++){
+      const raw=data.vertices[k+6+j],muted=art&&[5,6,7,12,15].includes(m);
+      colors[i*3+j]=photographed?.68+(raw-mean)*.3:Math.pow(muted?mean*.75+raw*.25:raw,1.8);
+    }
     if(m===30){uv[i*2]=data.vertices[k+9];uv[i*2+1]=1-data.vertices[k+10];}
     else{
       const scale=m===2?PHOTO_SURFACES.asphalt.scale:m===1?PHOTO_SURFACES.metal.scale:PHOTO_SURFACES.concrete.scale;
@@ -41,12 +46,25 @@ export function buildVesperGeometry(source){
   }
   for(let i=0;i<data.indices.length;i+=3){
     const k=data.indices[i]*12;let m=Math.round(data.vertices[k+11]);
-    if(m===1&&data.vertices[k+6]>data.vertices[k+8]*1.25&&data.vertices[k+7]<.32)m=13;
+    if(skip(i,m))continue;
+    if(m===1&&data.vertices[k+6]>data.vertices[k+8]*1.25&&data.vertices[k+7]<.32)m=17;
     if(!groups.has(m))groups.set(m,[]);groups.get(m).push(data.indices[i],data.indices[i+1],data.indices[i+2]);
   }
-  const index=new Uint32Array(data.indices.length),ids=[];let offset=0;
+  const index=new Uint32Array([...groups.values()].reduce((n,g)=>n+g.length,0)),ids=[];let offset=0;
   for(const [id,values] of groups){index.set(values,offset);geometry.addGroup(offset,values.length,ids.length);offset+=values.length;ids.push(id);}
-  geometry.setIndex(new T.BufferAttribute(index,1));geometry.setAttribute('uv',new T.BufferAttribute(uv,2));geometry.computeBoundingSphere();
+  geometry.setIndex(new T.BufferAttribute(index,1));geometry.setAttribute('uv',new T.BufferAttribute(uv,2));
+  if(art){
+    // Removed skins must not keep hundreds of thousands of unused vertices in
+    // mobile GPU buffers. Reindex retained vertices without changing positions.
+    const remap=new Int32Array(count).fill(-1),used=[];
+    for(let i=0;i<index.length;i++){const old=index[i];if(remap[old]===-1){remap[old]=used.length;used.push(old);}index[i]=remap[old];}
+    for(const name of ['position','normal','color','uv']){
+      const original=geometry.getAttribute(name),values=new Float32Array(used.length*original.itemSize);
+      for(let i=0;i<used.length;i++)for(let k=0;k<original.itemSize;k++)values[i*original.itemSize+k]=original.array[used[i]*original.itemSize+k];
+      geometry.setAttribute(name,new T.BufferAttribute(values,original.itemSize));
+    }
+  }
+  geometry.computeBoundingSphere();
   return {geometry,ids,triangles:index.length/3};
 }
 
@@ -59,45 +77,50 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   canvas=prepared.canvas;onCanvas(canvas);const renderer=prepared.renderer;
   renderer.onDeviceLost=info=>onFailure(new Error('Périphérique graphique perdu : '+(info?.message||info?.reason||'WebGPU')));
   canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();onFailure(new Error('Contexte WebGL perdu'));});
-  renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.22;
+  renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.84;
   renderer.shadowMap.enabled=profile.shadows;renderer.shadowMap.type=T.PCFShadowMap;
   renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;
-  const scene=new T.Scene();scene.background=new T.Color(0x152237);scene.fog=new T.FogExp2(0x152237,.0036);
+  const scene=new T.Scene();
   const camera=new T.PerspectiveCamera(64,innerWidth/innerHeight,.065,650);scene.add(camera);
   const torchTarget=new T.Object3D();torchTarget.position.set(0,0,-5);camera.add(torchTarget);
-  const torch=new T.SpotLight(0xc8e8ff,65,27,.42,.6,1.7);torch.target=torchTarget;camera.add(torch);
-  const hemi=new T.HemisphereLight(0xabbddc,0x22272b,2.4);scene.add(hemi);
-  const sun=new T.DirectionalLight(0xd2def3,2.25);sun.position.set(65,125,75);scene.add(sun);
-  sun.castShadow=profile.shadows;sun.shadow.mapSize.set(2048,2048);sun.shadow.normalBias=.06;
-  Object.assign(sun.shadow.camera,{left:-78,right:78,top:105,bottom:-105,near:1,far:290});sun.shadow.bias=-.0003;
-  // A small local reflection environment makes brushed metal and the real gun
-  // materials respond to the sky without screen-space reflections or a CDN.
-  const skyCanvas=document.createElement('canvas');skyCanvas.width=512;skyCanvas.height=256;
-  const skyContext=skyCanvas.getContext('2d'),skyGradient=skyContext.createLinearGradient(0,0,0,256);
-  skyGradient.addColorStop(0,'#18283f');skyGradient.addColorStop(.48,'#aac3db');skyGradient.addColorStop(.56,'#5c6978');skyGradient.addColorStop(1,'#1d232c');
-  skyContext.fillStyle=skyGradient;skyContext.fillRect(0,0,512,256);skyContext.fillStyle='#f3e1ca';skyContext.fillRect(62,95,70,5);
-  const environment=new T.CanvasTexture(skyCanvas);environment.mapping=T.EquirectangularReflectionMapping;environment.colorSpace=T.SRGBColorSpace;scene.environment=requestedQuality==='low'?null:environment;scene.environmentIntensity=.8;
+  const torch=new T.SpotLight(0xffefd4,22,22,.38,.72,2);torch.target=torchTarget;camera.add(torch);
+  const atmosphere=createVesperAtmosphere(T,scene,renderer,profile);
+  // The native player and the production ballistics share the exact same
+  // opened facade; no invisible full-wall proxy remains across a broken bay.
+  const artColliders=vesperArtColliders(collide);collide.splice(0,collide.length,...artColliders);
   const signTexture=new T.CanvasTexture(signAtlas);signTexture.colorSpace=T.SRGBColorSpace;
-  const photoTargets={concrete:[],asphalt:[],metal:[],rust:[]};
+  const photoTargets={concrete:[],asphalt:[],metal:[],rust:[],brick:[]};
   function meshFor(source,name){
-    const {geometry,ids,triangles}=buildVesperGeometry(source);
+    const {geometry,ids,triangles}=buildVesperGeometry(source,{art:source===staticMesh});
     const mats=ids.map(id=>{
-      if(id===30)return new T.MeshBasicMaterial({map:signTexture,color:0xffffff,side:T.DoubleSide,toneMapped:false});
+      if(id===30)return new T.MeshStandardMaterial({map:signTexture,color:0x9d9b8e,roughness:.85,side:T.DoubleSide});
       const luminous=[5,6,7,11,12].includes(id);
       const material=new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,side:T.DoubleSide,
-        roughness:id===1?.4:id===9?.24:.83,metalness:id===1?.7:id===9?.15:.02,
-        emissive:id===5||id===11?0xff3598:id===6?0x48bfff:id===7?0xffad52:id===12?0xff3a2d:0x000000,emissiveIntensity:luminous?1.25:0});
+        roughness:id===1?.68:id===9?.28:.9,metalness:id===1?.42:id===9?.08:.02,
+        emissive:id===5||id===11?0xff3598:id===6?0x48bfff:id===7?0xffad52:id===12?0xff3a2d:0x000000,emissiveIntensity:id===11?.42:id===7?.055:luminous?.012:0});
       material.shadowSide=T.FrontSide;
-      if(!luminous&&![3,4,8].includes(id))photoTargets[id===2||id===9?'asphalt':id===1?'metal':id===13?'rust':'concrete'].push(material);
+      if(id===3){material.color.setHex(0x283537);material.roughness=.35;material.metalness=.22;}
+      if(id===14){material.color.setHex(0x7a7365);material.roughness=.98;}
+      if(!luminous&&![3,4,8,14,15].includes(id))photoTargets[id===2||id===9?'asphalt':id===1?'metal':id===17?'rust':id===13?'brick':'concrete'].push(material);
       return material;
     });
     const mesh=new T.Mesh(geometry,mats);mesh.name=name;mesh.receiveShadow=true;mesh.castShadow=!profile.phone;scene.add(mesh);
     return {mesh,triangles};
   }
   const terrain=meshFor(staticMesh,'M01 / Vesper V7 reference geometry');
-  const gate=meshFor(portalMesh,'M01 / industrial Fracture');gate.mesh.position.set(0,11,-111);
-  const pbr=installPhotographicSurfaces(T,photoTargets,{performance:profile.phone||requestedQuality==='low'});
-  for(const [x,y,z,color,power,range] of [[-19,4,12,0x66d5ff,95,16],[23,5,16,0xffaa5e,100,20],[-20,8,-28,0x64baff,110,24],[0,10,-104,0xff399a,220,38]]){
+  const gate=meshFor(portalMesh,'M01 / industrial Fracture');gate.mesh.position.set(0,11,-111);gate.mesh.visible=false; // The giant Fracture reveal belongs to later acts, not W01.
+  // The independent legacy visit has its own page. Combat needs its final GPU
+  // geometry and semantic ranges, not the old duplicated JS number arrays.
+  if(Array.isArray(staticMesh.v))staticMesh.v.length=0;
+  if(Array.isArray(staticMesh.i))staticMesh.i.length=0;
+  const art=createVesperArt(T,scene,{collide,ranges:staticMesh.artRanges,performance:profile.phone||requestedQuality==='low'});
+  for(const key of Object.keys(photoTargets))photoTargets[key].push(...(art.pbrTargets[key]||[]));
+  new T.TextureLoader().load('./assets/cc0/vesper-brick_diff_512.jpg',texture=>{
+    texture.wrapS=texture.wrapT=T.RepeatWrapping;texture.colorSpace=T.SRGBColorSpace;
+    for(const material of photoTargets.brick){material.map=texture;material.roughness=.94;material.metalness=0;material.needsUpdate=true;}
+  });
+  const pbr=installPhotographicSurfaces(T,photoTargets,{performance:profile.phone||requestedQuality==='low',weathered:true});
+  for(const [x,y,z,color,power,range] of [[-19,4,12,0xe5ba7c,24,11],[23,5,16,0xffc38c,30,14],[-20,8,-28,0xd8c4a4,20,12],[0,10,-104,0xff69a8,48,22]]){
     const light=new T.PointLight(color,power,range,2);light.position.set(x,y,z);scene.add(light);
   }
   const obstacles=collide.map(c=>({x:(c.x1+c.x2)/2,z:(c.z1+c.z2)/2,y:Math.max(0,c.y1),hx:(c.x2-c.x1)/2,hz:(c.z2-c.z1)/2,
@@ -121,7 +144,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const gamepadInput=new DesktopGamepadInput();
   const fireInput=createFireBuffer();
   const companion=createAICompanion(T,scene,characterId);companion.root.visible=false;
-  let rig=null,gun=null,ready=false,pending=false,lastTime=0,lastPosition=null,held=false,ads=0,phase=0,portalTimer=-1,spawnQueue=[],lastSpawn=0,completed=false,portalSite={x:0,z:32};
+  let rig=null,gun=null,ready=false,pending=false,lastTime=0,lastPosition=null,held=false,ads=0,phase=0,workshopRead=false,portalTimer=-1,spawnQueue=[],lastSpawn=0,completed=false,portalSite={x:0,z:32};
   // Actual RLH hands and production weapon geometry are already present while
   // the full canonical soldier rig decodes; there is no CSS weapon substitute.
   gun=buildGun({mats:starterMaterials,gloves:starterGloves,makeFlash:parent=>{
@@ -147,17 +170,34 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       aimHeight:form==='probe'?.3:1.4,hitRadius:form==='probe'?.44:1.05,elevation:form==='probe'?2.1:0,awareness:'patrol',lastKnownX:x,lastKnownZ:z});
     return true;
   }
-  function patrol(){for(const p of [[-1,39,'synth'],[6,27,'stalker'],[-3,2,'scuttler'],[4,-13,'probe'],[3,-42,'seer'],[-4,-59,'bulwark']])spawn(...p);}
+  function patrol(){for(const p of [[-1,39,'synth'],[6,27,'stalker'],[-3,2,'scuttler'],[4,-13,'probe'],[3,-42,'seer'],[-4,-59,'bulwark'],[6,-5,'synth'],[-6,-25,'stalker']])spawn(...p);}
   const gateLight=new T.PointLight(0xff3e9e,0,24,2);scene.add(gateLight);
   const tacticalGate=new T.Group();tacticalGate.name='ORDRE / industrial reinforcement portal';tacticalGate.visible=false;scene.add(tacticalGate);
   const rim=new T.Mesh(new T.TorusGeometry(1.4,.16,8,36),materials.iron);tacticalGate.add(rim);
   const membrane=new T.Mesh(new T.CircleGeometry(1.3,36),new T.MeshBasicMaterial({color:0xff478f,transparent:true,opacity:.28,side:T.DoubleSide,depthWrite:false,toneMapped:false}));tacticalGate.add(membrane);
   const portalMarker=document.createElement('div');portalMarker.setAttribute('aria-label','Direction du portail ORDRE');portalMarker.hidden=true;
   portalMarker.style.cssText='position:fixed;top:max(58px,env(safe-area-inset-top));width:7px;height:7px;border-radius:50%;background:#ff72b4;box-shadow:0 0 10px #ff3388;pointer-events:none;z-index:4';document.body.append(portalMarker);
+  const objectiveMarker=document.createElement('div');objectiveMarker.setAttribute('aria-label','Direction de l’objectif');
+  objectiveMarker.style.cssText='position:fixed;top:max(42px,env(safe-area-inset-top));width:5px;height:5px;border-radius:50%;background:#d8c6a0;opacity:.75;pointer-events:none;z-index:4';document.body.append(objectiveMarker);
+  function objective(){
+    if(phase===0)return {x:-8,z:10.5,text:'Réarmer le circuit de l’annexe de secours'};
+    if(phase===1)return {x:-26,z:15,text:'Consulter le journal humain hors réseau'};
+    if(phase===2&&!workshopRead)return {x:22,z:20,text:'Atelier : retrouver la liaison câblée vers A3'};
+    if(phase===2)return {x:7,z:-48,text:'Carrefour : neutraliser la balise ORDRE'};
+    if(phase===3&&game.enemies.length){
+      const foe=game.enemies.reduce((a,b)=>Math.hypot(a.x-game.player.x,a.z-game.player.z)<Math.hypot(b.x-game.player.x,b.z-game.player.z)?a:b);
+      return {x:foe.x,z:foe.z,text:'Sécuriser le carrefour avant de rejoindre le relais'};
+    }
+    if(phase===3&&spawnQueue.length)return {...portalSite,text:'Repousser les derniers renforts ORDRE'};
+    return {x:-17.5,z:-29.5,text:'Escalier ou monte-charge : rejoindre le relais A3'};
+  }
   function reinforcements(){
-    portalTimer=game.time+3.5;lastSpawn=portalTimer;spawnQueue=['probe','synth','stalker','scuttler','seer','brute'];
+    portalTimer=game.time+3.5;lastSpawn=portalTimer;
+    // Eight opening patrols, then three bounded groups of eight. Queue, do not
+    // overwrite, if an efficient player reaches the next console early.
+    spawnQueue.push('probe','synth','stalker','scuttler','seer','brute','synth','bulwark');
     portalSite=phase>=3?{x:0,z:-72}:{x:0,z:32};tacticalGate.position.set(portalSite.x,1.6,portalSite.z);tacticalGate.visible=true;
-    gateLight.position.set(portalSite.x,3,portalSite.z);gateLight.intensity=130;
+    gateLight.position.set(portalSite.x,3,portalSite.z);gateLight.intensity=48;
     notify('PORTE ORDRE À DISTANCE — RENFORTS EN APPROCHE',2600);
   }
   const v=new T.Vector3(),forward=new T.Vector3(),origin=new T.Vector3(),end=new T.Vector3();
@@ -209,14 +249,14 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       }
       lastSpawn=game.time+.9;
     }
-    gateLight.intensity=portalTimer>game.time?110+35*Math.sin(game.time*5):spawnQueue.length?45:0;
+    gateLight.intensity=portalTimer>game.time?38+10*Math.sin(game.time*5):spawnQueue.length?18:0;
     tacticalGate.visible=gateLight.intensity>0;membrane.rotation.z=game.time*.35;portalMarker.hidden=!tacticalGate.visible;
     if(tacticalGate.visible){
       const bearing=Math.atan2(portalSite.x-p.x,-(portalSite.z-p.z))-s.yaw;
       const angle=Math.atan2(Math.sin(bearing),Math.cos(bearing));portalMarker.style.left=(50+Math.max(-42,Math.min(42,angle*30)))+'%';
     }
     for(const e of game.enemies){
-      if(!enemyModels.has(e.id)){const model=enemyFactory.create(e.elite,e.ranged,e.form);enemyModels.set(e.id,model);scene.add(model);}
+      if(!enemyModels.has(e.id)){const model=enemyFactory.create(e.elite,e.ranged,e.form);model.traverse(o=>{if(o.isMesh){o.castShadow=profile.shadows;o.receiveShadow=true;}});enemyModels.set(e.id,model);scene.add(model);}
       const model=enemyModels.get(e.id);model.position.set(e.x,e.elevation,e.z);model.rotation.y=e.yaw||0;model.userData.animate?.(game.time,e.phase,true,e,game.time);
     }
     for(const [id,model] of enemyModels)if(!game.enemies.some(e=>e.id===id)){scene.remove(model);enemyModels.delete(id);}
@@ -234,6 +274,9 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       }
       if(event.type==='companion-assist')notify(companion.name+' · '+(event.kind==='heal'?'SOIN LOCAL':event.kind==='shield'?'INTERCEPTION':'APPUI TACTIQUE'),1000);
     }
+    const target=objective(),bearing=Math.atan2(target.x-p.x,-(target.z-p.z))-s.yaw;
+    const objectiveAngle=Math.atan2(Math.sin(bearing),Math.cos(bearing));
+    objectiveMarker.style.left=(50+Math.max(-42,Math.min(42,objectiveAngle*30)))+'%';objectiveMarker.hidden=completed||s.free;
     effects.update(game,dt,camera);
     if(gun?.userData.flash)gun.userData.flash.visible=feel.state.kick>.025&&!game.weapon.melee;
     const active=game.state==='playing';
@@ -250,20 +293,27 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   }
   function onInteract(action){
     if(completed||game.state!=='playing')return false;
-    if(action==='power'&&phase===0){phase=1;reinforcements();return true;}
+    if(action==='power'&&phase===0){phase=1;return true;}
     if(action==='archive'){
       if(phase<1){notify('RÉTABLIR LE COURANT DE L’ANNEXE');return false;}
       game.invulnerable=Math.max(game.invulnerable,5);
       for(const e of game.enemies)if(Math.hypot(e.x-game.player.x,e.z-game.player.z)<25)e.stunnedUntil=game.time+5;
-      phase=Math.max(phase,2);notify(companion.name.toUpperCase()+' · LIAISON LOCALE INDÉPENDANTE D’ORDRE',2600);return true;
+      const firstRead=phase<2;phase=Math.max(phase,2);if(firstRead)reinforcements();
+      notify(companion.name.toUpperCase()+' · LIAISON LOCALE INDÉPENDANTE D’ORDRE',2600);return true;
+    }
+    if(action==='workshop'){
+      if(phase<2){notify('RELEVER D’ABORD LE JOURNAL DU CENTRE MÉDICAL');return false;}
+      if(!workshopRead)reinforcements();workshopRead=true;
+      notify('LIAISON CÂBLÉE A3 — COUPER LA BALISE DU CARREFOUR');return true;
     }
     if(action==='beacon'){
+      if(phase>=2&&!workshopRead){notify('ATELIER : IDENTIFIER D’ABORD LA LIAISON CÂBLÉE VERS A3');return false;}
       if(phase<2){notify('CONSULTER D’ABORD L’ARCHIVE HUMAINE');return false;}
-      phase=3;reinforcements();return true;
+      if(phase<3){phase=3;reinforcements();}return true;
     }
     if(action==='archives'){
       if(phase<3){notify('NEUTRALISER LA BALISE ORDRE AVANT D’UTILISER LE RELAIS');return false;}
-      if(game.enemies.some(e=>e.awareness==='engaged'&&Math.hypot(e.x-game.player.x,e.z-game.player.z)<16)){notify('SÉCURISER LES ABORDS DU RELAIS');return false;}
+      if(game.enemies.length||spawnQueue.length){notify('SÉCURISER LE QUARTIER AVANT D’UTILISER LE RELAIS');return false;}
       phase=4;completed=true;held=false;music.pause();ambience?.pause();document.exitPointerLock?.();
       const dialog=document.createElement('dialog');dialog.id='end-dialog';dialog.innerHTML='<h2>LE DERNIER SIGNAL</h2><p>Une trace humaine. Une nouvelle destination.</p><button id="retry-button">RETOUR AU MENU</button>';
       document.body.append(dialog);attachCampaignStory(dialog,{level:1,characterId});dialog.querySelector('#retry-button').onclick=()=>location.assign('./index.html');dialog.showModal();
@@ -272,7 +322,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   }
   // Validate a real terrain frame while the loading card is still displayed.
   // A published GPU API or a running simulation alone cannot prove rendering.
-  syncCamera(getState(),0);
+  syncCamera(getState(),0);atmosphere.update(0,camera,{day:getState().day,shadows:profile.shadows});
   renderer.setSize(innerWidth,innerHeight,false);
   try{
     if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);
@@ -284,6 +334,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   }catch(error){onFailure(error);throw error;}
   return {
     kind:renderer.isWebGLRenderer?'WebGL 2 · COMBAT V8':'WebGPU · COMBAT V8',managedResolution:true,
+    get objective(){return objective().text;},
     get playing(){return game.state==='playing'&&!completed;},
     get ambienceEnabled(){return ambientEnabled&&sound;},
     toggleAmbience(){ambientEnabled=!ambientEnabled;if(ambientEnabled)audioReady();return ambientEnabled&&sound;},
@@ -303,17 +354,16 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     update(dt){update(dt,getState());},
     draw(t){
       if(pending)return;const s=getState();syncCamera(s,Math.min(.05,t-lastTime||.016));lastTime=t;gate.mesh.rotation.z=t*.052;
-      sun.intensity=1.4+s.day*2.4;hemi.intensity=1.8+s.day*1.5;
       torch.visible=s.flashlight!==false;
       const shadows=profile.shadows&&s.shadows!==false&&s.quality!=='performance';
-      if(renderer.shadowMap.enabled!==shadows){renderer.shadowMap.enabled=shadows;renderer.shadowMap.needsUpdate=true;}
+      atmosphere.update(t,camera,{shadows,day:s.day});
       try{const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);if(result?.then){pending=true;result.then(()=>pending=false).catch(error=>{pending=false;onFailure(error);});}}
       catch(error){onFailure(error);}
     },
-    snapshot(){return {revision:'3.48',characterId,phase,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
+    snapshot(){return {revision:'3.49',characterId,phase,workshopRead,reinforcements:spawnQueue.length,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
       capacity:game.weapon.capacity,enemies:game.enemies.length,hostileProjectiles:game.bullets.filter(b=>b.hostile).length,shots:game.bullets.filter(b=>!b.hostile).length,
       kills:game.kills,rig:!!rig,gun:!!gun,backend:renderer.isWebGLRenderer?'webgl':'webgpu',triangles:terrain.triangles,
-      pbr:{...pbr.stats},effects:effects.stats(),companion:companion.snapshot(),position:{...getState().position},
+      art:{...art.stats},lighting:{exposure:renderer.toneMappingExposure,ambient:atmosphere.ambient.intensity,sun:atmosphere.sun.intensity},pbr:{...pbr.stats},effects:effects.stats(),companion:companion.snapshot(),position:{...getState().position},
       hostiles:game.enemies.map(e=>({id:e.id,x:e.x,y:e.elevation+e.aimHeight,z:e.z,hp:e.hp,awareness:e.awareness})),render:renderer.info.render};}
   };
 }
