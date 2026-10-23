@@ -49,7 +49,7 @@ test('hits report the physical material, face normal and weapon for coherent eff
   const g=new ArenaGame([{x:0,z:18,hx:3,hz:.2,height:3,surface:'metal'}]);g.nextWave=999;
   g.shoot({x:0,y:1.2,z:22},{x:0,y:0,z:-1});advance(g,.1);
   const impact=g.drainEvents().find(e=>e.type==='impact');
-  assert.equal(impact.surface,'metal');assert.equal(impact.weapon,'r9');assert.deepEqual(impact.normal,{x:0,y:0,z:1});
+  assert.equal(impact.surface,'metal');assert.equal(impact.weapon,'duor9');assert.deepEqual(impact.normal,{x:0,y:0,z:1});
 });
 test('a jump below a low overhead deck hits its underside',()=>{
   const g=new ArenaGame([{x:0,z:22,hx:3,hz:3,y:2.2,height:.2,walkableSurface:true}]);g.nextWave=999;

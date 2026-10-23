@@ -31,7 +31,7 @@ test('each portal site is clear and enemy navigation reaches laboratory and nort
  const origin={x:0,y:1.3,z:72},throughWall={x:-8,y:1.3,z:68};assert.ok(boxes.some(b=>segmentBox(origin,throughWall,b)!==null));
 });
 test('the map supports all three encounters with real bullets and cover intact',()=>{
- const g=new CampaignLevel1(createLevel1Obstacles(),()=>.5);g.invulnerable=10000;
+ const g=new CampaignLevel1(createLevel1Obstacles(),()=>.5);g.selectWeapon(0);g.cooldown=0;g.invulnerable=10000;
  Object.assign(g.player,{x:-6,z:63.6});assert.equal(g.interact(),true);Object.assign(g.player,{x:0,z:56.5});assert.equal(g.interact(),true);
  walk(g,2.3,56.5);walk(g,2.3,51.5);walk(g,0,47);step(g,6);
  function defeat(stage){let n=0;while(g.stage===stage&&n++<6000){

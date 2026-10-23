@@ -103,7 +103,7 @@ test('a profile is extruded across its width, with the outline along z and y', (
 
 test('every weapon is drawn around the grip: the origin is inside the model and the muzzle is its front', () => {
   const models = createWeaponModels(mats());
-  assert.equal(models.length,7);assert.equal(WEAPON_FRAME.length,7);
+  assert.equal(models.length,8);assert.equal(WEAPON_FRAME.length,8);
   models.forEach((model, index) => {
     const frame = WEAPON_FRAME[index], b = box(model);
     assert.ok(b.containsPoint(new T.Vector3(0, 0, 0)), `${frame.id}: the palm is inside the weapon's bounds`);
@@ -111,8 +111,8 @@ test('every weapon is drawn around the grip: the origin is inside the model and 
     assert.ok(frame.muzzle[1] > 0 && frame.muzzle[1] < b.max.y + 1e-6, `${frame.id}: the barrel sits above the grip`);
     assert.ok(b.max.z < (frame.id==='m12'?.35:.21), `${frame.id}: the stock stays short of the shooter's face`);
     let meshes = 0; model.traverse(o => { if (o.isMesh) { meshes++; assert.ok(finite(o.geometry)); } });
-    assert.ok(meshes >= 3 && meshes <= 9, `${frame.id}: merged into a handful of meshes (${meshes})`);
-    if (frame.support) assert.ok(frame.support[2] < -.15 && frame.support[2] > b.min.z, `${frame.id}: the free hand holds the front half`);
+    assert.ok(meshes >= 3 && meshes <= (frame.dual?18:9), `${frame.id}: merged into a handful of meshes (${meshes})`);
+    if (frame.support&&!frame.dual) assert.ok(frame.support[2] < -.15 && frame.support[2] > b.min.z, `${frame.id}: the free hand holds the front half`);
   });
   assert.equal(WEAPON_FRAME.filter(f=>!f.support).length,2,'pistol and sabre are one-handed');
 });
@@ -143,7 +143,7 @@ test('the gun carries the glove, the muzzle glow and a second glove only for two
     gun.userData.setVariant(i);
     assert.equal(gun.userData.index, i); assert.deepEqual(gun.userData.flash.position.toArray(), [...frame.muzzle]);
     assert.equal(gun.userData.support.visible, !!frame.support);
-    if (frame.support) assert.deepEqual(gun.userData.support.position.toArray(), [...frame.support]);
+    if (frame.support) assert.deepEqual(gun.worldToLocal(gun.userData.support.getWorldPosition(new T.Vector3())).toArray(), [...frame.support]);
     assert.equal(gun.children.filter(c => c.visible && c.userData.frame).length, 1, 'one weapon model at a time');
   });
   gun.userData.showSupport = false; gun.userData.setVariant(1); assert.equal(gun.userData.support.visible, false, 'the free controller of a headset is the free hand');

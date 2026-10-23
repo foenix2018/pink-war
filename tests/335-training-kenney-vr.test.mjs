@@ -29,7 +29,7 @@ test('the isolated training range has no portal or survival art and survives Web
 
 test('VR main hand stays curled over the primary grip and support hand attaches within reach',()=>{
  const src=readFileSync(new URL('../dist/vr.js',import.meta.url),'utf8');
- assert.match(src,/grip:Math\.max\(\.92,this\.handPose\.mainGrip\)/);
+ assert.match(src,/grip:Math\.max\(\.92,isMain\?this\.handPose\.mainGrip:this\.handPose\.sideGrip\)/);
  assert.match(src,/linked=target\.distanceTo\(wrist\)<\.24/);
- assert.match(src,/c\.gun\.visible=isMain&&\(!holster\?\.visible\|\|holster\.position\.y<-\.56\)/);
+ assert.match(src,/c\.gun\.visible=armed&&\['left','right'\]\.includes\(physicalHand\)&&\(!holster\?\.visible\|\|holster\.position\.y<-\.56\)/);
 });

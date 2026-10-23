@@ -153,7 +153,7 @@ export function createRLHSoldier(kit,createGun,profile){
   const arms=['Left','Right'].map(side=>({side,shoulder:bone(side+'Arm'),upper:bone(side+'Arm'),fore:bone(side+'ForeArm'),hand:bone(side+'Hand'),elbow:new T.Vector3(),wrist:new T.Vector3()}));
   const armor=createAegisArmor(actor,kit,profile);
   const chestRest=body.getWorldPosition(new T.Vector3());let level=1,weapon=0,anchor=new T.Vector3(),low=0,gait=0,recoilBody=0,carry=0,previewCarry=false;
-  const supported=()=>!!WEAPON_FRAME[weapon].support&&!previewCarry;
+  const supported=()=>!!WEAPON_FRAME[weapon].dual||!!WEAPON_FRAME[weapon].support&&!previewCarry;
   const soleSamples=[];
   for(const mesh of actor.parts){if(mesh.name!=='RLH rubber')continue;const p=mesh.geometry.attributes.position;
     for(const sign of [-1,1]){const candidates=[];for(let i=0;i<p.count;i++)if(p.getY(i)<.07&&p.getX(i)*sign>.05)candidates.push(i);

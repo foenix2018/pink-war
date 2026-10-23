@@ -101,6 +101,7 @@ function oscillator(ctx,output,time,wave,start,end,length,amp,space){
   remember(space,osc,[osc,v]);
 }
 export function playLaserShot(ctx,weapon='r9',power=1){
+  if(weapon==='duor9')weapon='r9';
   if(!ctx||ctx.state!=='running')return false;
   const space=spaceFor(ctx);if(!space.enabled)return false;
   stopCharge(space,ctx.currentTime);

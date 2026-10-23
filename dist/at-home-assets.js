@@ -63,8 +63,10 @@ export async function createAtHomeAssets(scene, hero) {
   const gun=player.makeGun({sleeve:true});
   gun.userData.showSupport=false;gun.userData.support.visible=false;
   gun.userData.setVariant(starterWeaponIndex(hero.id));
+  const offGun=player.makeGun({sleeve:true});offGun.name='GHJU / pistolet gauche suivi';offGun.scale.x=-1;
+  offGun.userData.showSupport=false;offGun.userData.setVariant(starterWeaponIndex(hero.id));offGun.visible=false;
   const freeHand=createGlove(player.kit.gloves,{mirror:true});
-  gun.userData.hand.userData.extendForearm();freeHand.userData.extendForearm();
+  gun.userData.hand.userData.extendForearm();offGun.userData.hand.userData.extendForearm();freeHand.userData.extendForearm();
   // The player sees their actual Pink War gun/gloves in first person.
   // Their sibling is the real animated character model, not a substitute mannequin.
   const companion=createSoldier(companionKit.kit,companionKit.makeGun,other);
@@ -93,24 +95,32 @@ export async function createAtHomeAssets(scene, hero) {
   let lastCompanionAnimation=-1;
 
   return {
-    hero,other,player,gun,freeHand,portal,companion,architecture,portals,offers,
+    hero,other,player,gun,offGun,freeHand,portal,companion,architecture,portals,offers,
     makeEnemy(form='stalker',elite=false,ranged=false) {
       return enemyFactory.create(elite,ranged,form);
     },
     setWeapon(index,level=1) {
       gun.userData.setVariant(index);
       gun.userData.setLevel(level);
+      offGun.userData.setVariant(index);offGun.userData.setLevel(level);
       companion.setLevel(level);
       companion.setWeapon(index);
     },
     animate(time,dt,level,gunState={}) {
       if(time<lastCompanionAnimation)lastCompanionAnimation=-1;
       const idx=gun.userData.index || 0;
-      gun.userData.setCombatState?.({...gunState,bladeHeld:idx===5&&(gunState.trigger||0)>.15});
+      const dual=idx===7;
+      gun.userData.setCombatState?.({...gunState,dualState:dual?{...gunState.dualState,shotAt:{right:gunState.dualState?.shotAt?.right??-Infinity,left:-Infinity}}:null,bladeHeld:idx===5&&(gunState.trigger||0)>.15});
       gun.userData.animateHands?.(gunState.trigger||0,gunState.grip??.64,gunState.reload||0,dt);
       const offGrip=gunState.offGrip||0,offTrigger=gunState.offTrigger||0;
+      if(dual){
+        offGun.userData.setCombatState({...gunState,dualState:{...gunState.dualState,shotAt:{right:gunState.dualState?.shotAt?.left??-Infinity,left:-Infinity}}});
+        offGun.userData.hand.userData.animate({trigger:offTrigger,grip:Math.max(.92,offGrip)},dt,-1);
+        offGun.rotation.copy(gun.rotation);offGun.position.copy(gun.position);
+        offGun.userData.setFlash(!!gunState.flash,time);
+      }
       freeHand.userData.animate?.({trigger:offTrigger,grip:offGrip,relax:(1-offGrip)*(1-offTrigger)*.5},dt);
-      gun.userData.flash.visible=!!gunState.flash;
+      gun.userData.setFlash(!!gunState.flash,time);
       if (time-lastCompanionAnimation>.055) {
         companion.animate(time,false,0,0,0,Math.min(.09,time-lastCompanionAnimation),{preview:false});
         lastCompanionAnimation=time;
@@ -156,7 +166,7 @@ export async function createAtHomeAssets(scene, hero) {
       architecture.disposeDecor(record);
     },
     dispose() {
-      this.hideDecor();gun.userData.disposeDynamic?.();freeHand.userData.dispose?.();
+      this.hideDecor();gun.userData.disposeDynamic?.();offGun.userData.disposeDynamic?.();freeHand.userData.dispose?.();
       companion.dispose?.();scene.remove(companion.root,portal);architecture.dispose();
       for(const material of [ruin.concrete,ruin.metal,ruin.road,ruin.glow,portalMaterial,innerMaterial]) material.dispose();
       for(const name of ['concreteMap','metalMap','roadMap']) ruin[name]?.dispose?.();

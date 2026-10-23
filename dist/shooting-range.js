@@ -74,9 +74,9 @@ export class ShootingRangeGame extends ArenaGame {
       phase:0,speed:trainingSpeed(this.time),hit:false,expired:false};
     this.targets.push(target);this.event('training-appear',{id:target.id,kind});return target;
   }
-  shoot(origin,direction,charge=1){
+  shoot(origin,direction,charge=1,hand=null){
     const before=this.bullets.length;
-    const result=super.shoot(origin,direction,charge);
+    const result=super.shoot(origin,direction,charge,hand);
     if(!result||this.weapon.melee)return result;
     this.trainingShots++;
     // Pink War fires finite-speed laser projectiles. Predict where moving

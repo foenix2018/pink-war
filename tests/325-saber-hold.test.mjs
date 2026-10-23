@@ -49,8 +49,8 @@ test('headset removes the artificial aiming ray but keeps tracked hilt animation
  const source=readFileSync(new URL('../dist/vr.js',import.meta.url),'utf8');
  assert.ok(source.includes('this.makeHUD(); this.removeSight(); this.makePauseBoard()'));
  assert.ok(!source.includes('this.makeHUD(); this.makeSight()'));
- assert.ok(source.includes('grip:Math.max(.92,this.handPose.mainGrip)'));
- assert.ok(source.includes("c.gun.visible=isMain&&(!holster?.visible||holster.position.y<-.56)"));
+ assert.ok(source.includes('grip:Math.max(.92,isMain?this.handPose.mainGrip:this.handPose.sideGrip)'));
+ assert.ok(source.includes("c.gun.visible=armed&&['left','right'].includes(physicalHand)&&(!holster?.visible||holster.position.y<-.56)"));
  const scene=readFileSync(new URL('../dist/scene.js',import.meta.url),'utf8');
  assert.ok(scene.includes('holsterGun=createGun()'));
 });

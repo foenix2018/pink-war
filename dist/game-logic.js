@@ -65,9 +65,10 @@ export const WEAPONS = Object.freeze([
   Object.freeze({ id: 'thorn', name: 'THORN', label: 'Canon à rail', level: 7, damage: 190, capacity: 6, interval: .28, reload: 2.1, speed: 200, pellets: 1, spread: 0, chargeTime: .7, splash: 1.8 }),
   Object.freeze({ id: 'nova', name: 'NOVA', label: 'Canon à énergie', level: 9, damage: 340, capacity: 4, interval: .4, reload: 2.4, speed: 80, pellets: 1, spread: 0, chargeTime: 1.05, splash: 5 }),
   Object.freeze({ id:'aurora',name:'AURORA',label:'Sabre à énergie',level:2,damage:155,capacity:0,interval:.48,reload:0,speed:0,pellets:0,spread:0,semiAuto:true,chargeTime:0,splash:0,melee:true }),
-  Object.freeze({id:'m12',name:'M–12',label:'Fusil à pompe',level:4,damage:18,capacity:8,interval:.88,reload:2.8,speed:170,pellets:8,spread:.038,semiAuto:true,chargeTime:0,splash:0,falloffStart:12,falloffEnd:40,minDamage:.2})
+  Object.freeze({id:'m12',name:'M–12',label:'Fusil à pompe',level:4,damage:18,capacity:8,interval:.88,reload:2.8,speed:170,pellets:8,spread:.038,semiAuto:true,chargeTime:0,splash:0,falloffStart:12,falloffEnd:40,minDamage:.2}),
+  Object.freeze({id:'duor9',name:'R–9 DUO',label:'Doubles pistolets laser',level:1,damage:24,capacity:24,handCapacity:12,interval:.2,reload:1.65,speed:110,pellets:1,spread:0,chargeTime:0,splash:0,dual:true})
 ]);
-export const starterWeaponIndex=characterId=>characterId==='lylu'?6:0;
+export const starterWeaponIndex=characterId=>characterId==='lylu'?6:7;
 export function projectileDamage(b,at){
  const w=WEAPONS.find(w=>w.id===b.weapon);if(!w?.falloffStart)return b.damage;
  const distance=Math.hypot(at.x-(b.originX??b.x),at.y-(b.originY??b.y),at.z-(b.originZ??b.z));
@@ -281,6 +282,7 @@ export class ArenaGame {
     this.activePortals=[];
     this.characterId=characterId==='lylu'?'lylu':'ghju';
     this.weaponIndex = starterWeaponIndex(this.characterId); this.ammo = WEAPONS.map(w => w.capacity);
+    this.dual={ammo:{left:12,right:12},readyAt:{left:0,right:0},shotAt:{left:-Infinity,right:-Infinity},held:{left:false,right:false},next:'right',flatAt:0};
     this.ownedWeapons = new Set([this.weaponIndex,0]); this.weaponOffers = [];
     this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false; this.semiPending=false;
     this.lastDamage = 0; this.regenerating = false;
@@ -324,6 +326,13 @@ export class ArenaGame {
   }
   get equipment() { return equipmentForLevel(this.wave); }
   get weapon() { return WEAPONS[this.weaponIndex]; }
+  get nextDualHand(){const hand=this.dual.next,other=hand==='right'?'left':'right';return this.dual.ammo[hand]>0&&this.time>=this.dual.readyAt[hand]?hand:this.dual.ammo[other]>0&&this.time>=this.dual.readyAt[other]?other:hand;}
+  refillWeapon(){this.ammo[this.weaponIndex]=this.weapon.capacity;if(this.weapon.dual)this.dual.ammo={left:12,right:12};}
+  restoreDualAmmo(saved){
+    const total=clamp(Math.floor(Number(this.ammo[7])||0),0,24);
+    const valid=['left','right'].every(hand=>Number.isInteger(saved?.[hand])&&saved[hand]>=0&&saved[hand]<=12)&&saved.left+saved.right===total;
+    this.dual.ammo=valid?{...saved}:{left:Math.floor(total/2),right:Math.ceil(total/2)};
+  }
   get unlockedWeapons() { return WEAPONS.filter((w,i) => this.ownedWeapons.has(i)); }
   event(type, data = {}) { this.events.push({ type, ...data }); }
   emitNoise(kind,radius,position={x:this.player.x,y:this.player.elevation+1,z:this.player.z}) {
@@ -349,6 +358,7 @@ export class ArenaGame {
   selectWeapon(index) {
     if (this.state !== 'playing' || !WEAPONS[index] || !this.ownedWeapons.has(index) || index === this.weaponIndex) return false;
     this.weaponIndex = index; this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false; this.semiPending=false;
+    this.dual.held={left:false,right:false};
     this.bladePrevious=null;this.bladeHitTimes.clear();this.bladeSlashAt=-99;this.bladeSpeed=0;this.bladeGuard=false;
     this.cooldown = Math.max(this.cooldown, .25); this.event('weapon', { index, name: this.weapon.name }); return true;
   }
@@ -406,6 +416,7 @@ export class ArenaGame {
     this.activePortals=chooseWavePortals(this.obstacles,this.random,this.wave,this.player,this.time);
     this.event('portals',{count:this.activePortals.length,sites:this.activePortals.map(p=>({...p}))});
     this.ammo = WEAPONS.map(w => w.capacity); this.reloadRemaining = 0; this.charge = 0;
+    this.dual.ammo={left:12,right:12};
     const offered = WEAPONS.findIndex(w => w.level === this.wave);
     if (offered > 0) this.offerWeapon(offered);
     this.event('equipment', this.equipment);
@@ -451,13 +462,15 @@ export class ArenaGame {
     field.update(target,this.time);
     return field.waypoint(enemy)||soundWaypoint(enemy,target,this.obstacles,segmentBox);
   }
-  shoot(origin, direction, charge = 1) {
+  shoot(origin, direction, charge = 1, hand = null) {
     if(this.weapon.melee){
       if(this.state!=='playing'||this.cooldown>0)return false;
       this.cooldown=this.weapon.interval;this.bladeSlashAt=this.time;this.bladeSlashSide*=-1;
       this.emitNoise('blade-swing',14,origin);this.event('blade-swing',{weapon:'aurora',origin:{...origin}});return true;
     }
     if (this.state !== 'playing' || this.cooldown > 0 || this.reloadRemaining > 0 || this.ammo[this.weaponIndex] <= 0) return false;
+    if(this.weapon.dual){hand=hand||this.nextDualHand;if(!['left','right'].includes(hand)||this.dual.ammo[hand]<=0||this.time<this.dual.readyAt[hand])return false;}
+    if(!origin||!direction||![origin.x,origin.y,origin.z,direction.x,direction.y,direction.z].every(Number.isFinite))return false;
     const length = Math.hypot(direction.x, direction.y, direction.z);
     if (length < .001) return false;
     const bulletId=this.nextId;
@@ -476,12 +489,24 @@ export class ArenaGame {
         originX:origin.x,originY:origin.y,originZ:origin.z,originElevation:this.player.elevation,
         damage: w.damage * power, splash: w.splash * power, power, weapon: w.id, hostile: false });
     }
-    this.ammo[this.weaponIndex]--; this.cooldown = w.interval; this.charge = 0;
+    this.ammo[this.weaponIndex]--;this.charge = 0;
+    if(w.dual){this.dual.ammo[hand]--;this.dual.readyAt[hand]=this.time+w.interval;this.dual.shotAt[hand]=this.time;this.dual.next=hand==='right'?'left':'right';}
+    else this.cooldown = w.interval;
     this.emitNoise('shot',SHOT_RADIUS[w.id]*(.75+.25*power),origin);
-    this.event('shot', { weapon: w.id, power,bulletId,origin:{...origin},direction:{x:nx,y:ny,z:nz} }); return true;
+    this.event('shot', { weapon: w.id, power,bulletId,hand,origin:{...origin},direction:{x:nx,y:ny,z:nz} }); return true;
+  }
+  triggerHand(hand,held,dt,origin,direction){
+    if(!this.weapon.dual||!['left','right'].includes(hand))return false;
+    this.dual.held[hand]=!!held;this.triggerHeld=this.dual.held.left||this.dual.held.right;
+    const fired=held?this.shoot(origin,direction,1,hand):false;
+    if(held&&this.ammo[this.weaponIndex]===0)this.reload();return fired;
   }
   trigger(held, dt, origin, direction) {
     const w = this.weapon;
+    if(w.dual){
+      if(held&&this.time>=this.dual.flatAt&&this.shoot(origin,direction,1,this.nextDualHand))this.dual.flatAt=this.time+w.interval/2;
+      this.triggerHeld=!!held;if(held&&this.ammo[this.weaponIndex]===0)this.reload();return;
+    }
     if(w.melee){if(held&&!this.triggerHeld)this.semiPending=true;if(!held)this.semiPending=false;if(held&&this.semiPending&&this.shoot(origin,direction))this.semiPending=false;this.triggerHeld=held;return;}
     if (!w.chargeTime) {
       if(w.semiAuto){
@@ -564,7 +589,7 @@ export class ArenaGame {
       if (Math.hypot(pickup.x - this.player.x, pickup.z - this.player.z) > PICKUP_RADIUS || Math.abs(pickup.y - this.player.elevation) > 1.4) continue;
       this.pickups.splice(i, 1);
       if (pickup.kind === 'heal') this.player.hp = Math.min(100, this.player.hp + PICKUP_HEAL);
-      else if (!this.weapon.melee) { this.ammo[this.weaponIndex] = this.weapon.capacity; this.reloadRemaining = 0; }
+      else if (!this.weapon.melee) { this.refillWeapon(); this.reloadRemaining = 0; }
       this.event('pickup', { kind: pickup.kind, x: pickup.x, y: pickup.y + .6, z: pickup.z });
     }
   }
@@ -574,7 +599,7 @@ export class ArenaGame {
     this.cooldown = Math.max(0, this.cooldown - dt); this.invulnerable = Math.max(0, this.invulnerable - dt);
     if (this.reloadRemaining > 0) {
       this.reloadRemaining = Math.max(0, this.reloadRemaining - dt);
-      if (this.reloadRemaining === 0) { this.ammo[this.weaponIndex] = this.weapon.capacity; this.event('reloaded'); }
+      if (this.reloadRemaining === 0) { this.refillWeapon(); this.event('reloaded'); }
     }
     this.regenerating = this.player.hp < 100 && this.time - this.lastDamage >= REGEN_DELAY;
     if (this.regenerating) this.player.hp = Math.min(100, this.player.hp + 18 * dt);

@@ -26,7 +26,7 @@ export class RoomGame extends ArenaGame {
     if(this.footstepDistance>.95){this.footstepDistance=0;this.emitNoise('step',6);}
   }
   blocked(a,b){return !!this.room?.trace(a,b);}
-  shoot(origin,direction,charge=1){if(!this.running||this.roomPhase==='scan'||this.blocked(this.head,origin))return false;return super.shoot(origin,direction,charge);}
+  shoot(origin,direction,charge=1,hand=null){if(!this.running||this.roomPhase==='scan'||this.blocked(this.head,origin))return false;return super.shoot(origin,direction,charge,hand);}
   trigger(held,dt,origin,direction){if(!this.running||!this.room.hasFloor()||this.roomPhase==='scan'){this.triggerHeld=false;this.semiPending=false;this.charge=0;return;}return super.trigger(held,dt,origin,direction);}
   emitNoise(kind,radius,position=this.head){
     if(!this.room)return [];
@@ -50,6 +50,7 @@ export class RoomGame extends ArenaGame {
   activateWave(){
     this.roomPhase='wave';this.spawnTimer=2.3;
     this.ammo=WEAPONS.map(w=>w.capacity);this.reloadRemaining=0;this.charge=0;
+    this.dual.ammo={left:12,right:12};
     const offered=WEAPONS.findIndex(w=>w.level===this.wave);if(offered>0)this.offerWeapon(offered);
     this.event('portals',{sites:this.activePortals.map(p=>({...p}))});this.event('wave',{wave:this.wave,count:this.toSpawn});this.event('equipment',this.equipment);
   }
@@ -92,7 +93,7 @@ export class RoomGame extends ArenaGame {
     if(!this.running||this.state!=='playing')return;
     if(!this.room.hasFloor()){this.roomPhase='scan';this.triggerHeld=false;this.bladePrevious=null;return;}
     dt=clamp(dt,0,.05);this.time+=dt;this.cooldown=Math.max(0,this.cooldown-dt);this.invulnerable=Math.max(0,this.invulnerable-dt);
-    if(this.reloadRemaining>0){this.reloadRemaining=Math.max(0,this.reloadRemaining-dt);if(!this.reloadRemaining){this.ammo[this.weaponIndex]=this.weapon.capacity;this.event('reloaded');}}
+    if(this.reloadRemaining>0){this.reloadRemaining=Math.max(0,this.reloadRemaining-dt);if(!this.reloadRemaining){this.refillWeapon();this.event('reloaded');}}
     this.regenerating=this.player.hp<100&&this.time-this.lastDamage>=REGEN_DELAY;if(this.regenerating)this.player.hp=Math.min(100,this.player.hp+18*dt);
     for(const index of this.pendingOffers)if(Math.floor(this.time)!==Math.floor(this.time-dt))this.offerWeapon(index);
     if(this.roomPhase==='scan'&&this.activePortals.length)this.roomPhase=this.toSpawn||this.enemies.length?'wave':'between';

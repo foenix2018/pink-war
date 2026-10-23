@@ -45,14 +45,14 @@ test('uncollected weapons appear nearby, visible and stay on the radar until acq
   const station=game.weaponOffers[0];
   assert.ok(Math.hypot(station.x-game.player.x,station.z-game.player.z)<9);
   assert.ok(!game.blocked({x:game.player.x,y:1.5,z:game.player.z},{x:station.x,y:1.7,z:station.z}));
-  assert.equal(game.weaponIndex,0,'player is free to refuse');
+  assert.equal(game.weaponIndex,7,'GHJU keeps the default dual pistols when refusing');
   game.player.x=station.x;game.player.z=station.z;
   assert.equal(game.collectWeapon(),true);
   assert.equal(game.weaponOffers.length,0);
 });
 
 test('two pink laser hits defeat a monster and award a score', () => {
-  const g = new ArenaGame(); g.nextWave = 999; g.enemies = [enemy(999, 13)];
+  const g = new ArenaGame();g.selectWeapon(0);g.cooldown=0; g.nextWave = 999; g.enemies = [enemy(999, 13)];
   assert.equal(g.shoot({ x: 0, y: 1.15, z: 22 }, { x: 0, y: 0, z: -1 }), true);
   assert.equal(g.shoot({ x: 0, y: 1.15, z: 22 }, { x: 0, y: 0, z: -1 }), false);
   advance(g, .2); assert.equal(g.enemies[0].hp, 16);
@@ -151,7 +151,7 @@ test('weapons appear at their scheduled levels, remain optional, and keep indivi
 test('an uncollected gun stays available even after the next wave and cannot be selected early', () => {
   const g=new ArenaGame();
   for(let i=0;i<5;i++)g.beginWave();
-  assert.equal(g.weaponIndex,0);
+  assert.equal(g.weaponIndex,7);
   assert.deepEqual(g.weaponOffers.map(o=>o.index),[5,1,6,2]);
   assert.equal(g.selectWeapon(2),false);
   const offer=g.weaponOffers[0];g.player.x=offer.x;g.player.z=offer.z;
@@ -159,11 +159,11 @@ test('an uncollected gun stays available even after the next wave and cannot be 
   assert.deepEqual(g.weaponOffers.map(o=>o.index),[1,6,2]);
   assert.equal(g.collectWeapon(),true);assert.equal(g.weaponIndex,1);
   assert.deepEqual(g.weaponOffers.map(o=>o.index),[6,2]);
-  g.reset();assert.equal(g.weaponOffers.length,0);assert.deepEqual(g.unlockedWeapons.map(w=>w.id),['r9']);
+  g.reset();assert.equal(g.weaponOffers.length,0);assert.deepEqual(g.unlockedWeapons.map(w=>w.id),['r9','duor9']);
 });
 
 test('weapons can be skipped without breaking cyclic weapon selection',()=>{
-  const g=new ArenaGame();
+  const g=new ArenaGame();g.selectWeapon(0);g.ownedWeapons.delete(7);
   g.ownedWeapons.add(2);g.ownedWeapons.add(4);
   assert.deepEqual(g.unlockedWeapons.map(w=>w.id),['r9','lance','nova']);
   assert.equal(g.cycleWeapon(),true);assert.equal(g.weaponIndex,2);
@@ -204,7 +204,7 @@ test('head, torso and limb produce distinct zones, multipliers and reactions', (
 });
 
 test('a depleted battery prevents firing, then reload restores charges and cannot be spammed', () => {
-  const g=new ArenaGame();g.nextWave=999;
+  const g=new ArenaGame();g.selectWeapon(0);g.cooldown=0;g.nextWave=999;
   const origin={x:0,y:2,z:22}, direction={x:1,y:0,z:0};
   for(let i=0;i<12;i++){g.cooldown=0;assert.equal(g.shoot(origin,direction),true);}
   g.cooldown=0;assert.equal(g.shoot(origin,direction),false);assert.equal(g.ammo[0],0);
@@ -301,7 +301,7 @@ test('a complete campaign reaches level 20 after 670 real projectile kills and s
     equipmentStages.push(...events.filter(e=>e.type==='equipment').map(e=>e.level));
   }
   assert.equal(g.state,'won',JSON.stringify({wave:g.wave,kills:g.kills,time:g.time,hp:g.player.hp,toSpawn:g.toSpawn}));assert.equal(g.wave,MAX_LEVEL);assert.equal(g.kills,670);assert.ok(g.player.hp>0);
-  assert.deepEqual(unlocks,['AURORA','BLOOM','M–12','LANCE','THORN','NOVA']);assert.equal(g.unlockedWeapons.length,7);
+  assert.deepEqual(unlocks,['AURORA','BLOOM','M–12','LANCE','THORN','NOVA']);assert.equal(g.unlockedWeapons.length,8);
   assert.deepEqual(equipmentStages,Array.from({length:MAX_LEVEL},(_,i)=>Math.min(i+1,10)));assert.equal(g.snapshot().equipment.name,'Impératrice');assert.equal(g.snapshot().equipment.unlocked.length,10);
   g.reset();assert.equal(g.snapshot().equipment.level,1);assert.deepEqual(g.snapshot().equipment.unlocked,['aube']);
 });

@@ -1,6 +1,6 @@
 // Gameplay acoustics are independent of the player's audio volume.
 export const NOISE_RADIUS=Object.freeze({step:12,sprint:28,crouch:2,reload:8,land:26});
-export const SHOT_RADIUS=Object.freeze({r9:46,bloom:55,lance:90,thorn:110,nova:130,m12:82});
+export const SHOT_RADIUS=Object.freeze({r9:46,duor9:46,bloom:55,lance:90,thorn:110,nova:130,m12:82});
 export function soundWaypoint(enemy,target,obstacles,segmentBox) {
   const radius=(enemy.radius||.8)+.35;
   const start={x:enemy.x,y:(enemy.elevation||0)+1,z:enemy.z},end={x:target.x,y:start.y,z:target.z};

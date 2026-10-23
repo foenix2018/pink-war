@@ -41,7 +41,7 @@ test('M02 reuses original physics rather than a simplified duplicate',()=>{
  const was=game.player.z;
  game.step(.016,{x:0,z:-1,jump:false,yaw:0,moveYaw:0,sprint:false});
  assert.notEqual(game.player.z,was);
- assert.strictEqual(game.weapon,WEAPONS[0]);
+ assert.strictEqual(game.weapon,WEAPONS[7]);
 });
 test('M02 uses original production weapon/optics/audio, character rig and touch UI',()=>{
  const js=source('level2-test.js'),soldier=source('level2-player.js'),

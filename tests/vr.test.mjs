@@ -18,6 +18,24 @@ function setup(game = { charge:0, triggerHeld:false, reload:()=>true, cycleWeapo
 }
 const down = (source,index,value=true) => { source.gamepad.buttons[index].pressed=value;source.gamepad.buttons[index].value=value?1:0; };
 
+test('GHJU DUO maps each physical index trigger to its own pistol and blocks both across pause',()=>{
+ const g=new ArenaGame(),{state,left,right}=setup(g);
+ down(left,0);let input=state.input();assert.deepEqual(input.fireHands,{left:true,right:false});assert.equal(input.aim,false);
+ down(right,0);input=state.input();assert.deepEqual(input.fireHands,{left:true,right:true});
+ down(left,4);assert.deepEqual(state.input().fireHands,{left:false,right:false});
+ down(left,4,false);state.input();down(left,4);assert.deepEqual(state.input().fireHands,{left:false,right:false});
+ down(left,0,false);assert.deepEqual(state.input().fireHands,{left:false,right:false},'a still-held right trigger keeps the release interlock');
+ down(right,0,false);state.input();down(left,0);assert.equal(state.input().fireHands.left,true);
+ g.selectWeapon(0);input=state.input();assert.deepEqual(input.fireHands,{left:false,right:false});assert.equal(input.fire,false,'a single weapon keeps the left hand free');
+});
+test('GHJU renders one pistol per controller and a left shot vibrates only the left controller',()=>{
+ const g=new ArenaGame(),{state,left,right}=setup(g),pulses=[];
+ for(const source of [right,left]){source.gamepad.hapticActuators=[{pulse:(strength,ms)=>pulses.push([source.handedness,strength,ms])}];const ray=new T.Group();ray.userData.source=source;state.controllers.push({ray,gun:new T.Group(),bare:new T.Group()});}
+ state.applyRoles();for(const c of state.controllers){assert.equal(c.gun.visible,true);assert.equal(c.bare.visible,false);assert.equal(c.gun.scale.x,c.ray.userData.source===left?-1:1);}
+ state.haptic('shot','duor9','left');assert.equal(pulses.length,1);assert.equal(pulses[0][0],'left');assert.ok(pulses[0][1]>.8);
+ g.selectWeapon(0);state.applyRoles();assert.equal(state.controllers[1].gun.visible,false);assert.equal(state.controllers[1].bare.visible,true);
+});
+
 test('Quest Touch Plus keeps left movement, right trigger and grip independent of source order',()=>{
   const {state,left,right}=setup();
   left.gamepad.axes=[.9,.9,.4,-.8];right.gamepad.axes=[.9,.9,.6,.9];
@@ -101,7 +119,7 @@ test('charged weapon uses the right trigger hold and releases a partial shot, th
 });
 
 test('Y cycles unlocked weapons, A jumps without changing weapon batteries',()=>{
-  const game=new ArenaGame();game.wave=5;game.nextWave=-1;game.ammo[0]=7;game.ammo[1]=18;game.ammo[2]=4;game.ownedWeapons.add(1);game.ownedWeapons.add(2);
+  const game=new ArenaGame();game.selectWeapon(0);game.ownedWeapons.delete(7);game.wave=5;game.nextWave=-1;game.ammo[0]=7;game.ammo[1]=18;game.ammo[2]=4;game.ownedWeapons.add(1);game.ownedWeapons.add(2);
   const {state,left,right}=setup(game);
   down(right,4);assert.equal(state.input().jump,true);assert.equal(game.weaponIndex,0);
   down(right,4,false);state.input();

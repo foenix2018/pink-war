@@ -49,7 +49,7 @@ export function questControls(hand = 'right') {
     [`Poignée ${sideF}`, 'Courir (maintenu)'],
     [`Clic joystick ${sideF}`, 'Terminal / arme proche : interagir · sinon : s’accroupir'],
     [b.jump, 'Saut · second appui : double saut / rebond mural'],
-    ['Gâchette INDEX gauche', 'Main libre / interaction'],
+    ['Gâchette INDEX gauche', 'GHJU / R–9 DUO : pistolet gauche · sinon : main libre'],
     [b.pause, 'Pause / reprise']
   ];
 }
@@ -206,22 +206,25 @@ export class VRController {
     this.sight = null;
   }
   // Weapon animations remain active without a numeric display on the gun.
-  updateWeaponState(gun, game, feel=null) {
+  updateWeaponState(gun, game, feel=null, hand=null) {
     const capacity = game.weapon.capacity, ammo = game.ammo[game.weaponIndex], reloading = game.reloadRemaining > 0;
     const reloadProgress = reloading ? clamp(1 - game.reloadRemaining / game.weapon.reload, 0, 1) : 0;
     const charge = game.weapon.chargeTime ? game.charge : 0;
-    gun.userData.setCombatState?.({ ammo, capacity, charge, reloadProgress, reloading, time: game.time,heat:feel?.heat||0,kick:feel?.kick||0,impulse:feel?.impulse||0,bladeHeld:!!game.weapon.melee&&!!game.triggerHeld });
+    const dualState=game.weapon.dual&&hand?{...game.dual,shotAt:{right:game.dual.shotAt[hand],left:-Infinity}}:game.dual;
+    gun.userData.setCombatState?.({ ammo, capacity, charge, reloadProgress, reloading, time: game.time,dualState,heat:feel?.heat||0,kick:feel?.kick||0,impulse:feel?.impulse||0,bladeHeld:!!game.weapon.melee&&!!game.triggerHeld });
   }
   cancelTrigger() {
     const game = this.hooks.game(); game.charge = 0; game.triggerHeld = false;game.semiPending=false; this.triggerBlocked = true;
+    if(game.dual)game.dual.held={left:false,right:false};
   }
   startReloadGesture() { if (this.mode === 'xr') this.reloadGesture = .82; }
   // Show the pistol in the shooting hand and a bare gauntlet in the other one.
   applyRoles() {
     const main = settingsOf(this).hand;
+    const dual=!!this.hooks.game?.()?.weapon?.dual;
     for (const c of this.controllers) {
       const hand = c.ray.userData.source?.handedness, known = hand === 'left' || hand === 'right';
-      c.gun.visible = hand === main; c.bare.visible = known && hand !== main;
+      c.gun.visible = known&&(hand === main||dual); c.bare.visible = known && hand !== main&&!dual;
       // Gloves are built for the right hand and mirrored for the left; a mirrored gun keeps its readout upright.
       const size = c.bare.userData.size ??= c.bare.scale.x;
       c.bare.scale.set(hand === 'left' ? -size : size, size, size);
@@ -415,7 +418,8 @@ export class VRController {
       syncTrackedHands(this.controllers,this.session,frame,this.hooks.world().renderer.xr.getReferenceSpace());
       this.applyRoles();
     }
-    const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, fire: false, sprint: false, precision: false, aim:false, jump: false, pickup: false, crouchToggle: false };
+    const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, fire: false, fireHands:{left:false,right:false}, sprint: false, precision: false, aim:false, jump: false, pickup: false, crouchToggle: false };
+    const dual=!!this.hooks.game?.()?.weapon?.dual,rawHands={left:false,right:false},trackedHands={left:false,right:false};
     const xr = this.mode === 'xr', cfg = settingsOf(this), mainHand = cfg.hand, sideHand = otherHand(mainHand);
     const focused=typeof document==='undefined'||(!document.hidden&&(!document.hasFocus||document.hasFocus()));
     const desktop = xr ? null : (this.desktopGamepads ||= new DesktopGamepadInput()).select(navigator.getGamepads?.() || [],{focused});
@@ -431,6 +435,7 @@ export class VRController {
       const pad = source.gamepad; if (!pad) continue;
       const axes = pad.axes || [], main = !xr || source.handedness === mainHand, side = !xr || source.handedness === sideHand;
       const tracked = visible && (!xr || !frame || !!frame.getPose(source.targetRaySpace, this.hooks.world().renderer.xr.getReferenceSpace()));
+      if(xr&&['left','right'].includes(source.handedness)){rawHands[source.handedness]=pressed(pad.buttons[0]);trackedHands[source.handedness]=tracked;}
       const stick = xr && axes.length >= 4 ? 2 : 0;
       const axis = xr ? deadzone : desktopAxis;
       if (side && tracked) {
@@ -477,26 +482,28 @@ export class VRController {
     if (xr && (!visible || !mainTracked)) { this.cancelTrigger(); this.hooks.pause?.(); }
     const playing = (this.hooks.phase?.() || phase) === 'playing';
     if (!playing) { result.x = result.z = result.turn = result.tilt = result.snap = 0; result.sprint = result.precision = result.aim = false; result.jump = false;result.pickup = false; if (xr) this.cancelTrigger(); }
-    if (!rawFire) this.triggerBlocked = false;
+    if (dual&&xr?!rawHands.left&&!rawHands.right:!rawFire) this.triggerBlocked = false;
     result.jump = playing && actions.has('jump');result.pickup = playing && actions.has('pickup');result.crouchToggle=playing && actions.has('crouch');
     result.fire = playing && mainTracked && rawFire && (!xr || !this.triggerBlocked);
+    if(xr&&dual)for(const hand of ['left','right'])result.fireHands[hand]=playing&&trackedHands[hand]&&rawHands[hand]&&!this.triggerBlocked;
     this.precision = result.precision && playing;
     this.aiming = xr ? result.aim && playing : result.precision && playing;
     return result;
   }
   // The returned vectors are reused: read them before calling aim() again.
-  aim() {
+  aim(hand=settingsOf(this).hand) {
     if (this.mode !== 'xr') return null;
     const world = this.hooks.world(), { T } = world, tmp = this.scratch ||= {};
     tmp.origin ||= new T.Vector3(); tmp.direction ||= new T.Vector3(); tmp.quaternion ||= new T.Quaternion(); tmp.head ||= new T.Vector3(); tmp.muzzle ||= new T.Vector3();
-    const main = controllerOf(this, settingsOf(this).hand);
+    const main = controllerOf(this, hand);
     const source = main?.ray || world.camera; source.updateWorldMatrix(true, false);
     const { origin, direction } = tmp;
     source.getWorldPosition(origin); source.getWorldQuaternion(tmp.quaternion); direction.set(0, 0, -1).applyQuaternion(tmp.quaternion);
     if (main?.gun) {
       if (main.gun.userData.index !== this.hooks.game().weaponIndex) main.gun.userData.setVariant?.(this.hooks.game().weaponIndex);
       main.gun.updateWorldMatrix(true, false);
-      origin.copy(main.gun.localToWorld(tmp.muzzle.copy(main.gun.userData.flash.position)));
+      const flash=main.gun.userData.flash;
+      if(flash.parent)flash.getWorldPosition(origin);else origin.copy(main.gun.localToWorld(tmp.muzzle.copy(flash.position)));
       // A tracked hand can physically cross a wall; the muzzle cannot shoot past it.
       const head = world.camera.getWorldPosition(tmp.head), length = head.distanceTo(origin);
       let nearest = 1;
@@ -507,9 +514,9 @@ export class VRController {
   }
   // No auxiliary targeting beam in XR: aim follows the real weapon in hand.
   updateSight() { if(this.sight)this.sight.group.visible=false; }
-  haptic(type, arg) {
+  haptic(type, arg, hand=null) {
     if (this.mode !== 'xr' || settingsOf(this).haptics === false) return;
-    const plan = hapticPlan(type, arg), main = settingsOf(this).hand;
+    const plan = hapticPlan(type, arg), main = hand||settingsOf(this).hand;
     if (plan.main) buzz(padOf(this, main), plan.main);
     if (plan.side) buzz(padOf(this, otherHand(main)), plan.side);
   }
@@ -549,28 +556,29 @@ export class VRController {
       // updateCamera() already placed the rig this frame while playing.
       if (this.hooks.phase() !== 'playing') this.positionRig();
       for (const c of this.controllers) {
-        const isMain = c.ray.userData.source?.handedness === main;
+        const physicalHand=c.ray.userData.source?.handedness,isMain = physicalHand === main,armed=isMain||!!game.weapon.dual;
         if (c.gun.userData.index !== game.weaponIndex) c.gun.userData.setVariant(game.weaponIndex);
         if (c.level !== level) { c.gun.userData.setLevel(level); c.bare.userData.setLevel(level); c.level = level; }
-        c.gun.userData.flash.visible = flash > 0 && isMain && this.hooks.phase()==='playing';
+        this.updateWeaponState(c.gun,game,feel,physicalHand);
+        c.gun.userData.setFlash?.(flash > 0 && armed && this.hooks.phase()==='playing',game.time);
         const handSign=main==='left'?-1:1;
         // AURORA: tracked palm closes around the central grip, below the emitter guard.
         // Keep the sword above the fist and slightly angled into the player's view.
         const sword=isMain&&game.weapon.melee;
-        c.gun.position.set(isMain?(feel?.yaw||0)*.10*handSign:0,
-          isMain?reload*.035-(feel?.kick||0)*.13+(sword?.028:0):0,
-          isMain?(feel?.kick??kick*.075)-reload*.045-(sword?.036:0):0);
-        c.gun.rotation.set(isMain?(feel?.pitch??kick*.22)+reload*Math.PI/2-(sword?.55:0):0,
-          isMain?(feel?.yaw||0)*handSign:0,
-          isMain?reload*.12+(sword?-.06*handSign:0):0);
+        c.gun.position.set(isMain&&!game.weapon.dual?(feel?.yaw||0)*.10*handSign:0,
+          armed?reload*.035-(game.weapon.dual?0:feel?.kick||0)*.13+(sword?.028:0):0,
+          armed?(game.weapon.dual?0:feel?.kick??kick*.075)-reload*.045-(sword?.036:0):0);
+        c.gun.rotation.set(armed?(game.weapon.dual?0:feel?.pitch??kick*.22)+reload*Math.PI/2-(sword?.55:0):0,
+          isMain&&!game.weapon.dual?(feel?.yaw||0)*handSign:0,
+          armed?reload*.12+(sword?-.06*handSign:0):0);
         const palm=c.gun.userData.palm,held=palm&&((this.scratch||={}).palm||=palm.clone());
         if(palm)c.gun.position.sub(held.copy(palm).applyEuler(c.gun.rotation)).add(TRACKED_PALM);
         // Re-evaluate visibility every frame; a previous saber swap must
         // never hide the following weapon permanently.
         const holster=this.hooks.world().holsterGun;
-        c.gun.visible=isMain&&(!holster?.visible||holster.position.y<-.56);
-        const fingerPose = isMain
-          ? { trigger:this.handPose.mainTrigger, grip:Math.max(.92,this.handPose.mainGrip), reload:0 }
+        c.gun.visible=armed&&['left','right'].includes(physicalHand)&&(!holster?.visible||holster.position.y<-.56);
+        const fingerPose = armed
+          ? { trigger:isMain?this.handPose.mainTrigger:this.handPose.sideTrigger, grip:Math.max(.92,isMain?this.handPose.mainGrip:this.handPose.sideGrip), reload:0 }
           : { trigger:this.handPose.sideTrigger, grip:this.handPose.sideGrip, reload,relax:(1-this.handPose.sideGrip)*(1-this.handPose.sideTrigger)*(1-reload)*.65 };
         c.gun.userData.hand?.userData.animate?.(fingerPose,dt,c.gun.scale.x<0?-1:1);
         c.bare.userData.animate?.(fingerPose,dt,c.bare.scale.x<0?-1:1);
@@ -579,7 +587,7 @@ export class VRController {
       // the exact grip mesh when the user squeezes. Away from it, the glove
       // remains independently tracked instead of snapping unrealistically.
       const primary=controllerOf(this,main),secondary=controllerOf(this,otherHand(main));
-      if(primary?.gun&&secondary?.bare){
+      if(primary?.gun&&secondary?.bare&&!game.weapon.dual){
         const fore=primary.gun.userData.supportPoint||WEAPON_FRAME[game.weaponIndex]?.support,hand=primary.gun.userData.support;
         let linked=false;
         if(fore&&primary.gun.visible&&this.handPose.sideGrip>.55&&secondary.anchor.visible){
@@ -592,7 +600,7 @@ export class VRController {
         if(hand){hand.visible=linked; if(linked){hand.userData.setBasePosition?.(fore);hand.userData.animate?.({grip:.98,trigger:0,reload:0,wrap:true},dt);}}
         secondary.bare.visible=!linked&&secondary.anchor.visible;
       }
-      const gun = controllerOf(this, main)?.gun; if (gun) this.updateWeaponState(gun, game,feel);
+      const gun=controllerOf(this,main)?.gun;
       gun?.userData.setSight?.(this.aiming && !game.reloadRemaining,this.sightEye());
       this.updateSight();
       // Heavy weapons rumble harder as the charge builds.

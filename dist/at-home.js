@@ -173,7 +173,7 @@ function updateSurfaces(frame){
  }
 }
 function edge(key,down){const old=previousButtons.get(key)||false;previousButtons.set(key,down);return down&&!old;}
-function cancelFire(){game.triggerHeld=false;game.semiPending=false;game.charge=0;game.bladePrevious=null;fireBlocked=true;scope?.release();}
+function cancelFire(){game.triggerHeld=false;game.dual.held={left:false,right:false};game.semiPending=false;game.charge=0;game.bladePrevious=null;fireBlocked=true;scope?.release();}
 function requestCombat(){startRequested=true;startCombat();}
 function startCombat(){
  if(mode==='paused'){startRequested=false;game.running=true;mode='combat';cancelFire();info('SIGNAL RÉTABLI');return;}
@@ -199,7 +199,7 @@ function processEvents(){
   if(event.type==='weapon-offer')announce(event.name+' / LIVRAISON DISPONIBLE');
   if(event.type==='unlock')announce(event.name+' / ACQUISE');
   if(event.type==='weapon'){assets.setWeapon(event.index,Math.min(10,Math.max(1,game.wave)));feel.reset();scope?.release();cancelFire();}
-  if(event.type==='shot'){feel.fire(event.weapon,event.power,controllerHandState.offGrip>.5);laser.shot(event);muzzleUntil=game.time+.075;try{playLaserShot(audio,event.weapon,event.power);}catch{}haptic('shot',event.weapon);}
+  if(event.type==='shot'){feel.fire(event.weapon,event.power,controllerHandState.offGrip>.5);laser.shot(event);muzzleUntil=game.time+.075;try{playLaserShot(audio,event.weapon,event.power);}catch{}haptic('shot',event.weapon,event.hand);}
   if(event.type==='reload'){haptic('reload');try{playWeaponAction(audio,game.weapon.id,'reload-out');}catch{}}
   if(event.type==='reloaded'){haptic('reloaded');try{playWeaponAction(audio,game.weapon.id,'reload-in');}catch{}}
   if(event.type==='impact'){laser.impact(event);try{playLaserImpact(audio,{surface:event.surface,distance:Math.hypot(event.x-head.x,event.y-head.y,event.z-head.z),splash:event.splash,power:event.power});}catch{}}
@@ -209,17 +209,17 @@ function processEvents(){
   if(event.type==='over'||event.type==='won'){mode='finished';music.pause();cancelFire();info('GÂCHETTE DROITE : REJOUER');}
  }
 }
-function haptic(type,arg){
+function haptic(type,arg,hand=null){
  try{if(JSON.parse(localStorage.getItem('pink-war-vr')||'{}').haptics===false)return;}catch{}
- const plan=hapticPlan(type,arg);for(const entry of mounts){const pulse=entry.source?.handedness==='right'?plan.main:plan.side;if(pulse)buzz(entry.source?.gamepad,pulse);}
+ const plan=hapticPlan(type,arg);for(const entry of mounts){const pulse=hand?(entry.source?.handedness===hand?plan.main:null):entry.source?.handedness==='right'?plan.main:plan.side;if(pulse)buzz(entry.source?.gamepad,pulse);}
 }
 for(let i=0;i<2;i++){
  const ray=renderer.xr.getController(i),anchor=new THREE.Group(),mount=new THREE.Group();anchor.matrixAutoUpdate=false;anchor.visible=false;mount.position.set(0,-.016,.05);scene.add(anchor,ray);anchor.add(mount);
  const entry={ray,anchor,mount,source:null};ray.addEventListener('connected',event=>{entry.source=event.data;updateControllerRoles();});ray.addEventListener('disconnected',()=>{entry.source=null;cancelFire();updateControllerRoles();});mounts.push(entry);
 }
 function updateControllerRoles(){
- if(!assets)return;assets.gun.visible=assets.freeHand.visible=false;
- for(const entry of mounts){entry.mount.remove(assets.gun,assets.freeHand);if(entry.source?.handedness==='right'){entry.mount.add(assets.gun);assets.gun.visible=!!session;}else if(entry.source?.handedness==='left'){entry.mount.add(assets.freeHand);assets.freeHand.visible=!!session;}}
+ if(!assets)return;assets.gun.visible=assets.offGun.visible=assets.freeHand.visible=false;
+ for(const entry of mounts){entry.mount.remove(assets.gun,assets.offGun,assets.freeHand);if(entry.source?.handedness==='right'){entry.mount.add(assets.gun);assets.gun.visible=!!session;}else if(entry.source?.handedness==='left'){const held=game.weapon.dual?assets.offGun:assets.freeHand;entry.mount.add(held);held.visible=!!session;}}
 }
 function sightEye(){
  const array=renderer.xr.getCamera(camera),source=array.cameras?.find(c=>c.viewport?.x>0)||array.cameras?.[0]||array;
@@ -239,21 +239,28 @@ function tick(ms,frame){
   if(active&&edge('collect',!!padL?.buttons?.[3]?.pressed)&&mode==='combat')game.collectWeapon();
   if(active&&edge('decor',!!padL?.buttons?.[4]?.pressed)){decorEnabled=!decorEnabled;assets?.architecture.setEnabled(decorEnabled,fullImmersion);}
   if(frame){syncTrackedHands(mounts,session,frame,renderer.xr.getReferenceSpace());updateControllerRoles();updatePlayArea(frame);updateSurfaces(frame);updatePlayArea(frame);}
-  const held=controllerHandState.trigger>.15,main=mounts.find(m=>m.source?.handedness==='right');if(!held)fireBlocked=false;
+  const held=controllerHandState.trigger>.15,main=mounts.find(m=>m.source?.handedness==='right');if(!held&&(!game.weapon.dual||controllerHandState.offTrigger<=.15))fireBlocked=false;
   if(held&&!lastTrigger&&active&&mode!=='combat')requestCombat();lastTrigger=held;
   if(startRequested&&active&&mode!=='combat'&&assets&&floors().length)startCombat();
   if(assets){
    const reload=game.reloadRemaining?1-game.reloadRemaining/game.weapon.reload:0;
-   assets.gun.rotation.set(feedback.pitch-(game.weapon.melee?.55:0)+reload*Math.PI/2,feedback.yaw,game.weapon.melee?-.06:0);
-   assets.gun.position.set(feedback.yaw*.1,.028*(+!!game.weapon.melee)-feedback.kick*.13,feedback.kick-(game.weapon.melee?.036:0));
+   const heldFeel=game.weapon.dual?{pitch:0,yaw:0,kick:0}:feedback;
+   assets.gun.rotation.set(heldFeel.pitch-(game.weapon.melee?.55:0)+reload*Math.PI/2,heldFeel.yaw,game.weapon.melee?-.06:0);
+   assets.gun.position.set(heldFeel.yaw*.1,.028*(+!!game.weapon.melee)-heldFeel.kick*.13,heldFeel.kick-(game.weapon.melee?.036:0));
    assets.animate(game.time,dt,Math.max(1,game.wave),{ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,reloading:game.reloadRemaining>0,reloadProgress:reload,
-    time:game.time,flash:game.time<muzzleUntil,heat:feedback.heat,kick:feedback.kick,impulse:feedback.impulse,...controllerHandState,trigger:active&&main?.anchor.visible&&!fireBlocked?controllerHandState.trigger:0});
+    time:game.time,dualState:game.dual,flash:active&&game.time<muzzleUntil,heat:feedback.heat,kick:feedback.kick,impulse:feedback.impulse,...controllerHandState,trigger:active&&main?.anchor.visible&&!fireBlocked?controllerHandState.trigger:0});
    if(active&&mode==='combat'){
     game.setHead(head,dt);game.updateBlade(assets.gun.userData.getBladeSegment(),dt,(controllerHandState.offTrigger>.15||controllerHandState.grip>.15),head);game.step(dt);
     assets.gun.updateWorldMatrix(true,true);const muzzle=assets.gun.userData.flash.position,origin=assets.gun.localToWorld(muzzle.clone()),aim=new THREE.Vector3(0,0,-1).transformDirection(assets.gun.matrixWorld);
-    game.trigger(!fireBlocked&&!!main?.anchor.visible&&held,dt,origin,aim);processEvents();syncModels();
+    if(game.weapon.dual){
+      for(const hand of ['right','left']){const tracked=mounts.find(m=>m.source?.handedness===hand),gun=hand==='right'?assets.gun:assets.offGun;
+        const muzzle=gun.userData.flash;muzzle.updateWorldMatrix(true,false);const at=muzzle.getWorldPosition(new THREE.Vector3()),direction=new THREE.Vector3(0,0,-1).transformDirection(gun.matrixWorld);
+        game.triggerHand(hand,!fireBlocked&&!!tracked?.anchor.visible&&(hand==='right'?held:controllerHandState.offTrigger>.15),dt,at,direction);
+      }
+    }else game.trigger(!fireBlocked&&!!main?.anchor.visible&&held,dt,origin,aim);
+    processEvents();syncModels();
    }
-   const eye=sightEye(),aiming=active&&mode==='combat'&&(controllerHandState.offTrigger>.15||controllerHandState.grip>.15)&&!game.reloadRemaining;
+   const eye=sightEye(),aiming=active&&mode==='combat'&&((!game.weapon.dual&&controllerHandState.offTrigger>.15)||controllerHandState.grip>.15)&&!game.reloadRemaining;
    assets.gun.userData.setSight?.(aiming,eye);
    if(aiming&&assets.gun.userData.optics?.[game.weaponIndex]){scope ||=createMagnifiedSight(256);scope.render({renderer,scene,gun:assets.gun,eyeCamera:eye,active:true,hide:[...mounts.map(m=>m.anchor),hud.plane,board.plane,announcement.plane]});}else scope?.release();
    assets.architecture.update(game.time,eye);

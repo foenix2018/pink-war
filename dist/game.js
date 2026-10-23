@@ -329,8 +329,9 @@ function updateCamera() {
   }
   const bob = Math.hypot(move.x, move.y) > .1 || keys.has('KeyW') || keys.has('KeyZ') || keys.has('KeyS');
   const ads=flatSightPose(optic,aimBlend);
-  weapon.position.set(ads.x+feel.yaw*.15, ads.y + (bob ? Math.sin(clock * 11) * .009*(1-aimBlend) : 0) - feel.kick*.18 + reloadLift * .045, ads.z + feel.kick - reloadLift * .028);
-  weapon.rotation.set(feel.pitch + reloadLift * Math.PI / 2,feel.yaw,Math.sin(clock * 1.8) * .003-feel.yaw*.35);
+  const heldFeel=game.weapon.dual?{yaw:0,kick:0,pitch:0}:feel;
+  weapon.position.set(ads.x+heldFeel.yaw*.15, ads.y + (bob ? Math.sin(clock * 11) * .009*(1-aimBlend) : 0) - heldFeel.kick*.18 + reloadLift * .045, ads.z + heldFeel.kick - reloadLift * .028);
+  weapon.rotation.set(heldFeel.pitch + reloadLift * Math.PI / 2,heldFeel.yaw,Math.sin(clock * 1.8) * .003-heldFeel.yaw*.35);
   if(game.weapon.melee){const slash=bladeSwingPose(game.bladePhase,game.bladeSlashSide);weapon.rotation.x=slash.x-.12;weapon.rotation.y=slash.y;weapon.rotation.z=slash.z;}
   camera.updateProjectionMatrix(); camera.updateMatrixWorld(true);
 }
@@ -344,7 +345,7 @@ function updateWeaponVisuals(dt, firing, moving) {
   reloadLift = reloadPose();
   const state = { ammo: game.ammo[game.weaponIndex], capacity: game.weapon.capacity, charge: game.weapon.chargeTime ? game.charge : 0,
     reloadProgress, reloading, time: game.time,heat:weaponFeel.state.heat,kick:weaponFeel.state.kick,impulse:weaponFeel.state.impulse,
-    bladeHeld:!!game.weapon.melee&&!!firing };
+    bladeHeld:!!game.weapon.melee&&!!firing,dualState:game.dual };
   world.fpsGun.userData.setCombatState?.(state); world.soldier.gun.userData.setCombatState?.(state);
   const trigger = firing && !reloading && game.state === 'playing' ? 1 : 0;
   // The actual shared LYLU/GHJU rig now receives locomotion on EVERY desktop/mobile view.
@@ -359,13 +360,14 @@ function updateWeaponVisuals(dt, firing, moving) {
     if (view === 'fps') world.fpsGun.userData.animateHands?.(trigger, trigger ? .34 : .18, reloadLift, dt);
   }
 }
-function aim() {
-  if (vr?.mode==='xr') return vr.aim();
+function aim(hand=game.weapon.dual?game.nextDualHand:'right') {
+  if (vr?.mode==='xr') return vr.aim(hand);
   const { T, camera } = world, forward = new T.Vector3(); camera.getWorldDirection(forward);
   // Shots leave the muzzle of the weapon the hand is holding.
   const origin = new T.Vector3(), gun = view === 'fps' ? world.fpsGun : world.soldier.gun;
   if (view !== 'fps') world.soldier.root.updateMatrixWorld(true);
-  gun.userData.flash.updateWorldMatrix(true, false); gun.userData.flash.getWorldPosition(origin);
+  const muzzle=gun.userData.flashFor?.(hand)||gun.userData.flash;
+  muzzle.updateWorldMatrix(true, false); muzzle.getWorldPosition(origin);
   const far = camera.position.clone().addScaledVector(forward, 160); let target = far, nearest = 1;
   for (const box of world.obstacles) { const hit = segmentBox(camera.position, far, box); if (hit !== null && hit < nearest) { nearest = hit; target = camera.position.clone().lerp(far, hit); } }
   for (const enemy of game.enemies) {
@@ -389,7 +391,7 @@ function handleEvents() {
     if (event.type === 'shot') {
       world.laserShot?.(event);
       const feel=weaponFeel.fire(event.weapon,event.power,game.player.crouched||aiming);
-      lastShotAt=clock;recoil=feel.pitch;flashTimer=feel.flash;vr.haptic('shot', event.weapon); weaponShotSound(event.weapon, event.power);
+      lastShotAt=clock;recoil=feel.pitch;flashTimer=feel.flash;vr.haptic('shot', event.weapon,event.hand); weaponShotSound(event.weapon, event.power);
     }
     if(event.type==='training-hit'){
       world.impact?.(event); // laser decal on the actual hit point of the moving target
@@ -716,7 +718,10 @@ function stepFrame(timestamp, xrFrame) {
     if(game.weapon.semiAuto&&firePressQueued)game.triggerHeld=false;firePressQueued=false;
     // Release is a real state transition for AURORA: never leave a sword active
     // after the trigger, headset tracking or scene focus is released.
-    if (game.state==='playing' && (firing || game.charge>0)) { const target=aim(); game.trigger(firing,dt,target.origin,target.direction); }
+    if(game.state==='playing'&&vr.mode==='xr'&&game.weapon.dual){
+      for(const hand of ['right','left']){const target=aim(hand);game.triggerHand(hand,vrInput.fireHands[hand],dt,target.origin,target.direction);}
+    }
+    else if (game.state==='playing' && (firing || game.charge>0)) { const target=aim(); game.trigger(firing,dt,target.origin,target.direction); }
     else if(game.weapon.melee){game.trigger(false,dt,null,null);}
     else {game.triggerHeld=false;game.semiPending=false;}
     handleEvents(); updateCamera();
@@ -743,7 +748,7 @@ function stepFrame(timestamp, xrFrame) {
   musicBed.update(dt,{active:audioActive,threat:Math.min(1,threat),intermission:game.wave>0&&game.nextWave>0});
   if(audioContext)setWeaponCharge(audioContext,game.weapon.id,game.charge,audioActive&&settings.sound&&game.charge>.015);
   if(audioActive&&game.reloadRemaining>0&&!reloadInserted&&1-game.reloadRemaining/game.weapon.reload>=.58){reloadInserted=true;if(settings.sound)playWeaponAction(audioContext,game.weapon.id,'reload-in');}
-  world.soldier.gun.userData.flash.visible = phase === 'playing' && flashTimer > 0; world.fpsGun.userData.flash.visible = phase === 'playing' && flashTimer > 0;
+  for(const gun of [world.soldier.gun,world.fpsGun])gun.userData.setFlash(phase === 'playing' && flashTimer > 0,game.time);
   $('crosshair').classList.toggle('shooting', flashTimer > 0); $('damage-flash').classList.toggle('active', phase!=='lobby' && damageUntil > clock);
   $('damage-flash').style.setProperty('--injury',phase==='lobby'?0:Math.max(0,(100-game.player.hp)/100*.65));
   vr.update(dt,flashTimer,recoil,weaponFeel.state);

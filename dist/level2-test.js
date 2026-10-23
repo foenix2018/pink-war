@@ -451,7 +451,7 @@ function updateOriginalSoldier(dt,moving,sprint,firing){
   model.root.position.set(game.player.x,game.player.elevation,game.player.z);
   model.root.rotation.y=yaw;
   if(model.weapon!==game.weaponIndex)model.setWeapon(game.weaponIndex);
-  model.gun.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,
+  model.gun.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,dualState:game.dual,
     reloading:game.reloadRemaining>0,reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,charge:game.charge});
   model.animate(game.time,moving,weaponFeel.state.pitch,0,Number(firing),dt,{
     airborne:!game.player.grounded,verticalSpeed:game.player.verticalSpeed,crouched:game.player.crouched,
@@ -556,7 +556,7 @@ function gameTick(dt){
    if(hit&&hit.t<near){near=hit.t;target=camera.position.clone().lerp(far,hit.t);}
  }
  const gun=view==='third'?playerRig?.model?.gun:weapon;
- const muzzle=gun?.userData?.flash;
+ const muzzle=gun?.userData?.flashFor?.(game.nextDualHand)||gun?.userData?.flash;
  const origin=new T.Vector3();
  if(muzzle){
   try{muzzle.updateWorldMatrix(true,false);muzzle.getWorldPosition(origin);}
@@ -595,12 +595,14 @@ function gameTick(dt){
  if(game.player.hp>0)$('damage').style.boxShadow='inset 0 0 '+(100-game.player.hp)*1.2+'px #c52c5e44';
  weaponKick=Math.max(0,weaponKick-dt*.7);
  const ads=flatSightPose(OPTICS[game.weapon.id],aimBlend);
- weapon.position.set(ads.x+weaponFeel.state.yaw*.15,ads.y-weaponFeel.state.kick*.18,ads.z+weaponFeel.state.kick);
- weapon.rotation.set(weaponFeel.state.pitch,weaponFeel.state.yaw,-weaponFeel.state.yaw*.35);
+ const heldFeel=game.weapon.dual?{yaw:0,kick:0,pitch:0}:weaponFeel.state;
+ weapon.position.set(ads.x+heldFeel.yaw*.15,ads.y-heldFeel.kick*.18,ads.z+heldFeel.kick);
+ weapon.rotation.set(heldFeel.pitch,heldFeel.yaw,-heldFeel.yaw*.35);
  weapon.userData.setSight?.(aimBlend>.55,camera);
- weapon.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,
+ weapon.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,dualState:game.dual,
   charge:game.charge,reloading:game.reloadRemaining>0,reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,
   heat:weaponFeel.state.heat,kick:weaponFeel.state.kick,impulse:weaponFeel.state.impulse});
+ weapon.userData.setFlash?.(running,game.time);playerRig?.model.gun.userData.setFlash?.(running,game.time);
  weapon.userData.animateHands?.(Number(firing),firing ? .34 : .18,game.reloadRemaining > 0 ? .8 : 0,dt);
  if(weapon.userData.index!==game.weaponIndex)weapon.userData.setVariant(game.weaponIndex);
  if(rain)rain.position.y=-(game.time*9%18);

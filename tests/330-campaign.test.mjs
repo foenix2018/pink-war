@@ -135,7 +135,7 @@ test('pause and death freeze objective timers, and replay clears the finite enco
 });
 
 test('all 32 enemies are defeated with real R9 projectiles across the longer finite mission', () => {
-  const game=new CampaignLevel1([],random);game.invulnerable=1000;
+  const game=new CampaignLevel1([],random);game.selectWeapon(0);game.cooldown=0;game.invulnerable=1000;
   archive(game);advance(game,5.1);
   const observed=new Set();
   function defeat(stage){let attempts=0;

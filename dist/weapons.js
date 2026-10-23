@@ -15,7 +15,8 @@ export const WEAPON_FRAME = Object.freeze([
   Object.freeze({ id: 'thorn', muzzle: Object.freeze([0, .108, -.85]), support: Object.freeze([0, -.05, -.34]), length: 1.05 }),
   Object.freeze({ id: 'nova', muzzle: Object.freeze([0, .11, -.655]), support: Object.freeze([0, -.058, -.29]), length: .9 }),
   Object.freeze({ id:'aurora',muzzle:Object.freeze([0,.14,0]),support:null,length:1.22,melee:true }),
-  M12_FRAME
+  M12_FRAME,
+  Object.freeze({id:'duor9',muzzle:Object.freeze([0,.077,-.207]),support:Object.freeze([-.44,0,0]),length:.27,dual:true})
 ]);
 // The Kenney blasters are placed by their muzzle, so their own pistol grips are not at the origin, and they are
 // toy-wide (grips 4.3 to 7.2 cm across). `slim` narrows each one (x only) to a 3.6 cm grip, which the glove's
@@ -278,7 +279,7 @@ const BATTERY_LAYOUT = Object.freeze([
 const BATTERY_COUNT = 8;
 const batteryCellGeometry = new T.BoxGeometry(.0035, .007, .008);
 function attachBatteryRail(model, index, mats, material) {
-  if(WEAPON_FRAME[index].melee||index===6)return null;
+  if(WEAPON_FRAME[index].melee||index>=6)return null;
   const [x,y,z,step] = BATTERY_LAYOUT[index], length = step * (BATTERY_COUNT - 1) + .012;
   const shell = new T.Mesh(new T.BoxGeometry(.009, .013, length), mats.dark);
   shell.position.set(x + .002, y, z - step * (BATTERY_COUNT - 1) * .5);
@@ -320,7 +321,11 @@ export function createWeaponModels(mats) {
       return group;
     }));
   }
-  return [...prototypes.get(mats).map(group => group.clone()),createM12Shotgun(mats.steel.envMap)];
+  const models=[...prototypes.get(mats).map(group => group.clone()),createM12Shotgun(mats.steel.envMap)];
+  const duo=new T.Group(),right=new T.Group(),left=new T.Group();
+  duo.name='R–9 DUO / GHJU';right.name='DUO right';left.name='DUO left';left.position.x=-.44;left.scale.x=-1;
+  right.add(models[0].clone());left.add(models[0].clone());duo.add(right,left);
+  Object.assign(duo.userData,{frame:WEAPON_FRAME[7],dual:true,integratedEmitter:true});models.push(duo);return models;
 }
 
 // The weapon in the right hand: every model is drawn around the grip (the palm), so the glove holds it by
@@ -358,6 +363,13 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   const hand = createGlove(gloves, { sleeve }), support = createGlove(gloves, { mirror: true, sleeve });
   support.visible = false; g.add(hand, support);
   const flash = makeFlash(g); flash.visible = false;
+  const dualRight=models[7].getObjectByName('DUO right'),dualLeft=models[7].getObjectByName('DUO left');
+  const leftFlash=makeFlash(dualLeft);leftFlash.visible=false;
+  g.userData.dualLeft=dualLeft;g.userData.flashFor=hand=>g.userData.index===7&&hand==='left'?leftFlash:flash;
+  g.userData.setFlash=(active,time=0)=>{
+    if(g.userData.index!==7){flash.visible=!!active;leftFlash.visible=false;return;}
+    for(const [hand,light] of [['right',flash],['left',leftFlash]]){const age=time-(g.userData.dualState?.shotAt?.[hand]??-Infinity);light.visible=!!active&&age>=0&&age<.045;}
+  };
   // Small moving emitter collars and residual heat make the discharge visible
   // at the barrel rather than a large floating light in front of the hand.
   const collar=new T.Mesh(new T.CylinderGeometry(.012,.014,.014,12),mats.steel);collar.rotation.x=Math.PI/2;g.add(collar);
@@ -365,12 +377,21 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   const heatMaterial=new T.MeshBasicMaterial({color:mats.rose.color,transparent:true,opacity:0,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false});
   const heatRing=new T.Mesh(new T.TorusGeometry(.012,.0018,6,20),heatMaterial);g.add(heatRing);
   heatRing.name='Barrel heat ring';
-  const emitterRadii=[.0105,.0165,.031,.029,.062,.023,.026];let blade=null;
+  const emitterRadii=[.0105,.0165,.031,.029,.062,.023,.026,.0105];let blade=null;
   g.userData.getBladeSegment=()=>g.userData.index===5?blade?.segment():null;
   Object.defineProperty(g.userData,'blade',{get:()=>blade});
   Object.assign(g.userData, { flash, hand, support, showSupport: true });
   g.userData.setLevel = level => { hand.userData.setLevel(level); support.userData.setLevel(level); };
-  g.userData.setCombatState = ({ ammo = 0, capacity = 1, charge = 0, reloadProgress = 0, reloading = false, time = 0,heat=0,kick=0,impulse=0,bladeHeld=false } = {}) => {
+  g.userData.setCombatState = ({ ammo = 0, capacity = 1, charge = 0, reloadProgress = 0, reloading = false, time = 0,heat=0,kick=0,impulse=0,bladeHeld=false,dualState=null } = {}) => {
+    if(dualState)g.userData.dualState=dualState;
+    if(g.userData.index===7){
+      dualLeft.visible=!!g.userData.showSupport;collar.visible=heatRing.visible=false;
+      for(const [side,carrier] of [['right',dualRight],['left',dualLeft]]){
+        const age=time-(g.userData.dualState?.shotAt?.[side]??-Infinity),kick=age>=0&&age<.3?.045*Math.sin(Math.min(1,age/.12)*Math.PI)*Math.exp(-age*12):0;
+        carrier.position.z=kick;carrier.rotation.x=kick*2.5;
+      }
+      g.userData.setFlash(false,time);return;
+    }
     if(g.userData.index===6)models[6].userData.animate({time,kick,impulse,reloadProgress,reloading});
     blade?.update(time,g.userData.index===5&&!!bladeHeld,mats.rose.color);
     collar.visible=g.userData.index!==5&&!models[g.userData.index].userData.integratedEmitter;
@@ -400,7 +421,7 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
     hand.userData.animate?.({ trigger, grip, reload: 0 }, dt);
     if(g.userData.index===6&&support.visible){const p=M12_FRAME.support;support.userData.setBasePosition?.([p[0],p[1],p[2]+(models[6].userData.pumpOffset||0)]);}
     // The free hand has no trigger: its index closes round the foregrip with the other fingers.
-    if (support.visible) support.userData.animate?.({ trigger: 0, grip: reload ? 0 : grip, reload, wrap: !reload }, dt);
+    if (support.visible) support.userData.animate?.({ trigger:g.userData.index===7?trigger:0, grip: reload ? 0 : grip, reload, wrap:g.userData.index!==7&&!reload }, dt);
   };
   const supportCuff=[...KENNEY_SUPPORT_CUFF];supportCuff[0]=-supportCuff[0];
   const handCuff=new T.Vector3(),rakeAxis=new T.Vector3(1,0,0);
@@ -409,23 +430,28 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
     if(!WEAPON_FRAME[index])return;
     if(g.userData.index===6&&index!==6)models[6].userData.resetAnimation();
     models.forEach((model, i) => model.visible = i === index);
-    const frame = WEAPON_FRAME[index],hold=index===6?M12_HOLD:g.userData.kenneyAssets?.loadedByIndex?.[index]?KENNEY_HOLD[index]:null;
+    const frame = WEAPON_FRAME[index],hold=index===6?M12_HOLD:g.userData.kenneyAssets?.loadedByIndex?.[index===7?0:index]?KENNEY_HOLD[index===7?0:index]:null;
+    if(index===7){dualRight.add(hand,flash);dualLeft.add(support);support.scale.x=Math.abs(support.scale.x);}
+    else {g.add(hand,support,flash);support.scale.x=-Math.abs(support.scale.x);}
+    dualLeft.visible=index===7&&!!g.userData.showSupport;leftFlash.visible=false;
     if(index===5&&!blade){blade=createEnergyBlade(mats.rose.color);g.add(blade.root);}
     if(index!==5)blade?.reset?.();
     const muzzle=models[index].userData.muzzle||frame.muzzle;
-    flash.position.set(...muzzle); flash.scale.setScalar([.14,.12,.25,.19,.38,0,.27][index]);
+    flash.position.set(...muzzle); flash.scale.setScalar([.14,.12,.25,.19,.38,0,.27,.14][index]);
+    leftFlash.position.set(...muzzle);leftFlash.scale.setScalar(.14);
     collar.visible=index!==5&&!models[index].userData.integratedEmitter;
     collar.position.set(frame.muzzle[0],frame.muzzle[1],frame.muzzle[2]+.009);collar.scale.set(emitterRadii[index]/.012,1,emitterRadii[index]/.012);
     heatRing.visible=false;
     support.visible = g.userData.showSupport && !!frame.support;
-    g.userData.supportPoint=hold?.support||frame.support;
-    support.userData.setBasePosition?.(g.userData.supportPoint || [0,0,0]);
+    g.userData.supportPoint=index===7?[-.44-(hold?.palm[0]||0),hold?.palm[1]||0,hold?.palm[2]||0]:hold?.support||frame.support;
+    support.userData.setBasePosition?.(index===7?(hold?.palm||[0,0,0]):g.userData.supportPoint || [0,0,0]);
     // The palm closes on the blaster's own grip: raked like it, the cuff heading back towards the elbow
     // (never up at the eye, where its open end would show).
     g.userData.palm.set(...(hold?.palm||[0,0,0]));
     hand.userData.setBasePosition?.(g.userData.palm.toArray());hand.rotation.x=hold?.rake||0;
     hand.userData.setForearm?.(hold?handCuff.set(...KENNEY_CUFF).applyAxisAngle(rakeAxis,-hold.rake).toArray():undefined);
-    support.userData.setForearm?.(hold?supportCuff:undefined);
+    support.rotation.x=index===7?hold?.rake||0:0;
+    support.userData.setForearm?.(index===7&&hold?handCuff.toArray():hold?supportCuff:undefined);
     g.userData.index = index;
   };
   g.userData.kenneyAssets=installKenneyBlasters(models,originalWeaponMeshes,WEAPON_FRAME,
@@ -441,6 +467,13 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
       // These cell rails belonged to the procedural receivers and otherwise
       // float alongside the Kenney model. The real GLB is a closed assembly.
       const rail=batteries[index];if(rail){rail.visible=false;rail.userData.shell.visible=false;}
+      if(index===0){
+        // Both pistols reuse the approved production R9, including its textures.
+        // Replace just the visual nodes; the two glove skeletons stay private.
+        for(const carrier of [dualRight,dualLeft]){for(const child of [...carrier.children])if(child!==hand&&child!==support&&child!==flash&&child!==leftFlash)carrier.remove(child);const visual=models[0].clone();visual.visible=true;carrier.add(visual);}
+        models[7].userData.muzzle=[...models[0].userData.muzzle];
+        if(g.userData.index===7)g.userData.setVariant(7);
+      }
       if(g.userData.index===index)g.userData.setVariant(index);
     },KENNEY_HOLD,mats.steel.envMap);
   g.userData.setVariant(0); g.userData.setLevel(1);
