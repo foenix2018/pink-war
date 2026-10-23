@@ -55,7 +55,7 @@ export class ShootingRangeGame extends ArenaGame {
     this.player.x=0;this.player.z=22;this.player.yaw=0;
     this.ownedWeapons=new Set(WEAPONS.map((_,i)=>i).filter(i=>!WEAPONS[i].melee));
     this.ammo=WEAPONS.map(w=>w.capacity);
-    this.weaponIndex=Number.isInteger(initialWeapon)&&initialWeapon>=0&&initialWeapon<5?initialWeapon:0;
+    this.weaponIndex=Number.isInteger(initialWeapon)&&initialWeapon>=0&&this.ownedWeapons.has(initialWeapon)?initialWeapon:0;
     this.state='playing';
   }
   get trainingAccuracy(){return this.trainingShots?Math.round(this.trainingHits/this.trainingShots*100):100;}

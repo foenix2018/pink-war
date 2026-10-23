@@ -1,13 +1,13 @@
 // Actual projectile trails, with a fixed budget of two instanced draws and three
 // short-lived lights. No per-shot light allocation, shadows or full-screen bloom.
 export const LASER_TRAILS=Object.freeze({
-  r9:{radius:.008,length:1.9,light:105},bloom:{radius:.006,length:2.8,light:85},
+  m12:{radius:.004,length:1.3,light:120},r9:{radius:.008,length:1.9,light:105},bloom:{radius:.006,length:2.8,light:85},
   lance:{radius:.006,length:5.8,light:180},thorn:{radius:.008,length:4.4,light:210},
   nova:{radius:.030,length:1.35,light:240},aurora:{radius:.013,length:2.8,light:145}
 });
 // Approximate diameter (m) of the illuminated point of contact.
 export const IMPACT_GLOW=Object.freeze({
-  r9:.18,bloom:.21,lance:.44,thorn:.68,nova:1.30,aurora:.40
+  m12:.18,r9:.18,bloom:.21,lance:.44,thorn:.68,nova:1.30,aurora:.40
 });
 export function createLaserFX(T,scene,palette={}) {
   const group=new T.Group();group.name='Laser cores, halos and pulse lights';scene.add(group);

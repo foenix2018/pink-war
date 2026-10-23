@@ -64,8 +64,16 @@ export const WEAPONS = Object.freeze([
   Object.freeze({ id: 'lance', name: 'LANCE', label: 'Sniper photonique', level: 5, damage: 160, capacity: 5, interval: .85, reload: 2.15, speed: 280, pellets: 1, spread: 0, semiAuto:true, chargeTime: 0, splash: 0 }),
   Object.freeze({ id: 'thorn', name: 'THORN', label: 'Canon à rail', level: 7, damage: 190, capacity: 6, interval: .28, reload: 2.1, speed: 200, pellets: 1, spread: 0, chargeTime: .7, splash: 1.8 }),
   Object.freeze({ id: 'nova', name: 'NOVA', label: 'Canon à énergie', level: 9, damage: 340, capacity: 4, interval: .4, reload: 2.4, speed: 80, pellets: 1, spread: 0, chargeTime: 1.05, splash: 5 }),
-  Object.freeze({ id:'aurora',name:'AURORA',label:'Sabre à énergie',level:2,damage:155,capacity:0,interval:.48,reload:0,speed:0,pellets:0,spread:0,semiAuto:true,chargeTime:0,splash:0,melee:true })
+  Object.freeze({ id:'aurora',name:'AURORA',label:'Sabre à énergie',level:2,damage:155,capacity:0,interval:.48,reload:0,speed:0,pellets:0,spread:0,semiAuto:true,chargeTime:0,splash:0,melee:true }),
+  Object.freeze({id:'m12',name:'M–12',label:'Fusil à pompe',level:4,damage:18,capacity:8,interval:.88,reload:2.8,speed:170,pellets:8,spread:.038,semiAuto:true,chargeTime:0,splash:0,falloffStart:12,falloffEnd:40,minDamage:.2})
 ]);
+export const starterWeaponIndex=characterId=>characterId==='lylu'?6:0;
+export function projectileDamage(b,at){
+ const w=WEAPONS.find(w=>w.id===b.weapon);if(!w?.falloffStart)return b.damage;
+ const distance=Math.hypot(at.x-(b.originX??b.x),at.y-(b.originY??b.y),at.z-(b.originZ??b.z));
+ const t=clamp((distance-w.falloffStart)/(w.falloffEnd-w.falloffStart),0,1);
+ return b.damage*(1-t*(1-w.minDamage));
+}
 // Low enough to hide behind, tall enough to stop standing-height shots.
 export const COVER_WALLS = Object.freeze([
   { x: -5.6, z: 14, hx: 4, hz: .55, height: 2.65 },
@@ -250,7 +258,7 @@ export function brokenBridgeDetour(enemy,player) {
   return null;
 }
 export class ArenaGame {
-  constructor(obstacles = [], random = Math.random, traversal = null) { this.traversal=traversal;this.routes=traversal?.routes||ELEVATED_ROUTES;this.lifts=traversal?.lifts||LIFTS;this.obstacles = obstacles; this.random = random; this.navigation = new CoverNavigation(obstacles); this.stairNavigation=this.routes.map(()=>new CoverNavigation(obstacles)); this.reset(); }
+  constructor(obstacles = [], random = Math.random, traversal = null, characterId='ghju') { this.traversal=traversal;this.routes=traversal?.routes||ELEVATED_ROUTES;this.lifts=traversal?.lifts||LIFTS;this.obstacles = obstacles; this.random = random; this.navigation = new CoverNavigation(obstacles); this.stairNavigation=this.routes.map(()=>new CoverNavigation(obstacles)); this.reset(characterId); }
   replaceObstacles(obstacles) {
     // Renderer recovery / entering WebXR rebuilds the scene. Keep aiming and
     // simulation on the same moving lift and gate colliders after that switch.
@@ -258,7 +266,7 @@ export class ArenaGame {
     this.navigation=new CoverNavigation(obstacles);this.stairNavigation=this.routes.map(()=>new CoverNavigation(obstacles));
     this.searchFields=new Map();
   }
-  reset() {
+  reset(characterId=this.characterId||'ghju') {
     this.searchFields=new Map();
     this.navigation.refreshAt = -1; this.navigation.goal = -1;
     this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0, verticalSpeed: 0, grounded: true, jumpHeld: false, crouched:false,airJumps:0,jumpImpulseX:0,jumpImpulseZ:0,lastGroundedAt:0 };
@@ -271,8 +279,9 @@ export class ArenaGame {
     this.state = 'playing'; this.cooldown = 0; this.invulnerable = 0;
     this.nextWave = .75; this.spawnTimer = 0; this.toSpawn = 0; this.nextId = 1;
     this.activePortals=[];
-    this.weaponIndex = 0; this.ammo = WEAPONS.map(w => w.capacity);
-    this.ownedWeapons = new Set([0]); this.weaponOffers = [];
+    this.characterId=characterId==='lylu'?'lylu':'ghju';
+    this.weaponIndex = starterWeaponIndex(this.characterId); this.ammo = WEAPONS.map(w => w.capacity);
+    this.ownedWeapons = new Set([this.weaponIndex,0]); this.weaponOffers = [];
     this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false; this.semiPending=false;
     this.lastDamage = 0; this.regenerating = false;
     for(const nav of this.stairNavigation){nav.refreshAt=-1;nav.goal=-1;}
@@ -454,13 +463,14 @@ export class ArenaGame {
     const bulletId=this.nextId;
     const w = this.weapon, power = w.chargeTime ? .3 + .7 * clamp(charge, 0, 1) : 1;
     const nx = direction.x / length, ny = direction.y / length, nz = direction.z / length;
-    const flat = Math.hypot(nx, nz) || 1, rx = -nz / flat, rz = nx / flat;
+    const flat = Math.hypot(nx, nz), rx = flat>1e-6?-nz/flat:1, rz = flat>1e-6?nx/flat:0;
+    const ux=-rz*ny,uy=rz*nx-rx*nz,uz=rx*ny;
     for (let i = 0; i < w.pellets; i++) {
       // A deterministic ring keeps the plasma spread consistent on touch screens.
-      const angle = i / Math.max(1, w.pellets - 1) * Math.PI * 2;
-      const sx = w.pellets > 1 && i > 0 ? Math.cos(angle) * w.spread : (this.random() - .5) * w.spread;
-      const sy = w.pellets > 1 && i > 0 ? Math.sin(angle) * w.spread : (this.random() - .5) * w.spread;
-      const vx = nx + rx * sx, vy = ny + sy, vz = nz + rz * sx, n = Math.hypot(vx, vy, vz);
+      const angle = w.id==='m12'?(i-1)/Math.max(1,w.pellets-1)*Math.PI*2:i/Math.max(1,w.pellets-1)*Math.PI*2;
+      const sx = w.id==='m12'&&i===0?0:w.pellets > 1 && i > 0 ? Math.cos(angle) * w.spread : (this.random() - .5) * w.spread;
+      const sy = w.id==='m12'&&i===0?0:w.pellets > 1 && i > 0 ? Math.sin(angle) * w.spread : (this.random() - .5) * w.spread;
+      const vx = nx + rx * sx+(w.id==='m12'?ux*sy:0), vy = ny + (w.id==='m12'?uy*sy:sy), vz = nz + rz * sx+(w.id==='m12'?uz*sy:0), n = Math.hypot(vx, vy, vz);
       this.bullets.push({ id: this.nextId++, x: origin.x, y: origin.y, z: origin.z,
         vx: vx / n * w.speed, vy: vy / n * w.speed, vz: vz / n * w.speed, life: 2.4,
         originX:origin.x,originY:origin.y,originZ:origin.z,originElevation:this.player.elevation,
@@ -791,7 +801,7 @@ export class ArenaGame {
         }
         this.event('impact', { ...at, bulletId:b.id, enemy: !!target, hostile: b.hostile, splash: b.splash,weapon:b.weapon,power:b.power||1,surface:target?'robot':surface,normal,direction:{x:b.vx,y:b.vy,z:b.vz} });
         if (target === this.player) this.damage(b.damage);
-        else if (target) this.damageEnemy(target, b.damage, at, zone, multiplier,{x:b.originX??this.player.x,z:b.originZ??this.player.z,elevation:b.originElevation??this.player.elevation});
+        else if (target) this.damageEnemy(target, projectileDamage(b,at), at, zone, multiplier,{x:b.originX??this.player.x,z:b.originZ??this.player.z,elevation:b.originElevation??this.player.elevation});
         if (!b.hostile && b.splash > 0) for (const e of [...this.enemies]) {
           if (e === target) continue;
           const center = { x: e.x, y: e.elevation + e.aimHeight, z: e.z }, d = Math.hypot(e.x - at.x, e.z - at.z, center.y - at.y);

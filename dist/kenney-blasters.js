@@ -95,7 +95,7 @@ function unpackAccessor(json,data,binStart,index){
     out[i*count+k]=data[spec.read](start+i*stride+k*spec.bytes,true);
   return out;
 }
-export function parseKenneyGLB(buffer){
+export function parseKenneyGLB(buffer,materialFactory=modelMaterial){
   const data=new DataView(buffer);
   if(data.getUint32(0,true)!==0x46546c67||data.getUint32(4,true)!==2)throw Error('Kenney GLB attendu');
   const length=data.getUint32(12,true);
@@ -113,7 +113,7 @@ export function parseKenneyGLB(buffer){
       if(primitive.attributes.TEXCOORD_0!==undefined)geometry.setAttribute('uv',new T.Float32BufferAttribute(unpackAccessor(json,data,binStart,primitive.attributes.TEXCOORD_0),2));
       if(primitive.indices!==undefined)geometry.setIndex(unpackAccessor(json,data,binStart,primitive.indices));
       if(!geometry.hasAttribute('normal'))geometry.computeVertexNormals();
-      const mesh=new T.Mesh(geometry,modelMaterial(json.materials?.[primitive.material]?.name));mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);
+      const mesh=new T.Mesh(geometry,materialFactory(json.materials?.[primitive.material]?.name));mesh.castShadow=true;mesh.receiveShadow=true;group.add(mesh);
     }
     return group;
   });

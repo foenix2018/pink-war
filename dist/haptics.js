@@ -1,5 +1,5 @@
 // Shared Touch Plus feedback. Magnitudes are bounded by the controller API.
-const shots=Object.freeze({r9:[.88,65],bloom:[.8,45],lance:[.97,95],thorn:[1,145],nova:[1,180],aurora:[.7,75]});
+const shots=Object.freeze({r9:[.88,65],bloom:[.8,45],lance:[.97,95],thorn:[1,145],nova:[1,180],aurora:[.7,75],m12:[1,115]});
 export function hapticPlan(type,arg){
  switch(type){
   case 'shot':return {main:shots[arg]||shots.r9};

@@ -4,7 +4,8 @@ export const FIRING_FEEL=Object.freeze({
   bloom:{kick:.023,pitch:.057,yaw:.012,returnSpeed:29,flash:.032,heat:.12},
   lance:{kick:.095,pitch:.145,yaw:.007,returnSpeed:20,flash:.06,heat:.34},
   thorn:{kick:.096,pitch:.18,yaw:.008,returnSpeed:19,flash:.06,heat:.42},
-  nova:{kick:.115,pitch:.215,yaw:.026,returnSpeed:16,flash:.10,heat:.55}
+  nova:{kick:.115,pitch:.215,yaw:.026,returnSpeed:16,flash:.10,heat:.55},
+  m12:{kick:.108,pitch:.18,yaw:.012,returnSpeed:18,flash:.065,heat:.36}
 });
 // Analytic damped springs give the same kick/settling at 30, 72, 90 or 120 Hz.
 // They affect the held model; never the position of the tracked headset.

@@ -1,3 +1,4 @@
+import {starterWeaponIndex} from './game-logic.js';
 // Reuse the real Pink War assets in room-scale AR; no substitute low-poly enemies or guns.
 import * as T from './vendor/three.webgpu.min.js';
 import { createEnemyFactory } from './enemies.js';
@@ -61,7 +62,7 @@ export async function createAtHomeAssets(scene, hero) {
   const enemyFactory=createEnemyFactory(player.mats);
   const gun=player.makeGun({sleeve:true});
   gun.userData.showSupport=false;gun.userData.support.visible=false;
-  gun.userData.setVariant(0);
+  gun.userData.setVariant(starterWeaponIndex(hero.id));
   const freeHand=createGlove(player.kit.gloves,{mirror:true});
   gun.userData.hand.userData.extendForearm();freeHand.userData.extendForearm();
   // The player sees their actual Pink War gun/gloves in first person.

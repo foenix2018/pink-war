@@ -3,6 +3,7 @@ import { Assembly, bevelBox, profile, turned, matrix } from './geo.js';
 import { createGlove } from './hands.js';
 import { createEnergyBlade } from './energy-blade.js';
 import { installKenneyBlasters } from './kenney-blasters.js';
+import {createM12Shotgun,M12_FRAME,M12_HOLD} from './m12-shotgun.js';
 
 // Every weapon is modelled in one frame: the origin is the centre of its pistol grip (where the palm rests),
 // -z is the barrel direction, +y is up. The gloved hand (hands.js) is built in the same frame, so any weapon
@@ -13,7 +14,8 @@ export const WEAPON_FRAME = Object.freeze([
   Object.freeze({ id: 'lance', muzzle: Object.freeze([0, .085, -.88]), support: Object.freeze([0, -.052, -.30]), length: 1.10 }),
   Object.freeze({ id: 'thorn', muzzle: Object.freeze([0, .108, -.85]), support: Object.freeze([0, -.05, -.34]), length: 1.05 }),
   Object.freeze({ id: 'nova', muzzle: Object.freeze([0, .11, -.655]), support: Object.freeze([0, -.058, -.29]), length: .9 }),
-  Object.freeze({ id:'aurora',muzzle:Object.freeze([0,.14,0]),support:null,length:1.22,melee:true })
+  Object.freeze({ id:'aurora',muzzle:Object.freeze([0,.14,0]),support:null,length:1.22,melee:true }),
+  M12_FRAME
 ]);
 // The Kenney blasters are placed by their muzzle, so their own pistol grips are not at the origin, and they are
 // toy-wide (grips 4.3 to 7.2 cm across). `slim` narrows each one (x only) to a 3.6 cm grip, which the glove's
@@ -37,12 +39,13 @@ const KENNEY_CUFF = Object.freeze([.28, -.72, .62]), KENNEY_SUPPORT_CUFF = Objec
 const PI = Math.PI;
 export const OPTICS = Object.freeze({
   bloom:Object.freeze({y:.178,z:-.032,radius:.018,magnification:2}),
-  lance:Object.freeze({y:.180,z:-.023,radius:.019,magnification:4})
+  lance:Object.freeze({y:.180,z:-.023,radius:.019,magnification:4}),
+  m12:Object.freeze({y:.177,z:-.165,radius:.018,magnification:1.15,eyeRelief:.62,iron:true})
 });
 const opticGlassGeometry=new T.CircleGeometry(1,32),opticDotGeometry=new T.CircleGeometry(.00075,16);
 const opticRingGeometry=new T.RingGeometry(.0068,.0074,32);
 function attachOptic(model,index) {
-  const source=OPTICS[WEAPON_FRAME[index].id];if(!source)return null;const cfg={...source};
+  const source=OPTICS[WEAPON_FRAME[index].id];if(!source||source.iron)return null;const cfg={...source};
   const glassMaterial=new T.MeshPhysicalMaterial({color:0x8ec4d5,metalness:.1,roughness:.12,transparent:true,opacity:.07,side:T.DoubleSide,depthWrite:false});
   const glass=new T.Mesh(opticGlassGeometry,glassMaterial);glass.scale.setScalar(cfg.radius);glass.position.set(0,cfg.y,cfg.z);model.add(glass);
   const reticle=new T.Group(),material=new T.MeshBasicMaterial({color:0xff655c,toneMapped:false,side:T.DoubleSide});
@@ -275,7 +278,7 @@ const BATTERY_LAYOUT = Object.freeze([
 const BATTERY_COUNT = 8;
 const batteryCellGeometry = new T.BoxGeometry(.0035, .007, .008);
 function attachBatteryRail(model, index, mats, material) {
-  if(WEAPON_FRAME[index].melee)return null;
+  if(WEAPON_FRAME[index].melee||index===6)return null;
   const [x,y,z,step] = BATTERY_LAYOUT[index], length = step * (BATTERY_COUNT - 1) + .012;
   const shell = new T.Mesh(new T.BoxGeometry(.009, .013, length), mats.dark);
   shell.position.set(x + .002, y, z - step * (BATTERY_COUNT - 1) * .5);
@@ -317,7 +320,7 @@ export function createWeaponModels(mats) {
       return group;
     }));
   }
-  return prototypes.get(mats).map(group => group.clone());
+  return [...prototypes.get(mats).map(group => group.clone()),createM12Shotgun(mats.steel.envMap)];
 }
 
 // The weapon in the right hand: every model is drawn around the grip (the palm), so the glove holds it by
@@ -362,22 +365,23 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   const heatMaterial=new T.MeshBasicMaterial({color:mats.rose.color,transparent:true,opacity:0,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false});
   const heatRing=new T.Mesh(new T.TorusGeometry(.012,.0018,6,20),heatMaterial);g.add(heatRing);
   heatRing.name='Barrel heat ring';
-  const emitterRadii=[.0105,.0165,.031,.029,.062,.023];let blade=null;
+  const emitterRadii=[.0105,.0165,.031,.029,.062,.023,.026];let blade=null;
   g.userData.getBladeSegment=()=>g.userData.index===5?blade?.segment():null;
   Object.defineProperty(g.userData,'blade',{get:()=>blade});
   Object.assign(g.userData, { flash, hand, support, showSupport: true });
   g.userData.setLevel = level => { hand.userData.setLevel(level); support.userData.setLevel(level); };
   g.userData.setCombatState = ({ ammo = 0, capacity = 1, charge = 0, reloadProgress = 0, reloading = false, time = 0,heat=0,kick=0,impulse=0,bladeHeld=false } = {}) => {
+    if(g.userData.index===6)models[6].userData.animate({time,kick,impulse,reloadProgress,reloading});
     blade?.update(time,g.userData.index===5&&!!bladeHeld,mats.rose.color);
     collar.visible=g.userData.index!==5&&!models[g.userData.index].userData.integratedEmitter;
     if(g.userData.index===5){heatRing.visible=false;flash.visible=false;return;}
-    const rail = batteries[g.userData.index]; if (!rail) return;
     const accent = mats.rose?.color || new T.Color(0xff80b2);
-    const frame=WEAPON_FRAME[g.userData.index],muzzle=models[g.userData.index].userData.muzzle||frame.muzzle,radius=models[g.userData.index].userData.integratedEmitter?[.012,.017,.014,.022,.030][g.userData.index]:emitterRadii[g.userData.index];
+    const frame=WEAPON_FRAME[g.userData.index],muzzle=models[g.userData.index].userData.muzzle||frame.muzzle,radius=models[g.userData.index].userData.integratedEmitter?[.012,.017,.014,.022,.030,0,.026][g.userData.index]:emitterRadii[g.userData.index];
     collar.position.set(muzzle[0],muzzle[1],muzzle[2]+.009+Math.min(.014,kick*.16));
     collar.scale.set(radius/.012,1,radius/.012);
     heatRing.position.set(muzzle[0],muzzle[1],muzzle[2]-.001);heatRing.scale.setScalar(radius/.012);
     heatMaterial.color.copy(accent);heatMaterial.opacity=Math.min(.8,heat*.25+charge*.45+impulse*.4);heatRing.visible=heatMaterial.opacity>.015;
+    const rail = batteries[g.userData.index]; if (!rail) return;
     const low = ammo > 0 && ammo <= capacity * .25, blink = Math.floor(time * 6) % 2 === 0;
     const chargeStep = Math.round(charge * BATTERY_COUNT), reloadStep = Math.ceil(reloadProgress * BATTERY_COUNT);
     const accentHex = accent.getHex(), key = `${g.userData.index}|${ammo}|${capacity}|${chargeStep}|${reloadStep}|${reloading}|${low&&blink}|${accentHex}`;
@@ -394,6 +398,7 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   };
   g.userData.animateHands = (trigger = 0, grip = .18, reload = 0, dt = .016) => {
     hand.userData.animate?.({ trigger, grip, reload: 0 }, dt);
+    if(g.userData.index===6&&support.visible){const p=M12_FRAME.support;support.userData.setBasePosition?.([p[0],p[1],p[2]+(models[6].userData.pumpOffset||0)]);}
     // The free hand has no trigger: its index closes round the foregrip with the other fingers.
     if (support.visible) support.userData.animate?.({ trigger: 0, grip: reload ? 0 : grip, reload, wrap: !reload }, dt);
   };
@@ -402,12 +407,13 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   g.userData.palm=new T.Vector3();
   g.userData.setVariant = index => {
     if(!WEAPON_FRAME[index])return;
+    if(g.userData.index===6&&index!==6)models[6].userData.resetAnimation();
     models.forEach((model, i) => model.visible = i === index);
-    const frame = WEAPON_FRAME[index],hold=g.userData.kenneyAssets?.loadedByIndex?.[index]?KENNEY_HOLD[index]:null;
+    const frame = WEAPON_FRAME[index],hold=index===6?M12_HOLD:g.userData.kenneyAssets?.loadedByIndex?.[index]?KENNEY_HOLD[index]:null;
     if(index===5&&!blade){blade=createEnergyBlade(mats.rose.color);g.add(blade.root);}
     if(index!==5)blade?.reset?.();
     const muzzle=models[index].userData.muzzle||frame.muzzle;
-    flash.position.set(...muzzle); flash.scale.setScalar([.14,.12,.25,.19,.38,0][index]);
+    flash.position.set(...muzzle); flash.scale.setScalar([.14,.12,.25,.19,.38,0,.27][index]);
     collar.visible=index!==5&&!models[index].userData.integratedEmitter;
     collar.position.set(frame.muzzle[0],frame.muzzle[1],frame.muzzle[2]+.009);collar.scale.set(emitterRadii[index]/.012,1,emitterRadii[index]/.012);
     heatRing.visible=false;
@@ -442,6 +448,7 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   g.userData.disposeDynamic=()=>{
     if(disposed)return;disposed=true;
     hand.userData.dispose?.();support.userData.dispose?.();
+    models[6].userData.dispose?.();
     for(const rail of batteries)if(rail){rail.dispose();rail.userData.shell.geometry.dispose();}
     blade?.dispose();
     for(const optic of optics)if(optic){optic.glassMaterial.dispose();optic.material.dispose();optic.hairMaterial?.dispose();for(const child of optic.reticle.children)if(child.isLineSegments)child.geometry.dispose();}

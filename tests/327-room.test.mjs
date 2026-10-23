@@ -47,7 +47,7 @@ test('waves telegraph their portals, obey the room population cap and grant a si
 test('weapons are delivered at their arena levels and cannot be selected until collected',()=>{
  const {g}=fixture();g.start({x:0,y:1.65,z:0});
  for(let level=1;level<=9;level++){g.beginWave();const index=WEAPONS.findIndex(w=>w.level===level);if(index>0){assert.ok(g.weaponOffers.some(o=>o.index===index));assert.equal(g.selectWeapon(index),false);assert.equal(g.collectWeapon(),true);assert.ok(g.ownedWeapons.has(index));}}
- assert.equal(g.ownedWeapons.size,6);
+ assert.equal(g.ownedWeapons.size,7);
 });
 test('delayed weapon delivery is retried when the room has a free visible pedestal location',()=>{
  const {g,room}=fixture();g.start({x:0,y:1.65,z:0});const saved=room.findPoint;room.findPoint=()=>null;g.offerWeapon(1);assert.ok(g.pendingOffers.has(1));assert.equal(g.weaponOffers.length,0);
@@ -72,7 +72,7 @@ test('a room blade deflects a physical projectile without homing, while a retrac
   if(extension){assert.equal(g.bullets[0].vz,-20);assert.equal(g.bullets[0].hostile,false);assert.equal(g.player.hp,100);}else{g.step(.05);assert.equal(g.player.hp,88);}
  }
 });
-test('twenty room waves finish after 670 projectile kills and six pickups in a controlled scan fixture',()=>{
+test('twenty room waves finish after 670 projectile kills and seven weapons in a controlled scan fixture',()=>{
  const {g}=fixture();g.start({x:0,y:1.65,z:0});let peak=0;
  for(let frame=0;frame<90000&&g.state==='playing';frame++){
   for(const e of g.enemies){e.attackTimer=999;e.speed=0;}g.step(.02);peak=Math.max(peak,g.enemies.length);
@@ -80,5 +80,5 @@ test('twenty room waves finish after 670 projectile kills and six pickups in a c
   if(g.ammo[g.weaponIndex]===0)g.reload();const e=g.enemies[0];
   if(e){const y=e.elevation+(e.form==='probe'?.55:e.form==='scuttler'?.85:1.3);g.shoot({x:0,y:1.35,z:0},{x:e.x,y:y-1.35,z:e.z},1);}
  }
- assert.equal(g.state,'won',JSON.stringify({wave:g.wave,kills:g.kills,hp:g.player.hp,toSpawn:g.toSpawn}));assert.equal(g.wave,20);assert.equal(g.kills,Array.from({length:20},(_,i)=>levelCount(i+1)).reduce((a,b)=>a+b,0));assert.equal(g.ownedWeapons.size,6);assert.ok(peak<=g.maxActive);
+ assert.equal(g.state,'won',JSON.stringify({wave:g.wave,kills:g.kills,hp:g.player.hp,toSpawn:g.toSpawn}));assert.equal(g.wave,20);assert.equal(g.kills,Array.from({length:20},(_,i)=>levelCount(i+1)).reduce((a,b)=>a+b,0));assert.equal(g.ownedWeapons.size,7);assert.ok(peak<=g.maxActive);
 });

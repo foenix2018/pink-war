@@ -1,4 +1,4 @@
-import { ArenaGame, WEAPONS, MAX_LEVEL, REGEN_DELAY, levelCount, traceEnemyHit, segmentSphere } from './game-logic.js';
+import { ArenaGame, WEAPONS, MAX_LEVEL, REGEN_DELAY, levelCount, traceEnemyHit, segmentSphere,projectileDamage } from './game-logic.js';
 import {tacticalOrder} from './tactical-enemies.js';
 import {squadOrder,relayVisualContact,clearSquadFiringLane} from './enemy-squads.js';
 import {segmentBox} from './game-logic.js';
@@ -10,7 +10,7 @@ const mix=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
 // The same weapon, battery, recoil-event and damage rules as the arena, with
 // native player tracking and enemy spawning supplied by the room/field adapter.
 export class RoomGame extends ArenaGame {
-  constructor(room,random=Math.random){super([],random);this.room=room;this.running=false;this.pendingOffers=new Set();this.maxActive=3;this.head={x:0,y:1.65,z:0};this.roomPhase='ready';}
+  constructor(room,random=Math.random,characterId='ghju'){super([],random,null,characterId);this.room=room;this.running=false;this.pendingOffers=new Set();this.maxActive=3;this.head={x:0,y:1.65,z:0};this.roomPhase='ready';}
   start(head){
     if(!this.room.hasFloor())return false;
     super.reset();this.pendingOffers.clear();this.running=true;this.roomPhase='between';this.nextWave=1.5;
@@ -157,7 +157,7 @@ export class RoomGame extends ArenaGame {
       if(b.hostile&&playerHit!==null&&playerHit<nearest){nearest=playerHit;target=this.player;}
       if(!b.hostile)for(const e of this.enemies){const hit=traceEnemyHit(a,end,e);if(hit&&hit.t<nearest){nearest=hit.t;target=e;zone=hit.zone;multiplier=hit.multiplier;}}
       if(nearest<=1){const at=mix(a,end,nearest);this.event('impact',{...at,bulletId:b.id,weapon:b.weapon,hostile:b.hostile,enemy:!!target,splash:b.splash||0,power:b.power||1,surface:target?'robot':wall?.surface||'concrete',normal:wall?.normal||{x:0,y:1,z:0}});
-        if(target===this.player)this.damage(b.damage);else if(target)this.damageEnemy(target,b.damage,at,zone,multiplier);
+        if(target===this.player)this.damage(b.damage);else if(target)this.damageEnemy(target,projectileDamage(b,at),at,zone,multiplier);
         if(!b.hostile&&b.splash>0)for(const e of [...this.enemies])if(e!==target){const c={x:e.x,y:e.elevation+e.aimHeight,z:e.z},d=Math.hypot(c.x-at.x,c.y-at.y,c.z-at.z);if(d<b.splash&&!this.blocked(a,c))this.damageEnemy(e,b.damage*(1-d/b.splash*.65),c);}
         this.bullets.splice(i,1);
       }else{Object.assign(b,end);b.life-=dt;if(b.life<=0)this.bullets.splice(i,1);}

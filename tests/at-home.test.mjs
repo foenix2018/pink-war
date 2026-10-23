@@ -23,7 +23,7 @@ test('AT HOME uses an AR session so the player can return to passthrough from th
   assert.match(js,/frame\.detectedMeshes/);
 });
 test('Room geometry is required before spawning a combat enemy',()=>{
-  assert.match(js,/new RoomGame\(room\)/);
+  assert.match(js,/new RoomGame\(room,Math.random,hero.id\)/);
   assert.match(js,/clearLineOfSight/);
   assert.match(js,/hasFloor:\(\)=>floors\(\)\.length>0/);
   assert.match(js,/initiateRoomCapture/);

@@ -92,7 +92,7 @@ const scannedRoom={hasFloor:()=>floors().length>0,floorAt:p=>roomFloorAt({...p,y
  ceilingAt:p=>Math.min(p.y+2.6,...surfaceRecords().filter(r=>r.kind==='ceiling'&&r.polygon[0].y>p.y+.4&&insideRoomPolygon(p,r.polygon)).map(r=>r.polygon.reduce((sum,v)=>sum+v.y,0)/r.polygon.length)),
  findPoint,canStand,canStandOnField,trace:traceRoom,waypoint:(from,target)=>navigation?.waypoint(from,target)};
 const room=createHomeBattlefield({room:scannedRoom,obstacles:()=>assets?.architecture.obstacles||[],forward:()=>new THREE.Vector3(0,0,-1).applyQuaternion(orientation)});
-const game=new RoomGame(room);
+const game=new RoomGame(room,Math.random,hero.id);
 function makeBoard(width,height,size){
  const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
  const texture=new THREE.CanvasTexture(canvas),plane=new THREE.Mesh(new THREE.PlaneGeometry(...size),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthTest:false,depthWrite:false,toneMapped:false}));
@@ -179,7 +179,7 @@ function startCombat(){
  if(mode==='paused'){startRequested=false;game.running=true;mode='combat';cancelFire();info('SIGNAL RÉTABLI');return;}
  if(!assets){info(assetError||'CHARGEMENT DES ARMES ET DES MACHINES');return;}
  if(!game.start(head)){info(floors().length?'ZONE DE SOL TROP ÉTROITE OU MASQUÉE':'SOL NON DÉTECTÉ : GÂCHETTE GAUCHE POUR SCANNER');return;}
- startRequested=false;clearBots();assets.syncOffers([]);assets.setPortals([],head);feel.reset();laser.reset();mode='combat';cancelFire();music.start(audio);
+ startRequested=false;clearBots();assets.syncOffers([]);assets.setPortals([],head);assets.setWeapon(game.weaponIndex,1);feel.reset();laser.reset();mode='combat';cancelFire();music.start(audio);
  const point=findPoint({purpose:'companion',head});if(point)assets.placeCompanion(new THREE.Vector3(point.x,point.y,point.z),head);else assets.companion.root.visible=false;
  info('INTRUSION DANS LE LABORATOIRE');announce('INTRUSION / '+hero.name);
 }

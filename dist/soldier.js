@@ -59,7 +59,7 @@ export function createCharacterKit(emblem, surfaces = {}) {
 }
 
 // Where each weapon is carried (palm position, body space) and where the idle hand rests with a one-handed weapon.
-const STANCE = Object.freeze([[.24, 1.4, -.5], [.12, 1.38, -.36], [.12, 1.38, -.36], [.1, 1.38, -.3], [.1, 1.36, -.32]]);
+const STANCE = Object.freeze([[.24, 1.4, -.5], [.12, 1.38, -.36], [.12, 1.38, -.36], [.1, 1.38, -.3], [.1, 1.36, -.32],[.24,1.36,-.36],[.16,1.37,-.39]]);
 const REST = Object.freeze([-.25, 1.08, -.16]);
 const UPPER = .31, FORE = .35, CARRY = 1.2;
 

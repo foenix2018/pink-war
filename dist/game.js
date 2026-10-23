@@ -32,7 +32,7 @@ if (!['auto', 'low', 'high'].includes(settings.quality)) settings.quality = 'aut
 let phase = 'lobby', view = boot?.view==='third'?'third':'fps', yaw = 0, pitch = -.075, game, world, vr;
 let character=characterForId('ghju');
 let selectedMode=['arena','training','campaign','campaign2'].includes(boot?.mode)?boot.mode:'campaign',launchBusy=false;
-let trainingWeaponIndex=Number.isInteger(boot?.trainingWeaponIndex)&&boot.trainingWeaponIndex>=0&&boot.trainingWeaponIndex<5?boot.trainingWeaponIndex:0;
+let trainingWeaponIndex=Number.isInteger(boot?.trainingWeaponIndex)&&boot.trainingWeaponIndex>=0&&boot.trainingWeaponIndex<7&&boot.trainingWeaponIndex!==5?boot.trainingWeaponIndex:0;
 function selectMode(mode){
   if(phase!=='lobby'||launchBusy)return;
   selectedMode=['campaign','campaign2','arena','training'].includes(mode)?mode:'campaign';
@@ -132,7 +132,7 @@ function selectCharacter(id,save=true){
   $('outfit-rotation').ariaLabel=`Faire tourner ${character.name}`;
   $('arsenal-title').innerHTML=`La puissance<br>en ${character.colorWord}.`;
   world?.setCharacter(character.id);
-  if(changed&&game){game.reset();world.resetDynamic();world.setWeapon(0);world.setEquipment(1);resetInput();updateHud();}
+  if(changed&&game){game.reset(character.id);world.resetDynamic();world.setWeapon(game.weaponIndex);world.setEquipment(1);resetInput();updateHud();}
   if(save)try{localStorage.setItem('pink-war-character',character.id);}catch{}
 }
 for(const button of document.querySelectorAll('[data-character]'))button.onclick=()=>selectCharacter(button.dataset.character);
@@ -245,7 +245,7 @@ async function start() {
   world.setCampaignActive(selectedMode==='campaign');
   world.setRangeActive(selectedMode==='training');
   game=selectedMode==='campaign'?new CampaignLevel1(world.obstacles,Math.random,character.id):
-    selectedMode==='training'?new ShootingRangeGame(world.obstacles,Math.random,trainingWeaponIndex):new ArenaGame(world.obstacles);
+    selectedMode==='training'?new ShootingRangeGame(world.obstacles,Math.random,trainingWeaponIndex):new ArenaGame(world.obstacles,Math.random,null,character.id);
   world.resetDynamic(); phase = 'loading'; yaw = 0; pitch = -.075;
   weaponFeel.reset();reloadInserted=false;lastShotAt=-99;flashTimer = 0; recoil = 0; damageUntil = 0; announcementUntil = 0;pickupNotice=null;equipmentUntil=0;crouchCameraBlend=0;currentSprinting=false; resetInput(); audioReady();
   world.setWeapon(game.weaponIndex);world.setEquipment(1);
@@ -277,7 +277,7 @@ $('arsenal-button').onclick = () => {
   WEAPONS.forEach((w,index) => {
     const button = document.createElement('button'), available = game.ownedWeapons.has(index);
     button.className = 'weapon-card' + (game.weaponIndex===index ? ' selected' : ''); button.disabled = !available;
-    const kenney=world.fpsGun.userData.kenneyAssets,kenneyReady=!w.melee&&!!kenney?.loadedByIndex?.[index];
+    const kenney=world.fpsGun.userData.kenneyAssets,kenneyReady=!w.melee&&(!!kenney?.loadedByIndex?.[index]||!!world.fpsGun.userData.weaponModels[index]?.userData.authored);
     button.innerHTML = `<span><strong>${w.name}</strong><small>${w.label} · ${w.melee?'énergie continue · parade':`${w.capacity} charges`}${w.chargeTime?' · tir chargé':''}<br>${w.melee?'Sabre AURORA':kenneyReady?'CHÂSSIS MK IV · MÉTAL ET CÉRAMIQUE':'CHARGEMENT DE L’ARME'}</small></span><b>${available?(game.weaponIndex===index?'ÉQUIPÉE':'ÉQUIPER'):`NIVEAU ${w.level}`}</b>`;
     button.onclick = () => { game.selectWeapon(index); world.setWeapon(game.weaponIndex); updateHud(); resume(); };
     $('weapon-list').append(button);
@@ -402,7 +402,7 @@ function handleEvents() {
     if(event.type==='blade-swing'){saberSwingSound=true;vr.haptic('shot','aurora');}
     if(event.type==='blade-hit'||event.type==='blade-parry'){world.impact({...event,enemy:event.type==='blade-hit'});if(settings.sound)saberAudio?.impact();vr.haptic(event.type==='blade-parry'?'parry':'hit');}
     if (event.type === 'weapon-offer') { tone(360, 820, .45, .03, 'sine'); }
-    if (event.type === 'wave') { const offered=WEAPONS.find(w=>w.level===event.wave); if(game.mode!=='campaign')announce(game.endless?`SURVIE / VAGUE ${event.wave}`:`NIVEAU ${String(event.wave).padStart(2, '0')} / ${MAX_LEVEL}`, offered && event.wave>1 ? `${offered.name} DISPONIBLE AU FAISCEAU · APPROCHEZ-VOUS` : `${event.count} CRÉATURES · LA BRÈCHE S’OUVRE`); tone(210, 420, .25, .065); tone(420, 630, .25, .06, 'triangle', .2); }
+    if (event.type === 'wave') { const offered=WEAPONS.find((w,i)=>w.level===event.wave&&!game.ownedWeapons.has(i)); if(game.mode!=='campaign')announce(game.endless?`SURVIE / VAGUE ${event.wave}`:`NIVEAU ${String(event.wave).padStart(2, '0')} / ${MAX_LEVEL}`, offered && event.wave>1 ? `${offered.name} DISPONIBLE AU FAISCEAU · APPROCHEZ-VOUS` : `${event.count} CRÉATURES · LA BRÈCHE S’OUVRE`); tone(210, 420, .25, .065); tone(420, 630, .25, .06, 'triangle', .2); }
     if (event.type === 'equipment') { const equipment=equipmentForCharacter(event.level,character.id);world.setEquipment(event.level);$('equipment-unlock-title').textContent=`${equipment.name} · NIV. ${event.level}`;$('equipment-unlock-detail').textContent=equipment.addition;equipmentUntil=clock+4;$('equipment-unlock').hidden=false; }
     if (event.type === 'clear'&&game.mode!=='campaign') { announce('NIVEAU TERMINÉ', '+ BONUS · LA BRÈCHE SE RECHARGE'); tone(420, 700, .25, .07); }
     if (event.type === 'weapon') { weaponFeel.reset();recoil=0;flashTimer=0;world.setWeapon(game.weaponIndex); vr.haptic('weapon'); tone(510, 760, .1, .03); }
@@ -774,7 +774,7 @@ vr = new VRController({
   afterExit:()=>{ resetInput();lastTime=0;updateHud();updateCamera();if(phase==='paused')$('pause-dialog').showModal();else if(phase==='over')$('end-dialog').showModal(); }
 });
 try {
-  world = await createScene($('world'), settings.quality,false,character.id);world.setCharacter(character.id);game = new ArenaGame(world.obstacles);
+  world = await createScene($('world'), settings.quality,false,character.id);world.setCharacter(character.id);game = new ArenaGame(world.obstacles,Math.random,null,character.id);
   $('renderer-label').textContent = `${world.backend.toUpperCase()} · CONÇU POUR LE TACTILE`;
   $('loading-status').textContent='Préparation du laboratoire et des équipements…';
   if(boot?.intent!=='play'){

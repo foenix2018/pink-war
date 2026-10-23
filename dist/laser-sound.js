@@ -6,6 +6,7 @@ export const LASER_PROFILES=Object.freeze({
   bloom:Object.freeze({pitch:740,end:162,duration:.092,body:155,thump:96,noise:.33,volume:.115,decay:.115,mechanism:2240,weight:.85}),
   lance:Object.freeze({pitch:2600,end:680,duration:.19,body:860,thump:135,noise:.20,volume:.14,decay:.38,mechanism:1640,weight:1.45}),
   thorn:Object.freeze({pitch:1220,end:110,duration:.31,body:155,thump:55,noise:.42,volume:.155,decay:.34,mechanism:980,weight:1.55}),
+  m12:Object.freeze({pitch:380,end:75,duration:.20,body:120,thump:48,noise:.78,volume:.17,decay:.32,mechanism:1150,weight:1.7}),
   nova:Object.freeze({pitch:930,end:62,duration:.51,body:100,thump:37,noise:.58,volume:.165,decay:.56,mechanism:640,weight:1.8})
 });
 
@@ -134,7 +135,7 @@ export function playLaserShot(ctx,weapon='r9',power=1){
   compress.attack.value=.003;compress.release.value=.09;
   output.connect(filter);filter.connect(compress);compress.connect(space.master);
   if(space.reflections)compress.connect(space.reflections);
-  const stop=t+Math.max(p.duration,p.decay)+.06;
+  const stop=t+Math.max(p.duration,p.decay,weapon==='m12'?.60:0)+.06;
   const tail=ctx.createGain();
   tail.gain.setValueAtTime(1,t);tail.gain.setValueAtTime(1,t+p.duration*.55);
   tail.gain.exponentialRampToValueAtTime(.0001,stop);
@@ -146,6 +147,10 @@ export function playLaserShot(ctx,weapon='r9',power=1){
   // A short, physical recoil pulse under the upper-frequency laser discharge.
   oscillator(ctx,tail,t,'sine',160,48,Math.min(.145,p.duration*.75),p.volume*strength*p.weight*1.06,space);
   if(weapon==='lance'||weapon==='nova')oscillator(ctx,tail,t+.018,'sine',p.pitch*.64,p.end*.58,p.decay*.8,p.volume*strength*.34,space);
+  if(weapon==='m12'){
+    oscillator(ctx,tail,t+.20,'triangle',1120,370,.055,.022*strength,space);
+    oscillator(ctx,output,t+.43,'triangle',1350,510,.065,.028*strength,space);
+  }
   const noise=ctx.createBufferSource(),band=ctx.createBiquadFilter(),ng=ctx.createGain();
   noise.buffer=noiseBuffer(ctx);
   band.type='bandpass';band.Q.value=1.25;

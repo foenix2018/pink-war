@@ -1,6 +1,6 @@
 import * as T from './vendor/three.webgpu.min.js';
 import { WebGLRenderer } from './vendor/three.module.min.js';
-import { PORTAL, COVER_WALLS, CATWALK, WEAPONS } from './game-logic.js';
+import { PORTAL, COVER_WALLS, CATWALK, WEAPONS,starterWeaponIndex } from './game-logic.js';
 import { createCharacterKit, createSoldier as buildSoldier } from './soldier.js';
 import { installShadowUnit, applyShadowMaterials } from './shadow-unit-game.js';
 import { buildGun } from './weapons.js';
@@ -411,7 +411,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     camera.updateProjectionMatrix();
   }
   function outfit(time,level,angle){
-    trackShadows(0,7);setEquipment(level);setWeapon(0);portal.visible=true;setPlayerVisible(true);weapon.visible=false;
+    trackShadows(0,7);setEquipment(level);setWeapon(starterWeaponIndex(character.id));portal.visible=true;setPlayerVisible(true);weapon.visible=false;
     const portrait=innerHeight>innerWidth,scale=portrait?1.6:2.1;
     soldier.root.scale.setScalar(scale*soldier.heightScale);soldier.root.position.set(0,0,7);soldier.root.rotation.y=angle;soldier.animate(time,false,0,0,0,.016,{preview:true});
     camera.fov=portrait?48:38;camera.position.set(0,portrait?1.8:2.7,portrait?16.4:16);

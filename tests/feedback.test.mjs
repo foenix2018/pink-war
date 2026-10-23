@@ -13,10 +13,10 @@ test('portal appearance timing uses game time and no stale markers remain after 
   assert.equal(portalIndicators(portals,p,0,10.1)[0].pending,false);
   assert.deepEqual(portalIndicators(portals,p,0,11,'won'),[]);assert.deepEqual(portalIndicators([],p,0,11),[]);
 });
-test('five weapons differ in impulse, with stronger charged weapons and a braced stance',()=>{
+test('six weapons differ in impulse, with stronger charged weapons and a braced stance',()=>{
   const peaks=[];
   for(const id of Object.keys(FIRING_FEEL)){const f=createWeaponFeel();f.fire(id);f.update(.035);peaks.push(f.state.kick);}
-  assert.equal(new Set(peaks).size,5);assert.ok(peaks[4]>peaks[0]*2);assert.ok(peaks[0]>peaks[1]);
+  assert.equal(new Set(peaks).size,6);assert.ok(peaks[4]>peaks[0]*2);assert.ok(peaks[0]>peaks[1]);
   const weak=createWeaponFeel(),full=createWeaponFeel(),braced=createWeaponFeel();weak.fire('thorn',.3);full.fire('thorn');braced.fire('thorn',1,true);
   assert.ok(weak.state.pitch<full.state.pitch);assert.ok(braced.state.pitch<full.state.pitch);
 });

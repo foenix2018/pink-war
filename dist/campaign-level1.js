@@ -43,7 +43,7 @@ export class CampaignLevel1 extends ArenaGame {
   }
 
   reset(characterId = this.characterId || 'ghju') {
-    super.reset();
+    super.reset(String(characterId).toLowerCase());
     this.mode = 'campaign';
     this.characterId = String(characterId).toLowerCase() === 'lylu' ? 'lylu' : 'ghju';
     this.sibling = this.characterId === 'ghju' ? 'LYLU' : 'GHJU';

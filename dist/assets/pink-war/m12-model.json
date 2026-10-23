@@ -1,0 +1,24 @@
+{
+  "id": "m12",
+  "revision": "3.52",
+  "triangles": 16244,
+  "meshes": 8,
+  "bytes": 808484,
+  "length": 0.99,
+  "muzzle": [
+    0,
+    0.124,
+    -0.668
+  ],
+  "palm": [
+    0.026,
+    0,
+    0
+  ],
+  "support": [
+    -0.036,
+    0.016,
+    -0.435
+  ],
+  "source": "Original mesh modelled from user-provided reference; not a downloaded CC0 model."
+}

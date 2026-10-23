@@ -361,10 +361,10 @@ function enemyMaterials(){
  return {monster:materials.wall,monsterFace:materials.black,cyan:materials.cyan,rose:materials.rose,violet:materials.blue,pale:materials.white};
 }
 function setupPlayer(){
- game=new ArenaGame(collisions,Math.random,traversal);game.reset();
+ game=new ArenaGame(collisions,Math.random,traversal);game.reset(characterId);
  Object.assign(game.player,{x:0,z:72,elevation:0,yaw:0,hp:100,grounded:true});
  game.wave=2;game.nextWave=Infinity;game.toSpawn=0;game.spawnTimer=Infinity;
- game.ownedWeapons=new Set([0,1,2]);game.ammo=WEAPONS.map(w=>w.capacity);
+ game.ownedWeapons=new Set([game.weaponIndex,0,1,2]);game.ammo=WEAPONS.map(w=>w.capacity);
  const lylu=characterId==='lylu';
  const heroGlow=lylu?glow(0x4da8ff):glow(0xff4fa1);
  const pm={...materials,armor:mat(lylu?0x356fa6:0xb64472,.38,.72),armorLight:mat(lylu?0xb6d9e8:0xdec3cf,.35,.68),steel:materials.iron,rose:heroGlow,pale:materials.white,violet:materials.blue};
@@ -372,7 +372,7 @@ function setupPlayer(){
  // The high-detail weapon is optional: a shader/GLB issue must not stop the mission.
  try {
   weapon=buildGun({mats:pm,gloves,makeFlash:()=>{const o=new T.Mesh(new T.SphereGeometry(.07,8,6),heroGlow);o.visible=false;return o;}});
-  weapon.userData.setVariant(0);
+  weapon.userData.setVariant(game.weaponIndex);
  } catch(error){
   console.warn('M02 / weapon detail degraded, game remains playable:',error);
   weapon=new T.Group();
@@ -739,7 +739,7 @@ async function boot(){
 function resume(){
  if(paused){unpauseMission();return;}
  running=true;shade.style.display='none';startButton.disabled=false;
- if(game){game.reset();game.wave=2;game.ownedWeapons=new Set([0,1,2]);game.ammo=WEAPONS.map(w=>w.capacity);}
+ if(game){game.reset(characterId);game.wave=2;game.ownedWeapons=new Set([game.weaponIndex,0,1,2]);game.ammo=WEAPONS.map(w=>w.capacity);}
  if(game){game.player.x=0;game.player.z=72;game.player.elevation=0;game.player.hp=100;game.state='playing';
   game.enemies=[];game.bullets=[];game.time=0;game.kills=0;game.nextWave=Infinity;game.toSpawn=0;}
  for(const o of enemyMeshes.values())scene.remove(o);enemyMeshes.clear();
@@ -773,7 +773,7 @@ window.addEventListener('keydown',e=>{
  if(e.code==='KeyC')crouchQueued=true;
  if(e.code==='KeyV')changeView();
  if(e.code==='Space')firePressQueued=true;
- if(/^Digit[123]$/.test(e.code))game.selectWeapon(Number(e.code.slice(-1))-1);
+ if(/^Digit[1237]$/.test(e.code))game.selectWeapon(Number(e.code.slice(-1))-1);
 });
 window.addEventListener('keyup',e=>keys.delete(e.code));
 window.addEventListener('blur',()=>{keys.clear();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();pinkControls.reset();touchControls?.reset();});

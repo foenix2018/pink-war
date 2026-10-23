@@ -152,13 +152,13 @@ test('an uncollected gun stays available even after the next wave and cannot be 
   const g=new ArenaGame();
   for(let i=0;i<5;i++)g.beginWave();
   assert.equal(g.weaponIndex,0);
-  assert.deepEqual(g.weaponOffers.map(o=>o.index),[5,1,2]);
+  assert.deepEqual(g.weaponOffers.map(o=>o.index),[5,1,6,2]);
   assert.equal(g.selectWeapon(2),false);
   const offer=g.weaponOffers[0];g.player.x=offer.x;g.player.z=offer.z;
   assert.equal(g.collectWeapon(),true);assert.equal(g.weaponIndex,5);
-  assert.deepEqual(g.weaponOffers.map(o=>o.index),[1,2]);
+  assert.deepEqual(g.weaponOffers.map(o=>o.index),[1,6,2]);
   assert.equal(g.collectWeapon(),true);assert.equal(g.weaponIndex,1);
-  assert.deepEqual(g.weaponOffers.map(o=>o.index),[2]);
+  assert.deepEqual(g.weaponOffers.map(o=>o.index),[6,2]);
   g.reset();assert.equal(g.weaponOffers.length,0);assert.deepEqual(g.unlockedWeapons.map(w=>w.id),['r9']);
 });
 
@@ -301,7 +301,7 @@ test('a complete campaign reaches level 20 after 670 real projectile kills and s
     equipmentStages.push(...events.filter(e=>e.type==='equipment').map(e=>e.level));
   }
   assert.equal(g.state,'won',JSON.stringify({wave:g.wave,kills:g.kills,time:g.time,hp:g.player.hp,toSpawn:g.toSpawn}));assert.equal(g.wave,MAX_LEVEL);assert.equal(g.kills,670);assert.ok(g.player.hp>0);
-  assert.deepEqual(unlocks,['AURORA','BLOOM','LANCE','THORN','NOVA']);assert.equal(g.unlockedWeapons.length,6);
+  assert.deepEqual(unlocks,['AURORA','BLOOM','M–12','LANCE','THORN','NOVA']);assert.equal(g.unlockedWeapons.length,7);
   assert.deepEqual(equipmentStages,Array.from({length:MAX_LEVEL},(_,i)=>Math.min(i+1,10)));assert.equal(g.snapshot().equipment.name,'Impératrice');assert.equal(g.snapshot().equipment.unlocked.length,10);
   g.reset();assert.equal(g.snapshot().equipment.level,1);assert.deepEqual(g.snapshot().equipment.unlocked,['aube']);
 });

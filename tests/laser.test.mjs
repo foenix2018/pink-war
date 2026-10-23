@@ -18,8 +18,8 @@ function audioMock(){
   return{ctx,calls};
 }
 
-test('five weapons have separate cinematic plasma envelopes and multilayer synthesis',()=>{
-  assert.deepEqual(Object.keys(LASER_PROFILES),['r9','bloom','lance','thorn','nova']);
+test('six weapons have separate cinematic plasma envelopes and multilayer synthesis',()=>{
+  assert.deepEqual(Object.keys(LASER_PROFILES),['r9','bloom','lance','thorn','m12','nova']);
   assert.equal(LASER_PROFILES.nova.duration>LASER_PROFILES.r9.duration,true);
   assert.equal(playLaserShot(null),false);
   for(const id of Object.keys(LASER_PROFILES)){
@@ -52,7 +52,7 @@ test('charge follows the trigger with one voice, then stops on firing, mute, or 
   disposeLaserAudio(ctx);assert.ok(nodes.every(n=>n.disconnected));
 });
 
-test('all five weapons have distinct reload stages and empty feedback without repeated frame scheduling',()=>{
+test('all six weapons have distinct reload stages and empty feedback without repeated frame scheduling',()=>{
   const {ctx,nodes,calls}=trackedAudioMock();
   for(const weapon of Object.keys(LASER_PROFILES)){
     for(const action of ['empty','reload-out','reload-in','reload-ready']){

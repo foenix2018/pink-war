@@ -1,3 +1,4 @@
+import {starterWeaponIndex} from './game-logic.js';
 // The same approved GHJU/LYLU Shadow Unit rig, kit and native animations
 // used by Pink Wars (dist/scene.js). Load after the playable scene starts:
 // a slow mesh decompress cannot prevent M02 from launching.
@@ -31,7 +32,7 @@ export async function installPinkWarsSoldier(T,scene,characterId,materials){
  const model=createSoldier(kit,createGun,character);
  installShadowUnit(model,character);
  // Preserve the canonical character; do not substitute a generic soldier.
- model.setWeapon(0);model.setLevel(1);
+ model.setWeapon(starterWeaponIndex(characterId));model.setLevel(1);
  model.root.scale.setScalar(model.heightScale);
  model.root.visible=false;
  scene.add(model.root);

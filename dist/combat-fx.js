@@ -1,6 +1,7 @@
 // Material-aware impacts with a fixed GPU budget: four instanced draws, no lights,
 // screen effects or per-impact meshes. Shared by the WebGPU and WebGL/Quest renderers.
 export const IMPACT_PROFILES = Object.freeze({
+  m12:Object.freeze({sparks:4,debris:1,dust:2,speed:4.8,flash:.11}),
   r9: Object.freeze({ sparks: 8, debris: 4, dust: 3, speed: 4.1, flash: .15 }),
   bloom: Object.freeze({ sparks: 6, debris: 3, dust: 2, speed: 5.2, flash: .12 }),
   lance: Object.freeze({ sparks: 12, debris: 4, dust: 3, speed: 7.0, flash: .21 }),
