@@ -1,6 +1,6 @@
 # M–12 / LYLU
 
-Source Blender du fusil vert/violet demandé par le créateur (photo jointe à la conversation du 23 octobre 2026). Modélisation originale à partir de cette référence ; ne pas attribuer la photographie ni ce modèle à une bibliothèque CC0.
+Source Blender du fusil demandé par le créateur (photo vert/violet jointe à la conversation du 23 octobre 2026). La finition actuelle remplace le vert par un gris foncé et conserve les motifs violets. Modélisation originale à partir de cette référence ; ne pas attribuer la photographie ni ce modèle à une bibliothèque CC0.
 
 Reconstruction depuis la racine du dépôt :
 

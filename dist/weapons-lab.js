@@ -31,6 +31,6 @@ function frame(){const w=innerWidth,h=innerHeight;renderer.setPixelRatio(Math.mi
   gun.userData.hand.visible=$('hands').checked;gun.userData.support.visible=$('hands').checked&&weapon!==0;gun.userData.animateHands(0,.2,0,.016);
   const distance=zoom*Math.max(1,1.25/camera.aspect);
   camera.position.set(Math.sin(angle)*distance*Math.cos(elevation),target.y+Math.sin(elevation)*distance,target.z+Math.cos(angle)*distance*Math.cos(elevation));camera.lookAt(target);if(w>700)camera.setViewOffset(w,h,120,0,w,h);else camera.setViewOffset(w,h,0,100,w,h);
-  renderer.render(scene,camera);frames++;$('status').textContent=weapon===6?'M–12 · Modèle original Blender · Pompe mobile · Camouflage vert/violet':`${gun.userData.kenneyAssets.loaded}/5 blasters · Métal, céramique, polymère · Inspection libre`;requestAnimationFrame(frame);
+  renderer.render(scene,camera);frames++;$('status').textContent=weapon===6?'M–12 · Modèle original Blender · Pompe mobile · Finition gris foncé/violet':`${gun.userData.kenneyAssets.loaded}/5 blasters · Métal, céramique, polymère · Inspection libre`;requestAnimationFrame(frame);
 }requestAnimationFrame(frame);
-window.__PINKWAR_ARMORY=Object.freeze({selectWeapon,selectCharacter:palette,snapshot:()=>({version:'3.52',frames,weapon,loaded:gun.userData.kenneyAssets.loaded,muzzle:gun.userData.flash.position.toArray()})});
+window.__PINKWAR_ARMORY=Object.freeze({selectWeapon,selectCharacter:palette,snapshot:()=>({version:'3.53',frames,weapon,loaded:gun.userData.kenneyAssets.loaded,muzzle:gun.userData.flash.position.toArray()})});

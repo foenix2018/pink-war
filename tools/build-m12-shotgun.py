@@ -10,7 +10,7 @@ bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=Fals
 def cv(p):return (p[0],-p[2],p[1])
 def uvpoint(X,Y):return ((430-X)*.00105,(310-Y)*.00105) # z,y from image landmarks
 M={}
-for name,color,metal,rough in [('paint',(.025,.25,.115),.58,.47),('alloy',(.21,.24,.24),.88,.32),('rubber',(.014,.020,.018),.12,.82),('silver',(.55,.58,.55),.85,.36),('detail',(.065,.085,.072),.7,.5),('bead',(.48,.76,.56),.3,.3)]:
+for name,color,metal,rough in [('paint',(.037,.041,.047),.58,.47),('alloy',(.21,.23,.25),.88,.32),('rubber',(.014,.016,.019),.12,.82),('silver',(.55,.57,.59),.85,.36),('detail',(.055,.064,.075),.7,.5),('bead',(.5,.55,.6),.3,.3)]:
  m=bpy.data.materials.new('PW_M12_'+name);m.diffuse_color=(*color,1);m.use_nodes=True;bs=m.node_tree.nodes.get('Principled BSDF');bs.inputs['Base Color'].default_value=(*color,1);bs.inputs['Metallic'].default_value=metal;bs.inputs['Roughness'].default_value=rough;M[name]=m
 pump=[]
 def finish(o,mat,bevel=.002,group='fixed'):
@@ -129,14 +129,14 @@ for group in ['fixed','pump']:
 root=bpy.data.objects.new('M12 shotgun / LYLU',None);bpy.context.collection.objects.link(root)
 for o in list(bpy.context.scene.objects):
  if o!=root and o.parent is None:o.parent=root
-root['pinkWarFrame']='grip-metres-v1';root['muzzle']=[0,.124,-.668];root['palm']=[.026,0,0];root['support']=[-.036,.016,-.435];root['designRevision']='3.52';root['reference']='Creator supplied green / violet skeletal-stock shotgun'
+root['pinkWarFrame']='grip-metres-v1';root['muzzle']=[0,.124,-.668];root['palm']=[.026,0,0];root['support']=[-.036,.016,-.435];root['designRevision']='3.53';root['reference']='Creator supplied green / violet skeletal-stock shotgun';root['finish']='Dark grey / violet, requested by creator'
 bpy.ops.wm.save_as_mainfile(filepath=str(ROOT/'assets/weapons/m12-shotgun.blend'))
 file=OUT/'m12-shotgun.glb';bpy.ops.export_scene.gltf(filepath=str(file),export_format='GLB',export_apply=True,export_extras=True,export_cameras=False,export_lights=False)
 (OUT/'m12-model-data.js').write_text('// Authored Blender mesh. Rebuild with tools/build-m12-shotgun.py.\nexport const M12_GLB="'+base64.b64encode(file.read_bytes()).decode()+'";\n')
 tris=0
 for o in bpy.context.scene.objects:
  if o.type=='MESH':o.data.calc_loop_triangles();tris+=len(o.data.loop_triangles)
-report={'id':'m12','revision':'3.52','triangles':tris,'meshes':sum(o.type=='MESH' for o in bpy.context.scene.objects),'bytes':file.stat().st_size,'length':.99,'muzzle':[0,.124,-.668],'palm':[.026,0,0],'support':[-.036,.016,-.435],'source':'Original mesh modelled from user-provided reference; not a downloaded CC0 model.'}
+report={'id':'m12','revision':'3.53','triangles':tris,'meshes':sum(o.type=='MESH' for o in bpy.context.scene.objects),'bytes':file.stat().st_size,'length':.99,'muzzle':[0,.124,-.668],'palm':[.026,0,0],'support':[-.036,.016,-.435],'source':'Original mesh modelled from user-provided reference; not a downloaded CC0 model.'}
 (OUT/'m12-model.json').write_text(json.dumps(report,indent=2)+'\n');print('M12_MODEL',json.dumps(report),flush=True)
 
 paint=M['paint'];bs=paint.node_tree.nodes.get('Principled BSDF')

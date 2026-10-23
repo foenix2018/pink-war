@@ -23,23 +23,23 @@ export function createM12Shotgun(environment=null){
   const maps=surfaces(),materials=new Map();
   const material=name=>{
    if(materials.has(name))return materials.get(name);const kind=name?.replace('PW_M12_','');
-   const p=kind==='paint'?{color:maps.paint?0xffffff:0x197f4d,map:maps.paint||null,roughnessMap:maps.finish||maps.rough,metalness:.60,roughness:.61,clearcoat:.24,clearcoatRoughness:.38}:
-    kind==='rubber'?{color:0x111915,metalness:.1,roughness:.85,map:maps.metal,roughnessMap:maps.rough}:
-    kind==='silver'?{color:0x8e9892,metalness:.90,roughness:.36,map:maps.metal,roughnessMap:maps.rough}:
-    kind==='bead'?{color:0x94c6a0,metalness:.4,roughness:.35}:
-    kind==='detail'?{color:0x25382e,metalness:.66,roughness:.54,map:maps.metal,roughnessMap:maps.rough}:
-    {color:0x485c54,metalness:.87,roughness:.40,map:maps.metal,roughnessMap:maps.rough};
+   const p=kind==='paint'?{color:maps.paint?0xffffff:0x36393d,map:maps.paint||null,roughnessMap:maps.finish||maps.rough,metalness:.60,roughness:.61,clearcoat:.24,clearcoatRoughness:.38}:
+    kind==='rubber'?{color:0x151719,metalness:.1,roughness:.85,map:maps.metal,roughnessMap:maps.rough}:
+    kind==='silver'?{color:0x92979c,metalness:.90,roughness:.36,map:maps.metal,roughnessMap:maps.rough}:
+    kind==='bead'?{color:0xb2b8bd,metalness:.4,roughness:.35}:
+    kind==='detail'?{color:0x2d3136,metalness:.66,roughness:.54,map:maps.metal,roughnessMap:maps.rough}:
+    {color:0x535a61,metalness:.87,roughness:.40,map:maps.metal,roughnessMap:maps.rough};
    const m=new T.MeshPhysicalMaterial({...p,envMap:environment,envMapIntensity:.55,bumpMap:kind==='paint'?maps.finish||maps.rough:maps.rough,bumpScale:kind==='paint'?.00003:.00008});m.name=name;materials.set(name,m);return m;
   };
   const bytes=Uint8Array.from(atob(M12_GLB),c=>c.charCodeAt(0));
   const master=parseKenneyGLB(bytes.buffer,material);master.name='M-12 / LYLU reference shotgun';
-  Object.assign(master.userData,{frame:M12_FRAME,muzzle:[...M12_FRAME.muzzle],integratedEmitter:true,authored:true,designRevision:'3.52'});
+  Object.assign(master.userData,{frame:M12_FRAME,muzzle:[...M12_FRAME.muzzle],integratedEmitter:true,authored:true,designRevision:'3.53'});
   cache.set(key,master);
  }
  const model=cache.get(key).clone(true),pump=model.getObjectByName('M12 pump'),shells=new T.Group();
  shells.name='M12 reload shell';shells.visible=false;model.add(shells);
  // Cartridges only appear during insertion; no floating ammo display on the gun.
- const shellMaterial=new T.MeshStandardMaterial({color:0x5d7663,roughness:.42,metalness:.65,envMap:environment});
+ const shellMaterial=new T.MeshStandardMaterial({color:0x687078,roughness:.42,metalness:.65,envMap:environment});
  const cartridge=new T.Mesh(new T.CylinderGeometry(.008,.008,.052,12),shellMaterial);cartridge.rotation.x=Math.PI/2;shells.add(cartridge);
  let cycle=Infinity,lastTime=0,shotLatch=false;
  function animate(state={},dt=0){
