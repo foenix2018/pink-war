@@ -1,4 +1,4 @@
-import { ArenaGame, WEAPONS, segmentBox } from './game-logic.js';
+import { ArenaGame, WEAPONS, segmentBox,weaponAllowedForCharacter } from './game-logic.js';
 
 // Shooting range: target-only simulation with the unchanged Pink War weapon
 // handling, audio and VR aiming. Distances are from the firing line z=22.
@@ -44,8 +44,8 @@ const noTerrain=Object.freeze({
   surfaces:()=>[],height:()=>0,routeForSurface:()=>null
 });
 export class ShootingRangeGame extends ArenaGame {
-  constructor(obstacles=[],random=Math.random,initialWeapon=0){
-    super(obstacles,random,noTerrain);
+  constructor(obstacles=[],random=Math.random,initialWeapon=0,characterId='ghju'){
+    super(obstacles,random,noTerrain,characterId);
     this.mode='training';this.targets=[];this.targetSerial=1;
     this.trainingHits=0;this.trainingShots=0;this.trainingEscapes=0;
     this.trainingCombo=0;this.trainingBestCombo=0;this.targetDelay=.2;
@@ -53,7 +53,7 @@ export class ShootingRangeGame extends ArenaGame {
     this.pendingHits=[];
     this.wave=0;this.nextWave=-1;this.toSpawn=0;
     this.player.x=0;this.player.z=22;this.player.yaw=0;
-    this.ownedWeapons=new Set(WEAPONS.map((_,i)=>i).filter(i=>!WEAPONS[i].melee));
+    this.ownedWeapons=new Set(WEAPONS.map((_,i)=>i).filter(i=>!WEAPONS[i].melee&&weaponAllowedForCharacter(i,characterId)));
     this.ammo=WEAPONS.map(w=>w.capacity);
     this.weaponIndex=Number.isInteger(initialWeapon)&&initialWeapon>=0&&this.ownedWeapons.has(initialWeapon)?initialWeapon:0;
     this.state='playing';

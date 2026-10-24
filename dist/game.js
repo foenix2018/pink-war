@@ -249,7 +249,7 @@ async function start() {
   world.setCampaignActive(selectedMode==='campaign');
   world.setRangeActive(selectedMode==='training');
   game=selectedMode==='campaign'?new CampaignLevel1(world.obstacles,Math.random,character.id):
-    selectedMode==='training'?new ShootingRangeGame(world.obstacles,Math.random,trainingWeaponIndex):new ArenaGame(world.obstacles,Math.random,null,character.id);
+    selectedMode==='training'?new ShootingRangeGame(world.obstacles,Math.random,trainingWeaponIndex,character.id):new ArenaGame(world.obstacles,Math.random,null,character.id);
   world.resetDynamic(); phase = 'loading'; yaw = 0; pitch = -.075;
   weaponFeel.reset();reloadInserted=false;lastShotAt=-99;flashTimer = 0; recoil = 0; damageUntil = 0; announcementUntil = 0;pickupNotice=null;equipmentUntil=0;crouchCameraBlend=0;currentSprinting=false; resetInput(); audioReady();
   world.setWeapon(game.weaponIndex);world.setEquipment(1);

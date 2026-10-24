@@ -1,4 +1,4 @@
-import {WEAPONS,starterWeaponIndex} from './game-logic.js';
+import {starterWeaponIndex,weaponAllowedForCharacter} from './game-logic.js';
 import {M01_CHECKPOINT_PREFIX,M01_CHECKPOINT_STAGES} from './checkpoint-index.js';
 export {readM01Checkpoint} from './checkpoint-index.js';
 // Only save after a finite encounter is cleared, on stable, stationary ground.
@@ -16,7 +16,7 @@ export function restoreM01Checkpoint(game,s){
  if(!s||s.version!==1||s.characterId!==game.characterId||!STAGES.has(s.stage))return false;
  game.enemies=[];game.openingSpawned=8;game.archiveRead=true;game.investigationRead=!!s.investigationRead;game.sabotaged=!!s.sabotaged;
  game.encounter=s.stage==='investigation'?0:s.stage==='sabotage'?1:2;game.spawned=8;game.toSpawn=0;game.nextSpawnAt=Infinity;game.activePortals=[];
- game.kills=s.kills;game.ownedWeapons=new Set([starterWeaponIndex(game.characterId),0,...(Array.isArray(s.owned)?s.owned:[]).filter(i=>Number.isInteger(i)&&i>=0&&i<WEAPONS.length)]);
+ game.kills=s.kills;game.ownedWeapons=new Set([starterWeaponIndex(game.characterId),0,...(Array.isArray(s.owned)?s.owned:[]).filter(i=>Number.isInteger(i)&&weaponAllowedForCharacter(i,game.characterId))]);
  game.weaponIndex=game.ownedWeapons.has(s.weaponIndex)?s.weaponIndex:(game.ownedWeapons.has(2)?2:game.ownedWeapons.has(1)?1:starterWeaponIndex(game.characterId));game.player.hp=Math.min(100,Math.max(1,Number(s.health)||100));
  Object.assign(game.player,POINTS[s.stage],{grounded:true,verticalSpeed:0,onLift:null});
  for(let i=0;i<game.ammo.length;i++)if(Number.isFinite(s.ammo?.[i]))game.ammo[i]=Math.max(0,Math.min(game.ammo[i],s.ammo[i]));

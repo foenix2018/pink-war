@@ -27,6 +27,11 @@ import {createMissionLoading} from './mission-loading.js';
 import {createPauseMenu} from './fracture-menu.js';
 import {createMissionXR,immersiveRendererPreferred} from './mission-xr.js';
 import {createGlove} from './hands.js';
+import {createDistrictSignage} from './level2-signage.js';
+import {createWarZone} from './level2-war-zone.js';
+import {createBattleAudio} from './level2-battle-audio.js';
+import {bevelBox} from './geo.js';
+import {createArchiveTerminalFactory} from './archive-terminals.js';
 
 const $=id=>document.getElementById(id);
 const characterId=new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju';
@@ -49,7 +54,7 @@ let enableAudio=true;try{enableAudio=JSON.parse(localStorage.getItem('rosee-sett
 let xr=null,fallbackGun=null,fallbackHand=null;
 const pauseMenu=createPauseMenu({title:'HISTOIRE / SOUS LES NÉONS',canOpen:()=>started,
  onPause:()=>pauseMission(),onResume:()=>unpauseMission(),onVR:()=>xr?.enter(),onHome:async()=>{await xr?.exit();location.assign('./index.html');}});pauseMenu.setVisible(false);
-let combatEffects=null,companion=null,environmentAudio=null;
+let combatEffects=null,companion=null,environmentAudio=null,warZone=null,battleAudio=null;
 let companionSkills=null,skillMenu=null;
 function audioReady(){
  if(!enableAudio)return;
@@ -60,6 +65,7 @@ function audioReady(){
   audioCtx.resume?.().catch?.(()=>{});
   setLaserAudioEnabled(audioCtx,true);
   environmentAudio=createAmbience(audioCtx);
+  battleAudio=createBattleAudio(audioCtx);
  }catch(error){console.warn('M02 audio fallback',error);}
 }
 document.addEventListener('pointerdown',audioReady,{once:true,capture:true,passive:true});
@@ -84,6 +90,7 @@ const materials={
  cyan:glow(0x3acddd),amber:glow(0xf6aa58),red:glow(0xe34e5b),
  rose:glow(0xff4fa1),blue:glow(0x4ba8ff),white:glow(0xc2e5eb)
 };
+let districtSigns=null;
 const cube=new T.BoxGeometry(1,1,1), plane=new T.PlaneGeometry(1,1);
 const projectileCore=new T.SphereGeometry(.07,6,4);
 function solid(x,y,z,w,h,d,m,collide=true,shadow=true){
@@ -115,15 +122,9 @@ const traversal={
 };
 function canvasTexture(w,h,paint){const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');paint(ctx,w,h);const tex=new T.CanvasTexture(c);tex.colorSpace=T.SRGBColorSpace;return tex;}
 function sign(text,x,y,z,width,color,side=1){
- const tex=canvasTexture(512,160,(c,w,h)=>{
-  c.fillStyle='#07131b';c.fillRect(0,0,w,h);c.strokeStyle=color;c.lineWidth=9;c.strokeRect(5,5,w-10,h-10);
-  c.fillStyle=color;c.shadowColor=color;c.shadowBlur=18;c.textAlign='center';c.textBaseline='middle';
-  c.font='900 '+(text.length>11?43:58)+'px system-ui';c.fillText(text,w/2,h/2,w-32);
- });
- const mesh=new T.Mesh(new T.PlaneGeometry(width,width*160/512),new T.MeshBasicMaterial({map:tex,side:T.DoubleSide,toneMapped:false}));
- mesh.position.set(x,y,z);mesh.rotation.y=side*Math.PI/2;root.add(mesh);
- solid(x,y,z,width*.025,width*.31,.15,materials.iron,false,false);
+ const group=districtSigns.create(text,{width,height:width*.31});group.position.set(x,y,z);group.rotation.y=-side*Math.PI/2;root.add(group);return group;
 }
+
 function mark(x,y,z,hex=0x66dbe8){
  const group=new T.Group();group.position.set(x,y,z);
  group.add(new T.Mesh(new T.CylinderGeometry(.58,.7,.12,24),materials.iron));
@@ -184,6 +185,11 @@ function tower(side,z,idx){
  for(let i=0;i<3;i++)solid(xx+(i-1)*3,height+.7,z+(i%2)*2,2.4,1.4,3.2,materials.iron,false);
 }
 function street(){
+ // The old road ended before several facade setbacks, exposing the clear
+ // colour under the pavements. The entire district now has a real ground.
+ const groundGeometry=new T.PlaneGeometry(88,164),uv=groundGeometry.attributes.uv;
+ for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)*11,uv.getY(i)*10.25);
+ const ground=new T.Mesh(groundGeometry,materials.concrete);ground.name='M02 / continuous district ground';ground.rotation.x=-Math.PI/2;ground.position.set(0,-.02,-1);ground.receiveShadow=true;root.add(ground);
  solid(0,-.16,0,22,.3,158,materials.asphalt,false);
  // Continuous tileable asphalt skin fixes the stretched UVs of the 158 m road.
  // The underlying collision plane is unchanged, and the atlas is shared.
@@ -218,7 +224,7 @@ function blockBuildings(){
   if(Math.abs(x)<35&&z>-80&&z<80)continue;
   const h=22+rng()*65,w=5+rng()*9;
   solid(x,h/2-.3,z,w,h,w,materials.black,false,false);
-  if(rng()>.48)solid(x,h-.4,z,w*.6,.2,w*.6,i%2?materials.cyan:materials.amber,false,false);
+  if(rng()>.48)solid(x,h-.4,z,w*.6,.2,w*.6,materials.dark,false,false);
  }
  // Telephone booths, wiring, carts, ducts, vending, awnings, scattered props.
  for(let z=60;z>-68;z-=17){
@@ -239,11 +245,7 @@ function blockBuildings(){
   beam([x0,y,z],[x1,y-1,z+2],.035,materials.black,5);
   if(i%3===0)beam([x0,y+1.2,z+.4],[x1,y+1,z+2],.05,materials.iron,5);
  }
- for(let i=0;i<12;i++){
-  const z=60-i*12,side=i%2?1:-1;
-  sign(['NEO MART','CLINIQUE','ARCHIVES','TRANSIT','24 / 7','FOOD','HELIX'][i%7],side*13,4.5+i%3*2,z,3.1,
-   side>0?'#67eaf1':'#ffa75c',side);
- }
+
  // Environmental storytelling.
  for(let i=0;i<14;i++){
   const x=(i%2?1:-1)*(6.5+rng()*1.8),z=70-i*10;
@@ -296,30 +298,39 @@ function stairsAndSkybridges(){
  for(let i=-4;i<=4;i++)beam([i*2.2,11.5,-18],[i*2.2,12,-18],.06,materials.black);
 }
 function props(){
+ const terminals=createArchiveTerminalFactory(T,{performance:low()});
+ function archive(x,z,title,id){
+  const computer=terminals.create(root,{x,z,id});
+  const map=canvasTexture(512,256,(c,w,h)=>{c.fillStyle='#15221f';c.fillRect(0,0,w,h);c.fillStyle='#95b3a4';c.font='17px monospace';c.fillText('VESPER / ARCHIVE LOCALE / 2196',20,36);c.fillRect(20,52,w-40,2);c.font='bold 29px monospace';c.fillText(title,20,100,w-40);c.font='16px monospace';c.fillText('CONNEXION EXTÉRIEURE : COUPÉE',20,139,w-40);c.fillText('F / CONSULTER LE TERMINAL',20,210,w-40);});
+  const screen=new T.Mesh(new T.PlaneGeometry(computer.width,computer.height),new T.MeshBasicMaterial({map,toneMapped:false}));screen.position.set(0,.018,computer.z);computer.display.add(screen);
+ }
  // First enclave: believable aid station, shutters, mattresses, radio, kit.
- solid(-3,1,55,3.7,2,1.2,materials.iron,true);
- solid(-2.1,2.1,55,1.3,.5,.85,materials.dark,false);
- solid(-2,2.42,55,.9,.08,.42,materials.cyan,false);
+ archive(-3,55,'POSTE DE SOINS','soins');collisions.push({x:-3,z:55,hx:1.1,hz:.38,y:0,height:1.9,surface:'metal'});
  for(let i=0;i<3;i++){
   solid(-5+i*1.3,.22,58,1.1,.44,2.0,materials.plaster,false);
   solid(-5+i*1.3,.42,58,.8,.05,1.7,materials.warning,false);
  }
- sign('SECOURS',-12.8,4.2,53,3.2,'#66ffda',-1);
+ const aid=sign('SECOURS',-3,3.15,54.9,2.5,'#a4b7ac',-1);aid.rotation.y=0;
+ for(const x of [-4.35,-1.65])beam([x,0,54.8],[x,3.65,54.8],.035,materials.iron);
  // Market checkout + HELIX terminal.
- solid(-8,1.0,14,2.2,2,1.1,materials.black,true);
- solid(-8,2.05,13.7,1.7,.94,.25,materials.cyan,false);
- solid(-8,2.3,14,1.3,.08,.18,materials.iron,false);
- for(let i=0;i<9;i++){const z=29-i*2.2;solid((i%2?1:-1)*7,.5,z,1.2,1,1.15,materials.rust,true);}
+ archive(-8,14,'GALERIE / HELIX','galerie');collisions.push({x:-8,z:14,hx:1.1,hz:.38,y:0,height:1.9,surface:'metal'});
+ const crateGeometry=bevelBox(1.2,1,1.15,.055,1),lidGeometry=bevelBox(1.25,.10,1.2,.035,1),cratePaint=mat(0x4c5650,.83,.28);
+ for(let i=0;i<9;i++){const z=29-i*2.2,x=(i%2?1:-1)*7;
+  const crate=new T.Mesh(crateGeometry,cratePaint);crate.position.set(x,.5,z);crate.userData.staticBox=true;crate.castShadow=!low();crate.receiveShadow=true;root.add(crate);
+  const lid=new T.Mesh(lidGeometry,materials.iron);lid.position.set(x,1.02,z);lid.userData.staticBox=true;root.add(lid);
+  for(const dx of [-.39,.39])solid(x+dx,.51,z,.045,1.02,1.17,materials.dark,false);
+  solid(x,.55,z+.59,.20,.15,.025,materials.warning,false);
+  collisions.push({x,z,hx:.63,hz:.6,y:0,height:1.08,surface:'metal'});
+ }
  // Transit hall/end: large functional portal and automatic barrier.
  for(const side of [-1,1]){
   solid(side*4.1,4.2,-63,1.25,8.4,.8,materials.iron,true);
   beam([side*4.15,3.9,-62.5],[side*4.15,7.7,-62.5],.12,materials.cyan);
  }
  solid(0,8,-63,9,.65,1.3,materials.iron,false);
- sign('TRANSIT',-13,8.4,-61,4.3,'#86e4f1',-1);
+ const transit=sign('TRANSIT',0,7.7,-62.55,3.6,'#a4b7ac',-1);transit.rotation.y=0;
  const door=solid(0,3.7,-63,.38,7.2,8,materials.black,false);door.visible=false;
- const terminal=solid(-5,1.1,-57,2.2,2.2,1.2,materials.iron,true);
- solid(-5,2.35,-56.6,1.9,1.1,.18,materials.cyan,false);
+ archive(-5,-57,'TRANSIT / SORTIE','transit');collisions.push({x:-5,z:-57,hx:1.1,hz:.38,y:0,height:1.9,surface:'metal'});
  for(const o of objectives)mark(o.x,o.y+.28,o.z,o.y>0?0xffc16c:0x6addf1);
 }
 function weather(){
@@ -356,19 +367,25 @@ function optimizeStaticBoxes(){
  }
 }
 function createEnvironment(){
- scene.background=new T.Color(0x06111d);scene.fog=new T.FogExp2(0x091b2b,low()?.008:.010);
+ scene.background=new T.Color(0x1c252d);scene.fog=new T.FogExp2(0x263139,low()?.008:.009);
  root=new T.Group();root.name='M02 / W02 LES BAS-NIVEAUX';scene.add(root);
+ districtSigns=createDistrictSignage(T,{performance:low()});
  architecture=createDistrictArchitecture({T,root,materials,solid,beam,sign,collisions,low:low(),rng});
- const ambient=new T.HemisphereLight(0x739cbd,0x0b1018,2.0);scene.add(ambient);
- const moon=new T.DirectionalLight(0x86abc9,2.0);moon.position.set(-18,44,21);scene.add(moon);
+ // Metals need reflected sky radiance, not brighter emissive colour. A tiny
+ // original district reflection map keeps the graphite weapons readable.
+ const reflection=canvasTexture(256,128,(c,w,h)=>{const g=c.createLinearGradient(0,0,0,h);for(const [at,color]of [[0,'#566574'],[.40,'#83909a'],[.51,'#35424b'],[.7,'#20272a'],[1,'#131a1c']])g.addColorStop(at,color);c.fillStyle=g;c.fillRect(0,0,w,h);});
+ reflection.mapping=T.EquirectangularReflectionMapping;scene.environment=reflection;scene.environmentIntensity=.55;
+ const ambient=new T.HemisphereLight(0xadb8be,0x34322c,1.4);scene.add(ambient);
+ const moon=new T.DirectionalLight(0xb1c1ce,2.15);moon.position.set(-18,44,21);scene.add(moon);
  moon.castShadow=!low();moon.shadow.mapSize.set(low()?512:1024,low()?512:1024);
+ moon.shadow.bias=-.00015;moon.shadow.normalBias=.025;moon.shadow.radius=2;
  Object.assign(moon.shadow.camera,{left:-48,right:48,top:48,bottom:-48,near:.1,far:125});
  for(let z=53;z>-57;z+=low()?-38:-19){
   const x=(Math.round(z)%2===0?1:-1)*8.4;
   const lamp=new T.PointLight(z%3===0?0xe69b5a:0x5bd6ec,low()?1.1:1.8,18,2);
   lamp.position.set(x,6.5,z);scene.add(lamp);lightSources.push(lamp);
  }
- street();blockBuildings();stairsAndSkybridges();props();architecture.decorate();weather();optimizeStaticBoxes();
+ street();blockBuildings();stairsAndSkybridges();props();architecture.decorate();warZone=createWarZone(T,root,materials,collisions,{performance:low()});weather();optimizeStaticBoxes();
  try{atmosphere=createStreetAtmosphere(T,root,{performance:low()});}
  catch(error){console.warn('M02 atmosphere disabled for compatibility:',error);}
 }
@@ -481,7 +498,7 @@ function updateOriginalSoldier(dt,moving,sprint,firing){
 }
 function pauseMission(){
  if(!running||paused)return;
- paused=true;running=false;heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
+ paused=true;running=false;battleAudio?.pause();environmentAudio?.pause();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
  touchControls?.reset();pinkControls.reset();document.exitPointerLock?.();
  pauseMenu.show();$('start').textContent='REPRENDRE LA MISSION →';
  $('status').textContent='PAUSE · PINK WARS / NIVEAU 2';
@@ -677,6 +694,7 @@ function animation(t,frame){
   running=false;shade.style.display='grid';status.textContent='Erreur de mission : '+(error?.message||String(error));
   startButton.disabled=false;startButton.textContent='RECOMMENCER LE NIVEAU 2 →';
  }
+ warZone?.update(game?.time||0,{active:running});for(const event of warZone?.drainEvents()||[])if(enableAudio&&battleAudio)battleAudio.event(event,game.player,yaw);
  if(xr?.active){xr.update(dt,weaponFeel.state,weaponKick>.025?.075:0);xr.renderScope();}
  if(scene&&camera&&!framePending&&!recovering){
    try{
@@ -727,7 +745,7 @@ async function boot(){
   canvas=prepared.canvas;renderer=prepared.renderer;
   renderer.onDeviceLost=info=>onRenderFailure(new Error('Périphérique graphique perdu : '+(info?.message||info?.reason||'WebGPU')));
   canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();onRenderFailure(new Error('Contexte WebGL perdu'));});
-  renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
+  renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
   renderer.shadowMap.enabled=profile.shadows&&!low();renderer.shadowMap.type=T.PCFShadowMap;
   scene=new T.Scene();camera=new T.PerspectiveCamera(67,innerWidth/innerHeight,.08,320);
   scene.add(camera);createEnvironment();
@@ -848,8 +866,8 @@ for(const name of ['pointerup','pointercancel']){
  window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
 }
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
-window.__PINK_M02=Object.freeze({snapshot:()=>({revision:'3.60',running,paused,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
+window.__PINK_M02=Object.freeze({snapshot:()=>({revision:'3.61',running,paused,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
- backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,
+ backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
  effects:combatEffects?.stats()})});
 if(autoMission){startButton.disabled=true;void boot();}

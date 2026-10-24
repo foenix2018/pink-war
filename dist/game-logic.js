@@ -69,6 +69,7 @@ export const WEAPONS = Object.freeze([
   Object.freeze({id:'duor9',name:'R–9 DUO',label:'Doubles pistolets laser',level:1,damage:24,capacity:24,handCapacity:12,interval:.2,reload:1.65,speed:110,pellets:1,spread:0,chargeTime:0,splash:0,dual:true})
 ]);
 export const starterWeaponIndex=characterId=>characterId==='lylu'?6:7;
+export const weaponAllowedForCharacter=(index,characterId='ghju')=>!!WEAPONS[index]&&(!WEAPONS[index].dual||characterId==='ghju');
 export function projectileDamage(b,at){
  const w=WEAPONS.find(w=>w.id===b.weapon);if(!w?.falloffStart)return b.damage;
  const distance=Math.hypot(at.x-(b.originX??b.x),at.y-(b.originY??b.y),at.z-(b.originZ??b.z));
@@ -335,7 +336,7 @@ export class ArenaGame {
     const valid=['left','right'].every(hand=>Number.isInteger(saved?.[hand])&&saved[hand]>=0&&saved[hand]<=12)&&saved.left+saved.right===total;
     this.dual.ammo=valid?{...saved}:{left:Math.floor(total/2),right:Math.ceil(total/2)};
   }
-  get unlockedWeapons() { return WEAPONS.filter((w,i) => this.ownedWeapons.has(i)); }
+  get unlockedWeapons() { return WEAPONS.filter((w,i) => this.ownedWeapons.has(i)&&weaponAllowedForCharacter(i,this.characterId)); }
   event(type, data = {}) { this.events.push({ type, ...data }); }
   emitNoise(kind,radius,position={x:this.player.x,y:this.player.elevation+1,z:this.player.z}) {
     const heard=propagateNoise(this.enemies,{...position,elevation:this.player.elevation,kind,radius},this.obstacles,segmentBox,this.time);
@@ -358,20 +359,21 @@ export class ArenaGame {
   drainEvents() { const e = this.events; this.events = []; return e; }
   blocked(start, end) { return this.obstacles.some(b => segmentBox(start, end, b) !== null); }
   selectWeapon(index) {
-    if (this.state !== 'playing' || !WEAPONS[index] || !this.ownedWeapons.has(index) || index === this.weaponIndex) return false;
+    if (this.state !== 'playing' || !weaponAllowedForCharacter(index,this.characterId) || !this.ownedWeapons.has(index) || index === this.weaponIndex) return false;
     this.weaponIndex = index; this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false; this.semiPending=false;
     this.dual.held={left:false,right:false};
     this.bladePrevious=null;this.bladeHitTimes.clear();this.bladeSlashAt=-99;this.bladeSpeed=0;this.bladeGuard=false;
     this.cooldown = Math.max(this.cooldown, .25); this.event('weapon', { index, name: this.weapon.name }); return true;
   }
   cycleWeapon(direction = 1) {
-    const slots=WEAPONS.map((_,index)=>this.ownedWeapons.has(index)?index:-1).filter(index=>index>=0);
+    const slots=WEAPONS.map((_,index)=>this.ownedWeapons.has(index)&&weaponAllowedForCharacter(index,this.characterId)?index:-1).filter(index=>index>=0);
     if(slots.length<2)return false;
     const at=slots.indexOf(this.weaponIndex),offset=direction<0?-1:1;
     return this.selectWeapon(slots[(Math.max(0,at)+offset+slots.length)%slots.length]);
   }
   // Weapons rise from a tactical holographic pedestal. Acquiring one is a deliberate action.
   offerWeapon(index) {
+    if(!weaponAllowedForCharacter(index,this.characterId))return;
     if(this.ownedWeapons.has(index)||this.weaponOffers.some(offer=>offer.index===index))return;
     const p=this.player;
     // Candidate pedestals are just ahead or to the side of the player,

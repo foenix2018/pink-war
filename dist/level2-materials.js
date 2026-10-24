@@ -1,5 +1,6 @@
 // PINK WARS / W02 lean CC0 PBR surface atlas.
-// Local CC0 photo sets (Poly Haven, source 1K, packaged at 512px) are resized
+// Five local CC0 photo sets (Poly Haven, source 1K, packaged at 512px),
+// plus the existing CC0 Quaternius brick maps reused from M01, are resized
 // once to 512px desktop / 256px Performance. Desktop receives albedo, normal
 // and roughness; mobile omits normals. No displacement, transmission or SSR.
 // If a local image fails, procedural albedo keeps the mission playable.
@@ -9,10 +10,12 @@ export const PBR_ASSETS=Object.freeze({
  concrete: Object.freeze({asset:'concrete_floor',hex:0xb8baba,repeat:[4,8],roughness:.82,metalness:.025}),
  blueMetal: Object.freeze({asset:'corrugated_iron',hex:0xaebfc9,repeat:[3,4],roughness:.52,metalness:.59}),
  chequer: Object.freeze({asset:'corrugated_iron',hex:0xc3c7c3,repeat:[8,3],roughness:.60,metalness:.66}),
- rust: Object.freeze({asset:'rusty_painted_metal',hex:0xd0b6ab,repeat:[2,2],roughness:.82,metalness:.32})
+ rust: Object.freeze({asset:'rusty_painted_metal',hex:0xd0b6ab,repeat:[2,2],roughness:.82,metalness:.32}),
+ masonry:Object.freeze({asset:'Quaternius T_RedBrick',source:'https://quaternius.com',prefix:'m01-brick-',hex:0xb7aba0,repeat:[1,1],roughness:.95,metalness:0})
 });
 const src=name=>'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/'+name+'/'+name+'_diff_1k.jpg';
 const localSource=(name,channel='diff')=>'./assets/cc0/'+name+'_'+channel+'_512.jpg';
+const profileSource=(profile,channel='diff')=>profile.prefix?'./assets/cc0/'+profile.prefix+(channel==='rough'?'orm':channel)+'_512.jpg':localSource(profile.asset,channel);
 function proceduralCanvas(size,kind){
  const c=document.createElement('canvas');c.width=c.height=size;
  const ctx=c.getContext('2d');const data=ctx.createImageData(size,size);let seed=kind.split('').reduce((n,c)=>Math.imul(n,31)+c.charCodeAt(0)|0,46730);
@@ -72,40 +75,47 @@ function apply(T,source,size,targets,profile,channel='diff'){
  }
  return texture;
 }
-export function installLeanPBR(T,materials,architecture,{performance=false,onProgress=()=>{}}={}){
+export function installLeanPBR(T,materials,architecture,{performance=false,onProgress=()=>{},fallbackAfter=4000}={}){
  const targets={
    asphalt:[materials.asphalt],
    concrete:[materials.concrete,materials.wall,materials.plaster,architecture?.pbrTargets?.ceramic,architecture?.pbrTargets?.dirty],
    blueMetal:[materials.dark,materials.iron,architecture?.pbrTargets?.brushed,architecture?.pbrTargets?.darkTrim,architecture?.pbrTargets?.pastel],
    chequer:[materials.road],
-   rust:[materials.rust,architecture?.pbrTargets?.copper]
+   rust:[materials.rust,architecture?.pbrTargets?.copper],
+   masonry:[architecture?.pbrTargets?.masonry]
  };
  const size=performance?256:512;
  const textures=[];
- const stats={ready:0,requested:Object.keys(targets).length,loadedFromSource:0,fallback:0,size,totalEstimatedGPUMiB:Math.round(Object.keys(targets).length*size*size*4*1.34*(performance?2:3)/1048576*10)/10};
+ const stats={ready:0,requested:Object.keys(targets).length,loadedFromSource:0,fallback:0,size,totalEstimatedGPUMiB:Math.round((5*size*size+(performance?128:512)**2)*4*1.34*(performance?2:3)/1048576*10)/10};
  onProgress({...stats});
  // Parallel, bounded loading. No PBR network promise blocks the level boot.
  const jobs=Object.entries(targets).map(async ([key,materials])=>{
-   let texSource=null;
+   const mapSize=performance&&key==='masonry'?128:size;
+   let texSource=null,timer;const pending=image(profileSource(PBR_ASSETS[key]));
+   let fallback=false;
    try {
      // Prevent one slow host from delaying the rest of the game.
      // Requests may continue in browser cache, but this material keeps its fallback.
-     texSource=await Promise.race([image(localSource(PBR_ASSETS[key].asset)),new Promise((_,reject)=>setTimeout(()=>reject(new Error('PBR timeout')),4000))]);
+     texSource=await Promise.race([pending,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('PBR timeout')),fallbackAfter);})]);
      stats.loadedFromSource++;
    } catch {
      texSource=proceduralCanvas(size,key);
-     stats.fallback++;
-   }
-   textures.push(apply(T,texSource,size,materials,PBR_ASSETS[key]));
+     stats.fallback++;fallback=true;
+   }finally{clearTimeout(timer);}
+   const albedo=apply(T,texSource,mapSize,materials,PBR_ASSETS[key]);textures.push(albedo);
+   // Shader compilation can hold the main thread longer than the boot budget.
+   // Keep the level playable, then upgrade the SAME GPU texture when its local
+   // photograph finishes decoding. A temporary fallback must not become final.
+   if(fallback)pending.then(source=>{albedo.image=downsample(source,mapSize);albedo.needsUpdate=true;stats.fallback--;stats.loadedFromSource++;onProgress({...stats});}).catch(()=>{});
    // A missing optional relief map never blocks a playable frame. Mobile keeps
    // roughness and albedo; desktop also receives the scanned surface normals.
    await Promise.allSettled((performance?['rough']:['normal','rough']).map(async channel=>{
-     const source=await image(localSource(PBR_ASSETS[key].asset,channel));
-     textures.push(apply(T,source,size,materials,PBR_ASSETS[key],channel));
+     const source=await image(profileSource(PBR_ASSETS[key],channel));
+     textures.push(apply(T,source,mapSize,materials,PBR_ASSETS[key],channel));
    }));
    stats.ready++;
    onProgress({...stats});
    return key;
  });
- return {textures,stats,done:Promise.allSettled(jobs),sources:Object.fromEntries(Object.entries(PBR_ASSETS).map(([id,v])=>[id,src(v.asset)]))};
+ return {textures,stats,done:Promise.allSettled(jobs),sources:Object.fromEntries(Object.entries(PBR_ASSETS).map(([id,v])=>[id,v.source||src(v.asset)]))};
 }

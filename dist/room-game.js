@@ -1,4 +1,4 @@
-import { ArenaGame, WEAPONS, MAX_LEVEL, REGEN_DELAY, levelCount, traceEnemyHit, segmentSphere,projectileDamage } from './game-logic.js';
+import { ArenaGame, WEAPONS, MAX_LEVEL, REGEN_DELAY, levelCount, traceEnemyHit, segmentSphere,projectileDamage,weaponAllowedForCharacter } from './game-logic.js';
 import {tacticalOrder,grenadeAvoidance} from './tactical-enemies.js';
 import {squadOrder,relayVisualContact,clearSquadFiringLane} from './enemy-squads.js';
 import {segmentBox} from './game-logic.js';
@@ -55,6 +55,7 @@ export class RoomGame extends ArenaGame {
     this.event('portals',{sites:this.activePortals.map(p=>({...p}))});this.event('wave',{wave:this.wave,count:this.toSpawn});this.event('equipment',this.equipment);
   }
   offerWeapon(index){
+    if(!weaponAllowedForCharacter(index,this.characterId))return;
     if(this.ownedWeapons.has(index)||this.weaponOffers.some(o=>o.index===index))return;
     const point=this.room.findPoint({purpose:'weapon',head:this.head,avoid:this.weaponOffers});
     if(!point){this.pendingOffers.add(index);return;}

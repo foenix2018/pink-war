@@ -61,3 +61,19 @@ test('the classic story XR menu resumes explicitly and never toggles a playing m
  f.press(f.right,0,false);state.input(f.frame);f.press(f.right,0,true);assert.equal(state.input(f.frame).fire,true);
  state.removePauseBoard();
 });
+test('native mission XR hides the offhand firearm with an actual boolean for every single weapon',async t=>{
+ const f=fixture(t);await f.xr.enter();f.xr.input(f.frame,.016);
+ for(const hero of ['lylu','ghju']){
+  f.w.game.reset(hero);
+  for(const index of [0,1,2,3,4,5,6,7]){
+   if(hero==='lylu'&&index===7)continue;
+   f.w.game.ownedWeapons.add(index);if(index!==f.w.game.weaponIndex)assert.equal(f.w.game.selectWeapon(index),true);
+   f.xr.update(.016);
+   const left=f.xr.entries.find(e=>e.source.handedness==='left'),right=f.xr.entries.find(e=>e.source.handedness==='right');
+   assert.equal(right.gun.visible,true);
+   assert.equal(left.gun.visible,index===7,hero+' / weapon '+index+' must never leave visibility undefined');
+   assert.equal(left.bare.visible,index!==7);
+  }
+ }
+ await f.xr.exit();
+});

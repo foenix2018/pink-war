@@ -1,8 +1,10 @@
 // W02 - Bas-Niveaux de Vesper. Modular district hard-surface art v2.
 // Decorative geometry deliberately does not change pathing. Collider hulls are
 // placed independently of detail: no false floors, no blockage from signage.
+import {createDistrictSignage} from './level2-signage.js';
 export function createDistrictArchitecture({T,root,materials,solid,beam,sign,collisions,low,rng}){
-  const C=materials;
+  const C=materials,signs=createDistrictSignage(T,{performance:low});
+  const stats={buildings:0,recessedWindows:0,brokenWindows:0,masonryBays:0};
   const ringGeo=new T.TorusGeometry(1,.07,6,32);
   const prism=(x,y,z,w,h,d,mat,top=1)=>{
     const mesh=new T.Mesh(new T.CylinderGeometry(top,1,h,8,1,false,Math.PI/8),mat);
@@ -49,24 +51,17 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
     beam([front-side*1.12,y+1.13,z-span/2],[front-side*1.12,y+1.13,z+span/2],.055,stainless,8);
     if(glowing)thin(front-side*1.08,y-.09,z,.11,.035,span,C.cyan);
   }
-  function advertisement(text,x,y,z,w,h,side=1,col='#73f4fb'){
-    // Real facade-mounted emitter, not a floating UI label.
-    const canvas=document.createElement('canvas');canvas.width=384;canvas.height=512;
-    const g=canvas.getContext('2d');
-    g.fillStyle='#070e1c';g.fillRect(0,0,384,512);
-    const grad=g.createLinearGradient(0,0,384,512);grad.addColorStop(0,'#0a3041');grad.addColorStop(.55,'#101323');grad.addColorStop(1,'#2b1528');
-    g.fillStyle=grad;g.fillRect(9,9,366,494);
-    for(let i=0;i<40;i++){g.strokeStyle='rgba(83,203,220,.07)';g.beginPath();g.moveTo(0,i*13);g.lineTo(384,i*13);g.stroke();}
-    g.lineWidth=5;g.strokeStyle=col;g.strokeRect(11,11,362,490);
-    g.fillStyle=col;g.textAlign='center';g.shadowColor=col;g.shadowBlur=22;
-    g.font='900 48px system-ui';g.fillText(text,192,296,350);
-    g.font='18px monospace';g.fillText('VESPER / 2196',192,342);
-    g.fillRect(102,367,180,7);
-    const tex=new T.CanvasTexture(canvas);tex.colorSpace=T.SRGBColorSpace;
-    const mesh=new T.Mesh(new T.PlaneGeometry(w,h),new T.MeshBasicMaterial({map:tex,side:T.DoubleSide,toneMapped:false}));
-    mesh.rotation.y=side*Math.PI/2;mesh.position.set(x,y,z);root.add(mesh);
-    thin(x+side*.09,y,z,.18,h+.3,w+.3,darkTrim);
-    return mesh;
+  function advertisement(text,x,y,z,w,h,side=1){
+    const mesh=signs.create(text,{width:Math.min(w,1.4),height:Math.min(h,2.0),poster:true});
+    mesh.rotation.y=-side*Math.PI/2;mesh.position.set(x,Math.min(y,2.5),z);root.add(mesh);return mesh;
+  }
+  const masonry=new T.MeshStandardMaterial({color:0x83756b,roughness:.95,metalness:0});
+  const metricBoxes=new Map();
+  function fabric(x,y,z,w,h,d,material=masonry){
+    const brick=material===masonry,key=[w,h,d,brick].join(':');let geometry=metricBoxes.get(key);
+    if(!geometry){geometry=new T.BoxGeometry(w,h,d);const p=geometry.attributes?.position,n=geometry.attributes?.normal,uv=geometry.attributes?.uv;
+      if(p&&n&&uv){for(let i=0;i<p.count;i++){const side=Math.abs(n.getX(i))>.5,top=Math.abs(n.getY(i))>.5;uv.setXY(i,(side?p.getZ(i):p.getX(i))/(brick?2:8),(top?p.getZ(i):p.getY(i))/(brick?2:16));}uv.needsUpdate=true;}metricBoxes.set(key,geometry);}
+    const mesh=new T.Mesh(geometry,material);mesh.position.set(x,y,z);mesh.castShadow=!low;mesh.receiveShadow=true;mesh.userData.staticBox=true;root.add(mesh);return mesh;
   }
   function facadeFin(x,y,z,h,side,accent){
     thin(x,y,z,.22,h,.18,brushed);
@@ -96,59 +91,56 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
     }
   }
   function residentialTower(side,z,idx){
-    // Preserve an honest collision envelope while changing rendered architecture.
     const x=side*(23+(idx%2)*3),height=24+(idx*7%28),w=18+(idx%3)*3,d=17;
     collisions.push({x,z,hx:w/2,hz:d/2,y:0,height:height+1,surface:'concrete'});
-    const front=x-side*w/2-.19;
-    prism(x,.0,z,w*.97,height*.56,d*.96,idx%3===0?ceramic:dirty,.86);
-    prism(x,height*.55,z,w*.87,height*.42,d*.84,idx%2?pastel:C.wall,.75);
-    const rooftop=height*.97;
-    prism(x,rooftop,z,w*.92,1.5,d*.91,brushed,1.02);
-    // Terraced cantilever creates a distinct architectural silhouette.
-    for(let i=0;i<3;i++){
-      let y=5+i*7.2;
-      if(y>height-3)continue;
-      thin(front-side*.88,y,z,1.9,.48,d*.82,brushed);
-      thin(front-side*.95,y+.3,z,2.04,.11,d*.79,darkTrim);
-    }
-    // Structural glass spine, segmented and recessed.
-    for(let y=3.1;y<height-1;y+=3){
-      const color=rng()>.48?lit[(idx+y|0)%lit.length]:glassBlue;
-      for(let j=-3;j<=3;j++){
-        const zz=z+j*2.13;
-        if(Math.abs(zz-z)>d*.47)continue;
-        thin(front-side*.28,y,zz,.12,1.82,1.18,color);
-        thin(front-side*.39,y-.98,zz,.23,.12,1.46,stainless);
-        thin(front-side*.39,y+.96,zz,.23,.13,1.46,brushed);
+    const front=x-side*w/2,storeys=Math.floor(height/3.2),bays=6,pitch=2.55;
+    stats.buildings++;
+    // Real rectangular floor plates, masonry piers and recessed glazing share
+    // the same facade plane as the collision envelope. Nothing floats in front.
+    fabric(x,height*.5,z+8.26,w,height,.48,dirty);fabric(x,height*.5,z-8.26,w,height,.48,dirty);
+    fabric(x+side*(w/2-.22),height*.5,z,.44,height,d,ceramic);
+    for(let floor=0;floor<storeys;floor++){
+      const base=floor*3.2,material=(idx%3===0||floor===0)?masonry:dirty;
+      fabric(x,base+.13,z,w,.26,d,ceramic);
+      fabric(front+side*.13,base+.58,z,.34,.9,d,material);
+      fabric(front+side*.13,base+3.04,z,.34,.30,d,ceramic);
+      for(const edge of [-7.94,7.94])fabric(front+side*.12,base+1.94,z+edge,.36,2.1,1.12,material);
+      for(let bay=0;bay<bays;bay++){
+        const zz=z+(bay-(bays-1)/2)*pitch,wy=base+1.94,damaged=(idx*11+floor*7+bay*3)%13<3;
+        fabric(front+side*.12,wy,zz-1.18,.36,2.1,.26,material);stats.masonryBays++;
+        if(floor===0&&bay===4){fabric(front+side*.13,wy,zz,.34,2.1,2.25,material);continue;}
+        fabric(front+side*.30,wy,zz,.08,1.82,2.03,black);
+        // Glazing and steel frame sit inside a real opening, not on a solid prism.
+        const glowOn=!damaged&&(idx+floor*3+bay)%17===0;
+        const pane=glowOn?warm:glassBlue;
+        if(!damaged){const window=fabric(front+side*.22,wy,zz,.025,1.62,1.83,pane);window.userData.facadeWindow={front,side};}
+        else{fabric(front+side*.22,wy+.53,zz-.62,.025,.55,.45,glassBlue);stats.brokenWindows++;}
+        for(const offset of [-.94,.94])fabric(front+side*.03,wy,zz+offset,.15,1.92,.065,brushed);
+        for(const offset of [-.87,.87])fabric(front+side*.03,wy+offset,zz,.17,.07,1.95,brushed);
+        fabric(front-side*.10,wy-.96,zz,.42,.10,2.14,ceramic);stats.recessedWindows++;
+        if(!damaged&&bay%3===1)fabric(front+side*.06,wy,zz,.12,1.73,.045,brushed);
+      }
+      // Balconies remain outside the playable stair envelope (x = ±10.6 m).
+      if(floor>0&&floor%3===1){const bx=front-side*.54,bz=z+(idx%2?3.4:-3.4);
+        fabric(bx,base+.22,bz,1.42,.19,4.6,brushed);
+        for(const dz of [-2.18,0,2.18])beam([bx-side*.64,base+.30,bz+dz],[bx-side*.64,base+1.37,bz+dz],.035,stainless,6);
+        beam([bx-side*.64,base+1.37,bz-2.2],[bx-side*.64,base+1.37,bz+2.2],.043,stainless,7);
       }
     }
-    for(const zz of [z-d*.42,z-d*.22,z+d*.22,z+d*.42])facadeFin(front-side*.55,height*.48,zz,height*.80,side,idx%2?C.cyan:C.amber);
-    techWrap(front,z,side,height,d);
-    // Localized rain trails and corroded panel seams break the texture repeat.
-    // They share two materials and are instanced with the other static boxes.
-    for(let n=0;n<11;n++){
-      const nz=z-d*.43+n*(d*.86/10),ey=4.2+(n%5)*3.25;
-      const streakLength=.85+(n%4)*.48;
-      thin(front-side*.72,ey,nz,.06,streakLength,.14,n%4===0?oxidation:runoff);
-      if(n%3===0)thin(front-side*.72,ey+streakLength*.58,nz,.09,.035,.52,brushed);
-    }
-    // External circulation and fire stairs read as real accessible envelopes.
-    if(idx%3===0){
-      const sx=front-side*1.70;
-      for(let j=0;j<Math.floor(height/3.2);j++){
-        const y=2.2+j*3.25,zz=z+(j%2?d*.25:-d*.25);
-        thin(sx,y,zz,2.3,.19,4.8,brushed);
-        beam([sx-side*.85,y+1.13,zz-2.4],[sx-side*.85,y+1.13,zz+2.4],.06,stainless);
-      }
-    }
-    if(idx%2===0)advertisement(idx%4?'NEURO':'VESPER',front-side*.61,Math.min(height-8,14),z+d*.27,2.5,6.4,side,idx%4?'#eeae80':'#6bddf7');
-    roofSet(x,z,height+.6,w,d);
-    // Neon at the roofline makes the silhouette identifiable from the spawn.
-    thin(x, height+1.42,z,w*.76,.13,d*.74,idx%2?C.amber:C.cyan);
+    // Damaged parapet, services and supported rooftop plant finish the silhouette.
+    const roof=storeys*3.2;fabric(x,roof+.14,z,w,.28,d,ceramic);
+    for(let j=0;j<8;j++)if((j+idx)%5!==0)fabric(front,roof+.64,z-7+j*2,.5,.8,1.6,materialForRoof(idx));
+    roofSet(x,z,roof+.27,w,d);
+    for(const zz of [z-6.7,z+6.7]){beam([front-side*.18,.5,zz],[front-side*.18,roof-.3,zz],.055,copper,8);}
+    for(let n=0;n<7;n++)thin(front-side*.07,1.8+n*2.9,z+(n%3-1)*4.5,.025,2.3,.34,runoff);
+    advertisement(idx%3===0?'HELIX':idx%3===1?'ÉVACUATION':'AVIS DE RECHERCHE',front-side*.075,1.94,z+3.825,1.05,1.55,side);
+    sign(['CLINIQUE 07','TRANSIT','ARCHIVES','ATELIER','ALIMENTATION','RELAIS'][idx%6],front-side*.21,4.05,z-3.5,2.7,'#b9b7ab',side);
   }
+  function materialForRoof(idx){return idx%2?dirty:ceramic;}
   function occupiedMarket(side,z){
     // Tented passage with *no* facade wall across the doorway.
     const x=side*21,w=13,d=16,front=side*12.2,back=side*27;
+    thin(side*19.8,-.06,z,15.4,.12,d,C.concrete);
     thin(x,8.7,z,w,.38,d,brushed);
     thin(x,9.1,z,w-.4,.08,d-.4,C.iron);
     solid(back,4.1,z,.9,8.2,d,dirty,true);
@@ -165,7 +157,7 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
       const zz=z-5+k*5.1;
       thin(side*19,.92,zz,3,1.42,1.5,stainless);
       thin(side*19,1.67,zz,3.2,.08,1.68,ceramic);
-      thin(side*17.4,2.4,zz,.12,1.2,2.2,k===1?C.amber:C.cyan);
+      thin(side*17.4,2.4,zz,.12,1.2,2.2,dirty);
       for(let j=0;j<3;j++)thin(side*(18.6+j*.55),1.77,zz, .24,.2,.65,k%2?C.warning:C.rust);
       thin(side*22,3.5,zz,1.8,.13,3.2,brushed);
       for(let j=0;j<3;j++)thin(side*(21+j*.8),3,zz-.1,.1,1.7,.1,copper);
@@ -178,8 +170,10 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
       cloth.rotation.set(-Math.PI/2+.2,side*.10,Math.sin(k*.7)*.11);root.add(cloth);
       beam([side*15,7.4,z-6+k*5],[side*23,7.8,z-6+k*5],.04,copper);
     }
-    sign('MARCHE 07',front,6.5,z-5.3,3.8,'#f5b466',side);
-    sign('RESEAU',side*24.8,5,z+4,2.9,'#60d5e6',side);
+    for(const dz of [-7.4,-3.2])beam([front,.1,z+dz],[front,8.7,z+dz],.065,stainless,8);
+    thin(front+side*.1,6.5,z-5.3,.24,1.4,4.0,brushed);
+    sign('MARCHE 07',front-side*.06,6.5,z-5.3,3.8,'#f5b466',side);
+    sign('RESEAU',side*26.45,5,z+4,2.9,'#60d5e6',side);
     for(let i=0;i<4;i++){
       const xx=side*(15.0+i*2.5),zz=z+5.2;
       thin(xx,.4,zz,1.55,.8,.66,copper);
@@ -212,7 +206,7 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
     }
     for(let z=65;z>-68;z-=12){
       thin(0,20.8,z,18.2,.42,.73,brushed);
-      thin(0,20.55,z,17.8,.07,.3,C.cyan);
+      thin(0,20.55,z,17.8,.07,.3,darkTrim);
     }
     for(let side of [-1,1])beam([side*8.8,20.8,67],[side*8.8,20.8,-68],.24,stainless,10);
   }
@@ -266,8 +260,6 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
       thin(-7,5.3,z,.2,.12,1.5,C.amber);
       beam([-7,0,z],[-7,10.3,z],.09,C.iron);
     }
-    advertisement('HELIX',-11.9,13.1,-39,4,6.8,-1,'#f56577');
-    advertisement('VESPER',13.5,15.5,29,3,7,1,'#73f7ee');
   }
-  return {residentialTower,occupiedMarket,pbrTargets:{ceramic,brushed,dirty,copper,darkTrim,pastel},decorate(){neonMonorail();narrativeClutter();}};
+  return {residentialTower,occupiedMarket,stats,signs,pbrTargets:{ceramic,brushed,dirty,copper,darkTrim,pastel,masonry},decorate(){neonMonorail();narrativeClutter();}};
 }

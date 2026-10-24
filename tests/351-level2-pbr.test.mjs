@@ -6,8 +6,8 @@ const level=readFileSync(new URL('../dist/level2-test.js',import.meta.url),'utf8
 const materialSource=readFileSync(new URL('../dist/level2-materials.js',import.meta.url),'utf8');
 const architecture=readFileSync(new URL('../dist/level2-architecture.js',import.meta.url),'utf8');
 
-test('W02 uses five shared low-res material sets from the packaged CC0 library',()=>{
- assert.deepEqual(Object.keys(PBR_ASSETS),['asphalt','concrete','blueMetal','chequer','rust']);
+test('W02 uses six shared low-res material sets from the packaged CC0 library',()=>{
+ assert.deepEqual(Object.keys(PBR_ASSETS),['asphalt','concrete','blueMetal','chequer','rust','masonry']);
  for(const material of Object.values(PBR_ASSETS)){
   assert.ok(material.asset);
   assert.ok(material.roughness>=0&&material.roughness<=1);
@@ -36,7 +36,7 @@ test('Architectural meshes use static quality booleans, not callable boolean',()
 test('No unexpected Full HD or 4K texture transfer',()=>{
  assert.doesNotMatch(materialSource,/\/(2k|4k|8k|16k)\//i);
  const high=Object.keys(PBR_ASSETS).length*512*512*4*1.34*3/(1024*1024);
- const perf=Object.keys(PBR_ASSETS).length*256*256*4*1.34*2/(1024*1024);
- assert.ok(high<21,'color, normal and roughness stay below 21 MiB');
- assert.ok(perf<3.5,'phone omits normals and stays below 3.5 MiB');
+ const perf=(5*256*256+128*128)*4*1.34*2/(1024*1024);
+ assert.ok(high<25,'six color, normal and roughness sets stay below 25 MiB');
+ assert.ok(perf<3.6,'phone omits normals and uses a smaller masonry map below 3.6 MiB');
 });
