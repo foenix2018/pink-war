@@ -22,7 +22,6 @@ export function installShadowUnit(model,profile){
   if(model.shadowUnit)return model.shadowUnit;
   const armour=attachShadowConcept(model,profile);
   const cape=addCapeToOriginalSoldier(model,profile);
-  const tabard=addCapeToOriginalSoldier(model,profile,{front:true});
 
   // Drive the cape with the soldier's actual animation clock. This covers
   // 3rd-person campaign, arena, stand, outfit, lobby and AT HOME companion.
@@ -34,15 +33,13 @@ export function installShadowUnit(model,profile){
     const movement=flight.sprint?'run':flight.crouched&&moving?'crouchWalk':
       moving?'walk':flight.airborne?'jump':'idle';
     cape.update(time,movement,.63);
-    tabard.update(time,movement,.35);
   };
   const dispose=model.dispose.bind(model);
   model.dispose=()=>{
     armour.dispose();
     cape.dispose();
-    tabard.dispose();
     dispose();
   };
-  model.shadowUnit={armour,cape,tabard,profile:profile.id};
+  model.shadowUnit={armour,cape,profile:profile.id};
   return model.shadowUnit;
 }

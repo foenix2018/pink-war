@@ -52,10 +52,10 @@ for(const profile of CHARACTERS){
     assert.equal(entry.armour.helmet.parent,soldier.actor.bone('Head'));
     assert.equal(entry.armour.spine.parent,soldier.actor.bone('Spine2'));
     assert.equal(entry.cape.anchor.parent,soldier.body);
-    assert.equal(entry.tabard.anchor.parent,soldier.body);
-    const capeMesh=entry.cape.anchor.children[0],tabardMesh=entry.tabard.anchor.children[0];
+    assert.equal(entry.tabard,undefined,'front tabard is removed');
+    const capeMesh=entry.cape.anchor.children[0];
     assert.ok(capeMesh.material.map.isDataTexture,'woven texture needs no external asset');
-    const before=tabardMesh.geometry.attributes.position.array.slice();
+    const before=capeMesh.geometry.attributes.position.array.slice();
     soldier.root.updateMatrixWorld(true);
     const bodyIndex=soldier.actor.bones.indexOf(soldier.body);
     const bindBody=new T.Matrix4().fromArray(soldier.actor.data.bones[bodyIndex].inverse).invert();
@@ -72,9 +72,6 @@ for(const profile of CHARACTERS){
       soldier.animate(level*.09,level%2===0,0,0,0,.016,{sprint:level===10});
       const positions=entry.cape.anchor.children[0].geometry.attributes.position.array;
       assert.ok(positions.every(Number.isFinite),'every cloth vertex stays finite');
-      assert.ok(tabardMesh.geometry.attributes.position.array.every(Number.isFinite),
-        'front cloth also stays finite while the armour changes');
-      assert.equal(entry.tabard.anchor.parent,soldier.body);
       for(const group of entry.armour.limbGroups){
         assert.ok(group.parent.isBone,'limb plates follow native skeleton joints');
         group.updateWorldMatrix(true,false);
@@ -87,17 +84,15 @@ for(const profile of CHARACTERS){
     // Per-character edge color is independent of the other hero's materials.
     const edges=entry.cape.anchor.children[0].children;
     assert.equal(edges[0].material.color.getHex(),profile.masculine?0x62b8ff:0xff1688);
-    assert.notDeepEqual(tabardMesh.geometry.attributes.position.array,before,'tabard animates');
-    capeMesh.geometry.computeBoundingBox();tabardMesh.geometry.computeBoundingBox();
+    assert.notDeepEqual(capeMesh.geometry.attributes.position.array,before,'rear cape animates');
+    capeMesh.geometry.computeBoundingBox();
     assert.ok(capeMesh.geometry.boundingBox.getSize(new T.Vector3()).x>.40,
       'rear cape covers the back instead of the former narrow strip');
     let disposed=0;
     capeMesh.geometry.addEventListener('dispose',()=>disposed++);
-    tabardMesh.geometry.addEventListener('dispose',()=>disposed++);
     soldier.dispose();
-    assert.equal(disposed,2,'both cloth panels release their geometry');
+    assert.equal(disposed,1,'rear cape releases its geometry');
     assert.equal(entry.cape.anchor.parent,null);
-    assert.equal(entry.tabard.anchor.parent,null);
     assert.ok(entry.armour.limbGroups.every(group=>group.parent===null));
     restoreDocument();
   });
@@ -122,22 +117,22 @@ for(const profile of CHARACTERS){
         'front and back plates are fitted to the undersuit instead of the hidden old shell');
     }
     const hip=soldier.actor.bone('Hips'),samples=[];
-    for(const [front,cloth] of [[false,entry.cape],[true,entry.tabard]]){
+    for(const cloth of [entry.cape]){
       cloth.update(0,'idle',0,{symmetric:true});
       const mesh=cloth.anchor.children[0],p=mesh.geometry.attributes.position;
       mesh.updateWorldMatrix(true,false);
-      const top=[],waistRow=front?12:16,waistIndex=waistRow*25+12;
+      const top=[],waistRow=16,waistIndex=waistRow*25+12;
       for(let i=0;i<25;i++)top.push(new T.Vector3().fromBufferAttribute(p,i));
       const waist=hip.worldToLocal(mesh.localToWorld(new T.Vector3().fromBufferAttribute(p,waistIndex)));
       // These samples were formerly 10–18 cm away from the actual waist.
       const inverseRoot=soldier.root.matrixWorld.clone().invert();
       const rootPoint=new T.Vector3().fromBufferAttribute(p,waistIndex).applyMatrix4(mesh.matrixWorld).applyMatrix4(inverseRoot);
       assert.ok(Math.abs(rootPoint.z)>.11&&Math.abs(rootPoint.z)<.145,
-        'front and rear fabric lie within a small clearance of the waist');
+        'rear fabric lies within a small clearance of the waist');
       const shoulderDepth=top[12].clone().applyMatrix4(mesh.matrixWorld).applyMatrix4(inverseRoot).z;
       const edgeDepth=top[0].clone().applyMatrix4(mesh.matrixWorld).applyMatrix4(inverseRoot).z;
       assert.ok(Math.abs(shoulderDepth)-Math.abs(edgeDepth)>.025,'attachment seam wraps around the torso');
-      samples.push({cloth,mesh,p,top,waist,waistIndex,front});
+      samples.push({cloth,mesh,p,top,waist,waistIndex});
     }
     // Include a placed/scaled/rotated actor, as in the lobby and companion.
     soldier.root.position.set(9,.7,-12);soldier.root.rotation.y=.73;
@@ -236,7 +231,7 @@ for(const profile of CHARACTERS){
     const shoulderWidth=shoulders.getSize(new T.Vector3()).x;
     const helmetWidth=new T.Box3().setFromObject(entry.armour.helmet).getSize(new T.Vector3()).x;
     assert.ok(helmetWidth/shoulderWidth>.39&&helmetWidth/shoulderWidth<.48,'helmet respects the reference shoulder span');
-    for(const cloth of [entry.cape,entry.tabard]){
+    for(const cloth of [entry.cape]){
       cloth.update(1,'idle',.6,{symmetric:true});
       const p=cloth.anchor.children[0].geometry.attributes.position,columns=24,rows=40;
       cloth.anchor.updateWorldMatrix(true,true);
@@ -252,7 +247,7 @@ for(const profile of CHARACTERS){
       }
       const width=p.getX(rows*(columns+1)+columns)-p.getX(rows*(columns+1));
       const ratio=width/shoulderWidth;
-      assert.ok(cloth===entry.tabard?ratio>.44&&ratio<.54:ratio>.58&&ratio<.70,'cloth width follows the reference silhouette');
+      assert.ok(ratio>.58&&ratio<.70,'rear cape width follows the reference silhouette');
     }
     for(const hand of hands)hand.userData.dispose();soldier.dispose();
   });

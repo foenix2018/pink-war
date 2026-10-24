@@ -90,7 +90,6 @@ const createGun=(options={})=>buildGun({
   makeFlash:parent=>{const flash=new T.Object3D();parent.add(flash);return flash;}
 });
 const capeParts=new Map();
-const tabardParts=new Map();
 const shadowParts=new Map();
 const subjects=new Map();
 const inspectionHands=new Map();
@@ -101,7 +100,6 @@ for(const id of ['lylu','ghju']){
   // Masquer l'ancien casque et monter les plaques/visière Shadow avant la cape.
   shadowParts.set(id,attachShadowConcept(model,characterForId(id)));
   capeParts.set(id,addCapeToOriginalSoldier(model,characterForId(id)));
-  tabardParts.set(id,addCapeToOriginalSoldier(model,characterForId(id),{front:true}));
   model.root.traverse(o=>{if(o.isMesh&&o.material?.isMeshStandardMaterial){o.material.envMap=surfaces.environment;o.material.envMapIntensity=o.material.userData.studioReflection??(o.material.name==='Shadow dark visor'?.18:.65);}});
   const gloves=[createGlove(kit.gloves,{mirror:true,sleeve:false}),createGlove(kit.gloves,{sleeve:false})];
   for(const glove of gloves){glove.visible=false;model.root.add(glove);}
@@ -284,7 +282,6 @@ function tick(now){
  }
  const symmetric=state.weapon<0&&state.motion==='idle';
  capeParts.get(state.character).update(state.clock,state.motion,state.capeWind,{symmetric});
- tabardParts.get(state.character).update(state.clock,state.motion,state.capeWind*.55,{symmetric});
  refreshSkeleton(model);
  const w=canvas.clientWidth,h=canvas.clientHeight;
  // Portrait inspection keeps the entire boot-to-helmet silhouette above the mobile control drawer.
