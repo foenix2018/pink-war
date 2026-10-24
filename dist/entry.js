@@ -2,6 +2,8 @@ import {graphicsProfile} from './renderer-policy.js';
 import {GAME_VERSION,showLaunchError,compatibleLaunchURL} from './launch-ui.js';
 import {syncMenuArtwork} from './menu-art.js?v=m02-prod-cover-1';
 import {showStoryPrologue} from './story-prologue.js';
+import {createMissionLoading} from './mission-loading.js';
+import {readM01Checkpoint} from './checkpoint-index.js';
 
 // This menu has no Three.js or character imports. It is usable before the user
 // chooses to download/build the 3D scene, including inside an iPhone web view.
@@ -27,7 +29,23 @@ function refresh(){
   $('sound-setting').checked=!!settings.sound;$('music-setting').checked=settings.music!==false;
   $('sensitivity').value=settings.sensitivity;$('quality').value=['auto','low','high'].includes(settings.quality)?settings.quality:'auto';
   $('launch-status').textContent=loading?'Chargement du secteur…':`V. ${GAME_VERSION} · prêt à lancer`;
+  $('resume-mission').hidden=mode!=='campaign'||!readM01Checkpoint(character)||loading;
 }
+const resumeButton=document.createElement('button');resumeButton.id='resume-mission';resumeButton.type='button';resumeButton.hidden=true;
+resumeButton.textContent='REPRENDRE AU POINT DE CONTRÔLE';resumeButton.style.cssText='margin-top:10px;padding:10px 0;background:none;border:0;border-bottom:1px solid #84958d;color:#dce8e1;font:600 11px system-ui;letter-spacing:.05em;cursor:pointer';
+$('play-button').after(resumeButton);
+function openMission(mission,{resume=false}={}){
+  loading=true;refresh();save();for(const d of document.querySelectorAll('dialog[open]'))d.close();
+  const cover=createMissionLoading({mission,characterId:character});cover.set(.04,'Ouverture du secteur');
+  const target=mission===2?'./level2-test.html':'./vesper-level1-v7.html';
+  const url=new URL(target,location.href);url.searchParams.set('source','campaign');url.searchParams.set('autostart','1');url.searchParams.set('character',character);url.searchParams.set('v',GAME_VERSION);
+  if(mission===1)url.searchParams.set('prologue','done');
+  if(resume)url.searchParams.set('resume','1');
+  if(new URLSearchParams(location.search).get('renderer')==='webgl')url.searchParams.set('renderer','webgl');
+  if(settings.quality==='low')url.searchParams.set('quality',mission===2?'low':'performance');
+  location.assign(url.href);
+}
+resumeButton.onclick=()=>{if(!loading)openMission(1,{resume:true});};
 for(const b of document.querySelectorAll('[data-character]'))b.onclick=()=>{if(!loading){character=b.dataset.character;save();refresh();}};
 for(const b of document.querySelectorAll('[data-mode]'))b.onclick=()=>{if(!loading){mode=b.dataset.mode;refresh();}};
 function panel(id){for(const d of document.querySelectorAll('dialog[open]'))d.close();$(id).showModal();}
@@ -49,13 +67,12 @@ async function begin(intent='play',afterPrologue=false){
   // Niveau 1 Vesper V7 — écran et tactile. La campagne classique et WebXR
   // restent accessibles par ?classic=1 ou via le lancement VR.
   if(mode==='campaign' && intent==='play' && !new URLSearchParams(location.search).has('classic')){
-    save();
-    location.assign('./vesper-level1-v7.html?source=campaign&prologue=done&v=3.57&character='+encodeURIComponent(character));
+    openMission(1);
     return;
   }
   if(mode==='campaign2'){
     if(intent==='vr'){showLaunchError(new Error('La mission 02 est actuellement disponible en mode écran PC / Mac. La version WebXR est en cours d’intégration.'),'niveau 2');return;}
-    save();location.assign('./level2-test.html?source=campaign&v=3.57&character='+encodeURIComponent(character));return;
+    openMission(2);return;
   }
   loading=true;refresh();
   for(const d of document.querySelectorAll('dialog[open]'))d.close();
@@ -66,7 +83,7 @@ async function begin(intent='play',afterPrologue=false){
   if(settings.sound||settings.music!==false)try{const Audio=window.AudioContext||window.webkitAudioContext;
     window.__PINKWAR_BOOT_AUDIO ||=new Audio();window.__PINKWAR_BOOT_AUDIO.resume().catch(()=>{});}catch{}
   try{
-    modulePromise ||=import('./game.js?v=3.57');await modulePromise;
+    modulePromise ||=import('./game.js?v=3.58');await modulePromise;
     for(const d of document.querySelectorAll('dialog'))d.removeEventListener('cancel',earlyCancel);
     if(!window.__PINKWAR||window.__PINKWAR.snapshot().phase==='error')throw new Error('Initialisation interrompue.');
     loading=false;

@@ -1,11 +1,12 @@
 // Shared left-side skill drawer. Locked entries remain informative before M07;
 // unlocking is owned by the simulation, never a DOM button or URL parameter.
+import {companionPictogram,paintCompanionPictogram} from './companion-pictograms.js';
 export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
  if(!document.querySelector('[data-companion-style]')){
-  const style=document.createElement('link');style.rel='stylesheet';style.href=new URL('./companion-menu.css?v=3.57',import.meta.url).href;style.dataset.companionStyle='';document.head.append(style);
+  const style=document.createElement('link');style.rel='stylesheet';style.href=new URL('./companion-menu.css?v=3.58',import.meta.url).href;style.dataset.companionStyle='';document.head.append(style);
  }
  const root=document.createElement('div');root.className='pw-companion';root.hidden=true;
- const toggle=document.createElement('button');toggle.className='pw-companion-toggle';toggle.type='button';toggle.setAttribute('aria-expanded','false');toggle.innerHTML='<span aria-hidden="true"></span><b></b>';
+ const toggle=document.createElement('button');toggle.className='pw-companion-toggle';toggle.type='button';toggle.setAttribute('aria-expanded','false');
  const panel=document.createElement('section');panel.className='pw-companion-panel';panel.hidden=true;panel.setAttribute('role','dialog');panel.setAttribute('aria-label','Compétences du partenaire');
  panel.innerHTML='<header><h2></h2><button type="button" aria-label="Fermer les compétences">×</button></header><p class="pw-companion-status"></p><div class="pw-companion-skills"></div><p class="pw-companion-note">G : ouvrir / fermer · choisir une compétence puis reprendre la visée.</p>';
  root.append(toggle,panel);document.body.append(root);
@@ -16,7 +17,8 @@ export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
   const key=JSON.stringify([status.name,status.unlocked,status.energy,status.skills.map(s=>[s.id,Math.ceil(s.remaining),s.enabled])]);
   if(key===signature)return;signature=key;
   const color='#'+status.color.toString(16).padStart(6,'0');root.style.setProperty('--partner',color);
-  toggle.querySelector('b').textContent=status.name.toUpperCase();toggle.setAttribute('aria-label','Compétences de '+status.name);
+  if(toggle.dataset.hero!==status.hero){toggle.innerHTML=companionPictogram(status.hero);toggle.dataset.hero=status.hero;}
+  toggle.setAttribute('aria-label','Compétences de '+status.name);toggle.title=status.name+' · compétences (G)';
   panel.querySelector('h2').textContent=status.name.toUpperCase();
   panel.querySelector('.pw-companion-status').textContent=status.unlocked?'Liaison locale · énergie '+status.energy+' / 100':'Liaison en sommeil. Rencontre dans « Mémoires locales », mission 7.';
   for(const s of status.skills){
@@ -60,7 +62,7 @@ export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
   const {mesh}=xr;left.updateWorldMatrix(true,false);right.updateWorldMatrix(true,false);
   left.getWorldPosition(mesh.position);mesh.position.y+=.12;
   camera.getWorldQuaternion(mesh.quaternion);
-  mesh.scale.set(open?.35:.13,open?.29:.055,1);mesh.updateMatrixWorld(true);
+  mesh.scale.set(open?.35:.066,open?.29:.055,1);mesh.updateMatrixWorld(true);
   right.getWorldPosition(xr.origin);right.getWorldQuaternion(xr.q);xr.direction.set(0,0,-1).applyQuaternion(xr.q);
   xr.ray.set(xr.origin,xr.direction);xr.ray.near=.025;xr.ray.far=2;
   const hit=xr.ray.intersectObject(mesh)[0];const down=trigger&&!xr.pressed;xr.pressed=!!trigger;
@@ -75,7 +77,9 @@ export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
   }
   if(xr.dirty){
    const c=xr.canvas.getContext('2d'),s=getStatus();c.fillStyle='#111c20';c.fillRect(0,0,768,640);
-   c.fillStyle='#'+s.color.toString(16).padStart(6,'0');c.fillRect(0,0,12,640);c.font='bold 46px sans-serif';c.fillText(s.name.toUpperCase(),38,open?66:354);
+   const tint='#'+s.color.toString(16).padStart(6,'0');c.fillStyle=tint;
+   if(open){c.fillRect(0,0,12,640);c.font='bold 46px sans-serif';c.fillText(s.name.toUpperCase(),38,66);}
+   else paintCompanionPictogram(c,s.hero,{color:tint,size:350});
    if(open){
     c.fillStyle='#d0dedb';c.font='25px sans-serif';c.fillText('FERMER ×',568,58);c.font='24px sans-serif';
     c.fillText(s.unlocked?'ÉNERGIE '+s.energy+' / 100':'RENCONTRE À LA MISSION 7',36,128);

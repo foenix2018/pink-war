@@ -23,10 +23,13 @@ import {createAmbience} from './ambience.js';
 import {createFireBuffer} from './fire-input.js';
 import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
+import {createMissionLoading} from './mission-loading.js';
 
 const $=id=>document.getElementById(id);
 const characterId=new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju';
 const main=$('game'),shade=$('shade'),startButton=$('start'),status=$('status');
+const autoMission=new URLSearchParams(location.search).get('manual')!=='1';
+const missionLoading=autoMission?(window.__PINKWAR_MISSION_LOADING||createMissionLoading({mission:2,characterId})):null;
 const quality=$('quality'),hud=$('hud');
 if(new URLSearchParams(location.search).get('quality')==='low')quality.value='low';
 const low=()=>quality.value==='low';
@@ -52,6 +55,8 @@ function audioReady(){
   environmentAudio=createAmbience(audioCtx);
  }catch(error){console.warn('M02 audio fallback',error);}
 }
+document.addEventListener('pointerdown',audioReady,{once:true,capture:true,passive:true});
+document.addEventListener('keydown',audioReady,{once:true,capture:true});
 
 const keys=new Set(),enemyMeshes=new Map(),shotMeshes=new Map();
 const collisions=[],floors=[],beacons=[],lightSources=[],decals=[];
@@ -675,6 +680,7 @@ function onRenderFailure(error){
  if(recovering)return;
  console.error('M02 render failed',error);
  recovering=true;running=false;shade.style.display='grid';
+ missionLoading?.fail('Le rendu a été interrompu. Rechargez le secteur.');
  $('status').textContent='Échec du rendu : '+(error?.message||String(error))+' · Essaye le mode compatibilité.';
  const url=new URL(location.href);
  if(url.searchParams.get('renderer')!=='webgl'){
@@ -694,12 +700,14 @@ function resize(){
  renderer.setPixelRatio(renderPixelRatio(profile,devicePixelRatio,width,height));renderer.setSize(width,height,false);
 }
 async function boot(){
+ missionLoading?.set(.10,'Initialisation du secteur');
  bootStep='initialisation graphique';status.textContent='Préparation du secteur et du moteur existant…';startButton.disabled=true;
  try{
   const environment={userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu};
   const profile=graphicsProfile(environment,low()?'low':'auto',new URLSearchParams(location.search).get('renderer')==='webgl'||low());
   if(profile.phone&&!new URLSearchParams(location.search).has('quality'))quality.value='low';
   const prepared=await createCompatibleRenderer({canvas,WebGPU:T.WebGPURenderer,WebGL:WebGLRenderer,profile});
+  missionLoading?.set(.28,'Construction des Bas-Niveaux');
   bootStep='création de la scène';status.textContent='Création du quartier cyberpunk…';
   canvas=prepared.canvas;renderer=prepared.renderer;
   renderer.onDeviceLost=info=>onRenderFailure(new Error('Périphérique graphique perdu : '+(info?.message||info?.reason||'WebGPU')));
@@ -708,8 +716,10 @@ async function boot(){
   renderer.shadowMap.enabled=profile.shadows&&!low();renderer.shadowMap.type=T.PCFShadowMap;
   scene=new T.Scene();camera=new T.PerspectiveCamera(67,innerWidth/innerHeight,.08,320);
   scene.add(camera);createEnvironment();
+  missionLoading?.set(.52,'Quartier et voies de transit prêts');
   bootStep='jouabilité';status.textContent='Installation des commandes et des armes…';
   setupPlayer();resize();
+  missionLoading?.set(.66,'Commandes et équipements');
   const useWebGL=!!renderer.isWebGLRenderer;
   bootStep='matériaux';
   try{pbrController=installLeanPBR(T,materials,architecture,{performance:low()||profile.phone,onProgress:state=>{
@@ -719,6 +729,7 @@ async function boot(){
   $('renderer').textContent=(renderer.isWebGLRenderer?'WebGL / repli':'WebGPU')+' · PBR';
   if(prepared.initialFailure)console.warn('M02: WebGPU unavailable:',prepared.initialFailure);
   bootStep='préparation du premier rendu';status.textContent='Préparation des lumières et du premier rendu…';
+  missionLoading?.set(.90,'Préparation du premier rendu');
   snapCamera();
   if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);
   bootStep='prêt';hud.hidden=false;started=true;requestAnimationFrame(animation);
@@ -734,10 +745,12 @@ async function boot(){
    onAim:down=>{if(down)audioReady();mouseAim=down;}
   });
   resume();
+  if(missionLoading){await missionLoading.finish();document.documentElement.classList.remove('pw-auto-story');}
   // Authentic production character is loaded after the first playable frame.
   // If decoding a dense rig fails, the mission keeps functioning.
   void loadAuthenticSoldier();
  }catch(error){
+  missionLoading?.fail('Les Bas-Niveaux n’ont pas pu charger. Réessayez.');
   console.error('[M02] boot failed at '+bootStep,error);
   status.textContent='Impossible de lancer ('+bootStep+') : '+(error?.message||error);
   startButton.textContent='RECOMMENCER LE CHARGEMENT →';startButton.disabled=false;
@@ -817,7 +830,8 @@ for(const name of ['pointerup','pointercancel']){
  window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
 }
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
-window.__PINK_M02=Object.freeze({snapshot:()=>({revision:'3.57',running,stage,characterId,health:game?.player.hp,
+window.__PINK_M02=Object.freeze({snapshot:()=>({revision:'3.58',running,stage,characterId,health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
  backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,
  effects:combatEffects?.stats()})});
+if(autoMission){startButton.disabled=true;void boot();}

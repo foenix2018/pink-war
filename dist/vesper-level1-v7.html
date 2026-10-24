@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><title>PINK WARS — LA FRACTURE · Le Dernier Signal</title><style>
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><link rel="stylesheet" href="./mission-loading.css?v=3.58"><script>document.documentElement.classList.toggle('pw-auto-story',!new URLSearchParams(location.search).has('visit'));</script>
+<title>PINK WARS — LA FRACTURE · Le Dernier Signal</title><style>
 :root{font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Arial,sans-serif;color:#e9f3f8;background:#081019;--pink:#ec4c91;--cyan:#7ad7fb;--line:rgba(156,187,205,.19)}
 *{box-sizing:border-box}html,body{height:100%;margin:0;overflow:hidden}body{background:#07111b;touch-action:none}button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,select:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}canvas#view{position:fixed;inset:0;width:100%;height:100%;display:block;outline:none;background:linear-gradient(#354a5a,#121e2b 65%,#121417)}
 #game{position:fixed;inset:0;pointer-events:none}
@@ -1880,28 +1881,29 @@ function toggleSurfaceMode(value){
  else{cc0Attempted=false;applyCC0Materials(true);}
 }
 
+let missionLoading=null;
 async function boot(){try{
- showVesperPrologue=(await import('./story-prologue.js?v=3.57')).showStoryPrologue;
+ if(!referenceVisit){const {createMissionLoading}=await import('./mission-loading.js?v=3.58');missionLoading=createMissionLoading({mission:1,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});missionLoading.set(.08,'Chargement du scénario');}
+ showVesperPrologue=(await import('./story-prologue.js?v=3.58')).showStoryPrologue;
  $('bootInfo').textContent='Construction de la mégalopole, bâtiments, détails et navigation…';
  await new Promise(r=>setTimeout(r,80));
  if(referenceVisit)buildScene();const atlas=createAtlas();const materialAtlas=referenceVisit?await v5LoadMaterial():null;
  $('bootInfo').textContent='Initialisation du moteur WebGPU…';
  if(!new URLSearchParams(location.search).has('visit')){
-  const {createVesperCombat}=await import('./vesper-combat.js?v=3.57');
+  const {createVesperCombat}=await import('./vesper-combat.js?v=3.58');missionLoading?.set(.16,'Ressources du secteur chargées');
   let renderFailed=false;
   const fail=error=>{
    console.warn('Vesper / échec du rendu, repli compatible :',error);
    if(renderFailed)return;renderFailed=true;gamePaused=true;combatWorld?.pause();
    const retry=new URL(location.href);
    if(retry.searchParams.get('renderer')!=='webgl'){retry.searchParams.set('renderer','webgl');location.replace(retry.href);}
-   else{console.error('Vesper render',error);$('intro').classList.remove('gone');$('bootInfo').textContent='Rendu interrompu. Recharge le secteur pour reprendre.';$('start').disabled=false;$('start').textContent='RECHARGER LE SECTEUR →';$('start').onclick=()=>location.reload();}
+   else{missionLoading?.fail('Le rendu a été interrompu. Réessayez le chargement.');console.error('Vesper render',error);$('intro').classList.remove('gone');$('bootInfo').textContent='Rendu interrompu. Recharge le secteur pour reprendre.';$('start').disabled=false;$('start').textContent='RECHARGER LE SECTEUR →';$('start').onclick=()=>location.reload();}
   };
   combatWorld=await createVesperCombat({canvas,staticMesh,portalMesh,signAtlas:atlas,collide,stairs,decks,interactions,notify,
    setPlayer:p=>{position.x=p.x;position.y=p.elevation+eyeHeight;position.z=p.z;grounded=p.grounded;},
     getState:()=>({input:{x:Number(keys.has('KeyD'))-Number(keys.has('KeyA')||keys.has('KeyQ'))+touch.moveX+gamepadMove.x,z:Number(keys.has('KeyS'))-Number(keys.has('KeyW')||keys.has('KeyZ'))+touch.moveY+gamepadMove.y,jump:jumpQueued||keys.has('KeyJ'),sprint:touch.sprint||padRun||keys.has('ShiftLeft')},position,yaw,pitch,aiming:isAiming||gamepadAiming,crouching,grounded,sprint:touch.sprint||padRun||keys.has('ShiftLeft'),free:isFree,day:timeOfDay,shadows:shadowsEnabled,quality,flashlight}),
-   onCanvas:value=>{canvas=value;},onFailure:fail,onMenuChange:()=>{keys.clear();firing=false;padFiring=false;touch.moveX=touch.moveY=0;touch.sprint=false;gamepadMove.x=gamepadMove.y=0;isAiming=false;}});
+   onProgress:(value,label)=>missionLoading?.set(value,label),onCanvas:value=>{canvas=value;},onFailure:fail,onMenuChange:()=>{keys.clear();firing=false;padFiring=false;touch.moveX=touch.moveY=0;touch.sprint=false;gamepadMove.x=gamepadMove.y=0;isAiming=false;}});
   renderer=combatWorld;gpuKind=renderer.kind;
-   if(combatWorld.checkpoint&&!new URLSearchParams(location.search).has('resume')){const b=document.createElement('button');b.textContent='REPRENDRE AU DERNIER POINT DE CONTRÔLE';b.style.cssText='margin-top:12px;padding:12px;border:1px solid #9a8863;background:#25312d;color:#e7d6ae;width:100%';b.onclick=()=>{const u=new URL(location.href);u.searchParams.set('resume','1');location.assign(u.href);};$('start').after(b);}
   document.body.classList.add('pw-live-combat');
    document.querySelector('#help h2').textContent='Le Dernier Signal';
    const help=document.querySelector('#help .helpGrid');help.innerHTML='<p>ZQSD / WASD : déplacement · Souris : regard<br>J : saut · Maj : course · C : accroupir<br>Clic gauche / Espace : tirer · Clic droit : viser<br>R : recharger · E / molette : arme suivante<br>F : lire un terminal ou récupérer une arme<br>G : compétences de Gaby / Cara<br>Échap : pause · M : carte · H : aide</p><p>Manette : sticks pour bouger et regarder<br>L2 : viser · R2 : tirer · Croix : saut<br>Carré : recharger · Triangle : arme suivante<br>Rond : accroupir · R3 : interagir<br>Options : pause · Croix haute : compétences</p>';
@@ -1915,7 +1917,8 @@ async function boot(){try{
  $('start').disabled=false;refreshObjective();
  if(combatWorld){$('materialStatus').textContent='Surfaces photographiques embarquées · disponibles hors ligne';$('materialMode').options[0].textContent='Photo CC0 · embarqué';$('materialMode').disabled=true;$('audioToggle').textContent=combatWorld.ambienceEnabled?'🔊 Ambiance sonore : active':'🔇 Ambiance sonore : désactivée';}
  else{if($('materialMode').value==='photo')applyCC0Materials();$('materialMode').addEventListener('change',e=>toggleSurfaceMode(e.target.value));}
- }catch(e){console.error(e);$('bootInfo').textContent='Erreur : '+e.message+' — essayer un navigateur prenant en charge WebGPU ou WebGL2';$('bootInfo').style.color='#ff778b';}}
+ if(!referenceVisit&&await missionLoading.finish())start();
+ }catch(e){missionLoading?.fail('Le secteur n’a pas pu charger. Réessayez.');if(!missionLoading)document.documentElement.classList.remove('pw-auto-story');console.error(e);$('bootInfo').textContent='Erreur : '+e.message+' — essayer un navigateur prenant en charge WebGPU ou WebGL2';$('bootInfo').style.color='#ff778b';}}
 let showVesperPrologue;
 function start(afterPrologue=false){if(started)return;
  const params=new URLSearchParams(location.search);

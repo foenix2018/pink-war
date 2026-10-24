@@ -88,7 +88,7 @@ export function showStoryPrologue({characterId='ghju',sound=true,music=true,repl
  document.addEventListener('keydown',keyboard,true);document.addEventListener('visibilitychange',visibility);
  function frame(now){if(closed)return;const dt=Math.min(250,now-last);last=now;
   if(!paused&&!hiddenPause){remaining=Math.max(0,remaining-dt);dots[index].style.setProperty('--progress',`${100*(1-remaining/(slides[index].seconds*1000))}%`);
-   if(remaining<=0&&index<slides.length-1)display(index+1);
+   if(remaining<=0){if(index<slides.length-1)display(index+1);else if(!replay){close();return;}}
   }raf=requestAnimationFrame(frame);
  }
  display(0);view.focus({preventScroll:true});raf=requestAnimationFrame(frame);

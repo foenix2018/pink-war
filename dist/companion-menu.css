@@ -1,7 +1,7 @@
 .pw-companion{--partner:#ff65b1;position:fixed;z-index:28;left:max(16px,env(safe-area-inset-left));top:43%;font-family:system-ui,sans-serif;color:#e9eded}
 .pw-companion[hidden]{display:none!important}
-.pw-companion-toggle{display:flex;align-items:center;gap:9px;min-height:44px;padding:10px 14px;border:1px solid #626967;border-left:3px solid var(--partner);border-radius:6px;background:#141d20eb;color:#f0f2ed;font:700 12px system-ui;letter-spacing:.08em;cursor:pointer}
-.pw-companion-toggle span{width:15px;height:15px;border:1px solid var(--partner);border-radius:50%;box-shadow:inset 0 0 0 3px #141d20}
+.pw-companion-toggle{display:grid;place-items:center;width:48px;height:48px;padding:8px;border:1px solid #65726f;border-radius:13px;background:#111c20ed;color:var(--partner);cursor:pointer}
+.pw-companion-toggle svg{display:block;width:29px;height:29px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .pw-companion-panel{position:absolute;left:0;top:0;transform:translateY(-35%);width:min(330px,calc(100vw - 32px));max-height:calc(100dvh - 36px);overflow:auto;background:#0f181cf5;border:1px solid #606967;border-top:2px solid var(--partner);border-radius:8px;box-shadow:0 12px 45px #0009;padding:18px;box-sizing:border-box}
 .pw-companion-panel[hidden]{display:none}
 .pw-companion-panel header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #3b4748;padding-bottom:12px;margin-bottom:12px}
@@ -14,5 +14,5 @@
 .pw-companion-skill strong{display:block;font-size:13px;font-weight:650}
 .pw-companion-skill small{display:block;font:11px/1.5 system-ui;margin-top:5px;color:#b1c0bd}
 .pw-companion-note{font:11px/1.5 system-ui;color:#98aaa6;margin:14px 0 0}
-@media(max-height:540px){.pw-companion{top:35%}.pw-companion-panel{transform:translateY(-30%);padding:12px}.pw-companion-skill{padding:9px}.pw-companion-toggle{padding:8px 10px}}
+@media(max-height:540px){.pw-companion{top:35%}.pw-companion-panel{transform:translateY(-30%);padding:12px}.pw-companion-skill{padding:9px}}
 body.xr-mode .pw-companion{display:none}

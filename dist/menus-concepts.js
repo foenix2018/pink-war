@@ -1,0 +1,45 @@
+import {companionPictogram} from './companion-pictograms.js';
+const $=id=>document.getElementById(id),params=new URLSearchParams(location.search);
+const directions={bastion:{name:'Bastion · militaire et lisible',description:'Une image forte, une navigation courte, des surfaces graphite et des accents réservés à l’action. Les mêmes repères se retrouvent dans la pause, les réglages et les compétences. C’est ma recommandation pour Pink Wars et la lisibilité en casque.'},vesper:{name:'Vesper · les interfaces des survivants',description:'Un cadre de terminal civil reconstruit, des blancs chauds et des séparateurs précis. La technologie reste humaine, avec la matière et les archives au cœur du lore. Les actions sont larges et les textes restent calmes.'},fracture:{name:'Fracture · panoramique et immersif',description:'Une composition plus cinématographique, des panneaux flottants sobres et des compétences disposées en arc. Les grands volumes facilitent le pointage en VR ; les commandes se réorganisent en colonne sur iPhone.'}};
+const screens=['accueil','pause','competences','reglages','chargement','jeu'];
+const state={direction:directions[params.get('direction')]?params.get('direction'):'bastion',screen:screens.includes(params.get('screen'))?params.get('screen'):'accueil',device:['desktop','phone','quest'].includes(params.get('device'))?params.get('device'):'desktop',hero:params.get('hero')==='lylu'?'lylu':'ghju',mode:'histoire'};
+const paths={play:'m9 5 11 7-11 7V5Z',story:'M5 4h11l3 3v13H5V4Zm3 5h8m-8 4h8m-8 4h5',arena:'m12 3 9 9-9 9-9-9 9-9Zm0 5v8m-4-4h8',home:'m3 11 9-8 9 8M6 9v12h12V9m-9 12v-7h6v7',settings:'M4 7h16M4 17h16M8 4v6m8 4v6',back:'M19 12H5m7-7-7 7 7 7',shield:'m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z',phase:'M12 3v3m0 12v3M3 12h3m12 0h3M6 6l2 2m8 8 2 2M6 18l2-2m8-8 2-2M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8',heal:'M9 4h6v5h5v6h-5v5H9v-5H4V9h5V4Z',target:'M4 8V4h4m8 0h4v4M4 16v4h4m8 0h4v-4M12 8v8m-4-4h8'};
+const icon=id=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+paths[id]+'"/></svg>';
+const row=(id,label,go,small='')=>'<button class="menu-row" data-go="'+go+'">'+icon(id)+'<span>'+label+'</span>'+(small?'<small>'+small+'</small>':'')+'</button>';
+let timer=null;
+function heroChoice(){return '<div class="hero-choice"><button data-hero="ghju" aria-pressed="'+(state.hero==='ghju')+'">GHJU / ROSE</button><button data-hero="lylu" aria-pressed="'+(state.hero==='lylu')+'">LYLU / BLEU</button></div>';}
+function render(){
+ clearTimeout(timer);const blue=state.hero==='lylu',name=blue?'CARA':'GABY',hero=blue?'LYLU':'GHJU';
+ const preview=$('preview');preview.dataset.direction=state.direction;preview.dataset.device=state.device;preview.style.setProperty('--hero',blue?'#80baff':'#ef91b4');
+ const image=state.screen==='chargement'?(blue?'art/chargement-lylu.webp':'art/chargement.webp'):state.direction==='vesper'?'art/prologue/06-signal.webp':state.direction==='fracture'?'art/prologue/03-ordre.webp':(blue?'art/accueil-lylu.webp':'art/accueil.webp');
+ preview.querySelector('.concept-backdrop').src=image;
+ const content=$('concept-content');let html='';
+ if(state.screen==='accueil')html='<div class="menu-layout"><div class="main-menu"><p class="eyebrow">GHJU / LYLU · APRÈS LA CHUTE</p><h2>Retrouver<br>l’autre.</h2><p class="menu-summary">Vesper, sept ans après la Chute.<br>Une trace de votre '+(blue?'sœur.':'frère.')+'</p>'+row('story','Histoire','histoire','01 / LE DERNIER SIGNAL')+row('arena','Arène','arene','LES BRÈCHES')+row('home','AT HOME','athome','QUEST 3')+'<button class="primary-action" data-play>JOUER <span>→</span></button>'+row('settings','Réglages','reglages')+heroChoice()+'</div><aside class="mission-chip"><span class="menu-path">SCÉNARIO / MISSION 01</span><strong>Le dernier signal</strong><p>Annexe des secours → boutique ouest → relais en hauteur.</p></aside></div>';
+ if(state.screen==='pause')html='<div class="menu-layout"><div class="dialog-menu"><p class="eyebrow">MISSION 01 / PROGRESSION LOCALE</p><h2>En pause.</h2><p class="menu-summary">Le dernier signal<br>Rejoindre la mémoire de la boutique.</p><button class="primary-action" data-go="jeu">CONTINUER <span>→</span></button>'+row('target','Objectif en cours','pause','BOUTIQUE OUEST')+row('settings','Réglages','reglages')+row('back','Retour à l’accueil','accueil')+'</div></div>';
+ if(state.screen==='competences')html='<div class="menu-layout"><div class="dialog-menu"><div class="skill-head"><div class="skill-symbol">'+companionPictogram(hero)+'</div><div><p class="eyebrow">PARTENAIRE / MISSION 07</p><h2>'+name+'</h2><p>Énergie 100 / 100 · commandes sur demande</p></div></div>'+[
+ ['phase',blue?'Surcharge de phase':'Impulsion de secours',blue?'Explosion offensive sur la zone visée.':'Détonation et neutralisation des machines.','30 s'],
+ [blue?'target':'shield',blue?'Marquage de faiblesse':'Bouclier local',blue?'Dégâts renforcés contre une cible visible.':'Trois interceptions pendant trois secondes.',blue?'12 s':'12 s'],
+ [blue?'phase':'heal',blue?'Amplification':'Réparation de terrain',blue?'Renforce les armes pendant cinq secondes.':'Rend 20 points de santé.', '18 s']
+ ].map(([glyph,label,detail,time])=>'<button class="menu-skill" data-demo-skill>'+icon(glyph)+'<span>'+label+'<small>'+detail+'</small></span><em>'+time+'</em></button>').join('')+'<button class="dialog-close" data-go="jeu">FERMER</button></div></div>';
+ if(state.screen==='reglages')html='<div class="menu-layout"><div class="dialog-menu menu-settings"><p class="eyebrow">PRÉFÉRENCES / CONFORT DE JEU</p><h2>Réglages.</h2><div class="setting-line"><label>Qualité d’image</label><select aria-label="Qualité de la maquette"><option>Automatique</option><option>Performance</option><option>Élevée</option></select></div><div class="setting-line"><label for="demo-sensitivity">Sensibilité</label><input id="demo-sensitivity" type="range" min="1" max="10" value="5"></div><div class="setting-line"><label for="demo-audio">Ambiance sonore</label><input id="demo-audio" type="checkbox" checked></div><div class="setting-line"><label for="demo-haptics">Vibrations</label><input id="demo-haptics" type="checkbox" checked></div><button class="primary-action" data-go="pause">VALIDER <span>✓</span></button></div></div>';
+ if(state.screen==='chargement')html='<div class="menu-layout"><div class="load-concept"><p class="eyebrow">MISSION 01 · VESPER / 2196</p><h2>Le dernier<br>signal.</h2><p>Un terminal hors réseau conserve peut-être une trace de votre famille.</p><div class="concept-progress-label"><span>SURFACES ET ÉQUIPEMENTS</span><span>68 %</span></div><div class="concept-progress"><i></i></div></div></div>';
+ if(state.screen==='jeu')html='<div class="concept-reticle"></div><button class="mini-icon" data-go="competences" aria-label="Ouvrir les compétences de '+name+'">'+companionPictogram(hero)+'</button><div class="concept-vitals"><div><span>SANTÉ</span><br><b>100</b><div class="health-rule"></div></div><div class="ammunition"><b>'+(blue?'8':'24')+'</b><small>/ '+(blue?'8':'24')+'</small></div></div>';
+ content.innerHTML=html;
+ $('direction-title').textContent=directions[state.direction].name;$('direction-description').textContent=directions[state.direction].description;
+ $('concept-context').textContent=(state.device==='quest'?'LISIBILITÉ EN CASQUE':state.device==='phone'?'FORMAT IPHONE':'CLAVIER / SOURIS / MANETTE')+' / '+hero;
+ $('review-device').value=state.device;$('review-hero').value=state.hero;
+ document.querySelectorAll('[data-direction]').forEach(b=>{if(b.tagName==='BUTTON')b.setAttribute('aria-pressed',String(b.dataset.direction===state.direction));});
+ document.querySelectorAll('.review-controls [data-screen]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.screen===state.screen)));
+ const url=new URL(location.href);for(const key of ['direction','screen','device','hero'])url.searchParams.set(key,state[key]);history.replaceState(null,'',url);
+}
+document.addEventListener('click',e=>{
+ const direction=e.target.closest('button[data-direction]'),screen=e.target.closest('[data-screen]'),go=e.target.closest('[data-go]'),hero=e.target.closest('[data-hero]');
+ if(direction){state.direction=direction.dataset.direction;render();}
+ else if(screen){state.screen=screen.dataset.screen;render();}
+ else if(hero){state.hero=hero.dataset.hero;render();}
+ else if(go){e.preventDefault();if(['histoire','arene','athome'].includes(go.dataset.go)){state.mode=go.dataset.go;state.screen='accueil';render();const buttons=[...$('concept-content').querySelectorAll('.menu-row')];buttons.find(b=>b.dataset.go===state.mode)?.classList.add('active');}else{state.screen=go.dataset.go;render();}}
+ else if(e.target.closest('[data-play]')){state.screen='chargement';render();timer=setTimeout(()=>{state.screen='jeu';render();},1500);}
+ else if(e.target.closest('[data-demo-skill]')){state.screen='jeu';render();}
+});
+$('review-device').onchange=e=>{state.device=e.target.value;render();};$('review-hero').onchange=e=>{state.hero=e.target.value;render();};
+render();window.__PINKWAR_MENU_CONCEPTS=Object.freeze({snapshot:()=>({...state})});

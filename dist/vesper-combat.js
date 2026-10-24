@@ -74,10 +74,11 @@ export function buildVesperGeometry(source,{art=false}={}){
   return {geometry,ids,triangles:index.length/3};
 }
 
-export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas,collide,stairs,decks,interactions,getState,setPlayer,notify,onCanvas,onFailure,onMenuChange=()=>{}}){
+export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas,collide,stairs,decks,interactions,getState,setPlayer,notify,onCanvas,onFailure,onMenuChange=()=>{},onProgress=()=>{}}){
   const params=new URLSearchParams(location.search),characterId=params.get('character')==='lylu'?'lylu':'ghju';
   const requestedQuality=getState().quality==='performance'?'low':getState().quality==='ultra'?'high':'auto';
   const profile=graphicsProfile({userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu},requestedQuality,params.get('renderer')==='webgl');
+  onProgress(.22,'Initialisation du rendu');
   const prepared=await createCompatibleRenderer({canvas,WebGPU:T.WebGPURenderer,WebGL:WebGLRenderer,profile});
   if(prepared.initialFailure)console.warn('Vesper / initialisation WebGPU :',prepared.initialFailure);
   canvas=prepared.canvas;onCanvas(canvas);const renderer=prepared.renderer;
@@ -91,10 +92,12 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const torchTarget=new T.Object3D();torchTarget.position.set(0,0,-5);camera.add(torchTarget);
   const torch=new T.SpotLight(0xffefd4,22,22,.38,.72,2);torch.target=torchTarget;camera.add(torch);
   const atmosphere=createVesperAtmosphere(T,scene,renderer,profile);
+  onProgress(.36,'Construction de Vesper');
   const missionArt=createCampaignArt(T,scene,null,{quality:profile.phone||requestedQuality==='low'?'low':requestedQuality,photographic:true});
   missionArt.setVisible(true);
   const dressing=missionArt.dressing;
   const salvage=await createM01Salvage(T,missionArt.root,{performance:profile.phone||requestedQuality==='low'});
+  onProgress(.58,'Objets et surfaces du secteur');
   const obstacles=missionArt.obstacles;obstacles.push(...salvage.colliders);
   const game=new CampaignLevel1(obstacles,Math.random,characterId);
   const checkpoint=readM01Checkpoint(characterId);
@@ -109,6 +112,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const gate={mesh:new T.Group()};
   setPlayer?.(game.player);
   await missionArt.ready;
+  onProgress(.76,'Surfaces et équipements chargés');
   const standard=(color,roughness=.6,metalness=.45)=>new T.MeshStandardMaterial({color,roughness,metalness});
   const materials={wall:standard(0x697886),black:standard(0x101820),dark:standard(0x202936),iron:standard(0x7b8991,.3,.85),
     cyan:new T.MeshBasicMaterial({color:0x75dfff}),rose:new T.MeshBasicMaterial({color:0xff70b9}),blue:new T.MeshBasicMaterial({color:0x65aaff}),white:standard(0xb4c6cb)};
@@ -140,6 +144,8 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       if(audio.state!=='running')void audio.resume().catch(()=>{});
     }catch(error){console.warn('Vesper audio',error);}
   }
+  document.addEventListener('pointerdown',audioReady,{once:true,capture:true,passive:true});
+  document.addEventListener('keydown',audioReady,{once:true,capture:true});
   const gateLight=new T.PointLight(0xff3e9e,0,24,2);scene.add(gateLight);
   const tacticalGate=new T.Group();tacticalGate.name='ORDRE / industrial reinforcement portal';tacticalGate.visible=false;scene.add(tacticalGate);
   const rim=new T.Mesh(new T.TorusGeometry(1.4,.16,8,36),materials.iron);tacticalGate.add(rim);
@@ -294,6 +300,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   // A published GPU API or a running simulation alone cannot prove rendering.
   syncCamera(getState(),0);atmosphere.update(0,camera,{day:getState().day,shadows:profile.shadows});
   renderer.setSize(innerWidth,innerHeight,false);
+  onProgress(.90,'Préparation du premier rendu');
   try{
     if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);
     if(renderer.waitForGPU){
@@ -302,12 +309,13 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       finally{clearTimeout(timer);}
     }
   }catch(error){onFailure(error);throw error;}
+  onProgress(.98,'Rendu du secteur validé');
   return {
     kind:renderer.isWebGLRenderer?'WebGL 2 · M01':'WebGPU · M01',managedResolution:true,canonical:true,
     get paused(){return journalOpen||skillMenu.isOpen;},
     get interaction(){return contextAction();},
     get layout(){return LEVEL1_MAP;},
-    restart(){location.assign(location.pathname+'?prologue=done&character='+characterId+'&v=3.57');},
+    restart(){location.assign(location.pathname+'?prologue=done&character='+characterId+'&v=3.58');},
     get checkpoint(){return checkpoint;},
     get objective(){return objective().text;},
     get playing(){return game.state==='playing'&&!completed;},
@@ -337,7 +345,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       try{const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);if(result?.then){pending=true;result.then(()=>pending=false).catch(error=>{pending=false;onFailure(error);});}}
       catch(error){onFailure(error);}
     },
-    snapshot(){return {revision:'3.57',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
+    snapshot(){return {revision:'3.58',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
       capacity:game.weapon.capacity,ownedWeapons:[...game.ownedWeapons],offers:game.weaponOffers.map(o=>({...o})),campaign:game.campaign,journalOpen,
       enemies:game.enemies.length,hostileProjectiles:game.bullets.filter(b=>b.hostile).length,shots:game.bullets.filter(b=>!b.hostile).length,
       kills:game.kills,rig:!!rig,gun:!!gun,backend:renderer.isWebGLRenderer?'webgl':'webgpu',triangles:terrain.triangles,

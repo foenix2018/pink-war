@@ -1,15 +1,10 @@
 import {WEAPONS,starterWeaponIndex} from './game-logic.js';
+import {M01_CHECKPOINT_PREFIX,M01_CHECKPOINT_STAGES} from './checkpoint-index.js';
+export {readM01Checkpoint} from './checkpoint-index.js';
 // Only save after a finite encounter is cleared, on stable, stationary ground.
-const KEY='pink-wars-m01-checkpoint-v1-';
-const STAGES=new Set(['investigation','sabotage','exit']);
+const KEY=M01_CHECKPOINT_PREFIX;
+const STAGES=new Set(M01_CHECKPOINT_STAGES);
 const POINTS={investigation:{x:0,z:26,elevation:0},sabotage:{x:18,z:6,elevation:0},exit:{x:18,z:-16,elevation:0}};
-export function readM01Checkpoint(characterId,storage){
- try{
-  storage ||= globalThis.localStorage;
-  const s=JSON.parse(storage.getItem(KEY+characterId));
-  return s?.version===1&&s.characterId===characterId&&STAGES.has(s.stage)&&Number.isFinite(s.kills)?s:null;
- }catch{return null;}
-}
 export function writeM01Checkpoint(game,storage){
  if(!STAGES.has(game.stage)||game.enemies.length||game.toSpawn||!game.player.grounded||game.player.onLift||Math.abs(game.player.verticalSpeed||0)>.05)return false;
  const s={version:1,characterId:game.characterId,stage:game.stage,kills:game.kills,
