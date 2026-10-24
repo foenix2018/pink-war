@@ -9,7 +9,7 @@ export const PROLOGUE=Object.freeze([
 ].map(Object.freeze));
 
 export function prologueSlides(character='ghju'){
- return PROLOGUE.map((s,i)=>({...s,src:new URL('./art/prologue/'+s.image+'.webp',import.meta.url).href,
+ return PROLOGUE.map((s,i)=>({...s,src:new URL('./art/prologue/'+s.image+'.webp?v=3.57',import.meta.url).href,
   text:i===5?s.text+(character==='lylu'?' LYLU capte une trace de sa sœur.':' GHJU capte une trace de son frère.')+' Un ancien relais répond : le dernier signal.':s.text}));
 }
 

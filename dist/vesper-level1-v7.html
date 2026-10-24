@@ -1711,8 +1711,8 @@ let padFiring=false;
 function pollGamepad(dt){const devices=navigator.getGamepads?.()||[],gp=combatWorld?combatWorld.gamepad(devices):Array.from(devices).find(Boolean);gamepadMove.x=0;gamepadMove.y=0;padLook.x=0;padLook.y=0;padRun=false;gamepadAiming=false;padFiring=false;if(!gp){lastGamepadButtons=[];return;}
  const d=v=>Math.abs(v)>.14?v:0, btn=i=>gp.buttons[i]?.pressed||false,edge=i=>btn(i)&&!lastGamepadButtons[i];
  gamepadMove.x=d(gp.axes[0]||0);gamepadMove.y=d(gp.axes[1]||0);padLook.x=d(gp.axes[2]||0);padLook.y=d(gp.axes[3]||0);padRun=btn(10);gamepadAiming=btn(6);
- yaw+=padLook.x*dt*1.9;pitch=clamp(pitch-padLook.y*dt*1.55,-1.46,1.46);
- padFiring=btn(7);if(edge(0))jumpQueued=true;if(edge(2))reloadWeapon();if(edge(3))changeWeapon(1);if(edge(1))crouching=!crouching;if(edge(11)){document.getElementById('help').classList.remove('show');interact();}if(edge(9)){gamePaused=!gamePaused;combatWorld?.pause();}
+ if(!combatWorld?.paused){yaw+=padLook.x*dt*1.9;pitch=clamp(pitch-padLook.y*dt*1.55,-1.46,1.46);}
+ if(edge(12))combatWorld?.toggleSkills();padFiring=btn(7);if(edge(0))jumpQueued=true;if(edge(2))reloadWeapon();if(edge(3))changeWeapon(1);if(edge(1))crouching=!crouching;if(edge(11)){document.getElementById('help').classList.remove('show');interact();}if(edge(9)){gamePaused=!gamePaused;combatWorld?.pause();}
  lastGamepadButtons=gp.buttons.map(b=>b.pressed);
 }
 
@@ -1881,13 +1881,13 @@ function toggleSurfaceMode(value){
 }
 
 async function boot(){try{
- showVesperPrologue=(await import('./story-prologue.js')).showStoryPrologue;
+ showVesperPrologue=(await import('./story-prologue.js?v=3.57')).showStoryPrologue;
  $('bootInfo').textContent='Construction de la mégalopole, bâtiments, détails et navigation…';
  await new Promise(r=>setTimeout(r,80));
  if(referenceVisit)buildScene();const atlas=createAtlas();const materialAtlas=referenceVisit?await v5LoadMaterial():null;
  $('bootInfo').textContent='Initialisation du moteur WebGPU…';
  if(!new URLSearchParams(location.search).has('visit')){
-  const {createVesperCombat}=await import('./vesper-combat.js?v=3.54');
+  const {createVesperCombat}=await import('./vesper-combat.js?v=3.57');
   let renderFailed=false;
   const fail=error=>{
    console.warn('Vesper / échec du rendu, repli compatible :',error);
@@ -1899,12 +1899,12 @@ async function boot(){try{
   combatWorld=await createVesperCombat({canvas,staticMesh,portalMesh,signAtlas:atlas,collide,stairs,decks,interactions,notify,
    setPlayer:p=>{position.x=p.x;position.y=p.elevation+eyeHeight;position.z=p.z;grounded=p.grounded;},
     getState:()=>({input:{x:Number(keys.has('KeyD'))-Number(keys.has('KeyA')||keys.has('KeyQ'))+touch.moveX+gamepadMove.x,z:Number(keys.has('KeyS'))-Number(keys.has('KeyW')||keys.has('KeyZ'))+touch.moveY+gamepadMove.y,jump:jumpQueued||keys.has('KeyJ'),sprint:touch.sprint||padRun||keys.has('ShiftLeft')},position,yaw,pitch,aiming:isAiming||gamepadAiming,crouching,grounded,sprint:touch.sprint||padRun||keys.has('ShiftLeft'),free:isFree,day:timeOfDay,shadows:shadowsEnabled,quality,flashlight}),
-   onCanvas:value=>{canvas=value;},onFailure:fail});
+   onCanvas:value=>{canvas=value;},onFailure:fail,onMenuChange:()=>{keys.clear();firing=false;padFiring=false;touch.moveX=touch.moveY=0;touch.sprint=false;gamepadMove.x=gamepadMove.y=0;isAiming=false;}});
   renderer=combatWorld;gpuKind=renderer.kind;
    if(combatWorld.checkpoint&&!new URLSearchParams(location.search).has('resume')){const b=document.createElement('button');b.textContent='REPRENDRE AU DERNIER POINT DE CONTRÔLE';b.style.cssText='margin-top:12px;padding:12px;border:1px solid #9a8863;background:#25312d;color:#e7d6ae;width:100%';b.onclick=()=>{const u=new URL(location.href);u.searchParams.set('resume','1');location.assign(u.href);};$('start').after(b);}
   document.body.classList.add('pw-live-combat');
    document.querySelector('#help h2').textContent='Le Dernier Signal';
-   const help=document.querySelector('#help .helpGrid');help.innerHTML='<p>ZQSD / WASD : déplacement · Souris : regard<br>J : saut · Maj : course · C : accroupir<br>Clic gauche / Espace : tirer · Clic droit : viser<br>R : recharger · E / molette : arme suivante<br>F : lire un terminal ou récupérer une arme<br>Échap : pause · M : carte · H : aide</p><p>Manette : sticks pour bouger et regarder<br>L2 : viser · R2 : tirer · Croix : saut<br>Carré : recharger · Triangle : arme suivante<br>Rond : accroupir · R3 : interagir<br>Options : pause</p>';
+   const help=document.querySelector('#help .helpGrid');help.innerHTML='<p>ZQSD / WASD : déplacement · Souris : regard<br>J : saut · Maj : course · C : accroupir<br>Clic gauche / Espace : tirer · Clic droit : viser<br>R : recharger · E / molette : arme suivante<br>F : lire un terminal ou récupérer une arme<br>G : compétences de Gaby / Cara<br>Échap : pause · M : carte · H : aide</p><p>Manette : sticks pour bouger et regarder<br>L2 : viser · R2 : tirer · Croix : saut<br>Carré : recharger · Triangle : arme suivante<br>Rond : accroupir · R3 : interagir<br>Options : pause · Croix haute : compétences</p>';
    document.querySelector('#help .helpCard > p').textContent='La boutique de briques est à l’ouest. Le point au-dessus du regard guide par un chemin praticable. Les portes de transfert d’ORDRE restent à distance ; seuls les huit patrouilleurs initiaux occupent déjà le quartier. Terrasse à 4,8 m, par escalier ou monte-charge.';
   const style=document.createElement('style');style.textContent='body.pw-live-combat #weaponVis,body.pw-live-combat #sources{display:none!important}#combatHud{z-index:4}body.pw-live-combat #intro.gone{pointer-events:none}';document.head.append(style);
   window.__PINK_VESPER={snapshot:()=>combatWorld.snapshot()};

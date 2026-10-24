@@ -10,6 +10,7 @@ import {bevelBox} from './geo.js';
 import {LEVEL1_STORY,createLevel1Story} from './level1-story.js';
 import {installPhotographicSurfaces} from './photographic-surfaces.js';
 import {createM01Dressing} from './m01-dressing.js';
+import {createArchiveTerminalFactory} from './archive-terminals.js';
 
 // Independent Blender-built map. Geometry is bundled locally, including in the
 // standalone HTML: no CDN, GLTF loader or late asset request is needed to play.
@@ -53,7 +54,8 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
    }));
   }
  }
- const ready=Promise.all([...pending,...(photos?[photos.done]:[])]);
+ const computers=createArchiveTerminalFactory(T,{performance:quality==='low'});
+ const ready=Promise.all([...pending,computers.ready,...(photos?[photos.done]:[])]);
  const pbr=photos?{start(){},stats:()=>({...photos.stats,source:'Local Poly Haven / CC0'}),dispose:()=>photos.dispose()}:createPolyHavenLayer(T,maps,{quality});
  const dressing=photographic?createM01Dressing(T,root,maps,{performance:quality==='low'}):null;
  for(const [name,encoded] of Object.entries(MESH_DATA)){
@@ -75,11 +77,17 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
   const data=paintTexture(width,height,()=>{}),mesh=new T.Mesh(ownG(new T.PlaneGeometry(w,h)),ownM(new T.MeshBasicMaterial({map:data.map,toneMapped:false})));mesh.position.set(x,y,z);root.add(mesh);
   const s={mesh,paint(lines,caption=title){const c=data.context;c.fillStyle='#071918';c.fillRect(0,0,width,height);c.fillStyle='#dbb073';c.fillRect(14,16,5,height-32);c.font='600 25px sans-serif';c.fillText(caption,33,42,width-60);lines.forEach((line,i)=>{c.fillStyle=i===0?'#eef0df':'#b5d0c6';c.font='22px sans-serif';c.fillText(line,33,83+i*39,width-60);});data.map.needsUpdate=true;}};screens.push(s);return s;
  }
- function terminal(x,y,z,id){shell(maps.dark,x,y+.5,z,1.2,1,.55);shell(maps.steel,x,y+1.4,z,2.6,1.05,.25);solid(x,z,2.6,.6,y,1.93,id);const desk=shell(maps.dark,x,y+1,z+.2,1.8,.10,.65);desk.rotation.x=.12;return panel('MÉMOIRE HUMAINE / HORS RÉSEAU',x,y+1.4,z+.142);}
+ function terminal(x,y,z,id){
+  const computer=computers.create(root,{x,y,z,id});solid(x,z,2.6,.6,y,1.93,id);
+  const display=panel('MÉMOIRE HUMAINE / HORS RÉSEAU',0,0,0,computer.width,computer.height);
+  computer.display.add(display.mesh);display.mesh.position.set(0,.018,computer.z);
+  display.mesh.material.color.setScalar(.72);
+  return display;
+ }
  box(maps.dark,-6,1.05,61.65,1.65,2.1,.6);solid(-6,61.65,1.65,.6,0,2.1,'power');
  const power=panel('ALIMENTATION / CIRCUIT ISOLÉ',-6,1.55,61.97,1.55,.95);
  const archive=terminal(0,0,54.45,'archive'),exit=terminal(18,4.8,-44.55,'exit');
- const systems=createVesperSystems(T,root,maps,{quality});obstacles.push(...systems.colliders);
+ const systems=createVesperSystems(T,root,maps,{quality,terminalMaterials:computers.materials});obstacles.push(...systems.colliders);
  const story=createLevel1Story(T,root,maps,{quality});obstacles.push(...story.colliders);
  for(const beat of LEVEL1_STORY.beats){
   const sign=panel(beat.title,beat.x,beat.id==='occupation'?3.05:2.65,beat.z+.16,2.4,1.25,768,320);sign.paint(beat.lines);
@@ -113,7 +121,7 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
   marker.visible=!!s.objective;if(s.objective){const p=s.objective.position;marker.position.set(p.x,p.y+3.2+Math.sin(time*2)*.05,p.z);marker.rotation.y=time*.5;}
  }
  function setVisible(enabled){root.visible=!!enabled;lastState='';if(enabled)pbr.start();}
- function stats(){return{visible:root.visible,systems:systems.stats(),story:story.stats(),stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:5,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:3,boundary:boundary.stats(),pbr:pbr.stats()};}
- function dispose(){if(disposed)return;disposed=true;pbr.dispose();dressing?.dispose();boundary.dispose();story.dispose();systems.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
+ function stats(){return{visible:root.visible,computers:computers.stats(),systems:systems.stats(),story:story.stats(),stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:5,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:3,boundary:boundary.stats(),pbr:pbr.stats()};}
+ function dispose(){if(disposed)return;disposed=true;pbr.dispose();computers.dispose();dressing?.dispose();boundary.dispose();story.dispose();systems.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
  return{root,obstacles,update,setVisible,stats,dispose,updateLift,ready,materials:maps,dressing};
 }

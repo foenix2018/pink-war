@@ -449,7 +449,7 @@ export function createEnemyFactory(mats){
         }
       }else{
         const pose=flight.combatPose||flight.tactics?.state,covered=['cover','return','relocate'].includes(pose),guard=pose==='guard',windup=pose==='windup';
-        const brace=covered?.085:windup?.06:guard?.035:0,aiming=alert==='engaged'&&!!flight.ranged;
+        const brace=(covered?.085:windup?.06:guard?.035:0)+.52*(flight.coverCrouch||0),aiming=alert==='engaged'&&!!flight.ranged;
         const recoil=Math.max(0,1-(simulationTime-(flight.lastShotAt??-99))/.16);
         const gait=Math.sin(cycle)*amount;pelvis.position.y=.909-pace*.048-brace+Math.cos(cycle*2)*.004*amount;
         thorax.rotation.set(.012+pace*.032+(covered?.045:0)-recoil*.018,-gait*.024,(pose==='peek'?.035:0)+gait*.012);

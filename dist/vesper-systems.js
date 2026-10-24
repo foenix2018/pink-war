@@ -2,7 +2,7 @@ import {Assembly,bevelBox,matrix} from './geo.js';
 
 // Physical salvage installations, echoing the loading art: old amber computers,
 // insulated looms, damaged copper and cold ORDRE equipment among the ruins.
-export function createVesperSystems(T,parent,maps,{quality='auto'}={}){
+export function createVesperSystems(T,parent,maps,{quality='auto',terminalMaterials=null}={}){
   const root=new T.Group();root.name='VESPER / circuits survivants';parent.add(root);
   const materials=[],textures=[],geometries=[],screens=[],lamps=[],colliders=[];let powered=false,disabled=false,disposed=false;
   const ownM=m=>(materials.push(m),m),ownG=g=>(geometries.push(g),g);
@@ -11,6 +11,7 @@ export function createVesperSystems(T,parent,maps,{quality='auto'}={}){
   const pale=ownM(new T.MeshBasicMaterial({color:0x96ddd6,toneMapped:false}));
   const amber=ownM(new T.MeshBasicMaterial({color:0xffbd6c,toneMapped:false}));
   const staticParts=new Assembly();let cables=0;
+  const caseMetal=terminalMaterials?.paint||maps.steel;
   const part=(g,m,p,r=[0,0,0])=>{staticParts.add(g,m,matrix(p,r));};
   const box=(m,size,p,r=[0,0,0])=>part(bevelBox(...size,Math.min(...size)*.17,1),m,p,r);
   function cable(points,r=.035,mat=rubber){
@@ -33,7 +34,13 @@ export function createVesperSystems(T,parent,maps,{quality='auto'}={}){
     const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;textures.push(texture);
     const mat=ownM(new T.MeshBasicMaterial({map:texture,toneMapped:false}));
     const screen=new T.Mesh(ownG(new T.PlaneGeometry(.9,.48)),mat);screen.position.set(x+1.75,y+1.38,z+.18);root.add(screen);
-    box(maps.steel,[1,.58,.30],[x+1.75,y+1.38,z]);
+    box(caseMetal,[1,.58,.30],[x+1.75,y+1.38,z]);
+    // Inset rubber seal, side vents and a bolted bezel around the actual glass.
+    for(const side of [-1,1]){
+      box(rubber,[.035,.50,.025],[x+1.75+side*.46,y+1.38,z+.16]);
+      box(caseMetal,[.07,.54,.055],[x+1.75+side*.48,y+1.38,z+.145]);
+      for(let j=0;j<7;j++)box(rubber,[.045,.008,.015],[x+1.75+side*.5,y+1.23+j*.04,z+.06]);
+    }
     box(maps.dark,[.6,.08,.46],[x+1.75,y+1.02,z+.12]);
     box(maps.steel,[.09,.36,.11],[x+1.75,y+1.14,z-.01]);
     const sweep=new T.Mesh(ownG(new T.PlaneGeometry(.84,.006)),pale);sweep.position.set(x+1.75,y+1.38,z+.182);root.add(sweep);
@@ -42,7 +49,7 @@ export function createVesperSystems(T,parent,maps,{quality='auto'}={}){
   stations.forEach(([x,y,z],index)=>{
     diagnostic(x,y,z,index);
     colliders.push({x:x-1.9,z:z-.07,hx:.34,hz:.24,y,height:1.3,surface:'metal',campaign:true},{x:x+1.75,z,hx:.5,hz:.15,y:y+1.09,height:.58,surface:'metal',campaign:true});
-    box(maps.steel,[.68,1.30,.48],[x-1.9,y+.65,z-.07]);
+    box(caseMetal,[.68,1.30,.48],[x-1.9,y+.65,z-.07]);
     for(let j=0;j<6;j++){
       box(rubber,[.56,.12,.07],[x-1.9,y+.18+j*.18,z+.19]);
       box(j%3?pale:amber,[.025,.018,.01],[x-2.09,y+.18+j*.18,z+.23]);

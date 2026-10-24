@@ -1,4 +1,4 @@
-import {tacticalOrder} from './tactical-enemies.js';
+import {tacticalOrder,grenadeAvoidance} from './tactical-enemies.js';
 import {squadOrder,relayVisualContact,clearSquadFiringLane,registerIncomingFire} from './enemy-squads.js';
 import { equipmentForLevel } from './equipment.js';
 import { PLATFORMS, STAIRS, LIFTS, BRIDGES, BRIDGE_APPROACHES, insideSurface, traversalSurfaces, liftHeightAt } from './world-layout.js';
@@ -173,7 +173,8 @@ export function traceEnemyHit(start, end, enemy) {
   if(enemy.form==='bulwark')for(const zone of zones)if(zone[0]==='limb'&&zone[2]>1){zone[1]=Math.sign(zone[1])*.74;zone[2]=1.15;zone[3]=-.18;zone[4]=.34;}
   let best=null;
   for(const [zone,ox,oy,oz,r,multiplier] of zones) {
-    const hit=segmentSphere(start,end,{x:enemy.x+(ox*cos+oz*sin)*elite,y:height+oy*elite,z:enemy.z+(-ox*sin+oz*cos)*elite},r*elite);
+    const lowered=oy-(enemy.coverCrouch||0)*(oy>1?.52:.16);
+    const hit=segmentSphere(start,end,{x:enemy.x+(ox*cos+oz*sin)*elite,y:height+lowered*elite,z:enemy.z+(-ox*sin+oz*cos)*elite},r*elite);
     if(hit!==null && (best===null || hit<best.t))best={t:hit,zone,multiplier:multiplier*(enemy.form==='bulwark'&&zone==='torso'?.72:1)};
   }
   return best;
@@ -268,6 +269,7 @@ export class ArenaGame {
     this.searchFields=new Map();
   }
   reset(characterId=this.characterId||'ghju') {
+    this.companionAmplifyUntil=0;this.companionHazards=[];this.companionWard=null;
     this.searchFields=new Map();
     this.navigation.refreshAt = -1; this.navigation.goal = -1;
     this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0, verticalSpeed: 0, grounded: true, jumpHeld: false, crouched:false,airJumps:0,jumpImpulseX:0,jumpImpulseZ:0,lastGroundedAt:0 };
@@ -556,7 +558,8 @@ export class ArenaGame {
   damageEnemy(target, amount, at, zone='torso',multiplier=1,source=this.player) {
     if (!this.enemies.includes(target)) return;
     const armor=target.form?Math.min(.18,Math.max(0,(target.tier||1)-1)*.025):0;
-    const effective=amount*multiplier*(1-armor*(zone==='head'?.35:1));
+    const support=source?.companion?1:(this.time<(target.companionMarkUntil||0)?1.2:1)*(this.time<(this.companionAmplifyUntil||0)?1.15:1);
+    const effective=amount*multiplier*support*(1-armor*(zone==='head'?.35:1));
     target.hp -= effective;
     target.lastKnownX=source.x;target.lastKnownZ=source.z;target.lastKnownHeight=source.elevation??this.player.elevation;
     target.alertedUntil=this.time+5;target.awareness='search';target.lastSeenAt=this.time;
@@ -643,7 +646,7 @@ export class ArenaGame {
       e.grounded ??= true;e.elevation ??= 0;
       let dx=this.player.x-e.x,dz=this.player.z-e.z;
       const horizontalDistance=Math.hypot(dx,dz)||1;
-      const eye={x:e.x,y:e.elevation+e.aimHeight,z:e.z};
+      const eye={x:e.x,y:e.elevation+e.aimHeight-.52*(e.coverCrouch||0)*enemyScale(e.form,e.elite),z:e.z};
       const playerHead={x:this.player.x,y:this.player.elevation+(this.player.crouched?.83:1.25),z:this.player.z};
       const verticalDistance=playerHead.y-eye.y,distance=Math.hypot(horizontalDistance,verticalDistance);
       const unobstructed=!this.blocked(eye,playerHead);
@@ -728,10 +731,11 @@ export class ArenaGame {
       // A slot behind a wall or a crate is no slot: that unit goes straight for the player.
       if(slot&&this.obstacles.some(b=>!b.walkableSurface&&segmentBox({x:this.player.x,y:eye.y,z:this.player.z},{x:slot.x,y:eye.y,z:slot.z},{...b,hx:b.hx+e.radius,hz:b.hz+e.radius})!==null))slot=null;
       if(slot){destinationX=slot.x;destinationZ=slot.z;}
-      const tacticContext={time:this.time,seen,threat:{x:e.lastKnownX,y:(e.lastKnownHeight||0)+1.25,z:e.lastKnownZ},obstacles:this.obstacles,allies:this.enemies,segmentBox};
+      const tacticContext={time:this.time,seen,threat:{x:e.lastKnownX,y:(e.lastKnownHeight||0)+1.25,z:e.lastKnownZ},obstacles:this.obstacles,allies:this.enemies,hazards:this.companionHazards,segmentBox};
       relayVisualContact(e,tacticContext);
-      const order=!stairRoute?(tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext)):null;
+      const order=!stairRoute?(grenadeAvoidance(e,tacticContext)||tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext)):null;
       e.combatPose=order?.state||'advance';
+      e.coverCrouch=((e.coverCrouch||0)+(Number(!!order?.crouched)-(e.coverCrouch||0))*(1-Math.exp(-dt*12)));
       if(order){destinationX=order.point.x;destinationZ=order.point.z;}
       dx=destinationX-e.x;dz=destinationZ-e.z;
       const goalDistance=Math.hypot(dx,dz)||1;
@@ -816,6 +820,10 @@ export class ArenaGame {
       }
       for (const obstacle of this.obstacles) { const t = segmentBox(start, end, obstacle); if (t !== null && t < nearest) { nearest = t; target = null;hitBox=obstacle;surface=obstacle.surface||'concrete'; } }
       if (end.y < .06 && start.y >= .06) { const t = (start.y - .06) / (start.y - end.y); if (t < nearest) { nearest = t; target = null;hitBox=null;surface='ground'; } }
+      if(b.hostile&&this.companionWard?.until>this.time&&this.companionWard.remaining>0){
+        const shieldHit=segmentSphere(start,end,{x:this.player.x,y:this.player.elevation+(this.player.crouched?.58:1.25),z:this.player.z},1.7);
+        if(shieldHit!==null&&shieldHit<nearest){this.companionWard.remaining--;this.bullets.splice(i,1);this.event('companion-assist',{name:'Gaby',kind:'ward'});continue;}
+      }
       if(!b.hostile){const t=Math.min(1,nearest);registerIncomingFire(this.enemies,start,{x:start.x+(end.x-start.x)*t,y:start.y+(end.y-start.y)*t,z:start.z+(end.z-start.z)*t},this.time,(a,c)=>this.blocked(a,c));}
       if (nearest <= 1) {
         const at = { x: start.x + (end.x - start.x) * nearest, y: start.y + (end.y - start.y) * nearest, z: start.z + (end.z - start.z) * nearest };

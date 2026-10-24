@@ -18,6 +18,15 @@ function setup(game = { charge:0, triggerHeld:false, reload:()=>true, cycleWeapo
 }
 const down = (source,index,value=true) => { source.gamepad.buttons[index].pressed=value;source.gamepad.buttons[index].value=value?1:0; };
 
+test('a wrist skill selection consumes firing and movement, preserving the release interlock',()=>{
+ const g=new ArenaGame(),{state,left,right}=setup(g);let reloads=0;g.reload=()=>{reloads++;return true;};
+ state.hooks.skillsInput=()=>true;state.precision=state.aiming=true;
+ down(left,0);down(right,0);down(right,5);left.gamepad.axes[2]=.8;
+ const input=state.input();assert.equal(input.fire,false);assert.deepEqual(input.fireHands,{left:false,right:false});assert.equal(input.x,0);assert.equal(reloads,0);assert.equal(state.aiming,false);
+ state.hooks.skillsInput=()=>false;down(right,5,false);assert.equal(state.input().fire,false,'closing the panel cannot fire a still-held trigger');
+ down(left,0,false);down(right,0,false);state.input();down(right,0);assert.equal(state.input().fire,true);
+});
+
 test('GHJU DUO maps each physical index trigger to its own pistol and blocks both across pause',()=>{
  const g=new ArenaGame(),{state,left,right}=setup(g);
  down(left,0);let input=state.input();assert.deepEqual(input.fireHands,{left:true,right:false});assert.equal(input.aim,false);

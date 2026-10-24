@@ -1,42 +1,54 @@
 {
   "title": "Pink Wars — La Fracture / Prologue",
-  "revision": "3.51",
-  "source": "Illustrations originales générées pour Pink Wars, à partir du storyboard officiel et des rendus de production GHJU/LYLU. Aucun asset ni personnage de Halo ou Mass Effect utilisé.",
+  "revision": "3.57",
+  "source": "Six illustrations originales générées pour Pink Wars selon le storyboard P00-01 à P00-06. Images de production GHJU/LYLU 3.56 utilisées comme références : casques fermés, graphite, rose/bleu, cape arrière sans tabard frontal. Aucun modèle de personnage modifié.",
   "productionReferences": [
-    "livraison/captures_346/ghju/001.png",
-    "livraison/captures_346/lylu/001.png"
+    "retrait_tabard_356/ghju-face-corrige.png",
+    "retrait_tabard_356/lylu-face-corrige.png"
   ],
-  "processing": "Conversion PNG vers WebP 1600 × 900 maximum, qualité 84.",
+  "processing": "Encodage local WebP 1600 × 900, qualité 83. Originaux PNG conservés hors du dépôt.",
   "assets": [
     {
       "file": "01-vesper.webp",
       "storyboard": "P00-01",
-      "bytes": 308450
+      "bytes": 259018,
+      "sha256": "267d69120582083d9b70c03ff38bbd020471f47b66bf16296f451503c14ecd07",
+      "generation": "exec-062a8a14-972d-441e-9324-01fc0a42acb6.png"
     },
     {
       "file": "02-secours.webp",
       "storyboard": "P00-02",
-      "bytes": 172758
+      "bytes": 145604,
+      "sha256": "bce9a2a195ccda35a453263c714e62092bd493b8df4e3c1cc4afaac1aa07136e",
+      "generation": "exec-8db562d9-ad5e-4db1-b3f2-bdef511886b8.png"
     },
     {
       "file": "03-ordre.webp",
       "storyboard": "P00-03",
-      "bytes": 235858
+      "bytes": 141012,
+      "sha256": "41af132f843be3bcd1c1c72de827715cd89bd3f655d01679f9f08836b555c581",
+      "generation": "exec-1752371a-118a-4d05-bfdc-6f3bb416d95a.png"
     },
     {
       "file": "04-evacuation.webp",
       "storyboard": "P00-04",
-      "bytes": 192906
+      "bytes": 144982,
+      "sha256": "e971a5288101ae8fe55c7016ff6108fd8384cfb3b24b00de404e8ba24d252812",
+      "generation": "exec-6a758297-9d66-4ac4-bcdb-8383d14b098a.png"
     },
     {
       "file": "05-separation.webp",
       "storyboard": "P00-05",
-      "bytes": 141506
+      "bytes": 94224,
+      "sha256": "0a5c6c934563c599e77be6f686cfd52a1204d1779e5fc3f1502b36a6b2e260de",
+      "generation": "exec-89d70942-3247-4407-914b-51d7255b2d06.png"
     },
     {
       "file": "06-signal.webp",
       "storyboard": "P00-06",
-      "bytes": 272758
+      "bytes": 221746,
+      "sha256": "734066d46a8a3738a30445856f39e34d1fb659e5454fb707085bf76e92bac7f2",
+      "generation": "exec-831debdf-1062-4d5a-aaaf-338e047405ac.png"
     }
   ]
 }

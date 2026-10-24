@@ -28,6 +28,7 @@ export function createPinkWarsInput(){
    lookX:desktopAxis(normalized[2])*1.6+(keys.has('ArrowRight')?1.4:0)-(keys.has('ArrowLeft')?1.4:0),
    lookY:desktopAxis(normalized[3])*1.35+(keys.has('ArrowDown')?1.15:0)-(keys.has('ArrowUp')?1.15:0),
    fire:actions.fire||keys.has(PINK_WARS_KEYS.fire),
+   companion:edges.has('companion'),
    aim:actions.aim,
    sprint:actions.sprint||held(keys,...PINK_WARS_KEYS.sprint),
    jump:edges.has('jump')||keys.has(PINK_WARS_KEYS.jump),

@@ -25,6 +25,8 @@ import {attachCampaignStory} from './story-chapters.js';
 import {DesktopGamepadInput} from './desktop-input.js';
 import {createFireBuffer} from './fire-input.js';
 import {createVesperAtmosphere,replacementTriangles} from './vesper-art.js';
+import {createCompanionSkills} from './companion-skills.js';
+import {createCompanionMenu} from './companion-menu.js';
 
 export function buildVesperGeometry(source,{art=false}={}){
   const skip=replacementTriangles(source,art);
@@ -72,7 +74,7 @@ export function buildVesperGeometry(source,{art=false}={}){
   return {geometry,ids,triangles:index.length/3};
 }
 
-export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas,collide,stairs,decks,interactions,getState,setPlayer,notify,onCanvas,onFailure}){
+export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas,collide,stairs,decks,interactions,getState,setPlayer,notify,onCanvas,onFailure,onMenuChange=()=>{}}){
   const params=new URLSearchParams(location.search),characterId=params.get('character')==='lylu'?'lylu':'ghju';
   const requestedQuality=getState().quality==='performance'?'low':getState().quality==='ultra'?'high':'auto';
   const profile=graphicsProfile({userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu},requestedQuality,params.get('renderer')==='webgl');
@@ -118,6 +120,9 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const gamepadInput=new DesktopGamepadInput();
   const fireInput=createFireBuffer();
   let rig=null,gun=null,ready=false,pending=false,lastTime=0,held=false,ads=0,completed=false,lastStage=game.stage,journalOpen=false,checkpointPending=false;
+  const skills=createCompanionSkills({characterId,mission:1,mode:'campaign'});
+  const skillMenu=createCompanionMenu({getStatus:()=>skills.snapshot(game),
+    onUse:id=>skills.use(id,{game,...aim()}),onChange(open){held=false;fireInput.reset();onMenuChange(open);if(open)document.exitPointerLock?.();}});
   const offerModels=new Map();
   // Actual RLH hands and production weapon geometry are already present while
   // the full canonical soldier rig decodes; there is no CSS weapon substitute.
@@ -193,7 +198,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     camera.updateMatrixWorld(true);
   }
   function update(dt,s){
-    if(!ready||completed||journalOpen)return;
+    if(!ready||completed||journalOpen||skillMenu.isOpen)return;
     syncCamera(s,dt);
     const p=game.player;
     if(!s.free){
@@ -250,6 +255,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     objectiveMarker.style.background=objectiveMarker.textContent?'transparent':'#d8c6a0';
     objectiveMarker.style.font='18px/7px system-ui';
     effects.update(game,dt,camera);
+    skills.update(dt,{game});skillMenu.refresh();
     gun?.userData.setFlash?.(game.state==='playing'&&!journalOpen&&(game.weapon.dual||feel.state.kick>.025)&&!game.weapon.melee,game.time);
     const active=game.state==='playing';
     ambience?.update(dt,{active:active&&sound&&ambientEnabled,position:p,moving,grounded:s.grounded,elevation:p.elevation,crouched:s.crouching,yaw:-s.yaw,probes:game.enemies});
@@ -298,22 +304,23 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   }catch(error){onFailure(error);throw error;}
   return {
     kind:renderer.isWebGLRenderer?'WebGL 2 · M01':'WebGPU · M01',managedResolution:true,canonical:true,
-    get paused(){return journalOpen;},
+    get paused(){return journalOpen||skillMenu.isOpen;},
     get interaction(){return contextAction();},
     get layout(){return LEVEL1_MAP;},
-    restart(){location.assign(location.pathname+'?prologue=done&character='+characterId+'&v=3.54');},
+    restart(){location.assign(location.pathname+'?prologue=done&character='+characterId+'&v=3.57');},
     get checkpoint(){return checkpoint;},
     get objective(){return objective().text;},
     get playing(){return game.state==='playing'&&!completed;},
     get ambienceEnabled(){return ambientEnabled&&sound;},
     toggleAmbience(){ambientEnabled=!ambientEnabled;if(ambientEnabled)audioReady();return ambientEnabled&&sound;},
-    start(){ready=true;audioReady();music.start(audio);notify('VESPER · 2196 — SEPT ANS APRÈS LA CHUTE',3800);void loadRig();},
+    start(){ready=true;skillMenu.setVisible(true);audioReady();music.start(audio);notify('VESPER · 2196 — SEPT ANS APRÈS LA CHUTE',3800);void loadRig();},
+    toggleSkills(){if(ready&&!journalOpen)skillMenu.setOpen(!skillMenu.isOpen);},
     fire(down){if(down&&!held){audioReady();fireInput.press(game.time);if(game.weapon.semiAuto)game.triggerHeld=false;}held=!!down;},
     reload(){audioReady();game.reload();},
     cycle(delta=1){game.cycleWeapon(delta);},
     select(index){game.selectWeapon(index);},
     interact:onInteract,
-    pause(){held=false;fireInput.reset();gamepadInput.reset();music.pause();ambience?.pause();saber?.update({active:false});},
+    pause(){held=false;fireInput.reset();gamepadInput.reset();skillMenu.setOpen(false);music.pause();ambience?.pause();saber?.update({active:false});},
     gamepad(devices){return gamepadInput.select(devices,{focused:!document.hidden});},
     resize(width,height){
       const requested=getState().quality,quality=requested==='performance'?'low':requested==='ultra'?'high':'auto';
@@ -323,18 +330,20 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     update(dt){update(dt,getState());},
     draw(t){
       if(pending)return;const s=getState();syncCamera(s,Math.min(.05,t-lastTime||.016));lastTime=t;gate.mesh.rotation.z=t*.052;
+      skillMenu.setVisible(ready&&!completed&&!journalOpen&&game.player.hp>0);
       torch.visible=s.flashlight!==false;
       const shadows=profile.shadows&&s.shadows!==false&&s.quality!=='performance';
       atmosphere.update(t,camera,{shadows,day:s.day});
       try{const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);if(result?.then){pending=true;result.then(()=>pending=false).catch(error=>{pending=false;onFailure(error);});}}
       catch(error){onFailure(error);}
     },
-    snapshot(){return {revision:'3.54',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
+    snapshot(){return {revision:'3.57',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
       capacity:game.weapon.capacity,ownedWeapons:[...game.ownedWeapons],offers:game.weaponOffers.map(o=>({...o})),campaign:game.campaign,journalOpen,
       enemies:game.enemies.length,hostileProjectiles:game.bullets.filter(b=>b.hostile).length,shots:game.bullets.filter(b=>!b.hostile).length,
       kills:game.kills,rig:!!rig,gun:!!gun,backend:renderer.isWebGLRenderer?'webgl':'webgpu',triangles:terrain.triangles,
       art:missionArt.stats(),dressing:dressing.stats,salvage:salvage.stats,lighting:{exposure:renderer.toneMappingExposure,ambient:atmosphere.ambient.intensity,sun:atmosphere.sun.intensity},pbr:missionArt.stats().pbr,effects:effects.stats(),companion:{name:characterId==='lylu'?'Cara':'Gaby',visible:false,materializationMission:7},position:{...getState().position},
-      hostiles:game.enemies.map(e=>({id:e.id,x:e.x,y:e.elevation+e.aimHeight,z:e.z,hp:e.hp,awareness:e.awareness})),render:renderer.info.render};}
+      skills:skills.snapshot(game),skillsMenuOpen:skillMenu.isOpen,
+      hostiles:game.enemies.map(e=>({id:e.id,x:e.x,y:e.elevation+e.aimHeight,z:e.z,hp:e.hp,awareness:e.awareness,tactic:e.combatPose,crouch:e.coverCrouch||0})),render:renderer.info.render};}
 
   };
 }

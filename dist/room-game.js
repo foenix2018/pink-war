@@ -1,5 +1,5 @@
 import { ArenaGame, WEAPONS, MAX_LEVEL, REGEN_DELAY, levelCount, traceEnemyHit, segmentSphere,projectileDamage } from './game-logic.js';
-import {tacticalOrder} from './tactical-enemies.js';
+import {tacticalOrder,grenadeAvoidance} from './tactical-enemies.js';
 import {squadOrder,relayVisualContact,clearSquadFiringLane} from './enemy-squads.js';
 import {segmentBox} from './game-logic.js';
 import { enemyDurability, enemyVolley, rangedMuzzle, enemyScale } from './enemy-combat.js';
@@ -109,12 +109,13 @@ export class RoomGame extends ArenaGame {
   moveEnemies(dt){
     const coverBoxes=this.room.coverBoxes?.()||[];
     for(const e of this.enemies){
-      const eye={x:e.x,y:e.elevation+e.aimHeight,z:e.z},seen=!this.blocked(eye,this.head),distance=Math.hypot(this.head.x-e.x,this.head.z-e.z);
+      const eye={x:e.x,y:e.elevation+e.aimHeight-.52*(e.coverCrouch||0)*enemyScale(e.form,e.elite)*(e.roomScale||1),z:e.z},seen=!this.blocked(eye,this.head),distance=Math.hypot(this.head.x-e.x,this.head.z-e.z);
       e.awareness=seen?'engaged':e.alertedUntil>this.time?'search':'patrol';
       if(seen){e.lastKnownX=this.head.x;e.lastKnownZ=this.head.z;e.lastKnownHeight=this.player.elevation;e.alertedUntil=this.time+10;}
       let target=seen?this.head:e.alertedUntil>this.time?{x:e.lastKnownX,z:e.lastKnownZ}:null;
-      const tacticContext={time:this.time,seen,threat:{x:e.lastKnownX,y:(e.lastKnownHeight||0)+1.25,z:e.lastKnownZ},obstacles:coverBoxes,allies:this.enemies,segmentBox};
-      relayVisualContact(e,tacticContext);const order=tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext);e.combatPose=order?.state||'advance';
+      const tacticContext={time:this.time,seen,threat:{x:e.lastKnownX,y:(e.lastKnownHeight||0)+1.25,z:e.lastKnownZ},obstacles:coverBoxes,allies:this.enemies,hazards:this.companionHazards,segmentBox};
+      relayVisualContact(e,tacticContext);const order=grenadeAvoidance(e,tacticContext)||tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext);e.combatPose=order?.state||'advance';
+      e.coverCrouch=(e.coverCrouch||0)+(Number(!!order?.crouched)-(e.coverCrouch||0))*(1-Math.exp(-dt*12));
       if(order)target={...order.point,y:e.groundY};
       e.moving=false;
       if(target){
@@ -147,6 +148,12 @@ export class RoomGame extends ArenaGame {
     for(let i=this.bullets.length-1;i>=0;i--){
       const b=this.bullets[i],a={x:b.x,y:b.y,z:b.z},end={x:b.x+b.vx*dt,y:b.y+b.vy*dt,z:b.z+b.vz*dt},wall=this.room.trace(a,end);
       const playerHit=b.hostile?segmentSphere(a,end,playerBody,.32):null;
+      if(b.hostile&&this.companionWard?.until>this.time&&this.companionWard.remaining>0){
+        const shieldHit=segmentSphere(a,end,playerBody,1.7);
+        if(shieldHit!==null&&(!wall||shieldHit<wall.t)){
+          this.companionWard.remaining--;this.bullets.splice(i,1);this.event('companion-assist',{name:'Gaby',kind:'ward'});continue;
+        }
+      }
       if(b.hostile&&this.bladePrevious?.extension>.95){const contact=bladeBulletContact(a,end,this.bladePrevious.base,this.bladePrevious.tip,this.bladeGuard?.10:.075);
         if(contact&&(!wall||contact.t<wall.t)&&(playerHit===null||contact.t<playerHit)&&!this.blocked(this.head,contact.point)){
           const v=reflectedVelocity({x:b.vx,y:b.vy,z:b.vz},this.bladePrevious,contact),n=Math.hypot(v.x,v.y,v.z)||1;

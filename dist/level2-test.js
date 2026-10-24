@@ -21,6 +21,8 @@ import {createCampaignCombatEffects} from './campaign-combat-effects.js';
 import {createAICompanion} from './ai-companions.js';
 import {createAmbience} from './ambience.js';
 import {createFireBuffer} from './fire-input.js';
+import {createCompanionSkills} from './companion-skills.js';
+import {createCompanionMenu} from './companion-menu.js';
 
 const $=id=>document.getElementById(id);
 const characterId=new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju';
@@ -38,6 +40,7 @@ const weaponFeel=createWeaponFeel(),pinkControls=createPinkWarsInput();
 const fireInput=createFireBuffer();
 let enableAudio=true;try{enableAudio=JSON.parse(localStorage.getItem('rosee-settings')||'{}').sound!==false;}catch{}
 let combatEffects=null,companion=null,environmentAudio=null;
+let companionSkills=null,skillMenu=null;
 function audioReady(){
  if(!enableAudio)return;
  if(audioCtx){void audioCtx.resume?.().catch?.(()=>{});return;}
@@ -385,6 +388,9 @@ function setupPlayer(){
  camera.add(weapon);weapon.position.set(.23,-.30,-.59);weapon.rotation.set(-.07,-.045,-.09);
  combatEffects=createCampaignCombatEffects(T,scene,characterId);
  companion=createAICompanion(T,scene,characterId);
+ companionSkills=createCompanionSkills({characterId,mission:2,mode:'campaign'});
+ skillMenu=createCompanionMenu({getStatus:()=>companionSkills.snapshot(game),onUse:()=>false,
+  onChange(open){heldFire=false;keys.clear();fireInput.reset();touchControls?.reset();if(open)document.exitPointerLock?.();}});
  try {enemyFactory=createEnemyFactory(enemyMaterials());}
  catch(error){console.warn('M02 / enemy visuals degraded:',error);enemyFactory=null;}
 
@@ -515,6 +521,8 @@ function updateEnemies(dt){
 let heldFire=false;
 function gameTick(dt){
  const controls=pinkControls.read(dt,keys,navigator.getGamepads?.()||[],{focused:!document.hidden});
+ if(controls.companion)skillMenu?.setOpen(!skillMenu.isOpen);
+ if(skillMenu?.isOpen)return;
  const touch=touchControls?.state||{x:0,z:0,lookX:0,lookY:0,fire:false,aim:false};
  const sensitivity=aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend);
  yaw-=(controls.lookX*1.8+touch.lookX*1.8)*sensitivity*dt;
@@ -591,6 +599,7 @@ function gameTick(dt){
  }
  combatEffects?.update(game,dt,camera);
  companion?.update(dt,{game,camera,active:false});
+ companionSkills?.update(dt,{game});skillMenu?.refresh();
  environmentAudio?.update(dt,{active:running,position:game.player,moving:Math.hypot(x,z)>.1,grounded:game.player.grounded,elevation:game.player.elevation,yaw,probes:game.enemies});
  if(game.player.hp>0)$('damage').style.boxShadow='inset 0 0 '+(100-game.player.hp)*1.2+'px #c52c5e44';
  weaponKick=Math.max(0,weaponKick-dt*.7);
@@ -634,6 +643,7 @@ function animation(t){
  requestAnimationFrame(animation);
  const dt=Math.min(.040,Math.max(0,(t-last)/1000));last=t;
  if(!renderer||!scene)return;
+ skillMenu?.setVisible(started&&running);
  clock+=dt;
  // Subtle transformer instability, without extra lights or shadow maps.
  for(let i=0;i<lightSources.length;i++){
@@ -807,7 +817,7 @@ for(const name of ['pointerup','pointercancel']){
  window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
 }
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
-window.__PINK_M02=Object.freeze({snapshot:()=>({revision:'3.48',running,stage,characterId,health:game?.player.hp,
+window.__PINK_M02=Object.freeze({snapshot:()=>({revision:'3.57',running,stage,characterId,health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
- backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,companion:companion?.snapshot(),pbr:pbrController?.stats,
+ backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,
  effects:combatEffects?.stats()})});

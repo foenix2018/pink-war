@@ -50,6 +50,7 @@ export function questControls(hand = 'right') {
     [`Clic joystick ${sideF}`, 'Terminal / arme proche : interagir · sinon : s’accroupir'],
     [b.jump, 'Saut · second appui : double saut / rebond mural'],
     ['Gâchette INDEX gauche', 'GHJU / R–9 DUO : pistolet gauche · sinon : main libre'],
+    ['Pupitre au poignet gauche', 'Pointer avec la main droite puis gâchette INDEX : compétences Gaby / Cara'],
     [b.pause, 'Pause / reprise']
   ];
 }
@@ -421,6 +422,7 @@ export class VRController {
     const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, fire: false, fireHands:{left:false,right:false}, sprint: false, precision: false, aim:false, jump: false, pickup: false, crouchToggle: false };
     const dual=!!this.hooks.game?.()?.weapon?.dual,rawHands={left:false,right:false},trackedHands={left:false,right:false};
     const xr = this.mode === 'xr', cfg = settingsOf(this), mainHand = cfg.hand, sideHand = otherHand(mainHand);
+    const skillsConsumed=xr&&!!this.hooks.skillsInput?.(this);
     const focused=typeof document==='undefined'||(!document.hidden&&(!document.hasFocus||document.hasFocus()));
     const desktop = xr ? null : (this.desktopGamepads ||= new DesktopGamepadInput()).select(navigator.getGamepads?.() || [],{focused});
     if (!xr && this.desktopPadKey !== this.desktopGamepads.activeKey) { this.previous.clear(); this.desktopPadKey = this.desktopGamepads.activeKey; }
@@ -468,12 +470,13 @@ export class VRController {
         // or pickup while the stick stays held must never cause a second crouch.
         edge('stick', 3, interaction ? 'pickup' : 'crouch');
       }
-      if (!xr) { edge('pause', DESKTOP_BUTTONS.pause); edge('jump', DESKTOP_BUTTONS.jump); edge('pickup', DESKTOP_BUTTONS.interact); edge('crouch', DESKTOP_BUTTONS.crouch); }
+      if (!xr) { edge('pause', DESKTOP_BUTTONS.pause); edge('jump', DESKTOP_BUTTONS.jump); edge('pickup', DESKTOP_BUTTONS.interact); edge('crouch', DESKTOP_BUTTONS.crouch);edge('companion',DESKTOP_BUTTONS.companion); }
     }
     if (actions.has('pause')) { this.hooks.togglePause(); if (xr) this.cancelTrigger(); }
+    else if(actions.has('companion'))this.hooks.toggleSkills?.();
     else if (phase === 'over' && actions.has('reload') && xr) { this.hooks.begin(); this.cancelTrigger(); }
     else if (phase === 'over' && actions.has('next') && xr) { this.cancelTrigger(); this.exit().catch(error => this.fail(error)); }
-    else if (phase === 'playing') {
+    else if (phase === 'playing'&&!skillsConsumed) {
       const game = this.hooks.game();
       if (actions.has('next')) { if (game.cycleWeapon(1) && xr) this.cancelTrigger(); }
       else if (actions.has('reload')) { if (game.reload() && xr) this.cancelTrigger(); }
@@ -481,6 +484,7 @@ export class VRController {
     this.trackingLost = xr && !mainTracked;
     if (xr && (!visible || !mainTracked)) { this.cancelTrigger(); this.hooks.pause?.(); }
     const playing = (this.hooks.phase?.() || phase) === 'playing';
+    if(skillsConsumed){this.cancelTrigger();this.precision=this.aiming=false;return { ...result,x:0,z:0,turn:0,tilt:0,snap:0,fire:false,fireHands:{left:false,right:false},sprint:false,precision:false,aim:false,jump:false,pickup:false,crouchToggle:false };}
     if (!playing) { result.x = result.z = result.turn = result.tilt = result.snap = 0; result.sprint = result.precision = result.aim = false; result.jump = false;result.pickup = false; if (xr) this.cancelTrigger(); }
     if (dual&&xr?!rawHands.left&&!rawHands.right:!rawFire) this.triggerBlocked = false;
     result.jump = playing && actions.has('jump');result.pickup = playing && actions.has('pickup');result.crouchToggle=playing && actions.has('crouch');

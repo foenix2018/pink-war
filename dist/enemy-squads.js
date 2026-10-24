@@ -1,4 +1,4 @@
-import {chooseTacticalCover} from './tactical-enemies.js';
+import {chooseTacticalCover,coverEyeHeight} from './tactical-enemies.js';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const eye=e=>({x:e.x,y:(e.elevation||0)+1.25,z:e.z});
 
@@ -18,7 +18,7 @@ export function squadOrder(e,ctx){
    if(free(p,e,obstacles)){t.cover=null;t.state='guard';return {point:p,stopDistance:.7,canFire:true,state:'guard',speedScale:.8};}}
  }
  if(e.ranged&&e.form!=='brute'&&range>6){
-  if(t.cover&&segmentBox({...t.cover.hidden,y:(e.elevation||0)+1.96},threat,t.cover.wall)===null){t.cover=null;t.nextPlan=time+.35;}
+  if(t.cover&&segmentBox({...t.cover.hidden,y:coverEyeHeight(e,t.cover)},threat,t.cover.wall)===null){t.cover=null;t.nextPlan=time+.35;}
   if(!t.cover&&time>=t.nextPlan&&(seen||underFire)){
    t.nextPlan=time+2.2;t.cover=chooseTacticalCover(e,threat,obstacles,allies,segmentBox);
    if(t.cover){t.state='relocate';t.until=time+8;}
@@ -30,7 +30,8 @@ export function squadOrder(e,ctx){
    }else if(t.state==='cover'&&time>=t.until&&!underFire){t.state='peek';t.until=time+2.8;t.shots=0;}
    else if(t.state==='peek'&&(underFire||t.shots>=2||time>=t.until)){t.state='return';t.until=time+4;}
    const point=t.state==='peek'?t.cover.peek:t.cover.hidden;
-   return {point,stopDistance:.28,canFire:t.state==='peek'&&seen&&distance(e,point)<.7,state:t.state,speedScale:underFire?1.12:1};
+   return {point,stopDistance:.28,canFire:t.state==='peek'&&seen&&distance(e,point)<.7,state:t.state,speedScale:underFire?1.12:1,
+    crouched:!!t.cover.crouch&&t.state!=='peek'};
   }
  }
  if(e.form==='brute'&&seen&&range>8&&range<22){
@@ -77,7 +78,7 @@ export function clearSquadFiringLane(e,from,to,allies){
  return !allies.some(a=>{
   if(a===e)return false;const t=((a.x-from.x)*dx+(a.z-from.z)*dz)/length2;
   if(t<=.015||t>=.99)return false;const y=from.y+(to.y-from.y)*t,ground=a.elevation||0;
-  return y>ground+.12&&y<ground+(a.form==='scuttler'?1.05:2.12)&&Math.hypot(from.x+dx*t-a.x,from.z+dz*t-a.z)<(a.radius||.65)+.12;
+  return y>ground+.12&&y<ground+(a.form==='scuttler'?1.05:2.12-.52*(a.coverCrouch||0))&&Math.hypot(from.x+dx*t-a.x,from.z+dz*t-a.z)<(a.radius||.65)+.12;
  });
 }
 
