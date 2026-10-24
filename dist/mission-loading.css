@@ -12,7 +12,7 @@
 .pw-load-labels{display:flex;justify-content:space-between;gap:16px;font-size:11px;color:#c2cfca;letter-spacing:.05em;margin-bottom:11px}
 .pw-load-track{height:3px;background:#e9f3ef23;width:100%;overflow:hidden}
 .pw-load-track i{display:block;height:100%;width:100%;background:var(--signal);transform:scaleX(0);transform-origin:left;transition:transform .18s ease-out}
-.pw-load-error{margin-top:22px;padding:11px 17px;border:1px solid #d2dfd78a;background:#18292e;color:#fff;border-radius:4px;font:inherit;cursor:pointer}
+.pw-load-error{margin-top:22px;padding:11px 17px;border:1px solid #d2dfd78a;background:#18292e;color:#fff;border-radius:24px;font:inherit;cursor:pointer}
 .pw-auto-story #intro .introCard{visibility:hidden}
 .pw-auto-story #intro.gone{display:none!important}
 .pw-auto-story #shade .panel{visibility:hidden}

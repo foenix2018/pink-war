@@ -17,10 +17,13 @@ import { createMagnifiedSight } from './magnified-sight.js';
 import { createHomeBattlefield } from './home-battlefield.js';
 import { hapticPlan, buzz } from './haptics.js';
 import { createBoundaryFence } from './boundary-fence.js';
+import {createPauseMenu} from './fracture-menu.js';
+import {createXRPauseMenu} from './xr-pause-menu.js';
 
 const $=id=>document.getElementById(id),status=$('at-home-status'),button=$('at-home-enter');
 let characterId='ghju';try{characterId=localStorage.getItem('pink-war-character')||characterId;}catch{}
 const hero=characterForId(characterId);document.documentElement.style.setProperty('--pink',hero.accent);
+document.documentElement.dataset.universe=hero.id==='lylu'?'blue':'pink';document.body.style.setProperty('--home-art',"url('./art/accueil"+(hero.id==='lylu'?'-lylu':'')+".webp')");
 $('at-home-character').textContent=hero.name+' · Laboratoire de l’IA · Après la chute';
 const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.025,650);
 scene.background=null;scene.add(camera,new THREE.HemisphereLight(0xc3d8ed,0x263239,1.8));
@@ -93,6 +96,12 @@ const scannedRoom={hasFloor:()=>floors().length>0,floorAt:p=>roomFloorAt({...p,y
  findPoint,canStand,canStandOnField,trace:traceRoom,waypoint:(from,target)=>navigation?.waypoint(from,target)};
 const room=createHomeBattlefield({room:scannedRoom,obstacles:()=>assets?.architecture.obstacles||[],forward:()=>new THREE.Vector3(0,0,-1).applyQuaternion(orientation)});
 const game=new RoomGame(room,Math.random,hero.id);
+let beforePause='ready';
+function pauseHome(){if(mode==='paused')return;beforePause=mode;mode='paused';game.stop();cancelFire();music.pause();ambience?.pause();if(!session)pauseMenu.show();}
+function resumeHome(){if(mode!=='paused')return;mode=beforePause;if(mode==='combat'){game.running=true;music.start(audio);}cancelFire();pauseMenu.hide(false);}
+async function home(){await session?.end();location.assign('./index.html');}
+const pauseMenu=createPauseMenu({title:'AT HOME / LABORATOIRE DE L’IA',onPause:pauseHome,onResume:resumeHome,onHome:home,onVR:report=>{if(!navigator.xr){report('Ouvrez AT HOME dans Meta Quest Browser pour utiliser le scan de la maison.');return;}return enter().then(()=>{if(session)pauseMenu.hide(false);else report(status.textContent);});}});
+const immersivePause=createXRPauseMenu(THREE,scene,{accent:hero.accent,onResume:resumeHome,onHome:()=>void home(),onExit:()=>void session?.end()});
 function makeBoard(width,height,size){
  const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
  const texture=new THREE.CanvasTexture(canvas),plane=new THREE.Mesh(new THREE.PlaneGeometry(...size),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthTest:false,depthWrite:false,toneMapped:false}));
@@ -102,7 +111,7 @@ const hud=makeBoard(512,112,[.42,.092]),board=makeBoard(768,240,[1.10,.34]),anno
 function announce(text){announcementUntil=game.time+4;const c=announcement.canvas.getContext('2d');c.clearRect(0,0,768,128);c.fillStyle='#15212bdd';c.fillRect(0,0,768,128);c.fillStyle=hero.accent;c.font='bold 34px monospace';c.textAlign='center';c.fillText(text,384,77);announcement.texture.needsUpdate=true;}
 function placeBoard(item,offset,distance){item.plane.position.copy(head).addScaledVector(direction.set(0,0,-1).applyQuaternion(orientation),distance);item.plane.position.y+=offset;item.plane.quaternion.copy(orientation);}
 function updateBoards(){
- hud.plane.visible=mode==='combat';board.plane.visible=!!session&&mode!=='combat';announcement.plane.visible=mode==='combat'&&game.time<announcementUntil;
+ hud.plane.visible=mode==='combat';board.plane.visible=!!session&&mode!=='combat'&&mode!=='paused';announcement.plane.visible=mode==='combat'&&game.time<announcementUntil;
  placeBoard(hud,-.27,1.05);placeBoard(board,-.42,1.4);placeBoard(announcement,.22,1.4);
  const ammo=game.ammo[game.weaponIndex],key=Math.ceil(game.player.hp)+'|'+ammo+'|'+game.weapon.melee+'|'+Math.ceil(game.reloadRemaining*4);
  if(key!==hud.key){hud.key=key;const c=hud.canvas.getContext('2d');c.clearRect(0,0,512,112);c.fillStyle='#111a28dd';c.fillRect(0,0,244,112);c.fillRect(264,0,248,112);c.fillStyle='#bfcddd';c.font='bold 17px sans-serif';c.fillText('SANTÉ',20,26);c.fillText(game.weapon.melee?'ÉNERGIE':'BALLES',284,26);c.fillStyle=game.player.hp<30?'#ff637f':'white';c.font='bold 50px sans-serif';c.fillText(String(Math.ceil(game.player.hp)),18,83);c.fillStyle='white';c.fillText(game.weapon.melee?'∞':String(ammo),282,83);c.fillStyle=hero.accent;c.fillRect(20,98,Math.max(0,204*game.player.hp/100),4);hud.texture.needsUpdate=true;}
@@ -230,18 +239,20 @@ function tick(ms,frame){
  if(session){
   const pose=frame?.getViewerPose(renderer.xr.getReferenceSpace());if(pose){head.copy(pose.transform.position);orientation.copy(pose.transform.orientation);}
   const active=session.visibilityState==='visible'&&!!pose;
-  if(active&&mode==='paused'){game.running=true;mode='combat';cancelFire();music.start(audio);info('SIGNAL RÉTABLI');}if(!pose&&mode==='combat')cancelFire();
+  if(!pose&&mode==='combat')cancelFire();
   const right=[...session.inputSources].find(s=>s.handedness==='right'),left=[...session.inputSources].find(s=>s.handedness==='left'),padR=right?.gamepad,padL=left?.gamepad;
   Object.assign(controllerHandState,{trigger:padR?.buttons?.[0]?.value||0,grip:padR?.buttons?.[1]?.value||0,offTrigger:padL?.buttons?.[0]?.value||0,offGrip:padL?.buttons?.[1]?.value||0});
+  if(active&&edge('pause',!!padR?.buttons?.[3]?.pressed)){if(mode==='paused')resumeHome();else pauseHome();}
   if(edge('exit',!!padR?.buttons?.[5]?.pressed)){session.end().catch(()=>{});return;}
-  if(active&&edge('reload',!!padR?.buttons?.[4]?.pressed)){if(mode==='combat')game.reload();else requestCombat();}
+  if(active&&edge('reload',!!padR?.buttons?.[4]?.pressed)&&mode!=='paused'){if(mode==='combat')game.reload();else requestCombat();}
   if(active&&edge('weapon',!!padL?.buttons?.[5]?.pressed)&&mode==='combat')game.cycleWeapon();
   if(active&&edge('collect',!!padL?.buttons?.[3]?.pressed)&&mode==='combat')game.collectWeapon();
   if(active&&edge('decor',!!padL?.buttons?.[4]?.pressed)){decorEnabled=!decorEnabled;assets?.architecture.setEnabled(decorEnabled,fullImmersion);}
   if(frame){syncTrackedHands(mounts,session,frame,renderer.xr.getReferenceSpace());updateControllerRoles();updatePlayArea(frame);updateSurfaces(frame);updatePlayArea(frame);}
+  const menuConsumed=immersivePause.update({active:mode==='paused',camera,ray:mounts.find(m=>m.source?.handedness==='right')?.ray,trigger:controllerHandState.trigger>.15});if(menuConsumed)cancelFire();
   const held=controllerHandState.trigger>.15,main=mounts.find(m=>m.source?.handedness==='right');if(!held&&(!game.weapon.dual||controllerHandState.offTrigger<=.15))fireBlocked=false;
-  if(held&&!lastTrigger&&active&&mode!=='combat')requestCombat();lastTrigger=held;
-  if(startRequested&&active&&mode!=='combat'&&assets&&floors().length)startCombat();
+  if(held&&!lastTrigger&&active&&mode!=='combat'&&mode!=='paused'&&!menuConsumed)requestCombat();lastTrigger=held;
+  if(startRequested&&active&&mode!=='combat'&&mode!=='paused'&&assets&&floors().length)startCombat();
   if(assets){
    const reload=game.reloadRemaining?1-game.reloadRemaining/game.weapon.reload:0;
    const heldFeel=game.weapon.dual?{pitch:0,yaw:0,kick:0}:feedback;
@@ -278,8 +289,9 @@ async function initiateScan(){
  if(typeof session.initiateRoomCapture!=='function'){info('CONFIGURE LE SCAN DANS SPACE SETUP DU QUEST');roomCaptureAsked=false;return;}
  info('SCAN DE LA MAISON EN COURS');try{await session.initiateRoomCapture();refreshScan=true;roomDirty=true;info('SCAN TERMINÉ : RECHERCHE DU SOL');}catch{info('SCAN ANNULÉ : TU PEUX RÉESSAYER');}finally{roomCaptureAsked=false;}
 }
-function onSelect(event){if(session?.visibilityState!=='visible')return;if(event.inputSource?.handedness==='left'&&mode!=='combat')initiateScan();if(event.inputSource?.handedness==='right'&&mode!=='combat')requestCombat();}
+function onSelect(event){if(session?.visibilityState!=='visible'||mode==='paused')return;if(event.inputSource?.handedness==='left'&&mode!=='combat')initiateScan();if(event.inputSource?.handedness==='right'&&mode!=='combat')requestCombat();}
 function onSessionEnd(){
+ immersivePause.update({active:false});pauseMenu.hide(false);
  session=null;mode='idle';game.stop();cancelFire();game.enemies=[];game.bullets=[];game.activePortals=[];game.weaponOffers=[];game.toSpawn=0;game.pendingOffers.clear();scope?.dispose();scope=null;music.pause();ambience?.pause();saberAudio?.update({active:false});bladeLight.intensity=0;clearBots();laser.reset();assets?.hideDecor();
  for(const record of surfaceRecords())discardSurface(record);surfaces.clear();meshes.clear();zoneRecord=null;boundedSpace=null;playPolygon=[];playAreaSource='';startRequested=false;boundary.setPolygon([]);navigation=null;navigationFloorY=null;room.resetRoom();roomDirty=true;lastRoomBuild=-99;
  for(const item of [hud,board,announcement])item.plane.visible=false;for(const mount of mounts){mount.source=null;mount.anchor.visible=false;mount.ray.userData.source=null;}
@@ -294,14 +306,13 @@ async function enter(){
  let opened;try{
   opened=await request;session=opened;mode='ready';decorEnabled=true;lastTime=0;startTime=performance.now()/1000;roomDirty=true;lastRoomBuild=-99;game.stop();
   opened.addEventListener('end',onSessionEnd,{once:true});opened.addEventListener('selectstart',onSelect);opened.addEventListener('inputsourceschange',updateControllerRoles);
-  opened.addEventListener('visibilitychange',()=>{if(opened.visibilityState==='hidden'&&mode==='combat'){mode='paused';game.stop();cancelFire();music.pause();ambience?.pause();info('GÂCHETTE DROITE : REPRENDRE');}});
+  opened.addEventListener('visibilitychange',()=>{if(opened.visibilityState!=='visible'&&mode==='combat')pauseHome();});
   await renderer.xr.setSession(opened);try{boundedSpace=await opened.requestReferenceSpace('bounded-floor');}catch{}document.body.classList.add('in-xr');$('at-home-end').hidden=false;info('DÉTECTION DE LA MAISON');
   if(!assets){assetsLoading ||=import('./at-home-assets.js').then(m=>m.createAtHomeAssets(scene,hero)).then(pack=>{assets=pack;assetsLoading=null;assetError='';updateControllerRoles();for(const r of surfaceRecords())if(!r.invisibleFloor)assets.projectRuin(r,decorEnabled,head);roomDirty=true;lastRoomBuild=-99;}).catch(error=>{assetsLoading=null;assetError='MODÈLES INDISPONIBLES : '+error.message;console.error('AT HOME',error);});}else updateControllerRoles();
  }catch(error){if(opened)await opened.end().catch(()=>{});if(session===opened)onSessionEnd();button.disabled=false;info('ACCÈS À LA RÉALITÉ MIXTE INDISPONIBLE : '+error.message);}
 }
 button.addEventListener('click',enter);$('at-home-end').addEventListener('click',()=>session?.end().catch(()=>{}));
 $('at-home-immersion')?.addEventListener('change',e=>{fullImmersion=e.target.value==='full';});
-window.addEventListener('keydown',e=>{if(e.key==='Escape')session?.end().catch(()=>{});});
 window.addEventListener('resize',()=>{if(renderer.xr.isPresenting)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight,false);});
 renderer.setAnimationLoop(tick);
 async function checkSupport(){if(!navigator.xr||!window.isSecureContext){info('OUVRE AT HOME DANS LE NAVIGATEUR QUEST 3');return;}try{if(await navigator.xr.isSessionSupported('immersive-ar')){button.disabled=false;info('QUEST COMPATIBLE · PRÉPARE LE SCAN DE LA MAISON');}else info('RÉALITÉ MIXTE INDISPONIBLE SUR CE NAVIGATEUR');}catch{info('SUPPORT WEBXR INDISPONIBLE');}}

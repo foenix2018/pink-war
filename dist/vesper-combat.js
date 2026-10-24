@@ -27,6 +27,8 @@ import {createFireBuffer} from './fire-input.js';
 import {createVesperAtmosphere,replacementTriangles} from './vesper-art.js';
 import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
+import {createMissionXR,immersiveRendererPreferred} from './mission-xr.js';
+import {createGlove} from './hands.js';
 
 export function buildVesperGeometry(source,{art=false}={}){
   const skip=replacementTriangles(source,art);
@@ -74,10 +76,11 @@ export function buildVesperGeometry(source,{art=false}={}){
   return {geometry,ids,triangles:index.length/3};
 }
 
-export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas,collide,stairs,decks,interactions,getState,setPlayer,notify,onCanvas,onFailure,onMenuChange=()=>{},onProgress=()=>{}}){
+export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas,collide,stairs,decks,interactions,getState,setPlayer,notify,onCanvas,onFailure,onMenuChange=()=>{},onProgress=()=>{},onPauseRequest=()=>{},onResumeRequest=()=>{},onHeading=()=>{}}){
   const params=new URLSearchParams(location.search),characterId=params.get('character')==='lylu'?'lylu':'ghju';
+  document.documentElement.dataset.universe=characterId==='lylu'?'blue':'pink';
   const requestedQuality=getState().quality==='performance'?'low':getState().quality==='ultra'?'high':'auto';
-  const profile=graphicsProfile({userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu},requestedQuality,params.get('renderer')==='webgl');
+  const profile=graphicsProfile({userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu},requestedQuality,params.get('renderer')==='webgl'||await immersiveRendererPreferred());
   onProgress(.22,'Initialisation du rendu');
   const prepared=await createCompatibleRenderer({canvas,WebGPU:T.WebGPURenderer,WebGL:WebGLRenderer,profile});
   if(prepared.initialFailure)console.warn('Vesper / initialisation WebGPU :',prepared.initialFailure);
@@ -124,6 +127,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const gamepadInput=new DesktopGamepadInput();
   const fireInput=createFireBuffer();
   let rig=null,gun=null,ready=false,pending=false,lastTime=0,held=false,ads=0,completed=false,lastStage=game.stage,journalOpen=false,checkpointPending=false;
+  let xr=null;
   const skills=createCompanionSkills({characterId,mission:1,mode:'campaign'});
   const skillMenu=createCompanionMenu({getStatus:()=>skills.snapshot(game),
     onUse:id=>skills.use(id,{game,...aim()}),onChange(open){held=false;fireInput.reset();onMenuChange(open);if(open)document.exitPointerLock?.();}});
@@ -178,6 +182,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   }
   const v=new T.Vector3(),forward=new T.Vector3(),origin=new T.Vector3(),end=new T.Vector3();
   function aim(){
+    if(xr?.active)return xr.aim();
     camera.updateMatrixWorld(true);camera.getWorldDirection(forward);end.copy(camera.position).addScaledVector(forward,160);
     let nearest=1;
     for(const o of obstacles){const hit=segmentBox(camera.position,end,o);if(hit!==null&&hit<nearest)nearest=hit;}
@@ -188,6 +193,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     return {origin,direction:target.sub(origin).normalize()};
   }
   function syncCamera(s,dt){
+    if(xr?.active){xr.syncPose();return;}
     ads+=(Number(s.aiming)-ads)*(1-Math.exp(-dt*14));
     camera.fov=magnifiedFov(64,1+((OPTICS[game.weapon.id]?.magnification||1)-1)*ads);camera.updateProjectionMatrix();
     camera.position.set(s.position.x,s.position.y-(s.crouching?.42:0),s.position.z);
@@ -208,17 +214,18 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     syncCamera(s,dt);
     const p=game.player;
     if(!s.free){
-      p.crouched=s.crouching;
-      game.step(dt,{...(s.input||{}),yaw:-s.yaw});
+      if(!xr?.active)p.crouched=s.crouching;
+      game.step(dt,{...(s.input||{}),yaw:-s.yaw,moveYaw:xr?.active?xr.controls?.moveYaw:undefined});
       setPlayer?.(p);
       syncCamera(getState(),dt);
     }
     const moving=Math.hypot(game.playerVelocity?.x||0,game.playerVelocity?.z||0)>.25;
     feel.update(dt);const a=aim();
     const ammoBefore=game.ammo[game.weaponIndex],bladeBefore=game.bladeSlashAt;
-    game.trigger(fireInput.requested(held,game.weapon,game.time)&&!s.free,dt,a.origin,a.direction);
+    if(xr?.active&&game.weapon.dual){for(const hand of ['right','left']){const aim=xr.aim(hand);game.triggerHand(hand,hand==='right'?xr.controls?.fire:xr.controls?.leftFire,dt,aim.origin,aim.direction);}}
+    else game.trigger(xr?.active?!!xr.controls?.fire:fireInput.requested(held,game.weapon,game.time)&&!s.free,dt,a.origin,a.direction);
     if(game.ammo[game.weaponIndex]<ammoBefore||game.bladeSlashAt!==bladeBefore)fireInput.consume();
-    if(game.weapon.melee)game.updateBlade(gun?.userData.getBladeSegment?.(),dt,s.aiming,camera.position);
+    if(game.weapon.melee)game.updateBlade((xr?.active?xr.gun():gun)?.userData.getBladeSegment?.(),dt,s.aiming,camera.getWorldPosition(new T.Vector3()));
     const portal=game.activePortals[0];
     tacticalGate.visible=!!portal;portalMarker.hidden=!portal;
     if(portal){
@@ -241,13 +248,13 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     for(const [id,model] of enemyModels)if(!game.enemies.some(e=>e.id===id)){scene.remove(model);enemyModels.delete(id);}
     for(const event of game.drainEvents()){
       effects.event(event);
-      if(event.type==='shot'){feel.fire(event.weapon,event.power,ads>.5);if(sound&&audio)playLaserShot(audio,event.weapon,event.power);}
+      if(event.type==='shot'){feel.fire(event.weapon,event.power,ads>.5);xr?.haptic('shot',event.weapon,event.hand);if(sound&&audio)playLaserShot(audio,event.weapon,event.power);}
       if(event.type==='impact'&&sound&&audio)playLaserImpact(audio,{surface:event.surface,distance:Math.hypot(event.x-p.x,event.z-p.z),power:event.power});
       if(event.type==='reload'&&sound&&audio)playWeaponAction(audio,game.weapon.id,'reload-out');
       if(event.type==='reloaded'&&sound&&audio)playWeaponAction(audio,game.weapon.id,'reload-ready');
       if(event.type==='over'){
         held=false;fireInput.reset();music.pause();ambience?.pause();document.exitPointerLock?.();
-        const dialog=document.createElement('dialog');dialog.innerHTML='<h2>SIGNAL PERDU</h2><p>ORDRE a repris le secteur.</p><button>REJOUER LA MISSION</button> <a href="./index.html">RETOUR AU MENU</a>';
+        if(xr?.active)onPauseRequest();const dialog=document.createElement('dialog');dialog.innerHTML='<h2>SIGNAL PERDU</h2><p>ORDRE a repris le secteur.</p><button>REJOUER LA MISSION</button> <a href="./index.html">RETOUR AU MENU</a>';
         dialog.querySelector('button').onclick=()=>location.reload();document.body.append(dialog);dialog.showModal();
       }
       if(event.type==='win')finishMission();
@@ -292,10 +299,16 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     if(entry){
       journalOpen=true;held=false;fireInput.reset();game.state='paused';document.exitPointerLock?.();
       showMissionJournal(entry,{sound,onClose(){journalOpen=false;game.state='playing';}});
+       if(xr?.active)xr.showJournal(entry,()=>document.getElementById('m01-journal')?.close());
     }
     if(game.completed)finishMission();
     return true;
   }
+  xr=createMissionXR({getWorld:()=>({T,scene,camera,renderer,game,weapon:gun,soldier:rig?.model.root,obstacles,accent:characterId==='lylu'?'#80baff':'#ef91b4',
+    createGun:()=>rig?.createGun({sleeve:false})||buildGun({mats:starterMaterials,gloves:starterGloves,sleeve:false,makeFlash:parent=>{const f=new T.Mesh(new T.SphereGeometry(.06,8,6),heroGlow);parent.add(f);return f;}}),createHand:()=>createGlove(rig?.kit.gloves||starterGloves,{sleeve:false})}),
+    getYaw:()=>-getState().yaw,setYaw:onHeading,isPaused:()=>!!getState().menuPaused||journalOpen||game.state!=='playing',
+    onPause:onPauseRequest,onResume:onResumeRequest,onHome:()=>location.assign('./index.html'),onExit:()=>{},skillsInput:args=>skillMenu.xrInput(args),
+    onFrame:(ms,frame)=>{const dt=Math.min(.045,Math.max(0,(ms-lastTime*1000)/1000||.016));const c=xr.input(frame,dt);const s=getState();if(c.interact)onInteract();if(!s.menuPaused&&!journalOpen&&!skillMenu.isOpen)update(dt,{...s,free:false,yaw:-xr.yaw,aiming:c.aim,input:c});xr.update(dt,feel.state,feel.state.kick>.025?.075:0);xr.renderScope();lastTime=ms/1000;atmosphere.update(lastTime,camera,{day:s.day,shadows:profile.shadows});try{renderer.render(scene,camera);}catch(error){onFailure(error);}}});
   // Validate a real terrain frame while the loading card is still displayed.
   // A published GPU API or a running simulation alone cannot prove rendering.
   syncCamera(getState(),0);atmosphere.update(0,camera,{day:getState().day,shadows:profile.shadows});
@@ -311,11 +324,12 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   }catch(error){onFailure(error);throw error;}
   onProgress(.98,'Rendu du secteur validé');
   return {
+    get xrActive(){return xr.active;},enterVR(){return xr.enter();},exitVR(){return xr.exit();},
     kind:renderer.isWebGLRenderer?'WebGL 2 · M01':'WebGPU · M01',managedResolution:true,canonical:true,
     get paused(){return journalOpen||skillMenu.isOpen;},
     get interaction(){return contextAction();},
     get layout(){return LEVEL1_MAP;},
-    restart(){location.assign(location.pathname+'?prologue=done&character='+characterId+'&v=3.58');},
+    restart(){location.assign(location.pathname+'?prologue=done&character='+characterId+'&v=3.59');},
     get checkpoint(){return checkpoint;},
     get objective(){return objective().text;},
     get playing(){return game.state==='playing'&&!completed;},
@@ -331,12 +345,14 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     pause(){held=false;fireInput.reset();gamepadInput.reset();skillMenu.setOpen(false);music.pause();ambience?.pause();saber?.update({active:false});},
     gamepad(devices){return gamepadInput.select(devices,{focused:!document.hidden});},
     resize(width,height){
+      if(xr.active)return;
       const requested=getState().quality,quality=requested==='performance'?'low':requested==='ultra'?'high':'auto';
       const current=graphicsProfile({userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu},quality,renderer.isWebGLRenderer);
       camera.aspect=width/height;camera.updateProjectionMatrix();renderer.setPixelRatio(renderPixelRatio(current,devicePixelRatio,width,height));renderer.setSize(width,height,false);
     },
     update(dt){update(dt,getState());},
     draw(t){
+      if(xr.active)return;
       if(pending)return;const s=getState();syncCamera(s,Math.min(.05,t-lastTime||.016));lastTime=t;gate.mesh.rotation.z=t*.052;
       skillMenu.setVisible(ready&&!completed&&!journalOpen&&game.player.hp>0);
       torch.visible=s.flashlight!==false;
@@ -345,7 +361,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       try{const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);if(result?.then){pending=true;result.then(()=>pending=false).catch(error=>{pending=false;onFailure(error);});}}
       catch(error){onFailure(error);}
     },
-    snapshot(){return {revision:'3.58',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
+    snapshot(){return {revision:'3.59',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
       capacity:game.weapon.capacity,ownedWeapons:[...game.ownedWeapons],offers:game.weaponOffers.map(o=>({...o})),campaign:game.campaign,journalOpen,
       enemies:game.enemies.length,hostileProjectiles:game.bullets.filter(b=>b.hostile).length,shots:game.bullets.filter(b=>!b.hostile).length,
       kills:game.kills,rig:!!rig,gun:!!gun,backend:renderer.isWebGLRenderer?'webgl':'webgpu',triangles:terrain.triangles,

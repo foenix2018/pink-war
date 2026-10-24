@@ -3,7 +3,7 @@
 import {companionPictogram,paintCompanionPictogram} from './companion-pictograms.js';
 export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
  if(!document.querySelector('[data-companion-style]')){
-  const style=document.createElement('link');style.rel='stylesheet';style.href=new URL('./companion-menu.css?v=3.58',import.meta.url).href;style.dataset.companionStyle='';document.head.append(style);
+  const style=document.createElement('link');style.rel='stylesheet';style.href=new URL('./companion-menu.css?v=3.59',import.meta.url).href;style.dataset.companionStyle='';document.head.append(style);
  }
  const root=document.createElement('div');root.className='pw-companion';root.hidden=true;
  const toggle=document.createElement('button');toggle.className='pw-companion-toggle';toggle.type='button';toggle.setAttribute('aria-expanded','false');
@@ -50,7 +50,7 @@ export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
   if(!xr&&enabled){
    const canvas=document.createElement('canvas');canvas.width=768;canvas.height=640;
    const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
-   const material=new T.MeshBasicMaterial({map:texture,side:T.DoubleSide,toneMapped:false});
+   const material=new T.MeshBasicMaterial({map:texture,side:T.DoubleSide,transparent:true,toneMapped:false});
    const mesh=new T.Mesh(new T.PlaneGeometry(1,1),material);mesh.name='Compétences / pupitre au poignet gauche';mesh.frustumCulled=false;scene.add(mesh);
    xr={canvas,texture,mesh,dirty:true,pressed:!!trigger,enabled:false,ray:new T.Raycaster(),origin:new T.Vector3(),direction:new T.Vector3(),q:new T.Quaternion()};
   }
@@ -76,14 +76,14 @@ export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
    xr.dirty=true;
   }
   if(xr.dirty){
-   const c=xr.canvas.getContext('2d'),s=getStatus();c.fillStyle='#111c20';c.fillRect(0,0,768,640);
+   const c=xr.canvas.getContext('2d'),s=getStatus();c.clearRect(0,0,768,640);c.fillStyle='#101c29';c.beginPath();c.roundRect(0,0,768,640,40);c.fill();
    const tint='#'+s.color.toString(16).padStart(6,'0');c.fillStyle=tint;
    if(open){c.fillRect(0,0,12,640);c.font='bold 46px sans-serif';c.fillText(s.name.toUpperCase(),38,66);}
    else paintCompanionPictogram(c,s.hero,{color:tint,size:350});
    if(open){
     c.fillStyle='#d0dedb';c.font='25px sans-serif';c.fillText('FERMER ×',568,58);c.font='24px sans-serif';
     c.fillText(s.unlocked?'ÉNERGIE '+s.energy+' / 100':'RENCONTRE À LA MISSION 7',36,128);
-    s.skills.forEach((skill,i)=>{const y=178+i*126;c.fillStyle=skill.enabled?'#344b50':'#222e32';c.fillRect(28,y,712,112);c.fillStyle=skill.enabled?'#e8f1eb':'#a1b2af';c.font='bold 27px sans-serif';c.fillText(skill.label,48,y+43,655);c.font='23px sans-serif';c.fillText(s.unlocked?(skill.remaining>0?Math.ceil(skill.remaining)+' s':'PRÊT'):'EN SOMMEIL',48,y+82);});
+    s.skills.forEach((skill,i)=>{const y=178+i*126;c.fillStyle=skill.enabled?'#344b50':'#222e32';c.beginPath();c.roundRect(28,y,712,112,30);c.fill();c.fillStyle=skill.enabled?'#e8f1eb':'#a1b2af';c.font='bold 27px sans-serif';c.fillText(skill.label,48,y+43,655);c.font='23px sans-serif';c.fillText(s.unlocked?(skill.remaining>0?Math.ceil(skill.remaining)+' s':'PRÊT'):'EN SOMMEIL',48,y+82);});
    }
    xr.texture.needsUpdate=true;xr.dirty=false;
   }

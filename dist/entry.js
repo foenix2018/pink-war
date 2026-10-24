@@ -34,13 +34,14 @@ function refresh(){
 const resumeButton=document.createElement('button');resumeButton.id='resume-mission';resumeButton.type='button';resumeButton.hidden=true;
 resumeButton.textContent='REPRENDRE AU POINT DE CONTRÔLE';resumeButton.style.cssText='margin-top:10px;padding:10px 0;background:none;border:0;border-bottom:1px solid #84958d;color:#dce8e1;font:600 11px system-ui;letter-spacing:.05em;cursor:pointer';
 $('play-button').after(resumeButton);
-function openMission(mission,{resume=false}={}){
+function openMission(mission,{resume=false,vr=false}={}){
   loading=true;refresh();save();for(const d of document.querySelectorAll('dialog[open]'))d.close();
   const cover=createMissionLoading({mission,characterId:character});cover.set(.04,'Ouverture du secteur');
   const target=mission===2?'./level2-test.html':'./vesper-level1-v7.html';
   const url=new URL(target,location.href);url.searchParams.set('source','campaign');url.searchParams.set('autostart','1');url.searchParams.set('character',character);url.searchParams.set('v',GAME_VERSION);
   if(mission===1)url.searchParams.set('prologue','done');
   if(resume)url.searchParams.set('resume','1');
+  if(vr)url.searchParams.set('vr','1');
   if(new URLSearchParams(location.search).get('renderer')==='webgl')url.searchParams.set('renderer','webgl');
   if(settings.quality==='low')url.searchParams.set('quality',mission===2?'low':'performance');
   location.assign(url.href);
@@ -71,8 +72,7 @@ async function begin(intent='play',afterPrologue=false){
     return;
   }
   if(mode==='campaign2'){
-    if(intent==='vr'){showLaunchError(new Error('La mission 02 est actuellement disponible en mode écran PC / Mac. La version WebXR est en cours d’intégration.'),'niveau 2');return;}
-    openMission(2);return;
+    openMission(2,{vr:intent==='vr'});return;
   }
   loading=true;refresh();
   for(const d of document.querySelectorAll('dialog[open]'))d.close();
@@ -83,7 +83,7 @@ async function begin(intent='play',afterPrologue=false){
   if(settings.sound||settings.music!==false)try{const Audio=window.AudioContext||window.webkitAudioContext;
     window.__PINKWAR_BOOT_AUDIO ||=new Audio();window.__PINKWAR_BOOT_AUDIO.resume().catch(()=>{});}catch{}
   try{
-    modulePromise ||=import('./game.js?v=3.58');await modulePromise;
+    modulePromise ||=import('./game.js?v=3.59');await modulePromise;
     for(const d of document.querySelectorAll('dialog'))d.removeEventListener('cancel',earlyCancel);
     if(!window.__PINKWAR||window.__PINKWAR.snapshot().phase==='error')throw new Error('Initialisation interrompue.');
     loading=false;

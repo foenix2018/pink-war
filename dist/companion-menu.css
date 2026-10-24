@@ -1,14 +1,14 @@
 .pw-companion{--partner:#ff65b1;position:fixed;z-index:28;left:max(16px,env(safe-area-inset-left));top:43%;font-family:system-ui,sans-serif;color:#e9eded}
 .pw-companion[hidden]{display:none!important}
-.pw-companion-toggle{display:grid;place-items:center;width:48px;height:48px;padding:8px;border:1px solid #65726f;border-radius:13px;background:#111c20ed;color:var(--partner);cursor:pointer}
+.pw-companion-toggle{display:grid;place-items:center;width:48px;height:48px;padding:8px;border:1px solid #65726f;border-radius:24px;background:#152435ed;color:var(--partner);cursor:pointer}
 .pw-companion-toggle svg{display:block;width:29px;height:29px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
-.pw-companion-panel{position:absolute;left:0;top:0;transform:translateY(-35%);width:min(330px,calc(100vw - 32px));max-height:calc(100dvh - 36px);overflow:auto;background:#0f181cf5;border:1px solid #606967;border-top:2px solid var(--partner);border-radius:8px;box-shadow:0 12px 45px #0009;padding:18px;box-sizing:border-box}
+.pw-companion-panel{position:absolute;left:0;top:0;transform:translateY(-35%);width:min(330px,calc(100vw - 32px));max-height:calc(100dvh - 36px);overflow:auto;background:#101c29f5;border:1px solid #606967;border-top:2px solid var(--partner);border-radius:24px;box-shadow:0 12px 45px #0009;padding:18px;box-sizing:border-box}
 .pw-companion-panel[hidden]{display:none}
 .pw-companion-panel header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #3b4748;padding-bottom:12px;margin-bottom:12px}
 .pw-companion-panel h2{margin:0;color:var(--partner);font-size:19px;letter-spacing:.09em}
 .pw-companion-panel header button{border:1px solid #52605f;background:#192326;color:#fff;border-radius:4px;min-width:36px;min-height:36px;cursor:pointer}
 .pw-companion-status{font-size:12px;line-height:1.5;color:#b7c4c2;margin:10px 0 14px}
-.pw-companion-skill{display:block;width:100%;text-align:left;border:1px solid #526260;background:#1b282b;color:#eef3ef;border-radius:5px;padding:12px;margin-top:8px;cursor:pointer}
+.pw-companion-skill{display:block;width:100%;text-align:left;border:1px solid #526260;background:#243447aa;color:#eef3ef;border-radius:20px;padding:12px;margin-top:8px;cursor:pointer}
 .pw-companion-skill:focus-visible,.pw-companion-toggle:focus-visible{outline:2px solid var(--partner);outline-offset:3px}
 .pw-companion-skill:disabled{cursor:default;background:#151f22;color:#9caaa8;border-color:#354445}
 .pw-companion-skill strong{display:block;font-size:13px;font-weight:650}

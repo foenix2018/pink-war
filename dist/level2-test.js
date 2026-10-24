@@ -24,9 +24,13 @@ import {createFireBuffer} from './fire-input.js';
 import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
 import {createMissionLoading} from './mission-loading.js';
+import {createPauseMenu} from './fracture-menu.js';
+import {createMissionXR,immersiveRendererPreferred} from './mission-xr.js';
+import {createGlove} from './hands.js';
 
 const $=id=>document.getElementById(id);
 const characterId=new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju';
+document.documentElement.dataset.universe=characterId==='lylu'?'blue':'pink';
 const main=$('game'),shade=$('shade'),startButton=$('start'),status=$('status');
 const autoMission=new URLSearchParams(location.search).get('manual')!=='1';
 const missionLoading=autoMission?(window.__PINKWAR_MISSION_LOADING||createMissionLoading({mission:2,characterId})):null;
@@ -42,6 +46,9 @@ let jumpQueued=false,crouchQueued=false,firePressQueued=false,weaponReady=false,
 const weaponFeel=createWeaponFeel(),pinkControls=createPinkWarsInput();
 const fireInput=createFireBuffer();
 let enableAudio=true;try{enableAudio=JSON.parse(localStorage.getItem('rosee-settings')||'{}').sound!==false;}catch{}
+let xr=null,fallbackGun=null,fallbackHand=null;
+const pauseMenu=createPauseMenu({title:'HISTOIRE / SOUS LES NÉONS',canOpen:()=>started,
+ onPause:()=>pauseMission(),onResume:()=>unpauseMission(),onVR:()=>xr?.enter(),onHome:async()=>{await xr?.exit();location.assign('./index.html');}});pauseMenu.setVisible(false);
 let combatEffects=null,companion=null,environmentAudio=null;
 let companionSkills=null,skillMenu=null;
 function audioReady(){
@@ -377,6 +384,7 @@ function setupPlayer(){
  const heroGlow=lylu?glow(0x4da8ff):glow(0xff4fa1);
  const pm={...materials,armor:mat(lylu?0x356fa6:0xb64472,.38,.72),armorLight:mat(lylu?0xb6d9e8:0xdec3cf,.35,.68),steel:materials.iron,rose:heroGlow,pale:materials.white,violet:materials.blue};
  const gloves={fabric:mat(0x222736,.9,.08),plate:pm.armor,trim:pm.armorLight,glow:heroGlow,accent:materials.cyan,metal:materials.iron};
+ fallbackGun=()=>buildGun({mats:pm,gloves,sleeve:false,makeFlash:parent=>{const f=new T.Mesh(new T.SphereGeometry(.06,8,6),heroGlow);parent.add(f);return f;}});fallbackHand=()=>createGlove(gloves,{sleeve:false});
  // The high-detail weapon is optional: a shader/GLB issue must not stop the mission.
  try {
   weapon=buildGun({mats:pm,gloves,makeFlash:()=>{const o=new T.Mesh(new T.SphereGeometry(.07,8,6),heroGlow);o.visible=false;return o;}});
@@ -431,6 +439,7 @@ function interact(){
  else if(stage===3){running=false;document.exitPointerLock?.();showChapter2Finale({characterId,onReplay:resume});}
 }
 function snapCamera(){
+ if(xr?.active){xr.syncPose();return;}
  const p=game.player,eye=characterId==='lylu'?1.71:1.61,optic=OPTICS[game.weapon.id],normal=view==='fps'?72:64;
  camera.fov=normal+(optic?(magnifiedFov(normal,optic.magnification)-normal)*aimBlend:0);
  camera.rotation.set(pitch+weaponFeel.state.pitch*.18,yaw+weaponFeel.state.yaw*.07,0,'YXZ');
@@ -474,12 +483,12 @@ function pauseMission(){
  if(!running||paused)return;
  paused=true;running=false;heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
  touchControls?.reset();pinkControls.reset();document.exitPointerLock?.();
- shade.style.display='grid';$('start').textContent='REPRENDRE LA MISSION →';
+ pauseMenu.show();$('start').textContent='REPRENDRE LA MISSION →';
  $('status').textContent='PAUSE · PINK WARS / NIVEAU 2';
 }
 function unpauseMission(){
  if(!paused)return;paused=false;running=true;shade.style.display='none';
- if(!touchControls?.root)canvas.requestPointerLock?.().catch?.(()=>{});
+ pauseMenu.hide(false);if(!touchControls?.root&&!xr?.active)canvas.requestPointerLock?.().catch?.(()=>{});
 }
 async function loadAuthenticSoldier(){
  if(weaponReady)return;weaponReady=true;
@@ -525,7 +534,8 @@ function updateEnemies(dt){
 }
 let heldFire=false;
 function gameTick(dt){
- const controls=pinkControls.read(dt,keys,navigator.getGamepads?.()||[],{focused:!document.hidden});
+ const xc=xr?.active?xr.controls:null;
+ const controls=xc?{moveX:xc.x,moveZ:xc.z,lookX:0,lookY:0,jump:xc.jump,interact:xc.interact,aim:xc.aim,fire:xc.fire,sprint:xc.sprint}:pinkControls.read(dt,keys,navigator.getGamepads?.()||[],{focused:!document.hidden});
  if(controls.companion)skillMenu?.setOpen(!skillMenu.isOpen);
  if(skillMenu?.isOpen)return;
  const touch=touchControls?.state||{x:0,z:0,lookX:0,lookY:0,fire:false,aim:false};
@@ -549,7 +559,7 @@ function gameTick(dt){
  if(jumpQueued)game.player.jumpHeld=false;
  const jump=controls.jump||jumpQueued;jumpQueued=false;
  game.nextWave=Infinity;game.toSpawn=0;
- game.step(dt,{x,z,yaw,moveYaw:yaw,sprint,jump,crouchToggle});
+ game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,sprint,jump,crouchToggle});
  weaponFeel.update(dt);
  snapCamera();
  if(firePressQueued)fireInput.press(game.time);
@@ -576,11 +586,12 @@ function gameTick(dt){
   catch{origin.copy(camera.position).addScaledVector(forward,.23);}
  }else origin.copy(camera.position).addScaledVector(forward,.23);
  const shotDirection=target.clone().sub(origin).normalize();
- const aim={origin,direction:shotDirection};
+ const aim=xr?.active?xr.aim():{origin,direction:shotDirection};
  if(game.weapon.semiAuto&&firePressQueued)game.triggerHeld=false;
  firePressQueued=false;
  const ammoBefore=game.ammo[game.weaponIndex],bladeBefore=game.bladeSlashAt;
- if(firing||game.charge>0)game.trigger(firing,dt,aim.origin,aim.direction);
+ if(xr?.active&&game.weapon.dual){for(const hand of ['right','left']){const a=xr.aim(hand);game.triggerHand(hand,hand==='right'?xc.fire:xc.leftFire,dt,a.origin,a.direction);}}
+ else if(firing||game.charge>0)game.trigger(firing,dt,aim.origin,aim.direction);
  else if(game.weapon.melee)game.trigger(false,dt,aim.origin,aim.direction);
  else{game.triggerHeld=false;game.semiPending=false;}
  if(game.ammo[game.weaponIndex]<ammoBefore||game.bladeSlashAt!==bladeBefore)fireInput.consume();
@@ -589,6 +600,7 @@ function gameTick(dt){
  for(const e of events){
   combatEffects?.event(e);
   if(e.type==='shot'){
+    xr?.haptic('shot',e.weapon,e.hand);
     weaponFeel.fire(e.weapon||game.weapon.id,e.power||1,aimBlend>.5);
     weaponKick=Math.min(.25,weaponKick+.085);
     if(enableAudio&&audioCtx)try{playLaserShot(audioCtx,e.weapon||game.weapon.id,e.power||1);}catch{}
@@ -644,10 +656,12 @@ function updateHUD(){
  if(clock>noticeUntil)$('notice').style.display='none';
  $('crosshair').style.filter=clock<hitUntil?'drop-shadow(0 0 7px #ffffff) brightness(3)':'';
 }
-function animation(t){
- requestAnimationFrame(animation);
+function animation(t,frame){
+ if(xr?.active&&!frame)return;
+ if(!xr?.active)requestAnimationFrame(animation);
  const dt=Math.min(.040,Math.max(0,(t-last)/1000));last=t;
  if(!renderer||!scene)return;
+ if(xr?.active)xr.input(frame,dt);
  skillMenu?.setVisible(started&&running);
  clock+=dt;
  // Subtle transformer instability, without extra lights or shadow maps.
@@ -663,6 +677,7 @@ function animation(t){
   running=false;shade.style.display='grid';status.textContent='Erreur de mission : '+(error?.message||String(error));
   startButton.disabled=false;startButton.textContent='RECOMMENCER LE NIVEAU 2 →';
  }
+ if(xr?.active){xr.update(dt,weaponFeel.state,weaponKick>.025?.075:0);xr.renderScope();}
  if(scene&&camera&&!framePending&&!recovering){
    try{
      const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);
@@ -704,7 +719,7 @@ async function boot(){
  bootStep='initialisation graphique';status.textContent='Préparation du secteur et du moteur existant…';startButton.disabled=true;
  try{
   const environment={userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu};
-  const profile=graphicsProfile(environment,low()?'low':'auto',new URLSearchParams(location.search).get('renderer')==='webgl'||low());
+  const profile=graphicsProfile(environment,low()?'low':'auto',new URLSearchParams(location.search).get('renderer')==='webgl'||low()||await immersiveRendererPreferred());
   if(profile.phone&&!new URLSearchParams(location.search).has('quality'))quality.value='low';
   const prepared=await createCompatibleRenderer({canvas,WebGPU:T.WebGPURenderer,WebGL:WebGLRenderer,profile});
   missionLoading?.set(.28,'Construction des Bas-Niveaux');
@@ -719,6 +734,7 @@ async function boot(){
   missionLoading?.set(.52,'Quartier et voies de transit prêts');
   bootStep='jouabilité';status.textContent='Installation des commandes et des armes…';
   setupPlayer();resize();
+  xr=createMissionXR({getWorld:()=>({T,scene,camera,renderer,game,weapon,soldier:playerRig?.model.root,obstacles:collisions,accent:characterId==='lylu'?'#80baff':'#ef91b4',createGun:()=>playerRig?.createGun({sleeve:false})||fallbackGun(),createHand:()=>playerRig?createGlove(playerRig.kit.gloves,{sleeve:false}):fallbackHand()}),getYaw:()=>yaw,setYaw:value=>{yaw=value;},onFrame:animation,isPaused:()=>paused||game.state!=='playing',onPause:pauseMission,onResume:()=>{unpauseMission();pauseMenu.hide(false);},onHome:()=>location.assign('./index.html'),onExit:()=>{snapCamera();resize();requestAnimationFrame(animation);},skillsInput:args=>skillMenu?.xrInput(args)});
   missionLoading?.set(.66,'Commandes et équipements');
   const useWebGL=!!renderer.isWebGLRenderer;
   bootStep='matériaux';
@@ -745,7 +761,9 @@ async function boot(){
    onAim:down=>{if(down)audioReady();mouseAim=down;}
   });
   resume();
+  pauseMenu.setVisible(true);
   if(missionLoading){await missionLoading.finish();document.documentElement.classList.remove('pw-auto-story');}
+  if(new URLSearchParams(location.search).get('vr')==='1'){pauseMenu.show();pauseMenu.status('Le secteur est prêt. Choisissez « Passer en VR » pour autoriser le casque.');}
   // Authentic production character is loaded after the first playable frame.
   // If decoding a dense rig fails, the mission keeps functioning.
   void loadAuthenticSoldier();
@@ -830,7 +848,7 @@ for(const name of ['pointerup','pointercancel']){
  window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
 }
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
-window.__PINK_M02=Object.freeze({snapshot:()=>({revision:'3.58',running,stage,characterId,health:game?.player.hp,
+window.__PINK_M02=Object.freeze({snapshot:()=>({revision:'3.59',running,paused,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
  backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,
  effects:combatEffects?.stats()})});

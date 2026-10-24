@@ -130,7 +130,7 @@ function selectCharacter(id,save=true){
   $('character-description').innerHTML=character.masculine?'LYLU. Séparé de sa sœur GHJU pendant la chute.<br class="desktop-break">Dans les ruines, les machines veillent encore.':'GHJU. Séparée de son frère LYLU pendant la chute.<br class="desktop-break">Dans les ruines, les machines veillent encore.';
   $('help-character').textContent=`BRIEFING / ${character.name}`;$('help-color').textContent=`Du ${character.colorWord}.`;
   $('pause-character').textContent=`${character.name} / EN ATTENTE`;
-  $('pause-title').innerHTML=`Une petite<br>pause ${character.masculine?'azurée':'rosée'}.`;
+  $('pause-title').textContent='En pause.';
   $('outfit-character').textContent=`ATELIER / ${character.name}`;
   $('outfit-button').ariaLabel=`Voir les armures et accessoires de ${character.name}`;
   $('outfit-rotation').ariaLabel=`Faire tourner ${character.name}`;
@@ -793,6 +793,7 @@ function stepFrame(timestamp, xrFrame) {
 }
 
 vr = new VRController({
+  home,
   toggleSkills:()=>skillMenu?.setOpen(!skillMenu.isOpen),
   skillsInput:controller=>skillMenu?.xrInput({T:world.T,scene:world.scene,camera:world.renderer.xr.getCamera(world.camera),
     left:controller.controllers.find(c=>c.tracked&&c.ray.userData.source?.handedness==='left')?.anchor,
@@ -806,6 +807,7 @@ vr = new VRController({
   webGL:async()=>{ if(!world.renderer.isWebGLRenderer){recovering=true;world.renderer.setAnimationLoop(null);try{world=await world.recover();game?.replaceObstacles(world.obstacles);window.dispatchEvent(new CustomEvent('rosee-renderer-recovered'));}finally{recovering=false;lastTime=0;world.renderer.setAnimationLoop(frame);}} },
   afterExit:()=>{ resetInput();lastTime=0;updateHud();updateCamera();if(phase==='paused')$('pause-dialog').showModal();else if(phase==='over')$('end-dialog').showModal(); }
 });
+$('pause-vr').onclick=()=>vr.open();
 try {
   world = await createScene($('world'), settings.quality,false,character.id);world.setCharacter(character.id);game = new ArenaGame(world.obstacles,Math.random,null,character.id);
   $('renderer-label').textContent = `${world.backend.toUpperCase()} · CONÇU POUR LE TACTILE`;

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><link rel="stylesheet" href="./mission-loading.css?v=3.58"><script>document.documentElement.classList.toggle('pw-auto-story',!new URLSearchParams(location.search).has('visit'));</script>
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><link rel="stylesheet" href="./mission-loading.css?v=3.59"><script>document.documentElement.classList.toggle('pw-auto-story',!new URLSearchParams(location.search).has('visit'));</script>
 <title>PINK WARS — LA FRACTURE · Le Dernier Signal</title><style>
 :root{font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Arial,sans-serif;color:#e9f3f8;background:#081019;--pink:#ec4c91;--cyan:#7ad7fb;--line:rgba(156,187,205,.19)}
 *{box-sizing:border-box}html,body{height:100%;margin:0;overflow:hidden}body{background:#07111b;touch-action:none}button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,select:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}canvas#view{position:fixed;inset:0;width:100%;height:100%;display:block;outline:none;background:linear-gradient(#354a5a,#121e2b 65%,#121417)}
@@ -73,7 +73,8 @@ body:not(.rainOn) #rainCurtain{display:none}
  #game #prompt{top:46%}
 }
 .photoMode #quickSettings,.photoMode #quickObjective{display:none!important}
-</style></head><body>
+</style><link rel="stylesheet" href="fracture.css?v=3.59">
+</head><body>
 <canvas id="view" aria-label="Environnement 3D de Vesper"></canvas>
 <div id="rainCurtain"></div><div id="game" aria-label="Commandes de la visite 3D"><div id="vignette"></div>
  <div class="top"><div><div class="logo"><em>PINK</em> WARS <span style="font-size:10px;color:#a9c9d9;letter-spacing:.1em">/ VISITE 3D</span></div><div class="smallcap">VESPER / LE DERNIER SIGNAL / SECTEUR 03</div></div><div class="topright"><div class="chip"><span class="dot"></span><strong id="renderer">INITIALISATION</strong> <span id="fps">— FPS</span></div><div id="cameraMode" class="chip">EXPLORATION</div></div></div>
@@ -1711,9 +1712,10 @@ function initCombatUI(){const sheet=document.createElement('style');sheet.textCo
 let padFiring=false;
 function pollGamepad(dt){const devices=navigator.getGamepads?.()||[],gp=combatWorld?combatWorld.gamepad(devices):Array.from(devices).find(Boolean);gamepadMove.x=0;gamepadMove.y=0;padLook.x=0;padLook.y=0;padRun=false;gamepadAiming=false;padFiring=false;if(!gp){lastGamepadButtons=[];return;}
  const d=v=>Math.abs(v)>.14?v:0, btn=i=>gp.buttons[i]?.pressed||false,edge=i=>btn(i)&&!lastGamepadButtons[i];
+ if(missionMenu?.isOpen){lastGamepadButtons=gp.buttons.map(b=>b.pressed);return;}
  gamepadMove.x=d(gp.axes[0]||0);gamepadMove.y=d(gp.axes[1]||0);padLook.x=d(gp.axes[2]||0);padLook.y=d(gp.axes[3]||0);padRun=btn(10);gamepadAiming=btn(6);
  if(!combatWorld?.paused){yaw+=padLook.x*dt*1.9;pitch=clamp(pitch-padLook.y*dt*1.55,-1.46,1.46);}
- if(edge(12))combatWorld?.toggleSkills();padFiring=btn(7);if(edge(0))jumpQueued=true;if(edge(2))reloadWeapon();if(edge(3))changeWeapon(1);if(edge(1))crouching=!crouching;if(edge(11)){document.getElementById('help').classList.remove('show');interact();}if(edge(9)){gamePaused=!gamePaused;combatWorld?.pause();}
+ if(edge(12))combatWorld?.toggleSkills();padFiring=btn(7);if(edge(0))jumpQueued=true;if(edge(2))reloadWeapon();if(edge(3))changeWeapon(1);if(edge(1))crouching=!crouching;if(edge(11)){document.getElementById('help').classList.remove('show');interact();}if(edge(9))toggleMissionPause();
  lastGamepadButtons=gp.buttons.map(b=>b.pressed);
 }
 
@@ -1736,7 +1738,7 @@ function inputSetup(){
   if(ev.code==='KeyJ')jumpQueued=true;
   if(ev.code==='Space')shoot();
   if(ev.code==='KeyC'||ev.code==='ControlLeft')crouching=!crouching;
-  if(ev.code==='Escape'){gamePaused=!gamePaused;combatWorld?.pause();notify(gamePaused?'PAUSE — Échap pour reprendre':'REPRISE',1300);}
+  if(ev.code==='Escape')toggleMissionPause();
 
  });
  document.addEventListener('keyup',ev=>keys.delete(ev.code));
@@ -1763,7 +1765,7 @@ function inputSetup(){
  for(const [id,label,description,action] of [
   ['btnReloadMobile','↻','Recharger',reloadWeapon],
   ['btnNextMobile','ARME','Arme suivante',()=>changeWeapon(1)],
-  ['btnPauseMobile','Ⅱ','Pause / reprendre',()=>{gamePaused=!gamePaused;combatWorld?.pause();document.getElementById('btnPauseMobile').textContent=gamePaused?'▶':'Ⅱ';}]
+  ['btnPauseMobile','Ⅱ','Pause / reprendre',toggleMissionPause]
  ]){const button=document.createElement('button');button.id=id;button.textContent=label;button.setAttribute('aria-label',description);button.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();action();});actions.append(button);}
  $('quality').value=quality;
  $('quality').addEventListener('change',e=>{quality=e.target.value;if(combatWorld){const url=new URL(location.href);url.searchParams.set('quality',quality);location.assign(url.href);}else resize();});
@@ -1807,7 +1809,7 @@ function sceneUI(t){if(t-lastUiTime<180)return;lastUiTime=t;
  if(noticeTime&&t>noticeTime){$('toast').classList.remove('show');noticeTime=0;}
 }
 let lastUiTime=0;
-function render(t){if(!started)return;const sec=t/1000,dt=Math.min(.045,(t-last)/1000||.016);last=t;
+function render(t){if(!started)return;if(combatWorld?.xrActive){requestAnimationFrame(render);return;}const sec=t/1000,dt=Math.min(.045,(t-last)/1000||.016);last=t;
  pollGamepad(dt);
  if(!gamePaused&&!combatWorld?.paused){
   if(keys.has('ArrowRight'))yaw+=dt*1.4;if(keys.has('ArrowLeft'))yaw-=dt*1.4;
@@ -1881,16 +1883,19 @@ function toggleSurfaceMode(value){
  else{cc0Attempted=false;applyCC0Materials(true);}
 }
 
-let missionLoading=null;
+let missionLoading=null,missionMenu=null;
+function toggleMissionPause(){if(missionMenu){missionMenu.isOpen?missionMenu.hide():missionMenu.show();}else{gamePaused=!gamePaused;combatWorld?.pause();}}
 async function boot(){try{
- if(!referenceVisit){const {createMissionLoading}=await import('./mission-loading.js?v=3.58');missionLoading=createMissionLoading({mission:1,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});missionLoading.set(.08,'Chargement du scénario');}
- showVesperPrologue=(await import('./story-prologue.js?v=3.58')).showStoryPrologue;
+ if(!referenceVisit){const {createMissionLoading}=await import('./mission-loading.js?v=3.59');missionLoading=createMissionLoading({mission:1,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});missionLoading.set(.08,'Chargement du scénario');}
+ showVesperPrologue=(await import('./story-prologue.js?v=3.59')).showStoryPrologue;
  $('bootInfo').textContent='Construction de la mégalopole, bâtiments, détails et navigation…';
  await new Promise(r=>setTimeout(r,80));
  if(referenceVisit)buildScene();const atlas=createAtlas();const materialAtlas=referenceVisit?await v5LoadMaterial():null;
  $('bootInfo').textContent='Initialisation du moteur WebGPU…';
  if(!new URLSearchParams(location.search).has('visit')){
-  const {createVesperCombat}=await import('./vesper-combat.js?v=3.58');missionLoading?.set(.16,'Ressources du secteur chargées');
+  const {createPauseMenu}=await import('./fracture-menu.js?v=3.59');
+  missionMenu=createPauseMenu({title:'HISTOIRE / LE DERNIER SIGNAL',canOpen:()=>started,onPause(){gamePaused=true;combatWorld?.pause();keys.clear();firing=false;isAiming=false;},onResume(){gamePaused=false;},onVR:()=>combatWorld?.enterVR(),onHome:async()=>{await combatWorld?.exitVR();location.assign('./index.html');}});missionMenu.setVisible(false);
+  const {createVesperCombat}=await import('./vesper-combat.js?v=3.59');missionLoading?.set(.16,'Ressources du secteur chargées');
   let renderFailed=false;
   const fail=error=>{
    console.warn('Vesper / échec du rendu, repli compatible :',error);
@@ -1901,8 +1906,8 @@ async function boot(){try{
   };
   combatWorld=await createVesperCombat({canvas,staticMesh,portalMesh,signAtlas:atlas,collide,stairs,decks,interactions,notify,
    setPlayer:p=>{position.x=p.x;position.y=p.elevation+eyeHeight;position.z=p.z;grounded=p.grounded;},
-    getState:()=>({input:{x:Number(keys.has('KeyD'))-Number(keys.has('KeyA')||keys.has('KeyQ'))+touch.moveX+gamepadMove.x,z:Number(keys.has('KeyS'))-Number(keys.has('KeyW')||keys.has('KeyZ'))+touch.moveY+gamepadMove.y,jump:jumpQueued||keys.has('KeyJ'),sprint:touch.sprint||padRun||keys.has('ShiftLeft')},position,yaw,pitch,aiming:isAiming||gamepadAiming,crouching,grounded,sprint:touch.sprint||padRun||keys.has('ShiftLeft'),free:isFree,day:timeOfDay,shadows:shadowsEnabled,quality,flashlight}),
-   onProgress:(value,label)=>missionLoading?.set(value,label),onCanvas:value=>{canvas=value;},onFailure:fail,onMenuChange:()=>{keys.clear();firing=false;padFiring=false;touch.moveX=touch.moveY=0;touch.sprint=false;gamepadMove.x=gamepadMove.y=0;isAiming=false;}});
+    getState:()=>({input:{x:Number(keys.has('KeyD'))-Number(keys.has('KeyA')||keys.has('KeyQ'))+touch.moveX+gamepadMove.x,z:Number(keys.has('KeyS'))-Number(keys.has('KeyW')||keys.has('KeyZ'))+touch.moveY+gamepadMove.y,jump:jumpQueued||keys.has('KeyJ'),sprint:touch.sprint||padRun||keys.has('ShiftLeft')},position,yaw,pitch,aiming:isAiming||gamepadAiming,crouching,grounded,sprint:touch.sprint||padRun||keys.has('ShiftLeft'),free:isFree,menuPaused:gamePaused,day:timeOfDay,shadows:shadowsEnabled,quality,flashlight}),
+   onPauseRequest:()=>missionMenu?.show(),onResumeRequest:()=>missionMenu?.hide(),onHeading:heading=>{yaw=-heading;},onProgress:(value,label)=>missionLoading?.set(value,label),onCanvas:value=>{canvas=value;},onFailure:fail,onMenuChange:()=>{keys.clear();firing=false;padFiring=false;touch.moveX=touch.moveY=0;touch.sprint=false;gamepadMove.x=gamepadMove.y=0;isAiming=false;}});
   renderer=combatWorld;gpuKind=renderer.kind;
   document.body.classList.add('pw-live-combat');
    document.querySelector('#help h2').textContent='Le Dernier Signal';
@@ -1926,7 +1931,7 @@ function start(afterPrologue=false){if(started)return;
   let settings={};try{settings=JSON.parse(localStorage.getItem('rosee-settings')||'{}');}catch{}
   showVesperPrologue({characterId:params.get('character')==='lylu'?'lylu':'ghju',...settings,onComplete:()=>{const url=new URL(location.href);url.searchParams.set('prologue','done');history.replaceState(null,'',url);start(true);}});return;
  }
- started=true;combatWorld?.start();$('intro').classList.add('gone');if(!matchMedia('(pointer: coarse)').matches)canvas.requestPointerLock?.().catch?.(()=>{});last=performance.now();requestAnimationFrame(render);}
+ started=true;missionMenu?.setVisible(true);combatWorld?.start();$('intro').classList.add('gone');if(!matchMedia('(pointer: coarse)').matches)canvas.requestPointerLock?.().catch?.(()=>{});last=performance.now();requestAnimationFrame(render);}
 boot();
 </script><script>
 (() => {

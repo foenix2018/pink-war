@@ -1,0 +1,20 @@
+// Shared screen pause menu. A click requesting WebXR keeps its user activation.
+export function createPauseMenu({title='PINK WARS',onPause=()=>{},onResume=()=>{},onVR=()=>{},onHome=()=>location.assign('./index.html'),canOpen=()=>true,vrLabel='Passer en VR'}={}){
+ const dialog=document.createElement('dialog');dialog.className='fracture-pause';dialog.setAttribute('aria-label','Menu pause');
+ dialog.innerHTML='<p class="fracture-kicker"></p><h2>En pause.</h2><p class="fracture-description">Le monde attend votre retour.</p><div class="fracture-choices"><button data-pause-action="resume" class="fracture-primary">Reprendre <span>→</span></button><button data-pause-action="vr"></button><button data-pause-action="home">Retour à l’accueil</button></div><p class="fracture-status" role="status"></p>';
+ dialog.querySelector('.fracture-kicker').textContent=title;dialog.querySelector('[data-pause-action="vr"]').textContent=vrLabel;
+ const actions=document.createElement('nav');actions.className='fracture-session-actions';actions.setAttribute('aria-label','Pause et réalité virtuelle');
+ actions.innerHTML='<button data-session="vr" aria-label="Passer en VR" title="Passer en VR"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16l2 9-3 2h-4l-3-3-3 3H5l-3-2L4 7Z"/><circle cx="7" cy="12" r="2"/><circle cx="17" cy="12" r="2"/></svg><span>VR</span></button><button data-session="pause" aria-label="Menu pause" title="Menu pause"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14m8-14v14"/></svg></button>';
+ document.body.append(actions,dialog);let open=false,padFrame=0,previous=[];
+ function pollPad(){if(!open)return;const p=Array.from(navigator.getGamepads?.()||[]).find(p=>p?.mapping==='standard');const current=p?.buttons.map(b=>b.pressed)||[];const edge=i=>current[i]&&!previous[i];const choices=[...dialog.querySelectorAll('.fracture-choices button')];let index=Math.max(0,choices.indexOf(document.activeElement));if(edge(12)||edge(13)){index=(index+(edge(13)?1:choices.length-1))%choices.length;choices[index].focus();}if(edge(0))choices[index].click();if(edge(1)||edge(9))hide();previous=current;if(open)padFrame=requestAnimationFrame(pollPad);}
+ function show(){if(open||!canOpen())return;open=true;onPause();document.exitPointerLock?.();dialog.showModal();previous=Array.from(navigator.getGamepads?.()||[]).find(p=>p?.mapping==='standard')?.buttons.map(b=>b.pressed)||[];padFrame=requestAnimationFrame(pollPad);}
+ function hide(resume=true){if(!open)return;open=false;cancelAnimationFrame(padFrame);dialog.close();if(resume)onResume();}
+ function status(message){dialog.querySelector('.fracture-status').textContent=message;}
+ function enterVR(){show();try{Promise.resolve(onVR(status)).catch(error=>status(error?.message||'Le casque n’a pas pu démarrer.'));}catch(error){status(error.message);}}
+ dialog.querySelector('[data-pause-action="resume"]').onclick=()=>hide();dialog.querySelector('[data-pause-action="vr"]').onclick=enterVR;
+ dialog.querySelector('[data-pause-action="home"]').onclick=()=>{hide(false);onHome();};
+ actions.querySelector('[data-session="pause"]').onclick=()=>open?hide():show();actions.querySelector('[data-session="vr"]').onclick=enterVR;
+ dialog.addEventListener('cancel',e=>{e.preventDefault();hide();});
+ const key=e=>{if(e.code!=='Escape'||!canOpen()||document.querySelector('.pw-prologue')||(!open&&document.querySelector('dialog[open]')))return;e.preventDefault();e.stopImmediatePropagation();open?hide():show();};document.addEventListener('keydown',key,true);
+ return{dialog,actions,show,hide,status,get isOpen(){return open;},setVisible(value){actions.hidden=!value;},dispose(){document.removeEventListener('keydown',key,true);dialog.remove();actions.remove();}};
+}
