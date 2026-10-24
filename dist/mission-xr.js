@@ -40,7 +40,8 @@ export function createMissionXR({getWorld,onFrame,onPause,onResume,onHome,onExit
    const reload=edge('reload',down(rp?.buttons[5])),next=edge('next',down(lp?.buttons[5])),jump=edge('jump',down(rp?.buttons[4])),interact=edge('interact',down(lp?.buttons[3]));
    if(reading){menu.update({active:false});reading.update(w.camera,right?.ray,trigger);blocked=true;return controls={x:0,z:0,fire:false,leftFire:false,jump:false,aim:false,sprint:false};}
    const consumed=menu.update({active:isPaused(),camera:w.camera,ray:right?.ray,trigger});
-   const skillsConsumed=!isPaused()&&skillsInput({T,scene:w.scene,camera:w.camera,left:left?.anchor,right:right?.ray,trigger,enabled:!!right?.tracked});
+   if(consumed){blocked=true;controls={x:0,z:0,fire:false,leftFire:false,jump:false,aim:false,sprint:false};return controls;}
+   const skillsConsumed=!isPaused()&&skillsInput({T,scene:w.scene,camera:w.camera,left:left?.anchor,right:right?.ray,trigger:trigger&&!blocked,enabled:!!right?.tracked});
    if(consumed||skillsConsumed){blocked=true;controls={x:0,z:0,fire:false,leftFire:false,jump:false,aim:false,sprint:false};return controls;}
    if(isPaused()){blocked=true;return controls={x:0,z:0,fire:false,leftFire:false,jump:false,aim:false,sprint:false};}
    if(reload){w.game.reload();blocked=true;}if(next){w.game.cycleWeapon();blocked=true;}

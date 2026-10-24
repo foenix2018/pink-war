@@ -92,6 +92,7 @@ export class RoomGame extends ArenaGame {
   step(dt){
     if(!this.running||this.state!=='playing')return;
     if(!this.room.hasFloor()){this.roomPhase='scan';this.triggerHeld=false;this.bladePrevious=null;return;}
+    this.autoReload();
     dt=clamp(dt,0,.05);this.time+=dt;this.cooldown=Math.max(0,this.cooldown-dt);this.invulnerable=Math.max(0,this.invulnerable-dt);
     if(this.reloadRemaining>0){this.reloadRemaining=Math.max(0,this.reloadRemaining-dt);if(!this.reloadRemaining){this.refillWeapon();this.event('reloaded');}}
     this.regenerating=this.player.hp<100&&this.time-this.lastDamage>=REGEN_DELAY;if(this.regenerating)this.player.hp=Math.min(100,this.player.hp+18*dt);

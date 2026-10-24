@@ -1,5 +1,7 @@
 # Pink Wars — La Fracture
 
+Version 3.60 : reprise corrigée dans le menu pause VR de la campagne, sans fenêtre HTML cachée ni double bascule. La gâchette de reprise ne déclenche ni tir ni compétence. Rechargement automatique à vide pour GHJU, LYLU et les armes récupérées, y compris si un seul pistolet de GHJU est vidé. [Détails](docs/pink-wars/MISE_A_JOUR_360.md) · [Jouer](https://pink-war.vercel.app/?v=3.60).
+
 Version 3.59 : direction **Fracture** appliquée aux menus. Pause, retour à l’accueil et accès VR dans les modes jouables ; menu 3D sélectionnable au casque. Passage WebXR dans M01/M02 avec conservation de la partie. Pause AT HOME au clic du joystick droit, commandes de scan et maison visible conservées. [Détails et limites](docs/pink-wars/MISE_A_JOUR_359.md) · [Jouer](https://pink-war.vercel.app/?v=3.59).
 
 Version 3.58 : pictogrammes Gaby/Cara sur le HUD et au poignet VR ; fin du prologue suivie du chargement illustré puis du jeu, sans second écran de confirmation. Reprise M01 accessible à l’accueil. Trois directions de menus à comparer avant la refonte globale. [Détails](docs/pink-wars/MISE_A_JOUR_358.md) · [Comparer les menus](https://pink-war.vercel.app/menus-concepts.html?v=3.58) · [Jouer](https://pink-war.vercel.app/?v=3.58).

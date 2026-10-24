@@ -164,7 +164,7 @@ export class VRController {
   // A static canvas guide is attached to the tracked head and shown only during pause.
   makePauseBoard(){
     if(this.pauseBoard||this.mode!=='xr')return;
-    this.fracturePause=createXRPauseMenu(this.hooks.world().T,this.hooks.world().scene,{accent:this.hooks.world().character?.accent,onResume:()=>{this.cancelTrigger();this.hooks.togglePause();},onHome:()=>this.hooks.home?.(),onExit:()=>void this.exit()});
+    this.fracturePause=createXRPauseMenu(this.hooks.world().T,this.hooks.world().scene,{accent:this.hooks.world().character?.accent,onResume:()=>{this.cancelTrigger();if(this.hooks.phase()==='paused'){if(this.hooks.resume)this.hooks.resume();else this.hooks.togglePause();}},onHome:()=>this.hooks.home?.(),onExit:()=>void this.exit()});
     const {T,camera}=this.hooks.world(),canvas=document.createElement('canvas');
     canvas.width=1024;canvas.height=768;
     const ctx=canvas.getContext('2d');
@@ -476,7 +476,7 @@ export class VRController {
       if (!xr) { edge('pause', DESKTOP_BUTTONS.pause); edge('jump', DESKTOP_BUTTONS.jump); edge('pickup', DESKTOP_BUTTONS.interact); edge('crouch', DESKTOP_BUTTONS.crouch);edge('companion',DESKTOP_BUTTONS.companion); }
     }
     const pauseConsumed=xr&&this.fracturePause?.update({active:phase==='paused',camera:this.hooks.world().camera,ray:controllerOf(this,'right')?.ray,trigger:pressed(padOf(this,'right')?.buttons?.[0])});
-    if(pauseConsumed){this.cancelTrigger();if(actions.has('pause'))this.hooks.togglePause();return {...result,x:0,z:0,turn:0,tilt:0,fire:false,fireHands:{left:false,right:false},jump:false,pickup:false,crouchToggle:false};}
+    if(pauseConsumed){this.cancelTrigger();if(actions.has('pause')&&this.hooks.phase()===phase)this.hooks.togglePause();return {...result,x:0,z:0,turn:0,tilt:0,fire:false,fireHands:{left:false,right:false},jump:false,pickup:false,crouchToggle:false};}
     if (actions.has('pause')) { this.hooks.togglePause(); if (xr) this.cancelTrigger(); }
     else if(actions.has('companion'))this.hooks.toggleSkills?.();
     else if (phase === 'over' && actions.has('reload') && xr) { this.hooks.begin(); this.cancelTrigger(); }

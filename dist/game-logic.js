@@ -411,6 +411,11 @@ export class ArenaGame {
     this.emitNoise('reload',NOISE_RADIUS.reload);
     this.event('reload', { duration: this.reloadRemaining }); return true;
   }
+  autoReload(){
+    if(this.weapon.melee||this.state!=='playing'||this.reloadRemaining>0)return false;
+    const empty=this.ammo[this.weaponIndex]<=0||(this.weapon.dual&&(this.dual.ammo.left<=0||this.dual.ammo.right<=0));
+    return empty?this.reload():false;
+  }
   beginWave() {
     if ((!this.endless && this.wave >= MAX_LEVEL) || this.state !== 'playing') return;
     this.wave++; this.toSpawn = levelCount(this.wave); this.spawned = 0;
@@ -598,6 +603,7 @@ export class ArenaGame {
   }
   step(dt, input = {}) {
     if (this.state !== 'playing') return;
+    this.autoReload();
     dt = clamp(dt, 0, .05); const previousTime=this.time;this.time += dt;this.updateLifts(previousTime);
     this.cooldown = Math.max(0, this.cooldown - dt); this.invulnerable = Math.max(0, this.invulnerable - dt);
     if (this.reloadRemaining > 0) {
