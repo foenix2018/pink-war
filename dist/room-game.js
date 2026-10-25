@@ -2,7 +2,7 @@ import { ArenaGame, WEAPONS, MAX_LEVEL, REGEN_DELAY, levelCount, traceEnemyHit, 
 import {tacticalOrder,grenadeAvoidance} from './tactical-enemies.js';
 import {squadOrder,relayVisualContact,clearSquadFiringLane} from './enemy-squads.js';
 import {segmentBox} from './game-logic.js';
-import { enemyDurability, enemyVolley, rangedMuzzle, enemyScale } from './enemy-combat.js';
+import { enemyDurability, enemyVolley, rangedMuzzle, enemyScale, enemySightPoint, remembersCoverContact } from './enemy-combat.js';
 import { bladeBulletContact, reflectedVelocity, sweepBlade } from './blade-combat.js';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mix=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
@@ -32,7 +32,7 @@ export class RoomGame extends ArenaGame {
     if(!this.room)return [];
     const heard=[];for(const e of this.enemies){const ear={x:e.x,y:e.elevation+e.aimHeight,z:e.z};
       const reach=Math.min(12,radius)*(e.form==='listener'?1.5:1)*(this.blocked(position,ear)?.4:1);
-      if(Math.hypot(ear.x-position.x,ear.y-position.y,ear.z-position.z)<reach){e.lastKnownX=position.x;e.lastKnownZ=position.z;e.alertedUntil=this.time+6;heard.push(e.id);}}
+      if(Math.hypot(ear.x-position.x,ear.y-position.y,ear.z-position.z)<reach){e.lastKnownX=position.x;e.lastKnownZ=position.z;e.lastHeardAt=this.time;e.alertedUntil=this.time+6;heard.push(e.id);}}
     return heard;
   }
   beginWave(){
@@ -111,19 +111,20 @@ export class RoomGame extends ArenaGame {
   moveEnemies(dt){
     const coverBoxes=this.room.coverBoxes?.()||[];
     for(const e of this.enemies){
-      const eye={x:e.x,y:e.elevation+e.aimHeight-.52*(e.coverCrouch||0)*enemyScale(e.form,e.elite)*(e.roomScale||1),z:e.z},seen=!this.blocked(eye,this.head),distance=Math.hypot(this.head.x-e.x,this.head.z-e.z);
-      e.awareness=seen?'engaged':e.alertedUntil>this.time?'search':'patrol';
-      if(seen){e.lastKnownX=this.head.x;e.lastKnownZ=this.head.z;e.lastKnownHeight=this.player.elevation;e.alertedUntil=this.time+10;}
-      let target=seen?this.head:e.alertedUntil>this.time?{x:e.lastKnownX,z:e.lastKnownZ}:null;
+      const eye=enemySightPoint(e),seen=!this.blocked(eye,this.head),distance=Math.hypot(this.head.x-e.x,this.head.z-e.z),remembered=e.alertedUntil>this.time||remembersCoverContact(e,this.time);
+      e.awareness=seen?'engaged':remembered?'search':'patrol';
+      if(seen){e.lastKnownX=this.head.x;e.lastKnownZ=this.head.z;e.lastKnownHeight=this.player.elevation;e.lastSeenAt=this.time;e.alertedUntil=this.time+10;}
+      let target=seen?this.head:remembered?{x:e.lastKnownX,z:e.lastKnownZ}:null;
       const tacticContext={time:this.time,seen,threat:{x:e.lastKnownX,y:(e.lastKnownHeight||0)+1.25,z:e.lastKnownZ},obstacles:coverBoxes,allies:this.enemies,hazards:this.companionHazards,segmentBox};
       relayVisualContact(e,tacticContext);const order=grenadeAvoidance(e,tacticContext)||tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext);e.combatPose=order?.state||'advance';
-      e.coverCrouch=(e.coverCrouch||0)+(Number(!!order?.crouched)-(e.coverCrouch||0))*(1-Math.exp(-dt*12));
+      e.coverCrouch=(e.coverCrouch||0)+((order?.crouchAmount??Number(!!order?.crouched))-(e.coverCrouch||0))*(1-Math.exp(-dt*12));
       if(order)target={...order.point,y:e.groundY};
       e.moving=false;
       if(target){
         const waypoint=this.room.waypoint?.(e,target)||target,dx=waypoint.x-e.x,dz=waypoint.z-e.z,n=Math.hypot(dx,dz)||1;
         if((order?Math.hypot(target.x-e.x,target.z-e.z)>order.stopDistance:distance>(e.ranged?(this.room.outdoor?7:2.0):.92))&&e.stunnedUntil<=this.time){const speed=e.speed*(e.limpUntil>this.time?.6:1)*(order?.speedScale??1),p={x:e.x+dx/n*speed*dt,y:e.groundY,z:e.z+dz/n*speed*dt};
-          if(this.room.canStand(p,e.radius)&&!this.blocked(eye,{x:p.x,y:eye.y,z:p.z})){e.x=p.x;e.z=p.z;e.moving=true;}}
+          const origin={x:e.x,y:e.elevation+.4*enemyScale(e.form,e.elite)*(e.roomScale||1),z:e.z};
+          if(this.room.canStand(p,e.radius)&&!this.blocked(origin,{x:p.x,y:origin.y,z:p.z})){e.x=p.x;e.z=p.z;e.moving=true;}}
         e.yaw=Math.atan2((order?e.lastKnownX:target.x)-e.x,(order?e.lastKnownZ:target.z)-e.z)+Math.PI;
       }
       if(e.form==='probe')e.elevation=e.groundY+.85+Math.sin(this.time*1.4+e.phase)*.09;

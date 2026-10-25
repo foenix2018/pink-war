@@ -334,7 +334,7 @@ test('enemy knees and ankles plant feet through locomotion and settle when the a
     let kneeMotion=false,lifted=false;
     for(let frame=1;frame<=100;frame++){
       actor.position.z-=.04;actor.userData.animate(frame*.016,.3,true);actor.updateMatrixWorld(true);
-      const floor=actor.position.y+(crawler?.075:.125)*actor.scale.y;
+      const floor=actor.position.y+(actor.userData.supportHeight??(crawler?.075:.125))*actor.scale.y;
       const feet=actor.userData.legs.map(leg=>leg.foot.getWorldPosition(point).y);
       assert.ok(feet.every(y=>y>=floor-1e-5),`${form}: ankles never dip under their support surface`);
       assert.ok(feet.filter(y=>Math.abs(y-floor)<1e-5).length>=(crawler?3:1),`${form}: each stride keeps a supporting foot or tripod`);
@@ -349,7 +349,7 @@ test('enemy knees and ankles plant feet through locomotion and settle when the a
     const stoppedPhase=actor.userData.gaitPhase;
     actor.userData.animate(3.22,.3,true);assert.equal(actor.userData.gaitPhase,stoppedPhase);
     actor.updateMatrixWorld(true);
-    const floor=actor.position.y+(crawler?.075:.125)*actor.scale.y;
+    const floor=actor.position.y+(actor.userData.supportHeight??(crawler?.075:.125))*actor.scale.y;
     for(const leg of actor.userData.legs)assert.ok(Math.abs(leg.foot.getWorldPosition(point).y-floor)<1e-5,`${form}: all feet settle flat`);
   }
 });

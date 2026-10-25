@@ -6,7 +6,7 @@ import { PROBE, updateProbe } from './aerial-probes.js';
 import { NOISE_RADIUS, SHOT_RADIUS, propagateNoise, soundWaypoint } from './hearing.js';
 import { tryJump } from './locomotion.js';
 import { hostileShotProfile, predictShot } from './enemy-fire.js';
-import { enemyDurability, enemyVolley, rangedMuzzle, enemyScale } from './enemy-combat.js';
+import { enemyDurability, enemyVolley, rangedMuzzle, enemyScale, enemySightPoint, remembersCoverContact } from './enemy-combat.js';
 import { sweepBlade, bladeBulletContact, reflectedVelocity } from './blade-combat.js';
 import { SHIELD_MAX, CHARGE_START, CHARGE_FUSE, CHARGE_RADIUS, soakDamage, rechargeShield, meleeStrike, throwCharge, grantCharges, updateCharges, forwardOf } from './armor-combat.js';
 // World units are metres. The playable arena is exactly 200 × 200 m.
@@ -675,7 +675,7 @@ export class ArenaGame {
       e.grounded ??= true;e.elevation ??= 0;
       let dx=this.player.x-e.x,dz=this.player.z-e.z;
       const horizontalDistance=Math.hypot(dx,dz)||1;
-      const eye={x:e.x,y:e.elevation+e.aimHeight-.52*(e.coverCrouch||0)*enemyScale(e.form,e.elite),z:e.z};
+      const eye=enemySightPoint(e),motionOrigin={x:e.x,y:(e.elevation||0)+.4*enemyScale(e.form,e.elite),z:e.z};
       const playerHead={x:this.player.x,y:this.player.elevation+(this.player.crouched?.83:1.25),z:this.player.z};
       const verticalDistance=playerHead.y-eye.y,distance=Math.hypot(horizontalDistance,verticalDistance);
       const unobstructed=!this.blocked(eye,playerHead);
@@ -690,7 +690,7 @@ export class ArenaGame {
         if(e.awareness!=='engaged')this.event('spotted',{id:e.id});
         e.awareness='engaged';e.lastSeenAt=this.time;e.lastKnownX=this.player.x;e.lastKnownZ=this.player.z;e.lastKnownHeight=this.player.elevation;
         e.alertedUntil=this.time+(e.form==='synth'?10:3.8);
-      }else if(this.time<(e.alertedUntil||0)){
+      }else if(this.time<(e.alertedUntil||0)||remembersCoverContact(e,this.time)){
         e.awareness='search';
       }else{
         e.awareness='patrol';
@@ -764,12 +764,12 @@ export class ArenaGame {
       relayVisualContact(e,tacticContext);
       const order=!stairRoute?(grenadeAvoidance(e,tacticContext)||tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext)):null;
       e.combatPose=order?.state||'advance';
-      e.coverCrouch=((e.coverCrouch||0)+(Number(!!order?.crouched)-(e.coverCrouch||0))*(1-Math.exp(-dt*12)));
+      e.coverCrouch=((e.coverCrouch||0)+((order?.crouchAmount??Number(!!order?.crouched))-(e.coverCrouch||0))*(1-Math.exp(-dt*12)));
       if(order){destinationX=order.point.x;destinationZ=order.point.z;}
       dx=destinationX-e.x;dz=destinationZ-e.z;
       const goalDistance=Math.hypot(dx,dz)||1;
       dx/=goalDistance;dz/=goalDistance;
-      if(this.obstacles.some(b=>!b.walkableSurface&&segmentBox(eye,{x:destinationX,y:eye.y,z:destinationZ},{...b,hx:b.hx+e.radius+.08,hz:b.hz+e.radius+.08})!==null)){
+      if(this.obstacles.some(b=>!b.walkableSurface&&segmentBox(motionOrigin,{x:destinationX,y:motionOrigin.y,z:destinationZ},{...b,hx:b.hx+e.radius+.08,hz:b.hz+e.radius+.08})!==null)){
         if(e.awareness!=='patrol'&&!stairRoute){
           const waypoint=e.awareness==='engaged'&&!order?this.navigation.waypoint(e):this.searchWaypoint(e,{x:destinationX,z:destinationZ});
           if(waypoint){dx=waypoint.x-e.x;dz=waypoint.z-e.z;const n=Math.hypot(dx,dz)||1;dx/=n;dz/=n;}

@@ -1,4 +1,14 @@
 import {carriesFieldRifle,fieldRifleMuzzle} from './enemy-weapon-layout.js';
+export const ROBOT_HEAD_TOP=2.014,ROBOT_SENSOR_Y=1.88,ROBOT_CROUCH_DROP=.52,MAX_COVER_CROUCH=1.4;
+// Finish a short cover manoeuvre using the last perceived contact. This never
+// refreshes the remembered position or grants a shot at an unseen player.
+export function remembersCoverContact(enemy,time){
+ return !!enemy.tactics?.cover&&time-Math.max(enemy.lastSeenAt??-Infinity,enemy.lastHeardAt??-Infinity)<12;
+}
+export function enemySightPoint(enemy){
+ const scale=enemyScale(enemy.form,enemy.elite)*(enemy.roomScale||1),y=enemy.form==='probe'?.55:enemy.form==='scuttler'?.92:ROBOT_SENSOR_Y,z=enemy.form==='probe'?-.665:enemy.form==='scuttler'?-.673:-.156,angle=enemy.yaw||0;
+ return {x:enemy.x+z*Math.sin(angle)*scale,y:(enemy.elevation||0)+(y-ROBOT_CROUCH_DROP*(enemy.coverCrouch||0))*scale,z:enemy.z+z*Math.cos(angle)*scale};
+}
 export function enemyDurability(wave, form = 'stalker', elite = false) {
   const base=elite?95+wave*25:42+wave*14;
   const frame=form==='synth'?1.42:form==='bulwark'?1.85:form==='brute'?1.6:form==='probe'?.82:form==='seer'?1.25:1.3;

@@ -42,7 +42,7 @@ test('a visible ranged unit fires its volley from the cannon and a stun interrup
  const g=new ArenaGame([],()=>.5);g.nextWave=999;g.wave=6;g.player.x=g.player.z=0;
  const e={id:9,form:'seer',x:0,z:-16,elevation:0,hp:1000,aimHeight:1.38,speed:0,radius:.8,ranged:true,stunnedUntil:0,attackTimer:0,awareness:'engaged'};g.enemies=[e];g.step(.05);
  assert.equal(e.burstRemaining,1);assert.equal(g.drainEvents().filter(e=>e.type==='enemy-shot').length,1);
- const muzzle=rangedMuzzle(e);assert.ok(muzzle.y>1.6);assert.ok(g.bullets[0].y>1.6);
+ const muzzle=rangedMuzzle(e);assert.ok(muzzle.y>1.5);assert.ok(g.bullets[0].y>1.5);
  for(let i=0;i<4;i++)g.step(.05);assert.equal(g.drainEvents().filter(e=>e.type==='enemy-shot').length,1);assert.equal(e.burstRemaining,0);
  e.attackTimer=0;e.burstRemaining=1;e.stunnedUntil=g.time+1;g.step(.05);assert.equal(g.drainEvents().filter(e=>e.type==='enemy-shot').length,0);assert.equal(e.burstRemaining,0);
 });

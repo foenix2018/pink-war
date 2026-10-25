@@ -33,7 +33,7 @@ test('readiness lowers the rifle and detection raises it while the original eyes
  actor.userData.animate(0,0,false,{},0);assert.equal(actor.userData.fieldRifle.bone.rotation.x,-.3);const idle=actor.userData.optics.color.getHex();
  actor.userData.animate(.1,0,false,{ranged:true,awareness:'search',lastHeardAt:.1,alertedUntil:2},.1);
  assert.equal(actor.userData.fieldRifle.bone.rotation.x,0);assert.notEqual(actor.userData.optics.color.getHex(),idle);
- assert.equal(actor.userData.alertState,'alert');assert.equal(carriesFieldRifle('synth'),false,'the ivory tactical unit keeps its own body and integrated weapon');
+ assert.equal(actor.userData.alertState,'alert');assert.equal(carriesFieldRifle('synth'),true,'the ivory tactical unit now shares the anatomical rifle grips');
 });
 test('every revised ground chassis preserves the mobile budget and adds no dynamic light',()=>{
  const factory=createEnemyFactory(mats());

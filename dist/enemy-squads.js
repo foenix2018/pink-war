@@ -1,4 +1,4 @@
-import {chooseTacticalCover,coverEyeHeight} from './tactical-enemies.js';
+import {chooseTacticalCover,coverEyeHeight,coverProgress} from './tactical-enemies.js';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const eye=e=>({x:e.x,y:(e.elevation||0)+1.25,z:e.z});
 
@@ -20,10 +20,11 @@ export function squadOrder(e,ctx){
  if(e.ranged&&e.form!=='brute'&&range>6){
   if(t.cover&&segmentBox({...t.cover.hidden,y:coverEyeHeight(e,t.cover)},threat,t.cover.wall)===null){t.cover=null;t.nextPlan=time+.35;}
   if(!t.cover&&time>=t.nextPlan&&(seen||underFire)){
-   t.nextPlan=time+2.2;t.cover=chooseTacticalCover(e,threat,obstacles,allies,segmentBox);
+   t.nextPlan=time+2.2;t.cover=chooseTacticalCover(e,threat,obstacles,allies,segmentBox,time);
    if(t.cover){t.state='relocate';t.until=time+8;}
   }
   if(t.cover){
+   if(!coverProgress(e,time))return null;
    if(t.state==='relocate'||t.state==='return'){
     if(distance(e,t.cover.hidden)<.5){t.state='cover';t.until=time+.8+(e.id%3)*.25;}
     else if(time>t.until){t.cover=null;t.nextPlan=time+3;t.state='advance';return null;}
@@ -31,7 +32,7 @@ export function squadOrder(e,ctx){
    else if(t.state==='peek'&&(underFire||t.shots>=2||time>=t.until)){t.state='return';t.until=time+4;}
    const point=t.state==='peek'?t.cover.peek:t.cover.hidden;
    return {point,stopDistance:.28,canFire:t.state==='peek'&&seen&&distance(e,point)<.7,state:t.state,speedScale:underFire?1.12:1,
-    crouched:!!t.cover.crouch&&t.state!=='peek'};
+    crouched:!!t.cover.crouch&&t.state!=='peek',crouchAmount:t.state==='peek'?0:t.cover.crouchAmount};
   }
  }
  if(e.form==='brute'&&seen&&range>8&&range<22){
