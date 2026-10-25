@@ -1,0 +1,56 @@
+{
+  "source": "Music supplied by the project creator in this conversation; no third-party license inferred.",
+  "encoding": "AAC LC stereo 64 kb/s, 32 kHz; loudness target -22 LUFS, -3 dBTP; short edge fades; streaming with native loop.",
+  "tracks": [
+    {
+      "level": 1,
+      "title": "Velvet Siege",
+      "file": "velvet-siege.m4a",
+      "original": "1-Level-1-velvet_siege.mp3",
+      "originalBytes": 3558988,
+      "bytes": 1212419,
+      "sha256": "d06a96507e6d2bfdc318324d60d436d5a662aa80ca94d652aa2359c56e979792",
+      "audio": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "aac",
+            "sample_rate": "32000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "148.101000"
+        }
+      },
+      "measuredLUFS": -20.89,
+      "measuredTruePeakDBTP": -5.3
+    },
+    {
+      "level": 2,
+      "title": "Iron Maw",
+      "file": "iron-maw.m4a",
+      "original": "2-Level-2-iron_maw.mp3",
+      "originalBytes": 4256142,
+      "bytes": 1451876,
+      "sha256": "61b1a8e5566c08f63c801244fc9dfbdf3195700b3bc64d02e884d30b91600694",
+      "audio": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "aac",
+            "sample_rate": "32000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "177.100000"
+        }
+      },
+      "measuredLUFS": -21.04,
+      "measuredTruePeakDBTP": -5.07
+    }
+  ]
+}

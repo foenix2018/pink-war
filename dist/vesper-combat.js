@@ -18,7 +18,7 @@ import {magnifiedFov,flatSightPose} from './optics.js';
 import {playLaserShot,playLaserImpact,playWeaponAction,setLaserAudioEnabled} from './laser-sound.js';
 import {createSaberSound} from './saber-sound.js';
 import {createAmbience} from './ambience.js';
-import {createMusicBed} from './music.js';
+import {createMissionMusic} from './mission-music.js';
 import {createCampaignCombatEffects} from './campaign-combat-effects.js';
 import {PHOTO_SURFACES} from './photographic-surfaces.js';
 import {attachCampaignStory} from './story-chapters.js';
@@ -146,10 +146,11 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   gun=buildGun({mats:starterMaterials,gloves:starterGloves,makeFlash:parent=>{
     const flash=new T.Mesh(new T.SphereGeometry(.06,8,6),heroGlow);flash.visible=false;parent.add(flash);return flash;
   }});camera.add(gun);
-  let audio=null,ambience=null,saber=null;const music=createMusicBed();
+  let audio=null,ambience=null,saber=null;const music=createMissionMusic(1);
   let sound=true,musicEnabled=true;try{const settings=JSON.parse(localStorage.getItem('rosee-settings')||'{}');sound=settings.sound!==false;musicEnabled=settings.music!==false;}catch{}
   let ambientEnabled=sound;
   music.setEnabled(musicEnabled);
+  window.addEventListener('pagehide',event=>{music.pause();if(!event.persisted)music.dispose();});
   function audioReady(){
     if(!sound&&!musicEnabled)return;
     try{
@@ -264,7 +265,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       effects.event(event);armorFx.handle(event);
       if(sound&&audio&&event.type==='circuit-isolated')playFieldCue(audio,'isolate',{source:event,listener:p,yaw:-s.yaw});
       if(sound&&audio&&event.type==='portals'&&event.count>0)for(const site of event.sites)playFieldCue(audio,'breach',{source:site,listener:p,yaw:-s.yaw});
-      if(event.type==='shot'){feel.fire(event.weapon,event.power,ads>.5);xr?.haptic('shot',event.weapon,event.hand);if(sound&&audio)playLaserShot(audio,event.weapon,event.power);}
+      if(event.type==='shot'){music.duck();feel.fire(event.weapon,event.power,ads>.5);xr?.haptic('shot',event.weapon,event.hand);if(sound&&audio)playLaserShot(audio,event.weapon,event.power);}
       if(event.type==='impact'&&sound&&audio)playLaserImpact(audio,{surface:event.surface,distance:Math.hypot(event.x-p.x,event.z-p.z),power:event.power});
       if(event.type==='reload'&&sound&&audio)playWeaponAction(audio,game.weapon.id,'reload-out');
       if(event.type==='reloaded'&&sound&&audio)playWeaponAction(audio,game.weapon.id,'reload-ready');
@@ -288,7 +289,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     gun?.userData.setFlash?.(game.state==='playing'&&!journalOpen&&(game.weapon.dual||feel.state.kick>.025)&&!game.weapon.melee,game.time);
     const active=game.state==='playing';
     ambience?.update(dt,{active:active&&sound&&ambientEnabled,position:p,moving,grounded:s.grounded,elevation:p.elevation,crouched:s.crouching,yaw:-s.yaw,probes:game.enemies});
-    music.update(dt,{active,threat:game.enemies.some(e=>e.awareness==='engaged')?.7:.05});
+    music.update(dt,{active:active&&!journalOpen&&!skillMenu.isOpen&&!s.menuPaused,threat:game.enemies.some(e=>e.awareness==='engaged')?.7:.05});
     saber?.update({active,equipped:game.weapon.melee,extended:held,sound,speed:game.bladeSpeed,swing:game.bladePhase<.08});
     // Shared combat HUD (same panels as M02, the Arena and the Range); the legacy readouts stay hidden below.
     (combatHud ||= mountCombatHud({characterId,onAction:armorTouch})).update(game);
@@ -348,7 +349,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     get paused(){return journalOpen||skillMenu.isOpen;},
     get interaction(){return contextAction();},
     get layout(){return LEVEL1_MAP;},
-    restart(){location.assign(location.pathname+'?prologue=done&character='+characterId+'&v=3.63.5');},
+    restart(){location.assign(location.pathname+'?prologue=done&character='+characterId+'&v=3.63.6');},
     get checkpoint(){return checkpoint;},
     get objective(){return objective().text;},
     get playing(){return game.state==='playing'&&!completed;},
@@ -383,7 +384,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       try{const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);if(result?.then){pending=true;result.then(()=>pending=false).catch(error=>{pending=false;onFailure(error);});}}
       catch(error){onFailure(error);}
     },
-    snapshot(){return {revision:'3.63.5',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
+    snapshot(){return {music:{playing:music.playing,source:music.source,...music.stats},revision:'3.63.6',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
       capacity:game.weapon.capacity,ownedWeapons:[...game.ownedWeapons],offers:game.weaponOffers.map(o=>({...o})),campaign:game.campaign,journalOpen,
       enemies:game.enemies.length,hostileProjectiles:game.bullets.filter(b=>b.hostile).length,shots:game.bullets.filter(b=>!b.hostile).length,
       kills:game.kills,rig:!!rig,gun:!!gun,backend:renderer.isWebGLRenderer?'webgl':'webgpu',triangles:terrain.triangles,

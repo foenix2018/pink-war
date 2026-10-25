@@ -7,6 +7,7 @@ import { playLaserShot,loadRealLaserSample,playLaserImpact,setLaserAudioEnabled,
 import { createAmbience } from './ambience.js';
 import { ACTIVE_INSTALLATIONS, BRIDGES, BRIDGE_LANDINGS, BRIDGE_APPROACHES, bridgeSegments } from './world-layout.js';
 import { createMusicBed } from './music.js';
+import {createMissionMusic} from './mission-music.js';
 import { portalIndicators } from './portal-indicator.js';
 import { objectiveIndicator } from './objective-guidance.js';
 import { OPTICS } from './weapons.js';
@@ -97,7 +98,7 @@ let canvasPointer = null, lastDrag = null, audioContext = window.__PINKWAR_BOOT_
 let saberAudio=null,saberSwingSound=false;
 let lastWeaponSlot=0,holsterRemaining=0;
 let bladeHead=null;
-const musicBed=createMusicBed();
+let musicBed=createMusicBed();
 const weaponFeel=createWeaponFeel();
 let portalForward=null;
 let reloadInserted=false,lastShotAt=-99;
@@ -282,6 +283,7 @@ async function start() {
   world.setRangeActive(selectedMode==='training');
   game=armed(selectedMode==='campaign'?new CampaignLevel1(world.obstacles,Math.random,character.id):
     selectedMode==='training'?new ShootingRangeGame(world.obstacles,Math.random,trainingWeaponIndex,character.id):new ArenaGame(world.obstacles,Math.random,null,character.id));
+  musicBed.dispose();musicBed=selectedMode==='campaign'?createMissionMusic(1):createMusicBed();musicBed.setEnabled(settings.music!==false);
   world.resetDynamic(); phase = 'loading'; yaw = 0; pitch = -.075;
   weaponFeel.reset();reloadInserted=false;lastShotAt=-99;flashTimer = 0; recoil = 0; damageUntil = 0; announcementUntil = 0;pickupNotice=null;equipmentUntil=0;crouchCameraBlend=0;currentSprinting=false; resetInput(); audioReady();
   world.setWeapon(game.weaponIndex);world.setEquipment(1);
@@ -429,7 +431,7 @@ function handleEvents() {
       if(vr.mode!=='xr')announce(event.title,event.subtitle);
       tone(410,680,.16,.025,'sine');
     }
-    if (event.type === 'shot') {
+    if (event.type === 'shot') {musicBed.duck?.();
       world.laserShot?.(event);
       const feel=weaponFeel.fire(event.weapon,event.power,game.player.crouched||aiming);
       lastShotAt=clock;recoil=feel.pitch;flashTimer=feel.flash;vr.haptic('shot', event.weapon,event.hand); weaponShotSound(event.weapon, event.power);

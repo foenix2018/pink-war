@@ -1,5 +1,7 @@
 # Pink Wars — La Fracture
 
+Version 3.63.6 : **décor RLH et musiques de mission** — Velvet Siege pour M01, Iron Maw pour M02, fond compressé avec atténuation pendant les tirs ; reprises d’asphalte fissuré, marquages usés, poutres en I sous l’auvent et vapeur légère après remise sous tension. [Sources et modifications](docs/pink-wars/ADAPTATIONS_RLH_363_6.md) · [Captures](https://pink-war.vercel.app/rlh-vesper-3636.html) · [Jouer](https://pink-war.vercel.app/?v=3.63.6).
+
 Version 3.63.5 : **matériaux et équipements de scénario** — béton/asphalte CC0 en 1K hors mode performance, acier brossé, peinture, caoutchouc et toile. Ordinateurs avec coque adoucie, refroidissement, connectique et écran de mémoire locale ; interrupteurs à poignée mobile et voyant fonctionnel. [Captures](https://pink-war.vercel.app/materiaux-3635.html) · [Détails](docs/pink-wars/MISE_A_JOUR_363_5.md) · [Jouer](https://pink-war.vercel.app/?v=3.63.5).
 
 Version 3.63.4 : **premier lot jouable de M01 long** — cour du convoi, aile technique traversante et deux approches vers l’annexe. Départs électriques à isoler, huit postes ennemis, renforts annoncés et finis, nouveaux points de contrôle. Modèles GHJU/LYLU et HUD C conservés. Cible du premier lot : 6–8 minutes à mesurer ; la mission complète de 20–25 minutes reste en construction. [Détails](docs/pink-wars/MISE_A_JOUR_363_4.md) · [Captures du jeu](https://pink-war.vercel.app/m01-cour-annexe.html?v=3.63.4) · [Jouer](https://pink-war.vercel.app/?v=3.63.4).

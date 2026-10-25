@@ -1,3 +1,4 @@
+import {createMissionMusic} from './mission-music.js';
 // PINK WARS / M02 "SOUS LES NÉONS" — isolated vertical-slice test.
 // Simulation, collisions, jump, stamina/health, weapons and hostiles are
 // imported unchanged from the production game. The cyberpunk world is new.
@@ -52,6 +53,7 @@ let view='fps',aimBlend=0,mouseAim=false,playerRig=null,touchControls=null,pause
 let jumpQueued=false,crouchQueued=false,firePressQueued=false,weaponReady=false,audioCtx=null,hitUntil=0;
 const weaponFeel=createWeaponFeel(),pinkControls=createPinkWarsInput();
 const fireInput=createFireBuffer();
+const music=createMissionMusic(2);let musicEnabled=true;try{musicEnabled=JSON.parse(localStorage.getItem('rosee-settings')||'{}').music!==false;}catch{}music.setEnabled(musicEnabled);
 let enableAudio=true;try{enableAudio=JSON.parse(localStorage.getItem('rosee-settings')||'{}').sound!==false;}catch{}
 let xr=null,fallbackGun=null,fallbackHand=null;
 // Armour layer (3.63): strikes and throws queued by the keyboard, the mouse and the touch buttons.
@@ -62,13 +64,13 @@ const pauseMenu=createPauseMenu({title:'HISTOIRE / SOUS LES NÉONS',canOpen:()=>
 let combatEffects=null,companion=null,environmentAudio=null,warZone=null,battleAudio=null;
 let companionSkills=null,skillMenu=null;
 function audioReady(){
- if(!enableAudio)return;
+ if(!enableAudio&&!musicEnabled)return;
  if(audioCtx){void audioCtx.resume?.().catch?.(()=>{});return;}
  try{
   const Context=window.AudioContext||window.webkitAudioContext;
   if(!Context)return;audioCtx=new Context();
   audioCtx.resume?.().catch?.(()=>{});
-  setLaserAudioEnabled(audioCtx,true);
+  setLaserAudioEnabled(audioCtx,enableAudio);music.setContext(audioCtx);
   environmentAudio=createAmbience(audioCtx);
   battleAudio=createBattleAudio(audioCtx);
  }catch(error){console.warn('M02 audio fallback',error);}
@@ -504,7 +506,7 @@ function updateOriginalSoldier(dt,moving,sprint,firing){
 }
 function pauseMission(){
  if(!running||paused)return;
- combatHud?.reset();touchSprinting=false;paused=true;running=false;battleAudio?.pause();environmentAudio?.pause();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
+ music.pause();combatHud?.reset();touchSprinting=false;paused=true;running=false;battleAudio?.pause();environmentAudio?.pause();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
  touchControls?.reset();pinkControls.reset();document.exitPointerLock?.();
  pauseMenu.show();$('start').textContent='REPRENDRE LA MISSION →';
  $('status').textContent='PAUSE · PINK WARS / NIVEAU 2';
@@ -628,7 +630,7 @@ function gameTick(dt){
   audio:()=>enableAudio&&audioCtx?.state==='running'?audioCtx:null,haptic:kind=>xr?.active&&xr.haptic(kind)});
  for(const e of events){
   combatEffects?.event(e);armorFx.handle(e);
-  if(e.type==='shot'){
+  if(e.type==='shot'){music.duck();
     xr?.haptic('shot',e.weapon,e.hand);
     weaponFeel.fire(e.weapon||game.weapon.id,e.power||1,aimBlend>.5);
     weaponKick=Math.min(.25,weaponKick+.085);
@@ -637,16 +639,16 @@ function gameTick(dt){
   if(e.type==='damage'){$('damage').style.boxShadow='inset 0 0 105px #c52c5e77';}
   if(e.type==='hit')hitUntil=clock+.12;
   if(e.type==='weapon')weaponFeel.reset();
-  if(e.type==='reload'&&audioCtx)try{playWeaponAction(audioCtx,game.weapon.id,'reload-out');}catch{}
-  if(e.type==='reloaded'&&audioCtx)try{playWeaponAction(audioCtx,game.weapon.id,'reload-ready');}catch{}
-  if(e.type==='impact'&&audioCtx)try{playLaserImpact(audioCtx,{surface:e.surface,distance:Math.hypot(e.x-game.player.x,e.z-game.player.z),power:e.power});}catch{}
+  if(e.type==='reload'&&enableAudio&&audioCtx)try{playWeaponAction(audioCtx,game.weapon.id,'reload-out');}catch{}
+  if(e.type==='reloaded'&&enableAudio&&audioCtx)try{playWeaponAction(audioCtx,game.weapon.id,'reload-ready');}catch{}
+  if(e.type==='impact'&&enableAudio&&audioCtx)try{playLaserImpact(audioCtx,{surface:e.surface,distance:Math.hypot(e.x-game.player.x,e.z-game.player.z),power:e.power});}catch{}
   if(e.type==='kill'){notice('CIBLE NEUTRALISÉE');}
   if(e.type==='over'){running=false;shade.style.display='grid';$('start').textContent='RECOMMENCER LE TEST →';$('status').textContent='Intervention interrompue — santé épuisée';document.exitPointerLock?.();}
  }
  combatEffects?.update(game,dt,camera);armorFx.update(game,dt);
  companion?.update(dt,{game,camera,active:false});
  companionSkills?.update(dt,{game});skillMenu?.refresh();
- environmentAudio?.update(dt,{active:running,position:game.player,moving:Math.hypot(x,z)>.1,grounded:game.player.grounded,elevation:game.player.elevation,yaw,probes:game.enemies});
+ environmentAudio?.update(dt,{active:running&&enableAudio,position:game.player,moving:Math.hypot(x,z)>.1,grounded:game.player.grounded,elevation:game.player.elevation,yaw,probes:game.enemies});
  if(game.player.hp>0)$('damage').style.boxShadow='inset 0 0 '+(100-game.player.hp)*1.2+'px #c52c5e44';
  weaponKick=Math.max(0,weaponKick-dt*.7);
  const ads=flatSightPose(OPTICS[game.weapon.id],aimBlend);
@@ -705,6 +707,7 @@ function animation(t,frame){
  if(atmosphere)try{atmosphere.update(clock);}catch(error){
    console.warn('M02 optional atmosphere frame disabled:',error);atmosphere=null;
  }
+ music.update(dt,{active:running&&!paused&&game?.state==='playing'&&!skillMenu?.isOpen});
  if(running)try{gameTick(dt);}catch(error){
   console.error('M02 simulation failure:',error);
   running=false;shade.style.display='grid';status.textContent='Erreur de mission : '+(error?.message||String(error));
@@ -885,7 +888,8 @@ for(const name of ['pointerup','pointercancel']){
  window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
 }
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
-window.__PINK_M02=Object.freeze({snapshot:()=>({revision:'3.63.5',running,paused,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
+window.addEventListener('pagehide',event=>{music.pause();if(!event.persisted)music.dispose();});
+window.__PINK_M02=Object.freeze({snapshot:()=>({music:{playing:music.playing,source:music.source,...music.stats},revision:'3.63.6',running,paused,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
  backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
  effects:combatEffects?.stats(),armor:game&&{shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt}})});

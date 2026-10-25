@@ -1,0 +1,23 @@
+{
+  "repository": "foenix2018/RLH",
+  "commit": "99698f74d72aaf7ab95000b86180772417ecb636",
+  "permission": "Adaptation requested by the project owner in the conversation. Not relabelled CC0.",
+  "files": [
+    {
+      "path": "js/modules/environment/vr-streetscape-v748.js",
+      "sha256": "f02cc04beb95451f3cc212c7fcd570d13e9ac96502a9e8d05d07a6c1fb4bb5c6"
+    },
+    {
+      "path": "js/modules/environment/vr-factory-site-v749.js",
+      "sha256": "62d2f28c7c07d17de4e2ca01ae801b432850b71db96491e8e4f42df44d5a3ea8"
+    },
+    {
+      "path": "js/legacy-09.js",
+      "sha256": "597fccb6fe473d014d157e7aa278b4c4961209d0f585ef0a1c719cb89d4d4403"
+    },
+    {
+      "path": "js/modules/scenarios/vehicle-fire-fx-v299.js",
+      "sha256": "b6c9129e54191e5e40a69e5608cebc8d23225297173db798c1cc735932922209"
+    }
+  ]
+}
