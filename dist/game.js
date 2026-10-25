@@ -24,6 +24,7 @@ import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
 import {createCompanionSkillFX} from './companion-skill-fx.js';
 import {mountCombatHud} from './combat-hud.js';
+import {createHudContrastControl} from './hud-appearance.js';
 import {createArmorFeedback,meleeKick,MELEE_POSE} from './armor-feedback.js';
 
 const $ = id => document.getElementById(id);
@@ -37,7 +38,7 @@ settings.sensitivity = clamp(Number(settings.sensitivity) || 1, .4, 2);
 if (!['auto', 'low', 'high'].includes(settings.quality)) settings.quality = 'auto';
 let phase = 'lobby', view = boot?.view==='third'?'third':'fps', yaw = 0, pitch = -.075, game, world, vr;
 let character=characterForId('ghju');
-let combatHud=null,armorFx=null,armorFxScene=null,meleeQueued=false,chargeQueued=false;
+let combatHud=null,armorFx=null,armorFxScene=null,meleeQueued=false,chargeQueued=false,touchSprinting=false;
 // Every session wears the armour layer of 3.63 (shield, strike, impulse charges).
 const armed=session=>{session.enableArmorShield();return session;};
 const heroAccent=()=>character.id==='lylu'?0x80baff:0xef91b4;
@@ -55,7 +56,7 @@ function armorView(){
   if(vr?.mode!=='xr'&&view!=='fps')origin.set(game.player.x,(game.player.elevation||0)+1.5,game.player.z);
   return {origin,direction};
 }
-const armorTouch=kind=>{if(phase!=='playing')return;audioReady();if(kind==='melee')meleeQueued=true;else chargeQueued=true;};
+const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;return;}if(phase!=='playing')return;audioReady();if(kind==='melee')meleeQueued=true;else if(kind==='charge')chargeQueued=true;else if(kind==='reload')game.reload();else if(kind==='next')game.cycleWeapon();else if(kind==='interact')pickupQueued=true;else if(kind==='crouch')crouchQueued=true;};
 function armorActions(input){
   if(meleeQueued||input.melee){const {direction}=armorView();game.melee({x:direction.x,z:direction.z});}
   if(chargeQueued||input.charge){const {origin,direction}=armorView();game.throwCharge({x:origin.x+direction.x*.45,y:origin.y-.18,z:origin.z+direction.z*.45},direction);}
@@ -135,6 +136,7 @@ function syncSound() {
   $('sound-button').title = $('sound-button').ariaLabel;
   $('sound-button').innerHTML = settings.sound ? '<svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4V5Zm4 4a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4V5Zm5 4 5 6m0-6-5 6"/></svg>';
 }
+$('settings-dialog').insertBefore(createHudContrastControl(),$('settings-dialog').querySelector('.close-dialog:last-child'));
 syncSound(); $('sensitivity').value = settings.sensitivity; $('quality').value = settings.quality;
 $('sound-button').onclick = () => { settings.sound = !settings.sound; syncSound(); audioReady(); persist(); };
 $('sound-setting').onchange = e => { settings.sound = e.target.checked; syncSound(); audioReady(); persist(); };
@@ -169,6 +171,7 @@ for(const button of document.querySelectorAll('[data-character]'))button.onclick
 selectCharacter(character.id,false);
 
 function resetInput() {
+  combatHud?.reset();touchSprinting=false;
   vr?.desktopGamepads?.reset();
   if(vr&&vr.mode!=='xr'){vr.previous?.clear();vr.desktopPadKey=null;}
   meleeQueued=chargeQueued=false;keys.clear(); firingPointers.clear(); aimPointers.clear(); firePressQueued=false; mouseAim=false; aiming=false; aimBlend=0; document.body.classList.remove('scoped','aiming'); $('aim-button')?.setAttribute('aria-pressed','false'); jumpQueued = false; pickupQueued = false;crouchQueued=false; canvasPointer = null; lastDrag = null;
@@ -530,6 +533,8 @@ function updateHud() {
   const nearby=game.nearbyWeapon();const pickup=$('pickup-button');
   pickup.hidden=!nearby;pickup.textContent=nearby?`RÉCUPÉRER ${WEAPONS[nearby.index].name} · F / X`:'';
   const interaction=game.getInteraction?.();
+  combatHud.setContext(interaction?.label||(nearby?'Récupérer '+WEAPONS[nearby.index].name:null));
+  combatHud.setObjective({label:game.mode==='training'?'STAND · '+game.trainingLevel.number+'/05':game.mode==='campaign'?'MISSION 01':'VAGUE '+String(Math.max(1,game.wave)).padStart(2,'0')+'/20',detail:game.mode==='training'?game.trainingLevel.label+' · Score '+game.score+' · Précision '+game.trainingAccuracy+' %':game.mode==='campaign'?(game.campaign?.subtitle||'Rejoindre le relais des archives.'):'Repousser les machines et récupérer les armes des brèches.'});
   if(interaction){pickup.hidden=false;pickup.textContent=`${interaction.label} · F`;pickup.ariaLabel=interaction.label;}
   $('ammo-label').textContent = game.weapon.melee?'∞':game.ammo[game.weaponIndex];
   $('ammo-capacity').textContent = game.weapon.melee?'':`/ ${game.weapon.capacity}`;
@@ -722,7 +727,7 @@ function stepFrame(timestamp, xrFrame) {
     aimBlend+=(Number(aiming)-aimBlend)*(1-Math.exp(-dt*14));
     document.body.classList.toggle('aiming',aiming);document.body.classList.toggle('scoped',aiming&&game.weapon.id==='lance'&&vr.mode==='off');
     $('aim-button').setAttribute('aria-pressed',String(aiming));
-    currentSprinting=!aiming&&(vrInput.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight'));
+    currentSprinting=!aiming&&(touchSprinting||vrInput.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight'));
     game.step(dt, { x, z, yaw: facing, moveYaw, sprint: currentSprinting, jump,crouchToggle });
     crouchCameraBlend+=(Number(game.player.crouched)-crouchCameraBlend)*Math.min(1,dt*8);
     if(pickupQueued||vrInput.pickup){game.collectWeapon();pickupQueued=false;}

@@ -128,7 +128,7 @@ test('the three engines wear the armour layer and share its controls and feedbac
   }
   assert.match(arena,/e\.code === 'KeyX'/);assert.match(arena,/e\.code === 'KeyB'/);assert.match(arena,/e\.button===1/);
   assert.match(m01Page,/ev\.code==='KeyX'/);assert.match(m01Page,/edge\(5\)\)combatWorld\?\.melee/);assert.match(m01Page,/edge\(4\)\)combatWorld\?\.throwCharge/);
-  assert.match(m01Page,/\n  \.pw-hud-touch \[data-armor=charge\]\{bottom:max\(240px/,'M01: CHARGE above the sprint button');
+  assert.match(read('combat-hud.css'),/\.pw-hud-palette/, 'C groups the charge in the secondary palette');
   assert.match(m01Page,/\n  #touchControls #touchButtons #btnPauseMobile\{/,'the approved M01 pause button rule is intact');
   assert.match(m02,/e\.code==='KeyX'/);assert.match(read('level2-input.js'),/melee:edges\.has\('melee'\),charge:edges\.has\('charge'\)/);
   assert.match(read('vr.js'),/edge\('sideTrigger',0,'charge'\)/);assert.match(read('mission-xr.js'),/edge\('melee',down\(rp\?\.buttons\[3\]\)\)/);

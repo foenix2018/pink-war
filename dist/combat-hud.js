@@ -1,7 +1,8 @@
 // Shared combat HUD for M01, M02, the Arena and the Range (book §11: health and ammunition always on screen,
 // everything else contextual). One DOM, one stylesheet: each engine mounts it and feeds it its game state.
 // The legacy readouts of each engine stay in the page, hidden by `body.pw-unified-hud`, so their logic is untouched.
-const STYLESHEET = 'combat-hud.css?v=3.63';
+import {hudIcon,restoreHudContrast,skinCombatControls} from './hud-appearance.js';
+const STYLESHEET = 'combat-hud.css?v=3.63.3';
 const HEROES = Object.freeze({ ghju: 'GHJU', lylu: 'LYLU' });
 export const HUD_SEGMENTS = 10;
 
@@ -43,61 +44,61 @@ function ensureStylesheet(doc) {
 }
 
 export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage = false, onAction = null } = {}) {
-  const doc = document; ensureStylesheet(doc);
-  const root = doc.createElement('section');
-  root.className = 'pw-hud'; root.setAttribute('aria-label', 'État de combat');
-  root.innerHTML = `<div class="pw-hud-vitals" role="status"><span class="pw-hud-tag"></span><div class="pw-hud-shield" hidden><i></i></div><div class="pw-hud-line"><b class="pw-hud-value">100</b><small>SANTÉ</small></div><div class="pw-hud-bar"><i></i></div><span class="pw-hud-note"></span></div>`
-    + `<div class="pw-hud-arms" role="status"><span class="pw-hud-tag pw-hud-weapon"></span><div class="pw-hud-line"><b class="pw-hud-ammo">0</b><small class="pw-hud-capacity"></small></div><div class="pw-hud-bar"><i></i></div><span class="pw-hud-charges" aria-label="Charges à impulsion"></span><span class="pw-hud-note"></span></div>`
-    + `<div class="pw-hud-hit" aria-hidden="true"><i></i></div>`
-    // Touch screens only (CSS): the armour actions, above the fire cluster, in the same place in every mode.
-    + `<div class="pw-hud-touch"><button type="button" data-armor="melee" aria-label="Frappe de mêlée">MÊLÉE</button><button type="button" data-armor="charge" aria-label="Lancer une charge à impulsion">CHARGE<small></small></button></div>`;
-  (parent || doc.body).append(root);
-  doc.body.classList.add('pw-unified-hud'); if (lobbyPage) doc.body.classList.add('pw-hud-lobby-page');
-  const $ = selector => root.querySelector(selector), vitals = $('.pw-hud-vitals'), arms = $('.pw-hud-arms');
-  const nodes = { tag: $('.pw-hud-vitals .pw-hud-tag'), hp: $('.pw-hud-value'), vitalNote: $('.pw-hud-vitals .pw-hud-note'),
-    weapon: $('.pw-hud-weapon'), ammo: $('.pw-hud-ammo'), capacity: $('.pw-hud-capacity'), armsNote: $('.pw-hud-arms .pw-hud-note'),
-    charges: $('.pw-hud-charges') };
-  const shieldBar = $('.pw-hud-shield'), hitRing = $('.pw-hud-hit'), chargeButton = $('[data-armor=charge]');
-  for (const button of root.querySelectorAll('[data-armor]')) button.addEventListener('pointerdown', event => {
-    // Keep the press away from the camera drag of the canvas underneath.
-    event.preventDefault(); event.stopPropagation(); onAction?.(button.dataset.armor);
-  });
-  const last = new Map();
-  // Only touch the DOM when a value changes: the HUD is fed every frame by the engines.
-  const text = (key, value) => { if (last.get(key) !== value) { last.set(key, value); nodes[key].textContent = value; } };
-  const prop = (element, key, value) => { const id = key + (element === vitals ? 'v' : 'a'); if (last.get(id) !== value) { last.set(id, value); element.style.setProperty(key, value); } };
-  const flag = (element, name, on) => { const id = name + (element === vitals ? 'v' : 'a'); if (last.get(id) !== on) { last.set(id, on); element.classList.toggle(name, on); } };
-  const api = {
-    root,
-    setCharacter(id) { const hero = id === 'lylu' ? 'lylu' : 'ghju'; root.dataset.hero = hero; text('tag', HEROES[hero]); },
-    update(game) {
-      const s = combatHudState(game);
-      text('hp', String(Math.ceil(s.hp)));
-      prop(vitals, '--fill', (s.hp / 100).toFixed(3));
-      flag(vitals, 'critical', s.critical); flag(vitals, 'regenerating', s.regenerating);
-      // Shield over health: hidden when the engine has no armour shield.
-      const shielded = s.shieldCapacity > 0, broken = shielded && s.shield <= 0;
-      if (last.get('shielded') !== shielded) { last.set('shielded', shielded); shieldBar.hidden = !shielded; }
-      if (shielded) prop(shieldBar, '--fill', (s.shield / s.shieldCapacity).toFixed(3));
-      flag(vitals, 'shield-broken', broken); flag(vitals, 'shield-charging', s.shieldCharging);
-      text('vitalNote', s.critical ? 'CRITIQUE' : broken ? 'BOUCLIER ROMPU' : s.shieldCharging ? 'RECHARGE DU BOUCLIER' : s.regenerating ? 'RÉGÉNÉRATION' : '');
-      text('charges', s.charges > 0 ? 'CHARGES ' + '◆'.repeat(s.charges) : '');
-      if (last.get('touchCharges') !== s.charges) { last.set('touchCharges', s.charges); chargeButton.lastChild.textContent = String(s.charges); chargeButton.classList.toggle('empty', s.charges <= 0); }
-      // Direction arc of the last hit around the crosshair.
-      const arc = s.hit ? (s.hit.angle * 180 / Math.PI).toFixed(0) + '|' + s.hit.strength.toFixed(2) : '';
-      if (last.get('arc') !== arc) { last.set('arc', arc); hitRing.style.opacity = s.hit ? s.hit.strength.toFixed(2) : '0';
-        if (s.hit) hitRing.style.setProperty('--angle', (s.hit.angle * 180 / Math.PI).toFixed(1) + 'deg'); }
-      text('weapon', s.weapon.toUpperCase());
-      text('ammo', s.melee ? 'LAME' : String(s.ammo));
-      text('capacity', s.melee ? '' : '/ ' + s.capacity);
-      prop(arms, '--fill', (s.reloading ? s.reloadProgress : s.melee ? 1 : s.capacity ? s.ammo / s.capacity : 0).toFixed(3));
-      flag(arms, 'reloading', s.reloading); flag(arms, 'empty', s.empty); flag(arms, 'low', !s.melee && !s.reloading && s.capacity > 0 && s.ammo > 0 && s.ammo <= s.capacity * .25);
-      text('armsNote', s.reloading ? 'RECHARGE' : s.empty ? 'VIDE · RECHARGER' : '');
+  const doc=document;ensureStylesheet(doc);restoreHudContrast(doc);skinCombatControls(doc);
+  const root=doc.createElement('section');root.className='pw-hud';root.dataset.layout='immersion';root.setAttribute('aria-label','État de combat');
+  root.innerHTML=`<button type="button" class="pw-hud-mission pw-glass" aria-expanded="false" aria-label="Afficher l’objectif">${hudIcon('objective')}<span></span></button>
+    <section class="pw-hud-objective pw-glass" hidden aria-label="Objectif actuel"><small></small><p></p></section>
+    <div class="pw-hud-vitals pw-glass" role="status" aria-label="Santé et bouclier"><span class="pw-hud-tag" hidden></span><div class="pw-hud-numbers"><span class="pw-shield-number">${hudIcon('shield')}<b class="pw-hud-shield-value">60</b></span><span>${hudIcon('health')}<b class="pw-hud-value">100</b></span></div><div class="pw-hud-shield" hidden><i></i></div><div class="pw-hud-bar"><i></i></div><span class="pw-hud-note"></span></div>
+    <div class="pw-hud-arms pw-glass"><button type="button" class="pw-hud-reload" data-hud-action="reload" aria-label="Recharger l’arme"><span class="pw-hud-weapon"></span><span><b class="pw-hud-ammo">0</b><small class="pw-hud-capacity"></small></span><span class="pw-hud-reload-track"><i></i></span></button><button type="button" class="pw-hud-swap" data-hud-action="next" aria-label="Arme suivante">${hudIcon('swap')}</button><span class="pw-hud-note" role="status"></span></div>
+    <div class="pw-hud-hit" aria-hidden="true"><i></i></div>
+    <div class="pw-hud-touch"><button type="button" class="pw-hud-more" aria-label="Actions secondaires" aria-expanded="false">${hudIcon('more')}</button><div class="pw-hud-palette pw-glass" hidden role="group" aria-label="Actions secondaires"><button type="button" data-armor="charge" aria-label="Lancer une charge à impulsion">${hudIcon('charge')}<span>Charge <b class="pw-hud-charges">2</b></span></button><button type="button" data-armor="melee" aria-label="Frappe de mêlée">${hudIcon('melee')}<span>Mêlée</span></button><button type="button" data-hud-action="crouch" aria-pressed="false">${hudIcon('crouch')}<span>Accroupi</span></button><button type="button" data-hud-action="sprint" aria-pressed="false">${hudIcon('sprint')}<span>Course</span></button></div></div>
+    <button type="button" class="pw-hud-context pw-glass" data-hud-action="interact" hidden>${hudIcon('interact')}<span></span><kbd>F</kbd></button>`;
+  (parent||doc.body).append(root);doc.body.classList.add('pw-unified-hud','pw-immersion-hud');if(lobbyPage)doc.body.classList.add('pw-hud-lobby-page');
+  const $=s=>root.querySelector(s),vitals=$('.pw-hud-vitals'),arms=$('.pw-hud-arms'),palette=$('.pw-hud-palette'),more=$('.pw-hud-more'),mission=$('.pw-hud-mission'),objective=$('.pw-hud-objective'),context=$('.pw-hud-context');
+  const nodes={tag:$('.pw-hud-tag'),hp:$('.pw-hud-value'),shield:$('.pw-hud-shield-value'),vitalNote:$('.pw-hud-vitals .pw-hud-note'),weapon:$('.pw-hud-weapon'),ammo:$('.pw-hud-ammo'),capacity:$('.pw-hud-capacity'),armsNote:$('.pw-hud-arms .pw-hud-note'),charges:$('.pw-hud-charges')};
+  const shieldBar=$('.pw-hud-shield'),shieldNumber=$('.pw-shield-number'),hitRing=$('.pw-hud-hit'),chargeButton=$('[data-armor=charge]'),crouchButton=$('[data-hud-action=crouch]'),sprintButton=$('[data-hud-action=sprint]');
+  let open=false,sprinting=false,disposed=false,active=true,objectiveKey='',contextLabel='';
+  const last=new Map(),text=(k,v)=>{if(last.get(k)!==v){last.set(k,v);nodes[k].textContent=v;}};
+  const prop=(element,k,v)=>{if(element.style.getPropertyValue(k)!==v)element.style.setProperty(k,v);};
+  const flag=(element,name,on)=>{if(element.classList.contains(name)!==on)element.classList.toggle(name,on);};
+  function setOpen(value){open=!!value&&!root.hidden&&active;palette.hidden=!open;more.setAttribute('aria-expanded',String(open));root.classList.toggle('pw-actions-open',open);if(open){objective.hidden=true;mission.setAttribute('aria-expanded','false');}}
+  function reset(){setOpen(false);objective.hidden=true;mission.setAttribute('aria-expanded','false');if(sprinting){sprinting=false;onAction?.('sprint',false);}sprintButton.setAttribute('aria-pressed','false');root.classList.remove('pw-sprinting');}
+  function command(kind){if(!active||root.hidden||disposed)return;setOpen(false);if(kind==='sprint'){sprinting=!sprinting;sprintButton.setAttribute('aria-pressed',String(sprinting));root.classList.toggle('pw-sprinting',sprinting);onAction?.(kind,sprinting);}else onAction?.(kind);}
+  // Native click provides one command per tap and keyboard/screen-reader activation.
+  // Held fire/aim keep their original captured pointer handlers in each engine.
+  for(const button of root.querySelectorAll('[data-armor],[data-hud-action]')){
+    button.addEventListener('pointerdown',e=>{e.stopPropagation();});
+    button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();command(button.dataset.armor||button.dataset.hudAction);if(e.detail>0)button.blur();});
+  }
+  root.addEventListener('keydown',e=>{if(['Space','Enter'].includes(e.code))e.stopPropagation();});
+  more.onclick=e=>{e.stopPropagation();setOpen(!open);};
+  mission.onclick=e=>{e.stopPropagation();setOpen(false);objective.hidden=!objective.hidden;mission.setAttribute('aria-expanded',String(!objective.hidden));};
+  const outside=e=>{if(root.contains(e.target))return;const wasOpen=open;setOpen(false);objective.hidden=true;mission.setAttribute('aria-expanded','false');if(wasOpen&&e.target.tagName==='CANVAS'){e.preventDefault();e.stopImmediatePropagation();}};
+  const key=e=>{if(e.code==='Escape'&&(open||!objective.hidden)){e.preventDefault();e.stopImmediatePropagation();setOpen(false);objective.hidden=true;mission.setAttribute('aria-expanded','false');more.focus({preventScroll:true});}};
+  const blur=()=>reset(),visibility=()=>{if(doc.hidden)reset();};
+  doc.addEventListener('pointerdown',outside,true);doc.addEventListener('keydown',key,true);doc.addEventListener('pw-hud-overlay',blur);doc.defaultView.addEventListener('blur',blur);doc.addEventListener('visibilitychange',visibility);
+  const api={root,setOpen,reset,get isOpen(){return open;},
+    setCharacter(id){const hero=id==='lylu'?'lylu':'ghju';root.dataset.hero=hero;doc.body.dataset.pwHero=hero;text('tag',HEROES[hero]);},
+    setObjective({label='',detail=''}={}){const signature=label+'|'+detail;mission.hidden=!label;if(signature===objectiveKey)return;objectiveKey=signature;mission.querySelector('span').textContent=label;objective.querySelector('small').textContent=label;objective.querySelector('p').textContent=detail;mission.setAttribute('aria-label',label+' : afficher l’objectif');objective.hidden=true;mission.setAttribute('aria-expanded','false');},
+    setContext(label){label=label||'';if(contextLabel===label)return;contextLabel=label;context.hidden=!label;context.querySelector('span').textContent=label;context.setAttribute('aria-label',label||'Interagir');},
+    update(game){
+      const s=combatHudState(game);active=game.state!=='paused'&&game.state!=='lost'&&game.state!=='won'&&s.hp>0;if(!active)reset();
+      text('hp',String(Math.ceil(s.hp)));text('shield',String(Math.ceil(s.shield)));prop(vitals,'--fill',(s.hp/100).toFixed(3));
+      flag(vitals,'critical',s.critical);flag(vitals,'regenerating',s.regenerating);
+      const shielded=s.shieldCapacity>0,broken=shielded&&s.shield<=0;shieldBar.hidden=shieldNumber.hidden=!shielded;
+      if(shielded)prop(shieldBar,'--fill',(s.shield/s.shieldCapacity).toFixed(3));
+      flag(vitals,'shield-broken',broken);flag(vitals,'shield-charging',s.shieldCharging);
+      text('vitalNote',s.critical?'CRITIQUE':broken?'BOUCLIER ROMPU':'');text('charges',String(s.charges));chargeButton.disabled=s.charges<=0;chargeButton.setAttribute('aria-label','Lancer une charge à impulsion · '+s.charges+' disponible'+(s.charges>1?'s':''));
+      crouchButton.setAttribute('aria-pressed',String(!!game.player?.crouched));
+      const arc=s.hit?(s.hit.angle*180/Math.PI).toFixed(0)+'|'+s.hit.strength.toFixed(2):'';
+      if(last.get('arc')!==arc){last.set('arc',arc);hitRing.style.opacity=s.hit?s.hit.strength.toFixed(2):'0';if(s.hit)hitRing.style.setProperty('--angle',(s.hit.angle*180/Math.PI).toFixed(1)+'deg');}
+      text('weapon',s.weapon.toUpperCase());text('ammo',s.melee?'LAME':String(s.ammo));text('capacity',s.melee?'':'/ '+s.capacity);
+      prop(arms,'--fill',(s.reloading?s.reloadProgress:s.melee?1:s.capacity?s.ammo/s.capacity:0).toFixed(3));
+      flag(arms,'reloading',s.reloading);flag(arms,'empty',s.empty);flag(arms,'low',!s.melee&&!s.reloading&&s.capacity>0&&s.ammo>0&&s.ammo<=s.capacity*.25);
+      text('armsNote',s.reloading?'RECHARGE':s.empty?'VIDE':'');$('.pw-hud-reload').disabled=s.melee||s.reloading;
       return s;
     },
-    setVisible(visible) { root.hidden = !visible; },
-    dispose() { root.remove(); doc.body.classList.remove('pw-unified-hud', 'pw-hud-lobby-page'); }
-  };
-  api.setCharacter(characterId);
-  return api;
+    setVisible(visible){if(!visible)reset();root.hidden=!visible;},
+    dispose(){if(disposed)return;reset();disposed=true;doc.removeEventListener('pointerdown',outside,true);doc.removeEventListener('keydown',key,true);doc.removeEventListener('pw-hud-overlay',blur);doc.defaultView.removeEventListener('blur',blur);doc.removeEventListener('visibilitychange',visibility);root.remove();doc.body.classList.remove('pw-unified-hud','pw-immersion-hud','pw-hud-lobby-page');}
+  };api.setCharacter(characterId);return api;
 }

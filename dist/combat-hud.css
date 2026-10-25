@@ -1,76 +1,54 @@
-/* Shared combat HUD (combat-hud.js) in the Fracture direction: glass panels, the hero's colour as the only accent
-   (GHJU pink, LYLU cyan), red reserved for danger. Health bottom left, the weapon in hand bottom right. */
-.pw-hud{--pw-accent:#ef91b4;--pw-panel:#0d1824cc;--pw-line:#93a9bc4d;position:fixed;inset:auto 0 0 0;z-index:6;pointer-events:none;
-  font:600 11px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;color:#e8eef2;font-variant-numeric:tabular-nums;letter-spacing:.06em}
+/* C — Immersion. Shared screen HUD; the headset keeps its native wrist/display controls. */
+.pw-hud{--pw-accent:#ef91b4;--pw-left:max(16px,env(safe-area-inset-left));--pw-right:max(16px,env(safe-area-inset-right));--pw-top:max(16px,env(safe-area-inset-top));--pw-base:max(20px,calc(env(safe-area-inset-bottom) + 10px));position:fixed;inset:0;z-index:18;pointer-events:none;font:500 11px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f6faff;font-variant-numeric:tabular-nums}
 .pw-hud[data-hero=lylu]{--pw-accent:#80baff}
-.pw-hud[hidden]{display:none}
-.pw-hud-vitals,.pw-hud-arms{position:fixed;bottom:max(22px,calc(env(safe-area-inset-bottom) + 14px));min-width:168px;padding:11px 14px 12px;
-  border:1px solid var(--pw-line);border-radius:18px;background:linear-gradient(115deg,#101c29e6,#0d18248c);backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);box-shadow:0 10px 34px #02081466}
-.pw-hud-vitals{left:max(22px,env(safe-area-inset-left))}
-.pw-hud-arms{right:max(22px,env(safe-area-inset-right));text-align:right}
-.pw-hud-tag{display:block;font-size:9px;letter-spacing:.2em;color:var(--pw-accent)}
-.pw-hud-line{display:flex;align-items:baseline;gap:7px;margin:3px 0 7px}
-.pw-hud-arms .pw-hud-line{justify-content:flex-end}
-.pw-hud-line b{font-size:30px;font-weight:650;letter-spacing:-.02em;line-height:1}
-.pw-hud-line small{font-size:10px;color:#b5c6d1;letter-spacing:.14em}
-/* Ten segments, filled from --fill (0..1): health in the hero's colour, the magazine or the reload in white. */
-.pw-hud-bar{position:relative;height:5px;border-radius:3px;background:#ffffff1f;overflow:hidden;
-  -webkit-mask:repeating-linear-gradient(90deg,#000 0 calc(10% - 2px),transparent calc(10% - 2px) 10%);
-  mask:repeating-linear-gradient(90deg,#000 0 calc(10% - 2px),transparent calc(10% - 2px) 10%)}
-.pw-hud-bar i{position:absolute;inset:0 auto 0 0;width:calc(var(--fill,1) * 100%);background:var(--pw-accent);transition:width .18s ease-out}
-.pw-hud-arms .pw-hud-bar i{left:auto;right:0;background:#e8eef2}
-.pw-hud-note{display:block;min-height:11px;margin-top:6px;font-size:9px;letter-spacing:.18em;color:#b5c6d1}
-.pw-hud-note:empty{display:none}
-.pw-hud-vitals.regenerating .pw-hud-bar i{animation:pw-hud-regen 1.1s ease-in-out infinite}
-.pw-hud-vitals.critical{border-color:#ff5d6c99}
-.pw-hud-vitals.critical .pw-hud-bar i{background:#ff5d6c}
-.pw-hud-vitals.critical .pw-hud-note{color:#ff8d98;animation:pw-hud-blink .8s steps(2) infinite}
-.pw-hud-arms.reloading .pw-hud-bar i{background:var(--pw-accent)}
-.pw-hud-arms.low .pw-hud-line b,.pw-hud-arms.empty .pw-hud-line b{color:#ff8d98}
-.pw-hud-arms.empty .pw-hud-note{color:#ff8d98}
-/* Armour shield (3.63): a brighter bar over health, in the hero's colour; it flashes while recharging and turns
-   to an empty red outline when broken. Health drops to a neutral white under it. */
-.pw-hud-shield{position:relative;height:7px;margin:6px 0 2px;border-radius:4px;background:#ffffff14;overflow:hidden;box-shadow:0 0 0 1px #ffffff12 inset}
-.pw-hud-shield[hidden]{display:none}
-.pw-hud-shield i{position:absolute;inset:0 auto 0 0;width:calc(var(--fill,1) * 100%);background:linear-gradient(90deg,var(--pw-accent),#ffffffd9);box-shadow:0 0 12px var(--pw-accent);transition:width .12s linear}
-.pw-hud-vitals:has(.pw-hud-shield:not([hidden])) .pw-hud-bar i{background:#e8eef2}
-.pw-hud-vitals.shield-charging .pw-hud-shield i{animation:pw-hud-regen .45s ease-in-out infinite}
-.pw-hud-vitals.shield-broken .pw-hud-shield{box-shadow:0 0 0 1px #ff5d6c inset;animation:pw-hud-blink .5s steps(2) 3}
-.pw-hud-charges{display:block;margin-top:6px;font-size:9px;letter-spacing:.18em;color:var(--pw-accent)}
-.pw-hud-charges:empty{display:none}
-/* Hit direction: an arc on a ring around the crosshair, turned towards where the shot came from. */
-.pw-hud-hit{position:fixed;left:50%;top:50%;width:min(34vmin,260px);height:min(34vmin,260px);transform:translate(-50%,-50%) rotate(var(--angle,0deg));opacity:0;transition:opacity .12s;pointer-events:none}
-.pw-hud-hit i{position:absolute;left:50%;top:0;width:44%;height:14%;transform:translateX(-50%);border-top:4px solid #ff5d6c;border-radius:50% 50% 0 0/100% 100% 0 0;filter:drop-shadow(0 0 6px #ff5d6c)}
-/* Armour actions on touch screens: right thumb, above the fire cluster and the interaction button. */
+body.pw-immersion-hud{--pw-control-accent:#ef91b4}body.pw-immersion-hud[data-pw-hero=lylu]{--pw-control-accent:#80baff}
+.pw-hud [hidden],.pw-hud[hidden]{display:none!important}.pw-hud button{font:inherit;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;color:inherit;pointer-events:auto}.pw-hud button:focus-visible{outline:2px solid var(--pw-accent);outline-offset:4px}.pw-hud button:disabled{cursor:default;opacity:.45}.pw-hud svg,[data-pw-immersion] svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.pw-glass{border:1px solid #ffffff50;border-top-color:#ffffff8c;background:linear-gradient(155deg,#deedff20,#233c4f48 75%),#11243288;backdrop-filter:blur(12px) saturate(120%);-webkit-backdrop-filter:blur(12px) saturate(120%);box-shadow:0 5px 17px #0002,inset 0 1px #fff2;color:#fff;text-shadow:0 1px 3px #0008}
+.pw-hud-mission{position:absolute;left:var(--pw-left);top:var(--pw-top);height:44px;min-width:110px;max-width:calc(100% - 90px);display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:16px;font-size:9px!important;letter-spacing:.1em}.pw-hud-mission svg{width:18px;color:var(--pw-accent)}.pw-hud-mission span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pw-hud-objective{position:absolute;top:calc(var(--pw-top) + 54px);left:var(--pw-left);width:min(350px,calc(100vw - 32px));padding:15px;border-radius:18px;pointer-events:auto}.pw-hud-objective small{font-size:9px;letter-spacing:.13em;color:var(--pw-accent)}.pw-hud-objective p{font-size:14px;line-height:1.45;margin:9px 0 0}
+.pw-hud-vitals,.pw-hud-arms{position:absolute;bottom:var(--pw-base);height:58px;border-radius:17px;pointer-events:auto}.pw-hud-vitals{left:var(--pw-left);width:128px;padding:11px}.pw-hud-numbers{display:flex;gap:12px;align-items:center}.pw-hud-numbers>span{display:flex;gap:4px;align-items:center}.pw-hud-numbers>span:first-child{color:var(--pw-accent)}.pw-hud-numbers svg{width:16px;height:16px}.pw-hud-numbers b{font-size:17px;font-weight:650;letter-spacing:-.04em;line-height:1.3}.pw-hud-bar,.pw-hud-shield{position:absolute;left:11px;right:11px;bottom:9px;height:3px;background:#fff2;border-radius:4px;overflow:hidden}.pw-hud-bar i,.pw-hud-shield i{display:block;width:calc(var(--fill,1) * 100%);height:100%;background:#e8eef2;transition:width .15s}.pw-hud-shield{bottom:10px}.pw-hud-shield i{background:var(--pw-accent)}.pw-hud-vitals:has(.pw-hud-shield:not([hidden])) .pw-hud-bar{bottom:5px;height:1px;opacity:.7}.pw-hud-note{position:absolute;left:10px;right:10px;bottom:-17px;text-align:left;white-space:nowrap;letter-spacing:.08em;font-size:8px;color:#f1c6cc;text-shadow:0 1px 4px #000}.pw-hud-note:empty{display:none}.pw-hud-vitals.critical .pw-hud-value{color:#ff9eaa}.pw-hud-vitals.critical{border-color:#ff8c9b}.pw-hud-vitals.shield-charging .pw-hud-shield i{animation:pw-hud-regen 1s ease-in-out infinite}.pw-hud-vitals.shield-broken .pw-hud-shield{box-shadow:0 0 0 1px #e88a99 inset}
+.pw-hud-arms{right:var(--pw-right);width:132px;display:flex}.pw-hud-arms button{border:0;background:none;min-height:44px;padding:9px 11px;text-align:left;line-height:1}.pw-hud-reload{flex:1;min-width:0;border-radius:17px 0 0 17px}.pw-hud-weapon{display:block;font-size:8px;letter-spacing:.13em;margin-bottom:4px;color:#d9e8f6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pw-hud-ammo{font-size:23px;font-weight:650;letter-spacing:-.05em}.pw-hud-capacity{font-size:11px;color:#dbe5ed;margin-left:6px;white-space:nowrap}.pw-hud-arms .pw-hud-swap{flex:0 0 44px;min-width:44px;border-left:1px solid #ffffff21;border-radius:0 17px 17px 0;padding:10px;display:grid;place-items:center}.pw-hud-swap svg{width:17px}.pw-hud-arms.reloading .pw-hud-reload{opacity:1}.pw-hud-reload-track{position:absolute;bottom:5px;left:11px;right:54px;height:2px;display:none;background:#fff2}.pw-hud-reload-track i{display:block;width:calc(var(--fill,0) * 100%);height:100%;background:var(--pw-accent)}.pw-hud-arms.reloading .pw-hud-reload-track{display:block}.pw-hud-arms.low .pw-hud-ammo,.pw-hud-arms.empty .pw-hud-ammo{color:#ffacb7}
 .pw-hud-touch{display:none}
+.pw-hud-more{position:absolute;right:var(--pw-right);bottom:calc(var(--pw-base) + 101px);width:46px;height:46px;padding:0;display:grid;place-items:center;border:1px solid #ffffff70;border-radius:50%;background:linear-gradient(150deg,#d3eaff22,#243f5455),#11243299;box-shadow:inset 0 1px #fff3;text-shadow:0 1px 3px #0008}.pw-hud-more[aria-expanded=true]{background:#35556dcc;border-color:#e2f0fc}
+.pw-hud-palette{position:absolute;right:var(--pw-right);bottom:calc(var(--pw-base) + 163px);width:176px;height:132px;border-radius:20px;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:5px;pointer-events:auto}.pw-hud-palette button{border:1px solid #d8ebff26;border-radius:12px;background:#ffffff0c;min-width:44px;min-height:44px;padding:5px;display:grid;align-content:center;justify-items:center;gap:4px;font-size:9px}.pw-hud-palette button[aria-pressed=true]{background:#8ab9d54d;border-color:#e8f4ff99}.pw-hud-palette svg{width:20px;height:20px}.pw-hud-charges{display:inline-grid;place-items:center;border:1px solid #b4cce277;border-radius:8px;min-width:14px;min-height:14px;font-size:9px;font-weight:600;margin-left:3px}.pw-hud-context{position:absolute;bottom:calc(var(--pw-base) + 80px);left:50%;transform:translateX(-50%);min-height:44px;max-width:min(360px,86vw);padding:9px 12px;display:flex;align-items:center;gap:8px;border-radius:15px;font-size:11px!important;backdrop-filter:none;-webkit-backdrop-filter:none;line-height:1.35}.pw-hud-context svg{flex:0 0 19px}.pw-hud-context kbd{font-size:9px;border:1px solid #b7d3e766;padding:3px 5px;border-radius:5px}.pw-hud-hit{position:fixed;left:50%;top:50%;width:min(34vmin,260px);height:min(34vmin,260px);transform:translate(-50%,-50%) rotate(var(--angle,0deg));opacity:0;transition:opacity .12s;pointer-events:none}.pw-hud-hit i{position:absolute;left:50%;top:0;width:44%;height:14%;transform:translateX(-50%);border-top:3px solid #ff7e88;border-radius:50% 50% 0 0/100% 100% 0 0}
+@keyframes pw-hud-regen{50%{opacity:.55}}
+/* Engine-owned nodes retain their event handlers/state, but no duplicate panels or commands. */
+body.pw-unified-hud #combatHud,body.pw-unified-hud #hud #bottom,body.pw-unified-hud .game-hud .vitals,body.pw-unified-hud .game-hud .ammo-readout,body.pw-unified-hud .game-hud .weapon-tag{display:none!important}
+body.pw-immersion-hud #game #quickSettings,body.pw-immersion-hud #game #quickObjective,body.pw-immersion-hud #game #objectivePanel,body.pw-immersion-hud #game #controlsPanel,body.pw-immersion-hud #game #prompt,body.pw-immersion-hud #pwMission,body.pw-immersion-hud #pwSettings,body.pw-immersion-hud #hud #objective,body.pw-immersion-hud #hud #prompt,body.pw-immersion-hud #pickup-button,body.pw-immersion-hud .pw-companion[data-unlocked=false]{display:none!important}
+body.pw-immersion-hud .fracture-session-actions [data-session=vr],body.pw-immersion-hud #hud-vr-button,body.pw-immersion-hud #view-button,body.pw-immersion-hud #btnPauseMobile,body.pw-immersion-hud [data-m02=pause]{display:none!important}
+body.pw-immersion-hud .fracture-session-actions,body.pw-immersion-hud .game-hud .hud-actions{position:fixed;top:max(16px,env(safe-area-inset-top));right:max(16px,env(safe-area-inset-right));width:auto;gap:0}
+body.pw-immersion-hud .fracture-session-actions button,body.pw-immersion-hud #pause-button{width:44px;height:44px;min-width:44px;border-radius:50%;border:1px solid #ffffff70;background:linear-gradient(150deg,#d3eaff22,#243f5455),#11243299;box-shadow:inset 0 1px #fff3;color:#fff;padding:10px;backdrop-filter:none;-webkit-backdrop-filter:none}
+body.pw-immersion-hud .score-hud,body.pw-immersion-hud .wave-hud,body.pw-immersion-hud .radar,body.pw-immersion-hud .training-hud{display:none!important}
+body.pw-immersion-hud .pw-companion-toggle{top:max(78px,calc(env(safe-area-inset-top) + 62px));left:max(16px,env(safe-area-inset-left));width:44px;height:44px}
+/* Settings stay inside the paused dialog; keyboard and gamepad commands are unchanged. */
+.fracture-settings[hidden],.fracture-pause .fracture-choices[hidden]{display:none!important}.fracture-settings{display:grid;gap:14px}.fracture-settings .pw-hud-contrast{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:12px 0;font-size:13px}.pw-hud-contrast small{display:block;color:#acbdca;font-size:10px;margin-top:5px}.pw-hud-contrast input{width:22px;height:22px;accent-color:#add5f6}.fracture-settings #controlsPanel{position:static!important;display:block!important;transform:none!important;width:100%!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;background:none!important;box-shadow:none!important}.fracture-settings #controlsPanel .tourPanel,.fracture-settings #controlsPanel .toggleRow{display:none!important}.fracture-settings #quality{position:static!important;display:block!important;width:100%;font-size:13px;max-width:100%;color:#eaf3f7;background:#1c2e3e;border:1px solid #526575;border-radius:10px;min-height:44px;padding:9px}.fracture-settings button,.fracture-settings select{min-height:44px}.fracture-settings .group{margin-top:12px}.fracture-settings .group label{font-size:12px;color:#c3d3df}.fracture-settings .group select{width:100%}.fracture-settings-back{margin-top:8px}.fracture-pause .fracture-choices button{min-height:44px}
+body.pw-hud-opaque .pw-glass{background:#102332f5;backdrop-filter:none;-webkit-backdrop-filter:none;border-color:#c5dbee99}
+body.pw-hud-lobby-page:not(.playing) .pw-hud,body.outfit-mode .pw-hud,.stereo-mode .pw-hud,body.xr-mode .pw-hud,body.in-xr .pw-hud,.photoMode .pw-hud{display:none}
 @media(pointer:coarse){
-  .pw-hud-touch{display:block}
-  .pw-hud-touch button{position:fixed;bottom:max(178px,calc(env(safe-area-inset-bottom) + 164px));width:56px;height:56px;padding:0;
-    display:grid;place-items:center;align-content:center;gap:1px;border-radius:50%;border:1px solid var(--pw-accent);background:#0d1824d9;color:#e8eef2;
-    font:800 8.5px/1 system-ui,sans-serif;letter-spacing:.08em;pointer-events:auto;touch-action:none;box-shadow:0 0 16px #02081480;z-index:7}
-  .pw-hud-touch [data-armor=melee]{right:max(92px,calc(env(safe-area-inset-right) + 80px))}
-  .pw-hud-touch [data-armor=charge]{right:max(24px,calc(env(safe-area-inset-right) + 13px))}
-  .pw-hud-touch small{font-size:12px;color:var(--pw-accent)}
-  .pw-hud-touch button.empty{opacity:.45;border-color:var(--pw-line)}
-  .pw-hud-touch button:active{background:color-mix(in srgb,var(--pw-accent) 30%,#0d1824)}
+ .pw-hud-touch{display:block}.pw-hud-vitals,.pw-hud-arms{bottom:calc(var(--pw-base) + 173px)}.pw-hud-vitals{width:122px}.pw-hud-context{bottom:calc(var(--pw-base) + 260px)}.pw-hud-context kbd{display:none}.pw-hud.pw-actions-open .pw-hud-arms{bottom:calc(var(--pw-base) + 310px)}
+ body.pw-immersion-hud #touchControls #touchButtons button:not([data-pw-immersion]),body.pw-immersion-hud .game-hud .fire-row button:not([data-pw-immersion]),body.pw-immersion-hud #m02-touch-controls .m02-actions button:not([data-pw-immersion]){display:none!important}
+ body.pw-immersion-hud #m02-touch-controls .m02-actions,body.pw-immersion-hud #touchControls #touchButtons,body.pw-immersion-hud .game-hud .fire-area,body.pw-immersion-hud .game-hud .fire-row{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;display:block!important;pointer-events:none!important;transform:none!important}
+ body.pw-immersion-hud #touchControls #touchButtons [data-pw-immersion],body.pw-immersion-hud .game-hud .fire-row [data-pw-immersion],body.pw-immersion-hud #m02-touch-controls .m02-actions [data-pw-immersion]{position:fixed!important;display:grid!important;align-content:center;justify-items:center;gap:4px;pointer-events:auto;touch-action:none;right:auto!important;top:auto!important;left:57%!important;bottom:max(25px,calc(env(safe-area-inset-bottom) + 15px))!important;transform:translateX(-50%)!important;width:56px!important;height:56px!important;min-height:44px!important;padding:0!important;margin:0!important;border-radius:50%!important;border:1px solid #ffffff70!important;background:linear-gradient(150deg,#d3eaff22,#243f5455),#11243299!important;box-shadow:inset 0 1px #fff3!important;color:#fff!important;font:500 9px system-ui!important;user-select:none;-webkit-user-select:none}
+ body.pw-immersion-hud [data-pw-immersion] small{font:500 7px system-ui;letter-spacing:.08em;pointer-events:none}
+ body.pw-immersion-hud #touchControls #touchButtons [data-pw-immersion=jump],body.pw-immersion-hud .game-hud .fire-row [data-pw-immersion=jump],body.pw-immersion-hud #m02-touch-controls .m02-actions [data-pw-immersion=jump]{width:48px!important;height:48px!important;bottom:max(100px,calc(env(safe-area-inset-bottom) + 90px))!important}
+ body.pw-immersion-hud #touchControls #touchButtons [data-pw-immersion=fire],body.pw-immersion-hud .game-hud .fire-row [data-pw-immersion=fire],body.pw-immersion-hud #m02-touch-controls .m02-actions [data-pw-immersion=fire]{width:74px!important;height:74px!important;right:max(16px,env(safe-area-inset-right))!important;left:auto!important;bottom:max(28px,calc(env(safe-area-inset-bottom) + 18px))!important;transform:none!important;border-color:#ffe2efb0!important;background:linear-gradient(140deg,#d35a8fbc,#923663ad)!important}
+ body.pw-immersion-hud[data-pw-hero=lylu] #touchControls #touchButtons [data-pw-immersion=fire],body.pw-immersion-hud[data-pw-hero=lylu] .game-hud .fire-row [data-pw-immersion=fire],body.pw-immersion-hud[data-pw-hero=lylu] #m02-touch-controls .m02-actions [data-pw-immersion=fire]{background:linear-gradient(140deg,#4a7fa9cb,#214d76c7)!important;border-color:#d6eeffd1!important}
+ body.pw-immersion-hud #touchControls #stick,body.pw-immersion-hud .game-hud #move-stick,body.pw-immersion-hud #m02-touch-controls #m02-move{position:fixed!important;left:max(16px,env(safe-area-inset-left))!important;bottom:max(20px,calc(env(safe-area-inset-bottom) + 10px))!important;width:112px!important;height:112px!important;min-width:0!important;touch-action:none;pointer-events:auto}
+ body.pw-immersion-hud #touchControls #stick,body.pw-immersion-hud .game-hud #move-stick .joystick-ring,body.pw-immersion-hud #m02-touch-controls #m02-move .m02-stick-ring{width:112px!important;height:112px!important;border-radius:50%;border:1px solid #ffffff55!important;background:linear-gradient(150deg,#d3eaff19,#243f5444),#11243270!important;box-shadow:inset 0 1px #fff2!important}
+ body.pw-immersion-hud #touchControls #nub,body.pw-immersion-hud .game-hud .joystick-knob,body.pw-immersion-hud #m02-touch-controls .m02-stick-knob{width:46px!important;height:46px!important;left:calc(50% - 23px)!important;top:calc(50% - 23px)!important;border-radius:50%;background:linear-gradient(140deg,#d5f2ff9c,#9bb8d044)!important;border:1px solid #e4f6ffd9!important;box-shadow:0 3px 8px #0002,inset 0 1px #fff8!important}
+ body.pw-immersion-hud .game-hud .joystick-knob svg,body.pw-immersion-hud .game-hud .stick-tick,body.pw-immersion-hud #m02-move small{display:none!important}
+ @media(max-width:390px){body.pw-immersion-hud #touchControls #stick,body.pw-immersion-hud .game-hud #move-stick,body.pw-immersion-hud .game-hud #move-stick .joystick-ring,body.pw-immersion-hud #m02-touch-controls #m02-move,body.pw-immersion-hud #m02-touch-controls #m02-move .m02-stick-ring{width:96px!important;height:96px!important}}
+ @media(orientation:landscape){
+  .pw-hud-vitals,.pw-hud-arms{bottom:calc(var(--pw-base) + 147px)}.pw-hud-context{top:38%;bottom:auto}.pw-hud.pw-actions-open .pw-hud-arms{top:var(--pw-top);bottom:auto;right:calc(var(--pw-right) + 66px)}
+  .pw-hud-palette{grid-template-columns:repeat(4,1fr);width:256px;height:70px;right:calc(var(--pw-right) + 100px);bottom:calc(var(--pw-base) + 151px);padding:6px;gap:4px}.pw-hud-palette button{font-size:8px}
+  body.pw-immersion-hud #touchControls #touchButtons [data-pw-immersion=aim],body.pw-immersion-hud .game-hud .fire-row [data-pw-immersion=aim],body.pw-immersion-hud #m02-touch-controls .m02-actions [data-pw-immersion=aim],body.pw-immersion-hud #touchControls #touchButtons [data-pw-immersion=jump],body.pw-immersion-hud .game-hud .fire-row [data-pw-immersion=jump],body.pw-immersion-hud #m02-touch-controls .m02-actions [data-pw-immersion=jump]{left:calc(100% - 185px)!important}
+ }
 }
-@keyframes pw-hud-regen{50%{filter:brightness(1.5)}}
-@keyframes pw-hud-blink{50%{opacity:.35}}
-/* The legacy readouts of each engine stay in the page for their own logic, hidden behind the shared HUD. */
-body.pw-unified-hud #combatHud,body.pw-unified-hud #hud #bottom,body.pw-unified-hud .game-hud .vitals,
-body.pw-unified-hud .game-hud .ammo-readout,body.pw-unified-hud .game-hud .weapon-tag{display:none!important}
-/* Main page: only while a session runs; never over the lobby, the outfit viewer or a headset view. */
-body.pw-hud-lobby-page:not(.playing) .pw-hud,body.outfit-mode .pw-hud,.stereo-mode .pw-hud,body.xr-mode .pw-hud,
-body.in-xr .pw-hud,.photoMode .pw-hud{display:none}
-/* Touch screens: compact, side by side above the movement stick (the approved RLH mobile layout keeps the
-   lower corners for the stick and the fire cluster). */
-@media(pointer:coarse){
-  .pw-hud-vitals,.pw-hud-arms{bottom:max(156px,calc(env(safe-area-inset-bottom) + 146px));min-width:0;padding:7px 10px 8px;border-radius:14px}
-  .pw-hud-arms{left:calc(max(10px,env(safe-area-inset-left)) + 112px);right:auto;text-align:left}
-  .pw-hud-vitals{left:max(10px,env(safe-area-inset-left));width:102px}
-  .pw-hud-arms{width:118px}.pw-hud-arms .pw-hud-line{justify-content:flex-start}
-  .pw-hud-arms .pw-hud-bar i{right:auto;left:0}
-  .pw-hud-line b{font-size:20px}.pw-hud-line{margin:2px 0 5px}
-}
+@supports not (backdrop-filter:blur(1px)){.pw-glass{background:#102332f5}}
 @media(prefers-reduced-motion:reduce){.pw-hud *{animation:none!important;transition:none!important}}
+@media(prefers-reduced-transparency:reduce){.pw-glass{background:#102332f5;backdrop-filter:none;-webkit-backdrop-filter:none}}
+.pw-hud,.pw-hud *{box-sizing:border-box}
+@media(pointer:fine){body.pw-immersion-hud .game-hud .touch-controls,body.pw-immersion-hud #touchControls,body.pw-immersion-hud #m02-touch-controls{display:none!important}}
+.fracture-settings #toggleMode,.fracture-settings #teleport{display:none!important}.fracture-settings-back{width:100%;border:1px solid #ffffff45;border-radius:12px;padding:12px;background:#e3eef6;color:#172c3c;font:600 13px system-ui}.fracture-settings #audioToggle{width:100%;border-radius:10px;padding:10px}
+body.pw-immersion-hud .pw-objective-marker{top:max(84px,calc(env(safe-area-inset-top) + 68px))!important}body.pw-immersion-hud .pw-portal-marker{top:max(104px,calc(env(safe-area-inset-top) + 88px))!important}
+.fracture-settings #helpOpen,.fracture-settings #mapPanelBtn{display:none!important}
+.pw-hud-arms .pw-hud-reload:disabled{opacity:1;cursor:default}

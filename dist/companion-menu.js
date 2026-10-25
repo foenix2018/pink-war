@@ -1,4 +1,4 @@
-// Shared left-side skill drawer. Locked entries remain informative before M07;
+// Shared left-side skill drawer. The shortcut stays out of the combat HUD before M07;
 // unlocking is owned by the simulation, never a DOM button or URL parameter.
 import {companionPictogram,paintCompanionPictogram} from './companion-pictograms.js';
 export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
@@ -13,7 +13,7 @@ export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
  let open=false,signature='',visible=false,disposed=false;
  const buttons=new Map();
  function refresh(){
-  const status=getStatus();if(!status)return;
+  const status=getStatus();if(!status)return;root.dataset.unlocked=String(!!status.unlocked);
   const key=JSON.stringify([status.name,status.unlocked,status.energy,status.skills.map(s=>[s.id,Math.ceil(s.remaining),s.enabled])]);
   if(key===signature)return;signature=key;
   const color='#'+status.color.toString(16).padStart(6,'0');root.style.setProperty('--partner',color);
@@ -31,7 +31,7 @@ export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
   if(xr)xr.dirty=true;
  }
  function setOpen(value){
-  if(disposed||!visible&&value)return;open=!!value;panel.hidden=!open;toggle.hidden=open;
+  if(disposed||value&&(!visible||!getStatus()?.unlocked))return;open=!!value;panel.hidden=!open;toggle.hidden=open;
   toggle.setAttribute('aria-expanded',String(open));refresh();if(xr)xr.dirty=true;onChange(open);
   if(open)panel.querySelector('header button').focus({preventScroll:true});else if(!root.hidden)toggle.focus({preventScroll:true});
  }
@@ -57,7 +57,7 @@ export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
   if(!xr)return false;
   if(xr.mesh.parent!==scene&&scene)scene.add(xr.mesh);
   const wasXR=xr.enabled;xr.enabled=enabled;
-  xr.mesh.visible=enabled&&visible&&!!left&&!!right;
+  xr.mesh.visible=enabled&&visible&&!!getStatus()?.unlocked&&!!left&&!!right;
   if(!xr.mesh.visible){xr.pressed=!!trigger;if(open&&(enabled||wasXR))setOpen(false);return false;}
   const {mesh}=xr;left.updateWorldMatrix(true,false);right.updateWorldMatrix(true,false);
   left.getWorldPosition(mesh.position);mesh.position.y+=.12;
