@@ -15,13 +15,14 @@ export function installPhotographicSurfaces(T,targets,{performance=false,weather
     for(const channel of channels){
       stats.total++;
       done.push(new Promise(resolve=>{
-        const asset=weathered&&channel==='diff'&&key!=='rust'?'vesper-'+(key==='metal'?'steel':key):profile.asset;
-        loader.load('./assets/cc0/'+asset+'_'+channel+'_512.jpg',texture=>{
+        const high=!performance&&['concrete','asphalt'].includes(key);
+        const asset=!high&&weathered&&channel==='diff'&&key!=='rust'?'vesper-'+(key==='metal'?'steel':key):profile.asset;
+        loader.load('./assets/cc0/'+asset+'_'+channel+(high?'_1k.jpg':'_512.jpg'),texture=>{
           textures.push(texture);texture.wrapS=texture.wrapT=T.RepeatWrapping;texture.anisotropy=performance?1:4;
           texture.colorSpace=channel==='diff'?T.SRGBColorSpace:T.NoColorSpace;
           for(const material of list){
             const slot=channel==='diff'?'map':channel==='normal'?'normalMap':'roughnessMap';
-            material[slot]=texture;material.roughness=weathered?Math.max(.65,profile.roughness):profile.roughness;
+            material[slot]=texture;if(high&&channel==='diff')material.color.setRGB(.82,.84,.82);material.roughness=weathered?Math.max(.65,profile.roughness):profile.roughness;
             material.metalness=profile.metalness*(weathered?.72:1);
             if(channel==='normal')material.normalScale.set(.36,.36);
             material.needsUpdate=true;

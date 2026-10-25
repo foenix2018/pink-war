@@ -1,3 +1,4 @@
+import {createCircuitSwitch} from './circuit-switch.js';
 import {createVesperSystems} from './vesper-systems.js';
 import {createPolyHavenLayer} from './polyhaven-level1.js';
 import {LEVEL1_MAP,createLevel1Obstacles} from './level1-layout.js';
@@ -17,7 +18,7 @@ import {createArchiveTerminalFactory} from './archive-terminals.js';
 // standalone HTML: no CDN, GLTF loader or late asset request is needed to play.
 export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=false}={}){
  const root=new T.Group();root.name='VESPER / SECOURS 07 — carte narrative Blender';root.visible=false;scene.add(root);
- const obstacles=createLevel1Obstacles(),geometries=[],materials=[],textures=[],screens=[],routes=[];
+ const obstacles=createLevel1Obstacles(),geometries=[],materials=[],textures=[],screens=[],routes=[],terminalDisplays=[];
  let stage='approach',lastState='',disposed=false,currentObjective=null;
  const ownG=g=>(geometries.push(g),g),ownM=m=>(materials.push(m),m);
  let seed=33207;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
@@ -74,19 +75,20 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
  function box(mat,x,y,z,w,h,d,parent=root){const o=new T.Mesh(boxGeo,mat);o.position.set(x,y,z);o.scale.set(w,h,d);o.receiveShadow=true;o.castShadow=quality!=='low';parent.add(o);return o;}
  function shell(mat,x,y,z,w,h,d){const o=new T.Mesh(ownG(bevelBox(w,h,d,.045,1)),mat);o.position.set(x,y,z);o.receiveShadow=true;o.castShadow=quality!=='low';root.add(o);return o;}
  function solid(x,z,w,d,y,height,id){if(obstacles.some(b=>b.campaignTerminal===id))return;obstacles.push({x,z,hx:w/2,hz:d/2,y,height,surface:'metal',campaign:true,campaignTerminal:id});}
- function panel(title,x,y,z,w=2.4,h=1,width=768,height=320){
+ function panel(title,x,y,z,w=2.4,h=1,width=768,height=320,equipment=false){
   const data=paintTexture(width,height,()=>{}),mesh=new T.Mesh(ownG(new T.PlaneGeometry(w,h)),ownM(new T.MeshBasicMaterial({map:data.map,toneMapped:false})));mesh.position.set(x,y,z);root.add(mesh);
-  const s={mesh,paint(lines,caption=title){const c=data.context;c.fillStyle='#071918';c.fillRect(0,0,width,height);c.fillStyle='#dbb073';c.fillRect(14,16,5,height-32);c.font='600 25px sans-serif';c.fillText(caption,33,42,width-60);lines.forEach((line,i)=>{c.fillStyle=i===0?'#eef0df':'#b5d0c6';c.font='22px sans-serif';c.fillText(line,33,83+i*39,width-60);});data.map.needsUpdate=true;}};screens.push(s);return s;
+  const s={mesh,paint(lines,caption=title){const c=data.context;c.fillStyle='#071918';c.fillRect(0,0,width,height);c.fillStyle='#dbb073';c.fillRect(14,16,5,height-32);c.font='600 25px sans-serif';c.fillText(caption,33,42,width-60);lines.forEach((line,i)=>{c.fillStyle=i===0?'#eef0df':'#b5d0c6';c.font='22px sans-serif';c.fillText(line,33,83+i*39,width-60);});if(equipment){c.strokeStyle='#345953';c.lineWidth=2;c.strokeRect(8,8,width-16,height-16);c.fillStyle='#77968c';c.font='15px monospace';c.fillText('VESPER  /  MÉMOIRE LOCALE  /  LIAISON PHYSIQUE',33,height-23);for(let j=0;j<7;j++){c.fillStyle=j<4?'#658c7d':'#253e39';c.fillRect(width-116+j*11,height-34,6,13);}}data.map.needsUpdate=true;}};screens.push(s);return s;
  }
  function terminal(x,y,z,id){
   const computer=computers.create(root,{x,y,z,id});solid(x,z,2.6,.6,y,1.93,id);
-  const display=panel('MÉMOIRE HUMAINE / HORS RÉSEAU',0,0,0,computer.width,computer.height);
+  const display=panel('MÉMOIRE HUMAINE / HORS RÉSEAU',0,0,0,computer.width,computer.height,768,320,true);
   computer.display.add(display.mesh);display.mesh.position.set(0,.018,computer.z);
-  display.mesh.material.color.setScalar(.72);
+  display.mesh.material.color.setScalar(.72);terminalDisplays.push(display.mesh);
   return display;
  }
- box(maps.dark,-6,1.05,61.65,1.65,2.1,.6);solid(-6,61.65,1.65,.6,0,2.1,'power');
- const power=panel('ALIMENTATION / CIRCUIT ISOLÉ',-6,1.55,61.97,1.55,.95);
+ shell(computers.materials.paint,-6,1.05,61.65,1.65,2.1,.6);solid(-6,61.65,1.65,.6,0,2.1,'power');
+ const powerSwitch=createCircuitSwitch(T,root,{x:-6,y:.72,z:61.98,scale:.85,materials:computers.materials});
+ const power=panel('ALIMENTATION / CIRCUIT ISOLÉ',-6,1.68,61.97,1.42,.55);
  const archive=terminal(0,0,54.45,'archive'),exit=terminal(18,4.8,-44.55,'exit');
  const systems=createVesperSystems(T,root,maps,{quality,terminalMaterials:computers.materials});obstacles.push(...systems.colliders);
  const story=createLevel1Story(T,root,maps,{quality});obstacles.push(...story.colliders);
@@ -109,8 +111,8 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
  box(maps.steel,lift.x,-.10,lift.z,6,.20,6,carriage);
  for(const side of [-1,1]){box(maps.steel,lift.x+side*2.92,.55,lift.z,.10,1.1,6,carriage);box(maps.amber,lift.x+side*2.9,1.07,lift.z,.045,.07,5.9,carriage);}
  function updateLift(time){if(root.visible)carriage.position.y=liftHeightAt(lift,time);}
- function update(game,time=0){const s=game?.campaign;if(!s||!root.visible)return;stage=s.stage;currentObjective=s.objective;story.update(game);systems.update(game,time);courtyard.update(game);updateLift(game.time);boundary.update({...game.player,y:game.player.elevation+1.65},.55,1.2);
-  const key=[stage,s.sibling,s.objective?.id,...s.archive].join('|');if(key!==lastState){lastState=key;
+ function update(game,time=0){const s=game?.campaign;if(!s||!root.visible)return;stage=s.stage;currentObjective=s.objective;story.update(game);systems.update(game,time);courtyard.update(game);powerSwitch.setState(!['approach','power'].includes(stage));updateLift(game.time);boundary.update({...game.player,y:game.player.elevation+1.65},.55,1.2);
+  const key=[stage,s.sibling,s.objective?.id,...s.archive].join('|');if(key!==lastState){lastState=key;const powered=!['approach','power'].includes(stage);computers.setPowered(powered);for(const screen of terminalDisplays)screen.material.color.setScalar(powered?.72:.30);
    power.paint(stage==='approach'?['DÉPARTS NON ISOLÉS','CONVOI / AILE TECHNIQUE']:stage==='power'?['Courant coupé. Réarmer le circuit.','F / clic du stick libre : interagir']:['CIRCUIT LOCAL : ACTIF','Réseau ORDRE : DÉCONNECTÉ']);
    archive.paint(['approach','power'].includes(stage)?['Mémoire hors tension.','Boîtier de secours à gauche.']:stage==='archive'?['Journal humain retrouvé.','F / clic du stick libre : lire']:s.archive);
    exit.paint(stage==='complete'?[`Passage de ${s.sibling} confirmé.`,'DESTINATION : ARCHIVES VÉGÉTALES','NIVEAU 1 TERMINÉ']:[`Trace de ${s.sibling} enregistrée.`,'F / clic du stick libre : consulter']);
@@ -124,6 +126,6 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
  }
  function setVisible(enabled){root.visible=!!enabled;lastState='';if(enabled)pbr.start();}
  function stats(){return{visible:root.visible,courtyard:courtyard.stats(),computers:computers.stats(),systems:systems.stats(),story:story.stats(),stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:5,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:3,boundary:boundary.stats(),pbr:pbr.stats()};}
- function dispose(){if(disposed)return;disposed=true;pbr.dispose();computers.dispose();dressing?.dispose();boundary.dispose();story.dispose();systems.dispose();courtyard.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
+ function dispose(){if(disposed)return;disposed=true;pbr.dispose();powerSwitch.dispose();computers.dispose();dressing?.dispose();boundary.dispose();story.dispose();systems.dispose();courtyard.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
  return{root,obstacles,update,setVisible,stats,dispose,updateLift,ready,materials:maps,dressing};
 }

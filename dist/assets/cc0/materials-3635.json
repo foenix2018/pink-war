@@ -1,0 +1,59 @@
+{
+  "license": "CC0-1.0",
+  "textures": [
+    {
+      "file": "asphalt_03_diff_1k.jpg",
+      "source": "https://polyhaven.com/a/asphalt_03",
+      "download": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/asphalt_03_diff_1k.jpg",
+      "license": "CC0-1.0",
+      "bytes": 212918,
+      "sourceSha256": "95ad02e2631c41cf9fdd6a37596cf75adb4fb8a8b6880567cc78ed1c41dc5681",
+      "sha256": "8e4c1c532e9a551bff9a1f35f0674946280e2b13f0cc1dc66596d02edc6eb969"
+    },
+    {
+      "file": "asphalt_03_normal_1k.jpg",
+      "source": "https://polyhaven.com/a/asphalt_03",
+      "download": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/asphalt_03_normal_1k.jpg",
+      "license": "CC0-1.0",
+      "bytes": 447944,
+      "sourceSha256": "978de8349ce2e9989325099a6fd1f5ea6b2826528e1264606a5c51296b1e2888",
+      "sha256": "770a0f7623eb17c2c3c1f8966936e43be664c601c1cbfe92ab4533dfafc5c730"
+    },
+    {
+      "file": "asphalt_03_rough_1k.jpg",
+      "source": "https://polyhaven.com/a/asphalt_03",
+      "download": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/asphalt_03_rough_1k.jpg",
+      "license": "CC0-1.0",
+      "bytes": 147440,
+      "sourceSha256": "069b6ea342aaad04fd1582f59c16fbbe5c7a6f0f3a87bc9d57648ed53336fb3a",
+      "sha256": "30acb0a8b5dd87cbda0c6cca245ba59d9a3a8ffc5f7d600aa1be42c9d730582c"
+    },
+    {
+      "file": "concrete_floor_diff_1k.jpg",
+      "source": "https://polyhaven.com/a/concrete_floor",
+      "download": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/concrete_floor_diff_1k.jpg",
+      "license": "CC0-1.0",
+      "bytes": 306398,
+      "sourceSha256": "5e06d0fb226f671470f59bf7798954b6965c9ed56dd45084dfd012e15737e444",
+      "sha256": "78513917c8535eb4ebff69b1652ba119e4ffc5a4b1d945d56559253e217cbc4c"
+    },
+    {
+      "file": "concrete_floor_normal_1k.jpg",
+      "source": "https://polyhaven.com/a/concrete_floor",
+      "download": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/concrete_floor_normal_1k.jpg",
+      "license": "CC0-1.0",
+      "bytes": 383075,
+      "sourceSha256": "5a403c176361193b785198ab363d3dc3755773ca5b023f19e05874e50caea302",
+      "sha256": "31225ec817bc51c6f08b49d37ae01366230d01b59e27e07fe097dec28925fd8e"
+    },
+    {
+      "file": "concrete_floor_rough_1k.jpg",
+      "source": "https://polyhaven.com/a/concrete_floor",
+      "download": "https://raw.githubusercontent.com/AetherRadar/operation-steel-tide/d6a33b932e00fb9016dea407eca3f909aeaf2dcb/assets/textures/concrete_floor_rough_1k.jpg",
+      "license": "CC0-1.0",
+      "bytes": 108241,
+      "sourceSha256": "342110e685c07af2c56194662a796b2ab4f2a4d992a9745b8fc55943414faead",
+      "sha256": "50579adcce80429d14ee4e4791835fc89aaa9b1c0534c5030bea156a1002acb4"
+    }
+  ]
+}

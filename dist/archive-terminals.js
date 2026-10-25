@@ -1,17 +1,19 @@
 import {Assembly,bevelBox,matrix} from './geo.js';
+import {createMachineFinishes} from './machine-finishes.js';
 
 // Salvaged human computers, in metres. The four M01 interaction locations and
 // their collision envelopes stay authoritative; no corridor is moved or added.
 export function createArchiveTerminalFactory(T,{performance=false,loadTextures=true}={}){
  const materials=[],textures=[],geometries=[],instances=[];
  const own=m=>(materials.push(m),m);
- const paint=own(new T.MeshStandardMaterial({color:0x716d60,roughness:.78,metalness:.28}));
- const metal=own(new T.MeshStandardMaterial({color:0x666962,roughness:.56,metalness:.83}));
+ const finishes=createMachineFinishes(T,{performance});
+ const paint=finishes.paint;
+ const metal=finishes.steel;
  const dark=own(new T.MeshStandardMaterial({color:0x171c1a,roughness:.69,metalness:.28}));
- const rubber=own(new T.MeshStandardMaterial({color:0x121411,roughness:.94,metalness:0}));
+ const rubber=finishes.rubber;
  const keys=own(new T.MeshStandardMaterial({color:0x393c33,roughness:.84,metalness:.02}));
  const amber=own(new T.MeshBasicMaterial({color:0x967241,toneMapped:false}));
- const stats={revision:'3.57',computers:0,textureReady:0,textureFailed:0,triangles:0};
+ const stats={revision:'3.63.5',computers:0,textureReady:0,textureFailed:0,triangles:0,powered:true};
  const pending=[];
  if(loadTextures&&typeof document!=='undefined'){
   const loader=new T.TextureLoader();
@@ -23,7 +25,7 @@ export function createArchiveTerminalFactory(T,{performance=false,loadTextures=t
    loader.load('./assets/cc0/'+file,t=>{
     textures.push(t);t.colorSpace=srgb?T.SRGBColorSpace:T.NoColorSpace;
     t.wrapS=t.wrapT=T.RepeatWrapping;t.anisotropy=performance?1:4;
-    for(const m of [paint,metal]){m[slot]=t;if(slot==='normalMap')m.normalScale.set(.12,.12);m.needsUpdate=true;}
+    for(const m of [dark]){m[slot]=t;if(slot==='normalMap')m.normalScale.set(.12,.12);m.needsUpdate=true;}
     stats.textureReady++;resolve(true);
    },undefined,()=>{stats.textureFailed++;resolve(false);});
   }));
@@ -72,7 +74,7 @@ export function createArchiveTerminalFactory(T,{performance=false,loadTextures=t
   // recess; there is no opaque overlay hiding the readable narrative texture.
   const h=new Assembly();
   const hb=(w,hh,d,m,p)=>parts(h,bevelBox(w,hh,d,.025,1),m,p);
-  hb(1.64,.88,.285,paint,[0,0,0]);hb(1.53,.78,.028,dark,[0,.018,.148]);
+  parts(h,bevelBox(1.64,.88,.285,.085,2),paint,[0,0,0]);hb(1.53,.78,.028,dark,[0,.018,.148]);
   hb(1.45,.70,.015,rubber,[0,.018,.169]);
   for(const side of [-1,1]){
    for(let i=0;i<7;i++)hb(.008,.11,.004,dark,[side*.77,-.18+i*.025,.146]);
@@ -80,6 +82,13 @@ export function createArchiveTerminalFactory(T,{performance=false,loadTextures=t
   }
   for(let i=0;i<3;i++)hb(.026,.008,.006,i?dark:amber,[.61-i*.052,-.375,.155]);
   hb(.32,.027,.006,dark,[-.39,-.375,.155]);
+  // Recessed cooling fins, protective shoulders and attached rear cable.
+  for(const side of [-1,1]){
+   parts(h,bevelBox(.085,.70,.22,.03,1),metal,[side*.79,0,-.035]);
+   for(let j=0;j<5;j++)hb(.23,.018,.03,dark,[side*.43,-.20+j*.085,-.155]);
+  }
+  const wire=new T.CatmullRomCurve3([new T.Vector3(.56,1.45,-.18),new T.Vector3(.60,1.16,-.24),new T.Vector3(.75,1.08,-.10)]);
+  parts(h,new T.TubeGeometry(wire,12,.012,6,false).translate(0,-1.48,.025),rubber,[0,0,0]);
   h.build(head);
   for(const assembly of [a,h]){
    for(const item of assembly.items)item.geometry.dispose();
@@ -88,7 +97,7 @@ export function createArchiveTerminalFactory(T,{performance=false,loadTextures=t
   stats.computers++;instances.push(root);
   return {root,display:head,width:1.36,height:.64,z:.180};
  }
- return {create,ready:Promise.all(pending),materials:{paint,metal,dark,rubber,keys},stats:()=>({...stats}),dispose(){
-  for(const root of instances)root.removeFromParent();for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();
+ return {create,setPowered(value){stats.powered=!!value;amber.color.setHex(value?0xb29355:0x292f2c);},ready:Promise.all(pending),materials:{paint,metal,dark,rubber,keys},stats:()=>({...stats}),dispose(){
+  finishes.dispose();for(const root of instances)root.removeFromParent();for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();
  }};
 }

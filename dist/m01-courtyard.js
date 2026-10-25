@@ -1,12 +1,15 @@
 import {Assembly,loft,matrix,bevelBox} from './geo.js';
+import {createCircuitSwitch} from './circuit-switch.js';
+import {createMachineFinishes} from './machine-finishes.js';
 import {LEVEL1_MAP} from './level1-layout.js';
 
 // Detailed props on the Blender-built courtyard: original medical equipment,
 // physical access labels and two electrical isolators. No new dynamic light.
 export function createCourtyardArt(T,parent,maps,{quality='auto',labels=true}={}){
  const root=new T.Group();root.name='M01 / cour et aile technique';parent.add(root);
- const assembly=new Assembly(),owned=[],textures=[],lamps=[],colliders=[];
- const cloth=new T.MeshStandardMaterial({color:0x626b5c,map:maps.plaster.map,roughness:.98,metalness:0});owned.push(cloth);
+ const assembly=new Assembly(),owned=[],textures=[],lamps=[],colliders=[],switches=[];
+ const finishes=createMachineFinishes(T,{performance:quality==='low'});
+ const cloth=finishes.fabric;
  const rubber=new T.MeshStandardMaterial({color:0x151d1d,map:maps.steel.map,roughness:.9,metalness:.08});owned.push(rubber);
  const ceramic=new T.MeshStandardMaterial({color:0xb2b4a4,map:maps.plaster.map,roughness:.85,metalness:.04});owned.push(ceramic);
  const red=new T.MeshStandardMaterial({color:0x713b30,roughness:.86,metalness:.14});owned.push(red);
@@ -23,16 +26,9 @@ export function createCourtyardArt(T,parent,maps,{quality='auto',labels=true}={}
  sign(-35.5,2.1,62,['TRIAGE / ACCÈS TECHNIQUE','CIRCUIT ISOLÉ · ENTRÉE EST'],3.3);
  sign(5,2.1,76,['ANNEXE DES ARCHIVES','POSTE DE SECOURS / HORS RÉSEAU'],3.4);
  for(const c of LEVEL1_MAP.courtyard.controls){
-  const z=c.z-.48;
-  box(rubber,[.94,1.42,.035],[c.x,.86,z+.255]);box(ceramic,[.74,.32,.045],[c.x,1.31,z+.28]);
-  box(maps.dark,[.57,.17,.035],[c.x,1.32,z+.312]);for(let j=0;j<7;j++)box(maps.steel,[.055,.07,.014],[c.x-.21+j*.07,1.32,z+.338]);
-  for(const side of [-1,1]){box(maps.steel,[.075,.45,.09],[c.x+side*.29,.86,z+.3]);rod(maps.rust,[c.x+side*.26,1.02,z+.33],[c.x+side*.26,.77,z+.46],.028);}
-  rod(red,[c.x-.24,.77,z+.46],[c.x+.24,.77,z+.46],.041);
-  for(const side of [-1,1])for(const yy of [.24,1.47])assembly.ball(maps.steel,[c.x+side*.42,yy,z+.284],[.018,.018,.008]);
-  for(let j=0;j<6;j++)box(rubber,[.45,.018,.02],[c.x,.27+j*.038,z+.282]);
-  const lamp=new T.Mesh(new T.SphereGeometry(.036,8,5),maps.amber);lamp.position.set(c.x+.25,1.34,z+.35);root.add(lamp);lamps.push(lamp);
-  const points=[[c.x-.36,.15,z],[c.x-.55,.055,z],[c.x-1.1,.055,z-.5],[c.x-1.1,.055,z-1.5]];
-  assembly.add(new T.TubeGeometry(new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p))),12,.035,6,false),rubber);
+  switches.push(createCircuitSwitch(T,root,{x:c.x,y:.86,z:c.z-.20,batch:assembly,materials:{paint:finishes.paint,metal:finishes.steel,rubber:finishes.rubber,dark:maps.dark}}));
+  const points=[[c.x-.36,.15,c.z-.48],[c.x-.55,.055,c.z-.48],[c.x-1.1,.055,c.z-.98],[c.x-1.1,.055,c.z-1.98]];
+  assembly.add(new T.TubeGeometry(new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p))),12,.035,6,false),finishes.rubber);
  }
  for(const [x,z,turn]of [[-30,66,0],[-18.5,49,Math.PI/2],[-31,78,0]]){
   const group=new T.Group();group.position.set(x,0,z);group.rotation.y=turn;root.add(group);const a=new Assembly();
@@ -53,7 +49,7 @@ export function createCourtyardArt(T,parent,maps,{quality='auto',labels=true}={}
  assembly.mount(root);assembly.setLevel(1);
  root.traverse(o=>{if(o.isMesh){o.castShadow=quality!=='low'&&!o.material.isMeshBasicMaterial;o.receiveShadow=true;}});
  let last=null;
- function update(game){const isolated=!!game.circuitIsolated;if(isolated===last)return;last=isolated;for(const lamp of lamps)lamp.visible=!isolated;}
- const stats=()=>{let triangles=0,draws=0;root.traverse(o=>{if(o.isMesh){draws++;triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;}});return{revision:'3.63.4',approaches:2,isolators:2,medicalCots:3,colliders:colliders.length,triangles,draws,circuitIsolated:!!last};};
- return {root,colliders,update,stats,dispose(){root.removeFromParent();root.traverse(o=>o.geometry?.dispose());for(const m of owned)m.dispose();for(const t of textures)t.dispose();}};
+ function update(game){const isolated=!!game.circuitIsolated;last=isolated;for(const control of switches)control.setState(isolated);}
+ const stats=()=>{let triangles=0,draws=0;root.traverse(o=>{if(o.isMesh){draws++;triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;}});return{revision:'3.63.5',approaches:2,isolators:2,medicalCots:3,colliders:colliders.length,triangles,draws,circuitIsolated:!!last};};
+ return {root,colliders,update,stats,dispose(){for(const control of switches)control.dispose();finishes.dispose();root.removeFromParent();root.traverse(o=>o.geometry?.dispose());for(const m of owned)m.dispose();for(const t of textures)t.dispose();}};
 }

@@ -36,3 +36,7 @@ Les fichiers `vesper-{concrete,asphalt,steel,paint}_diff_512.jpg` sont des compo
 Deux accessoires Poly Haven sont livrés dans `m01-salvage.json`, avec leurs textures PBR 512 px : [Old Military Crate](https://polyhaven.com/a/old_military_crate), Jack Mava, et [Metal Trash Can](https://polyhaven.com/a/metal_trash_can), GurJas Studios. Licence CC0 1.0. Source glTF de la caisse fermée et variante rouillée du conteneur ; transformations rigides intégrées, UV conservées. Le manifeste `assets/level1/cc0-props-sources.json` consigne les fichiers et empreintes du miroir public, épinglé au commit source. Aucune scène, carte ou code d’un autre jeu n’est repris.
 
 La surface de brique `m01-brick-{diff,normal,orm}_512.jpg` provient du **Downtown City MegaKit**, Quaternius, https://quaternius.com/packs/downtowncitymegakit.html, CC0 1.0 Universal. Les trois cartes originales `T_RedBrick_{BaseColor,Normal,ORM}.png` sont réduites à 512 px. Il s’agit d’une surface PBR créée par l’auteur, et non d’un scan photographique. Empreintes et licence source dans `assets/level1/cc0-props-sources.json`.
+
+## 3.63.5 — textures de proximité
+
+Béton `concrete_floor` et asphalte `asphalt_03`, cartes couleur, normales OpenGL et rugosité en 1024 × 1024, provenant des mêmes sources Poly Haven CC0 que les versions 512 existantes. Sources, empreintes des originaux et empreintes des fichiers JPEG optimisés : `materials-3635.json`. Les motifs des équipements dans `machine-finishes.js` sont des créations procédurales originales.
