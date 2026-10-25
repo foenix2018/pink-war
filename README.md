@@ -1,5 +1,7 @@
 # Pink Wars — La Fracture
 
+Version 3.63.1 : reprise de la **base 3.63** et de ses correctifs. Infanterie robotique graphite, casque compact, fusils tenus à deux mains avec poignées suivies en mouvement, départ des tirs raccordé au canon. Bouclier, mêlée, charges, interface et héros conservés. Nouvelle illustration d’accueil M02 proposée séparément, sans intégration. [Détails et analyse](docs/pink-wars/MISE_A_JOUR_363_1.md) · [Examiner les robots](https://pink-war.vercel.app/ennemis.html?form=stalker&v=3.63.1) · [Jouer](https://pink-war.vercel.app/?v=3.63.1).
+
 Version 3.63 : **combat d'armure** dans M01, M02, l'Arène et le Stand. Bouclier d'énergie au-dessus de la santé, qui se recharge après quelques secondes à l'abri ; frappe de mêlée (bien plus forte dans le dos) ; charge à impulsion lancée en arc qui neutralise les machines ; arc rouge autour du viseur indiquant d'où vient le tir reçu. Commandes : X / clic molette, B, RB / LB, boutons tactiles, stick droit et gâchette gauche au casque. [Détails](docs/pink-wars/MISE_A_JOUR_363.md) · [Jouer](https://pink-war.vercel.app/?v=3.63).
 
 Version 3.62 : menu d’accueil masqué pendant les parties d’Arène et du Stand, en-tête et couverture de la mission 02 corrigés, main de LYLU visible sur le M12. **Une seule interface de combat** (santé et arme en main) pour M01, M02, l’Arène et le Stand. Première étape de la [feuille de route cyberpunk / jouabilité Halo](docs/pink-wars/FEUILLE_DE_ROUTE_CYBERPUNK_HALO.md). [Détails](docs/pink-wars/MISE_A_JOUR_362.md) · [Jouer](https://pink-war.vercel.app/?v=3.62).
