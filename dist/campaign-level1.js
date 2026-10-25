@@ -201,6 +201,8 @@ export class CampaignLevel1 extends ArenaGame {
     this.setStage(COMBAT_STAGES[this.encounter]);
     this.event('portals', { count: 1, sites: [{ ...portal }] });
     this.event('wave', { wave: 1, count: ENCOUNTERS[this.encounter].length, campaign: true });
+    // Each new engagement brings one impulse charge (armor-combat.js), up to the carry limit.
+    if (this.encounter > 0) this.grantCharges(1);
     return true;
   }
 

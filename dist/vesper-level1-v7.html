@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
-<link rel="icon" href="icon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><link rel="stylesheet" href="./mission-loading.css?v=3.62"><script>document.documentElement.classList.toggle('pw-auto-story',!new URLSearchParams(location.search).has('visit'));</script>
+<link rel="icon" href="icon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><link rel="stylesheet" href="./mission-loading.css?v=3.63"><script>document.documentElement.classList.toggle('pw-auto-story',!new URLSearchParams(location.search).has('visit'));</script>
 <title>PINK WARS — LA FRACTURE · Le Dernier Signal</title><style>
 :root{font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Arial,sans-serif;color:#e9f3f8;background:#081019;--pink:#ec4c91;--cyan:#7ad7fb;--line:rgba(156,187,205,.19)}
 *{box-sizing:border-box}html,body{height:100%;margin:0;overflow:hidden}body{background:#07111b;touch-action:none}button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,select:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}canvas#view{position:fixed;inset:0;width:100%;height:100%;display:block;outline:none;background:linear-gradient(#354a5a,#121e2b 65%,#121417)}
@@ -34,6 +34,8 @@ body:not(.rainOn) #rainCurtain{display:none}
   #touchControls #touchButtons #btnRun{left:auto;right:max(24px,env(safe-area-inset-right));bottom:max(184px,calc(env(safe-area-inset-bottom) + 170px));width:44px;height:44px;font-size:8px}
   #touchControls #touchButtons #btnReloadMobile{right:max(110px,calc(env(safe-area-inset-right) + 100px));bottom:max(95px,calc(env(safe-area-inset-bottom) + 86px));width:48px;height:48px}
   #touchControls #touchButtons #btnNextMobile{right:max(110px,calc(env(safe-area-inset-right) + 100px));bottom:max(26px,env(safe-area-inset-bottom));width:48px;height:48px;font-size:9px}
+  /* 3.63: the shared CHARGE button sits above the sprint button of the approved M01 layout. */
+  .pw-hud-touch [data-armor=charge]{bottom:max(240px,calc(env(safe-area-inset-bottom) + 226px))!important}
   #touchControls #touchButtons #btnPauseMobile{right:max(62px,calc(env(safe-area-inset-right) + 54px));top:max(13px,env(safe-area-inset-top));width:38px;height:38px;border-radius:9px}
   #touchControls .mobileView{pointer-events:none;position:fixed;right:15px;top:38%;bottom:auto;opacity:.5;font-size:10px}
   #touchControls #btnAimMobile:active,#touchControls #btnFireMobile:active{background:#a63678}
@@ -74,7 +76,7 @@ body:not(.rainOn) #rainCurtain{display:none}
  #game #prompt{top:46%}
 }
 .photoMode #quickSettings,.photoMode #quickObjective{display:none!important}
-</style><link rel="stylesheet" href="fracture.css?v=3.62">
+</style><link rel="stylesheet" href="fracture.css?v=3.63">
 </head><body>
 <canvas id="view" aria-label="Environnement 3D de Vesper"></canvas>
 <div id="rainCurtain"></div><div id="game" aria-label="Commandes de la visite 3D"><div id="vignette"></div>
@@ -1716,7 +1718,7 @@ function pollGamepad(dt){const devices=navigator.getGamepads?.()||[],gp=combatWo
  if(missionMenu?.isOpen){lastGamepadButtons=gp.buttons.map(b=>b.pressed);return;}
  gamepadMove.x=d(gp.axes[0]||0);gamepadMove.y=d(gp.axes[1]||0);padLook.x=d(gp.axes[2]||0);padLook.y=d(gp.axes[3]||0);padRun=btn(10);gamepadAiming=btn(6);
  if(!combatWorld?.paused){yaw+=padLook.x*dt*1.9;pitch=clamp(pitch-padLook.y*dt*1.55,-1.46,1.46);}
- if(edge(12))combatWorld?.toggleSkills();padFiring=btn(7);if(edge(0))jumpQueued=true;if(edge(2))reloadWeapon();if(edge(3))changeWeapon(1);if(edge(1))crouching=!crouching;if(edge(11)){document.getElementById('help').classList.remove('show');interact();}if(edge(9))toggleMissionPause();
+ if(edge(12))combatWorld?.toggleSkills();padFiring=btn(7);if(edge(0))jumpQueued=true;if(edge(2))reloadWeapon();if(edge(3))changeWeapon(1);if(edge(1))crouching=!crouching;if(edge(11)){document.getElementById('help').classList.remove('show');interact();}if(edge(9))toggleMissionPause();if(edge(5))combatWorld?.melee?.();if(edge(4))combatWorld?.throwCharge?.();
  lastGamepadButtons=gp.buttons.map(b=>b.pressed);
 }
 
@@ -1736,6 +1738,8 @@ function inputSetup(){
   if(ev.code.startsWith('Digit')&&ev.code!=='Digit0'&&+ev.code.slice(5)<=(combatWorld?8:6)){weaponIndex=Number(ev.code.slice(5))-1;reloadFinish=0;combatWorld?.select(weaponIndex);if(!combatWorld)updateWeaponUI();}
   if(/^F[1-7]$/.test(ev.code)){ev.preventDefault();goToStop(Number(ev.code.slice(1))-1);}
   if(ev.code==='KeyR')reloadWeapon();
+  if(ev.code==='KeyX')combatWorld?.melee?.();
+  if(ev.code==='KeyB')combatWorld?.throwCharge?.();
   if(ev.code==='KeyJ')jumpQueued=true;
   if(ev.code==='Space')shoot();
   if(ev.code==='KeyC'||ev.code==='ControlLeft')crouching=!crouching;
@@ -1745,7 +1749,7 @@ function inputSetup(){
  document.addEventListener('keyup',ev=>keys.delete(ev.code));
  const cancelInputs=()=>{keys.clear();firing=isAiming=padFiring=padRun=jumpQueued=false;touch.moveX=touch.moveY=0;touch.sprint=false;touchLook=null;combatWorld?.pause();};
  window.addEventListener('blur',cancelInputs);document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelInputs();});
- canvas.addEventListener('mousedown',ev=>{if(ev.button===0){firing=true;shoot()}if(ev.button===2)isAiming=true;});
+ canvas.addEventListener('mousedown',ev=>{if(ev.button===0){firing=true;shoot()}if(ev.button===1){ev.preventDefault();combatWorld?.melee?.();}if(ev.button===2)isAiming=true;});
  document.addEventListener('mouseup',ev=>{if(ev.button===0)firing=false;if(ev.button===2)isAiming=false;});
  canvas.addEventListener('contextmenu',ev=>ev.preventDefault());
  canvas.addEventListener('wheel',ev=>{if(started){ev.preventDefault();changeWeapon(Math.sign(ev.deltaY)||1)}},{passive:false});
@@ -1888,16 +1892,16 @@ let missionLoading=null,missionMenu=null;
 function resumeMission(){gamePaused=false;keys.clear();firing=false;isAiming=false;combatWorld?.resume();}
 function toggleMissionPause(){if(missionMenu){missionMenu.isOpen?missionMenu.hide():missionMenu.show();}else{gamePaused=!gamePaused;combatWorld?.pause();}}
 async function boot(){try{
- if(!referenceVisit){const {createMissionLoading}=await import('./mission-loading.js?v=3.62');missionLoading=createMissionLoading({mission:1,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});missionLoading.set(.08,'Chargement du scénario');}
- showVesperPrologue=(await import('./story-prologue.js?v=3.62')).showStoryPrologue;
+ if(!referenceVisit){const {createMissionLoading}=await import('./mission-loading.js?v=3.63');missionLoading=createMissionLoading({mission:1,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});missionLoading.set(.08,'Chargement du scénario');}
+ showVesperPrologue=(await import('./story-prologue.js?v=3.63')).showStoryPrologue;
  $('bootInfo').textContent='Construction de la mégalopole, bâtiments, détails et navigation…';
  await new Promise(r=>setTimeout(r,80));
  if(referenceVisit)buildScene();const atlas=createAtlas();const materialAtlas=referenceVisit?await v5LoadMaterial():null;
  $('bootInfo').textContent='Initialisation du moteur WebGPU…';
  if(!new URLSearchParams(location.search).has('visit')){
-  const {createPauseMenu}=await import('./fracture-menu.js?v=3.62');
+  const {createPauseMenu}=await import('./fracture-menu.js?v=3.63');
   missionMenu=createPauseMenu({title:'HISTOIRE / LE DERNIER SIGNAL',canOpen:()=>started,onPause(){gamePaused=true;combatWorld?.pause();keys.clear();firing=false;isAiming=false;},onResume:resumeMission,onVR:()=>combatWorld?.enterVR(),onHome:async()=>{await combatWorld?.exitVR();location.assign('./index.html');}});missionMenu.setVisible(false);
-  const {createVesperCombat}=await import('./vesper-combat.js?v=3.62');missionLoading?.set(.16,'Ressources du secteur chargées');
+  const {createVesperCombat}=await import('./vesper-combat.js?v=3.63');missionLoading?.set(.16,'Ressources du secteur chargées');
   let renderFailed=false;
   const fail=error=>{
    console.warn('Vesper / échec du rendu, repli compatible :',error);

@@ -29,6 +29,32 @@
 .pw-hud-arms.reloading .pw-hud-bar i{background:var(--pw-accent)}
 .pw-hud-arms.low .pw-hud-line b,.pw-hud-arms.empty .pw-hud-line b{color:#ff8d98}
 .pw-hud-arms.empty .pw-hud-note{color:#ff8d98}
+/* Armour shield (3.63): a brighter bar over health, in the hero's colour; it flashes while recharging and turns
+   to an empty red outline when broken. Health drops to a neutral white under it. */
+.pw-hud-shield{position:relative;height:7px;margin:6px 0 2px;border-radius:4px;background:#ffffff14;overflow:hidden;box-shadow:0 0 0 1px #ffffff12 inset}
+.pw-hud-shield[hidden]{display:none}
+.pw-hud-shield i{position:absolute;inset:0 auto 0 0;width:calc(var(--fill,1) * 100%);background:linear-gradient(90deg,var(--pw-accent),#ffffffd9);box-shadow:0 0 12px var(--pw-accent);transition:width .12s linear}
+.pw-hud-vitals:has(.pw-hud-shield:not([hidden])) .pw-hud-bar i{background:#e8eef2}
+.pw-hud-vitals.shield-charging .pw-hud-shield i{animation:pw-hud-regen .45s ease-in-out infinite}
+.pw-hud-vitals.shield-broken .pw-hud-shield{box-shadow:0 0 0 1px #ff5d6c inset;animation:pw-hud-blink .5s steps(2) 3}
+.pw-hud-charges{display:block;margin-top:6px;font-size:9px;letter-spacing:.18em;color:var(--pw-accent)}
+.pw-hud-charges:empty{display:none}
+/* Hit direction: an arc on a ring around the crosshair, turned towards where the shot came from. */
+.pw-hud-hit{position:fixed;left:50%;top:50%;width:min(34vmin,260px);height:min(34vmin,260px);transform:translate(-50%,-50%) rotate(var(--angle,0deg));opacity:0;transition:opacity .12s;pointer-events:none}
+.pw-hud-hit i{position:absolute;left:50%;top:0;width:44%;height:14%;transform:translateX(-50%);border-top:4px solid #ff5d6c;border-radius:50% 50% 0 0/100% 100% 0 0;filter:drop-shadow(0 0 6px #ff5d6c)}
+/* Armour actions on touch screens: right thumb, above the fire cluster and the interaction button. */
+.pw-hud-touch{display:none}
+@media(pointer:coarse){
+  .pw-hud-touch{display:block}
+  .pw-hud-touch button{position:fixed;bottom:max(178px,calc(env(safe-area-inset-bottom) + 164px));width:56px;height:56px;padding:0;
+    display:grid;place-items:center;align-content:center;gap:1px;border-radius:50%;border:1px solid var(--pw-accent);background:#0d1824d9;color:#e8eef2;
+    font:800 8.5px/1 system-ui,sans-serif;letter-spacing:.08em;pointer-events:auto;touch-action:none;box-shadow:0 0 16px #02081480;z-index:7}
+  .pw-hud-touch [data-armor=melee]{right:max(92px,calc(env(safe-area-inset-right) + 80px))}
+  .pw-hud-touch [data-armor=charge]{right:max(24px,calc(env(safe-area-inset-right) + 13px))}
+  .pw-hud-touch small{font-size:12px;color:var(--pw-accent)}
+  .pw-hud-touch button.empty{opacity:.45;border-color:var(--pw-line)}
+  .pw-hud-touch button:active{background:color-mix(in srgb,var(--pw-accent) 30%,#0d1824)}
+}
 @keyframes pw-hud-regen{50%{filter:brightness(1.5)}}
 @keyframes pw-hud-blink{50%{opacity:.35}}
 /* The legacy readouts of each engine stay in the page for their own logic, hidden behind the shared HUD. */

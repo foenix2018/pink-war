@@ -1,7 +1,7 @@
 // Prefer the browser's standard mapping. Raw HID devices must match a known
 // DualShock 4 signature: treating a resting trigger as a stick caused drift.
 export const DESKTOP_DEADZONE = .2;
-export const DESKTOP_BUTTONS = Object.freeze({ jump: 0, crouch: 1, reload: 2, next: 3,
+export const DESKTOP_BUTTONS = Object.freeze({ jump: 0, crouch: 1, reload: 2, next: 3, charge: 4, melee: 5,
   aim: 6, fire: 7, pause: 9, sprint: 10, interact: 11, companion:12 });
 export const desktopAxis = value => Number.isFinite(value) && Math.abs(value) > DESKTOP_DEADZONE ? Math.max(-1, Math.min(1, value)) : 0;
 const pressed = button => !!button?.pressed || (Number.isFinite(button?.value) && button.value > .15);

@@ -8,6 +8,7 @@ import { tryJump } from './locomotion.js';
 import { hostileShotProfile, predictShot } from './enemy-fire.js';
 import { enemyDurability, enemyVolley, rangedMuzzle, enemyScale } from './enemy-combat.js';
 import { sweepBlade, bladeBulletContact, reflectedVelocity } from './blade-combat.js';
+import { SHIELD_MAX, CHARGE_START, CHARGE_FUSE, CHARGE_RADIUS, soakDamage, rechargeShield, meleeStrike, throwCharge, grantCharges, updateCharges, forwardOf } from './armor-combat.js';
 // World units are metres. The playable arena is exactly 200 × 200 m.
 export const ARENA_SIZE = 200;
 export const PORTAL = Object.freeze({ x: 0, z: -20 });
@@ -289,6 +290,9 @@ export class ArenaGame {
     this.ownedWeapons = new Set([this.weaponIndex,0]); this.weaponOffers = [];
     this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false; this.semiPending=false;
     this.lastDamage = 0; this.regenerating = false;
+    // Armour layer (armor-combat.js): shield on when an engine enables it, two impulse charges to start.
+    this.player.shield = this.shieldCapacity || 0; this.shieldCharging = false; this.lastHit = null;
+    this.charges = CHARGE_START; this.thrownCharges = []; this.chargeReadyAt = 0; this.meleeReadyAt = 0; this.meleeAt = -99;
     for(const nav of this.stairNavigation){nav.refreshAt=-1;nav.goal=-1;}
     this.updateLifts(0);
   }
@@ -353,7 +357,7 @@ export class ArenaGame {
   }
   startEndless() {
     if(this.state!=='won')return false;
-    this.endless=true;this.state='playing';this.nextWave=4;this.player.hp=100;
+    this.endless=true;this.state='playing';this.nextWave=4;this.player.hp=100;this.player.shield=this.shieldCapacity||0;
     this.event('survival');return true;
   }
   drainEvents() { const e = this.events; this.events = []; return e; }
@@ -420,7 +424,7 @@ export class ArenaGame {
   }
   beginWave() {
     if ((!this.endless && this.wave >= MAX_LEVEL) || this.state !== 'playing') return;
-    this.wave++; this.toSpawn = levelCount(this.wave); this.spawned = 0;
+    this.wave++; this.toSpawn = levelCount(this.wave); this.spawned = 0; if (this.wave > 1) grantCharges(this, 1);
     this.spawnTimer = 0; this.nextWave = -1;
     this.activePortals=chooseWavePortals(this.obstacles,this.random,this.wave,this.player,this.time);
     this.event('portals',{count:this.activePortals.length,sites:this.activePortals.map(p=>({...p}))});
@@ -537,11 +541,27 @@ export class ArenaGame {
     this.triggerHeld = held;
     if (held && this.ammo[this.weaponIndex] === 0) this.reload();
   }
-  damage(amount) {
+  // `source` (optional {x,z}) is where the hit came from, for the HUD's direction arcs.
+  damage(amount, source = null) {
     if (this.state !== 'playing' || this.invulnerable > 0) return;
-    this.player.hp = Math.max(0, this.player.hp - amount); this.invulnerable = .3;
-    this.lastDamage = this.time; this.regenerating = false; this.event('damage', { hp: this.player.hp });
+    const soaked = soakDamage(this.player, amount);
+    this.player.hp = Math.max(0, this.player.hp - soaked.rest); this.invulnerable = .3;
+    this.lastDamage = this.time; this.regenerating = false; this.shieldCharging = false;
+    if (source && Number.isFinite(source.x) && Number.isFinite(source.z)) this.lastHit = { x: source.x, z: source.z, time: this.time };
+    if (soaked.broke) this.event('shield-break');
+    this.event('damage', { hp: this.player.hp, shield: this.player.shield, absorbed: soaked.held, from: source ? { x: source.x, z: source.z } : null });
     if (this.player.hp <= 0) { this.state = 'over'; this.charge = 0; this.event('over'); }
+  }
+  // Armour layer API for the engines (armor-combat.js holds the rules).
+  enableArmorShield(capacity = SHIELD_MAX) { this.shieldCapacity = capacity; this.player.shield = capacity; this.shieldCharging = false; }
+  melee(forward = forwardOf(this.player.yaw)) { return meleeStrike(this, forward); }
+  throwCharge(origin, direction) { return throwCharge(this, origin, direction); }
+  grantCharges(count = 1) { grantCharges(this, count); }
+  knockback(enemy, dx, dz) { moveInArena(enemy, dx, dz, enemy.radius || .5, this.obstacles); }
+  // Visible charges in flight join the companions' energy spheres as dangers the machines step away from.
+  chargeHazards() {
+    const charges = (this.thrownCharges || []).map(c => ({ x: c.x, y: c.y, z: c.z, vx: c.vx, vz: c.vz, life: CHARGE_FUSE, age: this.time - c.thrownAt, radius: CHARGE_RADIUS }));
+    return charges.length ? [...(this.companionHazards || []), ...charges] : this.companionHazards;
   }
   get bladePhase(){return this.weapon.melee?Math.max(0,Math.min(1,(this.time-this.bladeSlashAt)/.42)):1;}
   updateBlade(segment,dt,guard=false,head=null){
@@ -599,7 +619,7 @@ export class ArenaGame {
       if (Math.hypot(pickup.x - this.player.x, pickup.z - this.player.z) > PICKUP_RADIUS || Math.abs(pickup.y - this.player.elevation) > 1.4) continue;
       this.pickups.splice(i, 1);
       if (pickup.kind === 'heal') this.player.hp = Math.min(100, this.player.hp + PICKUP_HEAL);
-      else if (!this.weapon.melee) { this.refillWeapon(); this.reloadRemaining = 0; }
+      else { if (!this.weapon.melee) { this.refillWeapon(); this.reloadRemaining = 0; } grantCharges(this, 1); }
       this.event('pickup', { kind: pickup.kind, x: pickup.x, y: pickup.y + .6, z: pickup.z });
     }
   }
@@ -612,6 +632,7 @@ export class ArenaGame {
       this.reloadRemaining = Math.max(0, this.reloadRemaining - dt);
       if (this.reloadRemaining === 0) { this.refillWeapon(); this.event('reloaded'); }
     }
+    rechargeShield(this, dt); updateCharges(this, dt);
     this.regenerating = this.player.hp < 100 && this.time - this.lastDamage >= REGEN_DELAY;
     if (this.regenerating) this.player.hp = Math.min(100, this.player.hp + 18 * dt);
     const yaw = input.yaw ?? this.player.yaw; this.player.yaw = yaw;
@@ -739,7 +760,7 @@ export class ArenaGame {
       // A slot behind a wall or a crate is no slot: that unit goes straight for the player.
       if(slot&&this.obstacles.some(b=>!b.walkableSurface&&segmentBox({x:this.player.x,y:eye.y,z:this.player.z},{x:slot.x,y:eye.y,z:slot.z},{...b,hx:b.hx+e.radius,hz:b.hz+e.radius})!==null))slot=null;
       if(slot){destinationX=slot.x;destinationZ=slot.z;}
-      const tacticContext={time:this.time,seen,threat:{x:e.lastKnownX,y:(e.lastKnownHeight||0)+1.25,z:e.lastKnownZ},obstacles:this.obstacles,allies:this.enemies,hazards:this.companionHazards,segmentBox};
+      const tacticContext={time:this.time,seen,threat:{x:e.lastKnownX,y:(e.lastKnownHeight||0)+1.25,z:e.lastKnownZ},obstacles:this.obstacles,allies:this.enemies,hazards:this.chargeHazards(),segmentBox};
       relayVisualContact(e,tacticContext);
       const order=!stairRoute?(grenadeAvoidance(e,tacticContext)||tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext)):null;
       e.combatPose=order?.state||'advance';
@@ -786,7 +807,7 @@ export class ArenaGame {
       else e.chargeProgress=e.ranged&&e.attackTimer>0&&e.attackTimer<.25?1-e.attackTimer/.25:0;
       // Never attack through walls or while merely searching the last seen position.
       if((!order||order.canFire)&&seen&&e.awareness==='engaged'&&distance<2&&e.attackTimer<=0&&(e.stunnedUntil||0)<=this.time){
-        e.attackTimer=.85;this.damage(e.elite?20+this.wave:10+Math.floor(this.wave/2));
+        e.attackTimer=.85;this.damage(e.elite?20+this.wave:10+Math.floor(this.wave/2),e);
       }else if((!order||order.canFire)&&seen&&e.awareness==='engaged'&&e.ranged&&distance<38&&e.attackTimer<=0&&(e.stunnedUntil||0)<=this.time){
         const profile=hostileShotProfile(this.wave,e.form),speed=profile.speed;
         const volley=enemyVolley(this.wave,e.form),muzzle=rangedMuzzle(e);
@@ -841,7 +862,7 @@ export class ArenaGame {
           faces.sort((a,c)=>Math.abs(at[a[0]]-a[1])-Math.abs(at[c[0]]-c[1]));normal={x:0,y:0,z:0};normal[faces[0][0]]=faces[0][2];
         }
         this.event('impact', { ...at, bulletId:b.id, enemy: !!target, hostile: b.hostile, splash: b.splash,weapon:b.weapon,power:b.power||1,surface:target?'robot':surface,normal,direction:{x:b.vx,y:b.vy,z:b.vz} });
-        if (target === this.player) this.damage(b.damage);
+        if (target === this.player) { const n=Math.hypot(b.vx,b.vz)||1; this.damage(b.damage,{x:this.player.x-b.vx/n*8,z:this.player.z-b.vz/n*8}); }
         else if (target) this.damageEnemy(target, projectileDamage(b,at), at, zone, multiplier,{x:b.originX??this.player.x,z:b.originZ??this.player.z,elevation:b.originElevation??this.player.elevation});
         if (!b.hostile && b.splash > 0) for (const e of [...this.enemies]) {
           if (e === target) continue;
@@ -866,5 +887,6 @@ export class ArenaGame {
     weaponIndex: this.weaponIndex, weapon: { ...this.weapon }, unlockedWeapons: this.unlockedWeapons.map(w => w.id),weaponOffers:this.weaponOffers.map(offer=>({...offer})), ammo: this.ammo[this.weaponIndex],
     reloadRemaining: this.reloadRemaining, charge: this.charge, regenerating: this.regenerating, regenIn: Math.max(0, REGEN_DELAY - (this.time - this.lastDamage)),
     toSpawn: this.toSpawn, nextWave: this.nextWave, activePortals:this.activePortals.map(p=>({...p})), enemies: this.enemies.map(e => ({ ...e })), bullets: this.bullets.map(b => ({ ...b })),
+    shield: this.player.shield || 0, shieldCapacity: this.shieldCapacity || 0, shieldCharging: !!this.shieldCharging, charges: this.charges, thrownCharges: (this.thrownCharges || []).map(c => ({ ...c })), lastHit: this.lastHit && { ...this.lastHit }, meleeAt: this.meleeAt,
     combo: this.time <= this.comboUntil ? this.combo : 0, comboRemaining: Math.max(0, this.comboUntil - this.time), bestCombo: this.bestCombo, pickups: this.pickups.map(p => ({ ...p })) }; }
 }

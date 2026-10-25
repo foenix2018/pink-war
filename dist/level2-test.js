@@ -28,6 +28,7 @@ import {createPauseMenu} from './fracture-menu.js';
 import {createMissionXR,immersiveRendererPreferred} from './mission-xr.js';
 import {createGlove} from './hands.js';
 import {mountCombatHud} from './combat-hud.js';
+import {createArmorFeedback,meleeKick,MELEE_POSE} from './armor-feedback.js';
 import {createDistrictSignage} from './level2-signage.js';
 import {createWarZone} from './level2-war-zone.js';
 import {createBattleAudio} from './level2-battle-audio.js';
@@ -53,6 +54,9 @@ const weaponFeel=createWeaponFeel(),pinkControls=createPinkWarsInput();
 const fireInput=createFireBuffer();
 let enableAudio=true;try{enableAudio=JSON.parse(localStorage.getItem('rosee-settings')||'{}').sound!==false;}catch{}
 let xr=null,fallbackGun=null,fallbackHand=null;
+// Armour layer (3.63): strikes and throws queued by the keyboard, the mouse and the touch buttons.
+let armorFx=null,meleeQueued=false,chargeQueued=false;
+const armorTouch=kind=>{if(!running||paused)return;audioReady();if(kind==='melee')meleeQueued=true;else chargeQueued=true;};
 const pauseMenu=createPauseMenu({title:'HISTOIRE / SOUS LES NÉONS',canOpen:()=>started,
  onPause:()=>pauseMission(),onResume:()=>unpauseMission(),onVR:()=>xr?.enter(),onHome:async()=>{await xr?.exit();location.assign('./index.html');}});pauseMenu.setVisible(false);
 let combatEffects=null,companion=null,environmentAudio=null,warZone=null,battleAudio=null;
@@ -394,7 +398,7 @@ function enemyMaterials(){
  return {monster:materials.wall,monsterFace:materials.black,cyan:materials.cyan,rose:materials.rose,violet:materials.blue,pale:materials.white};
 }
 function setupPlayer(){
- game=new ArenaGame(collisions,Math.random,traversal);game.reset(characterId);
+ game=new ArenaGame(collisions,Math.random,traversal);game.reset(characterId);game.enableArmorShield();
  Object.assign(game.player,{x:0,z:72,elevation:0,yaw:0,hp:100,grounded:true});
  game.wave=2;game.nextWave=Infinity;game.toSpawn=0;game.spawnTimer=Infinity;
  game.ownedWeapons=new Set([game.weaponIndex,0,1,2]);game.ammo=WEAPONS.map(w=>w.capacity);
@@ -451,9 +455,9 @@ function interact(){
  if(stage===0){stage=1;createEnemies();notice('ENCLAVE REPÉRÉE — NEUTRALISER LA PATROUILLE');}
  else if(stage===1){
   if(game.enemies.length>0){notice('TERMINAL VERROUILLÉ : MENACES ACTIVES');return;}
-  stage=2;notice('ARCHIVES HELIX SAISIES — REJOINDRE LE PONT +12 M');
+  stage=2;game.grantCharges(1);notice('ARCHIVES HELIX SAISIES — REJOINDRE LE PONT +12 M');
  }
- else if(stage===2){stage=3;notice('ACCÈS TRANSIT DÉVERROUILLÉ — DESCENDRE');}
+ else if(stage===2){stage=3;game.grantCharges(1);notice('ACCÈS TRANSIT DÉVERROUILLÉ — DESCENDRE');}
  else if(stage===3){running=false;document.exitPointerLock?.();showChapter2Finale({characterId,onReplay:resume});}
 }
 function snapCamera(){
@@ -553,7 +557,7 @@ function updateEnemies(dt){
 let heldFire=false;
 function gameTick(dt){
  const xc=xr?.active?xr.controls:null;
- const controls=xc?{moveX:xc.x,moveZ:xc.z,lookX:0,lookY:0,jump:xc.jump,interact:xc.interact,aim:xc.aim,fire:xc.fire,sprint:xc.sprint}:pinkControls.read(dt,keys,navigator.getGamepads?.()||[],{focused:!document.hidden});
+ const controls=xc?{moveX:xc.x,moveZ:xc.z,lookX:0,lookY:0,jump:xc.jump,interact:xc.interact,aim:xc.aim,fire:xc.fire,sprint:xc.sprint,melee:xc.melee,charge:xc.charge}:pinkControls.read(dt,keys,navigator.getGamepads?.()||[],{focused:!document.hidden});
  if(controls.companion)skillMenu?.setOpen(!skillMenu.isOpen);
  if(skillMenu?.isOpen)return;
  const touch=touchControls?.state||{x:0,z:0,lookX:0,lookY:0,fire:false,aim:false};
@@ -580,6 +584,10 @@ function gameTick(dt){
  game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,sprint,jump,crouchToggle});
  weaponFeel.update(dt);
  snapCamera();
+ if(meleeQueued||controls.melee){const view=new T.Vector3();camera.getWorldDirection(view);game.melee({x:view.x,z:view.z});}
+ if(chargeQueued||controls.charge){const eye=xr?.active?renderer.xr.getCamera():camera,from=new T.Vector3(),view=new T.Vector3();eye.getWorldPosition(from);eye.getWorldDirection(view);
+  game.throwCharge({x:from.x+view.x*.45,y:from.y-.18,z:from.z+view.z*.45},view);}
+ meleeQueued=chargeQueued=false;
  if(firePressQueued)fireInput.press(game.time);
  const firing=fireInput.requested(heldFire||touch.fire||controls.fire,game.weapon,game.time);
  // Same two-stage raycast as Pink Wars' game.js: center reticle selects a
@@ -615,8 +623,10 @@ function gameTick(dt){
  if(game.ammo[game.weaponIndex]<ammoBefore||game.bladeSlashAt!==bladeBefore)fireInput.consume();
  updateEnemies(dt);
  const events=game.drainEvents();
+ armorFx ||= createArmorFeedback({T,scene,accent:characterId==='lylu'?0x80baff:0xef91b4,listener:()=>game.player,
+  audio:()=>enableAudio&&audioCtx?.state==='running'?audioCtx:null,haptic:kind=>xr?.active&&xr.haptic(kind)});
  for(const e of events){
-  combatEffects?.event(e);
+  combatEffects?.event(e);armorFx.handle(e);
   if(e.type==='shot'){
     xr?.haptic('shot',e.weapon,e.hand);
     weaponFeel.fire(e.weapon||game.weapon.id,e.power||1,aimBlend>.5);
@@ -632,7 +642,7 @@ function gameTick(dt){
   if(e.type==='kill'){notice('CIBLE NEUTRALISÉE');}
   if(e.type==='over'){running=false;shade.style.display='grid';$('start').textContent='RECOMMENCER LE TEST →';$('status').textContent='Intervention interrompue — santé épuisée';document.exitPointerLock?.();}
  }
- combatEffects?.update(game,dt,camera);
+ combatEffects?.update(game,dt,camera);armorFx.update(game,dt);
  companion?.update(dt,{game,camera,active:false});
  companionSkills?.update(dt,{game});skillMenu?.refresh();
  environmentAudio?.update(dt,{active:running,position:game.player,moving:Math.hypot(x,z)>.1,grounded:game.player.grounded,elevation:game.player.elevation,yaw,probes:game.enemies});
@@ -642,6 +652,7 @@ function gameTick(dt){
  const heldFeel=game.weapon.dual?{yaw:0,kick:0,pitch:0}:weaponFeel.state;
  weapon.position.set(ads.x+heldFeel.yaw*.15,ads.y-heldFeel.kick*.18,ads.z+heldFeel.kick);
  weapon.rotation.set(heldFeel.pitch,heldFeel.yaw+ads.yaw,-heldFeel.yaw*.35+ads.roll);
+ const strike=game.weapon.melee?0:meleeKick(game);if(strike){weapon.position.x+=MELEE_POSE.x*strike;weapon.position.y+=MELEE_POSE.y*strike;weapon.position.z+=MELEE_POSE.z*strike;weapon.rotation.x+=MELEE_POSE.pitch*strike;}
  weapon.userData.setSight?.(aimBlend>.55,camera);
  weapon.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,dualState:game.dual,
   charge:game.charge,reloading:game.reloadRemaining>0,reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,
@@ -666,7 +677,7 @@ function updateHUD(){
  $('objective').textContent=(stage+1)+'/4 · '+o.label;
  $('hint').textContent=o.description;
  // Shared combat HUD (same panels as M01, the Arena and the Range); #hp / #ammo stay hidden below.
- (combatHud ||= mountCombatHud({characterId})).update(game);
+ (combatHud ||= mountCombatHud({characterId,onAction:armorTouch})).update(game);
  $('hp').textContent=Math.ceil(game.player.hp);
  $('weapon').firstChild.nodeValue=game.weapon.name+' ';
  $('ammo').textContent=game.weapon.melee?'LAME':game.ammo[game.weaponIndex]+' / '+game.weapon.capacity;
@@ -810,7 +821,7 @@ function resume(){
  for(const o of shotMeshes.values())scene.remove(o);shotMeshes.clear();
  combatEffects?.reset();companion?.reset();
  fireInput.reset();
- yaw=0;pitch=0;stage=0;lastMinimalHudStage=-1;heldFire=false;mouseAim=false;aimBlend=0;jumpQueued=false;crouchQueued=false;firePressQueued=false;keys.clear();pinkControls.reset();touchControls?.reset();weaponFeel.reset();
+ yaw=0;pitch=0;stage=0;lastMinimalHudStage=-1;meleeQueued=chargeQueued=false;heldFire=false;mouseAim=false;aimBlend=0;jumpQueued=false;crouchQueued=false;firePressQueued=false;keys.clear();pinkControls.reset();touchControls?.reset();weaponFeel.reset();
  $('name').textContent='PINK WARS · '+characterId.toUpperCase()+' · M02';
  if(!touchControls?.root)canvas.requestPointerLock?.().catch?.(()=>{});
 }
@@ -834,6 +845,8 @@ window.addEventListener('keydown',e=>{
  if(e.code==='KeyF')interact();
  if(e.code==='KeyE')game.cycleWeapon();
  if(e.code==='KeyR')game.reload();
+ if(e.code==='KeyX')meleeQueued=true;
+ if(e.code==='KeyB')chargeQueued=true;
  if(e.code==='KeyC')crouchQueued=true;
  if(e.code==='KeyV')changeView();
  if(e.code==='Space')firePressQueued=true;
@@ -853,6 +866,7 @@ let dragPointer=null,dragX=0,dragY=0;
 window.addEventListener('pointerdown',e=>{
  if(!running||e.target!==canvas)return;
  if(e.button===2){mouseAim=true;e.preventDefault();return;}
+ if(e.button===1&&e.pointerType==='mouse'){meleeQueued=true;e.preventDefault();return;}
  if(e.button!==0||e.pointerType!=='mouse')return;
  // On phones, the canvas is a camera surface, not a fire trigger.
  heldFire=true;firePressQueued=true;
@@ -869,8 +883,8 @@ for(const name of ['pointerup','pointercancel']){
  window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
 }
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
-window.__PINK_M02=Object.freeze({snapshot:()=>({revision:'3.62',running,paused,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
+window.__PINK_M02=Object.freeze({snapshot:()=>({revision:'3.63',running,paused,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
  backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
- effects:combatEffects?.stats()})});
+ effects:combatEffects?.stats(),armor:game&&{shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt}})});
 if(autoMission){startButton.disabled=true;void boot();}

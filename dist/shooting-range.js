@@ -1,4 +1,5 @@
 import { ArenaGame, WEAPONS, segmentBox,weaponAllowedForCharacter } from './game-logic.js';
+import { CHARGE_MAX } from './armor-combat.js';
 
 // Shooting range: target-only simulation with the unchanged Pink War weapon
 // handling, audio and VR aiming. Distances are from the firing line z=22.
@@ -58,6 +59,8 @@ export class ShootingRangeGame extends ArenaGame {
     this.weaponIndex=Number.isInteger(initialWeapon)&&initialWeapon>=0&&this.ownedWeapons.has(initialWeapon)?initialWeapon:0;
     this.state='playing';
   }
+  // The range is for practice: impulse charges come back as soon as one is thrown.
+  throwCharge(origin,direction){const thrown=super.throwCharge(origin,direction);if(thrown)this.charges=CHARGE_MAX;return thrown;}
   get trainingAccuracy(){return this.trainingShots?Math.round(this.trainingHits/this.trainingShots*100):100;}
   get trainingLevel(){return trainingStage(this.time);}
   makeTarget(){

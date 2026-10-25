@@ -1,5 +1,7 @@
 # Pink Wars — La Fracture
 
+Version 3.63 : **combat d'armure** dans M01, M02, l'Arène et le Stand. Bouclier d'énergie au-dessus de la santé, qui se recharge après quelques secondes à l'abri ; frappe de mêlée (bien plus forte dans le dos) ; charge à impulsion lancée en arc qui neutralise les machines ; arc rouge autour du viseur indiquant d'où vient le tir reçu. Commandes : X / clic molette, B, RB / LB, boutons tactiles, stick droit et gâchette gauche au casque. [Détails](docs/pink-wars/MISE_A_JOUR_363.md) · [Jouer](https://pink-war.vercel.app/?v=3.63).
+
 Version 3.62 : menu d’accueil masqué pendant les parties d’Arène et du Stand, en-tête et couverture de la mission 02 corrigés, main de LYLU visible sur le M12. **Une seule interface de combat** (santé et arme en main) pour M01, M02, l’Arène et le Stand. Première étape de la [feuille de route cyberpunk / jouabilité Halo](docs/pink-wars/FEUILLE_DE_ROUTE_CYBERPUNK_HALO.md). [Détails](docs/pink-wars/MISE_A_JOUR_362.md) · [Jouer](https://pink-war.vercel.app/?v=3.62).
 
 Version 3.61 : double R9 réservé à **GHJU**, arme unique pour LYLU et les autres modèles. M02 reçoit des façades à fenêtres en retrait, des affiches murales vieillies, les ordinateurs humains, des couvertures profilées et des traces de guerre : épaves, gravats, fumée et détonations lointaines. Chargement tardif des textures corrigé. [Détails et vérifications](docs/pink-wars/MISE_A_JOUR_361.md) · [Jouer](https://pink-war.vercel.app/?v=3.61).
@@ -121,7 +123,8 @@ La disposition ci-dessous est celle de la **main de tir droite** (par défaut). 
 | Joystick gauche | Déplacement horizontal, selon le regard ou selon la manette gauche |
 | Poignée gauche serrée à fond | Courir |
 | Clic du joystick gauche | S’accroupir / se relever ; ramasser à proximité d’une arme disponible |
-| Gâchette gauche | Viser avec BLOOM ×2 / LANCE ×4, en regardant dans la lentille ; maintenir la parade avec AURORA |
+| Gâchette gauche | GHJU / R–9 DUO : pistolet gauche ; sinon charge à impulsion (3.63). La visée et la parade AURORA sont sur la poignée (majeur) droite |
+| Clic du joystick droit | Frappe de mêlée (3.63) |
 | X | Sauter ; second appui en l’air : double saut ou rebond près d’une paroi |
 | Bouton ↑ au poignet libre | Pointer avec la main de tir puis presser sa gâchette ; aucune attaque lors de cette sélection |
 | Y | Pause / reprise |

@@ -50,7 +50,8 @@ export function questControls(hand = 'right') {
     [`Poignée ${sideF}`, 'Courir (maintenu)'],
     [`Clic joystick ${sideF}`, 'Terminal / arme proche : interagir · sinon : s’accroupir'],
     [b.jump, 'Saut · second appui : double saut / rebond mural'],
-    ['Gâchette INDEX gauche', 'GHJU / R–9 DUO : pistolet gauche · sinon : main libre'],
+    ['Gâchette INDEX gauche', 'GHJU / R–9 DUO : pistolet gauche · sinon : charge à impulsion'],
+    [`Clic joystick ${mainM}`, 'Frappe de mêlée'],
     ['Pupitre au poignet gauche', 'Pointer avec la main droite puis gâchette INDEX : compétences Gaby / Cara'],
     [b.pause, 'Pause / reprise']
   ];
@@ -422,7 +423,7 @@ export class VRController {
       syncTrackedHands(this.controllers,this.session,frame,this.hooks.world().renderer.xr.getReferenceSpace());
       this.applyRoles();
     }
-    const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, fire: false, fireHands:{left:false,right:false}, sprint: false, precision: false, aim:false, jump: false, pickup: false, crouchToggle: false };
+    const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, fire: false, fireHands:{left:false,right:false}, sprint: false, precision: false, aim:false, jump: false, pickup: false, crouchToggle: false, melee: false, charge: false };
     const dual=!!this.hooks.game?.()?.weapon?.dual,rawHands={left:false,right:false},trackedHands={left:false,right:false};
     const xr = this.mode === 'xr', cfg = settingsOf(this), mainHand = cfg.hand, sideHand = otherHand(mainHand);
     const skillsConsumed=xr&&!!this.hooks.skillsInput?.(this);
@@ -467,6 +468,11 @@ export class VRController {
       if(xr&&source.handedness==='right'){edge('jump',4);edge('reload',5);}
       if(xr&&source.handedness==='left'){edge('pause',4);edge('next',5);}
       if(!xr&&main){edge('reload',DESKTOP_BUTTONS.reload);edge('next',DESKTOP_BUTTONS.next);}
+      // Armour layer: bumpers on a gamepad; in the headset the main stick click strikes and the free index
+      // trigger of the other hand throws (dual pistols keep both triggers for firing).
+      if(!xr&&main){edge('melee',DESKTOP_BUTTONS.melee);edge('charge',DESKTOP_BUTTONS.charge);}
+      if(xr&&main)edge('mainStick',3,'melee');
+      if(xr&&side&&!dual)edge('sideTrigger',0,'charge');
       if (xr && side) {
         const game = this.hooks.game(), interaction = game?.getInteraction?.() || game?.nearbyWeapon?.();
         // Track the physical click, not its contextual action. Consuming a terminal
@@ -493,6 +499,7 @@ export class VRController {
     if (!playing) { result.x = result.z = result.turn = result.tilt = result.snap = 0; result.sprint = result.precision = result.aim = false; result.jump = false;result.pickup = false; if (xr) this.cancelTrigger(); }
     if (dual&&xr?!rawHands.left&&!rawHands.right:!rawFire) this.triggerBlocked = false;
     result.jump = playing && actions.has('jump');result.pickup = playing && actions.has('pickup');result.crouchToggle=playing && actions.has('crouch');
+    result.melee = playing && actions.has('melee'); result.charge = playing && actions.has('charge');
     result.fire = playing && mainTracked && rawFire && (!xr || !this.triggerBlocked);
     if(xr&&dual)for(const hand of ['left','right'])result.fireHands[hand]=playing&&trackedHands[hand]&&rawHands[hand]&&!this.triggerBlocked;
     this.precision = result.precision && playing;

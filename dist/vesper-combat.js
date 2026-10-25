@@ -30,6 +30,7 @@ import {createCompanionMenu} from './companion-menu.js';
 import {createMissionXR,immersiveRendererPreferred} from './mission-xr.js';
 import {createGlove} from './hands.js';
 import {mountCombatHud} from './combat-hud.js';
+import {createArmorFeedback,meleeKick,MELEE_POSE} from './armor-feedback.js';
 
 export function buildVesperGeometry(source,{art=false}={}){
   const skip=replacementTriangles(source,art);
@@ -107,6 +108,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   let combatHud=null;
   const checkpoint=readM01Checkpoint(characterId);
   if(params.get('resume')==='1'&&checkpoint)restoreM01Checkpoint(game,checkpoint);
+  game.enableArmorShield();
   // One simulation owns stairs, lifts, navigation, collisions and ballistics.
   collide.splice(0,collide.length,...obstacles.map(o=>({x1:o.x-o.hx,x2:o.x+o.hx,y1:o.y||0,y2:(o.y||0)+o.height,z1:o.z-o.hz,z2:o.z+o.hz,label:o.surface})));
   stairs.splice(0,stairs.length,...LEVEL1_MAP.stairs.map(s=>({x1:s.x-s.halfWidth,x2:s.x+s.halfWidth,zStart:s.bottomZ,zEnd:s.topZ,height:s.height})));
@@ -126,6 +128,11 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const starterGloves={fabric:standard(0x222736,.9,.08),plate:starterMaterials.armor,trim:starterMaterials.armorLight,glow:heroGlow,accent:materials.cyan,metal:materials.iron};
   const enemyFactory=createEnemyFactory({monster:materials.wall,monsterFace:materials.black,cyan:materials.cyan,rose:materials.rose,violet:materials.blue,pale:materials.white});
   const enemyModels=new Map(),feel=createWeaponFeel(),effects=createCampaignCombatEffects(T,scene,characterId);
+  // Armour layer (3.63): queued strikes and throws from the page controls, played on the next simulation step.
+  let meleeQueued=false,chargeQueued=false;
+  const armorTouch=kind=>kind==='melee'?api.melee():api.throwCharge();
+  const armorFx=createArmorFeedback({T,scene,accent:characterId==='lylu'?0x80baff:0xef91b4,listener:()=>game.player,
+    audio:()=>sound&&audio?.state==='running'?audio:null,haptic:kind=>xr?.active&&xr.haptic(kind)});
   const gamepadInput=new DesktopGamepadInput();
   const fireInput=createFireBuffer();
   let rig=null,gun=null,ready=false,pending=false,lastTime=0,held=false,ads=0,completed=false,lastStage=game.stage,journalOpen=false,checkpointPending=false;
@@ -203,6 +210,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     if(gun){
       const pose=flatSightPose(OPTICS[game.weapon.id],ads);
       gun.position.set(pose.x,pose.y-(game.weapon.dual?0:feel.state.kick)*.18,pose.z+(game.weapon.dual?0:feel.state.kick));gun.rotation.set(game.weapon.dual?0:feel.state.pitch,(game.weapon.dual?0:feel.state.yaw)+pose.yaw,pose.roll);
+      const strike=game.weapon.melee?0:meleeKick(game);if(strike){gun.position.x+=MELEE_POSE.x*strike;gun.position.y+=MELEE_POSE.y*strike;gun.position.z+=MELEE_POSE.z*strike;gun.rotation.x+=MELEE_POSE.pitch*strike;}
       gun.visible=!s.free;gun.userData.setSight?.(ads>.55,camera);
       gun.userData.setCombatState?.({time:game.time,dualState:game.dual,ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,reloading:game.reloadRemaining>0,
         reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,charge:game.charge,kick:feel.state.kick,heat:feel.state.heat,bladeHeld:game.weapon.melee&&held});
@@ -220,7 +228,11 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       game.step(dt,{...(s.input||{}),yaw:-s.yaw,moveYaw:xr?.active?xr.controls?.moveYaw:undefined});
       setPlayer?.(p);
       syncCamera(getState(),dt);
+      if(meleeQueued||s.input?.melee){camera.getWorldDirection(v);game.melee({x:v.x,z:v.z});}
+      if(chargeQueued||s.input?.charge){const view=xr?.active?renderer.xr.getCamera():camera;view.getWorldPosition(origin);view.getWorldDirection(v);
+        game.throwCharge({x:origin.x+v.x*.45,y:origin.y-.18,z:origin.z+v.z*.45},v);}
     }
+    meleeQueued=chargeQueued=false;
     const moving=Math.hypot(game.playerVelocity?.x||0,game.playerVelocity?.z||0)>.25;
     feel.update(dt);const a=aim();
     const ammoBefore=game.ammo[game.weaponIndex],bladeBefore=game.bladeSlashAt;
@@ -249,7 +261,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     }
     for(const [id,model] of enemyModels)if(!game.enemies.some(e=>e.id===id)){scene.remove(model);enemyModels.delete(id);}
     for(const event of game.drainEvents()){
-      effects.event(event);
+      effects.event(event);armorFx.handle(event);
       if(event.type==='shot'){feel.fire(event.weapon,event.power,ads>.5);xr?.haptic('shot',event.weapon,event.hand);if(sound&&audio)playLaserShot(audio,event.weapon,event.power);}
       if(event.type==='impact'&&sound&&audio)playLaserImpact(audio,{surface:event.surface,distance:Math.hypot(event.x-p.x,event.z-p.z),power:event.power});
       if(event.type==='reload'&&sound&&audio)playWeaponAction(audio,game.weapon.id,'reload-out');
@@ -269,7 +281,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     objectiveMarker.textContent=behind?(objectiveAngle<0?'‹':'›'):Math.abs(altitude)>.6?(altitude>0?'↑':'↓'):'';
     objectiveMarker.style.background=objectiveMarker.textContent?'transparent':'#d8c6a0';
     objectiveMarker.style.font='18px/7px system-ui';
-    effects.update(game,dt,camera);
+    effects.update(game,dt,camera);armorFx.update(game,dt);
     skills.update(dt,{game});skillMenu.refresh();
     gun?.userData.setFlash?.(game.state==='playing'&&!journalOpen&&(game.weapon.dual||feel.state.kick>.025)&&!game.weapon.melee,game.time);
     const active=game.state==='playing';
@@ -277,7 +289,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     music.update(dt,{active,threat:game.enemies.some(e=>e.awareness==='engaged')?.7:.05});
     saber?.update({active,equipped:game.weapon.melee,extended:held,sound,speed:game.bladeSpeed,swing:game.bladePhase<.08});
     // Shared combat HUD (same panels as M02, the Arena and the Range); the legacy readouts stay hidden below.
-    (combatHud ||= mountCombatHud({characterId})).update(game);
+    (combatHud ||= mountCombatHud({characterId,onAction:armorTouch})).update(game);
     const hp=document.getElementById('pwHealth'),ammo=document.getElementById('pwAmmo'),name=document.getElementById('pwWeapon');
     if(hp)hp.textContent=String(Math.ceil(p.hp));if(ammo)ammo.textContent=game.weapon.melee?'LAME':game.ammo[game.weaponIndex]+' / '+game.weapon.capacity;
     if(name)name.textContent=game.weapon.name+(game.reloadRemaining>0?' · RECHARGE':'');
@@ -327,13 +339,13 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     }
   }catch(error){onFailure(error);throw error;}
   onProgress(.98,'Rendu du secteur validé');
-  return {
+  const api={
     get xrActive(){return xr.active;},enterVR(){return xr.enter();},exitVR(){return xr.exit();},
     kind:renderer.isWebGLRenderer?'WebGL 2 · M01':'WebGPU · M01',managedResolution:true,canonical:true,
     get paused(){return journalOpen||skillMenu.isOpen;},
     get interaction(){return contextAction();},
     get layout(){return LEVEL1_MAP;},
-    restart(){location.assign(location.pathname+'?prologue=done&character='+characterId+'&v=3.62');},
+    restart(){location.assign(location.pathname+'?prologue=done&character='+characterId+'&v=3.63');},
     get checkpoint(){return checkpoint;},
     get objective(){return objective().text;},
     get playing(){return game.state==='playing'&&!completed;},
@@ -343,6 +355,8 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     toggleSkills(){if(ready&&!journalOpen)skillMenu.setOpen(!skillMenu.isOpen);},
     fire(down){if(down&&!held){audioReady();fireInput.press(game.time);if(game.weapon.semiAuto)game.triggerHeld=false;}held=!!down;},
     reload(){audioReady();game.reload();},
+    melee(){if(journalOpen||skillMenu.isOpen||game.state!=='playing')return;audioReady();meleeQueued=true;},
+    throwCharge(){if(journalOpen||skillMenu.isOpen||game.state!=='playing')return;audioReady();chargeQueued=true;},
     cycle(delta=1){game.cycleWeapon(delta);},
     select(index){game.selectWeapon(index);},
     interact:onInteract,
@@ -366,13 +380,15 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       try{const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);if(result?.then){pending=true;result.then(()=>pending=false).catch(error=>{pending=false;onFailure(error);});}}
       catch(error){onFailure(error);}
     },
-    snapshot(){return {revision:'3.62',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
+    snapshot(){return {revision:'3.63',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
       capacity:game.weapon.capacity,ownedWeapons:[...game.ownedWeapons],offers:game.weaponOffers.map(o=>({...o})),campaign:game.campaign,journalOpen,
       enemies:game.enemies.length,hostileProjectiles:game.bullets.filter(b=>b.hostile).length,shots:game.bullets.filter(b=>!b.hostile).length,
       kills:game.kills,rig:!!rig,gun:!!gun,backend:renderer.isWebGLRenderer?'webgl':'webgpu',triangles:terrain.triangles,
       art:missionArt.stats(),dressing:dressing.stats,salvage:salvage.stats,lighting:{exposure:renderer.toneMappingExposure,ambient:atmosphere.ambient.intensity,sun:atmosphere.sun.intensity},pbr:missionArt.stats().pbr,effects:effects.stats(),companion:{name:characterId==='lylu'?'Cara':'Gaby',visible:false,materializationMission:7},position:{...getState().position},
       skills:skills.snapshot(game),skillsMenuOpen:skillMenu.isOpen,
+      armor:{shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt},
       hostiles:game.enemies.map(e=>({id:e.id,x:e.x,y:e.elevation+e.aimHeight,z:e.z,hp:e.hp,awareness:e.awareness,tactic:e.combatPose,crouch:e.coverCrouch||0})),render:renderer.info.render};}
 
   };
+  return api;
 }

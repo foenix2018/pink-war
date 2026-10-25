@@ -38,6 +38,8 @@ export function createMissionXR({getWorld,onFrame,onPause,onResume,onHome,onExit
    if(!trigger&&!leftTrigger)blocked=false;
    if(!right?.tracked||session.visibilityState&&session.visibilityState!=='visible'){blocked=true;if(!isPaused())onPause();}
    const reload=edge('reload',down(rp?.buttons[5])),next=edge('next',down(lp?.buttons[5])),jump=edge('jump',down(rp?.buttons[4])),interact=edge('interact',down(lp?.buttons[3]));
+   // Armour layer: right stick click strikes; the left index trigger throws a charge unless it fires the second pistol.
+   const melee=edge('melee',down(rp?.buttons[3])),charge=edge('charge',leftTrigger&&!w.game.weapon?.dual);
    if(reading){menu.update({active:false});reading.update(w.camera,right?.ray,trigger);blocked=true;return controls={x:0,z:0,fire:false,leftFire:false,jump:false,aim:false,sprint:false};}
    const consumed=menu.update({active:isPaused(),camera:w.camera,ray:right?.ray,trigger});
    if(consumed){blocked=true;controls={x:0,z:0,fire:false,leftFire:false,jump:false,aim:false,sprint:false};return controls;}
@@ -47,7 +49,7 @@ export function createMissionXR({getWorld,onFrame,onPause,onResume,onHome,onExit
    if(reload){w.game.reload();blocked=true;}if(next){w.game.cycleWeapon();blocked=true;}
    const axis=v=>Math.abs(v||0)>.16?v:0;yaw-=axis(rp?.axes?.[2]||0)*1.8*dt;setYaw(yaw);api.syncPose();
    const forward=new T.Vector3();w.camera.getWorldDirection(forward);const moveYaw=Math.atan2(-forward.x,-forward.z);
-   return controls={x:axis(lp?.axes?.[2]),z:axis(lp?.axes?.[3]),moveYaw,yaw,jump,interact,fire:trigger&&!blocked,leftFire:leftTrigger&&!blocked,aim:down(rp?.buttons[1]),sprint:down(lp?.buttons[1])};
+   return controls={x:axis(lp?.axes?.[2]),z:axis(lp?.axes?.[3]),moveYaw,yaw,jump,interact,fire:trigger&&!blocked,leftFire:leftTrigger&&!blocked,melee,charge:charge&&!blocked,aim:down(rp?.buttons[1]),sprint:down(lp?.buttons[1])};
   },
   aim(hand='right'){
    const w=getWorld(),T=w.T,e=entries.find(e=>e.source?.handedness===hand),source=e?.ray||w.camera,origin=new T.Vector3(),direction=new T.Vector3(),q=new T.Quaternion();source.updateWorldMatrix(true,false);source.getWorldPosition(origin);source.getWorldQuaternion(q);direction.set(0,0,-1).applyQuaternion(q);

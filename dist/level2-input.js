@@ -5,7 +5,8 @@ import {DesktopGamepadInput,DESKTOP_BUTTONS,desktopAxis} from './desktop-input.j
 export const PINK_WARS_KEYS=Object.freeze({
   forward:['KeyW','KeyZ'],back:'KeyS',left:['KeyA','KeyQ'],right:'KeyD',
   fire:'Space',jump:'KeyJ',interact:'KeyF',next:'KeyE',reload:'KeyR',
-  crouch:'KeyC',view:'KeyV',pause:'Escape',sprint:['ShiftLeft','ShiftRight']
+  crouch:'KeyC',view:'KeyV',pause:'Escape',sprint:['ShiftLeft','ShiftRight'],
+  melee:'KeyX',charge:'KeyB'
 });
 export function createPinkWarsInput(){
  const input=new DesktopGamepadInput(),previous=new Set();
@@ -33,7 +34,8 @@ export function createPinkWarsInput(){
    sprint:actions.sprint||held(keys,...PINK_WARS_KEYS.sprint),
    jump:edges.has('jump')||keys.has(PINK_WARS_KEYS.jump),
    crouchToggle:edges.has('crouch'),
-   interact:edges.has('interact'),next:edges.has('next'),reload:edges.has('reload'),pause:edges.has('pause')
+   interact:edges.has('interact'),next:edges.has('next'),reload:edges.has('reload'),pause:edges.has('pause'),
+   melee:edges.has('melee'),charge:edges.has('charge')
   };
  }
  return {read,reset(){input.reset();previous.clear();}};

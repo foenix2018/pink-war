@@ -17,7 +17,7 @@ Demande du créateur (octobre 2026) : se rapprocher d’un jeu **à l’esprit c
 | Version | Contenu | État |
 |---|---|---|
 | **3.62** | Corrections de la vérification 3.61 ; interface de combat unique pour M01, M02, Arène et Stand. | Livrée ([note](MISE_A_JOUR_362.md)) |
-| **3.63 — Combat** | Bouclier d’énergie de l’armure qui se recharge après quelques secondes sans dégâts, au-dessus de la santé (jauge et alerte dans l’interface commune) ; frappe de mêlée ; charge à impulsion lancée en arc ; deux armes portées avec échange rapide ; retour de dégâts directionnel et marqueurs d’impact/neutralisation ; légère assistance de visée à la manette et au tactile. Mêmes règles dans les trois moteurs. | À valider |
+| **3.63 — Combat** | Bouclier d’énergie de l’armure qui se recharge après quelques secondes sans dégâts, au-dessus de la santé (jauge et alerte dans l’interface commune) ; frappe de mêlée ; charge à impulsion lancée en arc ; retour de dégâts directionnel. Mêmes règles dans les trois moteurs. Reportés : échange rapide entre deux armes portées, assistance de visée à la manette et au tactile. | Livrée ([note](MISE_A_JOUR_363.md)) |
 | **3.64 — Néons de M02** | Passe graphique cyberpunk : sol mouillé réfléchissant, enseignes et néons animés, halos, pluie à l’écran, brume de profondeur, étalonnage et bloom ciblé selon le profil de qualité ; éclairage dédié des armes et des gants en vue FPS. | À valider |
 | **3.65 — Vesper** | M01 « matin désolé » retravaillé (lumière, matériaux, profondeur) ; Arène refaite en Vesper nocturne cohérent avec M02. | À valider |
 

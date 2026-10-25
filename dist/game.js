@@ -24,6 +24,7 @@ import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
 import {createCompanionSkillFX} from './companion-skill-fx.js';
 import {mountCombatHud} from './combat-hud.js';
+import {createArmorFeedback,meleeKick,MELEE_POSE} from './armor-feedback.js';
 
 const $ = id => document.getElementById(id);
 const settings = { sound: true, music: true, sensitivity: 1, quality: 'auto' };
@@ -36,7 +37,30 @@ settings.sensitivity = clamp(Number(settings.sensitivity) || 1, .4, 2);
 if (!['auto', 'low', 'high'].includes(settings.quality)) settings.quality = 'auto';
 let phase = 'lobby', view = boot?.view==='third'?'third':'fps', yaw = 0, pitch = -.075, game, world, vr;
 let character=characterForId('ghju');
-let combatHud=null;
+let combatHud=null,armorFx=null,armorFxScene=null,meleeQueued=false,chargeQueued=false;
+// Every session wears the armour layer of 3.63 (shield, strike, impulse charges).
+const armed=session=>{session.enableArmorShield();return session;};
+const heroAccent=()=>character.id==='lylu'?0x80baff:0xef91b4;
+function armorFeedback(){
+  // The scene changes when the renderer is recovered: rebuild the effects on the live one.
+  if(armorFxScene!==world.scene){armorFx?.dispose();armorFxScene=world.scene;
+    armorFx=createArmorFeedback({T:world.T,scene:world.scene,accent:heroAccent(),haptic:kind=>vr?.haptic(kind),listener:()=>game?.player,
+      audio:()=>settings.sound&&audioContext?.state==='running'?audioContext:null});}
+  return armorFx;
+}
+function armorView(){
+  const camera=vr?.mode==='xr'?world.renderer.xr.getCamera():world.camera,origin=new world.T.Vector3(),direction=new world.T.Vector3();
+  camera.getWorldPosition(origin);camera.getWorldDirection(direction);
+  // In third person the camera trails behind: throw from the soldier's chest instead.
+  if(vr?.mode!=='xr'&&view!=='fps')origin.set(game.player.x,(game.player.elevation||0)+1.5,game.player.z);
+  return {origin,direction};
+}
+const armorTouch=kind=>{if(phase!=='playing')return;audioReady();if(kind==='melee')meleeQueued=true;else chargeQueued=true;};
+function armorActions(input){
+  if(meleeQueued||input.melee){const {direction}=armorView();game.melee({x:direction.x,z:direction.z});}
+  if(chargeQueued||input.charge){const {origin,direction}=armorView();game.throwCharge({x:origin.x+direction.x*.45,y:origin.y-.18,z:origin.z+direction.z*.45},direction);}
+  meleeQueued=chargeQueued=false;
+}
 let selectedMode=['arena','training','campaign','campaign2'].includes(boot?.mode)?boot.mode:'campaign',launchBusy=false;
 let trainingWeaponIndex=Number.isInteger(boot?.trainingWeaponIndex)&&boot.trainingWeaponIndex>=0&&boot.trainingWeaponIndex<7&&boot.trainingWeaponIndex!==5?boot.trainingWeaponIndex:0;
 function selectMode(mode){
@@ -137,7 +161,7 @@ function selectCharacter(id,save=true){
   $('outfit-button').ariaLabel=`Voir les armures et accessoires de ${character.name}`;
   $('outfit-rotation').ariaLabel=`Faire tourner ${character.name}`;
   $('arsenal-title').innerHTML=`La puissance<br>en ${character.colorWord}.`;
-  world?.setCharacter(character.id);combatHud?.setCharacter(character.id);
+  world?.setCharacter(character.id);combatHud?.setCharacter(character.id);armorFx?.setAccent(heroAccent());
   if(changed&&game){game.reset(character.id);world.resetDynamic();world.setWeapon(game.weaponIndex);world.setEquipment(1);resetInput();updateHud();}
   if(save)try{localStorage.setItem('pink-war-character',character.id);}catch{}
 }
@@ -147,7 +171,7 @@ selectCharacter(character.id,false);
 function resetInput() {
   vr?.desktopGamepads?.reset();
   if(vr&&vr.mode!=='xr'){vr.previous?.clear();vr.desktopPadKey=null;}
-  keys.clear(); firingPointers.clear(); aimPointers.clear(); firePressQueued=false; mouseAim=false; aiming=false; aimBlend=0; document.body.classList.remove('scoped','aiming'); $('aim-button')?.setAttribute('aria-pressed','false'); jumpQueued = false; pickupQueued = false;crouchQueued=false; canvasPointer = null; lastDrag = null;
+  meleeQueued=chargeQueued=false;keys.clear(); firingPointers.clear(); aimPointers.clear(); firePressQueued=false; mouseAim=false; aiming=false; aimBlend=0; document.body.classList.remove('scoped','aiming'); $('aim-button')?.setAttribute('aria-pressed','false'); jumpQueued = false; pickupQueued = false;crouchQueued=false; canvasPointer = null; lastDrag = null;
   for (const s of [move, look]) { s.x = 0; s.y = 0; s.id = null; }
   for (const id of ['move-stick', 'look-stick']) $(id).querySelector('.joystick-knob').style.transform = '';
   $('fire-button').classList.remove('firing');
@@ -250,8 +274,8 @@ async function start() {
   for (const d of document.querySelectorAll('dialog[open]')) d.close();
   world.setCampaignActive(selectedMode==='campaign');
   world.setRangeActive(selectedMode==='training');
-  game=selectedMode==='campaign'?new CampaignLevel1(world.obstacles,Math.random,character.id):
-    selectedMode==='training'?new ShootingRangeGame(world.obstacles,Math.random,trainingWeaponIndex,character.id):new ArenaGame(world.obstacles,Math.random,null,character.id);
+  game=armed(selectedMode==='campaign'?new CampaignLevel1(world.obstacles,Math.random,character.id):
+    selectedMode==='training'?new ShootingRangeGame(world.obstacles,Math.random,trainingWeaponIndex,character.id):new ArenaGame(world.obstacles,Math.random,null,character.id));
   world.resetDynamic(); phase = 'loading'; yaw = 0; pitch = -.075;
   weaponFeel.reset();reloadInserted=false;lastShotAt=-99;flashTimer = 0; recoil = 0; damageUntil = 0; announcementUntil = 0;pickupNotice=null;equipmentUntil=0;crouchCameraBlend=0;currentSprinting=false; resetInput(); audioReady();
   world.setWeapon(game.weaponIndex);world.setEquipment(1);
@@ -300,6 +324,8 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyE' && !e.repeat) game.cycleWeapon();
   if (e.code === 'KeyF' && !e.repeat) pickupQueued = true;
   if (e.code === 'KeyC' && !e.repeat) crouchQueued=true;
+  if (e.code === 'KeyX' && !e.repeat) meleeQueued=true;
+  if (e.code === 'KeyB' && !e.repeat) chargeQueued=true;
   keys.add(e.code);if(e.code==='Space'&&!e.repeat)firePressQueued=true;if(e.code==='KeyJ'&&!e.repeat)jumpQueued=true;
 });
 window.addEventListener('keyup', e => keys.delete(e.code));
@@ -339,6 +365,7 @@ function updateCamera() {
   weapon.position.set(ads.x+heldFeel.yaw*.15, ads.y + (bob ? Math.sin(clock * 11) * .009*(1-aimBlend) : 0) - heldFeel.kick*.18 + reloadLift * .045, ads.z + heldFeel.kick - reloadLift * .028);
   weapon.rotation.set(heldFeel.pitch + reloadLift * Math.PI / 2,heldFeel.yaw+ads.yaw,Math.sin(clock * 1.8) * .003-heldFeel.yaw*.35+ads.roll);
   if(game.weapon.melee){const slash=bladeSwingPose(game.bladePhase,game.bladeSlashSide);weapon.rotation.x=slash.x-.12;weapon.rotation.y=slash.y;weapon.rotation.z=slash.z;}
+  else{const strike=meleeKick(game);if(strike){weapon.position.x+=MELEE_POSE.x*strike;weapon.position.y+=MELEE_POSE.y*strike;weapon.position.z+=MELEE_POSE.z*strike;weapon.rotation.x+=MELEE_POSE.pitch*strike;}}
   camera.updateProjectionMatrix(); camera.updateMatrixWorld(true);
 }
 function reloadPose() {
@@ -390,6 +417,7 @@ function announce(title, subtitle) {
 }
 function handleEvents() {
   for (const event of game.drainEvents()) {
+    armorFeedback().handle(event);
     if(event.type==='campaign'){
       if(vr.mode!=='xr')announce(event.title,event.subtitle);
       tone(410,680,.16,.025,'sine');
@@ -489,7 +517,7 @@ function updateHud() {
   const equipment=equipmentForCharacter(game.wave,character.id);
   $('gear-label').textContent=`TENUE ${String(equipment.level).padStart(2,'0')} · ${equipment.name.toUpperCase()}`;
   // Shared combat HUD (same panels as M01 and M02); the legacy readouts below stay for their own logic.
-  (combatHud ||= mountCombatHud({characterId:character.id,lobbyPage:true})).update(game);
+  (combatHud ||= mountCombatHud({characterId:character.id,lobbyPage:true,onAction:armorTouch})).update(game);
   $('health-label').textContent = Math.ceil(game.player.hp); $('health-bar').style.width = `${game.player.hp}%`;
   $('health-status').textContent = game.regenerating?'RÉGÉNÉRATION':'SANTÉ';
   document.querySelector('.vitals').classList.toggle('regenerating', game.regenerating);
@@ -652,6 +680,8 @@ function bindCanvas() {
   canvas.addEventListener('contextmenu',e=>e.preventDefault());
   canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===0&&phase==='playing'){firingPointers.add(e.pointerId);firePressQueued=true;audioReady();}});
   canvas.addEventListener('pointerdown',e=>{if(e.button===2&&phase==='playing'){e.preventDefault();mouseAim=true;}});
+  canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===1&&phase==='playing'){e.preventDefault();meleeQueued=true;}});
+  canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
   canvas.addEventListener('pointerdown', e => { if ((e.pointerType==='mouse'&&e.button!==0)||phase !== 'playing' || canvasPointer !== null || (e.pointerType!=='mouse' && e.clientX < window.innerWidth*.5)) return; e.preventDefault(); canvasPointer = e.pointerId; lastDrag = { x: e.clientX, y: e.clientY }; try { canvas.setPointerCapture(e.pointerId); } catch {} });
   canvas.addEventListener('pointermove', e => { if (phase !== 'playing' || e.pointerId !== canvasPointer || !lastDrag) return; const fine=aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend);yaw -= (e.clientX - lastDrag.x) * .004 * settings.sensitivity*fine; pitch = clamp(pitch - (e.clientY - lastDrag.y) * .004 * settings.sensitivity*fine, -.85, .7); lastDrag = { x: e.clientX, y: e.clientY }; });
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) canvas.addEventListener(type, e => { if (e.pointerId === canvasPointer) { canvasPointer = null; lastDrag = null; } });
@@ -696,9 +726,10 @@ function stepFrame(timestamp, xrFrame) {
     game.step(dt, { x, z, yaw: facing, moveYaw, sprint: currentSprinting, jump,crouchToggle });
     crouchCameraBlend+=(Number(game.player.crouched)-crouchCameraBlend)*Math.min(1,dt*8);
     if(pickupQueued||vrInput.pickup){game.collectWeapon();pickupQueued=false;}
+    armorActions(vrInput);
     const moving = Math.hypot(x, z) > .1;
     world.sync(game, clock, dt);
-    world.campaignArt.update(game,clock);
+    world.campaignArt.update(game,clock);armorFeedback().update(game,dt);
     // Track the outgoing saber separately from the new firearm. The player sees
     // AURORA descend to the bottom-left before the new weapon appears.
     if(game.weaponIndex!==lastWeaponSlot){
@@ -813,7 +844,7 @@ vr = new VRController({
 });
 $('pause-vr').onclick=()=>vr.open();
 try {
-  world = await createScene($('world'), settings.quality,false,character.id);world.setCharacter(character.id);game = new ArenaGame(world.obstacles,Math.random,null,character.id);
+  world = await createScene($('world'), settings.quality,false,character.id);world.setCharacter(character.id);game = armed(new ArenaGame(world.obstacles,Math.random,null,character.id));
   $('renderer-label').textContent = `${world.backend.toUpperCase()} · CONÇU POUR LE TACTILE`;
   $('loading-status').textContent='Préparation du laboratoire et des équipements…';
   if(boot?.intent!=='play'){
