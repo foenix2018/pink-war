@@ -33,7 +33,7 @@
 <!-- Cinematic shaded type area -->
 <path d="M0 653H1600V900H0Z" fill="#050b17" fill-opacity=".76"/>
 <path d="M55 675H1520" stroke="#61dde8" stroke-width="3" opacity=".52"/>
-<text x="70" y="728" font-family="system-ui,Arial" font-size="27" letter-spacing="12" fill="#9be9ee">PINK WARS   /   MISSION 02</text>
-<text x="64" y="810" font-family="system-ui,Arial" font-size="80" font-weight="900" letter-spacing="-2" fill="url(#title)">SOUS LES NÉONS</text>
-<text x="70" y="848" font-family="system-ui,Arial" font-size="21" letter-spacing="5" fill="#e7b98c">LES BAS-NIVEAUX DE VESPER  ·  2196</text>
+<text x="1540" y="728" text-anchor="end" font-family="system-ui,Arial" font-size="27" letter-spacing="12" fill="#9be9ee">PINK WARS   /   MISSION 02</text>
+<text x="1540" y="810" text-anchor="end" font-family="system-ui,Arial" font-size="80" font-weight="900" letter-spacing="-2" fill="url(#title)">SOUS LES NÉONS</text>
+<text x="1540" y="848" text-anchor="end" font-family="system-ui,Arial" font-size="21" letter-spacing="5" fill="#e7b98c">LES BAS-NIVEAUX DE VESPER  ·  2196</text>
 <path d="M1510 688v158m-65 0h65" stroke="#f98aaa" stroke-width="5" opacity=".8"/></svg>

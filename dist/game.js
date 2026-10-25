@@ -23,6 +23,7 @@ import {createAICompanion} from './ai-companions.js';
 import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
 import {createCompanionSkillFX} from './companion-skill-fx.js';
+import {mountCombatHud} from './combat-hud.js';
 
 const $ = id => document.getElementById(id);
 const settings = { sound: true, music: true, sensitivity: 1, quality: 'auto' };
@@ -35,6 +36,7 @@ settings.sensitivity = clamp(Number(settings.sensitivity) || 1, .4, 2);
 if (!['auto', 'low', 'high'].includes(settings.quality)) settings.quality = 'auto';
 let phase = 'lobby', view = boot?.view==='third'?'third':'fps', yaw = 0, pitch = -.075, game, world, vr;
 let character=characterForId('ghju');
+let combatHud=null;
 let selectedMode=['arena','training','campaign','campaign2'].includes(boot?.mode)?boot.mode:'campaign',launchBusy=false;
 let trainingWeaponIndex=Number.isInteger(boot?.trainingWeaponIndex)&&boot.trainingWeaponIndex>=0&&boot.trainingWeaponIndex<7&&boot.trainingWeaponIndex!==5?boot.trainingWeaponIndex:0;
 function selectMode(mode){
@@ -135,7 +137,7 @@ function selectCharacter(id,save=true){
   $('outfit-button').ariaLabel=`Voir les armures et accessoires de ${character.name}`;
   $('outfit-rotation').ariaLabel=`Faire tourner ${character.name}`;
   $('arsenal-title').innerHTML=`La puissance<br>en ${character.colorWord}.`;
-  world?.setCharacter(character.id);
+  world?.setCharacter(character.id);combatHud?.setCharacter(character.id);
   if(changed&&game){game.reset(character.id);world.resetDynamic();world.setWeapon(game.weaponIndex);world.setEquipment(1);resetInput();updateHud();}
   if(save)try{localStorage.setItem('pink-war-character',character.id);}catch{}
 }
@@ -335,7 +337,7 @@ function updateCamera() {
   const ads=flatSightPose(optic,aimBlend);
   const heldFeel=game.weapon.dual?{yaw:0,kick:0,pitch:0}:feel;
   weapon.position.set(ads.x+heldFeel.yaw*.15, ads.y + (bob ? Math.sin(clock * 11) * .009*(1-aimBlend) : 0) - heldFeel.kick*.18 + reloadLift * .045, ads.z + heldFeel.kick - reloadLift * .028);
-  weapon.rotation.set(heldFeel.pitch + reloadLift * Math.PI / 2,heldFeel.yaw,Math.sin(clock * 1.8) * .003-heldFeel.yaw*.35);
+  weapon.rotation.set(heldFeel.pitch + reloadLift * Math.PI / 2,heldFeel.yaw+ads.yaw,Math.sin(clock * 1.8) * .003-heldFeel.yaw*.35+ads.roll);
   if(game.weapon.melee){const slash=bladeSwingPose(game.bladePhase,game.bladeSlashSide);weapon.rotation.x=slash.x-.12;weapon.rotation.y=slash.y;weapon.rotation.z=slash.z;}
   camera.updateProjectionMatrix(); camera.updateMatrixWorld(true);
 }
@@ -486,6 +488,8 @@ function updateHud() {
   updatePortalHUD();
   const equipment=equipmentForCharacter(game.wave,character.id);
   $('gear-label').textContent=`TENUE ${String(equipment.level).padStart(2,'0')} · ${equipment.name.toUpperCase()}`;
+  // Shared combat HUD (same panels as M01 and M02); the legacy readouts below stay for their own logic.
+  (combatHud ||= mountCombatHud({characterId:character.id,lobbyPage:true})).update(game);
   $('health-label').textContent = Math.ceil(game.player.hp); $('health-bar').style.width = `${game.player.hp}%`;
   $('health-status').textContent = game.regenerating?'RÉGÉNÉRATION':'SANTÉ';
   document.querySelector('.vitals').classList.toggle('regenerating', game.regenerating);

@@ -27,6 +27,7 @@ import {createMissionLoading} from './mission-loading.js';
 import {createPauseMenu} from './fracture-menu.js';
 import {createMissionXR,immersiveRendererPreferred} from './mission-xr.js';
 import {createGlove} from './hands.js';
+import {mountCombatHud} from './combat-hud.js';
 import {createDistrictSignage} from './level2-signage.js';
 import {createWarZone} from './level2-war-zone.js';
 import {createBattleAudio} from './level2-battle-audio.js';
@@ -640,7 +641,7 @@ function gameTick(dt){
  const ads=flatSightPose(OPTICS[game.weapon.id],aimBlend);
  const heldFeel=game.weapon.dual?{yaw:0,kick:0,pitch:0}:weaponFeel.state;
  weapon.position.set(ads.x+heldFeel.yaw*.15,ads.y-heldFeel.kick*.18,ads.z+heldFeel.kick);
- weapon.rotation.set(heldFeel.pitch,heldFeel.yaw,-heldFeel.yaw*.35);
+ weapon.rotation.set(heldFeel.pitch,heldFeel.yaw+ads.yaw,-heldFeel.yaw*.35+ads.roll);
  weapon.userData.setSight?.(aimBlend>.55,camera);
  weapon.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,dualState:game.dual,
   charge:game.charge,reloading:game.reloadRemaining>0,reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,
@@ -652,7 +653,7 @@ function gameTick(dt){
  for(const b of beacons){b.halo.rotation.z+=dt*.4;b.dot.position.y=1.6+Math.sin(game.time*2)*.13;}
  updateHUD();
 }
-let lastMinimalHudStage=-1;
+let lastMinimalHudStage=-1;let combatHud=null;
 function updateHUD(){
  if(stage!==lastMinimalHudStage){
    lastMinimalHudStage=stage;
@@ -664,6 +665,8 @@ function updateHUD(){
  const o=objectives[stage]||objectives[3];
  $('objective').textContent=(stage+1)+'/4 · '+o.label;
  $('hint').textContent=o.description;
+ // Shared combat HUD (same panels as M01, the Arena and the Range); #hp / #ammo stay hidden below.
+ (combatHud ||= mountCombatHud({characterId})).update(game);
  $('hp').textContent=Math.ceil(game.player.hp);
  $('weapon').firstChild.nodeValue=game.weapon.name+' ';
  $('ammo').textContent=game.weapon.melee?'LAME':game.ammo[game.weaponIndex]+' / '+game.weapon.capacity;
@@ -866,7 +869,7 @@ for(const name of ['pointerup','pointercancel']){
  window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
 }
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
-window.__PINK_M02=Object.freeze({snapshot:()=>({revision:'3.61',running,paused,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
+window.__PINK_M02=Object.freeze({snapshot:()=>({revision:'3.62',running,paused,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
  backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
  effects:combatEffects?.stats()})});

@@ -41,7 +41,8 @@ const PI = Math.PI;
 export const OPTICS = Object.freeze({
   bloom:Object.freeze({y:.178,z:-.032,radius:.018,magnification:2}),
   lance:Object.freeze({y:.180,z:-.023,radius:.019,magnification:4}),
-  m12:Object.freeze({y:.177,z:-.165,radius:.018,magnification:1.15,eyeRelief:.62,iron:true})
+  // The M12's receiver hides the shooting hand from the eye: at the hip it sits lower and turns slightly outwards.
+  m12:Object.freeze({y:.177,z:-.165,radius:.018,magnification:1.15,eyeRelief:.62,iron:true,hip:Object.freeze({x:.03,y:-.05,yaw:-.13,roll:.08})})
 });
 const opticGlassGeometry=new T.CircleGeometry(1,32),opticDotGeometry=new T.CircleGeometry(.00075,16);
 const opticRingGeometry=new T.RingGeometry(.0068,.0074,32);

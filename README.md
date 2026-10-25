@@ -1,5 +1,7 @@
 # Pink Wars — La Fracture
 
+Version 3.62 : menu d’accueil masqué pendant les parties d’Arène et du Stand, en-tête et couverture de la mission 02 corrigés, main de LYLU visible sur le M12. **Une seule interface de combat** (santé et arme en main) pour M01, M02, l’Arène et le Stand. Première étape de la [feuille de route cyberpunk / jouabilité Halo](docs/pink-wars/FEUILLE_DE_ROUTE_CYBERPUNK_HALO.md). [Détails](docs/pink-wars/MISE_A_JOUR_362.md) · [Jouer](https://pink-war.vercel.app/?v=3.62).
+
 Version 3.61 : double R9 réservé à **GHJU**, arme unique pour LYLU et les autres modèles. M02 reçoit des façades à fenêtres en retrait, des affiches murales vieillies, les ordinateurs humains, des couvertures profilées et des traces de guerre : épaves, gravats, fumée et détonations lointaines. Chargement tardif des textures corrigé. [Détails et vérifications](docs/pink-wars/MISE_A_JOUR_361.md) · [Jouer](https://pink-war.vercel.app/?v=3.61).
 
 Version 3.60 : reprise corrigée dans le menu pause VR de la campagne, sans fenêtre HTML cachée ni double bascule. La gâchette de reprise ne déclenche ni tir ni compétence. Rechargement automatique à vide pour GHJU, LYLU et les armes récupérées, y compris si un seul pistolet de GHJU est vidé. [Détails](docs/pink-wars/MISE_A_JOUR_360.md) · [Jouer](https://pink-war.vercel.app/?v=3.60).
