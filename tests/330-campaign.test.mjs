@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { CampaignLevel1, LEVEL1, LEVEL1_ENCOUNTERS } from '../dist/campaign-level1.js';
 import { COVER_WALLS, segmentBox } from '../dist/game-logic.js';
 import { createTraversalObstacles } from '../dist/world-layout.js';
+import {LEVEL1_MAP} from '../dist/level1-layout.js';
 import { enemyScale } from '../dist/enemy-combat.js';
 
 const random = () => .5;
@@ -12,6 +13,7 @@ const advance = (game, seconds, input = {}) => {
 const at = (game, point, offset = 1.5) => Object.assign(game.player,
   { x: point.x, z: point.z + offset, elevation: point.y || 0, grounded: true });
 const archive = game => {
+  if(game.stage==='approach'){at(game,LEVEL1_MAP.courtyard.controls[0]);assert.equal(game.interact(),true);}
   at(game, LEVEL1.power); assert.equal(game.interact(), true);
   at(game, LEVEL1.archive); assert.equal(game.interact(), true);
 };
@@ -19,8 +21,8 @@ const archive = game => {
 test('level 1 starts occupied, then preserves ordered objectives and the portal windup', () => {
   const game = new CampaignLevel1([], random);
   assert.equal(game.mode, 'campaign');
-  assert.equal(game.stage, 'power');
-  assert.equal(game.player.z, 72);
+  assert.equal(game.stage, 'approach');
+  assert.equal(game.player.z, LEVEL1.start.z);
   assert.equal(game.getInteraction(), null);
   game.invulnerable=1000;advance(game, 12);
   assert.equal(game.enemies.filter(e=>e.opening).length, 8);
@@ -31,7 +33,7 @@ test('level 1 starts occupied, then preserves ordered objectives and the portal 
   advance(game, 4.9);
   assert.equal(game.stage, 'breach');
   assert.equal(game.enemies.filter(e=>!e.opening).length, 0);
-  assert.equal(game.activePortals.length, 0);
+  assert.equal(game.activePortals.length, 1,'power already announced a remote, capped reinforcement group');
   advance(game, .2);
   assert.equal(game.stage, 'combat');
   assert.equal(game.activePortals.length, 1);
@@ -47,7 +49,7 @@ test('level 1 starts occupied, then preserves ordered objectives and the portal 
 
 test('interactions reject distance, the wrong floor and solid walls, including the final elevated terminal', () => {
   const wall = { x: -6, z: 62.7, hx: 2, hz: .1, height: 3 };
-  const game = new CampaignLevel1([wall], random);
+  const game = new CampaignLevel1([wall], random);game.setStage('power');
   at(game, LEVEL1.power);
   assert.equal(game.interact(), false);
   game.replaceObstacles([]);
@@ -78,7 +80,7 @@ test('offline human archives name the other sibling and reset keeps the selected
     game.reset();
     assert.equal(game.characterId, character);
     assert.equal(game.sibling, sibling);
-    assert.equal(game.stage, 'power');
+    assert.equal(game.stage, 'approach');
     assert.deepEqual(game.archiveLines, []);
     assert.equal(game.time, 0);
     assert.equal(game.spawned, 0);
@@ -120,7 +122,7 @@ test('pause and death freeze objective timers, and replay clears the finite enco
   advance(game, 20);
   assert.equal(game.time, time);
   assert.equal(game.interact(), false);
-  assert.equal(game.activePortals.length, 0);
+  assert.equal(game.activePortals.length, 1,'the previously announced breach is frozen during pause');
   game.state = 'playing';
   game.invulnerable=0;game.damage(100);
   advance(game, 20);
@@ -129,7 +131,7 @@ test('pause and death freeze objective timers, and replay clears the finite enco
   assert.equal(game.enemies.filter(e=>!e.opening).length, 0);
   game.reset('lylu');
   assert.equal(game.player.hp, 100);
-  assert.equal(game.stage, 'power');
+  assert.equal(game.stage, 'approach');
   assert.equal(game.characterId, 'lylu');
   assert.equal(game.ammo[0], 12);
 });
@@ -180,7 +182,7 @@ test('a missed laser remains a miss and current cover blocks campaign shots', ()
   game.shoot(origin, { x: 1, y: 0, z: 0 });
   advance(game, .5);
   assert.equal(enemy.hp, hp, 'there is no homing towards a nearby hostile');
-  const wall = { x: 0, z: 44, hx: 3, hz: .2, height: 6 };
+  const wall = { x:(origin.x+enemy.x)/2,z:(origin.z+enemy.z)/2,hx:3,hz:.2,height:6 };
   const aim = { x: enemy.x, y: enemy.elevation + .55, z: enemy.z };
   assert.notEqual(segmentBox(origin, aim, wall), null);
   game.replaceObstacles([wall]);

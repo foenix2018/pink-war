@@ -1,10 +1,10 @@
-# Le dernier signal — carte dédiée 3.40
+# Le dernier signal — cour et annexe 3.63.4
 
-GHJU / LYLU rejoint l’ancien quartier de secours de Vesper. ORDRE reste entièrement hostile. Les terminaux hors réseau conservent uniquement des archives humaines. Le premier chapitre comprend 32 ennemis : huit patrouilleurs initiaux et trois groupes de huit renforts. Au maximum huit ennemis sont actifs en même temps. La campagne reste finie et les chapitres suivants seront construits après les essais du joueur.
+GHJU / LYLU rejoint l’ancien quartier de secours de Vesper. ORDRE reste entièrement hostile. Les terminaux hors réseau conservent uniquement des archives humaines. Le premier chapitre comprend 32 ennemis : huit machines initiales et trois groupes de huit renforts. Le premier groupe arrive en deux temps : quatre après le rétablissement du courant, quatre après la lecture de l’archive. Au maximum huit ennemis sont actifs en même temps. La campagne reste finie et les chapitres suivants seront construits après les essais du joueur.
 
 ## Parcours jouable
 
-1. Huit machines occupent déjà le secteur : gagner les couvertures, réarmer le circuit du laboratoire puis consulter le journal de l’autre protagoniste. Les ennemis disposent d’un délai initial avant d’attaquer.
+1. Départ dans la cour en retrait. Choisir le convoi abandonné ou l’aile technique traversable pour isoler l’alimentation, puis réarmer le circuit du laboratoire et consulter le journal de l’autre protagoniste. Huit machines occupent des postes distincts ; le courant déclenche quatre renforts annoncés et plafonnés. Les ennemis disposent d’un délai initial avant d’attaquer.
 2. Lire cinq secondes à l’abri de la décharge du circuit isolé. Repousser les patrouilleurs et les premiers renforts de la brèche.
 3. Récupérer BLOOM puis traverser la rue jusqu’à l’ancienne boutique de briques à l’ouest. Son ordinateur hors réseau conserve un nouvel indice humain.
 4. Rejoindre le carrefour nord et combattre la seconde vague. Les carcasses et les murs arrêtent les tirs. Récupérer le sniper LANCE, puis désactiver la balise de surveillance ORDRE dans la rue.

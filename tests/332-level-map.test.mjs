@@ -9,6 +9,7 @@ const step=(g,seconds,input={})=>{for(let i=0;i<seconds/.025;i++)g.step(.025,inp
 function walk(g,x,z){let k=0;while(Math.hypot(g.player.x-x,g.player.z-z)>.12&&k++<10000){const dx=x-g.player.x,dz=z-g.player.z,n=Math.hypot(dx,dz);g.step(.025,{x:dx/n,z:dz/n,yaw:0});}assert.ok(k<10000,`walkable route to ${x},${z}, at ${g.player.x},${g.player.z}`);}
 test('complete physical route from outside lab through doors and street climbs to terminal',()=>{
  const g=new CampaignLevel1(createLevel1Obstacles());g.invulnerable=1000;g.enemies=[];g.openingSpawned=8;
+ for(const [x,z]of LEVEL1_MAP.courtyard.approaches[0].points)walk(g,x,z);
  // use the actual shared input names, same as PC/touch/VR
  for(const p of [[0,67],[-6,63.6],[0,63.6],[0,56.5],[2.3,56.5],[2.3,51.5],[0,47],[0,29],[0,13],[18,13],[18,6],[18,-17],[18,-39],[18,-43]])walk(g,...p);
  assert.ok(Math.abs(g.player.elevation-4.8)<.02);g.setStage('exit');assert.equal(g.getInteraction()?.id,'exit');assert.equal(g.interact(),true);
@@ -32,7 +33,7 @@ test('each portal site is clear and enemy navigation reaches laboratory and nort
 });
 test('the map supports all three encounters with real bullets and cover intact',()=>{
  const g=new CampaignLevel1(createLevel1Obstacles(),()=>.5);g.selectWeapon(0);g.cooldown=0;g.invulnerable=10000;
- Object.assign(g.player,{x:-6,z:63.6});assert.equal(g.interact(),true);Object.assign(g.player,{x:0,z:56.5});assert.equal(g.interact(),true);
+ Object.assign(g.player,{...LEVEL1_MAP.courtyard.controls[0],z:LEVEL1_MAP.courtyard.controls[0].z+1.5});assert.equal(g.interact(),true);Object.assign(g.player,{x:-6,z:63.6});assert.equal(g.interact(),true);Object.assign(g.player,{x:0,z:56.5});assert.equal(g.interact(),true);
  walk(g,2.3,56.5);walk(g,2.3,51.5);walk(g,0,47);step(g,6);
  function defeat(stage){let n=0;while(g.stage===stage&&n++<6000){
   for(const e of g.enemies){e.speed=0;e.stunnedUntil=10000;}

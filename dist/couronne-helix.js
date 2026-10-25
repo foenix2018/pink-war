@@ -40,7 +40,7 @@ let canvas=$('game'),renderer,scene,camera,game,weapon,art,clock=0,running=false
 let yaw=0,pitch=0,noticeUntil=0,hitUntil=0,paused=false,view='fps',aimBlend=0,mouseAim=false,playerRig=null,touchControls=null;
 let jumpQueued=false,crouchQueued=false,firePressQueued=false,heldFire=false,weaponReady=false,audioCtx=null;
 let combatEffects=null,companion=null,ambience=null,companionSkills=null,skillMenu=null,enemyFactory=null,armorFx=null,combatHud=null;
-let meleeQueued=false,chargeQueued=false,xr=null,fallbackGun=null,fallbackHand=null;
+let meleeQueued=false,chargeQueued=false,touchSprinting=false,xr=null,fallbackGun=null,fallbackHand=null;
 const music=createMusicBed();
 const weaponFeel=createWeaponFeel(),pinkControls=createPinkWarsInput(),fireInput=createFireBuffer();
 let enableAudio=true;try{enableAudio=JSON.parse(localStorage.getItem('rosee-settings')||'{}').sound!==false;}catch{}
@@ -244,7 +244,7 @@ function gameTick(dt){
  const x=controls.moveX+touch.x,z=controls.moveZ+touch.z;
  const aiming=!!OPTICS[game.weapon.id]&&game.reloadRemaining<=0&&(mouseAim||touch.aim||controls.aim);
  aimBlend+=(Number(aiming)-aimBlend)*(1-Math.exp(-dt*14));document.body.classList.toggle('aiming',aiming);
- const sprint=!aiming&&controls.sprint;
+ const sprint=!aiming&&(controls.sprint||touchSprinting);
  if(controls.pause){pauseMission();return;}
  if(controls.next)game.cycleWeapon();
  if(controls.reload)game.reload();
@@ -301,10 +301,10 @@ function gameTick(dt){
  if(weapon.userData.index!==game.weaponIndex)weapon.userData.setVariant(game.weaponIndex);
  updateHUD();
 }
-const armorTouch=kind=>{if(!running||paused)return;audioReady();if(kind==='melee')meleeQueued=true;else chargeQueued=true;};
+const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;return;}if(!running||paused)return;audioReady();if(kind==='melee')meleeQueued=true;else if(kind==='charge')chargeQueued=true;else if(kind==='reload')game.reload();else if(kind==='next')game.cycleWeapon();else if(kind==='interact')interact();else if(kind==='crouch')crouchQueued=true;};
 function updateHUD(){
  (combatHud ||= mountCombatHud({characterId,onAction:armorTouch})).update(game);
- const it=mission.nearInteraction();
+ const it=mission.nearInteraction();combatHud.setContext(it?.label);combatHud.setObjective({label:'COURONNE HELIX',detail:'Traverser les terrasses et couper la liaison HELIX.'});
  $('prompt').style.display=it?'block':'none';if(it)$('prompt').textContent='F / R3 · '+it.label;
  if(clock>noticeUntil)$('notice').style.display='none';
  $('crosshair').style.filter=clock<hitUntil?'drop-shadow(0 0 7px #ffffff) brightness(3)':'';
@@ -342,6 +342,7 @@ function resize(){
  renderer.setPixelRatio(renderPixelRatio(profile,devicePixelRatio,width,height));renderer.setSize(width,height,false);
 }
 function pauseMission(){
+ combatHud?.reset();touchSprinting=false;
  if(!running||paused)return;paused=true;running=false;music.pause();ambience?.pause?.();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
  touchControls?.reset();pinkControls.reset();document.exitPointerLock?.();pauseMenu.show();
 }

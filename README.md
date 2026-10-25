@@ -1,5 +1,7 @@
 # Pink Wars — La Fracture
 
+Version 3.63.4 : **premier lot jouable de M01 long** — cour du convoi, aile technique traversante et deux approches vers l’annexe. Départs électriques à isoler, huit postes ennemis, renforts annoncés et finis, nouveaux points de contrôle. Modèles GHJU/LYLU et HUD C conservés. Cible du premier lot : 6–8 minutes à mesurer ; la mission complète de 20–25 minutes reste en construction. [Détails](docs/pink-wars/MISE_A_JOUR_363_4.md) · [Captures du jeu](https://pink-war.vercel.app/m01-cour-annexe.html?v=3.63.4) · [Jouer](https://pink-war.vercel.app/?v=3.63.4).
+
 Version 3.63.3 : **HUD C « Immersion » intégré** — capsules santé/bouclier et munitions, palette tactile « … », objectif compact, pause/réglages/VR/accueil réunis. Robots humanoïdes et base 3.63 conservés. Préparation d’une extension M01 vers **20–25 minutes**, présentée séparément : la carte actuelle n’est pas encore allongée. [Détails](docs/pink-wars/MISE_A_JOUR_363_3.md) · [Plan du niveau long](https://pink-war.vercel.app/niveau1-direction.html?v=3.63.3) · [Jouer](https://pink-war.vercel.app/?v=3.63.3).
 Niveau autonome (prototype, hors menu et hors campagne) : **Couronne HELIX**. Crépuscule sur les hauteurs de Vesper, au-dessus de la ville en néons ; combat en bac à sable sur trois niveaux de terrasses, jusqu’au pylône d’ancrage de phase. [Fiche du niveau](docs/pink-wars/NIVEAU_COURONNE_HELIX.md) · page `couronne-helix.html`.
 

@@ -1,10 +1,10 @@
 # M01 — Une mission de guerre de 20–25 minutes
 
-**25 octobre 2026 · Cible de durée choisie par le créateur.** Cette fiche prépare l’extension du niveau ; les secteurs et comportements décrits ci-dessous ne sont pas encore livrés. La 3.63.3 intègre le HUD C, sans prétendre transformer M01 en une mission de vingt minutes.
+**25 octobre 2026 · Cible de durée choisie par le créateur.** Cette fiche prépare l’extension du niveau. **Lot 1 cour/annexe livré en 3.63.4** : deux approches, aile technique, isolation du circuit et premiers renforts. Les secteurs suivants restent des cibles. La durée finale de vingt minutes n’est pas encore livrée ni mesurée.
 
 ## Ce que la base explique
 
-Le retour du créateur est une traversée d’environ cinq minutes, trop facile. Le code confirme une structure courte : un niveau jouable borné à **77 × 144 m**, huit emplacements d’ennemis au départ, puis trois groupes de huit renforts. Les actions se concentrent autour de quelques terminaux ; les renforts arrivent essentiellement par un portail actif à la fois. Le jeu possède déjà tirs physiques, perception sonore, couverts, esquive de charges, bouclier, escalier, ascenseur et points de contrôle. Il manque surtout des situations qui obligent à exploiter ces systèmes.
+Le retour du créateur est une traversée d’environ cinq minutes, trop facile. La base 3.63.3 confirmait une structure courte : un niveau jouable borné à **77 × 144 m**, huit emplacements d’ennemis au départ, puis trois groupes de huit renforts. Les actions se concentrent autour de quelques terminaux ; les renforts arrivent essentiellement par un portail actif à la fois. Le jeu possède déjà tirs physiques, perception sonore, couverts, esquive de charges, bouclier, escalier, ascenseur et points de contrôle. Il manque surtout des situations qui obligent à exploiter ces systèmes.
 
 La durée seule ne prouve pas la qualité d’un niveau : un joueur expert pourra toujours aller plus vite. La cible concerne une première partie en difficulté normale, hors morts, chargements et cinématiques. Elle sera mesurée en test, pas imposée par un chronomètre, une porte lente ou des ennemis artificiellement résistants.
 
@@ -20,14 +20,14 @@ Le book dit « existant à enrichir » et « ne pas remplacer M01 existante » :
 
 | Séquence | Durée cible | Objectif et choix du joueur | Défense d’ORDRE et terrain | Hostiles finis |
 | --- | --- | --- | --- | --- |
-| 1. Approche des secours | 3 min | Observer la cour ; passer par le convoi abandonné ou le passage de service | Une sonde observe, un binôme tient le sol ; vrais obstacles coupant les lignes de tir, repli possible vers l’approche | 4 des huit initiaux |
-| 2. Cour et annexe | 4 min | Atteindre le circuit, remettre le courant et lire le premier journal ; entrer par l’accueil ou le local technique | Intérieurs traversants, portes ouvertes lisibles, tirs courts ; l’activation du circuit déclenche des renforts limités et annoncés | 4 initiaux + 4 renforts |
+| 1. Approche des secours | 3 min | Observer la cour ; passer par le convoi abandonné ou le passage de service | Une sonde observe, un binôme tient le sol ; vrais obstacles coupant les lignes de tir, repli possible vers l’approche | 8 initiaux, répartis cour/annexe |
+| 2. Cour et annexe | 4 min | Atteindre le circuit, remettre le courant et lire le premier journal ; entrer par l’accueil ou le local technique | Intérieurs traversants, portes ouvertes lisibles, tirs courts ; l’activation du circuit déclenche des renforts limités et annoncés | 4 renforts au courant + 4 après le journal |
 | 3. Boutique et îlot effondré | 5 min | Rejoindre le deuxième journal, récupérer BLOOM ; choisir intérieur protégé ou cour extérieure plus exposée | Une position de tir contrôle la rue ; un duo peut se déplacer par un chemin accessible derrière le joueur. Comptoirs, rayonnages et ruines servent réellement de couvert | 8 renforts |
-| 4. Carrefour sous le viaduc | 6 min | Traverser le verrou, atteindre puis saboter la balise ; route basse sous les véhicules ou boucle latérale par un bâtiment | Unité de suppression et fusiliers couvrent des angles différents ; la balise coordonne seulement les contacts perçus. Sa coupure réduit cette coordination, sans faire disparaître les robots | 8 renforts |
+| 4. Carrefour sous le viaduc | 6 min | Traverser le verrou, atteindre puis saboter la balise ; route basse sous les véhicules ou boucle latérale par un bâtiment | Unité de suppression et fusiliers couvrent des angles différents ; la balise coordonne seulement les contacts perçus. Sa coupure réduit cette coordination, sans faire disparaître les robots | 4 renforts |
 | 5. Montée et relais | 4 min | Rejoindre la terrasse par l’escalier ou l’ascenseur, utiliser LANCE, transmettre le signal | Défense du pied de l’accès et de la terrasse, sortie lisible de l’ascenseur, paliers protégés ; aucune apparition collée au joueur | 4 renforts |
 | **Total** | **22 min au centre de la cible** | **Deux routes par zone, deux journaux, un sabotage, une vraie montée** | **Cinq situations, plutôt qu’une succession de vagues identiques** | **32** |
 
-La répartition 4/8/8/8/4 est une proposition de production : les tests devront vérifier sa lisibilité et son coût. Elle conserve huit ennemis présents au départ et vingt-quatre renforts au total, mais répartit autrement les déclenchements. Aucune nouvelle catégorie de monstre n’est nécessaire pour obtenir cette première passe.
+Après le premier lot, la répartition cible devient 8/8/8/4/4 : les huit postes initiaux, huit renforts autour du courant et du journal, puis huit pour la boutique et huit à répartir entre carrefour et montée. Les derniers secteurs restent à construire ; les tests devront vérifier cette répartition et son coût. Elle conserve huit ennemis présents au départ et vingt-quatre renforts au total, mais répartit autrement les déclenchements. Aucune nouvelle catégorie de monstre n’est nécessaire pour obtenir cette première passe.
 
 ## Agrandir par des espaces utiles
 

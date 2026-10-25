@@ -2,11 +2,12 @@ import { ArenaGame, clamp, segmentBox } from './game-logic.js';
 import { PROBE } from './aerial-probes.js';
 import { enemyDurability } from './enemy-combat.js';
 import {LEVEL1_MAP,level1Traversal} from './level1-layout.js';
+import {openingDefenseOrder} from './m01-defense.js';
 
 // Independent Vesper mission map. Metres match the Blender source and physics.
 export const LEVEL1 = Object.freeze({
   id: 'vesper-01', name: 'Le dernier signal',
-  start: Object.freeze({ x: 0, z: 72, y: 0 }),
+  start: Object.freeze({...LEVEL1_MAP.courtyard.start}),
   power: Object.freeze({ x: -6, z: 62, y: 0 }),
   archive: Object.freeze({ x: 0, z: 55, y: 0 }),
   portal: Object.freeze({ x: 0, z: 33, y: 0 }),
@@ -22,12 +23,7 @@ export const LEVEL1_ENCOUNTERS = Object.freeze([
   Object.freeze(['probe','brute','listener','scuttler','synth','stalker','probe','bulwark'])
 ]);
 const ENCOUNTERS=LEVEL1_ENCOUNTERS;
-const OPENING_SITES=Object.freeze([
-  {x:3,z:61,form:'probe'},{x:2.2,z:47,form:'stalker'},
-  {x:-3,z:46,form:'scuttler'},{x:5,z:45,form:'synth'},
-  {x:0,z:39,form:'stalker'},{x:4,z:34,form:'probe'},
-  {x:-2,z:30,form:'stalker'},{x:5,z:25,form:'seer'}
-]);
+export const OPENING_SITES=Object.freeze(LEVEL1_MAP.courtyard.opening.map(p=>Object.freeze({...p})));
 const MAX_ACTIVE=8;
 const COMBAT_STAGES=['combat','combat2','combat3'];
 const TOTAL_ENEMIES=OPENING_SITES.length+ENCOUNTERS.reduce((sum,wave)=>sum+wave.length,0);
@@ -56,13 +52,19 @@ export class CampaignLevel1 extends ArenaGame {
     this.archiveReadUntil = Infinity;
     this.archiveRead = false;
     this.investigationRead = false;
-    this.sabotaged = false;
+    this.sabotaged = false;this.circuitIsolated=false;this.circuitRoute=null;this.powerAlarm=false;this.preArchiveLimit=0;this.courtyardPending=false;
     this.guideCache=null;this.guideNavigation=null;this.guideNavigationSource=null;
     this.completed = false;
-    this.stage = 'power';
-    this.setStage('power');
+    this.stage = 'approach';
+    this.setStage('approach');
     this.openingSpawned=0;this.ensureOpeningPatrol();
     return this;
+  }
+
+  sectorOrder(enemy,context){return openingDefenseOrder(enemy,context,this.powerAlarm);}
+
+  approachControl(){
+    return LEVEL1_MAP.courtyard.controls.reduce((best,c)=>!best||Math.hypot(c.x-this.player.x,c.z-this.player.z)<Math.hypot(best.x-this.player.x,best.z-this.player.z)?c:best,null);
   }
 
   get archiveLines() {
@@ -78,6 +80,7 @@ export class CampaignLevel1 extends ArenaGame {
 
   get campaign() {
     const text = {
+      approach: ['Les deux accès de l’annexe','Isoler le départ électrique : poste du convoi ou aile technique.'],
       power: ['Le laboratoire abandonné', 'Rétablir le courant sur le boîtier de secours.'],
       archive: ['Un ordinateur du passé', 'Consulter le terminal local, isolé du réseau d’ORDRE.'],
       breach: [`Une trace de ${this.sibling}`, 'Une intervention récente confirme son passage. Lire l’archive.'],
@@ -97,14 +100,15 @@ export class CampaignLevel1 extends ArenaGame {
       sabotage: { id: 'sabotage', label: 'DÉSACTIVER LA BALISE ORDRE', position: LEVEL1.sabotage },
       exit: { id: 'exit', label: 'CONSULTER LE RELAIS', position: LEVEL1.exit }
     };
-    const target = targets[this.stage];
+    const c=this.approachControl();
+    const target = this.stage==='approach'?{id:c.id,label:c.label,position:{x:c.x,y:c.y,z:c.z}}:targets[this.stage];
     return {
       id: LEVEL1.id, level: 1, name: LEVEL1.name, stage: this.stage,
       title: text[0], subtitle: text[1], characterId: this.characterId,
       sibling: this.sibling, archive: this.archiveLines,
       objective: target ? { ...target, position: { ...target.position } } : null,
       encounter:this.encounter+1,encounters:ENCOUNTERS.length,spawned:this.spawned+ENCOUNTERS.slice(0,this.encounter).reduce((sum,wave)=>sum+wave.length,0)+(this.openingSpawned||0),total:TOTAL_ENEMIES,opening:this.openingSpawned||0,maxActive:MAX_ACTIVE,
-      investigationRead:this.investigationRead,sabotaged:this.sabotaged,
+      investigationRead:this.investigationRead,sabotaged:this.sabotaged,circuitIsolated:this.circuitIsolated,circuitRoute:this.circuitRoute,powerAlarm:this.powerAlarm,openingRoles:true,
       remaining: this.toSpawn + this.enemies.length,
       portal: this.activePortals[0] ? { ...this.activePortals[0] } : null,
       completed: this.completed
@@ -119,7 +123,8 @@ export class CampaignLevel1 extends ArenaGame {
 
   getInteraction() {
     if (this.state !== 'playing') return null;
-    const objective = this.campaign.objective;
+    let objective = this.campaign.objective;
+    if(this.stage==='approach'){const near=LEVEL1_MAP.courtyard.controls.filter(c=>Math.hypot(this.player.x-c.x,this.player.z-c.z)<=INTERACTION_RANGE).sort((a,b)=>Math.hypot(this.player.x-a.x,this.player.z-a.z)-Math.hypot(this.player.x-b.x,this.player.z-b.z))[0];if(near)objective={id:near.id,label:near.label,position:{x:near.x,y:near.y,z:near.z}};}
     if (!objective) return null;
     const target = objective.position;
     if (Math.hypot(this.player.x - target.x, this.player.z - target.z) > INTERACTION_RANGE
@@ -133,7 +138,14 @@ export class CampaignLevel1 extends ArenaGame {
   interact() {
     const objective = this.getInteraction();
     if (!objective) return false;
-    if (objective.id === 'power') this.setStage('archive');
+    if (objective.id.startsWith('isolate-')){
+      this.circuitIsolated=true;this.circuitRoute=objective.id;this.emitNoise('switch',30,{x:objective.position.x,y:1.2,z:objective.position.z});this.setStage('power');this.event('circuit-isolated',{...objective.position,route:objective.id});
+    }else if (objective.id === 'power'){
+      this.powerAlarm=true;this.preArchiveLimit=LEVEL1_MAP.courtyard.powerReinforcements;this.toSpawn=this.preArchiveLimit;this.courtyardPending=true;this.nextSpawnAt=Infinity;
+      // The facility reports which fixed circuit was reset. It does not track a hidden player.
+      for(const e of this.enemies.filter(e=>e.opening)){e.awareness='search';e.lastKnownX=LEVEL1.power.x;e.lastKnownZ=LEVEL1.power.z;e.lastKnownHeight=0;e.lastHeardAt=this.time;e.alertedUntil=this.time+16;}
+      this.setStage('archive');this.tryCourtyardBreach();
+    }
     else if (objective.id === 'archive') {
       this.archiveRead = true;
       // An isolated power surge stalls nearby robots while the human log is read.
@@ -191,12 +203,23 @@ export class CampaignLevel1 extends ArenaGame {
     return null;
   }
 
+  tryCourtyardBreach(){
+    if(!this.courtyardPending)return false;
+    this.navigation.refreshAt=-1;this.navigation.update(this.player,this.time);
+    const points=LEVEL1_MAP.courtyard.portals.map(([x,z])=>({x,z})).concat(PORTAL_CANDIDATES);
+    const site=points.find(p=>{const cell=this.navigation.nearestOpen(p.x,p.z);return Math.hypot(p.x-this.player.x,p.z-this.player.z)>=14&&this.portalIsClear(p)&&cell>=0&&this.navigation.distance[cell]>=0;});
+    if(!site)return false;
+    const portal={id:100,...site,yaw:Math.atan2(this.player.x-site.x,this.player.z-site.z),openedAt:this.time};
+    this.activePortals=[portal];this.nextSpawnAt=this.time+3;this.courtyardPending=false;this.event('portals',{count:1,sites:[{...portal}]});this.event('courtyard-alarm',{count:this.preArchiveLimit});return true;
+  }
+
   openBreach() {
     const portal = this.choosePortal();
     if (!portal) return false;
     this.activePortals = [portal];
-    this.toSpawn = ENCOUNTERS[this.encounter].length;
-    this.spawned = 0;
+    const continuing=this.encounter===0&&this.powerAlarm;
+    if(!continuing)this.spawned=0;
+    this.toSpawn = ENCOUNTERS[this.encounter].length-this.spawned;this.courtyardPending=false;
     this.nextSpawnAt = this.time + 3;
     this.setStage(COMBAT_STAGES[this.encounter]);
     this.event('portals', { count: 1, sites: [{ ...portal }] });
@@ -213,7 +236,7 @@ export class CampaignLevel1 extends ArenaGame {
       id: this.nextId++, x: site.x, z: site.z,
       elevation: homeHeight + (probe ? PROBE.hover : 0), homeHeight,
       grounded: !probe, verticalSpeed: 0, form, elite: false,
-      ranged: probe || ['seer','brute','listener','bulwark','synth'].includes(form), hp: enemyDurability(1+this.encounter, form, false),
+      ranged: !!site.ranged || probe || ['seer','brute','listener','bulwark','synth'].includes(form), hp: enemyDurability(1+this.encounter, form, false),
       aimHeight: probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : ['seer','listener'].includes(form) ? 1.38 : ['brute','bulwark'].includes(form)?1.42:1.15,
       radius: probe ? PROBE.radius : form === 'scuttler' ? .86 : form==='bulwark'?.95:.8,
       hitRadius: probe ? .44 : form === 'scuttler' ? .91 : form === 'seer' ? .94 : 1.05,
@@ -236,14 +259,15 @@ export class CampaignLevel1 extends ArenaGame {
     for(let i=this.openingSpawned;i<sites.length;i++){
       const site=sites[i];if(!this.portalIsClear(site))break;
       const e=this.makeEnemy(site.form,{...site,id:0,yaw:0});
-      Object.assign(e,{opening:true,awareness:'patrol',lastKnownX:site.x,lastKnownZ:site.z,lastKnownHeight:0,alertedUntil:0,stunnedUntil:this.time+3});
+      Object.assign(e,{defense:{x:site.x,z:site.z,role:site.role,facing:site.facing},yaw:site.facing,opening:true,awareness:'patrol',lastKnownX:site.x,lastKnownZ:site.z,lastKnownHeight:0,alertedUntil:0,stunnedUntil:this.time+3});
       this.enemies.push(e);this.openingSpawned++;
     }
   }
 
   spawnEnemy() {
-    if (this.state !== 'playing' || !COMBAT_STAGES.includes(this.stage) || this.toSpawn <= 0
-      || this.enemies.length>=MAX_ACTIVE || this.spawned >= ENCOUNTERS[this.encounter].length || this.time + 1e-8 < this.nextSpawnAt) return false;
+    const preArchive=this.encounter===0&&['archive','breach'].includes(this.stage),limit=preArchive?this.preArchiveLimit:ENCOUNTERS[this.encounter].length;
+    if (this.state !== 'playing' || !(COMBAT_STAGES.includes(this.stage)||preArchive) || this.toSpawn <= 0
+      || this.enemies.length>=MAX_ACTIVE || this.spawned >= limit || this.time + 1e-8 < this.nextSpawnAt) return false;
     const site = this.activePortals[0];
     if (!site || !this.portalIsClear(site)) return false;
     const form = ENCOUNTERS[this.encounter][this.spawned], probe = form === 'probe';
@@ -261,7 +285,7 @@ export class CampaignLevel1 extends ArenaGame {
     if (this.state !== 'playing') return;
     // Only scheduling is replaced. Damage, projectile hits, recoil timing,
     // navigation, regeneration, stairs and lifts all remain shared with ArenaGame.
-    if(this.stage==='power'||this.stage==='archive')this.ensureOpeningPatrol();
+    if(['approach','power','archive'].includes(this.stage))this.ensureOpeningPatrol();
     this.nextWave = Infinity;
     this.spawnTimer = Infinity;
     try { super.step(clamp(dt, 0, .05), input); }
@@ -270,6 +294,9 @@ export class CampaignLevel1 extends ArenaGame {
       this.spawnTimer = Number.isFinite(this.nextSpawnAt) ? Math.max(0, this.nextSpawnAt - this.time) : 0;
     }
     if (this.state !== 'playing') return;
+    if(this.activePortals.some(p=>!this.portalIsClear(p))){this.activePortals=[];this.nextSpawnAt=Infinity;if(['archive','breach'].includes(this.stage))this.courtyardPending=true;}
+    if(this.courtyardPending&&['archive','breach'].includes(this.stage))this.tryCourtyardBreach();
+    if(['archive','breach'].includes(this.stage)&&this.toSpawn>0&&this.time>=this.nextSpawnAt)this.spawnEnemy();
     if (this.stage === 'breach' && this.time >= this.archiveReadUntil) this.openBreach();
     if(this.stage==='crossing'&&Math.hypot(this.player.x-LEVEL1.junction.x,this.player.z-LEVEL1.junction.z)<7){this.encounter=1;this.openBreach();}
     if (COMBAT_STAGES.includes(this.stage)) {

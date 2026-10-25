@@ -83,7 +83,7 @@ export function createVesperSystems(T,parent,maps,{quality='auto',terminalMateri
   const lights=[];if(quality!=='low')for(const i of [0,1]){const [x,y,z]=stations[i],light=new T.PointLight(0xffb46a,0,4,2);light.position.set(x+1.75,y+1.4,z+.5);root.add(light);lights.push(light);}
   let tick=-1;
   function update(game,time){
-    if(!root.visible)return;powered=game?.campaign?.stage!=='power';disabled=!!game?.campaign?.sabotaged;
+    if(!root.visible)return;powered=!['approach','power'].includes(game?.campaign?.stage);disabled=!!game?.campaign?.sabotaged;
     for(const light of lights)light.intensity=powered?1.8:0;
     for(const [i,s] of screens.entries()){
       const on=powered&&!(s.hostile&&disabled);s.screen.material.color.setScalar(on?1:.10);s.sweep.visible=on;

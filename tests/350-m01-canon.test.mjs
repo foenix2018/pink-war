@@ -19,7 +19,7 @@ test('M01 starts with eight patrols and GHJU dual R9; discovery guides to an act
  g.offerWeapon(1);const offer=g.weaponOffers[0],guide=g.objectiveTarget();
  assert.equal(guide.kind,'weapon');assert.equal(guide.x,offer.x);assert.equal(guide.z,offer.z);
  Object.assign(g.player,{x:offer.x,z:offer.z,elevation:offer.elevation});assert.equal(g.collectWeapon(),true);
- assert.equal(g.weaponIndex,1);assert.equal(g.selectWeapon(2),false);assert.equal(g.objectiveTarget().id,'power');
+ assert.equal(g.weaponIndex,1);assert.equal(g.selectWeapon(2),false);assert.equal(g.objectiveTarget().id,'isolate-convoy');
 });
 test('both sibling archives keep the human trail, the fall and Archives végétales without swapping heroes',()=>{
  for(const [hero,sibling,ai]of [['ghju','LYLU','Gaby'],['lylu','GHJU','Cara']]){

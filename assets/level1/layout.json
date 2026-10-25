@@ -527,47 +527,8 @@
       "z": 57.25,
       "hx": 0.15,
       "hz": 1.75,
-      "y": 0.0,
-      "height": 1.1,
-      "surface": "concrete",
-      "campaign": true,
-      "buildingPart": true,
-      "walkableSurface": false,
-      "buildingSlab": false
-    },
-    {
-      "x": -33.0,
-      "z": 57.25,
-      "hx": 0.15,
-      "hz": 1.75,
       "y": 2.9,
       "height": 0.7,
-      "surface": "concrete",
-      "campaign": true,
-      "buildingPart": true,
-      "walkableSurface": false,
-      "buildingSlab": false
-    },
-    {
-      "x": -33.0,
-      "z": 58.85,
-      "hx": 0.2,
-      "hz": 0.15,
-      "y": 0.55,
-      "height": 2.6,
-      "surface": "concrete",
-      "campaign": true,
-      "buildingPart": true,
-      "walkableSurface": false,
-      "buildingSlab": false
-    },
-    {
-      "x": -33.0,
-      "z": 60.75,
-      "hx": 0.15,
-      "hz": 1.75,
-      "y": 0.0,
-      "height": 1.1,
       "surface": "concrete",
       "campaign": true,
       "buildingPart": true,
@@ -839,47 +800,8 @@
       "z": 57.25,
       "hx": 0.15,
       "hz": 1.75,
-      "y": 0.0,
-      "height": 1.1,
-      "surface": "concrete",
-      "campaign": true,
-      "buildingPart": true,
-      "walkableSurface": false,
-      "buildingSlab": false
-    },
-    {
-      "x": -15.0,
-      "z": 57.25,
-      "hx": 0.15,
-      "hz": 1.75,
       "y": 2.9,
       "height": 0.7,
-      "surface": "concrete",
-      "campaign": true,
-      "buildingPart": true,
-      "walkableSurface": false,
-      "buildingSlab": false
-    },
-    {
-      "x": -15.0,
-      "z": 58.85,
-      "hx": 0.2,
-      "hz": 0.15,
-      "y": 0.55,
-      "height": 2.6,
-      "surface": "concrete",
-      "campaign": true,
-      "buildingPart": true,
-      "walkableSurface": false,
-      "buildingSlab": false
-    },
-    {
-      "x": -15.0,
-      "z": 60.75,
-      "hx": 0.15,
-      "hz": 1.75,
-      "y": 0.0,
-      "height": 1.1,
       "surface": "concrete",
       "campaign": true,
       "buildingPart": true,
@@ -40654,16 +40576,6 @@
       "buildingSlab": false
     },
     {
-      "x": -10,
-      "z": 60,
-      "hx": 0.275,
-      "hz": 10.0,
-      "y": 0,
-      "height": 5.4,
-      "surface": "concrete",
-      "campaign": true
-    },
-    {
       "x": 10,
       "z": 60,
       "hx": 0.275,
@@ -41918,48 +41830,348 @@
       "traversal": true
     },
     {
+      "x": -10,
+      "z": 66.15,
+      "y": 0.0,
+      "hx": 0.275,
+      "hz": 3.85,
+      "height": 5.4,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "annex-west-south"
+    },
+    {
+      "x": -10,
+      "z": 52.85,
+      "y": 0.0,
+      "hx": 0.275,
+      "hz": 2.85,
+      "height": 5.4,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "annex-west-north"
+    },
+    {
+      "x": -10,
+      "z": 59,
+      "y": 2.9000000000000004,
+      "hx": 0.275,
+      "hz": 3.15,
+      "height": 2.5,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "annex-service-lintel"
+    },
+    {
+      "x": -12.5,
+      "z": 55.5,
+      "y": 0.0,
+      "hx": 2.5,
+      "hz": 0.16,
+      "height": 3.1,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "connector-side"
+    },
+    {
+      "x": -12.5,
+      "z": 62.5,
+      "y": 0.0,
+      "hx": 2.5,
+      "hz": 0.16,
+      "height": 3.1,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "connector-side"
+    },
+    {
+      "x": -12.5,
+      "z": 59,
+      "y": 3.46,
+      "hx": 2.9,
+      "hz": 3.85,
+      "height": 0.14,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "connector-roof"
+    },
+    {
+      "x": -23.5,
+      "z": 59,
+      "y": 0.0,
+      "hx": 0.19,
+      "hz": 5.0,
+      "height": 2.9,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "triage-partition"
+    },
+    {
+      "x": -28,
+      "z": 49.5,
+      "y": 0.0,
+      "hx": 1.65,
+      "hz": 0.6,
+      "height": 1.1,
+      "surface": "metal",
+      "campaign": true,
+      "courtyardPart": "triage-north-desk",
+      "cover": true
+    },
+    {
+      "x": -29,
+      "z": 68.8,
+      "y": 0.0,
+      "hx": 1.2,
+      "hz": 0.425,
+      "height": 2.2,
+      "surface": "metal",
+      "campaign": true,
+      "courtyardPart": "triage-south-cabinet",
+      "cover": true
+    },
+    {
+      "x": -18,
+      "z": 66.8,
+      "y": 0.0,
+      "hx": 1.65,
+      "hz": 0.525,
+      "height": 1.3,
+      "surface": "metal",
+      "campaign": true,
+      "courtyardPart": "triage-back-desk",
+      "cover": true
+    },
+    {
+      "x": -39,
+      "z": 85,
+      "y": 0.0,
+      "hx": 2.0,
+      "hz": 0.5,
+      "height": 1.5,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "convoy-west-cover",
+      "cover": true
+    },
+    {
+      "x": -25,
+      "z": 88,
+      "y": 0.0,
+      "hx": 1.8,
+      "hz": 0.5,
+      "height": 1.55,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "convoy-mid-cover",
+      "cover": true
+    },
+    {
+      "x": -9,
+      "z": 80,
+      "y": 0.0,
+      "hx": 2.0,
+      "hz": 0.5,
+      "height": 1.55,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "convoy-east-cover",
+      "cover": true
+    },
+    {
+      "x": -34,
+      "z": 78,
+      "y": 0.0,
+      "hx": 0.9,
+      "hz": 1.0,
+      "height": 1.9,
+      "surface": "metal",
+      "campaign": true,
+      "courtyardPart": "convoy-crates",
+      "cover": true
+    },
+    {
+      "x": -47,
+      "z": 68,
+      "y": 0.0,
+      "hx": 0.7,
+      "hz": 2.0,
+      "height": 1.55,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "service-cover",
+      "cover": true
+    },
+    {
+      "x": -5,
+      "z": 74,
+      "y": 0.0,
+      "hx": 1.1,
+      "hz": 0.6,
+      "height": 1.4,
+      "surface": "metal",
+      "campaign": true,
+      "courtyardPart": "annex-door-cover",
+      "cover": true
+    },
+    {
+      "x": 3.8,
+      "z": 80.5,
+      "y": 0.0,
+      "hx": 1.2,
+      "hz": 0.35,
+      "height": 1.55,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "courtyard-shooter-cover",
+      "cover": true
+    },
+    {
       "x": -35,
-      "z": 10,
-      "hx": 0.07,
-      "hz": 72.0,
-      "y": 0,
-      "height": 1.05,
+      "z": 76,
+      "y": 0.0,
+      "hx": 0.08,
+      "hz": 0.08,
+      "height": 3.2,
       "surface": "metal",
       "campaign": true,
-      "fence": true
+      "courtyardPart": "triage-canopy-post"
     },
     {
-      "x": 42,
-      "z": 10,
-      "hx": 0.07,
-      "hz": 72.0,
-      "y": 0,
-      "height": 1.05,
+      "x": -35,
+      "z": 80,
+      "y": 0.0,
+      "hx": 0.08,
+      "hz": 0.08,
+      "height": 3.2,
       "surface": "metal",
       "campaign": true,
-      "fence": true
+      "courtyardPart": "triage-canopy-post"
     },
     {
-      "x": 3.5,
-      "z": -62,
-      "hx": 38.5,
-      "hz": 0.07,
-      "y": 0,
-      "height": 1.05,
+      "x": -25,
+      "z": 76,
+      "y": 0.0,
+      "hx": 0.08,
+      "hz": 0.08,
+      "height": 3.2,
       "surface": "metal",
       "campaign": true,
-      "fence": true
+      "courtyardPart": "triage-canopy-post"
     },
     {
-      "x": 3.5,
+      "x": -25,
+      "z": 80,
+      "y": 0.0,
+      "hx": 0.08,
+      "hz": 0.08,
+      "height": 3.2,
+      "surface": "metal",
+      "campaign": true,
+      "courtyardPart": "triage-canopy-post"
+    },
+    {
+      "x": -30,
+      "z": 78,
+      "y": 3.19,
+      "hx": 5.4,
+      "hz": 2.4,
+      "height": 0.12,
+      "surface": "metal",
+      "campaign": true,
+      "courtyardPart": "triage-canopy-roof"
+    },
+    {
+      "x": -28,
+      "z": 81.52,
+      "y": 0.0,
+      "hx": 0.55,
+      "hz": 0.24,
+      "height": 1.72,
+      "surface": "metal",
+      "campaign": true,
+      "courtyardPart": "isolate-convoy",
+      "campaignTerminal": "isolate-convoy"
+    },
+    {
+      "x": -42,
+      "z": 60.52,
+      "y": 0.0,
+      "hx": 0.55,
+      "hz": 0.24,
+      "height": 1.72,
+      "surface": "metal",
+      "campaign": true,
+      "courtyardPart": "isolate-service",
+      "campaignTerminal": "isolate-service"
+    },
+    {
+      "x": -20,
       "z": 82,
-      "hx": 38.5,
+      "hx": 3.0,
+      "hz": 1.4,
+      "y": 0,
+      "height": 1.7,
+      "surface": "metal",
+      "cover": true,
+      "vehicle": 6,
+      "campaign": true
+    },
+    {
+      "x": -42,
+      "z": 72,
+      "hx": 1.05,
+      "hz": 2.4,
+      "y": 0,
+      "height": 1.45,
+      "surface": "metal",
+      "cover": true,
+      "vehicle": 7,
+      "campaign": true
+    },
+    {
+      "x": -62,
+      "z": 18,
+      "hx": 0.07,
+      "hz": 80,
+      "y": 0,
+      "height": 1.05,
+      "surface": "metal",
+      "fence": true,
+      "campaign": true
+    },
+    {
+      "x": 58,
+      "z": 18,
+      "hx": 0.07,
+      "hz": 80,
+      "y": 0,
+      "height": 1.05,
+      "surface": "metal",
+      "fence": true,
+      "campaign": true
+    },
+    {
+      "x": -2,
+      "z": -62,
+      "hx": 60,
       "hz": 0.07,
       "y": 0,
       "height": 1.05,
       "surface": "metal",
-      "campaign": true,
-      "fence": true
+      "fence": true,
+      "campaign": true
+    },
+    {
+      "x": -2,
+      "z": 98,
+      "hx": 60,
+      "hz": 0.07,
+      "y": 0,
+      "height": 1.05,
+      "surface": "metal",
+      "fence": true,
+      "campaign": true
     }
   ],
   "buildings": [
@@ -42553,50 +42765,10 @@
     },
     {
       "x": -33.0,
-      "y": 0.55,
-      "z": 57.25,
-      "w": 0.3,
-      "h": 1.1,
-      "d": 3.5,
-      "mat": "brick"
-    },
-    {
-      "x": -33.0,
       "y": 3.25,
       "z": 57.25,
       "w": 0.3,
       "h": 0.7,
-      "d": 3.5,
-      "mat": "brick"
-    },
-    {
-      "x": -33.0,
-      "y": 1.85,
-      "z": 58.85,
-      "w": 0.4,
-      "h": 2.6,
-      "d": 0.3,
-      "mat": "concrete"
-    },
-    {
-      "x": -33.0,
-      "y": 2.03,
-      "z": 57.25,
-      "w": 0.055,
-      "h": 1.7,
-      "d": 3.0,
-      "mat": "glass",
-      "window": true,
-      "broken": false,
-      "axis": "z",
-      "side": -1
-    },
-    {
-      "x": -33.0,
-      "y": 0.55,
-      "z": 60.75,
-      "w": 0.3,
-      "h": 1.1,
       "d": 3.5,
       "mat": "brick"
     },
@@ -42617,19 +42789,6 @@
       "h": 2.6,
       "d": 0.3,
       "mat": "concrete"
-    },
-    {
-      "x": -33.0,
-      "y": 2.03,
-      "z": 60.75,
-      "w": 0.055,
-      "h": 1.7,
-      "d": 3.0,
-      "mat": "glass",
-      "window": true,
-      "broken": true,
-      "axis": "z",
-      "side": -1
     },
     {
       "x": -33.0,
@@ -42873,50 +43032,10 @@
     },
     {
       "x": -15.0,
-      "y": 0.55,
-      "z": 57.25,
-      "w": 0.3,
-      "h": 1.1,
-      "d": 3.5,
-      "mat": "brick"
-    },
-    {
-      "x": -15.0,
       "y": 3.25,
       "z": 57.25,
       "w": 0.3,
       "h": 0.7,
-      "d": 3.5,
-      "mat": "brick"
-    },
-    {
-      "x": -15.0,
-      "y": 1.85,
-      "z": 58.85,
-      "w": 0.4,
-      "h": 2.6,
-      "d": 0.3,
-      "mat": "concrete"
-    },
-    {
-      "x": -15.0,
-      "y": 2.03,
-      "z": 57.25,
-      "w": 0.055,
-      "h": 1.7,
-      "d": 3.0,
-      "mat": "glass",
-      "window": true,
-      "broken": false,
-      "axis": "z",
-      "side": 1
-    },
-    {
-      "x": -15.0,
-      "y": 0.55,
-      "z": 60.75,
-      "w": 0.3,
-      "h": 1.1,
       "d": 3.5,
       "mat": "brick"
     },
@@ -42937,19 +43056,6 @@
       "h": 2.6,
       "d": 0.3,
       "mat": "concrete"
-    },
-    {
-      "x": -15.0,
-      "y": 2.03,
-      "z": 60.75,
-      "w": 0.055,
-      "h": 1.7,
-      "d": 3.0,
-      "mat": "glass",
-      "window": true,
-      "broken": true,
-      "axis": "z",
-      "side": 1
     },
     {
       "x": -15.0,
@@ -83155,6 +83261,26 @@
       "yaw": 0,
       "kind": "bus",
       "paint": "car-cream"
+    },
+    {
+      "x": -20,
+      "z": 82,
+      "w": 2.8,
+      "d": 6,
+      "h": 1.7,
+      "yaw": 1.57079632679,
+      "kind": "rescue",
+      "paint": "car-cream"
+    },
+    {
+      "x": -42,
+      "z": 72,
+      "w": 2.1,
+      "d": 4.8,
+      "h": 1.45,
+      "yaw": 0,
+      "kind": "sedan",
+      "paint": "rust"
     }
   ],
   "stairs": [
@@ -83197,6 +83323,36 @@
     }
   ],
   "route": [
+    [
+      -50,
+      91,
+      0
+    ],
+    [
+      -42,
+      91,
+      0
+    ],
+    [
+      -28,
+      90,
+      0
+    ],
+    [
+      -28,
+      83,
+      0
+    ],
+    [
+      -12,
+      86,
+      0
+    ],
+    [
+      0,
+      77,
+      0
+    ],
     [
       0,
       72,
@@ -83269,10 +83425,10 @@
     ]
   ],
   "bounds": {
-    "minX": -35,
-    "maxX": 42,
+    "minX": -62,
+    "maxX": 58,
     "minZ": -62,
-    "maxZ": 82
+    "maxZ": 98
   },
   "portals": [
     [
@@ -83299,5 +83455,446 @@
       5,
       -8
     ]
-  ]
+  ],
+  "courtyardParts": [
+    {
+      "id": "annex-west-south",
+      "x": -10,
+      "y": 2.7,
+      "z": 66.15,
+      "w": 0.55,
+      "h": 5.4,
+      "d": 7.7,
+      "mat": "concrete"
+    },
+    {
+      "id": "annex-west-north",
+      "x": -10,
+      "y": 2.7,
+      "z": 52.85,
+      "w": 0.55,
+      "h": 5.4,
+      "d": 5.7,
+      "mat": "concrete"
+    },
+    {
+      "id": "annex-service-lintel",
+      "x": -10,
+      "y": 4.15,
+      "z": 59,
+      "w": 0.55,
+      "h": 2.5,
+      "d": 6.3,
+      "mat": "concrete"
+    },
+    {
+      "id": "connector-side",
+      "x": -12.5,
+      "y": 1.55,
+      "z": 55.5,
+      "w": 5,
+      "h": 3.1,
+      "d": 0.32,
+      "mat": "brick"
+    },
+    {
+      "id": "connector-side",
+      "x": -12.5,
+      "y": 1.55,
+      "z": 62.5,
+      "w": 5,
+      "h": 3.1,
+      "d": 0.32,
+      "mat": "brick"
+    },
+    {
+      "id": "connector-roof",
+      "x": -12.5,
+      "y": 3.53,
+      "z": 59,
+      "w": 5.8,
+      "h": 0.14,
+      "d": 7.7,
+      "mat": "concrete"
+    },
+    {
+      "id": "triage-partition",
+      "x": -23.5,
+      "y": 1.45,
+      "z": 59,
+      "w": 0.38,
+      "h": 2.9,
+      "d": 10,
+      "mat": "plaster"
+    },
+    {
+      "id": "triage-north-desk",
+      "x": -28,
+      "y": 0.55,
+      "z": 49.5,
+      "w": 3.3,
+      "h": 1.1,
+      "d": 1.2,
+      "mat": "steel",
+      "cover": true
+    },
+    {
+      "id": "triage-south-cabinet",
+      "x": -29,
+      "y": 1.1,
+      "z": 68.8,
+      "w": 2.4,
+      "h": 2.2,
+      "d": 0.85,
+      "mat": "rust",
+      "cover": true
+    },
+    {
+      "id": "triage-back-desk",
+      "x": -18,
+      "y": 0.65,
+      "z": 66.8,
+      "w": 3.3,
+      "h": 1.3,
+      "d": 1.05,
+      "mat": "steel",
+      "cover": true
+    },
+    {
+      "id": "convoy-west-cover",
+      "x": -39,
+      "y": 0.75,
+      "z": 85,
+      "w": 4,
+      "h": 1.5,
+      "d": 1,
+      "mat": "concrete",
+      "cover": true
+    },
+    {
+      "id": "convoy-mid-cover",
+      "x": -25,
+      "y": 0.775,
+      "z": 88,
+      "w": 3.6,
+      "h": 1.55,
+      "d": 1,
+      "mat": "concrete",
+      "cover": true
+    },
+    {
+      "id": "convoy-east-cover",
+      "x": -9,
+      "y": 0.775,
+      "z": 80,
+      "w": 4,
+      "h": 1.55,
+      "d": 1,
+      "mat": "concrete",
+      "cover": true
+    },
+    {
+      "id": "convoy-crates",
+      "x": -34,
+      "y": 0.95,
+      "z": 78,
+      "w": 1.8,
+      "h": 1.9,
+      "d": 2,
+      "mat": "rust",
+      "cover": true
+    },
+    {
+      "id": "service-cover",
+      "x": -47,
+      "y": 0.775,
+      "z": 68,
+      "w": 1.4,
+      "h": 1.55,
+      "d": 4,
+      "mat": "concrete",
+      "cover": true
+    },
+    {
+      "id": "annex-door-cover",
+      "x": -5,
+      "y": 0.7,
+      "z": 74,
+      "w": 2.2,
+      "h": 1.4,
+      "d": 1.2,
+      "mat": "steel",
+      "cover": true
+    },
+    {
+      "id": "courtyard-shooter-cover",
+      "x": 3.8,
+      "y": 0.775,
+      "z": 80.5,
+      "w": 2.4,
+      "h": 1.55,
+      "d": 0.7,
+      "mat": "concrete",
+      "cover": true
+    },
+    {
+      "id": "triage-canopy-post",
+      "x": -35,
+      "y": 1.6,
+      "z": 76,
+      "w": 0.16,
+      "h": 3.2,
+      "d": 0.16,
+      "mat": "rust"
+    },
+    {
+      "id": "triage-canopy-post",
+      "x": -35,
+      "y": 1.6,
+      "z": 80,
+      "w": 0.16,
+      "h": 3.2,
+      "d": 0.16,
+      "mat": "rust"
+    },
+    {
+      "id": "triage-canopy-post",
+      "x": -25,
+      "y": 1.6,
+      "z": 76,
+      "w": 0.16,
+      "h": 3.2,
+      "d": 0.16,
+      "mat": "rust"
+    },
+    {
+      "id": "triage-canopy-post",
+      "x": -25,
+      "y": 1.6,
+      "z": 80,
+      "w": 0.16,
+      "h": 3.2,
+      "d": 0.16,
+      "mat": "rust"
+    },
+    {
+      "id": "triage-canopy-roof",
+      "x": -30,
+      "y": 3.25,
+      "z": 78,
+      "w": 10.8,
+      "h": 0.12,
+      "d": 4.8,
+      "mat": "steel"
+    },
+    {
+      "id": "isolate-convoy",
+      "x": -28,
+      "y": 0.86,
+      "z": 81.52,
+      "w": 1.1,
+      "h": 1.72,
+      "d": 0.48,
+      "mat": "steel"
+    },
+    {
+      "id": "isolate-service",
+      "x": -42,
+      "y": 0.86,
+      "z": 60.52,
+      "w": 1.1,
+      "h": 1.72,
+      "d": 0.48,
+      "mat": "steel"
+    }
+  ],
+  "courtyard": {
+    "revision": "3.63.4",
+    "start": {
+      "x": -50,
+      "z": 91,
+      "y": 0
+    },
+    "controls": [
+      {
+        "id": "isolate-convoy",
+        "x": -28,
+        "z": 82,
+        "y": 0,
+        "label": "ISOLER LE D\u00c9PART DU CONVOI"
+      },
+      {
+        "id": "isolate-service",
+        "x": -42,
+        "z": 61,
+        "y": 0,
+        "label": "ISOLER LE D\u00c9PART TECHNIQUE"
+      }
+    ],
+    "approaches": [
+      {
+        "id": "convoy",
+        "name": "Cour du convoi",
+        "points": [
+          [
+            -50,
+            91
+          ],
+          [
+            -42,
+            91
+          ],
+          [
+            -28,
+            90
+          ],
+          [
+            -28,
+            83
+          ],
+          [
+            -12,
+            86
+          ],
+          [
+            0,
+            77
+          ],
+          [
+            0,
+            65
+          ],
+          [
+            -6,
+            63
+          ]
+        ]
+      },
+      {
+        "id": "service",
+        "name": "Aile technique",
+        "points": [
+          [
+            -50,
+            91
+          ],
+          [
+            -54,
+            84
+          ],
+          [
+            -54,
+            66
+          ],
+          [
+            -42,
+            63
+          ],
+          [
+            -35,
+            59
+          ],
+          [
+            -28,
+            59
+          ],
+          [
+            -28,
+            51
+          ],
+          [
+            -19,
+            51
+          ],
+          [
+            -18,
+            59
+          ],
+          [
+            -3.5,
+            59
+          ],
+          [
+            -3.5,
+            63
+          ],
+          [
+            -6,
+            63
+          ]
+        ]
+      }
+    ],
+    "opening": [
+      {
+        "x": -49,
+        "z": 78,
+        "form": "probe",
+        "role": "observer",
+        "facing": 2.5
+      },
+      {
+        "x": -10,
+        "z": 82,
+        "form": "stalker",
+        "role": "anchor",
+        "ranged": true,
+        "facing": 2.2
+      },
+      {
+        "x": -37,
+        "z": 81.7,
+        "form": "seer",
+        "role": "anchor",
+        "facing": 2.0
+      },
+      {
+        "x": -49,
+        "z": 64,
+        "form": "scuttler",
+        "role": "screen",
+        "facing": 2.8
+      },
+      {
+        "x": -27,
+        "z": 53,
+        "form": "synth",
+        "role": "anchor",
+        "facing": 3.14
+      },
+      {
+        "x": -5,
+        "z": 66,
+        "form": "stalker",
+        "role": "anchor",
+        "ranged": true,
+        "facing": 3.14
+      },
+      {
+        "x": 3,
+        "z": 52,
+        "form": "stalker",
+        "role": "screen",
+        "facing": 3.14
+      },
+      {
+        "x": 4,
+        "z": 42,
+        "form": "probe",
+        "role": "observer",
+        "facing": 3.14
+      }
+    ],
+    "portals": [
+      [
+        -40,
+        79
+      ],
+      [
+        6,
+        85
+      ]
+    ],
+    "powerReinforcements": 4
+  }
 }

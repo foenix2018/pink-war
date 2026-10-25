@@ -762,7 +762,7 @@ export class ArenaGame {
       if(slot){destinationX=slot.x;destinationZ=slot.z;}
       const tacticContext={time:this.time,seen,threat:{x:e.lastKnownX,y:(e.lastKnownHeight||0)+1.25,z:e.lastKnownZ},obstacles:this.obstacles,allies:this.enemies,hazards:this.chargeHazards(),segmentBox};
       relayVisualContact(e,tacticContext);
-      const order=!stairRoute?(grenadeAvoidance(e,tacticContext)||tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext)):null;
+      const order=!stairRoute?(grenadeAvoidance(e,tacticContext)||tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext)||this.sectorOrder?.(e,tacticContext)):null;
       e.combatPose=order?.state||'advance';
       e.coverCrouch=((e.coverCrouch||0)+((order?.crouchAmount??Number(!!order?.crouched))-(e.coverCrouch||0))*(1-Math.exp(-dt*12)));
       if(order){destinationX=order.point.x;destinationZ=order.point.z;}
@@ -798,7 +798,7 @@ export class ArenaGame {
         moveInArena(e,dx/norm*e.speed*dt*injury*searchSpeed,dz/norm*e.speed*dt*injury*searchSpeed,e.radius,this.obstacles);
       }
       this.settle(e,dt);
-      if(order)e.yaw=Math.atan2(e.lastKnownX-e.x,e.lastKnownZ-e.z)+Math.PI;
+      if(order)e.yaw=order.yaw??(Math.atan2(e.lastKnownX-e.x,e.lastKnownZ-e.z)+Math.PI);
       else if(e.ranged&&seen)e.yaw=Math.atan2(this.player.x-e.x,this.player.z-e.z)+Math.PI;
       else if(e.awareness!=='patrol'&&goalDistance>.15)e.yaw=Math.atan2(dx,dz)+Math.PI;
       else if(e.awareness==='patrol')e.yaw=(e.patrolAngle||0)+Math.PI;

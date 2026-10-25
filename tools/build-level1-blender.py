@@ -102,8 +102,9 @@ for index,(x,z,w,d,h) in enumerate(D['buildings']):
    for offset in [-.8,-.3,.2,.7]:rod('rust',(frontX+streetSide*.82,yy+.08,zz+offset),(frontX+streetSide*.86,yy+.82,zz+offset+.04),.014,8)
  for zz in [z-d*.33,z+d*.32]:rod('rust',(frontX,1,zz),(frontX,top+2,zz),.09)
  # disconnected future service rack, mechanically fitted to the old wall
- box('ORDRE service cabinet','steel',frontX+streetSide*.15,1.6,z,.32,2.2,1.6,.04)
- for k in range(5):box('cabinet grille','dark',frontX+streetSide*.33,1.0+k*.28,z,.04,.055,1.5,.005)
+ cabinetZ=z+8 if index==0 else z
+ box('ORDRE service cabinet','steel',frontX+streetSide*.15,1.6,cabinetZ,.32,2.2,1.6,.04)
+ for k in range(5):box('cabinet grille','dark',frontX+streetSide*.33,1.0+k*.28,cabinetZ,.04,.055,1.5,.005)
  # Historic stone cornices and arched window lintels distinguish old Vesper
  # apartment houses from the ribbed industrial installations added by ORDRE.
  if index in [0,2,6]:
@@ -120,10 +121,30 @@ for index,(x,z,w,d,h) in enumerate(D['buildings']):
    for yy in range(4,min(15,int(h)),3):box('conduit bracket','rust',frontX+streetSide*.4,yy,zz,.40,.08,.38,.02)
  # shallow debris within the structural footprint; open routes remain clear
  for k in range(10):stone('brick' if index in [0,2,6] else 'concrete',frontX-streetSide*.6,.08,z+(random.random()-.5)*d,.20,.12,.28)
+# Newly opened courtyard and annexe: the same metric parts define their colliders.
+for p in D.get('courtyardParts',[]):
+ if p.get('cover') and p['mat']=='concrete':
+  # Profiled civil-defence barriers: flared feet, inclined shoulders and worn paint.
+  # Keep the authored maximum footprint used by the conservative gameplay proxy.
+  x,y,z,w,h,d=[p[k] for k in ['x','y','z','w','h','d']];along=w>=d;length=w if along else d;thickness=d if along else w;base=y-h/2
+  cross=[(-thickness*.5,0),(thickness*.5,0),(thickness*.5,.16),(thickness*.39,h*.43),(thickness*.30,h-.08),(thickness*.24,h),(-thickness*.24,h),(-thickness*.30,h-.08),(-thickness*.39,h*.43),(-thickness*.5,.16)]
+  verts=[(x+end*length/2,base+yy,z+zz) if along else (x+zz,base+yy,z+end*length/2) for end in [-1,1] for zz,yy in cross];n=len(cross)
+  faces=[tuple(reversed(range(n))),tuple(range(n,2*n))]+[(i,(i+1)%n,(i+1)%n+n,i+n) for i in range(n)]
+  if along:faces=[tuple(reversed(face)) for face in faces]
+  o=gameMesh('profiled civil defence barrier','concrete',verts,faces);mod=o.modifiers.new('chipped edges','BEVEL');mod.width=.025;mod.segments=1;o.modifiers.new('barrier face normals','WEIGHTED_NORMAL')
+  for offset in [-.28,.28]:
+   xx=x+offset*length if along else x;zz=z if along else z+offset*length
+   rod('rust',(xx-.09 if along else xx,base+h+.005,zz if along else zz-.09),(xx+.09 if along else xx,base+h+.005,zz if along else zz+.09),.018,6)
+  for k in range(3):
+   alongPos=(k-1)*length*.23
+   if along:box('worn evacuation paint','car-cream',x+alongPos,base+h*.56,z+thickness*.365,.20,.28,.01,.002,0)
+   else:box('worn evacuation paint','car-cream',x+thickness*.365,base+h*.56,z+alongPos,.01,.28,.20,.002,0)
+  for k in range(3):stone('concrete',x+random.uniform(-w*.4,w*.4),.06,z+d*.7+random.uniform(.05,.22),.12,.07,.17)
+ else:box(p['id'],p['mat'],p['x'],p['y'],p['z'],p['w'],p['h'],p['d'],.035)
 # Lab, cover, fences, traverse surfaces share collider geometry.
 for b in D['obstacles']:
  if b.get('building') or b.get('liftId') or b.get('campaignTerminal'):continue
- if b.get('buildingPart') or 'vehicle' in b:continue
+ if b.get('buildingPart') or b.get('courtyardPart') or 'vehicle' in b:continue
  mat='steel' if b['surface']=='metal' else 'white' if b.get('cover') else 'concrete'
  if b.get('fence'):
   # Waist rails + uprights, same full extent as collision footprint.
@@ -257,7 +278,7 @@ for k in range(240):
 # All remain outside the playable fences; no visual obstacle is added to a route.
 for side in [-1,1]:
  for index,z in enumerate([-85,-50,-10,32,70,110]):
-  x=side*random.uniform(65,90);h=random.uniform(27,65);w=random.uniform(11,20)
+  x=(D['bounds']['minX']-random.uniform(24,42)) if side<0 else (D['bounds']['maxX']+random.uniform(24,42));h=random.uniform(27,65);w=random.uniform(11,20)
   chamferTower('chamfered ruined tower','concrete',x,z,w,18,0,h,1.2)
   chamferTower('inset broken crown','steel',x+1,z,w*.60,13,h,6,1.0,side*.65)
   for y in range(4,int(h)-2,5):
@@ -287,6 +308,7 @@ bpy.ops.object.select_all(action='SELECT');bpy.context.view_layer.objects.active
 print('MODELLING COMPLETE',len(bpy.context.scene.objects),flush=True)
 # Preserve editable Blender file and interchange format.
 bpy.context.scene.render.engine='BLENDER_EEVEE_NEXT'
+bpy.context.preferences.filepaths.save_version=0
 bpy.ops.wm.save_as_mainfile(filepath=str(P/'assets/level1/Vesper_Secours_07.blend'))
 bpy.ops.export_scene.gltf(filepath=str(P/'assets/level1/Vesper_Secours_07.glb'),export_format='GLB',export_yup=True,export_cameras=False,export_lights=False)
 # Material batches with applied bevel/weighted normals; little shader work and no loader dependencies.
@@ -312,6 +334,6 @@ indexEncoded={}
 for name,values in indices.items():
  if not values:continue
  compressor=zlib.compressobj(9,zlib.DEFLATED,-15);raw=struct.pack('<'+'I'*len(values),*values);indexEncoded[name]=base64.b64encode(compressor.compress(raw)+compressor.flush()).decode()
-metadata=dict(vertices=sum(len(v)//8 for v in parts.values()),tool='Blender '+bpy.app.version_string,triangles=triangles,batches=len(encoded),source='Original Pink War / Vesper Secours 07',revision='3.40',hollowBuildings=8,rustedVehicles=len(D['cars']),foliage='alpha leaf cards',surfaceMaps=True,shatteredGlazing=True,profiledVehicleCabins=True,roundedTyres=True,chamferedSkyline=True,bounds=D['bounds'])
+metadata=dict(vertices=sum(len(v)//8 for v in parts.values()),tool='Blender '+bpy.app.version_string,triangles=triangles,batches=len(encoded),source='Original Pink War / Vesper Secours 07',revision='3.63.4',hollowBuildings=8,rustedVehicles=len(D['cars']),foliage='alpha leaf cards',surfaceMaps=True,shatteredGlazing=True,profiledVehicleCabins=True,roundedTyres=True,chamferedSkyline=True,bounds=D['bounds'])
 (P/'dist/levels/vesper-01-mesh.js').write_text('// Original geometry created in Blender. Raw DEFLATE interleaved float32 position/normal/UV, material batches.\nexport const MESH_INFO='+json.dumps(metadata)+';\nexport const MESH_DATA='+json.dumps(encoded,separators=(',',':'))+';\nexport const MESH_INDEX_DATA='+json.dumps(indexEncoded,separators=(',',':'))+';\n')
 print('PINK_WAR_LEVEL1',json.dumps(metadata))

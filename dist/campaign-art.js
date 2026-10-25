@@ -10,6 +10,7 @@ import {bevelBox} from './geo.js';
 import {LEVEL1_STORY,createLevel1Story} from './level1-story.js';
 import {installPhotographicSurfaces} from './photographic-surfaces.js';
 import {createM01Dressing} from './m01-dressing.js';
+import {createCourtyardArt} from './m01-courtyard.js';
 import {createArchiveTerminalFactory} from './archive-terminals.js';
 
 // Independent Blender-built map. Geometry is bundled locally, including in the
@@ -17,7 +18,7 @@ import {createArchiveTerminalFactory} from './archive-terminals.js';
 export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=false}={}){
  const root=new T.Group();root.name='VESPER / SECOURS 07 — carte narrative Blender';root.visible=false;scene.add(root);
  const obstacles=createLevel1Obstacles(),geometries=[],materials=[],textures=[],screens=[],routes=[];
- let stage='power',lastState='',disposed=false,currentObjective=null;
+ let stage='approach',lastState='',disposed=false,currentObjective=null;
  const ownG=g=>(geometries.push(g),g),ownM=m=>(materials.push(m),m);
  let seed=33207;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  function paintTexture(w,h,paint){const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const context=canvas.getContext('2d');paint(context,w,h);const map=new T.CanvasTexture(canvas);map.colorSpace=T.SRGBColorSpace;textures.push(map);return{canvas,context,map};}
@@ -89,6 +90,7 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
  const archive=terminal(0,0,54.45,'archive'),exit=terminal(18,4.8,-44.55,'exit');
  const systems=createVesperSystems(T,root,maps,{quality,terminalMaterials:computers.materials});obstacles.push(...systems.colliders);
  const story=createLevel1Story(T,root,maps,{quality});obstacles.push(...story.colliders);
+ const courtyard=createCourtyardArt(T,root,maps,{quality});obstacles.push(...courtyard.colliders);
  for(const beat of LEVEL1_STORY.beats){
   const sign=panel(beat.title,beat.x,beat.id==='occupation'?3.05:2.65,beat.z+.16,2.4,1.25,768,320);sign.paint(beat.lines);
  }
@@ -100,28 +102,28 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
  panel('RELAIS DES ARCHIVES',18,7.1,-49.8,5,.8).paint(['ESCALIER / ASCENSEUR DE SERVICE']);
  // Route studs are physically fixed to the ground; no additional permanent HUD.
  const routeMat=ownM(new T.MeshBasicMaterial({color:0xdab66b,toneMapped:false}));
- for(let i=1;i<LEVEL1_MAP.route.length;i++){const a=LEVEL1_MAP.route[i-1],b=LEVEL1_MAP.route[i],n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/2.6);for(let k=0;k<n;k++){const t=k/n,o=box(routeMat,a[0]+(b[0]-a[0])*t,a[2]+(b[2]-a[2])*t+.025,a[1]+(b[1]-a[1])*t,.10,.02,.26);routes.push({o,segment:i});}}
+ for(let i=1;i<LEVEL1_MAP.route.length;i++){const a=LEVEL1_MAP.route[i-1],b=LEVEL1_MAP.route[i],n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/2.6);for(let k=0;k<n;k++){const t=k/n,o=box(routeMat,a[0]+(b[0]-a[0])*t,a[2]+(b[2]-a[2])*t+.025,a[1]+(b[1]-a[1])*t,.10,.02,.26);routes.push({o,archive:a[1]<=63&&b[1]>=47,north:b[1]<=47});}}
  const marker=new T.Mesh(ownG(new T.OctahedronGeometry(.10)),routeMat);root.add(marker);
  const objective=panel('OBJECTIF',0,2.6,55,2.5,.58,768,160);
  const carriage=new T.Group();root.add(carriage);const lift=LEVEL1_MAP.lifts[0];
  box(maps.steel,lift.x,-.10,lift.z,6,.20,6,carriage);
  for(const side of [-1,1]){box(maps.steel,lift.x+side*2.92,.55,lift.z,.10,1.1,6,carriage);box(maps.amber,lift.x+side*2.9,1.07,lift.z,.045,.07,5.9,carriage);}
  function updateLift(time){if(root.visible)carriage.position.y=liftHeightAt(lift,time);}
- function update(game,time=0){const s=game?.campaign;if(!s||!root.visible)return;stage=s.stage;currentObjective=s.objective;story.update(game);systems.update(game,time);updateLift(game.time);boundary.update({...game.player,y:game.player.elevation+1.65},.55,1.2);
-  const key=[stage,s.sibling,...s.archive].join('|');if(key!==lastState){lastState=key;
-   power.paint(stage==='power'?['Courant coupé. Réarmer le circuit.','F / clic du stick libre : interagir']:['CIRCUIT LOCAL : ACTIF','Réseau ORDRE : DÉCONNECTÉ']);
-   archive.paint(stage==='power'?['Mémoire hors tension.','Boîtier de secours à gauche.']:stage==='archive'?['Journal humain retrouvé.','F / clic du stick libre : lire']:s.archive);
+ function update(game,time=0){const s=game?.campaign;if(!s||!root.visible)return;stage=s.stage;currentObjective=s.objective;story.update(game);systems.update(game,time);courtyard.update(game);updateLift(game.time);boundary.update({...game.player,y:game.player.elevation+1.65},.55,1.2);
+  const key=[stage,s.sibling,s.objective?.id,...s.archive].join('|');if(key!==lastState){lastState=key;
+   power.paint(stage==='approach'?['DÉPARTS NON ISOLÉS','CONVOI / AILE TECHNIQUE']:stage==='power'?['Courant coupé. Réarmer le circuit.','F / clic du stick libre : interagir']:['CIRCUIT LOCAL : ACTIF','Réseau ORDRE : DÉCONNECTÉ']);
+   archive.paint(['approach','power'].includes(stage)?['Mémoire hors tension.','Boîtier de secours à gauche.']:stage==='archive'?['Journal humain retrouvé.','F / clic du stick libre : lire']:s.archive);
    exit.paint(stage==='complete'?[`Passage de ${s.sibling} confirmé.`,'DESTINATION : ARCHIVES VÉGÉTALES','NIVEAU 1 TERMINÉ']:[`Trace de ${s.sibling} enregistrée.`,'F / clic du stick libre : consulter']);
    investigation.paint(s.investigationRead?[`MESSAGE HUMAIN : ${s.sibling}`,'La balise d’ORDRE verrouille le relais.','Coupe-la dans la rue au nord-est.']:['Un journal a survécu dans cet atelier.','F / clic du stick libre : consulter']);
    sabotage.paint(s.sabotaged?['BALISE : HORS SERVICE','La voie du relais est ouverte.']:['SURVEILLANCE ORDRE : ACTIVE','F / clic du stick libre : saboter'],'BALISE ORDRE / COUPURE MANUELLE');
-   for(const r of routes)r.o.visible=stage==='power'?r.segment<=3:stage==='archive'?r.segment===4:['crossing','exit'].includes(stage)?r.segment>=5:false;
+   for(const r of routes)r.o.visible=stage==='archive'?r.archive:['crossing','exit'].includes(stage)?r.north:false;
    objective.mesh.visible=!!s.objective;
    if(s.objective){const p=s.objective.position;objective.mesh.position.set(p.x,p.y+2.7,p.z+.22);objective.paint(['F / CLIC STICK LIBRE'],s.objective.label);}
   }
   marker.visible=!!s.objective;if(s.objective){const p=s.objective.position;marker.position.set(p.x,p.y+3.2+Math.sin(time*2)*.05,p.z);marker.rotation.y=time*.5;}
  }
  function setVisible(enabled){root.visible=!!enabled;lastState='';if(enabled)pbr.start();}
- function stats(){return{visible:root.visible,computers:computers.stats(),systems:systems.stats(),story:story.stats(),stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:5,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:3,boundary:boundary.stats(),pbr:pbr.stats()};}
- function dispose(){if(disposed)return;disposed=true;pbr.dispose();computers.dispose();dressing?.dispose();boundary.dispose();story.dispose();systems.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
+ function stats(){return{visible:root.visible,courtyard:courtyard.stats(),computers:computers.stats(),systems:systems.stats(),story:story.stats(),stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:5,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:3,boundary:boundary.stats(),pbr:pbr.stats()};}
+ function dispose(){if(disposed)return;disposed=true;pbr.dispose();computers.dispose();dressing?.dispose();boundary.dispose();story.dispose();systems.dispose();courtyard.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
  return{root,obstacles,update,setVisible,stats,dispose,updateLift,ready,materials:maps,dressing};
 }

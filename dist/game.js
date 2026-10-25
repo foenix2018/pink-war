@@ -23,6 +23,8 @@ import {createAICompanion} from './ai-companions.js';
 import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
 import {createCompanionSkillFX} from './companion-skill-fx.js';
+import {playFieldCue} from './m01-field-audio.js';
+import {writeM01Checkpoint} from './m01-checkpoint.js';
 import {mountCombatHud} from './combat-hud.js';
 import {createHudContrastControl} from './hud-appearance.js';
 import {createArmorFeedback,meleeKick,MELEE_POSE} from './armor-feedback.js';
@@ -38,6 +40,7 @@ settings.sensitivity = clamp(Number(settings.sensitivity) || 1, .4, 2);
 if (!['auto', 'low', 'high'].includes(settings.quality)) settings.quality = 'auto';
 let phase = 'lobby', view = boot?.view==='third'?'third':'fps', yaw = 0, pitch = -.075, game, world, vr;
 let character=characterForId('ghju');
+let m01CheckpointGame=null,m01CheckpointStage=null,m01CheckpointPending=false;
 let combatHud=null,armorFx=null,armorFxScene=null,meleeQueued=false,chargeQueued=false,touchSprinting=false;
 // Every session wears the armour layer of 3.63 (shield, strike, impulse charges).
 const armed=session=>{session.enableArmorShield();return session;};
@@ -420,6 +423,7 @@ function announce(title, subtitle) {
 }
 function handleEvents() {
   for (const event of game.drainEvents()) {
+    if(game.mode==='campaign'&&settings.sound&&audioContext){if(event.type==='circuit-isolated')playFieldCue(audioContext,'isolate',{source:event,listener:game.player,yaw:listenerHeading()});if(event.type==='portals'&&event.count>0)for(const site of event.sites)playFieldCue(audioContext,'breach',{source:site,listener:game.player,yaw:listenerHeading()});}
     armorFeedback().handle(event);
     if(event.type==='campaign'){
       if(vr.mode!=='xr')announce(event.title,event.subtitle);
@@ -498,6 +502,7 @@ function gameOver(won = false) {
   if (vr?.mode !== 'xr') $('end-dialog').showModal();
 }
 function updateHud() {
+  if(game?.mode==='campaign'){if(m01CheckpointGame!==game||m01CheckpointStage!==game.stage){m01CheckpointGame=game;m01CheckpointStage=game.stage;m01CheckpointPending=true;}if(m01CheckpointPending&&writeM01Checkpoint(game))m01CheckpointPending=false;}
   const train=game?.mode==='training';
   $('training-hud').hidden=!train;
   for(const button of document.querySelectorAll('[data-range-weapon]')){
