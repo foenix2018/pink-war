@@ -1,3 +1,4 @@
+import {createWorldShadows,createGroundOcclusion} from './world-shadows.js';
 import * as T from './vendor/three.webgpu.min.js';
 import { WebGLRenderer } from './vendor/three.module.min.js';
 import { PORTAL, COVER_WALLS, CATWALK, WEAPONS,starterWeaponIndex } from './game-logic.js';
@@ -96,10 +97,13 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   const hemisphere=new T.HemisphereLight(0xa9c9e5,0x344058,1.32);scene.add(hemisphere);
   const sun = new T.DirectionalLight(0xb5d7ff, 2.25); sun.position.set(-30, 50, 20); sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = -40; sun.shadow.camera.right = 40; sun.shadow.camera.top = 40; sun.shadow.camera.bottom = -40; sun.shadow.camera.near = 1; sun.shadow.camera.far = 135; sun.shadow.bias = -.0015; sun.shadow.normalBias = .045; scene.add(sun);scene.add(sun.target);
+  const worldShadows=createWorldShadows(T,{scene,renderer,light:sun,profile,direction:{x:-30,y:50,z:20}});
+  let shadowTime=0,shadowEntities=[],shadowHeight=e=>e.elevation||e.homeHeight||0;
   function trackShadows(x,z,elevation=0){
-    // The 80 m shadow window follows play, retaining close detail across all districts.
-    const texel=80/1024,sx=Math.round(x/texel)*texel,sz=Math.round(z/texel)*texel;
-    sun.position.set(sx+(campaignSky?VESPER_SUN.x:-30),elevation+(campaignSky?VESPER_SUN.y:50),sz+(campaignSky?VESPER_SUN.z:20));sun.target.position.set(sx,elevation,sz);
+    // Selection changes the canonical sun direction; the map follows play.
+    const direction=campaignSky?VESPER_SUN:{x:-30,y:50,z:20};
+    worldShadows.update(shadowTime,{x,z,elevation},{entities:shadowEntities,heightAt:shadowHeight});
+    sun.position.set(sun.target.position.x+direction.x,elevation+direction.y,sun.target.position.z+direction.z);
   }
   const rim = new T.DirectionalLight(0x9abfff, 1.08); rim.position.set(30, 12, -35); scene.add(rim);
   const batches = new Map(); const obstacles = [];
@@ -376,7 +380,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   }
   function resetDynamic(){for(const m of pickupMeshes.values())scene.remove(m);pickupMeshes.clear();rangeArt.update(null);combatFX.reset();laserFX.reset();traversal.update(0);for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();portal.visible=!rangeActive;for(const death of deaths){scene.remove(death.fx);death.mat.dispose();death.haloMat.dispose();}deaths.length=0;for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
   function sync(sim,time,dt){
-    if(!campaignActive)city.fence?.update({...sim.player,y:(sim.player.elevation||0)+(sim.player.crouched?1.05:1.65)},.65,1.2);traversal.update(sim.time);campaignArt.updateLift(sim.time);combatFX.update(dt,camera);laserFX.update(sim.bullets,dt);trackShadows(sim.player.x,sim.player.z,sim.player.elevation||0);
+    if(!campaignActive)city.fence?.update({...sim.player,y:(sim.player.elevation||0)+(sim.player.crouched?1.05:1.65)},.65,1.2);traversal.update(sim.time);campaignArt.updateLift(sim.time);combatFX.update(dt,camera);laserFX.update(sim.bullets,dt);shadowTime=sim.time;shadowEntities=[...sim.enemies,sim.player];shadowHeight=e=>sim.surfaceHeight(e.x,e.z,sim.time,(e.elevation||0)+.3);trackShadows(sim.player.x,sim.player.z,sim.player.elevation||0);
     setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));updateStations(sim,time);syncSecondaryPortals(sim,sim.time);rangeArt.update(rangeActive?sim:null);
     for(const event of sim.events||[])if(event.type==='kill')beginDeath(event.id,time);
     updateDeaths(time);
@@ -440,7 +444,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     recovery = (async () => {
       const nextCanvas = renderer.domElement.cloneNode(false);
       nextCanvas.removeAttribute('data-controls-bound');released=true;
-      canvas.removeEventListener('webglcontextlost',contextLost);renderer.setAnimationLoop(null);
+      canvas.removeEventListener('webglcontextlost',contextLost);renderer.setAnimationLoop(null);worldShadows.dispose();arenaOcclusion.dispose();
       renderer.dispose();renderer.forceContextLoss?.();
       // Fresh resources avoid reusing texture state from a destroyed GPU device.
       const next = await createScene(nextCanvas, nextQuality, true,character.id);
@@ -456,6 +460,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   }
   const campaignArt=createCampaignArt(T,scene,obstacles,{quality:profile.artQuality,photographic:true});
   const arenaObstacles=[...obstacles];
+  const arenaOcclusion=createGroundOcclusion(T,arenaRoot,arenaObstacles,{compact:profile.artQuality==='low'});
   const rangeArt=createShootingRangeArt(T,scene);
   const rangeObstacles=[...rangeArt.obstacles];
   let campaignActive=false,rangeActive=false;

@@ -1,3 +1,4 @@
+import {createWorldShadows} from './world-shadows.js';
 // W01 / Les Secours de Vesper. Original environment art, separate from the
 // authoritative traversal/collision layout and from the locked Shadow Unit rigs.
 // Replaces selected legacy skins; never stacks a fourth car onto the old three.
@@ -41,7 +42,7 @@ export function projectedHull(box){
   return half(points).slice(0,-1).concat(half(points.slice().reverse()).slice(0,-1));
 }
 
-export function createVesperAtmosphere(T,scene,renderer,profile){
+export function createVesperAtmosphere(T,scene,renderer,profile,{extraLights=[]}={}){
   renderer.toneMappingExposure=VESPER_LIGHT.exposure;
   scene.fog=new T.Fog(0x747b79,VESPER_LIGHT.fogNear,VESPER_LIGHT.fogFar);
   scene.background=new T.Color(0x8e9694);
@@ -63,23 +64,13 @@ export function createVesperAtmosphere(T,scene,renderer,profile){
     scene.environment=reflection;scene.environmentIntensity=VESPER_LIGHT.skyIntensity;
     scene.backgroundRotation.y=scene.environmentRotation.y=-.55;
   });
-  let shadowAt=-Infinity,lastX=Infinity,lastZ=Infinity;
-  function update(time,camera,{shadows=true,day=.43}={}){
-    const enabled=profile.shadows&&shadows;
-    if(renderer.shadowMap.enabled!==enabled){renderer.shadowMap.enabled=enabled;renderer.shadowMap.needsUpdate=true;}
-    // A restrained time control cannot turn the overcast mission into neon day.
+  const worldShadows=createWorldShadows(T,{scene,renderer,light:sun,profile,direction:VESPER_SUN,extraLights});
+  function update(time,camera,{shadows=true,day=.43,focus=camera.position,entities=[],heightAt}={}){
     sun.intensity=1.12+Math.max(0,Math.min(1,day))*.55;
     ambient.intensity=.51+Math.max(0,Math.min(1,day))*.26;
-    if(Math.hypot(camera.position.x-lastX,camera.position.z-lastZ)>7){
-      lastX=Math.round(camera.position.x/8)*8;lastZ=Math.round(camera.position.z/8)*8;
-      sun.target.position.set(lastX,0,lastZ-13);
-      sun.position.set(lastX+VESPER_SUN.x,VESPER_SUN.y,lastZ-13+VESPER_SUN.z);
-      renderer.shadowMap.needsUpdate=true;
-    }
-    // Moving robots cast updated shadows; no permanently frozen first frame.
-    if(enabled&&time-shadowAt>.12){renderer.shadowMap.needsUpdate=true;shadowAt=time;}
+    worldShadows.update(time,focus,{enabled:shadows,entities,heightAt});
   }
-  return {sun,ambient,update,dispose(){sky.dispose();reflection?.dispose();sun.shadow.dispose();}};
+  return {sun,ambient,update,shadows:worldShadows,dispose(){worldShadows.dispose();sky.dispose();reflection?.dispose();sun.shadow.dispose();}};
 }
 
 export function createVesperArt(T,scene,{collide=[],ranges=[],performance=false}={}){

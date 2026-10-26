@@ -2,7 +2,6 @@
 // no shifted doors, no props on the authored route or across collision openings.
 import {Assembly,matrix} from './geo.js';
 import {LEVEL1_MAP} from './level1-layout.js';
-import {projectedHull} from './vesper-art.js';
 
 export function createM01Dressing(T,parent,maps,{performance=false}={}){
  const root=new T.Group();root.name='W01 / sept ans après la Chute';parent.add(root);
@@ -72,20 +71,8 @@ export function createM01Dressing(T,parent,maps,{performance=false}={}){
   stats.ferns++;
  }
  a.mount(root);a.setLevel(1);
- // Matching low-contrast contact occlusion. Mobile receives an approximate
- // static sun silhouette; desktop keeps dynamic directional shadows as well.
- const size=1024,c=document.createElement('canvas');c.width=c.height=size;const ctx=c.getContext('2d');
- const b=LEVEL1_MAP.bounds,w=b.maxX-b.minX,d=b.maxZ-b.minZ;
- const polygon=(pts,alpha)=>{ctx.fillStyle=`rgba(13,17,15,${alpha})`;ctx.beginPath();pts.forEach(([x,z],i)=>i?ctx.lineTo((x-b.minX)/w*size,(z-b.minZ)/d*size):ctx.moveTo((x-b.minX)/w*size,(z-b.minZ)/d*size));ctx.closePath();ctx.fill();};
- for(const o of LEVEL1_MAP.obstacles){
-  if(o.walkableSurface||(o.y||0)>.2||o.height<.35)continue;
-  const x1=o.x-o.hx,x2=o.x+o.hx,z1=o.z-o.hz,z2=o.z+o.hz;
-  polygon([[x1-.08,z1-.08],[x2+.08,z1-.08],[x2+.08,z2+.08],[x1-.08,z2+.08]],.16);
-  if(performance&&o.height>1)polygon(projectedHull({x1,x2,z1,z2,y2:o.height}),.10);
- }
- const tex=new T.CanvasTexture(c);textures.push(tex);const contact=new T.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1,toneMapped:false});owned.push(contact);
- const plane=new T.Mesh(new T.PlaneGeometry(w,d),contact);plane.rotation.x=-Math.PI/2;plane.position.set((b.minX+b.maxX)/2,.035,(b.minZ+b.maxZ)/2);root.add(plane);
+ // Contact darkening and sun projection are owned by the shared shadow layer.
  for(const mesh of a.meshes){mesh.castShadow=!performance&&!mesh.material.transparent;mesh.receiveShadow=true;stats.triangles+=(mesh.geometry.index?.count||mesh.geometry.attributes.position.count)/3;}
- stats.draws=a.meshes.length+1;
+ stats.draws=a.meshes.length;
  return {root,stats,dispose(){root.removeFromParent();root.traverse(o=>o.geometry?.dispose());for(const m of owned)m.dispose();for(const t of textures)t.dispose();}};
 }

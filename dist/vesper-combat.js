@@ -96,7 +96,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const camera=new T.PerspectiveCamera(64,innerWidth/innerHeight,.065,650);scene.add(camera);
   const torchTarget=new T.Object3D();torchTarget.position.set(0,0,-5);camera.add(torchTarget);
   const torch=new T.SpotLight(0xffefd4,22,22,.38,.72,2);torch.target=torchTarget;camera.add(torch);
-  const atmosphere=createVesperAtmosphere(T,scene,renderer,profile);
+  const atmosphere=createVesperAtmosphere(T,scene,renderer,profile,{extraLights:[torch]});
   onProgress(.36,'Construction de Vesper');
   const missionArt=createCampaignArt(T,scene,null,{quality:profile.phone||requestedQuality==='low'?'low':requestedQuality,photographic:true});
   missionArt.setVisible(true);
@@ -325,7 +325,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     createGun:()=>rig?.createGun({sleeve:false})||buildGun({mats:starterMaterials,gloves:starterGloves,sleeve:false,makeFlash:parent=>{const f=new T.Mesh(new T.SphereGeometry(.06,8,6),heroGlow);parent.add(f);return f;}}),createHand:()=>createGlove(rig?.kit.gloves||starterGloves,{sleeve:false})}),
     getYaw:()=>-getState().yaw,setYaw:onHeading,isPaused:()=>!!getState().menuPaused||journalOpen||game.state!=='playing',
     onPause:onPauseRequest,onResume:onResumeRequest,onHome:()=>location.assign('./index.html'),onExit:()=>{},skillsInput:args=>skillMenu.xrInput(args),
-    onFrame:(ms,frame)=>{const dt=Math.min(.045,Math.max(0,(ms-lastTime*1000)/1000||.016));const c=xr.input(frame,dt);const s=getState();if(c.interact)onInteract();if(!s.menuPaused&&!journalOpen&&!skillMenu.isOpen)update(dt,{...s,free:false,yaw:-xr.yaw,aiming:c.aim,input:c});xr.update(dt,feel.state,feel.state.kick>.025?.075:0);xr.renderScope();lastTime=ms/1000;atmosphere.update(lastTime,camera,{day:s.day,shadows:profile.shadows});try{renderer.render(scene,camera);}catch(error){onFailure(error);}}});
+    onFrame:(ms,frame)=>{const dt=Math.min(.045,Math.max(0,(ms-lastTime*1000)/1000||.016));const c=xr.input(frame,dt);const s=getState();if(c.interact)onInteract();if(!s.menuPaused&&!journalOpen&&!skillMenu.isOpen)update(dt,{...s,free:false,yaw:-xr.yaw,aiming:c.aim,input:c});xr.update(dt,feel.state,feel.state.kick>.025?.075:0);xr.renderScope();lastTime=ms/1000;atmosphere.update(lastTime,camera,{day:s.day,shadows:s.shadows!==false,focus:game.player,entities:[...game.enemies,game.player],heightAt:e=>game.surfaceHeight(e.x,e.z,game.time,(e.elevation||0)+.3)});try{renderer.render(scene,camera);}catch(error){onFailure(error);}}});
   // Validate a real terrain frame while the loading card is still displayed.
   // A published GPU API or a running simulation alone cannot prove rendering.
   syncCamera(getState(),0);atmosphere.update(0,camera,{day:getState().day,shadows:profile.shadows});
@@ -346,7 +346,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     get paused(){return journalOpen||skillMenu.isOpen;},
     get interaction(){return contextAction();},
     get layout(){return LEVEL1_MAP;},
-    restart(){location.assign(location.pathname+'?prologue=done&character='+characterId+'&v=3.63.10');},
+    restart(){location.assign(location.pathname+'?prologue=done&character='+characterId+'&v=3.63.11');},
     get checkpoint(){return checkpoint;},
     get objective(){return objective().text;},
     get playing(){return game.state==='playing'&&!completed;},
@@ -376,16 +376,16 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       if(pending)return;const s=getState();syncCamera(s,Math.min(.05,t-lastTime||.016));lastTime=t;gate.mesh.rotation.z=t*.052;
       skillMenu.setVisible(ready&&!completed&&!journalOpen&&game.player.hp>0);
       torch.visible=s.flashlight!==false;
-      const shadows=profile.shadows&&s.shadows!==false&&s.quality!=='performance';
-      atmosphere.update(t,camera,{shadows,day:s.day});
+      const shadows=s.shadows!==false;
+      atmosphere.update(t,camera,{shadows,day:s.day,focus:game.player,entities:[...game.enemies,game.player],heightAt:e=>game.surfaceHeight(e.x,e.z,game.time,(e.elevation||0)+.3)});
       try{const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);if(result?.then){pending=true;result.then(()=>pending=false).catch(error=>{pending=false;onFailure(error);});}}
       catch(error){onFailure(error);}
     },
-    snapshot(){return {music:{playing:false,source:null},revision:'3.63.10',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
+    snapshot(){return {music:{playing:false,source:null},revision:'3.63.11',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
       capacity:game.weapon.capacity,ownedWeapons:[...game.ownedWeapons],offers:game.weaponOffers.map(o=>({...o})),campaign:game.campaign,journalOpen,
       enemies:game.enemies.length,hostileProjectiles:game.bullets.filter(b=>b.hostile).length,shots:game.bullets.filter(b=>!b.hostile).length,
       kills:game.kills,rig:!!rig,gun:!!gun,backend:renderer.isWebGLRenderer?'webgl':'webgpu',triangles:terrain.triangles,
-      art:missionArt.stats(),dressing:dressing.stats,salvage:salvage.stats,lighting:{exposure:renderer.toneMappingExposure,ambient:atmosphere.ambient.intensity,sun:atmosphere.sun.intensity},pbr:missionArt.stats().pbr,effects:effects.stats(),companion:{name:characterId==='lylu'?'Cara':'Gaby',visible:false,materializationMission:7},position:{...getState().position},
+      art:missionArt.stats(),dressing:dressing.stats,salvage:salvage.stats,shadowing:atmosphere.shadows.stats(),lighting:{exposure:renderer.toneMappingExposure,ambient:atmosphere.ambient.intensity,sun:atmosphere.sun.intensity},pbr:missionArt.stats().pbr,effects:effects.stats(),companion:{name:characterId==='lylu'?'Cara':'Gaby',visible:false,materializationMission:7},position:{...getState().position},
       skills:skills.snapshot(game),skillsMenuOpen:skillMenu.isOpen,
       armor:{shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt},
       hostiles:game.enemies.map(e=>({id:e.id,x:e.x,y:e.elevation+e.aimHeight,z:e.z,hp:e.hp,awareness:e.awareness,tactic:e.combatPose,crouch:e.coverCrouch||0})),render:renderer.info.render};}

@@ -1,3 +1,4 @@
+import {createWorldShadows,createGroundOcclusion} from './world-shadows.js';
 // PINK WARS / M02 "SOUS LES NÉONS" — isolated vertical-slice test.
 // Simulation, collisions, jump, stamina/health, weapons and hostiles are
 // imported unchanged from the production game. The cyberpunk world is new.
@@ -48,6 +49,7 @@ const rng=(()=>{let s=220102;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;
 let canvas=main,renderer,scene,camera,game,weapon,clock=0,running=false,started=false,last=0,fpsTime=0,frames=0,framePending=false,recovering=false,bootStep='modules';
 let yaw=0,pitch=0,weaponKick=0,stage=0,reported=-1;
 let noticeUntil=0,signal=0,rain,enemyFactory,root,architecture,pbrController,atmosphere;
+let worldShadows=null,groundOcclusion=null;
 let view='fps',aimBlend=0,mouseAim=false,playerRig=null,touchControls=null,paused=false;
 let jumpQueued=false,crouchQueued=false,firePressQueued=false,weaponReady=false,audioCtx=null,hitUntil=0;
 const weaponFeel=createWeaponFeel(),pinkControls=createPinkWarsInput();
@@ -383,7 +385,7 @@ function createEnvironment(){
  reflection.mapping=T.EquirectangularReflectionMapping;scene.environment=reflection;scene.environmentIntensity=.55;
  const ambient=new T.HemisphereLight(0xadb8be,0x34322c,1.4);scene.add(ambient);
  const moon=new T.DirectionalLight(0xb1c1ce,2.15);moon.position.set(-18,44,21);scene.add(moon);
- moon.castShadow=!low();moon.shadow.mapSize.set(low()?512:1024,low()?512:1024);
+ moon.castShadow=true;moon.shadow.mapSize.set(low()?512:1024,low()?512:1024);
  moon.shadow.bias=-.00015;moon.shadow.normalBias=.025;moon.shadow.radius=2;
  Object.assign(moon.shadow.camera,{left:-48,right:48,top:48,bottom:-48,near:.1,far:125});
  for(let z=53;z>-57;z+=low()?-38:-19){
@@ -392,6 +394,8 @@ function createEnvironment(){
   lamp.position.set(x,6.5,z);scene.add(lamp);lightSources.push(lamp);
  }
  street();blockBuildings();stairsAndSkybridges();props();architecture.decorate();warZone=createWarZone(T,root,materials,collisions,{performance:low()});weather();optimizeStaticBoxes();
+ worldShadows=createWorldShadows(T,{scene,renderer,light:moon,profile:{artQuality:low()?'low':'auto'},direction:{x:-28,y:56,z:28}});
+ groundOcclusion=createGroundOcclusion(T,root,collisions,{compact:low()});
  try{atmosphere=createStreetAtmosphere(T,root,{performance:low()});}
  catch(error){console.warn('M02 atmosphere disabled for compatibility:',error);}
 }
@@ -714,6 +718,7 @@ function animation(t,frame){
  }
  warZone?.update(game?.time||0,{active:running});for(const event of warZone?.drainEvents()||[])if(enableAudio&&battleAudio)battleAudio.event(event,game.player,yaw);
  if(xr?.active){xr.update(dt,weaponFeel.state,weaponKick>.025?.075:0);xr.renderScope();}
+ worldShadows?.update(clock,game?.player||camera.position,{entities:game?[...game.enemies,game.player]:[],heightAt:e=>game.surfaceHeight(e.x,e.z,game.time,(e.elevation||0)+.3)});
  if(scene&&camera&&!framePending&&!recovering){
    try{
      const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);
@@ -764,7 +769,7 @@ async function boot(){
   renderer.onDeviceLost=info=>onRenderFailure(new Error('Périphérique graphique perdu : '+(info?.message||info?.reason||'WebGPU')));
   canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();onRenderFailure(new Error('Contexte WebGL perdu'));});
   renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
-  renderer.shadowMap.enabled=profile.shadows&&!low();renderer.shadowMap.type=T.PCFShadowMap;
+  renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;
   scene=new T.Scene();camera=new T.PerspectiveCamera(67,innerWidth/innerHeight,.08,320);
   scene.add(camera);createEnvironment();
   missionLoading?.set(.52,'Quartier et voies de transit prêts');
@@ -887,8 +892,8 @@ for(const name of ['pointerup','pointercancel']){
  window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
 }
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
-window.__PINK_M02=Object.freeze({snapshot:()=>({music:{playing:false,source:null},revision:'3.63.10',running,paused,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
+window.__PINK_M02=Object.freeze({snapshot:()=>({music:{playing:false,source:null},revision:'3.63.11',running,paused,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
- backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
+ shadowing:worldShadows?.stats(),backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
  effects:combatEffects?.stats(),armor:game&&{shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt}})});
 if(autoMission){startButton.disabled=true;void boot();}

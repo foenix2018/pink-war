@@ -6,8 +6,8 @@ export function graphicsProfile(environment={},quality='auto',forceWebGL=false){
   const headset=/OculusBrowser|Quest|PicoBrowser/i.test(ua);
   const phone=!headset&&(ios||/Android.*Mobile/i.test(ua));
   const compatible=environment.rendererHint==='webgl';
-  return {ios,phone,compatible,preferWebGL:forceWebGL||ios||compatible||!environment.gpu,
-    antialias:!phone&&!compatible,shadows:!phone&&!compatible&&quality!=='low',
+  return {ios,phone,headset,compatible,preferWebGL:forceWebGL||ios||compatible||!environment.gpu,
+    antialias:!phone&&!compatible,shadows:true,
     pixelRatioCap:phone?(quality==='high'?1.15:1):compatible?1:quality==='low'?1:quality==='high'?2:1.8,
     maxPixels:phone?750000:compatible?1100000:Infinity,
     artQuality:phone||compatible?'low':quality,skyWidth:phone||compatible||quality==='low'?1024:2048};

@@ -1,3 +1,4 @@
+import {createGroundOcclusion} from './world-shadows.js';
 import {createRlhEnvironment} from './rlh-environment.js';
 import {createCircuitSwitch} from './circuit-switch.js';
 import {createVesperSystems} from './vesper-systems.js';
@@ -111,6 +112,7 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
  // Route studs are physically fixed to the ground; no additional permanent HUD.
  const routeMat=ownM(new T.MeshBasicMaterial({color:0xdab66b,toneMapped:false}));
  for(let i=1;i<LEVEL1_MAP.route.length;i++){const a=LEVEL1_MAP.route[i-1],b=LEVEL1_MAP.route[i],n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/2.6);for(let k=0;k<n;k++){const t=k/n,o=box(routeMat,a[0]+(b[0]-a[0])*t,a[2]+(b[2]-a[2])*t+.025,a[1]+(b[1]-a[1])*t,.10,.02,.26);routes.push({o,archive:a[1]<=63&&b[1]>=47,north:b[1]<=47});}}
+ const contactOcclusion=createGroundOcclusion(T,root,obstacles,{compact:quality==='low'});
  const marker=new T.Mesh(ownG(new T.OctahedronGeometry(.10)),routeMat);root.add(marker);
  const objective=panel('OBJECTIF',0,2.6,55,2.5,.58,768,160);
  const carriage=new T.Group();root.add(carriage);const lift=LEVEL1_MAP.lifts[0];
@@ -131,7 +133,7 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
   marker.visible=!!s.objective;if(s.objective){const p=s.objective.position;marker.position.set(p.x,p.y+3.2+Math.sin(time*2)*.05,p.z);marker.rotation.y=time*.5;}
  }
  function setVisible(enabled){root.visible=!!enabled;lastState='';if(enabled)pbr.start();}
- function stats(){return{visible:root.visible,courtyard:courtyard.stats(),workshop:workshop.stats(),ceilings:ceilings.stats(),rlh:rlh.stats(),computers:computers.stats(),systems:systems.stats(),story:story.stats(),stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:5,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:3,boundary:boundary.stats(),pbr:pbr.stats()};}
- function dispose(){if(disposed)return;disposed=true;pbr.dispose();powerSwitch.dispose();computers.dispose();dressing?.dispose();boundary.dispose();story.dispose();systems.dispose();courtyard.dispose();workshop.dispose();ceilings.dispose();rlh.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
+ function stats(){return{visible:root.visible,contactOcclusion:contactOcclusion.stats(),courtyard:courtyard.stats(),workshop:workshop.stats(),ceilings:ceilings.stats(),rlh:rlh.stats(),computers:computers.stats(),systems:systems.stats(),story:story.stats(),stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:5,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:3,boundary:boundary.stats(),pbr:pbr.stats()};}
+ function dispose(){if(disposed)return;disposed=true;contactOcclusion.dispose();pbr.dispose();powerSwitch.dispose();computers.dispose();dressing?.dispose();boundary.dispose();story.dispose();systems.dispose();courtyard.dispose();workshop.dispose();ceilings.dispose();rlh.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
  return{root,obstacles,update,setVisible,stats,dispose,updateLift,ready,materials:maps,dressing};
 }

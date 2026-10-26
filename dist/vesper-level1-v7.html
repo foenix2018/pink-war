@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
-<link rel="icon" href="icon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><link rel="stylesheet" href="./mission-loading.css?v=3.63.10"><script>document.documentElement.classList.toggle('pw-auto-story',!new URLSearchParams(location.search).has('visit'));</script>
+<link rel="icon" href="icon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><link rel="stylesheet" href="./mission-loading.css?v=3.63.11"><script>document.documentElement.classList.toggle('pw-auto-story',!new URLSearchParams(location.search).has('visit'));</script>
 <title>PINK WARS — LA FRACTURE · Le Dernier Signal</title><style>
 :root{font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Arial,sans-serif;color:#e9f3f8;background:#081019;--pink:#ec4c91;--cyan:#7ad7fb;--line:rgba(156,187,205,.19)}
 *{box-sizing:border-box}html,body{height:100%;margin:0;overflow:hidden}body{background:#07111b;touch-action:none}button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,select:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}canvas#view{position:fixed;inset:0;width:100%;height:100%;display:block;outline:none;background:linear-gradient(#354a5a,#121e2b 65%,#121417)}
@@ -74,7 +74,7 @@ body:not(.rainOn) #rainCurtain{display:none}
  #game #prompt{top:46%}
 }
 .photoMode #quickSettings,.photoMode #quickObjective{display:none!important}
-</style><link rel="stylesheet" href="fracture.css?v=3.63.10">
+</style><link rel="stylesheet" href="fracture.css?v=3.63.11">
 </head><body>
 <canvas id="view" aria-label="Environnement 3D de Vesper"></canvas>
 <div id="rainCurtain"></div><div id="game" aria-label="Commandes de la visite 3D"><div id="vignette"></div>
@@ -1890,16 +1890,16 @@ let missionLoading=null,missionMenu=null;
 function resumeMission(){gamePaused=false;keys.clear();firing=false;isAiming=false;combatWorld?.resume();}
 function toggleMissionPause(){if(missionMenu){missionMenu.isOpen?missionMenu.hide():missionMenu.show();}else{gamePaused=!gamePaused;combatWorld?.pause();}}
 async function boot(){try{
- if(!referenceVisit){const {createMissionLoading}=await import('./mission-loading.js?v=3.63.10');missionLoading=createMissionLoading({mission:1,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});missionLoading.set(.08,'Chargement du scénario');}
- showVesperPrologue=(await import('./story-prologue.js?v=3.63.10')).showStoryPrologue;
+ if(!referenceVisit){const {createMissionLoading}=await import('./mission-loading.js?v=3.63.11');missionLoading=createMissionLoading({mission:1,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});missionLoading.set(.08,'Chargement du scénario');}
+ showVesperPrologue=(await import('./story-prologue.js?v=3.63.11')).showStoryPrologue;
  $('bootInfo').textContent='Construction de la mégalopole, bâtiments, détails et navigation…';
  await new Promise(r=>setTimeout(r,80));
  if(referenceVisit)buildScene();const atlas=createAtlas();const materialAtlas=referenceVisit?await v5LoadMaterial():null;
  $('bootInfo').textContent='Initialisation du moteur WebGPU…';
  if(!new URLSearchParams(location.search).has('visit')){
-  const {createPauseMenu}=await import('./fracture-menu.js?v=3.63.10');
+  const {createPauseMenu}=await import('./fracture-menu.js?v=3.63.11');
   missionMenu=createPauseMenu({title:'HISTOIRE / LE DERNIER SIGNAL',canOpen:()=>started,settingsSelectors:['#controlsPanel','#audioToggle'],onPause(){gamePaused=true;combatWorld?.pause();keys.clear();firing=false;isAiming=false;},onResume:resumeMission,onVR:()=>combatWorld?.enterVR(),onHome:async()=>{await combatWorld?.exitVR();location.assign('./index.html');}});missionMenu.setVisible(false);
-  const {createVesperCombat}=await import('./vesper-combat.js?v=3.63.10');missionLoading?.set(.16,'Ressources du secteur chargées');
+  const {createVesperCombat}=await import('./vesper-combat.js?v=3.63.11');missionLoading?.set(.16,'Ressources du secteur chargées');
   let renderFailed=false;
   const fail=error=>{
    console.warn('Vesper / échec du rendu, repli compatible :',error);

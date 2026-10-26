@@ -1,3 +1,4 @@
+import {createWorldShadows} from './world-shadows.js';
 // Pink War AT HOME: the scanned house becomes an abandoned AI laboratory.
 // Spatial data stays inside the session; walking uses native headset tracking.
 import * as THREE from './vendor/three.module.min.js';
@@ -30,6 +31,7 @@ const key=new THREE.DirectionalLight(0xdee9f0,2.1);key.position.set(2,5,3);scene
 const renderer=new THREE.WebGLRenderer({canvas:$('at-home-world'),alpha:true,antialias:true,powerPreference:'high-performance'});
 renderer.setClearColor(0x000000,0);renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.setSize(innerWidth,innerHeight,false);
 renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
+const worldShadows=createWorldShadows(THREE,{scene,renderer,light:key,profile:{headset:true},direction:{x:-12,y:28,z:15}});
 renderer.xr.enabled=true;renderer.xr.setReferenceSpaceType('local-floor');renderer.xr.setFoveation?.(.65);
 const raycaster=new THREE.Raycaster(),head=new THREE.Vector3(),direction=new THREE.Vector3(),orientation=new THREE.Quaternion(),tmp=new THREE.Vector3();
 let boundedSpace=null,zoneRecord=null,playPolygon=[],playAreaSource='',startRequested=false;
@@ -281,7 +283,7 @@ function tick(ms,frame){
   if(mode==='ready'){if(!assets)info(assetError||'CHARGEMENT DU LABORATOIRE');else if(floors().length)info(playAreaSource==='quest-boundary'?'ZONE QUEST PRÊTE : A OU GÂCHETTE DROITE':'SOL SCANNÉ PRÊT : A OU GÂCHETTE DROITE');else if(seconds-startTime>2)info(startRequested?'DÉMARRAGE EN ATTENTE : SCAN GÂCHETTE GAUCHE':'SOL NON DÉTECTÉ : GÂCHETTE GAUCHE POUR SCANNER');}
   ambience?.update(dt,{active:active&&mode==='combat',position:head,moving:true,grounded:true,elevation:game.player.elevation,probes:game.enemies});
   laser.update(game.bullets,dt);updateBoards();
- }renderer.render(scene,camera);frames++;
+ }worldShadows.update(seconds,game.player,{enabled:mode!=='idle',entities:game.enemies,heightAt:e=>room.floorAt({x:e.x,y:e.elevation,z:e.z})??game.player.elevation});renderer.render(scene,camera);frames++;
 }
 async function initiateScan(){
  if(!session||roomCaptureAsked)return;roomCaptureAsked=true;
