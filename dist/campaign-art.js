@@ -12,6 +12,7 @@ import {bevelBox} from './geo.js';
 import {LEVEL1_STORY,createLevel1Story} from './level1-story.js';
 import {installPhotographicSurfaces} from './photographic-surfaces.js';
 import {createM01Dressing} from './m01-dressing.js';
+import {createCampaignCeilings} from './m01-ceilings.js';
 import {createWorkshopArt} from './m01-workshop.js';
 import {createCourtyardArt} from './m01-courtyard.js';
 import {createArchiveTerminalFactory} from './archive-terminals.js';
@@ -96,6 +97,7 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
  const story=createLevel1Story(T,root,maps,{quality});obstacles.push(...story.colliders);
  const rlh=createRlhEnvironment(T,root,maps,{performance:quality==='low',equipment:computers.materials});obstacles.push(...rlh.colliders);
  const courtyard=createCourtyardArt(T,root,maps,{quality});obstacles.push(...courtyard.colliders);
+ const ceilings=createCampaignCeilings(T,root,maps,{quality});
  const workshop=createWorkshopArt(T,root,maps,{quality,equipment:computers.materials});
  for(const beat of LEVEL1_STORY.beats){
   const sign=panel(beat.title,beat.x,beat.id==='occupation'?3.05:2.65,beat.z+.16,2.4,1.25,768,320);sign.paint(beat.lines);
@@ -129,7 +131,7 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
   marker.visible=!!s.objective;if(s.objective){const p=s.objective.position;marker.position.set(p.x,p.y+3.2+Math.sin(time*2)*.05,p.z);marker.rotation.y=time*.5;}
  }
  function setVisible(enabled){root.visible=!!enabled;lastState='';if(enabled)pbr.start();}
- function stats(){return{visible:root.visible,courtyard:courtyard.stats(),workshop:workshop.stats(),rlh:rlh.stats(),computers:computers.stats(),systems:systems.stats(),story:story.stats(),stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:5,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:3,boundary:boundary.stats(),pbr:pbr.stats()};}
- function dispose(){if(disposed)return;disposed=true;pbr.dispose();powerSwitch.dispose();computers.dispose();dressing?.dispose();boundary.dispose();story.dispose();systems.dispose();courtyard.dispose();workshop.dispose();rlh.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
+ function stats(){return{visible:root.visible,courtyard:courtyard.stats(),workshop:workshop.stats(),ceilings:ceilings.stats(),rlh:rlh.stats(),computers:computers.stats(),systems:systems.stats(),story:story.stats(),stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:5,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:3,boundary:boundary.stats(),pbr:pbr.stats()};}
+ function dispose(){if(disposed)return;disposed=true;pbr.dispose();powerSwitch.dispose();computers.dispose();dressing?.dispose();boundary.dispose();story.dispose();systems.dispose();courtyard.dispose();workshop.dispose();ceilings.dispose();rlh.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
  return{root,obstacles,update,setVisible,stats,dispose,updateLift,ready,materials:maps,dressing};
 }

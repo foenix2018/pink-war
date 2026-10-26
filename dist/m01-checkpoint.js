@@ -18,7 +18,7 @@ export function restoreM01Checkpoint(game,s){
  // An old shop save precedes the west encounter: resume at its new approach.
  if(s.version<3&&s.stage==='investigation')s={...s,stage:'workshop'};
  game.workshopReleased=['investigation','sabotage','exit'].includes(s.stage);
- game.enemies=[];game.openingSpawned=8;game.circuitIsolated=true;game.circuitRoute=['isolate-convoy','isolate-service'].includes(s.circuitRoute)?s.circuitRoute:null;game.powerAlarm=s.stage!=='power';game.preArchiveLimit=4;game.courtyardPending=false;game.archiveRead=!['power','archive'].includes(s.stage);game.investigationRead=!!s.investigationRead;game.sabotaged=!!s.sabotaged;
+ game.enemies=[];game.openingActivated=true;game.openingSpawned=8;game.circuitIsolated=true;game.circuitRoute=['isolate-convoy','isolate-service'].includes(s.circuitRoute)?s.circuitRoute:null;game.powerAlarm=s.stage!=='power';game.preArchiveLimit=4;game.courtyardPending=false;game.archiveRead=!['power','archive'].includes(s.stage);game.investigationRead=!!s.investigationRead;game.sabotaged=!!s.sabotaged;
  game.encounter=['power','archive','workshop'].includes(s.stage)?0:['investigation','sabotage'].includes(s.stage)?1:2;game.spawned=s.stage==='power'?0:s.stage==='archive'?4:8;game.toSpawn=0;game.nextSpawnAt=Infinity;game.activePortals=[];
  game.kills=s.kills;game.ownedWeapons=new Set([starterWeaponIndex(game.characterId),0,...(Array.isArray(s.owned)?s.owned:[]).filter(i=>Number.isInteger(i)&&weaponAllowedForCharacter(i,game.characterId))]);
  game.weaponIndex=game.ownedWeapons.has(s.weaponIndex)?s.weaponIndex:(game.ownedWeapons.has(2)?2:game.ownedWeapons.has(1)?1:starterWeaponIndex(game.characterId));game.player.hp=Math.min(100,Math.max(1,Number(s.health)||100));

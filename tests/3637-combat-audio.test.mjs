@@ -12,7 +12,7 @@ function fixture(){
  return {...f,load,requests:()=>requests,recordings:()=>f.nodes.filter(n=>n.kind==='buffer'&&n.buffer?.id!==undefined)};
 }
 test('recorded metal rotates variants, attenuates by distance and never plays on concrete',async()=>{
- const f=fixture();await Promise.all([loadCombatSamples(f.ctx,f.load),loadCombatSamples(f.ctx,f.load)]);assert.equal(f.requests(),5);
+ const f=fixture();await Promise.all([loadCombatSamples(f.ctx,f.load),loadCombatSamples(f.ctx,f.load)]);assert.equal(f.requests(),9);
  for(let i=0;i<3;i++){assert.equal(playLaserImpact(f.ctx,{surface:'robot',distance:0}),true);f.ctx.tick(.5);}
  assert.equal(new Set(f.recordings().map(n=>n.buffer.id)).size,3);
  const count=f.recordings().length;playLaserImpact(f.ctx,{surface:'concrete'});assert.equal(f.recordings().length,count);f.ctx.tick(.5);
@@ -32,11 +32,11 @@ test('a missing optional recording leaves immediate synthesis available and retr
  const f=fixture();let fail=true;
  const load=async url=>url.includes('metal-heavy')&&fail?{ok:false}:f.load(url);
  assert.equal(await loadCombatSamples(f.ctx,load),false);assert.equal(playLaserShot(f.ctx,'m12'),true);
- fail=false;assert.equal(await loadCombatSamples(f.ctx,load),true);assert.equal(f.requests(),5);
+ fail=false;assert.equal(await loadCombatSamples(f.ctx,load),true);assert.equal(f.requests(),9);
  disposeLaserAudio(f.ctx);
 });
-test('bundled effects match the per-file licence and checksum register and stay below 110 KB',()=>{
+test('bundled effects match the per-file licence and checksum register and stay below 220 KB',()=>{
  const manifest=JSON.parse(readFileSync(new URL('../dist/audio/combat/manifest.json',import.meta.url)));let total=0;
  for(const item of manifest){const bytes=readFileSync(new URL('../dist/'+item.file,import.meta.url));assert.equal(bytes.toString('ascii',0,4),'RIFF');assert.equal(createHash('sha256').update(bytes).digest('hex'),item.sha256);assert.equal(item.license,'CC0-1.0');total+=bytes.length;}
- assert.equal(manifest.length,5);assert.ok(total<110000);
+ assert.equal(manifest.length,9);assert.ok(total<220000);
 });

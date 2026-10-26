@@ -13,9 +13,9 @@ const storage=()=>{const data=new Map();return{getItem:k=>data.get(k)||null,setI
 function safe(stage='investigation',hero='ghju'){
  const g=new CampaignLevel1([],()=>.5,hero);g.enemies=[];g.toSpawn=0;g.openingSpawned=8;g.kills=16;g.setStage(stage);return g;
 }
-test('M01 starts with eight patrols and GHJU dual R9; discovery guides to an actual collectible',()=>{
+test('M01 starts calmly with GHJU dual R9; discovery guides to an actual collectible',()=>{
  const g=new CampaignLevel1([],()=>.5);
- assert.equal(g.enemies.length,8);assert.deepEqual([...g.ownedWeapons],[7,0]);assert.equal(g.selectWeapon(2),false);
+ assert.equal(g.enemies.length,0);assert.deepEqual([...g.ownedWeapons],[7,0]);assert.equal(g.selectWeapon(2),false);
  g.offerWeapon(1);const offer=g.weaponOffers[0],guide=g.objectiveTarget();
  assert.equal(guide.kind,'weapon');assert.equal(guide.x,offer.x);assert.equal(guide.z,offer.z);
  Object.assign(g.player,{x:offer.x,z:offer.z,elevation:offer.elevation});assert.equal(g.collectWeapon(),true);

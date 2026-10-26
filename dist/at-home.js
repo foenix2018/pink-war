@@ -6,7 +6,7 @@ import { GAME_VERSION } from './launch-ui.js';
 import { WEAPONS } from './game-logic.js';
 import { RoomGame } from './room-game.js';
 import { classifyRoomSurface, insideRoomPolygon, roomBounds, roomFloorAt, createRoomNavigation } from './room-layout.js';
-import { playLaserShot, loadRealLaserSample, loadCombatSamples, playLaserImpact, playWeaponAction } from './laser-sound.js';
+import { playLaserShot, playEnemyShot, loadRealLaserSample, loadCombatSamples, playLaserImpact, playWeaponAction } from './laser-sound.js';
 import { createSaberSound } from './saber-sound.js';
 import { syncTrackedHands } from './xr-hands.js';
 import { createAmbience } from './ambience.js';
@@ -207,6 +207,7 @@ function processEvents(){
   if(event.type==='weapon-offer')announce(event.name+' / LIVRAISON DISPONIBLE');
   if(event.type==='unlock')announce(event.name+' / ACQUISE');
   if(event.type==='weapon'){assets.setWeapon(event.index,Math.min(10,Math.max(1,game.wave)));feel.reset();scope?.release();cancelFire();}
+  if(event.type==='enemy-shot'){const forward=new THREE.Vector3(0,0,-1).applyQuaternion(orientation);playEnemyShot(audio,{form:event.form,source:event,listener:{x:head.x,z:head.z,elevation:head.y-1.5},yaw:Math.atan2(-forward.x,-forward.z),occluded:game.blocked(event,head)});}
   if(event.type==='shot'){feel.fire(event.weapon,event.power,controllerHandState.offGrip>.5);laser.shot(event);muzzleUntil=game.time+.075;try{playLaserShot(audio,event.weapon,event.power);}catch{}haptic('shot',event.weapon,event.hand);}
   if(event.type==='reload'){haptic('reload');try{playWeaponAction(audio,game.weapon.id,'reload-out');}catch{}}
   if(event.type==='reloaded'){haptic('reloaded');try{playWeaponAction(audio,game.weapon.id,'reload-in');}catch{}}

@@ -3,7 +3,7 @@ import { createScene } from './scene.js?v=3.48';
 import { VRController } from './vr.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
 import { characterForId } from './characters.js';
-import { playLaserShot,loadRealLaserSample,loadCombatSamples,playLaserImpact,setLaserAudioEnabled,disposeLaserAudio,playWeaponAction,setWeaponCharge } from './laser-sound.js';
+import { playLaserShot,playEnemyShot,loadRealLaserSample,loadCombatSamples,playLaserImpact,setLaserAudioEnabled,disposeLaserAudio,playWeaponAction,setWeaponCharge } from './laser-sound.js';
 import { createAmbience } from './ambience.js';
 import { ACTIVE_INSTALLATIONS, BRIDGES, BRIDGE_LANDINGS, BRIDGE_APPROACHES, bridgeSegments } from './world-layout.js';
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
@@ -452,7 +452,7 @@ function handleEvents() {
     if (event.type === 'reloaded') { vr.haptic('reloaded');if(settings.sound)playWeaponAction(audioContext,game.weapon.id,'reload-ready'); }
     if (event.type === 'spawn') world.burst(event.x, event.y??1, event.z, world.palette.violet, 7);
     if (event.type === 'probe-charge') { const d=Math.hypot(event.x-game.player.x,event.z-game.player.z);tone(760,1300,.35,.022/(1+d*.065),'sine'); }
-    if (event.type === 'enemy-shot'&&event.form==='probe') { const d=Math.hypot(event.x-game.player.x,event.z-game.player.z);tone(250,85,.18,.032/(1+d*.065),'sawtooth'); }
+    if(event.type==='enemy-shot'&&settings.sound&&audioContext)playEnemyShot(audioContext,{form:event.form,source:event,listener:game.player,yaw:listenerHeading(),occluded:game.blocked(event,{x:game.player.x,y:game.player.elevation+1.5,z:game.player.z})});
     if (event.type === 'impact') {
       world.impact?.(event);
       if(settings.sound){

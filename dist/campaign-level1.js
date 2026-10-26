@@ -58,7 +58,7 @@ export class CampaignLevel1 extends ArenaGame {
     this.completed = false;
     this.stage = 'approach';
     this.setStage('approach');
-    this.openingSpawned=0;this.ensureOpeningPatrol();
+    this.openingSpawned=0;this.openingActivated=false;
     return this;
   }
 
@@ -111,7 +111,7 @@ export class CampaignLevel1 extends ArenaGame {
       sibling: this.sibling, archive: this.archiveLines,
       objective: target ? { ...target, position: { ...target.position } } : null,
       encounter:this.encounter+1,encounters:ENCOUNTERS.length,spawned:this.spawned+ENCOUNTERS.slice(0,this.encounter).reduce((sum,wave)=>sum+wave.length,0)+(this.openingSpawned||0),total:TOTAL_ENEMIES,opening:this.openingSpawned||0,maxActive:MAX_ACTIVE,
-      workshopReleased:this.workshopReleased,investigationRead:this.investigationRead,sabotaged:this.sabotaged,circuitIsolated:this.circuitIsolated,circuitRoute:this.circuitRoute,powerAlarm:this.powerAlarm,openingRoles:true,
+      workshopReleased:this.workshopReleased,investigationRead:this.investigationRead,sabotaged:this.sabotaged,circuitIsolated:this.circuitIsolated,circuitRoute:this.circuitRoute,powerAlarm:this.powerAlarm,openingRoles:true,openingActivated:this.openingActivated,
       remaining: this.toSpawn + this.enemies.length,
       portal: this.activePortals[0] ? { ...this.activePortals[0] } : null,
       completed: this.completed
@@ -142,6 +142,7 @@ export class CampaignLevel1 extends ArenaGame {
     const objective = this.getInteraction();
     if (!objective) return false;
     if (objective.id.startsWith('isolate-')){
+      this.openingActivated=true;this.ensureOpeningPatrol();
       this.circuitIsolated=true;this.circuitRoute=objective.id;this.emitNoise('switch',30,{x:objective.position.x,y:1.2,z:objective.position.z});this.setStage('power');this.event('circuit-isolated',{...objective.position,route:objective.id});
     }else if (objective.id === 'power'){
       this.powerAlarm=true;this.preArchiveLimit=LEVEL1_MAP.courtyard.powerReinforcements;this.toSpawn=this.preArchiveLimit;this.courtyardPending=true;this.nextSpawnAt=Infinity;
@@ -260,9 +261,17 @@ export class CampaignLevel1 extends ArenaGame {
     return enemy;
   }
 
+  activateOpening(){
+    if(this.openingActivated)return;
+    if(Math.hypot(this.player.x-LEVEL1.start.x,this.player.z-LEVEL1.start.z)<10)return;
+    if(OPENING_SITES.some(p=>Math.hypot(p.x-this.player.x,p.z-this.player.z)<12))return;
+    this.openingActivated=true;
+  }
+
   ensureOpeningPatrol() {
-    // No terminal prerequisites: a sentry is visible through the laboratory door
-    // from the start. Spawn only in real clear geometry and retry if rebuilding.
+    if(!this.openingActivated)return;
+    // Patrols activate only after leaving the calm arrival area. The eight
+    // authored positions remain finite, clear and separate from portal reinforcements.
     const sites=OPENING_SITES;
     for(let i=this.openingSpawned;i<sites.length;i++){
       const site=sites[i];if(!this.portalIsClear(site))break;
@@ -293,7 +302,7 @@ export class CampaignLevel1 extends ArenaGame {
     if (this.state !== 'playing') return;
     // Only scheduling is replaced. Damage, projectile hits, recoil timing,
     // navigation, regeneration, stairs and lifts all remain shared with ArenaGame.
-    if(['approach','power','archive'].includes(this.stage))this.ensureOpeningPatrol();
+    if(['approach','power','archive'].includes(this.stage)){this.activateOpening();this.ensureOpeningPatrol();}
     this.nextWave = Infinity;
     this.spawnTimer = Infinity;
     try { super.step(clamp(dt, 0, .05), input); }

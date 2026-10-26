@@ -9,7 +9,7 @@ import {openingDefenseOrder} from '../dist/m01-defense.js';
 import {MESH_INFO} from '../dist/levels/vesper-01-mesh.js';
 const material=new T.MeshStandardMaterial(),maps=Object.fromEntries(['steel','rust','dark','plaster','amber'].map(n=>[n,material]));
 const details=createCourtyardArt(T,new T.Group(),maps,{labels:false}),story=createLevel1Story(T,new T.Group(),maps),obstacles=[...createLevel1Obstacles(),...details.colliders,...story.colliders];
-const make=()=>{const g=new CampaignLevel1(obstacles,()=>.5);g.invulnerable=1e6;return g;};
+const make=()=>{const g=new CampaignLevel1(obstacles,()=>.5);g.openingActivated=true;g.ensureOpeningPatrol();g.invulnerable=1e6;return g;};
 const advance=(g,t)=>{for(let i=0;i<t/.025;i++)g.step(.025,{})};
 const at=(g,p)=>Object.assign(g.player,{x:p.x,z:p.z+1.5,elevation:0,grounded:true});
 const isolate=g=>{at(g,LEVEL1_MAP.courtyard.controls[0]);assert.ok(g.interact());};
@@ -38,8 +38,8 @@ test('opening posts stay finite, activate by perception and abandon their anchor
  bot.awareness='search';const a=openingDefenseOrder(bot,{...ctx,threat:{x:3,z:22}},false);assert.deepEqual(a.point,{x:3,z:22});assert.equal(a.canFire,false);assert.equal(openingDefenseOrder(bot,ctx,true),null);
  isolate(g);at(g,LEVEL1.power);g.interact();assert.ok(g.enemies.every(e=>e.lastKnownX===LEVEL1.power.x&&e.lastKnownZ===LEVEL1.power.z));
 });
-test('the introductory sight line is occupied and pressure damages a stationary player without increasing enemy health',()=>{
- const g=new CampaignLevel1(obstacles,()=>.5);g.enableArmorShield();const probe=g.enemies[0],start={...g.player};assert.equal(g.blocked({x:start.x,y:1.6,z:start.z},{x:probe.x,y:probe.elevation+.55,z:probe.z}),false);assert.ok(Math.abs(probe.x-start.x)<4&&start.z-probe.z>10);advance(g,18);assert.ok(g.player.shield<60||g.player.hp<100);assert.equal(g.stage,'approach');assert.equal(g.enemies.length,8);
+test('the arrival remains calm without input, then the eight patrol positions activate away from the player',()=>{
+ const g=new CampaignLevel1(obstacles,()=>.5);g.enableArmorShield();advance(g,18);assert.equal(g.enemies.length,0);assert.equal(g.player.hp,100);Object.assign(g.player,{x:-50,z:80});g.step(.025,{});assert.equal(g.enemies.length,8);assert.equal(g.stage,'approach');assert.ok(g.enemies.every(e=>Math.hypot(e.homeX+50,e.homeZ-80)>=12));
 });
 test('early checkpoints retain circuit state, shield and charges, without reintroducing patrols or duplicate reinforcements',()=>{
  for(const stage of ['power','archive']){const g=make();g.enableArmorShield();clear(g);isolate(g);if(stage==='archive'){at(g,LEVEL1.power);g.interact();for(let i=0;i<1000&&g.spawned<4;i++)g.step(.025,{});clear(g);}g.player.shield=31;g.charges=3;const data=new Map(),storage={setItem:(k,v)=>data.set(k,v),getItem:k=>data.get(k)};assert.equal(g.stage,stage);assert.equal(writeM01Checkpoint(g,storage),true);const s=readM01Checkpoint('ghju',storage);assert.equal(s.version,3);const loaded=make();loaded.enableArmorShield();assert.equal(restoreM01Checkpoint(loaded,s),true);assert.equal(loaded.circuitIsolated,true);assert.equal(loaded.circuitRoute,'isolate-convoy');assert.equal(loaded.player.shield,31);assert.equal(loaded.charges,3);assert.equal(loaded.enemies.length,0);loaded.step(.025,{});assert.equal(loaded.enemies.length,0);if(stage==='archive'){assert.equal(loaded.spawned,4);at(loaded,LEVEL1.archive);loaded.interact();advance(loaded,5.1);assert.equal(loaded.toSpawn,4);}}

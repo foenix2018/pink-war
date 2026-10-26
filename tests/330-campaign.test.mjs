@@ -18,14 +18,16 @@ const archive = game => {
   at(game, LEVEL1.archive); assert.equal(game.interact(), true);
 };
 
-test('level 1 starts occupied, then preserves ordered objectives and the portal windup', () => {
+test('level 1 starts calmly, then preserves ordered objectives and the portal windup', () => {
   const game = new CampaignLevel1([], random);
   assert.equal(game.mode, 'campaign');
   assert.equal(game.stage, 'approach');
   assert.equal(game.player.z, LEVEL1.start.z);
   assert.equal(game.getInteraction(), null);
   game.invulnerable=1000;advance(game, 12);
-  assert.equal(game.enemies.filter(e=>e.opening).length, 8);
+  assert.equal(game.enemies.length,0);
+  Object.assign(game.player,{x:-50,z:80});advance(game,.05);
+  assert.equal(game.enemies.filter(e=>e.opening).length,8);
   assert.equal(game.activePortals.length, 0);
   at(game, LEVEL1.archive);
   assert.equal(game.interact(), false, 'the archive has no power yet');

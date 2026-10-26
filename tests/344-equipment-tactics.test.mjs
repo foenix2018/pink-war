@@ -52,7 +52,7 @@ test('synthetic moves into cover, waits, peeks for two shots and returns; hidden
  e.awareness='patrol';assert.equal(tacticalOrder(e,{...args,time:4}),null);assert.equal(e.tactics.cover,null);
 });
 test('the live campaign introduces N-08 and the arena unlocks it without removing existing wave limits',()=>{
- const c=new CampaignLevel1([],()=>.5);assert.ok(c.enemies.some(e=>e.form==='synth'&&e.ranged));assert.equal(c.enemies.length,8);
+ const c=new CampaignLevel1([],()=>.5);assert.equal(c.enemies.length,0);Object.assign(c.player,{x:-50,z:80});c.step(.025,{});assert.ok(c.enemies.some(e=>e.form==='synth'&&e.ranged));assert.equal(c.enemies.length,8);
  const g=new ArenaGame([wall],()=>.5);g.wave=3;g.spawned=1;g.spawnEnemy();assert.equal(g.enemies.at(-1).form,'synth');assert.equal(g.enemies.at(-1).ranged,true);
 });
 

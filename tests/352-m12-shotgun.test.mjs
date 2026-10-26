@@ -21,7 +21,7 @@ test('LYLU retains M12 in story, survival and AT HOME; GHJU starts with dual R9'
   for(const g of [campaign,arena,home]){assert.equal(g.weaponIndex,index);assert.deepEqual([...g.ownedWeapons],hero==='lylu'?[6,0]:[7,0]);assert.equal(g.ammo[index],hero==='lylu'?8:24);}
   arena.reset();assert.equal(arena.weaponIndex,index,'restarting retains the selected hero');
  }
- const campaign=new CampaignLevel1([],()=>.5,'lylu');assert.equal(campaign.enemies.length,8);assert.equal(campaign.campaign.total,32);
+ const campaign=new CampaignLevel1([],()=>.5,'lylu');assert.equal(campaign.enemies.length,0);assert.equal(campaign.campaign.total,32);
  assert.equal(new ShootingRangeGame([],()=>.5,6).weapon.id,'m12');
 });
 test('one M12 trigger press consumes one cartridge for eight independent ballistic pellets, also when aiming vertically',()=>{

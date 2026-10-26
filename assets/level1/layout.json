@@ -84358,7 +84358,7 @@
     "opening": [
       {
         "x": -49,
-        "z": 78,
+        "z": 59,
         "form": "probe",
         "role": "observer",
         "facing": 2.5
@@ -84372,15 +84372,15 @@
         "facing": 2.2
       },
       {
-        "x": -37,
-        "z": 81.7,
+        "x": -22,
+        "z": 77,
         "form": "seer",
         "role": "anchor",
         "facing": 2.0
       },
       {
         "x": -49,
-        "z": 64,
+        "z": 42,
         "form": "scuttler",
         "role": "screen",
         "facing": 2.8

@@ -6,7 +6,7 @@ import {WebGLRenderer} from './vendor/three.module.min.js';
 import {ArenaGame,WEAPONS,clamp,segmentBox,traceEnemyHit} from './game-logic.js';
 import {createPinkWarsInput,createPinkWarsTouch} from './level2-input.js';
 import {createWeaponFeel} from './weapon-feel.js';
-import {loadRealLaserSample,loadCombatSamples,playLaserShot,playWeaponAction,playLaserImpact,setLaserAudioEnabled} from './laser-sound.js';
+import {loadRealLaserSample,loadCombatSamples,playLaserShot,playEnemyShot,playWeaponAction,playLaserImpact,setLaserAudioEnabled} from './laser-sound.js';
 import {aimSensitivity,magnifiedFov,flatSightPose} from './optics.js';
 import {OPTICS} from './weapons.js';
 import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './renderer-policy.js';
@@ -629,6 +629,7 @@ function gameTick(dt){
   audio:()=>enableAudio&&audioCtx?.state==='running'?audioCtx:null,haptic:kind=>xr?.active&&xr.haptic(kind)});
  for(const e of events){
   combatEffects?.event(e);armorFx.handle(e);
+  if(e.type==='enemy-shot'&&enableAudio&&audioCtx)playEnemyShot(audioCtx,{form:e.form,source:e,listener:game.player,yaw,occluded:game.blocked(e,{x:game.player.x,y:game.player.elevation+1.5,z:game.player.z})});
   if(e.type==='shot'){
     xr?.haptic('shot',e.weapon,e.hand);
     weaponFeel.fire(e.weapon||game.weapon.id,e.power||1,aimBlend>.5);
@@ -886,7 +887,7 @@ for(const name of ['pointerup','pointercancel']){
  window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
 }
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
-window.__PINK_M02=Object.freeze({snapshot:()=>({music:{playing:false,source:null},revision:'3.63.9',running,paused,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
+window.__PINK_M02=Object.freeze({snapshot:()=>({music:{playing:false,source:null},revision:'3.63.10',running,paused,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
  backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
  effects:combatEffects?.stats(),armor:game&&{shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt}})});

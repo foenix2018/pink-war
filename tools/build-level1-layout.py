@@ -86,7 +86,8 @@ layout=dict(id='vesper-secours-07',name='Le dernier signal — Quartier des seco
 extend_layout(layout)
 extend_workshop(layout)
 (p/'assets/level1/layout.json').write_text(json.dumps(layout,indent=2))
-js='// Original Pink War map; generated from assets/level1/layout.json.\nexport const LEVEL1_MAP = '+json.dumps(layout,separators=(',',':'))+';\n'
+js="import {M01_ROOF_COLLIDERS} from './m01-ceiling-layout.js';\n"
+js+='// Original Pink War map; generated from assets/level1/layout.json.\nexport const LEVEL1_MAP = '+json.dumps(layout,separators=(',',':'))+';\n'
 js+='''export function level1Surfaces(x,z,time=0){
  const result=[];
  for(const f of LEVEL1_MAP.buildingFloors)if(Math.abs(x-f.x)<=f.hx&&Math.abs(z-f.z)<=f.hz)result.push({height:f.height,id:'l1-room'});
@@ -98,6 +99,6 @@ js+='''export function level1Surfaces(x,z,time=0){
 export const level1Traversal={surfaces:level1Surfaces,lifts:LEVEL1_MAP.lifts,routes:LEVEL1_MAP.stairs,
  routeForSurface:id=>['l1-relay','l1-bridge','l1-lift','l1-stairs'].includes(id)?'l1-stairs':null,
  height:(x,z,time=0,max=Infinity)=>Math.max(0,...level1Surfaces(x,z,time).map(s=>s.height).filter(h=>h<=max+.001))};
-export const createLevel1Obstacles=()=>LEVEL1_MAP.obstacles.map(b=>({...b}));
+export const createLevel1Obstacles=()=>[...LEVEL1_MAP.obstacles,...M01_ROOF_COLLIDERS].map(b=>({...b}));
 '''
 (p/'dist/level1-layout.js').write_text(js)

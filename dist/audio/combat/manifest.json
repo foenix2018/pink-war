@@ -63,5 +63,57 @@
     "bytes": 44878,
     "conversion": "Mono PCM 16-bit 32 kHz; high-pass 85 Hz; measured peak normalized to -5 dBFS; trimmed tail, 45 ms fade",
     "seconds": 0.7
+  },
+  {
+    "id": "pistol-shot",
+    "file": "audio/combat/pistol-shot.wav",
+    "author": "Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney",
+    "license": "CC0-1.0",
+    "source": "https://opengameart.org/content/the-free-firearm-sound-library",
+    "download": "https://raw.githubusercontent.com/DeathByDenim/openspades-free-pak/main/Sounds/Weapons/Rifle/Fire1.opus",
+    "source_sha256": "12509a71c836375723240eb93aecc965b48883cb3041f0b95b20f6969c6872ae",
+    "sha256": "75ca51323878868d9d9c3f9496a3f4da8e7d8aefdf4a42dabcffecde3802531d",
+    "bytes": 20524,
+    "conversion": "Short mono PCM 16-bit 32 kHz; high-pass 95 Hz; normalized -4 dBFS peak, 45 ms tail fade. Rifle transients adapted to fictional weapons.",
+    "seconds": 0.32
+  },
+  {
+    "id": "automatic-shot",
+    "file": "audio/combat/automatic-shot.wav",
+    "author": "Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney",
+    "license": "CC0-1.0",
+    "source": "https://opengameart.org/content/the-free-firearm-sound-library",
+    "download": "https://raw.githubusercontent.com/DeathByDenim/openspades-free-pak/main/Sounds/Weapons/SMG/FireStereo.opus",
+    "source_sha256": "b60c48633c51b0d9e662f09c56493700ea2d8a0e84c4486d338190d251968555",
+    "sha256": "75bbdac39ba17d4073688e50a4bc2f05d286638779ed40a21eb979b7607f435c",
+    "bytes": 10284,
+    "conversion": "Short mono PCM 16-bit 32 kHz; high-pass 95 Hz; normalized -4 dBFS peak, 45 ms tail fade. Rifle transients adapted to fictional weapons.",
+    "seconds": 0.16
+  },
+  {
+    "id": "sniper-shot",
+    "file": "audio/combat/sniper-shot.wav",
+    "author": "Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney",
+    "license": "CC0-1.0",
+    "source": "https://opengameart.org/content/the-free-firearm-sound-library",
+    "download": "https://raw.githubusercontent.com/DeathByDenim/openspades-free-pak/main/Sounds/Weapons/Rifle/FireLocal.opus",
+    "source_sha256": "3f7dbe48bf0a44dff112a1cdca4947e09f45d44a6053ee36663e47b3bb4304bf",
+    "sha256": "ea50fedc25fb97a6b0ec2f42415f4ee83ae2f0b9c0a7ee6e2d9945303dcb1740",
+    "bytes": 25228,
+    "conversion": "Short mono PCM 16-bit 32 kHz; high-pass 95 Hz; normalized -4 dBFS peak, 45 ms tail fade. Rifle transients adapted to fictional weapons.",
+    "seconds": 0.3935
+  },
+  {
+    "id": "enemy-shot",
+    "file": "audio/combat/enemy-shot.wav",
+    "author": "Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney",
+    "license": "CC0-1.0",
+    "source": "https://opengameart.org/content/the-free-firearm-sound-library",
+    "download": "https://raw.githubusercontent.com/DeathByDenim/openspades-free-pak/main/Sounds/Weapons/Rifle/Fire2.opus",
+    "source_sha256": "e3656d93b642249956c58e11a6427c729e62206597f22d02b110835db7abb532",
+    "sha256": "7278fbed859860a1d7ac7ed51877cff87dd7bbac7bc1d247a285b7c162d5c51c",
+    "bytes": 24364,
+    "conversion": "Short mono PCM 16-bit 32 kHz; high-pass 95 Hz; normalized -4 dBFS peak, 45 ms tail fade. Rifle transients adapted to fictional weapons.",
+    "seconds": 0.38
   }
 ]

@@ -10,11 +10,11 @@ export const LASER_PROFILES=Object.freeze({
   nova:Object.freeze({pitch:930,end:62,duration:.51,body:100,thump:37,noise:.58,volume:.165,decay:.56,mechanism:640,weight:1.8})
 });
 
-// Five independent Kenney CC0 recordings; mono PCM WAV also decodes on iPhone.
+// Independently credited CC0 recordings; mono PCM WAV also decodes on iPhone.
 // Synthesized layers retain mechanical transients, bass and an offline fallback.
 const liveSamples=new WeakMap(),decodedSamples=new WeakMap();
 export const COMBAT_SAMPLES=Object.freeze(Object.fromEntries(
-  ['metal-light','metal-medium','metal-heavy','rifle-mechanism','shotgun-body'].map(id=>[id,`audio/combat/${id}.wav`])
+  ['metal-light','metal-medium','metal-heavy','rifle-mechanism','shotgun-body','pistol-shot','automatic-shot','sniper-shot','enemy-shot'].map(id=>[id,`audio/combat/${id}.wav`])
 ));
 const combatLoads=new WeakMap(),combatBuffers=new WeakMap();
 export async function loadCombatSamples(ctx,load=globalThis.fetch){
@@ -130,6 +130,8 @@ export function playLaserShot(ctx,weapon='r9',power=1){
   if(!ctx||ctx.state!=='running')return false;
   const space=spaceFor(ctx);if(!space.enabled)return false;
   stopCharge(space,ctx.currentTime);
+  const shotSample={r9:'pistol-shot',bloom:'automatic-shot',lance:'sniper-shot',thorn:'shotgun-body',nova:'sniper-shot'}[weapon];
+  const physical=shotSample?recorded(ctx,space,shotSample,space.master,{r9:.55,bloom:.43,lance:.64,thorn:.50,nova:.55}[weapon],{rate:weapon==='thorn'?.76:weapon==='nova'?.70:1,limit:weapon==='bloom'?.14:.72}):combatBuffers.get(ctx)?.has('shotgun-body');
   if(weapon==='m12'){
     recorded(ctx,space,'shotgun-body',space.master,.62,{limit:.65});
     recorded(ctx,space,'rifle-mechanism',space.master,.20,{at:ctx.currentTime+.24,rate:.92});
@@ -143,7 +145,7 @@ export function playLaserShot(ctx,weapon='r9',power=1){
     const rates={r9:1,bloom:1.08,lance:1.15,thorn:.9,nova:.8};
     sample.playbackRate.value=(rates[weapon]||1)*(1+.015*Math.sin(ctx.currentTime*97));
     const peak={r9:.32,bloom:.23,lance:.34,thorn:.37,nova:.4}[weapon]||.3;
-    gain.gain.value=peak*Math.max(.3,Math.min(1,Number(power)||1));
+    gain.gain.value=peak*(physical?.18:1)*Math.max(.3,Math.min(1,Number(power)||1));
     compressor.threshold.value=-13;compressor.ratio.value=2.7;
     sample.connect(gain);gain.connect(compressor);compressor.connect(space.master);
     if(space.reflections)compressor.connect(space.reflections);
@@ -158,7 +160,7 @@ export function playLaserShot(ctx,weapon='r9',power=1){
   const strength=Math.max(.25,Math.min(1,Number(power)||1));
   const t=ctx.currentTime+.003;
   const output=ctx.createGain(),filter=ctx.createBiquadFilter(),compress=ctx.createDynamicsCompressor();
-  output.gain.value=real?.32:.65;
+  output.gain.value=physical?.12:real?.32:.65;
   filter.type='lowpass';filter.frequency.setValueAtTime(9000,t);
   filter.frequency.exponentialRampToValueAtTime(1350,t+p.decay);
   compress.threshold.value=-18;compress.knee.value=12;compress.ratio.value=3;
@@ -198,6 +200,28 @@ export function playLaserShot(ctx,weapon='r9',power=1){
   cleanup.connect(silent);silent.connect(output);cleanup.start(stop);cleanup.stop(stop+.01);
   remember(space,cleanup,[cleanup,silent,tail,output,filter,compress]);
   return true;
+}
+
+
+// Robot emitters use a recorded transient with a restrained energy layer.
+// Calls are driven by the actual enemy-shot event, including shots that miss.
+export function playEnemyShot(ctx,{form='stalker',source={},listener={},yaw=0,occluded=false}={}){
+ if(!ctx||ctx.state!=='running')return false;
+ const space=spaceFor(ctx);if(!space.enabled||space.voices.size>=80)return false;
+ const dx=(source.x||0)-(listener.x||0),dz=(source.z||0)-(listener.z||0),dy=(source.y||1.4)-(listener.elevation||0)-1.5;
+ const distance=Math.hypot(dx,dz,dy);if(distance>100)return false;
+ const now=ctx.currentTime;if(now-(space.enemyShotAt??-1)<.035)return false;space.enemyShotAt=now;
+ const heavy=['brute','bulwark','listener'].includes(form),probe=form==='probe';
+ const gain=ctx.createGain(),filter=ctx.createBiquadFilter(),pan=ctx.createStereoPanner?.();
+ gain.gain.value=(heavy?.65:.48)/(1+distance*.085)*(occluded?.22:1);
+ filter.type='lowpass';filter.frequency.value=occluded?780:Math.max(1500,9600-distance*85);filter.Q.value=.5;
+ filter.connect(gain);gain.connect(space.master);
+ if(pan){pan.pan.value=Math.max(-.9,Math.min(.9,(dx*Math.cos(yaw)-dz*Math.sin(yaw))/Math.max(1,distance)));pan.connect(filter);}
+ const output=pan||filter;
+ const real=recorded(ctx,space,heavy?'sniper-shot':'enemy-shot',output,1,{rate:heavy?.80:probe?1.35:1,limit:heavy?.58:.32});
+ oscillator(ctx,output,now,'triangle',probe?1350:heavy?310:650,probe?360:heavy?92:180,probe?.15:.11,real?.018:.12,space);
+ const end=ctx.createOscillator(),silent=ctx.createGain();silent.gain.value=0;end.connect(silent);silent.connect(output);end.start(now+.73);end.stop(now+.74);
+ remember(space,end,[end,silent,...(pan?[pan]:[]),filter,gain]);return true;
 }
 
 // Contact sound follows the material hit, at the actual impact distance. Robots spark,
