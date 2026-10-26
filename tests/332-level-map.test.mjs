@@ -49,9 +49,10 @@ test('the map supports all three encounters with real bullets and cover intact',
    g.shoot(origin,{x:e.x-origin.x,y:y-origin.y,z:e.z-origin.z});
   }g.step(.05);
  }assert.ok(n<6000,`encounter ${stage} can finish`);}
- defeat('combat');assert.equal(g.stage,'investigation');
+ defeat('combat');assert.equal(g.stage,'workshop');
+ Object.assign(g.player,{x:LEVEL1.workshop.x,z:LEVEL1.workshop.z+1.4,elevation:0});assert.equal(g.interact(),true);defeat('combat2');assert.equal(g.stage,'investigation');
  Object.assign(g.player,{x:LEVEL1.investigation.x,z:LEVEL1.investigation.z+1.4,elevation:0});assert.equal(g.interact(),true);
- Object.assign(g.player,{x:18,z:6,elevation:0});step(g,.1);defeat('combat2');assert.equal(g.stage,'sabotage');
+ Object.assign(g.player,{x:18,z:6,elevation:0});step(g,.1);assert.equal(g.stage,'sabotage');
  Object.assign(g.player,{x:5,z:-6.5,elevation:0});assert.equal(g.interact(),true);defeat('combat3');assert.equal(g.kills,32);
  Object.assign(g.player,{x:18,z:-17,elevation:0});walk(g,18,-39);walk(g,18,-43);assert.equal(g.interact(),true);assert.equal(g.state,'won');
 });

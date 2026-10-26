@@ -155,11 +155,12 @@ test('all 32 enemies are defeated with real R9 projectiles across the longer fin
     }
     assert.ok(attempts<12000,`${stage} can be completed with physical bullets`);
   }
-  defeat('combat');assert.equal(game.kills,16);assert.equal(game.stage,'investigation');
+  defeat('combat');assert.equal(game.kills,16);assert.equal(game.stage,'workshop');
+  at(game,LEVEL1.workshop);assert.equal(game.interact(),true);assert.equal(game.workshopReleased,true);
+  defeat('combat2');assert.equal(game.kills,24);assert.equal(game.stage,'investigation');
   assert.ok(game.weaponOffers.some(o=>o.index===1));
   at(game,LEVEL1.investigation);assert.equal(game.interact(),true);assert.equal(game.investigationRead,true);
-  at(game,LEVEL1.junction,0);advance(game,.1);assert.equal(game.stage,'combat2');
-  defeat('combat2');assert.equal(game.kills,24);assert.equal(game.stage,'sabotage');
+  at(game,LEVEL1.junction,0);advance(game,.1);assert.equal(game.stage,'sabotage');
   assert.ok(game.weaponOffers.some(o=>o.index===2));
   at(game,LEVEL1.sabotage);assert.equal(game.interact(),true);assert.equal(game.sabotaged,true);
   defeat('combat3');assert.equal(game.kills,32);assert.equal(game.stage,'exit');

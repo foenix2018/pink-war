@@ -11265,47 +11265,8 @@
       "z": 18.299999999999997,
       "hx": 0.15,
       "hz": 1.7,
-      "y": 0.0,
-      "height": 1.1,
-      "surface": "concrete",
-      "campaign": true,
-      "buildingPart": true,
-      "walkableSurface": false,
-      "buildingSlab": false
-    },
-    {
-      "x": -33.0,
-      "z": 18.299999999999997,
-      "hx": 0.15,
-      "hz": 1.7,
       "y": 2.9,
       "height": 0.7,
-      "surface": "concrete",
-      "campaign": true,
-      "buildingPart": true,
-      "walkableSurface": false,
-      "buildingSlab": false
-    },
-    {
-      "x": -33.0,
-      "z": 19.849999999999998,
-      "hx": 0.2,
-      "hz": 0.15,
-      "y": 0.55,
-      "height": 2.6,
-      "surface": "concrete",
-      "campaign": true,
-      "buildingPart": true,
-      "walkableSurface": false,
-      "buildingSlab": false
-    },
-    {
-      "x": -33.0,
-      "z": 21.7,
-      "hx": 0.15,
-      "hz": 1.7,
-      "y": 0.0,
-      "height": 1.1,
       "surface": "concrete",
       "campaign": true,
       "buildingPart": true,
@@ -42130,7 +42091,332 @@
       "campaign": true
     },
     {
+      "x": -67,
+      "z": 39,
+      "y": 0.0,
+      "hx": 2.0,
+      "hz": 0.175,
+      "height": 3.7,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "workshop-south-wall",
+      "cover": false
+    },
+    {
+      "x": -48,
+      "z": 39,
+      "y": 0.0,
+      "hx": 10.0,
+      "hz": 0.175,
+      "height": 3.7,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "workshop-south-wall",
+      "cover": false
+    },
+    {
+      "x": -58,
+      "z": 11,
+      "y": 0.0,
+      "hx": 11.0,
+      "hz": 0.175,
+      "height": 3.7,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "workshop-north-wall",
+      "cover": false
+    },
+    {
+      "x": -39,
+      "z": 11,
+      "y": 0.0,
+      "hx": 1.0,
+      "hz": 0.175,
+      "height": 3.7,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "workshop-north-wall",
+      "cover": false
+    },
+    {
+      "x": -69,
+      "z": 25,
+      "y": 0.0,
+      "hx": 0.175,
+      "hz": 14.0,
+      "height": 1.4,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "workshop-west-sill",
+      "cover": false
+    },
+    {
+      "x": -69,
+      "z": 25,
+      "y": 3.2,
+      "hx": 0.175,
+      "hz": 14.0,
+      "height": 0.5,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "workshop-west-lintel",
+      "cover": false
+    },
+    {
+      "x": -69,
+      "z": 12,
+      "y": 1.4,
+      "hx": 0.175,
+      "hz": 1.0,
+      "height": 1.8,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "workshop-west-pier",
+      "cover": false
+    },
+    {
+      "x": -69,
+      "z": 20,
+      "y": 1.4,
+      "hx": 0.175,
+      "hz": 1.0,
+      "height": 1.8,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "workshop-west-pier",
+      "cover": false
+    },
+    {
+      "x": -69,
+      "z": 28,
+      "y": 1.4,
+      "hx": 0.175,
+      "hz": 1.0,
+      "height": 1.8,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "workshop-west-pier",
+      "cover": false
+    },
+    {
+      "x": -69,
+      "z": 38,
+      "y": 1.4,
+      "hx": 0.175,
+      "hz": 1.0,
+      "height": 1.8,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "workshop-west-pier",
+      "cover": false
+    },
+    {
+      "x": -38,
+      "z": 16,
+      "y": 0.0,
+      "hx": 0.175,
+      "hz": 5.0,
+      "height": 3.7,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "workshop-east-wall",
+      "cover": false
+    },
+    {
+      "x": -38,
+      "z": 35,
+      "y": 0.0,
+      "hx": 0.175,
+      "hz": 4.0,
+      "height": 3.7,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "workshop-east-wall",
+      "cover": false
+    },
+    {
+      "x": -54,
+      "z": 29,
+      "y": 0.0,
+      "hx": 0.15,
+      "hz": 6.0,
+      "height": 2.7,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "workshop-partition",
+      "cover": false
+    },
+    {
+      "x": -47,
+      "z": 21,
+      "y": 0.0,
+      "hx": 5.0,
+      "hz": 0.15,
+      "height": 2.7,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "workshop-screen",
+      "cover": false
+    },
+    {
+      "x": -66,
+      "z": 14,
+      "y": 0.0,
+      "hx": 0.13,
+      "hz": 0.13,
+      "height": 3.7,
+      "surface": "metal",
+      "campaign": true,
+      "courtyardPart": "workshop-column",
+      "cover": false
+    },
+    {
+      "x": -66,
+      "z": 36,
+      "y": 0.0,
+      "hx": 0.13,
+      "hz": 0.13,
+      "height": 3.7,
+      "surface": "metal",
+      "campaign": true,
+      "courtyardPart": "workshop-column",
+      "cover": false
+    },
+    {
+      "x": -40,
+      "z": 14,
+      "y": 0.0,
+      "hx": 0.13,
+      "hz": 0.13,
+      "height": 3.7,
+      "surface": "metal",
+      "campaign": true,
+      "courtyardPart": "workshop-column",
+      "cover": false
+    },
+    {
+      "x": -40,
+      "z": 36,
+      "y": 0.0,
+      "hx": 0.13,
+      "hz": 0.13,
+      "height": 3.7,
+      "surface": "metal",
+      "campaign": true,
+      "courtyardPart": "workshop-column",
+      "cover": false
+    },
+    {
       "x": -62,
+      "z": 25,
+      "y": 3.6999999999999997,
+      "hx": 7.0,
+      "hz": 14.0,
+      "height": 0.16,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "workshop-roof-west",
+      "cover": false
+    },
+    {
+      "x": -46,
+      "z": 15,
+      "y": 3.6999999999999997,
+      "hx": 8.0,
+      "hz": 4.0,
+      "height": 0.16,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "workshop-roof-north",
+      "cover": false
+    },
+    {
+      "x": -62,
+      "z": 26,
+      "y": 0.0,
+      "hx": 1.6,
+      "hz": 0.65,
+      "height": 1.2,
+      "surface": "metal",
+      "campaign": true,
+      "courtyardPart": "workshop-lathe",
+      "cover": true
+    },
+    {
+      "x": -44,
+      "z": 16,
+      "y": 0.0,
+      "hx": 2.0,
+      "hz": 0.5,
+      "height": 1.12,
+      "surface": "metal",
+      "campaign": true,
+      "courtyardPart": "workshop-bench",
+      "cover": true
+    },
+    {
+      "x": -51,
+      "z": 34,
+      "y": 0.0,
+      "hx": 0.8,
+      "hz": 1.5,
+      "height": 1.8,
+      "surface": "metal",
+      "campaign": true,
+      "courtyardPart": "workshop-rack",
+      "cover": true
+    },
+    {
+      "x": -35.4,
+      "z": 31,
+      "y": 0.0,
+      "hx": 0.6,
+      "hz": 2.0,
+      "height": 1.35,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "yard-cover-south",
+      "cover": true
+    },
+    {
+      "x": -42,
+      "z": 6,
+      "y": 0.0,
+      "hx": 2.0,
+      "hz": 0.5,
+      "height": 1.35,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "yard-cover-north",
+      "cover": true
+    },
+    {
+      "x": -64,
+      "z": 6,
+      "y": 0.0,
+      "hx": 2.5,
+      "hz": 0.6,
+      "height": 1.45,
+      "surface": "concrete",
+      "campaign": true,
+      "courtyardPart": "yard-wall-west",
+      "cover": true
+    },
+    {
+      "x": -63,
+      "z": 15.45,
+      "y": 0.0,
+      "hx": 0.75,
+      "hz": 0.3,
+      "height": 2,
+      "surface": "metal",
+      "campaign": true,
+      "courtyardPart": "workshop-electrical-cabinet",
+      "cover": false,
+      "campaignTerminal": "workshop"
+    },
+    {
+      "x": -78,
       "z": 18,
       "hx": 0.07,
       "hz": 80,
@@ -42152,9 +42438,9 @@
       "campaign": true
     },
     {
-      "x": -2,
+      "x": -10,
       "z": -62,
-      "hx": 60,
+      "hx": 68,
       "hz": 0.07,
       "y": 0,
       "height": 1.05,
@@ -42163,9 +42449,9 @@
       "campaign": true
     },
     {
-      "x": -2,
+      "x": -10,
       "z": 98,
-      "hx": 60,
+      "hx": 68,
       "hz": 0.07,
       "y": 0,
       "height": 1.05,
@@ -53525,50 +53811,10 @@
     },
     {
       "x": -33.0,
-      "y": 0.55,
-      "z": 18.299999999999997,
-      "w": 0.3,
-      "h": 1.1,
-      "d": 3.4,
-      "mat": "brick"
-    },
-    {
-      "x": -33.0,
       "y": 3.25,
       "z": 18.299999999999997,
       "w": 0.3,
       "h": 0.7,
-      "d": 3.4,
-      "mat": "brick"
-    },
-    {
-      "x": -33.0,
-      "y": 1.85,
-      "z": 19.849999999999998,
-      "w": 0.4,
-      "h": 2.6,
-      "d": 0.3,
-      "mat": "concrete"
-    },
-    {
-      "x": -33.0,
-      "y": 2.03,
-      "z": 18.299999999999997,
-      "w": 0.055,
-      "h": 1.7,
-      "d": 2.9,
-      "mat": "glass",
-      "window": true,
-      "broken": false,
-      "axis": "z",
-      "side": -1
-    },
-    {
-      "x": -33.0,
-      "y": 0.55,
-      "z": 21.7,
-      "w": 0.3,
-      "h": 1.1,
       "d": 3.4,
       "mat": "brick"
     },
@@ -53589,19 +53835,6 @@
       "h": 2.6,
       "d": 0.3,
       "mat": "concrete"
-    },
-    {
-      "x": -33.0,
-      "y": 2.03,
-      "z": 21.7,
-      "w": 0.055,
-      "h": 1.7,
-      "d": 2.9,
-      "mat": "glass",
-      "window": true,
-      "broken": true,
-      "axis": "z",
-      "side": -1
     },
     {
       "x": -33.0,
@@ -83425,7 +83658,7 @@
     ]
   ],
   "bounds": {
-    "minX": -62,
+    "minX": -78,
     "maxX": 58,
     "minZ": -62,
     "maxZ": 98
@@ -83706,6 +83939,303 @@
       "h": 1.72,
       "d": 0.48,
       "mat": "steel"
+    },
+    {
+      "id": "workshop-south-wall",
+      "x": -67,
+      "y": 1.85,
+      "z": 39,
+      "w": 4,
+      "h": 3.7,
+      "d": 0.35,
+      "mat": "brick",
+      "cover": false
+    },
+    {
+      "id": "workshop-south-wall",
+      "x": -48,
+      "y": 1.85,
+      "z": 39,
+      "w": 20,
+      "h": 3.7,
+      "d": 0.35,
+      "mat": "brick",
+      "cover": false
+    },
+    {
+      "id": "workshop-north-wall",
+      "x": -58,
+      "y": 1.85,
+      "z": 11,
+      "w": 22,
+      "h": 3.7,
+      "d": 0.35,
+      "mat": "brick",
+      "cover": false
+    },
+    {
+      "id": "workshop-north-wall",
+      "x": -39,
+      "y": 1.85,
+      "z": 11,
+      "w": 2,
+      "h": 3.7,
+      "d": 0.35,
+      "mat": "brick",
+      "cover": false
+    },
+    {
+      "id": "workshop-west-sill",
+      "x": -69,
+      "y": 0.7,
+      "z": 25,
+      "w": 0.35,
+      "h": 1.4,
+      "d": 28,
+      "mat": "brick",
+      "cover": false
+    },
+    {
+      "id": "workshop-west-lintel",
+      "x": -69,
+      "y": 3.45,
+      "z": 25,
+      "w": 0.35,
+      "h": 0.5,
+      "d": 28,
+      "mat": "brick",
+      "cover": false
+    },
+    {
+      "id": "workshop-west-pier",
+      "x": -69,
+      "y": 2.3,
+      "z": 12,
+      "w": 0.35,
+      "h": 1.8,
+      "d": 2,
+      "mat": "brick",
+      "cover": false
+    },
+    {
+      "id": "workshop-west-pier",
+      "x": -69,
+      "y": 2.3,
+      "z": 20,
+      "w": 0.35,
+      "h": 1.8,
+      "d": 2,
+      "mat": "brick",
+      "cover": false
+    },
+    {
+      "id": "workshop-west-pier",
+      "x": -69,
+      "y": 2.3,
+      "z": 28,
+      "w": 0.35,
+      "h": 1.8,
+      "d": 2,
+      "mat": "brick",
+      "cover": false
+    },
+    {
+      "id": "workshop-west-pier",
+      "x": -69,
+      "y": 2.3,
+      "z": 38,
+      "w": 0.35,
+      "h": 1.8,
+      "d": 2,
+      "mat": "brick",
+      "cover": false
+    },
+    {
+      "id": "workshop-east-wall",
+      "x": -38,
+      "y": 1.85,
+      "z": 16,
+      "w": 0.35,
+      "h": 3.7,
+      "d": 10,
+      "mat": "brick",
+      "cover": false
+    },
+    {
+      "id": "workshop-east-wall",
+      "x": -38,
+      "y": 1.85,
+      "z": 35,
+      "w": 0.35,
+      "h": 3.7,
+      "d": 8,
+      "mat": "brick",
+      "cover": false
+    },
+    {
+      "id": "workshop-partition",
+      "x": -54,
+      "y": 1.35,
+      "z": 29,
+      "w": 0.3,
+      "h": 2.7,
+      "d": 12,
+      "mat": "plaster",
+      "cover": false
+    },
+    {
+      "id": "workshop-screen",
+      "x": -47,
+      "y": 1.35,
+      "z": 21,
+      "w": 10,
+      "h": 2.7,
+      "d": 0.3,
+      "mat": "plaster",
+      "cover": false
+    },
+    {
+      "id": "workshop-column",
+      "x": -66,
+      "y": 1.85,
+      "z": 14,
+      "w": 0.26,
+      "h": 3.7,
+      "d": 0.26,
+      "mat": "steel",
+      "cover": false
+    },
+    {
+      "id": "workshop-column",
+      "x": -66,
+      "y": 1.85,
+      "z": 36,
+      "w": 0.26,
+      "h": 3.7,
+      "d": 0.26,
+      "mat": "steel",
+      "cover": false
+    },
+    {
+      "id": "workshop-column",
+      "x": -40,
+      "y": 1.85,
+      "z": 14,
+      "w": 0.26,
+      "h": 3.7,
+      "d": 0.26,
+      "mat": "steel",
+      "cover": false
+    },
+    {
+      "id": "workshop-column",
+      "x": -40,
+      "y": 1.85,
+      "z": 36,
+      "w": 0.26,
+      "h": 3.7,
+      "d": 0.26,
+      "mat": "steel",
+      "cover": false
+    },
+    {
+      "id": "workshop-roof-west",
+      "x": -62,
+      "y": 3.78,
+      "z": 25,
+      "w": 14,
+      "h": 0.16,
+      "d": 28,
+      "mat": "concrete",
+      "cover": false
+    },
+    {
+      "id": "workshop-roof-north",
+      "x": -46,
+      "y": 3.78,
+      "z": 15,
+      "w": 16,
+      "h": 0.16,
+      "d": 8,
+      "mat": "concrete",
+      "cover": false
+    },
+    {
+      "id": "workshop-lathe",
+      "x": -62,
+      "y": 0.6,
+      "z": 26,
+      "w": 3.2,
+      "h": 1.2,
+      "d": 1.3,
+      "mat": "steel",
+      "cover": true
+    },
+    {
+      "id": "workshop-bench",
+      "x": -44,
+      "y": 0.56,
+      "z": 16,
+      "w": 4,
+      "h": 1.12,
+      "d": 1,
+      "mat": "rust",
+      "cover": true
+    },
+    {
+      "id": "workshop-rack",
+      "x": -51,
+      "y": 0.9,
+      "z": 34,
+      "w": 1.6,
+      "h": 1.8,
+      "d": 3,
+      "mat": "steel",
+      "cover": true
+    },
+    {
+      "id": "yard-cover-south",
+      "x": -35.4,
+      "y": 0.675,
+      "z": 31,
+      "w": 1.2,
+      "h": 1.35,
+      "d": 4,
+      "mat": "concrete",
+      "cover": true
+    },
+    {
+      "id": "yard-cover-north",
+      "x": -42,
+      "y": 0.675,
+      "z": 6,
+      "w": 4,
+      "h": 1.35,
+      "d": 1,
+      "mat": "concrete",
+      "cover": true
+    },
+    {
+      "id": "yard-wall-west",
+      "x": -64,
+      "y": 0.725,
+      "z": 6,
+      "w": 5,
+      "h": 1.45,
+      "d": 1.2,
+      "mat": "concrete",
+      "cover": true
+    },
+    {
+      "id": "workshop-electrical-cabinet",
+      "x": -63,
+      "y": 1,
+      "z": 15.45,
+      "w": 1.5,
+      "h": 2,
+      "d": 0.6,
+      "mat": "steel",
+      "cover": false
     }
   ],
   "courtyard": {
@@ -83896,5 +84426,183 @@
       ]
     ],
     "powerReinforcements": 4
+  },
+  "workshop": {
+    "revision": "3.63.9",
+    "control": {
+      "id": "workshop",
+      "x": -63,
+      "z": 16,
+      "y": 0,
+      "label": "R\u00c9TABLIR LA LIAISON LOCALE"
+    },
+    "portals": [
+      [
+        -74,
+        27
+      ],
+      [
+        -60,
+        5
+      ],
+      [
+        -42,
+        44
+      ]
+    ],
+    "approaches": [
+      {
+        "id": "repair",
+        "name": "Atelier des r\u00e9parateurs",
+        "points": [
+          [
+            0,
+            47
+          ],
+          [
+            -12,
+            46
+          ],
+          [
+            -36,
+            43
+          ],
+          [
+            -62,
+            43
+          ],
+          [
+            -62,
+            34
+          ],
+          [
+            -58,
+            34
+          ],
+          [
+            -58,
+            20
+          ],
+          [
+            -63,
+            20
+          ],
+          [
+            -63,
+            17.5
+          ]
+        ]
+      },
+      {
+        "id": "yard",
+        "name": "Cour de livraison",
+        "points": [
+          [
+            0,
+            47
+          ],
+          [
+            -12,
+            46
+          ],
+          [
+            -35,
+            43
+          ],
+          [
+            -34,
+            36
+          ],
+          [
+            -34,
+            28
+          ],
+          [
+            -41,
+            28
+          ],
+          [
+            -50,
+            25
+          ],
+          [
+            -53,
+            25
+          ],
+          [
+            -53,
+            19
+          ],
+          [
+            -58,
+            19
+          ],
+          [
+            -63,
+            17.5
+          ]
+        ]
+      }
+    ],
+    "toJournal": [
+      [
+        -63,
+        17.5
+      ],
+      [
+        -58,
+        19
+      ],
+      [
+        -53,
+        19
+      ],
+      [
+        -53,
+        25
+      ],
+      [
+        -50,
+        28
+      ],
+      [
+        -41,
+        28
+      ],
+      [
+        -34,
+        28
+      ],
+      [
+        -34,
+        20
+      ],
+      [
+        -28,
+        20
+      ],
+      [
+        -21,
+        21.5
+      ]
+    ],
+    "coverPoints": [
+      [
+        -66,
+        31
+      ],
+      [
+        -58,
+        24
+      ],
+      [
+        -44,
+        29
+      ],
+      [
+        -35,
+        17
+      ]
+    ]
   }
 }

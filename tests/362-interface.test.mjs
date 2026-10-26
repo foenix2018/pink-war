@@ -41,10 +41,10 @@ test('the lobby is hidden during a session despite the Fracture id selector, and
   assert.ok(!html.includes('PROTOTYPE JOUABLE <b>V.3.48'),'no stale build number in the lobby footer');
 });
 
-test('the mission 02 cover keeps its title clear of the menu card; mission pages have a tab icon',()=>{
-  const svg=read('art/mission02-cover.svg');
-  assert.equal((svg.match(/x="1540"[^>]*text-anchor="end"/g)||[]).length,3);
-  assert.match(read('menu-art.js'),/mission02-cover\.svg\?v=m02-cover-2/);
+test('the cinematic mission 02 cover is shared by menu and loading, with its mobile header separated',()=>{
+  assert.match(read('menu-art.js'),/mission02-cover\.webp/);
+  assert.match(read('mission-loading.js'),/mission02-cover\.webp/);
+  assert.match(read('mission-loading.css'),/\.pw-load-home\{top:max\(58px/);
   for(const page of ['vesper-level1-v7.html','level2-test.html'])assert.match(read(page),/<link rel="icon" href="icon\.svg"/,page);
 });
 

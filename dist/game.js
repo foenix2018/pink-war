@@ -420,7 +420,7 @@ function announce(title, subtitle) {
 }
 function handleEvents() {
   for (const event of game.drainEvents()) {
-    if(game.mode==='campaign'&&settings.sound&&audioContext){if(event.type==='circuit-isolated')playFieldCue(audioContext,'isolate',{source:event,listener:game.player,yaw:listenerHeading()});if(event.type==='portals'&&event.count>0)for(const site of event.sites)playFieldCue(audioContext,'breach',{source:site,listener:game.player,yaw:listenerHeading()});}
+    if(game.mode==='campaign'&&settings.sound&&audioContext){if(['circuit-isolated','workshop-power'].includes(event.type))playFieldCue(audioContext,'isolate',{source:event,listener:game.player,yaw:listenerHeading()});if(event.type==='portals'&&event.count>0)for(const site of event.sites)playFieldCue(audioContext,'breach',{source:site,listener:game.player,yaw:listenerHeading()});}
     armorFeedback().handle(event);
     if(event.type==='campaign'){
       if(vr.mode!=='xr')announce(event.title,event.subtitle);

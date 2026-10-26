@@ -2,7 +2,7 @@
 
 **25 octobre 2026 · Cible de durée choisie par le créateur.** Cette fiche prépare l’extension du niveau. **Lot 1 cour/annexe livré en 3.63.4** : deux approches, aile technique, isolation du circuit et premiers renforts. Les secteurs suivants restent des cibles. La durée finale de vingt minutes n’est pas encore livrée ni mesurée.
 
-> **Proposition actualisée du 26 octobre :** [trois directions et parcours recommandé de 25 minutes](PROPOSITIONS_M01_26_OCTOBRE.md). Cette précision reste à choisir ; aucun secteur supplémentaire n’est livré en 3.63.8.
+> **Proposition actualisée du 26 octobre :** [trois directions et parcours recommandé de 25 minutes](PROPOSITIONS_M01_26_OCTOBRE.md). Option A choisie ; [atelier et cour de livraison en 3.63.9](MISE_A_JOUR_363_9.md). Carrefour et montée restent les prochains lots.
 
 ## Ce que la base explique
 

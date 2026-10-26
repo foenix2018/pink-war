@@ -1,6 +1,8 @@
 # M01 — Propositions pour une première traversée d’au moins vingt minutes
 
-**26 octobre 2026 · propositions à choisir, pas une extension déjà livrée.** Analyse du code de la 3.63.7 (`322eacb`) ; la 3.63.8 ne change que l’illustration M02 et sa présentation. Cette proposition précise le [plan de mission longue](PLAN_M01_20_25_MIN.md) à partir du premier lot effectivement livré.
+**26 octobre 2026 · option A choisie par le créateur.**
+
+Premier lot atelier/boutique livré en [3.63.9](MISE_A_JOUR_363_9.md). Les budgets de temps et les secteurs suivants restent des cibles. Diagnostic historique ci-dessous, établi avant cette extension. Analyse du code de la 3.63.7 (`322eacb`) ; la 3.63.8 ne change que l’illustration M02 et sa présentation. Cette proposition précise le [plan de mission longue](PLAN_M01_20_25_MIN.md) à partir du premier lot effectivement livré.
 
 ## Diagnostic vérifié
 

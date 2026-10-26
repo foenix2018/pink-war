@@ -11,6 +11,7 @@ export const LEVEL1 = Object.freeze({
   power: Object.freeze({ x: -6, z: 62, y: 0 }),
   archive: Object.freeze({ x: 0, z: 55, y: 0 }),
   portal: Object.freeze({ x: 0, z: 33, y: 0 }),
+  workshop: Object.freeze({...LEVEL1_MAP.workshop.control}),
   investigation: Object.freeze({ x:-21,z:20,y:0 }),
   junction: Object.freeze({ x:18,z:6,y:0 }),
   sabotage: Object.freeze({ x:5,z:-8,y:0 }),
@@ -51,7 +52,7 @@ export class CampaignLevel1 extends ArenaGame {
     this.nextSpawnAt = Infinity;
     this.archiveReadUntil = Infinity;
     this.archiveRead = false;
-    this.investigationRead = false;
+    this.investigationRead = false;this.workshopReleased=false;
     this.sabotaged = false;this.circuitIsolated=false;this.circuitRoute=null;this.powerAlarm=false;this.preArchiveLimit=0;this.courtyardPending=false;
     this.guideCache=null;this.guideNavigation=null;this.guideNavigationSource=null;
     this.completed = false;
@@ -85,9 +86,10 @@ export class CampaignLevel1 extends ArenaGame {
       archive: ['Un ordinateur du passé', 'Consulter le terminal local, isolé du réseau d’ORDRE.'],
       breach: [`Une trace de ${this.sibling}`, 'Une intervention récente confirme son passage. Lire l’archive.'],
       combat: ['Le signal a été repéré', 'Repousser les machines dans la cour du laboratoire.'],
+      workshop: ['L’atelier des réparateurs', 'Traverser l’atelier ou la cour de livraison et rétablir la liaison locale de la boutique.'],
       investigation: ['La mémoire de la boutique', 'Récupérer BLOOM puis lire l’ordinateur humain dans le bâtiment de briques à l’ouest.'],
       crossing: ['La rue des évacuations', 'Rejoindre le carrefour nord indiqué dans le journal humain.'],
-      combat2: ['Le verrou d’ORDRE', 'Utiliser les couvertures de la rue pour éliminer la seconde patrouille.'],
+      combat2: ['L’atelier sous pression', 'Repousser les machines du secteur ouest ; les établis et les cloisons offrent des couverts.'],
       sabotage: ['Couper les yeux d’ORDRE', 'Désactiver la balise de surveillance dans la rue, à l’ouest du relais.'],
       combat3: ['Dernière ligne de défense', 'Repousser les renforts puis rejoindre le relais sur la terrasse.'],
       exit: ['Rejoindre les Archives végétales', 'Monter par l’escalier extérieur ou l’ascenseur, puis consulter le relais.'],
@@ -96,6 +98,7 @@ export class CampaignLevel1 extends ArenaGame {
     const targets = {
       power: { id: 'power', label: 'RÉTABLIR LE COURANT', position: LEVEL1.power },
       archive: { id: 'archive', label: 'LIRE L’ARCHIVE', position: LEVEL1.archive },
+      workshop: { id:'workshop',label:LEVEL1_MAP.workshop.control.label,position:LEVEL1.workshop },
       investigation: { id: 'investigation', label: 'CONSULTER LE JOURNAL HUMAIN', position: LEVEL1.investigation },
       sabotage: { id: 'sabotage', label: 'DÉSACTIVER LA BALISE ORDRE', position: LEVEL1.sabotage },
       exit: { id: 'exit', label: 'CONSULTER LE RELAIS', position: LEVEL1.exit }
@@ -108,7 +111,7 @@ export class CampaignLevel1 extends ArenaGame {
       sibling: this.sibling, archive: this.archiveLines,
       objective: target ? { ...target, position: { ...target.position } } : null,
       encounter:this.encounter+1,encounters:ENCOUNTERS.length,spawned:this.spawned+ENCOUNTERS.slice(0,this.encounter).reduce((sum,wave)=>sum+wave.length,0)+(this.openingSpawned||0),total:TOTAL_ENEMIES,opening:this.openingSpawned||0,maxActive:MAX_ACTIVE,
-      investigationRead:this.investigationRead,sabotaged:this.sabotaged,circuitIsolated:this.circuitIsolated,circuitRoute:this.circuitRoute,powerAlarm:this.powerAlarm,openingRoles:true,
+      workshopReleased:this.workshopReleased,investigationRead:this.investigationRead,sabotaged:this.sabotaged,circuitIsolated:this.circuitIsolated,circuitRoute:this.circuitRoute,powerAlarm:this.powerAlarm,openingRoles:true,
       remaining: this.toSpawn + this.enemies.length,
       portal: this.activePortals[0] ? { ...this.activePortals[0] } : null,
       completed: this.completed
@@ -152,6 +155,10 @@ export class CampaignLevel1 extends ArenaGame {
       this.protectReading(5);
       this.archiveReadUntil = this.time + 5;
       this.setStage('breach');
+    } else if (objective.id === 'workshop') {
+      this.encounter=1;
+      if(!this.openBreach()){this.encounter=0;return false;}
+      this.workshopReleased=true;this.event('workshop-power',{x:LEVEL1.workshop.x,y:1.2,z:LEVEL1.workshop.z});this.emitNoise('switch',30,{x:LEVEL1.workshop.x,y:1.2,z:LEVEL1.workshop.z});
     } else if (objective.id === 'investigation') {
       this.investigationRead=true;this.protectReading(5);this.setStage('crossing');
     } else if (objective.id === 'sabotage') {
@@ -194,7 +201,8 @@ export class CampaignLevel1 extends ArenaGame {
     // site is deferred; there is deliberately no unsafe fallback at the player.
     this.navigation.refreshAt = -1;
     this.navigation.update(this.player, this.time);
-    for (const site of (this.encounter?PORTAL_CANDIDATES.slice(3).concat(PORTAL_CANDIDATES.slice(0,3)):PORTAL_CANDIDATES)) {
+    const sites=this.encounter===1?LEVEL1_MAP.workshop.portals.map(([x,z])=>({x,z,y:0})):this.encounter?PORTAL_CANDIDATES.slice(3).concat(PORTAL_CANDIDATES.slice(0,3)):PORTAL_CANDIDATES;
+    for (const site of sites) {
       if (Math.hypot(site.x - this.player.x, site.z - this.player.z) < PORTAL_DISTANCE || !this.portalIsClear(site)) continue;
       const cell = this.navigation.nearestOpen(site.x, site.z);
       if (cell < 0 || this.navigation.distance[cell] < 0) continue;
@@ -298,7 +306,7 @@ export class CampaignLevel1 extends ArenaGame {
     if(this.courtyardPending&&['archive','breach'].includes(this.stage))this.tryCourtyardBreach();
     if(['archive','breach'].includes(this.stage)&&this.toSpawn>0&&this.time>=this.nextSpawnAt)this.spawnEnemy();
     if (this.stage === 'breach' && this.time >= this.archiveReadUntil) this.openBreach();
-    if(this.stage==='crossing'&&Math.hypot(this.player.x-LEVEL1.junction.x,this.player.z-LEVEL1.junction.z)<7){this.encounter=1;this.openBreach();}
+    if(this.stage==='crossing'&&Math.hypot(this.player.x-LEVEL1.junction.x,this.player.z-LEVEL1.junction.z)<7){this.offerWeapon(2);this.setStage('sabotage');}
     if (COMBAT_STAGES.includes(this.stage)) {
       if (this.toSpawn > 0 && this.time >= this.nextSpawnAt) this.spawnEnemy();
       if (this.spawned === ENCOUNTERS[this.encounter].length && this.toSpawn === 0 && this.enemies.length === 0) {
@@ -307,8 +315,8 @@ export class CampaignLevel1 extends ArenaGame {
         this.score += 300;
         this.event('clear', { wave: 1, campaign: true });
         this.event('portals', { count: 0, sites: [] });
-        if(this.encounter===0){this.offerWeapon(1);this.setStage('investigation');}
-        else if(this.encounter===1){this.offerWeapon(2);this.setStage('sabotage');}
+        if(this.encounter===0){this.offerWeapon(1);this.setStage('workshop');}
+        else if(this.encounter===1)this.setStage('investigation');
         else this.setStage('exit');
       }
     }

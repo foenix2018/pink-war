@@ -334,6 +334,6 @@ indexEncoded={}
 for name,values in indices.items():
  if not values:continue
  compressor=zlib.compressobj(9,zlib.DEFLATED,-15);raw=struct.pack('<'+'I'*len(values),*values);indexEncoded[name]=base64.b64encode(compressor.compress(raw)+compressor.flush()).decode()
-metadata=dict(vertices=sum(len(v)//8 for v in parts.values()),tool='Blender '+bpy.app.version_string,triangles=triangles,batches=len(encoded),source='Original Pink War / Vesper Secours 07',revision='3.63.4',hollowBuildings=8,rustedVehicles=len(D['cars']),foliage='alpha leaf cards',surfaceMaps=True,shatteredGlazing=True,profiledVehicleCabins=True,roundedTyres=True,chamferedSkyline=True,bounds=D['bounds'])
+metadata=dict(vertices=sum(len(v)//8 for v in parts.values()),tool='Blender '+bpy.app.version_string,triangles=triangles,batches=len(encoded),source='Original Pink War / Vesper Secours 07',revision='3.63.9',hollowBuildings=8,rustedVehicles=len(D['cars']),foliage='alpha leaf cards',surfaceMaps=True,shatteredGlazing=True,profiledVehicleCabins=True,roundedTyres=True,chamferedSkyline=True,bounds=D['bounds'])
 (P/'dist/levels/vesper-01-mesh.js').write_text('// Original geometry created in Blender. Raw DEFLATE interleaved float32 position/normal/UV, material batches.\nexport const MESH_INFO='+json.dumps(metadata)+';\nexport const MESH_DATA='+json.dumps(encoded,separators=(',',':'))+';\nexport const MESH_INDEX_DATA='+json.dumps(indexEncoded,separators=(',',':'))+';\n')
 print('PINK_WAR_LEVEL1',json.dumps(metadata))

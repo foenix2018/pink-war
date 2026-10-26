@@ -8,9 +8,10 @@ const bodies=[[-6,61.65,1.65,.6,0,2.1,'power'],[0,54.45,2.6,.6,0,1.93,'archive']
 test('the objective guide walks the physical rescue, shop, sabotage and stairs route without a wall crossing',()=>{
 const mat=new T.MeshStandardMaterial(),story=createLevel1Story(T,new T.Group(),{steel:mat,rust:mat,dark:mat,plaster:mat});
 const g=new CampaignLevel1([...createLevel1Obstacles(),...bodies,...story.colliders],()=>.5);g.invulnerable=1e6;g.enemies=[];g.openingSpawned=8;
-for(const stage of ['approach','power','archive','investigation','crossing','sabotage','exit']){
+for(const stage of ['approach','power','archive','workshop','investigation','crossing','sabotage','exit']){
  g.setStage(stage);let i=0,stale=0,last={x:g.player.x,z:g.player.z};
  while(i++<2400){
+  const offer=g.objectiveTarget();if(offer?.kind==='weapon'&&Math.hypot(offer.x-g.player.x,offer.z-g.player.z)<1.5)g.collectWeapon();
   if(g.getInteraction()?.id===stage || stage==='approach'&&g.getInteraction()?.id.startsWith('isolate-') || stage==='crossing'&&Math.hypot(g.player.x-18,g.player.z-6)<6.5)break;
   const h=g.guidance();if(!h)throw Error('no guidance '+stage+' at '+JSON.stringify(g.player));
   const dx=h.x-g.player.x,dz=h.z-g.player.z,n=Math.hypot(dx,dz);g.step(.05,{x:dx/(n||1),z:dz/(n||1),yaw:0});

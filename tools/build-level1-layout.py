@@ -1,5 +1,6 @@
 import json,pathlib
 from m01_courtyard import extend_layout
+from m01_workshop import extend_workshop
 p=pathlib.Path(__file__).resolve().parents[1]; b=[]
 def box(x,z,w,d,h,y=0,**kw): b.append(dict(x=x,z=z,hx=w/2,hz=d/2,y=y,height=h,surface=kw.pop('surface','concrete'),campaign=True,**kw))
 # Playable buildings: closed blocks flank a continuous street, lab is a real interior.
@@ -27,6 +28,7 @@ for index,(x,z,w,d,h) in enumerate(blocks):
      px=x+along if axis=='x' else x+side*w/2;pz=z+side*d/2 if axis=='x' else z+along
      faceW,faceD=(spacing,.30) if axis=='x' else (.30,spacing)
      door=floor==0 and axis=='z' and side==(1 if x<0 else -1) and index in [2,3] and k in [bays//2-1,bays//2]
+     door=door or (floor==0 and axis=='z' and index==2 and side==-1 and k in [bays//2-1,bays//2])
      door=door or (floor==0 and axis=='z' and index==0 and k in [bays//2-1,bays//2])
      if not door:piece(px,y+.55,pz,faceW,1.1,faceD,'plaster' if old and floor%3 else skin)
      piece(px,y+3.25,pz,faceW,.70,faceD,skin)
@@ -82,6 +84,7 @@ layout=dict(id='vesper-secours-07',name='Le dernier signal — Quartier des seco
  route=[[0,72,0],[0,67,0],[-6,63,0],[0,56.5,0],[2.3,56.5,0],[2.3,51.5,0],[0,47,0],[0,29,0],[0,13,0],[18,13,0],[18,6,0],[18,-17,0],[18,-40,4.8],[18,-43,4.8]],
  bounds=dict(minX=-35,maxX=42,minZ=-62,maxZ=82),portals=[[0,33],[-5,45],[7,22],[18,0],[18,-14],[5,-8]])
 extend_layout(layout)
+extend_workshop(layout)
 (p/'assets/level1/layout.json').write_text(json.dumps(layout,indent=2))
 js='// Original Pink War map; generated from assets/level1/layout.json.\nexport const LEVEL1_MAP = '+json.dumps(layout,separators=(',',':'))+';\n'
 js+='''export function level1Surfaces(x,z,time=0){
