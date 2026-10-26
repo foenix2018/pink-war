@@ -18,3 +18,8 @@
 .pw-auto-story #shade .panel{visibility:hidden}
 @media(max-height:540px){.pw-load-copy{bottom:28px;width:min(480px,65vw)}.pw-load-kicker{margin-bottom:10px}.pw-load-description{font-size:12px;margin-bottom:20px}.pw-load-copy h1{font-size:34px;margin-bottom:12px}.pw-load-brand{top:16px;font-size:10px}}
 @media(orientation:portrait){.pw-mission-loading>img{object-position:66% center}.pw-mission-loading:after{background:linear-gradient(0deg,#091219fa 0%,#091219a3 49%,#09121918 100%)}.pw-load-copy{bottom:max(40px,7vh);width:calc(100% - 56px)}.pw-load-description{font-size:13px}}
+
+/* M02: keep the alley perspective readable in both landscape and portrait. */
+.pw-mission-loading[data-mission="2"]>img{object-position:52% center}
+.pw-mission-loading[data-mission="2"]:after{background:linear-gradient(90deg,#09121985 0%,#09121930 45%,transparent 80%),linear-gradient(0deg,#091219f5 0%,#09121980 28%,transparent 66%)}
+@media(max-width:600px){.pw-load-brand{font-size:10px;letter-spacing:.17em}.pw-load-home{top:max(58px,calc(env(safe-area-inset-top) + 44px));font-size:11px}}

@@ -886,7 +886,7 @@ for(const name of ['pointerup','pointercancel']){
  window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
 }
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
-window.__PINK_M02=Object.freeze({snapshot:()=>({music:{playing:false,source:null},revision:'3.63.7',running,paused,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
+window.__PINK_M02=Object.freeze({snapshot:()=>({music:{playing:false,source:null},revision:'3.63.8',running,paused,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
  backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
  effects:combatEffects?.stats(),armor:game&&{shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt}})});

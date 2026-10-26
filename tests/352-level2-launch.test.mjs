@@ -7,9 +7,9 @@ import {createDistrictArchitecture} from '../dist/level2-architecture.js';
 const text=file=>readFileSync(new URL('../dist/'+file,import.meta.url),'utf8');
 
 test('M02 has own cyberpunk artwork in menu, loading screen, and start page',()=>{
- const cover=text('art/mission02-cover.svg');
- assert.match(cover,/SOUS LES NÉONS/);
- assert.match(cover,/HELIX/);
+ const cover=readFileSync(new URL('../dist/art/mission02-cover.webp',import.meta.url));
+ assert.equal(cover.toString('ascii',0,4),'RIFF');
+ assert.equal(cover.toString('ascii',8,12),'WEBP');
  const title={textContent:''},description={textContent:''},credit={textContent:''};
  const img=(name)=>({dataset:{ghjuSrc:'art/accueil.webp',lyluSrc:'art/accueil-lylu.webp'},
    attr:{src:'art/accueil.webp'},getAttribute(key){return this.attr[key];},setAttribute(key,value){this.attr[key]=value;}});
@@ -17,15 +17,15 @@ test('M02 has own cyberpunk artwork in menu, loading screen, and start page',()=
  const root={querySelectorAll:()=>images,getElementById:(id)=>({'loading-title':title,'loading-description':description}[id]),
  querySelector:()=>credit};
  syncMenuArtwork('ghju','campaign2',root);
- assert.ok(images.every(im=>im.attr.src.includes('mission02-cover.svg')));
+ assert.ok(images.every(im=>im.attr.src.includes('mission02-cover.webp')));
  assert.match(title.textContent,/Sous les Néons/);
  assert.match(description.textContent,/HELIX/);
  syncMenuArtwork('lylu','campaign2',root);
- assert.ok(images.every(im=>im.attr.src.includes('mission02-cover.svg')));
+ assert.ok(images.every(im=>im.attr.src.includes('mission02-cover.webp')));
  syncMenuArtwork('lylu','campaign',root);
  assert.ok(images.every(im=>im.attr.src==='art/accueil-lylu.webp'));
  assert.equal(title.textContent,'Le dernier signal');
- assert.match(text('level2-test.html'),/mission02-cover\.svg/);
+ assert.match(text('level2-test.html'),/mission02-cover\.webp/);
 });
 
 test('W02 advanced architecture constructs tower, market and transit decor without throwing',()=>{

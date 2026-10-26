@@ -2,6 +2,8 @@
 
 **25 octobre 2026 · Cible de durée choisie par le créateur.** Cette fiche prépare l’extension du niveau. **Lot 1 cour/annexe livré en 3.63.4** : deux approches, aile technique, isolation du circuit et premiers renforts. Les secteurs suivants restent des cibles. La durée finale de vingt minutes n’est pas encore livrée ni mesurée.
 
+> **Proposition actualisée du 26 octobre :** [trois directions et parcours recommandé de 25 minutes](PROPOSITIONS_M01_26_OCTOBRE.md). Cette précision reste à choisir ; aucun secteur supplémentaire n’est livré en 3.63.8.
+
 ## Ce que la base explique
 
 Le retour du créateur est une traversée d’environ cinq minutes, trop facile. La base 3.63.3 confirmait une structure courte : un niveau jouable borné à **77 × 144 m**, huit emplacements d’ennemis au départ, puis trois groupes de huit renforts. Les actions se concentrent autour de quelques terminaux ; les renforts arrivent essentiellement par un portail actif à la fois. Le jeu possède déjà tirs physiques, perception sonore, couverts, esquive de charges, bouclier, escalier, ascenseur et points de contrôle. Il manque surtout des situations qui obligent à exploiter ces systèmes.
