@@ -13,6 +13,31 @@ export const LASER_PROFILES=Object.freeze({
 // Five independent Kenney CC0 recordings; mono PCM WAV also decodes on iPhone.
 // Synthesized layers retain mechanical transients, bass and an offline fallback.
 const liveSamples=new WeakMap(),decodedSamples=new WeakMap();
+export const COMBAT_SAMPLES=Object.freeze(Object.fromEntries(
+  ['metal-light','metal-medium','metal-heavy','rifle-mechanism','shotgun-body'].map(id=>[id,`audio/combat/${id}.wav`])
+));
+const combatLoads=new WeakMap(),combatBuffers=new WeakMap();
+export async function loadCombatSamples(ctx,load=globalThis.fetch){
+  if(!ctx||!load)return false;
+  if(combatLoads.has(ctx))return combatLoads.get(ctx);
+  const buffers=combatBuffers.get(ctx)||new Map();combatBuffers.set(ctx,buffers);
+  const pending=Promise.allSettled(Object.entries(COMBAT_SAMPLES).map(async([id,url])=>{
+    if(buffers.has(id))return;
+    const response=await load(url);if(!response.ok)throw Error('Combat sample missing: '+id);
+    buffers.set(id,await ctx.decodeAudioData(await response.arrayBuffer()));
+  })).then(results=>{const ok=results.every(r=>r.status==='fulfilled');if(!ok)combatLoads.delete(ctx);return ok;});
+  combatLoads.set(ctx,pending);return pending;
+}
+// Short recorded transients, bounded and released through the shared effects bus.
+function recorded(ctx,space,id,output,volume,{at=ctx.currentTime,rate=1,limit=.75}={}){
+  const buffer=combatBuffers.get(ctx)?.get(id);
+  if(!buffer||space.voices.size>=96)return false;
+  const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=buffer;source.playbackRate.value=rate;
+  const duration=Math.min(limit,buffer.duration/rate);
+  gain.gain.setValueAtTime(volume,at);gain.gain.setValueAtTime(volume,at+Math.max(.001,duration-.035));
+  gain.gain.linearRampToValueAtTime(0,at+duration);
+  source.connect(gain);gain.connect(output);remember(space,source,[source,gain]);source.start(at);source.stop(at+duration+.005);return true;
+}
 // A shared, quiet pair of early reflections suggests the surrounding ruined city.
 // No feedback loop: rapid fire cannot accumulate into an increasingly loud reverb tail.
 const spaces=new WeakMap();
@@ -105,6 +130,10 @@ export function playLaserShot(ctx,weapon='r9',power=1){
   if(!ctx||ctx.state!=='running')return false;
   const space=spaceFor(ctx);if(!space.enabled)return false;
   stopCharge(space,ctx.currentTime);
+  if(weapon==='m12'){
+    recorded(ctx,space,'shotgun-body',space.master,.62,{limit:.65});
+    recorded(ctx,space,'rifle-mechanism',space.master,.20,{at:ctx.currentTime+.24,rate:.92});
+  }
   const p=LASER_PROFILES[weapon]||LASER_PROFILES.r9;
   // The downloaded CC0 sample is played immediately, not deferred to a promise after the shot.
   const real=decodedSamples.get(ctx)?.get(weapon);
@@ -182,20 +211,26 @@ export function playLaserImpact(ctx,{surface='concrete',distance=0,power=1,splas
   space.impactTime=now;space.impactVoices++;
   const metal=surface==='metal'||surface==='robot',explosive=splash>0;
   const strength=Math.max(.25,Math.min(1,Number(power)||1))*attenuation;
-  const duration=explosive?.46:metal?.2:.15,t=now+.002;
+  const duration=explosive?.46:metal?.34:.15,t=now+.002;
   const bus=ctx.createGain();bus.gain.value=.68;bus.connect(space.master);
   if(space.reflections)bus.connect(space.reflections);
   const panner=ctx.createStereoPanner?.();
   if(panner){panner.pan.value=Math.max(-.8,Math.min(.8,Number(pan)||0));panner.connect(bus);}
   const output=panner||bus,noise=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
+  let realMetal=false;
+  if(metal){
+    space.metalIndex=((space.metalIndex??-1)+1)%3;
+    const id=['metal-heavy','metal-medium','metal-light'][space.metalIndex];
+    realMetal=recorded(ctx,space,id,output,.65*strength,{at:t,rate:.96+.06*Math.sin(now*31),limit:.3});
+  }
   noise.buffer=noiseBuffer(ctx);filter.type=metal?'bandpass':'lowpass';filter.Q.value=metal?1.3:.65;
   filter.frequency.setValueAtTime(metal?3100:1700,t);
   filter.frequency.exponentialRampToValueAtTime(metal?800:320,t+duration);
-  env(gain,t,(metal?.12:.09)*strength,Math.min(.17,duration));
+  env(gain,t,(metal?(realMetal?.025:.12):.09)*strength,Math.min(.17,duration));
   noise.connect(filter);filter.connect(gain);gain.connect(output);noise.start(t);noise.stop(t+.18);
   remember(space,noise,[noise,filter,gain]);
-  oscillator(ctx,output,t,'sine',explosive?105:metal?520:145,explosive?38:metal?210:65,duration,.075*strength,space);
-  if(metal)oscillator(ctx,output,t+.006,'triangle',1900,720,.105,.017*strength,space);
+  oscillator(ctx,output,t,'sine',explosive?105:metal?520:145,explosive?38:metal?210:65,duration,(realMetal?.018:.075)*strength,space);
+  if(metal&&!realMetal)oscillator(ctx,output,t+.006,'triangle',1900,720,.105,.017*strength,space);
   const cleanup=ctx.createOscillator(),silent=ctx.createGain();silent.gain.value=0;cleanup.connect(silent);silent.connect(bus);
   cleanup.start(t+duration+.03);cleanup.stop(t+duration+.04);
   remember(space,cleanup,[cleanup,silent,...(panner?[panner]:[]),bus],()=>{space.impactVoices=Math.max(0,space.impactVoices-1);});
@@ -214,6 +249,7 @@ export function playWeaponAction(ctx,weapon='r9',action='empty'){
   const t=now+.002,bus=ctx.createGain();bus.gain.value=.7;bus.connect(space.master);
   const empty=action==='empty',insert=action==='reload-in',ready=action==='reload-ready';
   const duration=empty?.06:insert?.19:ready?.20:.14;
+  if(ready)recorded(ctx,space,'rifle-mechanism',space.master,.154,{at:t,rate:weapon==='m12'?.94:1.12,limit:.4});
   const level=empty?.029:insert?.05:ready?.032:.035;
   oscillator(ctx,bus,t,'triangle',p.mechanism*(insert?.65:1.1),p.mechanism*.32,duration*.5,level,space);
   oscillator(ctx,bus,t+(insert?.065:.01),'sine',insert?160:ready?280:430,insert?75:ready?580:210,duration,level*p.weight*.7,space);

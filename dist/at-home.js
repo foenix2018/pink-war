@@ -6,10 +6,9 @@ import { GAME_VERSION } from './launch-ui.js';
 import { WEAPONS } from './game-logic.js';
 import { RoomGame } from './room-game.js';
 import { classifyRoomSurface, insideRoomPolygon, roomBounds, roomFloorAt, createRoomNavigation } from './room-layout.js';
-import { playLaserShot, loadRealLaserSample, playLaserImpact, playWeaponAction } from './laser-sound.js';
+import { playLaserShot, loadRealLaserSample, loadCombatSamples, playLaserImpact, playWeaponAction } from './laser-sound.js';
 import { createSaberSound } from './saber-sound.js';
 import { syncTrackedHands } from './xr-hands.js';
-import { createMusicBed } from './music.js';
 import { createAmbience } from './ambience.js';
 import { createWeaponFeel } from './weapon-feel.js';
 import { createLaserFX } from './laser-fx.js';
@@ -41,7 +40,7 @@ let lastTime=0,startTime=0,roomCaptureAsked=false,decorEnabled=true,fullImmersio
 let frames=0,fireBlocked=true,lastTrigger=false,scanMessage='',announcementUntil=0,muzzleUntil=0,refreshScan=false;
 const surfaces=new Map(),meshes=new Map(),bots=new Map(),bolts=new Map();
 const mounts=[],controllerHandState={trigger:0,grip:0,offTrigger:0,offGrip:0},previousButtons=new Map();
-const music=createMusicBed(),feel=createWeaponFeel(),laser=createLaserFX(THREE,scene,hero.palette);
+const feel=createWeaponFeel(),laser=createLaserFX(THREE,scene,hero.palette);
 const blockerMaterial=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false,side:THREE.DoubleSide});
 blockerMaterial.visible=false; // Keep ray collisions without drawing an invisible occlusion screen.
 const outlineMat=new THREE.LineBasicMaterial({color:hero.palette.rose,transparent:true,opacity:.38,depthWrite:false});
@@ -97,8 +96,8 @@ const scannedRoom={hasFloor:()=>floors().length>0,floorAt:p=>roomFloorAt({...p,y
 const room=createHomeBattlefield({room:scannedRoom,obstacles:()=>assets?.architecture.obstacles||[],forward:()=>new THREE.Vector3(0,0,-1).applyQuaternion(orientation)});
 const game=new RoomGame(room,Math.random,hero.id);
 let beforePause='ready';
-function pauseHome(){if(mode==='paused')return;beforePause=mode;mode='paused';game.stop();cancelFire();music.pause();ambience?.pause();if(!session)pauseMenu.show();}
-function resumeHome(){if(mode!=='paused')return;mode=beforePause;if(mode==='combat'){game.running=true;music.start(audio);}cancelFire();pauseMenu.hide(false);}
+function pauseHome(){if(mode==='paused')return;beforePause=mode;mode='paused';game.stop();cancelFire();ambience?.pause();if(!session)pauseMenu.show();}
+function resumeHome(){if(mode!=='paused')return;mode=beforePause;if(mode==='combat'){game.running=true;}cancelFire();pauseMenu.hide(false);}
 async function home(){await session?.end();location.assign('./index.html');}
 const pauseMenu=createPauseMenu({title:'AT HOME / LABORATOIRE DE L’IA',onPause:pauseHome,onResume:resumeHome,onHome:home,onVR:report=>{if(!navigator.xr){report('Ouvrez AT HOME dans Meta Quest Browser pour utiliser le scan de la maison.');return;}return enter().then(()=>{if(session)pauseMenu.hide(false);else report(status.textContent);});}});
 const immersivePause=createXRPauseMenu(THREE,scene,{accent:hero.accent,onResume:resumeHome,onHome:()=>void home(),onExit:()=>void session?.end()});
@@ -188,7 +187,7 @@ function startCombat(){
  if(mode==='paused'){startRequested=false;game.running=true;mode='combat';cancelFire();info('SIGNAL RÉTABLI');return;}
  if(!assets){info(assetError||'CHARGEMENT DES ARMES ET DES MACHINES');return;}
  if(!game.start(head)){info(floors().length?'ZONE DE SOL TROP ÉTROITE OU MASQUÉE':'SOL NON DÉTECTÉ : GÂCHETTE GAUCHE POUR SCANNER');return;}
- startRequested=false;clearBots();assets.syncOffers([]);assets.setPortals([],head);assets.setWeapon(game.weaponIndex,1);feel.reset();laser.reset();mode='combat';cancelFire();music.start(audio);
+ startRequested=false;clearBots();assets.syncOffers([]);assets.setPortals([],head);assets.setWeapon(game.weaponIndex,1);feel.reset();laser.reset();mode='combat';cancelFire();
  const point=findPoint({purpose:'companion',head});if(point)assets.placeCompanion(new THREE.Vector3(point.x,point.y,point.z),head);else assets.companion.root.visible=false;
  info('INTRUSION DANS LE LABORATOIRE');announce('INTRUSION / '+hero.name);
 }
@@ -215,7 +214,7 @@ function processEvents(){
   if(event.type==='blade-hit'||event.type==='blade-parry'){laser.impact({...event,weapon:'aurora',enemy:event.type==='blade-hit'});saberAudio?.impact(event.type==='blade-parry');haptic(event.type==='blade-parry'?'parry':'hit');}
   if(event.type==='damage')haptic('damage');
   if(event.type==='weapon')haptic('weapon');
-  if(event.type==='over'||event.type==='won'){mode='finished';music.pause();cancelFire();info('GÂCHETTE DROITE : REJOUER');}
+  if(event.type==='over'||event.type==='won'){mode='finished';cancelFire();info('GÂCHETTE DROITE : REJOUER');}
  }
 }
 function haptic(type,arg,hand=null){
@@ -279,7 +278,6 @@ function tick(ms,frame){
    saberAudio?.update({active:active&&mode==='combat',equipped:game.weapon.melee,extended:!fireBlocked&&held,speed:game.bladeSpeed,swing:game.weapon.melee&&game.bladePhase<.08});
   }
   if(mode==='ready'){if(!assets)info(assetError||'CHARGEMENT DU LABORATOIRE');else if(floors().length)info(playAreaSource==='quest-boundary'?'ZONE QUEST PRÊTE : A OU GÂCHETTE DROITE':'SOL SCANNÉ PRÊT : A OU GÂCHETTE DROITE');else if(seconds-startTime>2)info(startRequested?'DÉMARRAGE EN ATTENTE : SCAN GÂCHETTE GAUCHE':'SOL NON DÉTECTÉ : GÂCHETTE GAUCHE POUR SCANNER');}
-  if(active&&mode==='combat')music.update(dt,{active:true,threat:Math.min(1,game.enemies.length/Math.max(1,game.maxActive)),intermission:game.roomPhase==='between'});
   ambience?.update(dt,{active:active&&mode==='combat',position:head,moving:true,grounded:true,elevation:game.player.elevation,probes:game.enemies});
   laser.update(game.bullets,dt);updateBoards();
  }renderer.render(scene,camera);frames++;
@@ -292,7 +290,7 @@ async function initiateScan(){
 function onSelect(event){if(session?.visibilityState!=='visible'||mode==='paused')return;if(event.inputSource?.handedness==='left'&&mode!=='combat')initiateScan();if(event.inputSource?.handedness==='right'&&mode!=='combat')requestCombat();}
 function onSessionEnd(){
  immersivePause.update({active:false});pauseMenu.hide(false);
- session=null;mode='idle';game.stop();cancelFire();game.enemies=[];game.bullets=[];game.activePortals=[];game.weaponOffers=[];game.toSpawn=0;game.pendingOffers.clear();scope?.dispose();scope=null;music.pause();ambience?.pause();saberAudio?.update({active:false});bladeLight.intensity=0;clearBots();laser.reset();assets?.hideDecor();
+ session=null;mode='idle';game.stop();cancelFire();game.enemies=[];game.bullets=[];game.activePortals=[];game.weaponOffers=[];game.toSpawn=0;game.pendingOffers.clear();scope?.dispose();scope=null;ambience?.pause();saberAudio?.update({active:false});bladeLight.intensity=0;clearBots();laser.reset();assets?.hideDecor();
  for(const record of surfaceRecords())discardSurface(record);surfaces.clear();meshes.clear();zoneRecord=null;boundedSpace=null;playPolygon=[];playAreaSource='';startRequested=false;boundary.setPolygon([]);navigation=null;navigationFloorY=null;room.resetRoom();roomDirty=true;lastRoomBuild=-99;
  for(const item of [hud,board,announcement])item.plane.visible=false;for(const mount of mounts){mount.source=null;mount.anchor.visible=false;mount.ray.userData.source=null;}
  assets?.gun.removeFromParent();assets?.freeHand.removeFromParent();previousButtons.clear();lastTrigger=false;roomCaptureAsked=false;refreshScan=false;
@@ -302,7 +300,7 @@ async function enter(){
  if(!navigator.xr||session)return;let request;
  try{request=navigator.xr.requestSession('immersive-ar',{requiredFeatures:['local-floor'],optionalFeatures:['bounded-floor','plane-detection','mesh-detection']});}catch(error){info(error.message);return;}
  button.disabled=true;
- try{audio ||=new (window.AudioContext||window.webkitAudioContext)();audio.resume().catch(()=>{});saberAudio ||=createSaberSound(audio);ambience ||=createAmbience(audio);loadRealLaserSample(audio).catch(()=>{});}catch{}
+ try{audio ||=new (window.AudioContext||window.webkitAudioContext)();audio.resume().catch(()=>{});saberAudio ||=createSaberSound(audio);ambience ||=createAmbience(audio);void loadRealLaserSample(audio);void loadCombatSamples(audio);}catch{}
  let opened;try{
   opened=await request;session=opened;mode='ready';decorEnabled=true;lastTime=0;startTime=performance.now()/1000;roomDirty=true;lastRoomBuild=-99;game.stop();
   opened.addEventListener('end',onSessionEnd,{once:true});opened.addEventListener('selectstart',onSelect);opened.addEventListener('inputsourceschange',updateControllerRoles);

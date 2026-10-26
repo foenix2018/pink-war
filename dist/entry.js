@@ -1,3 +1,4 @@
+import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import {graphicsProfile} from './renderer-policy.js';
 import {GAME_VERSION,showLaunchError,compatibleLaunchURL} from './launch-ui.js';
 import {syncMenuArtwork} from './menu-art.js?v=m02-prod-cover-2';
@@ -15,6 +16,7 @@ const profile=graphicsProfile(navigator,settings.quality);
 document.documentElement.classList.toggle('iphone-launch',profile.ios);
 function save(){try{localStorage.setItem('pink-war-character',character);localStorage.setItem('rosee-settings',JSON.stringify(settings));}catch{}}
 function refresh(){
+  setScreenMusic(loading?'loading':'menu',mode==='campaign2'?2:1,settings.music!==false);
   document.documentElement.dataset.universe=character==='lylu'?'blue':'pink';
   syncMenuArtwork(character,mode);
   $('character-choice-status').textContent=character==='lylu'?'LYLU · UNIVERS BLEU':'GHJU · UNIVERS ROSE';
@@ -56,7 +58,7 @@ const earlyCancel=e=>e.currentTarget.close();
 for(const d of document.querySelectorAll('dialog'))d.addEventListener('cancel',earlyCancel);
 $('sound-button').onclick=()=>{settings.sound=!settings.sound;save();refresh();};
 $('sound-setting').onchange=e=>{settings.sound=e.target.checked;save();};
-$('music-setting').onchange=e=>{settings.music=e.target.checked;save();};
+$('music-setting').onchange=e=>{settings.music=e.target.checked;save();refresh();};
 $('sensitivity').oninput=e=>{settings.sensitivity=Number(e.target.value);save();};
 $('quality').onchange=e=>{settings.quality=e.target.value;save();};
 async function begin(intent='play',afterPrologue=false){
@@ -83,7 +85,7 @@ async function begin(intent='play',afterPrologue=false){
   if(settings.sound||settings.music!==false)try{const Audio=window.AudioContext||window.webkitAudioContext;
     window.__PINKWAR_BOOT_AUDIO ||=new Audio();window.__PINKWAR_BOOT_AUDIO.resume().catch(()=>{});}catch{}
   try{
-    modulePromise ||=import('./game.js?v=3.63.6');await modulePromise;
+    modulePromise ||=import('./game.js?v=3.63.7');await modulePromise;
     for(const d of document.querySelectorAll('dialog'))d.removeEventListener('cancel',earlyCancel);
     if(!window.__PINKWAR||window.__PINKWAR.snapshot().phase==='error')throw new Error('Initialisation interrompue.');
     loading=false;
@@ -102,4 +104,4 @@ $('lore-dialog').append(replay);
 $('loading-screen').hidden=true;
 $('online-launch').hidden=location.protocol!=='file:';
 refresh();
-window.__PINKWAR_ENTRY=Object.freeze({version:GAME_VERSION,snapshot:()=>({character,mode,view,loading,ios:profile.ios})});
+window.__PINKWAR_ENTRY=Object.freeze({version:GAME_VERSION,snapshot:()=>({character,mode,view,loading,ios:profile.ios,music:screenMusicSnapshot()})});

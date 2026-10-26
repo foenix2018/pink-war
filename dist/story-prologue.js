@@ -1,3 +1,4 @@
+import {setScreenMusic} from './menu-music.js';
 // P00-01…06, official storyboard. Original illustrations; no 3D download here.
 export const PROLOGUE=Object.freeze([
  {id:'P00-01',seconds:6,image:'01-vesper',date:'VESPER · 2189',title:'Avant la Chute',text:'Une ville humaine. Des serres au-dessus des rues, des secours dans le ciel. Les machines veillaient sur Vesper.'},
@@ -44,6 +45,7 @@ function soundtrack(sound,music){
 
 export function showStoryPrologue({characterId='ghju',sound=true,music=true,replay=false,onComplete=()=>{}}={}){
  if(document.querySelector('.pw-prologue'))return null;
+ setScreenMusic('prologue');
  if(!document.querySelector('[data-prologue-style]')){
   const link=document.createElement('link');link.rel='stylesheet';link.href=new URL('./story-prologue.css',import.meta.url).href;link.dataset.prologueStyle='';document.head.append(link);
  }
@@ -54,7 +56,7 @@ export function showStoryPrologue({characterId='ghju',sound=true,music=true,repl
  let index=-1,layer=0,paused=false,hiddenPause=document.hidden,remaining=0,last=performance.now(),raf=0,closed=false,loaded=0;
  const inert=[...document.body.children].filter(el=>!['SCRIPT','STYLE','LINK'].includes(el.tagName)).map(el=>[el,el.inert]);
  for(const [el]of inert)el.inert=true;document.body.append(view);document.documentElement.classList.add('prologue-open');
- function close(skipped=false){if(closed)return;closed=true;cancelAnimationFrame(raf);audio.stop();document.removeEventListener('keydown',keyboard,true);document.removeEventListener('visibilitychange',visibility);
+ function close(skipped=false){if(closed)return;closed=true;cancelAnimationFrame(raf);audio.stop();setScreenMusic('menu');document.removeEventListener('keydown',keyboard,true);document.removeEventListener('visibilitychange',visibility);
   view.remove();document.documentElement.classList.remove('prologue-open');for(const [el,value]of inert)el.inert=value;
   if(previousFocus?.isConnected)previousFocus.focus({preventScroll:true});delete window.__PINKWAR_PROLOGUE;onComplete({skipped});
  }

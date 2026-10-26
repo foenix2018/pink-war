@@ -7,7 +7,7 @@ import {WebGLRenderer} from './vendor/three.module.min.js';
 import {ArenaGame,clamp,segmentBox,traceEnemyHit} from './game-logic.js';
 import {createPinkWarsInput,createPinkWarsTouch} from './level2-input.js';
 import {createWeaponFeel} from './weapon-feel.js';
-import {playLaserShot,playWeaponAction,playLaserImpact,setLaserAudioEnabled} from './laser-sound.js';
+import {loadRealLaserSample,loadCombatSamples,playLaserShot,playWeaponAction,playLaserImpact,setLaserAudioEnabled} from './laser-sound.js';
 import {aimSensitivity,magnifiedFov,flatSightPose} from './optics.js';
 import {OPTICS,buildGun} from './weapons.js';
 import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './renderer-policy.js';
@@ -16,7 +16,6 @@ import {installPinkWarsSoldier} from './level2-player.js';
 import {createCampaignCombatEffects} from './campaign-combat-effects.js';
 import {createAICompanion} from './ai-companions.js';
 import {createAmbience} from './ambience.js';
-import {createMusicBed} from './music.js';
 import {createFireBuffer} from './fire-input.js';
 import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
@@ -41,7 +40,6 @@ let yaw=0,pitch=0,noticeUntil=0,hitUntil=0,paused=false,view='fps',aimBlend=0,mo
 let jumpQueued=false,crouchQueued=false,firePressQueued=false,heldFire=false,weaponReady=false,audioCtx=null;
 let combatEffects=null,companion=null,ambience=null,companionSkills=null,skillMenu=null,enemyFactory=null,armorFx=null,combatHud=null;
 let meleeQueued=false,chargeQueued=false,touchSprinting=false,xr=null,fallbackGun=null,fallbackHand=null;
-const music=createMusicBed();
 const weaponFeel=createWeaponFeel(),pinkControls=createPinkWarsInput(),fireInput=createFireBuffer();
 let enableAudio=true;try{enableAudio=JSON.parse(localStorage.getItem('rosee-settings')||'{}').sound!==false;}catch{}
 const keys=new Set(),enemyMeshes=new Map(),shotMeshes=new Map(),pickupMeshes=new Map();
@@ -59,8 +57,8 @@ function audioReady(){
  try{
   const Context=window.AudioContext||window.webkitAudioContext;if(!Context)return;
   audioCtx=window.__PINKWAR_BOOT_AUDIO||new Context();audioCtx.resume?.().catch?.(()=>{});
-  setLaserAudioEnabled(audioCtx,true);ambience=createAmbience(audioCtx);music.setContext(audioCtx);
-  if(running)music.start(audioCtx);
+  setLaserAudioEnabled(audioCtx,true);void loadRealLaserSample(audioCtx);void loadCombatSamples(audioCtx);ambience=createAmbience(audioCtx);
+
  }catch(error){console.warn('Couronne audio',error);}
 }
 document.addEventListener('pointerdown',audioReady,{once:true,capture:true,passive:true});
@@ -133,7 +131,7 @@ function clearVisuals(){
 }
 function interact(){if(running&&mission.interact())audioReady();}
 function finishMission(){
- running=false;music.pause();ambience?.pause?.();document.exitPointerLock?.();
+ running=false;ambience?.pause?.();document.exitPointerLock?.();
  const minutes=Math.floor(missionTime/60),seconds=String(Math.floor(missionTime%60)).padStart(2,'0');
  $('panel-title').innerHTML='Liaison <em>coupée</em>';
  $('panel-text').textContent='L’ancrage de la Couronne HELIX est désynchronisé : ORDRE perd une source de ses portails. '+(characterId==='lylu'?'LYLU':'GHJU')+' tient la terrasse au crépuscule.';
@@ -287,7 +285,6 @@ function gameTick(dt){
  companion?.update(dt,{game,camera,active:false});companionSkills?.update(dt,{game});skillMenu?.refresh();
  ambience?.update(dt,{active:running,position:game.player,moving:Math.hypot(x,z)>.1,grounded:game.player.grounded,elevation:game.player.elevation,yaw,probes:game.enemies});
  const threat=game.enemies.some(e=>e.awareness==='engaged')?.75:game.enemies.length?.25:.05;
- music.update(dt,{active:running,threat,intermission:!game.enemies.length});
  if(game.player.hp>0)$('damage').style.boxShadow='inset 0 0 '+(100-game.player.hp)*1.2+'px #c52c5e44';
  const ads=flatSightPose(OPTICS[game.weapon.id],aimBlend),held=game.weapon.dual?{yaw:0,kick:0,pitch:0}:weaponFeel.state;
  weapon.position.set(ads.x+held.yaw*.15,ads.y-held.kick*.18,ads.z+held.kick);
@@ -343,12 +340,12 @@ function resize(){
 }
 function pauseMission(){
  combatHud?.reset();touchSprinting=false;
- if(!running||paused)return;paused=true;running=false;music.pause();ambience?.pause?.();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
+ if(!running||paused)return;paused=true;running=false;ambience?.pause?.();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
  touchControls?.reset();pinkControls.reset();document.exitPointerLock?.();pauseMenu.show();
 }
 function unpauseMission(){
  if(!paused)return;paused=false;running=true;shade.style.display='none';pauseMenu.hide(false);
- audioReady();if(audioCtx)music.start(audioCtx);
+ audioReady();
  if(!touchControls?.root&&!xr?.active)canvas.requestPointerLock?.().catch?.(()=>{});
 }
 async function boot(){
@@ -389,7 +386,7 @@ async function boot(){
 function begin(){
  running=true;paused=false;shade.style.display='none';shade.classList.remove('ended','lost');startButton.disabled=false;
  fireInput.reset();heldFire=mouseAim=jumpQueued=crouchQueued=firePressQueued=meleeQueued=chargeQueued=false;aimBlend=0;keys.clear();pinkControls.reset();touchControls?.reset();weaponFeel.reset();
- audioReady();if(audioCtx)music.start(audioCtx);
+ audioReady();
  if(!touchControls?.root)canvas.requestPointerLock?.().catch?.(()=>{});
 }
 startButton.addEventListener('click',()=>{

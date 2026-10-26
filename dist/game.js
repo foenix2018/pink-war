@@ -3,11 +3,10 @@ import { createScene } from './scene.js?v=3.48';
 import { VRController } from './vr.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
 import { characterForId } from './characters.js';
-import { playLaserShot,loadRealLaserSample,playLaserImpact,setLaserAudioEnabled,disposeLaserAudio,playWeaponAction,setWeaponCharge } from './laser-sound.js';
+import { playLaserShot,loadRealLaserSample,loadCombatSamples,playLaserImpact,setLaserAudioEnabled,disposeLaserAudio,playWeaponAction,setWeaponCharge } from './laser-sound.js';
 import { createAmbience } from './ambience.js';
 import { ACTIVE_INSTALLATIONS, BRIDGES, BRIDGE_LANDINGS, BRIDGE_APPROACHES, bridgeSegments } from './world-layout.js';
-import { createMusicBed } from './music.js';
-import {createMissionMusic} from './mission-music.js';
+import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import { portalIndicators } from './portal-indicator.js';
 import { objectiveIndicator } from './objective-guidance.js';
 import { OPTICS } from './weapons.js';
@@ -98,7 +97,6 @@ let canvasPointer = null, lastDrag = null, audioContext = window.__PINKWAR_BOOT_
 let saberAudio=null,saberSwingSound=false;
 let lastWeaponSlot=0,holsterRemaining=0;
 let bladeHead=null;
-let musicBed=createMusicBed();
 const weaponFeel=createWeaponFeel();
 let portalForward=null;
 let reloadInserted=false,lastShotAt=-99;
@@ -111,18 +109,16 @@ const persist = () => { try { localStorage.setItem('rosee-settings', JSON.string
 const timeString = time => `${String(Math.floor(time / 60)).padStart(2, '0')}:${String(Math.floor(time % 60)).padStart(2, '0')}`;
 
 function audioReady() {
-  musicBed.setEnabled(settings.music!==false);
+  setScreenMusic(['lobby','outfit'].includes(phase)?'menu':phase==='loading'?'loading':'gameplay',selectedMode==='campaign2'?2:1,settings.music!==false);
   ambience?.setEnabled(settings.sound);
   if(audioContext)setLaserAudioEnabled(audioContext,settings.sound);
   if (!settings.sound && settings.music===false) return;
   try { audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
-    musicBed.setContext(audioContext);
-    if (audioContext.state === 'suspended') audioContext.resume().then(()=>{if(phase==='playing')musicBed.start(audioContext);}).catch(() => {});
+    if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
     ambience ||= createAmbience(audioContext,{installations:ACTIVE_INSTALLATIONS});
     saberAudio ||= createSaberSound(audioContext);
     ambience.setEnabled(settings.sound);setLaserAudioEnabled(audioContext,settings.sound);
-    if(settings.sound)loadRealLaserSample(audioContext).catch(()=>{});
-    if(phase==='playing')musicBed.start(audioContext);
+    if(settings.sound){void loadRealLaserSample(audioContext);void loadCombatSamples(audioContext);}
   } catch {}
 }
 function tone(frequency, end, duration = .1, volume = .055, type = 'triangle', delay = 0) {
@@ -218,9 +214,9 @@ function selectView(next) {
 for (const button of document.querySelectorAll('[data-view]')) button.onclick = () => selectView(button.dataset.view);
 selectView(view); $('view-button').onclick = () => selectView(view === 'fps' ? 'third' : 'fps');
 
-function pause() { if (phase !== 'playing') return; musicBed.pause();ambience?.pause(); phase = 'paused'; resetInput(); if (vr?.mode !== 'xr') $('pause-dialog').showModal(); }
+function pause() { if (phase !== 'playing') return; setScreenMusic('gameplay');ambience?.pause(); phase = 'paused'; resetInput(); if (vr?.mode !== 'xr') $('pause-dialog').showModal(); }
 function resume() { if (phase !== 'paused') return; for (const d of document.querySelectorAll('dialog[open]')) d.close(); phase = 'playing'; resetInput(); audioReady(); }
-function openPanel(id) { if (phase === 'playing') { phase = 'paused'; resetInput();musicBed.pause();ambience?.pause(); } for (const d of document.querySelectorAll('dialog[open]')) d.close(); $(id).showModal(); }
+function openPanel(id) { if (phase === 'playing') { phase = 'paused'; resetInput();setScreenMusic('gameplay');ambience?.pause(); } for (const d of document.querySelectorAll('dialog[open]')) d.close(); $(id).showModal(); }
 function closePanel(dialog) { if(dialog.id==='outfit-dialog'){closeOutfit();return;} dialog.close(); if (phase === 'paused') $('pause-dialog').showModal(); }
 $('pause-button').onclick = pause; $('resume-button').onclick = resume;
 $('how-button').onclick = () => openPanel('help-dialog'); $('settings-button').onclick = () => openPanel('settings-dialog'); $('pause-help').onclick = () => openPanel('help-dialog');
@@ -265,7 +261,7 @@ $('outfit-front').onclick=()=>{$('outfit-rotation').value=180;};$('outfit-back')
 async function home() {
   if (vr?.active) await vr.exit();
   for (const d of document.querySelectorAll('dialog[open]')) d.close(); phase = 'lobby'; resetInput();
-  document.body.classList.remove('playing'); $('game-hud').hidden = true; musicBed.pause();ambience?.pause();world.resetDynamic();
+  document.body.classList.remove('playing'); $('game-hud').hidden = true; setScreenMusic('gameplay');ambience?.pause();world.resetDynamic();
   saberAudio?.update({active:false,equipped:false});
   world.setRangeActive(false);world.setCampaignActive(false);selectMode(selectedMode);
   $('damage-flash').style.setProperty('--injury', '0'); $('damage-flash').classList.remove('active'); $('wave-announcement').classList.remove('show');
@@ -283,7 +279,6 @@ async function start() {
   world.setRangeActive(selectedMode==='training');
   game=armed(selectedMode==='campaign'?new CampaignLevel1(world.obstacles,Math.random,character.id):
     selectedMode==='training'?new ShootingRangeGame(world.obstacles,Math.random,trainingWeaponIndex,character.id):new ArenaGame(world.obstacles,Math.random,null,character.id));
-  musicBed.dispose();musicBed=selectedMode==='campaign'?createMissionMusic(1):createMusicBed();musicBed.setEnabled(settings.music!==false);
   world.resetDynamic(); phase = 'loading'; yaw = 0; pitch = -.075;
   weaponFeel.reset();reloadInserted=false;lastShotAt=-99;flashTimer = 0; recoil = 0; damageUntil = 0; announcementUntil = 0;pickupNotice=null;equipmentUntil=0;crouchCameraBlend=0;currentSprinting=false; resetInput(); audioReady();
   world.setWeapon(game.weaponIndex);world.setEquipment(1);
@@ -341,7 +336,7 @@ window.addEventListener('pointerup',e=>{firingPointers.delete(e.pointerId);if(e.
 window.addEventListener('pointercancel',e=>{firingPointers.delete(e.pointerId);mouseAim=false;aimPointers.clear();});
 window.addEventListener('blur', () => { resetInput(); if (phase === 'playing' && vr?.mode !== 'xr') pause(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { resetInput(); if (phase === 'playing' && vr?.mode !== 'xr') pause(); } });
-window.addEventListener('pagehide',event=>{ambience?.pause();musicBed.pause();saberAudio?.update({active:false,equipped:!!game?.weapon.melee});if(!event.persisted){ambience?.dispose();musicBed.dispose();saberAudio?.dispose();if(audioContext)disposeLaserAudio(audioContext);}});
+window.addEventListener('pagehide',event=>{ambience?.pause();setScreenMusic('gameplay');saberAudio?.update({active:false,equipped:!!game?.weapon.melee});if(!event.persisted){ambience?.dispose();saberAudio?.dispose();if(audioContext)disposeLaserAudio(audioContext);}});
 window.addEventListener('resize', () => { world?.resize(settings.quality); resetInput(); });
 
 function updateCamera() {
@@ -431,7 +426,7 @@ function handleEvents() {
       if(vr.mode!=='xr')announce(event.title,event.subtitle);
       tone(410,680,.16,.025,'sine');
     }
-    if (event.type === 'shot') {musicBed.duck?.();
+    if (event.type === 'shot') {
       world.laserShot?.(event);
       const feel=weaponFeel.fire(event.weapon,event.power,game.player.crouched||aiming);
       lastShotAt=clock;recoil=feel.pitch;flashTimer=feel.flash;vr.haptic('shot', event.weapon,event.hand); weaponShotSound(event.weapon, event.power);
@@ -486,7 +481,7 @@ function handleEvents() {
 function gameOver(won = false) {
   $('end-dialog')?.querySelector('.pw-story-card')?.remove();
   $('end-dialog')?.querySelector('.pw-story-next')?.remove();
-  musicBed.pause();ambience?.pause(); phase = 'over'; resetInput(); let best = game.score;
+  setScreenMusic('gameplay');ambience?.pause(); phase = 'over'; resetInput(); let best = game.score;
   try { best = Math.max(game.score, Number(localStorage.getItem('rosee-best')) || 0); localStorage.setItem('rosee-best', String(best)); } catch {}
   $('end-eyebrow').textContent = won ? `MISSION ACCOMPLIE / NIVEAU ${MAX_LEVEL}` : 'TRANSMISSION INTERROMPUE';
   $('end-title').innerHTML = won ? `La brèche est fermée.<br>Le ${character.colorWord} a gagné.` : 'Chaque aube<br>est un nouveau départ.';
@@ -651,7 +646,7 @@ let frames = 0, recovering = false,recoveryPromise=null,recoveryAttempts=0;
 async function recoverGraphics(error,stage='rendu'){
   if(recoveryPromise)return recoveryPromise;
   if(!world||!game||recoveryAttempts>=2){
-    recovering=false;phase='error';resetInput();musicBed.pause();ambience?.pause();
+    recovering=false;phase='error';resetInput();setScreenMusic('gameplay');ambience?.pause();
     showLaunchError(error,stage,world?.backend);return false;
   }
   recoveryAttempts++;recovering=true;
@@ -677,7 +672,7 @@ async function recoverGraphics(error,stage='rendu'){
       if(phase==='playing'){document.body.classList.add('playing');$('game-hud').hidden=false;audioReady();}
       updateHud();world.renderer.setAnimationLoop(frame);return true;
     }catch(failure){
-      console.error('Rétablissement 3D',failure);recovering=false;phase='error';musicBed.pause();ambience?.pause();
+      console.error('Rétablissement 3D',failure);recovering=false;phase='error';setScreenMusic('gameplay');ambience?.pause();
       showLaunchError(failure,'rétablissement',world?.backend);return false;
     }finally{$('loading-screen').hidden=true;recoveryPromise=null;}
   })();
@@ -796,9 +791,7 @@ function stepFrame(timestamp, xrFrame) {
   ambience?.update(dt,{active:audioActive,position:game.player,yaw:heading,
     moving:phase==='playing',elevation:game.player.elevation,onLift:!!game.player.onLift,
     grounded:game.player.grounded,crouched:game.player.crouched,probes:game.enemies});
-  let threat=clock-lastShotAt<1.2?.18:0;
-  for(const enemy of game.enemies)if(enemy.awareness==='engaged')threat+=Math.max(0,1-Math.hypot(enemy.x-game.player.x,enemy.z-game.player.z)/36)*.3;
-  musicBed.update(dt,{active:audioActive,threat:Math.min(1,threat),intermission:game.wave>0&&game.nextWave>0});
+  setScreenMusic(['lobby','outfit'].includes(phase)?'menu':phase==='loading'?'loading':'gameplay',selectedMode==='campaign2'?2:1,settings.music!==false);
   if(audioContext)setWeaponCharge(audioContext,game.weapon.id,game.charge,audioActive&&settings.sound&&game.charge>.015);
   if(audioActive&&game.reloadRemaining>0&&!reloadInserted&&1-game.reloadRemaining/game.weapon.reload>=.58){reloadInserted=true;if(settings.sound)playWeaponAction(audioContext,game.weapon.id,'reload-in');}
   for(const gun of [world.soldier.gun,world.fpsGun])gun.userData.setFlash(phase === 'playing' && flashTimer > 0,game.time);
@@ -864,7 +857,7 @@ try {
     try{await world.warm();world.render();}catch(error){world=await world.recover({quality:'low'});game.replaceObstacles(world.obstacles);world.lobby(0);await world.warm();world.render();}
   }
   selectMode(selectedMode);$('loading-screen').hidden=true;$('play-button').disabled = false;$('outfit-button').disabled=false;
-  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ version:GAME_VERSION,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,phase, view, frames,recovering,recoveryAttempts,graphics:world.graphics, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,aiming,aimBlend,cameraFov:world.camera.fov,laserEffects:world.laserStats?.(),city:world.cityStats?.(),vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelSource:world.soldier.actor?.data.source,modelNativeMotion:world.soldier.nativeMotion,modelNativeBones:world.soldier.nativeSkeleton?.bones.length,modelShadowUnit:world.soldier.shadowUnit?{profile:world.soldier.shadowUnit.profile,helmet:world.soldier.shadowUnit.armour.helmet.name,cape:world.soldier.shadowUnit.cape.anchor.visible,tabard:false}:null,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:musicBed.enabled,musicPlaying:musicBed.playing,musicFailed:musicBed.failed,musicSection:musicBed.section,musicVoices:musicBed.stats.voices,audioState:audioContext?.state||'idle',weaponFeedback:{...weaponFeel.state},previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
+  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ version:GAME_VERSION,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,phase, view, frames,recovering,recoveryAttempts,graphics:world.graphics, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,aiming,aimBlend,cameraFov:world.camera.fov,laserEffects:world.laserStats?.(),city:world.cityStats?.(),vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelSource:world.soldier.actor?.data.source,modelNativeMotion:world.soldier.nativeMotion,modelNativeBones:world.soldier.nativeSkeleton?.bones.length,modelShadowUnit:world.soldier.shadowUnit?{profile:world.soldier.shadowUnit.profile,helmet:world.soldier.shadowUnit.armour.helmet.name,cape:world.soldier.shadowUnit.cape.anchor.visible,tabard:false}:null,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:settings.music!==false,musicPlaying:screenMusicSnapshot().playing,musicSection:screenMusicSnapshot().surface,musicVoices:screenMusicSnapshot().voices||0,audioState:audioContext?.state||'idle',weaponFeedback:{...weaponFeel.state},previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
     selectedMode,guidance:game.guidance?.()||null,weaponModels:{...world.fpsGun.userData.kenneyAssets},training:game.mode==='training'?game.snapshot().training:null,rangeTargets:world.rangeArt.targetCount,campaignArt:world.campaignArt.stats(),inputs: { move: { ...move }, look: { ...look }, firing: firingPointers.size > 0 || keys.has('Space') }, drawCalls: world.renderer.info.render.calls, ...game.snapshot(),equipment:equipmentForCharacter(game.wave,character.id) }) });
   bindCanvas();world.renderer.setAnimationLoop(frame);
   $('launch-status').textContent=`V. ${GAME_VERSION} · prêt à lancer`;

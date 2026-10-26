@@ -1,3 +1,4 @@
+import {setScreenMusic} from './menu-music.js';
 export function missionPresentation(mission=1,characterId='ghju'){
  const blue=characterId==='lylu';
  return mission===2?{number:2,title:'Sous les Néons',description:'Les Bas-Niveaux de Vesper. Une enclave, des archives saisies, une route à ouvrir.',image:'art/mission02-cover.svg?v=m02-cover-1',signal:blue?'#78baff':'#f27ba7'}:
@@ -7,6 +8,8 @@ export function missionPresentation(mission=1,characterId='ghju'){
 // Stage-based progress: each update follows completed work, never a timed fake
 // download percentage. The cover hides only after a real render is validated.
 export function createMissionLoading({mission=1,characterId='ghju'}={}){
+ let musicEnabled=true;try{musicEnabled=JSON.parse(localStorage.getItem('rosee-settings')||'{}').music!==false;}catch{}
+ setScreenMusic('loading',mission,musicEnabled);
  if(!document.querySelector('[data-mission-loading-style]')){
   const link=document.createElement('link');link.rel='stylesheet';link.href=new URL('./mission-loading.css?v=3.58',import.meta.url).href;link.dataset.missionLoadingStyle='';document.head.append(link);
  }
@@ -26,10 +29,10 @@ export function createMissionLoading({mission=1,characterId='ghju'}={}){
  return {root,set,
   finish(){
    if(complete)return complete;
-   set(1,'Secteur prêt');complete=new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>{if(!failed)root.hidden=true;resolve(!failed);})));return complete;
+   set(1,'Secteur prêt');complete=new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>{if(!failed){setScreenMusic('gameplay',mission);root.hidden=true;}resolve(!failed);})));return complete;
   },
   fail(message='Le chargement a été interrompu.'){
-   failed=true;root.hidden=false;root.querySelector('.pw-load-state').textContent=message;
+   failed=true;setScreenMusic('loading',mission);root.hidden=false;root.querySelector('.pw-load-state').textContent=message;
    const button=root.querySelector('.pw-load-error');button.hidden=false;button.onclick=()=>location.reload();
   },
   get progress(){return progress;}

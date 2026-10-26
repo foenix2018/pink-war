@@ -1,0 +1,67 @@
+[
+  {
+    "id": "metal-heavy",
+    "file": "audio/combat/metal-heavy.wav",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/impact-sounds",
+    "download": "https://raw.githubusercontent.com/euuuuuuan/voidclad-public/main/assets/sfx/kenney/impactMetal_heavy_000.ogg",
+    "source_sha256": "e07045693e4a2b3d165c424e3dab4c781d9ff8880a386880ac89a51315d7f831",
+    "sha256": "10259dbceb8cb8ca2aaed783d1347c476140daf35fbf0bd5a48ad8426f583d2b",
+    "bytes": 10624,
+    "conversion": "Mono PCM 16-bit 32 kHz; high-pass 85 Hz; measured peak normalized to -5 dBFS; trimmed tail, 45 ms fade",
+    "seconds": 0.167664
+  },
+  {
+    "id": "metal-medium",
+    "file": "audio/combat/metal-medium.wav",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/impact-sounds",
+    "download": "https://raw.githubusercontent.com/euuuuuuan/voidclad-public/main/assets/sfx/kenney/impactMetal_medium_002.ogg",
+    "source_sha256": "7e89ce2ca0dbda95ea2b78d4b50791cab35c10d20e9f5ccd45dd0b00e99ff548",
+    "sha256": "2261c2951bc82587e9fb6f198818efc89f7cae36e4e5e61cc47a2352e4e0e5c1",
+    "bytes": 7518,
+    "conversion": "Mono PCM 16-bit 32 kHz; high-pass 85 Hz; measured peak normalized to -5 dBFS; trimmed tail, 45 ms fade",
+    "seconds": 0.119138
+  },
+  {
+    "id": "metal-light",
+    "file": "audio/combat/metal-light.wav",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/impact-sounds",
+    "download": "https://raw.githubusercontent.com/euuuuuuan/voidclad-public/main/assets/sfx/kenney/impactMetal_light_002.ogg",
+    "source_sha256": "25a96f90a9a1f88a531e824e126f0519504625e5635e65a72e4f31611428db29",
+    "sha256": "edee35aba487e123063d67c648b3bae5d7d101201b134af0453c2f7e77625cd1",
+    "bytes": 14984,
+    "conversion": "Mono PCM 16-bit 32 kHz; high-pass 85 Hz; measured peak normalized to -5 dBFS; trimmed tail, 45 ms fade",
+    "seconds": 0.235782
+  },
+  {
+    "id": "rifle-mechanism",
+    "file": "audio/combat/rifle-mechanism.wav",
+    "author": "SpringySpringo",
+    "license": "CC0-1.0",
+    "source": "https://opengameart.org/content/gun-reload-sounds",
+    "download": "https://raw.githubusercontent.com/DeathByDenim/openspades-free-pak/main/Sounds/Weapons/Rifle/RaiseLocal.opus",
+    "source_sha256": "f893e899438e1dd1eea0b95492ac5661171e90fc3b2e51b7570566b60b8acf2f",
+    "sha256": "7858e87de83f1b83a4fc309bcf6ace7f59187d9ef095d8f0764e1b2497911004",
+    "bytes": 25810,
+    "conversion": "Mono PCM 16-bit 32 kHz; high-pass 85 Hz; measured peak normalized to -5 dBFS; trimmed tail, 45 ms fade",
+    "seconds": 0.408563
+  },
+  {
+    "id": "shotgun-body",
+    "file": "audio/combat/shotgun-body.wav",
+    "author": "Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney",
+    "license": "CC0-1.0",
+    "source": "https://opengameart.org/content/the-free-firearm-sound-library",
+    "download": "https://raw.githubusercontent.com/DeathByDenim/openspades-free-pak/main/Sounds/Weapons/Shotgun/V2AmbienceSmall.opus",
+    "source_sha256": "4cd39c3151312d6e08f10f1641a1d57fbadcf9f583de72d0fbf31a8e9f91a99e",
+    "sha256": "8767c9a8f0cc63d6789a2360775511b2acdff2fb614e32f2983740de109f4525",
+    "bytes": 44878,
+    "conversion": "Mono PCM 16-bit 32 kHz; high-pass 85 Hz; measured peak normalized to -5 dBFS; trimmed tail, 45 ms fade",
+    "seconds": 0.7
+  }
+]

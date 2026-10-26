@@ -19,6 +19,8 @@ Tests : deux approches M01 parcourues avec les nouvelles collisions ; particules
 
 ## Musiques fournies par le créateur
 
+> Historique 3.63.6 : leur usage en partie est remplacé en 3.63.7 par la règle [accueil et chargements uniquement](./AUDIO_363_7.md).
+
 - M01 : **Velvet Siege**, 148 secondes, 3 558 988 → 1 212 419 octets.
 - M02 : **Iron Maw**, 177 secondes, 4 256 142 → 1 451 876 octets.
 - Total : 7 815 130 → 2 664 295 octets, soit environ **66 % de réduction**.

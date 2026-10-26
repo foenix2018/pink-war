@@ -1,4 +1,3 @@
-import {createMissionMusic} from './mission-music.js';
 // PINK WARS / M02 "SOUS LES NÉONS" — isolated vertical-slice test.
 // Simulation, collisions, jump, stamina/health, weapons and hostiles are
 // imported unchanged from the production game. The cyberpunk world is new.
@@ -7,7 +6,7 @@ import {WebGLRenderer} from './vendor/three.module.min.js';
 import {ArenaGame,WEAPONS,clamp,segmentBox,traceEnemyHit} from './game-logic.js';
 import {createPinkWarsInput,createPinkWarsTouch} from './level2-input.js';
 import {createWeaponFeel} from './weapon-feel.js';
-import {playLaserShot,playWeaponAction,playLaserImpact,setLaserAudioEnabled} from './laser-sound.js';
+import {loadRealLaserSample,loadCombatSamples,playLaserShot,playWeaponAction,playLaserImpact,setLaserAudioEnabled} from './laser-sound.js';
 import {aimSensitivity,magnifiedFov,flatSightPose} from './optics.js';
 import {OPTICS} from './weapons.js';
 import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './renderer-policy.js';
@@ -53,7 +52,7 @@ let view='fps',aimBlend=0,mouseAim=false,playerRig=null,touchControls=null,pause
 let jumpQueued=false,crouchQueued=false,firePressQueued=false,weaponReady=false,audioCtx=null,hitUntil=0;
 const weaponFeel=createWeaponFeel(),pinkControls=createPinkWarsInput();
 const fireInput=createFireBuffer();
-const music=createMissionMusic(2);let musicEnabled=true;try{musicEnabled=JSON.parse(localStorage.getItem('rosee-settings')||'{}').music!==false;}catch{}music.setEnabled(musicEnabled);
+
 let enableAudio=true;try{enableAudio=JSON.parse(localStorage.getItem('rosee-settings')||'{}').sound!==false;}catch{}
 let xr=null,fallbackGun=null,fallbackHand=null;
 // Armour layer (3.63): strikes and throws queued by the keyboard, the mouse and the touch buttons.
@@ -64,13 +63,13 @@ const pauseMenu=createPauseMenu({title:'HISTOIRE / SOUS LES NÉONS',canOpen:()=>
 let combatEffects=null,companion=null,environmentAudio=null,warZone=null,battleAudio=null;
 let companionSkills=null,skillMenu=null;
 function audioReady(){
- if(!enableAudio&&!musicEnabled)return;
+ if(!enableAudio)return;
  if(audioCtx){void audioCtx.resume?.().catch?.(()=>{});return;}
  try{
   const Context=window.AudioContext||window.webkitAudioContext;
-  if(!Context)return;audioCtx=new Context();
+  if(!Context)return;audioCtx=window.__PINKWAR_BOOT_AUDIO||new Context();
   audioCtx.resume?.().catch?.(()=>{});
-  setLaserAudioEnabled(audioCtx,enableAudio);music.setContext(audioCtx);
+  setLaserAudioEnabled(audioCtx,enableAudio);void loadRealLaserSample(audioCtx);void loadCombatSamples(audioCtx);
   environmentAudio=createAmbience(audioCtx);
   battleAudio=createBattleAudio(audioCtx);
  }catch(error){console.warn('M02 audio fallback',error);}
@@ -506,7 +505,7 @@ function updateOriginalSoldier(dt,moving,sprint,firing){
 }
 function pauseMission(){
  if(!running||paused)return;
- music.pause();combatHud?.reset();touchSprinting=false;paused=true;running=false;battleAudio?.pause();environmentAudio?.pause();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
+ combatHud?.reset();touchSprinting=false;paused=true;running=false;battleAudio?.pause();environmentAudio?.pause();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
  touchControls?.reset();pinkControls.reset();document.exitPointerLock?.();
  pauseMenu.show();$('start').textContent='REPRENDRE LA MISSION →';
  $('status').textContent='PAUSE · PINK WARS / NIVEAU 2';
@@ -630,7 +629,7 @@ function gameTick(dt){
   audio:()=>enableAudio&&audioCtx?.state==='running'?audioCtx:null,haptic:kind=>xr?.active&&xr.haptic(kind)});
  for(const e of events){
   combatEffects?.event(e);armorFx.handle(e);
-  if(e.type==='shot'){music.duck();
+  if(e.type==='shot'){
     xr?.haptic('shot',e.weapon,e.hand);
     weaponFeel.fire(e.weapon||game.weapon.id,e.power||1,aimBlend>.5);
     weaponKick=Math.min(.25,weaponKick+.085);
@@ -707,7 +706,6 @@ function animation(t,frame){
  if(atmosphere)try{atmosphere.update(clock);}catch(error){
    console.warn('M02 optional atmosphere frame disabled:',error);atmosphere=null;
  }
- music.update(dt,{active:running&&!paused&&game?.state==='playing'&&!skillMenu?.isOpen});
  if(running)try{gameTick(dt);}catch(error){
   console.error('M02 simulation failure:',error);
   running=false;shade.style.display='grid';status.textContent='Erreur de mission : '+(error?.message||String(error));
@@ -888,8 +886,7 @@ for(const name of ['pointerup','pointercancel']){
  window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
 }
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
-window.addEventListener('pagehide',event=>{music.pause();if(!event.persisted)music.dispose();});
-window.__PINK_M02=Object.freeze({snapshot:()=>({music:{playing:music.playing,source:music.source,...music.stats},revision:'3.63.6',running,paused,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
+window.__PINK_M02=Object.freeze({snapshot:()=>({music:{playing:false,source:null},revision:'3.63.7',running,paused,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
  backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
  effects:combatEffects?.stats(),armor:game&&{shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt}})});
