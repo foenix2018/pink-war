@@ -88,7 +88,10 @@ for(let side of [-1,1])for(let j=0;j<3;j++)cyl(side*.56,3.14-j*.18,.612,.022,.02
  const palettes=new Map(),materials=[];
  function colorMat(hex){if(!palettes.has(hex)){const c=new T.Color(hex);const m=new T.MeshStandardMaterial({color:c,metalness:.74,roughness:.43,flatShading:true,side:T.DoubleSide});if(hex==='#0675da'){m.emissive=new T.Color(0x0669d8);m.emissiveIntensity=1.9;}palettes.set(hex,m);materials.push(m);}return palettes.get(hex)}
  const batches=new Map();
- function pushTri(color,a,b,c){if(!batches.has(color))batches.set(color,[]);batches.get(color).push(...a,...b,...c)}
+ const pivots={leftLeg:[-.65,1.9,0],rightLeg:[.65,1.9,0],leftArm:[-1.13,3.12,0],rightArm:[1.13,3.12,0],head:[0,3.62,0]};
+ const rig={};for(const [key,p] of Object.entries(pivots)){const group=new T.Group();group.position.set(...p);visual.add(group);rig[key]=group;}
+ const stateMaterials=[];
+ function pushTri(color,a,b,c,part='body'){const key=part+'|'+color;if(!batches.has(key))batches.set(key,[]);const pivot=pivots[part]||[0,0,0];for(const v of [a,b,c])batches.get(key).push(v[0]-pivot[0],v[1]-pivot[1],v[2]-pivot[2]);}
  const cubeFaces=[[0,1,2,3],[4,7,6,5],[0,4,5,1],[3,2,6,7],[1,5,6,2],[0,3,7,4]];
  for(const sh of shapes){
  let verts,faces;
@@ -101,17 +104,32 @@ for(let side of [-1,1])for(let j=0;j<3;j++)cyl(side*.56,3.14-j*.18,.612,.022,.02
  faces=[Array.from({length:8},(_,i)=>7-i),Array.from({length:8},(_,i)=>i+8)];
  for(let i=0;i<8;i++)faces.push([i,(i+1)%8,(i+1)%8+8,i+8]);
  }
- for(const face of faces){if(face.length<3)continue;for(let i=1;i<face.length-1;i++)pushTri(sh.col,verts[face[0]],verts[face[i]],verts[face[i+1]]);}
+ const center=verts.reduce((a,v)=>[a[0]+v[0]/verts.length,a[1]+v[1]/verts.length,a[2]+v[2]/verts.length],[0,0,0]);
+ const part=center[1]<1.85?(center[0]<0?'leftLeg':'rightLeg'):center[1]>3.75&&Math.abs(center[0])<.55?'head':Math.abs(center[0])>.99&&center[1]<3.56&&center[1]>2.24?(center[0]<0?'leftArm':'rightArm'):'body';
+ for(const face of faces){if(face.length<3)continue;for(let i=1;i<face.length-1;i++)pushTri(sh.col,verts[face[0]],verts[face[i]],verts[face[i+1]],part);}
  }
  const meshes=[];
- for(const [color,coords] of batches){const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(coords,3));geo.computeVertexNormals();const m=new T.Mesh(geo,colorMat(color));m.castShadow=true;m.receiveShadow=true;visual.add(m);meshes.push(m);}
+ for(const [key,coords] of batches){const [part,color]=key.split('|');const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(coords,3));geo.computeVertexNormals();const m=new T.Mesh(geo,colorMat(color));m.castShadow=true;m.receiveShadow=true;(rig[part]||visual).add(m);meshes.push(m);}
  const muzzles=[],pods=[];
  for(const side of [-1,1]){
  for(const dx of [-.13,.13]){const tip=new T.Object3D();tip.position.set(side*1.43+dx,2.39,1.91);visual.add(tip);muzzles.push(tip)}
  for(const row of [-1,1])for(const col of [-1,1]){const tip=new T.Object3D();tip.position.set(side*1.22+col*.19,4.03+row*.16,.56);visual.add(tip);pods.push(tip)}
  }
- const state={health:options.health??850,time:0,dead:false};
- function update(dt,ctx={}){if(state.dead)return;state.time+=Math.max(0,Math.min(dt,.08));visual.position.y=ctx.moving?Math.sin(state.time*4)*.025:0;}
+ const state={health:options.health??850,time:0,dead:false,shotAt:-9};
+ const flashMat=new T.MeshBasicMaterial({color:0xffd891,transparent:true,opacity:0,depthWrite:false});materials.push(flashMat);
+ const flashes=muzzles.map(tip=>{const flare=new T.Mesh(new T.SphereGeometry(.11,6,4),flashMat);tip.add(flare);meshes.push(flare);return flare});
+ const tintMat=new T.MeshBasicMaterial({color:0x59c8ff,transparent:true,opacity:.12,depthWrite:false,side:T.DoubleSide});materials.push(tintMat);
+ const eyeLight=new T.PointLight(0x59c8ff,.7,4);eyeLight.position.set(0,4.04,.68);visual.add(eyeLight);
+ function update(dt,ctx={}){if(state.dead)return;dt=Math.max(0,Math.min(dt,.08));state.time+=dt;const stride=ctx.moving?Math.sin(state.time*5):0;
+ rig.leftLeg.rotation.x=stride*.16;rig.rightLeg.rotation.x=-stride*.16;
+ rig.leftArm.rotation.x=-stride*.09;rig.rightArm.rotation.x=stride*.09;
+ rig.head.rotation.y=Math.sin(state.time*.85)*.06;
+ visual.position.y=ctx.moving?Math.abs(stride)*.035:0;
+ const phase=ctx.awareness||'patrol',color=phase==='engaged'?0xff3e65:phase==='search'?0xffba39:0x39c9ff;
+ eyeLight.color.setHex(color);for(const material of materials){if(material.emissive&&material.emissiveIntensity>1.5)material.emissive.setHex(color);}
+ if(ctx.shotAt!==undefined&&ctx.shotAt>state.shotAt){state.shotAt=ctx.shotAt;flashMat.opacity=1;}
+ flashMat.opacity=Math.max(0,flashMat.opacity-dt*7);
+ }
  function damage(n){state.health-=Math.max(0,n);if(state.health<=0){state.dead=true;options.onDestroyed?.(root.position.clone())}return state.health}
  function dispose(){scene.remove(root);for(const m of meshes)m.geometry.dispose();for(const m of materials)m.dispose()}
  return {root,state,update,damage,dispose,muzzles,pods};
