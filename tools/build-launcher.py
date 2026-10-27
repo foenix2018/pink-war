@@ -39,7 +39,13 @@ with tempfile.TemporaryDirectory(prefix='pink-war-') as temporary:
     html = re.sub(r'url\(\s*(["\']?)((?:\./|/)?art/[^)\s"\']+)\1\s*\)', lambda m: 'url("'+art_url(m[2])+'")', html)
     html = re.sub(r'(\bsrc\s*=\s*)(["\'])((?:\./|/)?art/[^"\']+)\2', lambda m: m[1]+m[2]+art_url(m[3])+m[2], html)
     html = html.replace('href="icon.svg"','href="data:image/svg+xml,'+urllib.parse.quote((project/'dist/icon.svg').read_text(),safe='')+'"')
-    html = html.replace('  <link rel="manifest" href="manifest.webmanifest">\n','').replace('class="brand" href="./"','class="brand" href="#"')
+    # Keep the iPhone icon when this optional launcher is opened without its
+    # sibling assets; the hosted manifest belongs to the online application.
+    def icon_url(match):
+        asset = project/'dist'/match[1]
+        return 'href="data:image/png;base64,'+base64.b64encode(asset.read_bytes()).decode()+'"'
+    html = re.sub(r'href="((?:icons/favicon-32|apple-touch-icon)\.png)(?:\?[^\"]*)?"', icon_url, html)
+    html = re.sub(r'\s*<link\b(?=[^>]*\brel="manifest")[^>]*>', '', html).replace('class="brand" href="./"','class="brand" href="#"')
     html = html.replace('href="mains.html"','href="https://pink-war.vercel.app/mains.html"').replace('href="personnage.html"','href="https://pink-war.vercel.app/personnage.html"').replace('href="propositions.html"','href="https://pink-war.vercel.app/propositions.html"').replace('href="at-home.html"','href="https://pink-war.vercel.app/at-home.html"')
     html = html.replace('<script type="module" src="entry.js"></script>','<script type="module">\n'+javascript+'\n</script>')
     version = re.search(r"GAME_VERSION='([^']+)'", (project/'dist/launch-ui.js').read_text())[1]
