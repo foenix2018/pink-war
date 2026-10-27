@@ -199,9 +199,9 @@ export function applyBlasterEnvironment(root,environment){
 export function installKenneyBlasters(models,originals,frames,onLoad,holds=[],environment=null){
   const letters=['b','g','d','f','p'];
   // Le nouveau ARES X9, déjà assemblé, ne doit jamais être écrasé par un blaster Kenney.
-  const progress={loaded:1,total:5,failed:0,revision:'ares-x9',loadedByIndex:[false,false,true,false,false]};
+  const progress={loaded:2,total:5,failed:0,revision:'nexus-v9-ares-x9',loadedByIndex:[false,true,true,false,false]};
   for(let i=0;i<5;i++){
-   if(i===2)continue;
+   if(i===1||i===2)continue;
    cached(letters[i]).then(master=>{
     const skin=master.clone(true),frame=frames[i];
     skin.name=(skin.userData.pinkWarFrame?'Pink War IV / ':'Kenney CC0 / ')+frames[i].id;
