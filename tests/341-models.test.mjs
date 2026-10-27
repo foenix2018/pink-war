@@ -32,6 +32,7 @@ test('live installation keeps measured hand positions and removes the floating l
   assert.equal(gun.userData.weaponModels[0].userData.modelName,'VX-9 Orbital Defense');
   assert.equal(gun.userData.weaponModels[1].userData.modelName,'NEXUS V9');
   assert.equal(gun.userData.weaponModels[2].userData.modelName,'ARES X9');
+  assert.equal(gun.userData.weaponModels[3].userData.modelName,'THORN V8');
   assert.ok(gun.userData.weaponModels[2].userData.optimizedDrawCalls<=18,'ARES X9 uses material-grouped draw calls');
   for(let i=0;i<5;i++){
    gun.userData.setVariant(i);gun.userData.setCombatState({ammo:5,capacity:12,heat:1});
