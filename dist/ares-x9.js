@@ -64,7 +64,7 @@ function buildRifle(){
  // Trigger guard and forward mag release, cosmetic
  beam(rifle,[-3.33,2.18,.03],[-3.09,1.99,.03],.028,mat.black);beam(rifle,[-3.09,1.99,.03],[-2.69,1.98,.03],.028,mat.black);beam(rifle,[-2.69,1.98,.03],[-2.59,2.19,.03],.028,mat.black);
  box(rifle,-3.35,1.79,0,.38,.82,.43,mat.rubber,.078,-.2);
- for(let z of [-.245,.245]){box(rifle,-3.35,1.84,z,.40,.76,.028,mat.carbon,.045,-.2);for(let i=0;i<8;i++){let x=-3.44+i%2*.11;let y=1.55+Math.floor(i/2)*.115;strip(rifle,x,y,z>0?.266:-.266,.09,.012,.01,mat.grey);}}
+ for(let z of [-.245,.245]){box(rifle,-3.35,1.84,z,.40,.76,.028,mat.carbon,.045,-.2);for(let i=0;i<8;i++){let x=-3.44+i%2*.11;let y=1.55+Math.floor(i/2)*.115;strip(rifle,x,y,z>0?.266:-.266,.09,.012,.01,mat.body);}}
  cylinder(rifle,-3.12,2.18,.37,.09,.08,.08,mat.gold);bolt(rifle,-3.12,2.18,.43,.047);
  // Main handguard: upper and lower beams, engineered shell with side cutouts
  cylinder(rifle,1.28,2.58,0,4.9,.235,.235,mat.black,20);

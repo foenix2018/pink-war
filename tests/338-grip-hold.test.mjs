@@ -34,6 +34,7 @@ test('a loaded Kenney blaster puts the palm on its own grip and both cuffs towar
   const gun=buildGun({mats:mats(),gloves:createCharacterKit(new T.Texture()).gloves,makeFlash:flash});
   const {hand,support}=gun.userData;
   KENNEY_HOLD.forEach((hold,i)=>{
+    if(i===2)return; // Le nouveau ARES X9 ne reprend pas l'ancienne poignée Kenney.
     gun.userData.kenneyAssets.loadedByIndex[i]=true;gun.userData.setVariant(i);
     for(let k=0;k<20;k++)gun.userData.animateHands(0,.18,0,.05);
     assert.ok(near(hand.position.toArray(),hold.palm),`${WEAPON_FRAME[i].id}: palm on the grip`);

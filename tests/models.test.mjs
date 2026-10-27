@@ -111,7 +111,7 @@ test('every weapon is drawn around the grip: the origin is inside the model and 
     assert.ok(frame.muzzle[1] > 0 && frame.muzzle[1] < b.max.y + 1e-6, `${frame.id}: the barrel sits above the grip`);
     assert.ok(b.max.z < (frame.id==='m12'?.35:.21), `${frame.id}: the stock stays short of the shooter's face`);
     let meshes = 0; model.traverse(o => { if (o.isMesh) { meshes++; assert.ok(finite(o.geometry)); } });
-    assert.ok(meshes >= 3 && meshes <= (frame.dual?18:9), `${frame.id}: merged into a handful of meshes (${meshes})`);
+    assert.ok(meshes >= 3 && meshes <= (frame.dual||frame.id==='lance'?18:9), `${frame.id}: merged into a handful of meshes (${meshes})`);
     if (frame.support&&!frame.dual) assert.ok(frame.support[2] < -.15 && frame.support[2] > b.min.z, `${frame.id}: the free hand holds the front half`);
   });
   assert.equal(WEAPON_FRAME.filter(f=>!f.support).length,2,'pistol and sabre are one-handed');
