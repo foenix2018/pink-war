@@ -447,8 +447,8 @@ export class ArenaGame {
     const angle = this.random() * Math.PI * 2;
     const available=this.activePortals.filter(p=>p.openedAt<=this.time);
     const site=available.length?available[ordinal%available.length]:this.activePortals[0]||PORTAL;
-    const x=site.x+Math.sin(site.yaw||0)*3.2+Math.cos(angle)*.95;
-    const z=site.z+Math.cos(site.yaw||0)*3.2+Math.sin(angle)*.95;
+    const x=form==='sentinel'?this.player.x:site.x+Math.sin(site.yaw||0)*3.2+Math.cos(angle)*.95;
+    const z=form==='sentinel'?this.player.z-14:site.z+Math.cos(site.yaw||0)*3.2+Math.sin(angle)*.95;
     const aimHeight = probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : ['seer','listener'].includes(form) ? 1.38 : ['brute','bulwark'].includes(form) ? 1.42 : 1.15;
     const homeHeight = this.surfaceHeight(x, z,this.time,.3);
     const enemy = { id: this.nextId++, x, z, elevation: homeHeight + (probe ? PROBE.hover : 0),grounded:!probe,verticalSpeed:0,homeHeight,
@@ -461,6 +461,7 @@ export class ArenaGame {
       attackTimer: .8 + this.random() * .6, phase: this.random() * Math.PI * 2,
       awareness:'patrol',lastSeenAt:-999,lastKnownX:x,lastKnownZ:z,lastKnownHeight:homeHeight,patrolAngle:angle,patrolTimer:.7+this.random()*2,alertedUntil:0 };
 
+    if(form==='sentinel'){enemy.awareness='engaged';enemy.lastSeenAt=this.time;enemy.yaw=Math.PI;}
     this.enemies.push(enemy); this.toSpawn--; this.event('spawn', { id: enemy.id, x: enemy.x, y: enemy.elevation + enemy.aimHeight, z: enemy.z });
   }
   searchWaypoint(enemy,target) {
