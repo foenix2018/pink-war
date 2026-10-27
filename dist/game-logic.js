@@ -452,7 +452,7 @@ export class ArenaGame {
     const aimHeight = probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : ['seer','listener'].includes(form) ? 1.38 : ['brute','bulwark'].includes(form) ? 1.42 : 1.15;
     const homeHeight = this.surfaceHeight(x, z,this.time,.3);
     const enemy = { id: this.nextId++, x, z, elevation: homeHeight + (probe ? PROBE.hover : 0),grounded:!probe,verticalSpeed:0,homeHeight,
-      hp: form==='sentinel'?5*enemyDurability(this.wave,'stalker',false):enemyDurability(this.wave,form,elite), elite, ranged:ranged||form==='synth'||form==='sentinel', form, aimHeight,
+      hp: form==='sentinel'?1200:enemyDurability(this.wave,form,elite), elite, ranged:ranged||form==='synth'||form==='sentinel', form, aimHeight,
       speed: form==='sentinel'?1.5:probe ? Math.min(5,3.6 + this.wave * .07) : Math.min(4.3,2.4+(this.wave-1)*.055)*(form==='bulwark'?.7:form==='scuttler'?1.12:1),
       tier: Math.max(1,Math.ceil(this.wave/2)),limpUntil:0,stunnedUntil:0,
       homeX:site.x,homeZ:site.z,portalId:site.id,
@@ -588,7 +588,7 @@ export class ArenaGame {
     if (!this.enemies.includes(target)) return;
     const armor=target.form?Math.min(.18,Math.max(0,(target.tier||1)-1)*.025):0;
     const support=source?.companion?1:(this.time<(target.companionMarkUntil||0)?1.2:1)*(this.time<(this.companionAmplifyUntil||0)?1.15:1);
-    const effective=amount*multiplier*support*(1-armor*(zone==='head'?.35:1));
+    const effective=target.form==='sentinel' ? amount*support*(zone==='head'?5:zone==='limb'?.65:1) : amount*multiplier*support*(1-armor*(zone==='head'?.35:1));
     target.hp -= effective;
     target.lastKnownX=source.x;target.lastKnownZ=source.z;target.lastKnownHeight=source.elevation??this.player.elevation;
     target.alertedUntil=this.time+5;target.awareness='search';target.lastSeenAt=this.time;
