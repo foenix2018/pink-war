@@ -7,19 +7,20 @@ import {createM12Shotgun,M12_FRAME,M12_HOLD} from './m12-shotgun.js';
 import {dualRecoilPose} from './weapon-feel.js';
 import {createAresX9} from './ares-x9.js';
 import {createNexusV9} from './nexus-v9.js';
+import {createVX9Orbital} from './vx9-orbital.js';
 
 // Every weapon is modelled in one frame: the origin is the centre of its pistol grip (where the palm rests),
 // -z is the barrel direction, +y is up. The gloved hand (hands.js) is built in the same frame, so any weapon
 // sits in the hand by construction. `support` is where the free hand takes hold (null: a one-handed weapon).
 export const WEAPON_FRAME = Object.freeze([
-  Object.freeze({ id: 'r9', muzzle: Object.freeze([0, .077, -.207]), support: null, length: .27 }),
+  Object.freeze({ id: 'r9', muzzle: Object.freeze([0, .124, -.329]), support: null, length: .40 }),
   Object.freeze({ id: 'bloom', muzzle: Object.freeze([0, .108, -.600]), support: Object.freeze([0, .020, -.400]), length: .93 }),
   Object.freeze({ id: 'lance', muzzle: Object.freeze([0, .071, -.895]), support: Object.freeze([0, -.052, -.30]), length: 1.16 }),
   Object.freeze({ id: 'thorn', muzzle: Object.freeze([0, .108, -.85]), support: Object.freeze([0, -.05, -.34]), length: 1.05 }),
   Object.freeze({ id: 'nova', muzzle: Object.freeze([0, .11, -.655]), support: Object.freeze([0, -.058, -.29]), length: .9 }),
   Object.freeze({ id:'aurora',muzzle:Object.freeze([0,.14,0]),support:null,length:1.22,melee:true }),
   M12_FRAME,
-  Object.freeze({id:'duor9',muzzle:Object.freeze([0,.077,-.207]),support:Object.freeze([-.44,0,0]),length:.27,dual:true})
+  Object.freeze({id:'duor9',muzzle:Object.freeze([0,.124,-.329]),support:Object.freeze([-.44,0,0]),length:.40,dual:true})
 ]);
 // The Kenney blasters are placed by their muzzle, so their own pistol grips are not at the origin, and they are
 // toy-wide (grips 4.3 to 7.2 cm across). `slim` narrows each one (x only) to a 3.6 cm grip, which the glove's
@@ -243,7 +244,7 @@ function buildAurora(m){
   a.box(m.rose,[.009,.016,.004],[0,.042,-.027],[0,0,0],.001,false);
   return a;
 }
-const BUILDERS = [buildR9, null, null, buildThorn, buildNova,buildAurora];
+const BUILDERS = [null, null, null, buildThorn, buildNova,buildAurora];
 
 // Small exposed energy cells sit beside each receiver and react to ammunition, charge and reload.
 const BATTERY_LAYOUT = Object.freeze([
@@ -256,7 +257,7 @@ const BATTERY_LAYOUT = Object.freeze([
 const BATTERY_COUNT = 8;
 const batteryCellGeometry = new T.BoxGeometry(.0035, .007, .008);
 function attachBatteryRail(model, index, mats, material) {
-  if(WEAPON_FRAME[index].melee||index>=6||index===1||index===2)return null;
+  if(WEAPON_FRAME[index].melee||index>=6||index===0||index===1||index===2)return null;
   const [x,y,z,step] = BATTERY_LAYOUT[index], length = step * (BATTERY_COUNT - 1) + .012;
   const shell = new T.Mesh(new T.BoxGeometry(.009, .013, length), mats.dark);
   shell.position.set(x + .002, y, z - step * (BATTERY_COUNT - 1) * .5);
@@ -293,15 +294,15 @@ export function createWeaponModels(mats) {
   mats=weaponMetals(mats);
   if (!prototypes.has(mats)) {
     prototypes.set(mats, BUILDERS.map((build, index) => {
-      const group = index===1 ? createNexusV9() : index===2 ? createAresX9() : new T.Group();
-       if(index!==1&&index!==2)build(mats).build(group);
+      const group = index===0 ? createVX9Orbital() : index===1 ? createNexusV9() : index===2 ? createAresX9() : new T.Group();
+       if(index!==0&&index!==1&&index!==2)build(mats).build(group);
       group.userData.frame = WEAPON_FRAME[index];
       return group;
     }));
   }
   const models=[...prototypes.get(mats).map(group => group.clone()),createM12Shotgun(mats.steel.envMap)];
   const duo=new T.Group(),right=new T.Group(),left=new T.Group();
-  duo.name='R–9 DUO / GHJU';right.name='DUO right';left.name='DUO left';left.position.x=-.44;left.scale.x=-1;
+  duo.name='VX-9 DUO / GHJU';right.name='DUO right';left.name='DUO left';left.position.x=-.44;left.scale.x=-1;
   right.add(models[0].clone());left.add(models[0].clone());duo.add(right,left);
   Object.assign(duo.userData,{frame:WEAPON_FRAME[7],dual:true,integratedEmitter:true});models.push(duo);return models;
 }
@@ -409,7 +410,7 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
     if(!WEAPON_FRAME[index])return;
     if(g.userData.index===6&&index!==6)models[6].userData.resetAnimation();
     models.forEach((model, i) => model.visible = i === index);
-    const frame = WEAPON_FRAME[index],hold=index===6?M12_HOLD:index===1||index===2?null:g.userData.kenneyAssets?.loadedByIndex?.[index===7?0:index]?KENNEY_HOLD[index===7?0:index]:null;
+    const frame = WEAPON_FRAME[index],hold=index===6?M12_HOLD:[0,1,2,7].includes(index)?null:g.userData.kenneyAssets?.loadedByIndex?.[index]?KENNEY_HOLD[index]:null;
     if(index===7){dualRight.add(hand,flash);dualLeft.add(support);support.scale.x=Math.abs(support.scale.x);}
     else {g.add(hand,support,flash);support.scale.x=-Math.abs(support.scale.x);}
     dualLeft.visible=index===7&&!!g.userData.showSupport;leftFlash.visible=false;

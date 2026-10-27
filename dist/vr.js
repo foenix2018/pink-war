@@ -51,7 +51,7 @@ export function questControls(hand = 'right') {
     [`Poignée ${sideF}`, 'Courir (maintenu)'],
     [`Clic joystick ${sideF}`, 'Terminal / arme proche : interagir · sinon : s’accroupir'],
     [b.jump, 'Saut · second appui : double saut / rebond mural'],
-    ['Gâchette INDEX gauche', 'GHJU / R–9 DUO : pistolet gauche · sinon : charge à impulsion'],
+    ['Gâchette INDEX gauche', 'GHJU / VX-9 DUO : pistolet gauche · sinon : charge à impulsion'],
     [`Clic joystick ${mainM}`, 'Frappe de mêlée'],
     ['Pupitre au poignet gauche', 'Pointer avec la main droite puis gâchette INDEX : compétences Gaby / Cara'],
     [b.pause, 'Pause / reprise']

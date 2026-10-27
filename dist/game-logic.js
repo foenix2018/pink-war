@@ -60,14 +60,14 @@ export function meleePack(enemies, player) {
 export const REGEN_DELAY = 5;
 export const CATWALK = Object.freeze({ x: 22.4, halfWidth: 2, end: 20, landing: 8, height: 1.58 });
 export const WEAPONS = Object.freeze([
-  Object.freeze({ id: 'r9', name: 'R–9', label: 'Pistolet laser', level: 1, damage: 24, capacity: 12, interval: .2, reload: 1.25, speed: 110, pellets: 1, spread: 0, chargeTime: 0, splash: 0 }),
+  Object.freeze({ id: 'r9', name: 'VX-9', label: 'Pistolet Orbital Defense', level: 1, damage: 24, capacity: 12, interval: .2, reload: 1.25, speed: 110, pellets: 1, spread: 0, chargeTime: 0, splash: 0 }),
   Object.freeze({ id: 'bloom', name: 'NEXUS V9', label: 'Mitraillette tactique numérique', level: 3, damage: 34, capacity: 24, interval: .11, reload: 1.7, speed: 135, pellets: 1, spread: .009, chargeTime: 0, splash: 0 }),
   Object.freeze({ id: 'lance', name: 'ARES X9', label: 'Fusil de précision numérique', level: 5, damage: 160, capacity: 5, interval: .85, reload: 2.15, speed: 280, pellets: 1, spread: 0, semiAuto:true, chargeTime: 0, splash: 0 }),
   Object.freeze({ id: 'thorn', name: 'THORN', label: 'Canon à rail', level: 7, damage: 190, capacity: 6, interval: .28, reload: 2.1, speed: 200, pellets: 1, spread: 0, chargeTime: .7, splash: 1.8 }),
   Object.freeze({ id: 'nova', name: 'NOVA', label: 'Canon à énergie', level: 9, damage: 340, capacity: 4, interval: .4, reload: 2.4, speed: 80, pellets: 1, spread: 0, chargeTime: 1.05, splash: 5 }),
   Object.freeze({ id:'aurora',name:'AURORA',label:'Sabre à énergie',level:2,damage:155,capacity:0,interval:.48,reload:0,speed:0,pellets:0,spread:0,semiAuto:true,chargeTime:0,splash:0,melee:true }),
   Object.freeze({id:'m12',name:'M–12',label:'Fusil à pompe',level:4,damage:18,capacity:8,interval:.88,reload:2.8,speed:170,pellets:8,spread:.038,semiAuto:true,chargeTime:0,splash:0,falloffStart:12,falloffEnd:40,minDamage:.2}),
-  Object.freeze({id:'duor9',name:'R–9 DUO',label:'Doubles pistolets laser',level:1,damage:24,capacity:24,handCapacity:12,interval:.2,reload:1.65,speed:110,pellets:1,spread:0,chargeTime:0,splash:0,dual:true})
+  Object.freeze({id:'duor9',name:'VX-9 DUO',label:'Doubles pistolets Orbital',level:1,damage:24,capacity:24,handCapacity:12,interval:.2,reload:1.65,speed:110,pellets:1,spread:0,chargeTime:0,splash:0,dual:true})
 ]);
 export const starterWeaponIndex=characterId=>characterId==='lylu'?6:7;
 export const weaponAllowedForCharacter=(index,characterId='ghju')=>!!WEAPONS[index]&&(!WEAPONS[index].dual||characterId==='ghju');
