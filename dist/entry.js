@@ -53,6 +53,11 @@ function openMission(mission,{resume=false,vr=false}={}){
 resumeButton.onclick=()=>{if(!loading)openMission(1,{resume:true});};
 for(const b of document.querySelectorAll('[data-character]'))b.onclick=()=>{if(!loading){character=b.dataset.character;save();refresh();}};
 for(const b of document.querySelectorAll('[data-mode]'))b.onclick=()=>{if(!loading){mode=b.dataset.mode;refresh();}};
+const lobby=$('lobby'),chapters=$('story-chapters');
+function showStory(show){lobby.classList.toggle('story-page',show);chapters.hidden=!show;}
+$('story-open').onclick=()=>{if(!loading)showStory(true);};
+$('story-back').onclick=()=>showStory(false);
+for(const b of document.querySelectorAll('[data-chapter]'))b.onclick=()=>{if(loading)return;mode=b.dataset.chapter;showStory(false);refresh();};
 function panel(id){for(const d of document.querySelectorAll('dialog[open]'))d.close();$(id).showModal();}
 $('how-button').onclick=()=>panel('help-dialog');$('lore-button').onclick=()=>panel('lore-dialog');$('settings-button').onclick=()=>panel('settings-dialog');
 for(const b of document.querySelectorAll('.close-dialog'))b.onclick=()=>b.closest('dialog').close();
