@@ -198,8 +198,11 @@ export function applyBlasterEnvironment(root,environment){
 }
 export function installKenneyBlasters(models,originals,frames,onLoad,holds=[],environment=null){
   const letters=['b','g','d','f','p'];
-  const progress={loaded:0,total:5,failed:0,revision:'3.44',loadedByIndex:[false,false,false,false,false]};
-  for(let i=0;i<5;i++)cached(letters[i]).then(master=>{
+  // Le nouveau ARES X9, déjà assemblé, ne doit jamais être écrasé par un blaster Kenney.
+  const progress={loaded:1,total:5,failed:0,revision:'ares-x9',loadedByIndex:[false,false,true,false,false]};
+  for(let i=0;i<5;i++){
+   if(i===2)continue;
+   cached(letters[i]).then(master=>{
     const skin=master.clone(true),frame=frames[i];
     skin.name=(skin.userData.pinkWarFrame?'Pink War IV / ':'Kenney CC0 / ')+frames[i].id;
     applyBlasterEnvironment(skin,environment);
@@ -220,5 +223,6 @@ export function installKenneyBlasters(models,originals,frames,onLoad,holds=[],en
     for(const old of originals[i])old.visible=false;
     progress.loaded++;progress.loadedByIndex[i]=true;onLoad?.(i,skin);
   }).catch(e=>{progress.failed++;console.warn('Kenney blaster non disponible, arme native conservée',letters[i],e.message);});
+  }
   return progress;
 }

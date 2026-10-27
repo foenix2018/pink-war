@@ -5,6 +5,7 @@ import { createEnergyBlade } from './energy-blade.js';
 import { installKenneyBlasters } from './kenney-blasters.js';
 import {createM12Shotgun,M12_FRAME,M12_HOLD} from './m12-shotgun.js';
 import {dualRecoilPose} from './weapon-feel.js';
+import {createAresX9} from './ares-x9.js';
 
 // Every weapon is modelled in one frame: the origin is the centre of its pistol grip (where the palm rests),
 // -z is the barrel direction, +y is up. The gloved hand (hands.js) is built in the same frame, so any weapon
@@ -12,7 +13,7 @@ import {dualRecoilPose} from './weapon-feel.js';
 export const WEAPON_FRAME = Object.freeze([
   Object.freeze({ id: 'r9', muzzle: Object.freeze([0, .077, -.207]), support: null, length: .27 }),
   Object.freeze({ id: 'bloom', muzzle: Object.freeze([0, .082, -.6]), support: Object.freeze([0, -.05, -.228]), length: .8 }),
-  Object.freeze({ id: 'lance', muzzle: Object.freeze([0, .085, -.88]), support: Object.freeze([0, -.052, -.30]), length: 1.10 }),
+  Object.freeze({ id: 'lance', muzzle: Object.freeze([0, .071, -.895]), support: Object.freeze([0, -.052, -.30]), length: 1.16 }),
   Object.freeze({ id: 'thorn', muzzle: Object.freeze([0, .108, -.85]), support: Object.freeze([0, -.05, -.34]), length: 1.05 }),
   Object.freeze({ id: 'nova', muzzle: Object.freeze([0, .11, -.655]), support: Object.freeze([0, -.058, -.29]), length: .9 }),
   Object.freeze({ id:'aurora',muzzle:Object.freeze([0,.14,0]),support:null,length:1.22,melee:true }),
@@ -41,7 +42,7 @@ const KENNEY_CUFF = Object.freeze([.28, -.72, .62]), KENNEY_SUPPORT_CUFF = Objec
 const PI = Math.PI;
 export const OPTICS = Object.freeze({
   bloom:Object.freeze({y:.178,z:-.032,radius:.018,magnification:2}),
-  lance:Object.freeze({y:.180,z:-.023,radius:.019,magnification:4}),
+  lance:Object.freeze({y:.169,z:-.270,radius:.036,magnification:4}),
   // The M12's receiver hides the shooting hand from the eye: at the hip it sits lower and turns slightly outwards.
   m12:Object.freeze({y:.177,z:-.165,radius:.018,magnification:1.15,eyeRelief:.62,iron:true,hip:Object.freeze({x:.03,y:-.05,yaw:-.13,roll:.08})})
 });
@@ -160,34 +161,7 @@ function buildBloom(m) {
   return a;
 }
 
-// ---------------------------------------------------------------- LANCE
-function buildLance(m) {
-  const a=new Assembly();pistolGrip(a,m);triggerGroup(a,m);
-  a.add(profile([[.11,.12],[.12,.05],[.04,.041],[-.29,.041],[-.33,.070],[-.30,.12]],.052,.005),m.armorLight);
-  both(sign=>{
-    a.box(m.dark,[.004,.042,.25],[sign*.027,.082,-.12],[0,0,0],.002);
-    a.box(m.rose,[.003,.005,.20],[sign*.030,.077,-.11],[0,0,0],.001,false);
-  });
-  rail(a,m,.127,.10,-.28,.024);
-  // Open optical housing, a long single emitter and a compact recoil stock.
-  shaft(a,m.dark,.18,[[.020,-.025],[.028,-.025],[.030,-.22],[.024,-.245],[.020,-.245],[.020,-.025]],24);
-  [-.036,-.11,-.22].forEach(z=>ring(a,m.steel,.18,z,.030,.004));
-  a.box(m.dark,[.022,.032,.052],[0,.145,-.12],[0,0,0],.004);
-  a.box(m.dark,[.056,.053,.27],[0,.083,-.40],[0,0,0],.008);
-  both(sign=>{
-    a.box(m.armor,[.005,.04,.24],[sign*.031,.09,-.41],[0,0,0],.002);
-    a.box(m.rose,[.003,.004,.23],[sign*.034,.075,-.41],[0,0,0],.001,false);
-  });
-  shaft(a,m.steel,.085,[[0,-.53],[.013,-.53],[.013,-.805],[.010,-.88],[0,-.88]],18);
-  for(let i=0;i<7;i++)ring(a,m.dark,.085,-.56-i*.035,.017,.004);
-  shaft(a,m.dark,.085,[[.008,-.803],[.024,-.803],[.021,-.875],[.008,-.88],[.008,-.803]],20);
-  ring(a,m.rose,.085,-.878,.016,.003,0,false);
-  a.add(profile([[-.10,.04],[-.11,-.071],[-.042,-.073],[-.044,.04]],.036,.004),m.steel);
-  foregrip(a,m,-.30,-.052);
-  a.add(profile([[.12,.105],[.15,.105],[.172,.08],[.177,-.02],[.14,-.021],[.13,.04]],.047,.005),m.dark);
-  a.box(m.armor,[.052,.12,.031],[0,.036,.174],[.1,0,0],.006);
-  return a;
-}
+// ARES X9 : modèle procédural original du visualiseur, dans './ares-x9.js'.
 
 // ---------------------------------------------------------------- THORN
 function buildThorn(m) {
@@ -268,7 +242,7 @@ function buildAurora(m){
   a.box(m.rose,[.009,.016,.004],[0,.042,-.027],[0,0,0],.001,false);
   return a;
 }
-const BUILDERS = [buildR9, buildBloom, buildLance, buildThorn, buildNova,buildAurora];
+const BUILDERS = [buildR9, buildBloom, null, buildThorn, buildNova,buildAurora];
 
 // Small exposed energy cells sit beside each receiver and react to ammunition, charge and reload.
 const BATTERY_LAYOUT = Object.freeze([
@@ -318,7 +292,8 @@ export function createWeaponModels(mats) {
   mats=weaponMetals(mats);
   if (!prototypes.has(mats)) {
     prototypes.set(mats, BUILDERS.map((build, index) => {
-      const group = new T.Group(); build(mats).build(group);
+      const group = index===2 ? createAresX9() : new T.Group();
+       if(index!==2)build(mats).build(group);
       group.userData.frame = WEAPON_FRAME[index];
       return group;
     }));
