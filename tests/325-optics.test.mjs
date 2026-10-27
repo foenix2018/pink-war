@@ -49,7 +49,7 @@ function fixture() {
 test('scope uses one bounded target at 30 Hz, restores the XR framebuffer and never changes head pose', () => {
   const f = fixture(), scope = createMagnifiedSight(999), initial = f.state(), targets = new Set();
   let renders = 0;
-  f.renderer.render = (scene, camera) => { renders++; assert.equal(f.renderer.xr.enabled, false); assert.equal(f.hide[0].visible, false); targets.add(f.renderer.getRenderTarget()); assert.ok(camera.fov < 6); };
+  f.renderer.render = (scene, camera) => { renders++; assert.equal(f.renderer.xr.enabled, false); assert.equal(f.hide[0].visible, false); targets.add(f.renderer.getRenderTarget()); assert.ok(Math.abs(camera.fov-lensFov(f.optic.cfg.radius,f.optic.eyeDistance,f.optic.cfg.magnification))<.01); };
   for (const now of [0, 10, 20, 34, 40]) scope.render({ ...f, now });
   assert.equal(renders, 2); assert.equal(targets.size, 1); assert.equal(scope.stats().size, 512);
   assert.deepEqual(f.state(), initial); assert.notEqual(f.optic.glass.material, f.optic.glassMaterial);

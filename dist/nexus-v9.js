@@ -11,6 +11,9 @@ function constructPrototype(){
   const root=new THREE.Group();
 // MATÉRIAUX : variations métalliques très légères et traces d'usinage.
 function wearTexture(){
+ // Tests et rendu serveur n'ont pas de DOM : matériau sans relief de secours.
+ // Dans le navigateur, le même CanvasTexture d'origine est conservé.
+ if(typeof document==='undefined')return null;
  const c=document.createElement('canvas');c.width=c.height=256;
  const ctx=c.getContext('2d');ctx.fillStyle='#b1b1b1';ctx.fillRect(0,0,256,256);
  let seed=10391;const random=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);
