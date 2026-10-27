@@ -15,6 +15,7 @@ import { createTraversalArt } from './traversal-art.js';
 import { createLaserFX } from './laser-fx.js';
 import { createCombatFX } from './combat-fx.js';
 import { createShootingRangeArt } from './shooting-range-art.js';
+import {targetPosition} from './shooting-range.js';
 import { createMoon } from './moon.js';
 import { createCampaignArt } from './campaign-art.js';
 import { VESPER_SUN } from './vesper-art.js';
@@ -103,6 +104,8 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     // Selection changes the canonical sun direction; the map follows play.
     const direction=rangeActive?{x:-4,y:4.4,z:3}:campaignSky?VESPER_SUN:{x:-30,y:50,z:20};
     worldShadows.update(shadowTime,{x,z,elevation},{entities:shadowEntities,heightAt:shadowHeight});
+    // The range uses its own ceiling fixtures; no duplicate outdoor sun map.
+    if(rangeActive)sun.castShadow=false;
     sun.position.set(sun.target.position.x+direction.x,elevation+direction.y,sun.target.position.z+direction.z);
   }
   const rim = new T.DirectionalLight(0x9abfff, 1.08); rim.position.set(30, 12, -35); scene.add(rim);
@@ -380,8 +383,9 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   }
   function resetDynamic(){for(const m of pickupMeshes.values())scene.remove(m);pickupMeshes.clear();rangeArt.update(null);combatFX.reset();laserFX.reset();traversal.update(0);for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();portal.visible=!rangeActive;for(const death of deaths){scene.remove(death.fx);death.mat.dispose();death.haloMat.dispose();}deaths.length=0;for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
   function sync(sim,time,dt){
-    if(!campaignActive)city.fence?.update({...sim.player,y:(sim.player.elevation||0)+(sim.player.crouched?1.05:1.65)},.65,1.2);traversal.update(sim.time);campaignArt.updateLift(sim.time);combatFX.update(dt,camera);laserFX.update(sim.bullets,dt);shadowTime=sim.time;shadowEntities=[...sim.enemies,sim.player];shadowHeight=e=>sim.surfaceHeight(e.x,e.z,sim.time,(e.elevation||0)+.3);trackShadows(sim.player.x,sim.player.z,sim.player.elevation||0);
+    if(!campaignActive)city.fence?.update({...sim.player,y:(sim.player.elevation||0)+(sim.player.crouched?1.05:1.65)},.65,1.2);traversal.update(sim.time);campaignArt.updateLift(sim.time);combatFX.update(dt,camera);laserFX.update(sim.bullets,dt);shadowTime=sim.time;shadowEntities=rangeActive?[sim.player,...sim.targets.map(t=>({...targetPosition(t,sim.time),radius:.28}))]:[...sim.enemies,sim.player];shadowHeight=e=>sim.surfaceHeight(e.x,e.z,sim.time,(e.elevation||0)+.3);trackShadows(sim.player.x,sim.player.z,sim.player.elevation||0);
     setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));updateStations(sim,time);syncSecondaryPortals(sim,sim.time);rangeArt.update(rangeActive?sim:null);
+    if(rangeActive){rangeArt.shadows.update(sim.time,sim);}
     for(const event of sim.events||[])if(event.type==='kill')beginDeath(event.id,time);
     updateDeaths(time);
     soldier.root.scale.setScalar(soldier.heightScale);soldier.root.position.set(sim.player.x,sim.player.elevation||0,sim.player.z);soldier.root.rotation.y=sim.player.yaw;
@@ -471,7 +475,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     arenaRoot.visible=!campaignActive&&!rangeActive;
     scene.fog.color.setHex(campaignActive?0x747b79:character.world.fog);
     renderer.toneMappingExposure=rangeActive?.93:campaignActive?.84:1.08;
-    hemisphere.intensity=rangeActive?0:campaignActive?.62:1.32;sun.intensity=rangeActive?1.1:campaignActive?1.36:2.25;rim.intensity=rangeActive?0:campaignActive?.18:1.08;
+    hemisphere.intensity=rangeActive?0:campaignActive?.62:1.32;sun.intensity=rangeActive?0:campaignActive?1.36:2.25;rim.intensity=rangeActive?0:campaignActive?.18:1.08;
     sun.shadow.camera.far=campaignActive?235:135;sun.shadow.camera.updateProjectionMatrix();
     sky.material.map=campaignActive&&morningReady?morningSky:skyTexture;sky.material.needsUpdate=true;
     moon.group.visible=!campaignActive;
@@ -484,6 +488,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   function setRangeActive(enabled){
     rangeActive=!!enabled;
     rangeArt.root.visible=rangeActive;
+    rangeArt.shadows.setActive(rangeActive,renderer);sun.castShadow=!rangeActive;
     // The original portal and its particles are NOT children of arenaRoot.
     // Hide both explicitly; otherwise the survival gateway remains on the firing line.
     portal.visible=!rangeActive;
@@ -494,7 +499,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     obstacles.splice(0,obstacles.length,...(rangeActive?rangeObstacles:campaignActive?campaignArt.obstacles:arenaObstacles));
     scene.fog.color.setHex(rangeActive?0x545045:campaignActive?0x847572:character.world.fog);
     scene.fog.density=rangeActive?.0026:campaignActive?.0058:.008;
-    if(rangeActive){rangeArt.enableMaterials();sun.color.setHex(0xffe9c9);renderer.toneMappingExposure=.93;hemisphere.intensity=0;sun.intensity=1.1;rim.intensity=0;moon.group.visible=false;sky.visible=false;}
+    if(rangeActive){rangeArt.enableMaterials();sun.color.setHex(0xffe9c9);renderer.toneMappingExposure=.93;hemisphere.intensity=0;sun.intensity=0;rim.intensity=0;moon.group.visible=false;sky.visible=false;}
     else {sky.visible=true;renderer.toneMappingExposure=campaignActive?.84:1.08;hemisphere.intensity=campaignActive?.62:1.32;sun.intensity=campaignActive?1.36:2.25;rim.intensity=campaignActive?.18:1.08;}
   }
   return {T,scene,camera,moon,campaignArt,rangeArt,setRangeActive,setCampaignActive,graphics:{...profile,initialFailure:prepared.initialFailure},warm:async()=>{await campaignArt.ready;await warmRenderer(renderer,scene,camera)},get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>campaignActive?{...campaignArt.stats(),map:'vesper-secours-07'}:{...city.stats,boundary:city.fence?.stats()},resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,

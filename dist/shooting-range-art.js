@@ -2,6 +2,7 @@
 // Existing local CC0 photo sets stream only when this scene is selected.
 import { targetPosition,TRAINING_BARRIER,RANGE_CONTROLS,TARGET_OUTLINE } from './shooting-range.js';
 import {createRangeMaterials} from './shooting-range-materials.js';
+import {createRangeShadows} from './range-shadows.js';
 
 // Deterministic, locally generated PBR detail. Five shared 512px maps keep Quest
 // memory and draw calls bounded, even across the full 100-metre indoor range.
@@ -120,10 +121,11 @@ export function createShootingRangeArt(T,scene,options={}){
   root.add(indoorFill);
   root.add(new T.AmbientLight(0xf0eade,.28));
   // Two broad, neutral task lights model the ceiling fixtures without blue sunlight indoors.
-  const key=new T.DirectionalLight(0xfff2df,1.20);key.position.set(-5,4.5,23);key.target.position.set(0,0,10);root.add(key,key.target);
-  const fill=new T.DirectionalLight(0xe4e0d5,.72);fill.position.set(9,4,-44);fill.target.position.set(0,0,-12);root.add(fill,fill.target);
-  for(const z of [12,-16,-46]){
-    const lamp=new T.SpotLight(0xfff0da,30,30,1.18,.55,2);lamp.name='Éclairage des travées';lamp.position.set(0,4.52,z);lamp.target.position.set(0,0,z);lamp.castShadow=false;root.add(lamp,lamp.target);
+  const key=new T.DirectionalLight(0xfff2df,.65);key.position.set(-5,4.5,23);key.target.position.set(0,0,10);root.add(key,key.target);
+  const fill=new T.DirectionalLight(0xe4e0d5,.35);fill.position.set(9,4,-44);fill.target.position.set(0,0,-12);root.add(fill,fill.target);
+  const shadowLights=[];
+  for(const z of [25,4,-20,-44]){
+    const lamp=new T.SpotLight(0xfff0da,65,34,1.18,.55,2);lamp.name='Éclairage des travées';lamp.position.set(0,4.52,z);lamp.target.position.set(0,0,z);root.add(lamp,lamp.target);shadowLights.push(lamp);
   }
   const obstacles=[];
   const box=(name,x,y,z,w,h,d,mat=mats.metal)=>{
@@ -286,6 +288,7 @@ export function createShootingRangeArt(T,scene,options={}){
   }
   // Distinct training area behind the player does not block the VR controllers.
   solid('Fond stand',0,2.25,36,27,4.5,.3,mats.wall);
+  const shadows=createRangeShadows(T,{root,lights:shadowLights,obstacles,low:!!options.low});
   // Floor stays a walkable surface, never an X/Z blocking collider.
   const targetGroups=new Map();
   const circle=new T.CircleGeometry(1,20);
@@ -357,11 +360,11 @@ export function createShootingRangeArt(T,scene,options={}){
     for(const [id,item] of targetGroups)if(!existing.has(id)){releaseTarget(item);targetGroups.delete(id);}
   }
   function dispose(){
-    pbr.dispose();for(const item of targetGroups.values())releaseTarget(item);
+    shadows.dispose();pbr.dispose();for(const item of targetGroups.values())releaseTarget(item);
     targetGroups.clear();for(const sign of signs){sign.panel.removeFromParent();sign.panel.geometry.dispose();sign.material.dispose();sign.texture.dispose();}
     signs.length=0;root.removeFromParent();
     root.traverse(node=>{if(node.isMesh&&!hardwareGeos.includes(node.geometry)&&node.geometry!==circle)node.geometry.dispose();});
     circle.dispose();hardwareGeos.forEach(g=>g.dispose());Object.values(mats).forEach(m=>m.dispose());textures.forEach(t=>t?.dispose());
   }
-  return {root,obstacles,update,dispose,enableMaterials:pbr.enable,get ready(){return pbr.ready;},stats:pbr.stats,get targetCount(){return targetGroups.size;}};
+  return {root,obstacles,update,dispose,shadows,enableMaterials:pbr.enable,get ready(){return pbr.ready;},stats:()=>({...pbr.stats(),shadows:shadows.stats()}),get targetCount(){return targetGroups.size;}};
 }
