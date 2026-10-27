@@ -321,7 +321,7 @@ $('arsenal-button').onclick = () => {
     const button = document.createElement('button'), available = game.ownedWeapons.has(index);
     button.className = 'weapon-card' + (game.weaponIndex===index ? ' selected' : ''); button.disabled = !available;
     const kenney=world.fpsGun.userData.kenneyAssets,kenneyReady=!w.melee&&(!!kenney?.loadedByIndex?.[index]||!!world.fpsGun.userData.weaponModels[index]?.userData.authored);
-    button.innerHTML = `<span><strong>${w.name}</strong><small>${w.label} · ${w.melee?'énergie continue · parade':`${w.capacity} charges`}${w.chargeTime?' · tir chargé':''}<br>${w.melee?'Sabre AURORA':kenneyReady?(index===0||index===7?'CHÂSSIS VX-9 V5 · VISEUR HOLOGRAPHIQUE':index===2?'CHÂSSIS ARES X9 · OPTIQUE NUMÉRIQUE':index===1?'CHÂSSIS NEXUS V9 · VISEUR HOLOGRAPHIQUE':'CHÂSSIS MK IV · MÉTAL ET CÉRAMIQUE'):'CHARGEMENT DE L’ARME'}</small></span><b>${available?(game.weaponIndex===index?'ÉQUIPÉE':'ÉQUIPER'):`NIVEAU ${w.level}`}</b>`;
+    button.innerHTML = `<span><strong>${w.name}</strong><small>${w.label} · ${w.melee?'énergie continue · parade':`${w.capacity} charges`}${w.chargeTime?' · tir chargé':''}<br>${w.melee?'Sabre AURORA':kenneyReady?(index===3?'THORN V8 · RAIL MAGNÉTIQUE · MÉTAL INDUSTRIEL':index===0||index===7?'CHÂSSIS VX-9 V5 · VISEUR HOLOGRAPHIQUE':index===2?'CHÂSSIS ARES X9 · OPTIQUE NUMÉRIQUE':index===1?'CHÂSSIS NEXUS V9 · VISEUR HOLOGRAPHIQUE':'CHÂSSIS MK IV · MÉTAL ET CÉRAMIQUE'):'CHARGEMENT DE L’ARME'}</small></span><b>${available?(game.weaponIndex===index?'ÉQUIPÉE':'ÉQUIPER'):`NIVEAU ${w.level}`}</b>`;
     button.onclick = () => { game.selectWeapon(index); world.setWeapon(game.weaponIndex); updateHud(); resume(); };
     $('weapon-list').append(button);
   });
