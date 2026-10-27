@@ -7,6 +7,14 @@ export const TRAINING_BARRIER=Object.freeze({z:19.12,stopZ:19.80,height:1.13,wid
 export const RANGE_CONTROLS=Object.freeze([-2,-1,0,1,2].map(lane=>Object.freeze({x:lane*4.6+.55,y:1.25,z:20.05})));
 export const RANGE_ARMORY=Object.freeze({x:0,y:1.35,z:34.9,frontZ:34.48,width:5.9,height:2.5,depth:.7});
 export const RANGE_WEAPON_SLOTS=Object.freeze([0,1,2,3,4,6,7]);
+export const RANGE_ARMORY_SLOTS=Object.freeze(RANGE_WEAPON_SLOTS.map((index,i)=>Object.freeze({index,x:(i-3)*.78,y:1.43,z:RANGE_ARMORY.frontZ,width:.70,height:2.08})));
+export function traceRangeArmory(origin,direction,available=RANGE_WEAPON_SLOTS){
+  if(!origin||!direction||direction.z<=.001||origin.z>RANGE_ARMORY.frontZ+.01)return null;
+  const distance=(RANGE_ARMORY.frontZ-origin.z)/direction.z;if(distance<0||distance>4)return null;
+  const point={x:origin.x+direction.x*distance,y:origin.y+direction.y*distance,z:RANGE_ARMORY.frontZ};
+  const slot=RANGE_ARMORY_SLOTS.find(s=>available.includes(s.index)&&Math.abs(point.x-s.x)<s.width/2&&Math.abs(point.y-s.y)<s.height/2);
+  return slot?{index:slot.index,point,distance}:null;
+}
 export function rangeSessionTime(time){const seconds=Math.floor(Math.max(0,Number(time)||0));return String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');}
 // Same outline for the steel mesh and projectile tests, including the empty shoulders.
 export const TARGET_OUTLINE=Object.freeze([[-.48,-.94],[.48,-.94],[.52,-.20],[.70,.28],[.62,.43],[.25,.54],[.25,.67],[.29,.78],[.25,1.02],[.15,1.10],[-.15,1.10],[-.25,1.02],[-.29,.78],[-.25,.67],[-.25,.54],[-.62,.43],[-.70,.28],[-.52,-.20]].map(p=>Object.freeze(p)));
@@ -82,15 +90,34 @@ export class ShootingRangeGame extends ArenaGame {
   get trainingLevel(){return trainingStage(this.trainingElapsed);}
   get trainingMotionSpeed(){return trainingSpeed(this.trainingElapsed);}
   get rangeWeapons(){return RANGE_WEAPON_SLOTS.filter(i=>this.ownedWeapons.has(i)&&weaponAllowedForCharacter(i,this.characterId));}
+  setInteractionPosition(p=null){
+    this.interactionPosition=p&&[p.x,p.y,p.z].every(Number.isFinite)?{x:p.x,z:p.z,eyeY:p.y,elevation:this.player.elevation||0}:null;
+  }
   nearRangeArmory(){
-    const p=this.player,c=RANGE_ARMORY;
+    const p=this.interactionPosition||this.player,c=RANGE_ARMORY;
     if(this.state!=='playing'||(p.elevation||0)>1.6||p.z>c.frontZ+.2||Math.hypot(Math.max(0,Math.abs(p.x-c.x)-c.width/2),p.z-c.frontZ)>2.65)return false;
     const goal={x:Math.max(c.x-c.width/2,Math.min(c.x+c.width/2,p.x)),y:c.y,z:c.frontZ};
-    return !this.obstacles.some(b=>{const hit=segmentBox({x:p.x,y:(p.elevation||0)+1.5,z:p.z},goal,b);return hit!==null&&hit<.99;});
+    return !this.obstacles.some(b=>{const hit=segmentBox({x:p.x,y:p.eyeY??(p.elevation||0)+1.5,z:p.z},goal,b);return hit!==null&&hit<.99;});
+  }
+  armoryTarget(origin,direction){
+    if(!this.nearRangeArmory())return null;
+    const hit=traceRangeArmory(origin,direction,this.rangeWeapons);
+    return hit&&!this.obstacles.some(b=>{const t=segmentBox(origin,hit.point,b);return t!==null&&t<.99;})?hit:null;
+  }
+  armoryHandTarget(position){
+    if(!position||!this.nearRangeArmory()||position.z>RANGE_ARMORY.frontZ+.20)return null;
+    const available=this.rangeWeapons;let slot=null,distance=.36;
+    for(const s of RANGE_ARMORY_SLOTS){if(!available.includes(s.index))continue;const d=Math.hypot(position.x-s.x,position.y-s.y,position.z-s.z);if(d<distance){slot=s;distance=d;}}
+    if(!slot)return null;const point={x:slot.x,y:slot.y,z:slot.z};
+    return this.obstacles.some(b=>{const t=segmentBox(position,point,b);return t!==null&&t<.99;})?null:{index:slot.index,point,distance};
   }
   closeRangeArmory(){this.rangeArmoryOpen=false;}
   selectFromArmory(index){
-    if(!this.rangeArmoryOpen||!this.nearRangeArmory()||!this.rangeWeapons.includes(index))return false;
+    if(!this.rangeArmoryOpen)return false;
+    return this.takeFromArmory(index);
+  }
+  takeFromArmory(index){
+    if(!this.nearRangeArmory()||!this.rangeWeapons.includes(index))return false;
     if(index!==this.weaponIndex&&!this.selectWeapon(index))return false;
     this.closeRangeArmory();return true;
   }
@@ -103,13 +130,13 @@ export class ShootingRangeGame extends ArenaGame {
     this.refillWeapon();this.event('training-reset',{weapon:this.weapon.id});return true;
   }
   getInteraction(){
-    const p=this.player;
+    const p=this.interactionPosition||this.player;
     if(this.state!=='playing'||(p.elevation||0)>1.6)return null;
     if(this.nearRangeArmory())return {x:RANGE_ARMORY.x,y:RANGE_ARMORY.y,z:RANGE_ARMORY.frontZ,kind:'range-armory',label:'Choisir une arme · armoire'};
     const control=[...RANGE_CONTROLS].sort((a,b)=>Math.hypot(p.x-a.x,p.z-a.z)-Math.hypot(p.x-b.x,p.z-b.z)).find(c=>
       Math.hypot(p.x-c.x,p.z-c.z)<2.65&&!this.obstacles.some(box=>{
         if(Math.abs(box.x-c.x)<.01&&Math.abs(box.z-c.z)<.01)return false;
-        const hit=segmentBox({x:p.x,y:(p.elevation||0)+1.5,z:p.z},c,box);return hit!==null&&hit<.99;
+        const hit=segmentBox({x:p.x,y:p.eyeY??(p.elevation||0)+1.5,z:p.z},c,box);return hit!==null&&hit<.99;
       }));
     return control?{...control,label:this.trainingActive?'Arrêter les cibles':'Déclencher les cibles',kind:'range-control'}:null;
   }

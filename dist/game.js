@@ -47,7 +47,7 @@ let combatHud=null,armorFx=null,armorFxScene=null,meleeQueued=false,chargeQueued
 let rangeArmoryMenu=null;
 function syncRangeArmory(){
   if(game?.mode==='training'&&!rangeArmoryMenu)rangeArmoryMenu=createRangeArmoryMenu({getGame:()=>game,
-    onChoose(index){if(!game.selectFromArmory(index))return false;trainingWeaponIndex=index;try{localStorage.setItem('pink-war-training-weapon',String(index));}catch{}world.setWeapon(index);updateHud();return true;},
+    onChoose(index,{direct=false}={}){if(!(direct?game.takeFromArmory(index):game.selectFromArmory(index)))return false;trainingWeaponIndex=index;try{localStorage.setItem('pink-war-training-weapon',String(index));}catch{}world.setWeapon(index);updateHud();return true;},
     onChange(open){resetInput();if(open){document.dispatchEvent(new CustomEvent('pw-hud-overlay'));if(vr.mode!=='xr')document.exitPointerLock?.();}}
   });
   rangeArmoryMenu?.sync({active:phase==='playing'&&!recovering,xrMode:vr?.mode==='xr'});

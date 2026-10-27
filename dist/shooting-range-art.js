@@ -1,6 +1,6 @@
 // Self-contained covered range for desktop, mobile and WebXR.
 // Existing local CC0 photo sets stream only when this scene is selected.
-import { targetPosition,TRAINING_BARRIER,RANGE_CONTROLS,TARGET_OUTLINE,RANGE_ARMORY,RANGE_WEAPON_SLOTS } from './shooting-range.js';
+import { targetPosition,TRAINING_BARRIER,RANGE_CONTROLS,TARGET_OUTLINE,RANGE_ARMORY,RANGE_WEAPON_SLOTS,RANGE_ARMORY_SLOTS } from './shooting-range.js';
 import {WEAPONS} from './game-logic.js';
 import {bevelBox} from './geo.js';
 import {createRangeMaterials} from './shooting-range-materials.js';
@@ -313,7 +313,11 @@ export function createShootingRangeArt(T,scene,options={}){
     sign(WEAPONS[index].name,index===7?'GHJU':'ÉQUIPER',x,.40,34.48,.65,.18,'#e0c48b');
     const slot=new T.Group();slot.position.set(x,1.43,34.78);displayModels.add(slot);displaySlots.set(index,slot);
   });
-  sign('ARMURERIE','CHOISIR UNE ARME  /  F · ACTION',0,2.82,34.48,5.6,.52,'#eadab5');
+  sign('ARMURERIE','VR : POINTER + GÂCHETTE  /  F : MENU',0,2.82,34.48,5.6,.52,'#eadab5');
+  const hoverGeometry=new T.BufferGeometry().setFromPoints([new T.Vector3(-.35,-1.04,0),new T.Vector3(.35,-1.04,0),new T.Vector3(.35,1.04,0),new T.Vector3(-.35,1.04,0)]);
+  const armoryHover=new T.LineLoop(hoverGeometry,new T.LineBasicMaterial({color:0xe5c88e,transparent:true,opacity:.9}));
+  armoryHover.name='Armoire / arme pointée';armoryHover.visible=false;armoryHover.userData.noWorldShadow=true;root.add(armoryHover);
+  function setArmoryHover(index=null){const slot=RANGE_ARMORY_SLOTS.find(s=>s.index===index);armoryHover.visible=!!slot;if(slot)armoryHover.position.set(slot.x,1.35,slot.z-.025);}
   const armoryLamp=new T.SpotLight(0xffedcf,20,7,1.15,.6,2);armoryLamp.name='Projecteur de l’armurerie';armoryLamp.position.set(0,3.4,32.4);armoryLamp.target.position.set(0,1.35,34.9);armoryLamp.castShadow=false;root.add(armoryLamp,armoryLamp.target);
   box('Boîtier du projecteur de l’armurerie',0,3.43,32.4,.9,.16,.3,mats.metal);box('Lampe de l’armurerie',0,3.34,32.4,.76,.035,.24,mats.light);
   pipe('Suspente du projecteur de l’armurerie',[0,3.51,32.4],[0,4.9,32.4],.025,mats.trim);
@@ -406,11 +410,12 @@ export function createShootingRangeArt(T,scene,options={}){
     for(const [id,item] of targetGroups)if(!existing.has(id)){releaseTarget(item);targetGroups.delete(id);}
   }
   function dispose(){
+    hoverGeometry.dispose();armoryHover.material.dispose();
     clearArmoryModels();displayModels.removeFromParent();shadows.dispose();pbr.dispose();for(const item of targetGroups.values())releaseTarget(item);
     targetGroups.clear();for(const sign of signs){sign.panel.removeFromParent();sign.panel.geometry.dispose();sign.material.dispose();sign.texture.dispose();}
     signs.length=0;root.removeFromParent();
     root.traverse(node=>{if(node.isMesh&&!hardwareGeos.includes(node.geometry)&&node.geometry!==circle)node.geometry.dispose();});
     circle.dispose();hardwareGeos.forEach(g=>g.dispose());Object.values(mats).forEach(m=>m.dispose());textures.forEach(t=>t?.dispose());
   }
-  return {root,obstacles,update,dispose,shadows,setArmoryModels,enableMaterials:pbr.enable,get ready(){return pbr.ready;},stats:()=>({...pbr.stats(),shadows:shadows.stats(),armoryModels:displayModels.children.filter(s=>s.children.length).length}),get targetCount(){return targetGroups.size;}};
+  return {root,obstacles,update,dispose,shadows,setArmoryModels,setArmoryHover,enableMaterials:pbr.enable,get ready(){return pbr.ready;},stats:()=>({...pbr.stats(),shadows:shadows.stats(),armoryModels:displayModels.children.filter(s=>s.children.length).length}),get targetCount(){return targetGroups.size;}};
 }
