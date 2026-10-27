@@ -240,7 +240,7 @@ outlinePanel(optics,'Oeillet visée avant',[[-1.67,.54],[-1.63,.66],[-1.55,.71],
 
 // 9. Marquages et micro-usure sur les coques (textures avec Canvas, pas de maillage excessif).
 function labelTexture(lines){const can=document.createElement('canvas');can.width=1024;can.height=256;const ctx=can.getContext('2d');ctx.clearRect(0,0,1024,256);ctx.fillStyle='#b6c6d2';ctx.font='700 108px sans-serif';ctx.fillText(lines[0],24,128);ctx.font='32px monospace';ctx.fillStyle='#758b9d';ctx.fillText(lines[1],31,190);const t=new THREE.CanvasTexture(can);t.colorSpace=THREE.SRGBColorSpace;return t}
-function label(parent,lines,x,y,z,w,h,flip=false){const texture=labelTexture(lines);const o=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,color:0xa7b3bc,side:THREE.DoubleSide}));o.position.set(x,y,z);if(flip)o.rotation.y=Math.PI;parent.add(o)}
+function label(parent,lines,x,y,z,w,h,flip=false){if(typeof document==='undefined')return;const texture=labelTexture(lines);const o=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,color:0xa7b3bc,side:THREE.DoubleSide}));o.position.set(x,y,z);if(flip)o.rotation.y=Math.PI;parent.add(o)}
 label(chassis,['NEXUS','D E F E N S E    /   V9'],.45,-.016,.273,.50,.145);
 label(chassis,['NEXUS','D E F E N S E    /   V9'],.45,-.016,-.273,.50,.145,true);
 label(magwell,['9×19','SMART CELL · V09'],-.35,-.77,.153,.27,.10);
