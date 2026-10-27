@@ -24,6 +24,8 @@ test('impact materials determine fragments and robot hits leave no suspended sco
   assert.ok(meshes[0].count>concrete[0],'metal produces more hot sparks');
   assert.ok(meshes[2].count<concrete[2],'metal produces less masonry dust');
   expire(fx,2);assert.equal(fx.stats().active,0,'a moving robot leaves no floating wall decal');
+  fx.reset();fx.impact({...event,surface:'metal',noDecal:true});fx.update(.01);expire(fx,2);
+  assert.equal(fx.stats().active,0,'the moving range plate carries its own marks, with no world decal left behind');
   fx.dispose();
 });
 

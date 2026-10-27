@@ -1,6 +1,7 @@
-// Low-draw-call indoor/outdoor range for desktop, mobile and WebXR.
-// No dependency on the survival city, no new texture downloads.
-import { targetPosition,TRAINING_BARRIER } from './shooting-range.js';
+// Self-contained covered range for desktop, mobile and WebXR.
+// Existing local CC0 photo sets stream only when this scene is selected.
+import { targetPosition,TRAINING_BARRIER,RANGE_CONTROLS,TARGET_OUTLINE } from './shooting-range.js';
+import {createRangeMaterials} from './shooting-range-materials.js';
 
 // Deterministic, locally generated PBR detail. Five shared 512px maps keep Quest
 // memory and draw calls bounded, even across the full 100-metre indoor range.
@@ -74,7 +75,7 @@ function hazardStripes(T,repeat){
   const tex=new T.CanvasTexture(canvas);tex.colorSpace=T.SRGBColorSpace;tex.wrapS=tex.wrapT=T.RepeatWrapping;tex.repeat.set(repeat,1);tex.anisotropy=4;
   return tex;
 }
-export function createShootingRangeArt(T,scene){
+export function createShootingRangeArt(T,scene,options={}){
   const root=new T.Group();root.name='PINK WAR / champ de tir';root.visible=false;scene.add(root);
   const textures=[
     rangeSurface(T,'floor',8,30),rangeSurface(T,'wall',20,3),
@@ -89,28 +90,41 @@ export function createShootingRangeArt(T,scene){
     color,map,bumpMap:map,bumpScale,roughness,metalness
   });
   const mats={
-    floor:textured(0x4b5b64,floorMap,.92,.06,.017),
-    wall:textured(0x394b58,wallMap,.93,.06,.024),
-    metal:textured(0xb4bec5,metalMap,.46,.69,.014),
-    trim:textured(0x37444d,metalMap,.68,.47,.011),
+    floor:textured(0xc3bfb5,floorMap,.87,.025,.017),
+    wall:textured(0xc9c5ba,wallMap,.93,.025,.024),
+    metal:textured(0x9c9b91,metalMap,.4,.72,.004),
+    trim:textured(0x383832,metalMap,.65,.48,.006),
+    rust:textured(0xc7b5a0,metalMap,.82,.34,.012),
+    target:textured(0xbdb4a1,metalMap,.77,.38,.008),
+    scar:new T.MeshStandardMaterial({color:0x25231e,roughness:.96,metalness:.16,side:T.DoubleSide}),
+    ready:new T.MeshBasicMaterial({color:0xefa84d}),
+    live:new T.MeshBasicMaterial({color:0x8fbd76}),
     yellow:new T.MeshBasicMaterial({color:0xefbe67}),
     rose:new T.MeshBasicMaterial({color:0xff7aae}),
-    cyan:new T.MeshBasicMaterial({color:0x70dfea}),
+    cyan:new T.MeshBasicMaterial({color:0xaca58c}),
     white:new T.MeshBasicMaterial({color:0xf5f6ec}),
     black:new T.MeshBasicMaterial({color:0x111923}),
-    red:new T.MeshBasicMaterial({color:0xff526f}),
+    red:new T.MeshStandardMaterial({color:0x9f5039,roughness:.86,metalness:.04}),
     warning:new T.MeshBasicMaterial({color:0xffc74c}),
-    light:new T.MeshBasicMaterial({color:0xb6ebff}),
-    padding:textured(0x35444c,paddingMap,.96,.02,.012),
-    canopy:textured(0x596977,canopyMap,.88,.16,.019),
-    partition:textured(0x46566a,partitionMap,.9,.05,.01),
+    light:new T.MeshBasicMaterial({color:0xf5e7c8}),
+    padding:textured(0x49473d,paddingMap,.98,.01,.012),
+    canopy:textured(0x77736a,canopyMap,.88,.16,.019),
+    partition:textured(0x535246,partitionMap,.95,.05,.01),
     hazard:new T.MeshStandardMaterial({color:0xffffff,map:hazardMap,emissive:0x3a2c08,roughness:.55,metalness:.12})
   };
   // Indoor illumination: sunlight no longer reaches the range through the roof,
   // so a dedicated diffuse fill is necessary to see weapons and wall panels.
-  const indoorFill=new T.AmbientLight(0xb7cfda,1.35);
+  const pbr=createRangeMaterials(T,mats,textures,options);
+  const indoorFill=new T.HemisphereLight(0xfff6eb,0xa5a098,.78);
   indoorFill.name='Eclairage diffus du stand';
   root.add(indoorFill);
+  root.add(new T.AmbientLight(0xf0eade,.28));
+  // Two broad, neutral task lights model the ceiling fixtures without blue sunlight indoors.
+  const key=new T.DirectionalLight(0xfff2df,1.20);key.position.set(-5,4.5,23);key.target.position.set(0,0,10);root.add(key,key.target);
+  const fill=new T.DirectionalLight(0xe4e0d5,.72);fill.position.set(9,4,-44);fill.target.position.set(0,0,-12);root.add(fill,fill.target);
+  for(const z of [12,-16,-46]){
+    const lamp=new T.SpotLight(0xfff0da,30,30,1.18,.55,2);lamp.name='Éclairage des travées';lamp.position.set(0,4.52,z);lamp.target.position.set(0,0,z);lamp.castShadow=false;root.add(lamp,lamp.target);
+  }
   const obstacles=[];
   const box=(name,x,y,z,w,h,d,mat=mats.metal)=>{
     const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),mat);
@@ -124,15 +138,42 @@ export function createShootingRangeArt(T,scene){
     collision(x,z,w,d,y-h/2,h);
     return mesh;
   };
+  const cylinderGeo=new T.CylinderGeometry(1,1,1,12);
+  function pipe(name,a,b,r,mat=mats.trim){
+    const from=new T.Vector3(...a),to=new T.Vector3(...b),delta=to.clone().sub(from);
+    const mesh=new T.Mesh(cylinderGeo,mat);mesh.name=name;mesh.position.copy(from).add(to).multiplyScalar(.5);
+    mesh.scale.set(r,delta.length(),r);mesh.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),delta.normalize());
+    mesh.castShadow=true;mesh.receiveShadow=true;root.add(mesh);return mesh;
+  }
+  // Curved utility conduits, flanged I-beams and enclosed ventilation give the
+  // building a readable construction instead of a featureless blue tunnel.
+  for(const side of [-1,1]){
+    pipe('Canalisation ventilation', [side*10.7,4.35,34],[side*10.7,4.35,-61],.16,mats.metal);
+    pipe('Conduite électrique', [side*11.35,4.55,34],[side*11.35,4.55,-61],.045);
+    for(let z=29;z>=-59;z-=16){
+      const collar=new T.Mesh(new T.TorusGeometry(.17,.022,6,16),mats.rust);collar.position.set(side*10.7,4.35,z);root.add(collar);
+      pipe('Suspente de ventilation',[side*10.7,4.5,z],[side*10.7,4.94,z],.018,mats.metal);
+    }
+  }
+  const signs=[],controlGroups=[];
+  for(const c of RANGE_CONTROLS){
+    pipe('Pied de commande',[c.x,0,c.z],[c.x,c.y-.13,c.z],.045,mats.metal);
+    const enclosure=box('Boîtier de commande des cibles',c.x,c.y,c.z,.27,.32,.16,mats.trim);
+    const button=new T.Mesh(new T.CylinderGeometry(.055,.055,.035,20),mats.ready);button.rotation.x=Math.PI/2;button.position.set(c.x,c.y-.025,c.z+.1);root.add(button);
+    const bezel=new T.Mesh(new T.TorusGeometry(.073,.012,8,24),mats.metal);bezel.position.set(c.x,c.y-.025,c.z+.111);root.add(bezel);
+    box('Plaquette interrupteur',c.x,c.y+.095,c.z+.087,.18,.033,.012,mats.white);
+    sign('CIBLES','F / ACTION',c.x,c.y+.30,c.z+.10,.45,.14,'#d9cdb2');
+    controlGroups.push({enclosure,button});
+    collision(c.x,c.z,.20,.20,0,1.45);
+  }
   // Local stencilled signage, one canvas per graphic, no network textures.
-  const signs=[];
-  function sign(label,sub,x,y,z,w=2.15,h=.48,color='#8be1f5'){
+  function sign(label,sub,x,y,z,w=2.15,h=.48,color='#e2d5b7'){
     if(typeof document==='undefined')return null;
     const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;
     const c=canvas.getContext('2d');
-    const grad=c.createLinearGradient(0,0,512,128);grad.addColorStop(0,'#152936');grad.addColorStop(1,'#243f4d');
+    const grad=c.createLinearGradient(0,0,512,128);grad.addColorStop(0,'#24251f');grad.addColorStop(1,'#3c3b31');
     c.fillStyle=grad;c.fillRect(0,0,512,128);
-    c.strokeStyle='#536979';c.lineWidth=6;c.strokeRect(5,5,502,118);
+    c.strokeStyle='#77705c';c.lineWidth=6;c.strokeRect(5,5,502,118);
     c.fillStyle=color;c.font='bold 50px monospace';c.textAlign='center';c.fillText(label,256,61,490);
     c.fillStyle='#d3dde3';c.font='bold 25px monospace';c.fillText(sub,256,103,490);
     const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
@@ -172,7 +213,7 @@ export function createShootingRangeArt(T,scene){
     }
   }
   for(const side of [-1,1]){
-    solid('Mur latéral',side*13.5,1.85,-13,.28,3.7,103,mats.wall);
+    solid('Mur latéral',side*13.5,2.5,-13,.28,5.0,103,mats.wall);
     box('Bande de sécurité',side*12.2,.015,-13,.12,.016,100,mats.yellow);
     // Repeating steel gantries give a recognizable indoor-training perspective.
     for(let z=16;z>=-58;z-=10){
@@ -205,6 +246,7 @@ export function createShootingRangeArt(T,scene){
   box('Plafond pare-balles acoustique',0,5.05,-13,27,.30,103,mats.canopy);
   for(let z=31;z>=-59;z-=8){
     box('Poutre du plafond',0,4.73,z,26.9,.23,.34,mats.metal);
+    for(const y of [4.60,4.87])box('Semelle de poutre en I',0,y,z,26.9,.045,.49,mats.trim);
     box('Luminaires LED suspendus',0,4.57,z,23.4,.075,.12,mats.light);
     for(const side of [-1,1]){
       box('Panneaux antibruit',side*13.24,2.50,z,.08,2.55,6.2,mats.padding);
@@ -246,57 +288,80 @@ export function createShootingRangeArt(T,scene){
   solid('Fond stand',0,2.25,36,27,4.5,.3,mats.wall);
   // Floor stays a walkable surface, never an X/Z blocking collider.
   const targetGroups=new Map();
-  const circle=new T.CircleGeometry(1,28);
-  const ring=new T.TorusGeometry(1,.07,7,36);
-  function plate(mat,r,z){
-    const m=new T.Mesh(circle,mat);m.scale.set(r,r,1);m.position.z=z;return m;
+  const circle=new T.CircleGeometry(1,20);
+  const shape=new T.Shape();TARGET_OUTLINE.forEach(([x,y],i)=>i?shape.lineTo(x,y+.94):shape.moveTo(x,y+.94));shape.closePath();
+  const silhouette=new T.ExtrudeGeometry(shape,{depth:.035,bevelEnabled:true,bevelSize:.008,bevelThickness:.008,bevelSegments:2,steps:1});
+  silhouette.translate(0,0,-.04);
+  const scoreRing=new T.RingGeometry(.24,.255,36);scoreRing.translate(0,.94,.012);
+  const sensorRing=new T.RingGeometry(.11,.12,24);sensorRing.translate(0,1.80,.012);
+  const scarGeo=new T.RingGeometry(.012,.035,10),dentGeo=new T.CircleGeometry(.013,10);
+  const trackGeo=new T.BoxGeometry(1,1,1);
+  const hardwareGeos=[cylinderGeo,silhouette,scoreRing,sensorRing,scarGeo,dentGeo,trackGeo];
+  function releaseTarget(item){
+    item.carrier.removeFromParent();
+    item.track?.removeFromParent();
+    item.carrier.traverse(n=>{if(n.isMesh&&!hardwareGeos.includes(n.geometry)&&n.geometry!==circle)n.geometry.dispose();});
   }
   function makeTarget(id){
     const carrier=new T.Group();carrier.name='Cible escamotable '+id;root.add(carrier);
     const target=new T.Group();carrier.add(target);
-    target.add(plate(mats.black,1.12,-.085));
-    target.add(plate(mats.white,1,-.06));
-    target.add(plate(mats.red,.77,-.04));
-    target.add(plate(mats.white,.52,-.022));
-    target.add(plate(mats.rose,.30,-.012));
-    target.add(plate(mats.black,.15,.006));
-    const perimeter=new T.Mesh(ring,mats.yellow);perimeter.scale.set(1.04,1.04,.2);
-    perimeter.position.z=.035;target.add(perimeter);
+    const steel=new T.Mesh(silhouette,mats.target);steel.name='Silhouette balistique en acier biseauté';steel.castShadow=true;steel.receiveShadow=true;target.add(steel);
+    target.add(new T.Mesh(scoreRing,mats.red),new T.Mesh(sensorRing,mats.red));
+    for(const x of [-.38,.38]){
+      const bolt=new T.Mesh(new T.CylinderGeometry(.025,.025,.05,6),mats.metal);bolt.rotation.x=Math.PI/2;bolt.position.set(x,.32,.015);target.add(bolt);
+    }
+    const hinge=new T.Mesh(new T.CylinderGeometry(.065,.065,.8,12),mats.trim);hinge.rotation.z=Math.PI/2;hinge.position.y=-.94;carrier.add(hinge);
     // Sturdy pop-up mechanism. Pole is positioned each frame, not attached to
     // the scalable target head, so it always meets the deck.
     const pole=box('Trépied-cible',0,1,0,.09,2,.095,mats.metal);
     root.remove(pole);carrier.add(pole);
     const foot=new T.Mesh(new T.BoxGeometry(.45,.06,.5),mats.trim);carrier.add(foot);
-    const item={carrier,target,pole,foot};
+    const item={carrier,target,pole,foot,hinge,marked:false,track:null};
     targetGroups.set(id,item);return item;
   }
   function update(sim){
-    if(!sim?.targets){for(const item of targetGroups.values())item.carrier.removeFromParent();targetGroups.clear();return;}
+    for(const {button} of controlGroups){button.material=sim?.trainingActive?mats.live:mats.ready;}
+    if(!sim?.targets){for(const item of targetGroups.values())releaseTarget(item);targetGroups.clear();return;}
     const existing=new Set();
     for(const t of sim.targets){
       existing.add(t.id);
       const item=targetGroups.get(t.id)||makeTarget(t.id);
       const pos=targetPosition(t,sim.time);
+      if(t.range>0&&!item.track){
+        item.track=new T.Mesh(trackGeo,mats.metal);item.track.name='Rail motorisé de cible';item.track.receiveShadow=true;root.add(item.track);
+        item.track.position.set(t.x,.035,t.z);item.track.scale.set(t.kind==='lateral'?t.range*2+.6:.12,.045,t.kind==='depth'?t.range*2+.6:.12);
+      }
       item.carrier.position.set(pos.x,pos.y,pos.z);
-      const hitMotion=t.hit?Math.min(1,Math.max(0,(sim.time-(t.hitAt??sim.time))/.34)):0;
+      const sinceHit=t.hit?Math.max(0,sim.time-(t.hitAt??sim.time)):0;
+      const hitMotion=t.hit?Math.min(1,sinceHit/(.62-(t.impulse||.35)*.22)):0;
       const eased=hitMotion*hitMotion*(3-2*hitMotion);
-      item.target.scale.setScalar(t.radius*Math.min(1,Math.max(.025,(sim.time-t.born)*7)));
-      item.target.rotation.y=Math.sin((sim.time-t.born)*2)*.035;
+      const rise=Math.min(1,Math.max(0,(sim.time-t.born)/.45)),deployed=rise*rise*(3-2*rise);
+      item.target.scale.setScalar(t.radius);
+      item.target.rotation.y=t.hit?(t.hitOffset?.x||0)*.18*Math.sin(sinceHit*13)*Math.exp(-sinceHit*7):0;
       // The plate only folds down when a confirmed impact was registered.
-      item.target.rotation.x=hitMotion>0?-1.42*eased:0;
-      item.target.position.y=-.47*t.radius*eased;
-      item.pole.position.set(0,-pos.y*.5,-.22);
-      item.pole.scale.y=Math.max(.05,pos.y/2);
-      item.foot.position.set(0,-pos.y+.035,-.22);
+      item.target.rotation.x=hitMotion>0?-1.42*eased+Math.sin(sinceHit*24)*Math.exp(-sinceHit*9)*(t.impulse||.35)*.09:deployed>=1?0:-1.42*(1-deployed);
+      item.target.position.y=-.94*t.radius;
+      if(t.hit&&!item.marked){
+        item.marked=true;
+        for(const hit of (t.impacts||[{x:0,y:0}]).slice(0,8)){
+          const ring=new T.Mesh(scarGeo,mats.rust),dent=new T.Mesh(dentGeo,mats.scar);
+          ring.position.set(hit.x,hit.y+.94,.018);dent.position.set(hit.x,hit.y+.94,.019);targetGroups.get(t.id).target.add(ring,dent);
+        }
+      }
+      const hingeHeight=Math.max(.08,pos.y-.94*t.radius);
+      item.hinge.position.y=-.94*t.radius;item.hinge.scale.setScalar(t.radius);
+      item.pole.position.set(0,-pos.y+hingeHeight/2,-.04);
+      item.pole.scale.y=hingeHeight/2;
+      item.foot.position.set(0,-pos.y+.035,-.04);
     }
-    for(const [id,item] of targetGroups)if(!existing.has(id)){item.carrier.removeFromParent();targetGroups.delete(id);}
+    for(const [id,item] of targetGroups)if(!existing.has(id)){releaseTarget(item);targetGroups.delete(id);}
   }
   function dispose(){
-    for(const item of targetGroups.values())item.carrier.removeFromParent();
+    pbr.dispose();for(const item of targetGroups.values())releaseTarget(item);
     targetGroups.clear();for(const sign of signs){sign.panel.removeFromParent();sign.panel.geometry.dispose();sign.material.dispose();sign.texture.dispose();}
     signs.length=0;root.removeFromParent();
-    root.traverse(node=>{if(node.isMesh&&node.geometry!==circle&&node.geometry!==ring)node.geometry.dispose();});
-    circle.dispose();ring.dispose();Object.values(mats).forEach(m=>m.dispose());textures.forEach(t=>t?.dispose());
+    root.traverse(node=>{if(node.isMesh&&!hardwareGeos.includes(node.geometry)&&node.geometry!==circle)node.geometry.dispose();});
+    circle.dispose();hardwareGeos.forEach(g=>g.dispose());Object.values(mats).forEach(m=>m.dispose());textures.forEach(t=>t?.dispose());
   }
-  return {root,obstacles,update,dispose,get targetCount(){return targetGroups.size;}};
+  return {root,obstacles,update,dispose,enableMaterials:pbr.enable,get ready(){return pbr.ready;},stats:pbr.stats,get targetCount(){return targetGroups.size;}};
 }

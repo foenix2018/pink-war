@@ -32,8 +32,10 @@ test('training mode fires current Pink War guns, tracks score, and has no enemy 
  const game=new ShootingRangeGame([] ,()=>.5);
  assert.equal(game.mode,'training');assert.equal(game.ownedWeapons.size,7);
  assert.equal(game.enemies.length,0);
- game.step(.2,{});
+ assert.equal(game.collectWeapon(),true);
+ for(let i=0;i<5;i++)game.step(.05,{});
  assert.equal(game.targets.length,1);
+ for(let i=0;i<10;i++)game.step(.05,{});
  const target=game.targets[0],pos=targetPosition(target,game.time);
  const origin={x:0,y:1.6,z:22};
  const direction={x:pos.x,y:pos.y-1.6,z:pos.z-22};

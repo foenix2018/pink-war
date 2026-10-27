@@ -35,7 +35,7 @@ test('solid collision bodies exactly track new partitions, benches, back wall an
 
 test('untouched targets stay up, fold ONLY after a hit and remain visible for the fall animation',()=>{
  const sim=new ShootingRangeGame([],()=>.5);
- sim.step(.05);sim.step(.2);
+ sim.collectWeapon();for(let i=0;i<5;i++)sim.step(.05);
  assert.equal(sim.targets.length,1);
  const target=sim.targets[0];
  for(let i=0;i<185;i++)sim.step(.05,{});
@@ -56,13 +56,14 @@ test('untouched targets stay up, fold ONLY after a hit and remain visible for th
  sim.step(.14);art.update(sim);
  assert.ok(group.children[0].rotation.x<-.05,'plate falls down visibly only after impact');
  assert.ok(sim.targets.includes(target),'plate is still visible during fall animation');
- for(let i=0;i<12;i++)sim.step(.05);
+ for(let i=0;i<24;i++)sim.step(.05);
  assert.ok(!sim.targets.includes(target),'plate fully retires after impact animation');
  art.dispose();
 });
 
 test('difficulty switches automatically but does not retract targets during a stage',()=>{
  const sim=new ShootingRangeGame([],()=>.5);
+ sim.collectWeapon();
  for(let i=0;i<360;i++)sim.step(.05,{});
  assert.equal(sim.trainingLevel.number,1);
  assert.ok(sim.targets.length===1);
@@ -75,8 +76,9 @@ test('difficulty switches automatically but does not retract targets during a st
 
 test('a distant target waits for the actual finite-speed laser impact before reacting',()=>{
  const game=new ShootingRangeGame([],()=>.5);
+ game.collectWeapon();
  // Allow the range’s existing initial appearance delay before testing flight time.
- game.time=20.1;for(let i=0;i<6;i++)game.step(.05,{});
+ game.time=20.1;game.trainingElapsed=20.1;for(let i=0;i<6;i++)game.step(.05,{});
  const target=game.targets[0];
  assert.equal(target.kind,'fixed-far');
  const pos=targetPosition(target,game.time),origin={x:0,y:1.6,z:22};

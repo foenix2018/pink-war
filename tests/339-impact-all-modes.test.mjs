@@ -9,7 +9,7 @@ test('Histoire, Survie, Entrainement use the shared impact visuals for hit event
  const scene=readFileSync(new URL('../dist/scene.js',import.meta.url),'utf8');
  const training=readFileSync(new URL('../dist/shooting-range.js',import.meta.url),'utf8');
  assert.match(game,/if \(event\.type === 'impact'\) \{\s*world\.impact\?\.\(event\)/);
- assert.match(game,/if\(event\.type==='training-hit'\)\{\s*world\.impact\?\.\(event\)/);
+ assert.match(game,/if\(event\.type==='training-hit'\)\{[\s\S]*?world\.impact\?\.\(\{\.\.\.event,noDecal:true\}\)/);
  assert.match(game,/world\.impact\(\{\.\.\.event,enemy:event\.type==='blade-hit'\}\)/);
  assert.match(scene,/laserFX=createLaserFX\(T,scene,palette\)/);
  assert.match(scene,/impact:event=>\{combatFX\.impact\(event\);laserFX\.impact\(event\);\}/);

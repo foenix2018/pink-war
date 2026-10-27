@@ -653,16 +653,10 @@ export class VRController {
       c.fillStyle = '#334256'; c.fillRect(20, 94, 208, 4);
       c.fillStyle = hp <= 25 ? '#ff6b8a' : game.regenerating ? '#a8e2db' : accent; c.fillRect(20, 94, hp / 100 * 208, 4);
       if(game.mode==='training'){
-        c.fillStyle='rgba(13,28,39,.96)';c.fillRect(0,0,512,112);
-        c.fillStyle='#88e9ee';c.font='bold 19px sans-serif';
-        c.fillText('STAND · EXERCICE '+game.trainingLevel.number+'/5',18,26);
-        c.fillStyle='#f5f8fa';c.font='bold 31px sans-serif';
-        c.fillText(String(game.score).padStart(5,'0')+' PTS',18,73);
-        c.font='bold 21px sans-serif';
-        c.fillText(game.trainingAccuracy+' %',312,52);
-        c.fillStyle='#b9d7e3';c.font='16px sans-serif';
-        c.fillText('PRÉCISION',312,75);
-        c.fillText('TOUCHES '+game.trainingHits+'/'+game.trainingShots+' · SÉRIE '+game.trainingCombo,18,99);
+        // Keep the same health/ammunition HUD as the missions; a single footer
+        // explains the physical booth control without covering either counter.
+        c.fillStyle='#d9c7a6';c.font='bold 13px sans-serif';
+        c.fillText(game.trainingActive?'STAND · '+game.trainingHits+' TOUCHES · '+game.trainingAccuracy+' %':'CIBLES : CLIC STICK '+(settingsOf(this).hand==='left'?'DROIT':'GAUCHE'),20,111,470);
       }
       texture.needsUpdate = true;
       if(this.hud.portal){

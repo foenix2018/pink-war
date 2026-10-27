@@ -16,7 +16,7 @@ import { createSaberSound } from './saber-sound.js';
 import { magnifiedFov, aimSensitivity, flatSightPose } from './optics.js';
 import { CampaignLevel1 } from './campaign-level1.js';
 import {attachCampaignStory} from './story-chapters.js';
-import { ShootingRangeGame } from './shooting-range.js';
+import { ShootingRangeGame,traceTrainingTarget } from './shooting-range.js';
 import {GAME_VERSION,showLaunchError} from './launch-ui.js';
 import {syncMenuArtwork} from './menu-art.js';
 import {createAICompanion} from './ai-companions.js';
@@ -24,6 +24,7 @@ import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
 import {createCompanionSkillFX} from './companion-skill-fx.js';
 import {playFieldCue} from './m01-field-audio.js';
+import {rangeHoldOffset} from './range-handling.js';
 import {writeM01Checkpoint} from './m01-checkpoint.js';
 import {mountCombatHud} from './combat-hud.js';
 import {createHudContrastControl} from './hud-appearance.js';
@@ -344,7 +345,8 @@ function updateCamera() {
   if (vr?.mode === 'xr') { vr.positionRig(); return; }
   const { T, camera, soldier, weapon } = world, p = game.player;
   const feel=weaponFeel.state,flatScreen=vr?.mode!=='stereo';
-  const cameraYaw = yaw + (vr?.mode==='stereo' && vr.sensor ? vr.phoneYaw : 0)+(flatScreen?feel.yaw*.06:0), cameraPitch = clamp(pitch + (vr?.mode==='stereo' && vr.sensor ? vr.phonePitch : 0) + (flatScreen?feel.pitch*.2:0), -1.2, 1.2);
+  const hold=game.mode==='training'&&flatScreen?rangeHoldOffset(game.time,{moving:Math.hypot(game.playerVelocity?.x||0,game.playerVelocity?.z||0)>.25,aiming,crouched:p.crouched,heat:feel.heat}):{pitch:0,yaw:0,recoilScale:.2};
+  const cameraYaw = yaw + hold.yaw + (vr?.mode==='stereo' && vr.sensor ? vr.phoneYaw : 0)+(flatScreen?feel.yaw*.06:0), cameraPitch = clamp(pitch + hold.pitch + (vr?.mode==='stereo' && vr.sensor ? vr.phonePitch : 0) + (flatScreen?feel.pitch*hold.recoilScale:0), -1.2, 1.2);
   const optic=world.fpsGun.userData.optics?.[game.weaponIndex]?.cfg||OPTICS[game.weapon.id],normalFov=view==='fps'?72:64;
   camera.fov=normalFov+(optic?(magnifiedFov(normalFov,optic.magnification)-normalFov)*aimBlend:0);
   camera.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
@@ -411,6 +413,13 @@ function aim(hand=game.weapon.dual?game.nextDualHand:'right') {
     const hit = traceEnemyHit(camera.position,far,enemy);
     if (hit && hit.t < nearest) { nearest = hit.t; target = camera.position.clone().lerp(far,hit.t); }
   }
+  // Converge the muzzle on the surface actually under the reticle, just as
+  // walls already do. A silhouette outside that eye ray never attracts a shot.
+  if(game.mode==='training')for(const plate of game.targets){
+    const hit=traceTrainingTarget(camera.position,forward,plate,game.time);
+    if(hit){const fraction=camera.position.distanceTo(new T.Vector3(hit.point.x,hit.point.y,hit.point.z))/160;
+      if(fraction<nearest){nearest=fraction;target=new T.Vector3(hit.point.x,hit.point.y,hit.point.z);}}
+  }
   const direction = target.clone().sub(origin).normalize(); return { origin, direction };
 }
 
@@ -432,11 +441,19 @@ function handleEvents() {
       lastShotAt=clock;recoil=feel.pitch;flashTimer=feel.flash;vr.haptic('shot', event.weapon,event.hand); weaponShotSound(event.weapon, event.power);
     }
     if(event.type==='training-hit'){
-      world.impact?.(event); // laser decal on the actual hit point of the moving target
-      world.burst(event.x,event.y,event.z,world.palette.rose,event.bullseye?18:9);
-      if(vr.mode!=='xr')announce(event.bullseye?'PLEIN CENTRE !':'CIBLE TOUCHÉE',`+${event.points} PTS · SÉRIE ×${event.combo}`);
-      vr.haptic('hit');tone(event.bullseye?980:650,340,.095,.035,'triangle');
+      // Permanent marks belong to the articulated plate, not the empty world
+      // coordinates it leaves behind when folding into its carrier.
+      world.impact?.({...event,noDecal:true});
+      world.burst(event.x,event.y,event.z,0xffce83,event.weapon==='m12'?18:9);
+      if(settings.sound&&audioContext){
+        const distance=Math.hypot(event.x-game.player.x,event.z-game.player.z);
+        const heading=listenerHeading(),pan=((event.x-game.player.x)*Math.cos(heading)-(event.z-game.player.z)*Math.sin(heading))/Math.max(1,distance);
+        playLaserImpact(audioContext,{surface:'metal',distance,pan,power:event.power});
+      }
+      const marker=$('hit-marker');marker.classList.remove('hit');void marker.offsetWidth;marker.classList.add('hit');
+      vr.haptic('hit');
     }
+    if(event.type==='training-control'){if(settings.sound&&audioContext)playWeaponAction(audioContext,game.weapon.id,'reload-in');}
     if(event.type==='training-stage'){if(vr.mode!=='xr')announce(event.label,'NOUVEL EXERCICE · VITESSE CROISSANTE');tone(460,820,.24,.03,'sine');}
     if(event.type==='training-escaped'){tone(240,130,.09,.01,'triangle');}
     if(event.type==='blade-swing'){saberSwingSound=true;vr.haptic('shot','aurora');}
@@ -509,14 +526,13 @@ function updateHud() {
   }
   if(train){
     const stage=game.trainingLevel;
-    $('training-stage').textContent=`EXERCICE ${stage.number}/5 · ${stage.label}`;
+    $('training-stage').textContent=game.trainingActive?`EXERCICE ${stage.number}/5 · ${stage.label}`:'STAND EN ATTENTE · COMMANDE DANS VOTRE BOX';
     $('training-score').textContent=String(game.score).padStart(5,'0');
     $('training-accuracy').textContent=game.trainingAccuracy+' %';
     $('training-hits').textContent=`${game.trainingHits} / ${game.trainingShots}`;
-    $('training-arsenal').textContent=`ARSENAL MK IV · ${world.fpsGun.userData.kenneyAssets?.loaded||0}/5 ARMES PRÊTES`;
+    $('training-arsenal').textContent=game.trainingActive?'CIBLES ACTIVES · INTERRUPTEUR POUR ARRÊTER':'INTERRUPTEUR AMBRÉ · F / ACTION POUR DÉCLENCHER';
     $('training-combo').textContent=`×${game.trainingCombo}`;
-    $('training-speed').textContent=game.trainingLevel.number===5?`×${game.time<0?1:Math.min(4,1+game.time/45).toFixed(1)}`:
-      `${Math.ceil(stage.remaining)} s avant la suite`;
+    $('training-speed').textContent=!game.trainingActive?'Chronomètre arrêté':game.trainingLevel.number===5?`×${Math.min(4,1+game.trainingElapsed/45).toFixed(1)}`:`${Math.ceil(stage.remaining)} s avant la suite`;
   }
   updatePortalHUD();
   const equipment=equipmentForCharacter(game.wave,character.id);
@@ -536,7 +552,7 @@ function updateHud() {
   pickup.hidden=!nearby;pickup.textContent=nearby?`RÉCUPÉRER ${WEAPONS[nearby.index].name} · F / X`:'';
   const interaction=game.getInteraction?.();
   combatHud.setContext(interaction?.label||(nearby?'Récupérer '+WEAPONS[nearby.index].name:null));
-  combatHud.setObjective({label:game.mode==='training'?'STAND · '+game.trainingLevel.number+'/05':game.mode==='campaign'?'MISSION 01':'VAGUE '+String(Math.max(1,game.wave)).padStart(2,'0')+'/20',detail:game.mode==='training'?game.trainingLevel.label+' · Score '+game.score+' · Précision '+game.trainingAccuracy+' %':game.mode==='campaign'?(game.campaign?.subtitle||'Rejoindre le relais des archives.'):'Repousser les machines et récupérer les armes des brèches.'});
+  combatHud.setObjective({label:game.mode==='training'?(game.trainingActive?'STAND · '+game.trainingLevel.number+'/05':'STAND · EN ATTENTE'):game.mode==='campaign'?'MISSION 01':'VAGUE '+String(Math.max(1,game.wave)).padStart(2,'0')+'/20',detail:game.mode==='training'?(game.trainingActive?game.trainingLevel.label+' · Score '+game.score+' · Précision '+game.trainingAccuracy+' %':'Activez le bouton ambré dans votre box · F / ACTION'):game.mode==='campaign'?(game.campaign?.subtitle||'Rejoindre le relais des archives.'):'Repousser les machines et récupérer les armes des brèches.'});
   if(interaction){pickup.hidden=false;pickup.textContent=`${interaction.label} · F`;pickup.ariaLabel=interaction.label;}
   $('ammo-label').textContent = game.weapon.melee?'∞':game.ammo[game.weaponIndex];
   $('ammo-capacity').textContent = game.weapon.melee?'':`/ ${game.weapon.capacity}`;

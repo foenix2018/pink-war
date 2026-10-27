@@ -101,7 +101,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   let shadowTime=0,shadowEntities=[],shadowHeight=e=>e.elevation||e.homeHeight||0;
   function trackShadows(x,z,elevation=0){
     // Selection changes the canonical sun direction; the map follows play.
-    const direction=campaignSky?VESPER_SUN:{x:-30,y:50,z:20};
+    const direction=rangeActive?{x:-4,y:4.4,z:3}:campaignSky?VESPER_SUN:{x:-30,y:50,z:20};
     worldShadows.update(shadowTime,{x,z,elevation},{entities:shadowEntities,heightAt:shadowHeight});
     sun.position.set(sun.target.position.x+direction.x,elevation+direction.y,sun.target.position.z+direction.z);
   }
@@ -461,7 +461,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   const campaignArt=createCampaignArt(T,scene,obstacles,{quality:profile.artQuality,photographic:true});
   const arenaObstacles=[...obstacles];
   const arenaOcclusion=createGroundOcclusion(T,arenaRoot,arenaObstacles,{compact:profile.artQuality==='low'});
-  const rangeArt=createShootingRangeArt(T,scene);
+  const rangeArt=createShootingRangeArt(T,scene,{low:profile.artQuality==='low'||profile.phone||profile.headset});
   const rangeObstacles=[...rangeArt.obstacles];
   let campaignActive=false,rangeActive=false;
   function setCampaignActive(enabled){
@@ -470,8 +470,8 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     obstacles.splice(0,obstacles.length,...(campaignActive?campaignArt.obstacles:arenaObstacles));
     arenaRoot.visible=!campaignActive&&!rangeActive;
     scene.fog.color.setHex(campaignActive?0x747b79:character.world.fog);
-    renderer.toneMappingExposure=campaignActive?.84:1.08;
-    hemisphere.intensity=campaignActive?.62:1.32;sun.intensity=campaignActive?1.36:2.25;rim.intensity=campaignActive?.18:1.08;
+    renderer.toneMappingExposure=rangeActive?.93:campaignActive?.84:1.08;
+    hemisphere.intensity=rangeActive?0:campaignActive?.62:1.32;sun.intensity=rangeActive?1.1:campaignActive?1.36:2.25;rim.intensity=rangeActive?0:campaignActive?.18:1.08;
     sun.shadow.camera.far=campaignActive?235:135;sun.shadow.camera.updateProjectionMatrix();
     sky.material.map=campaignActive&&morningReady?morningSky:skyTexture;sky.material.needsUpdate=true;
     moon.group.visible=!campaignActive;
@@ -492,9 +492,10 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     campaignArt.setVisible(campaignActive&&!rangeActive);
     arenaRoot.visible=!campaignActive&&!rangeActive;
     obstacles.splice(0,obstacles.length,...(rangeActive?rangeObstacles:campaignActive?campaignArt.obstacles:arenaObstacles));
-    scene.fog.color.setHex(rangeActive?0x26333f:campaignActive?0x847572:character.world.fog);
-    scene.fog.density=rangeActive?.0046:campaignActive?.0058:.008;
-    if(rangeActive){hemisphere.color.setHex(0xcad8e1);sun.color.setHex(0xd2e6ff);renderer.toneMappingExposure=1.08;hemisphere.intensity=1.32;sun.intensity=2.25;rim.intensity=1.08;sky.material.map=skyTexture;moon.group.visible=true;}
+    scene.fog.color.setHex(rangeActive?0x545045:campaignActive?0x847572:character.world.fog);
+    scene.fog.density=rangeActive?.0026:campaignActive?.0058:.008;
+    if(rangeActive){rangeArt.enableMaterials();sun.color.setHex(0xffe9c9);renderer.toneMappingExposure=.93;hemisphere.intensity=0;sun.intensity=1.1;rim.intensity=0;moon.group.visible=false;sky.visible=false;}
+    else {sky.visible=true;renderer.toneMappingExposure=campaignActive?.84:1.08;hemisphere.intensity=campaignActive?.62:1.32;sun.intensity=campaignActive?1.36:2.25;rim.intensity=campaignActive?.18:1.08;}
   }
   return {T,scene,camera,moon,campaignArt,rangeArt,setRangeActive,setCampaignActive,graphics:{...profile,initialFailure:prepared.initialFailure},warm:async()=>{await campaignArt.ready;await warmRenderer(renderer,scene,camera)},get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>campaignActive?{...campaignArt.stats(),map:'vesper-secours-07'}:{...city.stats,boundary:city.fence?.stats()},resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
     holsterGun,setPlayerVisible,

@@ -101,7 +101,7 @@ export function createCombatFX(T, scene, palette = {}) {
     }
     // Persistent feathered burn marks are only attached to static surfaces. A mark
     // on a moving robot would otherwise remain floating after it moved away.
-    if (surface !== 'robot' && !event.enemy && !event.hostile) {
+    if (surface !== 'robot' && !event.enemy && !event.hostile && !event.noDecal) {
       const p = emit(dust, 'scorch', event, scorch, 7 + Math.random() * 3, .12 + profile.flash * .55, 0);
       p.vx = p.vy = p.vz = 0;
     }
