@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="style.css?v=3.47"><link rel="stylesheet" href="hud.css?v=3.47"><link rel="stylesheet" href="campaign.css?v=3.47"><link rel="stylesheet" href="training.css?v=3.47">
   <link rel="stylesheet" href="mobile-controls-v7.css?v=3.63.24">
 <link rel="stylesheet" href="fracture.css?v=3.63.24">
-</head>
+<style id="story-navigation-style">#lobby.story-page .intro > :not(#story-chapters){display:none!important}#lobby.story-page #story-chapters{display:block!important}#lobby.story-page .intro{min-height:360px}#story-chapters button{cursor:pointer;color:#edf4ff;background:#20334b;font-weight:700;letter-spacing:.07em}#story-chapters button:hover{border-color:#ed82b3}</style></head>
 <body>
   <canvas id="world" aria-label="Arène 3D de Pink war"></canvas>
   <div id="welcome-art" aria-hidden="true"><img data-character-art data-ghju-src="art/accueil.webp?v=3.47" data-lylu-src="art/accueil-lylu.webp?v=3.47" src="art/accueil.webp?v=3.47" alt="" fetchpriority="high" decoding="async"></div>
@@ -34,8 +34,8 @@
       <p class="tagline">Retrouver l’autre. Traverser les ruines.</p>
       <p class="description" id="character-description">GHJU cherche son frère LYLU dans les ruines de Vesper.</p>
       <div class="mission-intro"><span class="mission-kicker">CAMPAGNE · PREMIÈRE MISSION</span><h2 id="mission-title">01 — Le dernier signal</h2><p id="mission-description">Laboratoire abandonné, rue sous surveillance et relais en hauteur. Une trace de votre famille.</p></div>
-      <div class="mode-choice" role="group" aria-label="Choisir le mode de jeu"><button data-mode="campaign" aria-pressed="true">HISTOIRE · 01</button><button data-mode="campaign2" aria-pressed="false">HISTOIRE · 02</button><button data-mode="arena" aria-pressed="false">ARÈNE</button><a class="mode-home" href="at-home.html" title="AT HOME · JOUER CHEZ MOI (QUEST 3)">⌂ AT HOME</a></div>
-      <button class="training-shortcut text-button" data-mode="training" aria-pressed="false">STAND DE TIR · ESSAYER LES ARMES ↗</button>
+      <div class="mode-choice" role="group" aria-label="Choisir le mode de jeu"><button id="story-open" type="button">HISTOIRE</button><button data-mode="training" aria-pressed="false">STAND</button><button data-mode="arena" aria-pressed="false">ARÈNE</button></div><a class="mode-home" href="at-home.html" title="AT HOME · JOUER CHEZ MOI (QUEST 3)">⌂ AT HOME</a>
+      <section id="story-chapters" hidden aria-label="Chapitres de l’histoire" style="margin:14px 0;padding:18px;border:1px solid #718097;border-radius:16px;background:#101e2ce8"><h2 style="margin:0 0 14px">HISTOIRE · CHAPITRES</h2><div style="display:grid;gap:10px"><button type="button" data-chapter="campaign" style="padding:15px;border-radius:10px">01 — LE DERNIER SIGNAL</button><button type="button" data-chapter="campaign2" style="padding:15px;border-radius:10px">02 — SOUS LES NÉONS</button></div><button id="story-back" type="button" style="margin-top:18px;padding:12px;width:100%;border:1px solid #8391a8;border-radius:10px">← RETOUR ACCUEIL</button></section>
       <div class="character-choice" role="group" aria-label="Choisir votre personnage">
         <div class="character-choice-heading"><span class="field-label">VOTRE PERSONNAGE</span><span id="character-choice-status" role="status">GHJU · UNIVERS ROSE</span></div>
         <div class="character-cards">
