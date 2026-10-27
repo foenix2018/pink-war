@@ -94,8 +94,12 @@ for(let side of [-1,1])for(let j=0;j<3;j++)cyl(side*.56,3.14-j*.18,.612,.022,.02
  let verts,faces;
  if(sh.mesh){verts=sh.verts;faces=sh.polys;}
  else {const {x,y,z,w,h,d,rx=0,ry=0,rz=0}=sh;const cs=Math.cos(rx),sn=Math.sin(rx),cy=Math.cos(ry),sy=Math.sin(ry),cz=Math.cos(rz),sz=Math.sin(rz);
- verts=[];for(const dz of [-d/2,d/2])for(const dy of [-h/2,h/2])for(const dx of [-w/2,w/2]){let yy=dy*cs-dz*sn,zz=dy*sn+dz*cs,xx=dx*cy+zz*sy;zz=-dx*sy+zz*cy;verts.push([xx*cz-yy*sz+x,xx*sz+yy*cz+y,zz+z]);}
- faces=[[0,1,3,2],[4,6,7,5],[0,4,5,1],[2,3,7,6],[1,5,7,3],[0,2,6,4]];
+ // Reproduce the eight-sided chamfered armor used in the approved MK VIII canvas preview.
+ const bevel=Math.min(w,h)*.14,hw=w/2,hh=h/2;
+ const outline=[[-hw+bevel,-hh],[hw-bevel,-hh],[hw,-hh+bevel],[hw,hh-bevel],[hw-bevel,hh],[-hw+bevel,hh],[-hw,hh-bevel],[-hw,-hh+bevel]];
+ verts=[];for(const dz of [-d/2,d/2])for(const [dx,dy] of outline){let yy=dy*cs-dz*sn,zz=dy*sn+dz*cs,xx=dx*cy+zz*sy;zz=-dx*sy+zz*cy;verts.push([xx*cz-yy*sz+x,xx*sz+yy*cz+y,zz+z]);}
+ faces=[Array.from({length:8},(_,i)=>7-i),Array.from({length:8},(_,i)=>i+8)];
+ for(let i=0;i<8;i++)faces.push([i,(i+1)%8,(i+1)%8+8,i+8]);
  }
  for(const face of faces){if(face.length<3)continue;for(let i=1;i<face.length-1;i++)pushTri(sh.col,verts[face[0]],verts[face[i]],verts[face[i+1]]);}
  }
