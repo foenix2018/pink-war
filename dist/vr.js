@@ -426,9 +426,10 @@ export class VRController {
     const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, fire: false, fireHands:{left:false,right:false}, sprint: false, precision: false, aim:false, jump: false, pickup: false, crouchToggle: false, melee: false, charge: false };
     const dual=!!this.hooks.game?.()?.weapon?.dual,rawHands={left:false,right:false},trackedHands={left:false,right:false};
     const xr = this.mode === 'xr', cfg = settingsOf(this), mainHand = cfg.hand, sideHand = otherHand(mainHand);
-    const skillsConsumed=xr&&!!this.hooks.skillsInput?.(this);
+    let skillsConsumed=xr&&!!this.hooks.skillsInput?.(this);
     const focused=typeof document==='undefined'||(!document.hidden&&(!document.hasFocus||document.hasFocus()));
     const desktop = xr ? null : (this.desktopGamepads ||= new DesktopGamepadInput()).select(navigator.getGamepads?.() || [],{focused});
+    skillsConsumed ||= !!this.hooks.rangeArmoryInput?.({controller:this,desktop,xr});
     if (!xr && this.desktopPadKey !== this.desktopGamepads.activeKey) { this.previous.clear(); this.desktopPadKey = this.desktopGamepads.activeKey; }
     const sources = xr ? [...(this.session?.inputSources || [])] : desktop ? [{ gamepad: desktop, handedness: 'both' }] : [];
     const phase = this.hooks.phase?.() || 'playing', actions = new Set();
@@ -656,7 +657,8 @@ export class VRController {
         // Keep the same health/ammunition HUD as the missions; a single footer
         // explains the physical booth control without covering either counter.
         c.fillStyle='#d9c7a6';c.font='bold 13px sans-serif';
-        c.fillText(game.trainingActive?'STAND · '+game.trainingHits+' TOUCHES · '+game.trainingAccuracy+' %':'CIBLES : CLIC STICK '+(settingsOf(this).hand==='left'?'DROIT':'GAUCHE'),20,111,470);
+        const elapsed=Math.floor(game.trainingElapsed||0),clock=String(Math.floor(elapsed/60)).padStart(2,'0')+':'+String(elapsed%60).padStart(2,'0');
+        c.fillText(clock+' · '+String(game.score).padStart(5,'0')+' PTS · '+(game.trainingActive?'CIBLES ACTIVES':'STICK '+(settingsOf(this).hand==='left'?'DROIT':'GAUCHE')+' : ACTION'),20,111,470);
       }
       texture.needsUpdate = true;
       if(this.hud.portal){

@@ -45,7 +45,10 @@ test('the cinematic mission 02 cover is shared by menu and loading, with its mob
   assert.match(read('menu-art.js'),/mission02-cover\.webp/);
   assert.match(read('mission-loading.js'),/mission02-cover\.webp/);
   assert.match(read('mission-loading.css'),/\.pw-load-home\{top:max\(58px/);
-  for(const page of ['vesper-level1-v7.html','level2-test.html'])assert.match(read(page),/<link rel="icon" href="icon\.svg"/,page);
+  for(const page of ['vesper-level1-v7.html','level2-test.html']){
+    assert.match(read(page),/<link rel="icon" href="icons\/favicon-32\.png\?v=/,page);
+    assert.match(read(page),/<link rel="apple-touch-icon" href="apple-touch-icon\.png\?v=/,page);
+  }
 });
 
 test('at the hip the M12 sits lower and turns out so the shooting glove shows; aiming removes the offset',()=>{

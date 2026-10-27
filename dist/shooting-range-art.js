@@ -1,8 +1,11 @@
 // Self-contained covered range for desktop, mobile and WebXR.
 // Existing local CC0 photo sets stream only when this scene is selected.
-import { targetPosition,TRAINING_BARRIER,RANGE_CONTROLS,TARGET_OUTLINE } from './shooting-range.js';
+import { targetPosition,TRAINING_BARRIER,RANGE_CONTROLS,TARGET_OUTLINE,RANGE_ARMORY,RANGE_WEAPON_SLOTS } from './shooting-range.js';
+import {WEAPONS} from './game-logic.js';
+import {bevelBox} from './geo.js';
 import {createRangeMaterials} from './shooting-range-materials.js';
 import {createRangeShadows} from './range-shadows.js';
+import {applyWorldShadows} from './world-shadows.js';
 
 // Deterministic, locally generated PBR detail. Five shared 512px maps keep Quest
 // memory and draw calls bounded, even across the full 100-metre indoor range.
@@ -288,6 +291,49 @@ export function createShootingRangeArt(T,scene,options={}){
   }
   // Distinct training area behind the player does not block the VR controllers.
   solid('Fond stand',0,2.25,36,27,4.5,.3,mats.wall);
+  // Rear armory is behind the preparation benches, leaving their access aisle clear.
+  const cabinet=RANGE_ARMORY,displayModels=new T.Group(),displaySlots=new Map();root.add(displayModels);
+  displayModels.name='Armes exposées / armoire du stand';
+  collision(cabinet.x,cabinet.z,cabinet.width,cabinet.depth,0,cabinet.height);
+  function cabinetBox(name,x,y,z,w,h,d,mat=mats.trim){
+    const mesh=new T.Mesh(bevelBox(w,h,d,Math.min(.025,w/5,h/5,d/5),2),mat);mesh.name=name;mesh.position.set(x,y,z);root.add(mesh);return mesh;
+  }
+  cabinetBox('Socle de l’armoire',0,.12,cabinet.z,5.9,.24,.7,mats.metal);
+  cabinetBox('Fond blindé de l’armoire',0,1.35,35.18,5.82,2.22,.10,mats.padding);
+  cabinetBox('Dessus de l’armoire',0,2.44,cabinet.z,5.9,.16,.7,mats.metal);
+  for(const x of [-2.88,2.88]){
+    cabinetBox('Montant biseauté de l’armoire',x,1.3,cabinet.z,.14,2.35,.7,mats.metal);
+    box('Balisage intérieur de l’armoire',x*.97,1.37,34.56,.025,1.95,.025,mats.light);
+  }
+  RANGE_WEAPON_SLOTS.forEach((index,i)=>{
+    const x=(i-3)*.78;
+    cabinetBox('Compartiment d’arme',x,.62,34.89,.68,.09,.49,mats.trim);
+    for(const y of [1.06,1.78])box('Crochet de maintien',x,y,34.93,.14,.04,.16,mats.metal);
+    if(i<6)box('Séparation de rangement',x+.39,1.48,35.02,.025,1.78,.27,mats.trim);
+    sign(WEAPONS[index].name,index===7?'GHJU':'ÉQUIPER',x,.40,34.48,.65,.18,'#e0c48b');
+    const slot=new T.Group();slot.position.set(x,1.43,34.78);displayModels.add(slot);displaySlots.set(index,slot);
+  });
+  sign('ARMURERIE','CHOISIR UNE ARME  /  F · ACTION',0,2.82,34.48,5.6,.52,'#eadab5');
+  const armoryLamp=new T.SpotLight(0xffedcf,20,7,1.15,.6,2);armoryLamp.name='Projecteur de l’armurerie';armoryLamp.position.set(0,3.4,32.4);armoryLamp.target.position.set(0,1.35,34.9);armoryLamp.castShadow=false;root.add(armoryLamp,armoryLamp.target);
+  box('Boîtier du projecteur de l’armurerie',0,3.43,32.4,.9,.16,.3,mats.metal);box('Lampe de l’armurerie',0,3.34,32.4,.76,.035,.24,mats.light);
+  pipe('Suspente du projecteur de l’armurerie',[0,3.51,32.4],[0,4.9,32.4],.025,mats.trim);
+  let armoryVersion=null;
+  function clearArmoryModels(){for(const slot of displaySlots.values()){slot.traverse(n=>{if(n.isInstancedMesh)n.dispose();});slot.clear();}}
+  function setArmoryModels(sources,revision,characterId){
+    const key=revision+':'+characterId;if(key===armoryVersion)return;
+    clearArmoryModels();armoryVersion=key;
+    for(const [index,slot] of displaySlots){
+      if(index===7&&characterId!=='ghju')continue;
+      const source=sources[index===7?0:index];if(!source)continue;
+      for(let copy=0;copy<(index===7?2:1);copy++){
+        const holder=new T.Group(),model=source.clone(true);model.visible=true;model.rotation.set(Math.PI/2,0,Math.PI/2);holder.add(model);holder.position.x=index===7?(copy?-.16:.16):0;slot.add(holder);
+        model.traverse(n=>{if(n.name==='M12 reload shell')n.visible=false;});applyWorldShadows(holder);
+        holder.updateWorldMatrix(true,true);const bounds=new T.Box3();
+        model.traverseVisible(n=>{if(n.isMesh&&n.geometry){if(!n.geometry.boundingBox)n.geometry.computeBoundingBox();bounds.union(n.geometry.boundingBox.clone().applyMatrix4(n.matrixWorld));}});
+        if(!bounds.isEmpty()){const center=bounds.getCenter(new T.Vector3());model.position.sub(holder.worldToLocal(center));}
+      }
+    }
+  }
   const shadows=createRangeShadows(T,{root,lights:shadowLights,obstacles,low:!!options.low});
   // Floor stays a walkable surface, never an X/Z blocking collider.
   const targetGroups=new Map();
@@ -360,11 +406,11 @@ export function createShootingRangeArt(T,scene,options={}){
     for(const [id,item] of targetGroups)if(!existing.has(id)){releaseTarget(item);targetGroups.delete(id);}
   }
   function dispose(){
-    shadows.dispose();pbr.dispose();for(const item of targetGroups.values())releaseTarget(item);
+    clearArmoryModels();displayModels.removeFromParent();shadows.dispose();pbr.dispose();for(const item of targetGroups.values())releaseTarget(item);
     targetGroups.clear();for(const sign of signs){sign.panel.removeFromParent();sign.panel.geometry.dispose();sign.material.dispose();sign.texture.dispose();}
     signs.length=0;root.removeFromParent();
     root.traverse(node=>{if(node.isMesh&&!hardwareGeos.includes(node.geometry)&&node.geometry!==circle)node.geometry.dispose();});
     circle.dispose();hardwareGeos.forEach(g=>g.dispose());Object.values(mats).forEach(m=>m.dispose());textures.forEach(t=>t?.dispose());
   }
-  return {root,obstacles,update,dispose,shadows,enableMaterials:pbr.enable,get ready(){return pbr.ready;},stats:()=>({...pbr.stats(),shadows:shadows.stats()}),get targetCount(){return targetGroups.size;}};
+  return {root,obstacles,update,dispose,shadows,setArmoryModels,enableMaterials:pbr.enable,get ready(){return pbr.ready;},stats:()=>({...pbr.stats(),shadows:shadows.stats(),armoryModels:displayModels.children.filter(s=>s.children.length).length}),get targetCount(){return targetGroups.size;}};
 }

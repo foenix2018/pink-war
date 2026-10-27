@@ -5,6 +5,9 @@ import { CHARGE_MAX } from './armor-combat.js';
 // handling, audio and VR aiming. Distances are from the firing line z=22.
 export const TRAINING_BARRIER=Object.freeze({z:19.12,stopZ:19.80,height:1.13,width:25.5});
 export const RANGE_CONTROLS=Object.freeze([-2,-1,0,1,2].map(lane=>Object.freeze({x:lane*4.6+.55,y:1.25,z:20.05})));
+export const RANGE_ARMORY=Object.freeze({x:0,y:1.35,z:34.9,frontZ:34.48,width:5.9,height:2.5,depth:.7});
+export const RANGE_WEAPON_SLOTS=Object.freeze([0,1,2,3,4,6,7]);
+export function rangeSessionTime(time){const seconds=Math.floor(Math.max(0,Number(time)||0));return String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');}
 // Same outline for the steel mesh and projectile tests, including the empty shoulders.
 export const TARGET_OUTLINE=Object.freeze([[-.48,-.94],[.48,-.94],[.52,-.20],[.70,.28],[.62,.43],[.25,.54],[.25,.67],[.29,.78],[.25,1.02],[.15,1.10],[-.15,1.10],[-.25,1.02],[-.29,.78],[-.25,.67],[-.25,.54],[-.62,.43],[-.70,.28],[-.52,-.20]].map(p=>Object.freeze(p)));
 export function targetContains(x,y){
@@ -32,7 +35,7 @@ export function trainingStage(time){
   }
   return {...TRAINING_STAGES.at(-1),number:5,remaining:Infinity};
 }
-export function trainingSpeed(time){return Math.min(4,1+Math.max(0,time)/45);}
+export function trainingSpeed(time){return Math.min(1.5,.6+Math.max(0,time)/180);}
 export function targetPosition(target,time){
   const age=Math.max(0,Math.min(time,target.hitAt??Infinity)-target.born),s=target.speed;
   if(target.kind==='lateral')return {x:target.x+Math.sin(age*1.2*s+target.phase)*target.range,y:target.y,z:target.z};
@@ -65,6 +68,7 @@ export class ShootingRangeGame extends ArenaGame {
     this.targetTransition=.46;
     this.pendingHits=[];
     this.trainingActive=false;this.trainingElapsed=0;
+    this.rangeArmoryOpen=false;
     this.wave=0;this.nextWave=-1;this.toSpawn=0;
     this.player.x=0;this.player.z=22;this.player.yaw=0;
     this.ownedWeapons=new Set(WEAPONS.map((_,i)=>i).filter(i=>!WEAPONS[i].melee&&weaponAllowedForCharacter(i,characterId)));
@@ -73,12 +77,35 @@ export class ShootingRangeGame extends ArenaGame {
     this.state='playing';
   }
   // The range is for practice: impulse charges come back as soon as one is thrown.
-  throwCharge(origin,direction){const thrown=super.throwCharge(origin,direction);if(thrown)this.charges=CHARGE_MAX;return thrown;}
+  throwCharge(origin,direction){if(this.rangeArmoryOpen)return false;const thrown=super.throwCharge(origin,direction);if(thrown)this.charges=CHARGE_MAX;return thrown;}
   get trainingAccuracy(){return this.trainingShots?Math.round(this.trainingHits/this.trainingShots*100):100;}
   get trainingLevel(){return trainingStage(this.trainingElapsed);}
+  get trainingMotionSpeed(){return trainingSpeed(this.trainingElapsed);}
+  get rangeWeapons(){return RANGE_WEAPON_SLOTS.filter(i=>this.ownedWeapons.has(i)&&weaponAllowedForCharacter(i,this.characterId));}
+  nearRangeArmory(){
+    const p=this.player,c=RANGE_ARMORY;
+    if(this.state!=='playing'||(p.elevation||0)>1.6||p.z>c.frontZ+.2||Math.hypot(Math.max(0,Math.abs(p.x-c.x)-c.width/2),p.z-c.frontZ)>2.65)return false;
+    const goal={x:Math.max(c.x-c.width/2,Math.min(c.x+c.width/2,p.x)),y:c.y,z:c.frontZ};
+    return !this.obstacles.some(b=>{const hit=segmentBox({x:p.x,y:(p.elevation||0)+1.5,z:p.z},goal,b);return hit!==null&&hit<.99;});
+  }
+  closeRangeArmory(){this.rangeArmoryOpen=false;}
+  selectFromArmory(index){
+    if(!this.rangeArmoryOpen||!this.nearRangeArmory()||!this.rangeWeapons.includes(index))return false;
+    if(index!==this.weaponIndex&&!this.selectWeapon(index))return false;
+    this.closeRangeArmory();return true;
+  }
+  selectWeapon(index){
+    if(!super.selectWeapon(index))return false;
+    // Reset the drill, never the world clock used by projectiles and animation.
+    this.trainingElapsed=0;this.score=0;this.trainingHits=0;this.trainingShots=0;this.trainingEscapes=0;
+    this.trainingCombo=0;this.trainingBestCombo=0;this.combo=0;this.bestCombo=0;this.comboUntil=-1;
+    this.trainingActive=false;this.targets=[];this.pendingHits=[];this.bullets=[];this.thrownCharges=[];this.targetDelay=.18;
+    this.refillWeapon();this.event('training-reset',{weapon:this.weapon.id});return true;
+  }
   getInteraction(){
     const p=this.player;
     if(this.state!=='playing'||(p.elevation||0)>1.6)return null;
+    if(this.nearRangeArmory())return {x:RANGE_ARMORY.x,y:RANGE_ARMORY.y,z:RANGE_ARMORY.frontZ,kind:'range-armory',label:'Choisir une arme · armoire'};
     const control=[...RANGE_CONTROLS].sort((a,b)=>Math.hypot(p.x-a.x,p.z-a.z)-Math.hypot(p.x-b.x,p.z-b.z)).find(c=>
       Math.hypot(p.x-c.x,p.z-c.z)<2.65&&!this.obstacles.some(box=>{
         if(Math.abs(box.x-c.x)<.01&&Math.abs(box.z-c.z)<.01)return false;
@@ -87,7 +114,8 @@ export class ShootingRangeGame extends ArenaGame {
     return control?{...control,label:this.trainingActive?'Arrêter les cibles':'Déclencher les cibles',kind:'range-control'}:null;
   }
   collectWeapon(){
-    if(!this.getInteraction())return false;
+    const interaction=this.getInteraction();if(!interaction)return false;
+    if(interaction.kind==='range-armory'){this.rangeArmoryOpen=!this.rangeArmoryOpen;return true;}
     this.trainingActive=!this.trainingActive;this.targets=[];this.pendingHits=[];this.targetDelay=.18;
     this.event('training-control',{active:this.trainingActive});return true;
   }
@@ -106,6 +134,7 @@ export class ShootingRangeGame extends ArenaGame {
     this.targets.push(target);this.event('training-appear',{id:target.id,kind});return target;
   }
   shoot(origin,direction,charge=1,hand=null){
+    if(this.rangeArmoryOpen)return false;
     const before=this.bullets.length;
     const result=super.shoot(origin,direction,charge,hand);
     if(!result||this.weapon.melee)return result;
@@ -144,7 +173,7 @@ export class ShootingRangeGame extends ArenaGame {
     return result;
   }
   step(dt,input={}){
-    if(this.state!=='playing')return;
+    if(this.state!=='playing'||this.rangeArmoryOpen)return;
     dt=Math.max(0,Math.min(.05,Number(dt)||0));
     const beforeStage=this.trainingLevel.number;
     this.nextWave=-1;this.toSpawn=0;this.wave=0;
@@ -211,6 +240,7 @@ export class ShootingRangeGame extends ArenaGame {
       hits:this.trainingHits,shots:this.trainingShots,accuracy:this.trainingAccuracy,escapes:this.trainingEscapes,
       combo:this.trainingCombo,bestCombo:this.trainingBestCombo,stage:this.trainingLevel,
       active:this.trainingActive,elapsed:this.trainingElapsed,control:this.getInteraction(),
+      armoryOpen:this.rangeArmoryOpen,clock:rangeSessionTime(this.trainingElapsed),
       speed:trainingSpeed(this.trainingElapsed),targets:this.targets.map(t=>({...t,position:targetPosition(t,this.time)}))}};
   }
 }
