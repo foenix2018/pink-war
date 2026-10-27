@@ -3,7 +3,7 @@ import {audioMock} from './audio-mock.mjs';
 import {createAmbience} from '../dist/ambience.js';
 import {loadRLHFootsteps,RLH_STEP_SAMPLES} from '../dist/rlh-footsteps.js';
 import {enemyDurability,ROBOT_DURABILITY} from '../dist/enemy-combat.js';
-import {WEAPONS} from '../dist/game-logic.js';
+import {WEAPONS,HIT_ZONE_DAMAGE} from '../dist/game-logic.js';
 import {CampaignLevel1} from '../dist/campaign-level1.js';
 import {createHash} from 'node:crypto';import {readFileSync} from 'node:fs';
 
@@ -28,7 +28,7 @@ test('light, infantry and heavy robots require distinct finite torso hits, with 
    for(let i=0;i<40;i++)g.step(.025,{});shots++;
   }
   counts[form]=shots;assert.equal(g.kills,1);assert.ok(shots<10);
-  const torso=Math.ceil(enemyDurability(1,form)/pistol.damage),head=Math.ceil(enemyDurability(1,form)/(pistol.damage*(form==='probe'?2.4:2.2)));assert.ok(head<torso);
+  const torso=Math.ceil(enemyDurability(1,form)/pistol.damage),head=Math.ceil(enemyDurability(1,form)/(pistol.damage*HIT_ZONE_DAMAGE.head));assert.ok(head<torso);
  }
  assert.equal(counts.probe,1);assert.equal(counts.stalker,2);assert.equal(counts.synth,2);assert.equal(counts.brute,3);assert.equal(counts.bulwark,4);
  assert.ok(enemyDurability(3,'synth')>enemyDurability(1,'synth'));assert.ok(enemyDurability(1,'synth',true)>enemyDurability(1,'synth'));

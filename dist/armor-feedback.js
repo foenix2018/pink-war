@@ -2,6 +2,7 @@
 // controller rumble, impulse charges in flight and their pulse, and the strike motion of the held weapon.
 // No dynamic light is added (a new light recompiles every material on Quest): additive meshes only.
 import { CHARGE_RADIUS, MELEE_COOLDOWN } from './armor-combat.js';
+import {createHitFeedback} from './hit-feedback.js';
 
 const STRIKE_TIME = .26;
 // 0 → 1 → 0 over the strike: the weapon jabs forward and comes back. Engines add it to their FPS weapon pose.
@@ -12,7 +13,8 @@ export function meleeKick(game) {
 }
 export const MELEE_POSE = Object.freeze({ x: -.07, y: .03, z: -.2, pitch: -.45 });
 
-export function createArmorFeedback({ T, scene, audio = () => null, haptic = () => {}, listener = () => null, accent = 0xffffff } = {}) {
+export function createArmorFeedback({ T, scene, camera=null, audio = () => null, haptic = () => {}, listener = () => null, accent = 0xffffff } = {}) {
+  const hitFeedback=camera?createHitFeedback(T,camera):null;
   const colour = new T.Color(accent);
   // Thrown charges: a dark disc with a bright rim and a core that blinks faster as the fuse runs out.
   const discGeometry = new T.CylinderGeometry(.075, .075, .035, 16), rimGeometry = new T.TorusGeometry(.075, .012, 6, 20), coreGeometry = new T.SphereGeometry(.03, 8, 6);
@@ -72,9 +74,11 @@ export function createArmorFeedback({ T, scene, audio = () => null, haptic = () 
   const distanceGain = at => { const l = listener(); if (!l || !at) return 1; const d = Math.hypot(at.x - l.x, at.z - l.z); return 1 / (1 + d * .08); };
 
   return {
-    // Engines pass every game event here; only the armour layer's events are used.
+    // Engines pass every event here; confirmed hits and armour events are used.
     handle(event) {
       switch (event?.type) {
+        case 'hit': hitFeedback?.hit(event); break;
+        case 'weapon': case 'over': case 'win': hitFeedback?.reset(); break;
         case 'shield-break': play('shield-break'); haptic('damage'); break;
         case 'shield-recharge': play('shield-recharge'); break;
         case 'shield-full': play('shield-full'); break;
@@ -85,6 +89,7 @@ export function createArmorFeedback({ T, scene, audio = () => null, haptic = () 
       }
     },
     update(game, dt) {
+      hitFeedback?.update(dt);
       const live = new Set();
       for (const c of game?.thrownCharges || []) {
         live.add(c.id); const g = ensureCharge(c.id);
@@ -103,6 +108,7 @@ export function createArmorFeedback({ T, scene, audio = () => null, haptic = () 
     },
     setAccent(hex) { colour.setHex(hex); rimMaterial.color.copy(colour); },
     dispose() {
+      hitFeedback?.dispose();
       for (const g of flying.values()) scene.remove(g); flying.clear();
       for (const b of blasts) dropBlast(b); blasts.length = 0;
       for (const item of [discGeometry, rimGeometry, coreGeometry, discMaterial, rimMaterial, coreMaterial, shellGeometry, ringGeometry]) item.dispose();

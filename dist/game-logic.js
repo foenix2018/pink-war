@@ -149,6 +149,7 @@ export function moveInArena(entity, dx, dz, radius, obstacles) {
 
 // Zoned raycast keeps head / torso / extremities distinct in 3D, including in WebXR.
 // Old simulation fixtures (without a 'form') retain the original single hit sphere.
+export const HIT_ZONE_DAMAGE=Object.freeze({head:2.5,torso:1,limb:.6});
 export function traceEnemyHit(start, end, enemy) {
   const height=enemy.elevation||0;
   if(!enemy.form) {
@@ -159,25 +160,25 @@ export function traceEnemyHit(start, end, enemy) {
   const yaw=enemy.yaw||0,cos=Math.cos(yaw),sin=Math.sin(yaw);
   const crawl=enemy.form==='scuttler';
   const zones=enemy.form==='probe'?[
-    ['head',0,.55,-.48,.18,2.4],['torso',0,.55,0,.44,1],
-    ['limb',-.61,.49,-.42,.24,.7],['limb',.61,.49,-.42,.24,.7],
-    ['limb',-.61,.49,.42,.24,.7],['limb',.61,.49,.42,.24,.7]
+    ['head',0,.55,-.48,.18],['torso',0,.55,0,.44],
+    ['limb',-.61,.49,-.42,.24],['limb',.61,.49,-.42,.24],
+    ['limb',-.61,.49,.42,.24],['limb',.61,.49,.42,.24]
   ]:crawl?[
-    ['head',0,.85,-.44,.28,2.1],
-    ['torso',0,.79,.07,.51,1],
-    ['limb',-.61,.43,.14,.28,.65],['limb',.61,.43,.14,.28,.65]
+    ['head',0,.85,-.44,.28],
+    ['torso',0,.79,.07,.51],
+    ['limb',-.61,.43,.14,.28],['limb',.61,.43,.14,.28]
   ]:[
-    ['head',0,1.88,-.05,.28,2.2],
-    ['torso',0,1.27,0,.54,1],
-    ['limb',-.54,1.22,0,.23,.65],['limb',.54,1.22,0,.23,.65],
-    ['limb',-.2,.55,0,.29,.65],['limb',.2,.55,0,.29,.65]
+    ['head',0,1.88,-.05,.28],
+    ['torso',0,1.27,0,.54],
+    ['limb',-.54,1.22,0,.23],['limb',.54,1.22,0,.23],
+    ['limb',-.2,.55,0,.29],['limb',.2,.55,0,.29]
   ];
   if(enemy.form==='bulwark')for(const zone of zones)if(zone[0]==='limb'&&zone[2]>1){zone[1]=Math.sign(zone[1])*.74;zone[2]=1.15;zone[3]=-.18;zone[4]=.34;}
   let best=null;
-  for(const [zone,ox,oy,oz,r,multiplier] of zones) {
+  for(const [zone,ox,oy,oz,r] of zones) {
     const lowered=oy-(enemy.coverCrouch||0)*(oy>1?.52:.16);
     const hit=segmentSphere(start,end,{x:enemy.x+(ox*cos+oz*sin)*elite,y:height+lowered*elite,z:enemy.z+(-ox*sin+oz*cos)*elite},r*elite);
-    if(hit!==null && (best===null || hit<best.t))best={t:hit,zone,multiplier:multiplier*(enemy.form==='bulwark'&&zone==='torso'?.72:1)};
+    if(hit!==null && (best===null || hit<best.t))best={t:hit,zone,multiplier:HIT_ZONE_DAMAGE[zone]*(enemy.form==='bulwark'&&zone==='torso'?.72:1)};
   }
   return best;
 }
@@ -582,7 +583,7 @@ export class ArenaGame {
     this.bladePrevious={base:{...segment.base},tip:{...segment.tip},extension:segment.extension};
     for(const [id,at] of this.bladeHitTimes)if(this.time-at>3)this.bladeHitTimes.delete(id);
   }
-  damageEnemy(target, amount, at, zone='torso',multiplier=1,source=this.player) {
+  damageEnemy(target, amount, at, zone='torso',multiplier=HIT_ZONE_DAMAGE[zone]??1,source=this.player) {
     if (!this.enemies.includes(target)) return;
     const armor=target.form?Math.min(.18,Math.max(0,(target.tier||1)-1)*.025):0;
     const support=source?.companion?1:(this.time<(target.companionMarkUntil||0)?1.2:1)*(this.time<(this.companionAmplifyUntil||0)?1.15:1);
@@ -593,7 +594,7 @@ export class ArenaGame {
     if(zone==='limb')target.limpUntil=Math.max(target.limpUntil||0,this.time+2);
     if(zone==='head')target.stunnedUntil=Math.max(target.stunnedUntil||0,this.time+.32);
     target.hitAt=this.time;target.hitZone=zone;target.suppressedUntil=this.time+1.6;
-    this.event('hit', { id: target.id, zone, damage:effective });
+    this.event('hit', { id: target.id, zone, damage:effective,playerSource:!source?.companion });
     if (target.hp <= 0) {
       this.combo = this.time <= this.comboUntil ? this.combo + 1 : 1; this.comboUntil = this.time + COMBO_WINDOW;
       this.bestCombo = Math.max(this.bestCombo, this.combo);

@@ -58,7 +58,7 @@ const heroAccent=()=>character.id==='lylu'?0x80baff:0xef91b4;
 function armorFeedback(){
   // The scene changes when the renderer is recovered: rebuild the effects on the live one.
   if(armorFxScene!==world.scene){armorFx?.dispose();armorFxScene=world.scene;
-    armorFx=createArmorFeedback({T:world.T,scene:world.scene,accent:heroAccent(),haptic:kind=>vr?.haptic(kind),listener:()=>game?.player,
+    armorFx=createArmorFeedback({T:world.T,scene:world.scene,camera:world.camera,accent:heroAccent(),haptic:kind=>vr?.haptic(kind),listener:()=>game?.player,
       audio:()=>settings.sound&&audioContext?.state==='running'?audioContext:null});}
   return armorFx;
 }
@@ -489,7 +489,7 @@ function handleEvents() {
         playLaserImpact(audioContext,{surface:event.surface,distance,pan,splash:event.splash,power:event.power});
       }
     }
-    if (event.type === 'hit') { vr.haptic('hit'); if(event.zone==='head')tone(1300,680,.075,.032); const marker = $('hit-marker'); marker.classList.remove('hit'); void marker.offsetWidth; marker.classList.add('hit'); tone(300, 190, .06, .035); }
+    if (event.type === 'hit') { vr.haptic('hit'); if(event.zone==='head')tone(1300,680,.075,.032); tone(300, 190, .06, .035); }
     if (event.type === 'kill') { vr.haptic('kill'); world.burst(event.x, event.y, event.z, world.palette.violet, 12); tone(130, 50, .15, .06, 'square'); }
     if (event.type === 'combo') {
       vr.haptic('combo',event.count);tone(380+event.count*80,760+event.count*110,.13,.03,'triangle');

@@ -12,6 +12,7 @@ import { createSaberSound } from './saber-sound.js';
 import { syncTrackedHands } from './xr-hands.js';
 import { createAmbience } from './ambience.js';
 import { createWeaponFeel, recoilPose } from './weapon-feel.js';
+import {createHitFeedback} from './hit-feedback.js';
 import { createLaserFX } from './laser-fx.js';
 import { createMagnifiedSight } from './magnified-sight.js';
 import { createHomeBattlefield } from './home-battlefield.js';
@@ -43,6 +44,7 @@ let frames=0,fireBlocked=true,lastTrigger=false,scanMessage='',announcementUntil
 const surfaces=new Map(),meshes=new Map(),bots=new Map(),bolts=new Map();
 const mounts=[],controllerHandState={trigger:0,grip:0,offTrigger:0,offGrip:0},previousButtons=new Map();
 const feel=createWeaponFeel(),laser=createLaserFX(THREE,scene,hero.palette);
+const hitFeedback=createHitFeedback(THREE,camera);
 const blockerMaterial=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false,side:THREE.DoubleSide});
 blockerMaterial.visible=false; // Keep ray collisions without drawing an invisible occlusion screen.
 const outlineMat=new THREE.LineBasicMaterial({color:hero.palette.rose,transparent:true,opacity:.38,depthWrite:false});
@@ -203,6 +205,8 @@ function syncModels(){
 }
 function processEvents(){
  for(const event of game.drainEvents()){
+  if(event.type==='hit')hitFeedback.hit(event);
+  if(['weapon','over','won'].includes(event.type))hitFeedback.reset();
   if(event.type==='wave'){announce('BRÈCHE / VAGUE '+String(event.wave).padStart(2,'0'));assets.setPortals(game.activePortals,head);assets.setWeapon(game.weaponIndex,Math.min(10,game.wave));}
   if(event.type==='wave-clear')announce('VAGUE '+event.wave+' REPOUSSÉE');
   if(event.type==='room-blocked')announce('BRÈCHE EN ATTENTE / ZONE DE SOL');
@@ -237,7 +241,7 @@ function sightEye(){
  opticalEye.matrix.copy(source.matrixWorld);opticalEye.matrixWorld.copy(source.matrixWorld);opticalEye.matrixWorldInverse.copy(source.matrixWorld).invert();opticalEye.projectionMatrix.copy(source.projectionMatrix);opticalEye.projectionMatrixInverse.copy(source.projectionMatrixInverse);return opticalEye;
 }
 function tick(ms,frame){
- const seconds=ms/1000,dt=Math.min(.05,Math.max(0,seconds-lastTime));lastTime=seconds;const feedback=feel.update(dt);
+ const seconds=ms/1000,dt=Math.min(.05,Math.max(0,seconds-lastTime));lastTime=seconds;const feedback=feel.update(dt);hitFeedback.update(dt);
  if(session){
   const pose=frame?.getViewerPose(renderer.xr.getReferenceSpace());if(pose){head.copy(pose.transform.position);orientation.copy(pose.transform.orientation);}
   const active=session.visibilityState==='visible'&&!!pose;
@@ -293,7 +297,7 @@ async function initiateScan(){
 function onSelect(event){if(session?.visibilityState!=='visible'||mode==='paused')return;if(event.inputSource?.handedness==='left'&&mode!=='combat')initiateScan();if(event.inputSource?.handedness==='right'&&mode!=='combat')requestCombat();}
 function onSessionEnd(){
  immersivePause.update({active:false});pauseMenu.hide(false);
- session=null;mode='idle';game.stop();cancelFire();game.enemies=[];game.bullets=[];game.activePortals=[];game.weaponOffers=[];game.toSpawn=0;game.pendingOffers.clear();scope?.dispose();scope=null;ambience?.pause();saberAudio?.update({active:false});bladeLight.intensity=0;clearBots();laser.reset();assets?.hideDecor();
+ session=null;mode='idle';game.stop();cancelFire();game.enemies=[];game.bullets=[];game.activePortals=[];game.weaponOffers=[];game.toSpawn=0;game.pendingOffers.clear();scope?.dispose();scope=null;ambience?.pause();saberAudio?.update({active:false});bladeLight.intensity=0;clearBots();laser.reset();hitFeedback.reset();assets?.hideDecor();
  for(const record of surfaceRecords())discardSurface(record);surfaces.clear();meshes.clear();zoneRecord=null;boundedSpace=null;playPolygon=[];playAreaSource='';startRequested=false;boundary.setPolygon([]);navigation=null;navigationFloorY=null;room.resetRoom();roomDirty=true;lastRoomBuild=-99;
  for(const item of [hud,board,announcement])item.plane.visible=false;for(const mount of mounts){mount.source=null;mount.anchor.visible=false;mount.ray.userData.source=null;}
  assets?.gun.removeFromParent();assets?.freeHand.removeFromParent();previousButtons.clear();lastTrigger=false;roomCaptureAsked=false;refreshScan=false;
