@@ -34,7 +34,7 @@ test('a loaded Kenney blaster puts the palm on its own grip and both cuffs towar
   const gun=buildGun({mats:mats(),gloves:createCharacterKit(new T.Texture()).gloves,makeFlash:flash});
   const {hand,support}=gun.userData;
   KENNEY_HOLD.forEach((hold,i)=>{
-    if(i<=2)return; // VX-9, NEXUS et ARES X9 ont leur poignée intégrée au modèle original.
+    if(i<=3)return; // VX-9, NEXUS, ARES X9 et THORN V8 ont leur poignée intégrée au modèle original.
     gun.userData.kenneyAssets.loadedByIndex[i]=true;gun.userData.setVariant(i);
     for(let k=0;k<20;k++)gun.userData.animateHands(0,.18,0,.05);
     assert.ok(near(hand.position.toArray(),hold.palm),`${WEAPON_FRAME[i].id}: palm on the grip`);
@@ -50,7 +50,7 @@ test('a loaded Kenney blaster puts the palm on its own grip and both cuffs towar
     }
   });
   // Les trois modèles originaux sont centrés sur la main par construction.
-  for(const i of [0,1,2]){gun.userData.setVariant(i);assert.deepEqual(hand.position.toArray(),[0,0,0]);assert.equal(hand.rotation.x,0)}
+  for(const i of [0,1,2,3]){gun.userData.setVariant(i);assert.deepEqual(hand.position.toArray(),[0,0,0]);assert.equal(hand.rotation.x,0)}
   gun.userData.setVariant(2);assert.deepEqual(support.position.toArray(),[...WEAPON_FRAME[2].support]);
 });
 

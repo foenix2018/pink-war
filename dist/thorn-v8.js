@@ -328,7 +328,7 @@ for(let i=0;i<22;i++){
   const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));geometry.setAttribute('normal',new THREE.BufferAttribute(normals,3));geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));geometry.computeBoundingSphere();
   const mesh=new THREE.Mesh(geometry,materials[name]);mesh.name='THORN V8 / '+name;mesh.renderOrder=name==='reticle'?7:name==='glass'?5:name==='led'?4:0;mesh.castShadow=false;body.add(mesh);count++;
  }
- Object.assign(root.userData,{authored:true,authoredOptic:true,integratedEmitter:true,modelName:'THORN V8',sourceVersion:'V8 METAL INDUSTRIEL',optimizedDrawCalls:count,muzzle:[0,.12,-.57]});
+ Object.assign(root.userData,{authored:true,authoredOptic:true,integratedEmitter:true,modelName:'THORN V8',sourceVersion:'V8 METAL INDUSTRIEL',optimizedDrawCalls:count,muzzle:[0,.12,-.85]});
  return root;
 }
 export function createThornV8(){prototype ||= build();return prototype.clone(true)}

@@ -36,7 +36,7 @@ test('live installation keeps measured hand positions and removes the floating l
   for(let i=0;i<5;i++){
    gun.userData.setVariant(i);gun.userData.setCombatState({ammo:5,capacity:12,heat:1});
    assert.deepEqual(gun.userData.flash.position.toArray(),gun.userData.weaponModels[i].userData.muzzle);
-   assert.deepEqual(gun.userData.hand.position.toArray(),i<=2?[0,0,0]:KENNEY_HOLD[i].palm);
+   assert.deepEqual(gun.userData.hand.position.toArray(),i<=3?[0,0,0]:KENNEY_HOLD[i].palm);
    assert.equal(gun.userData.weaponModels[i].scale.x,1,'an originally authored round barrel stays round');
    assert.equal(gun.children.find(c=>c.name==='Dynamic emitter collar').visible,false,'the actual weapon owns its emitter');
    assert.ok(gun.children.find(c=>c.name==='Barrel heat ring').position.distanceTo(gun.userData.flash.position)<.002);

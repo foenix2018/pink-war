@@ -17,7 +17,7 @@ export const WEAPON_FRAME = Object.freeze([
   Object.freeze({ id: 'r9', muzzle: Object.freeze([0, .124, -.329]), support: null, length: .40 }),
   Object.freeze({ id: 'bloom', muzzle: Object.freeze([0, .108, -.600]), support: Object.freeze([0, .020, -.400]), length: .93 }),
   Object.freeze({ id: 'lance', muzzle: Object.freeze([0, .071, -.895]), support: Object.freeze([0, -.052, -.30]), length: 1.16 }),
-  Object.freeze({ id: 'thorn', muzzle: Object.freeze([0, .108, -.85]), support: Object.freeze([0, -.05, -.34]), length: 1.05 }),
+  Object.freeze({ id: 'thorn', muzzle: Object.freeze([0, .12, -.85]), support: Object.freeze([0, -.05, -.34]), length: 1.05 }),
   Object.freeze({ id: 'nova', muzzle: Object.freeze([0, .11, -.655]), support: Object.freeze([0, -.058, -.29]), length: .9 }),
   Object.freeze({ id:'aurora',muzzle:Object.freeze([0,.14,0]),support:null,length:1.22,melee:true }),
   M12_FRAME,
