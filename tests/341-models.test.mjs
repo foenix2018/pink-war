@@ -11,6 +11,7 @@ const kit=()=>createCharacterKit(new T.Texture());
 const make=k=>buildGun({mats:Object.fromEntries(['dark','steel','armor','armorLight','rose','pale','violet','cyan'].map(n=>[n,new T.MeshStandardMaterial()])),gloves:k.gloves,sleeve:false,makeFlash:p=>{const f=new T.Object3D();p.add(f);return f;}});
 test('five original weapons use the live grip frame and a visible, centred bore',()=>{
  for(const [i,file] of MK4_WEAPON_ASSETS.entries()){
+  if(i===2)continue; // ARES X9 remplace ce GLB; seuls les quatre autres blasters MK4 sont actifs.
   const root=parseKenneyGLB(buffer(file));root.updateMatrixWorld(true);
   assert.equal(root.userData.pinkWarFrame,'grip-metres-v1');assert.equal(root.userData.muzzle[2],WEAPON_FRAME[i].muzzle[2]);
   assert.ok(root.userData.muzzle[1]-KENNEY_HOLD[i].palm[1]>.09&&root.userData.muzzle[1]-KENNEY_HOLD[i].palm[1]<.13,'human grip sits just below the bore, without a long disconnected web');
@@ -28,15 +29,17 @@ test('live installation keeps measured hand positions and removes the floating l
  try{
   const gun=make(kit());for(let j=0;j<100&&gun.userData.kenneyAssets.loaded<5;j++)await new Promise(r=>setTimeout(r,10));
   assert.equal(gun.userData.kenneyAssets.loaded,5);assert.equal(gun.userData.kenneyAssets.failed,0);
+  assert.equal(gun.userData.weaponModels[2].userData.modelName,'ARES X9');
+  assert.ok(gun.userData.weaponModels[2].userData.optimizedDrawCalls<=18,'ARES X9 uses material-grouped draw calls');
   for(let i=0;i<5;i++){
    gun.userData.setVariant(i);gun.userData.setCombatState({ammo:5,capacity:12,heat:1});
    assert.deepEqual(gun.userData.flash.position.toArray(),gun.userData.weaponModels[i].userData.muzzle);
-   assert.deepEqual(gun.userData.hand.position.toArray(),KENNEY_HOLD[i].palm);
+   assert.deepEqual(gun.userData.hand.position.toArray(),i===2?[0,0,0]:KENNEY_HOLD[i].palm);
    assert.equal(gun.userData.weaponModels[i].scale.x,1,'an originally authored round barrel stays round');
    assert.equal(gun.children.find(c=>c.name==='Dynamic emitter collar').visible,false,'the actual weapon owns its emitter');
    assert.ok(gun.children.find(c=>c.name==='Barrel heat ring').position.distanceTo(gun.userData.flash.position)<.002);
    if(i===1||i===2){
-     assert.ok(gun.userData.weaponModels[i].userData.authoredOptic);const optic=gun.userData.optics[i];assert.ok(optic.cfg.y<.12,'magnified sight is on the actual receiver');
+     assert.ok(gun.userData.weaponModels[i].userData.authoredOptic);const optic=gun.userData.optics[i];assert.ok(optic.cfg.y<(i===2?.22:.12),'magnified sight is on the actual receiver');
      const camera=new T.PerspectiveCamera();camera.position.set(0,optic.cfg.y,optic.cfg.z+.18);camera.updateMatrixWorld(true);gun.userData.setSight(true,camera);
      assert.ok(optic.glass.visible&&optic.reticle.visible&&gun.userData.aiming,'a real aligned eye sees the reticle on the installed model');
      camera.position.x=.15;camera.updateMatrixWorld(true);gun.userData.setSight(true,camera);assert.equal(optic.reticle.visible,false,'an off-axis eye loses the sight without moving the tracked weapon');

@@ -174,6 +174,14 @@ function createPrototype(){
     if(!o.isMesh)return;
     const geo=o.geometry.clone();
     geo.applyMatrix4(o.matrixWorld);
+    // L'appui-joue d'origine empiétait sur le visage en vue FPS/Quest.
+    // Compresser uniquement l'arrière de crosse de 18 %, sans déplacer le canon ni l'optique.
+    const xyz=geo.attributes.position;
+    for(let v=0;v<xyz.count;v++){
+      const x=xyz.getX(v);
+      if(x < -3.35)xyz.setX(v,-3.35+(x+3.35)*.82);
+    }
+    xyz.needsUpdate=true;geo.computeVertexNormals();
     const key=o.material.uuid;
     if(!batches.has(key))batches.set(key,{material:o.material,parts:[]});
     batches.get(key).parts.push(geo);

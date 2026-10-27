@@ -301,7 +301,7 @@ test('a complete campaign reaches level 20 after 670 real projectile kills and s
     equipmentStages.push(...events.filter(e=>e.type==='equipment').map(e=>e.level));
   }
   assert.equal(g.state,'won',JSON.stringify({wave:g.wave,kills:g.kills,time:g.time,hp:g.player.hp,toSpawn:g.toSpawn}));assert.equal(g.wave,MAX_LEVEL);assert.equal(g.kills,670);assert.ok(g.player.hp>0);
-  assert.deepEqual(unlocks,['AURORA','BLOOM','M–12','LANCE','THORN','NOVA']);assert.equal(g.unlockedWeapons.length,8);
+  assert.deepEqual(unlocks,['AURORA','BLOOM','M–12','ARES X9','THORN','NOVA']);assert.equal(g.unlockedWeapons.length,8);
   assert.deepEqual(equipmentStages,Array.from({length:MAX_LEVEL},(_,i)=>Math.min(i+1,10)));assert.equal(g.snapshot().equipment.name,'Impératrice');assert.equal(g.snapshot().equipment.unlocked.length,10);
   g.reset();assert.equal(g.snapshot().equipment.level,1);assert.deepEqual(g.snapshot().equipment.unlocked,['aube']);
 });
