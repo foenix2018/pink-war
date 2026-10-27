@@ -1,3 +1,4 @@
+import { createSentinel } from './sentinel-mk9.js';
 import {createWorldShadows,createGroundOcclusion} from './world-shadows.js';
 import * as T from './vendor/three.webgpu.min.js';
 import { WebGLRenderer } from './vendor/three.module.min.js';
@@ -362,7 +363,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   }
   const monsters=new Map(), bulletMeshes=new Map(), particles=[];
   const enemyFactory=createEnemyFactory(mats);
-  const createMonster=(elite,ranged,form)=>enemyFactory.create(elite,ranged,form);
+  const createMonster=(elite,ranged,form)=>{if(form==='sentinel'){const sentinel=createSentinel(T,scene);const m=sentinel.root;m.userData.animate=(time,phase,healthy,e)=>{sentinel.update(.016,{moving:healthy,target:null});};m.userData.sentinel=sentinel;return m;}return enemyFactory.create(elite,ranged,form);};
   // Sparks share two instanced meshes (rose and violet), whatever their number.
   const SPARKS=320,sparkPools=[mats.rose,mats.violet].map(material=>{
     const pool=new T.InstancedMesh(geometries.ico,material,SPARKS);pool.count=0;pool.frustumCulled=false;pool.instanceMatrix.setUsage(T.DynamicDrawUsage);scene.add(pool);return pool;
