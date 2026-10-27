@@ -452,7 +452,7 @@ export class ArenaGame {
     const aimHeight = probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : ['seer','listener'].includes(form) ? 1.38 : ['brute','bulwark'].includes(form) ? 1.42 : 1.15;
     const homeHeight = this.surfaceHeight(x, z,this.time,.3);
     const enemy = { id: this.nextId++, x, z, elevation: homeHeight + (probe ? PROBE.hover : 0),grounded:!probe,verticalSpeed:0,homeHeight,
-      hp: form==='sentinel'?850:enemyDurability(this.wave,form,elite), elite, ranged:ranged||form==='synth'||form==='sentinel', form, aimHeight,
+      hp: form==='sentinel'?5*enemyDurability(this.wave,'stalker',false):enemyDurability(this.wave,form,elite), elite, ranged:ranged||form==='synth'||form==='sentinel', form, aimHeight,
       speed: form==='sentinel'?1.5:probe ? Math.min(5,3.6 + this.wave * .07) : Math.min(4.3,2.4+(this.wave-1)*.055)*(form==='bulwark'?.7:form==='scuttler'?1.12:1),
       tier: Math.max(1,Math.ceil(this.wave/2)),limpUntil:0,stunnedUntil:0,
       homeX:site.x,homeZ:site.z,portalId:site.id,
@@ -818,7 +818,7 @@ export class ArenaGame {
           const n=Math.hypot(target.x-muzzle.x,target.y-muzzle.y,target.z-muzzle.z)||1;
           this.bullets.push({id:this.nextId++,...muzzle,vx:(target.x-muzzle.x)/n*speed,
             vy:(target.y-muzzle.y)/n*speed,vz:(target.z-muzzle.z)/n*speed,
-            life:3,damage:volley.damage,hostile:true,weapon:'enemy',splash:0});
+            life:3,damage:volley.damage,hostile:true,weapon:e.form==='sentinel'?(Math.floor(this.time/4)%2?'nova':'r9'):'enemy',splash:e.form==='sentinel'&&Math.floor(this.time/4)%2?2.8:0});
           e.burstRemaining=e.burstRemaining>0?e.burstRemaining-1:volley.count-1;
           e.attackTimer=e.burstRemaining>0?volley.gap:profile.interval;e.lastShotAt=this.time;e.chargeProgress=0;if(e.tactics)e.tactics.shots++;
           e.aimPitch=Math.atan2(target.y-muzzle.y,Math.hypot(target.x-muzzle.x,target.z-muzzle.z));
