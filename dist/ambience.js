@@ -1,5 +1,6 @@
+import {loadRLHFootsteps,rlhStepClips} from './rlh-footsteps.js';
 // Ruins reclaimed by vegetation: quiet wind, working power systems, distant metal fatigue.
-// All sounds are synthesized locally. A caller supplies a gesture-unlocked AudioContext;
+// Wind and machinery are synthesized; footsteps reuse the RLH recordings. A caller supplies a gesture-unlocked AudioContext;
 // this module never constructs/resumes one, and never touches the independent music track.
 const buffers=new WeakMap();
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -27,7 +28,8 @@ function envelope(param,time,level,duration){
   param.exponentialRampToValueAtTime(.0001,time+duration);
 }
 
-export function createAmbience(ctx,{installations=[]}={}){
+export function createAmbience(ctx,{installations=[],footstepFetch=globalThis.fetch}={}){
+  const footstepReady=loadRLHFootsteps(ctx,footstepFetch);let recordedSteps=0;
   let enabled=true,active=false,disposed=false,graph=null,audible=false,elapsed=0,nextCreak=13;
   let lastPosition=null,stride=0,foot=0,steps=0,creaks=0,lastParameterUpdate=-1,gustStrength=0;
   const voices=new Set(),persistent=[];
@@ -72,10 +74,21 @@ export function createAmbience(ctx,{installations=[]}={}){
   function mute(){
     if(graph&&audible)target(graph.master.gain,0,ctx.currentTime,.025);
     audible=false;
+    for(const entry of [...voices])if(entry.footstep){try{entry.source.stop();}catch{}for(const node of entry.nodes)node.disconnect();voices.delete(entry);}
     lastPosition=null;stride=0;
   }
   function footstep(metal,speed,crouched){
     if(!ready()||voices.size>7)return;
+    const recordings=rlhStepClips(ctx).filter(Boolean);
+    if(recordings.length){
+      const t=ctx.currentTime,source=ctx.createBufferSource(),gain=ctx.createGain(),filter=ctx.createBiquadFilter();
+      source.buffer=recordings[steps%recordings.length];source.playbackRate.value=1+(random()-.5)*.045;
+      filter.type='lowpass';filter.frequency.value=metal?4800:3300;filter.Q.value=.55;
+      const duration=source.buffer.duration/source.playbackRate.value,volume=(crouched?.065:.14)*clamp(speed/5,.7,1.3);
+      gain.gain.setValueAtTime(volume,t);gain.gain.setValueAtTime(volume,t+Math.max(.01,duration-.045));gain.gain.linearRampToValueAtTime(0,t+duration);
+      source.connect(filter);filter.connect(gain);const pan=connectPan(gain,(foot++%2?1:-1)*.14);
+      remember(source,[source,filter,gain,...(pan?[pan]:[])]).footstep=true;source.start(t);source.stop(t+duration+.005);recordedSteps++;steps++;return;
+    }
     const t=ctx.currentTime,source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
     source.buffer=noiseBuffer(ctx);filter.type='lowpass';filter.frequency.value=metal?2800:950;filter.Q.value=.65;
     const duration=metal?.16:.115,volume=(crouched?.018:.027)*clamp(speed/5,.65,1.35);
@@ -152,7 +165,7 @@ export function createAmbience(ctx,{installations=[]}={}){
     if(elapsed>=nextCreak){creak();nextCreak=elapsed+15+random()*14;}
   }
   return {
-    update,
+    update,footstepReady,
     setEnabled(value){enabled=!!value;if(!enabled)mute();else if(ready()&&graph&&!audible){target(graph.master.gain,.85,ctx.currentTime,.35);audible=true;}},
     pause(){active=false;mute();},
     dispose(){
@@ -163,6 +176,6 @@ export function createAmbience(ctx,{installations=[]}={}){
     },
     get enabled(){return enabled;},
     get playing(){return ready()&&!!graph;},
-    get stats(){return {steps,creaks,voices:voices.size,persistentSources:graph?persistent.length:0,gustStrength};}
+    get stats(){return {steps,recordedSteps,footstepClips:rlhStepClips(ctx).filter(Boolean).length,creaks,voices:voices.size,persistentSources:graph?persistent.length:0,gustStrength};}
   };
 }

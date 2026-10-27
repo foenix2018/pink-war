@@ -19,7 +19,8 @@ function sync(){
 }
 export function setScreenMusic(next,mission=level,on=enabled){
  const selected=mission===2?2:1;
- if(selected!==level){player?.dispose();player=null;level=selected;}
+ // All menus and loading screens now share the creator's selected score.
+ level=selected;
  const changed=surface!==next||enabled!==!!on;
  surface=next;enabled=!!on;
  if(changed||!player)sync();

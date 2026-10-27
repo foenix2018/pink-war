@@ -9,10 +9,12 @@ export function enemySightPoint(enemy){
  const scale=enemyScale(enemy.form,enemy.elite)*(enemy.roomScale||1),y=enemy.form==='probe'?.55:enemy.form==='scuttler'?.92:ROBOT_SENSOR_Y,z=enemy.form==='probe'?-.665:enemy.form==='scuttler'?-.673:-.156,angle=enemy.yaw||0;
  return {x:enemy.x+z*Math.sin(angle)*scale,y:(enemy.elevation||0)+(y-ROBOT_CROUCH_DROP*(enemy.coverCrouch||0))*scale,z:enemy.z+z*Math.cos(angle)*scale};
 }
-export function enemyDurability(wave, form = 'stalker', elite = false) {
-  const base=elite?95+wave*25:42+wave*14;
-  const frame=form==='synth'?1.42:form==='bulwark'?1.85:form==='brute'?1.6:form==='probe'?.82:form==='seer'?1.25:1.3;
-  return Math.round(base*(frame+Math.min(.25,Math.max(0,wave-1)*.015)));
+// Chest durability distinguishes light frames, infantry and armoured chassis.
+// Sensor/head multipliers remain in the shared hitboxes; no minimum-hit invulnerability.
+export const ROBOT_DURABILITY=Object.freeze({probe:100,scuttler:140,stalker:180,seer:210,synth:250,listener:275,brute:340,bulwark:400});
+export function enemyDurability(wave,form='stalker',elite=false){
+ const tier=Math.max(1,Number(wave)||1),base=ROBOT_DURABILITY[form]||ROBOT_DURABILITY.stalker;
+ return Math.round(base*(1+(tier-1)*.055)*(elite?1.55:1));
 }
 export function enemyVolley(wave, form='stalker') {
   return {count:wave>=8&&form==='bulwark'?3:wave>=5&&['seer','brute','listener'].includes(form)?2:1,gap:.16,

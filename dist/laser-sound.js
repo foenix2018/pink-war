@@ -14,7 +14,7 @@ export const LASER_PROFILES=Object.freeze({
 // Synthesized layers retain mechanical transients, bass and an offline fallback.
 const liveSamples=new WeakMap(),decodedSamples=new WeakMap();
 export const COMBAT_SAMPLES=Object.freeze(Object.fromEntries(
-  ['metal-light','metal-medium','metal-heavy','rifle-mechanism','shotgun-body','pistol-shot','automatic-shot','sniper-shot','enemy-shot'].map(id=>[id,`audio/combat/${id}.wav`])
+  ['metal-light','metal-medium','metal-heavy','rifle-mechanism','shotgun-body','pistol-shot','automatic-shot','sniper-shot','enemy-shot'].map(id=>[id,`audio/combat/${id}.wav${id==='shotgun-body'?'?v=3.63.12':''}`])
 ));
 const combatLoads=new WeakMap(),combatBuffers=new WeakMap();
 export async function loadCombatSamples(ctx,load=globalThis.fetch){
@@ -133,7 +133,7 @@ export function playLaserShot(ctx,weapon='r9',power=1){
   const shotSample={r9:'pistol-shot',bloom:'automatic-shot',lance:'sniper-shot',thorn:'shotgun-body',nova:'sniper-shot'}[weapon];
   const physical=shotSample?recorded(ctx,space,shotSample,space.master,{r9:.55,bloom:.43,lance:.64,thorn:.50,nova:.55}[weapon],{rate:weapon==='thorn'?.76:weapon==='nova'?.70:1,limit:weapon==='bloom'?.14:.72}):combatBuffers.get(ctx)?.has('shotgun-body');
   if(weapon==='m12'){
-    recorded(ctx,space,'shotgun-body',space.master,.62,{limit:.65});
+    recorded(ctx,space,'shotgun-body',space.master,.68,{limit:1.05});
     recorded(ctx,space,'rifle-mechanism',space.master,.20,{at:ctx.currentTime+.24,rate:.92});
   }
   const p=LASER_PROFILES[weapon]||LASER_PROFILES.r9;

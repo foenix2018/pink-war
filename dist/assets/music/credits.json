@@ -6,10 +6,10 @@
       "level": 1,
       "title": "Velvet Siege",
       "file": "velvet-siege.m4a",
-      "original": "1-Level-1-velvet_siege.mp3",
+      "original": "1-Acceuil-velvet_siege.mp3",
       "originalBytes": 3558988,
-      "bytes": 1212419,
-      "sha256": "d06a96507e6d2bfdc318324d60d436d5a662aa80ca94d652aa2359c56e979792",
+      "bytes": 1211419,
+      "sha256": "402cd5507e438a249f7befb7dac4174a7f2cba9c0bd539fbcca7a4717425681b",
       "audio": {
         "programs": [],
         "stream_groups": [],
@@ -25,7 +25,9 @@
         }
       },
       "measuredLUFS": -20.89,
-      "measuredTruePeakDBTP": -5.3
+      "measuredTruePeakDBTP": -5.3,
+      "originalSha256": "4b276b61066d1045c331087a495f7e6ab2297d6ede927aa1547e47a16caae026",
+      "usage": "Main menu and loading screens, all levels; never gameplay"
     },
     {
       "level": 2,
@@ -52,5 +54,6 @@
       "measuredLUFS": -21.04,
       "measuredTruePeakDBTP": -5.07
     }
-  ]
+  ],
+  "activeMenuTrack": "velvet-siege.m4a"
 }

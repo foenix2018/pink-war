@@ -1,0 +1,45 @@
+{
+  "repository": "foenix2018/RLH",
+  "commit": "99698f74d72aaf7ab95000b86180772417ecb636",
+  "permission": "Reuse and adaptation explicitly requested by project owner in this conversation; no CC0 status inferred.",
+  "runtime_source": "js/chunks/audio-pack-v579.js step field matches pas_v579.mp3",
+  "conversion": "Four original footfalls, mono PCM 16-bit 32 kHz, edge fades and 65 Hz high-pass; timed by actual movement in Pink Wars.",
+  "files": [
+    {
+      "file": "audio/rlh/step-1.wav",
+      "source": "RLH/assets/audio/pas_v579.mp3",
+      "source_sha256": "389f36dfc0b8a5356a186c92b8c2e107fb74fd56b33b131114355eee4ec01f2b",
+      "source_start": 0.44,
+      "seconds": 0.42,
+      "sha256": "77f33843a2252855d976acaaa003dae67dde92aee20004d690983858264aea6b",
+      "bytes": 26958
+    },
+    {
+      "file": "audio/rlh/step-2.wav",
+      "source": "RLH/assets/audio/pas_v579.mp3",
+      "source_sha256": "389f36dfc0b8a5356a186c92b8c2e107fb74fd56b33b131114355eee4ec01f2b",
+      "source_start": 1.04,
+      "seconds": 0.42,
+      "sha256": "b8c2d43a877eb55fd844ca25e142c23af21d21c1297a65d0c05d9d6a31573c86",
+      "bytes": 26958
+    },
+    {
+      "file": "audio/rlh/step-3.wav",
+      "source": "RLH/assets/audio/pas_v579.mp3",
+      "source_sha256": "389f36dfc0b8a5356a186c92b8c2e107fb74fd56b33b131114355eee4ec01f2b",
+      "source_start": 1.63,
+      "seconds": 0.42,
+      "sha256": "857937168cd61ed867e2bca44c5cc9e069f7bc594ed816209fc254b41e6fa625",
+      "bytes": 26958
+    },
+    {
+      "file": "audio/rlh/step-4.wav",
+      "source": "RLH/assets/audio/pas_v579.mp3",
+      "source_sha256": "389f36dfc0b8a5356a186c92b8c2e107fb74fd56b33b131114355eee4ec01f2b",
+      "source_start": 2.25,
+      "seconds": 0.42,
+      "sha256": "243acd0ab1df8d9d3e0427d4bb1f202494b3f9a4815e4f7ae19619262518b259",
+      "bytes": 26958
+    }
+  ]
+}

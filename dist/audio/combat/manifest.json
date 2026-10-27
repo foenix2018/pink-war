@@ -57,12 +57,13 @@
     "author": "Ben Jaszczak, Brian Nelson, Kevin Heras, Matthew Nanney",
     "license": "CC0-1.0",
     "source": "https://opengameart.org/content/the-free-firearm-sound-library",
-    "download": "https://raw.githubusercontent.com/DeathByDenim/openspades-free-pak/main/Sounds/Weapons/Shotgun/V2AmbienceSmall.opus",
-    "source_sha256": "4cd39c3151312d6e08f10f1641a1d57fbadcf9f583de72d0fbf31a8e9f91a99e",
-    "sha256": "8767c9a8f0cc63d6789a2360775511b2acdff2fb614e32f2983740de109f4525",
-    "bytes": 44878,
-    "conversion": "Mono PCM 16-bit 32 kHz; high-pass 85 Hz; measured peak normalized to -5 dBFS; trimmed tail, 45 ms fade",
-    "seconds": 0.7
+    "download": "https://raw.githubusercontent.com/petroulacl/fps-asset-kit/main/sfx/firearm_sfx/Prepared%20SFX%20Library/Model%2012/K_17P.wav",
+    "source_sha256": "df18e60e5742bc18373ff46e5c471ef71849b138120d165f26104b249679ace0",
+    "sha256": "ce42c40df9b3539885704d9fe39f753439b992d26c6f43a53971d814be06b436",
+    "bytes": 67244,
+    "conversion": "Winchester Model 12 pump-action 12 gauge, K_17P; first blast at 0.89 s, 1.05 s mono PCM 16-bit 32 kHz; high-pass 65 Hz; -4 dBFS peak; 150 ms fade",
+    "seconds": 1.05,
+    "recordedWeapon": "Winchester Model 12, pump-action 12 gauge; master sheet entry K_17P.wav"
   },
   {
     "id": "pistol-shot",

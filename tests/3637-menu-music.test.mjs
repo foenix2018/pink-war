@@ -16,7 +16,7 @@ test('menu and loading own the score, gameplay, prologue, mute and page exit sto
  setScreenMusic('loading',1);assert.equal(streams.length,1,'loading reuses menu stream');
  setScreenMusic('gameplay');assert.ok(streams.every(m=>m.paused));
  events.get('pointerdown').forEach(fn=>fn());assert.ok(streams.every(m=>m.paused),'shooting cannot restart music');
- setScreenMusic('menu',2);await Promise.resolve();assert.match(screenMusicSnapshot().source,/iron-maw/);assert.equal(streams.filter(m=>!m.paused).length,1);
+ setScreenMusic('menu',2);await Promise.resolve();assert.match(screenMusicSnapshot().source,/velvet-siege/);assert.equal(streams.length,1,'changing levels keeps the selected menu score');assert.equal(streams.filter(m=>!m.paused).length,1);
  setScreenMusic('prologue');assert.ok(streams.every(m=>m.paused));
  setScreenMusic('menu',2,false);assert.ok(streams.every(m=>m.paused));
  setScreenMusic('menu',2,true);await Promise.resolve();assert.equal(screenMusicSnapshot().playing,true);
