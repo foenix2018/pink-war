@@ -29,6 +29,16 @@ export const WEAPON_FRAME = Object.freeze([
 // Measured on the meshes (weapon frame, metres): `palm` puts the index in the trigger guard, the fingers round
 // the front of the grip and the palm on its right face; `rake` tilts the hand like the grip; `support` closes the
 // free hand on the front of the magazine (or of the block under the barrel).
+// Per-weapon attachment points in the common grip coordinate system (metres).
+// The trigger finger stays independent of the three fingers wrapped around the grip.
+// Coordinates refer to the glove wrist/palm anchor, not to the muzzle or optical sight.
+export const AUTHORED_HOLD = Object.freeze({
+  0:Object.freeze({palm:Object.freeze([0,0,0]),support:null,rake:0}),
+  1:Object.freeze({palm:Object.freeze([0,0,0]),support:Object.freeze([0,.020,-.400]),rake:0}),
+  2:Object.freeze({palm:Object.freeze([0,0,0]),support:Object.freeze([0,-.052,-.300]),rake:0}),
+  3:Object.freeze({palm:Object.freeze([0,0,0]),support:Object.freeze([0,-.050,-.340]),rake:0}),
+  7:Object.freeze({palm:Object.freeze([0,0,0]),support:Object.freeze([-.44,0,0]),rake:0})
+});
 export const KENNEY_HOLD = Object.freeze([
   // X offsets put the palm OUTSIDE the grip's right flank, not through its
   // centreline; the index curls inward around the real GLB trigger guard.
@@ -411,7 +421,7 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
     if(!WEAPON_FRAME[index])return;
     if(g.userData.index===6&&index!==6)models[6].userData.resetAnimation();
     models.forEach((model, i) => model.visible = i === index);
-    const frame = WEAPON_FRAME[index],hold=index===6?M12_HOLD:[0,1,2,3,7].includes(index)?null:g.userData.kenneyAssets?.loadedByIndex?.[index]?KENNEY_HOLD[index]:null;
+    const frame = WEAPON_FRAME[index],hold=index===6?M12_HOLD:AUTHORED_HOLD[index]|| (g.userData.kenneyAssets?.loadedByIndex?.[index]?KENNEY_HOLD[index]:null);
     if(index===7){dualRight.add(hand,flash);dualLeft.add(support);support.scale.x=Math.abs(support.scale.x);}
     else {g.add(hand,support,flash);support.scale.x=-Math.abs(support.scale.x);}
     dualLeft.visible=index===7&&!!g.userData.showSupport;leftFlash.visible=false;

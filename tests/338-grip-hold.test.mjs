@@ -82,3 +82,16 @@ test('VR keeps the palm on the tracked hand and the free hand on the measured fo
   const scene=readFileSync(new URL('../dist/scene.js',import.meta.url),'utf8');
   assert.ok(!scene.includes('extendForearm'),'no forearm in the flat-screen view');
 });
+
+
+test('every ranged weapon keeps its shooting index free and its support fingers wrapped',()=>{
+ const gun=buildGun({mats:mats(),gloves:createCharacterKit(new T.Texture()).gloves,makeFlash:flash});
+ for(const i of [0,1,2,3,4,6,7]){
+  gun.userData.setVariant(i);
+  for(let j=0;j<8;j++)gun.userData.animateHands(1,.18,0,.016);
+  const {hand,support}=gun.userData;
+  assert.ok(hand.userData.rig.etat.index<.60,'shooting index stays independent: '+WEAPON_FRAME[i].id);
+  assert.ok(hand.userData.rig.etat.middle>.75,'middle finger wraps grip: '+WEAPON_FRAME[i].id);
+  if(WEAPON_FRAME[i].support){assert.ok(support.visible,'support hand exists: '+WEAPON_FRAME[i].id);if(i!==7)assert.ok(support.userData.rig.etat.index>.75,'support index wraps foregrip: '+WEAPON_FRAME[i].id);}
+ }
+});
