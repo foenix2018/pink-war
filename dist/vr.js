@@ -663,7 +663,8 @@ export class VRController {
         c.fillStyle='#d9c7a6';c.font='bold 13px sans-serif';
         const elapsed=Math.floor(game.trainingElapsed||0),clock=String(Math.floor(elapsed/60)).padStart(2,'0')+':'+String(elapsed%60).padStart(2,'0');
         const rack=game.getInteraction?.()?.kind==='range-armory',hover=game.armoryHover;
-        const hint=rack?(hover!==null&&hover!==undefined?'ARME POINTÉE · GÂCHETTE / PRISE':'ARMURERIE · CLIC STICK '+(settingsOf(this).hand==='left'?'DROIT':'GAUCHE')):clock+' · '+String(game.score).padStart(5,'0')+' PTS · '+(game.trainingActive?'CIBLES ACTIVES':'STICK '+(settingsOf(this).hand==='left'?'DROIT':'GAUCHE')+' : ACTION');
+        const equipped=game.armoryEquippedIndex===game.weaponIndex&&game.time<(game.armoryEquippedUntil||0);
+        const hint=equipped?game.weapon.name+' ÉQUIPÉE · RETOUR AU BOX':rack?(hover!==null&&hover!==undefined?'ARME POINTÉE · GÂCHETTE (2 MAINS)':'ARMURERIE · CLIC STICK '+(settingsOf(this).hand==='left'?'DROIT':'GAUCHE')):clock+' · '+String(game.score).padStart(5,'0')+' PTS · '+(game.trainingActive?'CIBLES ACTIVES':'STICK '+(settingsOf(this).hand==='left'?'DROIT':'GAUCHE')+' : ACTION');
         c.fillText(hint,20,111,470);
       }
       texture.needsUpdate = true;
