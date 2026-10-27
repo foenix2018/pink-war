@@ -442,25 +442,26 @@ export class ArenaGame {
     const elite = !special && this.wave >= 3 && ordinal % (this.wave >= 8 ? 3 : 5) === 2;
     const probe = !special && this.wave >= 3 && !elite && (ordinal % 6 === 3 || (this.wave >= 7 && ordinal > 0 && ordinal % 6 === 0));
     const forms = ['stalker','scuttler','seer','brute'];
-    const form = special || (probe ? 'probe' : elite ? 'brute' : forms[(ordinal + this.wave - 1) % forms.length]);
+    const form = this.wave===1 && ordinal===0 ? 'sentinel' : special || (probe ? 'probe' : elite ? 'brute' : forms[(ordinal + this.wave - 1) % forms.length]);
     const ranged = probe || !!special || form==='seer' || (this.wave>=3&&ordinal%3===1) || (this.wave>=5&&form==='brute');
     const angle = this.random() * Math.PI * 2;
     const available=this.activePortals.filter(p=>p.openedAt<=this.time);
     const site=available.length?available[ordinal%available.length]:this.activePortals[0]||PORTAL;
-    const x=site.x+Math.sin(site.yaw||0)*3.2+Math.cos(angle)*.95;
-    const z=site.z+Math.cos(site.yaw||0)*3.2+Math.sin(angle)*.95;
+    const x=form==='sentinel'?this.player.x:site.x+Math.sin(site.yaw||0)*3.2+Math.cos(angle)*.95;
+    const z=form==='sentinel'?this.player.z-14:site.z+Math.cos(site.yaw||0)*3.2+Math.sin(angle)*.95;
     const aimHeight = probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : ['seer','listener'].includes(form) ? 1.38 : ['brute','bulwark'].includes(form) ? 1.42 : 1.15;
     const homeHeight = this.surfaceHeight(x, z,this.time,.3);
     const enemy = { id: this.nextId++, x, z, elevation: homeHeight + (probe ? PROBE.hover : 0),grounded:!probe,verticalSpeed:0,homeHeight,
-      hp: enemyDurability(this.wave,form,elite), elite, ranged:ranged||form==='synth', form, aimHeight,
-      speed: probe ? Math.min(5,3.6 + this.wave * .07) : Math.min(4.3,2.4+(this.wave-1)*.055)*(form==='bulwark'?.7:form==='scuttler'?1.12:1),
+      hp: form==='sentinel'?850:enemyDurability(this.wave,form,elite), elite, ranged:ranged||form==='synth'||form==='sentinel', form, aimHeight,
+      speed: form==='sentinel'?1.5:probe ? Math.min(5,3.6 + this.wave * .07) : Math.min(4.3,2.4+(this.wave-1)*.055)*(form==='bulwark'?.7:form==='scuttler'?1.12:1),
       tier: Math.max(1,Math.ceil(this.wave/2)),limpUntil:0,stunnedUntil:0,
       homeX:site.x,homeZ:site.z,portalId:site.id,
-      radius: probe ? PROBE.radius : elite ? 1.05 : form === 'scuttler' ? .86 : form === 'brute' ? .95 : .8,
-      hitRadius: probe ? .44 : form === 'scuttler' ? .91 : form === 'brute' ? 1.18 : form === 'seer' ? .94 : 1.05,
+      radius: form==='sentinel'?1.4:probe ? PROBE.radius : elite ? 1.05 : form === 'scuttler' ? .86 : form === 'brute' ? .95 : .8,
+      hitRadius: form==='sentinel'?1.65:probe ? .44 : form === 'scuttler' ? .91 : form === 'brute' ? 1.18 : form === 'seer' ? .94 : 1.05,
       attackTimer: .8 + this.random() * .6, phase: this.random() * Math.PI * 2,
       awareness:'patrol',lastSeenAt:-999,lastKnownX:x,lastKnownZ:z,lastKnownHeight:homeHeight,patrolAngle:angle,patrolTimer:.7+this.random()*2,alertedUntil:0 };
 
+    if(form==='sentinel'){enemy.awareness='engaged';enemy.lastSeenAt=this.time;enemy.yaw=Math.PI;}
     this.enemies.push(enemy); this.toSpawn--; this.event('spawn', { id: enemy.id, x: enemy.x, y: enemy.elevation + enemy.aimHeight, z: enemy.z });
   }
   searchWaypoint(enemy,target) {

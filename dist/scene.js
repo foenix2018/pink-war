@@ -1,3 +1,4 @@
+import { createSentinel } from './sentinel-mk9.js';
 import {createWorldShadows,createGroundOcclusion} from './world-shadows.js';
 import * as T from './vendor/three.webgpu.min.js';
 import { WebGLRenderer } from './vendor/three.module.min.js';
@@ -362,7 +363,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   }
   const monsters=new Map(), bulletMeshes=new Map(), particles=[];
   const enemyFactory=createEnemyFactory(mats);
-  const createMonster=(elite,ranged,form)=>enemyFactory.create(elite,ranged,form);
+  const createMonster=(elite,ranged,form)=>{if(form==='sentinel'){const sentinel=createSentinel(T,scene);const m=sentinel.root;m.userData.animate=(time,phase,healthy,e)=>{sentinel.update(.016,{moving:healthy,target:null});};m.userData.sentinel=sentinel;return m;}return enemyFactory.create(elite,ranged,form);};
   // Sparks share two instanced meshes (rose and violet), whatever their number.
   const SPARKS=320,sparkPools=[mats.rose,mats.violet].map(material=>{
     const pool=new T.InstancedMesh(geometries.ico,material,SPARKS);pool.count=0;pool.frustumCulled=false;pool.instanceMatrix.setUsage(T.DynamicDrawUsage);scene.add(pool);return pool;
@@ -389,10 +390,10 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     for(const event of sim.events||[])if(event.type==='kill')beginDeath(event.id,time);
     updateDeaths(time);
     soldier.root.scale.setScalar(soldier.heightScale);soldier.root.position.set(sim.player.x,sim.player.elevation||0,sim.player.z);soldier.root.rotation.y=sim.player.yaw;
-    const present=new Set();for(const e of sim.enemies){present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite,e.ranged,e.form);m.rotation.order='YXZ';monsters.set(e.id,m);scene.add(m);}m.position.set(e.x,e.elevation||0,e.z);m.rotation.y=e.yaw??(Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI);m.userData.animate(time,e.phase,e.limpUntil<=time,e,sim.time);
+    const present=new Set();for(const e of sim.enemies){present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite,e.ranged,e.form);m.rotation.order='YXZ';monsters.set(e.id,m);if(!m.parent)scene.add(m);}m.position.set(e.x,e.elevation||0,e.z);m.rotation.y=e.yaw??(Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI);m.userData.animate(time,e.phase,e.limpUntil<=time,e,sim.time);
       // A hit rocks the body back, away from the shooter, for a fifth of a second (harder on a head shot).
       const sinceHit=sim.time-(e.hitAt??-9);m.rotation.x=sinceHit<.22?Math.sin(sinceHit/.22*Math.PI)*(e.hitZone==='head'?.2:.11):0;}
-    for(const[id,m]of monsters){if(!present.has(id)){scene.remove(m);monsters.delete(id);}}
+    for(const[id,m]of monsters){if(!present.has(id)){if(m.userData.sentinel)m.userData.sentinel.dispose();else scene.remove(m);monsters.delete(id);}}
     const active=new Set();for(const b of sim.bullets){if(!b.hostile)continue;active.add(b.id);let m=bulletMeshes.get(b.id);if(!m){m=new T.Group();const width=b.hostile?.028:({r9:.012,bloom:.010,lance:.022,thorn:.008,nova:.065}[b.weapon]||.015);const rail=b.weapon==='thorn',plasma=b.weapon==='nova';mesh(geometries.sphere,b.hostile?mats.cyan:mats.pale,m,[0,0,0],[width,width,rail?.16:plasma?.11:.055],false);mesh(geometries.sphere,b.hostile?mats.violet:mats.rose,m,[0,0,-.10],[width*1.6,width*1.6,rail?.22:plasma?.14:.10],false);m.scale.setScalar(.75+(b.power||1)*.25);bulletMeshes.set(b.id,m);scene.add(m);}m.position.set(b.x,b.y,b.z);m.lookAt(b.x+b.vx,b.y+b.vy,b.z+b.vz);}
     for(const[id,m]of bulletMeshes){if(!active.has(id)){scene.remove(m);bulletMeshes.delete(id);}}
     const live=new Set();for(const p of sim.pickups||[]){live.add(p.id);let m=pickupMeshes.get(p.id);if(!m){m=makePickup(p.kind);pickupMeshes.set(p.id,m);scene.add(m);}

@@ -12,6 +12,8 @@ const $=id=>document.getElementById(id);
 let character='ghju',mode='campaign',view='fps',trainingWeapon=0,loading=false,modulePromise=null;
 const settings={sound:true,music:true,sensitivity:1,quality:'auto'};
 try{character=localStorage.getItem('pink-war-character')==='lylu'?'lylu':'ghju';Object.assign(settings,JSON.parse(localStorage.getItem('rosee-settings')||'{}'));const stored=Number(localStorage.getItem('pink-war-training-weapon'));if(Number.isInteger(stored)&&stored>=0&&stored<7&&stored!==5)trainingWeapon=stored;}catch{}
+const requestedMode=new URLSearchParams(location.search).get('mode');
+if(['arena','training','campaign','campaign2'].includes(requestedMode))mode=requestedMode;
 const profile=graphicsProfile(navigator,settings.quality);
 document.documentElement.classList.toggle('iphone-launch',profile.ios);
 function save(){try{localStorage.setItem('pink-war-character',character);localStorage.setItem('rosee-settings',JSON.stringify(settings));}catch{}}
