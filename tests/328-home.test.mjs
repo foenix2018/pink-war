@@ -29,10 +29,11 @@ test('both RLH cuffs continue the palm axis without a bent wrist while fingers s
 test('metallic gun shells share reflections and palette changes without changing character materials',()=>{
  const env=new T.Texture(),source=Object.fromEntries(['steel','dark','armor','armorLight'].map(n=>[n,new T.MeshStandardMaterial({color:0x657580,envMap:env,metalness:.3,roughness:.7})]));
  for(const n of ['rose','pale','violet','cyan'])source[n]=new T.MeshBasicMaterial({color:0xff80b2});
- const models=createWeaponModels(source),steel=models[0].children.find(m=>m.material.name==='Weapon metal — steel').material;
+ // VX-9 utilise désormais son maillage V5; THORN vérifie toujours la palette métal procédurale.
+ const models=createWeaponModels(source),steel=models[3].children.find(m=>m.material?.name==='Weapon metal — steel').material;
  assert.ok(steel.metalness>.85&&steel.roughness<.3);assert.equal(steel.envMap,env);assert.equal(source.steel.metalness,.3);
  source.steel.color.setHex(0x99aabb);assert.equal(steel.color.getHex(),0x99aabb);
- assert.equal(models[0].children[0].geometry,createWeaponModels(source)[0].children[0].geometry);
+ assert.equal(models[3].children[0].geometry,createWeaponModels(source)[3].children[0].geometry);
 });
 test('outdoor breaches remain distant and enemies emerge at those breaches instead of beside the headset',()=>{
  const {f}=field(),head={x:0,y:1.65,z:0},portals=[];
