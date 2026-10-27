@@ -4,6 +4,7 @@ import { createGlove } from './hands.js';
 import { createEnergyBlade } from './energy-blade.js';
 import { installKenneyBlasters } from './kenney-blasters.js';
 import {createM12Shotgun,M12_FRAME,M12_HOLD} from './m12-shotgun.js';
+import {dualRecoilPose} from './weapon-feel.js';
 
 // Every weapon is modelled in one frame: the origin is the centre of its pistol grip (where the palm rests),
 // -z is the barrel direction, +y is up. The gloved hand (hands.js) is built in the same frame, so any weapon
@@ -388,8 +389,9 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
     if(g.userData.index===7){
       dualLeft.visible=!!g.userData.showSupport;collar.visible=heatRing.visible=false;
       for(const [side,carrier] of [['right',dualRight],['left',dualLeft]]){
-        const age=time-(g.userData.dualState?.shotAt?.[side]??-Infinity),kick=age>=0&&age<.3?.045*Math.sin(Math.min(1,age/.12)*Math.PI)*Math.exp(-age*12):0;
-        carrier.position.z=kick;carrier.rotation.x=kick*2.5;
+        const age=time-(g.userData.dualState?.shotAt?.[side]??-Infinity),pose=dualRecoilPose(age,{tracked:!!g.userData.recoilTracked}),sign=side==='left'?-1:1;
+        carrier.position.y=pose.y;carrier.position.z=pose.z;
+        carrier.rotation.set(pose.pitch,pose.yaw*sign,pose.roll*sign);
       }
       g.userData.setFlash(false,time);return;
     }

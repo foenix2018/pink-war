@@ -11,7 +11,7 @@ import { playLaserShot, playEnemyShot, loadRealLaserSample, loadCombatSamples, p
 import { createSaberSound } from './saber-sound.js';
 import { syncTrackedHands } from './xr-hands.js';
 import { createAmbience } from './ambience.js';
-import { createWeaponFeel } from './weapon-feel.js';
+import { createWeaponFeel, recoilPose } from './weapon-feel.js';
 import { createLaserFX } from './laser-fx.js';
 import { createMagnifiedSight } from './magnified-sight.js';
 import { createHomeBattlefield } from './home-battlefield.js';
@@ -257,9 +257,9 @@ function tick(ms,frame){
   if(startRequested&&active&&mode!=='combat'&&mode!=='paused'&&assets&&floors().length)startCombat();
   if(assets){
    const reload=game.reloadRemaining?1-game.reloadRemaining/game.weapon.reload:0;
-   const heldFeel=game.weapon.dual?{pitch:0,yaw:0,kick:0}:feedback;
-   assets.gun.rotation.set(heldFeel.pitch-(game.weapon.melee?.55:0)+reload*Math.PI/2,heldFeel.yaw,game.weapon.melee?-.06:0);
-   assets.gun.position.set(heldFeel.yaw*.1,.028*(+!!game.weapon.melee)-heldFeel.kick*.13,heldFeel.kick-(game.weapon.melee?.036:0));
+   const pose=recoilPose(game.weapon.id,feedback,{tracked:true,dual:!!game.weapon.dual,aiming:Number(controllerHandState.offGrip>.5)});
+   assets.gun.rotation.set(pose.pitch-(game.weapon.melee?.55:0)+reload*Math.PI/2,pose.yaw,pose.roll+(game.weapon.melee?-.06:0));
+   assets.gun.position.set(pose.x,.028*(+!!game.weapon.melee)+pose.y,pose.z-(game.weapon.melee?.036:0));
    assets.animate(game.time,dt,Math.max(1,game.wave),{ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,reloading:game.reloadRemaining>0,reloadProgress:reload,
     time:game.time,dualState:game.dual,flash:active&&game.time<muzzleUntil,heat:feedback.heat,kick:feedback.kick,impulse:feedback.impulse,...controllerHandState,trigger:active&&main?.anchor.visible&&!fireBlocked?controllerHandState.trigger:0});
    if(active&&mode==='combat'){

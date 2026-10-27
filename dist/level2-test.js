@@ -6,7 +6,7 @@ import * as T from './vendor/three.webgpu.min.js';
 import {WebGLRenderer} from './vendor/three.module.min.js';
 import {ArenaGame,WEAPONS,clamp,segmentBox,traceEnemyHit} from './game-logic.js';
 import {createPinkWarsInput,createPinkWarsTouch} from './level2-input.js';
-import {createWeaponFeel} from './weapon-feel.js';
+import {createWeaponFeel,recoilPose} from './weapon-feel.js';
 import {loadRealLaserSample,loadCombatSamples,playLaserShot,playEnemyShot,playWeaponAction,playLaserImpact,setLaserAudioEnabled} from './laser-sound.js';
 import {aimSensitivity,magnifiedFov,flatSightPose} from './optics.js';
 import {OPTICS} from './weapons.js';
@@ -47,7 +47,7 @@ if(new URLSearchParams(location.search).get('quality')==='low')quality.value='lo
 const low=()=>quality.value==='low';
 const rng=(()=>{let s=220102;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};})();
 let canvas=main,renderer,scene,camera,game,weapon,clock=0,running=false,started=false,last=0,fpsTime=0,frames=0,framePending=false,recovering=false,bootStep='modules';
-let yaw=0,pitch=0,weaponKick=0,stage=0,reported=-1;
+let yaw=0,pitch=0,stage=0,reported=-1;
 let noticeUntil=0,signal=0,rain,enemyFactory,root,architecture,pbrController,atmosphere;
 let worldShadows=null,groundOcclusion=null;
 let view='fps',aimBlend=0,mouseAim=false,playerRig=null,touchControls=null,paused=false;
@@ -470,7 +470,8 @@ function snapCamera(){
  if(xr?.active){xr.syncPose();return;}
  const p=game.player,eye=characterId==='lylu'?1.71:1.61,optic=OPTICS[game.weapon.id],normal=view==='fps'?72:64;
  camera.fov=normal+(optic?(magnifiedFov(normal,optic.magnification)-normal)*aimBlend:0);
- camera.rotation.set(pitch+weaponFeel.state.pitch*.18,yaw+weaponFeel.state.yaw*.07,0,'YXZ');
+ const kickPose=recoilPose(game.weapon.id,weaponFeel.state,{aiming:aimBlend,dual:!!game.weapon.dual,magnification:optic?.magnification||1});
+ camera.rotation.set(pitch+kickPose.cameraPitch,yaw+kickPose.cameraYaw,0,'YXZ');
  if(view==='fps')camera.position.set(p.x,p.elevation+eye-(p.crouched?.55:0),p.z);
  else{
   const start={x:p.x,y:p.elevation+eye-.2-(p.crouched?.45:0),z:p.z},dist=5.1;
@@ -636,8 +637,7 @@ function gameTick(dt){
   if(e.type==='enemy-shot'&&enableAudio&&audioCtx)playEnemyShot(audioCtx,{form:e.form,source:e,listener:game.player,yaw,occluded:game.blocked(e,{x:game.player.x,y:game.player.elevation+1.5,z:game.player.z})});
   if(e.type==='shot'){
     xr?.haptic('shot',e.weapon,e.hand);
-    weaponFeel.fire(e.weapon||game.weapon.id,e.power||1,aimBlend>.5);
-    weaponKick=Math.min(.25,weaponKick+.085);
+    weaponFeel.fire(e.weapon||game.weapon.id,e.power||1,(xr?.active?!!xr.controls?.aim:aimBlend>.5)||game.player.crouched);
     if(enableAudio&&audioCtx)try{playLaserShot(audioCtx,e.weapon||game.weapon.id,e.power||1);}catch{}
    }
   if(e.type==='damage'){$('damage').style.boxShadow='inset 0 0 105px #c52c5e77';}
@@ -654,17 +654,17 @@ function gameTick(dt){
  companionSkills?.update(dt,{game});skillMenu?.refresh();
  environmentAudio?.update(dt,{active:running&&enableAudio,position:game.player,moving:Math.hypot(x,z)>.1,grounded:game.player.grounded,elevation:game.player.elevation,yaw,probes:game.enemies});
  if(game.player.hp>0)$('damage').style.boxShadow='inset 0 0 '+(100-game.player.hp)*1.2+'px #c52c5e44';
- weaponKick=Math.max(0,weaponKick-dt*.7);
  const ads=flatSightPose(OPTICS[game.weapon.id],aimBlend);
- const heldFeel=game.weapon.dual?{yaw:0,kick:0,pitch:0}:weaponFeel.state;
- weapon.position.set(ads.x+heldFeel.yaw*.15,ads.y-heldFeel.kick*.18,ads.z+heldFeel.kick);
- weapon.rotation.set(heldFeel.pitch,heldFeel.yaw+ads.yaw,-heldFeel.yaw*.35+ads.roll);
+ const kickPose=recoilPose(game.weapon.id,weaponFeel.state,{aiming:aimBlend,dual:!!game.weapon.dual});
+ weapon.position.set(ads.x+kickPose.x,ads.y+kickPose.y,ads.z+kickPose.z);
+ weapon.rotation.set(kickPose.pitch,kickPose.yaw+ads.yaw,kickPose.roll+ads.roll);
  const strike=game.weapon.melee?0:meleeKick(game);if(strike){weapon.position.x+=MELEE_POSE.x*strike;weapon.position.y+=MELEE_POSE.y*strike;weapon.position.z+=MELEE_POSE.z*strike;weapon.rotation.x+=MELEE_POSE.pitch*strike;}
  weapon.userData.setSight?.(aimBlend>.55,camera);
  weapon.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,dualState:game.dual,
   charge:game.charge,reloading:game.reloadRemaining>0,reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,
   heat:weaponFeel.state.heat,kick:weaponFeel.state.kick,impulse:weaponFeel.state.impulse});
- weapon.userData.setFlash?.(running,game.time);playerRig?.model.gun.userData.setFlash?.(running,game.time);
+ const shotFlash=running&&!game.weapon.melee&&(game.weapon.dual||weaponFeel.state.flash>0);
+ weapon.userData.setFlash?.(shotFlash,game.time);playerRig?.model.gun.userData.setFlash?.(shotFlash,game.time);
  weapon.userData.animateHands?.(Number(firing),firing ? .34 : .18,game.reloadRemaining > 0 ? .8 : 0,dt);
  if(weapon.userData.index!==game.weaponIndex)weapon.userData.setVariant(game.weaponIndex);
  if(rain)rain.position.y=-(game.time*9%18);
@@ -717,7 +717,7 @@ function animation(t,frame){
   startButton.disabled=false;startButton.textContent='RECOMMENCER LE NIVEAU 2 →';
  }
  warZone?.update(game?.time||0,{active:running});for(const event of warZone?.drainEvents()||[])if(enableAudio&&battleAudio)battleAudio.event(event,game.player,yaw);
- if(xr?.active){xr.update(dt,weaponFeel.state,weaponKick>.025?.075:0);xr.renderScope();}
+ if(xr?.active){xr.update(dt,weaponFeel.state,weaponFeel.state.flash);xr.renderScope();}
  worldShadows?.update(clock,game?.player||camera.position,{entities:game?[...game.enemies,game.player]:[],heightAt:e=>game.surfaceHeight(e.x,e.z,game.time,(e.elevation||0)+.3)});
  if(scene&&camera&&!framePending&&!recovering){
    try{
@@ -892,7 +892,7 @@ for(const name of ['pointerup','pointercancel']){
  window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
 }
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
-window.__PINK_M02=Object.freeze({snapshot:()=>({music:{playing:false,source:null},revision:'3.63.16',running,paused,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
+window.__PINK_M02=Object.freeze({snapshot:()=>({music:{playing:false,source:null},revision:'3.63.17',running,paused,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
  shadowing:worldShadows?.stats(),backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
  effects:combatEffects?.stats(),armor:game&&{shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt}})});

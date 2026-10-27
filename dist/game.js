@@ -10,7 +10,7 @@ import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import { portalIndicators } from './portal-indicator.js';
 import { objectiveIndicator } from './objective-guidance.js';
 import { OPTICS } from './weapons.js';
-import { createWeaponFeel } from './weapon-feel.js';
+import { createWeaponFeel, recoilPose } from './weapon-feel.js';
 import { bladeSwingPose } from './blade-combat.js';
 import { createSaberSound } from './saber-sound.js';
 import { magnifiedFov, aimSensitivity, flatSightPose } from './optics.js';
@@ -355,8 +355,10 @@ function updateCamera() {
   const { T, camera, soldier, weapon } = world, p = game.player;
   const feel=weaponFeel.state,flatScreen=vr?.mode!=='stereo';
   const hold=game.mode==='training'&&flatScreen?rangeHoldOffset(game.time,{moving:Math.hypot(game.playerVelocity?.x||0,game.playerVelocity?.z||0)>.25,aiming,crouched:p.crouched,heat:feel.heat}):{pitch:0,yaw:0,recoilScale:.2};
-  const cameraYaw = yaw + hold.yaw + (vr?.mode==='stereo' && vr.sensor ? vr.phoneYaw : 0)+(flatScreen?feel.yaw*.06:0), cameraPitch = clamp(pitch + hold.pitch + (vr?.mode==='stereo' && vr.sensor ? vr.phonePitch : 0) + (flatScreen?feel.pitch*hold.recoilScale:0), -1.2, 1.2);
   const optic=world.fpsGun.userData.optics?.[game.weaponIndex]?.cfg||OPTICS[game.weapon.id],normalFov=view==='fps'?72:64;
+  const kickPose=recoilPose(game.weapon.id,feel,{aiming:aimBlend,dual:!!game.weapon.dual,magnification:optic?.magnification||1});
+  const trainingRecoil=game.mode==='training'?hold.recoilScale/.28:1;
+  const cameraYaw = yaw + hold.yaw + (vr?.mode==='stereo' && vr.sensor ? vr.phoneYaw : 0)+(flatScreen?kickPose.cameraYaw:0), cameraPitch = clamp(pitch + hold.pitch + (vr?.mode==='stereo' && vr.sensor ? vr.phonePitch : 0) + (flatScreen?kickPose.cameraPitch*trainingRecoil:0), -1.2, 1.2);
   camera.fov=normalFov+(optic?(magnifiedFov(normalFov,optic.magnification)-normalFov)*aimBlend:0);
   camera.rotation.set(cameraPitch, cameraYaw, 0, 'YXZ');
   const elevation = p.elevation || 0;
@@ -375,9 +377,8 @@ function updateCamera() {
   }
   const bob = Math.hypot(move.x, move.y) > .1 || keys.has('KeyW') || keys.has('KeyZ') || keys.has('KeyS');
   const ads=flatSightPose(optic,aimBlend);
-  const heldFeel=game.weapon.dual?{yaw:0,kick:0,pitch:0}:feel;
-  weapon.position.set(ads.x+heldFeel.yaw*.15, ads.y + (bob ? Math.sin(clock * 11) * .009*(1-aimBlend) : 0) - heldFeel.kick*.18 + reloadLift * .045, ads.z + heldFeel.kick - reloadLift * .028);
-  weapon.rotation.set(heldFeel.pitch + reloadLift * Math.PI / 2,heldFeel.yaw+ads.yaw,Math.sin(clock * 1.8) * .003-heldFeel.yaw*.35+ads.roll);
+  weapon.position.set(ads.x+kickPose.x, ads.y + (bob ? Math.sin(clock * 11) * .009*(1-aimBlend) : 0) + kickPose.y + reloadLift * .045, ads.z + kickPose.z - reloadLift * .028);
+  weapon.rotation.set(kickPose.pitch + reloadLift * Math.PI / 2,kickPose.yaw+ads.yaw,Math.sin(clock * 1.8) * .003+kickPose.roll+ads.roll);
   if(game.weapon.melee){const slash=bladeSwingPose(game.bladePhase,game.bladeSlashSide);weapon.rotation.x=slash.x-.12;weapon.rotation.y=slash.y;weapon.rotation.z=slash.z;}
   else{const strike=meleeKick(game);if(strike){weapon.position.x+=MELEE_POSE.x*strike;weapon.position.y+=MELEE_POSE.y*strike;weapon.position.z+=MELEE_POSE.z*strike;weapon.rotation.x+=MELEE_POSE.pitch*strike;}}
   camera.updateProjectionMatrix(); camera.updateMatrixWorld(true);

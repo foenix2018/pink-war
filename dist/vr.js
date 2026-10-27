@@ -7,6 +7,7 @@ import { WEAPON_FRAME } from './weapons.js';
 import { createMagnifiedSight } from './magnified-sight.js';
 import { hapticPlan, buzz } from './haptics.js';
 import {createXRPauseMenu} from './xr-pause-menu.js';
+import {recoilPose} from './weapon-feel.js';
 export { hapticPlan } from './haptics.js';
 
 const $ = id => document.getElementById(id);
@@ -307,6 +308,7 @@ export class VRController {
         this.rig.add(anchor); anchor.add(mount);
         // The other controller is the free hand: no second glove on the weapon in a headset.
         gun.userData.showSupport = false; gun.userData.support.visible = false;
+        gun.userData.recoilTracked = true;
         mount.position.set(GRIP_MOUNT.x, GRIP_MOUNT.y, GRIP_MOUNT.z);
         gun.visible = bare.visible = false; mount.add(gun, bare);
         // The old wrist-button was a selectable trigger target and no longer
@@ -582,12 +584,14 @@ export class VRController {
         // AURORA: tracked palm closes around the central grip, below the emitter guard.
         // Keep the sword above the fist and slightly angled into the player's view.
         const sword=isMain&&game.weapon.melee;
-        c.gun.position.set(isMain&&!game.weapon.dual?(feel?.yaw||0)*.10*handSign:0,
-          armed?reload*.035-(game.weapon.dual?0:feel?.kick||0)*.13+(sword?.028:0):0,
-          armed?(game.weapon.dual?0:feel?.kick??kick*.075)-reload*.045-(sword?.036:0):0);
-        c.gun.rotation.set(armed?(game.weapon.dual?0:feel?.pitch??kick*.22)+reload*Math.PI/2-(sword?.55:0):0,
-          isMain&&!game.weapon.dual?(feel?.yaw||0)*handSign:0,
-          armed?reload*.12+(sword?-.06*handSign:0):0);
+        const pose=recoilPose(game.weapon.id,armed?(feel||{kick:kick*.075,pitch:kick*.22}):{},
+          {tracked:true,dual:!!game.weapon.dual,aiming:Number(this.aiming)});
+        c.gun.position.set(pose.x*handSign,
+          armed?reload*.035+pose.y+(sword?.028:0):0,
+          armed?pose.z-reload*.045-(sword?.036:0):0);
+        c.gun.rotation.set(armed?pose.pitch+reload*Math.PI/2-(sword?.55:0):0,
+          pose.yaw*handSign,
+          armed?pose.roll*handSign+reload*.12+(sword?-.06*handSign:0):0);
         const palm=c.gun.userData.palm,held=palm&&((this.scratch||={}).palm||=palm.clone());
         if(palm)c.gun.position.sub(held.copy(palm).applyEuler(c.gun.rotation)).add(TRACKED_PALM);
         // Re-evaluate visibility every frame; a previous saber swap must

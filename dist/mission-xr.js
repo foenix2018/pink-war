@@ -3,6 +3,7 @@ import {segmentBox} from './game-logic.js';
 import {createXRPauseMenu,createXRJournal} from './xr-pause-menu.js';
 import {createMagnifiedSight} from './magnified-sight.js';
 import {hapticPlan,buzz} from './haptics.js';
+import {recoilPose} from './weapon-feel.js';
 
 export async function immersiveRendererPreferred(){
  let timer;try{return !!(globalThis.isSecureContext&&navigator.xr&&await Promise.race([navigator.xr.isSessionSupported('immersive-vr'),new Promise(resolve=>{timer=setTimeout(()=>resolve(false),1500);})]));}catch{return false;}finally{clearTimeout(timer);}
@@ -21,7 +22,7 @@ export function createMissionXR({getWorld,onFrame,onPause,onResume,onHome,onExit
    const pending=navigator.xr.requestSession('immersive-vr',{requiredFeatures:['local-floor'],optionalFeatures:['bounded-floor']});busy=true;
    let opened;try{
     opened=await pending;session=opened;const {T,scene,camera,renderer}=w;yaw=getYaw();rig=new T.Group();scene.add(rig);rig.add(camera);camera.clearViewOffset();camera.position.set(0,0,0);camera.rotation.set(0,0,0);renderer.xr.enabled=true;renderer.xr.setReferenceSpaceType('local-floor');renderer.xr.setFramebufferScaleFactor?.(.9);renderer.xr.setFoveation?.(.65);
-    entries=[0,1].map(index=>{const ray=renderer.xr.getController(index),anchor=new T.Group(),mount=new T.Group();anchor.matrixAutoUpdate=false;anchor.visible=false;rig.add(ray,anchor);anchor.add(mount);mount.position.set(0,-.012,.018);const gun=w.createGun(),bare=w.createHand();gun.userData.showSupport=false;if(gun.userData.support)gun.userData.support.visible=false;mount.add(gun,bare);return{ray,anchor,mount,gun,bare,source:null,tracked:false};});
+    entries=[0,1].map(index=>{const ray=renderer.xr.getController(index),anchor=new T.Group(),mount=new T.Group();anchor.matrixAutoUpdate=false;anchor.visible=false;rig.add(ray,anchor);anchor.add(mount);mount.position.set(0,-.012,.018);const gun=w.createGun(),bare=w.createHand();gun.userData.recoilTracked=true;gun.userData.showSupport=false;if(gun.userData.support)gun.userData.support.visible=false;mount.add(gun,bare);return{ray,anchor,mount,gun,bare,source:null,tracked:false};});
     menu=createXRPauseMenu(T,scene,{accent:w.accent,onResume:()=>{blocked=true;onResume();},onHome:()=>void api.home(),onExit:()=>void api.exit()});
     const canvas=document.createElement('canvas');canvas.width=512;canvas.height=112;const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;const plane=new T.Mesh(new T.PlaneGeometry(.42,.091875),new T.MeshBasicMaterial({map:texture,transparent:true,depthTest:false,depthWrite:false,toneMapped:false}));plane.position.set(0,-.27,-1.05);plane.renderOrder=100;plane.frustumCulled=false;camera.add(plane);hud={canvas,texture,plane,key:''};
     opened.addEventListener('end',finish,{once:true});opened.addEventListener('visibilitychange',()=>{if(opened.visibilityState!=='visible'){blocked=true;onPause();}});
@@ -65,7 +66,8 @@ export function createMissionXR({getWorld,onFrame,onPause,onResume,onHome,onExit
     gun.visible=!!(e.tracked&&armed);e.bare.visible=!!(e.tracked&&!armed);e.bare.scale.x=(hand==='left'?-1:1)*Math.abs(e.bare.scale.x);gun.scale.x=hand==='left'?-1:1;
     if(gun.userData.index!==g.weaponIndex)gun.userData.setVariant?.(g.weaponIndex);
     gun.userData.setCombatState?.({time:g.time,ammo:g.ammo[g.weaponIndex],capacity:g.weapon.capacity,dualState:g.weapon.dual?{...g.dual,shotAt:{right:g.dual.shotAt[hand],left:-Infinity}}:g.dual,reloading:g.reloadRemaining>0,reloadProgress:reload,charge:g.charge,heat:feel.heat||0,kick:feel.kick||0,bladeHeld:!blocked&&trigger>.15});
-    gun.rotation.set((g.weapon.dual?0:feel.pitch||0)+reload*Math.PI/2-(g.weapon.melee?.55:0),g.weapon.dual?0:feel.yaw||0,0);gun.position.set(0,-(feel.kick||0)*.13,.024+(feel.kick||0));
+    const pose=recoilPose(g.weapon.id,feel,{tracked:true,dual:!!g.weapon.dual,aiming:Number(!!controls?.aim)});
+    gun.rotation.set(pose.pitch+reload*Math.PI/2-(g.weapon.melee?.55:0),pose.yaw,pose.roll);gun.position.set(pose.x,pose.y,.024+pose.z);
     if(gun.userData.palm)gun.position.sub(gun.userData.palm.clone().applyEuler(gun.rotation)).add(new w.T.Vector3(.015,-.014,0));
     gun.userData.hand?.userData.animate?.({grip:.96,trigger,reload:0},dt,hand==='left'?-1:1);e.bare.userData.animate?.({grip,trigger,reload:0},dt,hand==='left'?-1:1);gun.userData.setFlash?.(!isPaused()&&flash>0,g.time);gun.userData.setSight?.(!!controls?.aim&&!g.reloadRemaining,w.camera);
    }

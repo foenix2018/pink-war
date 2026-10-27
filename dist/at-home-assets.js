@@ -61,9 +61,11 @@ export async function createAtHomeAssets(scene, hero) {
   const companionKit=prepareCharacter(other,surface);
   const enemyFactory=createEnemyFactory(player.mats);
   const gun=player.makeGun({sleeve:true});
+  gun.userData.recoilTracked=true;
   gun.userData.showSupport=false;gun.userData.support.visible=false;
   gun.userData.setVariant(starterWeaponIndex(hero.id));
   const offGun=player.makeGun({sleeve:true});offGun.name='GHJU / pistolet gauche suivi';offGun.scale.x=-1;
+  offGun.userData.recoilTracked=true;
   offGun.userData.showSupport=false;offGun.userData.setVariant(starterWeaponIndex(hero.id));offGun.visible=false;
   const freeHand=createGlove(player.kit.gloves,{mirror:true});
   gun.userData.hand.userData.extendForearm();offGun.userData.hand.userData.extendForearm();freeHand.userData.extendForearm();
