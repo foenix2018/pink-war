@@ -506,6 +506,7 @@ function updateOriginalSoldier(dt,moving,sprint,firing){
     reloading:game.reloadRemaining>0,reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,charge:game.charge});
   model.animate(game.time,moving,weaponFeel.state.pitch,0,Number(firing),dt,{
     airborne:!game.player.grounded,verticalSpeed:game.player.verticalSpeed,crouched:game.player.crouched,
+    velocity:game.playerVelocity,
     firing:!!firing,sprint,aim:aimBlend>.2
   });
  }catch(error){console.warn('M02 authentic animation fallback',error);scene.remove(model.root);playerRig=null;}

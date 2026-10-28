@@ -420,6 +420,7 @@ function updateWeaponVisuals(dt, firing, moving) {
   if (vr?.mode !== 'xr') {
     world.soldier.animate(clock, moving, recoil, reloadLift, trigger, dt, {
       airborne: !game.player.grounded, verticalSpeed: game.player.verticalSpeed,
+      velocity:game.playerVelocity,
       crouched: game.player.crouched, firing: trigger>0,
       sprint: currentSprinting, aim: !!(aiming||firing||game.charge>0),saberSwing:game.weapon.melee?bladeSwingPose(game.bladePhase,game.bladeSlashSide):null
     });

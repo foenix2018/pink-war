@@ -247,7 +247,7 @@ for(const profile of CHARACTERS){
       }
       const width=p.getX(rows*(columns+1)+columns)-p.getX(rows*(columns+1));
       const ratio=width/shoulderWidth;
-      assert.ok(ratio>.58&&ratio<.70,'rear cape width follows the reference silhouette');
+      assert.ok(ratio>.80&&ratio<.98,'the flared hem follows the wider cape visible in the wallpapers');
     }
     for(const hand of hands)hand.userData.dispose();soldier.dispose();
   });

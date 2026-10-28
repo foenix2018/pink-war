@@ -1,5 +1,7 @@
 # Pink Wars — La Fracture
 
+Version 3.66 : **GHJU et LYLU Shadow VII** — formes ajustées aux fonds de Vesper, cuirasse et bassin articulés, cape plus ample, cadence réelle, recul, pas latéraux, appuis et réception de saut. [Détails](docs/pink-wars/MISE_A_JOUR_366.md) · [Atelier animé](https://pink-war.vercel.app/personnage.html?v=3.66.0).
+
 Version 3.65 : **RECO1 blindé en campagne et dans l’Arène** — le personnage approuvé V10 remplace la Sentinelle légère, avec son squelette RLH de 41 os, ses animations et sa carabine. 750 PV de base, tirs sur le blindage réduits de moitié, optiques plus vulnérables ; canon et projectiles alignés sur le même repère. [Détails](docs/pink-wars/MISE_A_JOUR_365.md) · [Jouer dans l’Arène](https://pink-war.vercel.app/?mode=arena&v=3.65.0).
 
 Version 3.64 : **gants raccordés, lunettes précises** — poignet souple sans cassure et avant-bras complets jusqu’au coude en vue à la première personne ; réticule de chaque arme exactement au point d’impact (écran et casque, viseur reflex ajouté sur la NOVA, tir convergent au casque) ; mêmes poignées Quest dans les missions que dans l’Arène ; chapitre 02 lancé correctement après une partie ; une seule version affichée ; Sentinelle posée sur un sol libre. [Détails](docs/pink-wars/MISE_A_JOUR_364.md) · [Jouer](https://pink-war.vercel.app/?v=3.64.0).

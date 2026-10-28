@@ -41,10 +41,10 @@ test('all complete armour vertices remain finite and near their animated bones i
  const source=rlhFirefighterData(),clips=source.clips.map(c=>c.duration),{s}=make(CHARACTERS[1]);s.setLevel(10);s.setWeapon(1);
  const p=new T.Vector3(),bone=new T.Vector3();
  for(const motion of [{moving:false},{moving:true},{moving:false,crouched:true},{moving:true,crouched:true},{moving:true,sprint:true}]){
-  for(let frame=0;frame<14;frame++)s.animate(frame*.04,motion.moving,.2,.0,1,.04,motion);
+  for(let frame=0;frame<14;frame++){if(motion.moving)s.root.position.z-=(motion.sprint?7:motion.crouched?2:2.6)*.04;s.animate(frame*.04,motion.moving,.2,.0,1,.04,motion);}
   s.root.updateMatrixWorld(true);s.nativeSkeleton.update();
   for(const mesh of s.armor.parts){const ix=mesh.geometry.attributes.skinIndex;
-   for(let j=0;j<ix.count;j+=3){mesh.getVertexPosition(j,p);assert.ok(Number.isFinite(p.x+p.y+p.z));bone.setFromMatrixPosition(s.nativeSkeleton.bones[ix.getX(j)].matrixWorld);assert.ok(p.distanceTo(bone)<.68,'protection remains close to its native joint');}
+   for(let j=0;j<ix.count;j+=3){mesh.getVertexPosition(j,p).applyMatrix4(mesh.matrixWorld);assert.ok(Number.isFinite(p.x+p.y+p.z));bone.setFromMatrixPosition(s.nativeSkeleton.bones[ix.getX(j)].matrixWorld);assert.ok(p.distanceTo(bone)<.68,'protection remains close to its native joint');}
   }
  }
  assert.equal(s.nativeMotion,'run');assert.deepEqual(source.clips.map(c=>c.duration),clips,'source animation clips remain intact');assert.ok(s.actor.actions.rifle.getClip().duration>3);assert.ok(s.actor.actions.walkRifle.getClip().duration>1);s.dispose();

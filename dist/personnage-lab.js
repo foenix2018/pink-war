@@ -2,7 +2,7 @@ import {installShadowUnit,applyShadowMaterials} from './shadow-unit-game.js';
 import * as T from './vendor/three.webgpu.min.js';
 import { WebGLRenderer } from './vendor/three.module.min.js';
 import { createCharacterKit, createSoldier } from './soldier.js';
-import { buildGun } from './weapons.js';
+import { buildGun,WEAPON_FRAME } from './weapons.js';
 import { createSurfaceDetails } from './surfaces.js';
 import { characterForId } from './characters.js';
 import { playLaserShot, loadRealLaserSample } from './laser-sound.js';
@@ -98,7 +98,7 @@ function setCharacter(id){
   updateStatus();
 }
 function setMotion(motion){
-  if(!['idle','walk','run','jump','aim','crouch','walkFire','runFire','crouchWalk'].includes(motion))return;
+  if(!['idle','walk','run','jump','aim','crouch','walkFire','runFire','crouchWalk','back','left','right'].includes(motion))return;
   state.motion=motion;
   state.jumpStart=state.clock;
   document.querySelectorAll('[data-motion]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.motion===motion)));
@@ -107,7 +107,8 @@ function setMotion(motion){
 function updateStatus(){
   const model=subjects.get(state.character);
   const stage=equipmentForCharacter(state.level,state.character);$('stage-name').textContent=stage.name+' · NIVEAU '+stage.level;$('stage-description').textContent=stage.description;
-  $('status').textContent=`${model.armor.name} · ${characterForId(state.character).name} · ${model.targetHeight.toFixed(2).replace('.',',')} m · ${model.equipmentLevel}e armure · ${model.visibleParts} pièces · ${state.motion==='idle'?'repos':state.motion==='walk'?'marche':state.motion==='run'?'course':state.motion==='jump'?'saut':state.motion==='crouch'?'accroupi':state.motion==='walkFire'?'Rifle Walk':state.motion==='runFire'?'course + tir':state.motion==='crouchWalk'?'déplacement accroupi':'Idle Rifle'}`;
+  const labels={idle:'repos',walk:'marche',run:'course',jump:'saut',aim:'visée',crouch:'accroupi',walkFire:'marche + tir',runFire:'course + tir',crouchWalk:'déplacement accroupi',back:'recul',left:'pas à gauche',right:'pas à droite'};
+  $('status').textContent=`SHADOW VII · ${characterForId(state.character).name} · ${model.targetHeight.toFixed(2).replace('.',',')} m · ${labels[state.motion]}`;
 }
 for(const button of document.querySelectorAll('[data-character]'))button.addEventListener('click',()=>setCharacter(button.dataset.character));
 for(const button of document.querySelectorAll('[data-motion]'))button.addEventListener('click',()=>setMotion(button.dataset.motion));
@@ -121,7 +122,7 @@ $('sound-preview').addEventListener('click',async()=>{
     if(previewAudio.state!=='running')await previewAudio.resume();
     if(state.weapon===5){previewSaber ||=createSaberSound(previewAudio);previewSaber.ignite();return;}
     await loadRealLaserSample(previewAudio);
-    playLaserShot(previewAudio,['r9','bloom','lance','thorn','nova'][state.weapon],1);
+    playLaserShot(previewAudio,WEAPON_FRAME[state.weapon].id,1);
   }catch(error){console.warn('Essai audio laser non disponible',error);}
 });
 $('bones').addEventListener('change',e=>{state.showBones=e.target.checked;markers.visible=state.showBones;});
@@ -174,22 +175,23 @@ function resize(){
  renderer.setPixelRatio(dpr);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
 }
 window.addEventListener('resize',resize);resize();
-setCharacter('ghju');setMotion('idle');
+setCharacter(new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju');setMotion('idle');
 function tick(now){
  const dt=last?clamp((now-last)*.001,.001,.05):.016;last=now;state.clock+=dt;
  const model=subjects.get(state.character),root=model.root;
- const speed=['walk','walkFire'].includes(state.motion)?3.2:['run','runFire'].includes(state.motion)?9:state.motion==='crouchWalk'?2.2:0;
+ const speed=['walk','walkFire','back','left','right'].includes(state.motion)?3.2:['run','runFire'].includes(state.motion)?9:state.motion==='crouchWalk'?2.2:0;
+ const travel={x:state.motion==='left'?-speed:state.motion==='right'?speed:0,y:0,z:state.motion==='back'?speed:['left','right'].includes(state.motion)?0:-speed};
  // Drive the real rig's displacement-driven animation without translating it out of the viewer.
- if(speed)model._lastRootPosition=new T.Vector3(root.position.x,root.position.y,root.position.z+speed*dt);
+ if(speed)model._lastRootPosition=new T.Vector3(root.position.x-travel.x*dt,root.position.y,root.position.z-travel.z*dt);
  const airborne=state.motion==='jump';
  let height=0,velocity=0;
  if(airborne){
    const elapsed=state.clock-state.jumpStart;
-   if(elapsed>1.05){setMotion('idle');}
+   if(elapsed>7.25/9){setMotion('idle');}
    else {height=Math.max(0,7.25*elapsed-9*elapsed*elapsed);velocity=7.25-18*elapsed;}
  }
  root.position.y=height;
- model.animate(state.clock,!!speed,0,0,['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion)?1:0,dt,{airborne,verticalSpeed:velocity,crouched:['crouch','crouchWalk'].includes(state.motion),firing:['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion),sprint:['run','runFire'].includes(state.motion),preview:state.motion==='idle',saberSwing:state.weapon===5&&state.motion==='aim'?bladeSwingPose((state.clock%1.2)/.6):null});
+ model.animate(state.clock,!!speed,0,0,['aim','walkFire','runFire','crouch','crouchWalk','back','left','right'].includes(state.motion)?1:0,dt,{velocity:travel,airborne:airborne&&height>0,verticalSpeed:velocity,crouched:['crouch','crouchWalk'].includes(state.motion),firing:['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion),sprint:['run','runFire'].includes(state.motion),preview:state.motion==='idle',saberSwing:state.weapon===5&&state.motion==='aim'?bladeSwingPose((state.clock%1.2)/.6):null});
  model.gun.userData.setCombatState?.({time:state.clock,bladeHeld:state.weapon===5});
  refreshSkeleton(model);
  const w=canvas.clientWidth,h=canvas.clientHeight;

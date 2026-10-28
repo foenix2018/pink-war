@@ -80,7 +80,7 @@ export function addCapeToOriginalSoldier(model, profile, {front=false}={}) {
     const mesh=new T.Mesh(g,ribbonMaterial);mesh.frustumCulled=false;cloth.add(mesh);return {g,a};
   });
 
-  const direction=front?-1:1,topHeight=front?1.32:1.48,length=front?.84:1.035;
+  const direction=front?-1:1,topHeight=front?1.32:1.48,length=front?.84:1.13;
   // Cross-sections of the fitted cuirass, waist and belt in the rig's bind
   // frame. The cloth wraps around them instead of hanging on a distant plane.
   const sections=[
@@ -141,8 +141,8 @@ export function addCapeToOriginalSoldier(model, profile, {front=false}={}) {
   const billow=new Float32Array(rows+1);
   const billowVelocity=new Float32Array(rows+1);
   let previousTime=null, activitySmooth=.12;
-  function update(time,motion='idle',wind=.6,{symmetric=false}={}) {
-    const dt=previousTime==null?.016:Math.max(.001,Math.min(.04,time-previousTime));
+  function update(time,motion='idle',wind=.6,{symmetric=false,velocity=0,lateral=0,turn=0}={}) {
+    const dt=previousTime==null?.016:Math.max(0,Math.min(.04,time-previousTime));
     previousTime=time;
     const targetActivity=
       motion==='run'||motion==='runFire'?1:
@@ -156,17 +156,17 @@ export function addCapeToOriginalSoldier(model, profile, {front=false}={}) {
       // Ondulation retardée depuis l'attache : l'ourlet garde son inertie.
       const targetSway=lag*(
         (.011+.072*strength)*Math.sin(time*(1.0+activitySmooth)-v*3.0) +
-        .010*Math.sin(time*.52-v*1.4));
+        .010*Math.sin(time*.52-v*1.4)-Math.max(-.08,Math.min(.08,lateral*.012+turn*.035)));
       const targetBillow=lag*(
-        .012+.065*strength +
+        .012+.065*strength+Math.max(-.008,Math.min(.09,velocity*.012)) +
         (.008+.045*strength)*Math.sin(time*(1.22+activitySmooth*.65)-v*3.6));
       // Ressort amorti avec transmission vers les rangées inférieures.
       const spring=19-5*v, damping=7.6-2.7*v, transfer=9;
-      const lateral=(targetSway-sway[j])*spring-swayVelocity[j]*damping+
+      const lateralForce=(targetSway-sway[j])*spring-swayVelocity[j]*damping+
         (sway[j-1]-sway[j])*transfer;
       const depth=(targetBillow-billow[j])*spring-billowVelocity[j]*damping+
         (billow[j-1]-billow[j])*transfer;
-      swayVelocity[j]+=lateral*dt;
+      swayVelocity[j]+=lateralForce*dt;
       billowVelocity[j]+=depth*dt;
       sway[j]+=swayVelocity[j]*dt;
       billow[j]+=billowVelocity[j]*dt;
@@ -192,7 +192,7 @@ export function addCapeToOriginalSoldier(model, profile, {front=false}={}) {
       const v=j/rows,lag=Math.pow(v,1.4);
       const y=topHeight-length*v;
       const release=T.MathUtils.smoothstep(1.22-y,0,.30);
-      const width=front?(.265+.060*v):(.340+.080*v);
+      const width=front?(.265+.060*v):(.340+.240*Math.pow(v,1.25));
       for(let i=0;i<=columns;i++) {
         const u=i/columns,edge=2*u-1,n=(j*(columns+1)+i)*3;
         // Deux plis verticaux amples, sans vibrations rapides.
@@ -219,6 +219,7 @@ export function addCapeToOriginalSoldier(model, profile, {front=false}={}) {
         }
         point.z+=direction*(billow[j]+fold*.45)*release;
         if(y<1.06)avoidLegs(point);
+        point.y=Math.max(.055,point.y);
         point.applyMatrix4(toAnchor).toArray(positions,n);
       }
     }

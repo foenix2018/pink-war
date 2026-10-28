@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#10151e">
-<title>Pink War — Armures AÉGIS · LYLU / GHJU</title>
+<title>Pink Wars — GHJU / LYLU · Shadow VII</title>
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <style>
 :root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,Arial,sans-serif;--accent:#ff80b2;--bg:#111722;--line:#343b49;--text:#f0f3fa;--muted:#9ca5b8}
@@ -65,8 +65,8 @@ button.audio-preview{display:block;width:100%;min-height:40px;color:var(--text);
 <div class="top"><a class="brand" href="./index.html">✳ PINK <b>WAR</b></a><a class="back" href="./index.html">← Retour au jeu</a></div>
 <aside class="control">
   <div class="heading">
-    <h1>SHADOW UNIT · Soldat de Vesper</h1>
-    <p class="subtitle">Armure graphite et acier, casque fermé, cape dorsale tissée. Liserés roses pour GHJU et bleus pour LYLU, sur les dix niveaux d’armure.</p>
+    <h1>SHADOW VII · GHJU / LYLU</h1>
+    <p class="subtitle">La tenue des fonds de Vesper : graphite, visière panoramique et cape tissée. GHJU en rose, LYLU en bleu.</p>
   </div>
   <div class="group">
     <span class="group-title">Personnage</span>
@@ -80,6 +80,7 @@ button.audio-preview{display:block;width:100%;min-height:40px;color:var(--text);
   <div class="group">
     <span class="group-title">Combat en déplacement</span>
     <div class="actions"><button data-motion="walkFire">Rifle Walk</button><button data-motion="runFire">Course + tir</button><button data-motion="crouchWalk">Accroupi + tir</button></div>
+    <div class="actions" style="margin-top:7px"><button data-motion="back">Reculer</button><button data-motion="left">Pas à gauche</button><button data-motion="right">Pas à droite</button></div>
   </div>
   <div class="group">
     <span class="group-title">Orientation</span>
@@ -92,7 +93,7 @@ button.audio-preview{display:block;width:100%;min-height:40px;color:var(--text);
   </div>
   <div class="group">
     <label for="weapon">Arme</label>
-    <select id="weapon"><option value="0">R9 (initiale)</option><option value="1">BLOOM</option><option value="2">LANCE</option><option value="3">THORN</option><option value="4">NOVA</option><option value="5">AURORA · sabre</option></select>
+    <select id="weapon"><option value="0">VX-9</option><option value="1">NEXUS V9</option><option value="2">ARES X9</option><option value="3">THORN V8</option><option value="4">NOVA</option><option value="5">AURORA · sabre</option><option value="6">M–12</option><option value="7">VX-9 DUO</option><option value="8">VORTEX AR-7</option></select>
   </div>
   <div class="group"><span class="group-title">Écouter le tir de l’arme</span><button id="sound-preview" class="audio-preview" type="button">▶ Tester le laser</button></div>
   <div class="group switch">
@@ -108,6 +109,6 @@ button.audio-preview{display:block;width:100%;min-height:40px;color:var(--text);
 </aside>
 <div class="hint"><strong>LYLU / GHJU · SHADOW UNIT</strong>Armures originales · squelette, mains et animations RLH.</div>
 <div id="error" hidden role="alert"></div>
-<script type="module" src="./personnage-lab.js?v=3.46"></script>
+<script type="module" src="./personnage-lab.js?v=3.66.0"></script>
 </body>
 </html>

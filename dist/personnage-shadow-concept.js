@@ -2,6 +2,7 @@ import {buildShadowHelmet} from './shadow-helmet.js';
 import {reflectedGeometry,symmetricGeometry,mirrorAttachmentFrame} from './shadow-symmetry.js';
 import * as T from './vendor/three.webgpu.min.js';
 import {merge,bevelBox,loft} from './geo.js';
+import {batchHeroArmor} from './hero-armor-batches.js';
 
 // Shared reference armour: fitted to the native bones for both game and viewer.
 export function attachShadowConcept(model, profile) {
@@ -15,13 +16,13 @@ export function attachShadowConcept(model, profile) {
   model.root.updateMatrixWorld(true);
   const blue=!!profile.masculine;
   const accent=blue?0x51b5ff:0xff148b;
-  const dark=new T.MeshStandardMaterial({color:0x191c23,roughness:.48,metalness:.67,flatShading:true,side:T.DoubleSide});
-  const graphite=new T.MeshStandardMaterial({color:0x2b2e36,roughness:.40,metalness:.73,flatShading:true,side:T.DoubleSide});
-  const steel=new T.MeshStandardMaterial({color:0x595e6a,roughness:.48,metalness:.72,side:T.DoubleSide});
+  const dark=new T.MeshStandardMaterial({color:0x222731,roughness:.43,metalness:.58,flatShading:false,side:T.DoubleSide});
+  const graphite=new T.MeshStandardMaterial({color:0x343b46,roughness:.34,metalness:.68,flatShading:false,side:T.DoubleSide});
+  const steel=new T.MeshStandardMaterial({color:0x687280,roughness:.38,metalness:.74,side:T.DoubleSide});
   const black=new T.MeshStandardMaterial({color:0x080a0f,roughness:.65,metalness:.33,side:T.DoubleSide});
   const glass=new T.MeshPhysicalMaterial({
-    color:blue?0x12345b:0x6c153e,metalness:.65,roughness:.12,
-    clearcoat:.6,clearcoatRoughness:.06,side:T.DoubleSide,
+    color:blue?0x10233c:0x35152b,metalness:.38,roughness:.095,
+    clearcoat:1,clearcoatRoughness:.045,ior:1.48,side:T.DoubleSide,
     emissive:blue?0x051a29:0x200714,emissiveIntensity:.26
   });
   glass.name='Shadow dark visor';glass.userData.studioReflection=.60;
@@ -64,15 +65,15 @@ export function attachShadowConcept(model, profile) {
     const n=outline.length,cx=outline.reduce((s,v)=>s+v[0],0)/n,
       cy=outline.reduce((s,v)=>s+v[1],0)/n;
     const facing=(pos[2]>.06?1:-1)*(Math.cos(rot[1])>=0?1:-1);
-    const rise=Math.min(.028,depth+.010),vertices=[],indices=[];
-    const rings=[[1,0],[.96,.003],[.74,rise]];
+    const rise=Math.min(.022,depth+.007),vertices=[],indices=[];
+    const rings=[[1,0],[.965,.0025],[.90,.006],[.78,rise*.8],[.48,rise]];
     for(const [scale,z] of rings)for(const [x,y] of outline)
       vertices.push(cx+(x-cx)*scale,cy+(y-cy)*scale,z*facing);
     for(let row=1;row<rings.length;row++)for(let i=0;i<n;i++){
       const a=(row-1)*n+i,b=(row-1)*n+(i+1)%n,c=row*n+i,d=row*n+(i+1)%n;
       indices.push(a,b,c,b,d,c);
     }
-    const center=vertices.length/3;vertices.push(cx,cy,rise*facing);
+    const center=vertices.length/3;vertices.push(cx,cy,(rise+.001)*facing);
     for(let i=0;i<n;i++)indices.push((rings.length-1)*n+i,(rings.length-1)*n+(i+1)%n,center);
     // Seal the underside to give the plate a real edge in profile.
     const back=vertices.length/3;vertices.push(cx,cy,-.003*facing);
@@ -83,7 +84,7 @@ export function attachShadowConcept(model, profile) {
     const rx=Math.max(...outline.map(v=>Math.abs(v[0]-cx)),.001),ry=Math.max(...outline.map(v=>Math.abs(v[1]-cy)),.001);
     const uv=[];for(let i=0;i<vertices.length;i+=3)uv.push(.5+(vertices[i]-cx)/(2*rx),.5+(vertices[i+1]-cy)/(2*ry));
     g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));
-    const flat=g.toNonIndexed();flat.computeVertexNormals();g.dispose();
+    g.computeVertexNormals();const flat=g.toNonIndexed();g.dispose();
     return part(p,flat,mat,pos,rot);
   }
   function path(p,points,mat=light,r=.0034) {
@@ -169,7 +170,7 @@ export function attachShadowConcept(model, profile) {
       }
     }
     const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(verts,3));
-    g.setIndex(indices);const non=g.toNonIndexed();non.computeVertexNormals();g.dispose();return non;
+    g.setIndex(indices);g.computeVertexNormals();const non=g.toNonIndexed();g.dispose();return non;
   }
   buildShadowHelmet(helmet,{
     part,shape,block,path,materials:{dark,graphite,black,steel,glass,light,dim},disposables
@@ -185,6 +186,7 @@ export function attachShadowConcept(model, profile) {
   ],28),black);
   lining.name='Shadow / cuirasse ajustée et retours latéraux';
   lining.userData.fittedThorax=true;
+  spine.scale.x=blue?1.015:.965;
   // Rear reference: two broad gunmetal scapular plates, central vent cassette.
   for(const sign of [-1,1]){
     const outline=[[.060,-.110],[.153,-.100],[.205,-.057],[.213,.067],
@@ -251,7 +253,7 @@ export function attachShadowConcept(model, profile) {
     const shoulder=boneAnchor(model.actor.bone(sideName+'Arm'),
       [side*.250,1.510,-.015]);
     shoulder.name='Shadow V6 / épaule '+sideName;
-    shoulder.scale.setScalar(.90);
+    shoulder.scale.set(blue?.88:.82,.88,.88);
     shape(shoulder,[[-.090,-.068],[-.096,.014],[-.047,.084],
       [.020,.096],[.094,.018],[.073,-.080]],graphite,
       [0,0,-.021],[.17,side*.17,side*.17],.011);
@@ -296,6 +298,7 @@ export function attachShadowConcept(model, profile) {
     shieldLayer(upper,shield,graphite,-.022,.70);
     path(upper,[[sign*.037,.062,-.031],[sign*.043,-.017,-.031]],dim,.003);
     const fore=limbShell(side,'ForeArm','Hand',.067);
+    fore.scale.set(.90,1,.91);
     part(fore,facetHull([[-.108,.035,.035,.067],[-.074,.049,.046,.067],
       [.018,.061,.055,.067],[.075,.049,.045,.067],[.095,.038,.036,.067]],12),dark);
     shieldLayer(fore,shield,dark,0,1.04);
@@ -370,6 +373,27 @@ export function attachShadowConcept(model, profile) {
     block(boot,.042,.012,.006,light,0,.009,-.114);
     block(boot,.032,.009,.006,light,0,.075,.009);
   }
+  // A tapered, articulated waist replaces the broad empty gap below the chest.
+  // Plates bend with Spine/Hips; none crosses a hip or knee joint.
+  const abdomen=boneAnchor(model.actor.bone('Spine'),[0,1.171,0]);
+  abdomen.name='Shadow VII / abdomen articulé';
+  for(let j=0;j<3;j++){
+    const width=(blue?.145:.133)-j*.007,y=.081-j*.049;
+    shape(abdomen,[[-width,.023],[width,.023],[width*.92,-.013],[.062,-.026],[-.062,-.026],[-width*.92,-.013]],
+      j===0?graphite:dark,[0,y,-.117-j*.003],[.10,0,0],.005);
+    block(abdomen,.072,.003,.003,black,0,y+.008,-.135-j*.003);
+    for(const sign of [-1,1])block(abdomen,.010,.005,.004,steel,sign*(width-.017),y+.007,-.137-j*.003);
+  }
+  const belt=boneAnchor(model.hips,[0,1.040,0]);belt.name='Shadow VII / ceinture et bassin';
+  part(belt,loft([[-.025,.182,.124],[.024,.181,.124]],32),black);
+  shape(belt,[[-.046,-.023],[.046,-.023],[.054,.013],[.032,.029],[-.032,.029],[-.054,.013]],graphite,[0,0,-.134],[0,0,0],.004);
+  block(belt,.032,.005,.004,light,0,.004,-.148);
+  shape(belt,[[-.073,.015],[.073,.015],[.061,-.062],[0,-.102],[-.061,-.062]],dark,[0,-.063,-.105],[.12,0,0],.005);
+  for(const sign of [-1,1]){
+    const panel=[[.112,.008],[.182,.028],[.210,-.022],[.194,-.093],[.132,-.100],[.103,-.056]].map(([x,y])=>[sign*x,y]);
+    shape(belt,panel,graphite,[0,-.023,-.048],[0,sign*-.48,0],.004);
+    path(belt,[[sign*.170,-.057,-.077],[sign*.180,-.105,-.066]],dim,.002);
+  }
   // Keep the detailed silhouette economical: one draw per material and bone,
   // rather than one draw for every bolt, vent and bevelled panel.
   for(const group of attachmentGroups){
@@ -410,13 +434,15 @@ export function attachShadowConcept(model, profile) {
     for(const mesh of right.children)part(left,reflectedGeometry(mesh.geometry),mesh.material);
     mirrorPairs.push({left,right,position:left.position.clone(),quaternion:left.quaternion.clone(),scale:left.scale.clone()});
   }
+  model.root.updateMatrixWorld(true);
+  const rendered=batchHeroArmor(model,attachmentGroups);
   for(let i=0;i<pose.length;i++){
     model.actor.bones[i].position.copy(pose[i].p);
     model.actor.bones[i].quaternion.copy(pose[i].q);
   }
   model.root.updateMatrixWorld(true);
   return {
-    helmet,spine,limbGroups,mirrorPairs,
+    helmet,spine,limbGroups,mirrorPairs,batches:rendered.batches,bindings:rendered.bindings,triangles:rendered.triangles,revision:7,
     restoreAttachments(){
       for(const pair of mirrorPairs){
         pair.left.position.copy(pair.position);pair.left.quaternion.copy(pair.quaternion);pair.left.scale.copy(pair.scale);
@@ -427,6 +453,7 @@ export function attachShadowConcept(model, profile) {
     },
 
     dispose(){
+      rendered.dispose();
       for(const group of attachmentGroups)group.removeFromParent();
       for(const g of geometries)g.dispose();
       for(const g of filteredGeometries)g.dispose();

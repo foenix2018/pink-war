@@ -1,7 +1,7 @@
 // Shared Pink War Shadow Unit skin for the playable GHJU/LYLU soldiers.
 // The base Mixamo/RLH rig, weapon hands and combat logic remain unchanged.
-import {attachShadowConcept} from './personnage-shadow-concept.js?v=3.55';
-import {addCapeToOriginalSoldier} from './personnage-cape-addon.js?v=3.55';
+import {attachShadowConcept} from './personnage-shadow-concept.js?v=3.66.0';
+import {addCapeToOriginalSoldier} from './personnage-cape-addon.js?v=3.66.0';
 
 export function applyShadowMaterials(kit,profile){
   // Keep both teams' glow/accent colors while replacing the pale AÉGIS shell
@@ -30,9 +30,11 @@ export function installShadowUnit(model,profile){
   model.animate=(time,moving,recoil,reload,trigger,dt,flight={})=>{
     armour.restoreAttachments();
     animate(time,moving,recoil,reload,trigger,dt,flight);
-    const movement=flight.sprint?'run':flight.crouched&&moving?'crouchWalk':
-      moving?'walk':flight.airborne?'jump':'idle';
-    cape.update(time,movement,.63);
+    const locomotion=model.locomotion||{};
+    const travelling=(locomotion.speed||0)>.1;
+    const movement=flight.airborne?'jump':flight.crouched&&travelling?'crouchWalk':
+      model.nativeMotion==='run'?'run':travelling?'walk':'idle';
+    cape.update(time,movement,.63,{velocity:locomotion.forward||0,lateral:locomotion.lateral||0,turn:locomotion.turn||0});
   };
   const dispose=model.dispose.bind(model);
   model.dispose=()=>{

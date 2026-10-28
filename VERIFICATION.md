@@ -1,3 +1,13 @@
+# Pink War 3.66 — GHJU et LYLU Shadow VII
+
+578 tests Node réussis, aucun échec ni test ignoré. Dix nouveaux contrôles couvrent les deux personnages, les sommets des lots GPU comparés aux vraies attaches des os sous déplacements, hauteur, échelle, accroupissement et saut ; la cadence, le recul, le pas latéral, les neuf armes, la pause, les appuis au sol, la réception et le tissu. Les contrôles historiques utilisent un déplacement réel pour vérifier la course et le nouvel évasement de cape.
+
+Les personnages sont lancés depuis le vrai menu, parcourent l’Arène par W en troisième personne par V et tirent par Espace, avec diminution des munitions. Les deux parcours ne produisent aucune erreur JavaScript ni ressource locale manquante. L’atelier autonome chargé sans réseau affiche GHJU et LYLU, permet leur sélection et les pas en arrière sur viewport 390 × 844. Captures et [rapport](docs/pink-wars/HEROES_BROWSER_VERIFICATION.json) joints aux [notes 3.66](docs/pink-wars/MISE_A_JOUR_366.md).
+
+Le comptage de l’atelier passe de 121 à 58 appels de rendu dans la même vue, avec 19 lots d’armure partageant les 34 os natifs. Limites : Chromium/SwiftShader et framebuffer réduit, caméra préparée ; aucun test de Safari/iPhone ou Quest physique et aucune mesure de FPS matériel. Les illustrations originales ne sont pas retouchées.
+
+---
+
 # Pink War 3.65 — RECO1 intégré
 
 RECO1 V10 remplace la Sentinelle légère (`seer`) via la fabrique commune, en campagne, Arène et AT HOME. Rig RLH natif de 41 os et cinq clips, 18 os de rendu, 17 lots partagés et 59 742 triangles. Campagne/Arène : 750 PV de base ; projectiles sur blindage ×0,5 et sur optiques ×0,8 avant multiplicateur de tête. Les autres modes conservent leurs coefficients de difficulté existants.

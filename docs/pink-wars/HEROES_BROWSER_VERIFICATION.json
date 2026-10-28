@@ -1,0 +1,178 @@
+{
+  "reports": [
+    {
+      "id": "ghju",
+      "start": {
+        "time": 41997.89999999851,
+        "x": 0,
+        "z": 22,
+        "name": "GHJU",
+        "version": "3.66.0"
+      },
+      "run": {
+        "name": "GHJU",
+        "motion": "run",
+        "locomotion": {
+          "speed": 6.998945037281866,
+          "forward": 6.999999999999989,
+          "lateral": 0,
+          "turn": 0,
+          "legYaw": 0,
+          "backward": false,
+          "planted": [
+            false,
+            false
+          ],
+          "airborne": false,
+          "verticalSpeed": 0,
+          "landing": 0
+        },
+        "visible": true,
+        "batches": 19,
+        "x": 0,
+        "z": 18.149929999999983
+      },
+      "after": {
+        "motion": "rifle",
+        "ammo": 23,
+        "render": {
+          "frame": 23,
+          "calls": 131,
+          "triangles": 699491,
+          "points": 160,
+          "lines": 104
+        }
+      },
+      "errors": [],
+      "missing": []
+    },
+    {
+      "id": "lylu",
+      "start": {
+        "time": 35926.599999997765,
+        "x": 0,
+        "z": 22,
+        "name": "LYLU",
+        "version": "3.66.0"
+      },
+      "run": {
+        "name": "LYLU",
+        "motion": "run",
+        "locomotion": {
+          "speed": 6.998945037281866,
+          "forward": 6.999999999999989,
+          "lateral": 0,
+          "turn": 0,
+          "legYaw": 0,
+          "backward": false,
+          "planted": [
+            false,
+            false
+          ],
+          "airborne": false,
+          "verticalSpeed": 0,
+          "landing": 0
+        },
+        "visible": true,
+        "batches": 19,
+        "x": 0,
+        "z": 18.149929999999983
+      },
+      "after": {
+        "motion": "rifle",
+        "ammo": 7,
+        "render": {
+          "frame": 23,
+          "calls": 134,
+          "triangles": 694871,
+          "points": 160,
+          "lines": 104
+        }
+      },
+      "errors": [],
+      "missing": []
+    },
+    {
+      "offline": {
+        "character": "ghju",
+        "motion": "back",
+        "nativeMotion": "walkRifle",
+        "frames": 8,
+        "width": 390
+      }
+    },
+    {
+      "offline": {
+        "character": "lylu",
+        "motion": "back",
+        "nativeMotion": "walkRifle",
+        "frames": 12,
+        "width": 390
+      }
+    }
+  ],
+  "errors": [],
+  "note": "Real menu, W/V/Space input, actual shipped frame. Manual simulation frames, reduced SwiftShader framebuffer and prepared capture camera. Standalone workshop fully offline.",
+  "comparison": {
+    "before": {
+      "frame": 23,
+      "calls": 121,
+      "triangles": 128604,
+      "points": 0,
+      "lines": 138
+    },
+    "final": {
+      "frame": 23,
+      "calls": 58,
+      "triangles": 131126,
+      "points": 0,
+      "lines": 138
+    }
+  },
+  "environment": {
+    "renderer": "Chromium/SwiftShader WebGL2",
+    "mobile": "390x844 viewport, not physical hardware",
+    "hardwareFPS": "Not measured"
+  },
+  "finalStandalone": {
+    "reports": [
+      {
+        "offline": {
+          "character": "ghju",
+          "motion": "back",
+          "nativeMotion": "walkRifle",
+          "frames": 9,
+          "width": 390
+        }
+      },
+      {
+        "offline": {
+          "character": "lylu",
+          "motion": "back",
+          "nativeMotion": "walkRifle",
+          "frames": 14,
+          "width": 390
+        }
+      }
+    ],
+    "errors": [],
+    "note": "Real menu, W/V/Space input, actual shipped frame. Manual simulation frames, reduced SwiftShader framebuffer and prepared capture camera. Standalone workshop fully offline."
+  },
+  "tests": {
+    "total": 578,
+    "pass": 578,
+    "fail": 0,
+    "newHeroCases": 10
+  },
+  "standalone": {
+    "filename": "PINK_WARS_GHJU_LYLU_3_66.html",
+    "bytes": 13879811,
+    "sha256": "9132b4d832b4b1d23cf7a85c7f692771f1113027d9065e86b3c717c5ea9bb324",
+    "weaponsCheckedOffline": [
+      4,
+      6,
+      7,
+      8
+    ]
+  }
+}
