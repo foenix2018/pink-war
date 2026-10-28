@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="icon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pink Wars — 05 La Ligne Noyée</title>
+<meta name="description" content="Pink Wars, chapitre 05 : la Ligne 9 inondée sous les Halles-Basses de Vesper. Relancer les pompes P9, ouvrir l’écluse, découvrir ce qu’ORDRE cache sous les secteurs évacués.">
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,Arial,sans-serif;background:#05070a;color:#eef1f6}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#05070a}
+canvas#game{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#shade{position:fixed;inset:0;z-index:8;display:grid;place-items:center;padding:18px;overflow:auto;
+ background:radial-gradient(ellipse at 50% 108%,#2a9bd633,transparent 52%),radial-gradient(ellipse at 18% 20%,#ffa64a22,transparent 40%),linear-gradient(180deg,#0a0f16 0%,#0b141c 46%,#081016 70%,#05070a 100%)}
+.panel{max-width:620px;width:100%;padding:30px;border:1px solid #e8eef24d;border-radius:20px;background:linear-gradient(115deg,#0d1822ee,#0a131bcc);box-shadow:0 10px 80px #000c;backdrop-filter:blur(14px)}
+.kicker{font-size:12px;letter-spacing:.26em;color:#8fd0ff;font-weight:800}
+h1{margin:12px 0;font-size:clamp(34px,5vw,58px);font-weight:900;line-height:.95;text-transform:uppercase;letter-spacing:-.05em}
+em{font-style:normal;color:#5fb8ff}p{line-height:1.55;color:#c3cdd6}button,select{font:inherit;cursor:pointer}
+.primary{display:block;background:#e8f6ff;color:#0b1020;font-weight:900;border:0;border-radius:12px;padding:15px 24px;width:100%;margin:20px 0 10px;letter-spacing:.1em}
+.primary:hover{background:#ffffff}.primary:disabled{opacity:.6;cursor:wait}.small{font-size:12px;color:#a7b4bf}
+.chars{display:flex;gap:8px;margin-top:14px}.chars a{flex:1;text-align:center;padding:9px;border:1px solid #e8eef24d;border-radius:10px;color:#e8eef2;text-decoration:none;font-size:12px;font-weight:800;letter-spacing:.14em}
+.chars a[aria-current=true]{background:#e8eef21f;border-color:#e8eef2aa}
+#hud{position:fixed;inset:0;pointer-events:none;z-index:2;text-shadow:0 2px 4px #000}
+#top{position:absolute;top:max(60px,calc(env(safe-area-inset-top) + 47px));left:max(13px,env(safe-area-inset-left))}
+#objective{display:none;margin:0;padding:10px 13px;border-left:2px solid #5fb8ff;max-width:min(380px,calc(100vw - 72px));background:rgba(9,14,22,.86);font-size:12px;line-height:1.4;font-weight:800;letter-spacing:.04em}
+#hint{display:none;margin-top:4px;padding:8px 13px;max-width:min(380px,calc(100vw - 72px));background:rgba(9,14,22,.7);font-size:12px;color:#c3cdd6;line-height:1.4}
+body.pw-objective-open #objective,body.pw-objective-open #hint{display:block}
+#crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:18px;height:18px}
+#crosshair:before,#crosshair:after{content:"";position:absolute;top:8px;left:0;background:#f1f6fa;box-shadow:0 0 5px #8fd0ff}
+#crosshair:before{height:2px;width:18px}#crosshair:after{width:2px;height:18px;top:0;left:8px}
+body.aiming #crosshair{opacity:.23;transform:translate(-50%,-50%) scale(.52)}
+#prompt{position:absolute;top:45%;left:50%;transform:translate(-50%,-50%);background:#0b1426e0;border:1px solid #5fb8ffaa;border-radius:8px;padding:8px 13px;font-weight:900;font-size:12px;letter-spacing:.06em;display:none;max-width:86vw}
+#notice{position:absolute;top:30%;left:50%;transform:translateX(-50%);padding:10px 18px;background:#0b1426dd;border-radius:8px;letter-spacing:.12em;font-weight:900;font-size:12px;color:#cfe8ff;display:none;max-width:min(400px,calc(100vw - 28px));text-align:center}
+#subtitle{position:absolute;left:50%;bottom:max(118px,calc(env(safe-area-inset-bottom) + 108px));transform:translateX(-50%);width:min(720px,calc(100vw - 28px));padding:10px 16px;background:rgba(5,9,15,.78);border-radius:10px;font-size:15px;line-height:1.45;display:none;text-align:center}
+#subtitle b{font-weight:900;letter-spacing:.06em;margin-right:4px}
+#timer{position:absolute;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:min(380px,calc(100vw - 120px));padding:7px 10px;background:rgba(9,14,22,.82);border:1px solid #5fb8ff66;border-radius:9px}
+#timer-label{font-size:11px;font-weight:900;letter-spacing:.12em;text-align:center}#timer-track{height:5px;margin-top:5px;background:#ffffff1f;border-radius:3px;overflow:hidden}
+#timer-bar{height:100%;width:100%;background:#5fb8ff}#timer.danger{border-color:#ff5a4a99}#timer.danger #timer-bar{background:#ff5a4a}#timer.danger #timer-label{color:#ffc4bc}
+#doc{position:fixed;inset:0;z-index:9;display:grid;place-items:center;padding:18px;background:#000a}
+#doc[hidden]{display:none}
+#doc article{max-width:560px;width:100%;max-height:calc(100vh - 36px);overflow:auto;padding:26px 28px;background:#e9e3d2;color:#1d1f22;border-radius:6px;box-shadow:0 14px 60px #000;font-family:"Courier New",ui-monospace,monospace}
+#doc h2{margin:0 0 14px;font-size:17px;letter-spacing:.04em;font-family:Inter,system-ui,sans-serif;font-weight:900}#doc p{color:#2b2d31;font-size:14.5px;line-height:1.55;margin:0 0 11px}
+#doc button{margin-top:10px;background:#1d1f22;color:#f4efe2;border:0;border-radius:8px;padding:10px 16px;font-weight:800;letter-spacing:.08em;font-family:Inter,system-ui,sans-serif}
+#damage{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 95px transparent;transition:box-shadow .2s}
+#renderer{display:none}
+#quality{display:none;position:fixed;right:max(13px,env(safe-area-inset-right));top:max(62px,calc(env(safe-area-inset-top) + 46px));z-index:7;background:#0c1a23de;color:#c5d6d9;border:1px solid #526777a1;padding:6px;font-size:11px}
+body.pw-graphics-open #quality{display:block}
+.pw-minimal-action{position:fixed;z-index:7;top:max(13px,env(safe-area-inset-top));width:38px;height:38px;display:grid;place-items:center;background:rgba(9,14,22,.83);color:#e8eef2;border:1px solid #e8eef255;border-radius:9px;font-size:20px;pointer-events:auto;touch-action:manipulation}
+#pwMission{left:max(13px,env(safe-area-inset-left))}#pwSettings{right:max(13px,env(safe-area-inset-right))}
+#m02-touch-controls{position:fixed;inset:0;pointer-events:none;z-index:5;display:none}
+#m02-touch-controls .m02-stick-knob{position:absolute;left:calc(50% - 18px);top:calc(50% - 18px);width:36px;height:36px;border-radius:50%;background:#e8f6ff99;border:1px solid #ffffff}
+#m02-touch-controls .m02-stick-ring{position:relative}
+@media(pointer:coarse){#m02-touch-controls{display:block}#hud #prompt{top:41%}#subtitle{font-size:13px;width:min(560px,calc(100vw - 28px));bottom:40vh}}
+/* The Fracture pause button (top right) is the only pause control on this page. */
+#m02-touch-controls [data-m02=pause]{display:none!important}
+/* Briefing, defeat and ending panels cover the combat HUD. */
+body.pw-shaded .pw-hud,body.pw-shaded #hud,body.pw-shaded .pw-minimal-action{visibility:hidden}
+</style>
+<link rel="stylesheet" href="mobile-controls-v7.css?v=3.65"><link rel="stylesheet" href="fracture.css?v=3.65">
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="damage"></div>
+<div id="hud" hidden>
+  <div id="top"><div id="objective">La Ligne Noyée</div><div id="hint"></div></div>
+  <div id="timer" hidden><div id="timer-label"></div><div id="timer-track"><div id="timer-bar"></div></div></div>
+  <div id="crosshair"></div><div id="prompt"></div><div id="notice"></div><div id="subtitle" aria-live="polite"></div><span id="renderer"></span>
+</div>
+<div id="doc" hidden><article><h2 id="doc-title"></h2><div id="doc-body"></div><button id="doc-close" type="button">REPOSER LE DOCUMENT (F)</button></article></div>
+<button id="pwMission" class="pw-minimal-action" aria-label="Afficher l’objectif" title="Objectif" onclick="document.body.classList.toggle('pw-objective-open');document.body.classList.remove('pw-graphics-open')">◎</button><button id="pwSettings" class="pw-minimal-action" aria-label="Afficher les réglages" title="Réglages" onclick="document.body.classList.toggle('pw-graphics-open');document.body.classList.remove('pw-objective-open')">⚙</button><select id="quality" aria-label="Qualité graphique"><option value="normal">QUALITÉ NORMALE</option><option value="low">PERFORMANCE</option></select>
+<div id="shade"><div class="panel">
+  <div class="kicker">PINK WARS / ACTE II · SOUS LA VILLE · CHAPITRE 05</div>
+  <h1 id="panel-title">La Ligne <em>noyée</em></h1>
+  <p id="panel-text">Vesper, sept ans après la chute de 2189. Depuis trois jours, l’eau a pris la Ligne 9 sous les Halles-Basses et les dispensaires des Épars n’ont plus de route sèche. Nira Solen a besoin de quelqu’un pour relancer à la main les vieilles pompes P9. LYLU connaît cette station : il y est descendu le soir de la chute.</p>
+  <p class="small" id="panel-small">Mission longue (≈ 35 à 45 min) : station sans courant, marché effondré, quai inondé, tunnel technique, salle des pompes, écluse. Lampe frontale (L), documents à lire (F), points de contrôle à chaque étape. Bouclier d’armure, mêlée (X), charge à impulsion (B).</p>
+  <div class="chars"><a href="?character=lylu" id="pick-lylu">LYLU · CARA</a><a href="?character=ghju" id="pick-ghju">GHJU · GABY</a></div>
+  <button id="start" class="primary">DESCENDRE DANS LA LIGNE 9 →</button>
+  <a href="./ligne9.html?renderer=webgl" id="compat" style="display:inline-block;color:#8fd0ff;font-size:13px;margin-bottom:12px">Mode compatibilité WebGL (si écran noir)</a>
+  <div id="status" class="small">Clavier / souris, manette, tactile ou casque WebXR · rendu WebGPU avec repli WebGL</div>
+</div></div>
+<script type="module">
+const ghju=new URLSearchParams(location.search).get('character')==='ghju';
+document.getElementById(ghju?'pick-ghju':'pick-lylu').setAttribute('aria-current','true');
+if(ghju){document.getElementById('panel-text').textContent='Vesper, sept ans après la chute de 2189. Depuis trois jours, l’eau a pris la Ligne 9 sous les Halles-Basses et les dispensaires des Épars n’ont plus de route sèche. Nira Solen a besoin de quelqu’un pour relancer à la main les vieilles pompes P9. GHJU descend avec Gaby là où LYLU est allé seul le soir de la chute.';document.getElementById('compat').href='./ligne9.html?character=ghju&renderer=webgl';}
+import('./ligne9.js?v=3.65').catch(error=>{
+ const status=document.getElementById('status'),button=document.getElementById('start');
+ if(status)status.textContent='Erreur de chargement : '+(error?.message||String(error))+' — essaye le mode compatibilité WebGL.';
+ if(button){button.disabled=false;button.textContent='RECHARGER →';button.addEventListener('click',()=>location.reload());}
+ console.error('[Ligne 9] chargement impossible',error);
+});
+</script>
+</body></html>

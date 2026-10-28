@@ -1,0 +1,249 @@
+{
+ "license": "CC0-1.0",
+ "note": "Poly Haven textures (CC0), 1k JPG reduced to 512 px for Ligne 9.",
+ "textures": [
+  {
+   "file": "l9-anti_skid_tiles_diff_512.jpg",
+   "asset": "anti_skid_tiles",
+   "channel": "diff",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/anti_skid_tiles",
+   "bytes": 16939,
+   "sha256": "0238381a5beee2c40a1dbae8480b89f001af01f787b9d7287f21e039cc5ba5c5"
+  },
+  {
+   "file": "l9-anti_skid_tiles_nor_512.jpg",
+   "asset": "anti_skid_tiles",
+   "channel": "nor",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/anti_skid_tiles",
+   "bytes": 21503,
+   "sha256": "97a53217ac2229c4ff6738f1c3214095cf1d29238a1fb60c94229c89df7152c7"
+  },
+  {
+   "file": "l9-anti_skid_tiles_rough_512.jpg",
+   "asset": "anti_skid_tiles",
+   "channel": "rough",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/anti_skid_tiles",
+   "bytes": 40680,
+   "sha256": "eb1ab64764943e020bae90d16f13404a9c1776d477cb92aca28d3ae2e1c4f741"
+  },
+  {
+   "file": "l9-concrete_wall_006_diff_512.jpg",
+   "asset": "concrete_wall_006",
+   "channel": "diff",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/concrete_wall_006",
+   "bytes": 37106,
+   "sha256": "27af5e04463317b65042f034eb77c8848098a5627872c5db2fc7e5e46717f5f0"
+  },
+  {
+   "file": "l9-concrete_wall_006_nor_512.jpg",
+   "asset": "concrete_wall_006",
+   "channel": "nor",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/concrete_wall_006",
+   "bytes": 58474,
+   "sha256": "f9c2d1b9794182f84be3208dcd31c0973466d1acca6c9793a8972e78889f8b82"
+  },
+  {
+   "file": "l9-concrete_wall_006_rough_512.jpg",
+   "asset": "concrete_wall_006",
+   "channel": "rough",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/concrete_wall_006",
+   "bytes": 2581,
+   "sha256": "00e034ede400929465371cc3d651dff6f60b0d20415ce45917e5408c68f021ab"
+  },
+  {
+   "file": "l9-dirty_tiles_diff_512.jpg",
+   "asset": "dirty_tiles",
+   "channel": "diff",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/dirty_tiles",
+   "bytes": 21964,
+   "sha256": "77cf6820ed437a15715c79c08ef3cf51035f68057e422f54405f45eb9677a1da"
+  },
+  {
+   "file": "l9-dirty_tiles_nor_512.jpg",
+   "asset": "dirty_tiles",
+   "channel": "nor",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/dirty_tiles",
+   "bytes": 12962,
+   "sha256": "ba5e4235e9d538d379073a70146ed3b58317206e87f5dd3b25d24dfa8feffb69"
+  },
+  {
+   "file": "l9-dirty_tiles_rough_512.jpg",
+   "asset": "dirty_tiles",
+   "channel": "rough",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/dirty_tiles",
+   "bytes": 29191,
+   "sha256": "cddcce11b53c08d85d17020da7491fe67c4191be2b2fe593e2473406b764a89b"
+  },
+  {
+   "file": "l9-green_metal_rust_diff_512.jpg",
+   "asset": "green_metal_rust",
+   "channel": "diff",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/green_metal_rust",
+   "bytes": 18690,
+   "sha256": "d19e13168e68fb3f12ad16ae2760ba5bfe31eede620974e6247f4aa62dfc63ff"
+  },
+  {
+   "file": "l9-green_metal_rust_nor_512.jpg",
+   "asset": "green_metal_rust",
+   "channel": "nor",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/green_metal_rust",
+   "bytes": 9760,
+   "sha256": "5eeee084d18349f4ef67c28c6cd3e310b83442ea00a7b380734ba2bd82df9b66"
+  },
+  {
+   "file": "l9-green_metal_rust_rough_512.jpg",
+   "asset": "green_metal_rust",
+   "channel": "rough",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/green_metal_rust",
+   "bytes": 10147,
+   "sha256": "0ee2ef573416b212fe747094b2d27a8d3196e40756fcdd08dfc97814311010f6"
+  },
+  {
+   "file": "l9-long_white_tiles_diff_512.jpg",
+   "asset": "long_white_tiles",
+   "channel": "diff",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/long_white_tiles",
+   "bytes": 44680,
+   "sha256": "4c7e23c79c317a4cc601f74b78c5ae93f65959c3a7b701aeb72b5f42dd041ba8"
+  },
+  {
+   "file": "l9-long_white_tiles_nor_512.jpg",
+   "asset": "long_white_tiles",
+   "channel": "nor",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/long_white_tiles",
+   "bytes": 30419,
+   "sha256": "a6dd53b153ac192ccc4b9aeb2e4635e8ea6da75ed1eb049568f1db7b7f8cceaa"
+  },
+  {
+   "file": "l9-long_white_tiles_rough_512.jpg",
+   "asset": "long_white_tiles",
+   "channel": "rough",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/long_white_tiles",
+   "bytes": 32396,
+   "sha256": "16441d73e70f64db8a56702696af7e2b62374a72e4b966de31b3167e09b7f6e8"
+  },
+  {
+   "file": "l9-metal_plate_diff_512.jpg",
+   "asset": "metal_plate",
+   "channel": "diff",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/metal_plate",
+   "bytes": 44097,
+   "sha256": "5fac6aaa2e497650455eb85ba77df9383cb422f75f28137bb28d1698d43e9de9"
+  },
+  {
+   "file": "l9-metal_plate_nor_512.jpg",
+   "asset": "metal_plate",
+   "channel": "nor",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/metal_plate",
+   "bytes": 43753,
+   "sha256": "988879c09b84e40c5ce55cfdb0f568a0a722827fc3c6100466036b1a2b6188e3"
+  },
+  {
+   "file": "l9-metal_plate_rough_512.jpg",
+   "asset": "metal_plate",
+   "channel": "rough",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/metal_plate",
+   "bytes": 61961,
+   "sha256": "d06db4f89864cc38c785e7f181868960c25a840c08a2a78427adbf5d6616b42e"
+  },
+  {
+   "file": "l9-rusted_shutter_diff_512.jpg",
+   "asset": "rusted_shutter",
+   "channel": "diff",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/rusted_shutter",
+   "bytes": 63085,
+   "sha256": "6b87bd560566943e5a15e336608f3fc79d9b278d6dd50a45a3b99ca486768cf6"
+  },
+  {
+   "file": "l9-rusted_shutter_nor_512.jpg",
+   "asset": "rusted_shutter",
+   "channel": "nor",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/rusted_shutter",
+   "bytes": 68607,
+   "sha256": "c7d984713befab711922b911429a3d00e833c7d42295e24833124f6a86bccdd8"
+  },
+  {
+   "file": "l9-rusted_shutter_rough_512.jpg",
+   "asset": "rusted_shutter",
+   "channel": "rough",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/rusted_shutter",
+   "bytes": 30411,
+   "sha256": "b778828cc414d72ad1e8eb464b5615e52f8a6bc609cef44a8d1f477ea02a62b8"
+  },
+  {
+   "file": "l9-rusty_metal_grid_diff_512.jpg",
+   "asset": "rusty_metal_grid",
+   "channel": "diff",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/rusty_metal_grid",
+   "bytes": 49642,
+   "sha256": "05ed3099d6b47e220bc63f69e9c7d518d79652974d13dbfb3b4d12a580235997"
+  },
+  {
+   "file": "l9-rusty_metal_grid_nor_512.jpg",
+   "asset": "rusty_metal_grid",
+   "channel": "nor",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/rusty_metal_grid",
+   "bytes": 16044,
+   "sha256": "3baea6d44302ac17b9c8cd28b0611ed238bc17220b0cd4b32390357cd5f511d0"
+  },
+  {
+   "file": "l9-rusty_metal_grid_rough_512.jpg",
+   "asset": "rusty_metal_grid",
+   "channel": "rough",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/rusty_metal_grid",
+   "bytes": 36981,
+   "sha256": "19160818cf6584160a5e664951c8539f0b0c958e1e0858321fd70855b076c6d5"
+  },
+  {
+   "file": "l9-worn_tile_floor_diff_512.jpg",
+   "asset": "worn_tile_floor",
+   "channel": "diff",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/worn_tile_floor",
+   "bytes": 57521,
+   "sha256": "ace8dd72ba6316c235ae581fa65c22c4b347bfb96869cf0d929241f25f73de88"
+  },
+  {
+   "file": "l9-worn_tile_floor_nor_512.jpg",
+   "asset": "worn_tile_floor",
+   "channel": "nor",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/worn_tile_floor",
+   "bytes": 14166,
+   "sha256": "82c89f629bcff288e8231d845ea93bf9bd01efcc110fccebff5ead41f77ba874"
+  },
+  {
+   "file": "l9-worn_tile_floor_rough_512.jpg",
+   "asset": "worn_tile_floor",
+   "channel": "rough",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/worn_tile_floor",
+   "bytes": 48010,
+   "sha256": "ea635096c4d796554b1d0e353af5494c3323f3f7f995983eb71697f082ff9e2b"
+  }
+ ]
+}

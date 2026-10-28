@@ -80,12 +80,12 @@ let selectedMode=['arena','training','campaign','campaign2'].includes(boot?.mode
 let trainingWeaponIndex=Number.isInteger(boot?.trainingWeaponIndex)&&boot.trainingWeaponIndex>=0&&boot.trainingWeaponIndex<7&&boot.trainingWeaponIndex!==5?boot.trainingWeaponIndex:0;
 function selectMode(mode){
   if(phase!=='lobby'||launchBusy)return;
-  selectedMode=['campaign','campaign2','arena','training'].includes(mode)?mode:'campaign';
+  selectedMode=['campaign','campaign2','ligne9','arena','training'].includes(mode)?mode:'campaign';
   syncMenuArtwork(character.id,selectedMode);
   for(const button of document.querySelectorAll('[data-mode]'))button.setAttribute('aria-pressed',String(button.dataset.mode===selectedMode));
-  $('mission-title').textContent=selectedMode==='campaign2'?'02 — Sous les Néons':selectedMode==='campaign'?'01 — Le dernier signal':selectedMode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
-  $('mission-description').textContent=selectedMode==='campaign2'?'Bas-Niveaux de Vesper : marchés, ruelles pluvieuses, enclave de secours et archives HELIX.':selectedMode==='campaign'?'Ancien poste de secours, évacuation interrompue, journal clandestin et relais ORDRE à saboter. Retrouver une trace de votre famille.':selectedMode==='arena'?'Vingt vagues de machines, six armes et des équipements à récupérer.':'Cibles fixes, proches et lointaines ; trajectoires latérales et avant-arrière ; accélération continue. Mesurez votre précision.';
-  if(world)$('play-label').textContent=selectedMode==='campaign2'?'JOUER LE NIVEAU 2':selectedMode==='campaign'?'JOUER LE NIVEAU 1':selectedMode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
+  $('mission-title').textContent=selectedMode==='ligne9'?'05 — La Ligne Noyée':selectedMode==='campaign2'?'02 — Sous les Néons':selectedMode==='campaign'?'01 — Le dernier signal':selectedMode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
+  $('mission-description').textContent=selectedMode==='ligne9'?'Ligne 9 inondée sous les Halles-Basses : rétablir le courant, relancer les pompes P9, ouvrir l’écluse. Mission longue avec points de contrôle.':selectedMode==='campaign2'?'Bas-Niveaux de Vesper : marchés, ruelles pluvieuses, enclave de secours et archives HELIX.':selectedMode==='campaign'?'Ancien poste de secours, évacuation interrompue, journal clandestin et relais ORDRE à saboter. Retrouver une trace de votre famille.':selectedMode==='arena'?'Vingt vagues de machines, six armes et des équipements à récupérer.':'Cibles fixes, proches et lointaines ; trajectoires latérales et avant-arrière ; accélération continue. Mesurez votre précision.';
+  if(world)$('play-label').textContent=selectedMode==='ligne9'?'JOUER LE CHAPITRE 05':selectedMode==='campaign2'?'JOUER LE NIVEAU 2':selectedMode==='campaign'?'JOUER LE NIVEAU 1':selectedMode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
 }
 for(const button of document.querySelectorAll('[data-mode]'))button.onclick=()=>selectMode(button.dataset.mode);
 // Chapter cards (Histoire) pick the campaign mission once this module owns the launch button; the home
@@ -283,6 +283,12 @@ async function home() {
 $('quit-button').onclick = home; $('end-home').onclick = home;
 // Same mission pages and parameters as the first launch from the home page.
 function openMissionPage(mission){
+  if(mission===5){
+    const page=new URL('./ligne9.html',location.href);page.searchParams.set('character',character.id);page.searchParams.set('v',GAME_VERSION);
+    if(new URLSearchParams(location.search).get('renderer')==='webgl')page.searchParams.set('renderer','webgl');
+    if(settings.quality==='low')page.searchParams.set('quality','low');
+    location.assign(page.href);return;
+  }
   const url=new URL(mission===2?'./level2-test.html':'./vesper-level1-v7.html',location.href);
   for(const [key,value] of [['source','campaign'],['autostart','1'],['character',character.id],['v',GAME_VERSION]])url.searchParams.set(key,value);
   if(mission===1)url.searchParams.set('prologue','done');
@@ -292,6 +298,7 @@ function openMissionPage(mission){
 }
 async function start() {
   if(selectedMode==='campaign2'){openMissionPage(2);return;}
+  if(selectedMode==='ligne9'){openMissionPage(5);return;}
   if(selectedMode==='campaign'&&!vr?.active&&!new URLSearchParams(location.search).has('classic')){openMissionPage(1);return;}
   if (!world||launchBusy) return;
   launchBusy=true;
