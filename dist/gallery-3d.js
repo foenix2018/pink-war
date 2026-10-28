@@ -8,7 +8,7 @@ const canvas = $('native-model'), viewer = $('viewer'), status = $('viewer-messa
 const arButton = $('ar-launch'), modelViewer = $('model');
 const renderer = new WebGPURenderer({canvas, antialias: !/iPhone|Android/i.test(navigator.userAgent), alpha: false, forceWebGL:true});
 const rendererReady=renderer.init();
-const galleryBuildVersion='2026-10-28-ar-v4';
+const galleryBuildVersion='2026-10-28-ar-v5';
 renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.22;
@@ -186,10 +186,20 @@ window.galleryAR=async()=>{
    active.root.updateMatrixWorld(true);
    active.root.traverse(source=>{
     if(!source.isMesh&&!source.isSkinnedMesh)return;
-    if(!source.visible||!source.geometry?.attributes?.position)return;
+    if(!source.geometry?.attributes?.position)return;
+    // Visibility is inherited: inactive weapon models are hidden by parent groups.
+    for(let ancestor=source;ancestor;ancestor=ancestor.parent){if(!ancestor.visible)return;}
+    // Geometry belongs to its native rig; export in world coordinates only after filtering.
     const material=Array.isArray(source.material)?source.material[0]:source.material;
     const copy=new T.Mesh(source.geometry.clone(),new T.MeshStandardMaterial({color:material?.color?.clone?.()||new T.Color(0x8994a5),metalness:Math.min(.8,material?.metalness??.35),roughness:material?.roughness??.5,side:T.DoubleSide}));
-    source.updateWorldMatrix(true,false);copy.applyMatrix4(source.matrixWorld);copy.updateMatrix();exportRoot.add(copy);
+    source.updateWorldMatrix(true,false);
+    // Freeze the active pose; skinned geometry must be baked, not exported as an unbound rig.
+    if(source.isSkinnedMesh&&typeof source.applyBoneTransform==='function'){
+     const pos=copy.geometry.attributes.position,v=new T.Vector3();
+     for(let i=0;i<pos.count;i++){v.fromBufferAttribute(pos,i);source.applyBoneTransform(i,v);pos.setXYZ(i,v.x,v.y,v.z);}
+     pos.needsUpdate=true;copy.geometry.computeVertexNormals();
+    }
+    copy.applyMatrix4(source.matrixWorld);copy.updateMatrix();exportRoot.add(copy);
    });
    if(!exportRoot.children.length)throw Error('Aucun maillage compatible avec USDZ');
    const bytes=await new USDZExporter().parseAsync(exportRoot,{maxTextureSize:1024});
