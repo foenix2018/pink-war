@@ -8,7 +8,7 @@ const canvas = $('native-model'), viewer = $('viewer'), status = $('viewer-messa
 const arButton = $('ar-launch'), modelViewer = $('model');
 const renderer = new WebGPURenderer({canvas, antialias: !/iPhone|Android/i.test(navigator.userAgent), alpha: false, forceWebGL:true});
 const rendererReady=renderer.init();
-const galleryBuildVersion='2026-10-28-ar-v8';
+const galleryBuildVersion='2026-10-28-ar-v9';
 renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.22;
@@ -53,7 +53,7 @@ async function actualObject(name){
   soldier.setWeapon(name==='GHJU'?7:6);
   soldier.setLevel(1);
   soldier.animate(0,false,0,0,0,.016,{preview:true});
-  return {root:soldier.root,animate:(t,dt)=>soldier.animate(t,false,0,0,0,dt,{preview:true}),source:'Rig et armure Shadow Unit du jeu'};
+  return {root:soldier.root,animate:(t,dt)=>soldier.animate(t,false,0,0,0,dt,{preview:true}),source:'Rig et armure Shadow Unit du jeu',soldier,kit};
  }
  if(name==='GABY'||name==='CARA'){
   const {createAICompanion}=await import('./ai-companions.js');
@@ -191,6 +191,13 @@ window.galleryAR=async()=>{
      for(const weapon of node.userData.weaponModels)weaponRoots.add(weapon);
     }
    });
+   if(active.soldier){
+    const [{createGlove},{poseUnarmedForInspection}]=await Promise.all([import('./hands.js'),import('./rlh-firefighter.js')]);
+    const inspectionGloves=[createGlove(active.kit.gloves,{mirror:true,sleeve:false}),createGlove(active.kit.gloves,{mirror:false,sleeve:false})];
+    for(const glove of inspectionGloves)active.root.add(glove);
+    poseUnarmedForInspection(active.soldier,inspectionGloves);
+    active.soldier.shadowUnit?.cape?.update?.(0,'idle',0);
+   }
    active.root.updateMatrixWorld(true);
    active.root.traverse(source=>{
     if(!source.isMesh&&!source.isSkinnedMesh)return;
@@ -228,6 +235,7 @@ window.galleryAR=async()=>{
     if(size.y>.01){const scale=(active.name==='GHJU'?1.7:1.8)/size.y;for(const mesh of exportRoot.children){mesh.position.sub(center).multiplyScalar(scale);mesh.scale.multiplyScalar(scale);}}
    }
    const bytes=await new USDZExporter().parseAsync(exportRoot,{maxTextureSize:1024});
+   if(active.soldier){active.root.children.filter(c=>c.userData?.rlh&&c!==active.soldier.freeHand).forEach(c=>{if(c.parent===active.root)c.removeFromParent();});active.soldier.gun.visible=true;active.soldier.freeHand.visible=true;}
    const url=URL.createObjectURL(new Blob([bytes],{type:'model/vnd.usdz+zip'}));exportUrls.push(url);modelViewer.setAttribute('ios-src',url);
    // Quick Look opens from the second direct user gesture, after conversion.
   }else{
