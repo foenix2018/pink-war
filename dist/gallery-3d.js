@@ -8,7 +8,7 @@ const canvas = $('native-model'), viewer = $('viewer'), status = $('viewer-messa
 const arButton = $('ar-launch'), modelViewer = $('model');
 const renderer = new WebGPURenderer({canvas, antialias: !/iPhone|Android/i.test(navigator.userAgent), alpha: false, forceWebGL:true});
 const rendererReady=renderer.init();
-const galleryBuildVersion='2026-10-28-diagnostic-2';
+const galleryBuildVersion='2026-10-28-palette-fix';
 renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.22;
@@ -26,7 +26,12 @@ const palette=(profile)=>({
  steel:new T.MeshStandardMaterial({color:profile?.armor.steel??0x89929c,metalness:.84,roughness:.36}),
  dark:new T.MeshStandardMaterial({color:profile?.armor.dark??0x1b2029,metalness:.55,roughness:.48}),
  armor:new T.MeshStandardMaterial({color:profile?.armor.rose??0xe52d83,metalness:.72,roughness:.38}),
- armorLight:new T.MeshStandardMaterial({color:profile?.armor.pearl??0xf2dfe9,metalness:.7,roughness:.33})
+ armorLight:new T.MeshStandardMaterial({color:profile?.armor.pearl??0xf2dfe9,metalness:.7,roughness:.33}),
+ rose:new T.MeshStandardMaterial({color:profile?.armor.rose??0xe52d83,metalness:.65,roughness:.32}),
+ cyan:new T.MeshStandardMaterial({color:0x67dff0,metalness:.3,roughness:.3}),
+ pale:new T.MeshStandardMaterial({color:0xe8eaf1,metalness:.25,roughness:.4}),
+ violet:new T.MeshStandardMaterial({color:0x9870cf,metalness:.5,roughness:.4}),
+ monster:new T.MeshStandardMaterial({color:0x4d5861,metalness:.5,roughness:.5})
 });
 let item=null, requestId=0, running=false, autoRotate=true, bearing=.48, elevation=.18, zoom=4.1, previousTime=0, exportUrls=[], arReady=false;
 const weaponNames={'VX-9':0,'NEXUS V9':1,'ARES X9':2,'THORN':3,'NOVA':4,'AURORA':5,'M–12':6,'VX-9 DUO':7,'VORTEX AR-7':8};
