@@ -38,7 +38,8 @@ test('M01 and M02 each include a drawable narrative image',()=>{
 
 test('M02 is linked into the normal mission selection and M01 finale',()=>{
  const home=file('index.html'),entry=file('entry.js'),game=file('game.js'),level=file('level2-test.js');
- assert.match(home,/data-mode="campaign2"/);
+ assert.match(home,/data-chapter="campaign2"/,'chapter 02 is chosen from the Histoire page');
+ assert.match(game,/querySelectorAll\('\[data-chapter\]'\)/,'the game module honours the chapter choice after a first launch');
  assert.match(entry,/mode==='campaign2'/);
  assert.match(entry,/level2-test\.html/);
  assert.match(game,/attachCampaignStory/);

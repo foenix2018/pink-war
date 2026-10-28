@@ -447,8 +447,9 @@ export class ArenaGame {
     const angle = this.random() * Math.PI * 2;
     const available=this.activePortals.filter(p=>p.openedAt<=this.time);
     const site=available.length?available[ordinal%available.length]:this.activePortals[0]||PORTAL;
-    const x=form==='sentinel'?this.player.x:site.x+Math.sin(site.yaw||0)*3.2+Math.cos(angle)*.95;
-    const z=form==='sentinel'?this.player.z-14:site.z+Math.cos(site.yaw||0)*3.2+Math.sin(angle)*.95;
+    const front=form==='sentinel'?this.sentinelSpawn():null;
+    const x=front?front.x:site.x+Math.sin(site.yaw||0)*3.2+Math.cos(angle)*.95;
+    const z=front?front.z:site.z+Math.cos(site.yaw||0)*3.2+Math.sin(angle)*.95;
     const aimHeight = probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : ['seer','listener'].includes(form) ? 1.38 : ['brute','bulwark'].includes(form) ? 1.42 : 1.15;
     const homeHeight = this.surfaceHeight(x, z,this.time,.3);
     const enemy = { id: this.nextId++, x, z, elevation: homeHeight + (probe ? PROBE.hover : 0),grounded:!probe,verticalSpeed:0,homeHeight,
@@ -463,6 +464,18 @@ export class ArenaGame {
 
     if(form==='sentinel'){enemy.awareness='engaged';enemy.lastSeenAt=this.time;enemy.yaw=Math.PI;}
     this.enemies.push(enemy); this.toSpawn--; this.event('spawn', { id: enemy.id, x: enemy.x, y: enemy.elevation + enemy.aimHeight, z: enemy.z });
+  }
+  // The first-wave Sentinel stands in plain view ahead of the player: free ground for its 1.4 m body (no
+  // wall, cover block or portal frame) and an open line of sight, else the next nearby spot.
+  sentinelSpawn() {
+    const p=this.player,radius=1.4,base=p.elevation||0,edge=ARENA_SIZE/2-radius-1;
+    for(const distance of [14,12,16,10,18,8])for(const side of [0,-2.5,2.5,-5,5]){
+      const x=clamp(p.x+side,-edge,edge),z=clamp(p.z-distance,-edge,edge),y=this.surfaceHeight(x,z,this.time,.3);
+      const solid=this.obstacles.some(b=>!b.walkableSurface&&Math.abs(x-b.x)<b.hx+radius&&Math.abs(z-b.z)<b.hz+radius&&y<(b.y||0)+b.height-.02&&y+3.2>(b.y||0));
+      const portal=this.activePortals.some(site=>Math.hypot(x-site.x,z-site.z)<3.5);
+      if(!solid&&!portal&&!this.blocked({x:p.x,y:base+1.5,z:p.z},{x,y:y+2,z}))return {x,z};
+    }
+    return {x:p.x,z:clamp(p.z-14,-edge,edge)};
   }
   searchWaypoint(enemy,target) {
     // Search uses the last sound/visual contact, never the hidden player's live

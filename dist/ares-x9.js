@@ -170,6 +170,7 @@ let cached=null;
 function createPrototype(){
   const source=buildRifle();
   source.updateMatrixWorld(true);
+  const sightCentre=source.getObjectByName('Réticule numérique').getWorldPosition(new THREE.Vector3());
   const batches=new Map();
   source.traverse(o=>{
     if(!o.isMesh)return;
@@ -199,8 +200,10 @@ function createPrototype(){
     for(const part of geos)part.dispose();
   }
   source.traverse(o=>{if(o.isMesh)o.geometry.dispose();});
+  gun.updateMatrixWorld(true);palm.localToWorld(sightCentre);
   Object.assign(gun.userData,{
-    authored:true,authoredOptic:true,integratedEmitter:true,
+    authored:true,authoredOptic:true,integratedEmitter:true,ownReticle:true,
+    optic:{y:+sightCentre.y.toFixed(4),z:+sightCentre.z.toFixed(4),radius:+(.336*.092).toFixed(4)},
     muzzle:[0,.071,-.895],modelName:'ARES X9',
     optimizedDrawCalls:parts,source:'ARES X9 WebGPU original'
   });

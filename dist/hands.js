@@ -15,8 +15,8 @@ const trackedElbowPlate=armorPanel([[-.034,-.047],[.034,-.047],[.049,.020],[.031
 const trackedPlateGeometry=merge([bake(trackedElbowPlate,matrix([0,-.351,.046],[0,Math.PI,0])),bake(trackedElbowPlate,matrix([0,-.285,.049],[0,Math.PI,0],[.83,.58,.75]))]);
 export const syncGloveMaterials=syncRLHMaterials;
 
-export function createGlove(materials,{mirror=false,sleeve=true,forearm=GRIP.forearm}={}){
-  const group=new T.Group(),model=createRLHGlove(materials,{mirror,sleeve}),base=new T.Vector3();
+export function createGlove(materials,{mirror=false,sleeve=true,arm=false,forearm=GRIP.forearm}={}){
+  const group=new T.Group(),model=createRLHGlove(materials,{mirror,sleeve,arm}),base=new T.Vector3();
   // Reflection belongs to the outer game frame, so hands/grips and IK agree.
   model.scale.setScalar(.81);model.quaternion.copy(orientation);model.position.set(...GRIP.wrist);group.add(model);
   if(mirror)group.scale.x=-1;
@@ -35,7 +35,8 @@ export function createGlove(materials,{mirror=false,sleeve=true,forearm=GRIP.for
     // Points the cuff along the forearm (a direction in this glove's frame, before mirroring).
     setForearm(direction=forearm){localDirection.set(...direction).normalize().applyQuaternion(toModel);rig.forearm.quaternion.setFromUnitVectors(cuffAxis,localDirection);},
     extendForearm(){
-      if(group.userData.extendedForearm)return;
+      // A glove built with its own forearm (arm) already reaches the elbow.
+      if(group.userData.extendedForearm||model.userData.arm)return;
       const arm=new T.Group();arm.name='AÉGIS articulated forearm';
       const undersuit=new T.Mesh(trackedForearmGeometry,materials.fabric),plates=new T.Mesh(trackedPlateGeometry,materials.trim);
       undersuit.name='AÉGIS elbow undersuit';plates.name='AÉGIS overlapping elbow armour';

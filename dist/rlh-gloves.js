@@ -205,6 +205,17 @@ const MANCHETTE=(()=>[
   {y:-.190,w:.0670,cz:.001,db:.0480,dp:.0450,n:2.3},
   {y:-.242,w:.0640,cz:.001,db:.0450,dp:.0420,n:2.25}
 ].sort((a,b)=>a.y-b.y))();
+// Undersuit forearm continuing the cuff's last section towards the elbow.
+const AVANT_BRAS=[
+  {y:-.560,w:.0585,cz:.001,db:.0420,dp:.0400,n:2.1},
+  {y:-.480,w:.0600,cz:.001,db:.0430,dp:.0410,n:2.1},
+  {y:-.380,w:.0612,cz:.001,db:.0438,dp:.0415,n:2.15},
+  {y:-.290,w:.0628,cz:.001,db:.0446,dp:.0420,n:2.2},
+  {y:-.226,w:.0640,cz:.001,db:.0450,dp:.0420,n:2.25}
+];
+// Flexible wrist: cuff vertices from WRIST_BLEND[0] up to the wrist ring follow
+// the hand progressively, so a bent forearm never shows a hard kink.
+export const WRIST_BLEND=Object.freeze([-.078,-.004]);
 export const RLH_DIGITS={
   index :{x:-.0335,y:.110,z:.000,r:.0104,L:[.044,.027,.023],ecart:-.07,repos:.10},
   middle:{x:-.0110,y:.116,z:.001,r:.0109,L:[.049,.031,.025],ecart:-.02,repos:.13},
@@ -216,7 +227,7 @@ const NOMS_DOIGTS={index:'index',middle:'majeur',ring:'annulaire',pinky:'auricul
 /* =======================================================================
    CONSTRUCTION D'UN GANT (côté 'D' ou 'G')
    ======================================================================= */
-function buildSourceGlove(M,labelMaterial,{sleeve=true}={}){
+function buildSourceGlove(M,labelMaterial,{sleeve=true,arm=false}={}){
   const couture=(parent,pts,r)=>sourceSeam(parent,pts,r,M.fil);
   const cote='D';
   const sx = cote==='D' ? 1 : -1;       // le gant gauche est le miroir exact du droit
@@ -283,6 +294,20 @@ function buildSourceGlove(M,labelMaterial,{sleeve=true}={}){
     for(let i=0;i<uv.count;i++){umin=Math.min(umin,uv.getX(i));umax=Math.max(umax,uv.getX(i));}
     for(let i=0;i<uv.count;i++)uv.setXY(i,1-(uv.getX(i)-umin)/(umax-umin),(pz.getY(i)+.196)/.016);
     maille(g,labelMaterial,avantBras,{nom:pref+'identification_tactique',ombre:false});
+  }
+  if(sleeve&&arm){
+    // FPS forearm: the undersuit slides into the cuff's elbow lip and carries on
+    // to a closed elbow, so the gauntlet never ends on an open rim in view.
+    const elbow=AVANT_BRAS[0].y,lip=AVANT_BRAS.at(-1).y;
+    maille(loft(AVANT_BRAS,{y0:elbow,y1:lip,ny:18,nt:40,sx,off:-.0016}),M.caout,avantBras,{nom:pref+'avant_bras'});
+    for(const y of [-.300,-.360,-.420])maille(loft(AVANT_BRAS,{y0:y-.005,y1:y,ny:2,nt:36,sx,off:.0004}),M.textile2,avantBras,{nom:pref+'avant_bras_nervure'});
+    // Back-of-forearm armour plate and a padded elbow, on the same anatomical sections.
+    const plate=(mat,ya,yb,ta,tb,off,name)=>maille(loft(AVANT_BRAS,{y0:ya,y1:yb,ny:8,nt:18,t0:ta,t1:tb,sx,off}),mat,avantBras,{nom:pref+name});
+    plate(M.carbone,-.455,-.262,.48,Math.PI-.48,.0032,'plaque_avant_bras');
+    plate(M.hiVis,-.420,-.300,1.44,1.70,.0050,'liseré_avant_bras');
+    plate(M.matelasse,-.545,-.478,.30,Math.PI-.30,.0030,'coudiere');
+    const end=AVANT_BRAS[0],cap=new THREE.SphereGeometry(1,28,10,0,Math.PI*2,Math.PI/2,Math.PI/2);
+    maille(cap,M.caout,avantBras,{p:[0,end.y,end.cz||0],s:[sx*end.w,.034,(end.db+end.dp)/2],nom:pref+'coude'});
   }
   const patte=new THREE.Bone();patte.name=pref+'patte_serrage';
   patte.position.copy(pointLoft(MANCHETTE,.12,-.025,.002,sx));avantBras.add(patte);
@@ -500,37 +525,43 @@ function materialSet(gloves){
   }
   const set={materials,labels};materialSets.set(gloves,set);syncRLHMaterials(gloves);return set;
 }
-function template(sleeve){
-  if(templates.has(sleeve))return templates.get(sleeve);
+function template(sleeve,arm=false){
+  const templateKey=sleeve?(arm?'arm':'sleeve'):'short';
+  if(templates.has(templateKey))return templates.get(templateKey);
   const M=Object.fromEntries(MATERIAL_KEYS.map(key=>{const mat=new THREE.MeshStandardMaterial();mat.name=key;return [key,mat];}));
   const label=new THREE.MeshStandardMaterial();label.name='label';
-  const model=buildSourceGlove(M,label,{sleeve});
+  const model=buildSourceGlove(M,label,{sleeve,arm:sleeve&&arm});
   if(sleeve){
     // A narrow titanium wrist clasp is the existing level-four gauntlet upgrade.
     const mesh=maille(loft(MANCHETTE,{y0:-.112,y1:-.052,ny:6,nt:5,t0:1.48,t1:1.66,sx:1,off:.010}),M.metal,model.racine.children[0],{nom:'AÉGIS canal renforce'});mesh.userData.minLevel=4;
   }
   model.racine.updateMatrixWorld(true);
   const bones=[],meshes=[];model.racine.traverse(o=>{if(o.isBone){if(!o.name)o.name='RLH_joint_'+bones.length;bones.push(o);}else if(o.isMesh)meshes.push(o);});
-  const groups=new Map();
+  const groups=new Map(),forearm=bones.find(b=>b.name==='D_manchette'),wrist=bones.indexOf(bones.find(b=>b.name==='D_poignet'));
+  const onForearm=joint=>{for(let b=joint;b;b=b.parent)if(b===forearm)return true;return false;};
   for(const mesh of meshes){
     let joint=mesh.parent;while(joint&&!joint.isBone)joint=joint.parent;
     const bone=bones.indexOf(joint),g=mesh.geometry.index?mesh.geometry.toNonIndexed():mesh.geometry.clone();g.applyMatrix4(mesh.matrixWorld);
     const key=mesh.material.name,level=mesh.userData.minLevel||1,batchKey=key+':'+level;
-    if(!groups.has(batchKey))groups.set(batchKey,{key,level,parts:[],indices:[],count:0});
-    const group=groups.get(batchKey);group.parts.push(g);group.count++;
-    group.indices.push(...Array(g.attributes.position.count).fill(bone));
+    if(!groups.has(batchKey))groups.set(batchKey,{key,level,parts:[],indices:[],blend:[],count:0});
+    const group=groups.get(batchKey),y=g.attributes.position,blend=onForearm(joint);group.parts.push(g);group.count++;
+    for(let i=0;i<y.count;i++){
+      group.indices.push(bone);
+      const t=blend?THREE.MathUtils.clamp((y.getY(i)-WRIST_BLEND[0])/(WRIST_BLEND[1]-WRIST_BLEND[0]),0,1):0;
+      group.blend.push(t*t*(3-2*t));
+    }
   }
   const parts=[];
   for(const group of groups.values()){
     const geometry=merge(group.parts),n=geometry.attributes.position.count,indices=new Uint16Array(n*4),weights=new Float32Array(n*4);
-    for(let i=0;i<n;i++){indices[i*4]=group.indices[i];weights[i*4]=1;}
+    for(let i=0;i<n;i++){const w=group.blend[i];indices[i*4]=group.indices[i];weights[i*4]=1-w;if(w>0){indices[i*4+1]=wrist;weights[i*4+1]=w;}}
     geometry.setAttribute('skinIndex',new THREE.Float32BufferAttribute(indices,4));geometry.setAttribute('skinWeight',new THREE.Float32BufferAttribute(weights,4));
     geometry.computeBoundingBox();geometry.computeBoundingSphere();parts.push({...group,geometry});
-    group.parts.forEach(g=>g.dispose());delete parts[parts.length-1].parts;delete parts[parts.length-1].indices;
+    group.parts.forEach(g=>g.dispose());delete parts[parts.length-1].parts;delete parts[parts.length-1].indices;delete parts[parts.length-1].blend;
   }
   for(const mesh of meshes){mesh.removeFromParent();mesh.geometry.dispose();}
   Object.values(M).forEach(mat=>mat.dispose());label.dispose();
-  const result={root:model.racine,parts,count:meshes.length};templates.set(sleeve,result);return result;
+  const result={root:model.racine,parts,count:meshes.length};templates.set(templateKey,result);return result;
 }
 function controlRig(root){
   const map=new Map();root.traverse(b=>{if(b.isBone)map.set(b.name,b);});
@@ -554,8 +585,8 @@ function controlRig(root){
     maj(dt){const k=1-Math.exp(-Math.max(0,dt)*20);for(const key in cible)etat[key]+=(cible[key]-etat[key])*k;appliquer();}
   };
 }
-export function createRLHGlove(gloves,{mirror=false,sleeve=true}={}){
-  const source=template(sleeve),set=materialSet(gloves),group=new THREE.Group(),root=source.root.clone();group.name='RLH V40 '+(mirror?'G':'D');group.add(root);group.updateMatrixWorld(true);
+export function createRLHGlove(gloves,{mirror=false,sleeve=true,arm=false}={}){
+  const source=template(sleeve,arm),set=materialSet(gloves),group=new THREE.Group(),root=source.root.clone();group.name='RLH V40 '+(mirror?'G':'D');group.add(root);group.updateMatrixWorld(true);
   const bones=[];root.traverse(b=>{if(b.isBone)bones.push(b);});const skeleton=new THREE.Skeleton(bones),meshes=[];
   for(const part of source.parts){
     const mat=part.key==='label'?set.labels[mirror?'G':'D']:set.materials[part.key],mesh=new THREE.SkinnedMesh(part.geometry,mat);
@@ -563,12 +594,13 @@ export function createRLHGlove(gloves,{mirror=false,sleeve=true}={}){
     // A fist and open thumb stay inside a conservative fixed bounding volume.
     // The long RLH cuff also rotates toward the game's forearm, independently
     // of wrist flexion. Include that swept volume in the culling bounds.
-    mesh.boundingBox=new THREE.Box3(new THREE.Vector3(-.28,sleeve?-.29:-.07,-.29),new THREE.Vector3(.22,.25,.24));
-    mesh.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,.02,0),.39);
+    const long=sleeve&&arm;
+    mesh.boundingBox=new THREE.Box3(new THREE.Vector3(long?-.62:-.28,long?-.62:sleeve?-.29:-.07,long?-.62:-.29),new THREE.Vector3(long?.62:.22,.25,long?.62:.24));
+    mesh.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,long?-.10:.02,0),long?.66:.39);
     group.add(mesh);meshes.push({mesh,part});
   }
   const rig=controlRig(root);let disposed=false,level=1,side=mirror?'G':'D';
-  Object.assign(group.userData,{source:'RLH V40',armor:'AEGIS-II',skeleton,rig,parts:meshes,materials:set.materials,
+  Object.assign(group.userData,{source:'RLH V40',armor:'AEGIS-II',arm:sleeve&&arm,skeleton,rig,parts:meshes,materials:set.materials,
     setSide(next){if(next===side||!set.labels[next])return;side=next;for(const {mesh,part} of meshes)if(part.key==='label')mesh.material=set.labels[side];},
     setLevel(n){level=Math.max(1,Math.min(10,Math.floor(n||1)));for(const {mesh,part} of meshes)mesh.visible=part.level<=level;},
     dispose(){if(disposed)return;disposed=true;skeleton.dispose();},

@@ -50,9 +50,11 @@ test('Quest Touch Plus keeps left movement, right trigger and grip independent o
   left.gamepad.axes=[.9,.9,.4,-.8];right.gamepad.axes=[.9,.9,.6,.9];
   down(left,0); // The left trigger never fires.
   assert.equal(state.input().fire,false);
-  down(right,0);left.gamepad.buttons[1].value=.8;
+  // 3.63.26 grips: right middle finger sprints, left middle finger raises the optic.
+  down(right,0);right.gamepad.buttons[1].value=.8;
   let input=state.input();assert.equal(input.x,.4);assert.equal(input.z,-.8);assert.equal(input.fire,true);assert.equal(input.sprint,true);assert.equal(input.turn,.6);assert.equal(input.tilt,0);
-  down(right,1);input=state.input();assert.equal(input.precision,true);assert.equal(input.sprint,true,'holding the pistol grip does not stop sprinting');
+  down(left,1);input=state.input();assert.equal(input.aim,true);assert.equal(input.sprint,true,'raising the optic does not release the sprint grip');
+  assert.equal(input.precision,false,'in a headset no grip toggles the flat-screen precision mode');
   down(right,0,false);right.gamepad.buttons[0].value=.4;assert.equal(state.input().fire,true);
 });
 
@@ -176,15 +178,16 @@ test('a headset without a right controller falls back to the head ray for the si
   state.mode='stereo';assert.equal(VRController.prototype.aim.call(state),null);
 });
 
-test('right middle-finger GRIP aims independently of right index fire; left trigger does not aim',()=>{
+test('left middle-finger GRIP aims independently of right index fire; left trigger does not aim',()=>{
  let reloads=0;const {state,left,right,game,phase,setPhase}=setup({charge:.5,triggerHeld:true,reload:()=>{reloads++;return true;},cycleWeapon:()=>true});
  down(left,0);let input=state.input();assert.equal(input.aim,false);assert.equal(input.precision,false);assert.equal(input.fire,false);
- down(right,1);input=state.input();assert.equal(input.aim,true);assert.equal(input.precision,true);assert.equal(input.fire,false);
+ down(left,0,false);down(right,1);input=state.input();assert.equal(input.aim,false,'the right grip sprints, it does not aim');
+ down(right,1,false);down(left,1);input=state.input();assert.equal(input.aim,true);assert.equal(input.precision,false);assert.equal(input.fire,false);
  down(right,0);input=state.input();assert.equal(input.aim,true);assert.equal(input.fire,true);
  down(right,5);input=state.input();assert.equal(input.fire,false);assert.equal(reloads,1);assert.equal(game.charge,0);
  down(right,5,false);down(right,0,false);state.input();down(right,0);assert.equal(state.input().fire,true);
- const lost={getPose:space=>space.hand==='right'?null:{}};
- assert.equal(state.input(lost).aim,false,'an untracked right aiming hand cannot aim');
+ const lost={getPose:space=>space.hand==='left'?null:{}};
+ assert.equal(state.input(lost).aim,false,'an untracked left aiming hand cannot aim');
  setPhase('paused');input=state.input();assert.equal(input.aim,false);assert.equal(input.fire,false);assert.equal(phase(),'paused');
  setPhase('over');assert.equal(state.input().aim,false);
 });
@@ -207,12 +210,12 @@ test('desktop left trigger aims without jumping and Cross/A jumps on a fresh pre
   pad.buttons[0]={pressed:true,value:1};input=state.input();assert.equal(input.jump,true);assert.equal(state.input().jump,false);
  }finally{if(previous)Object.defineProperty(globalThis,'navigator',previous);else delete globalThis.navigator;}
 });
-test('the free-hand grip sprints when squeezed, and the stick click enters crouch stance',()=>{
-  const {state,left}=setup();
-  left.gamepad.buttons[1].value=.4;assert.equal(state.input().sprint,false,'a light grip while holding the controller is not a sprint');
-  left.gamepad.buttons[1].pressed=true;assert.equal(state.input().sprint,false,'a runtime that flags any squeeze as pressed does not turn it into a sprint');left.gamepad.buttons[1].pressed=false;
-  left.gamepad.buttons[1].value=.8;assert.equal(state.input().sprint,true);
-  left.gamepad.buttons[1].value=0;down(left,3);const input=state.input();assert.equal(input.sprint,false);assert.equal(input.crouchToggle,true);
+test('the shooting-hand grip sprints when squeezed, and the free-hand stick click enters crouch stance',()=>{
+  const {state,left,right}=setup();
+  right.gamepad.buttons[1].value=.4;assert.equal(state.input().sprint,false,'a light grip while holding the controller is not a sprint');
+  right.gamepad.buttons[1].pressed=true;assert.equal(state.input().sprint,false,'a runtime that flags any squeeze as pressed does not turn it into a sprint');right.gamepad.buttons[1].pressed=false;
+  right.gamepad.buttons[1].value=.8;assert.equal(state.input().sprint,true);
+  right.gamepad.buttons[1].value=0;down(left,3);const input=state.input();assert.equal(input.sprint,false);assert.equal(input.crouchToggle,true);
 });
 
 test('the shooting-hand stick only turns: pushing it up or down changes nothing else',()=>{
@@ -225,7 +228,7 @@ test('left-handed option changes aiming hand, but physical A/B/X/Y buttons stay 
  const reloads=[],cycles=[];
  const {state,left,right,phase}=setup({charge:0,triggerHeld:false,reload:()=>{reloads.push(1);return true;},cycleWeapon:d=>{cycles.push(d);return true;}},{...VR_DEFAULTS,hand:'left'});
  down(left,0);assert.equal(state.input().fire,true);down(left,0,false);
- down(left,1);assert.equal(state.input().aim,true);down(left,1,false);state.input();
+ down(right,1);assert.equal(state.input().aim,true,'left-handed: the free right hand raises the optic');down(right,1,false);state.input();
  right.gamepad.axes=[0,0,.4,-.8];left.gamepad.axes=[0,0,.9,.9];let input=state.input();
  assert.equal(input.x,.4);assert.equal(input.z,-.8);assert.equal(input.turn,.9);
  down(right,4);assert.equal(state.input().jump,true);down(right,4,false);state.input();
@@ -250,11 +253,13 @@ test('settings are validated and fall back to the defaults',()=>{
   assert.ok(Object.isFrozen(VR_DEFAULTS));
 });
 
-test('Quest tutorial spells out right index firing, right middle-finger aiming and A/B/Y/X mapping',()=>{
+test('Quest tutorial spells out right index firing, left middle-finger aiming, right-grip sprint and A/B/Y/X mapping',()=>{
   for(const hand of ['right','left']){
-    const controls=Object.fromEntries(questControls(hand));
-    assert.equal(controls['Gâchette INDEX droite'],'Tirer · AURORA : maintenir pour déployer la lame');
-    assert.equal(controls['Gâchette MAJEUR droite'],'Viser · BLOOM ×2 / LANCE ×4 · parade AURORA');
+    const controls=Object.fromEntries(questControls(hand)),main=hand==='left'?'gauche':'droite',free=hand==='left'?'droite':'gauche';
+    assert.equal(controls[`Gâchette INDEX ${main}`],'Tirer · AURORA : maintenir pour déployer la lame');
+    assert.equal(controls[`Gâchette MAJEUR ${main}`],'Courir (maintenir) · prise de tir conservée');
+    assert.match(controls[`Gâchette MAJEUR ${free}`],/^Épauler \/ viser : amène la lunette devant l’œil/);
+    assert.match(controls[`Gâchette INDEX ${free}`],/charge à impulsion/);
     assert.equal(controls.A,'Saut · second appui : double saut / rebond mural');
     assert.equal(controls.B,'Recharger la batterie');assert.equal(controls.Y,'Arme suivante');assert.equal(controls.X,'Pause / reprise');
     assert.equal(new Set(questControls(hand).map(([name])=>name)).size,questControls(hand).length);

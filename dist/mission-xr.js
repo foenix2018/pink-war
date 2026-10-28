@@ -4,6 +4,8 @@ import {createXRPauseMenu,createXRJournal} from './xr-pause-menu.js';
 import {createMagnifiedSight} from './magnified-sight.js';
 import {hapticPlan,buzz} from './haptics.js';
 import {recoilPose} from './weapon-feel.js';
+import {OPTICS} from './weapons.js';
+import {sightPoint,eyeAlignedSight} from './sight-line.js';
 
 export async function immersiveRendererPreferred(){
  let timer;try{return !!(globalThis.isSecureContext&&navigator.xr&&await Promise.race([navigator.xr.isSessionSupported('immersive-vr'),new Promise(resolve=>{timer=setTimeout(()=>resolve(false),1500);})]));}catch{return false;}finally{clearTimeout(timer);}
@@ -11,7 +13,10 @@ export async function immersiveRendererPreferred(){
 // Screen missions keep their actual world, simulation, inventory and progress in XR.
 export function createMissionXR({getWorld,onFrame,onPause,onResume,onHome,onExit=()=>{},isPaused=()=>false,getYaw=()=>0,setYaw=()=>{},skillsInput=()=>false}){
  let session=null,rig=null,busy=false,blocked=true,previous=new Map(),entries=[],menu=null,scope=null,yaw=0,controls=null,hud=null,reading=null,closeReading=null,opticalEye=null;
- const down=b=>!!b?.pressed||(b?.value||0)>.15;
+ const down=b=>!!b?.pressed||(b?.value||0)>.15,adsScratch={},sightScratch={};
+ // The right eye looks through the optic of the right-hand weapon (XR eye cameras carry world matrices only).
+ const eyeCamera=()=>{const w=getWorld(),source=session&&w.renderer.xr.getCamera(w.camera).cameras?.[1];if(!source)return null;const eye=opticalEye ||=new w.T.PerspectiveCamera();eye.matrixAutoUpdate=false;eye.matrix.copy(source.matrixWorld);eye.matrixWorld.copy(source.matrixWorld);eye.matrixWorldInverse.copy(source.matrixWorld).invert();eye.projectionMatrix.copy(source.projectionMatrix);eye.projectionMatrixInverse.copy(source.projectionMatrixInverse);return eye;};
+ const raised=hand=>{const g=getWorld().game;return hand==='right'&&!!controls?.aim&&!g?.weapon?.dual&&!g?.weapon?.melee;};
  const api={get active(){return !!session;},get yaw(){return yaw;},get controls(){return controls;},get entries(){return entries;},
   async enter(){
    if(session){await api.exit();return;}if(busy)return;
@@ -50,12 +55,17 @@ export function createMissionXR({getWorld,onFrame,onPause,onResume,onHome,onExit
    if(reload){w.game.reload();blocked=true;}if(next){w.game.cycleWeapon();blocked=true;}
    const axis=v=>Math.abs(v||0)>.16?v:0;yaw-=axis(rp?.axes?.[2]||0)*1.8*dt;setYaw(yaw);api.syncPose();
    const forward=new T.Vector3();w.camera.getWorldDirection(forward);const moveYaw=Math.atan2(-forward.x,-forward.z);
-   return controls={x:axis(lp?.axes?.[2]),z:axis(lp?.axes?.[3]),moveYaw,yaw,jump,interact,fire:trigger&&!blocked,leftFire:leftTrigger&&!blocked,melee,charge:charge&&!blocked,aim:down(rp?.buttons[1]),sprint:down(lp?.buttons[1])};
+   // Same grips as the Arena and the range: left grip raises the optic to the eye, right grip sprints.
+   return controls={x:axis(lp?.axes?.[2]),z:axis(lp?.axes?.[3]),moveYaw,yaw,jump,interact,fire:trigger&&!blocked,leftFire:leftTrigger&&!blocked,melee,charge:charge&&!blocked,aim:down(lp?.buttons[1]),sprint:down(rp?.buttons[1])};
   },
   aim(hand='right'){
    const w=getWorld(),T=w.T,e=entries.find(e=>e.source?.handedness===hand),source=e?.ray||w.camera,origin=new T.Vector3(),direction=new T.Vector3(),q=new T.Quaternion();source.updateWorldMatrix(true,false);source.getWorldPosition(origin);source.getWorldQuaternion(q);direction.set(0,0,-1).applyQuaternion(q);
    const muzzle=e?.gun.userData.flashFor?.('right')||e?.gun.userData.flash;if(muzzle){muzzle.updateWorldMatrix(true,false);muzzle.getWorldPosition(origin);}
-   const head=w.camera.getWorldPosition(new T.Vector3());let near=1;for(const box of w.obstacles||[]){const hit=segmentBox(head,origin,box);if(hit!==null)near=Math.min(near,hit);}if(near<1)origin.lerpVectors(head,origin,Math.max(0,near-.02));return{origin,direction};
+   const head=w.camera.getWorldPosition(new T.Vector3());let near=1;for(const box of w.obstacles||[]){const hit=segmentBox(head,origin,box);if(hit!==null)near=Math.min(near,hit);}if(near<1)origin.lerpVectors(head,origin,Math.max(0,near-.02));
+   // Optic raised: the shot meets the aiming eye's line of sight where the reticle rests.
+   const eye=raised(hand)&&eyeCamera();
+   if(eye){const line=eyeAlignedSight(T,eye.matrixWorld,null,sightScratch);direction.copy(sightPoint(T,line.eye,line.forward,{obstacles:w.obstacles,enemies:w.game.enemies})).sub(origin).normalize();}
+   return{origin,direction};
   },
   gun(hand='right'){return entries.find(e=>e.source?.handedness===hand)?.gun;},
   showJournal(entry,close){const w=getWorld();reading?.dispose();closeReading=close;reading=createXRJournal(w.T,w.scene,entry,()=>api.closeJournal());blocked=true;},
@@ -69,11 +79,14 @@ export function createMissionXR({getWorld,onFrame,onPause,onResume,onHome,onExit
     const pose=recoilPose(g.weapon.id,feel,{tracked:true,dual:!!g.weapon.dual,aiming:Number(!!controls?.aim)});
     gun.rotation.set(pose.pitch+reload*Math.PI/2-(g.weapon.melee?.55:0),pose.yaw,pose.roll);gun.position.set(pose.x,pose.y,.024+pose.z);
     if(gun.userData.palm)gun.position.sub(gun.userData.palm.clone().applyEuler(gun.rotation)).add(new w.T.Vector3(.015,-.014,0));
-    gun.userData.hand?.userData.animate?.({grip:.96,trigger,reload:0},dt,hand==='left'?-1:1);e.bare.userData.animate?.({grip,trigger,reload:0},dt,hand==='left'?-1:1);gun.userData.setFlash?.(!isPaused()&&flash>0,g.time);gun.userData.setSight?.(!!controls?.aim&&!g.reloadRemaining,w.camera);
+    // Optic raised (left grip): the sight's centre comes onto the right eye's axis, as in the Arena.
+    const eye=main&&!reload&&raised(hand)&&eyeCamera();
+    if(eye){const sight=eyeAlignedSight(w.T,eye.matrixWorld,gun.userData.optics?.[g.weaponIndex]?.cfg||OPTICS[g.weapon.id],adsScratch);gun.parent.updateWorldMatrix(true,false);gun.position.copy(gun.parent.worldToLocal(sight.position.clone()));gun.quaternion.copy(gun.parent.getWorldQuaternion(new w.T.Quaternion()).invert().multiply(sight.quaternion));}
+    gun.userData.hand?.userData.animate?.({grip:.96,trigger,reload:0},dt,hand==='left'?-1:1);e.bare.userData.animate?.({grip,trigger,reload:0},dt,hand==='left'?-1:1);gun.userData.setFlash?.(!isPaused()&&flash>0,g.time);gun.userData.setSight?.(!!controls?.aim&&!g.reloadRemaining,eyeCamera()||w.camera);
    }
    if(hud){const key=Math.ceil(g.player.hp)+'|'+g.ammo[g.weaponIndex]+'|'+g.weapon.melee;hud.plane.visible=!isPaused();if(hud.key!==key){hud.key=key;const c=hud.canvas.getContext('2d');c.clearRect(0,0,512,112);c.fillStyle='#101c29e8';c.beginPath();c.roundRect(0,0,512,112,22);c.fill();c.fillStyle='#becbd4';c.font='16px sans-serif';c.fillText('SANTÉ',22,28);c.fillText('MUNITIONS',280,28);c.fillStyle='white';c.font='bold 45px sans-serif';c.fillText(String(Math.ceil(g.player.hp)),22,83);c.fillText(g.weapon.melee?'∞':String(g.ammo[g.weaponIndex]),280,83);hud.texture.needsUpdate=true;}}
   },
-  renderScope(){const w=getWorld(),gun=api.gun();if(controls?.aim&&!isPaused()&&gun?.userData.optics?.[w.game.weaponIndex]){scope ||=createMagnifiedSight(256);const source=w.renderer.xr.getCamera(w.camera).cameras?.[1];const eye=opticalEye ||=new w.T.PerspectiveCamera();eye.matrixAutoUpdate=false;if(source){eye.matrix.copy(source.matrixWorld);eye.matrixWorld.copy(source.matrixWorld);eye.matrixWorldInverse.copy(source.matrixWorld).invert();eye.projectionMatrix.copy(source.projectionMatrix);eye.projectionMatrixInverse.copy(source.projectionMatrixInverse);}scope.render({renderer:w.renderer,scene:w.scene,gun,eyeCamera:source?eye:w.camera,active:true,hide:[rig,hud?.plane,menu?.mesh]});}else scope?.release();},
+  renderScope(){const w=getWorld(),gun=api.gun();if(controls?.aim&&!isPaused()&&gun?.userData.optics?.[w.game.weaponIndex]){scope ||=createMagnifiedSight(256);scope.render({renderer:w.renderer,scene:w.scene,gun,eyeCamera:eyeCamera()||w.camera,active:true,hide:[rig,hud?.plane,menu?.mesh]});}else scope?.release();},
   haptic(type,arg,hand='right'){try{if(JSON.parse(localStorage.getItem('pink-war-vr')||'{}').haptics===false)return;}catch{}const pulse=hapticPlan(type,arg).main;if(pulse)buzz(entries.find(e=>e.source?.handedness===hand)?.source?.gamepad,pulse);},
   async exit(){await session?.end();},async home(){await api.exit();onHome();}
  };

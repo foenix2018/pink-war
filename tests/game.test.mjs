@@ -115,7 +115,8 @@ test('twenty campaign levels increase enemy health and movement speed', () => {
   for(let level=1;level<=MAX_LEVEL;level++) {
     g.beginWave(); g.spawnEnemy(); const e=g.enemies.at(-1);
     const baseSpeed=e.speed/(e.form==='scuttler'?1.12:e.form==='bulwark'?.7:1);
-    assert.equal(e.hp,enemyDurability(level,e.form,e.elite));
+    // Wave 1 opens on the heavy Sentinel (fixed 1200 hp); every other first unit follows the level curve.
+    if(level===1){assert.equal(e.form,'sentinel');assert.equal(e.hp,1200);}else assert.equal(e.hp,enemyDurability(level,e.form,e.elite));
     for(const form of ['stalker','scuttler','seer','brute','probe','listener','bulwark'])for(const elite of [false,true])
       if(level>1)assert.ok(enemyDurability(level,form,elite)>enemyDurability(level-1,form,elite),'the same chassis gets tougher at every level');
     assert.ok(baseSpeed>previousSpeed); previousSpeed=baseSpeed;

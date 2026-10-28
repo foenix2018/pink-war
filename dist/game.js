@@ -1,4 +1,4 @@
-import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, clamp, segmentSphere, segmentBox, traceEnemyHit, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
+import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
 import { createScene } from './scene.js?v=3.48';
 import { VRController } from './vr.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
@@ -17,6 +17,7 @@ import { magnifiedFov, aimSensitivity, flatSightPose } from './optics.js';
 import { CampaignLevel1 } from './campaign-level1.js';
 import {attachCampaignStory} from './story-chapters.js';
 import { ShootingRangeGame,traceTrainingTarget } from './shooting-range.js';
+import {sightPoint} from './sight-line.js';
 import {GAME_VERSION,showLaunchError} from './launch-ui.js';
 import {syncMenuArtwork} from './menu-art.js';
 import {createAICompanion} from './ai-companions.js';
@@ -87,6 +88,9 @@ function selectMode(mode){
   if(world)$('play-label').textContent=selectedMode==='campaign2'?'JOUER LE NIVEAU 2':selectedMode==='campaign'?'JOUER LE NIVEAU 1':selectedMode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
 }
 for(const button of document.querySelectorAll('[data-mode]'))button.onclick=()=>selectMode(button.dataset.mode);
+// Chapter cards (Histoire) pick the campaign mission once this module owns the launch button; the home
+// page's own handler still closes the chapter list.
+for(const button of document.querySelectorAll('[data-chapter]')){const open=button.onclick;button.onclick=event=>{open?.call(button,event);selectMode(button.dataset.chapter);};}
 // The range armory only exists in-game: a touch/click station for the five weapons.
 for(const button of document.querySelectorAll('[data-range-weapon]'))button.onclick=()=>{
   if(phase!=='playing'||game?.mode!=='training')return;
@@ -277,10 +281,18 @@ async function home() {
   $('damage-flash').style.setProperty('--injury', '0'); $('damage-flash').classList.remove('active'); $('wave-announcement').classList.remove('show');
 }
 $('quit-button').onclick = home; $('end-home').onclick = home;
+// Same mission pages and parameters as the first launch from the home page.
+function openMissionPage(mission){
+  const url=new URL(mission===2?'./level2-test.html':'./vesper-level1-v7.html',location.href);
+  for(const [key,value] of [['source','campaign'],['autostart','1'],['character',character.id],['v',GAME_VERSION]])url.searchParams.set(key,value);
+  if(mission===1)url.searchParams.set('prologue','done');
+  if(new URLSearchParams(location.search).get('renderer')==='webgl')url.searchParams.set('renderer','webgl');
+  if(settings.quality==='low')url.searchParams.set('quality',mission===2?'low':'performance');
+  location.assign(url.href);
+}
 async function start() {
-  if(selectedMode==='campaign2'){
-    location.assign('./level2-test.html?character='+encodeURIComponent(character.id)+'&source=campaign');return;
-  }
+  if(selectedMode==='campaign2'){openMissionPage(2);return;}
+  if(selectedMode==='campaign'&&!vr?.active&&!new URLSearchParams(location.search).has('classic')){openMissionPage(1);return;}
   if (!world||launchBusy) return;
   launchBusy=true;
   selectView('fps');
@@ -412,29 +424,25 @@ function updateWeaponVisuals(dt, firing, moving) {
     if (view === 'fps') world.fpsGun.userData.animateHands?.(trigger, trigger ? .34 : .18, reloadLift, dt);
   }
 }
+// Converge the muzzle on the surface actually under the reticle. A silhouette outside that eye ray never
+// attracts a shot.
+function sightTarget(eye,forward){
+  return sightPoint(world.T,eye,forward,{obstacles:world.obstacles,enemies:game.enemies,plates:game.mode==='training'?game.targets:[],tracePlate:traceTrainingTarget,time:game.time});
+}
 function aim(hand=game.weapon.dual?game.nextDualHand:'right') {
-  if (vr?.mode==='xr') return vr.aim(hand);
+  if (vr?.mode==='xr') {
+    // Behind a raised optic the line of sight is the eye's: the shot meets it where the reticle rests.
+    const shot=vr.aim(hand),sight=shot&&vr.sightLine?.(hand);
+    if(sight)shot.direction.copy(sightTarget(sight.eye,sight.forward)).sub(shot.origin).normalize();
+    return shot;
+  }
   const { T, camera } = world, forward = new T.Vector3(); camera.getWorldDirection(forward);
   // Shots leave the muzzle of the weapon the hand is holding.
   const origin = new T.Vector3(), gun = view === 'fps' ? world.fpsGun : world.soldier.gun;
   if (view !== 'fps') world.soldier.root.updateMatrixWorld(true);
   const muzzle=gun.userData.flashFor?.(hand)||gun.userData.flash;
   muzzle.updateWorldMatrix(true, false); muzzle.getWorldPosition(origin);
-  const far = camera.position.clone().addScaledVector(forward, 160); let target = far, nearest = 1;
-  for (const box of world.obstacles) { const hit = segmentBox(camera.position, far, box); if (hit !== null && hit < nearest) { nearest = hit; target = camera.position.clone().lerp(far, hit); } }
-  for (const enemy of game.enemies) {
-    const center = { x: enemy.x, y: (enemy.elevation || 0) + (enemy.aimHeight ?? (enemy.elite ? 1.35 : 1.15)), z: enemy.z };
-    const hit = traceEnemyHit(camera.position,far,enemy);
-    if (hit && hit.t < nearest) { nearest = hit.t; target = camera.position.clone().lerp(far,hit.t); }
-  }
-  // Converge the muzzle on the surface actually under the reticle, just as
-  // walls already do. A silhouette outside that eye ray never attracts a shot.
-  if(game.mode==='training')for(const plate of game.targets){
-    const hit=traceTrainingTarget(camera.position,forward,plate,game.time);
-    if(hit){const fraction=camera.position.distanceTo(new T.Vector3(hit.point.x,hit.point.y,hit.point.z))/160;
-      if(fraction<nearest){nearest=fraction;target=new T.Vector3(hit.point.x,hit.point.y,hit.point.z);}}
-  }
-  const direction = target.clone().sub(origin).normalize(); return { origin, direction };
+  const direction = sightTarget(camera.position,forward).sub(origin).normalize(); return { origin, direction };
 }
 
 function announce(title, subtitle) {

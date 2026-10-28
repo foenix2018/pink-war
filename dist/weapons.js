@@ -51,18 +51,34 @@ export const KENNEY_HOLD = Object.freeze([
 // Forearm directions in the weapon frame: down, back and outward, towards each elbow. The eye is above and behind
 // the hands, so the open end of a cuff faces away from it.
 const KENNEY_CUFF = Object.freeze([.28, -.72, .62]), KENNEY_SUPPORT_CUFF = Object.freeze([-.22, -.88, .42]);
+// Flat-screen forearms (weapon frame): from the grip back towards the right elbow, and from the
+// foregrip back towards the left elbow, so both sleeves leave the screen instead of ending in view.
+export const FPS_ARMS = Object.freeze({hand:Object.freeze([.24,-.27,.93]),support:Object.freeze([-.40,-.40,.82])});
 
 const PI = Math.PI;
+// The eye is put on each sight's own axis: y/z are the centre of the model's reticle (weapon frame, metres),
+// measured on the authored VX-9, NEXUS, ARES and THORN models (their userData.optic) and on the NOVA reflex sight.
+// eyeRelief (default radius × 7, at least 12 cm) is how far the eye sits behind that centre when aiming.
 export const OPTICS = Object.freeze({
-  r9:Object.freeze({y:.155,z:-.12,radius:.026,magnification:1.15}),
-  bloom:Object.freeze({y:.258,z:-.185,radius:.036,magnification:2}),
-  lance:Object.freeze({y:.169,z:-.270,radius:.036,magnification:4}),
-  thorn:Object.freeze({y:.19,z:-.23,radius:.034,magnification:1.6}),
-  nova:Object.freeze({y:.18,z:-.20,radius:.034,magnification:1.35}),
-  duor9:Object.freeze({y:.155,z:-.12,radius:.026,magnification:1.15}),
+  r9:Object.freeze({y:.221,z:-.0487,radius:.0214,magnification:1.15,eyeRelief:.26}),
+  bloom:Object.freeze({y:.2586,z:-.1939,radius:.0342,magnification:2}),
+  lance:Object.freeze({y:.1693,z:-.2714,radius:.0309,magnification:4}),
+  thorn:Object.freeze({y:.3614,z:-.0533,radius:.0325,magnification:1.6}),
+  nova:Object.freeze({y:.122,z:-.085,radius:.020,magnification:1.35,eyeRelief:.22}),
+  duor9:Object.freeze({y:.221,z:-.0487,radius:.0214,magnification:1.15,eyeRelief:.26}),
   // The M12's receiver hides the shooting hand from the eye: at the hip it sits lower and turns slightly outwards.
-  m12:Object.freeze({y:.177,z:-.165,radius:.018,magnification:1.15,eyeRelief:.62,iron:true,hip:Object.freeze({x:.03,y:-.05,yaw:-.13,roll:.08})})
+  m12:Object.freeze({y:.177,z:-.165,radius:.018,magnification:1.15,eyeRelief:.62,xrEyeRelief:.30,iron:true,hip:Object.freeze({x:.03,y:-.05,yaw:-.13,roll:.08})})
 });
+// NOVA's compact reflex sight, mounted on its flat receiver top (y ≈ .086 from z +.04 to -.16).
+export function createNovaSight(mats){
+  const sight=new T.Group(),c=OPTICS.nova,box=(w,h,d,x,y,z,m)=>{const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),m);mesh.position.set(x,y,z);sight.add(mesh);return mesh;};
+  sight.name='NOVA reflex sight';
+  box(.040,.011,.074,0,.0915,c.z+.004,mats.dark);
+  for(const s of [-1,1]){box(.006,.050,.030,s*.0255,c.y,c.z,mats.steel);box(.003,.010,.030,s*.0295,.100,c.z,mats.dark);}
+  box(.057,.007,.030,0,c.y+.0285,c.z,mats.steel);
+  const led=box(.0025,.004,.016,.0287,c.y+.012,c.z,new T.MeshBasicMaterial({color:mats.rose.color,toneMapped:false}));led.name='NOVA sight status';
+  return sight;
+}
 const opticGlassGeometry=new T.CircleGeometry(1,32),opticDotGeometry=new T.CircleGeometry(.00075,16);
 const opticRingGeometry=new T.RingGeometry(.0068,.0074,32);
 function attachOptic(model,index) {
@@ -71,7 +87,7 @@ function attachOptic(model,index) {
   const glass=new T.Mesh(opticGlassGeometry,glassMaterial);glass.scale.setScalar(cfg.radius);glass.position.set(0,cfg.y,cfg.z);model.add(glass);
   const reticle=new T.Group(),material=new T.MeshBasicMaterial({color:0xff655c,toneMapped:false,side:T.DoubleSide});
   const dot=new T.Mesh(opticDotGeometry,material);reticle.add(dot);
-  if(index===1)reticle.add(new T.Mesh(opticRingGeometry,material));
+  if(index===1||index===4)reticle.add(new T.Mesh(opticRingGeometry,material));
   let hairMaterial=null;
   if(index===2){const lines=[];for(const s of [-1,1]){lines.push(s*.0025,0,0,s*.016,0,0,0,s*.0025,0,0,s*.016,0);for(let j=1;j<=3;j++){const p=s*j*.004;lines.push(p,-.001,0,p,.001,0,-.001,p,0,.001,p,0);}}const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(lines,3));hairMaterial=new T.LineBasicMaterial({color:0xe6b18b,toneMapped:false});reticle.add(new T.LineSegments(geo,hairMaterial));}
   reticle.visible=false;model.add(reticle);
@@ -324,7 +340,7 @@ export function createWeaponModels(mats) {
 
 // The weapon in the right hand: every model is drawn around the grip (the palm), so the glove holds it by
 // construction. Heavy weapons add a second glove on the foregrip. `makeFlash(parent)` supplies the muzzle glow.
-export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
+export function buildGun({ mats, gloves, sleeve = true, arm = sleeve, makeFlash }) {
   mats=weaponMetals(mats);
   const g = new T.Group(), models = createWeaponModels(mats);
   const originalWeaponMeshes=models.map(model=>[...model.children]);
@@ -332,6 +348,16 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   for (const model of models) { model.visible = false; g.add(model); }
   const optics=models.map(attachOptic),eye=new T.Vector3(),target=new T.Vector3();
   g.userData.optics=optics;
+  // A model that carries its own reticle owns the sight axis: the glass sits on it and the extra dot hides
+  // (the reticle group stays logically visible so the VR magnified sight keeps working).
+  const syncOptic=index=>{
+    const optic=optics[index],own=(index===7?models[0]:models[index]).userData;if(!optic||!own.optic)return;
+    Object.assign(optic.cfg,own.optic);optic.glass.position.set(0,optic.cfg.y,optic.cfg.z);optic.glass.scale.setScalar(optic.cfg.radius);
+    for(const child of optic.reticle.children)child.visible=!own.ownReticle;
+    // The model's own window is the glass on screen; this disc only carries the VR magnified picture.
+    if(own.ownReticle)optic.glassMaterial.opacity=0;
+  };
+  optics.forEach((optic,index)=>syncOptic(index));
   g.userData.setSight=(active,camera)=>{
     for(const optic of optics)if(optic)optic.reticle.visible=false;
     const optic=optics[g.userData.index];g.userData.aiming=!!active&&!!optic;
@@ -354,7 +380,7 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
   const batteryOff = new T.Color(0x171722), batteryLow = new T.Color(0xff385f), batteryReload = new T.Color(0xffffff);
   const batteryTint = new T.Color(), batteryCharge = new T.Color(), batteryWhite = new T.Color(0xffffff);
   let batteryStateKey = '';
-  const hand = createGlove(gloves, { sleeve }), support = createGlove(gloves, { mirror: true, sleeve });
+  const hand = createGlove(gloves, { sleeve, arm }), support = createGlove(gloves, { mirror: true, sleeve, arm });
   support.visible = false; g.add(hand, support);
   const flash = makeFlash(g); flash.visible = false;
   const dualRight=models[7].getObjectByName('DUO right'),dualLeft=models[7].getObjectByName('DUO left');
@@ -444,14 +470,24 @@ export function buildGun({ mats, gloves, sleeve = true, makeFlash }) {
     // (never up at the eye, where its open end would show).
     g.userData.palm.set(...(hold?.palm||[0,0,0]));
     hand.userData.setBasePosition?.(g.userData.palm.toArray());hand.rotation.x=hold?.rake||0;
-    hand.userData.setForearm?.(hold?handCuff.set(...KENNEY_CUFF).applyAxisAngle(rakeAxis,-hold.rake).toArray():undefined);
-    support.rotation.x=index===7?hold?.rake||0:0;
-    support.userData.setForearm?.(index===7&&hold?handCuff.toArray():hold?supportCuff:undefined);
+    const rake=hold?.rake||0;
+    if(arm){
+      // Directions are given in the weapon frame: undo the hand's rake, and the mirror of the free glove.
+      hand.userData.setForearm?.(handCuff.set(...(hold?.arm||FPS_ARMS.hand)).applyAxisAngle(rakeAxis,-rake).toArray());
+      support.rotation.x=index===7?rake:0;
+      const free=index===7?handCuff.toArray():[-(hold?.supportArm||FPS_ARMS.support)[0],...(hold?.supportArm||FPS_ARMS.support).slice(1)];
+      support.userData.setForearm?.(free);
+    }else{
+      hand.userData.setForearm?.(hold?handCuff.set(...KENNEY_CUFF).applyAxisAngle(rakeAxis,-hold.rake).toArray():undefined);
+      support.rotation.x=index===7?hold?.rake||0:0;
+      support.userData.setForearm?.(index===7&&hold?handCuff.toArray():hold?supportCuff:undefined);
+    }
     g.userData.index = index;
   };
   g.userData.kenneyAssets=installKenneyBlasters(models,originalWeaponMeshes,WEAPON_FRAME,
     (index,skin)=>{
       g.userData.kenneyVersion=(g.userData.kenneyVersion||0)+1;
+      if(index===4&&!skin.userData.optic){skin.add(createNovaSight(mats));const {y,z,radius}=OPTICS.nova;skin.userData.optic={y,z,radius};}
       // The sight stays round on a slimmed blaster.
       const optic=optics[index],slim=models[index].scale.x;
       if(optic){

@@ -32,6 +32,7 @@ test('each Kenney blaster has a measured hold: grip below the barrel, raked, for
 
 test('a loaded Kenney blaster puts the palm on its own grip and both cuffs towards the elbows',()=>{
   const gun=buildGun({mats:mats(),gloves:createCharacterKit(new T.Texture()).gloves,makeFlash:flash});
+  const tracked=buildGun({mats:mats(),gloves:createCharacterKit(new T.Texture()).gloves,sleeve:false,makeFlash:flash});
   const {hand,support}=gun.userData;
   KENNEY_HOLD.forEach((hold,i)=>{
     if(i<=3)return; // VX-9, NEXUS, ARES X9 et THORN V8 ont leur poignée intégrée au modèle original.
@@ -40,13 +41,20 @@ test('a loaded Kenney blaster puts the palm on its own grip and both cuffs towar
     assert.ok(near(hand.position.toArray(),hold.palm),`${WEAPON_FRAME[i].id}: palm on the grip`);
     assert.ok(near(gun.userData.palm.toArray(),hold.palm));
     assert.equal(hand.rotation.x,hold.rake);
+    // Flat-screen forearm (3.64): back and down to the right elbow, under the line of sight.
     const arm=cuff(gun,hand);
-    assert.ok(arm.y<-.5&&arm.z>.3&&arm.x>0,`${WEAPON_FRAME[i].id}: the shooting cuff heads down and back, away from the eye`);
+    assert.ok(arm.y<-.15&&arm.z>.75&&arm.x>0,`${WEAPON_FRAME[i].id}: the shooting forearm heads back and down to the right elbow`);
+    // Short tracked/body cuffs keep their steep angle away from the eye.
+    tracked.userData.kenneyAssets.loadedByIndex[i]=true;tracked.userData.setVariant(i);
+    const short=cuff(tracked,tracked.userData.hand);
+    assert.ok(short.y<-.5&&short.z>.3&&short.x>0,`${WEAPON_FRAME[i].id}: the short shooting cuff heads down and back, away from the eye`);
     if(hold.support){
       assert.ok(near(support.position.toArray(),hold.support),`${WEAPON_FRAME[i].id}: free hand on the foregrip`);
       assert.deepEqual(gun.userData.supportPoint,hold.support);
       const free=cuff(gun,support);
-      assert.ok(free.y<-.5&&free.z>.2&&free.x<0,`${WEAPON_FRAME[i].id}: the free cuff heads down, back and left`);
+      assert.ok(free.y<-.15&&free.z>.6&&free.x<0,`${WEAPON_FRAME[i].id}: the free forearm heads back, down and left`);
+      const shortFree=cuff(tracked,tracked.userData.support);
+      assert.ok(shortFree.y<-.5&&shortFree.z>.2&&shortFree.x<0,`${WEAPON_FRAME[i].id}: the short free cuff heads down, back and left`);
     }
   });
   // Les trois modèles originaux sont centrés sur la main par construction.

@@ -3,7 +3,8 @@ import { portalIndicators } from './portal-indicator.js';
 import { createObjectiveGuide, objectiveIndicator } from './objective-guidance.js';
 import { DesktopGamepadInput, desktopAxis, DESKTOP_BUTTONS } from './desktop-input.js';
 import { syncTrackedHands } from './xr-hands.js';
-import { WEAPON_FRAME } from './weapons.js';
+import { WEAPON_FRAME, OPTICS } from './weapons.js';
+import { eyeAlignedSight } from './sight-line.js';
 import { createMagnifiedSight } from './magnified-sight.js';
 import { hapticPlan, buzz } from './haptics.js';
 import {createXRPauseMenu} from './xr-pause-menu.js';
@@ -35,23 +36,24 @@ const controllerOf = (controller, hand) => (controller.controllers || []).find(c
 const padOf = (controller, hand) => controllerOf(controller, hand)?.ray.userData.source.gamepad;
 
 // Physical Touch Plus buttons are fixed: A jump, B reload, Y weapon, X pause.
-// Aim and fire belong to the right controller: middle-finger squeeze and index trigger.
+// Fire and sprint belong to the shooting hand (index trigger, middle-finger squeeze); the free hand's squeeze aims.
 export const buttonNames = () => ({ reload:'B', next:'Y', jump:'A', pause:'X' });
 export function questControls(hand = 'right') {
   const left = hand === 'left', b = buttonNames(hand);
   const mainF = left ? 'gauche' : 'droite', sideF = left ? 'droite' : 'gauche', mainM = left ? 'gauche' : 'droit', sideM = left ? 'droit' : 'gauche';
+  // Labels follow the shooting hand: its index fires and its grip sprints; the free grip raises the optic.
   return [
-    ['Manette droite', 'Pistolet : le canon est la visée'],
-    ['Gâchette INDEX droite', 'Tirer · AURORA : maintenir pour déployer la lame'],
-    ['Gâchette MAJEUR droite', 'Courir (maintenir) · prise de tir conservée'],
+    [`Manette ${mainF}`, 'Pistolet : le canon est la visée'],
+    [`Gâchette INDEX ${mainF}`, 'Tirer · AURORA : maintenir pour déployer la lame'],
+    [`Gâchette MAJEUR ${mainF}`, 'Courir (maintenir) · prise de tir conservée'],
     [b.reload, 'Recharger la batterie'],
     [b.next, 'Arme suivante'],
     [`Joystick ${mainM}`, 'Rotation fluide'],
     [`Joystick ${sideM}`, 'Se déplacer'],
     [`Gâchette MAJEUR ${sideF}`, 'Épauler / viser : amène la lunette devant l’œil · relâcher pour revenir à la main'],
-    [`Clic joystick ${sideF}`, 'Terminal / arme proche : interagir · sinon : s’accroupir'],
+    [`Clic joystick ${sideM}`, 'Terminal / arme proche : interagir · sinon : s’accroupir'],
     [b.jump, 'Saut · second appui : double saut / rebond mural'],
-    ['Gâchette INDEX gauche', 'VX-9 DUO : tirer avec la gauche · sinon : charge à impulsion'],
+    [`Gâchette INDEX ${sideF}`, `VX-9 DUO : tirer avec la ${sideF} · sinon : charge à impulsion`],
     [`Clic joystick ${mainM}`, 'Frappe de mêlée'],
     ['Pupitre au poignet gauche', 'Pointer avec la main droite puis gâchette INDEX : compétences Gaby / Cara'],
     [b.pause, 'Pause / reprise']
@@ -455,7 +457,8 @@ export class VRController {
         mainTracked ||= tracked; rawFire ||= pressed(pad.buttons[xr ? 0 : DESKTOP_BUTTONS.fire]);
         this.handPose.mainTrigger = Math.max(this.handPose.mainTrigger, amount(pad.buttons[xr ? 0 : DESKTOP_BUTTONS.fire]));
         this.handPose.mainGrip = Math.max(this.handPose.mainGrip, amount(pad.buttons[xr ? 1 : DESKTOP_BUTTONS.aim]));
-        result.precision ||= tracked && pressed(pad.buttons[xr ? 1 : DESKTOP_BUTTONS.aim]);
+        // Flat-screen pads only: in a headset the right grip sprints and the left grip raises the optic.
+        result.precision ||= !xr && tracked && pressed(pad.buttons[DESKTOP_BUTTONS.aim]);
         if(xr)result.sprint ||= tracked && squeezed(pad.buttons[1]);
         if (xr) {
           const turn = axes[stick] || 0;
@@ -509,6 +512,15 @@ export class VRController {
     this.precision = result.precision && playing;
     this.aiming = xr ? result.aim && playing : result.precision && playing;
     return result;
+  }
+  // While the optic is raised, the line of sight runs from the aiming eye straight ahead: shots converge
+  // where it meets the world. Null otherwise (hip fire, dual pistols, blade).
+  sightLine(hand=settingsOf(this).hand){
+    const game=this.hooks.game();
+    if(this.mode!=='xr'||!this.aiming||hand!==settingsOf(this).hand||game?.weapon?.dual||game?.weapon?.melee)return null;
+    const T=this.hooks.world().T,line=this.sightScratch||={eye:new T.Vector3(),forward:new T.Vector3(),q:new T.Quaternion(),scale:new T.Vector3()};
+    this.sightEye().matrixWorld.decompose(line.eye,line.q,line.scale);line.forward.set(0,0,-1).applyQuaternion(line.q);
+    return line;
   }
   // The returned vectors are reused: read them before calling aim() again.
   aim(hand=settingsOf(this).hand) {
@@ -601,17 +613,15 @@ export class VRController {
         // use the same head-forward direction while this assisted pose is active.
         if(isMain&&this.aiming&&!game.weapon.melee&&!game.weapon.dual&&!reload){
           const world=this.hooks.world(),T=world.T,eyeCamera=this.sightEye();
-          const scratch=this.adsScratch||=( {eye:new T.Vector3(),forward:new T.Vector3(),q:new T.Quaternion(),parentQ:new T.Quaternion(),desired:new T.Vector3()} );
-          eyeCamera.matrixWorld.decompose(scratch.eye,scratch.q,scratch.desired);
-          scratch.forward.set(0,0,-1).applyQuaternion(scratch.q);
-          const optic=c.gun.userData.optics?.[game.weaponIndex]?.cfg;
-          const offset=optic?Math.max(.12,optic.eyeRelief||optic.radius*7):.20;
-          scratch.desired.copy(scratch.eye).addScaledVector(scratch.forward,offset);
-          scratch.desired.add(new T.Vector3(0,-(optic?.y||.16),-(optic?.z||0)).applyQuaternion(scratch.q));
+          const scratch=this.adsScratch||=( {parentQ:new T.Quaternion()} );
+          // The optic's own axis (or the M12's iron sights) sits on the eye axis.
+          const optic=c.gun.userData.optics?.[game.weaponIndex]?.cfg||OPTICS[game.weapon.id];
+          const sight=eyeAlignedSight(T,eyeCamera.matrixWorld,optic,scratch);
           c.gun.parent.updateWorldMatrix(true,false);
-          c.gun.position.copy(c.gun.parent.worldToLocal(scratch.desired));
+          const local=(scratch.local||=new T.Vector3()).copy(sight.position);
+          c.gun.position.copy(c.gun.parent.worldToLocal(local));
           c.gun.parent.getWorldQuaternion(scratch.parentQ);
-          c.gun.quaternion.copy(scratch.parentQ.invert().multiply(scratch.q));
+          c.gun.quaternion.copy(scratch.parentQ.invert().multiply(sight.quaternion));
         }
         // Re-evaluate visibility every frame; a previous saber swap must
         // never hide the following weapon permanently.

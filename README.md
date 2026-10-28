@@ -1,5 +1,7 @@
 # Pink Wars — La Fracture
 
+Version 3.64 : **gants raccordés, lunettes précises** — poignet souple sans cassure et avant-bras complets jusqu’au coude en vue à la première personne ; réticule de chaque arme exactement au point d’impact (écran et casque, viseur reflex ajouté sur la NOVA, tir convergent au casque) ; mêmes poignées Quest dans les missions que dans l’Arène ; chapitre 02 lancé correctement après une partie ; une seule version affichée ; Sentinelle posée sur un sol libre. [Détails](docs/pink-wars/MISE_A_JOUR_364.md) · [Jouer](https://pink-war.vercel.app/?v=3.64.0).
+
 Version 3.63.6 : **décor RLH et musiques de mission** — Velvet Siege pour M01, Iron Maw pour M02, fond compressé avec atténuation pendant les tirs ; reprises d’asphalte fissuré, marquages usés, poutres en I sous l’auvent et vapeur légère après remise sous tension. [Sources et modifications](docs/pink-wars/ADAPTATIONS_RLH_363_6.md) · [Captures](https://pink-war.vercel.app/rlh-vesper-3636.html) · [Jouer](https://pink-war.vercel.app/?v=3.63.6).
 
 Version 3.63.5 : **matériaux et équipements de scénario** — béton/asphalte CC0 en 1K hors mode performance, acier brossé, peinture, caoutchouc et toile. Ordinateurs avec coque adoucie, refroidissement, connectique et écran de mémoire locale ; interrupteurs à poignée mobile et voyant fonctionnel. [Captures](https://pink-war.vercel.app/materiaux-3635.html) · [Détails](docs/pink-wars/MISE_A_JOUR_363_5.md) · [Jouer](https://pink-war.vercel.app/?v=3.63.5).
@@ -119,26 +121,24 @@ Jeu 3D en HTML et JavaScript, conçu pour iPhone, ordinateur et casque WebXR. La
 
 Ouvrir l’adresse HTTPS du jeu dans **Meta Quest Browser**, choisir LYLU ou GHJU, cliquer sur **VR**, régler le pistolet si besoin, puis **Entrer en VR · Meta Quest 3** et autoriser la session immersive. Le casque suit les mouvements de tête ; le jeu utilise la vue FPS. Le mode téléphone à deux yeux reste distinct.
 
-La disposition ci-dessous est celle de la **main de tir droite** (par défaut). Avec une main de tir gauche, tout est inversé : la gâchette gauche tire, la droite vise, X recharge, Y change d’arme, le joystick gauche tourne, le joystick droit déplace, A saute et B met en pause.
+La disposition ci-dessous est celle de la **main de tir droite** (par défaut). Avec une main de tir gauche, les rôles des deux mains s’échangent (l’index gauche tire, le majeur droit épaule, etc.) ; les boutons A, B, X et Y gardent leur rôle. Mêmes commandes dans l’Arène, le Stand, M01, M02 et la Couronne HELIX (3.64).
 
 | Commande Touch Plus | Action |
 | --- | --- |
-| Manette droite (le pistolet) | Le canon suit la main et sert de visée, indépendamment du regard ; le laser et les tirs partent de la bouche du canon |
-| Gâchette droite | Tir / attaque AURORA ; maintien pour charger THORN/NOVA, relâchement pour un tir partiel ; tir automatique à charge complète |
-| Poignée droite maintenue | Laser renforcé. Le laser reste visible sans elle (réglable) ; tenir le pistolet poignée serrée n’empêche pas de courir |
-| A | Recharger la batterie ; l’arme se redresse brièvement |
-| B | Arme débloquée suivante |
-| Joystick droit gauche/droite | Rotation fluide ; haut/bas sans effet |
-| Joystick gauche | Déplacement horizontal, selon le regard ou selon la manette gauche |
-| Poignée gauche serrée à fond | Courir |
-| Clic du joystick gauche | S’accroupir / se relever ; ramasser à proximité d’une arme disponible |
-| Gâchette gauche | GHJU / R–9 DUO : pistolet gauche ; sinon charge à impulsion (3.63). La visée et la parade AURORA sont sur la poignée (majeur) droite |
-| Clic du joystick droit | Frappe de mêlée (3.63) |
-| X | Sauter ; second appui en l’air : double saut ou rebond près d’une paroi |
-| Bouton ↑ au poignet libre | Pointer avec la main de tir puis presser sa gâchette ; aucune attaque lors de cette sélection |
-| Y | Pause / reprise |
-| A en pause / fin de partie | Reprendre / rejouer la campagne |
-| B en pause / fin de partie | Quitter la VR |
+| Manette droite (l’arme) | À la hanche, le canon suit la main et sert de visée ; les tirs partent de la bouche du canon |
+| Gâchette INDEX droite | Tir / lame AURORA (maintenir pour la déployer) ; maintien pour charger THORN/NOVA |
+| Gâchette MAJEUR gauche | **Épauler** : la lunette vient devant l’œil droit, le réticule se pose au centre et le tir converge exactement sur lui ; relâcher pour revenir à la main |
+| Gâchette MAJEUR droite serrée à fond | Courir (la prise de l’arme est conservée) |
+| B | Recharger la batterie |
+| Y | Arme suivante |
+| A | Saut ; second appui en l’air : double saut ou rebond près d’une paroi |
+| X | Pause / reprise |
+| Joystick droit | Rotation fluide |
+| Joystick gauche | Déplacement |
+| Clic du joystick gauche | Terminal ou arme proche : interagir / ramasser ; sinon s’accroupir |
+| Clic du joystick droit | Frappe de mêlée |
+| Gâchette INDEX gauche | VX-9 DUO : pistolet gauche ; sinon charge à impulsion |
+| Pupitre au poignet gauche | Pointer avec la main droite puis gâchette INDEX : compétences Gaby / Cara |
 
 ### Réglages du pistolet VR
 

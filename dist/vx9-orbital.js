@@ -317,8 +317,11 @@ rod([-1.36,.175,0],[-3.6,.175,0],.008,mat.light,mesh('shot'),8,1);
     part.renderOrder=name==='reticle'?7:name==='glass'?5:name==='led'?4:0;
     palm.add(part);drawCalls++;
   }
+  // The sight axis passes through the reticle's centre bead, measured on this model.
+  gun.updateMatrixWorld(true);const sight=palm.localToWorld(new THREE.Vector3(.637,.856,0));
   Object.assign(gun.userData,{
-    authored:true,authoredOptic:true,integratedEmitter:true,
+    authored:true,authoredOptic:true,integratedEmitter:true,ownReticle:true,
+    optic:{y:+sight.y.toFixed(4),z:+sight.z.toFixed(4),radius:+(.151*.142).toFixed(4)},
     muzzle:[0,.124,-.329],modelName:'VX-9 Orbital Defense',
     sourceVersion:'VX-9 ORBITAL V5',optimizedDrawCalls:drawCalls
   });

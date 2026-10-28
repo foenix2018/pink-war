@@ -42,7 +42,7 @@ Stick gauche : déplacement ; stick droit : orientation ; L2 : visée ; R2 : tir
 
 ## Casque (Quest 3)
 
-Commandes inchangées, plus deux ajouts (3.63) : clic du stick droit = frappe de mêlée ; gâchette gauche = charge à impulsion (sauf avec les pistolets doubles, où elle tire avec la seconde arme).
+Mêmes commandes que l'Arène et le Stand (3.64) : index droit = tir ; **majeur gauche = épauler** (la lunette vient devant l'œil droit et le tir converge sur le réticule) ; majeur droit serré = course ; clic du stick droit = frappe de mêlée ; gâchette gauche = charge à impulsion (sauf avec les pistolets doubles, où elle tire avec la seconde arme). Jusqu'en 3.63, les missions inversaient les deux majeurs.
 
 ## Implantation
 

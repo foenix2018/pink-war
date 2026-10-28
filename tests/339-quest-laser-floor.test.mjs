@@ -49,8 +49,9 @@ test('Quest control mapping and trigger meanings do not collide with aiming',asy
  assert.deepEqual(buttonNames(),{reload:'B',next:'Y',jump:'A',pause:'X'});
  const help=Object.fromEntries(questControls());
  assert.ok(help['Gâchette INDEX droite'].includes('Tirer'));
- assert.ok(help['Gâchette MAJEUR droite'].includes('Viser'));
- assert.ok(!help['Gâchette INDEX gauche'].includes('Viser'));
+ assert.ok(help['Gâchette MAJEUR gauche'].includes('viser'),'the free hand raises the optic');
+ assert.ok(help['Gâchette MAJEUR droite'].includes('Courir'));
+ assert.ok(!help['Gâchette INDEX gauche'].includes('iser'));
 });
 
 test('contact laser glow is attached to wall or floor and grows with weapon energy',()=>{

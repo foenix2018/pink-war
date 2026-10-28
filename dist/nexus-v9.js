@@ -250,6 +250,7 @@ addScrews();
 
 
   root.updateMatrixWorld(true);
+  const sightCentre=sightLine.getWorldPosition(new THREE.Vector3());
   const grouped=new Map();
   const transparent=[];
   const other=[];
@@ -283,8 +284,10 @@ addScrews();
   for(const o of transparent)centered.add(o);
   for(const o of other)centered.add(o);
   root.traverse(o=>{if((o.isMesh||o.isLineSegments)&&!o.isInstancedMesh)o.geometry.dispose();});
+  result.updateMatrixWorld(true);centered.localToWorld(sightCentre);
   Object.assign(result.userData,{
-    authored:true,authoredOptic:true,integratedEmitter:true,
+    authored:true,authoredOptic:true,integratedEmitter:true,ownReticle:true,
+    optic:{y:+sightCentre.y.toFixed(4),z:+sightCentre.z.toFixed(4),radius:+(.185*.185).toFixed(4)},
     muzzle:[0,.108,-.600],modelName:'NEXUS V9',sourceVersion:'NEXUS V9 V2',
     optimizedDrawCalls:grouped.size+transparent.length+other.length,
   });
