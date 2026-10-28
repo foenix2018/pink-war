@@ -4,7 +4,7 @@ import {USDZExporter} from 'https://esm.sh/three@0.170.0/examples/jsm/exporters/
 import {GLTFLoader} from 'https://esm.sh/three@0.170.0/examples/jsm/loaders/GLTFLoader.js';
 const mat=(c,metal=.55)=>new THREE.MeshStandardMaterial({color:c,metalness:metal,roughness:.38});
 async function authentic(name){
- if(name==='RECO1'){const {createReco1}=await import('./reco1.js');return createReco1().root||createReco1();}
+ if(name==='RECO1'){const {createReco1}=await import('./reco1.js');return createReco1();}
  if(['VX-9','NEXUS V9','ARES X9','THORN','NOVA','M–12','VORTEX AR-7'].includes(name)){
  const {createWeaponModels}=await import('./weapons.js');
  const palette={steel:mat(0x9ca2ad),dark:mat(0x171b24),armor:mat(0xdf428f),armorLight:mat(0xe7b9d2)};
