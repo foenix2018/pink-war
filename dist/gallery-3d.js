@@ -8,7 +8,7 @@ const canvas = $('native-model'), viewer = $('viewer'), status = $('viewer-messa
 const arButton = $('ar-launch'), modelViewer = $('model');
 const renderer = new WebGPURenderer({canvas, antialias: !/iPhone|Android/i.test(navigator.userAgent), alpha: false, forceWebGL:true});
 const rendererReady=renderer.init();
-const galleryBuildVersion='2026-10-28-ar-v9';
+const galleryBuildVersion='2026-10-28-gallery-base-v10';
 renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.22;
@@ -117,10 +117,13 @@ function fitObject(root){
  const bounds=new T.Box3().setFromObject(root);
  if(bounds.isEmpty())throw Error('Géométrie sans dimensions.');
  const extent=bounds.getSize(new T.Vector3()),center=bounds.getCenter(new T.Vector3());
- const holder=new T.Group();holder.add(root);holder.position.copy(center).multiplyScalar(-1);
- pivot.add(holder);
+ const holder=new T.Group();holder.add(root);
  const max=Math.max(extent.x,extent.y,extent.z,.02);
- pivot.scale.setScalar(2.03/max);
+ const scale=2.03/max;
+ // Put the lowest point of the native model on the pedestal top (y=-1.0875), not at the viewer origin.
+ holder.position.set(-center.x,-bounds.min.y+(-1.0875/scale),-center.z);
+ pivot.add(holder);
+ pivot.scale.setScalar(scale);
  return meshes;
 }
 function draw(now){
