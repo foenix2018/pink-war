@@ -5,9 +5,14 @@ import { CHARGE_MAX } from './armor-combat.js';
 // handling, audio and VR aiming. Distances are from the firing line z=22.
 export const TRAINING_BARRIER=Object.freeze({z:19.12,stopZ:19.80,height:1.13,width:25.5});
 export const RANGE_CONTROLS=Object.freeze([-2,-1,0,1,2].map(lane=>Object.freeze({x:lane*4.6+.55,y:1.25,z:20.05})));
-export const RANGE_ARMORY=Object.freeze({x:0,y:1.35,z:34.9,frontZ:34.48,width:5.9,height:2.5,depth:.7});
+// Rack 3.66: 8 full-size, independently selectable bays. The physical supports,
+ // WebXR rays and hand-reach targets all consume these same coordinates.
+export const RANGE_ARMORY=Object.freeze({x:0,y:1.50,z:34.9,frontZ:34.48,width:9.4,height:2.95,depth:.7,slotPitch:1.12,slotWidth:1.00});
 export const RANGE_WEAPON_SLOTS=Object.freeze([0,1,2,3,4,6,7,8]);
-export const RANGE_ARMORY_SLOTS=Object.freeze(RANGE_WEAPON_SLOTS.map((index,i)=>Object.freeze({index,x:(i-(RANGE_WEAPON_SLOTS.length-1)/2)*.70,y:1.43,z:RANGE_ARMORY.frontZ,width:.66,height:2.08})));
+export const RANGE_ARMORY_SLOTS=Object.freeze(RANGE_WEAPON_SLOTS.map((index,i)=>Object.freeze({
+  index,x:RANGE_ARMORY.x+(i-(RANGE_WEAPON_SLOTS.length-1)/2)*RANGE_ARMORY.slotPitch,
+  y:RANGE_ARMORY.y,z:RANGE_ARMORY.frontZ,width:RANGE_ARMORY.slotWidth,height:2.36
+})));
 export function traceRangeArmory(origin,direction,available=RANGE_WEAPON_SLOTS){
   if(!origin||!direction||direction.z<=.001||origin.z>RANGE_ARMORY.frontZ+.01)return null;
   const distance=(RANGE_ARMORY.frontZ-origin.z)/direction.z;if(distance<0||distance>7)return null;

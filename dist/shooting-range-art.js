@@ -298,29 +298,45 @@ export function createShootingRangeArt(T,scene,options={}){
   function cabinetBox(name,x,y,z,w,h,d,mat=mats.trim){
     const mesh=new T.Mesh(bevelBox(w,h,d,Math.min(.025,w/5,h/5,d/5),2),mat);mesh.name=name;mesh.position.set(x,y,z);root.add(mesh);return mesh;
   }
-  cabinetBox('Socle de l’armoire',0,.12,cabinet.z,5.9,.24,.7,mats.metal);
-  cabinetBox('Fond blindé de l’armoire',0,1.35,35.18,5.82,2.22,.10,mats.padding);
-  cabinetBox('Dessus de l’armoire',0,2.44,cabinet.z,5.9,.16,.7,mats.metal);
-  for(const x of [-2.88,2.88]){
-    cabinetBox('Montant biseauté de l’armoire',x,1.3,cabinet.z,.14,2.35,.7,mats.metal);
-    box('Balisage intérieur de l’armoire',x*.97,1.37,34.56,.025,1.95,.025,mats.light);
+  // Wider, reinforced steel rack: eight real bays, no overlapping long barrels.
+  const rackWidth=cabinet.width,edgeX=rackWidth/2-.075;
+  cabinetBox('Socle élargi de l’armoire',0,.12,cabinet.z,rackWidth,.24,cabinet.depth,mats.metal);
+  cabinetBox('Fond blindé / rack huit armes',0,cabinet.height/2,35.18,rackWidth-.18,cabinet.height-.26,.10,mats.padding);
+  cabinetBox('Traverse supérieure du rack',0,cabinet.height-.09,cabinet.z,rackWidth,.18,cabinet.depth,mats.metal);
+  for(const x of [-edgeX,edgeX]){
+    cabinetBox('Montant acier du rack',x,cabinet.height/2,cabinet.z,.15,cabinet.height-.16,cabinet.depth,mats.metal);
+    box('Balisage latéral du rack',x*.984,1.51,34.54,.026,2.25,.025,mats.light);
   }
-  RANGE_WEAPON_SLOTS.forEach((index,i)=>{
-    const x=(i-3)*.78;
-    cabinetBox('Compartiment d’arme',x,.62,34.89,.68,.09,.49,mats.trim);
-    for(const y of [1.06,1.78])box('Crochet de maintien',x,y,34.93,.14,.04,.16,mats.metal);
-    if(i<6)box('Séparation de rangement',x+.39,1.48,35.02,.025,1.78,.27,mats.trim);
-    sign(WEAPONS[index].name,index===7?'GHJU':'ÉQUIPER',x,.40,34.48,.65,.18,'#e0c48b');
-    const slot=new T.Group();slot.position.set(x,1.43,34.78);displayModels.add(slot);displaySlots.set(index,slot);
+  // All eight storage supports, nameplates and selection zones share one slot
+  // layout. No independent index-based X offsets are allowed here.
+  RANGE_ARMORY_SLOTS.forEach((slot,i)=>{
+    const x=slot.x,index=slot.index;
+    cabinetBox('Compartiment individuel élargi',x,.58,34.89,slot.width-.055,.09,.49,mats.trim);
+    for(const y of [1.06,2.18])box('Crochet de maintien réglable',x,y,34.93,.20,.043,.18,mats.metal);
+    if(i<RANGE_ARMORY_SLOTS.length-1){
+      const next=RANGE_ARMORY_SLOTS[i+1];
+      cabinetBox('Cloison verticale de rangement',(x+next.x)/2,1.53,35.02,.035,2.43,.28,mats.trim);
+    }
+    box('Repère LED d’emplacement',x,2.71,34.56,.28,.025,.035,index===8?mats.rose:mats.light);
+    sign(WEAPONS[index].name,index===7?'GHJU':index===8?'36 CELLULES':'ÉQUIPER',x,.345,cabinet.frontZ,slot.width-.055,.20,index===8?'#ffa0cf':'#e0c48b');
+    const displaySlot=new T.Group();displaySlot.position.set(x,slot.y,34.78);
+    displaySlot.userData.weaponIndex=index;displaySlot.userData.bayWidth=slot.width;
+    displayModels.add(displaySlot);displaySlots.set(index,displaySlot);
   });
-  sign('ARMURERIE','VR : POINTER + GÂCHETTE  /  F : MENU',0,2.82,34.48,5.6,.52,'#eadab5');
-  const hoverGeometry=new T.BufferGeometry().setFromPoints([new T.Vector3(-.35,-1.04,0),new T.Vector3(.35,-1.04,0),new T.Vector3(.35,1.04,0),new T.Vector3(-.35,1.04,0)]);
+  sign('ARMURERIE  /  8 ARMES','VR : POINTER + GÂCHETTE  /  F : MENU',0,3.21,cabinet.frontZ,rackWidth-.28,.49,'#eadab5');
+  const hoverHalfWidth=RANGE_ARMORY.slotWidth/2-.035,hoverHalfHeight=RANGE_ARMORY_SLOTS[0].height/2;
+  const hoverGeometry=new T.BufferGeometry().setFromPoints([
+    new T.Vector3(-hoverHalfWidth,-hoverHalfHeight,0),new T.Vector3(hoverHalfWidth,-hoverHalfHeight,0),
+    new T.Vector3(hoverHalfWidth,hoverHalfHeight,0),new T.Vector3(-hoverHalfWidth,hoverHalfHeight,0)]);
   const armoryHover=new T.LineLoop(hoverGeometry,new T.LineBasicMaterial({color:0xe5c88e,transparent:true,opacity:.9}));
   armoryHover.name='Armoire / arme pointée';armoryHover.visible=false;armoryHover.userData.noWorldShadow=true;root.add(armoryHover);
-  function setArmoryHover(index=null){const slot=RANGE_ARMORY_SLOTS.find(s=>s.index===index);armoryHover.visible=!!slot;if(slot)armoryHover.position.set(slot.x,1.35,slot.z-.025);}
-  const armoryLamp=new T.SpotLight(0xffedcf,20,7,1.15,.6,2);armoryLamp.name='Projecteur de l’armurerie';armoryLamp.position.set(0,3.4,32.4);armoryLamp.target.position.set(0,1.35,34.9);armoryLamp.castShadow=false;root.add(armoryLamp,armoryLamp.target);
-  box('Boîtier du projecteur de l’armurerie',0,3.43,32.4,.9,.16,.3,mats.metal);box('Lampe de l’armurerie',0,3.34,32.4,.76,.035,.24,mats.light);
-  pipe('Suspente du projecteur de l’armurerie',[0,3.51,32.4],[0,4.9,32.4],.025,mats.trim);
+  function setArmoryHover(index=null){const slot=RANGE_ARMORY_SLOTS.find(s=>s.index===index);armoryHover.visible=!!slot;if(slot)armoryHover.position.set(slot.x,slot.y,slot.z-.025);}
+  const armoryLamp=new T.SpotLight(0xffedcf,21,9,1.32,.6,2);
+  armoryLamp.name='Projecteur du grand rack';armoryLamp.position.set(0,3.65,31.6);
+  armoryLamp.target.position.set(0,cabinet.y,cabinet.z);armoryLamp.castShadow=false;root.add(armoryLamp,armoryLamp.target);
+  box('Boîtier du projecteur du rack',0,3.68,31.6,.9,.16,.3,mats.metal);
+  box('Lampe du grand rack',0,3.59,31.6,.76,.035,.24,mats.light);
+  pipe('Suspente du projecteur de rack',[0,3.77,31.6],[0,4.9,31.6],.025,mats.trim);
   let armoryVersion=null;
   function clearArmoryModels(){for(const slot of displaySlots.values()){slot.traverse(n=>{if(n.isInstancedMesh)n.dispose();});slot.clear();}}
   function setArmoryModels(sources,revision,characterId){
@@ -334,7 +350,22 @@ export function createShootingRangeArt(T,scene,options={}){
         model.traverse(n=>{if(n.name==='M12 reload shell')n.visible=false;});applyWorldShadows(holder);
         holder.updateWorldMatrix(true,true);const bounds=new T.Box3();
         model.traverseVisible(n=>{if(n.isMesh&&n.geometry){if(!n.geometry.boundingBox)n.geometry.computeBoundingBox();bounds.union(n.geometry.boundingBox.clone().applyMatrix4(n.matrixWorld));}});
-        if(!bounds.isEmpty()){const center=bounds.getCenter(new T.Vector3());model.position.sub(holder.worldToLocal(center));}
+        // Original weapons are cloned, not remeshed. Uniform fitting prevents
+        // the ARES, THORN and VORTEX from spilling into adjacent compartments.
+        if(!bounds.isEmpty()){
+          const bay=RANGE_ARMORY_SLOTS.find(s=>s.index===index);
+          const size=bounds.getSize(new T.Vector3());
+          const maxWidth=(index===7?bay.width*.47:bay.width*.86);
+          const factor=Math.min(1,maxWidth/Math.max(.001,size.x),
+            bay.height*.83/Math.max(.001,size.y),.48/Math.max(.001,size.z));
+          if(factor<1){
+            model.scale.multiplyScalar(factor);
+            holder.updateWorldMatrix(true,true);
+            bounds.setFromObject(model);
+          }
+          const center=bounds.getCenter(new T.Vector3());
+          model.position.sub(holder.worldToLocal(center));
+        }
       }
     }
   }
