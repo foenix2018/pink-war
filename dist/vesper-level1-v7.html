@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
-<link rel="icon" href="icons/favicon-32.png?v=3.65.0" sizes="32x32" type="image/png"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><link rel="stylesheet" href="./mission-loading.css?v=3.65.0"><script>document.documentElement.classList.toggle('pw-auto-story',!new URLSearchParams(location.search).has('visit'));</script>
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3.65.0" sizes="180x180">
-<link rel="manifest" href="manifest.webmanifest?v=3.65.0">
+<link rel="icon" href="icons/favicon-32.png?v=3.65.4" sizes="32x32" type="image/png"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><link rel="stylesheet" href="./mission-loading.css?v=3.65.4"><script>document.documentElement.classList.toggle('pw-auto-story',!new URLSearchParams(location.search).has('visit'));</script>
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3.65.4" sizes="180x180">
+<link rel="manifest" href="manifest.webmanifest?v=3.65.4">
 <meta name="apple-mobile-web-app-title" content="Pink Wars">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -79,7 +79,7 @@ body:not(.rainOn) #rainCurtain{display:none}
  #game #prompt{top:46%}
 }
 .photoMode #quickSettings,.photoMode #quickObjective{display:none!important}
-</style><link rel="stylesheet" href="fracture.css?v=3.65.0">
+</style><link rel="stylesheet" href="fracture.css?v=3.65.4">
 </head><body>
 <canvas id="view" aria-label="Environnement 3D de Vesper"></canvas>
 <div id="rainCurtain"></div><div id="game" aria-label="Commandes de la visite 3D"><div id="vignette"></div>
@@ -1715,14 +1715,15 @@ function initCombatUI(){const sheet=document.createElement('style');sheet.textCo
  `;document.head.append(sheet);
   const c=document.createElement('div');c.id='combatHud';c.setAttribute('aria-label','Santé et munitions');c.innerHTML='<div class="combatBox"><div class="combSub">ARME / <span id="pwWeapon">R9</span></div><div id="pwAmmo" class="ammoBig">12 / 12</div></div><div class="combatBox"><div class="combSub">SANTÉ</div><div class="ammoBig"><span id="pwHealth">100</span></div><div class="combSub" hidden>POINTS <span id="pwScore">0</span></div></div>';
  document.body.append(c);const g=document.createElement('div');g.id='weaponVis';g.innerHTML='<div class="gunMag"></div><div class="gunBody"></div><div class="gunRail"></div><div class="gunBarrel"></div><div class="gunLed"></div><div id="gunFlash"></div>';document.body.append(g);const h=document.createElement('div');h.id='hitCross';h.textContent='×';document.body.append(h);updateWeaponUI();}
+let legacyPS4Input=null;
 let padFiring=false;
-function pollGamepad(dt){const devices=navigator.getGamepads?.()||[],gp=combatWorld?combatWorld.gamepad(devices):Array.from(devices).find(Boolean);gamepadMove.x=0;gamepadMove.y=0;padLook.x=0;padLook.y=0;padRun=false;gamepadAiming=false;padFiring=false;if(!gp){lastGamepadButtons=[];return;}
- const d=v=>Math.abs(v)>.14?v:0, btn=i=>gp.buttons[i]?.pressed||false,edge=i=>btn(i)&&!lastGamepadButtons[i];
- if(missionMenu?.isOpen){lastGamepadButtons=gp.buttons.map(b=>b.pressed);return;}
+function pollGamepad(dt){const devices=navigator.getGamepads?.()||[],gp=combatWorld?combatWorld.gamepad(devices):legacyPS4Input?.select(devices,{focused:!document.hidden});gamepadMove.x=0;gamepadMove.y=0;padLook.x=0;padLook.y=0;padRun=false;gamepadAiming=false;padFiring=false;if(!gp){lastGamepadButtons=[];return;}
+ const d=v=>Number.isFinite(v)&&Math.abs(v)>.20?v:0, btn=i=>!!gp.buttons[i]?.pressed||(gp.buttons[i]?.value||0)>.55,edge=i=>btn(i)&&!lastGamepadButtons[i];
+ if(missionMenu?.isOpen){lastGamepadButtons=Array.from(gp.buttons,b=>!!b.pressed||(b.value||0)>.55);return;}
  gamepadMove.x=d(gp.axes[0]||0);gamepadMove.y=d(gp.axes[1]||0);padLook.x=d(gp.axes[2]||0);padLook.y=d(gp.axes[3]||0);padRun=btn(10);gamepadAiming=btn(6);
  if(!combatWorld?.paused){yaw+=padLook.x*dt*1.9;pitch=clamp(pitch-padLook.y*dt*1.55,-1.46,1.46);}
  if(edge(12))combatWorld?.toggleSkills();padFiring=btn(7);if(edge(0))jumpQueued=true;if(edge(2))reloadWeapon();if(edge(3))changeWeapon(1);if(edge(1))crouching=!crouching;if(edge(11)){document.getElementById('help').classList.remove('show');interact();}if(edge(9))toggleMissionPause();if(edge(5))combatWorld?.melee?.();if(edge(4))combatWorld?.throwCharge?.();
- lastGamepadButtons=gp.buttons.map(b=>b.pressed);
+ lastGamepadButtons=Array.from(gp.buttons,b=>!!b.pressed||(b.value||0)>.55);
 }
 
 function inputSetup(){
@@ -1892,19 +1893,23 @@ function toggleSurfaceMode(value){
 }
 
 let missionLoading=null,missionMenu=null;
+// DS4 in Safari uses the shared normalized gamepad mapping; no anonymous raw HID fallback.
+
 function resumeMission(){gamePaused=false;keys.clear();firing=false;isAiming=false;combatWorld?.resume();}
 function toggleMissionPause(){if(missionMenu){missionMenu.isOpen?missionMenu.hide():missionMenu.show();}else{gamePaused=!gamePaused;combatWorld?.pause();}}
 async function boot(){try{
- if(!referenceVisit){const {createMissionLoading}=await import('./mission-loading.js?v=3.65.0');missionLoading=createMissionLoading({mission:1,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});missionLoading.set(.08,'Chargement du scénario');}
- showVesperPrologue=(await import('./story-prologue.js?v=3.65.0')).showStoryPrologue;
+  const [{DesktopGamepadInput},{createGamepadAid}]=await Promise.all([import('./desktop-input.js?v=3.65.4'),import('./ios-gamepad.js?v=3.65.4')]);
+  legacyPS4Input=new DesktopGamepadInput();createGamepadAid();
+ if(!referenceVisit){const {createMissionLoading}=await import('./mission-loading.js?v=3.65.4');missionLoading=createMissionLoading({mission:1,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});missionLoading.set(.08,'Chargement du scénario');}
+ showVesperPrologue=(await import('./story-prologue.js?v=3.65.4')).showStoryPrologue;
  $('bootInfo').textContent='Construction de la mégalopole, bâtiments, détails et navigation…';
  await new Promise(r=>setTimeout(r,80));
  if(referenceVisit)buildScene();const atlas=createAtlas();const materialAtlas=referenceVisit?await v5LoadMaterial():null;
  $('bootInfo').textContent='Initialisation du moteur WebGPU…';
  if(!new URLSearchParams(location.search).has('visit')){
-  const {createPauseMenu}=await import('./fracture-menu.js?v=3.65.0');
+  const {createPauseMenu}=await import('./fracture-menu.js?v=3.65.4');
   missionMenu=createPauseMenu({title:'HISTOIRE / LE DERNIER SIGNAL',canOpen:()=>started,settingsSelectors:['#controlsPanel','#audioToggle'],onPause(){gamePaused=true;combatWorld?.pause();keys.clear();firing=false;isAiming=false;},onResume:resumeMission,onVR:()=>combatWorld?.enterVR(),onHome:async()=>{await combatWorld?.exitVR();location.assign('./index.html');}});missionMenu.setVisible(false);
-  const {createVesperCombat}=await import('./vesper-combat.js?v=3.65.0');missionLoading?.set(.16,'Ressources du secteur chargées');
+  const {createVesperCombat}=await import('./vesper-combat.js?v=3.65.4');missionLoading?.set(.16,'Ressources du secteur chargées');
   let renderFailed=false;
   const fail=error=>{
    console.warn('Vesper / échec du rendu, repli compatible :',error);

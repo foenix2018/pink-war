@@ -6,6 +6,7 @@ import * as T from './vendor/three.webgpu.min.js';
 import {WebGLRenderer} from './vendor/three.module.min.js';
 import {ArenaGame,starterWeaponOrder,WEAPONS,clamp,segmentBox,traceEnemyHit} from './game-logic.js';
 import {createPinkWarsInput,createPinkWarsTouch} from './level2-input.js';
+import {createGamepadAid} from './ios-gamepad.js';
 import {createWeaponFeel,recoilPose} from './weapon-feel.js';
 import {loadRealLaserSample,loadCombatSamples,playLaserShot,playEnemyShot,playWeaponAction,playLaserImpact,setLaserAudioEnabled} from './laser-sound.js';
 import {aimSensitivity,magnifiedFov,flatSightPose} from './optics.js';
@@ -37,6 +38,7 @@ import {bevelBox} from './geo.js';
 import {createArchiveTerminalFactory} from './archive-terminals.js';
 
 const $=id=>document.getElementById(id);
+createGamepadAid();
 const characterId=new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju';
 document.documentElement.dataset.universe=characterId==='lylu'?'blue':'pink';
 const main=$('game'),shade=$('shade'),startButton=$('start'),status=$('status');

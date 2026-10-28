@@ -1,7 +1,9 @@
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
+import {DesktopGamepadInput} from './desktop-input.js';
+import {createGamepadAid,gamepadsNow} from './ios-gamepad.js';
 import {graphicsProfile} from './renderer-policy.js';
 import {GAME_VERSION,showLaunchError,compatibleLaunchURL} from './launch-ui.js';
-import {syncMenuArtwork} from './menu-art.js?v=3.65.3';
+import {syncMenuArtwork} from './menu-art.js?v=3.65.4';
 import {showStoryPrologue} from './story-prologue.js';
 import {createMissionLoading} from './mission-loading.js';
 import {readM01Checkpoint} from './checkpoint-index.js';
@@ -92,7 +94,7 @@ async function begin(intent='play',afterPrologue=false){
   if(settings.sound||settings.music!==false)try{const Audio=window.AudioContext||window.webkitAudioContext;
     window.__PINKWAR_BOOT_AUDIO ||=new Audio();window.__PINKWAR_BOOT_AUDIO.resume().catch(()=>{});}catch{}
   try{
-    modulePromise ||=import('./game.js?v=3.65.3');await modulePromise;
+    modulePromise ||=import('./game.js?v=3.65.4');await modulePromise;
     for(const d of document.querySelectorAll('dialog'))d.removeEventListener('cancel',earlyCancel);
     if(!window.__PINKWAR||window.__PINKWAR.snapshot().phase==='error')throw new Error('Initialisation interrompue.');
     loading=false;
@@ -111,4 +113,40 @@ $('lore-dialog').append(replay);
 $('loading-screen').hidden=true;
 $('online-launch').hidden=location.protocol!=='file:';
 refresh();
+// iOS Safari / DualShock 4: controller navigation works before any 3D code is
+// loaded. The controller must be neutral once before its first intentional press.
+createGamepadAid();
+const lobbyPad=new DesktopGamepadInput();
+let lobbyPrevious=[],lobbyPadKey=null;
+const padPressed=(pad,index)=>!!pad?.buttons[index]?.pressed||(pad?.buttons[index]?.value||0)>.5;
+function pollLobbyController(){
+  if(document.hidden||loading){lobbyPad.select([]);lobbyPrevious=[];lobbyPadKey=null;requestAnimationFrame(pollLobbyController);return;}
+  const pad=lobbyPad.select(gamepadsNow(),{focused:!document.hidden});
+  const key=lobbyPad.activeKey;
+  if(key!==lobbyPadKey){lobbyPadKey=key;lobbyPrevious=pad?.buttons.map(b=>padPressed(pad,pad.buttons.indexOf(b)))||[];}
+  const current=pad?.buttons.map((_,i)=>padPressed(pad,i))||[];
+  const edge=i=>!!current[i]&&!lobbyPrevious[i];
+  const selectedMode=()=>['campaign','campaign2','training','arena'].indexOf(mode);
+  const choices=['campaign','campaign2','training','arena'];
+  if(edge(14)||edge(15)){
+    const dir=edge(14)?-1:1;
+    mode=choices[(selectedMode()+dir+choices.length)%choices.length];
+    if(!chapters.hidden)showStory(false);refresh();
+  }
+  if(edge(12)||edge(13)||edge(4)||edge(5)){
+    character=(edge(12)||edge(4))?'ghju':'lylu';save();refresh();
+  }
+  if(edge(3))showStory(chapters.hidden);
+  if(edge(1)){if(!chapters.hidden)showStory(false);else for(const d of document.querySelectorAll('dialog[open]'))d.close();}
+  if(edge(9))panel('help-dialog');
+  if(edge(2))panel('settings-dialog');
+  if(edge(0)&&!document.querySelector('dialog[open]')){
+    if(!chapters.hidden)showStory(false);
+    void begin('play');
+  }
+  lobbyPrevious=current;
+  requestAnimationFrame(pollLobbyController);
+}
+requestAnimationFrame(pollLobbyController);
+
 window.__PINKWAR_ENTRY=Object.freeze({version:GAME_VERSION,snapshot:()=>({character,mode,view,loading,ios:profile.ios,music:screenMusicSnapshot()})});

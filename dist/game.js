@@ -1,6 +1,7 @@
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, starterWeaponIndex, weaponCycleOrder, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
 import { createScene } from './scene.js?v=3.48';
 import { VRController } from './vr.js';
+import {createGamepadAid} from './ios-gamepad.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
 import { characterForId } from './characters.js';
 import { playLaserShot,playEnemyShot,loadRealLaserSample,loadCombatSamples,playLaserImpact,setLaserAudioEnabled,disposeLaserAudio,playWeaponAction,setWeaponCharge } from './laser-sound.js';
@@ -33,6 +34,7 @@ import {createHudContrastControl} from './hud-appearance.js';
 import {createArmorFeedback,meleeKick,MELEE_POSE} from './armor-feedback.js';
 
 const $ = id => document.getElementById(id);
+createGamepadAid();
 const settings = { sound: true, music: true, sensitivity: 1, quality: 'auto' };
 let narrativeCompanion=null,companionScene=null,companionHero=null;
 let companionSkills=null,skillMenu=null,skillFX=null,skillGame=null;
