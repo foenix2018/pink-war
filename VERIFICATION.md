@@ -1,3 +1,15 @@
+# Pink War 3.66.1 — articulations et appuis
+
+587 tests Node réussis, aucun échec, annulation ou test ignoré ; puis les trois tests de galerie ajoutés sur la branche principale réussissent également. Les neuf nouveaux tests vérifient GHJU et LYLU dans les quatre directions à 30, 60 et 120 Hz : absence de croisement des pieds, flexion des genoux, continuité des chevilles, équivalence entre atelier stationnaire et déplacement réel à 4,8 m de hauteur, dégagement des bottes en position debout et accroupie. Les dix tests 3.66 restent actifs, avec remplacement du verrouillage rigide par un appui progressif et contrôle de son relâchement.
+
+Les vraies commandes W/D/S/A, V et Espace sont utilisées dans l’Arène pour les deux personnages. Le recul est reconnu, les chevilles restent séparées, le tir consomme des munitions et chaque armure garde 19 lots. Aucun échec JavaScript ni ressource locale manquante. L’atelier autonome est chargé hors connexion en 390 × 844 et affiche les deux personnages en marche arrière. [Rapport](docs/pink-wars/HEROES_STRIDE_BROWSER_VERIFICATION.json) · [Notes et captures](docs/pink-wars/MISE_A_JOUR_366_1.md).
+
+Une mesure à 60 Hz du même rig local compare la 3.66 et la 3.66.1 : saut maximal de cheville par image en marche avant 17,93 → 4,25 cm ; en recul 17,75 → 3,13 cm. Aucun croisement dans les quatre séquences finales. Ces valeurs concernent le rig d’édition non réduit, pas une mesure de FPS matériel. [Protocole et résultats](docs/pink-wars/HEROES_STRIDE_METRICS.json).
+
+Syntaxe des modules et du générateur validée, `git diff --check` propre. Les ajouts distants de galerie sont intégrés. Limites : Chromium/SwiftShader, framebuffer réduit et caméra préparée ; aucun essai sur Safari/iPhone ou Quest physique. Les illustrations de référence restent inchangées.
+
+---
+
 # Pink War 3.66 — GHJU et LYLU Shadow VII
 
 578 tests Node réussis, aucun échec ni test ignoré. Dix nouveaux contrôles couvrent les deux personnages, les sommets des lots GPU comparés aux vraies attaches des os sous déplacements, hauteur, échelle, accroupissement et saut ; la cadence, le recul, le pas latéral, les neuf armes, la pause, les appuis au sol, la réception et le tissu. Les contrôles historiques utilisent un déplacement réel pour vérifier la course et le nouvel évasement de cape.

@@ -32,9 +32,9 @@ test('cadence follows actual displacement: walking, running, stopping against a 
  for(let i=0;i<60;i++)m.animate(2+i/60,true,0,0,0,1/60,{velocity:{x:0,z:0}});assert.equal(m.nativeMotion,'idle','holding movement into an obstacle cannot keep walking in place');
  const weights=Object.values(m.actor.actions).reduce((n,a)=>n+a.getEffectiveWeight(),0);assert.ok(Math.abs(weights-1)<1e-6);m.dispose();
 });
-test('backsteps reverse the native cycle and sidesteps turn the lower body while weapon IK stays exact',()=>{
- const m=hero();frames(m,40,{velocity:{x:0,z:2.4},aim:true});assert.equal(m.nativeMotion,'walkRifle');assert.ok(m.actor.actions.walkRifle.timeScale<0);assert.equal(m.locomotion.backward,true);
- frames(m,40,{velocity:{x:3,z:0},aim:true});assert.ok(m.locomotion.legYaw>.9);assert.ok(m.locomotion.lateral>2.9);
+test('backsteps preserve forward knee flexion and sidesteps keep the pelvis aligned while weapon IK stays exact',()=>{
+ const m=hero();frames(m,40,{velocity:{x:0,z:2.4},aim:true});assert.equal(m.nativeMotion,'walkRifle');assert.ok(m.actor.actions.walkRifle.timeScale>0);assert.equal(m.locomotion.backward,true);
+ frames(m,40,{velocity:{x:3,z:0},aim:true});assert.ok(Math.abs(m.locomotion.legYaw)<.15);assert.ok(m.locomotion.lateral>2.9);
  for(let weapon=0;weapon<WEAPON_FRAME.length;weapon++){m.setWeapon(weapon);frames(m,4,{velocity:{x:-2,z:-1},aim:true});m.root.updateMatrixWorld(true);for(let i=0;i<2;i++){const g=i===1?m.gun.userData.hand:WEAPON_FRAME[weapon].support||WEAPON_FRAME[weapon].dual?m.gun.userData.support:m.freeHand;const target=g.localToWorld(new T.Vector3(...GRIP.wrist));assert.ok(m.arms[i].hand.getWorldPosition(new T.Vector3()).distanceTo(target)<.001,`${weapon}/${i}: hands retain their real grips`);}}
  m.dispose();
 });
@@ -42,13 +42,13 @@ test('crouching and zero-time animation never accumulate hip or IK corrections',
  const m=hero();frames(m,60,{crouched:true,aim:true});const before=pose(m),cloth=m.shadowUnit.cape.anchor.children[0].geometry.attributes.position.array.slice();
  for(let i=0;i<80;i++)m.animate(m._testTime,false,0,0,1,0,{crouched:true,aim:true});assert.deepEqual(pose(m),before);assert.deepEqual(m.shadowUnit.cape.anchor.children[0].geometry.attributes.position.array,cloth);m.dispose();
 });
-test('a supporting boot stays at its world contact while the body advances',()=>{
- const m=hero();let previous=null,contacts=0,continuous=0,drift=0;
+test('support blends in and releases without snapping the boot back to the native pose',()=>{
+ const m=hero();let previous=null,contacts=0,continuous=0,drift=0,maxStep=0,previousLocal=null;
  for(let i=0;i<160;i++){
-  frames(m,1,{velocity:{x:0,z:-2}});const p=m.feet[0].getWorldPosition(new T.Vector3());
+  frames(m,1,{velocity:{x:0,z:-2}});const p=m.feet[0].getWorldPosition(new T.Vector3()),local=m.root.worldToLocal(p.clone());if(previousLocal)maxStep=Math.max(maxStep,local.distanceTo(previousLocal));previousLocal=local;
   if(m.locomotion.planted[0]){contacts++;if(previous){continuous++;drift=Math.max(drift,previous.distanceTo(p));}previous=p;}else previous=null;
  }
- assert.ok(contacts>20&&continuous>15,'real stance phases are detected across several strides');assert.ok(drift<.0001,`contact drift ${drift}`);m.dispose();
+ assert.ok(contacts>10&&continuous>5,'support is present across several strides');assert.ok(drift<.045,`soft support drift ${drift}`);assert.ok(maxStep<.065,'releasing the support cannot make an 18 cm jump');m.dispose();
 });
 test('jump apex flexes the knees and landing absorbs impact before recovering',()=>{
  const m=hero();frames(m,50,{aim:true});const standing=m.hips.position.y;

@@ -66,14 +66,14 @@ export function attachShadowConcept(model, profile) {
       cy=outline.reduce((s,v)=>s+v[1],0)/n;
     const facing=(pos[2]>.06?1:-1)*(Math.cos(rot[1])>=0?1:-1);
     const rise=Math.min(.022,depth+.007),vertices=[],indices=[];
-    const rings=[[1,0],[.965,.0025],[.90,.006],[.78,rise*.8],[.48,rise]];
+    const rings=[[1,0],[.965,.0025],[.90,.006],[.78,rise],[.48,rise]];
     for(const [scale,z] of rings)for(const [x,y] of outline)
       vertices.push(cx+(x-cx)*scale,cy+(y-cy)*scale,z*facing);
     for(let row=1;row<rings.length;row++)for(let i=0;i<n;i++){
       const a=(row-1)*n+i,b=(row-1)*n+(i+1)%n,c=row*n+i,d=row*n+(i+1)%n;
       indices.push(a,b,c,b,d,c);
     }
-    const center=vertices.length/3;vertices.push(cx,cy,(rise+.001)*facing);
+    const center=vertices.length/3;vertices.push(cx,cy,rise*facing);
     for(let i=0;i<n;i++)indices.push((rings.length-1)*n+i,(rings.length-1)*n+(i+1)%n,center);
     // Seal the underside to give the plate a real edge in profile.
     const back=vertices.length/3;vertices.push(cx,cy,-.003*facing);
@@ -171,6 +171,19 @@ export function attachShadowConcept(model, profile) {
     }
     const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(verts,3));
     g.setIndex(indices);g.computeVertexNormals();const non=g.toNonIndexed();g.dispose();return non;
+  }
+  function bootSole(){
+    const outline=[[-.050,-.145],[.038,-.145],[.060,-.114],[.061,-.041],[.049,.045],[.048,.125],[.031,.154],[-.032,.154],[-.052,.132],[-.056,.060],[-.048,-.022],[-.065,-.105]],p=[],uv=[],ix=[];
+    const rings=[[-.095,.92],[-.089,1],[-.073,1],[-.065,.92]],n=outline.length;
+    for(let row=0;row<rings.length;row++)for(let j=0;j<n;j++){const [y,s]=rings[row],[x,z]=outline[j];p.push(x*s,y,z*s+.010);uv.push(j/n,row/3);if(row){const a=(row-1)*n+j,b=(row-1)*n+(j+1)%n,c=row*n+j,d=row*n+(j+1)%n;ix.push(a,c,b,b,c,d);}}
+    for(const row of [0,3]){const c=p.length/3;p.push(0,rings[row][0],.01);uv.push(.5,.5);for(let j=0;j<n;j++)ix.push(...(row?[row*n+j,c,row*n+(j+1)%n]:[j,(j+1)%n,c]));}
+    const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(p,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.setIndex(ix);g.computeVertexNormals();return g;
+  }
+  function bootUpper(){
+    const rings=[[-.143,.045,-.065,-.008],[-.115,.058,-.067,.018],[-.045,.057,-.060,.064],[.038,.046,-.052,.087],[.105,.045,-.064,.035],[.151,.035,-.069,-.006]],p=[],uv=[],ix=[],steps=16;
+    for(let row=0;row<rings.length;row++)for(let j=0;j<steps;j++){const [z,w,lo,hi]=rings[row],a=j/steps*Math.PI*2,c=Math.cos(a),s=Math.sin(a),k=(Math.abs(c)**4+Math.abs(s)**4)**(-.25);p.push(w*c*k,(hi+lo)/2+(hi-lo)/2*s*k,z);uv.push(j/steps,row/(rings.length-1));if(row){const a=(row-1)*steps+j,b=(row-1)*steps+(j+1)%steps,c=row*steps+j,d=row*steps+(j+1)%steps;ix.push(a,b,c,b,d,c);}}
+    for(const row of [0,rings.length-1]){const c=p.length/3,r=rings[row];p.push(0,(r[2]+r[3])/2,r[0]);uv.push(.5,.5);for(let j=0;j<steps;j++)ix.push(...(row?[row*steps+j,row*steps+(j+1)%steps,c]:[j,c,(j+1)%steps]));}
+    const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(p,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.setIndex(ix);g.computeVertexNormals();return g;
   }
   buildShadowHelmet(helmet,{
     part,shape,block,path,materials:{dark,graphite,black,steel,glass,light,dim},disposables
@@ -357,18 +370,17 @@ export function attachShadowConcept(model, profile) {
     const footPosition=model.root.worldToLocal(footBone.getWorldPosition(new T.Vector3()));
     const boot=boneAnchor(footBone,[footPosition.x,footPosition.y-.006,footPosition.z-.09]);
     boot.name='Shadow / segmented boot '+side;limbGroups.push(boot);
-    part(boot,bevelBox(.130,.030,.310,.008),dark,[0,-.083,.010]);
+    part(boot,bootSole(),dark);
     part(boot,facetHull([[-.071,.041,.055,.090],[-.020,.051,.063,.090],
       [.059,.048,.057,.090],[.074,.043,.048,.090]],16),dark);
-    part(boot,bevelBox(.102,.061,.126,.008),graphite,[0,-.044,.101]);
-    part(boot,bevelBox(.125,.065,.156,.009),graphite,[0,-.039,-.064]);
+    part(boot,bootUpper(),graphite);
     shape(boot,[[-.060,-.025],[.060,-.025],[.065,.013],[.042,.033],
       [-.042,.033],[-.065,.013]],dark,[0,-.029,-.146],[0,0,0],.008);
     block(boot,.043,.013,.006,light,0,-.024,-.163);
     block(boot,.105,.034,.178,dark,0,-.012,-.022);
     for(let j=0;j<3;j++){
-      block(boot,.099-j*.006,.022,.046,graphite,0,.016+j*.016,-.076+j*.047,[-.17,0,0]);
-      block(boot,.056,.004,.004,black,0,.029+j*.016,-.081+j*.047);
+      block(boot,.099-j*.006,.016,.030,graphite,0,.038+j*.016,-.076+j*.047,[-.17,0,0]);
+      block(boot,.056,.003,.004,black,0,.048+j*.016,-.081+j*.047);
     }
     block(boot,.042,.012,.006,light,0,.009,-.114);
     block(boot,.032,.009,.006,light,0,.075,.009);
@@ -434,6 +446,17 @@ export function attachShadowConcept(model, profile) {
     for(const mesh of right.children)part(left,reflectedGeometry(mesh.geometry),mesh.material);
     mirrorPairs.push({left,right,position:left.position.clone(),quaternion:left.quaternion.clone(),scale:left.scale.clone()});
   }
+  // Include the complete boot: a toe guard can become the lowest point when
+  // the foot rolls. All points are immutable and deduplicated once at setup.
+  const soles=['Left','Right'].map(side=>{
+    const boot=limbGroups.find(g=>g.name==='Shadow / segmented boot '+side),points=[],v=new T.Vector3(),inverseRoot=model.root.matrixWorld.clone().invert();
+    boot.updateWorldMatrix(true,true);
+    for(const mesh of boot.children){const p=mesh.geometry.attributes.position,m=inverseRoot.clone().multiply(mesh.matrixWorld);for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(m);points.push(v.clone());}}
+    const inverse=model.actor.bone(side+'Foot').matrixWorld.clone().invert().multiply(model.root.matrixWorld);
+    const unique=new Map();for(const p of points){const v=p.applyMatrix4(inverse),key=v.toArray().map(n=>Math.round(n*1e5)).join(',');unique.set(key,v);}
+    return [...unique.values()];
+  });
+  model.setFootSoles?.(soles);
   model.root.updateMatrixWorld(true);
   const rendered=batchHeroArmor(model,attachmentGroups);
   for(let i=0;i<pose.length;i++){

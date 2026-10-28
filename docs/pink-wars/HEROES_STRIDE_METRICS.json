@@ -1,0 +1,71 @@
+{
+  "version": "3.66.1",
+  "baselineCommit": "cfab15a01e56aefc8985020e5a202ee21c94f2f9",
+  "method": "Same actual LYLU factory, Shadow armour and native RLH rig, 240 frames per direction at 60 Hz, velocity 3.2 units/s; warm-up 36 frames for step and acceleration. Ankle positions are root-local in the unscaled 2 m authoring rig. Separation includes the complete cycle. This is a deterministic kinematic check, not a device frame-rate measurement. Soft support intentionally releases progressively.",
+  "units": {
+    "maxStep": "local metres/frame",
+    "maxAccel": "local metres/frame squared (second position difference)",
+    "minSeparation": "right ankle x minus left ankle x, local metres",
+    "negativeBend": "number of anatomically inverted knee samples"
+  },
+  "before": [
+    {
+      "name": "forward",
+      "maxStep": 0.1792620251293368,
+      "maxAccel": 0.23254053447293666,
+      "minSeparation": 0.1546919295287912,
+      "negativeBend": 0
+    },
+    {
+      "name": "right",
+      "maxStep": 0.16487175124923237,
+      "maxAccel": 0.2175235230185649,
+      "minSeparation": -0.4882738129207418,
+      "negativeBend": 0
+    },
+    {
+      "name": "left",
+      "maxStep": 0.16348800859295387,
+      "maxAccel": 0.2160872491573249,
+      "minSeparation": -0.5468850850100111,
+      "negativeBend": 0
+    },
+    {
+      "name": "back",
+      "maxStep": 0.17745992733297938,
+      "maxAccel": 0.229877275490864,
+      "minSeparation": 0.1539236617093743,
+      "negativeBend": 0
+    }
+  ],
+  "after": [
+    {
+      "name": "forward",
+      "maxStep": 0.042542989053219966,
+      "maxAccel": 0.013450612004817506,
+      "minSeparation": 0.16908859820216168,
+      "negativeBend": 0
+    },
+    {
+      "name": "right",
+      "maxStep": 0.023790716112969706,
+      "maxAccel": 0.014701106891989446,
+      "minSeparation": 0.17862396570865594,
+      "negativeBend": 0
+    },
+    {
+      "name": "left",
+      "maxStep": 0.02840666766369328,
+      "maxAccel": 0.016735214312568747,
+      "minSeparation": 0.20010429828587517,
+      "negativeBend": 0
+    },
+    {
+      "name": "back",
+      "maxStep": 0.03129021984877977,
+      "maxAccel": 0.009707331079505893,
+      "minSeparation": 0.1690369349429478,
+      "negativeBend": 0
+    }
+  ]
+}

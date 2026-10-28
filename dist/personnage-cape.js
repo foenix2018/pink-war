@@ -261,8 +261,7 @@ function tick(now){
  model.gun.visible=true;
  for(const glove of inspectionHands.get(state.character))glove.visible=false;
  const speed=['walk','walkFire'].includes(state.motion)?3.2:['run','runFire'].includes(state.motion)?9:state.motion==='crouchWalk'?2.2:0;
- // Drive the real rig's displacement-driven animation without translating it out of the viewer.
- if(speed)model._lastRootPosition=new T.Vector3(root.position.x,root.position.y,root.position.z+speed*dt);
+ // Keep the contact frame moving even while the inspected model stays centred.
  const airborne=state.motion==='jump';
  let height=0,velocity=0;
  if(airborne){
@@ -271,7 +270,7 @@ function tick(now){
    else {height=Math.max(0,7.25*elapsed-9*elapsed*elapsed);velocity=7.25-18*elapsed;}
  }
  root.position.y=height;
- model.animate(state.clock,!!speed,0,0,['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion)?1:0,dt,{airborne,verticalSpeed:velocity,crouched:['crouch','crouchWalk'].includes(state.motion),firing:['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion),sprint:['run','runFire'].includes(state.motion),preview:state.motion==='idle',saberSwing:state.weapon===5&&state.motion==='aim'?bladeSwingPose((state.clock%1.2)/.6):null});
+ model.animate(state.clock,!!speed,0,0,['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion)?1:0,dt,{inPlace:true,velocity:{x:0,z:-speed},airborne,verticalSpeed:velocity,crouched:['crouch','crouchWalk'].includes(state.motion),firing:['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion),sprint:['run','runFire'].includes(state.motion),preview:state.motion==='idle',saberSwing:state.weapon===5&&state.motion==='aim'?bladeSwingPose((state.clock%1.2)/.6):null});
  model.gun.userData.setCombatState?.({time:state.clock,bladeHeld:state.weapon===5});
  if(state.weapon<0){
    if(state.motion==='idle'){

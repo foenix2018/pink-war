@@ -34,7 +34,7 @@ const floor = new T.Mesh(new T.PlaneGeometry(50,50),new T.MeshStandardMaterial({
 floor.rotation.x=-Math.PI/2;floor.position.y=-.06;floor.receiveShadow=true;scene.add(floor);
 const grid = new T.GridHelper(8,16,0x6a7899,0x303c52);grid.position.y=-.049;grid.material.transparent=true;grid.material.opacity=.26;scene.add(grid);
 const ground = new T.Mesh(new T.CylinderGeometry(.9,.92,.055,64),new T.MeshStandardMaterial({color:0x252d3b,roughness:.6,metalness:.2}));
-ground.position.y=-.04;ground.receiveShadow=true;scene.add(ground);
+ground.position.y=-.0275;ground.receiveShadow=true;scene.add(ground);
 
 const surfaces=createSurfaceDetails();
 const standard=(color,roughness=.5,metalness=.4)=>new T.MeshStandardMaterial({color,roughness,metalness});
@@ -181,8 +181,7 @@ function tick(now){
  const model=subjects.get(state.character),root=model.root;
  const speed=['walk','walkFire','back','left','right'].includes(state.motion)?3.2:['run','runFire'].includes(state.motion)?9:state.motion==='crouchWalk'?2.2:0;
  const travel={x:state.motion==='left'?-speed:state.motion==='right'?speed:0,y:0,z:state.motion==='back'?speed:['left','right'].includes(state.motion)?0:-speed};
- // Drive the real rig's displacement-driven animation without translating it out of the viewer.
- if(speed)model._lastRootPosition=new T.Vector3(root.position.x-travel.x*dt,root.position.y,root.position.z-travel.z*dt);
+ // Simulate travel in the contact frame while keeping the inspected model centred.
  const airborne=state.motion==='jump';
  let height=0,velocity=0;
  if(airborne){
@@ -191,7 +190,7 @@ function tick(now){
    else {height=Math.max(0,7.25*elapsed-9*elapsed*elapsed);velocity=7.25-18*elapsed;}
  }
  root.position.y=height;
- model.animate(state.clock,!!speed,0,0,['aim','walkFire','runFire','crouch','crouchWalk','back','left','right'].includes(state.motion)?1:0,dt,{velocity:travel,airborne:airborne&&height>0,verticalSpeed:velocity,crouched:['crouch','crouchWalk'].includes(state.motion),firing:['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion),sprint:['run','runFire'].includes(state.motion),preview:state.motion==='idle',saberSwing:state.weapon===5&&state.motion==='aim'?bladeSwingPose((state.clock%1.2)/.6):null});
+ model.animate(state.clock,!!speed,0,0,['aim','walkFire','runFire','crouch','crouchWalk','back','left','right'].includes(state.motion)?1:0,dt,{inPlace:true,velocity:travel,airborne:airborne&&height>0,verticalSpeed:velocity,crouched:['crouch','crouchWalk'].includes(state.motion),firing:['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion),sprint:['run','runFire'].includes(state.motion),preview:state.motion==='idle',saberSwing:state.weapon===5&&state.motion==='aim'?bladeSwingPose((state.clock%1.2)/.6):null});
  model.gun.userData.setCombatState?.({time:state.clock,bladeHeld:state.weapon===5});
  refreshSkeleton(model);
  const w=canvas.clientWidth,h=canvas.clientHeight;
