@@ -8,7 +8,7 @@ const canvas = $('native-model'), viewer = $('viewer'), status = $('viewer-messa
 const arButton = $('ar-launch'), modelViewer = $('model');
 const renderer = new WebGPURenderer({canvas, antialias: !/iPhone|Android/i.test(navigator.userAgent), alpha: false, forceWebGL:true});
 const rendererReady=renderer.init();
-const galleryBuildVersion='2026-10-28-all-models-v2';
+const galleryBuildVersion='2026-10-28-ar-v3';
 renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.22;
@@ -161,41 +161,42 @@ window.galleryBuild=async name=>{
 };
 window.galleryAR=async()=>{
  if(!item)return;
- // Second gesture is essential on Safari iOS: Quick Look refuses activation
- // when dynamic USDZ creation has consumed the initial user interaction.
+ const active=item;
  if(arReady){
-  if(typeof modelViewer.activateAR!=='function'){setStatus('AR indisponible dans ce navigateur.');return;}
-  modelViewer.activateAR().catch(e=>setStatus('AR indisponible sur cet appareil : '+(e.message||e)));
+  if(/iPhone|iPad|iPod/i.test(navigator.userAgent)){
+   const url=modelViewer.getAttribute('ios-src');
+   if(!url){setStatus('AR iOS : fichier USDZ absent.');return;}
+   const a=document.createElement('a');a.href=url;a.rel='ar';
+   const img=document.createElement('img');img.alt='Ouvrir dans Quick Look';a.append(img);
+   a.style.cssText='position:absolute;left:-10000px;top:0';document.body.append(a);a.click();a.remove();return;
+  }
+  if(typeof modelViewer.activateAR==='function'){
+   try{await modelViewer.activateAR();}catch(e){setStatus('Échec ouverture AR : '+(e.message||e));}
+  }else setStatus('AR indisponible sur ce navigateur.');
   return;
  }
  arButton.disabled=true;
- setStatus('Préparation du vrai modèle 3D pour la réalité augmentée…');
+ setStatus('Conversion du modèle '+active.name+' pour la réalité augmentée…');
  try{
-  await Promise.race([
-   customElements.whenDefined('model-viewer'),
-   new Promise((_,reject)=>setTimeout(()=>reject(Error('Module AR non chargé : connexion à model-viewer indisponible')),8000))
-  ]);
-  if(!item.glb){
-   const {GLTFExporter}=await import('https://esm.sh/three@0.170.0/examples/jsm/exporters/GLTFExporter.js');
-   const bytes=await new GLTFExporter().parseAsync(item.root,{binary:true,onlyVisible:true,maxTextureSize:1024});
-   const url=URL.createObjectURL(new Blob([bytes],{type:'model/gltf-binary'}));exportUrls.push(url);modelViewer.src=url;
-  }else modelViewer.src=item.glb;
-  if(/iPhone|iPad|iPod/i.test(navigator.userAgent)){
+  await Promise.race([customElements.whenDefined('model-viewer'),new Promise((_,reject)=>setTimeout(()=>reject(Error('Module AR non chargé')),10000))]);
+  const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if(isIOS){
    const {USDZExporter}=await import('https://esm.sh/three@0.170.0/examples/jsm/exporters/USDZExporter.js');
-   const bytes=await new USDZExporter().parseAsync(item.root,{maxTextureSize:1024});
+   const bytes=await new USDZExporter().parseAsync(active.root,{maxTextureSize:1024});
    const url=URL.createObjectURL(new Blob([bytes],{type:'model/vnd.usdz+zip'}));exportUrls.push(url);modelViewer.setAttribute('ios-src',url);
+   // Quick Look opens from the second direct user gesture, after conversion.
+  }else{
+   if(!active.glb){
+    const {GLTFExporter}=await import('https://esm.sh/three@0.170.0/examples/jsm/exporters/GLTFExporter.js');
+    const bytes=await new GLTFExporter().parseAsync(active.root,{binary:true,onlyVisible:true,maxTextureSize:1024});
+    const url=URL.createObjectURL(new Blob([bytes],{type:'model/gltf-binary'}));exportUrls.push(url);modelViewer.src=url;
+   }else modelViewer.src=active.glb;
   }
-  modelViewer.hidden=false;canvas.hidden=true;
-  await Promise.race([
-   new Promise((resolve,reject)=>{modelViewer.addEventListener('load',resolve,{once:true});modelViewer.addEventListener('error',()=>reject(Error('Fichier AR illisible')),{once:true});}),
-   new Promise((_,reject)=>setTimeout(()=>reject(Error('Chargement AR non terminé')),15000))
-  ]);
+  if(item!==active)throw Error('Modèle changé pendant la préparation');
   arReady=true;arButton.textContent='LANCER EN AR';
-  setStatus('Modèle prêt : appuyer sur « LANCER EN AR » pour le placer dans la pièce.');
- }catch(e){
-  canvas.hidden=false;modelViewer.hidden=true;arReady=false;
-  setStatus('Le modèle 3D reste visible. AR indisponible : '+(e.message||e));
- }finally{arButton.disabled=!item;}
+  setStatus(isIOS?'Fichier USDZ prêt : appuyer sur LANCER EN AR pour ouvrir Quick Look.':'Modèle GLB prêt : appuyer sur LANCER EN AR.');
+ }catch(e){arReady=false;setStatus('AR '+active.name+' : '+(e.message||e)+' · '+String(e.stack||'').slice(0,350));}
+ finally{arButton.disabled=!item;}
 };
 const touches=new Map();let drag=null;
 canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);touches.set(e.pointerId,[e.clientX,e.clientY]);drag=[e.clientX,e.clientY];autoRotate=false;$('rotation').textContent='⟳ ROTATION AUTO : OFF';});
