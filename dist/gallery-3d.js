@@ -8,7 +8,7 @@ const canvas = $('native-model'), viewer = $('viewer'), status = $('viewer-messa
 const arButton = $('ar-launch'), modelViewer = $('model');
 const renderer = new WebGPURenderer({canvas, antialias: !/iPhone|Android/i.test(navigator.userAgent), alpha: false, forceWebGL:true});
 const rendererReady=renderer.init();
-const galleryBuildVersion='2026-10-28-palette-fix';
+const galleryBuildVersion='2026-10-28-all-models-v2';
 renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.22;
@@ -76,7 +76,7 @@ async function actualObject(name){
  }
  if(Object.hasOwn(enemyForms,name)){
   const {createEnemyFactory}=await import('./enemies.js');
-  const mats={monster:surfaceMat(0x4d5861),cyan:surfaceMat(0x9de9ef),rose:surfaceMat(0xff80b2),pale:surfaceMat(0xffe5f4),violet:surfaceMat(0xac86e6)};
+  const mats=palette();
   const form=enemyForms[name],root=createEnemyFactory(mats).create(false,true,form);
   return {root,animate:t=>root.userData.animate?.(t,0,false,{},t),source:'Usine d’ennemis / châssis réel du jeu'};
  }
