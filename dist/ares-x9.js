@@ -130,10 +130,10 @@ function buildRifle(){
  hollowScopeTube(rifle,-.56,3.63,0,.17,.50,.50,mat.black,40);
  ring(rifle,-.46,3.63,0,.46,.044,mat.gold,40);
  ring(rifle,-.45,3.63,0,.41,.018,mat.titan,40);
- cylinder(rifle,-.437,3.63,0,.019,.392,.392,mat.glass,48);
+ // The objective must be open: a transparent material on a solid cylinder still occludes the target.
  ring(rifle,-.422,3.63,0,.336,.008,mat.glassrim,48);
  // Sapphire nested lens optics, subtle crosshair, custom lines projected on front disc
- cylinder(rifle,-.415,3.63,0,.004,.323,.323,new THREE.MeshBasicMaterial({color:0x0c2a42,transparent:true,opacity:.57}),48);
+ // No dark lens disc in the optical axis: the world or XR render target fills the aperture.
  ring(rifle,-.409,3.63,0,.24,.0027,mat.blue,48);
  const scopeGlow=new THREE.Group();scopeGlow.name='Réticule numérique';scopeGlow.position.set(-.400,3.63,0);rifle.add(scopeGlow);blueLights.push(scopeGlow);
  let l1=box(scopeGlow,0,0,0,.008,.46,.005,mat.blue,.001),l2=box(scopeGlow,0,0,0,.008,.005,.46,mat.blue,.001);
