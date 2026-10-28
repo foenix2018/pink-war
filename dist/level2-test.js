@@ -4,7 +4,7 @@ import {createWorldShadows,createGroundOcclusion} from './world-shadows.js';
 // imported unchanged from the production game. The cyberpunk world is new.
 import * as T from './vendor/three.webgpu.min.js';
 import {WebGLRenderer} from './vendor/three.module.min.js';
-import {ArenaGame,WEAPONS,clamp,segmentBox,traceEnemyHit} from './game-logic.js';
+import {ArenaGame,starterWeaponOrder,WEAPONS,clamp,segmentBox,traceEnemyHit} from './game-logic.js';
 import {createPinkWarsInput,createPinkWarsTouch} from './level2-input.js';
 import {createWeaponFeel,recoilPose} from './weapon-feel.js';
 import {loadRealLaserSample,loadCombatSamples,playLaserShot,playEnemyShot,playWeaponAction,playLaserImpact,setLaserAudioEnabled} from './laser-sound.js';
@@ -406,7 +406,7 @@ function setupPlayer(){
  game=new ArenaGame(collisions,Math.random,traversal);game.reset(characterId);game.enableArmorShield();
  Object.assign(game.player,{x:0,z:72,elevation:0,yaw:0,hp:100,grounded:true});
  game.wave=2;game.nextWave=Infinity;game.toSpawn=0;game.spawnTimer=Infinity;
- game.ownedWeapons=new Set([game.weaponIndex,0,1,2]);game.ammo=WEAPONS.map(w=>w.capacity);
+ game.ownedWeapons=new Set([...starterWeaponOrder(characterId),1,2]);game.ammo=WEAPONS.map(w=>w.capacity);
  const lylu=characterId==='lylu';
  const heroGlow=lylu?glow(0x4da8ff):glow(0xff4fa1);
  const pm={...materials,armor:mat(lylu?0x356fa6:0xb64472,.38,.72),armorLight:mat(lylu?0xb6d9e8:0xdec3cf,.35,.68),steel:materials.iron,rose:heroGlow,pale:materials.white,violet:materials.blue};
@@ -821,7 +821,7 @@ async function boot(){
 function resume(){
  if(paused){unpauseMission();return;}
  running=true;shade.style.display='none';startButton.disabled=false;
- if(game){game.reset(characterId);game.wave=2;game.ownedWeapons=new Set([game.weaponIndex,0,1,2]);game.ammo=WEAPONS.map(w=>w.capacity);}
+ if(game){game.reset(characterId);game.wave=2;game.ownedWeapons=new Set([...starterWeaponOrder(characterId),1,2]);game.ammo=WEAPONS.map(w=>w.capacity);}
  if(game){game.player.x=0;game.player.z=72;game.player.elevation=0;game.player.hp=100;game.state='playing';
   game.enemies=[];game.bullets=[];game.time=0;game.kills=0;game.nextWave=Infinity;game.toSpawn=0;}
  for(const o of enemyMeshes.values())scene.remove(o);enemyMeshes.clear();

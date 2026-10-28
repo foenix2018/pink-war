@@ -72,6 +72,15 @@ export const WEAPONS = Object.freeze([
   Object.freeze({id:'vortex',name:'VORTEX AR-7',label:'Fusil d’assaut tactique · indicateur rose',level:6,damage:43,capacity:36,interval:.115,reload:1.95,speed:175,pellets:1,spread:.009,chargeTime:0,splash:0})
 ]);
 export const starterWeaponIndex=characterId=>characterId==='lylu'?6:7;
+export const VORTEX_SECONDARY_INDEX=8;
+// Character-specific main weapon remains first. VORTEX is the second quick-switch
+// weapon in every mode, regardless of its stable data index (8).
+export const starterWeaponOrder=characterId=>[starterWeaponIndex(characterId),VORTEX_SECONDARY_INDEX,0];
+export const weaponCycleOrder=(ownedWeapons,characterId='ghju')=>{
+  const preferred=[...starterWeaponOrder(characterId),...WEAPONS.map((_,i)=>i)];
+  return preferred.filter((index,position)=>preferred.indexOf(index)===position
+    &&ownedWeapons.has(index)&&weaponAllowedForCharacter(index,characterId));
+};
 export const weaponAllowedForCharacter=(index,characterId='ghju')=>!!WEAPONS[index]&&(!WEAPONS[index].dual||characterId==='ghju');
 export function projectileDamage(b,at){
  const w=WEAPONS.find(w=>w.id===b.weapon);if(!w?.falloffStart)return b.damage;
@@ -290,7 +299,7 @@ export class ArenaGame {
     this.characterId=characterId==='lylu'?'lylu':'ghju';
     this.weaponIndex = starterWeaponIndex(this.characterId); this.ammo = WEAPONS.map(w => w.capacity);
     this.dual={ammo:{left:12,right:12},readyAt:{left:0,right:0},shotAt:{left:-Infinity,right:-Infinity},held:{left:false,right:false},next:'right',flatAt:0};
-    this.ownedWeapons = new Set([this.weaponIndex,0]); this.weaponOffers = []; // VORTEX is earned by progression; immediately selectable in the stand.
+    this.ownedWeapons = new Set(starterWeaponOrder(this.characterId)); this.weaponOffers = []; // Primary + VORTEX AR-7 as second weapon; preserve the VX-9.
     this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false; this.semiPending=false;
     this.lastDamage = 0; this.regenerating = false;
     // Armour layer (armor-combat.js): shield on when an engine enables it, two impulse charges to start.
@@ -373,7 +382,7 @@ export class ArenaGame {
     this.cooldown = Math.max(this.cooldown, .25); this.event('weapon', { index, name: this.weapon.name }); return true;
   }
   cycleWeapon(direction = 1) {
-    const slots=WEAPONS.map((_,index)=>this.ownedWeapons.has(index)&&weaponAllowedForCharacter(index,this.characterId)?index:-1).filter(index=>index>=0);
+    const slots=weaponCycleOrder(this.ownedWeapons,this.characterId);
     if(slots.length<2)return false;
     const at=slots.indexOf(this.weaponIndex),offset=direction<0?-1:1;
     return this.selectWeapon(slots[(Math.max(0,at)+offset+slots.length)%slots.length]);

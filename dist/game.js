@@ -1,4 +1,4 @@
-import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
+import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, starterWeaponIndex, weaponCycleOrder, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
 import { createScene } from './scene.js?v=3.48';
 import { VRController } from './vr.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
@@ -77,7 +77,7 @@ function armorActions(input){
   meleeQueued=chargeQueued=false;
 }
 let selectedMode=['arena','training','campaign','campaign2'].includes(boot?.mode)?boot.mode:'campaign',launchBusy=false;
-let trainingWeaponIndex=Number.isInteger(boot?.trainingWeaponIndex)&&boot.trainingWeaponIndex>=0&&boot.trainingWeaponIndex<WEAPONS.length&&boot.trainingWeaponIndex!==5?boot.trainingWeaponIndex:0;
+let trainingWeaponIndex=Number.isInteger(boot?.trainingWeaponIndex)&&boot.trainingWeaponIndex>=0&&boot.trainingWeaponIndex<WEAPONS.length&&boot.trainingWeaponIndex!==5?boot.trainingWeaponIndex:null;
 function selectMode(mode){
   if(phase!=='lobby'||launchBusy)return;
   selectedMode=['campaign','campaign2','arena','training'].includes(mode)?mode:'campaign';
@@ -300,7 +300,7 @@ async function start() {
   world.setCampaignActive(selectedMode==='campaign');
   world.setRangeActive(selectedMode==='training');
   game=armed(selectedMode==='campaign'?new CampaignLevel1(world.obstacles,Math.random,character.id):
-    selectedMode==='training'?new ShootingRangeGame(world.obstacles,Math.random,trainingWeaponIndex,character.id):new ArenaGame(world.obstacles,Math.random,null,character.id));
+    selectedMode==='training'?new ShootingRangeGame(world.obstacles,Math.random,trainingWeaponIndex??starterWeaponIndex(character.id),character.id):new ArenaGame(world.obstacles,Math.random,null,character.id));
   world.resetDynamic(); phase = 'loading'; yaw = 0; pitch = -.075;
   weaponFeel.reset();reloadInserted=false;lastShotAt=-99;flashTimer = 0; recoil = 0; damageUntil = 0; announcementUntil = 0;pickupNotice=null;equipmentUntil=0;crouchCameraBlend=0;currentSprinting=false; resetInput(); audioReady();
   world.setWeapon(game.weaponIndex);world.setEquipment(1);
@@ -329,7 +329,7 @@ $('reload-button').onclick = () => { if(phase==='playing') game.reload(); };
 $('weapon-button').onclick = () => { if(phase==='playing') game.cycleWeapon(); };
 $('arsenal-button').onclick = () => {
   $('weapon-list').replaceChildren();
-  WEAPONS.forEach((w,index) => {
+  [...weaponCycleOrder(game.ownedWeapons,game.characterId),...WEAPONS.map((_,i)=>i).filter(i=>!game.ownedWeapons.has(i))].forEach(index => { const w=WEAPONS[index];
     const button = document.createElement('button'), available = game.ownedWeapons.has(index);
     button.className = 'weapon-card' + (game.weaponIndex===index ? ' selected' : ''); button.disabled = !available;
     const kenney=world.fpsGun.userData.kenneyAssets,kenneyReady=!w.melee&&(!!kenney?.loadedByIndex?.[index]||!!world.fpsGun.userData.weaponModels[index]?.userData.authored);
