@@ -8,7 +8,7 @@ const canvas = $('native-model'), viewer = $('viewer'), status = $('viewer-messa
 const arButton = $('ar-launch'), modelViewer = $('model');
 const renderer = new WebGPURenderer({canvas, antialias: !/iPhone|Android/i.test(navigator.userAgent), alpha: false, forceWebGL:true});
 const rendererReady=renderer.init();
-const galleryBuildVersion='2026-10-28-ar-v3';
+const galleryBuildVersion='2026-10-28-ar-v4';
 renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.22;
@@ -182,7 +182,17 @@ window.galleryAR=async()=>{
   const isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);
   if(isIOS){
    const {USDZExporter}=await import('https://esm.sh/three@0.170.0/examples/jsm/exporters/USDZExporter.js');
-   const bytes=await new USDZExporter().parseAsync(active.root,{maxTextureSize:1024});
+   const exportRoot=new T.Group();
+   active.root.updateMatrixWorld(true);
+   active.root.traverse(source=>{
+    if(!source.isMesh&&!source.isSkinnedMesh)return;
+    if(!source.visible||!source.geometry?.attributes?.position)return;
+    const material=Array.isArray(source.material)?source.material[0]:source.material;
+    const copy=new T.Mesh(source.geometry.clone(),new T.MeshStandardMaterial({color:material?.color?.clone?.()||new T.Color(0x8994a5),metalness:Math.min(.8,material?.metalness??.35),roughness:material?.roughness??.5,side:T.DoubleSide}));
+    source.updateWorldMatrix(true,false);copy.applyMatrix4(source.matrixWorld);copy.updateMatrix();exportRoot.add(copy);
+   });
+   if(!exportRoot.children.length)throw Error('Aucun maillage compatible avec USDZ');
+   const bytes=await new USDZExporter().parseAsync(exportRoot,{maxTextureSize:1024});
    const url=URL.createObjectURL(new Blob([bytes],{type:'model/vnd.usdz+zip'}));exportUrls.push(url);modelViewer.setAttribute('ios-src',url);
    // Quick Look opens from the second direct user gesture, after conversion.
   }else{
