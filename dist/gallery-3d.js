@@ -1,59 +1,172 @@
-import * as THREE from './vendor/three.webgpu.min.js';
-import {GLTFExporter} from 'https://esm.sh/three@0.170.0/examples/jsm/exporters/GLTFExporter.js';
-import {USDZExporter} from 'https://esm.sh/three@0.170.0/examples/jsm/exporters/USDZExporter.js';
-import {GLTFLoader} from 'https://esm.sh/three@0.170.0/examples/jsm/loaders/GLTFLoader.js';
-const mat=(c,metal=.55)=>new THREE.MeshStandardMaterial({color:c,metalness:metal,roughness:.38});
-async function authentic(name){
- const {characterForId}=await import('./characters.js');
- if(name==='GABY'||name==='CARA'){const {createAICompanion}=await import('./ai-companions.js');const scene=new THREE.Scene();const actor=createAICompanion(THREE,scene,name==='GABY'?'ghju':'lylu');return actor?.root||scene.children.find(x=>x.isGroup)}
- if(name==='RECO1'){const {createReco1}=await import('./reco1.js');return createReco1();}
- if(name==='ROBOT LOURD'){const {createEnemyFactory}=await import('./enemies.js');const factory=createEnemyFactory({monster:mat(0x424c59)});return factory.create(false,true,'bulwark')}
- if(name==='GHJU'||name==='LYLU'){
- const {createCharacterKit,createSoldier}=await import('./soldier.js');
- const {buildGun}=await import('./weapons.js');
- const {createSurfaceDetails}=await import('./surfaces.js');
- const profile=characterForId(name.toLowerCase()),kit=createCharacterKit(new THREE.Texture(),createSurfaceDetails());kit.setPalette(profile.armor);
- const palette={steel:mat(profile.armor.steel),dark:mat(profile.armor.dark),armor:mat(profile.armor.rose),armorLight:mat(profile.armor.pearl)};
- const soldier=createSoldier(kit,()=>buildGun({mats:palette,gloves:kit.gloves,sleeve:false,makeFlash:p=>{const o=new THREE.Object3D();p.add(o);return o}}),profile);
- return soldier.root;
- }
- if(['VX-9','NEXUS V9','ARES X9','THORN','NOVA','M–12','VORTEX AR-7'].includes(name)){
- const {createWeaponModels}=await import('./weapons.js');
- const palette={steel:mat(0x9ca2ad),dark:mat(0x171b24),armor:mat(0xdf428f),armorLight:mat(0xe7b9d2)};
- const models=createWeaponModels(palette);
- return models[({'VX-9':0,'NEXUS V9':1,'ARES X9':2,'THORN':3,'NOVA':4,'M–12':6,'VORTEX AR-7':8})[name]];
- }
- throw new Error('Modèle original introuvable.');
-}
+// Galerie Pink Wars — aperçu NATIF des objets du moteur, sans proxy ni modèle factice.
+// La prévisualisation ne dépend pas des CDN d'export glTF/AR.
+import * as T from './vendor/three.webgpu.min.js';
+import {WebGLRenderer} from './vendor/three.module.min.js';
 
-const loader=new GLTFLoader(),gltfExporter=new GLTFExporter(),usdzExporter=new USDZExporter();
-function prepareForExport(root){
- if(!root?.traverse)throw new Error('Le moteur n’a retourné aucun objet 3D.');
- root.updateMatrixWorld(true);
- let count=0;
- root.traverse(item=>{
-  if(!item.isMesh&&!item.isSkinnedMesh)return;
-  if(!item.geometry?.attributes?.position){item.visible=false;return;}
-  if(!item.material){
-    item.material=new THREE.MeshStandardMaterial({color:0x777d88,metalness:.4,roughness:.6});
-  }else if(Array.isArray(item.material)){
-    item.material=item.material.map(m=>m||new THREE.MeshStandardMaterial({color:0x777d88}));
+const $ = id => document.getElementById(id);
+const canvas = $('native-model'), viewer = $('viewer'), status = $('viewer-message');
+const arButton = $('ar-launch'), modelViewer = $('model');
+const renderer = new WebGLRenderer({canvas, antialias: !/iPhone|Android/i.test(navigator.userAgent), alpha: false, powerPreference:'default'});
+renderer.outputColorSpace=T.SRGBColorSpace;
+renderer.toneMapping=T.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.22;
+const scene=new T.Scene();scene.background=new T.Color(0x101724);
+const camera=new T.PerspectiveCamera(42,1,.025,100);
+scene.add(new T.HemisphereLight(0xe9edff,0x18202c,2.7));
+const key=new T.DirectionalLight(0xffdeef,3.2);key.position.set(-3,5,4);scene.add(key);
+const fill=new T.DirectionalLight(0x7bb9ff,2);fill.position.set(4,2,-3);scene.add(fill);
+const rim=new T.DirectionalLight(0xff70bd,1.1);rim.position.set(2,4,5);scene.add(rim);
+const base=new T.Mesh(new T.CylinderGeometry(.78,.87,.085,48),new T.MeshStandardMaterial({color:0x253040,metalness:.55,roughness:.5}));
+base.position.y=-1.13;scene.add(base);
+const grid=new T.GridHelper(3,12,0x6d8ab0,0x314057);grid.position.y=-1.085;grid.material.opacity=.20;grid.material.transparent=true;scene.add(grid);
+const pivot=new T.Group();scene.add(pivot);
+const palette=(profile)=>({
+ steel:new T.MeshStandardMaterial({color:profile?.armor.steel??0x89929c,metalness:.84,roughness:.36}),
+ dark:new T.MeshStandardMaterial({color:profile?.armor.dark??0x1b2029,metalness:.55,roughness:.48}),
+ armor:new T.MeshStandardMaterial({color:profile?.armor.rose??0xe52d83,metalness:.72,roughness:.38}),
+ armorLight:new T.MeshStandardMaterial({color:profile?.armor.pearl??0xf2dfe9,metalness:.7,roughness:.33})
+});
+let item=null, requestId=0, running=false, autoRotate=true, bearing=.48, elevation=.18, zoom=4.1, previousTime=0, exportUrls=[];
+const weaponNames={'VX-9':0,'NEXUS V9':1,'ARES X9':2,'THORN':3,'NOVA':4,'AURORA':5,'M–12':6,'VX-9 DUO':7,'VORTEX AR-7':8};
+const enemyForms={'ROBOT LOURD':'bulwark','SYNTH N-08':'synth','POURSUIVANT':'stalker','BRUTE':'brute','TRAQUEUR':'listener','RAMPANT':'scuttler','SONDE S-03':'probe'};
+const surfaceMat=color=>new T.MeshStandardMaterial({color,metalness:.52,roughness:.47});
+function clearExports(){for(const u of exportUrls)URL.revokeObjectURL(u);exportUrls=[];}
+function setStatus(message){status.textContent=message;}
+async function actualObject(name){
+ if(name==='GHJU'||name==='LYLU'){
+  const [{characterForId},{createCharacterKit,createSoldier},{createSurfaceDetails},{buildGun},{installShadowUnit,applyShadowMaterials}] = await Promise.all([
+   import('./characters.js'),import('./soldier.js'),import('./surfaces.js'),import('./weapons.js'),import('./shadow-unit-game.js')]);
+  const profile=characterForId(name.toLowerCase());
+  const emblem=new T.Texture(),kit=createCharacterKit(emblem,createSurfaceDetails()),mats=palette(profile);
+  kit.setPalette(profile.armor);
+  const soldier=createSoldier(kit,()=>buildGun({mats,gloves:kit.gloves,sleeve:false,makeFlash:parent=>{const flash=new T.Object3D();parent.add(flash);return flash;}}),profile);
+  applyShadowMaterials(kit,profile);
+  installShadowUnit(soldier,profile);
+  soldier.root.scale.setScalar(soldier.heightScale);
+  soldier.setWeapon(name==='GHJU'?7:6);
+  soldier.setLevel(1);
+  soldier.animate(0,false,0,0,0,.016,{preview:true});
+  return {root:soldier.root,animate:(t,dt)=>soldier.animate(t,false,0,0,0,dt,{preview:true}),source:'Rig et armure Shadow Unit du jeu'};
+ }
+ if(name==='GABY'||name==='CARA'){
+  const {createAICompanion}=await import('./ai-companions.js');
+  const actor=createAICompanion(T,scene,name==='GABY'?'ghju':'lylu');
+  actor.root.removeFromParent();
+  actor.root.position.set(0,0,0);
+  return {root:actor.root,animate:(t,dt)=>{actor.root.rotation.y+=dt*.72;},source:'Sphère IA active du jeu',dispose:()=>actor.dispose()};
+ }
+ if(name==='RECO1'){
+  const {createReco1}=await import('./reco1.js');
+  const root=createReco1();
+  return {root,animate:(t)=>root.userData.animate?.(t,0,false,{},t),source:'RECO1 V10 · modèle et squelette originaux'};
+ }
+ if(Object.hasOwn(enemyForms,name)){
+  const {createEnemyFactory}=await import('./enemies.js');
+  const mats={monster:surfaceMat(0x4d5861),cyan:surfaceMat(0x9de9ef),rose:surfaceMat(0xff80b2),pale:surfaceMat(0xffe5f4),violet:surfaceMat(0xac86e6)};
+  const form=enemyForms[name],root=createEnemyFactory(mats).create(false,true,form);
+  return {root,animate:t=>root.userData.animate?.(t,0,false,{},t),source:'Usine d’ennemis / châssis réel du jeu'};
+ }
+ if(Object.hasOwn(weaponNames,name)){
+  const index=weaponNames[name];
+  if(index===4){
+   // NOVA est remplacé dans le jeu par son GLB Pink War IV au chargement.
+   const {parseKenneyGLB}=await import('./kenney-blasters.js');
+   const url=new URL('./assets/pink-war/blaster-p-mk4.glb',import.meta.url);
+   const response=await fetch(url);
+   if(!response.ok)throw Error('NOVA : fichier Pink War IV introuvable ('+response.status+')');
+   return {root:parseKenneyGLB(await response.arrayBuffer()),source:'NOVA MK4 · fichier GLB réellement chargé par le jeu',glb:url.href};
   }
-  if(item.isSkinnedMesh&&item.skeleton){item.skeleton.update();}
-  count++;
- });
- if(!count)throw new Error('Aucun maillage exploitable dans ce modèle.');
- return root;
+  const {createWeaponModels}=await import('./weapons.js');
+  const model=createWeaponModels(palette())[index];
+  if(!model)throw Error('Arme absente du moteur');
+  return {root:model,source:'Géométrie de l’arme active dans le moteur du jeu'};
+ }
+ throw Error('Aucun modèle 3D actif n’est associé à '+name);
 }
-let last=null;function revoke(){if(last){for(const u of last)URL.revokeObjectURL(u)}last=[]}
-window.galleryBuild=async(name)=>{
- const viewer=document.getElementById('viewer'),model=document.getElementById('model'),message=document.getElementById('viewer-message'),ar=document.getElementById('ar-launch');
- revoke();model.removeAttribute('ios-src');model.removeAttribute('src');ar.disabled=true;message.textContent='Préparation du modèle 3D et de la réalité augmentée…';
- let scene;const existing=null;
+function fitObject(root){
+ if(!root?.traverse)throw Error('Le moteur ne fournit pas de scène 3D.');
+ let meshes=0;root.traverse(o=>{if(o.isMesh||o.isSkinnedMesh)meshes++;});
+ if(!meshes)throw Error('Aucun maillage réel dans le modèle.');
+ root.updateMatrixWorld(true);
+ const bounds=new T.Box3().setFromObject(root);
+ if(bounds.isEmpty())throw Error('Géométrie sans dimensions.');
+ const extent=bounds.getSize(new T.Vector3()),center=bounds.getCenter(new T.Vector3());
+ const holder=new T.Group();holder.add(root);holder.position.copy(center).multiplyScalar(-1);
+ pivot.add(holder);
+ const max=Math.max(extent.x,extent.y,extent.z,.02);
+ pivot.scale.setScalar(2.03/max);
+ return meshes;
+}
+function draw(now){
+ if(viewer.hidden||!item){running=false;return;}
+ const dt=Math.min(.05,(now-previousTime)/1000||.016);
+ previousTime=now;
+ const rect=canvas.getBoundingClientRect();
+ if(rect.width>0&&rect.height>0){
+  const width=Math.max(1,Math.floor(rect.width)),height=Math.max(1,Math.floor(rect.height));
+  const dpr=Math.min(devicePixelRatio||1,/iPhone|Android/i.test(navigator.userAgent)?1.3:1.7);
+  renderer.setPixelRatio(dpr);renderer.setSize(width,height,false);
+  camera.aspect=width/height;camera.updateProjectionMatrix();
+  if(autoRotate)bearing+=dt*.40;
+  camera.position.set(zoom*Math.sin(bearing)*Math.cos(elevation),zoom*Math.sin(elevation)+.15,zoom*Math.cos(bearing)*Math.cos(elevation));
+  camera.lookAt(0,0,0);
+  try{item.animate?.(now/1000,dt);renderer.render(scene,camera);}catch(e){setStatus('Erreur du rendu natif : '+(e.message||e));running=false;return;}
+ }
+ requestAnimationFrame(draw);
+}
+function startDraw(){if(!running){running=true;previousTime=performance.now();requestAnimationFrame(draw);}}
+window.galleryClose=()=>{requestId++;item?.dispose?.();item=null;pivot.clear();modelViewer.removeAttribute('src');modelViewer.removeAttribute('ios-src');modelViewer.hidden=true;canvas.hidden=false;clearExports();arButton.disabled=true;};
+window.galleryToggleRotation=()=>{autoRotate=!autoRotate;$('rotation').textContent=autoRotate?'⟳ ROTATION AUTO : ON':'⟳ ROTATION AUTO : OFF';};
+window.galleryBuild=async name=>{
+ const token=++requestId;window.galleryClose();requestId=token;
+ setStatus('Chargement du modèle actif dans le moteur Pink Wars…');
+ arButton.disabled=true;modelViewer.hidden=true;canvas.hidden=false;
  try{
- if(existing){scene=(await loader.loadAsync(existing)).scene}else{scene=prepareForExport(await authentic(name));const buffer=await gltfExporter.parseAsync(scene,{binary:true,onlyVisible:true});const url=URL.createObjectURL(new Blob([buffer],{type:'model/gltf-binary'}));last.push(url);model.src=url}
- if(existing)model.src=existing;
- try{const usd=await usdzExporter.parseAsync(scene,{maxTextureSize:1024});const url=URL.createObjectURL(new Blob([usd],{type:'model/vnd.usdz+zip'}));last.push(url);model.setAttribute('ios-src',url);}catch(exportError){console.warn('USDZ export unavailable',exportError)}
- ar.disabled=!model.canActivateAR && !model.hasAttribute('ios-src');message.textContent=existing?'Modèle 3D du dépôt · AR iPhone (USDZ) / WebXR si pris en charge.':'Modèle issu des fonctions 3D du moteur du jeu. AR iPhone / WebXR si pris en charge.';
- }catch(e){message.textContent='Erreur de préparation 3D : '+String(e.message||e);ar.disabled=true}
+  const entry=await actualObject(name);
+  if(token!==requestId||viewer.hidden){entry.dispose?.();return;}
+  const count=fitObject(entry.root);
+  item={...entry,name};
+  bearing=.45;elevation=.16;zoom=4.1;
+  setStatus(entry.source+' · '+count+' maillages · glisser pour tourner, pincer pour zoomer.');
+  arButton.disabled=false;startDraw();
+ }catch(e){if(token!==requestId)return;setStatus('Impossible de charger le modèle actif : '+(e.message||e));arButton.disabled=true;console.error('Galerie Pink Wars',name,e);}
 };
+window.galleryAR=async()=>{
+ if(!item)return;
+ arButton.disabled=true;
+ setStatus('Préparation AR à partir du même modèle actif…');
+ try{
+  if(!customElements.get('model-viewer'))await customElements.whenDefined('model-viewer');
+  if(!item?.glb){
+   const {GLTFExporter}=await import('https://esm.sh/three@0.170.0/examples/jsm/exporters/GLTFExporter.js');
+   const exporter=new GLTFExporter();
+   const bytes=await exporter.parseAsync(item.root,{binary:true,onlyVisible:true,maxTextureSize:1024});
+   const url=URL.createObjectURL(new Blob([bytes],{type:'model/gltf-binary'}));exportUrls.push(url);modelViewer.src=url;
+  }else modelViewer.src=item.glb;
+  const isiOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if(isiOS){
+   const {USDZExporter}=await import('https://esm.sh/three@0.170.0/examples/jsm/exporters/USDZExporter.js');
+   const bytes=await new USDZExporter().parseAsync(item.root,{maxTextureSize:1024});
+   const url=URL.createObjectURL(new Blob([bytes],{type:'model/vnd.usdz+zip'}));exportUrls.push(url);modelViewer.setAttribute('ios-src',url);
+  }
+  modelViewer.hidden=false;canvas.hidden=true;
+  if(typeof modelViewer.activateAR!=='function')throw Error('AR indisponible : module model-viewer absent.');
+  await modelViewer.activateAR();
+  setStatus('Modèle actif exporté en AR. Revenir à la galerie pour manipuler la scène 3D.');
+ }catch(e){
+  canvas.hidden=false;modelViewer.hidden=true;
+  setStatus('Aperçu 3D conservé. AR indisponible sur cet appareil/navigateur : '+(e.message||e));
+ }finally{arButton.disabled=!item;}
+};
+const touches=new Map();let drag=null;
+canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);touches.set(e.pointerId,[e.clientX,e.clientY]);drag=[e.clientX,e.clientY];autoRotate=false;$('rotation').textContent='⟳ ROTATION AUTO : OFF';});
+canvas.addEventListener('pointermove',e=>{
+ if(!touches.has(e.pointerId))return;
+ const old=touches.get(e.pointerId);touches.set(e.pointerId,[e.clientX,e.clientY]);
+ if(touches.size===1){bearing-=(e.clientX-old[0])*.009;elevation=Math.max(-1.1,Math.min(1.1,elevation+(e.clientY-old[1])*.006));}
+ else if(touches.size===2){const points=[...touches.values()];const dist=Math.hypot(points[0][0]-points[1][0],points[0][1]-points[1][1]);if(canvas._distance)zoom=Math.max(2,Math.min(8,zoom*canvas._distance/Math.max(5,dist)));canvas._distance=dist;}
+});
+function release(e){touches.delete(e.pointerId);if(touches.size<2)canvas._distance=0;}
+canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);
+canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(2,Math.min(8,zoom*(1+Math.sign(e.deltaY)*.07)));},{passive:false});
+if(window.galleryPendingName&&!viewer.hidden)window.galleryBuild(window.galleryPendingName);
