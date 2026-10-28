@@ -26,7 +26,7 @@ const palette=(profile)=>({
  armor:new T.MeshStandardMaterial({color:profile?.armor.rose??0xe52d83,metalness:.72,roughness:.38}),
  armorLight:new T.MeshStandardMaterial({color:profile?.armor.pearl??0xf2dfe9,metalness:.7,roughness:.33})
 });
-let item=null, requestId=0, running=false, autoRotate=true, bearing=.48, elevation=.18, zoom=4.1, previousTime=0, exportUrls=[];
+let item=null, requestId=0, running=false, autoRotate=true, bearing=.48, elevation=.18, zoom=4.1, previousTime=0, exportUrls=[], arReady=false;
 const weaponNames={'VX-9':0,'NEXUS V9':1,'ARES X9':2,'THORN':3,'NOVA':4,'AURORA':5,'M–12':6,'VX-9 DUO':7,'VORTEX AR-7':8};
 const enemyForms={'REMPART':'bulwark','SYNTH N-08':'synth','POURSUIVANT':'stalker','BRUTE':'brute','TRAQUEUR':'listener','RAMPANT':'scuttler','SONDE S-03':'probe'};
 const surfaceMat=color=>new T.MeshStandardMaterial({color,metalness:.52,roughness:.47});
@@ -122,7 +122,7 @@ function draw(now){
  requestAnimationFrame(draw);
 }
 function startDraw(){if(!running){running=true;previousTime=performance.now();requestAnimationFrame(draw);}}
-window.galleryClose=()=>{requestId++;item?.dispose?.();item=null;pivot.clear();modelViewer.removeAttribute('src');modelViewer.removeAttribute('ios-src');modelViewer.hidden=true;canvas.hidden=false;clearExports();arButton.disabled=true;};
+window.galleryClose=()=>{requestId++;arReady=false;arButton.textContent='AR · VOIR CHEZ MOI';item?.dispose?.();item=null;pivot.clear();modelViewer.removeAttribute('src');modelViewer.removeAttribute('ios-src');modelViewer.hidden=true;canvas.hidden=false;clearExports();arButton.disabled=true;};
 window.galleryToggleRotation=()=>{autoRotate=!autoRotate;$('rotation').textContent=autoRotate?'⟳ ROTATION AUTO : ON':'⟳ ROTATION AUTO : OFF';};
 window.galleryBuild=async name=>{
  const token=++requestId;window.galleryClose();requestId=token;
@@ -140,29 +140,40 @@ window.galleryBuild=async name=>{
 };
 window.galleryAR=async()=>{
  if(!item)return;
+ // Second gesture is essential on Safari iOS: Quick Look refuses activation
+ // when dynamic USDZ creation has consumed the initial user interaction.
+ if(arReady){
+  if(typeof modelViewer.activateAR!=='function'){setStatus('AR indisponible dans ce navigateur.');return;}
+  modelViewer.activateAR().catch(e=>setStatus('AR indisponible sur cet appareil : '+(e.message||e)));
+  return;
+ }
  arButton.disabled=true;
- setStatus('Préparation AR à partir du même modèle actif…');
+ setStatus('Préparation du vrai modèle 3D pour la réalité augmentée…');
  try{
-  if(!customElements.get('model-viewer'))await customElements.whenDefined('model-viewer');
-  if(!item?.glb){
+  await Promise.race([
+   customElements.whenDefined('model-viewer'),
+   new Promise((_,reject)=>setTimeout(()=>reject(Error('Module AR non chargé : connexion à model-viewer indisponible')),8000))
+  ]);
+  if(!item.glb){
    const {GLTFExporter}=await import('https://esm.sh/three@0.170.0/examples/jsm/exporters/GLTFExporter.js');
-   const exporter=new GLTFExporter();
-   const bytes=await exporter.parseAsync(item.root,{binary:true,onlyVisible:true,maxTextureSize:1024});
+   const bytes=await new GLTFExporter().parseAsync(item.root,{binary:true,onlyVisible:true,maxTextureSize:1024});
    const url=URL.createObjectURL(new Blob([bytes],{type:'model/gltf-binary'}));exportUrls.push(url);modelViewer.src=url;
   }else modelViewer.src=item.glb;
-  const isiOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if(isiOS){
+  if(/iPhone|iPad|iPod/i.test(navigator.userAgent)){
    const {USDZExporter}=await import('https://esm.sh/three@0.170.0/examples/jsm/exporters/USDZExporter.js');
    const bytes=await new USDZExporter().parseAsync(item.root,{maxTextureSize:1024});
    const url=URL.createObjectURL(new Blob([bytes],{type:'model/vnd.usdz+zip'}));exportUrls.push(url);modelViewer.setAttribute('ios-src',url);
   }
   modelViewer.hidden=false;canvas.hidden=true;
-  if(typeof modelViewer.activateAR!=='function')throw Error('AR indisponible : module model-viewer absent.');
-  await modelViewer.activateAR();
-  setStatus('Modèle actif exporté en AR. Revenir à la galerie pour manipuler la scène 3D.');
+  await Promise.race([
+   new Promise((resolve,reject)=>{modelViewer.addEventListener('load',resolve,{once:true});modelViewer.addEventListener('error',()=>reject(Error('Fichier AR illisible')),{once:true});}),
+   new Promise((_,reject)=>setTimeout(()=>reject(Error('Chargement AR non terminé')),15000))
+  ]);
+  arReady=true;arButton.textContent='LANCER EN AR';
+  setStatus('Modèle prêt : appuyer sur « LANCER EN AR » pour le placer dans la pièce.');
  }catch(e){
-  canvas.hidden=false;modelViewer.hidden=true;
-  setStatus('Aperçu 3D conservé. AR indisponible sur cet appareil/navigateur : '+(e.message||e));
+  canvas.hidden=false;modelViewer.hidden=true;arReady=false;
+  setStatus('Le modèle 3D reste visible. AR indisponible : '+(e.message||e));
  }finally{arButton.disabled=!item;}
 };
 const touches=new Map();let drag=null;
