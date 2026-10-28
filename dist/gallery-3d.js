@@ -28,7 +28,7 @@ const palette=(profile)=>({
 });
 let item=null, requestId=0, running=false, autoRotate=true, bearing=.48, elevation=.18, zoom=4.1, previousTime=0, exportUrls=[];
 const weaponNames={'VX-9':0,'NEXUS V9':1,'ARES X9':2,'THORN':3,'NOVA':4,'AURORA':5,'M–12':6,'VX-9 DUO':7,'VORTEX AR-7':8};
-const enemyForms={'ROBOT LOURD':'bulwark','SYNTH N-08':'synth','POURSUIVANT':'stalker','BRUTE':'brute','TRAQUEUR':'listener','RAMPANT':'scuttler','SONDE S-03':'probe'};
+const enemyForms={'REMPART':'bulwark','SYNTH N-08':'synth','POURSUIVANT':'stalker','BRUTE':'brute','TRAQUEUR':'listener','RAMPANT':'scuttler','SONDE S-03':'probe'};
 const surfaceMat=color=>new T.MeshStandardMaterial({color,metalness:.52,roughness:.47});
 function clearExports(){for(const u of exportUrls)URL.revokeObjectURL(u);exportUrls=[];}
 function setStatus(message){status.textContent=message;}
@@ -59,6 +59,13 @@ async function actualObject(name){
   const {createReco1}=await import('./reco1.js');
   const root=createReco1();
   return {root,animate:(t)=>root.userData.animate?.(t,0,false,{},t),source:'RECO1 V10 · modèle et squelette originaux'};
+ }
+ if(name==='ROBOT LOURD'){
+  const {createSentinel}=await import('./sentinel-mk9.js');
+  const actor=createSentinel(T,scene,{health:1200});
+  actor.root.removeFromParent();
+  return {root:actor.root,animate:(t,dt)=>actor.update(dt,{moving:false,awareness:'patrol'}),
+    source:'Sentinel MK VIII · modèle blindé original, canons et pods de missiles',dispose:()=>actor.dispose()};
  }
  if(Object.hasOwn(enemyForms,name)){
   const {createEnemyFactory}=await import('./enemies.js');
