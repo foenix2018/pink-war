@@ -21,7 +21,7 @@ test('a heard step or shot turns only that robot’s optics red, then memory exp
   assert.deepEqual(propagateNoise([e],{x:0,y:1.2,z:0,radius:12,kind:'step'},[],segmentBox,1),[1]);
   a.userData.animate(1,0,false,e,1);assert.equal(a.userData.alertState,'alert');
   assert.equal(a.userData.optics.color.getHex(),ENEMY_OPTICS.alert);assert.equal(b.userData.optics.color.getHex(),ENEMY_OPTICS.idle);
-  const sharedA=a.children.find(o=>o.isMesh&&o.material!==a.userData.optics),sharedB=b.children.find(o=>o.isMesh&&o.material!==b.userData.optics);
+  const sharedA=a.getObjectsByProperty('isMesh',true).find(o=>o.material!==a.userData.optics),sharedB=b.getObjectsByProperty('isMesh',true).find(o=>o.material!==b.userData.optics);
   assert.equal(sharedA.geometry,sharedB.geometry);assert.equal(sharedA.material,sharedB.material,'body colour does not become a private red material');
   e.awareness='engaged';a.userData.animate(2,0,false,e,2);assert.equal(a.userData.optics.color.getHex(),ENEMY_OPTICS.engaged);
   e.awareness='patrol';a.userData.animate(20,0,false,e,20);assert.equal(a.userData.optics.color.getHex(),ENEMY_OPTICS.idle);

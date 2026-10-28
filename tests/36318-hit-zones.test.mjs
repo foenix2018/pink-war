@@ -15,11 +15,11 @@ test('all robot forms retain distinct head, body and limb zones at elevation, ro
  for(const form of Object.keys(ROBOT_DURABILITY))for(const yaw of [0,.8,Math.PI/2,Math.PI])for(const elite of [false,true])for(const crouch of [0,1]){
   const e=fixture({form,yaw,elite,elevation:2.4,roomScale:.72,coverCrouch:crouch}),scale=enemyScale(form,elite)*.72;
   const world=([x,y,z])=>({x:e.x+(x*Math.cos(yaw)+z*Math.sin(yaw))*scale,y:e.elevation+y*scale,z:e.z+(-x*Math.sin(yaw)+z*Math.cos(yaw))*scale});
-  const drone=form==='probe',crawl=form==='scuttler',headY=drone?.55:crawl?.85:1.93,torsoY=drone?.55:crawl?.79:1.27;
+  const drone=form==='probe',crawl=form==='scuttler',headY=drone?.55:crawl?.85:form==='seer'?1.69:1.93,torsoY=drone?.55:crawl?.79:form==='seer'?1.16:1.27;
   const lowered=y=>y-crouch*(y>1?.52:.16);
   const head=traceEnemyHit(world([0,lowered(headY),-3]),world([0,lowered(headY),3]),e);
   const body=traceEnemyHit(world([0,lowered(torsoY),3]),world([0,lowered(torsoY),-3]),e);
-  const limbX=drone?.61:crawl?.76:.2,limbY=drone?.49:crawl?.43:.47;
+  const limbX=drone?.61:crawl?.76:form==='seer'?.13:.2,limbY=drone?.49:crawl?.43:form==='seer'?.53:.47;
   const limb=traceEnemyHit(world([limbX,lowered(limbY),-3]),world([limbX,lowered(limbY),3]),e);
   for(const [hit,zone] of [[head,'head'],[body,'torso'],[limb,'limb']]){
    assert.equal(hit?.zone,zone,`${form} ${yaw} ${elite} ${crouch}`);close(hit.multiplier,HIT_ZONE_DAMAGE[zone]*(form==='bulwark'&&zone==='torso'?.72:1));

@@ -1,8 +1,9 @@
+import {isReco1,RECO1,reco1ProjectileScale} from './reco1-profile.js';
 import { ArenaGame, WEAPONS, MAX_LEVEL, REGEN_DELAY, levelCount, traceEnemyHit, segmentSphere,projectileDamage,weaponAllowedForCharacter } from './game-logic.js';
 import {tacticalOrder,grenadeAvoidance} from './tactical-enemies.js';
 import {squadOrder,relayVisualContact,clearSquadFiringLane} from './enemy-squads.js';
 import {segmentBox} from './game-logic.js';
-import { enemyDurability, enemyVolley, rangedMuzzle, enemyScale, enemySightPoint, remembersCoverContact } from './enemy-combat.js';
+import { enemyDurability, enemyVolley, rangedMuzzle, enemyScale, enemySightPoint, remembersCoverContact, aimReco1 } from './enemy-combat.js';
 import { bladeBulletContact, reflectedVelocity, sweepBlade } from './blade-combat.js';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const mix=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
@@ -69,10 +70,10 @@ export class RoomGame extends ArenaGame {
     const elite=!special&&this.wave>=3&&ordinal%5===2,probe=!special&&!elite&&this.wave>=3&&ordinal%6===3;
     const form=special||(probe?'probe':elite?'brute':['stalker','scuttler','seer','brute'][(ordinal+this.wave-1)%4]);
     const ranged=['seer','probe','listener','bulwark','synth'].includes(form)||(this.wave>=5&&form==='brute');
-    const roomScale=Math.min(1,Math.max(.6,((this.room.ceilingAt?.(point)??2.6)-point.y-.15)/((probe?1.95:form==='scuttler'?1.1:2.32)*enemyScale(form,elite))));
+    const roomScale=Math.min(1,Math.max(.6,((this.room.ceilingAt?.(point)??2.6)-point.y-.15)/((isReco1(form)?RECO1.height:probe?1.95:form==='scuttler'?1.1:2.32)*enemyScale(form,elite))));
     const e={id:this.nextId++,x:point.x,z:point.z,elevation:point.y+(probe?.85:0),groundY:point.y,form,elite,ranged,
       hp:Math.round(enemyDurability(this.wave,form,elite)*.72),speed:(this.room.outdoor?Math.min(2.6,1.6+this.wave*.05):Math.min(.75,.32+this.wave*.021))*(form==='scuttler'?1.12:form==='bulwark'?.65:1),
-      roomScale,radius:(probe?.38:elite?.44:.33)*roomScale,aimHeight:(probe?.55:form==='scuttler'?.85:1.88)*enemyScale(form,elite)*roomScale,tier:Math.ceil(this.wave/2),
+      roomScale,radius:(probe?.38:elite?.44:.33)*roomScale,aimHeight:(isReco1(form)?1.16:probe?.55:form==='scuttler'?.85:1.88)*enemyScale(form,elite)*roomScale,tier:Math.ceil(this.wave/2),
       yaw:Math.atan2(this.head.x-point.x,this.head.z-point.z)+Math.PI,attackTimer:1.5,stunnedUntil:0,limpUntil:0,phase:this.random()*6.28,awareness:'engaged',portalId:site.id};
     this.enemies.push(e);this.toSpawn--;this.spawned++;this.event('spawn',{id:e.id,x:e.x,y:e.elevation+e.aimHeight,z:e.z});return true;
   }
@@ -128,13 +129,16 @@ export class RoomGame extends ArenaGame {
         e.yaw=Math.atan2((order?e.lastKnownX:target.x)-e.x,(order?e.lastKnownZ:target.z)-e.z)+Math.PI;
       }
       if(e.form==='probe')e.elevation=e.groundY+.85+Math.sin(this.time*1.4+e.phase)*.09;
+      if(seen&&isReco1(e.form))aimReco1(e,{...this.head,y:this.head.y-.15});
       if(e.stunnedUntil>this.time){e.chargeProgress=0;e.lockedTarget=null;e.burstRemaining=0;continue;}
       e.attackTimer-=dt;
       if(!seen||order&&!order.canFire){e.chargeProgress=0;e.lockedTarget=null;e.burstRemaining=0;continue;}
       if(!e.ranged&&distance<1&&e.attackTimer<=0){this.damage(7+Math.floor(this.wave*.5));e.attackTimer=1.4;}
       if(e.ranged&&e.attackTimer<.65){e.lockedTarget||={...this.head};e.chargeProgress=clamp(1-e.attackTimer/.65,0,1);}
       if(e.ranged&&e.attackTimer<=0){
-        const muzzle=e.form==='probe'?{...eye}:rangedMuzzle(e),target=e.lockedTarget||this.head;
+        const target=e.lockedTarget||this.head;
+        if(isReco1(e.form))aimReco1(e,{...target,y:target.y-.15});
+        const muzzle=e.form==='probe'?{...eye}:rangedMuzzle(e);
         if(!this.blocked(muzzle,target)&&clearSquadFiringLane(e,muzzle,target,this.enemies)){
           const speed=Math.min(14,8+this.wave*.25),dx=target.x-muzzle.x,dy=target.y-.15-muzzle.y,dz=target.z-muzzle.z,n=Math.hypot(dx,dy,dz)||1;
           this.bullets.push({id:this.nextId++,...muzzle,vx:dx/n*speed,vy:dy/n*speed,vz:dz/n*speed,life:2.5,damage:6+Math.floor(this.wave*.55),hostile:true,weapon:'enemy',splash:0});
@@ -168,7 +172,7 @@ export class RoomGame extends ArenaGame {
       if(b.hostile&&playerHit!==null&&playerHit<nearest){nearest=playerHit;target=this.player;}
       if(!b.hostile)for(const e of this.enemies){const hit=traceEnemyHit(a,end,e);if(hit&&hit.t<nearest){nearest=hit.t;target=e;zone=hit.zone;multiplier=hit.multiplier;}}
       if(nearest<=1){const at=mix(a,end,nearest);this.event('impact',{...at,bulletId:b.id,weapon:b.weapon,hostile:b.hostile,enemy:!!target,splash:b.splash||0,power:b.power||1,surface:target?'robot':wall?.surface||'concrete',normal:wall?.normal||{x:0,y:1,z:0}});
-        if(target===this.player)this.damage(b.damage);else if(target)this.damageEnemy(target,projectileDamage(b,at),at,zone,multiplier);
+        if(target===this.player)this.damage(b.damage);else if(target)this.damageEnemy(target,projectileDamage(b,at)*reco1ProjectileScale(target,zone),at,zone,multiplier);
         if(!b.hostile&&b.splash>0)for(const e of [...this.enemies])if(e!==target){const c={x:e.x,y:e.elevation+e.aimHeight,z:e.z},d=Math.hypot(c.x-at.x,c.y-at.y,c.z-at.z);if(d<b.splash&&!this.blocked(a,c))this.damageEnemy(e,b.damage*(1-d/b.splash*.65),c);}
         this.bullets.splice(i,1);
       }else{Object.assign(b,end);b.life-=dt;if(b.life<=0)this.bullets.splice(i,1);}

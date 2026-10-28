@@ -8,7 +8,7 @@ function game(obstacles=[]){const g=new ArenaGame(obstacles,()=>.5);g.nextWave=9
 const bolt=()=>({id:71,x:0,y:1.25,z:-2,vx:0,vy:0,vz:80,damage:20,life:2,hostile:true,weapon:'enemy'});
 test('enemy hit zones use the same scale as their visible chassis, including elite heads',()=>{
  for(const form of ['stalker','scuttler','seer','brute','probe','listener','bulwark'])for(const elite of [false,true]){
-  const y=(form==='probe'?.55:form==='scuttler'?.85:1.88)*enemyScale(form,elite),e={x:0,z:0,elevation:0,yaw:0,form,elite};
+  const y=(form==='probe'?.55:form==='scuttler'?.85:form==='seer'?1.69:1.88)*enemyScale(form,elite),e={x:0,z:0,elevation:0,yaw:0,form,elite};
   const hit=traceEnemyHit({x:0,y,z:-3},{x:0,y,z:3},e);assert.equal(hit?.zone,'head',form+' '+elite);
  }
 });
@@ -42,7 +42,7 @@ test('a visible ranged unit fires its volley from the cannon and a stun interrup
  const g=new ArenaGame([],()=>.5);g.nextWave=999;g.wave=6;g.player.x=g.player.z=0;
  const e={id:9,form:'seer',x:0,z:-16,elevation:0,hp:1000,aimHeight:1.38,speed:0,radius:.8,ranged:true,stunnedUntil:0,attackTimer:0,awareness:'engaged'};g.enemies=[e];g.step(.05);
  assert.equal(e.burstRemaining,1);assert.equal(g.drainEvents().filter(e=>e.type==='enemy-shot').length,1);
- const muzzle=rangedMuzzle(e);assert.ok(muzzle.y>1.5);assert.ok(g.bullets[0].y>1.5);
+ const muzzle=rangedMuzzle(e);assert.ok(muzzle.y>1.35);assert.ok(g.bullets[0].y>1.3);
  for(let i=0;i<4;i++)g.step(.05);assert.equal(g.drainEvents().filter(e=>e.type==='enemy-shot').length,1);assert.equal(e.burstRemaining,0);
  e.attackTimer=0;e.burstRemaining=1;e.stunnedUntil=g.time+1;g.step(.05);assert.equal(g.drainEvents().filter(e=>e.type==='enemy-shot').length,0);assert.equal(e.burstRemaining,0);
 });

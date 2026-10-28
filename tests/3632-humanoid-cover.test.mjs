@@ -1,3 +1,4 @@
+import {isReco1,RECO1} from '../dist/reco1-profile.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -39,8 +40,8 @@ test('sampled Rifle Walk preserves alternating foot support and the biped retarg
 test('cover height is chosen for the real helmet and size, with both sensor and barrel clear at the peek',()=>{
  for(const form of ['stalker','synth','seer','listener']){
   const e=enemy(form),scale=enemyScale(form,false),c=chooseTacticalCover(e,threat,[wall],[],segmentBox);assert.ok(c,form);
-  assert.ok(c.crouchAmount>1&&c.crouchAmount<=1.4);
-  assert.ok((ROBOT_HEAD_TOP-ROBOT_CROUCH_DROP*c.crouchAmount)*scale<wall.height);
+  assert.ok(c.crouchAmount>(isReco1(form)?.6:1)&&c.crouchAmount<=1.4);
+  assert.ok(((isReco1(form)?RECO1.headTop:ROBOT_HEAD_TOP)-ROBOT_CROUCH_DROP*c.crouchAmount)*scale<wall.height);
   assert.notEqual(segmentBox({...c.hidden,y:coverEyeHeight(e,c)},threat,wall),null);
   const exposed={...e,...c.peek,coverCrouch:0,yaw:Math.atan2(threat.x-c.peek.x,threat.z-c.peek.z)+Math.PI};
   assert.equal(segmentBox(enemySightPoint(exposed),threat,wall),null);

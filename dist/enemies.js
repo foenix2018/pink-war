@@ -1,3 +1,4 @@
+import {createReco1} from './reco1.js';
 import * as T from './vendor/three.webgpu.min.js';
 import { Assembly, loft, matrix, merge, bevelBox, limb as lightweightLimb } from './geo.js';
 import {equipmentSurfaces} from './equipment-surfaces.js';
@@ -12,7 +13,7 @@ import {HUMAN_REFERENCE,sampleHumanStep,humanIdleBob} from './enemy-human-motion
 export const ENEMY_PROFILES=Object.freeze({
  synth:Object.freeze({name:'Synthétique N-08 / tacticien autonome',silhouette:'humanoid / ivory shell / exposed tendons / adaptive cover'}),
  stalker:Object.freeze({name:'Poursuivant / châssis de sécurité',silhouette:'military graphite shell / sealed helmet / paired optics / braced field rifle'}),
- seer:Object.freeze({name:'Sentinelle / optique longue portée',silhouette:'slender / cyclopean sensor / swept head'}),
+ seer:Object.freeze({name:'RECO1 · reconnaissance blindée',silhouette:'approved V10 / gunmetal segmented armour / 41-bone RLH motion / aimed carbine'}),
  brute:Object.freeze({name:'Brute / châssis de siège',silhouette:'broad / recessed head / heavy shoulders'}),
  bulwark:Object.freeze({name:'Rempart / unité de suppression',silhouette:'humanoid heavy chassis / faceted arm shields / integrated helmet'}),
  listener:Object.freeze({name:'Traqueur / réseau acoustique',silhouette:'humanoid scout / angular helmet / acoustic receivers'}),
@@ -173,6 +174,7 @@ export function createEnemyFactory(mats){
   }
 
   function create(elite=false,ranged=false,form='stalker'){
+    if(form==='seer')return createReco1({elite,environment:mats.monster?.envMap});
     if(!['stalker','scuttler','brute','seer','probe','listener','bulwark','synth'].includes(form))form='stalker';
     const kit=template(elite,ranged,form),root=new T.Group(),crawler=form==='scuttler',probe=form==='probe';
     root.name=({synth:'N-08 adaptive synthetic',stalker:'AI pursuit chassis',scuttler:'AI maintenance crawler',brute:'AI siege chassis',seer:'AI reconnaissance chassis',probe:'S-03 flying surveillance probe',listener:'E-06 acoustic tracker',bulwark:'B-11 armoured suppression unit'})[form];

@@ -23,14 +23,16 @@ test('light, infantry and heavy robots require distinct finite torso hits, with 
   const g=new CampaignLevel1([],()=>.5,'lylu');g.stage='workshop';g.openingSpawned=8;g.invulnerable=1e6;Object.assign(g.player,{x:0,z:0,elevation:0});
   const e=g.makeEnemy(form,{id:1,x:0,z:-5,yaw:0});e.stunnedUntil=1e6;e.speed=0;g.enemies=[e];let shots=0;
   const y=e.elevation+(form==='probe'?.55:form==='scuttler'?.79:1.27);
-  while(g.enemies.length&&shots<10){
+  while(g.enemies.length&&shots<(form==='seer'?24:10)){
+   if(g.ammo[g.weaponIndex]===0){if(g.reloadRemaining===0)assert.equal(g.reload(),true);while(g.reloadRemaining>0)g.step(.025,{});}
    assert.equal(g.shoot({x:0,y:1.45,z:0},{x:0,y:y-1.45,z:-5}),true);
    for(let i=0;i<40;i++)g.step(.025,{});shots++;
   }
-  counts[form]=shots;assert.equal(g.kills,1);assert.ok(shots<10);
+  counts[form]=shots;assert.equal(g.kills,1);assert.ok(shots<(form==='seer'?24:10));
   const torso=Math.ceil(enemyDurability(1,form)/pistol.damage),head=Math.ceil(enemyDurability(1,form)/(pistol.damage*HIT_ZONE_DAMAGE.head));assert.ok(head<torso);
  }
  assert.equal(counts.probe,1);assert.equal(counts.stalker,2);assert.equal(counts.synth,2);assert.equal(counts.brute,3);assert.equal(counts.bulwark,4);
+ assert.ok(counts.seer>counts.bulwark*2,'RECO1 takes substantially more actual M12 shells');
  assert.ok(enemyDurability(3,'synth')>enemyDurability(1,'synth'));assert.ok(enemyDurability(1,'synth',true)>enemyDurability(1,'synth'));
 });
 test('RLH clips and the real Model 12 blast match their provenance checksums and stay compact',()=>{

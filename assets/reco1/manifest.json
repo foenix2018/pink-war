@@ -1,0 +1,29 @@
+{
+  "source": "User-approved PINK_WARS_RECO1_V10_VISEE.html; original RLH 41-bone Mixamo clips",
+  "revision": "RECO1 V10 / Pink Wars 3.65",
+  "nativeBones": 41,
+  "visualBones": 18,
+  "batches": 17,
+  "bytes": 1498751,
+  "materials": [
+    "armor",
+    "armor2",
+    "recess",
+    "trim",
+    "bolts",
+    "edge",
+    "silver",
+    "lens",
+    "inner",
+    "decal-9",
+    "decal-10",
+    "dark",
+    "rubber",
+    "optics",
+    "tiny",
+    "decal-15",
+    "decal-16"
+  ],
+  "previewSha256": "823117f98a561f4a6f75b92079812193e6db2a830f376e05ac800a72d07f9855",
+  "triangles": 59742
+}

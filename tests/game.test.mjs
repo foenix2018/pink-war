@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ArenaGame, ARENA_SIZE, segmentSphere, segmentBox, moveInArena, MAX_LEVEL, WEAPONS, COVER_WALLS, REGEN_DELAY, levelCount, traceEnemyHit, PORTAL_SITES, chooseWavePortals } from '../dist/game-logic.js';
-import { enemyDurability } from '../dist/enemy-combat.js';
+import { enemyDurability,enemyScale } from '../dist/enemy-combat.js';
 
 const enemy = (id, z, x = 0) => ({ id, x, z, hp: 40, speed: 0, radius: .8, elite: false, attackTimer: 20, phase: 0 });
 const advance = (game, seconds, input = {}) => { for (let t = 0; t < seconds; t += .02) game.step(.02, input); };
@@ -111,7 +111,7 @@ test('random breach sites change across runs, avoid buildings and preserve enemy
 
 test('twenty campaign levels increase enemy health and movement speed', () => {
   assert.equal(MAX_LEVEL,20); assert.deepEqual(Array.from({length:20},(_,i)=>levelCount(i+1)),Array.from({length:20},(_,i)=>5+i*3));
-  const g = new ArenaGame([],()=>.5); let previousSpeed=0;
+  const g = new ArenaGame([],()=>.5); const previousSpeeds=new Map();
   for(let level=1;level<=MAX_LEVEL;level++) {
     g.beginWave(); g.spawnEnemy(); const e=g.enemies.at(-1);
     const baseSpeed=e.speed/(e.form==='scuttler'?1.12:e.form==='bulwark'?.7:1);
@@ -119,7 +119,7 @@ test('twenty campaign levels increase enemy health and movement speed', () => {
     if(level===1){assert.equal(e.form,'sentinel');assert.equal(e.hp,1200);}else assert.equal(e.hp,enemyDurability(level,e.form,e.elite));
     for(const form of ['stalker','scuttler','seer','brute','probe','listener','bulwark'])for(const elite of [false,true])
       if(level>1)assert.ok(enemyDurability(level,form,elite)>enemyDurability(level-1,form,elite),'the same chassis gets tougher at every level');
-    assert.ok(baseSpeed>previousSpeed); previousSpeed=baseSpeed;
+    if(previousSpeeds.has(e.form))assert.ok(baseSpeed>previousSpeeds.get(e.form));previousSpeeds.set(e.form,baseSpeed);
     for(let i=1;i<levelCount(level);i++)g.spawnEnemy();
     assert.ok(g.enemies.some(e=>e.ranged),'every wave contains shooting enemies');
     g.enemies=[]; g.toSpawn=0;
@@ -293,8 +293,8 @@ test('a complete campaign reaches level 20 after 670 real projectile kills and s
     origin.x=g.player.x;origin.z=g.player.z;origin.y=g.player.elevation+1.35;
     const target=g.enemies.reduce((best,e)=>!best||Math.hypot(e.x-origin.x,e.z-origin.z)<Math.hypot(best.x-origin.x,best.z-origin.z)?e:best,null);
     if(target){const old=previousTargets.get(target.id)||target,travel=Math.hypot(target.x-origin.x,target.z-origin.z)/g.weapon.speed;
-      const scale=target.elite?(target.form==='probe'?1.13:1.3):target.form==='scuttler'?.98:target.form==='seer'?1.04:1;
-      g.trigger(!g.weapon.semiAuto||!g.triggerHeld,.02,origin,{x:target.x+(target.x-old.x)/.02*travel-origin.x,y:(target.elevation||0)+(target.form==='probe'?.55:target.form==='scuttler'?.85:1.88)*scale-origin.y,z:target.z+(target.z-old.z)/.02*travel-origin.z});}
+      const scale=enemyScale(target.form,target.elite);
+      g.trigger(!g.weapon.semiAuto||!g.triggerHeld,.02,origin,{x:target.x+(target.x-old.x)/.02*travel-origin.x,y:(target.elevation||0)+(target.form==='probe'?.55:target.form==='scuttler'?.85:target.form==='seer'?1.69:1.88)*scale-origin.y,z:target.z+(target.z-old.z)/.02*travel-origin.z});}
     else g.trigger(false,.02,origin,{x:0,y:0,z:-1});
     for(const e of g.enemies)previousTargets.set(e.id,{x:e.x,z:e.z});
     const events=g.drainEvents();
