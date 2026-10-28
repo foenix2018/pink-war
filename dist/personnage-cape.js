@@ -266,11 +266,11 @@ function tick(now){
  let height=0,velocity=0;
  if(airborne){
    const elapsed=state.clock-state.jumpStart;
-   if(elapsed>1.05){setMotion('idle');}
-   else {height=Math.max(0,7.25*elapsed-9*elapsed*elapsed);velocity=7.25-18*elapsed;}
+   if(elapsed>7.25/9+.48){setMotion('idle');}
+   else if(elapsed<7.25/9){height=Math.max(0,7.25*elapsed-9*elapsed*elapsed);velocity=7.25-18*elapsed;}
  }
  root.position.y=height;
- model.animate(state.clock,!!speed,0,0,['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion)?1:0,dt,{inPlace:true,velocity:{x:0,z:-speed},airborne,verticalSpeed:velocity,crouched:['crouch','crouchWalk'].includes(state.motion),firing:['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion),sprint:['run','runFire'].includes(state.motion),preview:state.motion==='idle',saberSwing:state.weapon===5&&state.motion==='aim'?bladeSwingPose((state.clock%1.2)/.6):null});
+ model.animate(state.clock,!!speed,0,0,['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion)?1:0,dt,{inPlace:true,velocity:{x:0,z:-speed},airborne:airborne&&height>0,verticalSpeed:velocity,crouched:['crouch','crouchWalk'].includes(state.motion),firing:['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion),sprint:['run','runFire'].includes(state.motion),preview:state.motion==='idle',saberSwing:state.weapon===5&&state.motion==='aim'?bladeSwingPose((state.clock%1.2)/.6):null});
  model.gun.userData.setCombatState?.({time:state.clock,bladeHeld:state.weapon===5});
  if(state.weapon<0){
    if(state.motion==='idle'){

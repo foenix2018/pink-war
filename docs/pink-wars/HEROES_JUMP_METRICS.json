@@ -1,0 +1,43 @@
+{
+  "version": "3.66.2",
+  "baselineCommit": "686c805",
+  "method": "Identical GHJU factory with real Shadow armour, original 34-bone RLH rig in its unscaled local authoring frame. Standing and running at 7 units/s; 60 warm-up frames, jump impulse 7.25, gravity 18, 100 measured frames at 60 Hz including landing and return to locomotion. Kinematic position/angular measurements; not hardware FPS.",
+  "units": {
+    "maxFootStep": "local metres/frame",
+    "maxKneeAngle": "radians/frame",
+    "landingHipDrop": "local metres from warm-up pelvis to lowest post-contact pelvis",
+    "firstLand": "frame index"
+  },
+  "before": [
+    {
+      "speed": 0,
+      "maxFootStep": 0.0897715684376235,
+      "maxKneeAngle": 0.7519283961495955,
+      "landingHipDrop": 0.03984459165548648,
+      "firstLand": 47
+    },
+    {
+      "speed": 7,
+      "maxFootStep": 0.16120893902884376,
+      "maxKneeAngle": 0.7590828526273483,
+      "landingHipDrop": 0.02209107893461859,
+      "firstLand": 47
+    }
+  ],
+  "after": [
+    {
+      "speed": 0,
+      "maxFootStep": 0.04722743898875726,
+      "maxKneeAngle": 0.21379053180659488,
+      "landingHipDrop": 0.11823884340738355,
+      "firstLand": 47
+    },
+    {
+      "speed": 7,
+      "maxFootStep": 0.09949610452449179,
+      "maxKneeAngle": 0.3082749866913894,
+      "landingHipDrop": 0.10955275058555691,
+      "firstLand": 47
+    }
+  ]
+}

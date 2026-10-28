@@ -1,5 +1,7 @@
 # Pink Wars — La Fracture
 
+Version 3.66.2 : **saut plus souple pour GHJU et LYLU** — décollage continu, jambes décalées en vol, buste et bras libre mobiles, descente préparée et réception amortie. Double saut repris depuis la pose en cours ; atelier capable de montrer le saut en course et sa réception. [Détails](docs/pink-wars/MISE_A_JOUR_366_2.md) · [Atelier animé](https://pink-war.vercel.app/personnage.html?v=3.66.2).
+
 Version 3.66.1 : **articulations de GHJU et LYLU corrigées** — jambes séparées en pas latéraux, genoux cohérents en recul, libération progressive des appuis et transitions marche/course stabilisées. Bottes affinées, semelles et cou-de-pied sculptés, biseaux des plaques ajustés. [Détails](docs/pink-wars/MISE_A_JOUR_366_1.md) · [Atelier animé](https://pink-war.vercel.app/personnage.html?v=3.66.1).
 
 Version 3.66 : **GHJU et LYLU Shadow VII** — formes ajustées aux fonds de Vesper, cuirasse et bassin articulés, cape plus ample, cadence réelle, recul, pas latéraux, appuis et réception de saut. [Détails](docs/pink-wars/MISE_A_JOUR_366.md) · [Atelier animé](https://pink-war.vercel.app/personnage.html?v=3.66.0).

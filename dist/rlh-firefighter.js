@@ -5,6 +5,7 @@ import {createGlove,GRIP} from './hands.js';
 import {WEAPON_FRAME} from './weapons.js';
 import {createAegisArmor} from './aegis-v3.js';
 import {createHeroLocomotion,heroGaitReference} from './hero-locomotion.js';
+import {createHeroJump} from './hero-jump.js';
 
 let cached;
 const kits=new WeakMap(),clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
@@ -173,6 +174,7 @@ export function createRLHSoldier(kit,createGun,profile){
   const soleMeshes=[...new Set(soleSamples.map(sample=>sample.mesh))];
   actor.gaitReference=heroGaitReference(data,soleSamples);
   const locomotion=createHeroLocomotion({root,actor,hips,spine,body,legs,knees,feet},solveChain);
+  const jump=createHeroJump({root,hips,spine,body,legs,knees,feet,freeArm:arms[0].upper},solveChain,locomotion.footFloor);
   function wristTargets(){root.updateMatrixWorld(true);return [supported()?gun.userData.support.localToWorld(new T.Vector3(...GRIP.wrist)):rest.localToWorld(new T.Vector3(...GRIP.wrist)),gun.userData.hand.localToWorld(new T.Vector3(...GRIP.wrist))];}
   function fitMount(){
     for(let j=0;j<16;j++){
@@ -202,9 +204,10 @@ export function createRLHSoldier(kit,createGun,profile){
     animate(time,moving,recoil=0,reload=0,trigger=0,dt=.016,flight={}){
       dt=clamp(dt,0,.08);if(dt===0){actor.skeleton.update();return;}
       const motionState=locomotion.sample(moving,dt,flight,this._lastRootPosition);this._lastRootPosition=root.position.clone();this.locomotion=motionState;
+      this.jumpPose=jump.sample(dt,flight);
       const speed=motionState.speed,travelling=moving&&speed>.08,forward=Math.abs(motionState.travelDirection.x)<.85&&!motionState.backward;
       this._runMode=!flight.crouched&&forward&&(!!flight.sprint||speed>(this._runMode?4.8:5.8));
-      const run=this._runMode,aiming=trigger>.1||!!flight?.firing||!!flight?.aim,motion=travelling?(run?'run':aiming?'walkRifle':'walk'):aiming?'rifle':'idle';this.nativeMotion=motion;
+      const run=this._runMode,aiming=trigger>.1||!!flight?.firing||!!flight?.aim,motion=travelling&&!flight.airborne?(run?'run':aiming?'walkRifle':'walk'):aiming?'rifle':'idle';this.nativeMotion=motion;
       previewCarry=!!flight?.preview&&!moving&&!aiming&&!reload&&!WEAPON_FRAME[weapon].melee;
       rest.visible=!supported();gun.userData.support.visible=supported()&&gun.userData.showSupport;
       const cadence=clamp(speed/(run?6.4:2.6),.6,flight.crouched?1.1:1.8);
@@ -218,21 +221,15 @@ export function createRLHSoldier(kit,createGun,profile){
         for(const mesh of soleMeshes)mesh.bindMatrixInverse.copy(root.matrixWorld).invert();
         const correction=locomotion.groundTarget(actor.actions.run.getEffectiveWeight());
         hips.position.y-=locomotion.groundCorrection(correction,dt);
-      }
+      }else if(flight.airborne)hips.position.y-=locomotion.groundOffset();
       root.updateMatrixWorld(true);const footTargets=feet.map(f=>f.getWorldPosition(new T.Vector3())),footQuats=feet.map(f=>f.getWorldQuaternion(new T.Quaternion()));
-      const lower=low*.265+motionState.landing*.065;
+      const lower=low*.265;
       hips.position.y-=lower;spine.quaternion.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),low*.25));
       const recoilTarget=clamp(recoil/.16);recoilBody+=(recoilTarget-recoilBody)*(1-Math.exp(-dt*(recoilTarget>recoilBody?34:16)));this._recoilBody=recoilBody;
       body.quaternion.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),recoilBody*.025));
       if(lower>.001&&!flight?.airborne)for(let i=0;i<2;i++){solveChain(legs[i],knees[i],feet[i],footTargets[i],root.localToWorld(new T.Vector3(i===0?-.12:.12,.55,-.55)));feet[i].quaternion.copy(feet[i].parent.getWorldQuaternion(new T.Quaternion()).invert().multiply(footQuats[i]));}
-      if(flight?.airborne){
-        const tuck=1-clamp(Math.abs(flight.verticalSpeed||0)/7);
-        for(let i=0;i<2;i++){
-          legs[i].quaternion.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),-.22-.12*tuck));
-          knees[i].quaternion.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),.30+.23*tuck));
-        }
-      }
       locomotion.pose(dt,flight);locomotion.plant(dt,flight);
+      jump.pose(flight,motionState,!supported());
       root.updateMatrixWorld(true);
       const chest=root.worldToLocal(body.getWorldPosition(new T.Vector3())),delta=chest.clone().sub(chestRest);
       mount.position.copy(anchor).add(delta);mount.position.y-=low*.06;mount.position.z+=recoil*.08;

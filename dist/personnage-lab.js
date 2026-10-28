@@ -74,7 +74,7 @@ for(const id of ['lylu','ghju']){
   installShadowUnit(model,characterForId(id));
   subjects.set(id,model);
 }
-const state={character:'ghju',motion:'idle',level:1,weapon:0,angle:0,elevation:.12,zoom:matchMedia('(max-width:800px) and (orientation:portrait)').matches?6.0:3.9,showBones:false,jumpStart:0,clock:0};
+const state={character:'ghju',motion:'idle',jumpMotion:'idle',level:1,weapon:0,angle:0,elevation:.12,zoom:matchMedia('(max-width:800px) and (orientation:portrait)').matches?6.0:3.9,showBones:false,jumpStart:0,clock:0};
 const color=new T.Color();
 function setCharacter(id){
   if(!subjects.has(id))return;
@@ -99,6 +99,7 @@ function setCharacter(id){
 }
 function setMotion(motion){
   if(!['idle','walk','run','jump','aim','crouch','walkFire','runFire','crouchWalk','back','left','right'].includes(motion))return;
+  if(motion==='jump'&&state.motion!=='jump')state.jumpMotion=['crouch','crouchWalk'].includes(state.motion)?'idle':state.motion;
   state.motion=motion;
   state.jumpStart=state.clock;
   document.querySelectorAll('[data-motion]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.motion===motion)));
@@ -169,7 +170,7 @@ canvas.addEventListener('pointermove',e=>{
 });
 for(const name of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(name,e=>{pointerPositions.delete(e.pointerId);previousPinch=0;});
 canvas.addEventListener('wheel',e=>{e.preventDefault();state.zoom=clamp(state.zoom*Math.exp(e.deltaY*.001),2.3,7.2);},{passive:false});
-let frame=0,last=0;
+let frame=0,last=0,jumpFocus=0;
 function resize(){
  const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight),dpr=Math.min(window.devicePixelRatio||1,2);
  renderer.setPixelRatio(dpr);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
@@ -179,23 +180,25 @@ setCharacter(new URLSearchParams(location.search).get('character')==='lylu'?'lyl
 function tick(now){
  const dt=last?clamp((now-last)*.001,.001,.05):.016;last=now;state.clock+=dt;
  const model=subjects.get(state.character),root=model.root;
- const speed=['walk','walkFire','back','left','right'].includes(state.motion)?3.2:['run','runFire'].includes(state.motion)?9:state.motion==='crouchWalk'?2.2:0;
- const travel={x:state.motion==='left'?-speed:state.motion==='right'?speed:0,y:0,z:state.motion==='back'?speed:['left','right'].includes(state.motion)?0:-speed};
+ const motion=state.motion==='jump'?state.jumpMotion:state.motion;
+ const speed=['walk','walkFire','back','left','right'].includes(motion)?3.2:['run','runFire'].includes(motion)?9:motion==='crouchWalk'?2.2:0;
+ const travel={x:motion==='left'?-speed:motion==='right'?speed:0,y:0,z:motion==='back'?speed:['left','right'].includes(motion)?0:-speed};
  // Simulate travel in the contact frame while keeping the inspected model centred.
- const airborne=state.motion==='jump';
+ let airborne=false;
  let height=0,velocity=0;
- if(airborne){
+ if(state.motion==='jump'){
    const elapsed=state.clock-state.jumpStart;
-   if(elapsed>7.25/9){setMotion('idle');}
-   else {height=Math.max(0,7.25*elapsed-9*elapsed*elapsed);velocity=7.25-18*elapsed;}
+   if(elapsed>7.25/9+.48){setMotion(state.jumpMotion);}
+   else if(elapsed<7.25/9){height=Math.max(0,7.25*elapsed-9*elapsed*elapsed);velocity=7.25-18*elapsed;airborne=height>0;}
  }
  root.position.y=height;
- model.animate(state.clock,!!speed,0,0,['aim','walkFire','runFire','crouch','crouchWalk','back','left','right'].includes(state.motion)?1:0,dt,{inPlace:true,velocity:travel,airborne:airborne&&height>0,verticalSpeed:velocity,crouched:['crouch','crouchWalk'].includes(state.motion),firing:['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion),sprint:['run','runFire'].includes(state.motion),preview:state.motion==='idle',saberSwing:state.weapon===5&&state.motion==='aim'?bladeSwingPose((state.clock%1.2)/.6):null});
+ model.animate(state.clock,!!speed,0,0,['aim','walkFire','runFire','crouch','crouchWalk','back','left','right'].includes(motion)?1:0,dt,{inPlace:true,velocity:travel,airborne,verticalSpeed:velocity,crouched:['crouch','crouchWalk'].includes(motion),firing:['aim','walkFire','runFire','crouch','crouchWalk'].includes(motion),sprint:['run','runFire'].includes(motion),preview:state.motion==='idle',saberSwing:state.weapon===5&&motion==='aim'?bladeSwingPose((state.clock%1.2)/.6):null});
  model.gun.userData.setCombatState?.({time:state.clock,bladeHeld:state.weapon===5});
  refreshSkeleton(model);
  const w=canvas.clientWidth,h=canvas.clientHeight;
  // Portrait inspection keeps the entire boot-to-helmet silhouette above the mobile control drawer.
- const focal=(w<800&&h>w)?0.32:1.1;
+ jumpFocus+=(height*.65-jumpFocus)*(1-Math.exp(-dt*10));
+ const focal=((w<800&&h>w)?0.32:1.1)+jumpFocus;
  camera.position.set(Math.sin(state.angle)*Math.cos(state.elevation)*state.zoom,
     focal+Math.sin(state.elevation)*state.zoom,
     -Math.cos(state.angle)*Math.cos(state.elevation)*state.zoom);
@@ -206,7 +209,7 @@ function tick(now){
 }
 requestAnimationFrame(tick);
 window.__PINKWAR_CHARACTER_LAB=Object.freeze({
- snapshot:()=>({character:state.character,motion:state.motion,level:state.level,weapon:state.weapon,showBones:state.showBones,
+ snapshot:()=>({character:state.character,motion:state.motion,jumpPose:{...subjects.get(state.character).jumpPose},level:state.level,weapon:state.weapon,showBones:state.showBones,
   frames:frame,zoom:state.zoom,articulations:jointNames, jointPositions:()=>Object.fromEntries(Object.entries(subjects.get(state.character).jointPositions()).map(([k,v])=>[k,v.toArray()])),
   visibleParts:subjects.get(state.character).visibleParts,visibleMeshes:subjects.get(state.character).batchCount,physicalHeight:subjects.get(state.character).targetHeight,
   armorModules:[...subjects.get(state.character).armor.modules],armorTriangles:subjects.get(state.character).armor.parts.reduce((n,p)=>n+p.geometry.attributes.position.count/3,0),armorName:subjects.get(state.character).armor.name,armorRevision:subjects.get(state.character).armor.revision,armorGeneration:subjects.get(state.character).armor.generation,armorPieces:subjects.get(state.character).armor.count,nativeMotion:subjects.get(state.character).nativeMotion,nativeClips:Object.fromEntries(Object.entries(subjects.get(state.character).actor.actions).map(([name,a])=>[name,{duration:a.getClip().duration,weight:a.getEffectiveWeight(),time:a.time}]))}),

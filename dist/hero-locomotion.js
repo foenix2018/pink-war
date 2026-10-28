@@ -76,6 +76,10 @@ export function createHeroLocomotion(model,solveChain){
   for(let i=0;i<2;i++)for(const p of soles[i])floor=Math.min(floor,solePoint.copy(p).applyMatrix4(feet[i].matrixWorld).applyMatrix4(inverseRoot).y);
   return floor+(Math.min(floor,runFloor+.008)-floor)*runWeight;
  }
+ function footFloor(i,q){
+  let lowest=Infinity;for(const p of soles[i])lowest=Math.min(lowest,solePoint.copy(p).applyQuaternion(q).y);
+  return -lowest+.004;
+ }
  function pose(dt,flight){
   root.updateMatrixWorld(true);
   for(let i=0;i<2;i++){native[i].p.copy(root.worldToLocal(feet[i].getWorldPosition(new T.Vector3())));native[i].q.copy(feet[i].getWorldQuaternion(new T.Quaternion()));}
@@ -92,8 +96,7 @@ export function createHeroLocomotion(model,solveChain){
   for(let i=0;i<2;i++){
    const f=feet[i],n=native[i],l=locks[i],sign=i===0?-1:1,target=n.p.clone();
    const footYaw=direction.x*.10*(1-backAmount*.4),q=new T.Quaternion().setFromAxisAngle(up.clone().applyQuaternion(rootQ),footYaw).multiply(n.q);
-   let lowest=Infinity;for(const p of soles[i])lowest=Math.min(lowest,solePoint.copy(p).applyQuaternion(q).y);
-   const floor=-lowest+.004;
+   const floor=footFloor(i,q);
    const swing=n.ready&&dt>0?(n.p.z-n.previousZ)/dt:0;n.previousZ=n.p.z;n.ready=true;
    const stride=1-.30*sideAmount-.30*backAmount,excursion=-(n.p.z-centre[i])*stride;
    target.x+=excursion*direction.x*warp;target.z=T.MathUtils.lerp(n.p.z,centre[i]+excursion*direction.z,warp);
@@ -125,5 +128,5 @@ export function createHeroLocomotion(model,solveChain){
    state.supportWeight[i]=weight;state.planted[i]=weight>.20;
   }
  }
- return {state,sample,pose,plant,groundCorrection,groundTarget,setSoles};
+ return {state,sample,pose,plant,groundCorrection,groundTarget,setSoles,footFloor,groundOffset:()=>ground??0};
 }

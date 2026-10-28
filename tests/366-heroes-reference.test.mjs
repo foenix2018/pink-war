@@ -50,11 +50,12 @@ test('support blends in and releases without snapping the boot back to the nativ
  }
  assert.ok(contacts>10&&continuous>5,'support is present across several strides');assert.ok(drift<.045,`soft support drift ${drift}`);assert.ok(maxStep<.065,'releasing the support cannot make an 18 cm jump');m.dispose();
 });
-test('jump apex flexes the knees and landing absorbs impact before recovering',()=>{
+test('jump apex flexes the knees and landing absorbs impact progressively before recovering',()=>{
  const m=hero();frames(m,50,{aim:true});const standing=m.hips.position.y;
- frames(m,1,{airborne:true,verticalSpeed:6,aim:true});const rising=m.knees[0].quaternion.clone();
- frames(m,1,{airborne:true,verticalSpeed:0,aim:true});assert.ok(rising.angleTo(m.knees[0].quaternion)>.08);assert.ok(m.locomotion.planted.every(v=>!v));
- frames(m,1,{airborne:true,verticalSpeed:-6,aim:true});frames(m,1,{aim:true});assert.ok(m.locomotion.landing>.7);assert.ok(m.hips.position.y<standing-.025);
+ frames(m,6,{airborne:true,verticalSpeed:6,aim:true});const rising=m.knees[0].quaternion.clone();
+ frames(m,15,{airborne:true,verticalSpeed:0,aim:true});assert.ok(rising.angleTo(m.knees[0].quaternion)>.08);assert.ok(m.locomotion.planted.every(v=>!v));
+ frames(m,12,{airborne:true,verticalSpeed:-6,aim:true});frames(m,1,{aim:true});assert.ok(m.locomotion.landing>.7);
+ const touch=m.hips.position.y;frames(m,5,{aim:true});assert.ok(m.hips.position.y<standing-.06);assert.ok(m.hips.position.y<touch-.025,'compression builds after contact rather than snapping down on contact');
  frames(m,60,{aim:true});assert.ok(m.locomotion.landing<1e-5);assert.ok(Math.abs(m.hips.position.y-standing)<.025);m.dispose();
 });
 test('the flared, woven cape reacts to travel and turns while clearing the floor when crouched',()=>{

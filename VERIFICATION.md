@@ -1,3 +1,15 @@
+# Pink War 3.66.2 — saut progressif
+
+599 tests Node réussis, aucun échec, annulation ou test ignoré. Les neuf nouveaux cas utilisent la vraie physique de l’Arène : GHJU et LYLU à 30, 60 et 120 Hz, sur place et en course, contacts des bottes, continuité des chevilles/genoux, réception construite après le contact, double saut, chute, neuf prises d’armes et pause exacte. Le contrôle historique de réception vérifie maintenant sa progression après l’impact au lieu d’exiger un abaissement instantané. Les 28 tests ciblés saut/locomotion passent aussi.
+
+Le navigateur lance les deux personnages depuis le vrai menu, passe en troisième personne par V, saute par J, tire par Espace au sommet et effectue un saut en course par W puis un double saut par J. Les munitions diminuent, les trois impulsions sont reconnues, les deux personnages reviennent au sol et gardent 19 lots d’armure. Aucun échec JavaScript ni ressource locale manquante. L’atelier autonome est testé hors connexion sur viewport 390 × 844 : Course → Saut → réception → Course pour chaque personnage. [Rapport](docs/pink-wars/HEROES_JUMP_BROWSER_VERIFICATION.json) · [Notes et captures](docs/pink-wars/MISE_A_JOUR_366_2.md).
+
+Le même parcours de mesure à 60 Hz donne une variation maximale de genou entre deux images de 43,1° → 12,2° sur place et 43,5° → 17,7° en course. Le bassin fléchit sur plusieurs images à la réception au lieu de changer brutalement au contact. [Protocole et mesures](docs/pink-wars/HEROES_JUMP_METRICS.json).
+
+Limites : Chromium/SwiftShader, framebuffer réduit, caméra préparée et vagues désactivées pour les mesures de mouvement. Les cadences de simulation ne sont pas des FPS matériels. Aucun essai sur Safari/iPhone ou Quest physique. Les ajouts distants de galerie sont préservés et leurs trois contrôles passent. Les illustrations et la physique du saut sont conservées.
+
+---
+
 # Pink War 3.66.1 — articulations et appuis
 
 587 tests Node réussis, aucun échec, annulation ou test ignoré ; puis les trois tests de galerie ajoutés sur la branche principale réussissent également. Les neuf nouveaux tests vérifient GHJU et LYLU dans les quatre directions à 30, 60 et 120 Hz : absence de croisement des pieds, flexion des genoux, continuité des chevilles, équivalence entre atelier stationnaire et déplacement réel à 4,8 m de hauteur, dégagement des bottes en position debout et accroupie. Les dix tests 3.66 restent actifs, avec remplacement du verrouillage rigide par un appui progressif et contrôle de son relâchement.

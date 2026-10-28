@@ -1,0 +1,218 @@
+{
+  "reports": [
+    {
+      "id": "ghju",
+      "start": {
+        "time": 24362.599999997765,
+        "version": "3.66.2",
+        "name": "GHJU"
+      },
+      "apex": {
+        "frame": 83,
+        "grounded": false,
+        "height": 1.399167049448001,
+        "verticalSpeed": 0.34986199999999634,
+        "airJumps": 0,
+        "motion": "rifle",
+        "separation": 0.31399999817129076,
+        "jump": {
+          "phase": "apex",
+          "airTime": 0.3833410000000004,
+          "landingTime": 0,
+          "tuck": 1,
+          "compression": 0,
+          "weight": 1,
+          "launches": 1
+        }
+      },
+      "shot": {
+        "ammo": 23,
+        "visible": true,
+        "batches": 19
+      },
+      "final": {
+        "frame": 347,
+        "grounded": true,
+        "height": 0,
+        "verticalSpeed": 0,
+        "airJumps": 0,
+        "motion": "idle",
+        "separation": 0.3069098658392075,
+        "jump": {
+          "phase": "grounded",
+          "airTime": 0,
+          "landingTime": 1.3833610000000014,
+          "tuck": 0,
+          "compression": 0,
+          "weight": 0,
+          "launches": 3
+        }
+      },
+      "minSeparation": 0.14047776125311032,
+      "peakCompression": 0.9992019418879998,
+      "doubleJump": {
+        "frame": 212,
+        "grounded": false,
+        "height": 1.5050023994460087,
+        "verticalSpeed": 6.3499939999999775,
+        "airJumps": 1,
+        "motion": "idle",
+        "separation": 0.31293813306310014,
+        "jump": {
+          "phase": "takeoff",
+          "airTime": 0.01666700000000128,
+          "landingTime": 0,
+          "tuck": 0,
+          "compression": 0,
+          "weight": 1,
+          "launches": 3
+        }
+      },
+      "errors": [],
+      "missing": []
+    },
+    {
+      "id": "lylu",
+      "start": {
+        "time": 64113.39999999851,
+        "version": "3.66.2",
+        "name": "LYLU"
+      },
+      "apex": {
+        "frame": 83,
+        "grounded": false,
+        "height": 1.3991670494480004,
+        "verticalSpeed": 0.34986199999999545,
+        "airJumps": 0,
+        "motion": "rifle",
+        "separation": 0.31399999817129065,
+        "jump": {
+          "phase": "apex",
+          "airTime": 0.38334100000000026,
+          "landingTime": 0,
+          "tuck": 1,
+          "compression": 0,
+          "weight": 1,
+          "launches": 1
+        }
+      },
+      "shot": {
+        "ammo": 7,
+        "visible": true,
+        "batches": 19
+      },
+      "final": {
+        "frame": 347,
+        "grounded": true,
+        "height": 0,
+        "verticalSpeed": 0,
+        "airJumps": 0,
+        "motion": "idle",
+        "separation": 0.3069098658392079,
+        "jump": {
+          "phase": "grounded",
+          "airTime": 0,
+          "landingTime": 1.3833609999999914,
+          "tuck": 0,
+          "compression": 0,
+          "weight": 0,
+          "launches": 3
+        }
+      },
+      "minSeparation": 0.14047776676122695,
+      "peakCompression": 0.9992019418880022,
+      "doubleJump": {
+        "frame": 212,
+        "grounded": false,
+        "height": 1.5050023994460087,
+        "verticalSpeed": 6.3499939999999775,
+        "airJumps": 1,
+        "motion": "idle",
+        "separation": 0.3129381330631,
+        "jump": {
+          "phase": "takeoff",
+          "airTime": 0.01666700000000128,
+          "landingTime": 0,
+          "tuck": 0,
+          "compression": 0,
+          "weight": 1,
+          "launches": 3
+        }
+      },
+      "errors": [],
+      "missing": []
+    },
+    {
+      "offline": {
+        "character": "ghju",
+        "motion": "jump",
+        "jump": {
+          "phase": "apex",
+          "airTime": 0.35,
+          "landingTime": 0,
+          "tuck": 1,
+          "compression": 0,
+          "weight": 1,
+          "launches": 1
+        },
+        "native": "idle",
+        "width": 390
+      },
+      "returnedToRunning": true
+    },
+    {
+      "offline": {
+        "character": "lylu",
+        "motion": "jump",
+        "jump": {
+          "phase": "apex",
+          "airTime": 0.35,
+          "landingTime": 0,
+          "tuck": 1,
+          "compression": 0,
+          "weight": 1,
+          "launches": 1
+        },
+        "native": "idle",
+        "width": 390
+      },
+      "returnedToRunning": true
+    }
+  ],
+  "errors": [],
+  "note": "Real menu, J / W / Space / V inputs; actual game physics and shipped animation. Enemy waves disabled for the movement sample; manual simulation frames, reduced SwiftShader framebuffer and prepared capture camera. Standalone fully offline, running jump and return to run on 390\u00d7844. No physical iPhone/Quest or hardware FPS measurement.",
+  "standaloneFinalCheck": {
+    "sha256": "9f8ca9d819c5648406d3b5f16c0216b3c00536c91e6ce6090c8ef5c951d3c790",
+    "reports": [
+      {
+        "character": "ghju",
+        "motion": "jump",
+        "jump": {
+          "phase": "descent",
+          "airTime": 0.5667000000000008,
+          "landingTime": 0,
+          "tuck": 0.4835026619999938,
+          "compression": 0,
+          "weight": 1,
+          "launches": 1
+        },
+        "width": 390
+      },
+      {
+        "character": "lylu",
+        "motion": "jump",
+        "jump": {
+          "phase": "descent",
+          "airTime": 0.5500000000000073,
+          "landingTime": 0,
+          "tuck": 0.5812006862825378,
+          "compression": 0,
+          "weight": 1,
+          "launches": 1
+        },
+        "width": 390
+      }
+    ],
+    "errors": []
+  }
+}
