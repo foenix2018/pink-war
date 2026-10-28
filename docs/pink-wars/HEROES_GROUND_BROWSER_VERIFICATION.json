@@ -1,0 +1,393 @@
+{
+  "reports": [
+    {
+      "id": "ghju",
+      "start": {
+        "time": 39235.80000000447,
+        "version": "3.66.3",
+        "name": "GHJU",
+        "roadY": 0
+      },
+      "run": {
+        "maxSlip": 4.7803817790030125e-09,
+        "pairs": 47,
+        "contacts": 56,
+        "last": {
+          "grounded": true,
+          "y": 0,
+          "speed": 6.999999999999999,
+          "frequency": 2.0000000000000018,
+          "distance": 21.00041999999997,
+          "phase": 0.6036250219249295,
+          "native": "run",
+          "jump": {
+            "phase": "grounded",
+            "airTime": 0,
+            "landingTime": 0,
+            "tuck": 0,
+            "compression": 0,
+            "weight": 0,
+            "launches": 0
+          }
+        }
+      },
+      "sprint": {
+        "maxSlip": 3.1884050565778956e-09,
+        "pairs": 18,
+        "contacts": 24,
+        "last": {
+          "grounded": true,
+          "y": 0,
+          "speed": 10.000000000000066,
+          "frequency": 2.0000000000000586,
+          "distance": 46.000919999999866,
+          "phase": 0.6563669492607342,
+          "native": "run",
+          "jump": {
+            "phase": "grounded",
+            "airTime": 0,
+            "landingTime": 0,
+            "tuck": 0,
+            "compression": 0,
+            "weight": 0,
+            "launches": 0
+          }
+        }
+      },
+      "stopped": {
+        "maxSlip": 0,
+        "pairs": 0,
+        "contacts": 0,
+        "last": {
+          "grounded": true,
+          "y": 0,
+          "speed": 0,
+          "frequency": 0,
+          "distance": 46.000919999999866,
+          "phase": 0.6563669492607342,
+          "native": "idle",
+          "jump": {
+            "phase": "grounded",
+            "airTime": 0,
+            "landingTime": 0,
+            "tuck": 0,
+            "compression": 0,
+            "weight": 0,
+            "launches": 0
+          }
+        }
+      },
+      "ramp": {
+        "maxSlip": 3.635659398884314e-09,
+        "pairs": 11,
+        "contacts": 16,
+        "last": {
+          "grounded": true,
+          "y": 3.7500629999999986,
+          "speed": 6.999999999655141,
+          "frequency": 2.000000071474896,
+          "distance": 56.3844609999999,
+          "phase": 0.5402538043169467,
+          "native": "run",
+          "jump": {
+            "phase": "grounded",
+            "airTime": 0,
+            "landingTime": 0,
+            "tuck": 0,
+            "compression": 0,
+            "weight": 0,
+            "launches": 0
+          }
+        }
+      },
+      "lift": {
+        "maxSlip": 4.487560659532465e-09,
+        "pairs": 178,
+        "contacts": 180,
+        "last": {
+          "grounded": true,
+          "y": 2.4000479999999356,
+          "speed": 0,
+          "frequency": 0,
+          "distance": 56.3844609999999,
+          "phase": 0.5402538043169467,
+          "native": "idle",
+          "jump": {
+            "phase": "grounded",
+            "airTime": 0,
+            "landingTime": 0,
+            "tuck": 0,
+            "compression": 0,
+            "weight": 0,
+            "launches": 0
+          }
+        }
+      },
+      "blockedAt": {
+        "x": -31,
+        "z": -21
+      },
+      "blocked": {
+        "maxSlip": 1.999917778427539e-09,
+        "pairs": 58,
+        "contacts": 60,
+        "last": {
+          "grounded": true,
+          "y": 0,
+          "speed": 1.688248992187126e-11,
+          "frequency": 0,
+          "distance": 56.617791999999895,
+          "phase": 0.32885375859145716,
+          "native": "idle",
+          "jump": {
+            "phase": "grounded",
+            "airTime": 0,
+            "landingTime": 0,
+            "tuck": 0,
+            "compression": 0,
+            "weight": 0,
+            "launches": 0
+          }
+        }
+      },
+      "jump": {
+        "maxSlip": 0,
+        "pairs": 0,
+        "contacts": 0,
+        "last": {
+          "grounded": false,
+          "y": 1.3991670494480006,
+          "speed": 6.9999996461617,
+          "frequency": 0,
+          "distance": 61.2845519999999,
+          "phase": 0.9367917574478413,
+          "native": "idle",
+          "jump": {
+            "phase": "apex",
+            "airTime": 0.38334100000000026,
+            "landingTime": 0,
+            "tuck": 1,
+            "compression": 0,
+            "weight": 1,
+            "launches": 1
+          }
+        }
+      },
+      "errors": [],
+      "missing": []
+    },
+    {
+      "id": "lylu",
+      "start": {
+        "time": 48983,
+        "version": "3.66.3",
+        "name": "LYLU",
+        "roadY": 0
+      },
+      "run": {
+        "maxSlip": 3.247666782140873e-09,
+        "pairs": 39,
+        "contacts": 48,
+        "last": {
+          "grounded": true,
+          "y": 0,
+          "speed": 6.999999999999999,
+          "frequency": 2.0000000000000018,
+          "distance": 21.00041999999997,
+          "phase": 0.5626581506929114,
+          "native": "run",
+          "jump": {
+            "phase": "grounded",
+            "airTime": 0,
+            "landingTime": 0,
+            "tuck": 0,
+            "compression": 0,
+            "weight": 0,
+            "launches": 0
+          }
+        }
+      },
+      "sprint": {
+        "maxSlip": 3.1909109651875224e-09,
+        "pairs": 23,
+        "contacts": 30,
+        "last": {
+          "grounded": true,
+          "y": 0,
+          "speed": 10.000000000000066,
+          "frequency": 2.0000000000000586,
+          "distance": 46.000919999999866,
+          "phase": 0.6154000780287152,
+          "native": "run",
+          "jump": {
+            "phase": "grounded",
+            "airTime": 0,
+            "landingTime": 0,
+            "tuck": 0,
+            "compression": 0,
+            "weight": 0,
+            "launches": 0
+          }
+        }
+      },
+      "stopped": {
+        "maxSlip": 0,
+        "pairs": 0,
+        "contacts": 0,
+        "last": {
+          "grounded": true,
+          "y": 0,
+          "speed": 0,
+          "frequency": 0,
+          "distance": 46.000919999999866,
+          "phase": 0.6154000780287152,
+          "native": "idle",
+          "jump": {
+            "phase": "grounded",
+            "airTime": 0,
+            "landingTime": 0,
+            "tuck": 0,
+            "compression": 0,
+            "weight": 0,
+            "launches": 0
+          }
+        }
+      },
+      "ramp": {
+        "maxSlip": 4.8740701268297855e-09,
+        "pairs": 12,
+        "contacts": 16,
+        "last": {
+          "grounded": true,
+          "y": 3.7500629999999986,
+          "speed": 6.999999999655141,
+          "frequency": 2.0000000684157606,
+          "distance": 56.3844609999999,
+          "phase": 0.4993044412799037,
+          "native": "run",
+          "jump": {
+            "phase": "grounded",
+            "airTime": 0,
+            "landingTime": 0,
+            "tuck": 0,
+            "compression": 0,
+            "weight": 0,
+            "launches": 0
+          }
+        }
+      },
+      "lift": {
+        "maxSlip": 4.751572776263239e-09,
+        "pairs": 178,
+        "contacts": 180,
+        "last": {
+          "grounded": true,
+          "y": 2.4000479999999356,
+          "speed": 0,
+          "frequency": 0,
+          "distance": 56.3844609999999,
+          "phase": 0.4993044412799037,
+          "native": "idle",
+          "jump": {
+            "phase": "grounded",
+            "airTime": 0,
+            "landingTime": 0,
+            "tuck": 0,
+            "compression": 0,
+            "weight": 0,
+            "launches": 0
+          }
+        }
+      },
+      "blockedAt": {
+        "x": -31,
+        "z": -21
+      },
+      "blocked": {
+        "maxSlip": 2.8034748589336043e-09,
+        "pairs": 58,
+        "contacts": 60,
+        "last": {
+          "grounded": true,
+          "y": 0,
+          "speed": 1.688248992187126e-11,
+          "frequency": 0,
+          "distance": 56.617791999999895,
+          "phase": 0.3150285497819724,
+          "native": "idle",
+          "jump": {
+            "phase": "grounded",
+            "airTime": 0,
+            "landingTime": 0,
+            "tuck": 0,
+            "compression": 0,
+            "weight": 0,
+            "launches": 0
+          }
+        }
+      },
+      "jump": {
+        "maxSlip": 0,
+        "pairs": 0,
+        "contacts": 0,
+        "last": {
+          "grounded": false,
+          "y": 1.3991670494480006,
+          "speed": 6.9999996461617,
+          "frequency": 0,
+          "distance": 61.2845519999999,
+          "phase": 0.8958464367217398,
+          "native": "idle",
+          "jump": {
+            "phase": "apex",
+            "airTime": 0.38334100000000026,
+            "landingTime": 0,
+            "tuck": 1,
+            "compression": 0,
+            "weight": 1,
+            "launches": 1
+          }
+        }
+      },
+      "errors": [],
+      "missing": []
+    }
+  ],
+  "note": "Actual menu and W/Shift/J/V input; true game physics and hidden authoring boot vertices matching the GPU skin. Waves disabled, manual simulation frames, reduced SwiftShader framebuffer and prepared positions for ramp/lift/wall and capture cameras. No physical iPhone/Quest or hardware FPS measured.",
+  "offlineWorkshop": {
+    "sha256": "80b5c5a81bf25c1ca684ce8965875e3e5de871790cb84d1f8435b4df853d9bae",
+    "reports": [
+      {
+        "character": "ghju",
+        "motion": "jump",
+        "jump": {
+          "phase": "descent",
+          "airTime": 0.516699999999997,
+          "landingTime": 0,
+          "tuck": 0.7643863027495812,
+          "compression": 0,
+          "weight": 1,
+          "launches": 1
+        },
+        "width": 390
+      },
+      {
+        "character": "lylu",
+        "motion": "jump",
+        "jump": {
+          "phase": "descent",
+          "airTime": 0.5332999999999956,
+          "landingTime": 0,
+          "tuck": 0.6761137072775882,
+          "compression": 0,
+          "weight": 1,
+          "launches": 1
+        },
+        "width": 390
+      }
+    ],
+    "errors": []
+  },
+  "version": "3.66.3",
+  "simulationHz": 60
+}

@@ -69,7 +69,7 @@ export function createRLHFirefighterActor(kit,{includeGloves=true,military=false
   for(const g of gloves)root.add(g);
   function attachGloves(){root.updateMatrixWorld(true);for(let i=0;i<gloves.length;i++){const b=bone((i===0?'Left':'Right')+'Hand'),g=gloves[i],p=root.worldToLocal(b.getWorldPosition(new T.Vector3()));g.quaternion.copy(root.getWorldQuaternion(new T.Quaternion()).invert().multiply(b.getWorldQuaternion(new T.Quaternion())).multiply(g.userData.rlh.quaternion.clone().invert()));g.userData.setBasePosition(p.sub(new T.Vector3(...GRIP.wrist).multiply(g.scale).applyQuaternion(g.quaternion)).toArray());}}
   const api={root,bones,bone,skeleton,parts,gloves,mixer,actions,data,
-    animateNative(time,dt=.016,motion='idle',speed=1){
+    animateNative(time,dt=.016,motion='idle',speed=1,gait=null){
       const next=actions[motion]?motion:'idle';
       if(next!==state&&['walk','walkRifle','run'].includes(next)){
         const previous=actions[state],oldStrike=api.gaitReference?.[state]?.strike||0,nextStrike=api.gaitReference?.[next]?.strike||0;
@@ -77,6 +77,10 @@ export function createRLHFirefighterActor(kit,{includeGloves=true,military=false
       }
       state=next;
       for(const [key,a] of Object.entries(actions)){weights[key]+=(Number(key===state)-weights[key])*(1-Math.exp(-dt*11));a.setEffectiveWeight(weights[key]);a.timeScale=key==='idle'||key==='rifle'?1:speed;}
+      if(gait)for(const key of ['walk','walkRifle','run']){
+        const a=actions[key],duration=a.getClip().duration,phase=gait.phase+(api.gaitReference?.[key]?.strike||0);
+        a.timeScale=gait.frequency*duration;a.time=(phase-Math.floor(phase))*duration-dt*a.timeScale;
+      }
       for(const v of nativePose){v.b.position.copy(v.p);v.b.quaternion.copy(v.q);}
       mixer.update(Math.max(0,dt));
       for(const v of nativePose){v.p.copy(v.b.position);v.q.copy(v.b.quaternion);}
@@ -159,6 +163,19 @@ export function createRLHSoldier(kit,createGun,profile){
   const hips=bone('Hips'),spine=bone('Spine'),body=bone('Spine2'),headBone=bone('Head'),head=new T.Group();head.name='ClosedHelmet';headBone.add(head);
   root.updateMatrixWorld(true);head.position.copy(headBone.worldToLocal(new T.Vector3(0,1.751,.018)));
   const legs=['LeftUpLeg','RightUpLeg'].map(bone),knees=['LeftLeg','RightLeg'].map(bone),feet=['LeftFoot','RightFoot'].map(bone);
+  const legRest=new Map([...legs,...knees].map(b=>[b,new T.Quaternion().fromArray(data.bones[actor.bones.indexOf(b)].q)]));
+  function solveLegChain(upper,lower,end,target,pole,softness=0){
+    // Contact IK determines the knee plane. Starting from a changing clip roll
+    // twisted the greaves at the walk/flight boundary despite a fixed ankle.
+    upper.quaternion.copy(legRest.get(upper));lower.quaternion.copy(legRest.get(lower));
+    upper.updateWorldMatrix(true,true);const hip=upper.getWorldPosition(new T.Vector3()),delta=target.clone().sub(hip);
+    const reach=(lower.position.length()+end.position.length()-.020)*root.getWorldScale(new T.Vector3()).y;
+    const distance=delta.length(),start=reach-.10;
+    const soft=distance>start?start+.10*(1-Math.exp(-(distance-start)/.10)):distance;
+    const radius=T.MathUtils.lerp(Math.min(distance,reach),soft,clamp(softness));
+    if(radius<distance)target=hip.addScaledVector(delta.normalize(),radius);
+    return solveChain(upper,lower,end,target,pole);
+  }
   const mount=new T.Group(),gun=createGun({sleeve:false}),rest=createGlove(kit.gloves,{mirror:true,sleeve:false});rest.name='Free RLH hand';root.add(mount,rest);mount.add(gun);gun.scale.setScalar(.88);
   const arms=['Left','Right'].map(side=>({side,shoulder:bone(side+'Arm'),upper:bone(side+'Arm'),fore:bone(side+'ForeArm'),hand:bone(side+'Hand'),elbow:new T.Vector3(),wrist:new T.Vector3()}));
   const armor=createAegisArmor(actor,kit,profile);
@@ -173,8 +190,8 @@ export function createRLHSoldier(kit,createGun,profile){
   }
   const soleMeshes=[...new Set(soleSamples.map(sample=>sample.mesh))];
   actor.gaitReference=heroGaitReference(data,soleSamples);
-  const locomotion=createHeroLocomotion({root,actor,hips,spine,body,legs,knees,feet},solveChain);
-  const jump=createHeroJump({root,hips,spine,body,legs,knees,feet,freeArm:arms[0].upper},solveChain,locomotion.footFloor);
+  const locomotion=createHeroLocomotion({root,actor,hips,spine,body,legs,knees,feet},solveLegChain);
+  const jump=createHeroJump({root,actor,hips,spine,body,legs,knees,feet,freeArm:arms[0].upper},solveLegChain,locomotion.footFloor);
   function wristTargets(){root.updateMatrixWorld(true);return [supported()?gun.userData.support.localToWorld(new T.Vector3(...GRIP.wrist)):rest.localToWorld(new T.Vector3(...GRIP.wrist)),gun.userData.hand.localToWorld(new T.Vector3(...GRIP.wrist))];}
   function fitMount(){
     for(let j=0;j<16;j++){
@@ -210,8 +227,8 @@ export function createRLHSoldier(kit,createGun,profile){
       const run=this._runMode,aiming=trigger>.1||!!flight?.firing||!!flight?.aim,motion=travelling&&!flight.airborne?(run?'run':aiming?'walkRifle':'walk'):aiming?'rifle':'idle';this.nativeMotion=motion;
       previewCarry=!!flight?.preview&&!moving&&!aiming&&!reload&&!WEAPON_FRAME[weapon].melee;
       rest.visible=!supported();gun.userData.support.visible=supported()&&gun.userData.showSupport;
-      const cadence=clamp(speed/(run?6.4:2.6),.6,flight.crouched?1.1:1.8);
-      actor.animateNative(time,dt,motion,travelling?cadence:1);
+      const gaitCycle=locomotion.advanceGait(motion,dt,flight);
+      actor.animateNative(time,dt,motion,1,flight.airborne?null:gaitCycle);
       low+=(Number(!!flight?.crouched)-low)*(1-Math.exp(-dt*8));this._low=low;gait+=(Number(travelling)-gait)*(1-Math.exp(-dt*9));this._gaitWeight=gait;
       if(!flight?.airborne&&soleSamples.length){
         root.updateMatrixWorld(true);
@@ -219,7 +236,7 @@ export function createRLHSoldier(kit,createGun,profile){
         // Retain its former root-local bind frame: world elevation/scale must
         // never be subtracted from the pelvis when climbing stairs or lifts.
         for(const mesh of soleMeshes)mesh.bindMatrixInverse.copy(root.matrixWorld).invert();
-        const correction=locomotion.groundTarget(actor.actions.run.getEffectiveWeight());
+        const correction=locomotion.groundTarget();
         hips.position.y-=locomotion.groundCorrection(correction,dt);
       }else if(flight.airborne)hips.position.y-=locomotion.groundOffset();
       root.updateMatrixWorld(true);const footTargets=feet.map(f=>f.getWorldPosition(new T.Vector3())),footQuats=feet.map(f=>f.getWorldQuaternion(new T.Quaternion()));
@@ -227,7 +244,7 @@ export function createRLHSoldier(kit,createGun,profile){
       hips.position.y-=lower;spine.quaternion.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),low*.25));
       const recoilTarget=clamp(recoil/.16);recoilBody+=(recoilTarget-recoilBody)*(1-Math.exp(-dt*(recoilTarget>recoilBody?34:16)));this._recoilBody=recoilBody;
       body.quaternion.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),recoilBody*.025));
-      if(lower>.001&&!flight?.airborne)for(let i=0;i<2;i++){solveChain(legs[i],knees[i],feet[i],footTargets[i],root.localToWorld(new T.Vector3(i===0?-.12:.12,.55,-.55)));feet[i].quaternion.copy(feet[i].parent.getWorldQuaternion(new T.Quaternion()).invert().multiply(footQuats[i]));}
+      if(lower>.001&&!flight?.airborne)for(let i=0;i<2;i++){solveLegChain(legs[i],knees[i],feet[i],footTargets[i],root.localToWorld(new T.Vector3(i===0?-.12:.12,.55,-.55)));feet[i].quaternion.copy(feet[i].parent.getWorldQuaternion(new T.Quaternion()).invert().multiply(footQuats[i]));}
       locomotion.pose(dt,flight);locomotion.plant(dt,flight);
       jump.pose(flight,motionState,!supported());
       root.updateMatrixWorld(true);

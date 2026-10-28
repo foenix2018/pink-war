@@ -1,3 +1,15 @@
+# Pink War 3.66.3 — appuis sur le sol réel
+
+611 tests Node réussis, aucun échec, annulation ou test ignoré. Les 30 contrôles ciblés de foulée, saut et contact passent également ; aucun test historique modifié. Douze nouveaux cas mesurent les vrais sommets des bottes : marche à 1,6 m/s, course à 7 m/s et sprint à 10 m/s à 30/60/120 Hz, durée réelle d’appui, dérive horizontale inférieure à 2 mm par image, dégagement des semelles, rampe de l’Arène, monte-charge, mur, trottoir tourné, pivot et bord de plateforme.
+
+Le navigateur lance GHJU et LYLU depuis le vrai menu, passe en troisième personne par V et utilise W, Majuscule et J. Les mesures en partie passent en course, sprint et rampe ; le monte-charge porte les appuis sans déclencher de pas et maintenir W contre un mur fige la cadence. Aucune erreur JavaScript ou ressource locale manquante. L’atelier autonome final est chargé hors connexion en 390 × 844, puis Course → Saut → réception → Course pour les deux personnages. Le SHA-256 du fichier testé est conservé dans le [rapport](docs/pink-wars/HEROES_GROUND_BROWSER_VERIFICATION.json).
+
+La route visible est à la hauteur physique zéro, au lieu de −4,5 cm ; trottoirs, bordures et plateaux métalliques sont raccordés. L’atelier fait défiler ses repères à la vitesse simulée. Syntaxe des modules et du générateur validée, `git diff --check` propre. [Détails et captures](docs/pink-wars/MISE_A_JOUR_366_3.md).
+
+Limites : Chromium/SwiftShader, framebuffer réduit, positions et caméra de capture préparées, vagues désactivées pour la mesure. Les cadences de simulation ne sont pas des FPS matériels ; aucun essai sur Safari/iPhone ou Quest physique. Les mises à jour distantes de galerie sont conservées. Le navigateur vérifie le serveur local ; le déploiement est contrôlé séparément par le statut Vercel du commit publié.
+
+---
+
 # Pink War 3.66.2 — saut progressif
 
 599 tests Node réussis, aucun échec, annulation ou test ignoré. Les neuf nouveaux cas utilisent la vraie physique de l’Arène : GHJU et LYLU à 30, 60 et 120 Hz, sur place et en course, contacts des bottes, continuité des chevilles/genoux, réception construite après le contact, double saut, chute, neuf prises d’armes et pause exacte. Le contrôle historique de réception vérifie maintenant sa progression après l’impact au lieu d’exiger un abaissement instantané. Les 28 tests ciblés saut/locomotion passent aussi.

@@ -5,14 +5,14 @@ const smooth=T.MathUtils.smoothstep,clamp=T.MathUtils.clamp;
 // A flight layer on the original RLH bones. Physics owns the root trajectory;
 // this layer only poses the body, with the same leg IK and boot contact frame.
 export function createHeroJump(model,solveChain,footFloor){
- const {root,hips,spine,body,legs,knees,feet,freeArm}=model;
- const neutral=feet.map(f=>root.getWorldQuaternion(new T.Quaternion()).invert().multiply(f.getWorldQuaternion(new T.Quaternion())));
- const start=feet.map(()=>({p:new T.Vector3(),q:new T.Quaternion()})),pelvis={p:new T.Vector3(),q:new T.Quaternion()},restPelvis=new T.Vector3();
+ const {root,actor,hips,spine,body,legs,knees,feet,freeArm}=model;
+ const neutral=feet.map(f=>new T.Quaternion().setFromRotationMatrix(new T.Matrix4().fromArray(actor.data.bones[actor.bones.indexOf(f)].inverse).invert()));
+ const start=feet.map(()=>({p:new T.Vector3(),q:new T.Quaternion(),reach:0})),pelvis={p:new T.Vector3(),q:new T.Quaternion()},restPelvis=new T.Vector3();
  let wasAirborne=false,lastVertical=0,age=0,landAge=Infinity,launched=false,lead=0,impact=0,entryWeight=0;
  const state={phase:'grounded',airTime:0,landingTime:0,tuck:0,compression:0,weight:0,launches:0};
  function capture(){
   root.updateMatrixWorld(true);const inverse=root.getWorldQuaternion(new T.Quaternion()).invert();
-  for(let i=0;i<2;i++){start[i].p.copy(root.worldToLocal(feet[i].getWorldPosition(new T.Vector3())));start[i].q.copy(inverse).multiply(feet[i].getWorldQuaternion(new T.Quaternion()));}
+  for(let i=0;i<2;i++){const foot=feet[i].getWorldPosition(new T.Vector3());start[i].reach=foot.distanceTo(legs[i].getWorldPosition(new T.Vector3()))/root.getWorldScale(new T.Vector3()).y;start[i].p.copy(root.worldToLocal(foot));start[i].q.copy(inverse).multiply(feet[i].getWorldQuaternion(new T.Quaternion()));}
   pelvis.p.copy(hips.position);pelvis.q.copy(hips.quaternion);
  }
  function sample(dt,flight){
@@ -50,28 +50,38 @@ export function createHeroJump(model,solveChain,footFloor){
   if(airborne){
    const tuck=state.tuck,push=launched?(1-smooth(age,.065,.17)):0,prepare=smooth(-lastVertical,.6,5.2),travel=locomotion.travelDirection;
    const running=clamp(locomotion.speed/7,0,1),settle=smooth(age,0,.18);
-   hips.position.lerp(pelvis.p.clone().lerp(restPelvis.clone().add(new T.Vector3(0,.018*push-.025*tuck,0)),settle),state.weight);
-   hips.quaternion.slerp(pelvis.q,state.weight);
+   hips.position.copy(pelvis.p.clone().lerp(restPelvis.clone().add(new T.Vector3(0,.018*push-.025*tuck,0)),settle));
+   hips.quaternion.copy(pelvis.q);
    for(let i=0;i<2;i++){
     const leading=i===lead,sign=i===0?-1:1;
     // One knee leads, the other follows. Forward, lateral and backward jumps
     // share anatomical forward knee poles without cycling a walk in mid-air.
     const follow=leading?1:smooth(age,.09,.30),float=Math.sin(age*5)*tuck;
-    const p=new T.Vector3(sign*(.135+.022*tuck),.145+tuck*(leading?.27:.18)*follow+.012*float,.025);
+    const base=footFloor(i,rootQ.clone().multiply(neutral[i]));
+    const p=new T.Vector3(sign*(.135+.022*tuck),base+tuck*(leading?.27:.18)*follow+.012*float,.025);
     p.x+=travel.x*tuck*(leading?.07:-.035)*running;
     p.z+=tuck*(leading?-.12:.085)*follow+travel.z*tuck*(leading?.065:-.035)*running+.018*float;
     p.z+=push*(leading?-.015:.035);p.x=sign*Math.max(.085,sign*p.x);
     const pitch=(-.19*push-tuck*(leading?.08:.20))*(1-prepare);
     const q=new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),pitch).multiply(neutral[i]);
     p.lerpVectors(start[i].p,p,settle);q.slerpQuaternions(start[i].q,q,settle);
-    targets[i].p.lerp(p,state.weight);targets[i].q.slerp(q,state.weight);
+    targets[i].p.copy(p);targets[i].q.copy(q);
    }
    rotate(spine,(-.045*push-.13*tuck-.04*prepare+.02*Math.sin(age*5)*tuck)*state.weight,-travel.x*.025*state.weight);
    rotate(body,.025*tuck*state.weight);
   }else{
-   hips.position.lerp(pelvis.p,state.weight);hips.quaternion.slerp(pelvis.q,state.weight);
+   hips.quaternion.slerp(pelvis.q,state.weight);
    hips.position.y-=.14*state.compression;
-   for(let i=0;i<2;i++){targets[i].p.lerp(start[i].p,state.weight);targets[i].q.slerp(start[i].q,state.weight);}
+   root.updateMatrixWorld(true);const scale=root.getWorldScale(new T.Vector3()).y;let lower=0;
+   // Preserve the knee bend at touchdown while the true support points take
+   // over. Extending the legs four centimetres in one frame made them snap.
+   for(let i=0;i<2;i++){
+    if(!locomotion.planted[i])continue;
+    const hip=legs[i].getWorldPosition(new T.Vector3()),foot=root.localToWorld(targets[i].p.clone());
+    const reach=Math.min(start[i].reach+.10*smooth(landAge,0,.18),knees[i].position.length()+feet[i].position.length()-.020)*scale;
+    const horizontal=(hip.x-foot.x)**2+(hip.z-foot.z)**2;lower=Math.max(lower,hip.y-foot.y-Math.sqrt(Math.max(.001,reach*reach-horizontal)));
+   }
+   hips.position.y-=Math.max(0,lower)/scale;
    rotate(spine,-.14*state.compression);rotate(body,.035*state.compression);
   }
   if(freeLeft&&freeArm)rotate(freeArm,-.20*state.tuck+.10*state.compression,-.14*state.weight-.05*state.compression);
@@ -80,7 +90,7 @@ export function createHeroJump(model,solveChain,footFloor){
    const t=targets[i],q=rootQ.clone().multiply(t.q),sign=i===0?-1:1;
    t.p.x=sign*Math.max(.075,sign*t.p.x);t.p.y=Math.max(t.p.y,footFloor(i,q));
    const target=root.localToWorld(t.p.clone()),pole=root.localToWorld(new T.Vector3(sign*.24,.55,-.68));
-   solveChain(legs[i],knees[i],feet[i],target,pole);
+   solveChain(legs[i],knees[i],feet[i],target,pole,airborne?state.tuck:0);
    feet[i].quaternion.copy(feet[i].parent.getWorldQuaternion(new T.Quaternion()).invert().multiply(q));
   }
  }

@@ -310,6 +310,23 @@ export class ArenaGame {
   }
   surfacesAt(x,z,time=this.time) { return this.traversal?.surfaces(x,z,time)||traversalSurfaces(x,z,time); }
   surfaceHeight(x,z,time=this.time,max=Infinity) { return this.traversal?.height(x,z,time,max)??walkSurfaceHeight(x,z,time,max); }
+  groundHeight(x,z,standingHeight=this.player.elevation||0) {
+    let floor=this.surfaceHeight(x,z,this.time,standingHeight+.3);
+    for(const b of this.obstacles){const top=(b.y||0)+b.height;
+      const max=b.groundSurface?standingHeight+.3:standingHeight+.12;
+      if((b.groundSurface||!b.walkableSurface&&b.height<=1.35)&&top<=max){
+        const dx=x-b.x,dz=z-b.z,c=Math.cos(b.surfaceYaw||0),s=Math.sin(b.surfaceYaw||0);
+        if(Math.abs(dx*c-dz*s)<b.hx&&Math.abs(dx*s+dz*c)<b.hz)floor=Math.max(floor,top);
+      }
+    }
+    return floor;
+  }
+  footGroundHeight(x,z,standingHeight=this.player.elevation||0) {
+    let floor=this.groundHeight(x,z,standingHeight);
+    const connected=this.surfacesAt(this.player.x,this.player.z).filter(s=>Math.abs(s.height-standingHeight)<.35);
+    for(const s of this.surfacesAt(x,z))if(Math.abs(s.height-standingHeight)<1.8&&connected.some(c=>c.id===s.id))floor=Math.max(floor,s.height);
+    return floor;
+  }
   routeForSurface(id,x=0) { return this.traversal?.routeForSurface(id,x)??elevatedRouteForSurface(id,x); }
   updateLifts(previousTime) {
     for(const lift of this.lifts){
@@ -323,11 +340,7 @@ export class ArenaGame {
   }
   settle(entity,dt,isPlayer=false) {
     const previous=entity.elevation||0;
-    let floor=this.surfaceHeight(entity.x,entity.z,this.time,previous+.3);
-    for(const b of this.obstacles){
-      const top=(b.y||0)+b.height;
-      if(!b.walkableSurface && b.height<=1.35 && top<=previous+.12 && Math.abs(entity.x-b.x)<b.hx && Math.abs(entity.z-b.z)<b.hz)floor=Math.max(floor,top);
-    }
+    const floor=this.groundHeight(entity.x,entity.z,previous);
     if(entity.grounded && previous-floor>.32){entity.grounded=false;entity.verticalSpeed=0;}
     if(entity.grounded){entity.elevation=floor;entity.verticalSpeed=0;}
     else{

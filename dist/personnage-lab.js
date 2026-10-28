@@ -30,9 +30,10 @@ key.shadow.camera.left=-4;key.shadow.camera.right=4;key.shadow.camera.top=5;key.
 key.shadow.camera.near=.1;key.shadow.camera.far=20;key.shadow.bias=-.0006;scene.add(key);
 const fill = new T.DirectionalLight(0x86bbff,1.45);fill.position.set(4,3,3);scene.add(fill);
 const accents = new T.DirectionalLight(0xff7dba,1.1);accents.position.set(-3,2,3);scene.add(accents);
-const floor = new T.Mesh(new T.PlaneGeometry(50,50),new T.MeshStandardMaterial({color:0x202833,roughness:.88,metalness:.05}));
-floor.rotation.x=-Math.PI/2;floor.position.y=-.06;floor.receiveShadow=true;scene.add(floor);
-const grid = new T.GridHelper(8,16,0x6a7899,0x303c52);grid.position.y=-.049;grid.material.transparent=true;grid.material.opacity=.26;scene.add(grid);
+const floor = new T.Mesh(new T.PlaneGeometry(50,50),new T.MeshStandardMaterial({color:0x202833,roughness:.88,metalness:.05,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1}));
+floor.rotation.x=-Math.PI/2;floor.position.y=0;floor.receiveShadow=true;scene.add(floor);
+const grid = new T.GridHelper(50,100,0x687994,0x687994);grid.position.y=.001;grid.material.transparent=true;grid.material.opacity=.55;scene.add(grid);
+const groundTravel=new T.Vector2();
 const ground = new T.Mesh(new T.CylinderGeometry(.9,.92,.055,64),new T.MeshStandardMaterial({color:0x252d3b,roughness:.6,metalness:.2}));
 ground.position.y=-.0275;ground.receiveShadow=true;scene.add(ground);
 
@@ -181,8 +182,13 @@ function tick(now){
  const dt=last?clamp((now-last)*.001,.001,.05):.016;last=now;state.clock+=dt;
  const model=subjects.get(state.character),root=model.root;
  const motion=state.motion==='jump'?state.jumpMotion:state.motion;
- const speed=['walk','walkFire','back','left','right'].includes(motion)?3.2:['run','runFire'].includes(motion)?9:motion==='crouchWalk'?2.2:0;
+ const speed=['walk','walkFire'].includes(motion)?1.6:['back','left','right'].includes(motion)?3.2:['run','runFire'].includes(motion)?7:motion==='crouchWalk'?3:0;
  const travel={x:motion==='left'?-speed:motion==='right'?speed:0,y:0,z:motion==='back'?speed:['left','right'].includes(motion)?0:-speed};
+ // The model stays framed; the repeated floor moves in the same virtual
+ // reference as its planted soles. A static pedestal made this look like ice.
+ groundTravel.x+=travel.x*dt;groundTravel.y+=travel.z*dt;
+ grid.position.x=-(groundTravel.x%.5);grid.position.z=-(groundTravel.y%.5);
+ ground.visible=$('grid').checked&&speed===0;
  // Simulate travel in the contact frame while keeping the inspected model centred.
  let airborne=false;
  let height=0,velocity=0;

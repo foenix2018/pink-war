@@ -276,33 +276,37 @@ export function createRuinedCity(scene, obstacles, coverWalls, accent=0xff80b2, 
   const solid=(x,z,w,h,d,extra={})=>obstacles.push({x,z,hx:w/2,hz:d/2,height:h,surface:'concrete',...extra});
   // Distant terrain continues behind the arena wall so the skyline is grounded.
   const hinterland=new T.Mesh(new T.PlaneGeometry(620,620),m.dirt);hinterland.rotation.x=-Math.PI/2;hinterland.position.y=-.08;hinterland.receiveShadow=true;group.add(hinterland);
-  const ground=new T.Mesh(new T.PlaneGeometry(200,200),m.road);ground.rotation.x=-Math.PI/2;ground.position.y=-.045;ground.receiveShadow=true;group.add(ground);
+  const ground=new T.Mesh(new T.PlaneGeometry(200,200),m.road);ground.name='Arena road / physical zero';ground.rotation.x=-Math.PI/2;ground.position.y=0;ground.receiveShadow=true;group.add(ground);
   // Worn civic road: seams, aggregate and irregular pavement; no luminous grid.
   for(let z=-94;z<=94;z+=6) {
-    if(rand()>.16)cube(m.chalk,[0,.006,z],[.13,.009,1.75],[0,0,0],'box');
-    for(const x of [-8.8,8.8])cube(m.concrete,[x,.025,z],[2.05,.10,5.7],[0,(rand()-.5)*.026,0],'slab');
+    if(rand()>.16)cube(m.chalk,[0,.001,z],[.13,.002,1.75],[0,0,0],'box');
+    for(const x of [-8.8,8.8]){
+      const yaw=(rand()-.5)*.026;cube(m.concrete,[x,.025,z],[2.05,.10,5.7],[0,yaw,0],'slab');
+      solid(x,z,2.05,.10,5.7,{y:-.025,walkableSurface:true,groundSurface:true,surfaceYaw:yaw});
+    }
   }
-  for(const x of [-7.55,7.55])cube(m.chalk,[x,.007,0],[.07,.012,190],[0,0,0],'box');
+  for(const x of [-7.55,7.55])cube(m.chalk,[x,.001,0],[.07,.002,190],[0,0,0],'box');
   // Crack seams and patches indicate the street's previous function.
   for(let i=0;i<48;i++) {
     const x=(rand()-.5)*178,z=(rand()-.5)*178;
-    add('stone',m.dirt,[x,-.033,z],[1+rand()*3,.05,1+rand()*5],[0,rand()*6.28,0]);
+    add('stone',m.dirt,[x,.001,z],[1+rand()*3,.003,1+rand()*5],[0,rand()*6.28,0]);
   }
   // Human-scale street furniture grounds the larger ruins. Everything here is
   // flush with the road or within the existing 10 cm pavement, so routes stay open.
   for(let z=-86;z<91;z+=19)for(const side of [-1,1]) {
     const x=side*7.3;
-    cube(m.black,[x,-.018,z],[.52,.04,.95],[0,0,0],'box');
-    for(let j=0;j<7;j++)cube(m.steel,[x,.011,z-.4+j*.13],[.47,.035,.035],[0,0,0],'box');
+    cube(m.black,[x,-.020,z],[.52,.04,.95],[0,0,0],'box');
+    for(let j=0;j<7;j++)cube(m.steel,[x,.001,z-.4+j*.13],[.47,.002,.035],[0,0,0],'box');
     cube(m.concrete,[side*7.79,.065,z],[.22,.12,1.38],[0,0,0],'slab');
+    solid(side*7.79,z,.22,.12,1.38,{y:.005,walkableSurface:true,groundSurface:true});
   }
   for(let i=0;i<(quality==='low'?31:52);i++) {
     const x=(rand()-.5)*178,z=(rand()-.5)*179;
-    add('decal',m.scar,[x,-.024,z],[1.4+rand()*3,2.2+rand()*5,1],[-Math.PI/2,0,rand()*Math.PI*2]);
+    add('decal',m.scar,[x,.0015,z],[1.4+rand()*3,2.2+rand()*5,1],[-Math.PI/2,0,rand()*Math.PI*2]);
   }
   for(const [x,z,sx,sz] of [[3,12,1.6,3.4],[-4,-8,2.5,1.5],[-5,39,1.4,3],[-21,14,1.7,1.2],[46,-18,2.3,1.1],[-54,54,2.3,1.8]]) {
-    add('puddle',m.wet,[x,-.028,z],[sx,sz,1],[-Math.PI/2,0,rand()*6.28]);
-    add('decal',m.scar,[x+.6,-.01,z+.3],[sx*2,sz*2,1],[-Math.PI/2,0,rand()*6.28]);
+    add('puddle',m.wet,[x,.002,z],[sx,sz,1],[-Math.PI/2,0,rand()*6.28]);
+    add('decal',m.scar,[x+.6,.0015,z+.3],[sx*2,sz*2,1],[-Math.PI/2,0,rand()*6.28]);
   }
   function ivy(x,y,z,width,height,face=0) {
     for(let j=0;j<Math.ceil(width*1.3);j++) {
