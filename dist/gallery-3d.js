@@ -1,7 +1,7 @@
 // Galerie Pink Wars — aperçu NATIF des objets du moteur, sans proxy ni modèle factice.
 // La prévisualisation ne dépend pas des CDN d'export glTF/AR.
-import * as T from './vendor/three.webgpu.min.js';
-import {WebGLRenderer} from './vendor/three.module.min.js';
+import * as T from './vendor/three.module.min.js';
+const {WebGLRenderer}=T;
 
 const $ = id => document.getElementById(id);
 const canvas = $('native-model'), viewer = $('viewer'), status = $('viewer-message');
