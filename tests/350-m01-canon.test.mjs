@@ -15,7 +15,7 @@ function safe(stage='investigation',hero='ghju'){
 }
 test('M01 starts calmly with GHJU dual R9; discovery guides to an actual collectible',()=>{
  const g=new CampaignLevel1([],()=>.5);
- assert.equal(g.enemies.length,0);assert.deepEqual([...g.ownedWeapons],[7,0]);assert.equal(g.selectWeapon(2),false);
+ assert.equal(g.enemies.length,0);assert.deepEqual([...g.ownedWeapons],[7,8,0]);assert.equal(g.selectWeapon(2),false);
  g.offerWeapon(1);const offer=g.weaponOffers[0],guide=g.objectiveTarget();
  assert.equal(guide.kind,'weapon');assert.equal(guide.x,offer.x);assert.equal(guide.z,offer.z);
  Object.assign(g.player,{x:offer.x,z:offer.z,elevation:offer.elevation});assert.equal(g.collectWeapon(),true);

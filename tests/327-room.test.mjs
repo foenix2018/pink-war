@@ -46,7 +46,7 @@ test('waves telegraph their portals, obey the room population cap and grant a si
 });
 test('weapons are delivered at their arena levels and cannot be selected until collected',()=>{
  const {g}=fixture();g.start({x:0,y:1.65,z:0});
- for(let level=1;level<=9;level++){g.beginWave();const index=WEAPONS.findIndex(w=>w.level===level);if(index>0){assert.ok(g.weaponOffers.some(o=>o.index===index));assert.equal(g.selectWeapon(index),false);assert.equal(g.collectWeapon(),true);assert.ok(g.ownedWeapons.has(index));}}
+ for(let level=1;level<=9;level++){g.beginWave();const index=WEAPONS.findIndex(w=>w.level===level);if(index>0&&!g.ownedWeapons.has(index)){assert.ok(g.weaponOffers.some(o=>o.index===index));assert.equal(g.selectWeapon(index),false);assert.equal(g.collectWeapon(),true);assert.ok(g.ownedWeapons.has(index));}else if(index===8)assert.equal(g.weaponOffers.some(o=>o.index===index),false,'VORTEX is already equipped as secondary');}
  assert.equal(g.ownedWeapons.size,9);
 });
 test('delayed weapon delivery is retried when the room has a free visible pedestal location',()=>{
