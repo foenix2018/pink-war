@@ -8,6 +8,7 @@ const canvas = $('native-model'), viewer = $('viewer'), status = $('viewer-messa
 const arButton = $('ar-launch'), modelViewer = $('model');
 const renderer = new WebGPURenderer({canvas, antialias: !/iPhone|Android/i.test(navigator.userAgent), alpha: false, forceWebGL:true});
 const rendererReady=renderer.init();
+const galleryBuildVersion='2026-10-28-diagnostic-2';
 renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.22;
@@ -130,7 +131,7 @@ function draw(now){
   if(autoRotate)bearing+=dt*.40;
   camera.position.set(zoom*Math.sin(bearing)*Math.cos(elevation),zoom*Math.sin(elevation)+.15,zoom*Math.cos(bearing)*Math.cos(elevation));
   camera.lookAt(0,0,0);
-  try{item.animate?.(now/1000,dt);renderer.renderAsync(scene,camera).catch(e=>{setStatus('Erreur du rendu natif : '+(e.message||e));running=false;});}catch(e){setStatus('Erreur du rendu natif : '+(e.message||e));running=false;return;}
+  try{item.animate?.(now/1000,dt);renderer.renderAsync(scene,camera).catch(e=>{setStatus('Erreur rendu '+galleryBuildVersion+' : '+(e.message||e)+' · '+String(e.stack||'').slice(0,350));running=false;});}catch(e){setStatus('Erreur du rendu natif : '+(e.message||e));running=false;return;}
  }
  requestAnimationFrame(draw);
 }
@@ -139,7 +140,7 @@ window.galleryClose=()=>{requestId++;arReady=false;arButton.textContent='AR · V
 window.galleryToggleRotation=()=>{autoRotate=!autoRotate;$('rotation').textContent=autoRotate?'⟳ ROTATION AUTO : ON':'⟳ ROTATION AUTO : OFF';};
 window.galleryBuild=async name=>{
  window.galleryClose();const token=++requestId;
- setStatus('Chargement du modèle actif dans le moteur Pink Wars…');
+ setStatus('Chargement du modèle actif · '+galleryBuildVersion+'…');
  arButton.disabled=true;modelViewer.hidden=true;canvas.hidden=false;
  try{
   await rendererReady;
@@ -151,7 +152,7 @@ window.galleryBuild=async name=>{
   bearing=.45;elevation=.16;zoom=4.1;
   setStatus(entry.source+' · '+count+' maillages'+(repaired?' · '+repaired+' matériaux réparés':'')+' · glisser pour tourner, pincer pour zoomer.');
   arButton.disabled=false;startDraw();
- }catch(e){if(token!==requestId)return;setStatus('Impossible de charger le modèle actif : '+(e.message||e));arButton.disabled=true;console.error('Galerie Pink Wars',name,e);}
+ }catch(e){if(token!==requestId)return;setStatus('Échec '+galleryBuildVersion+' · '+name+' : '+(e.message||e)+' · '+String(e.stack||'').slice(0,520));arButton.disabled=true;console.error('Galerie Pink Wars',name,e);}
 };
 window.galleryAR=async()=>{
  if(!item)return;
