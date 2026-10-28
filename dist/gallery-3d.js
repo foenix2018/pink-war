@@ -8,7 +8,7 @@ const canvas = $('native-model'), viewer = $('viewer'), status = $('viewer-messa
 const arButton = $('ar-launch'), modelViewer = $('model');
 const renderer = new WebGPURenderer({canvas, antialias: !/iPhone|Android/i.test(navigator.userAgent), alpha: false, forceWebGL:true});
 const rendererReady=renderer.init();
-const galleryBuildVersion='2026-10-28-gallery-base-v11';
+const galleryBuildVersion='2026-10-28-gallery-base-v12';
 renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.22;
@@ -141,13 +141,24 @@ function draw(now){
   camera.position.set(zoom*Math.sin(bearing)*Math.cos(elevation),zoom*Math.sin(elevation)+.15,zoom*Math.cos(bearing)*Math.cos(elevation));
   camera.lookAt(0,0,0);
   try{item.animate?.(now/1000,dt);
-   // Character geometry has a cape and weapon that distort bounding boxes. Ground on the actual boot meshes instead.
+   // Ground every gallery entry on the same pedestal, including animated enemies and weapons.
+   // Prefer anatomical foot bones for soldiers; other models use their visible geometry bounds.
+   pivot.updateMatrixWorld(true);
+   let contactY;
    if(item.soldier?.feet?.length){
-    pivot.updateMatrixWorld(true);
-    const footY=Math.min(...item.soldier.feet.map(foot=>foot.getWorldPosition(new T.Vector3()).y));
-    const desired=-1.0875+.085;
-    if(Number.isFinite(footY))pivot.position.y+=T.MathUtils.clamp(desired-footY,-.08,.08);
+    contactY=Math.min(...item.soldier.feet.map(foot=>foot.getWorldPosition(new T.Vector3()).y));
+   }else{
+    const visibleBounds=new T.Box3(),partBounds=new T.Box3();
+    item.root.traverse(part=>{
+     if(!part.isMesh&&!part.isSkinnedMesh||!part.geometry)return;
+     for(let ancestor=part;ancestor;ancestor=ancestor.parent){if(!ancestor.visible)return;}
+     partBounds.setFromObject(part);
+     if(!partBounds.isEmpty())visibleBounds.union(partBounds);
+    });
+    if(!visibleBounds.isEmpty())contactY=visibleBounds.min.y;
    }
+   const pedestalTop=base.position.y+.085/2;
+   if(Number.isFinite(contactY))pivot.position.y+=T.MathUtils.clamp(pedestalTop-contactY,-.12,.12);
    renderer.renderAsync(scene,camera).catch(e=>{setStatus('Erreur rendu '+galleryBuildVersion+' : '+(e.message||e)+' · '+String(e.stack||'').slice(0,350));running=false;});}catch(e){setStatus('Erreur du rendu natif : '+(e.message||e));running=false;return;}
  }
  requestAnimationFrame(draw);
