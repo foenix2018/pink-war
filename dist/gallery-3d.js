@@ -8,7 +8,7 @@ const canvas = $('native-model'), viewer = $('viewer'), status = $('viewer-messa
 const arButton = $('ar-launch'), modelViewer = $('model');
 const renderer = new WebGPURenderer({canvas, antialias: !/iPhone|Android/i.test(navigator.userAgent), alpha: false, forceWebGL:true});
 const rendererReady=renderer.init();
-const galleryBuildVersion='2026-10-28-ar-v6';
+const galleryBuildVersion='2026-10-28-ar-v7';
 renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.22;
@@ -183,6 +183,14 @@ window.galleryAR=async()=>{
   if(isIOS){
    const {USDZExporter}=await import('https://esm.sh/three@0.170.0/examples/jsm/exporters/USDZExporter.js');
    const exportRoot=new T.Group();
+   // Explicitly locate the weapon holder: its userData.weaponModels contains all cached gun models.
+   const weaponRoots=new Set();
+   if(active.name==='GHJU'||active.name==='LYLU')active.root.traverse(node=>{
+    if(Array.isArray(node.userData?.weaponModels)){
+     weaponRoots.add(node);
+     for(const weapon of node.userData.weaponModels)weaponRoots.add(weapon);
+    }
+   });
    active.root.updateMatrixWorld(true);
    active.root.traverse(source=>{
     if(!source.isMesh&&!source.isSkinnedMesh)return;
@@ -191,7 +199,7 @@ window.galleryAR=async()=>{
     for(let ancestor=source;ancestor;ancestor=ancestor.parent){
      if(!ancestor.visible)return;
      // The soldier holds a gun rack containing every weapon model; never export that rack as part of a character.
-     if((active.name==='GHJU'||active.name==='LYLU')&&ancestor.userData?.weaponModels)return;
+     if(weaponRoots.has(ancestor))return;
     }
     // Geometry belongs to its native rig; export in world coordinates only after filtering.
     const material=Array.isArray(source.material)?source.material[0]:source.material;
@@ -206,6 +214,13 @@ window.galleryAR=async()=>{
     copy.applyMatrix4(source.matrixWorld);copy.updateMatrix();exportRoot.add(copy);
    });
    if(!exportRoot.children.length)throw Error('Aucun maillage compatible avec USDZ');
+   // A character export must never contain an oversized weapon or stage prop.
+   if(active.name==='GHJU'||active.name==='LYLU'){
+    const rejects=[];
+    for(const mesh of exportRoot.children){const b=new T.Box3().setFromObject(mesh),sz=b.getSize(new T.Vector3());if(sz.x>2.5||sz.y>3.2||sz.z>2.5)rejects.push(mesh);}
+    for(const mesh of rejects)exportRoot.remove(mesh);
+    if(!exportRoot.children.length)throw Error('Export AR : aucun maillage de personnage après filtrage');
+   }
    // Normalize the AR snapshot to the character's actual height, not the hidden weapons' dimensions.
    if(active.name==='GHJU'||active.name==='LYLU'){
     const bounds=new T.Box3().setFromObject(exportRoot),size=bounds.getSize(new T.Vector3()),center=bounds.getCenter(new T.Vector3());
