@@ -90,6 +90,18 @@ async function actualObject(name){
  }
  throw Error('Aucun modèle 3D actif n’est associé à '+name);
 }
+function repairMissingMaterials(root){
+ let repaired=0;
+ root.traverse(object=>{
+  if(!object.isMesh&&!object.isSkinnedMesh&&!object.isLine&&!object.isPoints)return;
+  const fallback=new T.MeshStandardMaterial({color:0x8994a5,metalness:.38,roughness:.6});
+  if(Array.isArray(object.material)){
+   object.material=object.material.map(m=>{if(m?.isMaterial)return m;repaired++;return fallback;});
+   if(!object.material.length){object.material=fallback;repaired++;}
+  }else if(!object.material?.isMaterial){object.material=fallback;repaired++;}
+ });
+ return repaired;
+}
 function fitObject(root){
  if(!root?.traverse)throw Error('Le moteur ne fournit pas de scène 3D.');
  let meshes=0;root.traverse(o=>{if(o.isMesh||o.isSkinnedMesh)meshes++;});
@@ -131,10 +143,11 @@ window.galleryBuild=async name=>{
  try{
   const entry=await actualObject(name);
   if(token!==requestId||viewer.hidden){entry.dispose?.();return;}
+  const repaired=repairMissingMaterials(entry.root);
   const count=fitObject(entry.root);
   item={...entry,name};
   bearing=.45;elevation=.16;zoom=4.1;
-  setStatus(entry.source+' · '+count+' maillages · glisser pour tourner, pincer pour zoomer.');
+  setStatus(entry.source+' · '+count+' maillages'+(repaired?' · '+repaired+' matériaux réparés':'')+' · glisser pour tourner, pincer pour zoomer.');
   arButton.disabled=false;startDraw();
  }catch(e){if(token!==requestId)return;setStatus('Impossible de charger le modèle actif : '+(e.message||e));arButton.disabled=true;console.error('Galerie Pink Wars',name,e);}
 };
