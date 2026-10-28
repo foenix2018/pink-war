@@ -8,7 +8,7 @@ const canvas = $('native-model'), viewer = $('viewer'), status = $('viewer-messa
 const arButton = $('ar-launch'), modelViewer = $('model');
 const renderer = new WebGPURenderer({canvas, antialias: !/iPhone|Android/i.test(navigator.userAgent), alpha: false, forceWebGL:true});
 const rendererReady=renderer.init();
-const galleryBuildVersion='2026-10-28-ar-v5';
+const galleryBuildVersion='2026-10-28-ar-v6';
 renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.22;
@@ -188,7 +188,11 @@ window.galleryAR=async()=>{
     if(!source.isMesh&&!source.isSkinnedMesh)return;
     if(!source.geometry?.attributes?.position)return;
     // Visibility is inherited: inactive weapon models are hidden by parent groups.
-    for(let ancestor=source;ancestor;ancestor=ancestor.parent){if(!ancestor.visible)return;}
+    for(let ancestor=source;ancestor;ancestor=ancestor.parent){
+     if(!ancestor.visible)return;
+     // The soldier holds a gun rack containing every weapon model; never export that rack as part of a character.
+     if((active.name==='GHJU'||active.name==='LYLU')&&ancestor.userData?.weaponModels)return;
+    }
     // Geometry belongs to its native rig; export in world coordinates only after filtering.
     const material=Array.isArray(source.material)?source.material[0]:source.material;
     const copy=new T.Mesh(source.geometry.clone(),new T.MeshStandardMaterial({color:material?.color?.clone?.()||new T.Color(0x8994a5),metalness:Math.min(.8,material?.metalness??.35),roughness:material?.roughness??.5,side:T.DoubleSide}));
@@ -202,6 +206,11 @@ window.galleryAR=async()=>{
     copy.applyMatrix4(source.matrixWorld);copy.updateMatrix();exportRoot.add(copy);
    });
    if(!exportRoot.children.length)throw Error('Aucun maillage compatible avec USDZ');
+   // Normalize the AR snapshot to the character's actual height, not the hidden weapons' dimensions.
+   if(active.name==='GHJU'||active.name==='LYLU'){
+    const bounds=new T.Box3().setFromObject(exportRoot),size=bounds.getSize(new T.Vector3()),center=bounds.getCenter(new T.Vector3());
+    if(size.y>.01){const scale=(active.name==='GHJU'?1.7:1.8)/size.y;for(const mesh of exportRoot.children){mesh.position.sub(center).multiplyScalar(scale);mesh.scale.multiplyScalar(scale);}}
+   }
    const bytes=await new USDZExporter().parseAsync(exportRoot,{maxTextureSize:1024});
    const url=URL.createObjectURL(new Blob([bytes],{type:'model/vnd.usdz+zip'}));exportUrls.push(url);modelViewer.setAttribute('ios-src',url);
    // Quick Look opens from the second direct user gesture, after conversion.
