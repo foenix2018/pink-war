@@ -40,7 +40,7 @@ test('all five Kenney guns show only their connected source GLB, not floating pr
    assert.ok(vertices>250, 'connected source glb must have geometry '+id);
  }
  assert.equal(KENNEY_HOLD.length,5);
- assert.equal(WEAPON_FRAME.length,8);
+ assert.equal(WEAPON_FRAME.length,9);
 });
 
 test('Quest control mapping and trigger meanings do not collide with aiming',async()=>{

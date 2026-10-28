@@ -30,7 +30,7 @@ test('a shot requires a true ray hit of the moving ring, not screen-space aim as
 
 test('training mode fires current Pink War guns, tracks score, and has no enemy waves',()=>{
  const game=new ShootingRangeGame([] ,()=>.5);
- assert.equal(game.mode,'training');assert.equal(game.ownedWeapons.size,7);
+ assert.equal(game.mode,'training');assert.equal(game.ownedWeapons.size,8);
  assert.equal(game.enemies.length,0);
  assert.equal(game.collectWeapon(),true);
  for(let i=0;i<5;i++)game.step(.05,{});
