@@ -38,7 +38,7 @@ async function actualObject(name){
    import('./characters.js'),import('./soldier.js'),import('./surfaces.js'),import('./weapons.js'),import('./shadow-unit-game.js')]);
   const profile=characterForId(name.toLowerCase());
   const emblem=new T.Texture(),kit=createCharacterKit(emblem,createSurfaceDetails()),mats=palette(profile);
-  kit.setPalette(profile.armor);
+  if(typeof kit.setPalette==='function')kit.setPalette(profile.armor);
   const soldier=createSoldier(kit,()=>buildGun({mats,gloves:kit.gloves,sleeve:false,makeFlash:parent=>{const flash=new T.Object3D();parent.add(flash);return flash;}}),profile);
   applyShadowMaterials(kit,profile);
   installShadowUnit(soldier,profile);
@@ -125,7 +125,7 @@ function startDraw(){if(!running){running=true;previousTime=performance.now();re
 window.galleryClose=()=>{requestId++;arReady=false;arButton.textContent='AR · VOIR CHEZ MOI';item?.dispose?.();item=null;pivot.clear();modelViewer.removeAttribute('src');modelViewer.removeAttribute('ios-src');modelViewer.hidden=true;canvas.hidden=false;clearExports();arButton.disabled=true;};
 window.galleryToggleRotation=()=>{autoRotate=!autoRotate;$('rotation').textContent=autoRotate?'⟳ ROTATION AUTO : ON':'⟳ ROTATION AUTO : OFF';};
 window.galleryBuild=async name=>{
- const token=++requestId;window.galleryClose();requestId=token;
+ window.galleryClose();const token=++requestId;
  setStatus('Chargement du modèle actif dans le moteur Pink Wars…');
  arButton.disabled=true;modelViewer.hidden=true;canvas.hidden=false;
  try{
