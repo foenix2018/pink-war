@@ -8,7 +8,7 @@ const canvas = $('native-model'), viewer = $('viewer'), status = $('viewer-messa
 const arButton = $('ar-launch'), modelViewer = $('model');
 const renderer = new WebGPURenderer({canvas, antialias: !/iPhone|Android/i.test(navigator.userAgent), alpha: false, forceWebGL:true});
 const rendererReady=renderer.init();
-const galleryBuildVersion='2026-10-28-ar-v7';
+const galleryBuildVersion='2026-10-28-ar-v8';
 renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.22;
@@ -187,7 +187,7 @@ window.galleryAR=async()=>{
    const weaponRoots=new Set();
    if(active.name==='GHJU'||active.name==='LYLU')active.root.traverse(node=>{
     if(Array.isArray(node.userData?.weaponModels)){
-     weaponRoots.add(node);
+     // Do not exclude the holder: its direct children include both gloves.
      for(const weapon of node.userData.weaponModels)weaponRoots.add(weapon);
     }
    });
@@ -203,7 +203,8 @@ window.galleryAR=async()=>{
     }
     // Geometry belongs to its native rig; export in world coordinates only after filtering.
     const material=Array.isArray(source.material)?source.material[0]:source.material;
-    const copy=new T.Mesh(source.geometry.clone(),new T.MeshStandardMaterial({color:material?.color?.clone?.()||new T.Color(0x8994a5),metalness:Math.min(.8,material?.metalness??.35),roughness:material?.roughness??.5,side:T.DoubleSide}));
+    const isCape=/cape|tabard|tissée/i.test(source.name||'');
+    const copy=new T.Mesh(source.geometry.clone(),new T.MeshStandardMaterial({color:isCape?new T.Color(0x171820):(material?.color?.clone?.()||new T.Color(0x8994a5)),metalness:isCape?0:Math.min(.8,material?.metalness??.35),roughness:isCape?.98:(material?.roughness??.5),transparent:false,opacity:1,depthWrite:true,side:T.DoubleSide}));
     source.updateWorldMatrix(true,false);
     // Freeze the active pose; skinned geometry must be baked, not exported as an unbound rig.
     if(source.isSkinnedMesh&&typeof source.applyBoneTransform==='function'){
