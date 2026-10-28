@@ -151,5 +151,8 @@ h1{white-space:nowrap;font-size:clamp(64px,6vw,94px)}.brand-mark,.unit-mark{font
 #scope-overlay:before{width:30vh;height:1px}#scope-overlay:after{height:30vh;width:1px}
 .xr-mode #scope-overlay,.stereo-mode #scope-overlay{display:none}
 
-/* The real optic owns its reticle; the screen mask only softens the periphery. */
-#scope-overlay:before,#scope-overlay:after{display:none}
+/* ADS sniper: a clear central sight picture and a true centred reticle.
+   The projectile's camera ray uses this exact screen centre. */
+.scoped #scope-overlay:before,.scoped #scope-overlay:after{display:block;background:#b7e9ff;opacity:.85}
+.scoped #scope-overlay i{position:absolute;left:50%;top:50%;width:5px;height:5px;transform:translate(-50%,-50%);border:1px solid #c7f5ff;border-radius:50%;box-shadow:0 0 7px #52caff}
+.scoped .crosshair{opacity:0}

@@ -381,6 +381,10 @@ function updateCamera() {
   weapon.rotation.set(kickPose.pitch + reloadLift * Math.PI / 2,kickPose.yaw+ads.yaw,Math.sin(clock * 1.8) * .003+kickPose.roll+ads.roll);
   if(game.weapon.melee){const slash=bladeSwingPose(game.bladePhase,game.bladeSlashSide);weapon.rotation.x=slash.x-.12;weapon.rotation.y=slash.y;weapon.rotation.z=slash.z;}
   else{const strike=meleeKick(game);if(strike){weapon.position.x+=MELEE_POSE.x*strike;weapon.position.y+=MELEE_POSE.y*strike;weapon.position.z+=MELEE_POSE.z*strike;weapon.rotation.x+=MELEE_POSE.pitch*strike;}}
+  // The ARES X9 optic is a full-screen sight picture in flat FPS ADS: the
+  // 3D tube is not drawn over the line of sight, but the gun/muzzle still exist
+  // and the shot ray is derived from this same camera centre.
+  if(view==='fps'&&game.weapon.id==='lance'&&aiming&&aimBlend>.97&&vr?.mode==='off')weapon.visible=false;
   camera.updateProjectionMatrix(); camera.updateMatrixWorld(true);
 }
 function reloadPose() {
@@ -753,7 +757,7 @@ function stepFrame(timestamp, xrFrame) {
     const crouchToggle=crouchQueued||vrInput.crouchToggle;crouchQueued=false;
     aiming=!!OPTICS[game.weapon.id]&&!game.reloadRemaining&&(vr.mode==='xr'?vrInput.aim:mouseAim||aimPointers.size>0||vrInput.precision);
     aimBlend+=(Number(aiming)-aimBlend)*(1-Math.exp(-dt*14));
-    document.body.classList.toggle('aiming',aiming);document.body.classList.toggle('scoped',aiming&&game.weapon.id==='lance'&&vr.mode==='off');
+    document.body.classList.toggle('aiming',aiming);document.body.classList.toggle('scoped',aiming&&game.weapon.id==='lance'&&view==='fps'&&vr.mode==='off');
     $('aim-button').setAttribute('aria-pressed',String(aiming));
     currentSprinting=!aiming&&(touchSprinting||vrInput.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight'));
     game.step(dt, { x, z, yaw: facing, moveYaw, sprint: currentSprinting, jump,crouchToggle });

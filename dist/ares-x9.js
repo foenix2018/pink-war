@@ -14,6 +14,7 @@ function addObj(parent,geometry,m,x=0,y=0,z=0,rz=0){let o=new THREE.Mesh(geometr
 function box(parent,x,y,z,w,h,d,m,r=.025,angle=0){const g=r?bevelBox(Math.max(w,.012),Math.max(h,.012),Math.max(d,.012),Math.min(r,w*.3,h*.3,d*.3),1):new THREE.BoxGeometry(w,h,d);return addObj(parent,g,m,x,y,z,angle);}
 function poly(parent,coords,thick,z,m,bevel=.015){let s=new THREE.Shape();coords.forEach((p,i)=>(i?s.lineTo(...p):s.moveTo(...p)));s.closePath();let g=new THREE.ExtrudeGeometry(s,{depth:thick,bevelEnabled:!!bevel,bevelSegments:1,steps:1,bevelThickness:bevel,bevelSize:bevel,curveSegments:1});g.translate(0,0,-thick/2);return addObj(parent,g,m,0,0,z);}
 function cylinder(parent,x,y,z,length,r1,r2,m,segments=16){let o=addObj(parent,new THREE.CylinderGeometry(r2??r1,r1,length,segments,1),m,x,y,z,-Math.PI/2);return o;}
+function hollowScopeTube(parent,x,y,z,length,r1,r2,m,segments=32){return addObj(parent,new THREE.CylinderGeometry(r2??r1,r1,length,segments,1,true),m,x,y,z,-Math.PI/2);}
 function ring(parent,x,y,z,R,r,m,radial=24){let o=addObj(parent,new THREE.TorusGeometry(R,r,7,radial),m,x,y,z);o.rotation.y=Math.PI/2;return o;}
 function bolt(parent,x,y,z,r=.055){let o=cylinder(parent,x,y,z,.045,r,r,mat.inner,10);cylinder(parent,x+.028,y,z,.018,r*.62,r*.62,mat.lightmetal,10);return o;}
 function beam(parent,a,b,r,m,seg=10){let A=new THREE.Vector3(...a),B=new THREE.Vector3(...b),v=new THREE.Vector3().subVectors(B,A);let o=addObj(parent,new THREE.CylinderGeometry(r,r,v.length(),seg),m,...A.clone().add(B).multiplyScalar(.5).toArray());o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),v.normalize());return o;}
@@ -109,9 +110,9 @@ function buildRifle(){
  for(let i=0;i<16;i++)box(rifle,-3.47+i*.182,3.025,0,.090,.06,.53,mat.titan,.004);
  for(let x of [-2.95,-1.40]){box(rifle,x,3.19,0,.27,.42,.40,mat.graphite,.024);box(rifle,x,3.36,0,.42,.13,.52,mat.titan,.028);bolt(rifle,x,3.17,.29,.055)}
  // Eye piece tube, engineered multi-diameter scope
- cylinder(rifle,-2.07,3.63,0,2.92,.235,.275,mat.black,28);
- cylinder(rifle,-3.46,3.63,0,.46,.312,.31,mat.titan,24);
- cylinder(rifle,-3.73,3.63,0,.19,.342,.342,mat.graphite,32);
+ hollowScopeTube(rifle,-2.07,3.63,0,2.92,.235,.275,mat.black,28);
+ hollowScopeTube(rifle,-3.46,3.63,0,.46,.312,.31,mat.titan,24);
+ hollowScopeTube(rifle,-3.73,3.63,0,.19,.342,.342,mat.graphite,32);
  ring(rifle,-3.86,3.63,0,.283,.033,mat.gold);
  for(let x of [-3.66,-3.53,-3.34,-2.52,-1.81])ring(rifle,x,3.63,0,.243,.02,mat.gold);
  // electronic box on top and eyepiece dials
@@ -124,9 +125,9 @@ function buildRifle(){
  box(rifle,-2.25,3.65,.51,.20,.22,.07,mat.gold,.02);
  for(let z of [-.28,.28]){strip(rifle,-3.12,3.77,z,.52,.028,.026,mat.copper);addLED(rifle,-2.52,3.76,z>0?.31:-.31,.15,.020,.008);}
  // Wide front objective
- cylinder(rifle,-.98,3.63,0,.79,.366,.47,mat.graphite,36);
- cylinder(rifle,-.73,3.63,0,.27,.468,.468,mat.titan,40);
- cylinder(rifle,-.56,3.63,0,.17,.50,.50,mat.black,40);
+ hollowScopeTube(rifle,-.98,3.63,0,.79,.366,.47,mat.graphite,36);
+ hollowScopeTube(rifle,-.73,3.63,0,.27,.468,.468,mat.titan,40);
+ hollowScopeTube(rifle,-.56,3.63,0,.17,.50,.50,mat.black,40);
  ring(rifle,-.46,3.63,0,.46,.044,mat.gold,40);
  ring(rifle,-.45,3.63,0,.41,.018,mat.titan,40);
  cylinder(rifle,-.437,3.63,0,.019,.392,.392,mat.glass,48);

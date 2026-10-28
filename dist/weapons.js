@@ -54,8 +54,12 @@ const KENNEY_CUFF = Object.freeze([.28, -.72, .62]), KENNEY_SUPPORT_CUFF = Objec
 
 const PI = Math.PI;
 export const OPTICS = Object.freeze({
+  r9:Object.freeze({y:.155,z:-.12,radius:.026,magnification:1.15}),
   bloom:Object.freeze({y:.258,z:-.185,radius:.036,magnification:2}),
   lance:Object.freeze({y:.169,z:-.270,radius:.036,magnification:4}),
+  thorn:Object.freeze({y:.19,z:-.23,radius:.034,magnification:1.6}),
+  nova:Object.freeze({y:.18,z:-.20,radius:.034,magnification:1.35}),
+  duor9:Object.freeze({y:.155,z:-.12,radius:.026,magnification:1.15}),
   // The M12's receiver hides the shooting hand from the eye: at the hip it sits lower and turns slightly outwards.
   m12:Object.freeze({y:.177,z:-.165,radius:.018,magnification:1.15,eyeRelief:.62,iron:true,hip:Object.freeze({x:.03,y:-.05,yaw:-.13,roll:.08})})
 });
