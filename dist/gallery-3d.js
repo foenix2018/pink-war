@@ -8,7 +8,7 @@ const canvas = $('native-model'), viewer = $('viewer'), status = $('viewer-messa
 const arButton = $('ar-launch'), modelViewer = $('model');
 const renderer = new WebGPURenderer({canvas, antialias: !/iPhone|Android/i.test(navigator.userAgent), alpha: false, forceWebGL:true});
 const rendererReady=renderer.init();
-const galleryBuildVersion='2026-10-28-gallery-base-v10';
+const galleryBuildVersion='2026-10-28-gallery-base-v11';
 renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.22;
@@ -124,6 +124,7 @@ function fitObject(root){
  holder.position.set(-center.x,-bounds.min.y+(-1.0875/scale),-center.z);
  pivot.add(holder);
  pivot.scale.setScalar(scale);
+ pivot.position.y=0;
  return meshes;
 }
 function draw(now){
@@ -139,7 +140,15 @@ function draw(now){
   if(autoRotate)bearing+=dt*.40;
   camera.position.set(zoom*Math.sin(bearing)*Math.cos(elevation),zoom*Math.sin(elevation)+.15,zoom*Math.cos(bearing)*Math.cos(elevation));
   camera.lookAt(0,0,0);
-  try{item.animate?.(now/1000,dt);renderer.renderAsync(scene,camera).catch(e=>{setStatus('Erreur rendu '+galleryBuildVersion+' : '+(e.message||e)+' · '+String(e.stack||'').slice(0,350));running=false;});}catch(e){setStatus('Erreur du rendu natif : '+(e.message||e));running=false;return;}
+  try{item.animate?.(now/1000,dt);
+   // Character geometry has a cape and weapon that distort bounding boxes. Ground on the actual boot meshes instead.
+   if(item.soldier?.feet?.length){
+    pivot.updateMatrixWorld(true);
+    const footY=Math.min(...item.soldier.feet.map(foot=>foot.getWorldPosition(new T.Vector3()).y));
+    const desired=-1.0875+.085;
+    if(Number.isFinite(footY))pivot.position.y+=T.MathUtils.clamp(desired-footY,-.08,.08);
+   }
+   renderer.renderAsync(scene,camera).catch(e=>{setStatus('Erreur rendu '+galleryBuildVersion+' : '+(e.message||e)+' · '+String(e.stack||'').slice(0,350));running=false;});}catch(e){setStatus('Erreur du rendu natif : '+(e.message||e));running=false;return;}
  }
  requestAnimationFrame(draw);
 }
