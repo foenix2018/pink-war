@@ -103,7 +103,7 @@ test('a profile is extruded across its width, with the outline along z and y', (
 
 test('every weapon is drawn around the grip: the origin is inside the model and the muzzle is its front', () => {
   const models = createWeaponModels(mats());
-  assert.equal(models.length,8);assert.equal(WEAPON_FRAME.length,8);
+  assert.equal(models.length,9);assert.equal(WEAPON_FRAME.length,9);
   models.forEach((model, index) => {
     const frame = WEAPON_FRAME[index], b = box(model);
     assert.ok(b.containsPoint(new T.Vector3(0, 0, 0)), `${frame.id}: the palm is inside the weapon's bounds`);

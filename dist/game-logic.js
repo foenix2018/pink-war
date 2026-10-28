@@ -68,7 +68,8 @@ export const WEAPONS = Object.freeze([
   Object.freeze({ id: 'nova', name: 'NOVA', label: 'Canon à énergie', level: 9, damage: 340, capacity: 4, interval: .4, reload: 2.4, speed: 80, pellets: 1, spread: 0, chargeTime: 1.05, splash: 5 }),
   Object.freeze({ id:'aurora',name:'AURORA',label:'Sabre à énergie',level:2,damage:155,capacity:0,interval:.48,reload:0,speed:0,pellets:0,spread:0,semiAuto:true,chargeTime:0,splash:0,melee:true }),
   Object.freeze({id:'m12',name:'M–12',label:'Fusil à pompe',level:4,damage:18,capacity:8,interval:.88,reload:2.8,speed:170,pellets:8,spread:.038,semiAuto:true,chargeTime:0,splash:0,falloffStart:12,falloffEnd:40,minDamage:.2}),
-  Object.freeze({id:'duor9',name:'VX-9 DUO',label:'Doubles pistolets Orbital',level:1,damage:24,capacity:24,handCapacity:12,interval:.2,reload:1.65,speed:110,pellets:1,spread:0,chargeTime:0,splash:0,dual:true})
+  Object.freeze({id:'duor9',name:'VX-9 DUO',label:'Doubles pistolets Orbital',level:1,damage:24,capacity:24,handCapacity:12,interval:.2,reload:1.65,speed:110,pellets:1,spread:0,chargeTime:0,splash:0,dual:true}),
+  Object.freeze({id:'vortex',name:'VORTEX AR-7',label:'Fusil d’assaut tactique · indicateur rose',level:1,damage:43,capacity:36,interval:.115,reload:1.95,speed:175,pellets:1,spread:.009,chargeTime:0,splash:0})
 ]);
 export const starterWeaponIndex=characterId=>characterId==='lylu'?6:7;
 export const weaponAllowedForCharacter=(index,characterId='ghju')=>!!WEAPONS[index]&&(!WEAPONS[index].dual||characterId==='ghju');
@@ -289,7 +290,7 @@ export class ArenaGame {
     this.characterId=characterId==='lylu'?'lylu':'ghju';
     this.weaponIndex = starterWeaponIndex(this.characterId); this.ammo = WEAPONS.map(w => w.capacity);
     this.dual={ammo:{left:12,right:12},readyAt:{left:0,right:0},shotAt:{left:-Infinity,right:-Infinity},held:{left:false,right:false},next:'right',flatAt:0};
-    this.ownedWeapons = new Set([this.weaponIndex,0]); this.weaponOffers = [];
+    this.ownedWeapons = new Set([this.weaponIndex,0,8]); // VORTEX available immediately in story and arena. this.weaponOffers = [];
     this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false; this.semiPending=false;
     this.lastDamage = 0; this.regenerating = false;
     // Armour layer (armor-combat.js): shield on when an engine enables it, two impulse charges to start.
