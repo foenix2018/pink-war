@@ -1,12 +1,13 @@
 // Galerie Pink Wars — aperçu NATIF des objets du moteur, sans proxy ni modèle factice.
 // La prévisualisation ne dépend pas des CDN d'export glTF/AR.
-import * as T from './vendor/three.module.min.js';
-const {WebGLRenderer}=T;
+import * as T from './vendor/three.webgpu.min.js';
+import {WebGPURenderer} from './vendor/three.webgpu.min.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('native-model'), viewer = $('viewer'), status = $('viewer-message');
 const arButton = $('ar-launch'), modelViewer = $('model');
-const renderer = new WebGLRenderer({canvas, antialias: !/iPhone|Android/i.test(navigator.userAgent), alpha: false, powerPreference:'default'});
+const renderer = new WebGPURenderer({canvas, antialias: !/iPhone|Android/i.test(navigator.userAgent), alpha: false, forceWebGL:true});
+const rendererReady=renderer.init();
 renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.22;
@@ -129,7 +130,7 @@ function draw(now){
   if(autoRotate)bearing+=dt*.40;
   camera.position.set(zoom*Math.sin(bearing)*Math.cos(elevation),zoom*Math.sin(elevation)+.15,zoom*Math.cos(bearing)*Math.cos(elevation));
   camera.lookAt(0,0,0);
-  try{item.animate?.(now/1000,dt);renderer.render(scene,camera);}catch(e){setStatus('Erreur du rendu natif : '+(e.message||e));running=false;return;}
+  try{item.animate?.(now/1000,dt);renderer.renderAsync(scene,camera).catch(e=>{setStatus('Erreur du rendu natif : '+(e.message||e));running=false;});}catch(e){setStatus('Erreur du rendu natif : '+(e.message||e));running=false;return;}
  }
  requestAnimationFrame(draw);
 }
@@ -141,6 +142,7 @@ window.galleryBuild=async name=>{
  setStatus('Chargement du modèle actif dans le moteur Pink Wars…');
  arButton.disabled=true;modelViewer.hidden=true;canvas.hidden=false;
  try{
+  await rendererReady;
   const entry=await actualObject(name);
   if(token!==requestId||viewer.hidden){entry.dispose?.();return;}
   const repaired=repairMissingMaterials(entry.root);
