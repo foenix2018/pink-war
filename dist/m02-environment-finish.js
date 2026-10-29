@@ -149,6 +149,8 @@ export function createEnvironmentFinish(T,{root,scene,performance=false,accent=0
   }
   root.add(g);created.push(g);
  }
+ // Avoid casting hundreds of dynamic shadows from decorative detail meshes.
+ created.forEach(o=>{o.userData.noWorldShadow=true;});
  const geometry=new T.BoxGeometry(1,1,1),matrix=new T.Matrix4(),pos=new T.Vector3(),scale=new T.Vector3(),quat=new T.Quaternion();
  let count=0;
  for(const [material,list] of perMaterial){
@@ -157,7 +159,7 @@ export function createEnvironmentFinish(T,{root,scene,performance=false,accent=0
   mesh.name='M02 / finitions instanciées · '+material.uuid.slice(0,6);
   mesh.receiveShadow=true;mesh.castShadow=false;
   list.forEach(([x,y,z,w,h,d],i)=>mesh.setMatrixAt(i,matrix.compose(pos.set(x,y,z),quat,scale.set(w,h,d))));
-  mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();root.add(mesh);created.push(mesh);count+=list.length;
+  mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();mesh.userData.noWorldShadow=true;root.add(mesh);created.push(mesh);count+=list.length;
  }
  return {stats:()=>({instances:count,objects:created.length,adverts:ads.length,ceilingZones:marketZones.length,extraLights:lights.length}),dispose(){
    created.forEach(o=>o.removeFromParent());lights.forEach(o=>o.removeFromParent());
