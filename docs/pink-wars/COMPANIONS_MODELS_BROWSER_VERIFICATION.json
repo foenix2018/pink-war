@@ -1,0 +1,419 @@
+{
+  "version": "3.66.4",
+  "gallery": [
+    {
+      "name": "GABY",
+      "meshes": 11,
+      "bones": [
+        4
+      ],
+      "source": "Sphère IA articulée du jeu · quatre coques de protection",
+      "calls": 14,
+      "width": 1050
+    },
+    {
+      "name": "CARA",
+      "meshes": 11,
+      "bones": [
+        6
+      ],
+      "source": "Sphère IA articulée du jeu · six panneaux offensifs",
+      "calls": 14,
+      "width": 1050
+    }
+  ],
+  "lab": [
+    {
+      "id": "ghju",
+      "before": {
+        "ui": {
+          "hero": "ghju",
+          "frames": 6,
+          "backend": "webgl",
+          "menu": false,
+          "skills": {
+            "name": "Gaby",
+            "hero": "GHJU",
+            "color": 16737713,
+            "unlocked": true,
+            "mission": 1,
+            "mode": "lab",
+            "energy": 100,
+            "ward": false,
+            "activeProjectiles": 0,
+            "skills": [
+              {
+                "id": "phase",
+                "label": "Impulsion de secours",
+                "detail": "Boule rose : détonation de zone et neutralisation brève des machines.",
+                "cooldown": 30,
+                "cost": 40,
+                "remaining": 0,
+                "enabled": true
+              },
+              {
+                "id": "ward",
+                "label": "Bouclier local",
+                "detail": "Intercepte jusqu’à trois projectiles proches pendant trois secondes.",
+                "cooldown": 12,
+                "cost": 30,
+                "remaining": 0,
+                "enabled": true
+              },
+              {
+                "id": "mend",
+                "label": "Réparation de terrain",
+                "detail": "Rend 20 points de santé. Ne ressuscite jamais.",
+                "cooldown": 18,
+                "cost": 45,
+                "remaining": 0,
+                "enabled": true
+              }
+            ]
+          },
+          "enemies": [
+            {
+              "id": 1,
+              "hp": 450,
+              "state": "relocate",
+              "crouch": 0.45196623856596263
+            },
+            {
+              "id": 2,
+              "hp": 450,
+              "state": "advance",
+              "crouch": 0
+            },
+            {
+              "id": 3,
+              "hp": 450,
+              "state": "advance",
+              "crouch": 0
+            }
+          ],
+          "projectiles": []
+        },
+        "orb": {
+          "name": "Gaby",
+          "state": "Dialogue",
+          "visible": true,
+          "energy": 100,
+          "cooldown": 0,
+          "assists": 0,
+          "model": {
+            "name": "Gaby",
+            "revision": "phase-shell-v2",
+            "petals": 4,
+            "bones": 4,
+            "draws": 11,
+            "triangles": 24448,
+            "opening": 0.17115839911487
+          }
+        }
+      },
+      "after": {
+        "ui": {
+          "hero": "ghju",
+          "frames": 14,
+          "backend": "webgl",
+          "menu": false,
+          "skills": {
+            "name": "Gaby",
+            "hero": "GHJU",
+            "color": 16737713,
+            "unlocked": true,
+            "mission": 1,
+            "mode": "lab",
+            "energy": 60,
+            "ward": false,
+            "activeProjectiles": 1,
+            "skills": [
+              {
+                "id": "phase",
+                "label": "Impulsion de secours",
+                "detail": "Boule rose : détonation de zone et neutralisation brève des machines.",
+                "cooldown": 30,
+                "cost": 40,
+                "remaining": 29.92,
+                "enabled": false
+              },
+              {
+                "id": "ward",
+                "label": "Bouclier local",
+                "detail": "Intercepte jusqu’à trois projectiles proches pendant trois secondes.",
+                "cooldown": 12,
+                "cost": 30,
+                "remaining": 0,
+                "enabled": true
+              },
+              {
+                "id": "mend",
+                "label": "Réparation de terrain",
+                "detail": "Rend 20 points de santé. Ne ressuscite jamais.",
+                "cooldown": 18,
+                "cost": 45,
+                "remaining": 0,
+                "enabled": true
+              }
+            ]
+          },
+          "enemies": [
+            {
+              "id": 1,
+              "hp": 450,
+              "state": "relocate",
+              "crouch": 0.4768480885431637
+            },
+            {
+              "id": 2,
+              "hp": 450,
+              "state": "advance",
+              "crouch": 0
+            },
+            {
+              "id": 3,
+              "hp": 450,
+              "state": "advance",
+              "crouch": 0
+            }
+          ],
+          "projectiles": [
+            {
+              "x": -0.129031475121438,
+              "y": 1.5025779739835465,
+              "z": 6.1504983296733915
+            }
+          ]
+        },
+        "orb": {
+          "name": "Gaby",
+          "state": "Dialogue",
+          "visible": true,
+          "energy": 100,
+          "cooldown": 0,
+          "assists": 0,
+          "model": {
+            "name": "Gaby",
+            "revision": "phase-shell-v2",
+            "petals": 4,
+            "bones": 4,
+            "draws": 11,
+            "triangles": 24448,
+            "opening": 0.5120782745824667
+          }
+        },
+        "width": 390,
+        "resources": {
+          "geometries": 46,
+          "textures": 13
+        }
+      }
+    },
+    {
+      "id": "lylu",
+      "before": {
+        "ui": {
+          "hero": "lylu",
+          "frames": 6,
+          "backend": "webgl",
+          "menu": false,
+          "skills": {
+            "name": "Cara",
+            "hero": "LYLU",
+            "color": 5749503,
+            "unlocked": true,
+            "mission": 1,
+            "mode": "lab",
+            "energy": 100,
+            "ward": false,
+            "activeProjectiles": 0,
+            "skills": [
+              {
+                "id": "phase",
+                "label": "Surcharge de phase",
+                "detail": "Boule bleue : explosion offensive sur l’ennemi ou la zone visée.",
+                "cooldown": 30,
+                "cost": 40,
+                "remaining": 0,
+                "enabled": true
+              },
+              {
+                "id": "mark",
+                "label": "Marquage de faiblesse",
+                "detail": "La cible visible subit 20 % de dégâts supplémentaires pendant huit secondes.",
+                "cooldown": 12,
+                "cost": 25,
+                "remaining": 0,
+                "enabled": true
+              },
+              {
+                "id": "amplify",
+                "label": "Amplification",
+                "detail": "Augmente de 15 % les dégâts des armes pendant cinq secondes.",
+                "cooldown": 18,
+                "cost": 40,
+                "remaining": 0,
+                "enabled": true
+              }
+            ]
+          },
+          "enemies": [
+            {
+              "id": 1,
+              "hp": 450,
+              "state": "relocate",
+              "crouch": 0.44975077485911846
+            },
+            {
+              "id": 2,
+              "hp": 450,
+              "state": "advance",
+              "crouch": 0
+            },
+            {
+              "id": 3,
+              "hp": 450,
+              "state": "advance",
+              "crouch": 0
+            }
+          ],
+          "projectiles": []
+        },
+        "orb": {
+          "name": "Cara",
+          "state": "Dialogue",
+          "visible": true,
+          "energy": 100,
+          "cooldown": 0,
+          "assists": 0,
+          "model": {
+            "name": "Cara",
+            "revision": "phase-shell-v2",
+            "petals": 6,
+            "bones": 6,
+            "draws": 11,
+            "triangles": 25584,
+            "opening": 0.16938997053217125
+          }
+        }
+      },
+      "after": {
+        "ui": {
+          "hero": "lylu",
+          "frames": 13,
+          "backend": "webgl",
+          "menu": false,
+          "skills": {
+            "name": "Cara",
+            "hero": "LYLU",
+            "color": 5749503,
+            "unlocked": true,
+            "mission": 1,
+            "mode": "lab",
+            "energy": 60,
+            "ward": false,
+            "activeProjectiles": 1,
+            "skills": [
+              {
+                "id": "phase",
+                "label": "Surcharge de phase",
+                "detail": "Boule bleue : explosion offensive sur l’ennemi ou la zone visée.",
+                "cooldown": 30,
+                "cost": 40,
+                "remaining": 29.96,
+                "enabled": false
+              },
+              {
+                "id": "mark",
+                "label": "Marquage de faiblesse",
+                "detail": "La cible visible subit 20 % de dégâts supplémentaires pendant huit secondes.",
+                "cooldown": 12,
+                "cost": 25,
+                "remaining": 0,
+                "enabled": true
+              },
+              {
+                "id": "amplify",
+                "label": "Amplification",
+                "detail": "Augmente de 15 % les dégâts des armes pendant cinq secondes.",
+                "cooldown": 18,
+                "cost": 40,
+                "remaining": 0,
+                "enabled": true
+              }
+            ]
+          },
+          "enemies": [
+            {
+              "id": 1,
+              "hp": 450,
+              "state": "relocate",
+              "crouch": 0.47620668061426996
+            },
+            {
+              "id": 2,
+              "hp": 450,
+              "state": "advance",
+              "crouch": 0
+            },
+            {
+              "id": 3,
+              "hp": 450,
+              "state": "advance",
+              "crouch": 0
+            }
+          ],
+          "projectiles": [
+            {
+              "x": 0.13600374557816575,
+              "y": 1.462770024997958,
+              "z": 6.950249531089241
+            }
+          ]
+        },
+        "orb": {
+          "name": "Cara",
+          "state": "Dialogue",
+          "visible": true,
+          "energy": 100,
+          "cooldown": 0,
+          "assists": 0,
+          "model": {
+            "name": "Cara",
+            "revision": "phase-shell-v2",
+            "petals": 6,
+            "bones": 6,
+            "draws": 11,
+            "triangles": 25584,
+            "opening": 0.3798836957344891
+          }
+        },
+        "width": 390,
+        "resources": {
+          "geometries": 46,
+          "textures": 13
+        }
+      }
+    }
+  ],
+  "errors": [],
+  "missing": [],
+  "limits": "Chromium/SwiftShader, reduced framebuffer. Local server; no physical Safari/iPhone or Quest and no hardware FPS measured. Read-only served-module QA hooks inspect actual models and resources.",
+  "tests": {
+    "full": {
+      "pass": 618,
+      "fail": 0,
+      "skipped": 0
+    },
+    "targetedAfterPortraitAdjustment": {
+      "pass": 22,
+      "fail": 0
+    }
+  },
+  "sourceSha256": {
+    "dist/companion-model.js": "88135f40f775a057f07959b843d6745cd37b9633231878e3e59f38f15d60d94a",
+    "dist/ai-companions.js": "cbe89b9415060c9fc5d8628dbfc8b7828960968b0fdfd938dfeb1db0461ad72a",
+    "dist/companion-lab.js": "5f1a1d8a734eedde97b5acb71a69085422a016090a91f55800ec201155b811a6",
+    "dist/gallery-3d.js": "2fecc7036400d0d1c64ce4dd2f53767b2bbb39bd92c8235c58cb4fa98875acf5"
+  }
+}

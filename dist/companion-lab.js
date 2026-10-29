@@ -32,7 +32,7 @@ function reset(){
   game.enemies.push(e);const model=factory.create(false,true,form);models.set(e.id,model);scene.add(model);
  }
  yaw=0;pitch=-.035;keys.clear();
- menu=createCompanionMenu({getStatus:()=>skills.snapshot(game),onUse:id=>{audioReady();return skills.use(id,{game,...aim()});},onChange(open){keys.clear();if(open)document.exitPointerLock?.();}});menu.setVisible(true);
+ menu=createCompanionMenu({getStatus:()=>skills.snapshot(game),onUse:id=>{audioReady();const used=skills.use(id,{game,...aim()});if(used)orb.react({type:'companion-assist',name:skills.name});return used;},onChange(open){keys.clear();if(open)document.exitPointerLock?.();}});menu.setVisible(true);
  camera.position.set(0,1.65,9);camera.rotation.set(pitch,0,0,'YXZ');
 }
 function resize(){if(!renderer)return;renderer.setPixelRatio(renderPixelRatio(profile,devicePixelRatio,innerWidth,innerHeight));renderer.setSize(innerWidth,innerHeight,false);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();}

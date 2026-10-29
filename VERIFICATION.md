@@ -1,3 +1,13 @@
+# Pink War 3.66.4 — Gaby et Cara articulées
+
+618 tests Node réussis, aucun échec, test ignoré ou annulé ; puis les 22 contrôles ciblés réussissent après le dernier ajustement portrait. Les sept nouveaux cas mesurent les vrais sommets des coques rigides sous transformation du parent, du corps et des charnières ; ils contrôlent les palettes d’os partagées, l’ouverture après une compétence réelle, la pause, le retour à l’écran après le suivi à l’épaule, le cadrage de tous les sommets en portrait et la libération unique des ressources. Les tests existants de coûts, recharges, ligne de vue, protection/soin sans résurrection et verrouillage M07 passent.
+
+Galerie réelle : ouverture directe des deux sphères, 11 maillages chacune, squelette de quatre/six os ; 14 appels de rendu dans la scène d’exposition complète. Atelier réel en 390 × 844 : touche G, sélection de la compétence, énergie consommée, projectile créé et coques déployées. Aucun échec JavaScript ni ressource locale manquante. [Rapport](docs/pink-wars/COMPANIONS_MODELS_BROWSER_VERIFICATION.json) · [Détails et captures](docs/pink-wars/MISE_A_JOUR_366_4.md).
+
+Gaby : 24 448 triangles ; Cara : 25 584. Aucun ajout de lumière ou de texture externe. Syntaxe des modules, générateur et configuration validée, `git diff --check` propre. Limites : Chromium/SwiftShader, framebuffer réduit, vues de détail dans une scène d’inspection ; aucun essai sur Safari/iPhone, Quest physique ou AR sur appareil, ni mesure de FPS matériel. Navigateur local ; confirmation de déploiement contrôlée séparément par le statut Vercel du commit.
+
+---
+
 # Pink War 3.66.3 — appuis sur le sol réel
 
 611 tests Node réussis, aucun échec, annulation ou test ignoré. Les 30 contrôles ciblés de foulée, saut et contact passent également ; aucun test historique modifié. Douze nouveaux cas mesurent les vrais sommets des bottes : marche à 1,6 m/s, course à 7 m/s et sprint à 10 m/s à 30/60/120 Hz, durée réelle d’appui, dérive horizontale inférieure à 2 mm par image, dégagement des semelles, rampe de l’Arène, monte-charge, mur, trottoir tourné, pivot et bord de plateforme.

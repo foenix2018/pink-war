@@ -60,7 +60,7 @@ async function actualObject(name){
   const actor=createAICompanion(T,scene,name==='GABY'?'ghju':'lylu');
   actor.root.removeFromParent();
   actor.root.position.set(0,0,0);
-  return {root:actor.root,animate:(t,dt)=>{actor.root.rotation.y+=dt*.72;},source:'Sphère IA active du jeu',dispose:()=>actor.dispose()};
+  return {root:actor.root,animate:(t,dt)=>actor.preview(dt),source:'Sphère IA articulée du jeu · '+(name==='GABY'?'quatre coques de protection':'six panneaux offensifs'),dispose:()=>actor.dispose()};
  }
  if(name==='RECO1'){
   const {createReco1}=await import('./reco1.js');

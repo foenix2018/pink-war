@@ -854,7 +854,7 @@ function stepFrame(timestamp, xrFrame) {
       }
       skillGame=game;
       skillMenu=createCompanionMenu({getStatus:()=>companionSkills.snapshot(game),
-        onUse:id=>companionSkills.use(id,{game,...aim('right'),emitter:narrativeCompanion.root.position}),
+        onUse:id=>{const used=companionSkills.use(id,{game,...aim('right'),emitter:narrativeCompanion.root.position});if(used)narrativeCompanion.react({type:'companion-assist',name:companionSkills.name});return used;},
         onChange(open){resetInput();if(open&&vr.mode!=='xr')document.exitPointerLock?.();}});
       skillFX=companionSkills.unlocked?createCompanionSkillFX(world.T,world.scene,companionSkills):null;
       companionScene=world.scene;companionHero=character.id;

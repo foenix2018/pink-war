@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
-<link rel="icon" href="icons/favicon-32.png?v=3.66.3" sizes="32x32" type="image/png"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><link rel="stylesheet" href="./mission-loading.css?v=3.66.3"><script>document.documentElement.classList.toggle('pw-auto-story',!new URLSearchParams(location.search).has('visit'));</script>
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3.66.3" sizes="180x180">
-<link rel="manifest" href="manifest.webmanifest?v=3.66.3">
+<link rel="icon" href="icons/favicon-32.png?v=3.66.4" sizes="32x32" type="image/png"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><link rel="stylesheet" href="./mission-loading.css?v=3.66.4"><script>document.documentElement.classList.toggle('pw-auto-story',!new URLSearchParams(location.search).has('visit'));</script>
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3.66.4" sizes="180x180">
+<link rel="manifest" href="manifest.webmanifest?v=3.66.4">
 <meta name="apple-mobile-web-app-title" content="Pink Wars">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -79,7 +79,7 @@ body:not(.rainOn) #rainCurtain{display:none}
  #game #prompt{top:46%}
 }
 .photoMode #quickSettings,.photoMode #quickObjective{display:none!important}
-</style><link rel="stylesheet" href="fracture.css?v=3.66.3">
+</style><link rel="stylesheet" href="fracture.css?v=3.66.4">
 </head><body>
 <canvas id="view" aria-label="Environnement 3D de Vesper"></canvas>
 <div id="rainCurtain"></div><div id="game" aria-label="Commandes de la visite 3D"><div id="vignette"></div>
@@ -1898,18 +1898,18 @@ let missionLoading=null,missionMenu=null;
 function resumeMission(){gamePaused=false;keys.clear();firing=false;isAiming=false;combatWorld?.resume();}
 function toggleMissionPause(){if(missionMenu){missionMenu.isOpen?missionMenu.hide():missionMenu.show();}else{gamePaused=!gamePaused;combatWorld?.pause();}}
 async function boot(){try{
-  const [{DesktopGamepadInput},{createGamepadAid}]=await Promise.all([import('./desktop-input.js?v=3.66.3'),import('./ios-gamepad.js?v=3.66.3')]);
+  const [{DesktopGamepadInput},{createGamepadAid}]=await Promise.all([import('./desktop-input.js?v=3.66.4'),import('./ios-gamepad.js?v=3.66.4')]);
   legacyPS4Input=new DesktopGamepadInput();createGamepadAid();
- if(!referenceVisit){const {createMissionLoading}=await import('./mission-loading.js?v=3.66.3');missionLoading=createMissionLoading({mission:1,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});missionLoading.set(.08,'Chargement du scénario');}
- showVesperPrologue=(await import('./story-prologue.js?v=3.66.3')).showStoryPrologue;
+ if(!referenceVisit){const {createMissionLoading}=await import('./mission-loading.js?v=3.66.4');missionLoading=createMissionLoading({mission:1,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});missionLoading.set(.08,'Chargement du scénario');}
+ showVesperPrologue=(await import('./story-prologue.js?v=3.66.4')).showStoryPrologue;
  $('bootInfo').textContent='Construction de la mégalopole, bâtiments, détails et navigation…';
  await new Promise(r=>setTimeout(r,80));
  if(referenceVisit)buildScene();const atlas=createAtlas();const materialAtlas=referenceVisit?await v5LoadMaterial():null;
  $('bootInfo').textContent='Initialisation du moteur WebGPU…';
  if(!new URLSearchParams(location.search).has('visit')){
-  const {createPauseMenu}=await import('./fracture-menu.js?v=3.66.3');
+  const {createPauseMenu}=await import('./fracture-menu.js?v=3.66.4');
   missionMenu=createPauseMenu({title:'HISTOIRE / LE DERNIER SIGNAL',canOpen:()=>started,settingsSelectors:['#controlsPanel','#audioToggle'],onPause(){gamePaused=true;combatWorld?.pause();keys.clear();firing=false;isAiming=false;},onResume:resumeMission,onVR:()=>combatWorld?.enterVR(),onHome:async()=>{await combatWorld?.exitVR();location.assign('./index.html');}});missionMenu.setVisible(false);
-  const {createVesperCombat}=await import('./vesper-combat.js?v=3.66.3');missionLoading?.set(.16,'Ressources du secteur chargées');
+  const {createVesperCombat}=await import('./vesper-combat.js?v=3.66.4');missionLoading?.set(.16,'Ressources du secteur chargées');
   let renderFailed=false;
   const fail=error=>{
    console.warn('Vesper / échec du rendu, repli compatible :',error);
