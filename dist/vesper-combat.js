@@ -26,6 +26,7 @@ import {createFireBuffer} from './fire-input.js';
 import {createVesperAtmosphere,replacementTriangles} from './vesper-art.js';
 import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
+import {createAICompanion} from './ai-companions.js';
 import {createMissionXR,immersiveRendererPreferred} from './mission-xr.js';
 import {createGlove} from './hands.js';
 import {playFieldCue} from './m01-field-audio.js';
@@ -137,8 +138,9 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   let rig=null,gun=null,ready=false,pending=false,lastTime=0,held=false,ads=0,completed=false,lastStage=game.stage,journalOpen=false,checkpointPending=false;
   let xr=null;
   const skills=createCompanionSkills({characterId,mission:1,mode:'campaign'});
+  const companion=createAICompanion(T,scene,characterId);
   const skillMenu=createCompanionMenu({getStatus:()=>skills.snapshot(game),
-    onUse:id=>skills.use(id,{game,...aim()}),onChange(open){held=false;fireInput.reset();onMenuChange(open);if(open)document.exitPointerLock?.();}});
+    onUse:id=>{const used=skills.use(id,{game,...aim(),emitter:companion.root.position});if(used)companion.react({type:'companion-assist',name:skills.name});return used;},onChange(open){held=false;fireInput.reset();onMenuChange(open);if(open)document.exitPointerLock?.();}});
   const offerModels=new Map();
   // Actual RLH hands and production weapon geometry are already present while
   // the full canonical soldier rig decodes; there is no CSS weapon substitute.
@@ -262,6 +264,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     for(const event of game.drainEvents()){
       effects.event(event);armorFx.handle(event);
       if(event.type==='weapon')feel.reset();
+      if(event.type==='companion-shot'&&sound&&audio)playLaserShot(audio,'r9',.35);
       if(sound&&audio&&['circuit-isolated','workshop-power'].includes(event.type))playFieldCue(audio,'isolate',{source:event,listener:p,yaw:-s.yaw});
       if(sound&&audio&&event.type==='portals'&&event.count>0)for(const site of event.sites)playFieldCue(audio,'breach',{source:site,listener:p,yaw:-s.yaw});
       if(event.type==='enemy-shot'&&sound&&audio)playEnemyShot(audio,{form:event.form,source:event,listener:p,yaw:-s.yaw,occluded:game.blocked(event,{x:p.x,y:p.elevation+1.5,z:p.z})});
@@ -284,6 +287,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     objectiveMarker.textContent=behind?(objectiveAngle<0?'‹':'›'):Math.abs(altitude)>.6?(altitude>0?'↑':'↓'):'';
     objectiveMarker.style.background=objectiveMarker.textContent?'transparent':'#d8c6a0';
     objectiveMarker.style.font='18px/7px system-ui';
+    companion.update(dt,{game,camera:xr?.active?renderer.xr.getCamera(camera):camera,active:!s.free&&game.player.hp>0,tracked:!!xr?.active});
     effects.update(game,dt,camera);armorFx.update(game,dt);
     skills.update(dt,{game});skillMenu.refresh();
     gun?.userData.setFlash?.(game.state==='playing'&&!journalOpen&&(game.weapon.dual||feel.state.flash>0)&&!game.weapon.melee,game.time);
@@ -348,7 +352,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     get paused(){return journalOpen||skillMenu.isOpen;},
     get interaction(){return contextAction();},
     get layout(){return LEVEL1_MAP;},
-    restart(){location.assign(location.pathname+'?prologue=done&character='+characterId+'&v=3.66.5');},
+    restart(){location.assign(location.pathname+'?prologue=done&character='+characterId+'&v=3.67.0');},
     get checkpoint(){return checkpoint;},
     get objective(){return objective().text;},
     get playing(){return game.state==='playing'&&!completed;},
@@ -387,7 +391,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       capacity:game.weapon.capacity,ownedWeapons:[...game.ownedWeapons],offers:game.weaponOffers.map(o=>({...o})),campaign:game.campaign,journalOpen,
       enemies:game.enemies.length,hostileProjectiles:game.bullets.filter(b=>b.hostile).length,shots:game.bullets.filter(b=>!b.hostile).length,
       kills:game.kills,rig:!!rig,gun:!!gun,backend:renderer.isWebGLRenderer?'webgl':'webgpu',triangles:terrain.triangles,
-      art:missionArt.stats(),dressing:dressing.stats,salvage:salvage.stats,shadowing:atmosphere.shadows.stats(),lighting:{exposure:renderer.toneMappingExposure,ambient:atmosphere.ambient.intensity,sun:atmosphere.sun.intensity},pbr:missionArt.stats().pbr,effects:effects.stats(),companion:{name:characterId==='lylu'?'Cara':'Gaby',visible:false,materializationMission:7},position:{...getState().position},
+      art:missionArt.stats(),dressing:dressing.stats,salvage:salvage.stats,shadowing:atmosphere.shadows.stats(),lighting:{exposure:renderer.toneMappingExposure,ambient:atmosphere.ambient.intensity,sun:atmosphere.sun.intensity},pbr:missionArt.stats().pbr,effects:effects.stats(),companion:companion.snapshot(),position:{...getState().position},
       skills:skills.snapshot(game),skillsMenuOpen:skillMenu.isOpen,
       armor:{shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt},
       hostiles:game.enemies.map(e=>({id:e.id,x:e.x,y:e.elevation+e.aimHeight,z:e.z,hp:e.hp,awareness:e.awareness,tactic:e.combatPose,crouch:e.coverCrouch||0})),render:renderer.info.render};}

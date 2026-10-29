@@ -22,6 +22,7 @@ import {sightPoint} from './sight-line.js';
 import {GAME_VERSION,showLaunchError} from './launch-ui.js';
 import {syncMenuArtwork} from './menu-art.js';
 import {createAICompanion} from './ai-companions.js';
+import {companionAvailable} from './companion-escort.js';
 import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
 import {createCompanionSkillFX} from './companion-skill-fx.js';
@@ -466,6 +467,10 @@ function handleEvents() {
       const feel=weaponFeel.fire(event.weapon,event.power,game.player.crouched||aiming);
       lastShotAt=clock;recoil=feel.pitch;flashTimer=feel.flash;vr.haptic('shot', event.weapon,event.hand); weaponShotSound(event.weapon, event.power);
     }
+    if(event.type==='companion-shot'){
+      world.laserShot?.(event);
+      if(settings.sound&&audioContext)playLaserShot(audioContext,'r9',.35);
+    }
     if(event.type==='training-hit'){
       // Permanent marks belong to the articulated plate, not the empty world
       // coordinates it leaves behind when folding into its carrier.
@@ -859,10 +864,10 @@ function stepFrame(timestamp, xrFrame) {
       skillFX=companionSkills.unlocked?createCompanionSkillFX(world.T,world.scene,companionSkills):null;
       companionScene=world.scene;companionHero=character.id;
     }
-    // M01 retains the audio signatures; physical companions debut in M07.
-    const active=phase==='playing'&&companionSkills.unlocked;
+    const active=['playing','paused'].includes(phase)&&companionAvailable({mission:game.campaign?.level||1,mode:game.mode});
     const companionCamera=vr.mode==='xr'?world.renderer.xr.getCamera(world.camera):world.camera;
-    narrativeCompanion.update(dt,{game,camera:companionCamera,active,assistance:false});
+    const companionDt=phase==='playing'&&!rangeArmoryMenu?.isOpen&&!skillMenu.isOpen?dt:0;
+    narrativeCompanion.update(companionDt,{game,camera:companionCamera,active,tracked:vr.mode==='xr'});
     skillMenu.setVisible(phase==='playing');skillMenu.refresh();
     if(active&&!skillMenu.isOpen)companionSkills.update(dt,{game});
     skillFX?.update();
@@ -900,7 +905,7 @@ try {
     try{await world.warm();world.render();}catch(error){world=await world.recover({quality:'low'});game.replaceObstacles(world.obstacles);world.lobby(0);await world.warm();world.render();}
   }
   selectMode(selectedMode);$('loading-screen').hidden=true;$('play-button').disabled = false;$('outfit-button').disabled=false;
-  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ version:GAME_VERSION,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,phase, view, frames,recovering,recoveryAttempts,graphics:world.graphics, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,aiming,aimBlend,cameraFov:world.camera.fov,laserEffects:world.laserStats?.(),city:world.cityStats?.(),vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelSource:world.soldier.actor?.data.source,modelNativeMotion:world.soldier.nativeMotion,modelNativeBones:world.soldier.nativeSkeleton?.bones.length,modelShadowUnit:world.soldier.shadowUnit?{profile:world.soldier.shadowUnit.profile,helmet:world.soldier.shadowUnit.armour.helmet.name,cape:world.soldier.shadowUnit.cape.anchor.visible,tabard:false}:null,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:settings.music!==false,musicPlaying:screenMusicSnapshot().playing,musicSection:screenMusicSnapshot().surface,musicVoices:screenMusicSnapshot().voices||0,audioState:audioContext?.state||'idle',weaponFeedback:{...weaponFeel.state},previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
+  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ version:GAME_VERSION,companion:narrativeCompanion?.snapshot(),skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,phase, view, frames,recovering,recoveryAttempts,graphics:world.graphics, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,aiming,aimBlend,cameraFov:world.camera.fov,laserEffects:world.laserStats?.(),city:world.cityStats?.(),vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelSource:world.soldier.actor?.data.source,modelNativeMotion:world.soldier.nativeMotion,modelNativeBones:world.soldier.nativeSkeleton?.bones.length,modelShadowUnit:world.soldier.shadowUnit?{profile:world.soldier.shadowUnit.profile,helmet:world.soldier.shadowUnit.armour.helmet.name,cape:world.soldier.shadowUnit.cape.anchor.visible,tabard:false}:null,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:settings.music!==false,musicPlaying:screenMusicSnapshot().playing,musicSection:screenMusicSnapshot().surface,musicVoices:screenMusicSnapshot().voices||0,audioState:audioContext?.state||'idle',weaponFeedback:{...weaponFeel.state},previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
     selectedMode,guidance:game.guidance?.()||null,weaponModels:{...world.fpsGun.userData.kenneyAssets},training:game.mode==='training'?game.snapshot().training:null,rangeTargets:world.rangeArt.targetCount,campaignArt:world.campaignArt.stats(),inputs: { move: { ...move }, look: { ...look }, firing: firingPointers.size > 0 || keys.has('Space') }, drawCalls: world.renderer.info.render.calls, ...game.snapshot(),equipment:equipmentForCharacter(game.wave,character.id) }) });
   bindCanvas();world.renderer.setAnimationLoop(frame);
   $('launch-status').textContent=`V. ${GAME_VERSION} · prêt à lancer`;

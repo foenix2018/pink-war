@@ -1,3 +1,5 @@
+> **MISE À JOUR DU CRÉATEUR — 29 octobre 2026 :** Gaby accompagne GHJU et Cara accompagne LYLU physiquement dès M01, ainsi que dans l’Arène et au stand. Elles flottent au-dessus et légèrement derrière le héros, assurent le tir de protection et l’éclairage dans le noir. Cette instruction remplace les mentions antérieures d’une première apparition physique à M07. La progression des compétences manuelles avancées reste à M07. [Implémentation 3.67](MISE_A_JOUR_367.md).
+
 > **ADDENDUM CANON — 22 octobre 2026, PRIORITAIRE SUR TOUTE DESCRIPTION CONTRADICTOIRE**  
 > **GHJU** est une **fille de petite taille, blonde aux yeux bleus**. En jeu, préserver strictement son modèle **Shadow Unit** existant (silhouette, casque fermé, armure graphite, tabard, cape, accents roses, squelette/animations). Ses cheveux et ses yeux ne sont à montrer que dans des séquences sans casque, selon le chara-design validé ; ne pas modifier le modèle 3D sur la base d'un concept art.  
 > **LYLU** est un **garçon** ; préserver strictement son modèle Shadow Unit actuel et ses accents bleus. Ne pas inventer son visage.  

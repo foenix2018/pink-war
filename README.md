@@ -1,5 +1,7 @@
 # Pink Wars — La Fracture
 
+Version 3.67 : **Gaby et Cara en escorte dès M01, dans l’Arène et au stand** — flottaison au-dessus et derrière le héros, tirs de protection sous 50 % de santé et torche automatique dans le noir. Suivi du corps en vue FPS/3P et de la tête en XR. [Détails](docs/pink-wars/MISE_A_JOUR_367.md) · [Arène](https://pink-war.vercel.app/?mode=arena&v=3.67.0) · [Stand](https://pink-war.vercel.app/?mode=training&v=3.67.0).
+
 Version 3.66.5 : **fin liseré rose sur Cara** — une bordure rose discrète suit un côté de chacun de ses six panneaux, avec optique et éclairage principal bleus. [Voir Cara en 3D](https://pink-war.vercel.app/galerie.html?model=CARA&v=3.66.5).
 
 Version 3.66.4 : **Gaby et Cara remodelées** — coques épaisses articulées, châssis interne, optiques et aérations détaillées. Quatre protections arrondies roses pour Gaby, six panneaux graphite et bleus pour Cara ; ouverture lors des compétences et cadrage portrait ajusté. [Détails](docs/pink-wars/MISE_A_JOUR_366_4.md) · [Gaby en 3D](https://pink-war.vercel.app/galerie.html?model=GABY&v=3.66.4) · [Cara en 3D](https://pink-war.vercel.app/galerie.html?model=CARA&v=3.66.4).

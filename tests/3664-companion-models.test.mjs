@@ -38,7 +38,8 @@ for(const [hero,name,petals,color]of [['ghju','Gaby',4,0xff65b1],['lylu','Cara',
   for(let i=0;i<360;i++){g.time+=1/60;portrait.update(1/60,{game:g,camera,assistance:false});}
   assert.ok(portrait.root.position.z>0,'idle companion returns to the shoulder after its greeting');portrait.react({type:'companion-assist',name});
   for(let i=0;i<40;i++){g.time+=1/60;portrait.update(1/60,{game:g,camera,assistance:false});}
-  scene.updateMatrixWorld(true);assert.ok(portrait.root.position.z<-.9,'a manual skill brings the model into view again');
+  assert.ok(portrait.root.position.z>.25,'casting keeps the companion behind the hero');
+  camera.position.set(0,2.4,4.8);camera.lookAt(0,1.5,0);camera.updateMatrixWorld(true);scene.updateMatrixWorld(true);
   portrait.root.traverse(mesh=>{if(!mesh.isMesh)return;const p=mesh.geometry.attributes.position;for(let i=0;i<p.count;i+=17){const v=mesh.getVertexPosition(i,new T.Vector3()).applyMatrix4(mesh.matrixWorld).project(camera);assert.ok(Math.abs(v.x)<1&&Math.abs(v.y)<1,'the actual opened shell fits inside a portrait viewport');}});
   assert.equal(portrait.snapshot().assists,0);portrait.dispose();
  });

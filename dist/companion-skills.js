@@ -1,12 +1,13 @@
 import {segmentBox,traceEnemyHit} from './game-logic.js';
 
-export const COMPANION_INTRO_MISSION=7;
+export const COMPANION_INTRO_MISSION=1;
+export const COMPANION_SKILL_MISSION=7;
 export const PHASE_RECHARGE=30;
 const finite=p=>p&&[p.x,p.y,p.z].every(Number.isFinite);
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
 const center=e=>({x:e.x,y:(e.elevation||0)+(e.aimHeight||1.25),z:e.z});
 export const companionIdentity=id=>id==='lylu'?{name:'Cara',hero:'LYLU',color:0x57baff}:{name:'Gaby',hero:'GHJU',color:0xff65b1};
-export const companionUnlocked=({mission=1,mode='campaign'}={})=>mode==='lab'||mode==='campaign'&&mission>=COMPANION_INTRO_MISSION;
+export const companionUnlocked=({mission=1,mode='campaign'}={})=>mode==='lab'||mode==='campaign'&&mission>=COMPANION_SKILL_MISSION;
 
 // Aim is sampled once. Energy spheres have physical flight and never home in on
 // a moving/hidden enemy. Both the target and the blast respect real colliders.

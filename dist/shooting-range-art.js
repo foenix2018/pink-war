@@ -121,6 +121,7 @@ export function createShootingRangeArt(T,scene,options={}){
   const pbr=createRangeMaterials(T,mats,textures,options);
   const indoorFill=new T.HemisphereLight(0xfff6eb,0xa5a098,.78);
   indoorFill.name='Eclairage diffus du stand';
+  indoorFill.userData.indoorFill=true;
   root.add(indoorFill);
   root.add(new T.AmbientLight(0xf0eade,.28));
   // Two broad, neutral task lights model the ceiling fixtures without blue sunlight indoors.

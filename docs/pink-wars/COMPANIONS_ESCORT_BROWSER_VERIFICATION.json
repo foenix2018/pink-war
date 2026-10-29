@@ -1,0 +1,593 @@
+{
+  "version": "3.67.0",
+  "main": {
+    "reports": [
+      {
+        "mode": "arena",
+        "id": "ghju",
+        "version": "3.67.0",
+        "orbit": {
+          "dx": -0.45430972780650936,
+          "dy": 2.098495093943992,
+          "dz": 0.6014192693802016,
+          "yaw": 0
+        },
+        "companion": {
+          "name": "Gaby",
+          "state": "Follow",
+          "visible": true,
+          "energy": 100,
+          "cooldown": 0,
+          "assists": 0,
+          "position": [
+            -0.45430972780650936,
+            2.098495093943992,
+            19.68469426938023
+          ],
+          "torch": {
+            "on": false,
+            "power": 0,
+            "illumination": 1.7629955516443256,
+            "distance": 14.64626369956018
+          },
+          "model": {
+            "name": "Gaby",
+            "revision": "phase-shell-v2",
+            "petals": 4,
+            "bones": 4,
+            "draws": 11,
+            "triangles": 24448,
+            "opening": 0.09999988132024348
+          }
+        },
+        "support": {
+          "safe": {
+            "name": "Gaby",
+            "state": "Follow",
+            "visible": true,
+            "energy": 100,
+            "cooldown": 0,
+            "assists": 0,
+            "position": [
+              -0.4180111903939501,
+              2.015065072273302,
+              19.629403468423106
+            ],
+            "torch": {
+              "on": false,
+              "power": 0,
+              "illumination": 1.7629955516443256,
+              "distance": 14.581298346137768
+            },
+            "model": {
+              "name": "Gaby",
+              "revision": "phase-shell-v2",
+              "petals": 4,
+              "bones": 4,
+              "draws": 11,
+              "triangles": 24448,
+              "opening": 0.09999999999845666
+            }
+          },
+          "low": {
+            "name": "Gaby",
+            "state": "Cooldown",
+            "visible": true,
+            "energy": 83,
+            "cooldown": 0.6833219999999991,
+            "assists": 2,
+            "position": [
+              -0.34550450017616535,
+              2.0617307131082483,
+              19.69126956102416
+            ],
+            "torch": {
+              "on": false,
+              "power": 0,
+              "illumination": 1.7629955516443256,
+              "distance": 14.646035238469251
+            },
+            "model": {
+              "name": "Gaby",
+              "revision": "phase-shell-v2",
+              "petals": 4,
+              "bones": 4,
+              "draws": 11,
+              "triangles": 24448,
+              "opening": 0.19986765594571576
+            }
+          },
+          "impact": {
+            "hp": 976,
+            "ammo": [
+              12,
+              24,
+              5,
+              6,
+              4,
+              0,
+              8,
+              24,
+              36
+            ],
+            "shots": 2
+          },
+          "recovered": {
+            "name": "Gaby",
+            "state": "Follow",
+            "visible": true,
+            "energy": 87,
+            "cooldown": 0,
+            "assists": 2,
+            "position": [
+              -0.3706999568862473,
+              2.1041051091103187,
+              19.693118059616065
+            ],
+            "torch": {
+              "on": false,
+              "power": 0,
+              "illumination": 1.7629955516443256,
+              "distance": 14.652902427200026
+            },
+            "model": {
+              "name": "Gaby",
+              "revision": "phase-shell-v2",
+              "petals": 4,
+              "bones": 4,
+              "draws": 11,
+              "triangles": 24448,
+              "opening": 0.10002608697500748
+            }
+          },
+          "dark": {
+            "on": true,
+            "power": 0.9953308302180973,
+            "illumination": 0,
+            "distance": 14.612206933910816
+          },
+          "light": {
+            "on": false,
+            "power": 0.0008106118944736126,
+            "illumination": 1.7629955516443256,
+            "distance": 14.580549522192033
+          }
+        },
+        "errors": [],
+        "missing": []
+      },
+      {
+        "mode": "arena",
+        "id": "lylu",
+        "version": "3.67.0",
+        "orbit": {
+          "dx": 0.3677198133191576,
+          "dy": 2.1015049060560083,
+          "dz": 0.6008334911813584,
+          "yaw": 0
+        },
+        "companion": {
+          "name": "Cara",
+          "state": "Follow",
+          "visible": true,
+          "energy": 100,
+          "cooldown": 0,
+          "assists": 0,
+          "position": [
+            0.3677198133191576,
+            2.1015049060560083,
+            19.684108491181387
+          ],
+          "torch": {
+            "on": false,
+            "power": 0,
+            "illumination": 1.7629955516443256,
+            "distance": 14.632932913078111
+          },
+          "model": {
+            "name": "Cara",
+            "revision": "phase-shell-v2",
+            "petals": 6,
+            "bones": 6,
+            "draws": 12,
+            "triangles": 25584,
+            "opening": 0.09999988132024348
+          }
+        },
+        "support": {
+          "safe": {
+            "name": "Cara",
+            "state": "Follow",
+            "visible": true,
+            "energy": 100,
+            "cooldown": 0,
+            "assists": 0,
+            "position": [
+              0.34948465446634636,
+              2.1849349277266983,
+              19.69711345810338
+            ],
+            "torch": {
+              "on": false,
+              "power": 0,
+              "illumination": 1.7629955516443256,
+              "distance": 14.654256692906078
+            },
+            "model": {
+              "name": "Cara",
+              "revision": "phase-shell-v2",
+              "petals": 6,
+              "bones": 6,
+              "draws": 12,
+              "triangles": 25584,
+              "opening": 0.09999999999845666
+            }
+          },
+          "low": {
+            "name": "Cara",
+            "state": "Protect",
+            "visible": true,
+            "energy": 65,
+            "cooldown": 0.883333000000006,
+            "assists": 3,
+            "position": [
+              0.4373952134529884,
+              2.138269286891752,
+              19.645640439079102
+            ],
+            "torch": {
+              "on": false,
+              "power": 0,
+              "illumination": 1.7629955516443256,
+              "distance": 14.600815788427019
+            },
+            "model": {
+              "name": "Cara",
+              "revision": "phase-shell-v2",
+              "petals": 6,
+              "bones": 6,
+              "draws": 12,
+              "triangles": 25584,
+              "opening": 0.2875514589467219
+            }
+          },
+          "impact": {
+            "hp": 968,
+            "ammo": [
+              12,
+              24,
+              5,
+              6,
+              4,
+              0,
+              8,
+              24,
+              36
+            ],
+            "shots": 3
+          },
+          "recovered": {
+            "name": "Cara",
+            "state": "Follow",
+            "visible": true,
+            "energy": 69,
+            "cooldown": 0,
+            "assists": 3,
+            "position": [
+              0.4538696547845333,
+              2.0958948908896815,
+              19.628953748285447
+            ],
+            "torch": {
+              "on": false,
+              "power": 0,
+              "illumination": 1.7629955516443256,
+              "distance": 14.57992953910341
+            },
+            "model": {
+              "name": "Cara",
+              "revision": "phase-shell-v2",
+              "petals": 6,
+              "bones": 6,
+              "draws": 12,
+              "triangles": 25584,
+              "opening": 0.10368426261316006
+            }
+          },
+          "dark": {
+            "on": true,
+            "power": 0.9953308302180973,
+            "illumination": 0,
+            "distance": 14.611424496829661
+          },
+          "light": {
+            "on": false,
+            "power": 0.0008106118944736126,
+            "illumination": 1.7629955516443256,
+            "distance": 14.656622613660655
+          }
+        },
+        "errors": [],
+        "missing": []
+      },
+      {
+        "mode": "training",
+        "id": "ghju",
+        "version": "3.67.0",
+        "orbit": {
+          "dx": -0.45430972780650936,
+          "dy": 2.0984950939439915,
+          "dz": 0.5768449222675258,
+          "yaw": 0
+        },
+        "companion": {
+          "name": "Gaby",
+          "state": "Follow",
+          "visible": true,
+          "energy": 100,
+          "cooldown": 0,
+          "assists": 0,
+          "position": [
+            -0.45430972780650936,
+            2.0984950939439915,
+            21.27684492226753
+          ],
+          "torch": {
+            "on": false,
+            "power": 0,
+            "illumination": 1.1606118631930038,
+            "distance": 14.621401455011318
+          },
+          "model": {
+            "name": "Gaby",
+            "revision": "phase-shell-v2",
+            "petals": 4,
+            "bones": 4,
+            "draws": 11,
+            "triangles": 24448,
+            "opening": 0.09999988132024348
+          }
+        },
+        "support": null,
+        "errors": [],
+        "missing": []
+      },
+      {
+        "mode": "training",
+        "id": "lylu",
+        "version": "3.67.0",
+        "orbit": {
+          "dx": 0.36771981331915765,
+          "dy": 2.1015049060560087,
+          "dz": 0.5762591440686826,
+          "yaw": 0
+        },
+        "companion": {
+          "name": "Cara",
+          "state": "Follow",
+          "visible": true,
+          "energy": 100,
+          "cooldown": 0,
+          "assists": 0,
+          "position": [
+            0.36771981331915765,
+            2.1015049060560087,
+            21.276259144068685
+          ],
+          "torch": {
+            "on": false,
+            "power": 0,
+            "illumination": 1.1557902625596055,
+            "distance": 14.60807601864481
+          },
+          "model": {
+            "name": "Cara",
+            "revision": "phase-shell-v2",
+            "petals": 6,
+            "bones": 6,
+            "draws": 12,
+            "triangles": 25584,
+            "opening": 0.09999988132024348
+          }
+        },
+        "support": null,
+        "errors": [],
+        "missing": []
+      }
+    ],
+    "note": "Real menu and W/V input, reduced SwiftShader framebuffer and manual frames. Prepared stationary threat in a real clear firing lane, health thresholds, and dimmed/restored environment lights; physics and colliders retained. Capture camera prepared."
+  },
+  "mission1": {
+    "reports": [
+      {
+        "id": "ghju",
+        "start": {
+          "name": "Gaby",
+          "companion": {
+            "name": "Gaby",
+            "state": "Follow",
+            "visible": true,
+            "energy": 100,
+            "cooldown": 0,
+            "assists": 0,
+            "position": [
+              -50.51574153859637,
+              2.0951267243966463,
+              91.53591797759245
+            ],
+            "torch": {
+              "on": false,
+              "power": 0,
+              "illumination": 0.9259869522807861,
+              "distance": 14.611547933507866
+            },
+            "model": {
+              "name": "Gaby",
+              "revision": "phase-shell-v2",
+              "petals": 4,
+              "bones": 4,
+              "draws": 11,
+              "triangles": 24448,
+              "opening": 0.09992190504446255
+            }
+          },
+          "position": {
+            "x": -50,
+            "y": 1.73,
+            "z": 91
+          }
+        },
+        "room": {
+          "companion": {
+            "name": "Gaby",
+            "state": "Follow",
+            "visible": true,
+            "energy": 100,
+            "cooldown": 0,
+            "assists": 0,
+            "position": [
+              -53.147050067303496,
+              2.036069377723983,
+              25.601132804486447
+            ],
+            "torch": {
+              "on": true,
+              "power": 0.9999891715468076,
+              "illumination": 0.02224936121069968,
+              "distance": 14.51174032600271
+            },
+            "model": {
+              "name": "Gaby",
+              "revision": "phase-shell-v2",
+              "petals": 4,
+              "bones": 4,
+              "draws": 11,
+              "triangles": 24448,
+              "opening": 0.09999999997611057
+            }
+          },
+          "player": {
+            "x": -53.5,
+            "z": 25,
+            "elevation": 0,
+            "hp": 100,
+            "yaw": -0.14,
+            "verticalSpeed": 0,
+            "grounded": true,
+            "jumpHeld": false,
+            "crouched": false,
+            "airJumps": 0,
+            "jumpImpulseX": 0,
+            "jumpImpulseZ": 0,
+            "lastGroundedAt": 2.461666666666663,
+            "shield": 60,
+            "onLift": null
+          }
+        },
+        "manualSkillsLocked": true,
+        "errors": [],
+        "missing": []
+      },
+      {
+        "id": "lylu",
+        "start": {
+          "name": "Cara",
+          "companion": {
+            "name": "Cara",
+            "state": "Follow",
+            "visible": true,
+            "energy": 100,
+            "cooldown": 0,
+            "assists": 0,
+            "position": [
+              -49.6735297349101,
+              2.104873275603354,
+              91.60026744219118
+            ],
+            "torch": {
+              "on": false,
+              "power": 0,
+              "illumination": 0.9259869522807861,
+              "distance": 14.549683478533836
+            },
+            "model": {
+              "name": "Cara",
+              "revision": "phase-shell-v2",
+              "petals": 6,
+              "bones": 6,
+              "draws": 12,
+              "triangles": 25584,
+              "opening": 0.09992190504446255
+            }
+          },
+          "position": {
+            "x": -50,
+            "y": 1.73,
+            "z": 91
+          }
+        },
+        "room": {
+          "companion": {
+            "name": "Cara",
+            "state": "Follow",
+            "visible": true,
+            "energy": 100,
+            "cooldown": 0,
+            "assists": 0,
+            "position": [
+              -53.24273796722389,
+              2.163930622276017,
+              25.650982839018525
+            ],
+            "torch": {
+              "on": true,
+              "power": 0.9999891715468076,
+              "illumination": 0.02224936121069968,
+              "distance": 14.574145998490549
+            },
+            "model": {
+              "name": "Cara",
+              "revision": "phase-shell-v2",
+              "petals": 6,
+              "bones": 6,
+              "draws": 12,
+              "triangles": 25584,
+              "opening": 0.09999999997611057
+            }
+          },
+          "player": {
+            "x": -53.5,
+            "z": 25,
+            "elevation": 0,
+            "hp": 100,
+            "yaw": -0.14,
+            "verticalSpeed": 0,
+            "grounded": true,
+            "jumpHeld": false,
+            "crouched": false,
+            "airJumps": 0,
+            "jumpImpulseX": 0,
+            "jumpImpulseZ": 0,
+            "lastGroundedAt": 2.461666666666663,
+            "shield": 60,
+            "onLift": null
+          }
+        },
+        "manualSkillsLocked": true,
+        "errors": [],
+        "missing": []
+      }
+    ],
+    "note": "Real M01 production page startup for both heroes, actual update/physics and roofed workshop; prepared position and simulation frames, manual camera torch off, enemies disabled. Reduced SwiftShader framebuffer, no physical Safari/Quest."
+  },
+  "targetedTests": {
+    "pass": 34,
+    "fail": 0
+  },
+  "limits": "Local Chromium/SwiftShader with reduced framebuffer; prepared threat, health, lighting and room positions; no physical Safari/iPhone or Quest test and no hardware FPS measured.",
+  "fullTests": {
+    "pass": 633,
+    "fail": 0,
+    "skipped": 0
+  }
+}

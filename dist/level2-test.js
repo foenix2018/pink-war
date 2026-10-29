@@ -653,7 +653,7 @@ function gameTick(dt){
   if(e.type==='over'){running=false;shade.style.display='grid';$('start').textContent='RECOMMENCER LE TEST →';$('status').textContent='Intervention interrompue — santé épuisée';document.exitPointerLock?.();}
  }
  combatEffects?.update(game,dt,camera);armorFx.update(game,dt);
- companion?.update(dt,{game,camera,active:false});
+ companion?.update(dt,{game,camera:xr?.active?renderer.xr.getCamera(camera):camera,active:running&&!paused,assistance:true,tracked:!!xr?.active});
  companionSkills?.update(dt,{game});skillMenu?.refresh();
  environmentAudio?.update(dt,{active:running&&enableAudio,position:game.player,moving:Math.hypot(x,z)>.1,grounded:game.player.grounded,elevation:game.player.elevation,yaw,probes:game.enemies});
  if(game.player.hp>0)$('damage').style.boxShadow='inset 0 0 '+(100-game.player.hp)*1.2+'px #c52c5e44';
