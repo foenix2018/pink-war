@@ -33,6 +33,7 @@ const palette=(profile)=>({
  violet:new T.MeshStandardMaterial({color:0x9870cf,metalness:.5,roughness:.4}),
  monster:new T.MeshStandardMaterial({color:0x4d5861,metalness:.5,roughness:.5})
 });
+let arPoseLocked=false;
 let item=null, requestId=0, running=false, autoRotate=true, bearing=.48, elevation=.18, zoom=4.1, previousTime=0, exportUrls=[], arReady=false;
 const weaponNames={'VX-9':0,'NEXUS V9':1,'ARES X9':2,'THORN':3,'NOVA':4,'AURORA':5,'M–12':6,'VX-9 DUO':7,'VORTEX AR-7':8};
 const enemyForms={'REMPART':'bulwark','SYNTH N-08':'synth','POURSUIVANT':'stalker','BRUTE':'brute','TRAQUEUR':'listener','RAMPANT':'scuttler','SONDE S-03':'probe'};
@@ -140,7 +141,7 @@ function draw(now){
   if(autoRotate)bearing+=dt*.40;
   camera.position.set(zoom*Math.sin(bearing)*Math.cos(elevation),zoom*Math.sin(elevation)+.15,zoom*Math.cos(bearing)*Math.cos(elevation));
   camera.lookAt(0,0,0);
-  try{item.animate?.(now/1000,dt);
+  try{if(!arPoseLocked)item.animate?.(now/1000,dt);
    // Ground every gallery entry on the same pedestal, including animated enemies and weapons.
    // Prefer anatomical foot bones for soldiers; other models use their visible geometry bounds.
    pivot.updateMatrixWorld(true);
@@ -198,6 +199,8 @@ window.galleryAR=async()=>{
   }else setStatus('AR indisponible sur ce navigateur.');
   return;
  }
+ arPoseLocked=true;
+ let inspectionHands=null;
  arButton.disabled=true;
  setStatus('Conversion du modèle '+active.name+' pour la réalité augmentée…');
  try{
@@ -215,25 +218,10 @@ window.galleryAR=async()=>{
     }
    });
    if(active.soldier){
-    const [{createGlove},{poseUnarmedForInspection}]=await Promise.all([import('./hands.js'),import('./rlh-firefighter.js')]);
-    const inspectionGloves=[createGlove(active.kit.gloves,{mirror:true,sleeve:false}),createGlove(active.kit.gloves,{mirror:false,sleeve:false})];
-    for(const glove of inspectionGloves)active.root.add(glove);
-    poseUnarmedForInspection(active.soldier,inspectionGloves,.016,{mirrorFromRight:false});
-    // AR-only anatomical correction: both hands hang beside the thighs with
-    // fingers pointing down, rather than inheriting the weapon grip's wrist roll.
-    // Keep the native RLH glove meshes, textures and finger articulation.
-    const wristCenters=[-.315,.315];
-    for(let side=0;side<2;side++){
-      const glove=inspectionGloves[side],x=wristCenters[side];
-      glove.quaternion.identity();
-      glove.scale.set(1,1,1);
-      glove.position.set(x,1.005,-.02);
-      // The glove adapter's local +Z points along the fingers when relaxed.
-      // Rotate the adapter so fingers face the floor, palms face the legs.
-      glove.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3(0,-1,0));
-      if(side===0)glove.rotateY(Math.PI);
-      glove.userData.animate({relax:1,grip:0,trigger:0,reload:0},.016);
-    }
+    // Attach the actual rigged RLH gloves to the character's wrist bones;
+    // no guessed XYZ offsets and no weapon grip adapter rotations.
+    const {attachNativeARHands}=await import('./gallery-ar-hands.js');
+    inspectionHands=attachNativeARHands(active.soldier,active.kit);
     active.soldier.shadowUnit?.cape?.update?.(0,'idle',0);
    }
    active.root.updateMatrixWorld(true);
@@ -273,7 +261,8 @@ window.galleryAR=async()=>{
     if(size.y>.01){const scale=(active.name==='GHJU'?1.7:1.8)/size.y;for(const mesh of exportRoot.children){mesh.position.sub(center).multiplyScalar(scale);mesh.scale.multiplyScalar(scale);}}
    }
    const bytes=await new USDZExporter().parseAsync(exportRoot,{maxTextureSize:1024});
-   if(active.soldier){active.root.children.filter(c=>c.userData?.rlh&&c!==active.soldier.freeHand).forEach(c=>{if(c.parent===active.root)c.removeFromParent();});active.soldier.gun.visible=true;active.soldier.freeHand.visible=true;}
+   inspectionHands?.dispose();inspectionHands=null;
+   if(active.soldier){active.soldier.gun.visible=true;active.soldier.freeHand.visible=true;}
    const url=URL.createObjectURL(new Blob([bytes],{type:'model/vnd.usdz+zip'}));exportUrls.push(url);modelViewer.setAttribute('ios-src',url);
    // Quick Look opens from the second direct user gesture, after conversion.
   }else{
@@ -287,7 +276,12 @@ window.galleryAR=async()=>{
   arReady=true;arButton.textContent='LANCER EN AR';
   setStatus(isIOS?'Fichier USDZ prêt : appuyer sur LANCER EN AR pour ouvrir Quick Look.':'Modèle GLB prêt : appuyer sur LANCER EN AR.');
  }catch(e){arReady=false;setStatus('AR '+active.name+' : '+(e.message||e)+' · '+String(e.stack||'').slice(0,350));}
- finally{arButton.disabled=!item;}
+ finally{
+  inspectionHands?.dispose();
+  if(active.soldier){active.soldier.gun.visible=true;active.soldier.freeHand.visible=true;}
+  arPoseLocked=false;
+  arButton.disabled=!item;
+ }
 };
 const touches=new Map();let drag=null;
 canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);touches.set(e.pointerId,[e.clientX,e.clientY]);drag=[e.clientX,e.clientY];autoRotate=false;$('rotation').textContent='⟳ ROTATION AUTO : OFF';});
