@@ -218,7 +218,7 @@ window.galleryAR=async()=>{
     const [{createGlove},{poseUnarmedForInspection}]=await Promise.all([import('./hands.js'),import('./rlh-firefighter.js')]);
     const inspectionGloves=[createGlove(active.kit.gloves,{mirror:true,sleeve:false}),createGlove(active.kit.gloves,{mirror:false,sleeve:false})];
     for(const glove of inspectionGloves)active.root.add(glove);
-    poseUnarmedForInspection(active.soldier,inspectionGloves);
+    poseUnarmedForInspection(active.soldier,inspectionGloves,.016,{mirrorFromRight:false});
     active.soldier.shadowUnit?.cape?.update?.(0,'idle',0);
    }
    active.root.updateMatrixWorld(true);
