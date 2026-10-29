@@ -27,6 +27,8 @@ import {createVesperAtmosphere,replacementTriangles} from './vesper-art.js';
 import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
 import {createAICompanion} from './ai-companions.js';
+import {readPreferredView,savePreferredView,normalizeView} from './view-options.js';
+import {thirdPersonPosition} from './third-person-camera.js';
 import {createMissionXR,immersiveRendererPreferred} from './mission-xr.js';
 import {createGlove} from './hands.js';
 import {playFieldCue} from './m01-field-audio.js';
@@ -137,6 +139,8 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const fireInput=createFireBuffer();
   let rig=null,gun=null,ready=false,pending=false,lastTime=0,held=false,ads=0,completed=false,lastStage=game.stage,journalOpen=false,checkpointPending=false;
   let xr=null;
+  let view=readPreferredView(),rigPromise=null;
+  const effectiveView=()=>xr?.active||!rig?'fps':view;
   const skills=createCompanionSkills({characterId,mission:1,mode:'campaign'});
   const companion=createAICompanion(T,scene,characterId);
   const skillMenu=createCompanionMenu({getStatus:()=>skills.snapshot(game),
@@ -197,7 +201,8 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     for(const o of obstacles){const hit=segmentBox(camera.position,end,o);if(hit!==null&&hit<nearest)nearest=hit;}
     for(const e of game.enemies){const hit=traceEnemyHit(camera.position,end,e);if(hit&&hit.t<nearest)nearest=hit.t;}
     const target=end.clone().lerp(camera.position,1-nearest);
-    const muzzle=gun?.userData.flashFor?.(game.nextDualHand)||gun?.userData.flash;if(muzzle){muzzle.updateWorldMatrix(true,false);muzzle.getWorldPosition(origin);}else origin.copy(camera.position).addScaledVector(forward,.28);
+    const heldGun=effectiveView()==='third'?rig?.model.gun:gun;
+    const muzzle=heldGun?.userData.flashFor?.(game.nextDualHand)||heldGun?.userData.flash;if(muzzle){muzzle.updateWorldMatrix(true,false);muzzle.getWorldPosition(origin);}else origin.copy(camera.position).addScaledVector(forward,.28);
     for(const o of obstacles){const hit=segmentBox(camera.position,origin,o);if(hit!==null){origin.lerpVectors(camera.position,origin,Math.max(0,hit-.02));break;}}
     return {origin,direction:target.sub(origin).normalize()};
   }
@@ -205,20 +210,34 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     if(xr?.active){xr.syncPose();return;}
     ads+=(Number(s.aiming)-ads)*(1-Math.exp(-dt*14));
     camera.fov=magnifiedFov(64,1+((OPTICS[game.weapon.id]?.magnification||1)-1)*ads);camera.updateProjectionMatrix();
-    camera.position.set(s.position.x,s.position.y-(s.crouching?.42:0),s.position.z);
+    if(effectiveView()==='third'){
+      const p=thirdPersonPosition(game.player,-s.yaw,s.pitch,obstacles,characterId==='lylu'?1.71:1.61);camera.position.set(p.x,p.y,p.z);
+    }else camera.position.set(s.position.x,s.position.y-(s.crouching?.42:0),s.position.z);
     const kickPose=recoilPose(game.weapon.id,feel.state,{aiming:ads,dual:!!game.weapon.dual,magnification:OPTICS[game.weapon.id]?.magnification||1});
     camera.rotation.set(s.pitch+kickPose.cameraPitch,-s.yaw+kickPose.cameraYaw,0,'YXZ');
     if(gun){
       const pose=flatSightPose(OPTICS[game.weapon.id],ads);
       gun.position.set(pose.x+kickPose.x,pose.y+kickPose.y,pose.z+kickPose.z);gun.rotation.set(kickPose.pitch,kickPose.yaw+pose.yaw,kickPose.roll+pose.roll);
       const strike=game.weapon.melee?0:meleeKick(game);if(strike){gun.position.x+=MELEE_POSE.x*strike;gun.position.y+=MELEE_POSE.y*strike;gun.position.z+=MELEE_POSE.z*strike;gun.rotation.x+=MELEE_POSE.pitch*strike;}
-      gun.visible=!s.free;gun.userData.setSight?.(ads>.55,camera);
+      gun.visible=!s.free&&effectiveView()==='fps';gun.userData.setSight?.(ads>.55,camera);
       gun.userData.setCombatState?.({time:game.time,dualState:game.dual,ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,reloading:game.reloadRemaining>0,
         reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,charge:game.charge,kick:feel.state.kick,heat:feel.state.heat,bladeHeld:game.weapon.melee&&held});
       if(gun.userData.index!==game.weaponIndex)gun.userData.setVariant(game.weaponIndex);
       gun.userData.animateHands?.(Number(held),.5,game.reloadRemaining>0?.8:0,dt);
     }
+    if(rig)rig.model.root.visible=!s.free&&effectiveView()==='third';
     camera.updateMatrixWorld(true);
+  }
+  function syncSoldier(dt,s){
+    if(!rig||xr?.active)return;const model=rig.model,p=game.player;
+    model.root.position.set(p.x,p.elevation||0,p.z);model.root.rotation.y=p.yaw;
+    if(model.weapon!==game.weaponIndex)model.setWeapon(game.weaponIndex);
+    model.gun.userData.setCombatState?.({time:game.time,dualState:game.dual,ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,reloading:game.reloadRemaining>0,charge:game.charge});
+    const reload=game.reloadRemaining>0?Math.sin((1-game.reloadRemaining/game.weapon.reload)*Math.PI):0;
+    model.animate(game.time,Math.hypot(game.playerVelocity.x,game.playerVelocity.z)>.1,feel.state.pitch,reload,Number(held),dt,{
+      velocity:game.playerVelocity,ground:(x,z,y)=>game.footGroundHeight(x,z,y),airborne:!p.grounded,verticalSpeed:p.verticalSpeed,
+      crouched:p.crouched,sprint:!!s.sprint,aim:!!s.aiming,firing:held
+    });
   }
   function update(dt,s){
     if(!ready||completed||journalOpen||skillMenu.isOpen)return;
@@ -235,7 +254,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     }
     meleeQueued=chargeQueued=false;
     const moving=Math.hypot(game.playerVelocity?.x||0,game.playerVelocity?.z||0)>.25;
-    feel.update(dt);const a=aim();
+    feel.update(dt);syncSoldier(dt,s);const a=aim();
     const ammoBefore=game.ammo[game.weaponIndex],bladeBefore=game.bladeSlashAt;
     if(xr?.active&&game.weapon.dual){for(const hand of ['right','left']){const aim=xr.aim(hand);game.triggerHand(hand,hand==='right'?xr.controls?.fire:xr.controls?.leftFire,dt,aim.origin,aim.direction);}}
     else game.trigger(xr?.active?!!xr.controls?.fire:fireInput.requested(held,game.weapon,game.time)&&!s.free,dt,a.origin,a.direction);
@@ -301,9 +320,11 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     if(hp)hp.textContent=String(Math.ceil(p.hp));if(ammo)ammo.textContent=game.weapon.melee?'LAME':game.ammo[game.weaponIndex]+' / '+game.weapon.capacity;
     if(name)name.textContent=game.weapon.name+(game.reloadRemaining>0?' · RECHARGE':'');
   }
-  async function loadRig(){
-    try{rig=await installPinkWarsSoldier(T,scene,characterId,materials);const previous=gun;gun=rig.createGun();camera.add(gun);gun.userData.setVariant(game.weaponIndex);previous?.removeFromParent();}
-    catch(error){console.error('Vesper / canonical rig',error);notify('ÉQUIPEMENT EN COURS DE CHARGEMENT · TIR DISPONIBLE',2500);}
+  function loadRig(){
+    return rigPromise||=(async()=>{
+      try{rig=await installPinkWarsSoldier(T,scene,characterId,materials);const previous=gun;gun=rig.createGun();camera.add(gun);gun.userData.setVariant(game.weaponIndex);previous?.removeFromParent();syncSoldier(.016,getState());syncCamera(getState(),0);}
+      catch(error){console.error('Vesper / canonical rig',error);notify('ÉQUIPEMENT EN COURS DE CHARGEMENT · TIR DISPONIBLE',2500);}
+    })();
   }
   function finishMission(){
     if(completed)return;completed=true;held=false;ambience?.pause();document.exitPointerLock?.();
@@ -347,12 +368,14 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   }catch(error){onFailure(error);throw error;}
   onProgress(.98,'Rendu du secteur validé');
   const api={
+    get view(){return effectiveView();},get viewReady(){return !!rig&&!xr?.active;},
+    setView(next){if(xr?.active||!rig)return false;view=normalizeView(next);savePreferredView(view);syncCamera(getState(),0);return true;},
     get xrActive(){return xr.active;},enterVR(){return xr.enter();},exitVR(){return xr.exit();},
     kind:renderer.isWebGLRenderer?'WebGL 2 · M01':'WebGPU · M01',managedResolution:true,canonical:true,
     get paused(){return journalOpen||skillMenu.isOpen;},
     get interaction(){return contextAction();},
     get layout(){return LEVEL1_MAP;},
-    restart(){location.assign(location.pathname+'?prologue=done&character='+characterId+'&v=3.67.0');},
+    restart(){location.assign(location.pathname+'?prologue=done&character='+characterId+'&v=3.67.1');},
     get checkpoint(){return checkpoint;},
     get objective(){return objective().text;},
     get playing(){return game.state==='playing'&&!completed;},
@@ -387,7 +410,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       try{const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);if(result?.then){pending=true;result.then(()=>pending=false).catch(error=>{pending=false;onFailure(error);});}}
       catch(error){onFailure(error);}
     },
-    snapshot(){return {music:{playing:false,source:null},revision:'3.65.0',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
+    snapshot(){return {view:effectiveView(),playerVisible:rig?.model.root.visible||false,music:{playing:false,source:null},revision:'3.65.0',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
       capacity:game.weapon.capacity,ownedWeapons:[...game.ownedWeapons],offers:game.weaponOffers.map(o=>({...o})),campaign:game.campaign,journalOpen,
       enemies:game.enemies.length,hostileProjectiles:game.bullets.filter(b=>b.hostile).length,shots:game.bullets.filter(b=>!b.hostile).length,
       kills:game.kills,rig:!!rig,gun:!!gun,backend:renderer.isWebGLRenderer?'webgl':'webgpu',triangles:terrain.triangles,

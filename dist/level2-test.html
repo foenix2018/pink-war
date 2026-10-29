@@ -2,18 +2,18 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<link rel="icon" href="icons/favicon-32.png?v=3.67.0" sizes="32x32" type="image/png"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3.67.0" sizes="180x180">
-<link rel="manifest" href="manifest.webmanifest?v=3.67.0">
+<link rel="icon" href="icons/favicon-32.png?v=3.67.1" sizes="32x32" type="image/png"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3.67.1" sizes="180x180">
+<link rel="manifest" href="manifest.webmanifest?v=3.67.1">
 <meta name="apple-mobile-web-app-title" content="Pink Wars">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="stylesheet" href="./mission-loading.css?v=3.67.0"><script>document.documentElement.classList.toggle('pw-auto-story',new URLSearchParams(location.search).get('manual')!=='1');</script><title>Pink Wars — M02 Sous les Néons / Playtest</title>
+<link rel="stylesheet" href="./mission-loading.css?v=3.67.1"><script>document.documentElement.classList.toggle('pw-auto-story',new URLSearchParams(location.search).get('manual')!=='1');</script><title>Pink Wars — M02 Sous les Néons / Playtest</title>
 <style>
 :root{color-scheme:dark;font-family:Inter,system-ui,Arial,sans-serif;background:#060b13;color:#e9f2f5}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden}
 canvas#game{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
-#shade{position:fixed;inset:0;z-index:8;display:grid;place-items:center;background:linear-gradient(110deg,#06111d88,#0a122630 52%,#09182466),url('art/mission02-cover.webp?v=3.67.0') center/cover no-repeat;padding:18px}
+#shade{position:fixed;inset:0;z-index:8;display:grid;place-items:center;background:linear-gradient(110deg,#06111d88,#0a122630 52%,#09182466),url('art/mission02-cover.webp?v=3.67.1') center/cover no-repeat;padding:18px}
 .panel{max-width:580px;width:100%;padding:33px;border:1px solid #6aaaba66;background:#08121bd9;box-shadow:0 10px 80px #000c;backdrop-filter:blur(14px)}
 .kicker{font-size:12px;letter-spacing:.26em;color:#73d8e5;font-weight:800}
 h1{margin:12px 0;font-size:clamp(33px,5vw,58px);font-weight:900;line-height:.96;text-transform:uppercase;letter-spacing:-.06em}
@@ -81,7 +81,7 @@ body.pw-graphics-open #quality{display:block!important}
  #hud #vitals,#hud #weapon{font-size:13px;padding:5px 7px}
  #hud #prompt{top:41%}
 }
-</style><link rel="stylesheet" href="fracture.css?v=3.67.0">
+</style><link rel="stylesheet" href="fracture.css?v=3.67.1">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -95,12 +95,12 @@ body.pw-graphics-open #quality{display:block!important}
 <button id="pwMission" class="pw-minimal-action" aria-label="Afficher l’objectif" title="Objectif" onclick="document.body.classList.toggle('pw-objective-open');document.body.classList.remove('pw-graphics-open')">◎</button><button id="pwSettings" class="pw-minimal-action" aria-label="Afficher les réglages" title="Réglages" onclick="document.body.classList.toggle('pw-graphics-open');document.body.classList.remove('pw-objective-open')">⚙</button><select id="quality" aria-label="Qualité graphique"><option value="normal">QUALITÉ NORMALE</option><option value="low">PERFORMANCE</option></select>
 <div id="shade"><div class="panel"><div class="kicker">PINK WARS / LA FRACTURE · MISSION 02</div><h1>Sous <em>les Néons</em></h1><p>Les Bas-Niveaux de Vesper. Une enclave doit être évacuée. Traverse les ruelles, infiltre la galerie marchande, emprunte les escaliers et les passerelles, puis rejoins la tour de transit.</p><p class="small">Les archives de l’évacuation ont été saisies. Rejoins l’enclave, récupère la trace de ta famille et ouvre une route vers la tour de transit.</p><button id="start" class="primary">ENTRER DANS LES BAS-NIVEAUX →</button><a href="./level2-test.html?renderer=webgl" style="display:inline-block;color:#a9f4fa;font-size:13px;margin-bottom:15px">Mode compatibilité WebGL (si écran noir)</a><div id="status" class="small">Clavier / souris / manette PC · rendu WebGPU avec repli WebGL selon l'appareil</div></div></div>
 <script type="module">
-import {createMissionLoading} from './mission-loading.js?v=3.67.0';
+import {createMissionLoading} from './mission-loading.js?v=3.67.1';
 if(new URLSearchParams(location.search).get('manual')!=='1'){
  window.__PINKWAR_MISSION_LOADING=createMissionLoading({mission:2,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});
  window.__PINKWAR_MISSION_LOADING.set(.04,'Ouverture du secteur');
 }
-import('./level2-test.js?v=3.67.0').catch(error=>{
+import('./level2-test.js?v=3.67.1').catch(error=>{
  document.documentElement.classList.remove('pw-auto-story');document.getElementById('pw-mission-loading')?.remove();
  const status=document.getElementById('status'),button=document.getElementById('start');
  if(status)status.textContent='Erreur de chargement : '+(error?.message||String(error))+' — Essaye le mode compatibilité WebGL.';

@@ -27,6 +27,7 @@ import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
 import {createMissionLoading} from './mission-loading.js';
 import {createPauseMenu} from './fracture-menu.js';
+import {readPreferredView,savePreferredView,normalizeView} from './view-options.js';
 import {createMissionXR,immersiveRendererPreferred} from './mission-xr.js';
 import {createGlove} from './hands.js';
 import {mountCombatHud} from './combat-hud.js';
@@ -52,7 +53,7 @@ let canvas=main,renderer,scene,camera,game,weapon,clock=0,running=false,started=
 let yaw=0,pitch=0,stage=0,reported=-1;
 let noticeUntil=0,signal=0,rain,enemyFactory,root,architecture,pbrController,atmosphere;
 let worldShadows=null,groundOcclusion=null;
-let view='fps',aimBlend=0,mouseAim=false,playerRig=null,touchControls=null,paused=false;
+let view=readPreferredView(),aimBlend=0,mouseAim=false,playerRig=null,touchControls=null,paused=false;
 let jumpQueued=false,crouchQueued=false,firePressQueued=false,weaponReady=false,audioCtx=null;
 const weaponFeel=createWeaponFeel(),pinkControls=createPinkWarsInput();
 const fireInput=createFireBuffer();
@@ -63,6 +64,7 @@ let xr=null,fallbackGun=null,fallbackHand=null;
 let armorFx=null,meleeQueued=false,chargeQueued=false,touchSprinting=false;
 const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;return;}if(!running||paused)return;audioReady();if(kind==='melee')meleeQueued=true;else if(kind==='charge')chargeQueued=true;else if(kind==='reload')game.reload();else if(kind==='next')game.cycleWeapon();else if(kind==='interact')interact();else if(kind==='crouch')crouchQueued=true;};
 const pauseMenu=createPauseMenu({title:'HISTOIRE / SOUS LES NÉONS',canOpen:()=>started,settingsSelectors:['#quality'],
+ view:{getView:()=>xr?.active?'fps':view,onSelect:next=>changeView(next),canChange:()=>!!playerRig&&!xr?.active},
  onPause:()=>pauseMission(),onResume:()=>unpauseMission(),onVR:()=>xr?.enter(),onHome:async()=>{await xr?.exit();location.assign('./index.html');}});pauseMenu.setVisible(false);
 let combatEffects=null,companion=null,environmentAudio=null,warZone=null,battleAudio=null;
 let companionSkills=null,skillMenu=null;
@@ -491,10 +493,13 @@ function snapCamera(){
  weapon.visible=view==='fps';
  if(playerRig?.model)playerRig.model.root.visible=view==='third';
 }
-function changeView(){
- view=view==='fps'?'third':'fps';
- if(!playerRig&&view==='third'){view='fps';notice('PERSONNAGE SHADOW UNIT EN COURS DE CHARGEMENT');}
+function changeView(next=view==='fps'?'third':'fps'){
+ if(xr?.active)return false;
+ const selected=normalizeView(next);
+ if(!playerRig&&selected==='third'){notice('PERSONNAGE SHADOW UNIT EN COURS DE CHARGEMENT');return false;}
+ view=selected;savePreferredView(view);
  snapCamera();
+ return true;
 }
 function updateOriginalSoldier(dt,moving,sprint,firing){
  const model=playerRig?.model;if(!model)return;
@@ -894,7 +899,7 @@ for(const name of ['pointerup','pointercancel']){
  window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
 }
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
-window.__PINK_M02=Object.freeze({snapshot:()=>({music:{playing:false,source:null},revision:'3.65.0',running,paused,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
+window.__PINK_M02=Object.freeze({snapshot:()=>({music:{playing:false,source:null},revision:'3.65.0',running,paused,view:xr?.active?'fps':view,playerVisible:playerRig?.model.root.visible||false,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
  shadowing:worldShadows?.stats(),backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
  effects:combatEffects?.stats(),armor:game&&{shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt}})});

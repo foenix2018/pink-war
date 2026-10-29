@@ -22,6 +22,7 @@ import {sightPoint} from './sight-line.js';
 import {GAME_VERSION,showLaunchError} from './launch-ui.js';
 import {syncMenuArtwork} from './menu-art.js';
 import {createAICompanion} from './ai-companions.js';
+import {mountViewControl,readPreferredView,savePreferredView,normalizeView} from './view-options.js';
 import {companionAvailable} from './companion-escort.js';
 import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
@@ -44,7 +45,8 @@ const boot=window.__PINKWAR_BOOT_OPTIONS;
 if(boot?.settings)Object.assign(settings,boot.settings);
 settings.sensitivity = clamp(Number(settings.sensitivity) || 1, .4, 2);
 if (!['auto', 'low', 'high'].includes(settings.quality)) settings.quality = 'auto';
-let phase = 'lobby', view = boot?.view==='third'?'third':'fps', yaw = 0, pitch = -.075, game, world, vr;
+let phase = 'lobby', view = boot?.view?normalizeView(boot.view):readPreferredView(), yaw = 0, pitch = -.075, game, world, vr;
+let optionsViewControl=null;
 let character=characterForId('ghju');
 let m01CheckpointGame=null,m01CheckpointStage=null,m01CheckpointPending=false;
 let combatHud=null,armorFx=null,armorFxScene=null,meleeQueued=false,chargeQueued=false,touchSprinting=false;
@@ -222,18 +224,22 @@ for(const type of ['pointerup','pointercancel','lostpointercapture'])$('aim-butt
 $('jump-button').addEventListener('pointerdown', e => { if (phase !== 'playing') return; e.preventDefault(); jumpQueued = true; });
 $('jump-button').addEventListener('click', e => { if (e.detail === 0 && phase === 'playing') jumpQueued = true; });
 
-function selectView(next) {
-  view = vr?.active ? 'fps' : next;
+function selectView(next,remember=true) {
+  view = vr?.active ? 'fps' : normalizeView(next);
+  if(remember&&!vr?.active)savePreferredView(view);
   for (const button of document.querySelectorAll('[data-view]')) { const selected = button.dataset.view === view; button.classList.toggle('selected', selected); button.setAttribute('aria-pressed', String(selected)); }
   $('game-view-label').textContent = view === 'fps' ? 'VUE FPS' : 'VUE 3e PERSONNE';
   $('view-button').title = view === 'fps' ? 'Passer en troisième personne (V)' : 'Passer en vue FPS (V)';
+  optionsViewControl?.refresh();
+  if(world&&game&&['playing','paused'].includes(phase))updateCamera();
 }
 for (const button of document.querySelectorAll('[data-view]')) button.onclick = () => selectView(button.dataset.view);
 selectView(view); $('view-button').onclick = () => selectView(view === 'fps' ? 'third' : 'fps');
+optionsViewControl=mountViewControl($('settings-dialog'),{getView:()=>view,onSelect:selectView,canChange:()=>!vr?.active});
 
 function pause() { if (phase !== 'playing') return; setScreenMusic('gameplay');ambience?.pause(); phase = 'paused'; resetInput(); if (vr?.mode !== 'xr') $('pause-dialog').showModal(); }
 function resume() { if (phase !== 'paused') return; for (const d of document.querySelectorAll('dialog[open]')) d.close(); phase = 'playing'; resetInput(); audioReady(); }
-function openPanel(id) { if (phase === 'playing') { phase = 'paused'; resetInput();setScreenMusic('gameplay');ambience?.pause(); } for (const d of document.querySelectorAll('dialog[open]')) d.close(); $(id).showModal(); }
+function openPanel(id) { if(id==='settings-dialog')optionsViewControl?.refresh(); if (phase === 'playing') { phase = 'paused'; resetInput();setScreenMusic('gameplay');ambience?.pause(); } for (const d of document.querySelectorAll('dialog[open]')) d.close(); $(id).showModal(); }
 function closePanel(dialog) { if(dialog.id==='outfit-dialog'){closeOutfit();return;} dialog.close(); if (phase === 'paused') $('pause-dialog').showModal(); }
 $('pause-button').onclick = pause; $('resume-button').onclick = resume;
 $('how-button').onclick = () => openPanel('help-dialog'); $('settings-button').onclick = () => openPanel('settings-dialog'); $('pause-help').onclick = () => openPanel('help-dialog');
@@ -298,7 +304,7 @@ async function start() {
   if(selectedMode==='campaign'&&!vr?.active&&!new URLSearchParams(location.search).has('classic')){openMissionPage(1);return;}
   if (!world||launchBusy) return;
   launchBusy=true;
-  selectView('fps');
+  selectView(readPreferredView(),false);
   for (const d of document.querySelectorAll('dialog[open]')) d.close();
   world.setCampaignActive(selectedMode==='campaign');
   world.setRangeActive(selectedMode==='training');

@@ -1,3 +1,13 @@
+# Pink War 3.67.1 — options FPS / 3P
+
+637 tests Node réussis, aucun échec, test ignoré ou annulé ; 20 contrôles ciblés réussis. Quatre nouveaux tests couvrent la sauvegarde partagée sans modification des autres réglages, le stockage bloqué, l’orientation et l’altitude de la caméra, ainsi que les murs et les vrais planchers. L’attente historique d’un FPS forcé au lancement est remplacée par la transmission de la préférence, avec repli FPS vérifié séparément.
+
+Vrais boutons tactiles en 390 × 844 dans les options de l’accueil, de l’Arène, du stand, de M01 et de M02 : choix 3P avant chargement, basculement dans les deux sens pendant la pause, visibilité du corps et de l’arme FPS, reprise et préférence conservée après rechargement. Dans M01, la touche Espace consomme une munition et le projectile part du canon visible avec une erreur mesurée nulle ; V revient en FPS sans activer le mode de visite libre. Aucune erreur JavaScript ni ressource locale manquante. [Rapport](docs/pink-wars/VIEW_OPTIONS_BROWSER_VERIFICATION.json) · [Notes et captures](docs/pink-wars/MISE_A_JOUR_367_1.md).
+
+Syntaxe, générateur et configuration vérifiés, `git diff --check` propre. Limites : Chromium/SwiftShader local, framebuffer réduit, invulnérabilité préparée pour les menus ; aucun appareil Safari/iPhone ou Quest physique et aucune mesure de FPS matériel. La préférence écran n’altère pas la caméra immersive. Confirmation de déploiement par le statut Vercel du commit, séparément des essais locaux.
+
+---
+
 # Pink War 3.67 — escorte, protection et torche
 
 633 tests Node réussis, aucun échec, test ignoré ou annulé. Les 34 contrôles ciblés passent, dont 15 nouveaux cas : orbite attachée au corps sous changement de caméra et altitude, seuil de santé strict à 50 %, origine optique des tirs, véritables impacts, absence de consommation de munitions et d’événement de recul du joueur, attribution des dégâts au compagnon, murs avant/après départ du tir, menaces engagées, cadence et réserve bornées, pause, plafond bas, éclairage réel, exclusion des propres lumières de la sphère, hystérésis, extinction et suivi de tête XR.

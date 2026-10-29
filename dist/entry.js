@@ -3,15 +3,16 @@ import {DesktopGamepadInput} from './desktop-input.js';
 import {createGamepadAid,gamepadsNow} from './ios-gamepad.js';
 import {graphicsProfile} from './renderer-policy.js';
 import {GAME_VERSION,showLaunchError,compatibleLaunchURL} from './launch-ui.js';
-import {syncMenuArtwork} from './menu-art.js?v=3.67.0';
+import {syncMenuArtwork} from './menu-art.js?v=3.67.1';
 import {showStoryPrologue} from './story-prologue.js';
 import {createMissionLoading} from './mission-loading.js';
 import {readM01Checkpoint} from './checkpoint-index.js';
+import {mountViewControl,readPreferredView,savePreferredView} from './view-options.js';
 
 // This menu has no Three.js or character imports. It is usable before the user
 // chooses to download/build the 3D scene, including inside an iPhone web view.
 const $=id=>document.getElementById(id);
-let character='ghju',mode='campaign',view='fps',trainingWeapon=0,loading=false,modulePromise=null;
+let character='ghju',mode='campaign',view=readPreferredView(),trainingWeapon=0,loading=false,modulePromise=null;
 const settings={sound:true,music:true,sensitivity:1,quality:'auto'};
 try{character=localStorage.getItem('pink-war-character')==='lylu'?'lylu':'ghju';Object.assign(settings,JSON.parse(localStorage.getItem('rosee-settings')||'{}'));const stored=Number(localStorage.getItem('pink-war-training-weapon'));if(Number.isInteger(stored)&&stored>=0&&stored<7&&stored!==5)trainingWeapon=stored;}catch{}
 const requestedMode=new URLSearchParams(location.search).get('mode');
@@ -70,6 +71,8 @@ $('sound-setting').onchange=e=>{settings.sound=e.target.checked;save();};
 $('music-setting').onchange=e=>{settings.music=e.target.checked;save();refresh();};
 $('sensitivity').oninput=e=>{settings.sensitivity=Number(e.target.value);save();};
 $('quality').onchange=e=>{settings.quality=e.target.value;save();};
+const earlyViewControl=mountViewControl($('settings-dialog'),{getView:()=>view,onSelect:next=>{view=next;savePreferredView(view);}});
+$('settings-dialog').querySelector('.setting-row').before(earlyViewControl.row);
 async function begin(intent='play',afterPrologue=false){
   if(loading)return;
   if(mode==='campaign'&&['play','vr'].includes(intent)&&!afterPrologue){
@@ -94,7 +97,7 @@ async function begin(intent='play',afterPrologue=false){
   if(settings.sound||settings.music!==false)try{const Audio=window.AudioContext||window.webkitAudioContext;
     window.__PINKWAR_BOOT_AUDIO ||=new Audio();window.__PINKWAR_BOOT_AUDIO.resume().catch(()=>{});}catch{}
   try{
-    modulePromise ||=import('./game.js?v=3.67.0');await modulePromise;
+    modulePromise ||=import('./game.js?v=3.67.1');await modulePromise;
     for(const d of document.querySelectorAll('dialog'))d.removeEventListener('cancel',earlyCancel);
     if(!window.__PINKWAR||window.__PINKWAR.snapshot().phase==='error')throw new Error('Initialisation interrompue.');
     loading=false;
