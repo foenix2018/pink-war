@@ -348,7 +348,7 @@ function props(){
 function weather(){
  const count=low()?300:950,arr=new Float32Array(count*6);
  for(let i=0;i<count;i++){
-  const x=(rng()-.5)*78,y=rng()*28,z=(rng()-.5)*165;
+  const x=(rng()-.5)*78,y=rng()*28,z=-82+rng()*162; // stops at the covered market (z 80)
   arr.set([x,y,z,x-.08,y-.48,z-.07],i*6);
  }
  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(arr,3));

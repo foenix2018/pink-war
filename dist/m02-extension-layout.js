@@ -100,7 +100,7 @@ function props() {
   for (const x of [-34, -30, -26]) add('servers', x, -90, .45, 4, 2.6);
   add('terminal', -18.6, -84, .6, .9, 1.1);
   // Loading dock: HELIX trucks, a civilian container, crate stacks, the dock control post.
-  add('truck', 26, -91, 4, 1.4, 3.2, 'metal', { vehicle: 'truck' }); add('container', 38, -86, 1.4, 3, 2.8, 'metal'); add('crates', 20, -84.4, 1, .8, 1.6);
+  add('truck', 26, -91, 4, 1.4, 3.2, 'metal', { vehicle: 'truck' }); add('container', 35, -85, 1.4, 2.4, 2.8, 'metal'); add('crates', 20, -84.4, 1, .8, 1.6);
   add('crates', 32, -94.6, 1.2, .7, 1.4); add('control-post', 44.6, -84.6, .6, .8, 1.2);
   return out;
 }
@@ -132,15 +132,15 @@ export const SUPPLIES = Object.freeze([['heal', 18, 84], ['cell', 34, 85.6], ['h
 // ---------- Encounters (helix: HELIX Security units in white and red) ----------
 const unit = (form, x, z, extra = {}) => Object.freeze({ form, x, z, ...extra });
 export const ENCOUNTERS = Object.freeze({
-  eclaireurs: { wave: 2, units: [unit('synth', -20, 93.4, { helix: true }), unit('synth', -16, 93.4, { helix: true }), unit('probe', -8, 88)] },
-  grille1: { wave: 2, units: [unit('synth', -24, 93.4, { helix: true }), unit('synth', -12, 93.4, { helix: true })] },
+  eclaireurs: { wave: 2, units: [unit('synth', -20, 92, { helix: true }), unit('synth', -16, 92, { helix: true }), unit('probe', -8, 88)] },
+  grille1: { wave: 2, units: [unit('synth', -24, 92, { helix: true }), unit('synth', -12, 92, { helix: true })] },
   grille2: { wave: 3, units: [unit('stalker', -22, 87), unit('scuttler', -8, 92), unit('seer', -28, 89, { helix: true })] },
   tour: { wave: 3, units: [unit('synth', -6, -88, { helix: true }), unit('synth', 6, -88, { helix: true }), unit('seer', 10, -92, { helix: true }), unit('probe', 0, -85)] },
   coffre: { wave: 3, units: [unit('synth', -28, -84, { helix: true }), unit('listener', -36, -93), unit('probe', -22, -92)] },
   renfort: { wave: 3, units: [unit('brute', 30, -86, { helix: true, elite: true }), unit('synth', 22, -88, { helix: true }), unit('synth', 18, -92, { helix: true })] },
   quai1: { wave: 4, units: [unit('synth', 40, -92, { helix: true }), unit('synth', 40, -88, { helix: true }), unit('stalker', 34, -92)] },
   quai2: { wave: 4, units: [unit('probe', 30, -84), unit('probe', 36, -94), unit('seer', 22, -94, { helix: true })] },
-  quai3: { wave: 4, units: [unit('brute', 40, -90, { helix: true, elite: true }), unit('synth', 34, -84, { helix: true }), unit('synth', 18, -94, { helix: true })] }
+  quai3: { wave: 4, units: [unit('brute', 40, -90, { helix: true, elite: true }), unit('synth', 28, -86, { helix: true }), unit('synth', 18, -94, { helix: true })] }
 });
 
 // ---------- Stages ----------
