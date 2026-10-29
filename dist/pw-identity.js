@@ -16,11 +16,11 @@
   if(node.matches('a.brand')){largeLogo(node,'header');return;}
   if(node.matches('#lobby .intro>h1,#intro .introCard>h1')){largeLogo(node,'major');return;}
   const walker=document.createTreeWalker(node,NodeFilter.SHOW_TEXT,{acceptNode(t){
-   return t.parentElement?.closest('script,style,noscript,code,pre,svg,.pw-brand-type')||!(/PINK\s+WARS/i.test(t.textContent))?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT;
+   return t.parentElement?.closest('script,style,noscript,code,pre,svg,.pw-brand-type')||!(/PINK\s+WARS?\b/i.test(t.textContent))?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT;
   }});
   const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
   for(const t of nodes){
-   const m=/PINK\s+WARS/i.exec(t.nodeValue);if(!m)continue;
+   const m=/PINK\s+WARS?\b/i.exec(t.nodeValue);if(!m)continue;
    const fragment=document.createDocumentFragment();
    const before=t.nodeValue.slice(0,m.index),after=t.nodeValue.slice(m.index+m[0].length);
    if(before)fragment.append(document.createTextNode(before));
