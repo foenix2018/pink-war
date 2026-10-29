@@ -1,7 +1,7 @@
 import {setScreenMusic} from './menu-music.js';
 export function missionPresentation(mission=1,characterId='ghju'){
  const blue=characterId==='lylu';
- if(mission===3)return {number:3,title:'Le Convoi des Absents',description:'Reprendre les archives de Vesper, retrouver le manifeste HELIX et ouvrir une piste vers l’Anneau logistique.',image:blue?'art/chargement-lylu.webp?v=3.47':'art/chargement.webp?v=3.47',signal:blue?'#78baff':'#e8bc83'};
+ if(mission===3)return {number:3,title:'Le Convoi des Absents',description:'Reprendre les archives de Vesper, retrouver le manifeste HELIX et ouvrir une piste vers l’Anneau logistique.',image:'art/mission03-cover.svg?v=1',signal:blue?'#78baff':'#e8bc83'};
  return mission===2?{number:2,title:'Sous les Néons',description:'Les Bas-Niveaux de Vesper. Une enclave, des archives saisies, une route à ouvrir.',image:'art/mission02-cover.webp?v=3.70.0',signal:blue?'#78baff':'#f27ba7'}:
   {number:1,title:'Le dernier signal',description:'Un terminal hors réseau conserve peut-être la trace de votre '+(blue?'sœur.':'frère.'),image:blue?'art/chargement-lylu.webp?v=3.47':'art/chargement.webp?v=3.47',signal:blue?'#78baff':'#f27ba7'};
 }
