@@ -27,3 +27,71 @@ body.fracture-home{background:linear-gradient(100deg,#0d1828ed,#101c36b8),var(--
    and keep the desktop card below the masthead brand. */
 body.playing #lobby,body.outfit-mode #lobby{display:none}
 @media(min-width:701px) and (min-height:551px){#lobby{padding-top:max(84px,calc(env(safe-area-inset-top) + 72px))}}
+
+
+/* PINK WARS / ENVIRONMENT & MENU FINISH 2026-10-29
+   Scoped entirely to interface elements. No characters, rigs or game controls. */
+:root{--pw-panel-edge:#92b3c378;--pw-menu-accent:var(--fracture,#f198c8)}
+#lobby{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#708da17d transparent}
+#lobby .intro{position:relative;isolation:isolate;background:
+ linear-gradient(128deg,rgba(26,42,59,.96),rgba(12,23,39,.92) 66%,rgba(15,29,43,.88))!important;
+ border:1px solid var(--pw-panel-edge)!important;
+ box-shadow:inset 0 1px rgba(232,248,255,.14),0 25px 90px #020810a8,0 3px 25px #80b6cf12;
+ overflow:hidden}
+#lobby .intro::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+ background:repeating-linear-gradient(90deg,transparent 0 35px,rgba(150,196,217,.05) 35px 36px),
+ linear-gradient(142deg,transparent 48%,rgba(114,173,196,.055) 49%,transparent 50%);
+ opacity:.62}
+#lobby .intro::after{content:"";position:absolute;top:0;left:25px;right:25px;height:2px;
+ background:linear-gradient(90deg,var(--pw-menu-accent),#7bcbdf 64%,transparent 100%);pointer-events:none}
+#lobby h1{font-weight:900!important;letter-spacing:-.047em;text-shadow:0 8px 28px #060f1da8}
+#lobby .tagline{color:#f2f6fc;font-weight:550}
+#lobby .mission-intro{position:relative!important;padding:11px 14px!important;border-left:2px solid var(--pw-menu-accent)!important;
+ background:linear-gradient(90deg,#8ab8cf10,transparent 95%);border-radius:0 9px 9px 0}
+#lobby .mission-intro h2{font-weight:750;line-height:1.25;letter-spacing:-.02em;color:#f4f7fb}
+#lobby .mission-intro p{max-width:35em;color:#b8cad8}
+#lobby .mode-choice{gap:8px!important}
+#lobby .mode-choice button,#lobby .mode-choice a{position:relative;min-height:46px!important;
+ border:1px solid #8cabc76a!important;border-radius:12px!important;
+ background:linear-gradient(135deg,#253b50,#142536)!important;
+ box-shadow:inset 0 1px #ffffff18,0 8px 14px #0004;
+ font-weight:750!important;letter-spacing:.055em;transition:border-color .18s,background .18s,transform .18s}
+#lobby .mode-choice [aria-pressed=true]{color:#fff!important;border-color:var(--pw-menu-accent)!important;
+ box-shadow:inset 0 0 0 1px #e1abde33,0 0 18px #c777b122}
+#lobby .mode-choice button:hover,#lobby .mode-choice a:hover{border-color:var(--pw-menu-accent)!important;filter:brightness(1.13)}
+#lobby .character-choice{padding:10px 0 5px!important}
+#lobby .character-card{border:1px solid #738ca277!important;border-radius:11px!important}
+#lobby .character-card.selected{background:#273d51b8!important;border-color:var(--pw-menu-accent)!important}
+#lobby #play-button{border:1px solid #fff5!important;border-radius:12px!important;box-shadow:0 9px 28px #03091688,inset 0 1px #fff5}
+#story-chapters{border:1px solid #7995b175!important;background:#0b1825ef!important;border-radius:13px!important}
+#story-chapters button{border-radius:9px!important;min-height:46px;border:1px solid #728aa06b!important;background:#22374c!important}
+#story-chapters button:focus-visible{outline:2px solid var(--pw-menu-accent);outline-offset:2px}
+.masthead .header-actions .vr-menu-button,.masthead .header-actions .icon-button{border-color:#93a7b581!important;
+ box-shadow:inset 0 1px #ffffff16,0 5px 16px #01061144;min-width:42px;min-height:42px}
+.panel-dialog,.fracture-pause,dialog:not(.panel-dialog){border-color:#9bb8ca77;
+ background:linear-gradient(135deg,#16293af7,#0b1726f5 76%)!important;
+ box-shadow:inset 0 1px #ffffff14,0 26px 88px #01050de0!important}
+.panel-dialog h2,.fracture-pause h2{font-weight:700;letter-spacing:-.035em}
+.panel-dialog .setting-row{border-bottom:1px solid #7494a329;padding-block:10px}
+.panel-dialog :is(button,select,input):focus-visible,.fracture-pause button:focus-visible{outline:2px solid var(--pw-menu-accent);outline-offset:3px}
+.fracture-choices button{border-radius:13px!important;min-height:46px;box-shadow:inset 0 1px #ffffff12}
+.fracture-choices .fracture-primary{box-shadow:0 12px 30px #020b18a1}
+#controlsPanel,#objectivePanel,#shade .panel,#intro .introCard{border:1px solid #819eb282!important;
+ background:linear-gradient(135deg,#132738f0,#091624e9)!important;box-shadow:inset 0 1px #fff2,0 18px 50px #0008!important;
+ backdrop-filter:blur(12px)}
+#controlsPanel,#shade .panel,#intro .introCard{border-radius:13px!important}
+#controlsPanel .group select{min-height:39px;border-color:#8aaabe78}
+#shade .primary,#intro .primary{border-radius:9px;box-shadow:0 10px 25px #0005}
+@media(max-width:700px){
+ #lobby{padding-block:76px 24px!important;align-items:flex-start!important}
+ #lobby .intro{margin:auto 0!important;padding:17px!important}
+ #lobby .mode-choice{gap:6px!important}
+ #lobby .mode-choice button,#lobby .mode-choice a{min-height:44px!important}
+ .masthead{padding:13px 16px!important}
+ #controlsPanel,#objectivePanel{max-width:calc(100vw - 22px)}
+}
+@media(max-height:550px) and (min-width:701px){
+ #lobby{padding-top:71px!important}
+ #lobby .intro{margin-bottom:16px}
+}
+@media(prefers-reduced-motion:reduce){#lobby .mode-choice button,#lobby .mode-choice a{transition:none}}
