@@ -35,5 +35,6 @@ Estimation, pas une mesure : le prologue ajoute environ 8 à 10 minutes, l’ép
 ## Vérifications
 
 - Tests automatisés : nouveau fichier `tests/369-m01-extension.test.mjs` (8 tests) : emprise hors du quartier et dans l’aire de jeu, navigation des machines dans chaque pièce, dégagement des interactions et des ennemis, prologue joué jusqu’au retour dans le quartier, épilogue joué du relais au monte-charge, points de contrôle, histoire des deux héros recoupée avec la Ligne 9. Les tests existants du M01 sont inchangés : sans l’extension, le chapitre d’origine se comporte comme avant.
-- Navigateur (Chromium, rendu logiciel) et iPhone émulé : voir le compte rendu de la livraison.
+- Navigateur (Chromium, rendu logiciel) : chapitre entier joué avec les raccourcis de test, de la cour de la caserne à l’écran de fin (prologue, retour dans le quartier, relais A3, épilogue, copie du registre sous assaut, monte-charge), aucune erreur console. iPhone 13 émulé : démarrage dans la cour, sous-titres de Gaby, objectif affiché, aucune erreur.
+- Correction de QA : les commandes de test (`?debug=1`) avancent la simulation d’un pas après une téléportation et ferment les documents immédiatement.
 - Limites : pas de mesure de durée ni de difficulté sur une vraie partie ; pas d’essai sur iPhone ni sur Quest 3 réels.
