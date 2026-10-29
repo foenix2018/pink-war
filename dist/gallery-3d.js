@@ -184,6 +184,7 @@ function draw(now){
 }
 function startDraw(){if(!running){running=true;previousTime=performance.now();requestAnimationFrame(draw);}}
 window.galleryClose=()=>{requestId++;arReady=false;groundTick=5;frameFailure=false;arButton.textContent='AR · VOIR CHEZ MOI';item?.dispose?.();item=null;pivot.clear();modelViewer.removeAttribute('src');modelViewer.removeAttribute('ios-src');modelViewer.hidden=true;canvas.hidden=false;clearExports();arButton.disabled=true;};
+window.galleryResetView=()=>{bearing=.45;elevation=.16;zoom=4.1;autoRotate=false;$('rotation').textContent='⟳ ROTATION AUTO : OFF';};
 window.galleryToggleRotation=()=>{autoRotate=!autoRotate;$('rotation').textContent=autoRotate?'⟳ ROTATION AUTO : ON':'⟳ ROTATION AUTO : OFF';};
 window.galleryBuild=async name=>{
  window.galleryClose();const token=++requestId;
