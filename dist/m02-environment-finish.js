@@ -11,6 +11,27 @@ export function createEnvironmentFinish(T,{root,scene,performance=false,accent=0
  const glowAmber=new T.MeshBasicMaterial({color:0xffc587,toneMapped:false});
  const glowAccent=new T.MeshBasicMaterial({color:accent,toneMapped:false});
  const perMaterial=new Map(),created=[],lights=[],textures=[];
+ // Tiny in-memory physical wear atlas (one shared GPU texture, no network).
+ // Reused across steel, oxidized frames, ceiling rails and roof fixtures.
+ const wearCanvas=document.createElement('canvas'),texSize=performance?128:256;
+ wearCanvas.width=wearCanvas.height=texSize;
+ const wearCtx=wearCanvas.getContext('2d'),wearPixels=wearCtx.createImageData(texSize,texSize);
+ let state=12671;
+ const random=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296;};
+ for(let y=0;y<texSize;y++)for(let x=0;x<texSize;x++){
+  const i=(y*texSize+x)*4,grain=(random()-.5)*65;
+  const brush=Math.sin(y*.9+x*.03)*12+(x%73<2?-32:0);
+  const v=Math.max(20,Math.min(242,153+grain+brush));
+  wearPixels.data[i]=v;wearPixels.data[i+1]=v;wearPixels.data[i+2]=v;wearPixels.data[i+3]=255;
+ }
+ wearCtx.putImageData(wearPixels,0,0);
+ const wearMap=new T.CanvasTexture(wearCanvas);
+ wearMap.colorSpace=T.NoColorSpace;wearMap.wrapS=wearMap.wrapT=T.RepeatWrapping;
+ wearMap.anisotropy=2;wearMap.generateMipmaps=true;textures.push(wearMap);
+ for(const [material,scale] of [[metal,.004],[oxidized,.003],[ceramic,.0016]]){
+  material.roughnessMap=wearMap;material.bumpMap=wearMap;material.bumpScale=scale;
+  material.needsUpdate=true;
+ }
  const put=(m,x,y,z,w,h,d)=>{
   if(!perMaterial.has(m))perMaterial.set(m,[]);
   perMaterial.get(m).push([x,y,z,w,h,d]);
