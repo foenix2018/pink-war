@@ -22,7 +22,7 @@ import {sightPoint} from './sight-line.js';
 import {GAME_VERSION,showLaunchError} from './launch-ui.js';
 import {syncMenuArtwork} from './menu-art.js';
 import {createAICompanion} from './ai-companions.js';
-import {bindViewButton,mountViewControl,readPreferredView,savePreferredView,normalizeView} from './view-options.js?v=3.69.0';
+import {bindViewButton,mountViewControl,readPreferredView,savePreferredView,normalizeView} from './view-options.js?v=3.70.0';
 import {companionAvailable} from './companion-escort.js';
 import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
