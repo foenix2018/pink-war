@@ -1,3 +1,4 @@
+import {createLivedInDressing} from './vesper-lived-in.js';
 // M02 extension dressing: the enclave of the covered market (stalls turned into barricades and beds, dormitory
 // tents, kitchen, school corner, water purifier, dispensary, radio room, the service lift from the Archives) and
 // the transit tower held by HELIX Security (black, industrial white, safety red: scanner gates, data vault, loading
@@ -487,6 +488,8 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     sign(signTex(['LES ÉPARS', 'ON NE LAISSE PERSONNE'], { bg: '#06161b', fg: '#ff6fb4', w: 1024, h: 256, border: '#5fe0f0' }), -14, 12, 79.75, Math.PI, 10, 2.5, { lit: true });
   }
 
+  const livedIn=createLivedInDressing(T,root,{chapter:2,low,materials:details.M});
+
   // ---------- Night: how much of the moon and sky reaches the eye indoors ----------
   let shelter = 1; const cachesById = new Map();
   function shelterAt(x, z) { const r = ROOM[roomAt(x, z)]; if (!r) return 1; return SHELTER[r.look] ?? 1; }
@@ -497,10 +500,10 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       placeFixtures(); buildRooms(); buildWalls(obstacles);
       for (const o of obstacles) if (o.extension) { dress(o); details.accessories(o); }
       buildFixtureMeshes(); buildDoors(); buildDevices(obstacles); buildSigns(); buildCyber();
-      flushGeometry(); flushPieces(); details.finish();
+      flushGeometry(); flushPieces(); details.finish(); livedIn.build(obstacles);
     },
     update(t, dt, eye, player = eye.position, { crank = false } = {}) {
-      updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt, crank); details.update(power);
+      updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt, crank); details.update(power); livedIn.update(t,dt,power);
       for (const s of steam) { const u = s.userData, k = (t * .25 + u.phase) % 1; s.position.set(u.x + Math.sin(t + u.phase) * .3, u.y + k * 3, u.z); s.scale.setScalar(.8 + k * 2.4); s.material.opacity = .14 * (1 - k); }
       for (const f of animated) f(t, dt, eye);
     },
@@ -523,6 +526,6 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     setPower(zone, on) { power[zone] = !!on; },
     markDone(id, done = true) { const d = devices.get(id); if (d) { d.done = done; if (!done) { d.turn = 0; if (d.moving) d.moving.rotation.set(0, 0, 0); } } },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
-    stats() { return { ...stats, details: details.stats(), power: { ...power }, shelter: +shelter.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, details: details.stats(), livedIn: livedIn.stats(), power: { ...power }, shelter: +shelter.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }

@@ -1,3 +1,11 @@
+# Pink War 3.73 — traces de vie et animations du décor
+
+673 tests Node réussis (`npm test`), aucun échec, test ignoré ou annulé. Onze contrôles ciblés passent également après les derniers ajustements. Les nouveaux tests couvrent les supports des objets, les emprises, les ressources, les budgets de rendu, les circuits et l’inertie des ventilateurs, le bassin ouvert et le branchement des deux extensions.
+
+Chromium/SwiftShader : démarrage des deux chapitres en fenêtre tactile 390 × 844, sans erreur JavaScript ni ressource manquante ; parcours contrôlé de la caserne jusqu’au rétablissement du courant. Captures des extensions en qualité normale avec éclairage de présentation pour examiner les objets. Aucun essai sur matériel iPhone/Quest, aucune mesure de cadence matérielle ni publication en production. [Notes et captures](docs/pink-wars/MISE_A_JOUR_373.md) · [Rapport](docs/pink-wars/LIVED_IN_373_BROWSER_VERIFICATION.json).
+
+---
+
 # Pink War 3.72 — matières et enrichissement réaliste
 
 669 tests Node réussis, aucun échec, test ignoré ou annulé (`npm test`). Sept contrôles ciblés passent aussi après les derniers réglages visuels : PBR déterministe et partagé, espaces colorimétriques, matériaux organiques non métalliques, budget bas, ouverture des rayonnages, flacons visibles, animation et dégagement des portes, et circuits électriques des écrans.

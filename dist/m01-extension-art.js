@@ -1,3 +1,4 @@
+import {createLivedInDressing} from './vesper-lived-in.js';
 // M01 extension dressing: Caserne 07 (red-brick AEGIS rescue station of 2189: apparatus bay with the VSAV 07
 // ambulance and the FPT 07 pump engine, dispatch room, lockers, generator room, drill tower) and the Archives
 // végétales (stone archive building, galleries, registers, greenhouse). Layout in m01-extension-layout.js.
@@ -356,7 +357,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
       }
       case 'planter': box(M.stone, x1, x2, 0, h, z1, z2); piece(M.soil, o.x, h - .05, o.z, w - .2, .06, d - .2); details.planting(o, low ? 4 : 7); break;
       case 'reception': box(M.wood, x1, x2, 0, h, z1, z2); piece(M.woodDark, o.x, h, o.z, w + .1, .05, d + .1); break;
-      case 'display': piece(M.woodDark, o.x, 0, o.z, w, .8, d); piece(M.glass, o.x, .8, o.z, w, h - .8, d); piece(M.foliage, o.x, .82, o.z, w * .5, .3, d * .5); break;
+      case 'display': piece(M.woodDark, o.x, 0, o.z, w, .8, d); piece(M.glass, o.x, .8, o.z, w, h - .8, d);  break;
       case 'desk': box(M.wood, x1, x2, h - .06, h, z1, z2); for (const sx of [-1, 1]) piece(M.woodDark, o.x + sx * (o.hx - .1), 0, o.z, .08, h - .06, d - .1); break;
       case 'shelves': {
         // Open bays: books sit on real shelves, visible in front of a thin back.
@@ -375,7 +376,11 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
       case 'terminal-desk': box(M.steel, x1, x2, 0, h, z1, z2); break;
       case 'cabinet': box(M.woodDark, x1, x2, 0, h, z1, z2); for (let y = .2; y < h - .1; y += .3) for (let k = 0; k < 13; k++) for (const s of [-1, 1]) piece(M.amber, x1 + .3 + k * (w - .6) / 12, y + .12, o.z + s * (o.hz + .005), .12, .02, .01); break;
       case 'bed': box(M.stone, x1, x2, 0, h, z1, z2); piece(M.soil, o.x, h - .05, o.z, w - .3, .06, d - .3); details.planting(o, low ? 7 : 12); break;
-      case 'basin': box(M.stone, x1, x2, 0, h, z1, z2); piece(M.dark, o.x, h - .05, o.z, w - .4, .02, d - .4); break;
+      case 'basin': {
+        box(M.stone,x1,x2,0,.14,z1,z2);
+        for(const [a,b,c,e] of [[x1,x1+.16,z1,z2],[x2-.16,x2,z1,z2],[x1+.16,x2-.16,z1,z1+.16],[x1+.16,x2-.16,z2-.16,z2]])box(M.stone,a,b,.14,h,c,e);
+        piece(M.dark,o.x,.14,o.z,w-.32,.014,d-.32);break;
+      }
       case 'trunk': details.tree(o); break;
       default: break;
     }
@@ -518,12 +523,14 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     // Greenhouse: floating botanical catalogue tags (old HELIX-made holograms, still on batteries).
     for (const [x, z, name] of [[20, -91, 'FOUGÈRE DES TOITS'], [36, -91, 'MOUSSE DE VESPER'], [20, -75, 'LIERRE DES QUAIS'], [36, -75, 'ORCHIDÉE GRISE'], [30.5, -88.5, 'CHÊNE DE LA SERRE · 1998']]) {
       const tag = new T.Mesh(new T.PlaneGeometry(1.6, .5), new T.MeshBasicMaterial({ map: signTex([name, 'ARCHIVES VÉGÉTALES · FICHE'], { bg: 'rgba(8,40,30,.55)', fg: '#9fffcf', w: 512, h: 160, border: '#6dff9c' }), transparent: true, opacity: .8, depthWrite: false, toneMapped: false, side: T.DoubleSide }));
-      tag.position.set(x, name.startsWith('CHÊNE') ? 2.4 : 1.9, z); add(tag); animated.push((t, dt, eye) => { tag.position.y += Math.sin(t * 1.3 + x) * .0015; tag.lookAt(eye.position.x, tag.position.y, eye.position.z); });
+      const baseY=name.startsWith('CHÊNE')?2.4:1.9; tag.name='M01 / catalogue botanique '+name; tag.position.set(x,baseY,z); add(tag); animated.push((t, dt, eye) => { tag.position.y=baseY+Math.sin(t*1.3+x)*.025; tag.lookAt(eye.position.x, tag.position.y, eye.position.z); });
     }
     // Vesper beyond the walls: neon advertising on the Archives' blind side wall, seen from the relay terrace.
     sign(signTex(['HELIX', 'LA MÉMOIRE DE VESPER EST EN SÉCURITÉ'], { bg: '#06121a', fg: '#ff4d5e', w: 1024, h: 256, border: '#ff4d5e' }), -30.2, 8.2, -84, -Math.PI / 2, 9, 2.25, { lit: true });
     piece(M.dark, -30.4, 6.4, -84, .3, 4, 9.6);
   }
+
+  const livedIn=createLivedInDressing(T,root,{chapter:1,low,materials:details.M});
 
   // ---------- Daylight adaptation inside the buildings ----------
   let adapt = 1; const cachesById = new Map();
@@ -535,10 +542,10 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
       placeFixtures(); buildRooms(); buildWalls(obstacles);
       for (const o of obstacles) if (o.extension) { dress(o); if (o.kind !== 'bed') details.accessories(o); }
       buildFixtureMeshes(); buildDoors(); buildDevices(obstacles); buildSigns(); buildCyber();
-      flushGeometry(); flushPieces(); details.finish();
+      flushGeometry(); flushPieces(); details.finish(); livedIn.build(obstacles);
     },
     update(t, dt, eye, player = eye.position) {
-      updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt); details.update(power);
+      updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt); details.update(power); livedIn.update(t,dt,power);
       for (const r of rotors) r.rotation.x += (power.caserne ? 14 : 0) * dt;
       for (const f of animated) f(t, dt, eye);
     },
@@ -564,6 +571,6 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     markDone(id, done = true) { const d = devices.get(id); if (d) { d.done = done; if (!done) { d.turn = 0; if (d.moving) d.moving.rotation.set(0, 0, 0); } } },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
     daylightAt,
-    stats() { return { ...stats, details: details.stats(), power: power.caserne, adapt: +adapt.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, details: details.stats(), livedIn: livedIn.stats(), power: power.caserne, adapt: +adapt.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }

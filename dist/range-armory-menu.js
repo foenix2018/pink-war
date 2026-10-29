@@ -5,7 +5,7 @@ export function armoryRegions(indices){return [...indices.map((index,i)=>({index
 export function armoryChoiceAt(indices,x,y){return armoryRegions(indices).find(r=>x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h)?.index??null;}
 
 export function createRangeArmoryMenu({getGame,onChoose,onChange=()=>{}}){
- if(!document.querySelector('[data-range-armory-style]')){const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./range-armory.css?v=3.72.0',import.meta.url).href;css.dataset.rangeArmoryStyle='';document.head.append(css);}
+ if(!document.querySelector('[data-range-armory-style]')){const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./range-armory.css?v=3.73.0',import.meta.url).href;css.dataset.rangeArmoryStyle='';document.head.append(css);}
  const root=document.createElement('section');root.className='pw-range-armory';root.hidden=true;root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');root.setAttribute('aria-label','Armurerie du stand');
  root.innerHTML='<div class="pw-range-armory-panel"><header><div><small>STAND DE TIR</small><h2>Armurerie</h2></div><button type="button" data-armory-close aria-label="Fermer l’armoire">×</button></header><p>Choisissez une arme. Le chronomètre et les points repartent à zéro.</p><div class="pw-range-armory-grid"></div><footer>Relancez ensuite les cibles depuis l’interrupteur de votre box.</footer></div>';
  const readout=document.createElement('aside');readout.className='pw-range-session';readout.hidden=true;readout.setAttribute('aria-label','Résultats de l’exercice');readout.innerHTML='<span><small>TEMPS</small><b data-range-time>00:00</b></span><i></i><span><small>POINTS</small><b data-range-points>00000</b></span>';

@@ -1,5 +1,7 @@
 # Pink Wars — La Fracture
 
+Version 3.73 : **plus de vie dans les niveaux 1 et 2** — sacs souples, bottes, gants, outils suspendus, fournitures de soin, conserves, vaisselle et affaires laissées près des couchages. Herbier sous verre, semis et arrosoir ; bassin avec eau, robinet et rides. Trois ventilateurs suivent les circuits électriques et cinq étoffes bougent doucement. [Détails et captures](docs/pink-wars/MISE_A_JOUR_373.md).
+
 Version 3.72 : **matières et objets plus réalistes dans les niveaux 1 et 2** — acier brossé, peinture usée, bois, toile, papier, terre, écorce et feuilles nervurées ; établi outillé, rayonnages ouverts avec livres, armoire médicale vitrée avec flacons, linge plissé, cuisine et installations techniques détaillées. Arbre de la serre à feuilles individuelles et branches effilées. [Détails et captures](docs/pink-wars/MISE_A_JOUR_372.md).
 
 Version 3.71 : **décors et accessoires des niveaux 1 et 2** — 23 portes détaillées avec quincaillerie et rails animés, six postes informatiques liés aux circuits électriques, feuillage courbé et arbre de la serre, rangements, caisses, bureaux et dispensaire enrichis. Portails de renforts à bobines et membrane en spirale, avec une signature rouge HELIX dans M02. [Détails et vérifications](docs/pink-wars/MISE_A_JOUR_371.md).

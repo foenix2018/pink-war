@@ -1,0 +1,131 @@
+{
+  "version": "3.73.0",
+  "date": "2026-10-29",
+  "tests": {
+    "command": "npm test",
+    "pass": 673,
+    "fail": 0,
+    "skipped": 0,
+    "finalTargetedTests": 11
+  },
+  "browser": "Chromium / SwiftShader / WebGL",
+  "detailScenes": [
+    {
+      "chapter": 1,
+      "errors": [],
+      "failedResources": [],
+      "quality": "normal",
+      "livedIn": {
+        "objects": 18,
+        "marks": 12,
+        "fans": 2,
+        "movingCloth": 0,
+        "waterFeatures": 1,
+        "batches": 25,
+        "triangles": 11310,
+        "fanSpeeds": [
+          {
+            "power": "caserne",
+            "speed": 2.9697832356414
+          },
+          {
+            "power": "caserne",
+            "speed": 2.9697832356414
+          }
+        ]
+      }
+    },
+    {
+      "chapter": 2,
+      "errors": [],
+      "failedResources": [],
+      "quality": "normal",
+      "livedIn": {
+        "objects": 23,
+        "marks": 12,
+        "fans": 1,
+        "movingCloth": 5,
+        "waterFeatures": 0,
+        "batches": 19,
+        "triangles": 12388,
+        "fanSpeeds": [
+          {
+            "power": "enclave",
+            "speed": 2.279908282993515
+          }
+        ]
+      }
+    }
+  ],
+  "mobile": [
+    {
+      "chapter": 2,
+      "viewport": [
+        390,
+        844
+      ],
+      "revision": "3.73.0",
+      "ready": true,
+      "errors": [],
+      "warnings": [],
+      "failedResources": [],
+      "power": {
+        "enclave": false,
+        "tower": true
+      },
+      "livedIn": {
+        "objects": 23,
+        "marks": 8,
+        "fans": 1,
+        "movingCloth": 5,
+        "waterFeatures": 0,
+        "batches": 19,
+        "triangles": 7316,
+        "fanSpeeds": [
+          {
+            "power": "enclave",
+            "speed": 0
+          }
+        ]
+      }
+    },
+    {
+      "chapter": 1,
+      "viewport": [
+        390,
+        844
+      ],
+      "revision": "3.73.0",
+      "ready": true,
+      "errors": [],
+      "warnings": [],
+      "failedResources": [],
+      "power": true,
+      "livedIn": {
+        "objects": 18,
+        "marks": 8,
+        "fans": 2,
+        "movingCloth": 0,
+        "waterFeatures": 1,
+        "batches": 25,
+        "triangles": 7798,
+        "fanSpeeds": [
+          {
+            "power": "caserne",
+            "speed": 12.128444239649323
+          },
+          {
+            "power": "caserne",
+            "speed": 12.128444239649323
+          }
+        ]
+      }
+    }
+  ],
+  "limits": [
+    "No physical iPhone or Quest tested",
+    "No hardware frame rate measured",
+    "Detail captures use presentation lighting",
+    "No production deployment"
+  ]
+}
