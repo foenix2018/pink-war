@@ -458,9 +458,9 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       catch(error){onFailure(error);}
     },
     // QA hooks (?debug=1): move the player, clear machines, advance the mission clock.
-    debug:params.has('debug')?{game,teleport(x,z){Object.assign(game.player,{x,z,elevation:game.surfaceHeight(x,z,game.time),grounded:true,verticalSpeed:0});setPlayer?.(game.player);},
+    debug:params.has('debug')?{game,teleport(x,z){Object.assign(game.player,{x,z,elevation:game.surfaceHeight(x,z,game.time),grounded:true,verticalSpeed:0});if(game.state==='playing')game.step(1/60,{});setPlayer?.(game.player);},
       clear(){game.enemies.length=0;game.toSpawn=0;},skip(seconds){game.time+=seconds;},god(){game.invulnerable=1e9;},
-      use(id){const it=EXTENSION_INTERACTIONS.find(i=>i.id===id);if(it){Object.assign(game.player,{x:it.x,z:it.z,elevation:0,grounded:true});setPlayer?.(game.player);}const done=onInteract();return done;},
+      use(id){const it=EXTENSION_INTERACTIONS.find(i=>i.id===id);if(it){Object.assign(game.player,{x:it.x,z:it.z,elevation:0,grounded:true});if(game.state==='playing')game.step(1/60,{});setPlayer?.(game.player);}const done=onInteract();return done;},
       // Synchronous close for scripted QA (the dialog's close event can lag behind a slow software renderer).
       closeJournal(){const d=document.getElementById('m01-journal');if(d){d.close();d.remove();}if(journalOpen){journalOpen=false;game.state='playing';}}}:null,
     snapshot(){return {view:effectiveView(),playerVisible:rig?.model.root.visible||false,music:{playing:false,source:null},revision:'3.69.0',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
