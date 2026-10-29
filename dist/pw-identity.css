@@ -1,0 +1,34 @@
+/* Pink Wars master identity: reusable, local assets and zero external font downloads.
+   Shape derived from the agreed magenta metallic / silver italic game artwork. */
+.pw-brand-type{display:inline-flex!important;align-items:baseline;gap:.22em;white-space:nowrap;font-family:Impact,"Arial Black",Arial,sans-serif!important;font-style:italic!important;font-weight:1000!important;letter-spacing:-.055em!important;text-transform:uppercase!important;line-height:.94!important;transform:skewX(-7deg);vertical-align:baseline}
+.pw-brand-type>.pw-brand-pink{background:linear-gradient(175deg,#ffb4e2 1%,#ff4dab 35%,#f22c8b 65%,#9e1056 100%);-webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-stroke:.25px #f474bb;text-shadow:none}
+.pw-brand-type>.pw-brand-silver{background:linear-gradient(173deg,#fff 3%,#e6eaf1 35%,#8599af 66%,#f5f8fe 82%,#596779);-webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-stroke:.35px #e8f1ff;text-shadow:none}
+.pw-major-wordmark{display:block;object-fit:contain;object-position:left center;width:min(310px,82%);height:auto;min-height:54px;filter:drop-shadow(0 5px 15px #020613ba)}
+a.brand .pw-header-wordmark{display:block;width:112px;max-width:100%;height:auto;filter:drop-shadow(0 2px 4px #030713d1)}
+#lobby .intro>h1{margin:9px 0 4px!important;line-height:1!important}
+#lobby .intro>h1 .pw-major-wordmark{width:min(290px,90%);min-height:72px}
+#intro .introCard>h1 .pw-major-wordmark{width:clamp(178px,18vw,282px);min-height:62px}
+body .pw-load-brand{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+body .pw-load-brand .pw-brand-type{font-size:1.03em}
+#shade .kicker .pw-brand-type,.introMeta .pw-brand-type{font-size:1.04em}
+header h1 .pw-brand-type{font-size:.92em}
+#game .logo .pw-brand-type{font-size:1.06em}
+@media(max-width:600px){#lobby .intro>h1 .pw-major-wordmark{width:min(244px,95%)}a.brand .pw-header-wordmark{width:88px}#intro .introCard>h1 .pw-major-wordmark{width:180px}}
+/* M03 cover artwork: illustration is unique to M03, not M01 or M02. */
+html.pw-m03-page #intro,body.chapter3 #intro{
+ background:#070e1a url('./art/mission03-cover.svg?v=1') center/cover no-repeat!important}
+html.pw-m03-page #intro::before,body.chapter3 #intro::before{
+ content:"";position:absolute;inset:0;pointer-events:none;
+ background:linear-gradient(90deg,#030712d1 0%,#06111fca 25%,#08121b4a 49%,transparent 78%);}
+html.pw-m03-page #intro .introCard,body.chapter3 #intro .introCard{
+ position:relative;isolation:isolate;z-index:1;background:linear-gradient(126deg,#07131fdc,#101d30ac)!important;
+ border:1px solid #6fbdd666!important;border-left:3px solid #fa4daa!important;box-shadow:0 20px 70px #0009!important;max-width:560px!important}
+html.pw-m03-page #intro .introMeta,body.chapter3 #intro .introMeta{color:#8edbf7}
+html.pw-m03-page #intro .subtitle,body.chapter3 #intro .subtitle{
+ color:#ff81bf!important;text-shadow:0 2px 12px #100414bd;font-size:clamp(21px,3vw,35px)!important;font-weight:900!important;line-height:1.1;letter-spacing:.015em}
+html.pw-m03-page #intro .featureRow .feature,body.chapter3 #intro .featureRow .feature{background:#0c2236aa;border:1px solid #527b9d6e;border-radius:6px}
+html.pw-m03-page #intro .startBtn,body.chapter3 #intro .startBtn{background:linear-gradient(110deg,#ad1b70,#f348a9)!important;border:1px solid #ff9dd5!important;box-shadow:0 8px 24px #b4177580}
+@media(max-width:700px){
+ html.pw-m03-page #intro,body.chapter3 #intro{background-position:64% center!important}
+ html.pw-m03-page #intro .introCard,body.chapter3 #intro .introCard{max-height:95dvh;overflow-y:auto;max-width:min(95vw,500px)!important;background:#071321ec!important}
+}
