@@ -57,3 +57,17 @@ La demande explicite est de **ne pas modifier les personnages pour le moment**. 
 ### Limites connues
 
 Aucune capture visuelle validée du rendu final sur tablette Dell, Quest 3 ou iPhone n'est disponible dans cet environnement. Le statut `READY` d'un déploiement signifie que Vercel a construit le site, pas que les modèles 3D sont visuellement exacts ou sans régression. La fusion en production reste conditionnée aux essais navigateur et au contrôle des FPS.
+
+## Réutilisation du secteur visitable comme chapitre 3
+
+**Décision : le niveau 1 canonique est conservé.** L'environnement de Vesper qui avait été montré sous forme de visite 3D (`vesper-level1-v7.html?visit=1`) est exploité comme **MISSION 03 — LE CONVOI DES ABSENTS**, sans copier 900 Ko de code moteur ni interférer avec le premier chapitre.
+
+- Route indépendante `/niveau3.html` via rewrite Vercel vers `vesper-level1-v7.html`; activation locale par le pathname ou `?chapter=3`.
+- Choix `03` du menu Histoire et nouvelle branche de navigation après la conclusion de `02 — Sous les Néons`.
+- Quatre étapes vérifiables dans un ordre imposé : annexe médicale, atelier, relais A3 en hauteur, zone de Fracture.
+- Scénographie propre : boîtiers de preuves, quatre caisses de convoi, enseigne de passage, teinte de fin de journée, briefing et épilogue.
+- Téléportation du visualiseur désactivée pendant cette mission pour ne pas neutraliser la progression.
+- Décors supplémentaires M01 précédemment ajoutés dans la branche de prévisualisation activés **uniquement lorsque la scène est utilisée comme M03**.
+- Aucun fichier de personnage ni aucun collider canonique M01 modifié.
+- Vérifications exécutées : parsing JS de tous les modules modifiés, simulation du blocage d'une interaction hors ordre, progression des quatre objectifs et final unique.
+- Statut : **prototype de parcours M03**, jouable avec les commandes du visualiseur WebGPU/WebGL2. L'intégration complète à la boucle de combat, aux véritables modèles/rigs des personnages et au système de checkpoints de la campagne reste hors périmètre de cette itération, conformément au gel des personnages. Aucune validation visuelle à distance n'a été possible.
