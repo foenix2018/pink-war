@@ -5,7 +5,22 @@ export const normalizeView=value=>value==='third'?'third':'fps';
 export function readPreferredView(){try{return normalizeView(globalThis.localStorage?.getItem(VIEW_STORAGE_KEY));}catch{return 'fps';}}
 export function savePreferredView(value){try{globalThis.localStorage?.setItem(VIEW_STORAGE_KEY,normalizeView(value));}catch{}}
 
-export function mountViewControl(parent,{getView=readPreferredView,onSelect=savePreferredView,canChange=()=>true}={}){
+export function bindViewButton(button,{getView=readPreferredView,onSelect=savePreferredView,canChange=()=>true}={}){
+ button.dataset.viewToggle='';
+ let previousView,previousDisabled;
+ function refresh(){
+  const third=normalizeView(getView())==='third',disabled=!canChange();
+  if(previousView===third&&previousDisabled===disabled)return;
+  previousView=third;previousDisabled=disabled;button.disabled=disabled;
+  button.textContent=third?'3P · Passer en FPS':'FPS · Passer en 3P';
+  button.setAttribute('aria-label',third?'Vue à la troisième personne. Passer en FPS':'Vue FPS. Passer à la troisième personne');
+  button.setAttribute('aria-pressed',String(third));
+ }
+ button.onclick=()=>{if(!button.disabled)onSelect(normalizeView(getView())==='third'?'fps':'third');refresh();};refresh();
+ return {button,refresh};
+}
+
+export function mountViewControl(parent,options={}){
  let row=parent.querySelector('[data-view-control]');
  if(!row){
   row=document.createElement('div');row.dataset.viewControl='';row.className='setting-row';
@@ -15,13 +30,5 @@ export function mountViewControl(parent,{getView=readPreferredView,onSelect=save
   button.style.cssText='min-height:44px;padding:10px 16px;border:1px solid #8493a3;border-radius:8px;background:#253140;color:#eef1f7;font:600 13px system-ui;cursor:pointer';
   row.append(label,button);parent.append(row);
  }
- const button=row.querySelector('[data-view-toggle]');
- function refresh(){
-  const third=normalizeView(getView())==='third';button.disabled=!canChange();
-  button.textContent=third?'3P · Passer en FPS':'FPS · Passer en 3P';
-  button.setAttribute('aria-label',third?'Vue à la troisième personne. Passer en FPS':'Vue FPS. Passer à la troisième personne');
-  button.setAttribute('aria-pressed',String(third));
- }
- button.onclick=()=>{if(!button.disabled)onSelect(normalizeView(getView())==='third'?'fps':'third');refresh();};refresh();
- return {row,button,refresh};
+ return {row,...bindViewButton(row.querySelector('[data-view-toggle]'),options)};
 }

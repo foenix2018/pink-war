@@ -1,3 +1,13 @@
+# Pink War 3.67.2 — bouton de vue directement dans la pause
+
+15 contrôles Node ciblés réussis, aucun échec, test ignoré ou annulé : préférence et stockage, caméra, HUD, pause XR et musique des menus. Syntaxe des quatre modules modifiés, générateur et `git diff --check` vérifiés. Aucun changement de mécanique ou de modèle.
+
+Les vrais boutons tactiles de l’Arène, du stand, de M01 et M02 sont contrôlés dans un viewport de 390 × 660 représentant la place disponible avec les barres du navigateur mobile. Le bouton est directement après Reprendre, visible sans défiler, avec une cible d’au moins 44 px. Passage FPS / 3P dans les deux sens et présence du corps vérifiés ; la pause reste ouverte. Réglages, touche V et préférence après rechargement restent synchronisés. Vérifications de débordement et de position aussi en 390 × 844, 844 × 390 et 1280 × 800. [Rapport](docs/pink-wars/PAUSE_VIEW_BROWSER_VERIFICATION.json) · [Notes et capture](docs/pink-wars/MISE_A_JOUR_367_2.md).
+
+Validation navigateur locale sous Chromium/SwiftShader, framebuffer réduit, invulnérabilité préparée pour les menus ; aucun essai sur Safari/iPhone ou Quest physique. Le statut Vercel confirme séparément la publication du commit. La version 3.67.1 et ses 637 tests complets restent documentés ci-dessous ; ce correctif applique les contrôles ciblés et les quatre parcours navigateur.
+
+---
+
 # Pink War 3.67.1 — options FPS / 3P
 
 637 tests Node réussis, aucun échec, test ignoré ou annulé ; 20 contrôles ciblés réussis. Quatre nouveaux tests couvrent la sauvegarde partagée sans modification des autres réglages, le stockage bloqué, l’orientation et l’altitude de la caméra, ainsi que les murs et les vrais planchers. L’attente historique d’un FPS forcé au lancement est remplacée par la transmission de la préférence, avec repli FPS vérifié séparément.

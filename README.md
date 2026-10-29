@@ -1,5 +1,7 @@
 # Pink Wars — La Fracture
 
+Version 3.67.2 : **FPS / 3P directement dans le menu pause**, juste sous « Reprendre le combat », sans ouvrir de sous-menu. Le bouton des réglages reste disponible et synchronisé. [Détails](docs/pink-wars/MISE_A_JOUR_367_2.md) · [Jouer](https://pink-war.vercel.app/?v=3.67.2).
+
 Version 3.67.1 : **bouton FPS / 3P dans les réglages** — disponible dans M01, M02, l’Arène et le stand, avec choix mémorisé. M01 affiche le vrai personnage animé en troisième personne et conserve les tirs depuis son arme. [Détails](docs/pink-wars/MISE_A_JOUR_367_1.md) · [Jouer](https://pink-war.vercel.app/?v=3.67.1).
 
 Version 3.67 : **Gaby et Cara en escorte dès M01, dans l’Arène et au stand** — flottaison au-dessus et derrière le héros, tirs de protection sous 50 % de santé et torche automatique dans le noir. Suivi du corps en vue FPS/3P et de la tête en XR. [Détails](docs/pink-wars/MISE_A_JOUR_367.md) · [Arène](https://pink-war.vercel.app/?mode=arena&v=3.67.0) · [Stand](https://pink-war.vercel.app/?mode=training&v=3.67.0).

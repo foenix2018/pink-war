@@ -19,6 +19,9 @@ body.fracture-home{background:linear-gradient(100deg,#0d1828ed,#101c36b8),var(--
 
 .fracture-controls{margin:22px 0;color:#b9cbd7}.fracture-controls summary{font-size:12px;cursor:pointer;padding:8px}.fracture-controls .pause-commands{margin-top:14px}.panel-dialog.pause-dialog>p{font-size:13px;color:#b8c9d4}.panel-dialog.pause-dialog>.secondary-button{display:block;margin-top:10px}.panel-dialog.pause-dialog>.hands-menu-button{display:none}
 
+.fracture-choices [data-pause-view]{border-color:var(--fracture);color:var(--fracture);letter-spacing:.04em}
+.fracture-choices [data-pause-view]:disabled{opacity:.5;cursor:default}
+
 #lobby{display:flex;justify-content:flex-start}#lobby .intro{position:relative;left:auto;right:auto;top:auto;bottom:auto;transform:none;max-width:100%;pointer-events:auto}@media(max-width:700px){#lobby .intro{width:100%}}
 /* The Fracture lobby is positioned with an id selector: hide it explicitly while playing or inspecting the outfit,
    and keep the desktop card below the masthead brand. */

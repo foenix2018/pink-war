@@ -22,7 +22,7 @@ import {sightPoint} from './sight-line.js';
 import {GAME_VERSION,showLaunchError} from './launch-ui.js';
 import {syncMenuArtwork} from './menu-art.js';
 import {createAICompanion} from './ai-companions.js';
-import {mountViewControl,readPreferredView,savePreferredView,normalizeView} from './view-options.js';
+import {bindViewButton,mountViewControl,readPreferredView,savePreferredView,normalizeView} from './view-options.js?v=3.67.2';
 import {companionAvailable} from './companion-escort.js';
 import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
@@ -46,7 +46,7 @@ if(boot?.settings)Object.assign(settings,boot.settings);
 settings.sensitivity = clamp(Number(settings.sensitivity) || 1, .4, 2);
 if (!['auto', 'low', 'high'].includes(settings.quality)) settings.quality = 'auto';
 let phase = 'lobby', view = boot?.view?normalizeView(boot.view):readPreferredView(), yaw = 0, pitch = -.075, game, world, vr;
-let optionsViewControl=null;
+let optionsViewControl=null,pauseViewControl=null;
 let character=characterForId('ghju');
 let m01CheckpointGame=null,m01CheckpointStage=null,m01CheckpointPending=false;
 let combatHud=null,armorFx=null,armorFxScene=null,meleeQueued=false,chargeQueued=false,touchSprinting=false;
@@ -230,14 +230,15 @@ function selectView(next,remember=true) {
   for (const button of document.querySelectorAll('[data-view]')) { const selected = button.dataset.view === view; button.classList.toggle('selected', selected); button.setAttribute('aria-pressed', String(selected)); }
   $('game-view-label').textContent = view === 'fps' ? 'VUE FPS' : 'VUE 3e PERSONNE';
   $('view-button').title = view === 'fps' ? 'Passer en troisième personne (V)' : 'Passer en vue FPS (V)';
-  optionsViewControl?.refresh();
+  optionsViewControl?.refresh();pauseViewControl?.refresh();
   if(world&&game&&['playing','paused'].includes(phase))updateCamera();
 }
 for (const button of document.querySelectorAll('[data-view]')) button.onclick = () => selectView(button.dataset.view);
 selectView(view); $('view-button').onclick = () => selectView(view === 'fps' ? 'third' : 'fps');
 optionsViewControl=mountViewControl($('settings-dialog'),{getView:()=>view,onSelect:selectView,canChange:()=>!vr?.active});
+pauseViewControl=bindViewButton($('pause-view'),{getView:()=>view,onSelect:selectView,canChange:()=>!vr?.active});
 
-function pause() { if (phase !== 'playing') return; setScreenMusic('gameplay');ambience?.pause(); phase = 'paused'; resetInput(); if (vr?.mode !== 'xr') $('pause-dialog').showModal(); }
+function pause() { if (phase !== 'playing') return; setScreenMusic('gameplay');ambience?.pause(); phase = 'paused'; resetInput(); pauseViewControl.refresh(); if (vr?.mode !== 'xr') $('pause-dialog').showModal(); }
 function resume() { if (phase !== 'paused') return; for (const d of document.querySelectorAll('dialog[open]')) d.close(); phase = 'playing'; resetInput(); audioReady(); }
 function openPanel(id) { if(id==='settings-dialog')optionsViewControl?.refresh(); if (phase === 'playing') { phase = 'paused'; resetInput();setScreenMusic('gameplay');ambience?.pause(); } for (const d of document.querySelectorAll('dialog[open]')) d.close(); $(id).showModal(); }
 function closePanel(dialog) { if(dialog.id==='outfit-dialog'){closeOutfit();return;} dialog.close(); if (phase === 'paused') $('pause-dialog').showModal(); }
