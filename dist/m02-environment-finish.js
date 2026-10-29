@@ -109,6 +109,34 @@ export function createEnvironmentFinish(T,{root,scene,performance=false,accent=0
    l.position.set(side*19.5,7.86,z+1.8);scene.add(l);lights.push(l);
   }
  }
+ // Technical ductwork: rounded downpipes, ring couplings and fan housings.
+ const ductGeometry=new T.CylinderGeometry(.115,.115,4.7,10);
+ const clampGeometry=new T.TorusGeometry(.148,.022,6,12);
+ for(const side of [-1,1])for(const z of [-47,-13,20,53]){
+  const pipe=new T.Mesh(ductGeometry,metal);
+  pipe.name='M02 / descente de ventilation circulaire';
+  pipe.position.set(side*13.27,3.4,z);pipe.castShadow=false;root.add(pipe);created.push(pipe);
+  for(const y of [1.9,3.35,4.85]){
+   const clamp=new T.Mesh(clampGeometry,oxidized);
+   clamp.rotation.x=Math.PI/2;clamp.position.set(side*13.27,y,z);
+   root.add(clamp);created.push(clamp);
+  }
+ }
+ const fanGeometry=new T.CylinderGeometry(.45,.45,.045,18);
+ const fanRing=new T.TorusGeometry(.39,.04,6,18);
+ for(const {side,z} of marketZones)for(const dz of [-3.2,3.2]){
+  const fan=new T.Mesh(fanGeometry,black);
+  fan.name='M02 / extracteur plafond';
+  fan.position.set(side*22.4,8.205,z+dz);fan.castShadow=false;root.add(fan);created.push(fan);
+  const ring=new T.Mesh(fanRing,metal);
+  ring.rotation.x=Math.PI/2;ring.position.set(side*22.4,8.171,z+dz);
+  root.add(ring);created.push(ring);
+  for(let b=0;b<4;b++){
+   const blade=new T.Mesh(new T.BoxGeometry(.66,.018,.055),oxidized);
+   blade.position.set(side*22.4,8.169,z+dz);
+   blade.rotation.y=b*Math.PI/4;root.add(blade);created.push(blade);
+  }
+ }
  // Graphic billboards: authored fictional adverts; texture reused by sign index.
  const ads=[
   ['VESPER','RESEAU CIVIL','SECTEUR 07 / RESTAURATION',0x79d7e8],
@@ -136,10 +164,13 @@ export function createEnvironmentFinish(T,{root,scene,performance=false,accent=0
   const tex=new T.CanvasTexture(cv);tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=2;textures.push(tex);return tex;
  };
  ads.forEach(([title,subtitle,micro,tint],i)=>{
-  const side=i%2?1:-1,z=61-i*23.5;
+  const side=i%2?1:-1;
+  const towerIndex=i+(side>0?4:0),z=65-i*22+(i%2?3:-3);
+  const market=(i===2&&side<0)||(i===3&&side>0);
+  const facade=market?12.2:23+(towerIndex%2)*3-(18+(towerIndex%3)*3)/2;
   const signRoot=new T.Group();signRoot.name='M02 / panneau publicitaire '+title;
-  // Place parallel to the facade, surface facing the street.
-  signRoot.position.set(side*12.54,5.5,z);
+  // Fasten to the actual market frontage or computed tower face; never float in the road.
+  signRoot.position.set(side*(facade-.24),5.5,z);
   signRoot.rotation.y=-side*Math.PI/2;
   const surface=new T.Mesh(new T.PlaneGeometry(3.2,1.61),new T.MeshBasicMaterial({map:makeAd(title,subtitle,micro,tint),toneMapped:false,side:T.DoubleSide}));
   surface.position.z=.12;signRoot.add(surface);
