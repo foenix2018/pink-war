@@ -53,6 +53,6 @@ test('both full extensions expose the new dressing without changing authoritativ
   const camera=new T.PerspectiveCamera();camera.position.set(0,1.7,0);art.update(1,.016,camera,camera.position);
   assert.ok(art.stats().livedIn.objects>=12);assert.equal(JSON.stringify(obstacles),before);
   const tag=art.root.getObjectByName('M01 / catalogue botanique FOUGÈRE DES TOITS');
-  if(tag){const y=tag.position.y;for(let i=0;i<90;i++)art.update(1,.016,camera,camera.position);assert.equal(tag.position.y,y,'botanical labels do not drift with frame count');assert.ok(Math.abs(y-1.9)<=.025);} 
+  if(tag){const y=tag.position.y;for(let i=0;i<90;i++)art.update(1,.016,camera,camera.position);assert.equal(tag.position.y,y,'botanical labels do not drift with frame count');assert.ok(Math.abs(y-1.9)<=.025);}
  }
 });
