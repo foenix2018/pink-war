@@ -52,7 +52,9 @@ const main=$('game'),shade=$('shade'),startButton=$('start'),status=$('status');
 const autoMission=new URLSearchParams(location.search).get('manual')!=='1';
 const missionLoading=autoMission?(window.__PINKWAR_MISSION_LOADING||createMissionLoading({mission:2,characterId})):null;
 const quality=$('quality'),hud=$('hud');
-if(new URLSearchParams(location.search).get('quality')==='low')quality.value='low';
+const requestedQuality=new URLSearchParams(location.search).get('quality');
+if(['low','balanced','normal'].includes(requestedQuality))quality.value=requestedQuality;
+const renderingQuality=()=>quality.value==='balanced'?'balanced':quality.value==='low'?'low':'auto';
 const low=()=>quality.value==='low';
 const rng=(()=>{let s=220102;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};})();
 let canvas=main,renderer,scene,camera,game,weapon,clock=0,running=false,started=false,last=0,fpsTime=0,frames=0,framePending=false,recovering=false,bootStep='modules';
@@ -857,7 +859,7 @@ function onRenderFailure(error){
 function resize(){
  if(!renderer)return;const width=innerWidth,height=innerHeight;
  camera.aspect=width/height;camera.updateProjectionMatrix();
- const profile=graphicsProfile({userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu},low()?'low':'auto');
+ const profile=graphicsProfile({userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu},renderingQuality());
  renderer.setPixelRatio(renderPixelRatio(profile,devicePixelRatio,width,height));renderer.setSize(width,height,false);
 }
 async function boot(){
@@ -865,7 +867,7 @@ async function boot(){
  bootStep='initialisation graphique';status.textContent='Préparation du secteur et du moteur existant…';startButton.disabled=true;
  try{
   const environment={userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu};
-  const profile=graphicsProfile(environment,low()?'low':'auto',new URLSearchParams(location.search).get('renderer')==='webgl'||low()||await immersiveRendererPreferred());
+  const profile=graphicsProfile(environment,renderingQuality(),new URLSearchParams(location.search).get('renderer')==='webgl'||low()||await immersiveRendererPreferred());
   if(profile.phone&&!new URLSearchParams(location.search).has('quality'))quality.value='low';
   const prepared=await createCompatibleRenderer({canvas,WebGPU:T.WebGPURenderer,WebGL:WebGLRenderer,profile});
   missionLoading?.set(.28,'Construction des Bas-Niveaux');
