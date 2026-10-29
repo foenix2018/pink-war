@@ -1,0 +1,87 @@
+{
+  "date": "2026-10-29",
+  "version": "3.71.0",
+  "tests": {
+    "command": "npm test",
+    "passed": 666,
+    "failed": 0,
+    "skipped": 0
+  },
+  "browser": "Chromium / SwiftShader / WebGL",
+  "objects": {
+    "errors": [],
+    "checks": [
+      "real canvas diagnostic textures",
+      "closed and open door renders",
+      "visible leaf geometry and hardware"
+    ]
+  },
+  "desktop": [
+    {
+      "level": 2,
+      "viewport": [
+        1280,
+        800
+      ],
+      "revision": "3.71.0",
+      "ready": true,
+      "errors": [],
+      "warnings": [],
+      "failedResources": []
+    },
+    {
+      "level": 1,
+      "viewport": [
+        1280,
+        800
+      ],
+      "revision": "3.71.0",
+      "ready": true,
+      "errors": [],
+      "warnings": [],
+      "failedResources": []
+    }
+  ],
+  "mobile": [
+    {
+      "level": 1,
+      "viewport": [
+        390,
+        844
+      ],
+      "revision": "3.71.0",
+      "ready": true,
+      "phase": "x-remise",
+      "power": true,
+      "detailStats": {
+        "plants": 37,
+        "computers": 3,
+        "accessories": 10,
+        "doors": 13,
+        "batches": 86,
+        "triangles": 34062
+      },
+      "errors": [],
+      "warnings": [],
+      "failedResources": []
+    },
+    {
+      "level": 2,
+      "viewport": [
+        390,
+        844
+      ],
+      "revision": "3.71.0",
+      "ready": true,
+      "source": "M02 mobile startup run console and qa/371-mobile-m02.webp",
+      "errors": [],
+      "warnings": [],
+      "failedResources": []
+    }
+  ],
+  "limits": [
+    "No physical iPhone or Quest tested",
+    "No hardware frame-rate measurements",
+    "No production deployment performed"
+  ]
+}

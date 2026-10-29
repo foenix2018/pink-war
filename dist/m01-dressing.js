@@ -1,10 +1,12 @@
 // Physical ageing of the preserved Secours 07 map. No replacement buildings,
 // no shifted doors, no props on the authored route or across collision openings.
+import {createVesperProps} from './vesper-props.js';
 import {Assembly,matrix} from './geo.js';
 import {LEVEL1_MAP} from './level1-layout.js';
 
 export function createM01Dressing(T,parent,maps,{performance=false}={}){
  const root=new T.Group();root.name='W01 / sept ans après la Chute';parent.add(root);
+ const details=createVesperProps(T,root,{low:performance});
  const a=new Assembly(),owned=[],textures=[],stats={leaks:0,moss:0,cables:0,aggregate:0,rebar:0,ferns:0,draws:0,triangles:0};
  let seed=2189;const rnd=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  const between=(x,y)=>x+(y-x)*rnd();
@@ -56,23 +58,14 @@ export function createM01Dressing(T,parent,maps,{performance=false}={}){
    a.add(new T.IcosahedronGeometry(r,0),k%4?aggregate:maps.brick,matrix([x+between(-.4,.4),r*.35,z+between(-1.8,1.8)],[rnd(),rnd(),rnd()],[1.4,.45,1]));stats.aggregate++;
   }
  }
- // Curved, tapered fern fronds supplement the authored leaf-card trees.
+ // Three-dimensional mixed growth stays in the original building aprons.
  for(const [x,z] of [[-14.4,48],[-13.7,31],[14.3,44],[13.9,25],[-13.7,-14],[29.9,-13],[-9.8,-47],[25,-50]]){
-  for(let f=0;f<6;f++){
-   const angle=f*1.047+rnd()*.25,len=between(.3,.65),p=[],uv=[];
-   for(let k=0;k<5;k++){
-    const pair=t=>{const w=Math.sin(t*Math.PI)*.045;return [[-w,len*(.85*t-.3*t*t),len*t*.65],[w,len*(.85*t-.3*t*t),len*t*.65]];};
-    const q=pair(k/5),r=pair((k+1)/5);
-    for(const [point,u,v] of [[q[0],0,k/5],[q[1],1,k/5],[r[1],1,(k+1)/5],[q[0],0,k/5],[r[1],1,(k+1)/5],[r[0],0,(k+1)/5]]){p.push(...point);uv.push(u,v);}
-   }
-   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(p,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.computeVertexNormals();
-   a.add(g,leaf,matrix([x,.02,z],[0,angle,0]));
-  }
-  stats.ferns++;
+  details.plant(x,.02,z,.65,'fern');details.plant(x+.16,.02,z-.18,.43);stats.ferns++;
  }
+ details.finish();
  a.mount(root);a.setLevel(1);
  // Contact darkening and sun projection are owned by the shared shadow layer.
  for(const mesh of a.meshes){mesh.castShadow=!performance&&!mesh.material.transparent;mesh.receiveShadow=true;stats.triangles+=(mesh.geometry.index?.count||mesh.geometry.attributes.position.count)/3;}
- stats.draws=a.meshes.length;
- return {root,stats,dispose(){root.removeFromParent();root.traverse(o=>o.geometry?.dispose());for(const m of owned)m.dispose();for(const t of textures)t.dispose();}};
+ stats.details=details.stats();stats.draws=a.meshes.length+stats.details.batches;stats.triangles+=stats.details.triangles;
+ return {root,stats,dispose(){details.dispose();root.removeFromParent();root.traverse(o=>o.geometry?.dispose());for(const m of owned)m.dispose();for(const t of textures)t.dispose();}};
 }

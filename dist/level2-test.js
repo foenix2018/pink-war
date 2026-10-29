@@ -1,3 +1,4 @@
+import {createVesperProps,createBreachFrame,createBreachTexture} from './vesper-props.js';
 import {createWorldShadows,createGroundOcclusion} from './world-shadows.js';
 // PINK WARS / M02 "SOUS LES NÉONS" — isolated vertical-slice test.
 // Simulation, collisions, jump, stamina/health, weapons and hostiles are
@@ -58,7 +59,7 @@ const rng=(()=>{let s=220102;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;
 let canvas=main,renderer,scene,camera,game,weapon,clock=0,running=false,started=false,last=0,fpsTime=0,frames=0,framePending=false,recovering=false,bootStep='modules';
 let yaw=0,pitch=0,stage=0,reported=-1;
 let noticeUntil=0,signal=0,rain,enemyFactory,root,architecture,pbrController,atmosphere;
-let worldShadows=null,groundOcclusion=null;
+let worldShadows=null,groundOcclusion=null,breachGate=null,breachMembrane=null;
 // 3.70 extension: enclave (prologue) and transit tower (epilogue) around the street.
 let extension=null,extArt=null,helixFactory=null,subtitles=null,skyLights=null,journalOpen=false,checkpointSaved=null,checkpointClock=0;
 let view=readPreferredView(),aimBlend=0,mouseAim=false,playerRig=null,touchControls=null,paused=false;
@@ -318,6 +319,10 @@ function stairsAndSkybridges(){
  for(let i=-4;i<=4;i++)beam([i*2.2,11.5,-18],[i*2.2,12,-18],.06,materials.black);
 }
 function props(){
+ const details=createVesperProps(T,root,{low:low()});
+ breachGate=new T.Group();breachGate.name='M02 / renforts HELIX';breachGate.visible=false;scene.add(breachGate);
+ createBreachFrame(T,breachGate,{radius:1.4,steel:materials.iron,dark:materials.black,energy:materials.red,low:low()});
+ breachMembrane=new T.Mesh(new T.CircleGeometry(1.27,32),new T.MeshBasicMaterial({map:createBreachTexture(T),color:0xff526c,transparent:true,opacity:.65,side:T.DoubleSide,depthWrite:false,toneMapped:false}));breachGate.add(breachMembrane);
  const terminals=createArchiveTerminalFactory(T,{performance:low()});
  function archive(x,z,title,id){
   const computer=terminals.create(root,{x,z,id});
@@ -340,6 +345,7 @@ function props(){
   const lid=new T.Mesh(lidGeometry,materials.iron);lid.position.set(x,1.02,z);lid.userData.staticBox=true;root.add(lid);
   for(const dx of [-.39,.39])solid(x+dx,.51,z,.045,1.02,1.17,materials.dark,false);
   solid(x,.55,z+.59,.20,.15,.025,materials.warning,false);
+  details.accessories({kind:'crates',x,z,hx:.6,hz:.575,height:1.08});
   collisions.push({x,z,hx:.63,hz:.6,y:0,height:1.08,surface:'metal'});
  }
  // Transit hall/end: large functional portal and automatic barrier.
@@ -352,6 +358,7 @@ function props(){
  const door=solid(0,3.7,-63,.38,7.2,8,materials.black,false);door.visible=false;
  archive(-5,-57,'TRANSIT / SORTIE','transit');collisions.push({x:-5,z:-57,hx:1.1,hz:.38,y:0,height:1.9,surface:'metal'});
  for(const o of objectives)mark(o.x,o.y+.28,o.z,o.y>0?0xffc16c:0x6addf1);
+ details.finish();
 }
 function weather(){
  const count=low()?300:950,arr=new Float32Array(count*6);
@@ -820,6 +827,10 @@ function animation(t,frame){
   extArt.update(clock,dt,eye,game.player,{crank:extension?.hold?.name==='grille'});extArt.syncPickups(game.pickups,clock);
   if(skyLights){const f=extArt.shelter(eye.position,dt);skyLights.ambient.intensity=1.4*(.5+.5*f);skyLights.moon.intensity=2.15*f;}
  }catch(error){console.warn('M02 extension dressing frame disabled:',error);extArt=null;}
+ if(breachGate){
+  const site=game?.activePortals[0];breachGate.visible=!!site;
+  if(site){breachGate.position.set(site.x,(site.y||0)+1.6,site.z);breachGate.rotation.y=site.yaw||0;breachMembrane.rotation.z=clock*.35;breachMembrane.material.opacity=.55+.12*Math.sin(clock*4);}
+ }
  subtitles?.update(dt,{xr:!!xr?.active,hidden:journalOpen||paused||!running});
  warZone?.update(game?.time||0,{active:running});for(const event of warZone?.drainEvents()||[])if(enableAudio&&battleAudio)battleAudio.event(event,game.player,yaw);
  if(xr?.active){xr.update(dt,weaponFeel.state,weaponFeel.state.flash);xr.renderScope();}
@@ -1010,7 +1021,7 @@ for(const name of ['pointerup','pointercancel']){
  window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
 }
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
-window.__PINK_M02=Object.freeze({snapshot:()=>({music:{playing:false,source:null},revision:'3.70.0',running,paused,view:xr?.active?'fps':view,playerVisible:playerRig?.model.root.visible||false,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,extension:extension&&{stage:extension.stage,hold:extension.hold,done:extension.done,reads:extension.reads,opened:extension.opened,groups:extension.groups(),interaction:extension.interaction()},subtitle:subtitles?.current||null,journal:journalOpen,dressing:extArt?.stats(),health:game?.player.hp,
+window.__PINK_M02=Object.freeze({snapshot:()=>({music:{playing:false,source:null},revision:'3.71.0',running,paused,view:xr?.active?'fps':view,playerVisible:playerRig?.model.root.visible||false,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,extension:extension&&{stage:extension.stage,hold:extension.hold,done:extension.done,reads:extension.reads,opened:extension.opened,groups:extension.groups(),interaction:extension.interaction()},subtitle:subtitles?.current||null,journal:journalOpen,dressing:extArt?.stats(),health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
  shadowing:worldShadows?.stats(),backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
  effects:combatEffects?.stats(),armor:game&&{shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt}}),

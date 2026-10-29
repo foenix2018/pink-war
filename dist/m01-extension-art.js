@@ -3,6 +3,7 @@
 // végétales (stone archive building, galleries, registers, greenhouse). Layout in m01-extension-layout.js.
 // Daylight scene: interiors dim the sun and the sky light (eye adaptation) and are lit by a small pool of
 // point lights moved to the nearest fixtures. Textures: CC0 sets already shipped (assets/cc0, assets/ligne9).
+import {createVesperProps} from './vesper-props.js';
 import { ROOMS, DOORS, INTERACTIONS, roomAt } from './m01-extension-layout.js';
 
 const TAU = Math.PI * 2;
@@ -20,6 +21,7 @@ function canvasTexture(T, w, h, paint, { repeat = false, color = true } = {}) {
 export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } = {}) {
   const low = quality === 'low', rng = seeded(707);
   const root = new T.Group(); root.name = 'M01 / Caserne 07 et Archives végétales'; scene.add(root);
+  const details = createVesperProps(T, root, {low});
   const animated = [], stats = { meshes: 0, instances: 0, textures: 0, fixtures: 0 };
   const add = (o, parent = root) => { parent.add(o); stats.meshes++; return o; };
 
@@ -59,11 +61,11 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     paintedMetal: pbr(CC('rusty_painted_metal'), { tile: 2, color: 0xc9c2b4, metalness: .4, label: 'métal peint' }),
     red: flat(0xa3241c, .45, .35), white: flat(0xe8e6df, .5, .2), yellow: flat(0xd8a91f, .55, .2), dark: flat(0x1c2126, .5, .6), steel: flat(0x7a838a, .32, .85),
     black: flat(0x0c0e10, .7, .3), wood: flat(0x6a4c33, .85, 0), woodDark: flat(0x3d2a1c, .85, 0), fabric: flat(0x55603e, .95, 0), blanket: flat(0xb0402e, .95, 0),
-    green: flat(0x2f4a2c, .9, 0, { side: T.DoubleSide }), soil: flat(0x2b211a, 1, 0), frame: flat(0x2b3a33, .5, .6), cardboard: flat(0x9b8263, .95, 0), paper: flat(0xe4ddc8, .95, 0, { side: T.DoubleSide }),
+    foliage: flat(0x2f4a2c, .9, 0, { side: T.DoubleSide }), soil: flat(0x2b211a, 1, 0), frame: flat(0x2b3a33, .5, .6), cardboard: flat(0x9b8263, .95, 0), paper: flat(0xe4ddc8, .95, 0, { side: T.DoubleSide }),
     glass: flat(0x8fa9b4, .06, .5, { transparent: true, opacity: .2, depthWrite: false, side: T.DoubleSide }), screenOff: flat(0x0c1216, .2, .3),
     amber: glow(0xffb35c), cyan: glow(0x7fe7ff), green: glow(0x3dff8a), redGlow: glow(0xff3328), helix: glow(0xff3a4c)
   };
-  M.green.name = 'feuillage';
+  M.foliage.name = 'feuillage';
 
   // ---------- Merged geometry (world-space UVs in metres / tile) ----------
   const geos = new Map();
@@ -150,12 +152,6 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     c.fillStyle = '#1b2a3a'; c.font = `700 16px ${FONT}`; c.fillText('LIGNE 9', 300, 400); c.fillText('BAS-NIVEAUX', 330, 250); c.fillText('ORME', 440, 330);
   });
   const glowDisc = canvasTexture(T, 64, 64, (c, w, h) => { const g = c.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.3, 'rgba(255,255,255,.4)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, w, h); });
-  const fernTex = canvasTexture(T, 128, 128, (c, w, h) => {
-    c.clearRect(0, 0, w, h); c.strokeStyle = '#3f6a35'; c.fillStyle = '#4f7d3c'; c.lineWidth = 3;
-    for (let k = 0; k < 7; k++) { const a = -Math.PI / 2 + (k - 3) * .32; c.beginPath(); c.moveTo(w / 2, h); const ex = w / 2 + Math.cos(a) * h * .9, ey = h + Math.sin(a) * h * .9; c.lineTo(ex, ey); c.stroke();
-      for (let t = .2; t < 1; t += .1) { const px = w / 2 + (ex - w / 2) * t, py = h + (ey - h) * t; c.beginPath(); c.ellipse(px, py, 7 * (1 - t) + 2, 3, a + 1.2, 0, TAU); c.fill(); c.beginPath(); c.ellipse(px, py, 7 * (1 - t) + 2, 3, a - 1.2, 0, TAU); c.fill(); } }
-  });
-
   // ---------- Fixtures and the light pool ----------
   const fixtures = [], power = { caserne: false };
   const fixture = (kind, x, y, z, { zone = 'caserne', color = 0xfff1d8, intensity = 12, range = 14, len = 1.2, axis = 'x', flicker = 0 } = {}) => {
@@ -282,7 +278,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
   }
 
   // ---------- Props ----------
-  const rotors = [], screens = [];
+  const rotors = [];
   function vehicle(o, kind) {
     const g = new T.Group(); g.position.set(o.x, 0, o.z); root.add(g);
     const along = o.hx > o.hz, L = (along ? o.hx : o.hz) * 2, W = (along ? o.hz : o.hx) * 2, part = (m, x, y, z, sx, sy, sz) => { const b = new T.Mesh(cube, m); b.position.set(x, y, z); b.scale.set(sx, sy, sz); b.castShadow = !low; b.receiveShadow = true; g.add(b); stats.meshes++; return b; };
@@ -329,7 +325,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
       case 'switchboard': box(M.plate, x1, x2, 0, h, z1, z2); for (let k = -1; k <= 1; k++) piece(k ? M.amber : M.redGlow, x2 + .01, h * .8, o.z + k * .4, .02, .05, .05); break;
       case 'console': {
         box(M.white, x1, x2, 0, h - .05, z1, z2); piece(M.dark, o.x, h - .05, o.z, w, .05, d);
-        for (let k = -1; k <= 1; k++) { piece(M.dark, x1 + .3, h, o.z + k * 1.8, .25, .55, .9); const s = new T.Mesh(new T.PlaneGeometry(.8, .45), M.screenOff); s.position.set(x1 + .44, h + .3, o.z + k * 1.8); s.rotation.y = Math.PI / 2; add(s); screens.push(s); }
+        for (let k = -1; k <= 1; k++) details.computer({x: x1 + .55, y: h, z: o.z + k * 1.8, yaw: Math.PI / 2, scale: .82, power: 'caserne'});
         break;
       }
       case 'radio-table': piece(M.steel, o.x, h - .05, o.z, w, .05, d); for (const sx of [-1, 1]) piece(M.steel, o.x + sx * (o.hx - .05), 0, o.z, .05, h - .05, d - .1); piece(M.dark, o.x - .5, h, o.z, .7, .35, .4); piece(M.amber, o.x - .3, h + .2, o.z - .21, .1, .04, .01); break;
@@ -344,9 +340,9 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
       case 'ari-rack': box(M.steel, x1, x2, 0, h, z1, z2, { skip: ['bottom', '+x'] }); for (let k = 0; k < 6; k++) for (const y of [.35, 1.15]) cylinder(M.yellow, o.x + .1, y + .35, z1 + .35 + k * (d - .7) / 5, .1, .6); break;
       case 'hose-rack': box(M.steel, x1, x2, 0, h, z1, z2, { skip: ['bottom', '+x'] }); for (let k = 0; k < 4; k++) for (const y of [.5, 1.3]) { const c = cylinder(M.white, o.x + .15, y, z1 + .5 + k * (d - 1) / 3, .28, .12, { axis: 'x', segments: 14 }); c.material = M.white; } break;
       case 'workbench': box(M.wood, x1, x2, h - .06, h, z1, z2); for (const s of [-1, 1]) piece(M.dark, o.x + s * (o.hx - .1), 0, o.z, .08, h - .06, d - .1); piece(M.steel, o.x, h, o.z + .1, w * .7, .25, .2); break;
-      case 'planter': box(M.stone, x1, x2, 0, h, z1, z2); piece(M.soil, o.x, h - .05, o.z, w - .2, .06, d - .2); fernsAt(o.x, h, o.z, w - .4, d - .4, 6); break;
+      case 'planter': box(M.stone, x1, x2, 0, h, z1, z2); piece(M.soil, o.x, h - .05, o.z, w - .2, .06, d - .2); details.planting(o, low ? 4 : 7); break;
       case 'reception': box(M.wood, x1, x2, 0, h, z1, z2); piece(M.woodDark, o.x, h, o.z, w + .1, .05, d + .1); break;
-      case 'display': piece(M.woodDark, o.x, 0, o.z, w, .8, d); piece(M.glass, o.x, .8, o.z, w, h - .8, d); piece(M.green, o.x, .82, o.z, w * .5, .3, d * .5); break;
+      case 'display': piece(M.woodDark, o.x, 0, o.z, w, .8, d); piece(M.glass, o.x, .8, o.z, w, h - .8, d); piece(M.foliage, o.x, .82, o.z, w * .5, .3, d * .5); break;
       case 'desk': box(M.wood, x1, x2, h - .06, h, z1, z2); for (const sx of [-1, 1]) piece(M.woodDark, o.x + sx * (o.hx - .1), 0, o.z, .08, h - .06, d - .1); break;
       case 'shelves': box(M.wood, x1, x2, 0, h, z1, z2, { skip: ['bottom', '-z'] }); for (let y = .4; y < h; y += .45) for (let k = 0; k < 14; k++) piece(rng() < .5 ? M.cardboard : M.woodDark, x1 + .3 + k * (w - .6) / 13, y, o.z - .05, .18, .3 + rng() * .08, .26); break;
       case 'stove': cylinder(M.dark, o.x, .25, o.z, .22, .5); piece(M.amber, o.x, .5, o.z, .2, .02, .2); break;
@@ -354,49 +350,22 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
       case 'stack': box(M.plate, x1, x2, 0, h, z1, z2); for (let y = .3; y < h - .2; y += .55) for (let k = 0; k < 12; k++) for (const s of [-1, 1]) piece(M.cardboard, o.x + s * (o.hx + .01), y, z1 + .4 + k * (d - .8) / 11, .02, .38, .3); break;
       case 'terminal-desk': box(M.steel, x1, x2, 0, h, z1, z2); break;
       case 'cabinet': box(M.woodDark, x1, x2, 0, h, z1, z2); for (let y = .2; y < h - .1; y += .3) for (let k = 0; k < 13; k++) for (const s of [-1, 1]) piece(M.amber, x1 + .3 + k * (w - .6) / 12, y + .12, o.z + s * (o.hz + .005), .12, .02, .01); break;
-      case 'bed': box(M.stone, x1, x2, 0, h, z1, z2); piece(M.soil, o.x, h - .05, o.z, w - .3, .06, d - .3); fernsAt(o.x, h, o.z, w - .6, d - .6, low ? 10 : 20); break;
+      case 'bed': box(M.stone, x1, x2, 0, h, z1, z2); piece(M.soil, o.x, h - .05, o.z, w - .3, .06, d - .3); details.planting(o, low ? 7 : 12); break;
       case 'basin': box(M.stone, x1, x2, 0, h, z1, z2); piece(M.dark, o.x, h - .05, o.z, w - .4, .02, d - .4); break;
-      case 'trunk': {
-        cylinder(M.woodDark, o.x, h / 2, o.z, .45, h, { r2: .3, segments: 10 });
-        const crown = new T.Mesh(new T.IcosahedronGeometry(3.4, 1), M.green); crown.position.set(o.x, h + 2, o.z); crown.scale.set(1, .7, 1); add(crown);
-        break;
-      }
+      case 'trunk': details.tree(o); break;
       default: break;
     }
   }
-  // Ferns: crossed alpha-tested planes, instanced.
-  const ferns = [];
-  function fernsAt(x, y, z, w, d, n) { for (let k = 0; k < n; k++) ferns.push([x + (rng() - .5) * w, y, z + (rng() - .5) * d, .6 + rng() * .7, rng() * Math.PI]); }
-  function flushFerns() {
-    if (!ferns.length) return;
-    const geo = new T.PlaneGeometry(1, 1); geo.translate(0, .5, 0);
-    const mat = new T.MeshStandardMaterial({ map: fernTex, alphaTest: .4, side: T.DoubleSide, roughness: .9 });
-    const mesh = new T.InstancedMesh(geo, mat, ferns.length * 2), m = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), p = new T.Vector3(), s = new T.Vector3();
-    ferns.forEach(([x, y, z, size, r], i) => { for (const k of [0, 1]) mesh.setMatrixAt(i * 2 + k, m.compose(p.set(x, y, z), q.setFromEuler(e.set(0, r + k * Math.PI / 2, 0)), s.set(size, size, size))); });
-    mesh.instanceMatrix.needsUpdate = true; mesh.computeBoundingSphere(); add(mesh); stats.instances += ferns.length * 2;
-  }
-
   // ---------- Doors ----------
   const doors = new Map();
   const SPEED = { fire: 1.3, glass: 1.8, wood: 1.4, sectional: .22, lift: .8 };
   function buildDoors() {
     for (const d of DOORS) {
-      const g = new T.Group(); root.add(g);
-      const across = d.axis === 'x', panels = [], w = d.width, h = d.height;
-      const leaf = (m, width, height, thick, offset, y = height / 2) => { const mesh = new T.Mesh(new T.BoxGeometry(across ? width : thick, height, across ? thick : width), m); mesh.position.set(across ? d.centre + offset : d.fixed, y, across ? d.fixed : d.centre + offset); mesh.castShadow = !low; g.add(mesh); stats.meshes++; return mesh; };
-      if (d.style === 'sectional') {
-        // Sectional door: horizontal panels that roll up into the bay.
-        for (let k = 0; k < 6; k++) { const p = leaf(M.shutter, w, h / 6 - .02, .08, 0, (k + .5) * h / 6); p.userData = { lift: h - .2, base: (k + .5) * h / 6 }; panels.push(p); }
-        const win = leaf(M.glass, w - .6, .4, .1, 0, h * .62); win.userData = { lift: h - .2, base: h * .62 }; panels.push(win);
-      } else if (d.style === 'glass' || d.style === 'lift') {
-        for (const dir of [-1, 1]) { const p = leaf(d.style === 'glass' ? M.glass : M.plate, w / 2, h, .06, dir * w / 4); p.userData = { slide: w / 2, dir, base: d.centre + dir * w / 4 }; panels.push(p);
-          if (d.style === 'glass') { const fr = leaf(M.frame, .06, h, .08, dir * (w / 2 - .03)); fr.userData = { slide: w / 2, dir, base: d.centre + dir * (w / 2 - .03) }; panels.push(fr); } }
-      } else {
-        const p = leaf(d.style === 'wood' ? M.woodDark : M.plate, w, h, .08, 0); p.userData = { slide: w, dir: 1, base: d.centre }; panels.push(p);
-      }
-      let lamp = null;
-      if (!d.open) { lamp = new T.Mesh(new T.BoxGeometry(.12, .12, .12), new T.MeshBasicMaterial({ color: 0xff3328, toneMapped: false })); lamp.position.set(across ? d.centre + w / 2 + .35 : d.fixed - .22, 1.5, across ? d.fixed + .22 : d.centre + w / 2 + .35); g.add(lamp); }
-      doors.set(d.id, { d, panels, lamp, state: d.open ? 'auto' : 'closed', open: 0 });
+      const model = details.door(d, {
+        paint: d.style === 'wood' ? M.woodDark : d.style === 'helix' ? M.helixWhite : M.plate,
+        accent: M.helixRed || M.red, glass: M.glass
+      });
+      doors.set(d.id, {d, model, state: d.open ? 'auto' : 'closed', open: 0});
     }
   }
   function updateDoors(dt, player) {
@@ -404,8 +373,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
       const { d } = door; let target = door.state === 'open' ? 1 : 0;
       if (door.state === 'auto') { const dx = d.axis === 'x' ? player.x - d.centre : player.x - d.fixed, dz = d.axis === 'x' ? player.z - d.fixed : player.z - d.centre; target = Math.hypot(dx, dz) < 3.8 ? 1 : 0; }
       door.open += Math.sign(target - door.open) * Math.min(Math.abs(target - door.open), dt * (SPEED[d.style] || 1));
-      for (const p of door.panels) { const u = p.userData; if (u.lift) p.position.y = u.base + u.lift * door.open * (1 - .1 * (u.base / d.height)); else if (d.axis === 'x') p.position.x = u.base + u.dir * u.slide * door.open; else p.position.z = u.base + u.dir * u.slide * door.open; }
-      if (door.lamp) door.lamp.material.color.set(door.state === 'closed' ? 0xff3328 : 0x3dff8a);
+      door.model.update(door.open, door.state === 'closed');
     }
   }
 
@@ -458,7 +426,6 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
       v.lamp.material.color.set(v.done ? 0x3dff8a : v.it.log ? (blink > .3 ? 0xfff2c8 : 0x6a6250) : v.available ? (blink > .5 ? 0xffb35c : 0x5a3a14) : 0x2a1a10);
       if (v.done && v.moving && v.turn < 1) { v.turn = Math.min(1, v.turn + dt * .8); if (v.it.id === 'gazole') v.moving.rotation.z = -v.turn * TAU * 2; else v.moving.rotation.x = -v.turn * 1.1; }
     }
-    for (const s of screens) s.material = power.caserne ? M.cyan : M.screenOff;
   }
 
   // ---------- Signs, posters, belongings ----------
@@ -482,7 +449,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     piece(M.blanket, -25.2, 0, -73.4, 1.9, .08, .8); piece(M.fabric, -25.1, .08, -73.4, 1.8, .06, .7); piece(M.cardboard, -23.6, 0, -74.8, .3, .2, .25); piece(M.steel, -23.2, 0, -74.6, .12, .12, .12);
     const map = new T.Mesh(new T.PlaneGeometry(.9, .9), new T.MeshStandardMaterial({ map: mapTex, roughness: .9 })); map.rotation.x = -Math.PI / 2; map.position.set(-27.2, .81, -70); add(map);
     // Leaves on the greenhouse floor.
-    for (let k = 0; k < (low ? 40 : 90); k++) piece(rng() < .5 ? M.green : M.soil, 15 + rng() * 26, 0, -96 + rng() * 27, .3, .01, .2, rng() * 3);
+    for (let k = 0; k < (low ? 40 : 90); k++) piece(rng() < .5 ? M.foliage : M.soil, 15 + rng() * 26, 0, -96 + rng() * 27, .3, .01, .2, rng() * 3);
     // Greenhouse roof: ribs, glass, and the sun shafts.
     for (let x = 15; x <= 41; x += 2.6) piece(M.frame, x, 9.95, -82.5, .12, .14, 29);
     piece(M.glass, 28, 10, -82.5, 28, .02, 29);
@@ -542,12 +509,12 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     root, M,
     build(obstacles) {
       placeFixtures(); buildRooms(); buildWalls(obstacles);
-      for (const o of obstacles) if (o.extension) dress(o);
-      buildFixtureMeshes(); buildDoors(); buildDevices(obstacles); buildSigns(); buildCyber(); flushFerns();
-      flushGeometry(); flushPieces();
+      for (const o of obstacles) if (o.extension) { dress(o); if (o.kind !== 'bed') details.accessories(o); }
+      buildFixtureMeshes(); buildDoors(); buildDevices(obstacles); buildSigns(); buildCyber();
+      flushGeometry(); flushPieces(); details.finish();
     },
     update(t, dt, eye, player = eye.position) {
-      updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt);
+      updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt); details.update(power);
       for (const r of rotors) r.rotation.x += (power.caserne ? 14 : 0) * dt;
       for (const f of animated) f(t, dt, eye);
     },
@@ -573,6 +540,6 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     markDone(id, done = true) { const d = devices.get(id); if (d) { d.done = done; if (!done) { d.turn = 0; if (d.moving) d.moving.rotation.set(0, 0, 0); } } },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
     daylightAt,
-    stats() { return { ...stats, power: power.caserne, adapt: +adapt.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, details: details.stats(), power: power.caserne, adapt: +adapt.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }

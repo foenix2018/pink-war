@@ -1,3 +1,4 @@
+import {createBreachFrame,createBreachTexture} from './vesper-props.js';
 // M01's book reference map, production combat, and locked Shadow Unit rigs.
 // The V7 page supplies controls; it no longer substitutes its visit map for M01.
 import * as T from './vendor/three.webgpu.min.js';
@@ -180,7 +181,8 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const gateLight=new T.PointLight(0xff3e9e,0,24,2);scene.add(gateLight);
   const tacticalGate=new T.Group();tacticalGate.name='ORDRE / industrial reinforcement portal';tacticalGate.visible=false;scene.add(tacticalGate);
   const rim=new T.Mesh(new T.TorusGeometry(1.4,.16,8,36),materials.iron);tacticalGate.add(rim);
-  const membrane=new T.Mesh(new T.CircleGeometry(1.3,36),new T.MeshBasicMaterial({color:0xff478f,transparent:true,opacity:.28,side:T.DoubleSide,depthWrite:false,toneMapped:false}));tacticalGate.add(membrane);
+  createBreachFrame(T,tacticalGate,{radius:1.4,steel:materials.iron,dark:materials.black,energy:materials.cyan,low:profile.phone||requestedQuality==='low'});
+  const membrane=new T.Mesh(new T.CircleGeometry(1.3,36),new T.MeshBasicMaterial({map:createBreachTexture(T),color:0xff478f,transparent:true,opacity:.72,side:T.DoubleSide,depthWrite:false,toneMapped:false}));tacticalGate.add(membrane);
   const portalMarker=document.createElement('div');portalMarker.className='pw-portal-marker';portalMarker.setAttribute('aria-label','Direction du portail ORDRE');portalMarker.hidden=true;
   portalMarker.style.cssText='position:fixed;top:max(58px,env(safe-area-inset-top));width:7px;height:7px;border-radius:50%;background:#ff72b4;box-shadow:0 0 10px #ff3388;pointer-events:none;z-index:4';document.body.append(portalMarker);
   const objectiveMarker=document.createElement('div');objectiveMarker.className='pw-objective-marker';objectiveMarker.setAttribute('aria-label','Direction de l’objectif');
@@ -277,7 +279,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     const portal=game.activePortals[0];
     tacticalGate.visible=!!portal;portalMarker.hidden=!portal;
     if(portal){
-      tacticalGate.position.set(portal.x,1.6,portal.z);gateLight.position.set(portal.x,2,portal.z);
+      tacticalGate.position.set(portal.x,1.6,portal.z);tacticalGate.rotation.y=portal.yaw||0;gateLight.position.set(portal.x,2,portal.z);
       gateLight.intensity=game.time<game.nextSpawnAt?24+6*Math.sin(game.time*5):12;
       membrane.rotation.z=game.time*.35;
       const bearing=Math.atan2(portal.x-p.x,-(portal.z-p.z))-s.yaw;
@@ -421,7 +423,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     get paused(){return journalOpen||skillMenu.isOpen;},
     get interaction(){return contextAction();},
     get layout(){return LEVEL1_MAP;},
-    restart(){location.assign(location.pathname+'?prologue=done&character='+characterId+'&v=3.70.0');},
+    restart(){location.assign(location.pathname+'?prologue=done&character='+characterId+'&v=3.71.0');},
     get checkpoint(){return checkpoint;},
     get objective(){return objective().text;},
     get playing(){return game.state==='playing'&&!completed;},
@@ -463,7 +465,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       use(id){const it=EXTENSION_INTERACTIONS.find(i=>i.id===id);if(it){Object.assign(game.player,{x:it.x,z:it.z,elevation:0,grounded:true});if(game.state==='playing')game.step(1/60,{});setPlayer?.(game.player);}const done=onInteract();return done;},
       // Synchronous close for scripted QA (the dialog's close event can lag behind a slow software renderer).
       closeJournal(){const d=document.getElementById('m01-journal');if(d){d.close();d.remove();}if(journalOpen){journalOpen=false;game.state='playing';}}}:null,
-    snapshot(){return {view:effectiveView(),playerVisible:rig?.model.root.visible||false,music:{playing:false,source:null},revision:'3.70.0',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
+    snapshot(){return {view:effectiveView(),playerVisible:rig?.model.root.visible||false,music:{playing:false,source:null},revision:'3.71.0',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
       capacity:game.weapon.capacity,ownedWeapons:[...game.ownedWeapons],offers:game.weaponOffers.map(o=>({...o})),campaign:game.campaign,journalOpen,
       enemies:game.enemies.length,hostileProjectiles:game.bullets.filter(b=>b.hostile).length,shots:game.bullets.filter(b=>!b.hostile).length,
       kills:game.kills,rig:!!rig,gun:!!gun,backend:renderer.isWebGLRenderer?'webgl':'webgpu',triangles:terrain.triangles,

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {GAME_VERSION} from '../dist/launch-ui.js';
 import { readFileSync } from 'node:fs';
 const read=path=>readFileSync(new URL('../dist/'+path,import.meta.url),'utf8');
 
@@ -38,6 +39,6 @@ test('M02 brief appears on objective stage changes only, help text invisible',()
 test('Primary HUD removes only nonessential long tips',()=>{
  const c=read('mobile-controls-v7.css'),main=read('index.html');
  assert.match(c,/body\.playing #game-tip\{display:none!important\}/);
- assert.match(main,/mobile-controls-v7\.css\?v=3\.6[3-9]/,"3.63+: cache refreshed for the on-screen fire cluster");
+ assert.ok(main.includes('mobile-controls-v7.css?v='+GAME_VERSION), 'cache refreshed for the current on-screen fire cluster');
  assert.match(c,/#m02-touch-controls/);
 });
