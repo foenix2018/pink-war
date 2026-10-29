@@ -133,7 +133,9 @@ export function poseUnarmedForInspection(model,gloves,dt=.016,{mirrorFromRight=t
     const target=root.localToWorld(new T.Vector3(sign*.315,1.005,-.020));
     const pole=root.localToWorld(new T.Vector3(sign*.43,1.18,.045));
     solveChain(upper,fore,hand,target,pole);
-    const glove=gloves[i];
+    const glove=gloves?.[i];
+    // AR can request the native neutral skeleton pose without adding game-grip adapters.
+    if(!glove)continue;
     glove.userData.animate({relax:.85},dt);
     root.updateMatrixWorld(true);
     const p=root.worldToLocal(hand.getWorldPosition(new T.Vector3()));
@@ -147,7 +149,7 @@ export function poseUnarmedForInspection(model,gloves,dt=.016,{mirrorFromRight=t
   // The glove adapter uses one right-hand mesh plus an outer reflection for
   // the left hand. Mirror the complete neutral frame so their resting shapes
   // agree as well as their wrist attachment points.
-  if(mirrorFromRight){
+  if(mirrorFromRight&&gloves?.[0]&&gloves?.[1]){
     gloves[1].updateWorldMatrix(true,false);
     const leftFrame=new T.Matrix4().makeScale(-1,1,1)
       .multiply(root.matrixWorld.clone().invert()).multiply(gloves[1].matrixWorld);
