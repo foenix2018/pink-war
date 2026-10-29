@@ -66,7 +66,7 @@ export function extraObstacles({ open = [] } = {}) {
 // Barrier posts of the ORDRE checkpoint stay; pedestrians pass along the pavements (x ±11).
 export const CHECKPOINT_POSTS = Object.freeze([at('post', -9.6, -34, .35, .35, 1.6, { surface: 'metal' }), at('post', 9.6, -34, .35, .35, 1.6, { surface: 'metal' })]);
 
-// ---------- The medical van (VSAV « SECOURS 03 ») ----------
+// ---------- Inès's ambulance ----------
 // Waypoints of its route; `stop` marks where it waits for a stage to clear the way.
 export const VAN_PATH = Object.freeze([
   { x: -6, z: 46 }, { x: -4, z: 30 }, { x: -4, z: -28, stop: 'barriere' },
@@ -78,7 +78,7 @@ export const VAN = Object.freeze({ speed: 3.2, hp: 100, sabotageRange: 7, sabota
 // ---------- Interactions ----------
 const it = (id, x, z, label, extra = {}) => Object.freeze({ id, x, z, y: 0, radius: 2.4, label, ...extra });
 export const INTERACTIONS = Object.freeze([
-  it('ines', -3.4, 46, 'PARLER À INÈS (VSAV SECOURS 03)'),
+  it('ines', -3.4, 46, 'PARLER À INÈS (AMBULANCE)'),
   it('alimentation', -6.4, 10.5, 'RÉARMER L’ALIMENTATION DE L’ANNEXE'),
   it('dossier', -26, 17, 'RELEVER LE DOSSIER DU CONVOI', { log: 'dossier' }),
   it('kit', -20, 24, 'PRENDRE LES KITS DE RÉANIMATION'),
@@ -88,11 +88,11 @@ export const INTERACTIONS = Object.freeze([
   it('balise', 0, -91.4, 'NEUTRALISER LA BALISE DE POURSUITE ORDRE'),
   it('barriere', -8.4, -32.4, 'POSER LE VÉRIN SUR LA BARRIÈRE'),
   it('treuil', 70, -44.4, 'COMMANDER LE TREUIL DE L’ÉCHANGEUR'),
-  it('arrimage', 72, -84.4, 'LANCER L’ARRIMAGE DU VSAV'),
+  it('arrimage', 72, -84.4, 'LANCER L’ARRIMAGE DE L’AMBULANCE'),
   it('regulation', 89, -75, 'CONSULTER LE REGISTRE DE RÉGULATION', { log: 'regulation' }),
   // Documents found along the way (always readable).
   it('doc-couvre-feu', 9, 52, 'LIRE L’AVIS DE COUVRE-FEU ORDRE', { log: 'couvre-feu' }),
-  it('doc-carnet', -30, 46, 'LIRE LE CARNET DE GARDE DE L’ANNEXE', { log: 'carnet' }),
+  it('doc-carnet', -30, 46, 'LIRE LE CARNET DE L’INFIRMERIE', { log: 'carnet' }),
   it('doc-atelier', 38, 24, 'LIRE LE BON DE COMMANDE HELIX', { log: 'commande' }),
   it('doc-ravel', -10, -38, 'LIRE LE MESSAGE GLISSÉ SOUS LE PORTIQUE', { y: 5.06, log: 'ravel' }),
   it('doc-stabilisation', 66, -36, 'LIRE LA FICHE DE TRANSFERT', { log: 'stabilisation' })
@@ -133,20 +133,20 @@ export const HOLD_WAVES = Object.freeze({
 // ---------- Stages ----------
 const stage = (id, label, hint, checkpoint) => Object.freeze({ id, label, hint, checkpoint: Object.freeze(checkpoint) });
 export const STAGES = Object.freeze([
-  stage('arrivee', 'REJOINDRE LE VSAV SECOURS 03', 'Le fourgon d’Inès attend devant l’annexe médicale, côté gauche de l’avenue.', { x: 2, z: 62, yaw: 0 }),
+  stage('arrivee', 'REJOINDRE L’AMBULANCE', 'L’ambulance d’Inès attend devant l’annexe médicale, côté gauche de l’avenue.', { x: 2, z: 62, yaw: 0 }),
   stage('alimentation', 'RÉARMER L’ANNEXE MÉDICALE', 'Coffret d’alimentation sur le trottoir, devant l’angle nord de l’annexe.', { x: -2, z: 40, yaw: 0 }),
   stage('dossier', 'RELEVER LE DOSSIER DU CONVOI', 'Archives de l’annexe, entrée nord, puis à gauche.', { x: -8, z: 14, yaw: Math.PI / 2 }),
   stage('kit', 'PRENDRE LES KITS DE RÉANIMATION', 'Armoire de la salle de soins, à droite des archives.', { x: -20, z: 18, yaw: Math.PI }),
   stage('atelier', 'EXTRAIRE LE MANIFESTE HELIX', 'Atelier technique, de l’autre côté de l’avenue. Porte côté avenue.', { x: 8, z: 26, yaw: -Math.PI / 2 }),
   stage('verin', 'DÉMONTER LE VÉRIN HYDRAULIQUE', 'Banc de levage au fond de l’atelier. Il remplacera le vérin de la barrière.', { x: 22, z: 26, yaw: -Math.PI / 2 }),
-  stage('escorte', 'ESCORTER LE VSAV', 'Reste près du fourgon : les machines sabotent ce qui roule sans escorte.', { x: -2, z: 36, yaw: 0 }),
+  stage('escorte', 'ESCORTER L’AMBULANCE', 'Reste près de l’ambulance : les machines sabotent ce qui roule sans escorte.', { x: -2, z: 36, yaw: 0 }),
   stage('a3', 'CROISER LES COORDONNÉES AU RELAIS A3', 'La barrière ORDRE est verrouillée. Escalier du relais A3, à gauche avant le pont.', { x: -2, z: -24, yaw: 0 }),
   stage('balise', 'NEUTRALISER LA BALISE DE POURSUITE', 'Au bout de l’avenue, devant la fracture. Vingt secondes de brouillage.', { x: 0, z: -66, yaw: 0 }),
   stage('barriere', 'RÉPARER LA BARRIÈRE', 'Poser le vérin sur le poteau gauche, puis tenir pendant la levée.', { x: -4, z: -26, yaw: 0 }),
-  stage('escorte2', 'PASSER SOUS LA ROUTE HAUTE', 'Le VSAV prend la voie de service vers l’échangeur. Reste avec lui.', { x: 0, z: -40, yaw: -Math.PI / 2 }),
+  stage('escorte2', 'PASSER SOUS LA ROUTE HAUTE', 'L’ambulance prend la voie de service vers l’échangeur. Reste avec elle.', { x: 0, z: -40, yaw: -Math.PI / 2 }),
   stage('echangeur', 'DÉGAGER L’ÉCHANGEUR', 'Une remorque bloque la bretelle. Le treuil de dépannage est à gauche du passage.', { x: 64, z: -36, yaw: -Math.PI / 2 }),
-  stage('gare', 'REJOINDRE LA GARE DE FRET', 'Suis le VSAV jusqu’au quai du train sanitaire.', { x: 80, z: -56, yaw: 0 }),
-  stage('arrimage', 'ARRIMER LE VSAV AU TRAIN', 'Commande d’arrimage au pied du portique. Quarante-cinq secondes.', { x: 76, z: -78, yaw: 0 }),
+  stage('gare', 'REJOINDRE LA GARE DE FRET', 'Suis l’ambulance jusqu’au quai du train sanitaire.', { x: 80, z: -56, yaw: 0 }),
+  stage('arrimage', 'ARRIMER L’AMBULANCE AU TRAIN', 'Commande d’arrimage au pied du portique. Quarante-cinq secondes.', { x: 76, z: -78, yaw: 0 }),
   stage('regulation', 'LIRE LE REGISTRE DE RÉGULATION', 'Cabine de régulation, au bout du quai.', { x: 84, z: -80, yaw: -Math.PI / 2 }),
   stage('fin', 'LE CONVOI DES ABSENTS', 'Le train sanitaire part vers l’Anneau logistique.', { x: 84, z: -80, yaw: -Math.PI / 2 })
 ]);

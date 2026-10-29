@@ -11,7 +11,7 @@ import {SPEAKERS as M01_SPEAKERS} from './m01-extension-story.js';
 
 export const SPEAKERS = Object.freeze({
   ...M01_SPEAKERS,
-  ines: { name: 'INÈS · VSAV SECOURS 03', color: '#9fe3c8' }, ravel: { name: 'S. RAVEL · CANAL CHIFFRÉ', color: '#f2f2f2' },
+  ines: { name: 'INÈS · AMBULANCE', color: '#9fe3c8' }, ravel: { name: 'S. RAVEL · CANAL CHIFFRÉ', color: '#f2f2f2' },
   gare: { name: 'RÉGULATION · GARE DE FRET', color: '#ffc890' }
 });
 const L = (...lines) => lines;
@@ -20,14 +20,14 @@ const sib = c => c === 'lylu' ? 'GHJU' : 'LYLU';
 export const SCRIPT = Object.freeze({
   intro: {
     lylu: L(['cara', 'Secteur 03. Couvre-feu ORDRE, rues vides, et ces néons qui clignotent pour personne.'],
-      ['ines', 'Ici Inès. Le VSAV est garé devant l’annexe médicale. Si on veut suivre le convoi 02, il nous faut la gare de fret de l’Anneau.'],
+      ['ines', 'Ici Inès. L’ambulance est garée devant l’annexe médicale. Si on veut suivre le convoi 02, il nous faut la gare de fret de l’Anneau.'],
       ['lylu', 'GHJU est dans ce convoi. On y va.']),
     ghju: L(['gaby', 'Secteur 03. Couvre-feu, rues vides, néons allumés pour personne. Je n’aime pas ça.'],
-      ['ines', 'Ici Inès. Le VSAV est garé devant l’annexe médicale. Pour suivre le convoi 02, il faut rejoindre la gare de fret de l’Anneau.'],
+      ['ines', 'Ici Inès. L’ambulance est garée devant l’annexe médicale. Pour suivre le convoi 02, il faut rejoindre la gare de fret de l’Anneau.'],
       ['ghju', 'LYLU est dans ce convoi. On y va.'])
   },
   ines: {
-    all: L(['ines', 'Mes patients tiennent, mais le fourgon n’a ni oxygène ni défibrillateur. L’annexe en avait. Et elle est sans courant depuis la chute.']),
+    all: L(['ines', 'Mes patients tiennent, mais l’ambulance n’a ni oxygène ni défibrillateur. L’annexe en avait. Et elle est sans courant depuis la chute.']),
     escort: L(['ines', 'Les quatorze du conteneur sont à l’arrière. Ils ont tous vu partir le convoi 02. Ils veulent savoir où.']),
     proof: L(['ines', 'Les caisses d’archives HELIX sont calées sous les brancards. Si on nous arrête avec ça, on ne repartira pas.'])
   },
@@ -58,11 +58,11 @@ export const SCRIPT = Object.freeze({
     all: L(['ines', 'Vérin reçu ? Parfait. Je démarre. Restez près de moi, les machines s’attaquent à ce qui roule seul.'])
   },
   escorte: {
-    lylu: L(['cara', 'Reste à moins de trente mètres du fourgon. S’il s’arrête, c’est qu’il y a quelque chose devant.']),
-    ghju: L(['gaby', 'Ne t’éloigne pas du VSAV. S’il s’arrête, c’est qu’il voit quelque chose.'])
+    lylu: L(['cara', 'Reste à moins de trente mètres de l’ambulance. Si elle s’arrête, c’est qu’il y a quelque chose devant.']),
+    ghju: L(['gaby', 'Ne t’éloigne pas de l’ambulance. Si elle s’arrête, c’est qu’elle voit quelque chose.'])
   },
   sabotage: {
-    all: L(['ines', 'Ils sont sur le fourgon ! Dégagez-les, vite !'])
+    all: L(['ines', 'Ils sont sur l’ambulance ! Dégagez-les, vite !'])
   },
   barrage: {
     all: L(['ordre', 'BARRAGE 03 · VÉHICULE NON AUTORISÉ · VERROUILLAGE ACTIF'], ['ines', 'La barrière ne bougera pas. Son vérin est grillé, et ORDRE la verrouille à distance.'])
@@ -95,8 +95,8 @@ export const SCRIPT = Object.freeze({
     all: L(['ines', 'Barrière levée ! Je passe sous la route haute, voie de service vers l’échangeur.'])
   },
   voie: {
-    lylu: L(['cara', 'Des sondes sous le viaduc. Elles descendent sur le fourgon.']),
-    ghju: L(['gaby', 'Sondes sous la route haute, droit sur le VSAV.'])
+    lylu: L(['cara', 'Des sondes sous le viaduc. Elles descendent sur l’ambulance.']),
+    ghju: L(['gaby', 'Sondes sous la route haute, droit sur l’ambulance.'])
   },
   echangeur: {
     all: L(['ines', 'Une remorque en travers de la bretelle. Il y a un treuil de dépannage à gauche, s’il a encore du jus.'])
@@ -116,7 +116,7 @@ export const SCRIPT = Object.freeze({
     ghju: L(['gaby', 'Quarante-cinq secondes. Ils vont tout envoyer sur ce quai.'])
   },
   arrimageOk: {
-    all: L(['ines', 'VSAV arrimé ! Le registre de régulation est dans la cabine, au bout du quai. Lisez-le avant le départ.'])
+    all: L(['ines', 'Ambulance arrimée ! Le registre de régulation est dans la cabine, au bout du quai. Lisez-le avant le départ.'])
   },
   regulation: {
     lylu: L(['lylu', 'Le convoi 02 n’est pas resté à l’Anneau. Le lot spécial est reparti vers une station énergétique.'], ['cara', 'Là où ORDRE voit une brèche ouverte… par des signatures humaines.']),
@@ -152,30 +152,30 @@ export const LOGS = Object.freeze({
     speech: 'La balise d’ORDRE au pied de la fracture suit chaque véhicule du secteur. Coupez-la avant la gare.' }),
   balise: () => ({ title: 'LIAISON ORDRE INTERROMPUE', stamp: 'BALISE DE POURSUITE · PÉRIMÈTRE PINK',
     lines: ['Les données du convoi sont sauvegardées hors réseau. Une piste mène désormais vers l’Anneau logistique.',
-      'Journal de la balise : 63 véhicules suivis en sept jours. 61 classés « transfert HELIX autorisé ». 2 classés « non autorisé » : le VSAV SECOURS 03, et un fourgon AEGIS il y a deux jours.'],
-    footer: 'L’autre fourgon AEGIS a été arrêté à la gare. Son équipage figure au lot spécial.', speech: 'Les données du convoi sont sauvegardées hors réseau.' }),
+      'Journal de la balise : 63 véhicules suivis en sept jours. 61 classés « transfert HELIX autorisé ». 2 classés « non autorisé » : l’ambulance d’Inès, et une ambulance AEGIS il y a deux jours.'],
+    footer: 'L’autre ambulance AEGIS a été arrêtée à la gare. Son équipage figure au lot spécial.', speech: 'Les données du convoi sont sauvegardées hors réseau.' }),
   regulation: c => ({ title: 'REGISTRE DE RÉGULATION — GARE DE FRET 03', stamp: 'CABINE DE RÉGULATION · LIGNE DE L’ANNEAU LOGISTIQUE',
     lines: ['Convoi 02 : arrivé à l’Anneau logistique, quai B. Lot civil : 41 personnes, remis au centre de stabilisation.',
       `Lot spécial : 7 personnes, dont 07-${sib(c)}. Réacheminés le jour même vers la station énergétique Est, « secteur de phase ».`,
       'Motif : « profils compatibles avec la stabilisation de la brèche ». Ordre signé conjointement : direction HELIX (A. Kessler) et contrôle ORDRE.',
-      'Train sanitaire 7 : départ autorisé vers l’Anneau. Chargement : un VSAV AEGIS. Non contrôlé.'],
+      'Train sanitaire 7 : départ autorisé vers l’Anneau. Chargement : une ambulance AEGIS. Non contrôlée.'],
     footer: 'Une brèche « à stabiliser », et des humains choisis pour cela. La suite passe par la station énergétique.',
     speech: `Lot spécial, dont zéro-sept ${sib(c)}, réacheminé vers la station énergétique Est, secteur de phase.` }),
   'couvre-feu': () => ({ title: 'AVIS DE COUVRE-FEU — ORDRE', stamp: 'AVENUE DES SECOURS · PANNEAU D’AFFICHAGE',
     lines: ['Secteur 03 : circulation interdite de 20 h à 6 h. Tout véhicule non enregistré sera immobilisé.',
       'Les transferts HELIX sont prioritaires et ne sont pas soumis au couvre-feu.'],
     footer: 'Une main a ajouté : « Les ambulances non plus, normalement. »', speech: 'Les transferts HELIX sont prioritaires.' }),
-  carnet: () => ({ title: 'CARNET DE GARDE DE L’ANNEXE', stamp: 'ANNEXE MÉDICALE · BUREAU DE L’INFIRMERIE',
-    lines: ['Hier, 22 h — Un fourgon HELIX a pris nos quatre patients de longue durée. « Stabilisation », ont-ils dit.',
+  carnet: () => ({ title: 'CARNET DE L’INFIRMERIE', stamp: 'ANNEXE MÉDICALE · BUREAU DE L’INFIRMERIE',
+    lines: ['Hier, 22 h — Un véhicule HELIX a pris nos quatre patients de longue durée. « Stabilisation », ont-ils dit.',
       'Hier, 23 h — Courant coupé par ORDRE « pour économie ». Les kits de réanimation sont restés dans l’armoire, chargés.',
       'Ce matin — Je pars à pied vers les Bas-Niveaux. On m’a dit qu’une infirmière, Inès, tient encore un dispensaire là-bas.'],
-    footer: 'Inès a reçu cette infirmière il y a deux jours. Elle était dans le convoi 03.', speech: 'Un fourgon HELIX a pris nos quatre patients. Stabilisation, ont-ils dit.' }),
+    footer: 'Inès a reçu cette infirmière il y a deux jours. Elle était dans le convoi 03.', speech: 'Un véhicule HELIX a pris nos quatre patients. Stabilisation, ont-ils dit.' }),
   commande: () => ({ title: 'BON DE COMMANDE — HELIX SECURITY', stamp: 'ATELIER TECHNIQUE · CLASSEUR',
     lines: ['Objet : 24 civières à sangles, 24 colliers d’identification, 2 scanners biométriques.', 'Livraison : gare de fret 03, quai du train sanitaire.',
       'Mention : « Pour le centre de stabilisation. Ne pas confier à AEGIS. »'],
     footer: 'Des colliers d’identification, pas des bracelets de soin.', speech: 'Vingt-quatre colliers d’identification. Ne pas confier à AEGIS.' }),
   ravel: () => ({ title: 'MESSAGE GLISSÉ SOUS LE PORTIQUE', stamp: 'ARCHIVES A3 · PAPIER PLIÉ EN QUATRE',
-    lines: ['« À l’équipe du VSAV : la régulation de la gare n’est pas contrôlée la nuit. Le registre dit tout. Lisez-le avant que le train parte. — S. R. »'],
+    lines: ['« À l’équipe de l’ambulance : la régulation de la gare n’est pas contrôlée la nuit. Le registre dit tout. Lisez-le avant que le train parte. — S. R. »'],
     footer: 'Le papier porte le tampon de la tour de transit.', speech: 'Le registre dit tout. Lisez-le avant que le train parte.' }),
   stabilisation: () => ({ title: 'FICHE DE TRANSFERT — CENTRE DE STABILISATION', stamp: 'VOIE DE SERVICE · DANS UNE CIVIÈRE RENVERSÉE',
     lines: ['Patient : non nommé. Statut : « compatible ». Destination : Anneau logistique, puis « secteur de phase ».',
@@ -186,7 +186,7 @@ export const logFor = (id, characterId = 'ghju') => LOGS[id]?.(characterId === '
 
 export const ENDING = Object.freeze({
   title: 'Le Convoi des Absents',
-  text: { lylu: 'Le train sanitaire roule vers l’Anneau logistique avec le VSAV d’Inès. Le registre de la gare l’a dit : GHJU n’est pas restée au centre de stabilisation. Le lot spécial est reparti vers une station énergétique où une brèche a été ouverte exprès.',
-    ghju: 'Le train sanitaire roule vers l’Anneau logistique avec le VSAV d’Inès. Le registre de la gare l’a dit : LYLU n’est pas resté au centre de stabilisation. Le lot spécial est reparti vers une station énergétique où une brèche a été ouverte exprès.' },
+  text: { lylu: 'Le train sanitaire roule vers l’Anneau logistique avec l’ambulance d’Inès. Le registre de la gare l’a dit : GHJU n’est pas restée au centre de stabilisation. Le lot spécial est reparti vers une station énergétique où une brèche a été ouverte exprès.',
+    ghju: 'Le train sanitaire roule vers l’Anneau logistique avec l’ambulance d’Inès. Le registre de la gare l’a dit : LYLU n’est pas resté au centre de stabilisation. Le lot spécial est reparti vers une station énergétique où une brèche a été ouverte exprès.' },
   next: 'Suite : 04 — La Brèche Violette'
 });

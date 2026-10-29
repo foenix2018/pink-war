@@ -1,6 +1,6 @@
 // MISSION 03 dressing: the baked night Vesper sector (m03-sector.js) lit for three.js — sky, fog, rain around the
 // eye, light halos on the neon, a small pool of point lights moved to the nearest neon clusters and street lamps —
-// plus what the mission adds: the VSAV « SECOURS 03 », the ORDRE barrier of the avenue, the tracking beacon at the
+// plus what the mission adds: the ambulance of Inès, the ORDRE barrier of the avenue, the tracking beacon at the
 // fracture, the blocked interchange (ramps leaving the route haute, wrecks, the jack-knifed trailer and its winch)
 // and the freight station of the Anneau logistique line (medical train, gantry, containers, regulation booth).
 // W03 palette (Tome II): galvanised metal, dusty haze, white/red marking; Vesper neon on the avenue.
@@ -94,6 +94,8 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
     for (const [x, z] of [[64.5, -76], [95.5, -86]]) { const leg = new T.Mesh(new T.BoxGeometry(1.2, 12, 1.2), M.yellow); leg.position.set(x, 6, z); add(leg); }
     box(M.yellow, 80, 11.4, -81, 33, 1, 1.4); const trolley = box(M.dark, 76, 9.6, -81, 3, 1.4, 2.2); animated.push(t => { trolley.position.x = 80 + Math.sin(t * .15) * 10; });
     arrimagePost(72, -86);
+    // Lamp posts along the service lane and the interchange (each one is also a source of the light pool).
+    for (const [x, z, k] of [[20, -33.4, 0], [34, -33.4, 1], [48, -33.4, 0], [62, -33.4, 1], [74, -32, 0], [86, -32, 1], [64.4, -50, 0], [64.4, -66, 1], [95.6, -60, 0], [95.6, -72, 1], [64.4, -90, 0]]) lampPost(x, z, k);
     sign(['GARE DE FRET 03', 'LIGNE DE L’ANNEAU LOGISTIQUE'], 79.5, 4.1, -30.65, Math.PI, 9, 2, { bg: '#0b0d10', fg: '#ffc890', w: 1024, h: 230, border: '#ffc890' });
     sign(['ANNEAU LOGISTIQUE →', 'QUAI B · CENTRE DE STABILISATION'], 96.45, 4.4, -80, -Math.PI / 2, 7, 1.5, { bg: '#e9ecee', fg: '#c1121f', w: 1024, h: 220 }, false);
     sign(['BRETELLE FERMÉE', 'ORDRE · CONTRÔLE DU TRAFIC'], 96.45, 4.4, -48, -Math.PI / 2, 6, 1.4, { bg: '#160307', fg: '#ff4d5e', w: 1024, h: 230, border: '#ff2f45' });
@@ -104,7 +106,7 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
   function truck(x, z, yaw, body, label) { const g = new T.Group(); g.position.set(x, 0, z); g.rotation.y = yaw; add(g); const p = (m, px, py, pz, w, h, d) => { const o = new T.Mesh(new T.BoxGeometry(w, h, d), m); o.position.set(px, py, pz); g.add(o); return o; };
     p(M.dark, 3.2, 1.5, 0, 1.6, 2.2, 2.4); p(M.glass, 4.02, 1.9, 0, .04, .9, 2.1); p(body, -1, 1.7, 0, 6.2, 2.8, 2.5); p(M.dark, 0, .5, 0, 8, .4, 2.2); wheelSet(g, 8, 2.5, .5);
     const s = new T.Mesh(new T.PlaneGeometry(4, .7), new T.MeshStandardMaterial({ map: signTex(label, { bg: null, fg: '#2a3a48', w: 512, h: 96 }), transparent: true, alphaTest: .05 })); s.position.set(-1, 2.2, 1.26); g.add(s); g.rotation.x = .03; return g; }
-  // The VSAV « SECOURS 03 » (and the burnt AEGIS van at the interchange).
+  // Inès's ambulance (and the burnt AEGIS van at the interchange).
   function aegisVan(x, z, yaw, burnt = false) {
     const g = new T.Group(); g.position.set(x, 0, z); g.rotation.y = yaw; add(g);
     const L = VAN.halfLength * 2, W = VAN.halfWidth * 2, body = burnt ? M.rust : M.white;
@@ -116,7 +118,7 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
     const lights = [];
     if (!burnt) {
       for (const s of [-1, 1]) { p(M.red, s * (W / 2 + .005), 1.05, .6, .01, .24, L - 2.1); p(M.yellow, s * (W / 2 + .006), 1.32, .6, .01, .08, L - 2.1);
-        const label = new T.Mesh(new T.PlaneGeometry(2.6, .55), new T.MeshStandardMaterial({ map: signTex(['SECOURS 03', 'VSAV · AEGIS'], { bg: null, fg: '#a3241c', w: 512, h: 128 }), transparent: true, alphaTest: .05 }));
+        const label = new T.Mesh(new T.PlaneGeometry(2.6, .55), new T.MeshStandardMaterial({ map: signTex(['AMBULANCE', 'AEGIS · 03'], { bg: null, fg: '#a3241c', w: 512, h: 128 }), transparent: true, alphaTest: .05 }));
         label.position.set(s * (W / 2 + .012), 2, .6); label.rotation.y = s * Math.PI / 2; g.add(label); }
       for (const s of [-1, 1]) { const b = p(new T.MeshBasicMaterial({ color: 0x2a6bff, toneMapped: false }), s * .55, 2.75, -L / 2 + 1.1, .3, .16, .3); lights.push(b); }
       for (const s of [-1, 1]) p(M.neonWhite, s * .7, .95, -L / 2 - .01, .3, .16, .02);
@@ -127,6 +129,12 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
     g.rotation.z = .12; return { g };
   }
   function winchPost(x, z) { box(M.yellow, x, 0, z, .9, 1.3, .9); box(M.dark, x, 1.3, z, 1, .3, 1); const drum = new T.Mesh(new T.CylinderGeometry(.35, .35, .8, 14), M.galva); drum.rotation.z = Math.PI / 2; drum.position.set(x, 1, z + .55); add(drum); devicesExtra.treuil = drum; }
+  function lampPost(x, z, k) {
+    const pole = new T.Mesh(new T.CylinderGeometry(.09, .12, 7, 8), M.galva); pole.position.set(x, 3.5, z); add(pole);
+    const head = new T.Mesh(new T.BoxGeometry(1.2, .14, .4), k ? M.neonAmber : M.neonWhite); head.position.set(x, 7, z); add(head);
+    const cone = new T.Mesh(new T.ConeGeometry(2.4, 6.8, 18, 1, true), additive(k ? 0xffb35c : 0xcfe8ff, .045)); cone.position.set(x, 3.6, z); add(cone);
+    sources.push({ x, y: 6.8, z, color: new T.Color(k ? 0xffb070 : 0xdcecff), intensity: 14, range: 20 });
+  }
   function arrimagePost(x, z) { box(M.dark, x, 0, z, .9, 1.3, .9); box(M.neonAmber, x, 1.3, z + .46, .5, .3, .02); }
   function train() {
     const cars = [[67, 'LOCO'], [76, 'SANITAIRE 7'], [85, 'SANITAIRE 7'], [93.5, 'FRET']];
@@ -276,11 +284,11 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
   }
 
   // ---------- Build ----------
-  let vsav = null, smoke = null;
+  let amb = null, smoke = null;
   const power = { annexe: false };
   function build() {
     buildEast(); buildBarrier(); buildTrailer(); buildBeacon(); buildDevices();
-    vsav = aegisVan(-6, 46, 0);
+    amb = aegisVan(-6, 46, 0);
     // Smoke of a damaged van.
     smoke = Array.from({ length: low ? 4 : 8 }, () => { const s = new T.Sprite(new T.SpriteMaterial({ map: halo, color: 0x444444, transparent: true, opacity: 0, depthWrite: false })); add(s); return s; });
     for (const m of movable.values()) m.apply(0);
@@ -295,10 +303,10 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
       if (devicesExtra.treuil && crank) devicesExtra.treuil.rotation.x += dt * 6;
       if (beacon) { beacon.off += ((beaconOff ? 1 : 0) - beacon.off) * Math.min(1, dt * 2); const on = 1 - beacon.off;
         beacon.beam.material.opacity = (.18 + .1 * Math.sin(t * 4)) * on; beacon.ring.material.opacity = .6 * on * (.5 + .5 * Math.sin(t * 6)); beacon.head.rotation.y = t * 2; beacon.head.material.color.set(on > .5 ? 0xff2f45 : 0x3dff8a); }
-      if (van && vsav) {
-        vsav.g.position.set(van.x, 0, van.z); vsav.g.rotation.y = van.yaw;
-        const flash = Math.sin(t * 9) > 0; vsav.lights[0].material.color.set(flash ? 0x2a6bff : 0x0a1430); vsav.lights[1].material.color.set(flash ? 0x0a1430 : 0x2a6bff);
-        vsav.flash.intensity = low ? 0 : (van.moving || van.waiting === 'machines' ? 5 : 2) * (flash ? 1 : .2);
+      if (van && amb) {
+        amb.g.position.set(van.x, 0, van.z); amb.g.rotation.y = van.yaw;
+        const flash = Math.sin(t * 9) > 0; amb.lights[0].material.color.set(flash ? 0x2a6bff : 0x0a1430); amb.lights[1].material.color.set(flash ? 0x0a1430 : 0x2a6bff);
+        amb.flash.intensity = low ? 0 : (van.moving || van.waiting === 'machines' ? 5 : 2) * (flash ? 1 : .2);
         const hurt = Math.max(0, 1 - van.hp / 60);
         smoke.forEach((s, i) => { const k = (t * .4 + i / smoke.length) % 1; s.position.set(van.x + Math.sin(i) * .4, 2.2 + k * 3, van.z); s.scale.setScalar(.8 + k * 2.2); s.material.opacity = hurt * .35 * (1 - k); });
       }

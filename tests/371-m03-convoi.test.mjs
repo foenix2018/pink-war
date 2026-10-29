@@ -123,8 +123,13 @@ test('the story: both heroes, Inès and Ravel from chapter 02, the stabilisation
 
 test('the level 3 page: shared combat HUD and engine, the baked sector, the menu entry; the first version stays reachable',()=>{
   const page=read('niveau3.js'),html=read('niveau3.html'),entry=read('entry.js'),vercel=readFileSync(new URL('../vercel.json',import.meta.url),'utf8');
-  for(const part of ['mountCombatHud','ArenaGame','createMissionXR','fetchSector','createM03Mission','createM03Art','logFor','REPRENDRE AU POINT DE CONTRÔLE','VSAV SECOURS 03'])assert.ok(page.includes(part),part);
+  for(const part of ['mountCombatHud','ArenaGame','createMissionXR','fetchSector','createM03Mission','createM03Art','logFor','REPRENDRE AU POINT DE CONTRÔLE','AMBULANCE · '])assert.ok(page.includes(part),part);
   assert.match(html,/import\('\.\/niveau3\.js/);assert.match(html,/vesper-level1-v7\.html\?chapter=3/,'first version (free visit) linked');
   assert.match(entry,/mission===3\?'\.\/niveau3\.html'/);assert.doesNotMatch(vercel,/niveau3\.html/,'the page is served directly');
   assert.doesNotMatch(read('index.html'),/LE CONVOI DES ABSENTS · DÉCOUVERTE/);
+});
+
+test('the wording stays generic: an ambulance, not fire-brigade jargon',()=>{
+  const text=['m03-story.js','m03-layout.js','m03-mission.js','m03-art.js','niveau3.js','niveau3.html'].map(read).join('\n');
+  assert.doesNotMatch(text,/VSAV|fourgon|chef d’agrès|\bFPT\b|caserne/i);assert.match(text,/ambulance/i);
 });

@@ -1,5 +1,5 @@
 // MISSION 03 — « Le Convoi des Absents » (campaign M03). Night Vesper sector of the visitor map, baked for three.js
-// (assets/m03), with the shared combat engine and HUD: escort of the VSAV « SECOURS 03 » from the medical annex to the
+// (assets/m03), with the shared combat engine and HUD: escort of Inès's ambulance from the medical annex to the
 // freight station of the Anneau logistique line. Built on the Ligne 9 page (same controls, XR, documents, checkpoints).
 import * as T from './vendor/three.webgpu.min.js';
 import {WebGLRenderer} from './vendor/three.module.min.js';
@@ -222,15 +222,15 @@ function finishMission(){
  $('panel-title').innerHTML='Le Convoi <em>des Absents</em>';
  $('panel-text').textContent=ENDING.text[characterId];
  const docs=Object.keys(LOGS).filter(id=>mission.reads.includes(id)).length;
- $('panel-small').textContent=`Temps ${minutes}:${seconds} · Machines neutralisées ${game.kills} · Précision ${shotsFired?Math.round(hits/shotsFired*100):0} % · VSAV ${Math.ceil(mission.van.hp)} % · Documents ${docs}/${Object.keys(LOGS).length} · ${ENDING.next}`;
+ $('panel-small').textContent=`Temps ${minutes}:${seconds} · Machines neutralisées ${game.kills} · Précision ${shotsFired?Math.round(hits/shotsFired*100):0} % · Ambulance ${Math.ceil(mission.van.hp)} % · Documents ${docs}/${Object.keys(LOGS).length} · ${ENDING.next}`;
  startButton.textContent='REJOUER LE NIVEAU 3 →';startButton.disabled=false;status.textContent='';shade.style.display='grid';shade.classList.add('ended');document.body.classList.add('pw-shaded');
  $('home').hidden=false;
 }
 function missionLost(reason='over'){
  if(!running)return;running=false;document.exitPointerLock?.();closeDocument();
  const van=reason==='van';
- $('panel-title').innerHTML=van?'VSAV <em>hors service</em>':'Signal <em>perdu</em>';
- $('panel-text').textContent=van?'Les machines ont saboté le fourgon d’Inès. Reprends au dernier point de contrôle : le VSAV y sera réparé.':'ORDRE tient encore le secteur 03. Reprends au dernier point de contrôle.';
+ $('panel-title').innerHTML=van?'Ambulance <em>hors service</em>':'Signal <em>perdu</em>';
+ $('panel-text').textContent=van?'Les machines ont saboté l’ambulance d’Inès. Reprends au dernier point de contrôle : elle y sera réparée.':'ORDRE tient encore le secteur 03. Reprends au dernier point de contrôle.';
  $('panel-small').textContent=L.STAGES[Math.min(mission.stage,L.STAGES.length-2)].label;
  startButton.textContent='REPRENDRE AU POINT DE CONTRÔLE →';startButton.disabled=false;status.textContent='';shade.style.display='grid';shade.classList.add('lost');document.body.classList.add('pw-shaded');
 }
@@ -405,7 +405,7 @@ function gameTick(dt){
 }
 const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;return;}if(!running||paused)return;audioReady();if(kind==='melee')meleeQueued=true;else if(kind==='charge')chargeQueued=true;else if(kind==='reload')game.reload();else if(kind==='next')game.cycleWeapon();else if(kind==='interact')interact();else if(kind==='crouch')crouchQueued=true;};
 let lastDevices='';
-const HOLD_LABEL={balise:'BROUILLAGE DE LA BALISE ORDRE',barriere:'LEVÉE DE LA BARRIÈRE',treuil:'TRACTION DU TREUIL',arrimage:'ARRIMAGE DU VSAV AU TRAIN'};
+const HOLD_LABEL={balise:'BROUILLAGE DE LA BALISE ORDRE',barriere:'LEVÉE DE LA BARRIÈRE',treuil:'TRACTION DU TREUIL',arrimage:'ARRIMAGE DE L’AMBULANCE AU TRAIN'};
 const VAN_WAIT={escorte:'attend son escorte',machines:'machines devant',stop:'à l’arrêt',stage:'à l’arrêt'};
 function updateHUD(){
  (combatHud ||= mountCombatHud({characterId,onAction:armorTouch})).update(game);
@@ -423,7 +423,7 @@ function updateHUD(){
  // The van: integrity and state, shown once it is on the road.
  const van=mission.van,vanBox=$('van');
  vanBox.hidden=mission.stage<L.STAGE_INDEX.escorte||completed();
- if(!vanBox.hidden){$('van-label').textContent='VSAV SECOURS 03 · '+Math.ceil(van.hp)+' %'+(van.moving?' · en route':van.waiting?' · '+VAN_WAIT[van.waiting]:'');$('van-bar').style.width=van.hp.toFixed(1)+'%';vanBox.classList.toggle('danger',van.hp<40);}
+ if(!vanBox.hidden){$('van-label').textContent='AMBULANCE · '+Math.ceil(van.hp)+' %'+(van.moving?' · en route':van.waiting?' · '+VAN_WAIT[van.waiting]:'');$('van-bar').style.width=van.hp.toFixed(1)+'%';vanBox.classList.toggle('danger',van.hp<40);}
  const available=L.INTERACTIONS.filter(i=>!i.log&&mission.available(i.id)).map(i=>i.id),key=available.join(',')+'|'+mission.done.length+'|'+mission.reads.length+'|'+mission.stage;
  if(key!==lastDevices){lastDevices=key;art.setAvailable([...available,...L.INTERACTIONS.filter(i=>i.log&&mission.available(i.id)).map(i=>i.id)]);syncDevices();}
 }

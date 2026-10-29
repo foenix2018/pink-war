@@ -75,7 +75,7 @@ export function createM03Mission({ game, characterId = 'ghju', choice = null, ba
     if (here.stop && !opened.has(here.stop)) { van.waiting = 'stop'; return; }
     if (!DRIVING.has(id())) { van.waiting = 'stage'; return; }
     const p = game.player;
-    if (Math.hypot(p.x - van.x, p.z - van.z) > L.VAN.leash) { van.waiting = 'escorte'; if (game.time > waitNotice) { waitNotice = game.time + 9; h.notice('LE VSAV VOUS ATTEND · RESTEZ À MOINS DE ' + L.VAN.leash + ' M'); } return; }
+    if (Math.hypot(p.x - van.x, p.z - van.z) > L.VAN.leash) { van.waiting = 'escorte'; if (game.time > waitNotice) { waitNotice = game.time + 9; h.notice('L’AMBULANCE VOUS ATTEND · RESTEZ À MOINS DE ' + L.VAN.leash + ' M'); } return; }
     const ahead = game.enemies.some(e => e.form !== 'probe' && Math.hypot(e.x - van.x, e.z - van.z) < 11);
     if (ahead) { van.waiting = 'machines'; return; }
     const dx = next.x - van.x, dz = next.z - van.z, d = Math.hypot(dx, dz), stepLen = Math.min(d, L.VAN.speed * dt);
@@ -89,8 +89,8 @@ export function createM03Mission({ game, characterId = 'ghju', choice = null, ba
     for (const e of game.enemies) if (e.form !== 'probe' && Math.hypot(e.x - van.x, e.z - van.z) < L.VAN.sabotageRange) near++;
     if (!near) return;
     van.hp = Math.max(0, van.hp - near * L.VAN.sabotage * dt);
-    if (game.time > sabotageSaid) { sabotageSaid = game.time + 20; say('sabotage', { again: true }); h.notice('LE VSAV EST SABOTÉ · ' + Math.ceil(van.hp) + ' %'); }
-    if (van.hp <= 0) { h.notice('LE VSAV EST HORS SERVICE'); h.lost('van'); }
+    if (game.time > sabotageSaid) { sabotageSaid = game.time + 20; say('sabotage', { again: true }); h.notice('L’AMBULANCE EST SABOTÉE · ' + Math.ceil(van.hp) + ' %'); }
+    if (van.hp <= 0) { h.notice('L’AMBULANCE EST HORS SERVICE'); h.lost('van'); }
   }
 
   // Stage-specific world state for a checkpoint: what has been achieved stays achieved.
@@ -166,11 +166,11 @@ export function createM03Mission({ game, characterId = 'ghju', choice = null, ba
       if (key === 'ines') { say('ines'); setStage(S.alimentation); h.cue('console'); }
       else if (key === 'alimentation') { done.add(key); h.setPower('annexe', true); say('courant'); setStage(S.dossier); h.cue('console'); h.notice('ANNEXE MÉDICALE ALIMENTÉE'); }
       else if (key === 'kit') { done.add(key); deploy('annexe', { alert: true }); say('kit'); h.cue('alarm'); h.notice('KITS DE RÉANIMATION RÉCUPÉRÉS · MACHINES EN APPROCHE'); }
-      else if (key === 'verin') { done.add(key); say('verin'); setStage(S.escorte); say('escorte'); h.cue('valve'); h.notice('VÉRIN HYDRAULIQUE DÉMONTÉ · LE VSAV DÉMARRE'); game.grantCharges(1); }
+      else if (key === 'verin') { done.add(key); say('verin'); setStage(S.escorte); say('escorte'); h.cue('valve'); h.notice('VÉRIN HYDRAULIQUE DÉMONTÉ · L’AMBULANCE DÉMARRE'); game.grantCharges(1); }
       else if (key === 'balise') { say('balise'); startHold('balise'); h.notice('BALISE ORDRE · BROUILLAGE EN COURS'); }
       else if (key === 'barriere') { say('barriere'); startHold('barriere'); h.notice('BARRIÈRE · LEVÉE EN COURS'); }
       else if (key === 'treuil') { say('treuil'); startHold('treuil'); h.notice('TREUIL DE DÉPANNAGE · TRACTION'); }
-      else if (key === 'arrimage') { say('arrimage'); startHold('arrimage'); h.notice('ARRIMAGE DU VSAV · NE PAS INTERROMPRE'); }
+      else if (key === 'arrimage') { say('arrimage'); startHold('arrimage'); h.notice('ARRIMAGE DE L’AMBULANCE · NE PAS INTERROMPRE'); }
       else return null;
       return it;
     },
@@ -184,9 +184,9 @@ export function createM03Mission({ game, characterId = 'ghju', choice = null, ba
         if (game.time >= hold.until) {
           const name = hold.name; hold = null; done.add(name); h.cue('stage');
           if (name === 'balise') { reads.add('balise'); say('baliseOk'); setStage(S.barriere); h.notice('LIAISON ORDRE INTERROMPUE'); h.read?.('balise'); game.grantCharges(1); }
-          if (name === 'barriere') { open('barriere'); say('barriereOk'); setStage(S.escorte2); h.notice('BARRIÈRE LEVÉE · LE VSAV REPART'); }
+          if (name === 'barriere') { open('barriere'); say('barriereOk'); setStage(S.escorte2); h.notice('BARRIÈRE LEVÉE · L’AMBULANCE REPART'); }
           if (name === 'treuil') { open('remorque'); say('treuilOk'); setStage(S.gare); h.notice('BRETELLE DÉGAGÉE'); game.grantCharges(1); }
-          if (name === 'arrimage') { say('arrimageOk'); setStage(S.regulation); h.notice('VSAV ARRIMÉ AU TRAIN SANITAIRE'); }
+          if (name === 'arrimage') { say('arrimageOk'); setStage(S.regulation); h.notice('AMBULANCE ARRIMÉE AU TRAIN SANITAIRE'); }
         }
       }
       // The van, and what its progress triggers.

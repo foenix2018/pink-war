@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <link rel="icon" href="icon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pink Wars — 03 Le Convoi des Absents</title>
-<meta name="description" content="Pink Wars, mission 03 : escorter le VSAV d’Inès à travers le secteur 03 de Vesper, de nuit, jusqu’à la gare de fret de l’Anneau logistique. Retrouver la trace du convoi des absents.">
+<meta name="description" content="Pink Wars, mission 03 : escorter l’ambulance d’Inès à travers le secteur 03 de Vesper, de nuit, jusqu’à la gare de fret de l’Anneau logistique. Retrouver la trace du convoi des absents.">
 <style>
 :root{color-scheme:dark;font-family:Inter,system-ui,Arial,sans-serif;background:#05070a;color:#eef1f6}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#05070a}
@@ -75,8 +75,8 @@ body.pw-shaded .pw-hud,body.pw-shaded #hud,body.pw-shaded .pw-minimal-action{vis
 <div id="shade"><div class="panel">
   <div class="kicker">PINK WARS / ACTE I · LA FRACTURE · MISSION 03</div>
   <h1 id="panel-title">Le Convoi <em>des Absents</em></h1>
-  <p id="panel-text">Vesper, 2196. À la tour de transit, le manifeste de HELIX l’a dit : le convoi 02 est parti vers l’Anneau logistique, et LYLU est dans son « lot spécial ». Inès Varga a récupéré un VSAV. Il faut le conduire de nuit à travers le secteur 03, sous couvre-feu ORDRE, jusqu’à la gare de fret.</p>
-  <p class="small" id="panel-small">Mission longue (≈ 20 à 30 min) : annexe médicale, atelier, escorte du VSAV, relais A3, balise de la fracture, barrière à réparer, échangeur bloqué, gare de fret. Documents à lire (F), points de contrôle à chaque étape, lampe frontale (L). Bouclier d’armure, mêlée (X), charge à impulsion (B).</p>
+  <p id="panel-text">Vesper, 2196. À la tour de transit, le manifeste de HELIX l’a dit : le convoi 02 est parti vers l’Anneau logistique, et LYLU est dans son « lot spécial ». Inès Varga a récupéré une ambulance. Il faut la conduire de nuit à travers le secteur 03, sous couvre-feu ORDRE, jusqu’à la gare de fret.</p>
+  <p class="small" id="panel-small">Mission longue (≈ 20 à 30 min) : annexe médicale, atelier, escorte de l’ambulance, relais A3, balise de la fracture, barrière à réparer, échangeur bloqué, gare de fret. Documents à lire (F), points de contrôle à chaque étape, lampe frontale (L). Bouclier d’armure, mêlée (X), charge à impulsion (B).</p>
   <div class="chars"><a href="?character=ghju" id="pick-ghju">GHJU · GABY</a><a href="?character=lylu" id="pick-lylu">LYLU · CARA</a></div>
   <button id="start" class="primary">ENTRER DANS LE SECTEUR 03 →</button>
   <button id="home" class="primary" hidden onclick="location.assign('./index.html?mode=campaign3')" style="margin-top:0;background:#1c2733;color:#e8eef2">RETOUR À LA CAMPAGNE →</button>
@@ -87,7 +87,7 @@ body.pw-shaded .pw-hud,body.pw-shaded #hud,body.pw-shaded .pw-minimal-action{vis
 <script type="module">
 const lylu=new URLSearchParams(location.search).get('character')==='lylu';
 document.getElementById(lylu?'pick-lylu':'pick-ghju').setAttribute('aria-current','true');
-if(lylu){document.getElementById('panel-text').textContent='Vesper, 2196. À la tour de transit, le manifeste de HELIX l’a dit : le convoi 02 est parti vers l’Anneau logistique, et GHJU est dans son « lot spécial ». Inès Varga a récupéré un VSAV. Il faut le conduire de nuit à travers le secteur 03, sous couvre-feu ORDRE, jusqu’à la gare de fret.';document.getElementById('compat').href='./niveau3.html?character=lylu&renderer=webgl';}
+if(lylu){document.getElementById('panel-text').textContent='Vesper, 2196. À la tour de transit, le manifeste de HELIX l’a dit : le convoi 02 est parti vers l’Anneau logistique, et GHJU est dans son « lot spécial ». Inès Varga a récupéré une ambulance. Il faut la conduire de nuit à travers le secteur 03, sous couvre-feu ORDRE, jusqu’à la gare de fret.';document.getElementById('compat').href='./niveau3.html?character=lylu&renderer=webgl';}
 import('./niveau3.js?v=3.71.0').catch(error=>{
  const status=document.getElementById('status'),button=document.getElementById('start');
  if(status)status.textContent='Erreur de chargement : '+(error?.message||String(error))+' — essaye le mode compatibilité WebGL.';
