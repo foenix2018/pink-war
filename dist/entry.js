@@ -52,7 +52,7 @@ function openLigne9(){
 function openMission(mission,{resume=false,vr=false}={}){
   loading=true;refresh();save();for(const d of document.querySelectorAll('dialog[open]'))d.close();
   const cover=createMissionLoading({mission,characterId:character});cover.set(.04,'Ouverture du secteur');
-  const target=mission===2?'./level2-test.html':'./vesper-level1-v7.html';
+  const target=mission===2?'./level2-test.html':mission===3?'./niveau3.html':'./vesper-level1-v7.html';
   const url=new URL(target,location.href);url.searchParams.set('source','campaign');url.searchParams.set('autostart','1');if(mission===3)url.searchParams.set('chapter','3');url.searchParams.set('character',character);url.searchParams.set('v',GAME_VERSION);
   if(mission===1)url.searchParams.set('prologue','done');
   if(resume)url.searchParams.set('resume','1');
