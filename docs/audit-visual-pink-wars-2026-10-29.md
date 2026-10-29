@@ -35,3 +35,25 @@ Une fois l'aperçu Vercel construit, ouvrir `/galerie.html?compare=before` et `/
 3. Mesurer les FPS M02 qualité Normale/Équilibré+/Performance sur la tablette Dell.
 4. Vérifier l'export USDZ iPhone de GHJU/LYLU, les mains et la cape ; ne pas publier l'AR comme validée sans ce contrôle.
 5. Essayer le Quest 3 et une manette PS4 pour exclure les régressions.
+
+## Vague 2 — périmètre exclusivement décors (29 octobre 2026)
+
+La demande explicite est de **ne pas modifier les personnages pour le moment**. Aucun fichier de personnage, main, arme, rig, IA ou animation de personnage n'a été modifié par cette vague.
+
+### Corrections intégrées
+
+- **Interface** : rehaussement des matériaux visuels des panneaux d'accueil, missions, galerie, réglages et briefing; meilleure typographie et boutons cohérents (dans `fracture.css`).
+- **M02 / rues** : grilles et bordures de caniveau, marquages d'accès, fixations de trottoir, coffrets de service. Géométrie instanciée, sans nouvelle collision.
+- **M02 / façades** : conduites techniques, colliers, plaques de maintenance, plus de relief non cubique grâce aux tuyaux cylindriques.
+- **M02 / publicités** : six publicités fictives à texture originale (VESPER, HELIX, NEON 24, LIGNE 09, ORDRE, MED-07), avec cadre, éclairage apparent et montage géométriquement aligné sur les façades des tours / marchés.
+- **M02 / plafonds** : deux faux plafonds commerciaux avec ossature, dalles partiellement absentes, réseaux techniques, diffuseurs LED, grilles, et quatre extracteurs circulaires.
+- **M02 / surfaces** : atlas procédural très léger pour micro-grain, métal brossé et rugosité des rails / dalles.
+- **M02 / éclairage et ombres** : deux points lumineux intérieurs en réglage normal, aucun point supplémentaire en Performance; détails exclus de la coûteuse projection de leur propre ombre dynamique.
+- **M01 / annexe de secours** : vraie grille de faux plafond suspendu à 8 m avec dalles manquantes, chemins de câble et luminaires.
+- **M01 / atelier** : rails, poutres, luminaires et conduites sous toiture existante.
+- **M01 / rues** : plaques techniques encastrées, fixations et conduites de façade, sans changement de collision.
+- **Tests** : `tests/environment-finish.test.mjs` ajouté pour contrôler la génération du décor avec un moteur Three simulé et le respect du périmètre.
+
+### Limites connues
+
+Aucune capture visuelle validée du rendu final sur tablette Dell, Quest 3 ou iPhone n'est disponible dans cet environnement. Le statut `READY` d'un déploiement signifie que Vercel a construit le site, pas que les modèles 3D sont visuellement exacts ou sans régression. La fusion en production reste conditionnée aux essais navigateur et au contrôle des FPS.
