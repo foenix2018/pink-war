@@ -1,0 +1,119 @@
+{
+  "version": "3.67.1",
+  "main": {
+    "reports": [
+      {
+        "mode": "arena",
+        "id": "ghju",
+        "started": {
+          "view": "third",
+          "model": true,
+          "fpsGun": false,
+          "companion": true
+        },
+        "fps": {
+          "view": "fps",
+          "model": false,
+          "fpsGun": true
+        },
+        "persisted": {
+          "view": "third",
+          "stored": "third",
+          "width": 390
+        },
+        "errors": [],
+        "missing": []
+      },
+      {
+        "mode": "training",
+        "id": "lylu",
+        "started": {
+          "view": "third",
+          "model": true,
+          "fpsGun": false,
+          "companion": true
+        },
+        "fps": {
+          "view": "fps",
+          "model": false,
+          "fpsGun": true
+        },
+        "persisted": {
+          "view": "third",
+          "stored": "third",
+          "width": 390
+        },
+        "errors": [],
+        "missing": []
+      }
+    ],
+    "note": "Real touch events in 390x844 options before loading 3D, real play, pause/options toggles both ways, and reload preference. Chromium/SwiftShader with reduced framebuffer; no physical Safari or Quest."
+  },
+  "missions": {
+    "reports": [
+      {
+        "mission": 1,
+        "selected": {
+          "view": "third",
+          "playerVisible": true
+        },
+        "fps": {
+          "view": "fps",
+          "playerVisible": false
+        },
+        "shooting": {
+          "error": 0,
+          "origin": {
+            "x": -49.75620357111738,
+            "y": 0.862443769446853,
+            "z": 90.56182667267825
+          },
+          "ammo": 23
+        },
+        "shortcut": {
+          "view": "fps",
+          "free": false
+        },
+        "persisted": {
+          "view": "third",
+          "stored": "third",
+          "width": 390
+        },
+        "errors": [],
+        "missing": []
+      },
+      {
+        "mission": 2,
+        "selected": {
+          "view": "third",
+          "playerVisible": true
+        },
+        "fps": {
+          "view": "fps",
+          "playerVisible": false
+        },
+        "shooting": null,
+        "shortcut": {
+          "view": "fps"
+        },
+        "persisted": {
+          "view": "third",
+          "stored": "third",
+          "width": 390
+        },
+        "errors": [],
+        "missing": []
+      }
+    ],
+    "note": "Real mobile pause/options touch controls in M01/M02, visible native heroes, FPS/3P both ways, M01 actual Space shot at visible weapon muzzle, V shortcut and reload persistence. Prepared invulnerability; local Chromium/SwiftShader with reduced framebuffer, no physical Safari/Quest."
+  },
+  "nodeTests": {
+    "pass": 637,
+    "fail": 0,
+    "skipped": 0
+  },
+  "targetedTests": {
+    "pass": 20,
+    "fail": 0
+  }
+}

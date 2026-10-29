@@ -1,6 +1,7 @@
-import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
+import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, starterWeaponIndex, weaponCycleOrder, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
 import { createScene } from './scene.js?v=3.48';
 import { VRController } from './vr.js';
+import {createGamepadAid} from './ios-gamepad.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
 import { characterForId } from './characters.js';
 import { playLaserShot,playEnemyShot,loadRealLaserSample,loadCombatSamples,playLaserImpact,setLaserAudioEnabled,disposeLaserAudio,playWeaponAction,setWeaponCharge } from './laser-sound.js';
@@ -21,6 +22,8 @@ import {sightPoint} from './sight-line.js';
 import {GAME_VERSION,showLaunchError} from './launch-ui.js';
 import {syncMenuArtwork} from './menu-art.js';
 import {createAICompanion} from './ai-companions.js';
+import {bindViewButton,mountViewControl,readPreferredView,savePreferredView,normalizeView} from './view-options.js?v=3.68.0';
+import {companionAvailable} from './companion-escort.js';
 import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
 import {createCompanionSkillFX} from './companion-skill-fx.js';
@@ -33,6 +36,7 @@ import {createHudContrastControl} from './hud-appearance.js';
 import {createArmorFeedback,meleeKick,MELEE_POSE} from './armor-feedback.js';
 
 const $ = id => document.getElementById(id);
+createGamepadAid();
 const settings = { sound: true, music: true, sensitivity: 1, quality: 'auto' };
 let narrativeCompanion=null,companionScene=null,companionHero=null;
 let companionSkills=null,skillMenu=null,skillFX=null,skillGame=null;
@@ -41,7 +45,8 @@ const boot=window.__PINKWAR_BOOT_OPTIONS;
 if(boot?.settings)Object.assign(settings,boot.settings);
 settings.sensitivity = clamp(Number(settings.sensitivity) || 1, .4, 2);
 if (!['auto', 'low', 'high'].includes(settings.quality)) settings.quality = 'auto';
-let phase = 'lobby', view = boot?.view==='third'?'third':'fps', yaw = 0, pitch = -.075, game, world, vr;
+let phase = 'lobby', view = boot?.view?normalizeView(boot.view):readPreferredView(), yaw = 0, pitch = -.075, game, world, vr;
+let optionsViewControl=null,pauseViewControl=null;
 let character=characterForId('ghju');
 let m01CheckpointGame=null,m01CheckpointStage=null,m01CheckpointPending=false;
 let combatHud=null,armorFx=null,armorFxScene=null,meleeQueued=false,chargeQueued=false,touchSprinting=false;
@@ -77,7 +82,7 @@ function armorActions(input){
   meleeQueued=chargeQueued=false;
 }
 let selectedMode=['arena','training','campaign','campaign2'].includes(boot?.mode)?boot.mode:'campaign',launchBusy=false;
-let trainingWeaponIndex=Number.isInteger(boot?.trainingWeaponIndex)&&boot.trainingWeaponIndex>=0&&boot.trainingWeaponIndex<7&&boot.trainingWeaponIndex!==5?boot.trainingWeaponIndex:0;
+let trainingWeaponIndex=Number.isInteger(boot?.trainingWeaponIndex)&&boot.trainingWeaponIndex>=0&&boot.trainingWeaponIndex<WEAPONS.length&&boot.trainingWeaponIndex!==5?boot.trainingWeaponIndex:null;
 function selectMode(mode){
   if(phase!=='lobby'||launchBusy)return;
   selectedMode=['campaign','campaign2','ligne9','arena','training'].includes(mode)?mode:'campaign';
@@ -219,18 +224,23 @@ for(const type of ['pointerup','pointercancel','lostpointercapture'])$('aim-butt
 $('jump-button').addEventListener('pointerdown', e => { if (phase !== 'playing') return; e.preventDefault(); jumpQueued = true; });
 $('jump-button').addEventListener('click', e => { if (e.detail === 0 && phase === 'playing') jumpQueued = true; });
 
-function selectView(next) {
-  view = vr?.active ? 'fps' : next;
+function selectView(next,remember=true) {
+  view = vr?.active ? 'fps' : normalizeView(next);
+  if(remember&&!vr?.active)savePreferredView(view);
   for (const button of document.querySelectorAll('[data-view]')) { const selected = button.dataset.view === view; button.classList.toggle('selected', selected); button.setAttribute('aria-pressed', String(selected)); }
   $('game-view-label').textContent = view === 'fps' ? 'VUE FPS' : 'VUE 3e PERSONNE';
   $('view-button').title = view === 'fps' ? 'Passer en troisième personne (V)' : 'Passer en vue FPS (V)';
+  optionsViewControl?.refresh();pauseViewControl?.refresh();
+  if(world&&game&&['playing','paused'].includes(phase))updateCamera();
 }
 for (const button of document.querySelectorAll('[data-view]')) button.onclick = () => selectView(button.dataset.view);
 selectView(view); $('view-button').onclick = () => selectView(view === 'fps' ? 'third' : 'fps');
+optionsViewControl=mountViewControl($('settings-dialog'),{getView:()=>view,onSelect:selectView,canChange:()=>!vr?.active});
+pauseViewControl=bindViewButton($('pause-view'),{getView:()=>view,onSelect:selectView,canChange:()=>!vr?.active});
 
-function pause() { if (phase !== 'playing') return; setScreenMusic('gameplay');ambience?.pause(); phase = 'paused'; resetInput(); if (vr?.mode !== 'xr') $('pause-dialog').showModal(); }
+function pause() { if (phase !== 'playing') return; setScreenMusic('gameplay');ambience?.pause(); phase = 'paused'; resetInput(); pauseViewControl.refresh(); if (vr?.mode !== 'xr') $('pause-dialog').showModal(); }
 function resume() { if (phase !== 'paused') return; for (const d of document.querySelectorAll('dialog[open]')) d.close(); phase = 'playing'; resetInput(); audioReady(); }
-function openPanel(id) { if (phase === 'playing') { phase = 'paused'; resetInput();setScreenMusic('gameplay');ambience?.pause(); } for (const d of document.querySelectorAll('dialog[open]')) d.close(); $(id).showModal(); }
+function openPanel(id) { if(id==='settings-dialog')optionsViewControl?.refresh(); if (phase === 'playing') { phase = 'paused'; resetInput();setScreenMusic('gameplay');ambience?.pause(); } for (const d of document.querySelectorAll('dialog[open]')) d.close(); $(id).showModal(); }
 function closePanel(dialog) { if(dialog.id==='outfit-dialog'){closeOutfit();return;} dialog.close(); if (phase === 'paused') $('pause-dialog').showModal(); }
 $('pause-button').onclick = pause; $('resume-button').onclick = resume;
 $('how-button').onclick = () => openPanel('help-dialog'); $('settings-button').onclick = () => openPanel('settings-dialog'); $('pause-help').onclick = () => openPanel('help-dialog');
@@ -302,12 +312,12 @@ async function start() {
   if(selectedMode==='campaign'&&!vr?.active&&!new URLSearchParams(location.search).has('classic')){openMissionPage(1);return;}
   if (!world||launchBusy) return;
   launchBusy=true;
-  selectView('fps');
+  selectView(readPreferredView(),false);
   for (const d of document.querySelectorAll('dialog[open]')) d.close();
   world.setCampaignActive(selectedMode==='campaign');
   world.setRangeActive(selectedMode==='training');
   game=armed(selectedMode==='campaign'?new CampaignLevel1(world.obstacles,Math.random,character.id):
-    selectedMode==='training'?new ShootingRangeGame(world.obstacles,Math.random,trainingWeaponIndex,character.id):new ArenaGame(world.obstacles,Math.random,null,character.id));
+    selectedMode==='training'?new ShootingRangeGame(world.obstacles,Math.random,trainingWeaponIndex??starterWeaponIndex(character.id),character.id):new ArenaGame(world.obstacles,Math.random,null,character.id));
   world.resetDynamic(); phase = 'loading'; yaw = 0; pitch = -.075;
   weaponFeel.reset();reloadInserted=false;lastShotAt=-99;flashTimer = 0; recoil = 0; damageUntil = 0; announcementUntil = 0;pickupNotice=null;equipmentUntil=0;crouchCameraBlend=0;currentSprinting=false; resetInput(); audioReady();
   world.setWeapon(game.weaponIndex);world.setEquipment(1);
@@ -336,11 +346,11 @@ $('reload-button').onclick = () => { if(phase==='playing') game.reload(); };
 $('weapon-button').onclick = () => { if(phase==='playing') game.cycleWeapon(); };
 $('arsenal-button').onclick = () => {
   $('weapon-list').replaceChildren();
-  WEAPONS.forEach((w,index) => {
+  [...weaponCycleOrder(game.ownedWeapons,game.characterId),...WEAPONS.map((_,i)=>i).filter(i=>!game.ownedWeapons.has(i))].forEach(index => { const w=WEAPONS[index];
     const button = document.createElement('button'), available = game.ownedWeapons.has(index);
     button.className = 'weapon-card' + (game.weaponIndex===index ? ' selected' : ''); button.disabled = !available;
     const kenney=world.fpsGun.userData.kenneyAssets,kenneyReady=!w.melee&&(!!kenney?.loadedByIndex?.[index]||!!world.fpsGun.userData.weaponModels[index]?.userData.authored);
-    button.innerHTML = `<span><strong>${w.name}</strong><small>${w.label} · ${w.melee?'énergie continue · parade':`${w.capacity} charges`}${w.chargeTime?' · tir chargé':''}<br>${w.melee?'Sabre AURORA':kenneyReady?(index===3?'THORN V8 · RAIL MAGNÉTIQUE · MÉTAL INDUSTRIEL':index===0||index===7?'CHÂSSIS VX-9 V5 · VISEUR HOLOGRAPHIQUE':index===2?'CHÂSSIS ARES X9 · OPTIQUE NUMÉRIQUE':index===1?'CHÂSSIS NEXUS V9 · VISEUR HOLOGRAPHIQUE':'CHÂSSIS MK IV · MÉTAL ET CÉRAMIQUE'):'CHARGEMENT DE L’ARME'}</small></span><b>${available?(game.weaponIndex===index?'ÉQUIPÉE':'ÉQUIPER'):`NIVEAU ${w.level}`}</b>`;
+    button.innerHTML = `<span><strong>${w.name}</strong><small>${w.label} · ${w.melee?'énergie continue · parade':`${w.capacity} charges`}${w.chargeTime?' · tir chargé':''}<br>${w.melee?'Sabre AURORA':kenneyReady?(index===8?'VORTEX AR-7 V5 · MÉTAL SATINÉ · 36 CELLULES ROSES':index===3?'THORN V8 · RAIL MAGNÉTIQUE · MÉTAL INDUSTRIEL':index===0||index===7?'CHÂSSIS VX-9 V5 · VISEUR HOLOGRAPHIQUE':index===2?'CHÂSSIS ARES X9 · OPTIQUE NUMÉRIQUE':index===1?'CHÂSSIS NEXUS V9 · VISEUR HOLOGRAPHIQUE':'CHÂSSIS MK IV · MÉTAL ET CÉRAMIQUE'):'CHARGEMENT DE L’ARME'}</small></span><b>${available?(game.weaponIndex===index?'ÉQUIPÉE':'ÉQUIPER'):`NIVEAU ${w.level}`}</b>`;
     button.onclick = () => { game.selectWeapon(index); world.setWeapon(game.weaponIndex); updateHud(); resume(); };
     $('weapon-list').append(button);
   });
@@ -425,6 +435,8 @@ function updateWeaponVisuals(dt, firing, moving) {
   if (vr?.mode !== 'xr') {
     world.soldier.animate(clock, moving, recoil, reloadLift, trigger, dt, {
       airborne: !game.player.grounded, verticalSpeed: game.player.verticalSpeed,
+      velocity:game.playerVelocity,
+      ground:(x,z,y)=>game.footGroundHeight(x,z,y),
       crouched: game.player.crouched, firing: trigger>0,
       sprint: currentSprinting, aim: !!(aiming||firing||game.charge>0),saberSwing:game.weapon.melee?bladeSwingPose(game.bladePhase,game.bladeSlashSide):null
     });
@@ -468,6 +480,10 @@ function handleEvents() {
       world.laserShot?.(event);
       const feel=weaponFeel.fire(event.weapon,event.power,game.player.crouched||aiming);
       lastShotAt=clock;recoil=feel.pitch;flashTimer=feel.flash;vr.haptic('shot', event.weapon,event.hand); weaponShotSound(event.weapon, event.power);
+    }
+    if(event.type==='companion-shot'){
+      world.laserShot?.(event);
+      if(settings.sound&&audioContext)playLaserShot(audioContext,'r9',.35);
     }
     if(event.type==='training-hit'){
       // Permanent marks belong to the articulated plate, not the empty world
@@ -857,15 +873,15 @@ function stepFrame(timestamp, xrFrame) {
       }
       skillGame=game;
       skillMenu=createCompanionMenu({getStatus:()=>companionSkills.snapshot(game),
-        onUse:id=>companionSkills.use(id,{game,...aim('right'),emitter:narrativeCompanion.root.position}),
+        onUse:id=>{const used=companionSkills.use(id,{game,...aim('right'),emitter:narrativeCompanion.root.position});if(used)narrativeCompanion.react({type:'companion-assist',name:companionSkills.name});return used;},
         onChange(open){resetInput();if(open&&vr.mode!=='xr')document.exitPointerLock?.();}});
       skillFX=companionSkills.unlocked?createCompanionSkillFX(world.T,world.scene,companionSkills):null;
       companionScene=world.scene;companionHero=character.id;
     }
-    // M01 retains the audio signatures; physical companions debut in M07.
-    const active=phase==='playing'&&companionSkills.unlocked;
+    const active=['playing','paused'].includes(phase)&&companionAvailable({mission:game.campaign?.level||1,mode:game.mode});
     const companionCamera=vr.mode==='xr'?world.renderer.xr.getCamera(world.camera):world.camera;
-    narrativeCompanion.update(dt,{game,camera:companionCamera,active,assistance:false});
+    const companionDt=phase==='playing'&&!rangeArmoryMenu?.isOpen&&!skillMenu.isOpen?dt:0;
+    narrativeCompanion.update(companionDt,{game,camera:companionCamera,active,tracked:vr.mode==='xr'});
     skillMenu.setVisible(phase==='playing');skillMenu.refresh();
     if(active&&!skillMenu.isOpen)companionSkills.update(dt,{game});
     skillFX?.update();
@@ -903,7 +919,7 @@ try {
     try{await world.warm();world.render();}catch(error){world=await world.recover({quality:'low'});game.replaceObstacles(world.obstacles);world.lobby(0);await world.warm();world.render();}
   }
   selectMode(selectedMode);$('loading-screen').hidden=true;$('play-button').disabled = false;$('outfit-button').disabled=false;
-  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ version:GAME_VERSION,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,phase, view, frames,recovering,recoveryAttempts,graphics:world.graphics, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,aiming,aimBlend,cameraFov:world.camera.fov,laserEffects:world.laserStats?.(),city:world.cityStats?.(),vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelSource:world.soldier.actor?.data.source,modelNativeMotion:world.soldier.nativeMotion,modelNativeBones:world.soldier.nativeSkeleton?.bones.length,modelShadowUnit:world.soldier.shadowUnit?{profile:world.soldier.shadowUnit.profile,helmet:world.soldier.shadowUnit.armour.helmet.name,cape:world.soldier.shadowUnit.cape.anchor.visible,tabard:false}:null,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:settings.music!==false,musicPlaying:screenMusicSnapshot().playing,musicSection:screenMusicSnapshot().surface,musicVoices:screenMusicSnapshot().voices||0,audioState:audioContext?.state||'idle',weaponFeedback:{...weaponFeel.state},previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
+  window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ version:GAME_VERSION,companion:narrativeCompanion?.snapshot(),skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,phase, view, frames,recovering,recoveryAttempts,graphics:world.graphics, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,aiming,aimBlend,cameraFov:world.camera.fov,laserEffects:world.laserStats?.(),city:world.cityStats?.(),vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelSource:world.soldier.actor?.data.source,modelNativeMotion:world.soldier.nativeMotion,modelNativeBones:world.soldier.nativeSkeleton?.bones.length,modelShadowUnit:world.soldier.shadowUnit?{profile:world.soldier.shadowUnit.profile,helmet:world.soldier.shadowUnit.armour.helmet.name,cape:world.soldier.shadowUnit.cape.anchor.visible,tabard:false}:null,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:settings.music!==false,musicPlaying:screenMusicSnapshot().playing,musicSection:screenMusicSnapshot().surface,musicVoices:screenMusicSnapshot().voices||0,audioState:audioContext?.state||'idle',weaponFeedback:{...weaponFeel.state},previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
     selectedMode,guidance:game.guidance?.()||null,weaponModels:{...world.fpsGun.userData.kenneyAssets},training:game.mode==='training'?game.snapshot().training:null,rangeTargets:world.rangeArt.targetCount,campaignArt:world.campaignArt.stats(),inputs: { move: { ...move }, look: { ...look }, firing: firingPointers.size > 0 || keys.has('Space') }, drawCalls: world.renderer.info.render.calls, ...game.snapshot(),equipment:equipmentForCharacter(game.wave,character.id) }) });
   bindCanvas();world.renderer.setAnimationLoop(frame);
   $('launch-status').textContent=`V. ${GAME_VERSION} · prêt à lancer`;

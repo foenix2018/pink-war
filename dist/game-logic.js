@@ -68,9 +68,19 @@ export const WEAPONS = Object.freeze([
   Object.freeze({ id: 'nova', name: 'NOVA', label: 'Canon à énergie', level: 9, damage: 340, capacity: 4, interval: .4, reload: 2.4, speed: 80, pellets: 1, spread: 0, chargeTime: 1.05, splash: 5 }),
   Object.freeze({ id:'aurora',name:'AURORA',label:'Sabre à énergie',level:2,damage:155,capacity:0,interval:.48,reload:0,speed:0,pellets:0,spread:0,semiAuto:true,chargeTime:0,splash:0,melee:true }),
   Object.freeze({id:'m12',name:'M–12',label:'Fusil à pompe',level:4,damage:18,capacity:8,interval:.88,reload:2.8,speed:170,pellets:8,spread:.038,semiAuto:true,chargeTime:0,splash:0,falloffStart:12,falloffEnd:40,minDamage:.2}),
-  Object.freeze({id:'duor9',name:'VX-9 DUO',label:'Doubles pistolets Orbital',level:1,damage:24,capacity:24,handCapacity:12,interval:.2,reload:1.65,speed:110,pellets:1,spread:0,chargeTime:0,splash:0,dual:true})
+  Object.freeze({id:'duor9',name:'VX-9 DUO',label:'Doubles pistolets Orbital',level:1,damage:24,capacity:24,handCapacity:12,interval:.2,reload:1.65,speed:110,pellets:1,spread:0,chargeTime:0,splash:0,dual:true}),
+  Object.freeze({id:'vortex',name:'VORTEX AR-7',label:'Fusil d’assaut tactique · indicateur rose',level:6,damage:43,capacity:36,interval:.115,reload:1.95,speed:175,pellets:1,spread:.009,chargeTime:0,splash:0})
 ]);
 export const starterWeaponIndex=characterId=>characterId==='lylu'?6:7;
+export const VORTEX_SECONDARY_INDEX=8;
+// Character-specific main weapon remains first. VORTEX is the second quick-switch
+// weapon in every mode, regardless of its stable data index (8).
+export const starterWeaponOrder=characterId=>[starterWeaponIndex(characterId),VORTEX_SECONDARY_INDEX,0];
+export const weaponCycleOrder=(ownedWeapons,characterId='ghju')=>{
+  const preferred=[...starterWeaponOrder(characterId),...WEAPONS.map((_,i)=>i)];
+  return preferred.filter((index,position)=>preferred.indexOf(index)===position
+    &&ownedWeapons.has(index)&&weaponAllowedForCharacter(index,characterId));
+};
 export const weaponAllowedForCharacter=(index,characterId='ghju')=>!!WEAPONS[index]&&(!WEAPONS[index].dual||characterId==='ghju');
 export function projectileDamage(b,at){
  const w=WEAPONS.find(w=>w.id===b.weapon);if(!w?.falloffStart)return b.damage;
@@ -289,7 +299,7 @@ export class ArenaGame {
     this.characterId=characterId==='lylu'?'lylu':'ghju';
     this.weaponIndex = starterWeaponIndex(this.characterId); this.ammo = WEAPONS.map(w => w.capacity);
     this.dual={ammo:{left:12,right:12},readyAt:{left:0,right:0},shotAt:{left:-Infinity,right:-Infinity},held:{left:false,right:false},next:'right',flatAt:0};
-    this.ownedWeapons = new Set([this.weaponIndex,0]); this.weaponOffers = [];
+    this.ownedWeapons = new Set(starterWeaponOrder(this.characterId)); this.weaponOffers = []; // Primary + VORTEX AR-7 as second weapon; preserve the VX-9.
     this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false; this.semiPending=false;
     this.lastDamage = 0; this.regenerating = false;
     // Armour layer (armor-combat.js): shield on when an engine enables it, two impulse charges to start.
@@ -300,6 +310,23 @@ export class ArenaGame {
   }
   surfacesAt(x,z,time=this.time) { return this.traversal?.surfaces(x,z,time)||traversalSurfaces(x,z,time); }
   surfaceHeight(x,z,time=this.time,max=Infinity) { return this.traversal?.height(x,z,time,max)??walkSurfaceHeight(x,z,time,max); }
+  groundHeight(x,z,standingHeight=this.player.elevation||0) {
+    let floor=this.surfaceHeight(x,z,this.time,standingHeight+.3);
+    for(const b of this.obstacles){const top=(b.y||0)+b.height;
+      const max=b.groundSurface?standingHeight+.3:standingHeight+.12;
+      if((b.groundSurface||!b.walkableSurface&&b.height<=1.35)&&top<=max){
+        const dx=x-b.x,dz=z-b.z,c=Math.cos(b.surfaceYaw||0),s=Math.sin(b.surfaceYaw||0);
+        if(Math.abs(dx*c-dz*s)<b.hx&&Math.abs(dx*s+dz*c)<b.hz)floor=Math.max(floor,top);
+      }
+    }
+    return floor;
+  }
+  footGroundHeight(x,z,standingHeight=this.player.elevation||0) {
+    let floor=this.groundHeight(x,z,standingHeight);
+    const connected=this.surfacesAt(this.player.x,this.player.z).filter(s=>Math.abs(s.height-standingHeight)<.35);
+    for(const s of this.surfacesAt(x,z))if(Math.abs(s.height-standingHeight)<1.8&&connected.some(c=>c.id===s.id))floor=Math.max(floor,s.height);
+    return floor;
+  }
   routeForSurface(id,x=0) { return this.traversal?.routeForSurface(id,x)??elevatedRouteForSurface(id,x); }
   updateLifts(previousTime) {
     for(const lift of this.lifts){
@@ -313,11 +340,7 @@ export class ArenaGame {
   }
   settle(entity,dt,isPlayer=false) {
     const previous=entity.elevation||0;
-    let floor=this.surfaceHeight(entity.x,entity.z,this.time,previous+.3);
-    for(const b of this.obstacles){
-      const top=(b.y||0)+b.height;
-      if(!b.walkableSurface && b.height<=1.35 && top<=previous+.12 && Math.abs(entity.x-b.x)<b.hx && Math.abs(entity.z-b.z)<b.hz)floor=Math.max(floor,top);
-    }
+    const floor=this.groundHeight(entity.x,entity.z,previous);
     if(entity.grounded && previous-floor>.32){entity.grounded=false;entity.verticalSpeed=0;}
     if(entity.grounded){entity.elevation=floor;entity.verticalSpeed=0;}
     else{
@@ -372,7 +395,7 @@ export class ArenaGame {
     this.cooldown = Math.max(this.cooldown, .25); this.event('weapon', { index, name: this.weapon.name }); return true;
   }
   cycleWeapon(direction = 1) {
-    const slots=WEAPONS.map((_,index)=>this.ownedWeapons.has(index)&&weaponAllowedForCharacter(index,this.characterId)?index:-1).filter(index=>index>=0);
+    const slots=weaponCycleOrder(this.ownedWeapons,this.characterId);
     if(slots.length<2)return false;
     const at=slots.indexOf(this.weaponIndex),offset=direction<0?-1:1;
     return this.selectWeapon(slots[(Math.max(0,at)+offset+slots.length)%slots.length]);
@@ -881,7 +904,7 @@ export class ArenaGame {
         }
         this.event('impact', { ...at, bulletId:b.id, enemy: !!target, hostile: b.hostile, splash: b.splash,weapon:b.weapon,power:b.power||1,surface:target?'robot':surface,normal,direction:{x:b.vx,y:b.vy,z:b.vz} });
         if (target === this.player) { const n=Math.hypot(b.vx,b.vz)||1; this.damage(b.damage,{x:this.player.x-b.vx/n*8,z:this.player.z-b.vz/n*8}); }
-        else if (target) this.damageEnemy(target, projectileDamage(b,at)*reco1ProjectileScale(target,zone), at, zone, multiplier,{x:b.originX??this.player.x,z:b.originZ??this.player.z,elevation:b.originElevation??this.player.elevation});
+        else if (target) this.damageEnemy(target, projectileDamage(b,at)*reco1ProjectileScale(target,zone), at, zone, multiplier,{x:b.originX??this.player.x,z:b.originZ??this.player.z,elevation:b.originElevation??this.player.elevation,...(b.companion?{companion:true}:{})});
         if (!b.hostile && b.splash > 0) for (const e of [...this.enemies]) {
           if (e === target) continue;
           const center = { x: e.x, y: e.elevation + e.aimHeight, z: e.z }, d = Math.hypot(e.x - at.x, e.z - at.z, center.y - at.y);

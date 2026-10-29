@@ -20,13 +20,13 @@ export function createTraversalArt(scene, obstacles, mats) {
   }
   for(const p of PLATFORMS) {
     const y=p.height,west=p.id==='garden';
-    block(mats.black,[p.hx*2,.22,p.hz*2],[p.x,y-.11,p.z],.035);
-    block(west?mats.concrete:mats.steel,[p.hx*2-.10,.025,p.hz*2-.10],[p.x,y+.003,p.z],.005);
+    block(mats.black,[p.hx*2,.22,p.hz*2],[p.x,y-.1125,p.z],.035);
+    block(west?mats.concrete:mats.steel,[p.hx*2-.10,.025,p.hz*2-.10],[p.x,y-.0125,p.z],.005);
     // Construction joints, grating ribs and worn hazard edges establish scale.
-    for(let z=p.z-p.hz+.25;z<p.z+p.hz;z+=.58)block(mats.black,[p.hx*2-.42,.011,.024],[p.x,y+.021,z],.002);
+    for(let z=p.z-p.hz+.25;z<p.z+p.hz;z+=.58)block(mats.black,[p.hx*2-.42,.002,.024],[p.x,y+.001,z],.0005);
     for(const side of [-1,1]) {
       const x=p.x+side*(p.hx-.24);
-      block(mats.yellow,[.14,.018,p.hz*2-.2],[x,y+.025,p.z],.003);
+      block(mats.yellow,[.14,.002,p.hz*2-.2],[x,y+.001,p.z],.0005);
       for(const z of [p.z-p.hz+.4,p.z+p.hz-.4]) {
         block(mats.concrete,[.65,y,.65],[x,y/2,z],.035);
         collision(x,z,.325,.325,0,y);
@@ -278,10 +278,10 @@ export function createTraversalArt(scene, obstacles, mats) {
       gates.push({gate,floor});
     }
     const carriage=new T.Group();carriage.position.set(l.x,0,l.z);root.add(carriage);
-    const deck=new Assembly();deck.box(mats.black,[l.hx*2,.2,l.hz*2],[0,-.10,0],[0,0,0],.035);
-    deck.box(mats.steel,[l.hx*2-.1,.018,l.hz*2-.1],[0,.006,0],[0,0,0],.006);
-    for(let z=-l.hz+.25;z<l.hz;z+=.29)deck.box(mats.black,[l.hx*2-.3,.015,.025],[0,.022,z],[0,0,0],.002);
-    for(const side of [-1,1])for(let z=-l.hz+.25;z<l.hz;z+=.62)deck.box(mats.yellow,[.25,.02,.32],[side*(l.hx-.25),.025,z],[0,.2,0],.003);
+    const deck=new Assembly();deck.box(mats.black,[l.hx*2,.2,l.hz*2],[0,-.1025,0],[0,0,0],.035);
+    deck.box(mats.steel,[l.hx*2-.1,.018,l.hz*2-.1],[0,-.009,0],[0,0,0],.006);
+    for(let z=-l.hz+.25;z<l.hz;z+=.29)deck.box(mats.black,[l.hx*2-.3,.002,.025],[0,.001,z],[0,0,0],.0005);
+    for(const side of [-1,1])for(let z=-l.hz+.25;z<l.hz;z+=.62)deck.box(mats.yellow,[.25,.002,.32],[side*(l.hx-.25),.001,z],[0,.2,0],.0005);
     deck.mount(carriage);
     const piston=new T.Mesh(new T.CylinderGeometry(.23,.32,1,10),mats.steel);piston.position.set(l.x,.05,l.z);root.add(piston);
     const suspension=[];

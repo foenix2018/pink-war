@@ -4,6 +4,7 @@
 export const LASER_PROFILES=Object.freeze({
   r9:Object.freeze({pitch:970,end:205,duration:.115,body:260,thump:130,noise:.25,volume:.14,decay:.14,mechanism:1850,weight:1}),
   bloom:Object.freeze({pitch:740,end:162,duration:.092,body:155,thump:96,noise:.33,volume:.115,decay:.115,mechanism:2240,weight:.85}),
+  vortex:Object.freeze({pitch:830,end:143,duration:.11,body:190,thump:108,noise:.38,volume:.135,decay:.16,mechanism:1750,weight:1.1}),
   lance:Object.freeze({pitch:2600,end:680,duration:.19,body:860,thump:135,noise:.20,volume:.14,decay:.38,mechanism:1640,weight:1.45}),
   thorn:Object.freeze({pitch:1220,end:110,duration:.31,body:155,thump:55,noise:.42,volume:.155,decay:.34,mechanism:980,weight:1.55}),
   m12:Object.freeze({pitch:380,end:75,duration:.20,body:120,thump:48,noise:.78,volume:.17,decay:.32,mechanism:1150,weight:1.7}),

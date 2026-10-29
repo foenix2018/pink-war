@@ -1,3 +1,95 @@
+# Pink War 3.67.2 — bouton de vue directement dans la pause
+
+15 contrôles Node ciblés réussis, aucun échec, test ignoré ou annulé : préférence et stockage, caméra, HUD, pause XR et musique des menus. Syntaxe des quatre modules modifiés, générateur et `git diff --check` vérifiés. Aucun changement de mécanique ou de modèle.
+
+Les vrais boutons tactiles de l’Arène, du stand, de M01 et M02 sont contrôlés dans un viewport de 390 × 660 représentant la place disponible avec les barres du navigateur mobile. Le bouton est directement après Reprendre, visible sans défiler, avec une cible d’au moins 44 px. Passage FPS / 3P dans les deux sens et présence du corps vérifiés ; la pause reste ouverte. Réglages, touche V et préférence après rechargement restent synchronisés. Vérifications de débordement et de position aussi en 390 × 844, 844 × 390 et 1280 × 800. [Rapport](docs/pink-wars/PAUSE_VIEW_BROWSER_VERIFICATION.json) · [Notes et capture](docs/pink-wars/MISE_A_JOUR_367_2.md).
+
+Validation navigateur locale sous Chromium/SwiftShader, framebuffer réduit, invulnérabilité préparée pour les menus ; aucun essai sur Safari/iPhone ou Quest physique. Le statut Vercel confirme séparément la publication du commit. La version 3.67.1 et ses 637 tests complets restent documentés ci-dessous ; ce correctif applique les contrôles ciblés et les quatre parcours navigateur.
+
+---
+
+# Pink War 3.67.1 — options FPS / 3P
+
+637 tests Node réussis, aucun échec, test ignoré ou annulé ; 20 contrôles ciblés réussis. Quatre nouveaux tests couvrent la sauvegarde partagée sans modification des autres réglages, le stockage bloqué, l’orientation et l’altitude de la caméra, ainsi que les murs et les vrais planchers. L’attente historique d’un FPS forcé au lancement est remplacée par la transmission de la préférence, avec repli FPS vérifié séparément.
+
+Vrais boutons tactiles en 390 × 844 dans les options de l’accueil, de l’Arène, du stand, de M01 et de M02 : choix 3P avant chargement, basculement dans les deux sens pendant la pause, visibilité du corps et de l’arme FPS, reprise et préférence conservée après rechargement. Dans M01, la touche Espace consomme une munition et le projectile part du canon visible avec une erreur mesurée nulle ; V revient en FPS sans activer le mode de visite libre. Aucune erreur JavaScript ni ressource locale manquante. [Rapport](docs/pink-wars/VIEW_OPTIONS_BROWSER_VERIFICATION.json) · [Notes et captures](docs/pink-wars/MISE_A_JOUR_367_1.md).
+
+Syntaxe, générateur et configuration vérifiés, `git diff --check` propre. Limites : Chromium/SwiftShader local, framebuffer réduit, invulnérabilité préparée pour les menus ; aucun appareil Safari/iPhone ou Quest physique et aucune mesure de FPS matériel. La préférence écran n’altère pas la caméra immersive. Confirmation de déploiement par le statut Vercel du commit, séparément des essais locaux.
+
+---
+
+# Pink War 3.67 — escorte, protection et torche
+
+633 tests Node réussis, aucun échec, test ignoré ou annulé. Les 34 contrôles ciblés passent, dont 15 nouveaux cas : orbite attachée au corps sous changement de caméra et altitude, seuil de santé strict à 50 %, origine optique des tirs, véritables impacts, absence de consommation de munitions et d’événement de recul du joueur, attribution des dégâts au compagnon, murs avant/après départ du tir, menaces engagées, cadence et réserve bornées, pause, plafond bas, éclairage réel, exclusion des propres lumières de la sphère, hystérésis, extinction et suivi de tête XR.
+
+Navigateur : vrai menu, W et V pour GHJU et LYLU dans l’Arène et au stand. Le partenaire est visible dès le départ, au-dessus et en arrière. Un adversaire préparé dans une ligne libre ne déclenche aucun tir à 50 de santé ; à 49, les projectiles frappent dans la vraie physique sans modifier les munitions du héros ; la récupération à 50 arrête les nouveaux tirs. L’atténuation et la restauration des lumières de scène allument puis éteignent la torche. La vraie page de M01 démarre aussi pour les deux héros ; dans l’atelier couvert de la carte de production, l’éclairage automatique s’allume avec les lumières normales et la lampe manuelle éteinte. Aucune erreur JavaScript ni ressource locale manquante dans ces six parcours. [Rapport](docs/pink-wars/COMPANIONS_ESCORT_BROWSER_VERIFICATION.json) · [Notes et captures](docs/pink-wars/MISE_A_JOUR_367.md).
+
+La sphère est active physiquement dès M01, dans l’Arène et au stand ; les compétences manuelles avancées restent à M07. Les anciennes attentes du prototype d’assistance instantanée et du retour devant la caméra ont été adaptées aux vrais projectiles et à l’orbite arrière demandée. Syntaxe, générateur et configuration vérifiés, `git diff --check` propre. Limites : Chromium/SwiftShader local, framebuffer réduit et situations préparées ; aucun essai sur Safari/iPhone ou Quest physique, ni mesure de FPS matériel. La torche utilise un SpotLight sans carte d’ombres additionnelle et limite sa portée au premier obstacle sur son axe. Confirmation du déploiement par le statut Vercel du commit publié, séparément des essais navigateur locaux.
+
+---
+
+# Pink War 3.66.5 — liseré rose de Cara
+
+13 contrôles ciblés réussis : modèles, peau rigide, ouverture des panneaux, cadrage portrait, ressources, assistance et galerie. La bordure de Cara utilise un tube de 1 mm de rayon et un matériau rose faiblement émissif ; le lot supplémentaire partage les six charnières existantes. Cara passe à 12 lots, avec le même nombre de triangles. Gaby conserve ses 11 lots et ses matériaux. Vérification visuelle du vrai modèle dans la galerie locale sous Chromium/SwiftShader, sans erreur JavaScript ou ressource locale manquante. La suite complète de 618 tests de la version précédente n’a pas été relancée pour ce réglage visuel.
+
+---
+
+# Pink War 3.66.4 — Gaby et Cara articulées
+
+618 tests Node réussis, aucun échec, test ignoré ou annulé ; puis les 22 contrôles ciblés réussissent après le dernier ajustement portrait. Les sept nouveaux cas mesurent les vrais sommets des coques rigides sous transformation du parent, du corps et des charnières ; ils contrôlent les palettes d’os partagées, l’ouverture après une compétence réelle, la pause, le retour à l’écran après le suivi à l’épaule, le cadrage de tous les sommets en portrait et la libération unique des ressources. Les tests existants de coûts, recharges, ligne de vue, protection/soin sans résurrection et verrouillage M07 passent.
+
+Galerie réelle : ouverture directe des deux sphères, 11 maillages chacune, squelette de quatre/six os ; 14 appels de rendu dans la scène d’exposition complète. Atelier réel en 390 × 844 : touche G, sélection de la compétence, énergie consommée, projectile créé et coques déployées. Aucun échec JavaScript ni ressource locale manquante. [Rapport](docs/pink-wars/COMPANIONS_MODELS_BROWSER_VERIFICATION.json) · [Détails et captures](docs/pink-wars/MISE_A_JOUR_366_4.md).
+
+Gaby : 24 448 triangles ; Cara : 25 584. Aucun ajout de lumière ou de texture externe. Syntaxe des modules, générateur et configuration validée, `git diff --check` propre. Limites : Chromium/SwiftShader, framebuffer réduit, vues de détail dans une scène d’inspection ; aucun essai sur Safari/iPhone, Quest physique ou AR sur appareil, ni mesure de FPS matériel. Navigateur local ; confirmation de déploiement contrôlée séparément par le statut Vercel du commit.
+
+---
+
+# Pink War 3.66.3 — appuis sur le sol réel
+
+611 tests Node réussis, aucun échec, annulation ou test ignoré. Les 30 contrôles ciblés de foulée, saut et contact passent également ; aucun test historique modifié. Douze nouveaux cas mesurent les vrais sommets des bottes : marche à 1,6 m/s, course à 7 m/s et sprint à 10 m/s à 30/60/120 Hz, durée réelle d’appui, dérive horizontale inférieure à 2 mm par image, dégagement des semelles, rampe de l’Arène, monte-charge, mur, trottoir tourné, pivot et bord de plateforme.
+
+Le navigateur lance GHJU et LYLU depuis le vrai menu, passe en troisième personne par V et utilise W, Majuscule et J. Les mesures en partie passent en course, sprint et rampe ; le monte-charge porte les appuis sans déclencher de pas et maintenir W contre un mur fige la cadence. Aucune erreur JavaScript ou ressource locale manquante. L’atelier autonome final est chargé hors connexion en 390 × 844, puis Course → Saut → réception → Course pour les deux personnages. Le SHA-256 du fichier testé est conservé dans le [rapport](docs/pink-wars/HEROES_GROUND_BROWSER_VERIFICATION.json).
+
+La route visible est à la hauteur physique zéro, au lieu de −4,5 cm ; trottoirs, bordures et plateaux métalliques sont raccordés. L’atelier fait défiler ses repères à la vitesse simulée. Syntaxe des modules et du générateur validée, `git diff --check` propre. [Détails et captures](docs/pink-wars/MISE_A_JOUR_366_3.md).
+
+Limites : Chromium/SwiftShader, framebuffer réduit, positions et caméra de capture préparées, vagues désactivées pour la mesure. Les cadences de simulation ne sont pas des FPS matériels ; aucun essai sur Safari/iPhone ou Quest physique. Les mises à jour distantes de galerie sont conservées. Le navigateur vérifie le serveur local ; le déploiement est contrôlé séparément par le statut Vercel du commit publié.
+
+---
+
+# Pink War 3.66.2 — saut progressif
+
+599 tests Node réussis, aucun échec, annulation ou test ignoré. Les neuf nouveaux cas utilisent la vraie physique de l’Arène : GHJU et LYLU à 30, 60 et 120 Hz, sur place et en course, contacts des bottes, continuité des chevilles/genoux, réception construite après le contact, double saut, chute, neuf prises d’armes et pause exacte. Le contrôle historique de réception vérifie maintenant sa progression après l’impact au lieu d’exiger un abaissement instantané. Les 28 tests ciblés saut/locomotion passent aussi.
+
+Le navigateur lance les deux personnages depuis le vrai menu, passe en troisième personne par V, saute par J, tire par Espace au sommet et effectue un saut en course par W puis un double saut par J. Les munitions diminuent, les trois impulsions sont reconnues, les deux personnages reviennent au sol et gardent 19 lots d’armure. Aucun échec JavaScript ni ressource locale manquante. L’atelier autonome est testé hors connexion sur viewport 390 × 844 : Course → Saut → réception → Course pour chaque personnage. [Rapport](docs/pink-wars/HEROES_JUMP_BROWSER_VERIFICATION.json) · [Notes et captures](docs/pink-wars/MISE_A_JOUR_366_2.md).
+
+Le même parcours de mesure à 60 Hz donne une variation maximale de genou entre deux images de 43,1° → 12,2° sur place et 43,5° → 17,7° en course. Le bassin fléchit sur plusieurs images à la réception au lieu de changer brutalement au contact. [Protocole et mesures](docs/pink-wars/HEROES_JUMP_METRICS.json).
+
+Limites : Chromium/SwiftShader, framebuffer réduit, caméra préparée et vagues désactivées pour les mesures de mouvement. Les cadences de simulation ne sont pas des FPS matériels. Aucun essai sur Safari/iPhone ou Quest physique. Les ajouts distants de galerie sont préservés et leurs trois contrôles passent. Les illustrations et la physique du saut sont conservées.
+
+---
+
+# Pink War 3.66.1 — articulations et appuis
+
+587 tests Node réussis, aucun échec, annulation ou test ignoré ; puis les trois tests de galerie ajoutés sur la branche principale réussissent également. Les neuf nouveaux tests vérifient GHJU et LYLU dans les quatre directions à 30, 60 et 120 Hz : absence de croisement des pieds, flexion des genoux, continuité des chevilles, équivalence entre atelier stationnaire et déplacement réel à 4,8 m de hauteur, dégagement des bottes en position debout et accroupie. Les dix tests 3.66 restent actifs, avec remplacement du verrouillage rigide par un appui progressif et contrôle de son relâchement.
+
+Les vraies commandes W/D/S/A, V et Espace sont utilisées dans l’Arène pour les deux personnages. Le recul est reconnu, les chevilles restent séparées, le tir consomme des munitions et chaque armure garde 19 lots. Aucun échec JavaScript ni ressource locale manquante. L’atelier autonome est chargé hors connexion en 390 × 844 et affiche les deux personnages en marche arrière. [Rapport](docs/pink-wars/HEROES_STRIDE_BROWSER_VERIFICATION.json) · [Notes et captures](docs/pink-wars/MISE_A_JOUR_366_1.md).
+
+Une mesure à 60 Hz du même rig local compare la 3.66 et la 3.66.1 : saut maximal de cheville par image en marche avant 17,93 → 4,25 cm ; en recul 17,75 → 3,13 cm. Aucun croisement dans les quatre séquences finales. Ces valeurs concernent le rig d’édition non réduit, pas une mesure de FPS matériel. [Protocole et résultats](docs/pink-wars/HEROES_STRIDE_METRICS.json).
+
+Syntaxe des modules et du générateur validée, `git diff --check` propre. Les ajouts distants de galerie sont intégrés. Limites : Chromium/SwiftShader, framebuffer réduit et caméra préparée ; aucun essai sur Safari/iPhone ou Quest physique. Les illustrations de référence restent inchangées.
+
+---
+
+# Pink War 3.66 — GHJU et LYLU Shadow VII
+
+578 tests Node réussis, aucun échec ni test ignoré. Dix nouveaux contrôles couvrent les deux personnages, les sommets des lots GPU comparés aux vraies attaches des os sous déplacements, hauteur, échelle, accroupissement et saut ; la cadence, le recul, le pas latéral, les neuf armes, la pause, les appuis au sol, la réception et le tissu. Les contrôles historiques utilisent un déplacement réel pour vérifier la course et le nouvel évasement de cape.
+
+Les personnages sont lancés depuis le vrai menu, parcourent l’Arène par W en troisième personne par V et tirent par Espace, avec diminution des munitions. Les deux parcours ne produisent aucune erreur JavaScript ni ressource locale manquante. L’atelier autonome chargé sans réseau affiche GHJU et LYLU, permet leur sélection et les pas en arrière sur viewport 390 × 844. Captures et [rapport](docs/pink-wars/HEROES_BROWSER_VERIFICATION.json) joints aux [notes 3.66](docs/pink-wars/MISE_A_JOUR_366.md).
+
+Le comptage de l’atelier passe de 121 à 58 appels de rendu dans la même vue, avec 19 lots d’armure partageant les 34 os natifs. Limites : Chromium/SwiftShader et framebuffer réduit, caméra préparée ; aucun test de Safari/iPhone ou Quest physique et aucune mesure de FPS matériel. Les illustrations originales ne sont pas retouchées.
+
+---
+
 # Pink War 3.65 — RECO1 intégré
 
 RECO1 V10 remplace la Sentinelle légère (`seer`) via la fabrique commune, en campagne, Arène et AT HOME. Rig RLH natif de 41 os et cinq clips, 18 os de rendu, 17 lots partagés et 59 742 triangles. Campagne/Arène : 750 PV de base ; projectiles sur blindage ×0,5 et sur optiques ×0,8 avant multiplicateur de tête. Les autres modes conservent leurs coefficients de difficulté existants.

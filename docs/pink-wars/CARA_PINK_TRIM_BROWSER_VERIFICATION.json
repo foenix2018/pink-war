@@ -1,0 +1,24 @@
+{
+  "version": "3.66.5",
+  "gallery": [
+    {
+      "name": "CARA",
+      "meshes": 12,
+      "bones": [
+        6
+      ],
+      "source": "Sphère IA articulée du jeu · six panneaux offensifs",
+      "calls": 15,
+      "width": 1050
+    }
+  ],
+  "lab": [],
+  "errors": [],
+  "missing": [],
+  "limits": "Chromium/SwiftShader, reduced framebuffer. Local server; no physical Safari/iPhone or Quest and no hardware FPS measured. Read-only served-module QA hooks inspect actual models and resources.",
+  "targetedTests": {
+    "pass": 13,
+    "fail": 0
+  },
+  "sourceSha256": "12623dfda0b449c4e51fea235711dae9a8c4aee53602e3917920349bda431594"
+}

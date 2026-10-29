@@ -32,5 +32,6 @@ jobs:
           node --check dist/hearing.js
           node --check dist/laser-sound.js
           node --check dist/enemy-lab.js
+          node --check dist/gallery-3d.js
       - name: Tests unitaires
         run: npm test

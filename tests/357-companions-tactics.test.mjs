@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as T from '../dist/vendor/three.webgpu.min.js';
 import {ArenaGame,segmentBox,traceEnemyHit} from '../dist/game-logic.js';
 import {createCompanionSkills,companionTarget,companionUnlocked} from '../dist/companion-skills.js';
+import {companionAvailable} from '../dist/companion-escort.js';
 import {chooseTacticalCover,tacticalOrder,grenadeAvoidance} from '../dist/tactical-enemies.js';
 import {rangedMuzzle} from '../dist/enemy-combat.js';
 import {createArchiveTerminalFactory} from '../dist/archive-terminals.js';
@@ -12,14 +13,16 @@ const enemy=(id=1,x=0,z=-12)=>({id,x,z,elevation:0,aimHeight:1.27,form:'stalker'
 const game=(obstacles=[])=>{const g=new ArenaGame(obstacles,()=>.5);g.nextWave=-1;g.toSpawn=0;g.enemies=[];return g;};
 const advance=(skills,g,n)=>{for(let i=0;i<n;i++){g.time+=.05;skills.update(.05,{game:g});}};
 
-test('physical companions and active skills remain locked until M07; the separate lab is explicit',()=>{
+test('physical escorts start in M01, arena and training; advanced manual skills retain their M07 progression',()=>{
  for(const mission of [1,2,6]){
   assert.equal(companionUnlocked({mission}),false);
+  assert.equal(companionAvailable({mission}),true);
   const s=createCompanionSkills({mission}),g=game();
   assert.equal(s.use('phase',{game:g,origin,direction}),false);assert.equal(s.projectiles.length,0);assert.equal(s.snapshot(g).energy,100);
  }
  assert.equal(companionUnlocked({mission:7}),true);assert.equal(companionUnlocked({mission:1,mode:'lab'}),true);
  assert.equal(companionUnlocked({mission:20,mode:'arena'}),false);
+ assert.equal(companionAvailable({mode:'arena'}),true);assert.equal(companionAvailable({mode:'training'}),true);
 });
 test('phase spheres are manual, bounded by 30 seconds, and freeze with paused simulation',()=>{
  const g=game(),s=createCompanionSkills({characterId:'lylu',mission:7});

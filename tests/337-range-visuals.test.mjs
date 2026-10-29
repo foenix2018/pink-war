@@ -15,11 +15,11 @@ test('la sélection de perspective et des armes est absente de l’accueil',()=>
   for(let i=0;i<5;i++)assert.match(html,new RegExp('data-range-weapon="'+i+'"'));
 });
 
-test('chargement FPS par défaut, sans manipuler les contrôles supprimés',()=>{
+test('la préférence FPS/3P est transmise au jeu sans réintroduire les anciens sélecteurs d’accueil',()=>{
   const entry=file('entry.js'),game=file('game.js');
-  assert.match(entry,/view='fps'/);
+  assert.match(entry,/view=readPreferredView\(\)/);
   assert.doesNotMatch(entry,/training-weapon-choice|data-training-weapon|data-view/);
-  assert.match(game,/boot\?\.view==='third'\?'third':'fps'/);
+  assert.match(game,/boot\?\.view\?normalizeView\(boot.view\):readPreferredView\(\)/);
   assert.match(game,/game\?\.mode!=='training'/);
   assert.match(game,/\[data-range-weapon\]/);
   assert.doesNotMatch(game,/training-weapon-choice|data-training-weapon/);

@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
-<link rel="icon" href="icons/favicon-32.png?v=3.66.0" sizes="32x32" type="image/png"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><link rel="stylesheet" href="./mission-loading.css?v=3.66.0"><script>document.documentElement.classList.toggle('pw-auto-story',!new URLSearchParams(location.search).has('visit'));</script>
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3.66.0" sizes="180x180">
-<link rel="manifest" href="manifest.webmanifest?v=3.66.0">
+<link rel="icon" href="icons/favicon-32.png?v=3.68.0" sizes="32x32" type="image/png"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><link rel="stylesheet" href="./mission-loading.css?v=3.68.0"><script>document.documentElement.classList.toggle('pw-auto-story',!new URLSearchParams(location.search).has('visit'));</script>
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3.68.0" sizes="180x180">
+<link rel="manifest" href="manifest.webmanifest?v=3.68.0">
 <meta name="apple-mobile-web-app-title" content="Pink Wars">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -79,7 +79,7 @@ body:not(.rainOn) #rainCurtain{display:none}
  #game #prompt{top:46%}
 }
 .photoMode #quickSettings,.photoMode #quickObjective{display:none!important}
-</style><link rel="stylesheet" href="fracture.css?v=3.66.0">
+</style><link rel="stylesheet" href="fracture.css?v=3.68.0">
 </head><body>
 <canvas id="view" aria-label="Environnement 3D de Vesper"></canvas>
 <div id="rainCurtain"></div><div id="game" aria-label="Commandes de la visite 3D"><div id="vignette"></div>
@@ -89,11 +89,11 @@ body:not(.rainOn) #rainCurtain{display:none}
  <div id="crosshair"></div><div id="prompt"><div class="eyebrow">[ F ] ACTION</div><div id="promptTitle"></div></div>
  <div id="toast"><div class="eyebrow">SIGNAL LOCAL</div><div id="toastText"></div></div>
  <div id="mapPanel"><div class="ctrlTitle" style="margin-bottom:9px">CARTE TACTIQUE / VESPER</div><canvas id="minimap" width="320" height="320"></canvas><div class="mapHint">Points roses : terminaux · Triangle : position</div></div>
- <div id="bottom"><div class="bottomLeft"><div id="sector">SECTEUR SECOURS</div><div id="coords">X 2.0 Y 0.0 Z 54.0</div></div><div class="bottomRight"><div><span class="key">Z Q S D</span> ou <span class="key">W A S D</span> marcher · <span class="key">SOURIS</span> regarder</div><div class="hint"><span class="key">MAJ</span> courir · <span class="key">J</span> sauter · <span class="key">F</span> action · <span class="key">E</span> arme · <span class="key">ESPACE</span> tirer · <span class="key">V</span> caméra libre · <span class="key">M</span> plan · <span class="key">H</span> aide · <span class="key">P</span> photo · <span class="key">F1–F7</span> lieux · <span class="key">1–7</span> armes · <span class="key">R</span> recharger · <span class="key">CLIC</span> tirer</div></div></div>
+ <div id="bottom"><div class="bottomLeft"><div id="sector">SECTEUR SECOURS</div><div id="coords">X 2.0 Y 0.0 Z 54.0</div></div><div class="bottomRight"><div><span class="key">Z Q S D</span> ou <span class="key">W A S D</span> marcher · <span class="key">SOURIS</span> regarder</div><div class="hint"><span class="key">MAJ</span> courir · <span class="key">J</span> sauter · <span class="key">F</span> action · <span class="key">E</span> arme · <span class="key">ESPACE</span> tirer · <span class="key">V</span> FPS / 3P · <span class="key">M</span> plan · <span class="key">H</span> aide · <span class="key">P</span> photo · <span class="key">F1–F7</span> lieux · <span class="key">1–7</span> armes · <span class="key">R</span> recharger · <span class="key">CLIC</span> tirer</div></div></div>
  <div id="touchControls"><div id="stick" aria-label="Joystick virtuel"><div id="nub"></div></div><div class="mobileView">Glisser à droite pour regarder</div><div id="touchButtons"><button id="btnRun">COURIR</button><button id="btnUse">UTIL.</button><button id="btnJump">SAUT</button></div></div>
 </div>
 <div id="intro"><div class="introCard"><div class="introMeta">PINK WARS / LA FRACTURE · MISSION 01</div><h1><span class="pink">PINK</span><br>WARS</h1><div class="subtitle">LE DERNIER SIGNAL</div><p class="lead">Retrouvez la trace de GHJU ou LYLU dans le quartier des secours de Vesper. Annexe médicale, boutique ouest, carrefour et relais en hauteur : les journaux humains ont survécu à la guerre. </p><div class="featureRow"><div class="feature">Architecture visitable</div><div class="feature">Végétation et ruines</div><div class="feature">Drones en mouvement</div><div class="feature">Archives humaines</div><div class="feature">WebGPU / WebGL2 • FPS · matériaux CC0</div><div class="feature">3.54 · M01</div><div class="feature">Portes praticables</div></div><button id="start" class="startBtn" disabled>ENTRER DANS VESPER →</button><p style="margin-top:14px"><a href="./index.html" style="color:#b9d5e5;text-decoration:underline">↩ Retour au menu Pink Wars</a></p><div id="bootInfo">Initialisation…</div><div class="notice">Vesper, 2196. Sept ans après la Chute, une archive hors réseau relance la recherche de votre frère ou de votre sœur. Explorez l’annexe, récupérez BLOOM puis LANCE, fouillez la boutique ouest et gagnez le relais des Archives végétales. La ville reste sous le contrôle d’ORDRE.</div></div></div>
-<div id="help"><div class="helpCard"><div class="eyebrow">PINK WARS / ASSISTANCE EXPLORATION</div><h2>Visiter le niveau 1</h2><div class="helpGrid"><div><p><code>ZQSD / WASD</code> : déplacements<br><code>Souris</code> : orientation, cliquer dans le jeu pour verrouiller le pointeur<br><code>Maj</code> : courir<br><code>J</code> : sauter / double saut<br><code>F</code> : activer un terminal<br><code>E</code> : arme suivante<br><code>Espace</code> : tirer</p></div><div><p><code>V</code> : caméra libre (survoler le niveau)<br><code>Espace / Ctrl</code> : monter/descendre en caméra libre<br><code>M</code> : afficher le plan<br><code>H</code> : afficher l'aide<br><code>F1–F7</code> : téléportation · <code>1–7</code> : armes · <code>R</code> : recharger · <code>C</code> : accroupir · <code>Clic gauche</code> : tirer · <code>Clic droit</code> : viser · <code>Molette</code> : arme suivante · <code>Manette</code> : sticks pour bouger/regarder, L2 viser, R2 tirer, Croix sauter, Carré recharger, Triangle arme, Rond accroupir, R3 interagir<br><code>P</code> : mode photo<br><code>Échap</code> : libérer le pointeur</p></div></div><p style="font-size:13px;line-height:1.65;color:#b5cbd8">Points d'intérêt : annexe médicale, atelier, terrasse Archives A3, passerelle ORDRE, Fracture au nord. Les terminaux déclenchent de courts messages narratifs ; les tirs consomment des cellules, les robots entendent les bruits et ripostent. Utilise les abris pour rompre leur ligne de vue.</p><button id="helpClose">RETOURNER À VESPER</button></div></div>
+<div id="help"><div class="helpCard"><div class="eyebrow">PINK WARS / ASSISTANCE EXPLORATION</div><h2>Visiter le niveau 1</h2><div class="helpGrid"><div><p><code>ZQSD / WASD</code> : déplacements<br><code>Souris</code> : orientation, cliquer dans le jeu pour verrouiller le pointeur<br><code>Maj</code> : courir<br><code>J</code> : sauter / double saut<br><code>F</code> : activer un terminal<br><code>E</code> : arme suivante<br><code>Espace</code> : tirer</p></div><div><p><code>V</code> : vue FPS / 3e personne (caméra libre en visite)<br><code>Espace / Ctrl</code> : monter/descendre en caméra libre<br><code>M</code> : afficher le plan<br><code>H</code> : afficher l'aide<br><code>F1–F7</code> : téléportation · <code>1–7</code> : armes · <code>R</code> : recharger · <code>C</code> : accroupir · <code>Clic gauche</code> : tirer · <code>Clic droit</code> : viser · <code>Molette</code> : arme suivante · <code>Manette</code> : sticks pour bouger/regarder, L2 viser, R2 tirer, Croix sauter, Carré recharger, Triangle arme, Rond accroupir, R3 interagir<br><code>P</code> : mode photo<br><code>Échap</code> : libérer le pointeur</p></div></div><p style="font-size:13px;line-height:1.65;color:#b5cbd8">Points d'intérêt : annexe médicale, atelier, terrasse Archives A3, passerelle ORDRE, Fracture au nord. Les terminaux déclenchent de courts messages narratifs ; les tirs consomment des cellules, les robots entendent les bruits et ripostent. Utilise les abris pour rompre leur ligne de vue.</p><button id="helpClose">RETOURNER À VESPER</button></div></div>
 <script>'use strict';
 /* PINK WARS — Le Dernier Signal — procedural visitable 3D prototype — V3 MATERIALS / SHADOWS / AMBIENCE.
    Renderer: native WebGPU; WebGL2 backup. No dependency, textures built in canvas. */
@@ -1715,14 +1715,15 @@ function initCombatUI(){const sheet=document.createElement('style');sheet.textCo
  `;document.head.append(sheet);
   const c=document.createElement('div');c.id='combatHud';c.setAttribute('aria-label','Santé et munitions');c.innerHTML='<div class="combatBox"><div class="combSub">ARME / <span id="pwWeapon">R9</span></div><div id="pwAmmo" class="ammoBig">12 / 12</div></div><div class="combatBox"><div class="combSub">SANTÉ</div><div class="ammoBig"><span id="pwHealth">100</span></div><div class="combSub" hidden>POINTS <span id="pwScore">0</span></div></div>';
  document.body.append(c);const g=document.createElement('div');g.id='weaponVis';g.innerHTML='<div class="gunMag"></div><div class="gunBody"></div><div class="gunRail"></div><div class="gunBarrel"></div><div class="gunLed"></div><div id="gunFlash"></div>';document.body.append(g);const h=document.createElement('div');h.id='hitCross';h.textContent='×';document.body.append(h);updateWeaponUI();}
+let legacyPS4Input=null;
 let padFiring=false;
-function pollGamepad(dt){const devices=navigator.getGamepads?.()||[],gp=combatWorld?combatWorld.gamepad(devices):Array.from(devices).find(Boolean);gamepadMove.x=0;gamepadMove.y=0;padLook.x=0;padLook.y=0;padRun=false;gamepadAiming=false;padFiring=false;if(!gp){lastGamepadButtons=[];return;}
- const d=v=>Math.abs(v)>.14?v:0, btn=i=>gp.buttons[i]?.pressed||false,edge=i=>btn(i)&&!lastGamepadButtons[i];
- if(missionMenu?.isOpen){lastGamepadButtons=gp.buttons.map(b=>b.pressed);return;}
+function pollGamepad(dt){const devices=navigator.getGamepads?.()||[],gp=combatWorld?combatWorld.gamepad(devices):legacyPS4Input?.select(devices,{focused:!document.hidden});gamepadMove.x=0;gamepadMove.y=0;padLook.x=0;padLook.y=0;padRun=false;gamepadAiming=false;padFiring=false;if(!gp){lastGamepadButtons=[];return;}
+ const d=v=>Number.isFinite(v)&&Math.abs(v)>.20?v:0, btn=i=>!!gp.buttons[i]?.pressed||(gp.buttons[i]?.value||0)>.55,edge=i=>btn(i)&&!lastGamepadButtons[i];
+ if(missionMenu?.isOpen){lastGamepadButtons=Array.from(gp.buttons,b=>!!b.pressed||(b.value||0)>.55);return;}
  gamepadMove.x=d(gp.axes[0]||0);gamepadMove.y=d(gp.axes[1]||0);padLook.x=d(gp.axes[2]||0);padLook.y=d(gp.axes[3]||0);padRun=btn(10);gamepadAiming=btn(6);
  if(!combatWorld?.paused){yaw+=padLook.x*dt*1.9;pitch=clamp(pitch-padLook.y*dt*1.55,-1.46,1.46);}
  if(edge(12))combatWorld?.toggleSkills();padFiring=btn(7);if(edge(0))jumpQueued=true;if(edge(2))reloadWeapon();if(edge(3))changeWeapon(1);if(edge(1))crouching=!crouching;if(edge(11)){document.getElementById('help').classList.remove('show');interact();}if(edge(9))toggleMissionPause();if(edge(5))combatWorld?.melee?.();if(edge(4))combatWorld?.throwCharge?.();
- lastGamepadButtons=gp.buttons.map(b=>b.pressed);
+ lastGamepadButtons=Array.from(gp.buttons,b=>!!b.pressed||(b.value||0)>.55);
 }
 
 function inputSetup(){
@@ -1733,7 +1734,7 @@ function inputSetup(){
   if(ev.repeat)return;
   if(ev.code==='KeyF')interact();
   if(ev.code==='KeyE')changeWeapon(1);
-  if(ev.code==='KeyV'){isFree=!isFree;notify(isFree?'Caméra libre : WASD / ZQSD, Espace pour monter, Ctrl pour descendre.':'Mode exploration FPS réactivé.');$('cameraMode').textContent=isFree?'CAMÉRA LIBRE':'EXPLORATION';}
+  if(ev.code==='KeyV'){if(combatWorld){isFree=false;combatWorld.setView(combatWorld.view==='fps'?'third':'fps');}else{isFree=!isFree;notify(isFree?'Caméra libre : WASD / ZQSD, Espace pour monter, Ctrl pour descendre.':'Mode exploration FPS réactivé.');$('cameraMode').textContent=isFree?'CAMÉRA LIBRE':'EXPLORATION';}}
   if(ev.code==='KeyM'){mapOpen=!mapOpen;$('mapPanel').classList.toggle('show',mapOpen)}
   if(ev.code==='KeyH'){$('help').classList.toggle('show')}
   if(ev.code==='KeyL'){flashlight=!flashlight;notify('Éclairage individuel '+(flashlight?'ACTIVÉ':'DÉSACTIVÉ'))}
@@ -1892,19 +1893,23 @@ function toggleSurfaceMode(value){
 }
 
 let missionLoading=null,missionMenu=null;
+// DS4 in Safari uses the shared normalized gamepad mapping; no anonymous raw HID fallback.
+
 function resumeMission(){gamePaused=false;keys.clear();firing=false;isAiming=false;combatWorld?.resume();}
 function toggleMissionPause(){if(missionMenu){missionMenu.isOpen?missionMenu.hide():missionMenu.show();}else{gamePaused=!gamePaused;combatWorld?.pause();}}
 async function boot(){try{
- if(!referenceVisit){const {createMissionLoading}=await import('./mission-loading.js?v=3.66.0');missionLoading=createMissionLoading({mission:1,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});missionLoading.set(.08,'Chargement du scénario');}
- showVesperPrologue=(await import('./story-prologue.js?v=3.66.0')).showStoryPrologue;
+  const [{DesktopGamepadInput},{createGamepadAid}]=await Promise.all([import('./desktop-input.js?v=3.68.0'),import('./ios-gamepad.js?v=3.68.0')]);
+  legacyPS4Input=new DesktopGamepadInput();createGamepadAid();
+ if(!referenceVisit){const {createMissionLoading}=await import('./mission-loading.js?v=3.68.0');missionLoading=createMissionLoading({mission:1,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});missionLoading.set(.08,'Chargement du scénario');}
+ showVesperPrologue=(await import('./story-prologue.js?v=3.68.0')).showStoryPrologue;
  $('bootInfo').textContent='Construction de la mégalopole, bâtiments, détails et navigation…';
  await new Promise(r=>setTimeout(r,80));
  if(referenceVisit)buildScene();const atlas=createAtlas();const materialAtlas=referenceVisit?await v5LoadMaterial():null;
  $('bootInfo').textContent='Initialisation du moteur WebGPU…';
  if(!new URLSearchParams(location.search).has('visit')){
-  const {createPauseMenu}=await import('./fracture-menu.js?v=3.66.0');
-  missionMenu=createPauseMenu({title:'HISTOIRE / LE DERNIER SIGNAL',canOpen:()=>started,settingsSelectors:['#controlsPanel','#audioToggle'],onPause(){gamePaused=true;combatWorld?.pause();keys.clear();firing=false;isAiming=false;},onResume:resumeMission,onVR:()=>combatWorld?.enterVR(),onHome:async()=>{await combatWorld?.exitVR();location.assign('./index.html');}});missionMenu.setVisible(false);
-  const {createVesperCombat}=await import('./vesper-combat.js?v=3.66.0');missionLoading?.set(.16,'Ressources du secteur chargées');
+  const {createPauseMenu}=await import('./fracture-menu.js?v=3.68.0');
+  missionMenu=createPauseMenu({title:'HISTOIRE / LE DERNIER SIGNAL',canOpen:()=>started,settingsSelectors:['#controlsPanel','#audioToggle'],view:{getView:()=>combatWorld?.view||'fps',onSelect:next=>{isFree=false;combatWorld?.setView(next);},canChange:()=>!!combatWorld?.viewReady},onPause(){gamePaused=true;combatWorld?.pause();keys.clear();firing=false;isAiming=false;},onResume:resumeMission,onVR:()=>combatWorld?.enterVR(),onHome:async()=>{await combatWorld?.exitVR();location.assign('./index.html');}});missionMenu.setVisible(false);
+  const {createVesperCombat}=await import('./vesper-combat.js?v=3.68.0');missionLoading?.set(.16,'Ressources du secteur chargées');
   let renderFailed=false;
   const fail=error=>{
    console.warn('Vesper / échec du rendu, repli compatible :',error);

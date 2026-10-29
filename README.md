@@ -1,6 +1,24 @@
 # Pink Wars — La Fracture
 
-Version 3.66 : **chapitre 05 « La Ligne Noyée »** — la Ligne 9 inondée sous les Halles-Basses, mission longue (≈ 35 à 45 min estimées) en 16 étapes avec points de contrôle : station sans courant, marché effondré, quai sous tension, tunnel technique coupé, salle des pompes P9, écluse, chambre JANUS-9 et fuite avant que l’eau ne remonte. Couloirs, 14 portes animées, eau qui se vide, éclairage de secours, lampe frontale, 10 documents à lire, dialogues sous-titrés (LYLU/Cara ou GHJU/Gaby). Accès : Histoire → 05. [Détails](docs/pink-wars/NIVEAU_LIGNE_9.md) · [Jouer](https://pink-war.vercel.app/ligne9.html).
+Version 3.68 : **chapitre 05 « La Ligne Noyée »** — la Ligne 9 inondée sous les Halles-Basses, mission longue (≈ 35 à 45 min estimées) en 16 étapes avec points de contrôle : station sans courant, marché effondré, quai sous tension, tunnel technique coupé, salle des pompes P9, écluse, chambre JANUS-9 et fuite avant que l’eau ne remonte. Couloirs, 14 portes animées, eau qui se vide, éclairage de secours, lampe frontale, 10 documents à lire, dialogues sous-titrés (LYLU/Cara ou GHJU/Gaby). Accès : Histoire → 05. [Détails](docs/pink-wars/NIVEAU_LIGNE_9.md) · [Jouer](https://pink-war.vercel.app/ligne9.html).
+
+Version 3.67.2 : **FPS / 3P directement dans le menu pause**, juste sous « Reprendre le combat », sans ouvrir de sous-menu. Le bouton des réglages reste disponible et synchronisé. [Détails](docs/pink-wars/MISE_A_JOUR_367_2.md) · [Jouer](https://pink-war.vercel.app/?v=3.67.2).
+
+Version 3.67.1 : **bouton FPS / 3P dans les réglages** — disponible dans M01, M02, l’Arène et le stand, avec choix mémorisé. M01 affiche le vrai personnage animé en troisième personne et conserve les tirs depuis son arme. [Détails](docs/pink-wars/MISE_A_JOUR_367_1.md) · [Jouer](https://pink-war.vercel.app/?v=3.67.1).
+
+Version 3.67 : **Gaby et Cara en escorte dès M01, dans l’Arène et au stand** — flottaison au-dessus et derrière le héros, tirs de protection sous 50 % de santé et torche automatique dans le noir. Suivi du corps en vue FPS/3P et de la tête en XR. [Détails](docs/pink-wars/MISE_A_JOUR_367.md) · [Arène](https://pink-war.vercel.app/?mode=arena&v=3.67.0) · [Stand](https://pink-war.vercel.app/?mode=training&v=3.67.0).
+
+Version 3.66.5 : **fin liseré rose sur Cara** — une bordure rose discrète suit un côté de chacun de ses six panneaux, avec optique et éclairage principal bleus. [Voir Cara en 3D](https://pink-war.vercel.app/galerie.html?model=CARA&v=3.66.5).
+
+Version 3.66.4 : **Gaby et Cara remodelées** — coques épaisses articulées, châssis interne, optiques et aérations détaillées. Quatre protections arrondies roses pour Gaby, six panneaux graphite et bleus pour Cara ; ouverture lors des compétences et cadrage portrait ajusté. [Détails](docs/pink-wars/MISE_A_JOUR_366_4.md) · [Gaby en 3D](https://pink-war.vercel.app/galerie.html?model=GABY&v=3.66.4) · [Cara en 3D](https://pink-war.vercel.app/galerie.html?model=CARA&v=3.66.4).
+
+Version 3.66.3 : **GHJU et LYLU ancrés au sol réel** — cadence liée à la distance parcourue, pieds fixes pendant l’appui, bassin souple et surfaces visibles raccordées à la physique. Rampes et monte-charge pris en compte ; quadrillage défilant dans l’atelier. [Détails](docs/pink-wars/MISE_A_JOUR_366_3.md) · [Jouer dans l’Arène](https://pink-war.vercel.app/?mode=arena&v=3.66.3).
+
+Version 3.66.2 : **saut plus souple pour GHJU et LYLU** — décollage continu, jambes décalées en vol, buste et bras libre mobiles, descente préparée et réception amortie. Double saut repris depuis la pose en cours ; atelier capable de montrer le saut en course et sa réception. [Détails](docs/pink-wars/MISE_A_JOUR_366_2.md) · [Atelier animé](https://pink-war.vercel.app/personnage.html?v=3.66.2).
+
+Version 3.66.1 : **articulations de GHJU et LYLU corrigées** — jambes séparées en pas latéraux, genoux cohérents en recul, libération progressive des appuis et transitions marche/course stabilisées. Bottes affinées, semelles et cou-de-pied sculptés, biseaux des plaques ajustés. [Détails](docs/pink-wars/MISE_A_JOUR_366_1.md) · [Atelier animé](https://pink-war.vercel.app/personnage.html?v=3.66.1).
+
+Version 3.66 : **GHJU et LYLU Shadow VII** — formes ajustées aux fonds de Vesper, cuirasse et bassin articulés, cape plus ample, cadence réelle, recul, pas latéraux, appuis et réception de saut. [Détails](docs/pink-wars/MISE_A_JOUR_366.md) · [Atelier animé](https://pink-war.vercel.app/personnage.html?v=3.66.0).
 
 Version 3.65 : **RECO1 blindé en campagne et dans l’Arène** — le personnage approuvé V10 remplace la Sentinelle légère, avec son squelette RLH de 41 os, ses animations et sa carabine. 750 PV de base, tirs sur le blindage réduits de moitié, optiques plus vulnérables ; canon et projectiles alignés sur le même repère. [Détails](docs/pink-wars/MISE_A_JOUR_365.md) · [Jouer dans l’Arène](https://pink-war.vercel.app/?mode=arena&v=3.65.0).
 

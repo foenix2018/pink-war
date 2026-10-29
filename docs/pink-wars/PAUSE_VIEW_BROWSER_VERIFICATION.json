@@ -1,0 +1,234 @@
+{
+  "version": "3.67.2",
+  "reports": [
+    {
+      "mode": "arena",
+      "geometry": {
+        "x": 41,
+        "y": 239.078125,
+        "width": 308,
+        "height": 52,
+        "viewportHeight": 660,
+        "scroll": 0,
+        "before": "REPRENDRE LE COMBAT →"
+      },
+      "third": {
+        "view": "third",
+        "playerVisible": true
+      },
+      "fps": {
+        "view": "fps",
+        "playerVisible": false
+      },
+      "settingsSynchronized": true,
+      "shortcutSynchronized": true,
+      "reloadPersisted": true,
+      "layouts": [
+        {
+          "width": 390,
+          "height": 844,
+          "button": {
+            "x": 41,
+            "y": 302.03125,
+            "width": 308,
+            "height": 52
+          }
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "button": {
+            "x": 198,
+            "y": 236.53125,
+            "width": 448,
+            "height": 45
+          }
+        },
+        {
+          "width": 1280,
+          "height": 800,
+          "button": {
+            "x": 416,
+            "y": 286.09375,
+            "width": 448,
+            "height": 52
+          }
+        }
+      ],
+      "errors": [],
+      "missing": []
+    },
+    {
+      "mode": "training",
+      "geometry": {
+        "x": 41,
+        "y": 239.078125,
+        "width": 308,
+        "height": 52,
+        "viewportHeight": 660,
+        "scroll": 0,
+        "before": "REPRENDRE LE COMBAT →"
+      },
+      "third": {
+        "view": "third",
+        "playerVisible": true
+      },
+      "fps": {
+        "view": "fps",
+        "playerVisible": false
+      },
+      "settingsSynchronized": true,
+      "shortcutSynchronized": true,
+      "reloadPersisted": true,
+      "layouts": [
+        {
+          "width": 390,
+          "height": 844,
+          "button": {
+            "x": 41,
+            "y": 302.03125,
+            "width": 308,
+            "height": 52
+          }
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "button": {
+            "x": 198,
+            "y": 236.53125,
+            "width": 448,
+            "height": 45
+          }
+        },
+        {
+          "width": 1280,
+          "height": 800,
+          "button": {
+            "x": 416,
+            "y": 286.09375,
+            "width": 448,
+            "height": 52
+          }
+        }
+      ],
+      "errors": [],
+      "missing": []
+    },
+    {
+      "mode": "m01",
+      "geometry": {
+        "x": 47,
+        "y": 317.3125,
+        "width": 296,
+        "height": 47,
+        "viewportHeight": 660,
+        "scroll": 0,
+        "before": "Reprendre →"
+      },
+      "third": {
+        "view": "third",
+        "playerVisible": true
+      },
+      "fps": {
+        "view": "fps",
+        "playerVisible": false
+      },
+      "settingsSynchronized": true,
+      "shortcutSynchronized": true,
+      "reloadPersisted": true,
+      "layouts": [
+        {
+          "width": 390,
+          "height": 844,
+          "button": {
+            "x": 47,
+            "y": 409.3125,
+            "width": 296,
+            "height": 47
+          }
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "button": {
+            "x": 248,
+            "y": 213.4375,
+            "width": 348,
+            "height": 47
+          }
+        },
+        {
+          "width": 1280,
+          "height": 800,
+          "button": {
+            "x": 466,
+            "y": 387.3125,
+            "width": 348,
+            "height": 47
+          }
+        }
+      ],
+      "errors": [],
+      "missing": []
+    },
+    {
+      "mode": "m02",
+      "geometry": {
+        "x": 47,
+        "y": 317.3125,
+        "width": 296,
+        "height": 47,
+        "viewportHeight": 660,
+        "scroll": 0,
+        "before": "Reprendre →"
+      },
+      "third": {
+        "view": "third",
+        "playerVisible": true
+      },
+      "fps": {
+        "view": "fps",
+        "playerVisible": false
+      },
+      "settingsSynchronized": true,
+      "shortcutSynchronized": true,
+      "reloadPersisted": true,
+      "layouts": [
+        {
+          "width": 390,
+          "height": 844,
+          "button": {
+            "x": 47,
+            "y": 409.3125,
+            "width": 296,
+            "height": 47
+          }
+        },
+        {
+          "width": 844,
+          "height": 390,
+          "button": {
+            "x": 248,
+            "y": 213.4375,
+            "width": 348,
+            "height": 47
+          }
+        },
+        {
+          "width": 1280,
+          "height": 800,
+          "button": {
+            "x": 466,
+            "y": 387.3125,
+            "width": 348,
+            "height": 47
+          }
+        }
+      ],
+      "errors": [],
+      "missing": []
+    }
+  ],
+  "note": "Real touch on production pages; initial 390x660 viewport models mobile browser chrome. Native heroes visible/hidden; direct toggle stays in pause, syncs with options and V; reload persists. Also 390x844, 844x390 and 1280x800. Local Chromium/SwiftShader, reduced framebuffer and prepared invulnerability; no physical iPhone or Quest."
+}

@@ -18,9 +18,9 @@ export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
   if(key===signature)return;signature=key;
   const color='#'+status.color.toString(16).padStart(6,'0');root.style.setProperty('--partner',color);
   if(toggle.dataset.hero!==status.hero){toggle.innerHTML=companionPictogram(status.hero);toggle.dataset.hero=status.hero;}
-  toggle.setAttribute('aria-label','Compétences de '+status.name);toggle.title=status.name+' · compétences (G)';
+  toggle.setAttribute('aria-label','Compétences de '+status.name);toggle.title=status.unlocked?status.name+' · compétences (G)':status.name+' · escorte : protection sous 50 % de santé et torche automatique';
   panel.querySelector('h2').textContent=status.name.toUpperCase();
-  panel.querySelector('.pw-companion-status').textContent=status.unlocked?'Liaison locale · énergie '+status.energy+' / 100':'Liaison en sommeil. Rencontre dans « Mémoires locales », mission 7.';
+  panel.querySelector('.pw-companion-status').textContent=status.unlocked?'Liaison locale · énergie '+status.energy+' / 100':'Escorte active · protection sous 50 % de santé et torche automatique. Compétences avancées à la mission 7.';
   for(const s of status.skills){
    let button=buttons.get(s.id);
    if(!button){button=document.createElement('button');button.type='button';button.className='pw-companion-skill';button.dataset.skill=s.id;button.innerHTML='<strong></strong><small></small>';button.onclick=()=>use(s.id);buttons.set(s.id,button);panel.querySelector('.pw-companion-skills').append(button);}

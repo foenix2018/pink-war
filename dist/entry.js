@@ -1,15 +1,18 @@
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
+import {DesktopGamepadInput} from './desktop-input.js';
+import {createGamepadAid,gamepadsNow} from './ios-gamepad.js';
 import {graphicsProfile} from './renderer-policy.js';
 import {GAME_VERSION,showLaunchError,compatibleLaunchURL} from './launch-ui.js';
-import {syncMenuArtwork} from './menu-art.js?v=3.66.0';
+import {syncMenuArtwork} from './menu-art.js?v=3.68.0';
 import {showStoryPrologue} from './story-prologue.js';
 import {createMissionLoading} from './mission-loading.js';
 import {readM01Checkpoint} from './checkpoint-index.js';
+import {mountViewControl,readPreferredView,savePreferredView} from './view-options.js?v=3.68.0';
 
 // This menu has no Three.js or character imports. It is usable before the user
 // chooses to download/build the 3D scene, including inside an iPhone web view.
 const $=id=>document.getElementById(id);
-let character='ghju',mode='campaign',view='fps',trainingWeapon=0,loading=false,modulePromise=null;
+let character='ghju',mode='campaign',view=readPreferredView(),trainingWeapon=0,loading=false,modulePromise=null;
 const settings={sound:true,music:true,sensitivity:1,quality:'auto'};
 try{character=localStorage.getItem('pink-war-character')==='lylu'?'lylu':'ghju';Object.assign(settings,JSON.parse(localStorage.getItem('rosee-settings')||'{}'));const stored=Number(localStorage.getItem('pink-war-training-weapon'));if(Number.isInteger(stored)&&stored>=0&&stored<7&&stored!==5)trainingWeapon=stored;}catch{}
 const requestedMode=new URLSearchParams(location.search).get('mode');
@@ -75,6 +78,8 @@ $('sound-setting').onchange=e=>{settings.sound=e.target.checked;save();};
 $('music-setting').onchange=e=>{settings.music=e.target.checked;save();refresh();};
 $('sensitivity').oninput=e=>{settings.sensitivity=Number(e.target.value);save();};
 $('quality').onchange=e=>{settings.quality=e.target.value;save();};
+const earlyViewControl=mountViewControl($('settings-dialog'),{getView:()=>view,onSelect:next=>{view=next;savePreferredView(view);}});
+$('settings-dialog').querySelector('.setting-row').before(earlyViewControl.row);
 async function begin(intent='play',afterPrologue=false){
   if(loading)return;
   if(mode==='campaign'&&['play','vr'].includes(intent)&&!afterPrologue){
@@ -100,7 +105,7 @@ async function begin(intent='play',afterPrologue=false){
   if(settings.sound||settings.music!==false)try{const Audio=window.AudioContext||window.webkitAudioContext;
     window.__PINKWAR_BOOT_AUDIO ||=new Audio();window.__PINKWAR_BOOT_AUDIO.resume().catch(()=>{});}catch{}
   try{
-    modulePromise ||=import('./game.js?v=3.66.0');await modulePromise;
+    modulePromise ||=import('./game.js?v=3.68.0');await modulePromise;
     for(const d of document.querySelectorAll('dialog'))d.removeEventListener('cancel',earlyCancel);
     if(!window.__PINKWAR||window.__PINKWAR.snapshot().phase==='error')throw new Error('Initialisation interrompue.');
     loading=false;
@@ -119,4 +124,40 @@ $('lore-dialog').append(replay);
 $('loading-screen').hidden=true;
 $('online-launch').hidden=location.protocol!=='file:';
 refresh();
+// iOS Safari / DualShock 4: controller navigation works before any 3D code is
+// loaded. The controller must be neutral once before its first intentional press.
+createGamepadAid();
+const lobbyPad=new DesktopGamepadInput();
+let lobbyPrevious=[],lobbyPadKey=null;
+const padPressed=(pad,index)=>!!pad?.buttons[index]?.pressed||(pad?.buttons[index]?.value||0)>.5;
+function pollLobbyController(){
+  if(document.hidden||loading){lobbyPad.select([]);lobbyPrevious=[];lobbyPadKey=null;requestAnimationFrame(pollLobbyController);return;}
+  const pad=lobbyPad.select(gamepadsNow(),{focused:!document.hidden});
+  const key=lobbyPad.activeKey;
+  if(key!==lobbyPadKey){lobbyPadKey=key;lobbyPrevious=pad?.buttons.map(b=>padPressed(pad,pad.buttons.indexOf(b)))||[];}
+  const current=pad?.buttons.map((_,i)=>padPressed(pad,i))||[];
+  const edge=i=>!!current[i]&&!lobbyPrevious[i];
+  const selectedMode=()=>['campaign','campaign2','training','arena'].indexOf(mode);
+  const choices=['campaign','campaign2','training','arena'];
+  if(edge(14)||edge(15)){
+    const dir=edge(14)?-1:1;
+    mode=choices[(selectedMode()+dir+choices.length)%choices.length];
+    if(!chapters.hidden)showStory(false);refresh();
+  }
+  if(edge(12)||edge(13)||edge(4)||edge(5)){
+    character=(edge(12)||edge(4))?'ghju':'lylu';save();refresh();
+  }
+  if(edge(3))showStory(chapters.hidden);
+  if(edge(1)){if(!chapters.hidden)showStory(false);else for(const d of document.querySelectorAll('dialog[open]'))d.close();}
+  if(edge(9))panel('help-dialog');
+  if(edge(2))panel('settings-dialog');
+  if(edge(0)&&!document.querySelector('dialog[open]')){
+    if(!chapters.hidden)showStory(false);
+    void begin('play');
+  }
+  lobbyPrevious=current;
+  requestAnimationFrame(pollLobbyController);
+}
+requestAnimationFrame(pollLobbyController);
+
 window.__PINKWAR_ENTRY=Object.freeze({version:GAME_VERSION,snapshot:()=>({character,mode,view,loading,ios:profile.ios,music:screenMusicSnapshot()})});

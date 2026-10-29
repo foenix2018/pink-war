@@ -10,7 +10,7 @@ export function createCampaignCombatEffects(T,scene,characterId='ghju'){
   const enemyBullets=[];
   return {
     event(e){
-      if(e.type==='shot')laser.shot(e);
+      if(e.type==='shot'||e.type==='companion-shot')laser.shot(e);
       if(e.type==='enemy-shot')enemyLaser.shot({...e,origin:{x:e.x,y:e.y,z:e.z},weapon:'bloom',power:.6});
       if(e.type==='impact'){
         impacts.impact(e);

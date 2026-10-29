@@ -134,7 +134,7 @@ test('Y cycles unlocked weapons, A jumps without changing weapon batteries',()=>
   const {state,left,right}=setup(game);
   down(right,4);assert.equal(state.input().jump,true);assert.equal(game.weaponIndex,0);
   down(right,4,false);state.input();
-  for(let i=0;i<3;i++){down(left,5);state.input();assert.equal(game.weaponIndex,(i+1)%3);down(left,5,false);state.input();}
+  for(let i=0;i<3;i++){down(left,5);state.input();assert.equal(game.weaponIndex,[1,2,8][i]);down(left,5,false);state.input();}
   assert.deepEqual(game.ammo.slice(0,3),[7,18,4]);assert.equal(game.selectWeapon(4),false);
 });
 test('VR aiming transforms the controller through the rig and uses the actual muzzle',()=>{

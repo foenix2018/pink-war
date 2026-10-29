@@ -19,10 +19,11 @@ test('V7 renderer adaptation preserves every reference vertex and triangle',()=>
 test('Gaby spends energy, observes her cooldown and never resurrects',()=>{
  const scene=new T.Scene(),camera=new T.PerspectiveCamera();camera.position.set(0,1.65,0);camera.updateMatrixWorld(true);
  const game=new ArenaGame([]);game.reset();game.nextWave=Infinity;game.player.hp=40;
+ game.player.z=0;game.enemies.push({id:1,x:0,z:-8,elevation:0,aimHeight:1.25,hp:100,awareness:'engaged'});
  const companion=createAICompanion(T,scene,'ghju');
- companion.update(.02,{game,camera});assert.equal(game.player.hp,58);assert.equal(companion.snapshot().assists,1);
- for(let i=0;i<20;i++)companion.update(.05,{game,camera});
- assert.equal(game.player.hp,58);assert.ok(companion.snapshot().energy<100);
+ for(let i=0;i<22;i++)companion.update(.02,{game,camera});assert.equal(game.player.hp,40);assert.equal(companion.snapshot().assists,1);
+ for(let i=0;i<10;i++)companion.update(.05,{game,camera});
+ assert.equal(game.player.hp,40);assert.ok(companion.snapshot().energy<100);
  game.player.hp=0;for(let i=0;i<300;i++)companion.update(.05,{game,camera});
  assert.equal(game.player.hp,0);companion.dispose();
 });
@@ -30,10 +31,10 @@ test('Gaby spends energy, observes her cooldown and never resurrects',()=>{
 test('Cara cannot shoot an engaged enemy through cover and has bounded support',()=>{
  const scene=new T.Scene(),camera=new T.PerspectiveCamera();camera.position.set(0,1.65,0);camera.updateMatrixWorld(true);
  const game=new ArenaGame([{x:0,z:-2,hx:3,hz:.3,y:0,height:4}]);game.reset();game.nextWave=Infinity;
- game.player.z=0;
+ game.player.z=0;game.player.hp=40;
  const enemy={id:22,x:0,z:-5,elevation:0,aimHeight:1.3,hp:100,tier:1,awareness:'engaged'};game.enemies.push(enemy);
  const companion=createAICompanion(T,scene,'lylu');companion.update(.02,{game,camera});assert.equal(enemy.hp,100);
- game.replaceObstacles([]);companion.update(.02,{game,camera});assert.equal(enemy.hp,82);
- for(let i=0;i<10;i++)companion.update(.05,{game,camera});assert.equal(enemy.hp,82);
+ game.replaceObstacles([]);for(let i=0;i<15;i++)companion.update(.02,{game,camera});assert.equal(enemy.hp,100,'damage waits for the physical projectile');
+ assert.equal(game.bullets.length,1);assert.equal(game.bullets[0].companion,true);
  assert.equal(companion.snapshot().assists,1);companion.dispose();
 });

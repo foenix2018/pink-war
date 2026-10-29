@@ -1,0 +1,174 @@
+{
+  "reports": [
+    {
+      "id": "ghju",
+      "start": {
+        "time": 58758.699999999255,
+        "x": 0,
+        "z": 22,
+        "name": "GHJU",
+        "version": "3.66.1"
+      },
+      "run": {
+        "name": "GHJU",
+        "motion": "run",
+        "locomotion": {
+          "speed": 6.998945037281866,
+          "forward": 6.999999999999989,
+          "lateral": 0,
+          "turn": 0,
+          "legYaw": 0,
+          "backward": false,
+          "planted": [
+            false,
+            false
+          ],
+          "supportWeight": [
+            0,
+            0
+          ],
+          "airborne": false,
+          "verticalSpeed": 0,
+          "landing": 0,
+          "travelDirection": {
+            "x": 0,
+            "y": 0,
+            "z": -1
+          }
+        },
+        "visible": true,
+        "batches": 19,
+        "x": 0,
+        "z": 18.149929999999983
+      },
+      "directional": [
+        {
+          "key": "KeyD",
+          "motion": "walk",
+          "backward": false,
+          "separation": 0.15109164269028386
+        },
+        {
+          "key": "KeyS",
+          "motion": "walk",
+          "backward": true,
+          "separation": 0.1546276388818506
+        },
+        {
+          "key": "KeyA",
+          "motion": "walk",
+          "backward": false,
+          "separation": 0.19667885811119845
+        }
+      ],
+      "after": {
+        "motion": "rifle",
+        "ammo": 23,
+        "render": {
+          "frame": 21,
+          "calls": 122,
+          "triangles": 689193,
+          "points": 160,
+          "lines": 104
+        }
+      },
+      "errors": [],
+      "missing": []
+    },
+    {
+      "id": "lylu",
+      "start": {
+        "time": 35530,
+        "x": 0,
+        "z": 22,
+        "name": "LYLU",
+        "version": "3.66.1"
+      },
+      "run": {
+        "name": "LYLU",
+        "motion": "run",
+        "locomotion": {
+          "speed": 6.998945037281866,
+          "forward": 6.999999999999989,
+          "lateral": 0,
+          "turn": 0,
+          "legYaw": 0,
+          "backward": false,
+          "planted": [
+            false,
+            false
+          ],
+          "supportWeight": [
+            0,
+            0
+          ],
+          "airborne": false,
+          "verticalSpeed": 0,
+          "landing": 0,
+          "travelDirection": {
+            "x": 0,
+            "y": 0,
+            "z": -1
+          }
+        },
+        "visible": true,
+        "batches": 19,
+        "x": 0,
+        "z": 18.149929999999983
+      },
+      "directional": [
+        {
+          "key": "KeyD",
+          "motion": "walk",
+          "backward": false,
+          "separation": 0.15109164289062724
+        },
+        {
+          "key": "KeyS",
+          "motion": "walk",
+          "backward": true,
+          "separation": 0.1546277439397632
+        },
+        {
+          "key": "KeyA",
+          "motion": "walk",
+          "backward": false,
+          "separation": 0.19667887973067955
+        }
+      ],
+      "after": {
+        "motion": "rifle",
+        "ammo": 7,
+        "render": {
+          "frame": 23,
+          "calls": 125,
+          "triangles": 684573,
+          "points": 160,
+          "lines": 104
+        }
+      },
+      "errors": [],
+      "missing": []
+    },
+    {
+      "offline": {
+        "character": "ghju",
+        "motion": "back",
+        "nativeMotion": "walkRifle",
+        "frames": 9,
+        "width": 390
+      }
+    },
+    {
+      "offline": {
+        "character": "lylu",
+        "motion": "back",
+        "nativeMotion": "walkRifle",
+        "frames": 13,
+        "width": 390
+      }
+    }
+  ],
+  "errors": [],
+  "note": "Real menu and W/D/S/A/V/Space inputs, actual shipped game frame. Manual simulation frames, reduced SwiftShader framebuffer and prepared capture camera; enemies disabled for the movement sample. Standalone workshop fully offline. No JavaScript errors or missing local resources."
+}

@@ -2,7 +2,7 @@ import {installShadowUnit,applyShadowMaterials} from './shadow-unit-game.js';
 import * as T from './vendor/three.webgpu.min.js';
 import { WebGLRenderer } from './vendor/three.module.min.js';
 import { createCharacterKit, createSoldier } from './soldier.js';
-import { buildGun } from './weapons.js';
+import { buildGun,WEAPON_FRAME } from './weapons.js';
 import { createSurfaceDetails } from './surfaces.js';
 import { characterForId } from './characters.js';
 import { playLaserShot, loadRealLaserSample } from './laser-sound.js';
@@ -30,11 +30,12 @@ key.shadow.camera.left=-4;key.shadow.camera.right=4;key.shadow.camera.top=5;key.
 key.shadow.camera.near=.1;key.shadow.camera.far=20;key.shadow.bias=-.0006;scene.add(key);
 const fill = new T.DirectionalLight(0x86bbff,1.45);fill.position.set(4,3,3);scene.add(fill);
 const accents = new T.DirectionalLight(0xff7dba,1.1);accents.position.set(-3,2,3);scene.add(accents);
-const floor = new T.Mesh(new T.PlaneGeometry(50,50),new T.MeshStandardMaterial({color:0x202833,roughness:.88,metalness:.05}));
-floor.rotation.x=-Math.PI/2;floor.position.y=-.06;floor.receiveShadow=true;scene.add(floor);
-const grid = new T.GridHelper(8,16,0x6a7899,0x303c52);grid.position.y=-.049;grid.material.transparent=true;grid.material.opacity=.26;scene.add(grid);
+const floor = new T.Mesh(new T.PlaneGeometry(50,50),new T.MeshStandardMaterial({color:0x202833,roughness:.88,metalness:.05,polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1}));
+floor.rotation.x=-Math.PI/2;floor.position.y=0;floor.receiveShadow=true;scene.add(floor);
+const grid = new T.GridHelper(50,100,0x687994,0x687994);grid.position.y=.001;grid.material.transparent=true;grid.material.opacity=.55;scene.add(grid);
+const groundTravel=new T.Vector2();
 const ground = new T.Mesh(new T.CylinderGeometry(.9,.92,.055,64),new T.MeshStandardMaterial({color:0x252d3b,roughness:.6,metalness:.2}));
-ground.position.y=-.04;ground.receiveShadow=true;scene.add(ground);
+ground.position.y=-.0275;ground.receiveShadow=true;scene.add(ground);
 
 const surfaces=createSurfaceDetails();
 const standard=(color,roughness=.5,metalness=.4)=>new T.MeshStandardMaterial({color,roughness,metalness});
@@ -74,7 +75,7 @@ for(const id of ['lylu','ghju']){
   installShadowUnit(model,characterForId(id));
   subjects.set(id,model);
 }
-const state={character:'ghju',motion:'idle',level:1,weapon:0,angle:0,elevation:.12,zoom:matchMedia('(max-width:800px) and (orientation:portrait)').matches?6.0:3.9,showBones:false,jumpStart:0,clock:0};
+const state={character:'ghju',motion:'idle',jumpMotion:'idle',level:1,weapon:0,angle:0,elevation:.12,zoom:matchMedia('(max-width:800px) and (orientation:portrait)').matches?6.0:3.9,showBones:false,jumpStart:0,clock:0};
 const color=new T.Color();
 function setCharacter(id){
   if(!subjects.has(id))return;
@@ -98,7 +99,8 @@ function setCharacter(id){
   updateStatus();
 }
 function setMotion(motion){
-  if(!['idle','walk','run','jump','aim','crouch','walkFire','runFire','crouchWalk'].includes(motion))return;
+  if(!['idle','walk','run','jump','aim','crouch','walkFire','runFire','crouchWalk','back','left','right'].includes(motion))return;
+  if(motion==='jump'&&state.motion!=='jump')state.jumpMotion=['crouch','crouchWalk'].includes(state.motion)?'idle':state.motion;
   state.motion=motion;
   state.jumpStart=state.clock;
   document.querySelectorAll('[data-motion]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.motion===motion)));
@@ -107,7 +109,8 @@ function setMotion(motion){
 function updateStatus(){
   const model=subjects.get(state.character);
   const stage=equipmentForCharacter(state.level,state.character);$('stage-name').textContent=stage.name+' · NIVEAU '+stage.level;$('stage-description').textContent=stage.description;
-  $('status').textContent=`${model.armor.name} · ${characterForId(state.character).name} · ${model.targetHeight.toFixed(2).replace('.',',')} m · ${model.equipmentLevel}e armure · ${model.visibleParts} pièces · ${state.motion==='idle'?'repos':state.motion==='walk'?'marche':state.motion==='run'?'course':state.motion==='jump'?'saut':state.motion==='crouch'?'accroupi':state.motion==='walkFire'?'Rifle Walk':state.motion==='runFire'?'course + tir':state.motion==='crouchWalk'?'déplacement accroupi':'Idle Rifle'}`;
+  const labels={idle:'repos',walk:'marche',run:'course',jump:'saut',aim:'visée',crouch:'accroupi',walkFire:'marche + tir',runFire:'course + tir',crouchWalk:'déplacement accroupi',back:'recul',left:'pas à gauche',right:'pas à droite'};
+  $('status').textContent=`SHADOW VII · ${characterForId(state.character).name} · ${model.targetHeight.toFixed(2).replace('.',',')} m · ${labels[state.motion]}`;
 }
 for(const button of document.querySelectorAll('[data-character]'))button.addEventListener('click',()=>setCharacter(button.dataset.character));
 for(const button of document.querySelectorAll('[data-motion]'))button.addEventListener('click',()=>setMotion(button.dataset.motion));
@@ -121,7 +124,7 @@ $('sound-preview').addEventListener('click',async()=>{
     if(previewAudio.state!=='running')await previewAudio.resume();
     if(state.weapon===5){previewSaber ||=createSaberSound(previewAudio);previewSaber.ignite();return;}
     await loadRealLaserSample(previewAudio);
-    playLaserShot(previewAudio,['r9','bloom','lance','thorn','nova'][state.weapon],1);
+    playLaserShot(previewAudio,WEAPON_FRAME[state.weapon].id,1);
   }catch(error){console.warn('Essai audio laser non disponible',error);}
 });
 $('bones').addEventListener('change',e=>{state.showBones=e.target.checked;markers.visible=state.showBones;});
@@ -168,33 +171,40 @@ canvas.addEventListener('pointermove',e=>{
 });
 for(const name of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(name,e=>{pointerPositions.delete(e.pointerId);previousPinch=0;});
 canvas.addEventListener('wheel',e=>{e.preventDefault();state.zoom=clamp(state.zoom*Math.exp(e.deltaY*.001),2.3,7.2);},{passive:false});
-let frame=0,last=0;
+let frame=0,last=0,jumpFocus=0;
 function resize(){
  const w=Math.max(1,canvas.clientWidth),h=Math.max(1,canvas.clientHeight),dpr=Math.min(window.devicePixelRatio||1,2);
  renderer.setPixelRatio(dpr);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
 }
 window.addEventListener('resize',resize);resize();
-setCharacter('ghju');setMotion('idle');
+setCharacter(new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju');setMotion('idle');
 function tick(now){
  const dt=last?clamp((now-last)*.001,.001,.05):.016;last=now;state.clock+=dt;
  const model=subjects.get(state.character),root=model.root;
- const speed=['walk','walkFire'].includes(state.motion)?3.2:['run','runFire'].includes(state.motion)?9:state.motion==='crouchWalk'?2.2:0;
- // Drive the real rig's displacement-driven animation without translating it out of the viewer.
- if(speed)model._lastRootPosition=new T.Vector3(root.position.x,root.position.y,root.position.z+speed*dt);
- const airborne=state.motion==='jump';
+ const motion=state.motion==='jump'?state.jumpMotion:state.motion;
+ const speed=['walk','walkFire'].includes(motion)?1.6:['back','left','right'].includes(motion)?3.2:['run','runFire'].includes(motion)?7:motion==='crouchWalk'?3:0;
+ const travel={x:motion==='left'?-speed:motion==='right'?speed:0,y:0,z:motion==='back'?speed:['left','right'].includes(motion)?0:-speed};
+ // The model stays framed; the repeated floor moves in the same virtual
+ // reference as its planted soles. A static pedestal made this look like ice.
+ groundTravel.x+=travel.x*dt;groundTravel.y+=travel.z*dt;
+ grid.position.x=-(groundTravel.x%.5);grid.position.z=-(groundTravel.y%.5);
+ ground.visible=$('grid').checked&&speed===0;
+ // Simulate travel in the contact frame while keeping the inspected model centred.
+ let airborne=false;
  let height=0,velocity=0;
- if(airborne){
+ if(state.motion==='jump'){
    const elapsed=state.clock-state.jumpStart;
-   if(elapsed>1.05){setMotion('idle');}
-   else {height=Math.max(0,7.25*elapsed-9*elapsed*elapsed);velocity=7.25-18*elapsed;}
+   if(elapsed>7.25/9+.48){setMotion(state.jumpMotion);}
+   else if(elapsed<7.25/9){height=Math.max(0,7.25*elapsed-9*elapsed*elapsed);velocity=7.25-18*elapsed;airborne=height>0;}
  }
  root.position.y=height;
- model.animate(state.clock,!!speed,0,0,['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion)?1:0,dt,{airborne,verticalSpeed:velocity,crouched:['crouch','crouchWalk'].includes(state.motion),firing:['aim','walkFire','runFire','crouch','crouchWalk'].includes(state.motion),sprint:['run','runFire'].includes(state.motion),preview:state.motion==='idle',saberSwing:state.weapon===5&&state.motion==='aim'?bladeSwingPose((state.clock%1.2)/.6):null});
+ model.animate(state.clock,!!speed,0,0,['aim','walkFire','runFire','crouch','crouchWalk','back','left','right'].includes(motion)?1:0,dt,{inPlace:true,velocity:travel,airborne,verticalSpeed:velocity,crouched:['crouch','crouchWalk'].includes(motion),firing:['aim','walkFire','runFire','crouch','crouchWalk'].includes(motion),sprint:['run','runFire'].includes(motion),preview:state.motion==='idle',saberSwing:state.weapon===5&&motion==='aim'?bladeSwingPose((state.clock%1.2)/.6):null});
  model.gun.userData.setCombatState?.({time:state.clock,bladeHeld:state.weapon===5});
  refreshSkeleton(model);
  const w=canvas.clientWidth,h=canvas.clientHeight;
  // Portrait inspection keeps the entire boot-to-helmet silhouette above the mobile control drawer.
- const focal=(w<800&&h>w)?0.32:1.1;
+ jumpFocus+=(height*.65-jumpFocus)*(1-Math.exp(-dt*10));
+ const focal=((w<800&&h>w)?0.32:1.1)+jumpFocus;
  camera.position.set(Math.sin(state.angle)*Math.cos(state.elevation)*state.zoom,
     focal+Math.sin(state.elevation)*state.zoom,
     -Math.cos(state.angle)*Math.cos(state.elevation)*state.zoom);
@@ -205,7 +215,7 @@ function tick(now){
 }
 requestAnimationFrame(tick);
 window.__PINKWAR_CHARACTER_LAB=Object.freeze({
- snapshot:()=>({character:state.character,motion:state.motion,level:state.level,weapon:state.weapon,showBones:state.showBones,
+ snapshot:()=>({character:state.character,motion:state.motion,jumpPose:{...subjects.get(state.character).jumpPose},level:state.level,weapon:state.weapon,showBones:state.showBones,
   frames:frame,zoom:state.zoom,articulations:jointNames, jointPositions:()=>Object.fromEntries(Object.entries(subjects.get(state.character).jointPositions()).map(([k,v])=>[k,v.toArray()])),
   visibleParts:subjects.get(state.character).visibleParts,visibleMeshes:subjects.get(state.character).batchCount,physicalHeight:subjects.get(state.character).targetHeight,
   armorModules:[...subjects.get(state.character).armor.modules],armorTriangles:subjects.get(state.character).armor.parts.reduce((n,p)=>n+p.geometry.attributes.position.count/3,0),armorName:subjects.get(state.character).armor.name,armorRevision:subjects.get(state.character).armor.revision,armorGeneration:subjects.get(state.character).armor.generation,armorPieces:subjects.get(state.character).armor.count,nativeMotion:subjects.get(state.character).nativeMotion,nativeClips:Object.fromEntries(Object.entries(subjects.get(state.character).actor.actions).map(([name,a])=>[name,{duration:a.getClip().duration,weight:a.getEffectiveWeight(),time:a.time}]))}),

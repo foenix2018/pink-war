@@ -133,7 +133,7 @@ test('weapons appear at their scheduled levels, remain optional, and keep indivi
     g.beginWave();
     const offeredIndex=WEAPONS.findIndex(w=>w.level===level);
     const previousWeapon=g.weaponIndex;
-    if(offeredIndex>0) {
+    if(offeredIndex>0&&!g.ownedWeapons.has(offeredIndex)) {
       const offer=g.weaponOffers.find(w=>w.index===offeredIndex);
       assert.ok(offer,'a new weapon appears in the world');
       assert.equal(g.weaponIndex,previousWeapon,'no forced weapon switch');
@@ -141,7 +141,7 @@ test('weapons appear at their scheduled levels, remain optional, and keep indivi
       assert.equal(g.collectWeapon(),true);
       assert.equal(g.weaponIndex,offeredIndex);
     }
-    assert.equal(g.unlockedWeapons.length,WEAPONS.filter(w=>w.level<=level).length);
+    assert.equal(g.unlockedWeapons.length,WEAPONS.filter(w=>w.level<=level||w.id==='vortex').length);
   }
   assert.equal(g.selectWeapon(0),true);g.cooldown=0;
   g.shoot({x:0,y:1,z:22},{x:0,y:0,z:-1});assert.equal(g.ammo[0],11);
@@ -160,17 +160,18 @@ test('an uncollected gun stays available even after the next wave and cannot be 
   assert.deepEqual(g.weaponOffers.map(o=>o.index),[1,6,2]);
   assert.equal(g.collectWeapon(),true);assert.equal(g.weaponIndex,1);
   assert.deepEqual(g.weaponOffers.map(o=>o.index),[6,2]);
-  g.reset();assert.equal(g.weaponOffers.length,0);assert.deepEqual(g.unlockedWeapons.map(w=>w.id),['r9','duor9']);
+  g.reset();assert.equal(g.weaponOffers.length,0);assert.deepEqual(g.unlockedWeapons.map(w=>w.id),['r9','duor9','vortex']);
 });
 
 test('weapons can be skipped without breaking cyclic weapon selection',()=>{
   const g=new ArenaGame();g.selectWeapon(0);g.ownedWeapons.delete(7);
   g.ownedWeapons.add(2);g.ownedWeapons.add(4);
-  assert.deepEqual(g.unlockedWeapons.map(w=>w.id),['r9','lance','nova']);
+  assert.deepEqual(g.unlockedWeapons.map(w=>w.id),['r9','lance','nova','vortex']);
   assert.equal(g.cycleWeapon(),true);assert.equal(g.weaponIndex,2);
   assert.equal(g.cycleWeapon(),true);assert.equal(g.weaponIndex,4);
+  assert.equal(g.cycleWeapon(),true);assert.equal(g.weaponIndex,8);
   assert.equal(g.cycleWeapon(),true);assert.equal(g.weaponIndex,0);
-  assert.equal(g.cycleWeapon(-1),true);assert.equal(g.weaponIndex,4);
+  assert.equal(g.cycleWeapon(-1),true);assert.equal(g.weaponIndex,8);
 });
 
 test('limb hit zones rotate with enemies so side shots remain accurately located',()=>{
@@ -302,7 +303,7 @@ test('a complete campaign reaches level 20 after 670 real projectile kills and s
     equipmentStages.push(...events.filter(e=>e.type==='equipment').map(e=>e.level));
   }
   assert.equal(g.state,'won',JSON.stringify({wave:g.wave,kills:g.kills,time:g.time,hp:g.player.hp,toSpawn:g.toSpawn}));assert.equal(g.wave,MAX_LEVEL);assert.equal(g.kills,670);assert.ok(g.player.hp>0);
-  assert.deepEqual(unlocks,['AURORA','NEXUS V9','M–12','ARES X9','THORN','NOVA']);assert.equal(g.unlockedWeapons.length,8);
+  assert.deepEqual(unlocks,['AURORA','NEXUS V9','M–12','ARES X9','THORN','NOVA']);assert.equal(g.unlockedWeapons.length,9);
   assert.deepEqual(equipmentStages,Array.from({length:MAX_LEVEL},(_,i)=>Math.min(i+1,10)));assert.equal(g.snapshot().equipment.name,'Impératrice');assert.equal(g.snapshot().equipment.unlocked.length,10);
   g.reset();assert.equal(g.snapshot().equipment.level,1);assert.deepEqual(g.snapshot().equipment.unlocked,['aube']);
 });

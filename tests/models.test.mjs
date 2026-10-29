@@ -103,14 +103,14 @@ test('a profile is extruded across its width, with the outline along z and y', (
 
 test('every weapon is drawn around the grip: the origin is inside the model and the muzzle is its front', () => {
   const models = createWeaponModels(mats());
-  assert.equal(models.length,8);assert.equal(WEAPON_FRAME.length,8);
+  assert.equal(models.length,9);assert.equal(WEAPON_FRAME.length,9);
   models.forEach((model, index) => {
     const frame = WEAPON_FRAME[index], b = box(model);
     assert.ok(b.containsPoint(new T.Vector3(0, 0, 0)), `${frame.id}: the palm is inside the weapon's bounds`);
     if(!frame.melee)assert.ok(Math.abs(b.min.z - frame.muzzle[2]) < (frame.id==='thorn'?.38:.03), `${frame.id}: the muzzle is at the front of the model`);
     assert.ok(frame.muzzle[1] > 0 && frame.muzzle[1] < b.max.y + 1e-6, `${frame.id}: the barrel sits above the grip`);
     // THORN V8's shoulder stock reaches behind the raised eye but stays under the cheek (see 364-gloves-sights).
-    assert.ok(b.max.z < (frame.id==='m12'?.35:frame.id==='bloom'?.45:frame.id==='thorn'?.34:.21), `${frame.id}: the stock stays short of the shooter's face`);
+    assert.ok(b.max.z < (frame.id==='m12'?.35:frame.id==='bloom'?.45:frame.id==='thorn'?.34:frame.id==='vortex'?.37:.21), `${frame.id}: the stock stays short of the shooter's face`);
     let meshes = 0; model.traverse(o => { if (o.isMesh) { meshes++; assert.ok(finite(o.geometry)); } });
     assert.ok(meshes >= 3 && meshes <= (frame.dual||frame.id==='lance'||frame.id==='bloom'?18:9), `${frame.id}: merged into a bounded number of meshes (${meshes})`);
     if (frame.support&&!frame.dual) assert.ok(frame.support[2] < -.15 && frame.support[2] > b.min.z, `${frame.id}: the free hand holds the front half`);
