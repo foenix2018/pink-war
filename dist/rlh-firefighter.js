@@ -109,7 +109,7 @@ function solveChain(upper,lower,end,target,pole){
 }
 
 // Neutral inspection stance only. Gameplay continues to use the weapon IK.
-export function poseUnarmedForInspection(model,gloves,dt=.016){
+export function poseUnarmedForInspection(model,gloves,dt=.016,{mirrorFromRight=true}={}){
   const {root,actor}=model;
   // Inspection is a stable, exactly frontal stance, rather than a random
   // frame of the breathing/weapon animation. Movement selections stay native.
@@ -147,10 +147,12 @@ export function poseUnarmedForInspection(model,gloves,dt=.016){
   // The glove adapter uses one right-hand mesh plus an outer reflection for
   // the left hand. Mirror the complete neutral frame so their resting shapes
   // agree as well as their wrist attachment points.
-  gloves[1].updateWorldMatrix(true,false);
-  const leftFrame=new T.Matrix4().makeScale(-1,1,1)
-    .multiply(root.matrixWorld.clone().invert()).multiply(gloves[1].matrixWorld);
-  leftFrame.decompose(gloves[0].position,gloves[0].quaternion,gloves[0].scale);
+  if(mirrorFromRight){
+    gloves[1].updateWorldMatrix(true,false);
+    const leftFrame=new T.Matrix4().makeScale(-1,1,1)
+      .multiply(root.matrixWorld.clone().invert()).multiply(gloves[1].matrixWorld);
+    leftFrame.decompose(gloves[0].position,gloves[0].quaternion,gloves[0].scale);
+  }
   model.gun.visible=false;model.freeHand.visible=false;
 }
 
