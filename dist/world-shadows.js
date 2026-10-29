@@ -11,14 +11,14 @@ export function applyWorldShadows(root){
   const lit=materials.some(m=>m&&(m.isMeshStandardMaterial||m.isMeshPhysicalMaterial||m.isMeshPhongMaterial||m.isMeshLambertMaterial));
   const opaque=materials.some(m=>m&&(!m.transparent||m.alphaTest>0));
   let fps=false;for(let p=o.parent;p;p=p.parent)if(p.isCamera||p.userData?.noWorldShadow){fps=true;break;}
-  o.castShadow=lit&&opaque&&!fps;o.receiveShadow=lit;
+  o.castShadow=lit&&opaque&&!fps&&!o.userData?.noWorldShadow;o.receiveShadow=lit;
  });
 }
 export function createWorldShadows(T,{scene,renderer,light,profile={},direction={x:-58,y:94,z:34},extraLights=[]}){
  const budget=shadowBudget(profile);renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;renderer.shadowMap.autoUpdate=false;
  light.castShadow=true;light.shadow.mapSize.set(budget.size,budget.size);
  Object.assign(light.shadow.camera,{left:-budget.span/2,right:budget.span/2,top:budget.span/2,bottom:-budget.span/2,near:.5,far:260});light.shadow.camera.updateProjectionMatrix();
- light.shadow.bias=-.00015;light.shadow.normalBias=.025;light.shadow.radius=2;light.shadow.autoUpdate=false;
+ light.shadow.bias=-.00015;light.shadow.normalBias=.021;light.shadow.radius=1.65;light.shadow.autoUpdate=false;
  if(!light.target.parent)scene.add(light.target);
  for(const source of extraLights){source.castShadow=true;source.shadow.mapSize.set(budget.torchSize,budget.torchSize);source.shadow.camera.near=.12;source.shadow.camera.far=28;source.shadow.bias=-.00012;source.shadow.normalBias=.015;source.shadow.autoUpdate=false;}
  // A single instanced soft footprint supplements contact under moving bodies.
