@@ -19,7 +19,7 @@ function canvasTexture(T, w, h, paint, { repeat = false, color = true } = {}) {
 
 export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } = {}) {
   const low = quality === 'low', rng = seeded(707);
-  const root = new T.Group(); root.name = 'M01 / Caserne 07 et Archives végétales'; scene.add(root);
+  const root = new T.Group(); root.name = 'M01 / Station 07 et Archives végétales'; scene.add(root);
   const animated = [], stats = { meshes: 0, instances: 0, textures: 0, fixtures: 0 };
   const add = (o, parent = root) => { parent.add(o); stats.meshes++; return o; };
 
@@ -137,9 +137,9 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     c.globalCompositeOperation = 'destination-out'; for (let i = 0; i < 400; i++) { c.fillStyle = `rgba(0,0,0,${rng() * .6})`; c.fillRect(rng() * w, rng() * h, 2, 2); }
   });
   const boardTex = canvasTexture(T, 512, 320, (c, w, h) => {
-    c.fillStyle = '#eef0ec'; c.fillRect(0, 0, w, h); c.fillStyle = '#1b2a3a'; c.font = `900 26px ${FONT}`; c.fillText('GARDE · NUIT DU 14/03/2189', 18, 36);
+    c.fillStyle = '#eef0ec'; c.fillRect(0, 0, w, h); c.fillStyle = '#1b2a3a'; c.font = `900 26px ${FONT}`; c.fillText('SERVICE · NUIT DU 14/03/2189', 18, 36);
     c.strokeStyle = '#7b8791'; c.lineWidth = 2; for (let k = 0; k < 4; k++) { c.strokeRect(18 + k * 122, 56, 112, 240); }
-    const cols = [['VSAV 07', 'GHJU', 'SOREL', 'QUENTIN'], ['FPT 07', 'DELCOURT', 'AUBRY', 'LENOIR', 'HADDAD', 'PETIT', 'ROSSI'], ['TECHNIQUE', 'LYLU', 'VARENNE', 'KIM'], ['EN INTERVENTION', '', '']];
+    const cols = [['AMBULANCE 07', 'GHJU', 'SOREL', 'QUENTIN'], ['CAMION 07', 'DELCOURT', 'AUBRY', 'LENOIR', 'HADDAD', 'PETIT', 'ROSSI'], ['TECHNIQUE', 'LYLU', 'VARENNE', 'KIM'], ['EN INTERVENTION', '', '']];
     cols.forEach((col, k) => col.forEach((name, i) => { if (!name) return; c.fillStyle = i ? (name === 'GHJU' ? '#d14c86' : name === 'LYLU' ? '#2f7fd0' : '#c23a2e') : '#1b2a3a'; if (i) c.fillRect(26 + k * 122, 70 + i * 32, 96, 24); c.fillStyle = i ? '#fff' : '#1b2a3a'; c.font = `${i ? 700 : 900} ${i ? 14 : 15}px ${FONT}`; c.fillText(name, 32 + k * 122, (i ? 87 : 76) + i * 32, 90); }));
   });
   const mapTex = canvasTexture(T, 512, 512, (c, w, h) => {
@@ -295,7 +295,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     for (const sx of [L / 2 - 1.2, -L / 2 + 1]) for (const sz of [-1, 1]) { const w = new T.Mesh(new T.CylinderGeometry(.48, .48, .32, 18), M.black); w.rotation.x = Math.PI / 2; w.position.set(sx, .48, sz * (W / 2 - .1)); g.add(w); stats.meshes++; }
     if (kind === 'vsav') {
       for (const sz of [-1, 1]) { part(M.red, -.9, 1.05, sz * (W / 2 + .005), L - 2.2, .22, .01); part(M.yellow, -.9, 1.3, sz * (W / 2 + .006), L - 2.2, .08, .01); }
-      const label = new T.Mesh(new T.PlaneGeometry(2.6, .5), new T.MeshStandardMaterial({ map: signTex(['SECOURS 07', 'VSAV · AEGIS'], { bg: null, fg: '#a3241c', w: 512, h: 128 }), transparent: true, alphaTest: .05 }));
+      const label = new T.Mesh(new T.PlaneGeometry(2.6, .5), new T.MeshStandardMaterial({ map: signTex(['AMBULANCE 07', 'AEGIS · VESPER'], { bg: null, fg: '#a3241c', w: 512, h: 128 }), transparent: true, alphaTest: .05 }));
       label.position.set(-.9, 2, W / 2 + .01); g.add(label);
     } else {
       for (const sz of [-1, 1]) { part(M.white, -.9, .95, sz * (W / 2 + .005), L - 2.2, .12, .01); part(M.shutter, -1.4, 1.6, sz * (W / 2 + .01), L - 3.4, 1.6, .01); }
@@ -323,7 +323,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
         for (let k = 0; k < 9; k++) piece(M.black, x1 + .3 + k * (w - .6) / 8, .6, z2 + .01, .06, h - 1, .02);
         const ex = cylinder(M.steel, x1 + .5, h + .6, o.z, .14, 1.2); ex.name = 'échappement';
         const fan = new T.Group(); fan.position.set(x2 + .02, h * .55, o.z); for (let k = 0; k < 4; k++) { const b = new T.Mesh(new T.BoxGeometry(.02, .9, .14), M.steel); b.rotation.x = k / 4 * Math.PI; fan.add(b); } add(fan); rotors.push(fan);
-        sign(signTex(['GROUPE ÉLECTROGÈNE', '125 kVA · SECOURS 07'], { bg: '#d8a91f', fg: '#16181a', w: 512, h: 128 }), o.x, 1.5, z1 - .01, Math.PI, 1.6, .4); break;
+        sign(signTex(['GROUPE ÉLECTROGÈNE', '125 kVA · STATION 07'], { bg: '#d8a91f', fg: '#16181a', w: 512, h: 128 }), o.x, 1.5, z1 - .01, Math.PI, 1.6, .4); break;
       }
       case 'day-tank': box(M.paintedMetal, x1, x2, 0, h, z1, z2); cylinder(M.steel, o.x + .4, 1.4, o.z, .04, 1.4, { axis: 'x' }); break;
       case 'switchboard': box(M.plate, x1, x2, 0, h, z1, z2); for (let k = -1; k <= 1; k++) piece(k ? M.amber : M.redGlow, x2 + .01, h * .8, o.z + k * .4, .02, .05, .05); break;
@@ -463,14 +463,14 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
 
   // ---------- Signs, posters, belongings ----------
   function buildSigns() {
-    sign(signTex(['AEGIS · CENTRE DE SECOURS 07', 'QUARTIER DES SECOURS · VESPER'], { bg: '#e8e6df', fg: '#a3241c', w: 1024, h: 192, border: '#a3241c' }), -79.83, 5.6, 86, Math.PI / 2, 6, 1.1);
+    sign(signTex(['AEGIS · STATION 07', 'QUARTIER DES SECOURS · VESPER'], { bg: '#e8e6df', fg: '#a3241c', w: 1024, h: 192, border: '#a3241c' }), -79.83, 5.6, 86, Math.PI / 2, 6, 1.1);
     sign(signTex('SORTIE DE SECOURS · NE PAS STATIONNER', { bg: '#a3241c', fg: '#fff', w: 1024, h: 96 }), -79.7, 4.75, 86, Math.PI / 2, 5, .4);
     sign(graffitiTex('07 · ON REVIENT', '#e8e2d0'), -79.83, 1.8, 62, Math.PI / 2, 3.4, 1.05, { see: true });
-    sign(signTex(['SALLE DE GARDE', 'STANDARD · CANAL 07'], { bg: '#0d3b5e', w: 512, h: 160 }), -84.17, 2.75, 58, Math.PI / 2, 1.5, .45, { lit: false });
+    sign(signTex(['SALLE DE VEILLE', 'RADIO · CANAL 07'], { bg: '#0d3b5e', w: 512, h: 160 }), -84.17, 2.75, 58, Math.PI / 2, 1.5, .45, { lit: false });
     sign(signTex('VESTIAIRES', { bg: '#0d3b5e', w: 512, h: 128 }), -84.17, 2.75, 68, Math.PI / 2, 1.3, .32);
     sign(signTex(['LOCAL TECHNIQUE', 'GROUPE ÉLECTROGÈNE'], { bg: '#d8a91f', fg: '#16181a', w: 512, h: 160 }), -84.17, 2.75, 48, Math.PI / 2, 1.5, .45);
-    sign(signTex('REMISE', { bg: '#a3241c', fg: '#fff', w: 512, h: 128 }), -82, 2.85, 73.83, Math.PI, 1.3, .32);
-    sign(signTex(['ARI · CONTRÔLE AVANT DÉPART', 'PRESSION > 280 BAR'], { bg: '#d8a91f', fg: '#16181a', w: 512, h: 160 }), -96.82, 2.4, 77.5, Math.PI / 2, 1.6, .5);
+    sign(signTex('HANGAR', { bg: '#a3241c', fg: '#fff', w: 512, h: 128 }), -82, 2.85, 73.83, Math.PI, 1.3, .32);
+    sign(signTex(['RESPIRATEURS · CONTRÔLE AVANT DÉPART', 'PRESSION > 280 BAR'], { bg: '#d8a91f', fg: '#16181a', w: 512, h: 160 }), -96.82, 2.4, 77.5, Math.PI / 2, 1.6, .5);
     sign(signTex(['ARCHIVES VÉGÉTALES', 'DE VESPER · ENTRÉE PUBLIQUE'], { bg: '#e6dcc4', fg: '#2d4a2a', w: 1024, h: 192, border: '#2d4a2a' }), 6, 4.7, -67.82, Math.PI, 7, 1.3);
     sign(signTex(['SALLE DES REGISTRES', 'COPIE DES DISPARUS DE 2189'], { bg: '#2d4a2a', fg: '#e6dcc4', w: 512, h: 160 }), -22, 3.3, -79.83, 0, 1.8, .55);
     sign(signTex('HERBIERS', { bg: '#2d4a2a', fg: '#e6dcc4', w: 512, h: 128 }), -8, 3.3, -79.83, 0, 1.4, .35);
@@ -496,7 +496,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     const sealTex = canvasTexture(T, 512, 512, (c, w, h) => {
       c.clearRect(0, 0, w, h); c.strokeStyle = '#ff3b4e'; c.lineWidth = 10; c.beginPath(); c.arc(w / 2, h / 2 - 30, 150, 0, TAU); c.stroke(); c.lineWidth = 4; c.beginPath(); c.arc(w / 2, h / 2 - 30, 118, 0, TAU); c.stroke();
       for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; c.beginPath(); c.moveTo(w / 2 + Math.cos(a) * 118, h / 2 - 30 + Math.sin(a) * 118); c.lineTo(w / 2 + Math.cos(a) * 150, h / 2 - 30 + Math.sin(a) * 150); c.stroke(); }
-      c.fillStyle = '#ff3b4e'; c.font = `900 64px ${FONT}`; c.textAlign = 'center'; c.fillText('ORDRE', w / 2, h / 2 - 8); c.font = `800 30px ${FONT}`; c.fillText('ZONE CONFISQUÉE', w / 2, h - 70); c.font = `700 22px ${FONT}`; c.fillText('ENGINS SAISIS · 14/03/2189', w / 2, h - 36);
+      c.fillStyle = '#ff3b4e'; c.font = `900 64px ${FONT}`; c.textAlign = 'center'; c.fillText('ORDRE', w / 2, h / 2 - 8); c.font = `800 30px ${FONT}`; c.fillText('ZONE CONFISQUÉE', w / 2, h - 70); c.font = `700 22px ${FONT}`; c.fillText('VÉHICULES SAISIS · 14/03/2189', w / 2, h - 36);
     });
     const seal = new T.Mesh(new T.PlaneGeometry(4.2, 4.2), additive(0xffffff, .55, sealTex)); seal.position.set(-79.6, 2.2, 86); seal.rotation.y = Math.PI / 2; add(seal);
     animated.push(t => { const open = doors.get('portail')?.open || 0; seal.visible = open < .15; seal.material.opacity = (.42 + .12 * Math.sin(t * 3)) * (Math.sin(t * 23) > .96 ? .3 : 1); seal.rotation.z = Math.sin(t * .4) * .02; });

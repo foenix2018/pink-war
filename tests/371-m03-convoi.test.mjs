@@ -143,3 +143,10 @@ test('one level screen for every chapter (logo, chapter, zone, objectives, RETOU
   const logo=read('art/pink-wars-wordmark.svg');assert.match(logo,/<path d="M/);assert.doesNotMatch(logo,/<text/,'traced letters, no font');
   assert.match(read('pw-identity.js'),/pink-wars-wordmark-inline\.svg/);
 });
+
+test('chapters 01 and 02 speak generically too: a station, an ambulance, a hangar — no fire-brigade jargon',()=>{
+  const story=read('m01-extension-story.js')+read('m02-extension-story.js'),labels=read('m01-extension-layout.js').split('\n').filter(l=>!l.trim().startsWith('//')).join('\n');
+  assert.doesNotMatch(story.replace(/^\/\/.*$/gm,''),/VSAV|\bFPT\b|[Cc]aserne|chef d’agrès|main courante|[Pp]ompiers|adjudant|caporal|Départs à la voix|\bARI\b/);
+  assert.doesNotMatch(labels,/'[^'\n]*(Caserne|CASERNE|MAIN COURANTE|SECTIONNELLE|REMISE|Remise)[^'\n]*'/);
+  assert.match(story,/ambulance 07/);assert.match(story,/STATION AEGIS 07/);
+});

@@ -21,7 +21,7 @@ export const BRIEFINGS = Object.freeze({
     text: c => `Il y a trois jours, une émission de onze secondes est passée sur le canal 07. Seule ta station écoutait encore cette fréquence. ${sib(c)}, ${c === 'lylu' ? 'ta sœur' : 'ton frère'}, est peut-être en vie.`,
     objectives: [['door', 'Revenir à la station 07', 'Lire le journal de la nuit de la chute.'], ['bolt', 'Rallumer le quartier', 'Groupe électrogène, porte, puis l’annexe hors réseau.'],
       ['signal', 'Atteindre le relais A3', 'Retrouver la connexion d’il y a trois jours.'], ['data', 'Copier le registre des disparus', 'Archives végétales, avant la purge d’ORDRE.']] },
-  2: { title: 'Sous les Néons', zone: 'Vesper // Bas-Niveaux', image: () => 'art/mission02-cover.webp?v=3.71.0',
+  2: { title: 'Sous les Néons', zone: 'Vesper // Bas-Niveaux', image: () => 'art/mission02-cover.webp?v=3.72.0',
     text: c => `L’enclave du marché couvert a été « recensée » par HELIX Security. ${sib(c)} est parti${c === 'lylu' ? 'e' : ''} avec les malades. Retrouve les civils cachés et la trace du convoi.`,
     objectives: [['medic', 'Rejoindre l’enclave du marché', 'Dispensaire, radio, puis la grille de l’enclave.'], ['target', 'Libérer la galerie HELIX', 'Repousser la patrouille et saisir le terminal.'],
       ['up', 'Rejoindre la tour de transit', 'Passerelles à +12 m, puis le contrôle HELIX.'], ['lock', 'Bloquer le convoi 03', 'Manifeste du coffre, puis le quai de chargement.']] },
@@ -40,7 +40,7 @@ export function briefingFor(mission = 1, characterId = 'ghju') {
     objectives: b.objectives.map(([icon, title, detail], i) => ({ icon, title, detail, n: String(i + 1).padStart(2, '0') })) };
 }
 
-const STYLE_URL = new URL('./mission-briefing.css?v=3.71.0', import.meta.url).href;
+const STYLE_URL = new URL('./mission-briefing.css?v=3.72.0', import.meta.url).href;
 const LOGO_URL = new URL('./art/pink-wars-wordmark.svg?v=2', import.meta.url).href;
 export function ensureBriefingStyle(doc = document) {
   if (doc.querySelector('[data-pw-briefing-style]')) return;

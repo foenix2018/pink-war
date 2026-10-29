@@ -13,7 +13,7 @@ function art(n){return ART[n]||ART[2];}
 export function chapterStory(level,characterId='ghju',choice='escort'){
  if(level===1)return {
    heading:'La voix dans le relais',
-   text:'Le casier de la Caserne 07, l’archive de l’annexe puis le relais A3 confirment le passage récent de '+sibling(characterId)+
+   text:'Le casier de la station 07, l’archive de l’annexe puis le relais A3 confirment le passage récent de '+sibling(characterId)+
    '. Aux Archives végétales, le registre des disparus porte son écriture : « pas disparu'+(String(characterId).toLowerCase()==='lylu'?'':'e')+' ». Trois jours d’avance seulement. La piste descend vers l’enclave du marché des Bas-Niveaux. Sous les néons, la recherche continue.',
    next:'02 — SOUS LES NÉONS',
    eyebrow:'FIN DE MISSION · LE DERNIER SIGNAL'

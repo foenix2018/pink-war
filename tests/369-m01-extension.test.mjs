@@ -71,7 +71,7 @@ test('the prologue plays: yard, dispatch log, lockers, generator hold, apparatus
   const {g,ext,log}=campaign('lylu');
   ext.start();assert.equal(g.stage,'x-cour');assert.deepEqual(log.said,['intro']);
   assert.ok(Math.hypot(g.player.x-X.CASERNE_START.x,g.player.z-X.CASERNE_START.z)<.1);
-  assert.equal(g.campaign.title,'La Caserne 07');assert.ok(g.guidance(),'the objective guide works inside the station');
+  assert.equal(g.campaign.title,'La station 07');assert.ok(g.guidance(),'the objective guide works inside the station');
   // The bay door is shut and the generator room cannot be bypassed.
   assert.ok(g.obstacles.some(o=>o.door==='portail'),'the sectional door is closed');
   let p=walkNav(g,[-82,48]);assert.equal(g.stage,'x-garde','entering the corridor');
@@ -140,5 +140,5 @@ test('the story: both heroes, Gaby with GHJU and Cara with LYLU, the night of 21
 test('the M01 page drives the extension: journals, subtitles, daylight adaptation, resume after a defeat',()=>{
   const code=read('vesper-combat.js');
   for(const part of ['installM01Extension','createM01ExtensionArt','createSubtitles','extArt.adapt(atmosphere','readExtensionCheckpoint','REPRENDRE AU POINT DE CONTRÔLE','M01_ENDING'])assert.ok(code.includes(part),part);
-  const art=read('m01-extension-art.js');for(const part of ['VSAV','FPT','GROUPE ÉLECTROGÈNE','ARCHIVES VÉGÉTALES','MONTE-CHARGE'])assert.ok(art.includes(part),part);
+  const art=read('m01-extension-art.js');for(const part of ['AMBULANCE 07','CAMION 07','GROUPE ÉLECTROGÈNE','ARCHIVES VÉGÉTALES','MONTE-CHARGE'])assert.ok(art.includes(part),part);
 });

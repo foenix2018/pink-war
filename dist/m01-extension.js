@@ -115,12 +115,12 @@ export function installM01Extension(game, hooks = {}) {
     }
   }
   const TEXT = {
-    'x-cour': ['La Caserne 07', 'Entrer dans la caserne par la porte de service, au fond de la cour.'],
-    'x-garde': ['La nuit de la chute', 'Lire la main courante dans la salle de garde.'],
+    'x-cour': ['La station 07', 'Entrer dans la station par la porte de service, au fond de la cour.'],
+    'x-garde': ['La nuit de la chute', 'Lire le journal de bord dans la salle de veille.'],
     'x-vestiaires': ['Les vestiaires', 'Ouvrir les casiers de l’équipe.'],
     'x-groupe': ['Le groupe électrogène', 'Ouvrir l’arrivée de gazole, puis démarrer le groupe et tenir pendant la montée en charge.'],
-    'x-remise': ['La remise', 'Commander la porte sectionnelle de la remise.'],
-    'x-sortie': ['Sortir de la caserne', 'Neutraliser la patrouille et rejoindre le quartier des secours.'],
+    'x-remise': ['Le hangar', 'Commander la grande porte du hangar.'],
+    'x-sortie': ['Sortir de la station', 'Neutraliser la patrouille et rejoindre le quartier des secours.'],
     'x-route': ['Une trace de trois jours', 'Rejoindre les Archives végétales par l’accès sud.'],
     'x-entree': ['Les Archives végétales', 'Déverrouiller les portes d’accueil à la main.'],
     'x-bivouac': ['Les Archives végétales', 'Suivre la trace jusqu’au bureau du conservateur.'],
@@ -176,7 +176,7 @@ export function installM01Extension(game, hooks = {}) {
     const id = it.id; lastJournal = null; afterJournal = null;
     if (id === 'gazole') { done.add('gazole'); h.cue('valve'); h.notice('ARRIVÉE DE GAZOLE OUVERTE'); }
     else if (id === 'demarreur') { done.add('demarreur'); say('groupe'); startHold('groupe'); h.notice('GROUPE ÉLECTROGÈNE · MONTÉE EN CHARGE'); h.cue('engine'); }
-    else if (id === 'porte-remise') { openDoor('portail'); deploy('rue'); say('portail'); setStage('x-sortie'); h.notice('PORTE SECTIONNELLE · OUVERTURE'); game.grantCharges(1); }
+    else if (id === 'porte-remise') { openDoor('portail'); deploy('rue'); say('portail'); setStage('x-sortie'); h.notice('PORTE DU HANGAR · OUVERTURE'); game.grantCharges(1); }
     else if (id === 'deverrouillage') { openDoor('accueil'); deploy('galerie', { alert: false }); deploy('serre', { alert: false }); setStage('x-bivouac'); h.notice('DÉVERROUILLAGE MANUEL · PORTES LIBÉRÉES'); }
     else if (id === 'copie') { say('copie'); startHold('copie'); h.notice('COPIE DU REGISTRE · NE PAS INTERROMPRE'); }
     else if (id === 'monte-charge') { openDoor('monte-charge'); setStage('x-fin'); h.notice('MONTE-CHARGE · PORTES OUVERTES'); }
@@ -206,7 +206,7 @@ export function installM01Extension(game, hooks = {}) {
       while (hold.waves.length && game.time >= hold.start + hold.waves[0][0]) { const [, name] = hold.waves.shift(); release(name); if (name === 'nid') say('nid'); }
       if (game.time >= hold.until) {
         const name = hold.name; hold = null; done.add(name); h.cue('stage');
-        if (name === 'groupe') { say('groupeOk'); setStage('x-remise'); h.notice('GROUPE EN CHARGE · REMISE ALIMENTÉE'); }
+        if (name === 'groupe') { say('groupeOk'); setStage('x-remise'); h.notice('GROUPE EN CHARGE · HANGAR ALIMENTÉ'); }
         if (name === 'copie') { reads.add('registre'); lastJournal = 'registre'; afterJournal = 'copieOk'; setStage('x-depart'); deploy('sortie'); game.grantCharges(1); }
       }
     }

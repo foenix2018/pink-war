@@ -12,12 +12,12 @@ export const CASERNE_START = Object.freeze({ x: -89, z: 32, yaw: 0 });
 const room = (id, x1, x2, z1, z2, ceiling, look, label, extra = {}) => Object.freeze({ id, x1, x2, z1, z2, ceiling, look, label, ...extra });
 export const ROOMS = Object.freeze([
   // Caserne 07.
-  room('cour', -97, -80, 28, 44, 0, 'yard', 'Cour de manœuvre · Caserne 07'),
-  room('couloir', -84, -80, 44, 74, 3, 'corridor', 'Couloir de la caserne'),
+  room('cour', -97, -80, 28, 44, 0, 'yard', 'Cour · Station AEGIS 07'),
+  room('couloir', -84, -80, 44, 74, 3, 'corridor', 'Couloir de la station'),
   room('technique', -97, -84, 44, 52, 3.4, 'technical', 'Local du groupe électrogène'),
-  room('cta', -97, -84, 52, 64, 3, 'office', 'Salle de garde · standard'),
+  room('cta', -97, -84, 52, 64, 3, 'office', 'Salle de veille · radio'),
   room('vestiaires', -97, -84, 64, 74, 3, 'lockers', 'Vestiaires'),
-  room('remise', -97, -80, 74, 96, 7, 'garage', 'Remise des engins'),
+  room('remise', -97, -80, 74, 96, 7, 'garage', 'Hangar des véhicules'),
   // Archives végétales.
   room('parvis', -2, 14, -68, -62, 0, 'forecourt', 'Parvis des Archives végétales'),
   room('hall', -2, 14, -80, -68, 6, 'hall', 'Hall d’accueil'),
@@ -99,7 +99,7 @@ export const DOORS = Object.freeze([
   door('cta', 'z', -84, 58, 3, 2.4, { open: true, style: 'glass' }),
   door('vestiaires', 'z', -84, 68, 3, 2.4, { open: true, style: 'fire' }),
   door('remise', 'x', 74, -82, 3, 2.6, { open: true, style: 'fire' }),
-  door('portail', 'z', -80, 86, 5, 4.2, { style: 'sectional', label: 'Porte sectionnelle de la remise' }),
+  door('portail', 'z', -80, 86, 5, 4.2, { style: 'sectional', label: 'Grande porte du hangar' }),
   door('accueil', 'x', -68, 6, 4, 3, { style: 'glass', label: 'Portes d’accueil' }),
   door('bureau', 'x', -76, -24, 3, 2.4, { open: true, style: 'wood' }),
   door('serveur', 'x', -76, -10, 3, 2.4, { open: true, style: 'fire' }),
@@ -149,18 +149,18 @@ function props() {
 // ---------- Interactions ----------
 const it = (id, x, z, label, extra = {}) => Object.freeze({ id, x, z, y: 0, radius: 2.3, label, ...extra });
 export const INTERACTIONS = Object.freeze([
-  it('main-courante', -93.4, 58, 'LIRE LA MAIN COURANTE DU 14/03/2189', { log: 'main-courante' }),
+  it('main-courante', -93.4, 58, 'LIRE LE JOURNAL DE BORD DU 14/03/2189', { log: 'main-courante' }),
   it('casier', -94.6, 70, 'OUVRIR LE CASIER', { log: 'casier' }),
   it('gazole', -94, 45.4, 'OUVRIR L’ARRIVÉE DE GAZOLE'),
   it('demarreur', -91, 50.4, 'DÉMARRER LE GROUPE ÉLECTROGÈNE'),
-  it('porte-remise', -81.2, 91.5, 'COMMANDER LA PORTE SECTIONNELLE'),
+  it('porte-remise', -81.2, 91.5, 'COMMANDER LA PORTE DU HANGAR'),
   it('relais-a3', 0, 0, '', { core: true }),
   it('deverrouillage', 8.8, -66.4, 'TIRER LA COMMANDE DE DÉVERROUILLAGE'),
   it('bivouac', -24.6, -72.4, 'EXAMINER LE BIVOUAC', { log: 'bivouac' }),
   it('copie', -18.4, -83.4, 'COPIER LE REGISTRE DES DISPARUS'),
   it('monte-charge', 40.4, -82.6, 'APPELER LE MONTE-CHARGE'),
   // Documents (always readable).
-  it('doc-tableau', -87.6, 53.2, 'LIRE LE TABLEAU DE GARDE', { log: 'tableau' }),
+  it('doc-tableau', -87.6, 53.2, 'LIRE LE TABLEAU DE SERVICE', { log: 'tableau' }),
   it('doc-radio', -89, 61.2, 'ÉCOUTER LA RADIO · CANAL 07', { log: 'radio' }),
   it('doc-consignes', -82.4, 79, 'LIRE LES CONSIGNES DE DÉPART', { log: 'consignes' }),
   it('doc-visiteurs', 6, -76, 'LIRE LE REGISTRE DES VISITEURS', { log: 'visiteurs' }),
@@ -191,12 +191,12 @@ export const ENCOUNTERS = Object.freeze({
 // ---------- Stages (prologue before the original 'approach', epilogue after its 'exit') ----------
 const stage = (id, label, hint, checkpoint) => Object.freeze({ id, label, hint, checkpoint: Object.freeze(checkpoint) });
 export const PROLOGUE = Object.freeze([
-  stage('x-cour', 'ENTRER DANS LA CASERNE 07', 'Porte de service au fond de la cour de manœuvre.', { x: -89, z: 32, yaw: 0 }),
-  stage('x-garde', 'LIRE LA MAIN COURANTE', 'Salle de garde, deuxième porte à gauche du couloir.', { x: -82, z: 46, yaw: 0 }),
+  stage('x-cour', 'ENTRER DANS LA STATION 07', 'Porte de service au fond de la cour.', { x: -89, z: 32, yaw: 0 }),
+  stage('x-garde', 'LIRE LE JOURNAL DE BORD', 'Salle de veille, deuxième porte à gauche du couloir.', { x: -82, z: 46, yaw: 0 }),
   stage('x-vestiaires', 'OUVRIR LES CASIERS', 'Vestiaires, au bout du couloir à gauche.', { x: -82, z: 58, yaw: 0 }),
-  stage('x-groupe', 'RELANCER LE GROUPE ÉLECTROGÈNE', 'Local technique : ouvrir le gazole, puis démarrer. La porte de la remise est électrique.', { x: -82, z: 48, yaw: 0 }),
-  stage('x-remise', 'OUVRIR LA PORTE DE LA REMISE', 'Boîtier de commande à droite de la porte sectionnelle.', { x: -82, z: 76, yaw: 0 }),
-  stage('x-sortie', 'REJOINDRE LE QUARTIER DES SECOURS', 'Passer la clôture devant la remise : l’annexe est à l’est.', { x: -82, z: 86, yaw: Math.PI / 2 })
+  stage('x-groupe', 'RELANCER LE GROUPE ÉLECTROGÈNE', 'Local technique : ouvrir le gazole, puis démarrer. La porte du hangar est électrique.', { x: -82, z: 48, yaw: 0 }),
+  stage('x-remise', 'OUVRIR LA PORTE DU HANGAR', 'Boîtier de commande à droite de la grande porte.', { x: -82, z: 76, yaw: 0 }),
+  stage('x-sortie', 'REJOINDRE LE QUARTIER DES SECOURS', 'Passer la clôture devant le hangar : l’annexe est à l’est.', { x: -82, z: 86, yaw: Math.PI / 2 })
 ]);
 export const EPILOGUE = Object.freeze([
   stage('x-route', 'REJOINDRE LES ARCHIVES VÉGÉTALES', 'Redescendre de la terrasse ; l’accès est au sud, par la clôture.', { x: 18, z: -16, yaw: Math.PI }),

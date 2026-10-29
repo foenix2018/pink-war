@@ -59,7 +59,7 @@ body.pw-graphics-open #quality{display:block}
 /* Briefing, defeat and ending panels cover the combat HUD. */
 body.pw-shaded .pw-hud,body.pw-shaded #hud,body.pw-shaded .pw-minimal-action{visibility:hidden}
 </style>
-<link rel="stylesheet" href="mobile-controls-v7.css?v=3.71.0"><link rel="stylesheet" href="fracture.css?v=3.71.0">
+<link rel="stylesheet" href="mobile-controls-v7.css?v=3.72.0"><link rel="stylesheet" href="fracture.css?v=3.72.0">
 <script defer src="./pw-identity.js?v=2"></script>
 </head>
 <body>
@@ -86,12 +86,12 @@ body.pw-shaded .pw-hud,body.pw-shaded #hud,body.pw-shaded .pw-minimal-action{vis
   <div id="status" class="small">Clavier / souris, manette, tactile ou casque WebXR · rendu WebGPU avec repli WebGL</div>
 </div></div>
 <script type="module">
-import {decorateShade} from './mission-briefing.js?v=3.71.0';
+import {decorateShade} from './mission-briefing.js?v=3.72.0';
 decorateShade(document.getElementById('shade'),{mission:3,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});
 const lylu=new URLSearchParams(location.search).get('character')==='lylu';
 document.getElementById(lylu?'pick-lylu':'pick-ghju').setAttribute('aria-current','true');
 if(lylu){document.getElementById('panel-text').textContent='Vesper, 2196. À la tour de transit, le manifeste de HELIX l’a dit : le convoi 02 est parti vers l’Anneau logistique, et GHJU est dans son « lot spécial ». Inès Varga a récupéré une ambulance. Il faut la conduire de nuit à travers le secteur 03, sous couvre-feu ORDRE, jusqu’à la gare de fret.';document.getElementById('compat').href='./niveau3.html?character=lylu&renderer=webgl';}
-import('./niveau3.js?v=3.71.0').catch(error=>{
+import('./niveau3.js?v=3.72.0').catch(error=>{
  const status=document.getElementById('status'),button=document.getElementById('start');
  if(status)status.textContent='Erreur de chargement : '+(error?.message||String(error))+' — essaye le mode compatibilité WebGL.';
  if(button){button.disabled=false;button.textContent='RECHARGER →';button.addEventListener('click',()=>location.reload());}
