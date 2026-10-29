@@ -8,7 +8,7 @@ const STAGES=new Set(M01_CHECKPOINT_STAGES);
 const POINTS={power:{x:-12.5,z:59,elevation:0},archive:{x:-4,z:58,elevation:0},workshop:{x:0,z:47,elevation:0},investigation:{x:-63,z:18,elevation:0},sabotage:{x:18,z:6,elevation:0},exit:{x:18,z:-16,elevation:0}};
 export function writeM01Checkpoint(game,storage){
  if(!STAGES.has(game.stage)||game.enemies.length||game.toSpawn||!game.player.grounded||game.player.onLift||Math.abs(game.player.verticalSpeed||0)>.05)return false;
- const s={version:3,characterId:game.characterId,stage:game.stage,kills:game.kills,
+ const s={version:3,savedAt:Date.now(),characterId:game.characterId,stage:game.stage,kills:game.kills,
   investigationRead:game.investigationRead,sabotaged:game.sabotaged,circuitIsolated:game.circuitIsolated,circuitRoute:game.circuitRoute,spawned:game.spawned,shield:game.player.shield,charges:game.charges,
   weaponIndex:game.weaponIndex,owned:[...game.ownedWeapons],ammo:[...game.ammo],dualAmmo:{...game.dual.ammo},health:Math.max(1,game.player.hp)};
  try{(storage||globalThis.localStorage).setItem(KEY+game.characterId,JSON.stringify(s));return true;}catch{return false;}

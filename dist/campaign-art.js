@@ -17,6 +17,7 @@ import {createCampaignCeilings} from './m01-ceilings.js';
 import {createWorkshopArt} from './m01-workshop.js';
 import {createCourtyardArt} from './m01-courtyard.js';
 import {createArchiveTerminalFactory} from './archive-terminals.js';
+import {FENCE_GAPS} from './m01-extension-layout.js';
 
 // Independent Blender-built map. Geometry is bundled locally, including in the
 // standalone HTML: no CDN, GLTF loader or late asset request is needed to play.
@@ -28,6 +29,13 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
  let seed=33207;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  function paintTexture(w,h,paint){const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const context=canvas.getContext('2d');paint(context,w,h);const map=new T.CanvasTexture(canvas);map.colorSpace=T.SRGBColorSpace;textures.push(map);return{canvas,context,map};}
  const pending=[],loader=new T.TextureLoader();let loadedMaps=0;
+ // The waist-high rail is part of the Blender map: open it where the Caserne 07 and the Archives végétales join the quarter.
+ function cutFenceOpenings(g){
+  const pos=g.getAttribute('position'),count=pos.count,index=g.index?Array.from(g.index.array):Array.from({length:count},(_,i)=>i),kept=[];
+  const inGap=(x,y,z)=>y<1.6&&FENCE_GAPS.some(gap=>gap.axis==='z'?Math.abs(x-gap.fixed)<.7&&z>gap.from-.05&&z<gap.to+.05:Math.abs(z-gap.fixed)<.7&&x>gap.from-.05&&x<gap.to+.05);
+  for(let i=0;i<index.length;i+=3){let x=0,y=0,z=0;for(let k=0;k<3;k++){const v=index[i+k];x+=pos.getX(v);y+=pos.getY(v);z+=pos.getZ(v);}if(!inGap(x/3,y/3,z/3))kept.push(index[i],index[i+1],index[i+2]);}
+  if(kept.length!==index.length)g.setIndex(kept);
+ }
  function surface(name,type){const url=SURFACE_DATA[name]?.[type];if(!url)return null;
   let resolve,reject;const wait=new Promise((ok,fail)=>{resolve=ok;reject=fail});pending.push(wait);
   const tex=loader.load(url,t=>{if(quality==='low'&&t.image.width>256){const c=document.createElement('canvas');c.width=c.height=256;c.getContext('2d').drawImage(t.image,0,0,256,256);t.image=c;t.needsUpdate=true;}loadedMaps++;resolve();},undefined,reject);
@@ -68,6 +76,7 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
   const raw=atob(encoded),bytes=new Uint8Array(raw.length);for(let k=0;k<raw.length;k++)bytes[k]=raw.charCodeAt(k);
   const decoded=inflateSync(bytes);const data=new T.InterleavedBuffer(new Float32Array(decoded.buffer,decoded.byteOffset,decoded.byteLength/4),8),g=ownG(new T.BufferGeometry());
   g.setAttribute('position',new T.InterleavedBufferAttribute(data,3,0));g.setAttribute('normal',new T.InterleavedBufferAttribute(data,3,3));g.setAttribute('uv',new T.InterleavedBufferAttribute(data,2,6));const encodedIndex=MESH_INDEX_DATA[name];if(encodedIndex){const rawIndex=atob(encodedIndex),indexBytes=new Uint8Array(rawIndex.length);for(let k=0;k<rawIndex.length;k++)indexBytes[k]=rawIndex.charCodeAt(k);const dataIndex=inflateSync(indexBytes);g.setIndex(new T.BufferAttribute(new Uint32Array(dataIndex.buffer,dataIndex.byteOffset,dataIndex.byteLength/4),1));}g.computeBoundingSphere();
+  cutFenceOpenings(g);
   const mesh=new T.Mesh(g,maps[name]);mesh.name='Blender / '+name;mesh.castShadow=quality!=='low'&&name!=='amber';mesh.receiveShadow=true;root.add(mesh);
  }
  const puddleMat=ownM(new T.MeshStandardMaterial({color:0x435854,roughness:.20,metalness:.30,transparent:true,opacity:.38,depthWrite:false}));

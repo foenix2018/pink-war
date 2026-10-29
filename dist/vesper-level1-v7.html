@@ -1929,7 +1929,7 @@ async function boot(){try{
    const help=document.querySelector('#help .helpGrid');help.innerHTML='<p>ZQSD / WASD : déplacement · Souris : regard<br>J : saut · Maj : course · C : accroupir<br>Clic gauche / Espace : tirer · Clic droit : viser<br>R : recharger · E / molette : arme suivante<br>F : lire un terminal ou récupérer une arme<br>G : compétences de Gaby / Cara<br>Échap : pause · M : carte · H : aide</p><p>Manette : sticks pour bouger et regarder<br>L2 : viser · R2 : tirer · Croix : saut<br>Carré : recharger · Triangle : arme suivante<br>Rond : accroupir · R3 : interagir<br>Options : pause · Croix haute : compétences</p>';
    document.querySelector('#help .helpCard > p').textContent='La boutique de briques est à l’ouest. Le point au-dessus du regard guide par un chemin praticable. Les portes de transfert d’ORDRE restent à distance ; seuls les huit patrouilleurs initiaux occupent déjà le quartier. Terrasse à 4,8 m, par escalier ou monte-charge.';
   const style=document.createElement('style');style.textContent='body.pw-live-combat #weaponVis,body.pw-live-combat #sources{display:none!important}#combatHud{z-index:4}body.pw-live-combat #intro.gone{pointer-events:none}';document.head.append(style);
-  window.__PINK_VESPER={snapshot:()=>combatWorld.snapshot()};
+  window.__PINK_VESPER={snapshot:()=>combatWorld.snapshot(),get debug(){return combatWorld?.debug||null;}};
  }else{
   try{renderer=await createWebGPU(atlas,materialAtlas);gpuKind='WebGPU'}catch(e){console.warn('WebGPU indisponible, repli WebGL2 :',e);if(canvas.getContext('webgl2')===null){const newCanvas=canvas.cloneNode(false);canvas.replaceWith(newCanvas);canvas=newCanvas;}renderer=await createWebGL(atlas,materialAtlas);gpuKind='WebGL 2';}
  }

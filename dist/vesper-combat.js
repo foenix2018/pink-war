@@ -34,6 +34,11 @@ import {createGlove} from './hands.js';
 import {playFieldCue} from './m01-field-audio.js';
 import {mountCombatHud} from './combat-hud.js';
 import {createArmorFeedback,meleeKick,MELEE_POSE} from './armor-feedback.js';
+import {installM01Extension,readExtensionCheckpoint,clearExtensionCheckpoint} from './m01-extension.js';
+import {createM01ExtensionArt} from './m01-extension-art.js';
+import {linesFor as extensionLines,ENDING as M01_ENDING} from './m01-extension-story.js';
+import {INTERACTIONS as EXTENSION_INTERACTIONS} from './m01-extension-layout.js';
+import {createSubtitles} from './story-subtitles.js';
 
 export function buildVesperGeometry(source,{art=false}={}){
   const skip=replacementTriangles(source,art);
@@ -109,8 +114,17 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const obstacles=missionArt.obstacles;obstacles.push(...salvage.colliders);
   const game=new CampaignLevel1(obstacles,Math.random,characterId);
   let combatHud=null;game.enableArmorShield();
-  const checkpoint=readM01Checkpoint(characterId);
-  if(params.get('resume')==='1'&&checkpoint)restoreM01Checkpoint(game,checkpoint);
+  const checkpoint=readM01Checkpoint(characterId),resuming=params.get('resume')==='1';
+  const coreRestored=resuming&&!!checkpoint&&restoreM01Checkpoint(game,checkpoint);
+  // Extended chapter (3.69): Caserne 07 prologue and Archives végétales epilogue around the original quarter.
+  const extArt=createM01ExtensionArt(T,scene,{quality:profile.phone||requestedQuality==='low'?'low':'normal',camera});
+  const subtitles=createSubtitles({T,camera});
+  const extension=installM01Extension(game,{setDoor:(id,state)=>extArt.setDoor(id,state),say:id=>subtitles.say(extensionLines(id,characterId)),cue:kind=>extensionCue(kind),notice:text=>notify(text,3800)});
+  const extensionSave=resuming?readExtensionCheckpoint(characterId):null;
+  if(extensionSave&&(!coreRestored||(extensionSave.savedAt||0)>(checkpoint.savedAt||0)))extension.restoreCheckpoint(extensionSave);
+  else if(coreRestored)extension.resumeCore();
+  else extension.start();
+  extArt.build(game.obstacles);
   // One simulation owns stairs, lifts, navigation, collisions and ballistics.
   collide.splice(0,collide.length,...obstacles.map(o=>({x1:o.x-o.hx,x2:o.x+o.hx,y1:o.y||0,y2:(o.y||0)+o.height,z1:o.z-o.hz,z2:o.z+o.hz,label:o.surface})));
   stairs.splice(0,stairs.length,...LEVEL1_MAP.stairs.map(s=>({x1:s.x-s.halfWidth,x2:s.x+s.halfWidth,zStart:s.bottomZ,zEnd:s.topZ,height:s.height})));
@@ -274,7 +288,13 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       lastStage=game.stage;notify(game.campaign.title+' — '+game.campaign.subtitle,4200);
       checkpointPending=true;
     }
-    if(checkpointPending&&writeM01Checkpoint(game))checkpointPending=false;
+    if(checkpointPending&&(extension.extension?extension.writeCheckpoint():writeM01Checkpoint(game)))checkpointPending=false;
+    if(!journalOpen){const later=extension.takeJournal();if(later)openJournal(later.entry,later.then);}
+    subtitles.update(dt,{xr:!!xr?.active,hidden:journalOpen});
+    extArt.setPower(extension.done.includes('groupe')||extension.prologueDone);
+    extArt.setAvailable(EXTENSION_INTERACTIONS.filter(i=>!i.log&&!i.core&&extension.available(i.id)).map(i=>i.id));
+    const hold=extension.hold;holdBar.hidden=!hold;
+    if(hold){holdBar.querySelector('.pw-hold-label').textContent=(hold.name==='groupe'?'MONTÉE EN CHARGE DU GROUPE':'COPIE DU REGISTRE')+' · '+Math.ceil(hold.remaining)+' s';holdBar.querySelector('.pw-hold-fill').style.width=(100*(1-hold.remaining/hold.total)).toFixed(1)+'%';}
     for(const e of game.enemies){
       if(!enemyModels.has(e.id)){const model=enemyFactory.create(e.elite,e.ranged,e.form);model.traverse(o=>{if(o.isMesh){o.castShadow=profile.shadows;o.receiveShadow=true;}});enemyModels.set(e.id,model);scene.add(model);}
       const model=enemyModels.get(e.id);model.position.set(e.x,e.elevation,e.z);model.rotation.y=e.yaw||0;model.userData.animate?.(game.time,e.phase,true,e,game.time);
@@ -293,8 +313,10 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       if(event.type==='reloaded'&&sound&&audio)playWeaponAction(audio,game.weapon.id,'reload-ready');
       if(event.type==='over'){
         held=false;fireInput.reset();ambience?.pause();document.exitPointerLock?.();
-        if(xr?.active)onPauseRequest();const dialog=document.createElement('dialog');dialog.innerHTML='<h2>SIGNAL PERDU</h2><p>ORDRE a repris le secteur.</p><button>REJOUER LA MISSION</button> <a href="./index.html">RETOUR AU MENU</a>';
-        dialog.querySelector('button').onclick=()=>location.reload();document.body.append(dialog);dialog.showModal();
+        if(xr?.active)onPauseRequest();const dialog=document.createElement('dialog');const saved=readExtensionCheckpoint(characterId)||readM01Checkpoint(characterId);
+        dialog.innerHTML='<h2>SIGNAL PERDU</h2><p>ORDRE a repris le secteur.</p>'+(saved?'<button data-resume>REPRENDRE AU POINT DE CONTRÔLE</button> ':'')+'<button data-restart>REJOUER LA MISSION</button> <a href="./index.html">RETOUR AU MENU</a>';
+        const go=resume=>{const url=new URL(location.href);if(resume)url.searchParams.set('resume','1');else url.searchParams.delete('resume');location.assign(url.href);};
+        dialog.querySelector('[data-resume]')?.addEventListener('click',()=>go(true));dialog.querySelector('[data-restart]').onclick=()=>go(false);document.body.append(dialog);dialog.showModal();
       }
       if(event.type==='win')finishMission();
       if(event.type==='unlock')notify('ÉQUIPEMENT RÉCUPÉRÉ · '+event.name,3000);
@@ -329,22 +351,45 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   function finishMission(){
     if(completed)return;completed=true;held=false;ambience?.pause();document.exitPointerLock?.();
     const dialog=document.createElement('dialog');dialog.id='end-dialog';
-    dialog.innerHTML='<h2>LE DERNIER SIGNAL</h2><p>Destination confirmée : Archives végétales.</p><button id="retry-button">RETOUR AU MENU</button>';
+    const p=document.createElement('p');p.textContent=M01_ENDING.text[characterId];clearExtensionCheckpoint(characterId);
+    dialog.innerHTML='<h2>LE DERNIER SIGNAL</h2><button id="retry-button">RETOUR AU MENU</button>';dialog.insertBefore(p,dialog.querySelector('#retry-button'));
     document.body.append(dialog);attachCampaignStory(dialog,{level:1,characterId});
     dialog.querySelector('#retry-button').onclick=()=>location.assign('./index.html');dialog.showModal();
   }
+  function openJournal(entry,then){
+    if(!entry)return;
+    combatHud?.reset();journalOpen=true;held=false;fireInput.reset();game.state='paused';document.exitPointerLock?.();
+    showMissionJournal(entry,{sound,onClose(){journalOpen=false;game.state='playing';if(then)subtitles.say(extensionLines(then,characterId));}});
+    if(xr?.active)xr.showJournal(entry,()=>document.getElementById('m01-journal')?.close());
+  }
+  // Short synthesised cues for the extension beats (doors, valves, engine, holds, portals).
+  function extensionCue(kind){
+    if(!sound||!audio||audio.state!=='running')return;
+    try{
+      const now=audio.currentTime,out=audio.createGain();out.gain.value=.12;out.connect(audio.destination);
+      const tone=(type,from,to,length,delay=0,gain=.9)=>{const o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(from,now+delay);o.frequency.exponentialRampToValueAtTime(to,now+delay+length);
+        g.gain.setValueAtTime(.0001,now+delay);g.gain.exponentialRampToValueAtTime(gain,now+delay+.02);g.gain.exponentialRampToValueAtTime(.0001,now+delay+length);o.connect(g);g.connect(out);o.start(now+delay);o.stop(now+delay+length+.05);};
+      if(kind==='door'){tone('sawtooth',70,55,1.4,0,.5);tone('square',140,120,.2,0,.3);}
+      else if(kind==='valve'){for(let k=0;k<5;k++)tone('square',220+k*20,200+k*20,.08,k*.16,.35);}
+      else if(kind==='engine'){tone('sawtooth',30,62,2.6,0,.8);tone('square',45,90,2.4,.3,.35);}
+      else if(kind==='hold'){tone('sine',110,220,1.8,0,.6);tone('sine',55,110,2.2,.1,.6);}
+      else if(kind==='portal'){tone('sawtooth',90,420,2.6);tone('sine',180,840,2.8,.2);}
+      else if(kind==='read'){tone('triangle',1200,900,.06,0,.25);tone('triangle',900,700,.08,.07,.2);}
+      else if(kind==='stage'){tone('triangle',440,660,.25);tone('triangle',660,880,.3,.22);}
+    }catch{}
+  }
+  const holdBar=document.createElement('div');holdBar.className='pw-hold';holdBar.hidden=true;
+  holdBar.style.cssText='position:fixed;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:min(380px,calc(100vw - 120px));padding:7px 10px;background:rgba(9,14,22,.82);border:1px solid #d8c6a099;border-radius:9px;z-index:6;pointer-events:none;font:900 11px system-ui;letter-spacing:.12em;color:#eef1f6;text-align:center';
+  holdBar.innerHTML='<div class="pw-hold-label"></div><div style="height:5px;margin-top:5px;background:#ffffff1f;border-radius:3px;overflow:hidden"><div class="pw-hold-fill" style="height:100%;background:#d8c6a0"></div></div>';document.body.append(holdBar);
   function onInteract(){
     if(completed||game.state!=='playing'||getState().free||journalOpen)return false;
     const terminal=game.getInteraction(),offer=game.nearbyWeapon();
     if(!terminal&&!offer)return false;
     const action=terminal?.id||'weapon';
     if(!game.collectWeapon())return false;
-    const entry=missionJournal(action,characterId);
-    if(entry){
-      combatHud?.reset();journalOpen=true;held=false;fireInput.reset();game.state='paused';document.exitPointerLock?.();
-      showMissionJournal(entry,{sound,onClose(){journalOpen=false;game.state='playing';}});
-       if(xr?.active)xr.showJournal(entry,()=>document.getElementById('m01-journal')?.close());
-    }
+    if(terminal?.extension)extArt.markDone(action);
+    const pendingJournal=extension.takeJournal();
+    openJournal(pendingJournal?.entry||missionJournal(action,characterId),pendingJournal?.then);
     if(game.completed)finishMission();
     return true;
   }
@@ -352,10 +397,10 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     createGun:()=>rig?.createGun({sleeve:false})||buildGun({mats:starterMaterials,gloves:starterGloves,sleeve:false,makeFlash:parent=>{const f=new T.Mesh(new T.SphereGeometry(.06,8,6),heroGlow);parent.add(f);return f;}}),createHand:()=>createGlove(rig?.kit.gloves||starterGloves,{sleeve:false})}),
     getYaw:()=>-getState().yaw,setYaw:onHeading,isPaused:()=>!!getState().menuPaused||journalOpen||game.state!=='playing',
     onPause:onPauseRequest,onResume:onResumeRequest,onHome:()=>location.assign('./index.html'),onExit:()=>{},skillsInput:args=>skillMenu.xrInput(args),
-    onFrame:(ms,frame)=>{const dt=Math.min(.045,Math.max(0,(ms-lastTime*1000)/1000||.016));const c=xr.input(frame,dt);const s=getState();if(c.interact)onInteract();if(!s.menuPaused&&!journalOpen&&!skillMenu.isOpen)update(dt,{...s,free:false,yaw:-xr.yaw,aiming:c.aim,input:c});xr.update(dt,feel.state,feel.state.flash);xr.renderScope();lastTime=ms/1000;atmosphere.update(lastTime,camera,{day:s.day,shadows:s.shadows!==false,focus:game.player,entities:[...game.enemies,game.player],heightAt:e=>game.surfaceHeight(e.x,e.z,game.time,(e.elevation||0)+.3)});try{renderer.render(scene,camera);}catch(error){onFailure(error);}}});
+    onFrame:(ms,frame)=>{const dt=Math.min(.045,Math.max(0,(ms-lastTime*1000)/1000||.016));const c=xr.input(frame,dt);const s=getState();if(c.interact)onInteract();if(!s.menuPaused&&!journalOpen&&!skillMenu.isOpen)update(dt,{...s,free:false,yaw:-xr.yaw,aiming:c.aim,input:c});xr.update(dt,feel.state,feel.state.flash);xr.renderScope();lastTime=ms/1000;atmosphere.update(lastTime,camera,{day:s.day,shadows:s.shadows!==false,focus:game.player,entities:[...game.enemies,game.player],heightAt:e=>game.surfaceHeight(e.x,e.z,game.time,(e.elevation||0)+.3)});const eye=renderer.xr.getCamera().getWorldPosition(new T.Vector3());extArt.update(lastTime,dt,{position:eye,quaternion:camera.quaternion},game.player);extArt.adapt(atmosphere,eye,dt);try{renderer.render(scene,camera);}catch(error){onFailure(error);}}});
   // Validate a real terrain frame while the loading card is still displayed.
   // A published GPU API or a running simulation alone cannot prove rendering.
-  syncCamera(getState(),0);atmosphere.update(0,camera,{day:getState().day,shadows:profile.shadows});
+  syncCamera(getState(),0);atmosphere.update(0,camera,{day:getState().day,shadows:profile.shadows});extArt.update(0,0,camera,game.player);extArt.adapt(atmosphere,camera.position,1);
   renderer.setSize(innerWidth,innerHeight,false);
   onProgress(.90,'Préparation du premier rendu');
   try{
@@ -402,20 +447,28 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     update(dt){update(dt,getState());},
     draw(t){
       if(xr.active)return;
-      if(pending)return;const s=getState();syncCamera(s,Math.min(.05,t-lastTime||.016));lastTime=t;gate.mesh.rotation.z=t*.052;
+      if(pending)return;const s=getState(),frameDt=Math.min(.05,t-lastTime||.016);syncCamera(s,frameDt);lastTime=t;gate.mesh.rotation.z=t*.052;
       skillMenu.setVisible(ready&&!completed&&!journalOpen&&game.player.hp>0);
       torch.visible=s.flashlight!==false;
       const shadows=s.shadows!==false;
       atmosphere.update(t,camera,{shadows,day:s.day,focus:game.player,entities:[...game.enemies,game.player],heightAt:e=>game.surfaceHeight(e.x,e.z,game.time,(e.elevation||0)+.3)});
+      extArt.update(t,frameDt,camera,game.player);extArt.adapt(atmosphere,camera.position,frameDt);
       try{const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);if(result?.then){pending=true;result.then(()=>pending=false).catch(error=>{pending=false;onFailure(error);});}}
       catch(error){onFailure(error);}
     },
-    snapshot(){return {view:effectiveView(),playerVisible:rig?.model.root.visible||false,music:{playing:false,source:null},revision:'3.65.0',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
+    // QA hooks (?debug=1): move the player, clear machines, advance the mission clock.
+    debug:params.has('debug')?{game,teleport(x,z){Object.assign(game.player,{x,z,elevation:game.surfaceHeight(x,z,game.time),grounded:true,verticalSpeed:0});setPlayer?.(game.player);},
+      clear(){game.enemies.length=0;game.toSpawn=0;},skip(seconds){game.time+=seconds;},god(){game.invulnerable=1e9;},
+      use(id){const it=EXTENSION_INTERACTIONS.find(i=>i.id===id);if(it){Object.assign(game.player,{x:it.x,z:it.z,elevation:0,grounded:true});setPlayer?.(game.player);}const done=onInteract();document.getElementById('m01-journal')?.close();return done;},
+      closeJournal(){document.getElementById('m01-journal')?.close();}}:null,
+    snapshot(){return {view:effectiveView(),playerVisible:rig?.model.root.visible||false,music:{playing:false,source:null},revision:'3.69.0',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
       capacity:game.weapon.capacity,ownedWeapons:[...game.ownedWeapons],offers:game.weaponOffers.map(o=>({...o})),campaign:game.campaign,journalOpen,
       enemies:game.enemies.length,hostileProjectiles:game.bullets.filter(b=>b.hostile).length,shots:game.bullets.filter(b=>!b.hostile).length,
       kills:game.kills,rig:!!rig,gun:!!gun,backend:renderer.isWebGLRenderer?'webgl':'webgpu',triangles:terrain.triangles,
       art:missionArt.stats(),dressing:dressing.stats,salvage:salvage.stats,shadowing:atmosphere.shadows.stats(),lighting:{exposure:renderer.toneMappingExposure,ambient:atmosphere.ambient.intensity,sun:atmosphere.sun.intensity},pbr:missionArt.stats().pbr,effects:effects.stats(),companion:companion.snapshot(),position:{...getState().position},
       skills:skills.snapshot(game),skillsMenuOpen:skillMenu.isOpen,
+      extension:{stage:game.stage,active:extension.extension,prologueDone:extension.prologueDone,hold:extension.hold,opened:extension.opened,done:extension.done,reads:extension.reads,groups:extension.groups(),art:extArt.stats()},
+      subtitle:subtitles.current,queued:subtitles.queued,
       armor:{shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt},
       hostiles:game.enemies.map(e=>({id:e.id,x:e.x,y:e.elevation+e.aimHeight,z:e.z,hp:e.hp,awareness:e.awareness,tactic:e.combatPose,crouch:e.coverCrouch||0})),render:renderer.info.render};}
 
