@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
-<link rel="icon" href="icons/favicon-32.png?v=3.70.0" sizes="32x32" type="image/png"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><link rel="stylesheet" href="./mission-loading.css?v=3.70.0"><script>document.documentElement.classList.toggle('pw-auto-story',!new URLSearchParams(location.search).has('visit'));</script>
+<link rel="icon" href="icons/favicon-32.png?v=3.70.0" sizes="32x32" type="image/png"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><link rel="stylesheet" href="./mission-loading.css?v=3.70.0"><script>document.documentElement.classList.toggle('pw-auto-story',!new URLSearchParams(location.search).has('visit')&&new URLSearchParams(location.search).get('chapter')!=='3'&&!location.pathname.endsWith('/niveau3.html'));</script>
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=3.70.0" sizes="180x180">
 <link rel="manifest" href="manifest.webmanifest?v=3.70.0">
 <meta name="apple-mobile-web-app-title" content="Pink Wars">
@@ -102,7 +102,10 @@ let canvas=$('view'); const mini=$('minimap'), mapCtx=mini.getContext('2d');
 let renderer, combatWorld=null, gpuKind='—', started=false, pv=new Float32Array(16), aspect=1;
 const requestedQuality=new URLSearchParams(location.search).get('quality');
 let quality=['performance','equilibre','ultra'].includes(requestedQuality)?requestedQuality:/iPhone|iPad|iPod|Android.*Mobile/i.test(navigator.userAgent)?'performance':'equilibre', timeOfDay=0.43, isFree=false, mapOpen=false, flashlight=false;
-const referenceVisit=new URLSearchParams(location.search).has('visit');
+const isChapter3=new URLSearchParams(location.search).get('chapter')==='3'||location.pathname.endsWith('/niveau3.html');
+const referenceVisit=new URLSearchParams(location.search).has('visit')||isChapter3;
+if(isChapter3)timeOfDay=.27;
+let mission3=null;
 let yaw=referenceVisit?-.47:.14, pitch=-0.035, position=referenceVisit?{x:2,y:1.73,z:54}:{x:-26,y:1.765,z:23}, velocityY=0, groundY=0, grounded=true;
 let last=0, fpsAcc=0, fpsCount=0, fps=0, noticeTime=0, missionIndex=0;
 const keys=new Set(), collide=[], stairs=[], decks=[], interactions=[], drones=[], beacons=[], worldBounds={minX:-77,maxX:77,minZ:-123,maxZ:71};
@@ -301,6 +304,70 @@ function rescueBuilding(){
  addSign(-18.3,3.5,11.9,6,1.15,'EVACUATION');
  for(let i=0;i<3;i++)lamp(-17+i*2,10,3.5,'cyan');
  interactions.push({x:-26,y:0,z:15,r:3,title:'Archive du centre médical',action:'archive',message:'ARCHIVE LOCALE · Dernier message enregistré avant la chute : « Ne prends pas le réseau principal. Retrouve les anciens relais. »'});
+}
+
+
+// M01 / Architectural finish: suspended ceilings, visible service infrastructure,
+// facade relief and maintenance access covers. Strictly visual: no colliders added.
+function m01ArchitectureFinish(){
+ const compact=quality==='performance';
+ // Medical annex: a readable 3D suspended ceiling below the existing roof.
+ const dx=compact?4.2:3.05,dz=compact?5.0:3.36;
+ for(let x=-43.2;x<=-14.6;x+=dx){
+  for(let z=13.8;z<=49.7;z+=dz){
+   const ix=Math.round((x+43.2)/dx),iz=Math.round((z-13.8)/dz);
+   const opened=(ix*7+iz*3)%17===0;
+   const luminaire=(ix%3===1&&iz%3===1);
+   // Some absent panels reveal a darker service cavity and conduit behind.
+   staticMesh.box(x,8.02,z,dx-.10,.065,dz-.11,opened?'graphite':(ix+iz)%7?'concrete':'dark',opened?MAT.METAL:MAT.CONCRETE);
+   staticMesh.box(x+dx*.49,7.98,z,.06,.13,dz,'steel',MAT.METAL);
+   staticMesh.box(x,7.98,z+dz*.49,dx,.13,.06,'steel',MAT.METAL);
+   if(opened){
+    staticMesh.box(x,7.86,z,.65,.06,dz*.72,'black',MAT.METAL);
+    staticMesh.line([x-.6,7.82,z],[x+.6,7.82,z],.085,'rust',MAT.METAL);
+   }
+   if(luminaire){
+    staticMesh.box(x,7.90,z,Math.min(1.70,dx*.72),.055,.33,'black',MAT.METAL);
+    staticMesh.box(x,7.86,z,Math.min(1.53,dx*.64),.029,.17,'blue',MAT.CYAN);
+   }
+  }
+ }
+ // Workshop: heavier steel ceiling, bolted struts, cable trays and recessed lights.
+ for(let z=18;z<=39;z+=3.5){
+  staticMesh.box(30,6.88,z,22.3,.16,.16,'graphite',MAT.METAL);
+  for(let x=20;x<=40;x+=4.2){
+   staticMesh.box(x,6.84,z,.18,.09,3.1,'steel',MAT.METAL);
+   if(Math.round(z/3.5)%2){
+    staticMesh.box(x,6.74,z,.97,.09,.66,'black',MAT.METAL);
+    for(let j=0;j<4;j++)staticMesh.box(x-.37+j*.25,6.685,z,.10,.027,.49,'blue',MAT.CYAN);
+   }
+  }
+ }
+ for(let x=20;x<=40;x+=6.5){
+  staticMesh.box(x,7.04,28.5,.29,.15,20,'graphite',MAT.METAL);
+  staticMesh.box(x-.18,7.01,28.5,.07,.04,20,'rust',MAT.METAL);
+ }
+ // Streets: physically recessed covers, fasteners and tactile curb separation.
+ for(let z=-79;z<57;z+=11){
+  for(const side of [-1,1]){
+   const x=side*10.82;
+   staticMesh.box(x,-.047,z,.92,.018,1.06,'black',MAT.METAL);
+   staticMesh.box(x,-.035,z,.84,.015,.98,'steel',MAT.METAL);
+   for(let i=0;i<6;i++)staticMesh.box(x,-.025,z-.36+i*.145,.65,.015,.042,'graphite',MAT.METAL);
+   staticMesh.box(side*12.7,.31,z+4.1,.15,.45,.8,'graphite',MAT.METAL);
+   staticMesh.box(side*12.76,.31,z+4.1,.055,.22,.54,'steel',MAT.METAL);
+  }
+ }
+ // Facades: service ducts and constrained relief, without obstructing doors.
+ for(const [x,z0,z1,h] of [[-12.82,-68,-11,8],[17.75,-70,-23,7],[18.0,-5,13,7]]){
+  for(const y of [3.0,5.8]){
+   staticMesh.box(x,y,(z0+z1)/2,.17,.16,Math.abs(z1-z0),'graphite',MAT.METAL);
+   staticMesh.box(x+(x<0?.09:-.09),y-.10,(z0+z1)/2,.07,.05,Math.abs(z1-z0),'steel',MAT.METAL);
+  }
+  for(let z=z0+3;z<z1;z+=8){
+   staticMesh.box(x,3.05,z,.34,.4,.17,'rust',MAT.METAL);
+  }
+ }
 }
 
 function environmentalStorytelling(){
@@ -1274,7 +1341,7 @@ function buildScene(){
   staticMesh.box(16.4,.62,z,1.0,1.25,2,'concrete',0);
   addCollider(-15.5,.62,z,1.0,1.25,2,'barrière béton');addCollider(16.4,.62,z,1.0,1.25,2,'barrière béton');
  }
- foliage();junkAndDetails();environmentalStorytelling();detailPassV3();v4SectorArt();v5SceneArt();roboticDroneMesh();portalMeshBuild();
+ foliage();junkAndDetails();environmentalStorytelling();if(isChapter3)m01ArchitectureFinish();detailPassV3();v4SectorArt();v5SceneArt();roboticDroneMesh();portalMeshBuild();
  for(let i=0;i<7;i++)drones.push({x:choice([-20,20])+between(-8,8),y:between(6,12),z:between(-93,-13),phase:between(0,Math.PI*2),speed:between(.16,.36),r:between(2.5,8)});
  // objective boxes
  interactions.push({x:-8,y:0,z:10.5,r:4,title:'Alimentation de l’annexe',action:'power',message:'CIRCUIT RÉARMÉ — Les terminaux isolés peuvent à nouveau être consultés.'});
@@ -1646,8 +1713,9 @@ function physics(dt){
  // keep stairs smooth even while stepping down
  if(grounded&&position.y>targetGround+.3){grounded=false}
 }
-function activeInteraction(){if(combatWorld?.canonical)return combatWorld.interaction;let best=null,min=Infinity;for(const p of interactions){let dist=Math.hypot(position.x-p.x,position.z-p.z,(position.y-eyeHeight-p.y)*1.25);if(dist<p.r&&dist<min){best=p;min=dist}}return best;}
+function activeInteraction(){if(combatWorld?.canonical)return combatWorld.interaction;let best=null,min=Infinity;for(const p of interactions){if(isChapter3&&p.done)continue;let dist=Math.hypot(position.x-p.x,position.z-p.z,(position.y-eyeHeight-p.y)*1.25);if(dist<p.r&&dist<min){best=p;min=dist}}return best;}
 function interact(){const p=activeInteraction();if(!p||isFree||gamePaused)return;
+ if(isChapter3){const result=mission3?.interact(p);if(result?.message)notify(result.message,7200);refreshObjective();return;}
  if(combatWorld?.canonical){combatWorld.interact();refreshObjective();return;}
  if(combatWorld&&!combatWorld.interact(p.action))return;
  if(p.action==='lift'){position.x=-11;position.z=-22;position.y=6.8;velocityY=0;grounded=true;notify(p.message);return;}
@@ -1660,7 +1728,7 @@ function interact(){const p=activeInteraction();if(!p||isFree||gamePaused)return
 
 function notify(message,ms=4000){$('toastText').textContent=message;$('toast').classList.add('show');noticeTime=performance.now()+ms;}
 const objectives=['Réarmer le circuit de l’annexe de secours','Lire les archives médicales hors réseau','Relever la liaison câblée de l’atelier, puis neutraliser la balise ORDRE','Atteindre le relais A3 sur la terrasse','Exploration libre — archives sécurisées'];
-function refreshObjective(){$('objective').textContent=combatWorld?.objective||objectives[missionIndex];$('objCount').textContent=`0${Math.min(4,missionIndex)}/04`;const brief=$('objectivePanel');brief.classList.add('open');clearTimeout(window.__pwVesperBrief);window.__pwVesperBrief=setTimeout(()=>brief.classList.remove('open'),3800);}
+function refreshObjective(){$('objective').textContent=isChapter3?mission3?.objective()||'Préparation du manifeste HELIX':combatWorld?.objective||objectives[missionIndex];$('objCount').textContent=isChapter3?`${String(mission3?.progress()||0).padStart(2,'0')}/04`:`0${Math.min(4,missionIndex)}/04`;const brief=$('objectivePanel');brief.classList.add('open');clearTimeout(window.__pwVesperBrief);window.__pwVesperBrief=setTimeout(()=>brief.classList.remove('open'),3800);}
 let touch={moveX:0,moveY:0,sprint:false}, touchLook=null;
 const GAME_WEAPONS=[
  {name:'R9',mag:32,damage:18,cooldown:120,reload:1150,color:'#a2d7eb'},
@@ -1796,7 +1864,7 @@ const visitStops=[
  {name:'Viaduc militaire',x:0,z:-44,y:1.73,yaw:0,pitch:.09,desc:'Patrouilles, drones et passerelle de surveillance d’ORDRE.'},
  {name:'Fracture PINK',x:0,z:-87,y:1.73,yaw:0,pitch:.13,desc:'Portail d’ancrage magenta, pylônes et périmètre dangereux.'}
 ];
-function goToStop(idx){if(combatWorld?.canonical)return;const s=visitStops[idx];if(!s)return;position={x:s.x,y:s.y,z:s.z};yaw=s.yaw;pitch=s.pitch;velocityY=0;grounded=true;jumpCount=0;jumpLatch=false;isFree=false;
+function goToStop(idx){if(isChapter3||combatWorld?.canonical)return;const s=visitStops[idx];if(!s)return;position={x:s.x,y:s.y,z:s.z};yaw=s.yaw;pitch=s.pitch;velocityY=0;grounded=true;jumpCount=0;jumpLatch=false;isFree=false;
  $('cameraMode').textContent='EXPLORATION';$('visitSelect').value=String(idx);notify('POINT DE VISITE : '+s.name.toUpperCase()+' — '+s.desc,5600);}
 function setGuides(){const select=$('visitSelect');for(let i=0;i<visitStops.length;i++){const option=document.createElement('option');option.value=String(i);option.textContent=visitStops[i].name;select.appendChild(option)}
  $('visitGo').onclick=()=>goToStop(+select.value);$('visitNext').onclick=()=>{let n=(+select.value+1)%visitStops.length;goToStop(n)};
@@ -1904,9 +1972,15 @@ async function boot(){try{
  showVesperPrologue=(await import('./story-prologue.js?v=3.70.0')).showStoryPrologue;
  $('bootInfo').textContent='Construction de la mégalopole, bâtiments, détails et navigation…';
  await new Promise(r=>setTimeout(r,80));
- if(referenceVisit)buildScene();const atlas=createAtlas();const materialAtlas=referenceVisit?await v5LoadMaterial():null;
+ if(referenceVisit)buildScene();
+ if(isChapter3){
+  const {createMission3Visit}=await import('./mission3-visit.js?v=1');
+  mission3=createMission3Visit({mesh:staticMesh,interactions,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju',onFinish(){gamePaused=true;document.exitPointerLock?.();}});
+  mission3.decorate();mission3.configure();
+ }
+ const atlas=createAtlas();const materialAtlas=referenceVisit?await v5LoadMaterial():null;
  $('bootInfo').textContent='Initialisation du moteur WebGPU…';
- if(!new URLSearchParams(location.search).has('visit')){
+ if(!referenceVisit){
   const {createPauseMenu}=await import('./fracture-menu.js?v=3.70.0');
   missionMenu=createPauseMenu({title:'HISTOIRE / LE DERNIER SIGNAL',canOpen:()=>started,settingsSelectors:['#controlsPanel','#audioToggle'],view:{getView:()=>combatWorld?.view||'fps',onSelect:next=>{isFree=false;combatWorld?.setView(next);},canChange:()=>!!combatWorld?.viewReady},onPause(){gamePaused=true;combatWorld?.pause();keys.clear();firing=false;isAiming=false;},onResume:resumeMission,onVR:()=>combatWorld?.enterVR(),onHome:async()=>{await combatWorld?.exitVR();location.assign('./index.html');}});missionMenu.setVisible(false);
   const {createVesperCombat}=await import('./vesper-combat.js?v=3.70.0');missionLoading?.set(.16,'Ressources du secteur chargées');

@@ -8,18 +8,22 @@ const canvas = $('native-model'), viewer = $('viewer'), status = $('viewer-messa
 const arButton = $('ar-launch'), modelViewer = $('model');
 const renderer = new WebGPURenderer({canvas, antialias: !/iPhone|Android/i.test(navigator.userAgent), alpha: false, forceWebGL:true});
 const rendererReady=renderer.init();
-const galleryBuildVersion='2026-10-28-gallery-base-v12';
+const galleryBuildVersion='2026-10-29-gallery-audit-v13';
 renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.22;
 const scene=new T.Scene();scene.background=new T.Color(0x101724);
 const camera=new T.PerspectiveCamera(42,1,.025,100);
-scene.add(new T.HemisphereLight(0xe9edff,0x18202c,2.7));
-const key=new T.DirectionalLight(0xffdeef,3.2);key.position.set(-3,5,4);scene.add(key);
-const fill=new T.DirectionalLight(0x7bb9ff,2);fill.position.set(4,2,-3);scene.add(fill);
-const rim=new T.DirectionalLight(0xff70bd,1.1);rim.position.set(2,4,5);scene.add(rim);
+scene.add(new T.HemisphereLight(0xe9edff,0x18202c,1.65));
+const key=new T.DirectionalLight(0xffdeef,2.65);key.position.set(-3,5,4);scene.add(key);
+const fill=new T.DirectionalLight(0x7bb9ff,1.15);fill.position.set(4,2,-3);scene.add(fill);
+const rim=new T.DirectionalLight(0xff70bd,1.7);rim.position.set(2,4,5);scene.add(rim);
 const base=new T.Mesh(new T.CylinderGeometry(.78,.87,.085,48),new T.MeshStandardMaterial({color:0x253040,metalness:.55,roughness:.5}));
 base.position.y=-1.13;scene.add(base);
+const baseRim=new T.Mesh(new T.TorusGeometry(.807,.009,7,48),new T.MeshBasicMaterial({color:0xf48ac7}));
+baseRim.rotation.x=-Math.PI/2;baseRim.position.y=-1.083;scene.add(baseRim);
+const contactShadow=new T.Mesh(new T.CircleGeometry(.68,32),new T.MeshBasicMaterial({color:0x020710,opacity:.42,transparent:true,depthWrite:false}));
+contactShadow.rotation.x=-Math.PI/2;contactShadow.position.y=-1.084;scene.add(contactShadow);
 const grid=new T.GridHelper(3,12,0x6d8ab0,0x314057);grid.position.y=-1.085;grid.material.opacity=.20;grid.material.transparent=true;scene.add(grid);
 const pivot=new T.Group();scene.add(pivot);
 const palette=(profile)=>({
@@ -35,6 +39,9 @@ const palette=(profile)=>({
 });
 let arPoseLocked=false;
 let item=null, requestId=0, running=false, autoRotate=true, bearing=.48, elevation=.18, zoom=4.1, previousTime=0, exportUrls=[], arReady=false;
+let lastCanvasWidth=0,lastCanvasHeight=0,lastPixelRatio=0,renderPending=false,groundTick=0,frameFailure=false;
+const tabletOrMobile=/iPhone|iPad|Android|Mobile/i.test(navigator.userAgent);
+const previewRatioCap=tabletOrMobile?1.22:1.5;
 const weaponNames={'VX-9':0,'NEXUS V9':1,'ARES X9':2,'THORN':3,'NOVA':4,'AURORA':5,'M–12':6,'VX-9 DUO':7,'VORTEX AR-7':8};
 const enemyForms={'REMPART':'bulwark','SYNTH N-08':'synth','POURSUIVANT':'stalker','BRUTE':'brute','TRAQUEUR':'listener','RAMPANT':'scuttler','SONDE S-03':'probe'};
 const surfaceMat=color=>new T.MeshStandardMaterial({color,metalness:.52,roughness:.47});
@@ -99,10 +106,10 @@ async function actualObject(name){
  throw Error('Aucun modèle 3D actif n’est associé à '+name);
 }
 function repairMissingMaterials(root){
- let repaired=0;
+ let repaired=0;let fallback=null;
  root.traverse(object=>{
   if(!object.isMesh&&!object.isSkinnedMesh&&!object.isLine&&!object.isPoints)return;
-  const fallback=new T.MeshStandardMaterial({color:0x8994a5,metalness:.38,roughness:.6});
+  if(!fallback)fallback=new T.MeshStandardMaterial({color:0x8994a5,metalness:.38,roughness:.6});
   if(Array.isArray(object.material)){
    object.material=object.material.map(m=>{if(m?.isMaterial)return m;repaired++;return fallback;});
    if(!object.material.length){object.material=fallback;repaired++;}
@@ -135,8 +142,11 @@ function draw(now){
  const rect=canvas.getBoundingClientRect();
  if(rect.width>0&&rect.height>0){
   const width=Math.max(1,Math.floor(rect.width)),height=Math.max(1,Math.floor(rect.height));
-  const dpr=Math.min(devicePixelRatio||1,/iPhone|Android/i.test(navigator.userAgent)?1.3:1.7);
-  renderer.setPixelRatio(dpr);renderer.setSize(width,height,false);
+  const dpr=Math.min(devicePixelRatio||1,previewRatioCap);
+  if(width!==lastCanvasWidth||height!==lastCanvasHeight||dpr!==lastPixelRatio){
+   renderer.setPixelRatio(dpr);renderer.setSize(width,height,false);
+   lastCanvasWidth=width;lastCanvasHeight=height;lastPixelRatio=dpr;
+  }
   camera.aspect=width/height;camera.updateProjectionMatrix();
   if(autoRotate)bearing+=dt*.40;
   camera.position.set(zoom*Math.sin(bearing)*Math.cos(elevation),zoom*Math.sin(elevation)+.15,zoom*Math.cos(bearing)*Math.cos(elevation));
@@ -146,9 +156,9 @@ function draw(now){
    // Prefer anatomical foot bones for soldiers; other models use their visible geometry bounds.
    pivot.updateMatrixWorld(true);
    let contactY;
-   if(item.soldier?.feet?.length){
+   if((++groundTick)%6===0&&item.soldier?.feet?.length){
     contactY=Math.min(...item.soldier.feet.map(foot=>foot.getWorldPosition(new T.Vector3()).y));
-   }else{
+   }else if(groundTick%6===0){
     const visibleBounds=new T.Box3(),partBounds=new T.Box3();
     item.root.traverse(part=>{
      if(!part.isMesh&&!part.isSkinnedMesh||!part.geometry)return;
@@ -160,12 +170,21 @@ function draw(now){
    }
    const pedestalTop=base.position.y+.085/2;
    if(Number.isFinite(contactY))pivot.position.y+=T.MathUtils.clamp(pedestalTop-contactY,-.12,.12);
-   renderer.renderAsync(scene,camera).catch(e=>{setStatus('Erreur rendu '+galleryBuildVersion+' : '+(e.message||e)+' · '+String(e.stack||'').slice(0,350));running=false;});}catch(e){setStatus('Erreur du rendu natif : '+(e.message||e));running=false;return;}
+   if(!renderPending&&!frameFailure){
+    renderPending=true;
+    renderer.renderAsync(scene,camera).catch(e=>{
+     frameFailure=true;
+     setStatus('Erreur rendu '+galleryBuildVersion+' : '+(e.message||e)+' · '+String(e.stack||'').slice(0,350));
+    }).finally(()=>{renderPending=false;});
+   }
+  }catch(e){frameFailure=true;setStatus('Erreur du rendu natif : '+(e.message||e));running=false;return;}
  }
+ if(frameFailure){running=false;return;}
  requestAnimationFrame(draw);
 }
 function startDraw(){if(!running){running=true;previousTime=performance.now();requestAnimationFrame(draw);}}
-window.galleryClose=()=>{requestId++;arReady=false;arButton.textContent='AR · VOIR CHEZ MOI';item?.dispose?.();item=null;pivot.clear();modelViewer.removeAttribute('src');modelViewer.removeAttribute('ios-src');modelViewer.hidden=true;canvas.hidden=false;clearExports();arButton.disabled=true;};
+window.galleryClose=()=>{requestId++;arReady=false;groundTick=5;frameFailure=false;arButton.textContent='AR · VOIR CHEZ MOI';item?.dispose?.();item=null;pivot.clear();modelViewer.removeAttribute('src');modelViewer.removeAttribute('ios-src');modelViewer.hidden=true;canvas.hidden=false;clearExports();arButton.disabled=true;};
+window.galleryResetView=()=>{bearing=.45;elevation=.16;zoom=4.1;autoRotate=false;$('rotation').textContent='⟳ ROTATION AUTO : OFF';};
 window.galleryToggleRotation=()=>{autoRotate=!autoRotate;$('rotation').textContent=autoRotate?'⟳ ROTATION AUTO : ON':'⟳ ROTATION AUTO : OFF';};
 window.galleryBuild=async name=>{
  window.galleryClose();const token=++requestId;
@@ -178,7 +197,7 @@ window.galleryBuild=async name=>{
   const repaired=repairMissingMaterials(entry.root);
   const count=fitObject(entry.root);
   item={...entry,name};
-  bearing=.45;elevation=.16;zoom=4.1;
+  bearing=.45;elevation=.16;zoom=4.1;groundTick=5;
   setStatus(entry.source+' · '+count+' maillages'+(repaired?' · '+repaired+' matériaux réparés':'')+' · glisser pour tourner, pincer pour zoomer.');
   arButton.disabled=false;startDraw();
  }catch(e){if(token!==requestId)return;setStatus('Échec '+galleryBuildVersion+' · '+name+' : '+(e.message||e)+' · '+String(e.stack||'').slice(0,520));arButton.disabled=true;console.error('Galerie Pink Wars',name,e);}

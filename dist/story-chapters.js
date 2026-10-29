@@ -69,7 +69,7 @@ export function showChapter2Finale({characterId='ghju',onReplay}={}){
  const actions=document.createElement('div');actions.className='pw-story-choice';
  const escort=document.createElement('button');escort.textContent='ESCORTER LES CIVILS';
  const proof=document.createElement('button');proof.className='amber';proof.textContent='RÉCUPÉRER LES PREUVES HELIX';
- const continueButton=document.createElement('button');continueButton.textContent='RETOUR À LA CAMPAGNE →';
+ const continueButton=document.createElement('button');continueButton.textContent='CONTINUER → MISSION 03 · LE CONVOI DES ABSENTS';
  continueButton.hidden=true;
  const replay=document.createElement('button');replay.className='secondary';replay.textContent='REJOUER LE NIVEAU 2';
  const decide=choice=>{
@@ -80,7 +80,7 @@ export function showChapter2Finale({characterId='ghju',onReplay}={}){
  };
  escort.addEventListener('click',()=>decide('escort'));
  proof.addEventListener('click',()=>decide('proof'));
- continueButton.addEventListener('click',()=>location.assign('./index.html'));
+ continueButton.addEventListener('click',()=>location.assign('./niveau3.html?chapter=3&character='+encodeURIComponent(characterId)+'&source=campaign'));
  replay.addEventListener('click',()=>{modal.remove();onReplay?.();});
  actions.append(escort,proof,continueButton,replay);
  shell.append(meta,header,image,intro,feedback,actions);modal.append(shell);document.body.appendChild(modal);

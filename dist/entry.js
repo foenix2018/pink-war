@@ -16,12 +16,12 @@ let character='ghju',mode='campaign',view=readPreferredView(),trainingWeapon=0,l
 const settings={sound:true,music:true,sensitivity:1,quality:'auto'};
 try{character=localStorage.getItem('pink-war-character')==='lylu'?'lylu':'ghju';Object.assign(settings,JSON.parse(localStorage.getItem('rosee-settings')||'{}'));const stored=Number(localStorage.getItem('pink-war-training-weapon'));if(Number.isInteger(stored)&&stored>=0&&stored<7&&stored!==5)trainingWeapon=stored;}catch{}
 const requestedMode=new URLSearchParams(location.search).get('mode');
-if(['arena','training','campaign','campaign2','ligne9'].includes(requestedMode))mode=requestedMode;
+if(['arena','training','campaign','campaign2','campaign3','ligne9'].includes(requestedMode))mode=requestedMode;
 const profile=graphicsProfile(navigator,settings.quality);
 document.documentElement.classList.toggle('iphone-launch',profile.ios);
 function save(){try{localStorage.setItem('pink-war-character',character);localStorage.setItem('rosee-settings',JSON.stringify(settings));}catch{}}
 function refresh(){
-  setScreenMusic(loading?'loading':'menu',mode==='campaign2'?2:1,settings.music!==false);
+  setScreenMusic(loading?'loading':'menu',mode==='campaign2'?2:mode==='campaign3'?3:1,settings.music!==false);
   document.documentElement.dataset.universe=character==='lylu'?'blue':'pink';
   syncMenuArtwork(character,mode);
   $('character-choice-status').textContent=character==='lylu'?'LYLU · UNIVERS BLEU':'GHJU · UNIVERS ROSE';
@@ -29,12 +29,13 @@ function refresh(){
   $('character-description').textContent=character==='lylu'?'LYLU cherche sa sœur GHJU dans les ruines de Vesper.':'GHJU cherche son frère LYLU dans les ruines de Vesper.';
   for(const b of document.querySelectorAll('[data-character]')){const yes=b.dataset.character===character;b.classList.toggle('selected',yes);b.setAttribute('aria-pressed',String(yes));}
   for(const b of document.querySelectorAll('[data-mode]'))b.setAttribute('aria-pressed',String(b.dataset.mode===mode));
-  $('mission-title').textContent=mode==='ligne9'?'05 — La Ligne Noyée':mode==='campaign2'?'02 — Sous les Néons':mode==='campaign'?'01 — Le dernier signal':mode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
-  $('mission-description').textContent=mode==='ligne9'?'Ligne 9 inondée sous les Halles-Basses : rétablir le courant, relancer les pompes P9, ouvrir l’écluse. Mission longue avec points de contrôle.':mode==='campaign2'?'Bas-Niveaux de Vesper : enclave, marché cyberpunk, HELIX et tour de transit. Sauver les civils ou récupérer les preuves.':mode==='campaign'?'Laboratoire abandonné, rue sous surveillance et relais en hauteur. Une trace de votre famille.':mode==='arena'?'Vingt vagues de machines et six armes à récupérer.':'Cibles fixes de 15 à 60 mètres, cibles mobiles latérales et avant-arrière. Vitesse croissante, score et précision.';
-  $('play-label').textContent=loading?'CHARGEMENT…':mode==='ligne9'?'JOUER LE CHAPITRE 05':mode==='campaign2'?'JOUER LE NIVEAU 2':mode==='campaign'?'JOUER LE NIVEAU 1':mode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
+  document.querySelector('.mission-kicker').textContent=mode==='campaign3'?'CAMPAGNE · TROISIÈME MISSION':mode==='campaign2'?'CAMPAGNE · DEUXIÈME MISSION':mode==='campaign'?'CAMPAGNE · PREMIÈRE MISSION':'PINK WARS · JOUER';
+  $('mission-title').textContent=mode==='ligne9'?'05 — La Ligne Noyée':mode==='campaign3'?'03 — Le Convoi des Absents':mode==='campaign2'?'02 — Sous les Néons':mode==='campaign'?'01 — Le dernier signal':mode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
+  $('mission-description').textContent=mode==='ligne9'?'Ligne 9 inondée sous les Halles-Basses : rétablir le courant, relancer les pompes P9, ouvrir l’écluse. Mission longue avec points de contrôle.':mode==='campaign3'?'Après l’évacuation, retrouver le manifeste HELIX dans le secteur des secours, accéder au relais A3 et neutraliser le signal ORDRE. Décor détaillé réemployé en nouveau chapitre.':mode==='campaign2'?'Bas-Niveaux de Vesper : enclave, marché cyberpunk, HELIX et tour de transit. Sauver les civils ou récupérer les preuves.':mode==='campaign'?'Laboratoire abandonné, rue sous surveillance et relais en hauteur. Une trace de votre famille.':mode==='arena'?'Vingt vagues de machines et six armes à récupérer.':'Cibles fixes de 15 à 60 mètres, cibles mobiles latérales et avant-arrière. Vitesse croissante, score et précision.';
+  $('play-label').textContent=loading?'CHARGEMENT…':mode==='ligne9'?'JOUER LE CHAPITRE 05':mode==='campaign3'?'JOUER LE NIVEAU 3':mode==='campaign2'?'JOUER LE NIVEAU 2':mode==='campaign'?'JOUER LE NIVEAU 1':mode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
   $('play-button').disabled=loading;
   $('sound-setting').checked=!!settings.sound;$('music-setting').checked=settings.music!==false;
-  $('sensitivity').value=settings.sensitivity;$('quality').value=['auto','low','high'].includes(settings.quality)?settings.quality:'auto';
+  $('sensitivity').value=settings.sensitivity;$('quality').value=['auto','low','balanced','high'].includes(settings.quality)?settings.quality:'auto';
   $('launch-status').textContent=loading?'Chargement du secteur…':`V. ${GAME_VERSION} · prêt à lancer`;
   $('resume-mission').hidden=mode!=='campaign'||!readM01Checkpoint(character)||loading;
 }
@@ -45,19 +46,19 @@ $('play-button').after(resumeButton);
 function openLigne9(){
   save();const url=new URL('./ligne9.html',location.href);url.searchParams.set('character',character);url.searchParams.set('v',GAME_VERSION);
   if(new URLSearchParams(location.search).get('renderer')==='webgl')url.searchParams.set('renderer','webgl');
-  if(settings.quality==='low')url.searchParams.set('quality','low');
+  if(settings.quality!=='auto')url.searchParams.set('quality',settings.quality);
   location.assign(url.href);
 }
 function openMission(mission,{resume=false,vr=false}={}){
   loading=true;refresh();save();for(const d of document.querySelectorAll('dialog[open]'))d.close();
   const cover=createMissionLoading({mission,characterId:character});cover.set(.04,'Ouverture du secteur');
-  const target=mission===2?'./level2-test.html':'./vesper-level1-v7.html';
-  const url=new URL(target,location.href);url.searchParams.set('source','campaign');url.searchParams.set('autostart','1');url.searchParams.set('character',character);url.searchParams.set('v',GAME_VERSION);
+  const target=mission===2?'./level2-test.html':mission===3?'./niveau3.html':'./vesper-level1-v7.html';
+  const url=new URL(target,location.href);url.searchParams.set('source','campaign');url.searchParams.set('autostart','1');if(mission===3)url.searchParams.set('chapter','3');url.searchParams.set('character',character);url.searchParams.set('v',GAME_VERSION);
   if(mission===1)url.searchParams.set('prologue','done');
   if(resume)url.searchParams.set('resume','1');
   if(vr)url.searchParams.set('vr','1');
   if(new URLSearchParams(location.search).get('renderer')==='webgl')url.searchParams.set('renderer','webgl');
-  if(settings.quality==='low')url.searchParams.set('quality',mission===2?'low':'performance');
+  if(settings.quality!=='auto'){const q=mission===3?({low:'performance',balanced:'equilibre',high:'ultra'}[settings.quality]||'equilibre'):settings.quality;url.searchParams.set('quality',q);}
   location.assign(url.href);
 }
 resumeButton.onclick=()=>{if(!loading)openMission(1,{resume:true});};
@@ -91,6 +92,9 @@ async function begin(intent='play',afterPrologue=false){
   if(mode==='campaign' && intent==='play' && !new URLSearchParams(location.search).has('classic')){
     openMission(1);
     return;
+  }
+  if(mode==='campaign3'){
+    openMission(3,{vr:false});return;
   }
   if(mode==='campaign2'){
     openMission(2,{vr:intent==='vr'});return;
@@ -137,8 +141,8 @@ function pollLobbyController(){
   if(key!==lobbyPadKey){lobbyPadKey=key;lobbyPrevious=pad?.buttons.map(b=>padPressed(pad,pad.buttons.indexOf(b)))||[];}
   const current=pad?.buttons.map((_,i)=>padPressed(pad,i))||[];
   const edge=i=>!!current[i]&&!lobbyPrevious[i];
-  const selectedMode=()=>['campaign','campaign2','training','arena'].indexOf(mode);
-  const choices=['campaign','campaign2','training','arena'];
+  const selectedMode=()=>['campaign','campaign2','campaign3','training','arena'].indexOf(mode);
+  const choices=['campaign','campaign2','campaign3','training','arena'];
   if(edge(14)||edge(15)){
     const dir=edge(14)?-1:1;
     mode=choices[(selectedMode()+dir+choices.length)%choices.length];

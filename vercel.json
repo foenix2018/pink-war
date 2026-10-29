@@ -4,6 +4,7 @@
   "buildCommand": "",
   "installCommand": "",
   "outputDirectory": "dist",
+  "rewrites": [{"source": "/niveau3.html", "destination": "/vesper-level1-v7.html"}],
   "headers": [
     {
       "source": "/",
