@@ -40,6 +40,9 @@
   const targets='h1,h2,h3,header,.logo,.introMeta,.kicker,.eyebrow,.smallcap,.pw-load-brand,.pp-meta,.pp-brand,.loading-copy,.loading-brand,.helpCard>div,.mission-kicker,.pw-story-meta,.pw-story-shell,.pw-story-card';
   if(node.matches(targets))mark(node);
   node.querySelectorAll?.(targets).forEach(mark);
+  // Normalize and style every other visible occurrence, including modal and future overlays.
+  // Text nodes in canvas, scripts, code and existing wordmarks remain untouched.
+  mark(node);
  }
  function boot(){
   apply(document.body);
