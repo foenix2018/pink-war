@@ -21,7 +21,7 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
   const h = { setDoor: noop, setObstacles: noop, say: noop, cue: noop, notice: noop, stage: noop, core: noop, finale: noop, ...hooks };
   const base = obstacles || game.obstacles.filter(o => !o.extension);
   const opened = new Set(), done = new Set(), said = new Set(), reads = new Set(), groups = new Map(), pending = [];
-  let stage = null, hold = null, serial = 0, lastJournal = null, afterJournal = null;
+  let stage = null, hold = null, serial = 0, lastJournal = null, afterJournal = null, prologueDone = false;
 
   // ---------- World ----------
   function rebuild() {
@@ -124,7 +124,7 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
     else return false;
     done.add(id); return true;
   }
-  function finishPrologue() { setStage(null); supplies('tour'); h.core(); }
+  function finishPrologue() { prologueDone = true; setStage(null); supplies('tour'); h.core(); }
 
   // ---------- Per-step progression (call after game.step) ----------
   function update() {
@@ -151,9 +151,13 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
   }
 
   // ---------- Checkpoints ----------
+  // Key of the place a checkpoint would restore now: the extension stage, or the street once the prologue is done.
+  const checkpointKey = () => stage || (prologueDone ? X.STREET.id : null);
   function writeCheckpoint(storage) {
-    if (!stage || !X.STAGE[stage] || stage === 'x-fin' || hold || game.enemies.length || !game.player.grounded) return false;
-    const s = { version: 1, characterId, stage, opened: [...opened], done: [...done], reads: [...reads], kills: game.kills,
+    const id = checkpointKey();
+    if (!id || !X.STAGE[id] || id === 'x-fin' || id === 'x-done' || hold || game.enemies.length || !game.player.grounded) return false;
+    // Groups of the stage not deployed yet come back on restore; a deployed group is cleared (no enemy left).
+    const s = { version: 1, characterId, stage: id, restore: (RESTORE[id] || []).filter(name => !groups.has(name)), opened: [...opened], done: [...done], reads: [...reads], kills: game.kills,
       weaponIndex: game.weaponIndex, owned: [...game.ownedWeapons], ammo: [...game.ammo], health: Math.max(1, game.player.hp), shield: game.player.shield, charges: game.charges, savedAt: Date.now() };
     try { (storage || globalThis.localStorage).setItem(CHECKPOINT_KEY + characterId, JSON.stringify(s)); return true; } catch { return false; }
   }
@@ -171,28 +175,31 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
     game.player.hp = Math.min(100, Math.max(1, Number(s.health) || 100));
     if (Number.isFinite(s.shield)) game.player.shield = Math.max(0, Math.min(game.shieldCapacity || 60, s.shield));
     if (Number.isFinite(s.charges)) game.charges = Math.max(0, Math.min(CHARGE_MAX, s.charges));
-    if (EPILOGUE_IDS.includes(s.stage)) opened.add('grille').add('tour');
+    const street = s.stage === X.STREET.id;
+    prologueDone = street || EPILOGUE_IDS.includes(s.stage);
+    if (prologueDone) opened.add('grille'); if (EPILOGUE_IDS.includes(s.stage)) opened.add('tour');
     rebuild(); for (const d of X.DOORS) h.setDoor(d.id, !!d.open || opened.has(d.id));
-    place(X.STAGE[s.stage].checkpoint); supplies(EPILOGUE_IDS.includes(s.stage) ? 'tour' : null);
-    setStage(s.stage); for (const name of RESTORE[s.stage] || []) deploy(name, { alert: false });
+    place(X.STAGE[s.stage].checkpoint); supplies(prologueDone ? 'tour' : null);
+    if (street) { setStage(null); h.core(); return true; }
+    setStage(s.stage); for (const name of Array.isArray(s.restore) ? s.restore : RESTORE[s.stage] || []) if (X.ENCOUNTERS[name]) deploy(name, { alert: false });
     return true;
   }
 
   const api = {
-    get stage() { return stage; }, get active() { return !!stage; }, get opened() { return [...opened]; }, get done() { return [...done]; }, get reads() { return [...reads]; },
+    get stage() { return stage; }, get active() { return !!stage; }, get prologueDone() { return prologueDone; }, get checkpointKey() { return checkpointKey(); }, get opened() { return [...opened]; }, get done() { return [...done]; }, get reads() { return [...reads]; },
     get pending() { return pending.map(p => p.name); },
     get hold() { return hold && { name: hold.name, remaining: Math.max(0, hold.until - game.time), total: X.HOLDS[hold.name] }; },
     groups() { return Object.fromEntries([...groups].map(([k, v]) => [k, { deployed: v.length, alive: alive(k) }])); },
     alive, available, nearInteraction, update, say,
     // New mission: the hero steps out of the Archives' service lift into the enclave.
     start() {
-      opened.clear(); done.clear(); said.clear(); reads.clear(); groups.clear(); pending.length = 0; hold = null; lastJournal = afterJournal = null;
+      opened.clear(); done.clear(); said.clear(); reads.clear(); groups.clear(); pending.length = 0; hold = null; lastJournal = afterJournal = null; prologueDone = false;
       opened.add('monte-charge'); rebuild(); for (const d of X.DOORS) h.setDoor(d.id, !!d.open || opened.has(d.id));
       place(X.LIFT_START); supplies(); setStage('x-arrivee'); say('intro');
     },
     // The street's last objective opens the transit tower instead of ending the chapter.
     beginEpilogue() {
-      opened.add('grille'); openDoor('tour'); supplies('tour'); setStage('x-tour'); deploy('tour', { alert: false }); say('tour'); game.grantCharges(1);
+      prologueDone = true; opened.add('grille'); openDoor('tour'); supplies('tour'); setStage('x-tour'); deploy('tour', { alert: false }); say('tour'); game.grantCharges(1);
     },
     // Interaction prompt and action for the extension; the page falls back to its own objectives otherwise.
     interaction() { const it = game.state === 'playing' ? nearInteraction() : null; return it && { id: it.id, label: it.label, x: it.x, z: it.z }; },

@@ -108,6 +108,12 @@ test('checkpoints: an extension stage resumes at its place, earlier progress kep
   const third=mission('lylu');assert.ok(third.ext.restoreCheckpoint({...save,stage:'x-coffre',opened:['monte-charge'],done:['badge']}));
   assert.ok(!third.g.obstacles.some(o=>o.door==='grille'||o.door==='tour'),'epilogue: gate and tower open');assert.ok(third.g.obstacles.some(o=>o.door==='coffre'));
   assert.equal(third.ext.groups().coffre,undefined);assert.ok(third.g.pickups.every(p=>!p.extension||p.z<0),'tower caches only');
+  // Once the gate is open the street itself is the checkpoint.
+  const fourth=mission('lylu');assert.ok(fourth.ext.restoreCheckpoint({...save,stage:'x-rue'}));assert.equal(fourth.ext.stage,null);assert.equal(fourth.log.core,1);
+  assert.ok(!fourth.g.obstacles.some(o=>o.door==='grille'));assert.ok(fourth.g.player.z<78&&fourth.g.player.z>74);
+  assert.ok(fourth.ext.writeCheckpoint(storage));assert.equal(readM02Checkpoint('lylu',storage).stage,'x-rue');
+  // A stage saved before its group was deployed brings the group back; a cleared one does not.
+  const fifth=mission('lylu');fifth.ext.start();fifth.ext.beginEpilogue();assert.equal(fifth.ext.groups().tour.deployed,4);
 });
 
 test('the story: both heroes, HELIX Security, records the army calls lost, the sibling on the convoy to the Anneau logistique',()=>{

@@ -5,7 +5,7 @@
 //  - south, epilogue: inside the transit tower (HELIX Security checkpoint, data vault, loading dock of the
 //    convoy to the Anneau logistique), ending on the chapter's existing choice (civilians or proofs).
 // The street spans x −32…33.5, z −75.5…73.5. Navigation rule: corridors 4 m wide centred on even
-// coordinates, doorways ≥ 3 m centred on even coordinates.
+// coordinates, doorways ≥ 3 m centred on even coordinates. Yaw as on the M02 page: 0 looks towards −z, π/2 towards −x.
 
 export const EXTENSION_ID = 'bas-niveaux-02-extension';
 export const LIFT_START = Object.freeze({ x: 43, z: 92, yaw: Math.PI / 2 });
@@ -147,10 +147,10 @@ export const ENCOUNTERS = Object.freeze({
 const stage = (id, label, hint, checkpoint) => Object.freeze({ id, label, hint, checkpoint: Object.freeze(checkpoint) });
 export const PROLOGUE = Object.freeze([
   stage('x-arrivee', 'REJOINDRE LE DISPENSAIRE', 'Le monte-charge s’ouvre sur le couloir de service de l’enclave.', { x: 43, z: 92, yaw: Math.PI / 2 }),
-  stage('x-dispensaire', 'LIRE LE REGISTRE DE SOINS', 'Bureau du dispensaire des Épars.', { x: 20, z: 92, yaw: Math.PI }),
-  stage('x-radio', 'RALLUMER LA RADIO DE L’ENCLAVE', 'Local radio : raccorder les batteries, puis allumer la radio.', { x: 34, z: 92, yaw: Math.PI }),
-  stage('x-eclaireurs', 'REPOUSSER LES ÉCLAIREURS HELIX', 'Ils sont descendus par la verrière du marché.', { x: 10, z: 92, yaw: -Math.PI / 2 }),
-  stage('x-grille', 'OUVRIR LA GRILLE DE L’ENCLAVE', 'Manivelle à droite de la grille. Vingt-cinq secondes de manœuvre.', { x: 2, z: 86, yaw: Math.PI })
+  stage('x-dispensaire', 'LIRE LE REGISTRE DE SOINS', 'Bureau du dispensaire des Épars.', { x: 20, z: 92, yaw: 0 }),
+  stage('x-radio', 'RALLUMER LA RADIO DE L’ENCLAVE', 'Local radio : raccorder les batteries, puis allumer la radio.', { x: 34, z: 92, yaw: 0 }),
+  stage('x-eclaireurs', 'REPOUSSER LES ÉCLAIREURS HELIX', 'Ils sont descendus par la verrière du marché.', { x: 10, z: 92, yaw: Math.PI / 2 }),
+  stage('x-grille', 'OUVRIR LA GRILLE DE L’ENCLAVE', 'Manivelle à droite de la grille. Vingt-cinq secondes de manœuvre.', { x: 2, z: 86, yaw: 0 })
 ]);
 export const EPILOGUE = Object.freeze([
   stage('x-tour', 'PRENDRE LE CONTRÔLE HELIX', 'Hall de la tour de transit : neutraliser le poste de contrôle.', { x: 0, z: -78, yaw: 0 }),
@@ -160,7 +160,9 @@ export const EPILOGUE = Object.freeze([
   stage('x-quai', 'BLOQUER LE CONVOI', 'Quai de chargement, poste de commande au fond à l’est. Tenir pendant le verrouillage.', { x: 10, z: -88, yaw: -Math.PI / 2 }),
   stage('x-fin', 'LE CONVOI DES ABSENTS', 'Choisir : les survivants ou les preuves.', { x: 40, z: -88, yaw: -Math.PI / 2 })
 ]);
-export const STAGE = Object.freeze(Object.fromEntries([...PROLOGUE, ...EPILOGUE].map(s => [s.id, s])));
+// Checkpoint of the street itself: the gate is open behind the player, the street's first objective ahead.
+export const STREET = stage('x-rue', 'LOCALISER LES CIVILS', 'La grille est ouverte : le poste de soins est au bout de la ruelle.', { x: 0, z: 76, yaw: 0 });
+export const STAGE = Object.freeze(Object.fromEntries([...PROLOGUE, STREET, ...EPILOGUE].map(s => [s.id, s])));
 export const HOLDS = Object.freeze({ grille: 25, quai: 50 });
 export const HOLD_WAVES = Object.freeze({ grille: [[2, 'grille1'], [12, 'grille2']], quai: [[3, 'quai1'], [20, 'quai2'], [34, 'quai3']] });
 
