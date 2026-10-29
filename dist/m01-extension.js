@@ -58,6 +58,10 @@ export function installM01Extension(game, hooks = {}) {
     groups.set(name, []);
   }
   const alive = name => (groups.get(name) || []).filter(id => game.enemies.some(e => e.id === id)).length;
+  function supplies(zone) {
+    for (let i = game.pickups.length - 1; i >= 0; i--) if (game.pickups[i].extension) game.pickups.splice(i, 1);
+    for (const s of X.SUPPLIES) if (!zone || X.ZONE[X.roomAt(s.x, s.z)] === zone) game.pickups.push({ id: game.nextId++, kind: s.kind, x: s.x, y: 0, z: s.z, until: Infinity, extension: true });
+  }
   function startHold(name) { hold = { name, start: game.time, until: game.time + X.HOLDS[name], waves: [...X.HOLD_WAVES[name]] }; h.cue('hold'); }
 
   // ---------- Stages ----------
@@ -181,7 +185,7 @@ export function installM01Extension(game, hooks = {}) {
   }
   let lastJournal = null, afterJournal = null;
   function beginEpilogue() {
-    prologueDone = true; done.add('relais-a3'); reads.add('relais-a3');
+    prologueDone = true; supplies('archives'); done.add('relais-a3'); reads.add('relais-a3');
     lastJournal = 'relais-a3'; afterJournal = 'relais';
     setStage('x-route'); deploy('route'); game.grantCharges(1);
   }
@@ -241,6 +245,7 @@ export function installM01Extension(game, hooks = {}) {
     const cp = X.STAGE[s.stage].checkpoint;
     Object.assign(game.player, { x: cp.x, z: cp.z, elevation: game.surfaceHeight(cp.x, cp.z, game.time), grounded: true, verticalSpeed: 0, onLift: null, yaw: cp.yaw });
     applyObstacles(); for (const d of X.DOORS) h.setDoor(d.id, !!d.open || opened.has(d.id));
+    supplies(EPILOGUE_IDS.includes(s.stage) ? 'archives' : null);
     setStage(s.stage);
     if (s.stage === 'x-bivouac') { deploy('galerie', { alert: false }); deploy('serre', { alert: false }); }
     if (s.stage === 'x-depart') deploy('sortie');
@@ -258,10 +263,10 @@ export function installM01Extension(game, hooks = {}) {
       opened.clear(); done.clear(); said.clear(); reads.clear(); groups.clear(); pending.length = 0; hold = null; prologueDone = false;
       Object.assign(game.player, { x: X.CASERNE_START.x, z: X.CASERNE_START.z, elevation: 0, grounded: true, verticalSpeed: 0, yaw: X.CASERNE_START.yaw });
       applyObstacles(); for (const d of X.DOORS) h.setDoor(d.id, !!d.open);
-      setStage('x-cour'); say('intro');
+      supplies(); setStage('x-cour'); say('intro');
     },
     // A saved core stage resumes the original chapter, with the prologue behind the player.
-    resumeCore() { prologueDone = true; opened.add('portail'); applyObstacles(); for (const d of X.DOORS) h.setDoor(d.id, !!d.open || opened.has(d.id)); },
+    resumeCore() { supplies('archives'); prologueDone = true; opened.add('portail'); applyObstacles(); for (const d of X.DOORS) h.setDoor(d.id, !!d.open || opened.has(d.id)); },
     restoreCheckpoint, writeCheckpoint,
     // Journal entry to show after an interaction (documents, relay log, registry copy), with its follow-up lines.
     takeJournal() { const id = lastJournal, then = afterJournal; lastJournal = afterJournal = null; return id ? { entry: logFor(id, game.characterId), id, then } : null; },

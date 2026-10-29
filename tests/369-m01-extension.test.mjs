@@ -63,6 +63,8 @@ test('interactions, documents and every machine of every encounter stand clear o
   for(const it of X.INTERACTIONS.filter(i=>!i.core)){assert.ok(X.roomAt(it.x,it.z),`${it.id} in a room`);assert.ok(!list.some(o=>inside(o,it.x,it.z,0,.6)),`${it.id} reachable`);}
   for(const [name,enc] of Object.entries(X.ENCOUNTERS))for(const u of enc.units)assert.ok(!list.some(o=>inside(o,u.x,u.z,0,u.form==='brute'||u.elite?1.05:.86)),`${name}/${u.form} at ${u.x},${u.z}`);
   for(const it of X.INTERACTIONS.filter(i=>i.log))assert.ok(LOGS[it.log],`document ${it.log}`);
+  for(const c of X.SUPPLIES){assert.ok(X.roomAt(c.x,c.z),`cache at ${c.x},${c.z} in a room`);assert.ok(!list.some(o=>inside(o,c.x,c.z,0,.5)),`cache at ${c.x},${c.z} reachable`);}
+  const {g:fresh,ext}=campaign();ext.start();assert.equal(fresh.pickups.filter(p=>p.extension).length,X.SUPPLIES.length,'AEGIS caches laid out');
 });
 
 test('the prologue plays: yard, dispatch log, lockers, generator hold, apparatus-bay door, then the original quarter',()=>{

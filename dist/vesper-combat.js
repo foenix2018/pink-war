@@ -291,7 +291,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     if(checkpointPending&&(extension.extension?extension.writeCheckpoint():writeM01Checkpoint(game)))checkpointPending=false;
     if(!journalOpen){const later=extension.takeJournal();if(later)openJournal(later.entry,later.then);}
     subtitles.update(dt,{xr:!!xr?.active,hidden:journalOpen});
-    extArt.setPower(extension.done.includes('groupe')||extension.prologueDone);
+    extArt.setPower(extension.done.includes('groupe')||extension.prologueDone);extArt.syncPickups(game.pickups,game.time,characterId==='lylu'?0x6fb8ff:0xff6fb4);
     extArt.setAvailable(EXTENSION_INTERACTIONS.filter(i=>!i.log&&!i.core&&extension.available(i.id)).map(i=>i.id));
     const hold=extension.hold;holdBar.hidden=!hold;
     if(hold){holdBar.querySelector('.pw-hold-label').textContent=(hold.name==='groupe'?'MONTÉE EN CHARGE DU GROUPE':'COPIE DU REGISTRE')+' · '+Math.ceil(hold.remaining)+' s';holdBar.querySelector('.pw-hold-fill').style.width=(100*(1-hold.remaining/hold.total)).toFixed(1)+'%';}
@@ -320,6 +320,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       }
       if(event.type==='win')finishMission();
       if(event.type==='unlock')notify('ÉQUIPEMENT RÉCUPÉRÉ · '+event.name,3000);
+      if(event.type==='pickup')notify(event.kind==='heal'?'TROUSSE AEGIS · SOINS':'CELLULE AEGIS · ARME RECHARGÉE · CHARGE +1',2200);
     }
     const target=objective(),bearing=Math.atan2(target.x-p.x,-(target.z-p.z))-s.yaw;
     const objectiveAngle=Math.atan2(Math.sin(bearing),Math.cos(bearing));
@@ -459,8 +460,9 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     // QA hooks (?debug=1): move the player, clear machines, advance the mission clock.
     debug:params.has('debug')?{game,teleport(x,z){Object.assign(game.player,{x,z,elevation:game.surfaceHeight(x,z,game.time),grounded:true,verticalSpeed:0});setPlayer?.(game.player);},
       clear(){game.enemies.length=0;game.toSpawn=0;},skip(seconds){game.time+=seconds;},god(){game.invulnerable=1e9;},
-      use(id){const it=EXTENSION_INTERACTIONS.find(i=>i.id===id);if(it){Object.assign(game.player,{x:it.x,z:it.z,elevation:0,grounded:true});setPlayer?.(game.player);}const done=onInteract();document.getElementById('m01-journal')?.close();return done;},
-      closeJournal(){document.getElementById('m01-journal')?.close();}}:null,
+      use(id){const it=EXTENSION_INTERACTIONS.find(i=>i.id===id);if(it){Object.assign(game.player,{x:it.x,z:it.z,elevation:0,grounded:true});setPlayer?.(game.player);}const done=onInteract();return done;},
+      // Synchronous close for scripted QA (the dialog's close event can lag behind a slow software renderer).
+      closeJournal(){const d=document.getElementById('m01-journal');if(d){d.close();d.remove();}if(journalOpen){journalOpen=false;game.state='playing';}}}:null,
     snapshot(){return {view:effectiveView(),playerVisible:rig?.model.root.visible||false,music:{playing:false,source:null},revision:'3.69.0',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
       capacity:game.weapon.capacity,ownedWeapons:[...game.ownedWeapons],offers:game.weaponOffers.map(o=>({...o})),campaign:game.campaign,journalOpen,
       enemies:game.enemies.length,hostileProjectiles:game.bullets.filter(b=>b.hostile).length,shots:game.bullets.filter(b=>!b.hostile).length,

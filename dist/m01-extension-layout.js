@@ -168,6 +168,10 @@ export const INTERACTIONS = Object.freeze([
   it('doc-herbier', -8, -91, 'OUVRIR L’HERBIER', { log: 'herbier' })
 ]);
 
+// AEGIS supply caches (medkit or energy cell + impulse charge), collected by walking over them.
+export const SUPPLIES = Object.freeze([['heal', -95, 80.2], ['cell', -86, 93.6], ['heal', -86.4, 62], ['cell', -82, 52],
+  ['heal', -20, -70.4], ['cell', -4, -90.6], ['cell', 24, -83], ['heal', 10, -78.6], ['heal', 16.4, -95]].map(([kind, x, z]) => Object.freeze({ kind, x, z })));
+
 // ---------- Encounters ----------
 const unit = (form, x, z, extra = {}) => Object.freeze({ form, x, z, ...extra });
 export const ENCOUNTERS = Object.freeze({

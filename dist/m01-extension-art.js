@@ -10,7 +10,7 @@ const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>
 const ROOM = Object.fromEntries(ROOMS.map(r => [r.id, r]));
 const roofed = r => r && r.ceiling > 0;
 // How much of the daylight reaches the eye inside each room (1 = outdoors).
-const DAYLIGHT = { yard: 1, forecourt: 1, greenhouse: .85, hall: .42, garage: .3, corridor: .12, technical: .1, office: .16, lockers: .1, gallery: .12, server: .08, archive: .1, lift: .1 };
+const DAYLIGHT = { yard: 1, forecourt: 1, greenhouse: .85, hall: .45, garage: .3, corridor: .14, technical: .12, office: .24, lockers: .12, gallery: .18, server: .12, archive: .2, lift: .12 };
 
 function canvasTexture(T, w, h, paint, { repeat = false, color = true } = {}) {
   const c = document.createElement('canvas'); c.width = w; c.height = h; paint(c.getContext('2d'), w, h);
@@ -42,7 +42,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
   const flat = (color, roughness = .6, metalness = .2, extra = {}) => new T.MeshStandardMaterial({ color, roughness, metalness, ...extra });
   const glow = color => new T.MeshBasicMaterial({ color, toneMapped: false });
   const M = {
-    brick: pbr({ diff: './assets/cc0/m01-brick-diff_512.jpg', nor: './assets/cc0/m01-brick-normal_512.jpg', rough: './assets/cc0/m01-brick-orm_512.jpg' }, { tile: 2, color: 0xc9a08c, label: 'brique' }),
+    brick: pbr({ diff: './assets/cc0/m01-brick-diff_512.jpg', nor: './assets/cc0/m01-brick-normal_512.jpg', rough: './assets/cc0/m01-brick-orm_512.jpg' }, { tile: 2, color: 0xffe2d2, label: 'brique' }),
     concrete: pbr(L9('concrete_wall_006'), { tile: 3, color: 0xaaa69f, label: 'béton' }),
     stone: pbr(L9('concrete_wall_006'), { tile: 2.4, color: 0xd4c8ad, label: 'pierre des Archives' }),
     plaster: pbr(L9('concrete_wall_006'), { tile: 4, color: 0xe6e0d2, label: 'enduit' }),
@@ -53,7 +53,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     asphalt: pbr(CC('asphalt_03'), { tile: 3, color: 0x8a8a86, label: 'enrobé' }),
     plate: pbr(L9('metal_plate'), { tile: 2, color: 0x9aa0a4, metalness: .55, roughness: .8, label: 'tôle' }),
     grid: pbr(L9('rusty_metal_grid'), { tile: 1.5, color: 0x9d8f80, metalness: .5, label: 'caillebotis' }),
-    shutter: pbr(L9('rusted_shutter'), { tile: 3, color: 0xc0b6a6, metalness: .4, label: 'tablier' }),
+    shutter: pbr(L9('rusted_shutter'), { tile: 3, color: 0xe8ddd0, metalness: .25, label: 'tablier' }),
     rust: pbr(L9('green_metal_rust'), { tile: 2.5, color: 0x9fb0a0, metalness: .45, label: 'acier vert' }),
     corrugated: pbr(CC('corrugated_iron'), { tile: 2, color: 0xa7aaa6, metalness: .5, label: 'bac acier' }),
     paintedMetal: pbr(CC('rusty_painted_metal'), { tile: 2, color: 0xc9c2b4, metalness: .4, label: 'métal peint' }),
@@ -168,8 +168,8 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     for (const [x, z] of [[-81.6, 45], [-81.6, 73], [-79.6, 92]]) fixture('emergency', x, 2.6, z, { zone: 'battery', color: 0x3dff8a, intensity: 2.5, range: 6 });
     // Archives: skylight shafts in the hall, a daylight slit in the gallery, the greenhouse is sunlit.
     for (const z of [-71, -77]) fixture('skylight', 6, 5.95, z, { zone: 'day', color: 0xfff1df, intensity: 34, range: 16 });
-    for (const x of [-26, -16, -6]) fixture('slit', x, 3.3, -78, { zone: 'day', color: 0xfff1df, intensity: 9, range: 9 });
-    for (const [x, z] of [[-22, -88], [-8, -88], [-23, -72], [-9, -72]]) fixture('slit', x, 4.9, z, { zone: 'day', color: 0xffeedd, intensity: 12, range: 11 });
+    for (const x of [-26, -16, -6]) fixture('slit', x, 3.3, -78, { zone: 'day', color: 0xfff1df, intensity: 16, range: 11 });
+    for (const [x, z] of [[-22, -88], [-8, -88], [-23, -72], [-9, -72]]) fixture('slit', x, z > -76 ? 3.1 : 4.9, z, { zone: 'day', color: 0xffeedd, intensity: 26, range: 14 });
     fixture('lamp', -24.6, 1.3, -73.6, { zone: 'camp', color: 0xffa060, intensity: 5, range: 6, flicker: .12 });
     fixture('tube', 45, 2.95, -80, { zone: 'lift', color: 0xe8f2ff, intensity: 8, range: 8 });
     stats.fixtures = fixtures.length;
@@ -488,8 +488,54 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     piece(M.glass, 28, 10, -82.5, 28, .02, 29);
   }
 
+  // ---------- Vesper 2196: neon, holograms, ORDRE scanners (cyberpunk layer) ----------
+  const additive = (color, opacity = .6, map = null) => new T.MeshBasicMaterial({ color, map, transparent: true, opacity, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false, side: T.DoubleSide });
+  const neon = (x1, y1, z1, x2, y2, z2, color) => { const len = Math.hypot(x2 - x1, y2 - y1, z2 - z1), m = new T.Mesh(new T.CylinderGeometry(.035, .035, len, 6), glow(color)); m.position.set((x1 + x2) / 2, (y1 + y2) / 2, (z1 + z2) / 2); m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), new T.Vector3(x2 - x1, y2 - y1, z2 - z1).normalize()); return add(m); };
+  function buildCyber() {
+    // ORDRE seal projected on the apparatus-bay door: a red hologram that dies when the door opens.
+    const sealTex = canvasTexture(T, 512, 512, (c, w, h) => {
+      c.clearRect(0, 0, w, h); c.strokeStyle = '#ff3b4e'; c.lineWidth = 10; c.beginPath(); c.arc(w / 2, h / 2 - 30, 150, 0, TAU); c.stroke(); c.lineWidth = 4; c.beginPath(); c.arc(w / 2, h / 2 - 30, 118, 0, TAU); c.stroke();
+      for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; c.beginPath(); c.moveTo(w / 2 + Math.cos(a) * 118, h / 2 - 30 + Math.sin(a) * 118); c.lineTo(w / 2 + Math.cos(a) * 150, h / 2 - 30 + Math.sin(a) * 150); c.stroke(); }
+      c.fillStyle = '#ff3b4e'; c.font = `900 64px ${FONT}`; c.textAlign = 'center'; c.fillText('ORDRE', w / 2, h / 2 - 8); c.font = `800 30px ${FONT}`; c.fillText('ZONE CONFISQUÉE', w / 2, h - 70); c.font = `700 22px ${FONT}`; c.fillText('ENGINS SAISIS · 14/03/2189', w / 2, h - 36);
+    });
+    const seal = new T.Mesh(new T.PlaneGeometry(4.2, 4.2), additive(0xffffff, .55, sealTex)); seal.position.set(-79.6, 2.2, 86); seal.rotation.y = Math.PI / 2; add(seal);
+    animated.push(t => { const open = doors.get('portail')?.open || 0; seal.visible = open < .15; seal.material.opacity = (.42 + .12 * Math.sin(t * 3)) * (Math.sin(t * 23) > .96 ? .3 : 1); seal.rotation.z = Math.sin(t * .4) * .02; });
+    // AEGIS neon on the station: a cyan « 07 » and a vertical « SECOURS » blade.
+    const sevenTex = signTex(['07'], { bg: null, fg: '#7fe7ff', w: 256, h: 256 });
+    sign(sevenTex, -79.8, 6.4, 79.6, Math.PI / 2, 1.6, 1.6, { lit: true, see: true });
+    neon(-79.75, 3.8, 78.6, -79.75, 3.8, 80.6, 0x7fe7ff); neon(-79.75, 7.2, 78.6, -79.75, 7.2, 80.6, 0x7fe7ff);
+    const blade = sign(signTex(['SECOURS'], { bg: '#160606', fg: '#ff4d3d', w: 128, h: 512 }), -79.2, 4.6, 92.5, Math.PI / 2, .6, 2.6, { lit: true }); piece(M.dark, -79.45, 3.2, 92.5, .3, 2.8, .7);
+    animated.push(t => { blade.material.color.setScalar(Math.sin(t * 17) > .93 ? .35 : 1); });
+    // Floor LED guide strips in the corridor (green on batteries, cyan on mains).
+    const strip = new T.Mesh(new T.BoxGeometry(.04, .02, 29.4), glow(0x3dff8a)); strip.position.set(-83.7, .03, 59); add(strip);
+    const strip2 = strip.clone(); strip2.position.x = -80.3; add(strip2);
+    animated.push(() => { const c = power.caserne ? 0x7fe7ff : 0x3dff8a; strip.material.color.set(c); });
+    // Holographic city table at the dispatch room: Vesper's blocks over the paper map, live when the station has power.
+    const holo = new T.Group(); holo.position.set(-90, 1.05, 55.6); add(holo);
+    const blocks = new T.InstancedMesh(cube, additive(0x7fe7ff, .35), 46), mm = new T.Matrix4(), pp = new T.Vector3(), qq = new T.Quaternion(), ss = new T.Vector3();
+    for (let k = 0; k < 46; k++) { const h = .08 + rng() * .5; blocks.setMatrixAt(k, mm.compose(pp.set((rng() - .5) * 2, h / 2, (rng() - .5) * 1.4), qq, ss.set(.08 + rng() * .12, h, .08 + rng() * .12))); }
+    blocks.instanceMatrix.needsUpdate = true; holo.add(blocks);
+    const ping = new T.Mesh(new T.RingGeometry(.05, .08, 24), additive(0xff4d3d, .9)); ping.rotation.x = -Math.PI / 2; ping.position.set(-.6, .02, -.3); holo.add(ping);
+    animated.push(t => { holo.visible = power.caserne; holo.rotation.y = Math.sin(t * .2) * .2; ping.scale.setScalar(1 + (t * 1.5 % 1) * 4); ping.material.opacity = .9 * (1 - t * 1.5 % 1); });
+    // Archives: green neon of the building, ORDRE scanner sweeping the forecourt, HELIX status ribbons on the copy racks.
+    neon(-1.8, 5.9, -67.75, 13.8, 5.9, -67.75, 0x6dff9c); neon(-1.8, 3.6, -67.75, 13.8, 3.6, -67.75, 0x6dff9c);
+    const scanner = new T.Group(); scanner.position.set(6, 6.2, -67.4); add(scanner);
+    piece(M.dark, 6, 6, -67.6, .5, .4, .5);
+    const beam = new T.Mesh(new T.ConeGeometry(1.6, 6, 24, 1, true), additive(0xff3b4e, .12)); beam.position.y = -3; scanner.add(beam);
+    const spot = new T.Mesh(new T.CircleGeometry(1.6, 28), additive(0xff3b4e, .35)); spot.rotation.x = -Math.PI / 2; add(spot);
+    animated.push(t => { const a = Math.sin(t * .7) * .55; scanner.rotation.set(-.55, a, 0); spot.position.set(6 + Math.sin(a) * 3.4, .02, -64.6 + Math.cos(a) * .4); beam.material.opacity = .08 + .05 * Math.sin(t * 9); });
+    // Greenhouse: floating botanical catalogue tags (old HELIX-made holograms, still on batteries).
+    for (const [x, z, name] of [[20, -91, 'FOUGÈRE DES TOITS'], [36, -91, 'MOUSSE DE VESPER'], [20, -75, 'LIERRE DES QUAIS'], [36, -75, 'ORCHIDÉE GRISE'], [30.5, -88.5, 'CHÊNE DE LA SERRE · 1998']]) {
+      const tag = new T.Mesh(new T.PlaneGeometry(1.6, .5), new T.MeshBasicMaterial({ map: signTex([name, 'ARCHIVES VÉGÉTALES · FICHE'], { bg: 'rgba(8,40,30,.55)', fg: '#9fffcf', w: 512, h: 160, border: '#6dff9c' }), transparent: true, opacity: .8, depthWrite: false, toneMapped: false, side: T.DoubleSide }));
+      tag.position.set(x, name.startsWith('CHÊNE') ? 2.4 : 1.9, z); add(tag); animated.push((t, dt, eye) => { tag.position.y += Math.sin(t * 1.3 + x) * .0015; tag.lookAt(eye.position.x, tag.position.y, eye.position.z); });
+    }
+    // Vesper beyond the walls: neon advertising on the Archives' blind side wall, seen from the relay terrace.
+    sign(signTex(['HELIX', 'LA MÉMOIRE DE VESPER EST EN SÉCURITÉ'], { bg: '#06121a', fg: '#ff4d5e', w: 1024, h: 256, border: '#ff4d5e' }), -30.2, 8.2, -84, -Math.PI / 2, 9, 2.25, { lit: true });
+    piece(M.dark, -30.4, 6.4, -84, .3, 4, 9.6);
+  }
+
   // ---------- Daylight adaptation inside the buildings ----------
-  let adapt = 1;
+  let adapt = 1; const cachesById = new Map();
   function daylightAt(x, z) { const r = ROOM[roomAt(x, z)]; if (!r) return 1; if (r.id === 'remise') return doors.get('portail')?.open > .5 ? .55 : DAYLIGHT.garage; return DAYLIGHT[r.look] ?? 1; }
 
   return {
@@ -497,7 +543,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     build(obstacles) {
       placeFixtures(); buildRooms(); buildWalls(obstacles);
       for (const o of obstacles) if (o.extension) dress(o);
-      buildFixtureMeshes(); buildDoors(); buildDevices(obstacles); buildSigns(); flushFerns();
+      buildFixtureMeshes(); buildDoors(); buildDevices(obstacles); buildSigns(); buildCyber(); flushFerns();
       flushGeometry(); flushPieces();
     },
     update(t, dt, eye, player = eye.position) {
@@ -510,6 +556,17 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
       const target = daylightAt(eye.x, eye.z); adapt += (target - adapt) * Math.min(1, dt * 2.5);
       atmosphere.sun.intensity *= adapt; atmosphere.ambient.intensity *= .25 + .75 * adapt;
       return adapt;
+    },
+    // AEGIS supply caches: a small case with the floating medkit or cell above it.
+    syncPickups(list, t = 0, accent = 0xff6fb4) {
+      const live = new Set();
+      for (const p of list) {
+        live.add(p.id); let o = cachesById.get(p.id);
+        if (!o) { o = new T.Group(); const caseMesh = new T.Mesh(new T.BoxGeometry(.6, .3, .4), M.paintedMetal); caseMesh.position.y = .15; o.add(caseMesh); const stripe = new T.Mesh(new T.BoxGeometry(.61, .06, .41), p.kind === 'heal' ? glow(accent) : M.cyan); stripe.position.y = .22; o.add(stripe);
+          const gem = new T.Mesh(new T.OctahedronGeometry(.2, 0), p.kind === 'heal' ? glow(accent) : glow(0xe8f6ff)); gem.position.y = .75; o.add(gem); o.userData.gem = gem; o.position.set(p.x, p.y || 0, p.z); root.add(o); cachesById.set(p.id, o); }
+        o.userData.gem.position.y = .75 + Math.sin(t * 2.4 + p.x) * .08; o.userData.gem.rotation.y = t * 1.8;
+      }
+      for (const [id, o] of cachesById) if (!live.has(id)) { o.removeFromParent(); cachesById.delete(id); }
     },
     setDoor(id, state) { const d = doors.get(id); if (!d) return; d.state = state ? (d.d.open ? 'auto' : 'open') : 'closed'; if (!state) d.open = 0; if (id === 'monte-charge' && state) liftLit = true; },
     setPower(on) { power.caserne = !!on; },
