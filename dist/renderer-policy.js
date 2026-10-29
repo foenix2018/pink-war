@@ -8,9 +8,9 @@ export function graphicsProfile(environment={},quality='auto',forceWebGL=false){
   const compatible=environment.rendererHint==='webgl';
   return {ios,phone,headset,compatible,preferWebGL:forceWebGL||ios||compatible||!environment.gpu,
     antialias:!phone&&!compatible,shadows:true,
-    pixelRatioCap:phone?(quality==='high'?1.15:1):compatible?1:quality==='low'?1:quality==='high'?2:1.8,
-    maxPixels:phone?750000:compatible?1100000:Infinity,
-    artQuality:phone||compatible?'low':quality,skyWidth:phone||compatible||quality==='low'?1024:2048};
+    pixelRatioCap:phone?(quality==='high'?1.15:1):compatible?1:quality==='low'?1:quality==='balanced'?1.4:quality==='high'?2:1.8,
+    maxPixels:phone?750000:compatible?1100000:quality==='balanced'?2000000:Infinity,
+    artQuality:phone||compatible?'low':quality==='balanced'?'high':quality,skyWidth:phone||compatible||quality==='low'?1024:2048};
 }
 
 export function renderPixelRatio(profile,deviceRatio,width,height){
