@@ -67,6 +67,8 @@ export function createMission3Visit({mesh,interactions,characterId='ghju',onFini
   const heading=doc.querySelector('#intro .introMeta');if(heading)heading.textContent='PINK WARS / LA FRACTURE · MISSION 03';
   const subtitle=doc.querySelector('#intro .subtitle');if(subtitle)subtitle.textContent='LE CONVOI DES ABSENTS';
   const lead=doc.querySelector('#intro .lead');if(lead)lead.textContent='Les informations saisies à HELIX ramènent vers les anciens secteurs de Vesper. Fouille l’annexe médicale, récupère le manifeste dans l’atelier, déchiffre le relais A3 et neutralise la liaison ORDRE.';
+  const features=doc.querySelector('#intro .featureRow');
+  if(features){features.replaceChildren(...['ANNEXE MÉDICALE','ATELIER TECHNIQUE','ARCHIVES A3','CONVOI HELIX','LYLU + CARA','WEBGPU / WEBGL2'].map(text=>{const tag=doc.createElement('div');tag.className='feature';tag.textContent=text;return tag;}));}
   const notice=doc.querySelector('#intro .notice');if(notice)notice.textContent='Nouveau parcours dans les décors détaillés de Vesper. Quatre objectifs dans un ordre précis, de l’annexe médicale jusqu’au périmètre fracturé. Ce chapitre est une première version exploratoire jouable.';
   const button=doc.querySelector('#start');if(button)button.textContent='DÉMARRER LA MISSION 03 →';
   const eyebrow=doc.querySelector('#objectivePanel .eyebrow');if(eyebrow)eyebrow.firstChild.textContent='MISSION 03 ';
