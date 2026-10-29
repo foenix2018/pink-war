@@ -80,7 +80,7 @@ export function showChapter2Finale({characterId='ghju',onReplay}={}){
  };
  escort.addEventListener('click',()=>decide('escort'));
  proof.addEventListener('click',()=>decide('proof'));
- continueButton.addEventListener('click',()=>location.assign('./vesper-level1-v7.html?chapter=3&character='+encodeURIComponent(characterId)+'&source=campaign'));
+ continueButton.addEventListener('click',()=>location.assign('./niveau3.html?chapter=3&character='+encodeURIComponent(characterId)+'&source=campaign'));
  replay.addEventListener('click',()=>{modal.remove();onReplay?.();});
  actions.append(escort,proof,continueButton,replay);
  shell.append(meta,header,image,intro,feedback,actions);modal.append(shell);document.body.appendChild(modal);
