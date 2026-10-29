@@ -67,6 +67,13 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
   };
   M.foliage.name = 'feuillage';
 
+  // Shared physical surface channels for close-up furniture and equipment.
+  for (const [keys,kind] of [
+    [['wood','woodDark'],'wood'],[['fabric','blanket','sheet','tarp','tarpAmber'],'fabric'],
+    [['steel'],'steel'],[['red','white','yellow','frame','helixWhite','helixBlack','helixRed'],'paint'],
+    [['dark','black'],'rubber'],[['cardboard','paper'],'paper']
+  ]) for (const key of keys) if (M[key]) details.surface(M[key],kind);
+
   // ---------- Merged geometry (world-space UVs in metres / tile) ----------
   const geos = new Map();
   const bucket = m => { if (!geos.has(m)) geos.set(m, { p: [], n: [], u: [], i: [] }); return geos.get(m); };
@@ -339,12 +346,29 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
       case 'vsav': case 'fpt': vehicle(o, o.kind); break;
       case 'ari-rack': box(M.steel, x1, x2, 0, h, z1, z2, { skip: ['bottom', '+x'] }); for (let k = 0; k < 6; k++) for (const y of [.35, 1.15]) cylinder(M.yellow, o.x + .1, y + .35, z1 + .35 + k * (d - .7) / 5, .1, .6); break;
       case 'hose-rack': box(M.steel, x1, x2, 0, h, z1, z2, { skip: ['bottom', '+x'] }); for (let k = 0; k < 4; k++) for (const y of [.5, 1.3]) { const c = cylinder(M.white, o.x + .15, y, z1 + .5 + k * (d - 1) / 3, .28, .12, { axis: 'x', segments: 14 }); c.material = M.white; } break;
-      case 'workbench': box(M.wood, x1, x2, h - .06, h, z1, z2); for (const s of [-1, 1]) piece(M.dark, o.x + s * (o.hx - .1), 0, o.z, .08, h - .06, d - .1); piece(M.steel, o.x, h, o.z + .1, w * .7, .25, .2); break;
+      case 'workbench': {
+        box(M.wood,x1,x2,h-.06,h,z1,z2);
+        for(const sx of [-1,1])for(const sz of [-1,1])piece(M.steel,o.x+sx*(o.hx-.1),0,o.z+sz*(o.hz-.1),.07,h-.06,.07);
+        piece(M.steel,o.x,.18,z2-.1,w-.12,.06,.06);
+        piece(M.paintedMetal,o.x,h+.16,z2-.025,w-.12,.72,.04);
+        for(let col=0;col<24;col++)for(let row=0;row<4;row++)piece(M.dark,x1+.15+col*(w-.3)/23,h+.24+row*.15,z2-.048,.022,.022,.004);
+        break;
+      }
       case 'planter': box(M.stone, x1, x2, 0, h, z1, z2); piece(M.soil, o.x, h - .05, o.z, w - .2, .06, d - .2); details.planting(o, low ? 4 : 7); break;
       case 'reception': box(M.wood, x1, x2, 0, h, z1, z2); piece(M.woodDark, o.x, h, o.z, w + .1, .05, d + .1); break;
       case 'display': piece(M.woodDark, o.x, 0, o.z, w, .8, d); piece(M.glass, o.x, .8, o.z, w, h - .8, d); piece(M.foliage, o.x, .82, o.z, w * .5, .3, d * .5); break;
       case 'desk': box(M.wood, x1, x2, h - .06, h, z1, z2); for (const sx of [-1, 1]) piece(M.woodDark, o.x + sx * (o.hx - .1), 0, o.z, .08, h - .06, d - .1); break;
-      case 'shelves': box(M.wood, x1, x2, 0, h, z1, z2, { skip: ['bottom', '-z'] }); for (let y = .4; y < h; y += .45) for (let k = 0; k < 14; k++) piece(rng() < .5 ? M.cardboard : M.woodDark, x1 + .3 + k * (w - .6) / 13, y, o.z - .05, .18, .3 + rng() * .08, .26); break;
+      case 'shelves': {
+        // Open bays: books sit on real shelves, visible in front of a thin back.
+        piece(M.woodDark,o.x,0,z2-.025,w,h,.05);
+        for(const side of [-1,1])piece(M.wood,o.x+side*(o.hx-.035),0,o.z,.07,h,d);
+        for(let y=.1;y<h-.1;y+=.45){piece(M.wood,o.x,y,o.z,w,.045,d);
+          for(let k=0;k<20;k++){const xx=x1+.25+k*(w-.5)/19,bh=.26+rng()*.09;
+            piece(k%3?M.woodDark:M.cardboard,xx,y+.05,z1+.20,.12+rng()*.07,bh,.28);
+            piece(M.paper,xx,y+.10,z1+.054,.07,.025,.008);
+          }
+        }break;
+      }
       case 'stove': cylinder(M.dark, o.x, .25, o.z, .22, .5); piece(M.amber, o.x, .5, o.z, .2, .02, .2); break;
       case 'rack': box(M.black, x1, x2, 0, h, z1, z2); for (let k = 0; k < 10; k++) piece(k % 4 ? M.cyan : M.helix, o.x - o.hx + .1 + (k % 5) * .2, .5 + Math.floor(k / 5) * .8, z1 - .01, .05, .03, .01); break;
       case 'stack': box(M.plate, x1, x2, 0, h, z1, z2); for (let y = .3; y < h - .2; y += .55) for (let k = 0; k < 12; k++) for (const s of [-1, 1]) piece(M.cardboard, o.x + s * (o.hx + .01), y, z1 + .4 + k * (d - .8) / 11, .02, .38, .3); break;

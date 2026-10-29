@@ -71,6 +71,13 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     amber: glow(0xffb35c), cyan: glow(0x5fe0f0), green: glow(0x3dff8a), redGlow: glow(0xff3328), helix: glow(0xff2f45), rose: glow(accent)
   };
 
+  // Shared physical surface channels for close-up furniture and equipment.
+  for (const [keys,kind] of [
+    [['wood','woodDark'],'wood'],[['fabric','blanket','sheet','tarp','tarpAmber'],'fabric'],
+    [['steel'],'steel'],[['red','white','yellow','frame','helixWhite','helixBlack','helixRed'],'paint'],
+    [['dark','black'],'rubber'],[['cardboard','paper'],'paper']
+  ]) for (const key of keys) if (M[key]) details.surface(M[key],kind);
+
   // ---------- Merged geometry (world-space UVs in metres / tile) ----------
   const geos = new Map();
   const bucket = m => { if (!geos.has(m)) geos.set(m, { p: [], n: [], u: [], i: [] }); return geos.get(m); };
@@ -305,7 +312,13 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       case 'barricade': box(M.plate, x1, x2, 0, h, z1, z2); for (let k = 0; k < 4; k++) piece(M.helixRed, x1 + .3 + k * (w - .6) / 3, h * .4, z2 + .01, .5, .12, .01); break;
       case 'school': box(M.wood, x1, x2, 0, h, z1, z2); for (let k = 0; k < 3; k++) piece(k % 2 ? M.rose : M.cyan, o.x, h, z1 + .3 + k * .9, .2, .04, .05); break;
       case 'bed': box(M.steel, x1, x2, .3, h - .2, z1, z2); piece(M.sheet, o.x, h - .2, o.z, w - .1, .2, d - .1); for (const sx of [-1, 1]) piece(M.steel, o.x + sx * (o.hx - .05), 0, o.z, .05, .3, d); piece(M.steel, x1 + .1, 0, z1 - .2, .04, 1.8, .04); break;
-      case 'cabinet': box(M.white, x1, x2, 0, h, z1, z2); piece(M.glass, x1 - .01, .3, o.z, .02, h - .5, d - .2); for (let y = .5; y < h - .2; y += .4) piece(M.cardboard, x1 + .2, y, o.z, .25, .18, d - .5); break;
+      case 'cabinet': {
+        piece(M.white,x2-.035,0,o.z,.07,h,d);
+        for(const side of [-1,1])piece(M.white,o.x,0,o.z+side*(o.hz-.035),w,h,.07);
+        piece(M.white,o.x,0,o.z,w,.1,d);piece(M.white,o.x,h-.08,o.z,w,.08,d);
+        for(let y=.5;y<h-.2;y+=.4)piece(M.steel,o.x,y-.035,o.z,w-.04,.035,d-.08);
+        piece(M.glass,x1-.01,.15,o.z,.02,h-.24,d-.12);break;
+      }
       case 'desk': box(M.wood, x1, x2, h - .06, h, z1, z2); for (const sx of [-1, 1]) piece(M.woodDark, o.x + sx * (o.hx - .1), 0, o.z, .08, h - .06, d - .1); break;
       case 'radio-rack': box(M.dark, x1, x2, 0, h, z1, z2); for (let k = 0; k < 8; k++) piece(k % 3 ? M.amber : M.green, x1 - .01, .5 + k * .2, o.z + (k % 2 ? .4 : -.4), .01, .04, .12); break;
       case 'console': {

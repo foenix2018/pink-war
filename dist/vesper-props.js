@@ -1,9 +1,11 @@
 // Shared, metric dressing for M01 and M02. Only visual detail: the authored
 // collision hulls, interaction positions and mission state remain authoritative.
 import {Assembly, bevelBox, matrix, limb} from './geo.js';
+import {createVesperSurfaces} from './vesper-surfaces.js';
 
 export function createVesperProps(T, parent, {low = false} = {}) {
   const root = new T.Group(); root.name = 'VESPER / objets détaillés'; parent.add(root);
+  const surfaces = createVesperSurfaces(T, {low});
   const staticParts = new Assembly(), owned = [], textures = [], displays = new Map(), doors = [];
   const stats = {plants: 0, computers: 0, accessories: 0, doors: 0, batches: 0, triangles: 0};
   let seed = 37107, finished = false;
@@ -16,16 +18,26 @@ export function createVesperProps(T, parent, {low = false} = {}) {
     dark: mat('joints et caoutchouc', 0x141d20, .83), paper: mat('étiquettes ivoire', 0xd5ccaf, .94),
     copper: mat('cuivre', 0x9c6846, .46, .72), soil: mat('terre', 0x30281e, 1),
     leaf: mat('feuillage ombré', 0x2e5034, .9), leafTip: mat('jeunes feuilles', 0x68804b, .92),
-    bark: mat('écorce', 0x51412f, .98)
+    bark: mat('écorce', 0x68523c, .98), wood: mat('bois des caisses', 0x99724c, .88),
+    fabric: mat('toile tissée', 0x8b9381, .97), ceramic: mat('céramique émaillée', 0xd2d9d2, .25),
+    stone: mat('graviers des bacs', 0xaaa08a, .98)
   };
-  M.leaf.side = M.leafTip.side = T.DoubleSide;
+  for (const [key, kind] of Object.entries({paint:'paint',steel:'steel',dark:'rubber',paper:'paper',copper:'copper',soil:'soil',leaf:'leaf',leafTip:'leaf',bark:'bark',wood:'wood',fabric:'fabric',ceramic:'ceramic',stone:'soil'})) surfaces.apply(M[key], kind);
+  M.leaf.side = M.leafTip.side = M.fabric.side = T.DoubleSide;
   const add = (a, g, m, p = [0, 0, 0], r = [0, 0, 0], s = [1, 1, 1]) => { a.add(g, m, matrix(p, r, s), !low); g.dispose(); };
   const box = (a, m, size, p, r = [0, 0, 0], transform = null) => {
     const g = Math.min(...size) > .06 ? bevelBox(...size, Math.min(.035, Math.min(...size) * .16), 1) : new T.BoxGeometry(...size);
+    // UVs in metres: screws, cabinets and large doors keep a consistent grain.
+    const pos = g.attributes.position, normal = g.attributes.normal, uv = g.attributes.uv;
+    const tile = m.userData.tile || .45;
+    for (let i = 0; i < pos.count; i++) {
+      const ax = Math.abs(normal.getX(i)), ay = Math.abs(normal.getY(i));
+      uv.setXY(i, (ax > .65 ? pos.getZ(i) : pos.getX(i)) / tile, (ay > .65 ? pos.getZ(i) : pos.getY(i)) / tile);
+    }
     const pose = matrix(p, r); if (transform) pose.premultiply(transform);
     a.add(g, m, pose, !low); g.dispose();
   };
-  const rod = (a, m, from, to, radius = .018) => { const g = limb(from, to, radius, radius, low ? 6 : 8); a.add(g, m, null, !low); g.dispose(); };
+  const rod = (a, m, from, to, radius = .018, endRadius = radius) => { const g = limb(from, to, radius, endRadius, low ? 6 : 8); a.add(g, m, null, !low); g.dispose(); };
   const sealAssembly = (a, host) => {
     a.build(host);
     for (const mesh of a.meshes) {
@@ -34,6 +46,28 @@ export function createVesperProps(T, parent, {low = false} = {}) {
     }
     for (const item of a.items) item.geometry.dispose(); a.items.length = 0;
   };
+
+  // Shared printed service labels: ink, barcode and a tiny serial, lit by the
+  // scene rather than luminous rectangles. Separate from mission documents.
+  let labels = null;
+  const LABELS = ['AEGIS · 07', 'MAINTENANCE', 'FILTRE / EAU', 'STÉRILE', 'HELIX / S3', 'ARCHIVES', 'HORS RÉSEAU', 'FRAGILE'];
+  function label(a, index, position, rotation = [0,0,0], width = .26) {
+    if (typeof document === 'undefined') return;
+    if (!labels) {
+      const c = document.createElement('canvas'); c.width = c.height = 512; const ctx = c.getContext('2d');
+      for (let row = 0; row < 8; row++) {
+        const y = row * 64; ctx.fillStyle = '#d6d0b6'; ctx.fillRect(0,y,512,64);
+        ctx.fillStyle = row === 4 ? '#a8272c' : '#242e2c'; ctx.fillRect(0,y,12,64); ctx.font = 'bold 22px monospace'; ctx.fillText(LABELS[row],24,y+27);
+        ctx.font = '10px monospace'; ctx.fillText('VS / 2189 / '+String(7104+row*37),24,y+49);
+        for (let k=0;k<55;k++) ctx.fillRect(320+k*3,y+12,k%4?1:2,38);
+      }
+      const map = new T.CanvasTexture(c); map.colorSpace = T.SRGBColorSpace; textures.push(map);
+      labels = new T.MeshStandardMaterial({name:'VESPER / marquages imprimés',map,roughness:.92,metalness:0}); owned.push(labels);
+    }
+    const geo = new T.PlaneGeometry(width,width/8), uv=geo.attributes.uv;
+    for(let i=0;i<uv.count;i++) uv.setY(i,(7-index+uv.getY(i))/8);
+    add(a,geo,labels,position,rotation);
+  }
 
   // Small shared diagnostic textures, painted once. The screen stays legible and its own
   // power channel dims it; no canvas uploads, particles or lights per frame.
@@ -105,14 +139,26 @@ export function createVesperProps(T, parent, {low = false} = {}) {
     const y = o.height, w = o.hx * 2, d = o.hz * 2;
     box(staticParts, M.soil, [Math.max(.1, w - .2), .05, Math.max(.1, d - .2)], [o.x, y + .015, o.z]);
     for (let k = 0; k < count; k++) plant(o.x + (rnd() - .5) * Math.max(0, w - .8), y + .05, o.z + (rnd() - .5) * Math.max(0, d - .8), .65 + rnd() * .55, k % 2 ? 'fern' : 'broad');
+    for (let k=0;k<(low?8:18);k++) {
+      const x=o.x+(rnd()-.5)*(w-.3),z=o.z+(rnd()-.5)*(d-.3),r=.025+rnd()*.035;
+      add(staticParts,new T.IcosahedronGeometry(r,0),k%3?M.bark:M.stone,[x,y+.045,z],[rnd(),rnd(),rnd()],[1.4,.35,1]);
+    }
   }
   function tree(o) {
-    rod(staticParts, M.bark, [o.x, 0, o.z], [o.x + .12, o.height, o.z], .32);
+    rod(staticParts, M.bark, [o.x, 0, o.z], [o.x + .12, o.height, o.z], .35, .18);
     for (let k = 0; k < 9; k++) {
       const a = k * 2.39996, x = o.x + Math.sin(a) * 1.8, z = o.z + Math.cos(a) * 1.8, y = o.height + .4 + (k % 3) * .65;
-      rod(staticParts, M.bark, [o.x, o.height * .7, o.z], [x, y, z], .09);
-      add(staticParts, new T.SphereGeometry(1, 8, 6), k % 3 ? M.leaf : M.leafTip, [x, y, z], [0, a, .12], [1.45, .85, 1.25]);
-      if (!low) plant(x, y + .2, z, 1.3);
+      const elbow=[o.x+Math.sin(a)*.8,o.height*(.80+(k%2)*.06),o.z+Math.cos(a)*.8];
+      rod(staticParts,M.bark,[o.x,o.height*(.5+(k%4)*.08),o.z],elbow,.11,.065);
+      rod(staticParts,M.bark,elbow,[x,y,z],.065,.028);
+      // An airy crown made of individual leaves, with real gaps between them.
+      // No green spheres underneath: silhouettes and sky holes remain natural.
+      for(let j=0;j<(low?55:95);j++) {
+        const az=rnd()*Math.PI*2,up=rnd()*2-1,rad=Math.cbrt(rnd()),r=Math.sqrt(1-up*up)*rad;
+        const px=x+Math.sin(az)*r*1.35,py=y+up*rad*.8,pz=z+Math.cos(az)*r*1.2;
+        add(staticParts,leaf(.24+rnd()*.17,.075+rnd()*.035,.35),j%4?M.leaf:M.leafTip,[px,py,pz],[(rnd()-.5)*1.6,rnd()*Math.PI*2,(rnd()-.5)*1.5]);
+        if(j%14===0)rod(staticParts,M.bark,[x,y,z],[px,py,pz],.014);
+      }
     }
     for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3; rod(staticParts, M.bark, [o.x, .5, o.z], [o.x + Math.sin(a) * .8, .02, o.z + Math.cos(a) * .8], .10); }
     stats.plants++;
@@ -121,7 +167,7 @@ export function createVesperProps(T, parent, {low = false} = {}) {
   function accessories(o) {
     const w = o.hx * 2, d = o.hz * 2, y = o.height, x = o.x, z = o.z;
     const b = (m, s, p) => box(staticParts, m, s, p);
-    if (['crates', 'cabinet', 'lockers', 'rack', 'servers', 'batteries'].includes(o.kind)) {
+    if (['crates', 'cabinet', 'lockers', 'rack', 'servers', 'batteries'].includes(o.kind) && !(o.kind==='cabinet'&&o.surface==='metal')) {
       // Recessed pulls, protective rails, label holders and screw heads stay
       // within the original object's outline plus a few centimetres.
       for (const side of [-1, 1]) {
@@ -157,14 +203,113 @@ export function createVesperProps(T, parent, {low = false} = {}) {
       b(M.paper, [.27, .032, .36], [x, y + .04, z + .005]);
       b(M.paper, [.29, .007, .21], [x + Math.min(.38, w * .22), y + .008, z]);
       b(M.copper, [.018, .018, .22], [x - Math.min(.25, w * .2), y + .014, z]);
-      add(staticParts, new T.CylinderGeometry(.07, .063, .14, 10), M.paint, [x + Math.min(.6, w * .33), y + .075, z - Math.min(.16, d * .2)]);
-      add(staticParts, new T.TorusGeometry(.048, .011, 5, 10), M.steel, [x + Math.min(.6, w * .33) + .072, y + .08, z - Math.min(.16, d * .2)], [0, Math.PI / 2, 0]);
+      const mugX=x+Math.min(.6,w*.33),mugZ=z-Math.min(.16,d*.2);
+      add(staticParts,new T.CylinderGeometry(.07,.063,.14,12,1,true),M.ceramic,[mugX,y+.075,mugZ]);
+      add(staticParts,new T.TorusGeometry(.067,.008,5,16),M.ceramic,[mugX,y+.145,mugZ],[Math.PI/2,0,0]);
+      add(staticParts,new T.CircleGeometry(.061,16),M.dark,[mugX,y+.115,mugZ],[-Math.PI/2,0,0]);
+      add(staticParts, new T.TorusGeometry(.048, .011, 5, 10), M.ceramic, [mugX + .072, y + .08, mugZ], [0, Math.PI / 2, 0]);
       stats.accessories++;
     }
     if (o.kind === 'bed' && o.surface !== 'stone') {
-      b(M.paper, [Math.min(w * .7, .65), .12, Math.min(d * .3, .38)], [x, y + .07, z - o.hz * .6]);
+      b(M.fabric, [Math.min(w * .7, .65), .12, Math.min(d * .3, .38)], [x, y + .07, z - o.hz * .6]);
       for (const side of [-1, 1]) rod(staticParts, M.steel, [x + side * o.hx * .87, y - .3, z - o.hz * .85], [x + side * o.hx * .87, y + .28, z - o.hz * .85], .025);
       stats.accessories++;
+    }
+    equipment(o);
+  }
+
+  function equipment(o) {
+    const {x,z,height:h}=o,w=o.hx*2,d=o.hz*2;
+    const b=(m,size,p,r)=>box(staticParts,m,size,p,r);
+    const ring=(r,p,rotation=[0,0,0],m=M.steel)=>add(staticParts,new T.TorusGeometry(r,.012,5,16),m,p,rotation);
+    if (o.kind==='workbench') {
+      // Vice, closed toolbox and two genuinely shaped hand tools on the bench.
+      b(M.paint,[.38,.07,.31],[x-.6,h+.035,z]);b(M.steel,[.14,.20,.16],[x-.6,h+.17,z]);
+      for(const side of [-1,1]) b(M.steel,[.05,.12,.27],[x-.6+side*.11,h+.28,z]);
+      rod(staticParts,M.steel,[x-.96,h+.21,z],[x-.42,h+.21,z],.018);
+      b(M.paint,[.61,.27,.32],[x+.65,h+.135,z]);b(M.dark,[.65,.04,.35],[x+.65,h+.29,z]);
+      b(M.steel,[.19,.025,.04],[x+.65,h+.34,z]);label(staticParts,1,[x+.65,h+.17,z+.164]);
+      rod(staticParts,M.steel,[x-.15,h+.022,z-.21],[x+.17,h+.022,z-.21],.017);
+      ring(.042,[x-.17,h+.025,z-.21],[Math.PI/2,0,0]);
+      b(M.dark,[.13,.025,.04],[x-.1,h+.02,z+.22],[0,0,.1]);rod(staticParts,M.steel,[x-.1,h+.02,z+.22],[x+.2,h+.02,z+.22],.012);
+      stats.accessories++;
+    }
+    if (['generator','switchboard','tank','day-tank','fuel-tank'].includes(o.kind)) {
+      const face=z+o.hz+.028;
+      b(M.paint,[.31,.37,.05],[x,h*.63,face]);
+      // A recessed analog pressure dial with a physical needle and glass rim.
+      add(staticParts,new T.CircleGeometry(.105,20),M.paper,[x,h*.66,face+.028]);
+      ring(.11,[x,h*.66,face+.035]);
+      rod(staticParts,M.dark,[x,h*.66,face+.04],[x+.052,h*.66+.045,face+.04],.005);
+      label(staticParts, o.kind==='tank'?2:1,[x,h*.43,face+.03]);
+      for(const side of [-1,1]) {
+        const xx=x+side*o.hx*.58;
+        rod(staticParts,M.copper,[xx,.2,face],[xx,h*.34,face],.025);
+        rod(staticParts,M.copper,[xx,h*.34,face],[xx+side*.13,h*.34,face],.025);
+        ring(.048,[xx,h*.24,face],[Math.PI/2,0,0]);
+      }
+      stats.accessories++;
+    }
+    if (o.kind==='radio-table'||o.kind==='radio-rack') {
+      const xx=x-o.hx*.5,top=o.kind==='radio-table'?h:0;
+      b(M.paint,[.5,.24,.30],[xx,top+.12,z]);
+      for(let k=0;k<7;k++)b(M.dark,[.18,.012,.015],[xx-.1,top+.05+k*.024,z+.157]);
+      for(const yy of [.07,.17])add(staticParts,new T.CylinderGeometry(.025,.025,.04,10),M.steel,[xx+.14,top+yy,z+.17],[Math.PI/2,0,0]);
+      label(staticParts,6,[xx,top+.23,z+.157], [0,0,0],.34);stats.accessories++;
+    }
+    if (o.kind==='bed'&&o.surface==='fabric') {
+      // Saline bag on the existing IV stand, tubing, folded linen and a tray.
+      const px=x-o.hx+.1,pz=z-o.hz-.2;
+      rod(staticParts,M.steel,[px,1.7,pz],[px+.17,1.7,pz],.012);
+      b(M.fabric,[.12,.23,.045],[px+.16,1.5,pz]);label(staticParts,3,[px+.16,1.51,pz+.026],[0,0,0],.10);
+      const curve=new T.CatmullRomCurve3([[px+.16,1.38,pz],[px+.22,1.05,pz],[x-.4,h+.11,z-.2]].map(p=>new T.Vector3(...p)));
+      add(staticParts,new T.TubeGeometry(curve,low?8:14,.006,4,false),M.paper);
+      b(M.fabric,[.35,.05,.3],[x+.55,h+.03,z]);
+      for(let k=0;k<3;k++)b(M.fabric,[.31,.025,.28],[x+.55,h+.07+k*.025,z]);
+      stats.accessories++;
+    }
+    if(o.kind==='cabinet'&&o.surface==='metal') {
+      const front=x-o.hx-.026;
+      b(M.steel,[.035,h-.2,.045],[front,h/2,z]);
+      for(const side of [-1,1]){
+        rod(staticParts,M.steel,[front-.05,.9,z+side*.12],[front-.05,1.13,z+side*.12],.012);
+        for(const yy of [.9,1.13])rod(staticParts,M.steel,[front,yy,z+side*.12],[front-.05,yy,z+side*.12],.012);
+      }
+
+      for(let row=0;row<3;row++)for(let k=0;k<3;k++) {
+        const xx=x-o.hx+.22,yy=.57+row*.4,zz=z-.8+k*.7;
+        add(staticParts,new T.CylinderGeometry(.037,.038,.12,10),M.ceramic,[xx,yy,zz]);
+        add(staticParts,new T.CylinderGeometry(.041,.041,.025,10),M.paint,[xx,yy+.074,zz]);
+        label(staticParts,3,[xx-.04,yy,zz],[0,-Math.PI/2,0],.07);
+      }
+      stats.accessories++;
+    }
+    if(['stall','tent'].includes(o.kind)) {
+      const yy=o.kind==='stall'?h+.15:.12;
+      b(M.fabric,[.48,.12,.43],[x-o.hx*.58,yy,z]);
+      // A draped blanket with hanging sides and shallow, irregular folds.
+      const cloth=new T.PlaneGeometry(Math.min(w-.1,1.8),Math.min(d+.12,1.1),low?6:12,5),p=cloth.attributes.position;
+      const uv=cloth.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)*Math.min(w-.1,1.8)/.045,uv.getY(i)*Math.min(d+.12,1.1)/.045);
+      for(let i=0;i<p.count;i++) {
+        const px=p.getX(i),py=p.getY(i),drop=Math.max(0,Math.abs(py)-d*.39)*.85;
+        p.setZ(i,Math.sin(px*32+py*5)*.018+Math.sin(px*13)*.014-drop);
+      }
+      cloth.computeVertexNormals();add(staticParts,cloth,M.fabric,[x+.25,yy+.045,z],[-Math.PI/2,0,0]);
+      stats.accessories++;
+    }
+    if(o.kind==='kitchen') {
+      for(const k of [-1,0,1]) {
+        const xx=x+k*1.6;
+        ring(.32,[xx,h+.44,z],[Math.PI/2,0,0]);
+        add(staticParts,new T.CylinderGeometry(.325,.325,.025,20),M.steel,[xx,h+.47,z]);
+        b(M.dark,[.11,.055,.035],[xx,h+.51,z]);
+        for(const side of [-1,1])ring(.065,[xx+side*.35,h+.28,z],[0,Math.PI/2,0]);
+      }
+      b(M.wood,[.42,.025,.27],[x+.6,h+.025,z+.3]);
+      rod(staticParts,M.steel,[x+.47,h+.05,z+.3],[x+.77,h+.05,z+.3],.012);stats.accessories++;
+    }
+    if(['rack','servers','crates','lockers','cabinet','stack'].includes(o.kind)) {
+      label(staticParts,o.kind==='servers'?4:o.kind==='stack'||o.surface==='wood'?5:o.kind==='crates'?7:0,[x-o.hx-.05,h*.79,z],[0,-Math.PI/2,0],Math.min(.36,d*.65));
     }
   }
 
@@ -196,6 +341,7 @@ export function createVesperProps(T, parent, {low = false} = {}) {
           for (const xx of [-w * .33, w * .33]) box(a, M.dark, [.09, .08, .02], [xx, 0, side * .06]);
         }
         if (k === 0) box(a, M.dark, [.55, .065, .12], [0, 0, .07]);
+        if (k === 2) label(a,1,[-w*.28,0,.068],[0,0,0],.36);
         if (k === Math.floor(n * .65) && d.style === 'sectional') {
           // Vision inserts replace an opaque band rather than a glass plate
           // pasted over a solid panel.
@@ -237,6 +383,7 @@ export function createVesperProps(T, parent, {low = false} = {}) {
           add(a, new T.TorusGeometry(Math.min(.35, w * .16), .035, 6, 20), M.steel, [0, 0, .20]);
           for (let k = 0; k < 3; k++) { const angle = k * Math.PI * 2 / 3; rod(a, M.steel, [0, 0, .20], [Math.sin(angle) * .32, Math.cos(angle) * .32, .20], .023); }
         }
+        if (d.style !== 'glass') label(a,d.style==='vault'||d.style==='helix'?4:1,[0,h*.27,d.style==='vault'?.18:.08],[0,0,0],Math.min(.38,lw*.4));
         sealAssembly(a, leaf); leaves.push({root: leaf, base, dir, slide: split ? lw + .08 : w + .08});
       }
       box(fixed, M.dark, [w + .2, .13, .16], [0, h + .22, 0]);
@@ -262,11 +409,11 @@ export function createVesperProps(T, parent, {low = false} = {}) {
     }};
     api.update(0, !d.open); doors.push(api); return api;
   }
-  return {root, M, plant, planting, tree, computer, accessories, door,
+  return {root, M, plant, planting, tree, computer, accessories, door, surface:surfaces.apply,
     finish() { if (!finished) { finished = true; sealAssembly(staticParts, root); } },
     update(power = {}) { for (const {material, power: key} of displays.values()) material.color.setScalar(key === 'always' || power[key] ? .85 : .025); },
-    stats: () => ({...stats}),
-    dispose() { root.removeFromParent(); const geometries = new Set(); root.traverse(o => { if (o.geometry) geometries.add(o.geometry); }); for (const g of geometries) g.dispose(); for (const m of owned) m.dispose(); for (const t of textures) t.dispose(); }
+    stats: () => ({...stats, surfaces:surfaces.stats()}),
+    dispose() { root.removeFromParent(); const geometries = new Set(); root.traverse(o => { if (o.geometry) geometries.add(o.geometry); }); for (const g of geometries) g.dispose(); for (const m of owned) m.dispose(); for (const t of textures) t.dispose(); surfaces.dispose(); }
   };
 }
 

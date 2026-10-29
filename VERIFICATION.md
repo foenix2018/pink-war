@@ -1,3 +1,13 @@
+# Pink War 3.72 — matières et enrichissement réaliste
+
+669 tests Node réussis, aucun échec, test ignoré ou annulé (`npm test`). Sept contrôles ciblés passent aussi après les derniers réglages visuels : PBR déterministe et partagé, espaces colorimétriques, matériaux organiques non métalliques, budget bas, ouverture des rayonnages, flacons visibles, animation et dégagement des portes, et circuits électriques des écrans.
+
+Démarrage des deux missions en Chromium/SwiftShader, fenêtres 1280 × 800 et tactile 390 × 844 : aucune erreur JavaScript, avertissement de décor désactivé ou ressource manquante. Parcours contrôlé de la caserne jusqu’au groupe en charge. Construction et captures des extensions en qualité normale pour examiner les matières et les objets. Les captures de détail utilisent un éclairage de présentation, sans modifier celui du jeu. [Notes et captures](docs/pink-wars/MISE_A_JOUR_372.md) · [Rapport](docs/pink-wars/REALISM_372_BROWSER_VERIFICATION.json).
+
+Aucun essai sur iPhone/Quest physiques, aucune mesure de cadence matérielle. Modifications préparées sur la même branche de proposition ; aucune publication en production.
+
+---
+
 # Pink War 3.71 — décors des niveaux 1 et 2
 
 666 tests Node réussis, aucun échec, test ignoré ou annulé (`npm test`). Quatre nouveaux contrôles couvrent le dégagement visuel des 23 portes, la quincaillerie solidaire des vantaux, les circuits indépendants des écrans, le feuillage non émissif, les budgets de géométrie et de lots, la construction des deux extensions en qualité normale et basse et le dégagement central des portails. Le contrôle historique du cache HUD utilise désormais la version courante.
