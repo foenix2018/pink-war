@@ -219,6 +219,21 @@ window.galleryAR=async()=>{
     const inspectionGloves=[createGlove(active.kit.gloves,{mirror:true,sleeve:false}),createGlove(active.kit.gloves,{mirror:false,sleeve:false})];
     for(const glove of inspectionGloves)active.root.add(glove);
     poseUnarmedForInspection(active.soldier,inspectionGloves,.016,{mirrorFromRight:false});
+    // AR-only anatomical correction: both hands hang beside the thighs with
+    // fingers pointing down, rather than inheriting the weapon grip's wrist roll.
+    // Keep the native RLH glove meshes, textures and finger articulation.
+    const wristCenters=[-.315,.315];
+    for(let side=0;side<2;side++){
+      const glove=inspectionGloves[side],x=wristCenters[side];
+      glove.quaternion.identity();
+      glove.scale.set(1,1,1);
+      glove.position.set(x,1.005,-.02);
+      // The glove adapter's local +Z points along the fingers when relaxed.
+      // Rotate the adapter so fingers face the floor, palms face the legs.
+      glove.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3(0,-1,0));
+      if(side===0)glove.rotateY(Math.PI);
+      glove.userData.animate({relax:1,grip:0,trigger:0,reload:0},.016);
+    }
     active.soldier.shadowUnit?.cape?.update?.(0,'idle',0);
    }
    active.root.updateMatrixWorld(true);
