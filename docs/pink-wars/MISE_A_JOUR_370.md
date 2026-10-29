@@ -72,4 +72,12 @@ C’est une estimation, pas une mesure. Le prologue ajoute environ 10 minutes et
   - les points de contrôle ;
   - l’histoire des deux héros ;
   - le branchement dans la page.
-- Navigateur : voir le compte rendu de QA de la livraison.
+- Navigateur (Chromium, rendu logiciel) : les deux parties ont été jouées avec les raccourcis de test, aucune erreur console.
+  - Prologue avec GHJU : monte-charge, dispensaire, registre, batteries et radio, éclaireurs HELIX, manœuvre de la grille, ouverture sur la rue.
+  - Épilogue avec LYLU : tour, badge, coffre, note Kessler, manifeste, alarme, verrouillage du quai sous trois vagues, écran du choix final.
+- iPhone 13 émulé : départ dans le monte-charge, sous-titres de Gaby, marché, aucune erreur.
+- Correction de QA : les commandes de test (`?debug=1`) font avancer le déroulé après une téléportation ou un nettoyage.
+- Limites :
+  - pas de mesure de durée ni de difficulté sur une vraie partie ;
+  - pas d’essai sur iPhone ni sur Quest 3 réels ;
+  - la nuit reste sombre dans le marché en qualité basse.

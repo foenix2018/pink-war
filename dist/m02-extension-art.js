@@ -190,8 +190,9 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     for (const f of fixtures) f.level = fixtureLevel(f) * flickerOf(f, t);
     for (const { mesh, list } of fixtureMeshes) { list.forEach((f, i) => { tmp.copy(f.color).multiplyScalar(Math.max(.05, f.level)); mesh.setColorAt(i, tmp); }); mesh.instanceColor.needsUpdate = true; }
     const here = roomAt(eye.x, eye.z);
-    // The street keeps its own lamps: the pool only serves the built rooms (and the doorway the eye stands in).
-    const scored = here && roofed(ROOM[here]) ? fixtures.filter(f => f.level > .02 && (f.room === here || Math.hypot(f.x - eye.x, f.z - eye.z) < 10))
+    // The street keeps its own lamps: outdoors the pool only serves rooms seen through a nearby doorway.
+    const inside = here && roofed(ROOM[here]);
+    const scored = here ? fixtures.filter(f => inside || Math.hypot(f.x - eye.x, f.z - eye.z) < 12).filter(f => f.level > .02 && (f.room === here || Math.hypot(f.x - eye.x, f.z - eye.z) < 12))
       .map(f => ({ f, d: Math.hypot(f.x - eye.x, f.y - eye.y, f.z - eye.z) * (f.room === here ? 1 : 1.8) / Math.sqrt(f.intensity / 12) })).sort((a, b) => a.d - b.d).slice(0, POOL).map(s => s.f) : [];
     const wanted = new Set(scored);
     for (const slot of pool) { if (slot.fixture && !wanted.has(slot.fixture)) slot.level = Math.max(0, slot.level - dt * 10); else if (slot.fixture) slot.level = Math.min(1, slot.level + dt * 8); if (slot.level <= 0) slot.fixture = null; }
