@@ -31,7 +31,7 @@ function refresh(){
   for(const b of document.querySelectorAll('[data-mode]'))b.setAttribute('aria-pressed',String(b.dataset.mode===mode));
   document.querySelector('.mission-kicker').textContent=mode==='campaign3'?'CAMPAGNE · TROISIÈME MISSION':mode==='campaign2'?'CAMPAGNE · DEUXIÈME MISSION':mode==='campaign'?'CAMPAGNE · PREMIÈRE MISSION':'PINK WARS · JOUER';
   $('mission-title').textContent=mode==='ligne9'?'05 — La Ligne Noyée':mode==='campaign3'?'03 — Le Convoi des Absents':mode==='campaign2'?'02 — Sous les Néons':mode==='campaign'?'01 — Le dernier signal':mode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
-  $('mission-description').textContent=mode==='ligne9'?'Ligne 9 inondée sous les Halles-Basses : rétablir le courant, relancer les pompes P9, ouvrir l’écluse. Mission longue avec points de contrôle.':mode==='campaign3'?'Après l’évacuation, retrouver le manifeste HELIX dans le secteur des secours, accéder au relais A3 et neutraliser le signal ORDRE. Décor détaillé réemployé en nouveau chapitre.':mode==='campaign2'?'Bas-Niveaux de Vesper : enclave, marché cyberpunk, HELIX et tour de transit. Sauver les civils ou récupérer les preuves.':mode==='campaign'?'Laboratoire abandonné, rue sous surveillance et relais en hauteur. Une trace de votre famille.':mode==='arena'?'Vingt vagues de machines et six armes à récupérer.':'Cibles fixes de 15 à 60 mètres, cibles mobiles latérales et avant-arrière. Vitesse croissante, score et précision.';
+  $('mission-description').textContent=mode==='ligne9'?'Ligne 9 inondée sous les Halles-Basses : rétablir le courant, relancer les pompes P9, ouvrir l’écluse. Mission longue avec points de contrôle.':mode==='campaign3'?'Secteur 03 de Vesper, de nuit : escorter le VSAV d’Inès de l’annexe médicale à la gare de fret de l’Anneau logistique. Barrage ORDRE, relais A3, balise de la fracture, échangeur bloqué. Mission longue avec points de contrôle.':mode==='campaign2'?'Bas-Niveaux de Vesper : enclave, marché cyberpunk, HELIX et tour de transit. Sauver les civils ou récupérer les preuves.':mode==='campaign'?'Laboratoire abandonné, rue sous surveillance et relais en hauteur. Une trace de votre famille.':mode==='arena'?'Vingt vagues de machines et six armes à récupérer.':'Cibles fixes de 15 à 60 mètres, cibles mobiles latérales et avant-arrière. Vitesse croissante, score et précision.';
   $('play-label').textContent=loading?'CHARGEMENT…':mode==='ligne9'?'JOUER LE CHAPITRE 05':mode==='campaign3'?'JOUER LE NIVEAU 3':mode==='campaign2'?'JOUER LE NIVEAU 2':mode==='campaign'?'JOUER LE NIVEAU 1':mode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
   $('play-button').disabled=loading;
   $('sound-setting').checked=!!settings.sound;$('music-setting').checked=settings.music!==false;
@@ -58,7 +58,7 @@ function openMission(mission,{resume=false,vr=false}={}){
   if(resume)url.searchParams.set('resume','1');
   if(vr)url.searchParams.set('vr','1');
   if(new URLSearchParams(location.search).get('renderer')==='webgl')url.searchParams.set('renderer','webgl');
-  if(settings.quality!=='auto'){const q=mission===3?({low:'performance',balanced:'equilibre',high:'ultra'}[settings.quality]||'equilibre'):settings.quality;url.searchParams.set('quality',q);}
+  if(settings.quality!=='auto'&&!(mission===3&&settings.quality!=='low'))url.searchParams.set('quality',settings.quality);
   location.assign(url.href);
 }
 resumeButton.onclick=()=>{if(!loading)openMission(1,{resume:true});};

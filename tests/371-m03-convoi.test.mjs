@@ -120,3 +120,11 @@ test('the story: both heroes, Inès and Ravel from chapter 02, the stabilisation
   assert.match(ENDING.next,/Brèche Violette/);
   const all=JSON.stringify(SCRIPT)+JSON.stringify(Object.keys(LOGS).flatMap(k=>[logFor(k,'ghju'),logFor(k,'lylu')]));assert.doesNotMatch(all,/est mort|est morte/);
 });
+
+test('the level 3 page: shared combat HUD and engine, the baked sector, the menu entry; the first version stays reachable',()=>{
+  const page=read('niveau3.js'),html=read('niveau3.html'),entry=read('entry.js'),vercel=readFileSync(new URL('../vercel.json',import.meta.url),'utf8');
+  for(const part of ['mountCombatHud','ArenaGame','createMissionXR','fetchSector','createM03Mission','createM03Art','logFor','REPRENDRE AU POINT DE CONTRÔLE','VSAV SECOURS 03'])assert.ok(page.includes(part),part);
+  assert.match(html,/import\('\.\/niveau3\.js/);assert.match(html,/vesper-level1-v7\.html\?chapter=3/,'first version (free visit) linked');
+  assert.match(entry,/mission===3\?'\.\/niveau3\.html'/);assert.doesNotMatch(vercel,/niveau3\.html/,'the page is served directly');
+  assert.doesNotMatch(read('index.html'),/LE CONVOI DES ABSENTS · DÉCOUVERTE/);
+});

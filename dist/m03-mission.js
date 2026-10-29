@@ -103,6 +103,8 @@ export function createM03Mission({ game, characterId = 'ghju', choice = null, ba
     get van() { return { x: van.x, z: van.z, yaw: van.yaw, index: van.index, hp: van.hp, moving: van.moving, waiting: van.waiting }; },
     groups() { return Object.fromEntries([...groups].map(([k, v]) => [k, { deployed: v.length, alive: alive(k) }])); },
     alive,
+    // QA and tests: put the van at a waypoint of its route.
+    placeVan(index) { placeVan(Math.max(0, Math.min(L.VAN_PATH.length - 1, index))); },
     start() {
       opened.clear(); done.clear(); said.clear(); reads.clear(); completed = false;
       placeVan(0); freshGame(L.START); setStage(S.arrivee); setWorld(); say('intro');
