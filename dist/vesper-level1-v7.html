@@ -303,6 +303,70 @@ function rescueBuilding(){
  interactions.push({x:-26,y:0,z:15,r:3,title:'Archive du centre médical',action:'archive',message:'ARCHIVE LOCALE · Dernier message enregistré avant la chute : « Ne prends pas le réseau principal. Retrouve les anciens relais. »'});
 }
 
+
+// M01 / Architectural finish: suspended ceilings, visible service infrastructure,
+// facade relief and maintenance access covers. Strictly visual: no colliders added.
+function m01ArchitectureFinish(){
+ const compact=quality==='performance';
+ // Medical annex: a readable 3D suspended ceiling below the existing roof.
+ const dx=compact?4.2:3.05,dz=compact?5.0:3.36;
+ for(let x=-43.2;x<=-14.6;x+=dx){
+  for(let z=13.8;z<=49.7;z+=dz){
+   const ix=Math.round((x+43.2)/dx),iz=Math.round((z-13.8)/dz);
+   const opened=(ix*7+iz*3)%17===0;
+   const luminaire=(ix%3===1&&iz%3===1);
+   // Some absent panels reveal a darker service cavity and conduit behind.
+   staticMesh.box(x,8.02,z,dx-.10,.065,dz-.11,opened?'graphite':(ix+iz)%7?'concrete':'dark',opened?MAT.METAL:MAT.CONCRETE);
+   staticMesh.box(x+dx*.49,7.98,z,.06,.13,dz,'steel',MAT.METAL);
+   staticMesh.box(x,7.98,z+dz*.49,dx,.13,.06,'steel',MAT.METAL);
+   if(opened){
+    staticMesh.box(x,7.86,z,.65,.06,dz*.72,'black',MAT.METAL);
+    staticMesh.line([x-.6,7.82,z],[x+.6,7.82,z],.085,'rust',MAT.METAL);
+   }
+   if(luminaire){
+    staticMesh.box(x,7.90,z,Math.min(1.70,dx*.72),.055,.33,'black',MAT.METAL);
+    staticMesh.box(x,7.86,z,Math.min(1.53,dx*.64),.029,.17,'blue',MAT.CYAN);
+   }
+  }
+ }
+ // Workshop: heavier steel ceiling, bolted struts, cable trays and recessed lights.
+ for(let z=18;z<=39;z+=3.5){
+  staticMesh.box(30,6.88,z,22.3,.16,.16,'graphite',MAT.METAL);
+  for(let x=20;x<=40;x+=4.2){
+   staticMesh.box(x,6.84,z,.18,.09,3.1,'steel',MAT.METAL);
+   if(Math.round(z/3.5)%2){
+    staticMesh.box(x,6.74,z,.97,.09,.66,'black',MAT.METAL);
+    for(let j=0;j<4;j++)staticMesh.box(x-.37+j*.25,6.685,z,.10,.027,.49,'blue',MAT.CYAN);
+   }
+  }
+ }
+ for(let x=20;x<=40;x+=6.5){
+  staticMesh.box(x,7.04,28.5,.29,.15,20,'graphite',MAT.METAL);
+  staticMesh.box(x-.18,7.01,28.5,.07,.04,20,'rust',MAT.METAL);
+ }
+ // Streets: physically recessed covers, fasteners and tactile curb separation.
+ for(let z=-79;z<57;z+=11){
+  for(const side of [-1,1]){
+   const x=side*10.82;
+   staticMesh.box(x,-.047,z,.92,.018,1.06,'black',MAT.METAL);
+   staticMesh.box(x,-.035,z,.84,.015,.98,'steel',MAT.METAL);
+   for(let i=0;i<6;i++)staticMesh.box(x,-.025,z-.36+i*.145,.65,.015,.042,'graphite',MAT.METAL);
+   staticMesh.box(side*12.7,.31,z+4.1,.15,.45,.8,'graphite',MAT.METAL);
+   staticMesh.box(side*12.76,.31,z+4.1,.055,.22,.54,'steel',MAT.METAL);
+  }
+ }
+ // Facades: service ducts and constrained relief, without obstructing doors.
+ for(const [x,z0,z1,h] of [[-12.82,-68,-11,8],[17.75,-70,-23,7],[18.0,-5,13,7]]){
+  for(const y of [3.0,5.8]){
+   staticMesh.box(x,y,(z0+z1)/2,.17,.16,Math.abs(z1-z0),'graphite',MAT.METAL);
+   staticMesh.box(x+(x<0?.09:-.09),y-.10,(z0+z1)/2,.07,.05,Math.abs(z1-z0),'steel',MAT.METAL);
+  }
+  for(let z=z0+3;z<z1;z+=8){
+   staticMesh.box(x,3.05,z,.34,.4,.17,'rust',MAT.METAL);
+  }
+ }
+}
+
 function environmentalStorytelling(){
  // Rescue annex: emergency canopy, red rescue symbol, evacuation markings, 3D gurneys.
  staticMesh.box(-11.7,5.7,28.4,5.2,.22,9.0,'graphite',1);
@@ -1274,7 +1338,7 @@ function buildScene(){
   staticMesh.box(16.4,.62,z,1.0,1.25,2,'concrete',0);
   addCollider(-15.5,.62,z,1.0,1.25,2,'barrière béton');addCollider(16.4,.62,z,1.0,1.25,2,'barrière béton');
  }
- foliage();junkAndDetails();environmentalStorytelling();detailPassV3();v4SectorArt();v5SceneArt();roboticDroneMesh();portalMeshBuild();
+ foliage();junkAndDetails();environmentalStorytelling();m01ArchitectureFinish();detailPassV3();v4SectorArt();v5SceneArt();roboticDroneMesh();portalMeshBuild();
  for(let i=0;i<7;i++)drones.push({x:choice([-20,20])+between(-8,8),y:between(6,12),z:between(-93,-13),phase:between(0,Math.PI*2),speed:between(.16,.36),r:between(2.5,8)});
  // objective boxes
  interactions.push({x:-8,y:0,z:10.5,r:4,title:'Alimentation de l’annexe',action:'power',message:'CIRCUIT RÉARMÉ — Les terminaux isolés peuvent à nouveau être consultés.'});
