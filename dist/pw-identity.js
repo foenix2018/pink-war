@@ -14,6 +14,13 @@
  function mark(node){
   if(!node||node.nodeType!==1||node.closest('.pw-brand-type')||node.closest('script,style,noscript,code,pre,svg'))return;
   if(node.matches('a.brand')){largeLogo(node,'header');return;}
+  if(node.matches('#game .logo')&&!node.dataset.pwLogoApplied){
+   node.dataset.pwLogoApplied='1';
+   const suffix=node.querySelector('span');
+   const img=document.createElement('img');img.src=logo;img.alt='PINK WARS';img.className='pw-header-wordmark';img.decoding='async';
+   node.replaceChildren(img);if(suffix)node.appendChild(suffix);return;
+  }
+
   if(node.matches('#lobby .intro>h1,#intro .introCard>h1')){largeLogo(node,'major');return;}
   const walker=document.createTreeWalker(node,NodeFilter.SHOW_TEXT,{acceptNode(t){
    return t.parentElement?.closest('script,style,noscript,code,pre,svg,.pw-brand-type')||!(/PINK\s+WARS?\b/i.test(t.textContent))?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT;
@@ -34,8 +41,8 @@
  }
  function apply(node){
   if(!node||node.nodeType!==1)return;
-  if(node.matches('a.brand,#lobby .intro>h1,#intro .introCard>h1'))mark(node);
-  node.querySelectorAll?.('a.brand,#lobby .intro>h1,#intro .introCard>h1').forEach(mark);
+  if(node.matches('a.brand,#lobby .intro>h1,#intro .introCard>h1,#game .logo'))mark(node);
+  node.querySelectorAll?.('a.brand,#lobby .intro>h1,#intro .introCard>h1,#game .logo').forEach(mark);
   // Only textual UI; never traverse WebGPU canvas or the entire world state.
   const targets='h1,h2,h3,header,.logo,.introMeta,.kicker,.eyebrow,.smallcap,.pw-load-brand,.pp-meta,.pp-brand,.loading-copy,.loading-brand,.helpCard>div,.mission-kicker,.pw-story-meta,.pw-story-shell,.pw-story-card';
   if(node.matches(targets))mark(node);
@@ -47,7 +54,7 @@
  function boot(){
   apply(document.body);
   const observer=new MutationObserver(entries=>{
-   for(const e of entries)for(const item of e.addedNodes){if(item.nodeType===1)apply(item);else if(item.nodeType===3&&item.parentElement?.matches('.logo,.pw-load-brand,.introMeta,.kicker,.eyebrow,.pp-brand,h1,h2'))mark(item.parentElement);}
+   for(const e of entries)for(const item of e.addedNodes){if(item.nodeType===1)apply(item);else if(item.nodeType===3&&/PINK\s+WARS?\b/i.test(item.nodeValue||''))mark(item.parentElement);}
   });
   observer.observe(document.body,{childList:true,subtree:true});
  }
