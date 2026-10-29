@@ -82,7 +82,7 @@ body.pw-graphics-open #quality{display:block!important}
  #hud #prompt{top:41%}
 }
 </style><link rel="stylesheet" href="fracture.css?v=3.71.0">
-<script defer src="./pw-identity.js?v=1"></script></head>
+<script defer src="./pw-identity.js?v=2"></script></head>
 <body>
 <canvas id="game"></canvas>
 <div id="damage"></div>
@@ -95,6 +95,8 @@ body.pw-graphics-open #quality{display:block!important}
 <button id="pwMission" class="pw-minimal-action" aria-label="Afficher l’objectif" title="Objectif" onclick="document.body.classList.toggle('pw-objective-open');document.body.classList.remove('pw-graphics-open')">◎</button><button id="pwSettings" class="pw-minimal-action" aria-label="Afficher les réglages" title="Réglages" onclick="document.body.classList.toggle('pw-graphics-open');document.body.classList.remove('pw-objective-open')">⚙</button><select id="quality" aria-label="Qualité graphique"><option value="normal">QUALITÉ NORMALE</option><option value="balanced">ÉQUILIBRÉ+ · FLUIDE</option><option value="low">PERFORMANCE</option></select>
 <div id="shade"><div class="panel"><div class="kicker">PINK WARS / LA FRACTURE · MISSION 02</div><h1>Sous <em>les Néons</em></h1><p>Les Bas-Niveaux de Vesper. Une enclave doit être évacuée. Traverse les ruelles, infiltre la galerie marchande, emprunte les escaliers et les passerelles, puis rejoins la tour de transit.</p><p class="small">Les archives de l’évacuation ont été saisies. Rejoins l’enclave, récupère la trace de ta famille et ouvre une route vers la tour de transit.</p><button id="start" class="primary">ENTRER DANS LES BAS-NIVEAUX →</button><a href="./level2-test.html?renderer=webgl" style="display:inline-block;color:#a9f4fa;font-size:13px;margin-bottom:15px">Mode compatibilité WebGL (si écran noir)</a><div id="status" class="small">Clavier / souris / manette PC · rendu WebGPU avec repli WebGL selon l'appareil</div></div></div>
 <script type="module">
+import {decorateShade} from './mission-briefing.js?v=3.71.0';
+decorateShade(document.getElementById('shade'),{mission:2,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});
 import {createMissionLoading} from './mission-loading.js?v=3.71.0';
 if(new URLSearchParams(location.search).get('manual')!=='1'){
  window.__PINKWAR_MISSION_LOADING=createMissionLoading({mission:2,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});

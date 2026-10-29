@@ -1,9 +1,8 @@
 import {setScreenMusic} from './menu-music.js';
+import {buildLoadingCover,briefingFor} from './mission-briefing.js';
 export function missionPresentation(mission=1,characterId='ghju'){
- const blue=characterId==='lylu';
- if(mission===3)return {number:3,title:'Le Convoi des Absents',description:'Reprendre les archives de Vesper, retrouver le manifeste HELIX et ouvrir une piste vers l’Anneau logistique.',image:'art/mission03-cover.svg?v=1',signal:blue?'#78baff':'#e8bc83'};
- return mission===2?{number:2,title:'Sous les Néons',description:'Les Bas-Niveaux de Vesper. Une enclave, des archives saisies, une route à ouvrir.',image:'art/mission02-cover.webp?v=3.71.0',signal:blue?'#78baff':'#f27ba7'}:
-  {number:1,title:'Le dernier signal',description:'Un terminal hors réseau conserve peut-être la trace de votre '+(blue?'sœur.':'frère.'),image:blue?'art/chargement-lylu.webp?v=3.47':'art/chargement.webp?v=3.47',signal:blue?'#78baff':'#f27ba7'};
+ const info=briefingFor(mission,characterId);
+ return {number:mission,title:info.title,description:info.text,image:info.image,signal:characterId==='lylu'?'#78baff':'#ff2d95'};
 }
 
 // Stage-based progress: each update follows completed work, never a timed fake
@@ -14,12 +13,10 @@ export function createMissionLoading({mission=1,characterId='ghju'}={}){
  if(!document.querySelector('[data-mission-loading-style]')){
   const link=document.createElement('link');link.rel='stylesheet';link.href=new URL('./mission-loading.css?v=3.71.0',import.meta.url).href;link.dataset.missionLoadingStyle='';document.head.append(link);
  }
- const info=missionPresentation(mission,characterId),root=document.createElement('section');root.className='pw-mission-loading';root.setAttribute('data-mission',String(mission));root.id='pw-mission-loading';
- root.setAttribute('role','status');root.setAttribute('aria-label','Chargement du scénario');root.style.setProperty('--signal',info.signal);
- root.innerHTML='<img alt=""><div class="pw-load-brand">PINK WARS / LA FRACTURE</div><a class="pw-load-home" href="./index.html">Retour à l’accueil</a><div class="pw-load-copy"><p class="pw-load-kicker"></p><h1></h1><p class="pw-load-description"></p><div class="pw-load-labels"><span class="pw-load-state">Préparation du secteur</span><span class="pw-load-value">0 %</span></div><div class="pw-load-track" role="progressbar" aria-label="Préparation du scénario" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div><button class="pw-load-error" hidden>Réessayer</button></div>';
- root.querySelector('img').src=new URL(info.image,import.meta.url).href;
- root.querySelector('.pw-load-kicker').textContent='MISSION '+String(info.number).padStart(2,'0')+' · VESPER / 2196';
- root.querySelector('h1').textContent=info.title;root.querySelector('.pw-load-description').textContent=info.description;document.body.append(root);
+ const root=document.createElement('section');root.className='pw-mission-loading';root.setAttribute('data-mission',String(mission));root.id='pw-mission-loading';
+ root.setAttribute('role','status');root.setAttribute('aria-label','Chargement du chapitre');
+ // Same level screen as the start panels (mission-briefing.js): art, logo, chapter, objectives; progress at the bottom right.
+ buildLoadingCover(root,mission,characterId);document.body.append(root);
  let progress=0,failed=false,complete=null;
  function set(value,label){
   if(failed||complete)return;progress=Math.max(progress,Math.min(1,Number(value)||0));

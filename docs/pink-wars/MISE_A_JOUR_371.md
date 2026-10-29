@@ -75,3 +75,22 @@ C’est une estimation, pas une mesure. Treize étapes, quatre phases à tenir (
   - le branchement de la page et du menu.
 - Navigateur (Chromium, rendu logiciel) : mission entière jouée avec les raccourcis de test, de l’arrivée jusqu’à l’écran de fin, aucune erreur console.
 - Limites : pas de mesure de durée ni de difficulté sur une vraie partie ; pas d’essai sur iPhone ni sur Quest 3 réels. Environ 470 000 triangles affichés : à surveiller sur mobile (la qualité « performance » allège la végétation et les lumières).
+
+## Identité : la calligraphie officielle et un écran de niveau commun
+
+- **Logo.** Le logo fourni (PINK magenta au-dessus de WARS argent brossé, lettres anguleuses entaillées) est vectorisé à partir de l’image d’origine.
+  - Il remplace l’ancien `art/pink-wars-wordmark.svg`, sans police : les lettres sont des tracés.
+  - Une version sur une ligne (`art/pink-wars-wordmark-inline.svg`) remplace les mentions « PINK WARS » dans les textes.
+  - Les 30 pages qui chargent `pw-identity.js` l’affichent.
+- **Écran de niveau commun** (`mission-briefing.js`, `mission-briefing.css`), sur le modèle de l’écran du chapitre 03 :
+  - illustration du chapitre en plein écran ;
+  - logo, « HISTOIRE › CHAPITRE 0N », grand numéro rose et titre ;
+  - ligne « ZONE : VESPER // … », texte court ;
+  - quatre objectifs numérotés avec leur icône ;
+  - RETOUR en bas à gauche, COMMENCER en bas à droite.
+
+  Il sert :
+  - à l’écran de chargement des chapitres (la jauge de progression remplace COMMENCER) ;
+  - aux écrans de départ, de fin et de défaite des niveaux 2, 3 et 5 (Ligne 9).
+
+  Le choix du héros se fait dans la barre du bas. Sur téléphone, la mise en page passe en colonne.

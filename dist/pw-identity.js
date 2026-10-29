@@ -1,8 +1,8 @@
 // Identity system for every visible Pink Wars screen. Original SVG lives in art/.
 (()=>{'use strict';
  const rootURL=new URL('.',document.currentScript?.src||location.href);
- const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('pw-identity.css?v=1',rootURL).href;document.head.append(css);
- const logo=new URL('art/pink-wars-wordmark.svg?v=1',rootURL).href;
+ const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('pw-identity.css?v=2',rootURL).href;document.head.append(css);
+ const logo=new URL('art/pink-wars-wordmark.svg?v=2',rootURL).href,inlineLogo=new URL('art/pink-wars-wordmark-inline.svg?v=2',rootURL).href;
  if(location.pathname.endsWith('/niveau3.html')||new URLSearchParams(location.search).get('chapter')==='3')document.documentElement.classList.add('pw-m03-page');
  function largeLogo(node,kind){
   if(!node||node.dataset.pwLogoApplied)return;
@@ -31,10 +31,10 @@
    const fragment=document.createDocumentFragment();
    const before=t.nodeValue.slice(0,m.index),after=t.nodeValue.slice(m.index+m[0].length);
    if(before)fragment.append(document.createTextNode(before));
-   const span=document.createElement('span');span.className='pw-brand-type';span.setAttribute('aria-label','PINK WARS');
-   const pink=document.createElement('span');pink.className='pw-brand-pink';pink.textContent='PINK';
-   const silver=document.createElement('span');silver.className='pw-brand-silver';silver.textContent='WARS';
-   span.append(pink,document.createTextNode(' '),silver);fragment.append(span);
+   // Text mentions of the name show the one-line wordmark (same lettering as the logo).
+   const span=document.createElement('span');span.className='pw-brand-type';span.setAttribute('role','img');span.setAttribute('aria-label','PINK WARS');
+   const img=document.createElement('img');img.src=inlineLogo;img.alt='';img.className='pw-inline-wordmark';img.decoding='async';
+   span.append(img);fragment.append(span);
    if(after)fragment.append(document.createTextNode(after));
    t.replaceWith(fragment);
   }

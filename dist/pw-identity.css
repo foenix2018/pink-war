@@ -1,8 +1,7 @@
 /* Pink Wars master identity: reusable, local assets and zero external font downloads.
-   Shape derived from the agreed magenta metallic / silver italic game artwork. */
-.pw-brand-type{display:inline-flex!important;align-items:baseline;gap:.22em;white-space:nowrap;font-family:Impact,"Arial Black",Arial,sans-serif!important;font-style:italic!important;font-weight:1000!important;letter-spacing:-.055em!important;text-transform:uppercase!important;line-height:.94!important;transform:skewX(-7deg);vertical-align:baseline}
-.pw-brand-type>.pw-brand-pink{background:linear-gradient(175deg,#ffb4e2 1%,#ff4dab 35%,#f22c8b 65%,#9e1056 100%);-webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-stroke:.25px #f474bb;text-shadow:none}
-.pw-brand-type>.pw-brand-silver{background:linear-gradient(173deg,#fff 3%,#e6eaf1 35%,#8599af 66%,#f5f8fe 82%,#596779);-webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-stroke:.35px #e8f1ff;text-shadow:none}
+   Lettering traced from the official logo (magenta PINK over brushed-silver WARS, angular cut letters). */
+.pw-brand-type{display:inline-block!important;white-space:nowrap;line-height:1!important;vertical-align:-.14em}
+.pw-brand-type>.pw-inline-wordmark{display:inline-block;height:1.02em;width:auto;filter:drop-shadow(0 1px 2px #000a)}
 .pw-major-wordmark{display:block;object-fit:contain;object-position:left center;width:min(310px,82%);height:auto;min-height:54px;filter:drop-shadow(0 5px 15px #020613ba)}
 a.brand .pw-header-wordmark{display:block;width:112px;max-width:100%;height:auto;filter:drop-shadow(0 2px 4px #030713d1)}
 #lobby .intro>h1{margin:9px 0 4px!important;line-height:1!important}

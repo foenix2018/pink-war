@@ -43,8 +43,9 @@ test('the lobby is hidden during a session despite the Fracture id selector, and
 
 test('the cinematic mission 02 cover is shared by menu and loading, with its mobile header separated',()=>{
   assert.match(read('menu-art.js'),/mission02-cover\.webp/);
-  assert.match(read('mission-loading.js'),/mission02-cover\.webp/);
-  assert.match(read('mission-loading.css'),/\.pw-load-home\{top:max\(58px/);
+  // 3.71: the loading cover is the shared level screen; its art and phone layout live in mission-briefing.
+  assert.match(read('mission-loading.js'),/buildLoadingCover/);assert.match(read('mission-briefing.js'),/mission02-cover\.webp/);
+  assert.match(read('mission-briefing.css'),/\.pw-briefing \.pwb-back\{left:16px/);
   for(const page of ['vesper-level1-v7.html','level2-test.html']){
     assert.match(read(page),/<link rel="icon" href="icons\/favicon-32\.png\?v=/,page);
     assert.match(read(page),/<link rel="apple-touch-icon" href="apple-touch-icon\.png\?v=/,page);

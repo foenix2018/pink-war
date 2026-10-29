@@ -133,3 +133,13 @@ test('the wording stays generic: an ambulance, not fire-brigade jargon',()=>{
   const text=['m03-story.js','m03-layout.js','m03-mission.js','m03-art.js','niveau3.js','niveau3.html'].map(read).join('\n');
   assert.doesNotMatch(text,/VSAV|fourgon|chef d’agrès|\bFPT\b|caserne/i);assert.match(text,/ambulance/i);
 });
+
+test('one level screen for every chapter (logo, chapter, zone, objectives, RETOUR / COMMENCER), and the traced logo',async()=>{
+  const {BRIEFINGS,briefingFor}=await import('../dist/mission-briefing.js');
+  for(const m of [1,2,3,5]){const b=briefingFor(m,'ghju');assert.equal(b.objectives.length,4,`chapter ${m}`);assert.ok(b.zone.startsWith('Vesper //'));assert.equal(b.number,String(m).padStart(2,'0'));}
+  assert.deepEqual(briefingFor(3).objectives.map(o=>o.title),['Fouiller l’annexe médicale','Récupérer le manifeste HELIX','Rejoindre les archives A3','Neutraliser la liaison ORDRE'],'the chapter 03 model');
+  for(const page of ['niveau3.html','ligne9.html','level2-test.html'])assert.match(read(page),/decorateShade\(document\.getElementById\('shade'\)/,page);
+  assert.match(read('mission-loading.js'),/buildLoadingCover/);assert.ok(Object.keys(BRIEFINGS).length>=4);
+  const logo=read('art/pink-wars-wordmark.svg');assert.match(logo,/<path d="M/);assert.doesNotMatch(logo,/<text/,'traced letters, no font');
+  assert.match(read('pw-identity.js'),/pink-wars-wordmark-inline\.svg/);
+});

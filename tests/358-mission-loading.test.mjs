@@ -4,8 +4,10 @@ import {createMissionLoading,missionPresentation} from '../dist/mission-loading.
 
 function loadingDOM(t){
  const oldDocument=globalThis.document,oldRAF=globalThis.requestAnimationFrame,frames=[];
- const node=()=>({hidden:false,style:{setProperty(){}},attributes:{},setAttribute(k,v){this.attributes[k]=v;},querySelector(selector){return this.nodes[selector]||=(node());},nodes:{}});
- const document={querySelector:()=>true,createElement:node,body:{append(){}},head:{append(){}}};
+ // 3.71: the cover is the shared level screen (mission-briefing.js), built with ordinary DOM calls.
+ const node=()=>({hidden:false,style:{setProperty(){}},dataset:{},classList:{add(){}},attributes:{},setAttribute(k,v){this.attributes[k]=v;},append(){},prepend(){},after(){},
+  querySelector(selector){return this.nodes[selector]||=(node());},nodes:{}});
+ const document={querySelector:()=>true,createElement:node,createElementNS:node,body:{append(){}},head:{append(){}}};
  globalThis.document=document;globalThis.requestAnimationFrame=fn=>frames.push(fn);
  t.after(()=>{globalThis.document=oldDocument;globalThis.requestAnimationFrame=oldRAF;});
  return ()=>frames.shift()?.();
