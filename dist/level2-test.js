@@ -15,6 +15,7 @@ import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './rende
 import {createEnemyFactory} from './enemies.js';
 import {buildGun} from './weapons.js';
 import {createDistrictArchitecture} from './level2-architecture.js';
+import {createEnvironmentFinish} from './m02-environment-finish.js';
 import {installLeanPBR} from './level2-materials.js';
 import {createStreetAtmosphere} from './level2-atmosphere.js';
 import {installPinkWarsSoldier} from './level2-player.js';
@@ -60,7 +61,7 @@ const rng=(()=>{let s=220102;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;
 let canvas=main,renderer,scene,camera,game,weapon,clock=0,running=false,started=false,last=0,fpsTime=0,frames=0,framePending=false,recovering=false,bootStep='modules';
 let yaw=0,pitch=0,stage=0,reported=-1;
 let noticeUntil=0,signal=0,rain,enemyFactory,root,architecture,pbrController,atmosphere;
-let worldShadows=null,groundOcclusion=null;
+let worldShadows=null,groundOcclusion=null,environmentFinish=null;
 // 3.70 extension: enclave (prologue) and transit tower (epilogue) around the street.
 let extension=null,extArt=null,helixFactory=null,subtitles=null,skyLights=null,journalOpen=false,checkpointSaved=null,checkpointClock=0;
 let view=readPreferredView(),aimBlend=0,mouseAim=false,playerRig=null,touchControls=null,paused=false;
@@ -408,7 +409,10 @@ function createEnvironment(){
   const lamp=new T.PointLight(z%3===0?0xe69b5a:0x5bd6ec,low()?1.1:1.8,18,2);
   lamp.position.set(x,6.5,z);scene.add(lamp);lightSources.push(lamp);
  }
- street();blockBuildings();stairsAndSkybridges();props();architecture.decorate();warZone=createWarZone(T,root,materials,collisions,{performance:low()});weather();optimizeStaticBoxes();
+ street();blockBuildings();stairsAndSkybridges();props();architecture.decorate();
+ // Visual-only pass: no collision changes or character/weapon assets touched.
+ environmentFinish=createEnvironmentFinish(T,{root,scene,performance:low(),accent:characterId==='lylu'?0x69b7ff:0xff63af});
+ warZone=createWarZone(T,root,materials,collisions,{performance:low()});weather();optimizeStaticBoxes();
  // 3.70: the enclave of the covered market (north) and the transit tower (south) close the two ends of the street.
  try{extArt=createM02ExtensionArt(T,scene,{quality:low()?'low':'normal',accent:characterId==='lylu'?0x4da8ff:0xff4fa1});extArt.build(extensionObstacles());}
  catch(error){console.warn('M02 extension dressing degraded, the mission stays playable:',error);extArt=null;}
