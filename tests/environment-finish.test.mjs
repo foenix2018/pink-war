@@ -58,7 +58,7 @@ test('M02 scene imports detail pass; M01 adds ceilings without touching collisio
  assert.match(read('level2-test.js'),/createEnvironmentFinish\(T/);
  const m01=read('vesper-level1-v7.html');
  assert.match(m01,/function m01ArchitectureFinish\(\)/);
- assert.match(m01,/environmentalStorytelling\(\);m01ArchitectureFinish\(\)/);
+ assert.match(m01,/environmentalStorytelling\(\);(if\(isChapter3\))?m01ArchitectureFinish\(\)/);
  const code=m01.slice(m01.indexOf('function m01ArchitectureFinish()'),m01.indexOf('function environmentalStorytelling()'));
  assert.doesNotMatch(code,/addCollider\(/);
 });
