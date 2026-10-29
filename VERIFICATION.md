@@ -1,3 +1,9 @@
+# Pink War 3.66.5 — liseré rose de Cara
+
+13 contrôles ciblés réussis : modèles, peau rigide, ouverture des panneaux, cadrage portrait, ressources, assistance et galerie. La bordure de Cara utilise un tube de 1 mm de rayon et un matériau rose faiblement émissif ; le lot supplémentaire partage les six charnières existantes. Cara passe à 12 lots, avec le même nombre de triangles. Gaby conserve ses 11 lots et ses matériaux. Vérification visuelle du vrai modèle dans la galerie locale sous Chromium/SwiftShader, sans erreur JavaScript ou ressource locale manquante. La suite complète de 618 tests de la version précédente n’a pas été relancée pour ce réglage visuel.
+
+---
+
 # Pink War 3.66.4 — Gaby et Cara articulées
 
 618 tests Node réussis, aucun échec, test ignoré ou annulé ; puis les 22 contrôles ciblés réussissent après le dernier ajustement portrait. Les sept nouveaux cas mesurent les vrais sommets des coques rigides sous transformation du parent, du corps et des charnières ; ils contrôlent les palettes d’os partagées, l’ouverture après une compétence réelle, la pause, le retour à l’écran après le suivi à l’épaule, le cadrage de tous les sommets en portrait et la libération unique des ressources. Les tests existants de coûts, recharges, ligne de vue, protection/soin sans résurrection et verrouillage M07 passent.

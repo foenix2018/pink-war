@@ -1,5 +1,7 @@
 # Pink Wars — La Fracture
 
+Version 3.66.5 : **fin liseré rose sur Cara** — une bordure rose discrète suit un côté de chacun de ses six panneaux, avec optique et éclairage principal bleus. [Voir Cara en 3D](https://pink-war.vercel.app/galerie.html?model=CARA&v=3.66.5).
+
 Version 3.66.4 : **Gaby et Cara remodelées** — coques épaisses articulées, châssis interne, optiques et aérations détaillées. Quatre protections arrondies roses pour Gaby, six panneaux graphite et bleus pour Cara ; ouverture lors des compétences et cadrage portrait ajusté. [Détails](docs/pink-wars/MISE_A_JOUR_366_4.md) · [Gaby en 3D](https://pink-war.vercel.app/galerie.html?model=GABY&v=3.66.4) · [Cara en 3D](https://pink-war.vercel.app/galerie.html?model=CARA&v=3.66.4).
 
 Version 3.66.3 : **GHJU et LYLU ancrés au sol réel** — cadence liée à la distance parcourue, pieds fixes pendant l’appui, bassin souple et surfaces visibles raccordées à la physique. Rampes et monte-charge pris en compte ; quadrillage défilant dans l’atelier. [Détails](docs/pink-wars/MISE_A_JOUR_366_3.md) · [Jouer dans l’Arène](https://pink-war.vercel.app/?mode=arena&v=3.66.3).

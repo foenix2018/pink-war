@@ -10,6 +10,8 @@ export function createCompanionModel(T,root,defensive=true){
  const glow=new T.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.75,metalness:.35,roughness:.3});
  const lens=new T.MeshStandardMaterial({color:defensive?0x471f3b:0x12384f,emissive:color,emissiveIntensity:.18,metalness:.75,roughness:.13});
  const materials=[steel,shell,dark,glow,lens],owned=new Set(),meshes=[];
+ const trim=defensive?steel:new T.MeshStandardMaterial({color:0xdb639f,emissive:0xff65b1,emissiveIntensity:.12,metalness:.65,roughness:.4});
+ if(!defensive)materials.push(trim);
  const chassis=new Assembly(),gyroArt=new Assembly(),panelGroups=new Map();
  const up=new T.Vector3(0,1,0),axis=new T.Vector3(0,0,1),tmp=new T.Vector3();
  const sphere=(theta,phi,r)=>new T.Vector3(Math.sin(phi)*Math.sin(theta)*r,Math.cos(phi)*Math.sin(theta)*r,Math.cos(theta)*r);
@@ -73,7 +75,7 @@ export function createCompanionModel(T,root,defensive=true){
  // fasteners. They open radially and pivot about their real mounting points.
  const width=Math.PI*2/count-(defensive?.15:.12),sector=new Assembly();
  sector.add(patch(defensive?.151:.148,width),shell);
- sector.add(arc(.153,.78,2.40,-width*.43,.0018,true),steel);
+ sector.add(arc(.153,.78,2.40,-width*.43,defensive?.0018:.0010,true),trim);
  sector.add(arc(.153,.78,2.40,width*.43,.0018,true),steel);
  sector.add(arc(.154,1.08,1.63,-width*.32,.0017),glow);
  sector.add(arc(.154,1.08,1.63,width*.32,.0017),glow);

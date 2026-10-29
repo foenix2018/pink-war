@@ -13,7 +13,7 @@ for(const [hero,name,petals,color]of [['ghju','Gaby',4,0xff65b1],['lylu','Cara',
   for(let i=0;i<90;i++)actor.preview(1/60);
   actor.react({type:'companion-assist',name});for(let i=0;i<15;i++)actor.preview(1/60);
   const box=new T.Box3().setFromObject(actor.root,true),size=box.getSize(new T.Vector3());assert.ok(size.x>.29&&size.x<.39&&size.y>.28&&size.y<.39&&size.z>.26&&size.z<.39,'stays a shoulder-sized 3D sphere, including opened shells');
-  const shell=meshes.filter(m=>m.isSkinnedMesh);assert.equal(shell.length,4);
+  const shell=meshes.filter(m=>m.isSkinnedMesh);assert.equal(shell.length,name==='Cara'?5:4);
   for(const mesh of shell){const weights=mesh.geometry.attributes.skinWeight,indices=mesh.geometry.attributes.skinIndex;for(let i=0;i<weights.count;i++){assert.equal(weights.getX(i),1);assert.equal(weights.getY(i),0);assert.ok(indices.getX(i)<petals);}}
   actor.dispose();
  });
