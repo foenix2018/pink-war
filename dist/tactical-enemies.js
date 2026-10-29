@@ -1,8 +1,9 @@
+import {isReco1,RECO1} from './reco1-profile.js';
 // Local cover choices use only the last heard/seen position. No knowledge of a
 // concealed player's live position, teleportation, or shots through walls.
 import {enemyScale,rangedMuzzle,ROBOT_HEAD_TOP,ROBOT_SENSOR_Y,ROBOT_CROUCH_DROP,MAX_COVER_CROUCH} from './enemy-combat.js';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),scaleOf=e=>enemyScale(e.form,e.elite)*(e.roomScale||1);
-export const coverEyeHeight=(enemy,cover)=> (enemy.elevation||0)+(ROBOT_SENSOR_Y-ROBOT_CROUCH_DROP*(cover?.crouchAmount??(cover?.crouch?1:0)))*scaleOf(enemy);
+export const coverEyeHeight=(enemy,cover)=> (enemy.elevation||0)+((isReco1(enemy.form)?RECO1.sensorY:ROBOT_SENSOR_Y)-ROBOT_CROUCH_DROP*(cover?.crouchAmount??(cover?.crouch?1:0)))*scaleOf(enemy);
 export function coverProgress(enemy,time){
  const t=enemy.tactics,d=distance(enemy,t.cover.hidden);
  if(!['relocate','return'].includes(t.state)){t.progressState=t.state;return true;}
@@ -40,14 +41,14 @@ export function grenadeAvoidance(enemy,{time,hazards=[],obstacles,segmentBox}){
  enemy.evadePoint=null;return null;
 }
 export function chooseTacticalCover(enemy,threat,obstacles,allies,segmentBox,time=0){
-  const floor=enemy.elevation||0,r=enemy.radius||.65,margin=r+.23,scale=scaleOf(enemy),minimum=(ROBOT_HEAD_TOP-ROBOT_CROUCH_DROP*MAX_COVER_CROUCH)*scale+.045;
+  const floor=enemy.elevation||0,r=enemy.radius||.65,margin=r+.23,scale=scaleOf(enemy),headTop=isReco1(enemy.form)?RECO1.headTop:ROBOT_HEAD_TOP,minimum=(headTop-ROBOT_CROUCH_DROP*MAX_COVER_CROUCH)*scale+.045;
   const free=p=>obstacles.every(b=>b.walkableSurface||(b.y||0)+b.height<floor+.12||(b.y||0)>floor+1.9||Math.abs(p.x-b.x)>b.hx+r+.08||Math.abs(p.z-b.z)>b.hz+r+.08);
   let best=null;
   const walls=obstacles.filter(w=>!w.walkableSurface&&(w.y||0)<=floor+.2&&(w.y||0)+w.height>=floor+minimum&&distance(enemy,w)<=22).sort((a,b)=>distance(enemy,a)-distance(enemy,b)).slice(0,24);
   for(const wall of walls){
-    const crouchAmount=Math.max(0,Math.min(MAX_COVER_CROUCH,(floor+ROBOT_HEAD_TOP*scale+.035-((wall.y||0)+wall.height))/(ROBOT_CROUCH_DROP*scale))),crouch=crouchAmount>.01;
+    const crouchAmount=Math.max(0,Math.min(MAX_COVER_CROUCH,(floor+headTop*scale+.035-((wall.y||0)+wall.height))/(ROBOT_CROUCH_DROP*scale))),crouch=crouchAmount>.01;
     const eye=p=>({x:p.x,y:coverEyeHeight(enemy,{crouchAmount}),z:p.z});
-    const standing=p=>({x:p.x,y:floor+ROBOT_SENSOR_Y*scale,z:p.z});
+    const standing=p=>({x:p.x,y:floor+(isReco1(enemy.form)?RECO1.sensorY:ROBOT_SENSOR_Y)*scale,z:p.z});
     for(const [nx,nz] of [[1,0],[-1,0],[0,1],[0,-1]]){
       if((wall.x-threat.x)*nx+(wall.z-threat.z)*nz<=0)continue;
       const tx=-nz,tz=nx,normal=nx?wall.hx:wall.hz,tangent=nx?wall.hz:wall.hx;
@@ -60,7 +61,7 @@ export function chooseTacticalCover(enemy,threat,obstacles,allies,segmentBox,tim
         if(travel>16||range<6||range>46||!free(hidden)||!free(peek))continue;
         if(enemy.tactics?.failedCovers?.some(p=>p.until>time&&distance(p,hidden)<1.1))continue;
         if(segmentBox(eye(hidden),threat,wall)===null)continue;
-        const top={...hidden,y:floor+(ROBOT_HEAD_TOP-ROBOT_CROUCH_DROP*crouchAmount)*scale};
+        const top={...hidden,y:floor+(headTop-ROBOT_CROUCH_DROP*crouchAmount)*scale};
         if(segmentBox(top,threat,wall)===null)continue;
         if(obstacles.some(b=>segmentBox(standing(peek),threat,b)!==null))continue;
         const muzzle=rangedMuzzle({...enemy,x:peek.x,z:peek.z,coverCrouch:0,aimPitch:0,yaw:Math.atan2(threat.x-peek.x,threat.z-peek.z)+Math.PI});

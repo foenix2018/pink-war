@@ -1,3 +1,4 @@
+import {isReco1} from './reco1-profile.js';
 import { ArenaGame, clamp, segmentBox } from './game-logic.js';
 import { PROBE } from './aerial-probes.js';
 import { enemyDurability } from './enemy-combat.js';
@@ -246,10 +247,10 @@ export class CampaignLevel1 extends ArenaGame {
       elevation: homeHeight + (probe ? PROBE.hover : 0), homeHeight,
       grounded: !probe, verticalSpeed: 0, form, elite: false,
       ranged: !!site.ranged || probe || ['seer','brute','listener','bulwark','synth'].includes(form), hp: enemyDurability(1+this.encounter, form, false),
-      aimHeight: probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : ['seer','listener'].includes(form) ? 1.38 : ['brute','bulwark'].includes(form)?1.42:1.15,
-      radius: probe ? PROBE.radius : form === 'scuttler' ? .86 : form==='bulwark'?.95:.8,
-      hitRadius: probe ? .44 : form === 'scuttler' ? .91 : form === 'seer' ? .94 : 1.05,
-      speed: probe ? 3.67 : form === 'scuttler' ? 2.68 : form==='bulwark'?1.8:2.4,
+      aimHeight: probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : isReco1(form)?1.16:['seer','listener'].includes(form) ? 1.38 : ['brute','bulwark'].includes(form)?1.42:1.15,
+      radius: isReco1(form)?.45:probe ? PROBE.radius : form === 'scuttler' ? .86 : form==='bulwark'?.95:.8,
+      hitRadius: isReco1(form)?.42:probe ? .44 : form === 'scuttler' ? .91 : form === 'seer' ? .94 : 1.05,
+      speed: isReco1(form)?1.8:probe ? 3.67 : form === 'scuttler' ? 2.68 : form==='bulwark'?1.8:2.4,
       tier: 1+this.encounter, limpUntil: 0, stunnedUntil: 0,
       homeX: site.x, homeZ: site.z, portalId: site.id,
       attackTimer: 1.4, phase: this.random() * Math.PI * 2,

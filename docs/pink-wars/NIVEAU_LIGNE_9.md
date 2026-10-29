@@ -1,6 +1,6 @@
 # Chapitre 05 — « La Ligne Noyée » (Ligne 9)
 
-Version 3.65. Mission longue de l’Acte II « Sous la ville », jouable depuis l’accueil (**Histoire → 05 — LA LIGNE NOYÉE**) ou directement sur `ligne9.html` (`?character=lylu` par défaut, `?character=ghju`).
+Version 3.66. Mission longue de l’Acte II « Sous la ville », jouable depuis l’accueil (**Histoire → 05 — LA LIGNE NOYÉE**) ou directement sur `ligne9.html` (`?character=lylu` par défaut, `?character=ghju`).
 
 ## Sources du canon
 

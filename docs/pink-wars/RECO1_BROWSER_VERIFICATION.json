@@ -1,0 +1,67 @@
+{
+  "browser": {
+    "arena": {
+      "version": "3.65.0",
+      "name": "RECO1 · reconnaissance blindée",
+      "hp": 750,
+      "form": "seer",
+      "stats": {
+        "nativeBones": 41,
+        "visualBones": 18,
+        "batches": 17,
+        "triangles": 59742
+      },
+      "enemyShots": 1,
+      "muzzle": [
+        -0.09246145844634192,
+        1.441587088960747,
+        17.808413883787832
+      ],
+      "pose": 1.0705763615605258e-08
+    },
+    "impact": {
+      "hp": 738,
+      "ammo": 11,
+      "kills": 0,
+      "geometry": {
+        "nativeBones": 41,
+        "visualBones": 18,
+        "batches": 17,
+        "triangles": 59742
+      }
+    },
+    "errors": [],
+    "failed": [],
+    "note": "Real entry UI and Space key. Prepared enemy/camera on free Arena ground; manual simulation frames and reduced software framebuffer."
+  },
+  "campaign": {
+    "result": {
+      "revision": "3.65.0",
+      "opening": 8,
+      "hp": 750,
+      "name": "RECO1 · reconnaissance blindée",
+      "stats": {
+        "nativeBones": 41,
+        "visualBones": 18,
+        "batches": 17,
+        "triangles": 59742
+      },
+      "authoredPost": {
+        "x": -22,
+        "z": 77,
+        "role": "anchor",
+        "facing": 2
+      },
+      "gripError": 1.3540472636122027e-08
+    },
+    "errors": [],
+    "failed": [],
+    "note": "Real M01 startup, authored opening seer post. Prepared activation position and close camera, software WebGL."
+  },
+  "environment": {
+    "browser": "Chromium / SwiftShader",
+    "renderer": "WebGL2",
+    "prepared": true,
+    "physical_Quest_or_iPhone": false
+  }
+}

@@ -1,3 +1,15 @@
+# Pink War 3.65 — RECO1 intégré
+
+RECO1 V10 remplace la Sentinelle légère (`seer`) via la fabrique commune, en campagne, Arène et AT HOME. Rig RLH natif de 41 os et cinq clips, 18 os de rendu, 17 lots partagés et 59 742 triangles. Campagne/Arène : 750 PV de base ; projectiles sur blindage ×0,5 et sur optiques ×0,8 avant multiplicateur de tête. Les autres modes conservent leurs coefficients de difficulté existants.
+
+**Validation** : `npm test`, 552/552 réussis, sans échec ni test ignoré. Les 11 nouveaux cas vérifient notamment le remplacement, les poses indépendantes sur buffers partagés, le déplacement et les appuis, les prises des deux mains, la pose en pause, la concordance canon/projectile avec couvert, hauteur, élite et échelle de pièce, les vrais tirs ennemis et dégâts au joueur, les murs, la réduction des tirs et l’élimination par projectiles réels. Syntaxe des modules et scripts validée, `git diff --check` propre.
+
+**Navigateur** : entrée réelle dans l’Arène depuis le menu ; RECO1 à 750 PV et un projectile hostile issus de la première vague ; touche Espace et VX-9 au torse donnant 738 PV et une munition consommée. Chargement réel de M01 puis activation des huit postes initiaux : RECO1 remplace le poste `seer` (-22, 77). Aucun échec JavaScript ni ressource locale manquante dans ces deux parcours. Capture et rapport dans [les notes 3.65](docs/pink-wars/MISE_A_JOUR_365.md).
+
+**Limites** : Chromium/SwiftShader et WebGL2, framebuffer réduit, positions de préparation et caméra de capture. Viewport mobile vérifié ; aucun essai sur iPhone/Safari ou Quest physique, ni mesure de fréquence d’images sur ces appareils. La validation locale ne constitue pas une preuve de déploiement en production.
+
+---
+
 # Pink War 3.40 — reprise de la production 3.39
 
 La production Vercel `pink-war.vercel.app` était READY sur le commit `ff6f699fb24092e932bb6fec2a719cea27fb1b10`. La copie locale 3.33 avait 83 commits de retard et un travail 3.34 non publié. Ce travail a été sauvegardé dans Git stash puis intégré sélectivement après récupération de la production. Les commandes Quest A saut / B recharge / Y arme / X pause et index droit tir / majeur droit visée, les grips Kenney, le stand de tir, les vagues améliorées et les impacts/halos 3.39 sont conservés.

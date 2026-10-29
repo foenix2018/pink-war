@@ -55,7 +55,7 @@ body.pw-graphics-open #quality{display:block}
 /* Briefing, defeat and ending panels cover the combat HUD. */
 body.pw-shaded .pw-hud,body.pw-shaded #hud,body.pw-shaded .pw-minimal-action{visibility:hidden}
 </style>
-<link rel="stylesheet" href="mobile-controls-v7.css?v=3.65"><link rel="stylesheet" href="fracture.css?v=3.65">
+<link rel="stylesheet" href="mobile-controls-v7.css?v=3.66"><link rel="stylesheet" href="fracture.css?v=3.66">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -81,7 +81,7 @@ body.pw-shaded .pw-hud,body.pw-shaded #hud,body.pw-shaded .pw-minimal-action{vis
 const ghju=new URLSearchParams(location.search).get('character')==='ghju';
 document.getElementById(ghju?'pick-ghju':'pick-lylu').setAttribute('aria-current','true');
 if(ghju){document.getElementById('panel-text').textContent='Vesper, sept ans après la chute de 2189. Depuis trois jours, l’eau a pris la Ligne 9 sous les Halles-Basses et les dispensaires des Épars n’ont plus de route sèche. Nira Solen a besoin de quelqu’un pour relancer à la main les vieilles pompes P9. GHJU descend avec Gaby là où LYLU est allé seul le soir de la chute.';document.getElementById('compat').href='./ligne9.html?character=ghju&renderer=webgl';}
-import('./ligne9.js?v=3.65').catch(error=>{
+import('./ligne9.js?v=3.66').catch(error=>{
  const status=document.getElementById('status'),button=document.getElementById('start');
  if(status)status.textContent='Erreur de chargement : '+(error?.message||String(error))+' — essaye le mode compatibilité WebGL.';
  if(button){button.disabled=false;button.textContent='RECHARGER →';button.addEventListener('click',()=>location.reload());}

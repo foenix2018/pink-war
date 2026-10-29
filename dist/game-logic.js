@@ -1,3 +1,4 @@
+import {isReco1,RECO1_HIT_ZONES,reco1ProjectileScale} from './reco1-profile.js';
 import {tacticalOrder,grenadeAvoidance} from './tactical-enemies.js';
 import {squadOrder,relayVisualContact,clearSquadFiringLane,registerIncomingFire} from './enemy-squads.js';
 import { equipmentForLevel } from './equipment.js';
@@ -6,7 +7,7 @@ import { PROBE, updateProbe } from './aerial-probes.js';
 import { NOISE_RADIUS, SHOT_RADIUS, propagateNoise, soundWaypoint } from './hearing.js';
 import { tryJump } from './locomotion.js';
 import { hostileShotProfile, predictShot } from './enemy-fire.js';
-import { enemyDurability, enemyVolley, rangedMuzzle, enemyScale, enemySightPoint, remembersCoverContact } from './enemy-combat.js';
+import { enemyDurability, enemyVolley, rangedMuzzle, enemyScale, enemySightPoint, remembersCoverContact, aimReco1 } from './enemy-combat.js';
 import { sweepBlade, bladeBulletContact, reflectedVelocity } from './blade-combat.js';
 import { SHIELD_MAX, CHARGE_START, CHARGE_FUSE, CHARGE_RADIUS, soakDamage, rechargeShield, meleeStrike, throwCharge, grantCharges, updateCharges, forwardOf } from './armor-combat.js';
 // World units are metres. The playable arena is exactly 200 × 200 m.
@@ -159,7 +160,7 @@ export function traceEnemyHit(start, end, enemy) {
   const elite=enemyScale(enemy.form,enemy.elite)*(enemy.roomScale||1);
   const yaw=enemy.yaw||0,cos=Math.cos(yaw),sin=Math.sin(yaw);
   const crawl=enemy.form==='scuttler';
-  const zones=enemy.form==='probe'?[
+  const zones=isReco1(enemy.form)?RECO1_HIT_ZONES:enemy.form==='probe'?[
     ['head',0,.55,-.48,.18],['torso',0,.55,0,.44],
     ['limb',-.61,.49,-.42,.24],['limb',.61,.49,-.42,.24],
     ['limb',-.61,.49,.42,.24],['limb',.61,.49,.42,.24]
@@ -450,15 +451,15 @@ export class ArenaGame {
     const front=form==='sentinel'?this.sentinelSpawn():null;
     const x=front?front.x:site.x+Math.sin(site.yaw||0)*3.2+Math.cos(angle)*.95;
     const z=front?front.z:site.z+Math.cos(site.yaw||0)*3.2+Math.sin(angle)*.95;
-    const aimHeight = probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : ['seer','listener'].includes(form) ? 1.38 : ['brute','bulwark'].includes(form) ? 1.42 : 1.15;
+    const aimHeight = probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : isReco1(form)?1.16:['seer','listener'].includes(form) ? 1.38 : ['brute','bulwark'].includes(form) ? 1.42 : 1.15;
     const homeHeight = this.surfaceHeight(x, z,this.time,.3);
     const enemy = { id: this.nextId++, x, z, elevation: homeHeight + (probe ? PROBE.hover : 0),grounded:!probe,verticalSpeed:0,homeHeight,
       hp: form==='sentinel'?1200:enemyDurability(this.wave,form,elite), elite, ranged:ranged||form==='synth'||form==='sentinel', form, aimHeight,
-      speed: form==='sentinel'?1.5:probe ? Math.min(5,3.6 + this.wave * .07) : Math.min(4.3,2.4+(this.wave-1)*.055)*(form==='bulwark'?.7:form==='scuttler'?1.12:1),
+      speed: form==='sentinel'?1.5:isReco1(form)?Math.min(2.7,1.8+(this.wave-1)*.04):probe ? Math.min(5,3.6 + this.wave * .07) : Math.min(4.3,2.4+(this.wave-1)*.055)*(form==='bulwark'?.7:form==='scuttler'?1.12:1),
       tier: Math.max(1,Math.ceil(this.wave/2)),limpUntil:0,stunnedUntil:0,
       homeX:site.x,homeZ:site.z,portalId:site.id,
-      radius: form==='sentinel'?1.4:probe ? PROBE.radius : elite ? 1.05 : form === 'scuttler' ? .86 : form === 'brute' ? .95 : .8,
-      hitRadius: form==='sentinel'?1.65:probe ? .44 : form === 'scuttler' ? .91 : form === 'brute' ? 1.18 : form === 'seer' ? .94 : 1.05,
+      radius: form==='sentinel'?1.4:isReco1(form)?.45:probe ? PROBE.radius : elite ? 1.05 : form === 'scuttler' ? .86 : form === 'brute' ? .95 : .8,
+      hitRadius: form==='sentinel'?1.65:isReco1(form)?.42:probe ? .44 : form === 'scuttler' ? .91 : form === 'brute' ? 1.18 : form === 'seer' ? .94 : 1.05,
       attackTimer: .8 + this.random() * .6, phase: this.random() * Math.PI * 2,
       awareness:'patrol',lastSeenAt:-999,lastKnownX:x,lastKnownZ:z,lastKnownHeight:homeHeight,patrolAngle:angle,patrolTimer:.7+this.random()*2,alertedUntil:0 };
 
@@ -817,6 +818,7 @@ export class ArenaGame {
       else if(e.ranged&&seen)e.yaw=Math.atan2(this.player.x-e.x,this.player.z-e.z)+Math.PI;
       else if(e.awareness!=='patrol'&&goalDistance>.15)e.yaw=Math.atan2(dx,dz)+Math.PI;
       else if(e.awareness==='patrol')e.yaw=(e.patrolAngle||0)+Math.PI;
+      if(seen&&isReco1(e.form))aimReco1(e,playerHead);
       if((e.stunnedUntil||0)<=this.time)e.attackTimer-=dt;
       if(!seen||e.stunnedUntil>this.time){e.burstRemaining=0;e.chargeProgress=0;}
       else e.chargeProgress=e.ranged&&e.attackTimer>0&&e.attackTimer<.25?1-e.attackTimer/.25:0;
@@ -825,8 +827,9 @@ export class ArenaGame {
         e.attackTimer=.85;this.damage(e.elite?20+this.wave:10+Math.floor(this.wave/2),e);
       }else if((!order||order.canFire)&&seen&&e.awareness==='engaged'&&e.ranged&&distance<38&&e.attackTimer<=0&&(e.stunnedUntil||0)<=this.time){
         const profile=hostileShotProfile(this.wave,e.form),speed=profile.speed;
-        const volley=enemyVolley(this.wave,e.form),muzzle=rangedMuzzle(e);
+        const volley=enemyVolley(this.wave,e.form);let muzzle=rangedMuzzle(e);
         const target=predictShot(muzzle,playerHead,this.playerVelocity,speed,profile.lead);
+        if(isReco1(e.form)){aimReco1(e,target);muzzle=rangedMuzzle(e);}
         if(!this.blocked(eye,muzzle)&&!this.blocked(muzzle,target)&&clearSquadFiringLane(e,muzzle,target,this.enemies)){
           const n=Math.hypot(target.x-muzzle.x,target.y-muzzle.y,target.z-muzzle.z)||1;
           this.bullets.push({id:this.nextId++,...muzzle,vx:(target.x-muzzle.x)/n*speed,
@@ -878,7 +881,7 @@ export class ArenaGame {
         }
         this.event('impact', { ...at, bulletId:b.id, enemy: !!target, hostile: b.hostile, splash: b.splash,weapon:b.weapon,power:b.power||1,surface:target?'robot':surface,normal,direction:{x:b.vx,y:b.vy,z:b.vz} });
         if (target === this.player) { const n=Math.hypot(b.vx,b.vz)||1; this.damage(b.damage,{x:this.player.x-b.vx/n*8,z:this.player.z-b.vz/n*8}); }
-        else if (target) this.damageEnemy(target, projectileDamage(b,at), at, zone, multiplier,{x:b.originX??this.player.x,z:b.originZ??this.player.z,elevation:b.originElevation??this.player.elevation});
+        else if (target) this.damageEnemy(target, projectileDamage(b,at)*reco1ProjectileScale(target,zone), at, zone, multiplier,{x:b.originX??this.player.x,z:b.originZ??this.player.z,elevation:b.originElevation??this.player.elevation});
         if (!b.hostile && b.splash > 0) for (const e of [...this.enemies]) {
           if (e === target) continue;
           const center = { x: e.x, y: e.elevation + e.aimHeight, z: e.z }, d = Math.hypot(e.x - at.x, e.z - at.z, center.y - at.y);
