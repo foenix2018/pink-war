@@ -34,7 +34,7 @@ function refresh(){
   $('play-label').textContent=loading?'CHARGEMENT…':mode==='ligne9'?'JOUER LE CHAPITRE 05':mode==='campaign2'?'JOUER LE NIVEAU 2':mode==='campaign'?'JOUER LE NIVEAU 1':mode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
   $('play-button').disabled=loading;
   $('sound-setting').checked=!!settings.sound;$('music-setting').checked=settings.music!==false;
-  $('sensitivity').value=settings.sensitivity;$('quality').value=['auto','low','high'].includes(settings.quality)?settings.quality:'auto';
+  $('sensitivity').value=settings.sensitivity;$('quality').value=['auto','low','balanced','high'].includes(settings.quality)?settings.quality:'auto';
   $('launch-status').textContent=loading?'Chargement du secteur…':`V. ${GAME_VERSION} · prêt à lancer`;
   $('resume-mission').hidden=mode!=='campaign'||!readM01Checkpoint(character)||loading;
 }
@@ -45,7 +45,7 @@ $('play-button').after(resumeButton);
 function openLigne9(){
   save();const url=new URL('./ligne9.html',location.href);url.searchParams.set('character',character);url.searchParams.set('v',GAME_VERSION);
   if(new URLSearchParams(location.search).get('renderer')==='webgl')url.searchParams.set('renderer','webgl');
-  if(settings.quality==='low')url.searchParams.set('quality','low');
+  if(settings.quality!=='auto')url.searchParams.set('quality',settings.quality);
   location.assign(url.href);
 }
 function openMission(mission,{resume=false,vr=false}={}){
@@ -57,7 +57,7 @@ function openMission(mission,{resume=false,vr=false}={}){
   if(resume)url.searchParams.set('resume','1');
   if(vr)url.searchParams.set('vr','1');
   if(new URLSearchParams(location.search).get('renderer')==='webgl')url.searchParams.set('renderer','webgl');
-  if(settings.quality==='low')url.searchParams.set('quality',mission===2?'low':'performance');
+  if(settings.quality!=='auto')url.searchParams.set('quality',mission===2&&settings.quality==='low'?'low':settings.quality);
   location.assign(url.href);
 }
 resumeButton.onclick=()=>{if(!loading)openMission(1,{resume:true});};
