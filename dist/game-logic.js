@@ -204,7 +204,7 @@ class CoverNavigation {
     const groundSolids=obstacles.filter(b=>!b.walkableSurface&&(b.y||0)<2);
     for (let z = 0; z < this.size; z++) for (let x = 0; x < this.size; x++) {
       const wx = this.edge + x * 2, wz = this.edge + z * 2;
-      this.solid[z * this.size + x] = groundSolids.some(b => Math.abs(wx-b.x) < b.hx+1.3 && Math.abs(wz-b.z) < b.hz+1.3) ? 1 : 0;
+      this.solid[z * this.size + x] = groundSolids.some(b => Math.abs(wx-b.x) < b.hx+(b.navPad??1.3) && Math.abs(wz-b.z) < b.hz+(b.navPad??1.3)) ? 1 : 0;
     }
   }
   point(index) { return { x: this.edge + index % this.size * 2, z: this.edge + Math.floor(index / this.size) * 2 }; }
