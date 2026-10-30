@@ -626,13 +626,14 @@ export class ArenaGame {
     const armor=target.form?Math.min(.18,Math.max(0,(target.tier||1)-1)*.025):0;
     const support=source?.companion?1:(this.time<(target.companionMarkUntil||0)?1.2:1)*(this.time<(this.companionAmplifyUntil||0)?1.15:1);
     const effective=target.form==='sentinel' ? amount*support*(zone==='head'?5:zone==='limb'?.65:1) : amount*multiplier*support*(1-armor*(zone==='head'?.35:1));
-    target.hp -= effective;
+    // damageScale: a phase shield (mission bosses) lets only a share of the damage through.
+    const scaled=effective*(target.damageScale??1);target.hp -= scaled;
     target.lastKnownX=source.x;target.lastKnownZ=source.z;target.lastKnownHeight=source.elevation??this.player.elevation;
     target.alertedUntil=this.time+5;target.awareness='search';target.lastSeenAt=this.time;
     if(zone==='limb')target.limpUntil=Math.max(target.limpUntil||0,this.time+2);
     if(zone==='head')target.stunnedUntil=Math.max(target.stunnedUntil||0,this.time+.32);
     target.hitAt=this.time;target.hitZone=zone;target.suppressedUntil=this.time+1.6;
-    this.event('hit', { id: target.id, zone, damage:effective,playerSource:!source?.companion });
+    this.event('hit', { id: target.id, zone, damage:scaled,playerSource:!source?.companion,shielded:(target.damageScale??1)<1 });
     if (target.hp <= 0) {
       this.combo = this.time <= this.comboUntil ? this.combo + 1 : 1; this.comboUntil = this.time + COMBO_WINDOW;
       this.bestCombo = Math.max(this.bestCombo, this.combo);
