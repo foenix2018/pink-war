@@ -78,7 +78,7 @@ body.pw-shaded .pw-hud,body.pw-shaded #hud,body.pw-shaded .pw-minimal-action{vis
   <div id="status" class="small">Clavier / souris, manette, tactile ou casque WebXR · rendu WebGPU avec repli WebGL</div>
 </div></div>
 <script type="module">
-import {decorateShade} from './mission-briefing.js?v=3.72.0';
+import {decorateShade} from './mission-briefing.js?v=3.73.0';
 decorateShade(document.getElementById('shade'),{mission:5,characterId:new URLSearchParams(location.search).get('character')==='ghju'?'ghju':'lylu'});
 const ghju=new URLSearchParams(location.search).get('character')==='ghju';
 document.getElementById(ghju?'pick-ghju':'pick-lylu').setAttribute('aria-current','true');

@@ -84,3 +84,12 @@ test('the story continues chapter 03 and leads to chapter 05; both heroes; gener
   const all=JSON.stringify(SCRIPT)+JSON.stringify(Object.keys(LOGS).flatMap(k=>[logFor(k,'ghju'),logFor(k,'lylu')]));
   assert.doesNotMatch(all,/est mort|est morte|VSAV|caserne|pompier/i);
 });
+
+test('the level 4 page: shared engine and HUD, guardian bar, level screen, menu entry from chapter 03',()=>{
+  const page=read('niveau4.js'),html=read('niveau4.html'),entry=read('entry.js'),game=read('game.js');
+  for(const part of ['mountCombatHud','ArenaGame','createMissionXR','createM04Mission','createM04Art','BLINDAGE DE PHASE','REPRENDRE AU POINT DE CONTRÔLE'])assert.ok(page.includes(part),part);
+  assert.match(html,/decorateShade\(document\.getElementById\('shade'\),\{mission:4/);assert.match(html,/import\('\.\/niveau4\.js/);
+  assert.match(read('index.html'),/data-chapter="campaign4"[^>]*>04 — LA BRÈCHE VIOLETTE/);assert.match(entry,/mission===4\?'\.\/niveau4\.html'/);assert.match(game,/'campaign4'/);
+  assert.match(read('niveau3.html'),/mode=campaign4/,'the end of chapter 03 leads to chapter 04');
+  assert.match(read('m04-art.js'),/createSignage/);assert.match(read('m03-art.js'),/createSignage/);assert.match(read('m03-sector.js'),/drawSignAtlas/);
+});

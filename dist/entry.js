@@ -3,11 +3,11 @@ import {DesktopGamepadInput} from './desktop-input.js';
 import {createGamepadAid,gamepadsNow} from './ios-gamepad.js';
 import {graphicsProfile} from './renderer-policy.js';
 import {GAME_VERSION,showLaunchError,compatibleLaunchURL} from './launch-ui.js';
-import {syncMenuArtwork} from './menu-art.js?v=3.72.0';
+import {syncMenuArtwork} from './menu-art.js?v=3.73.0';
 import {showStoryPrologue} from './story-prologue.js';
 import {createMissionLoading} from './mission-loading.js';
 import {readM01Checkpoint} from './checkpoint-index.js';
-import {mountViewControl,readPreferredView,savePreferredView} from './view-options.js?v=3.72.0';
+import {mountViewControl,readPreferredView,savePreferredView} from './view-options.js?v=3.73.0';
 
 // This menu has no Three.js or character imports. It is usable before the user
 // chooses to download/build the 3D scene, including inside an iPhone web view.
@@ -16,12 +16,12 @@ let character='ghju',mode='campaign',view=readPreferredView(),trainingWeapon=0,l
 const settings={sound:true,music:true,sensitivity:1,quality:'auto'};
 try{character=localStorage.getItem('pink-war-character')==='lylu'?'lylu':'ghju';Object.assign(settings,JSON.parse(localStorage.getItem('rosee-settings')||'{}'));const stored=Number(localStorage.getItem('pink-war-training-weapon'));if(Number.isInteger(stored)&&stored>=0&&stored<7&&stored!==5)trainingWeapon=stored;}catch{}
 const requestedMode=new URLSearchParams(location.search).get('mode');
-if(['arena','training','campaign','campaign2','campaign3','ligne9'].includes(requestedMode))mode=requestedMode;
+if(['arena','training','campaign','campaign2','campaign3','campaign4','ligne9'].includes(requestedMode))mode=requestedMode;
 const profile=graphicsProfile(navigator,settings.quality);
 document.documentElement.classList.toggle('iphone-launch',profile.ios);
 function save(){try{localStorage.setItem('pink-war-character',character);localStorage.setItem('rosee-settings',JSON.stringify(settings));}catch{}}
 function refresh(){
-  setScreenMusic(loading?'loading':'menu',mode==='campaign2'?2:mode==='campaign3'?3:1,settings.music!==false);
+  setScreenMusic(loading?'loading':'menu',mode==='campaign2'?2:mode==='campaign3'||mode==='campaign4'?3:1,settings.music!==false);
   document.documentElement.dataset.universe=character==='lylu'?'blue':'pink';
   syncMenuArtwork(character,mode);
   $('character-choice-status').textContent=character==='lylu'?'LYLU · UNIVERS BLEU':'GHJU · UNIVERS ROSE';
@@ -29,10 +29,10 @@ function refresh(){
   $('character-description').textContent=character==='lylu'?'LYLU cherche sa sœur GHJU dans les ruines de Vesper.':'GHJU cherche son frère LYLU dans les ruines de Vesper.';
   for(const b of document.querySelectorAll('[data-character]')){const yes=b.dataset.character===character;b.classList.toggle('selected',yes);b.setAttribute('aria-pressed',String(yes));}
   for(const b of document.querySelectorAll('[data-mode]'))b.setAttribute('aria-pressed',String(b.dataset.mode===mode));
-  document.querySelector('.mission-kicker').textContent=mode==='campaign3'?'CAMPAGNE · TROISIÈME MISSION':mode==='campaign2'?'CAMPAGNE · DEUXIÈME MISSION':mode==='campaign'?'CAMPAGNE · PREMIÈRE MISSION':'PINK WARS · JOUER';
-  $('mission-title').textContent=mode==='ligne9'?'05 — La Ligne Noyée':mode==='campaign3'?'03 — Le Convoi des Absents':mode==='campaign2'?'02 — Sous les Néons':mode==='campaign'?'01 — Le dernier signal':mode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
-  $('mission-description').textContent=mode==='ligne9'?'Ligne 9 inondée sous les Halles-Basses : rétablir le courant, relancer les pompes P9, ouvrir l’écluse. Mission longue avec points de contrôle.':mode==='campaign3'?'Secteur 03 de Vesper, de nuit : escorter le VSAV d’Inès de l’annexe médicale à la gare de fret de l’Anneau logistique. Barrage ORDRE, relais A3, balise de la fracture, échangeur bloqué. Mission longue avec points de contrôle.':mode==='campaign2'?'Bas-Niveaux de Vesper : enclave, marché cyberpunk, HELIX et tour de transit. Sauver les civils ou récupérer les preuves.':mode==='campaign'?'Laboratoire abandonné, rue sous surveillance et relais en hauteur. Une trace de votre famille.':mode==='arena'?'Vingt vagues de machines et six armes à récupérer.':'Cibles fixes de 15 à 60 mètres, cibles mobiles latérales et avant-arrière. Vitesse croissante, score et précision.';
-  $('play-label').textContent=loading?'CHARGEMENT…':mode==='ligne9'?'JOUER LE CHAPITRE 05':mode==='campaign3'?'JOUER LE NIVEAU 3':mode==='campaign2'?'JOUER LE NIVEAU 2':mode==='campaign'?'JOUER LE NIVEAU 1':mode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
+  document.querySelector('.mission-kicker').textContent=mode==='campaign4'?'CAMPAGNE · QUATRIÈME MISSION':mode==='campaign3'?'CAMPAGNE · TROISIÈME MISSION':mode==='campaign2'?'CAMPAGNE · DEUXIÈME MISSION':mode==='campaign'?'CAMPAGNE · PREMIÈRE MISSION':'PINK WARS · JOUER';
+  $('mission-title').textContent=mode==='ligne9'?'05 — La Ligne Noyée':mode==='campaign4'?'04 — La Brèche Violette':mode==='campaign3'?'03 — Le Convoi des Absents':mode==='campaign2'?'02 — Sous les Néons':mode==='campaign'?'01 — Le dernier signal':mode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
+  $('mission-description').textContent=mode==='ligne9'?'Ligne 9 inondée sous les Halles-Basses : rétablir le courant, relancer les pompes P9, ouvrir l’écluse. Mission longue avec points de contrôle.':mode==='campaign4'?'Station énergétique Est de JANUS : deux relais, trois stabilisateurs et le gardien de portique, autour de la brèche ouverte le soir de la chute. Mission longue avec points de contrôle.':mode==='campaign3'?'Secteur 03 de Vesper, de nuit : escorter l’ambulance d’Inès de l’annexe médicale à la gare de fret de l’Anneau logistique. Barrage ORDRE, relais A3, balise de la fracture, échangeur bloqué. Mission longue avec points de contrôle.':mode==='campaign2'?'Bas-Niveaux de Vesper : enclave, marché cyberpunk, HELIX et tour de transit. Sauver les civils ou récupérer les preuves.':mode==='campaign'?'Laboratoire abandonné, rue sous surveillance et relais en hauteur. Une trace de votre famille.':mode==='arena'?'Vingt vagues de machines et six armes à récupérer.':'Cibles fixes de 15 à 60 mètres, cibles mobiles latérales et avant-arrière. Vitesse croissante, score et précision.';
+  $('play-label').textContent=loading?'CHARGEMENT…':mode==='ligne9'?'JOUER LE CHAPITRE 05':mode==='campaign4'?'JOUER LE NIVEAU 4':mode==='campaign3'?'JOUER LE NIVEAU 3':mode==='campaign2'?'JOUER LE NIVEAU 2':mode==='campaign'?'JOUER LE NIVEAU 1':mode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
   $('play-button').disabled=loading;
   $('sound-setting').checked=!!settings.sound;$('music-setting').checked=settings.music!==false;
   $('sensitivity').value=settings.sensitivity;$('quality').value=['auto','low','balanced','high'].includes(settings.quality)?settings.quality:'auto';
@@ -52,13 +52,13 @@ function openLigne9(){
 function openMission(mission,{resume=false,vr=false}={}){
   loading=true;refresh();save();for(const d of document.querySelectorAll('dialog[open]'))d.close();
   const cover=createMissionLoading({mission,characterId:character});cover.set(.04,'Ouverture du secteur');
-  const target=mission===2?'./level2-test.html':mission===3?'./niveau3.html':'./vesper-level1-v7.html';
+  const target=mission===2?'./level2-test.html':mission===3?'./niveau3.html':mission===4?'./niveau4.html':'./vesper-level1-v7.html';
   const url=new URL(target,location.href);url.searchParams.set('source','campaign');url.searchParams.set('autostart','1');if(mission===3)url.searchParams.set('chapter','3');url.searchParams.set('character',character);url.searchParams.set('v',GAME_VERSION);
   if(mission===1)url.searchParams.set('prologue','done');
   if(resume)url.searchParams.set('resume','1');
   if(vr)url.searchParams.set('vr','1');
   if(new URLSearchParams(location.search).get('renderer')==='webgl')url.searchParams.set('renderer','webgl');
-  if(settings.quality!=='auto'&&!(mission===3&&settings.quality!=='low'))url.searchParams.set('quality',settings.quality);
+  if(settings.quality!=='auto'&&!(mission>=3&&settings.quality!=='low'))url.searchParams.set('quality',settings.quality);
   location.assign(url.href);
 }
 resumeButton.onclick=()=>{if(!loading)openMission(1,{resume:true});};
@@ -96,6 +96,9 @@ async function begin(intent='play',afterPrologue=false){
   if(mode==='campaign3'){
     openMission(3,{vr:false});return;
   }
+  if(mode==='campaign4'){
+    openMission(4,{vr:false});return;
+  }
   if(mode==='campaign2'){
     openMission(2,{vr:intent==='vr'});return;
   }
@@ -109,7 +112,7 @@ async function begin(intent='play',afterPrologue=false){
   if(settings.sound||settings.music!==false)try{const Audio=window.AudioContext||window.webkitAudioContext;
     window.__PINKWAR_BOOT_AUDIO ||=new Audio();window.__PINKWAR_BOOT_AUDIO.resume().catch(()=>{});}catch{}
   try{
-    modulePromise ||=import('./game.js?v=3.72.0');await modulePromise;
+    modulePromise ||=import('./game.js?v=3.73.0');await modulePromise;
     for(const d of document.querySelectorAll('dialog'))d.removeEventListener('cancel',earlyCancel);
     if(!window.__PINKWAR||window.__PINKWAR.snapshot().phase==='error')throw new Error('Initialisation interrompue.');
     loading=false;

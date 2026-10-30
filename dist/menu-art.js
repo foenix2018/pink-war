@@ -1,6 +1,6 @@
 // Menu illustration selected by mission and existing playable character.
 // The original level-1 GHJU / LYLU art is never overwritten.
-const M02_COVER='art/mission02-cover.webp?v=3.72.0';
+const M02_COVER='art/mission02-cover.webp?v=3.73.0';
 const M03_COVER='art/mission03-cover.svg?v=1';
 export function syncMenuArtwork(characterId,mode='campaign',root=document){
   const hero=characterId==='lylu'?'lylu':'ghju';

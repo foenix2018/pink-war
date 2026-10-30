@@ -11,7 +11,7 @@ export function createMissionLoading({mission=1,characterId='ghju'}={}){
  let musicEnabled=true;try{musicEnabled=JSON.parse(localStorage.getItem('rosee-settings')||'{}').music!==false;}catch{}
  setScreenMusic('loading',mission,musicEnabled);
  if(!document.querySelector('[data-mission-loading-style]')){
-  const link=document.createElement('link');link.rel='stylesheet';link.href=new URL('./mission-loading.css?v=3.72.0',import.meta.url).href;link.dataset.missionLoadingStyle='';document.head.append(link);
+  const link=document.createElement('link');link.rel='stylesheet';link.href=new URL('./mission-loading.css?v=3.73.0',import.meta.url).href;link.dataset.missionLoadingStyle='';document.head.append(link);
  }
  const root=document.createElement('section');root.className='pw-mission-loading';root.setAttribute('data-mission',String(mission));root.id='pw-mission-loading';
  root.setAttribute('role','status');root.setAttribute('aria-label','Chargement du chapitre');

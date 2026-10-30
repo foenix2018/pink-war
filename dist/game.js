@@ -22,7 +22,7 @@ import {sightPoint} from './sight-line.js';
 import {GAME_VERSION,showLaunchError} from './launch-ui.js';
 import {syncMenuArtwork} from './menu-art.js';
 import {createAICompanion} from './ai-companions.js';
-import {bindViewButton,mountViewControl,readPreferredView,savePreferredView,normalizeView} from './view-options.js?v=3.72.0';
+import {bindViewButton,mountViewControl,readPreferredView,savePreferredView,normalizeView} from './view-options.js?v=3.73.0';
 import {companionAvailable} from './companion-escort.js';
 import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
@@ -85,12 +85,12 @@ let selectedMode=['arena','training','campaign','campaign2'].includes(boot?.mode
 let trainingWeaponIndex=Number.isInteger(boot?.trainingWeaponIndex)&&boot.trainingWeaponIndex>=0&&boot.trainingWeaponIndex<WEAPONS.length&&boot.trainingWeaponIndex!==5?boot.trainingWeaponIndex:null;
 function selectMode(mode){
   if(phase!=='lobby'||launchBusy)return;
-  selectedMode=['campaign','campaign2','ligne9','arena','training'].includes(mode)?mode:'campaign';
+  selectedMode=['campaign','campaign2','campaign3','campaign4','ligne9','arena','training'].includes(mode)?mode:'campaign';
   syncMenuArtwork(character.id,selectedMode);
   for(const button of document.querySelectorAll('[data-mode]'))button.setAttribute('aria-pressed',String(button.dataset.mode===selectedMode));
-  $('mission-title').textContent=selectedMode==='ligne9'?'05 — La Ligne Noyée':selectedMode==='campaign2'?'02 — Sous les Néons':selectedMode==='campaign'?'01 — Le dernier signal':selectedMode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
+  $('mission-title').textContent=selectedMode==='ligne9'?'05 — La Ligne Noyée':selectedMode==='campaign4'?'04 — La Brèche Violette':selectedMode==='campaign3'?'03 — Le Convoi des Absents':selectedMode==='campaign2'?'02 — Sous les Néons':selectedMode==='campaign'?'01 — Le dernier signal':selectedMode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
   $('mission-description').textContent=selectedMode==='ligne9'?'Ligne 9 inondée sous les Halles-Basses : rétablir le courant, relancer les pompes P9, ouvrir l’écluse. Mission longue avec points de contrôle.':selectedMode==='campaign2'?'Bas-Niveaux de Vesper : marchés, ruelles pluvieuses, enclave de secours et archives HELIX.':selectedMode==='campaign'?'Ancien poste de secours, évacuation interrompue, journal clandestin et relais ORDRE à saboter. Retrouver une trace de votre famille.':selectedMode==='arena'?'Vingt vagues de machines, six armes et des équipements à récupérer.':'Cibles fixes, proches et lointaines ; trajectoires latérales et avant-arrière ; accélération continue. Mesurez votre précision.';
-  if(world)$('play-label').textContent=selectedMode==='ligne9'?'JOUER LE CHAPITRE 05':selectedMode==='campaign2'?'JOUER LE NIVEAU 2':selectedMode==='campaign'?'JOUER LE NIVEAU 1':selectedMode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
+  if(world)$('play-label').textContent=selectedMode==='ligne9'?'JOUER LE CHAPITRE 05':selectedMode==='campaign4'?'JOUER LE NIVEAU 4':selectedMode==='campaign3'?'JOUER LE NIVEAU 3':selectedMode==='campaign2'?'JOUER LE NIVEAU 2':selectedMode==='campaign'?'JOUER LE NIVEAU 1':selectedMode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
 }
 for(const button of document.querySelectorAll('[data-mode]'))button.onclick=()=>selectMode(button.dataset.mode);
 // Chapter cards (Histoire) pick the campaign mission once this module owns the launch button; the home
@@ -293,8 +293,8 @@ async function home() {
 $('quit-button').onclick = home; $('end-home').onclick = home;
 // Same mission pages and parameters as the first launch from the home page.
 function openMissionPage(mission){
-  if(mission===5){
-    const page=new URL('./ligne9.html',location.href);page.searchParams.set('character',character.id);page.searchParams.set('v',GAME_VERSION);
+  if(mission>=3){
+    const page=new URL(mission===5?'./ligne9.html':mission===4?'./niveau4.html':'./niveau3.html',location.href);if(mission!==5)page.searchParams.set('autostart','1');page.searchParams.set('character',character.id);page.searchParams.set('v',GAME_VERSION);
     if(new URLSearchParams(location.search).get('renderer')==='webgl')page.searchParams.set('renderer','webgl');
     if(settings.quality==='low')page.searchParams.set('quality','low');
     location.assign(page.href);return;
@@ -309,6 +309,8 @@ function openMissionPage(mission){
 async function start() {
   if(selectedMode==='campaign2'){openMissionPage(2);return;}
   if(selectedMode==='ligne9'){openMissionPage(5);return;}
+  if(selectedMode==='campaign3'){openMissionPage(3);return;}
+  if(selectedMode==='campaign4'){openMissionPage(4);return;}
   if(selectedMode==='campaign'&&!vr?.active&&!new URLSearchParams(location.search).has('classic')){openMissionPage(1);return;}
   if (!world||launchBusy) return;
   launchBusy=true;

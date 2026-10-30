@@ -1,5 +1,7 @@
 # Pink Wars — La Fracture
 
+Version 3.73 : **« La Brèche Violette », niveau 4** — la station énergétique Est de JANUS : sas, cour du réacteur et passerelle, hangar de drones, atelier serveur, anneau des stabilisateurs, gardien de portique BS01 au blindage de phase. La brèche a été ouverte le soir de la chute à 22 h 47 et elle est tenue avec des vivants ; la piste mène à la Ligne 9. Nouvelle signalétique de Vesper (néons, enseignes kanji, publicités holographiques, plaques bilingues) au niveau 3 et au niveau 4. [Détails](docs/pink-wars/MISE_A_JOUR_373.md).
+
 Version 3.72 : **vocabulaire générique** — les chapitres 01 et 02 parlent de station AEGIS 07, d’ambulance, de hangar et de journal de bord, sans jargon de pompier ; logo officiel vectorisé et écran de niveau commun sur le modèle du chapitre 03. [Détails](docs/pink-wars/MISE_A_JOUR_372.md).
 
 Version 3.71 : **« Le Convoi des Absents », niveau 3 complet** — le décor de nuit de Vesper de la première version (secteur 03 : avenue, annexe médicale, atelier, relais A3, fracture) passe dans le moteur commun (combat, HUD, sous-titres, documents, points de contrôle, VR) et devient une escorte : l’ambulance d’Inès, de l’annexe médicale au barrage ORDRE, à la balise de la fracture, sous la route haute, à travers un échangeur bloqué jusqu’à la gare de fret de l’Anneau logistique. Le registre de la gare révèle le centre de « stabilisation » et mène au niveau 4, la Brèche Violette ; ≈ 20 à 30 min estimées. [Détails](docs/pink-wars/MISE_A_JOUR_371.md).

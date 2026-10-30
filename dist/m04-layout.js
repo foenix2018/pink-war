@@ -166,7 +166,7 @@ export const ENCOUNTERS = Object.freeze({
   atelier2: { wave: 5, portal: { x: 86, z: 34 }, units: [unit('seer', 86, 34), unit('stalker', 84, 22), unit('scuttler', 88, 22)] },
   retour: { wave: 5, units: [unit('bulwark', 0, 20), unit('probe', -16, -10), unit('probe', 16, 0), unit('stalker', -26, -24), unit('stalker', 26, -26)] },
   anneau: { wave: 6, units: [unit('stalker', -40, -50), unit('stalker', 40, -50), unit('probe', 0, -50), unit('seer', -50, -70), unit('seer', 50, -70)] },
-  gardien: { wave: 7, units: [unit('bulwark', 0, -80, { elite: true, boss: 7, name: 'GARDIEN DE PORTIQUE BS01', guardian: true })] },
+  gardien: { wave: 7, units: [unit('bulwark', 0, -80, { elite: true, boss: 2.2, name: 'GARDIEN DE PORTIQUE BS01', guardian: true })] },
   stab1: { wave: 6, portal: { x: -44, z: -66 }, units: [unit('stalker', -44, -66), unit('scuttler', -42, -64), unit('scuttler', -46, -64)] },
   stab2: { wave: 6, portal: { x: 44, z: -66 }, units: [unit('seer', 44, -66), unit('probe', 46, -62), unit('stalker', 42, -62)] },
   stab3: { wave: 7, portal: { x: -36, z: -88 }, units: [unit('bulwark', -36, -88), unit('probe', -34, -84), unit('stalker', -38, -84), unit('probe', 30, -84)] },
