@@ -2,6 +2,7 @@
 // centimetre, one colour and one material index per quad) and rebuilt here for three.js: one mesh per material family,
 // planar world UVs, CC0 surfaces, neon and lit windows emissive, sign atlas redrawn from the page's labels.
 // Colliders and walkable surfaces (stairway, A3 deck) come from the same bake.
+import { drawSignAtlas } from './signage.js';
 
 // Material indices of the visitor renderer (vesper-level1-v7.html, MAT and V4_MAT).
 export const MAT = Object.freeze({ CONCRETE: 0, METAL: 1, ROAD: 2, WINDOW: 3, PLANT: 4, PINK: 5, CYAN: 6, AMBER: 7, SOIL: 8, WET: 9, WHITE: 10, RIFT: 11, RED: 12, BRICK: 13, FABRIC: 14, HOLO: 15, CERAMIC: 16, SIGN: 30 });
@@ -54,23 +55,8 @@ function canvasTexture(T, w, h, paint) {
   const c = document.createElement('canvas'); c.width = w; c.height = h; paint(c.getContext('2d'), w, h);
   const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 4; return t;
 }
-// The visitor page's sign atlas (createAtlas), redrawn from the labels kept by the bake.
-function signAtlas(T, labels) {
-  return canvasTexture(T, 1024, 1024, (g) => {
-    g.fillStyle = '#09111b'; g.fillRect(0, 0, 1024, 1024);
-    for (let i = 0; i < 16; i++) {
-      const x = i % 4 * 256, y = Math.floor(i / 4) * 256, label = labels[i] || '';
-      g.save(); g.translate(x, y); g.strokeStyle = '#7597a5'; g.lineWidth = 3; g.strokeRect(6, 6, 244, 244);
-      g.fillStyle = '#152430'; g.fillRect(9, 9, 238, 238); g.fillStyle = i % 5 === 2 ? '#ec467b' : '#c0dee5'; g.fillRect(12, 12, 6, 232);
-      g.fillStyle = '#7d9aa8'; g.font = '700 15px monospace'; g.fillText('VESPER  //  ARCHIVES', 23, 45);
-      g.fillStyle = '#edf6fb'; g.font = 'bold 26px Arial'; g.textAlign = 'center';
-      label.split(' / ').forEach((part, j) => { const lines = ['']; for (const word of part.split(' ')) { if (g.measureText(lines.at(-1) + ' ' + word).width > 202 && lines.at(-1)) lines.push(word); else lines[lines.length - 1] += (lines.at(-1) ? ' ' : '') + word; }
-        lines.forEach((line, k) => g.fillText(line, 128, 105 + j * 55 + k * 30)); });
-      g.strokeStyle = '#df347e'; g.lineWidth = 3; g.beginPath(); g.moveTo(23, 213); g.lineTo(230, 213); g.stroke();
-      g.textAlign = 'left'; g.fillStyle = '#7d9aa8'; g.font = '14px monospace'; g.fillText('UNIT.03     //    HORS RESEAU', 22, 238); g.restore();
-    }
-  });
-}
+// The visitor page's sign atlas (16 slots), redrawn in the shared Vesper signage style (signage.js).
+function signAtlas(T, labels) { return canvasTexture(T, 1024, 1024, g => drawSignAtlas(g, labels)); }
 // Lit windows at night: a grid of panes, a share of them warm or cold, some flickering in the material via emissive.
 function windowTextures(T) {
   let seed = 3031; const r = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };

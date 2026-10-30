@@ -6,6 +6,7 @@
 // W03 palette (Tome II): galvanised metal, dusty haze, white/red marking; Vesper neon on the avenue.
 import { INTERACTIONS, MOVABLE, VAN, areaAt } from './m03-layout.js';
 import { createSectorMeshes, neonSpots } from './m03-sector.js';
+import { createSignage, BLADES } from './signage.js';
 
 const TAU = Math.PI * 2;
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
@@ -58,6 +59,28 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
   });
   const sign = (lines, x, y, z, yaw, w, h, opts = {}, lit = true) => { const m = new T.Mesh(new T.PlaneGeometry(w, h), lit ? new T.MeshBasicMaterial({ map: signTex(lines, opts), toneMapped: false }) : new T.MeshStandardMaterial({ map: signTex(lines, opts), roughness: .6 })); m.position.set(x, y, z); m.rotation.y = yaw; return add(m); };
 
+  const signs = createSignage(T, { root, low });
+  // The avenue and the city around it: shop blades, brand holograms, wayfinding towards the annex, the workshop and the freight station.
+  function buildCity() {
+    const blades = [[-12.6, 5.6, 17, '救急', '#ff4fa1', 'SOINS'], [-12.6, 5.2, 46, '薬局', '#5fe0f0', 'PHARMA'], [17.4, 5.4, 22, '修理', '#ffb35c', 'ATELIER'], [17.4, 5.8, 38, '電脳', '#c06bff', 'IMPLANTS'],
+      [12.6, 5.6, -8, '夜市', '#ff4fa1', 'MARCHÉ'], [12.6, 5.2, -24, '酒場', '#ffb35c', 'BAR'], [-12.6, 5.6, -46, '倉庫', '#5fe0f0', 'DÉPÔT'], [12.6, 5.6, -70, '屋台', '#ff4fa1', 'NOUILLES'],
+      [-12.6, 5.6, -82, '危険', '#ff3b4e', 'ZONE ROUGE'], [-12.6, 5.4, 62, '市場', '#ffb35c', 'MARCHÉ'], [12.6, 5.6, 50, '東', '#5fe0f0', 'EST']];
+    for (const [x, y, z, word, color, sub] of blades.slice(0, low ? 6 : blades.length)) signs.blade(word, { color, sub, x, y, z, yaw: 0 });
+    signs.advert('vesperTransit', { w: 10, h: 4, x: 20.6, y: 8.5, z: -16, yaw: -Math.PI / 2 });
+    signs.advert('kitsune', { w: 8, h: 3.4, x: -22.6, y: 9, z: -76, yaw: Math.PI / 2 });
+    signs.advert('janus', { w: 16, h: 5, x: 0, y: 19, z: -103, yaw: 0 });
+    signs.advert('nova', { w: 5, h: 2.2, x: 17.6, y: 7.2, z: 30, yaw: -Math.PI / 2, holo: false });
+    signs.advert('ordre', { w: 6, h: 2.4, x: -12.4, y: 7.5, z: -40, yaw: Math.PI / 2 });
+    signs.advert('helix', { w: 9, h: 1.7, x: 30, y: 7.1, z: -52.1, yaw: 0, holo: false });
+    signs.advert('koi', { w: 5, h: 2.4, x: -12.4, y: 7.6, z: 4, yaw: Math.PI / 2 });
+    signs.advert('aegis', { w: 4, h: 1.8, x: -12.4, y: 6.8, z: 34, yaw: Math.PI / 2, holo: false });
+    signs.wayfinding('ANNEXE MÉDICALE', { sub: 'DISPENSAIRE DU SECTEUR 03', jp: '医療棟', picto: 'medic', arrow: Math.PI / 2, color: '#ff6fb4', w: 3, h: .8, x: 11.6, y: 3.2, z: 47, yaw: 0 });
+    signs.wayfinding('ATELIER TECHNIQUE', { sub: 'PIÈCES · VÉRINS · POMPES', jp: '整備工場', picto: 'bolt', arrow: -Math.PI / 2, color: '#ffb35c', w: 3, h: .8, x: -11.6, y: 3.2, z: 32, yaw: 0 });
+    signs.wayfinding('ARCHIVES A3', { sub: 'TERRASSE · ESCALIER', jp: '記録 · 中継', picto: 'lift', arrow: 0, color: '#5fe0f0', w: 3, h: .8, x: -6.4, y: 3.2, z: -5, yaw: 0 });
+    signs.wayfinding('GARE DE FRET 03', { sub: 'VOIE DE SERVICE SOUS LA ROUTE HAUTE', jp: '貨物駅', picto: 'train', arrow: -Math.PI / 2, color: '#ffc890', w: 3.4, h: .8, x: 11.6, y: 3.2, z: -42, yaw: 0 });
+    signs.wayfinding('PÉRIMÈTRE PINK', { sub: 'ACCÈS INTERDIT · ORDRE', jp: '立入禁止', picto: 'warn', arrow: null, color: '#ff3b4e', bg: '#160307', w: 3.4, h: .8, x: -8, y: 3, z: -78, yaw: 0 });
+  }
+
   // ---------- East zone: ground, interchange, freight station ----------
   function buildEast() {
     const ground = new T.Mesh(new T.PlaneGeometry(40, 70), M.asphalt); ground.rotation.x = -Math.PI / 2; ground.position.set(80, .006, -64); ground.receiveShadow = true; add(ground);
@@ -96,9 +119,14 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
     arrimagePost(72, -86);
     // Lamp posts along the service lane and the interchange (each one is also a source of the light pool).
     for (const [x, z, k] of [[20, -33.4, 0], [34, -33.4, 1], [48, -33.4, 0], [62, -33.4, 1], [74, -32, 0], [86, -32, 1], [64.4, -50, 0], [64.4, -66, 1], [95.6, -60, 0], [95.6, -72, 1], [64.4, -90, 0]]) lampPost(x, z, k);
-    sign(['GARE DE FRET 03', 'LIGNE DE L’ANNEAU LOGISTIQUE'], 79.5, 4.1, -30.65, Math.PI, 9, 2, { bg: '#0b0d10', fg: '#ffc890', w: 1024, h: 230, border: '#ffc890' });
-    sign(['ANNEAU LOGISTIQUE →', 'QUAI B · CENTRE DE STABILISATION'], 96.45, 4.4, -80, -Math.PI / 2, 7, 1.5, { bg: '#e9ecee', fg: '#c1121f', w: 1024, h: 220 }, false);
-    sign(['BRETELLE FERMÉE', 'ORDRE · CONTRÔLE DU TRAFIC'], 96.45, 4.4, -48, -Math.PI / 2, 6, 1.4, { bg: '#160307', fg: '#ff4d5e', w: 1024, h: 230, border: '#ff2f45' });
+    signs.neon(['GARE DE FRET 03', 'LIGNE DE L’ANNEAU LOGISTIQUE · 貨物駅'], { color: '#ffc890', color2: '#5fe0f0', kanji: '駅', w: 9, h: 2, x: 79.5, y: 4.1, z: -30.65, yaw: Math.PI });
+    signs.wayfinding('ANNEAU LOGISTIQUE', { sub: 'QUAI B · CENTRE DE STABILISATION', jp: '環状物流 · B番線', picto: 'train', arrow: Math.PI / 2, color: '#ff4d5e', w: 7, h: 1.5, x: 96.45, y: 4.4, z: -80, yaw: -Math.PI / 2 });
+    signs.wayfinding('BRETELLE FERMÉE', { sub: 'ORDRE · CONTRÔLE DU TRAFIC', jp: '通行止め', picto: 'warn', arrow: null, color: '#ff3b4e', bg: '#160307', w: 6, h: 1.4, x: 96.45, y: 4.4, z: -48, yaw: -Math.PI / 2 });
+    signs.hazard('TREUIL', { sub: 'CÂBLE SOUS TENSION · S’ÉCARTER', w: 1, h: .66, x: 70, y: 1.95, z: -45.54, yaw: 0 });
+    signs.hazard('ARRIMAGE', { sub: 'NE PAS STATIONNER SOUS LE PORTIQUE', w: 1, h: .66, x: 72, y: 1.95, z: -85.54, yaw: 0 });
+    signs.hazard('CHARGE LOURDE', { sub: 'HELIX · FRET SÉCURISÉ', picto: 'warn', w: 1.4, h: .7, x: 92, y: 2.3, z: -80.68, yaw: 0 });
+    signs.advert('vesperTransit', { w: 8, h: 3.2, x: 96.4, y: 8.5, z: -66, yaw: -Math.PI / 2 });
+    signs.blade('貨物', { color: '#ffc890', sub: 'FRET', x: 65.2, y: 5.2, z: -74.4, yaw: Math.PI / 2 });
   }
   function wheelSet(g, L, W, r = .45) { for (const sx of [L / 2 - 1, -L / 2 + 1]) for (const sz of [-1, 1]) { const w = new T.Mesh(new T.CylinderGeometry(r, r, .3, 16), M.rubber); w.rotation.x = Math.PI / 2; w.position.set(sx, r, sz * (W / 2 - .05)); g.add(w); } }
   function car(x, z, yaw, body = M.paint) { const g = new T.Group(); g.position.set(x, 0, z); g.rotation.y = yaw; add(g); const p = (m, px, py, pz, w, h, d) => { const o = new T.Mesh(new T.BoxGeometry(w, h, d), m); o.position.set(px, py, pz); g.add(o); };
@@ -163,7 +191,7 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
   }
   function booth() {
     box(M.galva, 93, 0, -75, 6, .3, 6); box(M.dark, 93, .3, -75, 6, 2.6, 6); box(M.glass, 89.98, 1.2, -75, .05, 1.4, 5.4);
-    box(M.galva, 93, 2.9, -75, 6.4, .3, 6.4); sign(['RÉGULATION', 'GARE DE FRET 03'], 89.94, 3.4, -75, -Math.PI / 2, 2.6, .7, { bg: '#0b0d10', fg: '#ffc890', w: 512, h: 140 });
+    box(M.galva, 93, 2.9, -75, 6.4, .3, 6.4); signs.neon(['RÉGULATION', 'GARE DE FRET 03'], { color: '#ffc890', kanji: '管制', w: 2.8, h: .8, x: 89.94, y: 3.4, z: -75, yaw: -Math.PI / 2 });
     box(M.neonAmber, 89.95, 1, -75, .02, .5, 1.2);
   }
 
@@ -287,7 +315,7 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
   let amb = null, smoke = null;
   const power = { annexe: false };
   function build() {
-    buildEast(); buildBarrier(); buildTrailer(); buildBeacon(); buildDevices();
+    buildCity(); buildEast(); buildBarrier(); buildTrailer(); buildBeacon(); buildDevices();
     amb = aegisVan(-6, 46, 0);
     // Smoke of a damaged van.
     smoke = Array.from({ length: low ? 4 : 8 }, () => { const s = new T.Sprite(new T.SpriteMaterial({ map: halo, color: 0x444444, transparent: true, opacity: 0, depthWrite: false })); add(s); return s; });
@@ -311,6 +339,7 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
         smoke.forEach((s, i) => { const k = (t * .4 + i / smoke.length) % 1; s.position.set(van.x + Math.sin(i) * .4, 2.2 + k * 3, van.z); s.scale.setScalar(.8 + k * 2.2); s.material.opacity = hurt * .35 * (1 - k); });
       }
       for (const f of animated) f(t, dt, e);
+      signs.update(t);
     },
     setMovable(id, open) { const m = movable.get(id); if (m) m.target = open ? 1 : 0; },
     snapMovable(id, open) { const m = movable.get(id); if (m) { m.target = m.open = open ? 1 : 0; m.apply(m.open); } },
