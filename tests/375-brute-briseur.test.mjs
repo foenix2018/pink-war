@@ -13,16 +13,19 @@ test('BRUTE Le Briseur uses authentic curved armour with graphite texture and se
  assert.match(ENEMY_PROFILES.brute.name,/BRISEUR/);
  assert.equal(brute.userData.bruteRevision,BRUTE_DESIGN.visualRevision);
  const armored=brute.children.filter(o=>o.isSkinnedMesh);
- assert.ok(armored.length>=5&&armored.length<=8,'body uses baked WebGPU skinned batches, not a mesh per bolt');
- const core=armored.find(m=>m.material.name==='BRUTE / scarlet thoracic reactor');
+ assert.equal(armored.length,6,'reference sculpt must stay within six GPU batches');
+ const core=armored.find(m=>m.material.name==='BRUTE / permanently glowing scarlet reactor');
  assert.ok(core,'real separately shaded thoracic reactor should be present');
- assert.equal(core.material.isMeshBasicMaterial,true,'reactor glows without new point lights');
- assert.equal(core.material.color.getHex(),0x80d9e8,'reactor optics remain idle blue to preserve auditory alert feedback');
+ assert.equal(core.material.isMeshStandardMaterial,true,'red reactor glows through emissive shading without a point light');
+ assert.equal(core.material.color.getHex(),0xc11332,'reactor must be scarlet even when idle');
+ assert.equal(core.material.emissive.getHex(),0xff1735);
+ assert.equal(brute.userData.optics.color.getHex(),0x80d9e8,'visor remains blue when passive');
  brute.userData.animate(0,0,true,{awareness:'engaged'},0);
- assert.equal(core.material.color.getHex(),0xff180c,'reactor and visor become red when the Brute detects the player');
+ assert.equal(core.material.color.getHex(),0xc11332,'reactor stays red regardless of alert');
+ assert.equal(brute.userData.optics.color.getHex(),0xff180c,'visor becomes red independently');
  assert.ok(brute.getObjectsByProperty('isLight',true).length===0);
  const b=bounds(brute),s=bounds(regular);
- assert.ok(b.max.x-b.min.x>s.max.x-s.min.x+.16,'shoulder silhouette must be appreciably wider');
+ assert.ok(b.max.x-b.min.x>s.max.x-s.min.x+.45,'Briseur shoulders must dominate the patrol chassis');
  assert.ok(b.min.y>-.13,'enlarged siege boots must not fall beneath the ground plane');
  let triangles=0;
  for(const mesh of armored){
@@ -58,7 +61,7 @@ test('elite BRUTE retains a working optical sensor and a red reactor in the same
  b.userData.animate(0,0,true,{awareness:'engaged',phase:0},0);
  b.updateMatrixWorld(true);b.userData.skeleton.update();
  assert.equal(b.userData.optics.color.getHex(),0xff180c);
- assert.ok(b.children.some(m=>m.isSkinnedMesh&&m.material?.name==='BRUTE / scarlet thoracic reactor'));
+ assert.ok(b.children.some(m=>m.isSkinnedMesh&&m.material?.name==='BRUTE / permanently glowing scarlet reactor'));
  const joints=b.userData.skeleton.bones;
  assert.ok(joints.some(j=>j.name==='sensor-head'));
  assert.equal(b.userData.designRevision,'3.63.2','retain pre-existing shared revision contract');
