@@ -61,22 +61,22 @@ export function buildHumanoidRobot({form,elite,ranged,armor,dark,servo,hazard,op
   const s=point('Arm',side),e=point('ForeArm',side),w=point('Hand',side);
   const upper=boneAt(`arm-${side}-shoulder`,s,thorax),lower=boneAt(`arm-${side}-elbow`,e,upper),wrist=boneAt(`arm-${side}-wrist`,w,lower);
   const u=assembly(upper),l=assembly(lower),f=assembly(wrist);
-  motor(a,s,.055,.075);shell(u,dark,s,e,.11*limbWidth,.12);shell(u,armor,[s[0],s[1]-.055,s[2]],[e[0],e[1]+.04,e[2]],.15*limbWidth,.15);
-  motor(l,e,.047,.07);shell(l,dark,e,w,.10*limbWidth,.10);shell(l,armor,[e[0],e[1]-.035,e[2]],[w[0],w[1]+.045,w[2]],.14*limbWidth,.14);
+  motor(a,s,.055,.075);shell(u,dark,s,e,.11*limbWidth,.12);if(form!=='brute')shell(u,armor,[s[0],s[1]-.055,s[2]],[e[0],e[1]+.04,e[2]],.15*limbWidth,.15);
+  motor(l,e,.047,.07);shell(l,dark,e,w,.10*limbWidth,.10);if(form!=='brute')shell(l,armor,[e[0],e[1]-.035,e[2]],[w[0],w[1]+.045,w[2]],.14*limbWidth,.14);
   l.limb(servo,[e[0]+side*.04,e[1]-.03,e[2]+.04],[w[0]+side*.033,w[1]+.035,w[2]+.04],.009,.008);
   f.box(dark,[.065,.075,.04],[w[0],w[1]-.035,w[2]-.016],[0,0,0],.006);
-  for(let finger=0;finger<4;finger++){const x=w[0]+(finger-1.5)*.017;f.limb(servo,[x,w[1]-.055,w[2]-.02],[x,w[1]-.105,w[2]-.037],.007,.006);f.limb(dark,[x,w[1]-.105,w[2]-.037],[x,w[1]-.10,w[2]-.069],.006,.005);}
-  f.limb(servo,[w[0]-side*.043,w[1]-.02,w[2]-.02],[w[0]-side*.051,w[1]-.05,w[2]-.05],.009,.007);
+  if(form!=='brute')for(let finger=0;finger<4;finger++){const x=w[0]+(finger-1.5)*.017;f.limb(servo,[x,w[1]-.055,w[2]-.02],[x,w[1]-.105,w[2]-.037],.007,.006);f.limb(dark,[x,w[1]-.105,w[2]-.037],[x,w[1]-.10,w[2]-.069],.006,.005);}
+  if(form!=='brute')f.limb(servo,[w[0]-side*.043,w[1]-.02,w[2]-.02],[w[0]-side*.051,w[1]-.05,w[2]-.05],.009,.007);
   if(form==='bulwark')l.add(shieldPlate,armor,matrix([e[0]+side*.045,(e[1]+w[1])*.5,w[2]-.07],[0,side*-.12,0],[1,1,1]));
    if(form==='brute')bruteArm({side,s,e,w,u,l,f,armor,dark,servo,reactor});
   armRig.push({upper,lower,wrist,side});
   const hip=point('UpLeg',side),knee=point('Leg',side),ankle=point('Foot',side),upperLeg=boneAt(`leg-${side}-hip`,hip,pelvis),lowerLeg=boneAt(`leg-${side}-knee`,knee,upperLeg),foot=boneAt(`leg-${side}-ankle`,ankle,lowerLeg);
   const v=assembly(upperLeg),c=assembly(lowerLeg),b=assembly(foot);
-  motor(v,hip,.055,.07);shell(v,dark,hip,knee,.13*limbWidth,.14);shell(v,armor,[hip[0],hip[1]-.05,hip[2]],[knee[0],knee[1]+.07,knee[2]],.19*limbWidth,.17);
-  motor(c,knee,.054,.075);c.add(kneePlate,armor,matrix([knee[0],knee[1],knee[2]-.061],[0,0,0],[1,1,1]));
-  shell(c,dark,knee,ankle,.105*limbWidth,.115);shell(c,armor,[knee[0],knee[1]-.055,knee[2]],[ankle[0],ankle[1]+.06,ankle[2]],.145*limbWidth,.14);
-  c.add(shin,armor,matrix([knee[0],.35,-.072],[0,0,0],[limbWidth,1,1]));
-  motor(b,ankle,.042,.065);b.add(boot,armor,matrix([ankle[0],.065,ankle[2]-.055]));b.add(sole,dark,matrix([ankle[0],.015,ankle[2]-.06]));
+  motor(v,hip,.055,.07);shell(v,dark,hip,knee,.13*limbWidth,.14);if(form!=='brute')shell(v,armor,[hip[0],hip[1]-.05,hip[2]],[knee[0],knee[1]+.07,knee[2]],.19*limbWidth,.17);
+  motor(c,knee,.054,.075);if(form!=='brute')c.add(kneePlate,armor,matrix([knee[0],knee[1],knee[2]-.061],[0,0,0],[1,1,1]));
+  shell(c,dark,knee,ankle,.105*limbWidth,.115);if(form!=='brute')shell(c,armor,[knee[0],knee[1]-.055,knee[2]],[ankle[0],ankle[1]+.06,ankle[2]],.145*limbWidth,.14);
+  if(form!=='brute')c.add(shin,armor,matrix([knee[0],.35,-.072],[0,0,0],[limbWidth,1,1]));
+  motor(b,ankle,.042,.065);if(form!=='brute')b.add(boot,armor,matrix([ankle[0],.065,ankle[2]-.055]));b.add(sole,dark,matrix([ankle[0],.015,ankle[2]-.06]));
    if(form==='brute')bruteLeg({side,hip,knee,ankle,v,c,b,armor,dark,servo,reactor});
   legRig.push({upper:upperLeg,lower:lowerLeg,foot,side,hip,knee,ankle});
  }
