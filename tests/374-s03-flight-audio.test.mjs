@@ -42,9 +42,11 @@ test('S-03 quadrotor banks and pitches with its real world velocity and yaw, wit
  state.motionZ=0;state.motionX=3;
  for(let i=70;i<110;i++)root.userData.animate(i/60,0,true,state,i/60);
  assert.ok(body.rotation.z<-.08,'sideways strafe should bank into the direction');
+ const strafingBank=body.rotation.z;
  state.motionX=0;state.rotorDestroyed=[true,false,false,false];
  for(let i=110;i<150;i++)root.userData.animate(i/60,0,true,state,i/60);
- assert.ok(body.rotation.z>0,'missing left motor creates asymmetric compensation');
+ assert.ok(body.rotation.z<-.06,'missing left motor creates asymmetric compensation');
+ assert.ok(Math.abs(body.rotation.z-strafingBank)>.015,'the drone adjusts bank when a motor fails');
  const fans=root.userData.skeleton.bones.filter(b=>b.name.startsWith('fan-'));
  assert.equal(fans.length,4);assert.ok(fans[0].scale.x<.05);
  let draws=0,triangles=0;root.traverse(o=>{if(o.isMesh){draws++;triangles+=o.geometry.attributes.position.count/3;}});
