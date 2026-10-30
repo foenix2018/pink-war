@@ -56,7 +56,7 @@ test('elite BRUTE retains a working optical sensor and a red reactor in the same
  b.userData.animate(0,0,true,{awareness:'engaged',phase:0},0);
  b.updateMatrixWorld(true);b.userData.skeleton.update();
  assert.equal(b.userData.optics.color.getHex(),0xff180c);
- assert.ok(b.children.some(m=>m.material.name==='BRUTE / scarlet thoracic reactor'));
+ assert.ok(b.children.some(m=>m.isSkinnedMesh&&m.material?.name==='BRUTE / scarlet thoracic reactor'));
  const joints=b.userData.skeleton.bones;
  assert.ok(joints.some(j=>j.name==='sensor-head'));
  assert.equal(b.userData.designRevision,'3.63.2','retain pre-existing shared revision contract');
