@@ -86,7 +86,7 @@ async function actualObject(name){
   const {createEnemyFactory}=await import('./enemies.js');
   const mats=palette();
   const form=enemyForms[name],root=createEnemyFactory(mats).create(false,true,form);
-  return {root,animate:t=>root.userData.animate?.(t,0,false,{},t),source:'Usine d’ennemis / châssis réel du jeu'};
+  return {root,animate:t=>root.userData.animate?.(t,0,false,form==='probe'?{yaw:root.rotation.y,motionX:Math.sin(t*.8)*2.4,motionZ:Math.cos(t*.8)*2.2}:{},t),source:form==='probe'?'S-03 / quadrirotor cyberpunk · vol stabilisé · son RLH en jeu':'Usine d’ennemis / châssis réel du jeu'};
  }
  if(Object.hasOwn(weaponNames,name)){
   const index=weaponNames[name];
