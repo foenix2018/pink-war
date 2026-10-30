@@ -87,7 +87,7 @@ export function createEnemyFactory(mats){
     const key=`${form}:${elite?1:0}:${ranged?1:0}`;if(cache.has(key))return cache.get(key);
     const armor=form==='synth'?synthShell:elite?heavyFrame:frame,dark=mechanism;
     const glow=ranged?mats.cyan:form==='scuttler'?mats.rose:form==='seer'?(mats.pale||mats.cyan):mats.violet;
-    const optics=new T.MeshBasicMaterial({color:form==='brute'?0xff304c:ENEMY_OPTICS.idle,toneMapped:false});optics.name=form==='brute'?'BRUTE / scarlet thoracic reactor':'ORDRE independent optics';
+    const optics=new T.MeshBasicMaterial({color:ENEMY_OPTICS.idle,toneMapped:false});optics.name=form==='brute'?'BRUTE / scarlet thoracic reactor':'ORDRE independent optics';
     const bones=[],assemblies=[],legRig=[],armRig=[],rotors=[];let probeHead=null,probeSignal=null,groundGun=null,gunSignal=null,humanoid=null;
     function bone(name,position,parent=-1){bones.push({name,position,parent});return bones.length-1;}
     function assembly(index){const a=new EnemyAssembly();assemblies.push({assembly:a,bone:index});return a;}
@@ -239,7 +239,7 @@ export function createEnemyFactory(mats){
     let previousProbeTime=null,dronePitch=0,droneRoll=0;
     root.userData.animate=(time,phase=0,moving=true,flight={},simulationTime=time)=>{
       const alert=enemyAlertState(flight,simulationTime);
-      if(root.userData.alertState!==alert){eyeMaterial.color.setHex(form==='brute'&&alert==='idle'?0xff304c:ENEMY_OPTICS[alert]);root.userData.alertState=alert;}
+      if(root.userData.alertState!==alert){eyeMaterial.color.setHex(ENEMY_OPTICS[alert]);root.userData.alertState=alert;}
       if(kit.groundGun!==null){
         const pulse=simulationTime-(flight.lastShotAt??-99)<.12?1:0;
         joints[kit.groundGun].rotation.x=T.MathUtils.clamp(riflePose&&alert==='idle'?-.30:flight.aimPitch||0,FIELD_RIFLE.minPitch,FIELD_RIFLE.maxPitch);
