@@ -82,6 +82,10 @@ export function createEnemyFactory(mats){
   const servo=new T.MeshStandardMaterial({color:0x858c8b,roughness:.42,metalness:.80,envMap:mats.monster.envMap,envMapIntensity:.5});
   const synthShell=new T.MeshPhysicalMaterial({color:0xc5d4d7,map:surface.metal,roughnessMap:surface.rough,bumpMap:surface.rough,bumpScale:.00025,metalness:.38,roughness:.42,clearcoat:.5,clearcoatRoughness:.32,envMap:mats.monster.envMap,envMapIntensity:.4});
   const hazard=new T.MeshStandardMaterial({color:0x96825b,roughness:.78,metalness:.25});
+  // BRUTE uses the existing caution-paint material slot for its permanent scarlet reactor.
+  // This preserves exactly six GPU batches and leaves the per-instance visor optics independent.
+  const bruteEnergy=new T.MeshStandardMaterial({color:0xc11332,emissive:0xff1735,emissiveIntensity:1.3,roughness:.24,metalness:.35});
+  bruteEnergy.name='BRUTE / permanently glowing scarlet reactor';
 
   function template(elite,ranged,form){
     const key=`${form}:${elite?1:0}:${ranged?1:0}`;if(cache.has(key))return cache.get(key);
@@ -191,7 +195,7 @@ export function createEnemyFactory(mats){
         a.add(sensor,glow,matrix([0,1.04,-.28],[0,0,0],[.05,.05,.021]),false);
       }
     }else{
-      humanoid=buildHumanoidRobot({form,elite,ranged,armor,dark,servo,hazard,optics,glow,reactor:optics,boneAt,assembly,thorax,pelvis});
+      humanoid=buildHumanoidRobot({form,elite,ranged,armor,dark,servo,hazard:form==='brute'?bruteEnergy:hazard,optics,glow,reactor:form==='brute'?bruteEnergy:optics,boneAt,assembly,thorax,pelvis});
       legRig.push(...humanoid.legRig);armRig.push(...humanoid.armRig);groundGun=humanoid.groundGun;gunSignal=humanoid.gunSignal;
     }
     const result={parts:bakeRig(assemblies),bones,legRig,armRig,pelvis,thorax,rotors,probeHead,probeSignal,groundGun,gunSignal,optics,humanoid};
@@ -204,7 +208,7 @@ export function createEnemyFactory(mats){
     const kit=template(elite,ranged,form),root=new T.Group(),crawler=form==='scuttler',probe=form==='probe';
     root.name=({synth:'N-08 adaptive synthetic',stalker:'AI pursuit chassis',scuttler:'AI maintenance crawler',brute:'BRUTE / LE BRISEUR siege chassis',seer:'AI reconnaissance chassis',probe:'S-03 flying surveillance probe',listener:'E-06 acoustic tracker',bulwark:'B-11 armoured suppression unit'})[form];
     root.userData.form=form;root.userData.designRevision='3.63.2';if(probe)root.userData.probeRevision='S-03 / destructible rotors 3.73';root.userData.profile=ENEMY_PROFILES[form];root.userData.surfaceStyle=form==='brute'?'weathered gunmetal / curved siege armour / exposed silver hydraulic rams / scarlet reactor': 'weathered alloy / faceted humanoid armour / RLH joint proportions / articulated rifle stance';
-    if(form==='brute')root.userData.bruteRevision='BRISEUR-2026-10';
+    if(form==='brute')root.userData.bruteRevision='BRISEUR-V2-REFERENCE-2026-10';
     const joints=kit.bones.map(spec=>{const b=new T.Bone();b.name=spec.name;b.position.set(...spec.position);return b;});
     kit.bones.forEach((spec,i)=>(spec.parent<0?root:joints[spec.parent]).add(joints[i]));root.updateMatrixWorld(true);
     const skeleton=new T.Skeleton(joints);
