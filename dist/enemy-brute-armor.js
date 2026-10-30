@@ -71,17 +71,18 @@ export function bruteHead({h,armor,dark,servo}){
  }
 }
 export function bruteArm({side,s,e,w,u,l,f,armor,dark,servo,reactor}){
- // Extra mass follows the existing shoulder/elbow/wrist skeleton.
- along(u,armCowl,armor,[s[0],s[1]-.055,s[2]],[e[0],e[1]+.035,e[2]],1.07,1.05);
- along(l,forearmGuard,armor,[e[0],e[1]-.025,e[2]],[w[0],w[1]+.045,w[2]],1.1,1.12);
+ // One oversized demolition gauntlet, one smaller gripping arm, matching the Briseur key art.
+ const demolisher=side===-1,bulk=demolisher?1.26:.93;
+ along(u,armCowl,armor,[s[0],s[1]-.055,s[2]],[e[0],e[1]+.035,e[2]],1.07*bulk,1.05*bulk);
+ along(l,forearmGuard,armor,[e[0],e[1]-.025,e[2]],[w[0],w[1]+.045,w[2]],1.1*bulk,1.12*bulk);
  u.limb(servo,[s[0]+side*.078,s[1]-.015,s[2]+.11],[e[0]+side*.09,e[1]+.055,e[2]+.11],.026,.016);
  u.limb(dark,[s[0]+side*.104,s[1]-.028,s[2]+.10],[e[0]+side*.085,e[1]+.11,e[2]+.11],.040,.038);
  l.limb(servo,[e[0]-side*.072,e[1]-.022,e[2]+.115],[w[0]-side*.067,w[1]+.030,w[2]+.092],.027,.016);
  l.add(jointRing,dark,matrix([e[0],e[1],e[2]],[0,Math.PI/2,0],[.78,.78,.78]));
- f.ellipsoid(dark,[w[0],w[1]-.10,w[2]-.029],[.136,.148,.12]);
- f.add(fistKnuckle,armor,matrix([w[0],w[1]-.12,w[2]-.104]));
+ f.ellipsoid(dark,[w[0],w[1]-.10,w[2]-.029],[.136*bulk,.148*bulk,.12*bulk]);
+ f.add(fistKnuckle,armor,matrix([w[0],w[1]-.12,w[2]-.104],[0,0,0],[bulk,bulk,bulk]));
  // Three impact ridges and a red self-test LED on the demolisher gauntlet.
- for(let k=-1;k<=1;k++)f.box(servo,[.065,.036,.020],[w[0]+k*.067,w[1]-.152,w[2]-.202],[0,0,0],.006);
+ for(let k=-1;k<=1;k++)f.box(servo,[.065*bulk,.036*bulk,.020],[w[0]+k*.067*bulk,w[1]-.152*bulk,w[2]-.202*bulk],[0,0,0],.006);
  f.box(reactor,[.062,.016,.012],[w[0],w[1]-.045,w[2]-.202],[0,0,0],.003,false);
  // Hinged wrist collar; all components are rigidly skinned to their native bones.
  f.add(smallerRing,servo,matrix([w[0],w[1],w[2]+.06],[Math.PI/2,0,0],[1,1,1]));
