@@ -83,10 +83,10 @@ async function actualObject(name){
     source:'Sentinel MK VIII · modèle blindé original, canons et pods de missiles',dispose:()=>actor.dispose()};
  }
  if(Object.hasOwn(enemyForms,name)){
-  const {createEnemyFactory}=await import('./enemies.js?v=3.76-briseur-v2');
+  const {createEnemyFactory}=await import('./enemies.js?v=3.77-briseur-v3');
   const mats=palette();
   const form=enemyForms[name],root=createEnemyFactory(mats).create(false,true,form);
-  return {root,animate:t=>root.userData.animate?.(t,0,false,form==='probe'?{yaw:root.rotation.y,motionX:Math.sin(t*.8)*2.4,motionZ:Math.cos(t*.8)*2.2}:form==='brute'?{awareness:'engaged'}:{},t),source:form==='probe'?'S-03 / quadrirotor cyberpunk · vol stabilisé · son RLH en jeu':form==='brute'?'Le Briseur / réacteur thoracique rouge · blindage de siège · rig d’origine':'Usine d’ennemis / châssis réel du jeu'};
+  return {root,animate:t=>root.userData.animate?.(t,0,false,form==='probe'?{yaw:root.rotation.y,motionX:Math.sin(t*.8)*2.4,motionZ:Math.cos(t*.8)*2.2}:form==='brute'?{awareness:'engaged'}:{},t),source:form==='probe'?'S-03 / quadrirotor cyberpunk · vol stabilisé · son RLH en jeu':form==='brute'?'Brute V3 · nouveau châssis hard-surface de siège · réacteur et marteau hydraulique':'Usine d’ennemis / châssis réel du jeu'};
  }
  if(Object.hasOwn(weaponNames,name)){
   const index=weaponNames[name];
@@ -197,7 +197,7 @@ window.galleryBuild=async name=>{
   const repaired=repairMissingMaterials(entry.root);
   const count=fitObject(entry.root);
   item={...entry,name};
-  bearing=.45;elevation=.16;zoom=4.1;groundTick=5;
+  bearing=name==='BRUTE'?.30:.45;elevation=name==='BRUTE'?.10:.16;zoom=4.1;groundTick=5;
   setStatus(entry.source+' · '+count+' maillages'+(repaired?' · '+repaired+' matériaux réparés':'')+' · glisser pour tourner, pincer pour zoomer.');
   arButton.disabled=false;startDraw();
  }catch(e){if(token!==requestId)return;setStatus('Échec '+galleryBuildVersion+' · '+name+' : '+(e.message||e)+' · '+String(e.stack||'').slice(0,520));arButton.disabled=true;console.error('Galerie Pink Wars',name,e);}

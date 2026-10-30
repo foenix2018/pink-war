@@ -4,7 +4,7 @@ import {loft,bevelBox,matrix} from './geo.js';
 import {profiledPanel} from './armor-profiles.js';
 import {HUMAN_REFERENCE} from './enemy-humanoid-data.js';
 import {FIELD_RIFLE,carriesFieldRifle} from './enemy-weapon-layout.js';
-import {bruteTorso,bruteHead,bruteArm,bruteLeg} from './enemy-brute-armor.js';
+import {buildBruteV3} from './enemy-brute-v3.js';
 
 // A new hard-surface body over the approved hero's anatomical reference.
 // Planar plates and tapered chamfers replace inflated limbs and round shoulders.
@@ -26,6 +26,7 @@ const tmp=new T.Vector3(),direction=new T.Vector3(),rotation=new T.Quaternion(),
 const reference=HUMAN_REFERENCE.joints;
 export function buildHumanoidRobot({form,elite,ranged,detail,armor,dark,servo,hazard,optics,glow,reactor,boneAt,assembly,thorax,pelvis}){
  if(form==='listener')return buildListener({form,elite,ranged,detail,armor,dark,servo,hazard,optics,glow,boneAt,assembly,thorax,pelvis});
+ if(form==='brute')return buildBruteV3({armor,dark,servo,reactor,optics,glow,boneAt,assembly,thorax,pelvis});
  const heavy=['brute','bulwark'].includes(form),slender=['seer','listener','synth'].includes(form),width=form==='brute'?1.95:heavy?1.45:slender?.96:1.06,limbWidth=form==='brute'?1.42:heavy?1.28:1;
  const a=assembly(thorax),hips=assembly(pelvis),legRig=[],armRig=[];let groundGun=null,gunSignal=null;
  const point=(name,side)=>{const p=reference[(side===-1?'Left':'Right')+name];return [p[0]*width,p[1],p[2]];};
@@ -47,7 +48,6 @@ export function buildHumanoidRobot({form,elite,ranged,detail,armor,dark,servo,ha
  hips.box(armor,[.32*width,.075,.20],[0,1.015,0],[0,0,0],.012);
  for(const side of [-1,1])hips.box(armor,[.12*width,.13,.075],[side*.13*width,.955,-.10],[0,side*-.12,side*-.08],.008);
  }
- if(form==='brute')bruteTorso({a,hips,armor,dark,servo,reactor});
  const neck=boneAt('sensor-head',reference.Head,thorax),h=assembly(neck);
  h.limb(dark,[0,1.60,.02],[0,1.77,.02],.043,.039);
  if(form!=='brute')h.add(helmet,armor,matrix([0,0,0],[0,0,0],[heavy?1.08:1,1,1]));
@@ -60,7 +60,6 @@ export function buildHumanoidRobot({form,elite,ranged,detail,armor,dark,servo,ha
  if(form!=='brute')h.box(dark,[.082,.022,.008],[0,1.75,-.125],[0,0,0],.003);
  if(form==='listener')for(const side of [-1,1]){h.limb(dark,[side*.11,1.91,.02],[side*.17,2.14,.04],.015,.009);h.add(joint,armor,matrix([side*.18,2.11,.04],[0,0,0],[.032,.075,.075]));}
  if(form==='seer')h.box(dark,[.045,.075,.07],[.10,2.04,.015],[0,0,.08],.006);
- if(form==='brute')bruteHead({h,armor,dark,servo,optics});
  for(const side of [-1,1]){
   const s=point('Arm',side),e=point('ForeArm',side),w=point('Hand',side);
   const upper=boneAt(`arm-${side}-shoulder`,s,thorax),lower=boneAt(`arm-${side}-elbow`,e,upper),wrist=boneAt(`arm-${side}-wrist`,w,lower);
@@ -72,7 +71,6 @@ export function buildHumanoidRobot({form,elite,ranged,detail,armor,dark,servo,ha
   if(form!=='brute')for(let finger=0;finger<4;finger++){const x=w[0]+(finger-1.5)*.017;f.limb(servo,[x,w[1]-.055,w[2]-.02],[x,w[1]-.105,w[2]-.037],.007,.006);f.limb(dark,[x,w[1]-.105,w[2]-.037],[x,w[1]-.10,w[2]-.069],.006,.005);}
   if(form!=='brute')f.limb(servo,[w[0]-side*.043,w[1]-.02,w[2]-.02],[w[0]-side*.051,w[1]-.05,w[2]-.05],.009,.007);
   if(form==='bulwark')l.add(shieldPlate,armor,matrix([e[0]+side*.045,(e[1]+w[1])*.5,w[2]-.07],[0,side*-.12,0],[1,1,1]));
-   if(form==='brute')bruteArm({side,s,e,w,u,l,f,armor,dark,servo,reactor});
   armRig.push({upper,lower,wrist,side});
   const hip=point('UpLeg',side),knee=point('Leg',side),ankle=point('Foot',side),upperLeg=boneAt(`leg-${side}-hip`,hip,pelvis),lowerLeg=boneAt(`leg-${side}-knee`,knee,upperLeg),foot=boneAt(`leg-${side}-ankle`,ankle,lowerLeg);
   const v=assembly(upperLeg),c=assembly(lowerLeg),b=assembly(foot);
@@ -81,7 +79,6 @@ export function buildHumanoidRobot({form,elite,ranged,detail,armor,dark,servo,ha
   shell(c,dark,knee,ankle,.105*limbWidth,.115);if(form!=='brute')shell(c,armor,[knee[0],knee[1]-.055,knee[2]],[ankle[0],ankle[1]+.06,ankle[2]],.145*limbWidth,.14);
   if(form!=='brute')c.add(shin,armor,matrix([knee[0],.35,-.072],[0,0,0],[limbWidth,1,1]));
   motor(b,ankle,.042,.065);if(form!=='brute')b.add(boot,armor,matrix([ankle[0],.065,ankle[2]-.055]));b.add(sole,dark,matrix([ankle[0],.015,ankle[2]-.06]));
-   if(form==='brute')bruteLeg({side,hip,knee,ankle,v,c,b,armor,dark,servo,reactor});
   legRig.push({upper:upperLeg,lower:lowerLeg,foot,side,hip,knee,ankle});
  }
  if(ranged){

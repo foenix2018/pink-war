@@ -7,6 +7,8 @@ import { enemyScale } from './enemy-combat.js';
 import {enemyAlertState,ENEMY_OPTICS} from './enemy-alert.js';
 import {enemySurfaces} from './enemy-surfaces.js';
 import {listenerSurfaces} from './listener-surfaces.js';
+import {bruteSurfaces} from './brute-surfaces.js';
+import {BRUTE_V3} from './enemy-brute-v3.js';
 import {FIELD_RIFLE,LISTENER_TOOL,carriesFieldRifle} from './enemy-weapon-layout.js';
 import {createRifleArmPose} from './enemy-rifle-pose.js';
 import {buildHumanoidRobot} from './enemy-humanoid.js';
@@ -16,7 +18,7 @@ export const ENEMY_PROFILES=Object.freeze({
  synth:Object.freeze({name:'Synthétique N-08 / tacticien autonome',silhouette:'humanoid / ivory shell / exposed tendons / adaptive cover'}),
  stalker:Object.freeze({name:'Poursuivant / châssis de sécurité',silhouette:'military graphite shell / sealed helmet / paired optics / braced field rifle'}),
  seer:Object.freeze({name:'RECO1 · reconnaissance blindée',silhouette:'approved V10 / gunmetal segmented armour / 41-bone RLH motion / aimed carbine'}),
- brute:Object.freeze({name:'BRUTE / LE BRISEUR',silhouette:'giant graphite siege chassis / massive pauldron shoulders / hydraulics / crushing fists / red chest reactor'}),
+ brute:Object.freeze({name:'BRUTE V3 / LE BRISEUR',silhouette:'enormous angular siege mech / recessed red slit visor / exposed hydraulic pistons / asymmetric demolition hammer / long segmented legs'}),
  bulwark:Object.freeze({name:'Rempart / unité de suppression',silhouette:'humanoid heavy chassis / faceted arm shields / integrated helmet'}),
  listener:Object.freeze({name:'Traqueur E-06 / réseau acoustique',silhouette:'open mechanical torso / wedge optical head / twin concave reflectors / hydraulic legs'}),
  scuttler:Object.freeze({name:'Rampant / maintenance autonome',silhouette:'low / worn overlapping armour / hydraulic six-legged maintenance chassis'}),
@@ -79,6 +81,11 @@ export function createEnemyFactory(mats,{detail='high'}={}){
   const cache=new Map(),surface=equipmentSurfaces(),wear=enemySurfaces(T);
   const frame=new T.MeshPhysicalMaterial({color:0x626a70,map:wear.metal,roughnessMap:wear.rough,bumpMap:wear.rough,bumpScale:.0007,roughness:.64,metalness:.64,clearcoat:.14,clearcoatRoughness:.52,envMap:mats.monster.envMap,envMapIntensity:.65});frame.name='ORDRE / worn graphite armour';
   const heavyFrame=frame.clone();heavyFrame.color.setHex(0x414b52);heavyFrame.roughness=.69;
+  const bruteMaps=bruteSurfaces(T),bruteFrame=frame.clone();
+  bruteFrame.name='BRUTE V3 / worn hard-surface graphite plating';bruteFrame.color.setHex(0x757b83);
+  bruteFrame.map=bruteMaps.paint;bruteFrame.roughnessMap=bruteMaps.rough;
+  bruteFrame.bumpMap=bruteMaps.relief;bruteFrame.bumpScale=.0012;
+  bruteFrame.roughness=.67;bruteFrame.metalness=.70;bruteFrame.clearcoat=.06;
   const mechanism=new T.MeshStandardMaterial({color:0x181c20,map:surface.metal,bumpMap:surface.rough,bumpScale:.0004,roughness:.78,metalness:.38,envMap:mats.monster.envMap,envMapIntensity:.35});
   const servo=new T.MeshStandardMaterial({color:0x858c8b,roughness:.42,metalness:.80,envMap:mats.monster.envMap,envMapIntensity:.5});
   const synthShell=new T.MeshPhysicalMaterial({color:0xc5d4d7,map:surface.metal,roughnessMap:surface.rough,bumpMap:surface.rough,bumpScale:.00025,metalness:.38,roughness:.42,clearcoat:.5,clearcoatRoughness:.32,envMap:mats.monster.envMap,envMapIntensity:.4});
@@ -94,7 +101,7 @@ export function createEnemyFactory(mats,{detail='high'}={}){
 
   function template(elite,ranged,form){
     const key=`${form}:${elite?1:0}:${ranged?1:0}`;if(cache.has(key))return cache.get(key);
-    const armor=form==='listener'?listenerFrame:form==='synth'?synthShell:elite?heavyFrame:frame,dark=mechanism;
+    const armor=form==='brute'?bruteFrame:form==='listener'?listenerFrame:form==='synth'?synthShell:elite?heavyFrame:frame,dark=mechanism;
     const glow=form==='listener'?listenerSignal:ranged?mats.cyan:form==='scuttler'?mats.rose:form==='seer'?(mats.pale||mats.cyan):mats.violet;
     const optics=new T.MeshBasicMaterial({color:ENEMY_OPTICS.idle,toneMapped:false});if(form==='listener')optics.map=listenerMaps.optics;optics.name=form==='brute'?'BRUTE / scarlet thoracic reactor':'ORDRE independent optics';
     const bones=[],assemblies=[],legRig=[],armRig=[],rotors=[];let probeHead=null,probeSignal=null,groundGun=null,gunSignal=null,humanoid=null;
@@ -231,9 +238,9 @@ export function createEnemyFactory(mats,{detail='high'}={}){
     if(form==='seer')return createReco1({elite,environment:mats.monster?.envMap});
     if(!['stalker','scuttler','brute','seer','probe','listener','bulwark','synth'].includes(form))form='stalker';
     const kit=template(elite,ranged,form),root=new T.Group(),crawler=form==='scuttler',probe=form==='probe';
-    root.name=({synth:'N-08 adaptive synthetic',stalker:'AI pursuit chassis',scuttler:'AI maintenance crawler',brute:'BRUTE / LE BRISEUR siege chassis',seer:'AI reconnaissance chassis',probe:'S-03 flying surveillance probe',listener:'E-06 acoustic tracker',bulwark:'B-11 armoured suppression unit'})[form];
-    root.userData.form=form;root.userData.designRevision='3.63.2';if(probe)root.userData.probeRevision='S-03 / destructible rotors 3.73';root.userData.profile=ENEMY_PROFILES[form];root.userData.surfaceStyle=form==='listener'?'worn titanium / open thoracic cage / directional acoustic reflectors / hydraulic limbs':form==='brute'?'weathered gunmetal / curved siege armour / exposed silver hydraulic rams / scarlet reactor': 'weathered alloy / faceted humanoid armour / RLH joint proportions / articulated rifle stance';
-    if(form==='brute')root.userData.bruteRevision='BRISEUR-V2-REFERENCE-2026-10';
+    root.name=({synth:'N-08 adaptive synthetic',stalker:'AI pursuit chassis',scuttler:'AI maintenance crawler',brute:'BRUTE V3 / LE BRISEUR heavy siege chassis',seer:'AI reconnaissance chassis',probe:'S-03 flying surveillance probe',listener:'E-06 acoustic tracker',bulwark:'B-11 armoured suppression unit'})[form];
+    root.userData.form=form;root.userData.designRevision='3.63.2';if(probe)root.userData.probeRevision='S-03 / destructible rotors 3.73';root.userData.profile=ENEMY_PROFILES[form];root.userData.surfaceStyle=form==='listener'?'worn titanium / open thoracic cage / directional acoustic reflectors / hydraulic limbs':form==='brute'?'worn graphite / large sharply bevelled siege plates / segmented piston mechanics / recessed scarlet reactor': 'weathered alloy / faceted humanoid armour / RLH joint proportions / articulated rifle stance';
+    if(form==='brute')root.userData.bruteRevision=BRUTE_V3.revision;
     const joints=kit.bones.map(spec=>{const b=new T.Bone();b.name=spec.name;b.position.set(...spec.position);return b;});
     kit.bones.forEach((spec,i)=>(spec.parent<0?root:joints[spec.parent]).add(joints[i]));root.updateMatrixWorld(true);
     const skeleton=new T.Skeleton(joints);

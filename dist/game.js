@@ -1,5 +1,5 @@
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, starterWeaponIndex, weaponCycleOrder, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
-import { createScene } from './scene.js?v=3.76-briseur-v2';
+import { createScene } from './scene.js?v=3.77-briseur-v3';
 import { VRController } from './vr.js';
 import {createGamepadAid} from './ios-gamepad.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';

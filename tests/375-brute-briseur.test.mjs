@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from '../dist/vendor/three.webgpu.min.js';
 import {createEnemyFactory,ENEMY_PROFILES} from '../dist/enemies.js';
-import {BRUTE_DESIGN} from '../dist/enemy-brute-armor.js';
+import {BRUTE_V3} from '../dist/enemy-brute-v3.js';
 import {enemyDurability,ROBOT_DURABILITY} from '../dist/enemy-combat.js';
 
 const materials=()=>Object.fromEntries(['monster','monsterElite','monsterFace','cyan','rose','violet','pale'].map(k=>[k,new T.MeshStandardMaterial()]));
@@ -11,7 +11,7 @@ const bounds=root=>{root.updateMatrixWorld(true);return new T.Box3().setFromObje
 test('BRUTE Le Briseur uses authentic curved armour with graphite texture and separate scarlet reactor',()=>{
  const factory=createEnemyFactory(materials()),brute=factory.create(false,false,'brute'),regular=factory.create(false,false,'stalker');
  assert.match(ENEMY_PROFILES.brute.name,/BRISEUR/);
- assert.equal(brute.userData.bruteRevision,BRUTE_DESIGN.visualRevision);
+ assert.equal(brute.userData.bruteRevision,BRUTE_V3.revision);
  const armored=brute.children.filter(o=>o.isSkinnedMesh);
  assert.ok(armored.length>=4&&armored.length<=6,'reference sculpt must stay within six GPU batches (got '+armored.length+')');
  const core=armored.find(m=>m.material.name==='BRUTE / permanently glowing scarlet reactor');
@@ -25,7 +25,8 @@ test('BRUTE Le Briseur uses authentic curved armour with graphite texture and se
  assert.equal(brute.userData.optics.color.getHex(),0xff180c,'visor becomes red independently');
  assert.ok(brute.getObjectsByProperty('isLight',true).length===0);
  const b=bounds(brute),s=bounds(regular);
- assert.ok(b.max.x-b.min.x>s.max.x-s.min.x+.45,'Briseur shoulders must dominate the patrol chassis');
+ assert.ok(b.max.x-b.min.x>s.max.x-s.min.x+.65,'V3 shoulder silhouette must dwarf patrol enemy');
+ assert.ok(b.max.y>2.08,'V3 hard surface shoulders and helmet must reach taller than V2');
  assert.ok(b.min.y>-.13,'enlarged siege boots must not fall beneath the ground plane');
  let triangles=0;
  for(const mesh of armored){
