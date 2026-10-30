@@ -1,5 +1,5 @@
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, starterWeaponIndex, weaponCycleOrder, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
-import { createScene } from './scene.js?v=3.48';
+import { createScene } from './scene.js?v=3.73';
 import { VRController } from './vr.js';
 import {createGamepadAid} from './ios-gamepad.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
@@ -513,6 +513,8 @@ function handleEvents() {
     if (event.type === 'reload') { reloadInserted=false;vr.startReloadGesture(); vr.haptic('reload');if(settings.sound){if(game.ammo[game.weaponIndex]===0)playWeaponAction(audioContext,game.weapon.id,'empty');playWeaponAction(audioContext,game.weapon.id,'reload-out');} }
     if (event.type === 'reloaded') { vr.haptic('reloaded');if(settings.sound)playWeaponAction(audioContext,game.weapon.id,'reload-ready'); }
     if (event.type === 'spawn') world.burst(event.x, event.y??1, event.z, world.palette.violet, 7);
+    if(event.type==='probe-rotor-destroyed'){tone(500,80,.24,.055,'sawtooth');vr.haptic('hit');}
+    if(event.type==='probe-crash')tone(150,35,.32,.07,'triangle');
     if (event.type === 'probe-charge') { const d=Math.hypot(event.x-game.player.x,event.z-game.player.z);tone(760,1300,.35,.022/(1+d*.065),'sine'); }
     if(event.type==='enemy-shot'&&settings.sound&&audioContext)playEnemyShot(audioContext,{form:event.form,source:event,listener:game.player,yaw:listenerHeading(),occluded:game.blocked(event,{x:game.player.x,y:game.player.elevation+1.5,z:game.player.z})});
     if (event.type === 'impact') {
