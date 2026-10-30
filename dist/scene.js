@@ -10,7 +10,7 @@ import { setKenneyAccent } from './kenney-blasters.js';
 import { createGlove } from './hands.js';
 import { CHARACTERS, characterForId } from './characters.js';
 import { createSurfaceDetails } from './surfaces.js';
-import { createEnemyFactory } from './enemies.js?v=3.76-briseur-v2';
+import { createEnemyFactory } from './enemies.js?v=3.77-briseur-v3';
 import {probeRotorAt} from './probe-damage.js';
 import { createRuinedCity, paintRuinSky } from './world-art.js';
 import { createTraversalArt } from './traversal-art.js';
