@@ -196,3 +196,378 @@ body:not(.playing) .panel-dialog,body:not(.playing) dialog:not(.panel-dialog){ba
     letter-spacing:.08em!important;
   }
 }
+
+/* ========================================================================
+  PINK WARS / VESPER CINEMATIC GLASS V5
+  Ref: approved polished menu artwork; CSS controls stay interactive.
+  The official Pink Wars logo, character helmets and game art are reused.
+======================================================================== */
+:root {
+  --pw-v5-rose: #ff4fad;
+  --pw-v5-blue: #55caff;
+  --pw-v5-rim: rgba(215,234,255,.84);
+  --pw-v5-font: 'Oxanium', 'Arial Narrow', system-ui, sans-serif;
+}
+html:not(.playing) body:not(.playing):not(.outfit-mode) #welcome-art img {
+  filter: brightness(.85) contrast(1.16) saturate(1.34) !important;
+}
+body:not(.playing):not(.outfit-mode) .scene-shade {
+  background:
+    radial-gradient(ellipse at 16% 36%, rgba(235,35,127,.16), transparent 56%),
+    radial-gradient(ellipse at 87% 68%, rgba(35,113,251,.20), transparent 55%),
+    linear-gradient(180deg, rgba(8,8,25,.12) 3%, rgba(4,9,27,.28) 35%, rgba(1,9,23,.57) 73%, rgba(2,7,18,.87) 100%) !important;
+}
+#lobby {
+  padding-top: max(30px,env(safe-area-inset-top,0px))!important;
+  padding-bottom: max(18px,env(safe-area-inset-bottom,0px))!important;
+}
+#lobby .intro {
+  width:min(900px,100%)!important;
+  max-width:900px!important;
+  padding:8px 0 18px!important;
+  text-align:center!important;
+}
+#lobby .intro>h1 {
+  margin:0 auto 5px!important;
+  text-align:center;
+  line-height:1!important;
+}
+#lobby .intro>h1 .pw-major-wordmark {
+  width:min(570px,79vw)!important;
+  max-width:100%!important;
+  margin:0 auto!important;
+  filter:drop-shadow(0 10px 18px rgba(1,6,18,.78)) drop-shadow(0 0 19px rgba(239,27,126,.22))!important;
+}
+#lobby .intro>.eyebrow {
+  width:fit-content!important;
+  max-width:100%;
+  margin:0 auto 32px!important;
+  padding:3px 15px 5px!important;
+  font-family:var(--pw-v5-font)!important;
+  font-size:clamp(11px,1.1vw,15px)!important;
+  letter-spacing:.34em!important;
+  font-weight:600!important;
+  white-space:normal;
+  color:#e0ecff!important;
+  text-shadow:0 2px 7px #031121, 0 0 12px rgba(248,68,175,.37);
+}
+#lobby .intro>.eyebrow:before,#lobby .intro>.eyebrow:after{
+  content:"";display:block;width:clamp(13px,3vw,45px);height:1px;
+  background:linear-gradient(90deg,transparent,#fb6fc6);
+  box-shadow:0 0 10px #ec4baf;
+}
+#lobby .intro>.eyebrow:after{transform:rotate(180deg)}
+#lobby .intro>.eyebrow .live-dot{display:none!important}
+#lobby .mode-choice {
+  gap:clamp(9px,1.7vw,17px)!important;
+  margin:0 0 16px!important;
+}
+#lobby .mode-choice>*{min-width:0}
+#lobby .mode-choice button,#lobby .mode-choice a {
+  position:relative!important;
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:flex-end!important;
+  gap:10px!important;
+  min-height:clamp(163px,18vw,249px)!important;
+  overflow:hidden!important;
+  padding:16px 14px 19px!important;
+  border-radius:clamp(23px,2.4vw,31px)!important;
+  border:1.5px solid rgba(201,224,254,.86)!important;
+  background:linear-gradient(145deg,rgba(173,201,239,.22),rgba(14,33,66,.11) 43%,rgba(5,12,29,.49))!important;
+  box-shadow:inset 0 2px rgba(255,255,255,.65),
+    inset 1px 0 rgba(220,239,255,.33),
+    inset 0 -4px 13px rgba(71,136,234,.25),
+    0 14px 38px rgba(0,7,21,.65),
+    0 0 13px rgba(81,160,255,.24)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(175%);
+  backdrop-filter:blur(18px) saturate(175%);
+  transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease;
+}
+#lobby .mode-choice button::before,#lobby .mode-choice a::before {
+  z-index:-2;
+  opacity:1!important;
+  filter:brightness(1.34) saturate(1.31) contrast(1.09)!important;
+}
+#lobby .mode-choice button::after,#lobby .mode-choice a::after {
+  z-index:-1!important;
+  left:3%!important;right:3%!important;top:0!important;
+  height:33%!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.36),rgba(181,211,255,.06),transparent)!important;
+  filter:blur(16px)!important;
+  pointer-events:none!important;
+}
+#lobby .mode-choice .glass-tile-icon {display:none!important}
+#lobby .mode-choice .glass-tile-label {
+  position:relative!important;
+  z-index:2!important;
+  margin:0 auto!important;
+  font-family:var(--pw-v5-font)!important;
+  font-weight:700!important;
+  font-size:clamp(16px,1.85vw,24px)!important;
+  line-height:1.18!important;
+  letter-spacing:.14em!important;
+  text-transform:uppercase!important;
+  color:#fff!important;
+  text-shadow:0 2px 7px #02070fe8, 0 0 20px #101b2f!important;
+}
+#lobby .mode-choice .glass-tile-label::after {
+  content:"";
+  display:block;width:62%;min-width:28px;height:2px;margin:8px auto 0;
+  border-radius:100%;background:linear-gradient(90deg,transparent,#f36bbb,transparent);
+  box-shadow:0 0 11px #ff5ac4;
+}
+#lobby .mode-choice [data-mode=training] .glass-tile-label::after,
+#lobby .mode-choice .mode-home .glass-tile-label::after {
+  background:linear-gradient(90deg,transparent,#55caff,transparent);
+  box-shadow:0 0 11px #55caff;
+}
+#lobby .mode-choice .glass-tile-arrow {
+  position:relative!important;z-index:2!important;
+  margin:0 auto!important;
+  font-size:27px!important;
+  font-family:system-ui!important;
+  font-weight:300!important;
+  line-height:1!important;
+  color:#edfaff!important;
+  text-shadow:0 1px 8px #020b25!important;
+}
+#lobby .mode-choice button:hover,#lobby .mode-choice a:hover {
+  transform:translateY(-2px)!important;
+  border-color:#fff!important;
+  box-shadow:inset 0 2px #fff7,0 15px 44px #010715ab,0 0 25px #c655bd45!important;
+}
+#lobby .mode-choice button:active,#lobby .mode-choice a:active {
+  transform:scale(.975)!important;
+}
+#lobby .mode-choice [data-mode=training]::before {
+  background-image:linear-gradient(180deg,rgba(3,8,19,.06),rgba(4,11,23,.16) 38%,rgba(2,6,17,.76) 100%),url('art/updates/36316/armoire.webp')!important;
+  background-size:cover,auto 230%!important;
+  background-position:center,center 57%!important;
+}
+#lobby .mode-choice [data-mode=arena]::before {
+  background-position:center,center 37%!important;
+}
+#lobby .mode-choice .gallery-home-link::before {
+  background-image:
+   linear-gradient(180deg,rgba(5,9,28,.03),rgba(4,10,26,.12) 41%,rgba(3,9,23,.79) 100%),
+   url('art/updates/3664/gaby-front.webp'),
+   url('art/updates/3664/cara-front.webp'),
+   radial-gradient(ellipse at center,#283e87,#170c37 65%,#040a1f)!important;
+  background-size:cover,56% auto,56% auto,cover!important;
+  background-position:center,-1% 24%,101% 24%,center!important;
+  background-repeat:no-repeat!important;
+  background-blend-mode:normal,screen,screen,normal!important;
+  filter:brightness(1.36) saturate(1.36)!important;
+}
+#lobby .mode-choice .mode-home::before {
+  background-position:center,center 40%!important;
+}
+/* Character selection has the oversized integrated helmet art of the approved concept. */
+#lobby .character-choice {
+  width:100%!important;
+  max-width:none!important;
+  margin:0 0 18px!important;
+  padding:0!important;
+}
+#lobby .character-cards {
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  padding:0!important;
+  gap:clamp(10px,2vw,20px)!important;
+}
+#lobby .character-card,#lobby .character-card.selected {
+  position:relative;
+  height:clamp(116px,12.8vw,155px)!important;
+  min-height:clamp(116px,12.8vw,155px)!important;
+  gap:4px!important;
+  padding:6px 17px 0 0!important;
+  border-radius:clamp(23px,2.5vw,32px)!important;
+  border:1.6px solid rgba(163,220,255,.89)!important;
+  background:linear-gradient(135deg,rgba(21,73,113,.76),rgba(4,17,37,.81) 61%,rgba(8,26,65,.81))!important;
+  -webkit-backdrop-filter:blur(19px) saturate(165%);
+  backdrop-filter:blur(19px) saturate(165%);
+  box-shadow:inset 0 2px rgba(255,255,255,.56),0 0 16px rgba(72,176,251,.38),0 12px 34px rgba(1,7,23,.77)!important;
+}
+#lobby .character-card[data-character=ghju] {
+  border-color:rgba(255,147,217,.92)!important;
+  background:linear-gradient(125deg,rgba(105,24,78,.73),rgba(29,12,50,.88) 60%,rgba(37,15,64,.8))!important;
+  box-shadow:inset 0 2px #fff6,0 0 15px rgba(255,74,185,.35),0 12px 34px #030716ba!important;
+}
+#lobby .character-card.selected[data-character=lylu] {
+  border-color:#9de7ff!important;
+  box-shadow:inset 0 2px #fff9,0 0 0 2px #53d7ff,0 0 29px #17baffac,0 12px 33px #020a1dc2!important;
+}
+#lobby .character-card.selected[data-character=ghju] {
+  border-color:#ffaddc!important;
+  box-shadow:inset 0 2px #fff9,0 0 0 2px #ff55b9,0 0 31px #f135acac,0 12px 33px #020a1dc2!important;
+}
+#lobby .pw-helmet {
+  width:clamp(105px,15vw,167px)!important;
+  height:100%!important;
+  flex:none!important;
+  align-self:stretch!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  overflow:hidden!important;
+}
+#lobby .pw-helmet::after {display:none!important}
+#lobby .pw-helmet img {
+  left:50%!important;top:50%!important;
+  width:535%!important;
+  max-width:none!important;
+  height:auto!important;
+  filter:contrast(1.2) brightness(1.17) saturate(1.35) drop-shadow(0 0 12px rgba(68,164,255,.27))!important;
+  -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 76%,transparent 99%);
+  mask-image:linear-gradient(to bottom,#000 0%,#000 76%,transparent 99%);
+}
+#lobby .character-card[data-character=ghju] .pw-helmet img {
+  filter:contrast(1.20) brightness(1.18) saturate(1.4) drop-shadow(0 0 12px rgba(245,69,173,.34))!important;
+  transform:translate(-50%,-24%)!important;
+}
+#lobby .character-card[data-character=lylu] .pw-helmet img {
+  transform:translate(-50%,-20%)!important;
+}
+#lobby .character-switch-label {
+  font-family:var(--pw-v5-font)!important;
+  font-size:clamp(17px,2.2vw,29px)!important;
+  font-weight:750!important;
+  letter-spacing:.17em!important;
+  text-shadow:0 1px 13px rgba(1,6,20,.9)!important;
+}
+#lobby .character-switch-label::after {
+  content:"";display:block;
+  margin:7px auto 0;width:64%;height:1.5px;
+  background:linear-gradient(90deg,transparent,#57cfff,transparent);
+  box-shadow:0 0 9px #58cfff;
+}
+#lobby [data-character=ghju] .character-switch-label::after {
+  background:linear-gradient(90deg,transparent,#ff73cb,transparent);
+  box-shadow:0 0 9px #ff73cb;
+}
+#lobby .character-check {display:none!important}
+/* Single large and genuinely translucent START control. */
+#lobby #play-button {
+  min-height:clamp(78px,9.5vw,116px)!important;
+  height:auto!important;
+  margin:0 0 15px!important;
+  padding:15px clamp(22px,3.5vw,56px)!important;
+  border-radius:clamp(24px,2.7vw,34px)!important;
+  border:2px solid rgba(193,235,255,.92)!important;
+  background:linear-gradient(110deg,rgba(33,122,184,.71),rgba(17,61,120,.74) 40%,rgba(54,27,98,.80) 100%)!important;
+  box-shadow:inset 0 3px 2px rgba(255,255,255,.59),inset 0 -2px rgba(103,206,255,.51),
+  0 0 17px rgba(44,176,253,.55),0 15px 48px rgba(1,10,38,.66)!important;
+  -webkit-backdrop-filter:blur(20px) saturate(165%);
+  backdrop-filter:blur(20px) saturate(165%);
+  color:#fff!important;
+}
+#lobby #play-label {
+  font-family:var(--pw-v5-font)!important;
+  font-weight:700!important;
+  font-size:clamp(19px,2.6vw,30px)!important;
+  letter-spacing:.22em!important;
+  text-shadow:0 2px 9px rgba(2,7,25,.75);
+}
+#lobby #play-button .play-arrow {
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  font-size:clamp(38px,5vw,65px)!important;
+  font-weight:200!important;
+  flex-basis:52px!important;
+}
+#lobby .pw-glass-footer {
+  display:flex;justify-content:space-between;align-items:center;gap:15px;
+  margin-top:0!important;
+}
+#lobby #pw-glass-settings, #lobby #launch-status {
+  min-height:51px!important;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:999px!important;
+  color:#f3f7ff!important;
+  border:1px solid rgba(172,210,252,.75)!important;
+  background:linear-gradient(130deg,rgba(43,65,102,.58),rgba(8,20,48,.77))!important;
+  box-shadow:inset 0 2px #ffffff4f,0 7px 22px #020a23a8!important;
+  -webkit-backdrop-filter:blur(15px) saturate(135%);
+  backdrop-filter:blur(15px) saturate(135%);
+}
+#lobby #pw-glass-settings{padding:9px 24px!important;font:700 clamp(11px,1.5vw,16px)/1.2 var(--pw-v5-font)!important;letter-spacing:.12em!important}
+#lobby #pw-glass-settings svg{display:none!important}
+#lobby #launch-status{padding:9px 21px!important;font:500 clamp(10px,1.3vw,14px)/1.2 var(--pw-v5-font)!important;letter-spacing:.10em!important;max-width:64%!important}
+/* Chapter list stays functional and only opens on request. */
+#lobby.story-page .intro{max-width:min(680px,100%)!important}
+#lobby.story-page #story-chapters{max-width:100%}
+@media (max-width:700px) {
+  #lobby {
+    padding:calc(env(safe-area-inset-top,0px) + 18px) 12px calc(env(safe-area-inset-bottom,0px) + 13px)!important;
+  }
+  #lobby .intro{padding:4px 0 8px!important}
+  #lobby .intro>h1{margin:0 auto 5px!important}
+  #lobby .intro>h1 .pw-major-wordmark{width:min(360px,80vw)!important}
+  #lobby .intro>.eyebrow{
+    font-size:clamp(9px,2.2vw,12px)!important;
+    letter-spacing:.19em!important;
+    margin-bottom:20px!important;
+    padding-inline:5px!important;
+  }
+  #lobby .intro>.eyebrow:before,#lobby .intro>.eyebrow:after{width:17px}
+  #lobby .mode-choice{gap:8px!important;margin:0 0 13px!important}
+  #lobby .mode-choice button,#lobby .mode-choice a {
+    min-height:clamp(110px,30vw,144px)!important;
+    gap:5px!important;
+    padding:12px 4px 14px!important;
+    border-radius:20px!important;
+    border-width:1.1px!important;
+    -webkit-backdrop-filter:blur(13px) saturate(145%);
+    backdrop-filter:blur(13px) saturate(145%);
+  }
+  #lobby .mode-choice .glass-tile-label {
+    font-size:clamp(11px,3.2vw,14px)!important;
+    letter-spacing:.08em!important;
+  }
+  #lobby .mode-choice .glass-tile-label::after{margin:5px auto 0;height:1px}
+  #lobby .mode-choice .glass-tile-arrow{font-size:21px!important}
+  #lobby .character-choice{margin:0 0 12px!important}
+  #lobby .character-cards{gap:8px!important}
+  #lobby .character-card,#lobby .character-card.selected {
+    min-height:clamp(78px,23vw,108px)!important;
+    height:clamp(78px,23vw,108px)!important;
+    border-radius:19px!important;
+    padding:2px 7px 0 0!important;
+  }
+  #lobby .pw-helmet{width:clamp(71px,21vw,105px)!important}
+  #lobby .character-switch-label{font-size:clamp(14px,3.5vw,18px)!important;letter-spacing:.08em!important}
+  #lobby .character-switch-label::after{margin-top:5px}
+  #lobby #play-button{
+    min-height:clamp(67px,18vw,81px)!important;
+    border-radius:25px!important;
+    padding:10px 20px!important;
+    margin:0 0 13px!important;
+  }
+  #lobby #play-label{font-size:clamp(16px,4.5vw,20px)!important;letter-spacing:.13em!important}
+  #lobby #play-button .play-arrow{font-size:43px!important;flex-basis:34px!important;width:34px!important}
+  #lobby #pw-glass-settings,#lobby #launch-status{min-height:42px!important}
+  #lobby #pw-glass-settings{padding:8px 15px!important;font-size:11px!important}
+  #lobby #launch-status{padding:8px 12px!important;font-size:9px!important;max-width:57%!important;letter-spacing:.015em!important}
+}
+@media(max-width:360px) {
+  #lobby .mode-choice{gap:6px!important}
+  #lobby .mode-choice .glass-tile-label{font-size:10px!important;letter-spacing:.035em!important}
+  #lobby .pw-helmet{width:67px!important}
+  #lobby .character-switch-label{font-size:13px!important}
+  #lobby #launch-status{font-size:8px!important}
+}
+@media (orientation:landscape) and (max-height:570px) {
+  #lobby .intro>h1 .pw-major-wordmark{width:190px!important}
+  #lobby .intro>.eyebrow{font-size:9px!important;margin-bottom:10px!important}
+  #lobby .mode-choice button,#lobby .mode-choice a{min-height:91px!important}
+  #lobby .character-card,#lobby .character-card.selected{height:72px!important;min-height:72px!important}
+  #lobby #play-button{min-height:57px!important}
+}
+@media (prefers-reduced-motion: reduce){
+ #lobby .mode-choice button,#lobby .mode-choice a,
+ #lobby .mode-choice button::before,#lobby .mode-choice a::before{transition:none!important}
+}
+
