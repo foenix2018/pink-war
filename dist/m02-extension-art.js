@@ -1,3 +1,4 @@
+import { createNeonFixture } from './neon-fixture.js';
 // M02 extension dressing: the enclave of the covered market (stalls turned into barricades and beds, dormitory
 // tents, kitchen, school corner, water purifier, dispensary, radio room, the service lift from the Archives) and
 // the transit tower held by HELIX Security (black, industrial white, safety red: scanner gates, data vault, loading
@@ -177,6 +178,10 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     for (const [kind, list] of byKind) {
       const mesh = new T.InstancedMesh(cube, new T.MeshBasicMaterial({ toneMapped: false }), list.length); mesh.name = 'M02x / luminaires ' + kind;
       list.forEach((f, i) => { const [sx, sy, sz] = shapes[kind]; mesh.setMatrixAt(i, m.compose(p.set(f.x, f.y, f.z), q, f.axis === 'z' && kind !== 'strip' ? s.set(sz, sy, sx) : s.set(sx, sy, sz))); mesh.setColorAt(i, new T.Color(0x111111));
+        if (kind === 'tube') {
+          const alongZ = f.axis === 'z';
+          for (const side of [-1, 1]) piece(M.steel, f.x + (alongZ ? 0 : side * .58), f.y - .045, f.z + (alongZ ? side * .58 : 0), alongZ ? .19 : .08, .1, alongZ ? .08 : .19);
+        }
         if (kind === 'highbay') piece(M.dark, f.x, f.y + .18, f.z, .05, ROOM.quai.ceiling - f.y, .05); });
       mesh.instanceMatrix.needsUpdate = true; mesh.instanceColor.needsUpdate = true; mesh.computeBoundingSphere(); add(mesh); stats.instances += list.length; fixtureMeshes.push({ mesh, list });
     }
@@ -337,9 +342,21 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
         // Hands knocking from inside: a faint warm light through the air vents.
         for (const z of [o.z - 1, o.z + 1]) piece(M.amber, x1 - .02, h - .4, z, .01, .1, .4); break;
       }
-      case 'crates': for (let k = 0; k < 4; k++) piece(k % 2 ? M.helixWhite : M.plate, o.x + (k % 2 - .5) * o.hx, Math.floor(k / 2) * h / 2, o.z, o.hx * .95, h / 2 - .02, d - .1);
+      case 'crates': for (let k = 0; k < 4; k++) {
+          const cx = o.x + (k % 2 - .5) * o.hx, base = Math.floor(k / 2) * h / 2, cw = o.hx * .95, ch = h / 2 - .02;
+          piece(k % 2 ? M.helixWhite : M.plate, cx, base, o.z, cw, ch, d - .1);
+          for (const side of [-1, 1]) piece(M.dark, cx + side * cw * .4, base + .03, z2 - .035, cw * .09, ch - .06, .025);
+          piece(M.dark, cx, base + ch * .75, z2 - .03, cw * .64, .025, .025);
+          piece(M.plate, cx, base + ch * .18, z2 - .025, cw * .25, .025, .025);
+        }
         sign(signTex(['ARCHIVES AEGIS 2189', 'FRAGILE · HELIX'], { bg: '#e9ecee', fg: '#0b0d10', w: 256, h: 128 }), o.x, h * .5, z2 + .02, 0, .8, .4); break;
-      case 'control-post': box(M.helixBlack, x1, x2, 0, h, z1, z2); piece(M.helix, o.x, h, o.z, w * .7, .05, d * .7); break;
+      case 'control-post':
+        box(M.helixBlack, x1, x2, 0, h, z1, z2);
+        piece(M.steel, o.x, h - .08, o.z, w + .03, .08, d + .03);
+        piece(M.screenOff, o.x, h + .002, o.z, w * .78, .025, d * .72);
+        piece(M.helix, o.x, h + .028, o.z - d * .12, w * .55, .01, d * .18);
+        for (const sx of [-1, 1]) piece(M.helixWhite, o.x + sx * w * .35, .16, z2 + .01, .035, h * .55, .02);
+        break;
       default: break;
     }
   }
@@ -452,7 +469,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
 
   // ---------- Vesper 2196: neon, holograms, HELIX scanners (cyberpunk layer) ----------
   const additive = (color, opacity = .6, map = null) => new T.MeshBasicMaterial({ color, map, transparent: true, opacity, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false, side: T.DoubleSide });
-  const neon = (x1, y1, z1, x2, y2, z2, color) => { const len = Math.hypot(x2 - x1, y2 - y1, z2 - z1), m = new T.Mesh(new T.CylinderGeometry(.035, .035, len, 6), glow(color)); m.position.set((x1 + x2) / 2, (y1 + y2) / 2, (z1 + z2) / 2); m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), new T.Vector3(x2 - x1, y2 - y1, z2 - z1).normalize()); return add(m); };
+  const neon = (x1, y1, z1, x2, y2, z2, color) => add(createNeonFixture(T, new T.Vector3(x1, y1, z1), new T.Vector3(x2, y2, z2), color, M.steel));
   const steam = [];
   function buildCyber() {
     // Market: dirty-cyan neon outline of the gate, amber stall neons, a holographic « ÉPARS » koi over the kitchen.

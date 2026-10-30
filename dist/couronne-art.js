@@ -95,6 +95,8 @@ export function createCouronneArt(T, scene, { quality = 'normal', camera } = {})
     white: std({ color: 0xdfe3e8, roughness: .3, metalness: .06 }),
     dark: std({ color: 0x232932, roughness: .38, metalness: .55 }),
     metal: std({ color: 0x59636e, roughness: .3, metalness: .85 }),
+    cratePanel: std({ color: 0x394751, roughness: .68, metalness: .55 }),
+    trim: std({ color: 0x87939a, roughness: .43, metalness: .7 }),
     glass: std({ color: 0x8aa3ba, roughness: .04, metalness: .9, transparent: true, opacity: .26, depthWrite: false, name: 'verre' }),
     water: std({ color: 0x0b1822, roughness: .04, metalness: .7 }),
     hedge: std({ color: 0x2f4c3d, roughness: .92, metalness: 0 }),
@@ -210,16 +212,41 @@ export function createCouronneArt(T, scene, { quality = 'normal', camera } = {})
         break;
       case 'monolith': queue(M.dark, o.x, y, o.z, w, o.height, d); queue(rng() < .5 ? M.amber : M.teal, o.x, y + .4, o.z + o.hz + .01, .08, o.height - .9, .02); queue(M.helix, o.x, y + o.height - .55, o.z + o.hz + .012, .3, .08, .02); break;
       case 'column': { const c = new T.Mesh(new T.CylinderGeometry(o.hx, o.hx * 1.1, o.height, 14), M.white); c.position.set(o.x, y + o.height / 2, o.z); c.castShadow = !low; add(c); break; }
-      case 'bench': queue(M.white, o.x, y, o.z, w, o.height, d); break;
+      case 'bench': {
+        // Recessed plinth and segmented seat remain within the playable cover volume.
+        queue(M.dark, o.x, y, o.z, w * .84, o.height * .78, d * .78);
+        queue(M.white, o.x, y + o.height * .78, o.z, w, o.height * .22, d);
+        for (const side of [-1, 1]) queue(M.trim, o.x + side * w * .37, y + .03, o.z, .06, o.height * .74, d * .8);
+        queue(M.ice, o.x, y + o.height * .65, z2 + .006, w * .68, .025, .012);
+        break;
+      }
       case 'kiosk': queue(M.dark, o.x, y, o.z, w, o.height, d); queue(M.ice, o.x, y + 1.1, o.z + o.hz + .01, w * .8, 1.1, .02); break;
-      case 'crate': queue(M.metal, o.x, y, o.z, w, o.height, d); queue(M.amber, o.x, y + o.height * .45, o.z + o.hz + .01, w * .7, .05, .01); break;
+      case 'crate': {
+        queue(M.cratePanel, o.x, y, o.z, w, o.height, d);
+        // Reinforced corners, lid and inset cargo panels on both exposed sides.
+        for (const side of [-1, 1]) {
+          queue(M.metal, o.x + side * w * .44, y, o.z, w * .12, o.height, d + .02);
+          queue(M.dark, o.x, y + o.height * .17, o.z + side * (o.hz + .012), w * .68, o.height * .62, .025);
+          queue(M.trim, o.x, y + o.height * .2, o.z + side * (o.hz + .028), w * .58, .035, .012);
+          queue(M.amber, o.x, y + o.height * .66, o.z + side * (o.hz + .029), w * .36, .035, .012);
+          for (const k of [-1, 1]) queue(M.trim, o.x + k * w * .25, y + o.height * .32, o.z + side * (o.hz + .03), .035, o.height * .22, .012);
+        }
+        queue(M.metal, o.x, y + o.height * .91, o.z, w + .02, o.height * .09, d + .02);
+        queue(M.dark, o.x, y + o.height + .002, o.z, w * .55, .018, d * .55);
+        break;
+      }
       case 'scanner': queue(M.white, o.x, y, o.z, w, o.height, d); queue(M.ice, o.x, y + .3, o.z, w + .02, o.height - .6, .06); break;
       case 'fountain': queue(M.white, o.x, y, o.z, w, o.height, d); queue(M.water, o.x, y + o.height - .05, o.z, w - .5, .02, d - .5); break;
       case 'sculpture': { queue(M.white, o.x, y, o.z, w, .5, d); const k = new T.Mesh(new T.TorusKnotGeometry(.75, .2, 90, 10, 2, 3), M.metal); k.position.set(o.x, y + 2.1, o.z); k.castShadow = !low; animated.push(t => { k.rotation.y = t * .15; }); add(k); break; }
       case 'barrier': queue(M.metal, o.x, y, o.z, w, o.height, d); queue(M.helix, o.x, y + o.height - .12, o.z, w + .02, .05, d + .02); break;
       case 'desk': queue(M.white, o.x, y, o.z, w, o.height, d); queue(M.ice, o.x, y + o.height, o.z, w * .6, .02, d * .6); break;
       case 'pillar': queue(M.white, o.x, y, o.z, w, o.height, d); break;
-      case 'console': queue(M.dark, o.x, y, o.z, w, o.height, d); break;
+      case 'console':
+        queue(M.dark, o.x, y, o.z, w, o.height, d);
+        queue(M.metal, o.x, y + o.height * .83, o.z, w + .02, o.height * .17, d + .02);
+        queue(M.ice, o.x, y + o.height + .003, o.z, w * .7, .015, d * .6);
+        queue(M.trim, o.x, y + .2, z2 + .01, w * .7, .05, .02);
+        break;
       case 'stabilizer': queue(M.dark, o.x, y, o.z, w, o.height, d); queue(M.metal, o.x, y + o.height, o.z, w * .7, .5, d * .7);
         for (const k of [-1, 0, 1]) for (const side of [-1, 1]) queue(M.phase, o.x + k * w * .25, y + .8, o.z + side * (o.hz + .01), .1, o.height - 1.6, .02);
         break;

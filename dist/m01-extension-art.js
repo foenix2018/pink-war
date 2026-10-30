@@ -1,3 +1,4 @@
+import { createNeonFixture } from './neon-fixture.js';
 // M01 extension dressing: Caserne 07 (red-brick AEGIS rescue station of 2189: apparatus bay with the VSAV 07
 // ambulance and the FPT 07 pump engine, dispatch room, lockers, generator room, drill tower) and the Archives
 // végétales (stone archive building, galleries, registers, greenhouse). Layout in m01-extension-layout.js.
@@ -192,6 +193,10 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
       const mesh = new T.InstancedMesh(cube, new T.MeshBasicMaterial({ toneMapped: false }), list.length); mesh.name = 'M01x / luminaires ' + kind;
       list.forEach((f, i) => { const [sx, sy, sz] = shapes[kind]; mesh.setMatrixAt(i, m.compose(p.set(f.x, f.y, f.z), q, f.axis === 'z' ? s.set(sz, sy, sx) : s.set(sx, sy, sz))); mesh.setColorAt(i, new T.Color(0x111111));
         if (kind === 'tube') piece(M.dark, f.x, f.y + .025, f.z, f.axis === 'z' ? .2 : 1.3, .06, f.axis === 'z' ? 1.3 : .2);
+        if (kind === 'tube') {
+          const alongZ = f.axis === 'z';
+          for (const side of [-1, 1]) piece(M.steel, f.x + (alongZ ? 0 : side * .58), f.y - .045, f.z + (alongZ ? side * .58 : 0), alongZ ? .19 : .08, .1, alongZ ? .08 : .19);
+        }
         if (kind === 'highbay') piece(M.dark, f.x, f.y + .18, f.z, .05, ROOM.remise.ceiling - f.y, .05); });
       mesh.instanceMatrix.needsUpdate = true; mesh.instanceColor.needsUpdate = true; mesh.computeBoundingSphere(); add(mesh); stats.instances += list.length; fixtureMeshes.push({ mesh, list });
     }
@@ -352,7 +357,14 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
       case 'stove': cylinder(M.dark, o.x, .25, o.z, .22, .5); piece(M.amber, o.x, .5, o.z, .2, .02, .2); break;
       case 'rack': box(M.black, x1, x2, 0, h, z1, z2); for (let k = 0; k < 10; k++) piece(k % 4 ? M.cyan : M.helix, o.x - o.hx + .1 + (k % 5) * .2, .5 + Math.floor(k / 5) * .8, z1 - .01, .05, .03, .01); break;
       case 'stack': box(M.plate, x1, x2, 0, h, z1, z2); for (let y = .3; y < h - .2; y += .55) for (let k = 0; k < 12; k++) for (const s of [-1, 1]) piece(M.cardboard, o.x + s * (o.hx + .01), y, z1 + .4 + k * (d - .8) / 11, .02, .38, .3); break;
-      case 'terminal-desk': box(M.steel, x1, x2, 0, h, z1, z2); break;
+      case 'terminal-desk':
+        box(M.steel, x1, x2, 0, h, z1, z2);
+        piece(M.dark, o.x, h, o.z, w + .02, .035, d + .02);
+        for (const side of [-1, 1]) {
+          piece(M.dark, o.x + side * w * .35, .14, z2 + .012, w * .25, h * .55, .025);
+          piece(M.steel, o.x + side * w * .35, h * .46, z2 + .03, w * .12, .025, .015);
+        }
+        break;
       case 'cabinet': box(M.woodDark, x1, x2, 0, h, z1, z2); for (let y = .2; y < h - .1; y += .3) for (let k = 0; k < 13; k++) for (const s of [-1, 1]) piece(M.amber, x1 + .3 + k * (w - .6) / 12, y + .12, o.z + s * (o.hz + .005), .12, .02, .01); break;
       case 'bed': box(M.stone, x1, x2, 0, h, z1, z2); piece(M.soil, o.x, h - .05, o.z, w - .3, .06, d - .3); fernsAt(o.x, h, o.z, w - .6, d - .6, low ? 10 : 20); break;
       case 'basin': box(M.stone, x1, x2, 0, h, z1, z2); piece(M.dark, o.x, h - .05, o.z, w - .4, .02, d - .4); break;
@@ -490,7 +502,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
 
   // ---------- Vesper 2196: neon, holograms, ORDRE scanners (cyberpunk layer) ----------
   const additive = (color, opacity = .6, map = null) => new T.MeshBasicMaterial({ color, map, transparent: true, opacity, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false, side: T.DoubleSide });
-  const neon = (x1, y1, z1, x2, y2, z2, color) => { const len = Math.hypot(x2 - x1, y2 - y1, z2 - z1), m = new T.Mesh(new T.CylinderGeometry(.035, .035, len, 6), glow(color)); m.position.set((x1 + x2) / 2, (y1 + y2) / 2, (z1 + z2) / 2); m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), new T.Vector3(x2 - x1, y2 - y1, z2 - z1).normalize()); return add(m); };
+  const neon = (x1, y1, z1, x2, y2, z2, color) => add(createNeonFixture(T, new T.Vector3(x1, y1, z1), new T.Vector3(x2, y2, z2), color, M.steel));
   function buildCyber() {
     // ORDRE seal projected on the apparatus-bay door: a red hologram that dies when the door opens.
     const sealTex = canvasTexture(T, 512, 512, (c, w, h) => {
