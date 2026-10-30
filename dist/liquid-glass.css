@@ -68,3 +68,43 @@ body:not(.playing) .panel-dialog,body:not(.playing) dialog:not(.panel-dialog){ba
 #lobby .mode-choice .glass-tile-icon,#lobby .mode-choice .glass-tile-label,#lobby .mode-choice .glass-tile-arrow{position:relative;z-index:1;filter:drop-shadow(0 2px 5px #020714)}
 #lobby .pw-helmet{isolation:isolate}
 #lobby .pw-helmet::after{content:"";position:absolute;inset:0;z-index:2;border-radius:inherit;border:1px solid #ffffff19;box-shadow:inset 0 2px 7px #b6e3ff18;pointer-events:none}
+
+/* 3.72.2 — clean, model-led artwork and character helmet alignment.
+   Gallery no longer displays a screenshot of its own controls; the sources are
+   the actual GABY/CARA model previews without any in-game UI. */
+#lobby .mode-choice [data-mode=training]{
+ --tile-image:url('art/updates/36316/armoire.webp');
+}
+#lobby .mode-choice [data-mode=training]::before{
+ background-image:linear-gradient(180deg,#11223914 0%,#0b142322 50%,#030b20d6 100%),url('art/updates/36316/armoire.webp');
+ background-size:cover, auto 275%;
+ background-position:center,center 49%;
+ background-repeat:no-repeat;
+ filter:brightness(1.34) saturate(1.16);
+}
+#lobby .mode-choice .gallery-home-link{
+ --tile-image:url('art/updates/3664/gaby-front.webp');
+}
+#lobby .mode-choice .gallery-home-link::before{
+ background-image:
+   linear-gradient(180deg,#0b193608 0%,#0813291c 49%,#030817cc 100%),
+   url('art/updates/3664/gaby-front.webp'),
+   url('art/updates/3664/cara-front.webp'),
+   radial-gradient(ellipse at 30% 30%,#5b275f,#112342 64%,#0b122c);
+ background-size:cover,auto 122%,auto 122%,cover;
+ background-position:center,0% 35%,100% 35%,center;
+ background-repeat:no-repeat;
+ background-blend-mode:normal,screen,screen,normal;
+ opacity:1;
+ filter:brightness(1.16) saturate(1.12);
+}
+#lobby .mode-choice .gallery-home-link::after{
+ background:linear-gradient(180deg,#ffffff36,transparent 70%);
+}
+/* Distinct crop origins: source GHJU render has a lower head position. */
+#lobby .character-card[data-character=lylu] .pw-helmet img{
+ transform:translate(-50%,-13%);
+}
+#lobby .character-card[data-character=ghju] .pw-helmet img{
+ transform:translate(-50%,-24%);
+}
