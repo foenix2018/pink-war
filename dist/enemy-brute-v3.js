@@ -170,7 +170,7 @@ export function buildBruteV3({armor:plate,dark,servo,reactor,optics,glow,boneAt,
    disc(c,servo,[knee[0]+side*.26,knee[1],knee[2]+.085],.11,.10);
    beam(c,dark,[knee[0]+side*.14,knee[1]-.12,.20],[ankle[0]+side*.14,ankle[1]+.08,.15],.039);
    beam(c,servo,[knee[0]+side*.14,knee[1]-.19,.21],[ankle[0]+side*.14,ankle[1]+.12,.18],.023);
-   block(b,dark,[ankle[0],.07,-.10],[.38,.15,.49]);
+   block(b,dark,[ankle[0],.085,-.10],[.38,.15,.49]);
    block(b,plate,[ankle[0],.14,-.20],[.39,.15,.44]);
    armor(b,plate,PL.heel,[ankle[0],.18,-.42],[0,0,0],[1.10,1.12,1]);
    for(let k=-1;k<=1;k++)block(b,plate,[ankle[0]+k*.135,.073,-.48],[.12,.09,.21]);
