@@ -91,8 +91,8 @@ body:not(.playing) .panel-dialog,body:not(.playing) dialog:not(.panel-dialog){ba
    url('art/updates/3664/gaby-front.webp'),
    url('art/updates/3664/cara-front.webp'),
    radial-gradient(ellipse at 30% 30%,#5b275f,#112342 64%,#0b122c);
- background-size:cover,auto 122%,auto 122%,cover;
- background-position:center,0% 35%,100% 35%,center;
+ background-size:cover,58% auto,58% auto,cover;
+ background-position:center,-4% 19%,104% 19%,center;
  background-repeat:no-repeat;
  background-blend-mode:normal,screen,screen,normal;
  opacity:1;
