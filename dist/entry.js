@@ -112,7 +112,7 @@ async function begin(intent='play',afterPrologue=false){
   if(settings.sound||settings.music!==false)try{const Audio=window.AudioContext||window.webkitAudioContext;
     window.__PINKWAR_BOOT_AUDIO ||=new Audio();window.__PINKWAR_BOOT_AUDIO.resume().catch(()=>{});}catch{}
   try{
-    modulePromise ||=import('./game.js?v=3.73.0&brute=briseur');await modulePromise;
+    modulePromise ||=import('./game.js?v=3.73.0&brute=briseur-v2');await modulePromise;
     for(const d of document.querySelectorAll('dialog'))d.removeEventListener('cancel',earlyCancel);
     if(!window.__PINKWAR||window.__PINKWAR.snapshot().phase==='error')throw new Error('Initialisation interrompue.');
     loading=false;
