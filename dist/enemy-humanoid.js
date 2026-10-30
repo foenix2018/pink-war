@@ -26,12 +26,13 @@ const tmp=new T.Vector3(),direction=new T.Vector3(),rotation=new T.Quaternion(),
 const reference=HUMAN_REFERENCE.joints;
 export function buildHumanoidRobot({form,elite,ranged,detail,armor,dark,servo,hazard,optics,glow,reactor,boneAt,assembly,thorax,pelvis}){
  if(form==='listener')return buildListener({form,elite,ranged,detail,armor,dark,servo,hazard,optics,glow,boneAt,assembly,thorax,pelvis});
- const heavy=['brute','bulwark'].includes(form),slender=['seer','listener','synth'].includes(form),width=heavy?1.45:slender?.96:1.06,limbWidth=heavy?1.28:1;
+ const heavy=['brute','bulwark'].includes(form),slender=['seer','listener','synth'].includes(form),width=form==='brute'?1.95:heavy?1.45:slender?.96:1.06,limbWidth=form==='brute'?1.42:heavy?1.28:1;
  const a=assembly(thorax),hips=assembly(pelvis),legRig=[],armRig=[];let groundGun=null,gunSignal=null;
  const point=(name,side)=>{const p=reference[(side===-1?'Left':'Right')+name];return [p[0]*width,p[1],p[2]];};
  const shell=(build,mat,start,end,w,d)=>{tmp.set(...start).add(new T.Vector3(...end)).multiplyScalar(.5);direction.set(...end).sub(new T.Vector3(...start));rotation.setFromUnitVectors(new T.Vector3(0,1,0),direction.clone().normalize());scale.set(w,direction.length(),d);build.add(limbShell,mat,new T.Matrix4().compose(tmp,rotation,scale));};
  const motor=(build,p,r=.052,w=.06)=>build.add(joint,servo,matrix(p,[0,0,0],[w,r,r]));
  a.add(core,dark,matrix([0,0,0],[0,0,0],[width,1,1]));
+ if(form!=='brute'){
  for(const side of [-1,1]){
   a.add(breast,armor,matrix([side*.115*width,1.405,-.143],[.025,side*-.08,0],[width,1,1]));
   a.box(hazard,[.055,.018,.012],[side*.16*width,1.52,-.176],[0,0,0],.002);
@@ -45,28 +46,29 @@ export function buildHumanoidRobot({form,elite,ranged,detail,armor,dark,servo,ha
  for(const side of [-1,1]){a.box(armor,[.07,.29,.065],[side*.115*width,1.39,.23],[0,0,0],.008);a.box(dark,[.055,.10,.035],[side*.115*width,1.39,.273],[0,0,0],.003);}
  hips.box(armor,[.32*width,.075,.20],[0,1.015,0],[0,0,0],.012);
  for(const side of [-1,1])hips.box(armor,[.12*width,.13,.075],[side*.13*width,.955,-.10],[0,side*-.12,side*-.08],.008);
+ }
  if(form==='brute')bruteTorso({a,hips,armor,dark,servo,reactor});
  const neck=boneAt('sensor-head',reference.Head,thorax),h=assembly(neck);
  h.limb(dark,[0,1.60,.02],[0,1.77,.02],.043,.039);
- h.add(helmet,armor,matrix([0,0,0],[0,0,0],[heavy?1.08:1,1,1]));
- h.add(face,armor,matrix([0,1.845,-.048],[0,0,0],[heavy?1.08:1,1,1]));
- h.add(visorPlate,dark,matrix([0,1.88,-.135]));
- for(const side of [-1,1]){h.box(dark,[.036,.11,.09],[side*.137,1.86,.005],[0,0,0],.006);h.add(joint,servo,matrix([side*.161,1.87,.005],[0,0,0],[.008,.028,.028]));}
+ if(form!=='brute')h.add(helmet,armor,matrix([0,0,0],[0,0,0],[heavy?1.08:1,1,1]));
+ if(form!=='brute')h.add(face,armor,matrix([0,1.845,-.048],[0,0,0],[heavy?1.08:1,1,1]));
+ if(form!=='brute')h.add(visorPlate,dark,matrix([0,1.88,-.135]));
+ if(form!=='brute')for(const side of [-1,1]){h.box(dark,[.036,.11,.09],[side*.137,1.86,.005],[0,0,0],.006);h.add(joint,servo,matrix([side*.161,1.87,.005],[0,0,0],[.008,.028,.028]));}
  if(form==='seer'){
   h.add(ring,dark,matrix([0,1.88,-.18],[0,0,0],[.047,.047,.047]));h.add(eye,optics,matrix([0,1.88,-.194],[0,0,0],[.031,.031,.012]),false);
- }else for(const side of [-1,1])h.add(eye,optics,matrix([side*.047,1.88,-.156],[0,0,0],[.031,.008,.009]),false);
- h.box(dark,[.082,.022,.008],[0,1.75,-.125],[0,0,0],.003);
+ }else if(form!=='brute')for(const side of [-1,1])h.add(eye,optics,matrix([side*.047,1.88,-.156],[0,0,0],[.031,.008,.009]),false);
+ if(form!=='brute')h.box(dark,[.082,.022,.008],[0,1.75,-.125],[0,0,0],.003);
  if(form==='listener')for(const side of [-1,1]){h.limb(dark,[side*.11,1.91,.02],[side*.17,2.14,.04],.015,.009);h.add(joint,armor,matrix([side*.18,2.11,.04],[0,0,0],[.032,.075,.075]));}
  if(form==='seer')h.box(dark,[.045,.075,.07],[.10,2.04,.015],[0,0,.08],.006);
- if(form==='brute')bruteHead({h,armor,dark,servo});
+ if(form==='brute')bruteHead({h,armor,dark,servo,optics});
  for(const side of [-1,1]){
   const s=point('Arm',side),e=point('ForeArm',side),w=point('Hand',side);
   const upper=boneAt(`arm-${side}-shoulder`,s,thorax),lower=boneAt(`arm-${side}-elbow`,e,upper),wrist=boneAt(`arm-${side}-wrist`,w,lower);
   const u=assembly(upper),l=assembly(lower),f=assembly(wrist);
   motor(a,s,.055,.075);shell(u,dark,s,e,.11*limbWidth,.12);if(form!=='brute')shell(u,armor,[s[0],s[1]-.055,s[2]],[e[0],e[1]+.04,e[2]],.15*limbWidth,.15);
   motor(l,e,.047,.07);shell(l,dark,e,w,.10*limbWidth,.10);if(form!=='brute')shell(l,armor,[e[0],e[1]-.035,e[2]],[w[0],w[1]+.045,w[2]],.14*limbWidth,.14);
-  l.limb(servo,[e[0]+side*.04,e[1]-.03,e[2]+.04],[w[0]+side*.033,w[1]+.035,w[2]+.04],.009,.008);
-  f.box(dark,[.065,.075,.04],[w[0],w[1]-.035,w[2]-.016],[0,0,0],.006);
+  if(form!=='brute')l.limb(servo,[e[0]+side*.04,e[1]-.03,e[2]+.04],[w[0]+side*.033,w[1]+.035,w[2]+.04],.009,.008);
+  if(form!=='brute')f.box(dark,[.065,.075,.04],[w[0],w[1]-.035,w[2]-.016],[0,0,0],.006);
   if(form!=='brute')for(let finger=0;finger<4;finger++){const x=w[0]+(finger-1.5)*.017;f.limb(servo,[x,w[1]-.055,w[2]-.02],[x,w[1]-.105,w[2]-.037],.007,.006);f.limb(dark,[x,w[1]-.105,w[2]-.037],[x,w[1]-.10,w[2]-.069],.006,.005);}
   if(form!=='brute')f.limb(servo,[w[0]-side*.043,w[1]-.02,w[2]-.02],[w[0]-side*.051,w[1]-.05,w[2]-.05],.009,.007);
   if(form==='bulwark')l.add(shieldPlate,armor,matrix([e[0]+side*.045,(e[1]+w[1])*.5,w[2]-.07],[0,side*-.12,0],[1,1,1]));
