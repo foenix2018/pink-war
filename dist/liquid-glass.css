@@ -1,0 +1,110 @@
+/* PINK WARS / OBSIDIAN LIQUID GLASS — production home UI.
+   No replacement of 3D models or gameplay bindings. */
+:root{--pw-glass-edge:rgba(196,229,255,.59);--pw-glass-blue:#8fd2ff;--pw-glass-pink:#ff80c5}
+body:not(.playing):not(.outfit-mode) .masthead{opacity:0;pointer-events:none}
+body:not(.playing):not(.outfit-mode) #welcome-art img{filter:brightness(.69) contrast(1.08) saturate(1.26)}
+body:not(.playing):not(.outfit-mode) .scene-shade{background:linear-gradient(180deg,rgba(6,12,30,.32),rgba(3,9,24,.42) 48%,rgba(2,8,20,.75)),linear-gradient(90deg,rgba(21,8,33,.26),transparent 60%)!important}
+#lobby{position:relative;display:flex!important;justify-content:center!important;align-items:flex-start!important;min-height:100dvh;height:100dvh;overflow-x:hidden;overflow-y:auto!important;scrollbar-width:none;padding:calc(env(safe-area-inset-top,0px) + 22px) clamp(14px,4vw,52px) calc(env(safe-area-inset-bottom,0px) + 18px)!important}
+#lobby::-webkit-scrollbar{display:none}
+body.playing #lobby,body.outfit-mode #lobby{display:none!important}
+#lobby .intro{position:relative!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;transform:none!important;isolation:initial!important;width:min(890px,100%)!important;max-width:890px!important;margin:auto!important;padding:12px 0 22px!important;overflow:visible!important;border:0!important;border-radius:0!important;background:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:none!important;text-align:center}
+#lobby .intro::before,#lobby .intro::after{display:none!important}
+#lobby .intro>.eyebrow{justify-content:center;display:flex;gap:10px;align-items:center;margin:2px 0 12px;color:#a9d7fb;font:600 clamp(8px,1.7vw,12px)/1.45 system-ui;letter-spacing:.28em}
+#lobby .live-dot{box-shadow:0 0 18px #69bdff;background:#80caff}
+#lobby .intro>h1{margin:0 auto 16px!important;line-height:1!important;text-align:center}
+#lobby .intro>h1 .pw-major-wordmark{display:block;margin:auto!important;width:min(500px,74vw)!important;max-width:100%!important;height:auto;min-height:0!important;object-fit:contain;filter:drop-shadow(0 12px 24px #0009) drop-shadow(0 0 16px #d84b8c35)}
+#lobby .tagline,#lobby .description,#lobby .mission-intro,#lobby .character-choice-heading,#lobby .play-note,#lobby .lore-link,#lobby .lobby-art-credit,#lobby .scene-caption,#lobby .character-label,#lobby .lobby-bottom{display:none!important}
+#lobby .mode-choice{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr));gap:clamp(8px,1.6vw,15px)!important;margin:12px 0 14px!important}
+#lobby .mode-choice>*{grid-column:span 2;min-width:0}
+#lobby .mode-choice>*:nth-child(n+4){grid-column:span 3}
+#lobby .mode-choice button,#lobby .mode-choice a{position:relative!important;display:flex!important;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px;min-height:clamp(135px,17vw,204px)!important;padding:15px 8px 20px!important;overflow:hidden;isolation:isolate;border:1px solid var(--pw-glass-edge)!important;border-radius:clamp(19px,2.8vw,28px)!important;color:#f4f7ff!important;background:linear-gradient(165deg,rgba(167,207,244,.24),rgba(25,48,76,.14) 29%,rgba(7,20,42,.56) 100%)!important;-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);box-shadow:inset 0 2px 2px #ffffff66,inset 1px 0 2px #d3efff25,inset 0 -5px 12px #90bbef2d,0 11px 32px #030a1bc0,0 0 14px #87b8ff1b!important;text-decoration:none!important;text-shadow:0 1px 5px #000c;transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease}
+#lobby .mode-choice button::before,#lobby .mode-choice a::before{content:"";position:absolute;z-index:-2;inset:-1px;background-image:linear-gradient(180deg,#0b1d2b04 5%,#06142612 43%,#020a1bca 100%),var(--tile-image,none);background-size:cover;background-position:center;opacity:.98;filter:brightness(1.12) saturate(1.14);transition:transform .35s ease,opacity .3s}
+#lobby .mode-choice button::after,#lobby .mode-choice a::after{content:"";position:absolute;z-index:-1;top:0;left:4%;right:4%;height:25%;border-radius:0 0 55% 55%;background:linear-gradient(180deg,#ffffff40,transparent);filter:blur(14px);pointer-events:none}
+#lobby .mode-choice button:hover,#lobby .mode-choice a:hover{transform:translateY(-3px)!important;border-color:#e9f5ff!important;box-shadow:inset 0 1px 3px #fff8,0 15px 37px #020817da,0 0 22px #c983ee33!important}
+#lobby .mode-choice button:hover::before,#lobby .mode-choice a:hover::before{transform:scale(1.045)}
+#lobby .mode-choice button:active,#lobby .mode-choice a:active{transform:scale(.972)!important}
+#lobby #story-open{--tile-image:url('art/mission02-cover.webp')}
+#lobby .mode-choice [data-mode=training]{--tile-image:url('art/updates/36313/stand.webp')}
+#lobby .mode-choice [data-mode=arena]{--tile-image:url('art/updates/367/arena-ghju.webp')}
+#lobby .mode-choice .gallery-home-link{--tile-image:url('art/updates/3664/gallery-gaby.webp')}
+#lobby .mode-choice .mode-home{--tile-image:url('art/accueil.webp')}
+#lobby .mode-choice .glass-tile-icon{display:flex;align-items:center;justify-content:center;width:33px;height:33px;color:#c7ebff;filter:drop-shadow(0 0 10px #87cbff89)}
+#lobby .mode-choice .glass-tile-icon svg{width:29px;height:29px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+#lobby .mode-choice .glass-tile-label{font:750 clamp(10px,1.4vw,15px)/1.2 system-ui,sans-serif;letter-spacing:.20em}
+#lobby .mode-choice .glass-tile-arrow{font-size:20px;font-weight:300;line-height:1;margin-top:0;color:#e8f9ff}
+#lobby .mode-choice [aria-pressed=true]{border-color:var(--pw-glass-blue)!important}
+#lobby .character-choice{width:100%!important;max-width:none!important;margin:4px 0 12px!important;padding:0!important}
+#lobby .character-cards{display:grid!important;grid-template-columns:1fr 1fr;gap:7px;padding:6px;border:1px solid #badcf5a3;border-radius:25px;background:linear-gradient(120deg,#dcecff21,#0b1a3291 65%,#eab8df17);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%);box-shadow:inset 0 2px 2px #ffffff30,0 12px 29px #0208148a}
+#lobby .character-card,#lobby .character-card.selected{--agent-glow:#68c8ff;position:relative;display:flex!important;justify-content:flex-start!important;align-items:center!important;gap:clamp(6px,1.5vw,16px)!important;min-width:0;min-height:82px!important;height:82px!important;padding:5px 11px 5px 6px!important;border:1px solid #9bc3e85e!important;border-radius:19px!important;background:linear-gradient(115deg,#233b57a1,#0a1a30ab)!important;color:#fff;box-shadow:inset 0 1px #ffffff36!important;overflow:hidden;isolation:isolate}
+#lobby .character-card[data-character=ghju]{--agent-glow:#ff8cd0}
+#lobby .character-card.selected{border-color:var(--agent-glow)!important;background:linear-gradient(110deg,color-mix(in srgb,var(--agent-glow) 28%,transparent),#103358aa 82%)!important;box-shadow:inset 0 1px 2px #fff8,0 0 0 1px var(--agent-glow),0 0 18px color-mix(in srgb,var(--agent-glow) 45%,transparent)!important}
+#lobby .pw-helmet{flex:none;position:relative;display:block;width:75px;height:71px;overflow:hidden;border-radius:14px;background:radial-gradient(#789ed35c,#111e30bc 70%);border:1px solid #cbe7ff33}
+#lobby .pw-helmet img{position:absolute;display:block;top:50%;left:50%;width:550%;height:auto;max-width:none;object-fit:contain;transform:translate(-50%,-17.9%);transform-origin:center center;filter:contrast(1.13) brightness(1.13) saturate(1.22);pointer-events:none}
+#lobby .character-switch-label{flex:1;text-align:center;color:#fff!important;letter-spacing:.22em;font:750 clamp(13px,2.4vw,23px)/1.2 system-ui!important;white-space:nowrap}
+#lobby .character-check{width:17px;height:17px;border-radius:50%;border:2px solid #cbecff9b;flex:none}
+#lobby .character-card.selected .character-check{border-color:var(--agent-glow);box-shadow:inset 0 0 0 3px #14253a;background:var(--agent-glow)}
+#lobby #play-button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:77px;height:auto!important;margin:10px 0!important;padding:11px 23px!important;border-radius:28px!important;border:1px solid #c5ecff!important;color:#eefaff!important;background:linear-gradient(105deg,#58b7ff8a,#163b72bd 50%,#ac86ed33)!important;-webkit-backdrop-filter:blur(22px) saturate(165%);backdrop-filter:blur(22px) saturate(165%);box-shadow:inset 0 2px #ffffffa3,inset 0 -2px #79c9ff77,0 7px 33px #256cbb55,0 0 18px #84bdf86b!important;letter-spacing:.17em;font:750 clamp(13px,2vw,20px)/1.3 system-ui}
+#lobby #play-button .play-icon{display:none!important}
+#lobby #play-button .play-arrow{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;border-radius:50%;border:1px solid #d8f4ff8c;background:#8cc7ff53;box-shadow:inset 0 1px #fffc,0 0 14px #9fd9ff65;font-size:30px}
+#lobby #resume-mission{display:block;margin:0 auto 8px!important;font-size:10px!important;color:#e4f2ff!important}
+#lobby #resume-mission[hidden]{display:none!important}
+#lobby .pw-glass-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px}
+#lobby #pw-glass-settings{min-height:47px;display:flex;align-items:center;gap:12px;padding:8px 16px;border:1px solid #9fcbe27d;border-radius:28px;background:#12244078;color:#f3f7ff;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);letter-spacing:.16em;font:700 11px system-ui;box-shadow:inset 0 1px #ffffff48}
+#lobby #pw-glass-settings svg{width:22px;height:22px}
+#lobby #launch-status{display:block;max-width:52%;margin:0!important;padding:8px 10px!important;font:600 10px/1.5 ui-monospace,monospace;letter-spacing:.1em;color:#c8d9e6;background:#13253d5e;border:1px solid #b6d9ee40;border-radius:18px;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+#lobby.story-page .intro{width:min(680px,100%)!important;padding:24px!important;border:1px solid #bfd9ee79!important;background:#0b1a31a6!important;backdrop-filter:blur(24px)!important;-webkit-backdrop-filter:blur(24px)!important;border-radius:28px!important}
+#lobby.story-page #story-chapters{display:block!important;margin:0!important;background:transparent!important;border:0!important;text-align:left}
+#lobby.story-page #story-chapters button{background:#152a4b9c!important;backdrop-filter:blur(12px);border:1px solid #a4c1ec64!important;border-radius:18px!important;color:#f4f7ff}
+body:not(.playing) .panel-dialog,body:not(.playing) dialog:not(.panel-dialog){background:linear-gradient(133deg,#39537580,#091728ca 75%)!important;-webkit-backdrop-filter:blur(22px) saturate(150%);backdrop-filter:blur(22px) saturate(150%);border:1px solid #b5d4ef80!important;border-radius:27px!important;box-shadow:inset 0 1px #fff5,0 18px 55px #0009!important}
+@media(max-width:700px){#lobby{padding:calc(env(safe-area-inset-top,0px) + 10px) 12px calc(env(safe-area-inset-bottom,0px) + 12px)!important}#lobby .intro{padding:8px 0 10px!important}#lobby .intro>.eyebrow{margin-bottom:8px}#lobby .intro>h1{margin-bottom:11px!important}#lobby .intro>h1 .pw-major-wordmark{width:min(355px,75vw)!important}#lobby .mode-choice{gap:8px!important;margin:8px 0 10px!important}#lobby .mode-choice button,#lobby .mode-choice a{min-height:clamp(110px,26vw,146px)!important;border-radius:21px!important;padding:12px 4px 12px!important;gap:5px}#lobby .mode-choice .glass-tile-icon svg{width:24px;height:24px}#lobby .mode-choice .glass-tile-label{font-size:10px;letter-spacing:.13em}#lobby .mode-choice .glass-tile-arrow{font-size:15px}#lobby .character-card,#lobby .character-card.selected{min-height:68px!important;height:68px!important;padding:4px!important;border-radius:16px!important;gap:5px!important}#lobby .pw-helmet{height:59px;width:53px;border-radius:13px}#lobby .character-switch-label{font-size:13px!important;letter-spacing:.14em}#lobby .character-check{width:13px;height:13px}#lobby #play-button{min-height:64px;padding:8px 15px!important;border-radius:23px!important}#lobby #play-button .play-arrow{flex-basis:41px;width:41px;height:41px}#lobby #pw-glass-settings{font-size:9px;letter-spacing:.08em;min-height:43px;padding:8px 11px}#lobby #launch-status{font-size:8px;letter-spacing:0}}
+@media(max-width:360px){#lobby .mode-choice button,#lobby .mode-choice a{min-height:100px!important}#lobby .pw-helmet{width:43px}#lobby .character-switch-label{font-size:11px!important}}
+@media(orientation:landscape) and (max-height:560px){#lobby .intro{max-width:850px!important}#lobby .intro>h1 .pw-major-wordmark{width:190px!important}#lobby .mode-choice button,#lobby .mode-choice a{min-height:83px!important;padding:6px!important;gap:1px}#lobby .mode-choice .glass-tile-icon svg{height:18px;width:18px}#lobby .character-card,#lobby .character-card.selected{height:57px!important;min-height:57px!important}#lobby .pw-helmet{height:47px;width:51px}#lobby #play-button{min-height:48px!important}}
+@media(prefers-reduced-motion:reduce){#lobby .mode-choice *{transition:none!important}}
+
+/* 3.72 — Image priorities and helmet head-centering: maintain iOS translucent appearance. */
+#lobby .mode-choice [data-mode=training]::before{background-position:center 47%;filter:brightness(1.18) saturate(1.06)}
+#lobby .mode-choice [data-mode=arena]::before{background-position:center 28%;filter:brightness(1.23) saturate(1.2)}
+#lobby .mode-choice .gallery-home-link::before{background-position:center 51%;filter:brightness(1.45) saturate(1.22)}
+#lobby .mode-choice .glass-tile-icon,#lobby .mode-choice .glass-tile-label,#lobby .mode-choice .glass-tile-arrow{position:relative;z-index:1;filter:drop-shadow(0 2px 5px #020714)}
+#lobby .pw-helmet{isolation:isolate}
+#lobby .pw-helmet::after{content:"";position:absolute;inset:0;z-index:2;border-radius:inherit;border:1px solid #ffffff19;box-shadow:inset 0 2px 7px #b6e3ff18;pointer-events:none}
+
+/* 3.72.2 — clean, model-led artwork and character helmet alignment.
+   Gallery no longer displays a screenshot of its own controls; the sources are
+   the actual GABY/CARA model previews without any in-game UI. */
+#lobby .mode-choice [data-mode=training]{
+ --tile-image:url('art/updates/36316/armoire.webp');
+}
+#lobby .mode-choice [data-mode=training]::before{
+ background-image:linear-gradient(180deg,#11223914 0%,#0b142322 50%,#030b20d6 100%),url('art/updates/36316/armoire.webp');
+ background-size:cover, auto 275%;
+ background-position:center,center 49%;
+ background-repeat:no-repeat;
+ filter:brightness(1.34) saturate(1.16);
+}
+#lobby .mode-choice .gallery-home-link{
+ --tile-image:url('art/updates/3664/gaby-front.webp');
+}
+#lobby .mode-choice .gallery-home-link::before{
+ background-image:
+   linear-gradient(180deg,#0b193608 0%,#0813291c 49%,#030817cc 100%),
+   url('art/updates/3664/gaby-front.webp'),
+   url('art/updates/3664/cara-front.webp'),
+   radial-gradient(ellipse at 30% 30%,#5b275f,#112342 64%,#0b122c);
+ background-size:cover,58% auto,58% auto,cover;
+ background-position:center,-4% 19%,104% 19%,center;
+ background-repeat:no-repeat;
+ background-blend-mode:normal,screen,screen,normal;
+ opacity:1;
+ filter:brightness(1.16) saturate(1.12);
+}
+#lobby .mode-choice .gallery-home-link::after{
+ background:linear-gradient(180deg,#ffffff36,transparent 70%);
+}
+/* Distinct crop origins: source GHJU render has a lower head position. */
+#lobby .character-card[data-character=lylu] .pw-helmet img{
+ transform:translate(-50%,-13%);
+}
+#lobby .character-card[data-character=ghju] .pw-helmet img{
+ transform:translate(-50%,-24%);
+}

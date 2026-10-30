@@ -143,6 +143,14 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
     p(body, 0, 1.25, -L / 2 + 1, W, 1.5, 1.9); p(M.glass, 0, 1.65, -L / 2 + .04, W - .2, .75, .04);
     p(body, 0, 1.55, .6, W, 2.3, L - 2.1); p(M.dark, 0, .45, 0, W - .2, .5, L - .2);
     for (const sz of [-L / 2 + 1, L / 2 - .9]) for (const sx of [-1, 1]) { const w = new T.Mesh(new T.CylinderGeometry(.44, .44, .3, 16), M.rubber); w.rotation.z = Math.PI / 2; w.position.set(sx * (W / 2 - .05), .44, sz); g.add(w); }
+    // Door seams, steps and bumper give the rescue van a readable structure.
+    for (const side of [-1, 1]) {
+      p(M.dark, side * (W / 2 + .01), .65, -L / 2 + 1.8, .025, 1.15, .035);
+      p(M.dark, side * (W / 2 + .02), .43, 0, .12, .12, L - 2.2);
+      p(M.galva, side * (W / 2 + .025), 1.35, .2, .03, .06, .3);
+    }
+    p(M.dark, 0, .55, -L / 2 - .04, W + .08, .17, .12);
+    p(M.dark, 0, 1.05, -L / 2 - .055, W * .5, .24, .03);
     const lights = [];
     if (!burnt) {
       for (const s of [-1, 1]) { p(M.red, s * (W / 2 + .005), 1.05, .6, .01, .24, L - 2.1); p(M.yellow, s * (W / 2 + .006), 1.32, .6, .01, .08, L - 2.1);
@@ -159,7 +167,11 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
   function winchPost(x, z) { box(M.yellow, x, 0, z, .9, 1.3, .9); box(M.dark, x, 1.3, z, 1, .3, 1); const drum = new T.Mesh(new T.CylinderGeometry(.35, .35, .8, 14), M.galva); drum.rotation.z = Math.PI / 2; drum.position.set(x, 1, z + .55); add(drum); devicesExtra.treuil = drum; }
   function lampPost(x, z, k) {
     const pole = new T.Mesh(new T.CylinderGeometry(.09, .12, 7, 8), M.galva); pole.position.set(x, 3.5, z); add(pole);
-    const head = new T.Mesh(new T.BoxGeometry(1.2, .14, .4), k ? M.neonAmber : M.neonWhite); head.position.set(x, 7, z); add(head);
+    // A hood, diffuser and end plates form a physical luminaire around the light source.
+    box(M.dark, x, 6.97, z, 1.35, .16, .52);
+    box(k ? M.neonAmber : M.neonWhite, x, 6.93, z, 1.1, .04, .32);
+    for (const side of [-1, 1]) box(M.galva, x + side * .62, 6.91, z, .09, .2, .54);
+    box(M.galva, x, 6.8, z, .13, .17, .13);
     const cone = new T.Mesh(new T.ConeGeometry(2.4, 6.8, 18, 1, true), additive(k ? 0xffb35c : 0xcfe8ff, .045)); cone.position.set(x, 3.6, z); add(cone);
     sources.push({ x, y: 6.8, z, color: new T.Color(k ? 0xffb070 : 0xdcecff), intensity: 14, range: 20 });
   }
@@ -185,6 +197,13 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
     for (const [x, z, w, d, k] of [[67, -80, 2.6, 6, 0], [92, -82, 6, 2.6, 1], [68, -88, 2.6, 4.8, 2]]) {
       const c = box(M.container[k], x, 0, z, w, 2.7, d);
       for (let i = 0; i < 10; i++) box(M.dark, x + (w > d ? -w / 2 + .3 + i * (w - .6) / 9 : w / 2 + .01), .1, z + (w > d ? d / 2 + .01 : -d / 2 + .3 + i * (d - .6) / 9), w > d ? .06 : .02, 2.5, w > d ? .02 : .06);
+      // Corner posts and door locking bars add structure without affecting cover.
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(M.galva, x + sx * (w / 2 - .07), .04, z + sz * (d / 2 - .07), .14, 2.62, .14);
+      for (const sx of [-1, 1]) {
+        box(M.dark, x + sx * w * .23, .18, z + d / 2 + .025, .045, 2.3, .045);
+        box(M.galva, x + sx * w * .23, 1.05, z + d / 2 + .055, .22, .05, .05);
+      }
+      box(M.galva, x, 2.6, z, w + .03, .1, d + .03);
       void c;
     }
     box(M.container[1], 67, 2.7, -80, 2.6, 2.7, 6);

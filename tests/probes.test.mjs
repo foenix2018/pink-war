@@ -76,11 +76,11 @@ test('a hit to a fan slows flight temporarily instead of using a ground limp',()
   assert.equal(damaged.enemies[0].grounded,false);
 });
 
-test('probe hit zones follow airborne height: iris critical, hull normal, fans reduced',()=>{
+test('probe hit zones follow airborne height: iris critical, hull normal, four individually targetable rotors',()=>{
   const p=probe({x:0,z:0,elevation:5,yaw:0});
   const core=traceEnemyHit({x:0,y:5.55,z:-2},{x:0,y:5.55,z:2},p);
   assert.equal(core.zone,'head');assert.equal(core.multiplier,2.5);
-  const fan=traceEnemyHit({x:.61,y:5.49,z:-2},{x:.61,y:5.49,z:2},p);assert.equal(fan.zone,'limb');
+  const fan=traceEnemyHit({x:.61,y:5.49,z:-2},{x:.61,y:5.49,z:2},p);assert.equal(fan.zone,'rotor');assert.equal(fan.multiplier,1);
   assert.equal(traceEnemyHit({x:0,y:1.55,z:-2},{x:0,y:1.55,z:2},p),null,'no invisible ground-level humanoid hitbox');
 });
 

@@ -3,6 +3,7 @@
 // solid, and projectiles keep their locked direction after the warning.
 import { hostileShotProfile, predictShot } from './enemy-fire.js';
 import { enemyVolley } from './enemy-combat.js';
+import {probeFlightState} from './probe-damage.js';
 export const PROBE = Object.freeze({radius: .9, height: 1.08, aimHeight: .55, hover: 2.7, windup: .7});
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 
@@ -30,6 +31,22 @@ export function moveProbe(game, enemy, dx, dy, dz, segmentBox) {
 export function updateProbe(game, e, dt, segmentBox) {
   if(!(dt>0))return;
   e.grounded = false; e.onLift = null; e.elevation ??= PROBE.hover;
+  const damage=probeFlightState(e);
+  if(damage.crashing){
+    // A second broken rotor is fatal, but the wreck falls before scoring the kill.
+    e.chargeRemaining=0;e.chargeProgress=0;e.lockedTarget=null;
+    e.crashVelocityY=Math.max(-19,(e.crashVelocityY||0)-12*dt);
+    const floor=Math.max(0,game.surfaceHeight?.(e.x,e.z,game.time,e.elevation+.25)??0);
+    const before=e.elevation,drift=Math.exp(-1.6*dt);
+    moveProbe(game,e,(e.motionX||0)*drift*dt,e.crashVelocityY*dt,(e.motionZ||0)*drift*dt,segmentBox);
+    e.motionX=(e.motionX||0)*drift;e.motionZ=(e.motionZ||0)*drift;
+    e.verticalSpeed=(e.elevation-before)/dt;
+    if(e.elevation<=floor+.11||game.time-(e.crashStartedAt??game.time)>4.5){
+      game.event('probe-crash',{id:e.id,x:e.x,y:e.elevation+PROBE.aimHeight,z:e.z});
+      game.damageEnemy(e,Math.max(1000,e.hp+1),{x:e.x,y:e.elevation+PROBE.aimHeight,z:e.z},'torso',1);
+    }
+    return;
+  }
   const eye = {x: e.x, y: e.elevation + PROBE.aimHeight, z: e.z};
   const target = {x: game.player.x, y: game.player.elevation + (game.player.crouched ? .83 : 1.25), z: game.player.z};
   const dx = target.x - eye.x, dz = target.z - eye.z, range = Math.hypot(dx, dz) || .001;
@@ -56,7 +73,7 @@ export function updateProbe(game, e, dt, segmentBox) {
     if (Math.hypot(hx, hz) > 13) e.patrolAngle = Math.atan2(hx, hz);
     vx = Math.sin(e.patrolAngle || 0) * .4; vz = Math.cos(e.patrolAngle || 0) * .4;
   }
-  const norm = Math.max(1, Math.hypot(vx, vz)), speed = (e.speed??3.6) * (stunned?.03:(e.limpUntil||0)>game.time?.55:1);
+  const norm = Math.max(1, Math.hypot(vx, vz)), speed = (e.speed??3.6) * damage.speedScale * (stunned?.03:(e.limpUntil||0)>game.time?.55:1);
   vx = vx / norm * speed; vz = vz / norm * speed;
   let desiredHeight = (e.awareness === 'patrol' ? (e.homeHeight || 0) : e.lastKnownHeight || 0) + PROBE.hover
     + Math.sin(game.time * 1.5 + (e.phase||0)) * .18;
@@ -100,7 +117,10 @@ export function updateProbe(game, e, dt, segmentBox) {
     e.attackTimer = (e.attackTimer || 0) - dt;
     if (e.attackTimer <= 0) {
       const profile=hostileShotProfile(game.wave,'probe');
-      e.lockedTarget = predictShot(eye,target,game.playerVelocity,profile.speed,profile.lead); e.chargeRemaining = PROBE.windup; e.chargeProgress = .01;
+      e.lockedTarget = predictShot(eye,target,game.playerVelocity,profile.speed,profile.lead);
+      // Damaged stabilizers cause a visible, reproducible loss of aim precision.
+      if(damage.accuracy){e.lockedTarget.x+=Math.sin(game.time*3.1+e.id)*damage.accuracy;e.lockedTarget.y+=Math.cos(game.time*2.7+e.id)*damage.accuracy*.5;}
+      e.chargeRemaining = PROBE.windup; e.chargeProgress = .01;
       game.event('probe-charge', {...eye, id: e.id});
     }
   }

@@ -10,7 +10,8 @@ import { setKenneyAccent } from './kenney-blasters.js';
 import { createGlove } from './hands.js';
 import { CHARACTERS, characterForId } from './characters.js';
 import { createSurfaceDetails } from './surfaces.js';
-import { createEnemyFactory } from './enemies.js';
+import { createEnemyFactory } from './enemies.js?v=3.74.0-s03';
+import {probeRotorAt} from './probe-damage.js';
 import { createRuinedCity, paintRuinSky } from './world-art.js';
 import { createTraversalArt } from './traversal-art.js';
 import { createLaserFX } from './laser-fx.js';
@@ -361,7 +362,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
       scene.remove(display.group);display.vortexMat.dispose();secondaryPortals.delete(id);
     }
   }
-  const monsters=new Map(), bulletMeshes=new Map(), particles=[];
+  const monsters=new Map(), bulletMeshes=new Map(), particles=[],probeSparkAt=new Map();
   const enemyFactory=createEnemyFactory(mats);
   const createMonster=(elite,ranged,form)=>{if(form==='sentinel'){const sentinel=createSentinel(T,scene);const m=sentinel.root;m.userData.animate=(time,phase,healthy,e)=>{sentinel.update(.016,{moving:Math.hypot(e.vx||0,e.vz||0)>.1||e.awareness==='engaged',awareness:e.awareness,shotAt:e.lastShotAt??-9});};m.userData.sentinel=sentinel;return m;}return enemyFactory.create(elite,ranged,form);};
   // Sparks share two instanced meshes (rose and violet), whatever their number.
@@ -382,17 +383,27 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     const ring=mesh(pickupRing,core,g,[0,-.5,0],[1,1,1],false);ring.rotation.x=-Math.PI/2;ring.userData.ground=true;
     return g;
   }
-  function resetDynamic(){for(const m of pickupMeshes.values())scene.remove(m);pickupMeshes.clear();rangeArt.update(null);combatFX.reset();laserFX.reset();traversal.update(0);for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();portal.visible=!rangeActive;for(const death of deaths){scene.remove(death.fx);death.mat.dispose();death.haloMat.dispose();}deaths.length=0;for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;for(const pool of sparkPools)pool.count=0;}
+  function resetDynamic(){for(const m of pickupMeshes.values())scene.remove(m);pickupMeshes.clear();rangeArt.update(null);combatFX.reset();laserFX.reset();traversal.update(0);for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();portal.visible=!rangeActive;for(const death of deaths){scene.remove(death.fx);death.mat.dispose();death.haloMat.dispose();}deaths.length=0;for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;probeSparkAt.clear();for(const pool of sparkPools)pool.count=0;}
   function sync(sim,time,dt){
     if(!campaignActive)city.fence?.update({...sim.player,y:(sim.player.elevation||0)+(sim.player.crouched?1.05:1.65)},.65,1.2);traversal.update(sim.time);campaignArt.updateLift(sim.time);combatFX.update(dt,camera);laserFX.update(sim.bullets,dt);shadowTime=sim.time;shadowEntities=rangeActive?[sim.player,...sim.targets.map(t=>({...targetPosition(t,sim.time),radius:.28}))]:[...sim.enemies,sim.player];shadowHeight=e=>sim.surfaceHeight(e.x,e.z,sim.time,(e.elevation||0)+.3);trackShadows(sim.player.x,sim.player.z,sim.player.elevation||0);
     setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));updateStations(sim,time);syncSecondaryPortals(sim,sim.time);rangeArt.update(rangeActive?sim:null);
     if(rangeActive){const observer=sim.interactionPosition||sim.player;if(Math.hypot(observer.x,observer.z-34.9)<12)rangeArt.setArmoryModels(fpsGun.userData.weaponModels,fpsGun.userData.kenneyVersion||0,character.id);rangeArt.shadows.update(sim.time,sim);}
-    for(const event of sim.events||[])if(event.type==='kill')beginDeath(event.id,time);
+    for(const event of sim.events||[]){
+      if(event.type==='kill')beginDeath(event.id,time);
+      if(event.type==='probe-rotor-destroyed')burst(event.x,event.y,event.z,palette.violet,8);
+      if(event.type==='probe-crash')burst(event.x,event.y,event.z,palette.rose,14);
+    }
     updateDeaths(time);
     soldier.root.scale.setScalar(soldier.heightScale);soldier.root.position.set(sim.player.x,sim.player.elevation||0,sim.player.z);soldier.root.rotation.y=sim.player.yaw;
-    const present=new Set();for(const e of sim.enemies){present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite,e.ranged,e.form);m.rotation.order='YXZ';monsters.set(e.id,m);if(!m.parent)scene.add(m);}m.position.set(e.x,e.elevation||0,e.z);m.rotation.y=e.yaw??(Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI);m.userData.animate(time,e.phase,e.limpUntil<=time,e,sim.time);
+    const present=new Set();for(const e of sim.enemies){
+      if(e.form==='probe'&&e.rotorDestroyed?.some(Boolean)&&sim.time>=(probeSparkAt.get(e.id)||0)){
+        const index=e.rotorDestroyed.findIndex(Boolean),p=probeRotorAt(e,index);
+        if(p)burst(p.x,p.y,p.z,palette.violet,3);
+        probeSparkAt.set(e.id,sim.time+.62+(e.id%3)*.11);
+      }present.add(e.id);let m=monsters.get(e.id);if(!m){m=createMonster(e.elite,e.ranged,e.form);m.rotation.order='YXZ';monsters.set(e.id,m);if(!m.parent)scene.add(m);}m.position.set(e.x,e.elevation||0,e.z);m.rotation.y=e.yaw??(Math.atan2(sim.player.x-e.x,sim.player.z-e.z)+Math.PI);m.userData.animate(time,e.phase,e.limpUntil<=time,e,sim.time);
       // A hit rocks the body back, away from the shooter, for a fifth of a second (harder on a head shot).
       const sinceHit=sim.time-(e.hitAt??-9);m.rotation.x=!m.userData.reco1&&sinceHit<.22?Math.sin(sinceHit/.22*Math.PI)*(e.hitZone==='head'?.2:.11):0;}
+    for(const id of probeSparkAt.keys())if(!present.has(id))probeSparkAt.delete(id);
     for(const[id,m]of monsters){if(!present.has(id)){if(m.userData.sentinel)m.userData.sentinel.dispose();else scene.remove(m);monsters.delete(id);}}
     const active=new Set();for(const b of sim.bullets){if(!b.hostile)continue;active.add(b.id);let m=bulletMeshes.get(b.id);if(!m){m=new T.Group();const width=b.hostile?.028:({r9:.012,bloom:.010,lance:.022,thorn:.008,nova:.065}[b.weapon]||.015);const rail=b.weapon==='thorn',plasma=b.weapon==='nova';mesh(geometries.sphere,b.hostile?mats.cyan:mats.pale,m,[0,0,0],[width,width,rail?.16:plasma?.11:.055],false);mesh(geometries.sphere,b.hostile?mats.violet:mats.rose,m,[0,0,-.10],[width*1.6,width*1.6,rail?.22:plasma?.14:.10],false);m.scale.setScalar(.75+(b.power||1)*.25);bulletMeshes.set(b.id,m);scene.add(m);}m.position.set(b.x,b.y,b.z);m.lookAt(b.x+b.vx,b.y+b.vy,b.z+b.vz);}
     for(const[id,m]of bulletMeshes){if(!active.has(id)){scene.remove(m);bulletMeshes.delete(id);}}

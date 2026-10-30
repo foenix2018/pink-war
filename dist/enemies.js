@@ -1,4 +1,5 @@
 import {createReco1} from './reco1.js';
+import {probeFlightState} from './probe-damage.js';
 import * as T from './vendor/three.webgpu.min.js';
 import { Assembly, loft, matrix, merge, bevelBox, limb as lightweightLimb } from './geo.js';
 import {equipmentSurfaces} from './equipment-surfaces.js';
@@ -18,7 +19,7 @@ export const ENEMY_PROFILES=Object.freeze({
  bulwark:Object.freeze({name:'Rempart / unité de suppression',silhouette:'humanoid heavy chassis / faceted arm shields / integrated helmet'}),
  listener:Object.freeze({name:'Traqueur / réseau acoustique',silhouette:'humanoid scout / angular helmet / acoustic receivers'}),
  scuttler:Object.freeze({name:'Rampant / maintenance autonome',silhouette:'low / segmented carapace / six legs'}),
- probe:Object.freeze({name:'Sonde / surveillance aérienne',silhouette:'teardrop / four ducted fans / gimbal iris'})
+ probe:Object.freeze({name:'Sonde S-03 / quadrirotor militaire cyberpunk',silhouette:'armored X-frame / four triple-blade ducted motors / stabilized gimbal iris'})
 });
 
 const crawlerShell=loft([[.48,.25,.34],[.58,.37,.48],[.75,.43,.53],[.91,.38,.45],[1.02,.24,.31]],22);
@@ -100,6 +101,22 @@ export function createEnemyFactory(mats){
       // with an exposed iris rather than a humanoid face or a cubic body.
       a.ellipsoid(dark,[0,.55,0],[.42,.31,.49]);
       a.add(probeHull,armor);
+      // Graphite cladding and recessed cooling channels, baked with the existing rig.
+      for(const side of [-1,1]){
+        a.box(armor,[.14,.045,.34],[side*.23,.755,-.02],[0,0,side*.13],.018);
+        for(let v=0;v<3;v++)a.box(dark,[.022,.008,.105],[side*(.30+v*.038),.792,-.07],[0,0,side*.12],.004);
+      }
+      for(let j=0;j<3;j++)a.box(servo,[.022,.012,.21],[0,.865,-.13+j*.13],[0,0,0],.004);
+      // Four visible diagonal load-bearing arms, paired motor braces and armored collars:
+      // all share baked skinned batches (no standalone geometry per frame).
+      for(const side of [-1,1])for(const dir of [-1,1]){
+        const armZ=dir*.42,motorX=side*.61;
+        a.limb(armor,[side*.23,.62,dir*.15],[side*.50,.53,dir*.36],.078,.046);
+        a.limb(dark,[side*.26,.48,dir*.16],[motorX,.475,armZ],.027,.023);
+        a.limb(servo,[side*.49,.53,dir*.36],[motorX,.54,armZ],.022,.028);
+        a.box(dark,[.075,.038,.11],[motorX,.55,armZ],[0,0,side*dir*.14],.011);
+        a.box(hazard,[.048,.022,.035],[motorX,.553,armZ],[0,0,0],.008);
+      }
       a.dome(armor,[0,.47,.03],[.35,.24,.39],[Math.PI,0,0]);
       a.add(ring,armor,matrix([0,.55,0],[Math.PI/2,0,0],[3.5,3.5,3.5]));
       for(let k=0;k<8;k++){const angle=k*Math.PI/4;a.add(bolt,servo,matrix([Math.cos(angle)*.37,.62,Math.sin(angle)*.39],[0,0,0],[.014,.015,.014]));}
@@ -115,10 +132,18 @@ export function createEnemyFactory(mats){
           a.limb(armor,[side*.24,.52,z*.45],[x,.49,z],.048,.034);
           a.limb(dark,[side*.28,.46,z*.45],[x,.44,z],.020,.013);
           a.add(probeDuct,armor,matrix([x,.49,z],[Math.PI/2,0,0]));
+          a.add(probeRim,servo,matrix([x,.513,z],[Math.PI/2,0,0],[1.08,1.08,1.08]));
+          for(const t of [-1,1])a.box(dark,[.027,.026,.066],[x+t*.183,.49,z],[0,0,0],.008);
           a.add(ring,glow,matrix([x,.476,z],[Math.PI/2,0,0],[1.53,1.53,1.53]),false);
           const rotor=bone('fan-'+side+'-'+z,[x,-.06,z],pelvis),r=assembly(rotor);rotors.push({index:rotor,side:z*side>0?1:-1});
-          r.ellipsoid(dark,[x,.49,z],[.037,.028,.037]);
-          for(const angle of [0,Math.PI/2])r.box(dark,[.31,.017,.035],[x,.49,z],[0,angle,0],.009);
+          r.ellipsoid(dark,[x,.49,z],[.046,.023,.046]);
+          // True three-blade silhouette: pitched, slim overlapping surfaces within the duct.
+          for(let blade=0;blade<3;blade++){
+            const theta=blade*Math.PI*2/3,dx=Math.cos(theta),dz=Math.sin(theta);
+            r.box(servo,[.125,.014,.046],[x+dx*.082,.49,z+dz*.082],[0,-theta,.085],.011);
+            r.box(hazard,[.021,.009,.045],[x+dx*.152,.494,z+dz*.152],[0,-theta,0],.004);
+          }
+          r.ellipsoid(armor,[x,.51,z],[.024,.013,.024]);
         }
       }
       probeHead=bone('optical-gimbal',[0,0,-.35],pelvis);const h=assembly(probeHead);
@@ -178,7 +203,7 @@ export function createEnemyFactory(mats){
     if(!['stalker','scuttler','brute','seer','probe','listener','bulwark','synth'].includes(form))form='stalker';
     const kit=template(elite,ranged,form),root=new T.Group(),crawler=form==='scuttler',probe=form==='probe';
     root.name=({synth:'N-08 adaptive synthetic',stalker:'AI pursuit chassis',scuttler:'AI maintenance crawler',brute:'AI siege chassis',seer:'AI reconnaissance chassis',probe:'S-03 flying surveillance probe',listener:'E-06 acoustic tracker',bulwark:'B-11 armoured suppression unit'})[form];
-    root.userData.form=form;root.userData.designRevision='3.63.2';root.userData.profile=ENEMY_PROFILES[form];root.userData.surfaceStyle='weathered alloy / faceted humanoid armour / RLH joint proportions / articulated rifle stance';
+    root.userData.form=form;root.userData.designRevision='3.63.2';if(probe)root.userData.probeRevision='S-03 / destructible rotors 3.73';root.userData.profile=ENEMY_PROFILES[form];root.userData.surfaceStyle='weathered alloy / faceted humanoid armour / RLH joint proportions / articulated rifle stance';
     const joints=kit.bones.map(spec=>{const b=new T.Bone();b.name=spec.name;b.position.set(...spec.position);return b;});
     kit.bones.forEach((spec,i)=>(spec.parent<0?root:joints[spec.parent]).add(joints[i]));root.updateMatrixWorld(true);
     const skeleton=new T.Skeleton(joints);
@@ -210,6 +235,7 @@ export function createEnemyFactory(mats){
     }
     const motionSample=new Float64Array(5);
     let previousTime=null,previousX=0,previousZ=0,motionSpeed=0,cycle=0;
+    let previousProbeTime=null,dronePitch=0,droneRoll=0;
     root.userData.animate=(time,phase=0,moving=true,flight={},simulationTime=time)=>{
       const alert=enemyAlertState(flight,simulationTime);
       if(root.userData.alertState!==alert){eyeMaterial.color.setHex(ENEMY_OPTICS[alert]);root.userData.alertState=alert;}
@@ -220,11 +246,32 @@ export function createEnemyFactory(mats){
         joints[kit.gunSignal].scale.setScalar(1+(flight.chargeProgress||0)*.45+pulse*.9);
       }
       if(probe){
-        const damaged=(flight.limpUntil||0)>simulationTime;
-        pelvis.rotation.set(Math.sin(time*2+phase)*.018,0,Math.sin(time*1.7+phase)*.025+(damaged?.06:0));
-        pelvis.position.y=.55+Math.sin(time*2.1+phase)*.018;
-        for(const [i,rotor] of kit.rotors.entries())joints[rotor.index].rotation.y=time*(damaged&&i===0?12:42)*rotor.side+phase;
-        joints[kit.probeHead].rotation.x=T.MathUtils.clamp(flight.aimPitch||0,-.55,.4);
+        const state=probeFlightState(flight),damaged=(flight.limpUntil||0)>simulationTime;
+        const lostSide=(flight.rotorDestroyed||[]).reduce((v,off,i)=>v+(off?(i<2?-1:1):0),0);
+        const fallTime=Math.max(0,simulationTime-(flight.crashStartedAt??simulationTime));
+        // RLH-style tilt: convert actual world velocity into the drone's yaw frame.
+        // The independent root yaw continues pointing the optical gimbal at the target.
+        const yaw=flight.yaw??root.rotation.y,c=Math.cos(yaw),sn=Math.sin(yaw);
+        const localX=c*(flight.motionX||0)-sn*(flight.motionZ||0);
+        const localZ=sn*(flight.motionX||0)+c*(flight.motionZ||0);
+        const desiredPitch=T.MathUtils.clamp(localZ*.052,-.23,.23);
+        const desiredRoll=T.MathUtils.clamp(-localX*.056+lostSide*.12,-.26,.26);
+        const dt=previousProbeTime===null?0:T.MathUtils.clamp(time-previousProbeTime,0,.1);
+        previousProbeTime=time;
+        const blend=1-Math.exp(-dt*7);
+        dronePitch+=(desiredPitch-dronePitch)*blend;
+        droneRoll+=(desiredRoll-droneRoll)*blend;
+        pelvis.rotation.set(state.crashing?Math.min(1.2,fallTime*1.2):
+            dronePitch+Math.sin(time*2+phase)*(state.lost?.042:.012),
+          0,state.crashing?Math.min(1.6,fallTime*2.4):
+            droneRoll+Math.sin(time*1.7+phase)*(state.lost?.06:.012)+(damaged?.035:0));
+        pelvis.position.y=.55+Math.sin(time*(state.lost?5:2.1)+phase)*(state.lost?.038:.018);
+        for(const [i,rotor] of kit.rotors.entries()){
+          const broken=!!flight.rotorDestroyed?.[i];
+          joints[rotor.index].rotation.y=time*(broken?0:damaged&&i===0?12:42)*rotor.side+phase;
+          joints[rotor.index].scale.setScalar(broken?.015:1);
+        }
+        joints[kit.probeHead].rotation.x=T.MathUtils.clamp((flight.aimPitch||0)-dronePitch,-.55,.4);
         const charge=T.MathUtils.clamp(flight.chargeProgress||0,0,1),flash=simulationTime-(flight.lastShotAt??-99)<.13?1:0;
         joints[kit.probeSignal].scale.setScalar(1+charge*(.35+.15*Math.sin(time*27))+flash*.7);
         return;

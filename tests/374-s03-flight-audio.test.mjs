@@ -1,0 +1,58 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as T from '../dist/vendor/three.webgpu.min.js';
+import {audioMock} from './audio-mock.mjs';
+import {createRLHDroneAudio} from '../dist/rlh-drone-audio.js';
+import {createEnemyFactory} from '../dist/enemies.js';
+const mats=()=>Object.fromEntries(['monster','monsterFace','rose','violet','cyan','pale'].map(k=>[k,new T.MeshStandardMaterial()]));
+
+test('the four motors use RLH Rescue 01 exact sawtooth and lowpass source design',()=>{
+ const {ctx,nodes,calls}=audioMock(),audio=createRLHDroneAudio(ctx);
+ const drone={form:'probe',id:2,x:3,z:0,elevation:3,motionX:4,motionZ:0};
+ ctx.state='suspended';audio.update({active:true,listener:{x:0,z:0},probes:[drone]});
+ assert.equal(nodes.length,0,'audio must not autoplay before a user gesture');
+ ctx.state='running';audio.update({active:true,listener:{x:0,z:0},probes:[drone],time:1});
+ const motors=nodes.filter(n=>n.kind==='oscillator');assert.equal(motors.length,4);
+ assert.ok(motors.every(m=>m.type==='sawtooth'));
+ assert.ok(motors.every(m=>m.connections[0].type==='lowpass'));
+ const motorGain=i=>motors[i].connections[0].connections[0].gain.value;
+ assert.equal(motorGain(0),.012);
+ assert.ok(motors[0].frequency.value>155,'thrust raises frequency');
+ const nodeCount=nodes.length,starts=calls.starts;
+ audio.update({active:true,listener:{x:0,z:0},probes:[{...drone,rotorDestroyed:[true,false,false,false]}],time:1.15});
+ assert.equal(motorGain(0),0,'destroyed motor really stops producing sound');
+ assert.equal(motorGain(1),.012);
+ assert.equal(nodes.length,nodeCount);assert.equal(calls.starts,starts,'no allocations per XR frame');
+ audio.update({active:false});assert.equal(nodes.find(n=>n.kind==='gain'&&n===motors[0].connections[0].connections[0].connections[0]).gain.value,0);
+ audio.dispose();
+ assert.equal(calls.stops,4);
+ assert.ok(nodes.every(n=>n.disconnected),'motors and stereo bus must disconnect');
+});
+
+test('S-03 quadrotor banks and pitches with its real world velocity and yaw, without altering targeting',()=>{
+ const root=createEnemyFactory(mats()).create(false,true,'probe');
+ const body=root.userData.skeleton.bones.find(b=>b.name==='pelvis');
+ assert.ok(body);
+ const state={form:'probe',yaw:0,motionX:0,motionZ:3,rotorDestroyed:[false,false,false,false],awareness:'engaged',aimPitch:.2};
+ for(let i=0;i<25;i++)root.userData.animate(i/60,0,true,state,i/60);
+ assert.ok(body.rotation.x>.075,'forward flight should pitch the fuselage');
+ state.motionZ=-3;
+ for(let i=25;i<70;i++)root.userData.animate(i/60,0,true,state,i/60);
+ assert.ok(body.rotation.x<-.065,'braking/reverse flight should pitch opposite');
+ state.motionZ=0;state.motionX=3;
+ for(let i=70;i<110;i++)root.userData.animate(i/60,0,true,state,i/60);
+ assert.ok(body.rotation.z<-.08,'sideways strafe should bank into the direction');
+ state.motionX=0;state.rotorDestroyed=[true,false,false,false];
+ for(let i=110;i<150;i++)root.userData.animate(i/60,0,true,state,i/60);
+ assert.ok(body.rotation.z<-.06,'missing left motor creates asymmetric compensation');
+ const healthy=createEnemyFactory(mats()).create(false,true,'probe');
+ const healthyBody=healthy.userData.skeleton.bones.find(b=>b.name==='pelvis');
+ for(let i=0;i<150;i++)healthy.userData.animate(i/60,0,true,{...state,rotorDestroyed:[false,false,false,false]},i/60);
+ assert.ok(Math.abs(body.rotation.z-healthyBody.rotation.z)>.07,'failed turbine banks compared to undamaged hover');
+ const fans=root.userData.skeleton.bones.filter(b=>b.name.startsWith('fan-'));
+ assert.equal(fans.length,4);assert.ok(fans[0].scale.x<.05);
+ let draws=0,triangles=0;root.traverse(o=>{if(o.isMesh){draws++;triangles+=o.geometry.attributes.position.count/3;}});
+ assert.equal(draws,6,'armoured quadrotor must retain baked six-batch render cost');
+ assert.ok(triangles<11000,'S-03 remains within mobile mesh budget: '+triangles);
+ assert.equal(root.getObjectsByProperty('isLight',true).length,0);
+});

@@ -32,12 +32,12 @@ function refresh(){
   document.querySelector('.mission-kicker').textContent=mode==='campaign4'?'CAMPAGNE · QUATRIÈME MISSION':mode==='campaign3'?'CAMPAGNE · TROISIÈME MISSION':mode==='campaign2'?'CAMPAGNE · DEUXIÈME MISSION':mode==='campaign'?'CAMPAGNE · PREMIÈRE MISSION':'PINK WARS · JOUER';
   $('mission-title').textContent=mode==='ligne9'?'05 — La Ligne Noyée':mode==='campaign4'?'04 — La Brèche Violette':mode==='campaign3'?'03 — Le Convoi des Absents':mode==='campaign2'?'02 — Sous les Néons':mode==='campaign'?'01 — Le dernier signal':mode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
   $('mission-description').textContent=mode==='ligne9'?'Ligne 9 inondée sous les Halles-Basses : rétablir le courant, relancer les pompes P9, ouvrir l’écluse. Mission longue avec points de contrôle.':mode==='campaign4'?'Station énergétique Est de JANUS : deux relais, trois stabilisateurs et le gardien de portique, autour de la brèche ouverte le soir de la chute. Mission longue avec points de contrôle.':mode==='campaign3'?'Secteur 03 de Vesper, de nuit : escorter l’ambulance d’Inès de l’annexe médicale à la gare de fret de l’Anneau logistique. Barrage ORDRE, relais A3, balise de la fracture, échangeur bloqué. Mission longue avec points de contrôle.':mode==='campaign2'?'Bas-Niveaux de Vesper : enclave, marché cyberpunk, HELIX et tour de transit. Sauver les civils ou récupérer les preuves.':mode==='campaign'?'Laboratoire abandonné, rue sous surveillance et relais en hauteur. Une trace de votre famille.':mode==='arena'?'Vingt vagues de machines et six armes à récupérer.':'Cibles fixes de 15 à 60 mètres, cibles mobiles latérales et avant-arrière. Vitesse croissante, score et précision.';
-  $('play-label').textContent=loading?'CHARGEMENT…':mode==='ligne9'?'JOUER LE CHAPITRE 05':mode==='campaign4'?'JOUER LE NIVEAU 4':mode==='campaign3'?'JOUER LE NIVEAU 3':mode==='campaign2'?'JOUER LE NIVEAU 2':mode==='campaign'?'JOUER LE NIVEAU 1':mode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
+  $('play-label').textContent=loading?'CHARGEMENT…':mode==='ligne9'?'JOUER LE CHAPITRE 05':mode==='campaign4'?'JOUER LE NIVEAU 4':mode==='campaign3'?'JOUER LE NIVEAU 3':mode==='campaign2'?'JOUER LE NIVEAU 2':mode==='campaign'?(readM01Checkpoint(character)?'CONTINUER':'JOUER'):mode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
   $('play-button').disabled=loading;
   $('sound-setting').checked=!!settings.sound;$('music-setting').checked=settings.music!==false;
   $('sensitivity').value=settings.sensitivity;$('quality').value=['auto','low','balanced','high'].includes(settings.quality)?settings.quality:'auto';
   $('launch-status').textContent=loading?'Chargement du secteur…':`V. ${GAME_VERSION} · prêt à lancer`;
-  $('resume-mission').hidden=mode!=='campaign'||!readM01Checkpoint(character)||loading;
+  $('resume-mission').hidden=true; // Replaced by the CONTINUER primary action when a checkpoint exists.
 }
 const resumeButton=document.createElement('button');resumeButton.id='resume-mission';resumeButton.type='button';resumeButton.hidden=true;
 resumeButton.textContent='REPRENDRE AU POINT DE CONTRÔLE';resumeButton.style.cssText='margin-top:10px;padding:10px 0;background:none;border:0;border-bottom:1px solid #84958d;color:#dce8e1;font:600 11px system-ui;letter-spacing:.05em;cursor:pointer';
@@ -70,7 +70,7 @@ $('story-open').onclick=()=>{if(!loading)showStory(true);};
 $('story-back').onclick=()=>showStory(false);
 for(const b of document.querySelectorAll('[data-chapter]'))b.onclick=()=>{if(loading)return;mode=b.dataset.chapter;showStory(false);refresh();};
 function panel(id){for(const d of document.querySelectorAll('dialog[open]'))d.close();$(id).showModal();}
-$('how-button').onclick=()=>panel('help-dialog');$('lore-button').onclick=()=>panel('lore-dialog');$('settings-button').onclick=()=>panel('settings-dialog');
+$('how-button').onclick=()=>panel('help-dialog');$('lore-button').onclick=()=>panel('lore-dialog');$('settings-button').onclick=()=>panel('settings-dialog');$('pw-glass-settings').onclick=()=>panel('settings-dialog');
 for(const b of document.querySelectorAll('.close-dialog'))b.onclick=()=>b.closest('dialog').close();
 const earlyCancel=e=>e.currentTarget.close();
 for(const d of document.querySelectorAll('dialog'))d.addEventListener('cancel',earlyCancel);
@@ -123,7 +123,7 @@ async function begin(intent='play',afterPrologue=false){
     $('play-button').onclick=()=>location.assign(compatibleLaunchURL());
   }
 }
-$('play-button').onclick=()=>begin('play');$('vr-button').onclick=()=>begin('vr');
+$('play-button').onclick=()=>{if(!loading&&mode==='campaign'&&readM01Checkpoint(character))openMission(1,{resume:true});else begin('play');};$('vr-button').onclick=()=>begin('vr');
 $('outfit-button').disabled=false;$('outfit-button').onclick=()=>begin('outfit');
 const replay=document.createElement('button');replay.type='button';replay.textContent='REVOIR LE PROLOGUE';replay.id='replay-prologue';
 replay.onclick=()=>{for(const d of document.querySelectorAll('dialog[open]'))d.close();showStoryPrologue({characterId:character,...settings,replay:true});};

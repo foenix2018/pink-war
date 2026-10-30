@@ -4,6 +4,7 @@ import {squadOrder,relayVisualContact,clearSquadFiringLane,registerIncomingFire}
 import { equipmentForLevel } from './equipment.js';
 import { PLATFORMS, STAIRS, LIFTS, BRIDGES, BRIDGE_APPROACHES, insideSurface, traversalSurfaces, liftHeightAt } from './world-layout.js';
 import { PROBE, updateProbe } from './aerial-probes.js';
+import {PROBE_ROTORS,probeRotorAt,probeRotorIndex,probeRotorMaxHp,damageProbeRotor} from './probe-damage.js';
 import { NOISE_RADIUS, SHOT_RADIUS, propagateNoise, soundWaypoint } from './hearing.js';
 import { tryJump } from './locomotion.js';
 import { hostileShotProfile, predictShot } from './enemy-fire.js';
@@ -170,6 +171,15 @@ export function traceEnemyHit(start, end, enemy) {
   const elite=enemyScale(enemy.form,enemy.elite)*(enemy.roomScale||1);
   const yaw=enemy.yaw||0,cos=Math.cos(yaw),sin=Math.sin(yaw);
   const crawl=enemy.form==='scuttler';
+  if(enemy.form==='probe'){
+    let rotorHit=null;
+    for(let i=0;i<PROBE_ROTORS.length;i++){
+      if(enemy.rotorDestroyed?.[i])continue;
+      const p=probeRotorAt(enemy,i),t=segmentSphere(start,end,p,.205*(enemy.elite?1.13:1));
+      if(t!==null&&(!rotorHit||t<rotorHit.t))rotorHit={t,zone:'rotor',multiplier:1};
+    }
+    if(rotorHit)return rotorHit;
+  }
   const zones=isReco1(enemy.form)?RECO1_HIT_ZONES:enemy.form==='probe'?[
     ['head',0,.55,-.48,.18],['torso',0,.55,0,.44],
     ['limb',-.61,.49,-.42,.24],['limb',.61,.49,-.42,.24],
@@ -478,6 +488,7 @@ export class ArenaGame {
     const homeHeight = this.surfaceHeight(x, z,this.time,.3);
     const enemy = { id: this.nextId++, x, z, elevation: homeHeight + (probe ? PROBE.hover : 0),grounded:!probe,verticalSpeed:0,homeHeight,
       hp: form==='sentinel'?1200:enemyDurability(this.wave,form,elite), elite, ranged:ranged||form==='synth'||form==='sentinel', form, aimHeight,
+      ...(probe?{rotorHp:Array(4).fill(probeRotorMaxHp(this.wave,elite)),rotorDestroyed:[false,false,false,false]}:{}),
       speed: form==='sentinel'?1.5:isReco1(form)?Math.min(2.7,1.8+(this.wave-1)*.04):probe ? Math.min(5,3.6 + this.wave * .07) : Math.min(4.3,2.4+(this.wave-1)*.055)*(form==='bulwark'?.7:form==='scuttler'?1.12:1),
       tier: Math.max(1,Math.ceil(this.wave/2)),limpUntil:0,stunnedUntil:0,
       homeX:site.x,homeZ:site.z,portalId:site.id,
@@ -626,10 +637,18 @@ export class ArenaGame {
     const armor=target.form?Math.min(.18,Math.max(0,(target.tier||1)-1)*.025):0;
     const support=source?.companion?1:(this.time<(target.companionMarkUntil||0)?1.2:1)*(this.time<(this.companionAmplifyUntil||0)?1.15:1);
     const effective=target.form==='sentinel' ? amount*support*(zone==='head'?5:zone==='limb'?.65:1) : amount*multiplier*support*(1-armor*(zone==='head'?.35:1));
+    let rotorResult=null;
+    if(target.form==='probe'&&zone==='rotor'){
+      const rotorIndex=probeRotorIndex(target,at);
+      rotorResult=damageProbeRotor(target,rotorIndex,effective,this.wave,this.time);
+      if(rotorResult.destroyed)this.event('probe-rotor-destroyed',{id:target.id,rotorIndex,...probeRotorAt(target,rotorIndex),lost:rotorResult.lost});
+    }
+    // External motor damage bleeds through only 20% to the main hull.
     // damageScale: a phase shield (mission bosses) lets only a share of the damage through.
-    const scaled=effective*(target.damageScale??1);target.hp -= scaled;
+    const scaled=(rotorResult?effective*.2:effective)*(target.damageScale??1);target.hp -= scaled;
     target.lastKnownX=source.x;target.lastKnownZ=source.z;target.lastKnownHeight=source.elevation??this.player.elevation;
     target.alertedUntil=this.time+5;target.awareness='search';target.lastSeenAt=this.time;
+    if(zone==='rotor'&&rotorResult?.destroyed)target.limpUntil=Math.max(target.limpUntil||0,this.time+1);
     if(zone==='limb')target.limpUntil=Math.max(target.limpUntil||0,this.time+2);
     if(zone==='head')target.stunnedUntil=Math.max(target.stunnedUntil||0,this.time+.32);
     target.hitAt=this.time;target.hitZone=zone;target.suppressedUntil=this.time+1.6;

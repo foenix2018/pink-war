@@ -273,6 +273,10 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
         mesh.setColorAt(i, new T.Color(0x111111));
         // Housing above each tube / lamp.
         if (kind === 'tube') piece(M.dark, f.x, f.y + .025, f.z, f.axis === 'z' ? .2 : f.len + .1, .06, f.axis === 'z' ? f.len + .1 : .2);
+        if (kind === 'tube') {
+          const alongZ = f.axis === 'z';
+          for (const side of [-1, 1]) piece(M.steel, f.x + (alongZ ? 0 : side * (f.len / 2 - .03)), f.y - .045, f.z + (alongZ ? side * (f.len / 2 - .03) : 0), alongZ ? .18 : .07, .1, alongZ ? .07 : .18);
+        }
         if (kind === 'hanging') { piece(M.dark, f.x, f.y + .1, f.z, .9, .18, .9); piece(M.dark, f.x, f.y + .26, f.z, .03, ROOM.halles.ceiling - f.y - .26, .03); }
         if (kind === 'cage') piece(M.dark, f.x, f.y - .14, f.z, .3, .05, .3);
         if (kind === 'highbay') piece(M.dark, f.x, f.y + .18, f.z, .5, ROOM.pompes.ceiling - f.y - .18, .5);
@@ -447,10 +451,32 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
       case 'turnstiles':
         for (let x = x1 + .25; x < x2 - .1; x += 1) { piece(M.steel, x, y, o.z, .3, h, .9); piece(M.red, x, y + h, o.z + .3, .08, .02, .08); if (x + .5 < x2) piece(M.glass, x + .5, y + .35, o.z, .6, .55, .04); }
         break;
-      case 'ticket-machine': box(M.steel, x1, x2, 0, h, z1, z2); piece(M.screenOff, x2 + .005, 1.1, o.z, .01, .45, .6); piece(M.yellow, x2 + .01, 1.65, o.z, .01, .12, .8); break;
-      case 'stretcher': piece(M.steel, o.x, 0, o.z, w, h - .12, d); piece(M.orange, o.x, h - .12, o.z, w - .1, .1, d - .05); break;
+      case 'ticket-machine':
+        box(M.steel, x1, x2, 0, h, z1, z2);
+        piece(M.dark, x2 + .006, .92, o.z, .035, .72, .82);
+        piece(M.screenOff, x2 + .025, 1.08, o.z, .018, .42, .6);
+        piece(M.yellow, x2 + .01, 1.65, o.z, .03, .12, .8);
+        piece(M.black, x2 + .015, .52, o.z, .025, .09, .38);
+        for (const side of [-1, 1]) piece(M.dark, x2 + .015, .12, o.z + side * d * .4, .025, .22, .08);
+        break;
+      case 'stretcher':
+        piece(M.steel, o.x, h * .35, o.z, w, .08, d);
+        piece(M.orange, o.x, h - .12, o.z, w - .1, .1, d - .05);
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+          piece(M.steel, o.x + sx * (o.hx - .12), .06, o.z + sz * (o.hz - .12), .07, h - .18, .07);
+          piece(M.dark, o.x + sx * (o.hx - .12), 0, o.z + sz * (o.hz - .12), .14, .12, .14);
+        }
+        break;
       case 'crates': if (o.surface === 'wood') { piece(M.wood, o.x, 0, o.z, w, h * .55, d); piece(M.wood, o.x + .1, h * .55, o.z - .05, w * .8, h * .45, d * .8, .3); }
-        else { piece(M.rust, o.x, 0, o.z, w, h, d); piece(M.yellow, o.x, h * .6, o.z, w + .02, .06, d + .02); } break;
+        else {
+          piece(M.rust, o.x, 0, o.z, w, h, d);
+          piece(M.yellow, o.x, h * .6, o.z, w + .02, .06, d + .02);
+          for (const side of [-1, 1]) {
+            piece(M.dark, o.x + side * w * .42, .05, z2 + .015, w * .1, h - .1, .03);
+            piece(M.steel, o.x + side * w * .25, h * .22, z2 + .03, .04, h * .25, .025);
+          }
+          piece(M.dark, o.x, h - .1, o.z, w + .02, .1, d + .02);
+        } break;
       case 'cabinet': box(M.plate, x1, x2, 0, h, z1, z2); for (let k = -1; k <= 1; k++) piece(k ? M.amber : M.red, along ? o.x + k * .5 : x1 - .01, h * .8, along ? z2 + .01 : o.z + k * .5, .05, .05, .05); break;
       case 'cot': piece(M.steel, o.x, 0, o.z, w, h - .15, d); piece(M.fabric, o.x, h - .15, o.z, w - .05, .1, d - .05); piece(M.canvasBlue, o.x + .3, h - .05, o.z, w * .55, .06, d - .02); break;
       case 'table': piece(M.steel, o.x, h - .05, o.z, w, .05, d); for (const sx of [-1, 1]) for (const sz of [-1, 1]) piece(M.steel, o.x + sx * (o.hx - .06), 0, o.z + sz * (o.hz - .06), .05, h - .05, .05);
