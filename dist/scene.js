@@ -363,7 +363,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     }
   }
   const monsters=new Map(), bulletMeshes=new Map(), particles=[],probeSparkAt=new Map();
-  const enemyFactory=createEnemyFactory(mats);
+  const enemyFactory=createEnemyFactory(mats,{detail:profile.phone||profile.headset||quality==='low'?'low':'high'});
   const createMonster=(elite,ranged,form)=>{if(form==='sentinel'){const sentinel=createSentinel(T,scene);const m=sentinel.root;m.userData.animate=(time,phase,healthy,e)=>{sentinel.update(.016,{moving:Math.hypot(e.vx||0,e.vz||0)>.1||e.awareness==='engaged',awareness:e.awareness,shotAt:e.lastShotAt??-9});};m.userData.sentinel=sentinel;return m;}return enemyFactory.create(elite,ranged,form);};
   // Sparks share two instanced meshes (rose and violet), whatever their number.
   const SPARKS=320,sparkPools=[mats.rose,mats.violet].map(material=>{

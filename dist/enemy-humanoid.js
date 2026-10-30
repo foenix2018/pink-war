@@ -1,3 +1,4 @@
+import {buildListener} from './enemy-listener.js';
 import * as T from './vendor/three.webgpu.min.js';
 import {loft,bevelBox,matrix} from './geo.js';
 import {profiledPanel} from './armor-profiles.js';
@@ -23,7 +24,8 @@ const boot=loft([[-.062,.067,.14,-.014],[-.043,.075,.147,-.016],[.035,.068,.12,.
 const receiver=bevelBox(.13,.13,.40,.012,1),sole=bevelBox(.153,.024,.30,.006,1);
 const tmp=new T.Vector3(),direction=new T.Vector3(),rotation=new T.Quaternion(),scale=new T.Vector3();
 const reference=HUMAN_REFERENCE.joints;
-export function buildHumanoidRobot({form,elite,ranged,armor,dark,servo,hazard,optics,glow,reactor,boneAt,assembly,thorax,pelvis}){
+export function buildHumanoidRobot({form,elite,ranged,detail,armor,dark,servo,hazard,optics,glow,reactor,boneAt,assembly,thorax,pelvis}){
+ if(form==='listener')return buildListener({form,elite,ranged,detail,armor,dark,servo,hazard,optics,glow,boneAt,assembly,thorax,pelvis});
  const heavy=['brute','bulwark'].includes(form),slender=['seer','listener','synth'].includes(form),width=heavy?1.45:slender?.96:1.06,limbWidth=heavy?1.28:1;
  const a=assembly(thorax),hips=assembly(pelvis),legRig=[],armRig=[];let groundGun=null,gunSignal=null;
  const point=(name,side)=>{const p=reference[(side===-1?'Left':'Right')+name];return [p[0]*width,p[1],p[2]];};

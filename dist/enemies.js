@@ -6,7 +6,8 @@ import {equipmentSurfaces} from './equipment-surfaces.js';
 import { enemyScale } from './enemy-combat.js';
 import {enemyAlertState,ENEMY_OPTICS} from './enemy-alert.js';
 import {enemySurfaces} from './enemy-surfaces.js';
-import {FIELD_RIFLE,carriesFieldRifle} from './enemy-weapon-layout.js';
+import {listenerSurfaces} from './listener-surfaces.js';
+import {FIELD_RIFLE,LISTENER_TOOL,carriesFieldRifle} from './enemy-weapon-layout.js';
 import {createRifleArmPose} from './enemy-rifle-pose.js';
 import {buildHumanoidRobot} from './enemy-humanoid.js';
 import {HUMAN_REFERENCE,sampleHumanStep,humanIdleBob} from './enemy-human-motion.js';
@@ -17,8 +18,8 @@ export const ENEMY_PROFILES=Object.freeze({
  seer:Object.freeze({name:'RECO1 · reconnaissance blindée',silhouette:'approved V10 / gunmetal segmented armour / 41-bone RLH motion / aimed carbine'}),
  brute:Object.freeze({name:'BRUTE / LE BRISEUR',silhouette:'giant graphite siege chassis / massive pauldron shoulders / hydraulics / crushing fists / red chest reactor'}),
  bulwark:Object.freeze({name:'Rempart / unité de suppression',silhouette:'humanoid heavy chassis / faceted arm shields / integrated helmet'}),
- listener:Object.freeze({name:'Traqueur / réseau acoustique',silhouette:'humanoid scout / angular helmet / acoustic receivers'}),
- scuttler:Object.freeze({name:'Rampant / maintenance autonome',silhouette:'low / segmented carapace / six legs'}),
+ listener:Object.freeze({name:'Traqueur E-06 / réseau acoustique',silhouette:'open mechanical torso / wedge optical head / twin concave reflectors / hydraulic legs'}),
+ scuttler:Object.freeze({name:'Rampant / maintenance autonome',silhouette:'low / worn overlapping armour / hydraulic six-legged maintenance chassis'}),
  probe:Object.freeze({name:'Sonde S-03 / quadrirotor militaire cyberpunk',silhouette:'armored X-frame / four triple-blade ducted motors / stabilized gimbal iris'})
 });
 
@@ -74,7 +75,7 @@ function bakeRig(assemblies){
   });
 }
 
-export function createEnemyFactory(mats){
+export function createEnemyFactory(mats,{detail='high'}={}){
   const cache=new Map(),surface=equipmentSurfaces(),wear=enemySurfaces(T);
   const frame=new T.MeshPhysicalMaterial({color:0x626a70,map:wear.metal,roughnessMap:wear.rough,bumpMap:wear.rough,bumpScale:.0007,roughness:.64,metalness:.64,clearcoat:.14,clearcoatRoughness:.52,envMap:mats.monster.envMap,envMapIntensity:.65});frame.name='ORDRE / worn graphite armour';
   const heavyFrame=frame.clone();heavyFrame.color.setHex(0x414b52);heavyFrame.roughness=.69;
@@ -83,11 +84,16 @@ export function createEnemyFactory(mats){
   const synthShell=new T.MeshPhysicalMaterial({color:0xc5d4d7,map:surface.metal,roughnessMap:surface.rough,bumpMap:surface.rough,bumpScale:.00025,metalness:.38,roughness:.42,clearcoat:.5,clearcoatRoughness:.32,envMap:mats.monster.envMap,envMapIntensity:.4});
   const hazard=new T.MeshStandardMaterial({color:0x96825b,roughness:.78,metalness:.25});
 
+  const listenerMaps=listenerSurfaces(T),listenerFrame=frame.clone();
+  listenerFrame.name='E-06 / worn titanium enamel';listenerFrame.color.setHex(0x8b8983);listenerFrame.map=listenerMaps.paint;listenerFrame.roughnessMap=listenerMaps.rough;listenerFrame.bumpMap=listenerMaps.relief;listenerFrame.bumpScale=.0014;listenerFrame.roughness=.72;
+  const listenerSignal=new T.MeshBasicMaterial({color:0xd56cac,toneMapped:false});
+  const listenerStencil=new T.MeshStandardMaterial({map:listenerMaps.label,roughness:.84,metalness:.28});
+
   function template(elite,ranged,form){
     const key=`${form}:${elite?1:0}:${ranged?1:0}`;if(cache.has(key))return cache.get(key);
-    const armor=form==='synth'?synthShell:elite?heavyFrame:frame,dark=mechanism;
-    const glow=ranged?mats.cyan:form==='scuttler'?mats.rose:form==='seer'?(mats.pale||mats.cyan):mats.violet;
-    const optics=new T.MeshBasicMaterial({color:ENEMY_OPTICS.idle,toneMapped:false});optics.name=form==='brute'?'BRUTE / scarlet thoracic reactor':'ORDRE independent optics';
+    const armor=form==='listener'?listenerFrame:form==='synth'?synthShell:elite?heavyFrame:frame,dark=mechanism;
+    const glow=form==='listener'?listenerSignal:ranged?mats.cyan:form==='scuttler'?mats.rose:form==='seer'?(mats.pale||mats.cyan):mats.violet;
+    const optics=new T.MeshBasicMaterial({color:ENEMY_OPTICS.idle,toneMapped:false});if(form==='listener')optics.map=listenerMaps.optics;optics.name=form==='brute'?'BRUTE / scarlet thoracic reactor':'ORDRE independent optics';
     const bones=[],assemblies=[],legRig=[],armRig=[],rotors=[];let probeHead=null,probeSignal=null,groundGun=null,gunSignal=null,humanoid=null;
     function bone(name,position,parent=-1){bones.push({name,position,parent});return bones.length-1;}
     function assembly(index){const a=new EnemyAssembly();assemblies.push({assembly:a,bone:index});return a;}
@@ -155,19 +161,34 @@ export function createEnemyFactory(mats){
       s.add(ring,optics,matrix([0,.55,-.66],[0,0,0],[.79,.79,.79]),false);
     }else if(crawler){
       a.add(crawlerShell,dark);
+      // Exposed service chassis beneath the protective shell.
+      for(const side of [-1,1]){
+        a.limb(servo,[side*.30,.69,-.43],[side*.30,.69,.39],.026);
+        a.limb(dark,[side*.34,.63,-.40],[side*.34,.63,.36],.032);
+        for(const z of [-.30,-.05,.20]){
+          a.ellipsoid(servo,[side*.38,.72,z],[.055,.055,.055]);
+          a.add(ring,dark,matrix([side*.405,.72,z],[0,Math.PI/2,0],[.43,.43,.43]));
+        }
+      }
       // Overlapping beetle-like plates surround a former municipal maintenance
       // chassis: cables, sockets and optical tools show its industrial origin.
       for(let i=0;i<4;i++){
-        const z=.31-i*.19,scale=1-i*.12;
-        a.add(crawlerSegment,armor,matrix([0,.94,z],[.04,0,0],[scale,scale,1]));
-        a.box(servo,[.17*scale,.032,.055],[0,1.09-i*.014,z+.045],[.13,0,0],.009);
+        const z=.34-i*.21,scale=1-i*.035;
+        a.add(crawlerSegment,armor,matrix([0,.98,z],[.04,0,0],[1.32*scale,1.25,1]));
+        a.add(new T.BoxGeometry(.40*scale,.075,.18),armor,matrix([0,1.14,z],[.035,0,0]));
+        for(const side of [-1,1])a.add(new T.BoxGeometry(.34*scale,.075,.18),armor,matrix([side*.32*scale,1.075,z],[.035,0,side*.38]));
+        a.box(dark,[.045,.025,.12],[0,1.09-i*.014,z+.045],[.13,0,0],.006);
+        for(const side of [-1,1]){
+          a.box(heavyFrame,[.17*scale,.035,.15],[side*.24*scale,1.035-i*.012,z],[.10,0,side*.19],.012);
+          a.add(bolt,servo,matrix([side*.27*scale,1.06-i*.012,z-.045],[0,0,0],[.012,.009,.012]));
+        }
       }
-      a.dome(armor,[0,.89,-.48],[.26,.19,.255],[.13,0,0]);
+      a.box(armor,[.59,.10,.21],[0,1.02,-.53],[.20,0,0],.025);
+      a.dome(heavyFrame,[0,.89,-.48],[.26,.13,.20],[.13,0,0]);
       a.ellipsoid(dark,[0,.81,-.64],[.16,.10,.062]);
       for(const s of [-1,0,1])a.add(sensor,optics,matrix([s*.089,.92,-.673],[0,0,0],[s===0?.036:.026,.028,.017]),false);
       for(const s of [-1,1]){
-        a.limb(dark,[s*.12,.75,-.55],[s*.19,.59,-.75],.036,.024);
-        a.limb(armor,[s*.19,.59,-.75],[s*.25,.48,-.88],.034,.007);
+        a.limb(dark,[s*.15,.76,-.56],[s*.22,.65,-.68],.026,.018);
         a.limb(dark,[s*.28,.73,.21],[s*.30,.74,-.40],.021);
       }
       for(const side of [-1,1])for(const [row,z] of [.28,-.02,-.32].entries()){
@@ -176,13 +197,18 @@ export function createEnemyFactory(mats){
         const lower=bone(`leg-${side}-${row}-knee`,knee.map((v,i)=>v-hip[i]),upper);
         const toe=bone(`leg-${side}-${row}-foot`,ankle.map((v,i)=>v-knee[i]),lower);
         const u=assembly(upper),l=assembly(lower),f=assembly(toe);
-        u.ellipsoid(dark,hip,[.075,.074,.082]);u.limb(armor,hip,knee,.075,.048);
+        u.ellipsoid(dark,hip,[.085,.082,.09]);u.limb(armor,hip,knee,.12,.085);
+        u.limb(heavyFrame,[hip[0],hip[1]+.045,hip[2]-.025],[knee[0],knee[1]+.04,knee[2]-.025],.055,.038);
+        u.limb(servo,[hip[0],hip[1]-.04,hip[2]-.07],[knee[0],knee[1]+.03,knee[2]-.07],.019,.014);
         u.add(ring,servo,matrix(hip,[0,Math.PI/2,0],[.50,.50,.50]));
         l.limb(servo,[knee[0],knee[1],knee[2]+.065],[ankle[0],ankle[1]+.15,ankle[2]+.065],.012,.009);
         u.limb(dark,[hip[0],hip[1]+.025,hip[2]+.075],[knee[0],knee[1]+.025,knee[2]+.075],.016,.013);
-        l.ellipsoid(dark,knee,[.078,.075,.083]);l.limb(armor,knee,ankle,.060,.024);
+        l.ellipsoid(dark,knee,[.088,.085,.09]);l.add(ring,servo,matrix(knee,[0,Math.PI/2,0],[.58,.58,.58]));l.limb(armor,knee,ankle,.10,.05);
+        l.limb(heavyFrame,[knee[0],knee[1]-.025,knee[2]-.025],[ankle[0],ankle[1]+.12,ankle[2]-.025],.047,.025);
         l.limb(dark,[knee[0],knee[1]-.025,knee[2]+.041],[ankle[0],ankle[1]+.12,ankle[2]+.041],.018,.012);
-        f.ellipsoid(dark,ankle,[.075,.035,.095]);f.limb(armor,ankle,[side*.82,.045,ankle[2]-.11],.036,.005);
+        f.ellipsoid(dark,ankle,[.105,.045,.14]);
+        f.box(heavyFrame,[.18,.055,.22],[ankle[0],.045,ankle[2]-.025],[0,0,0],.015);
+        f.limb(armor,ankle,[side*.82,.045,ankle[2]-.11],.045,.012);
         legRig.push({upper,lower,foot:toe,side,row,hip,knee,ankle});
       }
       if(ranged){
@@ -191,7 +217,7 @@ export function createEnemyFactory(mats){
         a.add(sensor,glow,matrix([0,1.04,-.28],[0,0,0],[.05,.05,.021]),false);
       }
     }else{
-      humanoid=buildHumanoidRobot({form,elite,ranged,armor,dark,servo,hazard,optics,glow,reactor:optics,boneAt,assembly,thorax,pelvis});
+      humanoid=buildHumanoidRobot({form,elite,ranged,detail,armor,dark,servo,hazard:form==='listener'?listenerStencil:hazard,optics,glow,reactor:optics,boneAt,assembly,thorax,pelvis});
       legRig.push(...humanoid.legRig);armRig.push(...humanoid.armRig);groundGun=humanoid.groundGun;gunSignal=humanoid.gunSignal;
     }
     const result={parts:bakeRig(assemblies),bones,legRig,armRig,pelvis,thorax,rotors,probeHead,probeSignal,groundGun,gunSignal,optics,humanoid};
@@ -203,7 +229,7 @@ export function createEnemyFactory(mats){
     if(!['stalker','scuttler','brute','seer','probe','listener','bulwark','synth'].includes(form))form='stalker';
     const kit=template(elite,ranged,form),root=new T.Group(),crawler=form==='scuttler',probe=form==='probe';
     root.name=({synth:'N-08 adaptive synthetic',stalker:'AI pursuit chassis',scuttler:'AI maintenance crawler',brute:'BRUTE / LE BRISEUR siege chassis',seer:'AI reconnaissance chassis',probe:'S-03 flying surveillance probe',listener:'E-06 acoustic tracker',bulwark:'B-11 armoured suppression unit'})[form];
-    root.userData.form=form;root.userData.designRevision='3.63.2';if(probe)root.userData.probeRevision='S-03 / destructible rotors 3.73';root.userData.profile=ENEMY_PROFILES[form];root.userData.surfaceStyle=form==='brute'?'weathered gunmetal / curved siege armour / exposed silver hydraulic rams / scarlet reactor': 'weathered alloy / faceted humanoid armour / RLH joint proportions / articulated rifle stance';
+    root.userData.form=form;root.userData.designRevision='3.63.2';if(probe)root.userData.probeRevision='S-03 / destructible rotors 3.73';root.userData.profile=ENEMY_PROFILES[form];root.userData.surfaceStyle=form==='listener'?'worn titanium / open thoracic cage / directional acoustic reflectors / hydraulic limbs':form==='brute'?'weathered gunmetal / curved siege armour / exposed silver hydraulic rams / scarlet reactor': 'weathered alloy / faceted humanoid armour / RLH joint proportions / articulated rifle stance';
     if(form==='brute')root.userData.bruteRevision='BRISEUR-2026-10';
     const joints=kit.bones.map(spec=>{const b=new T.Bone();b.name=spec.name;b.position.set(...spec.position);return b;});
     kit.bones.forEach((spec,i)=>(spec.parent<0?root:joints[spec.parent]).add(joints[i]));root.updateMatrixWorld(true);
@@ -219,8 +245,9 @@ export function createEnemyFactory(mats){
     root.scale.setScalar(enemyScale(form,elite));
     const legs=kit.legRig.map(spec=>({...spec,upper:joints[spec.upper],lower:joints[spec.lower],foot:joints[spec.foot]}));
     const arms=kit.armRig.map(spec=>({...spec,upper:joints[spec.upper],lower:joints[spec.lower],wrist:joints[spec.wrist]}));
-    const riflePose=ranged&&carriesFieldRifle(form)?createRifleArmPose(T,arms):null;
-    if(riflePose)root.userData.fieldRifle={bone:joints[kit.groundGun],arms,targets:()=>riflePose.targets(joints[kit.groundGun])};
+    const riflePose=ranged?(form==='listener'?createRifleArmPose(T,arms.filter(a=>a.side===1),LISTENER_TOOL):carriesFieldRifle(form)?createRifleArmPose(T,arms):null):null;
+    if(riflePose&&form!=='listener')root.userData.fieldRifle={bone:joints[kit.groundGun],arms,targets:()=>riflePose.targets(joints[kit.groundGun])};
+    if(riflePose&&form==='listener')root.userData.armTool={bone:joints[kit.groundGun],arms:arms.filter(a=>a.side===1),targets:()=>riflePose.targets(joints[kit.groundGun])};
     root.userData.skeleton=skeleton;root.userData.legs=legs;root.userData.sensorAnchor=kit.humanoid?.sensorAnchor;
     if(kit.humanoid)root.userData.humanoidReference={source:HUMAN_REFERENCE.source,sourceBoneCount:HUMAN_REFERENCE.sourceBoneCount,sourceSha256:HUMAN_REFERENCE.sourceSha256};
     if(kit.humanoid)root.userData.supportHeight=Math.min(...kit.humanoid.legRig.map(l=>l.ankle[1]));
@@ -242,7 +269,8 @@ export function createEnemyFactory(mats){
       if(root.userData.alertState!==alert){eyeMaterial.color.setHex(ENEMY_OPTICS[alert]);root.userData.alertState=alert;}
       if(kit.groundGun!==null){
         const pulse=simulationTime-(flight.lastShotAt??-99)<.12?1:0;
-        joints[kit.groundGun].rotation.x=T.MathUtils.clamp(riflePose&&alert==='idle'?-.30:flight.aimPitch||0,FIELD_RIFLE.minPitch,FIELD_RIFLE.maxPitch);
+        const lowered=form==='listener'&&alert!=='engaged';
+        joints[kit.groundGun].rotation.x=lowered?LISTENER_TOOL.patrolPitch:T.MathUtils.clamp(riflePose&&alert==='idle'?-.30:flight.aimPitch||0,FIELD_RIFLE.minPitch,FIELD_RIFLE.maxPitch);
         joints[kit.groundGun].position.z=kit.bones[kit.groundGun].position[2]+pulse*.05;
         joints[kit.gunSignal].scale.setScalar(1+(flight.chargeProgress||0)*.45+pulse*.9);
       }
@@ -310,7 +338,7 @@ export function createEnemyFactory(mats){
         }
       }else{
         const pose=flight.combatPose||flight.tactics?.state,covered=['cover','return','relocate'].includes(pose),guard=pose==='guard',windup=pose==='windup';
-        const brace=(covered?.085:windup?.06:guard?.035:0)+.52*(flight.coverCrouch||0),aiming=alert==='engaged'&&!!flight.ranged;
+        const brace=(form==='listener'?.035:0)+(covered?.085:windup?.06:guard?.035:0)+.52*(flight.coverCrouch||0),aiming=alert==='engaged'&&!!flight.ranged;
         const recoil=Math.max(0,1-(simulationTime-(flight.lastShotAt??-99))/.16);
         const gait=Math.sin(cycle)*amount;sampleHumanStep(cycle,runBlend,motionSample);
         pelvis.position.y=kit.humanoid.hipHeight-brace+motionSample[4]*amount+humanIdleBob(time)*.12*(1-amount);
@@ -318,7 +346,7 @@ export function createEnemyFactory(mats){
           const support=leg.ankle[1]+lift+Math.sqrt(Math.max(.001,reach*reach-x*x-z*z));pelvis.position.y=Math.min(pelvis.position.y,support);
         }
         root.userData.nativeMotion=amount>.03?(runBlend>.5?'run':'walkRifle'):'rifle';
-        thorax.rotation.set(.012+pace*.032+(covered?.045:0)-recoil*.018,-gait*.024,(pose==='peek'?.035:0)+gait*.012);
+        thorax.rotation.set((form==='listener'?-.023:.012)+pace*.032+(covered?.045:0)-recoil*.018,-gait*.024,(pose==='peek'?.035:0)+gait*.012);
         if(head){head.rotation.y=gait*.018+(alert==='idle'?Math.sin(time*.65+phase)*.06*(1-amount):0);head.rotation.x=-thorax.rotation.x*.6+(alert==='engaged'?T.MathUtils.clamp(flight.aimPitch||0,-.18,.18):0);}
         for(const leg of legs){
           const offset=leg.side===-1?0:2,lift=Math.max(0,motionSample[offset])*amount,z=motionSample[offset+1]*amount;

@@ -19,7 +19,7 @@ test('a profiled plate is sealed, rounded and convex with outward-facing surface
 
 test('every chassis exposes its red sensor ahead of its own armour in normal and elite forms',()=>{
  const mats=Object.fromEntries(['monster','monsterElite','monsterFace','rose','violet','cyan','pale'].map(k=>[k,new T.MeshStandardMaterial()]));
- const factory=createEnemyFactory(mats);
+ const factory=createEnemyFactory(mats,{detail:'low'});
  for(const form of Object.keys(ENEMY_PROFILES).filter(f=>f!=='seer'))for(const elite of [false,true]){
   const root=factory.create(elite,true,form);root.userData.animate(0,0,false,{awareness:'engaged'},0);root.updateMatrixWorld(true);root.userData.skeleton.update();
   const eye=root.userData.sensorAnchor||(form==='probe'?[0,.55]:form==='scuttler'?[0,.92]:form==='seer'?[0,1.918]:[.064,1.91]);

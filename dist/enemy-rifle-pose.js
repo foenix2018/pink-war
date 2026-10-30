@@ -2,11 +2,11 @@ import {FIELD_RIFLE} from './enemy-weapon-layout.js';
 
 // Two-link arm IK in the thorax frame. Targets belong to the weapon bone, so
 // fingers remain on the grips when the robot aims, crouches or absorbs recoil.
-export function createRifleArmPose(T,arms){
+export function createRifleArmPose(T,arms,layout=FIELD_RIFLE){
  const chains=arms.map(a=>({...a,upperBind:a.lower.position.clone().normalize(),lowerBind:a.wrist.position.clone().normalize(),upperLength:a.lower.position.length(),lowerLength:a.wrist.position.length()}));
  const target=new T.Vector3(),axis=new T.Vector3(),bend=new T.Vector3(),elbow=new T.Vector3(),lowerDirection=new T.Vector3(),inverse=new T.Quaternion(),combined=new T.Quaternion();
- const p=FIELD_RIFLE.pivot;
- const offsets={right:new T.Vector3(FIELD_RIFLE.rightGrip.x-p.x,FIELD_RIFLE.rightGrip.y-p.y,FIELD_RIFLE.rightGrip.z-p.z),left:new T.Vector3(FIELD_RIFLE.leftGrip.x-p.x,FIELD_RIFLE.leftGrip.y-p.y,FIELD_RIFLE.leftGrip.z-p.z)};
+ const p=layout.pivot;
+ const offsets={right:new T.Vector3(layout.rightGrip.x-p.x,layout.rightGrip.y-p.y,layout.rightGrip.z-p.z),left:new T.Vector3(layout.leftGrip.x-p.x,layout.leftGrip.y-p.y,layout.leftGrip.z-p.z)};
  return {update(gun){
   for(const c of chains){
    target.copy(offsets[c.side===1?'right':'left']).applyQuaternion(gun.quaternion).add(gun.position);

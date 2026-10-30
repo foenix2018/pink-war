@@ -36,7 +36,7 @@ test('readiness lowers the rifle and detection raises it while the original eyes
  assert.equal(actor.userData.alertState,'alert');assert.equal(carriesFieldRifle('synth'),true,'the ivory tactical unit now shares the anatomical rifle grips');
 });
 test('every revised ground chassis preserves the mobile budget and adds no dynamic light',()=>{
- const factory=createEnemyFactory(mats());
+ const factory=createEnemyFactory(mats(),{detail:'low'});
  for(const form of ['stalker','listener','brute','bulwark','synth'])for(const elite of [false,true]){
   const actor=factory.create(elite,true,form);let triangles=0,draws=0,lights=0;
   actor.traverse(o=>{if(o.isMesh){draws++;triangles+=o.geometry.attributes.position.count/3;}if(o.isLight)lights++;});
