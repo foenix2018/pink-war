@@ -5,6 +5,7 @@ import {profiledPanel} from './armor-profiles.js';
 import {HUMAN_REFERENCE} from './enemy-humanoid-data.js';
 import {FIELD_RIFLE,carriesFieldRifle} from './enemy-weapon-layout.js';
 import {bruteTorso,bruteHead,bruteArm,bruteLeg} from './enemy-brute-armor.js';
+import {buildBruteV3} from './enemy-brute-v3.js';
 
 // A new hard-surface body over the approved hero's anatomical reference.
 // Planar plates and tapered chamfers replace inflated limbs and round shoulders.
@@ -26,6 +27,7 @@ const tmp=new T.Vector3(),direction=new T.Vector3(),rotation=new T.Quaternion(),
 const reference=HUMAN_REFERENCE.joints;
 export function buildHumanoidRobot({form,elite,ranged,detail,armor,dark,servo,hazard,optics,glow,reactor,boneAt,assembly,thorax,pelvis}){
  if(form==='listener')return buildListener({form,elite,ranged,detail,armor,dark,servo,hazard,optics,glow,boneAt,assembly,thorax,pelvis});
+ if(form==='brute')return buildBruteV3({armor,dark,servo,reactor,optics,glow,boneAt,assembly,thorax,pelvis});
  const heavy=['brute','bulwark'].includes(form),slender=['seer','listener','synth'].includes(form),width=form==='brute'?1.95:heavy?1.45:slender?.96:1.06,limbWidth=form==='brute'?1.42:heavy?1.28:1;
  const a=assembly(thorax),hips=assembly(pelvis),legRig=[],armRig=[];let groundGun=null,gunSignal=null;
  const point=(name,side)=>{const p=reference[(side===-1?'Left':'Right')+name];return [p[0]*width,p[1],p[2]];};
