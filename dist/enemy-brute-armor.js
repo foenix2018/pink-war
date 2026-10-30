@@ -10,7 +10,7 @@ export const BRUTE_DESIGN=Object.freeze({
  role:'armoured industrial siege robot',core:'triangular frontal reactor',
  weakpoints:'existing gameplay head hitzone',material:'worn graphite / scarred steel / exposed hydraulics'
 });
-const plate=(points,depth=.045,bulge=.022)=>profiledPanel(points,{depth,bulge,round:.09,detail:4});
+const plate=(points,depth=.045,bulge=.022)=>profiledPanel(points,{depth,bulge,round:.09,detail:3});
 const chest=plate([[-.175,-.18],[.17,-.18],[.225,-.095],[.22,.11],[.105,.205],[-.13,.20],[-.22,.11]],.075,.032);
 const shoulder=plate([[-.19,-.14],[.165,-.14],[.235,-.045],[.205,.125],[.095,.193],[-.14,.186],[-.225,.065]],.085,.037);
 const reactorBezel=plate([[0,-.145],[.126,.092],[.085,.139],[-.084,.139],[-.127,.092]],.028,.015);
