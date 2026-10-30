@@ -71,10 +71,10 @@ export function bruteTorso({a,hips,armor,dark,servo,reactor}){
    a.box(reactor,[.029,.049,.012],[0,1.34+i*.085,.364],[0,0,0],.003,false);
  }
 }
-export function bruteHead({h,armor,dark,servo}){
+export function bruteHead({h,armor,dark,servo,optics}){
  // Unlike the old biped head: this helmet sits inside the shoulder cavity.
  h.add(crown,armor);
- h.add(visor,dark,matrix([0,1.885,-.159]),false);
+ h.add(visor,optics,matrix([0,1.877,-.193]),false);
  h.box(armor,[.14,.017,.075],[0,1.962,-.086],[0,0,0],.008);
  h.box(dark,[.118,.045,.06],[0,1.784,-.11],[.10,0,0],.008);
  for(const side of [-1,1]){
