@@ -17,7 +17,9 @@ test('BRUTE Le Briseur uses authentic curved armour with graphite texture and se
  const core=armored.find(m=>m.material.name==='BRUTE / scarlet thoracic reactor');
  assert.ok(core,'real separately shaded thoracic reactor should be present');
  assert.equal(core.material.isMeshBasicMaterial,true,'reactor glows without new point lights');
- assert.equal(core.material.color.getHex(),0xff304c);
+ assert.equal(core.material.color.getHex(),0x80d9e8,'reactor optics remain idle blue to preserve auditory alert feedback');
+ brute.userData.animate(0,0,true,{awareness:'engaged'},0);
+ assert.equal(core.material.color.getHex(),0xff180c,'reactor and visor become red when the Brute detects the player');
  assert.ok(brute.getObjectsByProperty('isLight',true).length===0);
  const b=bounds(brute),s=bounds(regular);
  assert.ok(b.max.x-b.min.x>s.max.x-s.min.x+.16,'shoulder silhouette must be appreciably wider');
