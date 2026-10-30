@@ -1,0 +1,16 @@
+/* PINK WARS / OBSIDIAN GLASS — gallery skin, original models preserved */
+body{background:radial-gradient(ellipse 65vw 75vh at 10% 0%,#3e184d66,transparent),radial-gradient(ellipse 75vw 70vh at 90% 55%,#12407577,transparent),#060b16}
+header{background:linear-gradient(135deg,#27345476,#100f28a6)!important;-webkit-backdrop-filter:blur(24px) saturate(170%);backdrop-filter:blur(24px) saturate(170%);border-bottom:1px solid #acdcff73!important}
+#tabs{overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap!important;box-shadow:inset 0 1px #ffffff3a,0 18px 45px #0007!important;border:1px solid #c6e2fa70!important;border-radius:24px!important;background:linear-gradient(140deg,#8497cb2b,#08182bc9)!important;backdrop-filter:blur(20px) saturate(160%)}
+#tabs::-webkit-scrollbar{display:none}
+#tabs button{white-space:nowrap;flex:0 0 auto;min-height:47px;border-radius:17px!important;border-color:#b9d6ff55!important;background:#b8d7ee19!important;backdrop-filter:blur(14px)}
+#tabs button[aria-selected=true]{background:linear-gradient(125deg,#df68ae60,#7640b97b)!important;border-color:#f6b9e1!important;box-shadow:inset 0 1px #fff7,0 8px 22px #f176c63d!important}
+.card{background:linear-gradient(142deg,#85b4e433,#1a2e4b71 60%,#0a1425a8)!important;border:1px solid #a1c9e37a!important;backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);border-radius:26px!important;box-shadow:inset 0 1px #fff4,0 18px 37px #0007!important}
+.card::after{border-color:#d1b6ed4c!important}
+.card>button{background:linear-gradient(132deg,#8bb9e044,#1b385b77)!important;border:1px solid #c7e3ff6b!important;border-radius:17px!important;backdrop-filter:blur(14px)}
+#notice{background:#345c7b2c!important;backdrop-filter:blur(13px);border-radius:15px!important}
+.viewer{background:#050b1aca!important;backdrop-filter:blur(18px)!important}
+.viewer-panel{border:1px solid #c4deff9e!important;border-radius:28px!important;background:linear-gradient(135deg,#5976a65c,#071226db 75%)!important;backdrop-filter:blur(24px) saturate(145%);box-shadow:inset 0 2px #fff5,0 26px 75px #000b!important}
+.viewer-actions button{background:#8bb5ee32!important;border:1px solid #b5d4fa77!important;border-radius:18px!important}
+.audit-compare{display:none!important}
+@media(max-width:600px){.card{min-height:185px!important}#tabs{margin-inline:-5px;padding:7px}#tabs button{padding:12px 15px}}
