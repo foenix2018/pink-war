@@ -66,15 +66,21 @@ test('footsteps follow traveled distance, not joystick intent; jumping and lifts
   ambience.dispose();
 });
 
-test('a nearby flying probe changes the spatial hum without adding persistent audio sources',()=>{
+test('a nearby probe engages the exact RLH four-motor synthesis without new sources per frame',()=>{
   const {ctx,nodes,calls}=audioMock(),ambience=createAmbience(ctx);
   ambience.update(.05,{active:true,position:{x:0,z:0}});const count=nodes.length,starts=calls.starts;
-  for(let i=0;i<10;i++){ctx.tick(.1);ambience.update(.1,{active:true,position:{x:0,z:0},probes:[{form:'probe',x:3,z:-3,elevation:2.7}]});}
-  assert.ok(nodes.some(n=>n.kind==='oscillator'&&n.frequency.value>130),'nearby propellers raise the mechanical frequency');
-  assert.equal(nodes.length,count);assert.equal(calls.starts,starts);
+  for(let i=0;i<10;i++){ctx.tick(.1);ambience.update(.1,{active:true,position:{x:0,z:0},probes:[{form:'probe',x:3,z:-3,elevation:2.7,motionX:3.6}]});}
+  const motors=nodes.filter(n=>n.kind==='oscillator'&&n.type==='sawtooth');
+  assert.equal(motors.length,4,'RLH Rescue 01 uses four sawtooth electric motors');
+  assert.ok(motors.some(n=>n.frequency.value>158),'actual drone speed changes motor pitch');
+  assert.equal(nodes.length,count+14,'four RLH motors share one gain and one stereo bus');
+  assert.equal(calls.starts,starts+4,'the motor bank is started only once');
+  assert.equal(ambience.stats.drone.motors,4);
   for(let i=0;i<10;i++){ctx.tick(.1);ambience.update(.1,{active:true,position:{x:0,z:0},probes:[]});}
-  assert.ok(nodes.some(n=>n.kind==='oscillator'&&n.frequency.value>56&&n.frequency.value<58),'destroyed probe leaves the environmental hum');
+  assert.equal(nodes.length,count+14);
+  assert.ok(nodes.some(n=>n.kind==='oscillator'&&n.frequency.value>56&&n.frequency.value<58),'low environmental machinery hum remains');
   ambience.dispose();
+  assert.ok(nodes.every(n=>n.disconnected),'all RLH motor nodes are released');
 });
 
 test('environment event sources finish, context suspension schedules no creaks',()=>{

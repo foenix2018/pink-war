@@ -13,7 +13,7 @@ test('La galerie ouvre les objets du jeu dans le canvas natif (et non les proxie
  assert.match(viewer,/import\('\.\/shadow-unit-game\.js'\)/);
  assert.match(viewer,/import\('\.\/reco1\.js'\)/);
  assert.match(viewer,/import\('\.\/weapons\.js'\)/);
- assert.match(viewer,/import\('\.\/enemies\.js'\)/);
+ assert.match(viewer,/import\('\.\/enemies\.js(?:\?v=[^']+)?'\)/);
  assert.match(viewer,/import\('\.\/ai-companions\.js'\)/);
  assert.doesNotMatch(viewer,/const existing=null|placeholder|cube proxy/);
 });
