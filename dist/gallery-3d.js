@@ -8,7 +8,7 @@ const canvas = $('native-model'), viewer = $('viewer'), status = $('viewer-messa
 const arButton = $('ar-launch'), modelViewer = $('model');
 const renderer = new WebGPURenderer({canvas, antialias: !/iPhone|Android/i.test(navigator.userAgent), alpha: false, forceWebGL:true});
 const rendererReady=renderer.init();
-const galleryBuildVersion='2026-10-29-gallery-audit-v13';
+const galleryBuildVersion='2026-10-31-gab1-communication-v1';
 renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.22;
@@ -38,6 +38,8 @@ const palette=(profile)=>({
  monster:new T.MeshStandardMaterial({color:0x4d5861,metalness:.5,roughness:.5})
 });
 let arPoseLocked=false;
+const gabControls=$('gaby-voice-controls'),gabStatus=$('gaby-voice-status');
+let gabAudio=null;
 let item=null, requestId=0, running=false, autoRotate=true, bearing=.48, elevation=.18, zoom=4.1, previousTime=0, exportUrls=[], arReady=false;
 let lastCanvasWidth=0,lastCanvasHeight=0,lastPixelRatio=0,renderPending=false,groundTick=0,frameFailure=false;
 const tabletOrMobile=/iPhone|iPad|Android|Mobile/i.test(navigator.userAgent);
@@ -68,7 +70,7 @@ async function actualObject(name){
   const actor=createAICompanion(T,scene,name==='GAB-1'?'ghju':'lylu');
   actor.root.removeFromParent();
   actor.root.position.set(0,0,0);
-  return {root:actor.root,animate:(t,dt)=>actor.preview(dt),source:'Sphère IA articulée du jeu · '+(name==='GAB-1'?'quatre coques de protection':'six panneaux offensifs'),dispose:()=>actor.dispose()};
+  return {root:actor.root,animate:(t,dt)=>actor.preview(dt),source:'Sphère IA articulée du jeu · '+(name==='GAB-1'?'quatre coques de protection / projection optique émotionnelle':'six panneaux offensifs'),say:(mood,options)=>actor.say(mood,options),stopSpeaking:()=>actor.stopSpeaking(),voiceState:()=>actor.snapshot().communication,dispose:()=>actor.dispose()};
  }
  if(name==='RECO1'){
   const {createReco1}=await import('./reco1.js');
@@ -122,7 +124,11 @@ function fitObject(root){
  let meshes=0;root.traverse(o=>{if(o.isMesh||o.isSkinnedMesh)meshes++;});
  if(!meshes)throw Error('Aucun maillage réel dans le modèle.');
  root.updateMatrixWorld(true);
+ // Invisible Gaby holograms must not shrink its default sphere on the pedestal.
+ const hiddenHolo=root.getObjectByName?.('GAB-1 / optique vers projection');
+ if(hiddenHolo&&hiddenHolo.parent)hiddenHolo.parent.remove(hiddenHolo);
  const bounds=new T.Box3().setFromObject(root);
+ if(hiddenHolo)root.add(hiddenHolo);
  if(bounds.isEmpty())throw Error('Géométrie sans dimensions.');
  const extent=bounds.getSize(new T.Vector3()),center=bounds.getCenter(new T.Vector3());
  const holder=new T.Group();holder.add(root);
@@ -152,6 +158,10 @@ function draw(now){
   camera.position.set(zoom*Math.sin(bearing)*Math.cos(elevation),zoom*Math.sin(elevation)+.15,zoom*Math.cos(bearing)*Math.cos(elevation));
   camera.lookAt(0,0,0);
   try{if(!arPoseLocked)item.animate?.(now/1000,dt);
+   if(item.name==='GAB-1'){
+    const state=item.voiceState?.();
+    if(state&&gabStatus)gabStatus.textContent=state.speaking?'MESSAGE · '+state.mood.toUpperCase():state.projection>.008?'RETOUR AU COMBAT · projection en retrait':'COMBAT · OPTIQUE SEULE';
+   }
    // Ground every gallery entry on the same pedestal, including animated enemies and weapons.
    // Prefer anatomical foot bones for soldiers; other models use their visible geometry bounds.
    pivot.updateMatrixWorld(true);
@@ -183,7 +193,7 @@ function draw(now){
  requestAnimationFrame(draw);
 }
 function startDraw(){if(!running){running=true;previousTime=performance.now();requestAnimationFrame(draw);}}
-window.galleryClose=()=>{requestId++;arReady=false;groundTick=5;frameFailure=false;arButton.textContent='AR · VOIR CHEZ MOI';item?.dispose?.();item=null;pivot.clear();modelViewer.removeAttribute('src');modelViewer.removeAttribute('ios-src');modelViewer.hidden=true;canvas.hidden=false;clearExports();arButton.disabled=true;};
+window.galleryClose=()=>{item?.stopSpeaking?.();if(gabControls)gabControls.hidden=true;requestId++;arReady=false;groundTick=5;frameFailure=false;arButton.textContent='AR · VOIR CHEZ MOI';item?.dispose?.();item=null;pivot.clear();modelViewer.removeAttribute('src');modelViewer.removeAttribute('ios-src');modelViewer.hidden=true;canvas.hidden=false;clearExports();arButton.disabled=true;};
 window.galleryResetView=()=>{bearing=.45;elevation=.16;zoom=4.1;autoRotate=false;$('rotation').textContent='⟳ ROTATION AUTO : OFF';};
 window.galleryToggleRotation=()=>{autoRotate=!autoRotate;$('rotation').textContent=autoRotate?'⟳ ROTATION AUTO : ON':'⟳ ROTATION AUTO : OFF';};
 window.galleryBuild=async name=>{
@@ -197,11 +207,25 @@ window.galleryBuild=async name=>{
   const repaired=repairMissingMaterials(entry.root);
   const count=fitObject(entry.root);
   item={...entry,name};
+  if(gabControls){gabControls.hidden=name!=='GAB-1';if(name==='GAB-1')gabStatus.textContent='COMBAT · OPTIQUE SEULE';}
   bearing=name==='BRUTE'?.30:.45;elevation=name==='BRUTE'?.10:.16;zoom=4.1;groundTick=5;
   setStatus(entry.source+' · '+count+' maillages'+(repaired?' · '+repaired+' matériaux réparés':'')+' · glisser pour tourner, pincer pour zoomer.');
   arButton.disabled=false;startDraw();
  }catch(e){if(token!==requestId)return;setStatus('Échec '+galleryBuildVersion+' · '+name+' : '+(e.message||e)+' · '+String(e.stack||'').slice(0,520));arButton.disabled=true;console.error('Galerie Pink Wars',name,e);}
 };
+$('gaby-combat')?.addEventListener('click',()=>{
+ if(item?.name!=='GAB-1')return;item.stopSpeaking?.();gabStatus.textContent='COMBAT · OPTIQUE SEULE';
+});
+$('gaby-speak')?.addEventListener('click',()=>{
+ if(item?.name!=='GAB-1')return;
+ const mood=$('gaby-mood')?.value||'message';
+ // Unlock Web Audio only after a real click; the face still animates when sound is muted.
+ const Audio=window.AudioContext||window.webkitAudioContext;
+ if(!gabAudio&&Audio)try{gabAudio=new Audio()}catch{}
+ const selected=item;
+ const speak=()=>{if(item===selected)item.say?.(mood,{audio:gabAudio,sound:!!gabAudio});};
+ if(gabAudio?.state==='suspended')void gabAudio.resume().then(speak).catch(speak);else speak();
+});
 window.galleryAR=async()=>{
  if(!item)return;
  const active=item;
