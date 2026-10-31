@@ -58,7 +58,7 @@ export function createReco1Pose(asset,states,rig={}){
    bone('Spine').quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(.22*crouchBlend,0,0)));bone('Spine1').quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(.12*crouchBlend,0,0)));bone('Neck').quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(-.20*crouchBlend,0,0)));actor.updateMatrixWorld(true);
    ['Right','Left'].forEach((s,i)=>{const pole=pos(bone(s+'UpLeg')).add(new T.Vector3(i===0?-.10:.10,-.02,.34));ik(bone(s+'UpLeg'),bone(s+'Leg'),bone(s+'Foot'),targets[i],pole);const foot=bone(s+'Foot');foot.quaternion.copy(quat(foot.parent).invert().multiply(feetQ[i]));actor.updateMatrixWorld(true);});
   }
-  if(states.motion!=='run'){actor.position.y+=ground-soleY();actor.updateMatrixWorld(true);}
+  if(states.motion!=='run'){actor.position.y+=ground-(rig.soleY?rig.soleY():soleY());actor.updateMatrixWorld(true);}
   if(states.mode==='search')bone('Head').quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(0,Math.sin(t*.65)*.22,0)));
   actor.updateMatrixWorld(true);drive(torsoBind);drive(headBind);
   // This is the simulation's authoritative carbine frame, not an independent visual aim.

@@ -46,3 +46,14 @@ test('Rempart skeleton has broader hips and shoulders than RECO1 without losing 
  const width=(actor,a,b)=>{const bones=actor.userData.nativeSkeleton.bones;return bones.find(v=>v.name===a).getWorldPosition(new T.Vector3()).distanceTo(bones.find(v=>v.name===b).getWorldPosition(new T.Vector3()));};
  for(const joint of ['Arm','UpLeg'])assert.ok(width(heavy,'mixamorigLeft'+joint,'mixamorigRight'+joint)>width(recon,'mixamorigLeft'+joint,'mixamorigRight'+joint)*1.7);
 });
+
+test('broader Rempart boots stay on the floor through the native walking cycle',()=>{
+ const actor=createRempart(),skeleton=actor.userData.skeleton,feet=new Set(skeleton.bones.map((b,i)=>/mixamorig(Left|Right)Foot$/.test(b.name)?i:-1).filter(i=>i>=0)),samples=[];
+ actor.traverse(mesh=>{if(!mesh.isSkinnedMesh)return;const ids=mesh.geometry.attributes.skinIndex;for(let i=0;i<ids.count;i++)if(feet.has(ids.getX(i)))samples.push({mesh,index:i});});
+ const point=new T.Vector3();
+ for(let i=0;i<60;i++){
+  const t=i/30;actor.userData.animate(t,0,true,{x:0,z:-t,awareness:'engaged'},t);skeleton.update();let min=Infinity;
+  for(const sample of samples){sample.mesh.getVertexPosition(sample.index,point);min=Math.min(min,point.y);}
+  assert.ok(min>-.005&&min<.012,'at least one real boot supports the chassis, y='+min);
+ }
+});

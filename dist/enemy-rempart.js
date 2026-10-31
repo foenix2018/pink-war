@@ -6,13 +6,24 @@ import {enemyAlertState,ENEMY_OPTICS} from './enemy-alert.js';
 import {rempartSurfaces} from './rempart-surfaces.js';
 import {rempartGeometry} from './enemy-rempart-model.js';
 import {REMPART} from './rempart-profile.js';
-const geometryCache=new Map(),materialCache=new WeakMap();
+const geometryCache=new Map(),materialCache=new WeakMap();const supportCache=new Map();
+function footSupportPoints(detail){
+ if(supportCache.has(detail))return supportCache.get(detail);
+ const low=rempartGeometry(detail),supports=new Map();
+ for(const side of ['Right','Left']){
+  const slot=low.names.indexOf(side+'Foot'),vertices=[];
+  for(const part of low.parts){if(!['plate','dark','metal'].includes(part.key))continue;const p=part.geometry.attributes.position,ids=part.geometry.attributes.skinIndex;for(let i=0;i<p.count;i++)if(ids.getX(i)===slot)vertices.push(new T.Vector3().fromBufferAttribute(p,i));}
+  const selected=new Set();for(const x of [-8,-4,-2,-1,-.5,0,.5,1,2,4,8])for(const z of [-8,-4,-2,-1,-.5,0,.5,1,2,4,8]){let best=null,min=Infinity;for(const v of vertices){const d=x*v.x+v.y+z*v.z;if(d<min){min=d;best=v;}}selected.add(best);}
+  const unique=new Map();for(const p of selected)unique.set(p.toArray().map(v=>v.toFixed(5)).join(','),p);supports.set(side,[...unique.values()]);
+ }
+ supportCache.set(detail,supports);return supports;
+}
 export function createRempart({elite=false,environment=null,detail='high'}={}){
  const asset=reco1Assets(),states={motion:'idle',aim:false,mode:'patrol'},root=new T.Group(),visual=new T.Group();
  const armRest=new Map(),aimQ=new T.Quaternion(),parentQ=new T.Quaternion(),point=new T.Vector3(),shoulderPoint=new T.Vector3(),direction=new T.Vector3(),delta=new T.Quaternion();
  // Native leg/body animation is retained. Heavy arms are braced with world-space
  // shoulder-to-elbow solves, so a walking shoulder never pulls away from its cannon.
- const pose=createReco1Pose(asset,states,{proportions:REMPART.proportions,afterPose:({actor,bones,pose:p})=>{
+ const rempartRig={proportions:REMPART.proportions,afterPose:({actor,bones,pose:p})=>{
   for(const side of ['Right','Left']){
    const upper=bones.get('mixamorig'+side+'Arm'),fore=bones.get('mixamorig'+side+'ForeArm');
    upper.getWorldPosition(shoulderPoint);
@@ -25,17 +36,18 @@ export function createRempart({elite=false,environment=null,detail='high'}={}){
    aimQ.setFromEuler(new T.Euler(right?-(p.aimPitch||0):-(p.guard||0)*.10,right?p.aimYaw||0:0,0,'YXZ')).multiply(rest.fore);
    fore.quaternion.copy(fore.parent.getWorldQuaternion(parentQ).invert().multiply(aimQ));actor.updateMatrixWorld(true);
   }
- }});
+ }};
+ const pose=createReco1Pose(asset,states,rempartRig);
  pose.gun.visible=false;pose.setPose({aimPitch:0,aimYaw:0});pose.update(0,0,0);
  root.add(visual);visual.rotation.y=Math.PI;root.scale.setScalar(enemyScale('bulwark',elite));
  const wear=rempartSurfaces(T);
  let base=materialCache.get(environment||asset);
  if(!base){base={
-  plate:new T.MeshStandardMaterial({color:0x79716d,map:wear.paint,roughnessMap:wear.rough,bumpMap:wear.height,bumpScale:.0008,roughness:.68,metalness:.72,envMap:environment,envMapIntensity:.75}),
+  plate:new T.MeshStandardMaterial({color:0x505357,map:wear.paint,roughnessMap:wear.rough,bumpMap:wear.height,bumpScale:.0012,roughness:.84,metalness:.62,envMap:environment,envMapIntensity:.55}),
   dark:new T.MeshStandardMaterial({color:0x171a1c,roughness:.68,metalness:.7,envMap:environment,envMapIntensity:.5}),
-  metal:new T.MeshStandardMaterial({color:0x777979,roughness:.43,metalness:.85,envMap:environment,envMapIntensity:.7}),
-  red:new T.MeshBasicMaterial({color:0xff1028,toneMapped:false}),
-  eye:new T.MeshBasicMaterial({color:ENEMY_OPTICS.idle,toneMapped:false}),
+  metal:new T.MeshStandardMaterial({color:0x555b61,roughness:.40,metalness:.85,envMap:environment,envMapIntensity:.7}),
+  red:new T.MeshBasicMaterial({color:0xff0a21,map:wear.signal,transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}),
+  eye:new T.MeshBasicMaterial({color:ENEMY_OPTICS.idle,map:wear.signal,transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}),
   decal:new T.MeshStandardMaterial({color:0xffffff,map:wear.stencil,transparent:true,alphaTest:.3,roughness:.95,metalness:.05,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1})
  };materialCache.set(environment||asset,base);}
  const materials={...base,eye:base.eye.clone()};
@@ -46,6 +58,13 @@ export function createRempart({elite=false,environment=null,detail='high'}={}){
  }
  // These are the actual 41 native bones, not an independent animation approximation.
  const skeleton=new T.Skeleton(nativeBones,nativeBones.map(b=>b.matrixWorld.clone().invert()));
+ // Contact points come from the actual sole hull, not empty bounding-box corners.
+ const soleSamples=[];
+ for(const side of ['Right','Left']){
+  const bone=pose.bones.get('mixamorig'+side+'Foot'),inverse=bone.matrixWorld.clone().invert();
+  for(const p of footSupportPoints(detail).get(side))soleSamples.push({bone,p:p.clone().applyMatrix4(inverse)});
+ }
+ const contactPoint=new T.Vector3();rempartRig.soleY=()=>{let min=Infinity;for(const sample of soleSamples)min=Math.min(min,contactPoint.copy(sample.p).applyMatrix4(sample.bone.matrixWorld).y);return min;};
  for(const part of geometryCache.get(detail)){
   const mesh=new T.SkinnedMesh(part.geometry,materials[part.key]);mesh.name='B-11 / '+part.key;mesh.bindMode=T.DetachedBindMode;mesh.bind(skeleton,new T.Matrix4());mesh.castShadow=!['red','eye','decal'].includes(part.key);mesh.receiveShadow=mesh.castShadow;mesh.boundingSphere=part.geometry.boundingSphere?.clone()||new T.Sphere(new T.Vector3(0,1,0),2);mesh.boundingSphere.radius+=.6;visual.add(mesh);
  }
