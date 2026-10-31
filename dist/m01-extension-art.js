@@ -589,7 +589,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
         }
         o.userData.gem.position.y = .75 + Math.sin(t * 2.4 + p.x) * .08; o.userData.gem.rotation.y = t * 1.8;
       }
-      for (const [id, o] of cachesById) if (!live.has(id)) { o.removeFromParent(); cachesById.delete(id); }
+      for (const [id, o] of cachesById) if (!live.has(id)) { o.removeFromParent(); o.userData.dispose?.(); cachesById.delete(id); }
     },
     setDoor(id, state) { const d = doors.get(id); if (!d) return; d.state = state ? (d.d.open ? 'auto' : 'open') : 'closed'; if (!state) d.open = 0; if (id === 'monte-charge' && state) liftLit = true; },
     setPower(on) { power.caserne = !!on; },
