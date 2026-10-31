@@ -33,7 +33,10 @@ export function trackedBarrelRay(T,gun,scratch={}){
  const q=scratch.quaternion||=new T.Quaternion();
  gun.updateWorldMatrix(true,false);
  const flash=gun.userData.flash;
- if(flash){flash.updateWorldMatrix(true,false);flash.getWorldPosition(origin);}
+ if(flash){
+   if(flash.parent){flash.updateWorldMatrix(true,false);flash.getWorldPosition(origin);}
+   else origin.copy(gun.localToWorld((scratch.local||=new T.Vector3()).copy(flash.position)));
+ }
  else gun.getWorldPosition(origin);
  gun.getWorldQuaternion(q);
  direction.set(0,0,-1).applyQuaternion(q).normalize();
