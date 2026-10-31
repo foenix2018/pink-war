@@ -354,7 +354,8 @@ async function initGalleryThumbStage(){
  const thumbCamera=new T.PerspectiveCamera(41,1,.025,100);
  thumbCamera.position.set(1.35,.75,3.3);
  thumbCamera.lookAt(0,0,0);
- galleryThumbStage={thumbCanvas,thumbRenderer,thumbScene,thumbPivot,thumbCamera};
+ const portraitCamera=new T.OrthographicCamera(-1,1,1,-1,.025,1000);
+ galleryThumbStage={thumbCanvas,thumbRenderer,thumbScene,thumbPivot,thumbCamera,portraitCamera};
  return galleryThumbStage;
 }
 async function renderGalleryThumbnail(name){
@@ -369,16 +370,70 @@ async function renderGalleryThumbnail(name){
   if(box.isEmpty())throw Error('Modèle vide : '+name);
   const size=box.getSize(new T.Vector3());
   const center=box.getCenter(new T.Vector3());
-  const scale=2.1/Math.max(size.x,size.y,size.z,.02);
+  const isPerson=name==='GHJU'||name==='LYLU';
+  const isPortrait=isPerson||Object.hasOwn(enemyForms,name)||name==='RECO1'||name==='ROBOT LOURD';
   const centered=new T.Group();
   centered.add(actor.root);
-  centered.position.set(-center.x,-center.y,-center.z);
   stage.thumbPivot.add(centered);
-  stage.thumbPivot.scale.setScalar(scale);
-  stage.thumbPivot.rotation.y=name==='BRUTE'?.22:name==='GABY'||name==='CARA'?.35:.10;
-  stage.thumbCamera.position.set(1.22,.50,3.45);
-  stage.thumbCamera.lookAt(0,0,0);
-  await stage.thumbRenderer.renderAsync(stage.thumbScene,stage.thumbCamera);
+  let selectedCamera=stage.thumbCamera;
+  if(isPortrait){
+   // A REAL three-quarter frontal headshot, not a stretched/zoomed CSS bitmap:
+   // keep the actual native head meshes, and crop using camera framing.
+   let headCenter=new T.Vector3(center.x,box.min.y+size.y*.84,center.z);
+   let cropHeight=Math.max(.18,size.y*.37);
+   if(isPerson&&actor.soldier?.head){
+    actor.soldier.head.updateWorldMatrix(true,true);
+    const helmetBox=new T.Box3().setFromObject(actor.soldier.head);
+    if(!helmetBox.isEmpty()){
+     const helmetSize=helmetBox.getSize(new T.Vector3());
+     headCenter=helmetBox.getCenter(new T.Vector3());
+     cropHeight=Math.max(helmetSize.y*1.53,helmetSize.x*1.28,.20);
+    }
+   }else if(name==='SONDE S-03'){
+    headCenter.y=box.min.y+size.y*.54;
+    cropHeight=Math.max(size.y*.67,.32);
+   }else if(name==='RAMPANT'){
+    headCenter.y=box.min.y+size.y*.65;
+    cropHeight=Math.max(size.y*.72,.32);
+   }else if(name==='BRUTE'){
+    headCenter.y=box.min.y+size.y*.79;
+    cropHeight=Math.max(size.y*.31,.34);
+   }else if(name==='ROBOT LOURD'){
+    headCenter.y=box.min.y+size.y*.84;
+    cropHeight=Math.max(size.y*.35,.35);
+   }else{
+    const headBone=actor.root.getObjectByName('sensor-head');
+    if(headBone){
+     const position=headBone.getWorldPosition(new T.Vector3());
+     if(position.y>box.min.y+size.y*.58&&position.y<box.max.y+size.y*.08){
+      headCenter.set(position.x,position.y,position.z);
+     }
+    }
+   }
+   centered.position.set(-headCenter.x,-headCenter.y,-headCenter.z);
+   stage.thumbPivot.scale.setScalar(1);
+   stage.thumbPivot.rotation.set(0,0,0);
+   const cam=stage.portraitCamera;
+   cam.left=-cropHeight*.5;cam.right=cropHeight*.5;
+   cam.top=cropHeight*.5;cam.bottom=-cropHeight*.5;
+   cam.updateProjectionMatrix();
+   // Helmet visors and enemy optics point toward -Z in Pink Wars.
+   // Camera comes from slightly camera-right and above: face in 3/4 view.
+   const distance=Math.max(5,size.y*4);
+   cam.position.set(distance*.43,distance*.11,-distance);
+   cam.lookAt(0,0,0);
+   cam.updateMatrixWorld(true);
+   selectedCamera=cam;
+  }else{
+   // Weapons and companion spheres retain the full-object shot.
+   const scale=2.1/Math.max(size.x,size.y,size.z,.02);
+   centered.position.set(-center.x,-center.y,-center.z);
+   stage.thumbPivot.scale.setScalar(scale);
+   stage.thumbPivot.rotation.y=name==='GABY'||name==='CARA'?.35:.10;
+   stage.thumbCamera.position.set(1.22,.50,3.45);
+   stage.thumbCamera.lookAt(0,0,0);
+  }
+  await stage.thumbRenderer.renderAsync(stage.thumbScene,selectedCamera);
   const image=stage.thumbCanvas.toDataURL('image/png');
   if(!image.startsWith('data:image/png;base64,')||image.length<1000)throw Error('Capture de miniature vide');
   return image;
