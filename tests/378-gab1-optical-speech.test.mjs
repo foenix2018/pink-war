@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from '../dist/vendor/three.webgpu.min.js';
 import {createAICompanion} from '../dist/ai-companions.js';
+import {ArenaGame} from '../dist/game-logic.js';
 import {createGabCommunication,GAB1_MOODS,gabMoodForEvent} from '../dist/companion-communication.js';
 
 const canvasStub=()=>({
@@ -26,7 +27,7 @@ test('Gabrielle hologram: optics alone when idle, appears only while communicati
   actor.stop();for(let i=0;i<65;i++)actor.update(1/60);
   assert.equal(actor.snapshot().visible,false);
   assert.equal(actor.snapshot().projection,0);
-  assert.equal(parent.children.length,0===1?1:3,'mechanical root retains only its original parts plus projection groups before disposal');
+  assert.equal(parent.children.length,3,'all three hologram elements remain owned until disposal');
   actor.dispose();assert.equal(parent.children.length,0);
  }finally{if(prior===undefined)delete globalThis.document;else globalThis.document=prior;}
 });
@@ -52,4 +53,13 @@ test('Gab-1 true companion reacts to skills, Cara remains without a pink speech 
  assert.equal(gaby.say('danger',{sound:false}),true);
  gaby.reset();assert.equal(gaby.snapshot().communication.speaking,false);
  gaby.dispose();cara.dispose();assert.equal(scene.children.length,0);
+});
+
+test('Gaby issues an automatic warning when an engaged enemy is visibly close, even at full HP',()=>{
+ const world=new T.Scene(),actor=createAICompanion(T,world,'ghju'),game=new ArenaGame([]);
+ game.enemies=[{id:111,hp:100,x:game.player.x,z:game.player.z-6,elevation:0,aimHeight:1.25,awareness:'engaged'}];
+ actor.update(1/60,{game,assistance:false,torchEnabled:false,sound:false});
+ assert.equal(actor.snapshot().communication.mood,'danger');
+ assert.equal(actor.snapshot().communication.speaking,true);
+ actor.dispose();
 });
