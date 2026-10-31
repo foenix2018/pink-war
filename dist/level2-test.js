@@ -616,11 +616,16 @@ function pauseMission(){
  if(!running||paused)return;
  combatHud?.reset();touchSprinting=false;paused=true;running=false;battleAudio?.pause();environmentAudio?.pause();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
  touchControls?.reset();pinkControls.reset();document.exitPointerLock?.();
- pauseMenu.show();$('start').textContent='REPRENDRE LA MISSION →';
+ // The immersive headset uses its own selectable 3D pause menu.
+ // Avoid an invisible HTML pause dialog retaining the wrong state.
+ if(!xr?.active)pauseMenu.show();
+ else pauseMenu.hide(false);
+ $('start').textContent='REPRENDRE LA MISSION →';
  $('status').textContent='PAUSE · PINK WARS / NIVEAU 2';
 }
 function unpauseMission(){
- if(!paused)return;paused=false;running=true;shade.style.display='none';
+ if(!paused){if(pauseMenu.isOpen)pauseMenu.hide(false);return;}
+ paused=false;running=true;shade.style.display='none';
  pauseMenu.hide(false);if(!touchControls?.root&&!xr?.active)canvas.requestPointerLock?.().catch?.(()=>{});
 }
 async function loadAuthenticSoldier(){
