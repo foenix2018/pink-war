@@ -113,11 +113,20 @@ export function createHardSurfaceFurniture(T,root,{M,low=false}={}){
  }
  function dress(o){
   if(!o)return false;
+  const start=a.items.length;
   if(['reception','desk','terminal-desk','radio-table','map-table'].includes(o.kind))counter(o);
   else if(o.kind==='bench')bench(o);
   else if(['lockers','cabinet','rack'].includes(o.kind))locker(o);
   else if(o.kind==='display')display(o);
   else return false;
+  // Rotate only the freshly baked geometry around the authored furniture
+  // footprint. Market fronts must face the public street, never a side wall.
+  if(o.yaw){
+   const change=new T.Matrix4().makeTranslation(o.x,0,o.z)
+     .multiply(new T.Matrix4().makeRotationY(o.yaw))
+     .multiply(new T.Matrix4().makeTranslation(-o.x,0,-o.z));
+   for(let k=start;k<a.items.length;k++)a.items[k].geometry.applyMatrix4(change);
+  }
   return true;
  }
  function blanket(x,y,z,w,d){
