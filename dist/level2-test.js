@@ -1,5 +1,6 @@
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import {assistedAim,firingView} from './aim-assist.js';
+import {sightPoint} from './sight-line.js';
 import {walkingSurface} from './surface-steps.js';
 import {createVesperProps,createBreachFrame,createBreachTexture} from './vesper-props.js';
 import {createWorldShadows,createGroundOcclusion} from './world-shadows.js';
@@ -681,6 +682,7 @@ function gameTick(dt){
  const x=controls.moveX+touch.x,z=controls.moveZ+touch.z;
  const aiming=!!OPTICS[game.weapon.id]&&game.reloadRemaining<=0&&(mouseAim||touch.aim||controls.aim);
  aimBlend+=(Number(aiming)-aimBlend)*(1-Math.exp(-dt*14));
+ game.precisionAiming=aimBlend>.55;
  document.body.classList.toggle('aiming',aiming);
  const sprint=!aiming&&(controls.sprint||touchSprinting);
  if(controls.pause){pauseMission();return;}
@@ -704,16 +706,7 @@ function gameTick(dt){
  // visible target; projectile origin is the ACTUAL held weapon muzzle.
  updateOriginalSoldier(dt,Math.hypot(x,z)>.1,sprint,firing);
  const forward=new T.Vector3();camera.getWorldDirection(forward);
- const far=camera.position.clone().addScaledVector(forward,160);
- let near=1,target=far;
- for(const box of collisions){
-   const hit=segmentBox(camera.position,far,box);
-   if(hit!==null&&hit<near){near=hit;target=camera.position.clone().lerp(far,hit);}
- }
- for(const e of game.enemies){
-   const hit=traceEnemyHit(camera.position,far,e);
-   if(hit&&hit.t<near){near=hit.t;target=camera.position.clone().lerp(far,hit.t);}
- }
+ const target=sightPoint(T,camera.position,forward,{obstacles:collisions,enemies:game.enemies});
  const gun=view==='third'?playerRig?.model?.gun:weapon;
  const muzzle=gun?.userData?.flashFor?.(game.nextDualHand)||gun?.userData?.flash;
  const origin=new T.Vector3();
@@ -722,7 +715,7 @@ function gameTick(dt){
   catch{origin.copy(camera.position).addScaledVector(forward,.23);}
  }else origin.copy(camera.position).addScaledVector(forward,.23);
  const shotDirection=target.clone().sub(origin).normalize();
- const aim=xr?.active?xr.aim():{origin,direction:new T.Vector3().copy(assistedAim({camera:camera.position,forward,origin,direction:shotDirection,enemies:game.enemies,obstacles:collisions,touch:!!navigator.maxTouchPoints}))};
+ const aim=xr?.active?xr.aim():{origin,direction:aimBlend>.3?shotDirection:new T.Vector3().copy(assistedAim({camera:camera.position,forward,origin,direction:shotDirection,enemies:game.enemies,obstacles:collisions,touch:!!navigator.maxTouchPoints}))};
  if(game.weapon.semiAuto&&firePressQueued)game.triggerHeld=false;
  firePressQueued=false;
  const ammoBefore=game.ammo[game.weaponIndex],bladeBefore=game.bladeSlashAt;
