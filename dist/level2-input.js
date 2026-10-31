@@ -1,3 +1,4 @@
+import {createTouchOrbit} from './touch-orbit.js';
 // M02 official Pink Wars controls adapter.
 // Input mappings are imported from the game's production desktop-input module
 // instead of copying arbitrary button values.
@@ -44,7 +45,7 @@ export function createPinkWarsInput(){
 // Keep gamepad/keyboard mappings from DesktopGamepadInput unchanged.
 export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onReload,onCrouch,onView,onPause,onAim}={}){
  const touch=(window.matchMedia?.('(pointer:coarse)')?.matches??(navigator.maxTouchPoints>0));
- if(!touch)return {state:{x:0,z:0,lookX:0,lookY:0,fire:false,aim:false},reset(){}};
+ if(!touch)return {state:{x:0,z:0,lookX:0,lookY:0,lookDX:0,lookDY:0,fire:false,aim:false},step(){return 0;},reset(){}};
  const root=document.createElement('div');root.id='m02-touch-controls';
  root.innerHTML='<div class="m02-stick" id="m02-move" aria-label="Déplacement"><div class="m02-stick-ring"><span class="m02-stick-knob"></span></div><small>SE DÉPLACER</small></div>'+
    
@@ -68,19 +69,20 @@ export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onRelo
  };
  bindStick('#m02-move','x','z');
  // A free swipe on the right half looks around; it never fires.
- let lookPointer=null,lookLastX=0,lookLastY=0;
+ const orbit=createTouchOrbit();let lookPointer=null;
  host.addEventListener('pointerdown',e=>{
   if(e.pointerType==='mouse'||e.clientX<innerWidth*.5||lookPointer!==null)return;
-  lookPointer=e.pointerId;lookLastX=e.clientX;lookLastY=e.clientY;
+  lookPointer=e.pointerId;orbit.start(e.pointerId,e.clientX,e.clientY);
   try{host.setPointerCapture(e.pointerId)}catch{}
  });
  host.addEventListener('pointermove',e=>{
   if(e.pointerId!==lookPointer)return;
-  state.lookDX+=Math.max(-90,Math.min(90,e.clientX-lookLastX));
-  state.lookDY+=Math.max(-90,Math.min(90,e.clientY-lookLastY));
-  lookLastX=e.clientX;lookLastY=e.clientY;
+  const delta=orbit.move(e.pointerId,e.clientX,e.clientY);
+  state.lookDX+=delta.fineX;
+  state.lookDY+=delta.deltaY;
+  // The orbit continues independently of pointermove until the finger is recentered.
  });
- const endLook=e=>{if(e.pointerId===lookPointer)lookPointer=null;};
+ const endLook=e=>{if(e.pointerId===lookPointer){orbit.end(e.pointerId);lookPointer=null;}};
  for(const name of ['pointerup','pointercancel','lostpointercapture'])host.addEventListener(name,endLook);
  const actions={jump:onJump,interact:onInteract,next:onNext,reload:onReload,crouch:onCrouch,view:onView,pause:onPause};
  for(const b of root.querySelectorAll('button')){
@@ -97,5 +99,5 @@ export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onRelo
    else if(name==='aim'){state.aim=false;onAim?.(false);}
   });
  }
- return {state,root,reset(){state.x=state.z=state.lookX=state.lookY=state.lookDX=state.lookDY=0;state.aim=state.fire=false;lookPointer=null;onFire?.(false);onAim?.(false);}};
+ return {state,root,step(dt){return orbit.step(dt);},reset(){state.x=state.z=state.lookX=state.lookY=state.lookDX=state.lookDY=0;state.aim=state.fire=false;orbit.reset();lookPointer=null;onFire?.(false);onAim?.(false);}};
 }
