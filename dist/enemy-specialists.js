@@ -59,6 +59,8 @@ export function specialistCombatOrder(e,ctx={}){
   if(r<9)return cache(e,ctx,()=>move(e,point(e,t,-3.2,s*1.9),ctx,'recon-retreat',{speedScale:1.15}),1.2);
   if(r>27&&r<39)return move(e,point(e,t,clamp(r-20,2,6)),ctx,'spotter-approach',{speedScale:1.04,stopDistance:.8});
   if(underFire)return null;
+  // Keep the original shooter's alternating strafe at mid-range; do not lock RECO1 to one side.
+  if(r>=12&&r<=27)return null;
   return cache(e,ctx,()=>move(e,point(e,t,1.3,s*3.6),ctx,'spotter-reposition',{speedScale:.95}),2);
  }
  case 'listener':{
