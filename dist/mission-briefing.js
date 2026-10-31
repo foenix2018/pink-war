@@ -15,6 +15,10 @@ const ICONS = {
   data: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5" fill="none" stroke-width="2"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" fill="none" stroke-width="2"/>'
 };
 const ia = c => c === 'lylu' ? 'CAR-14' : 'GAB-1';
+// Official story covers, optimized WebP. Numeric guard preserves mode/bonus fallbacks.
+export const chapterCover = n => Number.isInteger(n) && n >= 1 && n <= 20
+  ? 'art/chapters/chapter-' + String(n).padStart(2, '0') + '.webp?v=20261031'
+  : null;
 
 export const BRIEFINGS = Object.freeze({
   1: { title: 'Le Dernier Signal', zone: 'Vesper // Quartier des secours', image: c => c === 'lylu' ? 'art/chargement-lylu.webp?v=3.47' : 'art/chargement.webp?v=3.47',
@@ -40,7 +44,7 @@ export const BRIEFINGS = Object.freeze({
 });
 export function briefingFor(mission = 1, characterId = 'ghju') {
   const b = BRIEFINGS[mission] || BRIEFINGS[1], c = characterId === 'lylu' ? 'lylu' : 'ghju';
-  return { mission, number: String(mission).padStart(2, '0'), title: b.title, zone: b.zone, text: b.text(c), image: b.image(c),
+  return { mission, number: String(mission).padStart(2, '0'), title: b.title, zone: b.zone, text: b.text(c), image: chapterCover(mission) || b.image(c),
     objectives: b.objectives.map(([icon, title, detail], i) => ({ icon, title, detail, n: String(i + 1).padStart(2, '0') })) };
 }
 

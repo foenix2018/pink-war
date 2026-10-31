@@ -1,6 +1,7 @@
 // Pink Wars - narrative illustrations at the conclusion of each completed
 // campaign mission. Images and texts are kept separate from the physics engine.
-const ART={1:'./art/story-chapter-01.svg',2:'./art/story-chapter-02.svg'};
+// Same optimized cover used by the chapter selector and its mission briefing.
+const ART=Object.fromEntries(Array.from({length:20},(_,i)=>[i+1,'./art/chapters/chapter-'+String(i+1).padStart(2,'0')+'.webp?v=20261031']));
 const STYLE_ID='pink-war-chapter-narrative-styles';
 function styles(){
  if(document.getElementById(STYLE_ID))return;

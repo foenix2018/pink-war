@@ -1,0 +1,19 @@
+/* Chapter list: lightweight WebP only when a card enters the scroll viewport. */
+#story-chapters button[data-pw-cover]{
+  position:relative;
+  display:block;
+  min-height:88px;
+  overflow:hidden;
+  border:1px solid #6e8097!important;
+  background-image:linear-gradient(90deg,rgba(3,7,17,.97) 0%,rgba(3,7,17,.86) 43%,rgba(3,7,17,.27) 100%),var(--pw-chapter-cover,linear-gradient(#122035,#122035))!important;
+  background-position:center,center 45%;
+  background-size:cover,cover;
+  background-repeat:no-repeat;
+  color:#f5f8ff!important;
+  text-shadow:0 2px 6px #000e;
+  transition:border-color .18s ease,filter .18s ease;
+}
+#story-chapters button[data-pw-cover]:not(:disabled):hover{border-color:#ff67b6!important;filter:brightness(1.12)}
+#story-chapters button[data-pw-cover]:disabled{opacity:.55!important;cursor:default!important}
+#story-chapters button[data-pw-cover] small{color:#b7cfe0;line-height:1.8}
+@media(max-width:600px){#story-chapters button[data-pw-cover]{min-height:72px;background-position:center,right center}}
