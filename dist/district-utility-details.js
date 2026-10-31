@@ -5,7 +5,7 @@ import {Assembly,bevelBox,matrix} from './geo.js';
 
 export function createDistrictUtilities(T,{low=false,materials:C}={}){
  const a=new Assembly(),up=new T.Vector3(0,1,0);
- const stats={hydrants:0,generators:0,batches:0,triangles:0};
+ const stats={hydrants:0,generators:0,coolers:0,batches:0,triangles:0};
  const box=(m,size,p,r=[0,0,0],radius=.011)=>a.add(bevelBox(...size,Math.min(radius,...size.map(s=>s*.2)),low?1:2),m,matrix(p,r));
  const cyl=(m,x,y,z,r,h,rot=[0,0,0],rad=low?8:14)=>a.add(new T.CylinderGeometry(r,r,h,rad),m,matrix([x,y,z],rot));
  const connect=(m,one,two,r=.018)=>{
@@ -62,11 +62,37 @@ export function createDistrictUtilities(T,{low=false,materials:C}={}){
    connect(C.black,[x-.39,.27,z-side*.35],[x-.39,.15,z-side*.42],.048);
    stats.generators++;
  };
+ const cooler=(x,z)=>{
+   // Real rooftop fan-cooled refrigeration cabinet: duct, service shutter,
+   // twin recessed fan outlets, coil fins and bolted maintenance panels.
+   box(C.iron,[2.20,.15,1.38],[x,.42,z],[],.014);
+   box(C.rust,[2.10,1.72,1.34],[x,1.31,z],[],.035);
+   box(C.black,[1.93,1.30,.037],[x,1.30,z+.69],[],.011);
+   for(let row=0;row<(low?7:13);row++)
+     box(C.iron,[1.83,.023,.025],[x,.78+row*.075,z+.723],[],.002);
+   for(const side of [-1,1]){
+     const xx=x+side*.61;
+     cyl(C.black,xx,2.20,z,.33,.15,[0,0,0],low?12:18);
+     ring(C.iron,xx,2.29,z,.31,.029,[Math.PI/2,0,0]);
+     cyl(C.rust,xx,2.32,z,.075,.036,[0,0,0]);
+     for(let blade=0;blade<4;blade++){
+       const a=blade*Math.PI/2;
+       const dx=Math.cos(a)*.15,dz=Math.sin(a)*.15;
+       box(C.iron,[.11,.020,.26],[xx+dx,2.30,z+dz],[0,a,0],.005);
+     }
+     box(C.black,[.18,.21,.042],[xx,1.72,z-.69],[],.010);
+   }
+   for(const side of [-1,1]){
+     box(C.black,[.04,1.34,1.18],[x+side*1.0,1.30,z],[],.007);
+     for(const h of [.62,2.02])box(C.iron,[.19,.06,.18],[x+side*.92,h,z+.64],[],.006);
+   }
+   stats.coolers++;
+ };
  const build=root=>{
    const meshes=a.build(root,{name:'W02 / utilities · detailed fire hydrants and generators',userData:{decorativeOnly:true,physicalCollisionsAuthoritative:true}});
    stats.batches=meshes.length;stats.triangles=meshes.reduce((n,m)=>n+m.geometry.attributes.position.count/3,0);
    for(const it of a.items)it.geometry.dispose();a.items.length=0;
    return stats;
  };
- return {hydrant,generator,build,stats};
+ return {hydrant,generator,cooler,build,stats};
 }
