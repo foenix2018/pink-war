@@ -682,6 +682,7 @@ function gameTick(dt){
  pitch=clamp(pitch-(controls.lookY+touch.lookY)*1.35*sensitivity*dt,-.85,.7);
  // Right-half mobile swipe is delta-based (same semantics as the mouse).
  yaw-=(touch.lookDX||0)*.004*sensitivity;
+  yaw-=(touchControls?.step(dt)||0)*sensitivity; // continuous mobile hold-to-orbit
  pitch=clamp(pitch-(touch.lookDY||0)*.004*sensitivity,-.85,.7);
  touch.lookDX=touch.lookDY=0;
  const x=controls.moveX+touch.x,z=controls.moveZ+touch.z;
