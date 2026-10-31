@@ -66,6 +66,7 @@ test('GHJU gloves and muzzles follow their own pistol, and tracked recoil preser
  const feel=createWeaponFeel();feel.fire('m12');feel.update(.04);state.update(.016,.065,feel.state.pitch,feel.state);
  assert.ok(weapon.rotation.x>.05);assert.ok(weapon.position.z<.12);
  assert.ok(camera.position.equals(headPosition));assert.deepEqual(camera.matrix.elements,headBefore.elements);assert.ok(anchor.position.equals(anchorBefore));
- assert.ok(state.aim().direction.distanceTo(new T.Vector3(0,0,-1))<1e-8);
+ const visualBarrel=new T.Vector3(0,0,-1).applyQuaternion(weapon.getWorldQuaternion(new T.Quaternion()));
+ assert.ok(state.aim().direction.distanceTo(visualBarrel)<1e-8,'tracked projectile follows the recoiling gun while the head remains unchanged');
  weapon.userData.disposeDynamic();
 });
