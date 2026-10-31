@@ -597,8 +597,8 @@ export class ArenaGame {
     if (held && this.ammo[this.weaponIndex] === 0) this.reload();
   }
   // `source` (optional {x,z}) is where the hit came from, for the HUD's direction arcs.
-  damage(amount, source = null) {
-    if (this.state !== 'playing' || this.invulnerable > 0) return;
+  damage(amount, source = null, {pierceInvulnerability=false} = {}) {
+    if (this.state !== 'playing' || (this.invulnerable > 0 && !pierceInvulnerability)) return;
     const soaked = soakDamage(this.player, amount);
     this.player.hp = Math.max(0, this.player.hp - soaked.rest); this.invulnerable = .3;
     this.lastDamage = this.time; this.regenerating = false; this.shieldCharging = false;

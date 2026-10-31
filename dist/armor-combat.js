@@ -4,7 +4,8 @@
 
 export const SHIELD_MAX = 60, SHIELD_DELAY = 3.4, SHIELD_RATE = 32;
 export const MELEE_RANGE = 2.3, MELEE_DAMAGE = 80, MELEE_BACK_MULTIPLIER = 3, MELEE_COOLDOWN = .9, MELEE_CONE = Math.cos(50 * Math.PI / 180);
-export const CHARGE_START = 2, CHARGE_MAX = 4, CHARGE_FUSE = 1.4, CHARGE_RADIUS = 5.5, CHARGE_DAMAGE = 140, CHARGE_SPEED = 13, CHARGE_STUN = 1.2;
+export const CHARGE_START = 2, CHARGE_MAX = 4, CHARGE_FUSE = 1.4, CHARGE_RADIUS = 5.5, CHARGE_DAMAGE = 650, CHARGE_SPEED = 13, CHARGE_STUN = 1.2;
+export const CHARGE_CONTACT_RADIUS = 1.4, CHARGE_MID_RADIUS = 3.3, CHARGE_MID_DAMAGE = 120, CHARGE_SELF_FACTOR = .72;
 const GRAVITY = 16, CHARGE_LIFT = 3.2, CHARGE_COOLDOWN = .8;
 
 // Forward on the ground for a player yaw (the engine moves by (-sin, -cos) when walking forward).
@@ -89,8 +90,26 @@ export function updateCharges(game, dt) {
   }
 }
 
-// The pulse overloads machines in reach and in line of sight: damage falls off with distance, and they are
-// briefly neutralised. The player is not immune to a charge thrown too close.
+// Contact is devastating; a two-stage smooth curve fades to zero at the
+// established 5.5 m radius. The thrower shares this range, with self-damage
+// still passing through the ordinary energy-shield/health calculation.
+export function chargeDamageAt(distance,{self=false}={}){
+  if(!Number.isFinite(distance)||distance>=CHARGE_RADIUS)return 0;
+  const d=Math.max(0,distance);
+  let damage;
+  if(d<=CHARGE_CONTACT_RADIUS)damage=CHARGE_DAMAGE;
+  else if(d<=CHARGE_MID_RADIUS){
+    const t=(d-CHARGE_CONTACT_RADIUS)/(CHARGE_MID_RADIUS-CHARGE_CONTACT_RADIUS);
+    const smooth=t*t*(3-2*t);
+    damage=CHARGE_DAMAGE+(CHARGE_MID_DAMAGE-CHARGE_DAMAGE)*smooth;
+  }else{
+    const remaining=1-(d-CHARGE_MID_RADIUS)/(CHARGE_RADIUS-CHARGE_MID_RADIUS);
+    damage=CHARGE_MID_DAMAGE*Math.pow(Math.max(0,remaining),1.25);
+  }
+  return Math.max(0,damage*(self?CHARGE_SELF_FACTOR:1));
+}
+
+// Proximity damage affects every enemy and the thrower. Solid cover still blocks it.
 export function detonateCharge(game, c) {
   const at = { x: c.x, y: c.y + .25, z: c.z };
   game.event('charge-blast', { ...at, radius: CHARGE_RADIUS });
@@ -100,8 +119,8 @@ export function detonateCharge(game, c) {
     const d = Math.hypot(center.x - at.x, center.y - at.y, center.z - at.z);
     if (d > CHARGE_RADIUS || game.blocked(at, center)) continue;
     e.stunnedUntil = Math.max(e.stunnedUntil || 0, game.time + CHARGE_STUN);
-    game.damageEnemy(e, CHARGE_DAMAGE * Math.pow(1 - d / CHARGE_RADIUS, .7), center, 'torso', 1, { x: at.x, z: at.z, elevation: at.y });
+    game.damageEnemy(e, chargeDamageAt(d), center, 'torso', 1, { x: at.x, z: at.z, elevation: at.y });
   }
   const p = game.player, chest = { x: p.x, y: p.elevation + 1.1, z: p.z }, d = Math.hypot(chest.x - at.x, chest.y - at.y, chest.z - at.z);
-  if (d < CHARGE_RADIUS && !game.blocked(at, chest)) game.damage(CHARGE_DAMAGE * .5 * Math.pow(1 - d / CHARGE_RADIUS, .7), at);
+  if (d < CHARGE_RADIUS && !game.blocked(at, chest)) game.damage(chargeDamageAt(d,{self:true}), at, {pierceInvulnerability:true});
 }
