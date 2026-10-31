@@ -15,7 +15,6 @@ export function createAICompanion(T,scene,characterId='ghju'){
   if(disposed)return;root.visible=active;
   if(!active){flash.intensity=0;torch.update(0,{active:false});communication?.reset();return;}
   dt=Math.min(.05,Math.max(0,dt));if(!dt||game.state!=='playing')return;
-  communication?.update(dt);
   age+=dt;energy=Math.min(100,energy+dt*4);cooldown=Math.max(0,cooldown-dt);pulse=Math.max(0,pulse-dt*2);
   const hover=companionHover(game.player,age,defensive);
   if(tracked&&camera){camera.getWorldPosition(direction);for(const axis of ['x','y','z'])hover.point[axis]+=direction[axis]-hover.head[axis];Object.assign(hover.head,{x:direction.x,y:direction.y,z:direction.z});}
@@ -53,6 +52,7 @@ export function createAICompanion(T,scene,characterId='ghju'){
   flash.intensity=pulse*3;state=pulse>.2?'Protect':cooldown>0?'Cooldown':'Follow';
   torch.update(dt,{game,origin:muzzle,head:hover.head,forward,active:game.player.hp>0&&torchEnabled});
   model.update(dt,{pulse});
+  communication?.update(dt,{camera});
  }
  return {name,root,update,preview:dt=>{model.update(dt);communication?.update(dt);},
   say:(mood='message',options={})=>communication?.say(mood,options)||false,
