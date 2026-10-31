@@ -1,6 +1,6 @@
 import {segmentBox} from './game-logic.js';
 import {createCompanionModel} from './companion-model.js';
-import {COMPANION_SHOT,companionNeedsProtection,companionThreat,companionHover,safeCompanionHover,fireCompanionShot} from './companion-escort.js';
+import {COMPANION_SHOT,companionNeedsProtection,companionThreat,companionClear,companionHover,safeCompanionHover,fireCompanionShot} from './companion-escort.js';
 import {createCompanionTorch} from './companion-torch.js';
 import {createGabCommunication,gabMoodForEvent} from './companion-communication.js';
 
@@ -34,7 +34,8 @@ export function createAICompanion(T,scene,characterId='ghju'){
   if(camera){camera.getWorldDirection(direction);if(tracked){forward.x=direction.x;forward.z=direction.z;}forward.y=T.MathUtils.clamp(direction.y,-.5,.25);}
   const foe=assistance&&companionNeedsProtection(game)?companionThreat(game,root.position):null;
   // Speech is reserved for meaningful warnings and support actions. Gunshots never spam it.
-  if(communication&&foe&&age-lastAlert>13){lastAlert=age;communication.say('danger',{audio:audioContext,sound});}
+  const threatAhead=communication&&game.enemies?.some(e=>e.hp>0&&e.awareness==='engaged'&&Math.hypot(e.x-game.player.x,e.z-game.player.z)<12&&companionClear(root.position,{x:e.x,y:(e.elevation||0)+(e.aimHeight||1.25),z:e.z},game.obstacles));
+  if(threatAhead&&age-lastAlert>18){lastAlert=age;communication.say('danger',{audio:audioContext,sound});}
   else if(communication&&game.player.hp<28&&age-lastWorry>22&&age-lastAlert>3){lastWorry=age;communication.say('inquiet',{audio:audioContext,sound});}
   if(foe)end.set(foe.x,(foe.elevation||0)+(foe.aimHeight||1.25),foe.z);
   else end.set(hover.head.x+forward.x*12,hover.head.y-.15+forward.y*8,hover.head.z+forward.z*12);
