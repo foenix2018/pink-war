@@ -19,9 +19,9 @@ export const ROOMS = Object.freeze([
   room('radio', 28, 40, 80, 90, 3.2, 'radio', 'Local radio de l’enclave'),
   room('monte-charge', 40, 46, 88, 96, 3, 'lift', 'Monte-charge des Archives'),
   room('parvis', -14, 12, -82, -75.5, 0, 'street', 'Parvis de la tour de transit'),
-  room('tour', -14, 14, -94, -82, 8, 'lobby', 'Hall de la tour de transit · contrôle HELIX'),
-  room('coffre', -40, -14, -96, -82, 5, 'vault', 'Coffre de données HELIX'),
-  room('quai', 14, 46, -96, -82, 10, 'dock', 'Quai de chargement · convoi HELIX')
+  room('tour', -14, 14, -94, -82, 8, 'lobby', 'Hall de la tour de transit · contrôle du Directoire'),
+  room('coffre', -40, -14, -96, -82, 5, 'vault', 'Coffre de données du Directoire'),
+  room('quai', 14, 46, -96, -82, 10, 'dock', 'Quai de chargement · convoi du Directoire')
 ]);
 export const roomAt = (x, z) => ROOMS.find(r => x >= r.x1 && x <= r.x2 && z >= r.z1 && z <= r.z2)?.id || null;
 export const ZONE = Object.freeze(Object.fromEntries(ROOMS.map(r => [r.id, r.z1 > 0 ? 'enclave' : 'tour'])));
@@ -72,7 +72,7 @@ export const DOORS = Object.freeze([
   door('service', 'z', 12, 92, 4, 3, { open: true, style: 'fire' }),
   door('grille', 'x', 80, 0, 6, 4.2, { style: 'gate', label: 'Grille de l’enclave' }),
   door('tour', 'x', -82, 0, 6, 4.2, { style: 'helix', label: 'Accès de la tour de transit' }),
-  door('coffre', 'z', -14, -88, 3, 2.8, { style: 'vault', label: 'Coffre HELIX' }),
+  door('coffre', 'z', -14, -88, 3, 2.8, { style: 'vault', label: 'Coffre du Directoire' }),
   door('quai', 'z', 14, -88, 4, 3.2, { open: true, style: 'helix' }),
   door('convoi', 'z', 46, -90, 8, 6, { style: 'gate', label: 'Porte du convoi' })
 ]);
@@ -112,13 +112,13 @@ export const INTERACTIONS = Object.freeze([
   it('batterie', 31, 87.4, 'RACCORDER LE BANC DE BATTERIES'),
   it('radio', 32, 82.4, 'ALLUMER LA RADIO DE L’ENCLAVE', { log: 'radio' }),
   it('manivelle', 4.6, 81.6, 'ACTIONNER LA MANIVELLE DE LA GRILLE'),
-  it('badge', 0, -89.4, 'PRENDRE LE BADGE DU POSTE HELIX'),
+  it('badge', 0, -89.4, 'PRENDRE LE BADGE DU POSTE'),
   it('lecteur', -12.4, -85.2, 'PASSER LE BADGE SUR LE LECTEUR'),
-  it('manifeste', -18.6, -86.4, 'CONSULTER LE MANIFESTE DU CONVOI', { log: 'manifeste' }),
+  it('manifeste', -18.6, -86.4, 'PRENDRE UN MODULE DE DÉCRYPTAGE', { log: 'manifeste' }),
   it('commande-quai', 43, -84.6, 'BLOQUER LA PORTE DU CONVOI'),
   // Documents (always readable).
   it('doc-dessins', -27.4, 85.6, 'REGARDER LES DESSINS DE L’ÉCOLE', { log: 'dessins' }),
-  it('doc-avis', 2.6, 81.4, 'LIRE L’AVIS DE RECENSEMENT HELIX', { log: 'avis-helix' }),
+  it('doc-avis', 2.6, 81.4, 'LIRE L’AVIS DE RECENSEMENT DU DIRECTOIRE', { log: 'avis-helix' }),
   it('doc-cuisine', 6, 93.8, 'LIRE LE CARNET DE LA CUISINE', { log: 'cuisine' }),
   it('doc-consignes', -3.6, -89.6, 'LIRE LES CONSIGNES DU POSTE', { log: 'consignes' }),
   it('doc-kessler', -18.6, -93.4, 'LIRE LA NOTE DE LA DIRECTION', { log: 'kessler' }),
@@ -149,14 +149,14 @@ export const PROLOGUE = Object.freeze([
   stage('x-arrivee', 'REJOINDRE LE DISPENSAIRE', 'Le monte-charge s’ouvre sur le couloir de service de l’enclave.', { x: 43, z: 92, yaw: Math.PI / 2 }),
   stage('x-dispensaire', 'LIRE LE REGISTRE DE SOINS', 'Bureau du dispensaire des Épars.', { x: 20, z: 92, yaw: 0 }),
   stage('x-radio', 'RALLUMER LA RADIO DE L’ENCLAVE', 'Local radio : raccorder les batteries, puis allumer la radio.', { x: 34, z: 92, yaw: 0 }),
-  stage('x-eclaireurs', 'REPOUSSER LES ÉCLAIREURS HELIX', 'Ils sont descendus par la verrière du marché.', { x: 10, z: 92, yaw: Math.PI / 2 }),
+  stage('x-eclaireurs', 'REPOUSSER LES ÉCLAIREURS DU DIRECTOIRE', 'Ils sont descendus par la verrière du marché.', { x: 10, z: 92, yaw: Math.PI / 2 }),
   stage('x-grille', 'OUVRIR LA GRILLE DE L’ENCLAVE', 'Manivelle à droite de la grille. Vingt-cinq secondes de manœuvre.', { x: 2, z: 86, yaw: 0 })
 ]);
 export const EPILOGUE = Object.freeze([
-  stage('x-tour', 'PRENDRE LE CONTRÔLE HELIX', 'Hall de la tour de transit : neutraliser le poste de contrôle.', { x: 0, z: -78, yaw: 0 }),
+  stage('x-tour', 'PRENDRE LE POSTE DE CONTRÔLE', 'Hall de la tour de transit : neutraliser le poste de contrôle.', { x: 0, z: -78, yaw: 0 }),
   stage('x-badge', 'PRENDRE LE BADGE DU POSTE', 'Bureau du poste de sécurité, au fond du hall.', { x: 0, z: -84, yaw: 0 }),
   stage('x-coffre', 'OUVRIR LE COFFRE DE DONNÉES', 'Lecteur de badge à droite de la porte ouest.', { x: -10, z: -88, yaw: Math.PI / 2 }),
-  stage('x-manifeste', 'CONSULTER LE MANIFESTE', 'Terminal du coffre, près de l’entrée.', { x: -16, z: -88, yaw: Math.PI / 2 }),
+  stage('x-manifeste', 'RÉCUPÉRER LE MODULE DE DÉCRYPTAGE', 'Terminal du coffre, près de l’entrée.', { x: -16, z: -88, yaw: Math.PI / 2 }),
   stage('x-quai', 'BLOQUER LE CONVOI', 'Quai de chargement, poste de commande au fond à l’est. Tenir pendant le verrouillage.', { x: 10, z: -88, yaw: -Math.PI / 2 }),
   stage('x-fin', 'LE CONVOI DES ABSENTS', 'Choisir : les survivants ou les preuves.', { x: 40, z: -88, yaw: -Math.PI / 2 })
 ]);

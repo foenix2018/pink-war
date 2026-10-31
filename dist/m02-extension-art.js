@@ -289,11 +289,11 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     part(M.helixWhite, -.9, 1.7, 0, L - 2.2, 2.6, W); part(M.dark, 0, .45, 0, L - .2, .5, W - .3);
     for (const sz of [-1, 1]) { part(M.helixRed, -.9, 1.1, sz * (W / 2 + .005), L - 2.2, .2, .01); part(M.helix, -.9, 2.9, sz * (W / 2 + .006), L - 2.2, .04, .01); }
     for (const sx of [L / 2 - 1.2, -L / 2 + 1]) for (const sz of [-1, 1]) { const w = new T.Mesh(new T.CylinderGeometry(.48, .48, .32, 18), M.black); w.rotation.x = Math.PI / 2; w.position.set(sx, .48, sz * (W / 2 - .1)); g.add(w); stats.meshes++; }
-    const label = new T.Mesh(new T.PlaneGeometry(3.4, .7), new T.MeshStandardMaterial({ map: signTex(['HELIX SECURITY', 'CONVOI 03 · ANNEAU LOGISTIQUE'], { bg: null, fg: '#c1121f', w: 512, h: 128 }), transparent: true, alphaTest: .05 }));
+    const label = new T.Mesh(new T.PlaneGeometry(3.4, .7), new T.MeshStandardMaterial({ map: signTex(['DIRECTOIRE · SÉCURITÉ', 'CONVOI 03 · ANNEAU LOGISTIQUE'], { bg: null, fg: '#c1121f', w: 512, h: 128 }), transparent: true, alphaTest: .05 }));
     label.position.set(-.9, 2.1, W / 2 + .012); g.add(label);
     const back = label.clone(); back.position.z = -W / 2 - .012; back.rotation.y = Math.PI; g.add(back);
   }
-  const helixLogo = (bg = null) => signTex(['HELIX', 'SECURITY'], { bg, fg: '#ff2f45', w: 512, h: 256 });
+  const helixLogo = (bg = null) => signTex(['DIRECTOIRE', 'SÉCURITÉ'], { bg, fg: '#ff2f45', w: 512, h: 256 });
   function dress(o) {
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, h = o.height;
     switch (o.kind) {
@@ -364,7 +364,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
           piece(M.dark, cx, base + ch * .75, z2 - .03, cw * .64, .025, .025);
           piece(M.plate, cx, base + ch * .18, z2 - .025, cw * .25, .025, .025);
         }
-        sign(signTex(['ARCHIVES AEGIS 2189', 'FRAGILE · HELIX'], { bg: '#e9ecee', fg: '#0b0d10', w: 256, h: 128 }), o.x, h * .5, z2 + .02, 0, .8, .4); break;
+        sign(signTex(['ARCHIVES 2189', 'FRAGILE · HELIX'], { bg: '#e9ecee', fg: '#0b0d10', w: 256, h: 128 }), o.x, h * .5, z2 + .02, 0, .8, .4); break;
       case 'control-post':
         box(M.helixBlack, x1, x2, 0, h, z1, z2);
         piece(M.steel, o.x, h - .08, o.z, w + .03, .08, d + .03);
@@ -453,7 +453,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     sign(signTex('LOCAL RADIO', { bg: '#0d3b5e', w: 512, h: 128 }), 34, 2.7, 90.18, 0, 1.2, .3);
     sign(signTex(['MONTE-CHARGE', 'ARCHIVES VÉGÉTALES ↑'], { bg: '#0f7a3e', fg: '#f4fff6', w: 512, h: 160 }), 39.82, 2.9, 92, -Math.PI / 2, 1.6, .5);
     sign(signTex(['ÉCOLE DU MARCHÉ', 'MATIN : LECTURE · SOIR : CALCUL'], { bg: '#2b2350', fg: '#ffd7f0', w: 512, h: 160 }), -29.82, 2.6, 82.6, Math.PI / 2, 1.8, .55);
-    sign(signTex(['TOUR DE TRANSIT', 'HELIX SECURITY · ZONE CONTRÔLÉE'], { bg: '#0b0d10', fg: '#ff2f45', w: 1024, h: 192, border: '#ff2f45' }), 0, 6.4, -81.8, 0, 8, 1.5, { lit: true });
+    sign(signTex(['TOUR DE TRANSIT', 'DIRECTOIRE · ZONE CONTRÔLÉE'], { bg: '#0b0d10', fg: '#ff2f45', w: 1024, h: 192, border: '#ff2f45' }), 0, 6.4, -81.8, 0, 8, 1.5, { lit: true });
     sign(signTex(['CONTRÔLE D’IDENTITÉ', 'SCAN OBLIGATOIRE AVANT L’EAU'], { bg: '#e9ecee', fg: '#0b0d10', w: 512, h: 160 }), 0, 3.6, -93.82, 0, 2.4, .75);
     sign(signTex(['COFFRE DE DONNÉES', 'ACCÈS NIVEAU 3 · JANUS'], { bg: '#160307', fg: '#ff4d5e', w: 512, h: 160 }), -13.82, 3.6, -88, Math.PI / 2, 1.8, .55, { lit: true });
     sign(signTex(['QUAI DE CHARGEMENT', 'CONVOIS → ANNEAU LOGISTIQUE'], { bg: '#e9ecee', fg: '#c1121f', w: 512, h: 160 }), 13.82, 3.9, -88, -Math.PI / 2, 2, .62);

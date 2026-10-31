@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <link rel="icon" href="icon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pink Wars — 03 Le Convoi des Absents</title>
-<meta name="description" content="Pink Wars, mission 03 : escorter l’ambulance d’Inès à travers le secteur 03 de Vesper, de nuit, jusqu’à la gare de fret de l’Anneau logistique. Retrouver la trace du convoi des absents.">
+<title>Pink Wars — 03 Le Convoi des Oubliés</title>
+<meta name="description" content="Pink Wars, chapitre 03 : avec AEGIS, escorter l’ambulance d’Inès à travers le secteur 03 de Vesper, de nuit, jusqu’à la gare de fret de l’Anneau logistique, sur la piste des prisonniers du Directoire.">
 <style>
 :root{color-scheme:dark;font-family:Inter,system-ui,Arial,sans-serif;background:#05070a;color:#eef1f6}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#05070a}
@@ -59,7 +59,7 @@ body.pw-graphics-open #quality{display:block}
 /* Briefing, defeat and ending panels cover the combat HUD. */
 body.pw-shaded .pw-hud,body.pw-shaded #hud,body.pw-shaded .pw-minimal-action{visibility:hidden}
 </style>
-<link rel="stylesheet" href="mobile-controls-v7.css?v=3.73.0"><link rel="stylesheet" href="fracture.css?v=3.73.0">
+<link rel="stylesheet" href="mobile-controls-v7.css?v=3.74.0"><link rel="stylesheet" href="fracture.css?v=3.74.0">
 <script defer src="./pw-identity.js?v=2"></script>
 </head>
 <body>
@@ -74,11 +74,11 @@ body.pw-shaded .pw-hud,body.pw-shaded #hud,body.pw-shaded .pw-minimal-action{vis
 <div id="doc" hidden><article><small id="doc-stamp"></small><h2 id="doc-title"></h2><div id="doc-body"></div><button id="doc-close" type="button">REPOSER LE DOCUMENT (F)</button></article></div>
 <button id="pwMission" class="pw-minimal-action" aria-label="Afficher l’objectif" title="Objectif" onclick="document.body.classList.toggle('pw-objective-open');document.body.classList.remove('pw-graphics-open')">◎</button><button id="pwSettings" class="pw-minimal-action" aria-label="Afficher les réglages" title="Réglages" onclick="document.body.classList.toggle('pw-graphics-open');document.body.classList.remove('pw-objective-open')">⚙</button><select id="quality" aria-label="Qualité graphique"><option value="normal">QUALITÉ NORMALE</option><option value="low">PERFORMANCE</option></select>
 <div id="shade"><div class="panel">
-  <div class="kicker">PINK WARS / ACTE I · LA FRACTURE · MISSION 03</div>
-  <h1 id="panel-title">Le Convoi <em>des Absents</em></h1>
-  <p id="panel-text">Vesper, 2196. À la tour de transit, le manifeste de HELIX l’a dit : le convoi 02 est parti vers l’Anneau logistique, et LYLU est dans son « lot spécial ». Inès Varga a récupéré une ambulance. Il faut la conduire de nuit à travers le secteur 03, sous couvre-feu ORDRE, jusqu’à la gare de fret.</p>
-  <p class="small" id="panel-small">Mission longue (≈ 20 à 30 min) : annexe médicale, atelier, escorte de l’ambulance, relais A3, balise de la fracture, barrière à réparer, échangeur bloqué, gare de fret. Documents à lire (F), points de contrôle à chaque étape, lampe frontale (L). Bouclier d’armure, mêlée (X), charge à impulsion (B).</p>
-  <div class="chars"><a href="?character=ghju" id="pick-ghju">GHJU · GABY</a><a href="?character=lylu" id="pick-lylu">LYLU · CARA</a></div>
+  <div class="kicker">PINK WARS / ACTE I · LES CENDRES DE VESPER · CHAPITRE 03</div>
+  <h1 id="panel-title">Le Convoi <em>des Oubliés</em></h1>
+  <p id="panel-text">Vesper, 2196. Le convoi 02 du Directoire emmène ses prisonniers vers l’Anneau logistique. Mara Voss et AEGIS veulent les sortir de là cette nuit. Inès Varga a récupéré une ambulance : il faut la conduire de nuit à travers le secteur 03, sous le couvre-feu, jusqu’à la gare de fret.</p>
+  <p class="small" id="panel-small">Mission longue (≈ 20 à 30 min) : annexe médicale, atelier, escorte de l’ambulance, relais A3, balise du pylône, barrière à réparer, échangeur bloqué, gare de fret. Documents à lire (F), points de contrôle à chaque étape, lampe frontale (L). Bouclier d’armure, mêlée (X), charge à impulsion (B).</p>
+  <div class="chars"><a href="?character=ghju" id="pick-ghju">GHJU · GAB-1</a><a href="?character=lylu" id="pick-lylu">LYLU · CAR-14</a></div>
   <button id="start" class="primary">ENTRER DANS LE SECTEUR 03 →</button>
   <button id="home" class="primary" hidden onclick="location.assign('./index.html?mode=campaign4')" style="margin-top:0;background:#1c2733;color:#e8eef2">CHAPITRE 04 →</button>
   <a href="./niveau3.html?renderer=webgl" id="compat" style="display:inline-block;color:#ffc890;font-size:13px;margin-bottom:12px">Mode compatibilité WebGL (si écran noir)</a>
@@ -86,12 +86,12 @@ body.pw-shaded .pw-hud,body.pw-shaded #hud,body.pw-shaded .pw-minimal-action{vis
   <div id="status" class="small">Clavier / souris, manette, tactile ou casque WebXR · rendu WebGPU avec repli WebGL</div>
 </div></div>
 <script type="module">
-import {decorateShade} from './mission-briefing.js?v=3.73.0';
+import {decorateShade} from './mission-briefing.js?v=3.74.0';
 decorateShade(document.getElementById('shade'),{mission:3,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});
 const lylu=new URLSearchParams(location.search).get('character')==='lylu';
 document.getElementById(lylu?'pick-lylu':'pick-ghju').setAttribute('aria-current','true');
-if(lylu){document.getElementById('panel-text').textContent='Vesper, 2196. À la tour de transit, le manifeste de HELIX l’a dit : le convoi 02 est parti vers l’Anneau logistique, et GHJU est dans son « lot spécial ». Inès Varga a récupéré une ambulance. Il faut la conduire de nuit à travers le secteur 03, sous couvre-feu ORDRE, jusqu’à la gare de fret.';document.getElementById('compat').href='./niveau3.html?character=lylu&renderer=webgl';}
-import('./niveau3.js?v=3.73.0').catch(error=>{
+if(lylu){document.getElementById('panel-text').textContent='Vesper, 2196. Le convoi 02 du Directoire emmène ses prisonniers vers l’Anneau logistique, dont le docteur Hadi, un ancien chercheur de HELIX. Inès Varga a récupéré une ambulance : il faut la conduire de nuit à travers le secteur 03, sous le couvre-feu, jusqu’à la gare de fret.';document.getElementById('compat').href='./niveau3.html?character=lylu&renderer=webgl';}
+import('./niveau3.js?v=3.74.0').catch(error=>{
  const status=document.getElementById('status'),button=document.getElementById('start');
  if(status)status.textContent='Erreur de chargement : '+(error?.message||String(error))+' — essaye le mode compatibilité WebGL.';
  if(button){button.disabled=false;button.textContent='RECHARGER →';button.addEventListener('click',()=>location.reload());}

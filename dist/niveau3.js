@@ -221,7 +221,7 @@ function finishMission(){
  running=false;ambience?.pause?.();document.exitPointerLock?.();
  try{const current=Number(localStorage.getItem('pink-wars-last-cleared'))||0;localStorage.setItem('pink-wars-last-cleared',String(Math.max(current,3)));}catch{}
  const minutes=Math.floor(missionTime/60),seconds=String(Math.floor(missionTime%60)).padStart(2,'0');
- $('panel-title').innerHTML='Le Convoi <em>des Absents</em>';
+ $('panel-title').innerHTML='Le Convoi <em>des Oubliés</em>';
  $('panel-text').textContent=ENDING.text[characterId];
  const docs=Object.keys(LOGS).filter(id=>mission.reads.includes(id)).length;
  $('panel-small').textContent=`Temps ${minutes}:${seconds} · Machines neutralisées ${game.kills} · Précision ${shotsFired?Math.round(hits/shotsFired*100):0} % · Ambulance ${Math.ceil(mission.van.hp)} % · Documents ${docs}/${Object.keys(LOGS).length} · ${ENDING.next}`;
@@ -407,13 +407,13 @@ function gameTick(dt){
 }
 const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;return;}if(!running||paused)return;audioReady();if(kind==='melee')meleeQueued=true;else if(kind==='charge')chargeQueued=true;else if(kind==='reload')game.reload();else if(kind==='next')game.cycleWeapon();else if(kind==='interact')interact();else if(kind==='crouch')crouchQueued=true;};
 let lastDevices='';
-const HOLD_LABEL={balise:'BROUILLAGE DE LA BALISE ORDRE',barriere:'LEVÉE DE LA BARRIÈRE',treuil:'TRACTION DU TREUIL',arrimage:'ARRIMAGE DE L’AMBULANCE AU TRAIN'};
+const HOLD_LABEL={balise:'BROUILLAGE DE LA BALISE D’ORDRE',barriere:'LEVÉE DE LA BARRIÈRE',treuil:'TRACTION DU TREUIL',arrimage:'ARRIMAGE DE L’AMBULANCE AU TRAIN'};
 const VAN_WAIT={escorte:'attend son escorte',machines:'machines devant',stop:'à l’arrêt',stage:'à l’arrêt'};
 function updateHUD(){
  (combatHud ||= mountCombatHud({characterId,onAction:armorTouch})).update(game);
  const it=reading?null:mission.nearInteraction(),stageInfo=L.STAGES[mission.stage];combatHud.setContext(it?.label);
  const area=L.AREAS.find(a=>a.id===L.areaAt(game.player.x,game.player.z));
- combatHud.setObjective({label:'MISSION 03 · '+(area?.label||'Le Convoi des Absents'),detail:stageInfo?.label||''});
+ combatHud.setObjective({label:'MISSION 03 · '+(area?.label||'Le Convoi des Oubliés'),detail:stageInfo?.label||''});
  $('prompt').style.display=it?'block':'none';if(it)$('prompt').textContent='F / R3 · '+it.label;
  if(clock>noticeUntil)$('notice').style.display='none';
  $('crosshair').style.filter=clock<hitUntil?'drop-shadow(0 0 7px #ffffff) brightness(3)':'';
@@ -576,7 +576,7 @@ for(const name of ['pointerup','pointercancel'])window.addEventListener(name,e=>
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
 
 window.__PINK_M03=Object.freeze({
- snapshot:()=>({level:L.LEVEL_ID,revision:'3.73.0',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,choice,time:game?.time,missionTime,
+ snapshot:()=>({level:L.LEVEL_ID,revision:'3.74.0',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,choice,time:game?.time,missionTime,
   area:game&&L.areaAt(game.player.x,game.player.z),health:game?.player.hp,shield:game?.player.shield,charges:game?.charges,
   position:game&&{x:+game.player.x.toFixed(2),z:+game.player.z.toFixed(2),elevation:+game.player.elevation.toFixed(2)},
   weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,opened:mission?.opened,done:mission?.done,reads:mission?.reads,

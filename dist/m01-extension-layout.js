@@ -149,15 +149,15 @@ function props() {
 // ---------- Interactions ----------
 const it = (id, x, z, label, extra = {}) => Object.freeze({ id, x, z, y: 0, radius: 2.3, label, ...extra });
 export const INTERACTIONS = Object.freeze([
-  it('main-courante', -93.4, 58, 'LIRE LE JOURNAL DE BORD DU 14/03/2189', { log: 'main-courante' }),
-  it('casier', -94.6, 70, 'OUVRIR LE CASIER', { log: 'casier' }),
+  it('main-courante', -93.4, 58, 'LIRE LE JOURNAL DE BORD DU 17/11/2189', { log: 'main-courante' }),
+  it('casier', -94.6, 70, 'OUVRIR LE CASIER VEILLE', { log: 'casier' }),
   it('gazole', -94, 45.4, 'OUVRIR L’ARRIVÉE DE GAZOLE'),
   it('demarreur', -91, 50.4, 'DÉMARRER LE GROUPE ÉLECTROGÈNE'),
   it('porte-remise', -81.2, 91.5, 'COMMANDER LA PORTE DU HANGAR'),
   it('relais-a3', 0, 0, '', { core: true }),
   it('deverrouillage', 8.8, -66.4, 'TIRER LA COMMANDE DE DÉVERROUILLAGE'),
   it('bivouac', -24.6, -72.4, 'EXAMINER LE BIVOUAC', { log: 'bivouac' }),
-  it('copie', -18.4, -83.4, 'COPIER LE REGISTRE DES DISPARUS'),
+  it('copie', -18.4, -83.4, 'RESTAURER LE MESSAGE DU TERMINAL'),
   it('monte-charge', 40.4, -82.6, 'APPELER LE MONTE-CHARGE'),
   // Documents (always readable).
   it('doc-tableau', -87.6, 53.2, 'LIRE LE TABLEAU DE SERVICE', { log: 'tableau' }),
@@ -193,16 +193,16 @@ const stage = (id, label, hint, checkpoint) => Object.freeze({ id, label, hint, 
 export const PROLOGUE = Object.freeze([
   stage('x-cour', 'ENTRER DANS LA STATION 07', 'Porte de service au fond de la cour.', { x: -89, z: 32, yaw: 0 }),
   stage('x-garde', 'LIRE LE JOURNAL DE BORD', 'Salle de veille, deuxième porte à gauche du couloir.', { x: -82, z: 46, yaw: 0 }),
-  stage('x-vestiaires', 'OUVRIR LES CASIERS', 'Vestiaires, au bout du couloir à gauche.', { x: -82, z: 58, yaw: 0 }),
-  stage('x-groupe', 'RELANCER LE GROUPE ÉLECTROGÈNE', 'Local technique : ouvrir le gazole, puis démarrer. La porte du hangar est électrique.', { x: -82, z: 48, yaw: 0 }),
+  stage('x-vestiaires', 'OUVRIR LE CASIER VEILLE', 'Vestiaires, au bout du couloir à gauche.', { x: -82, z: 58, yaw: 0 }),
+  stage('x-groupe', 'RELANCER LE GROUPE ÉLECTROGÈNE', 'Local technique : ouvrir le gazole, puis démarrer. Des survivants sont enfermés : les portes sont électriques.', { x: -82, z: 48, yaw: 0 }),
   stage('x-remise', 'OUVRIR LA PORTE DU HANGAR', 'Boîtier de commande à droite de la grande porte.', { x: -82, z: 76, yaw: 0 }),
-  stage('x-sortie', 'REJOINDRE LE QUARTIER DES SECOURS', 'Passer la clôture devant le hangar : l’annexe est à l’est.', { x: -82, z: 86, yaw: Math.PI / 2 })
+  stage('x-sortie', 'REJOINDRE LE QUARTIER DES SECOURS', 'Passer la clôture devant le hangar : le relais A3 est à l’est.', { x: -82, z: 86, yaw: Math.PI / 2 })
 ]);
 export const EPILOGUE = Object.freeze([
   stage('x-route', 'REJOINDRE LES ARCHIVES VÉGÉTALES', 'Redescendre de la terrasse ; l’accès est au sud, par la clôture.', { x: 18, z: -16, yaw: Math.PI }),
   stage('x-entree', 'DÉVERROUILLER LES PORTES D’ACCUEIL', 'Commande de déverrouillage manuel, à droite des portes vitrées.', { x: 6, z: -64, yaw: Math.PI }),
-  stage('x-bivouac', 'SUIVRE LA TRACE', 'Galerie des herbiers, puis le bureau du conservateur.', { x: 6, z: -70, yaw: Math.PI }),
-  stage('x-copie', 'COPIER LE REGISTRE DES DISPARUS', 'Salle des registres, au bout de la galerie. La copie prend une minute et quart : tiens la salle.', { x: -22, z: -78, yaw: Math.PI }),
+  stage('x-bivouac', 'SUIVRE LA SOURCE DU SIGNAL', 'Galerie des herbiers, puis le bureau du conservateur.', { x: 6, z: -70, yaw: Math.PI }),
+  stage('x-copie', 'RESTAURER LE MESSAGE VEILLE-4', 'Terminal hors réseau, salle des registres au bout de la galerie. La restauration prend une minute et quart : tiens la salle.', { x: -22, z: -78, yaw: Math.PI }),
   stage('x-depart', 'PRENDRE LE MONTE-CHARGE', 'Grande serre, puis le monte-charge des Bas-Niveaux au fond à l’est.', { x: 8, z: -78, yaw: -Math.PI / 2 }),
   stage('x-fin', 'LE DERNIER SIGNAL', 'Destination : Bas-Niveaux.', { x: 45, z: -80, yaw: -Math.PI / 2 })
 ]);

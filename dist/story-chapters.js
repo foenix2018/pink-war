@@ -8,26 +8,25 @@ function styles(){
  document.head.appendChild(style);
 }
 const store=(key,value)=>{try{localStorage.setItem(key,String(value));}catch{}};
-const sibling=id=>String(id).toLowerCase()==='lylu'?'GHJU':'LYLU';
 function art(n){return ART[n]||ART[2];}
 export function chapterStory(level,characterId='ghju',choice='escort'){
+ const ia=String(characterId).toLowerCase()==='lylu'?'CAR-14':'GAB-1';
  if(level===1)return {
-   heading:'La voix dans le relais',
-   text:'Le casier de la station 07, l’archive de l’annexe puis le relais A3 confirment le passage récent de '+sibling(characterId)+
-   '. Aux Archives végétales, le registre des disparus porte son écriture : « pas disparu'+(String(characterId).toLowerCase()==='lylu'?'':'e')+' ». Trois jours d’avance seulement. La piste descend vers l’enclave du marché des Bas-Niveaux. Sous les néons, la recherche continue.',
-   next:'02 — SOUS LES NÉONS',
+   heading:'La voix de VEILLE-4',
+   text:'Le terminal hors réseau des Archives végétales a rendu un message enregistré la nuit de la Chute, sous l’indicatif de tes parents, VEILLE-4 : « Ne faites confiance à aucun système connecté au réseau principal. Retrouvez les relais indépendants. Et surtout… ne perdez pas les deux unités. » La suite est chiffrée. '+ia+' est restée silencieuse plusieurs secondes. Le Directoire garde des modules de décryptage aux Bas-Niveaux.',
+   next:'02 — LES PROFONDEURS',
    eyebrow:'FIN DE MISSION · LE DERNIER SIGNAL'
  };
  if(level===2)return {
-   heading:choice==='proof'?'La preuve qu’ils ont menti':'Les témoins de Vesper',
+   heading:choice==='proof'?'Les archives de la mise à jour':'Ceux qui réparaient les machines',
    text:choice==='proof'
-    ?'Les fichiers saisis à HELIX prouvent que les enregistrements de l’évacuation ont été confisqués. Un convoi a déplacé les données et les disparus vers l’Anneau logistique. L’indicatif de '+sibling(characterId)+' apparaît sur un manifeste.'
-    :'Les civils évacués décrivent un convoi HELIX emportant dossiers, identités et survivants. L’un d’eux a entendu l’indicatif de '+sibling(characterId)+'. La prochaine piste conduit à l’Anneau logistique.',
-   next:'03 — LE CONVOI DES ABSENTS',
-   eyebrow:'FIN DE MISSION · SOUS LES NÉONS'
+    ?'Les caisses HELIX contiennent des supports de 2189 sur la mise à jour du 17 novembre. Le module de décryptage est dans ta combinaison. Et ORDRE recherche deux systèmes autonomes, GAB-1 et CAR-14. Le convoi 02 est déjà parti vers l’Anneau logistique avec d’autres prisonniers du Directoire.'
+    :'Les prisonniers du convoi 03 sont libres. Ils parlent du convoi 02, parti vers l’Anneau logistique avec d’autres prisonniers du Directoire. Le module de décryptage est dans ta combinaison, et ORDRE recherche deux systèmes autonomes, GAB-1 et CAR-14.',
+   next:'03 — LE CONVOI DES OUBLIÉS',
+   eyebrow:'FIN DE MISSION · LES PROFONDEURS'
  };
  return {heading:'Un nouveau fragment de vérité',
-   text:'Une nouvelle transmission confirme que Vesper cache encore des traces des disparus. La recherche continue.',
+   text:'Une nouvelle transmission confirme que Vesper cache encore les traces de la Chute. La recherche continue.',
    eyebrow:'FIN DE MISSION · '+String(level).padStart(2,'0'),next:'CONTINUER'};
 }
 export function attachCampaignStory(dialog,{level=1,characterId='ghju'}={}){
@@ -39,8 +38,8 @@ export function attachCampaignStory(dialog,{level=1,characterId='ghju'}={}){
  const card=document.createElement('section');card.className='pw-story-card';
  const eyebrow=document.createElement('div');eyebrow.className='pw-story-meta';eyebrow.textContent=story.eyebrow;
  const image=document.createElement('img');image.className='pw-story-image';
- image.src=art(level);image.alt=level===1?'Illustration du relais abandonné et du signal retrouvé à Vesper':
- 'Illustration de la ville cyberpunk et des archives cachées par HELIX';
+ image.src=art(level);image.alt=level===1?'Illustration du relais abandonné et du signal VEILLE-4 retrouvé à Vesper':
+ 'Illustration des Bas-Niveaux tenus par le Directoire et des archives cachées par HELIX';
  const desc=document.createElement('div');desc.className='pw-story-caption';
  const h=document.createElement('strong');h.textContent=story.heading;
  desc.append(h,document.createTextNode(story.text));card.append(eyebrow,image,desc);
@@ -56,20 +55,20 @@ export function showChapter2Finale({characterId='ghju',onReplay}={}){
  styles();document.getElementById('pink-story-final')?.remove();
  store('pink-wars-last-cleared',2);
  const modal=document.createElement('div');modal.id='pink-story-final';modal.className='pw-story-modal';modal.setAttribute('role','dialog');
- modal.setAttribute('aria-modal','true');modal.setAttribute('aria-label','Épilogue de Sous les Néons');
+ modal.setAttribute('aria-modal','true');modal.setAttribute('aria-label','Épilogue des Profondeurs');
  const shell=document.createElement('section');shell.className='pw-story-shell';
  const meta=document.createElement('div');meta.className='pw-story-meta';meta.textContent='PINK WARS / M02 · FIN DE MISSION';
- const header=document.createElement('h2');header.textContent='La ville ne nous a pas tout dit.';
+ const header=document.createElement('h2');header.textContent='Les profondeurs ne gardent pas que des machines.';
  const image=document.createElement('img');image.src=art(2);image.className='pw-story-image';
- image.alt='Illustration de l’évacuation du quartier de Vesper et du secret des archives HELIX';
+ image.alt='Illustration de la tour de transit du Directoire et des archives HELIX';
  const intro=document.createElement('p');
- intro.textContent='La tour de transit s’ouvre. Derrière les derniers civils, HELIX emporte des enregistrements de la chute de Vesper. Tu ne peux pas tout ramener.';
+ intro.textContent='Le convoi 03 est bloqué à quai. D’un côté, quatorze prisonniers du Directoire. De l’autre, les caisses d’archives HELIX sur la mise à jour du 17 novembre. Tu ne peux pas tout ramener.';
  const feedback=document.createElement('div');feedback.className='choice-feedback';feedback.setAttribute('aria-live','polite');
- feedback.textContent='Choisis ce que tu protèges : les survivants ou les preuves.';
+ feedback.textContent='Choisis ce que tu protèges : les prisonniers ou les archives.';
  const actions=document.createElement('div');actions.className='pw-story-choice';
- const escort=document.createElement('button');escort.textContent='ESCORTER LES CIVILS';
- const proof=document.createElement('button');proof.className='amber';proof.textContent='RÉCUPÉRER LES PREUVES HELIX';
- const continueButton=document.createElement('button');continueButton.textContent='CONTINUER → MISSION 03 · LE CONVOI DES ABSENTS';
+ const escort=document.createElement('button');escort.textContent='LIBÉRER LES PRISONNIERS';
+ const proof=document.createElement('button');proof.className='amber';proof.textContent='RÉCUPÉRER LES ARCHIVES HELIX';
+ const continueButton=document.createElement('button');continueButton.textContent='CONTINUER → CHAPITRE 03 · LE CONVOI DES OUBLIÉS';
  continueButton.hidden=true;
  const replay=document.createElement('button');replay.className='secondary';replay.textContent='REJOUER LE NIVEAU 2';
  const decide=choice=>{

@@ -151,7 +151,7 @@ export function createM04Mission({ game, characterId = 'ghju', hooks = {} }) {
         if (stabsDone() === 3) { setStage(S.journal); h.breach(0); }
       }
       if (s === 'gardien' && !groups.has('gardien')) setStage(S.journal);
-      const g = guardian(); if (g && g.damageScale < 1 && g.hitAt && game.time - g.hitAt < .05 && game.time > shieldNoticeAt) { shieldNoticeAt = game.time + 6; h.notice('BLINDAGE DE PHASE · COUPE LES STABILISATEURS (' + stabsDone() + ' / 3)'); }
+      const g = guardian(); if (g && g.damageScale < 1 && g.hitAt && game.time - g.hitAt < .05 && game.time > shieldNoticeAt) { shieldNoticeAt = game.time + 6; h.notice('BLINDAGE SYNCHRONISÉ · COUPE LES STABILISATEURS ('  + stabsDone() + ' / 3)'); }
     }
   };
   return api;

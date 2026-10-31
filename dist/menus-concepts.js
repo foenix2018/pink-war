@@ -9,7 +9,7 @@ const row=(id,label,go,small='')=>'<button class="menu-row" data-go="'+go+'">'+i
 let timer=null;
 function heroChoice(){return '<div class="hero-choice"><button data-hero="ghju" aria-pressed="'+(state.hero==='ghju')+'">GHJU / ROSE</button><button data-hero="lylu" aria-pressed="'+(state.hero==='lylu')+'">LYLU / BLEU</button></div>';}
 function render(){
- clearTimeout(timer);const blue=state.hero==='lylu',name=blue?'CARA':'GABY',hero=blue?'LYLU':'GHJU';
+ clearTimeout(timer);const blue=state.hero==='lylu',name=blue?'CAR-14':'GAB-1',hero=blue?'LYLU':'GHJU';
  const preview=$('preview');preview.dataset.direction=state.direction;preview.dataset.device=state.device;preview.style.setProperty('--hero',blue?'#80baff':'#ef91b4');
  const image=state.screen==='chargement'?(blue?'art/chargement-lylu.webp':'art/chargement.webp'):state.direction==='vesper'?'art/prologue/06-signal.webp':state.direction==='fracture'?'art/prologue/03-ordre.webp':(blue?'art/accueil-lylu.webp':'art/accueil.webp');
  preview.querySelector('.concept-backdrop').src=image;

@@ -19,14 +19,15 @@ test('Vesper classic inline hosts remain parseable when the modular prologue is 
  assert.ok(count>=2,'both the launch host and legacy audio host are checked');
 });
 
-test('the six illustrated prologue panels follow P00 timings, chronology and equal sibling viewpoints',()=>{
- assert.deepEqual(PROLOGUE.map(s=>s.seconds),[6,6,4,8,5,5]);
- assert.equal(PROLOGUE.reduce((s,p)=>s+p.seconds,0),34);
+test('the six illustrated prologue panels tell « Le jour de la Chute » with equal sibling viewpoints',()=>{
+ assert.equal(PROLOGUE.length,6);assert.ok(PROLOGUE.every(s=>s.seconds>=6&&s.seconds<=8));
+ assert.match(PROLOGUE[2].date,/17 NOVEMBRE 2189 · 03 H 17/);assert.match(PROLOGUE[3].radio,/suspension temporaire de son autorité décisionnelle/);
+ assert.match(PROLOGUE[4].text,/rose.*bleu/);
  const ghju=prologueSlides('ghju'),lylu=prologueSlides('lylu');
  assert.equal(ghju[0].id,'P00-01');assert.equal(ghju[5].id,'P00-06');
  assert.match(ghju[0].date,/2189/);assert.match(ghju[5].date,/2196/);
- assert.match(ghju[5].text,/son frère/);assert.match(lylu[5].text,/sa sœur/);
- assert.doesNotMatch(JSON.stringify(ghju),/Nharis|JANUS|sacrifice/i,'no later revelation is spoiled');
+ assert.match(ghju[5].text,/GHJU, accompagnée de GAB-1/);assert.match(lylu[5].text,/LYLU, accompagné de CAR-14/);
+ assert.doesNotMatch(JSON.stringify(ghju),/JANUS|sacrifice|GAB-1 est|CAR-14 est|Gabrielle.{0,40}GAB-1|empreinte neuronale/i,'the identity of the spheres is not revealed (chapter 15)');
  for(const s of ghju){assert.ok(existsSync(new URL(s.src)));assert.ok(statSync(new URL(s.src)).size<400000,'each locally shipped WebP stays mobile-friendly');}
 });
 

@@ -218,7 +218,7 @@ function finishMission(){
  running=false;ambience?.pause?.();document.exitPointerLock?.();
  try{const current=Number(localStorage.getItem('pink-wars-last-cleared'))||0;localStorage.setItem('pink-wars-last-cleared',String(Math.max(current,4)));}catch{}
  const minutes=Math.floor(missionTime/60),seconds=String(Math.floor(missionTime%60)).padStart(2,'0');
- $('panel-title').innerHTML='La Brèche <em>Violette</em>';
+ $('panel-title').innerHTML='Le Protocole <em>Interdit</em>';
  $('panel-text').textContent=ENDING.text[characterId];
  const docs=Object.keys(LOGS).filter(id=>mission.reads.includes(id)).length;
  $('panel-small').textContent=`Temps ${minutes}:${seconds} · Machines neutralisées ${game.kills} · Précision ${shotsFired?Math.round(hits/shotsFired*100):0} % · Documents ${docs}/${Object.keys(LOGS).length} · ${ENDING.next}`;
@@ -408,7 +408,7 @@ function updateHUD(){
  (combatHud ||= mountCombatHud({characterId,onAction:armorTouch})).update(game);
  const it=reading?null:mission.nearInteraction(),stageInfo=L.STAGES[mission.stage];combatHud.setContext(it?.label);
  const area=L.AREAS.find(a=>a.id===L.areaAt(game.player.x,game.player.z));
- combatHud.setObjective({label:'MISSION 04 · '+(area?.label||'La Brèche Violette'),detail:stageInfo?.label||''});
+ combatHud.setObjective({label:'MISSION 04 · '+(area?.label||'Le Protocole Interdit'),detail:stageInfo?.label||''});
  $('prompt').style.display=it?'block':'none';if(it)$('prompt').textContent='F / R3 · '+it.label;
  if(clock>noticeUntil)$('notice').style.display='none';
  $('crosshair').style.filter=clock<hitUntil?'drop-shadow(0 0 7px #ffffff) brightness(3)':'';
@@ -418,7 +418,7 @@ function updateHUD(){
  // The guardian of the gantry: health and phase shield.
  const g=mission.guardian,bar=$('van');
  bar.hidden=!g||completed();
- if(g){$('van-label').textContent=g.name+' · '+Math.ceil(100*Math.max(0,g.hp)/g.maxHp)+' %'+(g.shield<1?' · BLINDAGE DE PHASE '+Math.round((1-g.shield)*100)+' %':'');$('van-bar').style.width=(100*Math.max(0,g.hp)/g.maxHp).toFixed(1)+'%';bar.classList.toggle('danger',true);}
+ if(g){$('van-label').textContent=g.name+' · '+Math.ceil(100*Math.max(0,g.hp)/g.maxHp)+' %'+(g.shield<1?' · BLINDAGE SYNCHRONISÉ '+Math.round((1-g.shield)*100)+' %':'');$('van-bar').style.width=(100*Math.max(0,g.hp)/g.maxHp).toFixed(1)+'%';bar.classList.toggle('danger',true);}
  const available=L.INTERACTIONS.filter(i=>mission.available(i.id)).map(i=>i.id),key=available.join(',')+'|'+mission.done.length+'|'+mission.reads.length+'|'+mission.stage;
  if(key!==lastDevices){lastDevices=key;art.setAvailable(available);syncDevices();}
 }
@@ -569,7 +569,7 @@ for(const name of ['pointerup','pointercancel'])window.addEventListener(name,e=>
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
 
 window.__PINK_M04=Object.freeze({
- snapshot:()=>({level:L.LEVEL_ID,revision:'3.73.0',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,time:game?.time,missionTime,
+ snapshot:()=>({level:L.LEVEL_ID,revision:'3.74.0',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,time:game?.time,missionTime,
   area:game&&L.areaAt(game.player.x,game.player.z),health:game?.player.hp,shield:game?.player.shield,charges:game?.charges,
   position:game&&{x:+game.player.x.toFixed(2),z:+game.player.z.toFixed(2),elevation:+game.player.elevation.toFixed(2)},
   weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,opened:mission?.opened,done:mission?.done,reads:mission?.reads,

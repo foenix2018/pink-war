@@ -5,21 +5,21 @@ import {chapterStory} from '../dist/story-chapters.js';
 
 const file=name=>readFileSync(new URL('../dist/'+name,import.meta.url),'utf8');
 
-test('M01 ending advances the canonical sibling mystery into Bas-Niveaux',()=>{
+test('M01 ending: the VEILLE-4 message of the parents, the silent sphere, the road to the Bas-Niveaux',()=>{
  const ghju=chapterStory(1,'ghju');
  const lylu=chapterStory(1,'lylu');
- assert.match(ghju.text,/LYLU/);assert.match(lylu.text,/GHJU/);
- assert.match(ghju.text,/Bas-Niveaux/);
- assert.match(ghju.next,/SOUS LES NÉONS/);
+ assert.match(ghju.text,/GAB-1/);assert.match(lylu.text,/CAR-14/);
+ assert.match(ghju.text,/ne perdez pas les deux unités/);assert.match(ghju.text,/Bas-Niveaux/);
+ assert.match(ghju.next,/LES PROFONDEURS/);
 });
 
 test('M02 ending preserves both story choices and the next freight clue',()=>{
  for(const character of ['ghju','lylu']){
   for(const choice of ['escort','proof']){
    const narrative=chapterStory(2,character,choice);
-   assert.match(narrative.text,/HELIX/);
+   assert.match(narrative.text,/GAB-1 et CAR-14/,'the wanted notice of chapter 2');
    assert.match(narrative.text,/Anneau logistique/);
-   assert.match(narrative.next,/CONVOI DES ABSENTS/);
+   assert.match(narrative.next,/CONVOI DES OUBLIÉS/);
   }
  }
  assert.notEqual(chapterStory(2,'ghju','escort').text,chapterStory(2,'ghju','proof').text);

@@ -52,7 +52,7 @@ test('the whole mission: badge, lock, court, two relays, maintenance, three stab
   use(g,m,'relais-ouest');run(g,m,4+PORTAL_CHARGE+.2);assert.equal(m.groups().hangar2.deployed,3);run(g,m,L.HOLDS['relais-ouest']);assert.equal(log.power['relais-ouest'],true);
   g.enemies.length=0;go(g,m,60,28);assert.equal(m.groups().atelier.deployed,5);g.enemies.length=0;
   use(g,m,'relais-est');run(g,m,L.HOLDS['relais-est']+1,{clear:true});assert.equal(m.stageId,'maintenance');assert.equal(log.doors.maintenance,true);assert.ok(m.groups().retour);
-  assert.match(logFor('signatures','lylu').lines.join(' '),/07-GHJU — active/);
+  assert.match(logFor('signatures','lylu').lines.join(' '),/Hadi, A\. — ancien chercheur HELIX/);
   g.enemies.length=0;go(g,m,0,-50);assert.equal(m.stageId,'stabilisateurs');assert.equal(m.guardian.shield,SHIELD[0],'phase shield up');
   for(const [k,id] of ['stab-1','stab-2','stab-3'].entries()){
     clearAll(g);use(g,m,id);run(g,m,L.HOLDS[id]+1);clearAll(g);step(g,m);assert.equal(m.guardian.shield,SHIELD[k+1],`shield after ${id}`);
@@ -60,7 +60,7 @@ test('the whole mission: badge, lock, court, two relays, maintenance, three stab
   assert.equal(m.stageId,'gardien');assert.ok(log.said.includes('stab3'));
   const boss=g.enemies.find(e=>e.guardian);const hp=boss.hp;g.damageEnemy(boss,40,{x:boss.x,y:1.5,z:boss.z});assert.ok(hp-boss.hp>=30,'full damage once the cages are cut (armour aside)');
   g.enemies.length=0;step(g,m);assert.equal(m.stageId,'journal');assert.ok(log.said.includes('gardienOk'));assert.equal(log.breach.at(-1),0);
-  assert.equal(use(g,m,'console').log,'journal-reacteur');assert.equal(m.completed,true);assert.equal(log.finished,1);
+  assert.equal(use(g,m,'console').log,'journal-reacteur');assert.ok(log.said.includes('journal'),'the PINK archive, then ORDRE wakes up');assert.equal(m.completed,true);assert.equal(log.finished,1);
 });
 
 test('the guardian takes only part of the damage while its cages hold, and the checkpoint restores the ring',()=>{
@@ -74,12 +74,14 @@ test('the guardian takes only part of the damage while its cages hold, and the c
   m.restoreCheckpoint();assert.equal(m.stageId,'stabilisateurs');assert.ok(g.enemies.some(e=>e.guardian),'the guardian is back at the checkpoint');assert.equal(m.guardian.shield,SHIELD[0]);
 });
 
-test('the story continues chapter 03 and leads to chapter 05; both heroes; generic wording',()=>{
+test('the story: chapter 4 « Le Protocole Interdit » — Mara Voss, the PINK archive, ORDRE identifies the sphere; both heroes',()=>{
   for(const id of Object.keys(SCRIPT)){const ly=linesFor(id,'lylu'),gh=linesFor(id,'ghju');assert.ok(ly.length&&gh.length,id);
     assert.ok(!ly.some(l=>['gaby','ghju'].includes(l.who))&&!gh.some(l=>['cara','lylu'].includes(l.who)),id);assert.ok([...ly,...gh].every(l=>l.speaker?.name),id);}
   assert.match(m03Log('regulation','ghju').lines.join(' '),/station énergétique Est/);assert.match(logFor('feuille-route').lines.join(' '),/lot spécial/);
-  const journal=logFor('journal-reacteur','ghju').lines.join(' ');assert.match(journal,/22 h 47/);assert.match(journal,/JANUS-9/);assert.match(journal,/07-LYLU/);
-  assert.match(read('m01-extension-story.js'),/22 h 47/,'the night of the fall in chapter 01');assert.match(read('ligne9-layout.js'),/JANUS-9/,'the anchor of chapter 05');
+  const journal=logFor('journal-reacteur','ghju').lines.join(' ');assert.match(journal,/PINK/);assert.match(journal,/autorité humaine/);assert.match(journal,/effacées/);assert.match(journal,/GAB-1/);
+  assert.match(logFor('journal-reacteur','lylu').lines.join(' '),/CAR-14/);
+  const end=linesFor('journal','ghju');assert.ok(end.some(l=>l.who==='voss'));assert.ok(end.some(l=>l.who==='ordre'&&/SIGNATURE INCOMPATIBLE · ARCHITECTURE NON AUTORISÉE · PROCÉDURE DE RÉCUPÉRATION PRIORITAIRE/.test(l.text)));
+  assert.match(read('ligne9-layout.js'),/JANUS-9/,'the node of chapter 05');
   assert.match(ENDING.next,/Ligne Noyée/);
   const all=JSON.stringify(SCRIPT)+JSON.stringify(Object.keys(LOGS).flatMap(k=>[logFor(k,'ghju'),logFor(k,'lylu')]));
   assert.doesNotMatch(all,/est mort|est morte|VSAV|caserne|pompier/i);
@@ -87,9 +89,9 @@ test('the story continues chapter 03 and leads to chapter 05; both heroes; gener
 
 test('the level 4 page: shared engine and HUD, guardian bar, level screen, menu entry from chapter 03',()=>{
   const page=read('niveau4.js'),html=read('niveau4.html'),entry=read('entry.js'),game=read('game.js');
-  for(const part of ['mountCombatHud','ArenaGame','createMissionXR','createM04Mission','createM04Art','BLINDAGE DE PHASE','REPRENDRE AU POINT DE CONTRÔLE'])assert.ok(page.includes(part),part);
+  for(const part of ['mountCombatHud','ArenaGame','createMissionXR','createM04Mission','createM04Art','BLINDAGE SYNCHRONISÉ','Le Protocole Interdit','REPRENDRE AU POINT DE CONTRÔLE'])assert.ok(page.includes(part),part);
   assert.match(html,/decorateShade\(document\.getElementById\('shade'\),\{mission:4/);assert.match(html,/import\('\.\/niveau4\.js/);
-  assert.match(read('index.html'),/data-chapter="campaign4"[^>]*>04 — LA BRÈCHE VIOLETTE/);assert.match(entry,/mission===4\?'\.\/niveau4\.html'/);assert.match(game,/'campaign4'/);
+  assert.match(read('index.html'),/data-chapter="campaign4"[^>]*>04 — LE PROTOCOLE INTERDIT/);assert.match(entry,/mission===4\?'\.\/niveau4\.html'/);assert.match(game,/'campaign4'/);
   assert.match(read('niveau3.html'),/mode=campaign4/,'the end of chapter 03 leads to chapter 04');
   assert.match(read('m04-art.js'),/createSignage/);assert.match(read('m03-art.js'),/createSignage/);assert.match(read('m03-sector.js'),/drawSignAtlas/);
 });

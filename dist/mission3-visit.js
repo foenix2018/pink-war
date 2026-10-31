@@ -3,10 +3,10 @@
 // Reuses the existing geometry/renderer, not character files, rigs or animations.
 // Does not touch the collision hulls of the reference district.
 export const M03_STEPS=Object.freeze([
- Object.freeze({action:'m03-medical',x:-26,y:0,z:15,r:3.5,title:'Relever le dossier du convoi',objective:'Fouiller les archives de l’annexe médicale',message:'ANCIEN REGISTRE / 2196 — Le convoi HELIX a soustrait des identités aux listes civiles. Une copie du manifeste a été transférée à l’atelier technique.'}),
- Object.freeze({action:'m03-workshop',x:22,y:0,z:20,r:3.8,title:'Extraire le manifeste HELIX',objective:'Récupérer le manifeste dans l’atelier',message:'HELIX / MANIFESTE INTERCEPTÉ — Une signature familiale figure parmi les personnes transférées. Le relais A3 contient les dernières coordonnées du convoi.'}),
- Object.freeze({action:'m03-archive',x:-17.5,y:5,z:-29.5,r:3.5,title:'Croiser les coordonnées au relais A3',objective:'Atteindre les Archives A3 en hauteur',message:'RELAIS A3 / DÉCRYPTAGE — Le dernier trajet mène au périmètre fracturé. Le réseau ORDRE utilise le portail pour masquer la destination du convoi.'}),
- Object.freeze({action:'m03-portal',x:0,y:0,z:-98,r:7,title:'Neutraliser la balise de poursuite',objective:'Interrompre le relais ORDRE au périmètre PINK',message:'LIAISON ORDRE INTERROMPUE — Les données du convoi sont sauvegardées hors réseau. Une piste mène désormais vers l’Anneau logistique.'})
+ Object.freeze({action:'m03-medical',x:-26,y:0,z:15,r:3.5,title:'Relever le dossier du convoi',objective:'Fouiller les archives de l’annexe médicale',message:'ANCIEN REGISTRE / 2196 — Le convoi du Directoire a soustrait des identités aux listes civiles. Une copie du manifeste a été transférée à l’atelier technique.'}),
+ Object.freeze({action:'m03-workshop',x:22,y:0,z:20,r:3.8,title:'Extraire le manifeste du convoi',objective:'Récupérer le manifeste dans l’atelier',message:'DIRECTOIRE / MANIFESTE INTERCEPTÉ — Convoi 02 : 41 prisonniers. Lot technique : 7 (ingénieurs, électriciens, un ancien chercheur).'}),
+ Object.freeze({action:'m03-archive',x:-17.5,y:5,z:-29.5,r:3.5,title:'Croiser les coordonnées au relais A3',objective:'Atteindre les Archives A3 en hauteur',message:'RELAIS A3 / DÉCRYPTAGE — Le dernier trajet passe sous le pylône de surveillance. ORDRE y masque la destination du convoi.'}),
+ Object.freeze({action:'m03-portal',x:0,y:0,z:-98,r:7,title:'Neutraliser la balise de poursuite',objective:'Interrompre la balise d’ORDRE au pied du pylône',message:'LIAISON ORDRE INTERROMPUE — Les données du convoi sont sauvegardées hors réseau. Une piste mène désormais vers l’Anneau logistique.'})
 ]);
 const css=`
 body.chapter3 #game #objectivePanel{display:block;top:max(61px,calc(env(safe-area-inset-top) + 48px));width:min(340px,calc(100vw - 78px));background:#071a29d9;border-left-color:#e8bd89}
@@ -62,13 +62,13 @@ export function createMission3Visit({mesh,interactions,characterId='ghju',onFini
  function configure(){
   doc.body.classList.add('chapter3');
   const st=doc.createElement('style');st.id='pw-m03-theme';st.textContent=css;doc.head.appendChild(st);
-  doc.title='PINK WARS — M03 · Le Convoi des Absents';
+  doc.title='PINK WARS — 03 · Le Convoi des Oubliés';
   const desc=doc.querySelector('meta[name="description"]');if(desc)desc.content='PINK WARS — Mission 03, Le Convoi des Absents. Recherche du manifeste HELIX dans les secteurs détaillés de Vesper.';
-  const heading=doc.querySelector('#intro .introMeta');if(heading)heading.textContent='PINK WARS / LA FRACTURE · MISSION 03';
+  const heading=doc.querySelector('#intro .introMeta');if(heading)heading.textContent='PINK WARS / LES HÉRITIERS DU SILENCE · CHAPITRE 03';
   const subtitle=doc.querySelector('#intro .subtitle');if(subtitle)subtitle.textContent='LE CONVOI DES ABSENTS';
   const lead=doc.querySelector('#intro .lead');if(lead)lead.textContent='Les informations saisies à HELIX ramènent vers les anciens secteurs de Vesper. Fouille l’annexe médicale, récupère le manifeste dans l’atelier, déchiffre le relais A3 et neutralise la liaison ORDRE.';
   const features=doc.querySelector('#intro .featureRow');
-  if(features){features.replaceChildren(...['ANNEXE MÉDICALE','ATELIER TECHNIQUE','ARCHIVES A3','CONVOI HELIX','LYLU + CARA','WEBGPU / WEBGL2'].map(text=>{const tag=doc.createElement('div');tag.className='feature';tag.textContent=text;return tag;}));}
+  if(features){features.replaceChildren(...['ANNEXE MÉDICALE','ATELIER TECHNIQUE','ARCHIVES A3','CONVOI HELIX','LYLU + CAR-14','WEBGPU / WEBGL2'].map(text=>{const tag=doc.createElement('div');tag.className='feature';tag.textContent=text;return tag;}));}
   const notice=doc.querySelector('#intro .notice');if(notice)notice.textContent='Nouveau parcours dans les décors détaillés de Vesper. Quatre objectifs dans un ordre précis, de l’annexe médicale jusqu’au périmètre fracturé. Ce chapitre est une première version exploratoire jouable.';
   const button=doc.querySelector('#start');if(button)button.textContent='DÉMARRER LA MISSION 03 →';
   const eyebrow=doc.querySelector('#objectivePanel .eyebrow');if(eyebrow)eyebrow.firstChild.textContent='MISSION 03 ';

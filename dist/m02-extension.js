@@ -49,7 +49,7 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
     const u = X.ENCOUNTERS[name].units[0];
     const portal = { id: 800 + (serial++), x: u.x, z: u.z, y: 0, yaw: Math.atan2(game.player.x - u.x, game.player.z - u.z), openedAt: game.time };
     game.activePortals = [portal]; game.event('portals', { count: 1, sites: [{ ...portal }] });
-    h.cue('portal'); h.notice('HELIX · RENFORTS EN APPROCHE'); pending.push({ name, at: game.time + PORTAL_CHARGE, close: game.time + PORTAL_CHARGE + 2.4 });
+    h.cue('portal'); h.notice('DIRECTOIRE · RENFORTS EN APPROCHE'); pending.push({ name, at: game.time + PORTAL_CHARGE, close: game.time + PORTAL_CHARGE + 2.4 });
     groups.set(name, []);
   }
   const alive = name => (groups.get(name) || []).filter(id => game.enemies.some(e => e.id === id)).length;
@@ -95,9 +95,9 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
       case 'x-arrivee': return pt(20, 87, 'REJOINDRE LE DISPENSAIRE');
       case 'x-dispensaire': return it('registre-soins');
       case 'x-radio': return it(done.has('batterie') ? 'radio' : 'batterie');
-      case 'x-eclaireurs': return pt(-8, 90, 'REPOUSSER LES ÉCLAIREURS HELIX');
+      case 'x-eclaireurs': return pt(-8, 90, 'REPOUSSER LES ÉCLAIREURS DU DIRECTOIRE');
       case 'x-grille': return it('manivelle');
-      case 'x-tour': return pt(0, -88, 'PRENDRE LE CONTRÔLE HELIX');
+      case 'x-tour': return pt(0, -88, 'PRENDRE LE POSTE DE CONTRÔLE');
       case 'x-badge': return it('badge');
       case 'x-coffre': return it('lecteur');
       case 'x-manifeste': return it('manifeste');
@@ -118,7 +118,7 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
     const id = it.id; lastJournal = afterJournal = null;
     if (id === 'batterie') { h.cue('valve'); h.notice('BANC DE BATTERIES RACCORDÉ'); }
     else if (id === 'manivelle') { say('grille'); startHold('grille'); h.notice('GRILLE DE L’ENCLAVE · MANŒUVRE EN COURS'); h.cue('engine'); }
-    else if (id === 'badge') { setStage('x-coffre'); h.notice('BADGE HELIX · NIVEAU 3'); say('tourOk'); }
+    else if (id === 'badge') { setStage('x-coffre'); h.notice('BADGE DU DIRECTOIRE · NIVEAU 3'); say('tourOk'); }
     else if (id === 'lecteur') { openDoor('coffre'); deploy('coffre'); setStage('x-manifeste'); say('coffre'); h.notice('COFFRE DE DONNÉES · ACCÈS ACCORDÉ'); }
     else if (id === 'commande-quai') { say('verrou'); startHold('quai'); h.notice('PORTE DU CONVOI · VERROUILLAGE'); h.cue('engine'); }
     else return false;
@@ -208,7 +208,7 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
       if (!stage || !X.STAGE[stage]) return null;
       if (hold || ['x-eclaireurs', 'x-tour', 'x-fin'].includes(stage)) {
         const p = game.player, enemy = game.enemies.reduce((best, e) => !best || Math.hypot(e.x - p.x, e.z - p.z) < Math.hypot(best.x - p.x, best.z - p.z) ? e : best, null);
-        if (enemy) return { x: enemy.x, z: enemy.z, y: 0, id: 'enemy-' + enemy.id, label: enemy.helix ? 'NEUTRALISER LES AGENTS HELIX' : 'NEUTRALISER LES MACHINES', enemy: true };
+        if (enemy) return { x: enemy.x, z: enemy.z, y: 0, id: 'enemy-' + enemy.id, label: enemy.helix ? 'NEUTRALISER LES AGENTS DU DIRECTOIRE' : 'NEUTRALISER LES MACHINES', enemy: true };
       }
       return targetFor(stage);
     },

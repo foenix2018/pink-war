@@ -1,23 +1,23 @@
-// M01 dialogue: the other sibling's human recording and an audio-only companion.
-// The production book reserves physical spheres and their assistance for M07.
+// M01 documents of the first street: the old VEILLE-4 relay and the notes of the Épars (bible « Les Héritiers
+// du Silence », chapter 1). The sphere comments; nothing tells what the « two units » are.
 export function missionJournal(action,characterId='ghju'){
- const sibling=characterId==='lylu'?'GHJU':'LYLU',companion=characterId==='lylu'?'Cara':'Gaby';
+ const companion=characterId==='lylu'?'CAR-14':'GAB-1';
  if(action==='archive')return {
-  title:'01 / UNE SIGNATURE FAMILIÈRE',stamp:'VESPER · 2196 / MÉMOIRE HUMAINE HORS RÉSEAU',
-  lines:[`ENREGISTREMENT : ${sibling}`,
-   '« Si tu retrouves cette annexe, ne reconnecte rien au réseau. ORDRE écoute les portes, les radios, les relais. »',
-   '« Mon itinéraire est dans la boutique de briques, à l’ouest. Retrouve les anciens relais. Je cherche encore un passage. »',
-   `${companion} — « Il y a une signature familière. »`],
-  speech:`${sibling}. Si tu retrouves cette annexe, ne reconnecte rien au réseau. Mon itinéraire est dans la boutique de briques, à l'ouest. Retrouve les anciens relais.`,
+  title:'01 / UN INDICATIF FAMILIER',stamp:'VESPER · 2196 / MÉMOIRE HUMAINE HORS RÉSEAU',
+  lines:['ÉMISSION AUTOMATIQUE · INDICATIF VEILLE-4 · SOURCE : RELAIS INDÉPENDANT',
+   '« …ne faites confiance à aucun système… réseau principal… »',
+   '« …les relais indépendants… »',
+   `${companion} — « Le signal est dégradé. Mais l’indicatif est propre. »`],
+  speech:'Indicatif VEILLE-4. Ne faites confiance à aucun système connecté au réseau principal. Retrouvez les relais indépendants.',
   footer:'Le circuit isolé vient de couper la surveillance locale. Reste à couvert : une sonde d’ORDRE peut avoir capté le signal.'
  };
  if(action==='investigation')return {
   title:'02 / LES JOURNAUX ONT SURVÉCU',stamp:'BOUTIQUE OUEST / TERMINAL DÉCONNECTÉ',
-  lines:[`NOTE LAISSÉE PAR ${sibling}`,
+  lines:['NOTE LAISSÉE PAR LES ÉPARS · GROUPE 12',
    '« Ils ont arrêté les convois avant la fin de l’évacuation. Les enseignes sont mortes ; leurs machines surveillent encore la rue. »',
-   '« Les Archives végétales gardent une copie des disparus. Le relais sur la terrasse connaît le chemin. Coupe d’abord la balise ORDRE au carrefour. »',
-   'SECOURS 07 — Évacuation suspendue en 2189. Sept années sans retour des équipes.'],
-  speech:'Les Archives végétales gardent une copie des disparus. Le relais sur la terrasse connaît le chemin. Coupe d’abord la balise au carrefour.',
+   '« Le relais de la terrasse répète un vieux message, signature VEILLE-4. La source est aux Archives végétales. Coupe d’abord la balise ORDRE au carrefour. »',
+   'SECOURS 07 — Évacuation suspendue le 17/11/2189. Sept années sans retour des équipes.'],
+  speech:'Le relais de la terrasse répète un vieux message, signature VEILLE-4. La source est aux Archives végétales. Coupe d’abord la balise au carrefour.',
   footer:'TERMINAL HORS RÉSEAU — Copie locale intacte. Dernier relais enregistré : terrasse nord.'
  };
  return null;

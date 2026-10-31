@@ -14,29 +14,29 @@ const ICONS = {
   lock: '<path d="M6 10h12v11H6z"/><path d="M8.5 10V7a3.5 3.5 0 0 1 7 0v3" fill="none" stroke-width="2"/>',
   data: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5" fill="none" stroke-width="2"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" fill="none" stroke-width="2"/>'
 };
-const sib = c => c === 'lylu' ? 'GHJU' : 'LYLU';
+const ia = c => c === 'lylu' ? 'CAR-14' : 'GAB-1';
 
 export const BRIEFINGS = Object.freeze({
   1: { title: 'Le Dernier Signal', zone: 'Vesper // Quartier des secours', image: c => c === 'lylu' ? 'art/chargement-lylu.webp?v=3.47' : 'art/chargement.webp?v=3.47',
-    text: c => `Il y a trois jours, une émission de onze secondes est passée sur le canal 07. Seule ta station écoutait encore cette fréquence. ${sib(c)}, ${c === 'lylu' ? 'ta sœur' : 'ton frère'}, est peut-être en vie.`,
-    objectives: [['door', 'Revenir à la station 07', 'Lire le journal de la nuit de la chute.'], ['bolt', 'Rallumer le quartier', 'Groupe électrogène, porte, puis l’annexe hors réseau.'],
-      ['signal', 'Atteindre le relais A3', 'Retrouver la connexion d’il y a trois jours.'], ['data', 'Copier le registre des disparus', 'Archives végétales, avant la purge d’ORDRE.']] },
-  2: { title: 'Sous les Néons', zone: 'Vesper // Bas-Niveaux', image: () => 'art/mission02-cover.webp?v=3.73.0',
-    text: c => `L’enclave du marché couvert a été « recensée » par HELIX Security. ${sib(c)} est parti${c === 'lylu' ? 'e' : ''} avec les malades. Retrouve les civils cachés et la trace du convoi.`,
-    objectives: [['medic', 'Rejoindre l’enclave du marché', 'Dispensaire, radio, puis la grille de l’enclave.'], ['target', 'Libérer la galerie HELIX', 'Repousser la patrouille et saisir le terminal.'],
-      ['up', 'Rejoindre la tour de transit', 'Passerelles à +12 m, puis le contrôle HELIX.'], ['lock', 'Bloquer le convoi 03', 'Manifeste du coffre, puis le quai de chargement.']] },
-  3: { title: 'Le Convoi des Absents', zone: 'Vesper // Secteur 03 · Archives A3', image: () => 'art/mission03-cover.svg?v=1',
-    text: () => 'Les dernières traces du convoi HELIX mènent au secteur 03. Escorte l’ambulance d’Inès de l’annexe médicale jusqu’à la gare de fret de l’Anneau logistique, avant qu’ORDRE ne verrouille la zone.',
-    objectives: [['medic', 'Fouiller l’annexe médicale', 'Retrouver les premiers éléments du convoi.'], ['doc', 'Récupérer le manifeste HELIX', 'Dans l’atelier de maintenance.'],
-      ['up', 'Rejoindre les archives A3', 'Accéder au niveau supérieur.'], ['target', 'Neutraliser la liaison ORDRE', 'Couper la balise de la fracture, puis escorter l’ambulance jusqu’à la gare.']] },
-  4: { title: 'La Brèche Violette', zone: 'Vesper // Station énergétique Est · JANUS', image: () => null,
-    text: () => 'Le lot spécial du convoi a été envoyé à la station énergétique Est. Au-dessus du réacteur, une lueur violette : une brèche que JANUS tient ouverte. Coupe ce qui la retient, et découvre avec quoi.',
+    text: c => `Une transmission dégradée est passée sur le canal 07. Elle porte VEILLE-4, l’indicatif que tes parents utilisaient avant la Chute. Les patrouilles d’ORDRE quadrillent le secteur. ${ia(c)} reste au-dessus de ton épaule.`,
+    objectives: [['door', 'Revenir à la station 07', 'Lire le journal de la nuit de la Chute.'], ['bolt', 'Libérer les survivants', 'Groupe électrogène, atelier de maintenance, puis la porte.'],
+      ['signal', 'Atteindre le relais A3', 'Le relais indépendant qui a réveillé le message.'], ['data', 'Restaurer le message VEILLE-4', 'Archives végétales, avant la purge d’ORDRE.']] },
+  2: { title: 'Les Profondeurs', zone: 'Vesper // Bas-Niveaux', image: () => 'art/mission02-cover.webp?v=3.74.0',
+    text: () => 'Le message de VEILLE-4 est chiffré. Dans les Bas-Niveaux, le Directoire fait réparer ses machines de guerre par les habitants et garde des modules de décryptage dans la tour de transit. Infiltre le secteur.',
+    objectives: [['medic', 'Rejoindre l’enclave du marché', 'Dispensaire, radio, puis la grille de l’enclave.'], ['target', 'Repousser le Directoire', 'Éclaireurs de la verrière, puis la galerie.'],
+      ['up', 'Rejoindre la tour de transit', 'Passerelles à +12 m, puis le poste de contrôle.'], ['lock', 'Prendre un module de décryptage', 'Coffre de données, puis bloquer le convoi 03.']] },
+  3: { title: 'Le Convoi des Oubliés', zone: 'Vesper // Secteur 03 · Archives A3', image: () => 'art/mission03-cover.svg?v=1',
+    text: () => 'AEGIS prépare l’évacuation des prisonniers du Directoire. Escorte l’ambulance d’Inès de l’annexe médicale jusqu’à la gare de fret de l’Anneau logistique, avant qu’ORDRE ne verrouille la zone.',
+    objectives: [['medic', 'Fouiller l’annexe médicale', 'Rallumer le courant et prendre les kits.'], ['doc', 'Récupérer le manifeste du convoi', 'Dans l’atelier de maintenance.'],
+      ['up', 'Rejoindre les archives A3', 'Accéder au niveau supérieur.'], ['target', 'Couper la balise d’ORDRE', 'Au pied du pylône, puis escorter l’ambulance jusqu’à la gare.']] },
+  4: { title: 'Le Protocole Interdit', zone: 'Vesper // Station énergétique Est · JANUS', image: () => null,
+    text: () => 'Avec la cellule AEGIS de Mara Voss, entre dans la station énergétique Est. Au-dessus du réacteur, une colonne violette : ORDRE y synchronise ses systèmes. Sous le portique dort une archive des anciens systèmes de secours.',
     objectives: [['door', 'Passer le sas d’inspection', 'Le badge du garde, puis la cour du réacteur.'], ['bolt', 'Réactiver les deux relais', 'Hangar de drones à l’ouest, atelier serveur à l’est.'],
-      ['target', 'Neutraliser les trois stabilisateurs', 'Autour de la brèche, le dernier sur le portique.'], ['lock', 'Abattre le gardien de portique', 'Son blindage cède avec chaque stabilisateur.']] },
+      ['target', 'Neutraliser les trois stabilisateurs', 'Autour de la colonne, le dernier sur le portique.'], ['lock', 'Abattre le gardien de portique', 'Son blindage cède avec chaque stabilisateur.']] },
   5: { title: 'La Ligne Noyée', zone: 'Vesper // Ligne 9 · Halles-Basses', image: () => null,
-    text: () => 'L’eau a pris la Ligne 9 sous les Halles-Basses. Relance à la main les vieilles pompes P9 et découvre ce qu’ORDRE cache sous les secteurs évacués.',
+    text: () => 'Traqués par ORDRE, les héros se replient chez les Épars. L’eau a pris la Ligne 9 sous les Halles-Basses : relance à la main les vieilles pompes P9 et découvre ce qu’ORDRE cache sous les secteurs évacués.',
     objectives: [['bolt', 'Rétablir le courant de secours', 'Local technique de la station.'], ['wave', 'Relancer les pompes P9', 'Trois vannes, puis le pupitre central.'],
-      ['door', 'Ouvrir l’écluse', 'Tenir pendant l’ouverture.'], ['data', 'Transmettre les preuves', 'Par l’ancien relais du poste Orme.']] }
+      ['door', 'Ouvrir l’écluse', 'Tenir pendant l’ouverture.'], ['data', 'Transmettre les archives', 'Par l’ancien relais du poste Orme.']] }
 });
 export function briefingFor(mission = 1, characterId = 'ghju') {
   const b = BRIEFINGS[mission] || BRIEFINGS[1], c = characterId === 'lylu' ? 'lylu' : 'ghju';
@@ -44,7 +44,7 @@ export function briefingFor(mission = 1, characterId = 'ghju') {
     objectives: b.objectives.map(([icon, title, detail], i) => ({ icon, title, detail, n: String(i + 1).padStart(2, '0') })) };
 }
 
-const STYLE_URL = new URL('./mission-briefing.css?v=3.73.0', import.meta.url).href;
+const STYLE_URL = new URL('./mission-briefing.css?v=3.74.0', import.meta.url).href;
 const LOGO_URL = new URL('./art/pink-wars-wordmark.svg?v=2', import.meta.url).href;
 export function ensureBriefingStyle(doc = document) {
   if (doc.querySelector('[data-pw-briefing-style]')) return;

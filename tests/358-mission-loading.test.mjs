@@ -37,6 +37,6 @@ test('a lost rendering context can recover the cover after the mission has start
 
 test('mission presentation follows the chosen sibling and the actual chapter',()=>{
  const ghju=missionPresentation(1,'ghju'),lylu=missionPresentation(1,'lylu');
- assert.match(ghju.description,/frère/);assert.match(lylu.description,/sœur/);assert.notEqual(ghju.signal,lylu.signal);
- assert.match(lylu.image,/chargement-lylu/);assert.equal(missionPresentation(2).title,'Sous les Néons');
+ assert.match(ghju.description,/GAB-1/);assert.match(lylu.description,/CAR-14/);assert.match(ghju.description,/VEILLE-4/);assert.notEqual(ghju.signal,lylu.signal);
+ assert.match(lylu.image,/chargement-lylu/);assert.equal(missionPresentation(2).title,'Les Profondeurs');
 });

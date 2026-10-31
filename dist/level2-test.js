@@ -79,7 +79,7 @@ let xr=null,fallbackGun=null,fallbackHand=null;
 // Armour layer (3.63): strikes and throws queued by the keyboard, the mouse and the touch buttons.
 let armorFx=null,meleeQueued=false,chargeQueued=false,touchSprinting=false;
 const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;return;}if(!running||paused)return;audioReady();if(kind==='melee')meleeQueued=true;else if(kind==='charge')chargeQueued=true;else if(kind==='reload')game.reload();else if(kind==='next')game.cycleWeapon();else if(kind==='interact')interact();else if(kind==='crouch')crouchQueued=true;};
-const pauseMenu=createPauseMenu({title:'HISTOIRE / SOUS LES NÉONS',canOpen:()=>started,settingsSelectors:['#quality'],
+const pauseMenu=createPauseMenu({title:'HISTOIRE / LES PROFONDEURS',canOpen:()=>started,settingsSelectors:['#quality'],
  view:{getView:()=>xr?.active?'fps':view,onSelect:next=>changeView(next),canChange:()=>!!playerRig&&!xr?.active},
  onPause:()=>pauseMission(),onResume:()=>unpauseMission(),onVR:()=>xr?.enter(),onHome:async()=>{await xr?.exit();location.assign('./index.html');}});pauseMenu.setVisible(false);
 let combatEffects=null,companion=null,environmentAudio=null,warZone=null,battleAudio=null;
@@ -560,7 +560,7 @@ function interact(){
  }
  else if(stage===2){stage=3;game.grantCharges(1);notice('ACCÈS TRANSIT DÉVERROUILLÉ — DESCENDRE');}
  else if(stage===3){
-  if(extension){stage=4;extension.beginEpilogue();notice('TOUR DE TRANSIT — CONTRÔLE HELIX');return;}
+  if(extension){stage=4;extension.beginEpilogue();notice('TOUR DE TRANSIT — CONTRÔLE DU DIRECTOIRE');return;}
   running=false;document.exitPointerLock?.();showChapter2Finale({characterId,onReplay:resume});
  }
 }
@@ -1032,7 +1032,7 @@ for(const name of ['pointerup','pointercancel']){
  window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
 }
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
-window.__PINK_M02=Object.freeze({snapshot:()=>({music:screenMusicSnapshot(),revision:'3.73.0',running,paused,view:xr?.active?'fps':view,playerVisible:playerRig?.model.root.visible||false,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,extension:extension&&{stage:extension.stage,hold:extension.hold,done:extension.done,reads:extension.reads,opened:extension.opened,groups:extension.groups(),interaction:extension.interaction()},subtitle:subtitles?.current||null,journal:journalOpen,dressing:extArt?.stats(),health:game?.player.hp,
+window.__PINK_M02=Object.freeze({snapshot:()=>({music:screenMusicSnapshot(),revision:'3.74.0',running,paused,view:xr?.active?'fps':view,playerVisible:playerRig?.model.root.visible||false,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,extension:extension&&{stage:extension.stage,hold:extension.hold,done:extension.done,reads:extension.reads,opened:extension.opened,groups:extension.groups(),interaction:extension.interaction()},subtitle:subtitles?.current||null,journal:journalOpen,dressing:extArt?.stats(),health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
  shadowing:worldShadows?.stats(),backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
  effects:combatEffects?.stats(),armor:game&&{shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt}}),

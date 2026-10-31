@@ -158,7 +158,7 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
       c.fillStyle = '#123'; c.font = `800 ${s === 'HALLES-BASSES' ? 22 : 18}px ${SIGN_FONT}`; c.textAlign = 'center'; c.fillText(s, x, 200); c.textAlign = 'left';
     });
     c.fillStyle = '#d23'; c.font = `800 18px ${SIGN_FONT}`; c.fillText('VOUS ÊTES ICI', 60 + 3 * (w - 120) / 5 - 62, 112);
-    c.fillStyle = 'rgba(30,30,30,.55)'; c.font = `700 16px ${SIGN_FONT}`; c.fillText('Fermée par arrêté ORDRE du 14/03/2189', 28, 240);
+    c.fillStyle = 'rgba(30,30,30,.55)'; c.font = `700 16px ${SIGN_FONT}`; c.fillText('Fermée par arrêté ORDRE du 17/11/2189', 28, 240);
   });
   const posterTex = (title, sub, bg, fg, mark) => canvasTexture(T, 256, 384, (c, w, h) => {
     c.fillStyle = bg; c.fillRect(0, 0, w, h); c.fillStyle = fg; c.globalAlpha = .18; for (let i = 0; i < 9; i++) c.fillRect(0, i * 46, w, 22); c.globalAlpha = 1;
@@ -546,7 +546,7 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
       const len = Math.hypot(ex - o.x, ez - o.z), pipe = new T.Mesh(new T.CylinderGeometry(.28, .28, len, 10), M.rust);
       pipe.position.set((ex + o.x) / 2, 9.4, (ez + o.z) / 2); pipe.rotation.z = Math.PI / 2; pipe.rotation.y = -Math.atan2(ez - o.z, ex - o.x); add(pipe);
     }
-    sign(signTex(['JANUS-9', 'HELIX · ANCRAGE DE PHASE · MAINTENU'], { bg: '#e8ebee', fg: '#1a1d22', border: '#ff3a4c', w: 512, h: 160 }), o.x, 1.6, o.z + o.hz * 1.36, 0, 2.4, .75);
+    sign(signTex(['JANUS-9', 'HELIX · NŒUD JANUS-9 · MAINTENU'], { bg: '#e8ebee', fg: '#1a1d22', border: '#ff3a4c', w: 512, h: 160 }), o.x, 1.6, o.z + o.hz * 1.36, 0, 2.4, .75);
     g.traverse(m => { if (m.isMesh) stats.meshes++; });
     anchorParts = { core, heart, halo, rings, seamTex };
   }
@@ -701,7 +701,7 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
         part(M.steel, .1, .1, .3, 0, 1.25, .42); moving = wheel; lamp.position.set(.3, 1.7, .25);
         const plate = new T.Mesh(new T.PlaneGeometry(.5, .18), new T.MeshStandardMaterial({ map: signTex(it.id.replace('vanne-', 'VANNE '), { bg: '#c9a227', fg: '#16181a', w: 256, h: 96 }) })); plate.position.set(0, 2.1, .02); g.add(plate);
       } else if (it.id.startsWith('preuve')) {
-        part(M.black, .9, 1.2, .25, 0, .6, .13); const screen = new T.Mesh(new T.PlaneGeometry(.75, .45), new T.MeshBasicMaterial({ map: signTex(['HELIX · JOURNAL', it.id === 'preuve-1' ? 'ANCRAGE 9-B · CHARGE' : 'ORDRE · ORDRES DE MAINTIEN'], { bg: '#04161c', fg: '#7fe7ff', w: 512, h: 300 }), toneMapped: false }));
+        part(M.black, .9, 1.2, .25, 0, .6, .13); const screen = new T.Mesh(new T.PlaneGeometry(.75, .45), new T.MeshBasicMaterial({ map: signTex(['HELIX · JOURNAL', it.id === 'preuve-1' ? 'NŒUD 9-B · ARCHIVES' : 'ORDRE · ORDRES DE MAINTIEN'], { bg: '#04161c', fg: '#7fe7ff', w: 512, h: 300 }), toneMapped: false }));
         screen.position.set(0, 1.45, .26); screen.rotation.x = -.15; g.add(screen); lamp.position.set(.36, 1.15, .27);
       } else if (it.id === 'relais-orme') {
         if (!onTable) { at.top = 1; part(M.steel, 1, .05, .55, 0, .975, -.28); part(M.steel, .05, .95, .05, -.45, .475, -.5); part(M.steel, .05, .95, .05, .45, .475, -.5); }
@@ -741,7 +741,7 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
     const exit = signTex(['⇠ SORTIE'], { bg: '#0f7a3e', fg: '#f4fff6', w: 256, h: 96 });
     // Street entrance: metro frieze and totem, ORDRE closure barrier.
     sign(signTex(['MÉTRO · LIGNE 9', 'HALLES-BASSES'], { bg: '#0d3b5e', w: 1024, h: 256 }), 0, 8.1, -86.25, Math.PI, 6.4, 1.6, { lit: true });
-    sign(signTex('ZONE FERMÉE · ARRÊTÉ ORDRE 14/03/2189', { bg: '#c9a227', fg: '#16181a', w: 1024, h: 96 }), 0, 7.05, -86.22, Math.PI, 5.4, .3);
+    sign(signTex('ZONE FERMÉE · ARRÊTÉ ORDRE 17/11/2189', { bg: '#c9a227', fg: '#16181a', w: 1024, h: 96 }), 0, 7.05, -86.22, Math.PI, 5.4, .3);
     // The ORDRE closure barrier, pushed aside against the facade.
     piece(hazard, -6.2, HEIGHTS.rue + .8, -88.5, 2.6, .14, .06, .5); for (const x of [-7.3, -5.1]) piece(M.dark, x, HEIGHTS.rue, -88.5 + (x + 6.2) * -.5, .1, 1, .1);
     sign(signTex(['PHARMACIE', 'ÉPARS · OUVERT LA NUIT'], { bg: '#0a1f14', fg: '#3dff8a', w: 512, h: 192 }), -7.83, HEIGHTS.rue + 3.8, -92, Math.PI / 2, 3, 1.1, { lit: true });
@@ -752,13 +752,13 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
     sign(blue(['↓ CORRESPONDANCE · QUAI 9 · DIRECTION ORME'], 1024, 96), 0, 4, -48.18, Math.PI, 5, .48, { lit: true });
     sign(lineMap, 15.82, 2.1, -52, -Math.PI / 2, 4, 1);
     sign(signTex(['↑ SORTIE', 'RUE DES TANNEURS'], { bg: '#0f7a3e', fg: '#f4fff6', w: 512, h: 160 }), 0, 5.4, -71.8, 0, 3, .9, { lit: true });
-    sign(posterTex('HELIX', 'L’ANCRAGE VOUS RELIE', '#e8ebee', '#1a1d22', '#ff3a4c'), -15.82, 1.8, -67, Math.PI / 2, 1.2, 1.8);
+    sign(posterTex('HELIX', 'JANUS VOUS RELIE', '#e8ebee', '#1a1d22', '#ff3a4c'), -15.82, 1.8, -67, Math.PI / 2, 1.2, 1.8);
     sign(posterTex('ORDRE', 'LA SÉCURITÉ EST UN DEVOIR', '#1a1d22', '#e7c45a', null), 15.82, 1.8, -68, -Math.PI / 2, 1.2, 1.8);
     sign(signTex(['LOCAL TECHNIQUE', 'ACCÈS RÉSERVÉ'], { bg: '#c9a227', fg: '#16181a', w: 512, h: 160 }), 15.82, 3.1, -62, -Math.PI / 2, 1.6, .5);
     sign(signTex(['PORTE DE SERVICE', 'OUVERTURE ÉLECTRIQUE'], { bg: '#7a1d1d', fg: '#f4f2ee', w: 512, h: 160 }), 0, 3.4, -48.19, Math.PI, 1.6, .5);
     // Corridors and the aid post.
     sign(blue(['→ HALLES-BASSES · QUAI 9'], 1024, 96), -1.82, 2.5, -30, Math.PI / 2, 4, .38, { lit: true });
-    sign(signTex(['POSTE DE SECOURS AEGIS', 'ÉVACUATION 14/03/2189'], { bg: '#f4f2ee', fg: '#9b1c1c', w: 512, h: 160, border: '#9b1c1c' }), 1.82, 3, -36, -Math.PI / 2, 1.8, .55);
+    sign(signTex(['POSTE DE SECOURS AEGIS', 'ÉVACUATION 17/11/2189'], { bg: '#f4f2ee', fg: '#9b1c1c', w: 512, h: 160, border: '#9b1c1c' }), 1.82, 3, -36, -Math.PI / 2, 1.8, .55);
     sign(graffitiTex('LES ANCIENS RELAIS →', '#8fd0ff'), 20, 1.6, -21.82, 0, 3, .95, { see: true });
     sign(blue(['MARCHÉ DES HALLES-BASSES'], 1024, 128), 40.18, 4.4, -20, Math.PI / 2, 6, .75, { lit: true });
     // Market and its collapse.

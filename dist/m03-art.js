@@ -17,7 +17,7 @@ function canvasTexture(T, w, h, paint) {
 
 export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0xff6fb4 } = {}) {
   const low = quality === 'low', rng = seeded(303);
-  const root = new T.Group(); root.name = 'M03 / Le Convoi des Absents'; scene.add(root);
+  const root = new T.Group(); root.name = 'M03 / Le Convoi des Oubliés'; scene.add(root);
   const animated = [], stats = { meshes: 0, halos: 0, lights: 0 };
   const add = (o, parent = root) => { parent.add(o); stats.meshes++; return o; };
 
@@ -124,7 +124,7 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
     signs.wayfinding('BRETELLE FERMÉE', { sub: 'ORDRE · CONTRÔLE DU TRAFIC', jp: '通行止め', picto: 'warn', arrow: null, color: '#ff3b4e', bg: '#160307', w: 6, h: 1.4, x: 96.45, y: 4.4, z: -48, yaw: -Math.PI / 2 });
     signs.hazard('TREUIL', { sub: 'CÂBLE SOUS TENSION · S’ÉCARTER', w: 1, h: .66, x: 70, y: 1.95, z: -45.54, yaw: 0 });
     signs.hazard('ARRIMAGE', { sub: 'NE PAS STATIONNER SOUS LE PORTIQUE', w: 1, h: .66, x: 72, y: 1.95, z: -85.54, yaw: 0 });
-    signs.hazard('CHARGE LOURDE', { sub: 'HELIX · FRET SÉCURISÉ', picto: 'warn', w: 1.4, h: .7, x: 92, y: 2.3, z: -80.68, yaw: 0 });
+    signs.hazard('CHARGE LOURDE', { sub: 'DIRECTOIRE · FRET SÉCURISÉ', picto: 'warn', w: 1.4, h: .7, x: 92, y: 2.3, z: -80.68, yaw: 0 });
     signs.advert('vesperTransit', { w: 8, h: 3.2, x: 96.4, y: 8.5, z: -66, yaw: -Math.PI / 2 });
     signs.blade('貨物', { color: '#ffc890', sub: 'FRET', x: 65.2, y: 5.2, z: -74.4, yaw: Math.PI / 2 });
   }
@@ -222,7 +222,7 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
     const pivot = new T.Group(); pivot.position.set(-9.6, 1.2, b.z); add(pivot);
     const boom = new T.Mesh(new T.BoxGeometry(18.6, .28, .22), M.white); boom.position.x = 9.3; pivot.add(boom);
     for (let k = 0; k < 9; k++) { const s = new T.Mesh(new T.BoxGeometry(1, .29, .23), M.red); s.position.x = 1 + k * 2; pivot.add(s); }
-    const holo = new T.Mesh(new T.PlaneGeometry(6, 1.4), additive(0xffffff, .55, signTex(['BARRAGE 03 · ORDRE', 'VÉHICULES NON AUTORISÉS'], { bg: 'rgba(40,0,8,.35)', fg: '#ff4d5e', w: 512, h: 120, border: '#ff2f45' }))); holo.position.set(0, 3.2, b.z); add(holo);
+    const holo = new T.Mesh(new T.PlaneGeometry(6, 1.4), additive(0xffffff, .55, signTex(['BARRAGE 03 · DIRECTOIRE', 'VÉHICULES NON AUTORISÉS'], { bg: 'rgba(40,0,8,.35)', fg: '#ff4d5e', w: 512, h: 120, border: '#ff2f45' }))); holo.position.set(0, 3.2, b.z); add(holo);
     movable.set('barriere', { open: 0, target: 0, apply: v => { pivot.rotation.z = v * 1.35; holo.material.opacity = .55 * (1 - v); } });
     animated.push(t => { holo.material.opacity *= Math.sin(t * 17) > .95 ? .3 : 1; });
   }
@@ -231,7 +231,7 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
     const body = new T.Mesh(new T.BoxGeometry(o.hx * 2, 3, o.hz * 2), M.container[0]); body.position.y = 2; g.add(body);
     const base = new T.Mesh(new T.BoxGeometry(o.hx * 2, .4, o.hz * 2 - .2), M.dark); base.position.y = .5; g.add(base);
     for (const k of [-5, -3.6, 4.6]) for (const s of [-1, 1]) { const w = new T.Mesh(new T.CylinderGeometry(.45, .45, .3, 14), M.rubber); w.rotation.x = Math.PI / 2; w.position.set(k, .45, s * (o.hz - .1)); g.add(w); }
-    const s = new T.Mesh(new T.PlaneGeometry(6, .8), new T.MeshStandardMaterial({ map: signTex('HELIX · FRET SÉCURISÉ', { bg: null, fg: '#e9ecee', w: 512, h: 80 }), transparent: true, alphaTest: .05 })); s.position.set(0, 2.4, o.hz + .01); g.add(s);
+    const s = new T.Mesh(new T.PlaneGeometry(6, .8), new T.MeshStandardMaterial({ map: signTex('DIRECTOIRE · FRET SÉCURISÉ', { bg: null, fg: '#e9ecee', w: 512, h: 80 }), transparent: true, alphaTest: .05 })); s.position.set(0, 2.4, o.hz + .01); g.add(s);
     g.rotation.y = .1;
     const cable = new T.Mesh(new T.CylinderGeometry(.03, .03, 1, 5), M.black); add(cable);
     movable.set('remorque', { open: 0, target: 0, apply: v => { g.position.set(o.x + 12 * v, 0, o.z - 2 * v); g.rotation.y = .1 + v * .5;

@@ -1,5 +1,5 @@
 import {createHudContrastControl} from './hud-appearance.js';
-import {bindViewButton,mountViewControl} from './view-options.js?v=3.73.0';
+import {bindViewButton,mountViewControl} from './view-options.js?v=3.74.0';
 // Shared screen pause menu. A click requesting WebXR keeps its user activation.
 export function createPauseMenu({title='PINK WARS',onPause=()=>{},onResume=()=>{},onVR=()=>{},onHome=()=>location.assign('./index.html'),canOpen=()=>true,vrLabel='Passer en VR',settingsSelectors=[],view=null}={}){
  const dialog=document.createElement('dialog');dialog.className='fracture-pause';dialog.setAttribute('aria-label','Menu pause');

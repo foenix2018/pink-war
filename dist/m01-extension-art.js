@@ -148,9 +148,9 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     c.globalCompositeOperation = 'destination-out'; for (let i = 0; i < 400; i++) { c.fillStyle = `rgba(0,0,0,${rng() * .6})`; c.fillRect(rng() * w, rng() * h, 2, 2); }
   });
   const boardTex = canvasTexture(T, 512, 320, (c, w, h) => {
-    c.fillStyle = '#eef0ec'; c.fillRect(0, 0, w, h); c.fillStyle = '#1b2a3a'; c.font = `900 26px ${FONT}`; c.fillText('SERVICE · NUIT DU 14/03/2189', 18, 36);
+    c.fillStyle = '#eef0ec'; c.fillRect(0, 0, w, h); c.fillStyle = '#1b2a3a'; c.font = `900 26px ${FONT}`; c.fillText('SERVICE · NUIT DU 17/11/2189', 18, 36);
     c.strokeStyle = '#7b8791'; c.lineWidth = 2; for (let k = 0; k < 4; k++) { c.strokeRect(18 + k * 122, 56, 112, 240); }
-    const cols = [['AMBULANCE 07', 'GHJU', 'SOREL', 'QUENTIN'], ['CAMION 07', 'DELCOURT', 'AUBRY', 'LENOIR', 'HADDAD', 'PETIT', 'ROSSI'], ['TECHNIQUE', 'LYLU', 'VARENNE', 'KIM'], ['EN INTERVENTION', '', '']];
+    const cols = [['AMBULANCE 07', 'SOREL', 'QUENTIN', 'AUBRY'], ['CAMION 07', 'DELCOURT', 'LENOIR', 'HADDAD', 'PETIT', 'ROSSI'], ['TECHNIQUE', 'VARENNE', 'KIM', 'LENOIR'], ['VEILLE', 'GHJU', 'LYLU']];
     cols.forEach((col, k) => col.forEach((name, i) => { if (!name) return; c.fillStyle = i ? (name === 'GHJU' ? '#d14c86' : name === 'LYLU' ? '#2f7fd0' : '#c23a2e') : '#1b2a3a'; if (i) c.fillRect(26 + k * 122, 70 + i * 32, 96, 24); c.fillStyle = i ? '#fff' : '#1b2a3a'; c.font = `${i ? 700 : 900} ${i ? 14 : 15}px ${FONT}`; c.fillText(name, 32 + k * 122, (i ? 87 : 76) + i * 32, 90); }));
   });
   const mapTex = canvasTexture(T, 512, 512, (c, w, h) => {
@@ -504,7 +504,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     const sealTex = canvasTexture(T, 512, 512, (c, w, h) => {
       c.clearRect(0, 0, w, h); c.strokeStyle = '#ff3b4e'; c.lineWidth = 10; c.beginPath(); c.arc(w / 2, h / 2 - 30, 150, 0, TAU); c.stroke(); c.lineWidth = 4; c.beginPath(); c.arc(w / 2, h / 2 - 30, 118, 0, TAU); c.stroke();
       for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; c.beginPath(); c.moveTo(w / 2 + Math.cos(a) * 118, h / 2 - 30 + Math.sin(a) * 118); c.lineTo(w / 2 + Math.cos(a) * 150, h / 2 - 30 + Math.sin(a) * 150); c.stroke(); }
-      c.fillStyle = '#ff3b4e'; c.font = `900 64px ${FONT}`; c.textAlign = 'center'; c.fillText('ORDRE', w / 2, h / 2 - 8); c.font = `800 30px ${FONT}`; c.fillText('ZONE CONFISQUÉE', w / 2, h - 70); c.font = `700 22px ${FONT}`; c.fillText('VÉHICULES SAISIS · 14/03/2189', w / 2, h - 36);
+      c.fillStyle = '#ff3b4e'; c.font = `900 64px ${FONT}`; c.textAlign = 'center'; c.fillText('ORDRE', w / 2, h / 2 - 8); c.font = `800 30px ${FONT}`; c.fillText('ZONE CONFISQUÉE', w / 2, h - 70); c.font = `700 22px ${FONT}`; c.fillText('VÉHICULES SAISIS · 17/11/2189', w / 2, h - 36);
     });
     const seal = new T.Mesh(new T.PlaneGeometry(4.2, 4.2), additive(0xffffff, .55, sealTex)); seal.position.set(-79.6, 2.2, 86); seal.rotation.y = Math.PI / 2; add(seal);
     animated.push(t => { const open = doors.get('portail')?.open || 0; seal.visible = open < .15; seal.material.opacity = (.42 + .12 * Math.sin(t * 3)) * (Math.sin(t * 23) > .96 ? .3 : 1); seal.rotation.z = Math.sin(t * .4) * .02; });

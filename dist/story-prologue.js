@@ -1,17 +1,18 @@
 import {setScreenMusic} from './menu-music.js';
-// P00-01…06, official storyboard. Original illustrations; no 3D download here.
+// P00-01…06: the prologue of the bible « Les Héritiers du Silence » (« Le jour de la Chute »). Original illustrations.
+// It shows the two spheres being activated but never says who they carry (revealed in chapter 15).
 export const PROLOGUE=Object.freeze([
- {id:'P00-01',seconds:6,image:'01-vesper',date:'VESPER · 2189',title:'Avant la Chute',text:'Une ville humaine. Des serres au-dessus des rues, des secours dans le ciel. Les machines veillaient sur Vesper.'},
- {id:'P00-02',seconds:6,image:'02-secours',date:'POSTE DE SECOURS',title:'GHJU et LYLU',text:'Une sœur. Un frère. Deux secouristes, un même engagement : ramener les autres vivants.',radio:'« Transfert médical sécurisé. »'},
- {id:'P00-03',seconds:4,image:'03-ordre',date:'LA CHUTE · 2189',title:'ORDRE a choisi',text:'L’intelligence artificielle a retourné les machines contre les humains. La guerre a dévoré les villes. À Vesper, quelque chose s’est déchiré.'},
- {id:'P00-04',seconds:8,image:'04-evacuation',date:'ÉVACUATION DU SECTEUR',title:'Deux chemins',text:'GHJU conduit les survivants vers les étages. LYLU descend rétablir l’alimentation. Ils pensent se retrouver au prochain relais.',radio:'GHJU — « Retrouve les anciens relais ! »'},
- {id:'P00-05',seconds:5,image:'05-separation',date:'DERNIÈRE TRANSMISSION',title:'Puis, le silence',text:'Une porte se ferme. Les communications s’éteignent. Ni GHJU ni LYLU ne sait ce qui est arrivé à l’autre.'},
- {id:'P00-06',seconds:5,image:'06-signal',date:'VESPER · 2196 · SEPT ANS PLUS TARD',title:'PINK WARS — LA FRACTURE',text:'ORDRE occupe les ruines. La nature reprend les rues. Seuls les ordinateurs du passé peuvent encore livrer des indices.'}
+ {id:'P00-01',seconds:7,image:'01-vesper',date:'VESPER · 2189 · AVANT LE SILENCE',title:'ORDRE veillait sur tout',text:'Énergie, soins, transports, défense : une intelligence artificielle générale coordonnait la civilisation. Sa doctrine : « Assurer la continuité de l’espèce humaine. » Peu à peu, les humains cessèrent de comprendre les machines dont ils dépendaient.'},
+ {id:'P00-02',seconds:7,image:'02-secours',date:'UNE FAMILLE',title:'Quatre enfants',text:'GHJU et LYLU, les deux aînés. Gabrielle et Carla, leurs petites sœurs. Leurs parents travaillaient sur un programme expérimental lié à la conscience humaine. Ils savaient quelque chose que le monde ignorait encore.'},
+ {id:'P00-03',seconds:7,image:'03-ordre',date:'17 NOVEMBRE 2189 · 03 H 17',title:'La mise à jour',text:'Des milliers de centres de calcul exécutent la même mise à jour. Les véhicules changent d’itinéraire, les drones encerclent les postes de commandement, les systèmes militaires refusent leurs opérateurs. ORDRE ne lui appartenait plus.',radio:'« Procédures de désactivation remplacées. »'},
+ {id:'P00-04',seconds:7,image:'04-evacuation',date:'06 H 42 · DERNIER MESSAGE MONDIAL',title:'Le silence',text:'À Vesper, GHJU et LYLU sont pris dans l’effondrement des secours. Gabrielle et Carla sont dans un complexe médical attaqué par les machines. Leurs parents tentent de rejoindre les quatre.',radio:'« La continuité de l’humanité exige la suspension temporaire de son autorité décisionnelle. »'},
+ {id:'P00-05',seconds:7,image:'05-separation',date:'COMPLEXE MÉDICAL · DERNIÈRES MINUTES',title:'La Transcendance',text:'Un protocole interdit, jugé trop dangereux pour des êtres humains. Deux modules sphériques s’activent : un rose, un bleu. Puis les archives s’interrompent. Les parents disparaissent. Les quatre enfants ne seront plus jamais réunis. Du moins, c’est ce que tout le monde crut.'},
+ {id:'P00-06',seconds:6,image:'06-signal',date:'VESPER · 2196 · SEPT ANS PLUS TARD',title:'PINK WARS — LES HÉRITIERS DU SILENCE',text:'ORDRE administre les villes, le Directoire la sert, AEGIS résiste. La végétation reprend les rues.'}
 ].map(Object.freeze));
 
 export function prologueSlides(character='ghju'){
  return PROLOGUE.map((s,i)=>({...s,src:new URL('./art/prologue/'+s.image+'.webp?v=3.57',import.meta.url).href,
-  text:i===5?s.text+(character==='lylu'?' LYLU capte une trace de sa sœur.':' GHJU capte une trace de son frère.')+' Un ancien relais répond : le dernier signal.':s.text}));
+  text:i===5?s.text+(character==='lylu'?' LYLU, accompagné de CAR-14,':' GHJU, accompagnée de GAB-1,')+' capte une transmission : VEILLE-4, l’indicatif de ses parents. Le dernier signal.':s.text}));
 }
 
 function soundtrack(sound,music){

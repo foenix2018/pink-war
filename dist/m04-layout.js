@@ -20,8 +20,8 @@ export const AREAS = Object.freeze([
   area('relais-est', 80, 92, 16, 40, 'Local du relais est', { roof: 4.5 }),
   area('atelier', 40, 92, 0, 56, 'Atelier serveur · mémoire de la station', { roof: 4.5 }),
   area('hangar', -92, -40, 0, 56, 'Hangar de drones', { roof: 12 }),
-  area('portique', -24, 24, -96, -82, 'Portique de la brèche'),
-  area('anneau', -60, 60, -96, -42, 'Anneau des stabilisateurs · brèche violette'),
+  area('portique', -24, 24, -96, -82, 'Portique de la colonne'),
+  area('anneau', -60, 60, -96, -42, 'Anneau des stabilisateurs · colonne violette'),
   area('cour', -40, 40, -30, 62, 'Cour du réacteur · station énergétique Est')
 ]);
 export const areaAt = (x, z) => AREAS.find(a => x >= a.x1 && x <= a.x2 && z >= a.z1 && z <= a.z2)?.id || null;
@@ -149,7 +149,7 @@ export const INTERACTIONS = Object.freeze([
   it('doc-avis', -22.4, 80, 'LIRE L’AVIS JANUS ÉNERGIE', { log: 'avis-janus' }),
   it('doc-plan', -36, 40, 'CONSULTER LE PLAN DE LA STATION', { log: 'plan' }),
   it('doc-drones', -66, 7, 'LIRE LE CARNET DE L’ATELIER DRONES', { log: 'drones' }),
-  it('doc-serveur', 60, 6, 'LIRE LE JOURNAL DES SIGNATURES', { log: 'signatures' }),
+  it('doc-serveur', 60, 6, 'LIRE LE REGISTRE DES TECHNICIENS', { log: 'signatures' }),
   it('doc-maintenance', 0, -38, 'LIRE LE RAPPORT DE MAINTENANCE', { log: 'maintenance' }),
   it('doc-badge', -46, -60, 'RAMASSER UN BRACELET D’IDENTIFICATION', { log: 'bracelet' })
 ]);
@@ -184,8 +184,8 @@ export const STAGES = Object.freeze([
   stage('relais', 'RÉACTIVER LES DEUX RELAIS', 'Relais ouest au fond du hangar de drones, relais est au bout de l’atelier serveur.', { x: 0, z: 30, yaw: 0 }),
   stage('maintenance', 'PRENDRE LE PASSAGE DE MAINTENANCE', 'La porte nord de la cour est déverrouillée. La passerelle domine la cour.', { x: 0, z: 0, yaw: 0 }),
   stage('stabilisateurs', 'NEUTRALISER LES TROIS STABILISATEURS', 'Deux cages de part et d’autre du réacteur, la troisième sur le portique (rampe à l’est).', { x: 0, z: -46, yaw: 0 }),
-  stage('gardien', 'ABATTRE LE GARDIEN DE PORTIQUE', 'Son blindage de phase cède à chaque stabilisateur neutralisé.', { x: 0, z: -48, yaw: 0 }),
-  stage('journal', 'LIRE LE JOURNAL DU RÉACTEUR', 'Console au pied du réacteur, côté portique.', { x: 0, z: -48, yaw: 0 }),
-  stage('fin', 'LA BRÈCHE VIOLETTE', 'La brèche retombe en veille.', { x: 0, z: -76, yaw: 0 })
+  stage('gardien', 'ABATTRE LE GARDIEN DE PORTIQUE', 'Son blindage synchronisé cède à chaque stabilisateur neutralisé.', { x: 0, z: -48, yaw: 0 }),
+  stage('journal', 'OUVRIR L’ARCHIVE DES SECOURS', 'Console hors réseau sous le portique, au pied du réacteur.', { x: 0, z: -48, yaw: 0 }),
+  stage('fin', 'LE PROTOCOLE INTERDIT', 'ORDRE lance ses unités de poursuite.', { x: 0, z: -76, yaw: 0 })
 ]);
 export const STAGE_INDEX = Object.freeze(Object.fromEntries(STAGES.map((s, i) => [s.id, i])));

@@ -12,7 +12,7 @@ function canvasTexture(T, w, h, paint) { const c = document.createElement('canva
 
 export function createM04Art(T, scene, { quality = 'normal', accent = 0xff6fb4 } = {}) {
   const low = quality === 'low', rng = seeded(404);
-  const root = new T.Group(); root.name = 'M04 / La Brèche Violette'; scene.add(root);
+  const root = new T.Group(); root.name = 'M04 / Le Protocole Interdit'; scene.add(root);
   const animated = [], stats = { meshes: 0, instances: 0, lights: 0 };
   const add = (o, parent = root) => { parent.add(o); stats.meshes++; return o; };
 
@@ -258,14 +258,14 @@ export function createM04Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
   // ---------- Signage (W04: technical blue, maintenance yellow, JANUS violet) ----------
   const signs = createSignage(T, { root, low });
   function buildSigns() {
-    signs.neon(['STATION ÉNERGÉTIQUE EST', 'JANUS ÉNERGIE · SECTEUR DE PHASE'], { color: '#9a7bff', color2: '#ff4fa1', kanji: '位相', w: 12, h: 2.4, x: 0, y: 5.6, z: 74.34, yaw: 0 });
+    signs.neon(['STATION ÉNERGÉTIQUE EST', 'JANUS · SECTEUR DE CALCUL'], { color: '#9a7bff', color2: '#ff4fa1', kanji: '位相', w: 12, h: 2.4, x: 0, y: 5.6, z: 74.34, yaw: 0 });
     signs.advert('janus', { w: 9, h: 3.6, x: -23.7, y: 6.5, z: 86, yaw: Math.PI / 2 });
     signs.wayfinding('SAS D’INSPECTION', { sub: 'BADGE JANUS OBLIGATOIRE', jp: '検査区域', picto: 'eye', arrow: 0, color: '#4aa8ff', w: 3.4, h: .8, x: 8, y: 3.4, z: 74.34, yaw: 0 });
-    signs.hazard('CONTRÔLE D’IDENTITÉ', { sub: 'TOUTE SIGNATURE EST ENREGISTRÉE', picto: 'eye', w: 1.6, h: .8, x: -9.75, y: 2, z: 68, yaw: Math.PI / 2 });
+    signs.hazard('CONTRÔLE D’IDENTITÉ', { sub: 'TOUT ACCÈS EST ENREGISTRÉ PAR ORDRE', picto: 'eye', w: 1.6, h: .8, x: -9.75, y: 2, z: 68, yaw: Math.PI / 2 });
     signs.wayfinding('HANGAR DE DRONES', { sub: 'RELAIS OUEST · SECTEUR 3', jp: '格納庫', picto: 'bolt', arrow: Math.PI / 2, color: '#ffc23a', w: 3.4, h: .8, x: -12, y: 3.4, z: 60, yaw: Math.PI });
     signs.wayfinding('ATELIER SERVEUR', { sub: 'RELAIS EST · SECTEUR 4', jp: '電算室', picto: 'bolt', arrow: -Math.PI / 2, color: '#4aa8ff', w: 3.4, h: .8, x: 12, y: 3.4, z: 60, yaw: Math.PI });
-    signs.wayfinding('ANNEAU DE PHASE', { sub: 'PASSAGE DE MAINTENANCE · SECTEUR 5–6', jp: '位相環', picto: 'phase', arrow: 0, color: '#ff4fa1', w: 3.8, h: .8, x: 8, y: 4, z: -29.75, yaw: 0 });
-    signs.hazard('ZONE DE PHASE', { sub: 'PERSONNEL JANUS UNIQUEMENT', picto: 'phase', w: 1.6, h: .8, x: -3.6, y: 2.2, z: -29.75, yaw: 0 });
+    signs.wayfinding('ANNEAU DE LA COLONNE', { sub: 'PASSAGE DE MAINTENANCE · SECTEUR 5–6', jp: '位相環', picto: 'phase', arrow: 0, color: '#ff4fa1', w: 3.8, h: .8, x: 8, y: 4, z: -29.75, yaw: 0 });
+    signs.hazard('ZONE DE SYNCHRONISATION', { sub: 'PERSONNEL JANUS UNIQUEMENT', picto: 'phase', w: 1.6, h: .8, x: -3.6, y: 2.2, z: -29.75, yaw: 0 });
     signs.blade('危険', { color: '#ffc23a', sub: 'DANGER', x: -38.5, y: 5, z: 50, yaw: Math.PI / 2 });
     signs.blade('格納庫', { color: '#4aa8ff', sub: 'HANGAR', x: -40.6, y: 6.5, z: 23, yaw: 0 });
     signs.blade('電算', { color: '#5fe0f0', sub: 'SERVEURS', x: 40.6, y: 4, z: 23.5, yaw: 0 });
@@ -274,7 +274,7 @@ export function createM04Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
     signs.advert('ordre', { w: 6, h: 2.4, x: 59.7, y: 6.5, z: -70, yaw: -Math.PI / 2 });
     signs.advert('helix', { w: 6, h: 2.2, x: -59.7, y: 6.5, z: -78, yaw: Math.PI / 2, holo: false });
     signs.hazard('DRONES EN CHARGE', { sub: 'NE PAS TOUCHER LES RACKS', picto: 'bolt', w: 1.4, h: .7, x: -91.75, y: 2.4, z: 16, yaw: Math.PI / 2 });
-    signs.hazard('BAIE 4', { sub: 'SIGNATURES · ACCÈS JANUS', picto: 'eye', w: 1.2, h: .6, x: 60, y: 2.4, z: 25.75, yaw: Math.PI });
+    signs.hazard('BAIE 4', { sub: 'TECHNICIENS · ACCÈS JANUS', picto: 'eye', w: 1.2, h: .6, x: 60, y: 2.4, z: 25.75, yaw: Math.PI });
     for (const [id, x, z, yaw] of [['relais-ouest', -91.75, 24.6, Math.PI / 2], ['relais-est', 91.75, 31.4, -Math.PI / 2]]) signs.wayfinding(id === 'relais-ouest' ? 'RELAIS OUEST' : 'RELAIS EST', { sub: 'RÉSEAU DE SECOURS 400 V', jp: '中継', picto: 'bolt', arrow: null, color: '#ffc23a', w: 2.4, h: .6, x, y: 3.1, z, yaw });
   }
 

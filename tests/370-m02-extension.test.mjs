@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {ArenaGame,ARENA_SIZE} from '../dist/game-logic.js';
 import * as X from '../dist/m02-extension-layout.js';
 import {createM02Extension,readM02Checkpoint,PORTAL_CHARGE} from '../dist/m02-extension.js';
-import {SCRIPT,linesFor,logFor,LOGS} from '../dist/m02-extension-story.js';
+import {SCRIPT,SPEAKERS,linesFor,logFor,LOGS} from '../dist/m02-extension-story.js';
 import {chapterStory} from '../dist/story-chapters.js';
 
 const read=path=>readFileSync(new URL('../dist/'+path,import.meta.url),'utf8');
@@ -68,7 +68,7 @@ test('the prologue plays: service lift, dispensary register, radio, HELIX scouts
   assert.ok(Math.hypot(g.player.x-X.LIFT_START.x,g.player.z-X.LIFT_START.z)<.1);
   assert.ok(g.obstacles.some(o=>o.door==='grille'),'the enclave gate is shut');assert.equal(g.pickups.filter(p=>p.extension).length,X.SUPPLIES.length);
   walkNav(g,ext,[20,86]);assert.equal(ext.stage,'x-dispensaire','entering the dispensary');
-  const reg=use(g,ext,'registre-soins');assert.equal(reg.then,'registre');assert.match(reg.entry.lines.join(' '),/07-GHJU/);assert.equal(ext.stage,'x-radio');
+  const reg=use(g,ext,'registre-soins');assert.equal(reg.then,'registre');assert.match(reg.entry.lines.join(' '),/réparent des châssis militaires pour ORDRE/);assert.equal(ext.stage,'x-radio');
   Object.assign(g.player,{x:32,z:82.4});assert.equal(ext.interaction(),null,'the radio is dead before the batteries');
   use(g,ext,'batterie');const radio=use(g,ext,'radio');assert.equal(radio.then,'radio');assert.equal(ext.stage,'x-eclaireurs');
   assert.equal(ext.groups().eclaireurs.deployed,3);assert.ok(g.enemies.filter(e=>e.helix).length===2,'two HELIX agents and a probe');
@@ -89,8 +89,8 @@ test('the transit tower: HELIX checkpoint, badge, data vault, manifest, dock hol
   Object.assign(g.player,{x:-18.6,z:-86.4});assert.equal(ext.interaction(),null,'the vault is locked');
   assert.ok(g.obstacles.some(o=>o.door==='coffre'));use(g,ext,'lecteur');assert.ok(!g.obstacles.some(o=>o.door==='coffre'));assert.equal(ext.stage,'x-manifeste');
   g.enemies.length=0;const kessler=use(g,ext,'doc-kessler');assert.match(kessler.entry.lines.join(' '),/supports de 2189/);
-  const manifest=use(g,ext,'manifeste');assert.equal(manifest.then,'manifeste');assert.match(manifest.entry.lines.join(' '),/07-LYLU.*Anneau logistique|Anneau logistique[\s\S]*07-LYLU/);
-  assert.match(manifest.entry.lines.join(' '),/déclarés « perdus » par l’armée/);assert.equal(ext.stage,'x-quai');assert.ok(log.said.includes('alarme'));
+  const manifest=use(g,ext,'manifeste');assert.equal(manifest.then,'manifeste');assert.match(manifest.entry.title,/AVIS DE RECHERCHE — ORDRE/);assert.match(manifest.entry.lines.join(' '),/GAB-1[\s\S]*CAR-14/);
+  assert.match(manifest.entry.lines.join(' '),/Procédure de récupération prioritaire/);assert.equal(ext.stage,'x-quai');assert.ok(log.said.includes('alarme'));
   Object.assign(g.player,{x:43,z:-84.6});assert.equal(ext.interaction(),null,'the dock team first');
   g.enemies.length=0;use(g,ext,'commande-quai');assert.equal(ext.hold.name,'quai');
   run(g,ext,X.HOLDS.quai+1);assert.equal(ext.hold,null);assert.equal(ext.stage,'x-fin');assert.equal(log.doors.convoi,true);
@@ -116,15 +116,16 @@ test('checkpoints: an extension stage resumes at its place, earlier progress kep
   const fifth=mission('lylu');fifth.ext.start();fifth.ext.beginEpilogue();assert.equal(fifth.ext.groups().tour.deployed,4);
 });
 
-test('the story: both heroes, HELIX Security, records the army calls lost, the sibling on the convoy to the Anneau logistique',()=>{
+test('the story: both heroes, the Directoire, the decryption module, ORDRE hunting GAB-1 and CAR-14, HELIX hiding the records of 2189',()=>{
   for(const id of Object.keys(SCRIPT)){
     const lylu=linesFor(id,'lylu'),ghju=linesFor(id,'ghju');assert.ok(lylu.length&&ghju.length,id);
     assert.ok(!lylu.some(l=>['gaby','ghju'].includes(l.who)),`${id} LYLU`);assert.ok(!ghju.some(l=>['cara','lylu'].includes(l.who)),`${id} GHJU`);
     assert.ok([...lylu,...ghju].every(l=>l.speaker?.name),`${id} speakers`);
   }
-  assert.ok(linesFor('manifeste','ghju').some(l=>l.text==='Ils protègent les données. Pas les gens.'),'storyboard 02B');
-  assert.match(logFor('registre-soins','lylu').lines.join(' '),/Archives végétales/,'continuity with M01');
-  assert.match(logFor('kessler').stamp,/JANUS/);assert.match(logFor('avis-helix').footer,/Kessler/);assert.match(logFor('consignes').lines.join(' '),/On m’a dit qu’on évacuait/);
+  assert.ok(linesFor('manifeste','lylu').some(l=>l.who==='cara'&&/avis de recherche/.test(l.text)),'CAR-14 intercepts the notice (chapter 2)');
+  assert.match(linesFor('intro','lylu').map(l=>l.text).join(' '),/module|décryptage|Directoire/,'continuity with M01: the encrypted message');
+  assert.match(logFor('kessler').stamp,/JANUS/);assert.match(logFor('kessler').lines.join(' '),/17 novembre/);assert.match(logFor('avis-helix').title,/DIRECTOIRE/);assert.match(logFor('consignes').lines.join(' '),/Je ne signe plus les bordereaux/);
+  assert.equal(SPEAKERS.helix.name,'DIRECTOIRE · DIFFUSION');
   const all=JSON.stringify(SCRIPT)+JSON.stringify(Object.keys(LOGS).flatMap(k=>[logFor(k,'ghju'),logFor(k,'lylu')]));
   assert.doesNotMatch(all,/est mort|est morte/);
   for(const c of ['lylu','ghju'])assert.match(chapterStory(2,c,'proof').text,/Anneau logistique/);

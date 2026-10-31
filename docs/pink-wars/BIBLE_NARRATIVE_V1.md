@@ -1,3 +1,5 @@
+> **REMPLACÉE — 31 octobre 2026.** La référence narrative en vigueur est [BIBLE_NARRATIVE_V2_HERITIERS_DU_SILENCE.md](BIBLE_NARRATIVE_V2_HERITIERS_DU_SILENCE.md) (« Les Héritiers du Silence »). Ce document reste comme archive de la version « La Fracture ».
+
 > **MISE À JOUR DU CRÉATEUR — 29 octobre 2026 :** Gaby accompagne GHJU et Cara accompagne LYLU physiquement dès M01, ainsi que dans l’Arène et au stand. Elles flottent au-dessus et légèrement derrière le héros, assurent le tir de protection et l’éclairage dans le noir. Cette instruction remplace les mentions antérieures d’une première apparition physique à M07. La progression des compétences manuelles avancées reste à M07. [Implémentation 3.67](MISE_A_JOUR_367.md).
 
 > **ADDENDUM CANON — 22 octobre 2026, PRIORITAIRE SUR TOUTE DESCRIPTION CONTRADICTOIRE**  

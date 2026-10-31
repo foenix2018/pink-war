@@ -50,7 +50,7 @@ export function createM03Mission({ game, characterId = 'ghju', choice = null, ba
   }
   function release(name) {
     const enc = L.ENCOUNTERS[name];
-    if (enc.portal) { h.openPortal(enc.portal.x, 0, enc.portal.z, { charge: PORTAL_CHARGE }); h.cue('portal'); h.notice('PORTAIL ORDRE · RENFORTS EN APPROCHE'); pending.push({ name, at: game.time + PORTAL_CHARGE }); groups.set(name, []); }
+    if (enc.portal) { h.openPortal(enc.portal.x, 0, enc.portal.z, { charge: PORTAL_CHARGE }); h.cue('portal'); h.notice('ORDRE · RENFORTS EN APPROCHE'); pending.push({ name, at: game.time + PORTAL_CHARGE }); groups.set(name, []); }
     else deploy(name, { alert: true });
   }
   function startHold(name) { hold = { name, start: game.time, until: game.time + L.HOLDS[name], waves: [...L.HOLD_WAVES[name]] }; h.cue('hold'); }

@@ -3,11 +3,11 @@ import {DesktopGamepadInput} from './desktop-input.js';
 import {createGamepadAid,gamepadsNow} from './ios-gamepad.js';
 import {graphicsProfile} from './renderer-policy.js';
 import {GAME_VERSION,showLaunchError,compatibleLaunchURL} from './launch-ui.js';
-import {syncMenuArtwork} from './menu-art.js?v=3.73.0';
+import {syncMenuArtwork} from './menu-art.js?v=3.74.0';
 import {showStoryPrologue} from './story-prologue.js';
 import {createMissionLoading} from './mission-loading.js';
 import {readM01Checkpoint} from './checkpoint-index.js';
-import {mountViewControl,readPreferredView,savePreferredView} from './view-options.js?v=3.73.0';
+import {mountViewControl,readPreferredView,savePreferredView} from './view-options.js?v=3.74.0';
 
 // This menu has no Three.js or character imports. It is usable before the user
 // chooses to download/build the 3D scene, including inside an iPhone web view.
@@ -29,10 +29,10 @@ function refresh(){
   $('character-description').textContent=character==='lylu'?'LYLU cherche sa sœur GHJU dans les ruines de Vesper.':'GHJU cherche son frère LYLU dans les ruines de Vesper.';
   for(const b of document.querySelectorAll('[data-character]')){const yes=b.dataset.character===character;b.classList.toggle('selected',yes);b.setAttribute('aria-pressed',String(yes));}
   for(const b of document.querySelectorAll('[data-mode]'))b.setAttribute('aria-pressed',String(b.dataset.mode===mode));
-  document.querySelector('.mission-kicker').textContent=mode==='campaign4'?'CAMPAGNE · QUATRIÈME MISSION':mode==='campaign3'?'CAMPAGNE · TROISIÈME MISSION':mode==='campaign2'?'CAMPAGNE · DEUXIÈME MISSION':mode==='campaign'?'CAMPAGNE · PREMIÈRE MISSION':'PINK WARS · JOUER';
-  $('mission-title').textContent=mode==='breach'?'Opération Brèche — mission bonus':mode==='ligne9'?'05 — La Ligne Noyée':mode==='campaign4'?'04 — La Brèche Violette':mode==='campaign3'?'03 — Le Convoi des Absents':mode==='campaign2'?'02 — Sous les Néons':mode==='campaign'?'01 — Le dernier signal':mode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
-  $('mission-description').textContent=mode==='breach'?'Six secteurs industriels, deux relais, trois stabilisateurs et un gardien avant extraction.':mode==='ligne9'?'Ligne 9 inondée sous les Halles-Basses : rétablir le courant, relancer les pompes P9, ouvrir l’écluse. Mission longue avec points de contrôle.':mode==='campaign4'?'Station énergétique Est de JANUS : deux relais, trois stabilisateurs et le gardien de portique, autour de la brèche ouverte le soir de la chute. Mission longue avec points de contrôle.':mode==='campaign3'?'Secteur 03 de Vesper, de nuit : escorter l’ambulance d’Inès de l’annexe médicale à la gare de fret de l’Anneau logistique. Barrage ORDRE, relais A3, balise de la fracture, échangeur bloqué. Mission longue avec points de contrôle.':mode==='campaign2'?'Bas-Niveaux de Vesper : enclave, marché cyberpunk, HELIX et tour de transit. Sauver les civils ou récupérer les preuves.':mode==='campaign'?'Laboratoire abandonné, rue sous surveillance et relais en hauteur. Une trace de votre famille.':mode==='arena'?'Vingt vagues de machines et six armes à récupérer.':'Cibles fixes de 15 à 60 mètres, cibles mobiles latérales et avant-arrière. Vitesse croissante, score et précision.';
-  $('play-label').textContent=loading?'CHARGEMENT…':mode==='ligne9'?'JOUER LE CHAPITRE 05':mode==='campaign4'?'JOUER LE NIVEAU 4':mode==='campaign3'?'JOUER LE NIVEAU 3':mode==='campaign2'?'JOUER LE NIVEAU 2':mode==='campaign'?(readM01Checkpoint(character)?'CONTINUER':'JOUER'):mode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
+  document.querySelector('.mission-kicker').textContent=mode==='campaign4'?'ACTE I · CHAPITRE 04':mode==='campaign3'?'ACTE I · CHAPITRE 03':mode==='campaign2'?'ACTE I · CHAPITRE 02':mode==='campaign'?'ACTE I · CHAPITRE 01':'PINK WARS · JOUER';
+  $('mission-title').textContent=mode==='breach'?'Opération Brèche — mission bonus':mode==='ligne9'?'05 — La Ligne Noyée':mode==='campaign4'?'04 — Le Protocole Interdit':mode==='campaign3'?'03 — Le Convoi des Oubliés':mode==='campaign2'?'02 — Les Profondeurs':mode==='campaign'?'01 — Le Dernier Signal':mode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
+  $('mission-description').textContent=mode==='breach'?'Six secteurs industriels, deux relais, trois stabilisateurs et un gardien avant extraction.':mode==='ligne9'?'Ligne 9 inondée sous les Halles-Basses : rétablir le courant, relancer les pompes P9, ouvrir l’écluse et découvrir ce qu’ORDRE cache sous l’eau. Mission longue avec points de contrôle.':mode==='campaign4'?'Avec la cellule AEGIS de Mara Voss, à la station énergétique Est de JANUS : deux relais, trois stabilisateurs, le gardien de portique et une archive oubliée des anciens systèmes de secours. Mission longue avec points de contrôle.':mode==='campaign3'?'Secteur 03 de Vesper, de nuit : avec AEGIS, escorter l’ambulance d’Inès jusqu’à la gare de fret de l’Anneau logistique, sur la piste des prisonniers du Directoire. Relais A3, balise du pylône, échangeur bloqué. Mission longue avec points de contrôle.':mode==='campaign2'?'Bas-Niveaux de Vesper, tenus par le Directoire : enclave, marché couvert et tour de transit. Trouver un module de décryptage, libérer les prisonniers ou récupérer les archives HELIX.':mode==='campaign'?'Une transmission porte l’indicatif de vos parents, VEILLE-4. Station de secours abandonnée, rue sous surveillance, relais en hauteur et Archives végétales.':mode==='arena'?'Vingt vagues de machines et six armes à récupérer.':'Cibles fixes de 15 à 60 mètres, cibles mobiles latérales et avant-arrière. Vitesse croissante, score et précision.';
+  $('play-label').textContent=loading?'CHARGEMENT…':mode==='ligne9'?'JOUER LE CHAPITRE 05':mode==='campaign4'?'JOUER LE CHAPITRE 04':mode==='campaign3'?'JOUER LE CHAPITRE 03':mode==='campaign2'?'JOUER LE CHAPITRE 02':mode==='campaign'?(readM01Checkpoint(character)?'CONTINUER':'JOUER'):mode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
   $('play-button').disabled=loading;
   $('sound-setting').checked=!!settings.sound;$('music-setting').checked=settings.music!==false;
   $('sensitivity').value=settings.sensitivity;$('quality').value=['auto','low','balanced','high'].includes(settings.quality)?settings.quality:'auto';
@@ -112,7 +112,7 @@ async function begin(intent='play',afterPrologue=false){
   if(settings.sound||settings.music!==false)try{const Audio=window.AudioContext||window.webkitAudioContext;
     window.__PINKWAR_BOOT_AUDIO ||=new Audio();window.__PINKWAR_BOOT_AUDIO.resume().catch(()=>{});}catch{}
   try{
-    modulePromise ||=import('./game.js?v=3.73.0&brute=briseur-v3&integration=20261031');await modulePromise;
+    modulePromise ||=import('./game.js?v=3.74.0&brute=briseur-v3&integration=20261031');await modulePromise;
     for(const d of document.querySelectorAll('dialog'))d.removeEventListener('cancel',earlyCancel);
     if(!window.__PINKWAR||window.__PINKWAR.snapshot().phase==='error')throw new Error('Initialisation interrompue.');
     loading=false;

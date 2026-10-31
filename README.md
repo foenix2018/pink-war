@@ -2,6 +2,8 @@
 
 Intégration du 31 octobre : décors vivants M01/M02, mission bonus **Opération Brèche**, assistance de tir, sons des surfaces et musiques menu/mission. [Détails](docs/pink-wars/INTEGRATION_2026_10_31.md).
 
+Version 3.74 : **« Les Héritiers du Silence », nouvelle continuité** — l’histoire suit désormais la bible du créateur : la Chute du 17 novembre 2189 (mise à jour d’ORDRE à 03 h 17, dernier message à 06 h 42), ORDRE l’intelligence artificielle, le Directoire à son service, AEGIS, les Épars, HELIX ; les sphères s’appellent GAB-1 et CAR-14. Nouveau prologue, chapitres 01 à 05 réécrits (Le Dernier Signal, Les Profondeurs, Le Convoi des Oubliés, Le Protocole Interdit, La Ligne Noyée), menu des 20 chapitres en cinq actes. [Détails](docs/pink-wars/MISE_A_JOUR_374.md) · [Bible](docs/pink-wars/BIBLE_NARRATIVE_V2_HERITIERS_DU_SILENCE.md).
+
 Version 3.73 : **« La Brèche Violette », niveau 4** — la station énergétique Est de JANUS : sas, cour du réacteur et passerelle, hangar de drones, atelier serveur, anneau des stabilisateurs, gardien de portique BS01 au blindage de phase. La brèche a été ouverte le soir de la chute à 22 h 47 et elle est tenue avec des vivants ; la piste mène à la Ligne 9. Nouvelle signalétique de Vesper (néons, enseignes kanji, publicités holographiques, plaques bilingues) au niveau 3 et au niveau 4. [Détails](docs/pink-wars/MISE_A_JOUR_373.md).
 
 Version 3.72 : **vocabulaire générique** — les chapitres 01 et 02 parlent de station AEGIS 07, d’ambulance, de hangar et de journal de bord, sans jargon de pompier ; logo officiel vectorisé et écran de niveau commun sur le modèle du chapitre 03. [Détails](docs/pink-wars/MISE_A_JOUR_372.md).

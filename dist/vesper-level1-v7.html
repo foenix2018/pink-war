@@ -1,11 +1,11 @@
 <!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
-<link rel="icon" href="icons/favicon-32.png?v=3.73.0" sizes="32x32" type="image/png"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><link rel="stylesheet" href="./mission-loading.css?v=3.73.0"><script>document.documentElement.classList.toggle('pw-auto-story',!new URLSearchParams(location.search).has('visit')&&new URLSearchParams(location.search).get('chapter')!=='3'&&!location.pathname.endsWith('/niveau3.html'));</script>
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3.73.0" sizes="180x180">
-<link rel="manifest" href="manifest.webmanifest?v=3.73.0">
+<link rel="icon" href="icons/favicon-32.png?v=3.74.0" sizes="32x32" type="image/png"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#08111e"><meta name="description" content="PINK WARS — Niveau 1 : Le Dernier Signal. Prototype 3D visitable autonome WebGPU avec repli WebGL2."><link rel="stylesheet" href="./mission-loading.css?v=3.74.0"><script>document.documentElement.classList.toggle('pw-auto-story',!new URLSearchParams(location.search).has('visit')&&new URLSearchParams(location.search).get('chapter')!=='3'&&!location.pathname.endsWith('/niveau3.html'));</script>
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=3.74.0" sizes="180x180">
+<link rel="manifest" href="manifest.webmanifest?v=3.74.0">
 <meta name="apple-mobile-web-app-title" content="Pink Wars">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<title>PINK WARS — LA FRACTURE · Le Dernier Signal</title><style>
+<title>PINK WARS — LES HÉRITIERS DU SILENCE · Le Dernier Signal</title><style>
 :root{font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Arial,sans-serif;color:#e9f3f8;background:#081019;--pink:#ec4c91;--cyan:#7ad7fb;--line:rgba(156,187,205,.19)}
 *{box-sizing:border-box}html,body{height:100%;margin:0;overflow:hidden}body{background:#07111b;touch-action:none}button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,select:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}canvas#view{position:fixed;inset:0;width:100%;height:100%;display:block;outline:none;background:linear-gradient(#354a5a,#121e2b 65%,#121417)}
 #game{position:fixed;inset:0;pointer-events:none}
@@ -79,7 +79,7 @@ body:not(.rainOn) #rainCurtain{display:none}
  #game #prompt{top:46%}
 }
 .photoMode #quickSettings,.photoMode #quickObjective{display:none!important}
-</style><link rel="stylesheet" href="fracture.css?v=3.73.0">
+</style><link rel="stylesheet" href="fracture.css?v=3.74.0">
 <script defer src="./pw-identity.js?v=2"></script></head><body>
 <canvas id="view" aria-label="Environnement 3D de Vesper"></canvas>
 <div id="rainCurtain"></div><div id="game" aria-label="Commandes de la visite 3D"><div id="vignette"></div>
@@ -92,7 +92,7 @@ body:not(.rainOn) #rainCurtain{display:none}
  <div id="bottom"><div class="bottomLeft"><div id="sector">SECTEUR SECOURS</div><div id="coords">X 2.0 Y 0.0 Z 54.0</div></div><div class="bottomRight"><div><span class="key">Z Q S D</span> ou <span class="key">W A S D</span> marcher · <span class="key">SOURIS</span> regarder</div><div class="hint"><span class="key">MAJ</span> courir · <span class="key">J</span> sauter · <span class="key">F</span> action · <span class="key">E</span> arme · <span class="key">ESPACE</span> tirer · <span class="key">V</span> FPS / 3P · <span class="key">M</span> plan · <span class="key">H</span> aide · <span class="key">P</span> photo · <span class="key">F1–F7</span> lieux · <span class="key">1–7</span> armes · <span class="key">R</span> recharger · <span class="key">CLIC</span> tirer</div></div></div>
  <div id="touchControls"><div id="stick" aria-label="Joystick virtuel"><div id="nub"></div></div><div class="mobileView">Décaler et maintenir pour tourner</div><div id="touchButtons"><button id="btnRun">COURIR</button><button id="btnUse">UTIL.</button><button id="btnJump">SAUT</button></div></div>
 </div>
-<div id="intro"><div class="introCard"><div class="introMeta">PINK WARS / LA FRACTURE · MISSION 01</div><h1><span class="pink">PINK</span><br>WARS</h1><div class="subtitle">LE DERNIER SIGNAL</div><p class="lead">Retrouvez la trace de GHJU ou LYLU dans le quartier des secours de Vesper. Annexe médicale, boutique ouest, carrefour et relais en hauteur : les journaux humains ont survécu à la guerre. </p><div class="featureRow"><div class="feature">Architecture visitable</div><div class="feature">Végétation et ruines</div><div class="feature">Drones en mouvement</div><div class="feature">Archives humaines</div><div class="feature">WebGPU / WebGL2 • FPS · matériaux CC0</div><div class="feature">3.54 · M01</div><div class="feature">Portes praticables</div></div><button id="start" class="startBtn" disabled>ENTRER DANS VESPER →</button><p style="margin-top:14px"><a href="./index.html" style="color:#b9d5e5;text-decoration:underline">↩ Retour au menu Pink Wars</a></p><div id="bootInfo">Initialisation…</div><div class="notice">Vesper, 2196. Sept ans après la Chute, une archive hors réseau relance la recherche de votre frère ou de votre sœur. Explorez l’annexe, récupérez BLOOM puis LANCE, fouillez la boutique ouest et gagnez le relais des Archives végétales. La ville reste sous le contrôle d’ORDRE.</div></div></div>
+<div id="intro"><div class="introCard"><div class="introMeta">PINK WARS / LES HÉRITIERS DU SILENCE · CHAPITRE 01</div><h1><span class="pink">PINK</span><br>WARS</h1><div class="subtitle">LE DERNIER SIGNAL</div><p class="lead">Une transmission porte l’indicatif VEILLE-4, celui de vos parents avant la Chute. Annexe médicale, boutique ouest, carrefour et relais en hauteur : les journaux humains ont survécu à la guerre. </p><div class="featureRow"><div class="feature">Architecture visitable</div><div class="feature">Végétation et ruines</div><div class="feature">Drones en mouvement</div><div class="feature">Archives humaines</div><div class="feature">WebGPU / WebGL2 • FPS · matériaux CC0</div><div class="feature">3.54 · M01</div><div class="feature">Portes praticables</div></div><button id="start" class="startBtn" disabled>ENTRER DANS VESPER →</button><p style="margin-top:14px"><a href="./index.html" style="color:#b9d5e5;text-decoration:underline">↩ Retour au menu Pink Wars</a></p><div id="bootInfo">Initialisation…</div><div class="notice">Vesper, 2196. Sept ans après la Chute, une archive hors réseau relance la recherche de votre frère ou de votre sœur. Explorez l’annexe, récupérez BLOOM puis LANCE, fouillez la boutique ouest et gagnez le relais des Archives végétales. La ville reste sous le contrôle d’ORDRE.</div></div></div>
 <div id="help"><div class="helpCard"><div class="eyebrow">PINK WARS / ASSISTANCE EXPLORATION</div><h2>Visiter le niveau 1</h2><div class="helpGrid"><div><p><code>ZQSD / WASD</code> : déplacements<br><code>Souris</code> : orientation, cliquer dans le jeu pour verrouiller le pointeur<br><code>Maj</code> : courir<br><code>J</code> : sauter / double saut<br><code>F</code> : activer un terminal<br><code>E</code> : arme suivante<br><code>Espace</code> : tirer</p></div><div><p><code>V</code> : vue FPS / 3e personne (caméra libre en visite)<br><code>Espace / Ctrl</code> : monter/descendre en caméra libre<br><code>M</code> : afficher le plan<br><code>H</code> : afficher l'aide<br><code>F1–F7</code> : téléportation · <code>1–7</code> : armes · <code>R</code> : recharger · <code>C</code> : accroupir · <code>Clic gauche</code> : tirer · <code>Clic droit</code> : viser · <code>Molette</code> : arme suivante · <code>Manette</code> : sticks pour bouger/regarder, L2 viser, R2 tirer, Croix sauter, Carré recharger, Triangle arme, Rond accroupir, R3 interagir<br><code>P</code> : mode photo<br><code>Échap</code> : libérer le pointeur</p></div></div><p style="font-size:13px;line-height:1.65;color:#b5cbd8">Points d'intérêt : annexe médicale, atelier, terrasse Archives A3, passerelle ORDRE, Fracture au nord. Les terminaux déclenchent de courts messages narratifs ; les tirs consomment des cellules, les robots entendent les bruits et ripostent. Utilise les abris pour rompre leur ligne de vue.</p><button id="helpClose">RETOURNER À VESPER</button></div></div>
 <script>'use strict';
 /* PINK WARS — Le Dernier Signal — procedural visitable 3D prototype — V3 MATERIALS / SHADOWS / AMBIENCE.
@@ -502,7 +502,7 @@ function a3Tower(){
  for(let i=0;i<9;i++){const xx=-34+i*2;staticMesh.box(xx,5.2,-40,.7,.65,.6,'black',1);staticMesh.box(xx,5.51,-40,.49,.10,.55,choice(['amber','blue']),choice([7,6]));}
  staticMesh.box(-25,22.5,-30,.5,7,.5,'steel',1);
  staticMesh.sphere(-25,26,-30,1,1,1,'blue',MAT.CYAN,5,8);
- interactions.push({x:-17.5,y:5,z:-29.5,r:3,title:'Terminal des Archives A3',action:'archives',message:'RELAIS NORD — Une trace humaine confirme le passage de ton frère ou de ta sœur. Prochaine piste : les Bas-Niveaux de Vesper.'});
+ interactions.push({x:-17.5,y:5,z:-29.5,r:3,title:'Terminal des Archives A3',action:'archives',message:'RELAIS NORD — L’indicatif VEILLE-4 transite par ce relais indépendant. Prochaine piste : les Bas-Niveaux de Vesper.'});
 }
 function overpass(){
  const z=-56;
@@ -628,7 +628,7 @@ function portalAndFaction(){
   let x=between(-16,16),z=-108+between(-2,2);
   staticMesh.line([x,0,z],[x+between(-2,2),between(2,8),z+.4],.10,'pink',5);
  }
- interactions.push({x:0,y:0,z:-98,r:7,title:'Périmètre de la Fracture',action:'portal',message:'ANOMALIE PINK — L’ancrage principal demeure actif. La faille émet des signatures impossibles à attribuer aux seules machines d’ORDRE.'});
+ interactions.push({x:0,y:0,z:-98,r:7,title:'Pylône de surveillance',action:'portal',message:'PYLÔNE ORDRE — La colonne de relais demeure active. Elle capte des signatures que les machines d’ORDRE n’arrivent pas à attribuer.'});
 }
 function signalPosts(){
  for(let i=0;i<10;i++){
@@ -1862,7 +1862,7 @@ const visitStops=[
  {name:'Escalier A3',x:-9,z:-5.3,y:1.73,yaw:0,pitch:.04,desc:'Gravis les marches du relais et rejoins la terrasse.'},
  {name:'Terrasse Archives',x:-24,z:-25,y:6.8,yaw:2.32,pitch:-.10,desc:'Accède au véritable relais et découvre le terminal narratif.'},
  {name:'Viaduc militaire',x:0,z:-44,y:1.73,yaw:0,pitch:.09,desc:'Patrouilles, drones et passerelle de surveillance d’ORDRE.'},
- {name:'Fracture PINK',x:0,z:-87,y:1.73,yaw:0,pitch:.13,desc:'Portail d’ancrage magenta, pylônes et périmètre dangereux.'}
+ {name:'Pylône ORDRE',x:0,z:-87,y:1.73,yaw:0,pitch:.13,desc:'Colonne de relais magenta, pylônes et périmètre dangereux.'}
 ];
 function goToStop(idx){if(isChapter3||combatWorld?.canonical)return;const s=visitStops[idx];if(!s)return;position={x:s.x,y:s.y,z:s.z};yaw=s.yaw;pitch=s.pitch;velocityY=0;grounded=true;jumpCount=0;jumpLatch=false;isFree=false;
  $('cameraMode').textContent='EXPLORATION';$('visitSelect').value=String(idx);notify('POINT DE VISITE : '+s.name.toUpperCase()+' — '+s.desc,5600);}
@@ -1967,25 +1967,25 @@ let missionLoading=null,missionMenu=null;
 function resumeMission(){gamePaused=false;keys.clear();firing=false;isAiming=false;combatWorld?.resume();}
 function toggleMissionPause(){if(missionMenu){missionMenu.isOpen?missionMenu.hide():missionMenu.show();}else{gamePaused=!gamePaused;combatWorld?.pause();}}
 async function boot(){try{
-  const [{DesktopGamepadInput},{createGamepadAid},{createTouchOrbit}]=await Promise.all([import('./desktop-input.js?v=3.73.0'),import('./ios-gamepad.js?v=3.73.0'),import('./touch-orbit.js?v=1')]);
+  const [{DesktopGamepadInput},{createGamepadAid},{createTouchOrbit}]=await Promise.all([import('./desktop-input.js?v=3.74.0'),import('./ios-gamepad.js?v=3.74.0'),import('./touch-orbit.js?v=1')]);
    touchOrbit=createTouchOrbit();
   legacyPS4Input=new DesktopGamepadInput();createGamepadAid();
- if(!referenceVisit){const {createMissionLoading}=await import('./mission-loading.js?v=3.73.0');missionLoading=createMissionLoading({mission:1,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});missionLoading.set(.08,'Chargement du scénario');}
- showVesperPrologue=(await import('./story-prologue.js?v=3.73.0')).showStoryPrologue;
+ if(!referenceVisit){const {createMissionLoading}=await import('./mission-loading.js?v=3.74.0');missionLoading=createMissionLoading({mission:1,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});missionLoading.set(.08,'Chargement du scénario');}
+ showVesperPrologue=(await import('./story-prologue.js?v=3.74.0')).showStoryPrologue;
  $('bootInfo').textContent='Construction de la mégalopole, bâtiments, détails et navigation…';
  await new Promise(r=>setTimeout(r,80));
  if(referenceVisit)buildScene();
  if(isChapter3){
-  const {createMission3Visit}=await import('./mission3-visit.js?v=1');
+  const {createMission3Visit}=await import('./mission3-visit.js?v=3.74.0');
   mission3=createMission3Visit({mesh:staticMesh,interactions,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju',onFinish(){gamePaused=true;document.exitPointerLock?.();}});
   mission3.decorate();mission3.configure();
  }
  const atlas=createAtlas();const materialAtlas=referenceVisit?await v5LoadMaterial():null;
  $('bootInfo').textContent='Initialisation du moteur WebGPU…';
  if(!referenceVisit){
-  const {createPauseMenu}=await import('./fracture-menu.js?v=3.73.0');
+  const {createPauseMenu}=await import('./fracture-menu.js?v=3.74.0');
   missionMenu=createPauseMenu({title:'HISTOIRE / LE DERNIER SIGNAL',canOpen:()=>started,settingsSelectors:['#controlsPanel','#audioToggle'],view:{getView:()=>combatWorld?.view||'fps',onSelect:next=>{isFree=false;combatWorld?.setView(next);},canChange:()=>!!combatWorld?.viewReady},onPause(){gamePaused=true;combatWorld?.pause();keys.clear();firing=false;isAiming=false;},onResume:resumeMission,onVR:()=>combatWorld?.enterVR(),onHome:async()=>{await combatWorld?.exitVR();location.assign('./index.html');}});missionMenu.setVisible(false);
-  const {createVesperCombat}=await import('./vesper-combat.js?v=3.73.0');missionLoading?.set(.16,'Ressources du secteur chargées');
+  const {createVesperCombat}=await import('./vesper-combat.js?v=3.74.0');missionLoading?.set(.16,'Ressources du secteur chargées');
   let renderFailed=false;
   const fail=error=>{
    console.warn('Vesper / échec du rendu, repli compatible :',error);
@@ -2002,7 +2002,7 @@ async function boot(){try{
   renderer=combatWorld;gpuKind=renderer.kind;
   document.body.classList.add('pw-live-combat');
    document.querySelector('#help h2').textContent='Le Dernier Signal';
-   const help=document.querySelector('#help .helpGrid');help.innerHTML='<p>ZQSD / WASD : déplacement · Souris : regard<br>J : saut · Maj : course · C : accroupir<br>Clic gauche / Espace : tirer · Clic droit : viser<br>R : recharger · E / molette : arme suivante<br>F : lire un terminal ou récupérer une arme<br>G : compétences de Gaby / Cara<br>Échap : pause · M : carte · H : aide</p><p>Manette : sticks pour bouger et regarder<br>L2 : viser · R2 : tirer · Croix : saut<br>Carré : recharger · Triangle : arme suivante<br>Rond : accroupir · R3 : interagir<br>Options : pause · Croix haute : compétences</p>';
+   const help=document.querySelector('#help .helpGrid');help.innerHTML='<p>ZQSD / WASD : déplacement · Souris : regard<br>J : saut · Maj : course · C : accroupir<br>Clic gauche / Espace : tirer · Clic droit : viser<br>R : recharger · E / molette : arme suivante<br>F : lire un terminal ou récupérer une arme<br>G : compétences de GAB-1 / CAR-14<br>Échap : pause · M : carte · H : aide</p><p>Manette : sticks pour bouger et regarder<br>L2 : viser · R2 : tirer · Croix : saut<br>Carré : recharger · Triangle : arme suivante<br>Rond : accroupir · R3 : interagir<br>Options : pause · Croix haute : compétences</p>';
    document.querySelector('#help .helpCard > p').textContent='La boutique de briques est à l’ouest. Le point au-dessus du regard guide par un chemin praticable. Les portes de transfert d’ORDRE restent à distance ; seuls les huit patrouilleurs initiaux occupent déjà le quartier. Terrasse à 4,8 m, par escalier ou monte-charge.';
   const style=document.createElement('style');style.textContent='body.pw-live-combat #weaponVis,body.pw-live-combat #sources{display:none!important}#combatHud{z-index:4}body.pw-live-combat #intro.gone{pointer-events:none}';document.head.append(style);
   window.__PINK_VESPER={snapshot:()=>combatWorld.snapshot(),get debug(){return combatWorld?.debug||null;}};

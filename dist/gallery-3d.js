@@ -63,12 +63,12 @@ async function actualObject(name){
   soldier.animate(0,false,0,0,0,.016,{preview:true});
   return {root:soldier.root,animate:(t,dt)=>soldier.animate(t,false,0,0,0,dt,{preview:true}),source:'Rig et armure Shadow Unit du jeu',soldier,kit};
  }
- if(name==='GABY'||name==='CARA'){
+ if(name==='GAB-1'||name==='CAR-14'){
   const {createAICompanion}=await import('./ai-companions.js');
-  const actor=createAICompanion(T,scene,name==='GABY'?'ghju':'lylu');
+  const actor=createAICompanion(T,scene,name==='GAB-1'?'ghju':'lylu');
   actor.root.removeFromParent();
   actor.root.position.set(0,0,0);
-  return {root:actor.root,animate:(t,dt)=>actor.preview(dt),source:'Sphère IA articulée du jeu · '+(name==='GABY'?'quatre coques de protection':'six panneaux offensifs'),dispose:()=>actor.dispose()};
+  return {root:actor.root,animate:(t,dt)=>actor.preview(dt),source:'Sphère IA articulée du jeu · '+(name==='GAB-1'?'quatre coques de protection':'six panneaux offensifs'),dispose:()=>actor.dispose()};
  }
  if(name==='RECO1'){
   const {createReco1}=await import('./reco1.js');
@@ -430,7 +430,7 @@ async function renderGalleryThumbnail(name){
    const scale=2.1/Math.max(size.x,size.y,size.z,.02);
    centered.position.set(-center.x,-center.y,-center.z);
    stage.thumbPivot.scale.setScalar(scale);
-   stage.thumbPivot.rotation.y=name==='GABY'||name==='CARA'?.35:.10;
+   stage.thumbPivot.rotation.y=name==='GAB-1'||name==='CAR-14'?.35:.10;
    stage.thumbCamera.position.set(1.22,.50,3.45);
    stage.thumbCamera.lookAt(0,0,0);
   }

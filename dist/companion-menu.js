@@ -1,6 +1,8 @@
 // Shared left-side skill drawer. The shortcut stays out of the combat HUD before M07;
 // unlocking is owned by the simulation, never a DOM button or URL parameter.
 import {companionPictogram,paintCompanionPictogram} from './companion-pictograms.js';
+// Names shown to the player (canon « Les Héritiers du Silence »); the code keeps its internal keys.
+const LABEL={Gaby:'GAB-1',Cara:'CAR-14'};
 export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
  if(!document.querySelector('[data-companion-style]')){
   const style=document.createElement('link');style.rel='stylesheet';style.href=new URL('./companion-menu.css?v=3.59',import.meta.url).href;style.dataset.companionStyle='';document.head.append(style);
@@ -18,8 +20,8 @@ export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
   if(key===signature)return;signature=key;
   const color='#'+status.color.toString(16).padStart(6,'0');root.style.setProperty('--partner',color);
   if(toggle.dataset.hero!==status.hero){toggle.innerHTML=companionPictogram(status.hero);toggle.dataset.hero=status.hero;}
-  toggle.setAttribute('aria-label','Compétences de '+status.name);toggle.title=status.unlocked?status.name+' · compétences (G)':status.name+' · escorte : protection sous 50 % de santé et torche automatique';
-  panel.querySelector('h2').textContent=status.name.toUpperCase();
+  const label=LABEL[status.name]||status.name;toggle.setAttribute('aria-label','Compétences de '+label);toggle.title=status.unlocked?label+' · compétences (G)':label+' · escorte : protection sous 50 % de santé et torche automatique';
+  panel.querySelector('h2').textContent=label;
   panel.querySelector('.pw-companion-status').textContent=status.unlocked?'Liaison locale · énergie '+status.energy+' / 100':'Escorte active · protection sous 50 % de santé et torche automatique. Compétences avancées à la mission 7.';
   for(const s of status.skills){
    let button=buttons.get(s.id);
@@ -78,7 +80,7 @@ export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
   if(xr.dirty){
    const c=xr.canvas.getContext('2d'),s=getStatus();c.clearRect(0,0,768,640);c.fillStyle='#101c29';c.beginPath();c.roundRect(0,0,768,640,40);c.fill();
    const tint='#'+s.color.toString(16).padStart(6,'0');c.fillStyle=tint;
-   if(open){c.fillRect(0,0,12,640);c.font='bold 46px sans-serif';c.fillText(s.name.toUpperCase(),38,66);}
+   if(open){c.fillRect(0,0,12,640);c.font='bold 46px sans-serif';c.fillText(LABEL[s.name]||s.name.toUpperCase(),38,66);}
    else paintCompanionPictogram(c,s.hero,{color:tint,size:350});
    if(open){
     c.fillStyle='#d0dedb';c.font='25px sans-serif';c.fillText('FERMER ×',568,58);c.font='24px sans-serif';

@@ -25,7 +25,7 @@ test('Chaque arme en service a une fiche et un aperçu 3D',()=>{
  assert.ok(existsSync(new URL('../dist/assets/pink-war/blaster-p-mk4.glb',import.meta.url)),'NOVA MK4 doit être disponible');
 });
 test('Les personnages et les ennemis actifs sont représentés',()=>{
- for(const name of ['GHJU','LYLU','GABY','CARA','RECO1','ROBOT LOURD'])assert.ok(html.includes('"'+name+'"'));
+ for(const name of ['GHJU','LYLU','GAB-1','CAR-14','RECO1','ROBOT LOURD'])assert.ok(html.includes('"'+name+'"'));
  for(const form of ['synth','stalker','brute','listener','scuttler','probe','bulwark'])assert.ok(viewer.includes("'"+form+"'"));
  for(const form of ['probe','scuttler','stalker','synth','listener','brute','bulwark'])assert.ok(ROBOT_DURABILITY[form]>0);
 });

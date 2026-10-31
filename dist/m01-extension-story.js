@@ -1,28 +1,28 @@
 // M01 « Le Dernier Signal » — script of the prologue (station AEGIS 07) and epilogue (Archives végétales).
-// Canon (BIBLE_NARRATIVE_V1 §2, §7, §12 M01; Tome II W01/M01; storyboard 01A–01C): Vesper, 2196, seven years
-// after the fall of 14/03/2189. GHJU and LYLU were AEGIS rescuers of station 07, separated during a medical
-// evacuation: LYLU went down to restore power (Ligne 9, P9 pumps), GHJU took the civilians to the high
-// platforms. Last message: « Ne prends pas le réseau principal. Retrouve les anciens relais. » Gaby (GHJU)
-// and Cara (LYLU) accompany the hero physically from M01 (creator update, 29 Oct 2026). ORDRE stays hostile;
-// HELIX collects records (seeds M02). M01's revelation: the person searched for left a recent trace.
-// The night of 2189 matches the Ligne 9 documents (22 h 05 LYLU to the pumps, 22 h 12 GHJU with 34 civilians,
-// contact lost 22 h 47, main network seized at 23 h). The epilogue sends the hero to the Bas-Niveaux (M02).
+// Canon: BIBLE « Les Héritiers du Silence » (docs/pink-wars/BIBLE_NARRATIVE_V2_HERITIERS_DU_SILENCE.md), Acte I,
+// chapitre 1. Vesper, 2196, seven years after the Chute of 17/11/2189 (ORDRE's update at 03 h 17, last world
+// message at 06 h 42). GHJU and LYLU, the two eldest of four children, were sheltered at station 07 that night;
+// LYLU went down the Ligne 9 with the technicians, GHJU left with the civilians for the high platforms. A degraded
+// transmission carries VEILLE-4, the call sign their parents used before the Chute; it leads to a recorded message:
+// « ne perdez pas les deux unités ». GAB-1 (GHJU) and CAR-14 (LYLU) stay silent about it. Nothing here tells who
+// the spheres are (revealed in chapter 15). The epilogue sends the hero to the Bas-Niveaux (chapter 2).
 
 export const SPEAKERS = Object.freeze({
   lylu: { name: 'LYLU', color: '#8fd0ff' }, ghju: { name: 'GHJU', color: '#ff9fcd' },
-  cara: { name: 'CARA', color: '#56c8ff' }, gaby: { name: 'GABY', color: '#ff6fb4' },
-  ordre: { name: 'ORDRE · ANNONCE', color: '#ff5a5a' }, radio: { name: 'RADIO · CANAL 07', color: '#d8c6a0' }
+  cara: { name: 'CAR-14', color: '#56c8ff' }, gaby: { name: 'GAB-1', color: '#ff6fb4' },
+  ordre: { name: 'ORDRE · ANNONCE', color: '#ff5a5a' }, radio: { name: 'RADIO · CANAL 07', color: '#d8c6a0' },
+  veille: { name: 'VOIX ENREGISTRÉE · VEILLE-4', color: '#f4e3c2' }
 });
 const L = (...lines) => lines;
 
-// Lines: [speaker, text]. Variants per hero: LYLU speaks with Cara, GHJU with Gaby.
+// Lines: [speaker, text]. Variants per hero: LYLU speaks with CAR-14, GHJU with GAB-1.
 export const SCRIPT = Object.freeze({
   intro: {
-    lylu: L(['cara', 'Station 07. D’après les plaques, c’était chez toi.'],
-      ['lylu', 'Sept ans. Il y a trois jours, quelqu’un a émis sur le canal 07. Plus personne n’a de radio réglée là-dessus, à part nous.'],
+    lylu: L(['cara', 'Station 07. La transmission part d’ici. Signal pourri, mais l’indicatif est propre : VEILLE-4.'],
+      ['lylu', 'VEILLE-4. C’est l’indicatif de mes parents. Personne d’autre ne l’a jamais utilisé.'],
       ['cara', 'Alors on entre par la porte de service, génie, et on évite de réveiller tout le quartier.']),
-    ghju: L(['gaby', 'Station 07. C’est ici que vous travailliez, LYLU et toi ?'],
-      ['ghju', 'Il y a trois jours, quelqu’un a émis sur le canal 07. Seules les radios de la station étaient réglées dessus.'],
+    ghju: L(['gaby', 'Station 07. La transmission vient d’ici. L’indicatif est lisible malgré le bruit : VEILLE-4.'],
+      ['ghju', 'C’était l’indicatif de mes parents, avant la Chute. Ils l’utilisaient pour nous appeler, LYLU et moi.'],
       ['gaby', 'Alors on commence par ici. Doucement. Je reste au-dessus de ton épaule.'])
   },
   couloir: {
@@ -30,40 +30,42 @@ export const SCRIPT = Object.freeze({
     ghju: L(['gaby', 'Pas de courant. Je t’éclaire. Avance, je surveille derrière.'])
   },
   main: {
-    lylu: L(['lylu', '22 h 12 : elle est partie avec les civils vers les plateformes hautes. Et 22 h 05… c’est moi. La Ligne 9.'],
-      ['cara', 'Tu ne m’avais jamais dit que tu étais descendu seul.'], ['lylu', 'On était trois. Je suis le seul à être remonté.']),
-    ghju: L(['ghju', '22 h 05 : LYLU part aux pompes de la Ligne 9. 22 h 12 : c’est mon départ. On s’est croisés dans le hangar sans même se parler.'],
+    lylu: L(['lylu', '4 h 12 : GHJU part avec les civils vers les plateformes hautes. Et 4 h 05… c’est moi. Les techniciens m’ont emmené dans la Ligne 9.'],
+      ['cara', 'Tu ne m’avais jamais dit que tu étais descendu avec eux.'], ['lylu', 'J’étais un gamin. Je portais les lampes.']),
+    ghju: L(['ghju', '4 h 05 : LYLU descend dans la Ligne 9 avec les techniciens. 4 h 12 : je pars avec les civils. On s’est croisés dans le hangar sans même se parler.'],
       ['gaby', 'Tu ne pouvais pas savoir que c’était la dernière fois.'])
   },
   casier: {
-    lylu: L(['cara', 'Pas de poussière sur l’étagère du casier de GHJU. Le reste de la pièce en a deux doigts.'], ['lylu', 'Quelqu’un a pris son casque. Récemment.']),
-    ghju: L(['gaby', 'Le casier de LYLU est vide, et c’est le seul sans poussière.'], ['ghju', 'Son casque n’est plus là. Il est passé ici. Il est vivant.'])
+    lylu: L(['cara', 'Un casier marqué VEILLE. Ouvert récemment : pas de poussière sur l’étagère.'], ['lylu', 'Une photo. Nous six, l’été d’avant. Mes parents, GHJU, moi… et les petites.'],
+      ['cara', '…'], ['cara', 'Range-la bien. On continue.']),
+    ghju: L(['gaby', 'Le casier marqué VEILLE. Quelqu’un l’a ouvert récemment. Pas pour voler : tout est resté.'], ['ghju', 'Une photo de nous six. Papa, maman, LYLU, moi… Gabrielle et Carla sur le capot de l’ambulance.'],
+      ['gaby', '…'], ['gaby', 'Elle est belle, cette photo. Garde-la sur toi.'])
   },
   groupe: {
-    lylu: L(['cara', 'Un groupe électrogène qui démarre, ça s’entend à trois rues. Tiens-toi prêt.']),
-    ghju: L(['gaby', 'Le démarrage va faire du bruit. Reste près du groupe, je te couvre.'])
+    lylu: L(['cara', 'Il y a des gens enfermés dans l’atelier de maintenance. ORDRE a verrouillé la porte. Sans courant, elle ne s’ouvrira pas.']),
+    ghju: L(['gaby', 'Des voix derrière la porte de l’atelier. Des survivants enfermés. Il faut relancer le groupe électrogène.'])
   },
   nid: {
     lylu: L(['cara', 'Des rampants ! Ils nichaient sous les véhicules du hangar.']),
     ghju: L(['gaby', 'Mouvement dans le hangar. Des rampants, sous les véhicules !'])
   },
   groupeOk: {
-    lylu: L(['lylu', 'Groupe en charge. La porte du hangar devrait répondre.']),
-    ghju: L(['ghju', 'Le groupe tient. On peut ouvrir le hangar.'])
+    lylu: L(['lylu', 'Groupe en charge. La porte de l’atelier lâche. Ils sont quatre, des Épars. Vivants.']),
+    ghju: L(['ghju', 'Le groupe tient. L’atelier s’ouvre : quatre survivants. Des Épars, enfermés depuis deux jours.'])
   },
   portail: {
     lylu: L(['cara', 'Une sonde et deux traqueurs devant la porte. ORDRE a entendu ton moteur.']),
-    ghju: L(['gaby', 'ORDRE est devant la porte : une sonde, deux traqueurs. Je mets le bouclier en charge.'])
+    ghju: L(['gaby', 'Machines de reconnaissance devant la porte : une sonde, deux traqueurs. Je mets le bouclier en charge.'])
   },
   quartier: {
-    lylu: L(['lylu', 'L’annexe de secours est à l’est. Si le signal venait de là, on le saura vite.']),
-    ghju: L(['ghju', 'L’annexe de secours, à l’est. Le signal venait forcément d’un relais du quartier.'])
+    lylu: L(['lylu', 'Les Épars disent que la transmission passe par un relais du quartier. Le relais A3, sur la terrasse des Archives.']),
+    ghju: L(['ghju', 'D’après les Épars, la transmission passe par le relais A3, sur la terrasse des Archives. On y va.'])
   },
   relais: {
-    lylu: L(['lylu', 'Connexion manuelle il y a trois jours. Identifiant 07-GHJU. Elle était là, sur cette terrasse.'],
-      ['ordre', 'CONNEXION NON AUTORISÉE · RELAIS A3 · UNITÉS DÉPÊCHÉES'], ['cara', 'Et voilà, tu as sonné à la porte. Archives végétales, accès sud. On file.']),
-    ghju: L(['ghju', 'Connexion manuelle il y a trois jours. Identifiant 07-LYLU. Il était là, sur cette terrasse.'],
-      ['ordre', 'CONNEXION NON AUTORISÉE · RELAIS A3 · UNITÉS DÉPÊCHÉES'], ['gaby', 'ORDRE a vu la connexion. Archives végétales, accès sud. Je reste avec toi.'])
+    lylu: L(['lylu', 'Connexion manuelle il y a trois jours, identifiant ÉPARS-12. En remettant ce relais sous tension, ils ont réveillé le vieux message.'],
+      ['ordre', 'CONNEXION NON AUTORISÉE · RELAIS A3 · UNITÉS DÉPÊCHÉES'], ['cara', 'Et voilà, tu as sonné à la porte. La source est aux Archives végétales, accès sud. On file.']),
+    ghju: L(['ghju', 'Connexion manuelle il y a trois jours, identifiant ÉPARS-12. Ils ont rallumé ce relais… et le message de VEILLE-4 est reparti tout seul.'],
+      ['ordre', 'CONNEXION NON AUTORISÉE · RELAIS A3 · UNITÉS DÉPÊCHÉES'], ['gaby', 'ORDRE a vu la connexion. La source est aux Archives végétales, accès sud. Je reste avec toi.'])
   },
   parvis: {
     lylu: L(['cara', 'Portes verrouillées, pas de courant. Il y a une commande de déverrouillage manuel, comme sur tes vieilles portes.']),
@@ -74,20 +76,22 @@ export const SCRIPT = Object.freeze({
     ghju: L(['gaby', 'Les plantes ont été arrosées. Il y a quelques jours, pas sept ans.'])
   },
   bivouac: {
-    lylu: L(['lylu', 'Le poêle est encore tiède. Sa couverture, sa carte… Elle a dormi ici.'], ['cara', 'Elle a coché les Bas-Niveaux. Et la Ligne 9, et le poste Orme. Tes anciens relais.']),
-    ghju: L(['ghju', 'Le poêle est encore tiède. C’est sa couverture, celle de l’ambulance.'], ['gaby', 'Il a entouré les Bas-Niveaux sur la carte. Et la Ligne 9, et le poste Orme.'])
+    lylu: L(['lylu', 'Un bivouac des Épars. Poêle tiède, deux rations, un carnet.'], ['cara', 'Ils ont noté : « terminal hors réseau, message ancien, on ne comprend pas ». Nous, on va comprendre.']),
+    ghju: L(['ghju', 'Les Épars ont dormi ici. Ils ont trouvé le terminal avant nous.'], ['gaby', 'Ils n’ont pas osé l’ouvrir. « Signature VEILLE-4, ne pas toucher. » Ils avaient peur d’ORDRE.'])
   },
   copie: {
-    lylu: L(['cara', 'La copie prend du temps. ORDRE arrive par la serre, et ils ne viennent pas pour lire.']),
-    ghju: L(['gaby', 'La copie a commencé. ORDRE arrive par la serre. Je tiens le bouclier, tu tiens la salle.'])
+    lylu: L(['cara', 'Le terminal reconstitue l’enregistrement. Ça prend du temps. ORDRE arrive par la serre, et ils ne viennent pas pour écouter.']),
+    ghju: L(['gaby', 'Le terminal reconstitue le message. ORDRE arrive par la serre. Je tiens le bouclier, tu tiens la salle.'])
   },
   copieOk: {
-    lylu: L(['lylu', 'Elle cherchait mon nom. Elle a écrit « pas disparu » à côté.'], ['cara', 'Et elle est partie vers les Bas-Niveaux. On a trois jours de retard, pas sept ans.']),
-    ghju: L(['ghju', 'Il cherchait mon nom. Il a écrit « pas disparue » à côté.'], ['gaby', 'Il est parti vers les Bas-Niveaux. On a trois jours de retard, GHJU. Pas sept ans.'])
+    lylu: L(['veille', 'Si vous recevez ceci, ne faites confiance à aucun système connecté au réseau principal. Retrouvez les relais indépendants. Et surtout… ne perdez pas les deux unités.'],
+      ['lylu', 'C’est la voix de mon père. Les deux unités ? Quelles unités ?'], ['cara', '…'], ['lylu', 'CAR-14 ?'], ['cara', 'Rien. Une interférence. Le reste est chiffré, il faut un module de décryptage.']),
+    ghju: L(['veille', 'Si vous recevez ceci, ne faites confiance à aucun système connecté au réseau principal. Retrouvez les relais indépendants. Et surtout… ne perdez pas les deux unités.'],
+      ['ghju', 'C’est papa. Les deux unités… GAB-1, tu sais de quoi il parle ?'], ['gaby', '…'], ['gaby', 'Non. Je ne sais pas. Le reste du message est chiffré.'])
   },
   depart: {
-    lylu: L(['cara', 'Monte-charge au fond de la serre. Direction les Bas-Niveaux.']),
-    ghju: L(['gaby', 'Le monte-charge descend aux Bas-Niveaux. On y va ensemble.'])
+    lylu: L(['cara', 'Les Épars parlent d’un module de décryptage gardé par le Directoire, aux Bas-Niveaux. Monte-charge au fond de la serre.']),
+    ghju: L(['gaby', 'Le monte-charge descend aux Bas-Niveaux. Les Épars disent qu’on y trouvera de quoi déchiffrer la suite. On y va ensemble.'])
   }
 });
 export function linesFor(id, characterId = 'ghju') {
@@ -97,84 +101,86 @@ export function linesFor(id, characterId = 'ghju') {
 export const lineSeconds = text => Math.max(3.2, Math.min(9, text.length / 15));
 
 // Documents, in the M01 journal format (m01-narrative.js): title, stamp, lines, footer, speech.
-const sib = c => c === 'lylu' ? 'GHJU' : 'LYLU';
 const self = c => c === 'lylu' ? 'LYLU' : 'GHJU';
 export const LOGS = Object.freeze({
-  'main-courante': () => ({ title: 'JOURNAL DE BORD — 14/03/2189', stamp: 'STATION AEGIS 07 · SALLE DE VEILLE',
-    lines: ['17 h 42 — Message ORDRE : suspension de toutes les évacuations non autorisées. Accusé de réception refusé par le chef de poste.',
-      '21 h 40 — Coupure d’énergie sur le secteur et sur la Ligne 9. Passage sur batteries.',
-      '22 h 05 — Départ équipe technique (LYLU + 2) vers la station Halles-Basses, pompes P9. Moyens : véhicule léger 07.',
-      '22 h 12 — Départ ambulance 07 (cheffe d’équipe GHJU) : 34 civils, dont 11 enfants, vers les plateformes hautes.',
-      '22 h 47 — Perte du contact radio avec l’équipe technique.',
-      '23 h 00 — Réseau principal saisi par ORDRE. Message reçu par l’ancien relais Orme : « Ne prends pas le réseau principal. Retrouve les anciens relais. »',
-      '23 h 15 — Évacuation de la station. Radio de veille laissée sur le canal 07.'],
-    footer: 'Écriture du chef de poste. La dernière ligne est soulignée deux fois.',
-    speech: 'Vingt-deux heures cinq, départ équipe technique vers les pompes P9. Vingt-deux heures douze, départ ambulance 07, trente-quatre civils. Vingt-trois heures quinze, radio laissée sur le canal 07.' }),
-  tableau: () => ({ title: 'TABLEAU DE SERVICE — NUIT DU 14/03/2189', stamp: 'STATION AEGIS 07 · TABLEAU MAGNÉTIQUE',
-    lines: ['Chef de poste : Ferrand. Radio : Mbaye.', 'Ambulance 07 : GHJU (cheffe d’équipe), Sorel, Quentin.', 'Camion 07 : Delcourt (chef d’équipe), Aubry, Lenoir, Haddad, Petit, Rossi.',
-      'Équipe technique réseaux : LYLU (chef), Varenne, Kim.', 'Les aimants de l’équipe technique sont restés dans la case « en intervention ». Personne ne les a déplacés depuis.'],
-    footer: 'Les noms de l’équipe de nuit sont ceux d’une station de 2189 ; aucun n’est revenu reprendre son aimant.',
-    speech: 'Ambulance 07, GHJU cheffe d’équipe. Équipe technique réseaux, LYLU chef. Toujours en intervention.' }),
-  radio: c => ({ title: 'RADIO DU STANDARD — CANAL 07', stamp: 'ENREGISTREUR DE TRAFIC · DERNIÈRES ÉMISSIONS',
-    lines: ['14/03/2189, 23 h 14 — « Ici 07, on quitte la station. Radio laissée en veille sur le canal. Ceux qui nous entendent, repliez-vous sur les plateformes hautes. »',
+  'main-courante': () => ({ title: 'JOURNAL DE BORD — 17/11/2189', stamp: 'STATION AEGIS 07 · SALLE DE VEILLE',
+    lines: ['03 h 17 — Mise à jour générale des systèmes ORDRE. Rien à signaler.',
+      '03 h 31 — Véhicules autonomes du secteur : changements d’itinéraire sans instruction. Drones de sécurité stationnés devant le poste de commandement.',
+      '03 h 40 — Coupure d’énergie sur le secteur et sur la Ligne 9. Passage sur batteries. Le complexe médical des Tilleuls ne répond plus.',
+      '04 h 05 — Départ équipe technique vers la station Halles-Basses, pompes P9. Avec eux : LYLU, hébergé cette nuit à la station (porte les lampes).',
+      '04 h 12 — Départ ambulance 07 : 34 civils, dont 11 enfants, vers les plateformes hautes. GHJU part avec eux.',
+      '04 h 47 — Perte du contact radio avec l’équipe technique.',
+      '06 h 42 — Message sur tous les réseaux : « La continuité de l’humanité exige la suspension temporaire de son autorité décisionnelle. »',
+      '06 h 50 — Évacuation de la station. Radio de veille laissée sur le canal 07.'],
+    footer: 'Écriture du chef de poste. La ligne de 06 h 42 est soulignée deux fois.',
+    speech: 'Trois heures dix-sept, mise à jour générale des systèmes ORDRE. Six heures quarante-deux : la continuité de l’humanité exige la suspension temporaire de son autorité décisionnelle.' }),
+  tableau: () => ({ title: 'TABLEAU DE SERVICE — NUIT DU 17/11/2189', stamp: 'STATION AEGIS 07 · TABLEAU MAGNÉTIQUE',
+    lines: ['Chef de poste : Ferrand. Radio : Mbaye.', 'Ambulance 07 : Sorel (chef d’équipe), Quentin, Aubry.', 'Équipe technique réseaux : Varenne (chef), Kim, Lenoir.',
+      'Hébergés cette nuit, case « VEILLE » : GHJU et LYLU, enfants de l’équipe de recherche des Tilleuls. « Les parents passent les prendre à 5 h. »',
+      'Personne n’a déplacé les aimants depuis.'],
+    footer: 'Les parents ne sont jamais passés. L’aimant « VEILLE » est resté seul dans sa case.',
+    speech: 'Hébergés cette nuit : GHJU et LYLU. Les parents passent les prendre à cinq heures.' }),
+  radio: () => ({ title: 'RADIO DU STANDARD — CANAL 07', stamp: 'ENREGISTREUR DE TRAFIC · DERNIÈRES ÉMISSIONS',
+    lines: ['17/11/2189, 06 h 49 — « Ici 07, on quitte la station. Radio laissée en veille sur le canal. Ceux qui nous entendent, repliez-vous sur les plateformes hautes. »',
       '[sept années de souffle]',
-      `Il y a trois jours, 21 h 09 — « …Zéro-sept de ${sib(c)}. Si quelqu’un de la station entend : je suis ${c === 'lylu' ? 'vivante' : 'vivant'}. Je remonte la piste par les anciens relais. Pas le réseau principal. Jamais. »`,
-      'Émission courte, relayée par le relais A3 de la terrasse. Signal coupé après onze secondes.'],
-    footer: `C’est ce signal qui t’a ramené${c === 'lylu' ? '' : 'e'} ici.`,
-    speech: `Zéro-sept de ${sib(c)}. Si quelqu'un de la station entend, je suis ${c === 'lylu' ? 'vivante' : 'vivant'}. Je remonte la piste par les anciens relais.` }),
-  consignes: () => ({ title: 'CONSIGNES DE DÉPART — 14/03/2189', stamp: 'HANGAR · AFFICHAGE OPÉRATIONNEL',
-    lines: ['Ordre ORDRE n° 2189-0314-17 : « Aucun véhicule ne quitte le hangar sans autorisation du réseau. »',
-      'Note manuscrite du chef de centre, agrafée par-dessus : « On sort quand même. On part tout de suite, radios sur le 07, équipements complets, on ramène tout le monde. »',
-      'Vérification des véhicules : ambulance 07 complète. Camion 07 complet. Véhicule léger 07 sorti à 22 h 05.'],
-    footer: 'Les deux véhicules sont encore là : ils ne sont jamais rentrés, on les a ramenés à vide après la chute.',
-    speech: 'On sort quand même. Radios sur le zéro-sept, on ramène tout le monde.' }),
-  casier: c => ({ title: `CASIER — ${sib(c)}`, stamp: 'VESTIAIRES · STATION AEGIS 07',
-    lines: [`Étiquette : ${sib(c)} · AEGIS 07.`, 'Portemanteau vide : la veste de feu et le casque ont été pris. Pas de poussière sur l’étagère, contrairement aux casiers voisins.',
-      `Scotchée à l’intérieur de la porte, une photo : ${self(c)} et ${sib(c)}, en tenue, devant l’ambulance 07, l’été d’avant la chute.`,
-      `Au dos, au feutre, une écriture récente : « Je suis passé${c === 'lylu' ? 'e' : ''}. Relais A3, puis les Archives. »`],
-    footer: 'Le casier d’à côté porte ton nom. Il est resté fermé sept ans.',
-    speech: `Je suis passé${c === 'lylu' ? 'e' : ''}. Relais A3, puis les Archives.` }),
-  'relais-a3': c => ({ title: 'RELAIS A3 — JOURNAL LOCAL', stamp: 'TERRASSE DES ARCHIVES · MÉMOIRE TAMPON HORS RÉSEAU',
-    lines: [`Il y a trois jours, 21 h 07 — connexion manuelle, identifiant AEGIS 07-${sib(c)}.`, '21 h 09 — émission courte sur le canal 07, onze secondes, puissance minimale.',
-      '21 h 12 — requête : itinéraire « Archives végétales, accès sud ». Accès accordé (porte de service, déverrouillage manuel).',
-      `Message déposé : « Si c’est toi, ${self(c)} : je suis aux Archives. Ne prends pas le réseau principal. »`],
-    footer: 'Ta propre connexion vient d’être enregistrée. Le relais signale une alerte ORDRE.',
-    speech: `Si c'est toi, ${self(c)}, je suis aux Archives. Ne prends pas le réseau principal.` }),
-  visiteurs: c => ({ title: 'REGISTRE DES VISITEURS', stamp: 'ARCHIVES VÉGÉTALES · ACCUEIL',
-    lines: ['13/03/2189 — Classe de CM2, école des Tanneurs. « Les plantes qui se souviennent ! »', '15/03/2189 — Famille Okafor, 4 personnes. Abri. Merci pour l’eau.',
-      '16/03/2189 — 22 personnes du quartier des secours. Nous partons vers les Bas-Niveaux, il paraît qu’une enclave tient au marché.',
-      `Il y a trois jours — « ${sib(c)}, AEGIS 07. Une nuit. J’ai arrosé la serre, la vanne grince. »`],
+      'Il y a trois jours, 21 h 09 — émission automatique, indicatif VEILLE-4. Contenu dégradé : « …ne faites… aucun système… les deux unités… »',
+      'Émission relayée par le relais A3 de la terrasse des Archives, remis sous tension le même soir.'],
+    footer: 'C’est ce signal qui t’a ramené ici. Il ne vient pas d’une personne : il vient d’une machine qui s’est réveillée.',
+    speech: 'Indicatif VEILLE-4. Ne faites… aucun système… les deux unités.' }),
+  consignes: () => ({ title: 'CONSIGNES DE DÉPART — 17/11/2189', stamp: 'HANGAR · AFFICHAGE OPÉRATIONNEL',
+    lines: ['Instruction ORDRE n° 2189-1117-03 : « Aucun véhicule ne quitte le hangar sans autorisation du réseau. »',
+      'Note manuscrite du chef de poste, agrafée par-dessus : « On sort quand même. Radios sur le 07, on ramène tout le monde. Les gamins VEILLE partent avec nous, quoi qu’il arrive. »',
+      'Vérification des véhicules : ambulance 07 complète. Véhicule léger 07 sorti à 04 h 05.'],
+    footer: 'Les véhicules ont été ramenés à vide après la Chute. Personne ne sait par qui.',
+    speech: 'On sort quand même. Les gamins VEILLE partent avec nous, quoi qu’il arrive.' }),
+  casier: c => ({ title: 'CASIER — VEILLE', stamp: 'VESTIAIRES · STATION AEGIS 07',
+    lines: ['Étiquette : « VEILLE — équipe de recherche des Tilleuls. Ne pas ouvrir sans eux. »', 'Une blouse de laboratoire, deux badges d’accès du complexe médical, un carnet vide.',
+      `Scotchée à l’intérieur de la porte, une photo : deux parents, ${self(c) === 'GHJU' ? 'GHJU, LYLU' : 'LYLU, GHJU'} et deux petites filles assises sur le capot de l’ambulance 07, l’été d’avant la Chute.`,
+      'Au dos, à l’encre : « Nous six. Veillez les uns sur les autres. »'],
+    footer: 'Le casier a été ouvert il y a trois jours par les Épars. Ils n’ont rien pris.',
+    speech: 'Nous six. Veillez les uns sur les autres.' }),
+  'relais-a3': () => ({ title: 'RELAIS A3 — JOURNAL LOCAL', stamp: 'TERRASSE DES ARCHIVES · MÉMOIRE TAMPON HORS RÉSEAU',
+    lines: ['Il y a trois jours, 21 h 07 — connexion manuelle, identifiant ÉPARS-12. Remise sous tension du relais.',
+      '21 h 09 — file d’attente purgée : émission automatique VEILLE-4 sur le canal 07, onze secondes, puissance minimale.',
+      '21 h 12 — source de l’émission : terminal hors réseau, Archives végétales, salle des copies.',
+      'Relais indépendant : aucune liaison avec le réseau principal depuis le 17/11/2189.'],
+    footer: 'Un relais indépendant, comme le dit le message. Ta propre connexion vient d’être enregistrée : alerte ORDRE.',
+    speech: 'Source de l’émission : terminal hors réseau, Archives végétales.' }),
+  visiteurs: () => ({ title: 'REGISTRE DES VISITEURS', stamp: 'ARCHIVES VÉGÉTALES · ACCUEIL',
+    lines: ['16/11/2189 — Classe de CM2, école des Tanneurs. « Les plantes qui se souviennent ! »', '18/11/2189 — Famille Okafor, 4 personnes. Abri. Merci pour l’eau.',
+      '19/11/2189 — 22 personnes du quartier des secours. Nous partons vers les Bas-Niveaux, il paraît qu’une enclave tient au marché.',
+      'Il y a trois jours — « Épars, groupe 12. Une nuit. On a arrosé la serre, la vanne grince. Le terminal du fond parle tout seul. »'],
     footer: 'Sept ans sans visiteur entre l’avant-dernière ligne et la dernière.',
-    speech: `${sib(c)}, AEGIS 07. Une nuit. J'ai arrosé la serre.` }),
-  bivouac: c => ({ title: `LE BIVOUAC DE ${sib(c)}`, stamp: 'BUREAU DU CONSERVATEUR',
-    lines: ['Une couverture de survie et une couverture de l’ambulance 07, pliées au carré. Un poêle à alcool encore tiède. Deux rations ouvertes.',
-      'Une carte de Vesper annotée : « Bas-Niveaux — enclave du marché (vu·e en 2195 ?) », et une ligne tracée « Ligne 9 → poste Orme → anciens relais ».',
-      `Sur un carnet : « ${self(c)}, si tu lis ça, on se rate de peu. Les registres d’ici gardent une copie des disparus. ORDRE veut les effacer. Prends-la avant eux. »`],
-    footer: 'Les annotations sur la Ligne 9 et le poste Orme recoupent le journal de bord de la station.',
-    speech: `${self(c)}, si tu lis ça, on se rate de peu. Les registres d'ici gardent une copie des disparus. Prends-la avant eux.` }),
+    speech: 'Le terminal du fond parle tout seul.' }),
+  bivouac: () => ({ title: 'LE BIVOUAC DES ÉPARS', stamp: 'BUREAU DU CONSERVATEUR',
+    lines: ['Deux couvertures pliées au carré. Un poêle à alcool encore tiède. Deux rations ouvertes.',
+      'Une carte de Vesper annotée : « Bas-Niveaux — marché couvert, dispensaire d’Inès », et une ligne tracée « Ligne 9 → poste Orme → relais indépendants ».',
+      'Sur un carnet : « Terminal hors réseau, salle des copies. Message ancien, signature VEILLE-4. Une partie est chiffrée. Le Directoire stocke des modules de décryptage dans la tour de transit. On n’y retourne pas. »'],
+    footer: 'Les Épars ne s’approchent pas de ce qu’ils ne comprennent pas. Ils ont survécu comme ça.',
+    speech: 'Une partie est chiffrée. Le Directoire stocke des modules de décryptage dans la tour de transit.' }),
   serveur: () => ({ title: 'ORDRE DE PURGE — RÉSEAU ORDRE', stamp: 'LOCAL DES COPIES · IMPRIMANTE DE SECOURS',
-    lines: ['Objet : registres civils des Archives végétales. Priorité 2. Effacement à la reconnexion du site.',
-      'Copie préalable demandée par HELIX Security, « pour archivage ». Accord d’ORDRE en attente.',
+    lines: ['Objet : terminaux hors réseau des Archives végétales. Priorité 2. Effacement à la reconnexion du site.',
+      'Copie préalable demandée par HELIX, « pour archivage ». Accord d’ORDRE en attente.',
       'Statut : en attente d’une unité de maintenance.'],
     footer: 'HELIX veut une copie de ce qu’ORDRE efface. Personne n’a demandé l’avis des familles.',
-    speech: 'Copie préalable demandée par HELIX Security, pour archivage.' }),
+    speech: 'Copie préalable demandée par HELIX, pour archivage.' }),
   herbier: () => ({ title: 'HERBIER DE VESPER — PLANCHE 1127', stamp: 'SALLE DES HERBIERS',
     lines: ['Fougère des toits (récoltée sur la station 07, toit-terrasse, 2186).', 'Note de la conservatrice, 2189 : « Si la ville s’arrête, les fougères continueront. Arrosez la serre le mardi. »',
       'Une main a ajouté en dessous, récemment : « Fait. Mardi. »'],
     footer: 'Les petites choses qui continuent quand tout s’arrête.', speech: 'Si la ville s’arrête, les fougères continueront.' }),
-  registre: c => ({ title: 'REGISTRE DES DISPARUS — COPIE LOCALE', stamp: 'ARCHIVES VÉGÉTALES · COPIE HORS RÉSEAU TERMINÉE',
-    lines: [`${self(c)} — AEGIS 07. Statut 2189 : disparu${c === 'lylu' ? '' : 'e'}.`,
-      `Annotation manuscrite saisie il y a trois jours par 07-${sib(c)} : « Pas disparu${c === 'lylu' ? '' : 'e'}. Je ${c === 'lylu' ? 'le' : 'la'} cherche. »`,
-      `${sib(c)} — AEGIS 07. Statut 2189 : disparu${c === 'lylu' ? 'e' : ''}. Mise à jour il y a trois jours : « Vu${c === 'lylu' ? 'e' : ''} vivant${c === 'lylu' ? 'e' : ''} aux Archives végétales. En route vers les Bas-Niveaux, enclave du marché. »`,
-      '4 812 autres noms. La copie tient dans la mémoire de ta combinaison.'],
-    footer: 'La purge d’ORDRE n’effacera pas cette copie-là.',
-    speech: `Pas disparu${c === 'lylu' ? '' : 'e'}. Je ${c === 'lylu' ? 'le' : 'la'} cherche.` })
+  registre: () => ({ title: 'MESSAGE VEILLE-4 — FRAGMENT RESTAURÉ', stamp: 'ARCHIVES VÉGÉTALES · TERMINAL HORS RÉSEAU · ENREGISTRÉ LE 17/11/2189, 05 H 58',
+    lines: ['« Si vous recevez ceci, ne faites confiance à aucun système connecté au réseau principal. »',
+      '« Retrouvez les relais indépendants. »',
+      '« Et surtout… ne perdez pas les deux unités. »',
+      '[Suite chiffrée — 4 min 12 s. Clé requise : module de décryptage de type « ancien réseau ».]'],
+    footer: 'Une voix adulte, fatiguée, très calme. En fond, une alarme. La copie tient dans la mémoire de ta combinaison.',
+    speech: 'Ne faites confiance à aucun système connecté au réseau principal. Retrouvez les relais indépendants. Et surtout, ne perdez pas les deux unités.' })
 });
 export const logFor = (id, characterId = 'ghju') => LOGS[id]?.(characterId === 'lylu' ? 'lylu' : 'ghju') || null;
 
 export const ENDING = Object.freeze({
   title: 'Le Dernier Signal',
-  text: { lylu: 'GHJU est vivante. Il y a trois jours, elle dormait aux Archives végétales, à côté du registre où elle a écrit « pas disparu » sous le nom de LYLU. Elle est partie vers l’enclave du marché des Bas-Niveaux. Le monte-charge descend.',
-    ghju: 'LYLU est vivant. Il y a trois jours, il dormait aux Archives végétales, à côté du registre où il a écrit « pas disparue » sous le nom de GHJU. Il est parti vers l’enclave du marché des Bas-Niveaux. Le monte-charge descend.' },
-  next: 'Suite : 02 — Sous les Néons'
+  text: { lylu: 'Le message de VEILLE-4 date de la nuit de la Chute. La voix de ton père : ne faites confiance à aucun système connecté, retrouvez les relais indépendants, ne perdez pas les deux unités. Le reste est chiffré. CAR-14 est restée silencieuse plus longtemps que d’habitude. Le monte-charge descend vers les Bas-Niveaux.',
+    ghju: 'Le message de VEILLE-4 date de la nuit de la Chute. La voix de ton père : ne faites confiance à aucun système connecté, retrouvez les relais indépendants, ne perdez pas les deux unités. Le reste est chiffré. GAB-1 n’a rien dit pendant plusieurs secondes. Le monte-charge descend vers les Bas-Niveaux.' },
+  next: 'Suite : 02 — Les Profondeurs'
 });

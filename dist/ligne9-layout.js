@@ -32,7 +32,7 @@ export const ROOMS = Object.freeze([
   room('couloirEcluse', -78, -74, 52, 64, 3.4, 'corridor', { label: 'Galerie de l’écluse' }),
   room('sas', -90, -62, 64, 78, 10, 'lock', { label: 'Sas de l’écluse' }),
   room('voie', -62, -40, 68, 76, 6, 'lowtrack', { label: 'Voie basse' }),
-  room('chambre', -40, 20, 60, 96, 12, 'anchor', { label: 'Chambre JANUS-9' }),
+  room('chambre', -40, 20, 60, 96, 12, 'anchor', { label: 'Nœud JANUS-9' }),
   room('orme', 20, 44, 76, 96, 3.6, 'control', { label: 'Poste de commande Orme' }),
   room('cabine', 44, 50, 82, 90, 3, 'lift', { label: 'Monte-charge de service' })
 ]);

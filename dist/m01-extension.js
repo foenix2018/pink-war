@@ -117,14 +117,14 @@ export function installM01Extension(game, hooks = {}) {
   const TEXT = {
     'x-cour': ['La station 07', 'Entrer dans la station par la porte de service, au fond de la cour.'],
     'x-garde': ['La nuit de la chute', 'Lire le journal de bord dans la salle de veille.'],
-    'x-vestiaires': ['Les vestiaires', 'Ouvrir les casiers de l’équipe.'],
-    'x-groupe': ['Le groupe électrogène', 'Ouvrir l’arrivée de gazole, puis démarrer le groupe et tenir pendant la montée en charge.'],
+    'x-vestiaires': ['Les vestiaires', 'Ouvrir le casier marqué VEILLE.'],
+    'x-groupe': ['Le groupe électrogène', 'Des survivants sont enfermés dans l’atelier : ouvrir le gazole, démarrer le groupe et tenir pendant la montée en charge.'],
     'x-remise': ['Le hangar', 'Commander la grande porte du hangar.'],
     'x-sortie': ['Sortir de la station', 'Neutraliser la patrouille et rejoindre le quartier des secours.'],
-    'x-route': ['Une trace de trois jours', 'Rejoindre les Archives végétales par l’accès sud.'],
+    'x-route': ['La source du signal', 'Rejoindre les Archives végétales par l’accès sud.'],
     'x-entree': ['Les Archives végétales', 'Déverrouiller les portes d’accueil à la main.'],
-    'x-bivouac': ['Les Archives végétales', 'Suivre la trace jusqu’au bureau du conservateur.'],
-    'x-copie': ['Le registre des disparus', 'Copier le registre avant la purge d’ORDRE, et tenir la salle.'],
+    'x-bivouac': ['Les Archives végétales', 'Suivre la source du signal jusqu’au bureau du conservateur.'],
+    'x-copie': ['Le message VEILLE-4', 'Restaurer le message du terminal hors réseau avant la purge d’ORDRE, et tenir la salle.'],
     'x-depart': ['Vers les Bas-Niveaux', 'Traverser la serre et appeler le monte-charge.'],
     'x-fin': ['Vers les Bas-Niveaux', 'Entrer dans le monte-charge.']
   };

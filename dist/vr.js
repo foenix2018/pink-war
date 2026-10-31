@@ -55,7 +55,7 @@ export function questControls(hand = 'right') {
     [b.jump, 'Saut · second appui : double saut / rebond mural'],
     [`Gâchette INDEX ${sideF}`, `VX-9 DUO : tirer avec la ${sideF} · sinon : charge à impulsion`],
     [`Clic joystick ${mainM}`, 'Frappe de mêlée'],
-    ['Pupitre au poignet gauche', 'Pointer avec la main droite puis gâchette INDEX : compétences Gaby / Cara'],
+    ['Pupitre au poignet gauche', 'Pointer avec la main droite puis gâchette INDEX : compétences GAB-1 / CAR-14'],
     [b.pause, 'Pause / reprise']
   ];
 }

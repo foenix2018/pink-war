@@ -21,10 +21,10 @@ test('M01 starts calmly with GHJU dual R9; discovery guides to an actual collect
  Object.assign(g.player,{x:offer.x,z:offer.z,elevation:offer.elevation});assert.equal(g.collectWeapon(),true);
  assert.equal(g.weaponIndex,1);assert.equal(g.selectWeapon(2),false);assert.equal(g.objectiveTarget().id,'isolate-convoy');
 });
-test('both sibling archives keep the human trail, the fall and Archives végétales without swapping heroes',()=>{
- for(const [hero,sibling,ai]of [['ghju','LYLU','Gaby'],['lylu','GHJU','Cara']]){
+test('both archives follow the VEILLE-4 signal of the parents, the fall and Archives végétales, each hero with its sphere',()=>{
+ for(const [hero,ai]of [['ghju','GAB-1'],['lylu','CAR-14']]){
   const first=missionJournal('archive',hero),second=missionJournal('investigation',hero);
-  assert.match(first.lines.join('\n'),new RegExp(sibling));assert.match(first.lines.join('\n'),new RegExp(ai));
+  assert.match(first.lines.join('\n'),/VEILLE-4/);assert.match(first.lines.join('\n'),new RegExp(ai));
   assert.match(second.lines.join('\n'),/2189/);assert.match(second.lines.join('\n'),/Archives végétales/);
   const ending=chapterStory(1,hero);assert.match(ending.text,/Archives végétales/);assert.match(ending.text,/Bas-Niveaux/);
  }

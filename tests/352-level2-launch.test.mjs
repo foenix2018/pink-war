@@ -18,13 +18,13 @@ test('M02 has own cyberpunk artwork in menu, loading screen, and start page',()=
  querySelector:()=>credit};
  syncMenuArtwork('ghju','campaign2',root);
  assert.ok(images.every(im=>im.attr.src.includes('mission02-cover.webp')));
- assert.match(title.textContent,/Sous les Néons/);
- assert.match(description.textContent,/HELIX/);
+ assert.match(title.textContent,/Les Profondeurs/);
+ assert.match(description.textContent,/Directoire/);
  syncMenuArtwork('lylu','campaign2',root);
  assert.ok(images.every(im=>im.attr.src.includes('mission02-cover.webp')));
  syncMenuArtwork('lylu','campaign',root);
  assert.ok(images.every(im=>im.attr.src==='art/accueil-lylu.webp'));
- assert.equal(title.textContent,'Le dernier signal');
+ assert.equal(title.textContent,'01 — Le Dernier Signal');
  assert.match(text('level2-test.html'),/mission02-cover\.webp/);
 });
 

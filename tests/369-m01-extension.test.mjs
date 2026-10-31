@@ -94,18 +94,18 @@ test('the relay A3 opens the epilogue: Archives végétales, bivouac, registry c
   // The original chapter is done up to its relay.
   g.setStage('exit');Object.assign(g.player,{...LEVEL1.exit,elevation:LEVEL1.exit.y,grounded:true});
   assert.equal(g.getInteraction()?.id,'exit');assert.ok(g.interact());assert.equal(g.completed,false,'the relay no longer ends the chapter');
-  assert.equal(g.stage,'x-route');const relay=ext.takeJournal();assert.equal(relay.id,'relais-a3');assert.match(relay.entry.lines.join(' '),/07-LYLU/);
+  assert.equal(g.stage,'x-route');const relay=ext.takeJournal();assert.equal(relay.id,'relais-a3');assert.match(relay.entry.lines.join(' '),/ÉPARS-12[\s\S]*VEILLE-4/);
   g.enemies.length=0;Object.assign(g.player,{x:6,z:-58,elevation:0});walkNav(g,[6,-64.5]);assert.equal(g.stage,'x-entree');
   assert.ok(g.obstacles.some(o=>o.door==='accueil'),'the entrance is locked');
   const use=id=>{const it=X.INTERACTIONS.find(i=>i.id===id);Object.assign(g.player,{x:it.x,z:it.z,elevation:0,grounded:true});assert.ok(g.interact(),`${id} used`);return ext.takeJournal();};
   g.enemies.length=0;use('deverrouillage');assert.equal(g.stage,'x-bivouac');assert.ok(!g.obstacles.some(o=>o.door==='accueil'));
-  g.enemies.length=0;assert.match(use('doc-visiteurs').entry.lines.join(' '),/LYLU, AEGIS 07/);
+  g.enemies.length=0;assert.match(use('doc-visiteurs').entry.lines.join(' '),/Épars, groupe 12/);
   assert.equal(use('bivouac').then,'bivouac');assert.equal(g.stage,'x-copie');
   g.enemies.length=0;use('copie');assert.equal(ext.hold.name,'copie');assert.equal(g.getInteraction(),null,'nothing else during the copy');
   const run=s=>{for(let t=0;t<s;t+=1/30){g.invulnerable=1e9;g.step(1/30,{});for(const e of g.drainEvents())events.push(e.type);}};
   run(4+PORTAL_CHARGE+.2);assert.equal(ext.groups().copie1.deployed,3,'reinforcements step out of the greenhouse portal');assert.ok(events.includes('portals'));
   run(X.HOLDS.copie);assert.equal(ext.hold,null);assert.equal(g.stage,'x-depart');
-  const registre=ext.takeJournal();assert.equal(registre.id,'registre');assert.match(registre.entry.lines.join(' '),/Pas disparue/);assert.equal(registre.then,'copieOk');
+  const registre=ext.takeJournal();assert.equal(registre.id,'registre');assert.match(registre.entry.lines.join(' '),/ne perdez pas les deux unités/);assert.equal(registre.then,'copieOk');
   g.enemies.length=0;Object.assign(g.player,{x:40.4,z:-82.6});assert.ok(g.interact());assert.equal(g.stage,'x-fin');
   walkNav(g,[45,-80]);assert.equal(g.completed,true);assert.equal(g.state,'won');
 });
@@ -122,19 +122,23 @@ test('checkpoints: an extension stage resumes at its place with earlier progress
   assert.equal(third.g.stage,'x-copie');assert.ok(!third.g.obstacles.some(o=>o.door==='accueil'||o.door==='portail'));assert.ok(third.ext.prologueDone);
 });
 
-test('the story: both heroes, Gaby with GHJU and Cara with LYLU, the night of 2189 matching Ligne 9, a recent trace, the road to the Bas-Niveaux',()=>{
+test('the story: both heroes, GAB-1 with GHJU and CAR-14 with LYLU, the night of the Chute matching Ligne 9, the VEILLE-4 message, the road to the Bas-Niveaux',()=>{
   for(const id of Object.keys(SCRIPT)){
     const lylu=linesFor(id,'lylu'),ghju=linesFor(id,'ghju');assert.ok(lylu.length&&ghju.length,id);
     assert.ok(!lylu.some(l=>['gaby','ghju'].includes(l.who)),`${id} LYLU`);assert.ok(!ghju.some(l=>['cara','lylu'].includes(l.who)),`${id} GHJU`);
   }
   const main=logFor('main-courante','ghju').lines.join(' ');
-  for(const fact of ['22 h 05','pompes P9','22 h 12','34 civils','22 h 47','23 h 00','Ne prends pas le réseau principal. Retrouve les anciens relais.','17 h 42','canal 07'])assert.ok(main.includes(fact),fact);
-  const ligne9=read('ligne9-story.js');for(const fact of ['22 h 05','22 h 12','22 h 47','34 civils'])assert.ok(ligne9.includes(fact),`Ligne 9 agrees: ${fact}`);
-  assert.match(logFor('registre','lylu').lines.join(' '),/GHJU.*Bas-Niveaux/);assert.match(logFor('bivouac','ghju').lines.join(' '),/Ligne 9 → poste Orme/);
+  assert.match(logFor('main-courante','ghju').title,/17\/11\/2189/);
+  for(const fact of ['03 h 17','04 h 05','pompes P9','04 h 12','34 civils','04 h 47','06 h 42','suspension temporaire de son autorité décisionnelle','canal 07'])assert.ok(main.includes(fact),fact);
+  const ligne9=read('ligne9-story.js');for(const fact of ['04 h 05','04 h 12','04 h 47','34 civils'])assert.ok(ligne9.includes(fact),`Ligne 9 agrees: ${fact}`);
+  assert.match(logFor('registre','lylu').lines.join(' '),/Retrouvez les relais indépendants[\s\S]*deux unités/);
+  assert.equal(linesFor('copieOk','ghju')[0].who,'veille');assert.equal(linesFor('copieOk','ghju')[0].speaker.name,'VOIX ENREGISTRÉE · VEILLE-4');
+  assert.ok(linesFor('copieOk','ghju').some(l=>l.who==='gaby'&&l.text==='…'),'GAB-1 stays silent');assert.match(logFor('bivouac','ghju').lines.join(' '),/Ligne 9 → poste Orme/);
   assert.match(logFor('serveur').lines.join(' '),/HELIX/);
   const all=JSON.stringify(SCRIPT)+JSON.stringify(Object.keys(LOGS).map(k=>logFor(k,'ghju')))+JSON.stringify(ENDING);
-  assert.doesNotMatch(all,/est mort|est morte/);assert.match(ENDING.text.ghju,/LYLU est vivant/);assert.match(ENDING.text.lylu,/GHJU est vivante/);
-  assert.match(chapterStory(1,'ghju').text,/Bas-Niveaux/);assert.match(chapterStory(1,'ghju').text,/registre/);
+  assert.doesNotMatch(all,/est mort|est morte|est vivante?\b/,'chapter 1 gives no news of the sibling');assert.match(ENDING.text.ghju,/VEILLE-4/);assert.match(ENDING.next,/Les Profondeurs/);
+  assert.match(chapterStory(1,'ghju').text,/Bas-Niveaux/);assert.match(chapterStory(1,'ghju').text,/VEILLE-4/);
+  assert.doesNotMatch(all,/Gabrielle.{0,60}(GAB-1|sphère)|GAB-1.{0,60}Gabrielle/,'the spheres keep their secret until chapter 15');
 });
 
 test('the M01 page drives the extension: journals, subtitles, daylight adaptation, resume after a defeat',()=>{

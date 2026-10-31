@@ -61,7 +61,7 @@ test('the first part plays: Inès, the annex power, the convoy file, the resusci
   assert.equal(linesFor('ines','lylu','proof').at(-1).who,'ines');assert.match(linesFor('ines','ghju','escort').at(-1).text,/quatorze/);
   use(g,m,'ines');assert.equal(m.stageId,'alimentation');
   use(g,m,'alimentation');assert.equal(log.power.annexe,true);assert.equal(m.stageId,'dossier');
-  assert.equal(use(g,m,'dossier').log,'dossier');assert.equal(m.stageId,'kit');assert.match(logFor('dossier','lylu').lines.join(' '),/07-GHJU/);
+  assert.equal(use(g,m,'dossier').log,'dossier');assert.equal(m.stageId,'kit');assert.match(logFor('dossier','lylu').lines.join(' '),/lot à part/);
   use(g,m,'kit');assert.equal(m.groups().annexe.deployed,4);run(g,m,1);assert.equal(m.stageId,'kit','the annex fight first');
   g.enemies.length=0;step(g,m);assert.equal(m.stageId,'atelier');
   Object.assign(g.player,{x:24,z:28});step(g,m);assert.equal(m.groups().atelier.deployed,4,'patrol at the workshop');
@@ -107,17 +107,19 @@ test('the van loses integrity when machines reach it, and the checkpoint puts ev
   assert.equal(g.enemies.length,0);
 });
 
-test('the story: both heroes, Inès and Ravel from chapter 02, the stabilisation centre, the road to the Brèche Violette',()=>{
+test('the story: both heroes, Inès and Ravel from chapter 02, Mara Voss and AEGIS, the first glimpse of the sibling, the road to the Protocole Interdit',()=>{
   for(const [id,entry] of Object.entries(SCRIPT)){
     const lylu=linesFor(id,'lylu'),ghju=linesFor(id,'ghju');assert.ok(lylu.length&&ghju.length,id);
     assert.ok(!lylu.some(l=>['gaby','ghju'].includes(l.who)),`${id} LYLU`);assert.ok(!ghju.some(l=>['cara','lylu'].includes(l.who)),`${id} GHJU`);
     assert.ok([...lylu,...ghju].every(l=>l.speaker?.name),`${id} speakers`);
   }
-  assert.match(logFor('regulation','lylu').lines.join(' '),/07-GHJU[\s\S]*station énergétique/);assert.match(logFor('regulation','ghju').lines.join(' '),/Kessler/);
+  assert.match(logFor('regulation','lylu').lines.join(' '),/Hadi[\s\S]*station énergétique/);
+  assert.match(linesFor('treuilOk','lylu').map(l=>l.text).join(' '),/marques roses/);assert.match(linesFor('treuilOk','ghju').map(l=>l.text).join(' '),/signature bleue/);
+  assert.ok(linesFor('intro','ghju').some(l=>l.who==='voss'),'Mara Voss, AEGIS');assert.match(logFor('regulation','ghju').lines.join(' '),/Kessler/);
   assert.match(logFor('relais').lines.join(' '),/Ravel/);assert.match(logFor('dossier','ghju').lines.join(' '),/stabilisation/);
   // The first version's texts are kept.
   for(const [i,id] of ['dossier','manifeste','relais'].entries())assert.ok(logFor(id,'ghju').lines[0].includes(M03_STEPS[i].message.split(' — ')[1].slice(0,40)),id);
-  assert.match(ENDING.next,/Brèche Violette/);
+  assert.match(ENDING.next,/Protocole Interdit/);assert.match(ENDING.text.ghju,/raison d’espérer que LYLU est vivant/);
   const all=JSON.stringify(SCRIPT)+JSON.stringify(Object.keys(LOGS).flatMap(k=>[logFor(k,'ghju'),logFor(k,'lylu')]));assert.doesNotMatch(all,/est mort|est morte/);
 });
 
@@ -137,7 +139,7 @@ test('the wording stays generic: an ambulance, not fire-brigade jargon',()=>{
 test('one level screen for every chapter (logo, chapter, zone, objectives, RETOUR / COMMENCER), and the traced logo',async()=>{
   const {BRIEFINGS,briefingFor}=await import('../dist/mission-briefing.js');
   for(const m of [1,2,3,5]){const b=briefingFor(m,'ghju');assert.equal(b.objectives.length,4,`chapter ${m}`);assert.ok(b.zone.startsWith('Vesper //'));assert.equal(b.number,String(m).padStart(2,'0'));}
-  assert.deepEqual(briefingFor(3).objectives.map(o=>o.title),['Fouiller l’annexe médicale','Récupérer le manifeste HELIX','Rejoindre les archives A3','Neutraliser la liaison ORDRE'],'the chapter 03 model');
+  assert.deepEqual(briefingFor(3).objectives.map(o=>o.title),['Fouiller l’annexe médicale','Récupérer le manifeste du convoi','Rejoindre les archives A3','Couper la balise d’ORDRE'],'the chapter 03 model');
   for(const page of ['niveau3.html','ligne9.html','level2-test.html'])assert.match(read(page),/decorateShade\(document\.getElementById\('shade'\)/,page);
   assert.match(read('mission-loading.js'),/buildLoadingCover/);assert.ok(Object.keys(BRIEFINGS).length>=4);
   const logo=read('art/pink-wars-wordmark.svg');assert.match(logo,/<path d="M/);assert.doesNotMatch(logo,/<text/,'traced letters, no font');
