@@ -6,6 +6,7 @@ import {createLivedInDressing} from './vesper-lived-in.js';
 // Daylight scene: interiors dim the sun and the sky light (eye adaptation) and are lit by a small pool of
 // point lights moved to the nearest fixtures. Textures: CC0 sets already shipped (assets/cc0, assets/ligne9).
 import {createVesperProps} from './vesper-props.js';
+import {createRescueVehicle} from './rescue-vehicle-detail.js';
 import { ROOMS, DOORS, INTERACTIONS, roomAt } from './m01-extension-layout.js';
 
 const TAU = Math.PI * 2;
@@ -293,26 +294,18 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
   // ---------- Props ----------
   const rotors = [];
   function vehicle(o, kind) {
-    const g = new T.Group(); g.position.set(o.x, 0, o.z); root.add(g);
-    const along = o.hx > o.hz, L = (along ? o.hx : o.hz) * 2, W = (along ? o.hz : o.hx) * 2, part = (m, x, y, z, sx, sy, sz) => { const b = new T.Mesh(cube, m); b.position.set(x, y, z); b.scale.set(sx, sy, sz); b.castShadow = !low; b.receiveShadow = true; g.add(b); stats.meshes++; return b; };
-    if (!along) g.rotation.y = Math.PI / 2;
-    const body = kind === 'vsav' ? M.white : M.red, cab = kind === 'vsav' ? M.white : M.red;
-    // Cab at +x (towards the bay door), box body behind.
-    part(cab, L / 2 - 1.1, 1.35, 0, 2.1, 1.6, W); part(M.glass, L / 2 - .06, 1.75, 0, .04, .8, W - .3);
-    part(body, -.9, 1.55, 0, L - 2.2, kind === 'vsav' ? 2.2 : 2.5, W);
-    part(M.dark, 0, .45, 0, L - .2, .5, W - .3);
-    for (const sx of [L / 2 - 1.2, -L / 2 + 1]) for (const sz of [-1, 1]) { const w = new T.Mesh(new T.CylinderGeometry(.48, .48, .32, 18), M.black); w.rotation.x = Math.PI / 2; w.position.set(sx, .48, sz * (W / 2 - .1)); g.add(w); stats.meshes++; }
-    if (kind === 'vsav') {
-      for (const sz of [-1, 1]) { part(M.red, -.9, 1.05, sz * (W / 2 + .005), L - 2.2, .22, .01); part(M.yellow, -.9, 1.3, sz * (W / 2 + .006), L - 2.2, .08, .01); }
-      const label = new T.Mesh(new T.PlaneGeometry(2.6, .5), new T.MeshStandardMaterial({ map: signTex(['AMBULANCE 07', 'AEGIS · VESPER'], { bg: null, fg: '#a3241c', w: 512, h: 128 }), transparent: true, alphaTest: .05 }));
-      label.position.set(-.9, 2, W / 2 + .01); g.add(label);
-    } else {
-      for (const sz of [-1, 1]) { part(M.white, -.9, .95, sz * (W / 2 + .005), L - 2.2, .12, .01); part(M.shutter, -1.4, 1.6, sz * (W / 2 + .01), L - 3.4, 1.6, .01); }
-      part(M.steel, -.6, 2.95, 0, L - 1.4, .12, .6); part(M.steel, -.6, 3.05, -.35, L - 1.6, .06, .08); part(M.steel, -.6, 3.05, .35, L - 1.6, .06, .08);
-      for (let k = 0; k < 8; k++) part(M.steel, -L / 2 + 1 + k * (L - 2.2) / 7, 3.05, 0, .05, .05, .7);
-    }
-    // Beacons on the cab roof (dead since 2189).
-    for (const sz of [-.6, .6]) part(M.dark, L / 2 - 1.1, 2.2, sz, .25, .14, .25);
+    const along=o.hx>o.hz,L=(along?o.hx:o.hz)*2,W=(along?o.hz:o.hx)*2;
+    // Keep exactly the authored visual centre and collider envelope. The cab
+    // faces the bay opening in its original world orientation.
+    const g=createRescueVehicle(T,{
+      kind,length:L,width:W,low,M,
+      signTexture:(id)=>signTex([id,'AEGIS · VESPER'],{bg:null,fg:kind==='vsav'?'#a3241c':'#e9e3d7',w:512,h:128})
+    });
+    g.position.set(o.x,0,o.z);
+    if(!along)g.rotation.y=Math.PI/2;
+    root.add(g);
+    stats.meshes+=g.children.length;
+    stats.vehicles=(stats.vehicles||0)+1;
   }
   function dress(o) {
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, h = o.height, along = w >= d;
