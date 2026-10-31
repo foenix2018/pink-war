@@ -5,7 +5,8 @@ import {enemyScale} from './enemy-combat.js';
 import {enemyAlertState,ENEMY_OPTICS} from './enemy-alert.js';
 import {rempartSurfaces} from './rempart-surfaces.js';
 import {rempartGeometry} from './enemy-rempart-model.js';
-import {REMPART} from './rempart-profile.js';
+import {REMPART,setRempartWeaponMotion,clearRempartWeaponMotion} from './rempart-profile.js';
+import {createRempartLegRetarget} from './rempart-locomotion.js';
 const geometryCache=new Map(),materialCache=new WeakMap();const supportCache=new Map();
 function footSupportPoints(detail){
  if(supportCache.has(detail))return supportCache.get(detail);
@@ -21,15 +22,21 @@ function footSupportPoints(detail){
 export function createRempart({elite=false,environment=null,detail='high'}={}){
  const asset=reco1Assets(),states={motion:'idle',aim:false,mode:'patrol'},root=new T.Group(),visual=new T.Group();
  const armRest=new Map(),aimQ=new T.Quaternion(),parentQ=new T.Quaternion(),point=new T.Vector3(),shoulderPoint=new T.Vector3(),direction=new T.Vector3(),delta=new T.Quaternion();
- // Native leg/body animation is retained. Heavy arms are braced with world-space
- // shoulder-to-elbow solves, so a walking shoulder never pulls away from its cannon.
+ let bodyBind=null,lastEnemy=null;const bodyMotion=new T.Matrix4(),weaponOffset={x:0,y:0,z:0};
+ // Elbows follow a point on the moving thorax; aiming stabilises orientation,
+ // rather than pinning the weapon in the character's stationary root frame.
  const rempartRig={proportions:REMPART.proportions,afterPose:({actor,bones,pose:p})=>{
+  const thorax=bones.get('mixamorigSpine2');
+  if(!bodyBind)bodyBind=thorax.matrixWorld.clone().invert();
+  bodyMotion.multiplyMatrices(thorax.matrixWorld,bodyBind);
   for(const side of ['Right','Left']){
    const upper=bones.get('mixamorig'+side+'Arm'),fore=bones.get('mixamorig'+side+'ForeArm');
    upper.getWorldPosition(shoulderPoint);
    if(!armRest.has(side))armRest.set(side,{upper:upper.getWorldQuaternion(new T.Quaternion()),fore:fore.getWorldQuaternion(new T.Quaternion()),direction:fore.getWorldPosition(new T.Vector3()).sub(shoulderPoint).normalize()});
    const rest=armRest.get(side),right=side==='Right';
-   point.set(right?-.52:.52,1.20-REMPART.crouchDrop*(p.coverCrouch||0)+(right?0:(p.guard||0)*.06),.025);
+   point.set(right?-.52:.52,1.20+(right?0:(p.guard||0)*.06),.025).applyMatrix4(bodyMotion);
+   if(!right)point.y=Math.max(1.02,point.y); // Keep the long shield clear of the floor when ducking.
+   if(right){weaponOffset.x=-(point.x+.52);weaponOffset.y=point.y-1.20+REMPART.crouchDrop*(p.coverCrouch||0);weaponOffset.z=-(point.z-.025);}
    direction.copy(point).sub(shoulderPoint).normalize();delta.setFromUnitVectors(rest.direction,direction);
    aimQ.copy(delta).multiply(rest.upper);upper.quaternion.copy(upper.parent.getWorldQuaternion(parentQ).invert().multiply(aimQ));actor.updateMatrixWorld(true);
    fore.position.copy(fore.parent.worldToLocal(point));
@@ -58,6 +65,7 @@ export function createRempart({elite=false,environment=null,detail='high'}={}){
  }
  // These are the actual 41 native bones, not an independent animation approximation.
  const skeleton=new T.Skeleton(nativeBones,nativeBones.map(b=>b.matrixWorld.clone().invert()));
+ rempartRig.retargetLegs=createRempartLegRetarget(pose);
  // Contact points come from the actual sole hull, not empty bounding-box corners.
  const soleSamples=[];
  for(const side of ['Right','Left']){
@@ -76,9 +84,12 @@ export function createRempart({elite=false,environment=null,detail='high'}={}){
   const elapsed=previous===null?0:Math.max(0,time-previous),dt=Math.min(.1,elapsed),x=enemy.x??root.position.x,z=enemy.z??root.position.z,dist=Math.hypot(x-px,z-pz);
   const measured=moving&&elapsed>0&&dist<2&&(enemy.stunnedUntil||0)<=simulationTime?Math.min(5,dist/elapsed):0;speed+=(measured-speed)*(1-Math.exp(-dt*18));if(measured<.01&&speed<.03)speed=0;previous=time;px=x;pz=z;
   const alert=enemyAlertState(enemy,simulationTime);states.motion=speed>2.9?'run':speed>.06?'walk':'idle';states.aim=alert!=='idle';states.mode=alert==='engaged'?'attack':alert==='alert'?'search':'patrol';
-  pose.setPose({speed,guard:(enemy.combatPose||enemy.tactics?.state)==='guard'?1:0,coverCrouch:enemy.coverCrouch||0,aimPitch:T.MathUtils.clamp(enemy.aimPitch||0,REMPART.minPitch,REMPART.maxPitch),aimYaw:enemy.aimYaw||0,hitPulse:Math.max(0,1-(simulationTime-(enemy.hitAt??-99))/.22)});pose.update(dt,time,0);materials.eye.color.setHex(ENEMY_OPTICS[alert]);root.userData.alertState=alert;root.userData.motionSpeed=speed;root.userData.nativeMotion=states.motion;
+  pose.setPose({speed,guard:(enemy.combatPose||enemy.tactics?.state)==='guard'?1:0,coverCrouch:enemy.coverCrouch||0,aimPitch:T.MathUtils.clamp(enemy.aimPitch||0,REMPART.minPitch,REMPART.maxPitch),aimYaw:enemy.aimYaw||0,hitPulse:Math.max(0,1-(simulationTime-(enemy.hitAt??-99))/.22)});pose.update(dt,time,0);
+  if(lastEnemy&&lastEnemy!==enemy)clearRempartWeaponMotion(lastEnemy,weaponOffset);
+  lastEnemy=enemy;setRempartWeaponMotion(enemy,weaponOffset);
+  materials.eye.color.setHex(ENEMY_OPTICS[alert]);root.userData.alertState=alert;root.userData.motionSpeed=speed;root.userData.nativeMotion=states.motion;
  };
  root.userData.animate(0,0,false,{},0);
  root.userData.modelStats={nativeBones:41,batches:geometryCache.get(detail).length,triangles:geometryCache.get(detail).reduce((n,p)=>n+p.geometry.attributes.position.count/3,0)};
- let disposed=false;const dispose=()=>{if(disposed)return;disposed=true;pose.dispose();skeleton.dispose();materials.eye.dispose();};root.addEventListener('removed',dispose);root.userData.dispose=dispose;return root;
+ let disposed=false;const dispose=()=>{if(disposed)return;disposed=true;if(lastEnemy)clearRempartWeaponMotion(lastEnemy,weaponOffset);pose.dispose();skeleton.dispose();materials.eye.dispose();};root.addEventListener('removed',dispose);root.userData.dispose=dispose;return root;
 }

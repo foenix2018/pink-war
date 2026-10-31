@@ -1,5 +1,5 @@
 import {RECO1,isReco1,reco1MuzzleLocal} from './reco1-profile.js';
-import {REMPART,rempartMuzzleLocal} from './rempart-profile.js';
+import {REMPART,rempartMuzzleLocal,getRempartWeaponMotion} from './rempart-profile.js';
 import {carriesFieldRifle,fieldRifleMuzzle,listenerToolMuzzle} from './enemy-weapon-layout.js';
 export const ROBOT_HEAD_TOP=2.014,ROBOT_SENSOR_Y=1.88,ROBOT_CROUCH_DROP=.52,MAX_COVER_CROUCH=1.4;
 // Finish a short cover manoeuvre using the last perceived contact. This never
@@ -24,7 +24,7 @@ export function enemyVolley(wave, form='stalker') {
 }
 export function rangedMuzzle(enemy) {
   const crawler=enemy.form==='scuttler',scale=enemyScale(enemy.form,enemy.elite)*(enemy.roomScale||1);
-  const rifle=isReco1(enemy.form)?reco1MuzzleLocal(enemy.aimPitch,enemy.aimYaw,enemy.coverCrouch):enemy.form==='bulwark'?rempartMuzzleLocal(enemy.aimPitch,enemy.aimYaw,enemy.coverCrouch):enemy.form==='listener'?listenerToolMuzzle(enemy.aimPitch||0):carriesFieldRifle(enemy.form)?fieldRifleMuzzle(enemy.aimPitch||0):null;
+  const rifle=isReco1(enemy.form)?reco1MuzzleLocal(enemy.aimPitch,enemy.aimYaw,enemy.coverCrouch):enemy.form==='bulwark'?rempartMuzzleLocal(enemy.aimPitch,enemy.aimYaw,enemy.coverCrouch,getRempartWeaponMotion(enemy)):enemy.form==='listener'?listenerToolMuzzle(enemy.aimPitch||0):carriesFieldRifle(enemy.form)?fieldRifleMuzzle(enemy.aimPitch||0):null;
   const x=rifle?.x??(crawler?0:.37),z=rifle?.z??(crawler?-.28:-.345),y=(rifle?.y??(crawler?1.04:1.69))-(isReco1(enemy.form)||enemy.form==='bulwark'?0:.52*(enemy.coverCrouch||0)),angle=enemy.yaw||0;
   return {x:enemy.x+(x*Math.cos(angle)+z*Math.sin(angle))*scale,
     y:(enemy.elevation||0)+y*scale,z:enemy.z+(-x*Math.sin(angle)+z*Math.cos(angle))*scale};
