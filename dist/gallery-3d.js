@@ -66,7 +66,7 @@ async function actualObject(name){
   return {root:soldier.root,animate:(t,dt)=>soldier.animate(t,false,0,0,0,dt,{preview:true}),source:'Rig et armure Shadow Unit du jeu',soldier,kit};
  }
  if(name==='GAB-1'||name==='CAR-14'){
-  const {createAICompanion}=await import('./ai-companions.js');
+  const {createAICompanion}=await import('./ai-companions.js?v=3.80-gab1-communication');
   const actor=createAICompanion(T,scene,name==='GAB-1'?'ghju':'lylu');
   actor.root.removeFromParent();
   actor.root.position.set(0,0,0);
