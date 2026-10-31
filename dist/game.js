@@ -921,7 +921,7 @@ function stepFrame(timestamp, xrFrame) {
       }
       skillGame=game;
       skillMenu=createCompanionMenu({getStatus:()=>companionSkills.snapshot(game),
-        onUse:id=>{const used=companionSkills.use(id,{game,...aim('right'),emitter:narrativeCompanion.root.position});if(used)narrativeCompanion.react({type:'companion-assist',name:companionSkills.name});return used;},
+        onUse:id=>{const used=companionSkills.use(id,{game,...aim('right'),emitter:narrativeCompanion.root.position});if(used)narrativeCompanion.react({type:'companion-assist',name:companionSkills.name,kind:id,audioContext,sound:settings.sound!==false});return used;},
         onChange(open){resetInput();if(open&&vr.mode!=='xr')document.exitPointerLock?.();}});
       skillFX=companionSkills.unlocked?createCompanionSkillFX(world.T,world.scene,companionSkills):null;
       companionScene=world.scene;companionHero=character.id;
@@ -929,7 +929,7 @@ function stepFrame(timestamp, xrFrame) {
     const active=['playing','paused'].includes(phase)&&companionAvailable({mission:game.campaign?.level||1,mode:game.mode});
     const companionCamera=vr.mode==='xr'?world.renderer.xr.getCamera(world.camera):world.camera;
     const companionDt=phase==='playing'&&!rangeArmoryMenu?.isOpen&&!skillMenu.isOpen?dt:0;
-    narrativeCompanion.update(companionDt,{game,camera:companionCamera,active,tracked:vr.mode==='xr'});
+    narrativeCompanion.update(companionDt,{game,camera:companionCamera,active,tracked:vr.mode==='xr',audioContext,sound:settings.sound!==false});
     skillMenu.setVisible(phase==='playing');skillMenu.refresh();
     if(active&&!skillMenu.isOpen)companionSkills.update(dt,{game});
     skillFX?.update();
