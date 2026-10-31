@@ -2,8 +2,9 @@
 // Decorative geometry deliberately does not change pathing. Collider hulls are
 // placed independently of detail: no false floors, no blockage from signage.
 import {createDistrictSignage} from './level2-signage.js';
+import {createDistrictUtilities} from './district-utility-details.js';
 export function createDistrictArchitecture({T,root,materials,solid,beam,sign,collisions,low,rng}){
-  const C=materials,signs=createDistrictSignage(T,{performance:low});
+  const C=materials,signs=createDistrictSignage(T,{performance:low}),utilities=createDistrictUtilities(T,{low,materials:C});
   const stats={buildings:0,recessedWindows:0,brokenWindows:0,masonryBays:0};
   const ringGeo=new T.TorusGeometry(1,.07,6,32);
   const prism=(x,y,z,w,h,d,mat,top=1)=>{
@@ -180,19 +181,9 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
       thin(xx,.84,zz,1.68,.09,.76,C.warning);
     }
   }
-  function hydrant(x,z){
-    cyl(x,.5,z,.19,1.0,C.rust,10);
-    cyl(x,1.0,z,.25,.16,C.iron,10);
-    beam([x-.34,.65,z],[x+.34,.65,z],.11,C.iron);
-  }
+  function hydrant(x,z){utilities.hydrant(x,z);}
   function generator(x,z,side){
-    const obj=new T.Group();obj.position.set(x,0,z);root.add(obj);
-    const parts=[
-      [0,.62,0,1.5,1.2,.76,brushed],[0,1.27,0,1.45,.10,.84,C.iron],
-      [-.54,.81,side*.42,.21,.6,.09,C.cyan],[.54,.81,side*.42,.21,.6,.09,C.amber]
-    ];
-    for(const [sx,y,sz,w,h,d,m] of parts){const me=new T.Mesh(new T.BoxGeometry(w,h,d),m);me.position.set(sx,y,sz);obj.add(me);}
-    for(let a=0;a<6;a++)beam([x-.63+a*.24,.31,z+side*.45],[x-.63+a*.24,1.07,z+side*.45],.035,C.black);
+    utilities.generator(x,z,side);
     collisions.push({x,z,hx:.76,hz:.39,y:0,height:1.4,surface:'metal'});
   }
   function neonMonorail(){
@@ -233,8 +224,12 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
       generator(8,z,1);
       const pole=8.2;
       beam([pole,2,z+1],[pole,6.8,z+1],.09,copper);
-      const hex=new T.Mesh(new T.OctahedronGeometry(.48,0),z%2?C.amber:C.cyan);
-      hex.position.set(pole,6.8,z+1);root.add(hex);
+      // Service inspection luminaire: actual visor, housing, grille and emissive lens.
+      // No floating neon octahedron pretending to be a street fixture.
+      thin(pole,6.78,z+1,.93,.15,.63,brushed);
+      thin(pole,6.67,z+1,.74,.11,.48,C.black);
+      thin(pole,6.61,z+1,.60,.032,.36,z%2?C.amber:C.cyan);
+      for(const side of [-1,1])thin(pole+side*.37,6.70,z+1,.055,.20,.56,C.iron);
     }
     // Duct clusters, stacked service boxes and low-lying local vapour.
     for(let z=38;z>-64;z-=13){
@@ -261,5 +256,9 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
       beam([-7,0,z],[-7,10.3,z],.09,C.iron);
     }
   }
-  return {residentialTower,occupiedMarket,stats,signs,pbrTargets:{ceramic,brushed,dirty,copper,darkTrim,pastel,masonry},decorate(){neonMonorail();narrativeClutter();}};
+  return {residentialTower,occupiedMarket,stats,signs,pbrTargets:{ceramic,brushed,dirty,copper,darkTrim,pastel,masonry},decorate(){
+    neonMonorail();narrativeClutter();
+    const result=utilities.build(root);stats.utilityHydrants=result.hydrants;
+    stats.utilityGenerators=result.generators;stats.utilityBatches=result.batches;stats.utilityTriangles=result.triangles;
+  }};
 }
