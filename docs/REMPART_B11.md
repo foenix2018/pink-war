@@ -6,6 +6,8 @@ Les volumes représentent une tête encastrée, deux tours de refroidissement, u
 
 L’armement stabilise les bras au-dessus de la locomotion native. La bouche du canon et l’origine simulée des projectiles partagent un repère, y compris en visée et accroupi. Le capteur, les zones touchables et les hauteurs utilisées pour les couverts sont recalés. Les valeurs de santé et de dégâts restent celles du Rempart.
 
+[Rendu](../apercus/rempart-reference/rempart.png) · [Marche animée](../apercus/rempart-reference/marche.gif)
+
 Aperçu interactif : `rempart-preview.html` (Arrêt, Marche, Course, Accroupi et Visée). Il affiche le même modèle que le jeu. L’atelier et la galerie continuent à passer par la fabrique commune.
 
 - Qualité haute : 16 210 triangles, six lots de rendu.
