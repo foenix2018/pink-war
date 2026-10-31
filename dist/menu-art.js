@@ -7,7 +7,10 @@ export function syncMenuArtwork(characterId,mode='campaign',root=document){
   const level2=mode==='campaign2',level3=mode==='campaign3';
   const mission=MODE_CHAPTER[mode]||null;
   for(const image of root.querySelectorAll('img[data-character-art]')){
-    const source=mission?coverFor(mission):image.dataset[hero+'Src'];
+    // Preserve the main Liquid Glass welcome illustration and character selection.
+    // Only replace the chapter-specific loading artwork.
+    const isWelcome=Boolean(image.closest('#welcome-art'));
+    const source=isWelcome?image.dataset[hero+'Src']:mission?coverFor(mission):image.dataset[hero+'Src'];
     if(source&&image.getAttribute('src')!==source)image.setAttribute('src',source);
     image.dataset.hero=hero;
     image.dataset.mission=mission?'m'+String(mission).padStart(2,'0'):'m01';
