@@ -10,6 +10,7 @@ import {createRescueVehicle} from './rescue-vehicle-detail.js';
 import {createHardSurfaceFurniture} from './realistic-furniture.js';
 import {createStationEquipment} from './station-equipment-detail.js';
 import {createCivilCar} from './civil-vehicle-detail.js';
+import {createM01SupplyCache} from './supply-cache-details.js';
 import { ROOMS, DOORS, INTERACTIONS, roomAt } from './m01-extension-layout.js';
 
 const TAU = Math.PI * 2;
@@ -555,7 +556,12 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     root, M,
     build(obstacles) {
       placeFixtures(); buildRooms(); buildWalls(obstacles);
-      for (const o of obstacles) if (o.extension) { dress(o); if (o.kind !== 'bed') details.accessories(o); }
+      for (const o of obstacles) if (o.extension) {
+        dress(o);
+        // New cupboard faces already include all their own locks, vents and handles;
+        // avoid intersecting the legacy accessory strips behind those doors.
+        if (!['bed','lockers','cabinet','rack','ari-rack','hose-rack'].includes(o.kind)) details.accessories(o);
+      }
       buildFixtureMeshes(); buildDoors(); buildDevices(obstacles); buildSigns(); buildCyber();
       flushGeometry(); flushPieces(); furnishings.finish(); stationGear.finish(); details.finish(); livedIn.build(obstacles);
     },
@@ -575,8 +581,12 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
       const live = new Set();
       for (const p of list) {
         live.add(p.id); let o = cachesById.get(p.id);
-        if (!o) { o = new T.Group(); const caseMesh = new T.Mesh(new T.BoxGeometry(.6, .3, .4), M.paintedMetal); caseMesh.position.y = .15; o.add(caseMesh); const stripe = new T.Mesh(new T.BoxGeometry(.61, .06, .41), p.kind === 'heal' ? glow(accent) : M.cyan); stripe.position.y = .22; o.add(stripe);
-          const gem = new T.Mesh(new T.OctahedronGeometry(.2, 0), p.kind === 'heal' ? glow(accent) : glow(0xe8f6ff)); gem.position.y = .75; o.add(gem); o.userData.gem = gem; o.position.set(p.x, p.y || 0, p.z); root.add(o); cachesById.set(p.id, o); }
+        if (!o) {
+          const asset=createM01SupplyCache(T,{heal:p.kind==='heal',M,accent});
+          o=asset.root;o.userData.gem=asset.token;
+          o.position.set(p.x,p.y||0,p.z);
+          root.add(o);cachesById.set(p.id,o);
+        }
         o.userData.gem.position.y = .75 + Math.sin(t * 2.4 + p.x) * .08; o.userData.gem.rotation.y = t * 1.8;
       }
       for (const [id, o] of cachesById) if (!live.has(id)) { o.removeFromParent(); cachesById.delete(id); }
