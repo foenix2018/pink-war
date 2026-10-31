@@ -63,3 +63,20 @@ test('Gaby issues an automatic warning when an engaged enemy is visibly close, e
  assert.equal(actor.snapshot().communication.speaking,true);
  actor.dispose();
 });
+
+test('optical display faces the camera without rotating the combat drone itself',()=>{
+ const prior=globalThis.document;globalThis.document={createElement:()=>canvasStub()};
+ try{
+  const scene=new T.Scene(),root=new T.Group(),camera=new T.PerspectiveCamera();scene.add(root,camera);
+  root.position.set(3,1,2);root.rotation.y=1.12;camera.position.set(4,2,5);
+  scene.updateMatrixWorld(true);
+  const gaze=root.quaternion.clone(),actor=createGabCommunication(T,root);
+  actor.say('soin',{sound:false});actor.update(.05,{camera});
+  const hologram=root.getObjectByName('GAB-1 / optique vers projection');
+  const localNormal=new T.Vector3(0,0,1).applyQuaternion(hologram.quaternion).applyQuaternion(root.quaternion);
+  const expected=camera.position.clone().sub(root.position).normalize();
+  assert.ok(localNormal.dot(expected)>.99,'screen must be readable to the player while the drone keeps fighting');
+  assert.ok(root.quaternion.angleTo(gaze)<1e-8,'screen rotation must not interfere with cannon targeting');
+  actor.dispose();
+ }finally{if(prior===undefined)delete globalThis.document;else globalThis.document=prior;}
+});
