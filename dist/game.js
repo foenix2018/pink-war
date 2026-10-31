@@ -26,7 +26,7 @@ import { ShootingRangeGame,traceTrainingTarget } from './shooting-range.js';
 import {sightPoint} from './sight-line.js';
 import {GAME_VERSION,showLaunchError} from './launch-ui.js';
 import {syncMenuArtwork} from './menu-art.js';
-import {createAICompanion} from './ai-companions.js';
+import {createAICompanion} from './ai-companions.js?v=3.80-gab1-communication';
 import {bindViewButton,mountViewControl,readPreferredView,savePreferredView,normalizeView} from './view-options.js?v=3.74.0';
 import {companionAvailable} from './companion-escort.js';
 import {createCompanionSkills} from './companion-skills.js';
