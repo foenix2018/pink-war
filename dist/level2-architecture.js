@@ -160,7 +160,7 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
       const zz=z-5+k*5.1;
       // Real counter with open rear, recessed fronts, structural feet and drawers.
       // Its unchanged 3m x 1.5m footprint does not close the market entrance.
-      furniture.dress({kind:'reception',x:side*19,z:zz,hx:1.50,hz:.75,height:1.06});
+      furniture.dress({kind:'reception',x:side*19,z:zz,hx:1.50,hz:.75,height:1.06,yaw:-side*Math.PI/2});
       thin(side*17.4,2.4,zz,.12,1.2,2.2,dirty);
       for(let j=0;j<3;j++)thin(side*(18.6+j*.55),1.17,zz, .24,.2,.65,k%2?C.warning:C.rust);
       thin(side*22,3.5,zz,1.8,.13,3.2,brushed);
