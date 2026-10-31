@@ -48,26 +48,12 @@ export function buildHumanoidRobot({form,elite,ranged,detail,armor,dark,servo,ha
  hips.box(armor,[.32*width,.075,.20],[0,1.015,0],[0,0,0],.012);
  for(const side of [-1,1])hips.box(armor,[.12*width,.13,.075],[side*.13*width,.955,-.10],[0,side*-.12,side*-.08],.008);
  }
- if(form==='bulwark'){
-  // B-11: broad overlapping bunker plates, rear cooling towers and red power strips.
-  a.box(armor,[.58,.22,.18],[0,1.48,-.19],[0,0,0],.025);
-  a.box(dark,[.23,.17,.035],[0,1.32,-.207],[0,0,0],.01);
-  for(let i=0;i<3;i++)a.box(reactor,[.15,.018,.012],[0,1.28+i*.045,-.23],[0,0,0],.003,false);
-  for(const side of [-1,1]){
-   a.box(armor,[.22,.25,.22],[side*.38,1.59,.10],[0,0,side*.08],.02);
-   a.box(dark,[.15,.15,.025],[side*.38,1.60,-.019],[0,0,0],.005);
-   for(let i=0;i<4;i++)a.box(servo,[.12,.009,.01],[side*.38,1.55+i*.032,-.037],[0,0,0],.001);
-   a.box(reactor,[.018,.12,.012],[side*.47,1.60,-.025],[0,0,0],.002,false);
-   a.box(armor,[.22,.20,.16],[side*.29,1.39,-.13],[0,side*.15,side*-.12],.018);
-  }
- }
  const neck=boneAt('sensor-head',reference.Head,thorax),h=assembly(neck);
  h.limb(dark,[0,1.60,.02],[0,1.77,.02],.043,.039);
  if(form!=='brute')h.add(helmet,armor,matrix([0,0,0],[0,0,0],[heavy?1.08:1,1,1]));
  if(form!=='brute')h.add(face,armor,matrix([0,1.845,-.048],[0,0,0],[heavy?1.08:1,1,1]));
  if(form!=='brute')h.add(visorPlate,dark,matrix([0,1.88,-.135]));
  if(form!=='brute')for(const side of [-1,1]){h.box(dark,[.036,.11,.09],[side*.137,1.86,.005],[0,0,0],.006);h.add(joint,servo,matrix([side*.161,1.87,.005],[0,0,0],[.008,.028,.028]));}
- if(form==='bulwark')h.box(optics,[.19,.018,.012],[0,1.88,-.16],[0,0,0],.003,false);
  if(form==='seer'){
   h.add(ring,dark,matrix([0,1.88,-.18],[0,0,0],[.047,.047,.047]));h.add(eye,optics,matrix([0,1.88,-.194],[0,0,0],[.031,.031,.012]),false);
  }else if(form!=='brute')for(const side of [-1,1])h.add(eye,optics,matrix([side*.047,1.88,-.156],[0,0,0],[.031,.008,.009]),false);
@@ -84,13 +70,7 @@ export function buildHumanoidRobot({form,elite,ranged,detail,armor,dark,servo,ha
   if(form!=='brute')f.box(dark,[.065,.075,.04],[w[0],w[1]-.035,w[2]-.016],[0,0,0],.006);
   if(form!=='brute')for(let finger=0;finger<4;finger++){const x=w[0]+(finger-1.5)*.017;f.limb(servo,[x,w[1]-.055,w[2]-.02],[x,w[1]-.105,w[2]-.037],.007,.006);f.limb(dark,[x,w[1]-.105,w[2]-.037],[x,w[1]-.10,w[2]-.069],.006,.005);}
   if(form!=='brute')f.limb(servo,[w[0]-side*.043,w[1]-.02,w[2]-.02],[w[0]-side*.051,w[1]-.05,w[2]-.05],.009,.007);
-  if(form==='bulwark' && side===-1){
-   const x=e[0]-.10,y=(e[1]+w[1])*.5;
-   l.add(shieldPlate,armor,matrix([x,y,w[2]-.12],[0,.08,0],[1.45,1.75,1.5]));
-   for(let i=-1;i<=1;i++)l.box(dark,[.48,.018,.025],[x,y+i*.25,w[2]-.17],[0,0,0],.003);
-   l.box(reactor,[.025,.62,.018],[x-.245,y,w[2]-.16],[0,0,0],.003,false);
-   l.box(servo,[.18,.025,.018],[x,y-.18,w[2]-.18],[0,0,-.45],.002);
-  }
+  if(form==='bulwark')l.add(shieldPlate,armor,matrix([e[0]+side*.045,(e[1]+w[1])*.5,w[2]-.07],[0,side*-.12,0],[1,1,1]));
   armRig.push({upper,lower,wrist,side});
   const hip=point('UpLeg',side),knee=point('Leg',side),ankle=point('Foot',side),upperLeg=boneAt(`leg-${side}-hip`,hip,pelvis),lowerLeg=boneAt(`leg-${side}-knee`,knee,upperLeg),foot=boneAt(`leg-${side}-ankle`,ankle,lowerLeg);
   const v=assembly(upperLeg),c=assembly(lowerLeg),b=assembly(foot);
@@ -99,12 +79,6 @@ export function buildHumanoidRobot({form,elite,ranged,detail,armor,dark,servo,ha
   shell(c,dark,knee,ankle,.105*limbWidth,.115);if(form!=='brute')shell(c,armor,[knee[0],knee[1]-.055,knee[2]],[ankle[0],ankle[1]+.06,ankle[2]],.145*limbWidth,.14);
   if(form!=='brute')c.add(shin,armor,matrix([knee[0],.35,-.072],[0,0,0],[limbWidth,1,1]));
   motor(b,ankle,.042,.065);if(form!=='brute')b.add(boot,armor,matrix([ankle[0],.065,ankle[2]-.055]));b.add(sole,dark,matrix([ankle[0],.015,ankle[2]-.06]));
-  if(form==='bulwark'){
-   v.box(armor,[.25,.23,.12],[hip[0],(hip[1]+knee[1])*.5,-.12],[0,0,side*-.08],.02);
-   c.box(armor,[.23,.25,.12],[knee[0],.29,-.11],[0,0,side*.05],.018);
-   c.box(reactor,[.018,.14,.012],[knee[0]+side*.10,.30,-.18],[0,0,0],.002,false);
-   b.box(armor,[.24,.10,.30],[ankle[0],.075,ankle[2]-.07],[0,0,0],.02);
-  }
   legRig.push({upper:upperLeg,lower:lowerLeg,foot,side,hip,knee,ankle});
  }
  if(ranged){
@@ -114,14 +88,6 @@ export function buildHumanoidRobot({form,elite,ranged,detail,armor,dark,servo,ha
    gun.add(receiver,armor,matrix([p.x,p.y-.02,-.10]));gun.box(dark,[.09,.11,.17],[p.x,p.y-.04,.17],[0,0,0],.01);gun.box(dark,[.045,.13,.06],[p.x,p.y-.14,.045],[-.15,0,0],.008);
    gun.box(armor,[.115,.095,.12],[p.x,p.y-.035,-.33],[0,0,0],.01);gun.limb(dark,[p.x,p.y,-.32],[m.x,m.y,m.z],.027,.023);gun.add(ring,servo,matrix([m.x,m.y,m.z+.018],[0,0,0],[.026,.026,.026]));
   }else{gun.box(armor,[.18,.16,.32],[p.x,p.y,.02],[0,0,0],.015);gun.limb(dark,[p.x,p.y,-.10],[m.x,m.y,m.z],.055,.035);a.limb(servo,[p.x,1.56,.08],[p.x,1.67,.08],.034,.03);}
-  if(form==='bulwark'){
-   gun.box(armor,[.24,.22,.23],[p.x,p.y,-.12],[0,0,0],.02);
-   for(let i=0;i<6;i++){
-    const angle=i*Math.PI/3,x=p.x+Math.cos(angle)*.052,y=p.y+Math.sin(angle)*.052;
-    gun.limb(servo,[x,y,-.18],[x,y,m.z],.018,.018);
-    gun.add(ring,reactor,matrix([x,y,m.z],[0,0,0],[.014,.014,.014]),false);
-   }
-  }
   gunSignal=boneAt('weapon-ready-emitter',[m.x,m.y,m.z],groundGun);assembly(gunSignal).add(eye,glow,matrix([m.x,m.y,m.z],[0,0,0],[.022,.022,.01]),false);
  }
  return {legRig,armRig,groundGun,gunSignal,sensorAnchor:form==='seer'?[0,1.88]:[.047,1.88],hipHeight:reference.LeftUpLeg[1]};
