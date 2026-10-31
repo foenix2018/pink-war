@@ -51,8 +51,8 @@ test('synthetic moves into cover, waits, peeks for two shots and returns; hidden
  e.tactics.shots=2;o=tacticalOrder(e,{...args,time:3.3});assert.equal(o.state,'return');assert.equal(o.canFire,false);
  e.awareness='patrol';assert.equal(tacticalOrder(e,{...args,time:4}),null);assert.equal(e.tactics.cover,null);
 });
-test('the live campaign introduces N-08 and the arena unlocks it without removing existing wave limits',()=>{
- const c=new CampaignLevel1([],()=>.5);assert.equal(c.enemies.length,0);Object.assign(c.player,{x:-50,z:80});c.step(.025,{});assert.ok(c.enemies.some(e=>e.form==='synth'&&e.ranged));assert.equal(c.enemies.length,8);
+test('the campaign reserves N-08 for later encounters while arena unlocks it at wave 3',()=>{
+ const c=new CampaignLevel1([],()=>.5);assert.equal(c.enemies.length,0);Object.assign(c.player,{x:-50,z:80});c.step(.025,{});assert.ok(c.enemies.every(e=>['probe','stalker','scuttler'].includes(e.form)));assert.equal(c.enemies.length,8);
  const g=new ArenaGame([wall],()=>.5);g.wave=3;g.spawned=1;g.spawnEnemy();assert.equal(g.enemies.at(-1).form,'synth');assert.equal(g.enemies.at(-1).ranged,true);
 });
 

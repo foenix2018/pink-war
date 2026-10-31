@@ -28,7 +28,7 @@ const noop = () => {};
 
 export function configureUnit(e, u, wave) {
   const form = u.form, elite = !!u.elite, probe = form === 'probe';
-  return Object.assign(e, { x: u.x, z: u.z, form, elite,
+  Object.assign(e, { x: u.x, z: u.z, form, elite,
     ranged: probe || ['seer', 'synth', 'listener', 'bulwark'].includes(form) || (form === 'brute' && wave >= 5),
     aimHeight: probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : ['seer', 'listener'].includes(form) ? 1.38 : ['brute', 'bulwark'].includes(form) ? 1.42 : 1.15,
     radius: probe ? PROBE.radius : elite ? 1.05 : form === 'scuttler' ? .86 : form === 'brute' ? .95 : .8,
@@ -37,6 +37,8 @@ export function configureUnit(e, u, wave) {
     speed: probe ? Math.min(5, 3.6 + wave * .07) : Math.min(4.3, 2.4 + (wave - 1) * .055) * (form === 'bulwark' ? .7 : form === 'scuttler' ? 1.12 : 1),
     elevation: probe ? PROBE.hover : 0, homeHeight: 0, grounded: !probe, verticalSpeed: 0,
     homeX: u.x, homeZ: u.z, lastKnownX: u.x, lastKnownZ: u.z, lastKnownHeight: 0 });
+  e.maxHp=e.hp;
+  return e;
 }
 
 export function createLigne9Mission({ game, characterId = 'lylu', hooks = {} }) {

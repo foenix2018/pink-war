@@ -310,6 +310,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     for(const event of game.drainEvents()){
       effects.event(event);armorFx.handle(event);
       if(event.type==='weapon')feel.reset();
+      if(event.type==='squad-call')subtitles.say('ORDRE · UN SIGNAL DE RENFORT A ÉTÉ TRANSMIS');
       if(event.type==='companion-shot'&&sound&&audio)playLaserShot(audio,'r9',.35);
       if(sound&&audio&&['circuit-isolated','workshop-power'].includes(event.type))playFieldCue(audio,'isolate',{source:event,listener:p,yaw:-s.yaw});
       if(sound&&audio&&event.type==='portals'&&event.count>0)for(const site of event.sites)playFieldCue(audio,'breach',{source:site,listener:p,yaw:-s.yaw});

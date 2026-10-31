@@ -4,6 +4,7 @@ import { PROBE } from './aerial-probes.js';
 import { enemyDurability } from './enemy-combat.js';
 import {LEVEL1_MAP,level1Traversal} from './level1-layout.js';
 import {openingDefenseOrder} from './m01-defense.js';
+import {LEVEL1_OPENING_FORMS,LEVEL1_ENCOUNTERS as DIRECTOR_ENCOUNTERS,LEVEL1_MAX_ACTIVE,activeThreatBudget,reinforcementDelay} from './enemy-director.js';
 
 // Independent Vesper mission map. Metres match the Blender source and physics.
 export const LEVEL1 = Object.freeze({
@@ -19,14 +20,10 @@ export const LEVEL1 = Object.freeze({
   exit: Object.freeze({ x:18,z:-44,y:4.8 })
 });
 
-export const LEVEL1_ENCOUNTERS = Object.freeze([
-  Object.freeze(['probe','stalker','scuttler','seer','stalker','probe','scuttler','seer']),
-  Object.freeze(['synth','probe','scuttler','brute','stalker','listener','probe','seer']),
-  Object.freeze(['probe','brute','listener','scuttler','synth','stalker','probe','bulwark'])
-]);
+export const LEVEL1_ENCOUNTERS = DIRECTOR_ENCOUNTERS;
 const ENCOUNTERS=LEVEL1_ENCOUNTERS;
-export const OPENING_SITES=Object.freeze(LEVEL1_MAP.courtyard.opening.map(p=>Object.freeze({...p})));
-const MAX_ACTIVE=8;
+export const OPENING_SITES=Object.freeze(LEVEL1_MAP.courtyard.opening.map((p,i)=>Object.freeze({...p,form:LEVEL1_OPENING_FORMS[i]||p.form})));
+const MAX_ACTIVE=LEVEL1_MAX_ACTIVE;
 const COMBAT_STAGES=['combat','combat2','combat3'];
 const TOTAL_ENEMIES=OPENING_SITES.length+ENCOUNTERS.reduce((sum,wave)=>sum+wave.length,0);
 const PORTAL_CANDIDATES=LEVEL1_MAP.portals.map(([x,z])=>({x,z,y:0}));
@@ -259,6 +256,7 @@ export class CampaignLevel1 extends ArenaGame {
       lastKnownHeight: this.player.elevation, alertedUntil: this.time + 15,
       patrolAngle: site.yaw, patrolTimer: 2
     };
+    enemy.maxHp=enemy.hp;
     return enemy;
   }
 
@@ -285,7 +283,7 @@ export class CampaignLevel1 extends ArenaGame {
   spawnEnemy() {
     const preArchive=this.encounter===0&&['archive','breach'].includes(this.stage),limit=preArchive?this.preArchiveLimit:ENCOUNTERS[this.encounter].length;
     if (this.state !== 'playing' || !(COMBAT_STAGES.includes(this.stage)||preArchive) || this.toSpawn <= 0
-      || this.enemies.length>=MAX_ACTIVE || this.spawned >= limit || this.time + 1e-8 < this.nextSpawnAt) return false;
+      || this.enemies.length>=activeThreatBudget(this.encounter) || this.spawned >= limit || this.time + 1e-8 < this.nextSpawnAt) return false;
     const site = this.activePortals[0];
     if (!site || !this.portalIsClear(site)) return false;
     const form = ENCOUNTERS[this.encounter][this.spawned], probe = form === 'probe';
@@ -293,8 +291,8 @@ export class CampaignLevel1 extends ArenaGame {
     this.enemies.push(enemy);
     this.spawned++;
     this.toSpawn--;
-    // The probe establishes the threat before the ground patrol emerges.
-    this.nextSpawnAt = this.time + (this.spawned === 1 ? 3.5 : 2.4);
+    // Finite scripted budget with recovery pauses, not additional surprise spawns.
+    this.nextSpawnAt=this.time+reinforcementDelay({encounter:this.encounter,ordinal:this.spawned,alive:this.enemies.length,playerHp:this.player.hp});
     this.event('spawn', { id: enemy.id, x: enemy.x, y: enemy.elevation + enemy.aimHeight, z: enemy.z });
     return true;
   }
@@ -312,6 +310,13 @@ export class CampaignLevel1 extends ArenaGame {
       this.spawnTimer = Number.isFinite(this.nextSpawnAt) ? Math.max(0, this.nextSpawnAt - this.time) : 0;
     }
     if (this.state !== 'playing') return;
+    // Radio calls advance only the next previously authored reinforcement.
+    const callers=this.enemies.filter(e=>e.radioCallPending);
+    if(callers.length){
+      for(const e of callers)e.radioCallPending=false;
+      this.event('squad-call',{count:callers.length});
+      if(this.toSpawn>0&&this.activePortals.length)this.nextSpawnAt=Math.min(this.nextSpawnAt,this.time+2.0);
+    }
     if(this.activePortals.some(p=>!this.portalIsClear(p))){this.activePortals=[];this.nextSpawnAt=Infinity;if(['archive','breach'].includes(this.stage))this.courtyardPending=true;}
     if(this.courtyardPending&&['archive','breach'].includes(this.stage))this.tryCourtyardBreach();
     if(['archive','breach'].includes(this.stage)&&this.toSpawn>0&&this.time>=this.nextSpawnAt)this.spawnEnemy();

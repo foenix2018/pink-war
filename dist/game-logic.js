@@ -1,6 +1,7 @@
 import {isReco1,RECO1_HIT_ZONES,reco1ProjectileScale} from './reco1-profile.js';
 import {tacticalOrder,grenadeAvoidance} from './tactical-enemies.js';
 import {squadOrder,relayVisualContact,clearSquadFiringLane,registerIncomingFire} from './enemy-squads.js';
+import {individualCombatOrder} from './enemy-brain.js';
 import { equipmentForLevel } from './equipment.js';
 import { PLATFORMS, STAIRS, LIFTS, BRIDGES, BRIDGE_APPROACHES, insideSurface, traversalSurfaces, liftHeightAt } from './world-layout.js';
 import { PROBE, updateProbe } from './aerial-probes.js';
@@ -498,6 +499,7 @@ export class ArenaGame {
       awareness:'patrol',lastSeenAt:-999,lastKnownX:x,lastKnownZ:z,lastKnownHeight:homeHeight,patrolAngle:angle,patrolTimer:.7+this.random()*2,alertedUntil:0 };
 
     if(form==='sentinel'){enemy.awareness='engaged';enemy.lastSeenAt=this.time;enemy.yaw=Math.PI;}
+    enemy.maxHp=enemy.hp;
     this.enemies.push(enemy); this.toSpawn--; this.event('spawn', { id: enemy.id, x: enemy.x, y: enemy.elevation + enemy.aimHeight, z: enemy.z });
   }
   // The first-wave Sentinel stands in plain view ahead of the player: free ground for its 1.4 m body (no
@@ -729,6 +731,7 @@ export class ArenaGame {
     const pack=meleePack(this.enemies,this.player);
     for (const e of this.enemies) {
       if(e.form==='probe'){updateProbe(this,e,dt,segmentBox);continue;}
+      e.maxHp ??= e.hp;
       e.aimHeight ??= e.elite ? 1.35 : 1.15;
       e.hitRadius ??= e.elite ? 1.3 : 1.05;
       e.grounded ??= true;e.elevation ??= 0;
@@ -821,7 +824,7 @@ export class ArenaGame {
       if(slot){destinationX=slot.x;destinationZ=slot.z;}
       const tacticContext={time:this.time,seen,threat:{x:e.lastKnownX,y:(e.lastKnownHeight||0)+1.25,z:e.lastKnownZ},obstacles:this.obstacles,allies:this.enemies,hazards:this.chargeHazards(),segmentBox};
       relayVisualContact(e,tacticContext);
-      const order=!stairRoute?(grenadeAvoidance(e,tacticContext)||tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext)||this.sectorOrder?.(e,tacticContext)):null;
+      const order=!stairRoute?(grenadeAvoidance(e,tacticContext)||individualCombatOrder(e,tacticContext)||tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext)||this.sectorOrder?.(e,tacticContext)):null;
       e.combatPose=order?.state||'advance';
       e.coverCrouch=((e.coverCrouch||0)+((order?.crouchAmount??Number(!!order?.crouched))-(e.coverCrouch||0))*(1-Math.exp(-dt*12)));
       if(order){destinationX=order.point.x;destinationZ=order.point.z;}
