@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from '../dist/vendor/three.webgpu.min.js';
 import {createRempart} from '../dist/enemy-rempart.js';
+import {rempartGeometry} from '../dist/enemy-rempart-model.js';
 import {rangedMuzzle} from '../dist/enemy-combat.js';
 
 test('Rempart uses RECO1 native bones and moves its armoured limbs with the walk cycle',()=>{
@@ -100,4 +101,20 @@ test('disposing a Rempart releases its animated weapon offset',async()=>{
  actor.userData.dispose();
  const physical=rangedMuzzle(e),rest=rempartMuzzleLocal();
  assert.ok(new T.Vector3(physical.x,physical.y,physical.z).distanceTo(new T.Vector3(rest.x,rest.y,rest.z+e.z))<1e-8,'headless or replacement model starts without a stale offset');
+});
+
+
+test('Rempart helmet and optical slit project beyond the high breastplate in both LODs',()=>{
+ for(const detail of ['low','high']){
+  const {names,parts}=rempartGeometry(detail),headIndex=names.indexOf('Head');
+  assert.ok(headIndex>=0,'native Head mesh exists');
+  const exposed=[];
+  for(const part of parts){if(part.key!=='eye')continue;
+   const pos=part.geometry.getAttribute('position'),skin=part.geometry.getAttribute('skinIndex');
+   for(let i=0;i<pos.count;i++)if(skin.getX(i)===headIndex)exposed.push([pos.getY(i),pos.getZ(i)]);
+  }
+  assert.ok(exposed.length>0,detail+': visor stays attached to native Head bone');
+  assert.ok(Math.min(...exposed.map(p=>p[0]))>1.86,detail+': visor should clear thoracic collar in height');
+  assert.ok(Math.min(...exposed.map(p=>p[1]))>.49,detail+': visor should project in front of breastplate');
+ }
 });
