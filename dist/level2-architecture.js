@@ -205,9 +205,7 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
     for(let side of [-1,1])beam([side*8.8,20.8,67],[side*8.8,20.8,-68],.24,stainless,10);
   }
   function coolingUnit(x,z){
-    thin(x,1.3,z,2.25,2.2,1.45,dirty);
-    for(let i=0;i<6;i++)thin(x,1.1+i*.25,z+.77,1.76,.065,.08,stainless);
-    for(const sx of [-.77,.77])cyl(x+sx,2.48,z,.21,.32,brushed);
+    utilities.cooler(x,z);
   }
   function narrativeClutter(){
     // Enclave / LD07 medical dormitory: stretchers, canisters, transformer,
@@ -262,6 +260,6 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
     const furnished=furniture.finish();stats.furnitureCount=furnished.objects;
     stats.furnitureBatches=furnished.batches;stats.furnitureTriangles=furnished.triangles;
     const result=utilities.build(root);stats.utilityHydrants=result.hydrants;
-    stats.utilityGenerators=result.generators;stats.utilityBatches=result.batches;stats.utilityTriangles=result.triangles;
+    stats.utilityGenerators=result.generators;stats.utilityCoolingUnits=result.coolers;stats.utilityBatches=result.batches;stats.utilityTriangles=result.triangles;
   }};
 }
