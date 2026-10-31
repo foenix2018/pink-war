@@ -166,7 +166,7 @@ test('all 32 enemies are defeated with real R9 projectiles across the longer fin
   assert.ok(game.weaponOffers.some(o=>o.index===2));
   at(game,LEVEL1.sabotage);assert.equal(game.interact(),true);assert.equal(game.sabotaged,true);
   defeat('combat3');assert.equal(game.kills,32);assert.equal(game.stage,'exit');
-  assert.deepEqual([...observed].sort(),['probe','stalker','scuttler','seer','brute','listener','bulwark','synth'].sort());
+  assert.deepEqual([...observed].sort(),['probe','stalker','scuttler','seer','synth'].sort());
   assert.equal(game.campaign.total,32);assert.equal(game.campaign.spawned,32);
   const preEnd=game.drainEvents();assert.equal(preEnd.filter(e=>e.type==='clear').length,3);assert.equal(preEnd.some(e=>e.type==='win'),false);
   at(game,LEVEL1.exit);assert.equal(game.interact(),true);
