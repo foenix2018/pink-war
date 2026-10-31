@@ -1,0 +1,60 @@
+{
+  "targetedTests": {
+    "passed": 58,
+    "failed": 0
+  },
+  "browser": [
+    {
+      "scenario": "m01",
+      "state": "x-cour",
+      "detailObjects": 18,
+      "music": {
+        "surface": "gameplay",
+        "level": 1,
+        "enabled": true,
+        "playing": true,
+        "source": "./assets/music/iron-maw.m4a?v=3.74.0",
+        "title": "Iron Maw",
+        "section": "exploration",
+        "streaming": true,
+        "failed": false,
+        "position": 5.4,
+        "gain": 0.58,
+        "ducked": false,
+        "voices": 1
+      },
+      "javascriptErrors": [],
+      "missingResources": []
+    },
+    {
+      "scenario": "breach",
+      "state": "playing",
+      "detailObjects": null,
+      "music": true,
+      "javascriptErrors": [],
+      "missingResources": []
+    },
+    {
+      "scenario": "m02",
+      "state": "playing",
+      "detailObjects": 23,
+      "music": {
+        "surface": "gameplay",
+        "level": 2,
+        "enabled": true,
+        "playing": true,
+        "source": "./assets/music/iron-maw.m4a?v=3.74.0",
+        "title": "Iron Maw",
+        "section": "exploration",
+        "streaming": true,
+        "failed": false,
+        "position": 0,
+        "gain": 0.58,
+        "ducked": false,
+        "voices": 1
+      },
+      "javascriptErrors": [],
+      "missingResources": []
+    }
+  ]
+}

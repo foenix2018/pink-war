@@ -1,3 +1,31 @@
+# Pink War 3.73 — traces de vie et animations du décor
+
+673 tests Node réussis (`npm test`), aucun échec, test ignoré ou annulé. Onze contrôles ciblés passent également après les derniers ajustements. Les nouveaux tests couvrent les supports des objets, les emprises, les ressources, les budgets de rendu, les circuits et l’inertie des ventilateurs, le bassin ouvert et le branchement des deux extensions.
+
+Chromium/SwiftShader : démarrage des deux chapitres en fenêtre tactile 390 × 844, sans erreur JavaScript ni ressource manquante ; parcours contrôlé de la caserne jusqu’au rétablissement du courant. Captures des extensions en qualité normale avec éclairage de présentation pour examiner les objets. Aucun essai sur matériel iPhone/Quest, aucune mesure de cadence matérielle ni publication en production. [Notes et captures](docs/pink-wars/MISE_A_JOUR_373.md) · [Rapport](docs/pink-wars/LIVED_IN_373_BROWSER_VERIFICATION.json).
+
+---
+
+# Pink War 3.72 — matières et enrichissement réaliste
+
+669 tests Node réussis, aucun échec, test ignoré ou annulé (`npm test`). Sept contrôles ciblés passent aussi après les derniers réglages visuels : PBR déterministe et partagé, espaces colorimétriques, matériaux organiques non métalliques, budget bas, ouverture des rayonnages, flacons visibles, animation et dégagement des portes, et circuits électriques des écrans.
+
+Démarrage des deux missions en Chromium/SwiftShader, fenêtres 1280 × 800 et tactile 390 × 844 : aucune erreur JavaScript, avertissement de décor désactivé ou ressource manquante. Parcours contrôlé de la caserne jusqu’au groupe en charge. Construction et captures des extensions en qualité normale pour examiner les matières et les objets. Les captures de détail utilisent un éclairage de présentation, sans modifier celui du jeu. [Notes et captures](docs/pink-wars/MISE_A_JOUR_372.md) · [Rapport](docs/pink-wars/REALISM_372_BROWSER_VERIFICATION.json).
+
+Aucun essai sur iPhone/Quest physiques, aucune mesure de cadence matérielle. Modifications préparées sur la même branche de proposition ; aucune publication en production.
+
+---
+
+# Pink War 3.71 — décors des niveaux 1 et 2
+
+666 tests Node réussis, aucun échec, test ignoré ou annulé (`npm test`). Quatre nouveaux contrôles couvrent le dégagement visuel des 23 portes, la quincaillerie solidaire des vantaux, les circuits indépendants des écrans, le feuillage non émissif, les budgets de géométrie et de lots, la construction des deux extensions en qualité normale et basse et le dégagement central des portails. Le contrôle historique du cache HUD utilise désormais la version courante.
+
+Chromium/SwiftShader en WebGL : lancement de M01 et M02 en 1280 × 800, puis contrôle tactile 390 × 844. Aucune erreur JavaScript, avertissement de décoration désactivée ou ressource HTTP manquante. Le parcours contrôlé de M01 lit les deux documents de la caserne, ouvre le gazole, démarre le groupe puis atteint la commande de la remise ; les nouveaux écrans s'allument avec le groupe. Construction des modèles et rendu des portes fermées puis complètement ouvertes contrôlés séparément. [Notes et captures](docs/pink-wars/MISE_A_JOUR_371.md) · [Rapport](docs/pink-wars/PROPS_371_BROWSER_VERIFICATION.json).
+
+Aucun essai sur Safari/iPhone ou Quest physique, aucune mesure de cadence matérielle. Modifications préparées sur une branche ; aucune publication en production.
+
+---
+
 # Pink War 3.67.2 — bouton de vue directement dans la pause
 
 15 contrôles Node ciblés réussis, aucun échec, test ignoré ou annulé : préférence et stockage, caméra, HUD, pause XR et musique des menus. Syntaxe des quatre modules modifiés, générateur et `git diff --check` vérifiés. Aucun changement de mécanique ou de modèle.

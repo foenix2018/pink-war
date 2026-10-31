@@ -1,8 +1,8 @@
 // User-supplied score, streamed through the game's already unlocked audio context.
 const MENU_SCORE=Object.freeze({title:'Velvet Siege',url:'./assets/music/velvet-siege.m4a?v=3.63.12'});
 export const MISSION_TRACKS=Object.freeze({1:MENU_SCORE,2:MENU_SCORE});
-export function createMissionMusic(level,{mediaFactory=()=>new Audio()}={}){
- const track=MISSION_TRACKS[level];if(!track)throw new Error('Unknown music level');
+export function createMissionMusic(level,{mediaFactory=()=>new Audio(),track=MISSION_TRACKS[level]}={}){
+ if(!track)throw new Error('Unknown music level');
  let ctx=null,media=null,node=null,gain=null,enabled=true,active=false,disposed=false,failed=false,pending=false,blocked=false,duckUntil=0,lastGain=-1;
  const hidden=()=>typeof document!=='undefined'&&document.hidden;
  const ready=()=>!disposed&&enabled&&active&&!hidden()&&ctx?.state==='running';

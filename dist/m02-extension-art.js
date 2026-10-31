@@ -1,4 +1,5 @@
 import { createNeonFixture } from './neon-fixture.js';
+import {createLivedInDressing} from './vesper-lived-in.js';
 // M02 extension dressing: the enclave of the covered market (stalls turned into barricades and beds, dormitory
 // tents, kitchen, school corner, water purifier, dispensary, radio room, the service lift from the Archives) and
 // the transit tower held by HELIX Security (black, industrial white, safety red: scanner gates, data vault, loading
@@ -6,6 +7,7 @@ import { createNeonFixture } from './neon-fixture.js';
 // dirty cyan, amber, runoff, low cables, steam. Interiors are lit by a small pool of point lights moved to the
 // nearest fixtures; the page dims its moon and sky light indoors with shelterAt(). Textures: CC0 sets already
 // shipped (assets/cc0, assets/ligne9).
+import {createVesperProps} from './vesper-props.js';
 import { ROOMS, DOORS, INTERACTIONS, roomAt } from './m02-extension-layout.js';
 
 const TAU = Math.PI * 2;
@@ -23,6 +25,7 @@ function canvasTexture(T, w, h, paint, { repeat = false, color = true } = {}) {
 export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0xff6fb4 } = {}) {
   const low = quality === 'low', rng = seeded(2202);
   const root = new T.Group(); root.name = 'M02 / enclave du marché et tour de transit'; scene.add(root);
+  const details = createVesperProps(T, root, {low});
   const animated = [], stats = { meshes: 0, instances: 0, textures: 0, fixtures: 0 };
   const add = (o, parent = root) => { parent.add(o); stats.meshes++; return o; };
 
@@ -69,6 +72,13 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     glass: flat(0x8fb1bb, .06, .5, { transparent: true, opacity: .18, depthWrite: false, side: T.DoubleSide }), screenOff: flat(0x0c1216, .2, .3),
     amber: glow(0xffb35c), cyan: glow(0x5fe0f0), green: glow(0x3dff8a), redGlow: glow(0xff3328), helix: glow(0xff2f45), rose: glow(accent)
   };
+
+  // Shared physical surface channels for close-up furniture and equipment.
+  for (const [keys,kind] of [
+    [['wood','woodDark'],'wood'],[['fabric','blanket','sheet','tarp','tarpAmber'],'fabric'],
+    [['steel'],'steel'],[['red','white','yellow','frame','helixWhite','helixBlack','helixRed'],'paint'],
+    [['dark','black'],'rubber'],[['cardboard','paper'],'paper']
+  ]) for (const key of keys) if (M[key]) details.surface(M[key],kind);
 
   // ---------- Merged geometry (world-space UVs in metres / tile) ----------
   const geos = new Map();
@@ -271,7 +281,6 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
   }
 
   // ---------- Props ----------
-  const screens = [];
   function vehicle(o) {
     // HELIX convoy truck: white box body with red bands, black cab towards the convoy door (+x).
     const g = new T.Group(); g.position.set(o.x, 0, o.z); root.add(g);
@@ -309,12 +318,18 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       case 'barricade': box(M.plate, x1, x2, 0, h, z1, z2); for (let k = 0; k < 4; k++) piece(M.helixRed, x1 + .3 + k * (w - .6) / 3, h * .4, z2 + .01, .5, .12, .01); break;
       case 'school': box(M.wood, x1, x2, 0, h, z1, z2); for (let k = 0; k < 3; k++) piece(k % 2 ? M.rose : M.cyan, o.x, h, z1 + .3 + k * .9, .2, .04, .05); break;
       case 'bed': box(M.steel, x1, x2, .3, h - .2, z1, z2); piece(M.sheet, o.x, h - .2, o.z, w - .1, .2, d - .1); for (const sx of [-1, 1]) piece(M.steel, o.x + sx * (o.hx - .05), 0, o.z, .05, .3, d); piece(M.steel, x1 + .1, 0, z1 - .2, .04, 1.8, .04); break;
-      case 'cabinet': box(M.white, x1, x2, 0, h, z1, z2); piece(M.glass, x1 - .01, .3, o.z, .02, h - .5, d - .2); for (let y = .5; y < h - .2; y += .4) piece(M.cardboard, x1 + .2, y, o.z, .25, .18, d - .5); break;
+      case 'cabinet': {
+        piece(M.white,x2-.035,0,o.z,.07,h,d);
+        for(const side of [-1,1])piece(M.white,o.x,0,o.z+side*(o.hz-.035),w,h,.07);
+        piece(M.white,o.x,0,o.z,w,.1,d);piece(M.white,o.x,h-.08,o.z,w,.08,d);
+        for(let y=.5;y<h-.2;y+=.4)piece(M.steel,o.x,y-.035,o.z,w-.04,.035,d-.08);
+        piece(M.glass,x1-.01,.15,o.z,.02,h-.24,d-.12);break;
+      }
       case 'desk': box(M.wood, x1, x2, h - .06, h, z1, z2); for (const sx of [-1, 1]) piece(M.woodDark, o.x + sx * (o.hx - .1), 0, o.z, .08, h - .06, d - .1); break;
       case 'radio-rack': box(M.dark, x1, x2, 0, h, z1, z2); for (let k = 0; k < 8; k++) piece(k % 3 ? M.amber : M.green, x1 - .01, .5 + k * .2, o.z + (k % 2 ? .4 : -.4), .01, .04, .12); break;
       case 'console': {
         box(M.plate, x1, x2, 0, h - .05, z1, z2); piece(M.dark, o.x, h - .05, o.z, w, .05, d);
-        for (const k of [-1, 1]) { const s = new T.Mesh(new T.PlaneGeometry(.9, .5), M.screenOff); s.position.set(o.x + k * .9, h + .3, z2 + .02); add(s); screens.push(s); }
+        for (const k of [-1, 1]) details.computer({x: o.x + k * .9, y: h, z: o.z, scale: .82, kind: 'radio', power: 'enclave'});
         break;
       }
       case 'batteries': box(M.dark, x1, x2, 0, h, z1, z2); for (let k = 0; k < 4; k++) piece(M.helixRed, x1 + .2 + k * (w - .4) / 3, h, o.z, .14, .08, .14); break;
@@ -327,8 +342,8 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
         break;
       }
       case 'security-desk': box(M.helixWhite, x1, x2, 0, h, z1, z2); piece(M.helixBlack, o.x, h, o.z, w + .1, .05, d + .1); piece(M.helix, o.x, h * .5, z2 + .01, w - .4, .06, .01);
-        sign(helixLogo('#0b0d10'), o.x, h * .5 + .25, z2 + .02, 0, 1.2, .6); break;
-      case 'planter': box(M.helixWhite, x1, x2, 0, h, z1, z2); piece(flat(0x2f4a2c, .9, 0), o.x, h, o.z, w - .3, .4, d - .3); break;
+        sign(helixLogo('#0b0d10'), o.x, h * .5 + .25, z2 + .02, 0, 1.2, .6); details.computer({x: o.x, y: h + .05, z: o.z, scale: .9, kind: 'helix', power: 'tower'}); break;
+      case 'planter': box(M.helixWhite, x1, x2, 0, h, z1, z2); details.planting(o); break;
       case 'servers': {
         box(M.helixBlack, x1, x2, 0, h, z1, z2);
         for (const face of [x1 - .01, x2 + .01]) for (let k = 0; k < 14; k++) piece(k % 5 ? M.cyan : M.helix, face, .3 + (k % 7) * .32, o.z - o.hz + .5 + Math.floor(k / 7) * (d - 1), .01, .03, .5);
@@ -366,25 +381,11 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
   const SPEED = { fire: 1.3, glass: 1.8, gate: .3, helix: 1.2, vault: .5, lift: .8 };
   function buildDoors() {
     for (const d of DOORS) {
-      const g = new T.Group(); root.add(g);
-      const across = d.axis === 'x', panels = [], w = d.width, h = d.height;
-      const leaf = (m, width, height, thick, offset, y = height / 2) => { const mesh = new T.Mesh(new T.BoxGeometry(across ? width : thick, height, across ? thick : width), m); mesh.position.set(across ? d.centre + offset : d.fixed, y, across ? d.fixed : d.centre + offset); mesh.castShadow = !low; g.add(mesh); stats.meshes++; return mesh; };
-      if (d.style === 'gate') {
-        // Rolling grille: bars and slats that rise into the lintel.
-        for (let k = 0; k < 8; k++) { const p = leaf(M.shutter, w, h / 8 - .05, .08, 0, (k + .5) * h / 8); p.userData = { lift: h - .2, base: (k + .5) * h / 8 }; panels.push(p); }
-      } else if (d.style === 'glass' || d.style === 'lift' || d.style === 'helix') {
-        const m = d.style === 'glass' ? M.glass : d.style === 'lift' ? M.plate : M.helixWhite;
-        for (const dir of [-1, 1]) { const p = leaf(m, w / 2, h, .08, dir * w / 4); p.userData = { slide: w / 2, dir, base: d.centre + dir * w / 4 }; panels.push(p);
-          if (d.style === 'helix') { const band = leaf(M.helixRed, w / 2, .12, .1, dir * w / 4, h * .55); band.userData = { slide: w / 2, dir, base: d.centre + dir * w / 4 }; panels.push(band); } }
-      } else if (d.style === 'vault') {
-        const p = leaf(M.steel, w, h, .3, 0); p.userData = { slide: w, dir: 1, base: d.centre }; panels.push(p);
-        const ring = leaf(M.helixRed, w * .6, w * .6, .34, 0, h / 2); ring.userData = { slide: w, dir: 1, base: d.centre }; panels.push(ring);
-      } else {
-        const p = leaf(M.plate, w, h, .08, 0); p.userData = { slide: w, dir: 1, base: d.centre }; panels.push(p);
-      }
-      let lamp = null;
-      if (!d.open) { lamp = new T.Mesh(new T.BoxGeometry(.12, .12, .12), new T.MeshBasicMaterial({ color: 0xff3328, toneMapped: false })); lamp.position.set(across ? d.centre + w / 2 + .35 : d.fixed - .22, 1.5, across ? d.fixed + .22 : d.centre + w / 2 + .35); g.add(lamp); }
-      doors.set(d.id, { d, panels, lamp, state: d.open ? 'auto' : 'closed', open: 0 });
+      const model = details.door(d, {
+        paint: d.style === 'wood' ? M.woodDark : d.style === 'helix' ? M.helixWhite : M.plate,
+        accent: M.helixRed || M.red, glass: M.glass
+      });
+      doors.set(d.id, {d, model, state: d.open ? 'auto' : 'closed', open: 0});
     }
   }
   function updateDoors(dt, player) {
@@ -392,8 +393,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       const { d } = door; let target = door.state === 'open' ? 1 : 0;
       if (door.state === 'auto') { const dx = d.axis === 'x' ? player.x - d.centre : player.x - d.fixed, dz = d.axis === 'x' ? player.z - d.fixed : player.z - d.centre; target = Math.hypot(dx, dz) < 3.8 ? 1 : 0; }
       door.open += Math.sign(target - door.open) * Math.min(Math.abs(target - door.open), dt * (SPEED[d.style] || 1));
-      for (const p of door.panels) { const u = p.userData; if (u.lift) p.position.y = u.base + u.lift * door.open * (1 - .1 * (u.base / d.height)); else if (d.axis === 'x') p.position.x = u.base + u.dir * u.slide * door.open; else p.position.z = u.base + u.dir * u.slide * door.open; }
-      if (door.lamp) door.lamp.material.color.set(door.state === 'closed' ? 0xff3328 : 0x3dff8a);
+      door.model.update(door.open, door.state === 'closed');
     }
   }
 
@@ -442,7 +442,6 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       if (v.it.id === 'manivelle' && crank) v.moving.rotation.z -= dt * 4;
       else if (v.done && v.moving && v.turn < 1) { v.turn = Math.min(1, v.turn + dt * .8); if (v.it.id === 'manivelle') v.moving.rotation.z = -v.turn * TAU; else if (v.it.id === 'batterie') v.moving.position.y -= dt * .05; else v.moving.material = M.green; }
     }
-    for (const s of screens) s.material = power.enclave ? M.cyan : M.screenOff;
   }
 
   // ---------- Signs, posters, belongings ----------
@@ -506,6 +505,8 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     sign(signTex(['LES ÉPARS', 'ON NE LAISSE PERSONNE'], { bg: '#06161b', fg: '#ff6fb4', w: 1024, h: 256, border: '#5fe0f0' }), -14, 12, 79.75, Math.PI, 10, 2.5, { lit: true });
   }
 
+  const livedIn=createLivedInDressing(T,root,{chapter:2,low,materials:details.M});
+
   // ---------- Night: how much of the moon and sky reaches the eye indoors ----------
   let shelter = 1; const cachesById = new Map();
   function shelterAt(x, z) { const r = ROOM[roomAt(x, z)]; if (!r) return 1; return SHELTER[r.look] ?? 1; }
@@ -514,12 +515,12 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     root, M,
     build(obstacles) {
       placeFixtures(); buildRooms(); buildWalls(obstacles);
-      for (const o of obstacles) if (o.extension) dress(o);
+      for (const o of obstacles) if (o.extension) { dress(o); details.accessories(o); }
       buildFixtureMeshes(); buildDoors(); buildDevices(obstacles); buildSigns(); buildCyber();
-      flushGeometry(); flushPieces();
+      flushGeometry(); flushPieces(); details.finish(); livedIn.build(obstacles);
     },
     update(t, dt, eye, player = eye.position, { crank = false } = {}) {
-      updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt, crank);
+      updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt, crank); details.update(power); livedIn.update(t,dt,power);
       for (const s of steam) { const u = s.userData, k = (t * .25 + u.phase) % 1; s.position.set(u.x + Math.sin(t + u.phase) * .3, u.y + k * 3, u.z); s.scale.setScalar(.8 + k * 2.4); s.material.opacity = .14 * (1 - k); }
       for (const f of animated) f(t, dt, eye);
     },
@@ -542,6 +543,6 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     setPower(zone, on) { power[zone] = !!on; },
     markDone(id, done = true) { const d = devices.get(id); if (d) { d.done = done; if (!done) { d.turn = 0; if (d.moving) d.moving.rotation.set(0, 0, 0); } } },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
-    stats() { return { ...stats, power: { ...power }, shelter: +shelter.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, details: details.stats(), livedIn: livedIn.stats(), power: { ...power }, shelter: +shelter.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }

@@ -1,10 +1,18 @@
 # Pink Wars — La Fracture
 
+Intégration du 31 octobre : décors vivants M01/M02, mission bonus **Opération Brèche**, assistance de tir, sons des surfaces et musiques menu/mission. [Détails](docs/pink-wars/INTEGRATION_2026_10_31.md).
+
 Version 3.73 : **« La Brèche Violette », niveau 4** — la station énergétique Est de JANUS : sas, cour du réacteur et passerelle, hangar de drones, atelier serveur, anneau des stabilisateurs, gardien de portique BS01 au blindage de phase. La brèche a été ouverte le soir de la chute à 22 h 47 et elle est tenue avec des vivants ; la piste mène à la Ligne 9. Nouvelle signalétique de Vesper (néons, enseignes kanji, publicités holographiques, plaques bilingues) au niveau 3 et au niveau 4. [Détails](docs/pink-wars/MISE_A_JOUR_373.md).
 
 Version 3.72 : **vocabulaire générique** — les chapitres 01 et 02 parlent de station AEGIS 07, d’ambulance, de hangar et de journal de bord, sans jargon de pompier ; logo officiel vectorisé et écran de niveau commun sur le modèle du chapitre 03. [Détails](docs/pink-wars/MISE_A_JOUR_372.md).
 
 Version 3.71 : **« Le Convoi des Absents », niveau 3 complet** — le décor de nuit de Vesper de la première version (secteur 03 : avenue, annexe médicale, atelier, relais A3, fracture) passe dans le moteur commun (combat, HUD, sous-titres, documents, points de contrôle, VR) et devient une escorte : l’ambulance d’Inès, de l’annexe médicale au barrage ORDRE, à la balise de la fracture, sous la route haute, à travers un échangeur bloqué jusqu’à la gare de fret de l’Anneau logistique. Le registre de la gare révèle le centre de « stabilisation » et mène au niveau 4, la Brèche Violette ; ≈ 20 à 30 min estimées. [Détails](docs/pink-wars/MISE_A_JOUR_371.md).
+
+Version 3.73 : **plus de vie dans les niveaux 1 et 2** — sacs souples, bottes, gants, outils suspendus, fournitures de soin, conserves, vaisselle et affaires laissées près des couchages. Herbier sous verre, semis et arrosoir ; bassin avec eau, robinet et rides. Trois ventilateurs suivent les circuits électriques et cinq étoffes bougent doucement. [Détails et captures](docs/pink-wars/MISE_A_JOUR_373.md).
+
+Version 3.72 : **matières et objets plus réalistes dans les niveaux 1 et 2** — acier brossé, peinture usée, bois, toile, papier, terre, écorce et feuilles nervurées ; établi outillé, rayonnages ouverts avec livres, armoire médicale vitrée avec flacons, linge plissé, cuisine et installations techniques détaillées. Arbre de la serre à feuilles individuelles et branches effilées. [Détails et captures](docs/pink-wars/MISE_A_JOUR_372.md).
+
+Version 3.71 : **décors et accessoires des niveaux 1 et 2** — 23 portes détaillées avec quincaillerie et rails animés, six postes informatiques liés aux circuits électriques, feuillage courbé et arbre de la serre, rangements, caisses, bureaux et dispensaire enrichis. Portails de renforts à bobines et membrane en spirale, avec une signature rouge HELIX dans M02. [Détails et vérifications](docs/pink-wars/MISE_A_JOUR_371.md).
 
 Version 3.70 : **« Sous les Néons » complet** — le niveau 2 garde sa rue et ses quatre objectifs, et gagne un prologue et un épilogue construits aux deux bouts de la rue : l’**enclave du marché couvert** (sortie du monte-charge des Archives, dispensaire, registre de soins, radio à rallumer, éclaireurs HELIX tombés de la verrière, grille à tenir 25 s) et la **tour de transit** (contrôle HELIX, badge, coffre de données, manifeste du convoi vers l’Anneau logistique, quai à bloquer 50 s, puis le choix civils ou preuves). Histoire raccordée au chapitre 01 et au chapitre 03, premier affrontement avec HELIX Security, néons, vapeur et hologrammes, points de contrôle avec reprise ; ≈ 30 min ou plus estimées. [Détails](docs/pink-wars/MISE_A_JOUR_370.md).
 

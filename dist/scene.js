@@ -20,6 +20,7 @@ import { createShootingRangeArt } from './shooting-range-art.js';
 import {targetPosition} from './shooting-range.js';
 import { createMoon } from './moon.js';
 import { createCampaignArt } from './campaign-art.js';
+import {createCampaignArt as createBreachArt} from './breach-art.js';
 import { VESPER_SUN } from './vesper-art.js';
 import { graphicsProfile,renderPixelRatio,createCompatibleRenderer,warmRenderer } from './renderer-policy.js';
 
@@ -329,7 +330,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   const breachHaloGeometry=new T.TorusGeometry(2.83,.045,5,40);
   const breachSurfaceGeometry=new T.PlaneGeometry(4.6,4.6);
   function buildSecondaryPortal(site) {
-    const group=new T.Group();group.position.set(site.x,0,site.z);group.rotation.y=site.yaw||0;
+    const group=new T.Group();group.position.set(site.x,site.y||0,site.z);group.rotation.y=site.yaw||0;
     scene.add(group);
     const gate=new T.Group();gate.position.y=2.9;group.add(gate);
     const ring=mesh(breachRingGeometry,mats.steel,gate,[0,0,0],[1,1,1],false);
@@ -464,7 +465,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
       renderer.dispose();renderer.forceContextLoss?.();
       // Fresh resources avoid reusing texture state from a destroyed GPU device.
       const next = await createScene(nextCanvas, nextQuality, true,character.id);
-      next.setCampaignActive(campaignActive);
+      next.setCampaignActive(campaignActive,breachActive?'breach':'classic');
       next.setRangeActive(rangeActive);
       next.camera.position.copy(camera.position); next.camera.rotation.copy(camera.rotation); next.camera.fov = camera.fov; next.camera.updateProjectionMatrix();
       next.soldier.root.position.copy(soldier.root.position); next.soldier.root.rotation.copy(soldier.root.rotation); next.soldier.root.scale.copy(soldier.root.scale);
@@ -474,15 +475,22 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     })();
     try { return await recovery; } finally { recovery = null; }
   }
-  const campaignArt=createCampaignArt(T,scene,obstacles,{quality:profile.artQuality,photographic:true});
+  const baseCampaignArt=createCampaignArt(T,scene,obstacles,{quality:profile.artQuality,photographic:true});
+  let campaignArt=baseCampaignArt,breachArt=null,breachActive=false;
   const arenaObstacles=[...obstacles];
   const arenaOcclusion=createGroundOcclusion(T,arenaRoot,arenaObstacles,{compact:profile.artQuality==='low'});
   const rangeArt=createShootingRangeArt(T,scene,{low:profile.artQuality==='low'||profile.phone||profile.headset});
   const rangeObstacles=[...rangeArt.obstacles];
   let campaignActive=false,rangeActive=false;
-  function setCampaignActive(enabled){
+  function styleBreach(){scene.fog.color.setHex(0x171329);sky.material.map=skyTexture;sky.material.needsUpdate=true;renderer.toneMappingExposure=1.05;hemisphere.intensity=.95;sun.intensity=1.8;rim.intensity=.48;hemisphere.color.setHex(0x9eafff);sun.color.setHex(0x9ebaff);portal.visible=false;dust.visible=false;}
+  function setCampaignActive(enabled,variant='classic'){
+    campaignArt.setVisible(false);
+    breachActive=!!enabled&&variant==='breach';
+    if(breachActive)breachArt ||=createBreachArt(T,scene);
+    campaignArt=breachActive?breachArt:baseCampaignArt;
     campaignActive=!!enabled;
-    if(campaignSky!==campaignActive){campaignSky=campaignActive;const c=skyTexture.image;paintSky(c.getContext('2d'),c.width,c.height);skyTexture.needsUpdate=true;}
+    const daylight=campaignActive&&!breachActive;
+    if(campaignSky!==daylight){campaignSky=daylight;const c=skyTexture.image;paintSky(c.getContext('2d'),c.width,c.height);skyTexture.needsUpdate=true;}
     obstacles.splice(0,obstacles.length,...(campaignActive?campaignArt.obstacles:arenaObstacles));
     arenaRoot.visible=!campaignActive&&!rangeActive;
     scene.fog.color.setHex(campaignActive?0x747b79:character.world.fog);
@@ -494,8 +502,10 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     scene.fog.density=campaignActive?.0058:.008;
     hemisphere.color.setHex(campaignActive?0xc4ceca:0xa9c9e5);hemisphere.groundColor.setHex(campaignActive?0x414833:0x344058);
     sun.color.setHex(campaignActive?0xffdeb7:0xb5d7ff);rim.color.setHex(campaignActive?0xa6bbb7:0x9abfff);
-    campaignArt.setVisible(campaignActive&&!rangeActive);if(!campaignActive&&!rangeActive)city.enablePbr();
+    campaignArt.setVisible(campaignActive&&!rangeActive);
+    if(!campaignActive&&!rangeActive)city.enablePbr();
     if(!rangeActive){portal.visible=true;dust.visible=true;}
+    if(breachActive&&!rangeActive)styleBreach();
   }
   function setRangeActive(enabled){
     rangeActive=!!enabled;
@@ -513,8 +523,9 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     scene.fog.density=rangeActive?.0026:campaignActive?.0058:.008;
     if(rangeActive){rangeArt.enableMaterials();sun.color.setHex(0xffe9c9);renderer.toneMappingExposure=.93;hemisphere.intensity=0;sun.intensity=0;rim.intensity=0;moon.group.visible=false;sky.visible=false;}
     else {sky.visible=true;renderer.toneMappingExposure=campaignActive?.84:1.08;hemisphere.intensity=campaignActive?.62:1.32;sun.intensity=campaignActive?1.36:2.25;rim.intensity=campaignActive?.18:1.08;}
+    if(breachActive&&!rangeActive)styleBreach();
   }
-  return {T,scene,camera,moon,campaignArt,rangeArt,setRangeActive,setCampaignActive,graphics:{...profile,initialFailure:prepared.initialFailure},warm:async()=>{await campaignArt.ready;await warmRenderer(renderer,scene,camera)},get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>campaignActive?{...campaignArt.stats(),map:'vesper-secours-07'}:{...city.stats,boundary:city.fence?.stats()},resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
+  return {T,scene,camera,moon,get campaignArt(){return campaignArt;},rangeArt,setRangeActive,setCampaignActive,graphics:{...profile,initialFailure:prepared.initialFailure},warm:async()=>{await campaignArt.ready;await warmRenderer(renderer,scene,camera)},get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>campaignActive?{...campaignArt.stats(),map:breachActive?'breche-violette-01':'vesper-secours-07'}:{...city.stats,boundary:city.fence?.stats()},resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
     holsterGun,setPlayerVisible,
     get lost(){return lost;},get backend(){return renderer.backend?.isWebGPUBackend?'WebGPU':'WebGL';},render:()=>{if(!lost){camera.updateWorldMatrix(true,false);moon.update(camera);lightBlade();renderer.render(scene,camera);}}};
 }

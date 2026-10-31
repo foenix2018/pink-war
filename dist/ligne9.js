@@ -1,3 +1,5 @@
+import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
+import {walkingSurface} from './surface-steps.js';
 // PINK WARS — « LIGNE 9 · LA LIGNE NOYÉE », campaign chapter 05 (Tome II M05, Acte II « Sous la ville »).
 // Same production simulation as the missions (ArenaGame + armour layer), weapons, gloves, Shadow Unit rig,
 // controls, HUD and WebXR as M02 and the Couronne HELIX; new world (ligne9-layout.js / ligne9-art.js), a full
@@ -390,7 +392,7 @@ function gameTick(dt){
  if(running)mission.update();
  combatEffects?.update(game,dt,camera);armorFx.update(game,dt);
  companion?.update(dt,{game,camera,active:false});companionSkills?.update(dt,{game});skillMenu?.refresh();
- ambience?.update(dt,{active:running,position:game.player,moving:Math.hypot(x,z)>.1,grounded:game.player.grounded,elevation:game.player.elevation,yaw,probes:game.enemies});
+ ambience?.update(dt,{active:running,position:game.player,moving:Math.hypot(x,z)>.1,grounded:game.player.grounded,elevation:game.player.elevation,yaw,probes:game.enemies,surface:walkingSurface(game)});
  if(game.player.hp>0)$('damage').style.boxShadow='inset 0 0 '+(100-game.player.hp)*1.2+'px #c52c5e44';
  const ads=flatSightPose(OPTICS[game.weapon.id],aimBlend),held=game.weapon.dual?{yaw:0,kick:0,pitch:0}:weaponFeel.state;
  weapon.position.set(ads.x+held.yaw*.15,ads.y-held.kick*.18,ads.z+held.kick);
@@ -426,6 +428,7 @@ function updateHUD(){
 
 // ---------- Loop, pause, boot ----------
 function animation(t,frame){
+ if(started)setScreenMusic(running&&!paused&&!reading&&!skillMenu?.isOpen&&game?.state==='playing'?'gameplay':'paused',5);
  if(xr?.active&&!frame)return;
  if(!xr?.active)requestAnimationFrame(animation);
  const dt=Math.min(.04,Math.max(0,(t-last)/1000));last=t;

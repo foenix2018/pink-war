@@ -1,3 +1,4 @@
+import {createSurfaceSteps} from './surface-steps.js';
 import {loadRLHFootsteps,rlhStepClips} from './rlh-footsteps.js';
 import {createRLHDroneAudio} from './rlh-drone-audio.js';
 // Ruins reclaimed by vegetation: quiet wind, working power systems, distant metal fatigue.
@@ -29,10 +30,10 @@ function envelope(param,time,level,duration){
   param.exponentialRampToValueAtTime(.0001,time+duration);
 }
 
-export function createAmbience(ctx,{installations=[],footstepFetch=globalThis.fetch}={}){
-  const footstepReady=loadRLHFootsteps(ctx,footstepFetch);let recordedSteps=0;
+export function createAmbience(ctx,{installations=[],footstepFetch=globalThis.fetch,footsteps=null}={}){
+  const footstepReady=loadRLHFootsteps(ctx,footstepFetch);let recordedSteps=0,surfaceBank=footsteps;
   const droneAudio=createRLHDroneAudio(ctx);
-  let enabled=true,active=false,disposed=false,graph=null,audible=false,elapsed=0,nextCreak=13;
+  let enabled=true,active=false,disposed=false,graph=null,audible=false,elapsed=0,nextCreak=13,nextAlarm=0;
   let lastPosition=null,stride=0,foot=0,steps=0,creaks=0,lastParameterUpdate=-1,gustStrength=0;
   const voices=new Set(),persistent=[];
   const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
@@ -77,10 +78,11 @@ export function createAmbience(ctx,{installations=[],footstepFetch=globalThis.fe
     if(graph&&audible)target(graph.master.gain,0,ctx.currentTime,.025);
     audible=false;
     for(const entry of [...voices])if(entry.footstep){try{entry.source.stop();}catch{}for(const node of entry.nodes)node.disconnect();voices.delete(entry);}
-    droneAudio.mute();lastPosition=null;stride=0;
+    surfaceBank?.pause?.();droneAudio.mute();lastPosition=null;stride=0;
   }
-  function footstep(metal,speed,crouched){
+  function footstep(metal,speed,crouched,surface){
     if(!ready()||voices.size>7)return;
+    if(surface){surfaceBank ||=createSurfaceSteps(ctx,{fetchFile:footstepFetch});void surfaceBank.load?.();if(surfaceBank.play(surface,{destination:graph.master,speed,crouched,foot})){foot++;steps++;recordedSteps++;return;}}
     const recordings=rlhStepClips(ctx).filter(Boolean);
     if(recordings.length){
       const t=ctx.currentTime,source=ctx.createBufferSource(),gain=ctx.createGain(),filter=ctx.createBiquadFilter();
@@ -114,7 +116,7 @@ export function createAmbience(ctx,{installations=[],footstepFetch=globalThis.fe
     osc.connect(gain);const pan=connectPan(gain,(random()*2-1)*.6);
     remember(osc,[osc,gain,...(pan?[pan]:[])]);osc.start(t);osc.stop(t+duration+.01);creaks++;
   }
-  function update(dt,{active:nextActive=false,position=null,moving=false,elevation=0,onLift=false,grounded=true,crouched=false,yaw=0,shelter=0,probes=[]}={}){
+  function update(dt,{active:nextActive=false,position=null,moving=false,elevation=0,onLift=false,grounded=true,crouched=false,yaw=0,shelter=0,probes=[],surface=null,installations:localInstallations=installations,alarm=false}={}){
     if(disposed)return;
     const wasReady=ready();active=!!nextActive;
     if(!ready()){if(wasReady||graph)mute();return;}
@@ -133,7 +135,7 @@ export function createAmbience(ctx,{installations=[],footstepFetch=globalThis.fe
       target(graph.wind.frequency,430+gust*540,t,.6);
       target(graph.leaves.gain,(1-height*.8)*(.011+gust*.013)*exposure,t,.5);
       let machinery=.12,sourceBearing=0;
-      if(position)for(const source of installations){
+      if(position)for(const source of localInstallations){
         const distance=Math.hypot(finite(position.x)-source.x,finite(position.z)-source.z);
         const proximity=clamp(1-distance/35,0,1);
         if(proximity>machinery){machinery=proximity;sourceBearing=Math.atan2(source.x-finite(position.x),-(source.z-finite(position.z)));}
@@ -154,11 +156,12 @@ export function createAmbience(ctx,{installations=[],footstepFetch=globalThis.fe
         if(distance<Math.max(1.5,dt*16)){
           stride+=distance;
           const stepDistance=crouched?.95:1.55;
-          if(stride>=stepDistance){stride%=stepDistance;footstep(elevation>1.2,distance/dt,crouched);}
+          if(stride>=stepDistance){stride%=stepDistance;footstep(surface?surface==='metal':elevation>1.2,distance/dt,crouched,surface);}
         }else stride=0;
       }else stride=0;
       lastPosition={x,z};
     }else {lastPosition=null;stride=0;}
+    if(alarm&&elapsed>=nextAlarm&&voices.size<6){const t=ctx.currentTime,osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.setValueAtTime(490,t);osc.frequency.linearRampToValueAtTime(690,t+.22);envelope(gain.gain,t,.009,.46);osc.connect(gain);gain.connect(graph.master);remember(osc,[osc,gain]);osc.start(t);osc.stop(t+.49);nextAlarm=elapsed+1.1;}
     if(elapsed>=nextCreak){creak();nextCreak=elapsed+15+random()*14;}
   }
   return {
@@ -169,7 +172,7 @@ export function createAmbience(ctx,{installations=[],footstepFetch=globalThis.fe
       if(disposed)return;disposed=true;active=false;
       for(const source of persistent)try{source.stop();}catch{}
       for(const entry of voices){try{entry.source.stop();}catch{}for(const node of entry.nodes)node.disconnect();}
-      voices.clear();droneAudio.dispose();if(graph)for(const node of graph.nodes)node.disconnect();graph=null;
+      voices.clear();surfaceBank?.dispose?.();droneAudio.dispose();if(graph)for(const node of graph.nodes)node.disconnect();graph=null;
     },
     get enabled(){return enabled;},
     get playing(){return ready()&&!!graph;},

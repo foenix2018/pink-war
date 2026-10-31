@@ -1,0 +1,168 @@
+{
+  "version": "3.72.0",
+  "date": "2026-10-29",
+  "tests": {
+    "command": "npm test",
+    "passed": 669,
+    "failed": 0,
+    "skipped": 0,
+    "finalTargetedTests": 7
+  },
+  "browser": "Chromium / SwiftShader / WebGL",
+  "detailScenes": [
+    {
+      "chapter": 1,
+      "errors": [],
+      "bad": [],
+      "stats": {
+        "meshes": 173,
+        "instances": 1324,
+        "textures": 39,
+        "fixtures": 29,
+        "details": {
+          "plants": 63,
+          "computers": 3,
+          "accessories": 16,
+          "doors": 13,
+          "batches": 100,
+          "triangles": 103032,
+          "surfaces": {
+            "families": 11,
+            "textures": 33,
+            "size": 128,
+            "bytes": 2162688
+          }
+        },
+        "power": true,
+        "adapt": 1,
+        "lights": 0,
+        "doors": {
+          "service": 0,
+          "technique": 0,
+          "cta": 0,
+          "vestiaires": 0,
+          "remise": 0,
+          "portail": 0,
+          "accueil": 0,
+          "bureau": 0,
+          "serveur": 0,
+          "registres": 0,
+          "herbiers": 0,
+          "serre": 0,
+          "monte-charge": 0
+        }
+      }
+    },
+    {
+      "chapter": 2,
+      "errors": [],
+      "bad": [],
+      "stats": {
+        "meshes": 151,
+        "instances": 358,
+        "textures": 39,
+        "fixtures": 34,
+        "details": {
+          "plants": 14,
+          "computers": 3,
+          "accessories": 25,
+          "doors": 10,
+          "batches": 126,
+          "triangles": 39720,
+          "surfaces": {
+            "families": 11,
+            "textures": 33,
+            "size": 128,
+            "bytes": 2162688
+          }
+        },
+        "power": {
+          "enclave": true,
+          "tower": true
+        },
+        "shelter": 1,
+        "lights": 3,
+        "doors": {
+          "monte-charge": 0,
+          "dispensaire": 0,
+          "radio": 0,
+          "soins": 0,
+          "service": 0,
+          "grille": 0,
+          "tour": 0,
+          "coffre": 0,
+          "quai": 0,
+          "convoi": 0
+        }
+      }
+    }
+  ],
+  "missions": [
+    {
+      "level": 2,
+      "viewport": [
+        1280,
+        800
+      ],
+      "revision": "3.72.0",
+      "ready": true,
+      "errors": [],
+      "warnings": [],
+      "failedResources": [],
+      "power": {
+        "enclave": false,
+        "tower": true
+      }
+    },
+    {
+      "level": 1,
+      "viewport": [
+        1280,
+        800
+      ],
+      "revision": "3.72.0",
+      "ready": true,
+      "errors": [],
+      "warnings": [],
+      "failedResources": [],
+      "power": false
+    }
+  ],
+  "mobile": [
+    {
+      "level": 2,
+      "viewport": [
+        390,
+        844
+      ],
+      "revision": "3.72.0",
+      "ready": true,
+      "errors": [],
+      "warnings": [],
+      "failedResources": [],
+      "power": {
+        "enclave": false,
+        "tower": true
+      }
+    },
+    {
+      "level": 1,
+      "viewport": [
+        390,
+        844
+      ],
+      "revision": "3.72.0",
+      "ready": true,
+      "errors": [],
+      "warnings": [],
+      "failedResources": [],
+      "power": true
+    }
+  ],
+  "limits": [
+    "No physical iPhone or Quest tested",
+    "No hardware frame rate measured",
+    "Detail captures use presentation lighting; mission lighting is unchanged",
+    "No production publication"
+  ]
+}

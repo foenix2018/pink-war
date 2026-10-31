@@ -1,38 +1,37 @@
 import {createMissionMusic} from './mission-music.js';
-
-// One stream per page, shared by the launcher and the loading cover. Gameplay
-// and the prologue never activate these tracks. No AudioContext before a gesture.
-let surface='gameplay',level=1,enabled=true,player=null,context=null,unlocked=false;
-// Preserve only the user's audio-unlock intent across same-tab mission navigation.
-// The browser still decides whether playback/resume is permitted on the next page.
+import {createMusicBed} from './music-tracks.js';
+// One page owner: menu/loading and gameplay share a context and never overlap.
+let disposed=false;
+let surface='paused',level=1,enabled=true,menuPlayer=null,gamePlayer=null,activePlayer=null,context=null,unlocked=false;
+try{enabled=JSON.parse(localStorage.getItem('rosee-settings')||'{}').music!==false;}catch{}
 try{unlocked=window.sessionStorage.getItem('pink-war-menu-audio-unlocked')==='1';}catch{}
-const allowed=()=>enabled&&['menu','loading'].includes(surface);
-function sync(){
- if(!allowed()){player?.pause();return;}
+const allowed=()=>enabled&&['menu','loading','gameplay'].includes(surface)&&!(typeof document!=='undefined'&&document.hidden);
+function sync(restart=false){
+ if(disposed)return;
+ if(!allowed()){menuPlayer?.pause();gamePlayer?.pause();activePlayer=null;return;}
  if(!unlocked)return;
  try{
-  const AudioContext=window.AudioContext||window.webkitAudioContext;
-  if(!AudioContext)return;
+  const AudioContext=window.AudioContext||window.webkitAudioContext;if(!AudioContext)return;
   context=window.__PINKWAR_BOOT_AUDIO ||=new AudioContext();
-  player ||=createMissionMusic(level);
-  player.setEnabled(enabled);player.setContext(context);
-  player.start(context);
-  if(context.state==='suspended')void context.resume().then(()=>{if(allowed())player?.start(context);}).catch(()=>{});
+  const gameplay=surface==='gameplay';
+  if(gameplay)gamePlayer ||=createMusicBed();else menuPlayer ||=createMissionMusic(level);
+  const next=gameplay?gamePlayer:menuPlayer;
+  if(next!==activePlayer){activePlayer?.pause();activePlayer=next;restart=true;}
+  next.setContext(context);next.setEnabled(true);
+  if(restart)next.start(context);else next.update(0,{active:true});
+  if(context.state==='suspended')void context.resume().then(()=>{if(allowed())sync(true);}).catch(()=>{});
  }catch{}
 }
 export function setScreenMusic(next,mission=level,on=enabled){
- const selected=mission===2?2:1;
- // All menus and loading screens now share the creator's selected score.
- level=selected;
  const changed=surface!==next||enabled!==!!on;
- surface=next;enabled=!!on;
- if(changed||!player)sync();
+ level=mission;surface=next;enabled=!!on;sync(changed);
 }
-export function screenMusicSnapshot(){return {surface,level,enabled,playing:player?.playing||false,source:player?.source||null,...player?.stats};}
+export function screenMusicSnapshot(){return {surface,level,enabled,playing:activePlayer?.playing||false,source:activePlayer?.source||null,...activePlayer?.stats};}
 if(typeof document!=='undefined'){
- const unlock=()=>{unlocked=true;if(allowed())try{window.sessionStorage.setItem('pink-war-menu-audio-unlocked','1');}catch{}sync();};
+ const unlock=()=>{unlocked=true;try{window.sessionStorage.setItem('pink-war-menu-audio-unlocked','1');}catch{}sync(true);};
  document.addEventListener('pointerdown',unlock,{capture:true,passive:true});
  document.addEventListener('keydown',unlock,{capture:true});
- window.addEventListener('pagehide',event=>{player?.pause();if(!event.persisted){player?.dispose();player=null;}});
- window.addEventListener('pageshow',()=>sync());
+ document.addEventListener('visibilitychange',()=>sync(true));
+ window.addEventListener('pagehide',event=>{menuPlayer?.pause();gamePlayer?.pause();activePlayer=null;if(!event.persisted){disposed=true;menuPlayer?.dispose();gamePlayer?.dispose();menuPlayer=gamePlayer=null;}});
+ window.addEventListener('pageshow',()=>sync(true));
 }

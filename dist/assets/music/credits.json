@@ -27,7 +27,7 @@
       "measuredLUFS": -20.89,
       "measuredTruePeakDBTP": -5.3,
       "originalSha256": "4b276b61066d1045c331087a495f7e6ab2297d6ede927aa1547e47a16caae026",
-      "usage": "Main menu and loading screens, all levels; never gameplay"
+      "usage": "Main menu and loading screens"
     },
     {
       "level": 2,
@@ -52,8 +52,10 @@
         }
       },
       "measuredLUFS": -21.04,
-      "measuredTruePeakDBTP": -5.07
+      "measuredTruePeakDBTP": -5.07,
+      "usage": "Gameplay, all missions and arena"
     }
   ],
-  "activeMenuTrack": "velvet-siege.m4a"
+  "activeMenuTrack": "velvet-siege.m4a",
+  "activeGameplayTrack": "iron-maw.m4a"
 }

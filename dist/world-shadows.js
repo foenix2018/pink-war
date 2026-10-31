@@ -45,7 +45,7 @@ export function createWorldShadows(T,{scene,renderer,light,profile={},direction=
   lastEnabled=enabled;let count=0;
   if(enabled)for(const e of entities){
    if(count>=64||!Number.isFinite(e.x)||!Number.isFinite(e.z))continue;
-   const floor=heightAt(e),height=Math.max(0,(e.elevation||0)-floor),radius=Math.max(.3,Math.min(1.3,e.radius||.45))*(2.1+Math.min(2,height)*.35);
+   const floor=heightAt(e);if(!Number.isFinite(floor)||(e.elevation||0)-floor>=1.8)continue;const height=Math.max(0,(e.elevation||0)-floor),radius=Math.max(.3,Math.min(1.3,e.radius||.45))*(2.1+Math.min(2,height)*.35);
    position.set(e.x,floor+.022,e.z);scale.set(radius,radius*.82,1);matrix.compose(position,rotation,scale);contacts.setMatrixAt(count++,matrix);
   }
   contacts.count=count;contacts.instanceMatrix.needsUpdate=true;

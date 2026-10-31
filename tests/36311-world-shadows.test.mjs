@@ -20,7 +20,10 @@ test('the shadow window follows the player, maps refresh on movement, reset and 
  renderer.shadowMap.needsUpdate=false;light.shadow.needsUpdate=false;s.update(.01,e);assert.equal(renderer.shadowMap.needsUpdate,false);
  s.update(.2,e);assert.equal(renderer.shadowMap.needsUpdate,true);s.update(.21,{...e,x:60});assert.ok(Math.abs(light.target.position.x-60)<.05);
  s.update(.22,e,{enabled:false});assert.equal(light.castShadow,false);assert.equal(torch.castShadow,false);assert.equal(renderer.shadowMap.enabled,false);assert.equal(s.contacts.visible,false);
- s.update(0,e);assert.equal(renderer.shadowMap.needsUpdate,true);s.dispose();assert.equal(scene.children.includes(s.contacts),false);
+ s.update(0,e);assert.equal(renderer.shadowMap.needsUpdate,true);
+ s.update(.3,e,{entities:[{...e,elevation:7}],heightAt:()=>4.8});assert.equal(s.contacts.count,0,'high jumps leave no detached ground contact');
+ s.update(.4,e,{entities:[e],heightAt:()=>NaN});assert.equal(s.contacts.count,0,'invalid support never writes non-finite instance matrices');
+ s.dispose();assert.equal(scene.children.includes(s.contacts),false);
 });
 test('ground occlusion excludes ceilings, platforms and floor slabs, darkening only the grounded contact of physical solids',()=>{
  const parent=new T.Group(),o=createGroundOcclusion(T,parent,[{x:0,z:0,hx:1,hz:1,y:0,height:1},{x:0,z:0,hx:20,hz:20,y:3.4,height:.1},{x:20,z:0,hx:5,hz:5,y:0,height:.2,walkableSurface:true}],{compact:true});
