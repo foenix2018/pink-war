@@ -762,7 +762,7 @@ function bindCanvas() {
   canvas.dataset.controlsBound = 'true';
   canvas.addEventListener('contextmenu',e=>e.preventDefault());
   canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===0&&phase==='playing'){firingPointers.add(e.pointerId);firePressQueued=true;audioReady();if(vr.mode==='off'&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch(()=>{});}});
-  canvas.addEventListener('pointerdown',e=>{if(e.button===2&&phase==='playing'){e.preventDefault();mouseAim=true;}});
+  canvas.addEventListener('pointerdown',e=>{if(e.button===2&&phase==='playing'){e.preventDefault();mouseAim=true;if(e.pointerType==='mouse'&&vr.mode==='off'&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch(()=>{});}});
   canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===1&&phase==='playing'){e.preventDefault();meleeQueued=true;}});
   canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
   canvas.addEventListener('pointerdown', e => { if ((e.pointerType==='mouse'&&e.button!==0)||phase !== 'playing' || canvasPointer !== null || (e.pointerType!=='mouse' && e.clientX < window.innerWidth*.5)) return; e.preventDefault(); canvasPointer = e.pointerId; lastDrag = { x: e.clientX, y: e.clientY }; try { canvas.setPointerCapture(e.pointerId); } catch {} });
