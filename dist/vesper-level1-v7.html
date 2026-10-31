@@ -1821,12 +1821,12 @@ function inputSetup(){
  document.addEventListener('keyup',ev=>keys.delete(ev.code));
  const cancelInputs=()=>{keys.clear();firing=isAiming=padFiring=padRun=jumpQueued=false;touch.moveX=touch.moveY=0;touch.sprint=false;touchLook=null;combatWorld?.pause();};
  window.addEventListener('blur',cancelInputs);document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelInputs();});
- canvas.addEventListener('mousedown',ev=>{if(ev.button===0){firing=true;shoot()}if(ev.button===1){ev.preventDefault();combatWorld?.melee?.();}if(ev.button===2)isAiming=true;});
+ canvas.addEventListener('mousedown',ev=>{if(ev.button===0){firing=true;shoot()}if(ev.button===1){ev.preventDefault();combatWorld?.melee?.();}if(ev.button===2){isAiming=true;if(started&&!matchMedia('(pointer: coarse)').matches&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch?.(()=>{});}});
  document.addEventListener('mouseup',ev=>{if(ev.button===0)firing=false;if(ev.button===2)isAiming=false;});
  canvas.addEventListener('contextmenu',ev=>ev.preventDefault());
  canvas.addEventListener('wheel',ev=>{if(started){ev.preventDefault();changeWeapon(Math.sign(ev.deltaY)||1)}},{passive:false});
  canvas.addEventListener('click',()=>{if(started&&!matchMedia('(pointer: coarse)').matches && document.pointerLockElement!==canvas)canvas.requestPointerLock?.();});
- document.addEventListener('mousemove',ev=>{if(document.pointerLockElement===canvas){yaw+=ev.movementX*.0021;pitch=clamp(pitch-ev.movementY*.0021,-1.48,1.48)}});
+ document.addEventListener('mousemove',ev=>{if(document.pointerLockElement===canvas){const fine=isAiming||gamepadAiming?.68:1;yaw+=ev.movementX*.0021*fine;pitch=clamp(pitch-ev.movementY*.0021*fine,-1.48,1.48)}});
  canvas.addEventListener('pointerdown',ev=>{if(ev.pointerType==='touch'&&ev.clientX>=innerWidth*.5){touchLook={id:ev.pointerId,x:ev.clientX,y:ev.clientY};try{canvas.setPointerCapture(ev.pointerId)}catch{}}});
  canvas.addEventListener('pointermove',ev=>{if(touchLook?.id===ev.pointerId){yaw+=(ev.clientX-touchLook.x)*.0042;pitch=clamp(pitch-(ev.clientY-touchLook.y)*.0042,-1.4,1.4);touchLook.x=ev.clientX;touchLook.y=ev.clientY}});
  for(const type of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(type,ev=>{if(touchLook?.id===ev.pointerId)touchLook=null});
