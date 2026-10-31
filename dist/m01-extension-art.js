@@ -9,6 +9,7 @@ import {createVesperProps} from './vesper-props.js';
 import {createRescueVehicle} from './rescue-vehicle-detail.js';
 import {createHardSurfaceFurniture} from './realistic-furniture.js';
 import {createStationEquipment} from './station-equipment-detail.js';
+import {createCivilCar} from './civil-vehicle-detail.js';
 import { ROOMS, DOORS, INTERACTIONS, roomAt } from './m01-extension-layout.js';
 
 const TAU = Math.PI * 2;
@@ -323,9 +324,11 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
         sign(signTex('07', { bg: '#a3241c', w: 256, h: 256 }), x2 + .02, h - 1.4, o.z, Math.PI / 2, 1.4, 1.4); break;
       case 'fuel-tank': { const c = cylinder(M.paintedMetal, o.x, 1.2, o.z, .85, d, { axis: 'z', segments: 20 }); piece(M.dark, o.x, 0, o.z - .8, w, .4, .3); piece(M.dark, o.x, 0, o.z + .8, w, .4, .3); sign(signTex(['GAZOLE', 'CUVE 07'], { bg: '#d8a91f', fg: '#16181a', w: 256, h: 128 }), o.x + .87, 1.3, o.z, Math.PI / 2, .9, .45); c.name = 'cuve'; break; }
       case 'car': {
-        piece(M.red, o.x, .35, o.z, w, .7, d); piece(M.red, o.x, 1.05, o.z + .3, w - .1, .5, d * .55); piece(M.glass, o.x, 1.05, o.z + .3, w - .05, .45, d * .56);
-        for (const sz of [-1, 1]) for (const sx of [-1, 1]) cylinder(M.black, o.x + sx * (o.hx - .05), .35, o.z + sz * (o.hz - .6), .35, .25, { axis: 'x' });
-        piece(M.white, o.x, .7, o.z, w + .01, .12, d - .4); break;
+        const along=w>d;
+        const vehicle=createCivilCar(T,{length:Math.max(w,d),width:Math.min(w,d),low,M});
+        vehicle.position.set(o.x,0,o.z);
+        if(!along)vehicle.rotation.y=Math.PI/2;
+        add(vehicle);break;
       }
       case 'generator': {
         box(M.rust, x1, x2, .2, h, z1, z2); piece(M.dark, o.x, 0, o.z, w + .2, .2, d + .2);
