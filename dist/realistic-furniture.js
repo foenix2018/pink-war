@@ -72,16 +72,29 @@ export function createHardSurfaceFurniture(T,root,{M,low=false}={}){
     }
    }
   }else{
+   // Lockers on the west and north walls open into the walkable corridor:
+   // long-Z units face +X, long-X north units face -Z. Drawer orientation
+   // must follow actual room geometry, not only the object's long axis.
+   const frontZ=z>68&&o.kind==='lockers'?z-hz+.027:face;
+   const frontX=x+hx-.026;
+   const toZ=frontZ<z?-1:1;
    for(let k=0;k<cols;k++){
-    const u=-span/2+(k+.5)*span/cols,xx=along?x+u:x,zz=along?z:z+u;
-    const pw=along?Math.max(.11,span/cols-.035):w-.09;
-    put(mat.case,[pw,h-.18,.025],[xx,h*.50,along?face:zz],[],.008);
+    const u=-span/2+(k+.5)*span/cols;
+    const pw=Math.max(.10,span/cols-.037);
     if(along){
-     const cx=xx+pw*.30;
-     put(mat.black,[pw*.56,h*.06,.016],[xx,h*.72,face+.018],[],.002);
-     if(!low)for(let j=0;j<3;j++)put(mat.black,[pw*.47,.009,.01],[xx,h*.68-j*.033,face+.026],[],0);
-     put(mat.metal,[.023,.13,.027],[cx,h*.49,face+.030],[],.004);
-     disc(mat.black,[cx,h*.38,face+.042],.014,.020,[Math.PI/2,0,0]);
+     const xx=x+u,handle=xx+pw*.29;
+     put(mat.case,[pw,h-.18,.025],[xx,h*.50,frontZ],[],.008);
+     put(mat.black,[pw*.55,h*.064,.016],[xx,h*.72,frontZ+toZ*.020],[],.002);
+     if(!low)for(let j=0;j<3;j++)put(mat.black,[pw*.47,.009,.012],[xx,h*.68-j*.033,frontZ+toZ*.030],[],0);
+     put(mat.metal,[.025,.13,.027],[handle,h*.49,frontZ+toZ*.032],[],.003);
+     disc(mat.black,[handle,h*.38,frontZ+toZ*.042],.014,.018,[Math.PI/2,0,0]);
+    }else{
+     const zz=z+u,handle=zz+pw*.29;
+     put(mat.case,[.025,h-.18,pw],[frontX,h*.5,zz],[],.008);
+     put(mat.black,[.016,h*.064,pw*.55],[frontX+.019,h*.72,zz],[],.002);
+     if(!low)for(let j=0;j<3;j++)put(mat.black,[.010,.009,pw*.47],[frontX+.030,h*.68-j*.033,zz],[],0);
+     put(mat.metal,[.026,.13,.024],[frontX+.032,h*.49,handle],[],.003);
+     disc(mat.black,[frontX+.043,h*.38,handle],.014,.018,[0,0,Math.PI/2]);
     }
     stats.panels++;
    }
