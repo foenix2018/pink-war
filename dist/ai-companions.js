@@ -2,12 +2,12 @@ import {segmentBox} from './game-logic.js';
 import {createCompanionModel} from './companion-model.js';
 import {COMPANION_SHOT,companionNeedsProtection,companionThreat,companionClear,companionHover,safeCompanionHover,fireCompanionShot} from './companion-escort.js';
 import {createCompanionTorch} from './companion-torch.js';
-import {createGabCommunication,gabMoodForEvent} from './companion-communication.js';
+import {createGabCommunication,companionMoodForEvent} from './companion-communication.js';
 
 export function createAICompanion(T,scene,characterId='ghju'){
  const defensive=characterId!=='lylu',name=defensive?'Gaby':'Cara',color=defensive?0xff65b1:0x57baff,cfg=COMPANION_SHOT[name];
  const root=new T.Group();root.name=name+' / autonomous phase sphere';root.userData.companionLight=true;scene.add(root);
- const model=createCompanionModel(T,root,defensive),torch=createCompanionTorch(T,scene),communication=defensive?createGabCommunication(T,root):null;
+ const model=createCompanionModel(T,root,defensive),torch=createCompanionTorch(T,scene),communication=createGabCommunication(T,root,{defensive});
  const flash=new T.PointLight(color,0,2.2,2);root.add(flash);
  const up=new T.Vector3(0,1,0),target=new T.Vector3(),end=new T.Vector3(),muzzle=new T.Vector3(),direction=new T.Vector3(),forward=new T.Vector3(),q=new T.Quaternion(),face=new T.Matrix4();
  let energy=100,cooldown=0,pulse=0,initialized=false,assists=0,state='Follow',disposed=false,age=0,lastAlert=-100,lastWorry=-100;
@@ -58,7 +58,7 @@ export function createAICompanion(T,scene,characterId='ghju'){
   say:(mood='message',options={})=>communication?.say(mood,options)||false,
   stopSpeaking:()=>communication?.stop(),
   react(event){if(event?.name===name&&['companion-assist','companion-phase'].includes(event.type)){
-   pulse=1;model.react();communication?.say(gabMoodForEvent(event),{audio:event.audioContext||null,sound:event.sound!==false});
+   pulse=1;model.react();communication?.say(companionMoodForEvent(event,defensive),{audio:event.audioContext||null,sound:event.sound!==false});
   }},
   reset(){energy=100;cooldown=pulse=age=0;initialized=false;assists=0;state='Follow';lastAlert=lastWorry=-100;flash.intensity=0;root.quaternion.identity();model.reset();communication?.reset();torch.reset();},
   snapshot:()=>({name,state,visible:root.visible,energy:Math.round(energy),cooldown,assists,position:root.position.toArray(),torch:torch.snapshot(),model:model.stats(),communication:communication?.snapshot()||null}),
