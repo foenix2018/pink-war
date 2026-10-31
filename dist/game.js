@@ -1,3 +1,4 @@
+import {createTouchOrbit} from './touch-orbit.js';
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, starterWeaponIndex, weaponCycleOrder, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
 import { createScene } from './scene.js?v=3.77-briseur-v3';
 import { VRController } from './vr.js';
@@ -116,6 +117,7 @@ try{character=characterForId(localStorage.getItem('pink-war-character'));}catch{
 if(boot?.characterId)character=characterForId(boot.characterId);
 let clock = 0, lastTime = 0, hudTimer = 0, flashTimer = 0, recoil = 0, reloadLift = 0, announcementUntil = 0, damageUntil = 0, pickupNotice = null;
 let outfitReturn = 'lobby', previewLevel = 1, equipmentUntil = 0;
+const touchOrbit=createTouchOrbit();
 let canvasPointer = null, lastDrag = null, audioContext = window.__PINKWAR_BOOT_AUDIO||null, ambience = null;
 let saberAudio=null,saberSwingSound=false;
 let lastWeaponSlot=0,holsterRemaining=0;
@@ -198,7 +200,7 @@ function resetInput() {
   combatHud?.reset();touchSprinting=false;
   vr?.desktopGamepads?.reset();
   if(vr&&vr.mode!=='xr'){vr.previous?.clear();vr.desktopPadKey=null;}
-  meleeQueued=chargeQueued=false;keys.clear(); firingPointers.clear(); aimPointers.clear(); firePressQueued=false; mouseAim=false; aiming=false; aimBlend=0;fireZoomBlend=0; document.body.classList.remove('scoped','aiming'); $('aim-button')?.setAttribute('aria-pressed','false'); jumpQueued = false; pickupQueued = false;crouchQueued=false; canvasPointer = null; lastDrag = null;
+  meleeQueued=chargeQueued=false;keys.clear(); firingPointers.clear(); aimPointers.clear(); firePressQueued=false; mouseAim=false; aiming=false; aimBlend=0;fireZoomBlend=0; document.body.classList.remove('scoped','aiming'); $('aim-button')?.setAttribute('aria-pressed','false'); jumpQueued = false; pickupQueued = false;crouchQueued=false; canvasPointer = null; lastDrag = null;touchOrbit.reset();
   for (const s of [move, look]) { s.x = 0; s.y = 0; s.id = null; }
   for (const id of ['move-stick', 'look-stick']) $(id).querySelector('.joystick-knob').style.transform = '';
   $('fire-button').classList.remove('firing');
@@ -765,9 +767,27 @@ function bindCanvas() {
   canvas.addEventListener('pointerdown',e=>{if(e.button===2&&phase==='playing'){e.preventDefault();mouseAim=true;if(e.pointerType==='mouse'&&vr.mode==='off'&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch(()=>{});}});
   canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===1&&phase==='playing'){e.preventDefault();meleeQueued=true;}});
   canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
-  canvas.addEventListener('pointerdown', e => { if ((e.pointerType==='mouse'&&e.button!==0)||phase !== 'playing' || canvasPointer !== null || (e.pointerType!=='mouse' && e.clientX < window.innerWidth*.5)) return; e.preventDefault(); canvasPointer = e.pointerId; lastDrag = { x: e.clientX, y: e.clientY }; try { canvas.setPointerCapture(e.pointerId); } catch {} });
-  canvas.addEventListener('pointermove', e => { if (phase !== 'playing' || document.pointerLockElement===canvas || e.pointerId !== canvasPointer || !lastDrag) return; const fine=aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend);yaw -= (e.clientX - lastDrag.x) * .004 * settings.sensitivity*fine; pitch = clamp(pitch - (e.clientY - lastDrag.y) * .004 * settings.sensitivity*fine, -.85, .7); lastDrag = { x: e.clientX, y: e.clientY }; });
-  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) canvas.addEventListener(type, e => { if (e.pointerId === canvasPointer) { canvasPointer = null; lastDrag = null; } });
+  canvas.addEventListener('pointerdown',e=>{
+    if((e.pointerType==='mouse'&&e.button!==0)||phase!=='playing'||canvasPointer!==null||
+       (e.pointerType!=='mouse'&&e.clientX<window.innerWidth*.5))return;
+    e.preventDefault();canvasPointer=e.pointerId;lastDrag={x:e.clientX,y:e.clientY};
+    if(e.pointerType!=='mouse')touchOrbit.start(e.pointerId,e.clientX,e.clientY);
+    try{canvas.setPointerCapture(e.pointerId);}catch{}
+   });
+  canvas.addEventListener('pointermove',e=>{
+    if(phase!=='playing'||document.pointerLockElement===canvas||e.pointerId!==canvasPointer||!lastDrag)return;
+    const fine=aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend);
+    if(touchOrbit.active){
+     const m=touchOrbit.move(e.pointerId,e.clientX,e.clientY);
+     yaw-=m.fineX*.004*settings.sensitivity*fine;
+     pitch=clamp(pitch-m.deltaY*.004*settings.sensitivity*fine,-.85,.7);
+    }else{
+     yaw-=(e.clientX-lastDrag.x)*.004*settings.sensitivity*fine;
+     pitch=clamp(pitch-(e.clientY-lastDrag.y)*.004*settings.sensitivity*fine,-.85,.7);
+    }
+    lastDrag={x:e.clientX,y:e.clientY};
+   });
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) canvas.addEventListener(type, e => { if(e.pointerId===canvasPointer){touchOrbit.end(e.pointerId);canvasPointer=null;lastDrag=null;} });
    // PC: smooth continuous mouse-look with free aiming even with no button held.
    window.addEventListener('mousemove',e=>{
      if(phase!=='playing'||document.pointerLockElement!==canvas||vr.mode!=='off')return;
@@ -798,6 +818,7 @@ function stepFrame(timestamp, xrFrame) {
     const sensitivity = settings.sensitivity*(vr.mode==='xr'?1:aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend));
     yaw -= (look.x * 1.8 + vrInput.turn * 1.6 + (keys.has('ArrowRight') ? 1.4 : 0) - (keys.has('ArrowLeft') ? 1.4 : 0)) * sensitivity * dt;
     yaw -= vrInput.snap;
+    if(vr.mode!=='xr')yaw-=touchOrbit.step(dt)*sensitivity;
     pitch = clamp(pitch + (-look.y * 1.35 - vrInput.tilt * 1.35 + (keys.has('ArrowUp') ? 1.15 : 0) - (keys.has('ArrowDown') ? 1.15 : 0)) * sensitivity * dt, -.85, .7);
     yaw %= Math.PI * 2;
     const x = move.x + vrInput.x + (keys.has('KeyD') ? 1 : 0) - ((keys.has('KeyA') || keys.has('KeyQ')) ? 1 : 0);
