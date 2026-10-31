@@ -395,17 +395,18 @@ async function renderGalleryThumbnail(name){
    }else if(name==='RAMPANT'){
     headCenter.y=box.min.y+size.y*.65;
     cropHeight=Math.max(size.y*.72,.32);
-   }else if(name==='BRUTE'){
-    headCenter.y=box.min.y+size.y*.79;
-    cropHeight=Math.max(size.y*.31,.34);
-   }else if(name==='ROBOT LOURD'){
-    headCenter.y=box.min.y+size.y*.84;
-    cropHeight=Math.max(size.y*.35,.35);
    }else{
-    const headBone=actor.root.getObjectByName('sensor-head');
+    if(name==='BRUTE')cropHeight=Math.max(size.y*.27,.30);
+    if(name==='ROBOT LOURD')cropHeight=Math.max(size.y*.35,.35);
+    // Native skeletons on BRUTE, SYNTH and RECO1/REMPART expose different head-bone names.
+    // Prefer their true 3D head position to a bbox polluted by weapons or shoulders.
+    const headBone=actor.root.getObjectByName('sensor-head')
+      ||actor.root.getObjectByName('mixamorigHead')
+      ||actor.root.getObjectByName('Head');
     if(headBone){
+     headBone.updateWorldMatrix(true,false);
      const position=headBone.getWorldPosition(new T.Vector3());
-     if(position.y>box.min.y+size.y*.58&&position.y<box.max.y+size.y*.08){
+     if(position.y>box.min.y+size.y*.52&&position.y<box.max.y+size.y*.10){
       headCenter.set(position.x,position.y,position.z);
      }
     }
