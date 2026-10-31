@@ -39,5 +39,10 @@ export function createM01SupplyCache(T,{heal=false,M,accent=0xff6fb4}={}){
  // Identifying case badge. The object is also readable without animated glow.
  const front=sign.clone(),label=new T.Mesh(new T.PlaneGeometry(.16,.09),front);
  label.position.set(0,.19,.199);root.add(label);
+ root.userData.dispose=()=>{
+  const geo=new Set();root.traverse(o=>{if(o.isMesh&&o.geometry)geo.add(o.geometry);});
+  for(const g of geo)g.dispose();
+  sign.dispose();front.dispose();hullMat.dispose();
+ };
  return {root,token};
 }
