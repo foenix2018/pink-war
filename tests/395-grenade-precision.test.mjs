@@ -38,7 +38,7 @@ test('scoped automatic rifle keeps the centreline closer than hip fire while sho
  const shoot=(aiming,weaponIndex)=>{
   const game=new ArenaGame([],()=>0);game.nextWave=999;
   game.ownedWeapons.add(weaponIndex);assert.ok(game.selectWeapon(weaponIndex));
-  game.aimingPrecision=aiming;assert.ok(game.shoot(origin,forward));
+  game.aimingPrecision=aiming;game.cooldown=0;assert.ok(game.shoot(origin,forward));
   return game.bullets;
  };
  const hip=shoot(false,1)[0],ads=shoot(true,1)[0];
