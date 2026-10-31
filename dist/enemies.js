@@ -1,4 +1,5 @@
 import {createReco1} from './reco1.js';
+import {createRempart} from './enemy-rempart.js';
 import {probeFlightState} from './probe-damage.js';
 import * as T from './vendor/three.webgpu.min.js';
 import { Assembly, loft, matrix, merge, bevelBox, limb as lightweightLimb } from './geo.js';
@@ -236,6 +237,7 @@ export function createEnemyFactory(mats,{detail='high'}={}){
 
   function create(elite=false,ranged=false,form='stalker'){
     if(form==='seer')return createReco1({elite,environment:mats.monster?.envMap});
+    if(form==='bulwark')return createRempart({elite,environment:mats.monster?.envMap,detail});
     if(!['stalker','scuttler','brute','seer','probe','listener','bulwark','synth'].includes(form))form='stalker';
     const kit=template(elite,ranged,form),root=new T.Group(),crawler=form==='scuttler',probe=form==='probe';
     root.name=({synth:'N-08 adaptive synthetic',stalker:'AI pursuit chassis',scuttler:'AI maintenance crawler',brute:'BRUTE V3 / LE BRISEUR heavy siege chassis',seer:'AI reconnaissance chassis',probe:'S-03 flying surveillance probe',listener:'E-06 acoustic tracker',bulwark:'B-11 armoured suppression unit'})[form];

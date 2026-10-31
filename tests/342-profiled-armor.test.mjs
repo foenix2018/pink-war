@@ -25,12 +25,14 @@ test('every chassis exposes its red sensor ahead of its own armour in normal and
   const eye=root.userData.sensorAnchor||(form==='probe'?[0,.55]:form==='scuttler'?[0,.92]:form==='seer'?[0,1.918]:[.064,1.91]);
   // The animated pelvis lowers and the head tilts. Cast in the live sensor's
   // bone frame rather than aiming through its unposed nominal height.
-  const skeleton=root.userData.skeleton,j=skeleton.bones.findIndex(b=>b.name===(form==='probe'?'optical-gimbal':form==='scuttler'?'pelvis':'sensor-head'));
+  const skeleton=root.userData.skeleton,j=skeleton.bones.findIndex(b=>b.name===(form==='probe'?'optical-gimbal':form==='scuttler'?'pelvis':form==='bulwark'?'mixamorigHead':'sensor-head'));
   const pose=new T.Matrix4().multiplyMatrices(skeleton.bones[j].matrixWorld,skeleton.boneInverses[j]);
-  const origin=new T.Vector3(eye[0],eye[1],-4).applyMatrix4(pose),direction=new T.Vector3(0,0,1).transformDirection(pose);
+  const native=form==='bulwark';
+  const origin=new T.Vector3(eye[0],eye[1],native?4:-4).applyMatrix4(pose),direction=new T.Vector3(0,0,native?-1:1).transformDirection(pose);
+  if(native){root.children[0].localToWorld(origin);direction.transformDirection(root.children[0].matrixWorld);}
   const hit=new T.Raycaster(origin,direction).intersectObject(root,true)[0];
   assert.ok(hit,form);assert.equal(hit.object.material,root.userData.optics,form+': live sensor stays in front of the shell');
-  assert.equal(root.userData.alertState,'engaged');assert.equal(root.userData.designRevision,'3.63.2');
+  assert.equal(root.userData.alertState,'engaged');assert.equal(root.userData.designRevision,form==='bulwark'?'B-11 / reference chassis / native RECO1 rig':'3.63.2');
   let triangles=0;root.traverse(o=>{if(!o.isMesh)return;triangles+=o.geometry.attributes.position.count/3;const w=o.geometry.attributes.skinWeight;for(let i=0;i<w.count;i++)assert.equal(w.getX(i)+w.getY(i)+w.getZ(i)+w.getW(i),1,'no unbound fragments');});
   assert.ok(triangles<11000,form+': same mobile geometry budget');
  }

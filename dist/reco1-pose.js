@@ -1,7 +1,7 @@
 // Generated from the approved V10 RLH driver. See assets/reco1/README.md for changes.
 import * as T from './vendor/three.webgpu.min.js';
 import {RECO1,RECO1_WEAPON} from './reco1-profile.js';
-export function createReco1Pose(asset,states){
+export function createReco1Pose(asset,states,rig={}){
  const data=asset.motion,pose={},actor=new T.Group(),poseRoot=new T.Group(),root=poseRoot;actor.scale.setScalar(2.78);actor.position.y=-.64;
  const bones=new Map();for(const d of data.bones){const b=new T.Bone();b.name=d.name;b.position.fromArray(d.position);b.quaternion.fromArray(d.quaternion);b.scale.fromArray(d.scale);bones.set(d.name,b);}
  for(const d of data.bones)(bones.get(d.parent)||actor).add(bones.get(d.name));actor.updateMatrixWorld(true);
@@ -44,6 +44,9 @@ export function createReco1Pose(asset,states){
   for(const v of mixedPose){v.b.position.copy(v.p);v.b.quaternion.copy(v.q);}// Restore the native layer even when mixer time is frozen.
   mixer.update(dt);
   for(const v of mixedPose){v.p.copy(v.b.position);v.q.copy(v.b.quaternion); }
+  // Optional mech proportions retarget bone translations after the native clip.
+  // The saved animation layer above stays unmodified, so widening never accumulates.
+  if(rig.proportions)for(const [name,factor] of Object.entries(rig.proportions))bone(name).position.multiplyScalar(factor);
   if(pose.hitPulse)bone('Spine2').quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(-.045*pose.hitPulse,0,0)));
 
   for(const side of ['Left','Right'])for(const n of ['UpLeg','Leg','Foot'])lastNative[side+n]=bone(side+n).quaternion.toArray();
@@ -55,7 +58,8 @@ export function createReco1Pose(asset,states){
    bone('Spine').quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(.22*crouchBlend,0,0)));bone('Spine1').quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(.12*crouchBlend,0,0)));bone('Neck').quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(-.20*crouchBlend,0,0)));actor.updateMatrixWorld(true);
    ['Right','Left'].forEach((s,i)=>{const pole=pos(bone(s+'UpLeg')).add(new T.Vector3(i===0?-.10:.10,-.02,.34));ik(bone(s+'UpLeg'),bone(s+'Leg'),bone(s+'Foot'),targets[i],pole);const foot=bone(s+'Foot');foot.quaternion.copy(quat(foot.parent).invert().multiply(feetQ[i]));actor.updateMatrixWorld(true);});
   }
-  if(states.motion!=='run'){actor.position.y+=ground-soleY();actor.updateMatrixWorld(true);}
+  if(rig.retargetLegs){rig.retargetLegs({actor,bones,pose,states,ik});actor.updateMatrixWorld(true);}
+  if(states.motion!=='run'){actor.position.y+=ground-(rig.soleY?rig.soleY():soleY());actor.updateMatrixWorld(true);}
   if(states.mode==='search')bone('Head').quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(0,Math.sin(t*.65)*.22,0)));
   actor.updateMatrixWorld(true);drive(torsoBind);drive(headBind);
   // This is the simulation's authoritative carbine frame, not an independent visual aim.
@@ -76,6 +80,7 @@ export function createReco1Pose(asset,states){
     const gq=gun.getWorldQuaternion(new T.Quaternion()).multiply(i===0?triggerGripQ:supportGripQ);setHandRotation(armBindings[i],gq);
    });
   }
+  if(rig.afterPose){rig.afterPose({actor,bones,pose,states});actor.updateMatrixWorld(true);}
   actor.updateMatrixWorld(true);refreshVisual();helper.updateMatrixWorld(true);
   const B=bore();aimError=B.direction.angleTo(B.target.clone().sub(B.origin).normalize());
   gripError=0;if(gun.visible){const grips=[new T.Vector3(.016,-.049,-.078),new T.Vector3(-.040,-.040,.160)];['Right','Left'].forEach((s,i)=>{gripError=Math.max(gripError,pos(bone(s+'Hand')).distanceTo(gun.localToWorld(grips[i])));});}

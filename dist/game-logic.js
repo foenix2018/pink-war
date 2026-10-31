@@ -194,7 +194,7 @@ export function traceEnemyHit(start, end, enemy) {
     ['limb',-.54,1.22,0,.23],['limb',.54,1.22,0,.23],
     ['limb',-.2,.55,0,.29],['limb',.2,.55,0,.29]
   ];
-  if(enemy.form==='bulwark')for(const zone of zones)if(zone[0]==='limb'&&zone[2]>1){zone[1]=Math.sign(zone[1])*.74;zone[2]=1.15;zone[3]=-.18;zone[4]=.34;}
+  if(enemy.form==='bulwark')for(const zone of zones){if(zone[0]==='head'){zone[2]=1.738;zone[3]=-.20;zone[4]=.18;}else if(zone[0]==='limb'&&zone[2]>1){zone[1]=Math.sign(zone[1])*.64;zone[2]=1.15;zone[3]=-.18;zone[4]=.34;}}
   let best=null;
   for(const [zone,ox,oy,oz,r] of zones) {
     const lowered=oy-(enemy.coverCrouch||0)*(oy>1?.52:.16);
