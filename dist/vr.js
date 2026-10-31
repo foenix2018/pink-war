@@ -500,17 +500,18 @@ export class VRController {
       if (actions.has('next')) { if (game.cycleWeapon(1) && xr) this.cancelTrigger(); }
       else if (actions.has('reload')) { if (game.reload() && xr) this.cancelTrigger(); }
     }
-    this.trackingLost = xr && !mainTracked;
+    const lostTrackingNow=xr&&!mainTracked&&!this.trackingLost;
+    this.trackingLost=xr&&!mainTracked;
     if(xr&&(!visible||!mainTracked)){
       // Controller occlusion cancels shooting but never toggles back to pause
       // after the player explicitly pressed X to resume.
       this.cancelTrigger();
-      if(!visible)this.hooks.pause?.();
+      if(!visible||lostTrackingNow&&phase==='playing')this.hooks.pause?.();
     }
     const playing = (this.hooks.phase?.() || phase) === 'playing';
     if(skillsConsumed){this.cancelTrigger();this.precision=this.aiming=false;return { ...result,x:0,z:0,turn:0,tilt:0,snap:0,fire:false,fireHands:{left:false,right:false},sprint:false,precision:false,aim:false,jump:false,pickup:false,crouchToggle:false };}
     if (!playing) { result.x = result.z = result.turn = result.tilt = result.snap = 0; result.sprint = result.precision = result.aim = false; result.jump = false;result.pickup = false; if (xr) this.cancelTrigger(); }
-    if (dual&&xr?!rawHands.left&&!rawHands.right:!rawFire) this.triggerBlocked = false;
+    if((!xr||mainTracked)&&(dual&&xr?!rawHands.left&&!rawHands.right:!rawFire))this.triggerBlocked=false;
     result.jump = playing && actions.has('jump');result.pickup = playing && actions.has('pickup');result.crouchToggle=playing && actions.has('crouch');
     result.melee = playing && actions.has('melee'); result.charge = playing && actions.has('charge');
     result.fire = playing && mainTracked && rawFire && (!xr || !this.triggerBlocked);
