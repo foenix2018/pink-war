@@ -306,7 +306,7 @@ test('a left shooting hand aims from the left controller',()=>{
   state.settings=VR_DEFAULTS;aim=state.aim();assert.ok(Math.abs(aim.origin.x-.3)<1e-8);
 });
 
-test('the muzzle follows the pistol with a recoil kick and the aim keeps the controller direction',()=>{
+test('the muzzle and physical shot direction both follow tracked recoil of the pistol',()=>{
   const camera=new T.PerspectiveCamera();camera.position.set(0,1.7,0);
   const ray=new T.Group();ray.position.set(.25,1.2,-.3);ray.userData.source={handedness:'right'};
   const mount=new T.Group();mount.position.set(0,.11,-.045);ray.add(mount);
@@ -314,7 +314,7 @@ test('the muzzle follows the pistol with a recoil kick and the aim keeps the con
   const state=Object.assign(Object.create(VRController.prototype),{mode:'xr',settings:VR_DEFAULTS,controllers:[{ray,gun}],hooks:{game:()=>({weaponIndex:0}),world:()=>({T,camera})}});
   let aim=state.aim();assert.ok(aim.origin.distanceTo(new T.Vector3(.25,1.31,-.975))<1e-6,'the muzzle sits above the grip and in front of it');
   assert.ok(aim.direction.distanceTo(new T.Vector3(0,0,-1))<1e-8);
-  gun.rotation.x=.16;aim=state.aim();assert.ok(aim.direction.distanceTo(new T.Vector3(0,0,-1))<1e-8,'recoil moves the model only; the shot direction stays on the controller ray');
+  gun.rotation.x=.16;aim=state.aim();assert.ok(aim.direction.distanceTo(new T.Vector3(0,Math.sin(.16),-Math.cos(.16)))<1e-8,'the ballistic ray follows the visible barrel during tracked recoil');
 });
 test('the VR portal strip and health display release all resources on headset exit',()=>{
   const original=globalThis.document;globalThis.document={createElement:()=>({width:0,height:0})};
