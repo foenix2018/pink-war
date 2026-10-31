@@ -19,10 +19,10 @@ function fixture(t,skillsInput=()=>false){
  const w={T,scene,camera,renderer,game,createGun:makeGun,createHand:()=>new T.Group(),obstacles:[],accent:'#80baff'};
  const xr=createMissionXR({getWorld:()=>w,onFrame(){},getYaw:()=>0,onPause:()=>{paused=true;},onResume:()=>{paused=false;},isPaused:()=>paused,onHome:()=>{homes++;},onExit:()=>{exits++;},skillsInput});
  const button=()=>({pressed:false,value:0}),left={handedness:'left',targetRaySpace:{hand:'left'},gripSpace:{hand:'left'},gamepad:{axes:[0,0,0,0],buttons:Array.from({length:6},button)}},right={...left,handedness:'right',targetRaySpace:{hand:'right'},gripSpace:{hand:'right'},gamepad:{axes:[0,0,0,0],buttons:Array.from({length:6},button)}};session.inputSources=[left,right];
- let rightQ=new T.Quaternion();const frame={getPose:space=>({transform:{matrix:new T.Matrix4().compose(new T.Vector3(space.hand==='right'?.2:-.2,1.2,-.45),space.hand==='right'?rightQ:new T.Quaternion(),new T.Vector3(1,1,1)).elements}})};
+ let rightQ=new T.Quaternion(),rightTracked=true;const frame={getPose:space=>space.hand==='right'&&!rightTracked?null:({transform:{matrix:new T.Matrix4().compose(new T.Vector3(space.hand==='right'?.2:-.2,1.2,-.45),space.hand==='right'?rightQ:new T.Quaternion(),new T.Vector3(1,1,1)).elements}})};
  const press=(source,index,yes)=>{source.gamepad.buttons[index]={pressed:yes,value:Number(yes)};};
  function pointAt(row){const mesh=scene.getObjectByName('Fracture / menu pause immersif'),target=mesh.localToWorld(new T.Vector3(0,(.5-(268+122*row)/720)*.8015625,0));target.z-=game.player.z;rightQ=new T.Quaternion().setFromUnitVectors(new T.Vector3(0,0,-1),target.sub(new T.Vector3(.2,1.2,-.45)).normalize());}
- return{xr,w,session,left,right,frame,press,get requests(){return requests;},get paused(){return paused;},get homes(){return homes;},get exits(){return exits;},get loop(){return loop;},pointAtHome:()=>pointAt(1),pointAtResume:()=>pointAt(0)};
+ return{xr,w,session,left,right,frame,press,get requests(){return requests;},get paused(){return paused;},get homes(){return homes;},get exits(){return exits;},get loop(){return loop;},pointAtHome:()=>pointAt(1),pointAtResume:()=>pointAt(0),loseRight:()=>{rightTracked=false;},recoverRight:()=>{rightTracked=true;}};
 }
 
 test('VR requests keep the click activation and preserve the running mission on entry and exit',async t=>{
@@ -76,4 +76,35 @@ test('native mission XR hides the offhand firearm with an actual boolean for eve
   }
  }
  await f.xr.exit();
+});
+
+
+test('Story M02 can resume with left X after right-hand tracking drops; gameplay stays paused only on real session loss',async t=>{
+ const f=fixture(t);await f.xr.enter();f.xr.input(f.frame,.016);
+ f.w.game.time=62;f.w.game.ammo[0]=5;
+ f.press(f.left,4,true);let input=f.xr.input(f.frame,.016);
+ assert.equal(f.paused,true);assert.equal(input.fire,false);
+ f.press(f.left,4,false);f.xr.input(f.frame,.016);
+ f.loseRight();f.xr.input(f.frame,.016);
+ f.press(f.left,4,true);input=f.xr.input(f.frame,.016);
+ assert.equal(f.paused,false,'right controller occlusion must not undo XR resume');
+ assert.equal(input.fire,false,'lost controller cannot fire');
+ assert.equal(f.w.game.time,62);assert.equal(f.w.game.ammo[0],5);
+ f.press(f.left,4,false);f.xr.input(f.frame,.016);
+ f.press(f.right,0,true);assert.equal(f.xr.input(f.frame,.016).fire,false);
+ f.recoverRight();assert.equal(f.xr.input(f.frame,.016).fire,false,'held trigger stays blocked on tracking recovery');
+ f.press(f.right,0,false);f.xr.input(f.frame,.016);
+ f.press(f.right,0,true);assert.equal(f.xr.input(f.frame,.016).fire,true);
+ await f.xr.exit();
+});
+
+test('Story M02 X resumes after the headset is visible, but not while the XR session is hidden',async t=>{
+ const f=fixture(t);await f.xr.enter();f.xr.input(f.frame,.016);
+ f.session.visibilityState='hidden';f.xr.input(f.frame,.016);assert.equal(f.paused,true);
+ f.press(f.left,4,true);f.xr.input(f.frame,.016);
+ assert.equal(f.paused,true,'resume forbidden while headset is not visible');
+ f.press(f.left,4,false);f.xr.input(f.frame,.016);
+ f.session.visibilityState='visible';
+ f.press(f.left,4,true);f.xr.input(f.frame,.016);
+ assert.equal(f.paused,false);await f.xr.exit();
 });
