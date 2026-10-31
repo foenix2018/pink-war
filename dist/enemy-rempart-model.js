@@ -25,7 +25,18 @@ const outlines={
 };
 export function rempartGeometry(detail='high'){
  const low=detail==='low';if(cache.has(detail))return cache.get(detail);
- const pieces=[],add=(bone,key,g,m)=>{const geometry=g.clone();if(m){geometry.applyMatrix4(m);if(m.determinant()<0){const index=geometry.index?Array.from(geometry.index.array):Array.from({length:geometry.attributes.position.count},(_,i)=>i);for(let i=0;i<index.length;i+=3)[index[i+1],index[i+2]]=[index[i+2],index[i+1]];geometry.setIndex(index);}}pieces.push({bone,key,geometry});};
+ const pieces=[],add=(bone,key,g,m)=>{const geometry=g.clone();if(m){geometry.applyMatrix4(m);if(m.determinant()<0){const index=geometry.index?Array.from(geometry.index.array):Array.from({length:geometry.attributes.position.count},(_,i)=>i);for(let i=0;i<index.length;i+=3)[index[i+1],index[i+2]]=[index[i+2],index[i+1]];geometry.setIndex(index);}}
+ // Keep all helmet components (including its optical slit) ahead of the breastplate.
+ // Transform the rigid Head geometry in bind space, not its RECO1 bone, so native
+ // idle/walk/run/aim clips continue to drive the head without offset drift.
+ if(bone==='Head'){
+  const pivot=new T.Vector3(0,1.73,.115),shift=new T.Vector3(0,.17,.27);
+  const lift=new T.Matrix4().makeTranslation(-pivot.x,-pivot.y,-pivot.z);
+  lift.premultiply(new T.Matrix4().makeScale(1.16,1.13,1.18));
+  lift.premultiply(new T.Matrix4().makeTranslation(pivot.x+shift.x,pivot.y+shift.y,pivot.z+shift.z));
+  geometry.applyMatrix4(lift);
+ }
+ pieces.push({bone,key,geometry});};
  const box=(b,k,size,pos,rot=[0,0,0],bevel=.012)=>add(b,k,low&&(k==='dark'||Math.min(...size)<.03)?new T.BoxGeometry(...size):chamfer(size,Math.min(bevel,...size.map(s=>s*.22))),matrix(pos,rot));
  const plate=(b,k,shape,pos,size=[1,1,1],rot=[0,0,0],depth=.08,curvature=0)=>{
   const points=outlines[shape]||shape,m=matrix(pos,rot,size),bulge=curvature||(['shoulder','shin'].includes(shape)?.032:0);
