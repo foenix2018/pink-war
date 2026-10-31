@@ -1,6 +1,7 @@
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import {walkingSurface} from './surface-steps.js';
 import {assistedAim,firingView} from './aim-assist.js';
+import {sightPoint} from './sight-line.js';
 import {createBreachFrame,createBreachTexture} from './vesper-props.js';
 // M01's book reference map, production combat, and locked Shadow Unit rigs.
 // The V7 page supplies controls; it no longer substitutes its visit map for M01.
@@ -215,20 +216,18 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const v=new T.Vector3(),forward=new T.Vector3(),origin=new T.Vector3(),end=new T.Vector3();
   function aim(){
     if(xr?.active)return xr.aim();
-    camera.updateMatrixWorld(true);camera.getWorldDirection(forward);end.copy(camera.position).addScaledVector(forward,160);
-    let nearest=1;
-    for(const o of obstacles){const hit=segmentBox(camera.position,end,o);if(hit!==null&&hit<nearest)nearest=hit;}
-    for(const e of game.enemies){const hit=traceEnemyHit(camera.position,end,e);if(hit&&hit.t<nearest)nearest=hit.t;}
-    const target=end.clone().lerp(camera.position,1-nearest);
+    camera.updateMatrixWorld(true);camera.getWorldDirection(forward);
+    const target=sightPoint(T,camera.position,forward,{obstacles:game.obstacles,enemies:game.enemies});
     const heldGun=effectiveView()==='third'?rig?.model.gun:gun;
     const muzzle=heldGun?.userData.flashFor?.(game.nextDualHand)||heldGun?.userData.flash;if(muzzle){muzzle.updateWorldMatrix(true,false);muzzle.getWorldPosition(origin);}else origin.copy(camera.position).addScaledVector(forward,.28);
     for(const o of obstacles){const hit=segmentBox(camera.position,origin,o);if(hit!==null){origin.lerpVectors(camera.position,origin,Math.max(0,hit-.02));break;}}
     const direction=target.sub(origin).normalize();
-    return {origin,direction:new T.Vector3().copy(assistedAim({camera:camera.position,forward,origin,direction,enemies:game.enemies,obstacles:game.obstacles,touch:!!navigator.maxTouchPoints}))};
+    return {origin,direction:ads>.3?direction:new T.Vector3().copy(assistedAim({camera:camera.position,forward,origin,direction,enemies:game.enemies,obstacles:game.obstacles,touch:!!navigator.maxTouchPoints}))};
   }
   function syncCamera(s,dt){
     if(xr?.active){xr.syncPose();return;}
     ads+=(Number(s.aiming)-ads)*(1-Math.exp(-dt*14));
+    game.precisionAiming=ads>.55;
     camera.fov=magnifiedFov(64,1+((OPTICS[game.weapon.id]?.magnification||1)-1)*ads);if(!xr?.active)camera.fov=firingView(camera.fov,game.weapon.melee?0:Math.min(1,feel.state.flash*4),ads).fov;camera.updateProjectionMatrix();
     if(effectiveView()==='third'){
       const p=thirdPersonPosition(game.player,-s.yaw,s.pitch,obstacles,characterId==='lylu'?1.71:1.61);camera.position.set(p.x,p.y,p.z);
