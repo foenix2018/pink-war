@@ -243,9 +243,9 @@ selectView(view); $('view-button').onclick = () => selectView(view === 'fps' ? '
 optionsViewControl=mountViewControl($('settings-dialog'),{getView:()=>view,onSelect:selectView,canChange:()=>!vr?.active});
 pauseViewControl=bindViewButton($('pause-view'),{getView:()=>view,onSelect:selectView,canChange:()=>!vr?.active});
 
-function pause() { if (phase !== 'playing') return; setScreenMusic('paused');ambience?.pause(); phase = 'paused'; resetInput(); pauseViewControl.refresh(); if (vr?.mode !== 'xr') $('pause-dialog').showModal(); }
+function pause() { if (phase !== 'playing') return;document.exitPointerLock?.();setScreenMusic('paused');ambience?.pause(); phase = 'paused'; resetInput(); pauseViewControl.refresh(); if (vr?.mode !== 'xr') $('pause-dialog').showModal(); }
 function resume() { if (phase !== 'paused') return; for (const d of document.querySelectorAll('dialog[open]')) d.close(); phase = 'playing'; resetInput(); audioReady(); }
-function openPanel(id) { if(id==='settings-dialog')optionsViewControl?.refresh(); if (phase === 'playing') { phase = 'paused'; resetInput();setScreenMusic('paused');ambience?.pause(); } for (const d of document.querySelectorAll('dialog[open]')) d.close(); $(id).showModal(); }
+function openPanel(id) { document.exitPointerLock?.();if(id==='settings-dialog')optionsViewControl?.refresh(); if (phase === 'playing') { phase = 'paused'; resetInput();setScreenMusic('paused');ambience?.pause(); } for (const d of document.querySelectorAll('dialog[open]')) d.close(); $(id).showModal(); }
 function closePanel(dialog) { if(dialog.id==='outfit-dialog'){closeOutfit();return;} dialog.close(); if (phase === 'paused') $('pause-dialog').showModal(); }
 $('pause-button').onclick = pause; $('resume-button').onclick = resume;
 $('how-button').onclick = () => openPanel('help-dialog'); $('settings-button').onclick = () => openPanel('settings-dialog'); $('pause-help').onclick = () => openPanel('help-dialog');
@@ -289,7 +289,7 @@ $('outfit-front').onclick=()=>{$('outfit-rotation').value=180;};$('outfit-back')
 
 async function home() {
   if (vr?.active) await vr.exit();
-  for (const d of document.querySelectorAll('dialog[open]')) d.close(); phase = 'lobby'; resetInput();
+  document.exitPointerLock?.();for (const d of document.querySelectorAll('dialog[open]')) d.close(); phase = 'lobby'; resetInput();
   document.body.classList.remove('playing'); $('game-hud').hidden = true; setScreenMusic('paused');ambience?.pause();world.resetDynamic();
   saberAudio?.update({active:false,equipped:false});
   world.setRangeActive(false);world.setCampaignActive(false);selectMode(selectedMode);
@@ -472,7 +472,7 @@ function aim(hand=game.weapon.dual?game.nextDualHand:'right') {
   const muzzle=gun.userData.flashFor?.(hand)||gun.userData.flash;
   muzzle.updateWorldMatrix(true, false); muzzle.getWorldPosition(origin);
   let direction = sightTarget(camera.position,forward).sub(origin).normalize();
-  if(game.mode!=='training')direction=new T.Vector3().copy(assistedAim({camera:camera.position,forward,origin,direction,enemies:game.enemies,obstacles:world.obstacles,touch:!!navigator.maxTouchPoints,enabled:settings.aimAssist!==false}));
+  if(game.mode!=='training'&&aimBlend<.3)direction=new T.Vector3().copy(assistedAim({camera:camera.position,forward,origin,direction,enemies:game.enemies,obstacles:world.obstacles,touch:!!navigator.maxTouchPoints,enabled:settings.aimAssist!==false}));
   return { origin, direction };
 }
 
@@ -761,13 +761,20 @@ function bindCanvas() {
   if (canvas.dataset.controlsBound) return;
   canvas.dataset.controlsBound = 'true';
   canvas.addEventListener('contextmenu',e=>e.preventDefault());
-  canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===0&&phase==='playing'){firingPointers.add(e.pointerId);firePressQueued=true;audioReady();}});
+  canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===0&&phase==='playing'){firingPointers.add(e.pointerId);firePressQueued=true;audioReady();if(vr.mode==='off'&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch(()=>{});}});
   canvas.addEventListener('pointerdown',e=>{if(e.button===2&&phase==='playing'){e.preventDefault();mouseAim=true;}});
   canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===1&&phase==='playing'){e.preventDefault();meleeQueued=true;}});
   canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
   canvas.addEventListener('pointerdown', e => { if ((e.pointerType==='mouse'&&e.button!==0)||phase !== 'playing' || canvasPointer !== null || (e.pointerType!=='mouse' && e.clientX < window.innerWidth*.5)) return; e.preventDefault(); canvasPointer = e.pointerId; lastDrag = { x: e.clientX, y: e.clientY }; try { canvas.setPointerCapture(e.pointerId); } catch {} });
-  canvas.addEventListener('pointermove', e => { if (phase !== 'playing' || e.pointerId !== canvasPointer || !lastDrag) return; const fine=aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend);yaw -= (e.clientX - lastDrag.x) * .004 * settings.sensitivity*fine; pitch = clamp(pitch - (e.clientY - lastDrag.y) * .004 * settings.sensitivity*fine, -.85, .7); lastDrag = { x: e.clientX, y: e.clientY }; });
+  canvas.addEventListener('pointermove', e => { if (phase !== 'playing' || document.pointerLockElement===canvas || e.pointerId !== canvasPointer || !lastDrag) return; const fine=aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend);yaw -= (e.clientX - lastDrag.x) * .004 * settings.sensitivity*fine; pitch = clamp(pitch - (e.clientY - lastDrag.y) * .004 * settings.sensitivity*fine, -.85, .7); lastDrag = { x: e.clientX, y: e.clientY }; });
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) canvas.addEventListener(type, e => { if (e.pointerId === canvasPointer) { canvasPointer = null; lastDrag = null; } });
+   // PC: smooth continuous mouse-look with free aiming even with no button held.
+   window.addEventListener('mousemove',e=>{
+     if(phase!=='playing'||document.pointerLockElement!==canvas||vr.mode!=='off')return;
+     const factor=aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend);
+     yaw-=e.movementX*.004*settings.sensitivity*factor;
+     pitch=clamp(pitch-e.movementY*.004*settings.sensitivity*factor,-.85,.7);
+   });
 }
 window.addEventListener('rosee-renderer-recovered', () => { $('world').removeAttribute('data-controls-bound'); bindCanvas(); $('renderer-label').textContent = `${world.backend.toUpperCase()} · CONÇU POUR LE TACTILE`; });
 function frame(timestamp, xrFrame) {
@@ -806,6 +813,7 @@ function stepFrame(timestamp, xrFrame) {
     document.body.classList.toggle('aiming',aiming);document.body.classList.toggle('scoped',aiming&&game.weapon.id==='lance'&&view==='fps'&&vr.mode==='off');
     $('aim-button').setAttribute('aria-pressed',String(aiming));
     currentSprinting=!aiming&&(touchSprinting||vrInput.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight'));
+    game.precisionAiming=aimBlend>.55;
     game.step(dt, { x, z, yaw: facing, moveYaw, sprint: currentSprinting, jump,crouchToggle });
     crouchCameraBlend+=(Number(game.player.crouched)-crouchCameraBlend)*Math.min(1,dt*8);
     if(pickupQueued||vrInput.pickup){game.collectWeapon();pickupQueued=false;syncRangeArmory();}
