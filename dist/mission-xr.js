@@ -39,15 +39,20 @@ export function createMissionXR({getWorld,onFrame,onPause,onResume,onHome,onExit
    const w=getWorld(),T=w.T;syncTrackedHands(entries,session,frame,w.renderer.xr.getReferenceSpace());api.syncPose();
    const left=entries.find(e=>e.source?.handedness==='left'),right=entries.find(e=>e.source?.handedness==='right');const lp=left?.source?.gamepad,rp=right?.source?.gamepad;
    const edge=(name,value)=>{const hit=value&&!previous.get(name);previous.set(name,value);return hit;};
-   const pause=edge('pause',down(lp?.buttons[4]));if(pause){blocked=true;if(reading)api.closeJournal();else isPaused()?onResume():onPause();}
+   const pause=edge('pause',!!left?.tracked&&down(lp?.buttons[4]));if(pause){blocked=true;if(reading)api.closeJournal();else if(!session.visibilityState||session.visibilityState==='visible'){isPaused()?onResume():onPause();}}
    const trigger=down(rp?.buttons[0]),leftTrigger=down(lp?.buttons[0]);
-   if(!trigger&&!leftTrigger)blocked=false;
-   if(!right?.tracked||session.visibilityState&&session.visibilityState!=='visible'){blocked=true;if(!isPaused())onPause();}
+   if(!trigger&&!leftTrigger&&right?.tracked)blocked=false;
+   // A lost right-hand tracking sample blocks firing, but must not
+   // re-pause the mission after an explicit X-button resume.
+   if(!right?.tracked)blocked=true;
+   if(session.visibilityState&&session.visibilityState!=='visible'){
+     blocked=true;if(!isPaused())onPause();
+   }
    const reload=edge('reload',down(rp?.buttons[5])),next=edge('next',down(lp?.buttons[5])),jump=edge('jump',down(rp?.buttons[4])),interact=edge('interact',down(lp?.buttons[3]));
    // Armour layer: right stick click strikes; the left index trigger throws a charge unless it fires the second pistol.
    const melee=edge('melee',down(rp?.buttons[3])),charge=edge('charge',leftTrigger&&!w.game.weapon?.dual);
    if(reading){menu.update({active:false});reading.update(w.camera,right?.ray,trigger);blocked=true;return controls={x:0,z:0,fire:false,leftFire:false,jump:false,aim:false,sprint:false};}
-   const consumed=menu.update({active:isPaused(),camera:w.camera,ray:right?.ray,trigger});
+   const consumed=menu.update({active:isPaused(),camera:w.camera,ray:right?.tracked?right.ray:null,trigger:right?.tracked?trigger:false});
    if(consumed){blocked=true;controls={x:0,z:0,fire:false,leftFire:false,jump:false,aim:false,sprint:false};return controls;}
    const skillsConsumed=!isPaused()&&skillsInput({T,scene:w.scene,camera:w.camera,left:left?.anchor,right:right?.ray,trigger:trigger&&!blocked,enabled:!!right?.tracked});
    if(consumed||skillsConsumed){blocked=true;controls={x:0,z:0,fire:false,leftFire:false,jump:false,aim:false,sprint:false};return controls;}
