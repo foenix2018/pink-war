@@ -314,3 +314,126 @@ function release(e){touches.delete(e.pointerId);if(touches.size<2)canvas._distan
 canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);
 canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(2,Math.min(8,zoom*(1+Math.sign(e.deltaY)*.07)));},{passive:false});
 if(window.galleryPendingName&&!viewer.hidden)window.galleryBuild(window.galleryPendingName);
+
+
+// Vignettes photographiques natives de la galerie — rendus figés des VRAIS modèles du moteur.
+// Une seule scène légère, capture à la demande, aucun rendu continu et cache partagé Arsenal/Stats.
+const galleryThumbCache=new Map();
+const galleryThumbWaiters=new Map();
+const galleryThumbQueue=[];
+const galleryThumbQueued=new Set();
+let galleryThumbBusy=false;
+let galleryThumbStage=null;
+
+async function initGalleryThumbStage(){
+ if(galleryThumbStage)return galleryThumbStage;
+ const thumbCanvas=document.createElement('canvas');
+ const thumbRenderer=new WebGPURenderer({
+  canvas:thumbCanvas,forceWebGL:true,antialias:false,alpha:false,preserveDrawingBuffer:true
+ });
+ await thumbRenderer.init();
+ thumbRenderer.setPixelRatio(1);
+ thumbRenderer.setSize(224,224,false);
+ thumbRenderer.outputColorSpace=T.SRGBColorSpace;
+ thumbRenderer.toneMapping=T.ACESFilmicToneMapping;
+ thumbRenderer.toneMappingExposure=1.36;
+ const thumbScene=new T.Scene();
+ thumbScene.background=new T.Color(0x101d2e);
+ thumbScene.add(new T.HemisphereLight(0xecf4ff,0x142132,2.15));
+ const mainLight=new T.DirectionalLight(0xffddf0,3.3);
+ mainLight.position.set(-2.5,5,4);
+ thumbScene.add(mainLight);
+ const oppositeLight=new T.DirectionalLight(0x79baff,1.7);
+ oppositeLight.position.set(4,1,-3);
+ thumbScene.add(oppositeLight);
+ const accentLight=new T.DirectionalLight(0xfe69ba,1.7);
+ accentLight.position.set(2,3,5);
+ thumbScene.add(accentLight);
+ const thumbPivot=new T.Group();
+ thumbScene.add(thumbPivot);
+ const thumbCamera=new T.PerspectiveCamera(41,1,.025,100);
+ thumbCamera.position.set(1.35,.75,3.3);
+ thumbCamera.lookAt(0,0,0);
+ galleryThumbStage={thumbCanvas,thumbRenderer,thumbScene,thumbPivot,thumbCamera};
+ return galleryThumbStage;
+}
+async function renderGalleryThumbnail(name){
+ const stage=await initGalleryThumbStage();
+ let actor=null;
+ try{
+  actor=await actualObject(name);
+  repairMissingMaterials(actor.root);
+  actor.animate?.(0.12,.016);
+  actor.root.updateMatrixWorld(true);
+  const box=new T.Box3().setFromObject(actor.root);
+  if(box.isEmpty())throw Error('Modèle vide : '+name);
+  const size=box.getSize(new T.Vector3());
+  const center=box.getCenter(new T.Vector3());
+  const scale=2.1/Math.max(size.x,size.y,size.z,.02);
+  const centered=new T.Group();
+  centered.add(actor.root);
+  centered.position.set(-center.x,-center.y,-center.z);
+  stage.thumbPivot.add(centered);
+  stage.thumbPivot.scale.setScalar(scale);
+  stage.thumbPivot.rotation.y=name==='BRUTE'?.22:name==='GABY'||name==='CARA'?.35:.10;
+  stage.thumbCamera.position.set(1.22,.50,3.45);
+  stage.thumbCamera.lookAt(0,0,0);
+  await stage.thumbRenderer.renderAsync(stage.thumbScene,stage.thumbCamera);
+  const image=stage.thumbCanvas.toDataURL('image/png');
+  if(!image.startsWith('data:image/png;base64,')||image.length<1000)throw Error('Capture de miniature vide');
+  return image;
+ }finally{
+  actor?.dispose?.();
+  stage.thumbPivot.clear();
+  stage.thumbPivot.scale.setScalar(1);
+  stage.thumbPivot.rotation.set(0,0,0);
+ }
+}
+function applyGalleryThumbnail(img,src){
+ if(!img.isConnected)return;
+ img.src=src;
+ const holder=img.closest('.gallery-thumb');
+ if(holder)holder.dataset.state='ready';
+}
+async function processGalleryThumbnails(){
+ if(galleryThumbBusy)return;
+ galleryThumbBusy=true;
+ try{
+  while(galleryThumbQueue.length){
+   const name=galleryThumbQueue.shift();
+   galleryThumbQueued.delete(name);
+   const waiters=galleryThumbWaiters.get(name);
+   if(!waiters||![...waiters].some(img=>img.isConnected)){
+    galleryThumbWaiters.delete(name);continue;
+   }
+   try{
+    const src=galleryThumbCache.get(name)||await renderGalleryThumbnail(name);
+    galleryThumbCache.set(name,src);
+    for(const img of waiters)applyGalleryThumbnail(img,src);
+   }catch(error){
+    console.warn('Galerie : miniature native indisponible pour',name,error);
+    for(const img of waiters){
+     if(img.isConnected)img.closest('.gallery-thumb')?.setAttribute('data-state','unavailable');
+    }
+   }finally{
+    galleryThumbWaiters.delete(name);
+   }
+   // Une capture par frame, sans boucle 3D permanente en arrière-plan.
+   await new Promise(resolve=>requestAnimationFrame(resolve));
+  }
+ }finally{
+  galleryThumbBusy=false;
+ }
+}
+window.galleryRequestThumbnail=(name,img)=>{
+ if(!name||!img)return;
+ if(galleryThumbCache.has(name)){applyGalleryThumbnail(img,galleryThumbCache.get(name));return;}
+ let waiters=galleryThumbWaiters.get(name);
+ if(!waiters){waiters=new Set();galleryThumbWaiters.set(name,waiters);}
+ waiters.add(img);
+ if(!galleryThumbQueued.has(name)){
+  galleryThumbQueued.add(name);galleryThumbQueue.push(name);
+ }
+ void processGalleryThumbnails();
+};
+window.dispatchEvent(new Event('gallery-thumbnails-ready'));
