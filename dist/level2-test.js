@@ -1007,7 +1007,7 @@ window.addEventListener('mousemove',e=>{
 let dragPointer=null,dragX=0,dragY=0;
 window.addEventListener('pointerdown',e=>{
  if(!running||e.target!==canvas)return;
- if(e.button===2){mouseAim=true;e.preventDefault();return;}
+ if(e.button===2){mouseAim=true;e.preventDefault();if(e.pointerType==='mouse'&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch(()=>{});return;}
  if(e.button===1&&e.pointerType==='mouse'){meleeQueued=true;e.preventDefault();return;}
  if(e.button!==0||e.pointerType!=='mouse')return;
  // On phones, the canvas is a camera surface, not a fire trigger.
