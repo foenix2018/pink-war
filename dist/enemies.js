@@ -227,7 +227,7 @@ export function createEnemyFactory(mats,{detail='high'}={}){
         a.add(sensor,glow,matrix([0,1.04,-.28],[0,0,0],[.05,.05,.021]),false);
       }
     }else{
-      humanoid=buildHumanoidRobot({form,elite,ranged,detail,armor,dark,servo,hazard:form==='listener'?listenerStencil:form==='brute'?bruteEnergy:hazard,optics,glow,reactor:form==='brute'?bruteEnergy:optics,boneAt,assembly,thorax,pelvis});
+      humanoid=buildHumanoidRobot({form,elite,ranged,detail,armor,dark,servo,hazard:form==='listener'?listenerStencil:form==='brute'?bruteEnergy:hazard,optics,glow,reactor:['brute','bulwark'].includes(form)?bruteEnergy:optics,boneAt,assembly,thorax,pelvis});
       legRig.push(...humanoid.legRig);armRig.push(...humanoid.armRig);groundGun=humanoid.groundGun;gunSignal=humanoid.gunSignal;
     }
     const result={parts:bakeRig(assemblies),bones,legRig,armRig,pelvis,thorax,rotors,probeHead,probeSignal,groundGun,gunSignal,optics,humanoid};
