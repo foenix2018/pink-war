@@ -488,7 +488,8 @@ export class VRController {
       }
       if (!xr) { edge('pause', DESKTOP_BUTTONS.pause); edge('jump', DESKTOP_BUTTONS.jump); edge('pickup', DESKTOP_BUTTONS.interact); edge('crouch', DESKTOP_BUTTONS.crouch);edge('companion',DESKTOP_BUTTONS.companion); }
     }
-    const pauseConsumed=xr&&this.fracturePause?.update({active:phase==='paused',camera:this.hooks.world().camera,ray:controllerOf(this,'right')?.ray,trigger:pressed(padOf(this,'right')?.buttons?.[0])});
+    const primary=controllerOf(this,'right');
+    const pauseConsumed=xr&&this.fracturePause?.update({active:phase==='paused',camera:this.hooks.world().camera,ray:primary?.tracked?primary.ray:null,trigger:mainTracked&&pressed(padOf(this,'right')?.buttons?.[0])});
     if(pauseConsumed){this.cancelTrigger();if(actions.has('pause')&&this.hooks.phase()===phase)this.hooks.togglePause();return {...result,x:0,z:0,turn:0,tilt:0,fire:false,fireHands:{left:false,right:false},jump:false,pickup:false,crouchToggle:false};}
     if (actions.has('pause')) { this.hooks.togglePause(); if (xr) this.cancelTrigger(); }
     else if(actions.has('companion'))this.hooks.toggleSkills?.();
@@ -500,7 +501,12 @@ export class VRController {
       else if (actions.has('reload')) { if (game.reload() && xr) this.cancelTrigger(); }
     }
     this.trackingLost = xr && !mainTracked;
-    if (xr && (!visible || !mainTracked)) { this.cancelTrigger(); this.hooks.pause?.(); }
+    if(xr&&(!visible||!mainTracked)){
+      // Controller occlusion cancels shooting but never toggles back to pause
+      // after the player explicitly pressed X to resume.
+      this.cancelTrigger();
+      if(!visible)this.hooks.pause?.();
+    }
     const playing = (this.hooks.phase?.() || phase) === 'playing';
     if(skillsConsumed){this.cancelTrigger();this.precision=this.aiming=false;return { ...result,x:0,z:0,turn:0,tilt:0,snap:0,fire:false,fireHands:{left:false,right:false},sprint:false,precision:false,aim:false,jump:false,pickup:false,crouchToggle:false };}
     if (!playing) { result.x = result.z = result.turn = result.tilt = result.snap = 0; result.sprint = result.precision = result.aim = false; result.jump = false;result.pickup = false; if (xr) this.cancelTrigger(); }
