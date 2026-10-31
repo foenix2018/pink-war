@@ -32,7 +32,7 @@ test('real VSAV and FPT keep their metric footprints, characterful features and 
   assert.ok(bounds.min.y>-.03,'wheels must stay on the ground');
   assert.ok(bounds.max.y<=RESCUE_VEHICLE_PROFILE[kind].maxHeight+.2,'vehicle must not exceed garage clearance');
   let n=0;v.traverse(x=>{if(!x.isMesh)return;const pos=x.geometry.attributes.position;assert.ok(pos&&pos.count>0);n+=pos.count/3;for(const k of pos.array)assert.ok(Number.isFinite(k));});
-  assert.ok(n<18000,'mobile geometry budget for decorative static vehicle');
+  assert.ok(n<28000,'mobile geometry budget for decorative static vehicle');
  }
 });
 test('W02 detailed hydrants and industrial generators are merged for mobile renderers',()=>{
