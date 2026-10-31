@@ -108,3 +108,33 @@ test('Story M02 X resumes after the headset is visible, but not while the XR ses
  f.press(f.left,4,true);f.xr.input(f.frame,.016);
  assert.equal(f.paused,false);await f.xr.exit();
 });
+
+
+test('Arena and Range X resumes VR after the primary controller briefly loses tracking',t=>{
+ const f=fixture(t);let phase='playing',pauses=0,resumes=0;
+ const controllers=[f.left,f.right].map(source=>{
+   const ray=new T.Group(),anchor=new T.Group(),gun=new T.Group(),bare=new T.Group();
+   ray.userData.source=source;anchor.matrixAutoUpdate=false;f.w.scene.add(ray,anchor);
+   return {ray,anchor,gun,bare,source,tracked:true};
+ });
+ const state=Object.assign(Object.create(VRController.prototype),{
+   mode:'xr',session:f.session,settings:{...VR_DEFAULTS},controllers,
+   previous:new Map(),triggerBlocked:true,
+   hooks:{world:()=>f.w,game:()=>f.w.game,phase:()=>phase,
+     pause:()=>{pauses++;phase='paused';},
+     togglePause:()=>{phase=phase==='playing'?'paused':'playing';if(phase==='playing')resumes++;else pauses++;}}
+ });
+ state.makePauseBoard();state.input(f.frame);
+ f.press(f.left,4,true);state.input(f.frame);assert.equal(phase,'paused');
+ f.press(f.left,4,false);state.input(f.frame);
+ f.loseRight();state.input(f.frame);
+ f.press(f.left,4,true);const input=state.input(f.frame);
+ assert.equal(phase,'playing','temporary occlusion cannot force a second pause');
+ assert.equal(input.fire,false);
+ assert.equal(pauses,1);assert.equal(resumes,1);
+ f.press(f.left,4,false);state.input(f.frame);
+ f.recoverRight();f.press(f.right,0,true);assert.equal(state.input(f.frame).fire,false);
+ f.press(f.right,0,false);state.input(f.frame);
+ f.press(f.right,0,true);assert.equal(state.input(f.frame).fire,true);
+ state.removePauseBoard();
+});
