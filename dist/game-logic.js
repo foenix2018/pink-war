@@ -312,6 +312,7 @@ export class ArenaGame {
     this.dual={ammo:{left:12,right:12},readyAt:{left:0,right:0},shotAt:{left:-Infinity,right:-Infinity},held:{left:false,right:false},next:'right',flatAt:0};
     this.ownedWeapons = new Set(starterWeaponOrder(this.characterId)); this.weaponOffers = []; // Primary + VORTEX AR-7 as second weapon; preserve the VX-9.
     this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false; this.semiPending=false;
+    this.aimingPrecision=false;
     this.lastDamage = 0; this.regenerating = false;
     // Armour layer (armor-combat.js): shield on when an engine enables it, two impulse charges to start.
     this.player.shield = this.shieldCapacity || 0; this.shieldCharging = false; this.lastHit = null;
@@ -543,11 +544,13 @@ export class ArenaGame {
     const nx = direction.x / length, ny = direction.y / length, nz = direction.z / length;
     const flat = Math.hypot(nx, nz), rx = flat>1e-6?-nz/flat:1, rz = flat>1e-6?nx/flat:0;
     const ux=-rz*ny,uy=rz*nx-rx*nz,uz=rx*ny;
+    // ADS keeps the line of sight centred while hip fire retains the original cone.
+    const spread=w.spread*(this.aimingPrecision&&w.id!=='m12'?.08:1);
     for (let i = 0; i < w.pellets; i++) {
       // A deterministic ring keeps the plasma spread consistent on touch screens.
       const angle = w.id==='m12'?(i-1)/Math.max(1,w.pellets-1)*Math.PI*2:i/Math.max(1,w.pellets-1)*Math.PI*2;
-      const sx = w.id==='m12'&&i===0?0:w.pellets > 1 && i > 0 ? Math.cos(angle) * w.spread : (this.random() - .5) * w.spread;
-      const sy = w.id==='m12'&&i===0?0:w.pellets > 1 && i > 0 ? Math.sin(angle) * w.spread : (this.random() - .5) * w.spread;
+      const sx = w.id==='m12'&&i===0?0:w.pellets > 1 && i > 0 ? Math.cos(angle) * spread : (this.random() - .5) * spread;
+      const sy = w.id==='m12'&&i===0?0:w.pellets > 1 && i > 0 ? Math.sin(angle) * spread : (this.random() - .5) * spread;
       const vx = nx + rx * sx+(w.id==='m12'?ux*sy:0), vy = ny + (w.id==='m12'?uy*sy:sy), vz = nz + rz * sx+(w.id==='m12'?uz*sy:0), n = Math.hypot(vx, vy, vz);
       this.bullets.push({ id: this.nextId++, x: origin.x, y: origin.y, z: origin.z,
         vx: vx / n * w.speed, vy: vy / n * w.speed, vz: vz / n * w.speed, life: 2.4,
