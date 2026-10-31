@@ -8,6 +8,7 @@ import {createLivedInDressing} from './vesper-lived-in.js';
 import {createVesperProps} from './vesper-props.js';
 import {createRescueVehicle} from './rescue-vehicle-detail.js';
 import {createHardSurfaceFurniture} from './realistic-furniture.js';
+import {createStationEquipment} from './station-equipment-detail.js';
 import { ROOMS, DOORS, INTERACTIONS, roomAt } from './m01-extension-layout.js';
 
 const TAU = Math.PI * 2;
@@ -71,6 +72,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
   };
   M.foliage.name = 'feuillage';
   const furnishings=createHardSurfaceFurniture(T,root,{M,low});
+  const stationGear=createStationEquipment(T,root,{M,low});
 
   // Shared physical surface channels for close-up furniture and equipment.
   for (const [keys,kind] of [
@@ -313,7 +315,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, h = o.height, along = w >= d;
     // Furniture gets authored, recognizable geometry instead of collision proxies.
     // Greenhouse 'bed' remains a PLANT BED, not a sleeping mattress.
-    if(furnishings.dress(o))return;
+    if(furnishings.dress(o)||stationGear.dress(o))return;
     switch (o.kind) {
       case 'drill-tower':
         box(M.concrete, x1, x2, 0, h, z1, z2);
@@ -552,7 +554,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
       placeFixtures(); buildRooms(); buildWalls(obstacles);
       for (const o of obstacles) if (o.extension) { dress(o); if (o.kind !== 'bed') details.accessories(o); }
       buildFixtureMeshes(); buildDoors(); buildDevices(obstacles); buildSigns(); buildCyber();
-      flushGeometry(); flushPieces(); furnishings.finish(); details.finish(); livedIn.build(obstacles);
+      flushGeometry(); flushPieces(); furnishings.finish(); stationGear.finish(); details.finish(); livedIn.build(obstacles);
     },
     update(t, dt, eye, player = eye.position) {
       updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt); details.update(power); livedIn.update(t,dt,power);
@@ -581,6 +583,6 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     markDone(id, done = true) { const d = devices.get(id); if (d) { d.done = done; if (!done) { d.turn = 0; if (d.moving) d.moving.rotation.set(0, 0, 0); } } },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
     daylightAt,
-    stats() { return { ...stats, furniture: {...furnishings.stats}, details: details.stats(), livedIn: livedIn.stats(), power: power.caserne, adapt: +adapt.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, furniture: {...furnishings.stats}, stationEquipment: {...stationGear.stats}, details: details.stats(), livedIn: livedIn.stats(), power: power.caserne, adapt: +adapt.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }
