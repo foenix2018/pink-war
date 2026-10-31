@@ -20,16 +20,19 @@ test('armored grenade has its physical casing, dual luminous bands, top emitter 
  fx.dispose();assert.equal(casing.parent,null,'cleanup removes the grenade');
 });
 
-test('impulse explosion animates a spherical pulse, ground ring, arc and instanced fragments with no lingering objects',()=>{
+test('IX-09 explosion uses fire, smoke and ballistic fragments without rotating circles',()=>{
  const scene=new T.Scene(),fx=createArmorFeedback({T,scene,camera:null});
- fx.handle({type:'charge-blast',x:0,y:1.0,z:-6,radius:5.5});
- assert.ok(scene.children.some(o=>o.isInstancedMesh&&o.count===12),'one draw for twelve energetic fragments');
- const blast=scene.children.filter(o=>o.isMesh||o.isInstancedMesh);
- assert.equal(blast.length,4);
- fx.update({time:0,thrownCharges:[]},.15);
- assert.ok(blast.some(o=>o.scale.x>1),'the explosion radius grows');
- fx.update({time:0,thrownCharges:[]},.5);
- assert.equal(scene.children.length,0,'pulse and fragments disappear once finished');
+ fx.handle({type:'charge-blast',x:0,y:1,z:-6,radius:5.5});
+ const meshes=scene.children.filter(o=>o.isInstancedMesh);
+ assert.equal(meshes.length,3,'three pooled batches: smoke, flame and fragments');
+ assert.ok(meshes.some(o=>/fumée/.test(o.name)));
+ assert.ok(meshes.some(o=>/boule de feu/.test(o.name)));
+ assert.ok(meshes.some(o=>/débris/.test(o.name)));
+ assert.ok(!scene.children.some(o=>o.geometry?.type==='RingGeometry'||o.geometry?.type==='TorusGeometry'),'no decorative circular blasts');
+ fx.update({time:0,thrownCharges:[]},.18);
+ assert.ok(meshes.every(o=>o.instanceMatrix.version>0),'instanced explosion particles are animated');
+ fx.update({time:0,thrownCharges:[]},4.5);
+ assert.equal(scene.children.length,0,'smoke dissipates and batches clean up');
  fx.dispose();
 });
 

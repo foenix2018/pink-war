@@ -4,6 +4,7 @@
 import { hostileShotProfile, predictShot } from './enemy-fire.js';
 import { enemyVolley } from './enemy-combat.js';
 import {probeFlightState} from './probe-damage.js';
+import {probeSpecialistGuidance} from './enemy-specialists.js';
 export const PROBE = Object.freeze({radius: .9, height: 1.08, aimHeight: .55, hover: 2.7, windup: .7});
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 
@@ -60,9 +61,8 @@ export function updateProbe(game, e, dt, segmentBox) {
 
   let vx = 0, vz = 0;
   if (e.awareness === 'engaged') {
-    const approach = clamp((range - 14) / 5, -1, 1), side = e.id % 2 ? 1 : -1;
-    vx = dx / range * approach + dz / range * .27 * side;
-    vz = dz / range * approach - dx / range * .27 * side;
+    const guidance=probeSpecialistGuidance(e,{time:game.time,range,dx,dz});
+    vx=guidance.vx;vz=guidance.vz;
   } else if (e.awareness === 'search') {
     const x = e.lastKnownX - e.x, z = e.lastKnownZ - e.z, distance = Math.hypot(x, z);
     if (distance > 2) {vx = x / distance * .65; vz = z / distance * .65;}
@@ -76,7 +76,8 @@ export function updateProbe(game, e, dt, segmentBox) {
   const norm = Math.max(1, Math.hypot(vx, vz)), speed = (e.speed??3.6) * damage.speedScale * (stunned?.03:(e.limpUntil||0)>game.time?.55:1);
   vx = vx / norm * speed; vz = vz / norm * speed;
   let desiredHeight = (e.awareness === 'patrol' ? (e.homeHeight || 0) : e.lastKnownHeight || 0) + PROBE.hover
-    + Math.sin(game.time * 1.5 + (e.phase||0)) * .18;
+    + Math.sin(game.time * 1.5 + (e.phase||0)) * .18
+    + (e.awareness==='engaged'?probeSpecialistGuidance(e,{time:game.time,range,dx,dz}).altitudeOffset:0);
   // Orbit a blocking wall rather than repeatedly pushing directly into it.
   const ahead = {x: eye.x + vx * .65, y: eye.y, z: eye.z + vz * .65};
   if (game.blocked(eye, ahead)) {
