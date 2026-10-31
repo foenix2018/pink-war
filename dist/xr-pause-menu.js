@@ -8,7 +8,7 @@ export function createXRPauseMenu(T,scene,{accent='#f28ab1',onResume=()=>{},onHo
  const raycaster=new T.Raycaster(),origin=new T.Vector3(),direction=new T.Vector3(),q=new T.Quaternion();let shown=false,pressed=true,hover=-1;
  const rows=[['REPRENDRE',onResume],['RETOUR À L’ACCUEIL',onHome],['QUITTER LA VR',onExit]];
  function paint(){c.clearRect(0,0,1024,720);c.fillStyle='#101c2a';c.beginPath();c.roundRect(2,2,1020,716,50);c.fill();c.strokeStyle='#71899c';c.lineWidth=2;c.stroke();c.textAlign='center';c.fillStyle=accent;c.font='600 22px sans-serif';c.fillText('PINK WARS / LA FRACTURE',512,77);c.fillStyle='#f2f2ed';c.font='500 58px sans-serif';c.fillText('En pause.',512,156);
-  rows.forEach(([label],i)=>{c.fillStyle=i===hover?accent:'#243343';c.beginPath();c.roundRect(130,220+i*122,764,96,48);c.fill();c.fillStyle=i===hover?'#101c2a':'#f1f2ee';c.font='600 29px sans-serif';c.fillText(label,512,280+i*122);});c.fillStyle='#bac6ce';c.font='22px sans-serif';c.fillText('Pointer avec la main droite · gâchette pour choisir',512,656);texture.needsUpdate=true;}
+  rows.forEach(([label],i)=>{c.fillStyle=i===hover?accent:'#243343';c.beginPath();c.roundRect(130,220+i*122,764,96,48);c.fill();c.fillStyle=i===hover?'#101c2a':'#f1f2ee';c.font='600 29px sans-serif';c.fillText(label,512,280+i*122);});c.fillStyle='#bac6ce';c.font='22px sans-serif';c.fillText('Manette droite : sélectionner · X gauche : reprendre',512,656);texture.needsUpdate=true;}
  paint();
  return{mesh,update({active,camera,ray,trigger=false}){
   mesh.visible=!!active;beam.visible=false;
