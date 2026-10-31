@@ -846,6 +846,8 @@ function stepFrame(timestamp, xrFrame) {
     // Pose the authentic IK skeleton BEFORE raycasting. In 3P the projectile now leaves the
     // current crouched/armed muzzle instead of the preceding frame's hand positions.
     updateWeaponVisuals(dt, firing, moving); updateCamera();
+    // XR muzzle must match the controller pose this frame, not the previous.
+    if(vr.mode==='xr')vr.update(dt,flashTimer,recoil,weaponFeel.state);
     // Firearms appear once the outgoing hilt has passed the belt line.
     if(vr.mode!=='xr'&&view==='fps')world.fpsGun.visible=holsterRemaining<=.21;
     if(game.weapon.semiAuto&&firePressQueued)game.triggerHeld=false;firePressQueued=false;
@@ -883,7 +885,7 @@ function stepFrame(timestamp, xrFrame) {
   for(const gun of [world.soldier.gun,world.fpsGun])gun.userData.setFlash(phase === 'playing' && flashTimer > 0,game.time);
   $('crosshair').classList.toggle('shooting', flashTimer > 0); $('damage-flash').classList.toggle('active', phase!=='lobby' && damageUntil > clock);
   $('damage-flash').style.setProperty('--injury',phase==='lobby'?0:Math.max(0,(100-game.player.hp)/100*.65));
-  vr.update(dt,flashTimer,recoil,weaponFeel.state);
+  if(vr.mode!=='xr')vr.update(dt,flashTimer,recoil,weaponFeel.state);
   if(clock>equipmentUntil)$('equipment-unlock').hidden=true;
   if (clock > announcementUntil) $('wave-announcement').classList.remove('show');
   if (world.lost && !recovering) {

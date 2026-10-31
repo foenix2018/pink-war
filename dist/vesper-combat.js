@@ -274,7 +274,9 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     }
     meleeQueued=chargeQueued=false;
     const moving=Math.hypot(game.playerVelocity?.x||0,game.playerVelocity?.z||0)>.25;
-    feel.update(dt);syncSoldier(dt,s);const a=aim();
+    feel.update(dt);syncSoldier(dt,s);
+    if(xr?.active)xr.update(dt,feel.state,feel.state.flash);
+    const a=aim();
     const ammoBefore=game.ammo[game.weaponIndex],bladeBefore=game.bladeSlashAt;
     if(xr?.active&&game.weapon.dual){for(const hand of ['right','left']){const aim=xr.aim(hand);game.triggerHand(hand,hand==='right'?xr.controls?.fire:xr.controls?.leftFire,dt,aim.origin,aim.direction);}}
     else game.trigger(xr?.active?!!xr.controls?.fire:fireInput.requested(held,game.weapon,game.time)&&!s.free,dt,a.origin,a.direction);
@@ -405,7 +407,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     createGun:()=>rig?.createGun({sleeve:false})||buildGun({mats:starterMaterials,gloves:starterGloves,sleeve:false,makeFlash:parent=>{const f=new T.Mesh(new T.SphereGeometry(.06,8,6),heroGlow);parent.add(f);return f;}}),createHand:()=>createGlove(rig?.kit.gloves||starterGloves,{sleeve:false})}),
     getYaw:()=>-getState().yaw,setYaw:onHeading,isPaused:()=>!!getState().menuPaused||journalOpen||game.state!=='playing',
     onPause:onPauseRequest,onResume:onResumeRequest,onHome:()=>location.assign('./index.html'),onExit:()=>{},skillsInput:args=>skillMenu.xrInput(args),
-    onFrame:(ms,frame)=>{const dt=Math.min(.045,Math.max(0,(ms-lastTime*1000)/1000||.016));const c=xr.input(frame,dt);const s=getState();if(c.interact)onInteract();if(!s.menuPaused&&!journalOpen&&!skillMenu.isOpen)update(dt,{...s,free:false,yaw:-xr.yaw,aiming:c.aim,input:c});xr.update(dt,feel.state,feel.state.flash);xr.renderScope();lastTime=ms/1000;atmosphere.update(lastTime,camera,{day:s.day,shadows:s.shadows!==false,focus:game.player,entities:[...game.enemies,game.player],heightAt:e=>game.surfaceHeight(e.x,e.z,game.time,(e.elevation||0)+.3)});const eye=renderer.xr.getCamera().getWorldPosition(new T.Vector3());extArt.update(lastTime,dt,{position:eye,quaternion:camera.quaternion},game.player);extArt.adapt(atmosphere,eye,dt);try{renderer.render(scene,camera);}catch(error){onFailure(error);}}});
+    onFrame:(ms,frame)=>{const dt=Math.min(.045,Math.max(0,(ms-lastTime*1000)/1000||.016));const c=xr.input(frame,dt);const s=getState();if(c.interact)onInteract();if(!s.menuPaused&&!journalOpen&&!skillMenu.isOpen)update(dt,{...s,free:false,yaw:-xr.yaw,aiming:c.aim,input:c});else xr.update(dt,feel.state,feel.state.flash);xr.renderScope();lastTime=ms/1000;atmosphere.update(lastTime,camera,{day:s.day,shadows:s.shadows!==false,focus:game.player,entities:[...game.enemies,game.player],heightAt:e=>game.surfaceHeight(e.x,e.z,game.time,(e.elevation||0)+.3)});const eye=renderer.xr.getCamera().getWorldPosition(new T.Vector3());extArt.update(lastTime,dt,{position:eye,quaternion:camera.quaternion},game.player);extArt.adapt(atmosphere,eye,dt);try{renderer.render(scene,camera);}catch(error){onFailure(error);}}});
   // Validate a real terrain frame while the loading card is still displayed.
   // A published GPU API or a running simulation alone cannot prove rendering.
   syncCamera(getState(),0);atmosphere.update(0,camera,{day:getState().day,shadows:profile.shadows});extArt.update(0,0,camera,game.player);extArt.adapt(atmosphere,camera.position,1);

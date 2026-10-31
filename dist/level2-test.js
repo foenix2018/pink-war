@@ -705,6 +705,7 @@ function gameTick(dt){
  // Same two-stage raycast as Pink Wars' game.js: center reticle selects a
  // visible target; projectile origin is the ACTUAL held weapon muzzle.
  updateOriginalSoldier(dt,Math.hypot(x,z)>.1,sprint,firing);
+ if(xr?.active)xr.update(dt,weaponFeel.state,weaponFeel.state.flash);
  const forward=new T.Vector3();camera.getWorldDirection(forward);
  const target=sightPoint(T,camera.position,forward,{obstacles:collisions,enemies:game.enemies});
  const gun=view==='third'?playerRig?.model?.gun:weapon;
@@ -837,7 +838,7 @@ function animation(t,frame){
  }
  subtitles?.update(dt,{xr:!!xr?.active,hidden:journalOpen||paused||!running});
  warZone?.update(game?.time||0,{active:running});for(const event of warZone?.drainEvents()||[])if(enableAudio&&battleAudio)battleAudio.event(event,game.player,yaw);
- if(xr?.active){xr.update(dt,weaponFeel.state,weaponFeel.state.flash);xr.renderScope();}
+ if(xr?.active){if(!running||paused)xr.update(dt,weaponFeel.state,weaponFeel.state.flash);xr.renderScope();}
  worldShadows?.update(clock,game?.player||camera.position,{entities:game?[...game.enemies,game.player]:[],heightAt:e=>game.surfaceHeight(e.x,e.z,game.time,(e.elevation||0)+.3)});
  if(scene&&camera&&!framePending&&!recovering){
    try{
