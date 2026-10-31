@@ -2,6 +2,7 @@ import {isReco1,RECO1_HIT_ZONES,reco1ProjectileScale} from './reco1-profile.js';
 import {tacticalOrder,grenadeAvoidance} from './tactical-enemies.js';
 import {squadOrder,relayVisualContact,clearSquadFiringLane,registerIncomingFire} from './enemy-squads.js';
 import {individualCombatOrder} from './enemy-brain.js';
+import {specialistCombatOrder,specialistVisualRelay} from './enemy-specialists.js';
 import { equipmentForLevel } from './equipment.js';
 import { PLATFORMS, STAIRS, LIFTS, BRIDGES, BRIDGE_APPROACHES, insideSurface, traversalSurfaces, liftHeightAt } from './world-layout.js';
 import { PROBE, updateProbe } from './aerial-probes.js';
@@ -827,7 +828,9 @@ export class ArenaGame {
       if(slot){destinationX=slot.x;destinationZ=slot.z;}
       const tacticContext={time:this.time,seen,threat:{x:e.lastKnownX,y:(e.lastKnownHeight||0)+1.25,z:e.lastKnownZ},obstacles:this.obstacles,allies:this.enemies,hazards:this.chargeHazards(),segmentBox};
       relayVisualContact(e,tacticContext);
-      const order=!stairRoute?(grenadeAvoidance(e,tacticContext)||individualCombatOrder(e,tacticContext)||tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext)||this.sectorOrder?.(e,tacticContext)):null;
+      specialistVisualRelay(e,tacticContext);
+      // Grenade avoidance and survival retain priority over specialist tactics.
+      const order=!stairRoute?(grenadeAvoidance(e,tacticContext)||individualCombatOrder(e,tacticContext)||specialistCombatOrder(e,tacticContext)||tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext)||this.sectorOrder?.(e,tacticContext)):null;
       e.combatPose=order?.state||'advance';
       e.coverCrouch=((e.coverCrouch||0)+((order?.crouchAmount??Number(!!order?.crouched))-(e.coverCrouch||0))*(1-Math.exp(-dt*12)));
       if(order){destinationX=order.point.x;destinationZ=order.point.z;}
