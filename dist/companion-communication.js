@@ -21,6 +21,10 @@ export function createGabCommunication(T,root){
  let elapsed=0,open=0,remaining=0,mood='message',speaking=false,drawAt=0,voiceNodes=[],disposed=false;
  let canvas=null,ctx=null,texture=null,holo=null,beam=null,halo=null,group=null;
  let owned=[];
+ // When Gaby communicates in-game, her image faces the player's camera without
+ // rotating the combat pupil or moving its firing vector.
+ const Z=new T.Vector3(0,0,1),camAt=new T.Vector3(),rootAt=new T.Vector3(),toCamera=new T.Vector3(),inv=new T.Quaternion(),faceQ=new T.Quaternion();
+ const beamBase=new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),Math.PI/2);
  const canRender=typeof document!=='undefined'&&typeof document.createElement==='function';
  if(canRender){
   canvas=document.createElement('canvas');canvas.width=512;canvas.height=384;ctx=canvas.getContext('2d');
@@ -115,14 +119,23 @@ export function createGabCommunication(T,root){
   speaking=true;drawAt=0;silence();if(sound)playBeeps(audio,mood);return true;
  }
  function stop(){remaining=0;speaking=false;silence();}
- function update(dt){
+ function update(dt,{camera=null}={}){
   if(disposed||!(dt>0))return;
   dt=Math.min(dt,.05);elapsed+=dt;
   if(speaking){remaining=Math.max(0,remaining-dt);if(remaining===0)speaking=false;}
   const goal=speaking?1:0;open+=(goal-open)*(1-Math.exp(-dt*(goal?11:8)));
   if(Math.abs(goal-open)<.003)open=goal;
   if(group){group.visible=open>.004;if(group.visible){
-   const p=open*open*(3-2*open);group.position.z=.147-.025*p;group.scale.setScalar(Math.max(.001,p));
+   const p=open*open*(3-2*open);
+   group.position.set(0,0,.147);group.scale.setScalar(Math.max(.001,p));
+   if(camera){
+    root.updateMatrixWorld(true);
+    camera.getWorldPosition(camAt);root.getWorldPosition(rootAt);
+    toCamera.copy(camAt).sub(rootAt).normalize();root.getWorldQuaternion(inv).invert();toCamera.applyQuaternion(inv);
+    faceQ.setFromUnitVectors(Z,toCamera);group.quaternion.copy(faceQ);
+    if(beam){beam.quaternion.copy(faceQ).multiply(beamBase);beam.position.set(0,0,.147).addScaledVector(toCamera,.065);}
+   }else {group.quaternion.identity();if(beam){beam.quaternion.copy(beamBase);beam.position.set(0,0,.21);}}
+   
    holo.material.opacity=Math.min(1,open*3);
   }}
   if(beam){beam.visible=open>.004;beam.material.opacity=.06*open+.15*Math.sin(Math.PI*open);beam.scale.set(.24+.76*open,.24+.76*open,.28+.72*open);}
