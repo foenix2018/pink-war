@@ -87,7 +87,7 @@ export function createRescueVehicle(T,{kind,length,width,low=false,M,signTexture
  for(const x of [frontX-.25,boxX,backX+.38])bat(M.dark,[.045,.03,width-.19],[x,.74,0]);
  const axles=[length/2-1.24,-length/2+.95];
  for(const x of axles)for(const side of [-1,1]){
-  const z=side*(width*.5-.055);
+  const z=side*(width*.5-.19);
   parts.add(new T.CylinderGeometry(.47,.47,.23,low?12:22),M.black,matrix([x,.49,z],[Math.PI/2,0,0]));
   // Sidewall ring, radial hub, cap, rim screws. Each is batched by material.
   const exposed=z+side*.126;
@@ -98,7 +98,7 @@ export function createRescueVehicle(T,{kind,length,width,low=false,M,signTexture
    const a=i*Math.PI/4;disc(M.steel,x+Math.cos(a)*.145,.49+Math.sin(a)*.145,exposed+side*.03,.016,.012,8);
   }
   // The visible arch follows the tyre instead of pretending a wheel is a ball.
-  parts.add(new T.TorusGeometry(.525,.031,5,low?12:24,Math.PI),M.steel,matrix([x,.49,side*(width*.5+.036)]));
+  parts.add(new T.TorusGeometry(.525,.031,5,low?12:24,Math.PI),M.steel,matrix([x,.49,side*(width*.5-.016)]));
   bat(M.dark,[1.09,.11,.16],[x,1.01,side*(width*.5-.10)],[],.018);
  }
  // Reflective body markings and actual equipment compartments.
