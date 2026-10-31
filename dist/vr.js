@@ -488,6 +488,10 @@ export class VRController {
       }
       if (!xr) { edge('pause', DESKTOP_BUTTONS.pause); edge('jump', DESKTOP_BUTTONS.jump); edge('pickup', DESKTOP_BUTTONS.interact); edge('crouch', DESKTOP_BUTTONS.crouch);edge('companion',DESKTOP_BUTTONS.companion); }
     }
+    // Sample tracking loss before the pause panel consumes the frame. Otherwise
+    // resuming with X could treat the next frame as a *new* loss and repause.
+    const lostTrackingNow=xr&&!mainTracked&&!this.trackingLost;
+    this.trackingLost=xr&&!mainTracked;
     const primary=controllerOf(this,'right');
     const pauseConsumed=xr&&this.fracturePause?.update({active:phase==='paused',camera:this.hooks.world().camera,ray:primary?.tracked?primary.ray:null,trigger:mainTracked&&pressed(padOf(this,'right')?.buttons?.[0])});
     if(pauseConsumed){this.cancelTrigger();if(actions.has('pause')&&this.hooks.phase()===phase)this.hooks.togglePause();return {...result,x:0,z:0,turn:0,tilt:0,fire:false,fireHands:{left:false,right:false},jump:false,pickup:false,crouchToggle:false};}
@@ -500,8 +504,6 @@ export class VRController {
       if (actions.has('next')) { if (game.cycleWeapon(1) && xr) this.cancelTrigger(); }
       else if (actions.has('reload')) { if (game.reload() && xr) this.cancelTrigger(); }
     }
-    const lostTrackingNow=xr&&!mainTracked&&!this.trackingLost;
-    this.trackingLost=xr&&!mainTracked;
     if(xr&&(!visible||!mainTracked)){
       // Controller occlusion cancels shooting but never toggles back to pause
       // after the player explicitly pressed X to resume.
