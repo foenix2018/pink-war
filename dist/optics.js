@@ -7,7 +7,7 @@ export function lensFov(radius, eyeDistance, magnification) {
   return degrees(2 * Math.atan(radius / distance / Math.max(1, magnification)));
 }
 export function aimSensitivity(magnification = 1, blend = 1) {
-  return 1 + (1 / Math.pow(Math.max(1, magnification), .7) - 1) * Math.max(0, Math.min(1, blend));
+  return 1+(Math.max(.54,1/Math.pow(Math.max(1,magnification),.45))-1)*Math.max(0,Math.min(1,blend));
 }
 
 // Match the installed model's eyepiece rather than the procedural fallback's
