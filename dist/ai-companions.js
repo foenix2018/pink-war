@@ -1,18 +1,19 @@
 import {segmentBox} from './game-logic.js';
 import {createCompanionModel} from './companion-model.js';
-import {COMPANION_SHOT,companionNeedsProtection,companionThreat,companionHover,safeCompanionHover,fireCompanionShot} from './companion-escort.js';
+import {COMPANION_SHOT,companionNeedsProtection,companionThreat,companionClear,companionHover,safeCompanionHover,fireCompanionShot} from './companion-escort.js';
 import {createCompanionTorch} from './companion-torch.js';
+import {createGabCommunication,companionMoodForEvent} from './companion-communication.js';
 
 export function createAICompanion(T,scene,characterId='ghju'){
  const defensive=characterId!=='lylu',name=defensive?'Gaby':'Cara',color=defensive?0xff65b1:0x57baff,cfg=COMPANION_SHOT[name];
  const root=new T.Group();root.name=name+' / autonomous phase sphere';root.userData.companionLight=true;scene.add(root);
- const model=createCompanionModel(T,root,defensive),torch=createCompanionTorch(T,scene);
+ const model=createCompanionModel(T,root,defensive),torch=createCompanionTorch(T,scene),communication=createGabCommunication(T,root,{defensive});
  const flash=new T.PointLight(color,0,2.2,2);root.add(flash);
  const up=new T.Vector3(0,1,0),target=new T.Vector3(),end=new T.Vector3(),muzzle=new T.Vector3(),direction=new T.Vector3(),forward=new T.Vector3(),q=new T.Quaternion(),face=new T.Matrix4();
- let energy=100,cooldown=0,pulse=0,initialized=false,assists=0,state='Follow',disposed=false,age=0;
- function update(dt,{game,camera,active=true,assistance=true,torchEnabled=true,tracked=false}={}){
+ let energy=100,cooldown=0,pulse=0,initialized=false,assists=0,state='Follow',disposed=false,age=0,lastAlert=-100,lastWorry=-100;
+ function update(dt,{game,camera,active=true,assistance=true,torchEnabled=true,tracked=false,audioContext=null,sound=true}={}){
   if(disposed)return;root.visible=active;
-  if(!active){flash.intensity=0;torch.update(0,{active:false});return;}
+  if(!active){flash.intensity=0;torch.update(0,{active:false});communication?.reset();return;}
   dt=Math.min(.05,Math.max(0,dt));if(!dt||game.state!=='playing')return;
   age+=dt;energy=Math.min(100,energy+dt*4);cooldown=Math.max(0,cooldown-dt);pulse=Math.max(0,pulse-dt*2);
   const hover=companionHover(game.player,age,defensive);
@@ -31,6 +32,10 @@ export function createAICompanion(T,scene,characterId='ghju'){
   const yaw=game.player.yaw||0;forward.set(-Math.sin(yaw),0,-Math.cos(yaw));
   if(camera){camera.getWorldDirection(direction);if(tracked){forward.x=direction.x;forward.z=direction.z;}forward.y=T.MathUtils.clamp(direction.y,-.5,.25);}
   const foe=assistance&&companionNeedsProtection(game)?companionThreat(game,root.position):null;
+  // Speech is reserved for meaningful warnings and support actions. Gunshots never spam it.
+  const threatAhead=communication&&game.enemies?.some(e=>e.hp>0&&e.awareness==='engaged'&&Math.hypot(e.x-game.player.x,e.z-game.player.z)<12&&companionClear(root.position,{x:e.x,y:(e.elevation||0)+(e.aimHeight||1.25),z:e.z},game.obstacles));
+  if(threatAhead&&age-lastAlert>18){lastAlert=age;communication.say('danger',{audio:audioContext,sound});}
+  else if(communication&&game.player.hp<28&&age-lastWorry>22&&age-lastAlert>3){lastWorry=age;communication.say('inquiet',{audio:audioContext,sound});}
   if(foe)end.set(foe.x,(foe.elevation||0)+(foe.aimHeight||1.25),foe.z);
   else end.set(hover.head.x+forward.x*12,hover.head.y-.15+forward.y*8,hover.head.z+forward.z*12);
   q.setFromRotationMatrix(face.lookAt(end,root.position,up));if(root.parent)q.premultiply(root.parent.getWorldQuaternion(new T.Quaternion()).invert());
@@ -47,11 +52,16 @@ export function createAICompanion(T,scene,characterId='ghju'){
   flash.intensity=pulse*3;state=pulse>.2?'Protect':cooldown>0?'Cooldown':'Follow';
   torch.update(dt,{game,origin:muzzle,head:hover.head,forward,active:game.player.hp>0&&torchEnabled});
   model.update(dt,{pulse});
+  communication?.update(dt,{camera});
  }
- return {name,root,update,preview:dt=>model.update(dt),
-  react(event){if(event?.name===name&&['companion-assist','companion-phase'].includes(event.type)){pulse=1;model.react();}},
-  reset(){energy=100;cooldown=pulse=age=0;initialized=false;assists=0;state='Follow';flash.intensity=0;root.quaternion.identity();model.reset();torch.reset();},
-  snapshot:()=>({name,state,visible:root.visible,energy:Math.round(energy),cooldown,assists,position:root.position.toArray(),torch:torch.snapshot(),model:model.stats()}),
-  dispose(){if(disposed)return;disposed=true;root.removeFromParent();torch.dispose();model.dispose();}
+ return {name,root,update,preview:dt=>{model.update(dt);communication?.update(dt);},
+  say:(mood='message',options={})=>communication?.say(mood,options)||false,
+  stopSpeaking:()=>communication?.stop(),
+  react(event){if(event?.name===name&&['companion-assist','companion-phase'].includes(event.type)){
+   pulse=1;model.react();communication?.say(companionMoodForEvent(event,defensive),{audio:event.audioContext||null,sound:event.sound!==false});
+  }},
+  reset(){energy=100;cooldown=pulse=age=0;initialized=false;assists=0;state='Follow';lastAlert=lastWorry=-100;flash.intensity=0;root.quaternion.identity();model.reset();communication?.reset();torch.reset();},
+  snapshot:()=>({name,state,visible:root.visible,energy:Math.round(energy),cooldown,assists,position:root.position.toArray(),torch:torch.snapshot(),model:model.stats(),communication:communication?.snapshot()||null}),
+  dispose(){if(disposed)return;disposed=true;root.removeFromParent();torch.dispose();communication?.dispose();model.dispose();}
  };
 }
