@@ -4,7 +4,7 @@ import { createObjectiveGuide, objectiveIndicator } from './objective-guidance.j
 import { DesktopGamepadInput, desktopAxis, DESKTOP_BUTTONS } from './desktop-input.js';
 import { syncTrackedHands } from './xr-hands.js';
 import { WEAPON_FRAME, OPTICS } from './weapons.js';
-import { eyeAlignedSight } from './sight-line.js';
+import { eyeAlignedSight, trackedBarrelRay } from './sight-line.js';
 import { createMagnifiedSight } from './magnified-sight.js';
 import { hapticPlan, buzz } from './haptics.js';
 import {createXRPauseMenu} from './xr-pause-menu.js';
@@ -528,20 +528,25 @@ export class VRController {
     const world = this.hooks.world(), { T } = world, tmp = this.scratch ||= {};
     tmp.origin ||= new T.Vector3(); tmp.direction ||= new T.Vector3(); tmp.quaternion ||= new T.Quaternion(); tmp.head ||= new T.Vector3(); tmp.muzzle ||= new T.Vector3();
     const main = controllerOf(this, hand);
-    const source = this.aiming && !this.hooks.game()?.weapon?.dual ? this.sightEye() : (main?.ray || world.camera); source.updateWorldMatrix(true, false);
-    const { origin, direction } = tmp;
-    source.getWorldPosition(origin); source.getWorldQuaternion(tmp.quaternion); direction.set(0, 0, -1).applyQuaternion(tmp.quaternion);
-    if (main?.gun) {
-      if (main.gun.userData.index !== this.hooks.game().weaponIndex) main.gun.userData.setVariant?.(this.hooks.game().weaponIndex);
-      main.gun.updateWorldMatrix(true, false);
-      const flash=main.gun.userData.flash;
-      if(flash.parent)flash.getWorldPosition(origin);else origin.copy(main.gun.localToWorld(tmp.muzzle.copy(flash.position)));
-      // A tracked hand can physically cross a wall; the muzzle cannot shoot past it.
-      const head = world.camera.getWorldPosition(tmp.head), length = head.distanceTo(origin);
-      let nearest = 1;
-      for (const wall of world.obstacles || []) { const hit = segmentBox(head, origin, wall); if (hit !== null) nearest = Math.min(nearest, hit); }
-      if (nearest < 1) origin.lerpVectors(head, origin, Math.max(0, nearest - .025 / Math.max(length, .001)));
-    } else if (main) origin.addScaledVector(direction, .34);
+    const source=main?.ray||world.camera,{origin,direction}=tmp;
+    if(main?.gun){
+      if(main.gun.userData.index!==this.hooks.game().weaponIndex)
+        main.gun.userData.setVariant?.(this.hooks.game().weaponIndex);
+      trackedBarrelRay(T,main.gun,tmp);
+      // A real muzzle cannot fire through cover when the hand intersects it.
+      const head=world.camera.getWorldPosition(tmp.head),length=head.distanceTo(origin);
+      let nearest=1;
+      for(const wall of world.obstacles||[]){
+        const hit=segmentBox(head,origin,wall);
+        if(hit!==null)nearest=Math.min(nearest,hit);
+      }
+      if(nearest<1)origin.lerpVectors(head,origin,Math.max(0,nearest-.025/Math.max(length,.001)));
+    }else{
+      source.updateWorldMatrix(true,false);source.getWorldPosition(origin);
+      source.getWorldQuaternion(tmp.quaternion);
+      direction.set(0,0,-1).applyQuaternion(tmp.quaternion);
+      if(main)origin.addScaledVector(direction,.34);
+    }
     return { origin, direction };
   }
   // No auxiliary targeting beam in XR: aim follows the real weapon in hand.

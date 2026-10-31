@@ -24,3 +24,18 @@ export function eyeAlignedSight(T,eyeMatrix,optic,scratch={}){
   position.add(scale.set(0,-(optic?.y??.16),-(optic?.z??0)).applyQuaternion(q));
   return {position,quaternion:q,eye,forward:(scratch.forward||=new T.Vector3()).set(0,0,-1).applyQuaternion(q)};
 }
+
+
+// Uses the current visual barrel's world pose (never the Touch controller's
+// generic ray). In VR each controller carries one firearm, including DUO mode.
+export function trackedBarrelRay(T,gun,scratch={}){
+ const origin=scratch.origin||=new T.Vector3(),direction=scratch.direction||=new T.Vector3();
+ const q=scratch.quaternion||=new T.Quaternion();
+ gun.updateWorldMatrix(true,false);
+ const flash=gun.userData.flash;
+ if(flash){flash.updateWorldMatrix(true,false);flash.getWorldPosition(origin);}
+ else gun.getWorldPosition(origin);
+ gun.getWorldQuaternion(q);
+ direction.set(0,0,-1).applyQuaternion(q).normalize();
+ return {origin,direction};
+}

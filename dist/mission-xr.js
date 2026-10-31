@@ -5,7 +5,7 @@ import {createMagnifiedSight} from './magnified-sight.js';
 import {hapticPlan,buzz} from './haptics.js';
 import {recoilPose} from './weapon-feel.js';
 import {OPTICS} from './weapons.js';
-import {sightPoint,eyeAlignedSight} from './sight-line.js';
+import {sightPoint,eyeAlignedSight,trackedBarrelRay} from './sight-line.js';
 
 export async function immersiveRendererPreferred(){
  let timer;try{return !!(globalThis.isSecureContext&&navigator.xr&&await Promise.race([navigator.xr.isSessionSupported('immersive-vr'),new Promise(resolve=>{timer=setTimeout(()=>resolve(false),1500);})]));}catch{return false;}finally{clearTimeout(timer);}
@@ -13,7 +13,7 @@ export async function immersiveRendererPreferred(){
 // Screen missions keep their actual world, simulation, inventory and progress in XR.
 export function createMissionXR({getWorld,onFrame,onPause,onResume,onHome,onExit=()=>{},isPaused=()=>false,getYaw=()=>0,setYaw=()=>{},skillsInput=()=>false}){
  let session=null,rig=null,busy=false,blocked=true,previous=new Map(),entries=[],menu=null,scope=null,yaw=0,controls=null,hud=null,reading=null,closeReading=null,opticalEye=null;
- const down=b=>!!b?.pressed||(b?.value||0)>.15,adsScratch={},sightScratch={};
+ const down=b=>!!b?.pressed||(b?.value||0)>.15,adsScratch={},sightScratch={},aimScratch={};
  // The right eye looks through the optic of the right-hand weapon (XR eye cameras carry world matrices only).
  const eyeCamera=()=>{const w=getWorld(),source=session&&w.renderer.xr.getCamera(w.camera).cameras?.[1];if(!source)return null;const eye=opticalEye ||=new w.T.PerspectiveCamera();eye.matrixAutoUpdate=false;eye.matrix.copy(source.matrixWorld);eye.matrixWorld.copy(source.matrixWorld);eye.matrixWorldInverse.copy(source.matrixWorld).invert();eye.projectionMatrix.copy(source.projectionMatrix);eye.projectionMatrixInverse.copy(source.projectionMatrixInverse);return eye;};
  const raised=hand=>{const g=getWorld().game;return hand==='right'&&!!controls?.aim&&!g?.weapon?.dual&&!g?.weapon?.melee;};
@@ -59,12 +59,25 @@ export function createMissionXR({getWorld,onFrame,onPause,onResume,onHome,onExit
    return controls={x:axis(lp?.axes?.[2]),z:axis(lp?.axes?.[3]),moveYaw,yaw,jump,interact,fire:trigger&&!blocked,leftFire:leftTrigger&&!blocked,melee,charge:charge&&!blocked,aim:down(lp?.buttons[1]),sprint:down(rp?.buttons[1])};
   },
   aim(hand='right'){
-   const w=getWorld(),T=w.T,e=entries.find(e=>e.source?.handedness===hand),source=e?.ray||w.camera,origin=new T.Vector3(),direction=new T.Vector3(),q=new T.Quaternion();source.updateWorldMatrix(true,false);source.getWorldPosition(origin);source.getWorldQuaternion(q);direction.set(0,0,-1).applyQuaternion(q);
-   const muzzle=e?.gun.userData.flashFor?.('right')||e?.gun.userData.flash;if(muzzle){muzzle.updateWorldMatrix(true,false);muzzle.getWorldPosition(origin);}
-   const head=w.camera.getWorldPosition(new T.Vector3());let near=1;for(const box of w.obstacles||[]){const hit=segmentBox(head,origin,box);if(hit!==null)near=Math.min(near,hit);}if(near<1)origin.lerpVectors(head,origin,Math.max(0,near-.02));
-   // Optic raised: the shot meets the aiming eye's line of sight where the reticle rests.
+   const w=getWorld(),T=w.T,e=entries.find(e=>e.source?.handedness===hand),source=e?.ray||w.camera;
+   const scratch=aimScratch[hand]||=( {origin:new T.Vector3(),direction:new T.Vector3(),quaternion:new T.Quaternion(),head:new T.Vector3()} );
+   const {origin,direction,quaternion,head}=scratch;
+   if(e?.gun){
+     if(e.gun.userData.index!==w.game.weaponIndex)e.gun.userData.setVariant?.(w.game.weaponIndex);
+     trackedBarrelRay(T,e.gun,scratch);
+   }else{
+     source.updateWorldMatrix(true,false);source.getWorldPosition(origin);
+     source.getWorldQuaternion(quaternion);direction.set(0,0,-1).applyQuaternion(quaternion);
+   }
+   w.camera.getWorldPosition(head);const distance=head.distanceTo(origin);let near=1;
+   for(const box of w.obstacles||[]){const hit=segmentBox(head,origin,box);if(hit!==null)near=Math.min(near,hit);}
+   if(near<1)origin.lerpVectors(head,origin,Math.max(0,near-.025/Math.max(distance,.001)));
+   // A raised optic meets the same point indicated by the correct XR eye.
    const eye=raised(hand)&&eyeCamera();
-   if(eye){const line=eyeAlignedSight(T,eye.matrixWorld,null,sightScratch);direction.copy(sightPoint(T,line.eye,line.forward,{obstacles:w.obstacles,enemies:w.game.enemies})).sub(origin).normalize();}
+   if(eye){
+     const line=eyeAlignedSight(T,eye.matrixWorld,null,sightScratch);
+     direction.copy(sightPoint(T,line.eye,line.forward,{obstacles:w.obstacles,enemies:w.game.enemies})).sub(origin).normalize();
+   }
    return{origin,direction};
   },
   gun(hand='right'){return entries.find(e=>e.source?.handedness===hand)?.gun;},
