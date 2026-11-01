@@ -1,0 +1,30 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PINK WARS · Transmission holographique · Essai</title><link rel="stylesheet" href="./hologram-comms.css?v=1">
+<style>
+html,body{margin:0;min-height:100%;background:#0a1423;color:#f7faff;font-family:'Oxanium',sans-serif;overflow:hidden}
+#scene{position:fixed;inset:0;background:linear-gradient(#07111cb0,#07111c6e 38%,#07111ce9),url('./art/chapters/chapter-01.webp') center/cover no-repeat}
+#scene:before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 45% 40%,#ee448a25,transparent 55%)}
+.controls{position:fixed;z-index:50;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;align-items:center;max-width:calc(100vw - 16px)}
+.controls button{border:1px solid #a8d9fe8a;background:#173149ce;color:#fff;border-radius:16px;padding:10px 12px;font:600 12px 'Oxanium',sans-serif;white-space:nowrap;cursor:pointer;backdrop-filter:blur(12px)}
+.controls button:active{background:#914472}
+.pw-comms[data-expanded='true']{bottom:50%;transform:translate(-50%,50%);max-height:calc(100dvh - 100px)}
+.pw-comms[data-expanded='true'] .pw-comms-transcript{max-height:calc(100dvh - 220px)}
+@media(max-width:480px){.controls button{font-size:10px;padding:9px 7px}.pw-comms[data-expanded='true']{max-height:calc(100dvh - 84px)}.pw-comms[data-expanded='true'] .pw-comms-transcript{max-height:calc(100dvh - 195px)}}
+</style></head><body><div id="scene"></div>
+<nav class="controls"><button id="replay">REJOUER</button><button id="next">MESSAGE SUIVANT</button><button id="switch">CAR-14 / LYLU</button></nav>
+<script type="module">
+import {createHologramComms} from './hologram-comms.js';
+const $=id=>document.getElementById(id);
+const sequences={
+ ghju:[{who:'gaby',text:'GHJU, TROIS SIGNATURES EN APPROCHE.'},{who:'ghju',text:'TU PEUX NOUS OUVRIR UN PASSAGE ?'},{who:'gaby',text:'OUI. HUIT SECONDES DE FENÊTRE.'},{who:'ghju',text:'PARFAIT. ON Y VA.'}],
+ lylu:[{who:'cara',text:'LYLU, UNE PATROUILLE ARRIVE PAR LE COULOIR EST.'},{who:'lylu',text:'CAR-14, VERROUILLE LEUR POINT D’ENTRÉE.'},{who:'cara',text:'CIBLE IDENTIFIÉE. JE PEUX AMPLIFIER TON TIR.'},{who:'lylu',text:'ALORS RESTE PRÈS DE MOI.'}]
+};
+let hero='ghju',index=0;
+const comms=createHologramComms({expanded:true,maxMessages:4});
+const next=()=>{const seq=sequences[hero];comms.push(seq[index%seq.length]);index++;comms.setExpanded(true)};
+$('next').onclick=next;
+$('replay').onclick=()=>{index=0;comms.clear();next();next();next();next()};
+$('switch').onclick=()=>{hero=hero==='ghju'?'lylu':'ghju';$('switch').textContent=hero==='ghju'?'CAR-14 / LYLU':'GAB-1 / GHJU';$('replay').click()};
+$('replay').click();
+window.__PINKWAR_COMMS_TRIAL={comms,next,setHero:id=>{if(sequences[id]){hero=id;$('replay').click()}}};
+</script></body></html>

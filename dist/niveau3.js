@@ -1,3 +1,4 @@
+import {createHologramComms} from './hologram-comms.js';
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import {walkingSurface} from './surface-steps.js';
 // MISSION 03 — « Le Convoi des Absents » (campaign M03). Night Vesper sector of the visitor map, baked for three.js
@@ -121,14 +122,17 @@ function showStage(index,s){
  if(index>0)cue('stage');
 }
 const subtitles=[];let subtitle=null;
+const comms=createHologramComms();
 function say(id){for(const line of linesFor(id,characterId,choice))subtitles.push(line);}
 function updateSubtitles(dt){
  if(subtitle&&!reading){subtitle.left-=dt;if(subtitle.left<=0)subtitle=null;}
  if(!subtitle&&subtitles.length){const line=subtitles.shift();subtitle={...line,left:lineSeconds(line.text)};drawSubtitle(subtitle);}
- const box=$('subtitle');box.style.display=subtitle&&!xr?.active?'block':'none';
+ const box=$('subtitle');box.style.display='none';
+ comms.update(dt,{xr:!!xr?.active,hidden:!!reading});
  if(subtitlePlane)subtitlePlane.visible=!!(subtitle&&xr?.active&&!reading);
 }
 function drawSubtitle(line){
+ comms.push(line);
  const box=$('subtitle');box.innerHTML='';const who=document.createElement('b');who.textContent=line.speaker?.name||line.who.toUpperCase();who.style.color=line.speaker?.color||'#fff';
  box.append(who,document.createTextNode(' '+line.text));
  if(!subtitlePlane)return;
@@ -197,7 +201,7 @@ function lookFrom(cp){yaw=cp.yaw||0;pitch=-.04;}
 
 // ---------- Mission presentation (rules in m03-mission.js) ----------
 function startMission(){
- subtitles.length=0;subtitle=null;for(const it of L.INTERACTIONS)art.markDone(it.id,false);
+ subtitles.length=0;subtitle=null;comms.clear();for(const it of L.INTERACTIONS)art.markDone(it.id,false);
  mission.start();lookFrom(L.START);missionTime=0;shotsFired=0;hits=0;
 }
 function clearVisuals(){
@@ -521,7 +525,7 @@ function begin(){
 startButton.addEventListener('click',()=>{
  audioReady();
  if(!started){startButton.disabled=true;boot();return;}
- if(shade.classList.contains('lost')){shade.classList.remove('lost');subtitles.length=0;subtitle=null;mission.restoreCheckpoint();lookFrom(L.STAGES[mission.stage].checkpoint);lastDevices='';begin();return;}
+ if(shade.classList.contains('lost')){shade.classList.remove('lost');subtitles.length=0;subtitle=null;comms.clear();mission.restoreCheckpoint();lookFrom(L.STAGES[mission.stage].checkpoint);lastDevices='';begin();return;}
  if(completed()){startMission();}
  begin();
 });

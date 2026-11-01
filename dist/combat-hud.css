@@ -156,3 +156,105 @@ body.pw-unified-hud .pw-companion-toggle{display:none!important}
   height:58px!important;width:58px!important;right:var(--pw-right)!important
  }
 }
+
+/* 3.82 - tactical bottom layout, aim centred on left joystick vertical axis. */
+body.pw-immersion-hud{--pw-stick-bottom:max(28px,calc(env(safe-area-inset-bottom) + 10px));--pw-stick-size:112px;--pw-control-centre:calc(var(--pw-stick-bottom) + var(--pw-stick-size) / 2);--pw-control-spacing:56px}
+body.pw-immersion-hud .pw-hud-mission,body.pw-immersion-hud .pw-hud-objective{display:none!important}
+body.pw-immersion-hud .pw-hud .pw-hud-melee-direct span,body.pw-immersion-hud .pw-hud .pw-hud-crouch-direct span{display:none!important}
+@media(pointer:coarse){
+body.pw-immersion-hud #touchControls #stick,body.pw-immersion-hud .game-hud #move-stick,body.pw-immersion-hud #m02-touch-controls #m02-move{bottom:var(--pw-stick-bottom)!important}
+body.pw-immersion-hud #touchControls #touchButtons [data-pw-immersion=aim],body.pw-immersion-hud .game-hud .fire-row [data-pw-immersion=aim],body.pw-immersion-hud #m02-touch-controls .m02-actions [data-pw-immersion=aim]{
+ left:50%!important;right:auto!important;bottom:calc(var(--pw-control-centre) - 28px)!important;width:56px!important;height:56px!important;transform:translateX(-50%)!important}
+body.pw-immersion-hud #touchControls #touchButtons [data-pw-immersion=jump],body.pw-immersion-hud .game-hud .fire-row [data-pw-immersion=jump],body.pw-immersion-hud #m02-touch-controls .m02-actions [data-pw-immersion=jump]{
+ left:50%!important;right:auto!important;bottom:calc(var(--pw-control-centre) + var(--pw-control-spacing) - 23px)!important;width:46px!important;height:46px!important;transform:translateX(-50%)!important}
+body.pw-immersion-hud .pw-hud .pw-hud-crouch-direct{
+ left:50%!important;right:auto!important;bottom:calc(var(--pw-control-centre) - var(--pw-control-spacing) - 23px)!important;width:46px!important;height:46px!important;transform:translateX(-50%)!important}
+body.pw-immersion-hud .pw-hud .pw-hud-crouch-direct svg{width:28px!important;height:28px!important}
+body.pw-immersion-hud .pw-hud .pw-hud-melee-direct{left:auto!important;right:calc(var(--pw-right) + 9px)!important;bottom:calc(var(--pw-stick-bottom) + 85px)!important;width:56px!important;height:56px!important;transform:none!important}
+body.pw-immersion-hud #touchControls #touchButtons [data-pw-immersion=fire],body.pw-immersion-hud .game-hud .fire-row [data-pw-immersion=fire],body.pw-immersion-hud #m02-touch-controls .m02-actions [data-pw-immersion=fire],
+body.pw-immersion-hud[data-pw-hero=lylu] #touchControls #touchButtons [data-pw-immersion=fire],body.pw-immersion-hud[data-pw-hero=lylu] .game-hud .fire-row [data-pw-immersion=fire],body.pw-immersion-hud[data-pw-hero=lylu] #m02-touch-controls .m02-actions [data-pw-immersion=fire]{
+ left:auto!important;right:var(--pw-right)!important;bottom:var(--pw-stick-bottom)!important;width:74px!important;height:74px!important;transform:none!important;
+ background:linear-gradient(145deg,#f6506970,#aa183e82),#2a102557!important;border-color:#ffb4c0bc!important;box-shadow:inset 0 1px #fff5,0 0 16px #ed547629!important}
+}
+@media(pointer:coarse) and (max-width:390px){body.pw-immersion-hud{--pw-stick-size:96px;--pw-control-spacing:51px}}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:540px){
+ body.pw-immersion-hud{--pw-stick-bottom:max(25px,calc(env(safe-area-inset-bottom) + 10px));--pw-control-spacing:54px}
+ body.pw-immersion-hud .pw-hud .pw-hud-melee-direct{bottom:calc(var(--pw-stick-bottom) + 72px)!important;width:50px!important;height:50px!important}
+ body.pw-immersion-hud #touchControls #touchButtons [data-pw-immersion=fire],body.pw-immersion-hud .game-hud .fire-row [data-pw-immersion=fire],body.pw-immersion-hud #m02-touch-controls .m02-actions [data-pw-immersion=fire]{width:62px!important;height:62px!important}
+}
+
+/* HUD 3.83 – glass at rest, dense tactile feedback only while pressed.
+   Background alpha changes, never the whole element's opacity: text stays legible. */
+body.pw-immersion-hud:not(.pw-hud-opaque) .pw-glass{
+  background:linear-gradient(155deg,#e2f3ff12,#243b5620 75%),#081d2d39;
+  border-color:#dceeff44;border-top-color:#ffffff78;
+  -webkit-backdrop-filter:blur(14px) saturate(128%);
+  backdrop-filter:blur(14px) saturate(128%);
+}
+body.pw-immersion-hud .pw-hud button,
+body.pw-immersion-hud [data-pw-immersion],
+body.pw-immersion-hud .fracture-session-actions button,
+body.pw-immersion-hud #pause-button{
+  scale:1;
+  transition:scale 150ms cubic-bezier(.18,.7,.36,1.22),background-color 160ms ease,border-color 160ms ease,box-shadow 160ms ease;
+}
+body.pw-immersion-hud .pw-hud button:is(:active,[data-pw-pressed=true]),
+body.pw-immersion-hud [data-pw-immersion]:is(:active,[data-pw-pressed=true]),
+body.pw-immersion-hud .fracture-session-actions button:is(:active,[data-pw-pressed=true]),
+body.pw-immersion-hud #pause-button:is(:active,[data-pw-pressed=true]){
+  scale:1.07;
+  border-color:#edfbffcc!important;
+  box-shadow:inset 0 1px #ffffff72,0 0 18px #9ed2f95a,0 7px 18px #0005!important;
+  background:linear-gradient(145deg,#e9f8ff4d,#314e6db5),#112d46bb!important;
+}
+body.pw-immersion-hud .pw-hud .pw-hud-companion:is(:active,[data-pw-pressed=true]){
+  scale:1.055;
+  border-color:var(--pw-accent)!important;
+  box-shadow:inset 0 1px #fff8,0 0 18px color-mix(in srgb,var(--pw-accent) 48%,transparent)!important;
+}
+@media(pointer:coarse){
+ body.pw-immersion-hud .pw-hud .pw-hud-crouch-direct,
+ body.pw-immersion-hud .pw-hud .pw-hud-melee-direct{
+  background:linear-gradient(145deg,#ebf7ff18,#1b39512c),#102a3d58!important;
+  border-color:#e5f6ff74!important;
+  -webkit-backdrop-filter:blur(12px) saturate(130%);
+  backdrop-filter:blur(12px) saturate(130%);
+ }
+ body.pw-immersion-hud .pw-hud .pw-hud-crouch-direct:is(:active,[data-pw-pressed=true]),
+ body.pw-immersion-hud .pw-hud .pw-hud-melee-direct:is(:active,[data-pw-pressed=true]){
+  scale:1.075;
+  background:linear-gradient(145deg,#e5f4ff70,#2b4b68c5),#0c2a42b0!important;
+ }
+ body.pw-immersion-hud #touchControls #touchButtons [data-pw-immersion],
+ body.pw-immersion-hud .game-hud .fire-row [data-pw-immersion],
+ body.pw-immersion-hud #m02-touch-controls .m02-actions [data-pw-immersion]{
+  background:linear-gradient(145deg,#e1f5ff16,#20394e23),#10263953!important;
+  -webkit-backdrop-filter:blur(12px) saturate(125%);
+  backdrop-filter:blur(12px) saturate(125%);
+ }
+ body.pw-immersion-hud #touchControls #touchButtons [data-pw-immersion=fire],
+ body.pw-immersion-hud .game-hud .fire-row [data-pw-immersion=fire],
+ body.pw-immersion-hud #m02-touch-controls .m02-actions [data-pw-immersion=fire],
+ body.pw-immersion-hud[data-pw-hero=lylu] #touchControls #touchButtons [data-pw-immersion=fire],
+ body.pw-immersion-hud[data-pw-hero=lylu] .game-hud .fire-row [data-pw-immersion=fire],
+ body.pw-immersion-hud[data-pw-hero=lylu] #m02-touch-controls .m02-actions [data-pw-immersion=fire]{
+  background:linear-gradient(145deg,#e7405937,#a90d3b47),#31132839!important;
+  border-color:#ffb9c6a3!important;
+ }
+ body.pw-immersion-hud #touchControls #touchButtons [data-pw-immersion]:is(:active,[data-pw-pressed=true]),
+ body.pw-immersion-hud .game-hud .fire-row [data-pw-immersion]:is(:active,[data-pw-pressed=true]),
+ body.pw-immersion-hud #m02-touch-controls .m02-actions [data-pw-immersion]:is(:active,[data-pw-pressed=true]){
+  background:linear-gradient(145deg,#e6f7ff78,#395d7ab9),#132c42c0!important;
+  scale:1.075!important;
+ }
+ body.pw-immersion-hud #touchControls #touchButtons [data-pw-immersion=fire]:is(:active,[data-pw-pressed=true]),
+ body.pw-immersion-hud .game-hud .fire-row [data-pw-immersion=fire]:is(:active,[data-pw-pressed=true]),
+ body.pw-immersion-hud #m02-touch-controls .m02-actions [data-pw-immersion=fire]:is(:active,[data-pw-pressed=true]){
+  background:linear-gradient(145deg,#fb7187c9,#bc224ebc),#6d153bbb!important;
+  border-color:#ffd9e2ea!important;
+  box-shadow:inset 0 1px #fff8,0 0 22px #f2528498!important;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ body.pw-immersion-hud .pw-hud button,body.pw-immersion-hud [data-pw-immersion]{transition:none!important;scale:1!important}
+}

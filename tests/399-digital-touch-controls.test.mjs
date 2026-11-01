@@ -27,15 +27,40 @@ test('PS4 helper overlay is removed without touching Gamepad API or controller m
  assert.match(sourceCode,/export const PS4_CONTROLS/);
 });
 
-test('crouch replaces original fire position, fire moves above, melee sits above fire',()=>{
+test('crouch sits below aim, jump above, melee over translucent red fire',()=>{
  const hud=source('combat-hud.js'),css=source('combat-hud.css');
  assert.match(hud,/touchActionLayer\.append\(meleeButton,crouchButton\)/);
  assert.match(hud,/sprintButton\.remove\(\)/);
  assert.match(css,/\.pw-hud \.pw-hud-crouch-direct/);
  assert.match(css,/\.pw-hud \.pw-hud-melee-direct/);
  assert.match(css,/\[data-pw-immersion=fire\]/);
+ assert.match(css,/--pw-control-centre:/);
+ assert.match(css,/\[data-pw-immersion=aim\]/);
+ assert.match(css,/\[data-pw-immersion=jump\]/);
+ assert.match(css,/linear-gradient\(145deg,#f6506970,#aa183e82\)/);
+ assert.match(hud,/hudIcon\('down-double'\)/);
+ assert.match(source('hud-appearance.js'),/'down-double':/);
+ const trial=source('hud-essai.html');
+ assert.doesNotMatch(trial,/id="trial-tools"|id="trial-label"|id="trial-note"|>MISSION 01/);
+ assert.match(trial,/--pw-demo-centre:/);
+ assert.match(trial,/#aim\{left:50%!important/);
+ assert.match(trial,/#jump\{left:50%!important/);
+ assert.match(trial,/\.pw-hud \.pw-hud-crouch-direct\{left:50%!important/);
 });
 
+test('liquid glass becomes more opaque and scales only during interaction',()=>{
+ const css=source('combat-hud.css'),hud=source('combat-hud.js'),trial=source('hud-essai.html');
+ assert.match(css,/3\.83 – glass at rest/);
+ assert.match(css,/#081d2d39/);
+ assert.match(css,/\[data-pw-pressed=true\]/);
+ assert.match(css,/scale:1\.075/);
+ assert.match(css,/#fb7187c9/);
+ assert.match(hud,/pressedPointers=new Map\(\)/);
+ assert.match(hud,/doc\.addEventListener\('pointerdown',pressStart,true\)/);
+ assert.match(hud,/doc\.removeEventListener\('pointerdown',pressStart,true\)/);
+ assert.match(trial,/#trial-actions \.control:is\(:active,\[data-pw-pressed=true\]\)/);
+ assert.match(trial,/pressedTrial=new Map\(\)/);
+});
 test('strong left-stick deflection triggers sprint while slight movement still walks',()=>{
  assert.equal(touchAnalogSprint(0,-1),true);
  assert.equal(touchAnalogSprint(.65,-.65),true);
@@ -47,4 +72,13 @@ test('strong left-stick deflection triggers sprint while slight movement still w
  for(const mission of ['level2-test.js','niveau3.js','niveau4.js','ligne9.js','couronne-helix.js']){
   assert.match(source(mission),/controls\.sprint\|\|touchSprinting\|\|touch\.sprint/,mission);
  }
+});
+
+test('fire and aim keep only their icons, with accessible names',()=>{
+ const hudAppearance=source('hud-appearance.js'),trial=source('hud-essai.html');
+ assert.match(hudAppearance,/button\.innerHTML=hudIcon\(name\);/);
+ assert.match(hudAppearance,/setAttribute\('aria-label'/);
+ assert.doesNotMatch(hudAppearance,/<small>'\+\(name==='aim'/);
+ assert.match(trial,/<button id="fire"[^>]*aria-label="Tirer"[^>]*><svg[^>]*>[\s\S]*?<\/svg><\/button>/);
+ assert.match(trial,/<button id="aim"[^>]*aria-label="Viser"[^>]*><svg[^>]*>[\s\S]*?<\/svg><\/button>/);
 });

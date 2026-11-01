@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#081320"><title>PINK WARS — HUD / VERSION ESSAI</title>
+<link rel="stylesheet" href="./combat-hud.css?v=3.83-liquid-feedback-1" data-pw-hud>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080f1b;color:#f3f7ff;font-family:system-ui,-apple-system,sans-serif}
+body{touch-action:manipulation}
+#scene{position:fixed;inset:0;background:linear-gradient(#05101b45,#08132068 44%,#050b14cc),url('./art/chapters/chapter-01.webp') center/cover no-repeat,#111e2c;overflow:hidden}
+#scene:before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 47% 47%,#ffffff12,transparent 55%),linear-gradient(90deg,#060b16a0,transparent 24%,transparent 76%,#060b1685);pointer-events:none}
+#crosshair{position:fixed;left:50%;top:50%;width:31px;height:31px;transform:translate(-50%,-50%);z-index:3;pointer-events:none}
+#crosshair:before,#crosshair:after{content:"";position:absolute;background:#e8fbffbb}
+#crosshair:before{left:15px;top:1px;width:1px;height:29px}#crosshair:after{left:1px;top:15px;width:29px;height:1px}
+#trial-tools{position:fixed;top:142px;left:50%;transform:translateX(-50%);z-index:14;display:flex;align-items:center;justify-content:center;gap:7px;flex-wrap:wrap;width:min(330px,calc(100vw - 140px));pointer-events:auto}
+#trial-tools button{border:1px solid #ffffff63;background:#142a3cce;backdrop-filter:blur(10px);color:#edf8ff;border-radius:20px;padding:7px 10px;letter-spacing:.02em;font-size:10px;min-height:34px}
+#trial-tools button[aria-pressed=true]{border-color:var(--accent,#ee8fbe);background:#77506dce}
+#trial-label{position:fixed;left:50%;transform:translateX(-50%);top:122px;z-index:14;color:#c6d7e8;font-size:10px;letter-spacing:.19em;white-space:nowrap;text-shadow:0 2px 6px #000}
+#toast{position:fixed;top:calc(50% + 38px);left:50%;transform:translateX(-50%);z-index:30;color:#eaf6ff;background:#102235e9;border:1px solid #aed5f563;border-radius:12px;padding:8px 13px;pointer-events:none;font-size:12px;white-space:nowrap;opacity:0;transition:opacity .18s}
+#toast.show{opacity:1}
+#trial-note{position:fixed;bottom:max(4px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:5;font-size:8px;letter-spacing:.08em;color:#d5e6ec9e;white-space:nowrap;pointer-events:none}
+#trial-actions{position:fixed;inset:0;z-index:10;pointer-events:none}
+#trial-actions .control{position:absolute;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;border:1px solid #cfecff8c;border-radius:50%;background:linear-gradient(140deg,#a9d8ff20,#14304bbd),#0a2034c9;color:#fff;box-shadow:inset 0 1px 1px #ffffff50,0 5px 16px #0007;backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);font-size:9px;font-weight:600;pointer-events:auto;touch-action:none;user-select:none}
+#trial-actions .control svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+#fire{right:23px;bottom:108px;width:69px;height:69px;border-color:#ffc0d98c;background:linear-gradient(140deg,#ca568ab8,#733b6db8);font-weight:800}
+body[data-hero=lylu] #fire{background:linear-gradient(140deg,#478cc9cb,#1b4b77d9);border-color:#b8e9ffb0}
+#aim{left:57%;bottom:34px;width:58px;height:58px}
+#jump{left:57%;bottom:106px;width:49px;height:49px}
+#pause{position:fixed;right:18px;top:91px;width:42px;height:42px;border-radius:50%;z-index:12;background:#13273dc9;color:#fff;border:1px solid #b9d8fa80;pointer-events:auto}
+#move{position:fixed;bottom:26px;left:19px;z-index:11;width:122px;height:122px;border:1px solid #acc8de73;border-radius:50%;background:radial-gradient(circle,#b9cad52a,#152b41a8 60%,#0a1c30c9);box-shadow:inset 0 2px 11px #fff2,0 6px 20px #0006;touch-action:none;pointer-events:auto}
+#knob{position:absolute;left:calc(50% - 25px);top:calc(50% - 25px);width:50px;height:50px;border-radius:50%;background:linear-gradient(140deg,#cde7fa,#617e99);border:1px solid #eeffffc7;box-shadow:0 3px 10px #0008;pointer-events:none}
+#move[data-run=true]{border-color:#f19fc9}
+body[data-hero=lylu] #move[data-run=true]{border-color:#8dd4ff}
+body.pw-demo .pw-hud{z-index:8}
+body.pw-demo .pw-hud-touch{display:block!important}
+body.pw-demo .pw-hud .pw-hud-crouch-direct,body.pw-demo .pw-hud .pw-hud-melee-direct{position:fixed;display:grid;justify-items:center;align-content:center;gap:4px;right:20px;left:auto;border:1px solid #dcf1ffad;background:linear-gradient(150deg,#d3eaff28,#183348cd),#112436bf;color:#fff;box-shadow:inset 0 1px #fff4,0 5px 17px #0005;backdrop-filter:blur(10px);border-radius:50%;padding:3px;pointer-events:auto;z-index:11;touch-action:manipulation}
+body.pw-demo .pw-hud .pw-hud-crouch-direct{width:73px;height:73px;bottom:28px}
+body.pw-demo .pw-hud .pw-hud-melee-direct{width:57px;height:57px;bottom:194px;right:27px}
+body.pw-demo .pw-hud .pw-hud-crouch-direct[aria-pressed=true]{border-color:#ee87b7;background:#6d385dcc}
+body.pw-demo .pw-hud .pw-hud-more,body.pw-demo .pw-hud .pw-hud-palette{display:none!important}
+body.pw-demo .pw-hud .pw-hud-vitals{top:16px!important}
+body.pw-demo .pw-hud .pw-hud-arms{top:16px!important}
+body.pw-demo .pw-hud .pw-hud-mission{top:86px!important}
+body.pw-demo .pw-hud .pw-hud-companion{top:39%!important}
+body.pw-demo .pw-hud .pw-hud-gear{top:clamp(12px,calc(39% - 90px),220px)!important}
+body.pw-demo .pw-hud .pw-hud-context{display:none!important}
+body.pw-demo .pw-hud .pw-hud-numbers b,body.pw-demo .pw-hud .pw-hud-ammo,body.pw-demo .pw-hud .pw-hud-capacity{font-variant-numeric:tabular-nums}
+@media(min-width:750px){#trial-tools{top:120px;width:auto}#trial-label{top:99px}#pause{top:94px}#trial-note{bottom:7px}}
+@media(max-height:600px){#trial-label{top:75px}#trial-tools{top:95px}#trial-actions #move{width:95px;height:95px}#move{width:95px;height:95px;bottom:14px}#fire{width:60px;height:60px;bottom:79px}#aim{bottom:15px}#jump{bottom:80px}body.pw-demo .pw-hud .pw-hud-melee-direct{bottom:149px!important;width:50px;height:50px}body.pw-demo .pw-hud .pw-hud-crouch-direct{bottom:12px!important;width:60px;height:60px}body.pw-demo .pw-hud .pw-hud-mission{top:16px!important}body.pw-demo .pw-hud .pw-hud-companion{top:40%!important}}
+
+/* Trial 3.82: expose only genuine gameplay controls, with the same central stack. */
+body.pw-demo{--pw-demo-stick-bottom:max(26px,calc(env(safe-area-inset-bottom) + 12px));--pw-demo-stick-size:122px;--pw-demo-spacing:56px;--pw-demo-centre:calc(var(--pw-demo-stick-bottom) + var(--pw-demo-stick-size) / 2)}
+#trial-label,#trial-tools,#trial-note{display:none!important}
+body.pw-demo .pw-hud .pw-hud-mission,body.pw-demo .pw-hud .pw-hud-objective{display:none!important}
+body.pw-demo #move{bottom:var(--pw-demo-stick-bottom)!important}
+body.pw-demo #aim{left:50%!important;right:auto!important;bottom:calc(var(--pw-demo-centre) - 28px)!important;width:56px!important;height:56px!important;transform:translateX(-50%)!important}
+body.pw-demo #jump{left:50%!important;right:auto!important;bottom:calc(var(--pw-demo-centre) + var(--pw-demo-spacing) - 23px)!important;width:46px!important;height:46px!important;transform:translateX(-50%)!important}
+body.pw-demo .pw-hud .pw-hud-crouch-direct{left:50%!important;right:auto!important;bottom:calc(var(--pw-demo-centre) - var(--pw-demo-spacing) - 23px)!important;width:46px!important;height:46px!important;transform:translateX(-50%)!important}
+body.pw-demo .pw-hud .pw-hud-crouch-direct span,body.pw-demo .pw-hud .pw-hud-melee-direct span{display:none!important}
+body.pw-demo .pw-hud .pw-hud-crouch-direct svg{width:28px!important;height:28px!important}
+body.pw-demo #fire,body.pw-demo[data-hero=lylu] #fire{right:23px!important;left:auto!important;bottom:var(--pw-demo-stick-bottom)!important;width:74px!important;height:74px!important;transform:none!important;background:linear-gradient(145deg,#f6506970,#aa183e82),#2a102557!important;border-color:#ffb4c0bc!important;box-shadow:inset 0 1px #fff5,0 0 16px #ed547629!important}
+body.pw-demo .pw-hud .pw-hud-melee-direct{left:auto!important;right:32px!important;bottom:calc(var(--pw-demo-stick-bottom) + 85px)!important;width:56px!important;height:56px!important;transform:none!important}
+@media(max-height:600px){body.pw-demo{--pw-demo-stick-size:95px;--pw-demo-stick-bottom:max(18px,env(safe-area-inset-bottom));--pw-demo-spacing:45px}
+body.pw-demo #move{width:95px!important;height:95px!important}body.pw-demo #fire{width:60px!important;height:60px!important}
+body.pw-demo .pw-hud .pw-hud-melee-direct{width:49px!important;height:49px!important;bottom:calc(var(--pw-demo-stick-bottom) + 70px)!important}}
+@media(max-width:390px){body.pw-demo{--pw-demo-stick-size:106px;--pw-demo-spacing:51px}body.pw-demo #move{width:106px;height:106px}}
+
+/* HUD trial 3.83 matches the in-game Liquid Glass interaction. */
+body.pw-demo #trial-actions .control,
+body.pw-demo #pause{
+  scale:1;
+  transition:scale 150ms cubic-bezier(.18,.7,.36,1.22),background-color 160ms ease,border-color 160ms ease,box-shadow 160ms ease;
+  background:linear-gradient(145deg,#e1f5ff16,#20394e23),#10263953;
+  border-color:#e5f6ff74;
+  -webkit-backdrop-filter:blur(12px) saturate(125%);
+  backdrop-filter:blur(12px) saturate(125%);
+}
+body.pw-demo #trial-actions .control:is(:active,[data-pw-pressed=true]),
+body.pw-demo #pause:is(:active,[data-pw-pressed=true]){
+  scale:1.075;
+  background:linear-gradient(145deg,#e6f7ff78,#395d7ab9),#132c42c0!important;
+  border-color:#edfbffcc!important;
+  box-shadow:inset 0 1px #fff8,0 0 18px #9ed2f95a!important;
+}
+body.pw-demo #fire,body.pw-demo[data-hero=lylu] #fire{
+  background:linear-gradient(145deg,#e7405937,#a90d3b47),#31132839!important;
+  border-color:#ffb9c6a3!important;
+}
+body.pw-demo #fire:is(:active,[data-pw-pressed=true]){
+  background:linear-gradient(145deg,#fb7187c9,#bc224ebc),#6d153bbb!important;
+  border-color:#ffd9e2ea!important;
+  box-shadow:inset 0 1px #fff8,0 0 22px #f2528498!important;
+}
+body.pw-demo #move{background:radial-gradient(circle,#cceeff16,#1236533f 60%,#061c305a);transition:background-color 140ms,border-color 140ms}
+body.pw-demo #move:active{background:radial-gradient(circle,#cceeff30,#21436597 60%,#0a28478c)}
+@media(prefers-reduced-motion:reduce){body.pw-demo #trial-actions .control{transition:none!important;scale:1!important}}
+</style></head>
+<body class="pw-demo" data-hero="ghju">
+<div id="scene"></div><div id="crosshair"></div>
+<button id="pause" aria-label="Pause" title="Pause">Ⅱ</button>
+<div id="trial-actions">
+<button id="fire" class="control" aria-label="Tirer"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v5m0 12v5M1 12h5m12 0h5"/></svg></button>
+<button id="aim" class="control" aria-label="Viser"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg></button>
+<button id="jump" class="control" aria-label="Sauter"><svg viewBox="0 0 24 24"><path d="m4 14 8-8 8 8m-16 5 8-8 8 8"/></svg></button>
+</div>
+<div id="move" aria-label="Joystick gauche (pousser à fond pour courir)"><span id="knob"></span></div>
+<div id="toast" role="status"></div>
+<script type="module">
+import {mountCombatHud} from './combat-hud.js';
+import {WEAPONS,starterWeaponIndex,weaponAllowedForCharacter} from './game-logic.js';
+const $=id=>document.getElementById(id);
+const ammo=()=>WEAPONS.map(w=>w.capacity);
+const game={state:'playing',characterId:'ghju',player:{hp:100,shield:60,crouched:false},shieldCapacity:60,charges:2,ammo:ammo(),weaponIndex:7,ownedWeapons:new Set([0,1,6,7,8]),reloadRemaining:0,
+ get weapon(){return WEAPONS[this.weaponIndex]},
+ selectWeapon(index){if(!this.ownedWeapons.has(index)||!weaponAllowedForCharacter(index,this.characterId))return false;this.weaponIndex=index;update();return true;}
+};
+let toastTimer,paused=false;
+function toast(text){const el=$('toast');el.textContent=text;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),1050);}
+function update(){hud.update(game);}
+function action(kind){
+ if(paused)return;
+ if(kind==='crouch'){game.player.crouched=!game.player.crouched;toast(game.player.crouched?'ACCROUPI':'DEBOUT');}
+ if(kind==='melee')toast('FRAPPE DE MÊLÉE');
+ if(kind==='charge'){if(game.charges){game.charges--;toast('GRENADE LANCÉE');}else toast('AUCUNE GRENADE');}
+ if(kind==='reload'){game.ammo[game.weaponIndex]=game.weapon.capacity;toast('RECHARGÉ');}
+ update();
+}
+const hud=mountCombatHud({characterId:'ghju',onAction:action});
+
+update();
+function hero(id){
+ game.characterId=id;game.weaponIndex=starterWeaponIndex(id);game.ownedWeapons=new Set(id==='ghju'?[0,1,6,7,8]:[0,1,6,8]);game.ammo=ammo();game.charges=2;game.player.hp=100;game.player.shield=60;game.player.crouched=false;game.state='playing';paused=false;
+ document.body.dataset.hero=id;hud.setGearOpen(false);hud.setCharacter(id);hud.setVisible(true);update();toast(id==='ghju'?'GAB-1 ACTIVÉ':'CAR-14 ACTIVÉ');
+}
+$('fire').addEventListener('pointerdown',e=>{e.preventDefault();if(paused)return;const w=game.weapon;if(w.melee){toast('COUP AURORA');return;}if(game.ammo[game.weaponIndex]>0){game.ammo[game.weaponIndex]--;toast('TIR · '+w.name)}else toast('CHARGEUR VIDE');update();});
+$('fire').addEventListener('click',e=>{if(e.detail===0){const w=game.weapon;if(game.ammo[game.weaponIndex]>0){game.ammo[game.weaponIndex]--;update();}}});
+$('aim').addEventListener('pointerdown',e=>{e.preventDefault();toast('MODE VISÉE');});
+$('jump').onclick=()=>toast('SAUT');
+$('pause').onclick=()=>{paused=!paused;game.state=paused?'paused':'playing';hud.setVisible(!paused);$('pause').textContent=paused?'▶':'Ⅱ';toast(paused?'PAUSE':'REPRISE');update();};
+const pressedTrial=new Map();
+document.addEventListener('pointerdown',e=>{
+  const b=e.target?.closest?.('#trial-actions button,#pause');
+  if(!b)return;
+  pressedTrial.set(e.pointerId,b);
+  b.dataset.pwPressed='true';
+},true);
+for(const type of ['pointerup','pointercancel','lostpointercapture'])document.addEventListener(type,e=>{
+  const b=pressedTrial.get(e.pointerId);if(!b)return;
+  pressedTrial.delete(e.pointerId);if(![...pressedTrial.values()].includes(b))delete b.dataset.pwPressed;
+},true);
+window.addEventListener('blur',()=>{
+  for(const b of pressedTrial.values())delete b.dataset.pwPressed;
+  pressedTrial.clear();
+});
+const move=$('move'),knob=$('knob');let pointer=null,run=false;
+function resetMove(){pointer=null;run=false;knob.style.transform='';move.dataset.run='false';}
+function drag(e){const rect=move.getBoundingClientRect(),r=rect.width*.33;const dx=e.clientX-(rect.left+rect.width/2),dy=e.clientY-(rect.top+rect.height/2);const ratio=Math.min(1,r/(Math.hypot(dx,dy)||1));knob.style.transform='translate('+dx*ratio+'px,'+dy*ratio+'px)';const running=Math.hypot(dx*ratio,dy*ratio)>=r*.88;move.dataset.run=String(running);if(running&&!run)toast('COURSE ACTIVÉE');run=running;}
+move.addEventListener('pointerdown',e=>{pointer=e.pointerId;move.setPointerCapture(pointer);drag(e);});
+move.addEventListener('pointermove',e=>{if(e.pointerId===pointer)drag(e);});
+for(const type of ['pointerup','pointercancel','lostpointercapture'])move.addEventListener(type,e=>{if(e.pointerId===pointer)resetMove();});
+document.addEventListener('keydown',e=>{if(e.code==='KeyR')action('reload');if(e.code==='KeyC')action('crouch');if(e.code==='KeyX')action('melee');});
+// Switch the trial companion without adding development buttons: ?hero=lylu.
+if(new URLSearchParams(location.search).get('hero')==='lylu')hero('lylu');
+window.__PINK_WARS_HUD_TRIAL__={game,hud,hero,action};
+</script></body></html>

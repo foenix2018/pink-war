@@ -1,0 +1,88 @@
+/* Pink Wars – fractured sci-fi letterforms and cinematic holo dialogue. 
+   Based on Bruno Ace SC (SIL Open Font License 1.1), NOT the rejected Saira font.
+   Horizontal selective masks add the signature interrupted glyphs. */
+@import url('https://fonts.googleapis.com/css2?family=Bruno+Ace+SC&family=Oxanium:wght@400;500;600;700&display=swap');
+.pw-comms{
+ --pw-pink:#ff84c6;--pw-blue:#a0cfff;--pw-paper:#eff6ff;
+ position:fixed;z-index:38;left:50%;bottom:clamp(92px,24vh,244px);
+ transform:translateX(-50%);width:min(610px,calc(100vw - 28px));
+ color:var(--pw-paper);
+ border:1px solid #e9eeff9c;border-radius:27px 27px 23px 23px;
+ background:linear-gradient(115deg,#394e6170,#0b2030d9 52%,#243953b8);
+ -webkit-backdrop-filter:blur(18px) saturate(125%);backdrop-filter:blur(18px) saturate(125%);
+ box-shadow:inset 0 2px #ffffff55,inset 0 -2px #ec65a05d,0 15px 40px #030816cb,0 0 26px #ff5cb933;
+ padding:16px 18px 12px;
+ font-family:'Oxanium',system-ui,sans-serif;pointer-events:none;isolation:isolate;
+}
+.pw-comms[hidden]{display:none!important}
+.pw-comms::before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;box-shadow:inset 0 0 18px #ff82c52a}
+.pw-comms-header{display:flex;align-items:center;gap:10px;min-height:28px;padding:0 3px 13px;border-bottom:1px solid #e1f0ff80}
+.pw-comms-brand,.pw-comms-name,.pw-comms-words{
+ font-family:'Bruno Ace SC','Oxanium',system-ui,sans-serif;text-transform:uppercase;
+ font-weight:400;letter-spacing:.095em;
+}
+.pw-comms-cut{-webkit-mask-image:repeating-linear-gradient(180deg,#000 0px,#000 15px,transparent 15px,transparent 17px,#000 17px,#000 32px);mask-image:repeating-linear-gradient(180deg,#000 0px,#000 15px,transparent 15px,transparent 17px,#000 17px,#000 32px)}
+.pw-comms-brand{font-size:13px;letter-spacing:.24em;white-space:nowrap}
+.pw-comms-mark{color:var(--pw-pink);font-size:13px;letter-spacing:2px}
+.pw-comms-rule{height:1px;min-width:12px;flex:1;background:linear-gradient(90deg,#ed78b5,transparent)}
+.pw-comms-status{font:600 9px 'Oxanium',sans-serif;letter-spacing:.09em;white-space:nowrap;color:#b5d7ea}
+.pw-comms-toggle{min-width:33px;min-height:33px;border:1px solid #ffffff70;border-radius:10px;background:#213b56a8;color:#e4f0ff;font-size:20px;pointer-events:auto;cursor:pointer}
+.pw-comms-toggle:focus-visible{outline:2px solid var(--pw-pink)}
+.pw-comms-transcript{display:grid;gap:13px;max-height:min(53vh,570px);overflow:auto;scrollbar-width:thin;scrollbar-color:#e7a3d3 #142535;padding:17px 5px 8px 2px}
+.pw-comms-entry{--pw-channel:var(--pw-pink);display:grid;grid-template-columns:67px minmax(0,1fr);align-items:start;gap:13px}
+.pw-comms-entry[data-person='ghju']{--pw-channel:#bfd6fb}
+.pw-comms-entry[data-person='lylu'],.pw-comms-entry[data-person='car']{--pw-channel:#7dc9ff}
+.pw-comms-entry[data-person='radio']{--pw-channel:#d7c8a4}
+.pw-comms-avatar{width:67px;height:76px;border:1px solid var(--pw-channel);clip-path:polygon(18% 0,88% 0,100% 16%,100% 87%,88% 100%,0 100%,0 18%);background:radial-gradient(circle at 60% 40%,#62778c95,#0a1423);box-shadow:0 0 14px var(--pw-channel);padding:3px;display:grid;place-items:center;color:var(--pw-channel);font-size:28px;overflow:hidden}
+.pw-comms-avatar canvas,.pw-comms-avatar img{display:block;width:100%;height:100%;object-fit:cover;object-position:center 28%;filter:contrast(1.12)}
+.pw-comms-avatar canvas{object-fit:contain}
+.pw-comms-meta{display:flex;align-items:center;gap:12px;min-height:24px;margin:0 0 6px 4px}
+.pw-comms-name{color:var(--pw-channel);font-size:clamp(13px,1.4vw,18px);letter-spacing:.16em}
+.pw-comms-stripes{color:var(--pw-channel);font-size:11px;letter-spacing:2px}
+.pw-comms-bubble{
+ min-height:50px;padding:14px 17px;border-radius:18px 19px 20px 18px;
+ border:1px solid var(--pw-channel);background:linear-gradient(110deg,#26354b97,#192740de);
+ box-shadow:inset 0 1px #ffffff18,inset 0 -2px var(--pw-channel),0 3px 18px #0004,0 0 10px color-mix(in srgb,var(--pw-channel) 28%,transparent);
+}
+.pw-comms-entry[data-person='gab'] .pw-comms-bubble,.pw-comms-entry[data-person='car'] .pw-comms-bubble{
+ background:linear-gradient(118deg,#522c4999,#2a29478a 65%,#5a2e52a0)}
+.pw-comms-words{
+ display:block;color:#f7f9ff;
+ font-size:clamp(12px,1.48vw,17px);line-height:1.52;letter-spacing:.11em;
+ overflow-wrap:anywhere;hyphens:auto;
+}
+.pw-comms-footer{display:flex;gap:12px;justify-content:center;align-items:center;padding-top:11px;color:#adc5db80}
+.pw-comms-footer>span{flex:1;height:1px;background:linear-gradient(90deg,transparent,#c2daf9a5)}
+.pw-comms-footer>span:last-child{background:linear-gradient(90deg,#c2daf9a5,transparent)}
+.pw-comms-footer b{color:#748ca5;font:12px monospace}
+.pw-comms-footer b span{color:var(--pw-pink)}
+/* During combat the newest message has priority. Tap the header icon for the full screenshot-like history. */
+.pw-comms[data-expanded='false']{width:min(500px,calc(100vw - 26px));bottom:max(110px,calc(env(safe-area-inset-bottom) + 95px));padding:9px 12px;border-radius:18px}
+.pw-comms[data-expanded='false'] .pw-comms-header{padding-bottom:4px;min-height:22px}
+.pw-comms[data-expanded='false'] .pw-comms-brand{font-size:10px}
+.pw-comms[data-expanded='false'] .pw-comms-status{display:none}
+.pw-comms[data-expanded='false'] .pw-comms-transcript{padding:9px 0 1px;max-height:28vh;overflow:hidden}
+.pw-comms[data-expanded='false'] .pw-comms-entry:not(:last-child){display:none}
+.pw-comms[data-expanded='false'] .pw-comms-entry{grid-template-columns:45px minmax(0,1fr);gap:9px}
+.pw-comms[data-expanded='false'] .pw-comms-avatar{width:45px;height:49px}
+.pw-comms[data-expanded='false'] .pw-comms-meta{min-height:16px;margin-bottom:3px}
+.pw-comms[data-expanded='false'] .pw-comms-name{font-size:11px}
+.pw-comms[data-expanded='false'] .pw-comms-bubble{min-height:40px;padding:8px 10px;border-radius:11px}
+.pw-comms[data-expanded='false'] .pw-comms-words{font-size:clamp(10px,2.5vw,13px);letter-spacing:.03em;line-height:1.45}
+.pw-comms[data-expanded='false'] .pw-comms-footer{display:none}
+@media(max-width:650px){
+ .pw-comms[data-expanded='true']{width:calc(100vw - 18px);bottom:50%;transform:translate(-50%,50%);max-height:calc(100dvh - 30px);padding:12px 10px 10px;border-radius:22px}
+ .pw-comms[data-expanded='true'] .pw-comms-transcript{max-height:calc(100dvh - 117px);gap:9px;padding:11px 2px}
+ .pw-comms[data-expanded='true'] .pw-comms-entry{grid-template-columns:51px minmax(0,1fr);gap:8px}
+ .pw-comms[data-expanded='true'] .pw-comms-avatar{width:51px;height:58px}
+ .pw-comms[data-expanded='true'] .pw-comms-bubble{padding:11px}
+ .pw-comms[data-expanded='true'] .pw-comms-words{font-size:clamp(11px,3vw,15px);letter-spacing:.045em;line-height:1.44}
+ .pw-comms[data-expanded='true'] .pw-comms-name{font-size:13px}
+ .pw-comms-brand{font-size:11px}
+}
+@media(orientation:landscape) and (max-height:510px){
+ .pw-comms[data-expanded='true'] .pw-comms-transcript{max-height:calc(100dvh - 95px)}
+ .pw-comms[data-expanded='false']{bottom:calc(env(safe-area-inset-bottom) + 72px);width:min(450px,48vw);left:50%;padding:7px}
+}
+@media(prefers-reduced-transparency:reduce){.pw-comms{background:#102337f2;backdrop-filter:none;-webkit-backdrop-filter:none}}
+@media(prefers-reduced-motion:reduce){.pw-comms *{animation:none!important;transition:none!important}}

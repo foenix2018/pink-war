@@ -1,3 +1,4 @@
+@import url('./pink-type.css?v=1');
 /* Level screen shared by every chapter (model: chapter 03 screen). Local fonts only. */
 .pw-briefing{--pwb-pink:#ff2d95;--pwb-pink2:#ff5fb0;--pwb-line:#ff2d9555;--pwb-ink:#e8ecf2;--pwb-mute:#aeb7c4;--pwb-head:"Bahnschrift","DIN Alternate","DIN Condensed","Arial Narrow","Roboto Condensed",system-ui,sans-serif;
  position:fixed!important;inset:0;z-index:80;place-items:start!important;align-content:start!important;padding:0!important;overflow:hidden auto;color:var(--pwb-ink);font-family:system-ui,"Segoe UI",sans-serif;
