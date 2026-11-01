@@ -1,5 +1,6 @@
 import {BREACH_DRESSING} from './breach-dressing-layout.js';
 import {BREACH} from './breach-layout.js';
+import {createFunctionalProp} from './functional-props.js';
 
 export function createBreachDressing(T,root,api){
  const {box,cylinder,cable,collar,solidDetail,materials:m,ownG,ownM,ownT}=api;
@@ -23,9 +24,21 @@ export function createBreachDressing(T,root,api){
  // Small, physically attached information plates; no overhead mission billboards.
  function plate(text,x,y,z,w=1.25){const cv=document.createElement('canvas');cv.width=512;cv.height=96;const c=cv.getContext('2d');c.fillStyle='#16212b';c.fillRect(0,0,512,96);c.fillStyle='#b4c7d0';c.font='600 30px sans-serif';c.fillText(text,16,58,480);const tex=ownT(new T.CanvasTexture(cv));tex.colorSpace=T.SRGBColorSpace;const material=ownM(new T.MeshBasicMaterial({map:tex}));box(m.steel,x,y,z-.035,w+.05,w*.1875+.05,.07);const mesh=new T.Mesh(ownG(new T.PlaneGeometry(w,w*.1875)),material);mesh.position.set(x,y,z+.005);root.add(mesh);stats.attachedSigns++;}
  function keyboard(x,y,z,w=1.2){box(m.dark,x,y,z,w,.06,.42);for(let row=0;row<3;row++)for(let col=0;col<11;col++)box(m.steel,x-w*.42+col*w*.083,y+.035,z-.12+row*.11,w*.06,.018,.07);}
- function chair(x,z){solid(m.dark,x,.68,z,.62,.13,.62);const back=box(m.steel,x,1.03,z+.27,.64,.68,.11);back.rotation.x=-.13;cylinder(m.steel,x,.34,z,.07,.55);for(const a of [0,Math.PI/3,Math.PI*2/3]){const foot=box(m.dark,x,.08,z,.8,.08,.09);foot.rotation.y=a;}}
+ function chair(x,z){
+    const chair=createFunctionalProp(T,'chair',{w:.72,d:.74,h:1.45,low:false,M:{
+      steel:m.steel,paintedMetal:m.steel,dark:m.dark,black:m.rubber,wood:m.steel
+    }});
+    chair.position.set(x,0,z);root.add(chair);
+    // The owning scene must dispose even of the new merged furniture geos.
+    chair.traverse(mesh=>{if(mesh.isMesh)ownG(mesh.geometry);});
+  }
  function console(p,holographic=false){
-  solid(m.dark,p.x,.45,p.z,p.w*.88,.9,p.d*.78);box(m.steel,p.x,1,p.z,p.w,.13,p.d);box(m.dark,p.x,1.08,p.z-.2,p.w*.92,.04,.18);
+  // Physically usable console: open knee recess, supporting feet and beveled worktop.
+  for(const dx of [-p.w*.41,p.w*.41])for(const dz of [-p.d*.34,p.d*.34])
+   box(m.steel,p.x+dx,.49,p.z+dz,.09,.92,.09);
+  box(m.dark,p.x,.56,p.z-p.d*.30,p.w*.82,.73,.08);
+  box(m.steel,p.x,1,p.z,p.w,.13,p.d);
+  box(m.dark,p.x,1.08,p.z-.2,p.w*.92,.04,.18);
   const count=p.w>3.5?2:1;
   for(let i=0;i<count;i++){const dx=(i-(count-1)/2)*1.48;box(m.steel,p.x+dx,1.34,p.z-.35,.09,.55,.09);panel(p.id+'-'+i,p.x+dx,1.79,p.z-.35,1.22,.65,{caption:p.zone==='reactor'?'RÉACTEUR / CONFINEMENT':'VESPER / RÉSEAU LOCAL',kind:p.zone});keyboard(p.x+dx,1.1,p.z+.24,1.05);}
   chair(p.x-p.w*.29,p.z+1.13);routeCable([[p.x,1,p.z-.65],[p.x-.7,.1,p.z-.8],[p.x-1.6,.07,p.z-.7],[p.x-1.7,.07,p.z-2]],.045);
@@ -38,7 +51,13 @@ export function createBreachDressing(T,root,api){
   }
  }
  function rack(p,batteries=false){
-  solid(m.dark,p.x,p.h/2,p.z,p.w,p.h,p.d);box(m.steel,p.x,.12,p.z,p.w+.2,.24,p.d+.15);
+  // Open server/battery rack: structural uprights, accessible rear panel,
+  // individual shelves. No opaque cuboid hides the modules from the player.
+  for(const dx of [-p.w*.45,p.w*.45])for(const dz of [-p.d*.43,p.d*.43])
+   box(m.steel,p.x+dx,p.h*.5,p.z+dz,.09,p.h,.09);
+  box(m.dark,p.x,p.h*.5,p.z-p.d*.47,p.w*.92,p.h*.89,.045);
+  box(m.steel,p.x,.12,p.z,p.w+.12,.24,p.d+.10);
+  box(m.steel,p.x,p.h-.055,p.z,p.w+.12,.11,p.d+.1);
   for(let row=0;row<5;row++){
    const y=.38+row*(p.h-.5)/5;box(m.steel,p.x,y,p.z+p.d/2+.03,p.w*.84,.1,.08);
    for(const dx of [-.72,0,.72]){
