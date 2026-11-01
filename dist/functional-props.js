@@ -6,7 +6,7 @@ import {Assembly,bevelBox,matrix,limb} from './geo.js';
 export const FUNCTIONAL_PROP_REV='world-functional-props-2026-11-v1';
 export const FUNCTIONAL_KINDS=Object.freeze([
  'forklift','railcar','cot','stretcher','bed','bench','desk','workbench','counter',
- 'cabinet','rack','servers','batteries','generator','ticket-machine','vending',
+ 'cabinet','rack','servers','batteries','generator','transformer','ticket-machine','vending',
  'scanner','terminal','security-desk','console','kiosk','booth','pump','winch','chair'
 ]);
 export function createFunctionalProp(T,kind,{w=2,d=1,h=2,low=false,M={}}={}){
@@ -189,6 +189,25 @@ export function createFunctionalProp(T,kind,{w=2,d=1,h=2,low=false,M={}}={}){
    for(const x of [-W*.30,-W*.17,-W*.04])cyl(led,[x,H*.72,face+.073],.022,.024,[Math.PI/2,0,0],8);
    cyl(steel,[-W*.36,H*.93,-D*.20],.08,H*.25);
  }
+ function transformer(){
+   // High-voltage transformer, not a diesel generator with the wrong label.
+   box(shadow,[W,.17,D],[0,.14,0],[],.018);
+   box(body,[W*.80,H*.57,D*.77],[0,H*.42,0],[],.05);
+   for(const side of [-1,1]){
+     for(let j=0;j<(low?5:10);j++){
+       const x=-W*.32+j*W*.64/(low?4:9);
+       box(steel,[.025,H*.39,.045],[x,H*.42,side*D*.395],[],.004);
+     }
+     box(shadow,[W*.64,.10,.036],[0,H*.62,side*D*.412]);
+   }
+   for(let k=0;k<3;k++){
+     const x=(k-1)*W*.23;
+     cyl(shadow,[x,H*.77,0],Math.min(W*.105,.21),.22);
+     for(let j=0;j<4;j++)cyl(steel,[x,H*.84+j*.086,0],Math.min(W*.12,.24),.023,[],low?9:14);
+     cyl(led,[x,H*.84+4*.086,0],.060,.052);
+   }
+   for(const x of [-W*.32,W*.32])box(steel,[.08,.24,.085],[x,H*.82,-D*.30]);
+ }
  function locomotive(){
    const wheelRadius=Math.min(.36,D*.18);
    box(shadow,[W,.30,D*.91],[0,.52,0]);
@@ -279,6 +298,7 @@ export function createFunctionalProp(T,kind,{w=2,d=1,h=2,low=false,M={}}={}){
  else if(['ticket-machine','vending','terminal','security-desk','console','kiosk','booth'].includes(kind))cabinetMachine();
  else if(kind==='scanner')scanner();
  else if(kind==='generator')generator();
+ else if(kind==='transformer')transformer();
  else if(kind==='pump'||kind==='winch')pumpWinch();
  else if(kind==='chair')chair();
  const meshes=a.build(root,{name:'PW / '+kind+' · batches PBR',userData:{visualOnly:true}});
