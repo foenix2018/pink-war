@@ -158,7 +158,7 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
   const key=e=>{if(e.code==='Escape'&&(open||arsenalOpen||!objective.hidden)){e.preventDefault();e.stopImmediatePropagation();setArsenalOpen(false);setOpen(false);objective.hidden=true;mission.setAttribute('aria-expanded','false');partner.focus({preventScroll:true});}};
   const blur=()=>reset(),visibility=()=>{if(doc.hidden)reset();};
   doc.addEventListener('pointerdown',outside,true);doc.addEventListener('keydown',key,true);doc.addEventListener('pw-hud-overlay',blur);doc.defaultView.addEventListener('blur',blur);doc.addEventListener('visibilitychange',visibility);
-  const api={root,setOpen,reset,setArsenalOpen,toggleArsenal(){setArsenalOpen(!arsenalOpen);},get isOpen(){return open||arsenalOpen;},get isArsenalOpen(){return arsenalOpen;},
+  const api={root,setOpen,reset,setArsenalOpen,pollGamepad:gamepadMenu,toggleArsenal(){setArsenalOpen(!arsenalOpen);},get isOpen(){return open||arsenalOpen;},get isArsenalOpen(){return arsenalOpen;},
     setCharacter(id){const hero=id==='lylu'?'lylu':'ghju';root.dataset.hero=hero;doc.body.dataset.pwHero=hero;text('tag',HEROES[hero]);partnerName.textContent=PARTNER_LABEL[hero];partnerPhoto.src=PARTNER_IMAGES[hero];partnerPhoto.alt='Portrait de '+PARTNER_LABEL[hero];partner.setAttribute('aria-label','Armes et grenades · '+PARTNER_LABEL[hero]);},
     setObjective({label='',detail=''}={}){const signature=label+'|'+detail;mission.hidden=!label;if(signature===objectiveKey)return;objectiveKey=signature;mission.querySelector('span').textContent=label;objective.querySelector('small').textContent=label;objective.querySelector('p').textContent=detail;mission.setAttribute('aria-label',label+' : afficher l’objectif');objective.hidden=true;mission.setAttribute('aria-expanded','false');},
     setContext(label){label=label||'';if(contextLabel===label)return;contextLabel=label;context.hidden=!label;context.querySelector('span').textContent=label;context.setAttribute('aria-label',label||'Interagir');},
@@ -177,7 +177,7 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
       prop(arms,'--fill',(s.reloading?s.reloadProgress:s.melee?1:s.capacity?s.ammo/s.capacity:0).toFixed(3));
       flag(arms,'reloading',s.reloading);flag(arms,'empty',s.empty);flag(arms,'low',!s.melee&&!s.reloading&&s.capacity>0&&s.ammo>0&&s.ammo<=s.capacity*.25);
       text('armsNote',s.reloading?'RECHARGE':s.empty?'VIDE':'');$('.pw-hud-reload').disabled=s.melee||s.reloading;
-      gamepadMenu();return s;
+      return s;
     },
     setVisible(visible){if(!visible)reset();root.hidden=!visible;},
     dispose(){if(disposed)return;reset();disposed=true;doc.removeEventListener('pointerdown',outside,true);doc.removeEventListener('keydown',key,true);doc.removeEventListener('pw-hud-overlay',blur);doc.defaultView.removeEventListener('blur',blur);doc.removeEventListener('visibilitychange',visibility);root.remove();doc.body.classList.remove('pw-unified-hud','pw-immersion-hud','pw-hud-lobby-page');}
