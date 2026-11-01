@@ -103,7 +103,7 @@ body.pw-immersion-hud .pw-objective-marker{top:max(84px,calc(env(safe-area-inset
 /* Hide the old separate GAB/CAR shortcut while this single portrait is active.
    Existing unlocked companion skills remain reachable from the arsenal panel. */
 body.pw-immersion-hud .pw-companion-toggle{display:none!important}
-body.pw-immersion-hud #pw-gamepad-aid{top:calc(env(safe-area-inset-top) + 82px)!important}
+body.pw-immersion-hud #pw-gamepad-aid{top:calc(env(safe-area-inset-top) + 132px)!important}
 body.pw-immersion-hud .fracture-session-actions,body.pw-immersion-hud .game-hud .hud-actions{
  top:calc(env(safe-area-inset-top) + 83px)!important;right:max(16px,env(safe-area-inset-right))}
 @media(hover:none),(max-width:750px){
