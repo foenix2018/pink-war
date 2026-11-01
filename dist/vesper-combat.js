@@ -151,7 +151,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const enemyModels=new Map(),feel=createWeaponFeel(),effects=createCampaignCombatEffects(T,scene,characterId);
   // Armour layer (3.63): queued strikes and throws from the page controls, played on the next simulation step.
   let meleeQueued=false,chargeQueued=false;
-  const armorTouch=(kind,value)=>{if(kind==='melee')api.melee();else if(kind==='charge')api.throwCharge();else if(kind==='reload')api.reload();else if(kind==='next')api.cycle();else if(kind==='interact')api.interact();else onControl(kind,value);};
+  const armorTouch=(kind,value)=>{if(kind==='melee')api.melee();else if(kind==='charge')api.throwCharge();else if(kind==='reload')api.reload();else if(kind==='next')combatHud?.toggleArsenal();else if(kind==='weapon')api.select(Number(value));else if(kind==='companion')api.toggleSkills();else if(kind==='interact')api.interact();else onControl(kind,value);};
   const armorFx=createArmorFeedback({T,scene,camera,accent:characterId==='lylu'?0x80baff:0xef91b4,listener:()=>game.player,
     audio:()=>sound&&audio?.state==='running'?audio:null,haptic:kind=>xr?.active&&xr.haptic(kind)});
   const gamepadInput=new DesktopGamepadInput();
@@ -260,7 +260,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   }
   function update(dt,s){
     setScreenMusic(ready&&!completed&&!journalOpen&&!skillMenu.isOpen&&game.state==='playing'?'gameplay':'paused',1);
-    if(!ready||completed||journalOpen||skillMenu.isOpen)return;
+    if(!ready||completed||journalOpen||skillMenu.isOpen||combatHud?.isArsenalOpen)return;
     syncCamera(s,dt);
     const p=game.player;
     if(!s.free){
@@ -443,6 +443,9 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     melee(){if(journalOpen||skillMenu.isOpen||game.state!=='playing')return;audioReady();meleeQueued=true;},
     throwCharge(){if(journalOpen||skillMenu.isOpen||game.state!=='playing')return;audioReady();chargeQueued=true;},
     cycle(delta=1){game.cycleWeapon(delta);},
+    get arsenalOpen(){return !!combatHud?.isArsenalOpen;},
+    toggleArsenal(){if(ready&&!xr?.active&&!journalOpen&&game.state==='playing')combatHud?.toggleArsenal();},
+    pollArsenalGamepad(){return !!combatHud?.pollGamepad();},
     select(index){game.selectWeapon(index);},
     interact:onInteract,
     pause(){setScreenMusic('paused');combatHud?.reset();held=false;fireInput.reset();gamepadInput.reset();skillMenu.setOpen(false);ambience?.pause();saber?.update({active:false});},

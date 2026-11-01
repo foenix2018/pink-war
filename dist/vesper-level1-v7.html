@@ -1787,10 +1787,10 @@ let legacyPS4Input=null;
 let padFiring=false;
 function pollGamepad(dt){const devices=navigator.getGamepads?.()||[],gp=combatWorld?combatWorld.gamepad(devices):legacyPS4Input?.select(devices,{focused:!document.hidden});gamepadMove.x=0;gamepadMove.y=0;padLook.x=0;padLook.y=0;padRun=false;gamepadAiming=false;padFiring=false;if(!gp){lastGamepadButtons=[];return;}
  const d=v=>Number.isFinite(v)&&Math.abs(v)>.20?v:0, btn=i=>!!gp.buttons[i]?.pressed||(gp.buttons[i]?.value||0)>.55,edge=i=>btn(i)&&!lastGamepadButtons[i];
- if(missionMenu?.isOpen){lastGamepadButtons=Array.from(gp.buttons,b=>!!b.pressed||(b.value||0)>.55);return;}
+ if(missionMenu?.isOpen||combatWorld?.pollArsenalGamepad?.()){lastGamepadButtons=Array.from(gp.buttons,b=>!!b.pressed||(b.value||0)>.55);return;}
  gamepadMove.x=d(gp.axes[0]||0);gamepadMove.y=d(gp.axes[1]||0);padLook.x=d(gp.axes[2]||0);padLook.y=d(gp.axes[3]||0);padRun=btn(10);gamepadAiming=btn(6);
  if(!combatWorld?.paused){yaw+=padLook.x*dt*1.9;pitch=clamp(pitch-padLook.y*dt*1.55,-1.46,1.46);}
- if(edge(12))combatWorld?.toggleSkills();padFiring=btn(7);if(edge(0))jumpQueued=true;if(edge(2))reloadWeapon();if(edge(3))changeWeapon(1);if(edge(1))crouching=!crouching;if(edge(11)){document.getElementById('help').classList.remove('show');interact();}if(edge(9))toggleMissionPause();if(edge(5))combatWorld?.melee?.();if(edge(4))combatWorld?.throwCharge?.();
+ if(edge(12))combatWorld?.toggleSkills();padFiring=btn(7);if(edge(0))jumpQueued=true;if(edge(2))reloadWeapon();if(edge(3))combatWorld?.toggleArsenal?.();if(edge(1))crouching=!crouching;if(edge(11)){document.getElementById('help').classList.remove('show');interact();}if(edge(9))toggleMissionPause();if(edge(5))combatWorld?.melee?.();if(edge(4))combatWorld?.throwCharge?.();
  lastGamepadButtons=Array.from(gp.buttons,b=>!!b.pressed||(b.value||0)>.55);
 }
 
@@ -1801,7 +1801,7 @@ function inputSetup(){
   if(!started||combatWorld?.paused)return;keys.add(ev.code);
   if(ev.repeat)return;
   if(ev.code==='KeyF')interact();
-  if(ev.code==='KeyE')changeWeapon(1);
+  if(ev.code==='KeyE')combatWorld?.toggleArsenal?.();
   if(ev.code==='KeyV'){if(combatWorld){isFree=false;combatWorld.setView(combatWorld.view==='fps'?'third':'fps');}else{isFree=!isFree;notify(isFree?'Caméra libre : WASD / ZQSD, Espace pour monter, Ctrl pour descendre.':'Mode exploration FPS réactivé.');$('cameraMode').textContent=isFree?'CAMÉRA LIBRE':'EXPLORATION';}}
   if(ev.code==='KeyM'){mapOpen=!mapOpen;$('mapPanel').classList.toggle('show',mapOpen)}
   if(ev.code==='KeyH'){$('help').classList.toggle('show')}
@@ -1841,7 +1841,7 @@ function inputSetup(){
  const actions=document.getElementById('touchButtons');
  for(const [id,label,description,action] of [
   ['btnReloadMobile','↻','Recharger',reloadWeapon],
-  ['btnNextMobile','ARME','Arme suivante',()=>changeWeapon(1)],
+  ['btnNextMobile','ARME','Ouvrir armes et grenades',()=>combatWorld?.toggleArsenal?.()],
   ['btnPauseMobile','Ⅱ','Pause / reprendre',toggleMissionPause]
  ]){const button=document.createElement('button');button.id=id;button.textContent=label;button.setAttribute('aria-label',description);button.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();action();});actions.append(button);}
  $('quality').value=quality;
@@ -1888,7 +1888,7 @@ function sceneUI(t){if(t-lastUiTime<180)return;lastUiTime=t;
 let lastUiTime=0;
 function render(t){if(!started)return;if(combatWorld?.xrActive){requestAnimationFrame(render);return;}const sec=t/1000,dt=Math.min(.045,(t-last)/1000||.016);last=t;
  pollGamepad(dt);
- if(!gamePaused&&!combatWorld?.paused){
+ if(!gamePaused&&!combatWorld?.paused&&!combatWorld?.arsenalOpen){
   yaw+=touchOrbit?.step(dt)||0;
    if(keys.has('ArrowRight'))yaw+=dt*1.4;if(keys.has('ArrowLeft'))yaw-=dt*1.4;
   if(keys.has('ArrowUp'))pitch=clamp(pitch+dt*1.15,-1.4,1.4);if(keys.has('ArrowDown'))pitch=clamp(pitch-dt*1.15,-1.4,1.4);
@@ -2002,7 +2002,7 @@ async function boot(){try{
   renderer=combatWorld;gpuKind=renderer.kind;
   document.body.classList.add('pw-live-combat');
    document.querySelector('#help h2').textContent='Le Dernier Signal';
-   const help=document.querySelector('#help .helpGrid');help.innerHTML='<p>ZQSD / WASD : déplacement · Souris : regard<br>J : saut · Maj : course · C : accroupir<br>Clic gauche / Espace : tirer · Clic droit : viser<br>R : recharger · E / molette : arme suivante<br>F : lire un terminal ou récupérer une arme<br>G : compétences de GAB-1 / CAR-14<br>Échap : pause · M : carte · H : aide</p><p>Manette : sticks pour bouger et regarder<br>L2 : viser · R2 : tirer · Croix : saut<br>Carré : recharger · Triangle : arme suivante<br>Rond : accroupir · R3 : interagir<br>Options : pause · Croix haute : compétences</p>';
+   const help=document.querySelector('#help .helpGrid');help.innerHTML='<p>ZQSD / WASD : déplacement · Souris : regard<br>J : saut · Maj : course · C : accroupir<br>Clic gauche / Espace : tirer · Clic droit : viser<br>R : recharger · E : arsenal GAB-1 / CAR-14<br>F : lire un terminal ou récupérer une arme<br>G : compétences de GAB-1 / CAR-14<br>Échap : pause · M : carte · H : aide</p><p>Manette : sticks pour bouger et regarder<br>L2 : viser · R2 : tirer · Croix : saut<br>Carré : recharger · Triangle : ouvrir arsenal<br>Rond : accroupir · R3 : interagir<br>Options : pause · Croix haute : compétences</p>';
    document.querySelector('#help .helpCard > p').textContent='La boutique de briques est à l’ouest. Le point au-dessus du regard guide par un chemin praticable. Les portes de transfert d’ORDRE restent à distance ; seuls les huit patrouilleurs initiaux occupent déjà le quartier. Terrasse à 4,8 m, par escalier ou monte-charge.';
   const style=document.createElement('style');style.textContent='body.pw-live-combat #weaponVis,body.pw-live-combat #sources{display:none!important}#combatHud{z-index:4}body.pw-live-combat #intro.gone{pointer-events:none}';document.head.append(style);
   window.__PINK_VESPER={snapshot:()=>combatWorld.snapshot(),get debug(){return combatWorld?.debug||null;}};

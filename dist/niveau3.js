@@ -334,6 +334,8 @@ function updateActors(){
 
 // ---------- Simulation tick ----------
 function gameTick(dt){
+ const arsenalControllerFrame=!!combatHud?.pollGamepad();
+ if(arsenalControllerFrame)return;
  const xc=xr?.active?xr.controls:null;
  const controls=xc?{moveX:xc.x,moveZ:xc.z,lookX:0,lookY:0,jump:xc.jump,interact:xc.interact,aim:xc.aim,fire:xc.fire,sprint:xc.sprint,melee:xc.melee,charge:xc.charge}
   :pinkControls.read(dt,keys,navigator.getGamepads?.()||[],{focused:!document.hidden});
@@ -351,7 +353,9 @@ function gameTick(dt){
  aimBlend+=(Number(aiming)-aimBlend)*(1-Math.exp(-dt*14));document.body.classList.toggle('aiming',aiming);
  const sprint=!aiming&&(controls.sprint||touchSprinting);
  if(controls.pause){pauseMission();return;}
- if(controls.next)game.cycleWeapon();
+ if(controls.next&&!xr?.active)combatHud?.toggleArsenal();
+ if(combatHud?.isArsenalOpen)return;
+ if(controls.next&&xr?.active)game.cycleWeapon();
  if(controls.reload)game.reload();
  if(controls.interact)interact();
  if(reading)return;
@@ -405,7 +409,7 @@ function gameTick(dt){
  if(weapon.userData.index!==game.weaponIndex)weapon.userData.setVariant(game.weaponIndex);
  updateHUD();
 }
-const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;return;}if(!running||paused)return;audioReady();if(kind==='melee')meleeQueued=true;else if(kind==='charge')chargeQueued=true;else if(kind==='reload')game.reload();else if(kind==='next')game.cycleWeapon();else if(kind==='interact')interact();else if(kind==='crouch')crouchQueued=true;};
+const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;return;}if(!running||paused)return;audioReady();if(kind==='melee')meleeQueued=true;else if(kind==='charge')chargeQueued=true;else if(kind==='reload')game.reload();else if(kind==='next')combatHud?.toggleArsenal();else if(kind==='weapon')game?.selectWeapon(Number(value));else if(kind==='companion')skillMenu?.setOpen(!skillMenu?.isOpen);else if(kind==='interact')interact();else if(kind==='crouch')crouchQueued=true;};
 let lastDevices='';
 const HOLD_LABEL={balise:'BROUILLAGE DE LA BALISE D’ORDRE',barriere:'LEVÉE DE LA BARRIÈRE',treuil:'TRACTION DU TREUIL',arrimage:'ARRIMAGE DE L’AMBULANCE AU TRAIN'};
 const VAN_WAIT={escorte:'attend son escorte',machines:'machines devant',stop:'à l’arrêt',stage:'à l’arrêt'};
@@ -504,7 +508,7 @@ async function boot(){
   if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);
   bootStep='prêt';hud.hidden=false;started=true;requestAnimationFrame(animation);
   touchControls=createPinkWarsTouch(canvas,{onFire:down=>{if(down)audioReady();heldFire=down;if(down)firePressQueued=true;},onJump:()=>{jumpQueued=true;},onInteract:()=>interact(),
-   onNext:()=>game.cycleWeapon(),onReload:()=>game.reload(),onCrouch:()=>{crouchQueued=true;},onView:()=>changeView(),onPause:()=>pauseMission(),onAim:down=>{if(down)audioReady();mouseAim=down;}});
+   onNext:()=>combatHud?.toggleArsenal(),onReload:()=>game.reload(),onCrouch:()=>{crouchQueued=true;},onView:()=>changeView(),onPause:()=>pauseMission(),onAim:down=>{if(down)audioReady();mouseAim=down;}});
   begin();pauseMenu.setVisible(true);void loadAuthenticSoldier();
  }catch(error){
   console.error('[M03] démarrage impossible ('+bootStep+')',error);
@@ -537,7 +541,7 @@ window.addEventListener('keydown',e=>{
  keys.add(e.code);if(e.repeat)return;
  if(e.code==='KeyJ')jumpQueued=true;
  if(e.code==='KeyF')interact();
- if(e.code==='KeyE')game.cycleWeapon();
+ if(e.code==='KeyE')combatHud?.toggleArsenal();
  if(e.code==='KeyR')game.reload();
  if(e.code==='KeyX')meleeQueued=true;
  if(e.code==='KeyB')chargeQueued=true;

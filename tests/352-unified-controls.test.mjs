@@ -10,7 +10,7 @@ test('The new Vesper M01 aligns keyboard commands to M02',()=>{
  }
  assert.match(m1,/keys\.has\('KeyJ'\)\s*&&\s*!jumpLatch/);
  assert.match(m1,/if\(ev\.code==='KeyF'\)interact\(\)/);
- assert.match(m1,/if\(ev\.code==='KeyE'\)changeWeapon\(1\)/);
+ assert.match(m1,/if\(ev\.code==='KeyE'\)combatWorld\?\.toggleArsenal\?\.\(\)/);
  assert.match(m1,/if\(ev\.code==='KeyR'\)reloadWeapon\(\)/);
  assert.match(m1,/firing\|\|keys\.has\('Space'\)/);
  assert.match(m1,/keys\.add\('KeyJ'\)/);
