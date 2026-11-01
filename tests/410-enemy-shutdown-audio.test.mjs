@@ -45,7 +45,8 @@ test('never allocate an AudioContext; respect missing, muted, and suspended cont
  assert.equal(f.stats().created,0);
  context=f.context;f.context.state='suspended';
  assert.equal(audio.play('shutdown',{x:1,z:1,form:'brute'}),true,'schedule after touch to play when iOS resumes');
- assert.equal(audio.stats().active,0,'mock onended releases voice');
+ assert.equal(audio.stats().active,1,'voice remains scheduled until playback ends');
+ audio.stop();assert.equal(audio.stats().active,0);
  audio.dispose();assert.equal(audio.play('shutdown',{x:1,z:1}),false);
 });
 test('bounded voices, distance culling and stop/dispose clean up',()=>{
@@ -55,6 +56,7 @@ test('bounded voices, distance culling and stop/dispose clean up',()=>{
  assert.equal(audio.play('shutdown',{x:2,z:0,form:'brute',duration:1.2}),true);
  assert.equal(audio.play('glitch',{x:3,z:0,form:'seer'}),true);
  assert.equal(audio.play('terminal',{x:2,z:0,form:'bulwark'}),true);
+ assert.equal(audio.play('fault',{x:2,z:0}),false,'simultaneous voice cap');
  audio.stop();assert.equal(audio.stats().active,0);
  audio.dispose();assert.equal(audio.play('fault',{x:0,z:0}),false);
  assert.ok(f.stats().created>0);
