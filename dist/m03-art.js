@@ -242,9 +242,16 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
     box(M.container[1], 67, 2.7, -80, 2.6, 2.7, 6);
   }
   function booth() {
-    box(M.galva, 93, 0, -75, 6, .3, 6); box(M.dark, 93, .3, -75, 6, 2.6, 6); box(M.glass, 89.98, 1.2, -75, .05, 1.4, 5.4);
-    box(M.galva, 93, 2.9, -75, 6.4, .3, 6.4); signs.neon(['RÉGULATION', 'GARE DE FRET 03'], { color: '#ffc890', kanji: '管制', w: 2.8, h: .8, x: 89.94, y: 3.4, z: -75, yaw: -Math.PI / 2 });
-    box(M.neonAmber, 89.95, 1, -75, .02, .5, 1.2);
+    const office=createFunctionalProp(T,'booth',{w:6,d:6,h:3.2,low,M:{
+      ...M,paintedMetal:M.galva,steel:M.galva,glass:M.glass,dark:M.dark
+    }});
+    office.position.set(93,0,-75);add(office);
+    // Surveillance window and identification sign remain on the active station face.
+    const glassPane=new T.Mesh(new T.PlaneGeometry(2.8,1.34),M.glass);
+    glassPane.position.set(89.98,1.93,-75);glassPane.rotation.y=Math.PI/2;add(glassPane);
+    signs.neon(['RÉGULATION','GARE DE FRET 03'],
+      {color:'#ffc890',kanji:'管制',w:2.8,h:.8,x:89.94,y:3.4,z:-75,yaw:-Math.PI/2});
+    box(M.neonAmber,89.95,1,-75,.02,.5,1.2);
   }
 
   // ---------- The avenue: ORDRE barrier, tracking beacon at the fracture ----------
