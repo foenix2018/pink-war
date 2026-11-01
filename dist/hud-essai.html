@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#081320"><title>PINK WARS — HUD / VERSION ESSAI</title>
-<link rel="stylesheet" href="./combat-hud.css?v=3.82-layout-1" data-pw-hud>
+<link rel="stylesheet" href="./combat-hud.css?v=3.83-liquid-feedback-1" data-pw-hud>
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080f1b;color:#f3f7ff;font-family:system-ui,-apple-system,sans-serif}
 body{touch-action:manipulation}
@@ -64,6 +64,36 @@ body.pw-demo .pw-hud .pw-hud-melee-direct{left:auto!important;right:32px!importa
 body.pw-demo #move{width:95px!important;height:95px!important}body.pw-demo #fire{width:60px!important;height:60px!important}
 body.pw-demo .pw-hud .pw-hud-melee-direct{width:49px!important;height:49px!important;bottom:calc(var(--pw-demo-stick-bottom) + 70px)!important}}
 @media(max-width:390px){body.pw-demo{--pw-demo-stick-size:106px;--pw-demo-spacing:51px}body.pw-demo #move{width:106px;height:106px}}
+
+/* HUD trial 3.83 matches the in-game Liquid Glass interaction. */
+body.pw-demo #trial-actions .control,
+body.pw-demo #pause{
+  scale:1;
+  transition:scale 150ms cubic-bezier(.18,.7,.36,1.22),background-color 160ms ease,border-color 160ms ease,box-shadow 160ms ease;
+  background:linear-gradient(145deg,#e1f5ff16,#20394e23),#10263953;
+  border-color:#e5f6ff74;
+  -webkit-backdrop-filter:blur(12px) saturate(125%);
+  backdrop-filter:blur(12px) saturate(125%);
+}
+body.pw-demo #trial-actions .control:is(:active,[data-pw-pressed=true]),
+body.pw-demo #pause:is(:active,[data-pw-pressed=true]){
+  scale:1.075;
+  background:linear-gradient(145deg,#e6f7ff78,#395d7ab9),#132c42c0!important;
+  border-color:#edfbffcc!important;
+  box-shadow:inset 0 1px #fff8,0 0 18px #9ed2f95a!important;
+}
+body.pw-demo #fire,body.pw-demo[data-hero=lylu] #fire{
+  background:linear-gradient(145deg,#e7405937,#a90d3b47),#31132839!important;
+  border-color:#ffb9c6a3!important;
+}
+body.pw-demo #fire:is(:active,[data-pw-pressed=true]){
+  background:linear-gradient(145deg,#fb7187c9,#bc224ebc),#6d153bbb!important;
+  border-color:#ffd9e2ea!important;
+  box-shadow:inset 0 1px #fff8,0 0 22px #f2528498!important;
+}
+body.pw-demo #move{background:radial-gradient(circle,#cceeff16,#1236533f 60%,#061c305a);transition:background-color 140ms,border-color 140ms}
+body.pw-demo #move:active{background:radial-gradient(circle,#cceeff30,#21436597 60%,#0a28478c)}
+@media(prefers-reduced-motion:reduce){body.pw-demo #trial-actions .control{transition:none!important;scale:1!important}}
 </style></head>
 <body class="pw-demo" data-hero="ghju">
 <div id="scene"></div><div id="crosshair"></div>
@@ -107,6 +137,21 @@ $('fire').addEventListener('click',e=>{if(e.detail===0){const w=game.weapon;if(g
 $('aim').addEventListener('pointerdown',e=>{e.preventDefault();toast('MODE VISÉE');});
 $('jump').onclick=()=>toast('SAUT');
 $('pause').onclick=()=>{paused=!paused;game.state=paused?'paused':'playing';hud.setVisible(!paused);$('pause').textContent=paused?'▶':'Ⅱ';toast(paused?'PAUSE':'REPRISE');update();};
+const pressedTrial=new Map();
+document.addEventListener('pointerdown',e=>{
+  const b=e.target?.closest?.('#trial-actions button,#pause');
+  if(!b)return;
+  pressedTrial.set(e.pointerId,b);
+  b.dataset.pwPressed='true';
+},true);
+for(const type of ['pointerup','pointercancel','lostpointercapture'])document.addEventListener(type,e=>{
+  const b=pressedTrial.get(e.pointerId);if(!b)return;
+  pressedTrial.delete(e.pointerId);if(![...pressedTrial.values()].includes(b))delete b.dataset.pwPressed;
+},true);
+window.addEventListener('blur',()=>{
+  for(const b of pressedTrial.values())delete b.dataset.pwPressed;
+  pressedTrial.clear();
+});
 const move=$('move'),knob=$('knob');let pointer=null,run=false;
 function resetMove(){pointer=null;run=false;knob.style.transform='';move.dataset.run='false';}
 function drag(e){const rect=move.getBoundingClientRect(),r=rect.width*.33;const dx=e.clientX-(rect.left+rect.width/2),dy=e.clientY-(rect.top+rect.height/2);const ratio=Math.min(1,r/(Math.hypot(dx,dy)||1));knob.style.transform='translate('+dx*ratio+'px,'+dy*ratio+'px)';const running=Math.hypot(dx*ratio,dy*ratio)>=r*.88;move.dataset.run=String(running);if(running&&!run)toast('COURSE ACTIVÉE');run=running;}

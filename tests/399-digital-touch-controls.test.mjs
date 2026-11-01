@@ -48,6 +48,19 @@ test('crouch sits below aim, jump above, melee over translucent red fire',()=>{
  assert.match(trial,/\.pw-hud \.pw-hud-crouch-direct\{left:50%!important/);
 });
 
+test('liquid glass becomes more opaque and scales only during interaction',()=>{
+ const css=source('combat-hud.css'),hud=source('combat-hud.js'),trial=source('hud-essai.html');
+ assert.match(css,/3\.83 – glass at rest/);
+ assert.match(css,/#081d2d39/);
+ assert.match(css,/\[data-pw-pressed=true\]/);
+ assert.match(css,/scale:1\.075/);
+ assert.match(css,/#fb7187c9/);
+ assert.match(hud,/pressedPointers=new Map\(\)/);
+ assert.match(hud,/doc\.addEventListener\('pointerdown',pressStart,true\)/);
+ assert.match(hud,/doc\.removeEventListener\('pointerdown',pressStart,true\)/);
+ assert.match(trial,/#trial-actions \.control:is\(:active,\[data-pw-pressed=true\]\)/);
+ assert.match(trial,/pressedTrial=new Map\(\)/);
+});
 test('strong left-stick deflection triggers sprint while slight movement still walks',()=>{
  assert.equal(touchAnalogSprint(0,-1),true);
  assert.equal(touchAnalogSprint(.65,-.65),true);

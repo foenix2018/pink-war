@@ -7,7 +7,7 @@ import {paintCompanionPortrait} from './companion-portrait.js';
 import {renderDigitalCounter} from './digital-display.js';
 let activeCombatHud = null;
 export const getActiveCombatHud = () => activeCombatHud;
-const STYLESHEET = 'combat-hud.css?v=3.82-layout-1';
+const STYLESHEET = 'combat-hud.css?v=3.83-liquid-feedback-1';
 const HEROES = Object.freeze({ ghju: 'GHJU', lylu: 'LYLU' });
 export const HUD_SEGMENTS = 10;
 
@@ -136,6 +136,31 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
   more.onclick=e=>{e.stopPropagation();setOpen(!open);};
   mission.onclick=e=>{e.stopPropagation();setOpen(false);objective.hidden=!objective.hidden;mission.setAttribute('aria-expanded',String(!objective.hidden));};
   const outside=e=>{if(root.contains(e.target))return;const wasOpen=open||gearOpen;setGearOpen(false);setOpen(false);objective.hidden=true;mission.setAttribute('aria-expanded','false');if(wasOpen&&e.target.tagName==='CANVAS'){e.preventDefault();e.stopImmediatePropagation();}};
+  // Shared input feedback: one delegated listener covers every combat mode, including
+  // engine-owned buttons added after HUD initialization. Does not synthesize game input.
+  const feedbackSelector='[data-pw-immersion],.pw-hud-companion,.pw-hud-gear button,.pw-hud-reload,.pw-hud-crouch-direct,.pw-hud-melee-direct,.pw-hud-context,.pw-hud-mission';
+  const pressedPointers=new Map();
+  const pressStart=e=>{
+    if(!active||disposed)return;
+    const button=e.target?.closest?.(feedbackSelector);
+    if(!button||button.disabled)return;
+    pressedPointers.set(e.pointerId,button);
+    button.dataset.pwPressed='true';
+  };
+  const pressEnd=e=>{
+    const button=pressedPointers.get(e.pointerId);
+    if(!button)return;
+    pressedPointers.delete(e.pointerId);
+    if(![...pressedPointers.values()].includes(button))delete button.dataset.pwPressed;
+  };
+  const clearPresses=()=>{
+    for(const button of pressedPointers.values())delete button.dataset.pwPressed;
+    pressedPointers.clear();
+  };
+  doc.addEventListener('pointerdown',pressStart,true);
+  for(const event of ['pointerup','pointercancel','lostpointercapture'])doc.addEventListener(event,pressEnd,true);
+  doc.defaultView.addEventListener('blur',clearPresses);
+  doc.addEventListener('visibilitychange',clearPresses);
   const key=e=>{if(e.code==='Escape'&&(open||gearOpen||!objective.hidden)){e.preventDefault();e.stopImmediatePropagation();setGearOpen(false);setOpen(false);objective.hidden=true;mission.setAttribute('aria-expanded','false');portrait.focus({preventScroll:true});}};
   const blur=()=>reset(),visibility=()=>{if(doc.hidden)reset();};
   doc.addEventListener('pointerdown',outside,true);doc.addEventListener('keydown',key,true);doc.addEventListener('pw-hud-overlay',blur);doc.defaultView.addEventListener('blur',blur);doc.addEventListener('visibilitychange',visibility);
@@ -164,6 +189,6 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
       return s;
     },
     setVisible(visible){if(!visible)reset();root.hidden=!visible;},
-    dispose(){if(disposed)return;reset();disposed=true;doc.removeEventListener('pointerdown',outside,true);doc.removeEventListener('keydown',key,true);doc.removeEventListener('pw-hud-overlay',blur);doc.defaultView.removeEventListener('blur',blur);doc.removeEventListener('visibilitychange',visibility);root.remove();if(activeCombatHud===api)activeCombatHud=null;doc.body.classList.remove('pw-unified-hud','pw-immersion-hud','pw-hud-lobby-page');}
+    dispose(){if(disposed)return;reset();disposed=true;clearPresses();doc.removeEventListener('pointerdown',pressStart,true);for(const event of ['pointerup','pointercancel','lostpointercapture'])doc.removeEventListener(event,pressEnd,true);doc.defaultView.removeEventListener('blur',clearPresses);doc.removeEventListener('visibilitychange',clearPresses);doc.removeEventListener('pointerdown',outside,true);doc.removeEventListener('keydown',key,true);doc.removeEventListener('pw-hud-overlay',blur);doc.defaultView.removeEventListener('blur',blur);doc.removeEventListener('visibilitychange',visibility);root.remove();if(activeCombatHud===api)activeCombatHud=null;doc.body.classList.remove('pw-unified-hud','pw-immersion-hud','pw-hud-lobby-page');}
   };api.setCharacter(characterId);activeCombatHud=api;return api;
 }
