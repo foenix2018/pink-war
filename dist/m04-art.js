@@ -5,6 +5,7 @@
 // of point lights moved to the nearest fixtures, the breach (beam, rings, sparks) driven by breach(v), shared signage.
 import { AREAS, DOORS, INTERACTIONS, FLOORS, HEIGHTS, areaAt } from './m04-layout.js';
 import { createSignage } from './signage.js';
+import {createFunctionalProp} from './functional-props.js';
 
 const TAU = Math.PI * 2;
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
@@ -133,10 +134,25 @@ export function createM04Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
   const breach = { level: 1, target: 1 }, relays = new Map(), stabs = [];
   function dress(o) {
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, h = o.height;
+    // All stages share the same hard-surface silhouettes, independent of PBR palette.
+    const shared={bench:'desk',scanner:'scanner',transformer:'generator',
+      forklift:'forklift',generator:'generator',cabinet:'cabinet',
+      rack:'rack',workbench:'workbench',batteries:'batteries',servers:'servers',
+      terminal:'terminal',console:'console'};
+    if(shared[o.kind]){
+      const model=createFunctionalProp(T,shared[o.kind],{w,d,h,low,M});
+      model.position.set(o.x,0,o.z);add(model);return;
+    }
     switch (o.kind) {
       case 'train': {
-        for (const [x, name] of [[-16, 'LOCO'], [-4, 'SAN'], [9, 'SAN'], [20, 'FRET']]) { const lw = name === 'FRET' ? 7 : 11; box(name === 'LOCO' ? M.dark : M.white, x - lw / 2, x + lw / 2, .6, 4.2, 96.3, 98.8); box(M.dark, x - lw / 2 + .3, x + lw / 2 - .3, 0, .6, 96.6, 98.5);
-          if (name === 'SAN') { piece(M.ledWhite, x, 2.6, 96.28, lw - .6, .06, .02); for (let k = -4; k <= 4; k += 2) piece(M.ledYellow, x + k, 3.2, 96.28, 1, .45, .02); } }
+        for(const [x,name] of [[-16,'LOCO'],[-4,'SAN'],[9,'SAN'],[20,'FRET']]){
+          const lw=name==='FRET'?7:11;
+          const vehicle=createFunctionalProp(T,'railcar',{w:lw,d:2.5,h:4.2,low,
+            M:{...M,paintedMetal:name==='LOCO'?M.dark:M.white,
+              white:name==='LOCO'?M.dark:M.white,glass:M.glass||M.screenOff,
+              ledCyan:name==='SAN'?M.ledYellow:M.ledBlue}});
+          vehicle.name='M04 / wagon '+name;vehicle.position.set(x,0,97.55);add(vehicle);
+        }
         break;
       }
       case 'guard-post': box(M.white, x1, x2, 0, h, z1, z2); box(M.glass, x1 - .02, x2 + .02, 1.1, 2.2, z1 - .02, z1, { skip: ['top', 'bottom'] }); piece(M.ledBlue, o.x, h, o.z, w, .1, d); break;
