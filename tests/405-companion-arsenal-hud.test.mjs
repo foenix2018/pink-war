@@ -48,6 +48,16 @@ test('production mission 1 Vesper page uses the new HUD actions, not an unrelate
  assert.match(motor,/pollArsenalGamepad\(\)/);
  assert.match(motor,/combatHud\?\.isArsenalOpen/);
 });
+test('later story missions reuse one equipment chooser instead of immediate weapon cycling',()=>{
+ for(const filename of ['niveau3.js','niveau4.js','ligne9.js']){
+  const script=read(filename);
+  assert.match(script,/combatHud\?\.pollGamepad\(\)/,filename);
+  assert.match(script,/game\?\.selectWeapon\(Number\(value\)\)/,filename);
+  assert.match(script,/onNext:\(\)=>combatHud\?\.toggleArsenal\(\)/,filename);
+  assert.match(script,/controls\.next&&!xr\?\.active/,filename);
+  assert.match(script,/if\(combatHud\?\.isArsenalOpen\)return/,filename);
+ }
+});
 test('PS4 triangle opens arsenal on flat screen while Quest VR keeps original weapon switching',()=>{
  const js=read('combat-hud.js'),vr=read('vr.js'),m1=read('game.js'),m2=read('level2-test.js');
  assert.match(vr,/!xr && this\.hooks\.openArsenal/);
