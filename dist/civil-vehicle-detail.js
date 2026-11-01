@@ -35,7 +35,7 @@ export function createCivilCar(T,{length=4.4,width=2,low=false,M}={}){
   box(M.glass,[1.24,.27,.018],[-.62,1.27,z+s*.008],[0,s*.025,0],.006);
   box(M.glass,[.72,.23,.018],[.62,1.24,z+s*.008],[0,s*.045,0],.006);
   box(M.black,[.026,.20,.023],[.10,1.28,z+s*.024],[],.002);
-  box(M.black,[.16,.13,.15],[L-.65,1.21,s*(W+.027)],[],.018);
+  box(M.black,[.16,.13,.15],[L-.65,1.21,s*(W-.070)],[],.018);
  }
  // An angled real windshield mounted between the frame and roofline.
  box(M.glass,[.025,.42,width-.40],[L-.72,1.24,0],[0,0,-.56],.010);
