@@ -304,7 +304,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, h = o.height;
     // Reuse physically distinct functional props across the whole game.
     // The obstacle/layout object remains the authority for physics and objectives.
-    const replacements={bed:'bed',cabinet:'cabinet',desk:'desk','radio-rack':'rack',
+    const replacements={bed:'bed',desk:'desk','radio-rack':'rack',
       console:'console',batteries:'batteries','security-desk':'security-desk',
       servers:'servers',terminal:'terminal',kitchen:'workbench'};
     const type=replacements[o.kind];
