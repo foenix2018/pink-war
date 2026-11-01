@@ -258,3 +258,49 @@ body.pw-immersion-hud .pw-hud .pw-hud-companion:is(:active,[data-pw-pressed=true
 @media(prefers-reduced-motion:reduce){
  body.pw-immersion-hud .pw-hud button,body.pw-immersion-hud [data-pw-immersion]{transition:none!important;scale:1!important}
 }
+
+
+/* 3.85 mobile action fix. Preserve native engine-held-firing semantics. */
+@media(pointer:coarse){
+ body.pw-immersion-hud .pw-hud .pw-hud-engine-fire{
+  position:fixed!important;display:grid!important;place-items:center!important;
+  top:auto!important;left:auto!important;right:var(--pw-right)!important;
+  bottom:var(--pw-stick-bottom)!important;transform:none!important;
+  width:74px!important;height:74px!important;min-width:74px!important;min-height:74px!important;
+  margin:0!important;padding:0!important;flex:none!important;z-index:26!important;
+  pointer-events:auto!important;touch-action:none!important;
+  border-radius:50%!important;border:1px solid #ffb4c0bc!important;
+  background:linear-gradient(145deg,#f6506970,#aa183e82),#2a102557!important;
+  color:#fff!important;box-shadow:inset 0 1px #fff5,0 0 16px #ed547629!important;
+  -webkit-backdrop-filter:blur(12px) saturate(130%);backdrop-filter:blur(12px) saturate(130%);
+ }
+ body.pw-immersion-hud .pw-hud .pw-hud-engine-fire svg{display:block!important;width:28px!important;height:28px!important;pointer-events:none!important;stroke:currentColor!important;fill:none!important}
+ body.pw-immersion-hud .pw-hud .pw-hud-engine-fire:is(:active,[data-pw-pressed=true]){
+  background:linear-gradient(145deg,#fb7187c9,#bc224ebc),#6d153bbb!important;
+  border-color:#ffd9e2ea!important;box-shadow:inset 0 1px #fff8,0 0 22px #f2528498!important;
+ }
+}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:540px){
+ body.pw-immersion-hud .pw-hud .pw-hud-engine-fire{width:62px!important;height:62px!important;min-width:62px!important;min-height:62px!important}
+}
+/* Action button mirrors GAB-1 / CAR-14, and exposes its meaning through aria-label. */
+body.pw-immersion-hud .pw-hud .pw-hud-context{
+ position:fixed!important;top:40%!important;right:var(--pw-right)!important;
+ left:auto!important;bottom:auto!important;transform:none!important;
+ width:63px!important;height:74px!important;min-width:63px!important;max-width:63px!important;
+ min-height:74px!important;margin:0!important;padding:0!important;
+ border-radius:23px!important;border:1px solid #dceeff83!important;
+ background:linear-gradient(145deg,#dcefff22,#1b39515c),#102a3d7f!important;
+ box-shadow:inset 0 1px #ffffff45,0 4px 14px #0005!important;
+ display:grid!important;place-items:center!important;z-index:21!important;
+ pointer-events:auto!important;touch-action:manipulation;
+}
+body.pw-immersion-hud .pw-hud .pw-hud-context[hidden]{display:none!important}
+body.pw-immersion-hud .pw-hud .pw-hud-context svg{width:28px!important;height:28px!important;flex:none}
+body.pw-immersion-hud .pw-hud .pw-hud-context span,body.pw-immersion-hud .pw-hud .pw-hud-context kbd{display:none!important}
+body.pw-immersion-hud .pw-hud .pw-hud-context:is(:active,[data-pw-pressed=true]){background:linear-gradient(145deg,#e5f4ff70,#2b4b68c5),#0c2a42b0!important;border-color:#f5fbff!important}
+@media(pointer:coarse){body.pw-immersion-hud .pw-hud .pw-hud-context{top:35%!important}}
+@media(orientation:landscape) and (max-height:540px){
+ body.pw-immersion-hud .pw-hud .pw-hud-context{top:38%!important;width:57px!important;min-width:57px!important;max-width:57px!important;height:64px!important;min-height:64px!important}
+}
+@media(pointer:fine){body.pw-immersion-hud .pw-hud .pw-hud-engine-fire{display:none!important}}

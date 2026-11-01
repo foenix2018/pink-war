@@ -7,7 +7,7 @@ import {paintCompanionPortrait} from './companion-portrait.js';
 import {renderDigitalCounter} from './digital-display.js';
 let activeCombatHud = null;
 export const getActiveCombatHud = () => activeCombatHud;
-const STYLESHEET = 'combat-hud.css?v=3.83-liquid-feedback-1';
+const STYLESHEET = 'combat-hud.css?v=3.85-mobile-actions-1';
 const HEROES = Object.freeze({ ghju: 'GHJU', lylu: 'LYLU' });
 export const HUD_SEGMENTS = 10;
 
@@ -81,6 +81,18 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
   crouchButton.classList.add('pw-hud-crouch-direct');
   sprintButton.remove();more.hidden=true;palette.hidden=true;
   const gear=$('.pw-hud-gear'),portrait=$('.pw-hud-companion'),gearList=$('.pw-hud-weapon-list'),gearGrenade=$('.pw-hud-gear-grenade'),gearSkills=$('.pw-hud-gear-skills');
+  // Preserve the engine button and original pointerdown / pointerup fire events.
+  // Relocating outside transformed legacy touch wrappers fixes iPhone positioning.
+  let engineFire=null,engineFireHome=null,engineFireNext=null;
+  function dockEngineFire(){
+    const button=engineFire||doc.querySelector('#fire-button,#btnFireMobile,[data-m02="fire"]');
+    if(!button||(button===engineFire&&root.contains(button)))return;
+    if(!engineFire){engineFire=button;engineFireHome=button.parentNode;engineFireNext=button.nextSibling;}
+    skinCombatControls(doc); // M01 injects its engine-owned fire button after mount.
+    button.classList.add('pw-hud-engine-fire');
+    root.append(button);
+  }
+  dockEngineFire();
   let gearOpen=false,currentGame=null,gearSignature='',portraitHero=null;
   function equipmentState(){return combatEquipmentState(currentGame,root.dataset.hero);}
   function setGearOpen(value){
@@ -172,7 +184,7 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
     setObjective({label='',detail=''}={}){const signature=label+'|'+detail;mission.hidden=!label;if(signature===objectiveKey)return;objectiveKey=signature;mission.querySelector('span').textContent=label;objective.querySelector('small').textContent=label;objective.querySelector('p').textContent=detail;mission.setAttribute('aria-label',label+' : afficher l’objectif');objective.hidden=true;mission.setAttribute('aria-expanded','false');},
     setContext(label){label=label||'';if(contextLabel===label)return;contextLabel=label;context.hidden=!label;context.querySelector('span').textContent=label;context.setAttribute('aria-label',label||'Interagir');},
     update(game){
-      currentGame=game;const s=combatHudState(game);active=game.state!=='paused'&&game.state!=='lost'&&game.state!=='won'&&s.hp>0;if(!active)reset();
+      dockEngineFire();currentGame=game;const s=combatHudState(game);active=game.state!=='paused'&&game.state!=='lost'&&game.state!=='won'&&s.hp>0;if(!active)reset();
       text('hp',String(Math.ceil(s.hp)));text('shield',String(Math.ceil(s.shield)));prop(vitals,'--fill',(s.hp/100).toFixed(3));
       flag(vitals,'critical',s.critical);flag(vitals,'regenerating',s.regenerating);
       const shielded=s.shieldCapacity>0,broken=shielded&&s.shield<=0;shieldBar.hidden=shieldNumber.hidden=!shielded;
@@ -189,6 +201,6 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
       return s;
     },
     setVisible(visible){if(!visible)reset();root.hidden=!visible;},
-    dispose(){if(disposed)return;reset();disposed=true;clearPresses();doc.removeEventListener('pointerdown',pressStart,true);for(const event of ['pointerup','pointercancel','lostpointercapture'])doc.removeEventListener(event,pressEnd,true);doc.defaultView.removeEventListener('blur',clearPresses);doc.removeEventListener('visibilitychange',clearPresses);doc.removeEventListener('pointerdown',outside,true);doc.removeEventListener('keydown',key,true);doc.removeEventListener('pw-hud-overlay',blur);doc.defaultView.removeEventListener('blur',blur);doc.removeEventListener('visibilitychange',visibility);root.remove();if(activeCombatHud===api)activeCombatHud=null;doc.body.classList.remove('pw-unified-hud','pw-immersion-hud','pw-hud-lobby-page');}
+    dispose(){if(disposed)return;reset();disposed=true;clearPresses();doc.removeEventListener('pointerdown',pressStart,true);for(const event of ['pointerup','pointercancel','lostpointercapture'])doc.removeEventListener(event,pressEnd,true);doc.defaultView.removeEventListener('blur',clearPresses);doc.removeEventListener('visibilitychange',clearPresses);doc.removeEventListener('pointerdown',outside,true);doc.removeEventListener('keydown',key,true);doc.removeEventListener('pw-hud-overlay',blur);doc.defaultView.removeEventListener('blur',blur);doc.removeEventListener('visibilitychange',visibility);if(engineFire&&engineFireHome?.isConnected){engineFire.classList.remove('pw-hud-engine-fire');engineFireHome.insertBefore(engineFire,engineFireNext?.parentNode===engineFireHome?engineFireNext:null);}root.remove();if(activeCombatHud===api)activeCombatHud=null;doc.body.classList.remove('pw-unified-hud','pw-immersion-hud','pw-hud-lobby-page');}
   };api.setCharacter(characterId);activeCombatHud=api;return api;
 }
