@@ -39,6 +39,28 @@ Base : `939f84e060316d36303322778c466b5c6bf15f1b`
 ## Statut vérification
 Modifications poussées uniquement sur la branche de travail. **Tests automatisés ajoutés, mais campagne de tests complète de cette branche pas encore exécutée**. Contrôle statique des imports relatifs et délimiteurs des modules de production effectué. Revue visuelle réelle sur Dell, iPhone et Quest 3 non effectuée. Aucune livraison demandée ou effectuée.
 
+## Troisième passe : mutualisation inter-chapitres et remplacement des objets cubiques (NON LIVRÉ)
+
+L'audit ci-dessous documente **l'état initial** ; ces nouveaux remplacements ont ensuite été enregistrés sur la branche de travail. Chaque modification conserve les objets du layout et leurs fonctions d'interaction. Les scènes n'ont pas été validées en session réelle.
+
+- `dist/functional-props.js` : bibliothèque réutilisable et fusionnée par matériau, contenant 25 familles de silhouettes : chariot élévateur avec vraies fourches, wagons à baies et bogies, transformateur à ailettes et isolateurs, groupes électrogènes, supports de lits/brancards, guichets, kiosques, distributeurs, scanners, racks serveurs, batteries, établis, treuils, pompes, bureaux, bancs et fauteuils. Emplacements, hauteurs et dimensions conservés ; des objets fonctionnels auparavant uniquement cubiques ont maintenant des pièces distinctes.
+- `dist/freight-truck-detail.js` : camion cargo commun M02/M03, cabine profilée, pare-brise incliné, portes latérales, rétroviseurs, caisse renforcée, jantes et roues détaillées.
+- `dist/m02-extension-art.js` : reprise des lits du refuge, couchages improvisés, tentes, bureau, armoires, consoles de radio, racks, batterie, postes de sécurité, portiques. Conservation des écrans et éléments d'interaction : le rideau HELIX reste animé ; affichage du manifeste et ordinateurs de radio restaurés après la mutualisation. Panneaux de convoi inchangés. Les anciennes gemmes pickups deviennent kits de soin et cartouches énergie reconnaissables.
+- `dist/m03-art.js` : remplace voitures, camions, ambulance Inès, wagons sanitaires/fret, treuil et guichet de régulation. Le véhicule médical conserve sa routine de déplacement, l'éclairage, les gyrophares et son marquage AEGIS. Le treuil conserve son axe animé. Rampe de chargement et enseignes de gare préservées.
+- `dist/m04-art.js` : chariot élévateur orienté vers la direction de chargement originale, trains, transformateurs électriques, groupe électrogène, casiers et mobilier d'atelier ; branche dédiée `transformer` au lieu de maquiller un générateur diesel.
+- `dist/ligne9-art.js` : guichets, machines à billets, distributeur NOVA-KAÏ, brancards, lits, établis, commerces, casiers, bancs et treuils ; pompe animée enrichie de stator et raccords sans supprimer sa cinématique.
+- `dist/couronne-art.js` : bancs, guichets, scanners et bureaux réalistes ; consoles de phase particulières conservées pour ne pas interrompre les interactions.
+- `dist/breach-dressing.js` : sièges à assise et dossier, piétement sur roulettes ; consoles sur pieds avec passage pour les jambes ; racks de serveurs ouverts et accessibles.
+- `tests/381-cross-chapter-functional-props.test.mjs` : intégrité de la bibliothèque, dimensions, budget géométrique et raccordement des modules de chapitres.
+
+### Validation et statut
+- Examen statique des imports et des délimiteurs des modules modifiés : aucune dépendance relative manquante dans les modules de production examinés.
+- **Les tests Node.js et la revue visuelle en situation n'ont pas été exécutés**. Création du sandbox de test distant refusée par Vercel (403) et aucune autorisation de livrer un aperçu distant : les scripts peuvent encore contenir des défauts fonctionnels. Le fichier HTML local d'atelier importe les géométries directement depuis la branche mais son rendu chez l'utilisateur n'est pas encore confirmé.
+- Les portiques visuellement ouverts utilisent encore les colliders de mission actuels. À auditer sur le terrain avant de livrer pour éviter un passage trompeur.
+- Restent à examiner finement : pédales et fourches du chariot, collisions de brancards dans les couloirs, espaces libres devant les consoles, performances Quest 3 et Dell.
+- **Aucune fusion `main`, aucun déploiement public.** En attente d'une validation et de modifications groupées supplémentaires.
+
+
 ## Audit complémentaire des modèles « trop cubiques » — fichiers réels, 2026-11-01
 
 Inspection statique des fonctions de placement de décors de tous les chapitres.
