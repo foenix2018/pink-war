@@ -4,9 +4,10 @@
 import {hudIcon,restoreHudContrast,skinCombatControls} from './hud-appearance.js';
 import {WEAPONS,weaponCycleOrder} from './game-logic.js';
 import {paintCompanionPortrait} from './companion-portrait.js';
+import {renderDigitalCounter} from './digital-display.js';
 let activeCombatHud = null;
 export const getActiveCombatHud = () => activeCombatHud;
-const STYLESHEET = 'combat-hud.css?v=3.80-gear-1';
+const STYLESHEET = 'combat-hud.css?v=3.81-digital-controls-1';
 const HEROES = Object.freeze({ ghju: 'GHJU', lylu: 'LYLU' });
 export const HUD_SEGMENTS = 10;
 
@@ -71,6 +72,14 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
   const $=s=>root.querySelector(s),vitals=$('.pw-hud-vitals'),arms=$('.pw-hud-arms'),palette=$('.pw-hud-palette'),more=$('.pw-hud-more'),mission=$('.pw-hud-mission'),objective=$('.pw-hud-objective'),context=$('.pw-hud-context');
   const nodes={tag:$('.pw-hud-tag'),hp:$('.pw-hud-value'),shield:$('.pw-hud-shield-value'),vitalNote:$('.pw-hud-vitals .pw-hud-note'),weapon:$('.pw-hud-weapon'),ammo:$('.pw-hud-ammo'),capacity:$('.pw-hud-capacity'),armsNote:$('.pw-hud-arms .pw-hud-note'),charges:$('.pw-hud-charges')};
   const shieldBar=$('.pw-hud-shield'),shieldNumber=$('.pw-shield-number'),hitRing=$('.pw-hud-hit'),chargeButton=$('[data-armor=charge]'),crouchButton=$('[data-hud-action=crouch]'),sprintButton=$('[data-hud-action=sprint]');
+  // Reuse the existing melee/crouch commands as always-visible touch buttons.
+  // Crouch takes the former fire position; fire moves above it and melee directly above fire.
+  // Run is handled by the left analog stick; retain keyboard and gamepad sprint bindings.
+  const touchActionLayer=$('.pw-hud-touch'),meleeButton=$('[data-armor=melee]');
+  touchActionLayer.append(meleeButton,crouchButton);
+  meleeButton.classList.add('pw-hud-melee-direct');
+  crouchButton.classList.add('pw-hud-crouch-direct');
+  sprintButton.remove();more.hidden=true;palette.hidden=true;
   const gear=$('.pw-hud-gear'),portrait=$('.pw-hud-companion'),gearList=$('.pw-hud-weapon-list'),gearGrenade=$('.pw-hud-gear-grenade'),gearSkills=$('.pw-hud-gear-skills');
   let gearOpen=false,currentGame=null,gearSignature='',portraitHero=null;
   function equipmentState(){return combatEquipmentState(currentGame,root.dataset.hero);}
@@ -110,7 +119,8 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
   gearGrenade.onclick=()=>{if(currentGame?.charges>0){setGearOpen(false);command('charge');}};
   gearSkills.onclick=()=>{setGearOpen(false);doc.dispatchEvent(new CustomEvent('pw-hud-open-skills'));};
   let open=false,sprinting=false,disposed=false,active=true,objectiveKey='',contextLabel='';
-  const last=new Map(),text=(k,v)=>{if(last.get(k)!==v){last.set(k,v);nodes[k].textContent=v;}};
+  const last=new Map(),digitalKeys=new Set(['hp','shield','ammo','capacity']);
+  const text=(k,v)=>{if(last.get(k)!==v){last.set(k,v);if(digitalKeys.has(k))renderDigitalCounter(nodes[k],v);else nodes[k].textContent=v;}};
   const prop=(element,k,v)=>{if(element.style.getPropertyValue(k)!==v)element.style.setProperty(k,v);};
   const flag=(element,name,on)=>{if(element.classList.contains(name)!==on)element.classList.toggle(name,on);};
   function setOpen(value){open=!!value&&!root.hidden&&active;palette.hidden=!open;more.setAttribute('aria-expanded',String(open));root.classList.toggle('pw-actions-open',open);if(open){objective.hidden=true;mission.setAttribute('aria-expanded','false');}}

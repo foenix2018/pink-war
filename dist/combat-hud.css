@@ -99,3 +99,60 @@ body.pw-unified-hud .pw-companion-toggle{display:none!important}
  .pw-hud .pw-hud-gear-weapon{min-height:35px;padding:6px 9px}
  .pw-hud .pw-hud-gear-grenade,.pw-hud .pw-hud-gear-skills{min-height:38px;margin-top:6px;padding:7px 9px}
 }
+
+/* HUD 3.81 — authentic bold seven-segment digits, rendered in vector paths. */
+.pw-hud .pw-hud-numbers{gap:7px}
+.pw-hud .pw-hud-numbers>span{gap:3px}
+.pw-hud .pw-hud-numbers b,.pw-hud .pw-hud-ammo,.pw-hud .pw-hud-capacity{font-family:"Arial Black",system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:0}
+.pw-hud .pw-hud-numbers b{display:inline-flex;align-items:center;min-height:25px;line-height:1}
+.pw-hud .pw-hud-ammo,.pw-hud .pw-hud-capacity{display:inline-flex;vertical-align:middle;align-items:center;line-height:1}
+.pw-hud .pw-hud-capacity{margin-left:5px}
+.pw-hud .pw-led-run{display:inline-flex;gap:1px;align-items:center;vertical-align:middle;white-space:nowrap}
+.pw-hud .pw-led-digit{display:block!important;width:11px!important;height:24px!important;min-width:0!important;overflow:visible;flex:none;fill:currentColor!important;stroke:none!important}
+.pw-hud .pw-led-digit .pw-led-on{opacity:1}
+.pw-hud .pw-led-digit .pw-led-off{opacity:.085}
+.pw-hud .pw-led-digit .pw-led-on{filter:drop-shadow(0 0 1px currentColor)}
+.pw-hud .pw-hud-ammo .pw-led-digit{width:17px!important;height:34px!important}
+.pw-hud .pw-hud-capacity .pw-led-digit{width:10px!important;height:20px!important}
+.pw-hud .pw-led-digit.pw-led-slash{width:7px!important}
+.pw-hud .pw-led-space{width:2px;height:1px}
+.pw-hud .pw-hud-vitals .pw-hud-shield-value{color:var(--pw-accent)}
+.pw-hud .pw-hud-value{color:#f6fbff}
+.pw-hud .pw-hud-arms{width:132px}
+.pw-hud .pw-hud-arms .pw-hud-reload{min-width:0;padding-top:8px;padding-bottom:7px}
+@media(pointer:coarse){
+ /* Direct actions: crouch occupies the former firing circle; firing and melee stack above. */
+ .pw-hud .pw-hud-more,.pw-hud .pw-hud-palette{display:none!important}
+ .pw-hud .pw-hud-crouch-direct,.pw-hud .pw-hud-melee-direct{
+  position:fixed;display:grid;justify-items:center;align-content:center;gap:5px;
+  right:max(16px,env(safe-area-inset-right));left:auto;
+  padding:5px;pointer-events:auto;touch-action:manipulation;
+  border-radius:50%;border:1px solid #d5e9f48c;
+  background:linear-gradient(145deg,#d5eaff28,#172d3daf),#0f2232bd;
+  box-shadow:inset 0 1px #ffffff30,0 5px 13px #0005;color:#f7faff;
+  backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
+  font:600 9px/1.1 system-ui,sans-serif;text-shadow:0 1px 3px #0008;
+  z-index:20
+ }
+ .pw-hud .pw-hud-crouch-direct{width:74px;height:74px;bottom:max(28px,calc(env(safe-area-inset-bottom) + 18px))}
+ .pw-hud .pw-hud-crouch-direct[aria-pressed=true]{border-color:var(--pw-accent);background:#38536ae5}
+ .pw-hud .pw-hud-melee-direct{width:60px;height:60px;bottom:max(195px,calc(env(safe-area-inset-bottom) + 185px));right:calc(var(--pw-right) + 7px)}
+ .pw-hud .pw-hud-melee-direct svg,.pw-hud .pw-hud-crouch-direct svg{width:22px;height:22px}
+ body.pw-immersion-hud #touchControls #touchButtons [data-pw-immersion=fire],
+ body.pw-immersion-hud .game-hud .fire-row [data-pw-immersion=fire],
+ body.pw-immersion-hud #m02-touch-controls .m02-actions [data-pw-immersion=fire]{
+  bottom:max(111px,calc(env(safe-area-inset-bottom) + 101px))!important;
+  width:68px!important;height:68px!important;
+  right:calc(max(16px,env(safe-area-inset-right)) + 3px)!important
+ }
+}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:540px){
+ .pw-hud .pw-hud-crouch-direct{width:58px;height:58px;bottom:max(12px,env(safe-area-inset-bottom))}
+ .pw-hud .pw-hud-melee-direct{width:48px;height:48px;bottom:calc(max(12px,env(safe-area-inset-bottom)) + 129px);right:calc(var(--pw-right) + 5px)}
+ body.pw-immersion-hud #touchControls #touchButtons [data-pw-immersion=fire],
+ body.pw-immersion-hud .game-hud .fire-row [data-pw-immersion=fire],
+ body.pw-immersion-hud #m02-touch-controls .m02-actions [data-pw-immersion=fire]{
+  bottom:calc(max(12px,env(safe-area-inset-bottom)) + 65px)!important;
+  height:58px!important;width:58px!important;right:var(--pw-right)!important
+ }
+}

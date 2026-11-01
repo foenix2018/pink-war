@@ -242,7 +242,7 @@ function gameTick(dt){
  const x=controls.moveX+touch.x,z=controls.moveZ+touch.z;
  const aiming=!!OPTICS[game.weapon.id]&&game.reloadRemaining<=0&&(mouseAim||touch.aim||controls.aim);
  aimBlend+=(Number(aiming)-aimBlend)*(1-Math.exp(-dt*14));document.body.classList.toggle('aiming',aiming);
- const sprint=!aiming&&(controls.sprint||touchSprinting);
+ const sprint=!aiming&&(controls.sprint||touchSprinting||touch.sprint);
  if(controls.pause){pauseMission();return;}
  if(controls.next)game.cycleWeapon();
  if(controls.reload)game.reload();
