@@ -38,6 +38,16 @@ test('the arsenal exposes only equipped weapons and connects true impulse charge
  assert.equal(weaponCycleOrder(new Set([0,7,8]),'ghju').join(','),'7,8,0');
  assert.equal(weaponCycleOrder(new Set([0,7,8]),'lylu').join(','),'8,0','dual pistol not selectable by LYLU');
 });
+test('production mission 1 Vesper page uses the new HUD actions, not an unrelated showroom',()=>{
+ const page=read('vesper-level1-v7.html'),motor=read('vesper-combat.js');
+ assert.match(page,/combatWorld\?\.toggleArsenal\?\.\(\)/);
+ assert.match(page,/combatWorld\?\.pollArsenalGamepad\?\.\(\)/);
+ assert.match(page,/!combatWorld\?\.arsenalOpen/);
+ assert.match(motor,/kind==='weapon'\)api\.select\(Number\(value\)\)/);
+ assert.match(motor,/get arsenalOpen\(\)/);
+ assert.match(motor,/pollArsenalGamepad\(\)/);
+ assert.match(motor,/combatHud\?\.isArsenalOpen/);
+});
 test('PS4 triangle opens arsenal on flat screen while Quest VR keeps original weapon switching',()=>{
  const js=read('combat-hud.js'),vr=read('vr.js'),m1=read('game.js'),m2=read('level2-test.js');
  assert.match(vr,/!xr && this\.hooks\.openArsenal/);
