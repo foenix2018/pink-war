@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#081320"><title>PINK WARS — HUD / VERSION ESSAI</title>
-<link rel="stylesheet" href="./combat-hud.css?v=3.81-digital-controls-1" data-pw-hud>
+<link rel="stylesheet" href="./combat-hud.css?v=3.82-layout-1" data-pw-hud>
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080f1b;color:#f3f7ff;font-family:system-ui,-apple-system,sans-serif}
 body{touch-action:manipulation}
@@ -47,14 +47,26 @@ body.pw-demo .pw-hud .pw-hud-context{display:none!important}
 body.pw-demo .pw-hud .pw-hud-numbers b,body.pw-demo .pw-hud .pw-hud-ammo,body.pw-demo .pw-hud .pw-hud-capacity{font-variant-numeric:tabular-nums}
 @media(min-width:750px){#trial-tools{top:120px;width:auto}#trial-label{top:99px}#pause{top:94px}#trial-note{bottom:7px}}
 @media(max-height:600px){#trial-label{top:75px}#trial-tools{top:95px}#trial-actions #move{width:95px;height:95px}#move{width:95px;height:95px;bottom:14px}#fire{width:60px;height:60px;bottom:79px}#aim{bottom:15px}#jump{bottom:80px}body.pw-demo .pw-hud .pw-hud-melee-direct{bottom:149px!important;width:50px;height:50px}body.pw-demo .pw-hud .pw-hud-crouch-direct{bottom:12px!important;width:60px;height:60px}body.pw-demo .pw-hud .pw-hud-mission{top:16px!important}body.pw-demo .pw-hud .pw-hud-companion{top:40%!important}}
+
+/* Trial 3.82: expose only genuine gameplay controls, with the same central stack. */
+body.pw-demo{--pw-demo-stick-bottom:max(26px,calc(env(safe-area-inset-bottom) + 12px));--pw-demo-stick-size:122px;--pw-demo-spacing:56px;--pw-demo-centre:calc(var(--pw-demo-stick-bottom) + var(--pw-demo-stick-size) / 2)}
+#trial-label,#trial-tools,#trial-note{display:none!important}
+body.pw-demo .pw-hud .pw-hud-mission,body.pw-demo .pw-hud .pw-hud-objective{display:none!important}
+body.pw-demo #move{bottom:var(--pw-demo-stick-bottom)!important}
+body.pw-demo #aim{left:50%!important;right:auto!important;bottom:calc(var(--pw-demo-centre) - 28px)!important;width:56px!important;height:56px!important;transform:translateX(-50%)!important}
+body.pw-demo #jump{left:50%!important;right:auto!important;bottom:calc(var(--pw-demo-centre) + var(--pw-demo-spacing) - 23px)!important;width:46px!important;height:46px!important;transform:translateX(-50%)!important}
+body.pw-demo .pw-hud .pw-hud-crouch-direct{left:50%!important;right:auto!important;bottom:calc(var(--pw-demo-centre) - var(--pw-demo-spacing) - 23px)!important;width:46px!important;height:46px!important;transform:translateX(-50%)!important}
+body.pw-demo .pw-hud .pw-hud-crouch-direct span,body.pw-demo .pw-hud .pw-hud-melee-direct span{display:none!important}
+body.pw-demo .pw-hud .pw-hud-crouch-direct svg{width:28px!important;height:28px!important}
+body.pw-demo #fire,body.pw-demo[data-hero=lylu] #fire{right:23px!important;left:auto!important;bottom:var(--pw-demo-stick-bottom)!important;width:74px!important;height:74px!important;transform:none!important;background:linear-gradient(145deg,#f6506970,#aa183e82),#2a102557!important;border-color:#ffb4c0bc!important;box-shadow:inset 0 1px #fff5,0 0 16px #ed547629!important}
+body.pw-demo .pw-hud .pw-hud-melee-direct{left:auto!important;right:32px!important;bottom:calc(var(--pw-demo-stick-bottom) + 85px)!important;width:56px!important;height:56px!important;transform:none!important}
+@media(max-height:600px){body.pw-demo{--pw-demo-stick-size:95px;--pw-demo-stick-bottom:max(18px,env(safe-area-inset-bottom));--pw-demo-spacing:45px}
+body.pw-demo #move{width:95px!important;height:95px!important}body.pw-demo #fire{width:60px!important;height:60px!important}
+body.pw-demo .pw-hud .pw-hud-melee-direct{width:49px!important;height:49px!important;bottom:calc(var(--pw-demo-stick-bottom) + 70px)!important}}
+@media(max-width:390px){body.pw-demo{--pw-demo-stick-size:106px;--pw-demo-spacing:51px}body.pw-demo #move{width:106px;height:106px}}
 </style></head>
 <body class="pw-demo" data-hero="ghju">
 <div id="scene"></div><div id="crosshair"></div>
-<div id="trial-label">PINK WARS / HUD · VERSION ESSAI</div>
-<div id="trial-tools">
-<button id="ghju" aria-pressed="true">GHJU · GAB-1</button><button id="lylu" aria-pressed="false">LYLU · CAR-14</button>
-<button id="damage">−10 PV</button><button id="reset">RÉINITIALISER</button>
-</div>
 <button id="pause" aria-label="Pause" title="Pause">Ⅱ</button>
 <div id="trial-actions">
 <button id="fire" class="control" aria-label="Tirer"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v5m0 12v5M1 12h5m12 0h5"/></svg>TIR</button>
@@ -62,7 +74,7 @@ body.pw-demo .pw-hud .pw-hud-numbers b,body.pw-demo .pw-hud .pw-hud-ammo,body.pw
 <button id="jump" class="control" aria-label="Sauter"><svg viewBox="0 0 24 24"><path d="m4 14 8-8 8 8m-16 5 8-8 8 8"/></svg></button>
 </div>
 <div id="move" aria-label="Joystick gauche (pousser à fond pour courir)"><span id="knob"></span></div>
-<div id="toast" role="status"></div><div id="trial-note">ESSAI INTERACTIF · AUCUNE SAUVEGARDE MODIFIÉE</div>
+<div id="toast" role="status"></div>
 <script type="module">
 import {mountCombatHud} from './combat-hud.js';
 import {WEAPONS,starterWeaponIndex,weaponAllowedForCharacter} from './game-logic.js';
@@ -84,15 +96,12 @@ function action(kind){
  update();
 }
 const hud=mountCombatHud({characterId:'ghju',onAction:action});
-hud.setObjective({label:'MISSION 01',detail:'Tester les commandes tactiles et le menu de GAB-1 / CAR-14.'});
+
 update();
 function hero(id){
  game.characterId=id;game.weaponIndex=starterWeaponIndex(id);game.ownedWeapons=new Set(id==='ghju'?[0,1,6,7,8]:[0,1,6,8]);game.ammo=ammo();game.charges=2;game.player.hp=100;game.player.shield=60;game.player.crouched=false;game.state='playing';paused=false;
- document.body.dataset.hero=id;hud.setGearOpen(false);hud.setCharacter(id);$('ghju').setAttribute('aria-pressed',String(id==='ghju'));$('lylu').setAttribute('aria-pressed',String(id==='lylu'));hud.setVisible(true);update();toast(id==='ghju'?'GAB-1 ACTIVÉ':'CAR-14 ACTIVÉ');
+ document.body.dataset.hero=id;hud.setGearOpen(false);hud.setCharacter(id);hud.setVisible(true);update();toast(id==='ghju'?'GAB-1 ACTIVÉ':'CAR-14 ACTIVÉ');
 }
-$('ghju').onclick=()=>hero('ghju');$('lylu').onclick=()=>hero('lylu');
-$('damage').onclick=()=>{if(game.player.shield>=10)game.player.shield-=10;else game.player.hp=Math.max(1,game.player.hp-10);update();toast('DÉGÂTS SUBIS');};
-$('reset').onclick=()=>hero(game.characterId);
 $('fire').addEventListener('pointerdown',e=>{e.preventDefault();if(paused)return;const w=game.weapon;if(w.melee){toast('COUP AURORA');return;}if(game.ammo[game.weaponIndex]>0){game.ammo[game.weaponIndex]--;toast('TIR · '+w.name)}else toast('CHARGEUR VIDE');update();});
 $('fire').addEventListener('click',e=>{if(e.detail===0){const w=game.weapon;if(game.ammo[game.weaponIndex]>0){game.ammo[game.weaponIndex]--;update();}}});
 $('aim').addEventListener('pointerdown',e=>{e.preventDefault();toast('MODE VISÉE');});
@@ -105,5 +114,7 @@ move.addEventListener('pointerdown',e=>{pointer=e.pointerId;move.setPointerCaptu
 move.addEventListener('pointermove',e=>{if(e.pointerId===pointer)drag(e);});
 for(const type of ['pointerup','pointercancel','lostpointercapture'])move.addEventListener(type,e=>{if(e.pointerId===pointer)resetMove();});
 document.addEventListener('keydown',e=>{if(e.code==='KeyR')action('reload');if(e.code==='KeyC')action('crouch');if(e.code==='KeyX')action('melee');});
+// Switch the trial companion without adding development buttons: ?hero=lylu.
+if(new URLSearchParams(location.search).get('hero')==='lylu')hero('lylu');
 window.__PINK_WARS_HUD_TRIAL__={game,hud,hero,action};
 </script></body></html>

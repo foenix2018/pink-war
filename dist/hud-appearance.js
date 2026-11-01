@@ -7,7 +7,8 @@ export const HUD_ICONS=Object.freeze({
  melee:'<path d="M6 12V7a2 2 0 0 1 4 0V6a2 2 0 0 1 4 0v1a2 2 0 0 1 4 0v5m-8-3v3m4-3v3M6 11l-2 1v4l4 5h8l4-6v-3l-3-1-4 3-3-2Z"/>',
  charge:'<circle cx="12" cy="13" r="7"/><path d="M10 3h4m-2 0v3m2 4-4 4h4l-3 4"/>',more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
  interact:'<path d="M8 21V10a2 2 0 0 1 4 0v3m0-4V5a2 2 0 0 1 4 0v8m0-4a2 2 0 0 1 4 0v7l-3 5H8l-4-7a2 2 0 0 1 3-2l1 1"/>',
- sprint:'<circle cx="15" cy="4" r="2"/><path d="m12 8-4 4 5 3-2 6m1-13 4 5h5M9 10l-4 2m8 3 5 5M2 6h6M1 9h4"/>'
+ sprint:'<circle cx="15" cy="4" r="2"/><path d="m12 8-4 4 5 3-2 6m1-13 4 5h5M9 10l-4 2m8 3 5 5M2 6h6M1 9h4"/>',
+ 'down-double':'<path d="m5 4 7 7 7-7m-14 8 7 7 7-7"/>'
 });
 export const hudIcon=name=>'<svg viewBox="0 0 24 24" aria-hidden="true">'+HUD_ICONS[name]+'</svg>';
 export function setHudContrast(opaque,doc=document){
