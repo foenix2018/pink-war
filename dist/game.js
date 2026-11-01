@@ -170,7 +170,7 @@ $('sound-button').onclick = () => { settings.sound = !settings.sound; syncSound(
 $('sound-setting').onchange = e => { settings.sound = e.target.checked; syncSound(); audioReady(); persist(); };
 $('music-setting').onchange=e=>{settings.music=e.target.checked;audioReady();persist();};
 $('sensitivity').oninput = e => { settings.sensitivity = Number(e.target.value); persist(); };
-$('quality').onchange = e => { settings.quality = e.target.value; graphicsGovernor?.reset(); world?.setResolutionScale(1); world?.resize(settings.quality); persist(); };
+$('quality').onchange = e => { settings.quality = e.target.value; graphicsGovernor?.reset(); graphicsGovernor=null; graphicsGovernorWorld=null; world?.setResolutionScale(1); world?.resize(settings.quality); persist(); };
 
 function selectCharacter(id,save=true){
   if(phase!=='lobby')return;
