@@ -672,7 +672,8 @@ function updateEnemies(dt){
 }
 let heldFire=false;
 function gameTick(dt){
- combatHud?.pollGamepad();
+ const arsenalControllerFrame=!!combatHud?.pollGamepad();
+ if(arsenalControllerFrame)return;
  const xc=xr?.active?xr.controls:null;
  const controls=xc?{moveX:xc.x,moveZ:xc.z,lookX:0,lookY:0,jump:xc.jump,interact:xc.interact,aim:xc.aim,fire:xc.fire,sprint:xc.sprint,melee:xc.melee,charge:xc.charge}:pinkControls.read(dt,keys,navigator.getGamepads?.()||[],{focused:!document.hidden});
  if(controls.companion)skillMenu?.setOpen(!skillMenu.isOpen);
