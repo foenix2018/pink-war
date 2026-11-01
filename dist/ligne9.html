@@ -84,7 +84,7 @@ decorateShade(document.getElementById('shade'),{mission:5,characterId:new URLSea
 const ghju=new URLSearchParams(location.search).get('character')==='ghju';
 document.getElementById(ghju?'pick-ghju':'pick-lylu').setAttribute('aria-current','true');
 if(ghju){document.getElementById('panel-text').textContent='Vesper, sept ans après la Chute de 2189, traqués par ORDRE depuis la station Est. Depuis trois jours, l’eau a pris la Ligne 9 sous les Halles-Basses et les dispensaires des Épars n’ont plus de route sèche. Nira Solen a besoin de quelqu’un pour relancer à la main les vieilles pompes P9. GHJU descend avec GAB-1 là où LYLU est allé la nuit de la Chute.';document.getElementById('compat').href='./ligne9.html?character=ghju&renderer=webgl';}
-import('./ligne9.js?v=3.74.0').catch(error=>{
+import('./ligne9.js?v=3.86-robot-destruction-audio').catch(error=>{
  const status=document.getElementById('status'),button=document.getElementById('start');
  if(status)status.textContent='Erreur de chargement : '+(error?.message||String(error))+' — essaye le mode compatibilité WebGL.';
  if(button){button.disabled=false;button.textContent='RECHARGER →';button.addEventListener('click',()=>location.reload());}

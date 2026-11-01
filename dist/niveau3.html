@@ -92,7 +92,7 @@ decorateShade(document.getElementById('shade'),{mission:3,characterId:new URLSea
 const lylu=new URLSearchParams(location.search).get('character')==='lylu';
 document.getElementById(lylu?'pick-lylu':'pick-ghju').setAttribute('aria-current','true');
 if(lylu){document.getElementById('panel-text').textContent='Vesper, 2196. Le convoi 02 du Directoire emmène ses prisonniers vers l’Anneau logistique, dont le docteur Hadi, un ancien chercheur de HELIX. Inès Varga a récupéré une ambulance : il faut la conduire de nuit à travers le secteur 03, sous le couvre-feu, jusqu’à la gare de fret.';document.getElementById('compat').href='./niveau3.html?character=lylu&renderer=webgl';}
-import('./niveau3.js?v=3.74.0').catch(error=>{
+import('./niveau3.js?v=3.86-robot-destruction-audio').catch(error=>{
  const status=document.getElementById('status'),button=document.getElementById('start');
  if(status)status.textContent='Erreur de chargement : '+(error?.message||String(error))+' — essaye le mode compatibilité WebGL.';
  if(button){button.disabled=false;button.textContent='RECHARGER →';button.addEventListener('click',()=>location.reload());}

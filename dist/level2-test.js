@@ -18,6 +18,8 @@ import {aimSensitivity,magnifiedFov,flatSightPose} from './optics.js';
 import {OPTICS} from './weapons.js';
 import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './renderer-policy.js';
 import {createEnemyFactory} from './enemies.js';
+import {createEnemyDestructionFX} from './enemy-destruction-fx.js';
+import {createRobotShutdownAudio} from './enemy-shutdown-audio.js';
 import {buildGun} from './weapons.js';
 import {createDistrictArchitecture} from './level2-architecture.js';
 import {createEnvironmentFinish} from './m02-environment-finish.js';
@@ -83,6 +85,8 @@ const pauseMenu=createPauseMenu({title:'HISTOIRE / LES PROFONDEURS',canOpen:()=>
  view:{getView:()=>xr?.active?'fps':view,onSelect:next=>changeView(next),canChange:()=>!!playerRig&&!xr?.active},
  onPause:()=>pauseMission(),onResume:()=>unpauseMission(),onVR:()=>xr?.enter(),onHome:async()=>{await xr?.exit();location.assign('./index.html');}});pauseMenu.setVisible(false);
 let combatEffects=null,companion=null,environmentAudio=null,warZone=null,battleAudio=null;
+let enemyDestructionFX=null;
+const robotShutdownAudio=createRobotShutdownAudio({getContext:()=>enableAudio&&audioCtx?.state==='running'?audioCtx:null,getListener:()=>game?.player,getYaw:()=>yaw});
 let companionSkills=null,skillMenu=null;
 function audioReady(){
  if(!enableAudio)return;
@@ -659,9 +663,15 @@ function updateEnemies(dt){
    enemyMeshes.set(e.id,model);scene.add(model);
   }
   model.position.set(e.x,e.elevation,e.z);model.rotation.y=e.yaw||0;
-  model.userData.animate?.(clock,e.phase,true,e,game.time);
+  model.userData.animate?.(clock,e.phase,true,e,game.time);enemyDestructionFX?.mark(e,model,dt);
  }
- for(const [id,o] of enemyMeshes)if(!live.has(id)){scene.remove(o);enemyMeshes.delete(id);}
+ for(const [id,o] of enemyMeshes)if(!live.has(id)){
+    const dead=game.events?.some(event=>event.type==='kill'&&event.id===id);
+    if(dead&&enemyDestructionFX)enemyDestructionFX.kill(o,{id,form:o.userData.form,x:o.position.x,z:o.position.z,groundY:o.position.y-(o.userData.form==='probe'?2:0)});
+    else scene.remove(o);
+    enemyMeshes.delete(id);
+  }
+  enemyDestructionFX?.update(dt);
  const active=new Set();
  for(const b of game.bullets){
   active.add(b.id);let mesh=shotMeshes.get(b.id);
@@ -898,7 +908,7 @@ async function boot(){
   renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;
   scene=new T.Scene();camera=new T.PerspectiveCamera(67,innerWidth/innerHeight,.08,320);
-  scene.add(camera);createEnvironment();
+  scene.add(camera);enemyDestructionFX=createEnemyDestructionFX(T,scene,{camera,low:low()||profile.phone||profile.headset,maxDeaths:7,onSound:(kind,source)=>robotShutdownAudio.play(kind,source)});createEnvironment();
   missionLoading?.set(.52,'Quartier et voies de transit prêts');
   bootStep='jouabilité';status.textContent='Installation des commandes et des armes…';
   setupPlayer();resize();
@@ -953,7 +963,7 @@ function resume({fresh=false}={}){
  if(game){game.reset(characterId);game.wave=2;game.ownedWeapons=new Set([...starterWeaponOrder(characterId),1,2]);game.ammo=WEAPONS.map(w=>w.capacity);}
  if(game){game.player.x=0;game.player.z=72;game.player.elevation=0;game.player.hp=100;game.state='playing';
   game.enemies=[];game.bullets=[];game.time=0;game.kills=0;game.nextWave=Infinity;game.toSpawn=0;}
- for(const o of enemyMeshes.values())scene.remove(o);enemyMeshes.clear();
+ for(const o of enemyMeshes.values())scene.remove(o);enemyMeshes.clear();enemyDestructionFX?.reset();robotShutdownAudio.stop();
  for(const o of shotMeshes.values())scene.remove(o);shotMeshes.clear();
  combatEffects?.reset();companion?.reset();
  fireInput.reset();
