@@ -504,7 +504,7 @@ export class VRController {
       if (actions.has('next')) { if(!xr && this.hooks.openArsenal) this.hooks.openArsenal(); else if(game.cycleWeapon(1) && xr) this.cancelTrigger(); }
       else if (actions.has('reload')) { if (game.reload() && xr) this.cancelTrigger(); }
     }
-    if(!xr&&this.hooks.arsenalOpen?.()){
+    if(!xr&&(this.hooks.arsenalOpen?.()||this.hooks.arsenalInputFrame?.())){
       // Keep the gameplay controls neutral while the player browses with
       // the DualShock D-pad / cross. VR wrist switching remains untouched.
       return {...result,x:0,z:0,turn:0,tilt:0,snap:0,fire:false,fireHands:{left:false,right:false},
