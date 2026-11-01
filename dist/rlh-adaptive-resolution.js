@@ -38,7 +38,14 @@ export function createAdaptiveResolution({mobile=false,enabled=true,minScale,slo
   if(slow>=slowHold)next=Math.max(floor,scale-downStep);
   else if(fast>=fastHold)next=Math.min(1,scale+upStep);
   next=Math.round(next*1000)/1000;
-  if(Math.abs(next-scale)<.0005){slow=fast=0;return null;}
+  // Below a threshold, preserve the evidence across successive frames:
+  // clearing it here would make the hysteresis impossible to trigger.
+  // Only clear saturated counters when already at the hard floor/ceiling.
+  if(Math.abs(next-scale)<.0005){
+   if(slow>=slowHold)slow=0;
+   if(fast>=fastHold)fast=0;
+   return null;
+  }
   history.push({from:scale,to:next,at:Math.round(elapsed),frameMs:Math.round(ema*10000)/10});
   if(history.length>16)history.shift();
   scale=next;lastChange=elapsed;changes++;slow=fast=0;
