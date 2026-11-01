@@ -59,7 +59,7 @@ export function robotOpticPower(t,seed=0){
  return Math.max(.025,(1-t*.97)*(.47+.41*Math.max(0,flicker)));
 }
 
-export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeaths=8,maxParticles=160}={}){
+export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeaths=8,maxParticles=160,onSound=null}={}){
  const budget=low?Math.min(75,maxParticles):maxParticles,limit=low?Math.min(4,maxDeaths):maxDeaths;
  const smokeTex=(()=>{
   const s=64,d=new Uint8Array(s*s*4);
@@ -83,6 +83,9 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
  smoke.renderOrder=7;sparks.renderOrder=8;arcs.renderOrder=9;
  const particles=[],timers=new Map(),deaths=[];
  const eyeStates=new WeakMap();
+ let soundHandler=typeof onSound==='function'?onSound:null;
+ const soundFaultAt=new Map();
+ function sound(kind,details){try{soundHandler?.(kind,details);}catch(error){console.warn?.('robot sound',error)}}
  const pos=new T.Vector3(),sc=new T.Vector3(),matrix=new T.Matrix4(),rotation=new T.Quaternion();
  const tiltAxis=new T.Vector3(.8,.4,.7),anchorScratch=new T.Vector3();
  let elapsed=0;
@@ -124,7 +127,7 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
  function mark(e,model,dt=0){
   if(!e||!model)return;
   const stage=enemyDamageStage(e.hp,e.maxHp);
-  if(stage.stage===0){timers.delete(e.id);powerEyes(model,1);return;}
+  if(stage.stage===0){timers.delete(e.id);soundFaultAt.delete(e.id);powerEyes(model,1);return;}
   const critical=stage.stage>=3;
   // Power failure affects the robot's own optics material, never shared armor.
   powerEyes(model,critical?(.15+.62*Math.abs(Math.sin(elapsed*5.1+e.id)*Math.sin(elapsed*2.4+e.id*.31)))*(.68+stage.damage*.26):1);
@@ -146,10 +149,15 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
   // RECO1 emits discrete optic/wrist arcs, Brute vents its exposed chest and
   // pistons, and Rempart arcs at the head, shoulders and cannon.
   if(stage.stage>=2)electricBurst(e,stage.stage===2?1:stage.stage===3?3:5,.095,model);
+  // Critical machine faults: limit repeated sounds per robot even at 120fps.
+  if(stage.stage>=3&&elapsed>=(soundFaultAt.get(e.id)||0)){
+    sound('fault',{id:e.id,x:e.x,y:(e.elevation||0)+1.2,z:e.z,form:e.form,damage:stage.damage});
+    soundFaultAt.set(e.id,elapsed+(stage.stage===4?.70:1.15)+rnd()*.22);
+  }
  }
  function kill(model,{id=null,form='stalker',x,y,z,groundY=null}={}){
   if(!model)return;
-  if(id!==null)timers.delete(id);
+  if(id!==null){timers.delete(id);soundFaultAt.delete(id);}
   const p=model.position,record={
    model,form,age:0,duration:robotDeathDuration(form),
    x:Number.isFinite(x)?x:p.x,z:Number.isFinite(z)?z:p.z,
@@ -159,6 +167,7 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
   };
   model.position.set(record.x,record.startY,record.z);
   deaths.push(record);
+  sound('shutdown',{id,x:record.x,y:record.startY+1,z:record.z,form,damage:1,duration:record.duration});
   electricBurst({form,x:record.x,z:record.z,elevation:record.startY,yaw:model.rotation.y||0},low?5:9,.12,model);
   for(let i=0;i<(low?3:6);i++)emit('spark',record.x,record.startY+1,record.z,.09);
   while(deaths.length>limit){
@@ -181,6 +190,10 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
    while(d.nextCue<SHUTDOWN_CUES.length&&t>=SHUTDOWN_CUES[d.nextCue].at){
      const cue=SHUTDOWN_CUES[d.nextCue++];
      electricBurst(origin,low?Math.max(2,Math.round(cue.count*.58)):cue.count,.12,d.model);
+     if(cue.at===.30||cue.at===.81)
+       sound('glitch',{id:d.seed,x:d.x,y:d.model.position.y+1,z:d.z,form:d.form,damage:1});
+     if(cue.at===.965)
+       sound('terminal',{id:d.seed,x:d.x,y:d.model.position.y+1,z:d.z,form:d.form,damage:1});
    }
    if(d.age<d.duration){
     if(d.age>.15&&rnd()<delta*(low?8:14)){
@@ -220,14 +233,14 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
  }
  function reset(){
   for(const d of deaths)scene.remove(d.model);deaths.length=0;
-  timers.clear();particles.length=0;smoke.count=sparks.count=arcs.count=0;elapsed=0;
+  timers.clear();soundFaultAt.clear();particles.length=0;smoke.count=sparks.count=arcs.count=0;elapsed=0;
   explosions.dispose();explosions=createGrenadeExplosionV4(T,scene,blastOptions);
  }
  function dispose(){
-  for(const d of deaths)scene.remove(d.model);deaths.length=0;timers.clear();particles.length=0;
+  for(const d of deaths)scene.remove(d.model);deaths.length=0;timers.clear();soundFaultAt.clear();particles.length=0;
   explosions.dispose();
   for(const m of [smoke,sparks,arcs])scene.remove(m);
   puffGeo.dispose();sparkGeo.dispose();arcGeo.dispose();puffMat.dispose();sparkMat.dispose();arcMat.dispose();smokeTex.dispose();
  }
- return {mark,kill,update,reset,dispose,stats:()=>({damagedParticles:particles.length,electricArcs:particles.filter(p=>p.kind==='arc').length,falling:deaths.length,explosions:explosions.stats().active})};
+ return {mark,kill,update,reset,dispose,setSoundHandler:handler=>{soundHandler=typeof handler==='function'?handler:null;},stats:()=>({damagedParticles:particles.length,electricArcs:particles.filter(p=>p.kind==='arc').length,falling:deaths.length,explosions:explosions.stats().active})};
 }
