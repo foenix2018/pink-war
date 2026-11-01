@@ -690,7 +690,7 @@ function gameTick(dt){
  aimBlend+=(Number(aiming)-aimBlend)*(1-Math.exp(-dt*14));
  game.precisionAiming=aimBlend>.55;
  document.body.classList.toggle('aiming',aiming);
- const sprint=!aiming&&(controls.sprint||touchSprinting);
+ const sprint=!aiming&&(controls.sprint||touchSprinting||touch.sprint);
  if(controls.pause){pauseMission();return;}
  if(controls.next)game.cycleWeapon();
  if(controls.reload)game.reload();
