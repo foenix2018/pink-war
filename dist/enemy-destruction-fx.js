@@ -18,18 +18,34 @@ export function robotDeathDuration(form='stalker'){
  return form==='probe'?.92:form==='sentinel'?1.48:['brute','bulwark'].includes(form)?1.24:1.08;
 }
 
-// Four localized electrical failure points: damaged torso reactor, optics,
-// limb actuators and (for armed humanoids) weapon arm. Heights scale by chassis.
-export function electricFailureAnchor(e={},slot=0){
- const form=e.form||'stalker',flying=form==='probe',
-   heavy=['brute','bulwark','sentinel'].includes(form),
-   base=Number(e.elevation)||0,scale=heavy?1.4:flying?.38:1,
-   yaw=Number(e.yaw)||0;
- const anchors=[[0,1.03,.13],[0,1.64,-.23],[-.52,.76,.04],[.55,.90,-.15],[.68,1.22,-.39]];
- const [lx,ly,lz]=anchors[Math.abs(Math.trunc(slot))%anchors.length];
- return {x:(Number(e.x)||0)+Math.cos(yaw)*lx*scale+Math.sin(yaw)*lz*scale,
-   y:base+(flying?.20+ly*.13:ly*scale),
-   z:(Number(e.z)||0)-Math.sin(yaw)*lx*scale+Math.cos(yaw)*lz*scale};
+// Chassis-local failure contacts. The game uses form='seer' for RECO1 and
+// form='bulwark' for Rempart. Local forward is -Z, unlike their asset bind pose.
+// Sentinel's sensor is actually 4.04m high; generic 1.7m offsets miss its head.
+export const ROBOT_FAILURE_CONTACTS=Object.freeze({
+ seer:Object.freeze([[0,1.17,-.24],[0,1.69,-.11],[-.27,.62,-.02],[.30,1.24,-.15],[.40,1.34,-.44]]),
+ brute:Object.freeze([[0,1.56,-.37],[0,2.05,-.28],[-.69,.91,-.14],[.75,1.24,-.12],[-1.03,1.62,-.22]]),
+ bulwark:Object.freeze([[0,1.22,-.26],[0,1.738,-.25],[-.46,.66,-.10],[.47,1.20,-.13],[.53,1.24,-.46]]),
+ sentinel:Object.freeze([[0,2.74,-.62],[0,4.04,-.64],[-.90,1.27,-.35],[1.02,3.18,-.13],[1.43,2.42,-1.15]]),
+ probe:Object.freeze([[0,.22,-.15],[0,.48,-.52],[-.42,.11,0],[.42,.11,0],[0,.18,-.70]]),
+ default:Object.freeze([[0,1.03,-.15],[0,1.75,-.18],[-.40,.70,0],[.43,.92,-.10],[.52,1.27,-.40]])
+});
+export const robotFailureCategory=form=>
+ form==='seer'?'RECO1':form==='brute'?'BRUTE':form==='bulwark'?'REMPART':form==='sentinel'?'SENTINEL':'GENERIC';
+export function electricFailureAnchor(e={},slot=0,model=null,scratch=null){
+ const contacts=ROBOT_FAILURE_CONTACTS[e.form]||ROBOT_FAILURE_CONTACTS.default;
+ const index=Math.abs(Math.trunc(Number(slot)||0))%contacts.length;
+ const [lx,ly,lz]=contacts[index];
+ // The model transform contains enemy/elite scale and yaw. Apply it when
+ // available to keep bursts on articulated meshes, not arbitrary world space.
+ if(model?.localToWorld&&scratch?.set){
+  const p=model.localToWorld(scratch.set(lx,ly,lz));
+  return {x:p.x,y:p.y,z:p.z};
+ }
+ const scale=(e.elite&&e.form!=='probe'?1.3:e.elite?1.13:1)*(Number(e.roomScale)||1);
+ const yaw=Number(e.yaw)||0,c=Math.cos(yaw),s=Math.sin(yaw);
+ return {x:(Number(e.x)||0)+(c*lx+s*lz)*scale,
+   y:(Number(e.elevation)||0)+ly*scale,
+   z:(Number(e.z)||0)+(-s*lx+c*lz)*scale};
 }
 // Scripted, irregular shutdown discharges; no full-screen flashes.
 export const SHUTDOWN_CUES=Object.freeze([
@@ -68,7 +84,7 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
  const particles=[],timers=new Map(),deaths=[];
  const eyeStates=new WeakMap();
  const pos=new T.Vector3(),sc=new T.Vector3(),matrix=new T.Matrix4(),rotation=new T.Quaternion();
- const tiltAxis=new T.Vector3(.8,.4,.7);
+ const tiltAxis=new T.Vector3(.8,.4,.7),anchorScratch=new T.Vector3();
  let elapsed=0;
  const blastOptions={camera,maxBlasts:low?2:4,quality:low?'low':'normal'};
  let explosions=createGrenadeExplosionV4(T,scene,blastOptions);
@@ -97,9 +113,9 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
   if(!eye.transparent||eye.depthWrite){eye.transparent=true;eye.depthWrite=false;eye.needsUpdate=true;}
   eye.opacity=base.opacity*Math.max(.035,power);
  }
- function electricBurst(e,count=6,size=.11){
+ function electricBurst(e,count=6,size=.11,model=null){
   for(let i=0;i<count;i++){
-    const at=electricFailureAnchor(e,i%5);
+    const at=electricFailureAnchor(e,i%5,model,anchorScratch);
     // Four actuator/head/weapon failure points, with minimal positional jitter.
     emit('arc',at.x+(rnd()-.5)*.16,at.y+(rnd()-.5)*.12,at.z+(rnd()-.5)*.16,size);
     if(i%3===0)emit('spark',at.x,at.y,at.z,size*.75);
@@ -117,13 +133,19 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
   const next=timers.get(e.id)||0;
   if(elapsed<next)return;
   timers.set(e.id,elapsed+stage.interval*(.84+rnd()*.32));
-  const flying=e.form==='probe',bulk=['sentinel','brute','bulwark'].includes(e.form);
-  const h=flying?.25:bulk?1.75:.95;
-  const ox=(rnd()-.5)*(bulk?1.1:.55),oy=h+(rnd()-.5)*.5,oz=(rnd()-.5)*.55;
-  for(let i=0;i<stage.smoke;i++)emit('smoke',(e.x||0)+ox+(rnd()-.5)*.25,(e.elevation||0)+oy,(e.z||0)+oz,.24+.07*stage.stage+rnd()*.12);
-  for(let i=0;i<stage.sparks;i++)emit('spark',(e.x||0)+ox,(e.elevation||0)+oy,(e.z||0)+oz,.09);
-  // Blue-white arcs indicate actuators losing power, interleaved with hot metal.
-  if(stage.stage>=2)electricBurst(e,stage.stage===2?1:stage.stage===3?3:5,.095);
+  const cat=robotFailureCategory(e.form),massive=cat==='BRUTE'||cat==='REMPART'||cat==='SENTINEL';
+  const smokeSize=(massive?.29:.24)+.07*stage.stage;
+  for(let i=0;i<stage.smoke;i++){
+    const at=electricFailureAnchor(e,(i+stage.stage)%5,model,anchorScratch);
+    emit('smoke',at.x+(rnd()-.5)*.20,at.y+(rnd()-.5)*.18,at.z+(rnd()-.5)*.20,smokeSize+rnd()*.12);
+  }
+  for(let i=0;i<stage.sparks;i++){
+    const at=electricFailureAnchor(e,(i+2)%5,model,anchorScratch);
+    emit('spark',at.x,at.y,at.z,.09);
+  }
+  // RECO1 emits discrete optic/wrist arcs, Brute vents its exposed chest and
+  // pistons, and Rempart arcs at the head, shoulders and cannon.
+  if(stage.stage>=2)electricBurst(e,stage.stage===2?1:stage.stage===3?3:5,.095,model);
  }
  function kill(model,{id=null,form='stalker',x,y,z,groundY=null}={}){
   if(!model)return;
@@ -137,7 +159,7 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
   };
   model.position.set(record.x,record.startY,record.z);
   deaths.push(record);
-  electricBurst({form,x:record.x,z:record.z,elevation:record.startY,yaw:model.rotation.y||0},low?5:9,.12);
+  electricBurst({form,x:record.x,z:record.z,elevation:record.startY,yaw:model.rotation.y||0},low?5:9,.12,model);
   for(let i=0;i<(low?3:6);i++)emit('spark',record.x,record.startY+1,record.z,.09);
   while(deaths.length>limit){
    const old=deaths.shift();scene.remove(old.model);
@@ -158,15 +180,15 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
    const origin={form:d.form,x:d.x,z:d.z,elevation:d.model.position.y,yaw:d.model.rotation.y||0};
    while(d.nextCue<SHUTDOWN_CUES.length&&t>=SHUTDOWN_CUES[d.nextCue].at){
      const cue=SHUTDOWN_CUES[d.nextCue++];
-     electricBurst(origin,low?Math.max(2,Math.round(cue.count*.58)):cue.count,.12);
+     electricBurst(origin,low?Math.max(2,Math.round(cue.count*.58)):cue.count,.12,d.model);
    }
    if(d.age<d.duration){
     if(d.age>.15&&rnd()<delta*(low?8:14)){
       emit('smoke',d.x,d.model.position.y+1,d.z,.5);
-      electricBurst(origin,low?2:4,.10);
+      electricBurst(origin,low?2:4,.10,d.model);
     }
    }else{
-    electricBurst(origin,low?8:16,.17);
+    electricBurst(origin,low?8:16,.17,d.model);
     powerEyes(d.model,.035);
     const size=d.form==='sentinel'?7.2:['brute','bulwark'].includes(d.form)?5.0:flying?3.0:3.8;
     explosions.spawn({x:d.x,y:d.y+.7,z:d.z,radius:size});
