@@ -38,3 +38,47 @@ Base : `939f84e060316d36303322778c466b5c6bf15f1b`
 
 ## Statut vérification
 Modifications poussées uniquement sur la branche de travail. **Tests automatisés ajoutés, mais campagne de tests complète de cette branche pas encore exécutée**. Contrôle statique des imports relatifs et délimiteurs des modules de production effectué. Revue visuelle réelle sur Dell, iPhone et Quest 3 non effectuée. Aucune livraison demandée ou effectuée.
+
+## Audit complémentaire des modèles « trop cubiques » — fichiers réels, 2026-11-01
+
+Inspection statique des fonctions de placement de décors de tous les chapitres.
+**Diagnostic de code : aucune capture du rendu final ne confirme encore chaque silhouette.**
+La construction d'un objet uniquement avec des `box()`, `piece()` ou `queue()` n'est pas une faute pour un bâtiment ou un caisson, mais est insuffisante pour certains objets fonctionnels où l'utilisateur doit reconnaître une machine, une cabine, un lit ou un outil. Les scripts examinés ci-dessous n'ont pas été modifiés dans cette passe.
+
+### Priorité P0 — très visibles ou indispensables à la lecture narrative
+| Chapitre et fichier | Fonction constatée | Correctif de modélisation recommandé |
+| --- | --- | --- |
+| M02 extension, `dist/m02-extension-art.js` ~284-294 | Camion du convoi HELIX : cabine, caisse et pare-brise = quatre grands cubes, roues non détaillées | Véhicule compartimenté hard-surface : cabine profilée, pare-brise incliné, jantes, panneaux cargo, suspensions et vrais blocs optiques |
+| M03, `dist/m03-art.js` ~131-163 | Voiture, camion et ambulance Inès/AEGIS encore majoritairement `BoxGeometry` ; modifs des véhicules M01 non réutilisées | Adapter les modules des nouveaux véhicules au bon axe local et au canon visuel M03, préserver les véhicules brûlés et la signalétique |
+| M04, `dist/m04-art.js` ~149 | Chariot élévateur = seulement trois blocs : pas de roues, mât, fourches ni siège | Vrai chariot avec cabine ouverte, volant, contrepoids, roues, deux fourches et vérin de levage |
+| M04, `dist/m04-art.js` ~137 | Train composé de 4 grands parallélépipèdes | Locomotive et wagons distincts : bogies, fenêtres, portes, soufflets, axes et phares |
+| M02 extension, `dist/m02-extension-art.js` ~300-321 | Abri improvisé / couchette `stall`, tente `tent`, lit `bed` représentés par boîtes et quadrilatères sans tissus naturels | Cadres métalliques, textiles drapés, matelas et coussins en surface déformée, affaissement du tissu, ancrages |
+| M02 extension, `dist/m02-extension-art.js` ~336-353 | Scanners, postes de sécurité et terminaux avec blocs cubiques massifs | Vérifier qu'un portique est visuellement ouvert, rendre lisibles lecteur, caméra, capteurs, socle et portes techniques |
+| M04, `dist/m04-art.js` ~151-162 | Groupe électrogène = cylindre ; casiers, établis, batteries, serveurs, terminaux = blocs | Générateur moteur/capot/panneau, armoires à portes, racks à baies physiques, vrais établis et câblage |
+| Ligne 9, `dist/ligne9-art.js` ~454-481 | Distributeur de billets, chariots de soins `stretcher`, lit `cot`, armoires = gros volumes cubiques | Boutons, lecteur, fente, écran en retrait ; brancards sur roulettes, textile et accoudoirs, mobilier modulaire |
+| Ligne 9, `dist/ligne9-art.js` ~497-516 | Distributeur automatique, pompe, treuil, bureau et rack serveur : détails de surface mais silhouette peu travaillée | Niche à produits, panneau de paiement, pompe avec volute, conduites et capot, treuil avec câble, tambour et embrayage |
+| Rédaction/Brèche, `dist/breach-dressing.js` ~26-42 | Chaise = assise carrée + dossier plat ; console et racks essentiellement parallélépipédiques | Chaise pivotante assise incurvée, piétement cinq branches, accoudoirs ; racks réellement ajourés et panneaux articulés |
+
+### Priorité P1 — scène secondaire / immersion
+| Fichier | Objets à reprendre | Diagnostic |
+| --- | --- | --- |
+| `dist/m02-extension-art.js` ~311-369 | Cuisine, école improvisée, radio-rack, batteries, serveurs, cartons, containers | Formes parfois crédibles de loin, mais peu de silhouettes ou d'interfaces fonctionnelles au plus près |
+| `dist/m03-art.js` ~167-241 | Poteau de treuil, cabine de péage, conteneurs, plateformes et remorque | Manque de câbles, mécanismes, charnières, joints et éléments lisibles |
+| `dist/m04-art.js` ~145-177 | Transformateurs, refroidissement, portiques, réacteur et stabilisateurs | Différencier matériaux, profils d'équipements et raccordements ; les stabilisateurs peuvent rester géométriques mais pas arbitraires |
+| `dist/ligne9-art.js` ~444-516 | Guichets, tourniquets, échoppes, kiosques, bancs, cabines et caisses | Effet « caisse géante » et panneaux uniformes; approfondir les fonctions d'usage |
+| `dist/couronne-art.js` ~209-253 | Haies, kiosques, scanners, fontaines, bureaux, consoles et stabilisateurs | Conserver le langage architectural minimaliste, mais donner profondeur, remplissage et contours lisibles aux objets non architecturaux |
+| `dist/breach-dressing.js` ~28-72 | Consoles, claviers, racks, tables de diagnostic et fauteuils | Repenser leur ergonomie, poignée et fixation ; attention aux consoles interactives |
+| `dist/m02-environment-finish.js` ~125-145 | Extracteurs de plafond | Quatre pales plates au même pivot sans moyeu ni grille protectrice |
+| `dist/level2-architecture.js` | Marchés/équipements récemment modifiés | Avant de poursuivre, vérifier le correctif sur les vraies scènes et les anciennes collisions |
+| `dist/shooting-range-art.js` ~299-335 | Armurerie | Déjà structurée en huit compartiments, **pas un modèle simplifié à remplacer globalement** : retouches ciblées seulement |
+
+### Incohérences transversales constatées
+1. Le même archétype *ambulance / voiture / camion* a plusieurs implémentations indépendantes en M01, M02 et M03 ; la dernière refonte des véhicules n'affecte pas automatiquement les autres chapitres.
+2. Les types `bed`, `cot`, `stretcher` et `stall` désignent des objets différents selon le chapitre ; ne pas convertir les bacs de culture M01 en couchettes.
+3. Des machines censées être traversées/utilisées (scanners, terminaux, distributeurs) sont visuellement créées comme des blocs entiers ; **vérifier la correspondance réelle entre ouvertures visuelles, collisions et interaction avant de modifier**.
+4. Certains objets annoncent leur fonction par une texture ou un panneau mais n'ont pas les caractéristiques physiques attendues (chariot élévateur sans fourches, machine sans commande).
+5. Tous les chapitres ne réutilisent pas les nouvelles fonctions de mobilier et de véhicules. Introduire un adaptateur de taille/orientation commun, sans déplacer les colliders.
+6. Les formes cubiques de murs, d'armoires simples, de barrières et de panneaux de façade ne sont pas automatiquement des erreurs ; privilégier les silhouettes fonctionnelles, pas l'arrondi systématique.
+
+**Statut : inventaire seulement ; aucune modification supplémentaire du moteur ou des scènes réalisée lors de cet audit. Pas de fusion/déploiement.**
+
