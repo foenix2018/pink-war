@@ -1,6 +1,8 @@
 // Shared left-side skill drawer. The shortcut stays out of the combat HUD before M07;
 // unlocking is owned by the simulation, never a DOM button or URL parameter.
 import {companionPictogram,paintCompanionPictogram} from './companion-pictograms.js';
+import {getActiveCombatHud} from './combat-hud.js';
+import {paintCompanionPortrait} from './companion-portrait.js';
 // Names shown to the player (canon « Les Héritiers du Silence »); the code keeps its internal keys.
 const LABEL={Gaby:'GAB-1',Cara:'CAR-14'};
 export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
@@ -33,12 +35,14 @@ export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
   if(xr)xr.dirty=true;
  }
  function setOpen(value){
-  if(disposed||value&&(!visible||!getStatus()?.unlocked))return;open=!!value;panel.hidden=!open;toggle.hidden=open;
+  if(disposed||value&&(!visible||(!getStatus()?.unlocked&&!getActiveCombatHud())))return;open=!!value;panel.hidden=!open;toggle.hidden=open;
   toggle.setAttribute('aria-expanded',String(open));refresh();if(xr)xr.dirty=true;onChange(open);
   if(open)panel.querySelector('header button').focus({preventScroll:true});else if(!root.hidden)toggle.focus({preventScroll:true});
  }
  function use(id){if(onUse(id)){setOpen(false);return true;}signature='';refresh();return false;}
  toggle.onclick=()=>setOpen(!open);panel.querySelector('header button').onclick=()=>setOpen(false);
+ const openFromGear=()=>{if(visible&&getStatus()?.unlocked)setOpen(true);};
+ document.addEventListener('pw-hud-open-skills',openFromGear);
  const key=e=>{
   if(!visible||e.target?.closest?.('input,textarea,select'))return;
   if(e.code==='KeyG'||open&&e.code==='Escape'){
@@ -93,6 +97,6 @@ export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
  }
  return {root,refresh,xrInput,get isOpen(){return open;},setOpen,
   setVisible(value){visible=!!value;root.hidden=!visible;if(xr&&!visible)xr.mesh.visible=false;if(!visible&&open)setOpen(false);if(visible)refresh();},
-  dispose(){disposed=true;document.removeEventListener('keydown',key,true);document.removeEventListener('pointerdown',outside,true);root.remove();if(xr){xr.mesh.removeFromParent();xr.mesh.geometry.dispose();xr.mesh.material.dispose();xr.texture.dispose();}}
+  dispose(){disposed=true;document.removeEventListener('pw-hud-open-skills',openFromGear);document.removeEventListener('keydown',key,true);document.removeEventListener('pointerdown',outside,true);root.remove();if(xr){xr.mesh.removeFromParent();xr.mesh.geometry.dispose();xr.mesh.material.dispose();xr.texture.dispose();}}
  };
 }
