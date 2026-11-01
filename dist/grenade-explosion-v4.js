@@ -80,7 +80,7 @@ export function createGrenadeExplosionV4(T,scene,{camera=null,maxBlasts=4,qualit
   }
   for(const mesh of [b.smoke,b.fire,b.shards])mesh.instanceMatrix.needsUpdate=true;
  }
- function drop(b){if(b)scene.remove(b.smoke,b.fire,b.shards);}
+ function drop(b){if(!b)return;for(const mesh of [b.smoke,b.fire,b.shards]){scene.remove(mesh);mesh.dispose?.();}}
  function update(dt){for(let i=blasts.length-1;i>=0;i--){const b=blasts[i];b.age+=Math.max(0,dt||0);
    if(b.age>=4.5){drop(b);blasts.splice(i,1);}else renderOne(b);
  }}

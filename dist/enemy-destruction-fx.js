@@ -37,7 +37,7 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
  for(const mesh of [smoke,sparks]){mesh.count=0;mesh.frustumCulled=false;mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);scene.add(mesh);}
  smoke.renderOrder=7;sparks.renderOrder=8;
  const particles=[],timers=new Map(),deaths=[];
- const up=new T.Vector3(0,1,0),pos=new T.Vector3(),sc=new T.Vector3(),matrix=new T.Matrix4(),rotation=new T.Quaternion();
+ const pos=new T.Vector3(),sc=new T.Vector3(),matrix=new T.Matrix4(),rotation=new T.Quaternion();
  let elapsed=0;
  const blastOptions={camera,maxBlasts:low?2:4,quality:low?'low':'normal'};
  let explosions=createGrenadeExplosionV4(T,scene,blastOptions);
@@ -71,11 +71,11 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
    x:Number.isFinite(x)?x:p.x,z:Number.isFinite(z)?z:p.z,
    y:Number.isFinite(groundY)?groundY:p.y,
    startY:p.y,initialX:model.rotation.x,initialZ:model.rotation.z,
-   dir:(Math.random()>.5?1:-1),exploded:false,
+   dir:(Math.random()>.5?1:-1),
   };
   model.position.set(record.x,record.startY,record.z);
   deaths.push(record);
-  for(let i=0;i<8&&!low||i<4;i++)emit('spark',record.x,record.startY+1,record.z,.09);
+  for(let i=0;i<(low?4:8);i++)emit('spark',record.x,record.startY+1,record.z,.09);
   while(deaths.length>limit){
    const old=deaths.shift();scene.remove(old.model);
   }
