@@ -10,6 +10,14 @@ const STYLESHEET = 'combat-hud.css?v=3.80-gear-1';
 const HEROES = Object.freeze({ ghju: 'GHJU', lylu: 'LYLU' });
 export const HUD_SEGMENTS = 10;
 
+export function combatEquipmentState(game,hero='ghju'){
+ const owned=game?.ownedWeapons instanceof Set?game.ownedWeapons:new Set();
+ return {hero:hero==='lylu'?'lylu':'ghju',weaponIndex:game?.weaponIndex??-1,charges:Math.max(0,Number(game?.charges)||0),
+  weapons:weaponCycleOrder(owned,game?.characterId||hero).map(index=>({index,name:WEAPONS[index].name,
+   ammo:game?.ammo?.[index]??0,capacity:WEAPONS[index].capacity,melee:!!WEAPONS[index].melee}))};
+}
+
+
 // Pure reading of an ArenaGame-like state (the three engines share these fields).
 export function combatHudState(game) {
   const player = game?.player || {}, weapon = game?.weapon || {};
@@ -65,14 +73,7 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
   const shieldBar=$('.pw-hud-shield'),shieldNumber=$('.pw-shield-number'),hitRing=$('.pw-hud-hit'),chargeButton=$('[data-armor=charge]'),crouchButton=$('[data-hud-action=crouch]'),sprintButton=$('[data-hud-action=sprint]');
   const gear=$('.pw-hud-gear'),portrait=$('.pw-hud-companion'),gearList=$('.pw-hud-weapon-list'),gearGrenade=$('.pw-hud-gear-grenade'),gearSkills=$('.pw-hud-gear-skills');
   let gearOpen=false,currentGame=null,gearSignature='',portraitHero=null;
-  function equipmentState(){
-    const game=currentGame;
-    const owned=game?.ownedWeapons instanceof Set?game.ownedWeapons:new Set();
-    return {hero:root.dataset.hero||'ghju',weaponIndex:game?.weaponIndex??-1,
-      charges:Math.max(0,Number(game?.charges)||0),
-      weapons:weaponCycleOrder(owned,game?.characterId||root.dataset.hero).map(index=>({index,name:WEAPONS[index].name,
-        ammo:game?.ammo?.[index]??0,capacity:WEAPONS[index].capacity,melee:!!WEAPONS[index].melee}))};
-  }
+  function equipmentState(){return combatEquipmentState(currentGame,root.dataset.hero);}
   function setGearOpen(value){
     gearOpen=!!value&&!root.hidden&&active;
     if(gearOpen)setOpen(false);
