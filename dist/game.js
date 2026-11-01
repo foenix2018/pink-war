@@ -1,4 +1,5 @@
 import {createTouchOrbit} from './touch-orbit.js';
+import {createAdaptiveResolution} from './rlh-adaptive-resolution.js';
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, starterWeaponIndex, weaponCycleOrder, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
 import { createScene } from './scene.js?v=3.77-briseur-v3';
 import { VRController } from './vr.js';
@@ -51,6 +52,7 @@ if(boot?.settings)Object.assign(settings,boot.settings);
 settings.sensitivity = clamp(Number(settings.sensitivity) || 1, .4, 2);
 if (!['auto', 'low', 'high'].includes(settings.quality)) settings.quality = 'auto';
 let phase = 'lobby', view = boot?.view?normalizeView(boot.view):readPreferredView(), yaw = 0, pitch = -.075, game, world, vr;
+let graphicsGovernor=null,graphicsGovernorWorld=null;
 let optionsViewControl=null,pauseViewControl=null;
 let character=characterForId('ghju');
 let m01CheckpointGame=null,m01CheckpointStage=null,m01CheckpointPending=false;
@@ -168,7 +170,7 @@ $('sound-button').onclick = () => { settings.sound = !settings.sound; syncSound(
 $('sound-setting').onchange = e => { settings.sound = e.target.checked; syncSound(); audioReady(); persist(); };
 $('music-setting').onchange=e=>{settings.music=e.target.checked;audioReady();persist();};
 $('sensitivity').oninput = e => { settings.sensitivity = Number(e.target.value); persist(); };
-$('quality').onchange = e => { settings.quality = e.target.value; world?.resize(settings.quality); persist(); };
+$('quality').onchange = e => { settings.quality = e.target.value; graphicsGovernor?.reset(); world?.setResolutionScale(1); world?.resize(settings.quality); persist(); };
 
 function selectCharacter(id,save=true){
   if(phase!=='lobby')return;
@@ -938,6 +940,16 @@ function stepFrame(timestamp, xrFrame) {
       if(event.type==='companion-explosion')playLaserImpact(audioContext,{...event,surface:'metal'});
     }
     vr.renderScope();if(vr.mode==='stereo')world.renderStereo();else world.render();frames++;
+    // RLH V886 hysteresis adapted for Pink Wars: don't reduce mesh or material
+    // detail, and never change VR/stereo render targets or optics mid-session.
+    if(graphicsGovernorWorld!==world){
+      graphicsGovernorWorld=world;
+      graphicsGovernor=createAdaptiveResolution({mobile:!!world.graphics?.phone,
+        enabled:settings.quality!=='high'});
+    }
+    const scale=graphicsGovernor.sample(dt,{active:phase==='playing',
+      immersive:vr.mode!=='off',hidden:document.hidden});
+    if(scale!==null&&vr.mode==='off')world.setResolutionScale(scale);
   }
 }
 
