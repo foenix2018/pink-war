@@ -1,6 +1,7 @@
 import {createTouchOrbit} from './touch-orbit.js';
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, starterWeaponIndex, weaponCycleOrder, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
 import { createScene } from './scene.js?v=3.77-briseur-v3';
+import {createRobotShutdownAudio} from './enemy-shutdown-audio.js';
 import { VRController } from './vr.js';
 import {createGamepadAid} from './ios-gamepad.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
@@ -119,6 +120,11 @@ let clock = 0, lastTime = 0, hudTimer = 0, flashTimer = 0, recoil = 0, reloadLif
 let outfitReturn = 'lobby', previewLevel = 1, equipmentUntil = 0;
 const touchOrbit=createTouchOrbit();
 let canvasPointer = null, lastDrag = null, audioContext = window.__PINKWAR_BOOT_AUDIO||null, ambience = null;
+const robotShutdownAudio=createRobotShutdownAudio({
+  getContext:()=>settings.sound&&audioContext?.state==='running'?audioContext:null,
+  getListener:()=>game?.player,getYaw:()=>listenerHeading()
+});
+function wireRobotShutdownAudio(){world?.setRobotShutdownSound?.((kind,source)=>robotShutdownAudio.play(kind,source));}
 let saberAudio=null,saberSwingSound=false;
 let lastWeaponSlot=0,holsterRemaining=0;
 let bladeHead=null;
@@ -164,8 +170,8 @@ function syncSound() {
 }
 $('settings-dialog').insertBefore(createHudContrastControl(),$('settings-dialog').querySelector('.close-dialog:last-child'));
 syncSound(); $('sensitivity').value = settings.sensitivity; $('quality').value = settings.quality;
-$('sound-button').onclick = () => { settings.sound = !settings.sound; syncSound(); audioReady(); persist(); };
-$('sound-setting').onchange = e => { settings.sound = e.target.checked; syncSound(); audioReady(); persist(); };
+$('sound-button').onclick = () => { settings.sound = !settings.sound; if(!settings.sound)robotShutdownAudio.stop();syncSound(); audioReady(); persist(); };
+$('sound-setting').onchange = e => { settings.sound = e.target.checked; if(!settings.sound)robotShutdownAudio.stop();syncSound(); audioReady(); persist(); };
 $('music-setting').onchange=e=>{settings.music=e.target.checked;audioReady();persist();};
 $('sensitivity').oninput = e => { settings.sensitivity = Number(e.target.value); persist(); };
 $('quality').onchange = e => { settings.quality = e.target.value; world?.resize(settings.quality); persist(); };
@@ -386,7 +392,7 @@ window.addEventListener('pointerup',e=>{firingPointers.delete(e.pointerId);if(e.
 window.addEventListener('pointercancel',e=>{firingPointers.delete(e.pointerId);mouseAim=false;aimPointers.clear();});
 window.addEventListener('blur', () => { resetInput(); if (phase === 'playing' && vr?.mode !== 'xr') pause(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { resetInput(); if (phase === 'playing' && vr?.mode !== 'xr') pause(); } });
-window.addEventListener('pagehide',event=>{ambience?.pause();setScreenMusic('paused');saberAudio?.update({active:false,equipped:!!game?.weapon.melee});if(!event.persisted){ambience?.dispose();saberAudio?.dispose();if(audioContext)disposeLaserAudio(audioContext);}});
+window.addEventListener('pagehide',event=>{robotShutdownAudio.stop();ambience?.pause();setScreenMusic('paused');saberAudio?.update({active:false,equipped:!!game?.weapon.melee});if(!event.persisted){ambience?.dispose();saberAudio?.dispose();if(audioContext)disposeLaserAudio(audioContext);}});
 window.addEventListener('resize', () => { world?.resize(settings.quality); resetInput(); });
 
 function updateCamera() {
@@ -735,7 +741,7 @@ async function recoverGraphics(error,stage='rendu'){
   recoveryPromise=(async()=>{
     try{
       if(vr.mode==='xr')await vr.exit();
-      const next=await world.recover({quality:'low'});world=next;
+      const next=await world.recover({quality:'low'});world=next;wireRobotShutdownAudio();
       world.setCampaignActive(selectedMode==='campaign'||selectedMode==='breach',selectedMode==='breach'?'breach':'classic');
       world.setRangeActive(selectedMode==='training');
       game.replaceObstacles(world.obstacles);
@@ -954,17 +960,17 @@ vr = new VRController({
   quality:()=>settings.quality,
   togglePause:()=>{ if(phase==='playing')pause();else if(phase==='paused')resume(); },
   begin:()=>{ if(phase==='over'&&game.state==='won'&&game.mode!=='campaign')continueSurvival();else if(phase==='lobby'||phase==='over')start();else resume();selectView('fps');resetInput(); },
-  webGL:async()=>{ if(!world.renderer.isWebGLRenderer){recovering=true;world.renderer.setAnimationLoop(null);try{world=await world.recover();game?.replaceObstacles(world.obstacles);window.dispatchEvent(new CustomEvent('rosee-renderer-recovered'));}finally{recovering=false;lastTime=0;world.renderer.setAnimationLoop(frame);}} },
+  webGL:async()=>{ if(!world.renderer.isWebGLRenderer){recovering=true;world.renderer.setAnimationLoop(null);try{world=await world.recover();wireRobotShutdownAudio();game?.replaceObstacles(world.obstacles);window.dispatchEvent(new CustomEvent('rosee-renderer-recovered'));}finally{recovering=false;lastTime=0;world.renderer.setAnimationLoop(frame);}} },
   afterExit:()=>{ resetInput();lastTime=0;updateHud();updateCamera();if(phase==='paused')$('pause-dialog').showModal();else if(phase==='over')$('end-dialog').showModal(); }
 });
 $('pause-vr').onclick=()=>vr.open();
 try {
-  world = await createScene($('world'), settings.quality,false,character.id);world.setCharacter(character.id);game = armed(new ArenaGame(world.obstacles,Math.random,null,character.id));
+  world = await createScene($('world'), settings.quality,false,character.id);world.setCharacter(character.id);game = armed(new ArenaGame(world.obstacles,Math.random,null,character.id));wireRobotShutdownAudio();
   $('renderer-label').textContent = `${world.backend.toUpperCase()} · CONÇU POUR LE TACTILE`;
   $('loading-status').textContent='Préparation du laboratoire et des équipements…';
   if(boot?.intent!=='play'){
     world.lobby(0);
-    try{await world.warm();world.render();}catch(error){world=await world.recover({quality:'low'});game.replaceObstacles(world.obstacles);world.lobby(0);await world.warm();world.render();}
+    try{await world.warm();world.render();}catch(error){world=await world.recover({quality:'low'});wireRobotShutdownAudio();game.replaceObstacles(world.obstacles);world.lobby(0);await world.warm();world.render();}
   }
   selectMode(selectedMode);$('loading-screen').hidden=true;$('play-button').disabled = false;$('outfit-button').disabled=false;
   window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ version:GAME_VERSION,companion:narrativeCompanion?.snapshot(),skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,phase, view, frames,recovering,recoveryAttempts,graphics:world.graphics, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,aiming,aimBlend,cameraFov:world.camera.fov,laserEffects:world.laserStats?.(),city:world.cityStats?.(),vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelSource:world.soldier.actor?.data.source,modelNativeMotion:world.soldier.nativeMotion,modelNativeBones:world.soldier.nativeSkeleton?.bones.length,modelShadowUnit:world.soldier.shadowUnit?{profile:world.soldier.shadowUnit.profile,helmet:world.soldier.shadowUnit.armour.helmet.name,cape:world.soldier.shadowUnit.cape.anchor.visible,tabard:false}:null,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:settings.music!==false,musicPlaying:screenMusicSnapshot().playing,musicSection:screenMusicSnapshot().surface,musicVoices:screenMusicSnapshot().voices||0,audioState:audioContext?.state||'idle',weaponFeedback:{...weaponFeel.state},previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,

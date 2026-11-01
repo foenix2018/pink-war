@@ -15,6 +15,7 @@ import {OPTICS,buildGun} from './weapons.js';
 import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './renderer-policy.js';
 import {createEnemyFactory} from './enemies.js';
 import {createEnemyDestructionFX} from './enemy-destruction-fx.js';
+import {createRobotShutdownAudio} from './enemy-shutdown-audio.js';
 import {installPinkWarsSoldier} from './level2-player.js';
 import {createCampaignCombatEffects} from './campaign-combat-effects.js';
 import {createAICompanion} from './ai-companions.js';
@@ -47,6 +48,7 @@ let jumpQueued=false,crouchQueued=false,firePressQueued=false,heldFire=false,wea
 let combatEffects=null,companion=null,ambience=null,companionSkills=null,skillMenu=null,enemyFactory=null,armorFx=null,combatHud=null;
 let meleeQueued=false,chargeQueued=false,touchSprinting=false,xr=null,fallbackGun=null,fallbackHand=null;
 let enemyDestructionFX=null;
+const robotShutdownAudio=createRobotShutdownAudio({getContext:()=>enableAudio&&audioCtx?.state==='running'?audioCtx:null,getListener:()=>game?.player,getYaw:()=>yaw});
 let reading=null,lamp=null,lampMode='auto',lampOn=false,cityBed=null,subtitlePlane=null,sector=null;
 const weaponFeel=createWeaponFeel(),pinkControls=createPinkWarsInput(),fireInput=createFireBuffer();
 let enableAudio=true;try{enableAudio=JSON.parse(localStorage.getItem('rosee-settings')||'{}').sound!==false;}catch{}
@@ -207,7 +209,7 @@ function startMission(){
  mission.start();lookFrom(L.START);missionTime=0;shotsFired=0;hits=0;
 }
 function clearVisuals(){
- for(const o of enemyMeshes.values())scene.remove(o);enemyMeshes.clear();enemyDestructionFX?.reset();
+ for(const o of enemyMeshes.values())scene.remove(o);enemyMeshes.clear();enemyDestructionFX?.reset();robotShutdownAudio.stop();
  for(const o of shotMeshes.values())scene.remove(o);shotMeshes.clear();
  for(const o of pickupMeshes.values())scene.remove(o);pickupMeshes.clear();
  combatEffects?.reset();companion?.reset?.();
@@ -502,7 +504,7 @@ async function boot(){
   renderer.shadowMap.enabled=false;
   bootStep='décor';status.textContent='Chargement du secteur 03 de Vesper…';
   sector=await fetchSector();traversal=sectorTraversal(sector.meta);
-  scene=new T.Scene();camera=new T.PerspectiveCamera(70,innerWidth/innerHeight,.06,600);scene.add(camera);enemyDestructionFX=createEnemyDestructionFX(T,scene,{camera,low:low()||profile.phone||profile.headset,maxDeaths:7});
+  scene=new T.Scene();camera=new T.PerspectiveCamera(70,innerWidth/innerHeight,.06,600);scene.add(camera);enemyDestructionFX=createEnemyDestructionFX(T,scene,{camera,low:low()||profile.phone||profile.headset,maxDeaths:7,onSound:(kind,source)=>robotShutdownAudio.play(kind,source)});
   createWorld();
   bootStep='jouabilité';status.textContent='Armes, commandes et machines…';
   setupPlayer();resize();

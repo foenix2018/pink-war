@@ -5,10 +5,27 @@ import {WebGLRenderer} from './vendor/three.module.min.js';
 import {graphicsProfile,renderPixelRatio,createCompatibleRenderer} from './renderer-policy.js';
 import {createEnemyFactory} from './enemies.js';
 import {createEnemyDestructionFX,robotFailureCategory} from './enemy-destruction-fx.js';
+import {createRobotShutdownAudio} from './enemy-shutdown-audio.js';
 
 const $=id=>document.getElementById(id);
 const canvas=$('view'),status=$('stats'),select=$('robot'),health=$('health'),slider=$('damage');
-let renderer,engine,fx,robot=null,entity=null,dead=false,last=0,time=0,yaw=.48,pitch=.12,drag=null;
+let renderer,engine,fx,robot=null,entity=null,dead=false,last=0,time=0,yaw=.48,pitch=.12,drag=null,labAudioCtx=null,labMuted=false;
+function unlockLabAudio(){
+ if(labMuted)return;
+ try{
+  const Context=window.AudioContext||window.webkitAudioContext;
+  if(!Context)return;
+  labAudioCtx ||=new Context();
+  labAudioCtx.resume?.().catch?.(()=>{});
+ }catch(error){console.warn('Audio indisponible sur cet appareil',error);}
+}
+const shutdownAudio=createRobotShutdownAudio({getContext:()=>!labMuted&&labAudioCtx?.state==='running'?labAudioCtx:null,getListener:()=>({x:0,z:4,elevation:0}),getYaw:()=>0});
+function setLabMute(muted){
+ labMuted=!!muted;if(labMuted)shutdownAudio.stop();
+ $('sound').textContent=labMuted?'SON DÉSACTIVÉ':'SON ACTIVÉ';
+ $('sound').setAttribute('aria-pressed',String(!labMuted));
+}
+$('sound').onclick=()=>{setLabMute(!labMuted);if(!labMuted)unlockLabAudio();};
 const scene=new T.Scene();scene.background=new T.Color(0x141b2a);scene.fog=new T.FogExp2(0x1d2635,.025);
 const camera=new T.PerspectiveCamera(53,1,.08,110);
 const mk=(color,metalness=.45,roughness=.63)=>new T.MeshStandardMaterial({color,metalness,roughness});
@@ -26,7 +43,7 @@ function pointCamera(){const target=robot?.userData?.form==='brute'?1.30:1.08;
 }
 function makeRobot(){
  if(robot){scene.remove(robot);robot=null;}
- fx?.reset();
+ fx?.reset();shutdownAudio.stop();
  const form=select.value,quality=/iPhone|OculusBrowser|Quest|Android/i.test(navigator.userAgent)?'low':'high';
  robot=engine.create(false,true,form);
  robot.position.set(0,0,0);robot.rotation.y=Math.PI*.20;
@@ -37,9 +54,9 @@ function makeRobot(){
 }
 function applyDamage(){if(!entity||dead)return;entity.hp=100-Number(slider.value);health.textContent=entity.hp+' PV';}
 select.onchange=makeRobot;slider.oninput=applyDamage;
-$('restart').onclick=()=>{slider.value='78';makeRobot()};
+$('restart').onclick=()=>{unlockLabAudio();slider.value='78';makeRobot()};
 $('destroy').onclick=()=>{
- if(!robot||!entity||dead)return;
+ unlockLabAudio();if(!robot||!entity||dead)return;
  dead=true;health.textContent='0 PV';
  fx.kill(robot,{id:entity.id,form:entity.form,x:0,z:0,groundY:0});
  entity=null;robot=null; // destruction FX owns rig until its final explosion.
@@ -50,11 +67,12 @@ function resize(){
  renderer.setPixelRatio(renderPixelRatio(profile,devicePixelRatio||1,width,height));
  renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();
 }
-canvas.addEventListener('pointerdown',e=>{drag={id:e.pointerId,x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId)});
+canvas.addEventListener('pointerdown',e=>{unlockLabAudio();drag={id:e.pointerId,x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId)});
 canvas.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;
  yaw+=Math.max(-.12,Math.min(.12,(e.clientX-drag.x)*.006));pitch=Math.max(-.4,Math.min(.5,pitch+(e.clientY-drag.y)*.004));drag.x=e.clientX;drag.y=e.clientY});
 for(const event of ['pointerup','pointercancel'])canvas.addEventListener(event,()=>drag=null);
 addEventListener('resize',resize);
+slider.addEventListener('pointerdown',unlockLabAudio);
 function frame(now){
  const dt=Math.min(.05,(now-(last||now))*.001);last=now;time+=dt;
  pointCamera();
@@ -79,7 +97,7 @@ async function start(){
  renderer=prepared.renderer;renderer.outputColorSpace=T.SRGBColorSpace;
  renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;
  engine=createEnemyFactory(mats,{detail:profile.phone||profile.headset?'low':'high'});
- fx=createEnemyDestructionFX(T,scene,{camera,low:profile.phone||profile.headset,maxDeaths:3,maxParticles:profile.phone||profile.headset?75:140});
+ fx=createEnemyDestructionFX(T,scene,{camera,low:profile.phone||profile.headset,maxDeaths:3,maxParticles:profile.phone||profile.headset?75:140,onSound:(kind,source)=>shutdownAudio.play(kind,source)});
  makeRobot();resize();requestAnimationFrame(frame);
 }
 start().catch(error=>{console.error(error);status.textContent='Échec du laboratoire : '+String(error.message||error)});
