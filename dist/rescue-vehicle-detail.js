@@ -10,6 +10,7 @@ export const RESCUE_VEHICLE_PROFILE=Object.freeze({
  fpt:Object.freeze({type:'FPT',name:'CAMION 07',role:'fire-engine',maxHeight:3.2})
 });
 export function createRescueVehicle(T,{kind,length,width,low=false,M,signTexture=null}={}){
+ kind=kind==='ambulance'?'vsav':kind;
  const info=RESCUE_VEHICLE_PROFILE[kind];if(!info)throw Error('Unknown rescue vehicle '+kind);
  if(!(length>4&&width>1.5))throw Error('Invalid rescue vehicle envelope');
  const g=new T.Group();g.name='AEGIS 07 / '+info.name+' · véhicule hard-surface';
