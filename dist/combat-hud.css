@@ -52,3 +52,50 @@ body.pw-hud-lobby-page:not(.playing) .pw-hud,body.outfit-mode .pw-hud,.stereo-mo
 body.pw-immersion-hud .pw-objective-marker{top:max(84px,calc(env(safe-area-inset-top) + 68px))!important}body.pw-immersion-hud .pw-portal-marker{top:max(104px,calc(env(safe-area-inset-top) + 88px))!important}
 .fracture-settings #helpOpen,.fracture-settings #mapPanelBtn{display:none!important}
 .pw-hud-arms .pw-hud-reload:disabled{opacity:1;cursor:default}
+
+
+/* Tactical HUD 3.80: persistent readouts at the upper corners, companion-owned inventory on the left. */
+.pw-hud .pw-hud-vitals{top:var(--pw-top);bottom:auto!important;left:var(--pw-left);height:60px;z-index:2}
+.pw-hud .pw-hud-arms,.pw-hud.pw-actions-open .pw-hud-arms{top:var(--pw-top)!important;bottom:auto!important;right:var(--pw-right)!important;height:60px;z-index:2}
+.pw-hud .pw-hud-arms{width:128px}.pw-hud .pw-hud-reload{border-radius:17px;width:100%}
+.pw-hud .pw-hud-swap{display:none!important}.pw-hud .pw-hud-reload-track{right:11px}
+.pw-hud .pw-hud-mission{top:calc(var(--pw-top) + 71px);left:50%;transform:translateX(-50%);max-width:min(48vw,290px);height:35px;min-width:0;padding:7px 10px;white-space:nowrap}
+.pw-hud .pw-hud-objective{left:50%;transform:translateX(-50%);top:calc(var(--pw-top) + 115px);max-width:calc(100vw - 36px)}
+body.pw-immersion-hud .fracture-session-actions,body.pw-immersion-hud .game-hud .hud-actions{top:calc(max(16px,env(safe-area-inset-top)) + 71px)}
+body.pw-immersion-hud #pause-button{top:calc(max(16px,env(safe-area-inset-top)) + 71px)}
+.pw-hud .pw-hud-companion{position:absolute;left:var(--pw-left);top:40%;width:63px;min-height:74px;padding:5px 5px 7px;border-radius:23px;display:grid;justify-items:center;gap:2px;pointer-events:auto;z-index:6;border-color:color-mix(in srgb,var(--pw-accent) 75%,white)}
+.pw-hud-companion canvas{display:block;width:52px;height:52px;border-radius:50%;box-shadow:inset 0 1px 4px #ffffff52,0 0 14px color-mix(in srgb,var(--pw-accent) 25%,transparent)}
+.pw-hud .pw-hud-companion-name{font-size:9px;letter-spacing:.08em;line-height:1.1;font-weight:750;color:var(--pw-accent)}
+.pw-hud .pw-hud-companion-chevron{position:absolute;right:-8px;top:24px;width:17px;height:22px;border-radius:9px;background:#12273fe9;border:1px solid #e0e9ff76;color:#e3f1ff;font-size:17px;line-height:18px}
+.pw-hud .pw-hud-companion[aria-expanded=true]{background:#2e4665e9;border-color:var(--pw-accent)}
+.pw-hud .pw-hud-gear{position:absolute;z-index:7;left:calc(var(--pw-left) + 73px);top:clamp(16px,calc(40% - 115px),250px);width:min(300px,calc(100vw - 110px));max-height:calc(100dvh - 40px);overflow:auto;overscroll-behavior:contain;border-radius:22px;padding:13px;pointer-events:auto;box-shadow:0 12px 32px #0007,inset 0 1px #fff4}
+.pw-hud-gear header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
+.pw-hud-gear header strong{font-size:12px;letter-spacing:.16em;color:var(--pw-accent)}
+.pw-hud .pw-hud-gear-close{width:32px;height:32px;min-width:32px;border:1px solid #ffffff40;border-radius:50%;background:#ffffff12;font-size:22px;line-height:1}
+.pw-hud-gear-hint{display:block;color:#bbcadb;font-size:10px;letter-spacing:.04em;margin-bottom:11px}
+.pw-hud-weapon-list{display:grid;gap:6px}
+.pw-hud .pw-hud-gear-weapon{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;min-height:42px;text-align:left;border:1px solid #95aace45;border-radius:12px;background:#d3e9ff0b;padding:9px 10px}
+.pw-hud-gear-weapon strong{font-size:11px;font-weight:700;letter-spacing:.02em}
+.pw-hud-gear-weapon span{font-size:10px;white-space:nowrap;color:#c0cad5}
+.pw-hud .pw-hud-gear-weapon[aria-pressed=true]{background:color-mix(in srgb,var(--pw-accent) 17%,#1b3143);border-color:var(--pw-accent)}
+.pw-hud .pw-hud-gear-grenade,.pw-hud .pw-hud-gear-skills{width:100%;min-height:46px;border-radius:13px;border:1px solid #deb79b66;background:#b7845820;display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;padding:10px;text-align:left;font-size:10px;font-weight:750;letter-spacing:.025em}
+.pw-hud-gear-grenade b{font-size:16px;color:#ffcc9e}
+.pw-hud .pw-hud-gear-skills{justify-content:center;background:#ffffff0d;border-color:#bcd3e34d}
+body.pw-unified-hud .pw-companion-toggle{display:none!important}
+.pw-hud .pw-hud-palette [data-armor=charge]{display:none!important}
+.pw-hud .pw-hud-palette{grid-template-columns:repeat(3,minmax(0,1fr));width:170px}
+@media(pointer:coarse){
+ .pw-hud .pw-hud-vitals,.pw-hud .pw-hud-arms{top:var(--pw-top)!important;bottom:auto!important}
+ .pw-hud .pw-hud-companion{top:35%;min-width:63px;min-height:74px}
+ .pw-hud .pw-hud-gear{top:clamp(10px,calc(35% - 90px),200px)}
+ .pw-hud .pw-hud-palette{width:178px;grid-template-columns:repeat(3,minmax(0,1fr));height:78px}
+}
+@media(orientation:landscape) and (max-height:540px){
+ .pw-hud .pw-hud-mission{top:var(--pw-top);max-width:150px}
+ .pw-hud .pw-hud-companion{top:38%;width:57px;min-height:64px}
+ .pw-hud-companion canvas{width:44px;height:44px}
+ .pw-hud .pw-hud-gear{top:max(8px,env(safe-area-inset-top));width:min(330px,calc(100vw - 102px));max-height:calc(100dvh - 16px);padding:10px}
+ .pw-hud-gear-hint{margin-bottom:5px}.pw-hud-weapon-list{gap:4px}
+ .pw-hud .pw-hud-gear-weapon{min-height:35px;padding:6px 9px}
+ .pw-hud .pw-hud-gear-grenade,.pw-hud .pw-hud-gear-skills{min-height:38px;margin-top:6px;padding:7px 9px}
+}
