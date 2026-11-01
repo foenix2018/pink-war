@@ -14,6 +14,7 @@ import {aimSensitivity,magnifiedFov,flatSightPose} from './optics.js';
 import {OPTICS,buildGun} from './weapons.js';
 import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './renderer-policy.js';
 import {createEnemyFactory} from './enemies.js';
+import {createEnemyDestructionFX} from './enemy-destruction-fx.js';
 import {installPinkWarsSoldier} from './level2-player.js';
 import {createCampaignCombatEffects} from './campaign-combat-effects.js';
 import {createAICompanion} from './ai-companions.js';
@@ -45,6 +46,7 @@ let yaw=0,pitch=0,noticeUntil=0,hitUntil=0,paused=false,view='fps',aimBlend=0,mo
 let jumpQueued=false,crouchQueued=false,firePressQueued=false,heldFire=false,weaponReady=false,audioCtx=null;
 let combatEffects=null,companion=null,ambience=null,companionSkills=null,skillMenu=null,enemyFactory=null,armorFx=null,combatHud=null;
 let meleeQueued=false,chargeQueued=false,touchSprinting=false,xr=null,fallbackGun=null,fallbackHand=null;
+let enemyDestructionFX=null;
 let reading=null,lamp=null,lampMode='auto',lampOn=false,cityBed=null,subtitlePlane=null,sector=null;
 const weaponFeel=createWeaponFeel(),pinkControls=createPinkWarsInput(),fireInput=createFireBuffer();
 let enableAudio=true;try{enableAudio=JSON.parse(localStorage.getItem('rosee-settings')||'{}').sound!==false;}catch{}
@@ -205,7 +207,7 @@ function startMission(){
  mission.start();lookFrom(L.START);missionTime=0;shotsFired=0;hits=0;
 }
 function clearVisuals(){
- for(const o of enemyMeshes.values())scene.remove(o);enemyMeshes.clear();
+ for(const o of enemyMeshes.values())scene.remove(o);enemyMeshes.clear();enemyDestructionFX?.reset();
  for(const o of shotMeshes.values())scene.remove(o);shotMeshes.clear();
  for(const o of pickupMeshes.values())scene.remove(o);pickupMeshes.clear();
  combatEffects?.reset();companion?.reset?.();
@@ -307,7 +309,7 @@ const projectileCore=new T.SphereGeometry(.07,6,4);
 const shotMaterial={hostile:new T.MeshBasicMaterial({color:0xff4659,toneMapped:false}),friendly:new T.MeshBasicMaterial({color:characterId==='lylu'?0x8fd0ff:0xff8ac4,toneMapped:false})};
 const pickupGeometry=new T.OctahedronGeometry(.28,0);
 const pickupMaterial={heal:new T.MeshBasicMaterial({color:characterId==='lylu'?0x6fb8ff:0xff6fb4,toneMapped:false}),cell:new T.MeshBasicMaterial({color:0xe8f6ff,toneMapped:false})};
-function updateActors(){
+function updateActors(dt){
  const live=new Set();
  for(const e of game.enemies){
   live.add(e.id);let model=enemyMeshes.get(e.id);
@@ -317,9 +319,15 @@ function updateActors(){
    if(e.boss)model.scale.setScalar(1.25);
    model.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true;}});enemyMeshes.set(e.id,model);scene.add(model);
   }
-  model.position.set(e.x,e.elevation,e.z);model.rotation.y=e.yaw||0;model.userData.animate?.(clock,e.phase,true,e,game.time);
+  model.position.set(e.x,e.elevation,e.z);model.rotation.y=e.yaw||0;model.userData.animate?.(clock,e.phase,true,e,game.time);enemyDestructionFX?.mark(e,model,dt);
  }
- for(const [id,o] of enemyMeshes)if(!live.has(id)){scene.remove(o);enemyMeshes.delete(id);}
+ for(const [id,o] of enemyMeshes)if(!live.has(id)){
+    const dead=game.events?.some(event=>event.type==='kill'&&event.id===id);
+    if(dead&&enemyDestructionFX)enemyDestructionFX.kill(o,{id,form:o.userData.form,x:o.position.x,z:o.position.z,groundY:o.position.y-(o.userData.form==='probe'?2:0)});
+    else scene.remove(o);
+    enemyMeshes.delete(id);
+  }
+  enemyDestructionFX?.update(dt);
  const active=new Set();
  for(const b of game.bullets){
   active.add(b.id);let mesh=shotMeshes.get(b.id);
@@ -380,7 +388,7 @@ function gameTick(dt){
  else if(firing||game.charge>0)game.trigger(firing,dt,aim.origin,aim.direction);
  else{game.triggerHeld=false;game.semiPending=false;}
  if(game.ammo[game.weaponIndex]<ammoBefore)fireInput.consume();
- updateActors();
+ updateActors(dt);
  for(const e of game.drainEvents()){
   combatEffects?.event(e);armorFx.handle(e);
   if(e.type==='shot'){shotsFired++;xr?.haptic('shot',e.weapon,e.hand);weaponFeel.fire(e.weapon||game.weapon.id,e.power||1,aimBlend>.5);if(enableAudio&&audioCtx)try{playLaserShot(audioCtx,e.weapon||game.weapon.id,e.power||1);}catch{}}
@@ -494,7 +502,7 @@ async function boot(){
   renderer.shadowMap.enabled=false;
   bootStep='décor';status.textContent='Chargement du secteur 03 de Vesper…';
   sector=await fetchSector();traversal=sectorTraversal(sector.meta);
-  scene=new T.Scene();camera=new T.PerspectiveCamera(70,innerWidth/innerHeight,.06,600);scene.add(camera);
+  scene=new T.Scene();camera=new T.PerspectiveCamera(70,innerWidth/innerHeight,.06,600);scene.add(camera);enemyDestructionFX=createEnemyDestructionFX(T,scene,{camera,low:low()||profile.phone||profile.headset,maxDeaths:7});
   createWorld();
   bootStep='jouabilité';status.textContent='Armes, commandes et machines…';
   setupPlayer();resize();
