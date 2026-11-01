@@ -10,6 +10,7 @@ import { createSignage, BLADES } from './signage.js';
 import {createCivilCar} from './civil-vehicle-detail.js';
 import {createFreightTruck} from './freight-truck-detail.js';
 import {createRescueVehicle} from './rescue-vehicle-detail.js';
+import {createFunctionalProp} from './functional-props.js';
 
 const TAU = Math.PI * 2;
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
@@ -177,7 +178,16 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
     flash.position.set(0,3,-L/2+1);g.add(flash);
     return {g,lights,flash,body};
   }
-  function winchPost(x, z) { box(M.yellow, x, 0, z, .9, 1.3, .9); box(M.dark, x, 1.3, z, 1, .3, 1); const drum = new T.Mesh(new T.CylinderGeometry(.35, .35, .8, 14), M.galva); drum.rotation.z = Math.PI / 2; drum.position.set(x, 1, z + .55); add(drum); devicesExtra.treuil = drum; }
+  function winchPost(x,z){
+    const chassis=createFunctionalProp(T,'winch',{w:1.05,d:1.2,h:1.45,low,M:{
+      ...M,paintedMetal:M.yellow,steel:M.galva,dark:M.dark,black:M.black
+    }});
+    chassis.position.set(x,0,z);add(chassis);
+    // Keep the same animated axle used by the mission interaction.
+    const drum=new T.Mesh(new T.CylinderGeometry(.30,.30,.53,low?12:22),M.galva);
+    drum.rotation.z=Math.PI/2;drum.position.set(x,1.02,z+.56);add(drum);
+    devicesExtra.treuil=drum;
+  }
   function lampPost(x, z, k) {
     const pole = new T.Mesh(new T.CylinderGeometry(.09, .12, 7, 8), M.galva); pole.position.set(x, 3.5, z); add(pole);
     // A hood, diffuser and end plates form a physical luminaire around the light source.
@@ -190,21 +200,31 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
   }
   function arrimagePost(x, z) { box(M.dark, x, 0, z, .9, 1.3, .9); box(M.neonAmber, x, 1.3, z + .46, .5, .3, .02); }
   function train() {
-    const cars = [[67, 'LOCO'], [76, 'SANITAIRE 7'], [85, 'SANITAIRE 7'], [93.5, 'FRET']];
-    for (const [x, name] of cars) {
-      const g = new T.Group(); g.position.set(x, 0, -96); add(g);
-      const p = (m, px, py, pz, w, h, d) => { const o = new T.Mesh(new T.BoxGeometry(w, h, d), m); o.position.set(px, py, pz); g.add(o); return o; };
-      p(name === 'LOCO' ? M.dark : M.white, 0, 2.3, 0, name === 'FRET' ? 5 : 8.4, 3.4, 3); p(M.dark, 0, .6, 0, 8, .6, 2.6);
-      for (const s of [-1.5, 1.5]) for (const k of [-2.6, 2.6]) { const w = new T.Mesh(new T.CylinderGeometry(.42, .42, .2, 14), M.rubber); w.rotation.x = Math.PI / 2; w.position.set(k, .45, s); g.add(w); }
-      if (name.startsWith('SANITAIRE')) {
-        p(M.red, 0, 3.1, 1.51, 8.4, .25, .02); p(M.neonWhite, 0, 2.4, 1.52, 7.6, .06, .02);
-        const s = new T.Mesh(new T.PlaneGeometry(3.6, .9), new T.MeshBasicMaterial({ map: signTex(['✚ ' + name, 'ANNEAU LOGISTIQUE'], { bg: '#e8ebee', fg: '#c1121f', w: 512, h: 128 }), toneMapped: false })); s.position.set(0, 2.2, 1.53); g.add(s);
-        for (let k = -3; k <= 3; k += 1.5) p(M.neonAmber, k, 2.9, 1.52, .9, .4, .02);
+    const cars=[[67,'LOCO'],[76,'SANITAIRE 7'],[85,'SANITAIRE 7'],[93.5,'FRET']];
+    for(const [x,name] of cars){
+      const L=name==='FRET'?5:8.4;
+      const wagon=createFunctionalProp(T,'railcar',{w:L,d:3,h:4.0,low,
+        M:{...M,paintedMetal:name==='LOCO'?M.dark:M.white,
+          white:name==='LOCO'?M.dark:M.white,ledCyan:name.startsWith('SANITAIRE')?M.red:M.neonWhite,
+          steel:M.galva,glass:M.glass,rubber:M.rubber}});
+      wagon.position.set(x,0,-96);add(wagon);
+      if(name.startsWith('SANITAIRE')){
+        const label=new T.Mesh(new T.PlaneGeometry(3.45,.76),
+          new T.MeshBasicMaterial({map:signTex(['✚ '+name,'ANNEAU LOGISTIQUE'],
+          {bg:'#e8ebee',fg:'#c1121f',w:512,h:128}),toneMapped:false}));
+        label.position.set(x,2.26,-94.44);add(label);
+        const stripe=new T.Mesh(new T.BoxGeometry(L-.25,.12,.038),M.red);
+        stripe.position.set(x,3.12,-94.43);add(stripe);
       }
-      if (name === 'LOCO') { p(M.neonRed, -4.21, 2.8, 0, .02, .2, 2.4); p(M.neonWhite, -4.21, 1.4, -1, .02, .2, .4); p(M.neonWhite, -4.21, 1.4, 1, .02, .2, .4); }
+      if(name==='LOCO'){
+        for(const z of [-97.0,-95.0]){
+          const light=new T.Mesh(new T.BoxGeometry(.03,.18,.21),M.neonWhite);
+          light.position.set(x-L/2-.015,1.28,z);add(light);
+        }
+      }
     }
-    // Loading ramp of the medical wagon, where the van drives on.
-    box(M.galva, 80, 0, -92.6, 4, .4, 2.2);
+    // Loading ramp for Inès' vehicle remains aligned with original choreography.
+    box(M.galva,80,0,-92.6,4,.4,2.2);
   }
   function containers() {
     for (const [x, z, w, d, k] of [[67, -80, 2.6, 6, 0], [92, -82, 6, 2.6, 1], [68, -88, 2.6, 4.8, 2]]) {
