@@ -73,3 +73,12 @@ test('strong left-stick deflection triggers sprint while slight movement still w
   assert.match(source(mission),/controls\.sprint\|\|touchSprinting\|\|touch\.sprint/,mission);
  }
 });
+
+test('fire and aim keep only their icons, with accessible names',()=>{
+ const hudAppearance=source('hud-appearance.js'),trial=source('hud-essai.html');
+ assert.match(hudAppearance,/button\.innerHTML=hudIcon\(name\);/);
+ assert.match(hudAppearance,/setAttribute\('aria-label'/);
+ assert.doesNotMatch(hudAppearance,/<small>'\+\(name==='aim'/);
+ assert.match(trial,/<button id="fire"[^>]*aria-label="Tirer"[^>]*><svg[^>]*>[\s\S]*?<\/svg><\/button>/);
+ assert.match(trial,/<button id="aim"[^>]*aria-label="Viser"[^>]*><svg[^>]*>[\s\S]*?<\/svg><\/button>/);
+});

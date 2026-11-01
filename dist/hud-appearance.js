@@ -27,7 +27,7 @@ export function createHudContrastControl(doc=document){
 export function skinCombatControls(doc=document){
  for(const [name,selector] of Object.entries({fire:'#btnFireMobile,#fire-button,[data-m02=fire]',aim:'#btnAimMobile,#aim-button,[data-m02=aim]',jump:'#btnJump,#jump-button,[data-m02=jump]'})){
   for(const button of doc.querySelectorAll(selector))if(!button.dataset.pwImmersion){
-   button.dataset.pwImmersion=name;button.innerHTML=hudIcon(name)+(name==='jump'?'':'<small>'+(name==='aim'?'VISER':'TIR')+'</small>');
+   button.dataset.pwImmersion=name;button.innerHTML=hudIcon(name);button.setAttribute('aria-label',name==='aim'?'Viser':name==='fire'?'Tirer':'Sauter');
   }
  }
 }
