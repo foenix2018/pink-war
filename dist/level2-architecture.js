@@ -5,7 +5,16 @@ import {createDistrictSignage} from './level2-signage.js';
 import {createDistrictUtilities} from './district-utility-details.js';
 import {createHardSurfaceFurniture} from './realistic-furniture.js';
 export function createDistrictArchitecture({T,root,materials,solid,beam,sign,collisions,low,rng}){
-  const C=materials,signs=createDistrictSignage(T,{performance:low}),utilities=createDistrictUtilities(T,{low,materials:C});
+  const C=materials,signs=createDistrictSignage(T,{performance:low});
+  // Some schematic-layout consumers supply a minimal Three interface for
+  // collision validation rather than a complete 3D renderer.
+  const canBuildDetail=typeof T.Vector3==='function'&&typeof T.Quaternion==='function';
+  const utilities=canBuildDetail?createDistrictUtilities(T,{low,materials:C}):{
+    hydrant(x,z){cyl(x,.56,z,.19,.96,C.rust||C.iron);},
+    generator(x,z){thin(x,.72,z,1.5,1.42,.82,C.iron);},
+    cooler(x,z){thin(x,1.2,z,2.2,2.1,1.38,C.iron);},
+    build(){return {hydrants:0,generators:0,coolers:0,batches:0,triangles:0};}
+  };
   const stats={buildings:0,recessedWindows:0,brokenWindows:0,masonryBays:0};
   const ringGeo=new T.TorusGeometry(1,.07,6,32);
   const prism=(x,y,z,w,h,d,mat,top=1)=>{
@@ -30,7 +39,21 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
   const oxidation=new T.MeshStandardMaterial({color:0x63524c,roughness:.89,metalness:.25});
   const dirty=new T.MeshStandardMaterial({color:0x41545b,metalness:.12,roughness:.92});
   const warm=new T.MeshBasicMaterial({color:0xffc38b,toneMapped:false});
-  const furniture=createHardSurfaceFurniture(T,root,{low,M:{steel:stainless,paintedMetal:ceramic,dark:black,woodDark:brushed,wood:pastel,fabric:dirty,paper:ceramic,cyan:C.cyan,glass:C.glass}});
+  const furniture=canBuildDetail?createHardSurfaceFurniture(T,root,{low,M:{
+    steel:stainless,paintedMetal:ceramic,dark:black,woodDark:brushed,
+    wood:pastel,fabric:dirty,paper:ceramic,cyan:C.cyan,glass:C.glass
+  }}):{
+    dress(o){
+      thin(o.x,o.height*.46,o.z,o.hx*2,o.height*.86,o.hz*2,ceramic);
+      thin(o.x,o.height-.03,o.z,o.hx*2+.04,.07,o.hz*2+.04,stainless);
+      return true;
+    },
+    stretcher(x,z){
+      thin(x,.45,z,1.65,.12,1.14,stainless);
+      thin(x,.56,z,1.45,.10,.92,dirty);
+    },
+    finish(){return {objects:0,batches:0,triangles:0};}
+  };
   const violet=new T.MeshBasicMaterial({color:0xa567ef,toneMapped:false});
   const red=new T.MeshBasicMaterial({color:0xdd5e52,toneMapped:false});
   const lit=[signage,C.amber,C.blue,warm,violet];
