@@ -1,37 +1,42 @@
 {
   "title": "Pink Wars — La Fracture",
-  "revision": "3.63.15",
-  "artwork": "Original crown emblem created for Pink Wars, blue LYLU / rose GHJU, opaque artwork; iOS supplies the corner mask.",
+  "revision": "3.74.1-icon-20261101",
+  "artwork": "Cyberpunk military 3D PINK WARS magenta and chrome lettering, blue/pink neon frame, created 2026-11-01.",
   "files": [
     {
-      "file": "icons/pink-wars-1024.png",
-      "size": 1024,
-      "bytes": 1848168,
-      "sha256": "1f77bbe966e04e2e26b36e529d6d76f90423cfa3a96374541b293b50b122b173"
-    },
-    {
-      "file": "icons/icon-512.png",
-      "size": 512,
-      "bytes": 462024,
-      "sha256": "e0564cad9ee3c0373783615677731054875e9adcd051e0a3f82c3b86987d2f04"
-    },
-    {
-      "file": "icons/icon-192.png",
-      "size": 192,
-      "bytes": 67120,
-      "sha256": "8faffe4c64b44bd2fcdd9da04c8cec938414305f1d1b1e968006107e98d7ce5b"
+      "file": "icons/favicon-32.png",
+      "bytes": 1244,
+      "sha256": "c989ce254fc73be2d26a473c9df0efb64fb7301b7e713bfaf0e8a6ecf62b4235"
     },
     {
       "file": "apple-touch-icon.png",
-      "size": 180,
-      "bytes": 59201,
-      "sha256": "9c59cb49b94be564caf60b4e948fcfa850238503dd744d76acf561d218952901"
+      "bytes": 17321,
+      "sha256": "95acc7220820a62c12b5c43fdd4767669dec6b7619abaf3a2a64b400a7f5a2ad"
     },
     {
-      "file": "icons/favicon-32.png",
-      "size": 32,
-      "bytes": 2476,
-      "sha256": "7a7b3174598df0951111dc6b353482527c564426c7b1ec9751ac410a71a1ba04"
+      "file": "icons/icon-192.png",
+      "bytes": 19423,
+      "sha256": "081bae68f00351a477183af32769b7c0cfd4bab71baf5bfe946258322acbd0be"
+    },
+    {
+      "file": "icons/icon-512.png",
+      "bytes": 84687,
+      "sha256": "2c6f0558a97a573e96e1035db20dbcc47794a4bb8f05f7814534cf7f38f70669"
+    },
+    {
+      "file": "icons/pink-wars-1024.png",
+      "bytes": 286671,
+      "sha256": "eb85084eaf17e7419a10ae2f9402556de6ed417d3211dfd66a14e1390dd6924d"
+    },
+    {
+      "file": "icons/icon-512-maskable.png",
+      "bytes": 55983,
+      "sha256": "6b829b1ab316cee194f5d1364eeda0c9738329843eff28ac8bed7adb0f071f9d"
+    },
+    {
+      "file": "favicon.ico",
+      "bytes": 175861,
+      "sha256": "1d67d60b86fc0484549a77d98aed93d5af08993d3604fcc133567d59c87a6ce8"
     }
   ]
 }
