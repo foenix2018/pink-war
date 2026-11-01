@@ -135,7 +135,7 @@ export function createM04Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
   function dress(o) {
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, h = o.height;
     // All stages share the same hard-surface silhouettes, independent of PBR palette.
-    const shared={bench:'bench',scanner:'scanner',transformer:'generator',
+    const shared={bench:'bench',scanner:'scanner',transformer:'transformer',
       forklift:'forklift',generator:'generator',cabinet:'cabinet',
       rack:'rack',workbench:'workbench',batteries:'batteries',servers:'servers',
       terminal:'terminal',console:'console'};
