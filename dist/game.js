@@ -54,7 +54,7 @@ let phase = 'lobby', view = boot?.view?normalizeView(boot.view):readPreferredVie
 let optionsViewControl=null,pauseViewControl=null;
 let character=characterForId('ghju');
 let m01CheckpointGame=null,m01CheckpointStage=null,m01CheckpointPending=false;
-let combatHud=null,armorFx=null,armorFxScene=null,meleeQueued=false,chargeQueued=false,touchSprinting=false;
+let combatHud=null,armorFx=null,armorFxScene=null,meleeQueued=false,chargeQueued=false,touchSprinting=false,arsenalConsumedFrame=false;
 let rangeArmoryMenu=null;
 function syncRangeArmory(){
   if(game?.mode==='training'&&!rangeArmoryMenu)rangeArmoryMenu=createRangeArmoryMenu({getGame:()=>game,
@@ -805,7 +805,7 @@ function stepFrame(timestamp, xrFrame) {
   const dt = lastTime ? Math.min((timestamp - lastTime) / 1000, .05) : .016; lastTime = timestamp; clock += dt;
   const feel=weaponFeel.update(dt);recoil=feel.pitch;flashTimer=feel.flash;
   // The standard Bluetooth/USB gamepad is available outside VR as well.
-  syncRangeArmory();combatHud?.pollGamepad();const vrInput = vr.input(xrFrame);
+  syncRangeArmory();arsenalConsumedFrame=!!combatHud?.pollGamepad();const vrInput = vr.input(xrFrame);
   skillMenu?.setVisible(phase==='playing');
   if(vr.mode!=='xr')skillMenu?.xrInput({enabled:false});
   // Illustrated menus do not need a full city render behind their opaque image.
@@ -814,7 +814,7 @@ function stepFrame(timestamp, xrFrame) {
   world.animatePortal(clock);
   if (phase === 'lobby') world.lobby(clock,Math.max(1,game.wave));
   if (phase === 'outfit') world.outfit(clock,previewLevel,Number($('outfit-rotation').value)*Math.PI/180);
-  if (phase === 'playing' && !recovering && !skillMenu?.isOpen && !rangeArmoryMenu?.isOpen && !combatHud?.isArsenalOpen) {
+  if (phase === 'playing' && !recovering && !skillMenu?.isOpen && !rangeArmoryMenu?.isOpen && !combatHud?.isArsenalOpen && !arsenalConsumedFrame) {
     const sensitivity = settings.sensitivity*(vr.mode==='xr'?1:aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend));
     yaw -= (look.x * 1.8 + vrInput.turn * 1.6 + (keys.has('ArrowRight') ? 1.4 : 0) - (keys.has('ArrowLeft') ? 1.4 : 0)) * sensitivity * dt;
     yaw -= vrInput.snap;
@@ -946,6 +946,7 @@ vr = new VRController({
   rangeArmoryInput:input=>rangeArmoryMenu?.input(input),
   openArsenal:()=>combatHud?.toggleArsenal(),
   arsenalOpen:()=>!!combatHud?.isArsenalOpen,
+  arsenalInputFrame:()=>arsenalConsumedFrame,
   toggleSkills:()=>skillMenu?.setOpen(!skillMenu.isOpen),
   skillsInput:controller=>skillMenu?.xrInput({T:world.T,scene:world.scene,camera:world.renderer.xr.getCamera(world.camera),
     left:controller.controllers.find(c=>c.tracked&&c.ray.userData.source?.handedness==='left')?.anchor,
