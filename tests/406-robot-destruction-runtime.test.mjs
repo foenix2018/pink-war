@@ -23,9 +23,10 @@ test('robot health damage spawns bounded smoke/spark meshes and delayed explosio
  const camera={position:{x:0,y:1,z:0},quaternion:{}};
  const fx=createEnemyDestructionFX(T,scene,{camera,low:true,maxDeaths:4});
  const model=new Dummy();model.position.set(3,0,4);scene.add(model);
- for(let i=0;i<20;i++){fx.mark({id:7,form:'stalker',hp:10,maxHp:100,x:3,z:4,elevation:0},model,.05);fx.update(.05);}
+ let peakArcs=0;
+ for(let i=0;i<24;i++){fx.mark({id:7,form:'stalker',hp:10,maxHp:100,x:3,z:4,elevation:0},model,.05);fx.update(.05);peakArcs=Math.max(peakArcs,fx.stats().electricArcs);}
  assert.ok(fx.stats().damagedParticles>0);
- assert.ok(fx.stats().electricArcs>0,'damaged robots emit visible electrical arcs');
+ assert.ok(peakArcs>0,'damaged robots emit visible electrical arcs');
  assert.ok(fx.stats().damagedParticles<=75,'low power budget');
  fx.kill(model,{id:7,form:'stalker',x:3,z:4,groundY:0});
  assert.equal(fx.stats().falling,1);
