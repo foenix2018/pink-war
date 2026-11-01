@@ -158,7 +158,7 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
   function aegisVan(x,z,yaw,burnt=false){
     const g=new T.Group();g.position.set(x,0,z);g.rotation.y=yaw;add(g);
     const L=VAN.halfLength*2,W=VAN.halfWidth*2;
-    const body=createRescueVehicle(T,{kind:'vsav',length:L,width:W,low,
+    const body=createRescueVehicle(T,{kind:'ambulance',length:L,width:W,low,
       signTexture:burnt?null:()=>signTex(['AMBULANCE','AEGIS · 03'],
         {bg:null,fg:'#a3241c',w:512,h:128}),
       M:{...M,red:burnt?M.rust:M.red,white:burnt?M.rust:M.white,
