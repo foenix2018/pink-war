@@ -7,7 +7,7 @@ import {paintCompanionPortrait} from './companion-portrait.js';
 import {renderDigitalCounter} from './digital-display.js';
 let activeCombatHud = null;
 export const getActiveCombatHud = () => activeCombatHud;
-const STYLESHEET = 'combat-hud.css?v=3.85-mobile-actions-1';
+const STYLESHEET = 'combat-hud.css?v=3.86-grenade-safearea-1';
 const HEROES = Object.freeze({ ghju: 'GHJU', lylu: 'LYLU' });
 export const HUD_SEGMENTS = 10;
 
@@ -76,7 +76,13 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
   // Crouch takes the former fire position; fire moves above it and melee directly above fire.
   // Run is handled by the left analog stick; retain keyboard and gamepad sprint bindings.
   const touchActionLayer=$('.pw-hud-touch'),meleeButton=$('[data-armor=melee]');
-  touchActionLayer.append(meleeButton,crouchButton);
+  // Grenade uses the actual impulse-charge stock. No duplicate game inventory.
+  const grenadeButton=doc.createElement('button');grenadeButton.type='button';
+  grenadeButton.className='pw-hud-grenade-direct pw-glass';
+  grenadeButton.dataset.hudAction='grenade';
+  grenadeButton.setAttribute('aria-label','Lancer une grenade à impulsion');
+  grenadeButton.innerHTML=hudIcon('grenade')+'<span class="pw-hud-grenade-count" aria-hidden="true">0</span>';
+  touchActionLayer.append(meleeButton,crouchButton,grenadeButton);
   meleeButton.classList.add('pw-hud-melee-direct');
   crouchButton.classList.add('pw-hud-crouch-direct');
   sprintButton.remove();more.hidden=true;palette.hidden=true;
@@ -137,7 +143,7 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
   const flag=(element,name,on)=>{if(element.classList.contains(name)!==on)element.classList.toggle(name,on);};
   function setOpen(value){open=!!value&&!root.hidden&&active;palette.hidden=!open;more.setAttribute('aria-expanded',String(open));root.classList.toggle('pw-actions-open',open);if(open){objective.hidden=true;mission.setAttribute('aria-expanded','false');}}
   function reset(){setGearOpen(false);setOpen(false);objective.hidden=true;mission.setAttribute('aria-expanded','false');if(sprinting){sprinting=false;onAction?.('sprint',false);}sprintButton.setAttribute('aria-pressed','false');root.classList.remove('pw-sprinting');}
-  function command(kind){if(!active||root.hidden||disposed)return;setOpen(false);if(kind==='sprint'){sprinting=!sprinting;sprintButton.setAttribute('aria-pressed',String(sprinting));root.classList.toggle('pw-sprinting',sprinting);onAction?.(kind,sprinting);}else onAction?.(kind);}
+  function command(kind){if(!active||root.hidden||disposed)return;setOpen(false);if(kind==='sprint'){sprinting=!sprinting;sprintButton.setAttribute('aria-pressed',String(sprinting));root.classList.toggle('pw-sprinting',sprinting);onAction?.(kind,sprinting);}else if(kind==='grenade'){if((Number(currentGame?.charges)||0)>0)onAction?.('charge');}else onAction?.(kind);}
   // Native click provides one command per tap and keyboard/screen-reader activation.
   // Held fire/aim keep their original captured pointer handlers in each engine.
   for(const button of root.querySelectorAll('[data-armor],[data-hud-action]')){
@@ -150,7 +156,7 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
   const outside=e=>{if(root.contains(e.target))return;const wasOpen=open||gearOpen;setGearOpen(false);setOpen(false);objective.hidden=true;mission.setAttribute('aria-expanded','false');if(wasOpen&&e.target.tagName==='CANVAS'){e.preventDefault();e.stopImmediatePropagation();}};
   // Shared input feedback: one delegated listener covers every combat mode, including
   // engine-owned buttons added after HUD initialization. Does not synthesize game input.
-  const feedbackSelector='[data-pw-immersion],.pw-hud-companion,.pw-hud-gear button,.pw-hud-reload,.pw-hud-crouch-direct,.pw-hud-melee-direct,.pw-hud-context,.pw-hud-mission';
+  const feedbackSelector='[data-pw-immersion],.pw-hud-companion,.pw-hud-gear button,.pw-hud-reload,.pw-hud-crouch-direct,.pw-hud-melee-direct,.pw-hud-grenade-direct,.pw-hud-context,.pw-hud-mission';
   const pressedPointers=new Map();
   const pressStart=e=>{
     if(!active||disposed)return;
@@ -190,7 +196,7 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
       const shielded=s.shieldCapacity>0,broken=shielded&&s.shield<=0;shieldBar.hidden=shieldNumber.hidden=!shielded;
       if(shielded)prop(shieldBar,'--fill',(s.shield/s.shieldCapacity).toFixed(3));
       flag(vitals,'shield-broken',broken);flag(vitals,'shield-charging',s.shieldCharging);
-      text('vitalNote',s.critical?'CRITIQUE':broken?'BOUCLIER ROMPU':'');text('charges',String(s.charges));chargeButton.disabled=s.charges<=0;chargeButton.setAttribute('aria-label','Lancer une charge à impulsion · '+s.charges+' disponible'+(s.charges>1?'s':''));
+      text('vitalNote',s.critical?'CRITIQUE':broken?'BOUCLIER ROMPU':'');text('charges',String(s.charges));chargeButton.disabled=s.charges<=0;chargeButton.setAttribute('aria-label','Lancer une charge à impulsion · '+s.charges+' disponible'+(s.charges>1?'s':''));grenadeButton.disabled=!active||s.charges<=0;grenadeButton.querySelector('.pw-hud-grenade-count').textContent=String(s.charges);grenadeButton.setAttribute('aria-label','Lancer une grenade à impulsion · '+s.charges+' disponible'+(s.charges>1?'s':''));
       crouchButton.setAttribute('aria-pressed',String(!!game.player?.crouched));
       const arc=s.hit?(s.hit.angle*180/Math.PI).toFixed(0)+'|'+s.hit.strength.toFixed(2):'';
       if(last.get('arc')!==arc){last.set('arc',arc);hitRing.style.opacity=s.hit?s.hit.strength.toFixed(2):'0';if(s.hit)hitRing.style.setProperty('--angle',(s.hit.angle*180/Math.PI).toFixed(1)+'deg');}

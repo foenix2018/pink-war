@@ -156,3 +156,10 @@ h1{white-space:nowrap;font-size:clamp(64px,6vw,94px)}.brand-mark,.unit-mark{font
 .scoped #scope-overlay:before,.scoped #scope-overlay:after{display:block;background:#b7e9ff;opacity:.85}
 .scoped #scope-overlay i{position:absolute;left:50%;top:50%;width:5px;height:5px;transform:translate(-50%,-50%);border:1px solid #c7f5ff;border-radius:50%;box-shadow:0 0 7px #52caff}
 .scoped .crosshair{opacity:0}
+
+/* iPhone 14 Pro – Safari/standalone dynamic viewport rendering. Do not shrink
+   the game canvas to the safe area: only the actual input buttons need insets. */
+@supports(height:100dvh){
+ html,body{height:100dvh;min-height:100dvh}
+ #world{position:fixed;left:0;top:0;right:auto;bottom:auto;width:100vw;height:100dvh}
+}
