@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as T from '../dist/vendor/three.webgpu.min.js';
 import {createRLHStaticVehicle,RLH_FLEET_REV} from '../dist/rlh-static-vehicles.js';
 import {RLH_CIVIL_SOURCE_VERSION} from '../dist/rlh-civil-car-v750.js';
-import {EXTENSION_OBSTACLES} from '../dist/m01-extension-layout.js';
+import {extensionObstacles} from '../dist/m01-extension-layout.js';
 import {createM01ExtensionArt} from '../dist/m01-extension-art.js';
 import {readFileSync} from 'node:fs';
 const M=()=>Object.fromEntries(['red','white','yellow','steel','paintedMetal','dark','black','glass','cyan','redGlow'].map(x=>[x,new T.MeshStandardMaterial({name:x,color:0x737e89,transparent:x==='glass',opacity:x==='glass'?.72:1})]));
@@ -47,7 +47,7 @@ test('FPTL V396-derived deco retains shutter slats, roof ladder and fire pump wh
  assert.ok(v.triangles<120000);
 });
 test('existing car/FPT obstacles stay authoritative; only exterior dressing is replaced',()=>{
- const obstacles=EXTENSION_OBSTACLES;
+ const obstacles=extensionObstacles();
  assert.ok(obstacles.some(o=>o.kind==='car'));
  assert.ok(obstacles.some(o=>o.kind==='fpt'));
  const sceneText=String(createM01ExtensionArt);
