@@ -446,7 +446,11 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
       vending:'vending',winch:'winch'};
     if(replacement[o.kind]){
       const model=createFunctionalProp(T,replacement[o.kind],{w,d,h,low,M});
-      model.position.set(o.x,y,o.z);add(model);return;
+      model.position.set(o.x,y,o.z);add(model);
+      if(o.kind==='vending')sign(signTex(['NOVA-KAÏ','PROTÉINES · 2 CR'],
+        {bg:'#2a1408',fg:'#ffb35c',w:256,h:384}),o.x,y+H*.79,z2+.035,0,
+        Math.min(1.25,w*.7),Math.min(.42,H*.21),{lit:true});
+      return;
     }
     switch (o.kind) {
       case 'bollard': cylinder(M.dark, o.x, y + h / 2, o.z, .14, h); piece(M.yellow, o.x, y + h - .2, o.z, .3, .06, .3); break;
@@ -515,7 +519,19 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
       }
       case 'pump': {
         box(M.concrete, x1, x2, 0, .4, z1, z2); cylinder(M.rust, o.x, 1.7, o.z, 1.95, 2.6, { segments: 28 }); cylinder(M.rust, o.x, 3.2, o.z, 1.2, .5, { segments: 24 });
-        const motor = cylinder(M.dark, o.x, 3.9, o.z, .9, 1.1, { segments: 20 }); cylinder(M.steel, o.x + 2, 1.3, o.z, .55, 1.3, { axis: 'x' });
+        const motor=cylinder(M.dark,o.x,3.9,o.z,.9,1.1,{segments:low?12:24});
+        cylinder(M.steel,o.x+2,1.3,o.z,.55,1.3,{axis:'x'});
+        // Pumping housing now includes ribbed stator, visible flanges, valve
+        // bonnet and a real outlet. Rotor reference is kept for game animation.
+        for(let j=0;j<7;j++)cylinder(M.steel,o.x,3.55+j*.105,o.z,.93,.025,{segments:low?12:24});
+        for(const side of [-1,1]){
+          cylinder(M.dark,o.x+side*1.93,1.3,o.z,.66,.095,{axis:'x'});
+          cylinder(M.steel,o.x+side*1.99,1.3,o.z,.46,.16,{axis:'x'});
+          piece(M.steel,o.x+side*1.65,1.06,o.z,.13,.80,.13);
+        }
+        cylinder(M.steel,o.x,4.48,o.z,.15,.14,{segments:low?8:16});
+        cylinder(M.rust,o.x,4.57,o.z,.09,.24,{segments:low?8:16});
+        for(const side of [-1,1])piece(M.dark,o.x+side*.82,3.63,o.z,.12,.22,.16);
         const fanCap = new T.Group(); fanCap.position.set(o.x, 4.5, o.z); for (let k = 0; k < 6; k++) { const b = new T.Mesh(new T.BoxGeometry(1.4, .04, .16), M.steel); b.rotation.y = k / 6 * Math.PI; fanCap.add(b); } add(fanCap);
         pumpRotors.push({ cap: fanCap, motor, speed: 0 }); sign(signTex('POMPE ' + (pumpRotors.length), { bg: '#1d2a22', fg: '#e5dfb4', w: 256, h: 96 }), o.x + 1.97, 2.2, o.z, Math.PI / 2, 1.4, .5);
         break;
