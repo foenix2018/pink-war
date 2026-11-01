@@ -1,0 +1,23 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pink Wars · Essai courts-circuits des robots</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;background:#070c16;color:#e8f2ff;font-family:system-ui,sans-serif;height:100dvh;overflow:hidden}
+#view{display:block;width:100%;height:100dvh;touch-action:none}
+header{position:fixed;top:15px;left:15px;padding:12px 15px;border:1px solid #c3dcef55;border-radius:14px;background:#061627b9;pointer-events:none;max-width:calc(100% - 30px)}
+h1{font-size:clamp(15px,2.5vw,22px);margin:3px 0;letter-spacing:.08em}header small{font-size:10px;letter-spacing:.18em;color:#f2a7d2}
+#stats{position:fixed;right:14px;top:14px;text-align:right;font:600 11px monospace;white-space:pre-line;line-height:1.8;background:#061627a5;border:1px solid #b2c8e04d;border-radius:11px;padding:10px}
+#panel{position:fixed;left:50%;transform:translateX(-50%);bottom:max(12px,env(safe-area-inset-bottom));display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;width:min(790px,calc(100vw - 18px));background:#09192ee8;border:1px solid #c9d9ed61;padding:11px;border-radius:18px;backdrop-filter:blur(14px)}
+#panel label{display:flex;align-items:center;gap:7px;font-size:11px}#panel select,#panel button{background:#142943;border:1px solid #a9c7e580;border-radius:11px;color:white;font:650 11px system-ui;padding:10px 12px;min-height:40px}
+#panel button{cursor:pointer}#panel button:active{background:#7a315c}#panel input{accent-color:#ff80bd;width:125px}#health{font:700 12px monospace;min-width:39px;color:#ffb7d7}
+#message{position:fixed;bottom:120px;left:15px;font-size:10px;color:#d2e5fa;pointer-events:none}
+@media(max-width:640px){header{top:8px;left:8px;padding:8px 10px}#stats{top:9px;right:8px;padding:6px;font-size:9px;max-width:125px}#panel{padding:8px;gap:6px}#panel label{flex:1 1 190px;justify-content:center}#panel input{width:90px}#panel select,#panel button{padding:7px 9px;font-size:10px}#message{bottom:155px}}
+</style></head><body><canvas id="view"></canvas>
+<header><small>LABORATOIRE · AUCUNE PUBLICATION</small><h1>DÉSACTIVATION DES MACHINES</h1><small>COURTS-CIRCUITS · FUMÉE · CHUTE · EXPLOSION</small></header>
+<div id="stats">Initialisation WebGPU / WebGL…</div>
+<div id="message">Tourner la caméra avec le doigt · Étincelles ancrées sur le modèle réel</div>
+<nav id="panel" aria-label="Contrôles du laboratoire">
+<label>ROBOT <select id="robot"><option value="seer">RECO1</option><option value="brute">BRUTE V3</option><option value="bulwark">REMPART B-11</option></select></label>
+<label>DÉGÂTS <input id="damage" aria-label="Pourcentage de dégâts" type="range" min="0" max="99" step="1" value="78"><span id="health">22 PV</span></label>
+<button id="destroy" type="button">DÉSACTIVER</button><button id="restart" type="button">RECOMMENCER</button>
+</nav>
+<script type="module" src="./enemy-destruction-lab.js"></script></body></html>
