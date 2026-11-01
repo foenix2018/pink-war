@@ -10,6 +10,7 @@ import {createLivedInDressing} from './vesper-lived-in.js';
 import {createVesperProps} from './vesper-props.js';
 import {createFunctionalProp} from './functional-props.js';
 import {createM01SupplyCache} from './supply-cache-details.js';
+import {createFreightTruck} from './freight-truck-detail.js';
 import { ROOMS, DOORS, INTERACTIONS, roomAt } from './m02-extension-layout.js';
 
 const TAU = Math.PI * 2;
@@ -284,16 +285,19 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
 
   // ---------- Props ----------
   function vehicle(o) {
-    // HELIX convoy truck: white box body with red bands, black cab towards the convoy door (+x).
-    const g = new T.Group(); g.position.set(o.x, 0, o.z); root.add(g);
-    const L = o.hx * 2, W = o.hz * 2, part = (m, x, y, z, sx, sy, sz) => { const b = new T.Mesh(cube, m); b.position.set(x, y, z); b.scale.set(sx, sy, sz); b.castShadow = !low; b.receiveShadow = true; g.add(b); stats.meshes++; return b; };
-    part(M.helixBlack, L / 2 - 1.1, 1.35, 0, 2.1, 1.7, W); part(M.glass, L / 2 - .06, 1.8, 0, .04, .8, W - .3);
-    part(M.helixWhite, -.9, 1.7, 0, L - 2.2, 2.6, W); part(M.dark, 0, .45, 0, L - .2, .5, W - .3);
-    for (const sz of [-1, 1]) { part(M.helixRed, -.9, 1.1, sz * (W / 2 + .005), L - 2.2, .2, .01); part(M.helix, -.9, 2.9, sz * (W / 2 + .006), L - 2.2, .04, .01); }
-    for (const sx of [L / 2 - 1.2, -L / 2 + 1]) for (const sz of [-1, 1]) { const w = new T.Mesh(new T.CylinderGeometry(.48, .48, .32, 18), M.black); w.rotation.x = Math.PI / 2; w.position.set(sx, .48, sz * (W / 2 - .1)); g.add(w); stats.meshes++; }
-    const label = new T.Mesh(new T.PlaneGeometry(3.4, .7), new T.MeshStandardMaterial({ map: signTex(['DIRECTOIRE · SÉCURITÉ', 'CONVOI 03 · ANNEAU LOGISTIQUE'], { bg: null, fg: '#c1121f', w: 512, h: 128 }), transparent: true, alphaTest: .05 }));
-    label.position.set(-.9, 2.1, W / 2 + .012); g.add(label);
-    const back = label.clone(); back.position.z = -W / 2 - .012; back.rotation.y = Math.PI; g.add(back);
+    const L=o.hx*2,W=o.hz*2;
+    const g=createFreightTruck(T,{length:L,width:W,low,M});
+    g.position.set(o.x,0,o.z);add(g);
+    const signMaterial=new T.MeshStandardMaterial({
+      map:signTex(['DIRECTOIRE · SÉCURITÉ','CONVOI 03 · ANNEAU LOGISTIQUE'],{bg:null,fg:'#c1121f',w:512,h:128}),
+      transparent:true,alphaTest:.05,roughness:.82
+    });
+    for(const side of [-1,1]){
+      const label=new T.Mesh(new T.PlaneGeometry(Math.min(3.4,L-2.6),.7),signMaterial);
+      label.position.set(-1.1,2.08,side*(W/2+.014));
+      if(side<0)label.rotation.y=Math.PI;
+      g.add(label);
+    }
   }
   const helixLogo = (bg = null) => signTex(['DIRECTOIRE', 'SÉCURITÉ'], { bg, fg: '#ff2f45', w: 512, h: 256 });
   function dress(o) {
