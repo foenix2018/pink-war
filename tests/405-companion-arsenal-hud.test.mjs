@@ -29,7 +29,7 @@ test('the arsenal exposes only equipped weapons and connects true impulse charge
  assert.match(js,/weaponCycleOrder\(owned,hero\)/);
  assert.match(js,/weapon\.name/);
  assert.match(js,/command\('weapon',index\)/);
- assert.match(js,/data-hud-action="charge"/);
+ assert.match(js,/data-armor="charge"/);
  assert.match(js,/game\?\.charges/);
  assert.match(m1,/game\?\.selectWeapon\(Number\(value\)\)/);
  assert.match(m2,/game\?\.selectWeapon\(Number\(value\)\)/);
