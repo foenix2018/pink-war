@@ -1,4 +1,5 @@
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
+import {createAdaptiveResolution} from './rlh-adaptive-resolution.js';
 import {assistedAim,firingView} from './aim-assist.js';
 import {sightPoint} from './sight-line.js';
 import {walkingSurface} from './surface-steps.js';
@@ -64,6 +65,9 @@ const renderingQuality=()=>quality.value==='balanced'?'balanced':quality.value==
 const low=()=>quality.value==='low';
 const rng=(()=>{let s=220102;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};})();
 let canvas=main,renderer,scene,camera,game,weapon,clock=0,running=false,started=false,last=0,fpsTime=0,frames=0,framePending=false,recovering=false,bootStep='modules';
+const adaptiveMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+const resolutionGovernor=createAdaptiveResolution({mobile:adaptiveMobile});
+let resolutionScale=1;
 let yaw=0,pitch=0,stage=0,reported=-1;
 let noticeUntil=0,signal=0,rain,enemyFactory,root,architecture,pbrController,atmosphere;
 let worldShadows=null,groundOcclusion=null,environmentFinish=null,breachGate=null,breachMembrane=null;
@@ -857,6 +861,11 @@ function animation(t,frame){
      }
    }catch(err){onRenderFailure(err);}
  }
+ // Preserve PBR, geometry and shadow detail. Avoid resizing active WebXR
+ // viewports and avoid interfering with an unfinished async GPU render.
+ const newScale=resolutionGovernor.sample(dt,{active:running&&!paused&&!journalOpen&&!framePending&&!recovering,
+   immersive:!!xr?.active,hidden:document.hidden});
+ if(newScale!==null&&!xr?.active){resolutionScale=newScale;resize();}
  frames++;fpsTime+=dt;if(fpsTime>.5){$('fps').textContent=Math.round(frames/fpsTime);frames=0;fpsTime=0;}
 }
 function onRenderFailure(error){
@@ -880,7 +889,7 @@ function resize(){
  if(!renderer)return;const width=innerWidth,height=innerHeight;
  camera.aspect=width/height;camera.updateProjectionMatrix();
  const profile=graphicsProfile({userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu},renderingQuality());
- renderer.setPixelRatio(renderPixelRatio(profile,devicePixelRatio,width,height));renderer.setSize(width,height,false);
+ renderer.setPixelRatio(renderPixelRatio(profile,devicePixelRatio,width,height)*resolutionScale);renderer.setSize(width,height,false);
 }
 async function boot(){
  missionLoading?.set(.10,'Initialisation du secteur');
