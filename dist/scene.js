@@ -440,11 +440,20 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     camera.setViewOffset(innerWidth,innerHeight,portrait?0:-innerWidth*.22,portrait?innerHeight*.24:0,innerWidth,innerHeight);camera.updateProjectionMatrix();
   }
   function setInspection(enabled){combatFX.setVisible?.(!enabled);for(const m of monsters.values())m.visible=!enabled;for(const m of bulletMeshes.values())m.visible=!enabled;for(const pool of sparkPools)pool.visible=!enabled&&pool.count>0;}
+  // Adaptive resolution affects only the display buffer, not the 3D objects,
+  // textures, collisions, shadows or scripted VR camera setup.
+  let resolutionScale=1;
   function resize(nextQuality=quality){
     quality=nextQuality;const current=graphicsProfile(deviceEnvironment,quality,forceWebGL);
-    const ratio=renderPixelRatio(current,devicePixelRatio,innerWidth,innerHeight);
+    const ratio=renderPixelRatio(current,devicePixelRatio,innerWidth,innerHeight)*resolutionScale;
     renderer.setPixelRatio(ratio);renderer.setSize(innerWidth,innerHeight,false);
     camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.shadowMap.enabled=current.shadows;
+  }
+  function setResolutionScale(next){
+    if(renderer.xr?.isPresenting)return false;
+    const v=Math.max(.65,Math.min(1,Number(next)||1));
+    if(Math.abs(v-resolutionScale)<.001)return false;
+    resolutionScale=v;resize();return true;
   }
   resize();
   const stereo = new T.StereoCamera(); stereo.aspect = .5; stereo.eyeSep = .064;
@@ -525,7 +534,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     else {sky.visible=true;renderer.toneMappingExposure=campaignActive?.84:1.08;hemisphere.intensity=campaignActive?.62:1.32;sun.intensity=campaignActive?1.36:2.25;rim.intensity=campaignActive?.18:1.08;}
     if(breachActive&&!rangeActive)styleBreach();
   }
-  return {T,scene,camera,moon,get campaignArt(){return campaignArt;},rangeArt,setRangeActive,setCampaignActive,graphics:{...profile,initialFailure:prepared.initialFailure},warm:async()=>{await campaignArt.ready;await warmRenderer(renderer,scene,camera)},get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>campaignActive?{...campaignArt.stats(),map:breachActive?'breche-violette-01':'vesper-secours-07'}:{...city.stats,boundary:city.fence?.stats()},resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
+  return {T,scene,camera,moon,get campaignArt(){return campaignArt;},rangeArt,setRangeActive,setCampaignActive,graphics:{...profile,initialFailure:prepared.initialFailure},warm:async()=>{await campaignArt.ready;await warmRenderer(renderer,scene,camera)},get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,setResolutionScale,get resolutionScale(){return resolutionScale;},sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>campaignActive?{...campaignArt.stats(),map:breachActive?'breche-violette-01':'vesper-secours-07'}:{...city.stats,boundary:city.fence?.stats()},resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
     holsterGun,setPlayerVisible,
     get lost(){return lost;},get backend(){return renderer.backend?.isWebGPUBackend?'WebGPU':'WebGL';},render:()=>{if(!lost){camera.updateWorldMatrix(true,false);moon.update(camera);lightBlade();renderer.render(scene,camera);}}};
 }
