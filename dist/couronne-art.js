@@ -4,6 +4,7 @@
 // (magenta, reserved to phase fields) as the long-range landmark. Original design; no other franchise's
 // environments are reproduced (§36). Budget: instancing for every repeated element, three dynamic lights.
 import { FLOORS, STAIRS, HEIGHTS, LANDING, SIDE_STEPS, stairHeight } from './couronne-layout.js';
+import {createFunctionalProp} from './functional-props.js';
 
 const TAU = Math.PI * 2;
 
@@ -197,6 +198,11 @@ export function createCouronneArt(T, scene, { quality = 'normal', camera } = {})
   const posts = [];
   function dress(o) {
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, y = o.y;
+    const surface={bench:'bench',kiosk:'kiosk',scanner:'scanner',desk:'desk'};
+    if(surface[o.kind]){
+      const model=createFunctionalProp(T,surface[o.kind],{w,d,h:o.height,low,M});
+      model.position.set(o.x,y,o.z);add(model);return;
+    }
     switch (o.kind) {
       case 'screen': case 'rail': {
         queue(M.glass, o.x, y, o.z, w, o.height - .08, d * .4);
