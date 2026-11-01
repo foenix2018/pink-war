@@ -121,6 +121,7 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
     // Navigation only while the flat-screen selector is open; the game engine
     // keeps ownership of controller mapping and in-headset XR input.
     let pad;try{pad=Array.from(navigator.getGamepads?.()||[]).map(normalizeDesktopGamepad).find(Boolean);}catch{}
+    const wasOpen=arsenalOpen;
     const states=pad?.buttons?.map(x=>!!x?.pressed)||[];
     const edge=index=>!!states[index]&&!padButtons[index];
     if(arsenalOpen&&pad){
@@ -132,6 +133,7 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
       markSelection();
     }
     padButtons=states;
+    return wasOpen||arsenalOpen;
   }
   partner.addEventListener('pointerdown',e=>e.stopPropagation());
   partner.onclick=e=>{e.preventDefault();e.stopPropagation();setArsenalOpen(!arsenalOpen);};
