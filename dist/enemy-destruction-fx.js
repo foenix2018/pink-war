@@ -111,7 +111,7 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
   if(stage.stage===0){timers.delete(e.id);powerEyes(model,1);return;}
   const critical=stage.stage>=3;
   // Power failure affects the robot's own optics material, never shared armor.
-  powerEyes(model,critical?robotOpticPower(elapsed*.53,e.id)*(.64+stage.damage*.24):1);
+  powerEyes(model,critical?(.15+.62*Math.abs(Math.sin(elapsed*5.1+e.id)*Math.sin(elapsed*2.4+e.id*.31)))*(.68+stage.damage*.26):1);
   // A hard cap on emission distance and per-robot frequency limits GPU uploads.
   if(camera?.position&&Math.hypot((e.x||0)-camera.position.x,(e.z||0)-camera.position.z)>(low?46:75))return;
   const next=timers.get(e.id)||0;

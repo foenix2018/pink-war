@@ -20,6 +20,7 @@ test('robot failure changes own optics only, and emits budgeted blue-white arcs'
  const code=read('enemy-destruction-fx.js');
  assert.match(code,/const eye=model\?\.userData\?\.optics/);
  assert.match(code,/const eyeStates=new WeakMap\(\)/);
+ assert.match(code,/Math\.sin\(elapsed\*5\.1\+e\.id\)/,'ongoing damaged optics flicker rather than permanent shutdown');
  assert.match(code,/arcs=new T.InstancedMesh/);
  assert.match(code,/color:0xc2eeff/);
  assert.match(code,/particles\.length>=budget/);
