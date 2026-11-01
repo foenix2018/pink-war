@@ -13,7 +13,10 @@ export function createFunctionalProp(T,kind,{w=2,d=1,h=2,low=false,M={}}={}){
  if(!FUNCTIONAL_KINDS.includes(kind))return null;
  const root=new T.Group();root.name='PW / '+kind+' · géométrie fonctionnelle';
  root.userData.visualRevision=FUNCTIONAL_PROP_REV;
- const a=new Assembly(),W=Math.max(.35,w),D=Math.max(.3,d),H=Math.max(.5,h);
+ const a=new Assembly(),swapBedAxis=['bed','cot','stretcher'].includes(kind)&&w>d;
+ const W=swapBedAxis?Math.max(.35,d):Math.max(.35,w);
+ const D=swapBedAxis?Math.max(.3,w):Math.max(.3,d),H=Math.max(.5,h);
+ if(swapBedAxis)root.rotation.y=Math.PI/2;
  const material=(...names)=>names.map(n=>M[n]).find(v=>v&&v.isMaterial)||
    Object.values(M).find(v=>v&&v.isMaterial)||
    new T.MeshStandardMaterial({color:0x63707b,metalness:.55,roughness:.65});
