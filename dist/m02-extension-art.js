@@ -305,12 +305,27 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     // Reuse physically distinct functional props across the whole game.
     // The obstacle/layout object remains the authority for physics and objectives.
     const replacements={bed:'bed',cabinet:'cabinet',desk:'desk','radio-rack':'rack',
-      console:'console',batteries:'batteries',scanner:'scanner','security-desk':'security-desk',
+      console:'console',batteries:'batteries','security-desk':'security-desk',
       servers:'servers',terminal:'terminal',kitchen:'workbench'};
     const type=replacements[o.kind];
     if(type){
       const model=createFunctionalProp(T,type,{w,d,h,low,M});
-      model.position.set(o.x,0,o.z);add(model);return;
+      model.position.set(o.x,0,o.z);add(model);
+      if(o.kind==='console')for(const k of [-1,1])
+        details.computer({x:o.x+k*.9,y:h,z:o.z,scale:.82,kind:'radio',power:'enclave'});
+      else if(o.kind==='security-desk'){
+        sign(helixLogo('#0b0d10'),o.x,h*.5+.25,z2+.02,0,1.2,.6);
+        details.computer({x:o.x,y:h+.05,z:o.z,scale:.9,kind:'helix',power:'tower'});
+      }else if(o.kind==='terminal'){
+        const info=new T.Mesh(new T.PlaneGeometry(.9,.55),
+          new T.MeshBasicMaterial({map:signTex(['MANIFESTE · CONVOI 02','ACCÈS BADGE NIVEAU 3'],
+          {bg:'#160307',fg:'#ff4d5e',w:512,h:300}),toneMapped:false}));
+        info.position.set(x1-.02,h+.35,o.z);info.rotation.y=-Math.PI/2;add(info);
+      }else if(o.kind==='kitchen'){
+        for(const k of [-1,0,1])cylinder(M.dark,o.x+k*1.6,h+.15,o.z,.32,.25,{segments:low?9:16});
+        piece(M.amber,o.x-1.6,h-.02,z1-.01,.5,.06,.01);
+      }
+      return;
     }
     switch (o.kind) {
       case 'stall': {
@@ -368,8 +383,9 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       }
       case 'batteries': box(M.dark, x1, x2, 0, h, z1, z2); for (let k = 0; k < 4; k++) piece(M.helixRed, x1 + .2 + k * (w - .4) / 3, h, o.z, .14, .08, .14); break;
       case 'scanner': {
-        // HELIX scanner gate: two white posts, a red arch, a sweeping light curtain between them.
-        box(M.helixWhite, x1, x2, 0, h, z1, z2); piece(M.helixRed, o.x, h - .2, o.z, w + .04, .2, d + .04);
+        // Keep the animated HELIX scanner curtain and only replace the physical frame.
+        const portal=createFunctionalProp(T,'scanner',{w,d,h,low,M});
+        portal.position.set(o.x,0,o.z);add(portal); piece(M.helixRed, o.x, h - .2, o.z, w + .04, .2, d + .04);
         const curtain = new T.Mesh(new T.PlaneGeometry(2.6, h - .3), new T.MeshBasicMaterial({ color: 0xff2f45, transparent: true, opacity: .14, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false, side: T.DoubleSide }));
         curtain.position.set(o.x + (o.x < 0 ? 1.7 : -1.7), (h - .3) / 2, o.z); curtain.rotation.y = 0; add(curtain);
         animated.push(t => { curtain.material.opacity = power.tower ? .1 + .06 * Math.sin(t * 6 + o.x) : 0; });
