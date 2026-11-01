@@ -444,7 +444,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     throwCharge(){if(journalOpen||skillMenu.isOpen||game.state!=='playing')return;audioReady();chargeQueued=true;},
     cycle(delta=1){game.cycleWeapon(delta);},
     get arsenalOpen(){return !!combatHud?.isArsenalOpen;},
-    toggleArsenal(){if(ready&&!journalOpen&&game.state==='playing')combatHud?.toggleArsenal();},
+    toggleArsenal(){if(ready&&!xr?.active&&!journalOpen&&game.state==='playing')combatHud?.toggleArsenal();},
     pollArsenalGamepad(){return !!combatHud?.pollGamepad();},
     select(index){game.selectWeapon(index);},
     interact:onInteract,
