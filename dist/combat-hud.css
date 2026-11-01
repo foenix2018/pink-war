@@ -304,3 +304,43 @@ body.pw-immersion-hud .pw-hud .pw-hud-context:is(:active,[data-pw-pressed=true])
  body.pw-immersion-hud .pw-hud .pw-hud-context{top:38%!important;width:57px!important;min-width:57px!important;max-width:57px!important;height:64px!important;min-height:64px!important}
 }
 @media(pointer:fine){body.pw-immersion-hud .pw-hud .pw-hud-engine-fire{display:none!important}}
+
+/* v3.86 – quick grenade, above melee and the red fire control. */
+body.pw-immersion-hud .pw-hud .pw-hud-grenade-direct{display:none!important}
+@media(pointer:coarse){
+ body.pw-immersion-hud .pw-hud .pw-hud-grenade-direct{
+  position:fixed!important;display:grid!important;place-items:center!important;
+  box-sizing:border-box!important;left:auto!important;top:auto!important;
+  right:calc(var(--pw-right) + 9px)!important;bottom:calc(var(--pw-stick-bottom) + 163px)!important;
+  width:56px!important;height:56px!important;min-width:56px!important;min-height:56px!important;
+  padding:0!important;margin:0!important;border-radius:50%!important;
+  border:1px solid #f4b5d6ae!important;color:#f8eaf7!important;
+  background:linear-gradient(145deg,#f3b9d72b,#553c6470),#17263a80!important;
+  -webkit-backdrop-filter:blur(13px) saturate(130%);backdrop-filter:blur(13px) saturate(130%);
+  box-shadow:inset 0 1px #ffffff42,0 4px 14px #0004!important;
+  z-index:24!important;pointer-events:auto!important;touch-action:manipulation!important;
+ }
+ body.pw-immersion-hud .pw-hud .pw-hud-grenade-direct svg{width:27px!important;height:27px!important;stroke-width:1.75!important}
+ body.pw-immersion-hud .pw-hud .pw-hud-grenade-count{
+  position:absolute;right:-3px;top:-5px;display:grid;place-items:center;
+  width:21px;height:21px;border-radius:50%;font:800 11px/1 system-ui;
+  color:#fff;background:#86345e;box-shadow:0 2px 6px #000a;border:1px solid #ffc6de
+ }
+ body.pw-immersion-hud .pw-hud .pw-hud-grenade-direct:disabled{opacity:.4!important;filter:saturate(.45);pointer-events:none!important}
+ body.pw-immersion-hud .pw-hud .pw-hud-grenade-direct:is(:active,[data-pw-pressed=true]){
+  scale:1.075!important;background:linear-gradient(145deg,#f0b0d586,#69344fb8),#301c35b0!important;
+  border-color:#ffe5f2!important;box-shadow:0 0 20px #ee75b46c!important
+ }
+}
+@media(pointer:coarse) and (orientation:landscape) and (max-height:540px){
+ body.pw-immersion-hud .pw-hud .pw-hud-grenade-direct{
+  bottom:calc(var(--pw-stick-bottom) + 133px)!important;right:calc(var(--pw-right) + 5px)!important;
+  width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important
+ }
+ body.pw-immersion-hud .pw-hud .pw-hud-grenade-direct svg{width:23px!important;height:23px!important}
+}
+/* The combat HUD covers Safari's dynamic visual viewport; control positions
+   still use env(safe-area-inset-*) so they avoid the home indicator. */
+@supports(height:100dvh){
+ body.pw-immersion-hud .pw-hud{height:100dvh;min-height:100dvh;bottom:auto}
+}
