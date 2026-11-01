@@ -925,7 +925,7 @@ async function boot(){
    onFire:down=>{if(down)audioReady();heldFire=down;if(down)firePressQueued=true;},
    onJump:()=>{jumpQueued=true;},
    onInteract:()=>interact(),
-   onNext:()=>game.cycleWeapon(),
+   onNext:()=>combatHud?.toggleArsenal(),
    onReload:()=>game.reload(),
    onCrouch:()=>{crouchQueued=true;},
    onView:()=>changeView(),
