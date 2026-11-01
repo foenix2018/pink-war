@@ -448,8 +448,8 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
       const model=createFunctionalProp(T,replacement[o.kind],{w,d,h,low,M});
       model.position.set(o.x,y,o.z);add(model);
       if(o.kind==='vending')sign(signTex(['NOVA-KAÏ','PROTÉINES · 2 CR'],
-        {bg:'#2a1408',fg:'#ffb35c',w:256,h:384}),o.x,y+H*.79,z2+.035,0,
-        Math.min(1.25,w*.7),Math.min(.42,H*.21),{lit:true});
+        {bg:'#2a1408',fg:'#ffb35c',w:256,h:384}),o.x,y+h*.79,z2+.035,0,
+        Math.min(1.25,w*.7),Math.min(.42,h*.21),{lit:true});
       return;
     }
     switch (o.kind) {
