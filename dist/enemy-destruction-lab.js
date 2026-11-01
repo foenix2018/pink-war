@@ -19,7 +19,7 @@ function unlockLabAudio(){
   labAudioCtx.resume?.().catch?.(()=>{});
  }catch(error){console.warn('Audio indisponible sur cet appareil',error);}
 }
-const shutdownAudio=createRobotShutdownAudio({getContext:()=>!labMuted&&labAudioCtx?.state==='running'?labAudioCtx:null,getListener:()=>({x:0,z:4,elevation:0}),getYaw:()=>0});
+const shutdownAudio=createRobotShutdownAudio({getContext:()=>!labMuted&&labAudioCtx?.state!=='closed'?labAudioCtx:null,getListener:()=>({x:0,z:4,elevation:0}),getYaw:()=>0});
 function setLabMute(muted){
  labMuted=!!muted;if(labMuted)shutdownAudio.stop();
  $('sound').textContent=labMuted?'SON DÉSACTIVÉ':'SON ACTIVÉ';

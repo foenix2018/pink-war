@@ -37,7 +37,7 @@ export function createRobotShutdownAudio({getContext=()=>null,getListener=()=>nu
  }
  function play(kind,source={}){
    if(disposed)return false;
-   const ctx=getContext?.();if(!ctx||ctx.state!=='running')return false;
+   const ctx=getContext?.();if(!ctx||ctx.state==='closed')return false;
    if(!['fault','glitch','shutdown','terminal'].includes(kind))return false;
    const listener=getListener?.(),spatial=robotShutdownSpatial(source,listener,getYaw?.()||0);
    if(spatial.distance>65||spatial.gain<.018||voices.size>=maxVoices)return false;
