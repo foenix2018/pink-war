@@ -78,7 +78,7 @@ let enableAudio=true;try{enableAudio=JSON.parse(localStorage.getItem('rosee-sett
 let xr=null,fallbackGun=null,fallbackHand=null;
 // Armour layer (3.63): strikes and throws queued by the keyboard, the mouse and the touch buttons.
 let armorFx=null,meleeQueued=false,chargeQueued=false,touchSprinting=false;
-const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;return;}if(!running||paused)return;audioReady();if(kind==='melee')meleeQueued=true;else if(kind==='charge')chargeQueued=true;else if(kind==='reload')game.reload();else if(kind==='next')game.cycleWeapon();else if(kind==='interact')interact();else if(kind==='crouch')crouchQueued=true;};
+const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;return;}if(!running||paused)return;audioReady();if(kind==='melee')meleeQueued=true;else if(kind==='charge')chargeQueued=true;else if(kind==='reload')game.reload();else if(kind==='next')combatHud?.toggleArsenal();else if(kind==='weapon')game?.selectWeapon(Number(value));else if(kind==='companion')skillMenu?.setOpen(!skillMenu?.isOpen);else if(kind==='interact')interact();else if(kind==='crouch')crouchQueued=true;};
 const pauseMenu=createPauseMenu({title:'HISTOIRE / LES PROFONDEURS',canOpen:()=>started,settingsSelectors:['#quality'],
  view:{getView:()=>xr?.active?'fps':view,onSelect:next=>changeView(next),canChange:()=>!!playerRig&&!xr?.active},
  onPause:()=>pauseMission(),onResume:()=>unpauseMission(),onVR:()=>xr?.enter(),onHome:async()=>{await xr?.exit();location.assign('./index.html');}});pauseMenu.setVisible(false);
@@ -672,10 +672,13 @@ function updateEnemies(dt){
 }
 let heldFire=false;
 function gameTick(dt){
+ combatHud?.pollGamepad();
  const xc=xr?.active?xr.controls:null;
  const controls=xc?{moveX:xc.x,moveZ:xc.z,lookX:0,lookY:0,jump:xc.jump,interact:xc.interact,aim:xc.aim,fire:xc.fire,sprint:xc.sprint,melee:xc.melee,charge:xc.charge}:pinkControls.read(dt,keys,navigator.getGamepads?.()||[],{focused:!document.hidden});
  if(controls.companion)skillMenu?.setOpen(!skillMenu.isOpen);
  if(skillMenu?.isOpen)return;
+ if(controls.next&&!xr?.active)combatHud?.toggleArsenal();
+ if(combatHud?.isArsenalOpen)return;
  const touch=touchControls?.state||{x:0,z:0,lookX:0,lookY:0,fire:false,aim:false};
  const sensitivity=aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend);
  yaw-=(controls.lookX*1.8+touch.lookX*1.8)*sensitivity*dt;
@@ -692,7 +695,7 @@ function gameTick(dt){
  document.body.classList.toggle('aiming',aiming);
  const sprint=!aiming&&(controls.sprint||touchSprinting);
  if(controls.pause){pauseMission();return;}
- if(controls.next)game.cycleWeapon();
+ if(controls.next&&xr?.active)game.cycleWeapon();
  if(controls.reload)game.reload();
  if(controls.interact)interact();
  const crouchToggle=controls.crouchToggle||crouchQueued;crouchQueued=false;
@@ -992,7 +995,7 @@ window.addEventListener('keydown',e=>{
  if(e.repeat)return;
  if(e.code==='KeyJ'){jumpQueued=true;}
  if(e.code==='KeyF')interact();
- if(e.code==='KeyE')game.cycleWeapon();
+ if(e.code==='KeyE')combatHud?.toggleArsenal();
  if(e.code==='KeyR')game.reload();
  if(e.code==='KeyX')meleeQueued=true;
  if(e.code==='KeyB')chargeQueued=true;
