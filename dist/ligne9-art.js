@@ -441,12 +441,14 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, y = o.y || 0, h = o.height, along = w >= d;
     // Functional silhouettes replace previous heavy box-based station props.
     // Machines with animation (pump motor, dynamic rack LEDs) remain specialized.
-    const replacement={'ticket-machine':'ticket-machine',stretcher:'stretcher',cot:'cot',
+    const replacement={booth:'booth','ticket-machine':'ticket-machine',stretcher:'stretcher',cot:'cot',
       cabinet:'cabinet',table:'desk',desk:'desk',bench:'bench',kiosk:'kiosk',
       vending:'vending',winch:'winch'};
     if(replacement[o.kind]){
       const model=createFunctionalProp(T,replacement[o.kind],{w,d,h,low,M});
       model.position.set(o.x,y,o.z);add(model);
+      if(o.kind==='booth')sign(signTex('GUICHET',{bg:'#0d3b5e'}),
+        x2+.02,y+h-.45,o.z,Math.PI/2,Math.min(2.6,d*.9),.5);
       if(o.kind==='vending')sign(signTex(['NOVA-KAÏ','PROTÉINES · 2 CR'],
         {bg:'#2a1408',fg:'#ffb35c',w:256,h:384}),o.x,y+h*.79,z2+.035,0,
         Math.min(1.25,w*.7),Math.min(.42,h*.21),{lit:true});
@@ -496,7 +498,8 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
       case 'table': piece(M.steel, o.x, h - .05, o.z, w, .05, d); for (const sx of [-1, 1]) for (const sz of [-1, 1]) piece(M.steel, o.x + sx * (o.hx - .06), 0, o.z + sz * (o.hz - .06), .05, h - .05, .05);
         piece(M.dark, o.x - .4, h, o.z, .6, .3, .35); piece(M.amber, o.x - .2, h + .2, o.z + .18, .05, .03, .01); break;
       case 'stall': {
-        piece(M.wood, o.x, 0, o.z, w, h, d); piece(M.wood, o.x, h, o.z, w + .1, .05, d + .1);
+        const counter=createFunctionalProp(T,'counter',{w,d,h,low,M});
+        counter.position.set(o.x,y,o.z);add(counter);
         const awning = rng() < .5 ? M.canvasRed : M.canvasBlue;
         for (const sx of [-1, 1]) piece(M.steel, o.x + sx * (o.hx - .05), h, o.z + o.hz - .05, .05, 1.4, .05);
         piece(awning, o.x, h + 1.4, o.z + .25, w + .5, .04, d + 1); for (let k = 0; k < 4; k++) piece(rng() < .5 ? M.orange : M.wood, o.x - o.hx + .4 + k * .6, h + .05, o.z, .4, .2 + rng() * .25, .35, rng());
