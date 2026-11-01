@@ -23,7 +23,8 @@ test('W02 uses six shared low-res material sets from the packaged CC0 library',(
 });
 test('W02 keeps boot and engine independent of CDN download',()=>{
  assert.match(level,/installLeanPBR\(T,materials,architecture/);
- assert.match(level,/scene\.add\(camera\);createEnvironment\(\)/);
+ assert.match(level,/scene\.add\(camera\);enemyDestructionFX=createEnemyDestructionFX\([^\n]+\);createEnvironment\(\)/);
+ assert.match(level,/onSound:\(kind,source\)=>robotShutdownAudio\.play\(kind,source\)/);
  assert.match(level,/setupPlayer\(\);resize\(\)/);
  assert.doesNotMatch(level,/await installLeanPBR/);
  assert.match(level,/createCompatibleRenderer/);
