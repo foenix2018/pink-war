@@ -9,7 +9,7 @@ import {createVesperProps} from './vesper-props.js';
 import {createRescueVehicle} from './rescue-vehicle-detail.js';
 import {createHardSurfaceFurniture} from './realistic-furniture.js';
 import {createStationEquipment} from './station-equipment-detail.js';
-import {createCivilCar} from './civil-vehicle-detail.js';
+import {createRLHStaticVehicle,RLH_FLEET_REV} from './rlh-static-vehicles.js';
 import {createM01SupplyCache} from './supply-cache-details.js';
 import { ROOMS, DOORS, INTERACTIONS, roomAt } from './m01-extension-layout.js';
 
@@ -325,11 +325,12 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
         sign(signTex('07', { bg: '#a3241c', w: 256, h: 256 }), x2 + .02, h - 1.4, o.z, Math.PI / 2, 1.4, 1.4); break;
       case 'fuel-tank': { const c = cylinder(M.paintedMetal, o.x, 1.2, o.z, .85, d, { axis: 'z', segments: 20 }); piece(M.dark, o.x, 0, o.z - .8, w, .4, .3); piece(M.dark, o.x, 0, o.z + .8, w, .4, .3); sign(signTex(['GAZOLE', 'CUVE 07'], { bg: '#d8a91f', fg: '#16181a', w: 256, h: 128 }), o.x + .87, 1.3, o.z, Math.PI / 2, .9, .45); c.name = 'cuve'; break; }
       case 'car': {
-        const along=w>d;
-        const vehicle=createCivilCar(T,{length:Math.max(w,d),width:Math.min(w,d),low,M});
-        vehicle.position.set(o.x,0,o.z);
-        if(!along)vehicle.rotation.y=Math.PI/2;
-        add(vehicle);break;
+        // Original RLH V750 civilian car profiles, baked once into material batches.
+        // Existing M01 car collider remains the only authoritative obstacle.
+        const car=createRLHStaticVehicle(T,'civil',{low,M,type:'berline',color:0x536270});
+        car.position.set(o.x,0,o.z);
+        car.rotation.y=w>=d?0:Math.PI/2;
+        add(car);stats.rlhCars=(stats.rlhCars||0)+1;break;
       }
       case 'generator': {
         box(M.rust, x1, x2, .2, h, z1, z2); piece(M.dark, o.x, 0, o.z, w + .2, .2, d + .2);
@@ -353,7 +354,15 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
         break;
       }
       case 'bench': piece(o.surface === 'wood' ? M.wood : M.steel, o.x, h - .06, o.z, w, .06, d); for (const s of [-1, 1]) along ? piece(M.dark, o.x + s * (o.hx - .2), 0, o.z, .06, h - .06, d - .05) : piece(M.dark, o.x, 0, o.z + s * (o.hz - .2), w - .05, h - .06, .06); break;
-      case 'vsav': case 'fpt': vehicle(o, o.kind); break;
+      case 'vsav': vehicle(o,o.kind); break;
+      case 'fpt': {
+        // RLH FPTL V396-derived, non-interactive outside-only geometry.
+        // The vehicle's original garage collider stays unchanged.
+        const fire=createRLHStaticVehicle(T,'fptl',{low,M});
+        fire.position.set(o.x,0,o.z);
+        fire.rotation.y=w>=d?Math.PI/2:0;
+        add(fire);stats.rlhFptl=(stats.rlhFptl||0)+1;break;
+      }
       case 'ari-rack': box(M.steel, x1, x2, 0, h, z1, z2, { skip: ['bottom', '+x'] }); for (let k = 0; k < 6; k++) for (const y of [.35, 1.15]) cylinder(M.yellow, o.x + .1, y + .35, z1 + .35 + k * (d - .7) / 5, .1, .6); break;
       case 'hose-rack': box(M.steel, x1, x2, 0, h, z1, z2, { skip: ['bottom', '+x'] }); for (let k = 0; k < 4; k++) for (const y of [.5, 1.3]) { const c = cylinder(M.white, o.x + .15, y, z1 + .5 + k * (d - 1) / 3, .28, .12, { axis: 'x', segments: 14 }); c.material = M.white; } break;
       case 'workbench': {
@@ -562,6 +571,14 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
         // avoid intersecting the legacy accessory strips behind those doors.
         if (!['bed','lockers','cabinet','rack','ari-rack','hose-rack'].includes(o.kind)) details.accessories(o);
       }
+      // One parked RLH V570 Defender 4x4 on the outer edge of the Caserne yard.
+      // Static scenery only: no new player vehicle, physics or collision records.
+      const defender=createRLHStaticVehicle(T,'defender',{low,M});
+      defender.position.set(-86.8,0,36.1);
+      defender.rotation.y=Math.PI;
+      defender.name='M01 / VLTT RLH Defender 110 · décor 4x4';
+      add(defender);
+      stats.rlhDefenders=1;stats.rlhFleetRevision=RLH_FLEET_REV;
       buildFixtureMeshes(); buildDoors(); buildDevices(obstacles); buildSigns(); buildCyber();
       flushGeometry(); flushPieces(); furnishings.finish(); stationGear.finish(); details.finish(); livedIn.build(obstacles);
     },
