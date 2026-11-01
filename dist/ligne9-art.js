@@ -6,6 +6,7 @@
 // Magenta stays reserved to the phase signature of the JANUS-9 anchor (Tome II §22).
 import { ROOMS, DOORS, WATER, STAIRS, LANDING, HEIGHTS, INTERACTIONS, roomAt } from './ligne9-layout.js';
 
+import {createFunctionalProp} from './functional-props.js';
 const TAU = Math.PI * 2;
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
 const ROOM = Object.fromEntries(ROOMS.map(r => [r.id, r]));
@@ -438,6 +439,21 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
   const fans = [], pumpRotors = [], racks = [];
   function dress(o) {
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, y = o.y || 0, h = o.height, along = w >= d;
+    // Functional silhouettes replace previous heavy box-based station props.
+    // Machines with animation (pump motor, dynamic rack LEDs) remain specialized.
+    const replacement={booth:'booth','ticket-machine':'ticket-machine',stretcher:'stretcher',cot:'cot',
+      cabinet:'cabinet',table:'desk',desk:'desk',bench:'bench',kiosk:'kiosk',
+      vending:'vending',winch:'winch'};
+    if(replacement[o.kind]){
+      const model=createFunctionalProp(T,replacement[o.kind],{w,d,h,low,M});
+      model.position.set(o.x,y,o.z);add(model);
+      if(o.kind==='booth')sign(signTex('GUICHET',{bg:'#0d3b5e'}),
+        x2+.02,y+h-.45,o.z,Math.PI/2,Math.min(2.6,d*.9),.5);
+      if(o.kind==='vending')sign(signTex(['NOVA-KAÏ','PROTÉINES · 2 CR'],
+        {bg:'#2a1408',fg:'#ffb35c',w:256,h:384}),o.x,y+h*.79,z2+.035,0,
+        Math.min(1.25,w*.7),Math.min(.42,h*.21),{lit:true});
+      return;
+    }
     switch (o.kind) {
       case 'bollard': cylinder(M.dark, o.x, y + h / 2, o.z, .14, h); piece(M.yellow, o.x, y + h - .2, o.z, .3, .06, .3); break;
       case 'parapet': for (let x = x1; x <= x2 + 1e-6; x += 1.2) piece(M.steel, x, y, o.z, .06, h, .06); piece(M.steel, o.x, y + h - .05, o.z, w, .06, .08); piece(M.steel, o.x, y + .5, o.z, w, .04, .04); break;
@@ -482,7 +498,8 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
       case 'table': piece(M.steel, o.x, h - .05, o.z, w, .05, d); for (const sx of [-1, 1]) for (const sz of [-1, 1]) piece(M.steel, o.x + sx * (o.hx - .06), 0, o.z + sz * (o.hz - .06), .05, h - .05, .05);
         piece(M.dark, o.x - .4, h, o.z, .6, .3, .35); piece(M.amber, o.x - .2, h + .2, o.z + .18, .05, .03, .01); break;
       case 'stall': {
-        piece(M.wood, o.x, 0, o.z, w, h, d); piece(M.wood, o.x, h, o.z, w + .1, .05, d + .1);
+        const counter=createFunctionalProp(T,'counter',{w,d,h,low,M});
+        counter.position.set(o.x,y,o.z);add(counter);
         const awning = rng() < .5 ? M.canvasRed : M.canvasBlue;
         for (const sx of [-1, 1]) piece(M.steel, o.x + sx * (o.hx - .05), h, o.z + o.hz - .05, .05, 1.4, .05);
         piece(awning, o.x, h + 1.4, o.z + .25, w + .5, .04, d + 1); for (let k = 0; k < 4; k++) piece(rng() < .5 ? M.orange : M.wood, o.x - o.hx + .4 + k * .6, h + .05, o.z, .4, .2 + rng() * .25, .35, rng());
@@ -505,7 +522,19 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
       }
       case 'pump': {
         box(M.concrete, x1, x2, 0, .4, z1, z2); cylinder(M.rust, o.x, 1.7, o.z, 1.95, 2.6, { segments: 28 }); cylinder(M.rust, o.x, 3.2, o.z, 1.2, .5, { segments: 24 });
-        const motor = cylinder(M.dark, o.x, 3.9, o.z, .9, 1.1, { segments: 20 }); cylinder(M.steel, o.x + 2, 1.3, o.z, .55, 1.3, { axis: 'x' });
+        const motor=cylinder(M.dark,o.x,3.9,o.z,.9,1.1,{segments:low?12:24});
+        cylinder(M.steel,o.x+2,1.3,o.z,.55,1.3,{axis:'x'});
+        // Pumping housing now includes ribbed stator, visible flanges, valve
+        // bonnet and a real outlet. Rotor reference is kept for game animation.
+        for(let j=0;j<7;j++)cylinder(M.steel,o.x,3.55+j*.105,o.z,.93,.025,{segments:low?12:24});
+        for(const side of [-1,1]){
+          cylinder(M.dark,o.x+side*1.93,1.3,o.z,.66,.095,{axis:'x'});
+          cylinder(M.steel,o.x+side*1.99,1.3,o.z,.46,.16,{axis:'x'});
+          piece(M.steel,o.x+side*1.65,1.06,o.z,.13,.80,.13);
+        }
+        cylinder(M.steel,o.x,4.48,o.z,.15,.14,{segments:low?8:16});
+        cylinder(M.rust,o.x,4.57,o.z,.09,.24,{segments:low?8:16});
+        for(const side of [-1,1])piece(M.dark,o.x+side*.82,3.63,o.z,.12,.22,.16);
         const fanCap = new T.Group(); fanCap.position.set(o.x, 4.5, o.z); for (let k = 0; k < 6; k++) { const b = new T.Mesh(new T.BoxGeometry(1.4, .04, .16), M.steel); b.rotation.y = k / 6 * Math.PI; fanCap.add(b); } add(fanCap);
         pumpRotors.push({ cap: fanCap, motor, speed: 0 }); sign(signTex('POMPE ' + (pumpRotors.length), { bg: '#1d2a22', fg: '#e5dfb4', w: 256, h: 96 }), o.x + 1.97, 2.2, o.z, Math.PI / 2, 1.4, .5);
         break;

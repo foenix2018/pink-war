@@ -8,6 +8,9 @@ import {createLivedInDressing} from './vesper-lived-in.js';
 // nearest fixtures; the page dims its moon and sky light indoors with shelterAt(). Textures: CC0 sets already
 // shipped (assets/cc0, assets/ligne9).
 import {createVesperProps} from './vesper-props.js';
+import {createFunctionalProp} from './functional-props.js';
+import {createM01SupplyCache} from './supply-cache-details.js';
+import {createFreightTruck} from './freight-truck-detail.js';
 import { ROOMS, DOORS, INTERACTIONS, roomAt } from './m02-extension-layout.js';
 
 const TAU = Math.PI * 2;
@@ -282,31 +285,77 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
 
   // ---------- Props ----------
   function vehicle(o) {
-    // HELIX convoy truck: white box body with red bands, black cab towards the convoy door (+x).
-    const g = new T.Group(); g.position.set(o.x, 0, o.z); root.add(g);
-    const L = o.hx * 2, W = o.hz * 2, part = (m, x, y, z, sx, sy, sz) => { const b = new T.Mesh(cube, m); b.position.set(x, y, z); b.scale.set(sx, sy, sz); b.castShadow = !low; b.receiveShadow = true; g.add(b); stats.meshes++; return b; };
-    part(M.helixBlack, L / 2 - 1.1, 1.35, 0, 2.1, 1.7, W); part(M.glass, L / 2 - .06, 1.8, 0, .04, .8, W - .3);
-    part(M.helixWhite, -.9, 1.7, 0, L - 2.2, 2.6, W); part(M.dark, 0, .45, 0, L - .2, .5, W - .3);
-    for (const sz of [-1, 1]) { part(M.helixRed, -.9, 1.1, sz * (W / 2 + .005), L - 2.2, .2, .01); part(M.helix, -.9, 2.9, sz * (W / 2 + .006), L - 2.2, .04, .01); }
-    for (const sx of [L / 2 - 1.2, -L / 2 + 1]) for (const sz of [-1, 1]) { const w = new T.Mesh(new T.CylinderGeometry(.48, .48, .32, 18), M.black); w.rotation.x = Math.PI / 2; w.position.set(sx, .48, sz * (W / 2 - .1)); g.add(w); stats.meshes++; }
-    const label = new T.Mesh(new T.PlaneGeometry(3.4, .7), new T.MeshStandardMaterial({ map: signTex(['DIRECTOIRE · SÉCURITÉ', 'CONVOI 03 · ANNEAU LOGISTIQUE'], { bg: null, fg: '#c1121f', w: 512, h: 128 }), transparent: true, alphaTest: .05 }));
-    label.position.set(-.9, 2.1, W / 2 + .012); g.add(label);
-    const back = label.clone(); back.position.z = -W / 2 - .012; back.rotation.y = Math.PI; g.add(back);
+    const L=o.hx*2,W=o.hz*2;
+    const g=createFreightTruck(T,{length:L,width:W,low,M});
+    g.position.set(o.x,0,o.z);add(g);
+    const signMaterial=new T.MeshStandardMaterial({
+      map:signTex(['DIRECTOIRE · SÉCURITÉ','CONVOI 03 · ANNEAU LOGISTIQUE'],{bg:null,fg:'#c1121f',w:512,h:128}),
+      transparent:true,alphaTest:.05,roughness:.82
+    });
+    for(const side of [-1,1]){
+      const label=new T.Mesh(new T.PlaneGeometry(Math.min(3.4,L-2.6),.7),signMaterial);
+      label.position.set(-1.1,2.08,side*(W/2+.014));
+      if(side<0)label.rotation.y=Math.PI;
+      g.add(label);
+    }
   }
   const helixLogo = (bg = null) => signTex(['DIRECTOIRE', 'SÉCURITÉ'], { bg, fg: '#ff2f45', w: 512, h: 256 });
   function dress(o) {
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, h = o.height;
+    // Reuse physically distinct functional props across the whole game.
+    // The obstacle/layout object remains the authority for physics and objectives.
+    const replacements={bed:'bed',desk:'desk','radio-rack':'rack',
+      console:'console',batteries:'batteries','security-desk':'security-desk',
+      servers:'servers',terminal:'terminal',kitchen:'workbench'};
+    const type=replacements[o.kind];
+    if(type){
+      const model=createFunctionalProp(T,type,{w,d,h,low,M});
+      model.position.set(o.x,0,o.z);add(model);
+      if(o.kind==='console')for(const k of [-1,1])
+        details.computer({x:o.x+k*.9,y:h,z:o.z,scale:.82,kind:'radio',power:'enclave'});
+      else if(o.kind==='security-desk'){
+        sign(helixLogo('#0b0d10'),o.x,h*.5+.25,z2+.02,0,1.2,.6);
+        details.computer({x:o.x,y:h+.05,z:o.z,scale:.9,kind:'helix',power:'tower'});
+      }else if(o.kind==='terminal'){
+        const info=new T.Mesh(new T.PlaneGeometry(.9,.55),
+          new T.MeshBasicMaterial({map:signTex(['MANIFESTE · CONVOI 02','ACCÈS BADGE NIVEAU 3'],
+          {bg:'#160307',fg:'#ff4d5e',w:512,h:300}),toneMapped:false}));
+        info.position.set(x1-.02,h+.35,o.z);info.rotation.y=-Math.PI/2;add(info);
+      }else if(o.kind==='kitchen'){
+        for(const k of [-1,0,1])cylinder(M.dark,o.x+k*1.6,h+.15,o.z,.32,.25,{segments:low?9:16});
+        piece(M.amber,o.x-1.6,h-.02,z1-.01,.5,.06,.01);
+      }
+      return;
+    }
     switch (o.kind) {
       case 'stall': {
         // A market stall turned into a barricade bed: crates, a mattress, a tarp on poles.
-        box(M.wood, x1, x2, 0, h, z1, z2); piece(M.sheet, o.x, h, o.z, w - .3, .14, d - .2); piece(M.blanket, o.x + .4, h + .14, o.z, w * .45, .05, d - .3);
+        const cot=createFunctionalProp(T,'cot',{w:w-.1,d:d-.1,h:Math.max(.85,h),low,M});cot.position.set(o.x,0,o.z);add(cot);
         for (const sx of [-1, 1]) for (const sz of [-1, 1]) piece(M.steel, o.x + sx * (o.hx - .05), 0, o.z + sz * (o.hz - .05), .05, 2.6, .05);
         const tarp = new T.Mesh(new T.PlaneGeometry(w + .4, d + .6), rng() < .5 ? M.tarp : M.tarpAmber); tarp.rotation.x = -Math.PI / 2 + .12; tarp.position.set(o.x, 2.6, o.z); add(tarp);
         break;
       }
       case 'tent': {
-        const g = new T.Mesh(new T.CylinderGeometry(.02, Math.max(o.hx, o.hz) * 1.05, h, 4, 1, true), rng() < .5 ? M.tarp : M.tarpAmber); g.rotation.y = Math.PI / 4; g.scale.set(1, 1, o.hz / o.hx); g.position.set(o.x, h / 2, o.z); add(g);
-        piece(M.blanket, o.x, 0, o.z - .4, w * .6, .1, .8); break;
+        // Sloped tent canopy: four physical supports plus two hanging textile panels.
+        const tent=new T.Group();tent.position.set(o.x,0,o.z);add(tent);
+        const tarpMaterial=rng()<.5?M.tarp:M.tarpAmber;
+        const cross=[[[-w*.47,.15,-d*.44],[0,h,-d*.44],[w*.47,.15,-d*.44]],
+                     [[-w*.47,.15,d*.44],[0,h,d*.44],[w*.47,.15,d*.44]]];
+        for(const z of [-d*.44,d*.44])for(const x of [-w*.45,w*.45]){
+          const pole=new T.Mesh(new T.CylinderGeometry(.024,.024,h*.61,low?6:9),M.steel);
+          pole.position.set(x,h*.305,z);tent.add(pole);
+        }
+        for(const sx of [-1,1]){
+          const geom=new T.BufferGeometry();
+          const vertices=new Float32Array([sx*w*.47,.18,-d*.46,0,h,-d*.46,
+            sx*w*.47,.18,d*.46,0,h,d*.46]);
+          geom.setAttribute('position',new T.BufferAttribute(vertices,3));
+          geom.setAttribute('uv',new T.Float32BufferAttribute([0,0,1,0,0,1,1,1],2));
+          geom.setIndex([0,1,2,1,3,2]);geom.computeVertexNormals();
+          const panel=new T.Mesh(geom,tarpMaterial);panel.castShadow=!low;tent.add(panel);
+        }
+        const bedding=createFunctionalProp(T,'cot',{w:w*.53,d:d*.55,h:.85,low,M});
+        bedding.position.set(0,0,-d*.1);tent.add(bedding);break;
       }
       case 'kitchen': box(M.steel, x1, x2, 0, h, z1, z2); for (const k of [-1, 0, 1]) { cylinder(M.dark, o.x + k * 1.6, h + .22, o.z, .32, .44, { segments: 14 }); } piece(M.amber, o.x - 1.6, h - .02, z1 - .01, .5, .06, .01); break;
       case 'tank': {
@@ -334,8 +383,9 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       }
       case 'batteries': box(M.dark, x1, x2, 0, h, z1, z2); for (let k = 0; k < 4; k++) piece(M.helixRed, x1 + .2 + k * (w - .4) / 3, h, o.z, .14, .08, .14); break;
       case 'scanner': {
-        // HELIX scanner gate: two white posts, a red arch, a sweeping light curtain between them.
-        box(M.helixWhite, x1, x2, 0, h, z1, z2); piece(M.helixRed, o.x, h - .2, o.z, w + .04, .2, d + .04);
+        // Keep the animated HELIX scanner curtain and only replace the physical frame.
+        const portal=createFunctionalProp(T,'scanner',{w,d,h,low,M});
+        portal.position.set(o.x,0,o.z);add(portal); piece(M.helixRed, o.x, h - .2, o.z, w + .04, .2, d + .04);
         const curtain = new T.Mesh(new T.PlaneGeometry(2.6, h - .3), new T.MeshBasicMaterial({ color: 0xff2f45, transparent: true, opacity: .14, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false, side: T.DoubleSide }));
         curtain.position.set(o.x + (o.x < 0 ? 1.7 : -1.7), (h - .3) / 2, o.z); curtain.rotation.y = 0; add(curtain);
         animated.push(t => { curtain.material.opacity = power.tower ? .1 + .06 * Math.sin(t * 6 + o.x) : 0; });
@@ -532,12 +582,15 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       const live = new Set();
       for (const p of list) {
         live.add(p.id); let o = cachesById.get(p.id);
-        if (!o) { o = new T.Group(); const tower = p.z < 0, caseMesh = new T.Mesh(new T.BoxGeometry(.6, .3, .4), tower ? M.helixWhite : M.paintedMetal); caseMesh.position.y = .15; o.add(caseMesh);
-          const stripe = new T.Mesh(new T.BoxGeometry(.61, .06, .41), tower ? M.helix : p.kind === 'heal' ? M.rose : M.cyan); stripe.position.y = .22; o.add(stripe);
-          const gem = new T.Mesh(new T.OctahedronGeometry(.2, 0), p.kind === 'heal' ? M.rose : glow(0xe8f6ff)); gem.position.y = .75; o.add(gem); o.userData.gem = gem; o.position.set(p.x, p.y || 0, p.z); root.add(o); cachesById.set(p.id, o); }
+        if(!o){
+          const asset=createM01SupplyCache(T,{heal:p.kind==='heal',M,accent});
+          o=asset.root;o.userData.gem=asset.token;
+          o.position.set(p.x,p.y||0,p.z);
+          root.add(o);cachesById.set(p.id,o);
+        }
         o.userData.gem.position.y = .75 + Math.sin(t * 2.4 + p.x) * .08; o.userData.gem.rotation.y = t * 1.8;
       }
-      for (const [id, o] of cachesById) if (!live.has(id)) { o.removeFromParent(); cachesById.delete(id); }
+      for (const [id, o] of cachesById) if (!live.has(id)) { o.removeFromParent(); o.userData.dispose?.(); cachesById.delete(id); }
     },
     setDoor(id, state) { const d = doors.get(id); if (!d) return; d.state = state ? (d.d.open ? 'auto' : 'open') : 'closed'; if (!state) d.open = 0; },
     setPower(zone, on) { power[zone] = !!on; },

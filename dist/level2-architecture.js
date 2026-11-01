@@ -2,8 +2,19 @@
 // Decorative geometry deliberately does not change pathing. Collider hulls are
 // placed independently of detail: no false floors, no blockage from signage.
 import {createDistrictSignage} from './level2-signage.js';
+import {createDistrictUtilities} from './district-utility-details.js';
+import {createHardSurfaceFurniture} from './realistic-furniture.js';
 export function createDistrictArchitecture({T,root,materials,solid,beam,sign,collisions,low,rng}){
   const C=materials,signs=createDistrictSignage(T,{performance:low});
+  // Some schematic-layout consumers supply a minimal Three interface for
+  // collision validation rather than a complete 3D renderer.
+  const canBuildDetail=typeof T.Vector3==='function'&&typeof T.Quaternion==='function';
+  const utilities=canBuildDetail?createDistrictUtilities(T,{low,materials:C}):{
+    hydrant(x,z){cyl(x,.56,z,.19,.96,C.rust||C.iron);},
+    generator(x,z){thin(x,.72,z,1.5,1.42,.82,C.iron);},
+    cooler(x,z){thin(x,1.2,z,2.2,2.1,1.38,C.iron);},
+    build(){return {hydrants:0,generators:0,coolers:0,batches:0,triangles:0};}
+  };
   const stats={buildings:0,recessedWindows:0,brokenWindows:0,masonryBays:0};
   const ringGeo=new T.TorusGeometry(1,.07,6,32);
   const prism=(x,y,z,w,h,d,mat,top=1)=>{
@@ -28,6 +39,21 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
   const oxidation=new T.MeshStandardMaterial({color:0x63524c,roughness:.89,metalness:.25});
   const dirty=new T.MeshStandardMaterial({color:0x41545b,metalness:.12,roughness:.92});
   const warm=new T.MeshBasicMaterial({color:0xffc38b,toneMapped:false});
+  const furniture=canBuildDetail?createHardSurfaceFurniture(T,root,{low,M:{
+    steel:stainless,paintedMetal:ceramic,dark:black,woodDark:brushed,
+    wood:pastel,fabric:dirty,paper:ceramic,cyan:C.cyan,glass:C.glass
+  }}):{
+    dress(o){
+      thin(o.x,o.height*.46,o.z,o.hx*2,o.height*.86,o.hz*2,ceramic);
+      thin(o.x,o.height-.03,o.z,o.hx*2+.04,.07,o.hz*2+.04,stainless);
+      return true;
+    },
+    stretcher(x,z){
+      thin(x,.45,z,1.65,.12,1.14,stainless);
+      thin(x,.56,z,1.45,.10,.92,dirty);
+    },
+    finish(){return {objects:0,batches:0,triangles:0};}
+  };
   const violet=new T.MeshBasicMaterial({color:0xa567ef,toneMapped:false});
   const red=new T.MeshBasicMaterial({color:0xdd5e52,toneMapped:false});
   const lit=[signage,C.amber,C.blue,warm,violet];
@@ -155,10 +181,11 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
     beam([front,7.8,z-7.5],[front,7.8,z+7.5],.12,copper);
     for(let k=0;k<3;k++){
       const zz=z-5+k*5.1;
-      thin(side*19,.92,zz,3,1.42,1.5,stainless);
-      thin(side*19,1.67,zz,3.2,.08,1.68,ceramic);
+      // Real counter with open rear, recessed fronts, structural feet and drawers.
+      // Its unchanged 3m x 1.5m footprint does not close the market entrance.
+      furniture.dress({kind:'reception',x:side*19,z:zz,hx:1.50,hz:.75,height:1.06,yaw:-side*Math.PI/2});
       thin(side*17.4,2.4,zz,.12,1.2,2.2,dirty);
-      for(let j=0;j<3;j++)thin(side*(18.6+j*.55),1.77,zz, .24,.2,.65,k%2?C.warning:C.rust);
+      for(let j=0;j<3;j++)thin(side*(18.6+j*.55),1.17,zz, .24,.2,.65,k%2?C.warning:C.rust);
       thin(side*22,3.5,zz,1.8,.13,3.2,brushed);
       for(let j=0;j<3;j++)thin(side*(21+j*.8),3,zz-.1,.1,1.7,.1,copper);
     }
@@ -180,19 +207,9 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
       thin(xx,.84,zz,1.68,.09,.76,C.warning);
     }
   }
-  function hydrant(x,z){
-    cyl(x,.5,z,.19,1.0,C.rust,10);
-    cyl(x,1.0,z,.25,.16,C.iron,10);
-    beam([x-.34,.65,z],[x+.34,.65,z],.11,C.iron);
-  }
+  function hydrant(x,z){utilities.hydrant(x,z);}
   function generator(x,z,side){
-    const obj=new T.Group();obj.position.set(x,0,z);root.add(obj);
-    const parts=[
-      [0,.62,0,1.5,1.2,.76,brushed],[0,1.27,0,1.45,.10,.84,C.iron],
-      [-.54,.81,side*.42,.21,.6,.09,C.cyan],[.54,.81,side*.42,.21,.6,.09,C.amber]
-    ];
-    for(const [sx,y,sz,w,h,d,m] of parts){const me=new T.Mesh(new T.BoxGeometry(w,h,d),m);me.position.set(sx,y,sz);obj.add(me);}
-    for(let a=0;a<6;a++)beam([x-.63+a*.24,.31,z+side*.45],[x-.63+a*.24,1.07,z+side*.45],.035,C.black);
+    utilities.generator(x,z,side);
     collisions.push({x,z,hx:.76,hz:.39,y:0,height:1.4,surface:'metal'});
   }
   function neonMonorail(){
@@ -211,18 +228,14 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
     for(let side of [-1,1])beam([side*8.8,20.8,67],[side*8.8,20.8,-68],.24,stainless,10);
   }
   function coolingUnit(x,z){
-    thin(x,1.3,z,2.25,2.2,1.45,dirty);
-    for(let i=0;i<6;i++)thin(x,1.1+i*.25,z+.77,1.76,.065,.08,stainless);
-    for(const sx of [-.77,.77])cyl(x+sx,2.48,z,.21,.32,brushed);
+    utilities.cooler(x,z);
   }
   function narrativeClutter(){
     // Enclave / LD07 medical dormitory: stretchers, canisters, transformer,
     // captured broadcasts and emergency glow.
     for(let i=0;i<3;i++){
       const zz=56+i*2.1;
-      thin(-7,.52,zz,1.65,.16,1.14,ceramic);
-      for(const sx of [-.62,.62])for(const dz of [-.45,.45])beam([-7+sx,.1,zz+dz],[-7+sx,.46,zz+dz],.045,brushed);
-      thin(-7,.65,zz+.23,1.2,.07,.38,C.plaster);
+      furniture.stretcher(-7,zz,{width:1.14,length:1.70});
     }
     generator(7,48,1);
     for(let z=48;z>28;z-=7){
@@ -233,8 +246,12 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
       generator(8,z,1);
       const pole=8.2;
       beam([pole,2,z+1],[pole,6.8,z+1],.09,copper);
-      const hex=new T.Mesh(new T.OctahedronGeometry(.48,0),z%2?C.amber:C.cyan);
-      hex.position.set(pole,6.8,z+1);root.add(hex);
+      // Service inspection luminaire: actual visor, housing, grille and emissive lens.
+      // No floating neon octahedron pretending to be a street fixture.
+      thin(pole,6.78,z+1,.93,.15,.63,brushed);
+      thin(pole,6.67,z+1,.74,.11,.48,C.black);
+      thin(pole,6.61,z+1,.60,.032,.36,z%2?C.amber:C.cyan);
+      for(const side of [-1,1])thin(pole+side*.37,6.70,z+1,.055,.20,.56,C.iron);
     }
     // Duct clusters, stacked service boxes and low-lying local vapour.
     for(let z=38;z>-64;z-=13){
@@ -261,5 +278,11 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
       beam([-7,0,z],[-7,10.3,z],.09,C.iron);
     }
   }
-  return {residentialTower,occupiedMarket,stats,signs,pbrTargets:{ceramic,brushed,dirty,copper,darkTrim,pastel,masonry},decorate(){neonMonorail();narrativeClutter();}};
+  return {residentialTower,occupiedMarket,stats,signs,pbrTargets:{ceramic,brushed,dirty,copper,darkTrim,pastel,masonry},decorate(){
+    neonMonorail();narrativeClutter();
+    const furnished=furniture.finish();stats.furnitureCount=furnished.objects;
+    stats.furnitureBatches=furnished.batches;stats.furnitureTriangles=furnished.triangles;
+    const result=utilities.build(root);stats.utilityHydrants=result.hydrants;
+    stats.utilityGenerators=result.generators;stats.utilityCoolingUnits=result.coolers;stats.utilityBatches=result.batches;stats.utilityTriangles=result.triangles;
+  }};
 }

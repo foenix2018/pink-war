@@ -7,6 +7,10 @@
 import { INTERACTIONS, MOVABLE, VAN, areaAt } from './m03-layout.js';
 import { createSectorMeshes, neonSpots } from './m03-sector.js';
 import { createSignage, BLADES } from './signage.js';
+import {createCivilCar} from './civil-vehicle-detail.js';
+import {createFreightTruck} from './freight-truck-detail.js';
+import {createRescueVehicle} from './rescue-vehicle-detail.js';
+import {createFunctionalProp} from './functional-props.js';
 
 const TAU = Math.PI * 2;
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
@@ -129,42 +133,63 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
     signs.blade('貨物', { color: '#ffc890', sub: 'FRET', x: 65.2, y: 5.2, z: -74.4, yaw: Math.PI / 2 });
   }
   function wheelSet(g, L, W, r = .45) { for (const sx of [L / 2 - 1, -L / 2 + 1]) for (const sz of [-1, 1]) { const w = new T.Mesh(new T.CylinderGeometry(r, r, .3, 16), M.rubber); w.rotation.x = Math.PI / 2; w.position.set(sx, r, sz * (W / 2 - .05)); g.add(w); } }
-  function car(x, z, yaw, body = M.paint) { const g = new T.Group(); g.position.set(x, 0, z); g.rotation.y = yaw; add(g); const p = (m, px, py, pz, w, h, d) => { const o = new T.Mesh(new T.BoxGeometry(w, h, d), m); o.position.set(px, py, pz); g.add(o); };
-    p(body, 0, .65, 0, 4.2, .7, 1.9); p(body, -.2, 1.25, 0, 2.3, .6, 1.75); p(M.glass, -.2, 1.25, 0, 2.32, .5, 1.6); wheelSet(g, 4.2, 1.9, .36); g.rotation.z = .04; }
-  function truck(x, z, yaw, body, label) { const g = new T.Group(); g.position.set(x, 0, z); g.rotation.y = yaw; add(g); const p = (m, px, py, pz, w, h, d) => { const o = new T.Mesh(new T.BoxGeometry(w, h, d), m); o.position.set(px, py, pz); g.add(o); return o; };
-    p(M.dark, 3.2, 1.5, 0, 1.6, 2.2, 2.4); p(M.glass, 4.02, 1.9, 0, .04, .9, 2.1); p(body, -1, 1.7, 0, 6.2, 2.8, 2.5); p(M.dark, 0, .5, 0, 8, .4, 2.2); wheelSet(g, 8, 2.5, .5);
-    const s = new T.Mesh(new T.PlaneGeometry(4, .7), new T.MeshStandardMaterial({ map: signTex(label, { bg: null, fg: '#2a3a48', w: 512, h: 96 }), transparent: true, alphaTest: .05 })); s.position.set(-1, 2.2, 1.26); g.add(s); g.rotation.x = .03; return g; }
-  // Inès's ambulance (and the burnt AEGIS van at the interchange).
-  function aegisVan(x, z, yaw, burnt = false) {
-    const g = new T.Group(); g.position.set(x, 0, z); g.rotation.y = yaw; add(g);
-    const L = VAN.halfLength * 2, W = VAN.halfWidth * 2, body = burnt ? M.rust : M.white;
-    const p = (m, px, py, pz, w, h, d) => { const o = new T.Mesh(new T.BoxGeometry(w, h, d), m); o.position.set(px, py, pz); o.castShadow = !low; g.add(o); return o; };
-    // Cab towards −z (front), box body behind.
-    p(body, 0, 1.25, -L / 2 + 1, W, 1.5, 1.9); p(M.glass, 0, 1.65, -L / 2 + .04, W - .2, .75, .04);
-    p(body, 0, 1.55, .6, W, 2.3, L - 2.1); p(M.dark, 0, .45, 0, W - .2, .5, L - .2);
-    for (const sz of [-L / 2 + 1, L / 2 - .9]) for (const sx of [-1, 1]) { const w = new T.Mesh(new T.CylinderGeometry(.44, .44, .3, 16), M.rubber); w.rotation.z = Math.PI / 2; w.position.set(sx * (W / 2 - .05), .44, sz); g.add(w); }
-    // Door seams, steps and bumper give the rescue van a readable structure.
-    for (const side of [-1, 1]) {
-      p(M.dark, side * (W / 2 + .01), .65, -L / 2 + 1.8, .025, 1.15, .035);
-      p(M.dark, side * (W / 2 + .02), .43, 0, .12, .12, L - 2.2);
-      p(M.galva, side * (W / 2 + .025), 1.35, .2, .03, .06, .3);
-    }
-    p(M.dark, 0, .55, -L / 2 - .04, W + .08, .17, .12);
-    p(M.dark, 0, 1.05, -L / 2 - .055, W * .5, .24, .03);
-    const lights = [];
-    if (!burnt) {
-      for (const s of [-1, 1]) { p(M.red, s * (W / 2 + .005), 1.05, .6, .01, .24, L - 2.1); p(M.yellow, s * (W / 2 + .006), 1.32, .6, .01, .08, L - 2.1);
-        const label = new T.Mesh(new T.PlaneGeometry(2.6, .55), new T.MeshStandardMaterial({ map: signTex(['AMBULANCE', 'AEGIS · 03'], { bg: null, fg: '#a3241c', w: 512, h: 128 }), transparent: true, alphaTest: .05 }));
-        label.position.set(s * (W / 2 + .012), 2, .6); label.rotation.y = s * Math.PI / 2; g.add(label); }
-      for (const s of [-1, 1]) { const b = p(new T.MeshBasicMaterial({ color: 0x2a6bff, toneMapped: false }), s * .55, 2.75, -L / 2 + 1.1, .3, .16, .3); lights.push(b); }
-      for (const s of [-1, 1]) p(M.neonWhite, s * .7, .95, -L / 2 - .01, .3, .16, .02);
-      const head = new T.SpotLight(0xfff4e0, low ? 0 : 26, 26, .55, .6, 1.4); head.position.set(0, 1.1, -L / 2); head.target.position.set(0, 0, -L / 2 - 12); g.add(head); g.add(head.target);
-      const flash = new T.PointLight(0x3a72ff, 0, 14, 2); flash.position.set(0, 3, -L / 2 + 1); g.add(flash);
-      return { g, lights, flash, body: g };
-    }
-    g.rotation.z = .12; return { g };
+  function car(x,z,yaw,body=M.paint){
+    const g=createCivilCar(T,{length:4.2,width:1.9,low,
+      M:{...M,red:body,redGlow:M.neonRed,yellow:M.yellow,
+        steel:M.galva,white:M.white,black:M.black,glass:M.glass}});
+    g.position.set(x,0,z);g.rotation.y=yaw;g.rotation.z=.04;
+    add(g);return g;
   }
-  function winchPost(x, z) { box(M.yellow, x, 0, z, .9, 1.3, .9); box(M.dark, x, 1.3, z, 1, .3, 1); const drum = new T.Mesh(new T.CylinderGeometry(.35, .35, .8, 14), M.galva); drum.rotation.z = Math.PI / 2; drum.position.set(x, 1, z + .55); add(drum); devicesExtra.treuil = drum; }
+  function truck(x,z,yaw,body,label){
+    const g=createFreightTruck(T,{length:8,width:2.5,low,
+      M:{...M,helixWhite:body,helixRed:M.red,steel:M.galva,
+        black:M.black,dark:M.dark,glass:M.glass}});
+    g.position.set(x,0,z);g.rotation.y=yaw;add(g);
+    const signMaterial=new T.MeshStandardMaterial({
+      map:signTex(label,{bg:null,fg:'#2a3a48',w:512,h:96}),
+      transparent:true,alphaTest:.05,roughness:.85
+    });
+    const t=new T.Mesh(new T.PlaneGeometry(3.65,.65),signMaterial);
+    t.position.set(-1.05,2.25,1.285);g.add(t);
+    g.rotation.x=.03;return g;
+  }
+  // Inès keeps the real moving ambulance and its existing siren/light states.
+  // The cabin and medical compartment now reuse the detailed AEGIS rescue model.
+  function aegisVan(x,z,yaw,burnt=false){
+    const g=new T.Group();g.position.set(x,0,z);g.rotation.y=yaw;add(g);
+    const L=VAN.halfLength*2,W=VAN.halfWidth*2;
+    const body=createRescueVehicle(T,{kind:'ambulance',length:L,width:W,low,
+      signTexture:burnt?null:()=>signTex(['AMBULANCE','AEGIS · 03'],
+        {bg:null,fg:'#a3241c',w:512,h:128}),
+      M:{...M,red:burnt?M.rust:M.red,white:burnt?M.rust:M.white,
+        dark:M.dark,steel:M.galva,black:M.black,glass:M.glass,
+        yellow:M.yellow,shutter:M.galva,redGlow:burnt?M.rust:M.neonRed}});
+    // Model +X front -> mission vehicle -Z front.
+    body.rotation.y=Math.PI/2;g.add(body);
+    if(burnt){g.rotation.z=.12;return {g};}
+    const lights=[];
+    for(const side of [-1,1]){
+      const b=new T.Mesh(new T.BoxGeometry(.30,.16,.30),
+        new T.MeshBasicMaterial({color:0x2a6bff,toneMapped:false}));
+      b.position.set(side*.55,2.75,-L/2+1.1);g.add(b);lights.push(b);
+    }
+    const head=new T.SpotLight(0xfff4e0,low?0:26,26,.55,.6,1.4);
+    head.position.set(0,1.1,-L/2);head.target.position.set(0,0,-L/2-12);
+    g.add(head);g.add(head.target);
+    const flash=new T.PointLight(0x3a72ff,0,14,2);
+    flash.position.set(0,3,-L/2+1);g.add(flash);
+    return {g,lights,flash,body};
+  }
+  function winchPost(x,z){
+    const chassis=createFunctionalProp(T,'winch',{w:1.05,d:1.2,h:1.45,low,M:{
+      ...M,paintedMetal:M.yellow,steel:M.galva,dark:M.dark,black:M.black
+    }});
+    chassis.position.set(x,0,z);add(chassis);
+    // Keep the same animated axle used by the mission interaction.
+    const drum=new T.Mesh(new T.CylinderGeometry(.30,.30,.53,low?12:22),M.galva);
+    drum.rotation.z=Math.PI/2;drum.position.set(x,1.02,z+.56);add(drum);
+    devicesExtra.treuil=drum;
+  }
   function lampPost(x, z, k) {
     const pole = new T.Mesh(new T.CylinderGeometry(.09, .12, 7, 8), M.galva); pole.position.set(x, 3.5, z); add(pole);
     // A hood, diffuser and end plates form a physical luminaire around the light source.
@@ -177,21 +202,31 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
   }
   function arrimagePost(x, z) { box(M.dark, x, 0, z, .9, 1.3, .9); box(M.neonAmber, x, 1.3, z + .46, .5, .3, .02); }
   function train() {
-    const cars = [[67, 'LOCO'], [76, 'SANITAIRE 7'], [85, 'SANITAIRE 7'], [93.5, 'FRET']];
-    for (const [x, name] of cars) {
-      const g = new T.Group(); g.position.set(x, 0, -96); add(g);
-      const p = (m, px, py, pz, w, h, d) => { const o = new T.Mesh(new T.BoxGeometry(w, h, d), m); o.position.set(px, py, pz); g.add(o); return o; };
-      p(name === 'LOCO' ? M.dark : M.white, 0, 2.3, 0, name === 'FRET' ? 5 : 8.4, 3.4, 3); p(M.dark, 0, .6, 0, 8, .6, 2.6);
-      for (const s of [-1.5, 1.5]) for (const k of [-2.6, 2.6]) { const w = new T.Mesh(new T.CylinderGeometry(.42, .42, .2, 14), M.rubber); w.rotation.x = Math.PI / 2; w.position.set(k, .45, s); g.add(w); }
-      if (name.startsWith('SANITAIRE')) {
-        p(M.red, 0, 3.1, 1.51, 8.4, .25, .02); p(M.neonWhite, 0, 2.4, 1.52, 7.6, .06, .02);
-        const s = new T.Mesh(new T.PlaneGeometry(3.6, .9), new T.MeshBasicMaterial({ map: signTex(['✚ ' + name, 'ANNEAU LOGISTIQUE'], { bg: '#e8ebee', fg: '#c1121f', w: 512, h: 128 }), toneMapped: false })); s.position.set(0, 2.2, 1.53); g.add(s);
-        for (let k = -3; k <= 3; k += 1.5) p(M.neonAmber, k, 2.9, 1.52, .9, .4, .02);
+    const cars=[[67,'LOCO'],[76,'SANITAIRE 7'],[85,'SANITAIRE 7'],[93.5,'FRET']];
+    for(const [x,name] of cars){
+      const L=name==='FRET'?5:8.4;
+      const wagon=createFunctionalProp(T,'railcar',{w:L,d:3,h:4.0,low,
+        M:{...M,paintedMetal:name==='LOCO'?M.dark:M.white,
+          white:name==='LOCO'?M.dark:M.white,ledCyan:name.startsWith('SANITAIRE')?M.red:M.neonWhite,
+          steel:M.galva,glass:M.glass,rubber:M.rubber}});
+      wagon.position.set(x,0,-96);add(wagon);
+      if(name.startsWith('SANITAIRE')){
+        const label=new T.Mesh(new T.PlaneGeometry(3.45,.76),
+          new T.MeshBasicMaterial({map:signTex(['✚ '+name,'ANNEAU LOGISTIQUE'],
+          {bg:'#e8ebee',fg:'#c1121f',w:512,h:128}),toneMapped:false}));
+        label.position.set(x,2.26,-94.44);add(label);
+        const stripe=new T.Mesh(new T.BoxGeometry(L-.25,.12,.038),M.red);
+        stripe.position.set(x,3.12,-94.43);add(stripe);
       }
-      if (name === 'LOCO') { p(M.neonRed, -4.21, 2.8, 0, .02, .2, 2.4); p(M.neonWhite, -4.21, 1.4, -1, .02, .2, .4); p(M.neonWhite, -4.21, 1.4, 1, .02, .2, .4); }
+      if(name==='LOCO'){
+        for(const z of [-97.0,-95.0]){
+          const light=new T.Mesh(new T.BoxGeometry(.03,.18,.21),M.neonWhite);
+          light.position.set(x-L/2-.015,1.28,z);add(light);
+        }
+      }
     }
-    // Loading ramp of the medical wagon, where the van drives on.
-    box(M.galva, 80, 0, -92.6, 4, .4, 2.2);
+    // Loading ramp for Inès' vehicle remains aligned with original choreography.
+    box(M.galva,80,0,-92.6,4,.4,2.2);
   }
   function containers() {
     for (const [x, z, w, d, k] of [[67, -80, 2.6, 6, 0], [92, -82, 6, 2.6, 1], [68, -88, 2.6, 4.8, 2]]) {
@@ -209,9 +244,16 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
     box(M.container[1], 67, 2.7, -80, 2.6, 2.7, 6);
   }
   function booth() {
-    box(M.galva, 93, 0, -75, 6, .3, 6); box(M.dark, 93, .3, -75, 6, 2.6, 6); box(M.glass, 89.98, 1.2, -75, .05, 1.4, 5.4);
-    box(M.galva, 93, 2.9, -75, 6.4, .3, 6.4); signs.neon(['RÉGULATION', 'GARE DE FRET 03'], { color: '#ffc890', kanji: '管制', w: 2.8, h: .8, x: 89.94, y: 3.4, z: -75, yaw: -Math.PI / 2 });
-    box(M.neonAmber, 89.95, 1, -75, .02, .5, 1.2);
+    const office=createFunctionalProp(T,'booth',{w:6,d:6,h:3.2,low,M:{
+      ...M,paintedMetal:M.galva,steel:M.galva,glass:M.glass,dark:M.dark
+    }});
+    office.position.set(93,0,-75);add(office);
+    // Surveillance window and identification sign remain on the active station face.
+    const glassPane=new T.Mesh(new T.PlaneGeometry(2.8,1.34),M.glass);
+    glassPane.position.set(89.98,1.93,-75);glassPane.rotation.y=Math.PI/2;add(glassPane);
+    signs.neon(['RÉGULATION','GARE DE FRET 03'],
+      {color:'#ffc890',kanji:'管制',w:2.8,h:.8,x:89.94,y:3.4,z:-75,yaw:-Math.PI/2});
+    box(M.neonAmber,89.95,1,-75,.02,.5,1.2);
   }
 
   // ---------- The avenue: ORDRE barrier, tracking beacon at the fracture ----------
