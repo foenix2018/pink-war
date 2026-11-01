@@ -127,7 +127,7 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
   const key=e=>{if(e.code==='Escape'&&(open||gearOpen||!objective.hidden)){e.preventDefault();e.stopImmediatePropagation();setGearOpen(false);setOpen(false);objective.hidden=true;mission.setAttribute('aria-expanded','false');portrait.focus({preventScroll:true});}};
   const blur=()=>reset(),visibility=()=>{if(doc.hidden)reset();};
   doc.addEventListener('pointerdown',outside,true);doc.addEventListener('keydown',key,true);doc.addEventListener('pw-hud-overlay',blur);doc.defaultView.addEventListener('blur',blur);doc.addEventListener('visibilitychange',visibility);
-  const api={root,setOpen,setGearOpen,reset,equipmentState,chooseWeapon,get isOpen(){return open||gearOpen;},
+  const api={root,setOpen,setGearOpen,reset,equipmentState,chooseWeapon,throwGrenade(){if(currentGame?.charges>0&&active){command('charge');return true;}return false;},get isOpen(){return open||gearOpen;},
     setCharacter(id){const hero=id==='lylu'?'lylu':'ghju';root.dataset.hero=hero;doc.body.dataset.pwHero=hero;text('tag',HEROES[hero]);
       if(portraitHero!==hero){portraitHero=hero;paintCompanionPortrait(portrait.querySelector('canvas').getContext('2d'),hero,128);
         const label=hero==='lylu'?'CAR-14':'GAB-1';$('.pw-hud-companion-name').textContent=label;portrait.setAttribute('aria-label','Ouvrir les armes et grenades de '+label);gearSignature='';}
