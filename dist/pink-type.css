@@ -1,0 +1,20 @@
+/* Pink Wars — typography of the approved fractured-sci-fi reference.
+   Screen text uses geometric Bruno Ace SC (OFL 1.1); small informational and
+   long accessibility texts retain an easier-to-read Oxanium fallback.
+   The red/white digital health and ammunition glyphs are not overridden. */
+:root{--pw-title-font:'Bruno Ace SC','Oxanium',system-ui,sans-serif;--pw-copy-font:'Oxanium',system-ui,sans-serif}
+body:not(.pw-demo) :is(h1,h2,h3,.pw-story-meta,.pw-story-next,.fracture-title,.pw-briefing h1,.pw-briefing h2,.pw-prologue h1,.pw-prologue header,.pw-comms-brand){
+ font-family:var(--pw-title-font);font-weight:400;letter-spacing:.065em;text-transform:uppercase
+}
+body :is(.fracture-pause button,.fracture-settings button,.pw-story-choice button,.pw-hud-gear header strong,.pw-hud-weapon,.pw-hud-companion-name,.pw-hud-gear-weapon strong,.pw-story-modal button){
+ font-family:var(--pw-title-font);letter-spacing:.055em
+}
+body :is(.pw-briefing p,.pw-story-caption,.pw-prologue .pp-text,.fracture-settings small,.pw-companion-note){
+ font-family:var(--pw-copy-font);letter-spacing:.018em;line-height:1.47
+}
+/* Signature fractured lines only on large headings, to keep long French text legible. */
+body :is(.pw-prologue h1,.pw-story-modal h2,.pw-briefing h1,.pw-briefing h2,.fracture-title){
+ -webkit-mask-image:repeating-linear-gradient(180deg,#000 0px,#000 17px,transparent 17px,transparent 19px,#000 19px,#000 39px);
+ mask-image:repeating-linear-gradient(180deg,#000 0px,#000 17px,transparent 17px,transparent 19px,#000 19px,#000 39px)
+}
+@media(max-width:430px){body :is(.fracture-pause button,.pw-story-choice button,.pw-hud-gear-weapon strong){letter-spacing:.02em}}
