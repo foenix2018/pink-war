@@ -6,6 +6,7 @@
 // Magenta stays reserved to the phase signature of the JANUS-9 anchor (Tome II §22).
 import { ROOMS, DOORS, WATER, STAIRS, LANDING, HEIGHTS, INTERACTIONS, roomAt } from './ligne9-layout.js';
 
+import {createFunctionalProp} from './functional-props.js';
 const TAU = Math.PI * 2;
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
 const ROOM = Object.fromEntries(ROOMS.map(r => [r.id, r]));
@@ -438,6 +439,15 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
   const fans = [], pumpRotors = [], racks = [];
   function dress(o) {
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, y = o.y || 0, h = o.height, along = w >= d;
+    // Functional silhouettes replace previous heavy box-based station props.
+    // Machines with animation (pump motor, dynamic rack LEDs) remain specialized.
+    const replacement={'ticket-machine':'ticket-machine',stretcher:'stretcher',cot:'cot',
+      cabinet:'cabinet',table:'desk',desk:'desk',bench:'bench',kiosk:'kiosk',
+      vending:'vending',winch:'winch'};
+    if(replacement[o.kind]){
+      const model=createFunctionalProp(T,replacement[o.kind],{w,d,h,low,M});
+      model.position.set(o.x,y,o.z);add(model);return;
+    }
     switch (o.kind) {
       case 'bollard': cylinder(M.dark, o.x, y + h / 2, o.z, .14, h); piece(M.yellow, o.x, y + h - .2, o.z, .3, .06, .3); break;
       case 'parapet': for (let x = x1; x <= x2 + 1e-6; x += 1.2) piece(M.steel, x, y, o.z, .06, h, .06); piece(M.steel, o.x, y + h - .05, o.z, w, .06, .08); piece(M.steel, o.x, y + .5, o.z, w, .04, .04); break;
