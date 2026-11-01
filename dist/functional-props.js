@@ -5,7 +5,7 @@
 import {Assembly,bevelBox,matrix,limb} from './geo.js';
 export const FUNCTIONAL_PROP_REV='world-functional-props-2026-11-v1';
 export const FUNCTIONAL_KINDS=Object.freeze([
- 'forklift','railcar','cot','stretcher','bed','desk','workbench','counter',
+ 'forklift','railcar','cot','stretcher','bed','bench','desk','workbench','counter',
  'cabinet','rack','servers','batteries','generator','ticket-machine','vending',
  'scanner','terminal','security-desk','console','kiosk','booth','pump','winch','chair'
 ]);
@@ -61,6 +61,15 @@ export function createFunctionalProp(T,kind,{w=2,d=1,h=2,low=false,M={}}={}){
        cyl(shadow,[W*.22,y+.3,0],.055,.10,[0,0,Math.PI/2]);
      }
    }
+ }
+ function bench(){
+  const y=Math.min(.55,H*.74);
+  box(steel,[W,.075,D],[0,y,0],[],.014);
+  box(body,[W-.07,.043,D-.07],[0,y+.055,0],[],.013);
+  for(const x of [-W*.44,W*.44])for(const z of [-D*.39,D*.39])
+    box(shadow,[.07,y-.08,.06],[x,(y-.08)*.5,z],[],.005);
+  for(const x of [-W*.44,W*.44])rod(steel,[x,y-.04,-D*.37],[x,y+.45,-D*.37],.025);
+  box(steel,[W-.11,.20,.052],[0,y+.35,-D*.37],[-.15,0,0],.009);
  }
  function bed(){
    const y=Math.min(.55,H*.48);
@@ -262,6 +271,7 @@ export function createFunctionalProp(T,kind,{w=2,d=1,h=2,low=false,M={}}={}){
    }
  }
  if(['cot','bed','stretcher'].includes(kind))bed();
+ else if(kind==='bench')bench();
  else if(kind==='forklift')forklift();
  else if(kind==='railcar')locomotive();
  else if(['desk','workbench','counter'].includes(kind))table();
