@@ -374,7 +374,7 @@ window.addEventListener('keydown', e => {
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
   if (e.code === 'KeyV' && !e.repeat) selectView(view === 'fps' ? 'third' : 'fps');
   if (e.code === 'KeyR' && !e.repeat) game.reload();
-  if (e.code === 'KeyE' && !e.repeat) combatHud?.toggleArsenal();
+  if (e.code === 'KeyE' && !e.repeat && vr?.mode!=='xr') combatHud?.toggleArsenal();
   if (e.code === 'KeyF' && !e.repeat) pickupQueued = true;
   if (e.code === 'KeyC' && !e.repeat) crouchQueued=true;
   if (e.code === 'KeyX' && !e.repeat) meleeQueued=true;
