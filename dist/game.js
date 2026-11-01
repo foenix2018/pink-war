@@ -1,6 +1,6 @@
 import {createTouchOrbit} from './touch-orbit.js';
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, starterWeaponIndex, weaponCycleOrder, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
-import { createScene } from './scene.js?v=3.77-briseur-v3';
+import { createScene } from './scene.js?v=3.86-robot-destruction-audio';
 import {createRobotShutdownAudio} from './enemy-shutdown-audio.js';
 import { VRController } from './vr.js';
 import {createGamepadAid} from './ios-gamepad.js';

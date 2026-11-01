@@ -103,7 +103,7 @@ if(new URLSearchParams(location.search).get('manual')!=='1'){
  window.__PINKWAR_MISSION_LOADING=createMissionLoading({mission:2,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});
  window.__PINKWAR_MISSION_LOADING.set(.04,'Ouverture du secteur');
 }
-import('./level2-test.js?v=3.74.0').catch(error=>{
+import('./level2-test.js?v=3.86-robot-destruction-audio').catch(error=>{
  document.documentElement.classList.remove('pw-auto-story');document.getElementById('pw-mission-loading')?.remove();
  const status=document.getElementById('status'),button=document.getElementById('start');
  if(status)status.textContent='Erreur de chargement : '+(error?.message||String(error))+' — Essaye le mode compatibilité WebGL.';
