@@ -140,7 +140,13 @@ export function createM04Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
       rack:'rack',workbench:'workbench',batteries:'batteries',servers:'servers',
       terminal:'terminal',console:'console'};
     if(shared[o.kind]){
-      const model=createFunctionalProp(T,shared[o.kind],{w,d,h,low,M});
+      // The old JANUS forklift mast faced -Z; local +X detailed model is
+      // rotated with its footprint exchanged so collision sizes stay constant.
+      const isForklift=o.kind==='forklift';
+      const model=createFunctionalProp(T,shared[o.kind],{
+        w:isForklift?d:w,d:isForklift?w:d,h,low,M
+      });
+      if(isForklift)model.rotation.y=Math.PI/2;
       model.position.set(o.x,0,o.z);add(model);return;
     }
     switch (o.kind) {
