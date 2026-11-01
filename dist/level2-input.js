@@ -3,6 +3,7 @@ import {createTouchOrbit} from './touch-orbit.js';
 // Input mappings are imported from the game's production desktop-input module
 // instead of copying arbitrary button values.
 import {DesktopGamepadInput,DESKTOP_BUTTONS,desktopAxis} from './desktop-input.js';
+export const touchAnalogSprint=(x,z)=>Math.hypot(Number(x)||0,Number(z)||0)>=.88;
 export const PINK_WARS_KEYS=Object.freeze({
   forward:['KeyW','KeyZ'],back:'KeyS',left:['KeyA','KeyQ'],right:'KeyD',
   fire:'Space',jump:'KeyJ',interact:'KeyF',next:'KeyE',reload:'KeyR',
@@ -45,13 +46,13 @@ export function createPinkWarsInput(){
 // Keep gamepad/keyboard mappings from DesktopGamepadInput unchanged.
 export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onReload,onCrouch,onView,onPause,onAim}={}){
  const touch=(window.matchMedia?.('(pointer:coarse)')?.matches??(navigator.maxTouchPoints>0));
- if(!touch)return {state:{x:0,z:0,lookX:0,lookY:0,lookDX:0,lookDY:0,fire:false,aim:false},step(){return 0;},reset(){}};
+ if(!touch)return {state:{x:0,z:0,lookX:0,lookY:0,lookDX:0,lookDY:0,fire:false,aim:false,sprint:false},step(){return 0;},reset(){}};
  const root=document.createElement('div');root.id='m02-touch-controls';
  root.innerHTML='<div class="m02-stick" id="m02-move" aria-label="Déplacement"><div class="m02-stick-ring"><span class="m02-stick-knob"></span></div><small>SE DÉPLACER</small></div>'+
    
    '<div class="m02-actions"><button data-m02="aim">VISER</button><button data-m02="fire">TIR</button><button data-m02="jump">↑ SAUT</button><button data-m02="interact">F · ACTION</button><button data-m02="next">ARME</button><button data-m02="reload">↻</button><button data-m02="crouch">ACCROUPI</button><button data-m02="view">VUE</button><button data-m02="pause">Ⅱ</button></div>';
  document.body.append(root);
- const state={x:0,z:0,lookX:0,lookY:0,lookDX:0,lookDY:0,fire:false,aim:false};
+ const state={x:0,z:0,lookX:0,lookY:0,lookDX:0,lookDY:0,fire:false,aim:false,sprint:false};
  const bindStick=(id,ax,az)=>{
   const element=root.querySelector(id),ring=element.querySelector('.m02-stick-ring'),knob=element.querySelector('.m02-stick-knob');
   let pointer=null;
@@ -60,9 +61,10 @@ export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onRelo
    const dx=e.clientX-(box.left+box.width/2),dy=e.clientY-(box.top+box.height/2),norm=Math.min(1,r/(Math.hypot(dx,dy)||1));
    const x=dx*norm/r,y=dy*norm/r;
    state[ax]=Math.abs(x)<.08?0:x;state[az]=Math.abs(y)<.08?0:y;
+   state.sprint=touchAnalogSprint(state.x,state.z);
    knob.style.transform='translate('+dx*norm+'px,'+dy*norm+'px)';
   }
-  const release=e=>{if(pointer!==e.pointerId)return;pointer=null;state[ax]=state[az]=0;knob.style.transform='';};
+  const release=e=>{if(pointer!==e.pointerId)return;pointer=null;state[ax]=state[az]=0;state.sprint=false;knob.style.transform='';};
   element.addEventListener('pointerdown',e=>{if(pointer!==null)return;e.preventDefault();pointer=e.pointerId;try{element.setPointerCapture(e.pointerId);}catch{}set(e);});
   element.addEventListener('pointermove',e=>{if(e.pointerId!==pointer)return;e.preventDefault();set(e);});
   for(const name of ['pointerup','pointercancel','lostpointercapture'])element.addEventListener(name,release);
@@ -99,5 +101,5 @@ export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onRelo
    else if(name==='aim'){state.aim=false;onAim?.(false);}
   });
  }
- return {state,root,step(dt){return orbit.step(dt);},reset(){state.x=state.z=state.lookX=state.lookY=state.lookDX=state.lookDY=0;state.aim=state.fire=false;orbit.reset();lookPointer=null;onFire?.(false);onAim?.(false);}};
+ return {state,root,step(dt){return orbit.step(dt);},reset(){state.x=state.z=state.lookX=state.lookY=state.lookDX=state.lookDY=0;state.aim=state.fire=state.sprint=false;orbit.reset();lookPointer=null;onFire?.(false);onAim?.(false);}};
 }
