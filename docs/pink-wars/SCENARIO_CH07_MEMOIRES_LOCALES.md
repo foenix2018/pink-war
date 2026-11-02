@@ -114,3 +114,33 @@ monte, aqueduc, grotte sous la cascade), pas en ligne droite. Techniques prévue
 - **Lumière :** calculée à l’avance.
 - **Chargement :** décor préparé en fichier binaire comme au chapitre 03.
 - **Quest 3 et iPhone :** environ la moitié de la densité de végétation.
+
+## Prototype jouable (2 novembre 2026)
+
+Page autonome `foret.html` (non reliée au menu) : vallon de 200 × 200 m généré dans le code (aucun modèle
+téléchargé), déplacement libre au clavier, à la souris ou au doigt, sans combat ni dialogues.
+- **Végétation :** 2 600 arbres (conifères et feuillus), 6 000 fougères et 12 000 touffes d’herbe. Chaque espèce
+  est dessinée en série en trois niveaux de détail : modèle complet à moins de 28 m, simplifié jusqu’à 62 m, image
+  plate au-delà. Le tri est refait 10 fois par seconde et tout ce qui sort du champ de vision est écarté.
+- **Lieux :** rivière et gué à pierres, moulin et aqueduc en ruine (pierre texturée, mousse), falaise de 18 m,
+  cascade animée avec brume, bassin, entrée de grotte dans une fente de la falaise, tunnel praticable jusqu’au
+  relais indépendant qui brille en bleu. Dans la grotte, la lumière du ciel s’éteint.
+- **Son :** le bruit de la cascade augmente quand on s’en approche.
+- **Qualité :** `?quality=low|balanced|high` ; les ombres ne sont calculées qu’en qualité haute. `?bench=40` lance
+  un parcours automatique le long du sentier (lisière → gué → ruines → cascade → grotte) et mesure chaque image.
+
+### Mesures (navigateur de test sans carte graphique, 960 × 540)
+
+| Qualité | Appels de dessin (max) | Triangles (moyenne / max) | Processeur par image |
+|---|---|---|---|
+| Basse | 100 | 61 k / 79 k | ≈ 9 ms |
+| Moyenne | 100 | 134 k / 162 k | 1,1 ms (végétation) + 8,0 ms (dessin) |
+| Haute | 128 | 176 k / 226 k | ≈ 9–10 ms |
+
+Le navigateur de test dessine sans carte graphique, donc ses images par seconde ne veulent rien dire ici. Ce qui
+compte, c’est ce que le jeu demande : une centaine d’appels de dessin, 60 000 à 230 000 triangles et moins de 10 ms
+de travail du processeur. C’est dans le budget d’un ordinateur et à la portée d’un Quest 3 ou d’un iPhone récent
+en qualité basse. Il faut encore le confirmer sur ces appareils.
+
+Pistes d’optimisation pour le vrai niveau : fusionner les blocs des ruines (≈ 60 appels de dessin à eux seuls) en
+un seul objet, préparer le décor à l’avance en fichier binaire comme au chapitre 03.
