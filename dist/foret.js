@@ -9,9 +9,10 @@ import * as T from './vendor/three.webgpu.min.js';
 import {WebGLRenderer} from './vendor/three.module.min.js';
 import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './renderer-policy.js';
 import {linesFor,lineSeconds,logFor,ENDING} from './m07-story.js';
-import {createM07Hud} from './m07-hud.js';
+import {createM07Hud} from './m07-hud.js?v=2';
 
 const params = new URLSearchParams(globalThis.location?.search ?? '');
+if(params.has('debug'))document.body.classList.add('m07-debug');
 const $ = id => document.getElementById(id);
 const TAU = Math.PI * 2, clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, t) => a + (b - a) * t;
 const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
