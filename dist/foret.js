@@ -189,16 +189,34 @@ function withUV(parts) {
   // Plants and impostors are lit from above whatever side is seen: no dark back faces.
   const out = new T.BufferGeometry(); out.setAttribute('position', new T.BufferAttribute(pos, 3)); out.setAttribute('normal', new T.BufferAttribute(nor, 3)); out.setAttribute('uv', new T.BufferAttribute(uv, 2)); out.computeBoundingSphere(); return out;
 }
-const rock = (seed, detail = 2) => {
-  const g = paint(lumpy(new T.IcosahedronGeometry(1, detail), .5, seed).scale(1, .62, 1), 0x77756c, .3, seed), p = g.attributes.position, c = g.attributes.color, mossy = new T.Color(0x4f6b2e);
-  for (let i = 0; i < p.count; i++) { const k = smooth(.15, .55, p.getY(i)) * .8; c.setXYZ(i, lerp(c.getX(i), mossy.r, k), lerp(c.getY(i), mossy.g, k), lerp(c.getZ(i), mossy.b, k)); }
-  return g;
+// Rocks: a welded (indexed) sphere so the normals are smooth, displaced by coherent noise, flattened, with a flat
+// sitting face, darker cracks and moss on top. The near and far versions share the same shape (no pop).
+function weld(geometry) {
+  const p = geometry.attributes.position, map = new Map(), index = [], pos = [];
+  for (let i = 0; i < p.count; i++) {
+    const key = `${p.getX(i).toFixed(4)},${p.getY(i).toFixed(4)},${p.getZ(i).toFixed(4)}`; let j = map.get(key);
+    if (j === undefined) { j = pos.length / 3; map.set(key, j); pos.push(p.getX(i), p.getY(i), p.getZ(i)); } index.push(j);
+  }
+  const out = new T.BufferGeometry(); out.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); out.setIndex(index); return out;
+}
+const rock = (seed, detail = 3) => {
+  const g = weld(new T.IcosahedronGeometry(1, detail)), p = g.attributes.position, v = new T.Vector3(), c = new Float32Array(p.count * 3);
+  const stone = new T.Color(0x86837a), crack = new T.Color(0x3f3d39), moss = new T.Color(0x55712f), lichen = new T.Color(0x9a9878), k = new T.Color();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    const n = fbm(v.x * 1.1 + seed, v.y * 1.1 + v.z * .9 + seed * .3), fine = noise(v.x * 5 + seed, v.z * 5 + v.y * 5);
+    v.multiplyScalar(1 + (n - .5) * .6 + (fine - .5) * .1); v.y *= .6; if (v.y < -.22) v.y = -.22 + (v.y + .22) * .12;
+    p.setXYZ(i, v.x, v.y, v.z);
+    k.copy(stone).lerp(lichen, smooth(.55, .75, fine) * .35).lerp(crack, clamp((.42 - n) * 2.2, 0, .75)).lerp(moss, smooth(.08, .42, v.y) * (.55 + n * .4));
+    c[i * 3] = k.r; c[i * 3 + 1] = k.g; c[i * 3 + 2] = k.b;
+  }
+  g.setAttribute('color', new T.BufferAttribute(c, 3)); g.computeVertexNormals(); g.computeBoundingSphere(); return g;
 };
 
 // ---------------------------------------------------------------- Instanced vegetation with LOD ------------------
 // Each kind keeps its instances (position, rotation, scale, tint) and three meshes (near, mid, far). update() files
 // every visible instance into one of them; invisible ones are skipped entirely.
-function vegetation(scene, kind, instances, meshes, { near, mid, far, radius = 4 }) {
+function vegetation(scene, kind, instances, meshes, { near, mid, far, radius = 4, fade = false }) {
   const m4 = new T.Matrix4(), q = new T.Quaternion(), s = new T.Vector3(), p = new T.Vector3(), up = new T.Vector3(0, 1, 0), col = new T.Color(), sphere = new T.Sphere();
   for (const m of meshes) if (m) { m.frustumCulled = false; m.count = 0; scene.add(m); }
   return {
@@ -213,7 +231,9 @@ function vegetation(scene, kind, instances, meshes, { near, mid, far, radius = 4
         const level = d < nearD ? 0 : d < midD ? 1 : 2, mesh = meshes[level]; if (!mesh) continue;
         const i = counts[level]++; if (i >= mesh.instanceMatrix.count) continue;
         q.setFromAxisAngle(up, level === 2 ? Math.atan2(cx - it.x, cz - it.z) : it.r);
-        m4.compose(p.set(it.x, it.y, it.z), q, s.set(it.s, it.s, it.s)); mesh.setMatrixAt(i, m4);
+        // Small plants grow in over the last quarter of their radius instead of popping in.
+        const grow = fade ? clamp((farD - d) / (farD * .25), 0, 1) : 1, sc = it.s * grow;
+        m4.compose(p.set(it.x, it.y, it.z), q, s.set(sc * (it.sx || 1), sc, sc * (it.sz || 1))); mesh.setMatrixAt(i, m4);
         if (mesh.instanceColor) mesh.setColorAt(i, col.setScalar(it.tint));
       }
       let visible = 0;
@@ -253,13 +273,17 @@ export function scatter(seed = 42) {
     if (z < CLIFF_Z) continue;
     grass.push({ x, z, y: terrainHeight(x, z) - .03, r: r() * TAU, s: .6 + r() * .6, tint: .8 + r() * .35 });
   }
-  for (let i = 0; i < 520; i++) {
-    const z = (r() - .5) * 2 * HALF, near = r() < .55, x = near ? riverX(z) + (r() - .5) * 15 : (r() - .5) * 2 * HALF;
-    if (pathDistance(x, z) < 2.5) continue;
-    rocks.push({ x, z, y: terrainHeight(x, z) - .15, r: r() * TAU, s: .4 + r() * 1.5, tint: .75 + r() * .35 });
+  for (let i = 0; i < 900 && rocks.length < 460; i++) {
+    const z = (r() - .5) * 2 * HALF, near = r() < .55, x = near ? riverX(z) + (r() - .5) * 15 : (r() - .5) * 2 * HALF, s = .4 + r() * 1.4;
+    if (pathDistance(x, z) < 2.5 + s) continue;
+    if (z > CLIFF_Z - 9 && z < CLIFF_Z + 2) continue;                                   // nothing hangs on the cliff face
+    const around = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([a, b]) => terrainHeight(x + a * s, z + b * s));
+    if (Math.max(...around) - Math.min(...around) > .9 * s + .4) continue;            // too steep to sit on
+    // Sunk by a third of its height on the lowest side: it rests in the ground, it never floats.
+    rocks.push({ x, z, y: Math.min(...around, terrainHeight(x, z)) - .18 * s, r: r() * TAU, s, sx: .8 + r() * .6, sz: .8 + r() * .6, tint: .8 + r() * .3 });
   }
   // The ford: stepping stones across the river.
-  for (let k = 0; k <= 7; k++) { const t = k / 7, z = lerp(57, 53, t), x = lerp(riverX(55) - 6, riverX(55) + 6, t); rocks.push({ x, z, y: waterY(z) - .35, r: k, s: .9, tint: .9, step: true }); }
+  for (let k = 0; k <= 7; k++) { const t = k / 7, z = lerp(57, 53, t), x = lerp(riverX(55) - 6, riverX(55) + 6, t); rocks.push({ x, z, y: waterY(z) - .3, r: k * 1.7, s: .85, sx: 1.2, sz: 1, tint: .95, step: true }); }
   return { trees, ferns, grass, rocks };
 }
 
@@ -397,12 +421,12 @@ function sky(scene) {
 }
 function sunbeams(scene) {
   // Low, slanted light shafts through the canopy: additive tapered quads, very cheap.
-  const tex = canvasTexture(32, 128, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,170,90,0)'); gr.addColorStop(.25, 'rgba(255,170,90,.32)'); gr.addColorStop(1, 'rgba(255,170,90,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }, { alpha: true });
+  const tex = canvasTexture(32, 128, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,170,90,0)'); gr.addColorStop(.3, 'rgba(255,170,90,.3)'); gr.addColorStop(.7, 'rgba(255,170,90,.12)'); gr.addColorStop(1, 'rgba(255,170,90,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }, { alpha: true });
   const mat = new T.MeshBasicMaterial({ map: tex, transparent: true, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, fog: false, opacity: .38 });
   const tilt = Math.atan2(Math.hypot(SUN_DIR.x, SUN_DIR.z), SUN_DIR.y), heading = Math.atan2(SUN_DIR.x, SUN_DIR.z);
   for (const [x, z] of [[18, 70], [-22, 30], [30, 24], [-6, -20], [riverX(-48) + 8, -48], [-30, 60], [40, -10]]) {
     const geo = new T.PlaneGeometry(3, 34).translate(0, 17, 0).rotateX(tilt * .8);
-    const m = new T.Mesh(geo, mat); m.position.set(x, terrainHeight(x, z), z); m.rotation.y = heading; scene.add(m);
+    const m = new T.Mesh(geo, mat); m.position.set(x, terrainHeight(x, z) + 3.5, z); m.rotation.y = heading; scene.add(m);
   }
 }
 // Merge static meshes that share a material into one draw call each.
@@ -445,7 +469,8 @@ function remnants(scene, colliders) {
   { const x = -38, z = 18, y = ground(x, z) + .6;
     for (let k = 0; k < 4; k++) { const len = 26; box(.25, .25, len, 0x5d5a55, x + (k % 2 ? 1.8 : -1.8), y + (k > 1 ? 1.8 : 0), z, .9, 0, 0); }
     for (let k = 0; k < 10; k++) box(3.8, .14, .14, 0x5d5a55, x + Math.sin(.9) * (k * 2.6 - 12), y + .9, z + Math.cos(.9) * (k * 2.6 - 12), .9 + Math.PI / 2, .7 * (k % 2 ? 1 : -1));
-    box(9, .6, .6, 0x4f4c48, x + Math.sin(.9) * 14, y + 3, z + Math.cos(.9) * 14, .9, .35); }
+    box(9, .6, .6, 0x4f4c48, x + Math.sin(.9) * 14, y + 3, z + Math.cos(.9) * 14, .9, .35);
+    colliders.push({ x, z, hx: 2.4, hz: 13.5, ry: .9 }); }
   // The research antenna sign, half eaten by moss.
   { const x = 9, z = 70, y = ground(x, z); box(.14, 2.2, .14, 0x4a4036, x - .8, y + 1.1, z); box(.14, 2.2, .14, 0x4a4036, x + .8, y + 1.1, z);
     const plate = new T.Mesh(new T.PlaneGeometry(2.2, 1.1), new T.MeshStandardMaterial({ roughness: .9, map: canvasTexture(256, 128, (g, w, h) => { g.fillStyle = '#d9d4c3'; g.fillRect(0, 0, w, h); g.fillStyle = '#3d5a6b'; g.font = 'bold 22px system-ui'; g.fillText('ANTENNE DE RECHERCHE', 12, 40); g.fillText('DES TILLEULS', 12, 68); g.font = '16px system-ui'; g.fillText('Équipe VEILLE · 2,4 km ↑', 12, 100); g.fillStyle = 'rgba(70,95,40,.75)'; for (let i = 0; i < 40; i++) { g.beginPath(); g.arc(Math.random() * 90, h - Math.random() * 50, 4 + Math.random() * 9, 0, TAU); g.fill(); } }) }));
@@ -526,8 +551,11 @@ function blockedBy(x, z, colliders, trunks) {
     const dx = x - c.x, dz = z - c.z, cos = Math.cos(-c.ry), sin = Math.sin(-c.ry), lx = dx * cos - dz * sin, lz = dx * sin + dz * cos;
     if (Math.abs(lx) < c.hx && Math.abs(lz) < c.hz) return true;
   }
-  const cell = trunks.get(`${Math.floor(x / 6)},${Math.floor(z / 6)}`);
-  if (cell) for (const t of cell) if (Math.hypot(x - t.x, z - t.z) < .55 * t.s + .35) return true;
+  const cx = Math.floor(x / 6), cz = Math.floor(z / 6);
+  for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) {
+    const cell = trunks.get(`${cx + a},${cz + b}`);
+    if (cell) for (const t of cell) if (Math.hypot(x - t.x, z - t.z) < t.radius + .35) return true;
+  }
   return false;
 }
 
@@ -588,6 +616,7 @@ export async function boot() {
   const shadows = quality === 'high'; renderer.shadowMap.enabled = shadows; renderer.shadowMap.type = T.PCFSoftShadowMap;
   const FOG = quality === 'low' ? .016 : .012; const scene = new T.Scene(); scene.fog = new T.FogExp2(0xb27a63, FOG);
   const camera = new T.PerspectiveCamera(70, innerWidth / innerHeight, .1, 650);
+  const cull = new T.PerspectiveCamera(100, innerWidth / innerHeight * 1.25, .1, 650), lastView = { yaw: 0, pitch: 0, x: 0, z: 0 };
   const skyDome = sky(scene);
   const hemi = new T.HemisphereLight(0xb79ac4, 0x4a3a2a, 1.7); scene.add(hemi);
   const sun = new T.DirectionalLight(0xffa765, 3.1); sun.position.copy(SUN_DIR).multiplyScalar(120); scene.add(sun, sun.target);
@@ -606,13 +635,15 @@ export async function boot() {
   const con = world.trees.filter(t => t.conifer), brd = world.trees.filter(t => !t.conifer);
   const impostor = (w, h) => withUV([new T.PlaneGeometry(w, h).translate(0, h / 2, 0), new T.PlaneGeometry(w, h).translate(0, h / 2, 0).rotateY(Math.PI)]);
   const kinds = [
-    vegetation(scene, 'conifères', con, [instanced(conifer(0), leaf, con.length, { shadow: shadows }), instanced(conifer(1), leaf, con.length, { shadow: shadows }), instanced(impostor(6, 10.5), imp('imp-conifer'), con.length)], { near: 28, mid: 62, far: 260, radius: 4 }),
-    vegetation(scene, 'feuillus', brd, [instanced(broadleaf(0), leaf, brd.length, { shadow: shadows }), instanced(broadleaf(1), leaf, brd.length, { shadow: shadows }), instanced(impostor(7.5, 8.5), imp('imp-broadleaf'), brd.length)], { near: 28, mid: 62, far: 260, radius: 4 }),
-    vegetation(scene, 'fougères', world.ferns, [instanced(withUV([0, 1, 2, 3, 4, 5].map(i => new T.PlaneGeometry(1.4, 1.1).translate(0, .55, 0).rotateY(i * Math.PI / 3 + (i > 2 ? Math.PI : 0)))), plant('fern'), 3500), null, null], { near: 32, mid: 32, far: 32, radius: .7 }),
-    vegetation(scene, 'herbes', world.grass, [instanced(withUV([0, 1, 2, 3].map(i => new T.PlaneGeometry(1.2, .7).translate(0, .35, 0).rotateY(i * Math.PI / 2))), plant('grass'), 6000), null, null], { near: 22, mid: 22, far: 22, radius: .4 }),
-    vegetation(scene, 'rochers', world.rocks, [instanced(rock(3, 2), new T.MeshStandardMaterial({ vertexColors: true, roughness: .95 }), world.rocks.length), instanced(rock(5, 1), new T.MeshStandardMaterial({ vertexColors: true, roughness: .95 }), world.rocks.length), null], { near: 45, mid: 140, far: 140, radius: 1 })
+    vegetation(scene, 'conifères', con, [instanced(conifer(0), leaf, con.length, { shadow: shadows }), instanced(conifer(1), leaf, con.length, { shadow: shadows }), instanced(impostor(6, 10.5), imp('imp-conifer'), con.length)], { near: 32, mid: 75, far: 260, radius: 4 }),
+    vegetation(scene, 'feuillus', brd, [instanced(broadleaf(0), leaf, brd.length, { shadow: shadows }), instanced(broadleaf(1), leaf, brd.length, { shadow: shadows }), instanced(impostor(7.5, 8.5), imp('imp-broadleaf'), brd.length)], { near: 32, mid: 75, far: 260, radius: 4 }),
+    vegetation(scene, 'fougères', world.ferns, [instanced(withUV([0, 1, 2, 3, 4, 5].map(i => new T.PlaneGeometry(1.4, 1.1).translate(0, .55, 0).rotateY(i * Math.PI / 3 + (i > 2 ? Math.PI : 0)))), plant('fern'), 3500), null, null], { near: 34, mid: 34, far: 34, radius: .7, fade: true }),
+    vegetation(scene, 'herbes', world.grass, [instanced(withUV([0, 1, 2, 3].map(i => new T.PlaneGeometry(1.2, .7).translate(0, .35, 0).rotateY(i * Math.PI / 2))), plant('grass'), 6000), null, null], { near: 24, mid: 24, far: 24, radius: .4, fade: true }),
+    vegetation(scene, 'rochers', world.rocks, [instanced(rock(3, 3), new T.MeshStandardMaterial({ vertexColors: true, roughness: .95 }), world.rocks.length), instanced(rock(3, 1), new T.MeshStandardMaterial({ vertexColors: true, roughness: .95 }), world.rocks.length), null], { near: 50, mid: 160, far: 160, radius: 1.2 })
   ];
-  const trunks = new Map(); for (const t of world.trees) { const k = `${Math.floor(t.x / 6)},${Math.floor(t.z / 6)}`; (trunks.get(k) || trunks.set(k, []).get(k)).push(t); }
+  // Trunks and rocks block the player (the stepping stones of the ford stay walkable).
+  const trunks = new Map();
+  for (const t of [...world.trees.map(t => ({ x: t.x, z: t.z, radius: .4 * t.s + .15 })), ...world.rocks.filter(r => !r.step && r.s > .55).map(r => ({ x: r.x, z: r.z, radius: .82 * r.s * Math.max(r.sx, r.sz) }))]) { const k = `${Math.floor(t.x / 6)},${Math.floor(t.z / 6)}`; (trunks.get(k) || trunks.set(k, []).get(k)).push(t); }
 
   // Player.
   const ctl = controls(canvas), player = { x: 6, z: 96, y: 0 }; ctl.look.yaw = 0;
@@ -659,7 +690,12 @@ export async function boot() {
     player.y = lerp(player.y || gy, Math.max(gy, wy), Math.min(1, dt * 12));
     camera.position.set(player.x, player.y + 1.65, player.z); camera.rotation.set(ctl.look.pitch, ctl.look.yaw, 0, 'YXZ');
     skyDome.position.copy(camera.position);
-    camera.updateMatrixWorld(); pv.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); frustum.setFromProjectionMatrix(pv);
+    camera.updateMatrixWorld();
+    // Culling uses a wider view than the screen, and is redone as soon as the view turns or moves: nothing pops at the edges.
+    cull.position.copy(camera.position); cull.quaternion.copy(camera.quaternion); cull.updateMatrixWorld();
+    pv.multiplyMatrices(cull.projectionMatrix, cull.matrixWorldInverse); frustum.setFromProjectionMatrix(pv);
+    const turned = Math.abs(ctl.look.yaw - lastView.yaw) > .07 || Math.abs(ctl.look.pitch - lastView.pitch) > .07 || Math.hypot(player.x - lastView.x, player.z - lastView.z) > 1.2;
+    if (turned) { refresh = 0; Object.assign(lastView, { yaw: ctl.look.yaw, pitch: ctl.look.pitch, x: player.x, z: player.z }); }
     const t0 = performance.now(); if ((refresh -= dt) <= 0) { refresh = .1; for (const k of kinds) k.update(camera, frustum, Q); } const t1 = performance.now();
     river.tex.offset.y = (river.tex.offset.y - dt * .35) % 1; fall.update(time);
     grotte.glow.intensity = 5 + Math.sin(time * 3) * 1.2; drones.update(time); dust.update(time, camera.position);
@@ -675,7 +711,7 @@ export async function boot() {
     fpsAcc += dt; fpsN++; if (fpsAcc > .5) { fps = fpsN / fpsAcc; fpsAcc = fpsN = 0; const s = stats(); hud.textContent = `${s.backend} · qualité ${quality} · ${s.fps} i/s · ${s.calls} appels · ${(s.triangles / 1000).toFixed(0)} k triangles · arbres ${s.instances['conifères'] + s.instances['feuillus']}/${world.trees.length}`; zone.textContent = s.zone; }
     requestAnimationFrame(frame);
   }
-  addEventListener('resize', () => { renderer.setPixelRatio(renderPixelRatio(profile, devicePixelRatio, innerWidth, innerHeight)); renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
+  addEventListener('resize', () => { renderer.setPixelRatio(renderPixelRatio(profile, devicePixelRatio, innerWidth, innerHeight)); renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); cull.aspect = camera.aspect * 1.25; cull.updateProjectionMatrix(); });
   window.__FORET = { scene, stats, story, get bench() { return bench?.result || null; }, teleport(x, z, yaw = 0) { player.x = x; player.z = z; player.y = groundHeight(x, z); ctl.look.yaw = yaw; refresh = 0; }, look(yaw, pitch = 0) { ctl.look.yaw = yaw; ctl.look.pitch = pitch; refresh = 0; } };
   requestAnimationFrame(frame);
   return window.__FORET;
