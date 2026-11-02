@@ -35,3 +35,5 @@ body.m07-hud-enabled:not(.m07-debug) #hud,body.m07-hud-enabled:not(.m07-debug) #
 body.m07-hud-enabled #prompt{z-index:7}
 @media(pointer:coarse){.m07-joystick,.m07-run-label{display:block}.m07-help{display:none}.m07-stat{height:55px;min-width:106px;padding:8px 9px}.m07-stat strong{font-size:14px}.m07-objective{top:calc(var(--t) + 64px);max-width:50vw}.m07-objective-detail{top:calc(var(--t) + 110px)}.m07-pause{top:calc(var(--t) + 118px)}.m07-companion{top:33%}.m07-companion-detail{top:33%}.m07-action{bottom:calc(var(--b) + 17px);width:78px;height:60px}}
 @media(pointer:coarse) and (max-height:520px){.m07-stat{top:var(--t)}.m07-objective{top:calc(var(--t) + 62px)}.m07-companion{top:44%;width:54px}.m07-companion canvas{width:43px;height:43px}.m07-joystick{width:92px;height:92px}.m07-action{height:50px}}
+
+body.m07-hud-enabled #doc{z-index:11}body.m07-hud-enabled #fin{z-index:9}body.m07-hud-enabled #sub{z-index:8}
