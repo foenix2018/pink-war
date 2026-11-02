@@ -1,0 +1,37 @@
+/* Chapter 07 – exploration adaptation of the classic Pink Wars HUD.
+   The level is currently non-combat; do not simulate health, weapons or grenades. */
+.m07-hud{--accent:#ef91b4;--l:max(15px,env(safe-area-inset-left));--r:max(15px,env(safe-area-inset-right));--t:max(15px,env(safe-area-inset-top));--b:max(15px,env(safe-area-inset-bottom));position:fixed;inset:0;z-index:6;color:#eef7ff;font:600 12px/1.2 system-ui,-apple-system,sans-serif;pointer-events:none}
+.m07-hud[data-hero="lylu"]{--accent:#80baff}
+body:not(.m07-playing) .m07-hud{display:none}
+.m07-hud *{box-sizing:border-box}
+.m07-hud button{font:inherit;color:inherit;cursor:pointer;pointer-events:auto;touch-action:manipulation}
+.m07-glass{background:linear-gradient(130deg,#d3eaff22,#243f5444),#112432bd;border:1px solid #d6e7f75f;box-shadow:inset 0 1px #ffffff38,0 8px 20px #0004;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.m07-stat{position:absolute;top:var(--t);height:60px;border-radius:17px;padding:10px 13px;display:grid;align-content:center;gap:5px;min-width:128px}
+.m07-stat small{font-size:9px;letter-spacing:.12em;color:#b7cee3}
+.m07-stat strong{font-size:17px;letter-spacing:.025em;color:#eaf6ff}
+.m07-stat em{font-style:normal;color:#a2b4c7;font-size:10px}
+.m07-stat-left{left:var(--l)}.m07-stat-right{right:var(--r);min-width:128px}
+.m07-stat-left strong{color:var(--accent)}
+.m07-objective{position:absolute;top:calc(var(--t) + 7px);left:50%;transform:translateX(-50%);border-radius:15px;padding:11px 14px;max-width:min(40vw,310px);font-size:10px;letter-spacing:.06em;text-align:center}
+.m07-objective-detail{position:absolute;top:calc(var(--t) + 69px);left:50%;transform:translateX(-50%);width:min(340px,calc(100vw - 30px));border-radius:16px;padding:13px 15px;line-height:1.5;font-size:12px}
+.m07-objective-detail[hidden],.m07-companion-detail[hidden],.m07-pause-screen[hidden]{display:none}
+.m07-companion{position:absolute;left:var(--l);top:36%;padding:5px;border-radius:22px;width:63px;display:grid;gap:4px;justify-items:center;border-color:var(--accent)}
+.m07-companion canvas{display:block;width:51px;height:51px;border-radius:50%;background:#16263b}.m07-companion span{font-size:9px;color:var(--accent);letter-spacing:.05em}
+.m07-companion-detail{position:absolute;left:calc(var(--l) + 73px);top:35%;width:min(280px,calc(100vw - 112px));padding:14px;border-radius:17px;line-height:1.45}
+.m07-companion-detail strong{color:var(--accent)}.m07-companion-detail p{margin:8px 0 0;color:#d1e0e9;font-weight:500}
+.m07-action{position:absolute;right:var(--r);bottom:calc(var(--b) + 76px);min-width:80px;min-height:48px;padding:8px 12px;border-radius:17px;border-color:var(--accent);background:#203a50e0}
+.m07-action:disabled{opacity:.42;cursor:default}
+.m07-action[hidden]{display:none}
+.m07-pause{position:absolute;right:var(--r);top:calc(var(--t) + 75px);width:42px;height:42px;border-radius:50%;font-size:18px!important}
+.m07-joystick{display:none;position:absolute;left:var(--l);bottom:calc(var(--b) + 5px);width:118px;height:118px;border-radius:50%;border:1px solid #ffffff6c;background:#17324c88;pointer-events:auto;touch-action:none}
+.m07-knob{position:absolute;top:50%;left:50%;width:48px;height:48px;margin:-24px;border-radius:50%;background:#bddeff66;border:1px solid #dcefffac;pointer-events:none}
+.m07-run-label{display:none;position:absolute;left:calc(var(--l) + 125px);bottom:calc(var(--b) + 30px);font-size:10px;color:#e4ebf4}
+.m07-help{position:absolute;left:50%;bottom:var(--b);transform:translateX(-50%);color:#d9e4efaf;font-size:10px;white-space:nowrap}
+.m07-pause-screen{position:fixed;inset:0;z-index:8;background:#050e1cdb;pointer-events:auto;display:grid;place-items:center;padding:16px;backdrop-filter:blur(12px)}
+.m07-pause-panel{width:min(370px,92vw);padding:26px;border-radius:22px;text-align:center;display:grid;gap:14px}
+.m07-pause-panel h2{font-size:22px;margin:0}.m07-pause-panel p{margin:0;color:#aabfd0;font-size:12px;font-weight:400}
+.m07-pause-panel button,.m07-pause-panel a{display:block;padding:12px 18px;border-radius:12px;border:1px solid #d4e1ff77;background:#24415c;color:#fff;text-decoration:none}
+body.m07-hud-enabled:not(.m07-debug) #hud,body.m07-hud-enabled:not(.m07-debug) #zone,body.m07-hud-enabled #help{display:none!important}
+body.m07-hud-enabled #prompt{z-index:7}
+@media(pointer:coarse){.m07-joystick,.m07-run-label{display:block}.m07-help{display:none}.m07-stat{height:55px;min-width:106px;padding:8px 9px}.m07-stat strong{font-size:14px}.m07-objective{top:calc(var(--t) + 64px);max-width:50vw}.m07-objective-detail{top:calc(var(--t) + 110px)}.m07-pause{top:calc(var(--t) + 118px)}.m07-companion{top:33%}.m07-companion-detail{top:33%}.m07-action{bottom:calc(var(--b) + 17px);width:78px;height:60px}}
+@media(pointer:coarse) and (max-height:520px){.m07-stat{top:var(--t)}.m07-objective{top:calc(var(--t) + 62px)}.m07-companion{top:44%;width:54px}.m07-companion canvas{width:43px;height:43px}.m07-joystick{width:92px;height:92px}.m07-action{height:50px}}
