@@ -28,7 +28,7 @@ export function createM07Hud({characterId='ghju',onMove=()=>{},onRun=()=>{},onIn
   const setPaused=value=>{paused=!!value;pause.hidden=!paused;if(paused){onMove(0,0);onRun(false);document.exitPointerLock?.();}else resetStick();};
   q('.m07-pause').onclick=()=>setPaused(true);
   q('[data-resume]').onclick=()=>setPaused(false);
-  window.addEventListener('keydown',e=>{if(e.code!=='Escape'||!document.getElementById('doc')?.hidden)return;e.preventDefault();e.stopImmediatePropagation();setPaused(!paused);},true);
+  window.addEventListener('keydown',e=>{if(e.code!=='Escape'||!document.body.classList.contains('m07-playing')||!document.getElementById('doc')?.hidden)return;e.preventDefault();e.stopImmediatePropagation();setPaused(!paused);},true);
   action.onclick=()=>{if(!paused&&!action.hidden)onInteract();};
   function resetStick(){ptr=null;onMove(0,0);onRun(false);knob.style.transform='translate(0px,0px)';}
   function steer(e){
