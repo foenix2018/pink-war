@@ -1,0 +1,28 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pink Wars — Prototype · forêt des Sources</title><meta name="description" content="Prototype de performance du chapitre 07 de Pink Wars : forêt, rivière et gué, moulin et aqueduc en ruine, cascade et grotte.">
+<link rel="icon" href="icon.svg"><meta name="theme-color" content="#1c2a1d">
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#1c2a1d;color:#e6efe2;font:14px/1.45 system-ui,sans-serif}
+canvas#game{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#hud{position:fixed;left:12px;top:10px;padding:6px 10px;border-radius:8px;background:#0b140dcc;font:12px ui-monospace,monospace;max-width:calc(100% - 24px)}
+#zone{position:fixed;left:50%;top:14px;transform:translateX(-50%);padding:6px 14px;border-radius:999px;background:#0b140dcc;letter-spacing:.12em;text-transform:uppercase;font-size:12px}
+#help{position:fixed;left:12px;bottom:12px;padding:8px 12px;border-radius:8px;background:#0b140dcc;font-size:12px;color:#b7c8b2}
+#start{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(#22351fdd,#0b140df2)}
+#start .card{max-width:520px;margin:16px;padding:24px;border:1px solid #6c8a5e;border-radius:16px;background:#101b11e6}
+#start h1{margin:0 0 6px;font-size:28px}#start p{color:#b9cab3}
+#start button{margin-top:10px;padding:12px 18px;border:1px solid #9fd07f;border-radius:10px;background:#2d4a26;color:#fff;font:inherit;font-weight:700;cursor:pointer}
+#start small a{color:#9fd07f}
+</style><script defer src="./pw-identity.js?v=2"></script></head><body>
+<canvas id="game"></canvas><div id="hud">Chargement…</div><div id="zone"></div>
+<div id="help">ZQSD / WASD · souris (clic) · Maj : courir — tactile : gauche se déplacer, droite regarder</div>
+<div id="start"><div class="card"><small>PINK WARS · CHAPITRE 07 · PROTOTYPE</small><h1>La forêt des Sources</h1>
+<p>Banc d’essai du décor de « Mémoires locales » : sous-bois, rivière et gué, moulin et aqueduc en ruine, cascade, grotte. Pas encore de combat ni de dialogues.</p>
+<p>Qualité : <a href="?quality=low">basse</a> · <a href="?quality=balanced">moyenne</a> · <a href="?quality=high">haute</a> · <a href="?bench=40">mesure automatique</a></p>
+<button id="go" disabled>PRÉPARATION…</button></div></div>
+<script type="module">
+import {boot} from './foret.js?v=1';
+const go=document.getElementById('go');
+boot().then(()=>{go.disabled=false;go.textContent='ENTRER DANS LA FORÊT →';if(new URLSearchParams(location.search).get('bench'))document.getElementById('start').remove();})
+ .catch(e=>{go.textContent='Erreur : '+(e?.message||e);console.error(e);});
+go.onclick=()=>document.getElementById('start').remove();
+</script></body></html>
