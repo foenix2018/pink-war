@@ -1,5 +1,5 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Pink Wars — Prototype · forêt des Sources</title><meta name="description" content="Prototype de performance du chapitre 07 de Pink Wars : forêt, rivière et gué, moulin et aqueduc en ruine, cascade et grotte.">
+<title>Pink Wars — 07 Mémoires Locales</title><meta name="description" content="Prototype de performance du chapitre 07 de Pink Wars : forêt, rivière et gué, moulin et aqueduc en ruine, cascade et grotte.">
 <link rel="icon" href="icon.svg"><meta name="theme-color" content="#2a1712">
 <style>
 html,body{margin:0;height:100%;overflow:hidden;background:#1a1012;color:#efe6dc;font:14px/1.45 system-ui,sans-serif}
@@ -24,14 +24,14 @@ canvas#game{position:fixed;inset:0;width:100%;height:100%;display:block;touch-ac
 <canvas id="game"></canvas><div id="hud">Chargement…</div><div id="zone"></div>
 <div id="sub" hidden><b></b><span></span></div><button id="prompt" hidden></button>
 <div id="doc" hidden><div class="card"><small></small><h2></h2><div class="lines"></div><p class="foot"></p><button>FERMER</button></div></div>
-<div id="fin" hidden><small>FIN DU PROTOTYPE · CHAPITRE 07</small><p></p><small>Dans le niveau complet : le Centre de la Cascade, le dossier TRANSCENDANCE, la N-08 et la fuite par l’aqueduc.</small><br><br><a href="index.html">← RETOUR AU JEU</a></div>
+<div id="fin" hidden><small>FIN DU PROTOTYPE · CHAPITRE 07</small><p></p><small>Dans le niveau complet : le Centre de la Cascade, le dossier TRANSCENDANCE, la N-08 et la fuite par l’aqueduc.</small><br><br><a href="index.html?mode=foret">← RETOUR AU MENU</a></div>
 <div id="help">ZQSD / WASD · souris (clic) · Maj : courir · E : lire — tactile : gauche se déplacer, droite regarder</div>
-<div id="start"><div class="card"><small>PINK WARS · CHAPITRE 07 · PROTOTYPE</small><h1>La forêt des Sources</h1>
+<div id="start"><div class="card"><small>PINK WARS · ACTE II · CHAPITRE 07 · VERSION DE TRAVAIL</small><h1>Mémoires locales</h1><p style="margin-top:-4px;color:#ffb27a">La forêt des Sources</p>
 <p>2196, sept ans après la Chute. Au sortir de la fonderie d’ORDRE (chapitre 06), le camion d’AEGIS dépose GHJU à la lisière de la forêt des Sources, au coucher du soleil. Le dossier des Tilleuls parle d’une antenne de recherche de ses parents, quelque part derrière la cascade.</p>
 <p>Prototype de décor et de mise en scène : sous-bois, rivière et gué, moulin et aqueduc en ruine, cascade, grotte et relais indépendant. Dialogues et documents du chapitre 07, pas encore de combat. Au bout : la suite vers le chapitre 08, « Les Ordres de JANUS ».</p>
 <p>Héros : <a href="?character=ghju">GHJU · GAB-1</a> · <a href="?character=lylu">LYLU · CAR-14</a></p>
 <p>Qualité : <a href="?quality=low">basse</a> · <a href="?quality=balanced">moyenne</a> · <a href="?quality=high">haute</a> · <a href="?bench=40">mesure automatique</a></p>
-<button id="go" disabled>PRÉPARATION…</button></div></div>
+<button id="go" disabled>PRÉPARATION…</button> <a href="index.html?mode=foret" style="margin-left:10px;color:#ffb27a">← Retour au menu</a></div></div>
 <script type="module">
 import {boot} from './foret.js?v=2';
 const go=document.getElementById('go');
