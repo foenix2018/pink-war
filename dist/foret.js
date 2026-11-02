@@ -8,6 +8,7 @@
 import * as T from './vendor/three.webgpu.min.js';
 import {WebGLRenderer} from './vendor/three.module.min.js';
 import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './renderer-policy.js';
+import {linesFor,lineSeconds,logFor,ENDING} from './m07-story.js';
 
 const params = new URLSearchParams(globalThis.location?.search ?? '');
 const $ = id => document.getElementById(id);
@@ -290,7 +291,7 @@ function riverMesh() {
     const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); return g;
   };
   const tex = waterTexture(false); tex.wrapS = tex.wrapT = T.RepeatWrapping;
-  const mat = new T.MeshStandardMaterial({ map: tex, color: 0x9fd0d4, roughness: .12, metalness: .15, transparent: true, opacity: .86, depthWrite: false });
+  const mat = new T.MeshStandardMaterial({ map: tex, color: 0x9fc4c8, emissive: 0x3a1c10, roughness: .1, metalness: .25, transparent: true, opacity: .88, depthWrite: false });
   const group = new T.Group(); group.name = 'rivière';
   group.add(new T.Mesh(make(POOL.z - 2, HALF, 11, 1.5), mat), new T.Mesh(make(-HALF, CLIFF_Z - 4, 7, 2), mat));
   const pool = new T.Mesh(new T.CircleGeometry(POOL.r + 1.5, 40).rotateX(-Math.PI / 2), mat); pool.position.set(riverX(POOL.z), waterY(POOL.z) + .01, POOL.z); group.add(pool);
@@ -306,14 +307,14 @@ function waterfall(scene, quality) {
   }
   curtain.computeVertexNormals();
   const t1 = waterTexture(true), t2 = waterTexture(true); for (const t of [t1, t2]) { t.wrapS = t.wrapT = T.RepeatWrapping; } t1.repeat.set(3, 1.5); t2.repeat.set(5, 2.4);
-  const mk = (tex, opacity) => new T.Mesh(curtain, new T.MeshStandardMaterial({ map: tex, color: 0xf2fbff, transparent: true, opacity, depthWrite: false, side: T.DoubleSide, roughness: .3, emissive: 0x30474d }));
+  const mk = (tex, opacity) => new T.Mesh(curtain, new T.MeshStandardMaterial({ map: tex, color: 0xfff1e6, transparent: true, opacity, depthWrite: false, side: T.DoubleSide, roughness: .3, emissive: 0x4a3028 }));
   const back = mk(t1, .95), front = mk(t2, .7); scene.add(back, front); front.position.z = .25;
   // Mist and foam: a few hundred points that rise and fade, recycled.
   const count = quality === 'low' ? 160 : 420, pos = new Float32Array(count * 3), seeds = new Float32Array(count), r = rng(9);
   for (let i = 0; i < count; i++) seeds[i] = r();
   const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(pos, 3));
   const puff = canvasTexture(64, 64, (c, w) => { const gr = c.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,.75)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = gr; c.fillRect(0, 0, w, w); }, { alpha: true });
-  const mist = new T.Points(g, new T.PointsMaterial({ map: puff, size: 1.6, transparent: true, opacity: .55, depthWrite: false, color: 0xeef8fb, sizeAttenuation: true }));
+  const mist = new T.Points(g, new T.PointsMaterial({ map: puff, size: 1.6, transparent: true, opacity: .55, depthWrite: false, color: 0xffe2cc, sizeAttenuation: true }));
   mist.frustumCulled = false; scene.add(mist);
   return {
     x: xw, z: POOL.z - 7, update(t) {
@@ -353,7 +354,9 @@ function ruins(scene, colliders) {
   }
   for (const [x, z, s] of [[5.5, 33, 1.4], [8, 28.5, 1.1], [3.2, 29, .9]]) { const b = block(2 * s, 1.2 * s, 1.5 * s, x, z, null, x); b.rotation.z = .4; }
   // Moss caps.
-  for (const m of [...group.children]) if (m.geometry?.type === 'BoxGeometry' && m.scale.y > 0) { const cap = new T.Mesh(new T.BoxGeometry(m.geometry.parameters.width + .1, .12, m.geometry.parameters.depth + .1), moss); cap.position.copy(m.position); cap.position.y += m.geometry.parameters.height / 2; cap.rotation.y = m.rotation.y; group.add(cap); }
+  for (const m of [...group.children]) if (m.geometry?.type === 'BoxGeometry' && m.scale.y > 0) { const cap = new T.Mesh(new T.BoxGeometry(m.geometry.parameters.width + .1, .12, m.geometry.parameters.depth + .1), moss); cap.position.copy(m.position); cap.position.y += m.geometry.parameters.height / 2; cap.rotation.copy(m.rotation); group.add(cap); }
+  // One draw call per material instead of one per stone.
+  const merged = mergeStatic([...group.children]); group.clear(); for (const m of merged) group.add(m);
   return group;
 }
 function cave(scene) {
@@ -372,20 +375,126 @@ function cave(scene) {
   const glow = new T.PointLight(0x58d8ff, 6, 14, 1.6); glow.position.set(end.x, CAVE_FLOOR + 1.6, end.z + 1); scene.add(glow);
   return { relay, glow };
 }
+// Sunset: the sun sits low in the west-north-west, behind the cliff; the light is long, orange and warm.
+export const SUN_DIR = new T.Vector3(-.78, .16, -.6).normalize();
 function sky(scene) {
-  const g = new T.SphereGeometry(600, 24, 12), p = g.attributes.position, c = new Float32Array(p.count * 3), top = new T.Color(0x6f9fc4), hz = new T.Color(0xcfd8c6), k = new T.Color();
-  for (let i = 0; i < p.count; i++) { const y = p.getY(i) / 600; k.copy(hz).lerp(top, clamp(y * 1.6, 0, 1)); c[i * 3] = k.r; c[i * 3 + 1] = k.g; c[i * 3 + 2] = k.b; }
+  const g = new T.SphereGeometry(600, 48, 24), p = g.attributes.position, c = new Float32Array(p.count * 3), k = new T.Color(), v = new T.Vector3();
+  const zenith = new T.Color(0x232a55), high = new T.Color(0x5b4a78), horizon = new T.Color(0xe98a55), glow = new T.Color(0xffc27a), ground = new T.Color(0x3a2a2a);
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i).normalize(); const y = v.y, toward = Math.max(0, v.dot(SUN_DIR));
+    if (y < 0) k.copy(horizon).lerp(ground, clamp(-y * 4, 0, 1)); else k.copy(horizon).lerp(high, smooth(0, .35, y)).lerp(zenith, smooth(.3, 1, y));
+    k.lerp(glow, Math.pow(toward, 6) * (1 - smooth(0, .5, y)) * .9);
+    if (toward > .9985) k.set(0xfff1c8);
+    c[i * 3] = k.r; c[i * 3 + 1] = k.g; c[i * 3 + 2] = k.b;
+  }
   g.setAttribute('color', new T.BufferAttribute(c, 3));
-  const m = new T.Mesh(g, new T.MeshBasicMaterial({ vertexColors: true, side: T.BackSide, fog: false, depthWrite: false })); m.renderOrder = -1; scene.add(m); return m;
+  const m = new T.Mesh(g, new T.MeshBasicMaterial({ vertexColors: true, side: T.BackSide, fog: false, depthWrite: false })); m.renderOrder = -1; scene.add(m);
+  // The sun disc and its halo, always at the same place in the sky.
+  const halo = canvasTexture(128, 128, (gc, w) => { const gr = gc.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,245,220,1)'); gr.addColorStop(.12, 'rgba(255,214,150,.95)'); gr.addColorStop(.4, 'rgba(255,150,80,.28)'); gr.addColorStop(1, 'rgba(255,120,60,0)'); gc.fillStyle = gr; gc.fillRect(0, 0, w, w); }, { alpha: true });
+  const disc = new T.Sprite(new T.SpriteMaterial({ map: halo, fog: false, depthWrite: false, blending: T.AdditiveBlending, transparent: true }));
+  disc.scale.set(150, 150, 1); disc.position.copy(SUN_DIR).multiplyScalar(560); m.add(disc);
+  return m;
 }
 function sunbeams(scene) {
-  // Light shafts in the clearings: additive tapered quads, very cheap.
-  const tex = canvasTexture(32, 128, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,240,200,0)'); gr.addColorStop(.25, 'rgba(255,240,200,.35)'); gr.addColorStop(1, 'rgba(255,240,200,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }, { alpha: true });
-  const mat = new T.MeshBasicMaterial({ map: tex, transparent: true, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, fog: false, opacity: .55 });
-  for (const [x, z] of [[18, 70], [-22, 30], [30, 24], [-6, -20], [riverX(-48) + 8, -48]]) {
-    const m = new T.Mesh(new T.PlaneGeometry(3.5, 22), mat); m.position.set(x, terrainHeight(x, z) + 10, z); m.rotation.set(0, .6, .35); scene.add(m);
-    const m2 = m.clone(); m2.rotation.y += Math.PI / 2; scene.add(m2);
+  // Low, slanted light shafts through the canopy: additive tapered quads, very cheap.
+  const tex = canvasTexture(32, 128, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,170,90,0)'); gr.addColorStop(.25, 'rgba(255,170,90,.32)'); gr.addColorStop(1, 'rgba(255,170,90,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }, { alpha: true });
+  const mat = new T.MeshBasicMaterial({ map: tex, transparent: true, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, fog: false, opacity: .38 });
+  const tilt = Math.atan2(Math.hypot(SUN_DIR.x, SUN_DIR.z), SUN_DIR.y), heading = Math.atan2(SUN_DIR.x, SUN_DIR.z);
+  for (const [x, z] of [[18, 70], [-22, 30], [30, 24], [-6, -20], [riverX(-48) + 8, -48], [-30, 60], [40, -10]]) {
+    const geo = new T.PlaneGeometry(3, 34).translate(0, 17, 0).rotateX(tilt * .8);
+    const m = new T.Mesh(geo, mat); m.position.set(x, terrainHeight(x, z), z); m.rotation.y = heading; scene.add(m);
   }
+}
+// Merge static meshes that share a material into one draw call each.
+function mergeStatic(meshes) {
+  const byMat = new Map();
+  for (const m of meshes) { m.updateMatrixWorld(true); (byMat.get(m.material) || byMat.set(m.material, []).get(m.material)).push(m); }
+  const out = [];
+  for (const [mat, list] of byMat) {
+    const geos = list.map(m => { const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone(); g.applyMatrix4(m.matrixWorld); return g; });
+    let n = 0; for (const g of geos) n += g.attributes.position.count;
+    const attrs = ['position', 'normal', 'uv', 'color'].filter(a => geos.every(g => g.attributes[a]));
+    const out1 = new T.BufferGeometry();
+    for (const a of attrs) { const size = geos[0].attributes[a].itemSize, arr = new Float32Array(n * size); let o = 0; for (const g of geos) { arr.set(g.attributes[a].array, o); o += g.attributes[a].array.length; } out1.setAttribute(a, new T.BufferAttribute(arr, size)); }
+    out1.computeBoundingSphere(); const mesh = new T.Mesh(out1, mat); mesh.castShadow = list[0].castShadow; mesh.receiveShadow = true; out.push(mesh);
+  }
+  return out;
+}
+// The world of 2189, abandoned for seven years: the old forest road, a rusted car, the AEGIS truck back from the
+// foundry (chapter 06), a fallen power pylon, the sign of the Tilleuls research antenna, ORDRE's dead surveillance
+// mast, and an ORDRE machine shot down in the ruins. Everything is merged into a handful of draw calls.
+function remnants(scene, colliders) {
+  const parts = [], glow = [];
+  const rust = new T.MeshStandardMaterial({ vertexColors: true, roughness: .85, metalness: .35 });
+  const add = (geo, color, x, y, z, ry = 0, rz = 0, rx = 0, jitter = .25, seed = 1) => { const m = new T.Mesh(paint(geo, color, jitter, seed), rust); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); parts.push(m); return m; };
+  const box = (w, h, d, color, x, y, z, ry = 0, rz = 0, rx = 0) => add(new T.BoxGeometry(w, h, d), color, x, y, z, ry, rz, rx);
+  const ground = (x, z) => terrainHeight(x, z);
+  // Cracked asphalt of the old road at the edge of the forest (pieces tilted by roots).
+  for (let k = 0; k < 9; k++) { const x = -18 + k * 4.4, z = 86 + Math.sin(k) * .8; box(4.2, .14, 5.5, k % 3 ? 0x3b3b3c : 0x2f3033, x, ground(x, z) + .05, z, .05 * Math.sin(k * 3), .04 * Math.cos(k * 2), .03 * Math.sin(k)); }
+  // The AEGIS truck (back from the foundry): cab, box body, wheels, a pink and blue stripe faded by the sun.
+  { const x = -6, z = 86, y = ground(x, z), ry = .12;
+    const g = new T.Group(); g.position.set(x, y, z); g.rotation.y = ry; scene.add(g);
+    const local = []; const lb = (w, h, d, c, px, py, pz) => { const m = new T.Mesh(paint(new T.BoxGeometry(w, h, d), c, .12, 3), rust); m.position.set(px, py, pz); g.add(m); local.push(m); };
+    lb(2.5, 1.9, 2.2, 0x55616a, 0, 1.55, -2.7); lb(2.6, 2.6, 5, 0x6c7880, 0, 1.9, .9); lb(2.62, .25, 5.02, 0x8a3d6a, 0, 2.25, .9); lb(2.63, .12, 5.03, 0x3c6b9a, 0, 1.95, .9);
+    for (const [px, pz] of [[-1.25, -2.6], [1.25, -2.6], [-1.25, 2.2], [1.25, 2.2]]) { const w = new T.Mesh(paint(new T.CylinderGeometry(.55, .55, .4, 12).rotateZ(Math.PI / 2), 0x1b1b1b, .1, 4), rust); w.position.set(px, .55, pz); g.add(w); local.push(w); }
+    g.updateMatrixWorld(true); for (const m of local) { g.remove(m); m.applyMatrix4(g.matrixWorld); parts.push(m); } scene.remove(g);
+    colliders.push({ x, z: z - .9, hx: 1.6, hz: 4.1, ry }); }
+  // A rusted car swallowed by ferns, doors missing.
+  { const x = 14, z = 80, y = ground(x, z); box(1.9, .8, 4.2, 0x7a4a2e, x, y + .55, z, -.5, .06); box(1.7, .7, 2.1, 0x6a3f28, x - .1, y + 1.25, z + .2, -.5, .06); colliders.push({ x, z, hx: 1.2, hz: 2.3, ry: -.5 }); }
+  // A fallen high-voltage pylon across the undergrowth, with its cables.
+  { const x = -38, z = 18, y = ground(x, z) + .6;
+    for (let k = 0; k < 4; k++) { const len = 26; box(.25, .25, len, 0x5d5a55, x + (k % 2 ? 1.8 : -1.8), y + (k > 1 ? 1.8 : 0), z, .9, 0, 0); }
+    for (let k = 0; k < 10; k++) box(3.8, .14, .14, 0x5d5a55, x + Math.sin(.9) * (k * 2.6 - 12), y + .9, z + Math.cos(.9) * (k * 2.6 - 12), .9 + Math.PI / 2, .7 * (k % 2 ? 1 : -1));
+    box(9, .6, .6, 0x4f4c48, x + Math.sin(.9) * 14, y + 3, z + Math.cos(.9) * 14, .9, .35); }
+  // The research antenna sign, half eaten by moss.
+  { const x = 9, z = 70, y = ground(x, z); box(.14, 2.2, .14, 0x4a4036, x - .8, y + 1.1, z); box(.14, 2.2, .14, 0x4a4036, x + .8, y + 1.1, z);
+    const plate = new T.Mesh(new T.PlaneGeometry(2.2, 1.1), new T.MeshStandardMaterial({ roughness: .9, map: canvasTexture(256, 128, (g, w, h) => { g.fillStyle = '#d9d4c3'; g.fillRect(0, 0, w, h); g.fillStyle = '#3d5a6b'; g.font = 'bold 22px system-ui'; g.fillText('ANTENNE DE RECHERCHE', 12, 40); g.fillText('DES TILLEULS', 12, 68); g.font = '16px system-ui'; g.fillText('Équipe VEILLE · 2,4 km ↑', 12, 100); g.fillStyle = 'rgba(70,95,40,.75)'; for (let i = 0; i < 40; i++) { g.beginPath(); g.arc(Math.random() * 90, h - Math.random() * 50, 4 + Math.random() * 9, 0, TAU); g.fill(); } }) }));
+    plate.position.set(x, y + 1.7, z + .08); plate.rotation.y = .25; scene.add(plate); }
+  // ORDRE's surveillance mast, dead, leaning over the river; its red eye still blinks.
+  { const x = riverX(10) + 9, z = 10, y = ground(x, z); box(.5, 14, .5, 0x3a3d42, x, y + 7, z, 0, -.18); box(1.6, .9, 1.6, 0x24272c, x + 1.3, y + 13.6, z, 0, -.18);
+    glow.push([x + 1.3 + .9, y + 13.6, z, 0xff2a2a]); }
+  // The ORDRE machine shot down in the mill court: legs folded, chassis cracked, sensor still red.
+  { const x = 22, z = 30, y = ground(x, z); box(2.6, 1.2, 1.8, 0x2c2f35, x, y + .7, z, .7, .3); box(1, .8, 1, 0x1f2227, x + 1.4, y + 1, z + 1, .7, .5);
+    for (const [a, l] of [[.2, 2.2], [1.4, 2], [2.6, 2.3], [4, 1.9]]) box(.25, .25, l, 0x3a3d43, x + Math.cos(a) * 1.3, y + .35, z + Math.sin(a) * 1.3, a, 0, .4);
+    glow.push([x + 1.9, y + 1.1, z + 1.3, 0xff3b4e]); colliders.push({ x, z, hx: 1.6, hz: 1.3, ry: .7 }); }
+  // Rusted barrels and a collapsed fence along the river path.
+  for (let k = 0; k < 6; k++) { const x = riverX(40 - k * 9) - 8 - (k % 2) * 2, z = 40 - k * 9; add(new T.CylinderGeometry(.35, .35, .9, 10), k % 2 ? 0x6e4a2c : 0x4b5a3a, x, ground(x, z) + .3, z, k, k % 3 ? 1.4 : 0, 0, .3, 9 + k); }
+  for (let k = 0; k < 12; k++) { const x = 34 + k * 2.2, z = 46 - k * .6; box(.1, 1.2, .1, 0x5a5048, x, ground(x, z) + .5, z, 0, (k % 4 === 1 ? .9 : 0) + .05 * k); }
+  for (const m of mergeStatic(parts)) { m.castShadow = true; scene.add(m); }
+  // Emissive dots (one small mesh each) and a blink driven from the frame loop.
+  const lights = glow.map(([x, y, z, c]) => { const m = new T.Mesh(new T.SphereGeometry(.16, 8, 6), new T.MeshBasicMaterial({ color: c, fog: false })); m.position.set(x, y, z); scene.add(m); return m; });
+  return { lights };
+}
+// Vesper on the southern horizon: towers in silhouette, a few lit windows and pink beacons. Unaffected by the fog.
+function skyline(scene) {
+  const r = rng(77), parts = [], dark = new T.MeshBasicMaterial({ vertexColors: true, fog: false });
+  for (let i = 0; i < 70; i++) {
+    const a = (r() - .5) * 1.5 + Math.PI, d = 330 + r() * 120, w = 10 + r() * 22, h = 30 + r() * 120 * (r() < .2 ? 2 : 1), broken = r() < .35;
+    const g = paint(new T.BoxGeometry(w, h, w * (.6 + r()), 2, 6, 2), new T.Color().setHSL(.78, .22, .035 + r() * .03).getHex(), .15, i);
+    if (broken) { const pp = g.attributes.position; for (let k = 0; k < pp.count; k++) if (pp.getY(k) > h * .2) pp.setY(k, pp.getY(k) - (pp.getX(k) > 0 ? h * (.15 + r() * .25) : r() * h * .08)); }
+    const m = new T.Mesh(g, dark); m.position.set(Math.sin(a) * d, h / 2 - 6, -Math.cos(a) * d); m.rotation.y = r() * TAU; parts.push(m);
+  }
+  for (const m of mergeStatic(parts)) scene.add(m);
+  const pts = [], cols = [], c = new T.Color();
+  for (const m of parts) { const h = m.geometry.parameters?.height || 60; for (let k = 0; k < 6; k++) { pts.push(m.position.x + (r() - .5) * 12, m.position.y - h / 2 + r() * h, m.position.z + (r() - .5) * 12); c.set(r() < .25 ? 0xff4fa3 : r() < .5 ? 0x5fb8ff : 0xffc27a); cols.push(c.r, c.g, c.b); } }
+  const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pts, 3)); g.setAttribute('color', new T.Float32BufferAttribute(cols, 3));
+  scene.add(new T.Points(g, new T.PointsMaterial({ size: 3.4, vertexColors: true, fog: false, sizeAttenuation: true })));
+}
+// ORDRE's probes patrolling above the canopy: a body, a red eye, slow loops. They cannot see under the trees.
+function probes(scene) {
+  const list = [], body = new T.MeshStandardMaterial({ color: 0x2a2d33, metalness: .6, roughness: .4 }), eye = new T.MeshBasicMaterial({ color: 0xff3045, fog: false });
+  for (const [cx, cz, r, h, sp] of [[0, 20, 38, 24, .11], [-30, -30, 26, 28, -.14], [35, -40, 20, 30, .17]]) {
+    const g = new T.Group(); g.add(new T.Mesh(new T.CylinderGeometry(.8, .5, .5, 10), body)); const e = new T.Mesh(new T.SphereGeometry(.22, 8, 6), eye); e.position.set(0, -.2, .75); g.add(e);
+    const ring = new T.Mesh(new T.TorusGeometry(1.15, .08, 6, 20), body); ring.rotation.x = Math.PI / 2; g.add(ring); scene.add(g); list.push({ g, cx, cz, r, h, sp, a: cx });
+  }
+  return { update(t) { for (const p of list) { const a = p.a + t * p.sp; p.g.position.set(p.cx + Math.cos(a) * p.r, terrainHeight(p.cx, p.cz) + p.h + Math.sin(t * 1.3 + p.a) * .6, p.cz + Math.sin(a) * p.r); p.g.rotation.y = -a + (p.sp > 0 ? 0 : Math.PI); } } };
+}
+// Dust and ash in the low light, around the player only.
+function motes(scene, count) {
+  const pos = new Float32Array(count * 3), seed = new Float32Array(count), r = rng(31); for (let i = 0; i < count; i++) seed[i] = r();
+  const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(pos, 3));
+  const pts = new T.Points(g, new T.PointsMaterial({ color: 0xffd2a0, size: .04, transparent: true, opacity: .45, depthWrite: false })); pts.frustumCulled = false; scene.add(pts);
+  return { update(t, p) { for (let i = 0; i < count; i++) { const s = seed[i], a = s * 977; pos[i * 3] = p.x + ((a * 13.1 + t * .3) % 24) - 12; pos[i * 3 + 1] = p.y + ((s * 7 + t * .08 * (s + .3)) % 6); pos[i * 3 + 2] = p.z + ((a * 7.7 + t * .2) % 24) - 12; } g.attributes.position.needsUpdate = true; } };
 }
 
 // ---------------------------------------------------------------- Player and controls ----------------------------
@@ -422,6 +531,52 @@ function blockedBy(x, z, colliders, trunks) {
   return false;
 }
 
+// ---------------------------------------------------------------- Story layer --------------------------------------
+// The chapter 07 scenes (m07-story.js) play where they happen; documents are read on the spot (E or the button).
+function createStory(characterId, relay) {
+  const sub = $('sub'), prompt = $('prompt'), doc = $('doc'), queue = [], seen = new Set();
+  let line = null, left = 0, near = null;
+  const say = id => { if (seen.has(id)) return; seen.add(id); queue.push(...linesFor(id, characterId)); };
+  const cave0 = CAVE[0];
+  const SCENES = [
+    ['lisiere', () => true],
+    ['sousBois', (x, z) => z < 72 && z > 40],
+    ['traqueur', (x, z) => z < 62 && z > 40 && seen.has('sousBois')],
+    ['gue', (x, z) => Math.hypot(x - riverX(55), z - 55) < 16],
+    ['ruines', (x, z) => Math.hypot(x - 28, z - 26) < 20],
+    ['cascade', (x, z) => Math.hypot(x - riverX(POOL.z), z - POOL.z) < 22],
+    ['toise', (x, z) => Math.hypot(x - cave0[0], z - cave0[1]) < 6],
+    ['grotte', (x, z) => z < CAVE[1][1] && caveDistance(x, z) < 2.6],
+    ['turbineOk', (x, z) => Math.hypot(x - relay.position.x, z - relay.position.z) < 4]
+  ];
+  const DOCS = [
+    { id: 'sentier', x: 9, z: 70 }, { id: 'epars', x: riverX(-12) - 13, z: -12 }, { id: 'moulin', x: 25, z: 19.6 },
+    { id: 'toise', x: cave0[0] - 1.6, z: cave0[1] + 2.5 }, { id: 'relais-grotte', x: relay.position.x, z: relay.position.z + 1.2 }
+  ];
+  const open = id => {
+    const d = logFor(id, characterId); if (!d) return;
+    doc.querySelector('small').textContent = d.stamp; doc.querySelector('h2').textContent = d.title;
+    doc.querySelector('.lines').replaceChildren(...d.lines.map(t => Object.assign(document.createElement('p'), { textContent: t })));
+    doc.querySelector('.foot').textContent = d.footer; doc.hidden = false; document.exitPointerLock?.();
+  };
+  doc.querySelector('button').onclick = () => { doc.hidden = true; };
+  prompt.onclick = () => near && open(near.id);
+  addEventListener('keydown', e => { if (e.code === 'KeyE' && near && doc.hidden) open(near.id); else if (e.code === 'Escape' || (e.code === 'KeyE' && !doc.hidden)) doc.hidden = true; });
+  let ended = false;
+  return {
+    seen,
+    update(p, dt) {
+      for (const [id, test] of SCENES) if (!seen.has(id) && test(p.x, p.z)) say(id);
+      if (!ended && seen.has('turbineOk') && !queue.length && !line) { ended = true; $('fin').hidden = false; $('fin').querySelector('p').textContent = ENDING.next; }
+      if (line && (left -= dt) <= 0) line = null;
+      if (!line && queue.length) { line = queue.shift(); left = lineSeconds(line.text); sub.hidden = false; sub.querySelector('b').textContent = line.speaker.name; sub.querySelector('b').style.color = line.speaker.color; sub.querySelector('span').textContent = line.text; }
+      if (!line) sub.hidden = true;
+      near = DOCS.find(d => Math.hypot(p.x - d.x, p.z - d.z) < 3.2) || null;
+      prompt.hidden = !near || !doc.hidden; if (near) prompt.textContent = 'E · LIRE : ' + logFor(near.id, characterId).title;
+    }
+  };
+}
+
 // ---------------------------------------------------------------- Boot -------------------------------------------
 export async function boot() {
   const quality = ['low', 'balanced', 'high'].includes(params.get('quality')) ? params.get('quality') : (matchMedia('(pointer:coarse)').matches ? 'low' : 'balanced');
@@ -429,18 +584,19 @@ export async function boot() {
   const { renderer, canvas } = await createCompatibleRenderer({ canvas: $('game'), WebGPU: T.WebGPURenderer, WebGL: WebGLRenderer, profile });
   const backend = renderer.isWebGLRenderer ? 'WebGL' : renderer.backend?.isWebGPUBackend ? 'WebGPU' : 'WebGPU (repli WebGL2)';
   renderer.setPixelRatio(renderPixelRatio(profile, devicePixelRatio, innerWidth, innerHeight)); renderer.setSize(innerWidth, innerHeight);
-  renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+  renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
   const shadows = quality === 'high'; renderer.shadowMap.enabled = shadows; renderer.shadowMap.type = T.PCFSoftShadowMap;
-  const scene = new T.Scene(); scene.fog = new T.FogExp2(0xb8c7b4, quality === 'low' ? .019 : .014);
+  const FOG = quality === 'low' ? .016 : .012; const scene = new T.Scene(); scene.fog = new T.FogExp2(0xb27a63, FOG);
   const camera = new T.PerspectiveCamera(70, innerWidth / innerHeight, .1, 650);
   const skyDome = sky(scene);
-  const hemi = new T.HemisphereLight(0xcfe4f2, 0x3a4a2a, 1.5); scene.add(hemi);
-  const sun = new T.DirectionalLight(0xfff0d4, 2.4); sun.position.set(40, 70, 30); scene.add(sun, sun.target);
-  if (shadows) { sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 200 }); sun.shadow.bias = -.0006; }
+  const hemi = new T.HemisphereLight(0xb79ac4, 0x4a3a2a, 1.7); scene.add(hemi);
+  const sun = new T.DirectionalLight(0xffa765, 3.1); sun.position.copy(SUN_DIR).multiplyScalar(120); scene.add(sun, sun.target);
+  if (shadows) { sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 260 }); sun.shadow.bias = -.0006; }
   scene.add(terrainMesh(quality));
   const river = riverMesh(); scene.add(river.group);
   const fall = waterfall(scene, quality), colliders = [];
   ruins(scene, colliders); const grotte = cave(scene); sunbeams(scene);
+  const relics = remnants(scene, colliders); skyline(scene); const drones = probes(scene), dust = motes(scene, quality === 'low' ? 120 : 260);
 
   // Vegetation.
   const world = scatter(42), Q = { low: .65, balanced: 1, high: 1.35 }[quality];
@@ -460,6 +616,7 @@ export async function boot() {
 
   // Player.
   const ctl = controls(canvas), player = { x: 6, z: 96, y: 0 }; ctl.look.yaw = 0;
+  const characterId = params.get('character') === 'lylu' ? 'lylu' : 'ghju', story = createStory(characterId, grotte.relay);
   const frustum = new T.Frustum(), pv = new T.Matrix4();
   let audio = null;
   function startAudio() {
@@ -474,7 +631,7 @@ export async function boot() {
 
   // Bench: an automatic walk along the path, frame times recorded.
   const bench = params.get('bench') ? { t: 0, frames: [], done: false, duration: Number(params.get('bench')) > 1 ? Number(params.get('bench')) : 40 } : null;
-  const route = new T.CatmullRomCurve3([...PATH.map(([x, z]) => new T.Vector3(x, 0, z)), new T.Vector3(CAVE[1][0], 0, CAVE[1][1]), new T.Vector3(CAVE[3][0], 0, CAVE[3][1])]);
+  const route = new T.CatmullRomCurve3([...PATH.map(([x, z]) => new T.Vector3(x, 0, z)), new T.Vector3(CAVE[1][0], 0, CAVE[1][1]), new T.Vector3(CAVE[2][0], 0, CAVE[2][1]), new T.Vector3(CAVE[3][0], 0, CAVE[3][1]), new T.Vector3(CAVE[4][0] + .8, 0, CAVE[4][1] + 1.5)]);
 
   let last = performance.now(), refresh = 0, fpsAcc = 0, fpsN = 0, fps = 0, time = 0;
   const hud = $('hud'), zone = $('zone');
@@ -505,11 +662,13 @@ export async function boot() {
     camera.updateMatrixWorld(); pv.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); frustum.setFromProjectionMatrix(pv);
     const t0 = performance.now(); if ((refresh -= dt) <= 0) { refresh = .1; for (const k of kinds) k.update(camera, frustum, Q); } const t1 = performance.now();
     river.tex.offset.y = (river.tex.offset.y - dt * .35) % 1; fall.update(time);
-    grotte.glow.intensity = 5 + Math.sin(time * 3) * 1.2;
-    if (shadows) { sun.position.set(player.x + 40, 70, player.z + 30); sun.target.position.set(player.x, 0, player.z); }
-    const inCave = zoneAt(player.x, player.z) === 'La grotte'; scene.fog.density = inCave ? .06 : quality === 'low' ? .019 : .014;
+    grotte.glow.intensity = 5 + Math.sin(time * 3) * 1.2; drones.update(time); dust.update(time, camera.position);
+    for (const [k, l] of relics.lights.entries()) l.visible = Math.sin(time * (2 + k) + k) > -.2;
+    story.update(player, dt);
+    if (shadows) { sun.position.set(player.x + SUN_DIR.x * 120, SUN_DIR.y * 120, player.z + SUN_DIR.z * 120); sun.target.position.set(player.x, 0, player.z); }
+    const inCave = zoneAt(player.x, player.z) === 'La grotte'; scene.fog.density = inCave ? .06 : FOG;
     // Inside the cave the sky no longer lights the rock: only the relay does.
-    const shade = inCave ? clamp((CAVE[0][1] - player.z) / 6, 0, 1) : 0; hemi.intensity = lerp(1.5, .12, shade); sun.intensity = lerp(2.4, 0, shade);
+    const shade = inCave ? clamp((CAVE[0][1] - player.z) / 6, 0, 1) : 0; hemi.intensity = lerp(1.7, .1, shade); sun.intensity = lerp(3.1, 0, shade);
     if (audio) audio.gain.gain.value = .22 * clamp(1 - Math.hypot(player.x - fall.x, player.z - fall.z) / 70, 0, 1) + .03;
     renderer.render(scene, camera); const t2 = performance.now();
     if (bench && !bench.done) { bench.cpuUpdate = (bench.cpuUpdate || 0) + t1 - t0; bench.cpuRender = (bench.cpuRender || 0) + t2 - t1; const c = renderer.info.render.drawCalls ?? renderer.info.render.calls, t3 = renderer.info.render.triangles; bench.maxCalls = Math.max(bench.maxCalls || 0, c); bench.maxTris = Math.max(bench.maxTris || 0, t3); bench.sumTris = (bench.sumTris || 0) + t3; bench.n = (bench.n || 0) + 1; }
@@ -517,7 +676,7 @@ export async function boot() {
     requestAnimationFrame(frame);
   }
   addEventListener('resize', () => { renderer.setPixelRatio(renderPixelRatio(profile, devicePixelRatio, innerWidth, innerHeight)); renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
-  window.__FORET = { scene, stats, get bench() { return bench?.result || null; }, teleport(x, z, yaw = 0) { player.x = x; player.z = z; player.y = groundHeight(x, z); ctl.look.yaw = yaw; refresh = 0; }, look(yaw, pitch = 0) { ctl.look.yaw = yaw; ctl.look.pitch = pitch; refresh = 0; } };
+  window.__FORET = { scene, stats, story, get bench() { return bench?.result || null; }, teleport(x, z, yaw = 0) { player.x = x; player.z = z; player.y = groundHeight(x, z); ctl.look.yaw = yaw; refresh = 0; }, look(yaw, pitch = 0) { ctl.look.yaw = yaw; ctl.look.pitch = pitch; refresh = 0; } };
   requestAnimationFrame(frame);
   return window.__FORET;
 }

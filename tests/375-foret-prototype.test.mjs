@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {terrainHeight,groundHeight,riverX,waterY,zoneAt,scatter,HALF,CLIFF_Z,POOL} from '../dist/foret.js';
-import {SEGMENTS} from '../dist/m07-story.js';
+import {SEGMENTS,SCRIPT,LOGS,ENDING} from '../dist/m07-story.js';
 
 test('the valley of the forest prototype: river below the banks, a waterfall drop, a cave under the plateau',()=>{
   for(let z=-55;z<=95;z+=5){const x=riverX(z);assert.ok(waterY(z)>terrainHeight(x,z),`water over the bed at z=${z}`);assert.ok(terrainHeight(x+12,z)>waterY(z),`banks above the water at z=${z}`);}
@@ -25,4 +25,15 @@ test('vegetation stays off the river, the path and the ford; budgets are bounded
   const code=readFileSync(new URL('../dist/foret.js',import.meta.url),'utf8');
   assert.match(code,/alphaTest/);assert.doesNotMatch(code.replace(/\/\/.*$/gm,''),/transmission|MeshPhysicalMaterial|CubeCamera|Reflector/,'no costly reflections');
   assert.match(code,/frustum\.intersectsSphere/,'vegetation is culled per instance');
+});
+
+test('sunset, post-apocalyptic remnants and the chapter 07 scenes from chapter 06 to chapter 08',()=>{
+  const code=readFileSync(new URL('../dist/foret.js',import.meta.url),'utf8'),html=readFileSync(new URL('../dist/foret.html',import.meta.url),'utf8');
+  for(const part of ['SUN_DIR','function skyline','function remnants','function probes','AEGIS','ORDRE','createStory'])assert.ok(code.includes(part),part);
+  const scenes=[...code.matchAll(/\['([a-zA-Z]+)', \(x, z\) =>|\['(lisiere)', \(\) =>/g)].map(m=>m[1]||m[2]);
+  for(const id of scenes)assert.ok(SCRIPT[id],`scene ${id} exists in m07-story.js`);
+  assert.deepEqual(scenes.slice(0,1),['lisiere']);assert.ok(scenes.includes('turbineOk'));
+  for(const id of [...code.matchAll(/\{ id: '([a-z-]+)', x:/g)].map(m=>m[1]))assert.ok(LOGS[id],`document ${id}`);
+  assert.match(SCRIPT.lisiere.ghju[0][1],/fonderie/,'the chapter opens on the foundry of chapter 06');assert.match(ENDING.next,/08 — Les Ordres de JANUS/);
+  assert.match(html,/chapitre 06/);assert.match(html,/chapitre 08/);assert.match(html,/coucher du soleil/);
 });

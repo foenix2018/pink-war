@@ -144,3 +144,28 @@ en qualité basse. Il faut encore le confirmer sur ces appareils.
 
 Pistes d’optimisation pour le vrai niveau : fusionner les blocs des ruines (≈ 60 appels de dessin à eux seuls) en
 un seul objet, préparer le décor à l’avance en fichier binaire comme au chapitre 03.
+
+## Ambiance post-apocalyptique au coucher du soleil (prototype v2)
+
+Demande du créateur : un jeu post-apocalyptique, un coucher de soleil, et une cohérence avec le chapitre 06 avant
+et le chapitre 08 après.
+- **Heure :** le soir du jour de la fonderie. Soleil bas à l’ouest-nord-ouest, derrière la falaise : lumière
+  orange rasante, ciel violet, brume chaude, poussière en suspension.
+- **Les restes de 2189, abandonnés depuis sept ans :**
+  - l’asphalte fissuré de l’ancienne route forestière, une voiture rouillée ;
+  - un pylône à haute tension couché dans le sous-bois, des fûts rouillés, une clôture effondrée ;
+  - le panneau « Antenne de recherche des Tilleuls — équipe VEILLE », mangé par la mousse.
+- **ORDRE est là :**
+  - un mât de surveillance mort penché sur la rivière, dont l’œil rouge clignote encore ;
+  - une machine abattue dans la cour du moulin ;
+  - trois sondes qui tournent au-dessus de la canopée, sans voir sous les arbres.
+- **Vesper :** la ville en ruine se découpe à l’horizon sud, avec quelques fenêtres et balises roses encore allumées.
+- **Lien avec le chapitre 06 :** on arrive par le camion d’AEGIS qui revient de la fonderie. La première réplique,
+  celle de Mara Voss, parle des N-08 qui apprennent depuis la fonderie.
+- **Lien avec le chapitre 08 :** au fond de la grotte, le relais indépendant clôt le prototype et annonce
+  « Suite : 08 — Les Ordres de JANUS ».
+- **Scènes et documents :** les scènes du chapitre 07 se déclenchent là où elles se passent (lisière, sous-bois,
+  gué, ruines, cascade, marques dans la roche, grotte, relais). Cinq documents se lisent sur place (touche E ou
+  bouton).
+- **Performance :** les éléments ajoutés sont regroupés en quelques appels de dessin. Les ruines, regroupées par
+  matière, passent de près de 60 appels à 2.

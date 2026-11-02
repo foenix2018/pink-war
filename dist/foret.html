@@ -1,26 +1,39 @@
 <!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Pink Wars — Prototype · forêt des Sources</title><meta name="description" content="Prototype de performance du chapitre 07 de Pink Wars : forêt, rivière et gué, moulin et aqueduc en ruine, cascade et grotte.">
-<link rel="icon" href="icon.svg"><meta name="theme-color" content="#1c2a1d">
+<link rel="icon" href="icon.svg"><meta name="theme-color" content="#2a1712">
 <style>
-html,body{margin:0;height:100%;overflow:hidden;background:#1c2a1d;color:#e6efe2;font:14px/1.45 system-ui,sans-serif}
+html,body{margin:0;height:100%;overflow:hidden;background:#1a1012;color:#efe6dc;font:14px/1.45 system-ui,sans-serif}
 canvas#game{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
 #hud{position:fixed;left:12px;top:10px;padding:6px 10px;border-radius:8px;background:#0b140dcc;font:12px ui-monospace,monospace;max-width:calc(100% - 24px)}
 #zone{position:fixed;left:50%;top:14px;transform:translateX(-50%);padding:6px 14px;border-radius:999px;background:#0b140dcc;letter-spacing:.12em;text-transform:uppercase;font-size:12px}
 #help{position:fixed;left:12px;bottom:12px;padding:8px 12px;border-radius:8px;background:#0b140dcc;font-size:12px;color:#b7c8b2}
-#start{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(#22351fdd,#0b140df2)}
+#start{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(#3a2219dd,#0d0a10f2)}
 #start .card{max-width:520px;margin:16px;padding:24px;border:1px solid #6c8a5e;border-radius:16px;background:#101b11e6}
 #start h1{margin:0 0 6px;font-size:28px}#start p{color:#b9cab3}
 #start button{margin-top:10px;padding:12px 18px;border:1px solid #9fd07f;border-radius:10px;background:#2d4a26;color:#fff;font:inherit;font-weight:700;cursor:pointer}
-#start small a{color:#9fd07f}
+#start small a,#start p a{color:#ffb27a}
+#sub{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);max-width:min(760px,92vw);padding:10px 16px;border-radius:12px;background:#120c10d9;font-size:15px;text-align:center}
+#sub b{display:block;font-size:11px;letter-spacing:.14em;margin-bottom:3px}
+#prompt{position:fixed;left:50%;bottom:130px;transform:translateX(-50%);padding:9px 16px;border:1px solid #ffb27a;border-radius:999px;background:#2a1712e6;color:#ffe1c8;font:inherit;font-size:13px;cursor:pointer}
+#doc{position:fixed;inset:0;display:grid;place-items:center;background:#0b0708b3}#doc[hidden],#sub[hidden],#prompt[hidden],#fin[hidden]{display:none}
+#doc .card{max-width:min(620px,92vw);max-height:80dvh;overflow:auto;padding:22px;border:1px solid #9a7b5d;border-radius:12px;background:#17110e;color:#e8dccb}
+#doc small{color:#c7a27d;letter-spacing:.08em}#doc h2{margin:.3em 0 .6em;font-size:20px}#doc .foot{font-size:13px;color:#b9a48f}
+#doc button,#fin a{padding:10px 16px;border:1px solid #ffb27a;border-radius:8px;background:#3a2218;color:#fff;font:inherit;cursor:pointer;text-decoration:none}
+#fin{position:fixed;right:14px;bottom:14px;max-width:340px;padding:14px;border-radius:12px;background:#17110ee6;border:1px solid #ffb27a}#fin p{margin:.3em 0 .8em;font-weight:700}
 </style><script defer src="./pw-identity.js?v=2"></script></head><body>
 <canvas id="game"></canvas><div id="hud">Chargement…</div><div id="zone"></div>
-<div id="help">ZQSD / WASD · souris (clic) · Maj : courir — tactile : gauche se déplacer, droite regarder</div>
+<div id="sub" hidden><b></b><span></span></div><button id="prompt" hidden></button>
+<div id="doc" hidden><div class="card"><small></small><h2></h2><div class="lines"></div><p class="foot"></p><button>FERMER</button></div></div>
+<div id="fin" hidden><small>FIN DU PROTOTYPE · CHAPITRE 07</small><p></p><small>Dans le niveau complet : le Centre de la Cascade, le dossier TRANSCENDANCE, la N-08 et la fuite par l’aqueduc.</small><br><br><a href="index.html">← RETOUR AU JEU</a></div>
+<div id="help">ZQSD / WASD · souris (clic) · Maj : courir · E : lire — tactile : gauche se déplacer, droite regarder</div>
 <div id="start"><div class="card"><small>PINK WARS · CHAPITRE 07 · PROTOTYPE</small><h1>La forêt des Sources</h1>
-<p>Banc d’essai du décor de « Mémoires locales » : sous-bois, rivière et gué, moulin et aqueduc en ruine, cascade, grotte. Pas encore de combat ni de dialogues.</p>
+<p>2196, sept ans après la Chute. Au sortir de la fonderie d’ORDRE (chapitre 06), le camion d’AEGIS dépose GHJU à la lisière de la forêt des Sources, au coucher du soleil. Le dossier des Tilleuls parle d’une antenne de recherche de ses parents, quelque part derrière la cascade.</p>
+<p>Prototype de décor et de mise en scène : sous-bois, rivière et gué, moulin et aqueduc en ruine, cascade, grotte et relais indépendant. Dialogues et documents du chapitre 07, pas encore de combat. Au bout : la suite vers le chapitre 08, « Les Ordres de JANUS ».</p>
+<p>Héros : <a href="?character=ghju">GHJU · GAB-1</a> · <a href="?character=lylu">LYLU · CAR-14</a></p>
 <p>Qualité : <a href="?quality=low">basse</a> · <a href="?quality=balanced">moyenne</a> · <a href="?quality=high">haute</a> · <a href="?bench=40">mesure automatique</a></p>
 <button id="go" disabled>PRÉPARATION…</button></div></div>
 <script type="module">
-import {boot} from './foret.js?v=1';
+import {boot} from './foret.js?v=2';
 const go=document.getElementById('go');
 boot().then(()=>{go.disabled=false;go.textContent='ENTRER DANS LA FORÊT →';if(new URLSearchParams(location.search).get('bench'))document.getElementById('start').remove();})
  .catch(e=>{go.textContent='Erreur : '+(e?.message||e);console.error(e);});
