@@ -9,6 +9,7 @@ import * as T from './vendor/three.webgpu.min.js';
 import {WebGLRenderer} from './vendor/three.module.min.js';
 import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './renderer-policy.js';
 import {linesFor,lineSeconds,logFor,ENDING} from './m07-story.js';
+import {createM07Hud} from './m07-hud.js';
 
 const params = new URLSearchParams(globalThis.location?.search ?? '');
 const $ = id => document.getElementById(id);
@@ -524,7 +525,7 @@ function motes(scene, count) {
 
 // ---------------------------------------------------------------- Player and controls ----------------------------
 function controls(canvas) {
-  const keys = new Set(), look = { yaw: 0, pitch: 0 }, move = { x: 0, z: 0 }, touch = new Map();
+  const keys = new Set(), look = { yaw: 0, pitch: 0 }, move = { x: 0, z: 0 }, touch = new Map(), virtual = { x: 0, z: 0, run: false };
   addEventListener('keydown', e => keys.add(e.code)); addEventListener('keyup', e => keys.delete(e.code));
   canvas.addEventListener('click', () => { if (!matchMedia('(pointer:coarse)').matches) canvas.requestPointerLock?.(); });
   addEventListener('mousemove', e => { if (document.pointerLockElement !== canvas) return; look.yaw -= e.movementX * .0023; look.pitch = clamp(look.pitch - e.movementY * .0023, -1.3, 1.3); });
@@ -538,11 +539,14 @@ function controls(canvas) {
   const end = e => { const t = touch.get(e.pointerId); if (t?.left) move.x = move.z = 0; touch.delete(e.pointerId); };
   canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end);
   return {
-    look, input() {
-      let x = move.x, z = move.z;
+    look,
+    setVirtualMove(x,z){virtual.x=clamp(x,-1,1);virtual.z=clamp(z,-1,1);},
+    setVirtualRun(value){virtual.run=!!value;},
+    input() {
+      let x = move.x+virtual.x, z = move.z+virtual.z;
       if (keys.has('KeyW') || keys.has('KeyZ') || keys.has('ArrowUp')) z -= 1; if (keys.has('KeyS') || keys.has('ArrowDown')) z += 1;
       if (keys.has('KeyA') || keys.has('KeyQ') || keys.has('ArrowLeft')) x -= 1; if (keys.has('KeyD') || keys.has('ArrowRight')) x += 1;
-      const l = Math.hypot(x, z); return { x: l > 1 ? x / l : x, z: l > 1 ? z / l : z, run: keys.has('ShiftLeft') || keys.has('ShiftRight') };
+      const l = Math.hypot(x, z); return { x: l > 1 ? x / l : x, z: l > 1 ? z / l : z, run: keys.has('ShiftLeft') || keys.has('ShiftRight') || virtual.run };
     }
   };
 }
@@ -648,6 +652,7 @@ export async function boot() {
   // Player.
   const ctl = controls(canvas), player = { x: 6, z: 96, y: 0 }; ctl.look.yaw = 0;
   const characterId = params.get('character') === 'lylu' ? 'lylu' : 'ghju', story = createStory(characterId, grotte.relay);
+  const gameplayHud=createM07Hud({characterId,onMove:(x,z)=>ctl.setVirtualMove(x,z),onRun:value=>ctl.setVirtualRun(value),onInteract:()=>{const button=$('prompt');if(button&&!button.hidden&&$('doc').hidden)button.click();}});
   const frustum = new T.Frustum(), pv = new T.Matrix4();
   let audio = null;
   function startAudio() {
@@ -669,7 +674,9 @@ export async function boot() {
   const stats = () => ({ backend, quality, fps: Math.round(fps), calls: renderer.info.render.drawCalls ?? renderer.info.render.calls, triangles: renderer.info.render.triangles,
     instances: Object.fromEntries(kinds.map(k => [k.kind, k.visible])), total: Object.fromEntries(kinds.map(k => [k.kind, k.count])), zone: zoneAt(player.x, player.z), player: { ...player } });
   function frame(now) {
-    const raw = now - last, dt = Math.min(.05, raw / 1000); last = now; time += dt;
+    const raw = now - last, dt = Math.min(.05, raw / 1000); last = now;
+    if(gameplayHud.paused){requestAnimationFrame(frame);return;}
+    time += dt;
     if (bench && !bench.done) {
       bench.t += dt; const u = clamp(bench.t / bench.duration, 0, 1), p = route.getPointAt(u), q = route.getPointAt(Math.min(1, u + .01));
       player.x = p.x; player.z = p.z; ctl.look.yaw = Math.atan2(-(q.x - p.x), -(q.z - p.z)); ctl.look.pitch = -.05; if (bench.t > .5) bench.frames.push(raw);
@@ -701,6 +708,7 @@ export async function boot() {
     grotte.glow.intensity = 5 + Math.sin(time * 3) * 1.2; drones.update(time); dust.update(time, camera.position);
     for (const [k, l] of relics.lights.entries()) l.visible = Math.sin(time * (2 + k) + k) > -.2;
     story.update(player, dt);
+    gameplayHud.update({zone:zoneAt(player.x,player.z),canInteract:!$('prompt').hidden&&!$('doc').hidden,finished:!$('fin').hidden});
     if (shadows) { sun.position.set(player.x + SUN_DIR.x * 120, SUN_DIR.y * 120, player.z + SUN_DIR.z * 120); sun.target.position.set(player.x, 0, player.z); }
     const inCave = zoneAt(player.x, player.z) === 'La grotte'; scene.fog.density = inCave ? .06 : FOG;
     // Inside the cave the sky no longer lights the rock: only the relay does.
@@ -712,7 +720,7 @@ export async function boot() {
     requestAnimationFrame(frame);
   }
   addEventListener('resize', () => { renderer.setPixelRatio(renderPixelRatio(profile, devicePixelRatio, innerWidth, innerHeight)); renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); cull.aspect = camera.aspect * 1.25; cull.updateProjectionMatrix(); });
-  window.__FORET = { scene, stats, story, get bench() { return bench?.result || null; }, teleport(x, z, yaw = 0) { player.x = x; player.z = z; player.y = groundHeight(x, z); ctl.look.yaw = yaw; refresh = 0; }, look(yaw, pitch = 0) { ctl.look.yaw = yaw; ctl.look.pitch = pitch; refresh = 0; } };
+  window.__FORET = { scene, stats, story, hud: gameplayHud, get bench() { return bench?.result || null; }, teleport(x, z, yaw = 0) { player.x = x; player.z = z; player.y = groundHeight(x, z); ctl.look.yaw = yaw; refresh = 0; }, look(yaw, pitch = 0) { ctl.look.yaw = yaw; ctl.look.pitch = pitch; refresh = 0; } };
   requestAnimationFrame(frame);
   return window.__FORET;
 }
