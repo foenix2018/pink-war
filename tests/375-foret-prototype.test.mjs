@@ -41,7 +41,7 @@ test('sunset, post-apocalyptic remnants and the chapter 07 scenes from chapter 0
 test('chapter 07 is in the game: menu entry, mode, launch to the forest page and back',()=>{
   const read=f=>readFileSync(new URL('../dist/'+f,import.meta.url),'utf8');
   assert.match(read('index.html'),/data-chapter="foret"[^>]*>07 — MÉMOIRES LOCALES/);
-  assert.match(read('entry.js'),/'foret'\].includes\(requestedMode\)|'ligne9','foret'/);assert.match(read('entry.js'),/openLigne9\('\.\/foret\.html'\)/);
+  assert.match(read('entry.js'),/'foret','breach'\]\.includes\(requestedMode\)/);assert.match(read('entry.js'),/openLigne9\('\.\/foret\.html'\)/);
   assert.match(read('game.js'),/selectedMode==='foret'\)\{const page=new URL\('\.\/foret\.html'/);
   assert.match(read('foret.html'),/index\.html\?mode=foret/);
 });

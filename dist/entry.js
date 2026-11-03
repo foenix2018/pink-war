@@ -16,7 +16,7 @@ let character='ghju',mode='campaign',view=readPreferredView(),trainingWeapon=0,l
 const settings={sound:true,music:true,sensitivity:1,quality:'auto'};
 try{character=localStorage.getItem('pink-war-character')==='lylu'?'lylu':'ghju';Object.assign(settings,JSON.parse(localStorage.getItem('rosee-settings')||'{}'));const stored=Number(localStorage.getItem('pink-war-training-weapon'));if(Number.isInteger(stored)&&stored>=0&&stored<7&&stored!==5)trainingWeapon=stored;}catch{}
 const requestedMode=new URLSearchParams(location.search).get('mode');
-if(['arena','training','campaign','campaign2','campaign3','campaign4','ligne9','foret','breach'].includes(requestedMode))mode=requestedMode;
+if(['arena','training','campaign','campaign2','campaign3','campaign4','ligne9','campaign6','foret','breach'].includes(requestedMode))mode=requestedMode;
 const profile=graphicsProfile(navigator,settings.quality);
 document.documentElement.classList.toggle('iphone-launch',profile.ios);
 function save(){try{localStorage.setItem('pink-war-character',character);localStorage.setItem('rosee-settings',JSON.stringify(settings));}catch{}}
@@ -29,10 +29,10 @@ function refresh(){
   $('character-description').textContent=character==='lylu'?'LYLU cherche sa sœur GHJU dans les ruines de Vesper.':'GHJU cherche son frère LYLU dans les ruines de Vesper.';
   for(const b of document.querySelectorAll('[data-character]')){const yes=b.dataset.character===character;b.classList.toggle('selected',yes);b.setAttribute('aria-pressed',String(yes));}
   for(const b of document.querySelectorAll('[data-mode]'))b.setAttribute('aria-pressed',String(b.dataset.mode===mode));
-  document.querySelector('.mission-kicker').textContent=mode==='foret'?'ACTE II · CHAPITRE 07':mode==='ligne9'?'ACTE II · CHAPITRE 05':mode==='campaign4'?'ACTE I · CHAPITRE 04':mode==='campaign3'?'ACTE I · CHAPITRE 03':mode==='campaign2'?'ACTE I · CHAPITRE 02':mode==='campaign'?'ACTE I · CHAPITRE 01':'PINK WARS · JOUER';
-  $('mission-title').textContent=mode==='foret'?'07 — Mémoires Locales':mode==='breach'?'Opération Brèche — mission bonus':mode==='ligne9'?'05 — La Ligne Noyée':mode==='campaign4'?'04 — Le Protocole Interdit':mode==='campaign3'?'03 — Le Convoi des Oubliés':mode==='campaign2'?'02 — Les Profondeurs':mode==='campaign'?'01 — Le Dernier Signal':mode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
-  $('mission-description').textContent=mode==='foret'?'Le soir de la fonderie, la forêt des Sources : sous-bois, gué, moulin et aqueduc en ruine, cascade et grotte, sur la piste de l’antenne de recherche de tes parents. Version de travail : décor et histoire, sans combat pour l’instant.':mode==='breach'?'Six secteurs industriels, deux relais, trois stabilisateurs et un gardien avant extraction.':mode==='ligne9'?'Ligne 9 inondée sous les Halles-Basses : rétablir le courant, relancer les pompes P9, ouvrir l’écluse et découvrir ce qu’ORDRE cache sous l’eau. Mission longue avec points de contrôle.':mode==='campaign4'?'Avec la cellule AEGIS de Mara Voss, à la station énergétique Est de JANUS : deux relais, trois stabilisateurs, le gardien de portique et une archive oubliée des anciens systèmes de secours. Mission longue avec points de contrôle.':mode==='campaign3'?'Secteur 03 de Vesper, de nuit : avec AEGIS, escorter l’ambulance d’Inès jusqu’à la gare de fret de l’Anneau logistique, sur la piste des prisonniers du Directoire. Relais A3, balise du pylône, échangeur bloqué. Mission longue avec points de contrôle.':mode==='campaign2'?'Bas-Niveaux de Vesper, tenus par le Directoire : enclave, marché couvert et tour de transit. Trouver un module de décryptage, libérer les prisonniers ou récupérer les archives HELIX.':mode==='campaign'?'Une transmission porte l’indicatif de vos parents, VEILLE-4. Station de secours abandonnée, rue sous surveillance, relais en hauteur et Archives végétales.':mode==='arena'?'Vingt vagues de machines et six armes à récupérer.':'Cibles fixes de 15 à 60 mètres, cibles mobiles latérales et avant-arrière. Vitesse croissante, score et précision.';
-  $('play-label').textContent=loading?'CHARGEMENT…':mode==='foret'?'JOUER LE CHAPITRE 07':mode==='ligne9'?'JOUER LE CHAPITRE 05':mode==='campaign4'?'JOUER LE CHAPITRE 04':mode==='campaign3'?'JOUER LE CHAPITRE 03':mode==='campaign2'?'JOUER LE CHAPITRE 02':mode==='campaign'?(readM01Checkpoint(character)?'CONTINUER':'JOUER'):mode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
+  document.querySelector('.mission-kicker').textContent=mode==='foret'?'ACTE II · CHAPITRE 07':mode==='campaign6'?'ACTE II · CHAPITRE 06':mode==='ligne9'?'ACTE II · CHAPITRE 05':mode==='campaign4'?'ACTE I · CHAPITRE 04':mode==='campaign3'?'ACTE I · CHAPITRE 03':mode==='campaign2'?'ACTE I · CHAPITRE 02':mode==='campaign'?'ACTE I · CHAPITRE 01':'PINK WARS · JOUER';
+  $('mission-title').textContent=mode==='foret'?'07 — Mémoires Locales':mode==='campaign6'?'06 — Le Cœur d’Acier':mode==='breach'?'Opération Brèche — mission bonus':mode==='ligne9'?'05 — La Ligne Noyée':mode==='campaign4'?'04 — Le Protocole Interdit':mode==='campaign3'?'03 — Le Convoi des Oubliés':mode==='campaign2'?'02 — Les Profondeurs':mode==='campaign'?'01 — Le Dernier Signal':mode==='arena'?'Survie — Les brèches':'Centre de tir — Qualification';
+  $('mission-description').textContent=mode==='campaign6'?'La fonderie automatisée de Vesper-Nord, que nomment les bons P-0 de la Ligne 9 : parc à ferraille, halle de coulée, chaîne lourde des Brutes et l’unité N-08 qui apprend de chaque combat. Sauver les techniciens d’AEGIS. Mission longue avec points de contrôle.':mode==='foret'?'Le soir de la fonderie, la forêt des Sources : sous-bois, gué, moulin et aqueduc en ruine, cascade et grotte, sur la piste de l’antenne de recherche de tes parents. Version de travail : décor et histoire, sans combat pour l’instant.':mode==='breach'?'Six secteurs industriels, deux relais, trois stabilisateurs et un gardien avant extraction.':mode==='ligne9'?'Ligne 9 inondée sous les Halles-Basses : rétablir le courant, relancer les pompes P9, ouvrir l’écluse et découvrir ce qu’ORDRE cache sous l’eau. Mission longue avec points de contrôle.':mode==='campaign4'?'Avec la cellule AEGIS de Mara Voss, à la station énergétique Est de JANUS : deux relais, trois stabilisateurs, le gardien de portique et une archive oubliée des anciens systèmes de secours. Mission longue avec points de contrôle.':mode==='campaign3'?'Secteur 03 de Vesper, de nuit : avec AEGIS, escorter l’ambulance d’Inès jusqu’à la gare de fret de l’Anneau logistique, sur la piste des prisonniers du Directoire. Relais A3, balise du pylône, échangeur bloqué. Mission longue avec points de contrôle.':mode==='campaign2'?'Bas-Niveaux de Vesper, tenus par le Directoire : enclave, marché couvert et tour de transit. Trouver un module de décryptage, libérer les prisonniers ou récupérer les archives HELIX.':mode==='campaign'?'Une transmission porte l’indicatif de vos parents, VEILLE-4. Station de secours abandonnée, rue sous surveillance, relais en hauteur et Archives végétales.':mode==='arena'?'Vingt vagues de machines et six armes à récupérer.':'Cibles fixes de 15 à 60 mètres, cibles mobiles latérales et avant-arrière. Vitesse croissante, score et précision.';
+  $('play-label').textContent=loading?'CHARGEMENT…':mode==='foret'?'JOUER LE CHAPITRE 07':mode==='campaign6'?'JOUER LE CHAPITRE 06':mode==='ligne9'?'JOUER LE CHAPITRE 05':mode==='campaign4'?'JOUER LE CHAPITRE 04':mode==='campaign3'?'JOUER LE CHAPITRE 03':mode==='campaign2'?'JOUER LE CHAPITRE 02':mode==='campaign'?(readM01Checkpoint(character)?'CONTINUER':'JOUER'):mode==='arena'?'LANCER LA SURVIE':'ENTRER AU STAND DE TIR';
   $('play-button').disabled=loading;
   $('sound-setting').checked=!!settings.sound;$('music-setting').checked=settings.music!==false;
   $('sensitivity').value=settings.sensitivity;$('quality').value=['auto','low','balanced','high'].includes(settings.quality)?settings.quality:'auto';
@@ -52,7 +52,7 @@ function openLigne9(page='./ligne9.html'){
 function openMission(mission,{resume=false,vr=false}={}){
   loading=true;refresh();save();for(const d of document.querySelectorAll('dialog[open]'))d.close();
   const cover=createMissionLoading({mission,characterId:character});cover.set(.04,'Ouverture du secteur');
-  const target=mission===2?'./level2-test.html':mission===3?'./niveau3.html':mission===4?'./niveau4.html':'./vesper-level1-v7.html';
+  const target=mission===2?'./level2-test.html':mission===3?'./niveau3.html':mission===4?'./niveau4.html':mission===6?'./niveau6.html':'./vesper-level1-v7.html';
   const url=new URL(target,location.href);url.searchParams.set('source','campaign');url.searchParams.set('autostart','1');if(mission===3)url.searchParams.set('chapter','3');url.searchParams.set('character',character);url.searchParams.set('v',GAME_VERSION);
   if(mission===1)url.searchParams.set('prologue','done');
   if(resume)url.searchParams.set('resume','1');
@@ -99,6 +99,9 @@ async function begin(intent='play',afterPrologue=false){
   if(mode==='campaign4'){
     openMission(4,{vr:false});return;
   }
+  if(mode==='campaign6'){
+    openMission(6,{vr:false});return;
+  }
   if(mode==='campaign2'){
     openMission(2,{vr:intent==='vr'});return;
   }
@@ -113,7 +116,7 @@ async function begin(intent='play',afterPrologue=false){
   if(settings.sound||settings.music!==false)try{const Audio=window.AudioContext||window.webkitAudioContext;
     window.__PINKWAR_BOOT_AUDIO ||=new Audio();window.__PINKWAR_BOOT_AUDIO.resume().catch(()=>{});}catch{}
   try{
-    modulePromise ||=import('./game.js?v=3.86-robot-destruction-audio-foret');await modulePromise;
+    modulePromise ||=import('./game.js?v=3.86-robot-destruction-audio-foret-m06');await modulePromise;
     for(const d of document.querySelectorAll('dialog'))d.removeEventListener('cancel',earlyCancel);
     if(!window.__PINKWAR||window.__PINKWAR.snapshot().phase==='error')throw new Error('Initialisation interrompue.');
     loading=false;
