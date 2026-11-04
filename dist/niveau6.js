@@ -12,7 +12,7 @@ import {createPinkWarsInput,createPinkWarsTouch} from './level2-input.js';
 import {createWeaponFeel} from './weapon-feel.js';
 import {loadRealLaserSample,loadCombatSamples,playLaserShot,playWeaponAction,playLaserImpact,setLaserAudioEnabled} from './laser-sound.js';
 import {aimSensitivity,magnifiedFov,flatSightPose} from './optics.js';
-import {OPTICS,buildGun} from './weapons.js';
+import {OPTICS,buildGun,attachViewmodelLight} from './weapons.js';
 import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './renderer-policy.js';
 import {createEnemyFactory} from './enemies.js';
 import {createEnemyDestructionFX} from './enemy-destruction-fx.js';
@@ -191,6 +191,7 @@ function setupPlayer(){
  try{weapon=buildGun({mats:pm,gloves,makeFlash:()=>{const o=new T.Mesh(new T.SphereGeometry(.07,8,6),heroGlow);o.visible=false;return o;}});weapon.userData.setVariant(game.weaponIndex);}
  catch(error){console.warn('M06 / arme simplifiée',error);weapon=new T.Group();Object.assign(weapon.userData,{index:0,setVariant(index){this.index=index;},setCombatState(){}});}
  camera.add(weapon);weapon.position.set(.19,-.24,-.56);
+ attachViewmodelLight(camera,{rim:characterId==='lylu'?0x5fb0ff:0xff6fb8});
  combatEffects=createCampaignCombatEffects(T,scene,characterId);
  companion=createAICompanion(T,scene,characterId);
  companionSkills=createCompanionSkills({characterId,mission:4,mode:'campaign'});
@@ -597,6 +598,6 @@ window.__PINK_M06=Object.freeze({
   look:(y,p)=>{yaw=y;pitch=p;snapCamera();},clear:(keepBoss=false)=>{game.enemies=game.enemies.filter(e=>keepBoss&&e.n08);mission.update(1/60);},
   interact:()=>{interact();return reading;},close:()=>closeDocument(),skip:seconds=>{game.time+=seconds;mission.update(1/60);},god:()=>{game.invulnerable=1e9;},
   use:id=>{const it=L.INTERACTIONS.find(i=>i.id===id);Object.assign(game.player,{x:it.x,z:it.z,elevation:it.y||0,grounded:true,verticalSpeed:0});interact();return {reading,stage:mission.stageId};},
-  portal:(x,z)=>art.openPortal(x,0,z,{charge:30}),view:()=>changeView(),lamp:()=>toggleLamp(),vr:()=>xr.enter()}:null
+  weapon:i=>{game.ownedWeapons?.add(i);game.selectWeapon(i);return game.weaponIndex;},portal:(x,z)=>art.openPortal(x,0,z,{charge:30}),view:()=>changeView(),lamp:()=>toggleLamp(),vr:()=>xr.enter()}:null
 });
 if(params.get('autostart')==='1'){startButton.disabled=true;void boot();}

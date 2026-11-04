@@ -20,7 +20,7 @@ import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './rende
 import {createEnemyFactory} from './enemies.js';
 import {createEnemyDestructionFX} from './enemy-destruction-fx.js';
 import {createRobotShutdownAudio} from './enemy-shutdown-audio.js';
-import {buildGun} from './weapons.js';
+import {buildGun,attachViewmodelLight} from './weapons.js';
 import {createDistrictArchitecture} from './level2-architecture.js';
 import {createEnvironmentFinish} from './m02-environment-finish.js';
 import {installLeanPBR} from './level2-materials.js';
@@ -463,6 +463,7 @@ function setupPlayer(){
   Object.assign(weapon.userData,{index:0,setVariant(index){this.index=index;},setCombatState(){}});
  }
  camera.add(weapon);weapon.position.set(.23,-.30,-.59);weapon.rotation.set(-.07,-.045,-.09);
+ attachViewmodelLight(camera,{rim:characterId==='lylu'?0x5fb0ff:0xff6fb8});
  combatEffects=createCampaignCombatEffects(T,scene,characterId);
  companion=createAICompanion(T,scene,characterId);
  companionSkills=createCompanionSkills({characterId,mission:2,mode:'campaign'});

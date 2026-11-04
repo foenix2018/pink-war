@@ -1,13 +1,15 @@
 // PINK WARS — VORTEX AR-7 V5, original procedural model from the approved viewer.
-// Same olive/brushed-metal hull, rear buttstock, cyan reflex optic and pink magazine rails.
+// White Shadow Unit hull (was olive), rear buttstock, pink-tinted reflex optic and pink magazine rails.
 // Weapon local frame: grip at (0,0,0), muzzle points down -Z.
 import * as THREE from './vendor/three.webgpu.min.js';
 let cachedPrototype;
 function buildPrototype(){
 const meshes={solid:[],glow:[],optic:[],ammo:[],shot:[]};
 const C=(hex,a=1)=>[((hex>>>16)&255)/255,((hex>>>8)&255)/255,(hex&255)/255,a];
-const pink=C(0xff3fa1),pinkSoft=C(0xff83c9),cyan=C(0x6befff),titanium=C(0x69716d),edge=C(0x9ca69b);
-const steel=C(0x87938f),olive=C(0x626c60),olive2=C(0x4a564f),armor=C(0x424e4d),dark=C(0x263137),black=C(0x111a20),rubber=C(0x172027),trim=C(0x9aa6a3),groove=C(0x0a1116),green=C(0x92ff79),scratched=C(0x7d8c82),brushed=C(0x64716c),brushedBright=C(0x90a19c),oxide=C(0x293734),alloy=C(0x64736b),rearAlloy=C(0x414f4e),rearEdge=C(0x72837f);
+const pink=C(0xff3fa1),pinkSoft=C(0xff83c9),cyan=C(0xff6fbf),titanium=C(0x7c818a),edge=C(0xb9bec6);
+// Shadow Unit finish (player reference of 4 Nov 2026): white ceramic plates, graphite receiver, pink light. The
+// variable names keep the original olive build so the geometry below is unchanged.
+const steel=C(0x9aa0a8),olive=C(0xe4e6ea),olive2=C(0xc4c8ce),armor=C(0x2c3038),dark=C(0x1c1f25),black=C(0x0f1114),rubber=C(0x15171b),trim=C(0xd7dade),groove=C(0x0a0b0e),green=C(0xff4fa8),scratched=C(0xd0d3d8),brushed=C(0xb7bcc3),brushedBright=C(0xe9ebee),oxide=C(0x23262c),alloy=C(0xc9cdd3),rearAlloy=C(0x2c3038),rearEdge=C(0xa9aeb5);
 const geom=mesh=>meshes[mesh];
 const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
 function unit(x){const n=Math.hypot(...x)||1;return x.map(v=>v/n)}
@@ -260,9 +262,9 @@ rod([-2.54,.015,0],[-3.75,.015,0],.016,C(0xffe7b6),geom('shot'),8);
  const pivot=new THREE.Group();pivot.rotation.y=-Math.PI/2;pivot.scale.setScalar(.25);root.add(pivot);
  const body=new THREE.Group();body.position.set(-.35,.55,0);pivot.add(body);
  const materials={
-  solid:new THREE.MeshStandardMaterial({vertexColors:true,metalness:.78,roughness:.34,side:THREE.DoubleSide}),
+  solid:new THREE.MeshStandardMaterial({vertexColors:true,metalness:.32,roughness:.36,side:THREE.DoubleSide}),
   glow:new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false,side:THREE.DoubleSide,transparent:true,depthWrite:false}),
-  optic:new THREE.MeshPhysicalMaterial({color:0xa4deea,transparent:true,opacity:.17,metalness:.10,roughness:.08,side:THREE.DoubleSide,depthWrite:false})
+  optic:new THREE.MeshPhysicalMaterial({color:0xff7ac0,transparent:true,opacity:.26,metalness:.10,roughness:.08,side:THREE.DoubleSide,depthWrite:false})
  };
  for(const name of ['solid','glow','optic']){
   const raw=meshes[name],n=raw.length/11;

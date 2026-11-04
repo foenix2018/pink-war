@@ -344,3 +344,57 @@ body.pw-immersion-hud .pw-hud .pw-hud-grenade-direct{display:none!important}
 @supports(height:100dvh){
  body.pw-immersion-hud .pw-hud{height:100dvh;min-height:100dvh;bottom:auto}
 }
+/* HUD 3.87 — concept FPS view (4 Nov 2026): equipment tabs everywhere; on a mouse screen the companion portrait heads
+   the vitals in the upper left, health (pink) and shield (blue) as two long bars, the weapon readout carries its
+   silhouette and a cartridge. Touch layouts keep their 3.80–3.86 positions. */
+.pw-hud-weapon-glyph,.pw-hud .pw-hud-bullet{display:none}
+.pw-hud .pw-hud-glyph{display:block;width:100%!important;height:100%!important;fill:currentColor!important;stroke:none!important}
+.pw-hud-gear-tabs{display:flex;gap:4px;margin:0 0 10px;padding:3px;border-radius:12px;background:#0a182455;border:1px solid #ffffff1c}
+.pw-hud .pw-hud-gear-tabs button{flex:1;min-height:32px;border:0;border-radius:9px;background:none;font-size:11px;font-weight:650;letter-spacing:.03em;color:#c9d6e2}
+.pw-hud .pw-hud-gear-tabs button[aria-selected=true]{background:color-mix(in srgb,var(--pw-accent) 30%,#20354a);color:#fff;box-shadow:inset 0 -2px var(--pw-accent)}
+.pw-hud .pw-hud-gear-weapon{display:grid;grid-template-columns:46px 1fr auto 16px;justify-content:stretch}
+.pw-hud-gear-glyph{display:block;width:46px;height:15px;color:#e9eef4;opacity:.9}
+.pw-hud-gear-check{color:var(--pw-accent);font-size:14px;text-align:right}
+.pw-hud .pw-hud-gear-grenade{margin-top:0;display:grid;grid-template-columns:24px 1fr auto;text-align:left}
+.pw-hud-gear-grenade>svg{width:22px;height:22px;fill:none;stroke:#ffcc9e;stroke-width:1.6}
+.pw-hud-gear-grenade span small{display:block;font-size:9px;color:#d8c2b0;margin-top:3px;letter-spacing:.04em}
+.pw-hud-gear-charges::before{content:'×';margin-right:2px;font-size:.8em}
+.pw-hud .pw-hud-gear-skills{margin-top:0}
+.pw-hud-gear-locked{display:block;color:#bbcadb;font-size:10px;line-height:1.4;padding:4px 2px}
+.pw-hud-gear-locked[hidden]{display:none}
+@media (pointer:fine) and (min-width:900px){
+ .pw-hud{--pw-shield-blue:#6fb6ff}
+ .pw-hud .pw-hud-companion{top:var(--pw-top)!important;left:var(--pw-left);width:92px;min-height:96px;border-radius:20px;padding:6px 6px 7px;z-index:3}
+ .pw-hud .pw-hud-companion canvas{width:70px;height:70px;border-radius:16px}
+ .pw-hud .pw-hud-companion-name{font-size:10px;letter-spacing:.12em}
+ .pw-hud .pw-hud-companion-chevron{top:34px}
+ .pw-hud .pw-hud-vitals{left:calc(var(--pw-left) + 100px);width:260px;height:96px;padding:12px 16px;border-radius:20px}
+ .pw-hud .pw-hud-numbers{position:absolute;inset:12px 16px auto;flex-direction:column;align-items:stretch;gap:24px}
+ .pw-hud .pw-hud-numbers>span{flex-direction:row;gap:8px}
+ .pw-hud .pw-hud-numbers>span:first-child{order:2;color:var(--pw-shield-blue)}
+ .pw-hud .pw-hud-numbers>span:last-child{order:1;color:#ff5fa8}
+ .pw-hud .pw-hud-numbers svg{width:19px;height:19px}
+ .pw-hud .pw-hud-vitals .pw-hud-shield-value,.pw-hud .pw-hud-value{color:#f6fbff}
+ .pw-hud .pw-hud-vitals .pw-hud-bar,.pw-hud .pw-hud-vitals .pw-hud-shield{left:90px;right:16px;height:7px;border-radius:5px;background:#ffffff1c;opacity:1}
+ .pw-hud .pw-hud-vitals .pw-hud-bar{top:21px;bottom:auto}
+ .pw-hud .pw-hud-vitals .pw-hud-shield{top:70px;bottom:auto}
+ .pw-hud .pw-hud-vitals:has(.pw-hud-shield:not([hidden])) .pw-hud-bar{bottom:auto;height:7px;opacity:1}
+ .pw-hud .pw-hud-vitals .pw-hud-bar i{background:linear-gradient(90deg,#ff3d95,#ff8cc4);box-shadow:0 0 10px #ff5fa888}
+ .pw-hud .pw-hud-vitals .pw-hud-shield i{background:linear-gradient(90deg,#3d8dff,#9fd2ff);box-shadow:0 0 10px #6fb6ff88}
+ .pw-hud .pw-hud-vitals .pw-hud-note{bottom:-18px}
+ .pw-hud .pw-hud-arms,.pw-hud.pw-actions-open .pw-hud-arms{width:300px;height:76px}
+ .pw-hud .pw-hud-arms .pw-hud-reload{display:grid;grid-template-columns:128px 1fr;grid-template-rows:auto 1fr;column-gap:14px;align-items:center;padding:9px 16px;border-radius:20px}
+ .pw-hud .pw-hud-weapon-glyph{display:block;grid-row:1/3;width:128px;height:42px;color:#f3f5f8;filter:drop-shadow(0 0 6px #ff6fbf55)}
+ .pw-hud .pw-hud-weapon{font-size:11px;letter-spacing:.14em;margin-bottom:2px;align-self:end}
+ .pw-hud .pw-hud-ammo-row{display:flex;align-items:center;gap:2px;align-self:start}
+ .pw-hud .pw-hud-bullet{display:block;width:8px;height:20px;margin-left:8px;fill:#ff6fbf}
+ .pw-hud .pw-hud-reload-track{left:16px;right:16px;bottom:8px}
+ .pw-hud .pw-hud-gear{top:calc(var(--pw-top) + 108px)!important;left:var(--pw-left);width:330px}
+}
+/* Concept grade: violet corners and a pink lift on the lower screen, over the 3D view and under the HUD panels.
+   Pure CSS, so WebGPU and the WebGL fallback look the same and it costs no GPU pass. */
+.pw-hud::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+ background:radial-gradient(ellipse 120% 95% at 50% 46%,transparent 52%,#2a0b3a66 88%,#14051fa6 100%),
+  linear-gradient(180deg,#5a2a8c14 0%,transparent 38%,transparent 62%,#ff4fa814 100%);
+ mix-blend-mode:normal}
+body.pw-hud-lobby-page .pw-hud::before,.pw-hud[hidden]::before{display:none}

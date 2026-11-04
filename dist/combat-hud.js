@@ -7,9 +7,24 @@ import {paintCompanionPortrait} from './companion-portrait.js';
 import {renderDigitalCounter} from './digital-display.js';
 let activeCombatHud = null;
 export const getActiveCombatHud = () => activeCombatHud;
-const STYLESHEET = 'combat-hud.css?v=3.86-grenade-safearea-1';
+const STYLESHEET = 'combat-hud.css?v=3.87-concept-3';
 const HEROES = Object.freeze({ ghju: 'GHJU', lylu: 'LYLU' });
 export const HUD_SEGMENTS = 10;
+
+// Side silhouettes of the arsenal (48 × 16), drawn in the weapon readout and the equipment list.
+const GLYPHS=Object.freeze({
+  pistol:'M14 4h21v4H25l-2 7h-6l1-7h-4z',
+  dual:'M8 3h17v3h-8l-2 6h-5l1-6H8zM22 8h19v3h-9l-2 5h-5l1-5h-4z',
+  rifle:'M1 7h7l2-2h15l1-2h5v2h12v3H30l-1 2h-4l-1 5h-4l1-5h-4l-3 4h-5l2-4H1z',
+  sniper:'M1 7h6l2-2h13l1-1h4v1h20v2H27l-1 2h-3l-1 5h-3l1-5h-5l-3 3H8l1-3H1zM14 1h11v3H14z',
+  shotgun:'M2 6h8l2-1h33v4H27l-2 2h-6l-4 4H9l3-4H2z',
+  heavy:'M3 5h28l3-2h11v9H34l-3-2H22l-2 5h-5l1-5H3z',
+  blade:'M2 9h9l2-2h3v5h-3l-2-2H2zM17 8l29-4-27 7z'});
+const GLYPH_OF=Object.freeze({r9:'pistol',duor9:'dual',bloom:'rifle',vortex:'rifle',lance:'sniper',m12:'shotgun',thorn:'heavy',nova:'heavy',aurora:'blade'});
+export function weaponGlyph(index){
+  const id=WEAPONS[index]?.id;return `<svg class="pw-hud-glyph" viewBox="0 0 48 16" aria-hidden="true"><path d="${GLYPHS[GLYPH_OF[id]]||GLYPHS.rifle}"/></svg>`;
+}
+const BULLET='<svg class="pw-hud-bullet" viewBox="0 0 8 20" aria-hidden="true"><path d="M2 7c0-4 2-6 2-6s2 2 2 6v10H2zM1.5 18h5v2h-5z"/></svg>';
 
 export function combatEquipmentState(game,hero='ghju'){
  const owned=game?.ownedWeapons instanceof Set?game.ownedWeapons:new Set();
@@ -62,9 +77,9 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
   root.innerHTML=`<button type="button" class="pw-hud-mission pw-glass" aria-expanded="false" aria-label="Afficher l’objectif">${hudIcon('objective')}<span></span></button>
     <section class="pw-hud-objective pw-glass" hidden aria-label="Objectif actuel"><small></small><p></p></section>
     <div class="pw-hud-vitals pw-glass" role="status" aria-label="Santé et bouclier"><span class="pw-hud-tag" hidden></span><div class="pw-hud-numbers"><span class="pw-shield-number">${hudIcon('shield')}<b class="pw-hud-shield-value">60</b></span><span>${hudIcon('health')}<b class="pw-hud-value">100</b></span></div><div class="pw-hud-shield" hidden><i></i></div><div class="pw-hud-bar"><i></i></div><span class="pw-hud-note"></span></div>
-    <div class="pw-hud-arms pw-glass"><button type="button" class="pw-hud-reload" data-hud-action="reload" aria-label="Recharger l’arme"><span class="pw-hud-weapon"></span><span><b class="pw-hud-ammo">0</b><small class="pw-hud-capacity"></small></span><span class="pw-hud-reload-track"><i></i></span></button><button type="button" class="pw-hud-swap" data-hud-action="next" aria-label="Arme suivante">${hudIcon('swap')}</button><span class="pw-hud-note" role="status"></span></div>
+    <div class="pw-hud-arms pw-glass"><button type="button" class="pw-hud-reload" data-hud-action="reload" aria-label="Recharger l’arme"><span class="pw-hud-weapon-glyph"></span><span class="pw-hud-weapon"></span><span class="pw-hud-ammo-row"><b class="pw-hud-ammo">0</b><small class="pw-hud-capacity"></small>${BULLET}</span><span class="pw-hud-reload-track"><i></i></span></button><button type="button" class="pw-hud-swap" data-hud-action="next" aria-label="Arme suivante">${hudIcon('swap')}</button><span class="pw-hud-note" role="status"></span></div>
     <button type="button" class="pw-hud-companion pw-glass" aria-label="Équipement GAB-1" aria-expanded="false" aria-controls="pw-tactical-gear"><canvas width="128" height="128" aria-hidden="true"></canvas><span class="pw-hud-companion-name">GAB-1</span><span class="pw-hud-companion-chevron">›</span></button>
-    <section class="pw-hud-gear pw-glass" id="pw-tactical-gear" role="dialog" aria-label="Équipement tactique" hidden><header><strong>ÉQUIPEMENT</strong><button type="button" class="pw-hud-gear-close" aria-label="Fermer l'équipement">×</button></header><small class="pw-hud-gear-hint">Sélectionner une arme débloquée</small><div class="pw-hud-weapon-list" role="group" aria-label="Armes disponibles"></div><button type="button" class="pw-hud-gear-grenade"><span>LANCER GRENADE · IMPULSION</span><b class="pw-hud-gear-charges">0</b></button><button type="button" class="pw-hud-gear-skills" hidden>COMPÉTENCES DU COMPAGNON</button></section>
+    <section class="pw-hud-gear pw-glass" id="pw-tactical-gear" role="dialog" aria-label="Équipement tactique" hidden><header><strong>ÉQUIPEMENT</strong><button type="button" class="pw-hud-gear-close" aria-label="Fermer l'équipement">×</button></header><nav class="pw-hud-gear-tabs" role="tablist" aria-label="Catégories"><button type="button" role="tab" data-gear-tab="armes" aria-selected="true">Armes</button><button type="button" role="tab" data-gear-tab="grenades" aria-selected="false">Grenades</button><button type="button" role="tab" data-gear-tab="options" aria-selected="false">Options</button></nav><div class="pw-hud-gear-pane" data-gear-pane="armes"><small class="pw-hud-gear-hint">Sélectionner une arme débloquée</small><div class="pw-hud-weapon-list" role="group" aria-label="Armes disponibles"></div></div><div class="pw-hud-gear-pane" data-gear-pane="grenades" hidden><button type="button" class="pw-hud-gear-grenade">${hudIcon('grenade')}<span>Grenade à impulsion<small>Lancer · touche B</small></span><b class="pw-hud-gear-charges">0</b></button></div><div class="pw-hud-gear-pane" data-gear-pane="options" hidden><button type="button" class="pw-hud-gear-skills" hidden>COMPÉTENCES DU COMPAGNON</button><small class="pw-hud-gear-locked">Compétences avancées du compagnon : mission 7.</small></div></section>
     <div class="pw-hud-hit" aria-hidden="true"><i></i></div>
     <div class="pw-hud-touch"><button type="button" class="pw-hud-more" aria-label="Actions secondaires" aria-expanded="false">${hudIcon('more')}</button><div class="pw-hud-palette pw-glass" hidden role="group" aria-label="Actions secondaires"><button type="button" data-armor="charge" aria-label="Lancer une charge à impulsion">${hudIcon('charge')}<span>Charge <b class="pw-hud-charges">2</b></span></button><button type="button" data-armor="melee" aria-label="Frappe de mêlée">${hudIcon('melee')}<span>Mêlée</span></button><button type="button" data-hud-action="crouch" aria-pressed="false">${hudIcon('down-double')}<span>Accroupi</span></button><button type="button" data-hud-action="sprint" aria-pressed="false">${hudIcon('sprint')}<span>Course</span></button></div></div>
     <button type="button" class="pw-hud-context pw-glass" data-hud-action="interact" hidden>${hudIcon('interact')}<span></span><kbd>F</kbd></button>`;
@@ -125,11 +140,16 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
       b.setAttribute('aria-pressed',String(w.index===s.weaponIndex));
       const name=doc.createElement('strong'),amount=doc.createElement('span');
       name.textContent=w.name;amount.textContent=w.melee?'LAME':w.ammo+' / '+w.capacity;
-      b.append(name,amount);b.onclick=()=>chooseWeapon(w.index);gearList.append(b);
+      const glyph=doc.createElement('i');glyph.className='pw-hud-gear-glyph';glyph.innerHTML=weaponGlyph(w.index);
+      const check=doc.createElement('b');check.className='pw-hud-gear-check';check.setAttribute('aria-hidden','true');check.textContent=w.index===s.weaponIndex?'✓':'';
+      b.append(glyph,name,amount,check);b.onclick=()=>chooseWeapon(w.index);gearList.append(b);
     }
     $('.pw-hud-gear-charges').textContent=String(s.charges);gearGrenade.disabled=s.charges<=0||game?.state!=='playing';
-    gearSkills.hidden=!unlocked;
+    gearSkills.hidden=!unlocked;$('.pw-hud-gear-locked').hidden=unlocked;
   }
+  const gearTabs=[...root.querySelectorAll('[data-gear-tab]')];
+  function showGearTab(name){for(const t of gearTabs)t.setAttribute('aria-selected',String(t.dataset.gearTab===name));for(const pane of root.querySelectorAll('[data-gear-pane]'))pane.hidden=pane.dataset.gearPane!==name;}
+  for(const t of gearTabs)t.onclick=e=>{e.stopPropagation();showGearTab(t.dataset.gearTab);};
   portrait.addEventListener('pointerdown',e=>e.stopPropagation());
   portrait.onclick=e=>{e.preventDefault();e.stopPropagation();setGearOpen(!gearOpen);};
   gear.addEventListener('pointerdown',e=>e.stopPropagation());
@@ -200,7 +220,7 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
       crouchButton.setAttribute('aria-pressed',String(!!game.player?.crouched));
       const arc=s.hit?(s.hit.angle*180/Math.PI).toFixed(0)+'|'+s.hit.strength.toFixed(2):'';
       if(last.get('arc')!==arc){last.set('arc',arc);hitRing.style.opacity=s.hit?s.hit.strength.toFixed(2):'0';if(s.hit)hitRing.style.setProperty('--angle',(s.hit.angle*180/Math.PI).toFixed(1)+'deg');}
-      text('weapon',s.weapon.toUpperCase());text('ammo',s.melee?'LAME':String(s.ammo));text('capacity',s.melee?'':'/ '+s.capacity);
+      if(last.get('glyph')!==game.weaponIndex){last.set('glyph',game.weaponIndex);$('.pw-hud-weapon-glyph').innerHTML=s.melee&&!WEAPONS[game.weaponIndex]?'':weaponGlyph(game.weaponIndex);}text('weapon',s.weapon.toUpperCase());text('ammo',s.melee?'LAME':String(s.ammo));text('capacity',s.melee?'':'/ '+s.capacity);
       prop(arms,'--fill',(s.reloading?s.reloadProgress:s.melee?1:s.capacity?s.ammo/s.capacity:0).toFixed(3));
       flag(arms,'reloading',s.reloading);flag(arms,'empty',s.empty);flag(arms,'low',!s.melee&&!s.reloading&&s.capacity>0&&s.ammo>0&&s.ammo<=s.capacity*.25);
       text('armsNote',s.reloading?'RECHARGE':s.empty?'VIDE':'');$('.pw-hud-reload').disabled=s.melee||s.reloading;refreshEquipment();

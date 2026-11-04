@@ -69,7 +69,8 @@ export const OPTICS = Object.freeze({
   thorn:Object.freeze({y:.3614,z:-.0533,radius:.0325,magnification:1.6}),
   nova:Object.freeze({y:.122,z:-.085,radius:.020,magnification:1.35,eyeRelief:.22}),
   duor9:Object.freeze({y:.221,z:-.0487,radius:.0214,magnification:1.15,eyeRelief:.26}),
-  vortex:Object.freeze({y:.334,z:-.249,radius:.026,magnification:1.30,eyeRelief:.26}),
+  // Hip pose closer and lower on the right, the stock under the shoulder (FPS reference of 4 Nov 2026).
+  vortex:Object.freeze({y:.334,z:-.249,radius:.026,magnification:1.30,eyeRelief:.26,hip:Object.freeze({x:.05,y:-.035,z:.07,yaw:.05,roll:-.02})}),
   // The M12's receiver hides the shooting hand from the eye: at the hip it sits lower and turns slightly outwards.
   m12:Object.freeze({y:.177,z:-.165,radius:.018,magnification:1.15,eyeRelief:.62,xrEyeRelief:.30,iron:true,hip:Object.freeze({x:.03,y:-.05,yaw:-.13,roll:.08})})
 });
@@ -346,6 +347,16 @@ export function createWeaponModels(mats) {
 
 // The weapon in the right hand: every model is drawn around the grip (the palm), so the glove holds it by
 // construction. Heavy weapons add a second glove on the foregrip. `makeFlash(parent)` supplies the muzzle glow.
+// Viewmodel fill light (FPS reference of 4 Nov 2026): the gun and the arms are lit from the front-left by a short warm
+// key and outlined by a rim in the hero's colour, whatever the sun does behind the player. Both lights are short-range
+// (1.2–1.6 m) and ride with the camera, so they barely touch the level.
+export function attachViewmodelLight(camera,{rim=0xff6fb8,key=0xfff1e6}={}){
+  if(camera.userData.viewmodelLight)return camera.userData.viewmodelLight;
+  const keyLight=new T.PointLight(key,2.4,1.6,2);keyLight.position.set(-.28,.24,-.18);keyLight.name='viewmodel key';
+  const rimLight=new T.PointLight(rim,1.1,1.2,2);rimLight.position.set(.5,-.04,-.62);rimLight.name='viewmodel rim';
+  camera.add(keyLight,rimLight);return camera.userData.viewmodelLight={key:keyLight,rim:rimLight};
+}
+
 export function buildGun({ mats, gloves, sleeve = true, arm = sleeve, makeFlash }) {
   mats=weaponMetals(mats);
   const g = new T.Group(), models = createWeaponModels(mats);

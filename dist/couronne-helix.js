@@ -9,7 +9,7 @@ import {createPinkWarsInput,createPinkWarsTouch} from './level2-input.js';
 import {createWeaponFeel} from './weapon-feel.js';
 import {loadRealLaserSample,loadCombatSamples,playLaserShot,playWeaponAction,playLaserImpact,setLaserAudioEnabled} from './laser-sound.js';
 import {aimSensitivity,magnifiedFov,flatSightPose} from './optics.js';
-import {OPTICS,buildGun} from './weapons.js';
+import {OPTICS,buildGun,attachViewmodelLight} from './weapons.js';
 import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './renderer-policy.js';
 import {createEnemyFactory} from './enemies.js';
 import {installPinkWarsSoldier} from './level2-player.js';
@@ -110,6 +110,7 @@ function setupPlayer(){
  try{weapon=buildGun({mats:pm,gloves,makeFlash:()=>{const o=new T.Mesh(new T.SphereGeometry(.07,8,6),heroGlow);o.visible=false;return o;}});weapon.userData.setVariant(game.weaponIndex);}
  catch(error){console.warn('Couronne / arme simplifiée',error);weapon=new T.Group();Object.assign(weapon.userData,{index:0,setVariant(index){this.index=index;},setCombatState(){}});}
  camera.add(weapon);weapon.position.set(.19,-.24,-.56);
+ attachViewmodelLight(camera,{rim:characterId==='lylu'?0x5fb0ff:0xff6fb8});
  combatEffects=createCampaignCombatEffects(T,scene,characterId);
  companion=createAICompanion(T,scene,characterId);
  companionSkills=createCompanionSkills({characterId,mission:3,mode:'campaign'});
