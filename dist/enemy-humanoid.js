@@ -6,6 +6,7 @@ import {HUMAN_REFERENCE} from './enemy-humanoid-data.js';
 import {FIELD_RIFLE,carriesFieldRifle} from './enemy-weapon-layout.js';
 import {buildBruteV3} from './enemy-brute-v3.js';
 import {buildSpectre} from './enemy-spectre.js';
+import {buildPursuer,buildSynthetic} from './enemy-poster-chassis.js';
 
 // A new hard-surface body over the approved hero's anatomical reference.
 // Planar plates and tapered chamfers replace inflated limbs and round shoulders.
@@ -30,6 +31,11 @@ const reference=HUMAN_REFERENCE.joints;
 export function buildHumanoidRobot({form,elite,ranged,detail,armor,dark,servo,hazard,optics,glow,reactor,boneAt,assembly,thorax,pelvis}){
  if(form==='spectre')return buildSpectre({armor,dark,servo,glow,boneAt,assembly,thorax,pelvis});
  if(form==='listener')return buildListener({form,elite,ranged,detail,armor,dark,servo,hazard,optics,glow,boneAt,assembly,thorax,pelvis});
+ if(form==='stalker'||form==='synth'){
+  const r=(form==='stalker'?buildPursuer:buildSynthetic)({armor,dark,servo,glow,optics,boneAt,assembly,thorax,pelvis});
+  if(ranged)Object.assign(r,mountRangedWeapon({form,armor,dark,servo,glow,boneAt,assembly,thorax,a:assembly(thorax),poster:true}));
+  return r;
+ }
  if(form==='brute')return buildBruteV3({armor,dark,servo,reactor,optics,glow,boneAt,assembly,thorax,pelvis});
  const heavy=['brute','bulwark'].includes(form),slender=['seer','listener','synth','spectre'].includes(form),width=form==='brute'?1.95:heavy?1.45:slender?.96:1.06,limbWidth=form==='brute'?1.42:heavy?1.28:form==='spectre'?.82:1;
  const a=assembly(thorax),hips=assembly(pelvis),legRig=[],armRig=[],bladeRig=[];let groundGun=null,gunSignal=null;
@@ -109,14 +115,20 @@ export function buildHumanoidRobot({form,elite,ranged,detail,armor,dark,servo,ha
   motor(b,ankle,.042,.065);if(form!=='brute')b.add(boot,armor,matrix([ankle[0],.065,ankle[2]-.055]));b.add(sole,dark,matrix([ankle[0],.015,ankle[2]-.06]));
   legRig.push({upper:upperLeg,lower:lowerLeg,foot,side,hip,knee,ankle});
  }
- if(ranged){
+ if(ranged)({groundGun,gunSignal}=mountRangedWeapon({form,armor,dark,servo,glow,boneAt,assembly,thorax,a}));
+ return {legRig,armRig,bladeRig,groundGun,gunSignal,sensorAnchor:form==='seer'?[0,1.88]:[.047,1.88],hipHeight:reference.LeftUpLeg[1]};
+}
+
+// Shoulder weapon shared by every humanoid; poster chassis add red rails, an optic and a magazine.
+function mountRangedWeapon({form,armor,dark,servo,glow,boneAt,assembly,thorax,a,poster=false}){
+ let groundGun=null,gunSignal=null;
   const field=carriesFieldRifle(form),p=field?FIELD_RIFLE.pivot:{x:.37,y:1.69,z:-.01},m=field?FIELD_RIFLE.muzzle:{x:.37,y:1.69,z:-.345};
   groundGun=boneAt(field?'aimed-field-rifle':'aimed-shoulder-weapon',[p.x,p.y,p.z],thorax);const gun=assembly(groundGun);
   if(field){
    gun.add(receiver,armor,matrix([p.x,p.y-.02,-.10]));gun.box(dark,[.09,.11,.17],[p.x,p.y-.04,.17],[0,0,0],.01);gun.box(dark,[.045,.13,.06],[p.x,p.y-.14,.045],[-.15,0,0],.008);
-   gun.box(armor,[.115,.095,.12],[p.x,p.y-.035,-.33],[0,0,0],.01);gun.limb(dark,[p.x,p.y,-.32],[m.x,m.y,m.z],.027,.023);gun.add(ring,servo,matrix([m.x,m.y,m.z+.018],[0,0,0],[.026,.026,.026]));
+   gun.box(armor,[.115,.095,.12],[p.x,p.y-.035,-.33],[0,0,0],.01);
+   if(poster){for(const side of [-1,1]){gun.box(glow,[.006,.018,.30],[p.x+side*.067,p.y-.01,-.10],[0,0,0],.002,false);gun.box(glow,[.006,.012,.08],[p.x+side*.06,p.y-.035,-.33],[0,0,0],.002,false);}gun.box(dark,[.05,.05,.16],[p.x,p.y+.085,-.08],[0,0,0],.008);gun.box(dark,[.055,.15,.07],[p.x,p.y-.15,-.16],[.12,0,0],.008);}gun.limb(dark,[p.x,p.y,-.32],[m.x,m.y,m.z],.027,.023);gun.add(ring,servo,matrix([m.x,m.y,m.z+.018],[0,0,0],[.026,.026,.026]));
   }else{gun.box(armor,[.18,.16,.32],[p.x,p.y,.02],[0,0,0],.015);gun.limb(dark,[p.x,p.y,-.10],[m.x,m.y,m.z],.055,.035);a.limb(servo,[p.x,1.56,.08],[p.x,1.67,.08],.034,.03);}
   gunSignal=boneAt('weapon-ready-emitter',[m.x,m.y,m.z],groundGun);assembly(gunSignal).add(eye,glow,matrix([m.x,m.y,m.z],[0,0,0],[.022,.022,.01]),false);
- }
- return {legRig,armRig,bladeRig,groundGun,gunSignal,sensorAnchor:form==='seer'?[0,1.88]:[.047,1.88],hipHeight:reference.LeftUpLeg[1]};
+  return {groundGun,gunSignal};
 }

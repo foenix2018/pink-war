@@ -151,6 +151,9 @@ export function buildBruteV3({armor:plate,dark,servo,reactor,optics,glow,boneAt,
      rivet(f,dark,w[0]+offset,w[1]-.31,-.515);
    }
    block(f,reactor,[w[0],w[1]-.04,-.497],[fw*.43,.025,.018],[0,0,0],false);
+   // Poster seams: scarlet bars across the knuckle block and up the gauntlet.
+   for(const dy of [-.115,-.175])block(f,reactor,[w[0]-side*fw*.18,w[1]+dy,-.522],[fw*.32,.022,.014],[0,0,0],false);
+   block(l,reactor,[(e[0]+w[0])*.5+side*.07,(e[1]+w[1])*.5,-.385],[.026,.24,.014],[0,side*.09,side*-.11],false);
    disc(f,servo,[w[0]+side*.20,w[1]-.03,.00],.11,.09);
    armRig.push({upper,lower,wrist,side});
    // Armored long legs: shin has a flat splintered plane, not a sphere.
@@ -166,6 +169,8 @@ export function buildBruteV3({armor:plate,dark,servo,reactor,optics,glow,boneAt,
    facetLimb(c,plate,[knee[0],knee[1]-.03,-.025],[ankle[0],ankle[1]+.04,-.025],.238,.235);
    armor(c,plate,PL.shin,[(knee[0]+ankle[0])*.5,(knee[1]+ankle[1])*.5,-.28],[0,side*.04,side*-.06],[1.05,.95,1]);
    armor(c,plate,PL.knee,[knee[0],knee[1]-.025,-.352],[0,0,0],[1.03,1.03,1]);
+   block(c,reactor,[(knee[0]+ankle[0])*.5+side*.08,(knee[1]+ankle[1])*.5,-.36],[.022,.20,.014],[0,side*.04,side*-.06],false);
+   block(v,reactor,[(hip[0]+knee[0])*.5+side*.09,(hip[1]+knee[1])*.5,-.345],[.022,.17,.014],[0,side*.06,side*-.08],false);
    disc(c,dark,[knee[0]+side*.225,knee[1],knee[2]+.08],.16,.13);
    disc(c,servo,[knee[0]+side*.26,knee[1],knee[2]+.085],.11,.10);
    beam(c,dark,[knee[0]+side*.14,knee[1]-.12,.20],[ankle[0]+side*.14,ankle[1]+.08,.15],.039);

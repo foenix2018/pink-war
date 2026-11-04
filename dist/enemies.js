@@ -13,6 +13,7 @@ import {BRUTE_V3} from './enemy-brute-v3.js';
 import {FIELD_RIFLE,LISTENER_TOOL,carriesFieldRifle} from './enemy-weapon-layout.js';
 import {createRifleArmPose} from './enemy-rifle-pose.js';
 import {buildHumanoidRobot} from './enemy-humanoid.js';
+import {POSTER_CHASSIS_REVISION} from './enemy-poster-chassis.js';
 import {HUMAN_REFERENCE,sampleHumanStep,humanIdleBob} from './enemy-human-motion.js';
 
 export const ENEMY_PROFILES=Object.freeze({
@@ -101,12 +102,15 @@ export function createEnemyFactory(mats,{detail='high'}={}){
   const listenerSignal=new T.MeshBasicMaterial({color:0xd56cac,toneMapped:false});
   const spectreSignal=new T.MeshBasicMaterial({color:0xff1838,toneMapped:false});
   const spectreFrame=frame.clone();spectreFrame.color.setHex(0x4e535b);spectreFrame.name='K-9 / worn graphite plates';
+  // Poster finish for PO-07 and SY-05: worn riveted graphite, scarlet seams (the eyes keep the idle/alert colours).
+  const posterFrame=frame.clone();posterFrame.color.setHex(0x5a5e64);posterFrame.roughness=.6;posterFrame.metalness=.72;posterFrame.name='PO-07 / SY-05 worn graphite plates';
+  const posterHeavy=posterFrame.clone();posterHeavy.color.setHex(0x44474d);posterHeavy.name='PO-07 / SY-05 elite dark graphite';
   const listenerStencil=new T.MeshStandardMaterial({map:listenerMaps.label,roughness:.84,metalness:.28});
 
   function template(elite,ranged,form){
     const key=`${form}:${elite?1:0}:${ranged?1:0}`;if(cache.has(key))return cache.get(key);
-    const armor=form==='spectre'?spectreFrame:form==='brute'?bruteFrame:form==='listener'?listenerFrame:form==='synth'?synthShell:elite?heavyFrame:frame,dark=mechanism;
-    const glow=form==='spectre'?spectreSignal:form==='listener'?listenerSignal:ranged?mats.cyan:form==='scuttler'?mats.rose:form==='seer'?(mats.pale||mats.cyan):mats.violet;
+    const armor=form==='spectre'?spectreFrame:form==='brute'?bruteFrame:form==='listener'?listenerFrame:(form==='stalker'||form==='synth')?(elite?posterHeavy:posterFrame):elite?heavyFrame:frame,dark=mechanism;
+    const glow=(form==='spectre'||form==='stalker'||form==='synth')?spectreSignal:form==='listener'?listenerSignal:ranged?mats.cyan:form==='scuttler'?mats.rose:form==='seer'?(mats.pale||mats.cyan):mats.violet;
     const optics=new T.MeshBasicMaterial({color:ENEMY_OPTICS.idle,toneMapped:false});if(form==='listener')optics.map=listenerMaps.optics;optics.name=form==='brute'?'BRUTE / scarlet thoracic reactor':'ORDRE independent optics';
     const bones=[],assemblies=[],legRig=[],armRig=[],rotors=[];let probeHead=null,probeSignal=null,groundGun=null,gunSignal=null,humanoid=null;
     function bone(name,position,parent=-1){bones.push({name,position,parent});return bones.length-1;}
@@ -248,6 +252,7 @@ export function createEnemyFactory(mats,{detail='high'}={}){
     if(form==='spectre')root.name='SPECTRE K-9 / ombre traqueuse';
     root.userData.form=form;root.userData.designRevision='3.63.2';if(probe)root.userData.probeRevision='S-03 / destructible rotors 3.73';root.userData.profile=ENEMY_PROFILES[form];root.userData.surfaceStyle=form==='listener'?'worn titanium / open thoracic cage / directional acoustic reflectors / hydraulic limbs':form==='brute'?'worn graphite / large sharply bevelled siege plates / segmented piston mechanics / recessed scarlet reactor': 'weathered alloy / faceted humanoid armour / RLH joint proportions / articulated rifle stance';
     if(form==='brute')root.userData.bruteRevision=BRUTE_V3.revision;
+    if(form==='stalker'||form==='synth')root.userData.posterRevision=POSTER_CHASSIS_REVISION;
     if(form==='spectre'){root.userData.designRevision='K9-independent-hunter-v2';root.userData.surfaceStyle='graphite separated plates / exposed tendons / reverse knees / retractable blades';}
     const joints=kit.bones.map(spec=>{const b=new T.Bone();b.name=spec.name;b.position.set(...spec.position);return b;});
     kit.bones.forEach((spec,i)=>(spec.parent<0?root:joints[spec.parent]).add(joints[i]));root.updateMatrixWorld(true);
@@ -362,10 +367,10 @@ export function createEnemyFactory(mats,{detail='high'}={}){
         const gait=Math.sin(cycle)*amount;sampleHumanStep(cycle,runBlend,motionSample);
         pelvis.position.y=kit.humanoid.hipHeight-brace+motionSample[4]*amount+humanIdleBob(time)*.12*(1-amount);
         for(const leg of legs){const k=leg.side===-1?0:2,lift=Math.max(0,motionSample[k])*amount,z=leg.ankle[2]+motionSample[k+1]*amount-leg.hip[2],x=leg.ankle[0]-leg.hip[0],reach=leg.upperLength+leg.lowerLength-.001;
-          const support=leg.ankle[1]+lift+Math.sqrt(Math.max(.001,reach*reach-x*x-z*z));pelvis.position.y=Math.min(pelvis.position.y,support);
+          const support=leg.ankle[1]+lift+Math.sqrt(Math.max(.001,reach*reach-x*x-z*z))-(leg.hip[1]-kit.humanoid.hipHeight);pelvis.position.y=Math.min(pelvis.position.y,support);
         }
         root.userData.nativeMotion=amount>.03?(runBlend>.5?'run':'walkRifle'):'rifle';
-        thorax.rotation.set((form==='spectre'?-.10:form==='listener'?-.023:.012)+pace*.032+(covered?.045:0)-recoil*.018,-gait*.024,(pose==='peek'?.035:0)+gait*.012);
+        thorax.rotation.set((form==='spectre'?-.10:form==='stalker'?-.05:form==='listener'?-.023:.012)+pace*.032+(covered?.045:0)-recoil*.018,-gait*.024,(pose==='peek'?.035:0)+gait*.012);
         if(head){head.rotation.y=gait*.018+(alert==='idle'?Math.sin(time*.65+phase)*.06*(1-amount):0);head.rotation.x=-thorax.rotation.x*.6+(alert==='engaged'?T.MathUtils.clamp(flight.aimPitch||0,-.18,.18):0);}
         for(const leg of legs){
           const offset=leg.side===-1?0:2,lift=Math.max(0,motionSample[offset])*amount,z=motionSample[offset+1]*amount;
@@ -373,7 +378,7 @@ export function createEnemyFactory(mats,{detail='high'}={}){
           target.set(leg.ankle[0],leg.ankle[1]+lift,leg.ankle[2]+z);
           direction.copy(target).sub(hip);const distance=Math.min(direction.length(),leg.upperLength+leg.lowerLength-.0001);direction.normalize();
           const along=(leg.upperLength**2-leg.lowerLength**2+distance**2)/(2*distance),height=Math.sqrt(Math.max(0,leg.upperLength**2-along**2));
-          bend.set(0,0,form==='spectre'?1:-1).addScaledVector(direction,-direction.dot(bend)).normalize();knee.copy(hip).addScaledVector(direction,along).addScaledVector(bend,height);
+          bend.set(0,0,form==='spectre'||form==='stalker'?1:-1).addScaledVector(direction,-direction.dot(bend)).normalize();knee.copy(hip).addScaledVector(direction,along).addScaledVector(bend,height);
           direction.copy(knee).sub(hip).normalize();leg.upper.quaternion.setFromUnitVectors(leg.upperBind,direction);
           inverse.copy(leg.upper.quaternion).invert();direction.copy(target).sub(knee).normalize().applyQuaternion(inverse);leg.lower.quaternion.setFromUnitVectors(leg.lowerBind,direction);
           q.copy(leg.upper.quaternion).multiply(leg.lower.quaternion);leg.foot.quaternion.copy(q).invert();

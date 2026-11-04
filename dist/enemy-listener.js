@@ -58,6 +58,8 @@ function reflector(){
 }
 const dish=reflector();
 const rim=new T.TorusGeometry(.245,.006,4,24);
+// Poster detail: a lit arc along the outer half of each reflector rim.
+const rimArc=new T.TorusGeometry(.252,.0045,3,18,Math.PI*.85).rotateZ(-Math.PI*.35);
 const innerRim=new T.TorusGeometry(.17,.003,3,20);
 const smallRim=new T.TorusGeometry(.085,.003,3,16);
 
@@ -182,7 +184,7 @@ export function buildListener({armor,dark,servo,hazard,optics,glow,boneAt,assemb
   strut(a,servo,[side*.14,1.56,.19],[side*.32,1.88,.20],.010);
   motor(d,at,.055,.08);
   d.add(lens,dark,matrix([at[0],at[1],at[2]+.06],rot,[.05,.05,.025]));
-  d.add(dish,armor,frame);d.add(rim,servo,frame);d.add(innerRim,dark,frame);d.add(smallRim,dark,frame);
+  d.add(dish,armor,frame);d.add(rim,servo,frame);if(detailed)d.add(rimArc,glow,matrix(at,rot,[side,1.1,1]),false);d.add(innerRim,dark,frame);d.add(smallRim,dark,frame);
   for(let k=0;k<8;k++){
    const angle=k/8*Math.PI*2,co=Math.cos(angle),si=Math.sin(angle);
    strut(d,dark,p([co*.05,si*.05,.035]),p([co*.235,si*.235,-.056]),.0035);
@@ -228,6 +230,7 @@ export function buildListener({armor,dark,servo,hazard,optics,glow,boneAt,assemb
   }else{
    addBox(l,armor,[.035,.23,.035],[mid[0]+.026,mid[1]-.025,mid[2]-.067],[0,0,-.08]);
    addBox(l,optics,[.004,.10,.005],[mid[0]+.026,mid[1],mid[2]-.088]);
+   addBox(l,glow,[.004,.16,.004],[mid[0]+.046,mid[1]-.03,mid[2]-.08],[0,0,-.08]);
   }
   const handFrame=new T.Matrix4().makeTranslation(...w)
    .multiply(new T.Matrix4().makeRotationY(side*Math.PI/2))
