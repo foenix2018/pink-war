@@ -14,6 +14,7 @@ import {FIELD_RIFLE,LISTENER_TOOL,carriesFieldRifle} from './enemy-weapon-layout
 import {createRifleArmPose} from './enemy-rifle-pose.js';
 import {buildHumanoidRobot} from './enemy-humanoid.js';
 import {POSTER_CHASSIS_REVISION} from './enemy-poster-chassis.js';
+import {createMocapDriver,MOCAP_REVISION} from './enemy-mocap.js';
 import {HUMAN_REFERENCE,sampleHumanStep,humanIdleBob} from './enemy-human-motion.js';
 
 export const ENEMY_PROFILES=Object.freeze({
@@ -284,6 +285,16 @@ export function createEnemyFactory(mats,{detail='high'}={}){
       leg.upperBind=new T.Vector3(...leg.knee).sub(new T.Vector3(...leg.hip));leg.upperLength=leg.upperBind.length();leg.upperBind.normalize();
       leg.lowerBind=new T.Vector3(...leg.ankle).sub(new T.Vector3(...leg.knee));leg.lowerLength=leg.lowerBind.length();leg.lowerBind.normalize();
     }
+    // REC-01's native motion capture drives every humanoid chassis (see enemy-mocap.js).
+    let mocap=null;
+    if(kit.humanoid){
+      const gunIndex=kit.groundGun,gunBind=new T.Vector3();
+      if(gunIndex!==null){let i=gunIndex;while(i>=0){gunBind.add(new T.Vector3(...kit.bones[i].position));i=kit.bones[i].parent;}}
+      const receivers=joints.filter(j=>j.name.startsWith('receiver-')).map(bone=>({bone,side:bone.name==='receiver-1'?1:-1}));
+      mocap=createMocapDriver({form,ranged,legs,arms,pelvis:joints[kit.pelvis],thorax:joints[kit.thorax],head:joints.find(j=>j.name==='sensor-head'),gun:gunIndex!==null?joints[gunIndex]:null,gunBind,hipHeight:kit.humanoid.hipHeight,receivers});
+      root.userData.mocapRevision=MOCAP_REVISION;root.userData.mocapTraits=mocap.traits;root.userData.nativeSkeleton=mocap.pose.skeleton;
+      root.addEventListener('removed',()=>mocap.dispose());
+    }
     const motionSample=new Float64Array(5);
     let previousTime=null,previousX=0,previousZ=0,motionSpeed=0,cycle=0;
     let previousProbeTime=null,dronePitch=0,droneRoll=0;
@@ -364,6 +375,13 @@ export function createEnemyFactory(mats,{detail='high'}={}){
         const pose=flight.combatPose||flight.tactics?.state,covered=['cover','return','relocate'].includes(pose),guard=pose==='guard',windup=pose==='windup';
         const brace=(form==='listener'?.035:0)+(covered?.085:windup?.06:guard?.035:0)+.52*(flight.coverCrouch||0),aiming=alert==='engaged'&&!!flight.ranged;
         const recoil=Math.max(0,1-(simulationTime-(flight.lastShotAt??-99))/.16);
+        if(mocap){
+          const hit=Math.max(0,1-(simulationTime-(flight.hitAt??-99))/.25),pulse=simulationTime-(flight.lastShotAt??-99)<.12?1:0;
+          const lowered=form==='listener'&&alert!=='engaged'?LISTENER_TOOL.patrolPitch:riflePose&&alert==='idle'?-.30:undefined;
+          const r=mocap.update(dt,time,{speed:motionSpeed,alert,aiming,brace,recoil,hit,hitSide:(flight.hitSide||(Math.floor((flight.hitAt||0)*10)%2?1:-1)),covered,guard:guard||windup,
+            pitch:T.MathUtils.clamp(flight.aimPitch||0,FIELD_RIFLE.minPitch,FIELD_RIFLE.maxPitch),lowered,pulse,phase:cycle});
+          root.userData.nativeMotion=r.clip;riflePose?.update(joints[kit.groundGun]);return;
+        }
         const gait=Math.sin(cycle)*amount;sampleHumanStep(cycle,runBlend,motionSample);
         pelvis.position.y=kit.humanoid.hipHeight-brace+motionSample[4]*amount+humanIdleBob(time)*.12*(1-amount);
         for(const leg of legs){const k=leg.side===-1?0:2,lift=Math.max(0,motionSample[k])*amount,z=leg.ankle[2]+motionSample[k+1]*amount-leg.hip[2],x=leg.ankle[0]-leg.hip[0],reach=leg.upperLength+leg.lowerLength-.001;

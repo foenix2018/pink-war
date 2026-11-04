@@ -1,3 +1,4 @@
+import {weaponPitch} from '../dist/enemy-mocap.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from '../dist/vendor/three.webgpu.min.js';
@@ -30,8 +31,8 @@ test('E-06 actual bore and simulated projectiles agree at height, yaw, crouch an
   assert.ok(actual.distanceTo(new T.Vector3(expected.x,expected.y,expected.z))<.065);
  }
  const a=factory.create(false,true,'listener');a.userData.animate(0,0,false,{awareness:'search',lastHeardAt:0,alertedUntil:2},0);
- assert.equal(a.userData.armTool.bone.rotation.x,LISTENER_TOOL.patrolPitch);
- a.userData.animate(.1,0,false,{awareness:'engaged',ranged:true},.1);assert.equal(a.userData.armTool.bone.rotation.x,0);
+ assert.ok(Math.abs(weaponPitch(a.userData.armTool.bone,a)-LISTENER_TOOL.patrolPitch)<1e-6);
+ a.userData.animate(.1,0,false,{awareness:'engaged',ranged:true},.1);assert.ok(Math.abs(weaponPitch(a.userData.armTool.bone,a))<1e-6);
 });
 
 test('both E-06 detail levels bound GPU work and preserve the physical weapon and alert sensor',()=>{

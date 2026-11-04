@@ -1,3 +1,4 @@
+import {weaponPitch} from '../dist/enemy-mocap.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from '../dist/vendor/three.module.min.js';
@@ -30,9 +31,9 @@ test('projectile origin follows the same pitched barrel as the rendered infantry
 });
 test('readiness lowers the rifle and detection raises it while the original eyes turn red',()=>{
  const actor=createEnemyFactory(mats()).create(false,true,'stalker');
- actor.userData.animate(0,0,false,{},0);assert.equal(actor.userData.fieldRifle.bone.rotation.x,-.3);const idle=actor.userData.optics.color.getHex();
+ actor.userData.animate(0,0,false,{},0);assert.ok(Math.abs(weaponPitch(actor.userData.fieldRifle.bone,actor)+.3)<1e-6);const idle=actor.userData.optics.color.getHex();
  actor.userData.animate(.1,0,false,{ranged:true,awareness:'search',lastHeardAt:.1,alertedUntil:2},.1);
- assert.equal(actor.userData.fieldRifle.bone.rotation.x,0);assert.notEqual(actor.userData.optics.color.getHex(),idle);
+ assert.ok(Math.abs(weaponPitch(actor.userData.fieldRifle.bone,actor))<1e-6);assert.notEqual(actor.userData.optics.color.getHex(),idle);
  assert.equal(actor.userData.alertState,'alert');assert.equal(carriesFieldRifle('synth'),true,'the ivory tactical unit now shares the anatomical rifle grips');
 });
 test('every revised ground chassis preserves the mobile budget and adds no dynamic light',()=>{
