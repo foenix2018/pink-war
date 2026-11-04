@@ -1,5 +1,6 @@
 // PINK WARS — IA tactique V1 validée. Les décisions ne voient que le contact perçu.
 export const ENEMY_BEHAVIORS=Object.freeze(Object.fromEntries(Object.entries({
+ spectre:['SPECTRE K-9','chasseur de proximité'],
  sentinel:['SE-03','garde de zone'],stalker:['PO-07','chasseur et flanqueur'],scuttler:['RPT-17','harcèlement mobile'],
  seer:['REC-01','éclaireur et relais'],listener:['TR-15','pisteur acoustique'],synth:['SY-05','couvertures tactiques'],
  brute:['BR-11','briseur de siège'],bulwark:['R-11','bouclier des alliés'],probe:['S-19','drone orbital']
@@ -31,6 +32,11 @@ export function specialistCombatOrder(e,ctx={}){
  if(Math.abs((e.elevation||0)-((t.y??1.25)-1.25))>1.25)return null;
  const r=dist(e,t),underFire=(e.suppressedUntil||0)>(ctx.time||0),seen=!!ctx.seen,s=side(e);
  switch(e.form){
+ case 'spectre':{
+  if(!seen||r>28)return null;
+  if(r<1.7)return {point:{x:e.x,z:e.z},stopDistance:0,canFire:true,state:'blade-strike',speedScale:0};
+  return cache(e,ctx,()=>move(e,point(e,t,clamp(r-1.4,1,7),s*(r>5?2.2:.35)),ctx,'spectre-stalk',{speedScale:1.2,stopDistance:.25}),.65);
+ }
  case 'sentinel':{
   const m=memo(e);m.home??={x:e.homeX??e.x,z:e.homeZ??e.z};
   if(dist(e,m.home)>3.8)return move(e,m.home,ctx,'hold-post',{stopDistance:.4,speedScale:.66});

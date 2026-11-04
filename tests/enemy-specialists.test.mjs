@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {ENEMY_BEHAVIORS,specialistCombatOrder,specialistVisualRelay,probeSpecialistGuidance} from '../dist/enemy-specialists.js';
-const forms=['sentinel','stalker','scuttler','seer','listener','synth','brute','bulwark','probe'];
+const forms=['sentinel','stalker','spectre','scuttler','seer','listener','synth','brute','bulwark','probe'];
 const enemy=(form,id=3)=>({id,form,x:0,z:0,elevation:0,awareness:'engaged',hp:100,maxHp:100,radius:.55,ranged:true});
 const ctx=(x=13,z=0)=>({time:3,seen:true,threat:{x,y:1.25,z},allies:[],obstacles:[],segmentBox:()=>null});
 test('every Pink Wars enemy form has a unique declared tactical role',()=>{

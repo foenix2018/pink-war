@@ -475,12 +475,12 @@ export class ArenaGame {
   }
   spawnEnemy() {
     const ordinal = this.spawned++;
-    const special=this.wave>=3&&ordinal%7===1?'synth':this.wave>=11&&ordinal%7===5?'bulwark':this.wave>=6&&ordinal%7===4?'listener':null;
+    const special=this.wave>=4&&ordinal%9===7?'spectre':this.wave>=3&&ordinal%7===1?'synth':this.wave>=11&&ordinal%7===5?'bulwark':this.wave>=6&&ordinal%7===4?'listener':null;
     const elite = !special && this.wave >= 3 && ordinal % (this.wave >= 8 ? 3 : 5) === 2;
     const probe = !special && this.wave >= 3 && !elite && (ordinal % 6 === 3 || (this.wave >= 7 && ordinal > 0 && ordinal % 6 === 0));
     const forms = ['stalker','scuttler','seer','brute'];
     const form = this.wave===1 && ordinal===0 ? 'sentinel' : special || (probe ? 'probe' : elite ? 'brute' : forms[(ordinal + this.wave - 1) % forms.length]);
-    const ranged = probe || !!special || form==='seer' || (this.wave>=3&&ordinal%3===1) || (this.wave>=5&&form==='brute');
+    const ranged = form==='spectre'?false:probe || !!special || form==='seer' || (this.wave>=3&&ordinal%3===1) || (this.wave>=5&&form==='brute');
     const angle = this.random() * Math.PI * 2;
     const available=this.activePortals.filter(p=>p.openedAt<=this.time);
     const site=available.length?available[ordinal%available.length]:this.activePortals[0]||PORTAL;
@@ -492,7 +492,7 @@ export class ArenaGame {
     const enemy = { id: this.nextId++, x, z, elevation: homeHeight + (probe ? PROBE.hover : 0),grounded:!probe,verticalSpeed:0,homeHeight,
       hp: form==='sentinel'?1200:enemyDurability(this.wave,form,elite), elite, ranged:ranged||form==='synth'||form==='sentinel', form, aimHeight,
       ...(probe?{rotorHp:Array(4).fill(probeRotorMaxHp(this.wave,elite)),rotorDestroyed:[false,false,false,false]}:{}),
-      speed: form==='sentinel'?1.5:isReco1(form)?Math.min(2.7,1.8+(this.wave-1)*.04):probe ? Math.min(5,3.6 + this.wave * .07) : Math.min(4.3,2.4+(this.wave-1)*.055)*(form==='bulwark'?.7:form==='scuttler'?1.12:1),
+      speed: form==='sentinel'?1.5:isReco1(form)?Math.min(2.7,1.8+(this.wave-1)*.04):probe ? Math.min(5,3.6 + this.wave * .07) : Math.min(4.3,2.4+(this.wave-1)*.055)*(form==='bulwark'?.7:form==='spectre'?1.18:form==='scuttler'?1.12:1),
       tier: Math.max(1,Math.ceil(this.wave/2)),limpUntil:0,stunnedUntil:0,
       homeX:site.x,homeZ:site.z,portalId:site.id,
       radius: form==='sentinel'?1.4:isReco1(form)?.45:probe ? PROBE.radius : elite ? 1.05 : form === 'scuttler' ? .86 : form === 'brute' ? .95 : .8,

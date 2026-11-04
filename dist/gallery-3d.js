@@ -45,7 +45,7 @@ let lastCanvasWidth=0,lastCanvasHeight=0,lastPixelRatio=0,renderPending=false,gr
 const tabletOrMobile=/iPhone|iPad|Android|Mobile/i.test(navigator.userAgent);
 const previewRatioCap=tabletOrMobile?1.22:1.5;
 const weaponNames={'VX-9':0,'NEXUS V9':1,'ARES X9':2,'THORN':3,'NOVA':4,'AURORA':5,'M–12':6,'VX-9 DUO':7,'VORTEX AR-7':8};
-const enemyForms={'R-11':'bulwark','SY-05':'synth','PO-07':'stalker','BR-11':'brute','TR-15':'listener','RPT-17':'scuttler','S-19':'probe'};
+const enemyForms={'SPECTRE K-9':'spectre','R-11':'bulwark','SY-05':'synth','PO-07':'stalker','BR-11':'brute','TR-15':'listener','RPT-17':'scuttler','S-19':'probe'};
 const surfaceMat=color=>new T.MeshStandardMaterial({color,metalness:.52,roughness:.47});
 function clearExports(){for(const u of exportUrls)URL.revokeObjectURL(u);exportUrls=[];}
 function setStatus(message){status.textContent=message;}

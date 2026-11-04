@@ -13,7 +13,7 @@ export function enemySightPoint(enemy){
 }
 // Chest durability distinguishes light frames, infantry and armoured chassis.
 // Sensor/head multipliers remain in the shared hitboxes; no minimum-hit invulnerability.
-export const ROBOT_DURABILITY=Object.freeze({probe:100,scuttler:140,stalker:180,seer:RECO1.health,synth:250,listener:275,brute:340,bulwark:400});
+export const ROBOT_DURABILITY=Object.freeze({probe:100,scuttler:140,stalker:180,spectre:160,seer:RECO1.health,synth:250,listener:275,brute:340,bulwark:400});
 export function enemyDurability(wave,form='stalker',elite=false){
  const tier=Math.max(1,Number(wave)||1),base=ROBOT_DURABILITY[form]||ROBOT_DURABILITY.stalker;
  return Math.round(base*(1+(tier-1)*.055)*(elite?1.55:1));
