@@ -14,7 +14,8 @@ export const BRUTE_V3=Object.freeze({
  chest:'recessed scarlet triangular reactor inside separated heavy breast plates',
  features:['octagonal hinges','armoured hands','exposed ram pistons','divided shin shields','toe blocks','rear engine spine']
 });
-const p=(points,depth=.07,bulge=.015)=>profiledPanel(points,{depth,bulge,round:.035,detail:3});
+// Poster slabs: flat faces and a crisp chamfer (the former centre bulge read as rounded pebbles).
+const p=(points,depth=.07,bulge=.015)=>profiledPanel(points,{depth,bulge:Math.min(bulge,.007),round:.03,detail:3});
 const G=new T.BoxGeometry(1,1,1);
 const C=new T.CylinderGeometry(1,1,1,8,1);
 const CLIP=new T.CylinderGeometry(1,1,1,6,1);
@@ -134,6 +135,10 @@ export function buildBruteV3({armor:plate,dark,servo,reactor,optics,glow,boneAt,
    facetLimb(l,dark,e,w,.22*gain,.20*gain);
    facetLimb(l,plate,[e[0],e[1]-.03,e[2]-.02],[w[0],w[1]+.02,w[2]-.025],.255*gain,.22*gain);
    armor(l,plate,PL.gauntlet,[(e[0]+w[0])*.5,(e[1]+w[1])*.5,-.27],[0,side*.09,side*-.11],[1.0*gain,1.22,1]);
+   // Poster forearm: stacked rectangular segments with rivets, over the gauntlet.
+   for(let k=0;k<3;k++){const t=.22+k*.27,x=e[0]+(w[0]-e[0])*t,y=e[1]+(w[1]-e[1])*t;
+    block(l,plate,[x+side*.02,y,-.355],[.40*gain,.105,.07],[0,side*.09,side*-.11]);block(l,dark,[x+side*.02,y-.06,-.345],[.38*gain,.016,.06],[0,side*.09,side*-.11]);
+    for(const dx of [-.14,.14])rivet(l,servo,x+side*.02+dx*gain,y+.02,-.392);}
    disc(l,dark,[e[0]+side*.14,e[1],e[2]],.15,.11);
    disc(l,servo,[e[0]+side*.16,e[1],e[2]],.10,.13);
    for(const k of [-1,1]){
@@ -169,6 +174,9 @@ export function buildBruteV3({armor:plate,dark,servo,reactor,optics,glow,boneAt,
    facetLimb(c,plate,[knee[0],knee[1]-.03,-.025],[ankle[0],ankle[1]+.04,-.025],.238,.235);
    armor(c,plate,PL.shin,[(knee[0]+ankle[0])*.5,(knee[1]+ankle[1])*.5,-.28],[0,side*.04,side*-.06],[1.05,.95,1]);
    armor(c,plate,PL.knee,[knee[0],knee[1]-.025,-.352],[0,0,0],[1.03,1.03,1]);
+   for(let k=0;k<2;k++){const t=.35+k*.3,x=knee[0]+(ankle[0]-knee[0])*t,y=knee[1]+(ankle[1]-knee[1])*t;
+    block(c,plate,[x,y,-.36],[.30,.12,.06],[0,side*.04,side*-.06]);block(c,dark,[x,y-.068,-.35],[.28,.016,.05],[0,side*.04,side*-.06]);
+    for(const dx of [-.11,.11])rivet(c,servo,x+dx,y+.025,-.392);}
    block(c,reactor,[(knee[0]+ankle[0])*.5+side*.08,(knee[1]+ankle[1])*.5,-.36],[.022,.20,.014],[0,side*.04,side*-.06],false);
    block(v,reactor,[(hip[0]+knee[0])*.5+side*.09,(hip[1]+knee[1])*.5,-.345],[.022,.17,.014],[0,side*.06,side*-.08],false);
    disc(c,dark,[knee[0]+side*.225,knee[1],knee[2]+.08],.16,.13);

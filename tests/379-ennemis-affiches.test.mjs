@@ -20,7 +20,7 @@ test('PO-07 and SY-05 are built from the poster chassis, in graphite with scarle
     const actor=factory.create(false,true,form);
     assert.equal(actor.userData.posterRevision,POSTER_CHASSIS_REVISION,form);
     const materials=[];actor.traverse(o=>{if(o.isMesh)materials.push(o.material);});
-    assert.ok(materials.some(m=>m.color?.getHex()===0x5a5e64),form+': graphite plates');
+    assert.ok(materials.some(m=>m.color?.getHex()===0x6e737b&&m.userData.posterWear&&m.bumpMap),form+': worn riveted graphite plates');
     assert.ok(materials.some(m=>m.isMeshBasicMaterial&&m.color.getHex()===0xff1838),form+': scarlet seams');
     assert.ok(actor.getObjectByName('aimed-field-rifle'),form+': field rifle bone');
   }

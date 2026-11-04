@@ -112,11 +112,11 @@ export function buildPursuer({armor,dark,servo,glow,optics,boneAt,assembly,thora
   const hip=[side*.12,1.08,.02],knee=[side*.17,.67,.20],ankle=[side*.19,.14,-.02];
   const upperLeg=boneAt(`leg-${side}-hip`,hip,pelvis),lowerLeg=boneAt(`leg-${side}-knee`,knee,upperLeg),foot=boneAt(`leg-${side}-ankle`,ankle,lowerLeg);
   const v=assembly(upperLeg),c=assembly(lowerLeg),b=assembly(foot);
-  motor(v,hip,.06);v.limb(dark,hip,knee,.048,.04);panel(v,thighPO,[side*.155,.90,-.01],[.22,side*-.12,side*-.07],[.85,.95,1]);
+  motor(v,hip,.06);v.limb(dark,hip,knee,.048,.04);panel(v,thighPO,[side*.155,.90,-.01],[.22,side*-.12,side*-.07],[1.05,1.05,1.2]);panel(v,thighPO,[side*.19,.93,.05],[.1,side*1.2,side*-.07],[.7,.8,1]);
   seam(v,[.009,.16,.009],[side*.17,.91,-.06],[.22,0,0]);
   motor(c,knee,.06);c.limb(dark,knee,ankle,.033,.024);
   c.limb(servo,[side*.21,.64,.17],[side*.23,.19,-.015],.016,.009);c.limb(armor,[side*.15,.61,.14],[side*.16,.21,-.03],.027,.019);
-  panel(c,shinPO,[side*.17,.43,.02],[.30,0,0],[.62,.85,.8]);seam(c,[.009,.17,.01],[side*.19,.46,-.04],[.30,0,0]);
+  panel(c,shinPO,[side*.17,.43,.02],[.30,0,0],[.85,.95,1.1]);seam(c,[.009,.17,.01],[side*.19,.46,-.04],[.30,0,0]);
   motor(b,ankle,.034);
   for(const toe of [-1,0,1])b.limb(armor,[ankle[0]+toe*.022,.085,-.035],[ankle[0]+toe*.06,.025,-.20+Math.abs(toe)*.03],.022,.005);
   b.limb(dark,[ankle[0],.09,.015],[ankle[0],.03,.11],.026,.012);
@@ -145,6 +145,9 @@ export function buildSynthetic({armor,dark,servo,glow,optics,boneAt,assembly,tho
  }
  if(label)body.add(new T.PlaneGeometry(.14,.07),label,matrix([0,1.47,-.222],[.04,0,0]));
  body.box(armor,[.08,.20,.05],[0,1.34,-.19],[.04,0,0],.012);
+ // Layered upper chest and collar (poster N-08 silhouette), read above the rifle.
+ body.box(armor,[.40,.12,.10],[0,1.58,-.13],[.12,0,0],.02);body.box(dark,[.36,.02,.09],[0,1.515,-.135],[.12,0,0],.004);
+ for(const side of [-1,1]){body.box(armor,[.12,.10,.16],[side*.13,1.66,-.02],[0,0,side*-.15],.016);bolt(body,side*.16,1.585,-.185);}
  for(let k=0;k<3;k++){body.box(armor,[.30-k*.02,.055,.20],[0,1.25-k*.06,-.05],[.06,0,0],.012);for(const side of [-1,1])body.box(dark,[.07,.05,.16],[side*(.17-k*.01),1.25-k*.06,-.02],[0,0,side*-.1],.008);}
  body.box(armor,[.20,.10,.10],[0,1.635,.0],[0,0,0],.016);
  // Tactical belt with pouches.
@@ -168,11 +171,13 @@ export function buildSynthetic({armor,dark,servo,glow,optics,boneAt,assembly,tho
   const s=[side*.205,1.492,.015],e=[side*.315,1.258,.043],w=[side*.38,1.005,-.03];
   const upper=boneAt(`arm-${side}-shoulder`,s,thorax),lower=boneAt(`arm-${side}-elbow`,e,upper),wrist=boneAt(`arm-${side}-wrist`,w,lower);
   const u=assembly(upper),l=assembly(lower),f=assembly(wrist);
-  motor(u,s,.065,.08);u.limb(dark,s,e,.05,.045);u.limb(armor,[s[0]+side*.01,s[1]-.07,s[2]],[e[0],e[1]+.06,e[2]],.07,.06);
+  motor(u,s,.065,.08);u.limb(dark,s,e,.05,.045);u.limb(armor,[s[0]+side*.01,s[1]-.07,s[2]],[e[0],e[1]+.06,e[2]],.085,.07);u.box(armor,[.16,.13,.17],[s[0]+(e[0]-s[0])*.35,s[1]+(e[1]-s[1])*.35,s[2]],[0,0,side*.4],.016);
   for(let k=0;k<3;k++)u.box(dark,[.15,.008,.15],[s[0]+(e[0]-s[0])*(.35+k*.15),s[1]+(e[1]-s[1])*(.35+k*.15),s[2]],[0,0,side*.4],.002);
   motor(l,e,.06,.08);l.limb(dark,e,w,.045,.04);
   const mid=[(e[0]+w[0])/2,(e[1]+w[1])/2,(e[2]+w[2])/2],a=side*tilt([Math.abs(e[0]),e[1]],[Math.abs(w[0]),w[1]]);
   l.limb(armor,[e[0],e[1]-.05,e[2]],[w[0],w[1]+.06,w[2]],.07,.062);
+  // Thick segmented gauntlet.
+  for(let k=0;k<3;k++){const t=.2+k*.28;l.box(armor,[.15,.075,.16],[e[0]+(w[0]-e[0])*t,e[1]+(w[1]-e[1])*t,e[2]+(w[2]-e[2])*t-.005],[0,0,a],.014);}
   seam(l,[.012,.17,.01],[mid[0]+side*.03,mid[1],mid[2]-.07],[0,0,a]);seam(l,[.012,.08,.01],[mid[0]+side*.06,mid[1]+.04,mid[2]-.04],[0,side*-.5,a]);
   for(const yy of [-.07,.07])bolt(l,mid[0]+side*.05,mid[1]+yy,mid[2]-.065);
   f.box(armor,[.09,.10,.06],[w[0],w[1]-.055,w[2]],[0,0,0],.012);
@@ -189,7 +194,8 @@ export function buildSynthetic({armor,dark,servo,glow,optics,boneAt,assembly,tho
   c.add(cylinder,servo,matrix([knee[0]+side*.088,knee[1],knee[2]],[0,0,Math.PI/2],[.04,.012,.04]));
   c.box(armor,[.12,.10,.06],[knee[0],knee[1],knee[2]-.07],[.1,0,0],.014);
   c.limb(dark,knee,ankle,.065,.055);c.limb(armor,[knee[0],knee[1]-.07,knee[2]-.01],[ankle[0],ankle[1]+.09,ankle[2]-.01],.095,.075);c.box(armor,[.07,.22,.07],[knee[0]+side*.075,.36,knee[2]+.01],[0,0,side*.04],.012);
-  seam(c,[.011,.20,.01],[(knee[0]+ankle[0])/2+side*.02,.35,-.095],[.02,0,0]);
+  c.box(armor,[.15,.26,.06],[(knee[0]+ankle[0])/2,.33,-.10],[.03,0,0],.014);bolt(c,(knee[0]+ankle[0])/2,.44,-.133);
+  seam(c,[.011,.20,.01],[(knee[0]+ankle[0])/2+side*.045,.33,-.132],[.03,0,0]);
   b.add(cylinder,dark,matrix([ankle[0]+side*.05,ankle[1],ankle[2]],[0,0,Math.PI/2],[.05,.04,.05]));
   b.box(armor,[.15,.09,.30],[ankle[0],.06,ankle[2]-.06],[0,0,0],.018);b.box(dark,[.16,.03,.32],[ankle[0],.015,ankle[2]-.06],[0,0,0],.006);
   b.box(armor,[.13,.06,.08],[ankle[0],.10,ankle[2]-.17],[.35,0,0],.012);

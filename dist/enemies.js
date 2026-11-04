@@ -15,6 +15,7 @@ import {createRifleArmPose} from './enemy-rifle-pose.js';
 import {buildHumanoidRobot} from './enemy-humanoid.js';
 import {POSTER_CHASSIS_REVISION} from './enemy-poster-chassis.js';
 import {createMocapDriver,MOCAP_REVISION} from './enemy-mocap.js';
+import {posterWear,applyPosterWear} from './poster-wear.js';
 import {HUMAN_REFERENCE,sampleHumanStep,humanIdleBob} from './enemy-human-motion.js';
 
 export const ENEMY_PROFILES=Object.freeze({
@@ -107,6 +108,10 @@ export function createEnemyFactory(mats,{detail='high'}={}){
   const posterFrame=frame.clone();posterFrame.color.setHex(0x5a5e64);posterFrame.roughness=.6;posterFrame.metalness=.72;posterFrame.name='PO-07 / SY-05 worn graphite plates';
   const posterHeavy=posterFrame.clone();posterHeavy.color.setHex(0x44474d);posterHeavy.name='PO-07 / SY-05 elite dark graphite';
   const listenerStencil=new T.MeshStandardMaterial({map:listenerMaps.label,roughness:.84,metalness:.28});
+  // Poster finish on every armour plate: riveted seams, chipped edges, scratches and grime (poster-wear.js).
+  const wornPlates=posterWear(T);
+  for(const [m,color] of [[posterFrame,0x6e737b],[posterHeavy,0x585c63],[spectreFrame,0x666c75],[bruteFrame,0x7e848c],[listenerFrame,0xaaa69e]]){applyPosterWear(m,wornPlates,{color});m.clearcoat=.04;}
+  listenerFrame.metalness=.55;
 
   function template(elite,ranged,form){
     const key=`${form}:${elite?1:0}:${ranged?1:0}`;if(cache.has(key))return cache.get(key);
