@@ -16,14 +16,14 @@ import {buildHumanoidRobot} from './enemy-humanoid.js';
 import {HUMAN_REFERENCE,sampleHumanStep,humanIdleBob} from './enemy-human-motion.js';
 
 export const ENEMY_PROFILES=Object.freeze({
- synth:Object.freeze({name:'Synthétique N-08 / tacticien autonome',silhouette:'humanoid / ivory shell / exposed tendons / adaptive cover'}),
- stalker:Object.freeze({name:'Poursuivant / châssis de sécurité',silhouette:'military graphite shell / sealed helmet / paired optics / braced field rifle'}),
- seer:Object.freeze({name:'RECO1 · reconnaissance blindée',silhouette:'approved V10 / gunmetal segmented armour / 41-bone RLH motion / aimed carbine'}),
- brute:Object.freeze({name:'BRUTE V3 / LE BRISEUR',silhouette:'enormous angular siege mech / recessed red slit visor / exposed hydraulic pistons / asymmetric demolition hammer / long segmented legs'}),
- bulwark:Object.freeze({name:'Rempart / unité de suppression',silhouette:'humanoid heavy chassis / faceted arm shields / integrated helmet'}),
- listener:Object.freeze({name:'Traqueur E-06 / réseau acoustique',silhouette:'open mechanical torso / wedge optical head / twin concave reflectors / hydraulic legs'}),
- scuttler:Object.freeze({name:'Rampant / maintenance autonome',silhouette:'low / worn overlapping armour / hydraulic six-legged maintenance chassis'}),
- probe:Object.freeze({name:'Sonde S-03 / quadrirotor militaire cyberpunk',silhouette:'armored X-frame / four triple-blade ducted motors / stabilized gimbal iris'})
+ synth:Object.freeze({name:'SY-05 · Synthétique / tacticien autonome',silhouette:'humanoid / ivory shell / exposed tendons / adaptive cover'}),
+ stalker:Object.freeze({name:'PO-07 · Poursuivant / châssis de sécurité',silhouette:'military graphite shell / sealed helmet / paired optics / braced field rifle'}),
+ seer:Object.freeze({name:'REC-01 · Reconnaissance blindée',silhouette:'approved V10 / gunmetal segmented armour / 41-bone RLH motion / aimed carbine'}),
+ brute:Object.freeze({name:'BR-11 · BRUTE / LE BRISEUR',silhouette:'enormous angular siege mech / recessed red slit visor / exposed hydraulic pistons / asymmetric demolition hammer / long segmented legs'}),
+ bulwark:Object.freeze({name:'R-11 · Rempart / unité de suppression',silhouette:'humanoid heavy chassis / faceted arm shields / integrated helmet'}),
+ listener:Object.freeze({name:'TR-15 · Traqueur / réseau acoustique',silhouette:'open mechanical torso / wedge optical head / twin concave reflectors / hydraulic legs'}),
+ scuttler:Object.freeze({name:'RPT-17 · Rampant / maintenance autonome',silhouette:'low / worn overlapping armour / hydraulic six-legged maintenance chassis'}),
+ probe:Object.freeze({name:'S-19 · Sonde / quadrirotor militaire cyberpunk',silhouette:'armored X-frame / four triple-blade ducted motors / stabilized gimbal iris'})
 });
 
 const crawlerShell=loft([[.48,.25,.34],[.58,.37,.48],[.75,.43,.53],[.91,.38,.45],[1.02,.24,.31]],22);
@@ -96,7 +96,7 @@ export function createEnemyFactory(mats,{detail='high'}={}){
   bruteEnergy.name='BRUTE / permanently glowing scarlet reactor';
 
   const listenerMaps=listenerSurfaces(T),listenerFrame=frame.clone();
-  listenerFrame.name='E-06 / worn titanium enamel';listenerFrame.color.setHex(0x8b8983);listenerFrame.map=listenerMaps.paint;listenerFrame.roughnessMap=listenerMaps.rough;listenerFrame.bumpMap=listenerMaps.relief;listenerFrame.bumpScale=.0014;listenerFrame.roughness=.72;
+  listenerFrame.name='TR-15 / worn titanium enamel';listenerFrame.color.setHex(0x8b8983);listenerFrame.map=listenerMaps.paint;listenerFrame.roughnessMap=listenerMaps.rough;listenerFrame.bumpMap=listenerMaps.relief;listenerFrame.bumpScale=.0014;listenerFrame.roughness=.72;
   const listenerSignal=new T.MeshBasicMaterial({color:0xd56cac,toneMapped:false});
   const listenerStencil=new T.MeshStandardMaterial({map:listenerMaps.label,roughness:.84,metalness:.28});
 
@@ -240,7 +240,7 @@ export function createEnemyFactory(mats,{detail='high'}={}){
     if(form==='bulwark')return createRempart({elite,environment:mats.monster?.envMap,detail});
     if(!['stalker','scuttler','brute','seer','probe','listener','bulwark','synth'].includes(form))form='stalker';
     const kit=template(elite,ranged,form),root=new T.Group(),crawler=form==='scuttler',probe=form==='probe';
-    root.name=({synth:'N-08 adaptive synthetic',stalker:'AI pursuit chassis',scuttler:'AI maintenance crawler',brute:'BRUTE V3 / LE BRISEUR heavy siege chassis',seer:'AI reconnaissance chassis',probe:'S-03 flying surveillance probe',listener:'E-06 acoustic tracker',bulwark:'B-11 armoured suppression unit'})[form];
+    root.name=({synth:'SY-05 / Synthétique',stalker:'PO-07 / Poursuivant',scuttler:'RPT-17 / Rampant',brute:'BR-11 / Brute',seer:'REC-01 / Reconnaissance',probe:'S-19 / Sonde',listener:'TR-15 / Traqueur',bulwark:'R-11 / Rempart'})[form];
     root.userData.form=form;root.userData.designRevision='3.63.2';if(probe)root.userData.probeRevision='S-03 / destructible rotors 3.73';root.userData.profile=ENEMY_PROFILES[form];root.userData.surfaceStyle=form==='listener'?'worn titanium / open thoracic cage / directional acoustic reflectors / hydraulic limbs':form==='brute'?'worn graphite / large sharply bevelled siege plates / segmented piston mechanics / recessed scarlet reactor': 'weathered alloy / faceted humanoid armour / RLH joint proportions / articulated rifle stance';
     if(form==='brute')root.userData.bruteRevision=BRUTE_V3.revision;
     const joints=kit.bones.map(spec=>{const b=new T.Bone();b.name=spec.name;b.position.set(...spec.position);return b;});

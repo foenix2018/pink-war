@@ -1,7 +1,7 @@
 // CHAPITRE 06 — mission flow, independent from rendering so that the whole mission runs in tests (same scheme as the
-// chapters 03, 04 and 05). The N-08 learns: every ADAPT_EVERY seconds of fighting it records where the player shoots
+// chapters 03, 04 and 05). The SY-05 learns: every ADAPT_EVERY seconds of fighting it records where the player shoots
 // from, and while the player stays within ADAPT_RADIUS of that spot it only takes ADAPTED of the damage. Changing
-// position (the tactic the bible asks for: « la N-08 adapte leurs tactiques à chaque affrontement ») restores it.
+// position (the tactic the bible asks for: « la SY-05 adapte leurs tactiques à chaque affrontement ») restores it.
 import {WEAPONS,weaponAllowedForCharacter} from './game-logic.js';
 import {configureUnit} from './ligne9-mission.js';
 import {keepPressure} from './ligne9-layout.js';
@@ -60,14 +60,14 @@ export function createM06Mission({ game, characterId = 'ghju', hooks = {} }) {
     pending.length = 0; groups.clear(); hold = null; pressureAt = 0; adapt = null; nextAdapt = Infinity; reinforced = false; h.clear(); supplies();
   }
   function setWorld() { for (const d of L.DOORS) h.setDoor(d.id, !!d.open || opened.has(d.id)); h.setLine(breakersDone() < 3); }
-  // The N-08 takes ADAPTED of the damage while the player stays near the spot it learnt.
+  // The SY-05 takes ADAPTED of the damage while the player stays near the spot it learnt.
   function adaptation() {
     const n = n08(); if (!n) return;
     const p = game.player, learnt = adapt && Math.hypot(p.x - adapt.x, p.z - adapt.z) < ADAPT_RADIUS;
     n.damageScale = learnt ? ADAPTED : 1;
     if (game.time >= nextAdapt) {
       nextAdapt = game.time + ADAPT_EVERY; adapt = { x: p.x, z: p.z }; adaptations++;
-      h.adapt(adapt); h.cue('alarm'); h.notice('N-08 · COMPORTEMENT ENREGISTRÉ · CHANGE DE POSITION'); say('n08Adapt');
+      h.adapt(adapt); h.cue('alarm'); h.notice('SY-05 · COMPORTEMENT ENREGISTRÉ · CHANGE DE POSITION'); say('n08Adapt');
     }
     if (!reinforced && n.hp < (n.maxHp || n.hp) * .5) { reinforced = true; release('renfort'); say('n08Mi'); }
   }

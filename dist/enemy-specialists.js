@@ -1,8 +1,8 @@
 // PINK WARS — IA tactique V1 validée. Les décisions ne voient que le contact perçu.
 export const ENEMY_BEHAVIORS=Object.freeze(Object.fromEntries(Object.entries({
- sentinel:['SENTINELLE','garde de zone'],stalker:['POURSUIVANT','chasseur et flanqueur'],scuttler:['RAMPANT','harcèlement mobile'],
- seer:['RECO1','éclaireur et relais'],listener:['TRAQUEUR E-06','pisteur acoustique'],synth:['SYNTHÉTIQUE N-08','couvertures tactiques'],
- brute:['BRUTE','briseur de siège'],bulwark:['REMPART','bouclier des alliés'],probe:['SONDE S-03','drone orbital']
+ sentinel:['SE-03','garde de zone'],stalker:['PO-07','chasseur et flanqueur'],scuttler:['RPT-17','harcèlement mobile'],
+ seer:['REC-01','éclaireur et relais'],listener:['TR-15','pisteur acoustique'],synth:['SY-05','couvertures tactiques'],
+ brute:['BR-11','briseur de siège'],bulwark:['R-11','bouclier des alliés'],probe:['S-19','drone orbital']
 }).map(([k,[label,role]])=>[k,Object.freeze({label,role})])));
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z),finite=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.z),side=e=>((e.id||0)%2?1:-1);
 const eye=e=>({x:e.x,y:(e.elevation||0)+1.18,z:e.z});

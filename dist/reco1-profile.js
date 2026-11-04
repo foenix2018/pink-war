@@ -1,6 +1,6 @@
 // RECO1 replaces the existing lightweight Sentinel (seer), in every shared combat mode.
 export const RECO1_FORM='seer';
-export const RECO1=Object.freeze({name:'RECO1 · reconnaissance blindée',health:750,bulletScale:.5,sensorBulletScale:.8,height:1.82,sensorY:1.69,headTop:1.83,coverDrop:.52});
+export const RECO1=Object.freeze({name:'REC-01 · Reconnaissance blindée',health:750,bulletScale:.5,sensorBulletScale:.8,height:1.82,sensorY:1.69,headTop:1.83,coverDrop:.52});
 export const isReco1=form=>form===RECO1_FORM;
 export const reco1ProjectileScale=(enemy,zone='torso')=>isReco1(enemy.form)?(zone==='head'?RECO1.sensorBulletScale:RECO1.bulletScale):1;
 // Same local frame as the game: forward is -Z. These values come from the V10 carbine.

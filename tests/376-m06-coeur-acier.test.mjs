@@ -86,14 +86,14 @@ test('chapter 06 lasts at least 30 minutes for each hero; every scene and docume
 test('the bible’s chapter 6, between chapter 05 (Ligne 9) and chapter 07 (forest): P-0, AEGIS technicians, Brutes, Remparts, Sondes, the N-08 that learns',()=>{
   assert.match(bible,/### Chapitre 6 — Le cœur d’acier/);assert.match(bible,/unité expérimentale N-08 coordonne les autres machines et adapte leurs tactiques/);
   const all=JSON.stringify(SCRIPT)+JSON.stringify(Object.keys(LOGS).flatMap(k=>[logFor(k,'ghju'),logFor(k,'lylu')]))+JSON.stringify(ENDING);
-  for(const part of ['Brutes','Remparts','sondes','N-08','AEGIS','apprend'])assert.match(all,new RegExp(part,'i'),part);
+  for(const part of ['BR-11','R-11','S-19','SY-05','AEGIS','apprend'])assert.match(all,new RegExp(part,'i'),part);
   // Before: the P-0 order of the Ligne 9 names this foundry; Nira sent the archives to Voss; Varenne and Kim come from the station Est.
   assert.match(JSON.stringify(M05.LOGS),/usine de Vesper-Nord/);assert.match(logFor('bon-p0').lines.join(' '),/usine de Vesper-Nord/);assert.match(M05.ENDING.next,/06 — Le Cœur d’Acier/);
   assert.match(read('m04-story.js'),/Varenne/);assert.match(read('m04-story.js'),/Kim/);
   // After: the same evening, the AEGIS truck, the N-08 that learn « since the foundry », the Tilleuls file about the forest antenna.
-  assert.match(M07.SCRIPT.lisiere.ghju[0][1],/Depuis la fonderie, les N-08 apprennent/);assert.match(logFor('requisition').lines.join(' '),/antenne de terrain[\s\S]*forêt des Sources/);
+  assert.match(M07.SCRIPT.lisiere.ghju[0][1],/Depuis la fonderie, les SY-05 apprennent/);assert.match(logFor('requisition').lines.join(' '),/antenne de terrain[\s\S]*forêt des Sources/);
   assert.match(ENDING.next,/07 — Mémoires Locales/);assert.match(logFor('depart').lines.join(' '),/coucher du soleil/);
-  assert.match(logFor('journal-n08','ghju').lines.join(' '),/station énergétique Est[\s\S]*Ligne 9[\s\S]*transmis à toutes les unités N-08/);
+  assert.match(logFor('journal-n08','ghju').lines.join(' '),/station énergétique Est[\s\S]*Ligne 9[\s\S]*transmis à toutes les unités SY-05/);
   assert.doesNotMatch(all,/Gabrielle|Carla|empreinte neuronale|est mort|est morte|CONVERGENCE|Résonance/);
 });
 

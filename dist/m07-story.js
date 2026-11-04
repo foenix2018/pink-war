@@ -9,14 +9,14 @@
 // venue ici. » Ce lieu n'est PAS le complexe médical du chapitre 15 (effacé de toutes les cartes, retrouvé au
 // chapitre 14) : c'est le Centre de la Cascade, l'antenne de terrain de l'équipe de recherche des Tilleuls (VEILLE).
 // Continuité : 01 (VEILLE-4, les Tilleuls, la photo « nous six »), 04 (ORDRE a reconnu la sphère : procédure de
-// récupération), 05 (Tomas, Nira Solen, les archives de production transmises à Mara Voss), 06 (la fonderie, N-08
+// récupération), 05 (Tomas, Nira Solen, les archives de production transmises à Mara Voss), 06 (la fonderie, SY-05
 // qui apprend). Suite : 08 « Les ordres de JANUS » (LYLU). Les compétences avancées des sphères s'ouvrent ici
 // (« compétences avancées à la mission 7 » dans companion-menu.js). Aucun lien sphères ↔ sœurs n'est dit.
 import {SPEAKERS as M04_SPEAKERS} from './m04-story.js';
 
 export const SPEAKERS = Object.freeze({
   ...M04_SPEAKERS,
-  nira: { name: 'NIRA SOLEN · ÉPARS', color: '#f2d38a' }, tomas: { name: 'TOMAS · ÉPARS', color: '#b9d98a' }, reco: { name: 'N-08 · UNITÉ DE RÉCUPÉRATION', color: '#ff3b4e' },
+  nira: { name: 'NIRA SOLEN · ÉPARS', color: '#f2d38a' }, tomas: { name: 'TOMAS · ÉPARS', color: '#b9d98a' }, reco: { name: 'SY-05 · UNITÉ DE RÉCUPÉRATION', color: '#ff3b4e' },
   centre: { name: 'CENTRE DE LA CASCADE · SYSTÈME LOCAL', color: '#9fe3d8' }
 });
 const L = (...lines) => lines;
@@ -24,18 +24,18 @@ const ia = c => c === 'lylu' ? 'CAR-14' : 'GAB-1';
 
 export const SCRIPT = Object.freeze({
   lisiere: {
-    ghju: L(['voss', 'Ici Voss. Depuis la fonderie, les N-08 apprennent de chacun de nos combats. Et depuis la station Est, ORDRE cherche GAB-1. Le dossier des Tilleuls parle d’une antenne de terrain dans la forêt des Sources.'],
-      ['tomas', 'Tomas, des Épars. Je connais la forêt. Sous les arbres, leurs sondes voient mal. Près de l’eau, leurs traqueurs n’entendent rien. Restez avec moi.'],
+    ghju: L(['voss', 'Ici Voss. Depuis la fonderie, les SY-05 apprennent de chacun de nos combats. Et depuis la station Est, ORDRE cherche GAB-1. Le dossier des Tilleuls parle d’une antenne de terrain dans la forêt des Sources.'],
+      ['tomas', 'Tomas, des Épars. Je connais la forêt. Sous les arbres, leurs sondes voient mal. Près de l’eau, leurs TR-15 n’entendent rien. Restez avec moi.'],
       ['gaby', 'C’est calme. Trop vert pour ORDRE. J’aime bien.']),
     lylu: L(['nira', 'Ici Nira. Les archives de la Ligne 9 citent une antenne des Tilleuls dans la forêt des Sources. Tomas t’attend à la lisière.'],
       ['tomas', 'Une autre armure est passée hier. Des marques roses. Elle a pris le sentier de la cascade.'],
       ['cara', 'Rose. Hier. Tu entends ça, LYLU ? On a un jour de retard. Pour une fois, ce n’est pas sept ans.'])
   },
   sousBois: {
-    ghju: L(['gaby', 'Sonde au-dessus des arbres. Reste sous le couvert, elle ne te verra pas.']),
-    lylu: L(['cara', 'Une sonde là-haut. Sous les feuilles, tu es invisible. Profites-en, ça ne t’arrive pas souvent.'])
+    ghju: L(['gaby', 'S-19 au-dessus des arbres. Reste sous le couvert, elle ne te verra pas.']),
+    lylu: L(['cara', 'Une S-19 là-haut. Sous les feuilles, tu es invisible. Profites-en, ça ne t’arrive pas souvent.'])
   },
-  traqueur: { all: L(['tomas', 'Un traqueur. Il écoute. Marche sur la mousse, pas sur les branches.']) },
+  traqueur: { all: L(['tomas', 'Un TR-15. Il écoute. Marche sur la mousse, pas sur les branches.']) },
   gue: {
     ghju: L(['gaby', 'La rivière est haute. La vieille passerelle a un treuil, côté ruines.']),
     lylu: L(['cara', 'Passerelle relevée, treuil rouillé, rampants dans les roseaux. Le paradis.'])
@@ -87,8 +87,8 @@ export const SCRIPT = Object.freeze({
   },
   recuperation: {
     all: L(['reco', 'SIGNATURE INCOMPATIBLE LOCALISÉE · PROCÉDURE DE RÉCUPÉRATION · CIBLE : SPHÈRE · PORTEUR : SECONDAIRE']),
-    ghju: L(['voss', 'GHJU, ORDRE a suivi GAB-1 jusqu’à toi. Une unité N-08 et ses escortes. Tiens jusqu’à ce que Tomas ouvre l’ancienne route.']),
-    lylu: L(['nira', 'LYLU, ils viennent pour CAR-14. Une N-08 et son escorte. Tomas ouvre l’ancienne route, tiens le centre.'])
+    ghju: L(['voss', 'GHJU, ORDRE a suivi GAB-1 jusqu’à toi. Une unité SY-05 et ses escortes. Tiens jusqu’à ce que Tomas ouvre l’ancienne route.']),
+    lylu: L(['nira', 'LYLU, ils viennent pour CAR-14. Une SY-05 et son escorte. Tomas ouvre l’ancienne route, tiens le centre.'])
   },
   liaison: {
     ghju: L(['gaby', 'Quelque chose s’est ouvert en moi. Je peux faire plus que te suivre. Laisse-moi te protéger.']),
@@ -112,9 +112,9 @@ export const LOGS = Object.freeze({
     lines: ['Boucle de la cascade : 6 km. Moulin et aqueduc du XXIIe siècle. Baignade interdite au bassin.', 'Antenne de recherche des Tilleuls : accès réservé au personnel.'],
     footer: 'Quelqu’un a gravé au couteau, sous le panneau : « ORDRE ne voit pas sous les feuilles. »', speech: 'Antenne de recherche des Tilleuls : accès réservé au personnel.' }),
   epars: () => ({ title: 'CARNET DES ÉPARS — GROUPE DE LA FORÊT', stamp: 'ABRI SOUS LES RACINES',
-    lines: ['Règle 1 : jamais de feu à découvert. Règle 2 : traverser près de l’eau, les traqueurs n’entendent rien. Règle 3 : ne pas entrer dans le centre.',
+    lines: ['Règle 1 : jamais de feu à découvert. Règle 2 : traverser près de l’eau, les TR-15 n’entendent rien. Règle 3 : ne pas entrer dans le centre.',
       'Il y a deux saisons : une machine nouvelle passe le long de la rivière. Elle recule quand on la vise. Elle revient par un autre côté.'],
-    footer: 'Les N-08 sont arrivées dans la forêt après la fonderie.', speech: 'Elle recule quand on la vise. Elle revient par un autre côté.' }),
+    footer: 'Les SY-05 sont arrivées dans la forêt après la fonderie.', speech: 'Elle recule quand on la vise. Elle revient par un autre côté.' }),
   moulin: () => ({ title: 'PLAQUE DU MOULIN', stamp: 'RUINES · PIERRE',
     lines: ['Moulin de la Source, 1904. Restauré en 2161. L’aqueduc alimentait la vallée jusqu’à la construction de Vesper.'],
     footer: 'Les ruines les plus anciennes de la région. Aucune carte d’ORDRE ne les détaille.', speech: 'Moulin de la Source, mille neuf cent quatre.' }),
@@ -151,7 +151,7 @@ export const SEGMENTS = Object.freeze([
   seg('cascade', 'Derrière la cascade', 'Sentier mouillé, bassin, marques dans la roche', { walk: 180, units: 6, puzzle: 40, lines: ['cascade', 'toise'], logs: ['toise'] }),
   seg('grotte', 'La grotte', 'Galeries inondées, nid de rampants, turbine', { walk: 300, holds: [45], units: 12, stealth: 60, lines: ['grotte', 'rampants', 'turbine', 'turbineOk'], logs: ['relais-grotte'] }),
   seg('centre', 'Le Centre de la Cascade', 'Antenne médicale envahie par les arbres', { walk: 200, units: 4, puzzle: 90, lines: ['centre', 'dossier', 'protection'], logs: ['dossier', 'journal'] }),
-  seg('recuperation', 'La récupération', 'Centre et ruines : défense puis N-08', { walk: 150, holds: [90], units: 18, lines: ['recuperation', 'liaison', 'n08', 'n08Ok'] }),
+  seg('recuperation', 'La récupération', 'Centre et ruines : défense puis SY-05', { walk: 150, holds: [90], units: 18, lines: ['recuperation', 'liaison', 'n08', 'n08Ok'] }),
   seg('sortie', 'Par l’aqueduc', 'Exfiltration sur l’aqueduc, retour à la rivière', { walk: 380, units: 8, lines: ['fin'] })
 ]);
 // Temps estimé (secondes) d'un segment pour un héros : marche, attentes, combats, énigmes, sous-titres et lecture.

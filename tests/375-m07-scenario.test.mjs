@@ -63,6 +63,6 @@ test('continuity with chapters 01, 04 and 05, the bible’s enemies and the comp
   assert.match(read('m04-story.js'),/PROCÉDURE DE RÉCUPÉRATION PRIORITAIRE/);assert.match(M07.linesFor('recuperation','ghju')[0].text,/PROCÉDURE DE RÉCUPÉRATION/);
   assert.match(read('ligne9-story.js'),/Pour Tomas/,'Tomas of the Ligne 9 market note');
   assert.match(read('companion-menu.js'),/Compétences avancées à la mission 7/);assert.ok(M07.SCRIPT.liaison,'the advanced skills open here');
-  assert.match(bible,/une unité expérimentale N-08 coordonne les autres machines et adapte leurs tactiques/);assert.match(all('ghju'),/N-08/);
+  assert.match(bible,/une unité expérimentale N-08 coordonne les autres machines et adapte leurs tactiques/);assert.match(all('ghju'),/SY-05/);
   for(const date of ['17 novembre 2189','17/11/2189'])assert.ok(all('ghju').includes(date),date);
 });

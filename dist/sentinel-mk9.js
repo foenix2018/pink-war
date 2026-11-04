@@ -1,7 +1,7 @@
 // Faithful geometric port of the user-approved Sentinel MK VIII preview.
 // The preview's polygon, track, armor, hydraulic and missile details are retained.
 export function createSentinel(T,scene,options={}){
- const root=new T.Group();root.name='Sentinel MK VIII / arena';scene.add(root);
+ const root=new T.Group();root.name='SE-03 · Sentinel / arena';scene.add(root);
  const visual=new T.Group();visual.rotation.y=Math.PI;root.add(visual);
  const shapes=[];
 function box(x,y,z,w,h,d,col,rx=0,ry=0,rz=0){shapes.push({x,y,z,w,h,d,col,rx,ry,rz})}function limb(x1,y1,z1,x2,y2,z2,r,col){let dx=x2-x1,dy=y2-y1,dz=z2-z1,L=Math.hypot(dx,dy,dz),rx=Math.atan2(dz,dy),rz=-Math.atan2(dx,Math.hypot(dy,dz));box((x1+x2)/2,(y1+y2)/2,(z1+z2)/2,r,L,r,col,rx,0,rz)}

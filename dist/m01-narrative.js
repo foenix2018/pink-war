@@ -9,7 +9,7 @@ export function missionJournal(action,characterId='ghju'){
    '« …les relais indépendants… »',
    `${companion} — « Le signal est dégradé. Mais l’indicatif est propre. »`],
   speech:'Indicatif VEILLE-4. Ne faites confiance à aucun système connecté au réseau principal. Retrouvez les relais indépendants.',
-  footer:'Le circuit isolé vient de couper la surveillance locale. Reste à couvert : une sonde d’ORDRE peut avoir capté le signal.'
+  footer:'Le circuit isolé vient de couper la surveillance locale. Reste à couvert : une S-19 d’ORDRE peut avoir capté le signal.'
  };
  if(action==='investigation')return {
   title:'02 / LES JOURNAUX ONT SURVÉCU',stamp:'BOUTIQUE OUEST / TERMINAL DÉCONNECTÉ',

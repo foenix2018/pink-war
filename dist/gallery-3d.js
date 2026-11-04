@@ -45,7 +45,7 @@ let lastCanvasWidth=0,lastCanvasHeight=0,lastPixelRatio=0,renderPending=false,gr
 const tabletOrMobile=/iPhone|iPad|Android|Mobile/i.test(navigator.userAgent);
 const previewRatioCap=tabletOrMobile?1.22:1.5;
 const weaponNames={'VX-9':0,'NEXUS V9':1,'ARES X9':2,'THORN':3,'NOVA':4,'AURORA':5,'M–12':6,'VX-9 DUO':7,'VORTEX AR-7':8};
-const enemyForms={'REMPART':'bulwark','SYNTH N-08':'synth','POURSUIVANT':'stalker','BRUTE':'brute','TRAQUEUR':'listener','RAMPANT':'scuttler','SONDE S-03':'probe'};
+const enemyForms={'R-11':'bulwark','SY-05':'synth','PO-07':'stalker','BR-11':'brute','TR-15':'listener','RPT-17':'scuttler','S-19':'probe'};
 const surfaceMat=color=>new T.MeshStandardMaterial({color,metalness:.52,roughness:.47});
 function clearExports(){for(const u of exportUrls)URL.revokeObjectURL(u);exportUrls=[];}
 function setStatus(message){status.textContent=message;}
@@ -72,23 +72,23 @@ async function actualObject(name){
   actor.root.position.set(0,0,0);
   return {root:actor.root,animate:(t,dt)=>actor.preview(dt),source:'Sphère IA articulée du jeu · '+(name==='GAB-1'?'quatre coques de protection / projection optique émotionnelle rose':'six panneaux offensifs / projection optique émotionnelle bleue'),say:(mood,options)=>actor.say(mood,options),stopSpeaking:()=>actor.stopSpeaking(),voiceState:()=>actor.snapshot().communication,dispose:()=>actor.dispose()};
  }
- if(name==='RECO1'){
+ if(name==='REC-01'){
   const {createReco1}=await import('./reco1.js');
   const root=createReco1();
-  return {root,animate:(t)=>root.userData.animate?.(t,0,false,{},t),source:'RECO1 V10 · modèle et squelette originaux'};
+  return {root,animate:(t)=>root.userData.animate?.(t,0,false,{},t),source:'REC-01 · modèle RECO1 V10 et squelette originaux'};
  }
- if(name==='ROBOT LOURD'){
+ if(name==='SE-03'){
   const {createSentinel}=await import('./sentinel-mk9.js');
   const actor=createSentinel(T,scene,{health:1200});
   actor.root.removeFromParent();
   return {root:actor.root,animate:(t,dt)=>actor.update(dt,{moving:false,awareness:'patrol'}),
-    source:'Sentinel MK VIII · modèle blindé original, canons et pods de missiles',dispose:()=>actor.dispose()};
+    source:'SE-03 · modèle Sentinel MK VIII, canons et pods de missiles',dispose:()=>actor.dispose()};
  }
  if(Object.hasOwn(enemyForms,name)){
   const {createEnemyFactory}=await import('./enemies.js?v=3.77-briseur-v3');
   const mats=palette();
   const form=enemyForms[name],root=createEnemyFactory(mats).create(false,true,form);
-  return {root,animate:t=>root.userData.animate?.(t,0,false,form==='probe'?{yaw:root.rotation.y,motionX:Math.sin(t*.8)*2.4,motionZ:Math.cos(t*.8)*2.2}:form==='brute'?{awareness:'engaged'}:{},t),source:form==='probe'?'S-03 / quadrirotor cyberpunk · vol stabilisé · son RLH en jeu':form==='brute'?'Brute V3 · nouveau châssis hard-surface de siège · réacteur et marteau hydraulique':'Usine d’ennemis / châssis réel du jeu'};
+  return {root,animate:t=>root.userData.animate?.(t,0,false,form==='probe'?{yaw:root.rotation.y,motionX:Math.sin(t*.8)*2.4,motionZ:Math.cos(t*.8)*2.2}:form==='brute'?{awareness:'engaged'}:{},t),source:form==='probe'?'S-19 / quadrirotor cyberpunk · vol stabilisé · son RLH en jeu':form==='brute'?'BR-11 · nouveau châssis hard-surface de siège · réacteur et marteau hydraulique':'Usine d’ennemis / châssis réel du jeu'};
  }
  if(Object.hasOwn(weaponNames,name)){
   const index=weaponNames[name];
@@ -220,7 +220,7 @@ window.galleryBuild=async name=>{
       const option=document.createElement('option');option.value=value;option.textContent=label;return option;
     }));
    }}
-  bearing=name==='BRUTE'?.30:.45;elevation=name==='BRUTE'?.10:.16;zoom=4.1;groundTick=5;
+  bearing=name==='BR-11'?.30:.45;elevation=name==='BR-11'?.10:.16;zoom=4.1;groundTick=5;
   setStatus(entry.source+' · '+count+' maillages'+(repaired?' · '+repaired+' matériaux réparés':'')+' · glisser pour tourner, pincer pour zoomer.');
   arButton.disabled=false;startDraw();
  }catch(e){if(token!==requestId)return;setStatus('Échec '+galleryBuildVersion+' · '+name+' : '+(e.message||e)+' · '+String(e.stack||'').slice(0,520));arButton.disabled=true;console.error('Galerie Pink Wars',name,e);}
@@ -407,7 +407,7 @@ async function renderGalleryThumbnail(name){
   const size=box.getSize(new T.Vector3());
   const center=box.getCenter(new T.Vector3());
   const isPerson=name==='GHJU'||name==='LYLU';
-  const isPortrait=isPerson||Object.hasOwn(enemyForms,name)||name==='RECO1'||name==='ROBOT LOURD';
+  const isPortrait=isPerson||Object.hasOwn(enemyForms,name)||name==='REC-01'||name==='SE-03';
   const centered=new T.Group();
   centered.add(actor.root);
   stage.thumbPivot.add(centered);
@@ -425,15 +425,15 @@ async function renderGalleryThumbnail(name){
      headCenter=helmetBox.getCenter(new T.Vector3());
      cropHeight=Math.max(helmetSize.y*1.53,helmetSize.x*1.28,.20);
     }
-   }else if(name==='SONDE S-03'){
+   }else if(name==='S-19'){
     headCenter.y=box.min.y+size.y*.54;
     cropHeight=Math.max(size.y*.67,.32);
-   }else if(name==='RAMPANT'){
+   }else if(name==='RPT-17'){
     headCenter.y=box.min.y+size.y*.65;
     cropHeight=Math.max(size.y*.72,.32);
    }else{
-    if(name==='BRUTE')cropHeight=Math.max(size.y*.27,.30);
-    if(name==='ROBOT LOURD')cropHeight=Math.max(size.y*.35,.35);
+    if(name==='BR-11')cropHeight=Math.max(size.y*.27,.30);
+    if(name==='SE-03')cropHeight=Math.max(size.y*.35,.35);
     // Native skeletons on BRUTE, SYNTH and RECO1/REMPART expose different head-bone names.
     // Prefer their true 3D head position to a bbox polluted by weapons or shoulders.
     const headBone=actor.root.getObjectByName('sensor-head')

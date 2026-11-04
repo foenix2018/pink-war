@@ -54,8 +54,8 @@ export const SCRIPT = Object.freeze({
     ghju: L(['ghju', 'Le groupe tient. L’atelier s’ouvre : quatre survivants. Des Épars, enfermés depuis deux jours.'])
   },
   portail: {
-    lylu: L(['cara', 'Une sonde et deux traqueurs devant la porte. ORDRE a entendu ton moteur.']),
-    ghju: L(['gaby', 'Machines de reconnaissance devant la porte : une sonde, deux traqueurs. Je mets le bouclier en charge.'])
+    lylu: L(['cara', 'Une S-19 et deux TR-15 devant la porte. ORDRE a entendu ton moteur.']),
+    ghju: L(['gaby', 'Machines de reconnaissance devant la porte : une S-19, deux TR-15. Je mets le bouclier en charge.'])
   },
   quartier: {
     lylu: L(['lylu', 'Les Épars disent que la transmission passe par un relais du quartier. Le relais A3, sur la terrasse des Archives.']),

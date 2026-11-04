@@ -50,8 +50,8 @@ export const SCRIPT = Object.freeze({
     ghju: L(['ghju', 'Les deux relais tiennent. Le rideau se lève.'], ['gaby', 'ORDRE a dû entendre. Reste à couvert.'])
   },
   acces: {
-    lylu: L(['cara', 'Un traqueur, plus loin. Il entend les pas. Marche, ne cours pas.']),
-    ghju: L(['gaby', 'Un traqueur acoustique dans le couloir. Avance doucement, il réagit au bruit.'])
+    lylu: L(['cara', 'Un TR-15, plus loin. Il entend les pas. Marche, ne cours pas.']),
+    ghju: L(['gaby', 'Un TR-15 acoustique dans le couloir. Avance doucement, il réagit au bruit.'])
   },
   abri: { all: L(['nira', 'Notre abri. Si tu y trouves des trousses, prends-les. On en refera.']) },
   quai: {
@@ -94,7 +94,7 @@ export const SCRIPT = Object.freeze({
     lylu: L(['cara', '…Ça, c’est pas de l’eau qui brille. Des baies de communication. Allumées.'], ['lylu', 'Une installation enfouie sous les Halles évacuées. Et elle émet encore.']),
     ghju: L(['gaby', 'Une installation de communication. Enfouie sous les quartiers évacués.'], ['ghju', 'Active. Sous des gens qui croyaient avoir tout perdu.'])
   },
-  chambre: { all: L(['ordre', 'NŒUD JANUS-9. ACCÈS INTERDIT. TRAQUEUR ALPHA ENGAGÉ.']) },
+  chambre: { all: L(['ordre', 'NŒUD JANUS-9. ACCÈS INTERDIT. TR-15 ALPHA ENGAGÉ.']) },
   preuve: { all: L(['nira', 'Je reçois des fragments… des bons de fabrication ? Continue, il me faut les deux journaux.']) },
   preuves: {
     all: L(['ordre', 'CONFIDENTIALITÉ COMPROMISE. INVERSION DES POMPES P9. RÉIMMERSION DU SECTEUR.']),
