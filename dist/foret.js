@@ -9,6 +9,7 @@ import * as T from './vendor/three.webgpu.min.js';
 import {WebGLRenderer} from './vendor/three.module.min.js';
 import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './renderer-policy.js';
 import {linesFor,lineSeconds,logFor,ENDING} from './m07-story.js';
+import {softCube,softEnough} from './soft-pieces.js';
 import {createM07Hud} from './m07-hud.js?v=2';
 
 const params = new URLSearchParams(globalThis.location?.search ?? '');
@@ -168,20 +169,50 @@ function lumpy(geometry, amount, seed) {
   for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const k = 1 + (noise(v.x * 2 + seed, v.y * 2 + v.z * 2) - .5) * amount + (r() - .5) * amount * .3; p.setXYZ(i, v.x * k, v.y * k, v.z * k); }
   geometry.computeVertexNormals(); return geometry;
 }
+// Trees. Every part is welded (indexed) before lighting so the normals are smooth: no faceted low-poly look. Trunks
+// taper and lean, conifer tiers droop with ragged skirts, broadleaf crowns are clusters of noisy leaf masses, darker in
+// their own shade and lighter where the sun hits the top.
+function bentTrunk(h, r0, r1, segs, seed, color) {
+  const g = weld(new T.CylinderGeometry(r1, r0, h, segs, 6, true).translate(0, h / 2, 0)), p = g.attributes.position, lean = (noise(seed, 3.1) - .5) * .5, v = new T.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i); const t = v.y / h, a = Math.atan2(v.z, v.x), bark = 1 + (noise(a * 3 + seed, v.y * 2.2) - .5) * .22;
+    p.setXYZ(i, v.x * bark + lean * t * t * h * .25, v.y, v.z * bark + lean * .4 * t * t * h * .25);
+  }
+  g.computeVertexNormals(); return paint(g, color, .25, seed);
+}
+function leafMass(radius, detail, seed, shade, light) {
+  const g = weld(new T.IcosahedronGeometry(radius, detail)), p = g.attributes.position, c = new Float32Array(p.count * 3), v = new T.Vector3(), k = new T.Color(), lo = new T.Color(shade), hi = new T.Color(light);
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i); const n = fbm(v.x * .9 + seed, v.y * .9 + v.z * .7), f = 1 + (n - .5) * .75 + (noise(v.x * 3.4 + seed, v.z * 3.4 + v.y * 3.4) - .5) * .2;
+    v.multiplyScalar(f); if (v.y < -radius * .3) v.y = -radius * .3 + (v.y + radius * .3) * .45; p.setXYZ(i, v.x, v.y, v.z);
+    k.copy(lo).lerp(hi, clamp(.5 + v.y / radius * .55, 0, 1) * (.75 + n * .35)); c[i * 3] = k.r; c[i * 3 + 1] = k.g; c[i * 3 + 2] = k.b;
+  }
+  g.setAttribute('color', new T.BufferAttribute(c, 3)); g.computeVertexNormals(); return g;
+}
 function conifer(lod) {
-  const parts = [paint(new T.CylinderGeometry(.18, .3, 3, lod ? 5 : 7).translate(0, 1.5, 0), 0x4b3424, .2, 3)];
-  const tiers = lod ? 3 : 5, seg = lod ? 6 : 9;
+  const parts = [bentTrunk(lod ? 4 : 5, .32, .12, lod ? 6 : 9, 3, 0x4b3424)];
+  const tiers = lod ? 4 : 7, seg = lod ? 8 : 13, shade = new T.Color(0x1d4029), tip = new T.Color(0x3f7a45), k = new T.Color();
   for (let i = 0; i < tiers; i++) {
-    const t = i / tiers, rad = 2.6 * (1 - t * .75), y = 2.2 + i * (lod ? 2.2 : 1.35);
-    parts.push(paint(lumpy(new T.ConeGeometry(rad, lod ? 3.2 : 2.6, seg, 1, true), lod ? .1 : .22, i + 3).translate(0, y + 1.2, 0), 0x2c5a37, .35, 11 + i));
+    const t = i / tiers, rad = 2.7 * (1 - t * .78), hgt = lod ? 2.6 : 2.1, y = 1.9 + i * (lod ? 1.75 : 1.02);
+    const g = weld(new T.ConeGeometry(rad, hgt, seg, 3, true)), p = g.attributes.position, c = new Float32Array(p.count * 3), v = new T.Vector3();
+    for (let q = 0; q < p.count; q++) {
+      v.fromBufferAttribute(p, q); const a = Math.atan2(v.z, v.x), rim = clamp((-v.y / hgt) + .5, 0, 1);
+      // Branch tips: the skirt droops and is ragged, the radius waves around the tier.
+      const wave = 1 + (noise(a * 2.6 + i * 7, i) - .5) * .35 * rim, droop = rim * rim * (.25 + noise(a * 5 + i, 2) * .45);
+      p.setXYZ(q, v.x * wave, v.y - droop, v.z * wave);
+      k.copy(shade).lerp(tip, rim * .8 + (1 - t) * .1); c[q * 3] = k.r; c[q * 3 + 1] = k.g; c[q * 3 + 2] = k.b;
+    }
+    g.setAttribute('color', new T.BufferAttribute(c, 3)); g.computeVertexNormals(); parts.push(g.translate(0, y + hgt / 2, 0));
   }
   return merge(parts);
 }
 function broadleaf(lod) {
-  const parts = [paint(new T.CylinderGeometry(.22, .38, 3.4, lod ? 5 : 7).translate(0, 1.7, 0), 0x5a4330, .2, 5)];
-  if (!lod) for (const [a, l] of [[.6, 1.6], [-.8, 1.4], [2.2, 1.5]]) parts.push(paint(new T.CylinderGeometry(.07, .14, l, 5).translate(0, l / 2, 0).rotateZ(.7).rotateY(a).translate(0, 2.8, 0), 0x5a4330, .2, 7));
-  const blobs = lod ? [[0, 5, 0, 2.8]] : [[0, 5.2, 0, 2.3], [1.3, 4.4, .4, 1.7], [-1.2, 4.6, -.5, 1.8], [.2, 6.3, -.3, 1.6]];
-  blobs.forEach(([x, y, z, s], i) => parts.push(paint(lumpy(new T.IcosahedronGeometry(s, lod ? 0 : 1), .35, i + 20).translate(x, y, z), 0x3f7a33, .4, 30 + i)));
+  const parts = [bentTrunk(lod ? 3.6 : 4.2, .42, .2, lod ? 6 : 9, 5, 0x5a4330)];
+  if (!lod) for (const [a, l, tilt] of [[.6, 2.2, .75], [-.9, 1.9, .7], [2.3, 2, .8], [3.6, 1.6, .9]]) parts.push(paint(weld(new T.CylinderGeometry(.06, .16, l, 6).translate(0, l / 2, 0).rotateZ(tilt).rotateY(a).translate(0, 3.1, 0)), 0x5a4330, .2, 7));
+  for (const g of parts) if (!g.attributes.normal || g.index) g.computeVertexNormals();
+  // Crown: leaf masses spread on an ellipsoid around (0, 5.4, 0).
+  const masses = lod ? [[0, 5.4, 0, 2.3], [1.2, 4.7, .6, 1.5], [-1.1, 4.9, -.7, 1.6]] : [[0, 5.6, 0, 1.9], [1.5, 5, .5, 1.5], [-1.4, 5.1, -.6, 1.55], [.4, 4.6, 1.6, 1.35], [-.5, 4.5, -1.6, 1.3], [1.1, 6.4, -.9, 1.25], [-1, 6.5, .8, 1.2], [.1, 7.1, .1, 1.1], [2.1, 4.2, -.7, 1.05], [-2, 4.3, .9, 1]];
+  masses.forEach(([x, y, z, r], n) => parts.push(leafMass(r, lod ? 0 : 1, 20 + n * 3.7, 0x2a5424, 0x6a9e3c).translate(x, y, z)));
   return merge(parts);
 }
 function withUV(parts) {
@@ -194,8 +225,10 @@ function withUV(parts) {
 // Rocks: a welded (indexed) sphere so the normals are smooth, displaced by coherent noise, flattened, with a flat
 // sitting face, darker cracks and moss on top. The near and far versions share the same shape (no pop).
 function weld(geometry) {
-  const p = geometry.attributes.position, map = new Map(), index = [], pos = [];
-  for (let i = 0; i < p.count; i++) {
+  // Indexed input (cylinders, cones) is walked through its own index so the triangles keep their corners.
+  const p = geometry.attributes.position, map = new Map(), index = [], pos = [], src = geometry.index, total = src ? src.count : p.count;
+  for (let n = 0; n < total; n++) {
+    const i = src ? src.getX(n) : n;
     const key = `${p.getX(i).toFixed(4)},${p.getY(i).toFixed(4)},${p.getZ(i).toFixed(4)}`; let j = map.get(key);
     if (j === undefined) { j = pos.length / 3; map.set(key, j); pos.push(p.getX(i), p.getY(i), p.getZ(i)); } index.push(j);
   }
@@ -453,14 +486,16 @@ function remnants(scene, colliders) {
   const parts = [], glow = [];
   const rust = new T.MeshStandardMaterial({ vertexColors: true, roughness: .85, metalness: .35 });
   const add = (geo, color, x, y, z, ry = 0, rz = 0, rx = 0, jitter = .25, seed = 1) => { const m = new T.Mesh(paint(geo, color, jitter, seed), rust); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); parts.push(m); return m; };
-  const box = (w, h, d, color, x, y, z, ry = 0, rz = 0, rx = 0) => add(new T.BoxGeometry(w, h, d), color, x, y, z, ry, rz, rx);
+  // Thick pieces are rounded (soft-pieces.js); thin bars and slabs stay plain boxes.
+  const shape = (w, h, d) => softEnough(w, h, d) ? softCube(T).clone().scale(w, h, d) : new T.BoxGeometry(w, h, d);
+  const box = (w, h, d, color, x, y, z, ry = 0, rz = 0, rx = 0) => add(shape(w, h, d), color, x, y, z, ry, rz, rx);
   const ground = (x, z) => terrainHeight(x, z);
   // Cracked asphalt of the old road at the edge of the forest (pieces tilted by roots).
   for (let k = 0; k < 9; k++) { const x = -18 + k * 4.4, z = 86 + Math.sin(k) * .8; box(4.2, .14, 5.5, k % 3 ? 0x3b3b3c : 0x2f3033, x, ground(x, z) + .05, z, .05 * Math.sin(k * 3), .04 * Math.cos(k * 2), .03 * Math.sin(k)); }
   // The AEGIS truck (back from the foundry): cab, box body, wheels, a pink and blue stripe faded by the sun.
   { const x = -6, z = 86, y = ground(x, z), ry = .12;
     const g = new T.Group(); g.position.set(x, y, z); g.rotation.y = ry; scene.add(g);
-    const local = []; const lb = (w, h, d, c, px, py, pz) => { const m = new T.Mesh(paint(new T.BoxGeometry(w, h, d), c, .12, 3), rust); m.position.set(px, py, pz); g.add(m); local.push(m); };
+    const local = []; const lb = (w, h, d, c, px, py, pz) => { const m = new T.Mesh(paint(shape(w, h, d), c, .12, 3), rust); m.position.set(px, py, pz); g.add(m); local.push(m); };
     lb(2.5, 1.9, 2.2, 0x55616a, 0, 1.55, -2.7); lb(2.6, 2.6, 5, 0x6c7880, 0, 1.9, .9); lb(2.62, .25, 5.02, 0x8a3d6a, 0, 2.25, .9); lb(2.63, .12, 5.03, 0x3c6b9a, 0, 1.95, .9);
     for (const [px, pz] of [[-1.25, -2.6], [1.25, -2.6], [-1.25, 2.2], [1.25, 2.2]]) { const w = new T.Mesh(paint(new T.CylinderGeometry(.55, .55, .4, 12).rotateZ(Math.PI / 2), 0x1b1b1b, .1, 4), rust); w.position.set(px, .55, pz); g.add(w); local.push(w); }
     g.updateMatrixWorld(true); for (const m of local) { g.remove(m); m.applyMatrix4(g.matrixWorld); parts.push(m); } scene.remove(g);

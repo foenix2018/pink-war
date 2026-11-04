@@ -199,6 +199,8 @@ function setupPlayer(){
  armorFx=createArmorFeedback({T,scene,accent:lylu?0x80baff:0xef91b4,listener:()=>game.player,
   audio:()=>enableAudio&&audioCtx?.state==='running'?audioCtx:null,haptic:kind=>xr?.active&&xr.haptic(kind)});
  try{enemyFactory=createEnemyFactory(enemyMaterials());}catch(error){console.warn('M06 / ennemis simplifiés',error);}
+ // The Brutes being assembled on the heavy chain are the real Brute model, inert.
+ try{art.dressLine?.(enemyFactory,{count:low()?3:7});}catch(error){console.warn('M06 / chaîne simplifiée',error);}
 }
 function lookFrom(cp){yaw=cp.yaw||0;pitch=-.04;}
 

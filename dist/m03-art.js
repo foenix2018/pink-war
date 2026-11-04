@@ -11,6 +11,7 @@ import {createCivilCar} from './civil-vehicle-detail.js';
 import {createFreightTruck} from './freight-truck-detail.js';
 import {createRescueVehicle} from './rescue-vehicle-detail.js';
 import {createFunctionalProp} from './functional-props.js';
+import { softCube, softEnough, splitPieces } from './soft-pieces.js';
 
 const TAU = Math.PI * 2;
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
@@ -53,7 +54,8 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
     white: std(0xe8ebee, .35, .25), red: std(0xb5161e, .4, .3), yellow: std(0xd9b021, .5, .2), rust: std(0x7a4a32, .8, .4), container: [std(0x23566e, .6, .45), std(0x8a2a22, .6, .45), std(0x3d6b3a, .6, .45)],
     neonCyan: glow(0x5fe0f0), neonPink: glow(0xff4fa1), neonAmber: glow(0xffb35c), neonRed: glow(0xff2f45), neonWhite: glow(0xe8f6ff)
   };
-  const box = (m, x, y, z, w, h, d, parent = root, ry = 0) => { const o = new T.Mesh(new T.BoxGeometry(w, h, d), m); o.position.set(x, y + h / 2, z); o.rotation.y = ry; o.castShadow = false; o.receiveShadow = true; return add(o, parent); };
+  // Thick boxes get rounded edges (soft-pieces.js); thin strips stay plain.
+  const box = (m, x, y, z, w, h, d, parent = root, ry = 0) => { const o = new T.Mesh(softEnough(w, h, d) ? softCube(T).clone().scale(w, h, d) : new T.BoxGeometry(w, h, d), m); o.position.set(x, y + h / 2, z); o.rotation.y = ry; o.castShadow = false; o.receiveShadow = true; return add(o, parent); };
   const FONT = 'system-ui,"Segoe UI",Arial,sans-serif';
   const signTex = (lines, { bg = '#0b0d10', fg = '#f2f4f2', w = 512, h = 128, border = null } = {}) => canvasTexture(T, w, h, (c, W, H) => {
     if (bg) { c.fillStyle = bg; c.fillRect(0, 0, W, H); }
@@ -270,7 +272,7 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
   }
   function buildTrailer() {
     const o = MOVABLE.remorque, g = new T.Group(); g.position.set(o.x, 0, o.z); add(g);
-    const body = new T.Mesh(new T.BoxGeometry(o.hx * 2, 3, o.hz * 2), M.container[0]); body.position.y = 2; g.add(body);
+    const body = new T.Mesh(softCube(T, .04).clone().scale(o.hx * 2, 3, o.hz * 2), M.container[0]); body.position.y = 2; g.add(body);
     const base = new T.Mesh(new T.BoxGeometry(o.hx * 2, .4, o.hz * 2 - .2), M.dark); base.position.y = .5; g.add(base);
     for (const k of [-5, -3.6, 4.6]) for (const s of [-1, 1]) { const w = new T.Mesh(new T.CylinderGeometry(.45, .45, .3, 14), M.rubber); w.rotation.x = Math.PI / 2; w.position.set(k, .45, s * (o.hz - .1)); g.add(w); }
     const s = new T.Mesh(new T.PlaneGeometry(6, .8), new T.MeshStandardMaterial({ map: signTex('DIRECTOIRE · FRET SÉCURISÉ', { bg: null, fg: '#e9ecee', w: 512, h: 80 }), transparent: true, alphaTest: .05 })); s.position.set(0, 2.4, o.hz + .01); g.add(s);

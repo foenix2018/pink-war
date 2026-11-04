@@ -6,6 +6,8 @@
 // (merged geometry with world UVs, instanced pieces, pooled point lights, doors, markers, portals, shared signage).
 import { AREAS, DOORS, INTERACTIONS, FLOORS, HEIGHTS } from './m06-layout.js';
 import { createSignage } from './signage.js';
+import { createFunctionalProp } from './functional-props.js';
+import { softCube, splitPieces } from './soft-pieces.js';
 
 const TAU = Math.PI * 2;
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
@@ -67,9 +69,11 @@ export function createM06Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
   }
   const cube = new T.BoxGeometry(1, 1, 1), pieces = new Map();
   const piece = (m, x, y, z, sx, sy, sz, ry = 0) => { if (!pieces.has(m)) pieces.set(m, []); pieces.get(m).push([x, y, z, sx, sy, sz, ry]); };
+  // Thick pieces get rounded edges (soft-pieces.js); thin strips, rails and LEDs stay plain.
+  const softSplit = all => { const { soft, plain } = splitPieces(all); return [[softCube(T), soft], [cube, plain]].filter(([, l]) => l.length); };
   function flushPieces() {
     const mat = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), p = new T.Vector3(), s = new T.Vector3();
-    for (const [m, list] of pieces) { const mesh = new T.InstancedMesh(cube, m, list.length); list.forEach(([x, y, z, sx, sy, sz, ry], i) => mesh.setMatrixAt(i, mat.compose(p.set(x, y + sy / 2, z), q.setFromEuler(e.set(0, ry, 0)), s.set(sx, sy, sz))));
+    for (const [m, all] of pieces) for (const [geo, list] of softSplit(all)) { const mesh = new T.InstancedMesh(geo, m, list.length); list.forEach(([x, y, z, sx, sy, sz, ry], i) => mesh.setMatrixAt(i, mat.compose(p.set(x, y + sy / 2, z), q.setFromEuler(e.set(0, ry, 0)), s.set(sx, sy, sz))));
       mesh.instanceMatrix.needsUpdate = true; mesh.computeBoundingSphere(); mesh.receiveShadow = true; add(mesh); stats.instances += list.length; }
     pieces.clear();
   }
@@ -151,6 +155,55 @@ export function createM06Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
 
   // ---------- Props ----------
   const line = { running: true, chassis: [], arms: [] }, forge = {}, learnt = { ring: null, level: 0 };
+  // Rounded volumes (soft-pieces.js) for the vehicles and machines, so nothing reads as a raw cube.
+  const soft = (m, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0, parent = root) => { const o = new T.Mesh(softCube(T), m); o.position.set(x, y, z); o.scale.set(sx, sy, sz); o.rotation.set(rx, ry, rz); o.castShadow = !low; parent.add(o); stats.meshes++; return o; };
+  const tube = (m, a, b, r, parent = root, segs = 10) => { const A = new T.Vector3(...a), B = new T.Vector3(...b), len = A.distanceTo(B), o = new T.Mesh(new T.CylinderGeometry(r, r, len, segs), m); o.position.copy(A).add(B).multiplyScalar(.5); o.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), B.clone().sub(A).normalize()); parent.add(o); stats.meshes++; return o; };
+  const joint = (m, p, r, parent = root) => { const o = new T.Mesh(new T.SphereGeometry(r, 12, 8), m); o.position.set(...p); parent.add(o); stats.meshes++; return o; };
+  function aegisTruck(x, z, w, d) {
+    // AEGIS truck back from the Ligne 9 run: cab with windscreen, box body with faded pink and blue bands, wheels with hubs.
+    const g = new T.Group(); g.position.set(x, 0, z); add(g); const cabZ = -d / 2 + .9;
+    soft(M.graphite, 0, 1.75, cabZ, w * .96, 1.9, 1.8, 0, 0, 0, g); soft(M.glass, 0, 2.25, cabZ - .9, w * .8, .8, .08, -.12, 0, 0, g);
+    soft(M.aegis, 0, 2.05, .85, w, 2.5, d - 1.9, 0, 0, 0, g); soft(M.ledMagenta, 0, 2.55, .85, w + .04, .14, d - 2, 0, 0, 0, g); soft(M.ledBlue, 0, 2.25, .85, w + .04, .08, d - 2, 0, 0, 0, g);
+    soft(M.dark, 0, .7, 0, w * .9, .4, d - .2, 0, 0, 0, g); soft(M.steel, 0, .8, -d / 2 - .05, w * .9, .3, .2, 0, 0, 0, g);
+    for (const s of [-1, 1]) { soft(M.ledWhite, s * w * .32, 1.3, -d / 2 - .12, .3, .16, .06, 0, 0, 0, g); soft(M.ledRed, s * w * .4, 1.2, d / 2 + .02, .2, .3, .05, 0, 0, 0, g); }
+    for (const [s, zz] of [[-1, cabZ], [1, cabZ], [-1, d / 2 - 1], [1, d / 2 - 1], [-1, d / 2 - 2.1], [1, d / 2 - 2.1]]) {
+      const wheel = new T.Mesh(new T.CylinderGeometry(.52, .52, .42, 20), M.black); wheel.rotation.z = Math.PI / 2; wheel.position.set(s * (w / 2 - .12), .52, zz); g.add(wheel);
+      const hub = new T.Mesh(new T.CylinderGeometry(.24, .24, .44, 12), M.steel); hub.rotation.z = Math.PI / 2; hub.position.copy(wheel.position); g.add(hub);
+    }
+  }
+  // The P-0 prototypes, thrown away: a welding arm on its base, a site quadruped's leg, a farm drone with its rotors.
+  function weldingArm(px, py, pz, ry, tilt) {
+    const g = new T.Group(); g.position.set(px, py, pz); g.rotation.set(tilt, ry, tilt * .5); add(g);
+    const base = new T.Mesh(new T.CylinderGeometry(.55, .65, .45, 16), M.yellow); base.position.y = .22; g.add(base);
+    joint(M.graphite, [0, .55, 0], .28, g); tube(M.yellow, [0, .55, 0], [.35, 1.9, .2], .16, g); joint(M.graphite, [.35, 1.9, .2], .22, g);
+    tube(M.yellow, [.35, 1.9, .2], [1.6, 2.2, .5], .12, g); joint(M.graphite, [1.6, 2.2, .5], .14, g); tube(M.steel, [1.6, 2.2, .5], [1.9, 1.8, .6], .05, g);
+    for (const s of [-1, 1]) tube(M.dark, [.1 * s, .7, .15], [.4, 1.7, .3 + .1 * s], .03, g, 6);
+  }
+  function quadrupedLeg(px, py, pz, ry) {
+    const g = new T.Group(); g.position.set(px, py, pz); g.rotation.y = ry; add(g);
+    soft(M.rust, 0, .35, 0, .9, .5, .7, 0, 0, .2, g); joint(M.graphite, [.4, .55, 0], .2, g); tube(M.yellow, [.4, .55, 0], [1.4, 1.2, .1], .14, g); joint(M.graphite, [1.4, 1.2, .1], .17, g);
+    tube(M.yellow, [1.4, 1.2, .1], [2.3, .2, .2], .11, g); soft(M.dark, 2.35, .12, .2, .5, .16, .4, 0, 0, 0, g);
+    tube(M.steel, [.5, .7, .15], [1.3, 1.3, .2], .04, g, 6);
+  }
+  function farmDrone(px, py, pz, ry, roll) {
+    const g = new T.Group(); g.position.set(px, py, pz); g.rotation.set(roll, ry, roll * .6); add(g);
+    soft(M.white, 0, 0, 0, .9, .32, .9, 0, 0, 0, g); soft(M.graphite, 0, -.25, 0, .5, .25, .5, 0, 0, 0, g);
+    for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + Math.PI / 4, ex = Math.cos(a) * 1.05, ez = Math.sin(a) * 1.05; tube(M.graphite, [0, 0, 0], [ex, .05, ez], .05, g, 6); const ring = new T.Mesh(new T.TorusGeometry(.38, .03, 6, 20), M.graphite); ring.rotation.x = Math.PI / 2; ring.position.set(ex, .08, ez); g.add(ring); if (k !== 2) { const blade = new T.Mesh(new T.BoxGeometry(.7, .01, .06), M.dark); blade.position.set(ex, .1, ez); blade.rotation.y = rng() * TAU; g.add(blade); } }
+    tube(M.steel, [-.3, -.35, 0], [-.3, -.35, .9], .03, g, 6); tube(M.steel, [.3, -.35, 0], [.3, -.35, .9], .03, g, 6);
+  }
+  // The Brutes on the heavy chain are the game's own Brute model (enemies.js), inert, given by the page.
+  function dressLine(factory, { count = 7 } = {}) {
+    if (!factory?.create) return 0; let made = 0;
+    for (const c of line.chassis) {
+      if (made >= count) break;
+      let model = null; try { model = factory.create(false, false, 'brute'); } catch { model = null; }
+      if (!model) continue;
+      model.traverse?.(o => { if (o.isMesh) { o.castShadow = !low; o.frustumCulled = true; } });
+      model.scale.setScalar(.95); model.rotation.y = Math.PI; model.position.set(0, 0, 0);
+      for (const child of [...c.g.children]) child.visible = false; c.g.add(model); c.real = model; made++;
+    }
+    stats.realBrutes = made; return made;
+  }
   function scrapMound(x, z, r) {
     // A heap of the converted civilian machines: welding arms, quadruped legs, farm drone rotors, rusted plates.
     const n = low ? 14 : 26;
@@ -159,8 +212,11 @@ export function createM06Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
       const kind = k % 4, mat = [M.rust, M.yellow, M.graphite, M.plate][kind];
       piece(mat, px, h * rng(), pz, s * (kind === 1 ? 2.2 : 1.2), s * .5, s * (kind === 1 ? .4 : 1), rng() * TAU);
     }
-    for (let k = 0; k < 3; k++) { const arm = new T.Mesh(new T.CylinderGeometry(.12, .18, 2.6, 8), M.yellow); arm.position.set(x + (rng() - .5) * r, 1.6 + rng(), z + (rng() - .5) * r); arm.rotation.set(rng() * 2, rng() * 3, rng() * 2); add(arm); }
-    const rotor = new T.Mesh(new T.TorusGeometry(.6, .05, 6, 18), M.graphite); rotor.position.set(x, 2.4, z); rotor.rotation.set(1.2, .3, 0); add(rotor);
+    // Recognisable machines on the heap (the P-0 prototypes): welding arms, quadruped legs, farm drones.
+    const top = 2.2;
+    weldingArm(x + (rng() - .5) * r * .6, top * .55, z + (rng() - .5) * r * .6, rng() * TAU, (rng() - .5) * .9);
+    quadrupedLeg(x + (rng() - .5) * r * .7, top * .4, z + (rng() - .5) * r * .7, rng() * TAU);
+    if (!low) { farmDrone(x + (rng() - .5) * r * .5, top * .8, z + (rng() - .5) * r * .5, rng() * TAU, (rng() - .5) * 1.2); weldingArm(x + (rng() - .5) * r * .9, .1, z + (rng() - .5) * r * .9, rng() * TAU, 1.2); }
   }
   function chassis(x, z, stage) {
     // A Brute in assembly: legs, torso frame, and (from stage 2) armour and the red reactor.
@@ -174,8 +230,8 @@ export function createM06Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
   function dress(o) {
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, h = o.height;
     switch (o.kind) {
-      case 'wagons': for (const [x, c] of [[-20, M.rust], [-4, M.graphite], [12, M.rust], [28, M.corrugated]]) { box(c, x - 7, x + 7, .9, 4, 96.2, 98.8); piece(M.dark, x, 0, 97.5, 12, .9, 2); for (const s of [-1, 1]) cylinder(M.black, x + s * 4.5, .5, 97.5, .5, 2.4, { axis: 'z', segments: 12 }); } break;
-      case 'truck': box(M.aegis, x1, x2, .8, 3, z1 + 1.4, z2); box(M.graphite, x1 + .1, x2 - .1, .8, 2.6, z1, z1 + 1.4); piece(M.ledMagenta, o.x, 2.2, z2 + .01, w, .12, .02); piece(M.ledBlue, o.x, 2, z2 + .01, w, .08, .02); for (const [s, zz] of [[-1, z1 + .9], [1, z1 + .9], [-1, z2 - .9], [1, z2 - .9]]) cylinder(M.black, o.x + s * o.hx, .5, zz, .5, .4, { axis: 'x', segments: 12 }); break;
+      case 'wagons': for (const [x, c] of [[-20, M.rust], [-4, M.graphite], [12, M.rust], [28, M.corrugated]]) { const car = createFunctionalProp(T, 'railcar', { w: 14, d: 2.6, h: 4, low, M: { ...M, paintedMetal: c, white: c, glass: M.glass, ledCyan: M.ledYellow } }); car.position.set(x, 0, 97.5); add(car); } break;
+      case 'truck': aegisTruck(o.x, o.z, w, d); break;
       case 'container': box(M.rust, x1, x2, 0, h, z1, z2); for (let k = 0; k < 9; k++) piece(M.dark, x1 + .3 + k * (w - .6) / 8, .1, z2 + .01, .05, h - .2, .02); break;
       case 'sleepers': for (let k = 0; k < 6; k++) piece(M.rust, o.x, k * .16, o.z, w, .15, d * (.6 + (k % 2) * .3)); break;
       case 'crates': case 'pallets': for (let k = 0; k < 4; k++) piece(k % 2 ? M.plate : M.rust, o.x + (k % 2 - .5) * o.hx, Math.floor(k / 2) * h / 2, o.z, o.hx * .95, h / 2 - .02, d - .1); break;
@@ -193,7 +249,7 @@ export function createM06Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
       case 'ladle': cylinder(M.soot, o.x, h / 2, o.z, o.hx, h, { r2: o.hx * 1.15 }); { const top = new T.Mesh(new T.CircleGeometry(o.hx * 1.05, 24), M.molten); top.rotation.x = -Math.PI / 2; top.position.set(o.x, h + .01, o.z); add(top); } piece(M.steel, o.x, h, o.z, w + 1.2, .3, .3); break;
       case 'moulds': for (let k = 0; k < 3; k++) { piece(M.dark, x1 + .9 + k * (w - 1.8) / 2, 0, o.z, 1.6, h, d); piece(k === 1 ? M.molten : M.soot, x1 + .9 + k * (w - 1.8) / 2, h, o.z, 1.2, .02, d - .4); } break;
       case 'slag': box(M.soot, x1, x2, 0, h, z1, z2); piece(M.molten, o.x, h, o.z, w - 1, .02, d - 1); break;
-      case 'cabinet': box(M.white, x1, x2, 0, h, z1, z2); piece(M.ledYellow, x2 + .01, h * .7, o.z, .02, .1, d * .7); break;
+      case 'cabinet': case 'terminal': { const prop = createFunctionalProp(T, o.kind, { w, d, h, low, M }); prop.position.set(o.x, 0, o.z); add(prop); break; }
       case 'conveyor': {
         box(M.dark, x1, x2, 0, h - .1, z1, z2); box(M.black, x1 + .1, x2 - .1, h - .1, h, z1, z2, { skip: ['bottom'] });
         for (let z = z1; z < z2; z += 1.5) piece(M.steel, o.x, h, z, w, .02, .08);
@@ -208,7 +264,8 @@ export function createM06Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
         const tip = new T.Mesh(new T.SphereGeometry(.12, 8, 6), M.moltenHot); tip.position.z = o.x < 68 ? 2 : -2; a2.add(tip);
         line.arms.push({ a1, a2, tip, phase: rng() * TAU }); break;
       }
-      case 'parts': box(M.dark, x1, x2, 0, .2, z1, z2); for (const y of [.9, 1.8]) piece(M.steel, o.x, y, o.z, w, .08, d); for (let k = 0; k < 6; k++) piece(k % 2 ? M.graphite : M.rust, o.x, .98 + (k % 2) * .9, z1 + .5 + Math.floor(k / 2) * (d - 1) / 2, w * .8, .5, .6); break;
+      case 'parts': { const rack = createFunctionalProp(T, 'rack', { w: d, d: w, h, low, M }); rack.rotation.y = Math.PI / 2; rack.position.set(o.x, 0, o.z); add(rack); }
+        box(M.dark, x1, x2, 0, .2, z1, z2); for (const y of [.9, 1.8]) piece(M.steel, o.x, y, o.z, w, .08, d); for (let k = 0; k < 6; k++) piece(k % 2 ? M.graphite : M.rust, o.x, .98 + (k % 2) * .9, z1 + .5 + Math.floor(k / 2) * (d - 1) / 2, w * .8, .5, .6); break;
       case 'core': {
         cylinder(M.dark, o.x, 1.5, o.z, o.hx, 3, { segments: 32 }); cylinder(M.graphite, o.x, 8, o.z, o.hx - 1.6, 10, { segments: 24, r2: o.hx - 2.4 });
         for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; piece(M.yellow, o.x + Math.cos(a) * (o.hx + .2), 0, o.z + Math.sin(a) * (o.hx + .2), .5, 3.2, .5, -a); }
@@ -217,7 +274,6 @@ export function createM06Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
         Object.assign(forge, { eye, rings }); break;
       }
       case 'mould-block': box(M.soot, x1, x2, 0, h, z1, z2); piece(M.rust, o.x, h, o.z, w, .05, d); break;
-      case 'terminal': box(M.dark, x1, x2, 0, h, z1, z2); piece(M.screen, o.x, h + .1, z2 + .02, w * .8, .5, .02); break;
       default: break;
     }
   }
@@ -345,6 +401,7 @@ export function createM06Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
     },
     setDoor(id, open) { const d = doors.get(id); if (d) d.state = open ? (d.d.open ? 'auto' : 'open') : 'closed'; },
     setLine(on) { line.running = !!on; },
+    dressLine,
     adapt(spot) { if (!learnt.ring) return; learnt.ring.position.set(spot.x, .05, spot.z); learnt.level = 1; },
     markDone(id, isDone = true) { const d = devices.get(id); if (d) d.done = isDone; },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },

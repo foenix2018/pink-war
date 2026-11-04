@@ -5,6 +5,7 @@
 // environments are reproduced (§36). Budget: instancing for every repeated element, three dynamic lights.
 import { FLOORS, STAIRS, HEIGHTS, LANDING, SIDE_STEPS, stairHeight } from './couronne-layout.js';
 import {createFunctionalProp} from './functional-props.js';
+import { softCube, softEnough, splitPieces } from './soft-pieces.js';
 
 const TAU = Math.PI * 2;
 
@@ -117,8 +118,9 @@ export function createCouronneArt(T, scene, { quality = 'normal', camera } = {})
   const queue = (material, x, y, z, sx, sy, sz, ry = 0) => { if (!boxes.has(material)) boxes.set(material, []); boxes.get(material).push([x, y, z, sx, sy, sz, ry]); };
   const flushBoxes = () => {
     const m = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), p = new T.Vector3(), s = new T.Vector3();
-    for (const [material, list] of boxes) {
-      const mesh = new T.InstancedMesh(cube, material, list.length); mesh.name = 'Couronne / ' + (material.name || 'boxes');
+    // Thick boxes get rounded edges (soft-pieces.js); thin strips stay plain.
+    for (const [material, all] of boxes) for (const [geo, list] of (({ soft, plain }) => [[softCube(T), soft], [cube, plain]].filter(([, l]) => l.length))(splitPieces(all))) {
+      const mesh = new T.InstancedMesh(geo, material, list.length); mesh.name = 'Couronne / ' + (material.name || 'boxes');
       list.forEach(([x, y, z, sx, sy, sz, ry], i) => { mesh.setMatrixAt(i, m.compose(p.set(x, y + sy / 2, z), q.setFromEuler(e.set(0, ry, 0)), s.set(sx, sy, sz))); });
       mesh.castShadow = !low && !material.transparent; mesh.receiveShadow = true; mesh.instanceMatrix.needsUpdate = true; mesh.computeBoundingSphere();
       add(mesh); stats.instances += list.length;

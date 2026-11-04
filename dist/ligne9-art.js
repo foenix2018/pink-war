@@ -7,6 +7,7 @@
 import { ROOMS, DOORS, WATER, STAIRS, LANDING, HEIGHTS, INTERACTIONS, roomAt } from './ligne9-layout.js';
 
 import {createFunctionalProp} from './functional-props.js';
+import { softCube, splitPieces } from './soft-pieces.js';
 const TAU = Math.PI * 2;
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
 const ROOM = Object.fromEntries(ROOMS.map(r => [r.id, r]));
@@ -111,10 +112,12 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
   // Instanced unit boxes for small repeated dressing: [x, y(bottom), z, sx, sy, sz, rotY].
   const cube = new T.BoxGeometry(1, 1, 1), boxes = new Map();
   const piece = (m, x, y, z, sx, sy, sz, ry = 0) => { if (!boxes.has(m)) boxes.set(m, []); boxes.get(m).push([x, y, z, sx, sy, sz, ry]); };
+  // Thick pieces get rounded edges (soft-pieces.js); thin strips, rails and LEDs stay plain.
+  const softSplit = all => { const { soft, plain } = splitPieces(all); return [[softCube(T), soft], [cube, plain]].filter(([, l]) => l.length); };
   function flushPieces() {
     const mat = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), p = new T.Vector3(), s = new T.Vector3();
-    for (const [m, list] of boxes) {
-      const mesh = new T.InstancedMesh(cube, m, list.length); mesh.name = 'Ligne 9 / ' + (m.name || 'pièces');
+    for (const [m, all] of boxes) for (const [geo, list] of softSplit(all)) {
+      const mesh = new T.InstancedMesh(geo, m, list.length); mesh.name = 'Ligne 9 / ' + (m.name || 'pièces');
       list.forEach(([x, y, z, sx, sy, sz, ry], i) => mesh.setMatrixAt(i, mat.compose(p.set(x, y + sy / 2, z), q.setFromEuler(e.set(0, ry, 0)), s.set(sx, sy, sz))));
       mesh.instanceMatrix.needsUpdate = true; mesh.computeBoundingSphere(); mesh.receiveShadow = true; add(mesh); stats.instances += list.length;
     }
