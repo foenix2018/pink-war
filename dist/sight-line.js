@@ -1,11 +1,13 @@
+import {turretHitbox} from './arena-defense.js';
 import {segmentBox,traceEnemyHit} from './game-logic.js';
 
 // The point where a line of sight (screen centre, or the eye behind a raised optic) first meets a wall, an
 // ORDRE machine or a range plate. Shots leave the muzzle towards it, so the reticle is where they land.
-export function sightPoint(T,eye,forward,{obstacles=[],enemies=[],plates=[],tracePlate=null,time=0,range=160}={}){
+export function sightPoint(T,eye,forward,{obstacles=[],enemies=[],turrets=[],plates=[],tracePlate=null,time=0,range=160}={}){
   const far=eye.clone().addScaledVector(forward,range);let target=far,nearest=1;
   for(const box of obstacles){const hit=segmentBox(eye,far,box);if(hit!==null&&hit<nearest){nearest=hit;target=eye.clone().lerp(far,hit);}}
   for(const enemy of enemies){const hit=traceEnemyHit(eye,far,enemy);if(hit&&hit.t<nearest){nearest=hit.t;target=eye.clone().lerp(far,hit.t);}}
+  for(const turret of turrets){if(turret.hp<=0)continue;const hit=segmentBox(eye,far,turretHitbox(turret));if(hit!==null&&hit<nearest){nearest=hit;target=eye.clone().lerp(far,hit);}}
   if(tracePlate)for(const plate of plates){
     const hit=tracePlate(eye,forward,plate,time);if(!hit)continue;
     const point=new T.Vector3(hit.point.x,hit.point.y,hit.point.z),fraction=eye.distanceTo(point)/range;

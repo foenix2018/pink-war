@@ -37,7 +37,7 @@ export function createMocapDriver({form,ranged,legs,arms,pelvis,thorax,head,gun,
  const armData=arms.map(a=>{const s=bindWorld(a.upper),e=bindWorld(a.lower),w=bindWorld(a.wrist);return {...a,dirU:e.clone().sub(s).normalize(),dirL:w.clone().sub(e).normalize(),native:a.side===-1?'Left':'Right'};});
  const legData=legs.map(l=>({...l,native:l.side===-1?'Left':'Right',ratio:(l.upperLength+l.lowerLength)/nativeLeg}));
  const reverse=form==='stalker'||form==='spectre';
- const q=new T.Quaternion(),q2=new T.Quaternion(),pq=new T.Quaternion(),tq=new T.Quaternion(),uq=new T.Quaternion(),e=new T.Euler();
+ const q=new T.Quaternion(),q2=new T.Quaternion(),pq=new T.Quaternion(),tq=new T.Quaternion(),uq=new T.Quaternion(),nativePelvis=new T.Quaternion(),e=new T.Euler();
  const a=new T.Vector3(),b=new T.Vector3(),hip=new T.Vector3(),target=new T.Vector3(),dir=new T.Vector3(),bend=new T.Vector3(),knee=new T.Vector3();
  const desired=new T.Matrix4(),rel=new T.Matrix4(),m=new T.Matrix4(),gunQ=new T.Quaternion(),one=new T.Vector3(1,1,1),gp=new T.Vector3();
  const nativeDir=(from,to,out)=>flipV(out.copy(P(nb(to))).sub(P(nb(from)))).normalize();
@@ -56,7 +56,7 @@ export function createMocapDriver({form,ranged,legs,arms,pelvis,thorax,head,gun,
   flipQ(q.copy(Q(nb('Hips'))).multiply(q2.copy(rest.hips).invert()),pq);
   e.setFromQuaternion(pq,'YXZ');e.x=THREE_CLAMP(e.x*.5,-.12,.12);const pelvisPitch=e.x;e.z*=traits.sway;e.y*=traits.sway;
   if(form==='brute'&&moving)e.z+=Math.sin(c.phase)*.05; // heavy side-to-side roll on each stomp
-  pelvis.quaternion.setFromEuler(e);const nativePelvis=q.copy(pq);pq.copy(pelvis.quaternion);
+  pelvis.quaternion.setFromEuler(e);nativePelvis.copy(pq);pq.copy(pelvis.quaternion);
   // Chest: native spine relative to the pelvis, hunch, recoil kick, hit flinch, cover lean.
   flipQ(q.copy(Q(nb('Spine2'))).multiply(q2.copy(rest.spine).invert()),tq);
   e.setFromQuaternion(nativePelvis.invert().multiply(tq),'YXZ');

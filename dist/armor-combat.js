@@ -36,7 +36,7 @@ export function meleeStrike(game, forward = forwardOf(game.player.yaw)) {
   const p = game.player, n = Math.hypot(forward.x, forward.z) || 1, fx = forward.x / n, fz = forward.z / n;
   const eye = { x: p.x, y: p.elevation + (p.crouched ? .9 : 1.35), z: p.z };
   let best = null, bestDistance = Infinity;
-  for (const e of game.enemies) {
+  for (const e of [...game.enemies,...(game.turrets||[]).filter(t=>t.hp>0)]) {
     const dx = e.x - p.x, dz = e.z - p.z, d = Math.hypot(dx, dz);
     if (d > MELEE_RANGE + (e.radius || .5) || Math.abs((e.elevation || 0) - p.elevation) > 1.6) continue;
     if (d > .2 && (dx * fx + dz * fz) / d < MELEE_CONE) continue;
@@ -50,9 +50,10 @@ export function meleeStrike(game, forward = forwardOf(game.player.yaw)) {
   const at = { x: best.x, y: (best.elevation || 0) + (best.aimHeight || 1.15), z: best.z };
   best.stunnedUntil = Math.max(best.stunnedUntil || 0, game.time + .6);
   const push = Math.min(.8, Math.max(0, MELEE_RANGE + .6 - bestDistance));
-  if (push > 0 && game.knockback) game.knockback(best, fx * push, fz * push);
+  if (!best.defenceTurret && push > 0 && game.knockback) game.knockback(best, fx * push, fz * push);
   game.event('melee', { hit: true, back, id: best.id, ...at });
-  game.damageEnemy(best, MELEE_DAMAGE * (back ? MELEE_BACK_MULTIPLIER : 1), at, 'torso', 1, p);
+  if(best.defenceTurret)game.damageDefenseTurret(best,MELEE_DAMAGE,{weapon:'melee',at});
+  else game.damageEnemy(best, MELEE_DAMAGE * (back ? MELEE_BACK_MULTIPLIER : 1), at, 'torso', 1, p);
   return true;
 }
 
@@ -63,7 +64,7 @@ export function throwCharge(game, origin, direction) {
   game.charges--; game.chargeReadyAt = game.time + CHARGE_COOLDOWN;
   const charge = { id: game.nextId++, x: origin.x, y: origin.y, z: origin.z,
     vx: direction.x / n * CHARGE_SPEED, vy: direction.y / n * CHARGE_SPEED + CHARGE_LIFT, vz: direction.z / n * CHARGE_SPEED,
-    fuseAt: game.time + CHARGE_FUSE, thrownAt: game.time };
+    originX:origin.x,originY:origin.y,originZ:origin.z, fuseAt: game.time + CHARGE_FUSE, thrownAt: game.time };
   (game.thrownCharges ||= []).push(charge);
   game.event('charge-throw', { id: charge.id, x: charge.x, y: charge.y, z: charge.z, charges: game.charges });
   return true;
@@ -121,6 +122,8 @@ export function detonateCharge(game, c) {
     e.stunnedUntil = Math.max(e.stunnedUntil || 0, game.time + CHARGE_STUN);
     game.damageEnemy(e, chargeDamageAt(d), center, 'torso', 1, { x: at.x, z: at.z, elevation: at.y });
   }
+  for(const t of game.turrets||[]){const center={x:t.x,y:1.75,z:t.z},d=Math.hypot(center.x-at.x,center.y-at.y,center.z-at.z);
+    if(t.hp>0&&d<CHARGE_RADIUS&&!game.blocked(at,center))game.damageDefenseTurret(t,chargeDamageAt(d),{weapon:'charge',at:center,source:{x:c.originX??c.x,y:c.originY??c.y,z:c.originZ??c.z}});}
   const p = game.player, chest = { x: p.x, y: p.elevation + 1.1, z: p.z }, d = Math.hypot(chest.x - at.x, chest.y - at.y, chest.z - at.z);
   if (d < CHARGE_RADIUS && !game.blocked(at, chest)) game.damage(chargeDamageAt(d,{self:true}), at, {pierceInvulnerability:true});
 }

@@ -1,3 +1,4 @@
+import {createArenaTurrets,fortressWaveUnit,turretHitbox,damageDefenseTurret,updateArenaTurrets} from './arena-defense.js';
 import {isReco1,RECO1_HIT_ZONES,reco1ProjectileScale} from './reco1-profile.js';
 import {tacticalOrder,grenadeAvoidance} from './tactical-enemies.js';
 import {squadOrder,relayVisualContact,clearSquadFiringLane,registerIncomingFire} from './enemy-squads.js';
@@ -286,7 +287,7 @@ export function brokenBridgeDetour(enemy,player) {
   return null;
 }
 export class ArenaGame {
-  constructor(obstacles = [], random = Math.random, traversal = null, characterId='ghju') { this.traversal=traversal;this.routes=traversal?.routes||ELEVATED_ROUTES;this.lifts=traversal?.lifts||LIFTS;this.obstacles = obstacles; this.random = random; this.navigation = new CoverNavigation(obstacles); this.stairNavigation=this.routes.map(()=>new CoverNavigation(obstacles)); this.reset(characterId); }
+  constructor(obstacles = [], random = Math.random, traversal = null, characterId='ghju') { this.traversal=traversal;this.routes=traversal?.routes||ELEVATED_ROUTES;this.lifts=traversal?.lifts||LIFTS;this.obstacles = obstacles; this.random = random; this.navigation = new CoverNavigation(obstacles); this.stairNavigation=this.routes.map(()=>new CoverNavigation(obstacles)); this.fortressArena=this.constructor===ArenaGame&&obstacles.some(o=>o.kind==='fortress-wall'); this.reset(characterId); }
   replaceObstacles(obstacles) {
     // Renderer recovery / entering WebXR rebuilds the scene. Keep aiming and
     // simulation on the same moving lift and gate colliders after that switch.
@@ -302,6 +303,7 @@ export class ArenaGame {
     this.playerVelocity={x:0,y:0,z:0};
     this.bladePrevious=null;this.bladeHitTimes=new Map();this.bladeSlashAt=-99;this.bladeSlashSide=1;this.bladeSpeed=0;this.bladeGuard=false;this.bladeHumAt=0;
     this.enemies = []; this.bullets = []; this.events = [];
+    this.turrets=this.fortressArena?createArenaTurrets():[];
     this.wave = 0; this.score = 0; this.kills = 0; this.time = 0;
     this.combo = 0; this.comboUntil = -1; this.bestCombo = 0; this.pickups = [];
     this.endless=false;this.footstepDistance=0;
@@ -475,12 +477,13 @@ export class ArenaGame {
   }
   spawnEnemy() {
     const ordinal = this.spawned++;
+    const unit=this.fortressArena?fortressWaveUnit(this.wave,ordinal):null;
     const special=this.wave>=4&&ordinal%9===7?'spectre':this.wave>=3&&ordinal%7===1?'synth':this.wave>=11&&ordinal%7===5?'bulwark':this.wave>=6&&ordinal%7===4?'listener':null;
-    const elite = !special && this.wave >= 3 && ordinal % (this.wave >= 8 ? 3 : 5) === 2;
-    const probe = !special && this.wave >= 3 && !elite && (ordinal % 6 === 3 || (this.wave >= 7 && ordinal > 0 && ordinal % 6 === 0));
+    const elite = unit?unit.elite:!special && this.wave >= 3 && ordinal % (this.wave >= 8 ? 3 : 5) === 2;
+    const probe = unit?unit.form==='probe':!special && this.wave >= 3 && !elite && (ordinal % 6 === 3 || (this.wave >= 7 && ordinal > 0 && ordinal % 6 === 0));
     const forms = ['stalker','scuttler','seer','brute'];
-    const form = this.wave===1 && ordinal===0 ? 'sentinel' : special || (probe ? 'probe' : elite ? 'brute' : forms[(ordinal + this.wave - 1) % forms.length]);
-    const ranged = form==='spectre'?false:probe || !!special || form==='seer' || (this.wave>=3&&ordinal%3===1) || (this.wave>=5&&form==='brute');
+    const form = unit?unit.form:this.wave===1 && ordinal===0 ? 'sentinel' : special || (probe ? 'probe' : elite ? 'brute' : forms[(ordinal + this.wave - 1) % forms.length]);
+    const ranged = form==='spectre'?false:probe || ['synth','listener','bulwark'].includes(form) || (!unit&&!!special) || form==='seer' || (this.wave>=3&&ordinal%3===1) || (this.wave>=5&&form==='brute');
     const angle = this.random() * Math.PI * 2;
     const available=this.activePortals.filter(p=>p.openedAt<=this.time);
     const site=available.length?available[ordinal%available.length]:this.activePortals[0]||PORTAL;
@@ -629,15 +632,18 @@ export class ArenaGame {
     if(this.time>=this.bladeHumAt){this.emitNoise('blade-hum',6);this.bladeHumAt=this.time+1.5;}
     if(this.bladeSpeed>.65||this.bladePhase<1){
       const eye=this.bladeEye;
-      for(const hit of sweepBlade(previous,segment,this.enemies,this.obstacles,eye,segmentBox,traceEnemyHit)){
+      for(const hit of sweepBlade(previous,segment,[...this.enemies,...this.turrets.filter(t=>t.hp>0)],this.obstacles,eye,segmentBox,(a,b,e)=>{if(!e.defenceTurret)return traceEnemyHit(a,b,e);const t=segmentBox(a,b,turretHitbox(e));return t===null?null:{t,zone:'torso',multiplier:1};})){
         if(this.time-(this.bladeHitTimes.get(hit.enemy.id)??-99)<.48)continue;
-        this.bladeHitTimes.set(hit.enemy.id,this.time);this.damageEnemy(hit.enemy,this.weapon.damage,hit.point,hit.zone,hit.multiplier);
+        this.bladeHitTimes.set(hit.enemy.id,this.time);
+        if(hit.enemy.defenceTurret)this.damageDefenseTurret(hit.enemy,this.weapon.damage,{weapon:'aurora',at:hit.point});
+        else this.damageEnemy(hit.enemy,this.weapon.damage,hit.point,hit.zone,hit.multiplier);
         this.event('blade-hit',{...hit.point,surface:'robot',weapon:'aurora',power:1,normal:{x:0,y:1,z:0}});
       }
     }
     this.bladePrevious={base:{...segment.base},tip:{...segment.tip},extension:segment.extension};
     for(const [id,at] of this.bladeHitTimes)if(this.time-at>3)this.bladeHitTimes.delete(id);
   }
+  damageDefenseTurret(t,amount,options){return damageDefenseTurret(this,t,amount,options);}
   damageEnemy(target, amount, at, zone='torso',multiplier=HIT_ZONE_DAMAGE[zone]??1,source=this.player) {
     if (!this.enemies.includes(target)) return;
     const armor=target.form?Math.min(.18,Math.max(0,(target.tier||1)-1)*.025):0;
@@ -895,6 +901,7 @@ export class ArenaGame {
       }
       if (this.state !== 'playing') break;
     }
+    updateArenaTurrets(this);
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const b = this.bullets[i], start = { x: b.x, y: b.y, z: b.z };
       const end = { x: b.x + b.vx * dt, y: b.y + b.vy * dt, z: b.z + b.vz * dt };
@@ -917,6 +924,11 @@ export class ArenaGame {
         const hit = traceEnemyHit(start,end,e);
         if (hit && hit.t < nearest) { nearest = hit.t; target = e;zone=hit.zone;multiplier=hit.multiplier; }
       }
+      for(const turret of this.turrets){
+        if(turret.hp<=0||b.turretId===turret.id)continue;
+        const box=turretHitbox(turret),hit=segmentBox(start,end,box);
+        if(hit!==null&&hit<nearest){nearest=hit;target=b.hostile?null:turret;hitBox=b.hostile?box:null;surface='metal';zone='torso';multiplier=1;}
+      }
       for (const obstacle of this.obstacles) { const t = segmentBox(start, end, obstacle); if (t !== null && t < nearest) { nearest = t; target = null;hitBox=obstacle;surface=obstacle.surface||'concrete'; } }
       if (end.y < .06 && start.y >= .06) { const t = (start.y - .06) / (start.y - end.y); if (t < nearest) { nearest = t; target = null;hitBox=null;surface='ground'; } }
       if(b.hostile&&this.companionWard?.until>this.time&&this.companionWard.remaining>0){
@@ -933,6 +945,7 @@ export class ArenaGame {
         }
         this.event('impact', { ...at, bulletId:b.id, enemy: !!target, hostile: b.hostile, splash: b.splash,weapon:b.weapon,power:b.power||1,surface:target?'robot':surface,normal,direction:{x:b.vx,y:b.vy,z:b.vz} });
         if (target === this.player) { const n=Math.hypot(b.vx,b.vz)||1; this.damage(b.damage,{x:this.player.x-b.vx/n*8,z:this.player.z-b.vz/n*8}); }
+        else if(target?.defenceTurret)this.damageDefenseTurret(target,projectileDamage(b,at),{weapon:b.weapon,at,source:{x:b.originX??start.x,y:b.originY??start.y,z:b.originZ??start.z,companion:!!b.companion}});
         else if (target) this.damageEnemy(target, projectileDamage(b,at)*reco1ProjectileScale(target,zone), at, zone, multiplier,{x:b.originX??this.player.x,z:b.originZ??this.player.z,elevation:b.originElevation??this.player.elevation,...(b.companion?{companion:true}:{})});
         if (!b.hostile && b.splash > 0) for (const e of [...this.enemies]) {
           if (e === target) continue;
@@ -953,7 +966,7 @@ export class ArenaGame {
       else this.nextWave = 5;
     }
   }
-  snapshot() { return { equipment: this.equipment, state: this.state, player: { ...this.player }, wave: this.wave, maxLevel: MAX_LEVEL, endless:this.endless, score: this.score, kills: this.kills, time: this.time,
+  snapshot() { return { fortressArena:!!this.fortressArena,turrets:this.turrets.map(t=>({...t,target:t.target&&{...t.target}})), equipment: this.equipment, state: this.state, player: { ...this.player }, wave: this.wave, maxLevel: MAX_LEVEL, endless:this.endless, score: this.score, kills: this.kills, time: this.time,
     weaponIndex: this.weaponIndex, weapon: { ...this.weapon }, unlockedWeapons: this.unlockedWeapons.map(w => w.id),weaponOffers:this.weaponOffers.map(offer=>({...offer})), ammo: this.ammo[this.weaponIndex],
     reloadRemaining: this.reloadRemaining, charge: this.charge, regenerating: this.regenerating, regenIn: Math.max(0, REGEN_DELAY - (this.time - this.lastDamage)),
     toSpawn: this.toSpawn, nextWave: this.nextWave, activePortals:this.activePortals.map(p=>({...p})), enemies: this.enemies.map(e => ({ ...e })), bullets: this.bullets.map(b => ({ ...b })),

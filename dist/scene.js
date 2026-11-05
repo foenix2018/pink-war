@@ -13,7 +13,8 @@ import { createSurfaceDetails } from './surfaces.js';
 import { createEnemyFactory } from './enemies.js?v=3.77-briseur-v3';
 import {createEnemyDestructionFX} from './enemy-destruction-fx.js';
 import {probeRotorAt} from './probe-damage.js';
-import { createRuinedCity, paintRuinSky } from './world-art.js';
+import { paintRuinSky } from './world-art.js';
+import { createFortifiedArena, paintFortressSky } from './arena-fortress.js';
 import { createTraversalArt } from './traversal-art.js';
 import { createLaserFX } from './laser-fx.js';
 import { createCombatFX } from './combat-fx.js';
@@ -90,7 +91,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   }
 
   let campaignSky=false;
-  function paintSky(c,w,h) { paintRuinSky(c,w,h,character.masculine,{dusk:campaignSky}); }
+  function paintSky(c,w,h) { if(campaignSky)paintRuinSky(c,w,h,false,{dusk:true});else paintFortressSky(c,w,h); }
   const skyTexture = canvasTexture(profile.skyWidth,profile.skyWidth/2,paintSky);
   const sky = new T.Mesh(new T.SphereGeometry(490, 32, 16), new T.MeshBasicMaterial({ map: skyTexture, side: T.BackSide, fog: false, dithering: true })); scene.add(sky);
   let morningReady=false;
@@ -117,7 +118,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   const batch = (mat, pos, scale, rot = 0) => { if (!batches.has(mat)) batches.set(mat, []); batches.get(mat).push({ pos, scale, rot }); };
   const arenaRoot=new T.Group();arenaRoot.name='Carte Survie / indépendante';scene.add(arenaRoot);
   const beforeArena=new Set(scene.children);
-  const city = createRuinedCity(scene, obstacles, COVER_WALLS, palette.rose, profile.artQuality,{deferPbr:true});
+  const city = createFortifiedArena(T,scene,obstacles,COVER_WALLS,{quality:profile.artQuality,environment:surfaces.environment});
   const cityMats = city.materials;
   const traversal = createTraversalArt(scene, obstacles, cityMats);
   for(const child of [...scene.children])if(!beforeArena.has(child))arenaRoot.add(child);
@@ -239,7 +240,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     applyShadowMaterials(characterKit,character);
     const colors={...character.world,...palette,dark:palette.ink,cyan:character.world.cyan};
     for(const [name,mat] of Object.entries(mats))mat.color.setHex(colors[name]);
-    scene.background.setHex(character.masculine?0x16243c:0x261d32);scene.fog.color.setHex(character.masculine?0x263750:0x463b50);scene.fog.density=.0067;
+    scene.background.setHex(character.masculine?0x16243c:0x261d32);scene.fog.color.setHex(0x302030);scene.fog.density=.0034;
     hemisphere.color.setHex(0xa9c9e5);hemisphere.groundColor.setHex(0x344058);
     sun.color.setHex(0xb5d7ff);rim.color.setHex(0x9abfff);city.setAccent(palette.rose);combatFX.setAccent(palette.rose);laserFX.setAccent(palette.rose);setKenneyAccent(palette.rose);
     portalLight.color.setHex(palette.hot);dust.material.color.setHex(palette.pale);
@@ -363,8 +364,9 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     const ring=mesh(pickupRing,core,g,[0,-.5,0],[1,1,1],false);ring.rotation.x=-Math.PI/2;ring.userData.ground=true;
     return g;
   }
-  function resetDynamic(){for(const m of pickupMeshes.values())scene.remove(m);pickupMeshes.clear();rangeArt.update(null);combatFX.reset();laserFX.reset();traversal.update(0);for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();portal.visible=!rangeActive;enemyFailureFX.reset();for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;probeSparkAt.clear();for(const pool of sparkPools)pool.count=0;}
+  function resetDynamic(){city.reset?.();for(const m of pickupMeshes.values())scene.remove(m);pickupMeshes.clear();rangeArt.update(null);combatFX.reset();laserFX.reset();traversal.update(0);for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();portal.visible=!rangeActive;enemyFailureFX.reset();for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;probeSparkAt.clear();for(const pool of sparkPools)pool.count=0;}
   function sync(sim,time,dt){
+    if(arenaRoot.visible)city.sync?.(sim);
     if(!campaignActive)city.fence?.update({...sim.player,y:(sim.player.elevation||0)+(sim.player.crouched?1.05:1.65)},.65,1.2);traversal.update(sim.time);campaignArt.updateLift(sim.time);combatFX.update(dt,camera);laserFX.update(sim.bullets,dt);shadowTime=sim.time;shadowEntities=rangeActive?[sim.player,...sim.targets.map(t=>({...targetPosition(t,sim.time),radius:.28}))]:[...sim.enemies,sim.player];shadowHeight=e=>sim.surfaceHeight(e.x,e.z,sim.time,(e.elevation||0)+.3);trackShadows(sim.player.x,sim.player.z,sim.player.elevation||0);
     setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));updateStations(sim,time);syncSecondaryPortals(sim,sim.time);rangeArt.update(rangeActive?sim:null);
     if(rangeActive){const observer=sim.interactionPosition||sim.player;if(Math.hypot(observer.x,observer.z-34.9)<12)rangeArt.setArmoryModels(fpsGun.userData.weaponModels,fpsGun.userData.kenneyVersion||0,character.id);rangeArt.shadows.update(sim.time,sim);}
@@ -399,7 +401,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     }
   }
   function setWeapon(index){ if(fpsGun.userData.index===index&&soldier.weapon===index)return;fpsGun.userData.setVariant(index);soldier.setWeapon(index); }
-  function animatePortal(time){city.update(time);sky.rotation.y=time*.00035;innerRing.rotation.z=time*.2;vortex.rotation.z=-time*.15;portalHalo.material.opacity=.3+Math.sin(time*2)*.055;dust.rotation.y=Math.sin(time*.1)*.06;}
+  function animatePortal(time){if(arenaRoot.visible)city.update(time,camera.position);sky.rotation.y=time*.00035;innerRing.rotation.z=time*.2;vortex.rotation.z=-time*.15;portalHalo.material.opacity=.3+Math.sin(time*2)*.055;dust.rotation.y=Math.sin(time*.1)*.06;}
   function lobby(time,level=1){
     trackShadows(0,7);camera.clearViewOffset();setEquipment(level);portal.visible=true;const portrait=innerHeight>innerWidth;
     soldier.root.scale.setScalar((portrait?1.2:2.6)*soldier.heightScale);soldier.root.position.set(portrait?0:3.1,0,7);soldier.root.rotation.y=Math.PI-.28;
@@ -472,13 +474,13 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     if(campaignSky!==daylight){campaignSky=daylight;const c=skyTexture.image;paintSky(c.getContext('2d'),c.width,c.height);skyTexture.needsUpdate=true;}
     obstacles.splice(0,obstacles.length,...(campaignActive?campaignArt.obstacles:arenaObstacles));
     arenaRoot.visible=!campaignActive&&!rangeActive;
-    scene.fog.color.setHex(campaignActive?0x747b79:character.world.fog);
+    scene.fog.color.setHex(campaignActive?0x747b79:0x302030);
     renderer.toneMappingExposure=rangeActive?.93:campaignActive?.84:1.08;
-    hemisphere.intensity=rangeActive?0:campaignActive?.62:1.32;sun.intensity=rangeActive?0:campaignActive?1.36:2.25;rim.intensity=rangeActive?0:campaignActive?.18:1.08;
+    hemisphere.intensity=rangeActive?0:campaignActive?.62:.85;sun.intensity=rangeActive?0:campaignActive?1.36:1.25;rim.intensity=rangeActive?0:campaignActive?.18:1.08;
     sun.shadow.camera.far=campaignActive?235:135;sun.shadow.camera.updateProjectionMatrix();
     sky.material.map=campaignActive&&morningReady?morningSky:skyTexture;sky.material.needsUpdate=true;
-    moon.group.visible=!campaignActive;
-    scene.fog.density=campaignActive?.0058:.008;
+    moon.group.visible=false;
+    scene.fog.density=campaignActive?.0058:.0034;
     hemisphere.color.setHex(campaignActive?0xc4ceca:0xa9c9e5);hemisphere.groundColor.setHex(campaignActive?0x414833:0x344058);
     sun.color.setHex(campaignActive?0xffdeb7:0xb5d7ff);rim.color.setHex(campaignActive?0xa6bbb7:0x9abfff);
     campaignArt.setVisible(campaignActive&&!rangeActive);
@@ -498,10 +500,10 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     campaignArt.setVisible(campaignActive&&!rangeActive);
     arenaRoot.visible=!campaignActive&&!rangeActive;
     obstacles.splice(0,obstacles.length,...(rangeActive?rangeObstacles:campaignActive?campaignArt.obstacles:arenaObstacles));
-    scene.fog.color.setHex(rangeActive?0x545045:campaignActive?0x847572:character.world.fog);
-    scene.fog.density=rangeActive?.0026:campaignActive?.0058:.008;
+    scene.fog.color.setHex(rangeActive?0x545045:campaignActive?0x847572:0x302030);
+    scene.fog.density=rangeActive?.0026:campaignActive?.0058:.0034;
     if(rangeActive){rangeArt.enableMaterials();sun.color.setHex(0xffe9c9);renderer.toneMappingExposure=.93;hemisphere.intensity=0;sun.intensity=0;rim.intensity=0;moon.group.visible=false;sky.visible=false;}
-    else {sky.visible=true;renderer.toneMappingExposure=campaignActive?.84:1.08;hemisphere.intensity=campaignActive?.62:1.32;sun.intensity=campaignActive?1.36:2.25;rim.intensity=campaignActive?.18:1.08;}
+    else {sky.visible=true;renderer.toneMappingExposure=campaignActive?.84:1.08;hemisphere.intensity=campaignActive?.62:.85;sun.intensity=campaignActive?1.36:1.25;rim.intensity=campaignActive?.18:1.08;}
     if(breachActive&&!rangeActive)styleBreach();
   }
   return {T,scene,camera,moon,setRobotShutdownSound:callback=>enemyFailureFX.setSoundHandler(callback),get campaignArt(){return campaignArt;},rangeArt,setRangeActive,setCampaignActive,graphics:{...profile,initialFailure:prepared.initialFailure},warm:async()=>{await campaignArt.ready;await warmRenderer(renderer,scene,camera)},get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>campaignActive?{...campaignArt.stats(),map:breachActive?'breche-violette-01':'vesper-secours-07'}:{...city.stats,boundary:city.fence?.stats()},resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
