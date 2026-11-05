@@ -1,39 +1,57 @@
-/* PINK WARS: Full-tile neon illustrations for STORY / STAND / ARENA / GALLERY / AR.
-   Each remains a keyboard/touch-accessible button or link. Existing mode handlers stay unchanged. */
+/* Pink Wars mode menu — correct full-tile artwork, without duplicate icons.
+   The source atlas has four equal square quadrants; each is painted on a
+   *square* span before being clipped to its enclosing responsive menu card. */
 #lobby .intro>.mode-choice>:is(#story-open,[data-mode=training],[data-mode=arena],.gallery-home-link,.mode-home){
-  padding:0!important;justify-content:center!important;align-items:stretch!important;isolation:isolate;
+  position:relative!important;
+  padding:0!important;
+  overflow:hidden!important;
+  isolation:isolate!important;
+  display:block!important;
 }
-/* The shared 2-by-2 spritesheet is drawn as a centered square so that
-   wide tiles crop the image naturally without distorting the design. */
-#lobby .intro>.mode-choice>:is(#story-open,[data-mode=training],[data-mode=arena],.gallery-home-link,.mode-home)::before{
-  content:"";position:absolute!important;left:0!important;right:auto!important;
-  top:50%!important;bottom:auto!important;width:100%!important;height:auto!important;
-  min-height:100%!important;aspect-ratio:1/1;z-index:-2!important;opacity:1!important;
-  background-image:url("icons/pink-wars-mode-icons.webp?v=1")!important;
-  background-size:200% 200%!important;background-repeat:no-repeat!important;
-  filter:none!important;transform:translateY(-50%)!important;pointer-events:none!important;
-  transition:transform .3s ease,filter .3s ease!important;
+/* Deactivate old oversized sprite and the old Liquid Glass reflection layer. */
+#lobby .intro>.mode-choice>:is(#story-open,[data-mode=training],[data-mode=arena],.gallery-home-link,.mode-home)::before,
+#lobby .intro>.mode-choice>:is(#story-open,[data-mode=training],[data-mode=arena],.gallery-home-link,.mode-home)::after{
+  content:none!important;display:none!important;
+  background-image:none!important;
 }
-#lobby .intro>.mode-choice>#story-open::before{background-position:0% 0%!important}
-#lobby .intro>.mode-choice>[data-mode="training"]::before{background-position:100% 0%!important}
-#lobby .intro>.mode-choice>[data-mode="arena"]::before{background-position:0% 100%!important}
-#lobby .intro>.mode-choice>.gallery-home-link::before{background-position:100% 100%!important}
-#lobby .intro>.mode-choice>.mode-home::before{
+/* Exactly one image fills every card. For the two wider bottom cards the
+   artwork remains square and is naturally cropped top/bottom, never distorted. */
+#lobby .intro>.mode-choice .pw-mode-art{
+  display:block!important;
+  position:absolute!important;
+  top:50%!important;left:50%!important;right:auto!important;bottom:auto!important;
+  width:100%!important;height:auto!important;min-height:0!important;
+  aspect-ratio:1/1!important;max-width:none!important;
+  margin:0!important;padding:0!important;border:0!important;
+  transform:translate(-50%,-50%)!important;
+  pointer-events:none!important;
+  z-index:2!important;
+  background-image:url("icons/pink-wars-mode-icons.webp?v=1");
+  background-size:200% 200%!important;
+  background-repeat:no-repeat!important;
+  background-color:#190617;
+  filter:none!important;
+  transition:transform .25s ease,filter .25s ease!important;
+}
+#lobby .intro>.mode-choice #story-open .pw-mode-art{background-position:0% 0%!important}
+#lobby .intro>.mode-choice [data-mode="training"] .pw-mode-art{background-position:100% 0%!important}
+#lobby .intro>.mode-choice [data-mode="arena"] .pw-mode-art{background-position:0% 100%!important}
+#lobby .intro>.mode-choice .gallery-home-link .pw-mode-art{background-position:100% 100%!important}
+#lobby .intro>.mode-choice .mode-home .pw-mode-art{
   background-image:url("icons/pink-wars-mode-ar.webp?v=1")!important;
-  background-size:cover!important;background-position:center!important;
+  background-size:cover!important;
+  background-position:center!important;
 }
-#lobby .intro>.mode-choice>:is(button,a) :is(.glass-tile-icon,.glass-tile-label,.glass-tile-arrow){
-  display:none!important;
+#lobby .intro>.mode-choice>:is(button,a):hover .pw-mode-art{
+  transform:translate(-50%,-50%) scale(1.035)!important;
+  filter:brightness(1.075)!important;
 }
-#lobby .intro>.mode-choice>:is(button,a):hover::before{
-  transform:translateY(-50%) scale(1.055)!important;filter:brightness(1.06)!important;
-}
-#lobby .intro>.mode-choice>:is(button,a):active::before{
-  transform:translateY(-50%) scale(.985)!important;
+#lobby .intro>.mode-choice>:is(button,a):active .pw-mode-art{
+  transform:translate(-50%,-50%) scale(.99)!important;
 }
 #lobby .intro>.mode-choice>:is(button,a):focus-visible{
-  outline:3px solid #ff78d8!important;outline-offset:3px!important;
+  outline:3px solid #ff7ed6!important;outline-offset:3px!important;
 }
 @media(prefers-reduced-motion:reduce){
-  #lobby .intro>.mode-choice>:is(button,a)::before{transition:none!important}
+ #lobby .intro>.mode-choice .pw-mode-art{transition:none!important}
 }
