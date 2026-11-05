@@ -810,3 +810,43 @@ body:not(.playing):not(.outfit-mode) .scene-shade {
     padding:6px 12px!important;
   }
 }
+
+/* PINK WARS — custom neon mode icons 2026-11-05 */
+#lobby .mode-choice :is(#story-open,[data-mode=training],[data-mode=arena],.gallery-home-link)::before{
+  background-image:radial-gradient(ellipse at 50% 42%,#61224f88 0%,#240c2be8 55%,#080a1df5 100%)!important;
+  background-size:cover!important;
+  background-position:center!important;
+  filter:none!important;
+}
+#lobby .mode-choice :is(#story-open,[data-mode=training],[data-mode=arena],.gallery-home-link) .glass-tile-icon{
+  display:block!important;
+  position:relative!important;
+  z-index:2;
+  width:clamp(58px,6.8vw,106px)!important;
+  height:clamp(58px,6.8vw,106px)!important;
+  flex:0 0 auto;
+  border-radius:23%;
+  background-image:url("icons/pink-wars-mode-icons.webp?v=1");
+  background-size:200% 200%;
+  background-repeat:no-repeat;
+  box-shadow:0 0 16px #f8338e59;
+  filter:drop-shadow(0 0 9px #ff369d65)!important;
+}
+#lobby .mode-choice :is(#story-open,[data-mode=training],[data-mode=arena],.gallery-home-link) .glass-tile-icon svg{display:none!important}
+#lobby .mode-choice :is(#story-open,[data-mode=training],[data-mode=arena],.gallery-home-link) .glass-tile-arrow{display:none!important}
+#lobby .mode-choice #story-open .glass-tile-icon{background-position:0% 0%}
+#lobby .mode-choice [data-mode=training] .glass-tile-icon{background-position:100% 0%}
+#lobby .mode-choice [data-mode=arena] .glass-tile-icon{background-position:0% 100%}
+#lobby .mode-choice .gallery-home-link .glass-tile-icon{background-position:100% 100%}
+@media(max-width:700px){
+ #lobby .mode-choice :is(#story-open,[data-mode=training],[data-mode=arena],.gallery-home-link) .glass-tile-icon{
+   width:clamp(39px,13vw,64px)!important;
+   height:clamp(39px,13vw,64px)!important;
+ }
+}
+@media(orientation:landscape) and (max-height:560px){
+ #lobby .mode-choice :is(#story-open,[data-mode=training],[data-mode=arena],.gallery-home-link) .glass-tile-icon{
+  width:38px!important;
+  height:38px!important;
+ }
+}
