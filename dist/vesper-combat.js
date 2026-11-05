@@ -1,3 +1,4 @@
+import {createM01SiegeAmbiance} from './m01-siege-ambiance.js';
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import {walkingSurface} from './surface-steps.js';
 import {assistedAim,firingView} from './aim-assist.js';
@@ -130,6 +131,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   else if(coreRestored)extension.resumeCore();
   else extension.start();
   extArt.build(game.obstacles);
+  const ambiance=createM01SiegeAmbiance(T,scene,{obstacles:game.obstacles,performance:profile.phone||profile.headset||requestedQuality==='low'});
   // One simulation owns stairs, lifts, navigation, collisions and ballistics.
   collide.splice(0,collide.length,...obstacles.map(o=>({x1:o.x-o.hx,x2:o.x+o.hx,y1:o.y||0,y2:(o.y||0)+o.height,z1:o.z-o.hz,z2:o.z+o.hz,label:o.surface})));
   stairs.splice(0,stairs.length,...LEVEL1_MAP.stairs.map(s=>({x1:s.x-s.halfWidth,x2:s.x+s.halfWidth,zStart:s.bottomZ,zEnd:s.topZ,height:s.height})));
@@ -407,10 +409,10 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     createGun:()=>rig?.createGun({sleeve:false})||buildGun({mats:starterMaterials,gloves:starterGloves,sleeve:false,makeFlash:parent=>{const f=new T.Mesh(new T.SphereGeometry(.06,8,6),heroGlow);parent.add(f);return f;}}),createHand:()=>createGlove(rig?.kit.gloves||starterGloves,{sleeve:false})}),
     getYaw:()=>-getState().yaw,setYaw:onHeading,isPaused:()=>!!getState().menuPaused||journalOpen||game.state!=='playing',
     onPause:onPauseRequest,onResume:onResumeRequest,onHome:()=>location.assign('./index.html'),onExit:()=>{},skillsInput:args=>skillMenu.xrInput(args),
-    onFrame:(ms,frame)=>{const dt=Math.min(.045,Math.max(0,(ms-lastTime*1000)/1000||.016));const c=xr.input(frame,dt);const s=getState();if(c.interact)onInteract();if(!s.menuPaused&&!journalOpen&&!skillMenu.isOpen)update(dt,{...s,free:false,yaw:-xr.yaw,aiming:c.aim,input:c});else xr.update(dt,feel.state,feel.state.flash);xr.renderScope();lastTime=ms/1000;atmosphere.update(lastTime,camera,{day:s.day,shadows:s.shadows!==false,focus:game.player,entities:[...game.enemies,game.player],heightAt:e=>game.surfaceHeight(e.x,e.z,game.time,(e.elevation||0)+.3)});const eye=renderer.xr.getCamera().getWorldPosition(new T.Vector3());extArt.update(lastTime,dt,{position:eye,quaternion:camera.quaternion},game.player);extArt.adapt(atmosphere,eye,dt);try{renderer.render(scene,camera);}catch(error){onFailure(error);}}});
+    onFrame:(ms,frame)=>{const dt=Math.min(.045,Math.max(0,(ms-lastTime*1000)/1000||.016));const c=xr.input(frame,dt);const s=getState();if(c.interact)onInteract();if(!s.menuPaused&&!journalOpen&&!skillMenu.isOpen)update(dt,{...s,free:false,yaw:-xr.yaw,aiming:c.aim,input:c});else xr.update(dt,feel.state,feel.state.flash);xr.renderScope();lastTime=ms/1000;atmosphere.update(lastTime,camera,{day:s.day,shadows:s.shadows!==false,focus:game.player,entities:[...game.enemies,game.player],heightAt:e=>game.surfaceHeight(e.x,e.z,game.time,(e.elevation||0)+.3)});const eye=renderer.xr.getCamera().getWorldPosition(new T.Vector3());extArt.update(lastTime,dt,{position:eye,quaternion:camera.quaternion},game.player);extArt.adapt(atmosphere,eye,dt);ambiance.update(lastTime,dt,{position:eye},{atmosphere,renderer,day:s.day});try{renderer.render(scene,camera);}catch(error){onFailure(error);}}});
   // Validate a real terrain frame while the loading card is still displayed.
   // A published GPU API or a running simulation alone cannot prove rendering.
-  syncCamera(getState(),0);atmosphere.update(0,camera,{day:getState().day,shadows:profile.shadows});extArt.update(0,0,camera,game.player);extArt.adapt(atmosphere,camera.position,1);
+  syncCamera(getState(),0);atmosphere.update(0,camera,{day:getState().day,shadows:profile.shadows});extArt.update(0,0,camera,game.player);extArt.adapt(atmosphere,camera.position,1);ambiance.update(0,0,camera,{atmosphere,renderer,day:getState().day});
   renderer.setSize(innerWidth,innerHeight,false);
   onProgress(.90,'Préparation du premier rendu');
   try{
@@ -462,7 +464,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       torch.visible=s.flashlight!==false;
       const shadows=s.shadows!==false;
       atmosphere.update(t,camera,{shadows,day:s.day,focus:game.player,entities:[...game.enemies,game.player],heightAt:e=>game.surfaceHeight(e.x,e.z,game.time,(e.elevation||0)+.3)});
-      extArt.update(t,frameDt,camera,game.player);extArt.adapt(atmosphere,camera.position,frameDt);
+      extArt.update(t,frameDt,camera,game.player);extArt.adapt(atmosphere,camera.position,frameDt);ambiance.update(t,frameDt,camera,{atmosphere,renderer,day:s.day});
       try{const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);if(result?.then){pending=true;result.then(()=>pending=false).catch(error=>{pending=false;onFailure(error);});}}
       catch(error){onFailure(error);}
     },
@@ -476,7 +478,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       capacity:game.weapon.capacity,ownedWeapons:[...game.ownedWeapons],offers:game.weaponOffers.map(o=>({...o})),campaign:game.campaign,journalOpen,
       enemies:game.enemies.length,hostileProjectiles:game.bullets.filter(b=>b.hostile).length,shots:game.bullets.filter(b=>!b.hostile).length,
       kills:game.kills,rig:!!rig,gun:!!gun,backend:renderer.isWebGLRenderer?'webgl':'webgpu',triangles:terrain.triangles,
-      art:missionArt.stats(),dressing:dressing.stats,salvage:salvage.stats,shadowing:atmosphere.shadows.stats(),lighting:{exposure:renderer.toneMappingExposure,ambient:atmosphere.ambient.intensity,sun:atmosphere.sun.intensity},pbr:missionArt.stats().pbr,effects:effects.stats(),companion:companion.snapshot(),position:{...getState().position},
+      art:missionArt.stats(),dressing:dressing.stats,salvage:salvage.stats,shadowing:atmosphere.shadows.stats(),lighting:{exposure:renderer.toneMappingExposure,ambient:atmosphere.ambient.intensity,sun:atmosphere.sun.intensity},ambiance:ambiance.stats(),pbr:missionArt.stats().pbr,effects:effects.stats(),companion:companion.snapshot(),position:{...getState().position},
       skills:skills.snapshot(game),skillsMenuOpen:skillMenu.isOpen,
       extension:{stage:game.stage,active:extension.extension,prologueDone:extension.prologueDone,hold:extension.hold,opened:extension.opened,done:extension.done,reads:extension.reads,groups:extension.groups(),art:extArt.stats()},
       subtitle:subtitles.current,queued:subtitles.queued,
