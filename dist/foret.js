@@ -562,8 +562,19 @@ function motes(scene, count) {
 
 // ---------------------------------------------------------------- Player and controls ----------------------------
 function controls(canvas) {
-  const keys = new Set(), look = { yaw: 0, pitch: 0 }, move = { x: 0, z: 0 }, touch = new Map(), virtual = { x: 0, z: 0, run: false };
-  addEventListener('keydown', e => keys.add(e.code)); addEventListener('keyup', e => keys.delete(e.code));
+  const keys = new Set(), look = { yaw: 0, pitch: 0 }, move = { x: 0, z: 0 }, touch = new Map(), virtual = { x: 0, z: 0, run: false };let jumpPressed=false;
+  addEventListener('keydown',e=>{
+    if(['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName))return;
+    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
+    keys.add(e.code);
+    if(e.code==='Space'&&!e.repeat)jumpPressed=true;
+   });
+   addEventListener('keyup',e=>keys.delete(e.code));
+   addEventListener('blur',()=>{keys.clear();jumpPressed=false;});
+   canvas.addEventListener('contextmenu',e=>e.preventDefault());
+   canvas.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='mouse'&&e.button===2){e.preventDefault();jumpPressed=true;canvas.requestPointerLock?.().catch?.(()=>{});}
+   });
   canvas.addEventListener('click', () => { if (!matchMedia('(pointer:coarse)').matches) canvas.requestPointerLock?.(); });
   addEventListener('mousemove', e => { if (document.pointerLockElement !== canvas) return; look.yaw -= e.movementX * .0023; look.pitch = clamp(look.pitch - e.movementY * .0023, -1.3, 1.3); });
   canvas.addEventListener('pointerdown', e => { if (e.pointerType !== 'touch') return; touch.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, left: e.clientX < innerWidth / 2 }); });
@@ -577,6 +588,7 @@ function controls(canvas) {
   canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end);
   return {
     look,
+    consumeJump(){const jump=jumpPressed;jumpPressed=false;return jump;},
     setVirtualMove(x,z){virtual.x=clamp(x,-1,1);virtual.z=clamp(z,-1,1);},
     setVirtualRun(value){virtual.run=!!value;},
     input() {
@@ -688,6 +700,7 @@ export async function boot() {
 
   // Player.
   const ctl = controls(canvas), player = { x: 6, z: 96, y: 0 }; ctl.look.yaw = 0;
+   let terrainY=groundHeight(player.x,player.z),jumpOffset=0,jumpVelocity=0;
   const characterId = params.get('character') === 'lylu' ? 'lylu' : 'ghju', story = createStory(characterId, grotte.relay);
   const gameplayHud=createM07Hud({characterId,onMove:(x,z)=>ctl.setVirtualMove(x,z),onRun:value=>ctl.setVirtualRun(value),onInteract:()=>{const button=$('prompt');if(button&&!button.hidden&&$('doc').hidden)button.click();}});
   const frustum = new T.Frustum(), pv = new T.Matrix4();
@@ -724,14 +737,22 @@ export async function boot() {
       const tryMove = (nx, nz) => {
         if (Math.abs(nx) > HALF - 1 || Math.abs(nz) > HALF - 1) return false;
         const inCave = nz < CLIFF_Z && caveDistance(nx, nz) < 2, gh = groundHeight(nx, nz);
-        if (!inCave && gh - player.y > 1.2 && player.y > 0) return false;     // the cliff is not climbable
+        if (!inCave && gh - terrainY > 1.2 && terrainY > 0) return false;     // the cliff is not climbable
         if (nz < CLIFF_Z - 1 && !inCave && player.z >= CLIFF_Z - 1 && caveDistance(player.x, player.z) >= 2) return false;
         if (blockedBy(nx, nz, colliders, trunks)) return false; player.x = nx; player.z = nz; return true;
       };
       if (!tryMove(player.x + dx, player.z + dz)) { tryMove(player.x + dx, player.z); tryMove(player.x, player.z + dz); }
     }
     const gy = groundHeight(player.x, player.z), wy = Math.abs(player.x - riverX(player.z)) < 6 ? waterY(player.z) - .45 : -1e9;
-    player.y = lerp(player.y || gy, Math.max(gy, wy), Math.min(1, dt * 12));
+    terrainY=lerp(terrainY,Math.max(gy,wy),Math.min(1,dt*12));
+    // Chapter 07 is an exploration map without weapons; keep the requested PC
+    // jump physics while retaining its original terrain-following controller.
+    if(ctl.consumeJump()&&jumpOffset<=.015)jumpVelocity=6.2;
+    if(jumpOffset>0||jumpVelocity>0){
+      jumpOffset+=jumpVelocity*dt;jumpVelocity-=17.5*dt;
+      if(jumpOffset<=0){jumpOffset=0;jumpVelocity=0;}
+    }
+    player.y=terrainY+jumpOffset;
     camera.position.set(player.x, player.y + 1.65, player.z); camera.rotation.set(ctl.look.pitch, ctl.look.yaw, 0, 'YXZ');
     skyDome.position.copy(camera.position);
     camera.updateMatrixWorld();
@@ -757,7 +778,7 @@ export async function boot() {
     requestAnimationFrame(frame);
   }
   addEventListener('resize', () => { renderer.setPixelRatio(renderPixelRatio(profile, devicePixelRatio, innerWidth, innerHeight)); renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); cull.aspect = camera.aspect * 1.25; cull.updateProjectionMatrix(); });
-  window.__FORET = { scene, stats, story, hud: gameplayHud, get bench() { return bench?.result || null; }, teleport(x, z, yaw = 0) { player.x = x; player.z = z; player.y = groundHeight(x, z); ctl.look.yaw = yaw; refresh = 0; }, look(yaw, pitch = 0) { ctl.look.yaw = yaw; ctl.look.pitch = pitch; refresh = 0; } };
+  window.__FORET = { scene, stats, story, hud: gameplayHud, get bench() { return bench?.result || null; }, teleport(x, z, yaw = 0) { player.x = x; player.z = z; terrainY=groundHeight(x,z);player.y=terrainY;jumpOffset=0;jumpVelocity=0;ctl.look.yaw=yaw; refresh = 0; }, look(yaw, pitch = 0) { ctl.look.yaw = yaw; ctl.look.pitch = pitch; refresh = 0; } };
   requestAnimationFrame(frame);
   return window.__FORET;
 }

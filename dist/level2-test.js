@@ -1001,7 +1001,7 @@ window.addEventListener('keydown',e=>{
  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
  keys.add(e.code);
  if(e.repeat)return;
- if(e.code==='KeyJ'){jumpQueued=true;}
+ if(e.code==='KeyJ'||e.code==='Space'){jumpQueued=true;}
  if(e.code==='KeyF')interact();
  if(e.code==='KeyE')game.cycleWeapon();
  if(e.code==='KeyR')game.reload();
@@ -1009,7 +1009,7 @@ window.addEventListener('keydown',e=>{
  if(e.code==='KeyB')chargeQueued=true;
  if(e.code==='KeyC')crouchQueued=true;
  if(e.code==='KeyV')changeView();
- if(e.code==='Space')firePressQueued=true;
+ // Espace déclenche le saut ; le tir reste sur clic gauche / manette / tactile.
  if(/^Digit[1237]$/.test(e.code))game.selectWeapon(Number(e.code.slice(-1))-1);
 });
 window.addEventListener('keyup',e=>keys.delete(e.code));
@@ -1025,7 +1025,7 @@ window.addEventListener('mousemove',e=>{
 let dragPointer=null,dragX=0,dragY=0;
 window.addEventListener('pointerdown',e=>{
  if(!running||e.target!==canvas)return;
- if(e.button===2){mouseAim=true;e.preventDefault();if(e.pointerType==='mouse'&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch(()=>{});return;}
+ if(e.button===2&&e.pointerType==='mouse'){jumpQueued=true;e.preventDefault();if(document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch(()=>{});return;}
  if(e.button===1&&e.pointerType==='mouse'){meleeQueued=true;e.preventDefault();return;}
  if(e.button!==0||e.pointerType!=='mouse')return;
  // On phones, the canvas is a camera surface, not a fire trigger.

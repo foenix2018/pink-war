@@ -392,7 +392,7 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyC' && !e.repeat) crouchQueued=true;
   if (e.code === 'KeyX' && !e.repeat) meleeQueued=true;
   if (e.code === 'KeyB' && !e.repeat) chargeQueued=true;
-  keys.add(e.code);if(e.code==='Space'&&!e.repeat)firePressQueued=true;if(e.code==='KeyJ'&&!e.repeat)jumpQueued=true;
+  keys.add(e.code);if((e.code==='Space'||e.code==='KeyJ')&&!e.repeat)jumpQueued=true;
 });
 window.addEventListener('keyup', e => keys.delete(e.code));
 window.addEventListener('pointerup',e=>{firingPointers.delete(e.pointerId);if(e.button===2)mouseAim=false;});
@@ -429,7 +429,7 @@ function updateCamera() {
     for (const box of world.obstacles) { const hit = segmentBox(start, end, { ...box, hx: box.hx + .2, hz: box.hz + .2 }); if (hit !== null) nearest = Math.min(nearest, Math.max(.09, hit - .05)); }
     camera.position.set(start.x + (end.x - start.x) * nearest, Math.max(.35, start.y + (end.y - start.y) * nearest), start.z + (end.z - start.z) * nearest);
   }
-  const bob = Math.hypot(move.x, move.y) > .1 || keys.has('KeyW') || keys.has('KeyZ') || keys.has('KeyS');
+  const bob = Math.hypot(move.x, move.y) > .1 || keys.has('KeyW') || keys.has('KeyZ') || keys.has('KeyS') || keys.has('ArrowUp') || keys.has('ArrowDown') || keys.has('ArrowLeft') || keys.has('ArrowRight');
   const ads=flatSightPose(optic,aimBlend);
   weapon.position.set(ads.x+kickPose.x, ads.y + (bob ? Math.sin(clock * 11) * .009*(1-aimBlend) : 0) + kickPose.y + reloadLift * .045, ads.z + kickPose.z - reloadLift * .028);
   weapon.rotation.set(kickPose.pitch + reloadLift * Math.PI / 2,kickPose.yaw+ads.yaw,Math.sin(clock * 1.8) * .003+kickPose.roll+ads.roll);
@@ -639,11 +639,11 @@ function updateHud() {
   $('ammo-state').textContent = game.weapon.melee?(game.triggerHeld?'LAME ACTIVE':'LAME RÉTRACTÉE'):game.reloadRemaining>0?'RECHARGE':'CELLULES';
   document.body.classList.toggle('blade-equipped',!!game.weapon.melee);document.body.classList.toggle('blade-guard',!!game.bladeGuard);
   document.querySelector('.weapon-tag').classList.toggle('ammo-low',!game.weapon.melee&&game.ammo[game.weaponIndex]<=game.weapon.capacity*.25);
-  $('aim-button').ariaLabel=game.weapon.melee?'Parer avec la lame':'Viser avec l’optique';$('aim-button').title=game.weapon.melee?'Parade : clic droit / gâchette gauche':'Visée : clic droit / gâchette gauche';
+  $('aim-button').ariaLabel=game.weapon.melee?'Parer avec la lame':'Viser avec l’optique';$('aim-button').title=game.weapon.melee?'Parade : touche O / gâchette gauche':'Visée : touche O / gâchette gauche';
   const reloading = game.reloadRemaining>0;
   document.querySelector('.fire-area').classList.toggle('reloading', reloading);
   $('reload-button').disabled = reloading || game.ammo[game.weaponIndex]===game.weapon.capacity;
-  $('fire-caption').innerHTML = game.weapon.melee?'MAINTENIR LA LAME <small>ESPACE / GÂCHETTE DROITE</small>':reloading ? `RECHARGE ${game.reloadRemaining.toFixed(1)} S` : game.weapon.chargeTime ? 'TIR CHARGÉ <small>MAINTENIR · RELÂCHER</small>' : 'TIR LASER <small>MAINTENIR · ESPACE</small>';
+  $('fire-caption').innerHTML = game.weapon.melee?'MAINTENIR LA LAME <small>CLIC GAUCHE / GÂCHETTE DROITE</small>':reloading ? `RECHARGE ${game.reloadRemaining.toFixed(1)} S` : game.weapon.chargeTime ? 'TIR CHARGÉ <small>MAINTENIR · RELÂCHER</small>' : 'TIR LASER <small>MAINTENIR · CLIC GAUCHE</small>';
   $('charge-bar').style.width = `${(reloading ? 1-game.reloadRemaining/game.weapon.reload : game.charge)*100}%`;
   const pending=game.weaponOffers[0];
   const distanceToWeapon=pending?Math.round(Math.hypot(pending.x-game.player.x,pending.z-game.player.z)):0;
@@ -782,7 +782,7 @@ function bindCanvas() {
   canvas.dataset.controlsBound = 'true';
   canvas.addEventListener('contextmenu',e=>e.preventDefault());
   canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===0&&phase==='playing'){firingPointers.add(e.pointerId);firePressQueued=true;audioReady();if(vr.mode==='off'&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch(()=>{});}});
-  canvas.addEventListener('pointerdown',e=>{if(e.button===2&&phase==='playing'){e.preventDefault();mouseAim=true;if(e.pointerType==='mouse'&&vr.mode==='off'&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch(()=>{});}});
+  canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===2&&phase==='playing'){e.preventDefault();jumpQueued=true;audioReady();if(vr.mode==='off'&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch(()=>{});}});
   canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===1&&phase==='playing'){e.preventDefault();meleeQueued=true;}});
   canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
   canvas.addEventListener('pointerdown',e=>{
@@ -834,20 +834,20 @@ function stepFrame(timestamp, xrFrame) {
   if (phase === 'outfit') world.outfit(clock,previewLevel,Number($('outfit-rotation').value)*Math.PI/180);
   if (phase === 'playing' && !recovering && !skillMenu?.isOpen && !rangeArmoryMenu?.isOpen) {
     const sensitivity = settings.sensitivity*(vr.mode==='xr'?1:aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend));
-    yaw -= (look.x * 1.8 + vrInput.turn * 1.6 + (keys.has('ArrowRight') ? 1.4 : 0) - (keys.has('ArrowLeft') ? 1.4 : 0)) * sensitivity * dt;
+    yaw -= (look.x * 1.8 + vrInput.turn * 1.6) * sensitivity * dt;
     yaw -= vrInput.snap;
     if(vr.mode!=='xr')yaw-=touchOrbit.step(dt)*sensitivity;
-    pitch = clamp(pitch + (-look.y * 1.35 - vrInput.tilt * 1.35 + (keys.has('ArrowUp') ? 1.15 : 0) - (keys.has('ArrowDown') ? 1.15 : 0)) * sensitivity * dt, -.85, .7);
+    pitch = clamp(pitch + (-look.y * 1.35 - vrInput.tilt * 1.35) * sensitivity * dt, -.85, .7);
     yaw %= Math.PI * 2;
-    const x = move.x + vrInput.x + (keys.has('KeyD') ? 1 : 0) - ((keys.has('KeyA') || keys.has('KeyQ')) ? 1 : 0);
-    const z = move.y + vrInput.z + (keys.has('KeyS') ? 1 : 0) - ((keys.has('KeyW') || keys.has('KeyZ')) ? 1 : 0);
+    const x = move.x + vrInput.x + ((keys.has('KeyD')||keys.has('ArrowRight')) ? 1 : 0) - ((keys.has('KeyA') || keys.has('KeyQ') || keys.has('ArrowLeft')) ? 1 : 0);
+    const z = move.y + vrInput.z + ((keys.has('KeyS')||keys.has('ArrowDown')) ? 1 : 0) - ((keys.has('KeyW') || keys.has('KeyZ') || keys.has('ArrowUp')) ? 1 : 0);
     const facing = yaw + (vr.mode==='stereo' && vr.sensor ? vr.phoneYaw : 0);
     let moveYaw = facing;
     if(vr.mode==='xr')moveYaw=vr.movementYaw(facing);
     if(jumpQueued)game.player.jumpHeld=false;
-    const jump = jumpQueued || vrInput.jump || keys.has('KeyJ'); jumpQueued = false;
+    const jump = jumpQueued || vrInput.jump || keys.has('Space') || keys.has('KeyJ'); jumpQueued = false;
     const crouchToggle=crouchQueued||vrInput.crouchToggle;crouchQueued=false;
-    aiming=!!OPTICS[game.weapon.id]&&!game.reloadRemaining&&(vr.mode==='xr'?vrInput.aim:mouseAim||aimPointers.size>0||vrInput.precision);
+    aiming=!!OPTICS[game.weapon.id]&&!game.reloadRemaining&&(vr.mode==='xr'?vrInput.aim:keys.has('KeyO')||mouseAim||aimPointers.size>0||vrInput.precision);
     aimBlend+=(Number(aiming)-aimBlend)*(1-Math.exp(-dt*14));
     document.body.classList.toggle('aiming',aiming);document.body.classList.toggle('scoped',aiming&&game.weapon.id==='lance'&&view==='fps'&&vr.mode==='off');
     $('aim-button').setAttribute('aria-pressed',String(aiming));
@@ -881,7 +881,7 @@ function stepFrame(timestamp, xrFrame) {
       }
     }
     fireZoomBlend+=(Number(flashTimer>0&&!game.weapon.melee)-fireZoomBlend)*(1-Math.exp(-dt*14));
-    const firing = vr.mode==='xr' ? vrInput.fire : !!(firingPointers.size || keys.has('Space') || vrInput.fire || game.weapon.semiAuto&&firePressQueued);
+    const firing = vr.mode==='xr' ? vrInput.fire : !!(firingPointers.size || vrInput.fire || game.weapon.semiAuto&&firePressQueued);
     // Pose the authentic IK skeleton BEFORE raycasting. In 3P the projectile now leaves the
     // current crouched/armed muzzle instead of the preceding frame's hand positions.
     updateWeaponVisuals(dt, firing, moving); updateCamera();

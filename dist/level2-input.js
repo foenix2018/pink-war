@@ -5,8 +5,8 @@ import {createTouchOrbit} from './touch-orbit.js';
 import {DesktopGamepadInput,DESKTOP_BUTTONS,desktopAxis} from './desktop-input.js';
 export const touchAnalogSprint=(x,z)=>Math.hypot(Number(x)||0,Number(z)||0)>=.88;
 export const PINK_WARS_KEYS=Object.freeze({
-  forward:['KeyW','KeyZ'],back:'KeyS',left:['KeyA','KeyQ'],right:'KeyD',
-  fire:'Space',jump:'KeyJ',interact:'KeyF',next:'KeyE',reload:'KeyR',
+  forward:['KeyW','KeyZ','ArrowUp'],back:['KeyS','ArrowDown'],left:['KeyA','KeyQ','ArrowLeft'],right:['KeyD','ArrowRight'],
+  fire:'MouseLeft',jump:['Space','KeyJ'],interact:'KeyF',next:'KeyE',reload:'KeyR',
   crouch:'KeyC',view:'KeyV',pause:'Escape',sprint:['ShiftLeft','ShiftRight'],
   melee:'KeyX',charge:'KeyB'
 });
@@ -26,15 +26,15 @@ export function createPinkWarsInput(){
     actions[action]=!!state;
   }
   return {
-   moveX:desktopAxis(normalized[0])+(held(keys,PINK_WARS_KEYS.right)?1:0)-(held(keys,...PINK_WARS_KEYS.left)?1:0),
-   moveZ:desktopAxis(normalized[1])+(keys.has(PINK_WARS_KEYS.back)?1:0)-(held(keys,...PINK_WARS_KEYS.forward)?1:0),
-   lookX:desktopAxis(normalized[2])*1.6+(keys.has('ArrowRight')?1.4:0)-(keys.has('ArrowLeft')?1.4:0),
-   lookY:desktopAxis(normalized[3])*1.35+(keys.has('ArrowDown')?1.15:0)-(keys.has('ArrowUp')?1.15:0),
-   fire:actions.fire||keys.has(PINK_WARS_KEYS.fire),
+   moveX:desktopAxis(normalized[0])+(held(keys,...PINK_WARS_KEYS.right)?1:0)-(held(keys,...PINK_WARS_KEYS.left)?1:0),
+   moveZ:desktopAxis(normalized[1])+(held(keys,...PINK_WARS_KEYS.back)?1:0)-(held(keys,...PINK_WARS_KEYS.forward)?1:0),
+   lookX:desktopAxis(normalized[2])*1.6,
+   lookY:desktopAxis(normalized[3])*1.35,
+   fire:actions.fire,
    companion:edges.has('companion'),
-   aim:actions.aim,
+   aim:actions.aim||keys.has('KeyO'),
    sprint:actions.sprint||held(keys,...PINK_WARS_KEYS.sprint),
-   jump:edges.has('jump')||keys.has(PINK_WARS_KEYS.jump),
+   jump:edges.has('jump')||held(keys,...PINK_WARS_KEYS.jump),
    crouchToggle:edges.has('crouch'),
    interact:edges.has('interact'),next:edges.has('next'),reload:edges.has('reload'),pause:edges.has('pause'),
    melee:edges.has('melee'),charge:edges.has('charge')
