@@ -4,6 +4,7 @@ import { targetPosition,TRAINING_BARRIER,RANGE_CONTROLS,TARGET_OUTLINE,RANGE_ARM
 import {WEAPONS} from './game-logic.js';
 import {bevelBox} from './geo.js';
 import {createRangeMaterials} from './shooting-range-materials.js';
+import {createMapInfoPanel} from './world-info-panel.js';
 import {createRangeShadows} from './range-shadows.js';
 import {applyWorldShadows} from './world-shadows.js';
 
@@ -172,20 +173,16 @@ export function createShootingRangeArt(T,scene,options={}){
     controlGroups.push({enclosure,button});
     collision(c.x,c.z,.20,.20,0,1.45);
   }
-  // Local stencilled signage, one canvas per graphic, no network textures.
-  function sign(label,sub,x,y,z,w=2.15,h=.48,color='#e2d5b7'){
+  // Replacement of the actual 3D signs, not an overlay on the player's HUD.
+  function sign(label,sub,x,y,z,w=2.15,h=.48,color='#ff4fac'){
     if(typeof document==='undefined')return null;
-    const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;
-    const c=canvas.getContext('2d');
-    const grad=c.createLinearGradient(0,0,512,128);grad.addColorStop(0,'#24251f');grad.addColorStop(1,'#3c3b31');
-    c.fillStyle=grad;c.fillRect(0,0,512,128);
-    c.strokeStyle='#77705c';c.lineWidth=6;c.strokeRect(5,5,502,118);
-    c.fillStyle=color;c.font='bold 50px monospace';c.textAlign='center';c.fillText(label,256,61,490);
-    c.fillStyle='#d3dde3';c.font='bold 25px monospace';c.fillText(sub,256,103,490);
-    const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
-    const material=new T.MeshBasicMaterial({map:texture,side:T.DoubleSide});
-    const panel=new T.Mesh(new T.PlaneGeometry(w,h),material);panel.position.set(x,y,z);if(z>34)panel.rotation.y=Math.PI;root.add(panel);
-    signs.push({panel,texture,material});return panel;
+    const panel=createMapInfoPanel(T,{
+      title:label,subtitle:sub,sector:'STAND DE TIR / SÉCURITÉ',
+      width:w,height:Math.max(h,Math.min(.95,w*.30)),
+      accent:color,low:!!options.low
+    });
+    panel.position.set(x,y,z);if(z>34)panel.rotation.y=Math.PI;
+    root.add(panel);signs.push({panel,glass:true});return panel;
   }
   // Professional qualification bay. Shooter stands BEHIND a continuous,
   // waist-height safety railing. The simulation also enforces the shooting
@@ -444,7 +441,7 @@ export function createShootingRangeArt(T,scene,options={}){
   function dispose(){
     hoverGeometry.dispose();armoryHover.material.dispose();
     clearArmoryModels();displayModels.removeFromParent();shadows.dispose();pbr.dispose();for(const item of targetGroups.values())releaseTarget(item);
-    targetGroups.clear();for(const sign of signs){sign.panel.removeFromParent();sign.panel.geometry.dispose();sign.material.dispose();sign.texture.dispose();}
+    targetGroups.clear();for(const sign of signs){sign.panel.removeFromParent();if(sign.glass)sign.panel.userData.dispose?.();else{sign.panel.geometry.dispose();sign.material.dispose();sign.texture.dispose();}}
     signs.length=0;root.removeFromParent();
     root.traverse(node=>{if(node.isMesh&&!hardwareGeos.includes(node.geometry)&&node.geometry!==circle)node.geometry.dispose();});
     circle.dispose();hardwareGeos.forEach(g=>g.dispose());Object.values(mats).forEach(m=>m.dispose());textures.forEach(t=>t?.dispose());

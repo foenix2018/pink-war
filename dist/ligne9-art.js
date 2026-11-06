@@ -7,6 +7,7 @@
 import { ROOMS, DOORS, WATER, STAIRS, LANDING, HEIGHTS, INTERACTIONS, roomAt } from './ligne9-layout.js';
 
 import {createFunctionalProp} from './functional-props.js';
+import {createMapInfoPanel} from './world-info-panel.js';
 import { softCube, splitPieces } from './soft-pieces.js';
 const TAU = Math.PI * 2;
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
@@ -130,7 +131,7 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
 
   // ---------- Canvas textures: signs, posters, papers, screens ----------
   const SIGN_FONT = 'system-ui,"Segoe UI",Arial,sans-serif';
-  const signTex = (lines, { bg = '#0d3b5e', fg = '#f2f4f2', w = 512, h = 128, border = null, align = 'center', size = .42 } = {}) => canvasTexture(T, w, h, (c, W, H) => {
+  const signTex = (lines, { bg = '#0d3b5e', fg = '#f2f4f2', w = 512, h = 128, border = null, align = 'center', size = .42 } = {}) => {const result=canvasTexture(T, w, h, (c, W, H) => {
     if (bg) { c.fillStyle = bg; c.fillRect(0, 0, W, H); } else c.clearRect(0, 0, W, H);
     if (border) { c.strokeStyle = border; c.lineWidth = Math.max(4, H * .05); c.strokeRect(c.lineWidth / 2, c.lineWidth / 2, W - c.lineWidth, H - c.lineWidth); }
     const rows = Array.isArray(lines) ? lines : [lines]; c.fillStyle = fg; c.textAlign = align; c.textBaseline = 'middle';
@@ -139,9 +140,15 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
       c.fillText(row, align === 'left' ? W * .05 : W / 2, H * (rows.length === 1 ? .52 : (k + .8) / (rows.length + .6)), W * .92);
     });
   });
+    result.userData.pwInfo={title:Array.isArray(lines)?String(lines[0]):String(lines),subtitle:Array.isArray(lines)?String(lines[1]||''):'',accent:bg&&/(#0f7a3e|#0d3b5e|#120c24)/i.test(bg)?'#60e5ff':'#ff4fac'};
+    return result;};
   const signs = [];
   // Signs are opaque unless see-through (graffiti): transparent planes would draw over the XR reading panel.
   function sign(tex, x, y, z, yaw, w, h, { lit = false, material = null, see = false } = {}) {
+    if(!see&&!material&&tex?.userData?.pwInfo&&w>=1.55&&h>=.35){
+      const info=tex.userData.pwInfo,board=createMapInfoPanel(T,{...info,sector:'LIGNE 9 / RÉSEAU DE VESPER',width:w,height:Math.max(h,Math.min(w*.34,1.25)),low});
+      board.position.set(x,y,z);board.rotation.y=yaw;add(board);signs.push(board);return board;
+    }
     const mat = material || (lit ? new T.MeshBasicMaterial({ map: tex, toneMapped: false, transparent: see, alphaTest: see ? .05 : 0 })
       : new T.MeshStandardMaterial({ map: tex, roughness: .7, metalness: .05, transparent: see, alphaTest: see ? .05 : 0 }));
     const mesh = new T.Mesh(new T.PlaneGeometry(w, h), mat); mesh.position.set(x, y, z); mesh.rotation.y = yaw; add(mesh); signs.push(mesh); return mesh;

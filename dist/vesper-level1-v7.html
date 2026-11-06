@@ -1352,20 +1352,39 @@ function buildScene(){
  console.info('Pink Wars: triangles',staticMesh.i.length/3,'verts',staticMesh.vertexCount,'colliders',collide.length,'props',textureSigns.length);
 }
 function createAtlas(){
- const t=document.createElement('canvas');t.width=t.height=1024;const g=t.getContext('2d');g.fillStyle='#09111b';g.fillRect(0,0,1024,1024);
- for(let i=0;i<16;i++){
-  const x=i%4*256,y=Math.floor(i/4)*256,label=textureSigns[i]||'';
-  g.save();g.translate(x,y);g.strokeStyle='#7597a5';g.lineWidth=3;g.strokeRect(6,6,244,244);
-  g.fillStyle='#152430';g.fillRect(9,9,238,238);
-  g.fillStyle=i%5===2?'#ec467b':'#c0dee5';g.fillRect(12,12,6,232);
-  g.fillStyle='#7d9aa8';g.font='700 15px monospace';g.fillText('VESPER  //  ARCHIVES',23,45);
-  let parts=label.split(' / ');g.fillStyle='#edf6fb';g.font='bold 26px Arial';g.textAlign='center';
-  parts.forEach((part,j)=>{let words=part.split(' '),lines=[''];for(const word of words){if(g.measureText(lines[lines.length-1]+' '+word).width>202&&lines[lines.length-1])lines.push(word);else lines[lines.length-1]+=(lines[lines.length-1]?' ':'')+word;}
-  lines.forEach((line,k)=>g.fillText(line,128,105+j*55+k*30));});
-  g.strokeStyle='#df347e';g.lineWidth=3;g.beginPath();g.moveTo(23,213);g.lineTo(230,213);g.stroke();
-  g.textAlign='left';g.fillStyle='#7d9aa8';g.font='14px monospace';g.fillText('UNIT.03     //    HORS RESEAU',22,238);g.restore();
- }
- return t;
+  // Native level 01 has an authored WebGL2/WebGPU sign atlas, not Three.js meshes.
+  // This paints the *physical wall sign textures*, avoiding any HUD overlay.
+  const t=document.createElement('canvas');t.width=t.height=1024;
+  const g=t.getContext('2d');g.clearRect(0,0,1024,1024);
+  const round=(x,y,w,h,r)=>{g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();};
+  for(let i=0;i<16;i++){
+    const x=i%4*256,y=Math.floor(i/4)*256,label=textureSigns[i]||'';
+    const pink=i%3!==1,accent=pink?'#ff4fac':'#60e5ff';
+    g.save();g.translate(x,y);
+    const bg=g.createLinearGradient(0,0,256,256);
+    bg.addColorStop(0,'#10172ce9');bg.addColorStop(.55,'#26334cbb');bg.addColorStop(1,'#0a1025ec');
+    g.fillStyle=bg;round(7,7,242,242,22);g.fill();
+    g.save();g.shadowColor=accent;g.shadowBlur=16;g.lineWidth=4;g.strokeStyle=accent;round(9,9,238,238,20);g.stroke();g.restore();
+    g.strokeStyle='#62deff';g.lineWidth=3;g.beginPath();g.moveTo(180,10);g.lineTo(230,10);g.quadraticCurveTo(245,12,246,31);g.lineTo(246,155);g.stroke();
+    g.fillStyle='rgba(255,255,255,.13)';g.beginPath();g.moveTo(20,20);g.lineTo(171,20);g.lineTo(130,39);g.lineTo(20,39);g.fill();
+    g.font='800 12px "Oxanium","Arial Narrow",Arial,sans-serif';g.fillStyle='#dbe8ff';
+    g.textAlign='left';g.fillText('PINK WARS  /  INFO',23,60);
+    g.fillStyle='#61eaff';g.fillRect(23,70,164,3);
+    const rows=label.split(' / ');g.textAlign='center';g.fillStyle='#f2f7ff';
+    let yy=113;for(let k=0;k<Math.min(2,rows.length);k++){
+      const words=rows[k].split(' ');let line='';const split=[];
+      g.font=(k===0?'900 29px ':'700 21px ')+'"Oxanium","Arial Narrow",Arial,sans-serif';
+      for(const word of words){const next=line?(line+' '+word):word;if(g.measureText(next).width>208&&line){split.push(line);line=word;}else line=next;}
+      if(line)split.push(line);
+      for(const part of split.slice(0,2)){g.fillStyle=k===0?'#f2f7ff':'#7deeff';g.shadowColor=k===0?'#ff53b8':'#42dfff';g.shadowBlur=k===0?7:4;g.fillText(part,128,yy,211);g.shadowBlur=0;yy+=k===0?33:24;}
+      yy+=8;
+    }
+    g.fillStyle='#ff5aaf';g.fillRect(27,209,194,3);
+    g.fillStyle='rgba(3,13,27,.65)';round(23,217,210,26,6);g.fill();
+    g.font='800 11px "Oxanium",Arial,sans-serif';g.fillStyle='#f8b5dc';g.textAlign='center';g.fillText('VESPER  /  SECTEUR 03',128,234);
+    g.restore();
+  }
+  return t;
 }
 // Rendering functions (WebGPU preferred; full WebGL2 fallback).
 const gpuShader=`

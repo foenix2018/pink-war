@@ -31,7 +31,20 @@ export function createFortifiedArena(T,scene,obstacles,coverWalls,{quality='low'
  const box=(m,s,p,r=[0,0,0],soft=false)=>{const g=soft?bevelBox(...s,.06,1):new T.BoxGeometry(...s);const uv=g.attributes.uv,pos=g.attributes.position,n=g.attributes.normal,t=m.userData.tile||2;
  for(let i=0;i<uv.count;i++){const ax=Math.abs(n.getX(i)),ay=Math.abs(n.getY(i));uv.setXY(i,(ax>.6?pos.getZ(i):pos.getX(i))/t,(ay>.6?pos.getZ(i):pos.getY(i))/t);}add(g,m,p,r);};
  const rod=(m,p,q,r=.04)=>{const u=new T.Vector3(...p),v=new T.Vector3(...q),d=v.clone().sub(u),g=new T.CylinderGeometry(r,r,d.length(),low?6:8);const rot=new T.Quaternion().setFromUnitVectors(new T.Vector3(0,1,0),d.normalize());const transform=new T.Matrix4().compose(u.add(v).multiplyScalar(.5),rot,new T.Vector3(1,1,1));a.add(g,m,frame.clone().multiply(transform),!low);g.dispose();};
- const labelMap=canvas(512,512,(c,w,h)=>{c.clearRect(0,0,w,h);c.fillStyle='#c6b8b7';c.textBaseline='middle';for(let row=0;row<4;row++){c.font='bold 78px monospace';c.fillText(['A-03','G-01','SECTEUR 07','ORDRE'][row],15,row*128+48);c.font='19px monospace';c.fillText('CONFINEMENT / VESPER',18,row*128+102);}});
+ const labelMap=canvas(512,512,(c,w,h)=>{
+ c.clearRect(0,0,w,h);c.textBaseline='middle';
+ for(let row=0;row<4;row++){
+  const y=row*128,color=row%2?'#60e5ff':'#ff4fac';
+  const glass=c.createLinearGradient(0,y,512,y+128);
+  glass.addColorStop(0,'#15233c');glass.addColorStop(.55,'#2b2848');glass.addColorStop(1,'#091b32');
+  c.fillStyle=glass;c.fillRect(8,y+6,496,115);
+  c.strokeStyle=color;c.shadowColor=color;c.shadowBlur=13;c.lineWidth=4;c.strokeRect(10,y+8,492,112);c.shadowBlur=0;
+  c.fillStyle='#e9eaf7';c.font='800 14px "Oxanium",Arial,sans-serif';c.fillText('PINK WARS / INFORMATIONS',27,y+27);
+  c.fillStyle='#6ce7ff';c.fillRect(28,y+38,292,2);
+  c.font='900 38px "Oxanium",Arial,sans-serif';c.fillStyle='#fff1fb';c.fillText(['A-03','G-01','SECTEUR 07','ORDRE'][row],27,y+67,450);
+  c.fillStyle=color;c.font='700 17px "Oxanium",Arial,sans-serif';c.fillText('CONFINEMENT / VESPER',28,y+98);
+ }
+});
  const labelMat=std('marquages',0xffffff,.88);labelMat.map=labelMap;labelMat.transparent=true;labelMat.alphaTest=.1;
  const label=(i,p,w=3,h=1.2)=>{if(!labelMap)return;const g=new T.PlaneGeometry(w,h),uv=g.attributes.uv;for(let k=0;k<uv.count;k++)uv.setY(k,(3-i+uv.getY(k))/4);add(g,labelMat,p);};
  const bannerMap=canvas(256,512,(c,w,h)=>{c.fillStyle='#76213e';c.fillRect(0,0,w,h);c.fillStyle='#d25480';c.beginPath();c.moveTo(36,110);c.lineTo(220,110);c.lineTo(128,230);c.closePath();c.fill();c.fillStyle='#76213e';c.beginPath();c.moveTo(75,130);c.lineTo(182,130);c.lineTo(128,192);c.closePath();c.fill();c.fillStyle='#d25480';c.fillRect(119,175,18,62);c.font='bold 25px monospace';c.fillText('ORDRE',85,290);c.font='12px monospace';c.fillText('VESPER / 07',79,325);});M.cloth.map=bannerMap;

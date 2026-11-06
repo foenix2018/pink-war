@@ -1,6 +1,7 @@
-// Original printed notices and recessed shop signs. No holographic UI billboards.
+import {createMapInfoPanel} from './world-info-panel.js';
+// Printed paper notices remain weathered; physical information signs use neon glass.
 export function createDistrictSignage(T,{performance=false}={}){
- const maps=new Map(),textures=[],materials=[],geometry=[];let count=0;
+ const maps=new Map(),textures=[],materials=[],geometry=[],panels=[];let count=0;
  const frame=new T.MeshStandardMaterial({color:0x242b2e,roughness:.72,metalness:.6});materials.push(frame);
  function texture(text,poster){
   const key=(poster?'paper:':'sign:')+text;if(maps.has(key))return maps.get(key);
@@ -31,11 +32,12 @@ export function createDistrictSignage(T,{performance=false}={}){
   const material=new T.MeshStandardMaterial({map,color:poster?0xe3dccc:0xadb7b3,roughness:poster?.98:.69,metalness:poster?0:.18});materials.push(material);maps.set(key,material);return material;
  }
  return{create(text,{width=2.5,height=.85,poster=false}={}){
+  if(!poster){const board=createMapInfoPanel(T,{title:text,subtitle:'VESPER · SECTEUR 07',sector:'RÉSEAU URBAIN / INFORMATIONS',width,height:Math.max(height,.92),accent:/RESEAU|HELIX/.test(text)?'#60e5ff':'#ff4fac',low:performance});panels.push(board);count++;return board;}
   const group=new T.Group();group.name='W02 / '+(poster?'notice imprimée / ':'enseigne montée / ')+text;
   const backing=new T.BoxGeometry(width+.08,height+.08,poster?.025:.11);geometry.push(backing);
   const back=new T.Mesh(backing,frame);back.position.z=-.067;group.add(back);
   const sheet=new T.PlaneGeometry(width,height,poster?4:1,poster?8:1);
   const p=sheet.attributes?.position;if(p&&poster)for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i);if(Math.abs(x)>width*.49)p.setX(i,x+(Math.sin(y*31)+Math.cos(y*17))*.009);p.setZ(i,Math.sin(y*8+x*9)*.006);}if(p)sheet.computeVertexNormals();geometry.push(sheet);
   const face=new T.Mesh(sheet,texture(text,poster));face.position.z=.003;group.add(face);count++;return group;
- },stats:()=>({mounted:count,uniqueMaps:maps.size,printed:true}),dispose(){for(const g of geometry)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();}};
+ },stats:()=>({mounted:count,uniqueMaps:maps.size,printed:true}),dispose(){for(const g of geometry)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();for(const p of panels)p.userData.dispose?.();}};
 }

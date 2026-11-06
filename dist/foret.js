@@ -10,6 +10,7 @@ import {WebGLRenderer} from './vendor/three.module.min.js';
 import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './renderer-policy.js';
 import {linesFor,lineSeconds,logFor,ENDING} from './m07-story.js';
 import {softCube,softEnough} from './soft-pieces.js';
+import {createMapInfoPanel} from './world-info-panel.js';
 import {createM07Hud} from './m07-hud.js?v=2';
 
 const params = new URLSearchParams(globalThis.location?.search ?? '');
@@ -510,7 +511,7 @@ function remnants(scene, colliders) {
     colliders.push({ x, z, hx: 2.4, hz: 13.5, ry: .9 }); }
   // The research antenna sign, half eaten by moss.
   { const x = 9, z = 70, y = ground(x, z); box(.14, 2.2, .14, 0x4a4036, x - .8, y + 1.1, z); box(.14, 2.2, .14, 0x4a4036, x + .8, y + 1.1, z);
-    const plate = new T.Mesh(new T.PlaneGeometry(2.2, 1.1), new T.MeshStandardMaterial({ roughness: .9, map: canvasTexture(256, 128, (g, w, h) => { g.fillStyle = '#d9d4c3'; g.fillRect(0, 0, w, h); g.fillStyle = '#3d5a6b'; g.font = 'bold 22px system-ui'; g.fillText('ANTENNE DE RECHERCHE', 12, 40); g.fillText('DES TILLEULS', 12, 68); g.font = '16px system-ui'; g.fillText('Équipe VEILLE · 2,4 km ↑', 12, 100); g.fillStyle = 'rgba(70,95,40,.75)'; for (let i = 0; i < 40; i++) { g.beginPath(); g.arc(Math.random() * 90, h - Math.random() * 50, 4 + Math.random() * 9, 0, TAU); g.fill(); } }) }));
+    const plate=createMapInfoPanel(T,{title:'ANTENNE DE RECHERCHE',subtitle:'DES TILLEULS · ÉQUIPE VEILLE · 2,4 KM ↑',sector:'CHAPITRE 07 / MÉMOIRES LOCALES',width:2.2,height:1.1,accent:'#60e5ff',low:params.get('quality')==='low'});
     plate.position.set(x, y + 1.7, z + .08); plate.rotation.y = .25; scene.add(plate); }
   // ORDRE's surveillance mast, dead, leaning over the river; its red eye still blinks.
   { const x = riverX(10) + 9, z = 10, y = ground(x, z); box(.5, 14, .5, 0x3a3d42, x, y + 7, z, 0, -.18); box(1.6, .9, 1.6, 0x24272c, x + 1.3, y + 13.6, z, 0, -.18);

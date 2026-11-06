@@ -1,3 +1,4 @@
+import {createMapInfoPanel} from './world-info-panel.js';
 // Vesper signage shared by the missions: neon signs with halo, vertical kanji blades, animated holographic adverts of
 // the city's brands, wayfinding plates with pictograms, hazard plates and stickers. Everything is drawn on canvases
 // (no font download, no image file) and returned as three.js meshes; `update(t)` animates flicker and holograms.
@@ -94,15 +95,16 @@ export function createSignage(T, { root, low = false } = {}) {
     return m;
   }
   // Wayfinding plate: pictogram, French line, Japanese line, optional direction arrow. Lit (back-lit plate).
-  function wayfinding(title, { sub = '', jp = '', picto = 'arrow', arrow = 0, color = '#ffc890', bg = '#0b0d10', w = 3, h = .8, x = 0, y = 0, z = 0, yaw = 0 } = {}) {
-    const W = 1024, H = Math.round(W * h / w), c = canvas(W, H), g = c.getContext('2d');
-    g.fillStyle = bg; g.fillRect(0, 0, W, H); g.fillStyle = color; g.fillRect(0, 0, W, H * .06); g.fillRect(0, H * .94, W, H * .06);
-    g.save(); g.translate(H * .5, H * .5); g.fillStyle = color; g.strokeStyle = color; (pictos[picto] || pictos.arrow)(g, H * .28); g.restore();
-    g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillStyle = '#f2f4f7'; g.font = `900 ${Math.round(H * (sub ? .3 : .38))}px ${COND}`; g.fillText(title, H * 1.02, sub ? H * .36 : H * .5, W - H * 2.1);
-    if (sub) { g.font = `700 ${Math.round(H * .16)}px ${COND}`; g.fillStyle = color; g.fillText(sub, H * 1.02, H * .64, W - H * 2.1); }
-    if (jp) { g.font = `800 ${Math.round(H * .14)}px ${JP}`; g.fillStyle = '#9aa6b4'; g.fillText(jp, H * 1.02, H * .84, W - H * 2.1); }
-    if (arrow !== null && arrow !== undefined && picto !== 'arrow') { g.save(); g.translate(W - H * .55, H * .5); g.rotate(arrow); g.fillStyle = color; pictos.arrow(g, H * .26); g.restore(); }
-    return place(plane(texture(T, c), w, h, { transparent: false }), x, y, z, yaw);
+  // In-world wall mounted Liquid Glass information boards.
+  // Coordinates and headings of the original signs are preserved.
+  function wayfinding(title,{sub='',jp='',picto='arrow',arrow=0,color='#ffc890',bg='#0b0d10',w=3,h=.8,x=0,y=0,z=0,yaw=0}={}){
+    const height=Math.max(h,Math.min(1.25,w*.35));
+    const direction=arrow==null?'':Math.abs(arrow)>2?'←':arrow>0.4?'↓':arrow<-.4?'↑':'→';
+    const info=createMapInfoPanel(T,{
+      title,subtitle:[sub,direction].filter(Boolean).join('  '),sector:jp?('VESPER / '+jp):'VESPER / DIRECTION',
+      width:w,height,accent:color,low
+    });
+    return place(info,x,y,z,yaw);
   }
   // Hazard plate / sticker (yellow-black stripes, pictogram, short text). Not lit.
   function hazard(text, { sub = '', picto = 'warn', w = .9, h = .6, x = 0, y = 0, z = 0, yaw = 0, color = '#f2c230' } = {}) {
