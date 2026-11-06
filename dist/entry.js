@@ -3,8 +3,8 @@ import {DesktopGamepadInput} from './desktop-input.js';
 import {createGamepadAid,gamepadsNow} from './ios-gamepad.js';
 import {graphicsProfile} from './renderer-policy.js';
 import {GAME_VERSION,showLaunchError,compatibleLaunchURL} from './launch-ui.js';
-import {syncMenuArtwork} from './menu-art.js?v=20261106-loading-art';
-import {beginScenarioLoading,setLoadingProgress} from './scenario-loading.js';
+import {syncMenuArtwork} from './menu-art.js?v=hq-20261106b';
+import {beginScenarioLoading,setLoadingProgress} from './scenario-loading.js?v=hq-20261106b';
 import {showStoryPrologue} from './story-prologue.js';
 import {createMissionLoading} from './mission-loading.js';
 import {readM01Checkpoint} from './checkpoint-index.js';
@@ -119,7 +119,7 @@ async function begin(intent='play',afterPrologue=false){
   if(settings.sound||settings.music!==false)try{const Audio=window.AudioContext||window.webkitAudioContext;
     window.__PINKWAR_BOOT_AUDIO ||=new Audio();window.__PINKWAR_BOOT_AUDIO.resume().catch(()=>{});}catch{}
   try{
-    modulePromise ||=import('./game.js?v=20261106-cinematic-loader');await modulePromise;
+    modulePromise ||=import('./game.js?v=hq-20261106b');await modulePromise;
     for(const d of document.querySelectorAll('dialog'))d.removeEventListener('cancel',earlyCancel);
     if(!window.__PINKWAR||window.__PINKWAR.snapshot().phase==='error')throw new Error('Initialisation interrompue.');
     loading=false;

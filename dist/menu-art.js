@@ -1,4 +1,4 @@
-import {SCENARIO_LOADING_ART} from './scenario-loading.js';
+import {SCENARIO_LOADING_ART} from './scenario-loading.js?v=hq-20261106b';
 // Menu illustration selected by mission and existing playable character.
 // The original level-1 GHJU / LYLU art is never overwritten.
 const coverFor = n => 'art/chapters/chapter-' + String(n).padStart(2,'0') + '.webp?v=20261031';

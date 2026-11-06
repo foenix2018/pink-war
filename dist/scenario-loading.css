@@ -2,7 +2,7 @@
    The approved artwork includes the Pink Wars wordmark in its top-right corner. */
 #loading-screen[data-mode="training"],#loading-screen[data-mode="arena"]{background:#070b18}
 #loading-screen[data-mode="training"]>img,
-#loading-screen[data-mode="arena"]>img{width:100%;height:100%;object-fit:cover;object-position:center center}
+#loading-screen[data-mode="arena"]>img{width:100%;height:100%;object-fit:cover;object-position:center center;image-rendering:auto;filter:none!important}
 #loading-screen[data-mode="training"]::after,
 #loading-screen[data-mode="arena"]::after{
  background:linear-gradient(0deg,rgba(3,7,19,.87),rgba(3,7,19,.07) 57%,rgba(3,7,19,.12)),
@@ -49,7 +49,8 @@
 #loading-screen #loading-value{font:800 15px/1 'Oxanium',monospace;color:#fff;white-space:nowrap;font-variant-numeric:tabular-nums}
 #loading-screen.pw-load-complete .loading-track i{background:linear-gradient(90deg,#f54eaa,#66dbf9)}
 @media(max-aspect-ratio:4/5){
- #loading-screen[data-mode="training"]>img,#loading-screen[data-mode="arena"]>img{object-position:70% center}
+ /* Crop the embedded logo out of the portrait wallpaper; show the separate sharp SVG once. */
+ #loading-screen[data-mode="training"]>img,#loading-screen[data-mode="arena"]>img{object-position:40% center}
  #loading-screen .loading-copy{bottom:max(7vh,env(safe-area-inset-bottom,0px));left:16px;width:calc(100% - 32px);padding:17px}
  #loading-screen .loading-copy h2{font-size:clamp(24px,6vw,34px)}
  #loading-screen .loading-track{margin-top:15px}
