@@ -1,13 +1,14 @@
 import {Assembly,loft,matrix,bevelBox} from './geo.js';
 import {createCircuitSwitch} from './circuit-switch.js';
 import {createMachineFinishes} from './machine-finishes.js';
+import {createMapInfoPanel} from './world-info-panel.js';
 import {LEVEL1_MAP} from './level1-layout.js';
 
 // Detailed props on the Blender-built courtyard: original medical equipment,
 // physical access labels and two electrical isolators. No new dynamic light.
 export function createCourtyardArt(T,parent,maps,{quality='auto',labels=true}={}){
  const root=new T.Group();root.name='M01 / cour et aile technique';parent.add(root);
- const assembly=new Assembly(),owned=[],textures=[],lamps=[],colliders=[],switches=[];
+ const assembly=new Assembly(),owned=[],textures=[],lamps=[],colliders=[],switches=[],infoPanels=[];
  const finishes=createMachineFinishes(T,{performance:quality==='low'});
  const cloth=finishes.fabric;
  const rubber=new T.MeshStandardMaterial({color:0x151d1d,map:maps.steel.map,roughness:.9,metalness:.08});owned.push(rubber);
@@ -15,12 +16,16 @@ export function createCourtyardArt(T,parent,maps,{quality='auto',labels=true}={}
  const red=new T.MeshStandardMaterial({color:0x713b30,roughness:.86,metalness:.14});owned.push(red);
  const box=(m,s,p,r=[0,0,0],b=.014)=>assembly.add(bevelBox(...s,b,1),m,matrix(p,r)),rod=(m,a,b,r=.02)=>assembly.limb(m,a,b,r,r*.9);
  function sign(x,y,z,lines,width=2.5){
-  box(maps.steel,[width,.92,.09],[x,y,z]);for(const side of [-1,1])rod(maps.rust,[x+side*(width*.4),0,z],[x+side*(width*.4),y+.4,z],.024);
-  colliders.push({x,z,y:y-.46,hx:width/2,hz:.05,height:.92,surface:'metal',campaign:true,courtyardPart:'access-sign'});
-  if(!labels)return;
-  const c=document.createElement('canvas');c.width=512;c.height=192;const ctx=c.getContext('2d');ctx.fillStyle='#303b35';ctx.fillRect(0,0,512,192);ctx.strokeStyle='#a39472';ctx.lineWidth=3;ctx.strokeRect(9,9,494,174);ctx.fillStyle='#d9ceb2';ctx.font='600 25px system-ui';lines.forEach((s,i)=>ctx.fillText(s,24,44+i*44,464));
-  const texture=new T.CanvasTexture(c);texture.colorSpace=T.SRGBColorSpace;textures.push(texture);const material=new T.MeshBasicMaterial({map:texture,toneMapped:false});owned.push(material);
-  const g=new T.PlaneGeometry(width-.09,.83);assembly.add(g,material,matrix([x,y,z+.052]),false);
+   box(maps.steel,[width,.92,.09],[x,y,z]);
+   for(const side of [-1,1])rod(maps.rust,[x+side*(width*.4),0,z],[x+side*(width*.4),y+.4,z],.024);
+   colliders.push({x,z,y:y-.46,hx:width/2,hz:.05,height:.92,surface:'metal',campaign:true,courtyardPart:'access-sign'});
+   if(!labels)return;
+   const panel=createMapInfoPanel(T,{
+     title:lines[0],subtitle:lines.slice(1).join(' · '),
+     sector:'SECOURS 07 / ACCÈS',width,height:.83,
+     accent:'#60e5ff',low:quality==='low'
+   });
+   panel.position.set(x,y,z+.09);root.add(panel);infoPanels.push(panel);
  }
  sign(-45,1.9,89,['SECOURS 07 / ANNEXE','CONVOI  →','AILE TECHNIQUE  ↑'],3.2);
  sign(-35.5,2.1,62,['TRIAGE / ACCÈS TECHNIQUE','CIRCUIT ISOLÉ · ENTRÉE EST'],3.3);
@@ -51,5 +56,5 @@ export function createCourtyardArt(T,parent,maps,{quality='auto',labels=true}={}
  let last=null;
  function update(game){const isolated=!!game.circuitIsolated;last=isolated;for(const control of switches)control.setState(isolated);}
  const stats=()=>{let triangles=0,draws=0;root.traverse(o=>{if(o.isMesh){draws++;triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;}});return{revision:'3.63.5',approaches:2,isolators:2,medicalCots:3,colliders:colliders.length,triangles,draws,circuitIsolated:!!last};};
- return {root,colliders,update,stats,dispose(){for(const control of switches)control.dispose();finishes.dispose();root.removeFromParent();root.traverse(o=>o.geometry?.dispose());for(const m of owned)m.dispose();for(const t of textures)t.dispose();}};
+ return {root,colliders,update,stats,dispose(){for(const control of switches)control.dispose();finishes.dispose();for(const panel of infoPanels){panel.userData.dispose?.();panel.removeFromParent();}root.removeFromParent();root.traverse(o=>o.geometry?.dispose());for(const m of owned)m.dispose();for(const t of textures)t.dispose();}};
 }

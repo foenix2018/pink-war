@@ -48,7 +48,7 @@ function renderPanel(ctx,W,H,{title,subtitle,sector,accent,compact}){
 }
 export function createMapInfoPanel(T,{
  title='INFORMATIONS',subtitle='',sector='VESPER / SECTEUR',
- width=3.4,height=1.1,accent=PALETTE.pink,low=false
+ width=3.4,height=1.1,accent=PALETTE.pink,low=false,textureCache=null
 }={}){
  const w=Math.max(.3,width),h=Math.max(.12,height),group=new T.Group();
  group.name='PINK WARS / panneau d’information Liquid Glass / '+String(title);
@@ -61,9 +61,23 @@ export function createMapInfoPanel(T,{
  const glassMat=new T.MeshPhysicalMaterial({color:0x1b2848,metalness:.22,roughness:.16,clearcoat:1,clearcoatRoughness:.12,transparent:true,opacity:.65,depthWrite:true,side:T.DoubleSide});
  add(new T.PlaneGeometry(w,h),glassMat,.005);
  const W=low?512:1024,H=Math.max(120,Math.min(low?512:768,Math.round(W*h/w)));
- const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
- renderPanel(canvas.getContext('2d'),W,H,{title,subtitle,sector,accent,compact:h<.45});
- const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;texture.anisotropy=low?2:4;texture.generateMipmaps=true;
+ const current={title,subtitle,sector};
+ const key=textureCache?JSON.stringify([W,H,title,subtitle,sector,accent]):null;
+ let entry=key?textureCache.get(key):null;
+ let texture=entry?.texture;
+ let context=null;
+ if(entry){entry.refs++;}
+ else {
+  const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
+  context=canvas.getContext('2d');
+  renderPanel(context,W,H,{...current,accent,compact:h<.45});
+  texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;texture.anisotropy=low?2:4;texture.generateMipmaps=true;
+  if(key){entry={texture,refs:1};textureCache.set(key,entry);}
+ }
+ const redraw=()=>{
+  if(!context)return false; // cached arena/décor text is intentionally immutable
+  renderPanel(context,W,H,{...current,accent,compact:h<.45});return true;
+ };
  const frontMat=new T.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,side:T.DoubleSide,toneMapped:false});
  add(new T.PlaneGeometry(w,h),frontMat,.022);
  // Real 3D neon rails, deliberately no lights to keep the Quest 3 draw budget bounded.
@@ -75,6 +89,23 @@ export function createMapInfoPanel(T,{
  const left=add(new T.BoxGeometry(edge,h+.09,.018),pinkMat,front);left.position.x=-w*.5-.035;
  const right=add(new T.BoxGeometry(edge,h+.09,.018),cyanMat,front);right.position.x=w*.5+.035;
  group.userData.isWorldInfoPanel=true;
- group.userData.dispose=()=>{texture.dispose();for(const g of disposeList)g.dispose();for(const m of own)m.dispose();};
+ // Dynamic text redraw for mission objectives, without re-creating meshes or GPU textures.
+ group.userData.setContent=({title:nextTitle,subtitle:nextSubtitle,sector:nextSector}={})=>{
+  if(nextTitle!==undefined)current.title=String(nextTitle);
+  if(nextSubtitle!==undefined)current.subtitle=String(nextSubtitle);
+  if(nextSector!==undefined)current.sector=String(nextSector);
+  if(redraw())texture.needsUpdate=true;
+ };
+ // Independent brightness control preserves the original power / progression cues.
+ group.userData.setBrightness=value=>{
+  const intensity=Math.max(.12,Math.min(1,Number(value)||.12));
+  frontMat.color.setScalar(intensity);
+ };
+ group.userData.panelMaterial=frontMat;
+ group.userData.dispose=()=>{
+  if(entry){if(--entry.refs===0){texture.dispose();textureCache.delete(key);}}
+  else texture.dispose();
+  for(const g of disposeList)g.dispose();for(const m of own)m.dispose();
+ };
  return group;
 }

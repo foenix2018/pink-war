@@ -17,13 +17,14 @@ import {createCampaignCeilings} from './m01-ceilings.js';
 import {createWorkshopArt} from './m01-workshop.js';
 import {createCourtyardArt} from './m01-courtyard.js';
 import {createArchiveTerminalFactory} from './archive-terminals.js';
+import {createMapInfoPanel} from './world-info-panel.js';
 import {FENCE_GAPS} from './m01-extension-layout.js';
 
 // Independent Blender-built map. Geometry is bundled locally, including in the
 // standalone HTML: no CDN, GLTF loader or late asset request is needed to play.
 export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=false}={}){
  const root=new T.Group();root.name='VESPER / SECOURS 07 — carte narrative Blender';root.visible=false;scene.add(root);
- const obstacles=createLevel1Obstacles(),geometries=[],materials=[],textures=[],screens=[],routes=[],terminalDisplays=[];
+ const obstacles=createLevel1Obstacles(),geometries=[],materials=[],textures=[],screens=[],routes=[],terminalDisplays=[],mountedInfoPanels=[];
  let stage='approach',lastState='',disposed=false,currentObjective=null;
  const ownG=g=>(geometries.push(g),g),ownM=m=>(materials.push(m),m);
  let seed=33207;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
@@ -89,6 +90,17 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
  function shell(mat,x,y,z,w,h,d){const o=new T.Mesh(ownG(bevelBox(w,h,d,.045,1)),mat);o.position.set(x,y,z);o.receiveShadow=true;o.castShadow=quality!=='low';root.add(o);return o;}
  function solid(x,z,w,d,y,height,id){if(obstacles.some(b=>b.campaignTerminal===id))return;obstacles.push({x,z,hx:w/2,hz:d/2,y,height,surface:'metal',campaign:true,campaignTerminal:id});}
  function panel(title,x,y,z,w=2.4,h=1,width=768,height=320,equipment=false){
+  // Wall signs and contextual objectives share the validated native 3D
+  // Liquid Glass panel; the salvaged computers keep their dedicated screens.
+  if(!equipment){
+   const board=createMapInfoPanel(T,{title,subtitle:'VESPER / MÉMOIRE LOCALE',sector:'VESPER / SECTEUR 07',width:w,height:h,low:quality==='low',accent:title.includes('ORDRE')?'#60e5ff':'#ff4fac'});
+   board.position.set(x,y,z);root.add(board);mountedInfoPanels.push(board);
+   const display={mesh:board,paint(lines,caption=title){
+    const content=Array.isArray(lines)?lines:[String(lines??'')];
+    board.userData.setContent({title:caption,subtitle:content.filter(Boolean).join(' · ').slice(0,240)});
+   }};
+   screens.push(display);return display;
+  }
   const data=paintTexture(width,height,()=>{}),mesh=new T.Mesh(ownG(new T.PlaneGeometry(w,h)),ownM(new T.MeshBasicMaterial({map:data.map,toneMapped:false})));mesh.position.set(x,y,z);root.add(mesh);
   const s={mesh,paint(lines,caption=title){const c=data.context;c.fillStyle='#071918';c.fillRect(0,0,width,height);c.fillStyle='#dbb073';c.fillRect(14,16,5,height-32);c.font='600 25px sans-serif';c.fillText(caption,33,42,width-60);lines.forEach((line,i)=>{c.fillStyle=i===0?'#eef0df':'#b5d0c6';c.font='22px sans-serif';c.fillText(line,33,83+i*39,width-60);});if(equipment){c.strokeStyle='#345953';c.lineWidth=2;c.strokeRect(8,8,width-16,height-16);c.fillStyle='#77968c';c.font='15px monospace';c.fillText('VESPER  /  MÉMOIRE LOCALE  /  LIAISON PHYSIQUE',33,height-23);for(let j=0;j<7;j++){c.fillStyle=j<4?'#658c7d':'#253e39';c.fillRect(width-116+j*11,height-34,6,13);}}data.map.needsUpdate=true;}};screens.push(s);return s;
  }
@@ -143,6 +155,6 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
  }
  function setVisible(enabled){root.visible=!!enabled;lastState='';if(enabled)pbr.start();}
  function stats(){return{visible:root.visible,contactOcclusion:contactOcclusion.stats(),courtyard:courtyard.stats(),workshop:workshop.stats(),ceilings:ceilings.stats(),rlh:rlh.stats(),computers:computers.stats(),systems:systems.stats(),story:story.stats(),stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:5,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:3,boundary:boundary.stats(),pbr:pbr.stats()};}
- function dispose(){if(disposed)return;disposed=true;contactOcclusion.dispose();pbr.dispose();powerSwitch.dispose();computers.dispose();dressing?.dispose();boundary.dispose();story.dispose();systems.dispose();courtyard.dispose();workshop.dispose();ceilings.dispose();rlh.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
+ function dispose(){if(disposed)return;disposed=true;contactOcclusion.dispose();pbr.dispose();powerSwitch.dispose();computers.dispose();dressing?.dispose();boundary.dispose();story.dispose();systems.dispose();courtyard.dispose();workshop.dispose();ceilings.dispose();rlh.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();for(const board of mountedInfoPanels)board.userData.dispose?.();root.clear();}
  return{root,obstacles,update,setVisible,stats,dispose,updateLift,ready,materials:maps,dressing};
 }

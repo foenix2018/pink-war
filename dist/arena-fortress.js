@@ -3,6 +3,7 @@
 import {Assembly,matrix,bevelBox} from './geo.js';
 import {ARENA_TURRETS} from './arena-defense.js';
 import {createArenaTurretArt} from './arena-turret-art.js';
+import {createMapInfoPanel} from './world-info-panel.js';
 export const FORTRESS_HALF=99.1,FORTRESS_HEIGHT=14;
 export const FORTRESS_WALLS=Object.freeze([
  {x:0,z:-100.5,hx:102,hz:1.4},{x:0,z:100.5,hx:102,hz:1.4},
@@ -31,22 +32,21 @@ export function createFortifiedArena(T,scene,obstacles,coverWalls,{quality='low'
  const box=(m,s,p,r=[0,0,0],soft=false)=>{const g=soft?bevelBox(...s,.06,1):new T.BoxGeometry(...s);const uv=g.attributes.uv,pos=g.attributes.position,n=g.attributes.normal,t=m.userData.tile||2;
  for(let i=0;i<uv.count;i++){const ax=Math.abs(n.getX(i)),ay=Math.abs(n.getY(i));uv.setXY(i,(ax>.6?pos.getZ(i):pos.getX(i))/t,(ay>.6?pos.getZ(i):pos.getY(i))/t);}add(g,m,p,r);};
  const rod=(m,p,q,r=.04)=>{const u=new T.Vector3(...p),v=new T.Vector3(...q),d=v.clone().sub(u),g=new T.CylinderGeometry(r,r,d.length(),low?6:8);const rot=new T.Quaternion().setFromUnitVectors(new T.Vector3(0,1,0),d.normalize());const transform=new T.Matrix4().compose(u.add(v).multiplyScalar(.5),rot,new T.Vector3(1,1,1));a.add(g,m,frame.clone().multiply(transform),!low);g.dispose();};
- const labelMap=canvas(512,512,(c,w,h)=>{
- c.clearRect(0,0,w,h);c.textBaseline='middle';
- for(let row=0;row<4;row++){
-  const y=row*128,color=row%2?'#60e5ff':'#ff4fac';
-  const glass=c.createLinearGradient(0,y,512,y+128);
-  glass.addColorStop(0,'#15233c');glass.addColorStop(.55,'#2b2848');glass.addColorStop(1,'#091b32');
-  c.fillStyle=glass;c.fillRect(8,y+6,496,115);
-  c.strokeStyle=color;c.shadowColor=color;c.shadowBlur=13;c.lineWidth=4;c.strokeRect(10,y+8,492,112);c.shadowBlur=0;
-  c.fillStyle='#e9eaf7';c.font='800 14px "Oxanium",Arial,sans-serif';c.fillText('PINK WARS / INFORMATIONS',27,y+27);
-  c.fillStyle='#6ce7ff';c.fillRect(28,y+38,292,2);
-  c.font='900 38px "Oxanium",Arial,sans-serif';c.fillStyle='#fff1fb';c.fillText(['A-03','G-01','SECTEUR 07','ORDRE'][row],27,y+67,450);
-  c.fillStyle=color;c.font='700 17px "Oxanium",Arial,sans-serif';c.fillText('CONFINEMENT / VESPER',28,y+98);
- }
-});
- const labelMat=std('marquages',0xffffff,.88);labelMat.map=labelMap;labelMat.transparent=true;labelMat.alphaTest=.1;
- const label=(i,p,w=3,h=1.2)=>{if(!labelMap)return;const g=new T.PlaneGeometry(w,h),uv=g.attributes.uv;for(let k=0;k<uv.count;k++)uv.setY(k,(3-i+uv.getY(k))/4);add(g,labelMat,p);};
+ // The previously painted arena atlas is replaced by real in-world 3D panels.
+ const labelMap=typeof document!=='undefined';
+ const arenaTextureCache=new Map();
+ const arenaInfoPanels=[];
+ const titles=['A-03','G-01','SECTEUR 07','ORDRE'];
+ const label=(i,p,w=3,h=1.2)=>{
+  if(!labelMap)return; // canvas unavailable outside the browser
+  const board=createMapInfoPanel(T,{
+   title:titles[i]||'INFORMATIONS',subtitle:'CONFINEMENT / VESPER',
+   sector:'ARÈNE / PÉRIMÈTRE DE DÉFENSE',width:w,height:h,low,textureCache:arenaTextureCache,
+   accent:i%2?'#60e5ff':'#ff4fac'
+  });
+  board.applyMatrix4(frame.clone().multiply(matrix(p)));
+  root.add(board);arenaInfoPanels.push(board);
+ };
  const bannerMap=canvas(256,512,(c,w,h)=>{c.fillStyle='#76213e';c.fillRect(0,0,w,h);c.fillStyle='#d25480';c.beginPath();c.moveTo(36,110);c.lineTo(220,110);c.lineTo(128,230);c.closePath();c.fill();c.fillStyle='#76213e';c.beginPath();c.moveTo(75,130);c.lineTo(182,130);c.lineTo(128,192);c.closePath();c.fill();c.fillStyle='#d25480';c.fillRect(119,175,18,62);c.font='bold 25px monospace';c.fillText('ORDRE',85,290);c.font='12px monospace';c.fillText('VESPER / 07',79,325);});M.cloth.map=bannerMap;
  const haloMap=canvas(128,128,(c,w,h)=>{const g=c.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);g.addColorStop(0,'rgba(255,80,164,.65)');g.addColorStop(.2,'rgba(255,40,120,.25)');g.addColorStop(1,'rgba(255,20,100,0)');c.fillStyle=g;c.fillRect(0,0,w,h);});
  const haloMat=new T.SpriteMaterial({map:haloMap,color:0xff5fa8,transparent:true,depthWrite:false,blending:T.AdditiveBlending,opacity:.55});owned.push(haloMat);
@@ -164,7 +164,7 @@ export function createFortifiedArena(T,scene,obstacles,coverWalls,{quality='low'
  const turretArt=createArenaTurretArt(T,root,M,{low});
  a.build(root);for(const item of a.items)item.geometry.dispose();a.items.length=0;
  root.traverse(o=>{if(o.isMesh){stat.meshes++;const g=o.geometry;stat.triangles+=(g.index?.count||g.attributes.position.count)/3;o.castShadow=!low&&!o.material.transparent&&!o.material.isMeshBasicMaterial;o.receiveShadow=true;}});
- stat.defenceTurrets=ARENA_TURRETS.length;stat.searchlights=beams.length;stat.dynamicLights=spots.length+floods.length;
+ stat.defenceTurrets=ARENA_TURRETS.length;stat.searchlights=beams.length;stat.dynamicLights=spots.length+floods.length;stat.inWorldInfoPanels=arenaInfoPanels.length;
  let previous=0;const down=new T.Vector3(0,-1,0),dir=new T.Vector3(),target=new T.Vector3();
  const update=(t,eye={x:0,z:0})=>{if(!root.visible)return;const dt=Math.max(0,Math.min(.08,t-previous));previous=t;
   for(const b of beams){const sweep=Math.sin(t*.16+b.phase)*30;target.set(b.origin.x*.45+sweep,0,b.origin.z*.45+Math.cos(t*.13+b.phase)*12);dir.copy(target).sub(b.origin);const length=dir.length();b.mesh.position.copy(b.origin);b.mesh.quaternion.setFromUnitVectors(down,dir.normalize());b.mesh.scale.set(length*.13,length,length*.13);if(!b.target)b.target=new T.Vector3();b.target.copy(target);}

@@ -1,5 +1,6 @@
 import * as T from './vendor/three.webgpu.min.js';
 import { Assembly } from './geo.js';
+import {createMapInfoPanel} from './world-info-panel.js';
 import { PLATFORMS, STAIRS, LIFTS, BRIDGES, BRIDGE_LANDINGS, BRIDGE_APPROACHES, bridgeSegments, liftHeightAt, createTraversalObstacles } from './world-layout.js';
 
 // Both geometry and collision use the same metre-based layout as locomotion.
@@ -248,21 +249,18 @@ export function createTraversalArt(scene, obstacles, mats) {
     }
     block(mats.steel,[l.hx*2,.22,l.hz*2],[l.x,top,l.z],.05);
     block(mats.accent,[.6,.11,.09],[l.x,top+.13,l.z+l.hz+.03],.008);
-    // A weathered panel explains the automatic cycle in the world, keeping the HUD clear.
-    const panelCanvas=document.createElement('canvas');panelCanvas.width=512;panelCanvas.height=256;
-    const pen=panelCanvas.getContext('2d');pen.fillStyle='#172523';pen.fillRect(0,0,512,256);
-    pen.strokeStyle='#a69e76';pen.lineWidth=8;pen.strokeRect(8,8,496,240);
-    pen.fillStyle='#d7d4b9';pen.font='bold 49px sans-serif';pen.fillText('ASCENSEUR',25,73);
-    pen.font='29px sans-serif';pen.fillText('AUTOMATIQUE',27,116);
-    pen.fillStyle='#a8b99c';pen.font='24px sans-serif';pen.fillText('ATTENDRE LA PLATEFORME',26,174);
-    pen.fillStyle='#d3c180';pen.font='bold 32px monospace';pen.fillText(`RUE ↔ +${String(l.height).replace('.',',')} m`,27,222);
-    const panelMap=new T.CanvasTexture(panelCanvas);panelMap.colorSpace=T.SRGBColorSpace;
-    const panelMaterial=new T.MeshStandardMaterial({map:panelMap,roughness:.85,metalness:.1});
+    // The mounted, physical Liquid Glass information boards describe the lift.
     const streetSide=l.x<0?-1:1;
     for(const floor of [0,l.height]){
       const panelSide=floor===0?streetSide:-streetSide;
-      const panel=new T.Mesh(new T.PlaneGeometry(1.65,.825),panelMaterial);
-      panel.position.set(l.x+panelSide*(l.hx+.032),floor+1.52,l.z+l.hz-.93);
+      const panel=createMapInfoPanel(T,{
+        title:'ASCENSEUR AUTOMATIQUE',
+        subtitle:'ATTENDRE LA PLATEFORME',
+        sector:'RUE ↔ +'+String(l.height).replace('.',',')+' M',
+        width:1.65,height:.825,
+        accent:'#60e5ff',low:false
+      });
+      panel.position.set(l.x+panelSide*(l.hx+.09),floor+1.52,l.z+l.hz-.93);
       panel.rotation.y=panelSide*Math.PI/2;root.add(panel);
     }
     // The platform moves by simulation time, exactly like the collision deck.

@@ -1,18 +1,22 @@
 import {Assembly,bevelBox,matrix} from './geo.js';
 import {createCircuitSwitch} from './circuit-switch.js';
+import {createMapInfoPanel} from './world-info-panel.js';
 
 // Repair-shop fittings share the map's physical cabinets, benches and walls.
 // All materials are borrowed; the module owns only its labels and geometry.
 export function createWorkshopArt(T,parent,maps,{quality='auto',labels=true,equipment=maps}={}){
  const root=new T.Group();root.name='M01 / atelier et cour de livraison';parent.add(root);
- const a=new Assembly(),owned=[],textures=[];
+ const a=new Assembly(),owned=[],textures=[],infoPanels=[];
  const box=(m,size,p,r=[0,0,0],b=.018)=>a.add(bevelBox(...size,b,1),m,matrix(p,r));
  const rod=(m,p,q,r=.02)=>a.limb(m,p,q,r,r);
  function sign(x,y,z,w,lines){
-  box(maps.dark,[w,.72,.08],[x,y,z]);if(!labels)return;
-  const c=document.createElement('canvas');c.width=768;c.height=192;const ctx=c.getContext('2d');
-  ctx.fillStyle='#303b37';ctx.fillRect(0,0,768,192);ctx.strokeStyle='#9d8f6e';ctx.lineWidth=4;ctx.strokeRect(8,8,752,176);ctx.fillStyle='#dacbb0';ctx.font='600 30px system-ui';lines.forEach((line,i)=>ctx.fillText(line,28,60+i*62,710));
-  const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;textures.push(t);const m=new T.MeshBasicMaterial({map:t,toneMapped:false});owned.push(m);a.add(new T.PlaneGeometry(w-.05,.67),m,matrix([x,y,z+.044]),false);
+   box(maps.dark,[w,.72,.08],[x,y,z]);if(!labels)return;
+   const panel=createMapInfoPanel(T,{
+     title:lines[0],subtitle:lines.slice(1).join(' · '),
+     sector:'ATELIER / INFORMATIONS',width:w,height:.72,
+     accent:'#ff4fac',low:quality==='low'
+   });
+   panel.position.set(x,y,z+.085);root.add(panel);infoPanels.push(panel);
  }
  sign(-62,3.25,39.20,5,['ATELIER / RÉPARATIONS CIVILES','BOUTIQUE PAR LA COUR  →']);
  sign(-47,2.95,21.20,4.5,['RÉSEAU MUNICIPAL DÉCONNECTÉ','LIAISON LOCALE  ←']);
@@ -49,5 +53,5 @@ export function createWorkshopArt(T,parent,maps,{quality='auto',labels=true,equi
  const control=createCircuitSwitch(T,root,{x:-63,y:.78,z:15.78,materials:equipment,batch:a});
  a.mount(root);a.setLevel(1);root.traverse(o=>{if(o.isMesh){o.castShadow=quality!=='low'&&!o.material.isMeshBasicMaterial;o.receiveShadow=true;}});
  let powered=false;
- return {root,update(game){powered=!!game.workshopReleased;control.setState(powered);},stats(){let triangles=0,draws=0;root.traverse(o=>{if(o.isMesh){draws++;triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;}});return {revision:'3.63.9',approaches:2,localSwitch:1,powered,triangles,draws};},dispose(){control.dispose();root.removeFromParent();root.traverse(o=>o.geometry?.dispose());owned.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());}};
+ return {root,update(game){powered=!!game.workshopReleased;control.setState(powered);},stats(){let triangles=0,draws=0;root.traverse(o=>{if(o.isMesh){draws++;triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;}});return {revision:'3.63.9',approaches:2,localSwitch:1,powered,triangles,draws};},dispose(){control.dispose();for(const panel of infoPanels){panel.userData.dispose?.();panel.removeFromParent();}root.removeFromParent();root.traverse(o=>o.geometry?.dispose());owned.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());}};
 }
