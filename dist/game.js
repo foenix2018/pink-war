@@ -39,6 +39,7 @@ import {rangeHoldOffset} from './range-handling.js';
 import {createRangeArmoryMenu} from './range-armory-menu.js';
 import {writeM01Checkpoint} from './m01-checkpoint.js';
 import {mountCombatHud} from './combat-hud.js';
+import {desktopZoomHeld,grenadeShortcut} from './desktop-modifier-controls.js';
 import {createHudContrastControl} from './hud-appearance.js';
 import {createArmorFeedback,meleeKick,MELEE_POSE} from './armor-feedback.js';
 
@@ -392,6 +393,7 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyC' && !e.repeat) crouchQueued=true;
   if (e.code === 'KeyX' && !e.repeat) meleeQueued=true;
   if (e.code === 'KeyB' && !e.repeat) chargeQueued=true;
+  if (grenadeShortcut(e)){e.preventDefault();chargeQueued=true;}
   keys.add(e.code);if((e.code==='Space'||e.code==='KeyJ')&&!e.repeat)jumpQueued=true;
 });
 window.addEventListener('keyup', e => keys.delete(e.code));
@@ -847,7 +849,7 @@ function stepFrame(timestamp, xrFrame) {
     if(jumpQueued)game.player.jumpHeld=false;
     const jump = jumpQueued || vrInput.jump || keys.has('Space') || keys.has('KeyJ'); jumpQueued = false;
     const crouchToggle=crouchQueued||vrInput.crouchToggle;crouchQueued=false;
-    aiming=!!OPTICS[game.weapon.id]&&!game.reloadRemaining&&(vr.mode==='xr'?vrInput.aim:keys.has('KeyO')||mouseAim||aimPointers.size>0||vrInput.precision);
+    aiming=!!OPTICS[game.weapon.id]&&!game.reloadRemaining&&(vr.mode==='xr'?vrInput.aim:desktopZoomHeld(keys)||mouseAim||aimPointers.size>0||vrInput.precision);
     aimBlend+=(Number(aiming)-aimBlend)*(1-Math.exp(-dt*14));
     document.body.classList.toggle('aiming',aiming);document.body.classList.toggle('scoped',aiming&&game.weapon.id==='lance'&&view==='fps'&&vr.mode==='off');
     $('aim-button').setAttribute('aria-pressed',String(aiming));

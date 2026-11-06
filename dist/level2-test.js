@@ -31,6 +31,7 @@ import {createCampaignCombatEffects} from './campaign-combat-effects.js';
 import {createAICompanion} from './ai-companions.js';
 import {createAmbience} from './ambience.js';
 import {createFireBuffer} from './fire-input.js';
+import {grenadeShortcut} from './desktop-modifier-controls.js';
 import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
 import {createMissionLoading} from './mission-loading.js';
@@ -1006,7 +1007,7 @@ window.addEventListener('keydown',e=>{
  if(e.code==='KeyE')game.cycleWeapon();
  if(e.code==='KeyR')game.reload();
  if(e.code==='KeyX')meleeQueued=true;
- if(e.code==='KeyB')chargeQueued=true;
+ if(e.code==='KeyB'||grenadeShortcut(e)){if(grenadeShortcut(e))e.preventDefault();chargeQueued=true;}
  if(e.code==='KeyC')crouchQueued=true;
  if(e.code==='KeyV')changeView();
  // Espace déclenche le saut ; le tir reste sur clic gauche / manette / tactile.
