@@ -1,3 +1,4 @@
+import {SCENARIO_LOADING_ART} from './scenario-loading.js';
 // Menu illustration selected by mission and existing playable character.
 // The original level-1 GHJU / LYLU art is never overwritten.
 const coverFor = n => 'art/chapters/chapter-' + String(n).padStart(2,'0') + '.webp?v=20261031';
@@ -10,7 +11,8 @@ export function syncMenuArtwork(characterId,mode='campaign',root=document){
     // Preserve the main Liquid Glass welcome illustration and character selection.
     // Only replace the chapter-specific loading artwork.
     const isWelcome=Boolean(image.closest('#welcome-art'));
-    const source=isWelcome?image.dataset[hero+'Src']:mission?coverFor(mission):image.dataset[hero+'Src'];
+    const scenario=SCENARIO_LOADING_ART[mode];
+    const source=isWelcome?image.dataset[hero+'Src']:scenario?scenario.src:mission?coverFor(mission):image.dataset[hero+'Src'];
     if(source&&image.getAttribute('src')!==source)image.setAttribute('src',source);
     image.dataset.hero=hero;
     image.dataset.mission=mission?'m'+String(mission).padStart(2,'0'):'m01';

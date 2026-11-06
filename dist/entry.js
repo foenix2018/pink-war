@@ -3,7 +3,8 @@ import {DesktopGamepadInput} from './desktop-input.js';
 import {createGamepadAid,gamepadsNow} from './ios-gamepad.js';
 import {graphicsProfile} from './renderer-policy.js';
 import {GAME_VERSION,showLaunchError,compatibleLaunchURL} from './launch-ui.js';
-import {syncMenuArtwork} from './menu-art.js?v=3.74.0';
+import {syncMenuArtwork} from './menu-art.js?v=20261106-loading-art';
+import {beginScenarioLoading,setLoadingProgress} from './scenario-loading.js';
 import {showStoryPrologue} from './story-prologue.js';
 import {createMissionLoading} from './mission-loading.js';
 import {readM01Checkpoint} from './checkpoint-index.js';
@@ -109,18 +110,21 @@ async function begin(intent='play',afterPrologue=false){
   if(mode==='foret'){openLigne9('./foret.html');return;}
   loading=true;refresh();
   for(const d of document.querySelectorAll('dialog[open]'))d.close();
-  $('loading-error').hidden=true;$('loading-screen').hidden=false;
-  $('loading-status').textContent='Chargement du décor et des équipements…';
+  $('loading-error').hidden=true;
+  beginScenarioLoading(mode,character,'Chargement des fichiers du moteur 3D…');
+  await new Promise(resolve=>requestAnimationFrame(resolve));
+  setLoadingProgress(8,'Téléchargement du moteur et des modèles…');
   window.__PINKWAR_BOOT_OPTIONS={characterId:character,mode,view,trainingWeaponIndex:trainingWeapon,settings:{...settings},intent};
   // Open the audio context within the user's gesture, before the module fetch.
   if(settings.sound||settings.music!==false)try{const Audio=window.AudioContext||window.webkitAudioContext;
     window.__PINKWAR_BOOT_AUDIO ||=new Audio();window.__PINKWAR_BOOT_AUDIO.resume().catch(()=>{});}catch{}
   try{
-    modulePromise ||=import('./game.js?v=3.86-robot-destruction-audio-foret-m06');await modulePromise;
+    modulePromise ||=import('./game.js?v=20261106-cinematic-loader');await modulePromise;
     for(const d of document.querySelectorAll('dialog'))d.removeEventListener('cancel',earlyCancel);
     if(!window.__PINKWAR||window.__PINKWAR.snapshot().phase==='error')throw new Error('Initialisation interrompue.');
     loading=false;
   }catch(error){
+    $('loading-screen').hidden=true;
     if($('loading-error').hidden)showLaunchError(error,'chargement des fichiers');
     modulePromise=null;loading=false;refresh();
     $('play-label').textContent='RELANCER EN MODE COMPATIBLE';

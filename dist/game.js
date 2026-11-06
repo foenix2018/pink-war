@@ -26,7 +26,8 @@ import {attachCampaignStory} from './story-chapters.js';
 import { ShootingRangeGame,traceTrainingTarget } from './shooting-range.js';
 import {sightPoint} from './sight-line.js';
 import {GAME_VERSION,showLaunchError} from './launch-ui.js';
-import {syncMenuArtwork} from './menu-art.js';
+import {syncMenuArtwork} from './menu-art.js?v=20261106-loading-art';
+import {beginScenarioLoading,setLoadingProgress,endScenarioLoading} from './scenario-loading.js';
 import {createAICompanion} from './ai-companions.js?v=3.80-gab1-communication';
 import {bindViewButton,mountViewControl,readPreferredView,savePreferredView,normalizeView} from './view-options.js?v=3.74.0';
 import {companionAvailable} from './companion-escort.js';
@@ -338,21 +339,25 @@ async function start() {
     selectedMode==='training'?new ShootingRangeGame(world.obstacles,Math.random,trainingWeaponIndex??starterWeaponIndex(character.id),character.id):new ArenaGame(world.obstacles,Math.random,null,character.id));
   if(checkpoint)game.resumeCheckpoint(checkpoint);
   world.resetDynamic(); phase = 'loading'; yaw = 0; pitch = -.075;
+  if(!vr?.active){beginScenarioLoading(selectedMode,character.id,'Préparation du secteur de combat…');setLoadingProgress(51,'Préparation des équipements…');}
   weaponFeel.reset();reloadInserted=false;lastShotAt=-99;flashTimer = 0; recoil = 0; damageUntil = 0; announcementUntil = 0;pickupNotice=null;equipmentUntil=0;crouchCameraBlend=0;currentSprinting=false; resetInput(); audioReady();
   world.setWeapon(game.weaponIndex);world.setEquipment(1);
   lastWeaponSlot=0;holsterRemaining=0;
   try{
     if(!vr?.active){
-      $('loading-title').textContent=selectedMode==='breach'?'Opération Brèche':selectedMode==='campaign'?'Le dernier signal':selectedMode==='training'?'Stand de tir':'Les brèches';
-      $('loading-status').textContent='Préparation du secteur…';$('loading-screen').hidden=false;
+      if(!['training','arena'].includes(selectedMode))$('loading-title').textContent=selectedMode==='breach'?'Opération Brèche':selectedMode==='campaign'?'Le dernier signal':'Les brèches';
+      setLoadingProgress(64,'Construction des objets et synchronisation des cibles…');
       await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
       world.campaignArt.update(game,clock);world.sync(game,clock,0);updateCamera();
+      setLoadingProgress(82,'Compilation des matériaux et des effets…');
       await world.warm();
+      world.render();
+      setLoadingProgress(96,'Premier rendu graphique terminé…');
     }
     phase='playing';lastTime=0;audioReady();
     document.body.classList.add('playing'); $('game-hud').hidden = false; $('game-tip').style.opacity = '1'; updateHud();
   }catch(error){console.error('Chargement du niveau',error);await recoverGraphics(error,'préparation du niveau');}
-  finally{launchBusy=false;$('loading-screen').hidden=true;}
+  finally{launchBusy=false;if(!vr?.active)await endScenarioLoading({completed:phase==='playing'});}
 }
 $('play-button').onclick = start; $('retry-button').onclick = start;
 function continueSurvival(){
@@ -743,8 +748,7 @@ async function recoverGraphics(error,stage='rendu'){
   recoveryAttempts++;recovering=true;
   const returnPhase=phase==='loading'?'playing':phase;
   resetInput();saberAudio?.update({active:false,equipped:false});
-  $('loading-status').textContent='Rétablissement automatique du rendu…';
-  if(!vr.active)$('loading-screen').hidden=false;
+  if(!vr.active){beginScenarioLoading(selectedMode,character.id,'Rétablissement automatique du rendu…');setLoadingProgress(15,'Réinitialisation des ressources graphiques…');}
   recoveryPromise=(async()=>{
     try{
       if(vr.mode==='xr')await vr.exit();
@@ -758,7 +762,8 @@ async function recoverGraphics(error,stage='rendu'){
       if(returnPhase==='playing'||returnPhase==='paused'||returnPhase==='over'){world.sync(game,clock,0);updateCamera();}
       else if(returnPhase==='outfit')world.outfit(clock,previewLevel,Number($('outfit-rotation').value)*Math.PI/180);
       else world.lobby(clock,Math.max(1,game.wave));
-      await world.warm();world.render();
+      setLoadingProgress(78,'Recompilation des effets…');
+      await world.warm();world.render();setLoadingProgress(96,'Rendu restauré…');
       phase=returnPhase;lastTime=0;recovering=false;$('loading-error').hidden=true;
       if(phase==='playing'){document.body.classList.add('playing');$('game-hud').hidden=false;audioReady();}
       updateHud();world.renderer.setAnimationLoop(frame);return true;
@@ -972,14 +977,15 @@ vr = new VRController({
 });
 $('pause-vr').onclick=()=>vr.open();
 try {
-  world = await createScene($('world'), settings.quality,false,character.id);world.setCharacter(character.id);game = armed(new ArenaGame(world.obstacles,Math.random,null,character.id));wireRobotShutdownAudio();
+  setLoadingProgress(18,'Initialisation du rendu WebGPU / WebGL…');
+  world = await createScene($('world'), settings.quality,false,character.id);setLoadingProgress(45,'Rendu 3D prêt · préparation du secteur…');world.setCharacter(character.id);game = armed(new ArenaGame(world.obstacles,Math.random,null,character.id));wireRobotShutdownAudio();
   $('renderer-label').textContent = `${world.backend.toUpperCase()} · CONÇU POUR LE TACTILE`;
   $('loading-status').textContent='Préparation du laboratoire et des équipements…';
   if(boot?.intent!=='play'){
     world.lobby(0);
     try{await world.warm();world.render();}catch(error){world=await world.recover({quality:'low'});wireRobotShutdownAudio();game.replaceObstacles(world.obstacles);world.lobby(0);await world.warm();world.render();}
   }
-  selectMode(selectedMode);$('loading-screen').hidden=true;$('play-button').disabled = false;$('outfit-button').disabled=false;
+  selectMode(selectedMode);if(boot?.intent!=='play')$('loading-screen').hidden=true;$('play-button').disabled = false;$('outfit-button').disabled=false;
   window.__PINKWAR = window.__ROSEE = Object.freeze({ snapshot: () => ({ version:GAME_VERSION,companion:narrativeCompanion?.snapshot(),skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,phase, view, frames,recovering,recoveryAttempts,graphics:world.graphics, vr:vr.mode, vrHand:vr.settings.hand,vrFrameRate:vr.frameRate,vrFoveation:vr.perf?.foveation||0,vrTurn:vr.settings.turn,vrPrecision:vr.precision,aiming,aimBlend,cameraFov:world.camera.fov,laserEffects:world.laserStats?.(),city:world.cityStats?.(),vrTrackingLost:vr.trackingLost,vrSightVisible:vr.sight?.group.visible||false,vrHelpVisible:vr.hud?.help?.plane.visible||false, sensor:vr.sensor,characterId:character.id,characterName:character.name,universe:world.character.universe,modelCharacter:world.soldier.root.name,environmentAccent:world.palette.rose,modelEquipmentLevel:world.soldier.equipmentLevel,modelVisibleParts:world.soldier.visibleParts,modelBatches:world.soldier.batchCount,modelSource:world.soldier.actor?.data.source,modelNativeMotion:world.soldier.nativeMotion,modelNativeBones:world.soldier.nativeSkeleton?.bones.length,modelShadowUnit:world.soldier.shadowUnit?{profile:world.soldier.shadowUnit.profile,helmet:world.soldier.shadowUnit.armour.helmet.name,cape:world.soldier.shadowUnit.cape.anchor.visible,tabard:false}:null,modelCrouchBlend:world.soldier._low??0,modelGaitWeight:world.soldier._gaitWeight??0,modelHipHeight:world.soldier.hips.position.y,cameraCrouchBlend:crouchCameraBlend,musicEnabled:settings.music!==false,musicPlaying:screenMusicSnapshot().playing,musicSection:screenMusicSnapshot().surface,musicVoices:screenMusicSnapshot().voices||0,audioState:audioContext?.state||'idle',weaponFeedback:{...weaponFeel.state},previewLevel,coverCount:world.obstacles.filter(b=>b.cover).length, backend: world.backend, camera: world.camera.position.toArray(), yaw, pitch,
     selectedMode,guidance:game.guidance?.()||null,weaponModels:{...world.fpsGun.userData.kenneyAssets},training:game.mode==='training'?game.snapshot().training:null,rangeTargets:world.rangeArt.targetCount,campaignArt:world.campaignArt.stats(),inputs: { move: { ...move }, look: { ...look }, firing: firingPointers.size > 0 || keys.has('Space') }, drawCalls: world.renderer.info.render.calls, ...game.snapshot(),equipment:equipmentForCharacter(game.wave,character.id) }) });
   bindCanvas();world.renderer.setAnimationLoop(frame);
