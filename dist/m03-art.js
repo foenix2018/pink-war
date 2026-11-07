@@ -1,3 +1,6 @@
+import {createStairHardware} from './stair-hardware.js';
+import {createModernSwitch,switchVariant} from './modern-switch.js';
+import {createLevelNeons} from './level-neons.js';
 // MISSION 03 dressing: the baked night Vesper sector (m03-sector.js) lit for three.js — sky, fog, rain around the
 // eye, light halos on the neon, a small pool of point lights moved to the nearest neon clusters and street lamps —
 // plus what the mission adds: the ambulance of Inès, the ORDRE barrier of the avenue, the tracking beacon at the
@@ -300,12 +303,19 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
       const ring = new T.Mesh(new T.RingGeometry(.5, .58, 28), additive(0xffb35c, .35)); ring.rotation.x = -Math.PI / 2; ring.position.y = .03; g.add(ring);
       if (it.log && !it.id.startsWith('doc-')) { const pad = new T.Mesh(new T.BoxGeometry(.5, .32, .05), M.dark); pad.position.set(0, 1.2, 0); g.add(pad); const scr = new T.Mesh(new T.PlaneGeometry(.42, .24), M.neonCyan); scr.position.set(0, 1.2, .03); g.add(scr); }
       else if (it.id.startsWith('doc-')) { const paper = new T.Mesh(new T.PlaneGeometry(.3, .4), std(0xe8e1cf, .9, 0, { side: T.DoubleSide })); paper.position.set(0, 1.15, 0); paper.rotation.x = -.3; g.add(paper); }
-      devices.set(it.id, { it, g, gem, ring, done: false, available: false });
+      let control=null;
+      if(["alimentation", "balise", "barriere"].includes(it.id)){
+        const mount=new T.Group();mount.rotation.y=Math.abs(it.x)>40?-Math.sign(it.x)*Math.PI/2:0;g.add(mount);
+        const post=new T.Mesh(new T.CylinderGeometry(.055,.085,1.12,8),M.dark);post.position.y=.56;mount.add(post);
+        control=createModernSwitch(T,mount,{y:1.35,z:.06,scale:.72,variant:switchVariant(it.id),id:it.id,label:it.id.replaceAll('-',' '),onLabel:/disj|stab|balise/.test(it.id)?'CIRCUIT ISOLÉ':'VALIDÉ',low});
+      }
+      devices.set(it.id, { it, g, gem, ring, control, done: false, available: false });
     }
   }
-  function updateDevices(t, eye) {
+  function updateDevices(t, eye, dt) {
     const blink = .5 + .5 * Math.sin(t * 5);
     for (const d of devices.values()) {
+      d.control?.setState(d.done,{available:d.available,dt});
       const doc = !!d.it.log, color = d.done ? 0x3dff8a : doc ? 0xe8f6ff : d.available ? 0xffb35c : 0x3a2a1a;
       d.gem.material.color.set(color); d.ring.material.color.set(color);
       const show = d.available || (doc && !d.done) || d.done;
@@ -377,19 +387,22 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
   // ---------- Build ----------
   let amb = null, smoke = null;
   const power = { annexe: false };
+  const neons=createLevelNeons(T,root,{low,metal:M.galva,back:M.dark,materials:[M.neonCyan,M.neonPink,M.neonAmber,M.neonRed,M.neonWhite]});
   function build() {
     buildCity(); buildEast(); buildBarrier(); buildTrailer(); buildBeacon(); buildDevices();
+    for(const [i,s] of sector.meta.stairs.entries())createStairHardware(T,root,{id:'m03-'+i,x:(s.x1+s.x2)/2,halfWidth:(s.x2-s.x1)/2-.05,bottomZ:s.zStart,topZ:s.zEnd,height:s.height},{low,steps:28,stepOffset:.5,rails:'fittings',postCount:11,railInset:-.17,railHeight:1.13,materials:{steel:M.galva,dark:M.dark}});
     amb = aegisVan(-6, 46, 0);
     // Smoke of a damaged van.
     smoke = Array.from({ length: low ? 4 : 8 }, () => { const s = new T.Sprite(new T.SpriteMaterial({ map: halo, color: 0x444444, transparent: true, opacity: 0, depthWrite: false })); add(s); return s; });
     for (const m of movable.values()) m.apply(0);
+    neons.meshes();neons.build();
   }
 
   return {
     root, M, build, openPortal,
     update(t, dt, eye, player, { van = null, beaconOff = false, crank = false } = {}) {
       const e = eye.position;
-      sectorMeshes.update(t); updatePool(dt, e); updateHalos(e); updateRain(dt, e); updatePortals(t, dt, e); updateDevices(t, e);
+      sectorMeshes.update(t); updatePool(dt, e); updateHalos(e); updateRain(dt, e); updatePortals(t, dt, e); updateDevices(t, e, dt);
       for (const m of movable.values()) { m.open += Math.sign(m.target - m.open) * Math.min(Math.abs(m.target - m.open), dt * .35); m.apply(m.open); }
       if (devicesExtra.treuil && crank) devicesExtra.treuil.rotation.x += dt * 6;
       if (beacon) { beacon.off += ((beaconOff ? 1 : 0) - beacon.off) * Math.min(1, dt * 2); const on = 1 - beacon.off;
@@ -409,6 +422,6 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
     setPower(zone, on) { power[zone] = !!on; },
     markDone(id, done = true) { const d = devices.get(id); if (d) d.done = done; },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
-    stats() { return { ...stats, sector: sectorMeshes.stats, portals: portals.length, movable: Object.fromEntries([...movable].map(([k, v]) => [k, +v.open.toFixed(2)])), beacon: beacon ? +(1 - beacon.off).toFixed(2) : null }; }
+    stats() { return { ...stats, neons:neons.stats(), sector: sectorMeshes.stats, portals: portals.length, movable: Object.fromEntries([...movable].map(([k, v]) => [k, +v.open.toFixed(2)])), beacon: beacon ? +(1 - beacon.off).toFixed(2) : null }; }
   };
 }

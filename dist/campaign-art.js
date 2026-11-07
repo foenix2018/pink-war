@@ -1,3 +1,6 @@
+import {createStairHardware} from './stair-hardware.js';
+import {replaceBakedNeonMesh} from './baked-neons.js';
+import {createLevelNeons} from './level-neons.js';
 import {createGroundOcclusion} from './world-shadows.js';
 import {createRlhEnvironment} from './rlh-environment.js';
 import {createCircuitSwitch} from './circuit-switch.js';
@@ -80,6 +83,7 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
   cutFenceOpenings(g);
   const mesh=new T.Mesh(g,maps[name]);mesh.name='Blender / '+name;mesh.castShadow=quality!=='low'&&name!=='amber';mesh.receiveShadow=true;root.add(mesh);
  }
+ const stairDetails=LEVEL1_MAP.stairs.map(s=>createStairHardware(T,root,s,{low:quality==='low',steps:24,railInset:.12,wall:true,materials:{steel:maps.steel,dark:maps.dark}}));
  const puddleMat=ownM(new T.MeshStandardMaterial({color:0x435854,roughness:.20,metalness:.30,transparent:true,opacity:.38,depthWrite:false}));
  for(const [x,z,sx,sz] of [[-3,47,2.5,1.5],[5,28,2,3],[21,8,2.8,1.8],[-2,64,1.5,2]]){const o=new T.Mesh(ownG(new T.CircleGeometry(1,18)),puddleMat);o.rotation.x=-Math.PI/2;o.position.set(x,.018,z);o.scale.set(sx,sz,1);root.add(o);}
  const boundary=createBoundaryFence(T,root,{material:maps.steel});const bounds=LEVEL1_MAP.bounds;boundary.setPolygon([{x:bounds.minX,z:bounds.minZ},{x:bounds.maxX,z:bounds.minZ},{x:bounds.maxX,z:bounds.maxZ},{x:bounds.minX,z:bounds.maxZ}]);
@@ -139,6 +143,7 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
  const carriage=new T.Group();root.add(carriage);const lift=LEVEL1_MAP.lifts[0];
  box(maps.steel,lift.x,-.10,lift.z,6,.20,6,carriage);
  for(const side of [-1,1]){box(maps.steel,lift.x+side*2.92,.55,lift.z,.10,1.1,6,carriage);box(maps.amber,lift.x+side*2.9,1.07,lift.z,.045,.07,5.9,carriage);}
+ const neons=createLevelNeons(T,root,{low:quality==='low',metal:maps.steel,back:maps.dark,materials:[maps.amber]});const bakedAmber=root.getObjectByName('Blender / amber');if(bakedAmber)replaceBakedNeonMesh(bakedAmber,neons);neons.meshes();neons.build();
  function updateLift(time){if(root.visible)carriage.position.y=liftHeightAt(lift,time);}
  function update(game,time=0){const s=game?.campaign;if(!s||!root.visible)return;stage=s.stage;currentObjective=s.objective;story.update(game);systems.update(game,time);courtyard.update(game);workshop.update(game);rlh.update(game);powerSwitch.setState(!['approach','power'].includes(stage));updateLift(game.time);boundary.update({...game.player,y:game.player.elevation+1.65},.55,1.2);
   const key=[stage,s.sibling,s.objective?.id,...s.archive].join('|');if(key!==lastState){lastState=key;const powered=!['approach','power'].includes(stage);computers.setPowered(powered);for(const screen of terminalDisplays)screen.material.color.setScalar(powered?.72:.30);investigation.mesh.material.color.setScalar(s.workshopReleased?.72:.20);
@@ -154,7 +159,8 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
   marker.visible=!!s.objective;if(s.objective){const p=s.objective.position;marker.position.set(p.x,p.y+3.2+Math.sin(time*2)*.05,p.z);marker.rotation.y=time*.5;}
  }
  function setVisible(enabled){root.visible=!!enabled;lastState='';if(enabled)pbr.start();}
- function stats(){return{visible:root.visible,contactOcclusion:contactOcclusion.stats(),courtyard:courtyard.stats(),workshop:workshop.stats(),ceilings:ceilings.stats(),rlh:rlh.stats(),computers:computers.stats(),systems:systems.stats(),story:story.stats(),stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:5,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:3,boundary:boundary.stats(),pbr:pbr.stats()};}
- function dispose(){if(disposed)return;disposed=true;contactOcclusion.dispose();pbr.dispose();powerSwitch.dispose();computers.dispose();dressing?.dispose();boundary.dispose();story.dispose();systems.dispose();courtyard.dispose();workshop.dispose();ceilings.dispose();rlh.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();for(const board of mountedInfoPanels)board.userData.dispose?.();root.clear();}
+ function stats(){return{neons:neons.stats(),visible:root.visible,contactOcclusion:contactOcclusion.stats(),courtyard:courtyard.stats(),workshop:workshop.stats(),ceilings:ceilings.stats(),rlh:rlh.stats(),computers:computers.stats(),systems:systems.stats(),story:story.stats(),stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:5,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:3,boundary:boundary.stats(),pbr:pbr.stats()};}
+ function dispose(){if(disposed)return;disposed=true;stairDetails.forEach(s=>s.dispose());neons.dispose();contactOcclusion.dispose();pbr.dispose();powerSwitch.dispose();computers.dispose();dressing?.dispose();boundary.dispose();story.dispose();systems.dispose();courtyard.dispose();workshop.dispose();ceilings.dispose();rlh.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();for(const board of mountedInfoPanels)board.userData.dispose?.();root.clear();}
+
  return{root,obstacles,update,setVisible,stats,dispose,updateLift,ready,materials:maps,dressing};
 }

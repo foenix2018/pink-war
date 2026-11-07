@@ -50,7 +50,7 @@ export function createWorkshopArt(T,parent,maps,{quality='auto',labels=true,equi
  }
  const cable=[[-63.5,.15,15.38],[-63.8,.05,14.4],[-64,.05,11.4],[-64,3.3,11.4],[-49,3.3,11.4],[-39,3.3,11.4]].map(p=>new T.Vector3(...p));
  a.add(new T.TubeGeometry(new T.CatmullRomCurve3(cable),32,.028,6,false),maps.dark);
- const control=createCircuitSwitch(T,root,{x:-63,y:.78,z:15.78,materials:equipment,batch:a});
+ const control=createCircuitSwitch(T,root,{x:-63,y:.78,z:15.78,materials:equipment,batch:a,variant:'rotary',label:'ATELIER / ÉNERGIE'});
  a.mount(root);a.setLevel(1);root.traverse(o=>{if(o.isMesh){o.castShadow=quality!=='low'&&!o.material.isMeshBasicMaterial;o.receiveShadow=true;}});
  let powered=false;
  return {root,update(game){powered=!!game.workshopReleased;control.setState(powered);},stats(){let triangles=0,draws=0;root.traverse(o=>{if(o.isMesh){draws++;triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;}});return {revision:'3.63.9',approaches:2,localSwitch:1,powered,triangles,draws};},dispose(){control.dispose();for(const panel of infoPanels){panel.userData.dispose?.();panel.removeFromParent();}root.removeFromParent();root.traverse(o=>o.geometry?.dispose());owned.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());}};

@@ -1,3 +1,6 @@
+import {createStairHardware} from './stair-hardware.js';
+import {createModernSwitch} from './modern-switch.js';
+import {createLevelNeons} from './level-neons.js';
 // COURONNE HELIX — dressing of the standalone level (couronne-layout.js holds the playable geometry).
 // Dusk on the heights of Vesper (Tome II §34): a white ceramic HELIX crown (§22 materials: clean ceramic and
 // polymer, grey glass, HELIX red used only on its marks) above a rain-washed neon city, with the phase anchor
@@ -114,8 +117,9 @@ export function createCouronneArt(T, scene, { quality = 'normal', camera } = {})
   const cube = new T.BoxGeometry(1, 1, 1);
 
   // Instanced boxes per material: [x, y(bottom), z, sx, sy, sz, rotY].
+  const neons=createLevelNeons(T,root,{low,floorHeights:[0,...FLOORS.map(f=>f.height).filter(Number.isFinite)],metal:M.metal,back:M.dark,materials:[M.helix,M.ice,M.amber,M.teal,M.warm]});
   const boxes = new Map();
-  const queue = (material, x, y, z, sx, sy, sz, ry = 0) => { if (!boxes.has(material)) boxes.set(material, []); boxes.get(material).push([x, y, z, sx, sy, sz, ry]); };
+  const queue = (material, x, y, z, sx, sy, sz, ry = 0) => { if(neons.box(material,[sx,sy,sz],[x,y+sy/2,z],[0,ry,0]))return; if (!boxes.has(material)) boxes.set(material, []); boxes.get(material).push([x, y, z, sx, sy, sz, ry]); };
   const flushBoxes = () => {
     const m = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), p = new T.Vector3(), s = new T.Vector3();
     // Thick boxes get rounded edges (soft-pieces.js); thin strips stay plain.
@@ -188,6 +192,7 @@ export function createCouronneArt(T, scene, { quality = 'normal', camera } = {})
       queue(M.white, s.x, s.base, z, s.halfWidth * 2, top - s.base, run + .01);
       if (!low || i % 2 === 0) queue(M.ice, s.x, top - .02, z + run / 2 - .03, s.halfWidth * 2 - .2, .03, .05);
     }
+    createStairHardware(T,root,s,{low,steps:count,railInset:.13,wall:true,materials:{steel:M.metal,dark:M.dark,tread:M.white}});
     queue(M.white, s.x, s.base, s.topZ - LANDING / 2, s.halfWidth * 2, s.height - s.base, LANDING);
     for (const side of [-1, 1]) for (let k = 0; k < SIDE_STEPS; k++) {
       const z2 = s.bottomZ - k * length / SIDE_STEPS, z1 = s.bottomZ - (k + 1) * length / SIDE_STEPS, top = stairHeight(s, z1) + 1.05;
@@ -328,10 +333,8 @@ export function createCouronneArt(T, scene, { quality = 'normal', camera } = {})
   // Consoles (lobby security, two phase stabilizers): screens whose colour reports their state.
   const consoles = new Map();
   for (const [id, x, z, y, text] of [['securite', 0, -29.4, HEIGHTS.parvis, 'SÉCURITÉ'], ['ancrage-ouest', -11, -45.9, HEIGHTS.ancrage, 'STAB. OUEST'], ['ancrage-est', 11, -45.9, HEIGHTS.ancrage, 'STAB. EST']]) {
-    const live = sign(text, 'VERROUILLÉ', '#ff5ac8', 512, 192), done = sign(text, 'DÉSACTIVÉ', '#9fefff', 512, 192);
-    const screen = new T.Mesh(new T.PlaneGeometry(1.7, .64), new T.MeshBasicMaterial({ map: live, transparent: true, toneMapped: false }));
-    screen.position.set(x, y + 1.62, z + .5); screen.rotation.x = -.35; add(screen);
-    consoles.set(id, { screen, live, done });
+    const control=createModernSwitch(T,root,{x,y:y+1.55,z:z+.52,scale:.9,id,variant:id==='securite'?'access':'rotary',label:text,onLabel:id==='securite'?'ACCÈS OUVERT':'DÉSYNCHRONISÉ',offLabel:'VERROUILLÉ',materials:{paint:M.white,metal:M.metal,dark:M.dark},low});
+    control.root.rotation.x=-.35;consoles.set(id,{control,done:false});
   }
 
   // ---------- The phase anchor ----------
@@ -408,7 +411,7 @@ export function createCouronneArt(T, scene, { quality = 'normal', camera } = {})
       if (rng() < .6) items.push([tw.x + (rng() - .5) * 18, tw.top - 12 - rng() * 60, tw.z + (rng() - .5) * 18, .8, 8 + rng() * 26, .8, neonColors[Math.floor(rng() * neonColors.length)]]);
       if (rng() < .5) items.push([tw.x, tw.top + .5, tw.z, 1.4, 1, 1.4, neonColors[3]]);
     }
-    const mesh = new T.InstancedMesh(cube, new T.MeshBasicMaterial({ toneMapped: false }), items.length), m = new T.Matrix4(), q = new T.Quaternion(), p = new T.Vector3(), s = new T.Vector3();
+    const mesh = new T.InstancedMesh(new T.CylinderGeometry(.5,.5,1,6), new T.MeshBasicMaterial({ toneMapped: false }), items.length), m = new T.Matrix4(), q = new T.Quaternion(), p = new T.Vector3(), s = new T.Vector3();
     items.forEach(([x, y, z, sx, sy, sz, color], i) => { mesh.setMatrixAt(i, m.compose(p.set(x, y, z), q, s.set(sx, sy, sz))); mesh.setColorAt(i, color); });
     mesh.instanceMatrix.needsUpdate = true; mesh.instanceColor.needsUpdate = true; mesh.computeBoundingSphere(); add(mesh); stats.instances += items.length;
   }
@@ -488,16 +491,17 @@ export function createCouronneArt(T, scene, { quality = 'normal', camera } = {})
   // Build everything queued.
   return {
     root, M,
-    build(collisions) { for (const o of collisions) dress(o); flushPosts(); flushBoxes(); },
+    build(collisions) { for (const o of collisions) dress(o); flushPosts(); neons.meshes(); neons.build(); flushBoxes(); },
     update(t, dt, cam = camera) {
       if (cam) { skyDome.position.copy(cam.position); sun.position.copy(cam.position).addScaledVector(sunDir, 800); sun.lookAt(cam.position); }
       for (const c of clouds) c.material.map.offset.x += c.userData.speed * dt;
+      for(const c of consoles.values())c.control.setState(c.done,{dt});
       for (const f of animated) f(t, dt);
     },
     openPortal,
     setGatesOpen(open) { gatesOpen = open; },
-    setConsole(id, done) { const c = consoles.get(id); if (c) c.screen.material.map = done ? c.done : c.live; },
+    setConsole(id, done) { const c = consoles.get(id); if (c) {c.done=!!done;c.control.setState(c.done);} },
     setAnchorPower(value) { anchorTarget = value; },
-    stats() { return { ...stats, portals: portals.length, anchorPower: +anchorPower.toFixed(2), gatesOpen }; }
+    stats() { return { ...stats, neons:neons.stats(), portals: portals.length, anchorPower: +anchorPower.toFixed(2), gatesOpen }; }
   };
 }

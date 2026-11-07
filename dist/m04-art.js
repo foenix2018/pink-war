@@ -1,3 +1,8 @@
+import {createFloorRampHardware} from './stair-hardware.js';
+import {createIndustrialLightBatch} from './industrial-light.js';
+import {createIndustrialDoor} from './industrial-door.js';
+import {createModernSwitch,switchVariant} from './modern-switch.js';
+import {createLevelNeons} from './level-neons.js';
 // MISSION 04 dressing: the JANUS energy station East at night (W04 palette: technical blue, maintenance yellow,
 // magenta reserved to the breach and its anchors). Arrival platform and medical train, inspection lock, reactor court
 // with its catwalk, drone hangar, server workshop, maintenance passage, the stabiliser ring around the violet breach
@@ -44,6 +49,8 @@ export function createM04Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
     ledBlue: glow(0x4aa8ff), ledCyan: glow(0x5fe0f0), ledYellow: glow(0xffc23a), ledMagenta: glow(0xff3fb4), ledRed: glow(0xff3328), ledWhite: glow(0xe8f2ff), screen: glow(0x2a7fd0)
   };
 
+  const neons=createLevelNeons(T,root,{low,floorHeights:[0,...FLOORS.map(f=>f.height).filter(Number.isFinite)],metal:M.steel,back:M.dark,materials:Object.entries(M).filter(([name])=>name.startsWith('led')).map(([,m])=>m)});
+
   // ---------- Merged geometry with world UVs ----------
   const geos = new Map();
   const bucket = m => { if (!geos.has(m)) geos.set(m, { p: [], n: [], u: [], i: [] }); return geos.get(m); };
@@ -55,6 +62,7 @@ export function createM04Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
   }
   function box(m, x1, x2, y1, y2, z1, z2, { skip = ['bottom'], top = m } = {}) {
     const a = x2 - x1, b = y2 - y1, c = z2 - z1, s = new Set(skip);
+    if(top===m&&neons.box(m,[a,b,c],[(x1+x2)/2,(y1+y2)/2,(z1+z2)/2]))return;
     if (!s.has('+x')) quad(m, [x2, y1, z2], [0, 0, -c], [0, b, 0]); if (!s.has('-x')) quad(m, [x1, y1, z1], [0, 0, c], [0, b, 0]);
     if (!s.has('+z')) quad(m, [x1, y1, z2], [a, 0, 0], [0, b, 0]); if (!s.has('-z')) quad(m, [x2, y1, z1], [-a, 0, 0], [0, b, 0]);
     if (!s.has('top')) quad(top, [x1, y2, z2], [a, 0, 0], [0, 0, -c]); if (!s.has('bottom')) quad(m, [x1, y1, z1], [a, 0, 0], [0, 0, c]);
@@ -67,7 +75,7 @@ export function createM04Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
     geos.clear();
   }
   const cube = new T.BoxGeometry(1, 1, 1), pieces = new Map();
-  const piece = (m, x, y, z, sx, sy, sz, ry = 0) => { if (!pieces.has(m)) pieces.set(m, []); pieces.get(m).push([x, y, z, sx, sy, sz, ry]); };
+  const piece = (m, x, y, z, sx, sy, sz, ry = 0) => { if(neons.box(m,[sx,sy,sz],[x,y+sy/2,z],[0,ry,0]))return; if (!pieces.has(m)) pieces.set(m, []); pieces.get(m).push([x, y, z, sx, sy, sz, ry]); };
   // Thick pieces get rounded edges (soft-pieces.js); thin strips, rails and LEDs stay plain.
   const softSplit = all => { const { soft, plain } = splitPieces(all); return [[softCube(T), soft], [cube, plain]].filter(([, l]) => l.length); };
   function flushPieces() {
@@ -96,9 +104,7 @@ export function createM04Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
   function buildDecks() {
     for (const f of FLOORS) {
       if (f.ramp) {
-        const len = f.ramp === 'x' ? f.x2 - f.x1 : f.z2 - f.z1, mid = new T.Vector3((f.x1 + f.x2) / 2, (f.from + f.to) / 2, (f.z1 + f.z2) / 2);
-        const deck = new T.Mesh(new T.BoxGeometry(f.ramp === 'x' ? Math.hypot(len, f.from - f.to) : f.x2 - f.x1, .16, f.ramp === 'z' ? Math.hypot(len, f.from - f.to) : f.z2 - f.z1), M.grid);
-        deck.position.copy(mid); const slope = Math.atan2(f.from - f.to, len); if (f.ramp === 'x') deck.rotation.z = slope; else deck.rotation.x = -slope; add(deck);
+        createFloorRampHardware(T,root,f,{low,materials:{steel:M.steel,dark:M.dark,tread:M.grid}});
       } else { box(M.grid, f.x1, f.x2, f.height - .16, f.height, f.z1, f.z2, { skip: [] }); box(M.yellow, f.x1, f.x2, f.height - .3, f.height - .16, f.z1, f.z2, { skip: ['top', 'bottom'] }); }
     }
     // Railings.
@@ -242,12 +248,9 @@ export function createM04Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
   // ---------- Doors ----------
   const doors = new Map();
   function buildDoors() {
-    for (const d of DOORS) {
-      const g = new T.Group(); add(g); const panels = [];
-      for (const dir of [-1, 1]) { const m = new T.Mesh(new T.BoxGeometry(d.axis === 'x' ? d.width / 2 : .12, d.height, d.axis === 'x' ? .12 : d.width / 2), d.style === 'hazard' ? M.yellow : M.white); m.position.set(d.axis === 'x' ? d.centre + dir * d.width / 4 : d.fixed, d.height / 2, d.axis === 'x' ? d.fixed : d.centre + dir * d.width / 4); g.add(m);
-        const band = new T.Mesh(new T.BoxGeometry(d.axis === 'x' ? d.width / 2 : .14, .14, d.axis === 'x' ? .14 : d.width / 2), d.style === 'hazard' ? M.black : M.ledBlue); band.position.copy(m.position); band.position.y = d.height * .55; g.add(band); panels.push({ m, band, dir, base: m.position.clone() }); }
-      const lamp = new T.Mesh(new T.BoxGeometry(.14, .14, .14), glow(0xff3328)); lamp.position.set(d.axis === 'x' ? d.centre + d.width / 2 + .4 : d.fixed + .3, d.height + .3, d.axis === 'x' ? d.fixed + .3 : d.centre + d.width / 2 + .4); g.add(lamp);
-      doors.set(d.id, { d, panels, lamp, state: d.open ? 'auto' : 'closed', open: 0 });
+    for(const d of DOORS){
+      const model=createIndustrialDoor(T,root,d,{low,materials:{paint:d.style==='hazard'?M.yellow:M.plate,steel:M.steel,dark:M.dark,glass:M.glass}});
+      doors.set(d.id,{d,model,state:d.open?'auto':'closed',open:0});
     }
   }
   function updateDoors(dt, p) {
@@ -255,8 +258,7 @@ export function createM04Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
       const { d } = door; let target = door.state === 'open' ? 1 : 0;
       if (door.state === 'auto') target = Math.hypot(p.x - (d.axis === 'x' ? d.centre : d.fixed), p.z - (d.axis === 'x' ? d.fixed : d.centre)) < 4.5 ? 1 : 0;
       door.open += Math.sign(target - door.open) * Math.min(Math.abs(target - door.open), dt * 1.4);
-      for (const pn of door.panels) for (const o of [pn.m, pn.band]) { if (d.axis === 'x') o.position.x = pn.base.x + pn.dir * d.width / 2 * door.open; else o.position.z = pn.base.z + pn.dir * d.width / 2 * door.open; }
-      door.lamp.material.color.set(door.state === 'closed' ? 0xff3328 : 0x3dff8a);
+      door.model.update(door.open,door.state==='closed');
     }
   }
 
@@ -268,12 +270,19 @@ export function createM04Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
       const gem = new T.Mesh(new T.OctahedronGeometry(.13, 0), glow(0xffb35c)); gem.position.y = 1.9; g.add(gem);
       const ring = new T.Mesh(new T.RingGeometry(.5, .58, 28), additive(0xffb35c, .35)); ring.rotation.x = -Math.PI / 2; ring.position.y = .03; g.add(ring);
       if (it.id.startsWith('doc-')) { const paper = new T.Mesh(new T.PlaneGeometry(.3, .4), std(0xe8e1cf, .9, 0, { side: T.DoubleSide })); paper.position.set(0, 1.15, 0); paper.rotation.x = -.3; g.add(paper); }
-      devices.set(it.id, { it, g, gem, ring, done: false, available: false });
+      let control=null;
+      if(["scanner", "relais-ouest", "relais-est", "stab-1", "stab-2", "stab-3"].includes(it.id)){
+        const mount=new T.Group();mount.rotation.y=Math.abs(it.x)>40?-Math.sign(it.x)*Math.PI/2:0;g.add(mount);
+        const post=new T.Mesh(new T.CylinderGeometry(.055,.085,1.12,8),M.dark);post.position.y=.56;mount.add(post);
+        control=createModernSwitch(T,mount,{y:1.35,z:.06,scale:.72,variant:switchVariant(it.id),id:it.id,label:it.id.replaceAll('-',' '),onLabel:/disj|stab|balise/.test(it.id)?'CIRCUIT ISOLÉ':'VALIDÉ',low});
+      }
+      devices.set(it.id, { it, g, gem, ring, control, done: false, available: false });
     }
   }
-  function updateDevices(t) {
+  function updateDevices(t, dt) {
     const blink = .5 + .5 * Math.sin(t * 5);
     for (const d of devices.values()) {
+      d.control?.setState(d.done,{available:d.available,dt});
       const doc = !!d.it.log, color = d.done ? 0x3dff8a : doc ? 0xe8f6ff : d.available ? 0xffb35c : 0x3a2a1a;
       d.gem.material.color.set(color); d.ring.material.color.set(color); d.gem.visible = d.available || doc || d.done; d.ring.visible = d.gem.visible && !d.done;
       d.gem.position.y = 1.9 + Math.sin(t * 2 + d.it.x) * .08; d.gem.rotation.y = t * 1.6; d.ring.material.opacity = d.available ? .25 + .35 * blink : .2;
@@ -305,14 +314,17 @@ export function createM04Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
 
   // ---------- Light pool ----------
   const sources = [];
-  for (const a of AREAS) if (a.roof) for (let x = a.x1 + 6; x < a.x2; x += 12) for (let z = a.z1 + 6; z < a.z2; z += 12) sources.push({ x, y: a.roof - .4, z, color: new T.Color(a.id === 'hangar' ? 0xdfe8ff : 0xcfe2ff), intensity: a.id === 'hangar' ? 26 : 12, range: a.id === 'hangar' ? 22 : 13 });
+  for (const a of AREAS) if (a.roof) for (let x = a.x1 + 6; x < a.x2; x += 12) for (let z = a.z1 + 6; z < a.z2; z += 12) sources.push({ indoor:true, x, y: a.roof - .4, z, color: new T.Color(a.id === 'hangar' ? 0xdfe8ff : 0xcfe2ff), intensity: a.id === 'hangar' ? 26 : 12, range: a.id === 'hangar' ? 22 : 13 });
   for (const [x, z] of [[-30, 50], [30, 50], [-30, 10], [30, 10], [-30, -24], [30, -24], [10, 93], [-16, 80], [16, 80], [-40, -60], [40, -60], [-12, -50]]) sources.push({ x, y: 9, z, color: new T.Color(0xffd9a0), intensity: 22, range: 24 });
   function buildFixtures() {
-    for (const s of sources) {
-      if (s.y > 8.5) { const pole = new T.Mesh(new T.CylinderGeometry(.1, .14, s.y, 8), M.steel); pole.position.set(s.x, s.y / 2, s.z); add(pole); piece(M.ledYellow, s.x, s.y, s.z, 1.4, .16, .5); }
-      else piece(M.ledWhite, s.x, s.y + .25, s.z, 1.4, .06, .3);
+    const indoor=[],outdoor=[];
+    for(const s of sources){
+      if(!s.indoor){const pole=new T.Mesh(new T.CylinderGeometry(.09,.14,s.y,8),M.steel);pole.position.set(s.x,s.y/2,s.z);add(pole);}
+      (s.indoor?indoor:outdoor).push({position:[s.x,s.y+.10,s.z],size:s.indoor?[1,.25,1]:[1.3,.24,.55],color:s.color});
     }
+    createIndustrialLightBatch(T,root,indoor,{kind:'highbay',low});createIndustrialLightBatch(T,root,outdoor,{kind:'sodium',low});
   }
+
   const POOL = low ? 3 : 6, pool = Array.from({ length: POOL }, () => { const l = new T.PointLight(0xffffff, 0, 14, 1.6); add(l, scene); return { l, s: null, level: 0 }; });
   function updatePool(dt, e) {
     const wanted = sources.map(s => ({ s, d: Math.hypot(s.x - e.x, s.y - e.y, s.z - e.z) / Math.sqrt(s.intensity / 10) })).filter(o => o.d < 28).sort((a, b) => a.d - b.d).slice(0, POOL).map(o => o.s), set = new Set(wanted);
@@ -342,10 +354,10 @@ export function createM04Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
     root, M, openPortal,
     build(obstacles) {
       buildGrounds(); buildDecks(); buildWalls(obstacles); for (const o of obstacles) dress(o); gantryStabilizer(); buildRelays(); buildBreach(); buildDoors(); buildDevices(); buildSigns(); buildFixtures();
-      flushGeometry(); flushPieces();
+      neons.meshes(); neons.build(); flushGeometry(); flushPieces();
     },
     update(t, dt, eye, player) {
-      const e = eye.position; updatePool(dt, e); updateBreach(t, dt); updatePortals(t, dt, e); updateDevices(t); if (player) updateDoors(dt, player);
+      const e = eye.position; updatePool(dt, e); updateBreach(t, dt); updatePortals(t, dt, e); updateDevices(t, dt); if (player) updateDoors(dt, player);
       for (const [, r] of relays) { r.lamps.forEach((l, k) => l.material.color.set(r.on ? (Math.sin(t * 6 + k) > 0 ? 0x3dff8a : 0x1a6a3a) : 0x3a1414)); r.coil.material.color.set(r.on ? 0x5fe0f0 : 0x203040); r.coil.rotation.z += dt * (r.on ? 4 : 0); }
       for (const f of animated) f(t, dt); signs.update(t);
     },
@@ -354,6 +366,6 @@ export function createM04Art(T, scene, { quality = 'normal', accent = 0xff6fb4 }
     breach(v) { breach.target = Math.max(0, Math.min(1, v)); },
     markDone(id, isDone = true) { const d = devices.get(id); if (d) d.done = isDone; if (id.startsWith('stab-')) { if (isDone) done.add(id); else done.delete(id); } },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
-    stats() { return { ...stats, portals: portals.length, breach: +breach.level.toFixed(2), signs: signs.stats().signs, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, neons:neons.stats(), portals: portals.length, breach: +breach.level.toFixed(2), signs: signs.stats().signs, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }

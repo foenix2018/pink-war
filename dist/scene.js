@@ -1,3 +1,4 @@
+import {createStairHardware} from './stair-hardware.js';
 import { createSentinel } from './sentinel-mk9.js';
 import {createWorldShadows,createGroundOcclusion} from './world-shadows.js';
 import * as T from './vendor/three.webgpu.min.js';
@@ -120,7 +121,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   const beforeArena=new Set(scene.children);
   const city = createFortifiedArena(T,scene,obstacles,COVER_WALLS,{quality:profile.artQuality,environment:surfaces.environment});
   const cityMats = city.materials;
-  const traversal = createTraversalArt(scene, obstacles, cityMats);
+  const traversal = createTraversalArt(scene, obstacles, cityMats, {low:profile.artQuality==='low'});
   for(const child of [...scene.children])if(!beforeArena.has(child))arenaRoot.add(child);
   const combatFX = createCombatFX(T, scene, palette);
   const laserFX=createLaserFX(T,scene,palette);
@@ -149,6 +150,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
       addWalkSurface(bridgeX, downZ, bridgeWidth, stairDepth, 0, downHeight);
     }
   }
+  for(const sign of [1,-1])createStairHardware(T,arenaRoot,{id:'arene-passerelle-'+sign,x:bridgeX,halfWidth:bridgeWidth/2,bottomZ:sign===1?CATWALK.end:-CATWALK.end+stairDepth,topZ:sign*CATWALK.landing,base:0,height:sign===1?CATWALK.height:CATWALK.height-stairRise},{low:profile.artQuality==='low',steps:sign===1?stairCount:stairCount-1,railInset:.35,materials:{steel:cityMats.steel,dark:cityMats.black}});
   const deckLength = CATWALK.landing * 2;
   batch(cityMats.black, [bridgeX, CATWALK.height - .06, 0], [bridgeWidth, .12, deckLength]);
   batch(cityMats.steel, [bridgeX, CATWALK.height + .012, 0], [bridgeWidth - .08, .035, deckLength - .08]);
@@ -157,14 +159,6 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     const railX = bridgeX + side * 2.55;
     // Invisible collision volume keeps the player on the walkway; visible bars follow the stairs.
     obstacles.push({ x: railX, z: 0, hx: .1, hz: CATWALK.end + .35, height: 2.55 });
-    for (let i = 0; i <= stairCount; i++) {
-      const upZ = CATWALK.end - i * stairDepth, upHeight = i * stairRise;
-      batch(cityMats.steel, [railX, upHeight + .41, upZ], [.13, .82, .14]);
-      if (i < stairCount) batch(cityMats.yellow, [railX, upHeight + .84, upZ - stairDepth / 2], [.09, .07, stairDepth - .02]);
-      const downZ = -CATWALK.landing - i * stairDepth, downHeight = (stairCount - i) * stairRise;
-      batch(cityMats.steel, [railX, downHeight + .41, downZ], [.13, .82, .14]);
-      if (i < stairCount) batch(cityMats.yellow, [railX, downHeight + .84, downZ - stairDepth / 2], [.09, .07, stairDepth - .02]);
-    }
     for (let z = -6; z <= 6; z += 2) {
       batch(cityMats.steel, [railX, CATWALK.height + .41, z], [.13, .82, .14]);
       if (z < 6) batch(cityMats.yellow, [railX, CATWALK.height + .84, z + 1], [.09, .07, 1.96]);
@@ -520,8 +514,8 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     campaignArt.setVisible(campaignActive&&!rangeActive);
     arenaRoot.visible=!campaignActive&&!rangeActive;
     obstacles.splice(0,obstacles.length,...(rangeActive?rangeObstacles:campaignActive?campaignArt.obstacles:arenaObstacles));
-    scene.fog.color.setHex(rangeActive?0x545045:campaignActive?0x847572:0x302030);
-    scene.fog.density=rangeActive?.0026:campaignActive?.0058:.0034;
+    scene.fog.color.setHex(rangeActive?0x222536:campaignActive?0x847572:0x302030);
+    scene.fog.density=rangeActive?.0045:campaignActive?.0058:.0034;
     if(rangeActive){rangeArt.enableMaterials();sun.color.setHex(0xffe9c9);renderer.toneMappingExposure=.93;hemisphere.intensity=0;sun.intensity=0;rim.intensity=0;moon.group.visible=false;sky.visible=false;}
     else {sky.visible=true;renderer.toneMappingExposure=campaignActive?.84:1.08;hemisphere.intensity=campaignActive?.62:.85;sun.intensity=campaignActive?1.36:1.25;rim.intensity=campaignActive?.18:1.08;}
     if(breachActive&&!rangeActive)styleBreach();

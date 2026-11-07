@@ -1,9 +1,11 @@
+import {createModernSwitch} from './modern-switch.js';
 import {BREACH_DRESSING} from './breach-dressing-layout.js';
 import {BREACH} from './breach-layout.js';
 import {createFunctionalProp} from './functional-props.js';
 
 export function createBreachDressing(T,root,api){
  const {box,cylinder,cable,collar,solidDetail,materials:m,ownG,ownM,ownT}=api;
+ const controls=[];
  const dynamic=[],screens=[],holograms=[],vapour=[],stateLights=[];
  const copper=ownM(new T.MeshStandardMaterial({color:0x976849,roughness:.52,metalness:.8}));
  const amber=ownM(new T.MeshBasicMaterial({color:0xf0b552,toneMapped:false}));
@@ -120,9 +122,9 @@ export function createBreachDressing(T,root,api){
  }
  for(const p of BREACH.relays){
   routeCable([[p.x,p.y+1.2,p.z-1.5],[p.x+Math.sign(p.x)*2,1,p.z-2],[Math.sign(p.x)*23,.13,p.z-3],[Math.sign(p.x)*23,.13,-27]],.13);
-  panel('relay-'+BREACH.relays.indexOf(p),p.x,1.18,p.z-.778,1.2,.56,{caption:'DISTRIBUTION / COUPLEUR',kind:'relay'});
+  controls.push({type:'relays',index:BREACH.relays.indexOf(p),control:createModernSwitch(T,root,{x:p.x,y:1.18,z:p.z-.76,scale:.75,variant:'breaker',label:'DISTRIBUTION / COUPLEUR',onLabel:'COUPLEUR ACTIF'})});
  }
- for(const [i,p] of BREACH.stabilizers.entries())panel('stabilizer-'+i,p.x,1.15,p.z-.778,1.2,.55,{caption:'CONFINEMENT / STABILISATEUR',kind:'stabilizer'});
+ for(const [i,p] of BREACH.stabilizers.entries())controls.push({type:'stabilizers',index:i,control:createModernSwitch(T,root,{x:p.x,y:1.15,z:p.z-.76,scale:.75,variant:'rotary',label:'STABILISATEUR '+(i+1),onLabel:'CIRCUIT ISOLÉ'})});
  // Trays in the low tunnel keep natural head clearance and expose a damaged junction.
  for(const z of [28,20,12,4]){solid(m.steel,-13,3.24,z,7,.13,.2);for(const x of [-16,-15.7,-15.4])routeCable([[x,3.1,z+3.5],[x,3.03,z],[x,3.1,z-3.5]],.035);}
  solid(m.dark,-17.4,2.3,12,.7,.8,.8);routeCable([[-17.2,2.7,12],[-16.6,2.5,11.7],[-16.3,1.65,11.2]],.035);
@@ -165,6 +167,7 @@ export function createBreachDressing(T,root,api){
  }
  let lastScreen=-1,lastKey='';
  function update(game,time){
+  for(const c of controls)c.control.setState(!!game.campaign?.[c.type]?.[c.index]);
   const p=game.player,key=[game.stage,...(game.relays||[]),...(game.stabilizers||[])].join('/');
   if(time-lastScreen>.75||key!==lastKey){screens.forEach(s=>paintScreen(s,game,time));lastScreen=time;lastKey=key;}
   for(const h of holograms)h.rotation.y=time*.26;
@@ -175,5 +178,5 @@ export function createBreachDressing(T,root,api){
   for(const indicator of stateLights)indicator.material=game.stage==='extraction'?green:m.blue;
   workLight.visible=Math.hypot(p.x+22,p.z-52)<35;tunnelLight.visible=Math.hypot(p.x+13,p.z-14)<29;
  }
- return {dynamic,screens,update,stats:()=>({...stats,steamSprites:vapour.length,sparkParticles:36,dustParticles:90,optionalLogs:4})};
+ return {dynamic,screens,update,dispose(){controls.forEach(c=>c.control.dispose());},stats:()=>({...stats,steamSprites:vapour.length,sparkParticles:36,dustParticles:90,optionalLogs:4})};
 }

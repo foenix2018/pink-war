@@ -1,3 +1,4 @@
+import {createLevelNeons} from './level-neons.js';
 // Pink Wars / M02 — deterministic environment detail pass.
 // Geometry is decorative: never added to collision arrays, never changes gameplay.
 // Shared instancing keeps hundreds of ceiling, road and facade details inexpensive.
@@ -11,6 +12,7 @@ export function createEnvironmentFinish(T,{root,scene,performance=false,accent=0
  const glowAmber=new T.MeshBasicMaterial({color:0xffc587,toneMapped:false});
  const glowAccent=new T.MeshBasicMaterial({color:accent,toneMapped:false});
  const perMaterial=new Map(),created=[],lights=[],textures=[];
+ const neons=createLevelNeons(T,root,{low:performance,metal,back:black,materials:[glowCyan,glowAmber,glowAccent]});
  // Tiny in-memory physical wear atlas (one shared GPU texture, no network).
  // Reused across steel, oxidized frames, ceiling rails and roof fixtures.
  const wearCanvas=document.createElement('canvas'),texSize=performance?128:256;
@@ -205,7 +207,8 @@ export function createEnvironmentFinish(T,{root,scene,performance=false,accent=0
  created.forEach(o=>{o.userData.noWorldShadow=true;});
  const geometry=new T.BoxGeometry(1,1,1),matrix=new T.Matrix4(),pos=new T.Vector3(),scale=new T.Vector3(),quat=new T.Quaternion();
  let count=0;
- for(const [material,list] of perMaterial){
+ for(const [material,all] of perMaterial){
+  const list=all.filter(([x,y,z,w,h,d])=>!neons.box(material,[w,h,d],[x,y,z]));
   if(!list.length)continue;
   const mesh=new T.InstancedMesh(geometry,material,list.length);
   mesh.name='M02 / finitions instanciées · '+material.uuid.slice(0,6);
@@ -213,8 +216,9 @@ export function createEnvironmentFinish(T,{root,scene,performance=false,accent=0
   list.forEach(([x,y,z,w,h,d],i)=>mesh.setMatrixAt(i,matrix.compose(pos.set(x,y,z),quat,scale.set(w,h,d))));
   mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();mesh.userData.noWorldShadow=true;root.add(mesh);created.push(mesh);count+=list.length;
  }
- return {stats:()=>({instances:count,objects:created.length,adverts:ads.length,ceilingZones:marketZones.length,extraLights:lights.length}),dispose(){
-   created.forEach(o=>o.removeFromParent());lights.forEach(o=>o.removeFromParent());
+ neons.meshes();neons.build();
+ return {stats:()=>({neons:neons.stats(),instances:count,objects:created.length,adverts:ads.length,ceilingZones:marketZones.length,extraLights:lights.length}),dispose(){
+   neons.dispose();created.forEach(o=>o.removeFromParent());lights.forEach(o=>o.removeFromParent());
    for(const tex of textures)tex.dispose();geometry.dispose();
    for(const m of [metal,black,ceramic,oxidized,floorPaint,glowCyan,glowAmber,glowAccent])m.dispose();
  }};

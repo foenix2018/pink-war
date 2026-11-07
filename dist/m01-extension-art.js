@@ -1,3 +1,6 @@
+import {upgradeLightBlocks} from './industrial-light.js';
+import {createModernSwitch,switchVariant} from './modern-switch.js';
+import {createLevelNeons,roundPoweredTubes} from './level-neons.js';
 import { createNeonFixture } from './neon-fixture.js';
 import {createLivedInDressing} from './vesper-lived-in.js';
 // M01 extension dressing: Caserne 07 (red-brick AEGIS rescue station of 2189: apparatus bay with the VSAV 07
@@ -84,6 +87,8 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     [['dark','black'],'rubber'],[['cardboard','paper'],'paper']
   ]) for (const key of keys) if (M[key]) details.surface(M[key],kind);
 
+  const neons=createLevelNeons(T,root,{low,metal:M.steel,back:M.dark,materials:[M.amber,M.cyan,M.green,M.redGlow,M.helix]});
+
   // ---------- Merged geometry (world-space UVs in metres / tile) ----------
   const geos = new Map();
   const bucket = m => { if (!geos.has(m)) geos.set(m, { p: [], n: [], u: [], i: [] }); return geos.get(m); };
@@ -100,6 +105,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
   }
   function box(m, x1, x2, y1, y2, z1, z2, { skip = ['bottom'], top = m } = {}) {
     const a = x2 - x1, b = y2 - y1, c = z2 - z1, s = new Set(skip);
+    if(top===m&&neons.box(m,[a,b,c],[(x1+x2)/2,(y1+y2)/2,(z1+z2)/2]))return;
     if (!s.has('+x')) quad(m, [x2, y1, z2], [0, 0, -c], [0, b, 0]);
     if (!s.has('-x')) quad(m, [x1, y1, z1], [0, 0, c], [0, b, 0]);
     if (!s.has('+z')) quad(m, [x1, y1, z2], [a, 0, 0], [0, b, 0]);
@@ -119,7 +125,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     geos.clear();
   }
   const cube = new T.BoxGeometry(1, 1, 1), pieces = new Map();
-  const piece = (m, x, y, z, sx, sy, sz, ry = 0) => { if (!pieces.has(m)) pieces.set(m, []); pieces.get(m).push([x, y, z, sx, sy, sz, ry]); };
+  const piece = (m, x, y, z, sx, sy, sz, ry = 0) => { if(neons.box(m,[sx,sy,sz],[x,y+sy/2,z],[0,ry,0]))return; if (!pieces.has(m)) pieces.set(m, []); pieces.get(m).push([x, y, z, sx, sy, sz, ry]); };
   // Thick pieces get rounded edges (soft-pieces.js); thin strips, rails and LEDs stay plain.
   const softSplit = all => { const { soft, plain } = splitPieces(all); return [[softCube(T), soft], [cube, plain]].filter(([, l]) => l.length); };
   function flushPieces() {
@@ -212,6 +218,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
           for (const side of [-1, 1]) piece(M.steel, f.x + (alongZ ? 0 : side * .58), f.y - .045, f.z + (alongZ ? side * .58 : 0), alongZ ? .19 : .08, .1, alongZ ? .08 : .19);
         }
         if (kind === 'highbay') piece(M.dark, f.x, f.y + .18, f.z, .05, ROOM.remise.ceiling - f.y, .05); });
+      if(kind==='tube')roundPoweredTubes(T,mesh,{low});else upgradeLightBlocks(T,mesh,kind,{low});
       mesh.instanceMatrix.needsUpdate = true; mesh.instanceColor.needsUpdate = true; mesh.computeBoundingSphere(); add(mesh); stats.instances += list.length; fixtureMeshes.push({ mesh, list });
     }
   }
@@ -447,7 +454,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
       const part = (m, sx, sy, sz, px, py, pz) => { const mesh = new T.Mesh(new T.BoxGeometry(sx, sy, sz), m); mesh.position.set(px, py, pz); g.add(mesh); stats.meshes++; return mesh; };
       const lamp = new T.Mesh(new T.BoxGeometry(.07, .07, .04), new T.MeshBasicMaterial({ color: 0xffb35c, toneMapped: false })); g.add(lamp);
       const table = at.o && ['console', 'radio-table', 'map-table', 'reception', 'desk', 'terminal-desk'].includes(at.o.kind);
-      let moving = null;
+      let moving = null, control = null;
       if (it.id === 'doc-tableau') { const b = new T.Mesh(new T.PlaneGeometry(1.6, 1), new T.MeshStandardMaterial({ map: boardTex, roughness: .6 })); b.position.set(0, 1.6, .02); g.add(b); lamp.position.set(.85, 1.1, .03); }
       else if (it.id === 'doc-radio') { part(M.dark, .6, .35, .35, 0, at.top + .175, -.15); part(M.amber, .25, .06, .01, -.1, at.top + .25, .03); const ant = new T.Mesh(new T.CylinderGeometry(.01, .01, .9, 4), M.steel); ant.position.set(.22, at.top + .8, -.2); g.add(ant); lamp.position.set(.2, at.top + .3, .03); }
       else if (it.id === 'casier') { const doorLeaf = part(M.paintedMetal, .55, 1.7, .03, .3, 1.05, .32); doorLeaf.rotation.y = -1.1; const photo = new T.Mesh(new T.PlaneGeometry(.18, .13), M.paper); photo.position.set(.05, 1.4, .3); g.add(photo); lamp.position.set(-.3, 1.9, .05); }
@@ -459,18 +466,15 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
         else { paper.position.set(0, 1.45, .012); lamp.position.set(.22, 1.62, .02); lamp.scale.setScalar(.5); }
         g.add(paper);
       } else {
-        const big = ['demarreur', 'porte-remise'].includes(it.id);
-        part(it.id === 'deverrouillage' ? M.red : M.plate, big ? .8 : .45, big ? 1 : .6, .2, 0, 1.4, .1);
-        moving = part(it.id === 'deverrouillage' ? M.yellow : M.red, .06, .35, .06, big ? .25 : .12, 1.4, .24);
-        part(M.dark, big ? .4 : .2, .2, .01, -.1, 1.65, .21); lamp.position.set(big ? -.28 : -.14, 1.1, .21);
-        if (it.id === 'porte-remise') for (const [c, y] of [[M.green, 1.55], [M.redGlow, 1.25]]) part(c, .1, .1, .04, .05, y, .22);
+        control=createModernSwitch(T,g,{y:1.4,z:.08,scale:.75,variant:switchVariant(it.id),id:it.id,label:it.id.replaceAll('-',' '),low});lamp.visible=false;
       }
-      devices.set(it.id, { it, lamp, moving, done: false, available: false, turn: 0 });
+      devices.set(it.id, { it, lamp, moving, control, done: false, available: false, turn: 0 });
     }
   }
   function updateDevices(t, dt) {
     const blink = .5 + .5 * Math.sin(t * 5);
     for (const v of devices.values()) {
+      v.control?.setState(v.done,{available:v.available,dt});
       v.lamp.material.color.set(v.done ? 0x3dff8a : v.it.log ? (blink > .3 ? 0xfff2c8 : 0x6a6250) : v.available ? (blink > .5 ? 0xffb35c : 0x5a3a14) : 0x2a1a10);
       if (v.done && v.moving && v.turn < 1) { v.turn = Math.min(1, v.turn + dt * .8); if (v.it.id === 'gazole') v.moving.rotation.z = -v.turn * TAU * 2; else v.moving.rotation.x = -v.turn * 1.1; }
     }
@@ -522,7 +526,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     const blade = sign(signTex(['SECOURS'], { bg: '#160606', fg: '#ff4d3d', w: 128, h: 512 }), -79.2, 4.6, 92.5, Math.PI / 2, .6, 2.6, { lit: true }); piece(M.dark, -79.45, 3.2, 92.5, .3, 2.8, .7);
     animated.push(t => { blade.material.color.setScalar(Math.sin(t * 17) > .93 ? .35 : 1); });
     // Floor LED guide strips in the corridor (green on batteries, cyan on mains).
-    const strip = new T.Mesh(new T.BoxGeometry(.04, .02, 29.4), glow(0x3dff8a)); strip.position.set(-83.7, .03, 59); add(strip);
+    const strip = new T.Mesh(new T.BoxGeometry(.04, .02, 29.4), M.green); strip.position.set(-83.7, .03, 59); add(strip);
     const strip2 = strip.clone(); strip2.position.x = -80.3; add(strip2);
     animated.push(() => { const c = power.caserne ? 0x7fe7ff : 0x3dff8a; strip.material.color.set(c); });
     // Holographic city table at the dispatch room: Vesper's blocks over the paper map, live when the station has power.
@@ -566,7 +570,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
         if (!['bed','lockers','cabinet','rack','ari-rack','hose-rack'].includes(o.kind)) details.accessories(o);
       }
       buildFixtureMeshes(); buildDoors(); buildDevices(obstacles); buildSigns(); buildCyber();
-      flushGeometry(); flushPieces(); furnishings.finish(); stationGear.finish(); details.finish(); livedIn.build(obstacles);
+      neons.meshes(); neons.build(); flushGeometry(); flushPieces(); furnishings.finish(); stationGear.finish(); details.finish(); livedIn.build(obstacles);
     },
     update(t, dt, eye, player = eye.position) {
       updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt); details.update(power); livedIn.update(t,dt,power);
@@ -599,6 +603,6 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
     markDone(id, done = true) { const d = devices.get(id); if (d) { d.done = done; if (!done) { d.turn = 0; if (d.moving) d.moving.rotation.set(0, 0, 0); } } },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
     daylightAt,
-    stats() { return { ...stats, furniture: {...furnishings.stats}, stationEquipment: {...stationGear.stats}, details: details.stats(), livedIn: livedIn.stats(), power: power.caserne, adapt: +adapt.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, neons:neons.stats(), furniture: {...furnishings.stats}, stationEquipment: {...stationGear.stats}, details: details.stats(), livedIn: livedIn.stats(), power: power.caserne, adapt: +adapt.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }

@@ -1,3 +1,4 @@
+import {createNeonFixtures} from './neon-fixtures.js';
 import {Assembly,matrix,bevelBox} from './geo.js';
 import {segmentBox} from './game-logic.js';
 
@@ -36,7 +37,8 @@ export function createM01SiegeAmbiance(T,scene,{obstacles=[],performance=false}=
  const steel=material(0x616875,.48,.68),dark=material(0x171d26,.68,.4),cloth=material(0x6e2946,.92,.02);
  cloth.side=T.DoubleSide;cloth.forceSinglePass=true;cloth.color.setHex(0xffffff);cloth.emissive.setHex(0x381020);cloth.emissiveIntensity=.25;
  const pink=new T.MeshBasicMaterial({color:0xff447f,toneMapped:false}),ivory=new T.MeshBasicMaterial({color:0xffd6a5,toneMapped:false}),blue=new T.MeshBasicMaterial({color:0xa7d9ff,toneMapped:false});owned.push(pink,ivory,blue);
- const box=(m,s,p,r=[0,0,0])=>{const g=bevelBox(...s,.028,1);a.add(g,m,matrix(p,r),false);g.dispose();};
+ const neons=createNeonFixtures(T,root,{low,metal:steel,back:dark,distantThreshold:100});
+ const box=(m,s,p,r=[0,0,0])=>{if(m===pink||m===ivory||m===blue){neons.panel(s,p,r,m.color.getHex());return;}const g=bevelBox(...s,.028,1);a.add(g,m,matrix(p,r),false);g.dispose();};
  const rod=(m,p,q,r=.04)=>{const u=new T.Vector3(...p),v=new T.Vector3(...q),d=v.clone().sub(u),g=new T.CylinderGeometry(r,r,d.length(),8);
   const transform=new T.Matrix4().compose(u.add(v).multiplyScalar(.5),new T.Quaternion().setFromUnitVectors(new T.Vector3(0,1,0),d.normalize()),new T.Vector3(1,1,1));a.add(g,m,transform,false);g.dispose();};
  const canvas=(w,h,paint)=>{if(typeof document==='undefined')return null;const c=document.createElement('canvas');c.width=w;c.height=h;paint(c.getContext('2d'),w,h);const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;textures.push(t);return t;};
@@ -62,7 +64,7 @@ export function createM01SiegeAmbiance(T,scene,{obstacles=[],performance=false}=
  const practical=[];
  for(const [x,y,z,yaw] of lamps){const cos=Math.cos(yaw),sin=Math.sin(yaw);
   box(dark,[1.1,.28,.22],[x,y,z],[0,yaw,0]);box(steel,[1.24,.07,.29],[x,y+.15,z],[0,yaw,0]);
-  for(let i=0;i<5;i++){const d=(i-2)*.17;box(pink,[.13,.10,.025],[x+cos*d+sin*.125,y,z-sin*d+cos*.125],[0,yaw,0]);}
+  box(pink,[.82,.10,.025],[x+sin*.125,y,z+cos*.125],[0,yaw,0]);
   const at=[x+sin*.4,y-.15,z+cos*.4];halo(at,3.2);practical.push({at,color:0xff397a,intensity:32,distance:15});
  }
  // Warm AEGIS lamps mark the starting court and the accessible archive entrance.
@@ -88,7 +90,7 @@ export function createM01SiegeAmbiance(T,scene,{obstacles=[],performance=false}=
   for(const side of [-1,1]){box(pink,[5.5,.65,.04],[x,h,z+side*3.02]);box(pink,[.04,.65,5.5],[x+side*3.02,h,z]);}
   rod(steel,[x,h+1,z],[x,h+5,z],.065);halo([x,h+5,z],2.4);
  }
- a.build(root);for(const item of a.items)item.geometry.dispose();a.items.length=0;
+ neons.build();a.build(root);for(const item of a.items)item.geometry.dispose();a.items.length=0;
  const puddles=new T.Group();puddles.name='Reflets humides extérieurs';root.add(puddles);
  const wet=material(0x2d3039,.2,.25),wetGeo=new T.CircleGeometry(1,low?18:28);
  const wetPos=wetGeo.attributes.position;for(let i=1;i<wetPos.count;i++){const f=.82+Math.sin(i*7.13)*.13;wetPos.setXY(i,wetPos.getX(i)*f,wetPos.getY(i)*f);}wetGeo.computeVertexNormals();
@@ -161,7 +163,7 @@ export function createM01SiegeAmbiance(T,scene,{obstacles=[],performance=false}=
  }
  const stat={revision:'m01-siege-01',searchlights:beams.length,banners:banners.length,watchPosts:4,practicals:practical.length,puddles:pools.length,rainParticles:count,maxDynamicLights:pointLights.length+1,addedColliders:0,meshes:0,triangles:0};
  root.traverse(o=>{if(o.isMesh){stat.meshes++;stat.triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3*(o.isInstancedMesh?o.count:1);o.castShadow=false;o.receiveShadow=!o.material.isMeshBasicMaterial;}});
- return {root,update,stats:()=>({...stat,covered,duskWeight:weight,dynamicLights:pointLights.filter(l=>l.visible).length+Number(search.visible)}),
-  dispose(){if(disposed)return;disposed=true;root.removeFromParent();if(skySource){scene.background=skySource;scene.environment=environmentSource;}
+ return {root,update,stats:()=>({...stat,neons:neons.stats(),covered,duskWeight:weight,dynamicLights:pointLights.filter(l=>l.visible).length+Number(search.visible)}),
+  dispose(){if(disposed)return;disposed=true;neons.dispose();root.removeFromParent();if(skySource){scene.background=skySource;scene.environment=environmentSource;}
    stormSky?.dispose();stormReflection?.dispose();const geometries=new Set();root.traverse(o=>{if(o.geometry)geometries.add(o.geometry);});for(const g of geometries)g.dispose();for(const m of owned)m.dispose();for(const t of textures)t.dispose();}};
 }

@@ -1,6 +1,6 @@
 import {createTouchOrbit} from './touch-orbit.js';
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, starterWeaponIndex, weaponCycleOrder, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
-import { createScene } from './scene.js?v=20261107-portal-laser-gates';
+import { createScene } from './scene.js?v=20261107-environment-release';
 import {createRobotShutdownAudio} from './enemy-shutdown-audio.js';
 import {createPortalLaserController} from './portal-laser-audio.js';
 import { VRController } from './vr.js';
@@ -786,6 +786,15 @@ function bindCanvas() {
   if (canvas.dataset.controlsBound) return;
   canvas.dataset.controlsBound = 'true';
   canvas.addEventListener('contextmenu',e=>e.preventDefault());
+  // Consume a real screen touch before mouse fire, pointer lock or touch-look.
+  canvas.addEventListener('pointerdown',e=>{
+    if(phase!=='playing'||game?.mode!=='training'||vr.mode==='xr'||rangeArmoryMenu?.isOpen||e.button>0)return;
+    const rect=canvas.getBoundingClientRect(),locked=document.pointerLockElement===canvas;
+    const pointer=new world.T.Vector2(locked?0:(e.clientX-rect.left)/rect.width*2-1,locked?0:1-(e.clientY-rect.top)/rect.height*2);
+    const ray=new world.T.Raycaster();world.camera.updateMatrixWorld();ray.setFromCamera(pointer,world.camera);
+    const hit=game.terminalTarget(ray.ray.origin,ray.ray.direction);
+    if(hit&&game.openRangeTerminal(hit.terminal.id)){e.preventDefault();e.stopImmediatePropagation();syncRangeArmory();}
+  },{capture:true});
   canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===0&&phase==='playing'){firingPointers.add(e.pointerId);firePressQueued=true;audioReady();if(vr.mode==='off'&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch(()=>{});}});
   canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===2&&phase==='playing'){e.preventDefault();jumpQueued=true;audioReady();if(vr.mode==='off'&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch(()=>{});}});
   canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===1&&phase==='playing'){e.preventDefault();meleeQueued=true;}});

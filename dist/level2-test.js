@@ -1,3 +1,5 @@
+import {createStairHardware} from './stair-hardware.js';
+import {createLevelNeons} from './level-neons.js';
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import {assistedAim,firingView} from './aim-assist.js';
 import {sightPoint} from './sight-line.js';
@@ -294,7 +296,7 @@ function stairsAndSkybridges(){
   solid(eastX,h/2,z,2.55,h,step+.012,materials.iron,false);
   solid(eastX,h+.012,z,2.55,.028,step,materials.warning,false);
   walkway(eastX,z,2.55,step+.06,h,'east-stair-'+i);
-  if(i%6===0)for(const side of [-1,1])beam([eastX+side*1.23,h+.02,z],[eastX+side*1.23,h+1.10,z],.045,materials.iron);
+
  }
  solid(eastX,11.87,-12.5,2.9,.26,12,materials.road,false);
  walkway(eastX,-12.5,2.9,12,12,'upper-east');
@@ -313,6 +315,8 @@ function stairsAndSkybridges(){
   solid(westX,h+.012,z,2.55,.03,step,materials.warning,false);
   walkway(westX,z,2.55,step+.07,h,'west-stair-'+i);
  }
+ createStairHardware(T,root,{id:'m02-est',x:eastX,halfWidth:1.275,bottomZ:16.1,topZ:16.1-upN*step,height:12},{low:low(),steps:upN,materials:{steel:materials.iron,dark:materials.black}});
+ createStairHardware(T,root,{id:'m02-ouest',x:westX,halfWidth:1.275,bottomZ:-19.7-(upN-1)*step,topZ:-19.7,height:12-rise},{low:low(),steps:upN-1,materials:{steel:materials.iron,dark:materials.black}});
  // Optional level +25 m to make the planned three vertical layers tangible.
  const roofX=-6.7,roofRise=13/72;
  for(let i=0;i<72;i++){
@@ -321,6 +325,7 @@ function stairsAndSkybridges(){
   solid(roofX,h+.01,z,2.4,.03,.36,materials.iron,false);
   walkway(roofX,z,2.4,.40,h,'roof-stair-'+i);
  }
+ createStairHardware(T,root,{id:'m02-toit',x:roofX,halfWidth:1.2,bottomZ:-19.8,topZ:-19.8-72*.36,base:12,height:25},{low:low(),steps:72,materials:{steel:materials.iron,dark:materials.black}});
  solid(-9,24.85,-51,15,.30,13.5,materials.road,false);
  walkway(-9,-51,15,13.5,25,'roof');
  for(let z=-57;z<-44;z+=2){
@@ -429,7 +434,9 @@ function createEnvironment(){
  street();blockBuildings();stairsAndSkybridges();props();architecture.decorate();
  // Visual-only pass: no collision changes or character/weapon assets touched.
  environmentFinish=createEnvironmentFinish(T,{root,scene,performance:low(),accent:characterId==='lylu'?0x69b7ff:0xff63af});
- warZone=createWarZone(T,root,materials,collisions,{performance:low()});weather();optimizeStaticBoxes();
+ warZone=createWarZone(T,root,materials,collisions,{performance:low()});weather();
+ const neons=createLevelNeons(T,root,{low:low(),metal:materials.iron,back:materials.dark,materials:[materials.cyan,materials.amber,materials.red,materials.rose,materials.blue,materials.white]});
+ neons.meshes();neons.build();root.userData.neons=neons.stats();optimizeStaticBoxes();
  // 3.70: the enclave of the covered market (north) and the transit tower (south) close the two ends of the street.
  try{extArt=createM02ExtensionArt(T,scene,{quality:low()?'low':'normal',accent:characterId==='lylu'?0x4da8ff:0xff4fa1});extArt.build(extensionObstacles());}
  catch(error){console.warn('M02 extension dressing degraded, the mission stays playable:',error);extArt=null;}
@@ -1046,7 +1053,7 @@ for(const name of ['pointerup','pointercancel']){
  window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
 }
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
-window.__PINK_M02=Object.freeze({snapshot:()=>({music:screenMusicSnapshot(),revision:'3.74.0',running,paused,view:xr?.active?'fps':view,playerVisible:playerRig?.model.root.visible||false,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,extension:extension&&{stage:extension.stage,hold:extension.hold,done:extension.done,reads:extension.reads,opened:extension.opened,groups:extension.groups(),interaction:extension.interaction()},subtitle:subtitles?.current||null,journal:journalOpen,dressing:extArt?.stats(),health:game?.player.hp,
+window.__PINK_M02=Object.freeze({snapshot:()=>({music:screenMusicSnapshot(),revision:'3.74.0',neons:root?.userData?.neons,running,paused,view:xr?.active?'fps':view,playerVisible:playerRig?.model.root.visible||false,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,extension:extension&&{stage:extension.stage,hold:extension.hold,done:extension.done,reads:extension.reads,opened:extension.opened,groups:extension.groups(),interaction:extension.interaction()},subtitle:subtitles?.current||null,journal:journalOpen,dressing:extArt?.stats(),health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
  shadowing:worldShadows?.stats(),backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
  effects:combatEffects?.stats(),armor:game&&{shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt}}),

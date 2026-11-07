@@ -1,10 +1,11 @@
+import {createStairHardware} from './stair-hardware.js';
 import * as T from './vendor/three.webgpu.min.js';
 import { Assembly } from './geo.js';
 import {createMapInfoPanel} from './world-info-panel.js';
 import { PLATFORMS, STAIRS, LIFTS, BRIDGES, BRIDGE_LANDINGS, BRIDGE_APPROACHES, bridgeSegments, liftHeightAt, createTraversalObstacles } from './world-layout.js';
 
 // Both geometry and collision use the same metre-based layout as locomotion.
-export function createTraversalArt(scene, obstacles, mats) {
+export function createTraversalArt(scene, obstacles, mats, {low=false}={}) {
   const root=new T.Group();root.name='Terraces, elevated bridges, ramps and freight lifts';scene.add(root);
   obstacles.push(...createTraversalObstacles());
   const fixed=new Assembly();
@@ -77,29 +78,15 @@ export function createTraversalArt(scene, obstacles, mats) {
     face.computeVertexNormals();
     const deck=new T.Mesh(face,mats.steel);deck.name='Rampe accessible '+stair.id;
     deck.material.side=T.DoubleSide;deck.receiveShadow=true;root.add(deck);
-    // Steel substructure, with a true continuous guide beam between landings.
+    createStairHardware(T,root,stair,{low,materials:{steel:mats.steel,dark:mats.black},mode:'ramp',steps:Math.ceil(length/.55)});
     for(const side of [-1,1]) {
       const edgeX=stair.x+side*(stair.halfWidth+.07);
-      rod(mats.rust,[edgeX,.045,near],[edgeX,rise-.04,far],.105);
-      rod(mats.steel,[edgeX,1.05,near],[edgeX,rise+1.05,far],.052);
-      rod(mats.steel,[edgeX,.54,near],[edgeX,rise+.54,far],.031);
-      const segments=Math.ceil(length/2);
-      for(let i=0;i<=segments;i++){
-        const t=i/segments,z=near-length*t,y=rise*t;
-        rod(mats.steel,[edgeX,y,z],[edgeX,y+1.06,z],.043);
-      }
       // Colliders track the incline and do not obstruct the entry/exit landings.
       const strips=Math.ceil(length/.45),depth=length/strips;
       for(let i=0;i<strips;i++){
         const u=(i+.5)/strips,z=near-u*length,y=rise*u;
         collision(edgeX,z,.075,depth/2,y,.95);
       }
-    }
-    // Tactile ribs rest on the incline rather than floating above displaced treads.
-    const strips=Math.ceil(length/.75);
-    for(let i=1;i<strips;i++){
-      const t=i/strips,z=near-length*t,top=rise*t;
-      block(mats.yellow,[width-.24,.012,.049],[stair.x,top+.018,z],.003);
     }
     // Close the gap beneath the incline with light supporting trusses.
     for(let i=1;i<5;i++){
@@ -210,20 +197,7 @@ export function createTraversalArt(scene, obstacles, mats) {
     const inclined=new T.Mesh(geo,mats.steel);
     inclined.name='Ramp to ruined footbridge';inclined.receiveShadow=true;
     root.add(inclined);
-    for(const side of [-1,1]){
-      const x=ramp.x+side*(ramp.halfWidth+.08);
-      rod(mats.rust,[x,.05,near],[x,rise-.15,far],.11);
-      rod(mats.steel,[x,1.1,near],[x,rise+1.1,far],.047);
-      rod(mats.steel,[x,.55,near],[x,rise+.55,far],.029);
-      for(let i=0;i<=Math.ceil(length/1.8);i++){
-        const t=i/Math.ceil(length/1.8),z=near-t*length,y=rise*t;
-        rod(mats.steel,[x,y+.1,z],[x,y+1.1,z],.045);
-      }
-    }
-    for(let i=1;i<Math.ceil(length/.8);i++){
-      const t=i/Math.ceil(length/.8),z=near-t*length,y=rise*t;
-      block(mats.yellow,[ramp.halfWidth*2-.3,.018,.05],[ramp.x,y+.019,z],.003);
-    }
+    createStairHardware(T,root,ramp,{low,materials:{steel:mats.steel,dark:mats.black},mode:'ramp',steps:Math.ceil(length/.55)});
     for(const t of [.28,.57,.82]){
       const z=near-t*length,y=rise*t;
       for(const side of [-1,1]){

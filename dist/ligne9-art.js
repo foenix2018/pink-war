@@ -1,3 +1,8 @@
+import {createStairHardware} from './stair-hardware.js';
+import {upgradeLightBlocks} from './industrial-light.js';
+import {createIndustrialDoor} from './industrial-door.js';
+import {createModernSwitch,switchVariant} from './modern-switch.js';
+import {createLevelNeons,roundPoweredTubes} from './level-neons.js';
 // LIGNE 9 — dressing of « La Ligne Noyée » (ligne9-layout.js holds the playable geometry).
 // A flooded 2189 metro station under the Halles-Basses: white metro tiles over a dirty lower band, worn floor
 // tiles, concrete, rusted steel (Poly Haven CC0 textures, assets/ligne9). Underground lighting is a pool of a
@@ -72,6 +77,7 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
   };
 
   // ---------- Merged world geometry (one mesh per material, UVs in metres / material tile) ----------
+  const neons=createLevelNeons(T,root,{low,metal:M.steel,back:M.dark,materials:[M.helix,M.cyan,M.amber,M.green]});
   const geos = new Map();
   const bucket = m => { if (!geos.has(m)) geos.set(m, { p: [], n: [], u: [], i: [] }); return geos.get(m); };
   // Quad from corner o along edges U and V (normal U × V); UVs are the world position along U and V.
@@ -112,7 +118,7 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
 
   // Instanced unit boxes for small repeated dressing: [x, y(bottom), z, sx, sy, sz, rotY].
   const cube = new T.BoxGeometry(1, 1, 1), boxes = new Map();
-  const piece = (m, x, y, z, sx, sy, sz, ry = 0) => { if (!boxes.has(m)) boxes.set(m, []); boxes.get(m).push([x, y, z, sx, sy, sz, ry]); };
+  const piece = (m, x, y, z, sx, sy, sz, ry = 0) => { if(neons.box(m,[sx,sy,sz],[x,y+sy/2,z],[0,ry,0]))return; if (!boxes.has(m)) boxes.set(m, []); boxes.get(m).push([x, y, z, sx, sy, sz, ry]); };
   // Thick pieces get rounded edges (soft-pieces.js); thin strips, rails and LEDs stay plain.
   const softSplit = all => { const { soft, plain } = splitPieces(all); return [[softCube(T), soft], [cube, plain]].filter(([, l]) => l.length); };
   function flushPieces() {
@@ -293,6 +299,7 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
         if (kind === 'highbay') piece(M.dark, f.x, f.y + .18, f.z, .5, ROOM.pompes.ceiling - f.y - .18, .5);
         if (kind === 'sodium') { piece(M.dark, f.x + (f.x < 0 ? -.6 : .6), f.y, f.z, 1.3, .12, .14); }
       });
+      if(kind==='tube'||kind==='helixStrip')roundPoweredTubes(T,mesh,{low});else upgradeLightBlocks(T,mesh,kind,{low});
       mesh.instanceMatrix.needsUpdate = true; mesh.instanceColor.needsUpdate = true; mesh.computeBoundingSphere(); add(mesh); stats.instances += list.length;
       fixtureMeshes.push({ mesh, list });
     }
@@ -438,11 +445,7 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
       piece(M.yellow, s.x, top - .015, z + run / 2 - .04, s.halfWidth * 2 - .1, .02, .06);
     }
     box(M.floorTile, s.x - s.halfWidth, s.x + s.halfWidth, 0, HEIGHTS.rue, s.topZ - LANDING, s.topZ, { skip: ['bottom', 'top', '-x', '+x'] });
-    // Handrails along both cheek walls.
-    for (const side of [-1, 1]) {
-      const rail = new T.Mesh(new T.CylinderGeometry(.035, .035, Math.hypot(length, s.height) + .6, 8), M.steel);
-      rail.position.set(s.x + side * (s.halfWidth - .12), s.height / 2 + .95, (s.bottomZ + s.topZ) / 2); rail.rotation.x = Math.PI / 2 + Math.atan2(s.height, length); add(rail);
-    }
+    createStairHardware(T,root,s,{low,steps:count,wall:true,railInset:.12,materials:{steel:M.steel,dark:M.dark,tread:M.floorTile}});
   }
 
   // ---------- Props from the colliders ----------
@@ -604,30 +607,9 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
   const doors = new Map();
   const SPEED = { fire: 1.3, glass: 1.8, shutter: .45, grille: .7, lock: 1 / 45, lift: 1 };
   function buildDoors() {
-    for (const d of DOORS) {
-      const g = new T.Group(); root.add(g);
-      const across = d.axis === 'x', panels = [], w = d.width, h = d.height;
-      const leaf = (m, width, height, thick, offset) => { const mesh = new T.Mesh(new T.BoxGeometry(across ? width : thick, height, across ? thick : width), m); mesh.position.set(across ? d.centre + offset : d.fixed, height / 2, across ? d.fixed : d.centre + offset); g.add(mesh); stats.meshes++; return mesh; };
-      if (d.style === 'fire') {
-        const p = leaf(M.plate, w, h, .08, 0); p.userData = { slide: w, dir: 1, base: d.centre }; panels.push(p);
-        const bar = leaf(M.steel, w * .7, .06, .14, 0); bar.position.y = 1.05; bar.userData = { slide: w, dir: 1, base: d.centre }; panels.push(bar);
-      } else if (d.style === 'glass' || d.style === 'lift') {
-        for (const dir of [-1, 1]) { const p = leaf(d.style === 'glass' ? M.glass : M.plate, w / 2, h, .06, dir * w / 4); p.userData = { slide: w / 2, dir, base: d.centre + dir * w / 4 }; panels.push(p); }
-      } else if (d.style === 'shutter' || d.style === 'grille') {
-        const p = leaf(d.style === 'shutter' ? M.shutter : M.grid, w, h, .06, 0); p.userData = { lift: h - .25 }; panels.push(p);
-      } else if (d.style === 'lock') {
-        for (const dir of [-1, 1]) {
-          const p = leaf(M.rust, w / 2, h, .7, dir * w / 4); p.userData = { slide: w / 2 - .3, dir, base: d.centre + dir * w / 4 }; panels.push(p);
-          const stripe = leaf(hazard, .3, h, .74, dir * .15); stripe.userData = { slide: w / 2 - .3, dir, base: d.centre + dir * .15 }; panels.push(stripe);
-        }
-      }
-      // Status lamp beside gated doors.
-      let lamp = null;
-      if (!d.open) {
-        lamp = new T.Mesh(new T.BoxGeometry(.12, .12, .12), new T.MeshBasicMaterial({ color: 0xff3328, toneMapped: false }));
-        lamp.position.set(across ? d.centre + w / 2 + .35 : d.fixed + (d.fixed > 0 ? -.22 : .22), 1.5, across ? d.fixed + .22 : d.centre + w / 2 + .35); g.add(lamp);
-      }
-      doors.set(d.id, { d, panels, lamp, state: d.open ? 'auto' : 'closed', open: 0 });
+    for(const d of DOORS){
+      const model=createIndustrialDoor(T,root,d,{low,materials:{paint:d.style==='lock'?M.rust:d.style==='shutter'?M.shutter:M.plate,steel:M.steel,dark:M.dark,glass:M.glass}});
+      doors.set(d.id,{d,model,state:d.open?'auto':'closed',open:0});
     }
   }
   function updateDoors(dt, player) {
@@ -639,12 +621,7 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
       else if (door.state === 'auto') { const dx = d.axis === 'x' ? player.x - d.centre : player.x - d.fixed, dz = d.axis === 'x' ? player.z - d.fixed : player.z - d.centre; target = Math.hypot(dx, dz) < 4.2 ? 1 : 0; }
       const speed = door.state === 'opening' ? SPEED.lock : (SPEED[d.style] || 1) * (d.style === 'lock' ? 12 : 1);
       door.open += Math.sign(target - door.open) * Math.min(Math.abs(target - door.open), dt * speed);
-      for (const p of door.panels) {
-        const u = p.userData;
-        if (u.lift) p.position.y = d.height / 2 + u.lift * door.open;
-        else if (d.axis === 'x') p.position.x = u.base + u.dir * u.slide * door.open; else p.position.z = u.base + u.dir * u.slide * door.open;
-      }
-      if (door.lamp) door.lamp.material.color.set(door.state === 'closed' ? 0xff3328 : door.state === 'opening' ? 0xffb35c : 0x3dff8a);
+      door.model.update(door.open,door.state==='closed');
     }
   }
 
@@ -727,7 +704,7 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
       g.position.set(at.x, 0, at.z); g.rotation.y = at.yaw; root.add(g);
       const part = (m, sx, sy, sz, px, py, pz) => { const mesh = new T.Mesh(new T.BoxGeometry(sx, sy, sz), m); mesh.position.set(px, py, pz); g.add(mesh); stats.meshes++; return mesh; };
       const lamp = new T.Mesh(new T.BoxGeometry(.07, .07, .04), new T.MeshBasicMaterial({ color: 0xffb35c, toneMapped: false })); g.add(lamp);
-      let moving = null;
+      let moving = null, control = null;
       const onTable = at.o && ['desk', 'table', 'stall'].includes(at.o.kind);
       if (it.log) {
         const paper = new T.Mesh(new T.PlaneGeometry(.34, .46), new T.MeshStandardMaterial({ map: paperTex(it.label.replace(/^LIRE (L’|LE |LA )?/, ''), seed++), roughness: .9, side: T.DoubleSide }));
@@ -751,22 +728,20 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
         gauges.rotation.x = -.9; gauges.position.set(0, at.top + .14, -.25); g.add(gauges); part(M.red, .14, .1, .14, .9, at.top + .05, .2); lamp.position.set(-1.1, at.top + .05, .3);
       } else {
         // Wall boxes: switchboard, relays, pump A panel, lock control.
-        const big = it.id === 'tableau' || it.id === 'ecluse';
-        part(M.plate, big ? 1.1 : .6, big ? 1.5 : .8, .22, 0, 1.4, .11);
-        const lever = part(M.red, .06, .4, .06, big ? .35 : .18, 1.4, .26); moving = lever;
-        part(M.dark, big ? .6 : .3, .25, .01, -.1, 1.75, .23); lamp.position.set(big ? -.35 : -.18, 1.05, .23);
+        control=createModernSwitch(T,g,{y:1.4,z:.08,scale:.82,variant:switchVariant(it.id),id:it.id,label:it.id.replaceAll('-',' '),low});lamp.visible=false;
         if (it.id.startsWith('relais')) { piece(M.dark, at.x, 0, at.z, .08, 1.0, .08); }
         if (it.id === 'pompe-a') {
           cylinderIn(g, M.rust, -.9, 1.5, .25, .3, 3);
           const plate = new T.Mesh(new T.PlaneGeometry(.6, .22), new T.MeshStandardMaterial({ map: signTex('POMPE A', { bg: '#c9a227', fg: '#16181a', w: 256, h: 96 }) })); plate.position.set(0, 2.05, .23); g.add(plate);
         }
       }
-      devices.set(it.id, { it, g, lamp, moving, done: false, available: false, turn: 0 });
+      devices.set(it.id, { it, g, lamp, moving, control, done: false, available: false, turn: 0 });
     }
   }
   function cylinderIn(g, m, x, y, z, r, h) { const c = new T.Mesh(new T.CylinderGeometry(r, r, h, 14), m); c.position.set(x, y, z); g.add(c); stats.meshes++; return c; }
   function updateDevices(t, dt) {
     for (const v of devices.values()) {
+      v.control?.setState(v.done,{available:v.available,dt});
       const blink = .5 + .5 * Math.sin(t * 5);
       v.lamp.material.color.set(v.done ? 0x3dff8a : v.it.log ? 0xfff2c8 : v.available ? (blink > .5 ? 0xffb35c : 0x5a3a14) : 0x2a1a10);
       if (v.it.log && !v.done) v.lamp.material.color.set(blink > .3 ? 0xfff2c8 : 0x6a6250);
@@ -928,7 +903,7 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
       placeFixtures(); buildRooms(); buildWalls(collisions); buildStairs();
       for (const o of collisions) dress(o);
       buildFixtureMeshes(); buildDoors(); buildWater(); buildFlood(); buildDevices(collisions); buildSigns();
-      flushGeometry(); flushPieces();
+      neons.meshes();neons.build();flushGeometry(); flushPieces();
     },
     update(t, dt, eye = camera, player = eye.position) {
       updateLights(t, dt, eye.position); updateAmbient(dt, eye.position); updateDoors(dt, player); updateWater(t, dt); updateDevices(t, dt);
@@ -951,6 +926,6 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
     // Is the place dark enough to want the head lamp?
     dark(x, z) { const r = ROOM[roomAt(x, z)]; if (!r) return true; if (r.id === 'rue' || r.id === 'chambre') return false; return (r.id === 'tunnel' ? power.tunnel : power.station) !== 'secours'; },
-    stats() { return { ...stats, power: { ...power }, lights: pool.filter(s => s.fixture).length, portals: portals.length, anchor: +anchorPower.toFixed(2), flooding, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])), water: Object.fromEntries([...waters].map(([k, v]) => [k, +v.level.toFixed(2)])) }; }
+    stats() { return { ...stats, neons:neons.stats(), power: { ...power }, lights: pool.filter(s => s.fixture).length, portals: portals.length, anchor: +anchorPower.toFixed(2), flooding, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])), water: Object.fromEntries([...waters].map(([k, v]) => [k, +v.level.toFixed(2)])) }; }
   };
 }

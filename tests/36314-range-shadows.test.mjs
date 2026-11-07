@@ -10,7 +10,8 @@ test('indoor maps cover the booth and all target distances, with a compact aggre
   for(const z of [22,7,-20,-42,-47])assert.ok(lamps.some(l=>Math.abs(l.position.z-z)<13),'a local ceiling fixture reaches z='+z);
   assert.ok(lamps.every(l=>l.position.y<4.9&&l.shadow.camera.far===34&&!l.shadow.autoUpdate));
   const renderer={shadowMap:{}};art.shadows.setActive(true,renderer);assert.ok(lamps.every(l=>l.castShadow));
-  for(const name of ['Tablette de préparation','Séparateur entre deux postes','Boîtier de commande des cibles']){const mesh=art.root.children.find(n=>n.name===name);assert.equal(mesh.castShadow,true);assert.equal(mesh.receiveShadow,true);}
+  for(const name of ['Tablette de préparation','Séparateur entre deux postes']){const mesh=art.root.children.find(n=>n.name===name);assert.equal(mesh.castShadow,true);assert.equal(mesh.receiveShadow,true);}
+  const control=art.root.children.find(n=>n.userData.switchVariant==='touch');assert.ok(control,'physical target console exists');const housings=[];control.traverse(n=>{if(n.isMesh&&n.material.isMeshStandardMaterial)housings.push(n);});assert.ok(housings.length>0);assert.ok(housings.every(n=>n.castShadow&&n.receiveShadow),'modern console housing participates in the cached room shadows');
   assert.ok(art.shadows.occlusion.stats().boxes>=10);assert.equal(art.shadows.occlusion.stats().draws,1);
   art.shadows.setActive(false);assert.ok(lamps.every(l=>!l.castShadow));assert.equal(art.shadows.occlusion.root.visible,false);art.dispose();
  }

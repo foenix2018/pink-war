@@ -31,7 +31,7 @@ export function createCourtyardArt(T,parent,maps,{quality='auto',labels=true}={}
  sign(-35.5,2.1,62,['TRIAGE / ACCÈS TECHNIQUE','CIRCUIT ISOLÉ · ENTRÉE EST'],3.3);
  sign(5,2.1,76,['ANNEXE DES ARCHIVES','POSTE DE SECOURS / HORS RÉSEAU'],3.4);
  for(const c of LEVEL1_MAP.courtyard.controls){
-  switches.push(createCircuitSwitch(T,root,{x:c.x,y:.86,z:c.z-.20,batch:assembly,materials:{paint:finishes.paint,metal:finishes.steel,rubber:finishes.rubber,dark:maps.dark}}));
+  switches.push(createCircuitSwitch(T,root,{x:c.x,y:.86,z:c.z-.20,variant:'touch',label:'SECOURS / ISOLEMENT',onLabel:'CIRCUIT ISOLÉ',offLabel:'SOUS TENSION',batch:assembly,materials:{paint:finishes.paint,metal:finishes.steel,rubber:finishes.rubber,dark:maps.dark}}));
   const points=[[c.x-.36,.15,c.z-.48],[c.x-.55,.055,c.z-.48],[c.x-1.1,.055,c.z-.98],[c.x-1.1,.055,c.z-1.98]];
   assembly.add(new T.TubeGeometry(new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p))),12,.035,6,false),finishes.rubber);
  }

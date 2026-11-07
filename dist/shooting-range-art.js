@@ -1,10 +1,16 @@
+import {createIndustrialLightBatch} from './industrial-light.js';
+import {createModernSwitch,switchVariant} from './modern-switch.js';
+import {createNeonFixtures} from './neon-fixtures.js';
+import {createCombatSurfaceTextures,metricSurfaceUV} from './combat-surface-textures.js';
 // Self-contained covered range for desktop, mobile and WebXR.
 // Existing local CC0 photo sets stream only when this scene is selected.
 import { targetPosition,TRAINING_BARRIER,RANGE_CONTROLS,TARGET_OUTLINE,RANGE_ARMORY,RANGE_WEAPON_SLOTS,RANGE_ARMORY_SLOTS } from './shooting-range.js';
 import {WEAPONS} from './game-logic.js';
 import {bevelBox} from './geo.js';
 import {createRangeMaterials} from './shooting-range-materials.js';
+import {createRangeSiegeArt} from './range-siege-art.js';
 import {createMapInfoPanel} from './world-info-panel.js';
+
 import {createRangeShadows} from './range-shadows.js';
 import {applyWorldShadows} from './world-shadows.js';
 
@@ -71,7 +77,7 @@ function rangeSurface(T,kind,repeatX=1,repeatY=1){
 function hazardStripes(T,repeat){
   if(typeof document==='undefined')return null;
   const w=256,h=64,canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
-  const c=canvas.getContext('2d');c.fillStyle='#e8b94a';c.fillRect(0,0,w,h);
+  const c=canvas.getContext('2d');c.fillStyle='#db277d';c.fillRect(0,0,w,h);
   c.fillStyle='#14181d';
   for(let x=-h;x<w+h;x+=64){c.beginPath();c.moveTo(x,h);c.lineTo(x+32,h);c.lineTo(x+32+h,0);c.lineTo(x+h,0);c.closePath();c.fill();}
   let seed=2741;const random=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
@@ -90,51 +96,61 @@ export function createShootingRangeArt(T,scene,options={}){
   const [floorMap,wallMap,metalMap,paddingMap,canopyMap]=textures;
   const hazardMap=hazardStripes(T,70);textures.push(hazardMap);
   // Lane partitions are 2.8 m panels: their own acoustic texture at that scale, not the 103 m ceiling's.
-  const partitionMap=rangeSurface(T,'padding',1,1);textures.push(partitionMap);
+  const partitionMap=rangeSurface(T,'metal',1,2);textures.push(partitionMap);
   const textured=(color,map,roughness,metalness,bumpScale)=>new T.MeshStandardMaterial({
     color,map,bumpMap:map,bumpScale,roughness,metalness
   });
   const mats={
-    floor:textured(0xc3bfb5,floorMap,.87,.025,.017),
-    wall:textured(0xc9c5ba,wallMap,.93,.025,.024),
-    metal:textured(0x9c9b91,metalMap,.4,.72,.004),
-    trim:textured(0x383832,metalMap,.65,.48,.006),
+    floor:textured(0x727d8a,floorMap,.37,.48,.017),
+    wall:textured(0x68707d,wallMap,.93,.025,.024),
+    metal:textured(0x8994a4,metalMap,.48,.38,.004),
+    trim:textured(0x414958,metalMap,.65,.28,.006),
     rust:textured(0xc7b5a0,metalMap,.82,.34,.012),
     target:textured(0xbdb4a1,metalMap,.77,.38,.008),
     scar:new T.MeshStandardMaterial({color:0x25231e,roughness:.96,metalness:.16,side:T.DoubleSide}),
     ready:new T.MeshBasicMaterial({color:0xefa84d}),
     live:new T.MeshBasicMaterial({color:0x8fbd76}),
-    yellow:new T.MeshBasicMaterial({color:0xefbe67}),
+    yellow:new T.MeshStandardMaterial({color:0xe8ad4e,roughness:.82}),
     rose:new T.MeshBasicMaterial({color:0xff7aae}),
-    cyan:new T.MeshBasicMaterial({color:0xaca58c}),
-    white:new T.MeshBasicMaterial({color:0xf5f6ec}),
+    cyan:new T.MeshBasicMaterial({color:0x59d8ff}),
+    white:new T.MeshStandardMaterial({color:0xf5f6ec,roughness:.9}),
     black:new T.MeshBasicMaterial({color:0x111923}),
-    red:new T.MeshStandardMaterial({color:0x9f5039,roughness:.86,metalness:.04}),
-    warning:new T.MeshBasicMaterial({color:0xffc74c}),
-    light:new T.MeshBasicMaterial({color:0xf5e7c8}),
-    padding:textured(0x49473d,paddingMap,.98,.01,.012),
-    canopy:textured(0x77736a,canopyMap,.88,.16,.019),
-    partition:textured(0x535246,partitionMap,.95,.05,.01),
-    hazard:new T.MeshStandardMaterial({color:0xffffff,map:hazardMap,emissive:0x3a2c08,roughness:.55,metalness:.12})
+    red:new T.MeshStandardMaterial({color:0xf13a99,roughness:.86,metalness:.04}),
+    warning:new T.MeshStandardMaterial({color:0xffc74c,roughness:.84}),
+    light:new T.MeshBasicMaterial({color:0xb9eaff}),
+    padding:textured(0x303a48,paddingMap,.98,.01,.012),
+    canopy:textured(0x3e485b,canopyMap,.88,.16,.019),
+    partition:textured(0x727d8b,partitionMap,.82,.18,.002),
+    hazard:new T.MeshStandardMaterial({color:0xffffff,map:hazardMap,emissive:0x341023,roughness:.55,metalness:.12})
   };
   // Indoor illumination: sunlight no longer reaches the range through the roof,
   // so a dedicated diffuse fill is necessary to see weapons and wall panels.
   const pbr=createRangeMaterials(T,mats,textures,options);
-  const indoorFill=new T.HemisphereLight(0xfff6eb,0xa5a098,.78);
+  const surfaces=createCombatSurfaceTextures(T,{low:!!options.low});
+  for(const [name,style] of [['metal','steel'],['trim','steel'],['partition','steel'],['canopy','corrugated']])surfaces.bind(mats[name],style);
+  const indoorFill=new T.HemisphereLight(0xb9d9ff,0x4c3350,1.55);
   indoorFill.name='Eclairage diffus du stand';
   indoorFill.userData.indoorFill=true;
   root.add(indoorFill);
-  root.add(new T.AmbientLight(0xf0eade,.28));
-  // Two broad, neutral task lights model the ceiling fixtures without blue sunlight indoors.
-  const key=new T.DirectionalLight(0xfff2df,.65);key.position.set(-5,4.5,23);key.target.position.set(0,0,10);root.add(key,key.target);
-  const fill=new T.DirectionalLight(0xe4e0d5,.35);fill.position.set(9,4,-44);fill.target.position.set(0,0,-12);root.add(fill,fill.target);
+  root.add(new T.AmbientLight(0xa2bddb,.43));
+  // Cool task lighting and a restrained rose fill establish the arsenal palette.
+  const key=new T.DirectionalLight(0xa6dfff,.75);key.position.set(-5,4.5,23);key.target.position.set(0,0,10);root.add(key,key.target);
+  const fill=new T.DirectionalLight(0xee81bd,.31);fill.position.set(9,4,-44);fill.target.position.set(0,0,-12);root.add(fill,fill.target);
   const shadowLights=[];
   for(const z of [25,4,-20,-44]){
-    const lamp=new T.SpotLight(0xfff0da,65,34,1.18,.55,2);lamp.name='Éclairage des travées';lamp.position.set(0,4.52,z);lamp.target.position.set(0,0,z);root.add(lamp,lamp.target);shadowLights.push(lamp);
+    const lamp=new T.SpotLight(0x9bdcff,55,34,1.18,.55,2);lamp.name='Éclairage des travées';lamp.position.set(0,4.52,z);lamp.target.position.set(0,0,z);root.add(lamp,lamp.target);shadowLights.push(lamp);
   }
+  const neons=createNeonFixtures(T,root,{low:!!options.low,metal:mats.metal,back:mats.trim});
   const obstacles=[];
   const box=(name,x,y,z,w,h,d,mat=mats.metal)=>{
-    const mesh=new T.Mesh(new T.BoxGeometry(w,h,d),mat);
+    const luminous=[mats.cyan,mats.yellow,mats.rose,mats.light,mats.warning].includes(mat);
+    if(luminous&&!/rétro-réfléchissantes/.test(name)){
+      neons.panel([w,h,d],[x,y,z],[0,0,0],mat===mats.cyan?0x27ceff:(mat===mats.yellow||mat===mats.warning)?0xffb52b:mat===mats.rose?0xff268e:0x8edfff,undefined,z>31?-1:null);
+      return null;
+    }
+    const geometry=new T.BoxGeometry(w,h,d);
+    if([mats.metal,mats.trim,mats.partition,mats.canopy].includes(mat))metricSurfaceUV(geometry,2);
+    const mesh=new T.Mesh(geometry,mat);
     mesh.name=name;mesh.position.set(x,y,z);mesh.receiveShadow=true;root.add(mesh);return mesh;
   };
   const collision=(x,z,w,d,y=0,h=3)=>obstacles.push({x,z,hx:w/2,hz:d/2,y,height:h,surface:'metal'});
@@ -165,12 +181,9 @@ export function createShootingRangeArt(T,scene,options={}){
   const signs=[],controlGroups=[];
   for(const c of RANGE_CONTROLS){
     pipe('Pied de commande',[c.x,0,c.z],[c.x,c.y-.13,c.z],.045,mats.metal);
-    const enclosure=box('Boîtier de commande des cibles',c.x,c.y,c.z,.27,.32,.16,mats.trim);
-    const button=new T.Mesh(new T.CylinderGeometry(.055,.055,.035,20),mats.ready);button.rotation.x=Math.PI/2;button.position.set(c.x,c.y-.025,c.z+.1);root.add(button);
-    const bezel=new T.Mesh(new T.TorusGeometry(.073,.012,8,24),mats.metal);bezel.position.set(c.x,c.y-.025,c.z+.111);root.add(bezel);
-    box('Plaquette interrupteur',c.x,c.y+.095,c.z+.087,.18,.033,.012,mats.white);
+    const control=createModernSwitch(T,root,{x:c.x,y:c.y,z:c.z,scale:.40,variant:'touch',label:'CIBLES / STAND',onLabel:'EXERCICE ACTIF',offLabel:'PRÊT AU TIR',low:!!options.low});
     sign('CIBLES','F / ACTION',c.x,c.y+.30,c.z+.10,.45,.14,'#d9cdb2');
-    controlGroups.push({enclosure,button});
+    controlGroups.push(control);
     collision(c.x,c.z,.20,.20,0,1.45);
   }
   // Replacement of the actual 3D signs, not an overlay on the player's HUD.
@@ -183,6 +196,7 @@ export function createShootingRangeArt(T,scene,options={}){
     });
     panel.position.set(x,y,z);if(z>34)panel.rotation.y=Math.PI;
     root.add(panel);signs.push({panel,glass:true});return panel;
+
   }
   // Professional qualification bay. Shooter stands BEHIND a continuous,
   // waist-height safety railing. The simulation also enforces the shooting
@@ -198,7 +212,7 @@ export function createShootingRangeArt(T,scene,options={}){
       box('Bandes rétro-réfléchissantes',x,1.035,z+.103,.1,.04,.015,mats.yellow);
     }
     collision(0,z,25.5,.22,0,1.13);
-    // Black-and-yellow safety marks are in the protected shooter area.
+    // Contrasting safety marks remain in the protected shooter area.
     for(let x=-12;x<=12;x+=1.3){
       box('Rayures de la ligne de sécurité',x,.025,20.12,.61,.018,.09,(Math.round(x*10)%2?mats.yellow:mats.warning));
     }
@@ -216,7 +230,7 @@ export function createShootingRangeArt(T,scene,options={}){
     }
   }
   for(const side of [-1,1]){
-    solid('Mur latéral',side*13.5,2.5,-13,.28,5.0,103,mats.wall);
+    solid('Mur latéral',side*13.5,1.40,-13,.28,2.8,103,mats.wall);
     box('Bande de sécurité',side*12.2,.015,-13,.12,.016,100,mats.yellow);
     // Repeating steel gantries give a recognizable indoor-training perspective.
     for(let z=16;z>=-58;z-=10){
@@ -241,12 +255,13 @@ export function createShootingRangeArt(T,scene,options={}){
       const x=lane*4.6;
       box('Rail de cible',x,3.5,z,3.65,.075,.09,mats.trim);
       // Overhead electronic distance indicator belongs to the downrange rig.
-      sign(distance,'ZONE DE CIBLES',x,3.27,z+.2,1.42,.35,'#f3c96a');
+      sign(distance,'ZONE DE CIBLES',x,3.27,z+.2,1.42,.35,'#75dfff');
     }
   }
   // Covered acoustic enclosure, visible on every lane. All ceiling components
   // remain above the unobstructed sight line; the safety rail is waist-height.
-  box('Plafond pare-balles acoustique',0,5.05,-13,27,.30,103,mats.canopy);
+  for(const side of [-1,1])box('Auvent latéral / ciel ouvert',side*10.6,5.05,-13,5.8,.22,103,mats.canopy);
+  box('Auvent de préparation arrière',0,5.05,32.5,15.4,.22,8,mats.canopy);
   for(let z=31;z>=-59;z-=8){
     box('Poutre du plafond',0,4.73,z,26.9,.23,.34,mats.metal);
     for(const y of [4.60,4.87])box('Semelle de poutre en I',0,y,z,26.9,.045,.49,mats.trim);
@@ -276,11 +291,17 @@ export function createShootingRangeArt(T,scene,options={}){
     const x=(lane+.5)*4.6;
     solid('Séparateur entre deux postes',x,1.39,21.30,.15,2.78,3.25,mats.partition);
     box('Cadre de protection du séparateur',x,2.8,21.30,.21,.09,3.31,mats.metal);
+    const upper=new T.Shape();upper.moveTo(-1.625,2.78);upper.lineTo(1.625,2.78);upper.lineTo(1.625,3.65);upper.lineTo(1.05,4.32);upper.lineTo(-1.625,4.32);upper.closePath();
+    const upperGeo=new T.ExtrudeGeometry(upper,{depth:.15,bevelEnabled:true,bevelThickness:.018,bevelSize:.018,bevelSegments:1,steps:1});
+    metricSurfaceUV(upperGeo,2);
+    const shoulder=new T.Mesh(upperGeo,mats.partition);shoulder.name='Cloison blindée / épaule chanfreinée';shoulder.rotation.y=-Math.PI/2;shoulder.position.set(x+.075,0,21.3);root.add(shoulder);
+    collision(x,21.3,.18,3.25,2.78,1.54);
+
     box('Bande LED séparateur',x,1.76,22.975,.035,.035,.07,mats.cyan);
   }
   // Behind the rear desks there is a marked access route, not an infinite room.
   for(const x of [-11.8,11.8])box('Marquage de circulation',x,.025,31,.06,.015,9,mats.yellow);
-  sign('STAND DE TIR','ACCES REGLEMENTE  /  5 COULOIRS',0,3.38,35.73,5.5,.75,'#ffd58b');
+  sign('STAND DE TIR','ACCES REGLEMENTE  /  5 COULOIRS',0,3.38,35.73,5.5,.75,'#ff5fac');
   // Secondary bullet-trap panels behind each drill distance.
   for(const z of [-61]){
     box('Blindage arrière des couloirs',0,2.55,z,25.6,4.45,.18,mats.wall);
@@ -294,7 +315,7 @@ export function createShootingRangeArt(T,scene,options={}){
   displayModels.name='Armes exposées / armoire du stand';
   collision(cabinet.x,cabinet.z,cabinet.width,cabinet.depth,0,cabinet.height);
   function cabinetBox(name,x,y,z,w,h,d,mat=mats.trim){
-    const mesh=new T.Mesh(bevelBox(w,h,d,Math.min(.025,w/5,h/5,d/5),2),mat);mesh.name=name;mesh.position.set(x,y,z);root.add(mesh);return mesh;
+    const mesh=new T.Mesh(metricSurfaceUV(bevelBox(w,h,d,Math.min(.025,w/5,h/5,d/5),2),2),mat);mesh.name=name;mesh.position.set(x,y,z);root.add(mesh);return mesh;
   }
   // Wider, reinforced steel rack: eight real bays, no overlapping long barrels.
   const rackWidth=cabinet.width,edgeX=rackWidth/2-.075;
@@ -332,8 +353,7 @@ export function createShootingRangeArt(T,scene,options={}){
   const armoryLamp=new T.SpotLight(0xffedcf,21,9,1.32,.6,2);
   armoryLamp.name='Projecteur du grand rack';armoryLamp.position.set(0,3.65,31.6);
   armoryLamp.target.position.set(0,cabinet.y,cabinet.z);armoryLamp.castShadow=false;root.add(armoryLamp,armoryLamp.target);
-  box('Boîtier du projecteur du rack',0,3.68,31.6,.9,.16,.3,mats.metal);
-  box('Lampe du grand rack',0,3.59,31.6,.76,.035,.24,mats.light);
+  const rackFixture=createIndustrialLightBatch(T,root,[{position:[0,3.65,31.6],size:[.9,.25,.5],color:0xffedcf}],{kind:'sodium',low:!!options.low});
   pipe('Suspente du projecteur de rack',[0,3.77,31.6],[0,4.9,31.6],.025,mats.trim);
   let armoryVersion=null;
   function clearArmoryModels(){for(const slot of displaySlots.values()){slot.traverse(n=>{if(n.isInstancedMesh)n.dispose();});slot.clear();}}
@@ -367,6 +387,9 @@ export function createShootingRangeArt(T,scene,options={}){
       }
     }
   }
+  const siege=createRangeSiegeArt(T,root,{low:!!options.low,metalMap,obstacles,surfaces,neons});
+  neons.build();
+  for(const name of ['floor','metal','trim','partition']){mats[name].envMap=siege.environment;mats[name].envMapIntensity=name==='floor'?.48:.38;}
   const shadows=createRangeShadows(T,{root,lights:shadowLights,obstacles,low:!!options.low});
   // Floor stays a walkable surface, never an X/Z blocking collider.
   const targetGroups=new Map();
@@ -374,11 +397,13 @@ export function createShootingRangeArt(T,scene,options={}){
   const shape=new T.Shape();TARGET_OUTLINE.forEach(([x,y],i)=>i?shape.lineTo(x,y+.94):shape.moveTo(x,y+.94));shape.closePath();
   const silhouette=new T.ExtrudeGeometry(shape,{depth:.035,bevelEnabled:true,bevelSize:.008,bevelThickness:.008,bevelSegments:2,steps:1});
   silhouette.translate(0,0,-.04);
+  const outlineGeo=new T.BufferGeometry().setFromPoints(TARGET_OUTLINE.map(([x,y])=>new T.Vector3(x,y+.94,.024)));
+  const outlineMat=new T.LineBasicMaterial({color:0xff77b9});
   const scoreRing=new T.RingGeometry(.24,.255,36);scoreRing.translate(0,.94,.012);
   const sensorRing=new T.RingGeometry(.11,.12,24);sensorRing.translate(0,1.80,.012);
   const scarGeo=new T.RingGeometry(.012,.035,10),dentGeo=new T.CircleGeometry(.013,10);
   const trackGeo=new T.BoxGeometry(1,1,1);
-  const hardwareGeos=[cylinderGeo,silhouette,scoreRing,sensorRing,scarGeo,dentGeo,trackGeo];
+  const hardwareGeos=[outlineGeo,cylinderGeo,silhouette,scoreRing,sensorRing,scarGeo,dentGeo,trackGeo];
   function releaseTarget(item){
     item.carrier.removeFromParent();
     item.track?.removeFromParent();
@@ -388,7 +413,8 @@ export function createShootingRangeArt(T,scene,options={}){
     const carrier=new T.Group();carrier.name='Cible escamotable '+id;root.add(carrier);
     const target=new T.Group();carrier.add(target);
     const steel=new T.Mesh(silhouette,mats.target);steel.name='Silhouette balistique en acier biseauté';steel.castShadow=true;steel.receiveShadow=true;target.add(steel);
-    target.add(new T.Mesh(scoreRing,mats.red),new T.Mesh(sensorRing,mats.red));
+    const contour=new T.LineLoop(outlineGeo,outlineMat);contour.name='Contour lumineux de la cible réelle';target.add(contour);
+    target.add(new T.Mesh(scoreRing,mats.rose),new T.Mesh(sensorRing,mats.cyan));
     for(const x of [-.38,.38]){
       const bolt=new T.Mesh(new T.CylinderGeometry(.025,.025,.05,6),mats.metal);bolt.rotation.x=Math.PI/2;bolt.position.set(x,.32,.015);target.add(bolt);
     }
@@ -402,7 +428,8 @@ export function createShootingRangeArt(T,scene,options={}){
     targetGroups.set(id,item);return item;
   }
   function update(sim){
-    for(const {button} of controlGroups){button.material=sim?.trainingActive?mats.live:mats.ready;}
+    siege.update(sim?.time||0,sim);
+    for(const control of controlGroups)control.setState(!!sim?.trainingActive);
     if(!sim?.targets){for(const item of targetGroups.values())releaseTarget(item);targetGroups.clear();return;}
     const existing=new Set();
     for(const t of sim.targets){
@@ -439,12 +466,12 @@ export function createShootingRangeArt(T,scene,options={}){
     for(const [id,item] of targetGroups)if(!existing.has(id)){releaseTarget(item);targetGroups.delete(id);}
   }
   function dispose(){
-    hoverGeometry.dispose();armoryHover.material.dispose();
+    rackFixture?.dispose();controlGroups.forEach(control=>control.dispose());neons.dispose();surfaces.dispose();siege.dispose();outlineMat.dispose();hoverGeometry.dispose();armoryHover.material.dispose();
     clearArmoryModels();displayModels.removeFromParent();shadows.dispose();pbr.dispose();for(const item of targetGroups.values())releaseTarget(item);
     targetGroups.clear();for(const sign of signs){sign.panel.removeFromParent();if(sign.glass)sign.panel.userData.dispose?.();else{sign.panel.geometry.dispose();sign.material.dispose();sign.texture.dispose();}}
     signs.length=0;root.removeFromParent();
     root.traverse(node=>{if(node.isMesh&&!hardwareGeos.includes(node.geometry)&&node.geometry!==circle)node.geometry.dispose();});
     circle.dispose();hardwareGeos.forEach(g=>g.dispose());Object.values(mats).forEach(m=>m.dispose());textures.forEach(t=>t?.dispose());
   }
-  return {root,obstacles,update,dispose,shadows,setArmoryModels,setArmoryHover,enableMaterials:pbr.enable,get ready(){return pbr.ready;},stats:()=>({...pbr.stats(),shadows:shadows.stats(),armoryModels:displayModels.children.filter(s=>s.children.length).length}),get targetCount(){return targetGroups.size;}};
+  return {root,obstacles,update,dispose,shadows,setArmoryModels,setArmoryHover,enableMaterials:()=>Promise.all([pbr.enable(),surfaces.enable()]),get ready(){return Promise.all([pbr.ready,surfaces.ready]);},stats:()=>({...pbr.stats(),surfaces:surfaces.stats(),neons:neons.stats(),ambiance:siege.stats(),shadows:shadows.stats(),armoryModels:displayModels.children.filter(s=>s.children.length).length}),get targetCount(){return targetGroups.size;}};
 }

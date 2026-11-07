@@ -1,3 +1,4 @@
+import {createIndustrialDoor} from './industrial-door.js';
 // Shared, metric dressing for M01 and M02. Only visual detail: the authored
 // collision hulls, interaction positions and mission state remain authoritative.
 import {Assembly, bevelBox, matrix, limb} from './geo.js';
@@ -316,104 +317,16 @@ export function createVesperProps(T, parent, {low = false} = {}) {
   // Industrial door family. Hardware belongs to each moving leaf, never to
   // the fixed wall. Opening it fully also clears the *visible* doorway.
   function door(d, materials = {}) {
-    const g = new T.Group(); g.name = 'VESPER / porte ' + d.id;
-    g.position.set(d.axis === 'x' ? d.centre : d.fixed, 0, d.axis === 'x' ? d.fixed : d.centre);
-    g.rotation.y = d.axis === 'x' ? 0 : Math.PI / 2; root.add(g);
-    const fixed = new Assembly(), leaves = [], w = d.width, h = d.height, rolling = ['sectional', 'gate'].includes(d.style);
-    const paint = materials.paint || M.paint, accent = materials.accent || M.copper, glass = materials.glass || M.dark;
-    for (const side of [-1, 1]) {
-      box(fixed, M.dark, [.09, h + .08, .16], [side * (w / 2 + .05), h / 2, 0]);
-      box(fixed, M.steel, [.09, h + .18, .24], [side * (w / 2 + .14), h / 2, -.025]);
-      for (const yy of [.28, h * .5, h - .18]) box(fixed, M.steel, [.025, .05, .05], [side * (w / 2 + .02), yy, .105]);
-    }
-    box(fixed, paint, [w + .4, .18, .30], [0, h + .12, 0]);
-    box(fixed, M.steel, [w + .16, .026, .32], [0, .016, 0]);
-    const lamp = new T.Mesh(new T.BoxGeometry(.07, .09, .02), new T.MeshBasicMaterial({color: 0xe85c4e, toneMapped: false}));
-    lamp.position.set(w / 2 + .2, 1.5, .175); g.add(lamp); owned.push(lamp.material);
-    if (rolling) {
-      const n = d.style === 'gate' ? 9 : 7, ph = h / n;
-      for (let k = 0; k < n; k++) {
-        const a = new Assembly(), leaf = new T.Group(), base = (k + .5) * ph;
-        leaf.name = 'VESPER / panneau mobile ' + k; leaf.position.y = base; g.add(leaf);
-        box(a, paint, [w - .04, ph - .018, .09], [0, 0, 0]);
-        for (const side of [-1, 1]) {
-          box(a, M.steel, [w - .06, .018, .024], [0, -ph / 2 + .03, side * .055]);
-          for (const xx of [-w * .33, w * .33]) box(a, M.dark, [.09, .08, .02], [xx, 0, side * .06]);
-        }
-        if (k === 0) box(a, M.dark, [.55, .065, .12], [0, 0, .07]);
-        if (k === 2) label(a,1,[-w*.28,0,.068],[0,0,0],.36);
-        if (k === Math.floor(n * .65) && d.style === 'sectional') {
-          // Vision inserts replace an opaque band rather than a glass plate
-          // pasted over a solid panel.
-          a.items.forEach(item => item.geometry.dispose()); a.items.length = 0;
-          box(a, paint, [w, ph * .25, .09], [0, ph * .375, 0]); box(a, paint, [w, ph * .25, .09], [0, -ph * .375, 0]);
-          for (const xx of [-w / 2 + .11, 0, w / 2 - .11]) box(a, paint, [.22, ph * .5, .09], [xx, 0, 0]);
-          for (const side of [-1, 1]) box(a, glass, [w / 2 - .32, ph * .5, .025], [side * w / 4, 0, 0]);
-        }
-        sealAssembly(a, leaf); leaves.push({root: leaf, base, k, ph});
-      }
-      // Two real tracks into the roof, drive shaft and head box.
-      for (const side of [-1, 1]) box(fixed, M.steel, [.07, .07, h + .35], [side * (w / 2 + .14), h + .20, -h / 2]);
-      box(fixed, M.dark, [.45, .34, .45], [w / 2 + .34, h + .18, -.15]);
-    } else {
-      const split = ['glass', 'lift', 'helix'].includes(d.style), count = split ? 2 : 1, lw = w / count;
-      for (let k = 0; k < count; k++) {
-        const a = new Assembly(), leaf = new T.Group(), dir = split ? (k ? 1 : -1) : 1, base = split ? dir * w / 4 : 0;
-        leaf.name = 'VESPER / vantail mobile ' + k; leaf.position.set(base, h / 2, 0); g.add(leaf);
-        if (d.style === 'glass') {
-          box(a, glass, [lw - .12, h - .14, .035], [0, 0, 0]);
-          for (const side of [-1, 1]) box(a, paint, [.06, h, .08], [side * (lw / 2 - .03), 0, 0]);
-          for (const yy of [-h / 2 + .035, h / 2 - .035]) box(a, paint, [lw, .07, .08], [0, yy, 0]);
-        } else {
-          const thick = d.style === 'vault' ? .27 : .09;
-          box(a, paint, [lw - .025, h - .025, thick], [0, 0, 0]);
-          for (const side of [-1, 1]) {
-            box(a, M.dark, [lw * .74, h * .62, .012], [0, 0, side * (thick / 2 + .007)]);
-            box(a, paint, [lw * .69, h * .57, .018], [0, 0, side * (thick / 2 + .016)]);
-            box(a, M.steel, [lw * .91, .17, .022], [0, -h * .35, side * (thick / 2 + .02)]);
-            if (d.style === 'helix') box(a, accent, [lw - .08, .11, .022], [0, h * .06, side * .075]);
-          }
-        }
-        for (const side of [-1, 1]) {
-          const xx = split ? -dir * (lw / 2 - .17) : -lw * .31;
-          box(a, M.steel, [.045, .32, .04], [xx, -.10, side * .13]);
-          box(a, M.dark, [.10, .45, .025], [xx, -.10, side * .08]);
-        }
-        if (d.style === 'vault') {
-          add(a, new T.TorusGeometry(Math.min(.35, w * .16), .035, 6, 20), M.steel, [0, 0, .20]);
-          for (let k = 0; k < 3; k++) { const angle = k * Math.PI * 2 / 3; rod(a, M.steel, [0, 0, .20], [Math.sin(angle) * .32, Math.cos(angle) * .32, .20], .023); }
-        }
-        if (d.style !== 'glass') label(a,d.style==='vault'||d.style==='helix'?4:1,[0,h*.27,d.style==='vault'?.18:.08],[0,0,0],Math.min(.38,lw*.4));
-        sealAssembly(a, leaf); leaves.push({root: leaf, base, dir, slide: split ? lw + .08 : w + .08});
-      }
-      box(fixed, M.dark, [w + .2, .13, .16], [0, h + .22, 0]);
-    }
-    // Fixed rails and surrounds share the scene's static material batches.
-    // Only the leaves and status lamp remain separate for animation.
-    g.updateMatrix();
-    for (const item of fixed.items) {
-      staticParts.add(item.geometry, item.material, g.matrix, item.shadow);
-      item.geometry.dispose();
-    }
-    fixed.items.length = 0; stats.doors++;
-    const api = {root: g, leaves, update(amount, locked = false) {
-      const open = Math.max(0, Math.min(1, amount));
-      for (const p of leaves) {
-        if (rolling) {
-          const travel = p.base + open * (h + .18), top = h + p.ph / 2 + .10, turn = Math.max(0, travel - top);
-          p.root.position.set(0, Math.min(travel, top), -turn);
-          p.root.rotation.x = -Math.min(1, turn / p.ph) * Math.PI / 2;
-        } else p.root.position.x = p.base + p.dir * p.slide * open;
-      }
-      lamp.material.color.setHex(locked ? 0xe85c4e : 0x77cda0);
-    }};
-    api.update(0, !d.open); doors.push(api); return api;
+    const api=createIndustrialDoor(T,root,d,{low,batch:staticParts,materials:{steel:M.steel,dark:M.dark,paint:materials.paint||M.paint,glass:materials.glass||M.dark}});
+    api.root.traverse(o=>{if(o.isMesh){stats.batches++;stats.triangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3*(o.isInstancedMesh?o.count:1);}});
+    stats.doors++;doors.push(api);return api;
   }
+
   return {root, M, plant, planting, tree, computer, accessories, door, surface:surfaces.apply,
     finish() { if (!finished) { finished = true; sealAssembly(staticParts, root); } },
     update(power = {}) { for (const {material, power: key} of displays.values()) material.color.setScalar(key === 'always' || power[key] ? .85 : .025); },
     stats: () => ({...stats, surfaces:surfaces.stats()}),
-    dispose() { root.removeFromParent(); const geometries = new Set(); root.traverse(o => { if (o.geometry) geometries.add(o.geometry); }); for (const g of geometries) g.dispose(); for (const m of owned) m.dispose(); for (const t of textures) t.dispose(); surfaces.dispose(); }
+    dispose() { doors.forEach(d=>d.dispose());root.removeFromParent(); const geometries = new Set(); root.traverse(o => { if (o.geometry) geometries.add(o.geometry); }); for (const g of geometries) g.dispose(); for (const m of owned) m.dispose(); for (const t of textures) t.dispose(); surfaces.dispose(); }
   };
 }
 

@@ -1,3 +1,5 @@
+import {findBakedNeonRuns} from './baked-neons.js';
+import {createNeonFixtures} from './neon-fixtures.js';
 // Mission 03 — the night Vesper sector of the visitor map, baked by tools/bake-m03-vesper.mjs (quads quantised to the
 // centimetre, one colour and one material index per quad) and rebuilt here for three.js: one mesh per material family,
 // planar world UVs, CC0 surfaces, neon and lit windows emissive, sign atlas redrawn from the page's labels.
@@ -104,8 +106,20 @@ export function createSectorMeshes(T, sector, { quality = 'normal', tile = {} } 
   const stats = { quads: 0, meshes: 0, emissiveQuads: 0 };
   const signUv = new Map((sector.meta.signs || []).map(([i, u0, v0, u1, v1]) => [i, [u0, v0, u1, v1]]));
 
+  const tubes=createNeonFixtures(T,group,{low,distantThreshold:Infinity});
+  const replaced=new Set();
+  for(const [id,color] of [[MAT.PINK,0xff4fa1],[MAT.CYAN,0x5fe0f0],[MAT.AMBER,0xffb35c],[MAT.RED,0xff2f45]]){
+    const ids=[],faces=[],src=sector.world;
+    for(let i=0;i<src.n;i++)if(src.mat[i]===id){ids.push(i);faces.push([0,1,2,3].map(v=>[0,1,2].map(a=>src.pos[i*12+v*3+a]*sector.meta.scale)));}
+    for(const run of findBakedNeonRuns(faces)){
+      tubes.bar(run.size,run.position,[0,0,0],color);
+      for(const i of run.indices)replaced.add(ids[i]);
+    }
+  }
+  tubes.build();stats.neons=tubes.stats();
+
   function build(src, filter, material, { tile: t = 2, lift = 1, emissive = false, signsUv = false, dropEvery = 0 }) {
-    const idx = []; for (let i = 0; i < src.n; i++) if (filter(src.mat[i]) && !(dropEvery && i % dropEvery === 0)) idx.push(i);
+    const idx = []; for (let i = 0; i < src.n; i++) if (!(src===sector.world&&replaced.has(i)) && filter(src.mat[i]) && !(dropEvery && i % dropEvery === 0)) idx.push(i);
     if (!idx.length) return null;
     const P = new Float32Array(idx.length * 12), N = new Float32Array(idx.length * 12), C = new Float32Array(idx.length * 12), U = new Float32Array(idx.length * 8), I = new Uint32Array(idx.length * 6);
     const s = sector.meta.scale;

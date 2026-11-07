@@ -7,10 +7,11 @@ export function armoryChoiceAt(indices,x,y){return armoryRegions(indices).find(r
 export function createRangeArmoryMenu({getGame,onChoose,onChange=()=>{}}){
  if(!document.querySelector('[data-range-armory-style]')){const css=document.createElement('link');css.rel='stylesheet';css.href=new URL('./range-armory.css?v=3.74.0',import.meta.url).href;css.dataset.rangeArmoryStyle='';document.head.append(css);}
  const root=document.createElement('section');root.className='pw-range-armory';root.hidden=true;root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');root.setAttribute('aria-label','Armurerie du stand');
- root.innerHTML='<div class="pw-range-armory-panel"><header><div><small>STAND DE TIR</small><h2>Armurerie</h2></div><button type="button" data-armory-close aria-label="Fermer l’armoire">×</button></header><p>Choisissez une arme. Le chronomètre et les points repartent à zéro.</p><div class="pw-range-armory-grid"></div><footer>Relancez ensuite les cibles depuis l’interrupteur de votre box.</footer></div>';
+ root.innerHTML='<div class="pw-range-armory-panel"><header><div><small>STAND DE TIR</small><h2>Choisir une arme</h2></div><button type="button" data-armory-close aria-label="Fermer le choix des armes">×</button></header><p>Choisissez une arme. Le chronomètre et les points repartent à zéro.</p><div class="pw-range-armory-grid"></div><footer>Relancez ensuite les cibles depuis l’interrupteur de votre box.</footer></div>';
  const readout=document.createElement('aside');readout.className='pw-range-session';readout.hidden=true;readout.setAttribute('aria-label','Résultats de l’exercice');readout.innerHTML='<span><small>TEMPS</small><b data-range-time>00:00</b></span><i></i><span><small>POINTS</small><b data-range-points>00000</b></span>';
  document.body.append(root,readout);
  const grid=root.querySelector('.pw-range-armory-grid'),timer=readout.querySelector('[data-range-time]'),score=readout.querySelector('[data-range-points]');
+ let menuPointerDownInside=false;
  let active=false,xrMode=false,shown=false,signature='',focused=0,previousFocus=null,previousGame=null,xr=null,disposed=false,padPressed=false,padBack=false,padDirection=0;
  const buttons=()=>[...grid.querySelectorAll('button')],close=()=>{getGame()?.closeRangeArmory?.();sync({active,xrMode});};
  const columns=()=>Math.max(1,getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length);
@@ -25,9 +26,10 @@ export function createRangeArmoryMenu({getGame,onChoose,onChange=()=>{}}){
   if(!active||!xrMode){game?.setInteractionPosition?.();game&&(game.armoryHover=null);xr?.world?.rangeArt?.setArmoryHover?.();}
   if(!xrMode)xr?.blockedTriggers.clear();
   if(!active)game?.closeRangeArmory?.();const open=active&&game?.mode==='training'&&!!game.rangeArmoryOpen;
+  if(open&&!game.canAccessRangeArmory()){game.closeRangeArmory();sync(state);return;}
   if(open)refresh();root.hidden=!open||xrMode;readout.hidden=!active||game?.mode!=='training'||open;
   if(!readout.hidden){const time=rangeSessionTime(game.trainingElapsed),points=String(game.score).padStart(5,'0');if(timer.textContent!==time)timer.textContent=time;if(score.textContent!==points)score.textContent=points;}
-  if(open!==shown){shown=open;onChange(open);padPressed=true;padBack=true;padDirection=0;if(xr){for(const h of Object.values(xr.hands))Object.assign(h,{trigger:true,grip:true,stick:true,confirm:true,back:true,navDirection:0});xr.navigation=false;xr.placed=false;xr.dirty=true;}if(open){previousFocus=document.activeElement;if(!xrMode)buttons()[focused]?.focus({preventScroll:true});}else if(!xrMode)previousFocus?.focus?.({preventScroll:true});}
+  if(open!==shown){menuPointerDownInside=false;shown=open;onChange(open);padPressed=true;padBack=true;padDirection=0;if(xr){for(const h of Object.values(xr.hands))Object.assign(h,{trigger:true,grip:true,stick:true,confirm:true,back:true,navDirection:0});xr.navigation=false;xr.placed=false;xr.dirty=true;}if(open){previousFocus=document.activeElement;if(!xrMode)buttons()[focused]?.focus({preventScroll:true});}else if(!xrMode)previousFocus?.focus?.({preventScroll:true});}
   if(xr&&(!open||!xrMode)){xr.mesh.visible=false;xr.beam.visible=false;}
  }
  const key=event=>{
@@ -40,12 +42,20 @@ export function createRangeArmoryMenu({getGame,onChoose,onChange=()=>{}}){
   else if(event.code==='ArrowUp')focusStep(xrMode?-3:-columns());
   else if(event.code==='Enter'||event.code==='Space'){if(document.activeElement===root.querySelector('[data-armory-close]'))close();else buttons()[focused]?.click();}
  };
- root.querySelector('[data-armory-close]').onclick=close;root.addEventListener('pointerdown',e=>e.stopPropagation());
+ root.querySelector('[data-armory-close]').onclick=close;root.addEventListener('pointerdown',e=>{menuPointerDownInside=true;e.stopPropagation();});
+ // A touch that opens the physical terminal can end above a newly displayed
+ // weapon button. Ignore that opening gesture's click; require a fresh press
+ // inside the chooser. Keyboard and assistive activation (detail=0) still work.
+ root.addEventListener('click',e=>{
+  if(e.detail>0&&!menuPointerDownInside){e.preventDefault();e.stopImmediatePropagation();return;}
+  menuPointerDownInside=false;
+ },true);
+ root.addEventListener('pointercancel',()=>{menuPointerDownInside=false;});
  grid.addEventListener('focusin',event=>{const index=buttons().indexOf(event.target.closest('button'));if(index>=0)focused=index;});
  document.addEventListener('keydown',key,true);
  function paint(){
-  const g=getGame(),indices=g.rangeWeapons,c=xr.canvas.getContext('2d');c.clearRect(0,0,1024,900);c.fillStyle='#1b211f';c.beginPath();c.roundRect(0,0,1024,900,38);c.fill();c.strokeStyle='#9e9276';c.lineWidth=3;c.stroke();c.fillStyle='#d9c397';c.font='600 24px sans-serif';c.fillText('STAND DE TIR',48,56);c.fillStyle='#f0eee5';c.font='600 51px sans-serif';c.fillText('Armurerie',48,122);c.font='22px sans-serif';c.fillStyle='#ccc6b5';c.fillText('Chaque nouvelle arme remet le temps et les points à zéro.',48,162);
-  for(const r of armoryRegions(indices)){const hover=xr.hover===r.index;c.fillStyle=hover?'#aa976b':r.index===g.weaponIndex?'#4a5140':'#303a35';c.beginPath();c.roundRect(r.x,r.y,r.w,r.h,22);c.fill();c.fillStyle=hover?'#151b18':'#f0eee6';c.font='600 31px sans-serif';c.fillText(r.index<0?'FERMER':WEAPONS[r.index].name,r.x+20,r.y+46,r.w-40);if(r.index>=0){c.font='21px sans-serif';c.fillText(WEAPONS[r.index].label,r.x+20,r.y+82,r.w-40);c.font='17px sans-serif';c.fillText(r.index===g.weaponIndex?'ÉQUIPÉE':WEAPONS[r.index].capacity+' CELLULES',r.x+20,r.y+108,r.w-40);}}
+  const g=getGame(),indices=g.rangeWeapons,c=xr.canvas.getContext('2d');c.clearRect(0,0,1024,900);c.fillStyle='#101c30';c.beginPath();c.roundRect(0,0,1024,900,38);c.fill();c.strokeStyle='#398fba';c.lineWidth=3;c.stroke();c.fillStyle='#61dfff';c.font='600 24px sans-serif';c.fillText('STAND DE TIR',48,56);c.fillStyle='#f0eee5';c.font='600 51px sans-serif';c.fillText('Armurerie',48,122);c.font='22px sans-serif';c.fillStyle='#ccc6b5';c.fillText('Chaque nouvelle arme remet le temps et les points à zéro.',48,162);
+  for(const r of armoryRegions(indices)){const hover=xr.hover===r.index;c.fillStyle=hover?'#ee5fa9':r.index===g.weaponIndex?'#56355f':'#1e354c';c.beginPath();c.roundRect(r.x,r.y,r.w,r.h,22);c.fill();c.fillStyle=hover?'#151b18':'#f0eee6';c.font='600 31px sans-serif';c.fillText(r.index<0?'FERMER':WEAPONS[r.index].name,r.x+20,r.y+46,r.w-40);if(r.index>=0){c.font='21px sans-serif';c.fillText(WEAPONS[r.index].label,r.x+20,r.y+82,r.w-40);c.font='17px sans-serif';c.fillText(r.index===g.weaponIndex?'ÉQUIPÉE':WEAPONS[r.index].capacity+' CELLULES',r.x+20,r.y+108,r.w-40);}}
   c.fillStyle='#d1c8b5';c.font='21px sans-serif';c.fillText('Deux mains · gâchette / prise · stick + A : équiper · B : fermer',48,698,928);xr.texture.needsUpdate=true;xr.dirty=false;
  }
  function prepareXR(controller){
@@ -82,12 +92,19 @@ export function createRangeArmoryMenu({getGame,onChoose,onChange=()=>{}}){
   xr.world.rangeArt?.setArmoryHover?.();g.armoryHover=null;
   if(!shown){
    xr.mesh.visible=false;
+   const terminals=inputs.filter(i=>i.tracked).map(input=>({input,target:g.terminalTarget?.(input.h.origin,input.h.direction)||g.terminalHandTarget?.(input.h.point)})).filter(t=>t.target);
+   const terminal=terminals.find(t=>t.input.press)||terminals[0];
+   if(terminal){
+    beamTo(terminal.target.point,terminal.input.h.origin);
+    if(terminal.input.press&&g.openRangeTerminal(terminal.target.terminal.id)){blockTriggers();sync({active,xrMode});return true;}
+    if(terminal.input.trigger||terminal.input.grip)return true;
+   }
    const targets=inputs.filter(i=>i.tracked).map(input=>{const pointed=g.armoryTarget?.(input.h.origin,input.h.direction),reach=g.armoryHandTarget?.(input.h.point);return {input,target:input.grip&&reach?reach:pointed||reach};}).filter(t=>t.target);
    const candidate=targets.find(t=>t.input.press)||targets[0];
    if(candidate){const {input,target}=candidate;g.armoryHover=target.index;xr.world.rangeArt?.setArmoryHover?.(target.index);beamTo(target.point,input.h.origin);if(input.press&&choose(target.index,true))blockTriggers();}
    return xr.blockedTriggers.size>0||targets.some(t=>t.input.trigger||t.input.grip);
   }
-  if(!g.nearRangeArmory()){close();return true;}
+  if(!g.canAccessRangeArmory()){close();return true;}
   if(inputs.some(i=>i.back||i.close)){close();return true;}
   xr.mesh.visible=true;
   if(!xr.placed){

@@ -1,3 +1,4 @@
+import {RANGE_TERMINALS,traceRangeTerminal} from './range-terminal-layout.js';
 import { ArenaGame, WEAPONS, segmentBox,weaponAllowedForCharacter } from './game-logic.js';
 import { CHARGE_MAX } from './armor-combat.js';
 
@@ -81,7 +82,7 @@ export class ShootingRangeGame extends ArenaGame {
     this.targetTransition=.46;
     this.pendingHits=[];
     this.trainingActive=false;this.trainingElapsed=0;
-    this.rangeArmoryOpen=false;
+    this.rangeArmoryOpen=false;this.rangeTerminalId=null;
     this.armoryEquippedIndex=null;this.armoryEquippedUntil=0;
     this.wave=0;this.nextWave=-1;this.toSpawn=0;
     this.player.x=0;this.player.z=22;this.player.yaw=0;
@@ -106,6 +107,35 @@ export class ShootingRangeGame extends ArenaGame {
     const goal={x:Math.max(c.x-c.width/2,Math.min(c.x+c.width/2,p.x)),y:c.y,z:c.frontZ};
     return !this.obstacles.some(b=>{const hit=segmentBox({x:p.x,y:p.eyeY??(p.elevation||0)+1.5,z:p.z},goal,b);return hit!==null&&hit<.99;});
   }
+  accessibleTerminal(terminal,reach=3.5){
+    if(!terminal||this.state!=='playing')return false;
+    const p=this.interactionPosition||this.player;
+    if((p.elevation||0)>1.6||p.z<terminal.z-.25||Math.hypot(p.x-terminal.x,p.z-terminal.z)>reach)return false;
+    const origin={x:p.x,y:p.eyeY??(p.elevation||0)+1.6,z:p.z};
+    return !this.obstacles.some(b=>{if(b.rangeTerminal===terminal.id)return false;const t=segmentBox(origin,terminal,b);return t!==null&&t<.99;});
+  }
+  terminalTarget(origin,direction){
+    const hit=traceRangeTerminal(origin,direction);
+    if(!hit||!this.accessibleTerminal(hit.terminal))return null;
+    return this.obstacles.some(b=>{if(b.rangeTerminal===hit.terminal.id)return false;const t=segmentBox(origin,hit.point,b);return t!==null&&t<.99;})?null:hit;
+  }
+  terminalHandTarget(position){
+    if(!position)return null;
+    for(const terminal of RANGE_TERMINALS){
+      if(!this.accessibleTerminal(terminal))continue;
+      const sine=Math.sin(terminal.tilt),cosine=Math.cos(terminal.tilt),dy=position.y-terminal.y,dz=position.z-terminal.z;
+      const normal=-dy*sine+dz*cosine,localY=dy*cosine+dz*sine;
+      if(normal>=-.025&&normal<.12&&Math.abs(position.x-terminal.x)<terminal.width/2&&Math.abs(localY)<terminal.height/2)return {terminal,point:{...position}};
+    }
+    return null;
+  }
+  openRangeTerminal(id){
+    const terminal=RANGE_TERMINALS.find(t=>t.id===id);if(!this.accessibleTerminal(terminal))return false;
+    this.rangeTerminalId=id;this.rangeArmoryOpen=true;return true;
+  }
+  canAccessRangeArmory(){
+    return this.nearRangeArmory()||(this.rangeArmoryOpen&&this.accessibleTerminal(RANGE_TERMINALS.find(t=>t.id===this.rangeTerminalId)));
+  }
   armoryTarget(origin,direction){
     if(!this.nearRangeArmory())return null;
     const hit=traceRangeArmory(origin,direction,this.rangeWeapons);
@@ -118,13 +148,13 @@ export class ShootingRangeGame extends ArenaGame {
     if(!slot)return null;const point={x:slot.x,y:slot.y,z:slot.z};
     return this.obstacles.some(b=>{const t=segmentBox(position,point,b);return t!==null&&t<.99;})?null:{index:slot.index,point,distance};
   }
-  closeRangeArmory(){this.rangeArmoryOpen=false;}
+  closeRangeArmory(){this.rangeArmoryOpen=false;this.rangeTerminalId=null;}
   selectFromArmory(index){
     if(!this.rangeArmoryOpen)return false;
     return this.takeFromArmory(index);
   }
   takeFromArmory(index){
-    if(!this.nearRangeArmory()||!this.rangeWeapons.includes(index))return false;
+    if(!this.canAccessRangeArmory()||!this.rangeWeapons.includes(index))return false;
     if(index!==this.weaponIndex&&!this.selectWeapon(index))return false;
     this.armoryEquippedIndex=index;this.armoryEquippedUntil=this.time+1.4;
     this.closeRangeArmory();return true;
@@ -141,6 +171,8 @@ export class ShootingRangeGame extends ArenaGame {
     const p=this.interactionPosition||this.player;
     if(this.state!=='playing'||(p.elevation||0)>1.6)return null;
     if(this.nearRangeArmory())return {x:RANGE_ARMORY.x,y:RANGE_ARMORY.y,z:RANGE_ARMORY.frontZ,kind:'range-armory',label:'Choisir une arme · armoire'};
+    const terminal=RANGE_TERMINALS.find(t=>this.accessibleTerminal(t,1.25));
+    if(terminal)return {...terminal,kind:'range-terminal',label:'Choisir une arme · écran tactile'};
     const control=[...RANGE_CONTROLS].sort((a,b)=>Math.hypot(p.x-a.x,p.z-a.z)-Math.hypot(p.x-b.x,p.z-b.z)).find(c=>
       Math.hypot(p.x-c.x,p.z-c.z)<2.65&&!this.obstacles.some(box=>{
         if(Math.abs(box.x-c.x)<.01&&Math.abs(box.z-c.z)<.01)return false;
@@ -150,6 +182,7 @@ export class ShootingRangeGame extends ArenaGame {
   }
   collectWeapon(){
     const interaction=this.getInteraction();if(!interaction)return false;
+    if(interaction.kind==='range-terminal')return this.openRangeTerminal(interaction.id);
     if(interaction.kind==='range-armory'){this.rangeArmoryOpen=!this.rangeArmoryOpen;return true;}
     this.trainingActive=!this.trainingActive;this.targets=[];this.pendingHits=[];this.targetDelay=.18;
     this.event('training-control',{active:this.trainingActive});return true;

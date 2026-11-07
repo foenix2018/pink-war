@@ -1,3 +1,6 @@
+import {upgradeLightBlocks} from './industrial-light.js';
+import {createModernSwitch,switchVariant} from './modern-switch.js';
+import {createLevelNeons,roundPoweredTubes} from './level-neons.js';
 import { createNeonFixture } from './neon-fixture.js';
 import {createLivedInDressing} from './vesper-lived-in.js';
 // M02 extension dressing: the enclave of the covered market (stalls turned into barricades and beds, dormitory
@@ -84,6 +87,8 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     [['dark','black'],'rubber'],[['cardboard','paper'],'paper']
   ]) for (const key of keys) if (M[key]) details.surface(M[key],kind);
 
+  const neons=createLevelNeons(T,root,{low,metal:M.steel,back:M.dark,materials:[M.amber,M.cyan,M.green,M.redGlow,M.helix,M.rose]});
+
   // ---------- Merged geometry (world-space UVs in metres / tile) ----------
   const geos = new Map();
   const bucket = m => { if (!geos.has(m)) geos.set(m, { p: [], n: [], u: [], i: [] }); return geos.get(m); };
@@ -100,6 +105,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
   }
   function box(m, x1, x2, y1, y2, z1, z2, { skip = ['bottom'], top = m } = {}) {
     const a = x2 - x1, b = y2 - y1, c = z2 - z1, s = new Set(skip);
+    if(top===m&&neons.box(m,[a,b,c],[(x1+x2)/2,(y1+y2)/2,(z1+z2)/2]))return;
     if (!s.has('+x')) quad(m, [x2, y1, z2], [0, 0, -c], [0, b, 0]);
     if (!s.has('-x')) quad(m, [x1, y1, z1], [0, 0, c], [0, b, 0]);
     if (!s.has('+z')) quad(m, [x1, y1, z2], [a, 0, 0], [0, b, 0]);
@@ -119,7 +125,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     geos.clear();
   }
   const cube = new T.BoxGeometry(1, 1, 1), pieces = new Map();
-  const piece = (m, x, y, z, sx, sy, sz, ry = 0) => { if (!pieces.has(m)) pieces.set(m, []); pieces.get(m).push([x, y, z, sx, sy, sz, ry]); };
+  const piece = (m, x, y, z, sx, sy, sz, ry = 0) => { if(neons.box(m,[sx,sy,sz],[x,y+sy/2,z],[0,ry,0]))return; if (!pieces.has(m)) pieces.set(m, []); pieces.get(m).push([x, y, z, sx, sy, sz, ry]); };
   // Thick pieces get rounded edges (soft-pieces.js); thin strips, rails and LEDs stay plain.
   const softSplit = all => { const { soft, plain } = splitPieces(all); return [[softCube(T), soft], [cube, plain]].filter(([, l]) => l.length); };
   function flushPieces() {
@@ -199,6 +205,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
           for (const side of [-1, 1]) piece(M.steel, f.x + (alongZ ? 0 : side * .58), f.y - .045, f.z + (alongZ ? side * .58 : 0), alongZ ? .19 : .08, .1, alongZ ? .08 : .19);
         }
         if (kind === 'highbay') piece(M.dark, f.x, f.y + .18, f.z, .05, ROOM.quai.ceiling - f.y, .05); });
+      if(kind==='tube'||kind==='strip')roundPoweredTubes(T,mesh,{low});else upgradeLightBlocks(T,mesh,kind,{low});
       mesh.instanceMatrix.needsUpdate = true; mesh.instanceColor.needsUpdate = true; mesh.computeBoundingSphere(); add(mesh); stats.instances += list.length; fixtureMeshes.push({ mesh, list });
     }
     // Low cables sagging between the bulbs of the market.
@@ -472,11 +479,11 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       const part = (m, sx, sy, sz, px, py, pz) => { const mesh = new T.Mesh(new T.BoxGeometry(sx, sy, sz), m); mesh.position.set(px, py, pz); g.add(mesh); stats.meshes++; return mesh; };
       const lamp = new T.Mesh(new T.BoxGeometry(.07, .07, .04), new T.MeshBasicMaterial({ color: 0xffb35c, toneMapped: false })); g.add(lamp);
       const table = at.o && ['desk', 'console', 'security-desk', 'terminal', 'kitchen', 'school', 'crates', 'batteries'].includes(at.o.kind);
-      let moving = null;
+      let moving = null, control = null;
       if (it.id === 'manivelle') { part(M.plate, .4, .5, .2, 0, 1.2, .1); const wheel = new T.Mesh(new T.TorusGeometry(.26, .03, 6, 20), M.helixRed); wheel.position.set(0, 1.2, .3); g.add(wheel); moving = wheel; part(M.steel, .04, .04, .3, .2, 1.2, .35); lamp.position.set(.25, 1.6, .22); }
       else if (it.id === 'doc-dessins') { const b = new T.Mesh(new T.PlaneGeometry(.9, .68), new T.MeshStandardMaterial({ map: drawingTex, roughness: .9 })); b.position.set(0, 1.2, .02); g.add(b); lamp.position.set(.5, .9, .03); }
       else if (it.id === 'badge') { part(M.helixWhite, .1, .02, .15, 0, at.top + .01, -.2); part(M.helix, .1, .021, .03, 0, at.top + .012, -.25); lamp.position.set(.2, at.top + .03, -.2); lamp.scale.setScalar(.5); }
-      else if (it.id === 'lecteur' || it.id === 'commande-quai') { part(M.helixBlack, .3, .45, .1, 0, 1.4, .05); const screen = part(M.helix, .2, .14, .01, 0, 1.48, .105); moving = screen; lamp.position.set(0, 1.25, .11); }
+      else if (it.id === 'lecteur' || it.id === 'commande-quai') { control=createModernSwitch(T,g,{y:1.4,z:.06,scale:.7,variant:switchVariant(it.id),id:it.id,label:it.id==='lecteur'?'IDENTIFICATION':'COMMANDE DU QUAI',onLabel:it.id==='lecteur'?'ACCÈS VALIDÉ':'QUAI OUVERT',low});lamp.visible=false; }
       else if (it.id === 'radio') { part(M.dark, .7, .4, .4, 0, at.top + .2, -.2); part(M.amber, .3, .07, .01, -.1, at.top + .28, .005); const ant = new T.Mesh(new T.CylinderGeometry(.01, .01, 1, 4), M.steel); ant.position.set(.25, at.top + .9, -.25); g.add(ant); lamp.position.set(.25, at.top + .35, .01); }
       else if (it.id === 'batterie') { const cable = new T.Mesh(new T.CylinderGeometry(.025, .025, 1.2, 6), M.helixRed); cable.rotation.z = Math.PI / 2; cable.position.set(0, at.top + .1, -.3); g.add(cable); moving = cable; lamp.position.set(.3, at.top + .1, -.3); }
       else if (it.log) {
@@ -485,12 +492,13 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
         else { paper.position.set(0, 1.45, .012); lamp.position.set(.22, 1.62, .02); lamp.scale.setScalar(.5); }
         g.add(paper);
       }
-      devices.set(it.id, { it, lamp, moving, done: false, available: false, turn: 0 });
+      devices.set(it.id, { it, lamp, moving, control, done: false, available: false, turn: 0 });
     }
   }
   function updateDevices(t, dt, crank) {
     const blink = .5 + .5 * Math.sin(t * 5);
     for (const v of devices.values()) {
+      v.control?.setState(v.done,{available:v.available,dt});
       v.lamp.material.color.set(v.done ? 0x3dff8a : v.it.log ? (blink > .3 ? 0xfff2c8 : 0x6a6250) : v.available ? (blink > .5 ? 0xffb35c : 0x5a3a14) : 0x2a1a10);
       if (v.it.id === 'manivelle' && crank) v.moving.rotation.z -= dt * 4;
       else if (v.done && v.moving && v.turn < 1) { v.turn = Math.min(1, v.turn + dt * .8); if (v.it.id === 'manivelle') v.moving.rotation.z = -v.turn * TAU; else if (v.it.id === 'batterie') v.moving.position.y -= dt * .05; else v.moving.material = M.green; }
@@ -570,7 +578,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       placeFixtures(); buildRooms(); buildWalls(obstacles);
       for (const o of obstacles) if (o.extension) { dress(o); details.accessories(o); }
       buildFixtureMeshes(); buildDoors(); buildDevices(obstacles); buildSigns(); buildCyber();
-      flushGeometry(); flushPieces(); details.finish(); livedIn.build(obstacles);
+      neons.meshes(); neons.build(); flushGeometry(); flushPieces(); details.finish(); livedIn.build(obstacles);
     },
     update(t, dt, eye, player = eye.position, { crank = false } = {}) {
       updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt, crank); details.update(power); livedIn.update(t,dt,power);
@@ -599,6 +607,6 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     setPower(zone, on) { power[zone] = !!on; },
     markDone(id, done = true) { const d = devices.get(id); if (d) { d.done = done; if (!done) { d.turn = 0; if (d.moving) d.moving.rotation.set(0, 0, 0); } } },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
-    stats() { return { ...stats, details: details.stats(), livedIn: livedIn.stats(), power: { ...power }, shelter: +shelter.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, neons:neons.stats(), details: details.stats(), livedIn: livedIn.stats(), power: { ...power }, shelter: +shelter.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }
