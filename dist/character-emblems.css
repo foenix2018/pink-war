@@ -22,7 +22,7 @@
 #lobby .character-card[data-character=ghju] .pw-helmet img{
  position:absolute!important;inset:0!important;top:0!important;left:0!important;
  display:block!important;width:100%!important;height:100%!important;
- max-width:100%!important;object-fit:contain!important;object-position:center!important;
+ max-width:100%!important;object-fit:cover!important;object-position:center 24%!important;
  transform:none!important;-webkit-mask-image:none!important;mask-image:none!important;
  filter:saturate(1.04) contrast(1.02)!important
 }
@@ -40,3 +40,61 @@
  }
 }
 @media(prefers-reduced-motion:reduce){#lobby .character-card{transition:none!important}}
+
+/* Character select — full-bleed artwork matching the complete rounded card.
+   Crop is vertically biased to the helmet; the name is rendered over the
+   lower gradient because it is outside the cropped area of the square icon. */
+#lobby .character-card,
+#lobby .character-card.selected{
+  padding:0!important;
+  overflow:hidden!important;
+}
+#lobby .character-card .pw-helmet{
+  display:block!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  border-radius:inherit!important;
+}
+#lobby .character-card .pw-helmet img{
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
+  object-position:50% 24%!important;
+  transform:none!important;
+}
+#lobby .character-card::before{
+  content:"";
+  display:block;
+  position:absolute;
+  inset:34% 0 0;
+  z-index:2;
+  background:linear-gradient(180deg,transparent 0%,rgba(4,10,24,.18) 30%,rgba(2,8,24,.89) 100%);
+  pointer-events:none;
+}
+#lobby .character-card[data-character="ghju"]::before{
+  background:linear-gradient(180deg,transparent 0%,rgba(28,5,33,.16) 30%,rgba(29,6,35,.90) 100%);
+}
+#lobby .character-card::after{
+  content:attr(data-character);
+  display:block;
+  position:absolute;
+  z-index:3;
+  left:0;right:0;bottom:clamp(8px,1.6vw,16px);
+  text-align:center;
+  text-transform:uppercase;
+  font:800 clamp(20px,3.2vw,31px)/1 "Oxanium","Arial Narrow",system-ui,sans-serif;
+  letter-spacing:.14em;
+  color:#f2faff;
+  text-shadow:0 0 9px rgba(100,221,255,.93),0 2px 12px #010a1b;
+  pointer-events:none;
+}
+#lobby .character-card[data-character="ghju"]::after{
+  text-shadow:0 0 10px rgba(255,87,186,.96),0 2px 12px #170619;
+}
+@media(max-width:700px){
+  #lobby .character-card::after{
+    font-size:clamp(18px,5.2vw,25px);
+    bottom:9px;
+  }
+}
