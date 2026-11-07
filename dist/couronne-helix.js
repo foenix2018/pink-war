@@ -1,3 +1,4 @@
+import {playPortalLaser,loadPortalSamples} from './portal-laser-audio.js';
 // PINK WARS — « COURONNE HELIX », standalone level (not linked from the lobby nor the campaign yet).
 // Same production simulation as the missions (ArenaGame + armour layer), same weapons, gloves, Shadow Unit
 // rig, controls, HUD and WebXR as M02; new world (couronne-layout.js / couronne-art.js) and a sandbox
@@ -57,20 +58,22 @@ function audioReady(){
  try{
   const Context=window.AudioContext||window.webkitAudioContext;if(!Context)return;
   audioCtx=window.__PINKWAR_BOOT_AUDIO||new Context();audioCtx.resume?.().catch?.(()=>{});
-  setLaserAudioEnabled(audioCtx,true);void loadRealLaserSample(audioCtx);void loadCombatSamples(audioCtx);ambience=createAmbience(audioCtx);
+  setLaserAudioEnabled(audioCtx,true);void loadRealLaserSample(audioCtx);void loadCombatSamples(audioCtx);void loadPortalSamples(audioCtx);ambience=createAmbience(audioCtx);
 
  }catch(error){console.warn('Couronne audio',error);}
 }
 document.addEventListener('pointerdown',audioReady,{once:true,capture:true,passive:true});
 document.addEventListener('keydown',audioReady,{once:true,capture:true});
 // Short synthesised cues for the mission beats (portal charge, console, stage cleared).
+let lastPortalSource=null;
 function cue(kind){
+ if(kind==='portal'){if(enableAudio)playPortalLaser(audioCtx,'open',{source:lastPortalSource||{},listener:game?.player||{},yaw});return;}
  if(!audioCtx||audioCtx.state!=='running')return;
  try{
   const now=audioCtx.currentTime,out=audioCtx.createGain();out.gain.value=.12;out.connect(audioCtx.destination);
   const tone=(type,from,to,length,delay=0)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(from,now+delay);o.frequency.exponentialRampToValueAtTime(to,now+delay+length);
    g.gain.setValueAtTime(.0001,now+delay);g.gain.exponentialRampToValueAtTime(.9,now+delay+.02);g.gain.exponentialRampToValueAtTime(.0001,now+delay+length);o.connect(g);g.connect(out);o.start(now+delay);o.stop(now+delay+length+.05);};
-  if(kind==='portal'){tone('sawtooth',90,420,2.6);tone('sine',180,840,2.8,.2);}
+  if(kind==='portal'){}
   else if(kind==='console'){tone('sine',660,990,.12);tone('sine',990,1320,.14,.13);}
   else if(kind==='stage'){tone('triangle',440,660,.25);tone('triangle',660,880,.3,.22);}
   else if(kind==='gate'){tone('sine',320,160,.6);tone('sine',480,240,.7,.05);}
@@ -87,7 +90,7 @@ function showStage(index,s){
 
 // ---------- World ----------
 function createWorld(){
- art=createCouronneArt(T,scene,{quality:low()?'low':'normal',camera});
+ art=createCouronneArt(T,scene,{webgpu:!!renderer.backend?.isWebGPUBackend,onPortalClose:source=>{if(enableAudio)playPortalLaser(audioCtx,'close',{source,listener:game?.player||{},yaw});},quality:low()?'low':'normal',camera});
  art.build(collisions);
 }
 function enemyMaterials(){
@@ -97,7 +100,7 @@ function enemyMaterials(){
 function setupPlayer(){
  game=new ArenaGame(collisions,Math.random,traversal,characterId);game.reset(characterId);game.enableArmorShield();
  mission=createCouronneMission({game,characterId,hooks:{
-  setObstacles:list=>{collisions=list;},openPortal:(x,y,z,o)=>art.openPortal(x,y,z,o),setGatesOpen:open=>art.setGatesOpen(open),
+  setObstacles:list=>{collisions=list;},openPortal:(x,y,z,o)=>{lastPortalSource={x,y,z};return art.openPortal(x,y,z,o);},setGatesOpen:open=>art.setGatesOpen(open),
   setConsole:(id,done)=>art.setConsole(id,done),setAnchorPower:v=>art.setAnchorPower(v),cue,notice:text=>notice(text,4),
   stage:showStage,finish:finishMission,clear:clearVisuals}});
  const lylu=characterId==='lylu',mat=(c,r=.5,m=.5)=>new T.MeshStandardMaterial({color:c,roughness:r,metalness:m}),glow=c=>new T.MeshBasicMaterial({color:c,toneMapped:false});

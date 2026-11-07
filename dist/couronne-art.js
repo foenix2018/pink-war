@@ -1,3 +1,4 @@
+import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
 import {createStairHardware} from './stair-hardware.js';
 import {createModernSwitch} from './modern-switch.js';
 import {createLevelNeons} from './level-neons.js';
@@ -27,7 +28,7 @@ function tiledPlane(T, w, h, tile) {
   return g;
 }
 
-export function createCouronneArt(T, scene, { quality = 'normal', camera } = {}) {
+export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, onPortalClose=()=>{}, camera } = {}) {
   const low = quality === 'low', rng = seeded(9091);
   const root = new T.Group(); root.name = 'COURONNE HELIX'; scene.add(root);
   const animated = [], stats = { instances: 0, meshes: 0 };
@@ -469,24 +470,21 @@ export function createCouronneArt(T, scene, { quality = 'normal', camera } = {})
 
   // ---------- ORDRE tactical portals (Tome II PT02: announced, then units step out) ----------
   const portals = [];
-  function openPortal(x, y, z, { charge = 3.2, hold = 2.2 } = {}) {
-    const g = new T.Group(); g.position.set(x, y, z);
-    const ring = new T.Mesh(new T.RingGeometry(1.7, 2.1, 40), M.additive(0xff3b4e, .0)); ring.rotation.x = -Math.PI / 2; ring.position.y = .03; g.add(ring);
-    const membrane = new T.Mesh(new T.CircleGeometry(1.9, 40), M.additive(0xff2d55, 0)); membrane.position.y = 2.2; membrane.scale.y = 1.15; g.add(membrane);
-    const frame = new T.Mesh(new T.TorusGeometry(2, .14, 8, 40), M.dark); frame.position.y = 2.2; frame.scale.y = 1.15; g.add(frame);
-    const emitters = [0, 1, 2].map(k => { const e = new T.Mesh(new T.BoxGeometry(.25, 1.6, .25), M.metal); const a = k / 3 * TAU; e.position.set(Math.cos(a) * 2.6, .8, Math.sin(a) * 2.6); e.rotation.z = Math.cos(a) * 1.2; e.rotation.x = -Math.sin(a) * 1.2; g.add(e); return e; });
-    add(g); const p = { group: g, ring, membrane, frame, emitters, age: 0, charge, hold }; portals.push(p); return p;
+  function openPortal(x,y,z,{charge=3.2,hold=2.2}={}){
+    const effect=createElectricPortal(T,{height:3.6,low,webgpu}),group=effect.group;
+    group.position.set(x,y,z);add(group);
+    const p={effect,group,age:0,charge,hold,closing:false};portals.push(p);return p;
   }
-  animated.push((t, dt) => {
-    for (let i = portals.length - 1; i >= 0; i--) {
-      const p = portals[i]; p.age += dt; const c = Math.min(1, p.age / p.charge), end = p.charge + p.hold;
-      p.ring.material.opacity = .9 * (.5 + .5 * Math.sin(t * 12)) * (p.age < end ? 1 : 0); p.ring.scale.setScalar(.6 + .5 * c);
-      for (const e of p.emitters) { e.rotation.z *= .95; e.rotation.x *= .95; }
-      p.membrane.material.opacity = p.age > p.charge * .7 ? Math.min(.75, (p.age - p.charge * .7) * 1.2) * Math.max(0, 1 - (p.age - end) * 1.5) : 0;
-      p.frame.rotation.z = t * 2; p.group.visible = p.age < end + .8;
-      if (p.age > end + .8) { root.remove(p.group); portals.splice(i, 1); }
+  function updatePortals(t,dt,eye){
+    for(let i=portals.length-1;i>=0;i--){
+      const p=portals[i];p.age+=dt;const end=p.charge+p.hold,closingAge=p.age>=end?p.age-end:null;
+      if(closingAge!==null&&!p.closing){p.closing=true;onPortalClose(p.group.position);}
+      if(eye)p.group.lookAt(eye.x,p.group.position.y,eye.z);
+      p.effect.update(t,{age:p.age,closingAge});
+      if(closingAge!==null&&closingAge>=PORTAL_CLOSE_SECONDS){p.effect.dispose();portals.splice(i,1);}
     }
-  });
+  }
+  animated.push((t,dt)=>updatePortals(t,dt,camera?.position));
 
   // Build everything queued.
   return {

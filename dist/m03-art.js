@@ -1,3 +1,4 @@
+import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
 import {createStairHardware} from './stair-hardware.js';
 import {createModernSwitch,switchVariant} from './modern-switch.js';
 import {createLevelNeons} from './level-neons.js';
@@ -23,7 +24,7 @@ function canvasTexture(T, w, h, paint) {
   const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.anisotropy = 4; return t;
 }
 
-export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0xff6fb4 } = {}) {
+export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPortalClose=()=>{}, sector, accent = 0xff6fb4 } = {}) {
   const low = quality === 'low', rng = seeded(303);
   const root = new T.Group(); root.name = 'M03 / Le Convoi des Oubliés'; scene.add(root);
   const animated = [], stats = { meshes: 0, halos: 0, lights: 0 };
@@ -367,22 +368,21 @@ export function createM03Art(T, scene, { quality = 'normal', sector, accent = 0x
 
   // ---------- ORDRE tactical portals ----------
   const portals = [];
-  function openPortal(x, y, z, { charge = 3.2, hold = 2.2 } = {}) {
-    const g = new T.Group(); g.position.set(x, y, z);
-    const ring = new T.Mesh(new T.RingGeometry(1.5, 1.85, 40), additive(0xff3b4e, 0)); ring.rotation.x = -Math.PI / 2; ring.position.y = .03; g.add(ring);
-    const membrane = new T.Mesh(new T.CircleGeometry(1.6, 40), additive(0xff2d55, 0)); membrane.position.y = 1.7; g.add(membrane);
-    const frame = new T.Mesh(new T.TorusGeometry(1.7, .12, 8, 40), M.dark); frame.position.y = 1.7; g.add(frame);
-    add(g); portals.push({ group: g, ring, membrane, frame, age: 0, charge, hold });
+  function openPortal(x,y,z,{charge=3.2,hold=2.2}={}){
+    const effect=createElectricPortal(T,{height:3.6,low,webgpu}),group=effect.group;
+    group.position.set(x,y,z);add(group);
+    const p={effect,group,age:0,charge,hold,closing:false};portals.push(p);return p;
   }
-  function updatePortals(t, dt, eye) {
-    for (let i = portals.length - 1; i >= 0; i--) {
-      const p = portals[i]; p.age += dt; const c = Math.min(1, p.age / p.charge), end = p.charge + p.hold;
-      p.ring.material.opacity = .9 * (.5 + .5 * Math.sin(t * 12)) * (p.age < end ? 1 : 0); p.ring.scale.setScalar(.6 + .5 * c);
-      p.membrane.material.opacity = p.age > p.charge * .7 ? Math.min(.75, (p.age - p.charge * .7) * 1.2) * Math.max(0, 1 - (p.age - end) * 1.5) : 0;
-      p.frame.rotation.z = t * 2; p.group.lookAt(eye.x, p.group.position.y, eye.z);
-      if (p.age > end + .8) { root.remove(p.group); portals.splice(i, 1); }
+  function updatePortals(t,dt,eye){
+    for(let i=portals.length-1;i>=0;i--){
+      const p=portals[i];p.age+=dt;const end=p.charge+p.hold,closingAge=p.age>=end?p.age-end:null;
+      if(closingAge!==null&&!p.closing){p.closing=true;onPortalClose(p.group.position);}
+      if(eye)p.group.lookAt(eye.x,p.group.position.y,eye.z);
+      p.effect.update(t,{age:p.age,closingAge});
+      if(closingAge!==null&&closingAge>=PORTAL_CLOSE_SECONDS){p.effect.dispose();portals.splice(i,1);}
     }
   }
+
 
   // ---------- Build ----------
   let amb = null, smoke = null;

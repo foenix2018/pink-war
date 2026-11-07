@@ -1,8 +1,8 @@
 import {createTouchOrbit} from './touch-orbit.js';
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, starterWeaponIndex, weaponCycleOrder, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
-import { createScene } from './scene.js?v=20261107-environment-release';
+import { createScene } from './scene.js?v=20261107-electric-portal-v4';
 import {createRobotShutdownAudio} from './enemy-shutdown-audio.js';
-import {createPortalLaserController} from './portal-laser-audio.js';
+import {loadPortalSamples,createPortalLaserController} from './portal-laser-audio.js';
 import { VRController } from './vr.js';
 import {createGamepadAid} from './ios-gamepad.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
@@ -154,7 +154,7 @@ function audioReady() {
     ambience ||= createAmbience(audioContext,{installations:ACTIVE_INSTALLATIONS});
     saberAudio ||= createSaberSound(audioContext);
     ambience.setEnabled(settings.sound);setLaserAudioEnabled(audioContext,settings.sound);
-    if(settings.sound){void loadRealLaserSample(audioContext);void loadCombatSamples(audioContext);}
+    if(settings.sound){void loadRealLaserSample(audioContext);void loadCombatSamples(audioContext);void loadPortalSamples(audioContext);}
   } catch {}
 }
 function tone(frequency, end, duration = .1, volume = .055, type = 'triangle', delay = 0) {
@@ -579,6 +579,7 @@ function handleEvents() {
   }
 }
 function gameOver(won = false) {
+  portalAudio.closeAll();world.closePortals();
   $('end-dialog')?.querySelector('.pw-story-card')?.remove();
   $('end-dialog')?.querySelector('.pw-story-next')?.remove();
   setScreenMusic('paused');ambience?.pause(); phase = 'over'; resetInput(); let best = game.score;

@@ -1,9 +1,9 @@
+import {createElectricPortalSet} from './electric-portal.js';
 import {createM01SiegeAmbiance} from './m01-siege-ambiance.js';
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import {walkingSurface} from './surface-steps.js';
 import {assistedAim,firingView} from './aim-assist.js';
 import {sightPoint} from './sight-line.js';
-import {createBreachFrame,createBreachTexture} from './vesper-props.js';
 // M01's book reference map, production combat, and locked Shadow Unit rigs.
 // The V7 page supplies controls; it no longer substitutes its visit map for M01.
 import * as T from './vendor/three.webgpu.min.js';
@@ -38,7 +38,7 @@ import {thirdPersonPosition} from './third-person-camera.js';
 import {createMissionXR,immersiveRendererPreferred} from './mission-xr.js';
 import {createGlove} from './hands.js';
 import {playFieldCue} from './m01-field-audio.js';
-import {createPortalLaserController,playPortalLaser} from './portal-laser-audio.js';
+import {loadPortalSamples,createPortalLaserController,playPortalLaser} from './portal-laser-audio.js';
 import {mountCombatHud} from './combat-hud.js';
 import {createArmorFeedback,meleeKick,MELEE_POSE} from './armor-feedback.js';
 import {installM01Extension,readExtensionCheckpoint,clearExtensionCheckpoint} from './m01-extension.js';
@@ -182,17 +182,13 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   function audioReady(){
     if(!sound)return;
     try{
-      if(!audio){const C=window.AudioContext||window.webkitAudioContext;if(!C)return;audio=window.__PINKWAR_BOOT_AUDIO||new C();setLaserAudioEnabled(audio,sound);void loadRealLaserSample(audio);void loadCombatSamples(audio);ambience=createAmbience(audio);saber=createSaberSound(audio);}
+      if(!audio){const C=window.AudioContext||window.webkitAudioContext;if(!C)return;audio=window.__PINKWAR_BOOT_AUDIO||new C();setLaserAudioEnabled(audio,sound);void loadRealLaserSample(audio);void loadCombatSamples(audio);void loadPortalSamples(audio);ambience=createAmbience(audio);saber=createSaberSound(audio);}
       if(audio.state!=='running')void audio.resume().catch(()=>{});
     }catch(error){console.warn('Vesper audio',error);}
   }
   document.addEventListener('pointerdown',audioReady,{once:true,capture:true,passive:true});
   document.addEventListener('keydown',audioReady,{once:true,capture:true});
-  const gateLight=new T.PointLight(0xff3e9e,0,24,2);scene.add(gateLight);
-  const tacticalGate=new T.Group();tacticalGate.name='ORDRE / industrial reinforcement portal';tacticalGate.visible=false;scene.add(tacticalGate);
-  const rim=new T.Mesh(new T.TorusGeometry(1.4,.16,8,36),materials.iron);tacticalGate.add(rim);
-  createBreachFrame(T,tacticalGate,{radius:1.4,steel:materials.iron,dark:materials.black,energy:materials.cyan,low:profile.phone||requestedQuality==='low'});
-  const membrane=new T.Mesh(new T.CircleGeometry(1.3,36),new T.MeshBasicMaterial({map:createBreachTexture(T),color:0xff478f,transparent:true,opacity:.72,side:T.DoubleSide,depthWrite:false,toneMapped:false}));tacticalGate.add(membrane);
+  const electricPortals=createElectricPortalSet(T,scene,{height:3.5,low:profile.phone||requestedQuality==='low',webgpu:!!renderer.backend?.isWebGPUBackend});
   const portalMarker=document.createElement('div');portalMarker.className='pw-portal-marker';portalMarker.setAttribute('aria-label','Direction du portail ORDRE');portalMarker.hidden=true;
   portalMarker.style.cssText='position:fixed;top:max(58px,env(safe-area-inset-top));width:7px;height:7px;border-radius:50%;background:#ff72b4;box-shadow:0 0 10px #ff3388;pointer-events:none;z-index:4';document.body.append(portalMarker);
   const objectiveMarker=document.createElement('div');objectiveMarker.className='pw-objective-marker';objectiveMarker.setAttribute('aria-label','Direction de l’objectif');
@@ -264,7 +260,9 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       crouched:p.crouched,sprint:!!s.sprint,aim:!!s.aiming,firing:held
     });
   }
+  let portalFrame=0;
   function update(dt,s){
+    portalFrame+=dt;electricPortals.sync(completed?[]:game.activePortals,game.time,portalFrame);
     setScreenMusic(ready&&!completed&&!journalOpen&&!skillMenu.isOpen&&game.state==='playing'?'gameplay':'paused',1);
     if(!ready||completed||journalOpen||skillMenu.isOpen)return;
     syncCamera(s,dt);
@@ -290,14 +288,11 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     if(game.ammo[game.weaponIndex]<ammoBefore||game.bladeSlashAt!==bladeBefore)fireInput.consume();
     if(game.weapon.melee)game.updateBlade((xr?.active?xr.gun():gun)?.userData.getBladeSegment?.(),dt,s.aiming,camera.getWorldPosition(new T.Vector3()));
     const portal=game.activePortals[0];
-    tacticalGate.visible=!!portal;portalMarker.hidden=!portal;
+    electricPortals.sync(game.activePortals,game.time,portalFrame);portalMarker.hidden=!portal;
     if(portal){
-      tacticalGate.position.set(portal.x,1.6,portal.z);tacticalGate.rotation.y=portal.yaw||0;gateLight.position.set(portal.x,2,portal.z);
-      gateLight.intensity=game.time<game.nextSpawnAt?24+6*Math.sin(game.time*5):12;
-      membrane.rotation.z=game.time*.35;
       const bearing=Math.atan2(portal.x-p.x,-(portal.z-p.z))-s.yaw;
       const angle=Math.atan2(Math.sin(bearing),Math.cos(bearing));portalMarker.style.left=(50+Math.max(-42,Math.min(42,angle*30)))+'%';
-    }else gateLight.intensity=0;
+    }
     missionArt.update(game,game.time);syncOffers();
     if(lastStage!==game.stage){
       lastStage=game.stage;notify(game.campaign.title+' — '+game.campaign.subtitle,4200);

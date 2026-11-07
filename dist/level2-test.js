@@ -1,10 +1,11 @@
+import {createElectricPortalSet} from './electric-portal.js';
 import {createStairHardware} from './stair-hardware.js';
 import {createLevelNeons} from './level-neons.js';
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import {assistedAim,firingView} from './aim-assist.js';
 import {sightPoint} from './sight-line.js';
 import {walkingSurface} from './surface-steps.js';
-import {createVesperProps,createBreachFrame,createBreachTexture} from './vesper-props.js';
+import {createVesperProps} from './vesper-props.js';
 import {createWorldShadows,createGroundOcclusion} from './world-shadows.js';
 // PINK WARS / M02 "SOUS LES NÉONS" — isolated vertical-slice test.
 // Simulation, collisions, jump, stamina/health, weapons and hostiles are
@@ -22,7 +23,7 @@ import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './rende
 import {createEnemyFactory} from './enemies.js';
 import {createEnemyDestructionFX} from './enemy-destruction-fx.js';
 import {createRobotShutdownAudio} from './enemy-shutdown-audio.js';
-import {playPortalLaser} from './portal-laser-audio.js';
+import {loadPortalSamples,createPortalLaserController} from './portal-laser-audio.js';
 import {buildGun,attachViewmodelLight} from './weapons.js';
 import {createDistrictArchitecture} from './level2-architecture.js';
 import {createEnvironmentFinish} from './m02-environment-finish.js';
@@ -72,7 +73,7 @@ const rng=(()=>{let s=220102;return()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;
 let canvas=main,renderer,scene,camera,game,weapon,clock=0,running=false,started=false,last=0,fpsTime=0,frames=0,framePending=false,recovering=false,bootStep='modules';
 let yaw=0,pitch=0,stage=0,reported=-1;
 let noticeUntil=0,signal=0,rain,enemyFactory,root,architecture,pbrController,atmosphere;
-let worldShadows=null,groundOcclusion=null,environmentFinish=null,breachGate=null,breachMembrane=null;
+let worldShadows=null,groundOcclusion=null,environmentFinish=null,electricPortals=null;
 // 3.70 extension: enclave (prologue) and transit tower (epilogue) around the street.
 let extension=null,extArt=null,helixFactory=null,subtitles=null,skyLights=null,journalOpen=false,checkpointSaved=null,checkpointClock=0;
 let view=readPreferredView(),aimBlend=0,mouseAim=false,playerRig=null,touchControls=null,paused=false;
@@ -99,7 +100,7 @@ function audioReady(){
   const Context=window.AudioContext||window.webkitAudioContext;
   if(!Context)return;audioCtx=window.__PINKWAR_BOOT_AUDIO||new Context();
   audioCtx.resume?.().catch?.(()=>{});
-  setLaserAudioEnabled(audioCtx,enableAudio);void loadRealLaserSample(audioCtx);void loadCombatSamples(audioCtx);
+  setLaserAudioEnabled(audioCtx,enableAudio);void loadRealLaserSample(audioCtx);void loadCombatSamples(audioCtx);void loadPortalSamples(audioCtx);
   environmentAudio=createAmbience(audioCtx);
   battleAudio=createBattleAudio(audioCtx);
  }catch(error){console.warn('M02 audio fallback',error);}
@@ -338,9 +339,8 @@ function stairsAndSkybridges(){
 }
 function props(){
  const details=createVesperProps(T,root,{low:low()});
- breachGate=new T.Group();breachGate.name='M02 / renforts HELIX';breachGate.visible=false;scene.add(breachGate);
- createBreachFrame(T,breachGate,{radius:1.4,steel:materials.iron,dark:materials.black,energy:materials.red,low:low()});
- breachMembrane=new T.Mesh(new T.CircleGeometry(1.27,32),new T.MeshBasicMaterial({map:createBreachTexture(T),color:0xff526c,transparent:true,opacity:.65,side:T.DoubleSide,depthWrite:false,toneMapped:false}));breachGate.add(breachMembrane);
+ electricPortals=createElectricPortalSet(T,scene,{height:3.5,low:low(),webgpu:!!renderer.backend?.isWebGPUBackend});
+
  const terminals=createArchiveTerminalFactory(T,{performance:low()});
  function archive(x,z,title,id){
   const computer=terminals.create(root,{x,z,id});
@@ -510,7 +510,7 @@ function setupExtension(){
   // Saved before the stage's own group is deployed, so a restart brings it back.
   stage:()=>{lastMinimalHudStage=-1;extensionCue('stage');if(extension&&extension.writeCheckpoint())checkpointSaved=extension.checkpointKey;},
   core:()=>{stage=0;lastMinimalHudStage=-1;},
-  finale:()=>{if(enableAudio)playPortalLaser(audioCtx,'close',{source:breachGate?.position||{},listener:game?.player||{},yaw});running=false;document.exitPointerLock?.();clearM02Checkpoint(characterId);checkpointSaved=null;subtitles?.clear();
+  finale:()=>{portalAudio.closeAll();game.activePortals=[];running=false;document.exitPointerLock?.();clearM02Checkpoint(characterId);checkpointSaved=null;subtitles?.clear();
    setTimeout(()=>showChapter2Finale({characterId,onReplay:()=>resume({fresh:true})}),900);}
  }});
 }
@@ -522,9 +522,10 @@ function openJournal(entry,then){
  if(xr?.active)xr.showJournal(entry,()=>document.getElementById('m01-journal')?.close());
 }
 // Short synthesised cues for the extension beats (doors, crank, batteries, holds, HELIX drops, documents).
+const portalAudio=createPortalLaserController({getContext:()=>audioCtx,getListener:()=>game?.player,getYaw:()=>yaw,enabled:()=>enableAudio});
 function extensionCue(kind){
  if(!enableAudio||!audioCtx||audioCtx.state!=='running')return;
- if(kind==='portal'){playPortalLaser(audioCtx,'open',{source:breachGate?.position||game?.activePortals?.[0]||{},listener:game?.player||{},yaw});return;}
+ if(kind==='portal')return; // Transition audio is owned by portalAudio.sync.
  try{
   const now=audioCtx.currentTime,out=audioCtx.createGain();out.gain.value=.12;out.connect(audioCtx.destination);
   const tone=(type,from,to,length,delay=0,gain=.9)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(from,now+delay);o.frequency.exponentialRampToValueAtTime(to,now+delay+length);
@@ -859,10 +860,8 @@ function animation(t,frame){
   extArt.update(clock,dt,eye,game.player,{crank:extension?.hold?.name==='grille'});extArt.syncPickups(game.pickups,clock);
   if(skyLights){const f=extArt.shelter(eye.position,dt);skyLights.ambient.intensity=1.4*(.5+.5*f);skyLights.moon.intensity=2.15*f;}
  }catch(error){console.warn('M02 extension dressing frame disabled:',error);extArt=null;}
- if(breachGate){
-  const site=game?.activePortals[0];breachGate.visible=!!site;
-  if(site){breachGate.position.set(site.x,(site.y||0)+1.6,site.z);breachGate.rotation.y=site.yaw||0;breachMembrane.rotation.z=clock*.35;breachMembrane.material.opacity=.55+.12*Math.sin(clock*4);}
- }
+ portalAudio.sync(game?.activePortals||[],game?.time||0);
+ electricPortals?.sync(game?.activePortals||[],game?.time||0,clock);
  subtitles?.update(dt,{xr:!!xr?.active,hidden:journalOpen||paused||!running});
  warZone?.update(game?.time||0,{active:running});for(const event of warZone?.drainEvents()||[])if(enableAudio&&battleAudio)battleAudio.event(event,game.player,yaw);
  if(xr?.active){if(!running||paused)xr.update(dt,weaponFeel.state,weaponFeel.state.flash);xr.renderScope();}

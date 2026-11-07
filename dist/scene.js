@@ -1,3 +1,4 @@
+import {createElectricPortal,createElectricPortalSet} from './electric-portal.js';
 import {createStairHardware} from './stair-hardware.js';
 import { createSentinel } from './sentinel-mk9.js';
 import {createWorldShadows,createGroundOcclusion} from './world-shadows.js';
@@ -173,25 +174,8 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     instance.castShadow = !mat.isMeshBasicMaterial; instance.receiveShadow = !mat.isMeshBasicMaterial; instance.computeBoundingSphere(); arenaRoot.add(instance);
   }
 
-  const portal = new T.Group(); portal.position.set(PORTAL.x,0,PORTAL.z); scene.add(portal);
-  mesh(new T.CylinderGeometry(9.2,10,.35,48), mats.dark, portal, [0,.12,0]);
-  mesh(new T.TorusGeometry(9,.04,4,80), mats.rose, portal, [0,.32,0], [1,1,1],false).rotation.x = -Math.PI/2;
-  const gate = new T.Group(); gate.position.y = 7.15; portal.add(gate);
-  mesh(new T.TorusGeometry(7,.46,8,72), mats.steel, gate);
-  mesh(new T.TorusGeometry(6.67,.095,6,100), mats.pale, gate,[0,0,.2],[1,1,1],false);
-  mesh(new T.TorusGeometry(7.52,.07,5,96), mats.rose, gate,[0,0,-.05],[1,1,1],false);
-  const innerRing = mesh(new T.TorusGeometry(5.85,.055,5,70,Math.PI*1.7), mats.rose, gate,[0,0,.26],[1,1,1],false);
-  function paintPortal(c,w) {
-    c.clearRect(0,0,w,w);
-    const g=c.createRadialGradient(w/2,w/2,0,w/2,w/2,w/2);[0,.09,.25,.7,.94,1].forEach((stop,i)=>g.addColorStop(stop,character.world.portal[i]));c.fillStyle=g;c.fillRect(0,0,w,w);
-    for(let i=0;i<48;i++){const a=i*.8,r=20+i*4.5;c.strokeStyle=`rgba(${character.world.portalLine},${.12+i/400})`;c.lineWidth=1;c.beginPath();c.arc(w/2,w/2,r,a,a+Math.PI*.65);c.stroke();}
-  }
-  const portalTexture=canvasTexture(512,512,paintPortal);
-  const vortex = mesh(new T.PlaneGeometry(13.1,13.1), new T.MeshBasicMaterial({map:portalTexture,transparent:true,side:T.DoubleSide,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}),gate,[0,0,-.05],[1,1,1],false);
-  const portalHalo = halo(gate,[0,0,.1],22,palette.rose,.36);
-  const portalLight = new T.PointLight(palette.hot,75,34,2);portalLight.position.set(0,5,2);portal.add(portalLight);
-  for(let i=0;i<12;i++){const a=i*Math.PI/6; const b=box(mats.dark,gate,[Math.cos(a)*7.12,Math.sin(a)*7.12,.12],[.8,.85,.75]);b.rotation.z=a;const n=box(mats.rose,gate,[Math.cos(a)*7.13,Math.sin(a)*7.13,.51],[.28,.5,.04],false);n.rotation.z=a;}
-  for(const x of [-8,8]){box(mats.dark,portal,[x,3,0],[1.3,6,1.9]);box(mats.rose,portal,[x,3.4,1],[.17,3.8,.06],false);}
+  const primaryPortal=createElectricPortal(T,{height:14.3,low:profile.phone||profile.headset,webgpu:!!renderer.backend?.isWebGPUBackend});
+  const portal=primaryPortal.group;portal.position.set(PORTAL.x,0,PORTAL.z);scene.add(portal);
   const dustPositions = new Float32Array(100*3); for(let i=0;i<100;i++){dustPositions[i*3]=(Math.random()-.5)*35;dustPositions[i*3+1]=Math.random()*18;dustPositions[i*3+2]=PORTAL.z+(Math.random()-.5)*20;}
   const dustGeo = new T.BufferGeometry();dustGeo.setAttribute('position',new T.BufferAttribute(dustPositions,3));const dust=new T.Points(dustGeo,new T.PointsMaterial({color:palette.pale,size:.045,transparent:true,opacity:.6,sizeAttenuation:true,depthWrite:false}));scene.add(dust);
 
@@ -237,9 +221,9 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     scene.background.setHex(character.masculine?0x16243c:0x261d32);scene.fog.color.setHex(0x302030);scene.fog.density=.0034;
     hemisphere.color.setHex(0xa9c9e5);hemisphere.groundColor.setHex(0x344058);
     sun.color.setHex(0xb5d7ff);rim.color.setHex(0x9abfff);city.setAccent(palette.rose);combatFX.setAccent(palette.rose);laserFX.setAccent(palette.rose);setKenneyAccent(palette.rose);
-    portalLight.color.setHex(palette.hot);dust.material.color.setHex(palette.pale);
+    dust.material.color.setHex(palette.pale);
     for(const sprite of themeHalos)sprite.material.color.setHex(palette.rose);
-    for(const [texture,paint] of [[skyTexture,paintSky],[portalTexture,paintPortal],[emblem,paintEmblem]]){
+    for(const [texture,paint] of [[skyTexture,paintSky],[emblem,paintEmblem]]){
       const canvas=texture.image;paint(canvas.getContext('2d'),canvas.width,canvas.height);texture.needsUpdate=true;
     }
     themeApplied=true;
@@ -297,65 +281,11 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     const ground=sim.surfaceHeight(event.x,event.z,sim.time,0);
     enemyFailureFX.kill(original,{id,form:event.form||original.userData.form,x:event.x,z:event.z,groundY:ground});
   }
-  // Secondary breaches are independent visual gates created only for an active wave.
-  // Shared low-poly geometry keeps draw calls and VRAM bounded on Quest/iPhone.
-  const secondaryPortals=new Map();
-  let primaryGateWasOpen=false,primaryGateClosedAt=-Infinity;
-  const breachRingGeometry=new T.TorusGeometry(2.45,.20,7,34);
-  const breachHaloGeometry=new T.TorusGeometry(2.83,.045,5,40);
-  const breachSurfaceGeometry=new T.PlaneGeometry(4.6,4.6);
-  function buildSecondaryPortal(site) {
-    const group=new T.Group();group.position.set(site.x,site.y||0,site.z);group.rotation.y=site.yaw||0;
-    scene.add(group);
-    const gate=new T.Group();gate.position.y=2.9;group.add(gate);
-    const ring=mesh(breachRingGeometry,mats.steel,gate,[0,0,0],[1,1,1],false);
-    const outline=mesh(breachHaloGeometry,mats.rose,gate,[0,0,.08],[1,1,1],false);
-    const vortexMat=new T.MeshBasicMaterial({map:portalTexture,transparent:true,side:T.DoubleSide,
-      depthWrite:false,blending:T.AdditiveBlending,toneMapped:false,opacity:0});
-    const surface=mesh(breachSurfaceGeometry,vortexMat,gate,[0,0,-.025],[1,1,1],false);
-    const floorRing=mesh(breachHaloGeometry,mats.pale,group,[0,.10,0],[.65,.65,.65],false);
-    floorRing.rotation.x=-Math.PI/2;
-    const light=new T.PointLight(palette.hot,6,10,2);light.position.set(0,2.8,.7);group.add(light);
-    return {group,gate,ring,outline,surface,vortexMat,floorRing,light,site};
-  }
-  function syncSecondaryPortals(sim,time) {
-    const present=new Set();
-    const centreSite=(sim.activePortals||[]).find(p=>p.x===PORTAL.x&&p.z===PORTAL.z&&time>=p.openedAt);
-    if(centreSite){
-      primaryGateWasOpen=true;primaryGateClosedAt=-Infinity;
-      const t=Math.max(0,Math.min(1,(time-centreSite.openedAt)/.85)),ease=t*t*(3-2*t);
-      gate.scale.y=Math.max(.001,ease);portalLight.intensity=75*ease;
-    }else{
-      if(primaryGateWasOpen){primaryGateClosedAt=time;primaryGateWasOpen=false;}
-      const fading=Math.max(0,Math.min(1,1-(time-primaryGateClosedAt)/.85));
-      gate.scale.y=Math.max(.001,fading*fading*(3-2*fading));
-      portalLight.intensity=75*fading;
-    }
-    const centreFading=time-primaryGateClosedAt<.85;
-    portal.visible=!rangeActive&&((!campaignActive&&!sim.wave)||!!centreSite||centreFading);
-    for(const site of sim.activePortals||[]){
-      if(site.x===PORTAL.x&&site.z===PORTAL.z)continue;
-      present.add(site.id);
-      let display=secondaryPortals.get(site.id);
-      if(!display){display=buildSecondaryPortal(site);secondaryPortals.set(site.id,display);}
-      display.closingAt=null;
-      const t=time-site.openedAt,open=Math.max(0,Math.min(1,t/.72)),ease=open*open*(3-2*open);
-      display.group.visible=t>=0;
-      display.gate.scale.set(1,Math.max(.001,ease),1);
-      display.surface.material.opacity=.88*ease*(.9+.1*Math.sin(time*3.4));
-      display.outline.rotation.z=time*.19;
-      display.floorRing.scale.setScalar(.62+.12*Math.sin(time*4));
-      display.light.intensity=6*ease;
-    }
-    for(const [id,display] of secondaryPortals)if(!present.has(id)){
-      display.closingAt ??=time;
-      const p=Math.max(0,Math.min(1,(time-display.closingAt)/.83));
-      const collapse=1-p*p*(3-2*p);
-      display.gate.scale.y=Math.max(.001,collapse);
-      display.vortexMat.opacity=.88*collapse;
-      display.light.intensity=6*collapse;
-      if(p>=1){scene.remove(display.group);display.vortexMat.dispose();secondaryPortals.delete(id);}
-    }
+  const electricPortals=createElectricPortalSet(T,scene,{low:profile.phone||profile.headset||quality==='low',webgpu:!!renderer.backend?.isWebGPUBackend});
+  let portalSites=[],portalTime=0,portalFrame=0;
+  function syncSecondaryPortals(sim,time){
+    portal.visible=!rangeActive&&!campaignActive&&!sim.wave;
+    portalSites=rangeActive?[]:sim.activePortals||[];portalTime=time;electricPortals.sync(portalSites,time,portalFrame);
   }
   const monsters=new Map(), bulletMeshes=new Map(), particles=[],probeSparkAt=new Map();
   const enemyFactory=createEnemyFactory(mats,{detail:profile.phone||profile.headset||quality==='low'?'low':'high'});
@@ -378,7 +308,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     const ring=mesh(pickupRing,core,g,[0,-.5,0],[1,1,1],false);ring.rotation.x=-Math.PI/2;ring.userData.ground=true;
     return g;
   }
-  function resetDynamic(){city.reset?.();for(const m of pickupMeshes.values())scene.remove(m);pickupMeshes.clear();rangeArt.update(null);combatFX.reset();laserFX.reset();traversal.update(0);for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();primaryGateWasOpen=false;primaryGateClosedAt=-Infinity;gate.scale.y=1;portalLight.intensity=75;portal.visible=!rangeActive;enemyFailureFX.reset();for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;probeSparkAt.clear();for(const pool of sparkPools)pool.count=0;}
+  function resetDynamic(){city.reset?.();for(const m of pickupMeshes.values())scene.remove(m);pickupMeshes.clear();rangeArt.update(null);combatFX.reset();laserFX.reset();traversal.update(0);electricPortals.reset();portalSites=[];portalTime=0;primaryPortal.update(0,{age:4});portal.visible=!rangeActive;enemyFailureFX.reset();for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;probeSparkAt.clear();for(const pool of sparkPools)pool.count=0;}
   function sync(sim,time,dt){
     if(arenaRoot.visible)city.sync?.(sim);
     if(!campaignActive)city.fence?.update({...sim.player,y:(sim.player.elevation||0)+(sim.player.crouched?1.05:1.65)},.65,1.2);traversal.update(sim.time);campaignArt.updateLift(sim.time);combatFX.update(dt,camera);laserFX.update(sim.bullets,dt);shadowTime=sim.time;shadowEntities=rangeActive?[sim.player,...sim.targets.map(t=>({...targetPosition(t,sim.time),radius:.28}))]:[...sim.enemies,sim.player];shadowHeight=e=>sim.surfaceHeight(e.x,e.z,sim.time,(e.elevation||0)+.3);trackShadows(sim.player.x,sim.player.z,sim.player.elevation||0);
@@ -415,7 +345,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     }
   }
   function setWeapon(index){ if(fpsGun.userData.index===index&&soldier.weapon===index)return;fpsGun.userData.setVariant(index);soldier.setWeapon(index); }
-  function animatePortal(time){if(arenaRoot.visible)city.update(time,camera.position);sky.rotation.y=time*.00035;innerRing.rotation.z=time*.2;vortex.rotation.z=-time*.15;portalHalo.material.opacity=.3+Math.sin(time*2)*.055;dust.rotation.y=Math.sin(time*.1)*.06;}
+  function animatePortal(time){portalFrame=time;electricPortals.sync(portalSites,portalTime,time);if(arenaRoot.visible)city.update(time,camera.position);sky.rotation.y=time*.00035;if(portal.visible)primaryPortal.update(time,{age:4});dust.rotation.y=Math.sin(time*.1)*.06;}
   function lobby(time,level=1){
     trackShadows(0,7);camera.clearViewOffset();setEquipment(level);portal.visible=true;const portrait=innerHeight>innerWidth;
     soldier.root.scale.setScalar((portrait?1.2:2.6)*soldier.heightScale);soldier.root.position.set(portrait?0:3.1,0,7);soldier.root.rotation.y=Math.PI-.28;
@@ -520,7 +450,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     else {sky.visible=true;renderer.toneMappingExposure=campaignActive?.84:1.08;hemisphere.intensity=campaignActive?.62:.85;sun.intensity=campaignActive?1.36:1.25;rim.intensity=campaignActive?.18:1.08;}
     if(breachActive&&!rangeActive)styleBreach();
   }
-  return {T,scene,camera,moon,setRobotShutdownSound:callback=>enemyFailureFX.setSoundHandler(callback),get campaignArt(){return campaignArt;},rangeArt,setRangeActive,setCampaignActive,graphics:{...profile,initialFailure:prepared.initialFailure},warm:async()=>{await campaignArt.ready;await warmRenderer(renderer,scene,camera)},get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>campaignActive?{...campaignArt.stats(),map:breachActive?'breche-violette-01':'vesper-secours-07'}:{...city.stats,boundary:city.fence?.stats()},resetDynamic,recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
+  return {T,scene,camera,moon,setRobotShutdownSound:callback=>enemyFailureFX.setSoundHandler(callback),get campaignArt(){return campaignArt;},rangeArt,setRangeActive,setCampaignActive,graphics:{...profile,initialFailure:prepared.initialFailure},warm:async()=>{await campaignArt.ready;await warmRenderer(renderer,scene,camera)},get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>campaignActive?{...campaignArt.stats(),map:breachActive?'breche-violette-01':'vesper-secours-07'}:{...city.stats,boundary:city.fence?.stats()},resetDynamic,closePortals:()=>{portalSites=[];electricPortals.sync([],portalTime,portalFrame);},recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
     holsterGun,setPlayerVisible,
     get lost(){return lost;},get backend(){return renderer.backend?.isWebGPUBackend?'WebGPU':'WebGL';},render:()=>{if(!lost){camera.updateWorldMatrix(true,false);moon.update(camera);lightBlade();renderer.render(scene,camera);}}};
 }

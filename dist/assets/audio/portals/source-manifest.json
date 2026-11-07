@@ -1,0 +1,63 @@
+{
+  "author": "Kenney",
+  "pack": "Sci-fi Sounds",
+  "license": "CC0-1.0",
+  "officialSource": "https://kenney.nl/assets/sci-fi-sounds",
+  "downloadMirror": "https://github.com/novincode/atomcut-library/tree/main/packs/kenney-sci-fi-sounds",
+  "files": [
+    {
+      "file": "computer-noise-000.m4a",
+      "originalName": "Audio/computerNoise_000.ogg",
+      "url": "https://raw.githubusercontent.com/novincode/atomcut-library/main/packs/kenney-sci-fi-sounds/audio/computer-noise-000.m4a",
+      "sha256": "e403108f9349998380b2388d5501133457486916af7594e080b29670384f57d7"
+    },
+    {
+      "file": "force-field-000.m4a",
+      "originalName": "Audio/forceField_000.ogg",
+      "url": "https://raw.githubusercontent.com/novincode/atomcut-library/main/packs/kenney-sci-fi-sounds/audio/force-field-000.m4a",
+      "sha256": "30602e90f965309623cab97f21c4c851db8976f471b8d19b65410911b6491064"
+    },
+    {
+      "file": "force-field-002.m4a",
+      "originalName": "Audio/forceField_002.ogg",
+      "url": "https://raw.githubusercontent.com/novincode/atomcut-library/main/packs/kenney-sci-fi-sounds/audio/force-field-002.m4a",
+      "sha256": "d42cf3560ae90abd9ae803928a2d6d038c30bb2e32211beea7c56b6e66c6e60e"
+    },
+    {
+      "file": "force-field-004.m4a",
+      "originalName": "Audio/forceField_004.ogg",
+      "url": "https://raw.githubusercontent.com/novincode/atomcut-library/main/packs/kenney-sci-fi-sounds/audio/force-field-004.m4a",
+      "sha256": "42fd3b6a275c035fb8d13ad1053cfc3e9769221d883575e199263dc06a9c464d"
+    },
+    {
+      "file": "laser-large-000.m4a",
+      "originalName": "Audio/laserLarge_000.ogg",
+      "url": "https://raw.githubusercontent.com/novincode/atomcut-library/main/packs/kenney-sci-fi-sounds/audio/laser-large-000.m4a",
+      "sha256": "9e7647829def6308fe896322f6a7ad9b912d9510a0e122c4c8bb2dcb18f2d457"
+    },
+    {
+      "file": "laser-large-001.m4a",
+      "originalName": "Audio/laserLarge_001.ogg",
+      "url": "https://raw.githubusercontent.com/novincode/atomcut-library/main/packs/kenney-sci-fi-sounds/audio/laser-large-001.m4a",
+      "sha256": "4f4429c186c96a5de6a65d2e48e7487943f8a3358f6b6b02645321dfd3a5e779"
+    },
+    {
+      "file": "laser-large-003.m4a",
+      "originalName": "Audio/laserLarge_003.ogg",
+      "url": "https://raw.githubusercontent.com/novincode/atomcut-library/main/packs/kenney-sci-fi-sounds/audio/laser-large-003.m4a",
+      "sha256": "a21ea3ea60eca50e18ddd6516fb1f26301fe2689cd5594228c5d82ec8d2ec255"
+    },
+    {
+      "file": "laser-small-001.m4a",
+      "originalName": "Audio/laserSmall_001.ogg",
+      "url": "https://raw.githubusercontent.com/novincode/atomcut-library/main/packs/kenney-sci-fi-sounds/audio/laser-small-001.m4a",
+      "sha256": "5207d6d648f669cf04010e4aa3896c0f742bec47638de53dad819548935ab219"
+    },
+    {
+      "file": "laser-small-003.m4a",
+      "originalName": "Audio/laserSmall_003.ogg",
+      "url": "https://raw.githubusercontent.com/novincode/atomcut-library/main/packs/kenney-sci-fi-sounds/audio/laser-small-003.m4a",
+      "sha256": "3f64d03022d0d0f0b15fd74c1cfe3bae587e6b055245358b456b1eb539361459"
+    }
+  ]
+}

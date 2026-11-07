@@ -17,7 +17,7 @@ import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './rende
 import {createEnemyFactory} from './enemies.js';
 import {createEnemyDestructionFX} from './enemy-destruction-fx.js';
 import {createRobotShutdownAudio} from './enemy-shutdown-audio.js';
-import {playPortalLaser} from './portal-laser-audio.js';
+import {loadPortalSamples,playPortalLaser} from './portal-laser-audio.js';
 import {installPinkWarsSoldier} from './level2-player.js';
 import {createCampaignCombatEffects} from './campaign-combat-effects.js';
 import {createAICompanion} from './ai-companions.js';
@@ -69,7 +69,7 @@ function audioReady(){
  try{
   const Context=window.AudioContext||window.webkitAudioContext;if(!Context)return;
   audioCtx=window.__PINKWAR_BOOT_AUDIO||new Context();audioCtx.resume?.().catch?.(()=>{});
-  setLaserAudioEnabled(audioCtx,true);void loadRealLaserSample(audioCtx);void loadCombatSamples(audioCtx);ambience=createAmbience(audioCtx);
+  setLaserAudioEnabled(audioCtx,true);void loadRealLaserSample(audioCtx);void loadCombatSamples(audioCtx);void loadPortalSamples(audioCtx);ambience=createAmbience(audioCtx);
   underground=createUnderground(audioCtx);
  }catch(error){console.warn('Ligne 9 audio',error);}
 }
@@ -101,10 +101,9 @@ function createUnderground(ctx){
  }};
 }
 // Short synthesised cues for the mission beats.
-let lastPortalSource=null,portalEverOpened=false;
+let lastPortalSource=null;
 function cue(kind){
  if(kind==='portal'){
-  portalEverOpened=true;
   if(audioCtx?.state==='running')playPortalLaser(audioCtx,'open',{source:lastPortalSource||{},listener:game?.player||{},yaw});
   return;
  }
@@ -173,7 +172,7 @@ function closeDocument(){
 
 // ---------- World ----------
 function createWorld(){
- art=createLigne9Art(T,scene,{quality:low()?'low':'normal',camera});
+ art=createLigne9Art(T,scene,{webgpu:!!renderer.backend?.isWebGPUBackend,onPortalClose:source=>{if(enableAudio)playPortalLaser(audioCtx,'close',{source,listener:game?.player||{},yaw});},quality:low()?'low':'normal',camera});
  art.build(collisions);
  // Head lamp of the AEGIS helmet: on automatically in the dark, L to force it.
  lamp=new T.SpotLight(0xf4f1e6,0,36,.46,.6,1.15);lamp.position.set(.12,.05,0);lamp.target.position.set(0,-.4,-6);camera.add(lamp);camera.add(lamp.target);
@@ -237,10 +236,6 @@ function syncDevices(){
  for(const it of L.INTERACTIONS){const isDone=it.log?mission.reads.includes(it.log):done.has(it.id)||(it.id==='tableau'&&mission.stage>L.STAGE_INDEX.courant)||(it.id==='pompe-a'&&mission.done.includes('pompeA'))||(it.id==='pupitre-p9'&&mission.done.includes('pompes'))||(it.id==='ecluse'&&mission.done.includes('ecluse'));art.markDone(it.id,isDone);}
 }
 function finishMission(){
- if(portalEverOpened&&audioCtx?.state==='running'){
-  playPortalLaser(audioCtx,'close',{source:lastPortalSource||{},listener:game?.player||{},yaw});
- }
- portalEverOpened=false;
  running=false;ambience?.pause?.();document.exitPointerLock?.();closeDocument();
  const minutes=Math.floor(missionTime/60),seconds=String(Math.floor(missionTime%60)).padStart(2,'0');
  $('panel-title').innerHTML='La Ligne <em>noyée</em>';

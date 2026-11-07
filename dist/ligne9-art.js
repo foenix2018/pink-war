@@ -1,3 +1,4 @@
+import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
 import {createStairHardware} from './stair-hardware.js';
 import {upgradeLightBlocks} from './industrial-light.js';
 import {createIndustrialDoor} from './industrial-door.js';
@@ -30,7 +31,7 @@ function canvasTexture(T, w, h, paint, { repeat = false, color = true } = {}) {
 const AMBIENT = { street: [.55, .55], stairwell: [.3, .12], hall: [.36, .05], technical: [.24, .04], corridor: [.22, .04], aid: [.26, .04], market: [.36, .05],
   shelter: [.26, .07], platform: [.34, .05], service: [.16, .015], pumps: [.32, .04], lock: [.24, .04], lowtrack: [.18, .03], anchor: [.3, .3], control: [.22, .04], lift: [.2, .04] };
 
-export function createLigne9Art(T, scene, { quality = 'normal', camera, assets = 'assets/ligne9/' } = {}) {
+export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, onPortalClose=()=>{}, camera, assets = 'assets/ligne9/' } = {}) {
   const low = quality === 'low', rng = seeded(905);
   const root = new T.Group(); root.name = 'LIGNE 9'; scene.add(root);
   const animated = [], stats = { meshes: 0, instances: 0, textures: 0, fixtures: 0 };
@@ -870,22 +871,21 @@ export function createLigne9Art(T, scene, { quality = 'normal', camera, assets =
 
   // ---------- ORDRE tactical portals ----------
   const portals = [];
-  function openPortal(x, y, z, { charge = 3.2, hold = 2.2 } = {}) {
-    const g = new T.Group(); g.position.set(x, y, z);
-    const ring = new T.Mesh(new T.RingGeometry(1.5, 1.85, 40), additive(0xff3b4e, 0)); ring.rotation.x = -Math.PI / 2; ring.position.y = .03; g.add(ring);
-    const membrane = new T.Mesh(new T.CircleGeometry(1.6, 40), additive(0xff2d55, 0)); membrane.position.y = 1.7; membrane.scale.y = 1.05; g.add(membrane);
-    const frame = new T.Mesh(new T.TorusGeometry(1.7, .12, 8, 40), M.dark); frame.position.y = 1.7; frame.scale.y = 1.05; g.add(frame);
-    add(g); const p = { group: g, ring, membrane, frame, age: 0, charge, hold }; portals.push(p); return p;
+  function openPortal(x,y,z,{charge=3.2,hold=2.2}={}){
+    const effect=createElectricPortal(T,{height:3.6,low,webgpu}),group=effect.group;
+    group.position.set(x,y,z);add(group);
+    const p={effect,group,age:0,charge,hold,closing:false};portals.push(p);return p;
   }
-  function updatePortals(t, dt, eye) {
-    for (let i = portals.length - 1; i >= 0; i--) {
-      const p = portals[i]; p.age += dt; const c = Math.min(1, p.age / p.charge), end = p.charge + p.hold;
-      p.ring.material.opacity = .9 * (.5 + .5 * Math.sin(t * 12)) * (p.age < end ? 1 : 0); p.ring.scale.setScalar(.6 + .5 * c);
-      p.membrane.material.opacity = p.age > p.charge * .7 ? Math.min(.75, (p.age - p.charge * .7) * 1.2) * Math.max(0, 1 - (p.age - end) * 1.5) : 0;
-      p.frame.rotation.z = t * 2; p.group.lookAt(eye.x, p.group.position.y, eye.z);
-      if (p.age > end + .8) { root.remove(p.group); portals.splice(i, 1); }
+  function updatePortals(t,dt,eye){
+    for(let i=portals.length-1;i>=0;i--){
+      const p=portals[i];p.age+=dt;const end=p.charge+p.hold,closingAge=p.age>=end?p.age-end:null;
+      if(closingAge!==null&&!p.closing){p.closing=true;onPortalClose(p.group.position);}
+      if(eye)p.group.lookAt(eye.x,p.group.position.y,eye.z);
+      p.effect.update(t,{age:p.age,closingAge});
+      if(closingAge!==null&&closingAge>=PORTAL_CLOSE_SECONDS){p.effect.dispose();portals.splice(i,1);}
     }
   }
+
 
   // ---------- Machines: fans, pumps ----------
   let pumpsTarget = 0, pumpsSpeed = 0;
