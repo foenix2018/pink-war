@@ -116,3 +116,45 @@
 @keyframes pw-sms-bump{0%{transform:translateX(-10px)}60%{transform:translateX(3px)}100%{transform:translateX(0)}}
 @keyframes pw-sms-out{0%{transform:translateX(0);opacity:1}100%{transform:translateX(-115%);opacity:0}}
 @media(prefers-reduced-motion:reduce){.pw-comms,.pw-comms.pw-comms-enter,.pw-comms.pw-comms-bump,.pw-comms[data-leaving='true']{animation:none!important}}
+
+/* ---- Expanded history: adapts to any phone, orientation or screen. It is laid out with left/right insets and auto
+   margins (never a transform: the entry animation used to leave it shifted half a screen to the right), scrolls
+   inside its own height, and stays inside the safe areas. ---- */
+.pw-comms[data-expanded='true']{
+ left:max(10px,env(safe-area-inset-left))!important;right:max(10px,env(safe-area-inset-right))!important;
+ width:auto!important;max-width:min(640px,calc(100vw - 20px));margin-inline:auto;
+ top:max(12px,calc(env(safe-area-inset-top) + 6px))!important;bottom:auto!important;transform:none!important;animation:none!important;
+ max-height:calc(100dvh - max(12px,env(safe-area-inset-top)) - max(12px,env(safe-area-inset-bottom)) - 14px);
+ display:flex;flex-direction:column;box-sizing:border-box;pointer-events:auto;
+}
+.pw-comms[data-expanded='true'] .pw-comms-header{flex:0 0 auto}
+.pw-comms[data-expanded='true'] .pw-comms-transcript{flex:1 1 auto;min-height:0;max-height:none!important;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.pw-comms[data-expanded='true'] .pw-comms-footer{flex:0 0 auto}
+.pw-comms[data-expanded='true'] .pw-comms-entry{min-width:0}
+.pw-comms[data-expanded='true'] .pw-comms-content,.pw-comms[data-expanded='true'] .pw-comms-bubble{min-width:0}
+.pw-comms[data-expanded='true'] .pw-comms-words{overflow-wrap:anywhere;word-break:break-word}
+@media(max-width:650px){
+ .pw-comms[data-expanded='true']{padding:10px 9px 8px;border-radius:20px}
+ .pw-comms[data-expanded='true'] .pw-comms-entry{grid-template-columns:44px minmax(0,1fr);gap:8px}
+ .pw-comms[data-expanded='true'] .pw-comms-avatar{width:44px;height:50px}
+ .pw-comms[data-expanded='true'] .pw-comms-words{font-size:clamp(11px,3.1vw,14px);letter-spacing:.03em;line-height:1.42}
+ .pw-comms[data-expanded='true'] .pw-comms-header{padding-bottom:8px}
+}
+@media(orientation:landscape) and (max-height:510px){
+ .pw-comms[data-expanded='true']{max-width:min(560px,calc(100vw - 20px));padding:7px 9px}
+ .pw-comms[data-expanded='true'] .pw-comms-transcript{gap:7px;padding:8px 2px 4px}
+ .pw-comms[data-expanded='true'] .pw-comms-footer{display:none}
+ .pw-comms[data-expanded='true'] .pw-comms-avatar{width:38px;height:44px}
+ .pw-comms[data-expanded='true'] .pw-comms-entry{grid-template-columns:38px minmax(0,1fr)}
+}
+/* The collapsed message never cuts a sentence short: it grows up to six lines, then scrolls. */
+.pw-comms[data-expanded='false'] .pw-comms-words{-webkit-line-clamp:unset;display:block;max-height:calc(1.38em * 6);overflow-y:auto;overscroll-behavior:contain}
+.pw-comms{box-sizing:border-box}
+@media(orientation:landscape) and (max-height:510px){
+ .pw-comms[data-expanded='true'] .pw-comms-header{padding-bottom:4px;min-height:24px}
+ .pw-comms[data-expanded='true'] .pw-comms-status,.pw-comms[data-expanded='true'] .pw-comms-mark{display:none}
+ .pw-comms[data-expanded='true'] .pw-comms-words{font-size:11px;line-height:1.34;letter-spacing:.02em}
+ .pw-comms[data-expanded='true'] .pw-comms-bubble{padding:6px 9px}
+ .pw-comms[data-expanded='true'] .pw-comms-name{font-size:11px}
+ .pw-comms[data-expanded='true'] .pw-comms-meta{margin-bottom:2px;min-height:16px}
+}

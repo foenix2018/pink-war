@@ -50,3 +50,15 @@ test('the enclave is lived in: lamps, light pools, survivors and props, all insi
   const art=read('m02-extension-art.js');assert.match(art,/createEnclaveLife\(T,root,\{low\}\)/);assert.match(art,/life\.build\(\)/);assert.match(art,/life\.update\(t,dt,power\)/);
   assert.match(read('m02-enclave-life.js'),/never changes gameplay or the navigation grid/);
 });
+
+test('the opened conversation fits any phone, orientation or screen: insets and auto margins, never a transform',()=>{
+  const css=readFileSync(new URL('../dist/hologram-comms.css',import.meta.url),'utf8');
+  const block=css.slice(css.lastIndexOf(".pw-comms[data-expanded='true']{\n left:max(10px"));
+  assert.match(block,/left:max\(10px,env\(safe-area-inset-left\)\)!important;right:max\(10px,env\(safe-area-inset-right\)\)!important/);
+  assert.match(block,/margin-inline:auto/);assert.match(block,/transform:none!important;animation:none!important/);
+  assert.match(block,/max-height:calc\(100dvh - max\(12px,env\(safe-area-inset-top\)\)/);
+  assert.match(css,/\.pw-comms-transcript\{flex:1 1 auto;min-height:0;max-height:none!important;overflow-y:auto/);
+  assert.match(css,/@media\(orientation:landscape\) and \(max-height:510px\)\{\s*\.pw-comms\[data-expanded='true'\]\{max-width:min\(560px/);
+  assert.match(css,/\.pw-comms\{box-sizing:border-box\}/,'padding no longer pushes the banner past the screen edge');
+  assert.match(css,/\.pw-comms\[data-expanded='false'\] \.pw-comms-words\{-webkit-line-clamp:unset;display:block;max-height:calc\(1\.38em \* 6\)/,'a message is never cut short: six lines, then it scrolls');
+});

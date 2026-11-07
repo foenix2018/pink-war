@@ -2,7 +2,7 @@
 // DOM-only overlay: no added renderer, no frame-by-frame canvas uploads, and no dialogue rewrite.
 import {paintCompanionPortrait} from './companion-portrait.js';
 
-const STYLESHEET='hologram-comms.css?v=20261107-sms';
+const STYLESHEET='hologram-comms.css?v=20261107-sms2';
 const kindOf=line=>{
  const key=String(line?.who||line?.speaker?.name||'').toLowerCase();
  if(key==='gaby'||key.includes('gab-1'))return 'gab';
@@ -29,6 +29,8 @@ export function createHologramComms({doc=document,expanded=false,maxMessages=4}=
  function setExpanded(value){
   root.dataset.expanded=String(!!value);
   toggle.setAttribute('aria-expanded',String(!!value));
+  // Opened history: land on the newest message, whatever the height of the screen.
+  if(value)requestAnimationFrame(()=>{list.scrollTop=list.scrollHeight;});
   toggle.setAttribute('aria-label',value?'Réduire la transmission':'Afficher les échanges précédents');
  }
  toggle.onclick=()=>setExpanded(root.dataset.expanded!=='true');
