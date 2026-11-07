@@ -1,3 +1,4 @@
+import {rendererLabel} from './renderer-policy.js';
 // PROTOTYPE — forêt des Sources (chapitre 07 « Mémoires locales », docs/pink-wars/SCENARIO_CH07_MEMOIRES_LOCALES.md).
 // Banc d'essai de performance, sans combat : un vallon de 200 × 200 m avec sous-bois, rivière et gué, moulin et
 // aqueduc en ruine, cascade, bassin et entrée de grotte praticable. Tout est généré ici (aucun modèle téléchargé).
@@ -663,7 +664,7 @@ export async function boot() {
   const quality = ['low', 'balanced', 'high'].includes(params.get('quality')) ? params.get('quality') : (matchMedia('(pointer:coarse)').matches ? 'low' : 'balanced');
   const profile = graphicsProfile({ userAgent: navigator.userAgent, maxTouchPoints: navigator.maxTouchPoints, platform: navigator.platform, gpu: !!navigator.gpu, rendererHint: params.get('renderer') }, quality);
   const { renderer, canvas } = await createCompatibleRenderer({ canvas: $('game'), WebGPU: T.WebGPURenderer, WebGL: WebGLRenderer, profile });
-  const backend = renderer.isWebGLRenderer ? 'WebGL' : renderer.backend?.isWebGPUBackend ? 'WebGPU' : 'WebGPU (repli WebGL2)';
+  const backend = rendererLabel(renderer);
   renderer.setPixelRatio(renderPixelRatio(profile, devicePixelRatio, innerWidth, innerHeight)); renderer.setSize(innerWidth, innerHeight);
   renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
   const shadows = quality === 'high'; renderer.shadowMap.enabled = shadows; renderer.shadowMap.type = T.PCFSoftShadowMap;

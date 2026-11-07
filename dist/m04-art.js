@@ -1,3 +1,4 @@
+import {createWorldEffects} from './webgpu-world-fx.js';
 import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
 import {createFloorRampHardware} from './stair-hardware.js';
 import {createIndustrialLightBatch} from './industrial-light.js';
@@ -20,6 +21,7 @@ function canvasTexture(T, w, h, paint) { const c = document.createElement('canva
 
 export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPortalClose=()=>{}, accent = 0xff6fb4 } = {}) {
   const low = quality === 'low', rng = seeded(404);
+  const worldFx=createWorldEffects(T,{webgpu,low});
   const root = new T.Group(); root.name = 'M04 / Le Protocole Interdit'; scene.add(root);
   const animated = [], stats = { meshes: 0, instances: 0, lights: 0 };
   const add = (o, parent = root) => { parent.add(o); stats.meshes++; return o; };
@@ -174,7 +176,7 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
       case 'guard-post': box(M.white, x1, x2, 0, h, z1, z2); box(M.glass, x1 - .02, x2 + .02, 1.1, 2.2, z1 - .02, z1, { skip: ['top', 'bottom'] }); piece(M.ledBlue, o.x, h, o.z, w, .1, d); break;
       case 'crates': for (let k = 0; k < 4; k++) piece(k % 2 ? M.plate : M.yellow, o.x + (k % 2 - .5) * o.hx, Math.floor(k / 2) * h / 2, o.z, o.hx * .95, h / 2 - .02, d - .1); break;
       case 'bench': piece(M.steel, o.x, .45, o.z, w, .06, d); piece(M.dark, o.x - o.hx + .2, 0, o.z, .08, .45, d); piece(M.dark, o.x + o.hx - .2, 0, o.z, .08, .45, d); break;
-      case 'scanner': box(M.white, x1, x2, 0, h, z1, z2); piece(M.ledBlue, o.x, h - .2, o.z, w + .04, .12, d + .04); { const c = new T.Mesh(new T.PlaneGeometry(2.2, h - .3), additive(0x4aa8ff, .14)); c.position.set(o.x + (o.x < 0 ? 1.6 : -1.6), (h - .3) / 2, o.z); c.rotation.y = Math.PI / 2; add(c); animated.push(t => { c.material.opacity = .1 + .06 * Math.sin(t * 5 + o.x); }); } break;
+      case 'scanner': box(M.white, x1, x2, 0, h, z1, z2); piece(M.ledBlue, o.x, h - .2, o.z, w + .04, .12, d + .04); { const c = new T.Mesh(new T.PlaneGeometry(2.2, h - .3), worldFx.hologram({color:0x4aa8ff,opacity:.14,scanner:true})); c.position.set(o.x + (o.x < 0 ? 1.6 : -1.6), (h - .3) / 2, o.z); c.rotation.y = Math.PI / 2; add(c); animated.push(t => { c.material.opacity = .1 + .06 * Math.sin(t * 5 + o.x); }); } break;
       case 'transformer': box(M.dark, x1, x2, 0, h, z1, z2); for (let k = 0; k < 6; k++) piece(M.steel, x1 + .4 + k * (w - .8) / 5, h, o.z, .22, .9, d - .4); piece(M.ledYellow, o.x, h * .6, z2 + .01, w * .6, .1, .02); break;
       case 'tank': cylinder(M.white, o.x, h / 2, o.z, o.hx, h); cylinder(M.blue, o.x, h * .75, o.z, o.hx + .03, .3); piece(M.steel, o.x - o.hx - .4, 0, o.z, .2, h + 1, .2); break;
       case 'container': box(M.blue, x1, x2, 0, h, z1, z2); for (let k = 0; k < 9; k++) piece(M.dark, x1 - .01, .1, z1 + .3 + k * (d - .6) / 8, .02, h - .2, .05); break;
@@ -360,6 +362,7 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
       neons.meshes(); neons.build(); flushGeometry(); flushPieces();
     },
     update(t, dt, eye, player) {
+      worldFx.update(t,eye.position);
       const e = eye.position; updatePool(dt, e); updateBreach(t, dt); updatePortals(t, dt, e); updateDevices(t, dt); if (player) updateDoors(dt, player);
       for (const [, r] of relays) { r.lamps.forEach((l, k) => l.material.color.set(r.on ? (Math.sin(t * 6 + k) > 0 ? 0x3dff8a : 0x1a6a3a) : 0x3a1414)); r.coil.material.color.set(r.on ? 0x5fe0f0 : 0x203040); r.coil.rotation.z += dt * (r.on ? 4 : 0); }
       for (const f of animated) f(t, dt); signs.update(t);
@@ -369,6 +372,6 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
     breach(v) { breach.target = Math.max(0, Math.min(1, v)); },
     markDone(id, isDone = true) { const d = devices.get(id); if (d) d.done = isDone; if (id.startsWith('stab-')) { if (isDone) done.add(id); else done.delete(id); } },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
-    stats() { return { ...stats, neons:neons.stats(), portals: portals.length, breach: +breach.level.toFixed(2), signs: signs.stats().signs, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, worldEffects:worldFx.stats(), neons:neons.stats(), portals: portals.length, breach: +breach.level.toFixed(2), signs: signs.stats().signs, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }

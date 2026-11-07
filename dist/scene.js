@@ -1,3 +1,4 @@
+import {rendererLabel} from './renderer-policy.js';
 import {createSupplyPickup} from './power-props.js';
 import {createElectricPortal,createElectricPortalSet} from './electric-portal.js';
 import {createStairHardware} from './stair-hardware.js';
@@ -121,7 +122,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   const batch = (mat, pos, scale, rot = 0) => { if (!batches.has(mat)) batches.set(mat, []); batches.get(mat).push({ pos, scale, rot }); };
   const arenaRoot=new T.Group();arenaRoot.name='Carte Survie / indépendante';scene.add(arenaRoot);
   const beforeArena=new Set(scene.children);
-  const city = createFortifiedArena(T,scene,obstacles,COVER_WALLS,{quality:profile.artQuality,environment:surfaces.environment});
+  const city = createFortifiedArena(T,scene,obstacles,COVER_WALLS,{quality:profile.artQuality,environment:surfaces.environment,webgpu:!!renderer.backend?.isWebGPUBackend});
   const cityMats = city.materials;
   const traversal = createTraversalArt(scene, obstacles, cityMats, {low:profile.artQuality==='low'});
   for(const child of [...scene.children])if(!beforeArena.has(child))arenaRoot.add(child);
@@ -447,5 +448,5 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   }
   return {T,scene,camera,moon,setRobotShutdownSound:callback=>enemyFailureFX.setSoundHandler(callback),get campaignArt(){return campaignArt;},rangeArt,setRangeActive,setCampaignActive,graphics:{...profile,initialFailure:prepared.initialFailure},warm:async()=>{await campaignArt.ready;await warmRenderer(renderer,scene,camera)},get renderer(){return renderer;},obstacles,get soldier(){return soldier;},get character(){return character;},get palette(){return {...palette};},weapon,fpsGun,monsters,resize,sync,lobby,animatePortal,burst,impact:event=>{combatFX.impact(event);laserFX.impact(event);},impactStats:combatFX.stats,laserShot:laserFX.shot,laserStats:laserFX.stats,cityStats:()=>campaignActive?{...campaignArt.stats(),map:breachActive?'breche-violette-01':'vesper-secours-07'}:{...city.stats,boundary:city.fence?.stats()},resetDynamic,closePortals:()=>{portalSites=[];electricPortals.sync([],portalTime,portalFrame);},recover,setWeapon,createGun,renderStereo,setEquipment,outfit,setInspection,createHand,setCharacter,
     holsterGun,setPlayerVisible,
-    get lost(){return lost;},get backend(){return renderer.backend?.isWebGPUBackend?'WebGPU':'WebGL';},render:()=>{if(!lost){camera.updateWorldMatrix(true,false);moon.update(camera);lightBlade();renderer.render(scene,camera);}}};
+    get lost(){return lost;},get backend(){return rendererLabel(renderer);},render:()=>{if(!lost){camera.updateWorldMatrix(true,false);moon.update(camera);lightBlade();renderer.render(scene,camera);}}};
 }

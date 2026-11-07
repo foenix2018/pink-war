@@ -1,7 +1,7 @@
 import {createTouchOrbit} from './touch-orbit.js';
 import {levelArrow,arrowGuidance} from './objective-arrow.js';
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, starterWeaponIndex, weaponCycleOrder, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
-import { createScene } from './scene.js?v=20261107-stairs-power-v2';
+import { createScene } from './scene.js?v=20261107-native-world-fx-v3';
 import {createRobotShutdownAudio} from './enemy-shutdown-audio.js';
 import {loadPortalSamples,createPortalLaserController} from './portal-laser-audio.js';
 import { VRController } from './vr.js';

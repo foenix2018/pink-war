@@ -1,3 +1,4 @@
+import {createWorldEffects} from './webgpu-world-fx.js';
 import {upgradeLightBlocks} from './industrial-light.js';
 import {createEnclaveLife} from './m02-enclave-life.js';
 import {createModernSwitch,switchVariant} from './modern-switch.js';
@@ -31,7 +32,7 @@ function canvasTexture(T, w, h, paint, { repeat = false, color = true } = {}) {
 }
 
 export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0xff6fb4, webgpu=false, onDoorMotion = () => {} } = {}) {
-  const low = quality === 'low', rng = seeded(2202);
+  const low = quality === 'low', rng = seeded(2202), worldFx=createWorldEffects(T,{webgpu,low});
   const root = new T.Group(); root.name = 'M02 / enclave du marché et tour de transit'; scene.add(root);
   const details = createVesperProps(T, root, {low});
   const animated = [], stats = { meshes: 0, instances: 0, textures: 0, fixtures: 0 };
@@ -397,7 +398,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
         // Keep the animated HELIX scanner curtain and only replace the physical frame.
         const portal=createFunctionalProp(T,'scanner',{w,d,h,low,M});
         portal.position.set(o.x,0,o.z);add(portal); piece(M.helixRed, o.x, h - .2, o.z, w + .04, .2, d + .04);
-        const curtain = new T.Mesh(new T.PlaneGeometry(2.6, h - .3), new T.MeshBasicMaterial({ color: 0xff2f45, transparent: true, opacity: .14, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false, side: T.DoubleSide }));
+        const curtain = new T.Mesh(new T.PlaneGeometry(2.6, h - .3), worldFx.hologram({color:0xff2f45,opacity:.14,scanner:true}));
         curtain.position.set(o.x + (o.x < 0 ? 1.7 : -1.7), (h - .3) / 2, o.z); curtain.rotation.y = 0; add(curtain);
         animated.push(t => { curtain.material.opacity = power.tower ? .1 + .06 * Math.sin(t * 6 + o.x) : 0; });
         break;
@@ -538,18 +539,18 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     neon(-4, 4.4, 79.75, 4, 4.4, 79.75, 0x5fe0f0); neon(-4, 0, 79.75, -4, 4.4, 79.75, 0x5fe0f0); neon(4, 0, 79.75, 4, 4.4, 79.75, 0x5fe0f0);
     for (const [x, z] of [[-24, 83.1], [-14, 83.1], [4, 89.1]]) neon(x - 1.4, 2.7, z, x + 1.4, 2.7, z, rng() < .5 ? 0xffb35c : 0xff6fb4);
     const koiTex = canvasTexture(T, 256, 128, (c, w, h) => { c.clearRect(0, 0, w, h); c.strokeStyle = '#7fe7ff'; c.lineWidth = 6; c.beginPath(); c.ellipse(110, 64, 70, 26, 0, 0, TAU); c.stroke(); c.beginPath(); c.moveTo(180, 64); c.lineTo(236, 30); c.lineTo(236, 98); c.closePath(); c.stroke(); c.fillStyle = '#ff6fb4'; c.beginPath(); c.arc(70, 58, 6, 0, TAU); c.fill(); });
-    const koi = new T.Mesh(new T.PlaneGeometry(2.4, 1.2), additive(0xffffff, .55, koiTex)); koi.position.set(6, 4, 94); add(koi);
+    const koi = new T.Mesh(new T.PlaneGeometry(2.4, 1.2), worldFx.hologram({color:0xffffff,opacity:.55,map:koiTex})); koi.position.set(6, 4, 94); add(koi);
     animated.push((t, dt, eye) => { koi.position.x = 6 + Math.sin(t * .35) * 6; koi.position.y = 4 + Math.sin(t * .9) * .2; koi.lookAt(eye.position.x, koi.position.y, eye.position.z); koi.material.opacity = power.enclave ? .55 : .2; });
     // HELIX holo projector over the market skylight: the census notice in red, flickering.
-    const notice = new T.Mesh(new T.PlaneGeometry(3.2, 1.6), additive(0xffffff, .5, signTex(['RECENSEMENT HELIX', 'PRÉSENTEZ-VOUS À LA TOUR DE TRANSIT', 'EAU · SOINS · ANNEAU LOGISTIQUE'], { bg: 'rgba(30,0,6,.4)', fg: '#ff4d5e', w: 512, h: 256, border: '#ff2f45' })));
+    const notice = new T.Mesh(new T.PlaneGeometry(3.2, 1.6), worldFx.hologram({color:0xffffff,opacity:.5,map:signTex(['RECENSEMENT HELIX', 'PRÉSENTEZ-VOUS À LA TOUR DE TRANSIT', 'EAU · SOINS · ANNEAU LOGISTIQUE'], { bg: 'rgba(30,0,6,.4)', fg: '#ff4d5e', w: 512, h: 256, border: '#ff2f45' })}));
     notice.position.set(-8, 6.4, 81.2); add(notice);
     animated.push(t => { notice.material.opacity = (.4 + .1 * Math.sin(t * 2)) * (Math.sin(t * 19) > .94 ? .2 : 1); });
     // Steam from the street gutters and the kitchen (W02: steam, runoff).
     const puffMat = new T.SpriteMaterial({ map: glowDisc, color: 0xa9c4cc, transparent: true, opacity: .12, depthWrite: false });
-    for (const [x, y, z] of [[-1, .2, 79.4], [6, .2, 79.4], [-6, .2, -76], [4, .2, -76], [6, 1.6, 95.4]]) for (let k = 0; k < (low ? 2 : 4); k++) { const s = new T.Sprite(puffMat.clone()); s.position.set(x + (rng() - .5), y, z); s.userData = { x: s.position.x, y, z, phase: rng() * 6 }; add(s); steam.push(s); }
+    for (const [x, y, z] of [[-1, .2, 79.4], [6, .2, 79.4], [-6, .2, -76], [4, .2, -76], [6, 1.6, 95.4]]) if(worldFx.native){worldFx.fog(root,{x,y:y+1,z,width:3,height:2.5,depth:3.5,opacity:.22});}else for (let k = 0; k < (low ? 2 : 4); k++) { const s = new T.Sprite(puffMat.clone()); s.position.set(x + (rng() - .5), y, z); s.userData = { x: s.position.x, y, z, phase: rng() * 6 }; add(s); steam.push(s); }
     // Transit tower: red light curtains over the doorway, a sweeping HELIX scanner on the forecourt, the vault's data glow.
     const scanner = new T.Group(); scanner.position.set(0, 6.2, -82.4); add(scanner);
-    const beam = new T.Mesh(new T.ConeGeometry(1.8, 6.2, 24, 1, true), additive(0xff2f45, .12)); beam.position.y = -3.1; scanner.add(beam);
+    const beam = worldFx.native?worldFx.fog(scanner,{y:-3.1,width:3.6,height:6.2,depth:3.6,color:0xff2f45,opacity:.12,beam:true}):new T.Mesh(new T.ConeGeometry(1.8, 6.2, 24, 1, true), additive(0xff2f45, .12)); beam.position.y = -3.1;if(!beam.parent)scanner.add(beam);
     const spot = new T.Mesh(new T.CircleGeometry(1.8, 28), additive(0xff2f45, .35)); spot.rotation.x = -Math.PI / 2; add(spot);
     animated.push(t => { const a = Math.sin(t * .7) * .6; scanner.rotation.set(.55, a, 0); spot.position.set(Math.sin(a) * 3.4, .02, -79.2 + Math.cos(a) * .3); const on = power.tower; beam.visible = spot.visible = on; beam.material.opacity = .08 + .05 * Math.sin(t * 9); });
     for (const x of [-12, 12]) neon(x, 0, -81.85, x, 8.6, -81.85, 0xff2f45);
@@ -584,7 +585,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       neons.meshes(); neons.build(); flushGeometry(); flushPieces(); details.finish(); livedIn.build(obstacles); life.build();
     },
     update(t, dt, eye, player = eye.position, { crank = false } = {}) {
-      updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt, crank); details.update(power); livedIn.update(t,dt,power); life.update(t,dt,power);
+      worldFx.update(t,eye.position);updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt, crank); details.update(power); livedIn.update(t,dt,power); life.update(t,dt,power);
       for (const s of steam) { const u = s.userData, k = (t * .25 + u.phase) % 1; s.position.set(u.x + Math.sin(t + u.phase) * .3, u.y + k * 3, u.z); s.scale.setScalar(.8 + k * 2.4); s.material.opacity = .14 * (1 - k); }
       for (const f of animated) f(t, dt, eye);
     },
@@ -611,6 +612,6 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     setPower(zone, on) { power[zone] = !!on; },
     markDone(id, done = true) { const d = devices.get(id); if (d) { d.done = done; if (!done) { d.turn = 0; if (d.moving) d.moving.rotation.set(0, 0, 0); } } },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
-    stats() { return { ...stats, neons:neons.stats(), details: details.stats(), livedIn: livedIn.stats(), life: life.stats(), power: { ...power }, shelter: +shelter.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, neons:neons.stats(), details: details.stats(), livedIn: livedIn.stats(), life: life.stats(), worldEffects:worldFx.stats(), power: { ...power }, shelter: +shelter.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }

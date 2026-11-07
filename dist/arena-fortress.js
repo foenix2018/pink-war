@@ -1,3 +1,4 @@
+import {createWorldEffects} from './webgpu-world-fx.js';
 import {createArenaWeathering} from './arena-weathering.js';
 import {createArenaOptics} from './arena-optics.js';
 import {createIndustrialLightBatch} from './industrial-light.js';
@@ -19,12 +20,13 @@ export function paintFortressSky(c,w,h){
  let seed=193;const r=()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/4294967296);
  for(let i=0;i<90;i++){const x=r()*w,y=h*(.2+r()*.34),rx=w*(.025+r()*.08),ry=h*(.007+r()*.025);c.save();c.translate(x,y);c.scale(1,ry/rx);const cloud=c.createRadialGradient(0,0,0,0,0,rx);cloud.addColorStop(0,i%3?'rgba(102,47,78,.15)':'rgba(10,10,22,.20)');cloud.addColorStop(1,'rgba(30,14,32,0)');c.fillStyle=cloud;c.fillRect(-rx,-rx,rx*2,rx*2);c.restore();}
 }
-export function createFortifiedArena(T,scene,obstacles,coverWalls,{quality='low',environment=null}={}){
- const low=quality==='low',root=new T.Group();root.name='ARÈNE / enceinte fortifiée';scene.add(root);
+export function createFortifiedArena(T,scene,obstacles,coverWalls,{quality='low',environment=null,webgpu=false}={}){
+ const low=quality==='low',root=new T.Group(),worldFx=createWorldEffects(T,{webgpu,low,reflections:true});root.name='ARÈNE / enceinte fortifiée';scene.add(root);if(worldFx.reflectionTarget)root.add(worldFx.reflectionTarget);
  let seed=71019;const rnd=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
  const owned=[],maps=[],a=new Assembly(),beams=[],beacons=[],spots=[],panels=[],stat={map:'fortified-arena',perimeterHeight:14,perimeterKind:'armoured-wall',perimeterWalls:4,towers:0,searchlights:0,meshes:0,triangles:0};
  const std=(name,color,roughness=.75,metalness=.1)=>{const m=new T.MeshStandardMaterial({name,color,roughness,metalness});owned.push(m);return m;};
  const M={concrete:std('béton graphite',0x98939b,.86),steel:std('acier patiné',0x97a2ad,.48,.75),black:std('joints',0x151a22,.7,.35),rust:std('acier oxydé',0x4c3136,.9,.4),yellow:std('signalétique ivoire',0xb8ada3,.85),leaf:std('feuillage',0x33463b),road:std('asphalte humide',0x92909b,.9,.02),paint:std('panneaux blindés',0x78818e,.68,.48),wet:std('flaques',0x10111a,.16,.30),cloth:std('bannières',0x722443,.92)};
+ if(worldFx.native)M.wet=worldFx.water({color:0x17242c,puddle:true,refraction:false,opacity:.82});
  M.cloth.side=T.DoubleSide;
  if(environment)for(const m of [M.steel,M.paint,M.wet]){m.envMap=environment;m.envMapIntensity=.65;}
  const arenaFill=new T.AmbientLight(0xb594aa,.95);root.add(arenaFill);
@@ -60,7 +62,7 @@ export function createFortifiedArena(T,scene,obstacles,coverWalls,{quality='low'
  const haloMat=new T.SpriteMaterial({map:haloMap,color:0xff5fa8,transparent:true,depthWrite:false,blending:T.AdditiveBlending,opacity:.24});owned.push(haloMat);
  const halo=(p,scale)=>{if(!haloMap)return;const m=new T.Sprite(haloMat);m.position.copy(new T.Vector3(...p).applyMatrix4(frame));m.scale.set(...scale);root.add(m);};
  const sides=[[0,-100.5,0],[100.5,0,-Math.PI/2],[0,100.5,Math.PI],[-100.5,0,Math.PI/2]];
- const optics=createArenaOptics(T,{low});
+ const optics=createArenaOptics(T,{low,webgpu,effects:worldFx});
  for(const [si,[sx,sz,yaw]] of sides.entries()){
   frame=matrix([sx,0,sz],[0,yaw,0]);
   // Continuous collision-backed wall. Panel joints and buttresses add depth.
@@ -162,7 +164,7 @@ export function createFortifiedArena(T,scene,obstacles,coverWalls,{quality='low'
   const g=new T.CircleGeometry(1,low?20:32),p=g.attributes.position;for(let k=1;k<p.count;k++){const f=.75+rnd()*.3;p.setXY(k,p.getX(k)*f,p.getY(k)*f);}g.computeVertexNormals();
   const pool=new T.Mesh(g,M.wet);pool.rotation.x=-Math.PI/2;pool.position.set(x,.012,z);pool.scale.set(rx,rz,1);root.add(pool);pools.push([x,z,rx,rz]);}
  const hazeMap=canvas(128,128,(c,w,h)=>{const g=c.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);g.addColorStop(0,'rgba(200,120,170,.35)');g.addColorStop(1,'rgba(80,20,50,0)');c.fillStyle=g;c.fillRect(0,0,w,h);});
- const haze=[];if(hazeMap)for(let i=0;i<(low?6:10);i++){const m=new T.SpriteMaterial({map:hazeMap,color:0xbb5b8e,transparent:true,opacity:.55,depthWrite:false});owned.push(m);const mesh=new T.Sprite(m);mesh.position.set((rnd()-.5)*170,2.5,(rnd()-.5)*170);mesh.scale.set(90,18,1);root.add(mesh);haze.push({mesh,x:mesh.position.x});}
+ const haze=[];if(worldFx.native){for(const [x,z] of [[-34,-38],[34,25],[-20,45]])worldFx.fog(root,{x,y:2.2,z,width:32,height:5,depth:24,color:0x9b7790,opacity:.12});}else if(hazeMap)for(let i=0;i<(low?6:10);i++){const m=new T.SpriteMaterial({map:hazeMap,color:0xbb5b8e,transparent:true,opacity:.55,depthWrite:false});owned.push(m);const mesh=new T.Sprite(m);mesh.position.set((rnd()-.5)*170,2.5,(rnd()-.5)*170);mesh.scale.set(90,18,1);root.add(mesh);haze.push({mesh,x:mesh.position.x});}
  const rainGeo=new T.BufferGeometry(),n=low?500:1500,rainPos=new Float32Array(n*3);for(let i=0;i<n;i++){rainPos[i*3]=(rnd()-.5)*195;rainPos[i*3+1]=rnd()*24;rainPos[i*3+2]=(rnd()-.5)*195;}
  rainGeo.setAttribute('position',new T.BufferAttribute(rainPos,3));const rainMat=new T.PointsMaterial({color:0x93a1b9,size:.035,transparent:true,opacity:.34,depthWrite:false});owned.push(rainMat);root.add(new T.Points(rainGeo,rainMat));
  for(let i=0;i<(low?2:3);i++){const light=new T.SpotLight(0xc6ddff,75,105,.24,.7,1.4);light.castShadow=false;root.add(light,light.target);spots.push(light);}
@@ -172,19 +174,20 @@ export function createFortifiedArena(T,scene,obstacles,coverWalls,{quality='low'
  neons.build();
  a.build(root);for(const item of a.items)item.geometry.dispose();a.items.length=0;
  root.traverse(o=>{if(o.isMesh){stat.meshes++;const g=o.geometry;stat.triangles+=(g.index?.count||g.attributes.position.count)/3*(o.isInstancedMesh?o.count:1);o.castShadow=!o.userData.noWorldShadow&&!low&&!o.material.transparent&&!o.material.isMeshBasicMaterial;o.receiveShadow=true;}});
- stat.neons=neons.stats();stat.defenceTurrets=ARENA_TURRETS.length;stat.searchlights=beams.length;stat.dynamicLights=spots.length+floods.length;
+ Object.defineProperty(stat,'worldEffects',{enumerable:true,get:()=>worldFx.stats()});stat.neons=neons.stats();stat.defenceTurrets=ARENA_TURRETS.length;stat.searchlights=beams.length;stat.dynamicLights=spots.length+floods.length;
  stat.inWorldInfoPanels=arenaInfoPanels.length;
 
  let previous=0;const down=new T.Vector3(0,-1,0),dir=new T.Vector3(),target=new T.Vector3();
- const update=(t,eye={x:0,z:0})=>{if(!root.visible)return;surfaces.enable();const dt=Math.max(0,Math.min(.08,t-previous));previous=t;
+ const update=(t,eye={x:0,z:0})=>{if(!root.visible)return;surfaces.enable();const dt=Math.max(0,Math.min(.08,t-previous));previous=t;worldFx.update(t,eye);
   for(const b of beams){const sweep=Math.sin(t*.16+b.phase)*30;target.set(b.origin.x*.45+sweep,0,b.origin.z*.45+Math.cos(t*.13+b.phase)*12);dir.copy(target).sub(b.origin);const length=dir.length();optics.aim(b.mesh,b.origin,target,eye);if(!b.target)b.target=new T.Vector3();b.target.copy(target);}
   beams.forEach((b,i)=>{dir.copy(b.target).sub(b.origin).normalize();headPose.position.copy(b.origin).addScaledVector(dir,-.30);headPose.quaternion.setFromUnitVectors(headAxis,dir);headPose.scale.set(.8,.7,1.3);headPose.updateMatrix();searchHeads.mesh.setMatrixAt(i,headPose.matrix);});
   searchHeads.mesh.instanceMatrix.needsUpdate=true;searchHeads.mesh.computeBoundingSphere();searchHeads.mesh.children.forEach(m=>m.computeBoundingSphere());
   const nearest=[...beams].sort((a,b)=>(a.origin.x-eye.x)**2+(a.origin.z-eye.z)**2-((b.origin.x-eye.x)**2+(b.origin.z-eye.z)**2));
+  if(worldFx.native)nearest.forEach((b,i)=>{b.mesh.visible=i<(low?3:6);});
   spots.forEach((l,i)=>{const b=nearest[i];l.position.copy(b.origin);l.target.position.copy(b.target);});
   for(let i=0;i<beacons.length;i++)beacons[i].scale.setScalar(1+Math.max(0,Math.sin(t*3+i))*.35);
   for(let i=0;i<haze.length;i++)haze[i].mesh.position.x=haze[i].x+Math.sin(t*.08+i)*3;
   for(let i=0;i<n;i++){rainPos[i*3+1]-=dt*(10+(i%4));if(rainPos[i*3+1]<0)rainPos[i*3+1]+=24;}rainGeo.attributes.position.needsUpdate=true;
  };
- return {group:root,materials:M,stats:stat,update,sync:turretArt.sync,reset:turretArt.reset,enablePbr:surfaces.enable,get ready(){return surfaces.ready;},textureStats:surfaces.stats,disposeTextures(){surfaces.dispose();weathering.dispose();optics.dispose();},neons,setAccent(){},fence:null};
+ return {group:root,materials:M,stats:stat,update,sync:turretArt.sync,reset:turretArt.reset,enablePbr:surfaces.enable,get ready(){return surfaces.ready;},textureStats:surfaces.stats,disposeTextures(){surfaces.dispose();weathering.dispose();optics.dispose();worldFx.dispose();},neons,setAccent(){},fence:null};
 }

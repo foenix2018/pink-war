@@ -1,3 +1,4 @@
+import {rendererBackend,rendererLabel} from './renderer-policy.js';
 import * as T from './vendor/three.webgpu.min.js';
 import {WebGLRenderer} from './vendor/three.module.min.js';
 import {ArenaGame} from './game-logic.js';
@@ -70,6 +71,6 @@ async function boot(){
  canvas.addEventListener('pointermove',e=>{if(pointer!==e.pointerId||menu.isOpen)return;yaw-=(e.clientX-lx)*.004;pitch=Math.max(-1.3,Math.min(1.3,pitch-(e.clientY-ly)*.004));lx=e.clientX;ly=e.clientY;});
  for(const name of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(name,()=>pointer=null);
  status.hidden=true;requestAnimationFrame(tick);
- window.__PINKWAR_COMPANIONS={snapshot:()=>({hero:$('hero').value,frames,backend:renderer.isWebGLRenderer?'webgl':'webgpu',menu:menu.isOpen,skills:skills.snapshot(game),enemies:game.enemies.map(e=>({id:e.id,hp:e.hp,state:e.combatPose,crouch:e.coverCrouch||0})),projectiles:skills.projectiles.map(p=>({x:p.x,y:p.y,z:p.z}))}),reset};
+ window.__PINKWAR_COMPANIONS={snapshot:()=>({hero:$('hero').value,frames,backend:rendererBackend(renderer),menu:menu.isOpen,skills:skills.snapshot(game),enemies:game.enemies.map(e=>({id:e.id,hp:e.hp,state:e.combatPose,crouch:e.coverCrouch||0})),projectiles:skills.projectiles.map(p=>({x:p.x,y:p.y,z:p.z}))}),reset};
 }
 boot().catch(fail);

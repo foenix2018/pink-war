@@ -1,3 +1,4 @@
+import {rendererBackend,rendererLabel} from './renderer-policy.js';
 import {createSupplyPickup} from './power-props.js';
 import {playPortalLaser,loadPortalSamples} from './portal-laser-audio.js';
 // PINK WARS — « COURONNE HELIX », standalone level (not linked from the lobby nor the campaign yet).
@@ -373,7 +374,7 @@ async function boot(){
    createGun:()=>playerRig?.createGun({sleeve:false})||fallbackGun(),createHand:()=>playerRig?createGlove(playerRig.kit.gloves,{sleeve:false}):fallbackHand()}),
    getYaw:()=>yaw,setYaw:value=>{yaw=value;},onFrame:animation,isPaused:()=>paused||game.state!=='playing',onPause:pauseMission,
    onResume:()=>{unpauseMission();pauseMenu.hide(false);},onHome:()=>location.assign('./index.html'),onExit:()=>{snapCamera();resize();requestAnimationFrame(animation);},skillsInput:args=>skillMenu?.xrInput(args)});
-  $('renderer').textContent=renderer.isWebGLRenderer?'WebGL':'WebGPU';
+  $('renderer').textContent=rendererLabel(renderer);
   bootStep='premier rendu';status.textContent='Premier rendu…';
   startMission();snapCamera();art.update(0,0,camera);
   if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);
@@ -452,7 +453,7 @@ window.__PINK_COURONNE=Object.freeze({
   position:game&&{x:+game.player.x.toFixed(2),z:+game.player.z.toFixed(2),elevation:+game.player.elevation.toFixed(2)},
   weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,gatesOpen:mission?.gatesOpen,consoles:mission?.consoles,
   pending:mission?.pending,groups:mission?.groups(),
-  backend:renderer?renderer.isWebGLRenderer?'webgl':'webgpu':null,rig:!!playerRig,art:art?.stats(),render:renderer?.info?.render}),
+  backend:renderer?rendererBackend(renderer):null,rig:!!playerRig,art:art?.stats(),render:renderer?.info?.render}),
  // QA hooks: move the player to a stage checkpoint or finish an encounter without the full fight.
  debug:params.has('debug')?{teleport:(x,z)=>Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0}),look:(y,p)=>{yaw=y;pitch=p;},clear:()=>{game.enemies.length=0;},
   interact:()=>mission.interact(),portal:(x,z)=>art.openPortal(x,traversal.height(x,z),z,{charge:30}),anchor:v=>art.setAnchorPower(v),vr:()=>xr.enter()}:null

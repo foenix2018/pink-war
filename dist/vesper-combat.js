@@ -1,3 +1,4 @@
+import {rendererBackend,rendererLabel} from './renderer-policy.js';
 import {createElectricPortalSet} from './electric-portal.js';
 import {levelArrow,arrowGuidance} from './objective-arrow.js';
 import {createM01SiegeAmbiance} from './m01-siege-ambiance.js';
@@ -431,7 +432,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     get view(){return effectiveView();},get viewReady(){return !!rig&&!xr?.active;},
     setView(next){if(xr?.active||!rig)return false;view=normalizeView(next);savePreferredView(view);syncCamera(getState(),0);return true;},
     get xrActive(){return xr.active;},enterVR(){return xr.enter();},exitVR(){return xr.exit();},
-    kind:renderer.isWebGLRenderer?'WebGL 2 · M01':'WebGPU · M01',managedResolution:true,canonical:true,
+    kind:rendererLabel(renderer)+' · M01',managedResolution:true,canonical:true,
     get paused(){return journalOpen||skillMenu.isOpen;},
     get interaction(){return contextAction();},
     get layout(){return LEVEL1_MAP;},
@@ -480,7 +481,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     snapshot(){return {view:effectiveView(),playerVisible:rig?.model.root.visible||false,music:screenMusicSnapshot(),revision:'3.74.0',characterId,phase:game.stage,workshopRead:game.investigationRead,reinforcements:game.toSpawn,objective:objective().text,ready,time:game.time,held,pendingShot:fireInput.pending(game.time),state:game.state,cooldown:game.cooldown,health:game.player.hp,weaponIndex:game.weaponIndex,weapon:game.weapon.id,ammo:game.ammo[game.weaponIndex],
       capacity:game.weapon.capacity,ownedWeapons:[...game.ownedWeapons],offers:game.weaponOffers.map(o=>({...o})),campaign:game.campaign,journalOpen,
       enemies:game.enemies.length,hostileProjectiles:game.bullets.filter(b=>b.hostile).length,shots:game.bullets.filter(b=>!b.hostile).length,
-      kills:game.kills,rig:!!rig,gun:!!gun,backend:renderer.isWebGLRenderer?'webgl':'webgpu',triangles:terrain.triangles,
+      kills:game.kills,rig:!!rig,gun:!!gun,backend:rendererBackend(renderer),triangles:terrain.triangles,
       art:missionArt.stats(),dressing:dressing.stats,salvage:salvage.stats,shadowing:atmosphere.shadows.stats(),lighting:{exposure:renderer.toneMappingExposure,ambient:atmosphere.ambient.intensity,sun:atmosphere.sun.intensity},ambiance:ambiance.stats(),pbr:missionArt.stats().pbr,effects:effects.stats(),companion:companion.snapshot(),position:{...getState().position},
       skills:skills.snapshot(game),skillsMenuOpen:skillMenu.isOpen,
       extension:{stage:game.stage,active:extension.extension,prologueDone:extension.prologueDone,hold:extension.hold,opened:extension.opened,done:extension.done,reads:extension.reads,groups:extension.groups(),art:extArt.stats()},

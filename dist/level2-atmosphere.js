@@ -1,6 +1,8 @@
+import {createWorldEffects} from './webgpu-world-fx.js';
 // M02 / W02 : atmospheric cues without post-processing, SSR, volumetric fog
 // or per-droplet geometry. Two instanced decal batches + tiny sprite pools.
-export function createStreetAtmosphere(T,root,{performance=false,seed=2196}={}){
+export function createStreetAtmosphere(T,root,{performance=false,seed=2196,webgpu=false}={}){
+ const worldFx=createWorldEffects(T,{webgpu,low:performance,reflections:true});if(worldFx.reflectionTarget)root.add(worldFx.reflectionTarget);
  let state=seed>>>0;
  const rand=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296};
  const q=new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),-Math.PI/2);
@@ -36,7 +38,7 @@ export function createStreetAtmosphere(T,root,{performance=false,seed=2196}={}){
  const colors=[0x58e5eb,0xe4b37f,0x799ec5];
  for(let palette=0;palette<colors.length;palette++){
    const quantity=Math.floor(counts.puddleClusters/colors.length);
-   const m=new T.MeshBasicMaterial({color:colors[palette],map:reflection,transparent:true,
+   const m=worldFx.native?worldFx.water({color:0x263945,opacity:.72,refraction:false,puddle:true}):new T.MeshBasicMaterial({color:colors[palette],map:reflection,transparent:true,
      blending:T.AdditiveBlending,depthWrite:false,opacity:performance?.18:.27,
      side:T.DoubleSide,fog:true,toneMapped:false});
    spriteMats.push(m);
@@ -79,7 +81,7 @@ export function createStreetAtmosphere(T,root,{performance=false,seed=2196}={}){
  const steamMat=new T.SpriteMaterial({map:haze,color:0xaccad4,transparent:true,
     opacity:performance?.08:.12,depthWrite:false,fog:true});
  for(let i=0;i<counts.steam;i++){
-   const sprite=new T.Sprite(steamMat);
+   const sprite=worldFx.native?worldFx.fog(root,{width:4.4,height:3.6,depth:4,opacity:.14}):new T.Sprite(steamMat);
    const z=48-i*(performance?47:18.2),x=(i%2?1:-1)*7.4;
    const base=.95+rand()*.5;
    sprite.position.set(x,base,z);sprite.scale.set(4.4,3.6,1);
@@ -99,7 +101,8 @@ export function createStreetAtmosphere(T,root,{performance=false,seed=2196}={}){
    root.add(sprite);haloSprites.push(sprite);
  }
  let fade=0;
- function update(time){
+ function update(time,eye=null){
+   worldFx.update(time,eye);
    const wind=Math.sin(time*.12);
    for(const steam of fx){
      const age=time*.30+steam.phase;
@@ -120,8 +123,8 @@ export function createStreetAtmosphere(T,root,{performance=false,seed=2196}={}){
    // Flicker only material opacity; no shadow/render target updates.
    haloMaterials[0].opacity=(performance?.13:.26)*fade;
  }
- return {update,stats:{...counts,additionalLights:0,postProcessingPasses:0,proceduralMaps:2},dispose(){
-   reflection.dispose();haze.dispose();
+ return {update,get stats(){return {...counts,additionalLights:0,postProcessingPasses:worldFx.stats().reflectionPasses,proceduralMaps:2,worldEffects:worldFx.stats()};},dispose(){
+   worldFx.dispose();reflection.dispose();haze.dispose();
    floor.dispose();ringGeo.dispose();
    [...spriteMats,steamMat,...haloMaterials,crossing,rings.material].forEach(m=>m.dispose());
  }};

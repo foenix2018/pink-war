@@ -1,3 +1,11 @@
+// The wrapper's class is not its backend: WebGPURenderer can fall back to WebGL2.
+export function rendererBackend(renderer){
+ if(!renderer)return 'unavailable';
+ if(renderer.backend?.isWebGPUBackend)return 'webgpu';
+ if(renderer.backend?.isWebGLBackend||renderer.isWebGLRenderer)return 'webgl';
+ return 'unknown';
+}
+export function rendererLabel(renderer){const backend=rendererBackend(renderer);return backend==='webgpu'?'WebGPU':backend==='webgl'?'WebGL 2':backend==='unavailable'?'En préparation':'Moteur indéterminé';}
 // Shared launch policy. A published GPU API is not proof that an adapter can
 // initialise; iOS uses the mature WebGL path until the real device is measured.
 export function graphicsProfile(environment={},quality='auto',forceWebGL=false){
@@ -36,7 +44,7 @@ export async function createCompatibleRenderer({canvas,WebGPU,WebGL,profile,time
         const initialisation=Promise.resolve(candidate.init()).then(()=>{if(retired)try{candidate.dispose();}catch{}});
         await deadline(initialisation,timeout,'Initialisation WebGPU interrompue.');
       }
-      return {renderer,canvas,profile,initialFailure};
+      return {renderer,canvas,profile,initialFailure:rendererBackend(renderer)==='webgl'?'WebGPU indisponible : repli WebGL 2.':initialFailure};
     }catch(error){
       retired=true;
       initialFailure=error instanceof Error?error.message:String(error);

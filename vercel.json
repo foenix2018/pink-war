@@ -2002,6 +2002,24 @@
           "value": "public, max-age=0, must-revalidate"
         }
       ]
+    },
+    {
+      "source": "/webgpu-world-fx.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/level2-atmosphere.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
     }
   ]
 }

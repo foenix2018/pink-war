@@ -1,3 +1,4 @@
+import {rendererBackend,rendererLabel} from './renderer-policy.js';
 import {createSupplyPickup} from './power-props.js';
 import {createHologramComms} from './hologram-comms.js';
 import {levelArrow,arrowGuidance} from './objective-arrow.js';
@@ -515,7 +516,7 @@ async function boot(){
    createGun:()=>playerRig?.createGun({sleeve:false})||fallbackGun(),createHand:()=>playerRig?createGlove(playerRig.kit.gloves,{sleeve:false}):fallbackHand()}),
    getYaw:()=>yaw,setYaw:value=>{yaw=value;},onFrame:animation,isPaused:()=>paused||game.state!=='playing',onPause:pauseMission,
    onResume:()=>{unpauseMission();pauseMenu.hide(false);},onHome:()=>location.assign('./index.html'),onExit:()=>{snapCamera();resize();requestAnimationFrame(animation);},skillsInput:args=>skillMenu?.xrInput(args)});
-  $('renderer').textContent=renderer.isWebGLRenderer?'WebGL':'WebGPU';
+  $('renderer').textContent=rendererLabel(renderer);
   bootStep='premier rendu';status.textContent='Premier rendu…';
   startMission();snapCamera();art.update(0,0,camera,game.player);
   if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);
@@ -598,7 +599,7 @@ window.__PINK_LIGNE9=Object.freeze({
   position:game&&{x:+game.player.x.toFixed(2),z:+game.player.z.toFixed(2),elevation:+game.player.elevation.toFixed(2)},
   weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,opened:mission?.opened,drained:mission?.drained,done:mission?.done,reads:mission?.reads,
   hold:mission?.hold,escape:mission?.escape,pending:mission?.pending,groups:mission?.groups(),reading,vr:!!xr?.active,subtitlePlane:!!subtitlePlane?.visible,lamp:lampOn,subtitle:subtitle&&{who:subtitle.who,text:subtitle.text},queued:subtitles.length,
-  backend:renderer?renderer.isWebGLRenderer?'webgl':'webgpu':null,rig:!!playerRig,art:art?.stats(),render:renderer?.info?.render}),
+  backend:renderer?rendererBackend(renderer):null,rig:!!playerRig,art:art?.stats(),render:renderer?.info?.render}),
  // QA hooks: move the player, look, clear an encounter, fast-forward the mission clock.
  debug:params.has('debug')?{teleport:(x,z)=>{Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0});snapCamera();},look:(y,p)=>{yaw=y;pitch=p;snapCamera();},clear:()=>{game.enemies.length=0;},
   interact:()=>{interact();return reading;},close:()=>closeDocument(),skip:seconds=>{game.time+=seconds;mission.update();},god:()=>{game.invulnerable=1e9;},

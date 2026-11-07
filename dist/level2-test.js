@@ -1,3 +1,4 @@
+import {rendererBackend,rendererLabel} from './renderer-policy.js';
 import {createStreetlamp} from './power-props.js';
 import {loadDoorSamples,createDoorAudioController} from './door-audio.js';
 import {createM02Boundary,stairBody,beyondDistrict,muzzleBeforeCover} from './m02-physical-layout.js';
@@ -453,7 +454,7 @@ function createEnvironment(){
  catch(error){console.warn('M02 extension dressing degraded, the mission stays playable:',error);extArt=null;}
  worldShadows=createWorldShadows(T,{scene,renderer,light:moon,profile:{artQuality:low()?'low':'auto'},direction:{x:-28,y:56,z:28}});
  groundOcclusion=createGroundOcclusion(T,root,collisions,{compact:low()});
- try{atmosphere=createStreetAtmosphere(T,root,{performance:low()});}
+ try{atmosphere=createStreetAtmosphere(T,root,{performance:low(),webgpu:!!renderer.backend?.isWebGPUBackend});}
  catch(error){console.warn('M02 atmosphere disabled for compatibility:',error);}
 }
 function enemyMaterials(){
@@ -868,7 +869,7 @@ function animation(t,frame){
    const flicker=1+.025*Math.sin(clock*.73+i*3.12);
    lightSources[i].intensity=(low()?1.04:1.66)*flicker;
  }
- if(atmosphere)try{atmosphere.update(clock);}catch(error){
+ if(atmosphere)try{atmosphere.update(clock,camera.position);}catch(error){
    console.warn('M02 optional atmosphere frame disabled:',error);atmosphere=null;
  }
  if(running)try{gameTick(dt);}catch(error){
@@ -945,13 +946,12 @@ async function boot(){
   setupPlayer();resize();
   xr=createMissionXR({getWorld:()=>({T,scene,camera,renderer,game,weapon,soldier:playerRig?.model.root,obstacles:collisions,accent:characterId==='lylu'?'#80baff':'#ef91b4',createGun:()=>playerRig?.createGun({sleeve:false})||fallbackGun(),createHand:()=>playerRig?createGlove(playerRig.kit.gloves,{sleeve:false}):fallbackHand()}),getYaw:()=>yaw,setYaw:value=>{yaw=value;},onFrame:animation,isPaused:()=>paused||game.state!=='playing',onPause:pauseMission,onResume:()=>{unpauseMission();pauseMenu.hide(false);},onHome:()=>location.assign('./index.html'),onExit:()=>{snapCamera();resize();requestAnimationFrame(animation);},skillsInput:args=>skillMenu?.xrInput(args)});
   missionLoading?.set(.66,'Commandes et équipements');
-  const useWebGL=!!renderer.isWebGLRenderer;
   bootStep='matériaux';
   try{pbrController=installLeanPBR(T,materials,architecture,{performance:low()||profile.phone,onProgress:state=>{
-    const renderMode=useWebGL?'WebGL':'WebGPU';
+    const renderMode=rendererLabel(renderer);
     $('renderer').textContent=renderMode+' · PBR '+state.ready+'/'+state.requested+(state.fallback?' · '+state.fallback+' hors-ligne':'');
   }});}catch(error){console.warn('M02/PBR optional fallback:',error);}
-  $('renderer').textContent=(renderer.isWebGLRenderer?'WebGL / repli':'WebGPU')+' · PBR';
+  $('renderer').textContent=rendererLabel(renderer)+' · PBR';
   if(prepared.initialFailure)console.warn('M02: WebGPU unavailable:',prepared.initialFailure);
   bootStep='préparation du premier rendu';status.textContent='Préparation des lumières et du premier rendu…';
   missionLoading?.set(.90,'Préparation du premier rendu');
@@ -1079,7 +1079,7 @@ for(const name of ['pointerup','pointercancel']){
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
 window.__PINK_M02=Object.freeze({snapshot:()=>({music:screenMusicSnapshot(),revision:'3.74.0',neons:root?.userData?.neons,running,paused,view:xr?.active?'fps':view,playerVisible:playerRig?.model.root.visible||false,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,extension:extension&&{stage:extension.stage,hold:extension.hold,done:extension.done,reads:extension.reads,opened:extension.opened,groups:extension.groups(),interaction:extension.interaction()},subtitle:subtitles?.current||null,journal:journalOpen,dressing:extArt?.stats(),health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
- shadowing:worldShadows?.stats(),backend:renderer?.isWebGLRenderer?'webgl':'webgpu',rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
+ shadowing:worldShadows?.stats(),backend:rendererBackend(renderer),rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
  effects:combatEffects?.stats(),armor:game&&{shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt}}),
  // QA hooks (?debug=1): world data, teleport, look, clear machines, advance the clock.
  debug:new URLSearchParams(location.search).has('debug')?{get game(){return game;},collisions,floors,teleport:(x,z)=>{Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0});if(game.state==='playing'){game.step(1/60,{});extension?.update();}},look:(y,p)=>{yaw=y;pitch=p;},clear:()=>{game.enemies.length=0;extension?.update();},skip:s=>{game.time+=s;extension?.update();},god:()=>{game.invulnerable=1e9;},interact:()=>interact(),

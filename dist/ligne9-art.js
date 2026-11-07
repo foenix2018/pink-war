@@ -1,3 +1,4 @@
+import {createWorldEffects} from './webgpu-world-fx.js';
 import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
 import {createStairHardware} from './stair-hardware.js';
 import {upgradeLightBlocks} from './industrial-light.js';
@@ -33,7 +34,8 @@ const AMBIENT = { street: [.55, .55], stairwell: [.3, .12], hall: [.36, .05], te
 
 export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, onPortalClose=()=>{}, camera, assets = 'assets/ligne9/' } = {}) {
   const low = quality === 'low', rng = seeded(905);
-  const root = new T.Group(); root.name = 'LIGNE 9'; scene.add(root);
+  const worldFx=createWorldEffects(T,{webgpu,low,reflections:true});
+  const root = new T.Group(); root.name = 'LIGNE 9'; scene.add(root);if(worldFx.reflectionTarget)root.add(worldFx.reflectionTarget);
   const animated = [], stats = { meshes: 0, instances: 0, textures: 0, fixtures: 0 };
   const add = (o, parent = root) => { parent.add(o); stats.meshes++; return o; };
 
@@ -631,8 +633,8 @@ export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, on
   function buildWater() {
     waterNormal.repeat.set(1, 1);
     for (const w of WATER) {
-      const mat = new T.MeshStandardMaterial({ color: w.live ? 0x0c1a20 : 0x0a1316, roughness: .06, metalness: .1, transparent: true, opacity: .9, normalMap: waterNormal, normalScale: new T.Vector2(.35, .35), depthWrite: true });
-      const geo = new T.PlaneGeometry(w.x2 - w.x1, w.z2 - w.z1), uv = geo.attributes.uv;
+      const mat = worldFx.water({color:w.live?0x0c1a20:0x0a1316,opacity:.9,normalMap:waterNormal});
+      const geo = new T.PlaneGeometry(w.x2-w.x1,w.z2-w.z1,worldFx.native?Math.min(24,Math.ceil((w.x2-w.x1)/2)):1,worldFx.native?Math.min(24,Math.ceil((w.z2-w.z1)/2)):1), uv = geo.attributes.uv;
       for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * (w.x2 - w.x1) / 6, uv.getY(i) * (w.z2 - w.z1) / 6);
       const mesh = new T.Mesh(geo, mat); mesh.rotation.x = -Math.PI / 2; mesh.position.set((w.x1 + w.x2) / 2, w.level, (w.z1 + w.z2) / 2); add(mesh);
       waters.set(w.id, { w, mesh, level: w.level, target: w.level, hideBelow: w.drainable ? -.05 : -Infinity });
@@ -673,8 +675,8 @@ export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, on
   const floodPlanes = [];
   function buildFlood() {
     for (const id of ['chambre', 'voie', 'sas']) {
-      const r = ROOM[id], mat = new T.MeshStandardMaterial({ color: 0x0b1518, roughness: .05, metalness: .1, transparent: true, opacity: .82, normalMap: waterNormal, normalScale: new T.Vector2(.5, .5) });
-      const mesh = new T.Mesh(new T.PlaneGeometry(r.x2 - r.x1, r.z2 - r.z1), mat); mesh.rotation.x = -Math.PI / 2; mesh.position.set((r.x1 + r.x2) / 2, -.05, (r.z1 + r.z2) / 2); mesh.visible = false; add(mesh);
+      const r = ROOM[id], mat = worldFx.water({color:0x0b1518,opacity:.82,normalMap:waterNormal});
+      const mesh = new T.Mesh(new T.PlaneGeometry(r.x2-r.x1,r.z2-r.z1,worldFx.native?Math.min(24,Math.ceil((r.x2-r.x1)/2)):1,worldFx.native?Math.min(24,Math.ceil((r.z2-r.z1)/2)):1), mat); mesh.rotation.x = -Math.PI / 2; mesh.position.set((r.x1 + r.x2) / 2, -.05, (r.z1 + r.z2) / 2); mesh.visible = false; add(mesh);
       floodPlanes.push(mesh);
     }
   }
@@ -906,9 +908,12 @@ export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, on
       neons.meshes();neons.build();flushGeometry(); flushPieces();
     },
     update(t, dt, eye = camera, player = eye.position) {
+      worldFx.update(t,eye.position);
+
       updateLights(t, dt, eye.position); updateAmbient(dt, eye.position); updateDoors(dt, player); updateWater(t, dt); updateDevices(t, dt);
       updateParticles(t, dt, eye.position); updatePortals(t, dt, eye.position); updateMachines(t, dt);
       for (const f of animated) f(t, dt, eye);
+      let distance=Infinity,height=0;for(const v of waters.values()){const mesh=v.mesh;if(mesh.visible){const d=(mesh.position.x-eye.position.x)**2+(mesh.position.z-eye.position.z)**2;if(d<distance){distance=d;height=mesh.position.y;}}}for(const mesh of floodPlanes)if(mesh.visible){const d=(mesh.position.x-eye.position.x)**2+(mesh.position.z-eye.position.z)**2;if(d<distance){distance=d;height=mesh.position.y;}}worldFx.setReflectionHeight(height);
     },
     openPortal, emerge,
     setDoor(id, state) { const d = doors.get(id); if (!d) return; d.state = state === 'opening' ? 'opening' : state ? (d.d.open ? 'auto' : 'open') : 'closed'; if (!state) d.open = 0; },
@@ -926,6 +931,6 @@ export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, on
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
     // Is the place dark enough to want the head lamp?
     dark(x, z) { const r = ROOM[roomAt(x, z)]; if (!r) return true; if (r.id === 'rue' || r.id === 'chambre') return false; return (r.id === 'tunnel' ? power.tunnel : power.station) !== 'secours'; },
-    stats() { return { ...stats, neons:neons.stats(), power: { ...power }, lights: pool.filter(s => s.fixture).length, portals: portals.length, anchor: +anchorPower.toFixed(2), flooding, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])), water: Object.fromEntries([...waters].map(([k, v]) => [k, +v.level.toFixed(2)])) }; }
+    stats() { return { ...stats, worldEffects:worldFx.stats(), neons:neons.stats(), power: { ...power }, lights: pool.filter(s => s.fixture).length, portals: portals.length, anchor: +anchorPower.toFixed(2), flooding, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])), water: Object.fromEntries([...waters].map(([k, v]) => [k, +v.level.toFixed(2)])) }; }
   };
 }

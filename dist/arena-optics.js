@@ -1,5 +1,7 @@
+import {createWorldEffects} from './webgpu-world-fx.js';
 // Feathered optics work in both WebGL and WebGPU with ordinary materials.
-export function createArenaOptics(T,{low=false}={}){
+export function createArenaOptics(T,{low=false,webgpu=false,effects=null}={}){
+ const worldFx=effects||createWorldEffects(T,{webgpu,low});
  const size=64,data=new Uint8Array(size*size*4);
  for(let y=0;y<size;y++)for(let x=0;x<size;x++){
   const u=(x+.5)/size*2-1,v=(y+.5)/size;
@@ -10,9 +12,10 @@ export function createArenaOptics(T,{low=false}={}){
  const beamMat=new T.MeshBasicMaterial({map,color:0xbad8ff,transparent:true,opacity:.065,depthWrite:false,depthTest:true,blending:T.AdditiveBlending,side:T.DoubleSide,toneMapped:false});
  const beamGeo=new T.BufferGeometry();beamGeo.setAttribute('position',new T.Float32BufferAttribute([-.015,0,0,.015,0,0,-.13,1,0,.13,1,0],3));beamGeo.setAttribute('uv',new T.Float32BufferAttribute([0,0,1,0,0,1,1,1],2));beamGeo.setIndex([0,1,2,2,1,3]);beamGeo.computeVertexNormals();
  const axis=new T.Vector3(),view=new T.Vector3(),right=new T.Vector3(),normal=new T.Vector3(),basis=new T.Matrix4();
- function searchlight(parent){const mesh=new T.Mesh(beamGeo,beamMat);mesh.name='Projecteur / diffusion dans la brume';mesh.userData.noWorldShadow=true;parent.add(mesh);return mesh;}
+ function searchlight(parent){const mesh=worldFx.native?worldFx.fog(parent,{width:1,height:1,depth:1,color:0xbad8ff,opacity:.10,beam:true}):new T.Mesh(beamGeo,beamMat);mesh.name='Projecteur / diffusion dans la brume';mesh.userData.noWorldShadow=true;parent.add(mesh);return mesh;}
  function aim(mesh,origin,target,eye){
   axis.copy(target).sub(origin);const length=axis.length();if(length<.001){mesh.visible=false;return;}mesh.visible=true;axis.divideScalar(length);
+  if(worldFx.native){mesh.position.copy(origin).addScaledVector(axis,length/2);mesh.quaternion.setFromUnitVectors(up,axis);mesh.scale.set(length*.16,length/2,length*.16);return;}
   view.set(eye.x,eye.y??1.7,eye.z).sub(origin);right.crossVectors(axis,view);
   if(right.lengthSq()<1e-7)right.crossVectors(axis,Math.abs(axis.y)<.9?new T.Vector3(0,1,0):new T.Vector3(1,0,0));
   right.normalize();normal.crossVectors(right,axis).normalize();basis.makeBasis(right,axis,normal);
@@ -30,5 +33,5 @@ export function createArenaOptics(T,{low=false}={}){
   for(const o of [core,glow])o.userData.noWorldShadow=true;
   return {group,aim(origin,target){direction.copy(target).sub(origin);const length=direction.length();group.visible=length>.001;if(!group.visible)return;direction.divideScalar(length);for(const [o,r] of [[core,.006],[glow,.025]]){o.position.copy(origin).addScaledVector(direction,length/2);o.quaternion.setFromUnitVectors(up,direction);o.scale.set(r,length,r);}contact.position.copy(target).addScaledVector(direction,-.025);}};
  }
- let disposed=false;return {searchlight,aim,laser,dispose(){if(disposed)return;disposed=true;for(const o of [map,spotMap,beamMat,beamGeo,coreGeo,coreMat,glowMat,spotMat])o.dispose();}};
+ let disposed=false;return {searchlight,aim,laser,dispose(){if(disposed)return;disposed=true;if(!effects)worldFx.dispose();for(const o of [map,spotMap,beamMat,beamGeo,coreGeo,coreMat,glowMat,spotMat])o.dispose();}};
 }

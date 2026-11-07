@@ -1,3 +1,4 @@
+import {rendererLabel} from './renderer-policy.js';
 // Pink Wars: actual RECO1, Brute V3 and Rempart combat models.
  // Interactive calibration page; never imported by the public game.
 import * as T from './vendor/three.webgpu.min.js';
@@ -83,7 +84,7 @@ function frame(now){
  fx.update(dt);
  if(Math.floor(time*4)!==Math.floor((time-dt)*4)){
   const stats=fx.stats();
-  status.textContent=(renderer.isWebGLRenderer?'WEBGL':'WEBGPU')+' · '+(robotFailureCategory(entity?.form||select.value))+
+  status.textContent=(rendererLabel(renderer).toUpperCase())+' · '+(robotFailureCategory(entity?.form||select.value))+
    '\nPV '+(entity?.hp??0)+' / 100\nÉTINCELLES '+stats.electricArcs+
    '\nPARTICULES '+stats.damagedParticles+'\nCHUTES '+stats.falling+
    '\nEXPLOSIONS '+stats.explosions;
