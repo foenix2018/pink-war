@@ -73,13 +73,13 @@ test('late waves introduce two chassis, cap simultaneous enemies, and allow volu
   assert.equal(traceEnemyHit({x:0,y:1.2,z:2},{x:0,y:1.2,z:-2},robot).multiplier,.72);
 });
 
-test('five distinct bundled WAV recordings decode once per context and select the proper voice',async()=>{
-  assert.equal(new Set(Object.values(LASER_SAMPLES)).size,5);
+test('six distinct bundled WAV recordings decode once per context and select the proper voice',async()=>{
+  assert.equal(new Set(Object.values(LASER_SAMPLES)).size,6);
   const {ctx,nodes}=audioMock();let decodes=0,fetches=0;
   ctx.decodeAudioData=async bytes=>({duration:.65,tag:new Uint8Array(bytes)[0],number:++decodes});
   const load=async url=>{fetches++;const bytes=readFileSync(new URL('../dist/'+url,import.meta.url));assert.equal(bytes.toString('ascii',0,4),'RIFF');return {ok:true,arrayBuffer:async()=>new Uint8Array([Object.values(LASER_SAMPLES).indexOf(url)]).buffer};};
   await Promise.all([loadRealLaserSample(ctx,load),loadRealLaserSample(ctx,load)]);
-  assert.equal(decodes,5);assert.equal(fetches,5);
+  assert.equal(decodes,6);assert.equal(fetches,6);
   for(const [i,id] of Object.keys(LASER_SAMPLES).entries()){
     playLaserShot(ctx,id);assert.equal(nodes.filter(n=>n.kind==='buffer'&&n.buffer?.number).at(-1).buffer.tag,i);ctx.tick(1);
   }
