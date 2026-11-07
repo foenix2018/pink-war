@@ -16,6 +16,7 @@ import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './rende
 import {createEnemyFactory} from './enemies.js';
 import {createEnemyDestructionFX} from './enemy-destruction-fx.js';
 import {createRobotShutdownAudio} from './enemy-shutdown-audio.js';
+import {playPortalLaser} from './portal-laser-audio.js';
 import {installPinkWarsSoldier} from './level2-player.js';
 import {createCampaignCombatEffects} from './campaign-combat-effects.js';
 import {createAICompanion} from './ai-companions.js';
@@ -97,13 +98,19 @@ function createCityBed(ctx){
  }};
 }
 // Short synthesised cues for the mission beats.
+let lastPortalSource=null,portalEverOpened=false;
 function cue(kind){
+ if(kind==='portal'){
+  portalEverOpened=true;
+  if(audioCtx?.state==='running')playPortalLaser(audioCtx,'open',{source:lastPortalSource||{},listener:game?.player||{},yaw});
+  return;
+ }
  if(!audioCtx||audioCtx.state!=='running')return;
  try{
   const now=audioCtx.currentTime,out=audioCtx.createGain();out.gain.value=.12;out.connect(audioCtx.destination);
   const tone=(type,from,to,length,delay=0,gain=.9)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(from,now+delay);o.frequency.exponentialRampToValueAtTime(to,now+delay+length);
    g.gain.setValueAtTime(.0001,now+delay);g.gain.exponentialRampToValueAtTime(gain,now+delay+.02);g.gain.exponentialRampToValueAtTime(.0001,now+delay+length);o.connect(g);g.connect(out);o.start(now+delay);o.stop(now+delay+length+.05);};
-  if(kind==='portal'){tone('sawtooth',90,420,2.6);tone('sine',180,840,2.8,.2);}
+  if(kind==='portal'){} // The laser portal cue was already handled above.
   else if(kind==='console'){tone('sine',660,990,.12);tone('sine',990,1320,.14,.13);}
   else if(kind==='stage'){tone('triangle',440,660,.25);tone('triangle',660,880,.3,.22);}
   else if(kind==='door'){tone('sawtooth',70,55,1.4,0,.5);tone('square',140,120,.2,0,.3);}
@@ -180,7 +187,7 @@ function setupPlayer(){
  const base=sectorObstacles(sector.meta);collisions=base;
  game=new ArenaGame(collisions,Math.random,traversal,characterId);game.reset(characterId);game.enableArmorShield();
  mission=createM03Mission({game,characterId,choice,base,hooks:{
-  setObstacles:list=>{collisions=list;},openPortal:(x,y,z,o)=>art.openPortal(x,y,z,o),setMovable:(id,open)=>art.setMovable(id,open),setPower:(zone,state)=>art.setPower(zone,state),
+  setObstacles:list=>{collisions=list;},openPortal:(x,y,z,o)=>{lastPortalSource={x,y,z};art.openPortal(x,y,z,o);},setMovable:(id,open)=>art.setMovable(id,open),setPower:(zone,state)=>art.setPower(zone,state),
   cue,notice:text=>notice(text,4),say,stage:showStage,finish:finishMission,lost:()=>missionLost('van'),clear:clearVisuals,read:id=>{art.markDone('balise');openDocument(id);}}});
  const lylu=characterId==='lylu',mat=(c,r=.5,m=.5)=>new T.MeshStandardMaterial({color:c,roughness:r,metalness:m}),glow=c=>new T.MeshBasicMaterial({color:c,toneMapped:false});
  const heroGlow=glow(lylu?0x4da8ff:0xff4fa1);
@@ -227,6 +234,10 @@ function syncDevices(){
  for(const it of L.INTERACTIONS)art.markDone(it.id,it.log?reads.has(it.log):done.has(it.id)||(it.id==='ines'&&mission.stage>0)||(it.id==='treuil'&&done.has('treuil'))||(it.id==='barriere'&&done.has('barriere')));
 }
 function finishMission(){
+ if(portalEverOpened&&audioCtx?.state==='running'){
+  playPortalLaser(audioCtx,'close',{source:lastPortalSource||{},listener:game?.player||{},yaw});
+ }
+ portalEverOpened=false;
  running=false;ambience?.pause?.();document.exitPointerLock?.();
  try{const current=Number(localStorage.getItem('pink-wars-last-cleared'))||0;localStorage.setItem('pink-wars-last-cleared',String(Math.max(current,3)));}catch{}
  const minutes=Math.floor(missionTime/60),seconds=String(Math.floor(missionTime%60)).padStart(2,'0');

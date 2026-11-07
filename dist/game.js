@@ -1,7 +1,8 @@
 import {createTouchOrbit} from './touch-orbit.js';
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, starterWeaponIndex, weaponCycleOrder, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
-import { createScene } from './scene.js?v=3.86-robot-destruction-audio';
+import { createScene } from './scene.js?v=20261107-portal-laser-gates';
 import {createRobotShutdownAudio} from './enemy-shutdown-audio.js';
+import {createPortalLaserController} from './portal-laser-audio.js';
 import { VRController } from './vr.js';
 import {createGamepadAid} from './ios-gamepad.js';
 import { EQUIPMENT, equipmentForCharacter } from './equipment.js';
@@ -127,6 +128,7 @@ const robotShutdownAudio=createRobotShutdownAudio({
   getListener:()=>game?.player,getYaw:()=>listenerHeading()
 });
 function wireRobotShutdownAudio(){world?.setRobotShutdownSound?.((kind,source)=>robotShutdownAudio.play(kind,source));}
+const portalAudio=createPortalLaserController({getContext:()=>audioContext,getListener:()=>game?.player,getYaw:()=>listenerHeading(),enabled:()=>settings.sound&&phase==='playing'});
 let saberAudio=null,saberSwingSound=false;
 let lastWeaponSlot=0,holsterRemaining=0;
 let bladeHead=null;
@@ -339,7 +341,7 @@ async function start() {
   game=armed(selectedMode==='breach'?new BreachLevel1(world.obstacles,Math.random,character.id):selectedMode==='campaign'?new CampaignLevel1(world.obstacles,Math.random,character.id):
     selectedMode==='training'?new ShootingRangeGame(world.obstacles,Math.random,trainingWeaponIndex??starterWeaponIndex(character.id),character.id):new ArenaGame(world.obstacles,Math.random,null,character.id));
   if(checkpoint)game.resumeCheckpoint(checkpoint);
-  world.resetDynamic(); phase = 'loading'; yaw = 0; pitch = -.075;
+  portalAudio.reset();world.resetDynamic(); phase = 'loading'; yaw = 0; pitch = -.075;
   if(!vr?.active){beginScenarioLoading(selectedMode,character.id,'Préparation du secteur de combat…');setLoadingProgress(51,'Préparation des équipements…');}
   weaponFeel.reset();reloadInserted=false;lastShotAt=-99;flashTimer = 0; recoil = 0; damageUntil = 0; announcementUntil = 0;pickupNotice=null;equipmentUntil=0;crouchCameraBlend=0;currentSprinting=false; resetInput(); audioReady();
   world.setWeapon(game.weaponIndex);world.setEquipment(1);
@@ -499,7 +501,7 @@ function announce(title, subtitle) {
 }
 function handleEvents() {
   for (const event of game.drainEvents()) {
-    if(game.mode==='campaign'&&settings.sound&&audioContext){if(['circuit-isolated','workshop-power'].includes(event.type))playFieldCue(audioContext,'isolate',{source:event,listener:game.player,yaw:listenerHeading()});if(event.type==='portals'&&event.count>0)for(const site of event.sites)playFieldCue(audioContext,'breach',{source:site,listener:game.player,yaw:listenerHeading()});}
+    if(game.mode==='campaign'&&settings.sound&&audioContext&&['circuit-isolated','workshop-power'].includes(event.type))playFieldCue(audioContext,'isolate',{source:event,listener:game.player,yaw:listenerHeading()});
     armorFeedback().handle(event);
     if(event.type==='campaign'){
       if(vr.mode!=='xr')announce(event.title,event.subtitle);
@@ -533,9 +535,9 @@ function handleEvents() {
     if(event.type==='blade-swing'){saberSwingSound=true;vr.haptic('shot','aurora');}
     if(event.type==='blade-hit'||event.type==='blade-parry'){world.impact({...event,enemy:event.type==='blade-hit'});if(settings.sound)saberAudio?.impact();vr.haptic(event.type==='blade-parry'?'parry':'hit');}
     if (event.type === 'weapon-offer') { tone(360, 820, .45, .03, 'sine'); }
-    if (event.type === 'wave') { const offered=WEAPONS.find((w,i)=>w.level===event.wave&&!game.ownedWeapons.has(i)); if(game.mode!=='campaign')announce(game.endless?`SURVIE / VAGUE ${event.wave}`:`NIVEAU ${String(event.wave).padStart(2, '0')} / ${MAX_LEVEL}`, offered && event.wave>1 ? `${offered.name} DISPONIBLE AU FAISCEAU · APPROCHEZ-VOUS` : `${event.count} MACHINES · LA BRÈCHE S’OUVRE`); tone(210, 420, .25, .065); tone(420, 630, .25, .06, 'triangle', .2); }
+    if (event.type === 'wave') { const offered=WEAPONS.find((w,i)=>w.level===event.wave&&!game.ownedWeapons.has(i)); if(game.mode!=='campaign')announce(game.endless?`SURVIE / VAGUE ${event.wave}`:`NIVEAU ${String(event.wave).padStart(2, '0')} / ${MAX_LEVEL}`, offered && event.wave>1 ? `${offered.name} DISPONIBLE AU FAISCEAU · APPROCHEZ-VOUS` : `${event.count} MACHINES · LA BRÈCHE S’OUVRE`); /* The portals now produce their own spatial, non-beep opening laser sound. */ }
     if (event.type === 'equipment') { const equipment=equipmentForCharacter(event.level,character.id);world.setEquipment(event.level);$('equipment-unlock-title').textContent=`${equipment.name} · NIV. ${event.level}`;$('equipment-unlock-detail').textContent=equipment.addition;equipmentUntil=clock+4;$('equipment-unlock').hidden=false; }
-    if (event.type === 'clear'&&game.mode!=='campaign') { announce('NIVEAU TERMINÉ', '+ BONUS · LA BRÈCHE SE RECHARGE'); tone(420, 700, .25, .07); }
+    if (event.type === 'clear'&&game.mode!=='campaign') { portalAudio.closeAll();announce('NIVEAU TERMINÉ', '+ BONUS · LA BRÈCHE SE RECHARGE'); }
     if (event.type === 'weapon') { weaponFeel.reset();recoil=0;flashTimer=0;world.setWeapon(game.weaponIndex); vr.haptic('weapon'); tone(510, 760, .1, .03); }
     if (event.type === 'jump') {tone(event.kind==='wall'?240:165,110,.075,.012);vr.haptic('jump');}
     if (event.type === 'land') tone(105, 55, .075, .013);
@@ -573,7 +575,7 @@ function handleEvents() {
     }
     if (event.type === 'damage') { damageUntil = clock + .25; vr.haptic('damage'); tone(80, 35, .18, .08, 'triangle'); }
     if (event.type === 'over') gameOver(false);
-    if (event.type === 'win') gameOver(true);
+    if (event.type === 'win'){portalAudio.closeAll();gameOver(true);}
   }
 }
 function gameOver(won = false) {
@@ -856,6 +858,7 @@ function stepFrame(timestamp, xrFrame) {
     currentSprinting=!aiming&&(touchSprinting||vrInput.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight')||(move.id!==null&&Math.hypot(move.x,move.y)>=.88));
     game.precisionAiming=aimBlend>.55;
     game.step(dt, { x, z, yaw: facing, moveYaw, sprint: currentSprinting, jump,crouchToggle });
+    portalAudio.sync(game.activePortals,game.time);
     crouchCameraBlend+=(Number(game.player.crouched)-crouchCameraBlend)*Math.min(1,dt*8);
     if(pickupQueued||vrInput.pickup){game.collectWeapon();pickupQueued=false;syncRangeArmory();}
     armorActions(vrInput);

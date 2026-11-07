@@ -1,7 +1,9 @@
-// Original, short field cues. No sample download and no background music voice.
+import {playPortalLaser} from './portal-laser-audio.js';
+// Keep circuit-isolator cues. Portals use a cinematic laser rather than old notes.
 const buffers=new WeakMap();
 export function playFieldCue(context,kind,{source={},listener={},yaw=0}={}){
  if(!context||context.state!=='running'||!['isolate','breach'].includes(kind))return false;
+ if(kind==='breach')return playPortalLaser(context,'open',{source,listener,yaw});
  const dx=(source.x||0)-(listener.x||0),dz=(source.z||0)-(listener.z||0),distance=Math.hypot(dx,dz),now=context.currentTime;
  const bus=context.createGain();bus.gain.value=(kind==='breach'?.075:.11)/(1+distance*.07);
  let panner=null,voices=0;
