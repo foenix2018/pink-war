@@ -429,7 +429,7 @@ function updateHUD(){
  (combatHud ||= mountCombatHud({characterId,onAction:armorTouch})).update(game);
  const it=reading?null:mission.nearInteraction(),stageInfo=L.STAGES[mission.stage];combatHud.setContext(it?.label);
  const area=L.AREAS.find(a=>a.id===L.areaAt(game.player.x,game.player.z));
- combatHud.setObjective({label:'MISSION 04 · '+(area?.label||'Le Protocole Interdit'),detail:stageInfo?.label||''});
+ combatHud.setObjective({guided:true,label:'MISSION 04 · '+(area?.label||'Le Protocole Interdit'),detail:stageInfo?.label||''});
  $('prompt').style.display=it?'block':'none';if(it)$('prompt').textContent='F / R3 · '+it.label;
  if(clock>noticeUntil)$('notice').style.display='none';
  $('crosshair').style.filter=clock<hitUntil?'drop-shadow(0 0 7px #ffffff) brightness(3)':'';

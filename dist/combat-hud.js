@@ -7,7 +7,7 @@ import {paintCompanionPortrait} from './companion-portrait.js';
 import {renderDigitalCounter} from './digital-display.js';
 let activeCombatHud = null;
 export const getActiveCombatHud = () => activeCombatHud;
-const STYLESHEET = 'combat-hud.css?v=3.87-concept-3';
+const STYLESHEET = 'combat-hud.css?v=20261107-mission-guidance';
 const HEROES = Object.freeze({ ghju: 'GHJU', lylu: 'LYLU' });
 export const HUD_SEGMENTS = 10;
 
@@ -75,7 +75,7 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
   const doc=document;ensureStylesheet(doc);restoreHudContrast(doc);skinCombatControls(doc);
   const root=doc.createElement('section');root.className='pw-hud';root.dataset.layout='immersion';root.setAttribute('aria-label','État de combat');
   root.innerHTML=`<button type="button" class="pw-hud-mission pw-glass" aria-expanded="false" aria-label="Afficher l’objectif">${hudIcon('objective')}<span></span></button>
-    <section class="pw-hud-objective pw-glass" hidden aria-label="Objectif actuel"><small></small><p></p></section>
+    <section class="pw-hud-guide pw-glass" hidden aria-label="Guidage de mission"><div class="pw-guide-heading"><small></small><span class="pw-guide-route"><i aria-hidden="true">↑</i><b></b></span></div><p class="pw-guide-title"></p><p class="pw-guide-instruction"></p><progress max="1" hidden aria-label="Avancement de la manœuvre"></progress></section><section class="pw-hud-objective pw-glass" hidden aria-label="Objectif actuel"><small></small><p></p></section>
     <div class="pw-hud-vitals pw-glass" role="status" aria-label="Santé et bouclier"><span class="pw-hud-tag" hidden></span><div class="pw-hud-numbers"><span class="pw-shield-number">${hudIcon('shield')}<b class="pw-hud-shield-value">60</b></span><span>${hudIcon('health')}<b class="pw-hud-value">100</b></span></div><div class="pw-hud-shield" hidden><i></i></div><div class="pw-hud-bar"><i></i></div><span class="pw-hud-note"></span></div>
     <div class="pw-hud-arms pw-glass"><button type="button" class="pw-hud-reload" data-hud-action="reload" aria-label="Recharger l’arme"><span class="pw-hud-weapon-glyph"></span><span class="pw-hud-weapon"></span><span class="pw-hud-ammo-row"><b class="pw-hud-ammo">0</b><small class="pw-hud-capacity"></small>${BULLET}</span><span class="pw-hud-reload-track"><i></i></span></button><button type="button" class="pw-hud-swap" data-hud-action="next" aria-label="Arme suivante">${hudIcon('swap')}</button><span class="pw-hud-note" role="status"></span></div>
     <button type="button" class="pw-hud-companion pw-glass" aria-label="Équipement GAB-1" aria-expanded="false" aria-controls="pw-tactical-gear"><canvas width="128" height="128" aria-hidden="true"></canvas><span class="pw-hud-companion-name">GAB-1</span><span class="pw-hud-companion-chevron">›</span></button>
@@ -85,6 +85,15 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
     <button type="button" class="pw-hud-context pw-glass" data-hud-action="interact" hidden>${hudIcon('interact')}<span></span><kbd>F</kbd></button>`;
   (parent||doc.body).append(root);doc.body.classList.add('pw-unified-hud','pw-immersion-hud');if(lobbyPage)doc.body.classList.add('pw-hud-lobby-page');
   const $=s=>root.querySelector(s),vitals=$('.pw-hud-vitals'),arms=$('.pw-hud-arms'),palette=$('.pw-hud-palette'),more=$('.pw-hud-more'),mission=$('.pw-hud-mission'),objective=$('.pw-hud-objective'),context=$('.pw-hud-context');
+  const guide=$('.pw-hud-guide');let guideSignature='';
+  function setGuidance(info){
+    root.classList.toggle('pw-guided',!!info);guide.hidden=!info;if(!info)return;
+    info={...info,bearing:Math.round((info.bearing||0)/2)*2,progress:info.progress==null?null:Math.round(info.progress*100)/100};
+    const signature=JSON.stringify(info);if(signature===guideSignature)return;guideSignature=signature;
+    guide.querySelector('small').textContent=info.label||'OBJECTIF';guide.querySelector('.pw-guide-title').textContent=info.title||'';guide.querySelector('.pw-guide-instruction').textContent=info.instruction||'';
+    guide.querySelector('.pw-guide-route b').textContent=info.route||'';guide.querySelector('.pw-guide-route i').hidden=!info.route;guide.querySelector('.pw-guide-route i').style.transform='rotate('+(info.bearing||0)+'deg)';
+    const progress=guide.querySelector('progress');progress.hidden=info.progress===null||info.progress===undefined;progress.value=Math.max(0,Math.min(1,info.progress||0));
+  }
   const nodes={tag:$('.pw-hud-tag'),hp:$('.pw-hud-value'),shield:$('.pw-hud-shield-value'),vitalNote:$('.pw-hud-vitals .pw-hud-note'),weapon:$('.pw-hud-weapon'),ammo:$('.pw-hud-ammo'),capacity:$('.pw-hud-capacity'),armsNote:$('.pw-hud-arms .pw-hud-note'),charges:$('.pw-hud-charges')};
   const shieldBar=$('.pw-hud-shield'),shieldNumber=$('.pw-shield-number'),hitRing=$('.pw-hud-hit'),chargeButton=$('[data-armor=charge]'),crouchButton=$('[data-hud-action=crouch]'),sprintButton=$('[data-hud-action=sprint]');
   // Reuse the existing melee/crouch commands as always-visible touch buttons.
@@ -207,7 +216,7 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
       if(portraitHero!==hero){portraitHero=hero;paintCompanionPortrait(portrait.querySelector('canvas').getContext('2d'),hero,128);
         const label=hero==='lylu'?'CAR-14':'GAB-1';$('.pw-hud-companion-name').textContent=label;portrait.setAttribute('aria-label','Ouvrir les armes et grenades de '+label);gearSignature='';}
     },
-    setObjective({label='',detail=''}={}){const signature=label+'|'+detail;mission.hidden=!label;if(signature===objectiveKey)return;objectiveKey=signature;mission.querySelector('span').textContent=label;objective.querySelector('small').textContent=label;objective.querySelector('p').textContent=detail;mission.setAttribute('aria-label',label+' : afficher l’objectif');objective.hidden=true;mission.setAttribute('aria-expanded','false');},
+    setObjective({label='',detail='',guided=false,guidance=null}={}){setGuidance(guided?{label,title:detail,instruction:'',...guidance}:null);const signature=label+'|'+detail;mission.hidden=!label;if(signature===objectiveKey)return;objectiveKey=signature;mission.querySelector('span').textContent=label;objective.querySelector('small').textContent=label;objective.querySelector('p').textContent=detail;mission.setAttribute('aria-label',label+' : afficher l’objectif');objective.hidden=true;mission.setAttribute('aria-expanded','false');},
     setContext(label){label=label||'';if(contextLabel===label)return;contextLabel=label;context.hidden=!label;context.querySelector('span').textContent=label;context.setAttribute('aria-label',label||'Interagir');},
     update(game){
       dockEngineFire();currentGame=game;const s=combatHudState(game);active=game.state!=='paused'&&game.state!=='lost'&&game.state!=='won'&&s.hp>0;if(!active)reset();

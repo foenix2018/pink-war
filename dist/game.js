@@ -1,6 +1,6 @@
 import {createTouchOrbit} from './touch-orbit.js';
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, starterWeaponIndex, weaponCycleOrder, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
-import { createScene } from './scene.js?v=20261107-electric-portal-v4';
+import { createScene } from './scene.js?v=20261107-mission-guidance';
 import {createRobotShutdownAudio} from './enemy-shutdown-audio.js';
 import {loadPortalSamples,createPortalLaserController} from './portal-laser-audio.js';
 import { VRController } from './vr.js';
@@ -637,7 +637,7 @@ function updateHud() {
   pickup.hidden=!nearby;pickup.textContent=nearby?`RÉCUPÉRER ${WEAPONS[nearby.index].name} · F / X`:'';
   const interaction=game.getInteraction?.();
   combatHud.setContext(interaction?.label||(nearby?'Récupérer '+WEAPONS[nearby.index].name:null));
-  combatHud.setObjective({label:game.mode==='training'?(game.trainingActive?'STAND · '+game.trainingLevel.number+'/05':'STAND · EN ATTENTE'):game.mode==='campaign'?(selectedMode==='breach'?'OPÉRATION BRÈCHE':'MISSION 01'):'VAGUE '+String(Math.max(1,game.wave)).padStart(2,'0')+'/20',detail:game.mode==='training'?(game.trainingActive?game.trainingLevel.label+' · Score '+game.score+' · Précision '+game.trainingAccuracy+' %':'Activez le bouton ambré dans votre box · F / ACTION'):game.mode==='campaign'?(game.campaign?.subtitle||'Rejoindre le relais des archives.'):(game.fortressArena?`${game.turrets.filter(t=>t.hp>0).length}/8 tourelles · Sniper ou attaque à moins de 5 m`:'Repousser les machines et récupérer les armes des brèches.')});
+  combatHud.setObjective({guided:game.mode==='campaign',label:game.mode==='training'?(game.trainingActive?'STAND · '+game.trainingLevel.number+'/05':'STAND · EN ATTENTE'):game.mode==='campaign'?(selectedMode==='breach'?'OPÉRATION BRÈCHE':'MISSION 01'):'VAGUE '+String(Math.max(1,game.wave)).padStart(2,'0')+'/20',detail:game.mode==='training'?(game.trainingActive?game.trainingLevel.label+' · Score '+game.score+' · Précision '+game.trainingAccuracy+' %':'Activez le bouton ambré dans votre box · F / ACTION'):game.mode==='campaign'?(game.campaign?.subtitle||'Rejoindre le relais des archives.'):(game.fortressArena?`${game.turrets.filter(t=>t.hp>0).length}/8 tourelles · Sniper ou attaque à moins de 5 m`:'Repousser les machines et récupérer les armes des brèches.')});
   if(interaction){pickup.hidden=false;pickup.textContent=`${interaction.label} · F`;pickup.ariaLabel=interaction.label;}
   $('ammo-label').textContent = game.weapon.melee?'∞':game.ammo[game.weaponIndex];
   $('ammo-capacity').textContent = game.weapon.melee?'':`/ ${game.weapon.capacity}`;

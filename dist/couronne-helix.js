@@ -305,7 +305,7 @@ function gameTick(dt){
 const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;return;}if(!running||paused)return;audioReady();if(kind==='melee')meleeQueued=true;else if(kind==='charge')chargeQueued=true;else if(kind==='reload')game.reload();else if(kind==='next')game.cycleWeapon();else if(kind==='interact')interact();else if(kind==='crouch')crouchQueued=true;};
 function updateHUD(){
  (combatHud ||= mountCombatHud({characterId,onAction:armorTouch})).update(game);
- const it=mission.nearInteraction();combatHud.setContext(it?.label);combatHud.setObjective({label:'COURONNE HELIX',detail:'Traverser les terrasses et couper la liaison HELIX.'});
+ const it=mission.nearInteraction();combatHud.setContext(it?.label);combatHud.setObjective({guided:true,label:'COURONNE HELIX',detail:L.STAGES[mission.stage]?.label||'Traverser les terrasses et couper la liaison HELIX.'});
  $('prompt').style.display=it?'block':'none';if(it)$('prompt').textContent='F / R3 · '+it.label;
  if(clock>noticeUntil)$('notice').style.display='none';
  $('crosshair').style.filter=clock<hitUntil?'drop-shadow(0 0 7px #ffffff) brightness(3)':'';

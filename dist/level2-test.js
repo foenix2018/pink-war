@@ -1,3 +1,4 @@
+import {scenarioGuidance,nearbyDoor} from './m02-guidance.js';
 import {createElectricPortalSet} from './electric-portal.js';
 import {createStairHardware} from './stair-hardware.js';
 import {createLevelNeons} from './level-neons.js';
@@ -50,7 +51,7 @@ import {createWarZone} from './level2-war-zone.js';
 import {createBattleAudio} from './level2-battle-audio.js';
 import {bevelBox} from './geo.js';
 import {createArchiveTerminalFactory} from './archive-terminals.js';
-import {createM02Extension,readM02Checkpoint,clearM02Checkpoint} from './m02-extension.js?v=20261107-m02-fluidity';
+import {createM02Extension,readM02Checkpoint,clearM02Checkpoint} from './m02-extension.js?v=20261107-m02-guidance';
 import {extensionObstacles,INTERACTIONS as M02X_INTERACTIONS,STAGE as M02X_STAGE} from './m02-extension-layout.js';
 import {linesFor as m02Lines} from './m02-extension-story.js';
 import {createM02ExtensionArt} from './m02-extension-art.js';
@@ -551,6 +552,7 @@ function updateExtension(dt){
  // Retry the checkpoint once a stage's fight is over (a save needs no machine left).
  if((checkpointClock+=dt)>1){checkpointClock=0;const key=extension.checkpointKey;if(key&&key!==checkpointSaved&&extension.writeCheckpoint())checkpointSaved=key;}
  if(extArt){
+  extArt.syncDoors(extension.opened);
   extArt.setPower('enclave',extension.done.includes('batterie'));
   extArt.setAvailable(M02X_INTERACTIONS.filter(i=>extension.available(i.id)).map(i=>i.id));
  }
@@ -561,14 +563,14 @@ function notice(message){
 function interact(){
  if(!running||game.state!=='playing'||journalOpen)return;
  if(extension?.active){
-  const it=extension.interaction();if(!it||!extension.interact())return;
+  const it=extension.interaction();if(!it){const d=nearbyDoor(game.player);notice(d?extension.doorStatus(d.id).reason:extension.guidance().instruction);return;}if(!extension.interact())return;
   if(!M02X_INTERACTIONS.find(i=>i.id===it.id)?.log)extArt?.markDone(it.id);
   const journal=extension.takeJournal();if(journal)openJournal(journal.entry,journal.then);
   return;
  }
  const o=objectives[stage];if(!o)return;
  const range=Math.hypot(game.player.x-o.x,game.player.z-o.z);
- if(range>3.3||Math.abs(game.player.elevation-o.y)>1.8)return;
+ if(range>3.3||Math.abs(game.player.elevation-o.y)>1.8){const d=nearbyDoor(game.player);notice(d?extension.doorStatus(d.id).reason:o.description+' Approche du repère indiqué.');return;}
  if(stage===0){stage=1;createEnemies();notice('ENCLAVE REPÉRÉE — NEUTRALISER LA PATROUILLE');}
  else if(stage===1){
   if(game.enemies.length>0){notice('TERMINAL VERROUILLÉ : MENACES ACTIVES');return;}
@@ -811,7 +813,9 @@ function updateHUD(){
   $('objective').textContent=(stage<4?'PROLOGUE':'ÉPILOGUE')+' · '+label;$('hint').textContent=detail;
   (combatHud ||= mountCombatHud({characterId,onAction:armorTouch})).update(game);
   const it=extension.interaction();
-  combatHud.setObjective({label:'MISSION 02 · '+(stage<4?'L’ENCLAVE':'LA TOUR DE TRANSIT'),detail:label+(detail?'. '+detail:'')});combatHud.setContext(it?it.label:null);
+  const info=extension.guidance();const guide=scenarioGuidance(game.player,info.target,{opened:extension.opened,yaw,instruction:info.instruction,progress:info.progress});
+  if(extension.hold)guide.title=extension.hold.name==='grille'?'OUVERTURE DE LA GRILLE':'VERROUILLAGE DU CONVOI';
+  combatHud.setObjective({guided:true,guidance:guide,label:'MISSION 02 · '+(stage<4?'L’ENCLAVE':'LA TOUR DE TRANSIT'),detail:label+(detail?'. '+detail:'')});combatHud.setContext(it?it.label:null);
   $('prompt').style.display=it?'block':'none';$('prompt').textContent='F / R3 : '+(it?.label||'');
   $('hp').textContent=Math.ceil(game.player.hp);$('weapon').firstChild.nodeValue=game.weapon.name+' ';
   $('ammo').textContent=game.weapon.melee?'LAME':game.ammo[game.weaponIndex]+' / '+game.weapon.capacity;
@@ -829,7 +833,11 @@ function updateHUD(){
  $('ammo').textContent=game.weapon.melee?'LAME':game.ammo[game.weaponIndex]+' / '+game.weapon.capacity;
  $('position').textContent='X '+game.player.x.toFixed(1)+' / Z '+game.player.z.toFixed(1)+' / ALT '+game.player.elevation.toFixed(1)+' m';
  const near=Math.hypot(game.player.x-o.x,game.player.z-o.z)<3.3&&Math.abs(game.player.elevation-o.y)<1.8;
- combatHud.setObjective({label:'MISSION 02 · '+String(stage+1).padStart(2,'0')+'/04',detail:o.label+'. '+o.description});combatHud.setContext(near?o.label:null);
+ let guideTarget={...o,id:'street-'+stage};
+ if(stage===1&&game.enemies.length){const nearest=game.enemies.reduce((best,e)=>!best||Math.hypot(e.x-game.player.x,e.z-game.player.z)<Math.hypot(best.x-game.player.x,best.z-game.player.z)?e:best,null);guideTarget={x:nearest.x,z:nearest.z,y:nearest.elevation||0,label:'NEUTRALISER LA PATROUILLE',id:'enemy-'+nearest.id};}
+ const guide=scenarioGuidance(game.player,guideTarget,{opened:extension?.opened||[],yaw,instruction:o.description+' Approche du repère puis utilise F / ACTION.'});
+ if(stage===1&&game.enemies.length){guide.instruction='Neutralise les '+game.enemies.length+' menaces restantes avant d’activer le terminal HELIX.';}
+ combatHud.setObjective({guided:true,guidance:guide,label:'MISSION 02 · '+String(stage+1).padStart(2,'0')+'/04',detail:o.label+'. '+o.description});combatHud.setContext(near?o.label:null);
  $('prompt').style.display=near?'block':'none';$('prompt').textContent='F / R3 : '+o.label;
  if(clock>noticeUntil)$('notice').style.display='none';
 }

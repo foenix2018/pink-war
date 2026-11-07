@@ -604,6 +604,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       for (const [id, o] of cachesById) if (!live.has(id)) { o.removeFromParent(); o.userData.dispose?.(); cachesById.delete(id); }
     },
     setDoor(id, state) { const d = doors.get(id); if (!d) return; d.state = state ? (d.d.open ? 'auto' : 'open') : 'closed'; if (!state) d.open = 0; },
+    syncDoors(opened=[]){const set=new Set(opened);for(const [id,door] of doors){const state=door.d.open?'auto':set.has(id)?'open':'closed';if(door.state!==state){door.state=state;if(state==='closed')door.open=0;}}},
     setPower(zone, on) { power[zone] = !!on; },
     markDone(id, done = true) { const d = devices.get(id); if (d) { d.done = done; if (!done) { d.turn = 0; if (d.moving) d.moving.rotation.set(0, 0, 0); } } },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },

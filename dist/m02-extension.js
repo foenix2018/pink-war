@@ -76,21 +76,22 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
   }
   function nearInteraction() {
     if (!stage || hold) return null;
-    const p = game.player; let best = null, bestD = Infinity;
+    const p = game.player, expected=targetFor(stage)?.id; let best = null, bestD = Infinity, bestPriority=Infinity;
     for (const it of X.INTERACTIONS) {
       if (Math.abs((p.elevation || 0) - it.y) > .6) continue;
-      const d = Math.hypot(p.x - it.x, p.z - it.z); if (d > RANGE || d >= bestD) continue;
+      const d = Math.hypot(p.x - it.x, p.z - it.z); if (d > RANGE) continue;
       // Documents are always readable; the radio and the manifest only once their stage is reached.
       if (!(it.log && !['radio', 'manifeste'].includes(it.id)) && !available(it.id)) continue;
       // The vault's documents are behind its door.
       if (X.roomAt(it.x, it.z) === 'coffre' && !opened.has('coffre')) continue;
-      best = it; bestD = d;
+      const priority=d<.35?-1:it.id===expected?0:1;
+      if(priority<bestPriority||(priority===bestPriority&&d<bestD)){best=it;bestD=d;bestPriority=priority;}
     }
     return best;
   }
   function targetFor(id) {
     const pt = (x, z, label) => ({ x, z, y: 0, id, label });
-    const it = key => { const i = X.INTERACTIONS.find(v => v.id === key); return pt(i.x, i.z, i.label); };
+    const it = key => { const i = X.INTERACTIONS.find(v => v.id === key); return {...pt(i.x,i.z,i.label),id:key}; };
     switch (id) {
       case 'x-arrivee': return pt(20, 87, 'REJOINDRE LE DISPENSAIRE');
       case 'x-dispensaire': return it('registre-soins');
@@ -177,7 +178,10 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
     if (Number.isFinite(s.charges)) game.charges = Math.max(0, Math.min(CHARGE_MAX, s.charges));
     const street = s.stage === X.STREET.id;
     prologueDone = street || EPILOGUE_IDS.includes(s.stage);
+    opened.add('monte-charge'); // Entry elevator never traps a resumed player inside.
     if (prologueDone) opened.add('grille'); if (EPILOGUE_IDS.includes(s.stage)) opened.add('tour');
+    // Older checkpoints may omit door flags even though their objective is already inside the vault.
+    if(['x-manifeste','x-quai','x-fin','x-done'].includes(s.stage))opened.add('coffre');
     rebuild(); for (const d of X.DOORS) h.setDoor(d.id, !!d.open || opened.has(d.id));
     place(X.STAGE[s.stage].checkpoint); supplies(prologueDone ? 'tour' : null);
     if (street) { setStage(null); h.core(); return true; }
@@ -204,13 +208,35 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
     // Interaction prompt and action for the extension; the page falls back to its own objectives otherwise.
     interaction() { const it = game.state === 'playing' ? nearInteraction() : null; return it && { id: it.id, label: it.label, x: it.x, z: it.z }; },
     interact() { const it = game.state === 'playing' ? nearInteraction() : null; return it ? handle(it) : false; },
-    target() {
-      if (!stage || !X.STAGE[stage]) return null;
-      if (hold || ['x-eclaireurs', 'x-tour', 'x-fin'].includes(stage)) {
-        const p = game.player, enemy = game.enemies.reduce((best, e) => !best || Math.hypot(e.x - p.x, e.z - p.z) < Math.hypot(best.x - p.x, best.z - p.z) ? e : best, null);
-        if (enemy) return { x: enemy.x, z: enemy.z, y: 0, id: 'enemy-' + enemy.id, label: enemy.helix ? 'NEUTRALISER LES AGENTS DU DIRECTOIRE' : 'NEUTRALISER LES MACHINES', enemy: true };
-      }
+    target(){
+      if(!stage||!X.STAGE[stage])return null;
+      let relevant=null;
+      if(stage==='x-eclaireurs')relevant=new Set(groups.get('eclaireurs')||[]);
+      if(stage==='x-tour')relevant=new Set(groups.get('tour')||[]);
+      if(stage==='x-quai'&&alive('renfort'))relevant=new Set(groups.get('renfort')||[]);
+      const candidates=game.enemies.filter(e=>relevant?relevant.has(e.id):hold?e.extension?.startsWith(hold.name):stage==='x-fin'?!!e.extension:false);
+      const enemy=candidates.reduce((best,e)=>!best||Math.hypot(e.x-game.player.x,e.z-game.player.z)<Math.hypot(best.x-game.player.x,best.z-game.player.z)?e:best,null);
+      if(enemy)return{x:enemy.x,z:enemy.z,y:enemy.elevation||0,id:'enemy-'+enemy.id,label:enemy.helix?'NEUTRALISER LES AGENTS DU DIRECTOIRE':'NEUTRALISER LES MACHINES',enemy:true};
       return targetFor(stage);
+    },
+    guidance(){
+      const target=this.target(),h=this.hold;let instruction=X.STAGE[stage]?.hint||'';
+      if(h)instruction=(h.name==='grille'?'Ouverture de la grille':'Verrouillage du convoi')+' : encore '+Math.ceil(h.remaining)+' s. Repousse les renforts ; la manœuvre se termine automatiquement.';
+      else if(target?.enemy)instruction='Neutralise les menaces indiquées avant de poursuivre. La commande reste verrouillée pendant ce combat.';
+      else if(stage==='x-radio')instruction=done.has('batterie')?'Batteries raccordées. Approche de la radio, puis utilise F / ACTION.':'Entre dans le local radio et raccorde le banc de batteries avec F / ACTION.';
+      else if(stage==='x-grille')instruction='Approche de la manivelle à droite de la grille et utilise F / ACTION une fois. Défends ensuite la zone pendant 25 secondes.';
+      else if(stage==='x-coffre')instruction='Le badge est acquis. Approche du lecteur côté hall, puis utilise F / ACTION pour ouvrir le coffre.';
+      else if(stage==='x-quai')instruction='Approche du poste de commande au fond du quai et utilise F / ACTION une fois. Défends la zone pendant 50 secondes.';
+      else if(target?.id&&X.INTERACTIONS.some(i=>i.id===target.id))instruction+=' Approche et utilise F / ACTION.';
+      return{target,instruction,progress:h?1-h.remaining/h.total:null};
+    },
+    doorStatus(id){
+      const d=X.DOORS.find(d=>d.id===id);if(!d)return null;
+      const unlocked=!!d.open||opened.has(id);let reason=unlocked?'Passage déverrouillé. Approche pour traverser.':this.guidance().instruction;
+      if(!unlocked&&id==='tour')reason='Active d’abord le terminal d’évacuation de la ruelle, après la passerelle.';
+      if(!unlocked&&id==='coffre'&&stage!=='x-coffre')reason=stage==='x-badge'?'Prends le badge sur le bureau du poste de contrôle.':'Neutralise le poste de contrôle, puis récupère son badge.';
+      if(!unlocked&&id==='grille'&&!hold&&stage!=='x-grille')reason='Lis le registre de soins, rétablis la radio et repousse les éclaireurs avant d’actionner la manivelle.';
+      return{id,unlocked,reason,label:d.label||d.id};
     },
     restoreCheckpoint, writeCheckpoint,
     takeJournal() { const id = lastJournal, then = afterJournal; lastJournal = afterJournal = null; return id ? { entry: logFor(id, characterId), id, then } : null; }
