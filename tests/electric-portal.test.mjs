@@ -46,3 +46,19 @@ test('a closing gate completes even after the mission simulation clock stops',()
  set.sync([],4,41);assert.equal(set.portals.size,1);
  set.sync([],4,43);assert.equal(set.portals.size,0);assert.equal(scene.children.length,0);
 });
+test('pooled M02 gates reuse geometry and keep a constant light count across reinforcements',async()=>{
+ const scene=new T.Scene(),set=createElectricPortalSet(T,scene,{poolSize:2,low:true});
+ const originals=scene.children.filter(o=>o.name==='PINK WARS / electric arc portal');
+ assert.equal(originals.length,2);
+ const lightCount=()=>{let n=0;scene.traverse(o=>{if(o.isPointLight)n++;});return n;};assert.equal(lightCount(),2);
+ let warmed=0;await set.prepare({isWebGLRenderer:true,compile(){warmed++;}},new T.PerspectiveCamera());assert.equal(warmed,1);
+ let first;
+ for(let i=0;i<12;i++){
+  const t=i*10;set.sync([{id:i,x:3,z:5,openedAt:t}],t+3);const p=set.portals.get(i);first??=p.effect.group;
+  assert.equal(p.effect.group,first);assert.equal(lightCount(),2);
+  set.sync([],t+4);set.sync([],t+7);assert.equal(set.portals.size,0);assert.equal(lightCount(),2);
+  assert.ok(originals.every(o=>!o.visible));
+ }
+ set.reset();assert.equal(scene.children.filter(o=>o.name==='PINK WARS / electric arc portal').length,2);
+ set.dispose();assert.equal(scene.children.length,0);
+});

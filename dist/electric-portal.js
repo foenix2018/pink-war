@@ -5,13 +5,13 @@ export function portalEnvelope(age,closingAge=null){
  const s=(a,b,x)=>{const v=Math.max(0,Math.min(1,(x-a)/(b-a)));return v*v*(3-2*v);},c=closingAge??-1;
  return {charge:s(0,1.5,age)*(1-s(1.65,1.95,c)),opening:s(1.28,2.65,age)*(1-s(0,1.68,c)),height:s(.55,1.65,age)*(1-s(1.1,1.8,c))};
 }
-export function createElectricPortal(T,{height=5.44,low=false,webgpu=false}={}){
+export function createElectricPortal(T,{height=5.44,low=false,webgpu=false,lights=true}={}){
  const group=new T.Group();group.name='PINK WARS / electric arc portal';group.scale.setScalar(height/5.44);
  const scene=group;
  const mat=(color,roughness=.5,metalness=.5)=>new T.MeshStandardMaterial({color,roughness,metalness});
  const steel=mat(0x566878,.38,.78),dark=mat(0x101b26,.52,.65),edge=mat(0x8596a8,.28,.8),paint=mat(0x374353,.42,.65);
  const pink=new T.MeshBasicMaterial({color:0xff1e80,toneMapped:false}),cyan=new T.MeshBasicMaterial({color:0x80f2ff,toneMapped:false});
- const cold=new T.PointLight(0x43e9ff,0,13,2),hot=new T.PointLight(0xff1e75,0,12,2);cold.position.set(-1.4,2.8,1);hot.position.set(1.4,1.8,1.6);group.add(cold,hot);
+ const cold=new T.PointLight(0x43e9ff,0,13,2),hot=new T.PointLight(0xff1e75,0,12,2);cold.position.set(-1.4,2.8,1);hot.position.set(1.4,1.8,1.6);if(lights)group.add(cold,hot);
 function mesh(g,m,p=[0,0,0],parent=scene,r=[0,0,0]){const o=new T.Mesh(g,m);o.position.set(...p);o.rotation.set(...r);parent.add(o);return o;}
 function box(s,p,m=dark,parent=scene,r=[0,0,0]){const g=new T.BoxGeometry(...s);return mesh(g,m,p,parent,r);}
 function rod(a,b,r=.035,m=steel,parent=scene){const u=new T.Vector3(...a),v=new T.Vector3(...b),d=v.clone().sub(u),o=mesh(new T.CylinderGeometry(r,r,d.length(),10),m,u.add(v).multiplyScalar(.5).toArray(),parent);o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),d.normalize());return o;}
@@ -70,11 +70,22 @@ field=mesh(new T.PlaneGeometry(3.5,5.1,40,56),fieldMat,[0,2.72,0]);
  }
 const maxSegments=low?700:1400,arcGeo=new T.CylinderGeometry(1,1,1,6),coreMat=new T.MeshBasicMaterial({color:0xc8f9ff,toneMapped:false}),arcHalo=new T.MeshBasicMaterial({color:0x29bfff,transparent:true,opacity:.18,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false});
 const cores=new T.InstancedMesh(arcGeo,coreMat,maxSegments),halos=new T.InstancedMesh(arcGeo,arcHalo,maxSegments);for(const o of [cores,halos]){o.frustumCulled=false;o.instanceMatrix.setUsage(T.DynamicDrawUsage);scene.add(o);}
+const coreColors=[new T.Color(0xbefaff),new T.Color(0xff90cd)],haloColors=[new T.Color(0x238eff),new T.Color(0xff157d)];
 const pose=new T.Object3D(),up=new T.Vector3(0,1,0),delta=new T.Vector3(),a0=new T.Vector3(),a1=new T.Vector3();let used=0;
 const hash=(a,b=0)=>{const x=Math.sin(a*127.1+b*311.7)*43758.5453;return x-Math.floor(x);};
-function line(a,b,r=.008,tint=0){if(used>=maxSegments)return;delta.copy(b).sub(a);const len=delta.length();if(len<.0001)return;pose.position.copy(a).add(b).multiplyScalar(.5);pose.quaternion.setFromUnitVectors(up,delta.divideScalar(len));pose.scale.set(r,len,r);pose.updateMatrix();cores.setMatrixAt(used,pose.matrix);cores.setColorAt(used,new T.Color(tint?0xff90cd:0xbefaff));pose.scale.set(r*3.5,len,r*3.5);pose.updateMatrix();halos.setMatrixAt(used,pose.matrix);halos.setColorAt(used,new T.Color(tint?0xff157d:0x238eff));used++;}
-function lightning(from,to,seed,t,amp=.16,r=.008,branch=true){let prev=from.clone();const frame=Math.floor(t*18),count=15;for(let k=1;k<=count;k++){const f=k/count,fall=Math.sin(f*Math.PI),point=from.clone().lerp(to,f);point.x+=(hash(seed+k,frame)-.5)*amp*fall;point.y+=(hash(seed+k+30,frame)-.5)*amp*fall;point.z+=(hash(seed+k+60,frame)-.5)*amp*fall;line(prev,point,r,seed%3===0);if(branch&&k%5===0){const end=point.clone().add(new T.Vector3((hash(k+80+seed,frame)-.5)*.45,(hash(k+20+seed,frame)-.5)*.45,.12));lightning(point,end,seed+k+100,t,amp*.5,r*.43,false);}prev=point;}}
-function ringPoint(a,w,h,t,offset=0){const jitter=(Math.sin(a*17+t*13)+Math.sin(a*31-t*17))*.012;return new T.Vector3(Math.sin(a)*(1.75*w+jitter+offset),2.72+Math.cos(a)*(2.55*h+jitter+offset),.08+Math.sin(a*9+t*8)*.035);}
+function line(a,b,r=.008,tint=0){if(used>=maxSegments)return;delta.copy(b).sub(a);const len=delta.length();if(len<.0001)return;pose.position.copy(a).add(b).multiplyScalar(.5);pose.quaternion.setFromUnitVectors(up,delta.divideScalar(len));pose.scale.set(r,len,r);pose.updateMatrix();cores.setMatrixAt(used,pose.matrix);cores.setColorAt(used,coreColors[tint?1:0]);pose.scale.set(r*3.5,len,r*3.5);pose.updateMatrix();halos.setMatrixAt(used,pose.matrix);halos.setColorAt(used,haloColors[tint?1:0]);used++;}
+const arcScratch=Array.from({length:2},()=>({prev:new T.Vector3(),point:new T.Vector3(),end:new T.Vector3()}));
+function lightning(from,to,seed,t,amp=.16,r=.008,branch=true){
+ const {prev,point,end}=arcScratch[branch?0:1];prev.copy(from);const frame=Math.floor(t*18),count=15;
+ for(let k=1;k<=count;k++){
+  const f=k/count,fall=Math.sin(f*Math.PI);point.copy(from).lerp(to,f);
+  point.x+=(hash(seed+k,frame)-.5)*amp*fall;point.y+=(hash(seed+k+30,frame)-.5)*amp*fall;point.z+=(hash(seed+k+60,frame)-.5)*amp*fall;
+  line(prev,point,r,seed%3===0);
+  if(branch&&k%5===0){end.copy(point);end.x+=(hash(k+80+seed,frame)-.5)*.45;end.y+=(hash(k+20+seed,frame)-.5)*.45;end.z+=.12;lightning(point,end,seed+k+100,t,amp*.5,r*.43,false);}
+  prev.copy(point);
+ }
+}
+function ringPoint(a,w,h,t,offset=0,target=new T.Vector3()){const jitter=(Math.sin(a*17+t*13)+Math.sin(a*31-t*17))*.012;return target.set(Math.sin(a)*(1.75*w+jitter+offset),2.72+Math.cos(a)*(2.55*h+jitter+offset),.08+Math.sin(a*9+t*8)*.035);}
 function haloTexture(){const s=64,d=new Uint8Array(s*s*4);for(let y=0;y<s;y++)for(let x=0;x<s;x++){const r=Math.hypot((x+.5)/s*2-1,(y+.5)/s*2-1),i=(y*s+x)*4;d[i]=d[i+1]=d[i+2]=255;d[i+3]=Math.max(0,Math.exp(-r*r*7)-Math.exp(-7))*255;}const t=new T.DataTexture(d,s,s);t.needsUpdate=true;return t;}
 const glowTex=haloTexture(),glowMat=new T.SpriteMaterial({map:glowTex,color:0x56dcff,transparent:true,opacity:.6,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}),flares=[];
 for(let i=0;i<12;i++){const s=new T.Sprite(glowMat);scene.add(s);flares.push(s);}
@@ -82,6 +93,7 @@ const floorGlowMat=new T.MeshBasicMaterial({map:glowTex,color:0x37badc,transpare
 // Ion motes follow the electrical field, then fall with gravity after closure.
 const particles=low?70:160,particleGeo=new T.BufferGeometry(),particlePositions=new Float32Array(particles*3);particleGeo.setAttribute('position',new T.BufferAttribute(particlePositions,3));const particleMat=new T.PointsMaterial({color:0xb4edff,size:.035,transparent:true,opacity:.8,depthWrite:false});const motes=new T.Points(particleGeo,particleMat);motes.frustumCulled=false;scene.add(motes);
 
+ const particleOrigin=new T.Vector3();
  let disposed=false;
  function update(time,{age=4,closingAge=null}={}){
   if(disposed)return false;
@@ -103,9 +115,9 @@ const particles=low?70:160,particleGeo=new T.BufferGeometry(),particlePositions=
   }
   cores.count=halos.count=used;cores.instanceMatrix.needsUpdate=halos.instanceMatrix.needsUpdate=true;
   if(used){cores.instanceColor.needsUpdate=halos.instanceColor.needsUpdate=true;}
-  for(let i=0;i<flares.length;i++){flares[i].position.copy(ringPoint(i*Math.PI/6+t*.1,width,height,t));flares[i].visible=active;const size=(.25+hash(i,Math.floor(t*15))*.26)*(charge+flash*.6);flares[i].scale.set(size,size,1);}
+  for(let i=0;i<flares.length;i++){ringPoint(i*Math.PI/6+t*.1,width,height,t,0,flares[i].position);flares[i].visible=active;const size=(.25+hash(i,Math.floor(t*15))*.26)*(charge+flash*.6);flares[i].scale.set(size,size,1);}
   for(let i=0;i<particles;i++){
-   const age=(t+hash(i)*2.8)%1.6,a=hash(i+24)*Math.PI*2,start=ringPoint(a,width,height,t);
+   const age=(t+hash(i)*2.8)%1.6,a=hash(i+24)*Math.PI*2,start=ringPoint(a,width,height,t,0,particleOrigin);
    particlePositions[i*3]=start.x+Math.sin(a)*age*.7+(hash(i+40)-.5)*age;
    particlePositions[i*3+1]=start.y+hash(i+70)*age*1.4-age*age*1.1;
    particlePositions[i*3+2]=.1+hash(i+130)*age*2;
@@ -115,23 +127,58 @@ const particles=low?70:160,particleGeo=new T.BufferGeometry(),particlePositions=
  }
  function dispose(){if(disposed)return;disposed=true;group.removeFromParent();const geometries=new Set(),materials=new Set(),textures=new Set();group.traverse(o=>{if(o.geometry)geometries.add(o.geometry);for(const m of o.material?(Array.isArray(o.material)?o.material:[o.material]):[]){materials.add(m);if(m.map)textures.add(m.map);}});for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();}
  update(0,{age:-1});
- return{group,update,dispose,get arcCount(){return used;}};
+ return{group,update,dispose,lightState:{cold,hot},get arcCount(){return used;}};
 }
 // Active portals retain their energy for the whole wave, then finish closing after removal.
 export function createElectricPortalSet(T,parent,options={}){
- const portals=new Map();
- return{portals,sync(sites=[],time=0,frameTime=time){
-  const present=new Set();
-  for(const [index,site] of sites.entries()){
-   const id=site.id??index;present.add(id);let p=portals.get(id);
-   if(!p){p={effect:createElectricPortal(T,options),openedAt:site.openedAt??time,closingAt:null};parent.add(p.effect.group);portals.set(id,p);}
-   p.closingAt=null;p.effect.group.position.set(site.x,site.y||0,site.z);p.effect.group.rotation.y=site.yaw||0;
-   p.effect.update(frameTime,{age:time-p.openedAt});
+ const portals=new Map(),slots=[],poolSize=options.poolSize||0,pooled=poolSize>0;
+ const shared=pooled?[new T.PointLight(0x43e9ff,0,13,2),new T.PointLight(0xff1e75,0,12,2)]:[];
+ if(pooled)parent.add(...shared);
+ function makeSlot(){const slot={effect:createElectricPortal(T,{...options,lights:!pooled}),inUse:false};parent.add(slot.effect.group);slots.push(slot);return slot;}
+ for(let i=0;i<poolSize;i++)makeSlot();
+ function release(p){
+  if(p.slot){p.slot.inUse=false;p.effect.update(0,{age:-1});}
+  else p.effect.dispose();
+ }
+ function lightFrame(){
+  const p=[...portals.values()].reverse().find(p=>p.effect.group.visible);
+  for(const [i,light] of shared.entries()){
+   if(!p){light.intensity=0;continue;}
+   const local=i?p.effect.lightState.hot:p.effect.lightState.cold;
+   p.effect.group.updateWorldMatrix(true,false);light.position.copy(local.position);p.effect.group.localToWorld(light.position);light.intensity=local.intensity;
   }
-  for(const [id,p] of portals)if(!present.has(id)){
-   p.closingAt??=frameTime;
-   p.effect.update(frameTime,{age:time-p.openedAt,closingAge:frameTime-p.closingAt});
-   if(frameTime-p.closingAt>=PORTAL_CLOSE_SECONDS){p.effect.dispose();portals.delete(id);}
-  }
- },reset(){for(const p of portals.values())p.effect.dispose();portals.clear();}};
+ }
+ return{portals,
+  // Called under the level's loading overlay: no extrusion or shader compilation on arrival.
+  async prepare(renderer,camera){
+   if(!pooled)return;
+   const culling=[];
+   try{for(const slot of slots){slot.effect.update(0,{age:4});slot.effect.group.traverse(o=>{if(o.isMesh||o.isSprite||o.isPoints){culling.push([o,o.frustumCulled]);o.frustumCulled=false;}});}
+    if(renderer.compileAsync&&!renderer.isWebGLRenderer)await renderer.compileAsync(parent,camera);
+    else renderer.compile?.(parent,camera);
+    // Upload the buffers and textures while the loading overlay is still visible.
+    if(renderer.renderAsync)await renderer.renderAsync(parent,camera);else renderer.render?.(parent,camera);
+   }finally{for(const [o,value] of culling)o.frustumCulled=value;for(const slot of slots)if(!slot.inUse)slot.effect.update(0,{age:-1});lightFrame();}
+  },
+  sync(sites=[],time=0,frameTime=time){
+   const present=new Set();
+   for(const [index,site] of sites.entries()){
+    const id=site.id??index;present.add(id);let p=portals.get(id);
+    if(!p){
+     const slot=pooled?(slots.find(s=>!s.inUse)||makeSlot()):null;if(slot)slot.inUse=true;
+     p={effect:slot?slot.effect:createElectricPortal(T,options),slot,openedAt:site.openedAt??time,closingAt:null};
+     if(!slot)parent.add(p.effect.group);portals.set(id,p);
+    }
+    p.closingAt=null;p.effect.group.position.set(site.x,site.y||0,site.z);p.effect.group.rotation.y=site.yaw||0;
+    p.effect.update(frameTime,{age:time-p.openedAt});
+   }
+   for(const [id,p] of portals)if(!present.has(id)){
+    p.closingAt??=frameTime;p.effect.update(frameTime,{age:time-p.openedAt,closingAge:frameTime-p.closingAt});
+    if(frameTime-p.closingAt>=PORTAL_CLOSE_SECONDS){release(p);portals.delete(id);}
+   }
+   lightFrame();
+  },
+  reset(){for(const p of portals.values())release(p);portals.clear();lightFrame();},
+  dispose(){this.reset();for(const s of slots)s.effect.dispose();slots.length=0;for(const l of shared)l.removeFromParent();}
+ };
 }

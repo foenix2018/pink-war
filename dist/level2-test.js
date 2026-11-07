@@ -50,7 +50,7 @@ import {createWarZone} from './level2-war-zone.js';
 import {createBattleAudio} from './level2-battle-audio.js';
 import {bevelBox} from './geo.js';
 import {createArchiveTerminalFactory} from './archive-terminals.js';
-import {createM02Extension,readM02Checkpoint,clearM02Checkpoint} from './m02-extension.js';
+import {createM02Extension,readM02Checkpoint,clearM02Checkpoint} from './m02-extension.js?v=20261107-m02-fluidity';
 import {extensionObstacles,INTERACTIONS as M02X_INTERACTIONS,STAGE as M02X_STAGE} from './m02-extension-layout.js';
 import {linesFor as m02Lines} from './m02-extension-story.js';
 import {createM02ExtensionArt} from './m02-extension-art.js';
@@ -339,7 +339,7 @@ function stairsAndSkybridges(){
 }
 function props(){
  const details=createVesperProps(T,root,{low:low()});
- electricPortals=createElectricPortalSet(T,scene,{height:3.5,low:low(),webgpu:!!renderer.backend?.isWebGPUBackend});
+ electricPortals=createElectricPortalSet(T,scene,{height:3.5,poolSize:2,low:low(),webgpu:!!renderer.backend?.isWebGPUBackend});
 
  const terminals=createArchiveTerminalFactory(T,{performance:low()});
  function archive(x,z,title,id){
@@ -838,6 +838,8 @@ function animation(t,frame){
  if(xr?.active&&!frame)return;
  if(!xr?.active)requestAnimationFrame(animation);
  const dt=Math.min(.040,Math.max(0,(t-last)/1000));last=t;
+ // Never mutate or retire GPU resources while the previous asynchronous frame compiles.
+ if(framePending||recovering)return;
  if(!renderer||!scene)return;
  if(xr?.active)xr.input(frame,dt);
  skillMenu?.setVisible(started&&running);
@@ -935,6 +937,7 @@ async function boot(){
   bootStep='préparation du premier rendu';status.textContent='Préparation des lumières et du premier rendu…';
   missionLoading?.set(.90,'Préparation du premier rendu');
   snapCamera();
+  await electricPortals.prepare(renderer,camera);
   if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);
   bootStep='prêt';hud.hidden=false;started=true;requestAnimationFrame(animation);
   touchControls=createPinkWarsTouch(canvas,{
@@ -973,6 +976,7 @@ function resume({fresh=false}={}){
  if(game){game.reset(characterId);game.wave=2;game.ownedWeapons=new Set([...starterWeaponOrder(characterId),1,2]);game.ammo=WEAPONS.map(w=>w.capacity);}
  if(game){game.player.x=0;game.player.z=72;game.player.elevation=0;game.player.hp=100;game.state='playing';
   game.enemies=[];game.bullets=[];game.time=0;game.kills=0;game.nextWave=Infinity;game.toSpawn=0;}
+ portalAudio.reset();electricPortals?.reset();
  for(const o of enemyMeshes.values())scene.remove(o);enemyMeshes.clear();enemyDestructionFX?.reset();robotShutdownAudio.stop();
  for(const o of shotMeshes.values())scene.remove(o);shotMeshes.clear();
  combatEffects?.reset();companion?.reset();

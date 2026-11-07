@@ -33,7 +33,7 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
 
   // ---------- Encounters ----------
   function deploy(name, { alert = true } = {}) {
-    const enc = X.ENCOUNTERS[name], ids = []; game.wave = enc.wave;
+    const enc = X.ENCOUNTERS[name], ids = [], heldPortals=game.activePortals; game.wave = enc.wave;
     if (!Number.isFinite(game.spawned)) game.spawned = 0;
     for (const u of enc.units) {
       game.toSpawn = 1; game.activePortals = [{ id: 700 + (serial++), x: u.x, z: u.z, yaw: 0, openedAt: game.time }];
@@ -41,7 +41,7 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
       configureUnit(e, u, enc.wave); e.helix = !!u.helix; e.extension = name; ids.push(e.id);
       if (alert) Object.assign(e, { awareness: 'search', alertedUntil: game.time + 8, lastKnownX: game.player.x, lastKnownZ: game.player.z, lastKnownHeight: game.player.elevation });
     }
-    game.activePortals = []; game.toSpawn = 0; game.spawnTimer = Infinity; game.nextWave = Infinity;
+    game.activePortals = heldPortals; game.toSpawn = 0; game.spawnTimer = Infinity; game.nextWave = Infinity;
     groups.set(name, ids); return ids;
   }
   // Hold reinforcements arrive through a short-lived HELIX drop point (telegraphed like a portal).
