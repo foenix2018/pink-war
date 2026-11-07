@@ -1,3 +1,4 @@
+import {createSupplyPickup} from './power-props.js';
 import {createHologramComms} from './hologram-comms.js';
 import {levelArrow,arrowGuidance} from './objective-arrow.js';
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
@@ -219,7 +220,7 @@ function startMission(){
 function clearVisuals(){
  for(const o of enemyMeshes.values())scene.remove(o);enemyMeshes.clear();enemyDestructionFX?.reset();robotShutdownAudio.stop();
  for(const o of shotMeshes.values())scene.remove(o);shotMeshes.clear();
- for(const o of pickupMeshes.values())scene.remove(o);pickupMeshes.clear();
+ for(const o of pickupMeshes.values()){o.userData.dispose?.();scene.remove(o);}pickupMeshes.clear();
  combatEffects?.reset();companion?.reset?.();
 }
 function interact(){
@@ -317,8 +318,7 @@ function aimRay(){
 // ---------- Rendering of the simulation ----------
 const projectileCore=new T.SphereGeometry(.07,6,4);
 const shotMaterial={hostile:new T.MeshBasicMaterial({color:0xff4659,toneMapped:false}),friendly:new T.MeshBasicMaterial({color:characterId==='lylu'?0x8fd0ff:0xff8ac4,toneMapped:false})};
-const pickupGeometry=new T.OctahedronGeometry(.28,0);
-const pickupMaterial={heal:new T.MeshBasicMaterial({color:characterId==='lylu'?0x6fb8ff:0xff6fb4,toneMapped:false}),cell:new T.MeshBasicMaterial({color:0xe8f6ff,toneMapped:false})};
+
 function updateActors(dt){
  const live=new Set();
  for(const e of game.enemies){
@@ -348,10 +348,10 @@ function updateActors(dt){
  const items=new Set();
  for(const p of game.pickups){
   const id=p.id??(p.x+':'+p.z);items.add(id);let mesh=pickupMeshes.get(id);
-  if(!mesh){mesh=new T.Mesh(pickupGeometry,pickupMaterial[p.kind]||pickupMaterial.cell);pickupMeshes.set(id,mesh);scene.add(mesh);}
-  mesh.position.set(p.x,(p.y??0)+.7+Math.sin(clock*2.4)*.1,p.z);mesh.rotation.y=clock*1.8;
+  if(!mesh){mesh=createSupplyPickup(T,{kind:p.kind,accent:characterId==='lylu'?0x6fb8ff:0xff6fb4,webgpu:!!renderer.backend?.isWebGPUBackend,low:quality.value==='low'}).root;pickupMeshes.set(id,mesh);scene.add(mesh);}
+  mesh.position.set(p.x,p.y??0,p.z);mesh.userData.update(clock,Number(p.id)||0);
  }
- for(const [id,o] of pickupMeshes)if(!items.has(id)){scene.remove(o);pickupMeshes.delete(id);}
+ for(const [id,o] of pickupMeshes)if(!items.has(id)){o.userData.dispose?.();scene.remove(o);pickupMeshes.delete(id);}
 }
 
 // ---------- Simulation tick ----------

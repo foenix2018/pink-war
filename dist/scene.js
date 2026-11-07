@@ -1,3 +1,4 @@
+import {createSupplyPickup} from './power-props.js';
 import {createElectricPortal,createElectricPortalSet} from './electric-portal.js';
 import {createStairHardware} from './stair-hardware.js';
 import { createSentinel } from './sentinel-mk9.js';
@@ -300,15 +301,9 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     for(let i=0;i<count&&particles.length<SPARKS;i++)particles.push({pool,x,y,z,vx:(Math.random()-.5)*7,vy:Math.random()*5,vz:(Math.random()-.5)*7,life:.45+Math.random()*.3,max:.8});
   }
   // Survival pickups: a rose medical cross or an energy cell, turning above a ground ring.
-  const pickupMeshes=new Map(),pickupRing=new T.TorusGeometry(.42,.025,4,28);
-  function makePickup(kind){
-    const g=new T.Group(),heal=kind==='heal',core=heal?mats.rose:mats.cyan;
-    if(heal){mesh(geometries.box,core,g,[0,0,0],[.36,.11,.11],false);mesh(geometries.box,core,g,[0,0,0],[.11,.36,.11],false);mesh(geometries.box,mats.white,g,[0,0,0],[.2,.2,.07],false);}
-    else{mesh(geometries.cylinder,mats.steel,g,[0,0,0],[.085,.3,.085],false);mesh(geometries.cylinder,core,g,[0,0,0],[.095,.13,.095],false);mesh(geometries.cylinder,mats.pale,g,[0,.18,0],[.035,.06,.035],false);}
-    const ring=mesh(pickupRing,core,g,[0,-.5,0],[1,1,1],false);ring.rotation.x=-Math.PI/2;ring.userData.ground=true;
-    return g;
-  }
-  function resetDynamic(){city.reset?.();for(const m of pickupMeshes.values())scene.remove(m);pickupMeshes.clear();rangeArt.update(null);combatFX.reset();laserFX.reset();traversal.update(0);electricPortals.reset();portalSites=[];portalTime=0;primaryPortal.update(0,{age:4});portal.visible=!rangeActive;enemyFailureFX.reset();for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;probeSparkAt.clear();for(const pool of sparkPools)pool.count=0;}
+  const pickupMeshes=new Map();
+  function makePickup(kind){return createSupplyPickup(T,{kind,webgpu:!!renderer.backend?.isWebGPUBackend,accent:palette.rose,low:profile.phone||quality==='low'}).root;}
+  function resetDynamic(){city.reset?.();for(const m of pickupMeshes.values()){m.userData.dispose?.();scene.remove(m);}pickupMeshes.clear();rangeArt.update(null);combatFX.reset();laserFX.reset();traversal.update(0);electricPortals.reset();portalSites=[];portalTime=0;primaryPortal.update(0,{age:4});portal.visible=!rangeActive;enemyFailureFX.reset();for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;probeSparkAt.clear();for(const pool of sparkPools)pool.count=0;}
   function sync(sim,time,dt){
     if(arenaRoot.visible)city.sync?.(sim);
     if(!campaignActive)city.fence?.update({...sim.player,y:(sim.player.elevation||0)+(sim.player.crouched?1.05:1.65)},.65,1.2);traversal.update(sim.time);campaignArt.updateLift(sim.time);combatFX.update(dt,camera);laserFX.update(sim.bullets,dt);shadowTime=sim.time;shadowEntities=rangeActive?[sim.player,...sim.targets.map(t=>({...targetPosition(t,sim.time),radius:.28}))]:[...sim.enemies,sim.player];shadowHeight=e=>sim.surfaceHeight(e.x,e.z,sim.time,(e.elevation||0)+.3);trackShadows(sim.player.x,sim.player.z,sim.player.elevation||0);
@@ -335,9 +330,9 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     for(const[id,m]of bulletMeshes){if(!active.has(id)){scene.remove(m);bulletMeshes.delete(id);}}
     const live=new Set();for(const p of sim.pickups||[]){live.add(p.id);let m=pickupMeshes.get(p.id);if(!m){m=makePickup(p.kind);pickupMeshes.set(p.id,m);scene.add(m);}
       // Blinks during its last 2.5 s; the ring stays on the floor while the item bobs.
-      const left=p.until-sim.time,bob=Math.sin(time*3+p.id)*.07;m.visible=left>2.5||Math.floor(left*6)%2===0;
-      m.position.set(p.x,p.y+.6+bob,p.z);m.rotation.y=time*1.8;for(const c of m.children)if(c.userData.ground)c.position.y=-.58-bob;}
-    for(const[id,m]of pickupMeshes)if(!live.has(id)){scene.remove(m);pickupMeshes.delete(id);}
+      const left=p.until-sim.time;m.visible=left>2.5||Math.floor(left*6)%2===0;
+      m.position.set(p.x,p.y||0,p.z);m.userData.update(time,Number(p.id)||0);}
+    for(const[id,m]of pickupMeshes)if(!live.has(id)){m.userData.dispose?.();scene.remove(m);pickupMeshes.delete(id);}
     for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.life-=dt;if(p.life<=0){particles.splice(i,1);continue;}p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;p.vy-=6*dt;}
     for(const pool of sparkPools){
       let n=0;for(const p of particles){if(p.pool!==pool)continue;sparkPosition.set(p.x,p.y,p.z);sparkScale.setScalar(.08*p.life/p.max);sparkMatrix.compose(sparkPosition,sparkRotation,sparkScale);pool.setMatrixAt(n++,sparkMatrix);}

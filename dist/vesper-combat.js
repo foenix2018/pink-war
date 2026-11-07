@@ -125,7 +125,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const checkpoint=readM01Checkpoint(characterId),resuming=params.get('resume')==='1';
   const coreRestored=resuming&&!!checkpoint&&restoreM01Checkpoint(game,checkpoint);
   // Extended chapter (3.69): Caserne 07 prologue and Archives végétales epilogue around the original quarter.
-  const extArt=createM01ExtensionArt(T,scene,{quality:profile.phone||requestedQuality==='low'?'low':'normal',camera});
+  const extArt=createM01ExtensionArt(T,scene,{quality:profile.phone||requestedQuality==='low'?'low':'normal',camera,webgpu:!!renderer.backend?.isWebGPUBackend});
   const subtitles=createSubtitles({T,camera});
   const extension=installM01Extension(game,{setDoor:(id,state)=>extArt.setDoor(id,state),say:id=>subtitles.say(extensionLines(id,characterId)),cue:kind=>extensionCue(kind),notice:text=>notify(text,3800)});
   const extensionSave=resuming?readExtensionCheckpoint(characterId):null;

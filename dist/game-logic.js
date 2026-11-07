@@ -720,10 +720,18 @@ export class ArenaGame {
     p.jumpHeld = jumpDown;
     const speed = p.crouched ? 3.0 : input.sprint ? 10 : 7, moveYaw = input.moveYaw ?? yaw;
     const oldX=p.x,oldZ=p.z,oldY=p.elevation,wasGrounded=p.grounded;
-    moveInArena(p, (Math.cos(moveYaw) * ix + Math.sin(moveYaw) * iz) * speed * dt,
-      (-Math.sin(moveYaw) * ix + Math.cos(moveYaw) * iz) * speed * dt, .55, this.obstacles);
-    if(p.jumpImpulseX||p.jumpImpulseZ){moveInArena(p,p.jumpImpulseX*dt,p.jumpImpulseZ*dt,.55,this.obstacles);p.jumpImpulseX*=Math.exp(-dt*5);p.jumpImpulseZ*=Math.exp(-dt*5);}
-    this.settle(p,dt,true);
+    const dx=(Math.cos(moveYaw)*ix+Math.sin(moveYaw)*iz)*speed*dt,
+      dz=(-Math.sin(moveYaw)*ix+Math.cos(moveYaw)*iz)*speed*dt;
+    // Fine treads must be sampled along the whole move, including sprint at low FPS.
+    // Subdivide locomotion and gravity together; AI, firing and mission time still tick once.
+    const impulseX=(p.jumpImpulseX||0)*dt,impulseZ=(p.jumpImpulseZ||0)*dt;
+    const substeps=Math.max(1,Math.ceil((Math.hypot(dx,dz)+Math.hypot(impulseX,impulseZ))/(this.traversal?.maxMoveStep||Infinity)));
+    for(let step=0;step<substeps;step++){
+      moveInArena(p,dx/substeps,dz/substeps,.55,this.obstacles);
+      if(impulseX||impulseZ)moveInArena(p,impulseX/substeps,impulseZ/substeps,.55,this.obstacles);
+      this.settle(p,dt/substeps,true);
+    }
+    if(impulseX||impulseZ){p.jumpImpulseX*=Math.exp(-dt*5);p.jumpImpulseZ*=Math.exp(-dt*5);}
     if(p.grounded){p.airJumps=0;p.jumpImpulseX=p.jumpImpulseZ=0;p.lastGroundedAt=this.time;}
     if(dt>0)this.playerVelocity={x:(p.x-oldX)/dt,y:(p.elevation-oldY)/dt,z:(p.z-oldZ)/dt};
     if(!wasGrounded&&p.grounded)this.emitNoise('land',NOISE_RADIUS.land);

@@ -12,7 +12,8 @@ import {audioMock} from './audio-mock.mjs';
 function staircase(base,rise,direction){
  const floors=Array.from({length:72},(_,i)=>({x:0,z:direction*(i+.5)*.36,hx:1.2,hz:.2,height:base+(i+1)*rise}));
  const obstacles=floors.map(s=>stairBody(0,s.z,2.4,.372,s.height,base));
- const traversal={routes:[],lifts:[],surfaces(x,z){return floors.filter(s=>Math.abs(x)<=s.hx&&Math.abs(z-s.z)<=s.hz).map((s,i)=>({id:'step-'+i,height:s.height}));},height(x,z,_t,max=Infinity){return floors.reduce((h,s)=>Math.abs(x)<=s.hx&&Math.abs(z-s.z)<=s.hz&&s.height<=max+.01?Math.max(h,s.height):h,base);}};
+ floors.push({x:0,z:direction*27.8,hx:1.2,hz:2,height:base+72*rise});
+ const traversal={routes:[],lifts:[],maxMoveStep:.12,surfaces(x,z){return floors.filter(s=>Math.abs(x)<=s.hx&&Math.abs(z-s.z)<=s.hz).map((s,i)=>({id:'step-'+i,height:s.height}));},height(x,z,_t,max=Infinity){return floors.reduce((h,s)=>Math.abs(x)<=s.hx&&Math.abs(z-s.z)<=s.hz&&s.height<=max+.01?Math.max(h,s.height):h,base);}};
  const g=new ArenaGame(obstacles,()=>.5,traversal);g.reset();Object.assign(g.player,{x:0,z:0,elevation:base,grounded:true});return{g,floors};
 }
 for(const [base,rise,direction] of [[0,1/6,-1],[12,13/72,-1],[0,1/6,1]])test(`solid staircase climbs and descends, base ${base}, direction ${direction}`,()=>{
@@ -81,4 +82,18 @@ test('new enclave crates and furniture have solid footprints without burying the
  const list=extensionObstacles().filter(b=>b.lifeSolid);assert.ok(list.length>=24);
  const cache={x:-20,z:87};assert.ok(!list.some(b=>Math.abs(cache.x-b.x)<b.hx+.5&&Math.abs(cache.z-b.z)<b.hz+.5));
  for(const b of list){const p={x:b.x+b.hx+2,z:b.z,elevation:0};moveInArena(p,-4,0,.55,[b]);assert.ok(p.x>=b.x+b.hx+.55-.001);assert.notEqual(segmentBox({x:b.x+2,y:b.height/2,z:b.z},{x:b.x-2,y:b.height/2,z:b.z},b),null);}
+});
+
+for(const dt of [1/60,1/30,.05])for(const sprint of [false,true])test(`game.step climbs fine stairs without losing support at dt=${dt}, sprint=${sprint}`,()=>{
+ for(const base of [0,12]){
+  const {g}=staircase(base,base?13/72:1/6,-1);g.nextWave=Infinity;let previous=base,steps=0;
+  while(g.player.z>-25.6&&steps++<1000){g.step(dt,{z:-1,yaw:0,moveYaw:0,sprint});assert.ok(g.player.elevation>=previous-.0001,JSON.stringify({dt,sprint,player:g.player,previous}));previous=g.player.elevation;}
+  assert.ok(steps<1000);assert.ok(g.player.elevation>base+(base?12.8:11.8));assert.equal(g.player.grounded,true);
+ }
+});
+
+test('jumping during a low-FPS sprint lands back on the steps and reaches the landing',()=>{
+ const {g}=staircase(0,1/6,-1);g.nextWave=Infinity;let frames=0;
+ while(g.player.z>-25.6&&frames<200){g.step(.05,{z:-1,yaw:0,moveYaw:0,sprint:true,jump:frames===20});frames++;}
+ assert.ok(frames<200);assert.ok(g.player.elevation>=11.8);assert.equal(g.player.grounded,true);
 });

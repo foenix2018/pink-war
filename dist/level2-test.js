@@ -1,3 +1,4 @@
+import {createStreetlamp} from './power-props.js';
 import {loadDoorSamples,createDoorAudioController} from './door-audio.js';
 import {createM02Boundary,stairBody,beyondDistrict,muzzleBeforeCover} from './m02-physical-layout.js';
 import {scenarioGuidance,nearbyDoor} from './m02-guidance.js';
@@ -155,7 +156,7 @@ function walkway(x,z,w,d,height,id='deck'){
  collisions.push({x,z,hx:w/2,hz:d/2,y:height-.13,height:.13,walkableSurface:true,surface:'metal'});
 }
 const traversal={
- routes:[],lifts:[],
+ routes:[],lifts:[],maxMoveStep:.12,
  surfaces(x,z){return floors.filter(s=>Math.abs(x-s.x)<=s.hx&&Math.abs(z-s.z)<=s.hz).map(s=>({id:s.id,height:s.height}));},
  height(x,z,time=0,max=Infinity){let h=0;for(const s of floors)if(s.height<=max+.01&&Math.abs(x-s.x)<=s.hx&&Math.abs(z-s.z)<=s.hz)h=Math.max(h,s.height);return h;},
  routeForSurface(){return null;}
@@ -275,10 +276,8 @@ function blockBuildings(){
   solid(-x,1.2,z+4,2.2,2.4,.75,materials.rust,true);
   for(let j=0;j<5;j++)solid(-x,.5+j*.26,z+4,1.6,.11,.4,materials.iron,false);
   const poleX=side*8.2;
-  beam([poleX,0,z+7],[poleX,7.7,z+7],.1,materials.iron);
-  beam([poleX,7.6,z+7],[poleX-side*2.7,7.6,z+7],.09,materials.iron);
-  const fixture=new T.Mesh(new T.SphereGeometry(.22,8,6),z%3?materials.amber:materials.cyan);
-  fixture.position.set(poleX-side*2.7,7.6,z+7);root.add(fixture);
+  createStreetlamp(T,root,{x:poleX,z:z+7,side,low:low(),webgpu:!!renderer.backend?.isWebGPUBackend});
+  collisions.push({x:poleX,z:z+7,hx:.19,hz:.19,y:0,height:7.4,surface:'metal'});
  }
  for(let i=0;i<18;i++){
   const z=70-i*8.1,y=9+(i%4)*2,x0=-14,x1=14;
@@ -301,6 +300,7 @@ function stairsAndSkybridges(){
   const body=stairBody(eastX,z,2.55,step+.012,h);if(body)collisions.push(body);
   solid(eastX,h+.012,z,2.55,.028,step,materials.warning,false);
   walkway(eastX,z,2.55,step+.06,h,'east-stair-'+i);
+  for(const side of [-1,1])collisions.push({x:eastX+side*1.345,z,hx:.043,hz:step/2+.02,y:h+.85,height:.24,surface:'metal',stairRail:true});
 
  }
  solid(eastX,11.87,-12.5,2.9,.26,12,materials.road,false);
@@ -320,6 +320,7 @@ function stairsAndSkybridges(){
   const body=stairBody(westX,z,2.55,step+.012,h);if(body)collisions.push(body);
   solid(westX,h+.012,z,2.55,.03,step,materials.warning,false);
   walkway(westX,z,2.55,step+.07,h,'west-stair-'+i);
+  for(const side of [-1,1])collisions.push({x:westX+side*1.345,z,hx:.043,hz:step/2+.02,y:h+.85,height:.24,surface:'metal',stairRail:true});
  }
  createStairHardware(T,root,{id:'m02-est',x:eastX,halfWidth:1.275,bottomZ:16.1,topZ:16.1-upN*step,height:12},{low:low(),steps:upN,materials:{steel:materials.iron,dark:materials.black}});
  createStairHardware(T,root,{id:'m02-ouest',x:westX,halfWidth:1.275,bottomZ:-19.7-(upN-1)*step,topZ:-19.7,height:12-rise},{low:low(),steps:upN-1,materials:{steel:materials.iron,dark:materials.black}});
@@ -331,6 +332,7 @@ function stairsAndSkybridges(){
   const body=stairBody(roofX,z,2.4,.37,h,12);if(body)collisions.push(body);
   solid(roofX,h+.01,z,2.4,.03,.36,materials.iron,false);
   walkway(roofX,z,2.4,.40,h,'roof-stair-'+i);
+  for(const side of [-1,1])collisions.push({x:roofX+side*1.27,z,hx:.043,hz:.20,y:h+.85,height:.24,surface:'metal',stairRail:true});
  }
  createStairHardware(T,root,{id:'m02-toit',x:roofX,halfWidth:1.2,bottomZ:-19.8,topZ:-19.8-72*.36,base:12,height:25},{low:low(),steps:72,materials:{steel:materials.iron,dark:materials.black}});
  solid(-6.7,24.85,-51,10.4,.30,13.5,materials.road,false);
@@ -339,6 +341,7 @@ function stairsAndSkybridges(){
   beam([-11.65,25,z],[-11.65,26.2,z],.06,materials.iron);
  }
  beam([-11.65,26.2,-57],[-11.65,26.2,-44],.08,materials.iron);
+ collisions.push({x:-11.65,z:-50.5,hx:.08,hz:6.5,y:25.9,height:.35,surface:'metal'});
  // Architectural braces and hanging lighting beneath the crossbridge.
  for(const side of [-1,1])beam([side*8,2,-18],[side*8,11.6,-18],.21,materials.iron,8);
  for(let i=-4;i<=4;i++)beam([i*2.2,11.5,-18],[i*2.2,12,-18],.06,materials.black);
@@ -446,7 +449,7 @@ function createEnvironment(){
  const neons=createLevelNeons(T,root,{low:low(),metal:materials.iron,back:materials.dark,materials:[materials.cyan,materials.amber,materials.red,materials.rose,materials.blue,materials.white]});
  neons.meshes();neons.build();root.userData.neons=neons.stats();optimizeStaticBoxes();
  // 3.70: the enclave of the covered market (north) and the transit tower (south) close the two ends of the street.
- try{extArt=createM02ExtensionArt(T,scene,{quality:low()?'low':'normal',accent:characterId==='lylu'?0x4da8ff:0xff4fa1,onDoorMotion:(d,p)=>doorAudio.update(d,p)});extArt.build(extensionObstacles());}
+ try{extArt=createM02ExtensionArt(T,scene,{quality:low()?'low':'normal',accent:characterId==='lylu'?0x4da8ff:0xff4fa1,webgpu:!!renderer.backend?.isWebGPUBackend,onDoorMotion:(d,p)=>doorAudio.update(d,p)});extArt.build(extensionObstacles());}
  catch(error){console.warn('M02 extension dressing degraded, the mission stays playable:',error);extArt=null;}
  worldShadows=createWorldShadows(T,{scene,renderer,light:moon,profile:{artQuality:low()?'low':'auto'},direction:{x:-28,y:56,z:28}});
  groundOcclusion=createGroundOcclusion(T,root,collisions,{compact:low()});
@@ -952,6 +955,7 @@ async function boot(){
   if(prepared.initialFailure)console.warn('M02: WebGPU unavailable:',prepared.initialFailure);
   bootStep='préparation du premier rendu';status.textContent='Préparation des lumières et du premier rendu…';
   missionLoading?.set(.90,'Préparation du premier rendu');
+  extArt?.syncPickups(game.pickups,clock);
   snapCamera();
   await electricPortals.prepare(renderer,camera);
   if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);

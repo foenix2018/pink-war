@@ -29,7 +29,7 @@ function canvasTexture(T, w, h, paint, { repeat = false, color = true } = {}) {
   const t = new T.CanvasTexture(c); if (color) t.colorSpace = T.SRGBColorSpace; if (repeat) t.wrapS = t.wrapT = T.RepeatWrapping; t.anisotropy = 4; return t;
 }
 
-export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } = {}) {
+export function createM01ExtensionArt(T, scene, { quality = 'normal', camera, webgpu=false } = {}) {
   const low = quality === 'low', rng = seeded(707);
   const root = new T.Group(); root.name = 'M01 / Station 07 et Archives végétales'; scene.add(root);
   const details = createVesperProps(T, root, {low});
@@ -589,12 +589,12 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera } =
       for (const p of list) {
         live.add(p.id); let o = cachesById.get(p.id);
         if (!o) {
-          const asset=createM01SupplyCache(T,{heal:p.kind==='heal',M,accent});
+          const asset=createM01SupplyCache(T,{heal:p.kind==='heal',M,accent,webgpu,low});
           o=asset.root;o.userData.gem=asset.token;
           o.position.set(p.x,p.y||0,p.z);
           root.add(o);cachesById.set(p.id,o);
         }
-        o.userData.gem.position.y = .75 + Math.sin(t * 2.4 + p.x) * .08; o.userData.gem.rotation.y = t * 1.8;
+        o.userData.pulse?.(t);o.userData.gem.position.y = .75 + Math.sin(t * 2.4 + p.x) * .08; o.userData.gem.rotation.y = t * 1.8;
       }
       for (const [id, o] of cachesById) if (!live.has(id)) { o.removeFromParent(); o.userData.dispose?.(); cachesById.delete(id); }
     },

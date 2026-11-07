@@ -1,12 +1,14 @@
+import {createSupplyPickup} from './power-props.js';
+import {bevelBox} from './geo.js';
 // M01 service caches: the interaction icon is a physical field-medical kit or
 // high-voltage energy cartridge, never an anonymous glowing octahedron.
 // Shared geos for mobile performance; collision/pickup authority unchanged.
-export function createM01SupplyCache(T,{heal=false,M,accent=0xff6fb4}={}){
+export function createM01SupplyCache(T,{heal=false,M,accent=0xff6fb4,webgpu=false,low=false}={}){
  const root=new T.Group();root.name='M01 / '+(heal?'trousse de secours':'cellule énergie')+' identifiable';
  const metal=M.paintedMetal||M.steel,steel=M.steel||metal,dark=M.dark||M.black;
  const sign=new T.MeshBasicMaterial({color:heal?accent:0x78e9ff,toneMapped:false});
  const shell=(m,s,p,round=.008)=>{
-  const g=new T.BoxGeometry(...s),mesh=new T.Mesh(g,m);mesh.position.set(...p);mesh.castShadow=true;mesh.receiveShadow=true;root.add(mesh);return mesh;
+  const g=bevelBox(...s,Math.min(.016,Math.min(...s)*.2),1),mesh=new T.Mesh(g,m);mesh.position.set(...p);mesh.castShadow=true;mesh.receiveShadow=true;root.add(mesh);return mesh;
  };
  // Physically lifted hard case with recessed locks, hinge and carrying handle.
  shell(dark,[.61,.07,.41],[0,.07,0]);
@@ -19,30 +21,15 @@ export function createM01SupplyCache(T,{heal=false,M,accent=0xff6fb4}={}){
  shell(steel,[.18,.025,.035],[0,.35,.02]);
  for(const side of [-1,1])shell(steel,[.028,.055,.035],[side*.08,.37,.02]);
  // Readable treatment/charge capsule on a suspended tray.
- const token=new T.Group();token.name=heal?'M01 / emblème secours':'M01 / cellule énergétique';
- token.position.y=.75;root.add(token);
- const hullMat=new T.MeshStandardMaterial({color:heal?0xe9e7e2:0x29465d,roughness:.45,metalness:heal?.32:.76});
- const tokenBox=(m,s,p)=>{const v=new T.Mesh(new T.BoxGeometry(...s),m);v.position.set(...p);v.castShadow=false;token.add(v);return v;};
- if(heal){
-  tokenBox(hullMat,[.25,.28,.09],[0,0,0]);
-  tokenBox(sign,[.16,.042,.008],[0,0,.051]);
-  tokenBox(sign,[.042,.16,.008],[0,0,.052]);
-  tokenBox(steel,[.20,.03,.025],[0,.155,0]);
- }else{
-  const cell=new T.Mesh(new T.CylinderGeometry(.095,.095,.30,10),hullMat);token.add(cell);
-  for(const sy of [-1,1]){
-   const cap=new T.Mesh(new T.CylinderGeometry(.102,.102,.036,12),steel);cap.position.y=sy*.145;token.add(cap);
-  }
-  for(const side of [-1,1])tokenBox(sign,[.014,.17,.033],[side*.068,0,.061]);
-  tokenBox(steel,[.14,.055,.014],[0,0,.094]);
- }
+ const asset=createSupplyPickup(T,{kind:heal?'heal':'cell',webgpu,accent,low,dock:false});
+ const token=asset.token;token.position.y=.75;root.add(token);root.userData.pulse=asset.root.userData.pulse;
  // Identifying case badge. The object is also readable without animated glow.
  const front=sign.clone(),label=new T.Mesh(new T.PlaneGeometry(.16,.09),front);
  label.position.set(0,.19,.199);root.add(label);
  root.userData.dispose=()=>{
-  const geo=new Set();root.traverse(o=>{if(o.isMesh&&o.geometry)geo.add(o.geometry);});
+  const geo=new Set();for(const o of root.children)if(o.isMesh&&o.geometry)geo.add(o.geometry);
   for(const g of geo)g.dispose();
-  sign.dispose();front.dispose();hullMat.dispose();
+  sign.dispose();front.dispose();
  };
  return {root,token};
 }
