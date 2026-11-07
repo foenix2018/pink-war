@@ -1,5 +1,6 @@
+import {ENCLAVE_STACKS,ENCLAVE_BARRELS,ENCLAVE_SACKS,DOCK_PALLETS,RATION_BENCH_Z,RATION_TABLE_Z} from './m02-life-layout.js';
 // M02 « Sous les Néons » — the enclave of the Épars and the transit tower, lived in (feedback of 7 Nov 2026: the level
-// felt empty). Purely visual and without colliders: it never changes gameplay or the navigation grid.
+// felt empty). Visual meshes; substantial props share positions with the colliders in m02-life-layout.js.
 //  · warm light pools under every bulb (additive, no extra dynamic light) and strings of bulbs over the market;
 //  · laundry lines, crates, barrels, sacks, water cans and bedding along the walls and stalls;
 //  · the service corridor: cable tray with status LEDs, pipe run, painted guide line, notices;
@@ -73,14 +74,14 @@ export function createEnclaveLife(T, parent, { low = false } = {}) {
     }
     // Crates, barrels, sacks and water cans stacked along the walls and beside the stalls.
     const crateStack = (x, z, n, yaw = 0) => { for (let k = 0; k < n; k++) box(k % 2 ? M.crateDark : M.crate, [.62, .46, .62], [x + (k % 2 ? .06 : -.05), .23 + k * .46, z], [0, yaw + (k % 3) * .12, 0]); };
-    crateStack(-29, 82.5, 3, .2); crateStack(-29, 83.4, 2); crateStack(-29, 96.6, 3, .1); crateStack(-27.8, 97.2, 2, .4); crateStack(10.8, 96.8, 3); crateStack(10.8, 82.8, 2, .3); crateStack(-11, 82.4, 2);
-    for (const [x, z] of [[-29.2, 88.8], [-29.2, 90.4], [10.9, 89.2], [-11.3, 97.2], [-5.2, 97.3]]) { box(M.barrel, [.58, .9, .58], [x, .45, z]); box(M.rust, [.6, .06, .6], [x, .9, z]); box(M.rust, [.6, .05, .6], [x, .46, z]); }
-    for (const [x, z] of [[-29.1, 86], [-1.2, 97.2], [10.8, 94.9]]) { box(M.sack, [.55, .35, .38], [x, .18, z], [0, .3, 0]); box(M.sack, [.5, .3, .36], [x + .05, .5, z], [0, -.2, 0]); }
+    for(const args of ENCLAVE_STACKS)crateStack(...args);
+    for (const [x, z] of ENCLAVE_BARRELS) { box(M.barrel, [.58, .9, .58], [x, .45, z]); box(M.rust, [.6, .06, .6], [x, .9, z]); box(M.rust, [.6, .05, .6], [x, .46, z]); }
+    for (const [x, z] of ENCLAVE_SACKS) { box(M.sack, [.55, .35, .38], [x, .18, z], [0, .3, 0]); box(M.sack, [.5, .3, .36], [x + .05, .5, z], [0, -.2, 0]); }
     for (const [x, z] of [[-12.6, 83], [-22.8, 88.2], [3, 88.2], [-5.4, 97.1]]) { box(M.can, [.28, .42, .16], [x, .21, z], [0, rng() * 3, 0]); box(M.can, [.28, .42, .16], [x + .32, .21, z + .08], [0, rng() * 3, 0]); }
     // A long bench and a table where the Épars share the evening ration.
-    box(M.plank, [3.2, .08, .5], [-18.5, .5, 87.1]); for (const x of [-19.9, -17.1]) box(M.seat, [.1, .5, .44], [x, .25, 87.1]);
-    box(M.plank, [3.2, .08, .9], [-18.5, .78, 88.4]); for (const x of [-19.9, -17.1]) box(M.seat, [.08, .78, .08], [x, .39, 88.4]);
-    for (let i = 0; i < 5; i++) fixed.add(new T.CylinderGeometry(.09, .07, .06, 10), M.white, matrix([-19.7 + i * .8, .84, 88.2]), false);
+    box(M.plank, [3.2, .08, .5], [-18.5, .5, RATION_BENCH_Z]); for (const x of [-19.9, -17.1]) box(M.seat, [.1, .5, .44], [x, .25, RATION_BENCH_Z]);
+    box(M.plank, [3.2, .08, .9], [-18.5, .78, RATION_TABLE_Z]); for (const x of [-19.9, -17.1]) box(M.seat, [.08, .78, .08], [x, .39, RATION_TABLE_Z]);
+    for (let i = 0; i < 5; i++) fixed.add(new T.CylinderGeometry(.09, .07, .06, 10), M.white, matrix([-19.7 + i * .8, .84, RATION_TABLE_Z-.2]), false);
     // Sleeping bundles on mats along the south wall (breathing), and sitters by the lanterns.
     const blankets = [M.blanketA, M.blanketB, M.blanketC];
     for (const [x, z, yaw, m] of [[-22, 95.6, 0, 0], [-14, 95.7, .1, 1], [-5.5, 95.6, -.08, 2]]) sleeper(x, z, yaw, blankets[m], .12);
@@ -145,7 +146,7 @@ export function createEnclaveLife(T, parent, { low = false } = {}) {
     for (const [x, z] of [[-10, -80], [10, -80]]) { box(M.white, [2.2, .08, .5], [x, .5, z]); for (const sx of [-.9, .9]) box(M.steel, [.06, .5, .4], [x + sx, .25, z]); }
     notice(['DIRECTOIRE', 'CONTRÔLE DES ACCÈS'], 0, 3.4, -93.7, 0, 2.6, 1.2, { bg: '#0b0d10', fg: '#ff4d5e', w: 512, h: 240 });
     for (const x of [-38, -34, -30, -26, -22]) fixed.add(new T.BoxGeometry(.06, .06, .02), [ledGreen, ledRed, ledAmber][Math.abs(x) % 3], matrix([x, 3.4, -95.84]), false);
-    for (const [x, z] of [[22, -94], [26, -94.2], [38, -85], [40, -93.4]]) { box(M.plank, [1.2, .14, .96], [x, .07, z]); box(M.crate, [.9, .7, .8], [x, .49, z], [0, rng() * .5, 0]); }
+    for (const [x, z] of DOCK_PALLETS) { box(M.plank, [1.2, .14, .96], [x, .07, z]); box(M.crate, [.9, .7, .8], [x, .49, z], [0, rng() * .5, 0]); }
     notice(['QUAI 3', 'CONVOI → ANNEAU'], 20, 5.4, -82.2, Math.PI, 2, .8, { bg: '#0b0d10', fg: '#ffd36e', w: 512, h: 200 });
   }
 

@@ -76,3 +76,9 @@ test('a protruding AR7 muzzle cannot spawn bullets beyond a thin wall',()=>{
  assert.equal(g.bullets.length,0);const impact=g.events.find(e=>e.type==='impact');assert.ok(impact&&impact.z>=.149,'projectile stops on the near wall face');
  const clear={x:0,y:1.4,z:.5};assert.equal(muzzleBeforeCover(g.player,clear,[wall]),clear);
 });
+
+test('new enclave crates and furniture have solid footprints without burying the supply cache',()=>{
+ const list=extensionObstacles().filter(b=>b.lifeSolid);assert.ok(list.length>=24);
+ const cache={x:-20,z:87};assert.ok(!list.some(b=>Math.abs(cache.x-b.x)<b.hx+.5&&Math.abs(cache.z-b.z)<b.hz+.5));
+ for(const b of list){const p={x:b.x+b.hx+2,z:b.z,elevation:0};moveInArena(p,-4,0,.55,[b]);assert.ok(p.x>=b.x+b.hx+.55-.001);assert.notEqual(segmentBox({x:b.x+2,y:b.height/2,z:b.z},{x:b.x-2,y:b.height/2,z:b.z},b),null);}
+});

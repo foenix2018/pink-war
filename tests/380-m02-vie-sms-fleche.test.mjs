@@ -39,7 +39,7 @@ test('the dialogue banner arrives like a text message: small, high on the left, 
   assert.match(js,/pw-comms-enter/);assert.match(js,/dataset\.leaving='true'/);assert.match(js,/setTimeout\(\(\)=>\{leaving=false/);
 });
 
-test('the enclave is lived in: lamps, light pools, survivors and props, all inside the rooms and without colliders',()=>{
+test('the enclave is lived in: lamps, light pools, survivors and props, all inside the rooms with shared solid-prop footprints',()=>{
   const parent=new T.Group(),life=createEnclaveLife(T,parent);life.build();const st=life.stats();
   assert.ok(st.lamps>=60,'strings of bulbs over the market: '+st.lamps);assert.ok(st.pools>=8,'warm light pools');
   assert.equal(st.sleepers,5);assert.equal(st.sitters,4);assert.ok(st.props>=70,'clutter, benches, curtains, trays: '+st.props);
@@ -48,7 +48,7 @@ test('the enclave is lived in: lamps, light pools, survivors and props, all insi
   assert.ok(marche&&tour);
   life.update(1,.016,{enclave:false});life.update(2,.016,{enclave:true});
   const art=read('m02-extension-art.js');assert.match(art,/createEnclaveLife\(T,root,\{low\}\)/);assert.match(art,/life\.build\(\)/);assert.match(art,/life\.update\(t,dt,power\)/);
-  assert.match(read('m02-enclave-life.js'),/never changes gameplay or the navigation grid/);
+  assert.match(read('m02-enclave-life.js'),/substantial props share positions with the colliders/);
 });
 
 test('the opened conversation fits any phone, orientation or screen: insets and auto margins, never a transform',()=>{
