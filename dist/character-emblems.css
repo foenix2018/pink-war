@@ -1,0 +1,42 @@
+/* Character choices use the approved LYLU/GHJU profile emblems, including their
+   embedded lettering; the original buttons, aria-labels and handlers remain. */
+#lobby .character-cards{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+#lobby .character-card,#lobby .character-card.selected{
+ position:relative!important;display:block!important;padding:0!important;
+ overflow:hidden!important;isolation:isolate!important;cursor:pointer;
+ background-image:radial-gradient(ellipse at center,#174679aa 0%,#070e24ec 82%)!important;
+ transition:transform .2s ease,opacity .2s ease,box-shadow .2s ease!important
+}
+#lobby .character-card[data-character=ghju],#lobby .character-card.selected[data-character=ghju]{
+ background-image:radial-gradient(ellipse at center,#6d2866a6 0%,#1c0625ee 82%)!important
+}
+#lobby .character-card .pw-helmet{
+ position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+ flex:none!important;border:0!important;border-radius:inherit!important;
+ overflow:hidden!important;background:transparent!important;box-shadow:none!important;
+ pointer-events:none!important
+}
+#lobby .character-card .pw-helmet::after{display:none!important}
+#lobby .character-card .pw-helmet img,
+#lobby .character-card[data-character=lylu] .pw-helmet img,
+#lobby .character-card[data-character=ghju] .pw-helmet img{
+ position:absolute!important;inset:0!important;top:0!important;left:0!important;
+ display:block!important;width:100%!important;height:100%!important;
+ max-width:100%!important;object-fit:contain!important;object-position:center!important;
+ transform:none!important;-webkit-mask-image:none!important;mask-image:none!important;
+ filter:saturate(1.04) contrast(1.02)!important
+}
+#lobby .character-card .character-switch-label,
+#lobby .character-card .character-switch-label::after,
+#lobby .character-card .character-check{display:none!important}
+#lobby .character-card:not(.selected){opacity:.92}
+#lobby .character-card.selected,#lobby .character-card:hover{opacity:1}
+#lobby .character-card:hover{transform:translateY(-2px)}
+#lobby .character-card:active{transform:scale(.985)}
+#lobby .character-card:focus-visible{outline:3px solid #eaf7ff!important;outline-offset:3px!important}
+@media(max-width:700px){
+ #lobby .character-card,#lobby .character-card.selected{
+  min-height:clamp(82px,24vw,112px)!important;height:clamp(82px,24vw,112px)!important
+ }
+}
+@media(prefers-reduced-motion:reduce){#lobby .character-card{transition:none!important}}
