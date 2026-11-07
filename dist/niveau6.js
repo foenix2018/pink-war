@@ -410,7 +410,7 @@ function gameTick(dt){
  const ads=flatSightPose(OPTICS[game.weapon.id],aimBlend),held=game.weapon.dual?{yaw:0,kick:0,pitch:0}:weaponFeel.state;
  weapon.position.set(ads.x+held.yaw*.15,ads.y-held.kick*.18,ads.z+held.kick);
  weapon.rotation.set(held.pitch,held.yaw+ads.yaw,-held.yaw*.35+ads.roll);
- const strike=meleeKick(game);if(strike){weapon.position.x+=MELEE_POSE.x*strike;weapon.position.y+=MELEE_POSE.y*strike;weapon.position.z+=MELEE_POSE.z*strike;weapon.rotation.x+=MELEE_POSE.pitch*strike;}
+ const strike=meleeKick(game);if(strike){MELEE_POSE.apply(weapon,game);}
  weapon.userData.setSight?.(aimBlend>.55,camera);
  weapon.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,dualState:game.dual,charge:game.charge,reloading:game.reloadRemaining>0,
   reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,heat:weaponFeel.state.heat,kick:weaponFeel.state.kick,impulse:weaponFeel.state.impulse});
@@ -598,6 +598,6 @@ window.__PINK_M06=Object.freeze({
   look:(y,p)=>{yaw=y;pitch=p;snapCamera();},clear:(keepBoss=false)=>{game.enemies=game.enemies.filter(e=>keepBoss&&e.n08);mission.update(1/60);},
   interact:()=>{interact();return reading;},close:()=>closeDocument(),skip:seconds=>{game.time+=seconds;mission.update(1/60);},god:()=>{game.invulnerable=1e9;},
   use:id=>{const it=L.INTERACTIONS.find(i=>i.id===id);Object.assign(game.player,{x:it.x,z:it.z,elevation:it.y||0,grounded:true,verticalSpeed:0});interact();return {reading,stage:mission.stageId};},
-  weapon:i=>{game.ownedWeapons?.add(i);game.selectWeapon(i);return game.weaponIndex;},portal:(x,z)=>art.openPortal(x,0,z,{charge:30}),view:()=>changeView(),lamp:()=>toggleLamp(),vr:()=>xr.enter()}:null
+  weapon:i=>{game.ownedWeapons?.add(i);game.selectWeapon(i);return game.weaponIndex;},aimRay:()=>{const r=aimRay(),f=new T.Vector3();camera.getWorldDirection(f);return {origin:r.origin.toArray(),direction:r.direction.toArray(),eye:camera.position.toArray(),forward:f.toArray()};},game:()=>game,portal:(x,z)=>art.openPortal(x,0,z,{charge:30}),view:()=>changeView(),lamp:()=>toggleLamp(),vr:()=>xr.enter()}:null
 });
 if(params.get('autostart')==='1'){startButton.disabled=true;void boot();}

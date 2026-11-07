@@ -1,3 +1,4 @@
+import { createTargetLock } from './target-lock.js';
 import {BREACH_LOGS} from './breach-dressing-layout.js';
 import {CampaignLevel1} from './campaign-level1.js';
 import {ArenaGame,clamp,segmentBox} from './game-logic.js';
@@ -51,6 +52,6 @@ export class BreachLevel1 extends CampaignLevel1{
  else if(this.stage==='reactor'&&this.stabilizers.every(Boolean)&&!this.enemies.length&&!this.pendingSpawns.length){this.setStage('extraction');this.extractionStarted=this.time;this.activePortals=[{id:777,...BREACH.exit,yaw:0,openedAt:this.time}];}
  for(const [i,s] of [{x:-23,z:30},{x:23,z:-64}].entries())if(!this.secretFound[i]&&Math.hypot(p.x-s.x,p.z-s.z)<2.4){this.secretFound[i]=true;this.player.hp=100;this.score+=500;this.offerWeapon(i+2);this.event('campaign',{title:'CACHE DÉCOUVERTE',subtitle:'Énergie restaurée · Arme disponible'});}
  }
- objectiveTarget(){const o=this.campaign.objective;if(o)return {...o.position,id:o.id,label:o.label,kind:'objective'};const gate=this.pendingSpawns[0]?.site;if(gate)return {...gate,id:`gate-${gate.id}`,label:'RENFORTS PAR LE PORTAIL',kind:'portal'};const enemy=this.enemies[0];if(enemy)return {x:enemy.x,z:enemy.z,y:enemy.homeHeight||0,id:`enemy-${enemy.id}`,label:'NEUTRALISER LES HOSTILES',kind:'enemy'};return {x:0,y:0,z:this.stage==='arrival'?59:-3,id:'route',label:'SUIVRE LA LIGNE BLEUE',kind:'route'};}
+ objectiveTarget(){const o=this.campaign.objective;if(o)return {...o.position,id:o.id,label:o.label,kind:'objective'};const gate=this.pendingSpawns[0]?.site;if(gate)return {...gate,id:`gate-${gate.id}`,label:'RENFORTS PAR LE PORTAIL',kind:'portal'};const enemy=(this.objectiveLock||=createTargetLock()).pick(this.enemies,e=>Math.hypot(e.x-this.player.x,e.z-this.player.z),this.time);if(enemy)return {x:enemy.x,z:enemy.z,y:enemy.homeHeight||0,id:`enemy-${enemy.id}`,label:'NEUTRALISER LES HOSTILES',kind:'enemy'};return {x:0,y:0,z:this.stage==='arrival'?59:-3,id:'route',label:'SUIVRE LA LIGNE BLEUE',kind:'route'};}
  guidance(){const t=this.objectiveTarget();return t?{...t,distance:Math.hypot(t.x-this.player.x,t.z-this.player.z),target:t,stage:this.stage}:null;}
 }

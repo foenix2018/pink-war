@@ -13,7 +13,7 @@ import { tryJump } from './locomotion.js';
 import { hostileShotProfile, predictShot } from './enemy-fire.js';
 import { enemyDurability, enemyVolley, rangedMuzzle, enemyScale, enemySightPoint, remembersCoverContact, aimReco1 } from './enemy-combat.js';
 import { sweepBlade, bladeBulletContact, reflectedVelocity } from './blade-combat.js';
-import { SHIELD_MAX, CHARGE_START, CHARGE_FUSE, CHARGE_RADIUS, soakDamage, rechargeShield, meleeStrike, throwCharge, grantCharges, updateCharges, forwardOf } from './armor-combat.js';
+import { SHIELD_MAX, CHARGE_START, CHARGE_FUSE, CHARGE_RADIUS, soakDamage, rechargeShield, meleeStrike, updateMelee, throwCharge, grantCharges, updateCharges, forwardOf, MELEE_IMPACT_DELAY } from './armor-combat.js';
 // World units are metres. The playable arena is exactly 200 × 200 m.
 export const ARENA_SIZE = 200;
 export const PORTAL = Object.freeze({ x: 0, z: -20 });
@@ -319,7 +319,7 @@ export class ArenaGame {
     this.lastDamage = 0; this.regenerating = false;
     // Armour layer (armor-combat.js): shield on when an engine enables it, two impulse charges to start.
     this.player.shield = this.shieldCapacity || 0; this.shieldCharging = false; this.lastHit = null;
-    this.charges = CHARGE_START; this.thrownCharges = []; this.chargeReadyAt = 0; this.meleeReadyAt = 0; this.meleeAt = -99;
+    this.charges = CHARGE_START; this.thrownCharges = []; this.chargeReadyAt = 0; this.meleeReadyAt = 0; this.meleeAt = -99; this.meleePending = null; this.meleeDelay = 0; this.chargeAt = -99;
     for(const nav of this.stairNavigation){nav.refreshAt=-1;nav.goal=-1;}
     this.updateLifts(0);
   }
@@ -612,7 +612,7 @@ export class ArenaGame {
     if (this.player.hp <= 0) { this.state = 'over'; this.charge = 0; this.event('over'); }
   }
   // Armour layer API for the engines (armor-combat.js holds the rules).
-  enableArmorShield(capacity = SHIELD_MAX) { this.shieldCapacity = capacity; this.player.shield = capacity; this.shieldCharging = false; }
+  enableArmorShield(capacity = SHIELD_MAX) { this.meleeDelay = MELEE_IMPACT_DELAY; this.shieldCapacity = capacity; this.player.shield = capacity; this.shieldCharging = false; }
   melee(forward = forwardOf(this.player.yaw)) { return meleeStrike(this, forward); }
   throwCharge(origin, direction) { return throwCharge(this, origin, direction); }
   grantCharges(count = 1) { grantCharges(this, count); }
@@ -703,7 +703,7 @@ export class ArenaGame {
       this.reloadRemaining = Math.max(0, this.reloadRemaining - dt);
       if (this.reloadRemaining === 0) { this.refillWeapon(); this.event('reloaded'); }
     }
-    rechargeShield(this, dt); updateCharges(this, dt);
+    rechargeShield(this, dt); updateCharges(this, dt); updateMelee(this);
     this.regenerating = this.player.hp < 100 && this.time - this.lastDamage >= REGEN_DELAY;
     if (this.regenerating) this.player.hp = Math.min(100, this.player.hp + 18 * dt);
     const yaw = input.yaw ?? this.player.yaw; this.player.yaw = yaw;

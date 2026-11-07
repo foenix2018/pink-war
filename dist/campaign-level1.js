@@ -1,3 +1,4 @@
+import { createTargetLock } from './target-lock.js';
 import {isReco1} from './reco1-profile.js';
 import { ArenaGame, clamp, segmentBox } from './game-logic.js';
 import { PROBE } from './aerial-probes.js';
@@ -346,7 +347,8 @@ export class CampaignLevel1 extends ArenaGame {
     if(this.stage==='breach')return {...LEVEL1.archive,id:'archive',label:'LIRE LE JOURNAL',kind:'objective'};
     if(this.stage==='crossing')return {...LEVEL1.junction,id:'junction',label:'REJOINDRE LE CARREFOUR',kind:'route'};
     if(COMBAT_STAGES.includes(this.stage)){
-      const enemy=this.enemies.reduce((best,e)=>!best||Math.hypot(e.x-this.player.x,e.z-this.player.z)<Math.hypot(best.x-this.player.x,best.z-this.player.z)?e:best,null);
+      // Locked: the guide keeps the same hostile until it falls or another one is clearly closer (no random swings).
+      const enemy=(this.objectiveLock||=createTargetLock()).pick(this.enemies,e=>Math.hypot(e.x-this.player.x,e.z-this.player.z),this.time);
       if(enemy)return {x:enemy.x,z:enemy.z,y:enemy.homeHeight||0,id:`enemy-${enemy.id}`,label:'NEUTRALISER LA PATROUILLE',kind:'enemy'};
       const portal=this.activePortals[0];
       if(portal)return {x:portal.x,z:portal.z,y:0,id:`portal-${portal.id}`,label:'RENFORTS ORDRE',kind:'portal'};

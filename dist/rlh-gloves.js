@@ -213,6 +213,15 @@ const AVANT_BRAS=[
   {y:-.290,w:.0628,cz:.001,db:.0446,dp:.0420,n:2.2},
   {y:-.226,w:.0640,cz:.001,db:.0450,dp:.0420,n:2.25}
 ];
+// FPS arm variant (feedback of 7 Nov 2026: forearms too thin). The wrist stays exactly as it was; from there the cuff
+// flares to a muscular forearm (≈1.3× at its fullest, flexor mass below the elbow) and the undersuit tapers to the elbow.
+const armGrowth=y=>{const t=Math.min(1,Math.max(0,(-.045-y)/.16)),s=t*t*(3-2*t);return 1+.20*s+.10*Math.exp(-(((y+.33)/.13)**2));};
+const grow=s=>{const f=armGrowth(s.y)*(1-.14*Math.min(1,Math.max(0,(-.47-s.y)/.11)));return {...s,w:s.w*f,db:s.db*f*1.07,dp:s.dp*f*1.07};};
+const MANCHETTE_ARM=MANCHETTE.map(grow);
+const AVANT_BRAS_ARM=[-.575,-.54,-.48,-.40,-.32,-.26,-.226].map(y=>{
+  const i=AVANT_BRAS.findIndex(a=>a.y>=y),b=AVANT_BRAS[Math.max(0,i)],a=AVANT_BRAS[Math.max(0,i-1)],t=a===b?0:(y-a.y)/(b.y-a.y);
+  const mix=k=>a[k]+(b[k]-a[k])*t;return grow({y,w:mix('w'),cz:.001,db:mix('db'),dp:mix('dp'),n:mix('n')});
+});
 // Flexible wrist: cuff vertices from WRIST_BLEND[0] up to the wrist ring follow
 // the hand progressively, so a bent forearm never shows a hard kink.
 export const WRIST_BLEND=Object.freeze([-.078,-.004]);
@@ -229,6 +238,7 @@ const NOMS_DOIGTS={index:'index',middle:'majeur',ring:'annulaire',pinky:'auricul
    ======================================================================= */
 function buildSourceGlove(M,labelMaterial,{sleeve=true,arm=false}={}){
   const couture=(parent,pts,r)=>sourceSeam(parent,pts,r,M.fil);
+  const SEC=sleeve&&arm?MANCHETTE_ARM:MANCHETTE,ARM_SEC=AVANT_BRAS_ARM;
   const cote='D';
   const sx = cote==='D' ? 1 : -1;       // le gant gauche est le miroir exact du droit
   const P=(x,y,z)=>[sx*x,y,z];
@@ -247,27 +257,27 @@ function buildSourceGlove(M,labelMaterial,{sleeve=true,arm=false}={}){
   // The native forearm bone remains separate from the two flexing wrist bones.
   // No piece crosses the palm or changes the hand/weapon attachment frame.
   const sleeveEnd=sleeve?-.242:-.024;
-  maille(loft(MANCHETTE,{y0:sleeveEnd,y1:.004,ny:sleeve?24:6,nt:40,sx}),M.caout,avantBras,{nom:pref+'joint_avant_bras'});
-  maille(loft(MANCHETTE,{y0:sleeveEnd,y1:-.004,ny:12,nt:32,sx,off:-.0022}),M.doublure,avantBras,{nom:pref+'manchette_doublure',ombre:false});
+  maille(loft(SEC,{y0:sleeveEnd,y1:.004,ny:sleeve?24:6,nt:40,sx}),M.caout,avantBras,{nom:pref+'joint_avant_bras'});
+  maille(loft(SEC,{y0:sleeveEnd,y1:-.004,ny:12,nt:32,sx,off:-.0022}),M.doublure,avantBras,{nom:pref+'manchette_doublure',ombre:false});
   // Three narrow rubber bellows preserve a natural, straight wrist transition.
-  for(const y of [-.026,-.017,-.008])maille(loft(MANCHETTE,{y0:y,y1:y+.004,ny:2,nt:36,sx,off:.001}),M.textile2,avantBras,{nom:pref+'joint_souple'});
+  for(const y of [-.026,-.017,-.008])maille(loft(SEC,{y0:y,y1:y+.004,ny:2,nt:36,sx,off:.001}),M.textile2,avantBras,{nom:pref+'joint_souple'});
   if(sleeve){
     // Curved shell segments follow anatomical cross-sections instead of boxes.
     // Folded edge strips and sealed ends give each plate genuine thickness.
     const shell=(mat,y0,y1,t0,t1,off=.003,name='plaque')=>{
-      const pieces=[loft(MANCHETTE,{y0,y1,ny:10,nt:22,t0,t1,sx,off}),
-        loft(MANCHETTE,{y0,y1,ny:10,nt:22,t0:t1,t1:t0,sx,off:off-.002})];
+      const pieces=[loft(SEC,{y0,y1,ny:10,nt:22,t0,t1,sx,off}),
+        loft(SEC,{y0,y1,ny:10,nt:22,t0:t1,t1:t0,sx,off:off-.002})];
       for(const y of [y0,y1]){
         const vertices=[],uv=[],idx=[];
         for(let j=0;j<=22;j++)for(const o of [off-.002,off]){
-          const p=pointLoft(MANCHETTE,t0+(t1-t0)*j/22,y,o,sx);vertices.push(p.x,p.y,p.z);uv.push(j/22,o);
+          const p=pointLoft(SEC,t0+(t1-t0)*j/22,y,o,sx);vertices.push(p.x,p.y,p.z);uv.push(j/22,o);
         }
         for(let j=0;j<22;j++){const a=j*2;idx.push(a,a+1,a+2,a+1,a+3,a+2);}
         const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();pieces.push(g);
       }
       for(const t of [t0,t1]){
         const vertices=[],uv=[],idx=[];
-        for(let j=0;j<=10;j++)for(const o of [off-.002,off]){const y=y0+(y1-y0)*j/10,p=pointLoft(MANCHETTE,t,y,o,sx);vertices.push(p.x,p.y,p.z);uv.push(j/10,o);}
+        for(let j=0;j<=10;j++)for(const o of [off-.002,off]){const y=y0+(y1-y0)*j/10,p=pointLoft(SEC,t,y,o,sx);vertices.push(p.x,p.y,p.z);uv.push(j/10,o);}
         for(let j=0;j<10;j++){const a=j*2;idx.push(a,a+1,a+2,a+1,a+3,a+2);}
         const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();pieces.push(g);
       }
@@ -280,16 +290,16 @@ function buildSourceGlove(M,labelMaterial,{sleeve=true,arm=false}={}){
     shell(M.carbone,-.117,-.049,.52,Math.PI-.52,.007,'plaque_poignet');
     shell(M.hiVis,-.205,-.140,1.41,1.73,.010,'incrustation_unite');
     for(const t of [.26,Math.PI-.26]){
-      const pts=Array.from({length:13},(_,i)=>pointLoft(MANCHETTE,t,-.207+i*.012,.006,sx));
+      const pts=Array.from({length:13},(_,i)=>pointLoft(SEC,t,-.207+i*.012,.006,sx));
       maille(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),12,.0017,5,false),M.metal,avantBras,{nom:pref+'arete_metal'});
       for(const y of [-.194,-.064]){
-        const p=pointLoft(MANCHETTE,t,y,.007,sx);
+        const p=pointLoft(SEC,t,y,.007,sx);
         maille(new THREE.SphereGeometry(.0028,8,5),M.metal,avantBras,{p:p.toArray(),nom:pref+'vis'});
       }
     }
     // A low-profile elbow lip replaces the flared firefighter cuff/hi-vis band.
     shell(M.caout,-.241,-.226,.12,Math.PI*2+.12,.0006,'joint_coude');
-    const g=loft(MANCHETTE,{y0:-.196,y1:-.180,ny:2,nt:12,t0:1.05,t1:1.38,sx,off:.010});
+    const g=loft(SEC,{y0:-.196,y1:-.180,ny:2,nt:12,t0:1.05,t1:1.38,sx,off:.010});
     const uv=g.attributes.uv,pz=g.attributes.position;let umin=Infinity,umax=-Infinity;
     for(let i=0;i<uv.count;i++){umin=Math.min(umin,uv.getX(i));umax=Math.max(umax,uv.getX(i));}
     for(let i=0;i<uv.count;i++)uv.setXY(i,1-(uv.getX(i)-umin)/(umax-umin),(pz.getY(i)+.196)/.016);
@@ -298,19 +308,33 @@ function buildSourceGlove(M,labelMaterial,{sleeve=true,arm=false}={}){
   if(sleeve&&arm){
     // FPS forearm: the undersuit slides into the cuff's elbow lip and carries on
     // to a closed elbow, so the gauntlet never ends on an open rim in view.
-    const elbow=AVANT_BRAS[0].y,lip=AVANT_BRAS.at(-1).y;
-    maille(loft(AVANT_BRAS,{y0:elbow,y1:lip,ny:18,nt:40,sx,off:-.0016}),M.caout,avantBras,{nom:pref+'avant_bras'});
-    for(const y of [-.300,-.360,-.420])maille(loft(AVANT_BRAS,{y0:y-.005,y1:y,ny:2,nt:36,sx,off:.0004}),M.textile2,avantBras,{nom:pref+'avant_bras_nervure'});
+    const elbow=ARM_SEC[0].y,lip=ARM_SEC.at(-1).y;
+    maille(loft(ARM_SEC,{y0:elbow,y1:lip,ny:18,nt:40,sx,off:-.0016}),M.caout,avantBras,{nom:pref+'avant_bras'});
+    for(const y of [-.300,-.360,-.420])maille(loft(ARM_SEC,{y0:y-.005,y1:y,ny:2,nt:36,sx,off:.0004}),M.textile2,avantBras,{nom:pref+'avant_bras_nervure'});
     // Back-of-forearm armour plate and a padded elbow, on the same anatomical sections.
-    const plate=(mat,ya,yb,ta,tb,off,name)=>maille(loft(AVANT_BRAS,{y0:ya,y1:yb,ny:8,nt:18,t0:ta,t1:tb,sx,off}),mat,avantBras,{nom:pref+name});
-    plate(M.carbone,-.455,-.262,.48,Math.PI-.48,.0032,'plaque_avant_bras');
-    plate(M.hiVis,-.420,-.300,1.44,1.70,.0050,'liseré_avant_bras');
+    const plate=(mat,ya,yb,ta,tb,off,name)=>maille(loft(ARM_SEC,{y0:ya,y1:yb,ny:8,nt:18,t0:ta,t1:tb,sx,off}),mat,avantBras,{nom:pref+name});
+    // Shadow Unit ceramic vambrace: shells that follow the forearm's own sections, a dark spine under the accent line.
+    plate(M.ceramique,-.535,-.255,.30,Math.PI-.30,.0058,'brassard_ceramique');
+    plate(M.ceramique,-.535,-.255,Math.PI+.42,Math.PI*2-.42,.0040,'brassard_ceramique_interne');
+    plate(M.carbone,-.470,-.300,.74,Math.PI-.74,.0098,'brassard_nervure');
+    plate(M.hiVis,-.490,-.285,1.50,1.64,.0112,'liseré_avant_bras');
     plate(M.matelasse,-.545,-.478,.30,Math.PI-.30,.0030,'coudiere');
-    const end=AVANT_BRAS[0],cap=new THREE.SphereGeometry(1,28,10,0,Math.PI*2,Math.PI/2,Math.PI/2);
+    // Two cinch straps with metal buckles on the back of the forearm, and a stitched seam down each flank.
+    for(const y of [-.352,-.448]){
+      maille(loft(ARM_SEC,{y0:y-.020,y1:y,ny:2,nt:44,sx,off:.0070}),M.velcro,avantBras,{nom:pref+'sangle_avant_bras'});
+      const p=pointLoft(ARM_SEC,Math.PI/2,y-.010,.0105,sx);
+      maille(new THREE.BoxGeometry(.034,.026,.007),M.metal,avantBras,{p:p.toArray(),nom:pref+'boucle_avant_bras'});
+      maille(new THREE.BoxGeometry(.020,.012,.0075),M.caout,avantBras,{p:[p.x,p.y,p.z+.0012],nom:pref+'boucle_fenetre'});
+    }
+    for(const t of [.10,Math.PI-.10]){
+      const pts=Array.from({length:20},(_,i)=>pointLoft(ARM_SEC,t,-.52+i*.0145,.0016,sx));
+      couture(avantBras,pts);
+    }
+    const end=ARM_SEC[0],cap=new THREE.SphereGeometry(1,28,10,0,Math.PI*2,Math.PI/2,Math.PI/2);
     maille(cap,M.caout,avantBras,{p:[0,end.y,end.cz||0],s:[sx*end.w,.034,(end.db+end.dp)/2],nom:pref+'coude'});
   }
   const patte=new THREE.Bone();patte.name=pref+'patte_serrage';
-  patte.position.copy(pointLoft(MANCHETTE,.12,-.025,.002,sx));avantBras.add(patte);
+  patte.position.copy(pointLoft(SEC,.12,-.025,.002,sx));avantBras.add(patte);
   maille(new THREE.CylinderGeometry(.005,.005,.003,12),M.metal,patte,{r:[Math.PI/2,0,0],nom:pref+'verrou_poignet'});
   /* ---------- corps de la main ---------- */
   maille(loft(RLH_PALM_SECTIONS,{y0:-.014,y1:.124,ny:30,nt:64,sx,capHaut:true}),M.textile,main,{nom:pref+'corps'});
@@ -473,7 +497,7 @@ export const RLH_POSES={
 
 
 const textureCache={value:null},materialSets=new WeakMap(),templates=new Map();
-const MATERIAL_KEYS=['textile','textile2','doublure','cuir','cuirF','carbone','caout','reflect','hiVis','matelasse','velcro','fil','metal'];
+const MATERIAL_KEYS=['textile','textile2','doublure','cuir','cuirF','carbone','caout','ceramique','reflect','hiVis','matelasse','velcro','fil','metal'];
 function sourceTextures(){
   if(textureCache.value)return textureCache.value;
   return textureCache.value={
@@ -498,7 +522,7 @@ export function syncRLHMaterials(gloves){
   M.textile.color.copy(fabric).lerp(accent,.08);M.textile2.color.copy(fabric).lerp(accent,.06);
   M.hiVis.color.copy(accent);M.hiVis.emissive.copy(accent).multiplyScalar(.05);
   M.matelasse.color.copy(accent).lerp(white,.08);M.fil.color.copy(white).multiplyScalar(.75);
-  M.reflect.color.copy(white).multiplyScalar(.78);M.metal.color.copy(white).multiplyScalar(.60);
+  M.ceramique.color.copy(white).lerp(new THREE.Color(0xffffff),.35);M.reflect.color.copy(white).multiplyScalar(.78);M.metal.color.copy(white).multiplyScalar(.60);
   const name=accent.b>accent.r?'LYLU':'GHJU',hex='#'+accent.getHexString();
   for(const [side,label] of Object.entries(set.labels))paintLabel(label.map,hex,name,side);
 }
@@ -513,6 +537,7 @@ function materialSet(gloves){
     cuirF:standard({color:0xb4bdc6,map:t.cuirF,bumpMap:t.cuirBump,bumpScale:.00040,roughness:.69,metalness:.02}),
     carbone:standard({color:0xbfc8d0,map:t.carbone,bumpMap:t.carboneBump,bumpScale:.00015,roughness:.60,metalness:.16}),
     caout:standard({color:0x282d32,roughness:.85}),
+    ceramique:standard({color:0xe6e8ec,roughness:.34,metalness:.22,envMap:gloves.trim.envMap||null,envMapIntensity:.6}),
     reflect:standard({map:t.reflect,roughness:.28,metalness:.82,envMap:gloves.trim.envMap||null,envMapIntensity:.85}),
     hiVis:standard({roughness:.6,emissiveIntensity:.1}),
     matelasse:standard({roughness:.37,metalness:.65,envMap:gloves.plate.envMap||null,envMapIntensity:.65}),
@@ -533,7 +558,7 @@ function template(sleeve,arm=false){
   const model=buildSourceGlove(M,label,{sleeve,arm:sleeve&&arm});
   if(sleeve){
     // A narrow titanium wrist clasp is the existing level-four gauntlet upgrade.
-    const mesh=maille(loft(MANCHETTE,{y0:-.112,y1:-.052,ny:6,nt:5,t0:1.48,t1:1.66,sx:1,off:.010}),M.metal,model.racine.children[0],{nom:'AÉGIS canal renforce'});mesh.userData.minLevel=4;
+    const mesh=maille(loft(arm?MANCHETTE_ARM:MANCHETTE,{y0:-.112,y1:-.052,ny:6,nt:5,t0:1.48,t1:1.66,sx:1,off:.010}),M.metal,model.racine.children[0],{nom:'AÉGIS canal renforce'});mesh.userData.minLevel=4;
   }
   model.racine.updateMatrixWorld(true);
   const bones=[],meshes=[];model.racine.traverse(o=>{if(o.isBone){if(!o.name)o.name='RLH_joint_'+bones.length;bones.push(o);}else if(o.isMesh)meshes.push(o);});

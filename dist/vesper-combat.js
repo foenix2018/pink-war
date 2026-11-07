@@ -239,7 +239,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     if(gun){
       const pose=flatSightPose(OPTICS[game.weapon.id],ads);
       gun.position.set(pose.x+kickPose.x,pose.y+kickPose.y,pose.z+kickPose.z);gun.rotation.set(kickPose.pitch,kickPose.yaw+pose.yaw,kickPose.roll+pose.roll);
-      const strike=game.weapon.melee?0:meleeKick(game);if(strike){gun.position.x+=MELEE_POSE.x*strike;gun.position.y+=MELEE_POSE.y*strike;gun.position.z+=MELEE_POSE.z*strike;gun.rotation.x+=MELEE_POSE.pitch*strike;}
+      const strike=game.weapon.melee?0:meleeKick(game);if(strike){MELEE_POSE.apply(gun,game);}
       gun.visible=!s.free&&effectiveView()==='fps';gun.userData.setSight?.(ads>.55,camera);
       gun.userData.setCombatState?.({time:game.time,dualState:game.dual,ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,reloading:game.reloadRemaining>0,
         reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,charge:game.charge,kick:feel.state.kick,heat:feel.state.heat,bladeHeld:game.weapon.melee&&held});

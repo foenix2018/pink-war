@@ -1,3 +1,4 @@
+import {createTargetLock} from './target-lock.js';
 import {segmentBox} from './game-logic.js';
 
 export const companionAvailable=({mission=1,mode='campaign'}={})=>
@@ -36,10 +37,14 @@ export function safeCompanionHover(head,wanted,obstacles=[],yaw=0){
  return {x:head.x+(wanted.x-head.x)*t,y:head.y+(wanted.y-head.y)*t,z:head.z+(wanted.z-head.z)*t};
 }
 
+const threatLocks=new WeakMap();
+// The orb keeps pointing at the same attacker until it falls, loses its line or another one is clearly closer: the
+// support fire is readable (and never seems to pick targets at random).
 export function companionThreat(game,origin){
- return game.enemies.filter(e=>e.hp>0&&e.awareness==='engaged'&&Math.hypot(e.x-game.player.x,e.z-game.player.z)<22)
-  .sort((a,b)=>Math.hypot(a.x-game.player.x,a.z-game.player.z)-Math.hypot(b.x-game.player.x,b.z-game.player.z))
-  .find(e=>companionClear(origin,{x:e.x,y:(e.elevation||0)+(e.aimHeight||1.25),z:e.z},game.obstacles));
+ const candidates=game.enemies.filter(e=>e.hp>0&&e.awareness==='engaged'&&Math.hypot(e.x-game.player.x,e.z-game.player.z)<22
+  &&companionClear(origin,{x:e.x,y:(e.elevation||0)+(e.aimHeight||1.25),z:e.z},game.obstacles));
+ let lock=threatLocks.get(game);if(!lock)threatLocks.set(game,lock=createTargetLock({ratio:.7,hold:.6}));
+ return lock.pick(candidates,e=>Math.hypot(e.x-game.player.x,e.z-game.player.z),game.time);
 }
 
 export function fireCompanionShot(game,name,origin,target,color){

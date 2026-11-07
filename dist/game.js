@@ -11,7 +11,7 @@ import { createAmbience } from './ambience.js';
 import { ACTIVE_INSTALLATIONS, BRIDGES, BRIDGE_LANDINGS, BRIDGE_APPROACHES, bridgeSegments } from './world-layout.js';
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import { portalIndicators } from './portal-indicator.js';
-import { objectiveIndicator } from './objective-guidance.js';
+import { objectiveIndicator, createObjectiveSmoother } from './objective-guidance.js';
 import { OPTICS } from './weapons.js';
 import { createWeaponFeel, recoilPose } from './weapon-feel.js';
 import { bladeSwingPose } from './blade-combat.js';
@@ -436,7 +436,7 @@ function updateCamera() {
   weapon.position.set(ads.x+kickPose.x, ads.y + (bob ? Math.sin(clock * 11) * .009*(1-aimBlend) : 0) + kickPose.y + reloadLift * .045, ads.z + kickPose.z - reloadLift * .028);
   weapon.rotation.set(kickPose.pitch + reloadLift * Math.PI / 2,kickPose.yaw+ads.yaw,Math.sin(clock * 1.8) * .003+kickPose.roll+ads.roll);
   if(game.weapon.melee){const slash=bladeSwingPose(game.bladePhase,game.bladeSlashSide);weapon.rotation.x=slash.x-.12;weapon.rotation.y=slash.y;weapon.rotation.z=slash.z;}
-  else{const strike=meleeKick(game);if(strike){weapon.position.x+=MELEE_POSE.x*strike;weapon.position.y+=MELEE_POSE.y*strike;weapon.position.z+=MELEE_POSE.z*strike;weapon.rotation.x+=MELEE_POSE.pitch*strike;}}
+  else{const strike=meleeKick(game);if(strike){MELEE_POSE.apply(weapon,game);}}
   // The ARES X9 optic is a full-screen sight picture in flat FPS ADS: the
   // 3D tube is not drawn over the line of sight, but the gun/muzzle still exist
   // and the shot ray is derived from this same camera centre.
@@ -714,10 +714,11 @@ function updateHud() {
   c.save(); c.translate(cx + game.player.x * scale, cy + game.player.z * scale); c.rotate(-yaw); c.fillStyle = radarTheme.player; c.beginPath(); c.moveTo(0, -6); c.lineTo(4, 4); c.lineTo(0, 2); c.lineTo(-4, 4); c.closePath(); c.fill(); c.restore();
   if (game.time > 9) $('game-tip').style.opacity = '0';
 }
+const objectiveSmoother=createObjectiveSmoother();
 function updatePortalHUD(){
   if(!world||!game)return;
   const heading=listenerHeading();
-  const hint=phase==='playing'?objectiveIndicator(game.guidance?.(),game.player,heading,game.state):null;
+  const raw=phase==='playing'?objectiveIndicator(game.guidance?.(),game.player,heading,game.state):null,hint=phase==='playing'?objectiveSmoother.update(raw,performance.now()/1000):(objectiveSmoother.reset(),null);
   const guide=$('objective-guide');guide.hidden=!hint||vr.mode==='xr';
   if(hint){
     guide.style.setProperty('--direction',String(hint.offset));

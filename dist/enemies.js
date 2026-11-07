@@ -384,7 +384,7 @@ export function createEnemyFactory(mats,{detail='high'}={}){
           const hit=Math.max(0,1-(simulationTime-(flight.hitAt??-99))/.25),pulse=simulationTime-(flight.lastShotAt??-99)<.12?1:0;
           const lowered=form==='listener'&&alert!=='engaged'?LISTENER_TOOL.patrolPitch:riflePose&&alert==='idle'?-.30:undefined;
           const r=mocap.update(dt,time,{speed:motionSpeed,alert,aiming,brace,recoil,hit,hitSide:(flight.hitSide||(Math.floor((flight.hitAt||0)*10)%2?1:-1)),covered,guard:guard||windup,
-            pitch:T.MathUtils.clamp(flight.aimPitch||0,FIELD_RIFLE.minPitch,FIELD_RIFLE.maxPitch),lowered,pulse,phase:cycle});
+            pitch:T.MathUtils.clamp(flight.aimPitch||0,FIELD_RIFLE.minPitch,FIELD_RIFLE.maxPitch),lowered,pulse,phase:cycle,cover:flight.coverCrouch||0});
           root.userData.nativeMotion=r.clip;riflePose?.update(joints[kit.groundGun]);return;
         }
         const gait=Math.sin(cycle)*amount;sampleHumanStep(cycle,runBlend,motionSample);

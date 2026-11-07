@@ -352,9 +352,11 @@ export function createWeaponModels(mats) {
 // (1.2–1.6 m) and ride with the camera, so they barely touch the level.
 export function attachViewmodelLight(camera,{rim=0xff6fb8,key=0xfff1e6}={}){
   if(camera.userData.viewmodelLight)return camera.userData.viewmodelLight;
-  const keyLight=new T.PointLight(key,2.4,1.6,2);keyLight.position.set(-.28,.24,-.18);keyLight.name='viewmodel key';
+  const keyLight=new T.PointLight(key,3.0,1.7,2);keyLight.position.set(-.28,.24,-.18);keyLight.name='viewmodel key';
+  // Soft fill from above the shooting arm: the forearms and hands read as volumes, not as dark tubes.
+  const fillLight=new T.PointLight(0xdfe8ff,1.5,1.5,2);fillLight.position.set(.34,.30,-.12);fillLight.name='viewmodel fill';
   const rimLight=new T.PointLight(rim,1.1,1.2,2);rimLight.position.set(.5,-.04,-.62);rimLight.name='viewmodel rim';
-  camera.add(keyLight,rimLight);return camera.userData.viewmodelLight={key:keyLight,rim:rimLight};
+  camera.add(keyLight,fillLight,rimLight);return camera.userData.viewmodelLight={key:keyLight,fill:fillLight,rim:rimLight};
 }
 
 export function buildGun({ mats, gloves, sleeve = true, arm = sleeve, makeFlash }) {

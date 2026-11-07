@@ -773,7 +773,7 @@ function gameTick(dt){
  const kickPose=recoilPose(game.weapon.id,weaponFeel.state,{aiming:aimBlend,dual:!!game.weapon.dual});
  weapon.position.set(ads.x+kickPose.x,ads.y+kickPose.y,ads.z+kickPose.z);
  weapon.rotation.set(kickPose.pitch,kickPose.yaw+ads.yaw,kickPose.roll+ads.roll);
- const strike=game.weapon.melee?0:meleeKick(game);if(strike){weapon.position.x+=MELEE_POSE.x*strike;weapon.position.y+=MELEE_POSE.y*strike;weapon.position.z+=MELEE_POSE.z*strike;weapon.rotation.x+=MELEE_POSE.pitch*strike;}
+ const strike=game.weapon.melee?0:meleeKick(game);if(strike){MELEE_POSE.apply(weapon,game);}
  weapon.userData.setSight?.(aimBlend>.55,camera);
  weapon.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,dualState:game.dual,
   charge:game.charge,reloading:game.reloadRemaining>0,reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,

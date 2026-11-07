@@ -25,6 +25,27 @@ export function objectiveIndicator(waypoint, player, heading, state = 'playing')
   };
 }
 
+// The guide must never twitch: the target can change hands, the route can be recomputed for a frame, a doorway can
+// make the next waypoint jump. The smoother eases the horizontal offset, keeps the last valid hint for a short grace
+// period instead of blinking out, and only lets the flags (behind, elevation) flip once they have been stable.
+export function createObjectiveSmoother({ rate = 9, grace = .9, flagDelay = .18 } = {}) {
+  let shown = null, last = null, lastAt = -Infinity, offset = 0, pending = null, pendingSince = 0;
+  return {
+    update(hint, now) {
+      if (hint) { last = hint; lastAt = now; } else if (!last || now - lastAt > grace) { shown = last = null; pending = null; return null; }
+      const source = hint || last, dt = Math.min(.1, Math.max(0, now - (this._t ?? now))); this._t = now;
+      if (!shown) { shown = { ...source }; offset = source.offset; return shown; }
+      offset += (source.offset - offset) * (1 - Math.exp(-rate * dt));
+      const flags = JSON.stringify([source.behind, source.turn, source.elevation, source.arrived]);
+      if (flags !== pending) { pending = flags; pendingSince = now; }
+      if (now - pendingSince >= flagDelay || source.arrived !== shown.arrived) shown = { ...source, offset };
+      else shown = { ...shown, offset, distance: source.distance, label: source.label, kind: source.kind };
+      return shown;
+    },
+    reset() { shown = last = pending = null; offset = 0; this._t = undefined; }
+  };
+}
+
 // Six degrees above the central sight line. A small geometry marker has no
 // canvas texture to upload at every head movement and is legible in both eyes.
 export function createObjectiveGuide(T, camera) {

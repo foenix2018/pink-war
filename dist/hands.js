@@ -14,24 +14,6 @@ const trackedForearmGeometry=loft([[-.43,.037,.031],[-.40,.048,.037],[-.32,.060,
 const trackedElbowPlate=armorPanel([[-.034,-.047],[.034,-.047],[.049,.020],[.031,.051],[-.031,.051],[-.049,.020]],.009,.008);
 const trackedPlateGeometry=merge([bake(trackedElbowPlate,matrix([0,-.351,.046],[0,Math.PI,0])),bake(trackedElbowPlate,matrix([0,-.285,.049],[0,Math.PI,0],[.83,.58,.75]))]);
 export const syncGloveMaterials=syncRLHMaterials;
-// Shadow Unit vambrace on the back of the forearm (FPS reference of 4 Nov 2026): a tapered ceramic shell in the
-// suit's light trim colour, an edge band, two light lines in the hero's colour (pink for GHJU, blue for LYLU) and a
-// wrist ring. In the forearm bone's frame the arm runs along −y from the wrist; +z is the back of the arm.
-const vambraceShell=new T.CylinderGeometry(.058,.071,.25,28,4,true,-2.55,5.1).translate(0,-.185,0);
-const vambraceEdge=new T.CylinderGeometry(.0605,.0735,.25,20,1,true,2.43,.12).translate(0,-.185,0);
-const vambraceLine=new T.BoxGeometry(.006,.21,.004);
-const wristRing=new T.TorusGeometry(.056,.006,6,24).rotateX(Math.PI/2).translate(0,-.068,0);
-let ceramic=null; // white Shadow Unit ceramic, shared by both arms
-function vambrace(materials){
-  const group=new T.Group();group.name='Shadow Unit vambrace';
-  ceramic??=new T.MeshStandardMaterial({color:0xe2e4e8,metalness:.25,roughness:.38});
-  const shell=new T.Mesh(vambraceShell,ceramic);shell.name='vambrace shell';
-  const edge=new T.Mesh(vambraceEdge,materials.plate||materials.trim),edge2=edge.clone();edge2.rotation.y=-4.98;
-  group.add(shell,edge,edge2,new T.Mesh(wristRing,materials.metal||materials.plate));
-  for(const a of [-.62,.62]){const line=new T.Mesh(vambraceLine,materials.glow);line.name='vambrace light';line.position.set(Math.sin(a)*.068,-.19,Math.cos(a)*.068);line.rotation.set(-.045,a,0);group.add(line);}
-  return group;
-}
-
 export function createGlove(materials,{mirror=false,sleeve=true,arm=false,forearm=GRIP.forearm}={}){
   const group=new T.Group(),model=createRLHGlove(materials,{mirror,sleeve,arm}),base=new T.Vector3();
   // Reflection belongs to the outer game frame, so hands/grips and IK agree.
@@ -39,7 +21,6 @@ export function createGlove(materials,{mirror=false,sleeve=true,arm=false,forear
   if(mirror)group.scale.x=-1;
   group.name='Pink war RLH '+(mirror?'gauche':'droit');
   const rig=model.userData.rig;
-  if(sleeve&&materials.glow){const shell=vambrace(materials);rig.forearm.add(shell);group.userData.vambrace=shell;}
   const localDirection=new T.Vector3(...forearm).normalize().applyQuaternion(orientation.clone().invert());
   // The cuff extends opposite the palm axis. A downwards default cuff bent
   // both wrists by about forty degrees despite neutral wrist bones.

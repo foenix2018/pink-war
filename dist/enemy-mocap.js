@@ -51,7 +51,7 @@ export function createMocapDriver({form,ranged,legs,arms,pelvis,thorax,head,gun,
   const moving=states.motion!=='idle',run=states.motion==='run',engaged=c.alert==='engaged';
   // Pelvis: native bob and sway, plus the chassis' own drop and the combat brace.
   const bob=(P(nb('Hips')).y-rest.hipsY)*k;
-  const drop=traits.drop*(moving?1:.4)+(engaged?traits.engagedDrop:0)+(form==='brute'?Math.min(c.brace,.16):c.brace); // the Brute braces, it does not kneel
+  const drop=traits.drop*(moving?1:.4)+(engaged?traits.engagedDrop:0)+(form==='brute'?Math.min(c.brace-.52*(c.cover||0),.16)+.52*(c.cover||0):c.brace); // the Brute braces, but follows its hit zone down behind cover
   pelvis.position.set(pelvisBind.x,hipHeight+bob*(form==='brute'?1.4:1)-drop,pelvisBind.z);
   flipQ(q.copy(Q(nb('Hips'))).multiply(q2.copy(rest.hips).invert()),pq);
   e.setFromQuaternion(pq,'YXZ');e.x=THREE_CLAMP(e.x*.5,-.12,.12);const pelvisPitch=e.x;e.z*=traits.sway;e.y*=traits.sway;
