@@ -961,7 +961,8 @@ export class ArenaGame {
       }
     }
     if (this.wave > 0 && this.toSpawn === 0 && this.enemies.length === 0 && this.nextWave < 0 && this.state === 'playing') {
-      this.score += 250 + this.wave * 50; this.event('clear', { wave: this.wave });
+      this.activePortals=[]; // Enemy gates close as soon as a wave is defeated.
+       this.score += 250 + this.wave * 50; this.event('clear', { wave: this.wave });
       if (!this.endless && this.wave === MAX_LEVEL) { this.state = 'won'; this.charge = 0; this.bullets = []; this.score += 2000; this.event('win'); }
       else this.nextWave = 5;
     }

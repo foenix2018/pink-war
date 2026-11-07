@@ -306,6 +306,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   // Secondary breaches are independent visual gates created only for an active wave.
   // Shared low-poly geometry keeps draw calls and VRAM bounded on Quest/iPhone.
   const secondaryPortals=new Map();
+  let primaryGateWasOpen=false,primaryGateClosedAt=-Infinity;
   const breachRingGeometry=new T.TorusGeometry(2.45,.20,7,34);
   const breachHaloGeometry=new T.TorusGeometry(2.83,.045,5,40);
   const breachSurfaceGeometry=new T.PlaneGeometry(4.6,4.6);
@@ -325,12 +326,25 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   }
   function syncSecondaryPortals(sim,time) {
     const present=new Set();
-    portal.visible=!rangeActive&&(!sim.wave||sim.activePortals.some(p=>p.x===PORTAL.x&&p.z===PORTAL.z&&time>=p.openedAt));
+    const centreSite=(sim.activePortals||[]).find(p=>p.x===PORTAL.x&&p.z===PORTAL.z&&time>=p.openedAt);
+    if(centreSite){
+      primaryGateWasOpen=true;primaryGateClosedAt=-Infinity;
+      const t=Math.max(0,Math.min(1,(time-centreSite.openedAt)/.85)),ease=t*t*(3-2*t);
+      gate.scale.y=Math.max(.001,ease);portalLight.intensity=75*ease;
+    }else{
+      if(primaryGateWasOpen){primaryGateClosedAt=time;primaryGateWasOpen=false;}
+      const fading=Math.max(0,Math.min(1,1-(time-primaryGateClosedAt)/.85));
+      gate.scale.y=Math.max(.001,fading*fading*(3-2*fading));
+      portalLight.intensity=75*fading;
+    }
+    const centreFading=time-primaryGateClosedAt<.85;
+    portal.visible=!rangeActive&&((!campaignActive&&!sim.wave)||!!centreSite||centreFading);
     for(const site of sim.activePortals||[]){
       if(site.x===PORTAL.x&&site.z===PORTAL.z)continue;
       present.add(site.id);
       let display=secondaryPortals.get(site.id);
       if(!display){display=buildSecondaryPortal(site);secondaryPortals.set(site.id,display);}
+      display.closingAt=null;
       const t=time-site.openedAt,open=Math.max(0,Math.min(1,t/.72)),ease=open*open*(3-2*open);
       display.group.visible=t>=0;
       display.gate.scale.set(1,Math.max(.001,ease),1);
@@ -340,7 +354,13 @@ export async function createScene(canvas, quality, forceWebGL = false, character
       display.light.intensity=6*ease;
     }
     for(const [id,display] of secondaryPortals)if(!present.has(id)){
-      scene.remove(display.group);display.vortexMat.dispose();secondaryPortals.delete(id);
+      display.closingAt ??=time;
+      const p=Math.max(0,Math.min(1,(time-display.closingAt)/.83));
+      const collapse=1-p*p*(3-2*p);
+      display.gate.scale.y=Math.max(.001,collapse);
+      display.vortexMat.opacity=.88*collapse;
+      display.light.intensity=6*collapse;
+      if(p>=1){scene.remove(display.group);display.vortexMat.dispose();secondaryPortals.delete(id);}
     }
   }
   const monsters=new Map(), bulletMeshes=new Map(), particles=[],probeSparkAt=new Map();
@@ -364,7 +384,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     const ring=mesh(pickupRing,core,g,[0,-.5,0],[1,1,1],false);ring.rotation.x=-Math.PI/2;ring.userData.ground=true;
     return g;
   }
-  function resetDynamic(){city.reset?.();for(const m of pickupMeshes.values())scene.remove(m);pickupMeshes.clear();rangeArt.update(null);combatFX.reset();laserFX.reset();traversal.update(0);for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();portal.visible=!rangeActive;enemyFailureFX.reset();for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;probeSparkAt.clear();for(const pool of sparkPools)pool.count=0;}
+  function resetDynamic(){city.reset?.();for(const m of pickupMeshes.values())scene.remove(m);pickupMeshes.clear();rangeArt.update(null);combatFX.reset();laserFX.reset();traversal.update(0);for(const visual of secondaryPortals.values()){scene.remove(visual.group);visual.vortexMat.dispose();}secondaryPortals.clear();primaryGateWasOpen=false;primaryGateClosedAt=-Infinity;gate.scale.y=1;portalLight.intensity=75;portal.visible=!rangeActive;enemyFailureFX.reset();for(const station of weaponStations.values()){scene.remove(station.base);station.beam.material.dispose();}weaponStations.clear();for(const m of monsters.values())scene.remove(m);monsters.clear();for(const m of bulletMeshes.values())scene.remove(m);bulletMeshes.clear();particles.length=0;probeSparkAt.clear();for(const pool of sparkPools)pool.count=0;}
   function sync(sim,time,dt){
     if(arenaRoot.visible)city.sync?.(sim);
     if(!campaignActive)city.fence?.update({...sim.player,y:(sim.player.elevation||0)+(sim.player.crouched?1.05:1.65)},.65,1.2);traversal.update(sim.time);campaignArt.updateLift(sim.time);combatFX.update(dt,camera);laserFX.update(sim.bullets,dt);shadowTime=sim.time;shadowEntities=rangeActive?[sim.player,...sim.targets.map(t=>({...targetPosition(t,sim.time),radius:.28}))]:[...sim.enemies,sim.player];shadowHeight=e=>sim.surfaceHeight(e.x,e.z,sim.time,(e.elevation||0)+.3);trackShadows(sim.player.x,sim.player.z,sim.player.elevation||0);

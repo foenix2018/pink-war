@@ -38,6 +38,7 @@ import {thirdPersonPosition} from './third-person-camera.js';
 import {createMissionXR,immersiveRendererPreferred} from './mission-xr.js';
 import {createGlove} from './hands.js';
 import {playFieldCue} from './m01-field-audio.js';
+import {createPortalLaserController,playPortalLaser} from './portal-laser-audio.js';
 import {mountCombatHud} from './combat-hud.js';
 import {createArmorFeedback,meleeKick,MELEE_POSE} from './armor-feedback.js';
 import {installM01Extension,readExtensionCheckpoint,clearExtensionCheckpoint} from './m01-extension.js';
@@ -175,6 +176,9 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   let audio=null,ambience=null,saber=null;
   let sound=true;try{const settings=JSON.parse(localStorage.getItem('rosee-settings')||'{}');sound=settings.sound!==false;}catch{}
   let ambientEnabled=sound;
+  const portalAudio=createPortalLaserController({
+    getContext:()=>audio,getListener:()=>game.player,getYaw:()=>-getState().yaw,enabled:()=>sound
+  });
   function audioReady(){
     if(!sound)return;
     try{
@@ -268,6 +272,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     if(!s.free){
       if(!xr?.active)p.crouched=s.crouching;
       game.step(dt,{...(s.input||{}),yaw:-s.yaw,moveYaw:xr?.active?xr.controls?.moveYaw:undefined});
+      portalAudio.sync(game.activePortals,game.time);
       setPlayer?.(p);
       syncCamera(getState(),dt);
       if(meleeQueued||s.input?.melee){camera.getWorldDirection(v);game.melee({x:v.x,z:v.z});}
@@ -316,7 +321,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       if(event.type==='squad-call')subtitles.say('ORDRE · UN SIGNAL DE RENFORT A ÉTÉ TRANSMIS');
       if(event.type==='companion-shot'&&sound&&audio)playLaserShot(audio,'r9',.35);
       if(sound&&audio&&['circuit-isolated','workshop-power'].includes(event.type))playFieldCue(audio,'isolate',{source:event,listener:p,yaw:-s.yaw});
-      if(sound&&audio&&event.type==='portals'&&event.count>0)for(const site of event.sites)playFieldCue(audio,'breach',{source:site,listener:p,yaw:-s.yaw});
+      // Portal transitions are synchronized from game.activePortals by portalAudio.
       if(event.type==='enemy-shot'&&sound&&audio)playEnemyShot(audio,{form:event.form,source:event,listener:p,yaw:-s.yaw,occluded:game.blocked(event,{x:p.x,y:p.elevation+1.5,z:p.z})});
       if(event.type==='shot'){feel.fire(event.weapon,event.power,(xr?.active?!!xr.controls?.aim:ads>.5)||p.crouched);xr?.haptic('shot',event.weapon,event.hand);if(sound&&audio)playLaserShot(audio,event.weapon,event.power);}
       if(event.type==='impact'&&sound&&audio)playLaserImpact(audio,{surface:event.surface,distance:Math.hypot(event.x-p.x,event.z-p.z),power:event.power});
@@ -361,6 +366,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     })();
   }
   function finishMission(){
+    portalAudio.closeAll();
     if(completed)return;completed=true;held=false;ambience?.pause();document.exitPointerLock?.();
     const dialog=document.createElement('dialog');dialog.id='end-dialog';
     const p=document.createElement('p');p.textContent=M01_ENDING.text[characterId];clearExtensionCheckpoint(characterId);
@@ -377,6 +383,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   // Short synthesised cues for the extension beats (doors, valves, engine, holds, portals).
   function extensionCue(kind){
     if(!sound||!audio||audio.state!=='running')return;
+    if(kind==='portal'){playPortalLaser(audio,'open',{source:game.activePortals[0]||{},listener:game.player,yaw:-getState().yaw});return;}
     try{
       const now=audio.currentTime,out=audio.createGain();out.gain.value=.12;out.connect(audio.destination);
       const tone=(type,from,to,length,delay=0,gain=.9)=>{const o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(from,now+delay);o.frequency.exponentialRampToValueAtTime(to,now+delay+length);
@@ -385,7 +392,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       else if(kind==='valve'){for(let k=0;k<5;k++)tone('square',220+k*20,200+k*20,.08,k*.16,.35);}
       else if(kind==='engine'){tone('sawtooth',30,62,2.6,0,.8);tone('square',45,90,2.4,.3,.35);}
       else if(kind==='hold'){tone('sine',110,220,1.8,0,.6);tone('sine',55,110,2.2,.1,.6);}
-      else if(kind==='portal'){tone('sawtooth',90,420,2.6);tone('sine',180,840,2.8,.2);}
+      // Portal effects are handled by the dedicated laser generator.
       else if(kind==='read'){tone('triangle',1200,900,.06,0,.25);tone('triangle',900,700,.08,.07,.2);}
       else if(kind==='stage'){tone('triangle',440,660,.25);tone('triangle',660,880,.3,.22);}
     }catch{}

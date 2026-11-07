@@ -20,6 +20,7 @@ import {createCompatibleRenderer,graphicsProfile,renderPixelRatio} from './rende
 import {createEnemyFactory} from './enemies.js';
 import {createEnemyDestructionFX} from './enemy-destruction-fx.js';
 import {createRobotShutdownAudio} from './enemy-shutdown-audio.js';
+import {playPortalLaser} from './portal-laser-audio.js';
 import {buildGun,attachViewmodelLight} from './weapons.js';
 import {createDistrictArchitecture} from './level2-architecture.js';
 import {createEnvironmentFinish} from './m02-environment-finish.js';
@@ -502,7 +503,7 @@ function setupExtension(){
   // Saved before the stage's own group is deployed, so a restart brings it back.
   stage:()=>{lastMinimalHudStage=-1;extensionCue('stage');if(extension&&extension.writeCheckpoint())checkpointSaved=extension.checkpointKey;},
   core:()=>{stage=0;lastMinimalHudStage=-1;},
-  finale:()=>{running=false;document.exitPointerLock?.();clearM02Checkpoint(characterId);checkpointSaved=null;subtitles?.clear();
+  finale:()=>{if(enableAudio)playPortalLaser(audioCtx,'close',{source:breachGate?.position||{},listener:game?.player||{},yaw});running=false;document.exitPointerLock?.();clearM02Checkpoint(characterId);checkpointSaved=null;subtitles?.clear();
    setTimeout(()=>showChapter2Finale({characterId,onReplay:()=>resume({fresh:true})}),900);}
  }});
 }
@@ -516,6 +517,7 @@ function openJournal(entry,then){
 // Short synthesised cues for the extension beats (doors, crank, batteries, holds, HELIX drops, documents).
 function extensionCue(kind){
  if(!enableAudio||!audioCtx||audioCtx.state!=='running')return;
+ if(kind==='portal'){playPortalLaser(audioCtx,'open',{source:breachGate?.position||game?.activePortals?.[0]||{},listener:game?.player||{},yaw});return;}
  try{
   const now=audioCtx.currentTime,out=audioCtx.createGain();out.gain.value=.12;out.connect(audioCtx.destination);
   const tone=(type,from,to,length,delay=0,gain=.9)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(from,now+delay);o.frequency.exponentialRampToValueAtTime(to,now+delay+length);
@@ -524,7 +526,7 @@ function extensionCue(kind){
   else if(kind==='valve'){for(let k=0;k<5;k++)tone('square',220+k*20,200+k*20,.08,k*.16,.35);}
   else if(kind==='engine'){tone('sawtooth',30,62,2.6,0,.8);tone('square',45,90,2.4,.3,.35);}
   else if(kind==='hold'){tone('sine',110,220,1.8,0,.6);tone('sine',55,110,2.2,.1,.6);}
-  else if(kind==='portal'){tone('square',880,440,.18,0,.4);tone('square',880,440,.18,.3,.4);tone('sawtooth',120,60,1.6,.5,.5);}
+  // Portal cue is handled by the original cinematic laser sound above.
   else if(kind==='read'){tone('triangle',1200,900,.06,0,.25);tone('triangle',900,700,.08,.07,.2);}
   else if(kind==='stage'){tone('triangle',440,660,.25);tone('triangle',660,880,.3,.22);}
  }catch{}
