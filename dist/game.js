@@ -1,4 +1,5 @@
 import {createTouchOrbit} from './touch-orbit.js';
+import {levelArrow,arrowGuidance} from './objective-arrow.js';
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, starterWeaponIndex, weaponCycleOrder, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
 import { createScene } from './scene.js?v=20261107-mission-guidance';
 import {createRobotShutdownAudio} from './enemy-shutdown-audio.js';
@@ -226,12 +227,22 @@ function attachJoystick(id, state) {
     state.x = Math.abs(x / radius) < .08 ? 0 : x / radius; state.y = Math.abs(y / radius) < .08 ? 0 : y / radius;
     knob.style.transform = `translate(${x}px, ${y}px)`;
   }
-  area.addEventListener('pointerdown', e => { if (phase !== 'playing' || state.id !== null || (e.pointerType === 'mouse' && e.button !== 0)) return; e.preventDefault(); state.id = e.pointerId; try { area.setPointerCapture(e.pointerId); } catch {} update(e); });
+  area.addEventListener('pointerdown', e => { if (phase !== 'playing' || (e.pointerType === 'mouse' && e.button !== 0)) return; e.preventDefault(); state.id = e.pointerId; /* a new finger takes over a stale one */ try { area.setPointerCapture(e.pointerId); } catch {} update(e); });
   area.addEventListener('pointermove', e => { if (e.pointerId !== state.id) return; if (e.pointerType === 'mouse' && e.buttons === 0) { release(e); return; } e.preventDefault(); update(e); });
   for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) area.addEventListener(event, release);
   for (const event of ['pointerup', 'pointercancel']) window.addEventListener(event, release);
 }
 attachJoystick('move-stick', move); attachJoystick('look-stick', look);
+// iOS can lose a pointerup (system gesture, notification, second finger, focus loss). Once no finger is on the screen,
+// or the page is hidden, every virtual control is released: the stick cannot stay deflected, fire cannot stay held.
+function freeTouchControls(){
+  for (const s of [move, look]) { s.x = 0; s.y = 0; s.id = null; }
+  for (const id of ['move-stick', 'look-stick']) { const knob = $(id)?.querySelector('.joystick-knob'); if (knob) knob.style.transform = ''; }
+  firingPointers.clear(); aimPointers.clear(); $('fire-button')?.classList.remove('firing');
+}
+for (const type of ['touchend', 'touchcancel']) document.addEventListener(type, e => { if (e.touches.length === 0) freeTouchControls(); }, { passive: true, capture: true });
+for (const type of ['blur', 'pagehide', 'orientationchange']) window.addEventListener(type, freeTouchControls);
+document.addEventListener('visibilitychange', () => { if (document.hidden) freeTouchControls(); });
 $('fire-button').addEventListener('pointerdown', e => { if (phase !== 'playing') return; e.preventDefault(); audioReady(); firePressQueued=true; firingPointers.add(e.pointerId); try { e.target.closest('button').setPointerCapture(e.pointerId); } catch {} $('fire-button').classList.add('firing'); });
 for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) $('fire-button').addEventListener(type, e => { firingPointers.delete(e.pointerId); if (!firingPointers.size) $('fire-button').classList.remove('firing'); });
 $('crouch-button').addEventListener('click',()=>{if(phase==='playing')crouchQueued=true;});
@@ -637,7 +648,7 @@ function updateHud() {
   pickup.hidden=!nearby;pickup.textContent=nearby?`RÉCUPÉRER ${WEAPONS[nearby.index].name} · F / X`:'';
   const interaction=game.getInteraction?.();
   combatHud.setContext(interaction?.label||(nearby?'Récupérer '+WEAPONS[nearby.index].name:null));
-  combatHud.setObjective({guided:game.mode==='campaign',label:game.mode==='training'?(game.trainingActive?'STAND · '+game.trainingLevel.number+'/05':'STAND · EN ATTENTE'):game.mode==='campaign'?(selectedMode==='breach'?'OPÉRATION BRÈCHE':'MISSION 01'):'VAGUE '+String(Math.max(1,game.wave)).padStart(2,'0')+'/20',detail:game.mode==='training'?(game.trainingActive?game.trainingLevel.label+' · Score '+game.score+' · Précision '+game.trainingAccuracy+' %':'Activez le bouton ambré dans votre box · F / ACTION'):game.mode==='campaign'?(game.campaign?.subtitle||'Rejoindre le relais des archives.'):(game.fortressArena?`${game.turrets.filter(t=>t.hp>0).length}/8 tourelles · Sniper ou attaque à moins de 5 m`:'Repousser les machines et récupérer les armes des brèches.')});
+  combatHud.setObjective({guided:game.mode==='campaign',guidance:game.mode==='campaign'?arrowGuidance(game.player,game.guidance?.(),game.player.yaw):null,label:game.mode==='training'?(game.trainingActive?'STAND · '+game.trainingLevel.number+'/05':'STAND · EN ATTENTE'):game.mode==='campaign'?(selectedMode==='breach'?'OPÉRATION BRÈCHE':'MISSION 01'):'VAGUE '+String(Math.max(1,game.wave)).padStart(2,'0')+'/20',detail:game.mode==='training'?(game.trainingActive?game.trainingLevel.label+' · Score '+game.score+' · Précision '+game.trainingAccuracy+' %':'Activez le bouton ambré dans votre box · F / ACTION'):game.mode==='campaign'?(game.campaign?.subtitle||'Rejoindre le relais des archives.'):(game.fortressArena?`${game.turrets.filter(t=>t.hp>0).length}/8 tourelles · Sniper ou attaque à moins de 5 m`:'Repousser les machines et récupérer les armes des brèches.')});
   if(interaction){pickup.hidden=false;pickup.textContent=`${interaction.label} · F`;pickup.ariaLabel=interaction.label;}
   $('ammo-label').textContent = game.weapon.melee?'∞':game.ammo[game.weaponIndex];
   $('ammo-capacity').textContent = game.weapon.melee?'':`/ ${game.weapon.capacity}`;

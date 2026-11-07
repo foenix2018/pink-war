@@ -2,7 +2,7 @@
 // DOM-only overlay: no added renderer, no frame-by-frame canvas uploads, and no dialogue rewrite.
 import {paintCompanionPortrait} from './companion-portrait.js';
 
-const STYLESHEET='hologram-comms.css?v=1';
+const STYLESHEET='hologram-comms.css?v=20261107-sms';
 const kindOf=line=>{
  const key=String(line?.who||line?.speaker?.name||'').toLowerCase();
  if(key==='gaby'||key.includes('gab-1'))return 'gab';
@@ -19,7 +19,10 @@ export function createHologramComms({doc=document,expanded=false,maxMessages=4}=
  root.setAttribute('role','region');
  root.innerHTML='<header class="pw-comms-header"><span class="pw-comms-brand">PINK WARS</span><span class="pw-comms-mark" aria-hidden="true">▰▰▰</span><span class="pw-comms-rule"></span><span class="pw-comms-status">◈ CANAL SÉCURISÉ</span><button class="pw-comms-toggle" type="button" aria-expanded="false" aria-label="Afficher les échanges précédents">▣</button></header><div class="pw-comms-transcript" aria-live="off"></div><footer class="pw-comms-footer"><span></span><b>▪　<span>■</span>　▪</b><span></span></footer>';
  const list=root.querySelector('.pw-comms-transcript'),toggle=root.querySelector('.pw-comms-toggle');
- let clock=0,hidden=false,disposed=false;const history=[];
+ let clock=0,hidden=false,disposed=false,leaving=false,leaveTimer=0;const history=[];
+ // The banner arrives from the left like a text message and leaves the same way (CSS animations, replayed on demand).
+ const replay=name=>{root.classList.remove('pw-comms-enter','pw-comms-bump');void root.offsetWidth;root.classList.add(name);};
+ const stopLeaving=()=>{if(leaving){leaving=false;clearTimeout(leaveTimer);delete root.dataset.leaving;}};
  const styleExists=doc.querySelector('link[data-pw-hologram-comms]');
  if(!styleExists){const link=doc.createElement('link');link.rel='stylesheet';link.href='./'+STYLESHEET;link.dataset.pwHologramComms='';doc.head.append(link);}
  doc.body.append(root);
@@ -62,16 +65,23 @@ export function createHologramComms({doc=document,expanded=false,maxMessages=4}=
   if(history.length>Math.max(2,maxMessages))history.shift();
   const elem=card(line);list.append(elem);
   while(list.children.length>Math.max(2,maxMessages))list.firstElementChild.remove();
-  root.hidden=false;clock=0;hidden=false;
+  const wasShown=!root.hidden&&!leaving;stopLeaving();root.hidden=false;clock=0;hidden=false;
+  replay(wasShown?'pw-comms-bump':'pw-comms-enter');
   if(root.dataset.expanded==='true')list.scrollTop=list.scrollHeight;
  }
  function update(dt,{xr=false,hidden:forceHidden=false}={}){
   if(disposed)return;
   if(!forceHidden&&!xr&&dt>0)clock+=Math.min(.1,dt);
   hidden=!!xr||!!forceHidden||clock>7;
-  root.hidden=hidden||history.length===0;
+  const gone=hidden||history.length===0;
+  if(!gone){stopLeaving();root.hidden=false;return;}
+  // Out of the way at once for VR or an explicit hide; otherwise slide back out to the left first.
+  if(root.hidden||leaving)return;
+  if(xr||forceHidden||history.length===0||root.dataset.expanded==='true'){root.hidden=true;return;}
+  leaving=true;root.dataset.leaving='true';
+  leaveTimer=setTimeout(()=>{leaving=false;delete root.dataset.leaving;root.hidden=true;},300);
  }
- function clear(){history.length=0;list.replaceChildren();clock=0;root.hidden=true;}
+ function clear(){history.length=0;list.replaceChildren();clock=0;stopLeaving();root.hidden=true;}
  function dispose(){if(disposed)return;disposed=true;clear();root.remove();}
  setExpanded(expanded);
  return {root,push,update,clear,dispose,setExpanded,get count(){return history.length;},get expanded(){return root.dataset.expanded==='true';}};

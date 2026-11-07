@@ -1,4 +1,5 @@
 import {upgradeLightBlocks} from './industrial-light.js';
+import {createEnclaveLife} from './m02-enclave-life.js';
 import {createModernSwitch,switchVariant} from './modern-switch.js';
 import {createLevelNeons,roundPoweredTubes} from './level-neons.js';
 import { createNeonFixture } from './neon-fixture.js';
@@ -178,7 +179,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
   };
   function placeFixtures() {
     // Enclave: strings of bare bulbs over the stalls, amber lanterns in the tents, cold tubes in the annexes, the radio on batteries.
-    for (const x of [-24, -14, -4, 6]) for (const z of [84, 92]) fixture('bulb', x, 4.2, z, { zone: 'enclave', color: 0xffb070, intensity: 16, range: 13, flicker: x === -4 && z === 92 ? .5 : .06 });
+    for (const x of [-24, -14, -4, 6]) for (const z of [84, 92]) fixture('bulb', x, 4.2, z, { zone: 'enclave', color: 0xffb070, intensity: 24, range: 15, flicker: x === -4 && z === 92 ? .5 : .06 });
     for (const x of [-26, -18, -10]) fixture('lantern', x, 1.9, 95.4, { zone: 'enclave', color: 0xff9a50, intensity: 3, range: 5, flicker: .1 });
     fixture('tube', 20, 3.3, 84, { zone: 'enclave', color: 0xe4fff4, intensity: 18, range: 12 }); fixture('tube', 16, 3.3, 87, { zone: 'enclave', color: 0xe4fff4, intensity: 12, range: 10, flicker: .35 });
     for (const x of [16, 22, 28, 34]) fixture('tube', x, 2.9, 92, { zone: 'enclave', color: 0xdfe9ff, intensity: 14, range: 11, flicker: x === 24 ? .4 : .05 });
@@ -190,7 +191,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     stats.fixtures = fixtures.length;
   }
   // Before the batteries the enclave runs on its last solar cells: dimmer, flickering more.
-  const fixtureLevel = f => f.zone === 'enclave' ? (power.enclave ? 1 : .6) : f.zone === 'radio' ? (power.enclave ? 1 : .25) : f.zone === 'lift' ? 1 : power.tower ? 1 : .2;
+  const fixtureLevel = f => f.zone === 'enclave' ? (power.enclave ? 1 : .8) : f.zone === 'radio' ? (power.enclave ? 1 : .25) : f.zone === 'lift' ? 1 : power.tower ? 1 : .2;
   const flickerOf = (f, t) => { if (!f.flicker) return 1; const n = Math.sin(t * 13.1 + f.phase) + Math.sin(t * 29.7 + f.phase * 1.7) * .6 + Math.sin(t * 2.1 + f.phase * .3) * 1.4; return n > 2.2 - f.flicker * 1.4 ? .08 : 1; };
   const fixtureMeshes = [];
   function buildFixtureMeshes() {
@@ -567,6 +568,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
   }
 
   const livedIn=createLivedInDressing(T,root,{chapter:2,low,materials:details.M});
+  const life=createEnclaveLife(T,root,{low});
 
   // ---------- Night: how much of the moon and sky reaches the eye indoors ----------
   let shelter = 1; const cachesById = new Map();
@@ -578,10 +580,10 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       placeFixtures(); buildRooms(); buildWalls(obstacles);
       for (const o of obstacles) if (o.extension) { dress(o); details.accessories(o); }
       buildFixtureMeshes(); buildDoors(); buildDevices(obstacles); buildSigns(); buildCyber();
-      neons.meshes(); neons.build(); flushGeometry(); flushPieces(); details.finish(); livedIn.build(obstacles);
+      neons.meshes(); neons.build(); flushGeometry(); flushPieces(); details.finish(); livedIn.build(obstacles); life.build();
     },
     update(t, dt, eye, player = eye.position, { crank = false } = {}) {
-      updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt, crank); details.update(power); livedIn.update(t,dt,power);
+      updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt, crank); details.update(power); livedIn.update(t,dt,power); life.update(t,dt,power);
       for (const s of steam) { const u = s.userData, k = (t * .25 + u.phase) % 1; s.position.set(u.x + Math.sin(t + u.phase) * .3, u.y + k * 3, u.z); s.scale.setScalar(.8 + k * 2.4); s.material.opacity = .14 * (1 - k); }
       for (const f of animated) f(t, dt, eye);
     },
@@ -608,6 +610,6 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     setPower(zone, on) { power[zone] = !!on; },
     markDone(id, done = true) { const d = devices.get(id); if (d) { d.done = done; if (!done) { d.turn = 0; if (d.moving) d.moving.rotation.set(0, 0, 0); } } },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
-    stats() { return { ...stats, neons:neons.stats(), details: details.stats(), livedIn: livedIn.stats(), power: { ...power }, shelter: +shelter.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, neons:neons.stats(), details: details.stats(), livedIn: livedIn.stats(), life: life.stats(), power: { ...power }, shelter: +shelter.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }

@@ -7,7 +7,7 @@ import {paintCompanionPortrait} from './companion-portrait.js';
 import {renderDigitalCounter} from './digital-display.js';
 let activeCombatHud = null;
 export const getActiveCombatHud = () => activeCombatHud;
-const STYLESHEET = 'combat-hud.css?v=20261107-mission-guidance';
+const STYLESHEET = 'combat-hud.css?v=20261107-arrow-chip';
 const HEROES = Object.freeze({ ghju: 'GHJU', lylu: 'LYLU' });
 export const HUD_SEGMENTS = 10;
 
@@ -86,13 +86,15 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
   (parent||doc.body).append(root);doc.body.classList.add('pw-unified-hud','pw-immersion-hud');if(lobbyPage)doc.body.classList.add('pw-hud-lobby-page');
   const $=s=>root.querySelector(s),vitals=$('.pw-hud-vitals'),arms=$('.pw-hud-arms'),palette=$('.pw-hud-palette'),more=$('.pw-hud-more'),mission=$('.pw-hud-mission'),objective=$('.pw-hud-objective'),context=$('.pw-hud-context');
   const guide=$('.pw-hud-guide');let guideSignature='';
+  // The guide is only a small arrow and a distance. The wording of the objective stays in the aria-label.
   function setGuidance(info){
-    root.classList.toggle('pw-guided',!!info);guide.hidden=!info;if(!info)return;
-    info={...info,bearing:Math.round((info.bearing||0)/2)*2,progress:info.progress==null?null:Math.round(info.progress*100)/100};
-    const signature=JSON.stringify(info);if(signature===guideSignature)return;guideSignature=signature;
-    guide.querySelector('small').textContent=info.label||'OBJECTIF';guide.querySelector('.pw-guide-title').textContent=info.title||'';guide.querySelector('.pw-guide-instruction').textContent=info.instruction||'';
-    guide.querySelector('.pw-guide-route b').textContent=info.route||'';guide.querySelector('.pw-guide-route i').hidden=!info.route;guide.querySelector('.pw-guide-route i').style.transform='rotate('+(info.bearing||0)+'deg)';
-    const progress=guide.querySelector('progress');progress.hidden=info.progress===null||info.progress===undefined;progress.value=Math.max(0,Math.min(1,info.progress||0));
+    const shown=!!info&&!!info.route;root.classList.toggle('pw-guided',!!info);guide.hidden=!shown;if(!shown)return;
+    info={...info,bearing:Math.round((info.bearing||0)/2)*2};
+    const signature=JSON.stringify([info.route,info.bearing,info.title]);if(signature===guideSignature)return;guideSignature=signature;
+    const distance=/(\d+\s*m)\s*$/.exec(info.route);
+    guide.querySelector('.pw-guide-route b').textContent=distance?distance[1].replace(/\s+/,' '):'';
+    const arrow=guide.querySelector('.pw-guide-route i');arrow.hidden=false;arrow.style.transform='rotate('+(info.bearing||0)+'deg)';
+    guide.setAttribute('aria-label','Objectif : '+(info.title||info.label||'')+(distance?' · '+distance[1]:'')+' · flèche à '+Math.round(info.bearing||0)+' degrés');
   }
   const nodes={tag:$('.pw-hud-tag'),hp:$('.pw-hud-value'),shield:$('.pw-hud-shield-value'),vitalNote:$('.pw-hud-vitals .pw-hud-note'),weapon:$('.pw-hud-weapon'),ammo:$('.pw-hud-ammo'),capacity:$('.pw-hud-capacity'),armsNote:$('.pw-hud-arms .pw-hud-note'),charges:$('.pw-hud-charges')};
   const shieldBar=$('.pw-hud-shield'),shieldNumber=$('.pw-shield-number'),hitRing=$('.pw-hud-hit'),chargeButton=$('[data-armor=charge]'),crouchButton=$('[data-hud-action=crouch]'),sprintButton=$('[data-hud-action=sprint]');

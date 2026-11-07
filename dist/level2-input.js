@@ -54,6 +54,17 @@ export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onRelo
    '<div class="m02-actions"><button data-m02="aim">VISER</button><button data-m02="fire">TIR</button><button data-m02="jump">↑ SAUT</button><button data-m02="interact">F · ACTION</button><button data-m02="next">ARME</button><button data-m02="reload">↻</button><button data-m02="crouch">ACCROUPI</button><button data-m02="view">VUE</button><button data-m02="pause">Ⅱ</button></div>';
  document.body.append(root);
  const state={x:0,z:0,lookX:0,lookY:0,lookDX:0,lookDY:0,fire:false,aim:false,sprint:false};
+ // iOS Safari can lose a pointerup / pointercancel (system gesture, notification, a second finger, the page losing
+ // focus). Every control therefore registers a forced release, and the safety nets below call them all as soon as the
+ // screen is known to be untouched, so the stick can never stay deflected and the fire button can never stay held.
+ const releasers=new Set();let fingers=0,idleFor=0,sawTouch=false;
+ const releaseAll=()=>{for(const release of [...releasers])release();};
+ const countFingers=e=>{fingers=e.touches?e.touches.length:fingers;if(fingers===0)releaseAll();};
+ document.addEventListener('touchstart',e=>{sawTouch=true;fingers=e.touches.length;},{passive:true,capture:true});
+ document.addEventListener('touchend',countFingers,{passive:true,capture:true});
+ document.addEventListener('touchcancel',countFingers,{passive:true,capture:true});
+ for(const name of ['blur','pagehide','orientationchange'])window.addEventListener(name,releaseAll);
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAll();});
  const bindStick=(id,ax,az)=>{
   const element=root.querySelector(id),ring=element.querySelector('.m02-stick-ring'),knob=element.querySelector('.m02-stick-knob');
   let pointer=null;
@@ -65,16 +76,21 @@ export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onRelo
    state.sprint=touchAnalogSprint(state.x,state.z);
    knob.style.transform='translate('+dx*norm+'px,'+dy*norm+'px)';
   }
-  const release=e=>{if(pointer!==e.pointerId)return;pointer=null;state[ax]=state[az]=0;state.sprint=false;knob.style.transform='';};
-  element.addEventListener('pointerdown',e=>{if(pointer!==null)return;e.preventDefault();pointer=e.pointerId;try{element.setPointerCapture(e.pointerId);}catch{}set(e);});
+  const forceRelease=()=>{if(pointer!==null){try{element.releasePointerCapture(pointer);}catch{}}pointer=null;state[ax]=state[az]=0;state.sprint=false;knob.style.transform='';};
+  releasers.add(forceRelease);
+  const release=e=>{if(pointer!==e.pointerId)return;forceRelease();};
+  // A new finger on the stick always takes over: a stale pointer left by a lost pointerup must never lock the stick.
+  element.addEventListener('pointerdown',e=>{e.preventDefault();if(pointer!==null&&pointer!==e.pointerId)forceRelease();pointer=e.pointerId;try{element.setPointerCapture(e.pointerId);}catch{}set(e);});
   element.addEventListener('pointermove',e=>{if(e.pointerId!==pointer)return;e.preventDefault();set(e);});
   for(const name of ['pointerup','pointercancel','lostpointercapture'])element.addEventListener(name,release);
  };
  bindStick('#m02-move','x','z');
  // A free swipe on the right half looks around; it never fires.
  const orbit=createTouchOrbit();let lookPointer=null;
+ const forceEndLook=()=>{if(lookPointer!==null){orbit.end(lookPointer);try{host.releasePointerCapture(lookPointer);}catch{}lookPointer=null;}};releasers.add(forceEndLook);
  host.addEventListener('pointerdown',e=>{
-  if(e.pointerType==='mouse'||e.clientX<innerWidth*.5||lookPointer!==null)return;
+  if(e.pointerType==='mouse'||e.clientX<innerWidth*.5)return;
+  if(lookPointer!==null)forceEndLook();
   lookPointer=e.pointerId;orbit.start(e.pointerId,e.clientX,e.clientY);
   try{host.setPointerCapture(e.pointerId)}catch{}
  });
@@ -90,6 +106,8 @@ export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onRelo
  const actions={jump:onJump,interact:onInteract,next:onNext,reload:onReload,crouch:onCrouch,view:onView,pause:onPause};
  for(const b of root.querySelectorAll('button')){
   const name=b.dataset.m02;
+  if(name==='fire')releasers.add(()=>{if(state.fire){state.fire=false;onFire?.(false);}});
+  if(name==='aim')releasers.add(()=>{if(state.aim){state.aim=false;onAim?.(false);}});
   b.addEventListener('pointerdown',e=>{
    e.preventDefault();e.stopPropagation();
    try{b.setPointerCapture(e.pointerId);}catch{}
@@ -102,5 +120,9 @@ export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onRelo
    else if(name==='aim'){state.aim=false;onAim?.(false);}
   });
  }
- return {state,root,step(dt){return orbit.step(dt);},reset(){state.x=state.z=state.lookX=state.lookY=state.lookDX=state.lookDY=0;state.aim=state.fire=state.sprint=false;orbit.reset();lookPointer=null;onFire?.(false);onAim?.(false);}};
+ // Watchdog: a control still marked held while no finger has touched the screen for a moment is a stale one.
+ return {state,root,step(dt){
+  const held=state.x||state.z||state.fire||state.aim||lookPointer!==null;
+  if(held&&sawTouch&&fingers===0){idleFor+=dt||0;if(idleFor>.25){releaseAll();idleFor=0;}}else idleFor=0;
+  return orbit.step(dt);},reset(){state.x=state.z=state.lookX=state.lookY=state.lookDX=state.lookDY=0;state.aim=state.fire=state.sprint=false;orbit.reset();lookPointer=null;onFire?.(false);onAim?.(false);}};
 }

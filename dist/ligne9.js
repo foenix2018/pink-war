@@ -1,4 +1,5 @@
 import {createHologramComms} from './hologram-comms.js';
+import {levelArrow,arrowGuidance} from './objective-arrow.js';
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import {walkingSurface} from './surface-steps.js';
 // PINK WARS — « LIGNE 9 · LA LIGNE NOYÉE », campaign chapter 05 (Tome II M05, Acte II « Sous la ville »).
@@ -432,7 +433,7 @@ let lastDevices='';
 function updateHUD(){
  (combatHud ||= mountCombatHud({characterId,onAction:armorTouch})).update(game);
  const it=reading?null:mission.nearInteraction(),stageInfo=L.STAGES[mission.stage];combatHud.setContext(it?.label);
- combatHud.setObjective({guided:true,label:'LIGNE 9 · '+(L.ROOMS.find(r=>r.id===L.roomAt(game.player.x,game.player.z))?.label||'La Ligne Noyée'),detail:stageInfo?.label||''});
+ combatHud.setObjective({guided:true,guidance:levelArrow(L.INTERACTIONS,mission,game.player,yaw),label:'LIGNE 9 · '+(L.ROOMS.find(r=>r.id===L.roomAt(game.player.x,game.player.z))?.label||'La Ligne Noyée'),detail:stageInfo?.label||''});
  $('prompt').style.display=it?'block':'none';if(it)$('prompt').textContent='F / R3 · '+it.label;
  if(clock>noticeUntil)$('notice').style.display='none';
  $('crosshair').style.filter=clock<hitUntil?'drop-shadow(0 0 7px #ffffff) brightness(3)':'';

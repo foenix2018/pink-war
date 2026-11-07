@@ -1,4 +1,5 @@
 import {createElectricPortalSet} from './electric-portal.js';
+import {levelArrow,arrowGuidance} from './objective-arrow.js';
 import {createM01SiegeAmbiance} from './m01-siege-ambiance.js';
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import {walkingSurface} from './surface-steps.js';
@@ -349,7 +350,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     saber?.update({active,equipped:game.weapon.melee,extended:held,sound,speed:game.bladeSpeed,swing:game.bladePhase<.08});
     // Shared combat HUD (same panels as M02, the Arena and the Range); the legacy readouts stay hidden below.
     (combatHud ||= mountCombatHud({characterId,onAction:armorTouch})).update(game);
-    combatHud.setObjective({guided:true,label:'MISSION 01',detail:objective().text});combatHud.setContext(contextAction()?.title);
+    combatHud.setObjective({guided:true,guidance:arrowGuidance(game.player,game.guidance?.(),game.player.yaw),label:'MISSION 01',detail:objective().text});combatHud.setContext(contextAction()?.title);
     const hp=document.getElementById('pwHealth'),ammo=document.getElementById('pwAmmo'),name=document.getElementById('pwWeapon');
     if(hp)hp.textContent=String(Math.ceil(p.hp));if(ammo)ammo.textContent=game.weapon.melee?'LAME':game.ammo[game.weaponIndex]+' / '+game.weapon.capacity;
     if(name)name.textContent=game.weapon.name+(game.reloadRemaining>0?' · RECHARGE':'');

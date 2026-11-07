@@ -1,4 +1,5 @@
 import {createHologramComms} from './hologram-comms.js';
+import {levelArrow,arrowGuidance} from './objective-arrow.js';
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import {walkingSurface} from './surface-steps.js';
 // CHAPITRE 06 — « Le Cœur d’Acier » (campaign). The automated foundry of Vesper-Nord in the late afternoon: rail spur,
@@ -432,7 +433,7 @@ function updateHUD(){
  (combatHud ||= mountCombatHud({characterId,onAction:armorTouch})).update(game);
  const it=reading?null:mission.nearInteraction(),stageInfo=L.STAGES[mission.stage];combatHud.setContext(it?.label);
  const area=L.AREAS.find(a=>a.id===L.areaAt(game.player.x,game.player.z));
- combatHud.setObjective({guided:true,label:'CHAPITRE 06 · '+(area?.label||'Le Cœur d’Acier'),detail:stageInfo?.label||''});
+ combatHud.setObjective({guided:true,guidance:levelArrow(L.INTERACTIONS,mission,game.player,yaw),label:'CHAPITRE 06 · '+(area?.label||'Le Cœur d’Acier'),detail:stageInfo?.label||''});
  $('prompt').style.display=it?'block':'none';if(it)$('prompt').textContent='F / R3 · '+it.label;
  if(clock>noticeUntil)$('notice').style.display='none';
  $('crosshair').style.filter=clock<hitUntil?'drop-shadow(0 0 7px #ffffff) brightness(3)':'';
