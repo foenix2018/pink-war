@@ -53,5 +53,16 @@
     "license": "CC0-1.0",
     "author": "Kenney",
     "source": "https://kenney.nl/assets/sci-fi-sounds"
+  },
+  {
+    "weapon": "vortex",
+    "source_file": "laser-large-003.m4a",
+    "source_sha256": "a21ea3ea60eca50e18ddd6516fb1f26301fe2689cd5594228c5d82ec8d2ec255",
+    "file": "audio/kenney/vortex.wav",
+    "sha256": "6946e19aff9117d7635908f922e2c4635c3184eb0128c8316c97a5d3fe0eae60",
+    "seconds": 0.22,
+    "license": "CC0-1.0",
+    "author": "Kenney",
+    "source": "https://kenney.nl/assets/sci-fi-sounds"
   }
 ]

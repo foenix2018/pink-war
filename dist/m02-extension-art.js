@@ -30,7 +30,7 @@ function canvasTexture(T, w, h, paint, { repeat = false, color = true } = {}) {
   const t = new T.CanvasTexture(c); if (color) t.colorSpace = T.SRGBColorSpace; if (repeat) t.wrapS = t.wrapT = T.RepeatWrapping; t.anisotropy = 4; return t;
 }
 
-export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0xff6fb4 } = {}) {
+export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0xff6fb4, onDoorMotion = () => {} } = {}) {
   const low = quality === 'low', rng = seeded(2202);
   const root = new T.Group(); root.name = 'M02 / enclave du marché et tour de transit'; scene.add(root);
   const details = createVesperProps(T, root, {low});
@@ -455,6 +455,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       if (door.state === 'auto') { const dx = d.axis === 'x' ? player.x - d.centre : player.x - d.fixed, dz = d.axis === 'x' ? player.z - d.fixed : player.z - d.centre; target = Math.hypot(dx, dz) < 3.8 ? 1 : 0; }
       door.open += Math.sign(target - door.open) * Math.min(Math.abs(target - door.open), dt * (SPEED[d.style] || 1));
       door.model.update(door.open, door.state === 'closed');
+      onDoorMotion(d,door.open);
     }
   }
 

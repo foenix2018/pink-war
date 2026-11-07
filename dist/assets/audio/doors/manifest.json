@@ -1,0 +1,22 @@
+[
+  {
+    "file": "assets/audio/doors/open.wav",
+    "sha256": "41bfa799d04be4c7aab318e644094da4d41943e18721c499851cc94addd02209",
+    "source_file": "door-open-000.m4a",
+    "source_sha256": "58a4fb2ade78bc893ee2c3630a2d8c69de53f04c1563cb89b61f63479c2186f2",
+    "source": "https://kenney.nl/assets/sci-fi-sounds",
+    "mirror": "https://github.com/novincode/atomcut-library/tree/main/packs/kenney-sci-fi-sounds",
+    "license": "CC0-1.0",
+    "author": "Kenney"
+  },
+  {
+    "file": "assets/audio/doors/close.wav",
+    "sha256": "01f769ff191a34014c42ceb0044fa5bc1895f75781316f7c4603a283847cfb76",
+    "source_file": "door-close-000.m4a",
+    "source_sha256": "eaba279ffee0bd1882d5add531b11c411765ef164affbd9d567acdb1d530f5f2",
+    "source": "https://kenney.nl/assets/sci-fi-sounds",
+    "mirror": "https://github.com/novincode/atomcut-library/tree/main/packs/kenney-sci-fi-sounds",
+    "license": "CC0-1.0",
+    "author": "Kenney"
+  }
+]

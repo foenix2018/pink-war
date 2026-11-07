@@ -78,7 +78,7 @@ export function disposeLaserAudio(ctx){
   for(const node of state.nodes)node.disconnect();spaces.delete(ctx);
 }
 export const LASER_SAMPLES=Object.freeze(Object.fromEntries(
-  ['r9','bloom','lance','thorn','nova'].map(id=>[id,globalThis.__PINKWAR_AUDIO_SAMPLES?.[id]||`audio/kenney/${id}.wav`])
+  ['r9','bloom','vortex','lance','thorn','nova'].map(id=>[id,globalThis.__PINKWAR_AUDIO_SAMPLES?.[id]||`audio/kenney/${id}.wav`])
 ));
 export const REAL_LASER_SAMPLE=LASER_SAMPLES.r9;
 export async function loadRealLaserSample(ctx,load=globalThis.fetch){
@@ -131,8 +131,8 @@ export function playLaserShot(ctx,weapon='r9',power=1){
   if(!ctx||ctx.state!=='running')return false;
   const space=spaceFor(ctx);if(!space.enabled)return false;
   stopCharge(space,ctx.currentTime);
-  const shotSample={r9:'pistol-shot',bloom:'automatic-shot',lance:'sniper-shot',thorn:'shotgun-body',nova:'sniper-shot'}[weapon];
-  const physical=shotSample?recorded(ctx,space,shotSample,space.master,{r9:.55,bloom:.43,lance:.64,thorn:.50,nova:.55}[weapon],{rate:weapon==='thorn'?.76:weapon==='nova'?.70:1,limit:weapon==='bloom'?.14:.72}):combatBuffers.get(ctx)?.has('shotgun-body');
+  const shotSample={r9:'pistol-shot',bloom:'automatic-shot',vortex:'automatic-shot',lance:'sniper-shot',thorn:'shotgun-body',nova:'sniper-shot'}[weapon];
+  const physical=shotSample?recorded(ctx,space,shotSample,space.master,{r9:.55,bloom:.43,vortex:.40,lance:.64,thorn:.50,nova:.55}[weapon],{rate:weapon==='thorn'?.76:weapon==='nova'?.70:1,limit:weapon==='bloom'||weapon==='vortex'?.14:.72}):weapon==='m12'&&combatBuffers.get(ctx)?.has('shotgun-body');
   if(weapon==='m12'){
     recorded(ctx,space,'shotgun-body',space.master,.68,{limit:1.05});
     recorded(ctx,space,'rifle-mechanism',space.master,.20,{at:ctx.currentTime+.24,rate:.92});
@@ -143,15 +143,15 @@ export function playLaserShot(ctx,weapon='r9',power=1){
   if(real){
     const sample=ctx.createBufferSource(),gain=ctx.createGain(),compressor=ctx.createDynamicsCompressor();
     sample.buffer=real;
-    const rates={r9:1,bloom:1.08,lance:1.15,thorn:.9,nova:.8};
+    const rates={r9:1,bloom:1.08,vortex:.94,lance:1.15,thorn:.9,nova:.8};
     sample.playbackRate.value=(rates[weapon]||1)*(1+.015*Math.sin(ctx.currentTime*97));
-    const peak={r9:.32,bloom:.23,lance:.34,thorn:.37,nova:.4}[weapon]||.3;
-    gain.gain.value=peak*(physical?.18:1)*Math.max(.3,Math.min(1,Number(power)||1));
+    const peak={r9:.32,bloom:.23,vortex:.32,lance:.34,thorn:.37,nova:.4}[weapon]||.3;
+    gain.gain.value=peak*(physical?(weapon==='vortex'?.85:.18):1)*Math.max(.3,Math.min(1,Number(power)||1));
     compressor.threshold.value=-13;compressor.ratio.value=2.7;
     sample.connect(gain);gain.connect(compressor);compressor.connect(space.master);
     if(space.reflections)compressor.connect(space.reflections);
     const duration=real.duration/sample.playbackRate.value;
-    const playLength=Math.min(duration,weapon==='bloom'?.12:weapon==='r9'?.27:.8);
+    const playLength=Math.min(duration,weapon==='vortex'?.22:weapon==='bloom'?.12:weapon==='r9'?.27:.8);
     gain.gain.setValueAtTime(gain.gain.value,ctx.currentTime);
     gain.gain.setValueAtTime(gain.gain.value,ctx.currentTime+Math.max(.005,playLength-(weapon==='bloom'?.025:.06)));
     gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+playLength);

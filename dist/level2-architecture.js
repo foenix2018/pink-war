@@ -4,7 +4,7 @@
 import {createDistrictSignage} from './level2-signage.js';
 import {createDistrictUtilities} from './district-utility-details.js';
 import {createHardSurfaceFurniture} from './realistic-furniture.js';
-export function createDistrictArchitecture({T,root,materials,solid,beam,sign,collisions,low,rng}){
+export function createDistrictArchitecture({T,root,materials,solid,beam,sign,collisions,floors=[],low,rng}){
   const C=materials,signs=createDistrictSignage(T,{performance:low});
   // Some schematic-layout consumers supply a minimal Three interface for
   // collision validation rather than a complete 3D renderer.
@@ -27,7 +27,12 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
     const obj=new T.Mesh(new T.CylinderGeometry(r,r,h,seg),mat);
     obj.position.set(x,y,z);root.add(obj);return obj;
   };
-  const thin=(x,y,z,w,h,d,m)=>solid(x,y,z,w,h,d,m,false,false);
+  const thin=(x,y,z,w,h,d,m)=>{
+    const mesh=solid(x,y,z,w,h,d,m,false,false);
+    // Substantial slabs stop shots and carry the player; narrow trim stays decoration.
+    if(w>.6&&d>.6&&h<=.5&&y>.1){const top=y+h/2;collisions.push({x,z,hx:w/2,hz:d/2,y:y-h/2,height:h,walkableSurface:true,surface:'metal'});floors.push({x,z,hx:w/2,hz:d/2,height:top,id:'m02-slab-'+floors.length});}
+    return mesh;
+  };
   const glassBlue=C.glass,stainless=C.iron,signage=C.cyan,black=C.black;
   const darkTrim=new T.MeshStandardMaterial({color:0x111b27,roughness:.54,metalness:.62});
   const ceramic=new T.MeshStandardMaterial({color:0x536478,roughness:.44,metalness:.3});
@@ -117,8 +122,8 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
     }
   }
   function residentialTower(side,z,idx){
-    const x=side*(23+(idx%2)*3),height=24+(idx*7%28),w=18+(idx%3)*3,d=17;
-    collisions.push({x,z,hx:w/2,hz:d/2,y:0,height:height+1,surface:'concrete'});
+    const x=side*Math.max(23+(idx%2)*3,13.6+(18+(idx%3)*3)/2),height=24+(idx*7%28),w=18+(idx%3)*3,d=17;
+    collisions.push({x,z,hx:w/2,hz:d/2,y:0,height:Math.floor(height/3.2)*3.2+.27,groundSurface:true,surface:'concrete'});
     const front=x-side*w/2,storeys=Math.floor(height/3.2),bays=6,pitch=2.55;
     stats.buildings++;
     // Real rectangular floor plates, masonry piers and recessed glazing share
@@ -165,25 +170,27 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
   function materialForRoof(idx){return idx%2?dirty:ceramic;}
   function occupiedMarket(side,z){
     // Tented passage with *no* facade wall across the doorway.
-    const x=side*21,w=13,d=16,front=side*12.2,back=side*27;
+    const x=side*19.8,w=15.6,d=16,front=side*12.2,back=side*27;
     thin(side*19.8,-.06,z,15.4,.12,d,C.concrete);
     thin(x,8.7,z,w,.38,d,brushed);
     thin(x,9.1,z,w-.4,.08,d-.4,C.iron);
     solid(back,4.1,z,.9,8.2,d,dirty,true);
     for(const zz of [z-d/2+.55,z+d/2-.55]){
-      solid(side*20.5,3.9,zz,w-.5,7.8,.55,dirty,true);
-      thin(side*20.5,7.6,zz,w-.5,.22,.76,brushed);
+      solid(x,3.9,zz,w-.5,7.8,.55,dirty,true);
+      thin(x,7.6,zz,w-.5,.22,.76,brushed);
     }
     // Shutters open through a 5 m entrance, closed in side units.
     for(const zz of [z-5.4,z+5.4]){
+      collisions.push({x:front,z:zz,hx:.14,hz:1.55,y:0,height:4.3,surface:'metal',kind:'closed-market-shutter'});
       for(let yy=.6;yy<4.3;yy+=.30)thin(front,yy,zz,.23,.16,3.1,brushed);
     }
     beam([front,7.8,z-7.5],[front,7.8,z+7.5],.12,copper);
     for(let k=0;k<3;k++){
       const zz=z-5+k*5.1;
       // Real counter with open rear, recessed fronts, structural feet and drawers.
-      // Its unchanged 3m x 1.5m footprint does not close the market entrance.
+      // Its unchanged 3m x 1.5m footprint rotates with the model and leaves the entrance clear.
       furniture.dress({kind:'reception',x:side*19,z:zz,hx:1.50,hz:.75,height:1.06,yaw:-side*Math.PI/2});
+      collisions.push({x:side*19,z:zz,hx:.75,hz:1.5,y:0,height:1.11,surface:'metal',kind:'market-counter'});
       thin(side*17.4,2.4,zz,.12,1.2,2.2,dirty);
       for(let j=0;j<3;j++)thin(side*(18.6+j*.55),1.17,zz, .24,.2,.65,k%2?C.warning:C.rust);
       thin(side*22,3.5,zz,1.8,.13,3.2,brushed);
@@ -203,7 +210,7 @@ export function createDistrictArchitecture({T,root,materials,solid,beam,sign,col
     sign('RESEAU',side*26.45,5,z+4,2.9,'#60d5e6',side);
     for(let i=0;i<4;i++){
       const xx=side*(15.0+i*2.5),zz=z+5.2;
-      thin(xx,.4,zz,1.55,.8,.66,copper);
+      solid(xx,.4,zz,1.55,.8,.66,copper,true);
       thin(xx,.84,zz,1.68,.09,.76,C.warning);
     }
   }

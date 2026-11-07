@@ -23,6 +23,7 @@ export const ROOMS = Object.freeze([
   room('coffre', -40, -14, -96, -82, 5, 'vault', 'Coffre de données du Directoire'),
   room('quai', 14, 46, -96, -82, 10, 'dock', 'Quai de chargement · convoi du Directoire')
 ]);
+export const CEILINGS=Object.freeze(ROOMS.filter(r=>r.ceiling>0).map(r=>Object.freeze({kind:'ceiling-'+r.id,x:(r.x1+r.x2)/2,z:(r.z1+r.z2)/2,hx:(r.x2-r.x1)/2+.15,hz:(r.z2-r.z1)/2+.15,y:r.ceiling,height:.3,walkableSurface:true,extensionCeiling:true,extension:true,surface:'concrete'})));
 export const roomAt = (x, z) => ROOMS.find(r => x >= r.x1 && x <= r.x2 && z >= r.z1 && z <= r.z2)?.id || null;
 export const ZONE = Object.freeze(Object.fromEntries(ROOMS.map(r => [r.id, r.z1 > 0 ? 'enclave' : 'tour'])));
 
@@ -168,5 +169,5 @@ export const HOLD_WAVES = Object.freeze({ grille: [[2, 'grille1'], [12, 'grille2
 
 export function extensionObstacles({ open = [] } = {}) {
   const openSet = new Set(open);
-  return [...walls(), ...props(), ...DOORS.filter(d => !d.open && !openSet.has(d.id)).map(doorCollider)].map(o => ({ ...o }));
+  return [...walls(), ...props(), ...CEILINGS, ...DOORS.filter(d => !d.open && !openSet.has(d.id)).map(doorCollider)].map(o => ({ ...o }));
 }

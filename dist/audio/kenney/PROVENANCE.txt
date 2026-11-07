@@ -12,3 +12,7 @@ laser1.ogg: https://github.com/pythonarcade/arcade/tree/master/arcade/resources/
 Included mirror license: ARCADE-LICENSE.txt (Kenney CC0)
 
 Derived WAVs: mono 44100 Hz PCM 16-bit, normalized with ffmpeg loudnorm -20 LUFS/-3 dBTP. Per-weapon runtime gain, modest pitch variation, discharge envelope, mechanical and bass layers, short early reflections. manifest.json records original and converted SHA-256 and duration. No franchise audio is included. Original OGGs archived in source/.
+
+2026-11-07 — VORTEX AR7: laserLarge_003, Kenney Sci-Fi Sounds CC0, downloaded from
+https://github.com/novincode/atomcut-library/tree/main/packs/kenney-sci-fi-sounds/audio/laser-large-003.m4a
+Original mirror M4A archived in source/. Derived WAV: 0.22 s mono 44100 Hz PCM16, 140 Hz highpass, 6.5 kHz lowpass, -19 LUFS / -3 dBTP, 60 ms fade. Layered at runtime with the existing automatic-shot CC0 transient and original synthesis.

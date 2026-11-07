@@ -1,3 +1,5 @@
+import {loadDoorSamples,createDoorAudioController} from './door-audio.js';
+import {createM02Boundary,stairBody,beyondDistrict,muzzleBeforeCover} from './m02-physical-layout.js';
 import {scenarioGuidance,nearbyDoor} from './m02-guidance.js';
 import {createElectricPortalSet} from './electric-portal.js';
 import {createStairHardware} from './stair-hardware.js';
@@ -101,7 +103,7 @@ function audioReady(){
   const Context=window.AudioContext||window.webkitAudioContext;
   if(!Context)return;audioCtx=window.__PINKWAR_BOOT_AUDIO||new Context();
   audioCtx.resume?.().catch?.(()=>{});
-  setLaserAudioEnabled(audioCtx,enableAudio);void loadRealLaserSample(audioCtx);void loadCombatSamples(audioCtx);void loadPortalSamples(audioCtx);
+  setLaserAudioEnabled(audioCtx,enableAudio);void loadRealLaserSample(audioCtx);void loadCombatSamples(audioCtx);void loadPortalSamples(audioCtx);void loadDoorSamples(audioCtx);
   environmentAudio=createAmbience(audioCtx);
   battleAudio=createBattleAudio(audioCtx);
  }catch(error){console.warn('M02 audio fallback',error);}
@@ -225,8 +227,8 @@ function tower(side,z,idx){
 function street(){
  // The old road ended before several facade setbacks, exposing the clear
  // colour under the pavements. The entire district now has a real ground.
- const groundGeometry=new T.PlaneGeometry(88,164),uv=groundGeometry.attributes.uv;
- for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)*11,uv.getY(i)*10.25);
+ const groundGeometry=new T.PlaneGeometry(104,204),uv=groundGeometry.attributes.uv;
+ for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)*13,uv.getY(i)*12.75);
  const ground=new T.Mesh(groundGeometry,materials.concrete);ground.name='M02 / continuous district ground';ground.rotation.x=-Math.PI/2;ground.position.set(0,-.02,-1);ground.receiveShadow=true;root.add(ground);
  solid(0,-.16,0,22,.3,158,materials.asphalt,false);
  // Continuous tileable asphalt skin fixes the stretched UVs of the 158 m road.
@@ -259,8 +261,8 @@ function blockBuildings(){
  // Distant volumetric skyline for dense city silhouette.
  for(let i=0;i<80;i++){
   const x=(rng()-.5)*145,z=(rng()-.5)*185;
-  if(Math.abs(x)<35&&z>-80&&z<80)continue;
   const h=22+rng()*65,w=5+rng()*9;
+  if(!beyondDistrict(x,z,w/2+12))continue;
   solid(x,h/2-.3,z,w,h,w,materials.black,false,false);
   if(rng()>.48)solid(x,h-.4,z,w*.6,.2,w*.6,materials.dark,false,false);
  }
@@ -296,6 +298,7 @@ function stairsAndSkybridges(){
  for(let i=0;i<upN;i++){
   const z=16.1-(i+.5)*step,h=(i+1)*rise;
   solid(eastX,h/2,z,2.55,h,step+.012,materials.iron,false);
+  const body=stairBody(eastX,z,2.55,step+.012,h);if(body)collisions.push(body);
   solid(eastX,h+.012,z,2.55,.028,step,materials.warning,false);
   walkway(eastX,z,2.55,step+.06,h,'east-stair-'+i);
 
@@ -304,16 +307,17 @@ function stairsAndSkybridges(){
  walkway(eastX,-12.5,2.9,12,12,'upper-east');
  solid(0,11.85,-18,22,.3,3.05,materials.road,false);
  walkway(0,-18,22,3.05,12,'crossbridge');
- for(let side of [-1,1]){
-  const x=side*1.38;
-  for(let i=-5;i<=5;i++){beam([i*2,12.1,-18+x],[i*2,13.3,-18+x],.06,materials.iron);}
-  beam([-10.4,13.2,-18+x],[10.4,13.2,-18+x],.07,materials.iron);
-  collisions.push({x:0,z:-18+x,hx:11,hz:.1,y:12,height:1.25,surface:'metal'});
+ // Leave real landing openings at the east, west and roof stair entrances.
+ for(const [z,from,to] of [[-16.62,-11,8.9],[-19.38,-5.1,11]]){
+  for(let x=from;x<=to;x+=2)beam([x,12.1,z],[x,13.3,z],.06,materials.iron);
+  beam([from,13.2,z],[to,13.2,z],.07,materials.iron);
+  collisions.push({x:(from+to)/2,z,hx:(to-from)/2,hz:.1,y:12,height:1.25,surface:'metal'});
  }
  for(let i=0;i<upN;i++){
   const z=-19.7-(i+.5)*step,h=12-(i+1)*rise;
   if(h<=0)continue;
   solid(westX,h/2,z,2.55,h,step+.012,materials.iron,false);
+  const body=stairBody(westX,z,2.55,step+.012,h);if(body)collisions.push(body);
   solid(westX,h+.012,z,2.55,.03,step,materials.warning,false);
   walkway(westX,z,2.55,step+.07,h,'west-stair-'+i);
  }
@@ -324,16 +328,17 @@ function stairsAndSkybridges(){
  for(let i=0;i<72;i++){
   const z=-19.8-(i+.5)*.36,h=12+(i+1)*roofRise;
   solid(roofX,(12+h)/2,z,2.4,h-12,.37,materials.iron,false);
+  const body=stairBody(roofX,z,2.4,.37,h,12);if(body)collisions.push(body);
   solid(roofX,h+.01,z,2.4,.03,.36,materials.iron,false);
   walkway(roofX,z,2.4,.40,h,'roof-stair-'+i);
  }
  createStairHardware(T,root,{id:'m02-toit',x:roofX,halfWidth:1.2,bottomZ:-19.8,topZ:-19.8-72*.36,base:12,height:25},{low:low(),steps:72,materials:{steel:materials.iron,dark:materials.black}});
- solid(-9,24.85,-51,15,.30,13.5,materials.road,false);
- walkway(-9,-51,15,13.5,25,'roof');
+ solid(-6.7,24.85,-51,10.4,.30,13.5,materials.road,false);
+ walkway(-6.7,-51,10.4,13.5,25,'roof');
  for(let z=-57;z<-44;z+=2){
-  beam([-16.25,25,z],[-16.25,26.2,z],.06,materials.iron);
+  beam([-11.65,25,z],[-11.65,26.2,z],.06,materials.iron);
  }
- beam([-16.25,26.2,-57],[-16.25,26.2,-44],.08,materials.iron);
+ beam([-11.65,26.2,-57],[-11.65,26.2,-44],.08,materials.iron);
  // Architectural braces and hanging lighting beneath the crossbridge.
  for(const side of [-1,1])beam([side*8,2,-18],[side*8,11.6,-18],.21,materials.iron,8);
  for(let i=-4;i<=4;i++)beam([i*2.2,11.5,-18],[i*2.2,12,-18],.06,materials.black);
@@ -351,7 +356,7 @@ function props(){
  // First enclave: believable aid station, shutters, mattresses, radio, kit.
  archive(-3,55,'POSTE DE SOINS','soins');collisions.push({x:-3,z:55,hx:1.1,hz:.38,y:0,height:1.9,surface:'metal'});
  for(let i=0;i<3;i++){
-  solid(-5+i*1.3,.22,58,1.1,.44,2.0,materials.plaster,false);
+  solid(-5+i*1.3,.22,58,1.1,.44,2.0,materials.plaster,true);
   solid(-5+i*1.3,.42,58,.8,.05,1.7,materials.warning,false);
  }
  const aid=sign('SECOURS',-3,3.15,54.9,2.5,'#a4b7ac',-1);aid.rotation.y=0;
@@ -416,7 +421,7 @@ function createEnvironment(){
  scene.background=new T.Color(0x1c252d);scene.fog=new T.FogExp2(0x263139,low()?.008:.009);
  root=new T.Group();root.name='M02 / W02 LES BAS-NIVEAUX';scene.add(root);
  districtSigns=createDistrictSignage(T,{performance:low()});
- architecture=createDistrictArchitecture({T,root,materials,solid,beam,sign,collisions,low:low(),rng});
+ architecture=createDistrictArchitecture({T,root,materials,solid,beam,sign,collisions,floors,low:low(),rng});
  // Metals need reflected sky radiance, not brighter emissive colour. A tiny
  // original district reflection map keeps the graphite weapons readable.
  const reflection=canvasTexture(256,128,(c,w,h)=>{const g=c.createLinearGradient(0,0,0,h);for(const [at,color]of [[0,'#566574'],[.40,'#83909a'],[.51,'#35424b'],[.7,'#20272a'],[1,'#131a1c']])g.addColorStop(at,color);c.fillStyle=g;c.fillRect(0,0,w,h);});
@@ -433,13 +438,15 @@ function createEnvironment(){
   lamp.position.set(x,6.5,z);scene.add(lamp);lightSources.push(lamp);
  }
  street();blockBuildings();stairsAndSkybridges();props();architecture.decorate();
+ createM02Boundary(T,root,{materials,solid,sign});
+ for(const b of extensionObstacles())if(b.extensionCeiling)floors.push({...b,height:b.y+b.height,id:b.kind});
  // Visual-only pass: no collision changes or character/weapon assets touched.
  environmentFinish=createEnvironmentFinish(T,{root,scene,performance:low(),accent:characterId==='lylu'?0x69b7ff:0xff63af});
  warZone=createWarZone(T,root,materials,collisions,{performance:low()});weather();
  const neons=createLevelNeons(T,root,{low:low(),metal:materials.iron,back:materials.dark,materials:[materials.cyan,materials.amber,materials.red,materials.rose,materials.blue,materials.white]});
  neons.meshes();neons.build();root.userData.neons=neons.stats();optimizeStaticBoxes();
  // 3.70: the enclave of the covered market (north) and the transit tower (south) close the two ends of the street.
- try{extArt=createM02ExtensionArt(T,scene,{quality:low()?'low':'normal',accent:characterId==='lylu'?0x4da8ff:0xff4fa1});extArt.build(extensionObstacles());}
+ try{extArt=createM02ExtensionArt(T,scene,{quality:low()?'low':'normal',accent:characterId==='lylu'?0x4da8ff:0xff4fa1,onDoorMotion:(d,p)=>doorAudio.update(d,p)});extArt.build(extensionObstacles());}
  catch(error){console.warn('M02 extension dressing degraded, the mission stays playable:',error);extArt=null;}
  worldShadows=createWorldShadows(T,{scene,renderer,light:moon,profile:{artQuality:low()?'low':'auto'},direction:{x:-28,y:56,z:28}});
  groundOcclusion=createGroundOcclusion(T,root,collisions,{compact:low()});
@@ -523,16 +530,16 @@ function openJournal(entry,then){
  if(xr?.active)xr.showJournal(entry,()=>document.getElementById('m01-journal')?.close());
 }
 // Short synthesised cues for the extension beats (doors, crank, batteries, holds, HELIX drops, documents).
+const doorAudio=createDoorAudioController({getContext:()=>audioCtx,getListener:()=>game?.player,getYaw:()=>yaw,enabled:()=>enableAudio&&running&&!paused&&!journalOpen});
 const portalAudio=createPortalLaserController({getContext:()=>audioCtx,getListener:()=>game?.player,getYaw:()=>yaw,enabled:()=>enableAudio});
 function extensionCue(kind){
  if(!enableAudio||!audioCtx||audioCtx.state!=='running')return;
- if(kind==='portal')return; // Transition audio is owned by portalAudio.sync.
+ if(kind==='portal'||kind==='door')return; // Transition audio is owned by portalAudio.sync.
  try{
   const now=audioCtx.currentTime,out=audioCtx.createGain();out.gain.value=.12;out.connect(audioCtx.destination);
   const tone=(type,from,to,length,delay=0,gain=.9)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(from,now+delay);o.frequency.exponentialRampToValueAtTime(to,now+delay+length);
    g.gain.setValueAtTime(.0001,now+delay);g.gain.exponentialRampToValueAtTime(gain,now+delay+.02);g.gain.exponentialRampToValueAtTime(.0001,now+delay+length);o.connect(g);g.connect(out);o.start(now+delay);o.stop(now+delay+length+.05);};
-  if(kind==='door'){tone('sawtooth',70,55,1.4,0,.5);tone('square',140,120,.2,0,.3);}
-  else if(kind==='valve'){for(let k=0;k<5;k++)tone('square',220+k*20,200+k*20,.08,k*.16,.35);}
+  if(kind==='valve'){for(let k=0;k<5;k++)tone('square',220+k*20,200+k*20,.08,k*.16,.35);}
   else if(kind==='engine'){tone('sawtooth',30,62,2.6,0,.8);tone('square',45,90,2.4,.3,.35);}
   else if(kind==='hold'){tone('sine',110,220,1.8,0,.6);tone('sine',55,110,2.2,.1,.6);}
   // Portal cue is handled by the original cinematic laser sound above.
@@ -632,7 +639,7 @@ function updateOriginalSoldier(dt,moving,sprint,firing){
 }
 function pauseMission(){
  if(!running||paused)return;
- combatHud?.reset();touchSprinting=false;paused=true;running=false;battleAudio?.pause();environmentAudio?.pause();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
+ doorAudio.reset();combatHud?.reset();touchSprinting=false;paused=true;running=false;battleAudio?.pause();environmentAudio?.pause();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
  touchControls?.reset();pinkControls.reset();document.exitPointerLock?.();
  // The immersive headset uses its own selectable 3D pause menu.
  // Avoid an invisible HTML pause dialog retaining the wrong state.
@@ -747,10 +754,11 @@ function gameTick(dt){
  }else origin.copy(camera.position).addScaledVector(forward,.23);
  const shotDirection=target.clone().sub(origin).normalize();
  const aim=xr?.active?xr.aim():{origin,direction:aimBlend>.3?shotDirection:new T.Vector3().copy(assistedAim({camera:camera.position,forward,origin,direction:shotDirection,enemies:game.enemies,obstacles:collisions,touch:!!navigator.maxTouchPoints}))};
+ aim.origin=muzzleBeforeCover(game.player,aim.origin,collisions);
  if(game.weapon.semiAuto&&firePressQueued)game.triggerHeld=false;
  firePressQueued=false;
  const ammoBefore=game.ammo[game.weaponIndex],bladeBefore=game.bladeSlashAt;
- if(xr?.active&&game.weapon.dual){for(const hand of ['right','left']){const a=xr.aim(hand);game.triggerHand(hand,hand==='right'?xc.fire:xc.leftFire,dt,a.origin,a.direction);}}
+ if(xr?.active&&game.weapon.dual){for(const hand of ['right','left']){const a=xr.aim(hand);a.origin=muzzleBeforeCover(game.player,a.origin,collisions);game.triggerHand(hand,hand==='right'?xc.fire:xc.leftFire,dt,a.origin,a.direction);}}
  else if(firing||game.charge>0)game.trigger(firing,dt,aim.origin,aim.direction);
  else if(game.weapon.melee)game.trigger(false,dt,aim.origin,aim.direction);
  else{game.triggerHeld=false;game.semiPending=false;}
@@ -979,6 +987,7 @@ async function boot(){
  }
 }
 function resume({fresh=false}={}){
+ doorAudio.reset();
  if(paused){unpauseMission();return;}
  running=true;shade.style.display='none';startButton.disabled=false;
  if(game){game.reset(characterId);game.wave=2;game.ownedWeapons=new Set([...starterWeaponOrder(characterId),1,2]);game.ammo=WEAPONS.map(w=>w.capacity);}

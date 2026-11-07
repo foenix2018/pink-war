@@ -143,6 +143,9 @@ export function moveInArena(entity, dx, dz, radius, obstacles) {
   const edge = ARENA_SIZE / 2 - radius - 1;
   let x = clamp(entity.x + dx, -edge, edge), z = entity.z;
   for (const b of obstacles) {
+    // Stair treads meet the feet before a capsule's forward radius. Allow this
+    // overlap inside the flight, while preserving its full solid side faces.
+    if (b.stairBody && Math.abs(entity.x-b.x)<b.hx-.08 && Math.abs(x-b.x)<b.hx-.08 && (b.y||0)+b.height<=(entity.elevation||0)+.62) continue;
     if (b.walkableSurface || ((entity.elevation||0) >= (b.y||0)+b.height-.02) || ((entity.elevation||0)+(entity.crouched?.95:1.8) < (b.y||0))) continue;
     const near=b.x-b.hx-radius,far=b.x+b.hx+radius;
     const crosses=(x>near&&x<far)||(dx>0&&entity.x<=near&&x>=near)||(dx<0&&entity.x>=far&&x<=far);
@@ -152,6 +155,7 @@ export function moveInArena(entity, dx, dz, radius, obstacles) {
   }
   z = clamp(entity.z + dz, -edge, edge);
   for (const b of obstacles) {
+    if (b.stairBody && Math.abs(entity.x-b.x)<b.hx-.08 && Math.abs(x-b.x)<b.hx-.08 && (b.y||0)+b.height<=(entity.elevation||0)+.62) continue;
     if (b.walkableSurface || ((entity.elevation||0) >= (b.y||0)+b.height-.02) || ((entity.elevation||0)+(entity.crouched?.95:1.8) < (b.y||0))) continue;
     const near=b.z-b.hz-radius,far=b.z+b.hz+radius;
     const crosses=(z>near&&z<far)||(dz>0&&entity.z<=near&&z>=near)||(dz<0&&entity.z>=far&&z<=far);
