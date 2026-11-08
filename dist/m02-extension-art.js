@@ -491,7 +491,10 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       else if (it.id === 'badge') { part(M.helixWhite, .1, .02, .15, 0, at.top + .01, -.2); part(M.helix, .1, .021, .03, 0, at.top + .012, -.25); lamp.position.set(.2, at.top + .03, -.2); lamp.scale.setScalar(.5); }
       else if (it.id === 'lecteur' || it.id === 'commande-quai') { control=createModernSwitch(T,g,{y:1.4,z:.06,scale:.7,variant:switchVariant(it.id),id:it.id,label:it.id==='lecteur'?'IDENTIFICATION':'COMMANDE DU QUAI',onLabel:it.id==='lecteur'?'ACCÈS VALIDÉ':'QUAI OUVERT',low});lamp.visible=false; }
       else if (it.id === 'radio') { part(M.dark, .7, .4, .4, 0, at.top + .2, -.2); part(M.amber, .3, .07, .01, -.1, at.top + .28, .005); const ant = new T.Mesh(new T.CylinderGeometry(.01, .01, 1, 4), M.steel); ant.position.set(.25, at.top + .9, -.25); g.add(ant); lamp.position.set(.25, at.top + .35, .01); }
-      else if (it.id === 'batterie') { const cable = new T.Mesh(new T.CylinderGeometry(.025, .025, 1.2, 6), M.helixRed); cable.rotation.z = Math.PI / 2; cable.position.set(0, at.top + .1, -.3); g.add(cable); moving = cable; lamp.position.set(.3, at.top + .1, -.3); }
+      else if (it.id === 'batterie') { const cable = new T.Mesh(new T.CylinderGeometry(.025, .025, 1.2, 6), M.helixRed); cable.rotation.z = Math.PI / 2; cable.position.set(0, at.top + .1, -.3); g.add(cable); moving = cable; lamp.position.set(.3, at.top + .1, -.3);
+        // Modern electrical control, while keeping the existing physical cable and mission interaction.
+        control=createModernSwitch(T,g,{x:.52,y:1.42,z:.08,scale:.58,variant:'breaker',id:it.id,label:'BANC DE BATTERIES',onLabel:'RACCORDÉ',offLabel:'HORS CIRCUIT',low});lamp.visible=false;
+      }
       else if (it.log) {
         const paper = new T.Mesh(new T.PlaneGeometry(.34, .46), new T.MeshStandardMaterial({ map: paperTex(it.label.replace(/^(LIRE|REGARDER|CONSULTER) (LE |LA |L’|LES )?/, ''), seed++), roughness: .9, side: T.DoubleSide }));
         if (table) { paper.rotation.x = -Math.PI / 2; paper.rotation.z = rng() - .5; paper.position.set(0, at.top + .006, -.25); lamp.position.set(.22, at.top + .03, -.25); lamp.scale.setScalar(.5); }
