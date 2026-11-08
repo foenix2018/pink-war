@@ -22,7 +22,7 @@ function fixture(t,skillsInput=()=>false){
  let rightQ=new T.Quaternion(),rightTracked=true;const frame={getPose:space=>space.hand==='right'&&!rightTracked?null:({transform:{matrix:new T.Matrix4().compose(new T.Vector3(space.hand==='right'?.2:-.2,1.2,-.45),space.hand==='right'?rightQ:new T.Quaternion(),new T.Vector3(1,1,1)).elements}})};
  const press=(source,index,yes)=>{source.gamepad.buttons[index]={pressed:yes,value:Number(yes)};};
  function pointAt(row){const mesh=scene.getObjectByName('Fracture / menu pause immersif'),target=mesh.localToWorld(new T.Vector3(0,(.5-(268+122*row)/720)*.8015625,0));target.z-=game.player.z;rightQ=new T.Quaternion().setFromUnitVectors(new T.Vector3(0,0,-1),target.sub(new T.Vector3(.2,1.2,-.45)).normalize());}
- return{xr,w,session,left,right,frame,press,get requests(){return requests;},get paused(){return paused;},get homes(){return homes;},get exits(){return exits;},get loop(){return loop;},pointAtHome:()=>pointAt(1),pointAtResume:()=>pointAt(0),loseRight:()=>{rightTracked=false;},recoverRight:()=>{rightTracked=true;}};
+ return{xr,w,session,left,right,frame,press,get requests(){return requests;},get paused(){return paused;},get homes(){return homes;},get exits(){return exits;},get loop(){return loop;},pointAtShield:()=>{const mesh=scene.getObjectByName('Bouclier / bouton dédié au poignet gauche'),target=mesh.getWorldPosition(new T.Vector3()).sub(new T.Vector3(game.player.x,game.player.elevation||0,game.player.z));rightQ=new T.Quaternion().setFromUnitVectors(new T.Vector3(0,0,-1),target.sub(new T.Vector3(.2,1.2,-.45)).normalize());},pointAway:()=>{rightQ=new T.Quaternion();},pointAtHome:()=>pointAt(1),pointAtResume:()=>pointAt(0),loseRight:()=>{rightTracked=false;},recoverRight:()=>{rightTracked=true;}};
 }
 
 test('VR requests keep the click activation and preserve the running mission on entry and exit',async t=>{
@@ -137,4 +137,27 @@ test('Arena and Range X resumes VR after the primary controller briefly loses tr
  f.press(f.right,0,false);state.input(f.frame);
  f.press(f.right,0,true);assert.equal(state.input(f.frame).fire,true);
  state.removePauseBoard();
+});
+
+
+test('mission Quest wrist shield toggles in combat and captures the entire selecting trigger press',async t=>{
+ const f=fixture(t);f.w.game.enableArmorShield();f.w.game.enableProjectedShields();await f.xr.enter();f.xr.input(f.frame,.016);
+ const button=f.w.scene.getObjectByName('Bouclier / bouton dédié au poignet gauche');assert.equal(button.visible,true);
+ f.pointAtShield();f.xr.input(f.frame,.016);f.press(f.right,0,true);let input=f.xr.input(f.frame,.016);
+ assert.equal(f.w.game.player.shieldDeployed,true);assert.equal(input.fire,false);assert.equal(f.paused,false);
+ f.pointAway();input=f.xr.input(f.frame,.016);assert.equal(input.fire,false,'holding the selecting trigger away from the icon must not shoot');assert.equal(f.w.game.player.shieldDeployed,true);
+ f.press(f.right,0,false);f.xr.input(f.frame,.016);f.press(f.right,0,true);assert.equal(f.xr.input(f.frame,.016).fire,true,'normal fire returns after release');
+ f.press(f.right,0,false);f.pointAtShield();f.xr.input(f.frame,.016);f.press(f.right,0,true);assert.equal(f.xr.input(f.frame,.016).fire,false);assert.equal(f.w.game.player.shieldDeployed,false);
+ f.press(f.right,0,false);f.press(f.left,4,true);f.xr.input(f.frame,.016);assert.equal(f.paused,true);assert.equal(button.visible,false);
+ await f.xr.exit();assert.equal(button.parent,null);
+});
+
+test('Arena and Range Quest wrist shield consumes both pistols without reassigning the physical buttons',t=>{
+ const f=fixture(t);f.w.game.enableArmorShield();f.w.game.enableProjectedShields();f.w.game.player.z=0;f.w.camera.position.set(0,1.65,0);
+ const controllers=[f.left,f.right].map(source=>{const ray=new T.Group(),anchor=new T.Group(),gun=new T.Group(),bare=new T.Group();ray.userData.source=source;anchor.matrixAutoUpdate=false;f.w.scene.add(ray,anchor);return{ray,anchor,gun,bare,source,tracked:true};});
+ const state=Object.assign(Object.create(VRController.prototype),{mode:'xr',session:f.session,settings:{...VR_DEFAULTS},controllers,previous:new Map(),triggerBlocked:true,hooks:{world:()=>f.w,game:()=>f.w.game,phase:()=>'playing'}});
+ state.input(f.frame);f.pointAtShield();state.input(f.frame);f.press(f.right,0,true);const input=state.input(f.frame);
+ assert.equal(f.w.game.player.shieldDeployed,true);assert.equal(input.fire,false);assert.deepEqual(input.fireHands,{left:false,right:false});
+ f.pointAway();assert.equal(state.input(f.frame).fire,false);f.press(f.right,0,false);state.input(f.frame);f.press(f.right,0,true);assert.equal(state.input(f.frame).fire,true);
+ state.shieldButton.dispose();
 });

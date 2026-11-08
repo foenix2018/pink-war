@@ -1,3 +1,4 @@
+import {createXRShieldButton} from './xr-shield-button.js';
 import {syncTrackedHands} from './xr-hands.js';
 import {segmentBox} from './game-logic.js';
 import {createXRPauseMenu,createXRJournal} from './xr-pause-menu.js';
@@ -12,7 +13,7 @@ export async function immersiveRendererPreferred(){
 }
 // Screen missions keep their actual world, simulation, inventory and progress in XR.
 export function createMissionXR({getWorld,onFrame,onPause,onResume,onHome,onExit=()=>{},isPaused=()=>false,getYaw=()=>0,setYaw=()=>{},skillsInput=()=>false}){
- let session=null,rig=null,busy=false,blocked=true,previous=new Map(),entries=[],menu=null,scope=null,yaw=0,controls=null,hud=null,reading=null,closeReading=null,opticalEye=null;
+ let session=null,rig=null,busy=false,blocked=true,previous=new Map(),entries=[],menu=null,scope=null,yaw=0,controls=null,hud=null,reading=null,closeReading=null,opticalEye=null,shieldButton=null;
  const down=b=>!!b?.pressed||(b?.value||0)>.15,adsScratch={},sightScratch={},aimScratch={};
  // The right eye looks through the optic of the right-hand weapon (XR eye cameras carry world matrices only).
  const eyeCamera=()=>{const w=getWorld(),source=session&&w.renderer.xr.getCamera(w.camera).cameras?.[1];if(!source)return null;const eye=opticalEye ||=new w.T.PerspectiveCamera();eye.matrixAutoUpdate=false;eye.matrix.copy(source.matrixWorld);eye.matrixWorld.copy(source.matrixWorld);eye.matrixWorldInverse.copy(source.matrixWorld).invert();eye.projectionMatrix.copy(source.projectionMatrix);eye.projectionMatrixInverse.copy(source.projectionMatrixInverse);return eye;};
@@ -28,7 +29,8 @@ export function createMissionXR({getWorld,onFrame,onPause,onResume,onHome,onExit
    let opened;try{
     opened=await pending;session=opened;const {T,scene,camera,renderer}=w;yaw=getYaw();rig=new T.Group();scene.add(rig);rig.add(camera);camera.clearViewOffset();camera.position.set(0,0,0);camera.rotation.set(0,0,0);renderer.xr.enabled=true;renderer.xr.setReferenceSpaceType('local-floor');renderer.xr.setFramebufferScaleFactor?.(.9);renderer.xr.setFoveation?.(.65);
     entries=[0,1].map(index=>{const ray=renderer.xr.getController(index),anchor=new T.Group(),mount=new T.Group();anchor.matrixAutoUpdate=false;anchor.visible=false;rig.add(ray,anchor);anchor.add(mount);mount.position.set(0,-.012,.018);const gun=w.createGun(),bare=w.createHand();gun.userData.recoilTracked=true;gun.userData.showSupport=false;if(gun.userData.support)gun.userData.support.visible=false;mount.add(gun,bare);return{ray,anchor,mount,gun,bare,source:null,tracked:false};});
-    menu=createXRPauseMenu(T,scene,{accent:w.accent,onResume:()=>{blocked=true;onResume();},onHome:()=>void api.home(),onExit:()=>void api.exit(),onShield:()=>{if(w.game.player.shield<=0)return;blocked=true;onResume();w.game.toggleProjectedShield?.();},shieldLabel:()=>w.game.player.shield<=0?'BOUCLIER EN RECHARGE':w.game.player.shieldDeployed?'REPLIER LE BOUCLIER':'ACTIVER LE BOUCLIER'});
+    shieldButton=createXRShieldButton(T,scene,{getGame:()=>getWorld().game,haptic:()=>api.haptic('weapon')});
+    menu=createXRPauseMenu(T,scene,{accent:w.accent,onResume:()=>{blocked=true;onResume();},onHome:()=>void api.home(),onExit:()=>void api.exit(),onShield:w.game.projectedShieldsEnabled?()=>{if(w.game.player.shield<=0)return;blocked=true;onResume();w.game.toggleProjectedShield?.();}:null,shieldLabel:()=>w.game.player.shield<=0?'BOUCLIER EN RECHARGE':w.game.player.shieldDeployed?'REPLIER LE BOUCLIER':'ACTIVER LE BOUCLIER'});
     const canvas=document.createElement('canvas');canvas.width=512;canvas.height=112;const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;const plane=new T.Mesh(new T.PlaneGeometry(.42,.091875),new T.MeshBasicMaterial({map:texture,transparent:true,depthTest:false,depthWrite:false,toneMapped:false}));plane.position.set(0,-.27,-1.05);plane.renderOrder=100;plane.frustumCulled=false;camera.add(plane);hud={canvas,texture,plane,key:''};
     opened.addEventListener('end',finish,{once:true});opened.addEventListener('visibilitychange',()=>{if(opened.visibilityState!=='visible'){blocked=true;onPause();}});
     document.body.classList.add('xr-mode');await renderer.xr.setSession(opened);renderer.setAnimationLoop(onFrame);blocked=true;previous.clear();onResume();api.syncPose();
@@ -51,11 +53,12 @@ export function createMissionXR({getWorld,onFrame,onPause,onResume,onHome,onExit
    const reload=edge('reload',down(rp?.buttons[5])),next=edge('next',down(lp?.buttons[5])),jump=edge('jump',down(rp?.buttons[4])),interact=edge('interact',down(lp?.buttons[3]));
    // Armour layer: right stick click strikes; the left index trigger throws a charge unless it fires the second pistol.
    const melee=edge('melee',down(rp?.buttons[3])),charge=edge('charge',leftTrigger&&!w.game.weapon?.dual);
-   if(reading){menu.update({active:false});reading.update(w.camera,right?.ray,trigger);blocked=true;return controls={x:0,z:0,fire:false,leftFire:false,jump:false,aim:false,sprint:false};}
+   if(reading){shieldButton?.update({trigger});menu.update({active:false});reading.update(w.camera,right?.ray,trigger);blocked=true;return controls={x:0,z:0,fire:false,leftFire:false,jump:false,aim:false,sprint:false};}
    const consumed=menu.update({active:isPaused(),camera:w.camera,ray:right?.tracked?right.ray:null,trigger:right?.tracked?trigger:false});
-   if(consumed){blocked=true;controls={x:0,z:0,fire:false,leftFire:false,jump:false,aim:false,sprint:false};return controls;}
+   if(consumed){shieldButton?.update({trigger});blocked=true;controls={x:0,z:0,fire:false,leftFire:false,jump:false,aim:false,sprint:false};return controls;}
    const skillsConsumed=!isPaused()&&skillsInput({T,scene:w.scene,camera:w.camera,left:left?.anchor,right:right?.ray,trigger:trigger&&!blocked,enabled:!!right?.tracked});
-   if(consumed||skillsConsumed){blocked=true;controls={x:0,z:0,fire:false,leftFire:false,jump:false,aim:false,sprint:false};return controls;}
+   const shieldConsumed=shieldButton?.update({active:!isPaused()&&!skillsConsumed&&!!left?.tracked&&!!right?.tracked,left:left?.anchor,ray:right?.ray,camera:w.camera,trigger});
+   if(consumed||skillsConsumed||shieldConsumed){blocked=true;controls={x:0,z:0,fire:false,leftFire:false,jump:false,aim:false,sprint:false};return controls;}
    if(isPaused()){blocked=true;return controls={x:0,z:0,fire:false,leftFire:false,jump:false,aim:false,sprint:false};}
    if(reload){w.game.reload();blocked=true;}if(next){w.game.cycleWeapon();blocked=true;}
    const axis=v=>Math.abs(v||0)>.16?v:0;yaw-=axis(rp?.axes?.[2]||0)*1.8*dt;setYaw(yaw);api.syncPose();
@@ -108,7 +111,7 @@ export function createMissionXR({getWorld,onFrame,onPause,onResume,onHome,onExit
   haptic(type,arg,hand='right'){try{if(JSON.parse(localStorage.getItem('pink-war-vr')||'{}').haptics===false)return;}catch{}const pulse=hapticPlan(type,arg).main;if(pulse)buzz(entries.find(e=>e.source?.handedness===hand)?.source?.gamepad,pulse);},
   async exit(){await session?.end();},async home(){await api.exit();onHome();}
  };
- function finish(){if(!session)return;const w=getWorld();session=null;w.renderer.setAnimationLoop(null);w.scene.add(w.camera);reading?.dispose();reading=null;menu?.dispose();menu=null;scope?.dispose();scope=null;if(hud){hud.plane.removeFromParent();hud.plane.geometry.dispose();hud.plane.material.dispose();hud.texture.dispose();hud=null;}
+ function finish(){if(!session)return;const w=getWorld();session=null;w.renderer.setAnimationLoop(null);w.scene.add(w.camera);reading?.dispose();reading=null;menu?.dispose();menu=null;shieldButton?.dispose();shieldButton=null;scope?.dispose();scope=null;if(hud){hud.plane.removeFromParent();hud.plane.geometry.dispose();hud.plane.material.dispose();hud.texture.dispose();hud=null;}
   for(const e of entries){e.gun.userData.disposeDynamic?.();e.bare.userData.dispose?.();e.ray.removeFromParent();}entries=[];rig?.removeFromParent();rig=null;w.renderer.xr.enabled=false;document.body.classList.remove('xr-mode');setYaw(yaw);onPause();onExit();
  }
  return api;

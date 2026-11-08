@@ -1,3 +1,4 @@
+import {createXRShieldButton} from './xr-shield-button.js';
 import { clamp, segmentBox, segmentSphere, traceEnemyHit } from './game-logic.js';
 import { portalIndicators } from './portal-indicator.js';
 import { createObjectiveGuide, objectiveIndicator } from './objective-guidance.js';
@@ -55,6 +56,7 @@ export function questControls(hand = 'right') {
     [b.jump, 'Saut · second appui : double saut / rebond mural'],
     [`Gâchette INDEX ${sideF}`, `VX-9 DUO : tirer avec la ${sideF} · sinon : charge à impulsion`],
     [`Clic joystick ${mainM}`, 'Frappe de mêlée'],
+    ['Bouclier au poignet gauche', 'Icône bouclier : pointer avec la main droite puis gâchette INDEX pour activer / replier'],
     ['Pupitre au poignet gauche', 'Pointer avec la main droite puis gâchette INDEX : compétences GAB-1 / CAR-14'],
     [b.pause, 'Pause / reprise']
   ];
@@ -168,7 +170,7 @@ export class VRController {
   // A static canvas guide is attached to the tracked head and shown only during pause.
   makePauseBoard(){
     if(this.pauseBoard||this.mode!=='xr')return;
-    this.fracturePause=createXRPauseMenu(this.hooks.world().T,this.hooks.world().scene,{accent:this.hooks.world().character?.accent,onResume:()=>{this.cancelTrigger();if(this.hooks.phase()==='paused'){if(this.hooks.resume)this.hooks.resume();else this.hooks.togglePause();}},onHome:()=>this.hooks.home?.(),onExit:()=>void this.exit(),onShield:()=>{const game=this.hooks.game();if(game.player.shield<=0)return;this.cancelTrigger();if(this.hooks.phase()==='paused'){if(this.hooks.resume)this.hooks.resume();else this.hooks.togglePause();}game.toggleProjectedShield?.();},shieldLabel:()=>{const g=this.hooks.game();return g.player.shield<=0?'BOUCLIER EN RECHARGE':g.player.shieldDeployed?'REPLIER LE BOUCLIER':'ACTIVER LE BOUCLIER';}});
+    this.fracturePause=createXRPauseMenu(this.hooks.world().T,this.hooks.world().scene,{accent:this.hooks.world().character?.accent,onResume:()=>{this.cancelTrigger();if(this.hooks.phase()==='paused'){if(this.hooks.resume)this.hooks.resume();else this.hooks.togglePause();}},onHome:()=>this.hooks.home?.(),onExit:()=>void this.exit(),onShield:this.hooks.game()?.projectedShieldsEnabled?()=>{const game=this.hooks.game();if(game.player.shield<=0)return;this.cancelTrigger();if(this.hooks.phase()==='paused'){if(this.hooks.resume)this.hooks.resume();else this.hooks.togglePause();}game.toggleProjectedShield?.();}:null,shieldLabel:()=>{const g=this.hooks.game();return g.player.shield<=0?'BOUCLIER EN RECHARGE':g.player.shieldDeployed?'REPLIER LE BOUCLIER':'ACTIVER LE BOUCLIER';}});
     const {T,camera}=this.hooks.world(),canvas=document.createElement('canvas');
     canvas.width=1024;canvas.height=768;
     const ctx=canvas.getContext('2d');
@@ -349,7 +351,7 @@ export class VRController {
   }
   finishXR() {
     if (this.mode !== 'xr') return;
-    this.scope?.dispose();this.scope=null;this.opticalEye=null;
+    this.scope?.dispose();this.scope=null;this.opticalEye=null;this.shieldButton?.dispose();this.shieldButton=null;
     const world = this.hooks.world(); this.removeHUD(); this.removeSight();this.removePauseBoard();this.cancelTrigger();
     world.scene.add(world.camera);
     this.rig?.removeFromParent();
@@ -434,6 +436,12 @@ export class VRController {
     const desktop = xr ? null : (this.desktopGamepads ||= new DesktopGamepadInput()).select(navigator.getGamepads?.() || [],{focused});
     let skillsConsumed=!!this.hooks.rangeArmoryInput?.({controller:this,desktop,xr});
     skillsConsumed ||= xr&&!!this.hooks.skillsInput?.(this);
+    if(xr){
+      const world=this.hooks.world(),game=this.hooks.game(),left=controllerOf(this,'left'),right=controllerOf(this,'right');
+      if(game?.projectedShieldsEnabled&&!this.shieldButton)this.shieldButton=createXRShieldButton(world.T,world.scene,{getGame:()=>this.hooks.game(),haptic:()=>this.haptic('weapon')});
+      const shieldConsumed=this.shieldButton?.update({active:this.hooks.phase()==='playing'&&!skillsConsumed&&!!left?.tracked&&!!right?.tracked&&(!this.session?.visibilityState||this.session.visibilityState==='visible'),left:left?.anchor,ray:right?.ray,camera:world.camera,trigger:pressed(padOf(this,'right')?.buttons?.[0])});
+      skillsConsumed ||= !!shieldConsumed;
+    }
     if (!xr && this.desktopPadKey !== this.desktopGamepads.activeKey) { this.previous.clear(); this.desktopPadKey = this.desktopGamepads.activeKey; }
     const sources = xr ? [...(this.session?.inputSources || [])] : desktop ? [{ gamepad: desktop, handedness: 'both' }] : [];
     const phase = this.hooks.phase?.() || 'playing', actions = new Set();
