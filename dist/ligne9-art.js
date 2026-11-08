@@ -729,6 +729,8 @@ export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, on
       } else if (it.id === 'pupitre-p9') {
         const gauges = new T.Mesh(new T.PlaneGeometry(2.6, .5), new T.MeshStandardMaterial({ map: signTex(['P9 · DÉBIT  PRESSION  NIVEAU', '▮▮▯▯   ▮▯▯▯   ▮▮▮▮'], { bg: '#20262a', fg: '#e5dfb4', w: 512, h: 120 }), emissive: new T.Color(.2, .18, .1) }));
         gauges.rotation.x = -.9; gauges.position.set(0, at.top + .14, -.25); g.add(gauges); part(M.red, .14, .1, .14, .9, at.top + .05, .2); lamp.position.set(-1.1, at.top + .05, .3);
+        // Reuse the campaign's modern rotary command beside the existing P9 pressure/flow gauges.
+        control=createModernSwitch(T,g,{x:.83,y:at.top+.40,z:.18,scale:.46,variant:'rotary',id:it.id,label:'POMPES P9',onLabel:'POMPES ACTIVES',offLabel:'EN ATTENTE',low});control.root.rotation.x=-.45;lamp.visible=false;
       } else {
         // Wall boxes: switchboard, relays, pump A panel, lock control.
         control=createModernSwitch(T,g,{y:1.4,z:.08,scale:.82,variant:switchVariant(it.id),id:it.id,label:it.id.replaceAll('-',' '),low});lamp.visible=false;
