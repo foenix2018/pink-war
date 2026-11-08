@@ -305,10 +305,10 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
       if (it.log && !it.id.startsWith('doc-')) { const pad = new T.Mesh(new T.BoxGeometry(.5, .32, .05), M.dark); pad.position.set(0, 1.2, 0); g.add(pad); const scr = new T.Mesh(new T.PlaneGeometry(.42, .24), M.neonCyan); scr.position.set(0, 1.2, .03); g.add(scr); }
       else if (it.id.startsWith('doc-')) { const paper = new T.Mesh(new T.PlaneGeometry(.3, .4), std(0xe8e1cf, .9, 0, { side: T.DoubleSide })); paper.position.set(0, 1.15, 0); paper.rotation.x = -.3; g.add(paper); }
       let control=null;
-      if(["alimentation", "balise", "barriere"].includes(it.id)){
+      if(["alimentation", "balise", "barriere", "treuil", "arrimage"].includes(it.id)){
         const mount=new T.Group();mount.rotation.y=Math.abs(it.x)>40?-Math.sign(it.x)*Math.PI/2:0;g.add(mount);
         const post=new T.Mesh(new T.CylinderGeometry(.055,.085,1.12,8),M.dark);post.position.y=.56;mount.add(post);
-        control=createModernSwitch(T,mount,{y:1.35,z:.06,scale:.72,variant:switchVariant(it.id),id:it.id,label:it.id.replaceAll('-',' '),onLabel:/disj|stab|balise/.test(it.id)?'CIRCUIT ISOLÉ':'VALIDÉ',low});
+        control=createModernSwitch(T,mount,{y:1.35,z:.06,scale:.72,variant:it.id==='treuil'?'rotary':it.id==='arrimage'?'access':switchVariant(it.id),id:it.id,label:it.id==='treuil'?'TREUIL':it.id==='arrimage'?'ARRIMAGE':it.id.replaceAll('-',' '),onLabel:it.id==='treuil'?'TREUIL ACTIVÉ':it.id==='arrimage'?'ARRIMAGE LANCÉ':/disj|stab|balise/.test(it.id)?'CIRCUIT ISOLÉ':'VALIDÉ',low});
       }
       devices.set(it.id, { it, g, gem, ring, control, done: false, available: false });
     }
