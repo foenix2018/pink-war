@@ -103,7 +103,7 @@ test('checkpoints: an extension stage resumes at its place, earlier progress kep
   Object.assign(g.player,{x:20,z:85});step(g,ext);use(g,ext,'registre-soins');ext.takeJournal();use(g,ext,'batterie');
   assert.ok(ext.writeCheckpoint(storage));const save=readM02Checkpoint('lylu',storage);assert.equal(save.stage,'x-radio');
   const second=mission('lylu');assert.ok(second.ext.restoreCheckpoint(save));assert.equal(second.ext.stage,'x-radio');
-  assert.ok(!second.ext.done.includes('batterie'),'the batteries are connected again');assert.ok(second.ext.done.includes('registre-soins'));
+  assert.ok(second.ext.done.includes('batterie'),'the completed battery connection is retained');const legacy=mission('lylu');assert.ok(legacy.ext.restoreCheckpoint({...save,version:1}));assert.ok(!legacy.ext.done.includes('batterie'),'legacy checkpoints retain their original replay boundary');assert.ok(second.ext.done.includes('registre-soins'));
   const cp=X.STAGE['x-radio'].checkpoint;assert.ok(Math.hypot(second.g.player.x-cp.x,second.g.player.z-cp.z)<.1);
   const third=mission('lylu');assert.ok(third.ext.restoreCheckpoint({...save,stage:'x-coffre',opened:['monte-charge'],done:['badge']}));
   assert.ok(!third.g.obstacles.some(o=>o.door==='grille'||o.door==='tour'),'epilogue: gate and tower open');assert.ok(third.g.obstacles.some(o=>o.door==='coffre'));

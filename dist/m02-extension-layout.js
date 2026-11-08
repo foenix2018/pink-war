@@ -115,7 +115,7 @@ export const INTERACTIONS = Object.freeze([
   it('radio', 32, 82.4, 'ALLUMER LA RADIO DE L’ENCLAVE', { log: 'radio' }),
   it('manivelle', 4.6, 81.6, 'ACTIONNER LA MANIVELLE DE LA GRILLE'),
   it('badge', 0, -89.4, 'PRENDRE LE BADGE DU POSTE'),
-  it('lecteur', -12.4, -85.2, 'PASSER LE BADGE SUR LE LECTEUR'),
+  it('lecteur', -12.4, -86.6, 'PASSER LE BADGE SUR LE LECTEUR'),
   it('manifeste', -18.6, -86.4, 'PRENDRE UN MODULE DE DÉCRYPTAGE', { log: 'manifeste' }),
   it('commande-quai', 43, -84.6, 'BLOQUER LA PORTE DU CONVOI'),
   // Documents (always readable).

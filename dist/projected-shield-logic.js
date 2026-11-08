@@ -3,7 +3,7 @@ export const SHIELD_COLOURS=Object.freeze({lylu:0x79bbff,ghju:0xff80b2,enemy:0xf
 export const BUBBLE_FORMS=Object.freeze(['brute','bulwark']);
 export const hasBubbleProfile=e=>BUBBLE_FORMS.includes(e?.form)&&!e.noProjectedShield;
 export function ensureEnemyBubble(e){
- if(!hasBubbleProfile(e)||e.projectedShieldInitialised)return;
+ if(!hasBubbleProfile(e)){if(e.projectedShieldInitialised){e.shieldCapacity=0;e.shield=0;e.projectedShieldInitialised=false;}return;}if(e.projectedShieldInitialised)return;
  e.projectedShieldInitialised=true;e.shieldCapacity=60;e.shield=60;e.shieldHitAt=-100;e.shieldBreakAt=-100;
 }
 export function playerShieldFrame(p){

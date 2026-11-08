@@ -1,14 +1,18 @@
 // M02 extension flow: prologue (enclave of the covered market) before the street's first objective, epilogue
 // (transit tower) after its last one. The M02 page keeps its numeric stages 0–3 for the street; this controller
 // owns the 'x-' stages around them and is independent from rendering, so the whole flow runs in tests.
-import {WEAPONS} from './game-logic.js';
+import {WEAPONS,starterWeaponOrder,weaponAllowedForCharacter,segmentBox} from './game-logic.js';
+import {ensureEnemyBubble} from './projected-shield-logic.js';
+import {M02_STREET_CHECKPOINTS} from './m02-street.js';
+import {M02_CHECKPOINT_KEY,validM02Checkpoint} from './m02-checkpoint-index.js';
+export {readM02Checkpoint,clearM02Checkpoint} from './m02-checkpoint-index.js';
 import {CHARGE_MAX} from './armor-combat.js';
 import {configureUnit} from './ligne9-mission.js';
 import * as X from './m02-extension-layout.js';
 import {logFor} from './m02-extension-story.js';
 
 export const PORTAL_CHARGE = 3.2;
-export const CHECKPOINT_KEY = 'pink-wars-m02x-checkpoint-v1-';
+export const CHECKPOINT_KEY = M02_CHECKPOINT_KEY;
 const PROLOGUE_IDS = X.PROLOGUE.map(s => s.id), EPILOGUE_IDS = X.EPILOGUE.map(s => s.id);
 const RANGE = 2.3, noop = () => {};
 // Groups to set again when the player restarts at the checkpoint of a stage (the page saves on each stage change,
@@ -18,10 +22,10 @@ const RESTORE = Object.freeze({ 'x-eclaireurs': ['eclaireurs'], 'x-tour': ['tour
 const AFTER = Object.freeze({ 'registre-soins': 'registre', radio: 'radio', manifeste: 'manifeste' });
 
 export function createM02Extension(game, { characterId = 'ghju', obstacles, hooks = {} } = {}) {
-  const h = { setDoor: noop, setObstacles: noop, say: noop, cue: noop, notice: noop, stage: noop, core: noop, finale: noop, ...hooks };
+  const h = { setDoor: noop, setObstacles: noop, say: noop, cue: noop, notice: noop, stage: noop, core: noop, finale: noop, streetCheckpoint:()=>({stage:0,patrolCleared:false}), ...hooks };
   const base = obstacles || game.obstacles.filter(o => !o.extension);
-  const opened = new Set(), done = new Set(), said = new Set(), reads = new Set(), groups = new Map(), pending = [];
-  let stage = null, hold = null, serial = 0, lastJournal = null, afterJournal = null, prologueDone = false;
+  const opened = new Set(), done = new Set(), said = new Set(), reads = new Set(), groups = new Map(), pending = [], collectedSupplies=new Set(), supplyIds=new Map();
+  let stage = null, hold = null, serial = 0, lastJournal = null, afterJournal = null, prologueDone = false,checkpointStorageError=false;
 
   // ---------- World ----------
   function rebuild() {
@@ -38,7 +42,7 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
     for (const u of enc.units) {
       game.toSpawn = 1; game.activePortals = [{ id: 700 + (serial++), x: u.x, z: u.z, yaw: 0, openedAt: game.time }];
       game.spawnEnemy(); const e = game.enemies.at(-1); if (!e) continue;
-      configureUnit(e, u, enc.wave); e.helix = !!u.helix; e.extension = name; ids.push(e.id);
+      configureUnit(e, u, enc.wave); if(game.projectedShieldsEnabled)ensureEnemyBubble(e); e.helix = !!u.helix; e.extension = name; ids.push(e.id);
       if (alert) Object.assign(e, { awareness: 'search', alertedUntil: game.time + 8, lastKnownX: game.player.x, lastKnownZ: game.player.z, lastKnownHeight: game.player.elevation });
     }
     game.activePortals = heldPortals; game.toSpawn = 0; game.spawnTimer = Infinity; game.nextWave = Infinity;
@@ -53,9 +57,11 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
     groups.set(name, []);
   }
   const alive = name => (groups.get(name) || []).filter(id => game.enemies.some(e => e.id === id)).length;
+  function trackSupplies(){for(const [id,key]of supplyIds)if(!game.pickups.some(p=>p.id===id)){collectedSupplies.add(key);supplyIds.delete(id);}}
   function supplies(zone) {
+    trackSupplies();supplyIds.clear();
     for (let i = game.pickups.length - 1; i >= 0; i--) if (game.pickups[i].extension) game.pickups.splice(i, 1);
-    for (const s of X.SUPPLIES) if (!zone || X.ZONE[X.roomAt(s.x, s.z)] === zone) game.pickups.push({ id: game.nextId++, kind: s.kind, x: s.x, y: 0, z: s.z, until: Infinity, extension: true });
+    for(const s of X.SUPPLIES){const key=s.kind+':'+s.x+':'+s.z;if(collectedSupplies.has(key)||zone&&X.ZONE[X.roomAt(s.x,s.z)]!==zone)continue;const id=game.nextId++;supplyIds.set(id,key);game.pickups.push({id,kind:s.kind,x:s.x,y:0,z:s.z,until:Infinity,extension:true,supplyKey:key});}
   }
   function startHold(name) { hold = { name, start: game.time, until: game.time + X.HOLDS[name], waves: [...X.HOLD_WAVES[name]] }; h.cue('hold'); }
 
@@ -80,6 +86,7 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
     for (const it of X.INTERACTIONS) {
       if (Math.abs((p.elevation || 0) - it.y) > .6) continue;
       const d = Math.hypot(p.x - it.x, p.z - it.z); if (d > RANGE) continue;
+      if(game.obstacles.some(o=>['wall','door'].includes(o.kind)&&segmentBox({x:p.x,y:(p.elevation||0)+1.3,z:p.z},{x:it.x,y:it.y+1.3,z:it.z},o)!==null))continue;
       // Documents are always readable; the radio and the manifest only once their stage is reached.
       if (!(it.log && !['radio', 'manifeste'].includes(it.id)) && !available(it.id)) continue;
       // The vault's documents are behind its door.
@@ -130,6 +137,7 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
   // ---------- Per-step progression (call after game.step) ----------
   function update() {
     if (game.state !== 'playing') return;
+    trackSupplies();
     for (let i = pending.length - 1; i >= 0; i--) {
       const q = pending[i];
       if (!q.deployed && game.time >= q.at) { q.deployed = true; deploy(q.name); if (q.name === 'quai2') say('agent'); }
@@ -153,26 +161,29 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
 
   // ---------- Checkpoints ----------
   // Key of the place a checkpoint would restore now: the extension stage, or the street once the prologue is done.
-  const checkpointKey = () => stage || (prologueDone ? X.STREET.id : null);
+  const checkpointKey = () => stage==='x-done'?'x-fin':stage || (prologueDone ? X.STREET.id : null);
+  const checkpointToken=()=>JSON.stringify([checkpointKey(),stage?null:h.streetCheckpoint(),[...done],[...reads],[...opened],[...groups.keys()],[...collectedSupplies]]);
   function writeCheckpoint(storage) {
     const id = checkpointKey();
-    if (!id || !X.STAGE[id] || id === 'x-fin' || id === 'x-done' || hold || game.enemies.length || !game.player.grounded) return false;
+    if(!id||!X.STAGE[id]||hold||pending.length||game.state!=='playing'||game.enemies.length||game.toSpawn||!game.player.grounded||game.player.onLift||Math.abs(game.player.verticalSpeed||0)>.05||game.player.hp<=0)return false;
+    trackSupplies();const street=id===X.STREET.id?h.streetCheckpoint():null;if(street&&(!Number.isInteger(street.stage)||street.stage<0||street.stage>3))return false;
     // Groups of the stage not deployed yet come back on restore; a deployed group is cleared (no enemy left).
-    const s = { version: 1, characterId, stage: id, restore: (RESTORE[id] || []).filter(name => !groups.has(name)), opened: [...opened], done: [...done], reads: [...reads], kills: game.kills,
+    const s = { version: 2, characterId, stage: id, streetStage:street?.stage??0,patrolCleared:!!street?.patrolCleared,collectedSupplies:[...collectedSupplies],dualAmmo:{...game.dual.ammo}, restore: (RESTORE[id] || []).filter(name => !groups.has(name)), opened: [...opened], done: [...done], reads: [...reads], kills: game.kills,score:game.score,time:game.time,
       weaponIndex: game.weaponIndex, owned: [...game.ownedWeapons], ammo: [...game.ammo], health: Math.max(1, game.player.hp), shield: game.player.shield, charges: game.charges, savedAt: Date.now() };
-    try { (storage || globalThis.localStorage).setItem(CHECKPOINT_KEY + characterId, JSON.stringify(s)); return true; } catch { return false; }
+    try { (storage || globalThis.localStorage).setItem(CHECKPOINT_KEY + characterId, JSON.stringify(s)); checkpointStorageError=false;return true; } catch { checkpointStorageError=true;return false; }
   }
-  function place(cp) { Object.assign(game.player, { x: cp.x, z: cp.z, elevation: game.surfaceHeight(cp.x, cp.z, game.time), grounded: true, verticalSpeed: 0, yaw: cp.yaw }); }
+  function place(cp) { Object.assign(game.player, { x: cp.x, z: cp.z, elevation: game.surfaceHeight(cp.x, cp.z, game.time,(cp.elevation||0)+.3), grounded: true, verticalSpeed: 0, yaw: cp.yaw, onLift:null,jumpHeld:false,airJumps:0,jumpImpulseX:0,jumpImpulseZ:0,shieldDeployed:false }); }
   function restoreCheckpoint(s) {
-    if (!s || s.version !== 1 || s.characterId !== characterId || !X.STAGE[s.stage] || s.stage === 'x-fin') return false;
-    const keepDone = (s.done || []).filter(id => !(s.stage === 'x-radio' && id === 'batterie') && !(s.stage === 'x-grille' && id === 'manivelle') && !(s.stage === 'x-quai' && id === 'commande-quai'));
-    opened.clear(); for (const id of s.opened || []) opened.add(id); done.clear(); for (const id of keepDone) done.add(id); reads.clear(); for (const id of s.reads || []) reads.add(id);
-    said.clear(); hold = null; pending.length = 0; groups.clear();
+    if(!validM02Checkpoint(s,characterId)||!X.STAGE[s.stage])return false;
+    const keepDone = (s.done || []).filter(id => !(s.version===1&&s.stage === 'x-radio' && id === 'batterie') && !(s.stage === 'x-grille' && id === 'manivelle') && !(s.stage === 'x-quai' && id === 'commande-quai'));
+    opened.clear(); for(const id of s.opened||[])if(X.DOORS.some(d=>d.id===id))opened.add(id); done.clear(); for (const id of keepDone) done.add(id); reads.clear(); for (const id of s.reads || []) reads.add(id);
+    said.clear(); hold = null; pending.length = 0; groups.clear();supplyIds.clear();collectedSupplies.clear();for(const key of s.collectedSupplies||[])if(typeof key==='string')collectedSupplies.add(key);game.pickups=game.pickups.filter(p=>!p.extension);
     game.enemies = []; game.bullets = []; game.activePortals = []; game.toSpawn = 0; game.nextWave = Infinity;
-    game.kills = Number(s.kills) || 0;
-    if (Array.isArray(s.owned)) game.ownedWeapons = new Set(s.owned.filter(i => Number.isInteger(i) && WEAPONS[i]));
-    if (game.ownedWeapons.has(s.weaponIndex)) game.selectWeapon?.(s.weaponIndex);
+    game.state='playing';game.kills=Math.max(0,Math.floor(Number(s.kills)||0));game.score=Math.max(0,Number(s.score)||0);game.time=Math.max(0,Number(s.time)||0);
+    game.ownedWeapons=new Set([...starterWeaponOrder(characterId),...(Array.isArray(s.owned)?s.owned:[]).filter(i=>Number.isInteger(i)&&weaponAllowedForCharacter(i,characterId))]);
+    if(!game.ownedWeapons.has(game.weaponIndex))game.weaponIndex=starterWeaponOrder(characterId)[0];if(game.ownedWeapons.has(s.weaponIndex))game.selectWeapon?.(s.weaponIndex);
     for (let i = 0; i < game.ammo.length; i++) if (Number.isFinite(s.ammo?.[i])) game.ammo[i] = Math.max(0, Math.min(WEAPONS[i].capacity, s.ammo[i]));
+    game.restoreDualAmmo(s.dualAmmo);game.cooldown=0;game.reloadRemaining=0;game.charge=0;game.triggerHeld=false;game.semiPending=false;game.thrownCharges=[];game.state='playing';
     game.player.hp = Math.min(100, Math.max(1, Number(s.health) || 100));
     if (Number.isFinite(s.shield)) game.player.shield = Math.max(0, Math.min(game.shieldCapacity || 60, s.shield));
     if (Number.isFinite(s.charges)) game.charges = Math.max(0, Math.min(CHARGE_MAX, s.charges));
@@ -181,23 +192,23 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
     opened.add('monte-charge'); // Entry elevator never traps a resumed player inside.
     if (prologueDone) opened.add('grille'); if (EPILOGUE_IDS.includes(s.stage)) opened.add('tour');
     // Older checkpoints may omit door flags even though their objective is already inside the vault.
-    if(['x-manifeste','x-quai','x-fin','x-done'].includes(s.stage))opened.add('coffre');
+    if(['x-manifeste','x-quai','x-fin','x-done'].includes(s.stage))opened.add('coffre');if(s.stage==='x-fin')opened.add('convoi');
     rebuild(); for (const d of X.DOORS) h.setDoor(d.id, !!d.open || opened.has(d.id));
-    place(X.STAGE[s.stage].checkpoint); supplies(prologueDone ? 'tour' : null);
-    if (street) { setStage(null); h.core(); return true; }
-    setStage(s.stage); for (const name of Array.isArray(s.restore) ? s.restore : RESTORE[s.stage] || []) if (X.ENCOUNTERS[name]) deploy(name, { alert: false });
+    place(street?M02_STREET_CHECKPOINTS[s.streetStage||0]:X.STAGE[s.stage].checkpoint); supplies(prologueDone ? 'tour' : null);
+    if(street){setStage(null);h.core({stage:s.streetStage||0,patrolCleared:!!s.patrolCleared});return true;}
+    setStage(s.stage); for (const name of Array.isArray(s.restore) ? s.restore : RESTORE[s.stage] || []) if(Object.hasOwn(X.ENCOUNTERS,name))deploy(name, { alert: false });
     return true;
   }
 
   const api = {
-    get stage() { return stage; }, get active() { return !!stage; }, get prologueDone() { return prologueDone; }, get checkpointKey() { return checkpointKey(); }, get opened() { return [...opened]; }, get done() { return [...done]; }, get reads() { return [...reads]; },
+    get stage() { return stage; }, get active() { return !!stage; }, get prologueDone() { return prologueDone; }, get checkpointKey() { return checkpointKey(); },get checkpointToken(){return checkpointToken();},get checkpointStorageError(){return checkpointStorageError;}, get opened() { return [...opened]; }, get done() { return [...done]; }, get reads() { return [...reads]; },
     get pending() { return pending.map(p => p.name); },
     get hold() { return hold && { name: hold.name, remaining: Math.max(0, hold.until - game.time), total: X.HOLDS[hold.name] }; },
     groups() { return Object.fromEntries([...groups].map(([k, v]) => [k, { deployed: v.length, alive: alive(k) }])); },
     alive, available, nearInteraction, update, say,
     // New mission: the hero steps out of the Archives' service lift into the enclave.
     start() {
-      opened.clear(); done.clear(); said.clear(); reads.clear(); groups.clear(); pending.length = 0; hold = null; lastJournal = afterJournal = null; prologueDone = false;
+      opened.clear(); done.clear(); said.clear(); reads.clear(); groups.clear();collectedSupplies.clear();supplyIds.clear(); pending.length = 0; hold = null; lastJournal = afterJournal = null; prologueDone = false;
       opened.add('monte-charge'); rebuild(); for (const d of X.DOORS) h.setDoor(d.id, !!d.open || opened.has(d.id));
       place(X.LIFT_START); supplies(); setStage('x-arrivee'); say('intro');
     },
@@ -243,8 +254,3 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
   };
   return api;
 }
-
-export function readM02Checkpoint(characterId, storage) {
-  try { const s = JSON.parse((storage || globalThis.localStorage).getItem(CHECKPOINT_KEY + characterId)); return s?.version === 1 && s.characterId === characterId && X.STAGE[s.stage] ? s : null; } catch { return null; }
-}
-export function clearM02Checkpoint(characterId, storage) { try { (storage || globalThis.localStorage).removeItem(CHECKPOINT_KEY + characterId); } catch {} }

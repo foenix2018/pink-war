@@ -1,3 +1,4 @@
+import {M02_STREET_OBJECTIVES,createM02Street} from './m02-street.js';
 import {overheadServiceLift} from './overhead-clearance.js';
 import {createLandingFinish} from './landing-finish.js';
 import {createAimRelease,reconcileAimModifiers} from './aim-release.js';
@@ -58,7 +59,7 @@ import {createWarZone} from './level2-war-zone.js';
 import {createBattleAudio} from './level2-battle-audio.js';
 import {bevelBox} from './geo.js';
 import {createArchiveTerminalFactory} from './archive-terminals.js';
-import {createM02Extension,readM02Checkpoint,clearM02Checkpoint} from './m02-extension.js?v=20261107-m02-guidance';
+import {createM02Extension,readM02Checkpoint,clearM02Checkpoint} from './m02-extension.js?v=20261108-m02-checkpoints';
 import {extensionObstacles,INTERACTIONS as M02X_INTERACTIONS,STAGE as M02X_STAGE} from './m02-extension-layout.js';
 import {linesFor as m02Lines} from './m02-extension-story.js';
 import {createM02ExtensionArt} from './m02-extension-art.js';
@@ -83,7 +84,7 @@ let yaw=0,pitch=0,stage=0,reported=-1;
 let noticeUntil=0,signal=0,rain,enemyFactory,root,architecture,pbrController,atmosphere;
 let worldShadows=null,groundOcclusion=null,environmentFinish=null,electricPortals=null;
 // 3.70 extension: enclave (prologue) and transit tower (epilogue) around the street.
-let extension=null,extArt=null,helixFactory=null,subtitles=null,skyLights=null,journalOpen=false,checkpointSaved=null,checkpointClock=0;
+let extension=null,extArt=null,helixFactory=null,subtitles=null,skyLights=null,journalOpen=false,checkpointSaved=null,checkpointClock=0,checkpointRestoring=false,checkpointStorageFailed=false,checkpointDecisionMade=false,streetMission=null;
 let view=readPreferredView(),aimBlend=0,mouseAim=false,playerRig=null,touchControls=null,paused=false;
 const aimRelease=createAimRelease();
 const exitAim=document.createElement('button');exitAim.textContent='↶ VUE NORMALE';exitAim.id='pw-exit-aim';exitAim.hidden=true;exitAim.style.cssText='position:fixed;top:calc(env(safe-area-inset-top) + 88px);left:50%;transform:translateX(-50%);z-index:30;border:1px solid #99d9df99;border-radius:22px;padding:9px 15px;background:#081a24e8;color:#e5faff;font:700 12px system-ui;touch-action:manipulation';document.body.append(exitAim);exitAim.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();cancelAim();});exitAim.addEventListener('click',()=>cancelAim());
@@ -122,12 +123,7 @@ document.addEventListener('keydown',audioReady,{once:true,capture:true});
 const keys=new Set(),enemyMeshes=new Map(),shotMeshes=new Map();
 const collisions=[],floors=[],beacons=[],lightSources=[],decals=[];
 const field={minX:-42,maxX:42,minZ:-81,maxZ:79};
-const objectives=[
- {x:0,z:53,y:0,label:'LOCALISER LES CIVILS',description:'Rejoins le poste de soins clandestin à l’entrée de la ruelle.'},
- {x:-8,z:14,y:0,label:'LIBÉRER LA GALERIE',description:'Repousse la patrouille, puis consulte le terminal HELIX.'},
- {x:0,z:-18,y:12,label:'REJOINDRE LES PASSERELLES',description:'Monte par le véritable escalier à droite jusqu’à +12 m.'},
- {x:-5,z:-57,y:0,label:'OUVRIR LA TOUR DE TRANSIT',description:'Descends à gauche et déverrouille l’évacuation.'}
-];
+const objectives=M02_STREET_OBJECTIVES;
 function mat(hex,rough=.8,metal=.1){return new T.MeshStandardMaterial({color:hex,roughness:rough,metalness:metal});}
 function glow(hex){return new T.MeshBasicMaterial({color:hex,toneMapped:false});}
 const materials={
@@ -517,6 +513,7 @@ function createEnemies(){
  signal=5;notice('PATROUILLE HOSTILE DÉTECTÉE');
 }
 function setupExtension(){
+ streetMission=createM02Street(game,{deploy:createEnemies,onNotice:notice,onStage:(value,reason)=>{stage=value;lastMinimalHudStage=-1;if(reason!=='restore')saveCheckpoint();},onEpilogue:()=>extension.beginEpilogue()});
  try{subtitles=createSubtitles({T,camera});}catch(error){console.warn('M02 subtitles disabled:',error);}
  extension=createM02Extension(game,{characterId,obstacles:collisions.filter(o=>!o.extension),hooks:{
   setDoor:(id,open)=>extArt?.setDoor(id,open),
@@ -524,10 +521,11 @@ function setupExtension(){
   say:id=>subtitles?.say(m02Lines(id,characterId)),
   cue:kind=>extensionCue(kind),notice,
   // Saved before the stage's own group is deployed, so a restart brings it back.
-  stage:()=>{lastMinimalHudStage=-1;extensionCue('stage');if(extension&&extension.writeCheckpoint())checkpointSaved=extension.checkpointKey;},
-  core:()=>{stage=0;lastMinimalHudStage=-1;},
-  finale:()=>{portalAudio.closeAll();game.activePortals=[];running=false;document.exitPointerLock?.();clearM02Checkpoint(characterId);checkpointSaved=null;subtitles?.clear();
-   setTimeout(()=>showChapter2Finale({characterId,onReplay:()=>resume({fresh:true})}),900);}
+  stage:()=>{lastMinimalHudStage=-1;extensionCue('stage');saveCheckpoint();},
+  streetCheckpoint:()=>streetMission?.snapshot||{stage:0,patrolCleared:false},
+  core:state=>{streetMission.start(state);stage=streetMission.stage;lastMinimalHudStage=-1;},
+  finale:()=>{portalAudio.closeAll();game.activePortals=[];running=false;document.exitPointerLock?.();saveCheckpoint({force:true});subtitles?.clear();
+   setTimeout(async()=>{try{if(xr?.active)await xr.exit();}catch{}showChapter2Finale({characterId,onDecide:()=>{checkpointDecisionMade=true;clearM02Checkpoint(characterId);checkpointSaved=null;},onReplay:()=>restartCheckpoint(true)});},900);}
  }});
 }
 function openJournal(entry,then){
@@ -559,13 +557,29 @@ const holdBar=document.createElement('div');holdBar.className='pw-hold';holdBar.
 holdBar.style.cssText='position:fixed;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:min(380px,calc(100vw - 120px));padding:7px 10px;background:rgba(9,14,22,.82);border:1px solid #ff2f4599;border-radius:9px;z-index:6;pointer-events:none;font:900 11px system-ui;letter-spacing:.12em;color:#eef1f6;text-align:center';
 holdBar.innerHTML='<div class="pw-hold-label"></div><div style="height:5px;margin-top:5px;background:#ffffff1f;border-radius:3px;overflow:hidden"><div class="pw-hold-fill" style="height:100%;background:#5fe0f0"></div></div>';document.body.append(holdBar);
 const HOLD_LABEL={grille:'MANŒUVRE DE LA GRILLE',quai:'VERROUILLAGE DE LA PORTE DU CONVOI'};
+function checkpointLabel(save){return save?.stage==='x-rue'?M02_STREET_OBJECTIVES[save.streetStage||0]?.label:M02X_STAGE[save?.stage]?.label||'DÉBUT DU NIVEAU';}
+function updateCheckpointMenu(){const save=readM02Checkpoint(characterId);checkpointRestore.disabled=!save;checkpointDescription.textContent=checkpointStorageFailed?'Sauvegarde indisponible sur cet appareil.':save?'Sauvegarde automatique · '+checkpointLabel(save):'Sauvegarde automatique aux points de contrôle sécurisés.';}
+function saveCheckpoint({force=false}={}){
+ if(!extension||checkpointRestoring||checkpointDecisionMade||!game)return false;
+ const token=extension.checkpointToken;if(!force&&token===checkpointSaved)return false;
+ if(!extension.writeCheckpoint()){if(extension.checkpointStorageError){checkpointStorageFailed=true;updateCheckpointMenu();}return false;}
+ const saved=readM02Checkpoint(characterId);if(!saved){checkpointStorageFailed=true;updateCheckpointMenu();return false;}
+ checkpointSaved=extension.checkpointToken;checkpointStorageFailed=false;updateCheckpointMenu();return true;
+}
+function restartCheckpoint(fresh=false){pauseMenu.hide(false);paused=false;resume({fresh});}
+const checkpointDescription=document.createElement('p');checkpointDescription.id='m02-checkpoint-status';checkpointDescription.setAttribute('role','status');checkpointDescription.style.cssText='font-size:12px;color:#bdd1df;line-height:1.5';
+const checkpointRestore=document.createElement('button');checkpointRestore.type='button';checkpointRestore.id='m02-restore-checkpoint';checkpointRestore.textContent='REVENIR AU POINT DE CONTRÔLE';checkpointRestore.onclick=()=>restartCheckpoint();
+const checkpointRestart=document.createElement('button');checkpointRestart.type='button';checkpointRestart.textContent='RECOMMENCER LE NIVEAU 2';checkpointRestart.onclick=()=>restartCheckpoint(true);
+pauseMenu.dialog.querySelector('.fracture-description').after(checkpointDescription);pauseMenu.dialog.querySelector('.fracture-choices').append(checkpointRestore,checkpointRestart);
+
 function updateExtension(dt){
  if(!extension)return;
  extension.update();
  const h=extension.hold;holdBar.hidden=!h||!running;
  if(h){holdBar.querySelector('.pw-hold-label').textContent=HOLD_LABEL[h.name]+' · '+Math.ceil(h.remaining)+' s';holdBar.querySelector('.pw-hold-fill').style.width=(100*(1-h.remaining/h.total)).toFixed(1)+'%';}
  // Retry the checkpoint once a stage's fight is over (a save needs no machine left).
- if((checkpointClock+=dt)>1){checkpointClock=0;const key=extension.checkpointKey;if(key&&key!==checkpointSaved&&extension.writeCheckpoint())checkpointSaved=key;}
+ streetMission?.update();
+ if((checkpointClock+=dt)>1){checkpointClock=0;saveCheckpoint();}
  if(extArt){
   extArt.syncDoors(extension.opened);
   extArt.setPower('enclave',extension.done.includes('batterie'));
@@ -586,16 +600,7 @@ function interact(){
  const o=objectives[stage];if(!o)return;
  const range=Math.hypot(game.player.x-o.x,game.player.z-o.z);
  if(range>3.3||Math.abs(game.player.elevation-o.y)>1.8){const d=nearbyDoor(game.player);notice(d?extension.doorStatus(d.id).reason:o.description+' Approche du repère indiqué.');return;}
- if(stage===0){stage=1;createEnemies();notice('ENCLAVE REPÉRÉE — NEUTRALISER LA PATROUILLE');}
- else if(stage===1){
-  if(game.enemies.length>0){notice('TERMINAL VERROUILLÉ : MENACES ACTIVES');return;}
-  stage=2;game.grantCharges(1);notice('ARCHIVES HELIX SAISIES — REJOINDRE LE PONT +12 M');
- }
- else if(stage===2){stage=3;game.grantCharges(1);notice('ACCÈS TRANSIT DÉVERROUILLÉ — DESCENDRE');}
- else if(stage===3){
-  if(extension){stage=4;extension.beginEpilogue();notice('TOUR DE TRANSIT — CONTRÔLE DU DIRECTOIRE');return;}
-  running=false;document.exitPointerLock?.();showChapter2Finale({characterId,onReplay:resume});
- }
+ streetMission?.interact();
 }
 function snapCamera(){
  if(xr?.active){xr.syncPose();return;}
@@ -647,6 +652,7 @@ function updateOriginalSoldier(dt,moving,sprint,firing){
 }
 function pauseMission(){
  if(!running||paused)return;
+ saveCheckpoint();updateCheckpointMenu();
  cancelAim();keys.clear();doorAudio.reset();combatHud?.reset();touchSprinting=false;paused=true;running=false;battleAudio?.pause();environmentAudio?.pause();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
  touchControls?.reset();pinkControls.reset();document.exitPointerLock?.();
  // The immersive headset uses its own selectable 3D pause menu.
@@ -790,8 +796,8 @@ function gameTick(dt){
   if(e.type==='reloaded'&&enableAudio&&audioCtx)try{playWeaponAction(audioCtx,game.weapon.id,'reload-ready');}catch{}
   if(e.type==='impact'&&enableAudio&&audioCtx)try{playLaserImpact(audioCtx,{surface:e.surface,distance:Math.hypot(e.x-game.player.x,e.z-game.player.z),power:e.power});}catch{}
   if(e.type==='kill'){notice('CIBLE NEUTRALISÉE');}
-  if(e.type==='over'){running=false;shade.style.display='grid';$('start').textContent='RECOMMENCER LE NIVEAU 2 →';$('status').textContent='Intervention interrompue — santé épuisée';document.exitPointerLock?.();subtitles?.clear();holdBar.hidden=true;
-   const save=readM02Checkpoint(characterId);resumeButton.hidden=!save;if(save)resumeButton.textContent='REPRENDRE AU POINT DE CONTRÔLE · '+(M02X_STAGE[save.stage]?.label||'')+' →';}
+  if(e.type==='over'){running=false;if(xr?.active)void xr.exit().catch(()=>{});shade.style.display='grid';$('start').textContent=readM02Checkpoint(characterId)?'REPRENDRE AU POINT DE CONTRÔLE →':'RECOMMENCER LE NIVEAU 2 →';$('status').textContent='Intervention interrompue — santé épuisée';document.exitPointerLock?.();subtitles?.clear();holdBar.hidden=true;
+   const save=readM02Checkpoint(characterId);resumeButton.hidden=!save;if(save)resumeButton.textContent='RECOMMENCER DEPUIS LE DÉBUT →';}
  }
  combatEffects?.update(game,dt,camera);armorFx.update(game,dt);
  companion?.update(dt,{game,camera:xr?.active?renderer.xr.getCamera(camera):camera,active:running&&!paused,assistance:true,tracked:!!xr?.active});
@@ -1010,21 +1016,24 @@ function resume({fresh=false}={}){
  yaw=0;pitch=0;stage=0;lastMinimalHudStage=-1;combatHud?.reset();touchSprinting=false;meleeQueued=chargeQueued=false;heldFire=false;mouseAim=false;aimBlend=0;jumpQueued=false;crouchQueued=false;firePressQueued=false;keys.clear();pinkControls.reset();touchControls?.reset();weaponFeel.reset();
  subtitles?.clear();holdBar.hidden=true;journalOpen=false;resumeButton.hidden=true;checkpointSaved=null;
  if(game&&extension){
+  checkpointRestoring=true;checkpointDecisionMade=false;streetMission.start();
   if(fresh)clearM02Checkpoint(characterId);
   const save=fresh?null:readM02Checkpoint(characterId);
   if(save&&extension.restoreCheckpoint(save)){
-   checkpointSaved=save.stage;stage=['x-tour','x-badge','x-coffre','x-manifeste','x-quai'].includes(save.stage)?4:0;
-   notice('POINT DE CONTRÔLE · '+(M02X_STAGE[save.stage]?.label||''));
+   stage=save.stage==='x-rue'?streetMission.stage:['x-tour','x-badge','x-coffre','x-manifeste','x-quai','x-fin'].includes(save.stage)?4:0;checkpointSaved=extension.checkpointToken;
+   notice('POINT DE CONTRÔLE · '+checkpointLabel(save));
   }else extension.start();
+  checkpointRestoring=false;checkpointClock=0;
+  for(const it of M02X_INTERACTIONS)extArt?.markDone(it.id,false);
   for(const id of extension.done)extArt?.markDone(id);
-  yaw=game.player.yaw||0;
+  yaw=game.player.yaw||0;saveCheckpoint();updateCheckpointMenu();
  }
  $('name').textContent='PINK WARS · '+characterId.toUpperCase()+' · M02';
  if(!touchControls?.root)canvas.requestPointerLock?.().catch?.(()=>{});
 }
-startButton.addEventListener('click',()=>{audioReady();if(started)resume({fresh:!paused});else{startButton.disabled=true;boot();}});
+startButton.addEventListener('click',()=>{audioReady();if(started)resume();else{startButton.disabled=true;boot();}});
 const resumeButton=document.createElement('button');resumeButton.className='primary';resumeButton.hidden=true;resumeButton.style.marginLeft='10px';startButton.after(resumeButton);
-resumeButton.addEventListener('click',()=>{audioReady();resume();});
+resumeButton.addEventListener('click',()=>{audioReady();restartCheckpoint(true);});
 quality.addEventListener('change',()=>{
  // Rebuild once on setting change so PBR resolution, sprite counts, weather
  // and shadow budget are all updated consistently, not only pixel ratio.
@@ -1055,7 +1064,7 @@ window.addEventListener('keydown',e=>{
 });
 window.addEventListener('keyup',e=>{keys.delete(e.code);reconcileAimModifiers(keys,e);});
 window.addEventListener('blur',()=>{cancelAim();keys.clear();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();pinkControls.reset();touchControls?.reset();});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAim();keys.clear();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();pinkControls.reset();touchControls?.reset();}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){saveCheckpoint();cancelAim();keys.clear();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();pinkControls.reset();touchControls?.reset();}});
 window.addEventListener('contextmenu',e=>{if(e.target===canvas)e.preventDefault();});
 window.addEventListener('mousemove',e=>{
  if(!running||document.pointerLockElement!==canvas)return;
@@ -1084,13 +1093,14 @@ for(const name of ['pointerup','pointercancel']){
  window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
 }
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement){heldFire=false;cancelAim();}});
+window.addEventListener('pagehide',()=>saveCheckpoint());
 window.addEventListener('orientationchange',()=>{cancelAim();keys.clear();});
 window.addEventListener('pointerdown',e=>reconcileAimModifiers(keys,e),{capture:true});
-window.__PINK_M02=Object.freeze({snapshot:()=>({music:screenMusicSnapshot(),revision:'3.75.1',neons:root?.userData?.neons,running,paused,view:xr?.active?'fps':view,playerVisible:playerRig?.model.root.visible||false,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,extension:extension&&{stage:extension.stage,hold:extension.hold,done:extension.done,reads:extension.reads,opened:extension.opened,groups:extension.groups(),interaction:extension.interaction()},subtitle:subtitles?.current||null,journal:journalOpen,dressing:extArt?.stats(),health:game?.player.hp,
+window.__PINK_M02=Object.freeze({snapshot:()=>({music:screenMusicSnapshot(),revision:'3.76.0',neons:root?.userData?.neons,running,paused,view:xr?.active?'fps':view,playerVisible:playerRig?.model.root.visible||false,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,extension:extension&&{stage:extension.stage,hold:extension.hold,done:extension.done,reads:extension.reads,opened:extension.opened,groups:extension.groups(),interaction:extension.interaction()},subtitle:subtitles?.current||null,journal:journalOpen,dressing:extArt?.stats(),health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
  shadowing:worldShadows?.stats(),backend:rendererBackend(renderer),rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
  effects:combatEffects?.stats(),projectedShields:armorFx?.shieldStats(),armor:game&&{shieldDeployed:!!game.player.shieldDeployed,shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt}}),
  // QA hooks (?debug=1): world data, teleport, look, clear machines, advance the clock.
  debug:new URLSearchParams(location.search).has('debug')?{get game(){return game;},collisions,floors,teleport:(x,z)=>{Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0});if(game.state==='playing'){game.step(1/60,{});extension?.update();}},look:(y,p)=>{yaw=y;pitch=p;},clear:()=>{game.enemies.length=0;extension?.update();},skip:s=>{game.time+=s;extension?.update();},god:()=>{game.invulnerable=1e9;},interact:()=>interact(),
-  use:id=>{const it=M02X_INTERACTIONS.find(i=>i.id===id);Object.assign(game.player,{x:it.x,z:it.z,elevation:0,grounded:true,verticalSpeed:0});interact();},street:n=>{stage=n;lastMinimalHudStage=-1;},closeJournal:()=>{const d=document.getElementById('m01-journal');if(d){d.close();d.dispatchEvent(new Event('close'));}},extension:()=>extension}:null});
+  use:id=>{const it=M02X_INTERACTIONS.find(i=>i.id===id);Object.assign(game.player,{x:it.x,z:it.z,elevation:0,grounded:true,verticalSpeed:0});interact();},street:n=>{streetMission.start({stage:n});stage=n;lastMinimalHudStage=-1;},closeJournal:()=>{const d=document.getElementById('m01-journal');if(d){d.close();d.dispatchEvent(new Event('close'));}},extension:()=>extension}:null});
 if(autoMission){startButton.disabled=true;void boot();}

@@ -52,7 +52,7 @@ export function attachCampaignStory(dialog,{level=1,characterId='ghju'}={}){
   const retry=dialog.querySelector('#retry-button');if(retry)dialog.insertBefore(next,retry);else dialog.append(next);
  }
 }
-export function showChapter2Finale({characterId='ghju',onReplay}={}){
+export function showChapter2Finale({characterId='ghju',onReplay,onDecide}={}){
  styles();document.getElementById('pink-story-final')?.remove();
  store('pink-wars-last-cleared',2);
  const modal=document.createElement('div');modal.id='pink-story-final';modal.className='pw-story-modal';modal.setAttribute('role','dialog');
@@ -73,7 +73,7 @@ export function showChapter2Finale({characterId='ghju',onReplay}={}){
  continueButton.hidden=true;
  const replay=document.createElement('button');replay.className='secondary';replay.textContent='REJOUER LE NIVEAU 2';
  const decide=choice=>{
-   store('pink-wars-m02-choice',choice);
+   store('pink-wars-m02-choice',choice);onDecide?.(choice);
    const story=chapterStory(2,characterId,choice);
    header.textContent=story.heading;feedback.textContent=story.text;
    escort.hidden=true;proof.hidden=true;continueButton.hidden=false;

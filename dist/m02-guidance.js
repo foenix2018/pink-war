@@ -22,7 +22,7 @@ export function scenarioWaypoint(player,target,opened=[]){
 }
 export function scenarioGuidance(player,target,{opened=[],yaw=0,instruction='',progress=null}={}){
  const waypoint=scenarioWaypoint(player,target,opened);
- const distance=target?Math.hypot(target.x-player.x,target.z-player.z):null;
+ const distance=waypoint?Math.hypot(waypoint.x-player.x,waypoint.z-player.z,(waypoint.y||0)-(player.elevation||0)):null;
  const angle=waypoint?Math.atan2(Math.sin(Math.atan2(-(waypoint.x-player.x),-(waypoint.z-player.z))-yaw),Math.cos(Math.atan2(-(waypoint.x-player.x),-(waypoint.z-player.z))-yaw)):0;
  return{title:target?.label||'OBJECTIF EN COURS',instruction,route:waypoint?(waypoint===target?'Objectif':'Suivre le passage')+(distance!==null?' · '+Math.ceil(distance)+' m':''):target?'Passage verrouillé : suis l’étape indiquée.':'',bearing:-angle*180/Math.PI,progress};
 }
