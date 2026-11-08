@@ -92,12 +92,12 @@ export function createEnclaveLife(T, parent, { low = false } = {}) {
     notice(['SOINS →', 'DISPENSAIRE'], 11.84, 2.4, 87.6, -Math.PI / 2, .9, .56, { fg: '#8dffd2' });
     notice(['TOUR ↗', 'COUVRE-FEU 22 H'], -29.84, 2.5, 84.4, Math.PI / 2, .9, .56, { fg: '#ff7b8a' });
   }
-  function sleeper(x, z, yaw, blanket, headRoom = .1, y = .42) {
+  function sleeper(x, z, yaw, blanket, headRoom = .1, y = .42, clinical = false) {
     const g = new T.Group(); g.position.set(x, y, z); g.rotation.y = yaw; root.add(g);
     const body = new T.Mesh(new T.SphereGeometry(1, 16, 10), blanket); body.scale.set(.9, .2, .34); body.position.set(.1, .0, 0); g.add(body);
     const head = new T.Mesh(new T.SphereGeometry(.13, 12, 8), M.skin); head.position.set(-.78, .03 + headRoom * .1, 0); g.add(head);
-    const pillow = new T.Mesh(new T.BoxGeometry(.34, .08, .3), M.clothA); pillow.position.set(-.8, -.05, 0); g.add(pillow);
-    const mat = new T.Mesh(new T.BoxGeometry(2.1, .06, .74), M.clothD); mat.position.set(0, -.16, 0); g.add(mat);
+    if(!clinical){const pillow = new T.Mesh(new T.BoxGeometry(.34, .08, .3), M.clothA); pillow.position.set(-.8, -.05, 0); g.add(pillow);
+    const mat = new T.Mesh(new T.BoxGeometry(2.1, .06, .74), M.clothD); mat.position.set(0, -.16, 0); g.add(mat);}
     animated.push(t => { body.scale.y = .2 + Math.sin(t * 1.25 + x) * .008; body.scale.z = .34 + Math.sin(t * 1.25 + x) * .006; });
     stats.sleepers++; return g;
   }
@@ -126,13 +126,10 @@ export function createEnclaveLife(T, parent, { low = false } = {}) {
     notice(['DISPENSAIRE', 'SILENCE'], 20, 2.2, 90.17, 0, .8, .5, { fg: '#8dffd2' });
     notice(['LOCAL RADIO', 'NE PAS TOUCHER'], 33, 2.2, 93.83, Math.PI, .8, .5, { fg: '#ff9bcf' });
     // Dispensary x 12…28, z 80…90: partition curtains, drip stands, a trolley, the cross.
-    for (const [x, z, w] of [[18.9, 85, 2.6], [24.3, 84.4, 2.4]]) { const c = new T.Mesh(new T.PlaneGeometry(w, 1.9), M.clothA); c.position.set(x, 1.55, z); c.rotation.y = Math.PI / 2; root.add(c); animated.push(t => { c.rotation.z = Math.sin(t * .8 + x) * .012; }); stats.props++; }
-    for (const [x, z] of [[17.4, 82.9], [17.4, 87.4]]) { box(M.steel, [.05, 1.8, .05], [x, .9, z]); box(M.steel, [.34, .04, .04], [x, 1.8, z]); fixed.add(new T.CylinderGeometry(.06, .06, .2, 8), M.white, matrix([x + .13, 1.68, z]), false); wire([x + .13, 1.58, z], [x + .3, .9, z + .15], .004); }
-    box(M.steel, [.9, .06, .55], [25.6, .8, 88.8]); for (const sx of [-.4, .4]) for (const sz of [-.22, .22]) box(M.steel, [.04, .8, .04], [25.6 + sx, .4, 88.8 + sz]);
-    box(M.white, [.3, .12, .3], [25.4, .89, 88.7]); box(M.crateDark, [.34, .1, .24], [25.9, .89, 88.9]);
+    // Detailed curtains, infusion stands and trolley are built by dispensary-details.js.
     fixed.add(new T.BoxGeometry(.5, .14, .02), glow(0xff5470), matrix([20, 2.6, 80.14]), false); fixed.add(new T.BoxGeometry(.14, .5, .02), glow(0xff5470), matrix([20, 2.6, 80.14]), false);
     notice(['DISPENSAIRE', 'DES ÉPARS'], 16.6, 2.3, 80.16, 0, 1, .62, { fg: '#8dffd2' });
-    sleeper(16.1, 82, 0, M.blanketA, .08, .86); sleeper(16.1, 88.2, Math.PI, M.blanketC, .08, .86);
+    sleeper(16.1, 82, 0, M.blanketA, .08, .86, true); sleeper(16.1, 88.2, Math.PI, M.blanketC, .08, .86, true);
     // Radio room x 28…40, z 80…90: map of the districts, coils of cable, a stool.
     notice(['CARTE DES ÉPARS', 'BAS-NIVEAUX · SECTEUR 7'], 34, 2.0, 80.17, 0, 1.5, .95, { fg: '#7beaf2', w: 384, h: 240 });
     for (const [x, z] of [[30.5, 82.2], [38.6, 88.6]]) { fixed.add(new T.TorusGeometry(.2, .05, 6, 14), M.wire, matrix([x, .06, z], [Math.PI / 2, 0, 0]), false); fixed.add(new T.TorusGeometry(.2, .05, 6, 14), M.wire, matrix([x, .13, z], [Math.PI / 2, 0, 0]), false); }

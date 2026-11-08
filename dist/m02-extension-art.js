@@ -1,3 +1,4 @@
+import {createDispensaryDetails} from './dispensary-details.js';
 import {createWorldEffects} from './webgpu-world-fx.js';
 import {upgradeLightBlocks} from './industrial-light.js';
 import {createEnclaveLife} from './m02-enclave-life.js';
@@ -311,8 +312,10 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       g.add(label);
     }
   }
+  const clinic=createDispensaryDetails(T,root,{M,low});
   const helixLogo = (bg = null) => signTex(['DIRECTOIRE', 'SÉCURITÉ'], { bg, fg: '#ff2f45', w: 512, h: 256 });
   function dress(o) {
+    if(roomAt(o.x,o.z)==='dispensaire'&&['bed','cabinet','desk'].includes(o.kind)){clinic[o.kind](o);return;}
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, h = o.height;
     // Reuse physically distinct functional props across the whole game.
     // The obstacle/layout object remains the authority for physics and objectives.
@@ -582,7 +585,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       placeFixtures(); buildRooms(); buildWalls(obstacles);
       for (const o of obstacles) if (o.extension) { dress(o); details.accessories(o); }
       buildFixtureMeshes(); buildDoors(); buildDevices(obstacles); buildSigns(); buildCyber();
-      neons.meshes(); neons.build(); flushGeometry(); flushPieces(); details.finish(); livedIn.build(obstacles); life.build();
+      neons.meshes(); neons.build(); flushGeometry(); flushPieces(); details.finish(); livedIn.build(obstacles); life.build();clinic.finish();
     },
     update(t, dt, eye, player = eye.position, { crank = false } = {}) {
       worldFx.update(t,eye.position);updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt, crank); details.update(power); livedIn.update(t,dt,power); life.update(t,dt,power);

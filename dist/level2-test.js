@@ -1,3 +1,6 @@
+import {overheadServiceLift} from './overhead-clearance.js';
+import {createLandingFinish} from './landing-finish.js';
+import {createAimRelease,reconcileAimModifiers} from './aim-release.js';
 import {rendererBackend,rendererLabel} from './renderer-policy.js';
 import {createStreetlamp} from './power-props.js';
 import {loadDoorSamples,createDoorAudioController} from './door-audio.js';
@@ -82,6 +85,9 @@ let worldShadows=null,groundOcclusion=null,environmentFinish=null,electricPortal
 // 3.70 extension: enclave (prologue) and transit tower (epilogue) around the street.
 let extension=null,extArt=null,helixFactory=null,subtitles=null,skyLights=null,journalOpen=false,checkpointSaved=null,checkpointClock=0;
 let view=readPreferredView(),aimBlend=0,mouseAim=false,playerRig=null,touchControls=null,paused=false;
+const aimRelease=createAimRelease();
+const exitAim=document.createElement('button');exitAim.textContent='↶ VUE NORMALE';exitAim.id='pw-exit-aim';exitAim.hidden=true;exitAim.style.cssText='position:fixed;top:calc(env(safe-area-inset-top) + 88px);left:50%;transform:translateX(-50%);z-index:30;border:1px solid #99d9df99;border-radius:22px;padding:9px 15px;background:#081a24e8;color:#e5faff;font:700 12px system-ui;touch-action:manipulation';document.body.append(exitAim);exitAim.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();cancelAim();});exitAim.addEventListener('click',()=>cancelAim());
+function cancelAim(){aimRelease.cancel();mouseAim=false;touchControls?.releaseAim?.();aimBlend=0;if(game)game.precisionAiming=false;exitAim.hidden=true;document.body.classList.remove('aiming');if(game&&camera)snapCamera();}
 let jumpQueued=false,crouchQueued=false,firePressQueued=false,weaponReady=false,audioCtx=null;
 const weaponFeel=createWeaponFeel(),pinkControls=createPinkWarsInput();
 const fireInput=createFireBuffer();
@@ -280,17 +286,20 @@ function blockBuildings(){
   createStreetlamp(T,root,{x:poleX,z:z+7,side,low:low(),webgpu:!!renderer.backend?.isWebGPUBackend});
   collisions.push({x:poleX,z:z+7,hx:.19,hz:.19,y:0,height:7.4,surface:'metal'});
  }
- for(let i=0;i<18;i++){
-  const z=70-i*8.1,y=9+(i%4)*2,x0=-14,x1=14;
-  beam([x0,y,z],[x1,y-1,z+2],.035,materials.black,5);
-  if(i%3===0)beam([x0,y+1.2,z+.4],[x1,y+1,z+2],.05,materials.iron,5);
- }
 
  // Environmental storytelling.
  for(let i=0;i<14;i++){
   const x=(i%2?1:-1)*(6.5+rng()*1.8),z=70-i*10;
   solid(x,.3,z,1.1,.6,.9,materials.rust,true);
   solid(x+.24,.72,z-.2,.65,.23,.6,materials.black,false);
+ }
+}
+function overheadServices(){
+ const run=(a,b,r,m)=>{const lift=overheadServiceLift(floors,a,b,{radius:r});return beam([a[0],a[1]+lift,a[2]],[b[0],b[1]+lift,b[2]],r,m,5);};
+ for(let i=0;i<18;i++){
+  const z=70-i*8.1,y=9+(i%4)*2;
+  run([-14,y,z],[14,y-1,z+2],.035,materials.black);
+  if(i%3===0)run([-14,y+1.2,z+.4],[14,y+1,z+2],.05,materials.iron);
  }
 }
 function stairsAndSkybridges(){
@@ -308,10 +317,9 @@ function stairsAndSkybridges(){
  walkway(eastX,-12.5,2.9,12,12,'upper-east');
  solid(0,11.85,-18,22,.3,3.05,materials.road,false);
  walkway(0,-18,22,3.05,12,'crossbridge');
+ solid(-10.6,11.86,-18.65,2.9,.28,2.1,materials.road,false);walkway(-10.6,-18.65,2.9,2.1,12,'upper-west');
  // Leave real landing openings at the east, west and roof stair entrances.
  for(const [z,from,to] of [[-16.62,-11,8.9],[-19.38,-5.1,11]]){
-  for(let x=from;x<=to;x+=2)beam([x,12.1,z],[x,13.3,z],.06,materials.iron);
-  beam([from,13.2,z],[to,13.2,z],.07,materials.iron);
   collisions.push({x:(from+to)/2,z,hx:(to-from)/2,hz:.1,y:12,height:1.25,surface:'metal'});
  }
  for(let i=0;i<upN;i++){
@@ -323,8 +331,8 @@ function stairsAndSkybridges(){
   walkway(westX,z,2.55,step+.07,h,'west-stair-'+i);
   for(const side of [-1,1])collisions.push({x:westX+side*1.345,z,hx:.043,hz:step/2+.02,y:h+.85,height:.24,surface:'metal',stairRail:true});
  }
- createStairHardware(T,root,{id:'m02-est',x:eastX,halfWidth:1.275,bottomZ:16.1,topZ:16.1-upN*step,height:12},{low:low(),steps:upN,materials:{steel:materials.iron,dark:materials.black}});
- createStairHardware(T,root,{id:'m02-ouest',x:westX,halfWidth:1.275,bottomZ:-19.7-(upN-1)*step,topZ:-19.7,height:12-rise},{low:low(),steps:upN-1,materials:{steel:materials.iron,dark:materials.black}});
+ createStairHardware(T,root,{id:'m02-est',x:eastX,halfWidth:1.275,bottomZ:16.1,topZ:16.1-upN*step,height:12},{low:low(),steps:upN,topReturn:false,materials:{steel:materials.iron,dark:materials.black}});
+ createStairHardware(T,root,{id:'m02-ouest',x:westX,halfWidth:1.275,bottomZ:-19.7-(upN-1)*step,topZ:-19.7,height:12-rise},{low:low(),steps:upN-1,topReturn:false,materials:{steel:materials.iron,dark:materials.black}});
  // Optional level +25 m to make the planned three vertical layers tangible.
  const roofX=-6.7,roofRise=13/72;
  for(let i=0;i<72;i++){
@@ -335,14 +343,10 @@ function stairsAndSkybridges(){
   walkway(roofX,z,2.4,.40,h,'roof-stair-'+i);
   for(const side of [-1,1])collisions.push({x:roofX+side*1.27,z,hx:.043,hz:.20,y:h+.85,height:.24,surface:'metal',stairRail:true});
  }
- createStairHardware(T,root,{id:'m02-toit',x:roofX,halfWidth:1.2,bottomZ:-19.8,topZ:-19.8-72*.36,base:12,height:25},{low:low(),steps:72,materials:{steel:materials.iron,dark:materials.black}});
+ createStairHardware(T,root,{id:'m02-toit',x:roofX,halfWidth:1.2,bottomZ:-19.8,topZ:-19.8-72*.36,base:12,height:25},{low:low(),steps:72,topReturn:false,materials:{steel:materials.iron,dark:materials.black}});
  solid(-6.7,24.85,-51,10.4,.30,13.5,materials.road,false);
  walkway(-6.7,-51,10.4,13.5,25,'roof');
- for(let z=-57;z<-44;z+=2){
-  beam([-11.65,25,z],[-11.65,26.2,z],.06,materials.iron);
- }
- beam([-11.65,26.2,-57],[-11.65,26.2,-44],.08,materials.iron);
- collisions.push({x:-11.65,z:-50.5,hx:.08,hz:6.5,y:25.9,height:.35,surface:'metal'});
+ createLandingFinish(T,root,{M:materials,low:low(),collisions});
  // Architectural braces and hanging lighting beneath the crossbridge.
  for(const side of [-1,1])beam([side*8,2,-18],[side*8,11.6,-18],.21,materials.iron,8);
  for(let i=-4;i<=4;i++)beam([i*2.2,11.5,-18],[i*2.2,12,-18],.06,materials.black);
@@ -441,7 +445,7 @@ function createEnvironment(){
   const lamp=new T.PointLight(z%3===0?0xe69b5a:0x5bd6ec,low()?1.1:1.8,18,2);
   lamp.position.set(x,6.5,z);scene.add(lamp);lightSources.push(lamp);
  }
- street();blockBuildings();stairsAndSkybridges();props();architecture.decorate();
+ street();blockBuildings();stairsAndSkybridges();overheadServices();props();architecture.decorate();
  createM02Boundary(T,root,{materials,solid,sign});
  for(const b of extensionObstacles())if(b.extensionCeiling)floors.push({...b,height:b.y+b.height,id:b.kind});
  // Visual-only pass: no collision changes or character/weapon assets touched.
@@ -489,7 +493,7 @@ function setupPlayer(){
  companion=createAICompanion(T,scene,characterId);
  companionSkills=createCompanionSkills({characterId,mission:2,mode:'campaign'});
  skillMenu=createCompanionMenu({getStatus:()=>companionSkills.snapshot(game),onUse:()=>false,
-  onChange(open){heldFire=false;keys.clear();fireInput.reset();touchControls?.reset();if(open)document.exitPointerLock?.();}});
+  onChange(open){cancelAim();heldFire=false;keys.clear();fireInput.reset();touchControls?.reset();if(open)document.exitPointerLock?.();}});
  try {enemyFactory=createEnemyFactory(enemyMaterials());}
  catch(error){console.warn('M02 / enemy visuals degraded:',error);enemyFactory=null;}
  try {helixFactory=createEnemyFactory({monster:mat(0xe9ecee,.32,.25),monsterFace:mat(0x0b0d10,.4,.55),cyan:glow(0xff2f45),rose:glow(0xff2f45),violet:mat(0x0b0d10,.4,.55),pale:mat(0xc1121f,.4,.3)});}
@@ -528,7 +532,7 @@ function setupExtension(){
 }
 function openJournal(entry,then){
  if(!entry)return;
- combatHud?.reset();journalOpen=true;heldFire=false;fireInput.reset();game.state='paused';document.exitPointerLock?.();
+ cancelAim();keys.clear();combatHud?.reset();journalOpen=true;heldFire=false;fireInput.reset();game.state='paused';document.exitPointerLock?.();
  showMissionJournal(entry,{sound:enableAudio,onClose(){journalOpen=false;if(game.state==='paused')game.state='playing';if(then)subtitles?.say(m02Lines(then,characterId));
   if(!touchControls?.root&&!xr?.active&&running)canvas.requestPointerLock?.().catch?.(()=>{});}});
  if(xr?.active)xr.showJournal(entry,()=>document.getElementById('m01-journal')?.close());
@@ -643,7 +647,7 @@ function updateOriginalSoldier(dt,moving,sprint,firing){
 }
 function pauseMission(){
  if(!running||paused)return;
- doorAudio.reset();combatHud?.reset();touchSprinting=false;paused=true;running=false;battleAudio?.pause();environmentAudio?.pause();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
+ cancelAim();keys.clear();doorAudio.reset();combatHud?.reset();touchSprinting=false;paused=true;running=false;battleAudio?.pause();environmentAudio?.pause();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
  touchControls?.reset();pinkControls.reset();document.exitPointerLock?.();
  // The immersive headset uses its own selectable 3D pause menu.
  // Avoid an invisible HTML pause dialog retaining the wrong state.
@@ -721,7 +725,8 @@ function gameTick(dt){
  pitch=clamp(pitch-(touch.lookDY||0)*.004*sensitivity,-.85,.7);
  touch.lookDX=touch.lookDY=0;
  const x=controls.moveX+touch.x,z=controls.moveZ+touch.z;
- const aiming=!!OPTICS[game.weapon.id]&&game.reloadRemaining<=0&&(mouseAim||touch.aim||controls.aim);
+ const aiming=!!OPTICS[game.weapon.id]&&game.reloadRemaining<=0&&aimRelease.read(mouseAim||touch.aim||controls.aim);
+ exitAim.hidden=!aiming&&aimBlend<.05;
  aimBlend+=(Number(aiming)-aimBlend)*(1-Math.exp(-dt*14));
  game.precisionAiming=aimBlend>.55;
  document.body.classList.toggle('aiming',aiming);
@@ -969,7 +974,7 @@ async function boot(){
    onCrouch:()=>{crouchQueued=true;},
    onView:()=>changeView(),
    onPause:()=>pauseMission(),
-   onAim:down=>{if(down)audioReady();mouseAim=down;}
+   onAim:down=>{if(down){audioReady();aimRelease.freshPress();}mouseAim=down;}
   });
   resume();
   pauseMenu.setVisible(true);
@@ -1030,9 +1035,11 @@ quality.addEventListener('change',()=>{
 window.addEventListener('resize',resize);
 window.addEventListener('keydown',e=>{
  if(['INPUT','SELECT','TEXTAREA'].includes(e.target?.tagName))return;
- if(e.code==='Escape'){e.preventDefault();if(paused)unpauseMission();else pauseMission();return;}
+ if(e.code==='Escape'){e.preventDefault();if(!paused&&(aimBlend>.05||mouseAim||touchControls?.state.aim)){cancelAim();return;}if(paused)unpauseMission();else pauseMission();return;}
  if(!running)return;
  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
+ reconcileAimModifiers(keys,e);
+ if(!e.repeat&&/^(KeyO|ControlLeft|ControlRight|MetaLeft|MetaRight)$/.test(e.code))aimRelease.freshPress();
  keys.add(e.code);
  if(e.repeat)return;
  if(e.code==='KeyJ'||e.code==='Space'){jumpQueued=true;}
@@ -1046,9 +1053,9 @@ window.addEventListener('keydown',e=>{
  // Espace déclenche le saut ; le tir reste sur clic gauche / manette / tactile.
  if(/^Digit[1237]$/.test(e.code))game.selectWeapon(Number(e.code.slice(-1))-1);
 });
-window.addEventListener('keyup',e=>keys.delete(e.code));
-window.addEventListener('blur',()=>{keys.clear();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();pinkControls.reset();touchControls?.reset();});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){keys.clear();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();pinkControls.reset();touchControls?.reset();}});
+window.addEventListener('keyup',e=>{keys.delete(e.code);reconcileAimModifiers(keys,e);});
+window.addEventListener('blur',()=>{cancelAim();keys.clear();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();pinkControls.reset();touchControls?.reset();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAim();keys.clear();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();pinkControls.reset();touchControls?.reset();}});
 window.addEventListener('contextmenu',e=>{if(e.target===canvas)e.preventDefault();});
 window.addEventListener('mousemove',e=>{
  if(!running||document.pointerLockElement!==canvas)return;
@@ -1076,7 +1083,9 @@ window.addEventListener('pointermove',e=>{
 for(const name of ['pointerup','pointercancel']){
  window.addEventListener(name,e=>{if(e.button===0||e.pointerId===dragPointer){heldFire=false;dragPointer=null;}if(e.button===2)mouseAim=false;});
 }
-document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
+document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement){heldFire=false;cancelAim();}});
+window.addEventListener('orientationchange',()=>{cancelAim();keys.clear();});
+window.addEventListener('pointerdown',e=>reconcileAimModifiers(keys,e),{capture:true});
 window.__PINK_M02=Object.freeze({snapshot:()=>({music:screenMusicSnapshot(),revision:'3.74.0',neons:root?.userData?.neons,running,paused,view:xr?.active?'fps':view,playerVisible:playerRig?.model.root.visible||false,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,extension:extension&&{stage:extension.stage,hold:extension.hold,done:extension.done,reads:extension.reads,opened:extension.opened,groups:extension.groups(),interaction:extension.interaction()},subtitle:subtitles?.current||null,journal:journalOpen,dressing:extArt?.stats(),health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
  shadowing:worldShadows?.stats(),backend:rendererBackend(renderer),rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,

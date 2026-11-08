@@ -2,7 +2,7 @@ import {Assembly,bevelBox,limb,matrix} from './geo.js';
 import {metricSurfaceUV} from './combat-surface-textures.js';
 
 // Decorative hardware uses the authored walking route. It never changes physics.
-export function createStairHardware(T,parent,s,{materials={},low=false,mode='steps',steps=Math.round(Math.abs(s.bottomZ-s.topZ)/.3),stepOffset=1,railInset=-.07,rails=true,wall=false,deck=false,postCount=null,railHeight=1.04}={}){
+export function createStairHardware(T,parent,s,{materials={},low=false,mode='steps',steps=Math.round(Math.abs(s.bottomZ-s.topZ)/.3),stepOffset=1,railInset=-.07,rails=true,wall=false,deck=false,postCount=null,railHeight=1.04,topReturn=true}={}){
  const root=new T.Group();root.name='Escalier / '+s.id;root.userData.stairHardware=s.id;parent.add(root);
  const a=new Assembly(),owned=[],geometries=new Set();
  const material=(color,roughness,metalness)=>{const m=new T.MeshStandardMaterial({color,roughness,metalness});owned.push(m);return m;};
@@ -36,7 +36,7 @@ export function createStairHardware(T,parent,s,{materials={},low=false,mode='ste
  if(rails)for(const side of [-1,1]){
   const x=side*(s.halfWidth-railInset),rise=railHeight;
   // Continuous grip with radiused returns: no exposed tube ends at entry/exit.
-  const pts=[at(0,.82,x),at(0,rise-.08,x),at(.008,rise,x),at(.992,rise,x),at(1,rise-.08,x),at(1,.82,x)];
+  const pts=[at(0,.82,x),at(0,rise-.08,x),at(.008,rise,x),at(.992,rise,x),at(1,topReturn?rise-.08:rise,x),at(1,topReturn?.82:rise,x)];
   if(rails!=='fittings'){const curve=new T.CatmullRomCurve3(pts.map(p=>new T.Vector3(...p)));add(new T.TubeGeometry(curve,Math.max(16,Math.ceil(length*2)),.043,low?6:10,false),steel);
   if(!wall){rod(at(0,.50,x),at(1,.50,x),.026);rod(at(0,.10,x),at(1,.10,x),.035,dark);}}
   const posts=postCount??Math.max(2,Math.ceil(length/1.65));

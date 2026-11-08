@@ -1,0 +1,30 @@
+{
+  "porte-B-ouverture.wav": {
+    "sha256": "a4372c8cd28ceac0907064a12b4125ccdfaa8c2411ebaeec82bed2b5208a4d01",
+    "bytes": 180962
+  },
+  "portes-B-ecoute.wav": {
+    "sha256": "035f518a2663054afc2aa6dd460248002c8f5a1cb5f09599d73b4cfe355cc5b4",
+    "bytes": 484948
+  },
+  "porte-B-fermeture.wav": {
+    "sha256": "0ff15026db4904825afcacfcfa2383c291f4b01ffe6c8a56cbf9a2f942c1223d",
+    "bytes": 189370
+  },
+  "portes-AVANT-ecoute.wav": {
+    "sha256": "283158e4690645ae9c7d87679c559e53d9825b6e5a0d32972e2aa9a5b14e8597",
+    "bytes": 138872
+  },
+  "porte-A-ouverture.wav": {
+    "sha256": "0688c4015062790285fe628b94e38c98212a950a759e3bb6fdcd296061fd83be",
+    "bytes": 139598
+  },
+  "portes-A-ecoute.wav": {
+    "sha256": "8eeb336baa7cbe00fea31c136895a068b33b66ea8025a16f04175248e8b11673",
+    "bytes": 400044
+  },
+  "porte-A-fermeture.wav": {
+    "sha256": "8a4c926055676d6d1635ce4ab3af400e3a0a7c140566125085102964d774aeeb",
+    "bytes": 145830
+  }
+}

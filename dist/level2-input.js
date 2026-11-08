@@ -121,7 +121,7 @@ export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onRelo
   });
  }
  // Watchdog: a control still marked held while no finger has touched the screen for a moment is a stale one.
- return {state,root,step(dt){
+ return {state,root,releaseAim(){state.aim=false;onAim?.(false);},step(dt){
   const held=state.x||state.z||state.fire||state.aim||lookPointer!==null;
   if(held&&sawTouch&&fingers===0){idleFor+=dt||0;if(idleFor>.25){releaseAll();idleFor=0;}}else idleFor=0;
   return orbit.step(dt);},reset(){state.x=state.z=state.lookX=state.lookY=state.lookDX=state.lookDY=0;state.aim=state.fire=state.sprint=false;orbit.reset();lookPointer=null;onFire?.(false);onAim?.(false);}};
