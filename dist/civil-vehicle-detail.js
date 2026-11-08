@@ -2,7 +2,7 @@
 // details instead of 3 intersecting giant cuboids. Static, collisionless dressing
 // within the authored gameplay car proxy; this is NOT an additional hitbox.
 import {Assembly,bevelBox,matrix} from './geo.js';
-export const CIVIL_CAR_REVISION='VESPER-COMPACT-2026-11';
+export const CIVIL_CAR_REVISION='VESPER-RLH-V750-ADAPTATION-2026-11';
 export function createCivilCar(T,{length=4.4,width=2,low=false,M}={}){
  if(!(length>3&&width>1))throw Error('invalid compact car dimensions');
  const g=new T.Group();g.name='VESPER / voiture civile cabossée · carrosserie profilée';
@@ -17,13 +17,24 @@ export function createCivilCar(T,{length=4.4,width=2,low=false,M}={}){
  const ring=(m,p,r,t,rot=[0,0,0])=>{
   const geo=new T.TorusGeometry(r,t,low?4:6,low?10:18);a.add(geo,m,matrix(p,rot),!low);geo.dispose();
  };
- const side=new T.Shape(),L=length*.5,W=width*.5;
- side.moveTo(-L+.05,.62);side.lineTo(L-.05,.62);
- side.lineTo(L-.10,1.01);side.lineTo(L-.42,1.09);
- side.lineTo(L-.77,1.42);side.lineTo(-L+.78,1.47);
- side.lineTo(-L+.42,1.13);side.lineTo(-L+.09,1.02);side.closePath();
- const shell=new T.ExtrudeGeometry(side,{depth:width*.87,steps:1,bevelEnabled:true,bevelThickness:.018,bevelSize:.025,bevelSegments:low?1:2,curveSegments:4});
+ // RLH V750: keep the four authentic civil silhouettes, but orient the nose to +X
+ // like Pink Wars, and preserve the old physical collider and mission anchors.
+ const L=length*.5,W=width*.5;
+ const RLH_PROFILES={
+  citadine:{L:3.85,body:[[-1.92,.30],[-1.89,.66],[-1.34,.78],[-.74,.84],[-.12,1.38],[.92,1.41],[1.48,1.22],[1.66,.80],[1.68,.36],[1.56,.30]],glass:[[-.10,1.31],[.88,1.34],[1.38,1.16],[-.68,.92]]},
+  berline:{L:4.45,body:[[-2.22,.30],[-2.20,.66],[-1.62,.76],[-.92,.80],[-.18,1.36],[.95,1.39],[1.52,.97],[2.12,.88],[2.22,.40],[2.10,.30]],glass:[[-.16,1.30],[.90,1.33],[1.44,.95],[-.86,.88]]},
+  break:{L:4.70,body:[[-2.35,.30],[-2.32,.66],[-1.72,.76],[-1.00,.80],[-.28,1.38],[1.55,1.42],[2.20,1.28],[2.34,.80],[2.36,.38],[2.24,.30]],glass:[[-.26,1.32],[1.50,1.36],[2.10,1.22],[-.94,.88]]}
+ };
+ const family=length<4.05?'citadine':length>4.65?'break':'berline';
+ const spec=RLH_PROFILES[family],sideShape=(points)=>{
+  const s=new T.Shape(),gain=length/spec.L;
+  points.forEach(([px,py],i)=>{const x=-px*gain; if(i===0)s.moveTo(x,py);else s.lineTo(x,py);});s.closePath();return s;
+ };
+ const shell=new T.ExtrudeGeometry(sideShape(spec.body),{depth:width*.87,steps:1,bevelEnabled:true,bevelThickness:.025,bevelSize:.024,bevelSegments:low?1:2,curveSegments:3});
  a.add(shell,M.red,matrix([0,0,-width*.435]),!low);shell.dispose();
+ const windows=new T.ExtrudeGeometry(sideShape(spec.glass),{depth:width*.908,steps:1,bevelEnabled:true,bevelThickness:.006,bevelSize:.007,bevelSegments:1,curveSegments:2});
+ a.add(windows,M.glass,matrix([0,0,-width*.454]),false);windows.dispose();
+ g.userData.vehicle.source='RLH civil-car-v750';g.userData.vehicle.bodyVariant=family;
  box(M.dark,[length-.26,.21,width-.22],[0,.62,0],[],.045);
  // Side doors have independent, readable panel edges and handles.
  for(const s of [-1,1]){
@@ -32,8 +43,11 @@ export function createCivilCar(T,{length=4.4,width=2,low=false,M}={}){
   box(M.steel,[.31,.023,.023],[-.67,1.13,z+s*.012],[],.004);
   box(M.steel,[.31,.023,.023],[.64,1.13,z+s*.012],[],.004);
   box(M.dark,[length-.26,.055,.035],[0,.69,z],[],.011);
-  box(M.glass,[1.24,.27,.018],[-.62,1.27,z+s*.008],[0,s*.025,0],.006);
-  box(M.glass,[.72,.23,.018],[.62,1.24,z+s*.008],[0,s*.045,0],.006);
+  // The actual RLH glazing has replaced the old flat window rectangles.
+  box(M.dark,[.024,.52,.025],[.12,1.16,z+s*.018],[],.004);
+  box(M.black,[length*.56,.022,.024],[0,.88,z+s*.017],[],.002);
+  box(M.steel,[.12,.022,.08],[L-.58,1.23,s*(W+.028)],[],.003);
+  box(M.dark,[.18,.13,.15],[L-.49,1.22,s*(W+.055)],[],.018);
   box(M.black,[.026,.20,.023],[.10,1.28,z+s*.024],[],.002);
   box(M.black,[.16,.13,.15],[L-.65,1.21,s*(W-.070)],[],.018);
  }
@@ -55,6 +69,13 @@ export function createCivilCar(T,{length=4.4,width=2,low=false,M}={}){
   circle(M.black,[x,.425,z+s*.145],.07,.026,[Math.PI/2,0,0]);
   ring(M.steel,[x,.425,z+s*.14],.30,.022);
  }
+ // RLH V750: proper inset grille, stacked slats, bumper rubbers and a visible registration.
+ box(M.dark,[.045,.17,width*.58],[L+.006,.77,0],[],.009);
+ for(let k=0;k<4;k++)box(M.steel,[.013,.014,width*.48],[L+.032,.72+k*.034,0],[],.002);
+ box(M.white,[.012,.105,.44],[L+.038,.51,0],[],.003);
+ box(M.dark,[.09,.15,width*.67],[-L+.027,.57,0],[],.010);
+ for(const s of [-1,1])box(M.yellow,[.019,.048,.115],[L+.016,.67,s*(W-.16)],[],.003);
+ if(family==='break')for(const s of [-1,1])box(M.steel,[length*.48,.028,.04],[-.26,1.48,s*(W-.15)],[],.007);
  // Luggage hatch line and marked seat belt inserts.
  box(M.dark,[.023,.42,width-.28],[-L+.43,1.22,0],[0,0,.18],.004);
  box(M.dark,[.14,.022,.045],[-L+.045,.83,0],[],.004);
