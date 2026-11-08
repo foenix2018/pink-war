@@ -1,20 +1,29 @@
-// Mechanical sci-fi door travel, Kenney CC0. One voice per moving door, no frame beeps.
+// Approved mechanical recordings: A for medical/sliding doors, B for heavy doors.
+// Tomlija / themias (CC BY 3.0), with Kenney CC0 lock transients; see audio credits.
 const buffers=new WeakMap(),loads=new WeakMap();
-export const DOOR_SAMPLES=Object.freeze({open:new URL('./assets/audio/doors/open.wav',import.meta.url).href,close:new URL('./assets/audio/doors/close.wav',import.meta.url).href});
+const sample=file=>new URL('./assets/audio/doors/'+file,import.meta.url).href;
+export const DOOR_SAMPLES=Object.freeze({
+ medical:Object.freeze({open:sample('medical-open.wav'),close:sample('medical-close.wav')}),
+ heavy:Object.freeze({open:sample('heavy-open.wav'),close:sample('heavy-close.wav')})
+});
+export function doorSoundProfile(door={}){
+ if(door.id==='dispensaire'||door.id==='soins')return 'medical';
+ return ['gate','vault','helix'].includes(door.style)?'heavy':'medical';
+}
 export function loadDoorSamples(ctx,fetcher=globalThis.fetch){
  if(!ctx?.decodeAudioData||!fetcher)return Promise.resolve(null);
  if(buffers.has(ctx))return Promise.resolve(buffers.get(ctx));
  if(loads.has(ctx))return loads.get(ctx);
- const task=Promise.all(Object.entries(DOOR_SAMPLES).map(async([kind,url])=>{const r=await fetcher(url);if(!r.ok)throw Error('Door recording unavailable');return[kind,await ctx.decodeAudioData(await r.arrayBuffer())];}))
+ const task=Promise.all(Object.entries(DOOR_SAMPLES).map(async([profile,samples])=>[profile,Object.fromEntries(await Promise.all(Object.entries(samples).map(async([kind,url])=>{const r=await fetcher(url);if(!r.ok)throw Error('Door recording unavailable');return[kind,await ctx.decodeAudioData(await r.arrayBuffer())];})))]))
  .then(entries=>{const result=Object.fromEntries(entries);buffers.set(ctx,result);return result;}).catch(()=>null).finally(()=>loads.delete(ctx));
  loads.set(ctx,task);return task;
 }
 export function playDoorMotion(ctx,kind,door,{listener={},yaw=0}={}){
- const buffer=buffers.get(ctx)?.[kind];if(!buffer||ctx.state!=='running')return null;
+ const buffer=buffers.get(ctx)?.[doorSoundProfile(door)]?.[kind];if(!buffer||ctx.state!=='running')return null;
  const x=door.axis==='x'?door.centre:door.fixed,z=door.axis==='x'?door.fixed:door.centre;
  const dx=x-(listener.x||0),dz=z-(listener.z||0),distance=Math.hypot(dx,dz);if(distance>24)return null;
  const source=ctx.createBufferSource(),gain=ctx.createGain(),pan=ctx.createStereoPanner?.(),nodes=[source,gain,...(pan?[pan]:[])];
- source.buffer=buffer;source.playbackRate.value=door.style==='gate'?.78:door.style==='vault'?.86:1.08;
+ source.buffer=buffer;source.playbackRate.value=1; // Preserve the exact approved recording and pitch.
  gain.gain.value=.46*Math.pow(1-distance/24,2)/(1+distance*.07);
  source.connect(gain);gain.connect(pan||ctx.destination);if(pan){pan.pan.value=Math.max(-.85,Math.min(.85,(dx*Math.cos(yaw)-dz*Math.sin(yaw))/Math.max(2,distance)));pan.connect(ctx.destination);}
  let stopped=false;const stop=()=>{if(stopped)return;stopped=true;try{source.stop();}catch{}for(const n of nodes)n.disconnect();};

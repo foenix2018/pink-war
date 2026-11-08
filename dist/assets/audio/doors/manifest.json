@@ -18,5 +18,53 @@
     "mirror": "https://github.com/novincode/atomcut-library/tree/main/packs/kenney-sci-fi-sounds",
     "license": "CC0-1.0",
     "author": "Kenney"
+  },
+  {
+    "file": "assets/audio/doors/medical-open.wav",
+    "sha256": "0688c4015062790285fe628b94e38c98212a950a759e3bb6fdcd296061fd83be",
+    "license": "CC-BY-3.0",
+    "author": "Tomlija; converted and modified by themias; mix Pink Wars",
+    "source": "https://freesound.org/people/Tomlija/sounds/99565/",
+    "mirror": "https://github.com/space-wizards/space-station-14/tree/master/Resources/Audio/Machines",
+    "source_file": "shutter.ogg",
+    "source_sha256": "ee567e2d18c6af1913aa6dcf0488c4aaa2e8f4f9549723de421cfc108a6b288b",
+    "modifications": "Approved mix A: speed, filtering, fades, level, Kenney CC0 metal-lock transients",
+    "approved_proposal": "porte-A-ouverture.wav"
+  },
+  {
+    "file": "assets/audio/doors/medical-close.wav",
+    "sha256": "8a4c926055676d6d1635ce4ab3af400e3a0a7c140566125085102964d774aeeb",
+    "license": "CC-BY-3.0",
+    "author": "Tomlija; converted and modified by themias; mix Pink Wars",
+    "source": "https://freesound.org/people/Tomlija/sounds/99565/",
+    "mirror": "https://github.com/space-wizards/space-station-14/tree/master/Resources/Audio/Machines",
+    "source_file": "shutter.ogg",
+    "source_sha256": "ee567e2d18c6af1913aa6dcf0488c4aaa2e8f4f9549723de421cfc108a6b288b",
+    "modifications": "Approved mix A: speed, filtering, fades, level, Kenney CC0 metal-lock transients",
+    "approved_proposal": "porte-A-fermeture.wav"
+  },
+  {
+    "file": "assets/audio/doors/heavy-open.wav",
+    "sha256": "a4372c8cd28ceac0907064a12b4125ccdfaa8c2411ebaeec82bed2b5208a4d01",
+    "license": "CC-BY-3.0",
+    "author": "Tomlija; converted and modified by themias; mix Pink Wars",
+    "source": "https://freesound.org/people/Tomlija/sounds/99565/",
+    "mirror": "https://github.com/space-wizards/space-station-14/tree/master/Resources/Audio/Machines",
+    "source_file": "shutter.ogg",
+    "source_sha256": "ee567e2d18c6af1913aa6dcf0488c4aaa2e8f4f9549723de421cfc108a6b288b",
+    "modifications": "Approved mix B: speed, filtering, fades, level, Kenney CC0 metal-lock transients",
+    "approved_proposal": "porte-B-ouverture.wav"
+  },
+  {
+    "file": "assets/audio/doors/heavy-close.wav",
+    "sha256": "0ff15026db4904825afcacfcfa2383c291f4b01ffe6c8a56cbf9a2f942c1223d",
+    "license": "CC-BY-3.0",
+    "author": "Tomlija; converted and modified by themias; mix Pink Wars",
+    "source": "https://freesound.org/people/Tomlija/sounds/99565/",
+    "mirror": "https://github.com/space-wizards/space-station-14/tree/master/Resources/Audio/Machines",
+    "source_file": "shutter.ogg",
+    "source_sha256": "ee567e2d18c6af1913aa6dcf0488c4aaa2e8f4f9549723de421cfc108a6b288b",
+    "modifications": "Approved mix B: speed, filtering, fades, level, Kenney CC0 metal-lock transients",
+    "approved_proposal": "porte-B-fermeture.wav"
   }
 ]

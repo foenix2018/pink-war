@@ -1,7 +1,7 @@
 # Proposition M02 : dispensaire, paliers et sortie de visée
 
 Version de travail sur `preview/dispensaire-portes-20261108`, issue de `04d3750`.
-Le joueur a demandé un aperçu avant intégration : aucun changement sur main ni aucun déploiement de production.
+Proposition validée par le joueur le 8 novembre 2026. Intégration de la version validée pour livraison GitHub et Vercel, version 3.74.1.
 
 ## Dispensaire
 
@@ -19,9 +19,9 @@ Cas reproduit dans la version publiée : KeyO maintenue avant une pause, relâch
 
 Cette reproduction n’établit pas la cause de tous les cas rapportés ; aucun réglage de zoom/accessibilité du navigateur n’a été désactivé.
 
-## Sons à choisir
+## Sons validés
 
-Les sons du jeu restent inchangés. Les deux propositions sont des fichiers d’écoute indépendants : A, coulissante médicale ; B, porte industrielle. Chaque fichier présente ouverture puis fermeture, sans bip. Sources et licences dans `dist/assets/audio/doors/proposals/CREDITS.md`. La source principale est CC BY 3.0, pas CC0. Le choix et l’intégration restent à valider par le joueur.
+Le joueur a validé A pour le dispensaire et les petites portes coulissantes, B pour les portes lourdes (grilles, coffre, HELIX). Les fichiers de lecture sont des copies exactes des fichiers individuels proposés, sans transposition. Chaque fichier présente ouverture puis fermeture, sans bip. Sources et licences dans `dist/assets/audio/doors/proposals/CREDITS.md`. La source principale est CC BY 3.0, pas CC0. Le chargement reste local, avec une seule voix par porte et arrêt à l’inversion, à la pause ou à la coupure du son.
 
 ## Vérification
 
@@ -32,3 +32,10 @@ Les sons du jeu restent inchangés. Les deux propositions sont des fichiers d’
 - Rendu natif WebGPU des nouveaux modèles sans erreur ; captures avant/après de la scène complète avec le mode WebGL de compatibilité, au même cadrage et réglage graphique.
 
 Les essais automatisés ont été réalisés sous Chromium logiciel ; un contrôle sur le téléphone/manette du joueur reste utile pour son cas de zoom intermittent.
+
+## Validation de l’intégration
+
+- 46 tests ciblés réussis : les 44 contrôles précédents et deux contrôles des sons validés (affectation de toutes les portes M02, hauteur de lecture inchangée, chargement unique par contexte, égalité des fichiers approuvés et crédits).
+- Les quatre fichiers définitifs ont été décodés et joués par Web Audio dans Chromium, puis arrêtés et libérés.
+- Les 18 parcours d’escalier et les retours de visée clavier/tactile ont été revérifiés dans la version intégrée.
+- La suite générale a été interrompue après identification d’un ancien échec du stand : tests/336-training-upgrade.test.mjs recherche encore le nom « Plafond pare-balles acoustique ». Le même test échoue sur 04d3750 avant ces modifications. Les autres annulations du journal général proviennent de l’arrêt de cette exécution ; elles ne constituent pas des résultats de test. Aucun changement du stand n’est inclus dans cette livraison.

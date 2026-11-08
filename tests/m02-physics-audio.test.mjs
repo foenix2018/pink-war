@@ -50,7 +50,7 @@ test('door motion audio fires once per direction, cancels on reversal and mute, 
  assert.deepEqual(calls,[['test','open'],['test','close']]);assert.equal(stops.length,1);
  enabled=false;c.update(door,.6);assert.equal(stops.length,2);c.reset();
  const f=audioMock();f.ctx.decodeAudioData=async()=>({duration:.9});let loads=0;
- await Promise.all([loadDoorSamples(f.ctx,async()=>{loads++;return{ok:true,arrayBuffer:async()=>new ArrayBuffer(4)};}),loadDoorSamples(f.ctx)]);assert.equal(loads,2);
+ await Promise.all([loadDoorSamples(f.ctx,async()=>{loads++;return{ok:true,arrayBuffer:async()=>new ArrayBuffer(4)};}),loadDoorSamples(f.ctx)]);assert.equal(loads,4);
  const d={axis:'z',fixed:2,centre:0,style:'fire'};
  const voice=playDoorMotion(f.ctx,'open',d,{listener:{x:0,z:0}});assert.ok(voice);assert.ok(f.nodes.find(n=>n.kind==='pan').pan.value>0);voice.stop();assert.ok(f.nodes.every(n=>n.disconnected));
  assert.equal(playDoorMotion(f.ctx,'open',{...d,fixed:30}),null);
@@ -64,8 +64,8 @@ test('VORTEX AR7 plays its own electric recording beside an actual automatic tra
  assert.ok(shots.some(n=>n.buffer.id.includes('vortex.wav')));assert.ok(shots.some(n=>n.buffer.id.includes('automatic-shot.wav')));
  f.ctx.tick(1);disposeLaserAudio(f.ctx);assert.ok(f.nodes.every(n=>n.disconnected));
 });
-test('new door and VORTEX recordings are local, distinct PCM with CC0 provenance',()=>{
- const door=JSON.parse(readFileSync(new URL('../dist/assets/audio/doors/manifest.json',import.meta.url))),vortex=JSON.parse(readFileSync(new URL('../dist/audio/kenney/manifest.json',import.meta.url))).filter(i=>i.weapon==='vortex');
+test('legacy door and VORTEX recordings retain their local PCM and CC0 provenance',()=>{
+ const door=JSON.parse(readFileSync(new URL('../dist/assets/audio/doors/manifest.json',import.meta.url))).filter(i=>i.license==='CC0-1.0'),vortex=JSON.parse(readFileSync(new URL('../dist/audio/kenney/manifest.json',import.meta.url))).filter(i=>i.weapon==='vortex');
  const hashes=new Set();for(const item of [...door,...vortex]){const b=readFileSync(new URL('../dist/'+item.file,import.meta.url));assert.equal(b.toString('ascii',0,4),'RIFF');assert.equal(item.license,'CC0-1.0');assert.equal(createHash('sha256').update(b).digest('hex'),item.sha256);hashes.add(item.sha256);}assert.equal(hashes.size,3);
 });
 
