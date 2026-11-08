@@ -465,7 +465,7 @@ function enemyMaterials(){
  return {monster:materials.wall,monsterFace:materials.black,cyan:materials.cyan,rose:materials.rose,violet:materials.blue,pale:materials.white};
 }
 function setupPlayer(){
- game=new ArenaGame(collisions,Math.random,traversal);game.reset(characterId);game.enableArmorShield();
+ game=new ArenaGame(collisions,Math.random,traversal);game.reset(characterId);game.enableArmorShield();game.enableProjectedShields();
  Object.assign(game.player,{x:0,z:72,elevation:0,yaw:0,hp:100,grounded:true});
  game.wave=2;game.nextWave=Infinity;game.toSpawn=0;game.spawnTimer=Infinity;
  game.ownedWeapons=new Set([...starterWeaponOrder(characterId),1,2]);game.ammo=WEAPONS.map(w=>w.capacity);
@@ -774,7 +774,7 @@ function gameTick(dt){
  if(game.ammo[game.weaponIndex]<ammoBefore||game.bladeSlashAt!==bladeBefore)fireInput.consume();
  updateEnemies(dt);updateExtension(dt);
  const events=game.drainEvents();
- armorFx ||= createArmorFeedback({T,scene,camera,accent:characterId==='lylu'?0x80baff:0xef91b4,listener:()=>game.player,
+ armorFx ||= createArmorFeedback({T,scene,camera,renderer,getGame:()=>game,getModel:()=>playerRig?.model,getWeapon:()=>weapon,getLeftController:()=>xr?.entries.find(e=>e.source?.handedness==='left'&&e.tracked)?.mount,canControl:()=>running&&!paused&&!journalOpen&&!skillMenu?.isOpen,low:low(),accent:characterId==='lylu'?0x80baff:0xef91b4,listener:()=>game.player,
   audio:()=>enableAudio&&audioCtx?.state==='running'?audioCtx:null,haptic:kind=>xr?.active&&xr.haptic(kind)});
  for(const e of events){
   combatEffects?.event(e);armorFx.handle(e);
@@ -1086,10 +1086,10 @@ for(const name of ['pointerup','pointercancel']){
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement){heldFire=false;cancelAim();}});
 window.addEventListener('orientationchange',()=>{cancelAim();keys.clear();});
 window.addEventListener('pointerdown',e=>reconcileAimModifiers(keys,e),{capture:true});
-window.__PINK_M02=Object.freeze({snapshot:()=>({music:screenMusicSnapshot(),revision:'3.74.1',neons:root?.userData?.neons,running,paused,view:xr?.active?'fps':view,playerVisible:playerRig?.model.root.visible||false,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,extension:extension&&{stage:extension.stage,hold:extension.hold,done:extension.done,reads:extension.reads,opened:extension.opened,groups:extension.groups(),interaction:extension.interaction()},subtitle:subtitles?.current||null,journal:journalOpen,dressing:extArt?.stats(),health:game?.player.hp,
+window.__PINK_M02=Object.freeze({snapshot:()=>({music:screenMusicSnapshot(),revision:'3.75.0',neons:root?.userData?.neons,running,paused,view:xr?.active?'fps':view,playerVisible:playerRig?.model.root.visible||false,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,extension:extension&&{stage:extension.stage,hold:extension.hold,done:extension.done,reads:extension.reads,opened:extension.opened,groups:extension.groups(),interaction:extension.interaction()},subtitle:subtitles?.current||null,journal:journalOpen,dressing:extArt?.stats(),health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
  shadowing:worldShadows?.stats(),backend:rendererBackend(renderer),rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
- effects:combatEffects?.stats(),armor:game&&{shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt}}),
+ effects:combatEffects?.stats(),projectedShields:armorFx?.shieldStats(),armor:game&&{shieldDeployed:!!game.player.shieldDeployed,shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt}}),
  // QA hooks (?debug=1): world data, teleport, look, clear machines, advance the clock.
  debug:new URLSearchParams(location.search).has('debug')?{get game(){return game;},collisions,floors,teleport:(x,z)=>{Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0});if(game.state==='playing'){game.step(1/60,{});extension?.update();}},look:(y,p)=>{yaw=y;pitch=p;},clear:()=>{game.enemies.length=0;extension?.update();},skip:s=>{game.time+=s;extension?.update();},god:()=>{game.invulnerable=1e9;},interact:()=>interact(),
   use:id=>{const it=M02X_INTERACTIONS.find(i=>i.id===id);Object.assign(game.player,{x:it.x,z:it.z,elevation:0,grounded:true,verticalSpeed:0});interact();},street:n=>{stage=n;lastMinimalHudStage=-1;},closeJournal:()=>{const d=document.getElementById('m01-journal');if(d){d.close();d.dispatchEvent(new Event('close'));}},extension:()=>extension}:null});

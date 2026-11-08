@@ -60,7 +60,7 @@ body.pw-graphics-open #quality{display:block}
 body.pw-shaded .pw-hud,body.pw-shaded #hud,body.pw-shaded .pw-minimal-action{visibility:hidden}
 @supports(height:100dvh){html,body{height:100dvh;min-height:100dvh}canvas#game{position:fixed;top:0;left:0;right:auto;bottom:auto;width:100vw;height:100dvh}}
 </style>
-<link rel="stylesheet" href="mobile-controls-v7.css?v=3.74.0"><link rel="stylesheet" href="fracture.css?v=3.74.0">
+<link rel="stylesheet" href="mobile-controls-v7.css?v=3.75.0"><link rel="stylesheet" href="fracture.css?v=3.75.0">
 <script defer src="./pw-identity.js?v=2"></script>
 </head>
 <body>
@@ -86,12 +86,12 @@ body.pw-shaded .pw-hud,body.pw-shaded #hud,body.pw-shaded .pw-minimal-action{vis
   <div id="status" class="small">Clavier / souris, manette, tactile ou casque WebXR · rendu WebGPU avec repli WebGL</div>
 </div></div>
 <script type="module">
-import {decorateShade} from './mission-briefing.js?v=3.74.0';
+import {decorateShade} from './mission-briefing.js?v=3.75.0';
 decorateShade(document.getElementById('shade'),{mission:4,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});
 const lylu=new URLSearchParams(location.search).get('character')==='lylu';
 document.getElementById(lylu?'pick-lylu':'pick-ghju').setAttribute('aria-current','true');
 if(lylu)document.getElementById('compat').href='./niveau4.html?character=lylu&renderer=webgl';
-import('./niveau4.js?v=20261107-native-world-fx-v3').catch(error=>{
+import('./niveau4.js?v=20261108-projected-shields').catch(error=>{
  const status=document.getElementById('status'),button=document.getElementById('start');
  if(status)status.textContent='Erreur de chargement : '+(error?.message||String(error))+' — essaye le mode compatibilité WebGL.';
  if(button){button.disabled=false;button.textContent='RECHARGER';button.addEventListener('click',()=>location.reload());}

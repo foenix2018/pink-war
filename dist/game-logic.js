@@ -1,3 +1,4 @@
+import {ensureEnemyBubble,shieldFacesSource,tracePlayerShield,traceEnemyShield,playerShieldFrame,enemyShieldFrame} from './projected-shield-logic.js';
 import {createArenaTurrets,fortressWaveUnit,turretHitbox,damageDefenseTurret,updateArenaTurrets} from './arena-defense.js';
 import {isReco1,RECO1_HIT_ZONES,reco1ProjectileScale} from './reco1-profile.js';
 import {tacticalOrder,grenadeAvoidance} from './tactical-enemies.js';
@@ -322,7 +323,7 @@ export class ArenaGame {
     this.aimingPrecision=false;
     this.lastDamage = 0; this.regenerating = false;
     // Armour layer (armor-combat.js): shield on when an engine enables it, two impulse charges to start.
-    this.player.shield = this.shieldCapacity || 0; this.shieldCharging = false; this.lastHit = null;
+    this.player.shield = this.shieldCapacity || 0; this.player.shieldDeployed=false;this.player.shieldHitAt=-100;this.player.shieldBreakAt=-100;this.shieldGeneration=(this.shieldGeneration||0)+1; this.shieldCharging = false; this.lastHit = null;
     this.charges = CHARGE_START; this.thrownCharges = []; this.chargeReadyAt = 0; this.meleeReadyAt = 0; this.meleeAt = -99; this.meleePending = null; this.meleeDelay = 0; this.chargeAt = -99;
     for(const nav of this.stairNavigation){nav.refreshAt=-1;nav.goal=-1;}
     this.updateLifts(0);
@@ -508,7 +509,7 @@ export class ArenaGame {
       awareness:'patrol',lastSeenAt:-999,lastKnownX:x,lastKnownZ:z,lastKnownHeight:homeHeight,patrolAngle:angle,patrolTimer:.7+this.random()*2,alertedUntil:0 };
 
     if(form==='sentinel'){enemy.awareness='engaged';enemy.lastSeenAt=this.time;enemy.yaw=Math.PI;}
-    enemy.maxHp=enemy.hp;
+    enemy.maxHp=enemy.hp;if(this.projectedShieldsEnabled)ensureEnemyBubble(enemy);
     this.enemies.push(enemy); this.toSpawn--; this.event('spawn', { id: enemy.id, x: enemy.x, y: enemy.elevation + enemy.aimHeight, z: enemy.z });
   }
   // The first-wave Sentinel stands in plain view ahead of the player: free ground for its 1.4 m body (no
@@ -605,18 +606,26 @@ export class ArenaGame {
     if (held && this.ammo[this.weaponIndex] === 0) this.reload();
   }
   // `source` (optional {x,z}) is where the hit came from, for the HUD's direction arcs.
-  damage(amount, source = null, {pierceInvulnerability=false} = {}) {
+  damage(amount, source = null, {pierceInvulnerability=false,at=null,shieldContact=false} = {}) {
     if (this.state !== 'playing' || (this.invulnerable > 0 && !pierceInvulnerability)) return;
-    const soaked = soakDamage(this.player, amount);
+    const protectedNow=!this.projectedShieldsEnabled||this.player.shieldDeployed&&(shieldContact||shieldFacesSource(this.player,source));
+    const soaked = protectedNow?soakDamage(this.player, amount):{held:0,rest:amount,broke:false};
+    if(soaked.held>0){this.player.shieldHitAt=this.time;this.event('projected-shield-hit',{id:'player',frame:playerShieldFrame(this.player),...at,absorbed:soaked.held,shield:this.player.shield,source});}
     this.player.hp = Math.max(0, this.player.hp - soaked.rest); this.invulnerable = .3;
     this.lastDamage = this.time; this.regenerating = false; this.shieldCharging = false;
     if (source && Number.isFinite(source.x) && Number.isFinite(source.z)) this.lastHit = { x: source.x, z: source.z, time: this.time };
-    if (soaked.broke) this.event('shield-break');
+    if (soaked.broke) {this.player.shieldDeployed=false;this.player.shieldBreakAt=this.time;this.event('shield-break');this.event('projected-shield-break',{id:'player',frame:playerShieldFrame(this.player),...at});}
     this.event('damage', { hp: this.player.hp, shield: this.player.shield, absorbed: soaked.held, from: source ? { x: source.x, z: source.z } : null });
-    if (this.player.hp <= 0) { this.state = 'over'; this.charge = 0; this.event('over'); }
+    if (this.player.hp <= 0) { this.player.shieldDeployed=false;this.state = 'over'; this.charge = 0; this.event('over'); }
   }
   // Armour layer API for the engines (armor-combat.js holds the rules).
   enableArmorShield(capacity = SHIELD_MAX) { this.meleeDelay = MELEE_IMPACT_DELAY; this.shieldCapacity = capacity; this.player.shield = capacity; this.shieldCharging = false; }
+  enableProjectedShields(){this.projectedShieldsEnabled=true;if(!this.shieldCapacity)this.enableArmorShield();this.player.shieldDeployed=false;for(const e of this.enemies)ensureEnemyBubble(e);}
+  toggleProjectedShield(){
+    if(!this.projectedShieldsEnabled||this.state!=='playing')return false;
+    if(!this.player.shieldDeployed&&(this.player.shield<=0||this.player.hp<=0))return false;
+    this.player.shieldDeployed=!this.player.shieldDeployed;this.event('projected-shield-toggle',{active:this.player.shieldDeployed});return true;
+  }
   melee(forward = forwardOf(this.player.yaw)) { return meleeStrike(this, forward); }
   throwCharge(origin, direction) { return throwCharge(this, origin, direction); }
   grantCharges(count = 1) { grantCharges(this, count); }
@@ -650,6 +659,14 @@ export class ArenaGame {
   damageDefenseTurret(t,amount,options){return damageDefenseTurret(this,t,amount,options);}
   damageEnemy(target, amount, at, zone='torso',multiplier=HIT_ZONE_DAMAGE[zone]??1,source=this.player) {
     if (!this.enemies.includes(target)) return;
+    if(this.projectedShieldsEnabled){
+      ensureEnemyBubble(target);
+      if(target.shield>0){const held=Math.min(target.shield,Math.max(0,amount));target.shield-=held;amount-=held;target.shieldHitAt=this.time;target.alertedUntil=this.time+5;target.awareness='search';target.lastKnownX=source.x;target.lastKnownZ=source.z;target.lastKnownHeight=source.elevation??this.player.elevation;
+        this.event('projected-shield-hit',{id:target.id,frame:enemyShieldFrame(target),...at,absorbed:held,shield:target.shield,source});
+        if(target.shield<=0){target.shieldBreakAt=this.time;this.event('projected-shield-break',{id:target.id,frame:enemyShieldFrame(target),...at});}
+        if(amount<=0){this.event('hit',{id:target.id,zone:'shield',damage:0,absorbed:held,shielded:true,playerSource:!source?.companion});return;}
+      }
+    }
     const armor=target.form?Math.min(.18,Math.max(0,(target.tier||1)-1)*.025):0;
     const support=source?.companion?1:(this.time<(target.companionMarkUntil||0)?1.2:1)*(this.time<(this.companionAmplifyUntil||0)?1.15:1);
     const effective=target.form==='sentinel' ? amount*support*(zone==='head'?5:zone==='limb'?.65:1) : amount*multiplier*support*(1-armor*(zone==='head'?.35:1));
@@ -701,6 +718,7 @@ export class ArenaGame {
   step(dt, input = {}) {
     if (this.state !== 'playing') return;
     this.autoReload();
+    if(this.projectedShieldsEnabled){for(const e of this.enemies)ensureEnemyBubble(e);if(this.player.hp<=0)this.player.shieldDeployed=false;}
     dt = clamp(dt, 0, .05); const previousTime=this.time;this.time += dt;this.updateLifts(previousTime);
     this.cooldown = Math.max(0, this.cooldown - dt); this.invulnerable = Math.max(0, this.invulnerable - dt);
     if (this.reloadRemaining > 0) {
@@ -928,12 +946,14 @@ export class ArenaGame {
           this.event('blade-parry',{...contact.point,bulletId:b.id,surface:'metal',weapon:'aurora',power:1,normal:reflected.normal,direction:{x:b.vx,y:b.vy,z:b.vz}});continue;
         }
       }
+      let shieldContact=false;
       let nearest = 1.01, target = null, zone='torso',multiplier=1,surface='concrete',hitBox=null;
       if (b.hostile) {
         const hit = segmentSphere(start, end, { x: this.player.x, y: (this.player.elevation || 0) + (this.player.crouched?.58:1.25), z: this.player.z }, this.player.crouched?.46:.62);
         if (hit !== null) { nearest = hit; target = this.player; }
+        const barrier=tracePlayerShield(this,start,end);if(barrier!==null&&barrier<nearest){nearest=barrier;target=this.player;shieldContact=true;}
       } else for (const e of this.enemies) {
-        const hit = traceEnemyHit(start,end,e);
+        const barrier=traceEnemyShield(this,e,start,end),bodyHit=traceEnemyHit(start,end,e),hit=barrier!==null&&(!bodyHit||barrier<=bodyHit.t)?{t:barrier,zone:'shield',multiplier:1}:bodyHit;
         if (hit && hit.t < nearest) { nearest = hit.t; target = e;zone=hit.zone;multiplier=hit.multiplier; }
       }
       for(const turret of this.turrets){
@@ -941,8 +961,8 @@ export class ArenaGame {
         const box=turretHitbox(turret),hit=segmentBox(start,end,box);
         if(hit!==null&&hit<nearest){nearest=hit;target=b.hostile?null:turret;hitBox=b.hostile?box:null;surface='metal';zone='torso';multiplier=1;}
       }
-      for (const obstacle of this.obstacles) { const t = segmentBox(start, end, obstacle); if (t !== null && t < nearest) { nearest = t; target = null;hitBox=obstacle;surface=obstacle.surface||'concrete'; } }
-      if (end.y < .06 && start.y >= .06) { const t = (start.y - .06) / (start.y - end.y); if (t < nearest) { nearest = t; target = null;hitBox=null;surface='ground'; } }
+      for (const obstacle of this.obstacles) { const t = segmentBox(start, end, obstacle); if (t !== null && t < nearest) { nearest = t; target = null;shieldContact=false;hitBox=obstacle;surface=obstacle.surface||'concrete'; } }
+      if (end.y < .06 && start.y >= .06) { const t = (start.y - .06) / (start.y - end.y); if (t < nearest) { nearest = t; target = null;shieldContact=false;hitBox=null;surface='ground'; } }
       if(b.hostile&&this.companionWard?.until>this.time&&this.companionWard.remaining>0){
         const shieldHit=segmentSphere(start,end,{x:this.player.x,y:this.player.elevation+(this.player.crouched?.58:1.25),z:this.player.z},1.7);
         if(shieldHit!==null&&shieldHit<nearest){this.companionWard.remaining--;this.bullets.splice(i,1);this.event('companion-assist',{name:'Gaby',kind:'ward'});continue;}
@@ -956,7 +976,7 @@ export class ArenaGame {
           faces.sort((a,c)=>Math.abs(at[a[0]]-a[1])-Math.abs(at[c[0]]-c[1]));normal={x:0,y:0,z:0};normal[faces[0][0]]=faces[0][2];
         }
         this.event('impact', { ...at, bulletId:b.id, enemy: !!target, hostile: b.hostile, splash: b.splash,weapon:b.weapon,power:b.power||1,surface:target?'robot':surface,normal,direction:{x:b.vx,y:b.vy,z:b.vz} });
-        if (target === this.player) { const n=Math.hypot(b.vx,b.vz)||1; this.damage(b.damage,{x:this.player.x-b.vx/n*8,z:this.player.z-b.vz/n*8}); }
+        if (target === this.player) { const n=Math.hypot(b.vx,b.vz)||1; this.damage(b.damage,{x:this.player.x-b.vx/n*8,z:this.player.z-b.vz/n*8},{at,shieldContact}); }
         else if(target?.defenceTurret)this.damageDefenseTurret(target,projectileDamage(b,at),{weapon:b.weapon,at,source:{x:b.originX??start.x,y:b.originY??start.y,z:b.originZ??start.z,companion:!!b.companion}});
         else if (target) this.damageEnemy(target, projectileDamage(b,at)*reco1ProjectileScale(target,zone), at, zone, multiplier,{x:b.originX??this.player.x,z:b.originZ??this.player.z,elevation:b.originElevation??this.player.elevation,...(b.companion?{companion:true}:{})});
         if (!b.hostile && b.splash > 0) for (const e of [...this.enemies]) {
@@ -983,6 +1003,6 @@ export class ArenaGame {
     weaponIndex: this.weaponIndex, weapon: { ...this.weapon }, unlockedWeapons: this.unlockedWeapons.map(w => w.id),weaponOffers:this.weaponOffers.map(offer=>({...offer})), ammo: this.ammo[this.weaponIndex],
     reloadRemaining: this.reloadRemaining, charge: this.charge, regenerating: this.regenerating, regenIn: Math.max(0, REGEN_DELAY - (this.time - this.lastDamage)),
     toSpawn: this.toSpawn, nextWave: this.nextWave, activePortals:this.activePortals.map(p=>({...p})), enemies: this.enemies.map(e => ({ ...e })), bullets: this.bullets.map(b => ({ ...b })),
-    shield: this.player.shield || 0, shieldCapacity: this.shieldCapacity || 0, shieldCharging: !!this.shieldCharging, charges: this.charges, thrownCharges: (this.thrownCharges || []).map(c => ({ ...c })), lastHit: this.lastHit && { ...this.lastHit }, meleeAt: this.meleeAt,
+    shield: this.player.shield || 0, shieldCapacity: this.shieldCapacity || 0, shieldDeployed:!!this.player.shieldDeployed,projectedShields:!!this.projectedShieldsEnabled, shieldCharging: !!this.shieldCharging, charges: this.charges, thrownCharges: (this.thrownCharges || []).map(c => ({ ...c })), lastHit: this.lastHit && { ...this.lastHit }, meleeAt: this.meleeAt,
     combo: this.time <= this.comboUntil ? this.combo : 0, comboRemaining: Math.max(0, this.comboUntil - this.time), bestCombo: this.bestCombo, pickups: this.pickups.map(p => ({ ...p })) }; }
 }

@@ -69,12 +69,12 @@ function syncRangeArmory(){
   rangeArmoryMenu?.sync({active:phase==='playing'&&!recovering,xrMode:vr?.mode==='xr'});
 }
 // Every session wears the armour layer of 3.63 (shield, strike, impulse charges).
-const armed=session=>{session.enableArmorShield();return session;};
+const armed=session=>{session.enableArmorShield();session.enableProjectedShields();return session;};
 const heroAccent=()=>character.id==='lylu'?0x80baff:0xef91b4;
 function armorFeedback(){
   // The scene changes when the renderer is recovered: rebuild the effects on the live one.
   if(armorFxScene!==world.scene){armorFx?.dispose();armorFxScene=world.scene;
-    armorFx=createArmorFeedback({T:world.T,scene:world.scene,camera:world.camera,accent:heroAccent(),haptic:kind=>vr?.haptic(kind),listener:()=>game?.player,
+    armorFx=createArmorFeedback({T:world.T,scene:world.scene,camera:world.camera,renderer:world.renderer,getGame:()=>game,getModel:()=>world.soldier,getWeapon:()=>world.fpsGun,getLeftController:()=>vr?.controllers.find(e=>e.ray.userData.source?.handedness==='left'&&e.anchor.visible)?.mount,canControl:()=>phase==='playing'&&!recovering&&!skillMenu?.isOpen&&!rangeArmoryMenu?.isOpen,low:settings.quality==='performance',accent:heroAccent(),haptic:kind=>vr?.haptic(kind),listener:()=>game?.player,
       audio:()=>settings.sound&&audioContext?.state==='running'?audioContext:null});}
   return armorFx;
 }

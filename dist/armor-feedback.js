@@ -1,3 +1,4 @@
+import {createProjectedShieldFX} from './projected-shield-fx.js';
 // Feedback of the armour layer (armor-combat.js) shared by M01, M02, the Arena and the Range: synthesised sounds,
 // controller rumble, impulse charges in flight and their pulse, and the strike motion of the held weapon.
 // No dynamic light is added (a new light recompiles every material on Quest): additive meshes only.
@@ -61,7 +62,9 @@ export const MELEE_POSE = Object.freeze({ x: -.07, y: .03, z: -.2, pitch: -.45,
     weapon.rotation.x += pose.pitch; weapon.rotation.y += pose.yaw; weapon.rotation.z += pose.roll; return true;
   } });
 
-export function createArmorFeedback({ T, scene, camera=null, audio = () => null, haptic = () => {}, listener = () => null, accent = 0xffffff } = {}) {
+export function createArmorFeedback({ T, scene, camera=null, renderer=null,getGame=()=>null,getModel=()=>null,getWeapon=()=>null,getLeftController=()=>null,canControl=()=>true,low=false, audio = () => null, haptic = () => {}, listener = () => null, accent = 0xffffff } = {}) {
+  let projected=null;
+  const projectedFor=game=>{if(game?.projectedShieldsEnabled&&!projected)projected=createProjectedShieldFX(T,{scene,camera,renderer,getGame:()=>getGame()||game,getModel,getWeapon,getLeftController,canControl,low});return projected;};
   const hitFeedback=camera?createHitFeedback(T,camera):null;
   const colour = new T.Color(accent),spinAxis=new T.Vector3(),spinStep=new T.Quaternion();
   // Impulse grenade, modelled like a hand grenade: an ovoid forged body cut into raised fragmentation lugs, a fuse
@@ -132,7 +135,9 @@ export function createArmorFeedback({ T, scene, camera=null, audio = () => null,
         g.gain.value = level; if (type === 'bandpass') filter.Q.value = 1.4;
         source.connect(filter); filter.connect(g); g.connect(out); source.start(now + delay);
       };
-      if (kind === 'shield-break') { tone('sawtooth', 900, 180, .28, .7); noise(.18, 2600, .6, 'highpass'); }
+      if(kind==='shield-deploy'){noise(.5,260,.5,'bandpass',0,1600);tone('sine',95,180,.5,.3);}
+      else if(kind==='shield-impact'){noise(.18,2100,.45,'bandpass',0,240);}
+      else if (kind === 'shield-break') { noise(.75,2800,.8,'bandpass',0,180);tone('sine',135,35,.72,.55); }
       else if (kind === 'shield-recharge') tone('sine', 280, 920, .6, .45);
       else if (kind === 'shield-full') { tone('sine', 1050, 1050, .07, .35); tone('sine', 1400, 1400, .07, .3, .08); }
       // Butt-stroke, in the order the body makes noise: gear and cloth shift while the rifle is drawn back, the air is
@@ -161,9 +166,13 @@ export function createArmorFeedback({ T, scene, camera=null, audio = () => null,
   return {
     // Engines pass every event here; confirmed hits and armour events are used.
     handle(event) {
+      projectedFor(getGame())?.handle(event,getGame());
       switch (event?.type) {
         case 'hit': hitFeedback?.hit(event); break;
         case 'weapon': case 'over': case 'win': hitFeedback?.reset(); break;
+        case 'projected-shield-toggle': if(event.active)play('shield-deploy'); break;
+        case 'projected-shield-hit': play('shield-impact',event.id==='player'?1:distanceGain(event));break;
+        case 'projected-shield-break': if(event.id!=='player')play('shield-break',distanceGain(event));break;
         case 'shield-break': play('shield-break'); haptic('damage'); break;
         case 'shield-recharge': play('shield-recharge'); break;
         case 'shield-full': play('shield-full'); break;
@@ -176,6 +185,7 @@ export function createArmorFeedback({ T, scene, camera=null, audio = () => null,
       }
     },
     update(game, dt) {
+      projectedFor(game)?.update(game,dt);
       hitFeedback?.update(dt);
       const live = new Set();
       for (const c of game?.thrownCharges || []) {
@@ -190,8 +200,10 @@ export function createArmorFeedback({ T, scene, camera=null, audio = () => null,
       for (const [id, g] of flying) if (!live.has(id)) { scene.remove(g); flying.delete(id); }
       explosion.update(dt);
     },
+    shieldStats(){return projected?.stats()||null;},
     setAccent(hex) { colour.setHex(hex); rimMaterial.color.copy(colour); },
     dispose() {
+      projected?.dispose();
       hitFeedback?.dispose();
       for (const g of flying.values()) scene.remove(g); flying.clear();
       explosion.dispose();

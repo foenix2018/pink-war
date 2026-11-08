@@ -168,7 +168,7 @@ export class VRController {
   // A static canvas guide is attached to the tracked head and shown only during pause.
   makePauseBoard(){
     if(this.pauseBoard||this.mode!=='xr')return;
-    this.fracturePause=createXRPauseMenu(this.hooks.world().T,this.hooks.world().scene,{accent:this.hooks.world().character?.accent,onResume:()=>{this.cancelTrigger();if(this.hooks.phase()==='paused'){if(this.hooks.resume)this.hooks.resume();else this.hooks.togglePause();}},onHome:()=>this.hooks.home?.(),onExit:()=>void this.exit()});
+    this.fracturePause=createXRPauseMenu(this.hooks.world().T,this.hooks.world().scene,{accent:this.hooks.world().character?.accent,onResume:()=>{this.cancelTrigger();if(this.hooks.phase()==='paused'){if(this.hooks.resume)this.hooks.resume();else this.hooks.togglePause();}},onHome:()=>this.hooks.home?.(),onExit:()=>void this.exit(),onShield:()=>{const game=this.hooks.game();if(game.player.shield<=0)return;this.cancelTrigger();if(this.hooks.phase()==='paused'){if(this.hooks.resume)this.hooks.resume();else this.hooks.togglePause();}game.toggleProjectedShield?.();},shieldLabel:()=>{const g=this.hooks.game();return g.player.shield<=0?'BOUCLIER EN RECHARGE':g.player.shieldDeployed?'REPLIER LE BOUCLIER':'ACTIVER LE BOUCLIER';}});
     const {T,camera}=this.hooks.world(),canvas=document.createElement('canvas');
     canvas.width=1024;canvas.height=768;
     const ctx=canvas.getContext('2d');

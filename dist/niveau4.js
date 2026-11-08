@@ -185,7 +185,7 @@ function enemyMaterials(){
 }
 function setupPlayer(){
  collisions=L.buildCollisions();
- game=new ArenaGame(collisions,Math.random,traversal,characterId);game.reset(characterId);game.enableArmorShield();
+ game=new ArenaGame(collisions,Math.random,traversal,characterId);game.reset(characterId);game.enableArmorShield();game.enableProjectedShields();
  mission=createM04Mission({game,characterId,hooks:{
   setObstacles:list=>{collisions=list;},openPortal:(x,y,z,o)=>{lastPortalSource={x,y,z};art.openPortal(x,y,z,o);},setDoor:(id,open)=>art.setDoor(id,open),setPower:(id,on)=>art.setPower(id,on),breach:v=>art.breach(v),
   cue,notice:text=>notice(text,4),say,stage:showStage,finish:finishMission,clear:clearVisuals}});
@@ -205,7 +205,7 @@ function setupPlayer(){
  companionSkills=createCompanionSkills({characterId,mission:4,mode:'campaign'});
  skillMenu=createCompanionMenu({getStatus:()=>companionSkills.snapshot(game),onUse:id=>companionSkills.use(id,{game,...aimRay()}),
   onChange(open){heldFire=false;keys.clear();fireInput.reset();touchControls?.reset();if(open)document.exitPointerLock?.();}});
- armorFx=createArmorFeedback({T,scene,accent:lylu?0x80baff:0xef91b4,listener:()=>game.player,
+ armorFx=createArmorFeedback({T,scene,camera,renderer,getGame:()=>game,getModel:()=>playerRig?.model,getWeapon:()=>weapon,getLeftController:()=>xr?.entries.find(e=>e.source?.handedness==='left'&&e.tracked)?.mount,canControl:()=>running&&!paused&&!reading&&!skillMenu?.isOpen,low:low(),accent:lylu?0x80baff:0xef91b4,listener:()=>game.player,
   audio:()=>enableAudio&&audioCtx?.state==='running'?audioCtx:null,haptic:kind=>xr?.active&&xr.haptic(kind)});
  try{enemyFactory=createEnemyFactory(enemyMaterials());}catch(error){console.warn('M04 / ennemis simplifiés',error);}
 }

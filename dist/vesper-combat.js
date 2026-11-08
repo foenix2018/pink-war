@@ -122,7 +122,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   onProgress(.58,'Objets et surfaces du secteur');
   const obstacles=missionArt.obstacles;obstacles.push(...salvage.colliders);
   const game=new CampaignLevel1(obstacles,Math.random,characterId);
-  let combatHud=null;game.enableArmorShield();
+  let combatHud=null;game.enableArmorShield();game.enableProjectedShields();
   const checkpoint=readM01Checkpoint(characterId),resuming=params.get('resume')==='1';
   const coreRestored=resuming&&!!checkpoint&&restoreM01Checkpoint(game,checkpoint);
   // Extended chapter (3.69): Caserne 07 prologue and Archives végétales epilogue around the original quarter.
@@ -157,7 +157,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   // Armour layer (3.63): queued strikes and throws from the page controls, played on the next simulation step.
   let meleeQueued=false,chargeQueued=false;
   const armorTouch=(kind,value)=>{if(kind==='melee')api.melee();else if(kind==='charge')api.throwCharge();else if(kind==='reload')api.reload();else if(kind==='next')api.cycle();else if(kind==='interact')api.interact();else onControl(kind,value);};
-  const armorFx=createArmorFeedback({T,scene,camera,accent:characterId==='lylu'?0x80baff:0xef91b4,listener:()=>game.player,
+  const armorFx=createArmorFeedback({T,scene,camera,renderer,getGame:()=>game,getModel:()=>rig?.model,getWeapon:()=>gun,getLeftController:()=>xr?.entries.find(e=>e.source?.handedness==='left'&&e.tracked)?.mount,canControl:()=>!getState().menuPaused&&!journalOpen&&!completed,low:profile.phone||requestedQuality==='low',accent:characterId==='lylu'?0x80baff:0xef91b4,listener:()=>game.player,
     audio:()=>sound&&audio?.state==='running'?audio:null,haptic:kind=>xr?.active&&xr.haptic(kind)});
   const gamepadInput=new DesktopGamepadInput();
   const fireInput=createFireBuffer();

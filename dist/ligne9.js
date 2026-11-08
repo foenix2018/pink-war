@@ -188,7 +188,7 @@ function enemyMaterials(){
  return {monster:m(0x3d4955,.62,.48),monsterFace:m(0x0b1119,.5,.4),cyan:g(0x3acddd),rose:g(0xff4fa1),violet:g(0x4ba8ff),pale:g(0xc2e5eb)};
 }
 function setupPlayer(){
- game=new ArenaGame(collisions,Math.random,traversal,characterId);game.reset(characterId);game.enableArmorShield();
+ game=new ArenaGame(collisions,Math.random,traversal,characterId);game.reset(characterId);game.enableArmorShield();game.enableProjectedShields();
  mission=createLigne9Mission({game,characterId,hooks:{
   setObstacles:list=>{collisions=list;},openPortal:(x,y,z,o)=>{lastPortalSource={x,y,z};art.openPortal(x,y,z,o);},
   setDoor:(id,state)=>art.setDoor(id,state),setWater:(id,state)=>art.setWater(id,state),setPower:(zone,state)=>art.setPower(zone,state),
@@ -210,7 +210,7 @@ function setupPlayer(){
  companionSkills=createCompanionSkills({characterId,mission:5,mode:'campaign'});
  skillMenu=createCompanionMenu({getStatus:()=>companionSkills.snapshot(game),onUse:id=>companionSkills.use(id,{game,...aimRay()}),
   onChange(open){heldFire=false;keys.clear();fireInput.reset();touchControls?.reset();if(open)document.exitPointerLock?.();}});
- armorFx=createArmorFeedback({T,scene,accent:lylu?0x80baff:0xef91b4,listener:()=>game.player,
+ armorFx=createArmorFeedback({T,scene,camera,renderer,getGame:()=>game,getModel:()=>playerRig?.model,getWeapon:()=>weapon,getLeftController:()=>xr?.entries.find(e=>e.source?.handedness==='left'&&e.tracked)?.mount,canControl:()=>running&&!paused&&!reading&&!skillMenu?.isOpen,low:low(),accent:lylu?0x80baff:0xef91b4,listener:()=>game.player,
   audio:()=>enableAudio&&audioCtx?.state==='running'?audioCtx:null,haptic:kind=>xr?.active&&xr.haptic(kind)});
  try{enemyFactory=createEnemyFactory(enemyMaterials());}catch(error){console.warn('Ligne 9 / ennemis simplifiés',error);}
 }

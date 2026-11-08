@@ -8,7 +8,7 @@ export const controllerLabel=pad=>isDualShock4(pad)?'DUALSHOCK 4':pad?.id?.inclu
 export const PS4_CONTROLS=Object.freeze({
   move:'Stick gauche',look:'Stick droit',aim:'L2',fire:'R2',jump:'Croix',
   reload:'Carré',next:'Triangle',crouch:'Rond',sprint:'L3',
-  interact:'R3',charge:'L1',melee:'R1',companion:'Croix directionnelle ↑',pause:'OPTIONS'
+  interact:'R3',charge:'L1',melee:'R1',shield:'Croix directionnelle ↓',companion:'Croix directionnelle ↑',pause:'OPTIONS'
 });
 // Keep gamepad detection and all the real bindings, but remove the floating
 // "MANETTE PS4" label/guide that obscured the ammunition counter on iPhone.

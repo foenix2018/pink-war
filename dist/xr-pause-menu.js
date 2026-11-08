@@ -1,14 +1,14 @@
 // Actual selectable menu in an immersive framebuffer; HTML dialogs are not visible there.
-export function createXRPauseMenu(T,scene,{accent='#f28ab1',onResume=()=>{},onHome=()=>{},onExit=()=>{}}={}){
+export function createXRPauseMenu(T,scene,{accent='#f28ab1',onResume=()=>{},onHome=()=>{},onExit=()=>{},onShield=null,shieldLabel=()=>'ACTIVER LE BOUCLIER'}={}){
  const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=720;const c=canvas.getContext('2d');
  const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
  const mesh=new T.Mesh(new T.PlaneGeometry(1.14,.8015625),new T.MeshBasicMaterial({map:texture,transparent:true,side:T.DoubleSide,depthTest:false,depthWrite:false,toneMapped:false}));
  mesh.name='Fracture / menu pause immersif';mesh.renderOrder=200;mesh.frustumCulled=false;mesh.visible=false;scene.add(mesh);
  const geometry=new T.BufferGeometry().setFromPoints([new T.Vector3(),new T.Vector3()]);const beam=new T.Line(geometry,new T.LineBasicMaterial({color:accent,depthTest:false,transparent:true,opacity:.8}));beam.renderOrder=201;beam.frustumCulled=false;beam.visible=false;scene.add(beam);
  const raycaster=new T.Raycaster(),origin=new T.Vector3(),direction=new T.Vector3(),q=new T.Quaternion();let shown=false,pressed=true,hover=-1;
- const rows=[['REPRENDRE',onResume],['RETOUR À L’ACCUEIL',onHome],['QUITTER LA VR',onExit]];
+ const rows=[['REPRENDRE',onResume],...(onShield?[[shieldLabel,onShield]]:[]),['RETOUR À L’ACCUEIL',onHome],['QUITTER LA VR',onExit]],rowStep=onShield?100:122,rowHeight=onShield?80:96;
  function paint(){c.clearRect(0,0,1024,720);c.fillStyle='#101c2a';c.beginPath();c.roundRect(2,2,1020,716,50);c.fill();c.strokeStyle='#71899c';c.lineWidth=2;c.stroke();c.textAlign='center';c.fillStyle=accent;c.font='600 22px sans-serif';c.fillText('PINK WARS / LES HÉRITIERS DU SILENCE',512,77);c.fillStyle='#f2f2ed';c.font='500 58px sans-serif';c.fillText('En pause.',512,156);
-  rows.forEach(([label],i)=>{c.fillStyle=i===hover?accent:'#243343';c.beginPath();c.roundRect(130,220+i*122,764,96,48);c.fill();c.fillStyle=i===hover?'#101c2a':'#f1f2ee';c.font='600 29px sans-serif';c.fillText(label,512,280+i*122);});c.fillStyle='#bac6ce';c.font='22px sans-serif';c.fillText('Manette droite : sélectionner · X gauche : reprendre',512,656);texture.needsUpdate=true;}
+  rows.forEach(([label],i)=>{c.fillStyle=i===hover?accent:'#243343';c.beginPath();c.roundRect(130,220+i*rowStep,764,rowHeight,40);c.fill();c.fillStyle=i===hover?'#101c2a':'#f1f2ee';c.font='600 29px sans-serif';c.fillText(typeof label==='function'?label():label,512,220+rowHeight*.625+i*rowStep);});c.fillStyle='#bac6ce';c.font='22px sans-serif';c.fillText('Manette droite : sélectionner · X gauche : reprendre',512,656);texture.needsUpdate=true;}
  paint();
  return{mesh,update({active,camera,ray,trigger=false}){
   mesh.visible=!!active;beam.visible=false;
@@ -16,7 +16,7 @@ export function createXRPauseMenu(T,scene,{accent='#f28ab1',onResume=()=>{},onHo
   if(!shown){shown=true;pressed=true;hover=-1;paint();}
   camera.getWorldPosition(mesh.position);camera.getWorldQuaternion(mesh.quaternion);direction.set(0,0,-1).applyQuaternion(mesh.quaternion);mesh.position.addScaledVector(direction,1.65);mesh.position.y-=.04;mesh.updateMatrixWorld(true);
   let hit=null;if(ray){ray.updateWorldMatrix(true,false);ray.getWorldPosition(origin);ray.getWorldQuaternion(q);direction.set(0,0,-1).applyQuaternion(q);raycaster.set(origin,direction);raycaster.near=.02;raycaster.far=5;hit=raycaster.intersectObject(mesh)[0];}
-  let next=-1;if(hit){const x=hit.uv.x*1024,y=(1-hit.uv.y)*720;if(x>=130&&x<=894)next=rows.findIndex((_,i)=>y>=220+i*122&&y<=316+i*122);const a=geometry.attributes.position;a.setXYZ(0,origin.x,origin.y,origin.z);a.setXYZ(1,hit.point.x,hit.point.y,hit.point.z);a.needsUpdate=true;beam.visible=true;}
+  let next=-1;if(hit){const x=hit.uv.x*1024,y=(1-hit.uv.y)*720;if(x>=130&&x<=894)next=rows.findIndex((_,i)=>y>=220+i*rowStep&&y<=220+rowHeight+i*rowStep);const a=geometry.attributes.position;a.setXYZ(0,origin.x,origin.y,origin.z);a.setXYZ(1,hit.point.x,hit.point.y,hit.point.z);a.needsUpdate=true;beam.visible=true;}
   if(next!==hover){hover=next;paint();}const down=trigger&&!pressed;pressed=!!trigger;if(down&&next>=0)rows[next][1]();return true;
  },dispose(){mesh.removeFromParent();beam.removeFromParent();mesh.geometry.dispose();mesh.material.dispose();texture.dispose();geometry.dispose();beam.material.dispose();}};
 }
