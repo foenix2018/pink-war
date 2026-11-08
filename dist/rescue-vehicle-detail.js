@@ -14,7 +14,7 @@ export function createRescueVehicle(T,{kind,length,width,low=false,M,signTexture
  const info=RESCUE_VEHICLE_PROFILE[kind];if(!info)throw Error('Unknown rescue vehicle '+kind);
  if(!(length>4&&width>1.5))throw Error('Invalid rescue vehicle envelope');
  const g=new T.Group();g.name='AEGIS 07 / '+info.name+' · véhicule hard-surface';
- g.userData.vehicle={kind,length,width,role:info.role,revision:'rescue-v2-2026-11',authoritativeCollider:'M01 extension obstacle'};
+ g.userData.vehicle={kind,length,width,role:info.role,revision:'rescue-RLH-vehicle-finishes-v3-2026-11',source:'RLH V750 utility / V644 automotive detailing, adapted to existing Pink Wars VSAV',authoritativeCollider:'M01 extension obstacle'};
  const parts=new Assembly();const bat=(m,s,p,r=[0,0,0],round=.012)=>{
   parts.add(round?bevelBox(...s,Math.min(round,Math.min(...s)*.20),low?1:2):new T.BoxGeometry(...s),m,matrix(p,r));
  };
@@ -42,6 +42,16 @@ export function createRescueVehicle(T,{kind,length,width,low=false,M,signTexture
  bat(bodyColor,[1.50,.22,width-.35],[cabX-.25,2.17,0],[0,0,0],.045);
  bat(M.dark,[.12,.39,width-.29],[frontX-.07,.86,0],[0,0,0],.018);
  bat(M.steel,[.09,.24,width*.53],[frontX+.017,1.15,0]);
+ // RLH automobile fascia: independent narrow grille slots and recessed radiator.
+ // They stay inside the authored rescue-vehicle dimensions, with no extra lights.
+ if(kind==='vsav'){
+  bat(M.dark,[.025,.20,width*.50],[frontX+.068,1.13,0],[],.005);
+  for(let k=0;k<5;k++)bat(M.steel,[.014,.012,width*.44],[frontX+.087,1.045+k*.040,0],[],.002);
+  for(const s of [-1,1]){
+   bat(M.dark,[.030,.13,.25],[frontX+.075,.78,s*(width*.32)],[],.010);
+   bat(M.white,[.010,.048,.17],[frontX+.092,.79,s*(width*.32)],[],.006);
+  }
+ }
  for(const z of [-width*.24,0,width*.24]){
   bat(M.dark,[.02,.027,width*.16],[frontX+.071,1.1,z]);
  }
@@ -97,10 +107,20 @@ export function createRescueVehicle(T,{kind,length,width,low=false,M,signTexture
   disc(M.dark,x,.49,exposed+side*.025,.085,.028);
   if(!low)for(let i=0;i<8;i++){
    const a=i*Math.PI/4;disc(M.steel,x+Math.cos(a)*.145,.49+Math.sin(a)*.145,exposed+side*.03,.016,.012,8);
+   if(kind==='vsav')disc(M.dark,x+Math.cos(a)*.283,.49+Math.sin(a)*.283,exposed+side*.022,.018,.008,8);
   }
   // The visible arch follows the tyre instead of pretending a wheel is a ball.
   parts.add(new T.TorusGeometry(.525,.031,5,low?12:24,Math.PI),M.steel,matrix([x,.49,side*(width*.5-.016)]));
   bat(M.dark,[1.09,.11,.16],[x,1.01,side*(width*.5-.10)],[],.018);
+ }
+ // RLH utilitaire-inspired roof skids and reinforcing seams; no moving parts.
+ if(kind==='vsav'){
+  for(const s of [-1,1]){
+   const z=s*(width*.5-.22);
+   bat(M.steel,[boxLen*.84,.040,.065],[boxX,2.49,z],[],.006);
+   for(const xx of [boxX-boxLen*.32,boxX+boxLen*.32])bat(M.dark,[.10,.070,.10],[xx,2.45,z],[],.008);
+   bat(M.dark,[boxLen*.83,.030,.019],[boxX,2.24,s*(width*.5-.048)],[],.002);
+  }
  }
  // Reflective body markings and actual equipment compartments.
  for(const side of [-1,1]){
@@ -140,7 +160,14 @@ export function createRescueVehicle(T,{kind,length,width,low=false,M,signTexture
   // Rear step for medical crew, split rear doors and grab handles.
   bat(M.steel,[.23,.09,width-.32],[backX-.04,.62,0]);
   bat(M.dark,[.013,1.38,.018],[backX-.059,1.69,0]);
-  for(const side of [-1,1])bat(M.steel,[.019,.31,.036],[backX-.058,1.75,side*.27]);
+  // RLH-inspired rear access: sealed two-leaf doors, glazed upper portholes and handle hardware.
+  for(const side of [-1,1]){
+   bat(M.steel,[.019,.31,.036],[backX-.058,1.75,side*.27]);
+   bat(M.dark,[.016,.35,width*.25],[backX-.060,2.05,side*width*.24],[],.007);
+   bat(M.glass,[.010,.29,width*.20],[backX-.071,2.05,side*width*.24],[],.007);
+   bat(M.steel,[.027,.13,.03],[backX-.079,1.50,side*.29],[],.004);
+   for(const yy of [1.20,2.28])bat(M.yellow,[.015,.034,width*.25],[backX-.072,yy,side*width*.25],[],.002);
+  }
  }
  // Rotating beacons are unlit, preserving historical deactivation in 2189.
  for(const z of [-.57,.57]){bat(M.dark,[.31,.10,.22],[cabX-.25,2.30,z],[],.015);bat(M.red,[.20,.065,.14],[cabX-.25,2.37,z],[],.012);}
