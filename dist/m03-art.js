@@ -40,22 +40,26 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
   const dome = new T.Mesh(new T.SphereGeometry(380, 24, 12), new T.MeshBasicMaterial({ map: skyTex, side: T.BackSide, fog: false, depthWrite: false })); dome.renderOrder = -1; add(dome);
 
   // ---------- The baked sector ----------
-  const sectorMeshes = createSectorMeshes(T, sector, { quality }); root.add(sectorMeshes.group);
+  const sectorMeshes = createSectorMeshes(T, sector, { quality, webgpu }); root.add(sectorMeshes.group);
   const spots = neonSpots(sector, { max: low ? 90 : 200 });
 
   // ---------- Materials for what the mission adds ----------
   const loader = new T.TextureLoader();
   const tex = (url, srgb = true, repeat = 1) => { const t = loader.load(url); t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(repeat, repeat); if (srgb) t.colorSpace = T.SRGBColorSpace; t.anisotropy = low ? 2 : 6; return t; };
-  const std = (color, roughness = .6, metalness = .2, extra = {}) => new T.MeshStandardMaterial({ color, roughness, metalness, ...extra });
+  const rich = webgpu && !low;
+  const std = (color, roughness = .6, metalness = .2, extra = {}) => { const { phys = null, ...rest } = extra, base = { color, roughness, metalness, ...rest };
+    if (!rich || !phys) return new T.MeshStandardMaterial(base);
+    const m = new T.MeshPhysicalMaterial({ ...base, ...phys }); m.userData.webgpuPhysical = true; return m; };
+  const coat = (c, r = .3) => ({ phys: { clearcoat: c, clearcoatRoughness: r } });
   const glow = color => new T.MeshBasicMaterial({ color, toneMapped: false });
   const additive = (color, opacity = .6, map = null) => new T.MeshBasicMaterial({ color, map, transparent: true, opacity, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false, side: T.DoubleSide });
   const M = {
-    asphalt: std(0x7c8186, .55, .1, { map: tex('./assets/cc0/vesper-asphalt_diff_512.jpg', true, 10) }),
+    asphalt: std(0x7c8186, .55, .1, { ...coat(.55, .25), map: tex('./assets/cc0/vesper-asphalt_diff_512.jpg', true, 10) }),
     concrete: std(0x9a9a96, .9, .02, { map: tex('./assets/cc0/vesper-concrete_diff_512.jpg', true, 2) }),
-    galva: std(0xaeb8bf, .38, .75, { map: tex('./assets/cc0/vesper-steel_diff_512.jpg', true, 2) }),
-    paint: std(0xd9d9d2, .55, .2, { map: tex('./assets/cc0/vesper-paint_diff_512.jpg', true, 2) }),
-    dark: std(0x1a2028, .5, .6), black: std(0x0b0d10, .6, .3), rubber: std(0x111214, .9, 0), glass: std(0x6f8f9c, .05, .6, { transparent: true, opacity: .35 }),
-    white: std(0xe8ebee, .35, .25), red: std(0xb5161e, .4, .3), yellow: std(0xd9b021, .5, .2), rust: std(0x7a4a32, .8, .4), container: [std(0x23566e, .6, .45), std(0x8a2a22, .6, .45), std(0x3d6b3a, .6, .45)],
+    galva: std(0xaeb8bf, .38, .75, { ...coat(.3, .3), map: tex('./assets/cc0/vesper-steel_diff_512.jpg', true, 2) }),
+    paint: std(0xd9d9d2, .55, .2, { ...coat(.45, .3), map: tex('./assets/cc0/vesper-paint_diff_512.jpg', true, 2) }),
+    dark: std(0x1a2028, .5, .6, coat(.25, .4)), black: std(0x0b0d10, .6, .3), rubber: std(0x111214, .9, 0), glass: std(0x6f8f9c, .05, .6, { transparent: true, opacity: .35 }),
+    white: std(0xe8ebee, .35, .25, coat(.6, .15)), red: std(0xb5161e, .4, .3, coat(.6, .15)), yellow: std(0xd9b021, .5, .2, coat(.5, .2)), rust: std(0x7a4a32, .8, .4), container: [std(0x23566e, .6, .45, coat(.35, .35)), std(0x8a2a22, .6, .45, coat(.35, .35)), std(0x3d6b3a, .6, .45, coat(.35, .35))],
     neonCyan: glow(0x5fe0f0), neonPink: glow(0xff4fa1), neonAmber: glow(0xffb35c), neonRed: glow(0xff2f45), neonWhite: glow(0xe8f6ff)
   };
   // Thick boxes get rounded edges (soft-pieces.js); thin strips stay plain.

@@ -40,6 +40,7 @@ import {installLeanPBR} from './level2-materials.js';
 import {createStreetAtmosphere} from './level2-atmosphere.js';
 import {installPinkWarsSoldier} from './level2-player.js';
 import {showChapter2Finale} from './story-chapters.js';
+import {playEndCinematic} from './end-cinematic.js';
 import {createCampaignCombatEffects} from './campaign-combat-effects.js';
 import {createAICompanion} from './ai-companions.js';
 import {createAmbience} from './ambience.js';
@@ -101,7 +102,7 @@ const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;retur
 const pauseMenu=createPauseMenu({title:'HISTOIRE / LES PROFONDEURS',canOpen:()=>started,settingsSelectors:['#quality'],
  view:{getView:()=>xr?.active?'fps':view,onSelect:next=>changeView(next),canChange:()=>!!playerRig&&!xr?.active},
  onPause:()=>pauseMission(),onResume:()=>unpauseMission(),onVR:()=>xr?.enter(),onHome:async()=>{await xr?.exit();location.assign('./index.html');}});pauseMenu.setVisible(false);
-let combatEffects=null,companion=null,environmentAudio=null,warZone=null,battleAudio=null;
+let endCine=null,combatEffects=null,companion=null,environmentAudio=null,warZone=null,battleAudio=null;
 let enemyDestructionFX=null;
 const robotShutdownAudio=createRobotShutdownAudio({getContext:()=>enableAudio&&audioCtx?.state==='running'?audioCtx:null,getListener:()=>game?.player,getYaw:()=>yaw});
 let companionSkills=null,skillMenu=null;
@@ -525,9 +526,14 @@ function setupExtension(){
   streetCheckpoint:()=>streetMission?.snapshot||{stage:0,patrolCleared:false},
   core:state=>{streetMission.start(state);stage=streetMission.stage;lastMinimalHudStage=-1;},
   finale:()=>{portalAudio.closeAll();game.activePortals=[];running=false;document.exitPointerLock?.();saveCheckpoint({force:true});subtitles?.clear();
-   setTimeout(async()=>{try{if(xr?.active)await xr.exit();}catch{}showChapter2Finale({characterId,onDecide:()=>{checkpointDecisionMade=true;clearM02Checkpoint(characterId);checkpointSaved=null;},onReplay:()=>restartCheckpoint(true)});},900);}
+   setTimeout(()=>startEndScene(),900);}
  }});
 }
+async function startEndScene(){let wasXr=false;try{if(xr?.active){wasXr=true;await xr.exit();}}catch{}const showFinale=()=>showChapter2Finale({characterId,onDecide:()=>{checkpointDecisionMade=true;clearM02Checkpoint(characterId);checkpointSaved=null;},onReplay:()=>restartCheckpoint(true)});
+   // In-engine end scene: the hero and her sphere on the dock, their exchange in the transmission panel.
+   if(wasXr||!scene){showFinale();return;}
+   try{endCine=playEndCinematic({T,camera,hero:playerRig?.model||null,sphere:companion,player:game.player,yaw,lines:m02Lines('fin',characterId),subtitles,firstPerson:[weapon],clip:(from,to)=>{let n=1;for(const box of game.obstacles){if(box.walkableSurface)continue;const t=segmentBox(from,to,{...box,hx:box.hx+.25,hz:box.hz+.25});if(t!==null)n=Math.min(n,t-.06);}return n;},title:'Chapitre 02 · Les Profondeurs',onDone:()=>{endCine=null;showFinale();}});}
+   catch(error){console.warn('M02 end cinematic skipped:',error);endCine=null;showFinale();}}
 function openJournal(entry,then){
  if(!entry)return;
  cancelAim();keys.clear();combatHud?.reset();journalOpen=true;heldFire=false;fireInput.reset();game.state='paused';document.exitPointerLock?.();
@@ -895,7 +901,8 @@ function animation(t,frame){
  }catch(error){console.warn('M02 extension dressing frame disabled:',error);extArt=null;}
  portalAudio.sync(game?.activePortals||[],game?.time||0);
  electricPortals?.sync(game?.activePortals||[],game?.time||0,clock);
- subtitles?.update(dt,{xr:!!xr?.active,hidden:journalOpen||paused||!running});
+ subtitles?.update(dt,{xr:!!xr?.active,hidden:journalOpen||paused||(!running&&!endCine)});
+ if(endCine)try{endCine.update(dt);}catch(error){console.warn('M02 end cinematic frame:',error);endCine.skip();}
  warZone?.update(game?.time||0,{active:running});for(const event of warZone?.drainEvents()||[])if(enableAudio&&battleAudio)battleAudio.event(event,game.player,yaw);
  if(xr?.active){if(!running||paused)xr.update(dt,weaponFeel.state,weaponFeel.state.flash);xr.renderScope();}
  worldShadows?.update(clock,game?.player||camera.position,{entities:game?[...game.enemies,game.player]:[],heightAt:e=>game.surfaceHeight(e.x,e.z,game.time,(e.elevation||0)+.3)});
@@ -1102,5 +1109,5 @@ window.__PINK_M02=Object.freeze({snapshot:()=>({music:screenMusicSnapshot(),revi
  effects:combatEffects?.stats(),projectedShields:armorFx?.shieldStats(),armor:game&&{shieldDeployed:!!game.player.shieldDeployed,shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt}}),
  // QA hooks (?debug=1): world data, teleport, look, clear machines, advance the clock.
  debug:new URLSearchParams(location.search).has('debug')?{get game(){return game;},collisions,floors,teleport:(x,z)=>{Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0});if(game.state==='playing'){game.step(1/60,{});extension?.update();}},look:(y,p)=>{yaw=y;pitch=p;},clear:()=>{game.enemies.length=0;extension?.update();},skip:s=>{game.time+=s;extension?.update();},god:()=>{game.invulnerable=1e9;},interact:()=>interact(),
-  use:id=>{const it=M02X_INTERACTIONS.find(i=>i.id===id);Object.assign(game.player,{x:it.x,z:it.z,elevation:0,grounded:true,verticalSpeed:0});interact();},street:n=>{streetMission.start({stage:n});stage=n;lastMinimalHudStage=-1;},closeJournal:()=>{const d=document.getElementById('m01-journal');if(d){d.close();d.dispatchEvent(new Event('close'));}},extension:()=>extension}:null});
+  use:id=>{const it=M02X_INTERACTIONS.find(i=>i.id===id);Object.assign(game.player,{x:it.x,z:it.z,elevation:0,grounded:true,verticalSpeed:0});interact();},endScene:()=>{running=false;startEndScene();},cine:()=>endCine,street:n=>{streetMission.start({stage:n});stage=n;lastMinimalHudStage=-1;},closeJournal:()=>{const d=document.getElementById('m01-journal');if(d){d.close();d.dispatchEvent(new Event('close'));}},extension:()=>extension}:null});
 if(autoMission){startButton.disabled=true;void boot();}

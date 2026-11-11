@@ -52,7 +52,7 @@ export function briefingFor(mission = 1, characterId = 'ghju') {
     objectives: b.objectives.map(([icon, title, detail], i) => ({ icon, title, detail, n: String(i + 1).padStart(2, '0') })) };
 }
 
-const STYLE_URL = new URL('./mission-briefing.css?v=3.74.0', import.meta.url).href;
+const STYLE_URL = new URL('./mission-briefing.css?v=3.75.0', import.meta.url).href;
 const LOGO_URL = new URL('./art/pink-wars-wordmark.svg?v=2', import.meta.url).href;
 export function ensureBriefingStyle(doc = document) {
   if (doc.querySelector('[data-pw-briefing-style]')) return;
@@ -93,6 +93,8 @@ export function decorateShade(shade, { mission, characterId = 'ghju', backHref =
   panel.querySelector('.kicker')?.classList.add('pwb-hidden');
   const h1 = panel.querySelector('h1'), text = panel.querySelector('#panel-text') || panel.querySelector('p');
   const parts = buildBriefing(panel, info, { doc, titleNode: h1, textNode: text });
+  // The chapter cover already shows the PINK WARS logo: no second logo over it.
+  if (chapterCover(mission)) { parts.logo?.classList.add('pwb-hidden'); shade.classList.add('pwb-has-cover'); }
   // The title keeps its markup (the pages rewrite it for the end and defeat panels); the zone follows the title.
   parts.head.after(parts.zone); parts.zone.after(text); text.after(parts.objectives);
   const start = panel.querySelector('#start');
@@ -112,7 +114,12 @@ export function buildLoadingCover(root, mission, characterId, { doc = document, 
   ensureBriefingStyle(doc);
   const info = briefingFor(mission, characterId);
   root.classList.add('pw-briefing', 'pwb-loading'); if (info.image) root.style.setProperty('--pwb-art', `url("${new URL(info.image, import.meta.url).href}")`); root.dataset.mission = String(mission);
-  const content = el(doc, 'div', 'pwb-content'); root.append(content); buildBriefing(content, info, { doc });
+  // The official chapter covers already carry the PINK WARS logo and the chapter title: the loading screen shows
+  // that art alone (no second logo, title or objectives over it). Objectives stay on the start panel. Chapters
+  // without a cover keep the composed screen.
+  const coverOnly = !!chapterCover(mission);
+  if (coverOnly) { root.classList.add('pwb-cover-only'); root.setAttribute('aria-label', `Chapitre ${info.number} · ${info.title} — chargement`); }
+  else { const content = el(doc, 'div', 'pwb-content'); root.append(content); buildBriefing(content, info, { doc }); }
   const back = el(doc, 'a', 'pwb-back', 'Retour'); back.href = backHref; root.append(back);
   const gauge = el(doc, 'div', 'pwb-gauge'); gauge.innerHTML = '<div class="pwb-gauge-labels"><span class="pw-load-state">Préparation du secteur</span><span class="pw-load-value">0 %</span></div><div class="pw-load-track" role="progressbar" aria-label="Préparation du chapitre" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div><button class="pw-load-error" hidden>Réessayer</button>';
   root.append(gauge);

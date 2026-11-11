@@ -95,3 +95,7 @@
  .pw-briefing .chars a{padding:17px 18px!important;flex:none!important;white-space:nowrap}
 }
 @media (min-width:761px){.pw-briefing #status{position:fixed;z-index:3;right:max(30px,4.2vw);bottom:calc(max(26px,env(safe-area-inset-bottom)) + 74px);max-width:min(380px,36vw);text-align:right;margin:0;text-shadow:0 1px 4px #000}}
+/* Loading cover = the chapter art alone, uncropped and undimmed (its logo and title are part of the image). */
+.pw-briefing.pwb-cover-only{background:#03050c var(--pwb-art,none) center/contain no-repeat!important}
+.pw-briefing.pwb-cover-only::before{background:linear-gradient(0deg,#03050ccc 0%,transparent 22%)}
+@media (max-aspect-ratio:16/9){.pw-briefing.pwb-cover-only{background-position:center 38%!important}}

@@ -85,6 +85,23 @@ export const SCRIPT = Object.freeze({
   agent: {
     all: L(['agent', 'Attendez… on nous a dit que c’était une affectation de travail. Que les gens partaient vers un abri.'])
   },
+  // End-of-chapter cinematic (end-cinematic.js): the hero and her sphere, face to face on the dock.
+  fin: {
+    ghju: L(['gaby', 'Porte bloquée, convoi à quai. Tu peux baisser l’arme, GHJU. Plus rien ne bouge ici.'],
+      ['ghju', 'Pas encore. Le Directoire renvoie toujours quelqu’un.'],
+      ['gaby', 'Alors je veille, et toi tu respires. Tu fais encore ce pli entre les yeux quand tu ne dors pas.'],
+      ['ghju', 'Tu me surveilles, maintenant ?'],
+      ['gaby', 'Depuis toujours. C’est un peu mon travail. Les modules de décryptage sont chauds : on lit VEILLE-4 dès qu’on est à couvert.'],
+      ['ghju', 'Et LYLU ?'],
+      ['gaby', 'Quelque part plus bas. Je capte des traces bleues. On le retrouvera.']),
+    lylu: L(['cara', 'Convoi bloqué. Avoue, LYLU : sans moi, tu cherchais encore le bon bouton.'],
+      ['lylu', 'Il y avait trois boutons. J’ai pris le bon.'],
+      ['cara', 'Au deuxième essai. Et tu saignes à l’épaule. Ne dis pas « ce n’est rien ».'],
+      ['lylu', 'Ce n’est rien.'],
+      ['cara', 'Tu dis toujours ça. Et moi je fais toujours semblant de te croire. Les modules sont chauds : on lit VEILLE-4 à couvert.'],
+      ['lylu', 'Et GHJU ?'],
+      ['cara', 'Une signature rose, très loin. Tiens bon. On la rattrapera.'])
+  },
   verrouOk: {
     lylu: L(['lylu', 'Porte bloquée. Le convoi ne part pas.'], ['cara', 'Les prisonniers dans le conteneur, les caisses d’archives HELIX sur le quai. On ne pourra pas tout sortir.']),
     ghju: L(['ghju', 'La porte est bloquée. Le convoi 03 reste ici.'], ['gaby', 'Les prisonniers d’un côté, les caisses d’archives HELIX de l’autre. On ne sortira pas tout.'])

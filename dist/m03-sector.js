@@ -76,7 +76,7 @@ function windowTextures(T) {
   return { emissive, color };
 }
 
-export function createSectorMeshes(T, sector, { quality = 'normal', tile = {} } = {}) {
+export function createSectorMeshes(T, sector, { quality = 'normal', tile = {}, webgpu = false } = {}) {
   const low = quality === 'low', group = new T.Group(); group.name = 'M03 / Vesper, secteur 03 (carte de visite cuite)';
   const loader = new T.TextureLoader(), textures = new Map();
   const tex = (url, srgb = true) => {
@@ -86,20 +86,25 @@ export function createSectorMeshes(T, sector, { quality = 'normal', tile = {} } 
   };
   const cc = name => './assets/cc0/' + name, l9 = (name, ch) => `./assets/ligne9/l9-${name}_${ch}_512.jpg`;
   const win = windowTextures(T), signs = signAtlas(T, sector.meta.signLabels || []);
-  const std = (o) => new T.MeshStandardMaterial({ vertexColors: true, roughness: .85, metalness: .05, ...o });
+  // WebGPU outside Performance: the same surfaces, physically richer (a lacquer on metal and paint, rain on the road,
+  // glazed windows and tiles, a fibre sheen on cloth). WebGL and Performance keep the standard material.
+  const rich = webgpu && !low;
+  const std = (o, phys = null) => { const base = { vertexColors: true, roughness: .85, metalness: .05, ...o };
+    if (!rich || !phys) return new T.MeshStandardMaterial(base);
+    const m = new T.MeshPhysicalMaterial({ ...base, ...phys }); m.userData.webgpuPhysical = true; return m; };
   // Vertex colours of the visitor page are a paint tint; textures carry the surface. Tile = metres per texture repeat.
   const FAMILY = {
     [MAT.CONCRETE]: { m: std({ map: tex(cc('vesper-concrete_diff_512.jpg')), roughness: .92 }), tile: 3.2, lift: 1.9 },
-    [MAT.METAL]: { m: std({ map: tex(cc('vesper-steel_diff_512.jpg')), roughness: .42, metalness: .62, normalMap: low ? null : tex(l9('metal_plate', 'nor'), false) }), tile: 2.4, lift: 1.8 },
-    [MAT.ROAD]: { m: std({ map: tex(cc('vesper-asphalt_diff_512.jpg')), roughness: .5, metalness: .15 }), tile: 4, lift: 2.2 },
-    [MAT.WINDOW]: { m: std({ map: win.color, emissiveMap: win.emissive, emissive: 0xffffff, emissiveIntensity: 1.25, roughness: .18, metalness: .55 }), tile: 6, lift: 1.4 },
+    [MAT.METAL]: { m: std({ map: tex(cc('vesper-steel_diff_512.jpg')), roughness: .42, metalness: .62, normalMap: low ? null : tex(l9('metal_plate', 'nor'), false) }, { clearcoat: .3, clearcoatRoughness: .35 }), tile: 2.4, lift: 1.8 },
+    [MAT.ROAD]: { m: std({ map: tex(cc('vesper-asphalt_diff_512.jpg')), roughness: .5, metalness: .15 }, { clearcoat: .55, clearcoatRoughness: .25 }), tile: 4, lift: 2.2 },
+    [MAT.WINDOW]: { m: std({ map: win.color, emissiveMap: win.emissive, emissive: 0xffffff, emissiveIntensity: 1.25, roughness: .18, metalness: .55 }, { clearcoat: .8, clearcoatRoughness: .08 }), tile: 6, lift: 1.4 },
     [MAT.PLANT]: { m: std({ roughness: 1, metalness: 0 }), tile: 2, lift: 1.25 },
     [MAT.SOIL]: { m: std({ map: tex(cc('vesper-asphalt_diff_512.jpg')), roughness: 1 }), tile: 2.5, lift: 1.5 },
-    [MAT.WET]: { m: std({ map: tex(cc('vesper-asphalt_diff_512.jpg')), roughness: .08, metalness: .45 }), tile: 3, lift: 1.6 },
-    [MAT.WHITE]: { m: std({ map: tex(cc('vesper-paint_diff_512.jpg')), roughness: .6 }), tile: 2, lift: 1.35 },
+    [MAT.WET]: { m: std({ map: tex(cc('vesper-asphalt_diff_512.jpg')), roughness: .08, metalness: .45 }, { clearcoat: 1, clearcoatRoughness: .04 }), tile: 3, lift: 1.6 },
+    [MAT.WHITE]: { m: std({ map: tex(cc('vesper-paint_diff_512.jpg')), roughness: .6 }, { clearcoat: .35, clearcoatRoughness: .4 }), tile: 2, lift: 1.35 },
     [MAT.BRICK]: { m: std({ map: tex(cc('m01-brick-diff_512.jpg')), normalMap: low ? null : tex(cc('m01-brick-normal_512.jpg'), false), roughness: .9 }), tile: 2.2, lift: 2.1 },
-    [MAT.FABRIC]: { m: std({ roughness: 1, side: T.DoubleSide }), tile: 1, lift: 1.4 },
-    [MAT.CERAMIC]: { m: std({ map: tex(l9('long_white_tiles', 'diff')), roughness: .35 }), tile: 1.6, lift: 1.5 },
+    [MAT.FABRIC]: { m: std({ roughness: 1, side: T.DoubleSide }, { sheen: 1, sheenRoughness: .7, sheenColor: 0xbfc6cc }), tile: 1, lift: 1.4 },
+    [MAT.CERAMIC]: { m: std({ map: tex(l9('long_white_tiles', 'diff')), roughness: .35 }, { clearcoat: .6, clearcoatRoughness: .15 }), tile: 1.6, lift: 1.5 },
     [MAT.SIGN]: { m: new T.MeshBasicMaterial({ map: signs, toneMapped: false }), tile: 1, lift: 1, signs: true }
   };
   const neon = new T.MeshBasicMaterial({ vertexColors: true, toneMapped: false });

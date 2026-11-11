@@ -123,6 +123,23 @@ export const SCRIPT = Object.freeze({
   arrimageOk: {
     all: L(['ines', 'Ambulance arrimée ! Le registre de régulation est dans la cabine, au bout du quai. Lisez-le avant le départ.'])
   },
+  // End-of-chapter cinematic (end-cinematic.js): on the quay, the hero and her sphere watch the train leave.
+  fin: {
+    ghju: L(['gaby', 'Le train sanitaire s’en va. Inès a ses kits, AEGIS a sa route. Tu as fait ce qu’il fallait.'],
+      ['ghju', 'Sur l’échangeur… la signature bleue. Tu es sûre de ce que tu as vu ?'],
+      ['gaby', 'Une Shadow Unit, à quatre cents mètres. Je n’ai rien pu verrouiller, mais je garde l’image.'],
+      ['ghju', 'Sept ans, GAB. Sept ans sans une trace de lui.'],
+      ['gaby', 'Alors ne la lâche pas. On ira la comparer aux relevés de la station Est.'],
+      ['ghju', 'Tu crois que c’est lui ?'],
+      ['gaby', 'Je crois que tu as le droit d’espérer. Et j’aimerais tellement que tu aies raison.']),
+    lylu: L(['cara', 'Train parti. Quarante personnes respirent grâce à toi. Pas mal, pour un imprudent.'],
+      ['lylu', 'Sur l’échangeur. L’armure aux marques roses. Tu l’as enregistrée ?'],
+      ['cara', 'Vue, mesurée, enregistrée. Une Shadow Unit, rose. Je n’ai pas pu la suivre.'],
+      ['lylu', 'Sept ans, CARA. Je la croyais sous les décombres du complexe.'],
+      ['cara', 'Moi, je ne crois rien : je calcule. Et le calcul dit qu’elle bouge exactement comme toi.'],
+      ['lylu', 'Station Est, alors.'],
+      ['cara', 'Station Est. Et cette fois, tu me laisses passer devant.'])
+  },
   regulation: {
     lylu: L(['lylu', 'Hadi n’est pas resté à l’Anneau. Il est parti vers la station énergétique Est, avec les techniciens.'], ['voss', 'La station Est. Mon équipe y descend. Il y a là-bas une archive des anciens systèmes de secours que je cherche depuis des années.']),
     ghju: L(['ghju', 'Les techniciens du convoi 02 sont repartis vers la station énergétique Est.'], ['voss', 'Alors rejoins ma cellule là-bas, GHJU. La station garde une archive des anciens systèmes de secours. Et peut-être un moyen de répondre à ORDRE.'])

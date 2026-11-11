@@ -2,6 +2,8 @@ import {rendererBackend,rendererLabel} from './renderer-policy.js';
 import {createSupplyPickup} from './power-props.js';
 import {createHologramComms} from './hologram-comms.js';
 import {levelArrow,arrowGuidance} from './objective-arrow.js';
+import {createM03Guidance,m03Target} from './m03-guidance.js';
+import {playEndCinematic} from './end-cinematic.js';
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import {walkingSurface} from './surface-steps.js';
 // MISSION 03 — « Le Convoi des Absents » (campaign M03). Night Vesper sector of the visitor map, baked for three.js
@@ -243,8 +245,20 @@ function finishMission(){
  $('panel-text').textContent=ENDING.text[characterId];
  const docs=Object.keys(LOGS).filter(id=>mission.reads.includes(id)).length;
  $('panel-small').textContent=`Temps ${minutes}:${seconds} · Machines neutralisées ${game.kills} · Précision ${shotsFired?Math.round(hits/shotsFired*100):0} % · Ambulance ${Math.ceil(mission.van.hp)} % · Documents ${docs}/${Object.keys(LOGS).length} · ${ENDING.next}`;
- startButton.textContent='REJOUER LE NIVEAU 3 →';startButton.disabled=false;status.textContent='';shade.style.display='grid';shade.classList.add('ended');document.body.classList.add('pw-shaded');
- $('home').hidden=false;
+ const showPanel=()=>{startButton.textContent='REJOUER LE NIVEAU 3 →';startButton.disabled=false;status.textContent='';shade.style.display='grid';shade.classList.add('ended');document.body.classList.add('pw-shaded');
+  $('home').hidden=false;};
+ // In-engine end scene on the quay (the hero and her sphere, their exchange in the transmission panel), once the
+ // regulation register has been read and closed. The headset goes straight to the end panel.
+ const stage=()=>{
+  if(reading){setTimeout(stage,300);return;}
+  if(xr?.active||!scene){showPanel();return;}
+  const lines={clear(){subtitles.length=0;subtitle=null;comms.clear();},say(list){subtitles.push(...list);},get current(){return subtitle;},get queued(){return subtitles.length;}};
+  try{endCine=playEndCinematic({T,camera,hero:playerRig?.model||null,sphere:companion,player:game.player,yaw,lines:linesFor('fin',characterId,choice),subtitles:lines,firstPerson:[weapon],
+   clip:(from,to)=>{let n=1;for(const box of collisions){if(box.walkableSurface)continue;const t=segmentBox(from,to,{...box,hx:box.hx+.25,hz:box.hz+.25});if(t!==null)n=Math.min(n,t-.06);}return n;},
+   title:'Chapitre 03 · Le Convoi des Oubliés',onDone:()=>{endCine=null;showPanel();}});}
+  catch(error){console.warn('M03 end cinematic skipped:',error);endCine=null;showPanel();}
+ };
+ setTimeout(stage,700);
 }
 function missionLost(reason='over'){
  if(!running)return;running=false;document.exitPointerLock?.();closeDocument();
@@ -433,11 +447,16 @@ const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;retur
 let lastDevices='';
 const HOLD_LABEL={balise:'BROUILLAGE DE LA BALISE D’ORDRE',barriere:'LEVÉE DE LA BARRIÈRE',treuil:'TRACTION DU TREUIL',arrimage:'ARRIMAGE DE L’AMBULANCE AU TRAIN'};
 const VAN_WAIT={escorte:'attend son escorte',machines:'machines devant',stop:'à l’arrêt',stage:'à l’arrêt'};
+let endCine=null,m03Guide=null,m03GuideAt=0,m03Waypoint=null;
 function updateHUD(){
  (combatHud ||= mountCombatHud({characterId,onAction:armorTouch})).update(game);
  const it=reading?null:mission.nearInteraction(),stageInfo=L.STAGES[mission.stage];combatHud.setContext(it?.label);
  const area=L.AREAS.find(a=>a.id===L.areaAt(game.player.x,game.player.z));
- combatHud.setObjective({guided:true,guidance:levelArrow(L.INTERACTIONS,mission,game.player,yaw),label:'MISSION 03 · '+(area?.label||'Le Convoi des Oubliés'),detail:stageInfo?.label||''});
+ // Path-following arrow (doors, stairway, around containers), refreshed five times a second; bearing follows the view.
+ if(!m03Guide)m03Guide=createM03Guidance({traversal});
+ if(clock>=m03GuideAt||!m03Waypoint){m03GuideAt=clock+.2;const target=m03Target(mission,game);m03Waypoint=target&&{target,point:m03Guide.waypoint(game.player,target,collisions)||target};}
+ const guidance=m03Waypoint?{...arrowGuidance(game.player,m03Waypoint.point,yaw),route:Math.ceil(Math.hypot(m03Waypoint.target.x-game.player.x,m03Waypoint.target.z-game.player.z))+' m',title:m03Waypoint.target.label}:levelArrow(L.INTERACTIONS,mission,game.player,yaw);
+ combatHud.setObjective({guided:true,guidance,label:'MISSION 03 · '+(area?.label||'Le Convoi des Oubliés'),detail:stageInfo?.label||''});
  $('prompt').style.display=it?'block':'none';if(it)$('prompt').textContent='F / R3 · '+it.label;
  if(clock>noticeUntil)$('notice').style.display='none';
  $('crosshair').style.filter=clock<hitUntil?'drop-shadow(0 0 7px #ffffff) brightness(3)':'';
@@ -467,12 +486,13 @@ function animation(t,frame){
   console.error('M03 / simulation',error);running=false;shade.style.display='grid';status.textContent='Erreur : '+(error?.message||String(error));
   startButton.disabled=false;startButton.textContent='RECOMMENCER →';
  }
- if(started){updateSubtitles(running?dt:0);updateLamp(dt);
+ if(started){updateSubtitles(running||endCine?dt:0);updateLamp(dt);
   const area=L.areaAt(game.player.x,game.player.z);
   cityBed?.update(dt,{active:running,area,indoor:!!L.AREAS.find(a=>a.id===area)?.roof});}
  const eye=xr?.active?renderer.xr.getCamera():camera;
  try{art.update(clock,dt,eye,game?.player,{van:mission?.van,beaconOff:!!mission?.done.includes('balise'),crank:mission?.hold?.name==='treuil'});}catch(error){console.warn('M03 / décor animé désactivé',error);art.update=()=>{};}
  if(xr?.active){xr.update(dt,weaponFeel.state,weaponFeel.state.kick>.025?.075:0);xr.renderScope();}
+ if(endCine)try{endCine.update(dt);}catch(error){console.warn('M03 end cinematic frame:',error);endCine.skip();}
  if(!framePending&&!recovering){
   try{const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);
    if(result&&typeof result.then==='function'){framePending=true;result.then(()=>{framePending=false;}).catch(err=>{framePending=false;onRenderFailure(err);});}}
@@ -612,6 +632,6 @@ window.__PINK_M03=Object.freeze({
   interact:()=>{interact();return reading;},close:()=>closeDocument(),skip:seconds=>{game.time+=seconds;mission.update(1/60);},god:()=>{game.invulnerable=1e9;},
   use:id=>{const it=L.INTERACTIONS.find(i=>i.id===id);Object.assign(game.player,{x:it.x,z:it.z,elevation:it.y||0,grounded:true,verticalSpeed:0});interact();return {reading,stage:mission.stageId};},
   van:index=>{mission.placeVan(index);},drive:seconds=>{for(let t=0;t<seconds;t+=1/30){const v=mission.van;game.enemies.length=0;Object.assign(game.player,{x:v.x+3,z:v.z+3,elevation:0});game.step(1/30,{});mission.update(1/30);}return mission.stageId;},
-  portal:(x,z)=>art.openPortal(x,0,z,{charge:30}),view:()=>changeView(),lamp:()=>toggleLamp(),vr:()=>xr.enter()}:null
+  endScene:()=>finishMission(),cine:()=>endCine,portal:(x,z)=>art.openPortal(x,0,z,{charge:30}),view:()=>changeView(),lamp:()=>toggleLamp(),vr:()=>xr.enter()}:null
 });
 if(params.get('autostart')==='1'){startButton.disabled=true;void boot();}
