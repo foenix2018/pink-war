@@ -38,16 +38,16 @@ export function createRobotShutdownAudio({getContext=()=>null,getListener=()=>nu
  function play(kind,source={}){
    if(disposed)return false;
    const ctx=getContext?.();if(!ctx||ctx.state==='closed')return false;
-   if(!['fault','glitch','shutdown','terminal'].includes(kind))return false;
+   if(!['fault','glitch','shutdown','terminal','rupture'].includes(kind))return false;
    const listener=getListener?.(),spatial=robotShutdownSpatial(source,listener,getYaw?.()||0);
    if(spatial.distance>65||spatial.gain<.018||voices.size>=maxVoices)return false;
    const t=ctx.currentTime+.008,pitch=robotShutdownPitch(source.form),isHeavy=pitch.body>=1.1;
    const duration=kind==='shutdown'?Math.min(1.4,Math.max(.42,Number(source.duration)||.85))
-                  :kind==='terminal'?.22:kind==='fault'?.17:.13;
+                  :kind==='terminal'?.22:kind==='rupture'?.26:kind==='fault'?.17:.13;
    const master=ctx.createGain(),node=ctx.createGain(),pan=ctx.createStereoPanner?.();
-   const strength=kind==='shutdown'?.095:kind==='terminal'?.075:kind==='glitch'?.040:.028;
+   const strength=kind==='rupture'?.2:kind==='shutdown'?.07:kind==='terminal'?.075:kind==='glitch'?.040:.028;
    // Single capped voice per robot, all output below -17dB even nearby.
-   const peak=Math.min(.12,strength*pitch.body*spatial.gain);
+   const peak=Math.min(kind==='rupture'?.24:.12,strength*pitch.body*spatial.gain);
    master.gain.value=1;
    if(pan){pan.pan.value=spatial.pan;node.connect(pan);pan.connect(master);}else node.connect(master);
    master.connect(ctx.destination);envelope(node.gain,t,peak,duration);
@@ -66,6 +66,10 @@ export function createRobotShutdownAudio({getContext=()=>null,getListener=()=>nu
    if(kind==='shutdown'){
      oscillator('sawtooth',pitch.base*1.55,pitch.fall,duration*.91,0,.58);
      oscillator('triangle',pitch.base*.61,pitch.fall*.55,duration*.95,0,.65);
+   }else if(kind==='rupture'){
+     // Hard metallic crack and a chest thump: the killing hit, not a power-down.
+     oscillator('sine',pitch.base*.9,34,duration*.9,0,.9);
+     oscillator('square',pitch.base*7.5,pitch.base*1.1,.07,0,.3);
    }else if(kind==='terminal'){
      oscillator('square',pitch.base*1.7,28,duration*.84,0,.42);
      oscillator('triangle',pitch.base*.53,34,duration*.92,0,.45);
@@ -75,9 +79,9 @@ export function createRobotShutdownAudio({getContext=()=>null,getListener=()=>nu
    }
    // High-passed electric crackle (generated once per AudioContext).
    const buffer=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),ng=ctx.createGain();
-   buffer.buffer=noise(ctx);filter.type=kind==='shutdown'?'bandpass':'highpass';
-   filter.frequency.value=kind==='shutdown'?(isHeavy?410:700):1400;
-   ng.gain.value=kind==='shutdown'?.48:.75;
+   buffer.buffer=noise(ctx);filter.type=kind==='shutdown'?'bandpass':kind==='rupture'?'lowpass':'highpass';
+   filter.frequency.value=kind==='shutdown'?(isHeavy?410:700):kind==='rupture'?(isHeavy?1500:2600):1400;
+   ng.gain.value=kind==='shutdown'?.48:kind==='rupture'?1.1:.75;
    buffer.connect(filter);filter.connect(ng);ng.connect(node);
    buffer.start(t);buffer.stop(t+Math.min(duration,.41));
    entry.sources.push({source:buffer,gain:ng,filter});

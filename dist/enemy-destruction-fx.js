@@ -1,6 +1,8 @@
 // Pink Wars — shared robot damage/destruction visual system (GPU instancing).
-// Active robots smoke progressively as their hull is damaged. Destroyed robots
-// tip/fall onto the terrain before a physical-looking fire/smoke/debris blast.
+// Active robots smoke progressively as their hull is damaged. A destroyed robot is
+// hit hard: impact flash, shock ring, sparks and torn plating thrown along the shot,
+// the chassis knocked off its feet and slammed down in about half a second, then a
+// detonation that leaves a scorch mark. No slow power-down.
 // No combat damage is applied here: gameplay keeps ownership of kills & scoring.
 // Small shared pools protect iPhone/Quest frame time; no per-robot particle meshes.
 import {createGrenadeExplosionV4} from './grenade-explosion-v4.js';
@@ -15,7 +17,14 @@ export function enemyDamageStage(hp,maxHp){
  return {damage,stage:4,smoke:4,sparks:3,interval:.17};
 }
 export function robotDeathDuration(form='stalker'){
- return form==='probe'?.92:form==='sentinel'?1.48:['brute','bulwark'].includes(form)?1.24:1.08;
+ return form==='probe'?.40:form==='sentinel'?.86:['brute','bulwark'].includes(form)?.70:.54;
+}
+// Knock-back of the chassis on the killing hit (m/s along the shot, lift in m/s, tumble in rad).
+export function robotKnockback(form='stalker'){
+ if(form==='probe')return {speed:7.5,lift:1.2,tumble:2.6,chunks:7};
+ if(form==='sentinel')return {speed:1.4,lift:.6,tumble:1.15,chunks:18};
+ if(form==='brute'||form==='bulwark')return {speed:2.4,lift:1.1,tumble:1.3,chunks:14};
+ return {speed:4.6,lift:2.6,tumble:1.5,chunks:10};
 }
 
 // Chassis-local failure contacts. The game uses form='seer' for RECO1 and
@@ -79,6 +88,44 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
  const arcMat=new T.MeshBasicMaterial({color:0xc2eeff,transparent:true,opacity:.97,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false});
  const smoke=new T.InstancedMesh(puffGeo,puffMat,budget),sparks=new T.InstancedMesh(sparkGeo,sparkMat,budget),
    arcs=new T.InstancedMesh(arcGeo,arcMat,budget);
+ // Kill burst pools: flash and shock ring (additive billboards), torn plating, scorch marks.
+ const ringTex=(()=>{
+  const n=64,d=new Uint8Array(n*n*4);
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+   const r=Math.hypot(x-n*.5,y-n*.5)/(n*.5),a=clamp01(1-Math.abs(r-.82)/.14),off=(y*n+x)*4;
+   d[off]=255;d[off+1]=236;d[off+2]=205;d[off+3]=Math.floor(255*a*a);
+  }
+  const t=new T.DataTexture(d,n,n,T.RGBAFormat);t.minFilter=T.LinearFilter;t.magFilter=T.LinearFilter;t.generateMipmaps=false;t.needsUpdate=true;return t;
+ })();
+ const burstBudget=low?64:200,chunkGeo=new T.BoxGeometry(.13,.05,.19);
+ const flashMat=new T.MeshBasicMaterial({map:smokeTex,color:0xffe2b0,transparent:true,opacity:.95,blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide,toneMapped:false});
+ const ringMat=new T.MeshBasicMaterial({map:ringTex,color:0xffc890,transparent:true,opacity:.8,blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide,toneMapped:false});
+ const chunkMat=new T.MeshBasicMaterial({color:0x39424d,toneMapped:false});
+ const scorchMat=new T.MeshBasicMaterial({map:smokeTex,color:0x050608,transparent:true,opacity:.7,depthWrite:false,side:T.DoubleSide,toneMapped:false});
+ const flashes=new T.InstancedMesh(puffGeo,flashMat,burstBudget),rings=new T.InstancedMesh(puffGeo,ringMat,burstBudget),
+   chunks=new T.InstancedMesh(chunkGeo,chunkMat,burstBudget),scorches=new T.InstancedMesh(puffGeo,scorchMat,low?6:12);
+ for(const mesh of [scorches,chunks,rings,flashes]){mesh.count=0;mesh.frustumCulled=false;mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);scene.add(mesh);}
+ scorches.renderOrder=2;rings.renderOrder=9;flashes.renderOrder=10;
+ const burst=[],flatAxis=new T.Vector3(1,0,0);
+ function push(kind,x,y,z,size,life,xv=0,yv=0,zv=0,floor=0){
+  const cap=kind==='scorch'?(low?6:12):burstBudget;
+  if(burst.filter(b=>b.kind===kind).length>=cap){const i=burst.findIndex(b=>b.kind===kind);if(i>=0)burst.splice(i,1);}
+  burst.push({kind,x,y,z,size,life,age:0,xv,yv,zv,floor,angle:rnd()*Math.PI*2,spin:(rnd()-.5)*18});
+ }
+ // Everything that leaves the chassis at once: flash, ring, sparks and plating thrown along (dx,dz).
+ function rupture(x,y,z,floor,dx,dz,power=1,count=10){
+  push('flash',x,y,z,2.1*power,.11);push('ring',x,floor+.04,z,3.4*power,.32);
+  const n=low?Math.ceil(count*.55):count;
+  for(let i=0;i<n;i++){
+   const a=rnd()*Math.PI*2,side=1.6+rnd()*3.4,along=2.5+rnd()*5.5;
+   push('chunk',x+(rnd()-.5)*.4,y+(rnd()-.3)*.7,z+(rnd()-.5)*.4,.7+rnd()*1.3,1.5+rnd()*.9,
+     dx*along+Math.cos(a)*side,2.2+rnd()*4.6,dz*along+Math.sin(a)*side,floor);
+  }
+  for(let i=0;i<(low?6:14);i++){
+   if(particles.length>=budget)break;
+   particles.push({kind:'spark',x,y,z,xv:dx*(3+rnd()*7)+(rnd()-.5)*6,yv:1.5+rnd()*5,zv:dz*(3+rnd()*7)+(rnd()-.5)*6,life:.3+rnd()*.4,age:0,size:.11+rnd()*.06,angle:rnd()*6.28});
+  }
+ }
  for(const mesh of [smoke,sparks,arcs]){mesh.count=0;mesh.frustumCulled=false;mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);scene.add(mesh);}
  smoke.renderOrder=7;sparks.renderOrder=8;arcs.renderOrder=9;
  const particles=[],timers=new Map(),deaths=[];
@@ -155,21 +202,27 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
     soundFaultAt.set(e.id,elapsed+(stage.stage===4?.70:1.15)+rnd()*.22);
   }
  }
- function kill(model,{id=null,form='stalker',x,y,z,groundY=null}={}){
+ function kill(model,{id=null,form='stalker',x,y,z,groundY=null,from=null}={}){
   if(!model)return;
   if(id!==null){timers.delete(id);soundFaultAt.delete(id);}
-  const p=model.position,record={
+  const p=model.position,kb=robotKnockback(form),record={
    model,form,age:0,duration:robotDeathDuration(form),
    x:Number.isFinite(x)?x:p.x,z:Number.isFinite(z)?z:p.z,
    y:Number.isFinite(groundY)?groundY:p.y,
    startY:p.y,initialX:model.rotation.x,initialZ:model.rotation.z,
    dir:(Math.random()>.5?1:-1),nextCue:0,seed:Number.isFinite(id)?id:Math.round(rnd()*100),
   };
+  // Thrown away from whoever fired (the camera unless the level says otherwise).
+  const origin=from||camera?.position||null;let dx=0,dz=0;
+  if(origin&&Number.isFinite(origin.x)&&Number.isFinite(origin.z)){dx=record.x-origin.x;dz=record.z-origin.z;const len=Math.hypot(dx,dz);if(len>.01){dx/=len;dz/=len;}else dx=dz=0;}
+  Object.assign(record,{dx,dz,vx:dx*kb.speed,vz:dz*kb.speed,vy:kb.lift,tumble:kb.tumble,landed:false});
   model.position.set(record.x,record.startY,record.z);
   deaths.push(record);
+  sound('rupture',{id,x:record.x,y:record.startY+1,z:record.z,form,damage:1});
   sound('shutdown',{id,x:record.x,y:record.startY+1,z:record.z,form,damage:1,duration:record.duration});
   electricBurst({form,x:record.x,z:record.z,elevation:record.startY,yaw:model.rotation.y||0},low?5:9,.12,model);
-  for(let i=0;i<(low?3:6);i++)emit('spark',record.x,record.startY+1,record.z,.09);
+  const heavy=form==='sentinel'||form==='brute'||form==='bulwark';
+  rupture(record.x,record.startY+(form==='probe'?.3:heavy?1.5:1.15),record.z,record.y,dx,dz,heavy?1.35:form==='probe'?.75:1,kb.chunks);
   while(deaths.length>limit){
    const old=deaths.shift();scene.remove(old.model);
   }
@@ -178,14 +231,18 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
   const delta=Math.min(.065,Math.max(0,Number(dt)||0));elapsed+=delta;
   for(let i=deaths.length-1;i>=0;i--){
    const d=deaths[i];d.age+=delta;
-   const t=clamp01(d.age/d.duration),fall=t*t*(3-2*t);
+   const t=clamp01(d.age/d.duration),fall=1-(1-t)*(1-t)*(1-t); // most of the fall happens at once
    const flying=d.form==='probe';
-   // Servo shutdown: small irregular spasms fade as the chassis hits ground.
-   const twitch=(1-fall)*Math.sin(d.age*37+d.seed*.8)*.055;
-   d.model.rotation.x=d.initialX+d.dir*fall*(flying?.9:1.27)+twitch;
-   d.model.rotation.z=d.initialZ+d.dir*fall*(flying?.65:.45)-twitch*.65;
+   // Knocked off its feet: ballistic, tumbling backwards, slammed on the ground and sliding to a stop.
+   const drag=Math.exp(-delta*(d.landed?9:1.6));d.vx*=drag;d.vz*=drag;d.vy-=(flying?16:19)*delta;
+   d.x+=d.vx*delta;d.z+=d.vz*delta;
+   let height=d.model.position.y+d.vy*delta;
+   if(height<=d.y){height=d.y;if(!d.landed){d.landed=true;push('ring',d.x,d.y+.04,d.z,1.8,.22);for(let n=0;n<(low?2:5);n++)emit('spark',d.x,d.y+.15,d.z,.09);}d.vy=0;}
+   const twitch=(1-fall)*Math.sin(d.age*61+d.seed*.8)*.04;
+   d.model.rotation.x=d.initialX-fall*d.tumble+twitch;
+   d.model.rotation.z=d.initialZ+d.dir*fall*(flying?.9:.38)-twitch*.65;
    powerEyes(d.model,robotOpticPower(t,d.seed)*.7);
-   d.model.position.y=flying?Math.max(d.y+.12,d.startY-5*t*t):d.y+Math.sin(fall*Math.PI)*.21;
+   d.model.position.set(d.x,height,d.z);
    const origin={form:d.form,x:d.x,z:d.z,elevation:d.model.position.y,yaw:d.model.rotation.y||0};
    while(d.nextCue<SHUTDOWN_CUES.length&&t>=SHUTDOWN_CUES[d.nextCue].at){
      const cue=SHUTDOWN_CUES[d.nextCue++];
@@ -205,6 +262,9 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
     powerEyes(d.model,.035);
     const size=d.form==='sentinel'?7.2:['brute','bulwark'].includes(d.form)?5.0:flying?3.0:3.8;
     explosions.spawn({x:d.x,y:d.y+.7,z:d.z,radius:size});
+    rupture(d.x,d.y+.5,d.z,d.y,d.dx*.3,d.dz*.3,size/3.8,Math.round(robotKnockback(d.form).chunks*.8));
+    push('scorch',d.x,d.y+.03,d.z,size*.62,9);
+    sound('rupture',{id:d.seed,x:d.x,y:d.y+.6,z:d.z,form:d.form,damage:1});
     for(let n=0;n<(low?5:11);n++)emit('spark',d.x,d.y+.7,d.z,.12);
     scene.remove(d.model);deaths.splice(i,1);
    }
@@ -229,18 +289,38 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
    }
    mesh.count=k;if(k)mesh.instanceMatrix.needsUpdate=true;
   }
+  for(let i=burst.length-1;i>=0;i--){
+   const b=burst[i];b.age+=delta;if(b.age>=b.life){burst.splice(i,1);continue;}
+   if(b.kind!=='chunk')continue;
+   b.yv-=17*delta;b.x+=b.xv*delta;b.y+=b.yv*delta;b.z+=b.zv*delta;b.angle+=b.spin*delta;
+   if(b.y<b.floor+.03){b.y=b.floor+.03;if(Math.abs(b.yv)>1.2){b.yv=-b.yv*.34;b.xv*=.55;b.zv*=.55;b.spin*=.5;}else{b.yv=0;b.xv*=.8;b.zv*=.8;b.spin=0;}}
+  }
+  for(const [type,mesh] of [['flash',flashes],['ring',rings],['chunk',chunks],['scorch',scorches]]){
+   let k=0;
+   for(const b of burst){
+    if(b.kind!==type)continue;
+    const u=b.age/b.life;pos.set(b.x,b.y,b.z);
+    if(type==='flash'){sc.setScalar(Math.max(.0001,b.size*(.55+u*.9)*(1-u*u)));if(camera)rotation.copy(camera.quaternion);else rotation.identity();}
+    else if(type==='ring'){sc.setScalar(Math.max(.0001,b.size*(.25+.75*(1-(1-u)*(1-u)))*(1-u*.25)));rotation.setFromAxisAngle(flatAxis,-Math.PI/2);if(u>.6)sc.setScalar(Math.max(.0001,b.size*(1-(u-.6)*.6)));}
+    else if(type==='scorch'){sc.setScalar(Math.max(.0001,b.size*Math.min(1,u*40)*(u>.75?(1-u)*4:1)));rotation.setFromAxisAngle(flatAxis,-Math.PI/2);}
+    else{sc.setScalar(Math.max(.0001,b.size*(u>.8?(1-u)*5:1)));tiltAxis.set(Math.sin(b.angle*.7),.4,Math.cos(b.angle*.7));tiltAxis.normalize?.();rotation.setFromAxisAngle(tiltAxis,b.angle);}
+    matrix.compose(pos,rotation,sc);mesh.setMatrixAt(k++,matrix);
+   }
+   mesh.count=k;if(k)mesh.instanceMatrix.needsUpdate=true;
+  }
   explosions.update(delta);
  }
  function reset(){
   for(const d of deaths)scene.remove(d.model);deaths.length=0;
-  timers.clear();soundFaultAt.clear();particles.length=0;smoke.count=sparks.count=arcs.count=0;elapsed=0;
+  timers.clear();soundFaultAt.clear();particles.length=0;burst.length=0;smoke.count=sparks.count=arcs.count=0;flashes.count=rings.count=chunks.count=scorches.count=0;elapsed=0;
   explosions.dispose();explosions=createGrenadeExplosionV4(T,scene,blastOptions);
  }
  function dispose(){
   for(const d of deaths)scene.remove(d.model);deaths.length=0;timers.clear();soundFaultAt.clear();particles.length=0;
   explosions.dispose();
-  for(const m of [smoke,sparks,arcs])scene.remove(m);
+  for(const m of [smoke,sparks,arcs,flashes,rings,chunks,scorches])scene.remove(m);burst.length=0;
+  chunkGeo.dispose();flashMat.dispose();ringMat.dispose();chunkMat.dispose();scorchMat.dispose();ringTex.dispose();
   puffGeo.dispose();sparkGeo.dispose();arcGeo.dispose();puffMat.dispose();sparkMat.dispose();arcMat.dispose();smokeTex.dispose();
  }
- return {mark,kill,update,reset,dispose,setSoundHandler:handler=>{soundHandler=typeof handler==='function'?handler:null;},stats:()=>({damagedParticles:particles.length,electricArcs:particles.filter(p=>p.kind==='arc').length,falling:deaths.length,explosions:explosions.stats().active})};
+ return {mark,kill,update,reset,dispose,setSoundHandler:handler=>{soundHandler=typeof handler==='function'?handler:null;},stats:()=>({damagedParticles:particles.length,electricArcs:particles.filter(p=>p.kind==='arc').length,falling:deaths.length,burst:burst.length,chunks:burst.filter(b=>b.kind==='chunk').length,explosions:explosions.stats().active})};
 }

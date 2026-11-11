@@ -1,3 +1,4 @@
+import {cityWindowAtlas} from './m03-city.js';
 import {findBakedNeonRuns} from './baked-neons.js';
 import {createNeonFixtures} from './neon-fixtures.js';
 // Mission 03 — the night Vesper sector of the visitor map, baked by tools/bake-m03-vesper.mjs (quads quantised to the
@@ -60,21 +61,8 @@ function canvasTexture(T, w, h, paint) {
 // The visitor page's sign atlas (16 slots), redrawn in the shared Vesper signage style (signage.js).
 function signAtlas(T, labels) { return canvasTexture(T, 1024, 1024, g => drawSignAtlas(g, labels)); }
 // Lit windows at night: a grid of panes, a share of them warm or cold, some flickering in the material via emissive.
-function windowTextures(T) {
-  let seed = 3031; const r = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
-  const emissive = canvasTexture(T, 256, 256, (c, w, h) => {
-    c.fillStyle = '#000'; c.fillRect(0, 0, w, h);
-    for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) { const v = r(); if (v < .62) continue;
-      c.fillStyle = v > .93 ? '#ff5aa8' : v > .86 ? '#7fe7ff' : v > .74 ? '#ffc890' : '#f2e2c0'; c.globalAlpha = .35 + r() * .65; c.fillRect(x * 32 + 4, y * 32 + 5, 24, 20); }
-    c.globalAlpha = 1;
-  });
-  const color = canvasTexture(T, 256, 256, (c, w, h) => {
-    c.fillStyle = '#1a242c'; c.fillRect(0, 0, w, h); c.fillStyle = '#0c1318';
-    for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) c.fillRect(x * 32 + 4, y * 32 + 5, 24, 20);
-  });
-  for (const t of [emissive, color]) { t.wrapS = t.wrapT = T.RepeatWrapping; }
-  return { emissive, color };
-}
+// Window bays of the baked facades: the detailed city atlas (frames, mullions, blinds, lit interiors).
+function windowTextures(T, low = false) { return cityWindowAtlas(T, low ? 512 : 1024); }
 
 export function createSectorMeshes(T, sector, { quality = 'normal', tile = {}, webgpu = false } = {}) {
   const low = quality === 'low', group = new T.Group(); group.name = 'M03 / Vesper, secteur 03 (carte de visite cuite)';
@@ -85,7 +73,7 @@ export function createSectorMeshes(T, sector, { quality = 'normal', tile = {}, w
     textures.set(url, t); return t;
   };
   const cc = name => './assets/cc0/' + name, l9 = (name, ch) => `./assets/ligne9/l9-${name}_${ch}_512.jpg`;
-  const win = windowTextures(T), signs = signAtlas(T, sector.meta.signLabels || []);
+  const win = windowTextures(T, low), signs = signAtlas(T, sector.meta.signLabels || []);
   // WebGPU outside Performance: the same surfaces, physically richer (a lacquer on metal and paint, rain on the road,
   // glazed windows and tiles, a fibre sheen on cloth). WebGL and Performance keep the standard material.
   const rich = webgpu && !low;
@@ -99,7 +87,7 @@ export function createSectorMeshes(T, sector, { quality = 'normal', tile = {}, w
     [MAT.CONCRETE]: { m: std({ map: tex(cc('vesper-concrete_diff_512.jpg')), roughness: .92, ...relief(l9('concrete_wall_006', 'nor'), l9('concrete_wall_006', 'rough'), .7) }), tile: 3.2, lift: 1.9 },
     [MAT.METAL]: { m: std({ map: tex(cc('vesper-steel_diff_512.jpg')), roughness: .42, metalness: .62, normalMap: low ? null : tex(l9('metal_plate', 'nor'), false), ...(rich ? { roughnessMap: tex(l9('metal_plate', 'rough'), false) } : {}) }, { clearcoat: .3, clearcoatRoughness: .35 }), tile: 2.4, lift: 1.8 },
     [MAT.ROAD]: { m: std({ map: tex(cc('vesper-asphalt_diff_512.jpg')), roughness: .5, metalness: .15, ...relief(cc('asphalt_03_normal_1k.jpg'), cc('asphalt_03_rough_1k.jpg'), .55) }, { clearcoat: .55, clearcoatRoughness: .25 }), tile: 4, lift: 2.2 },
-    [MAT.WINDOW]: { m: std({ map: win.color, emissiveMap: win.emissive, emissive: 0xffffff, emissiveIntensity: 1.25, roughness: .18, metalness: .55 }, { clearcoat: .8, clearcoatRoughness: .08 }), tile: 6, lift: 1.4 },
+    [MAT.WINDOW]: { m: std({ map: win.color, emissiveMap: win.emissive, emissive: 0xffffff, emissiveIntensity: 1.25, roughness: .18, metalness: .55 }, { clearcoat: .8, clearcoatRoughness: .08 }), tile: 5.6, lift: 1.4 },
     [MAT.PLANT]: { m: std({ roughness: 1, metalness: 0 }), tile: 2, lift: 1.25 },
     [MAT.SOIL]: { m: std({ map: tex(cc('vesper-asphalt_diff_512.jpg')), roughness: 1 }), tile: 2.5, lift: 1.5 },
     [MAT.WET]: { m: std({ map: tex(cc('vesper-asphalt_diff_512.jpg')), roughness: .08, metalness: .45, ...relief(cc('asphalt_03_normal_1k.jpg'), null, .3) }, { clearcoat: 1, clearcoatRoughness: .04 }), tile: 3, lift: 1.6 },
