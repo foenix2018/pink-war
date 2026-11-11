@@ -41,6 +41,7 @@ import {createStreetAtmosphere} from './level2-atmosphere.js';
 import {installPinkWarsSoldier} from './level2-player.js';
 import {showChapter2Finale} from './story-chapters.js';
 import {playEndCinematic} from './end-cinematic.js';
+import {upgradeForWebGPU} from './webgpu-upgrade.js';
 import {createCampaignCombatEffects} from './campaign-combat-effects.js';
 import {createAICompanion} from './ai-companions.js';
 import {createAmbience} from './ambience.js';
@@ -102,7 +103,7 @@ const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;retur
 const pauseMenu=createPauseMenu({title:'HISTOIRE / LES PROFONDEURS',canOpen:()=>started,settingsSelectors:['#quality'],
  view:{getView:()=>xr?.active?'fps':view,onSelect:next=>changeView(next),canChange:()=>!!playerRig&&!xr?.active},
  onPause:()=>pauseMission(),onResume:()=>unpauseMission(),onVR:()=>xr?.enter(),onHome:async()=>{await xr?.exit();location.assign('./index.html');}});pauseMenu.setVisible(false);
-let endCine=null,combatEffects=null,companion=null,environmentAudio=null,warZone=null,battleAudio=null;
+let endCine=null,webgpuFinish=null,combatEffects=null,companion=null,environmentAudio=null,warZone=null,battleAudio=null;
 let enemyDestructionFX=null;
 const robotShutdownAudio=createRobotShutdownAudio({getContext:()=>enableAudio&&audioCtx?.state==='running'?audioCtx:null,getListener:()=>game?.player,getYaw:()=>yaw});
 let companionSkills=null,skillMenu=null;
@@ -971,6 +972,10 @@ async function boot(){
   }});}catch(error){console.warn('M02/PBR optional fallback:',error);}
   $('renderer').textContent=rendererLabel(renderer)+' · PBR';
   if(prepared.initialFailure)console.warn('M02: WebGPU unavailable:',prepared.initialFailure);
+  // WebGPU finish (desktop-class, outside Performance): rounder shapes and physical surfaces for the whole level,
+  // once now and once more when the soldier and the first machines are in.
+  const finishWebGPU=()=>{if(!(renderer?.backend?.isWebGPUBackend||new URLSearchParams(location.search).get('finish')==='1')||low()||profile.phone)return null;try{const add=upgradeForWebGPU(T,scene,{camera});webgpuFinish=Object.fromEntries(Object.keys(add).map(k=>[k,(webgpuFinish?.[k]||0)+add[k]]));return webgpuFinish;}catch(error){console.warn('M02 WebGPU finish skipped:',error);return null;}};
+  finishWebGPU();setTimeout(finishWebGPU,8000);
   bootStep='préparation du premier rendu';status.textContent='Préparation des lumières et du premier rendu…';
   missionLoading?.set(.90,'Préparation du premier rendu');
   extArt?.syncPickups(game.pickups,clock);
@@ -1105,7 +1110,7 @@ window.addEventListener('orientationchange',()=>{cancelAim();keys.clear();});
 window.addEventListener('pointerdown',e=>reconcileAimModifiers(keys,e),{capture:true});
 window.__PINK_M02=Object.freeze({snapshot:()=>({music:screenMusicSnapshot(),revision:'3.76.0',neons:root?.userData?.neons,running,paused,view:xr?.active?'fps':view,playerVisible:playerRig?.model.root.visible||false,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,extension:extension&&{stage:extension.stage,hold:extension.hold,done:extension.done,reads:extension.reads,opened:extension.opened,groups:extension.groups(),interaction:extension.interaction()},subtitle:subtitles?.current||null,journal:journalOpen,dressing:extArt?.stats(),health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
- shadowing:worldShadows?.stats(),backend:rendererBackend(renderer),rig:!!playerRig,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
+ shadowing:worldShadows?.stats(),backend:rendererBackend(renderer),rig:!!playerRig,webgpuFinish,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
  effects:combatEffects?.stats(),projectedShields:armorFx?.shieldStats(),armor:game&&{shieldDeployed:!!game.player.shieldDeployed,shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt}}),
  // QA hooks (?debug=1): world data, teleport, look, clear machines, advance the clock.
  debug:new URLSearchParams(location.search).has('debug')?{get game(){return game;},collisions,floors,teleport:(x,z)=>{Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0});if(game.state==='playing'){game.step(1/60,{});extension?.update();}},look:(y,p)=>{yaw=y;pitch=p;},clear:()=>{game.enemies.length=0;extension?.update();},skip:s=>{game.time+=s;extension?.update();},god:()=>{game.invulnerable=1e9;},interact:()=>interact(),

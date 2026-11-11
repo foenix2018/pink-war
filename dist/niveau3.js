@@ -4,6 +4,7 @@ import {createHologramComms} from './hologram-comms.js';
 import {levelArrow,arrowGuidance} from './objective-arrow.js';
 import {createM03Guidance,m03Target} from './m03-guidance.js';
 import {playEndCinematic} from './end-cinematic.js';
+import {upgradeForWebGPU} from './webgpu-upgrade.js';
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import {walkingSurface} from './surface-steps.js';
 // MISSION 03 — « Le Convoi des Absents » (campaign M03). Night Vesper sector of the visitor map, baked for three.js
@@ -447,7 +448,7 @@ const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;retur
 let lastDevices='';
 const HOLD_LABEL={balise:'BROUILLAGE DE LA BALISE D’ORDRE',barriere:'LEVÉE DE LA BARRIÈRE',treuil:'TRACTION DU TREUIL',arrimage:'ARRIMAGE DE L’AMBULANCE AU TRAIN'};
 const VAN_WAIT={escorte:'attend son escorte',machines:'machines devant',stop:'à l’arrêt',stage:'à l’arrêt'};
-let endCine=null,m03Guide=null,m03GuideAt=0,m03Waypoint=null;
+let endCine=null,webgpuFinish=null,m03Guide=null,m03GuideAt=0,m03Waypoint=null;
 function updateHUD(){
  (combatHud ||= mountCombatHud({characterId,onAction:armorTouch})).update(game);
  const it=reading?null:mission.nearInteraction(),stageInfo=L.STAGES[mission.stage];combatHud.setContext(it?.label);
@@ -543,6 +544,10 @@ async function boot(){
    getYaw:()=>yaw,setYaw:value=>{yaw=value;},onFrame:animation,isPaused:()=>paused||game.state!=='playing',onPause:pauseMission,
    onResume:()=>{unpauseMission();pauseMenu.hide(false);},onHome:()=>location.assign('./index.html'),onExit:()=>{snapCamera();resize();requestAnimationFrame(animation);},skillsInput:args=>skillMenu?.xrInput(args)});
   $('renderer').textContent=rendererLabel(renderer);
+  // WebGPU finish (outside Performance; phones run Performance): rounder shapes and physical surfaces everywhere,
+  // again once the soldier and the first machines are in.
+  const finishWebGPU=()=>{if(!(renderer?.backend?.isWebGPUBackend||new URLSearchParams(location.search).get('finish')==='1')||low())return null;try{const add=upgradeForWebGPU(T,scene,{camera});webgpuFinish=Object.fromEntries(Object.keys(add).map(k=>[k,(webgpuFinish?.[k]||0)+add[k]]));return webgpuFinish;}catch(error){console.warn('M03 WebGPU finish skipped:',error);return null;}};
+  finishWebGPU();setTimeout(finishWebGPU,8000);
   bootStep='premier rendu';status.textContent='Premier rendu…';
   startMission();snapCamera();art.update(0,0,camera,game.player,{van:mission.van});
   if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);
@@ -625,7 +630,7 @@ window.__PINK_M03=Object.freeze({
   position:game&&{x:+game.player.x.toFixed(2),z:+game.player.z.toFixed(2),elevation:+game.player.elevation.toFixed(2)},
   weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,opened:mission?.opened,done:mission?.done,reads:mission?.reads,
   hold:mission?.hold,pending:mission?.pending,groups:mission?.groups(),van:mission?.van,reading,vr:!!xr?.active,subtitlePlane:!!subtitlePlane?.visible,lamp:lampOn,subtitle:subtitle&&{who:subtitle.who,text:subtitle.text},queued:subtitles.length,
-  backend:renderer?rendererBackend(renderer):null,rig:!!playerRig,art:art?.stats(),render:renderer?.info?.render}),
+  backend:renderer?rendererBackend(renderer):null,rig:!!playerRig,webgpuFinish,art:art?.stats(),render:renderer?.info?.render}),
  // QA hooks (?debug=1): move the player, look, clear an encounter, fast-forward the mission clock, use an interaction, move the van.
  debug:params.has('debug')?{teleport:(x,z)=>{Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0});snapCamera();if(game.state==='playing'){game.step(1/60,{});mission.update(1/60);}},
   look:(y,p)=>{yaw=y;pitch=p;snapCamera();},clear:()=>{game.enemies.length=0;mission.update(1/60);},

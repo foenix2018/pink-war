@@ -40,3 +40,25 @@ test('chapter 03 gets the same WebGPU tier: baked sector and mission props, stan
  const art=read('m03-art.js');assert.match(art,/createSectorMeshes\(T, sector, \{ quality, webgpu \}\)/);assert.match(art,/const rich = webgpu && !low/);
  assert.match(read('niveau3.js'),/webgpu:!!renderer\.backend\?\.isWebGPUBackend/);
 });
+
+test('WebGPU finish: rounded boxes keep their size, round parts get facets by real size, materials stay the same objects',async()=>{
+ const {upgradeForWebGPU,roundedBox,coatFor}=await import('../dist/webgpu-upgrade.js');
+ const g=roundedBox(T,2,1,.5,.05);g.computeBoundingBox();const s=g.boundingBox.getSize(new T.Vector3());
+ assert.ok(Math.abs(s.x-2)<1e-6&&Math.abs(s.y-1)<1e-6&&Math.abs(s.z-.5)<1e-6,'same outer size');
+ const scene=new T.Scene(),paint=new T.MeshStandardMaterial({color:0xff0000,roughness:.4,metalness:.2}),stone=new T.MeshStandardMaterial({roughness:.95});
+ const crate=new T.Mesh(new T.BoxGeometry(1,1,1),paint),drum=new T.Mesh(new T.CylinderGeometry(.5,.5,1,8),paint),bulb=new T.Mesh(new T.SphereGeometry(.03,8,6),stone);
+ const neon=new T.InstancedMesh(new T.CylinderGeometry(1,1,1,8),paint,50);const m=new T.Matrix4();for(let i=0;i<50;i++)neon.setMatrixAt(i,m.makeScale(.02,3,.02));
+ const camera=new T.PerspectiveCamera(),gun=new T.Mesh(new T.BoxGeometry(.2,.2,.6),new T.MeshStandardMaterial({roughness:.3}));camera.add(gun);
+ scene.add(crate,drum,bulb,neon,camera);const held=paint;
+ const st=upgradeForWebGPU(T,scene,{camera});
+ assert.equal(crate.material,held);assert.ok(paint.isMeshPhysicalMaterial&&paint.clearcoat>0,'paint lacquered in place');assert.equal(paint.color.getHex(),0xff0000);
+ assert.ok(!stone.isMeshPhysicalMaterial,'rough stone keeps its look');
+ assert.equal(crate.geometry.userData.webgpuShape,'rounded');assert.ok(drum.geometry.parameters.radialSegments>=40);
+ assert.equal(bulb.geometry.parameters.widthSegments,8,'a 3 cm bulb is already round');
+ assert.equal(neon.geometry.parameters.radialSegments,8,'thin neon tubes are not refaceted for their length');
+ assert.equal(gun.geometry.type,'BoxGeometry');assert.ok(!gun.material.isMeshPhysicalMaterial,'first-person weapon untouched');
+ assert.ok(st.addedTriangles<350000);assert.equal(coatFor({roughness:.95,metalness:0}),null);
+ const again=upgradeForWebGPU(T,scene,{camera});assert.equal(again.rounded+again.smoothed+again.materials,0,'idempotent: a second pass changes nothing');
+ for(const page of ['level2-test.js','niveau3.js'])assert.match(read(page),/upgradeForWebGPU\(T,scene,\{camera\}\)/);
+ assert.match(read('level2-test.js'),/get\('finish'\)==='1'\)\|\|low\(\)\|\|profile\.phone\)return null/);
+});
