@@ -10,18 +10,21 @@ import {Assembly, matrix} from './geo.js';
 
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
 
-export function createEnclaveLife(T, parent, { low = false } = {}) {
+export function createEnclaveLife(T, parent, { low = false, webgpu = false } = {}) {
   const root = new T.Group(); root.name = 'M02 / vie de l’enclave'; parent.add(root);
   const rng = seeded(20261107), owned = [], animated = [], stats = { lamps: 0, pools: 0, sleepers: 0, sitters: 0, props: 0, notices: 0 };
   let built = false, disposed = false;
-  const std = (color, roughness = .85, metalness = .05, extra = {}) => { const m = new T.MeshStandardMaterial({ color, roughness, metalness, ...extra }); owned.push(m); return m; };
+  // On WebGPU (desktop), cloth gets a fibre sheen and varnished or painted parts a light coat; WebGL keeps the same colours.
+  const rich = webgpu && !low;
+  const std = (color, roughness = .85, metalness = .05, extra = {}) => { const { phys = null, ...rest } = extra; const m = rich && phys ? new T.MeshPhysicalMaterial({ color, roughness, metalness, ...rest, ...phys }) : new T.MeshStandardMaterial({ color, roughness, metalness, ...rest }); owned.push(m); return m; };
+  const cloth = tint => ({ phys: { sheen: 1, sheenRoughness: .75, sheenColor: tint } }), coat = (c = .3, r = .4) => ({ phys: { clearcoat: c, clearcoatRoughness: r } });
   const glow = color => { const m = new T.MeshBasicMaterial({ color, toneMapped: false }); owned.push(m); return m; };
   const M = {
-    crate: std(0x6d5a42, .9), crateDark: std(0x4a3d2e, .92), barrel: std(0x39474c, .55, .6), rust: std(0x7a4d33, .8, .35), sack: std(0x8d7e5f, .95),
-    can: std(0x5e6f45, .6, .35), blueTarp: std(0x4c7480, .9, 0, { side: T.DoubleSide }), clothA: std(0xd4cbb4, .95, 0, { side: T.DoubleSide }), clothB: std(0x8f5d56, .95, 0, { side: T.DoubleSide }),
-    clothC: std(0x5d7a8c, .95, 0, { side: T.DoubleSide }), clothD: std(0xc2a15e, .95, 0, { side: T.DoubleSide }), wire: std(0x15191d, .6, .5), steel: std(0x59666d, .45, .75), pipe: std(0x6b5b4a, .5, .6),
-    blanketA: std(0x56707a, .95), blanketB: std(0x7b5a52, .95), blanketC: std(0x6c6c4f, .95), skin: std(0xb48a72, .8), hood: std(0x38424a, .95), seat: std(0x5a4a3a, .9),
-    white: std(0xdfe6e8, .55), plank: std(0x7d6648, .9)
+    crate: std(0x6d5a42, .9, .05, coat(.1, .6)), crateDark: std(0x4a3d2e, .92, .05, coat(.1, .6)), barrel: std(0x39474c, .55, .6, coat(.35, .35)), rust: std(0x7a4d33, .8, .35), sack: std(0x8d7e5f, .95, .05, cloth(0xc9b98f)),
+    can: std(0x5e6f45, .6, .35, coat(.4, .3)), blueTarp: std(0x4c7480, .9, 0, { side: T.DoubleSide, ...coat(.35, .45) }), clothA: std(0xd4cbb4, .95, 0, { side: T.DoubleSide, ...cloth(0xffffff) }), clothB: std(0x8f5d56, .95, 0, { side: T.DoubleSide, ...cloth(0xe0a49b) }),
+    clothC: std(0x5d7a8c, .95, 0, { side: T.DoubleSide, ...cloth(0xa9c6d8) }), clothD: std(0xc2a15e, .95, 0, { side: T.DoubleSide, ...cloth(0xf3d590) }), wire: std(0x15191d, .6, .5), steel: std(0x59666d, .45, .75, coat(.25, .3)), pipe: std(0x6b5b4a, .5, .6, coat(.2, .4)),
+    blanketA: std(0x56707a, .95, .05, cloth(0xa3bcc6)), blanketB: std(0x7b5a52, .95, .05, cloth(0xd5a597)), blanketC: std(0x6c6c4f, .95, .05, cloth(0xbcbc90)), skin: std(0xb48a72, .8, .05, { phys: { sheen: .4, sheenRoughness: .5, sheenColor: 0xffd6c0 } }), hood: std(0x38424a, .95, .05, cloth(0x7d8a96)), seat: std(0x5a4a3a, .9, .05, coat(.12, .6)),
+    white: std(0xdfe6e8, .55, .05, coat(.6, .2)), plank: std(0x7d6648, .9, .05, coat(.12, .6))
   };
   const bulb = glow(0xffc88a), bulbCool = glow(0xcfeaff), ledGreen = glow(0x58ffb4), ledAmber = glow(0xffb347), ledRed = glow(0xff4d5e), lampCyan = glow(0x7beaf2);
   const poolTexture = (() => {

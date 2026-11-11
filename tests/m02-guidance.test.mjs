@@ -13,11 +13,14 @@ test('the badge reader opens the vault and keeps other future locks intact',()=>
  const{game,ext,doors}=at('x-coffre',['grille','tour']);Object.assign(game.player,{x:-12.4,z:-85.2,elevation:0});assert.equal(ext.interaction().id,'lecteur');assert.ok(ext.interact());assert.equal(doors.coffre,true);assert.ok(!game.obstacles.some(o=>o.door==='coffre'));assert.ok(game.obstacles.some(o=>o.door==='convoi'));assert.equal(ext.target().id,'manifeste');
 });
 test('the route leaves the lift through its door and enters the clinic through the corridor',()=>{
- assert.deepEqual(scenarioWaypoint({x:43,z:92,elevation:0},{x:22,z:84},['monte-charge']),{x:40,z:92,y:0,label:'PASSER PAR Monte-charge'});
- const p=scenarioWaypoint({x:36,z:92,elevation:0},{x:22,z:84},['monte-charge']);assert.equal(p.x,20);assert.equal(p.z,90);
+ assert.deepEqual(scenarioWaypoint({x:43,z:92,elevation:0},{x:22,z:84},['monte-charge']),{x:41.3,z:92,y:0,label:'PASSER PAR Monte-charge'});
+ let p=scenarioWaypoint({x:36,z:92,elevation:0},{x:22,z:84},['monte-charge']);assert.equal(p.x,20);assert.equal(p.z,91.3);
+ p=scenarioWaypoint({x:20.9,z:90,elevation:0},{x:22,z:84},['monte-charge']);assert.deepEqual([p.x,p.z],[22,84]);
+ p=scenarioWaypoint({x:20.9,z:90,elevation:0},{x:31,z:87.4},['monte-charge']);assert.ok(p.z>90.5,'a player on the clinic threshold steps into the corridor before heading for the radio door');
  assert.equal(scenarioWaypoint({x:0,z:-88},{x:-18.6,z:-86.4},[]),null);
 });
 test('the route uses the authored stairs rather than pointing at an unreachable raised terminal',()=>{
+ {const down=scenarioWaypoint({x:-10.5,z:-17.3,elevation:12},{x:-5,z:-57,y:0});assert.ok(down.z<-19&&down.y<12,'no dead zone at the head of the west stairs: '+JSON.stringify(down));}
  const target={x:0,z:-18,y:12};let p=scenarioWaypoint({x:0,z:24,elevation:0},target);assert.equal(p.x,10.6);assert.equal(p.y,0);
  p=scenarioWaypoint({x:10.6,z:14,elevation:1},target);assert.equal(p.x,10.6);assert.ok(p.y>1);
  p=scenarioWaypoint({x:10.6,z:-10,elevation:12},target);assert.deepEqual([p.x,p.z],[10.6,-18]);
@@ -31,5 +34,10 @@ test('an optional poster remains readable when deliberately approached before th
 });
 test('a legacy arrival checkpoint cannot trap the player inside the service lift',()=>{
  const{game,ext,doors}=at('x-arrivee');assert.ok(ext.opened.includes('monte-charge'));assert.equal(doors['monte-charge'],true);assert.ok(!game.obstacles.some(o=>o.door==='monte-charge'));assert.ok(game.obstacles.some(o=>o.door==='grille'));assert.ok(game.obstacles.some(o=>o.door==='coffre'));
- const point=scenarioWaypoint(game.player,ext.target(),ext.opened);assert.ok(point);assert.equal(point.x,40);
+ const point=scenarioWaypoint(game.player,ext.target(),ext.opened);assert.ok(point);assert.equal(point.x,41.3);
+});
+test('dock guidance walks around the container instead of pointing into it',()=>{
+ const target={x:43,z:-84.6,y:0};let p=scenarioWaypoint({x:33.1,z:-84.6,elevation:0},target,['quai']);
+ assert.equal(p.label,'CONTOURNER LE CONTENEUR');assert.ok(p.z<-87.8);
+ assert.deepEqual(scenarioWaypoint({x:35,z:-89.3,elevation:0},target,['quai']),{...target});
 });

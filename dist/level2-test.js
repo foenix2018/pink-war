@@ -958,7 +958,7 @@ async function boot(){
   xr=createMissionXR({getWorld:()=>({T,scene,camera,renderer,game,weapon,soldier:playerRig?.model.root,obstacles:collisions,accent:characterId==='lylu'?'#80baff':'#ef91b4',createGun:()=>playerRig?.createGun({sleeve:false})||fallbackGun(),createHand:()=>playerRig?createGlove(playerRig.kit.gloves,{sleeve:false}):fallbackHand()}),getYaw:()=>yaw,setYaw:value=>{yaw=value;},onFrame:animation,isPaused:()=>paused||game.state!=='playing',onPause:pauseMission,onResume:()=>{unpauseMission();pauseMenu.hide(false);},onHome:()=>location.assign('./index.html'),onExit:()=>{snapCamera();resize();requestAnimationFrame(animation);},skillsInput:args=>skillMenu?.xrInput(args)});
   missionLoading?.set(.66,'Commandes et équipements');
   bootStep='matériaux';
-  try{pbrController=installLeanPBR(T,materials,architecture,{performance:low()||profile.phone,onProgress:state=>{
+  try{pbrController=installLeanPBR(T,materials,architecture,{performance:low()||profile.phone,hiRes:!!renderer?.backend?.isWebGPUBackend,onProgress:state=>{
     const renderMode=rendererLabel(renderer);
     $('renderer').textContent=renderMode+' · PBR '+state.ready+'/'+state.requested+(state.fallback?' · '+state.fallback+' hors-ligne':'');
   }});}catch(error){console.warn('M02/PBR optional fallback:',error);}

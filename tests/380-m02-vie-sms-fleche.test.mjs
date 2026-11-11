@@ -47,7 +47,7 @@ test('the enclave is lived in: lamps, light pools, survivors and props, all insi
   assert.ok(box.min.x>=-41&&box.max.x<=47&&box.min.z>=-97&&box.max.z<=99&&box.max.y<=9,'nothing outside the built rooms');
   assert.ok(marche&&tour);
   life.update(1,.016,{enclave:false});life.update(2,.016,{enclave:true});
-  const art=read('m02-extension-art.js');assert.match(art,/createEnclaveLife\(T,root,\{low\}\)/);assert.match(art,/life\.build\(\)/);assert.match(art,/life\.update\(t,dt,power\)/);
+  const art=read('m02-extension-art.js');assert.match(art,/createEnclaveLife\(T,root,\{low,webgpu\}\)/);assert.match(art,/life\.build\(\)/);assert.match(art,/life\.update\(t,dt,power\)/);
   assert.match(read('m02-enclave-life.js'),/substantial props share positions with the colliders/);
 });
 

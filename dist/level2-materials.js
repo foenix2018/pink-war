@@ -14,8 +14,10 @@ export const PBR_ASSETS=Object.freeze({
  masonry:Object.freeze({asset:'Quaternius T_RedBrick',source:'https://quaternius.com',prefix:'m01-brick-',hex:0xb7aba0,repeat:[1,1],roughness:.95,metalness:0})
 });
 const src=name=>'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/'+name+'/'+name+'_diff_1k.jpg';
-const localSource=(name,channel='diff')=>'./assets/cc0/'+name+'_'+channel+'_512.jpg';
-const profileSource=(profile,channel='diff')=>profile.prefix?'./assets/cc0/'+profile.prefix+(channel==='rough'?'orm':channel)+'_512.jpg':localSource(profile.asset,channel);
+const localSource=(name,channel='diff',res='512')=>'./assets/cc0/'+name+'_'+channel+'_'+res+'.jpg';
+const profileSource=(profile,channel='diff',res='512')=>profile.prefix?'./assets/cc0/'+profile.prefix+(channel==='rough'?'orm':channel)+'_512.jpg':localSource(profile.asset,channel,res);
+// Scans packaged at 1K too: WebGPU desktops receive them (the street floor fills most of the screen).
+export const HI_RES_PBR=Object.freeze(['asphalt','concrete']);
 function proceduralCanvas(size,kind){
  const c=document.createElement('canvas');c.width=c.height=size;
  const ctx=c.getContext('2d');const data=ctx.createImageData(size,size);let seed=kind.split('').reduce((n,c)=>Math.imul(n,31)+c.charCodeAt(0)|0,46730);
@@ -52,7 +54,7 @@ function image(url){
    img.src=url;
  });
 }
-function apply(T,source,size,targets,profile,channel='diff'){
+function apply(T,source,size,targets,profile,channel='diff',anisotropy=2){
  const texture=new T.CanvasTexture(downsample(source,size));
  texture.name='M02 PBR albedo / '+profile.asset;
  texture.wrapS=texture.wrapT=T.RepeatWrapping;
@@ -60,7 +62,7 @@ function apply(T,source,size,targets,profile,channel='diff'){
  texture.generateMipmaps=true;
  texture.minFilter=T.LinearMipmapLinearFilter;
  texture.magFilter=T.LinearFilter;
- texture.anisotropy=2;
+ texture.anisotropy=anisotropy;
  texture.repeat.set(...profile.repeat);
  for(const material of targets){
    // Keep same texture instance across all compatible meshes for GPU economy.
@@ -75,7 +77,7 @@ function apply(T,source,size,targets,profile,channel='diff'){
  }
  return texture;
 }
-export function installLeanPBR(T,materials,architecture,{performance=false,onProgress=()=>{},fallbackAfter=4000}={}){
+export function installLeanPBR(T,materials,architecture,{performance=false,hiRes=false,onProgress=()=>{},fallbackAfter=4000}={}){
  const targets={
    asphalt:[materials.asphalt],
    concrete:[materials.concrete,materials.wall,materials.plaster,architecture?.pbrTargets?.ceramic,architecture?.pbrTargets?.dirty],
@@ -90,8 +92,9 @@ export function installLeanPBR(T,materials,architecture,{performance=false,onPro
  onProgress({...stats});
  // Parallel, bounded loading. No PBR network promise blocks the level boot.
  const jobs=Object.entries(targets).map(async ([key,materials])=>{
-   const mapSize=performance&&key==='masonry'?128:size;
-   let texSource=null,timer;const pending=image(profileSource(PBR_ASSETS[key]));
+   const hi=hiRes&&!performance&&HI_RES_PBR.includes(key),res=hi?'1k':'512',aniso=hiRes&&!performance?8:2;
+   const mapSize=performance&&key==='masonry'?128:hi?1024:size;
+   let texSource=null,timer;const pending=image(profileSource(PBR_ASSETS[key],'diff',res));
    let fallback=false;
    try {
      // Prevent one slow host from delaying the rest of the game.
@@ -102,7 +105,7 @@ export function installLeanPBR(T,materials,architecture,{performance=false,onPro
      texSource=proceduralCanvas(size,key);
      stats.fallback++;fallback=true;
    }finally{clearTimeout(timer);}
-   const albedo=apply(T,texSource,mapSize,materials,PBR_ASSETS[key]);textures.push(albedo);
+   const albedo=apply(T,texSource,mapSize,materials,PBR_ASSETS[key],'diff',aniso);textures.push(albedo);
    // Shader compilation can hold the main thread longer than the boot budget.
    // Keep the level playable, then upgrade the SAME GPU texture when its local
    // photograph finishes decoding. A temporary fallback must not become final.
@@ -110,8 +113,8 @@ export function installLeanPBR(T,materials,architecture,{performance=false,onPro
    // A missing optional relief map never blocks a playable frame. Mobile keeps
    // roughness and albedo; desktop also receives the scanned surface normals.
    await Promise.allSettled((performance?['rough']:['normal','rough']).map(async channel=>{
-     const source=await image(profileSource(PBR_ASSETS[key],channel));
-     textures.push(apply(T,source,mapSize,materials,PBR_ASSETS[key],channel));
+     const source=await image(profileSource(PBR_ASSETS[key],channel,res));
+     textures.push(apply(T,source,mapSize,materials,PBR_ASSETS[key],channel,aniso));
    }));
    stats.ready++;
    onProgress({...stats});

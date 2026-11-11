@@ -46,39 +46,44 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     const p = new Promise(resolve => loader.load(url, tex => { tex.wrapS = tex.wrapT = T.RepeatWrapping; tex.anisotropy = low ? 2 : 6; if (srgb) tex.colorSpace = T.SRGBColorSpace; stats.textures++; resolve(tex); }, undefined, () => resolve(null)));
     cache.set(url, p); return p;
   };
-  const pbr = (maps, { tile = 2, color = 0xffffff, roughness = 1, metalness = 0, label } = {}) => {
-    const m = new T.MeshStandardMaterial({ color, roughness, metalness, name: label }); m.userData.tile = tile;
+  // WebGPU on a desktop-class device gets physically richer surfaces: a lacquer coat on painted metal and HELIX
+  // enamel, a wet sheen on the floors, a fibre sheen on cloth, 1K maps where they exist. WebGL and Performance keep
+  // the lean standard materials (same colours, same layout), so both look like the same place.
+  const rich = webgpu && !low, HI_RES = new Set(['asphalt_03', 'concrete_floor']);
+  const physical = (base, phys) => { const m = rich && phys ? new T.MeshPhysicalMaterial({ ...base, ...phys }) : new T.MeshStandardMaterial(base); if (rich && phys) m.userData.webgpuPhysical = true; return m; };
+  const pbr = (maps, { tile = 2, color = 0xffffff, roughness = 1, metalness = 0, label, phys = null } = {}) => {
+    const m = physical({ color, roughness, metalness, name: label }, phys); m.userData.tile = tile;
     Promise.all([maps.diff && load(maps.diff, true), maps.nor && !low && load(maps.nor, false), maps.rough && load(maps.rough, false)]).then(([d, n, r]) => {
       if (d) m.map = d; if (n) { m.normalMap = n; m.normalScale = new T.Vector2(.8, .8); } if (r) m.roughnessMap = r; m.needsUpdate = true;
     });
     return m;
   };
   const L9 = name => ({ diff: `./assets/ligne9/l9-${name}_diff_512.jpg`, nor: `./assets/ligne9/l9-${name}_nor_512.jpg`, rough: `./assets/ligne9/l9-${name}_rough_512.jpg` });
-  const CC = (name, nor = 'normal') => ({ diff: `./assets/cc0/${name}_diff_512.jpg`, nor: `./assets/cc0/${name}_${nor}_512.jpg`, rough: `./assets/cc0/${name}_rough_512.jpg` });
-  const flat = (color, roughness = .6, metalness = .2, extra = {}) => new T.MeshStandardMaterial({ color, roughness, metalness, ...extra });
+  const CC = (name, nor = 'normal') => { const r = rich && HI_RES.has(name) ? '1k' : '512'; return { diff: `./assets/cc0/${name}_diff_${r}.jpg`, nor: `./assets/cc0/${name}_${nor}_${r}.jpg`, rough: `./assets/cc0/${name}_rough_${r}.jpg` }; };
+  const flat = (color, roughness = .6, metalness = .2, extra = {}) => { const { phys = null, ...rest } = extra; return physical({ color, roughness, metalness, ...rest }, phys); };
   const glow = color => new T.MeshBasicMaterial({ color, toneMapped: false });
   const M = {
     facade: pbr(L9('concrete_wall_006'), { tile: 3, color: 0x8d969a, label: 'béton des Bas-Niveaux' }),
     concrete: pbr(L9('concrete_wall_006'), { tile: 3, color: 0xa29e96, label: 'béton' }),
     plaster: pbr(L9('concrete_wall_006'), { tile: 4, color: 0xc9cfc8, label: 'enduit' }),
-    tile: pbr(L9('long_white_tiles'), { tile: 1.6, color: 0xd9e4e0, label: 'faïence' }),
-    dirtyTile: pbr(L9('dirty_tiles'), { tile: 1.4, color: 0xa7aea4, label: 'carrelage sale' }),
-    floorTile: pbr(L9('worn_tile_floor'), { tile: 2.4, color: 0x9ea4a0, roughness: .85, label: 'dallage' }),
-    antiSkid: pbr(L9('anti_skid_tiles'), { tile: 2, color: 0x8f9799, label: 'dalle antidérapante' }),
-    slab: pbr(CC('concrete_floor'), { tile: 3, color: 0x8b8d8a, label: 'dalle béton' }),
-    asphalt: pbr(CC('asphalt_03'), { tile: 3, color: 0x6f7476, roughness: .55, label: 'enrobé mouillé' }),
-    plate: pbr(L9('metal_plate'), { tile: 2, color: 0x939ba0, metalness: .55, roughness: .7, label: 'tôle' }),
+    tile: pbr(L9('long_white_tiles'), { tile: 1.6, color: 0xd9e4e0, label: 'faïence', phys: { clearcoat: .55, clearcoatRoughness: .18 } }),
+    dirtyTile: pbr(L9('dirty_tiles'), { tile: 1.4, color: 0xa7aea4, label: 'carrelage sale', phys: { clearcoat: .25, clearcoatRoughness: .45 } }),
+    floorTile: pbr(L9('worn_tile_floor'), { tile: 2.4, color: 0x9ea4a0, roughness: .85, label: 'dallage', phys: { clearcoat: .2, clearcoatRoughness: .5 } }),
+    antiSkid: pbr(L9('anti_skid_tiles'), { tile: 2, color: 0x8f9799, label: 'dalle antidérapante', phys: { clearcoat: .3, clearcoatRoughness: .35 } }),
+    slab: pbr(CC('concrete_floor'), { tile: 3, color: 0x8b8d8a, label: 'dalle béton', phys: { clearcoat: .12, clearcoatRoughness: .6 } }),
+    asphalt: pbr(CC('asphalt_03'), { tile: 3, color: 0x6f7476, roughness: .55, label: 'enrobé mouillé', phys: { clearcoat: .7, clearcoatRoughness: .22 } }),
+    plate: pbr(L9('metal_plate'), { tile: 2, color: 0x939ba0, metalness: .55, roughness: .7, label: 'tôle', phys: { clearcoat: .2, clearcoatRoughness: .5 } }),
     grid: pbr(L9('rusty_metal_grid'), { tile: 1.5, color: 0x9d8f80, metalness: .5, label: 'caillebotis' }),
     shutter: pbr(L9('rusted_shutter'), { tile: 3, color: 0xbfc9cc, metalness: .3, label: 'rideau métallique' }),
     rust: pbr(L9('green_metal_rust'), { tile: 2.5, color: 0x8aa59a, metalness: .45, label: 'acier vert' }),
-    corrugated: pbr(CC('corrugated_iron'), { tile: 2, color: 0x8e979a, metalness: .5, label: 'bac acier' }),
-    paintedMetal: pbr(CC('rusty_painted_metal'), { tile: 2, color: 0xb9c2c0, metalness: .4, label: 'métal peint' }),
+    corrugated: pbr(CC('corrugated_iron'), { tile: 2, color: 0x8e979a, metalness: .5, label: 'bac acier', phys: { clearcoat: .15, clearcoatRoughness: .55 } }),
+    paintedMetal: pbr(CC('rusty_painted_metal'), { tile: 2, color: 0xb9c2c0, metalness: .4, label: 'métal peint', phys: { clearcoat: .35, clearcoatRoughness: .4 } }),
     // HELIX Security: black, industrial white, safety red.
-    helixWhite: flat(0xe9ecee, .32, .25, { name: 'blanc HELIX' }), helixBlack: flat(0x0b0d10, .4, .55, { name: 'noir HELIX' }), helixRed: flat(0xc1121f, .4, .3, { name: 'rouge sécurité' }),
-    white: flat(0xdedfd8, .5, .2), dark: flat(0x1a1f24, .5, .6), steel: flat(0x737d84, .32, .85), black: flat(0x0c0e10, .7, .3),
-    wood: flat(0x5e4630, .85, 0), woodDark: flat(0x392a1d, .85, 0), fabric: flat(0x3f5560, .95, 0), tarp: flat(0x2f6f78, .9, 0, { side: T.DoubleSide }), tarpAmber: flat(0x9a6a2a, .9, 0, { side: T.DoubleSide }),
-    blanket: flat(0x8b3b4a, .95, 0), cardboard: flat(0x8a7458, .95, 0), paper: flat(0xe4ddc8, .95, 0, { side: T.DoubleSide }), sheet: flat(0xd8dfdc, .95, 0),
-    water: flat(0x13252c, .05, .2, { name: 'ruissellement' }),
+    helixWhite: flat(0xe9ecee, .32, .25, { name: 'blanc HELIX', phys: { clearcoat: .9, clearcoatRoughness: .12 } }), helixBlack: flat(0x0b0d10, .4, .55, { name: 'noir HELIX', phys: { clearcoat: .75, clearcoatRoughness: .16 } }), helixRed: flat(0xc1121f, .4, .3, { name: 'rouge sécurité', phys: { clearcoat: .8, clearcoatRoughness: .14 } }),
+    white: flat(0xdedfd8, .5, .2, { phys: { clearcoat: .4, clearcoatRoughness: .3 } }), dark: flat(0x1a1f24, .5, .6, { phys: { clearcoat: .3, clearcoatRoughness: .4 } }), steel: flat(0x737d84, .32, .85, { phys: { clearcoat: .25, clearcoatRoughness: .3 } }), black: flat(0x0c0e10, .7, .3),
+    wood: flat(0x5e4630, .85, 0, { phys: { clearcoat: .12, clearcoatRoughness: .6 } }), woodDark: flat(0x392a1d, .85, 0, { phys: { clearcoat: .12, clearcoatRoughness: .6 } }), fabric: flat(0x3f5560, .95, 0, { phys: { sheen: 1, sheenRoughness: .75, sheenColor: 0x9fb4c0 } }), tarp: flat(0x2f6f78, .9, 0, { side: T.DoubleSide, phys: { clearcoat: .35, clearcoatRoughness: .45 } }), tarpAmber: flat(0x9a6a2a, .9, 0, { side: T.DoubleSide, phys: { clearcoat: .35, clearcoatRoughness: .45 } }),
+    blanket: flat(0x8b3b4a, .95, 0, { phys: { sheen: 1, sheenRoughness: .7, sheenColor: 0xd99aa6 } }), cardboard: flat(0x8a7458, .95, 0), paper: flat(0xe4ddc8, .95, 0, { side: T.DoubleSide }), sheet: flat(0xd8dfdc, .95, 0, { phys: { sheen: .8, sheenRoughness: .8, sheenColor: 0xffffff } }),
+    water: flat(0x13252c, .05, .2, { name: 'ruissellement', phys: { clearcoat: 1, clearcoatRoughness: .03 } }),
     glass: flat(0x8fb1bb, .06, .5, { transparent: true, opacity: .18, depthWrite: false, side: T.DoubleSide }), screenOff: flat(0x0c1216, .2, .3),
     amber: glow(0xffb35c), cyan: glow(0x5fe0f0), green: glow(0x3dff8a), redGlow: glow(0xff3328), helix: glow(0xff2f45), rose: glow(accent)
   };
@@ -576,7 +581,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
   }
 
   const livedIn=createLivedInDressing(T,root,{chapter:2,low,materials:details.M});
-  const life=createEnclaveLife(T,root,{low});
+  const life=createEnclaveLife(T,root,{low,webgpu});
 
   // ---------- Night: how much of the moon and sky reaches the eye indoors ----------
   let shelter = 1; const cachesById = new Map();
