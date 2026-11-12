@@ -5,6 +5,9 @@ import {levelArrow,arrowGuidance} from './objective-arrow.js';
 import {createM03Guidance,m03Target} from './m03-guidance.js';
 import {playEndCinematic} from './end-cinematic.js';
 import {upgradeForWebGPU} from './webgpu-upgrade.js';
+import {createCameraFeel} from './camera-feel.js';
+import {mountFilmLook} from './film-look.js';
+const cameraFeel=createCameraFeel();let filmLook=null,filmXr=false;
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import {walkingSurface} from './surface-steps.js';
 // MISSION 03 — « Le Convoi des Absents » (campaign M03). Night Vesper sector of the visitor map, baked for three.js
@@ -285,6 +288,8 @@ function snapCamera(){
   const area=L.AREAS.find(a=>a.id===L.areaAt(p.x,p.z)),ceiling=area?.roof?area.roof-.3:Infinity;
   camera.position.set(start.x+(end.x-start.x)*nearest,Math.min(ceiling,Math.max(p.elevation+.35,start.y+(end.y-start.y)*nearest)),start.z+(end.z-start.z)*nearest);
  }
+ // Living camera (bob, lean, landing dip, trauma shake): first person on screen only, never during the end scene.
+ if(view==='fps'&&!xr?.active&&running&&!endCine)cameraFeel.apply(camera);
  camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
  weapon.visible=view==='fps';if(playerRig?.model)playerRig.model.root.visible=view==='third';
 }
@@ -399,7 +404,7 @@ function gameTick(dt){
  const jump=controls.jump||jumpQueued;jumpQueued=false;
  game.nextWave=Infinity;game.toSpawn=0;
  game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,sprint,jump,crouchToggle});
- missionTime+=dt;weaponFeel.update(dt);snapCamera();
+ missionTime+=dt;weaponFeel.update(dt);cameraFeel.update(dt,{speed:Math.hypot(game.playerVelocity.x,game.playerVelocity.z),grounded:game.player.grounded,verticalSpeed:game.player.verticalSpeed,strafe:x,sprint,aim:aimBlend});snapCamera();
  if(meleeQueued||controls.melee){const view=new T.Vector3();camera.getWorldDirection(view);game.melee({x:view.x,z:view.z});}
  if(chargeQueued||controls.charge){const eye=xr?.active?renderer.xr.getCamera():camera,from=new T.Vector3(),dir=new T.Vector3();eye.getWorldPosition(from);eye.getWorldDirection(dir);
   if(view!=='fps'&&!xr?.active)from.set(game.player.x,game.player.elevation+1.5,game.player.z);
@@ -421,6 +426,10 @@ function gameTick(dt){
   if(e.type==='shot'){shotsFired++;xr?.haptic('shot',e.weapon,e.hand);weaponFeel.fire(e.weapon||game.weapon.id,e.power||1,aimBlend>.5);if(enableAudio&&audioCtx)try{playLaserShot(audioCtx,e.weapon||game.weapon.id,e.power||1);}catch{}}
   if(e.type==='hit'){hits++;hitUntil=clock+.12;}
   if(e.type==='damage')$('damage').style.boxShadow='inset 0 0 105px #c52c5e77';
+  if(e.type==='damage'){cameraFeel.shake(.45);filmLook?.hit(.55);}
+  if(e.type==='kill')cameraFeel.shake(Math.max(.06,.55-Math.hypot((e.x||0)-game.player.x,(e.z||0)-game.player.z)/16));
+  if(e.type==='shot'&&!e.companion)cameraFeel.shake(.045);
+  if(e.type==='land')cameraFeel.shake(.05);
   if(e.type==='weapon')weaponFeel.reset();
   if(e.type==='reload'&&audioCtx)try{playWeaponAction(audioCtx,game.weapon.id,'reload-out');}catch{}
   if(e.type==='reloaded'&&audioCtx)try{playWeaponAction(audioCtx,game.weapon.id,'reload-ready');}catch{}
@@ -493,6 +502,7 @@ function animation(t,frame){
  const eye=xr?.active?renderer.xr.getCamera():camera;
  try{art.update(clock,dt,eye,game?.player,{van:mission?.van,beaconOff:!!mission?.done.includes('balise'),crank:mission?.hold?.name==='treuil'});}catch(error){console.warn('M03 / décor animé désactivé',error);art.update=()=>{};}
  if(xr?.active){xr.update(dt,weaponFeel.state,weaponFeel.state.kick>.025?.075:0);xr.renderScope();}
+ if(filmLook){if(filmXr!==!!xr?.active){filmXr=!!xr?.active;filmLook.setEnabled(!filmXr);}filmLook.update(dt,{health:(game?.player.hp??100)/100});}
  if(endCine)try{endCine.update(dt);}catch(error){console.warn('M03 end cinematic frame:',error);endCine.skip();}
  if(!framePending&&!recovering){
   try{const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);
@@ -551,6 +561,7 @@ async function boot(){
   bootStep='premier rendu';status.textContent='Premier rendu…';
   startMission();snapCamera();art.update(0,0,camera,game.player,{van:mission.van});
   if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);
+  try{filmLook=mountFilmLook({canvas,low:low()});}catch(error){console.warn('film look skipped',error);}
   bootStep='prêt';hud.hidden=false;started=true;requestAnimationFrame(animation);
   touchControls=createPinkWarsTouch(canvas,{onFire:down=>{if(down)audioReady();heldFire=down;if(down)firePressQueued=true;},onJump:()=>{jumpQueued=true;},onInteract:()=>interact(),
    onNext:()=>game.cycleWeapon(),onReload:()=>game.reload(),onCrouch:()=>{crouchQueued=true;},onView:()=>changeView(),onPause:()=>pauseMission(),onAim:down=>{if(down)audioReady();mouseAim=down;}});

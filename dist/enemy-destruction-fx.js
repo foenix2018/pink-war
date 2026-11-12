@@ -173,6 +173,9 @@ export function createEnemyDestructionFX(T,scene,{camera=null,low=false,maxDeath
  }
  function mark(e,model,dt=0){
   if(!e||!model)return;
+  // Tell before a shot: the muzzle glows brighter during the last quarter second of the charge.
+  const charge=Number(e.chargeProgress)||0;
+  if(charge>.05){const at=electricFailureAnchor(e,4,model,anchorScratch);push('flash',at.x,at.y,at.z,.3+charge*.6,.05);}
   const stage=enemyDamageStage(e.hp,e.maxHp);
   if(stage.stage===0){timers.delete(e.id);soundFaultAt.delete(e.id);powerEyes(model,1);return;}
   const critical=stage.stage>=3;

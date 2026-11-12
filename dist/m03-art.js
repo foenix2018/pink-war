@@ -11,6 +11,7 @@ import {createLevelNeons} from './level-neons.js';
 import { INTERACTIONS, MOVABLE, VAN, areaAt } from './m03-layout.js';
 import { createSectorMeshes, neonSpots } from './m03-sector.js';
 import { createCyberCity } from './m03-city.js';
+import { createLightShafts } from './light-shafts.js';
 import { classifySectorProps, createSectorProps } from './m03-props.js';
 import { createSignage, BLADES } from './signage.js';
 import {createCivilCar} from './civil-vehicle-detail.js';
@@ -405,7 +406,7 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
 
 
   // ---------- Build ----------
-  let amb = null, smoke = null, city = null;
+  let amb = null, smoke = null, city = null, shafts = null;
   const power = { annexe: false };
   const neons=createLevelNeons(T,root,{low,metal:M.galva,back:M.dark,materials:[M.neonCyan,M.neonPink,M.neonAmber,M.neonRed,M.neonWhite]});
   function build() {
@@ -418,6 +419,9 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
     neons.meshes();neons.build();
     // The city around and above the sector (towers, skybridges, traffic, reflections): visual only, no collision.
     try { sectorProps = createSectorProps(T, root, propList.props, { low, rich }); stats.props = sectorProps.stats(); } catch (error) { console.warn('M03 / objets modélisés désactivés', error); }
+    // Volumetric light and dust under every street lamp of the sector.
+    try { shafts = createLightShafts(T, root, propList.props.filter(p => p.kind === 'lamp' || (p.kind === 'post' && p.h >= 4.5)).map(p => p.kind === 'lamp'
+      ? { x: p.cx + (p.cx > 0 ? -1 : 1) * (Math.min(2.6, p.h * .26) + .3), y: p.h - .12, z: p.cz, color: 0xffd9a0 } : { x: p.cx, y: p.h - .16, z: p.cz + (p.cx > 0 ? 1 : -1), color: 0xcfe6ff }), { low }); } catch (error) { console.warn('M03 / faisceaux désactivés', error); }
     try { city = createCyberCity(T, root, { low, rich, advert: (name, o) => signs.advert(name, o), bounds: sector.meta.bounds }); stats.city = city.stats(); } catch (error) { console.warn('M03 / ville désactivée', error); city = null; }
   }
 
@@ -438,7 +442,7 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
         smoke.forEach((s, i) => { const k = (t * .4 + i / smoke.length) % 1; s.position.set(van.x + Math.sin(i) * .4, 2.2 + k * 3, van.z); s.scale.setScalar(.8 + k * 2.2); s.material.opacity = hurt * .35 * (1 - k); });
       }
       for (const f of animated) f(t, dt, e);
-      city?.update(t, dt);
+      city?.update(t, dt); shafts?.update(dt);
       signs.update(t);
     },
     setMovable(id, open) { const m = movable.get(id); if (m) m.target = open ? 1 : 0; },

@@ -1,4 +1,7 @@
 import {createTouchOrbit} from './touch-orbit.js';
+import {createCameraFeel} from './camera-feel.js';
+import {mountFilmLook} from './film-look.js';
+const cameraFeel=createCameraFeel();let filmLook=null,filmOn=null;
 import {levelArrow,arrowGuidance} from './objective-arrow.js';
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, starterWeaponIndex, weaponCycleOrder, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
 import { createScene } from './scene.js?v=20261107-native-world-fx-v3';
@@ -444,6 +447,8 @@ function updateCamera() {
     for (const box of world.obstacles) { const hit = segmentBox(start, end, { ...box, hx: box.hx + .2, hz: box.hz + .2 }); if (hit !== null) nearest = Math.min(nearest, Math.max(.09, hit - .05)); }
     camera.position.set(start.x + (end.x - start.x) * nearest, Math.max(.35, start.y + (end.y - start.y) * nearest), start.z + (end.z - start.z) * nearest);
   }
+  // Living camera (bob, lean, landing dip, trauma shake): flat screen, first person, while playing.
+  if(view==='fps'&&flatScreen&&vr?.mode!=='xr'&&game.state==='playing')cameraFeel.apply(camera);
   const bob = Math.hypot(move.x, move.y) > .1 || keys.has('KeyW') || keys.has('KeyZ') || keys.has('KeyS') || keys.has('ArrowUp') || keys.has('ArrowDown') || keys.has('ArrowLeft') || keys.has('ArrowRight');
   const ads=flatSightPose(optic,aimBlend);
   weapon.position.set(ads.x+kickPose.x, ads.y + (bob ? Math.sin(clock * 11) * .009*(1-aimBlend) : 0) + kickPose.y + reloadLift * .045, ads.z + kickPose.z - reloadLift * .028);
@@ -512,6 +517,9 @@ function announce(title, subtitle) {
 }
 function handleEvents() {
   for (const event of game.drainEvents()) {
+    if(event.type==='damage'){cameraFeel.shake(.45);filmLook?.hit(.55);}
+    else if(event.type==='kill')cameraFeel.shake(Math.max(.06,.55-Math.hypot((event.x||0)-game.player.x,(event.z||0)-game.player.z)/16));
+    else if(event.type==='shot'&&!event.companion)cameraFeel.shake(.045);
     if(game.mode==='campaign'&&settings.sound&&audioContext&&['circuit-isolated','workshop-power'].includes(event.type))playFieldCue(audioContext,'isolate',{source:event,listener:game.player,yaw:listenerHeading()});
     armorFeedback().handle(event);
     if(event.type==='campaign'){
@@ -880,6 +888,8 @@ function stepFrame(timestamp, xrFrame) {
     currentSprinting=!aiming&&(touchSprinting||vrInput.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight')||(move.id!==null&&Math.hypot(move.x,move.y)>=.88));
     game.precisionAiming=aimBlend>.55;
     game.step(dt, { x, z, yaw: facing, moveYaw, sprint: currentSprinting, jump,crouchToggle });
+    cameraFeel.update(dt,{speed:Math.hypot(game.playerVelocity.x,game.playerVelocity.z),grounded:game.player.grounded,verticalSpeed:game.player.verticalSpeed,strafe:x,sprint:currentSprinting,aim:aimBlend});
+    try{filmLook ||= mountFilmLook({canvas:document.getElementById('world')});const on=game.state==='playing'&&vr?.mode!=='xr'&&vr?.mode!=='stereo';if(on!==filmOn){filmOn=on;filmLook.setEnabled(on);}filmLook.update(dt,{health:game.player.hp/100});}catch{}
     portalAudio.sync(game.activePortals,game.time);
     crouchCameraBlend+=(Number(game.player.crouched)-crouchCameraBlend)*Math.min(1,dt*8);
     if(pickupQueued||vrInput.pickup){game.collectWeapon();pickupQueued=false;syncRangeArmory();}

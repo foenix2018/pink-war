@@ -1,4 +1,5 @@
 import {upgradeLightBlocks} from './industrial-light.js';
+import {createLightShafts} from './light-shafts.js';
 import {createModernSwitch,switchVariant} from './modern-switch.js';
 import {createLevelNeons,roundPoweredTubes} from './level-neons.js';
 import { createNeonFixture } from './neon-fixture.js';
@@ -178,6 +179,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera, we
   });
   const glowDisc = canvasTexture(T, 64, 64, (c, w, h) => { const g = c.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.3, 'rgba(255,255,255,.4)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, w, h); });
   // ---------- Fixtures and the light pool ----------
+  let shafts;
   const fixtures = [], power = { caserne: false };
   const fixture = (kind, x, y, z, { zone = 'caserne', color = 0xfff1d8, intensity = 12, range = 14, len = 1.2, axis = 'x', flicker = 0 } = {}) => {
     const f = { kind, x, y, z, zone, color: new T.Color(color), intensity, range, len, axis, flicker, room: roomAt(x, z), level: 0, phase: rng() * 100 }; fixtures.push(f); return f;
@@ -573,7 +575,10 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera, we
       neons.meshes(); neons.build(); flushGeometry(); flushPieces(); furnishings.finish(); stationGear.finish(); details.finish(); livedIn.build(obstacles);
     },
     update(t, dt, eye, player = eye.position) {
-      updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt); details.update(power); livedIn.update(t,dt,power);
+      updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt);
+      // Volumetric light and dust under the big fixtures (built once the fixtures exist).
+      if (shafts === undefined) { try { shafts = createLightShafts(T, root, fixtures.filter(f => ['highbay','skylight'].includes(f.kind)).map(f => ({ x: f.x, y: f.y - .25, z: f.z, color: f.color.getHex() })), { low }); } catch (error) { shafts = null; console.warn('light shafts skipped', error); } }
+      shafts?.update(dt); details.update(power); livedIn.update(t,dt,power);
       for (const r of rotors) r.rotation.x += (power.caserne ? 14 : 0) * dt;
       for (const f of animated) f(t, dt, eye);
     },

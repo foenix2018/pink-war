@@ -42,6 +42,9 @@ import {installPinkWarsSoldier} from './level2-player.js';
 import {showChapter2Finale} from './story-chapters.js';
 import {playEndCinematic} from './end-cinematic.js';
 import {upgradeForWebGPU} from './webgpu-upgrade.js';
+import {createCameraFeel} from './camera-feel.js';
+import {mountFilmLook} from './film-look.js';
+const cameraFeel=createCameraFeel();let filmLook=null,filmXr=false;
 import {createCampaignCombatEffects} from './campaign-combat-effects.js';
 import {createAICompanion} from './ai-companions.js';
 import {createAmbience} from './ambience.js';
@@ -629,6 +632,8 @@ function snapCamera(){
   }
   camera.position.set(start.x+(end.x-start.x)*nearest,Math.max(.35,start.y+(end.y-start.y)*nearest),start.z+(end.z-start.z)*nearest);
  }
+ // Living camera (bob, lean, landing dip, trauma shake): first person on screen only, never during the end scene.
+ if(view==='fps'&&!xr?.active&&running&&!endCine)cameraFeel.apply(camera);
  camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
  weapon.visible=view==='fps';
  if(playerRig?.model)playerRig.model.root.visible=view==='third';
@@ -754,6 +759,7 @@ function gameTick(dt){
  game.nextWave=Infinity;game.toSpawn=0;
  game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,sprint,jump,crouchToggle});
  weaponFeel.update(dt);
+ cameraFeel.update(dt,{speed:Math.hypot(game.playerVelocity.x,game.playerVelocity.z),grounded:game.player.grounded,verticalSpeed:game.player.verticalSpeed,strafe:x,sprint,aim:aimBlend});
  snapCamera();
  if(meleeQueued||controls.melee){const view=new T.Vector3();camera.getWorldDirection(view);game.melee({x:view.x,z:view.z});}
  if(chargeQueued||controls.charge){const eye=xr?.active?renderer.xr.getCamera():camera,from=new T.Vector3(),view=new T.Vector3();eye.getWorldPosition(from);eye.getWorldDirection(view);
@@ -798,6 +804,10 @@ function gameTick(dt){
     if(enableAudio&&audioCtx)try{playLaserShot(audioCtx,e.weapon||game.weapon.id,e.power||1);}catch{}
    }
   if(e.type==='damage'){$('damage').style.boxShadow='inset 0 0 105px #c52c5e77';}
+  if(e.type==='damage'){cameraFeel.shake(.45);filmLook?.hit(.55);}
+  if(e.type==='kill')cameraFeel.shake(Math.max(.06,.55-Math.hypot((e.x||0)-game.player.x,(e.z||0)-game.player.z)/16));
+  if(e.type==='shot'&&!e.companion)cameraFeel.shake(.045);
+  if(e.type==='land')cameraFeel.shake(.05);
   if(e.type==='weapon')weaponFeel.reset();
   if(e.type==='reload'&&enableAudio&&audioCtx)try{playWeaponAction(audioCtx,game.weapon.id,'reload-out');}catch{}
   if(e.type==='reloaded'&&enableAudio&&audioCtx)try{playWeaponAction(audioCtx,game.weapon.id,'reload-ready');}catch{}
@@ -903,6 +913,7 @@ function animation(t,frame){
  portalAudio.sync(game?.activePortals||[],game?.time||0);
  electricPortals?.sync(game?.activePortals||[],game?.time||0,clock);
  subtitles?.update(dt,{xr:!!xr?.active,hidden:journalOpen||paused||(!running&&!endCine)});
+ if(filmLook){if(filmXr!==!!xr?.active){filmXr=!!xr?.active;filmLook.setEnabled(!filmXr);}filmLook.update(dt,{health:(game?.player.hp??100)/100});}
  if(endCine)try{endCine.update(dt);}catch(error){console.warn('M02 end cinematic frame:',error);endCine.skip();}
  warZone?.update(game?.time||0,{active:running});for(const event of warZone?.drainEvents()||[])if(enableAudio&&battleAudio)battleAudio.event(event,game.player,yaw);
  if(xr?.active){if(!running||paused)xr.update(dt,weaponFeel.state,weaponFeel.state.flash);xr.renderScope();}
@@ -982,6 +993,7 @@ async function boot(){
   snapCamera();
   await electricPortals.prepare(renderer,camera);
   if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);
+  try{filmLook=mountFilmLook({canvas,low:low()});}catch(error){console.warn('film look skipped',error);}
   bootStep='prêt';hud.hidden=false;started=true;requestAnimationFrame(animation);
   touchControls=createPinkWarsTouch(canvas,{
    onFire:down=>{if(down)audioReady();heldFire=down;if(down)firePressQueued=true;},
