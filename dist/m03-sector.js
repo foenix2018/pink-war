@@ -1,3 +1,4 @@
+import {sectorPropOffset} from './m03-layout.js';
 import {cityWindowAtlas} from './m03-city.js';
 import {findBakedNeonRuns} from './baked-neons.js';
 import {createNeonFixtures} from './neon-fixtures.js';
@@ -26,8 +27,8 @@ export function decodeSector(meta, bin) {
 
 // ---------- Collision and walkable surfaces (game-logic obstacle format) ----------
 export function sectorObstacles(meta, extra = []) {
-  const out = meta.colliders.map(c => ({ x: (c.x1 + c.x2) / 2, z: (c.z1 + c.z2) / 2, hx: (c.x2 - c.x1) / 2, hz: (c.z2 - c.z1) / 2, y: Math.max(0, c.y1), height: c.y2 - Math.max(0, c.y1),
-    surface: c.label === 'barrière béton' ? 'concrete' : 'metal', sector: true,
+  const out = [...meta.colliders, ...(meta.physicalSolids || [])].map(c => ({ x: (c.x1 + c.x2) / 2 + sectorPropOffset(c).x, z: (c.z1 + c.z2) / 2 + sectorPropOffset(c).z, hx: (c.x2 - c.x1) / 2, hz: (c.z2 - c.z1) / 2, y: Math.max(0, c.y1), height: c.y2 - Math.max(0, c.y1),
+    surface: [0,13,16].includes(c.mat) || c.label === 'barrière béton' ? 'concrete' : 'metal', sector: true, kind: c.label, stairBody: !!c.stairBody, walkableSurface: !!c.walkableSurface, blocksInteraction: c.source === 'page' || /paroi|dalle/.test(c.label),
     // Thin walls, barriers and posts keep a narrower margin in the machines' navigation grid (doorways stay open).
     navPad: Math.min(c.x2 - c.x1, c.z2 - c.z1) < 1.4 ? .7 : 1.3 }));
   return [...out, ...extra];
@@ -35,12 +36,13 @@ export function sectorObstacles(meta, extra = []) {
 // Height of the walkable surfaces: the stairway rises towards −z, the decks are reached from the stairway.
 export function sectorTraversal(meta, extraFloors = []) {
   const stairs = meta.stairs.map((s, k) => ({ id: 'escalier-' + k, ...s })), decks = meta.decks.map((d, k) => ({ id: 'pont-' + k, x1: d.x1, x2: d.x2, z1: d.z1, z2: d.z2, height: d.h }));
-  const floors = [...decks, ...extraFloors];
+  const floors = [...decks, ...(meta.physicalFloors || []), ...extraFloors];
   const onStair = (s, x, z) => x >= s.x1 && x <= s.x2 && z <= s.zStart && z >= s.zEnd;
   const stairHeight = (s, z) => s.height * Math.min(1, Math.max(0, (s.zStart - z) / (s.zStart - s.zEnd)));
   const onFloor = (f, x, z) => x >= f.x1 && x <= f.x2 && z >= f.z1 && z <= f.z2;
   const rampHeight = (f, x, z) => f.ramp ? f.from + (f.to - f.from) * Math.min(1, Math.max(0, f.ramp === 'x' ? (x - f.x1) / (f.x2 - f.x1) : (z - f.z1) / (f.z2 - f.z1))) : f.height;
   return {
+    maxMoveStep: .12,
     routes: stairs.map(s => ({ id: s.id, x: (s.x1 + s.x2) / 2, halfWidth: (s.x2 - s.x1) / 2, bottomZ: s.zStart, topZ: s.zEnd, height: s.height, base: 0 })), lifts: [],
     surfaces(x, z) { return [...floors.filter(f => onFloor(f, x, z)).map(f => ({ id: f.id, height: rampHeight(f, x, z) })), ...stairs.filter(s => onStair(s, x, z)).map(s => ({ id: s.id, height: stairHeight(s, z) }))]; },
     height(x, z, time = 0, max = Infinity) {
@@ -123,8 +125,9 @@ export function createSectorMeshes(T, sector, { quality = 'normal', tile = {}, w
       const ax = p[b], ay = p[b + 1], az = p[b + 2], ux = p[b + 3] - ax, uy = p[b + 4] - ay, uz = p[b + 5] - az, vx = p[b + 6] - ax, vy = p[b + 7] - ay, vz = p[b + 8] - az;
       let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; const len = Math.hypot(nx, ny, nz) || 1; nx /= len; ny /= len; nz /= len;
       const cr = src.col[q * 3] / 255 * lift, cg = src.col[q * 3 + 1] / 255 * lift, cb = src.col[q * 3 + 2] / 255 * lift;
+      const off = src===sector.world?sectorFaceOffset(src,q,s):{x:0,z:0};
       for (let v = 0; v < 4; v++) {
-        const x = p[b + v * 3] * s, y = p[b + v * 3 + 1] * s, z = p[b + v * 3 + 2] * s, o = k * 12 + v * 3;
+        const x = p[b + v * 3] * s + off.x, y = p[b + v * 3 + 1] * s, z = p[b + v * 3 + 2] * s + off.z, o = k * 12 + v * 3;
         P[o] = x; P[o + 1] = y; P[o + 2] = z; N[o] = nx; N[o + 1] = ny; N[o + 2] = nz; C[o] = Math.min(1, cr); C[o + 1] = Math.min(1, cg); C[o + 2] = Math.min(1, cb);
         const uvo = k * 8 + v * 2;
         if (signsUv) { const r = signUv.get(q) || [0, 0, 1, 1]; U[uvo] = v === 1 || v === 2 ? r[2] : r[0]; U[uvo + 1] = 1 - (v >= 2 ? r[3] : r[1]); }
@@ -172,4 +175,11 @@ export function neonSpots(sector, { minArea = .35, max = 220 } = {}) {
     out.push({ x, y, z, area, r: src.col[q * 3] / 255, g: src.col[q * 3 + 1] / 255, b: src.col[q * 3 + 2] / 255, mat: src.mat[q] });
   }
   return out.sort((a, b) => b.area - a.area).slice(0, max);
+}
+
+// Move complete small faces of the sign/lamp/bench cluster together with its hull.
+export function sectorFaceOffset(src,q,s){
+ const c={x1:Infinity,x2:-Infinity,y1:Infinity,y2:-Infinity,z1:Infinity,z2:-Infinity};
+ for(let v=0;v<4;v++)for(const[a,k]of [['x',0],['y',1],['z',2]]){const n=src.pos[q*12+v*3+k]*s;c[a+'1']=Math.min(c[a+'1'],n);c[a+'2']=Math.max(c[a+'2'],n);}
+ return sectorPropOffset(c);
 }

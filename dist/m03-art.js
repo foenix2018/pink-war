@@ -104,10 +104,11 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
     signs.advert('helix', { w: 9, h: 1.7, x: 30, y: 7.1, z: -52.1, yaw: 0, holo: false });
     signs.advert('koi', { w: 5, h: 2.4, x: -12.4, y: 7.6, z: 4, yaw: Math.PI / 2 });
     signs.advert('aegis', { w: 4, h: 1.8, x: -12.4, y: 6.8, z: 34, yaw: Math.PI / 2, holo: false });
-    signs.wayfinding('ANNEXE MÉDICALE', { sub: 'DISPENSAIRE DU SECTEUR 03', jp: '医療棟', picto: 'medic', arrow: Math.PI / 2, color: '#ff6fb4', w: 3, h: .8, x: 11.6, y: 3.2, z: 47, yaw: 0 });
-    signs.wayfinding('ATELIER TECHNIQUE', { sub: 'PIÈCES · VÉRINS · POMPES', jp: '整備工場', picto: 'bolt', arrow: -Math.PI / 2, color: '#ffb35c', w: 3, h: .8, x: -11.6, y: 3.2, z: 32, yaw: 0 });
-    signs.wayfinding('ARCHIVES A3', { sub: 'TERRASSE · ESCALIER', jp: '記録 · 中継', picto: 'lift', arrow: 0, color: '#5fe0f0', w: 3, h: .8, x: -6.4, y: 3.2, z: -5, yaw: 0 });
+    signs.wayfinding('01 · ANNEXE MÉDICALE', { sub: 'DISPENSAIRE DU SECTEUR 03', jp: '医療棟', picto: 'medic', arrow: Math.PI / 2, color: '#ff6fb4', w: 3, h: .8, x: 11.6, y: 3.2, z: 47, yaw: 0 });
+    signs.wayfinding('02 · ATELIER TECHNIQUE', { sub: 'PIÈCES · VÉRINS · POMPES', jp: '整備工場', picto: 'bolt', arrow: -Math.PI / 2, color: '#ffb35c', w: 3, h: .8, x: -11.6, y: 3.2, z: 32, yaw: 0 });
+    signs.wayfinding('03 · RELAIS A3', { sub: 'TERRASSE · ESCALIER', jp: '記録 · 中継', picto: 'lift', arrow: 0, color: '#5fe0f0', w: 3, h: .8, x: -6.4, y: 3.2, z: -5, yaw: 0 });
     signs.wayfinding('GARE DE FRET 03', { sub: 'VOIE DE SERVICE SOUS LA ROUTE HAUTE', jp: '貨物駅', picto: 'train', arrow: -Math.PI / 2, color: '#ffc890', w: 3.4, h: .8, x: 11.6, y: 3.2, z: -42, yaw: 0 });
+    signs.wayfinding('BROUILLAGE ORDRE', {sub:'COMMANDE À DROITE DU BARRAGE · RELAIS A3 REQUIS',picto:'bolt',arrow:-Math.PI/2,color:'#5fe0f0',w:3.4,h:.8,x:8.8,y:2.8,z:-29.5,yaw:0});
     signs.wayfinding('PÉRIMÈTRE PINK', { sub: 'ACCÈS INTERDIT · ORDRE', jp: '立入禁止', picto: 'warn', arrow: null, color: '#ff3b4e', bg: '#160307', w: 3.4, h: .8, x: -8, y: 3, z: -78, yaw: 0 });
   }
 
@@ -184,7 +185,7 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
   function aegisVan(x,z,yaw,burnt=false){
     const g=new T.Group();g.position.set(x,0,z);g.rotation.y=yaw;add(g);
     const L=VAN.halfLength*2,W=VAN.halfWidth*2;
-    const body=createRescueVehicle(T,{kind:'ambulance',length:L,width:W,low,
+    const body=createRescueVehicle(T,{kind:'ambulance',length:L,width:W,low,burnt,
       signTexture:burnt?null:()=>signTex(['AMBULANCE','AEGIS · 03'],
         {bg:null,fg:'#a3241c',w:512,h:128}),
       M:{...M,red:burnt?M.rust:M.red,white:burnt?M.rust:M.white,
@@ -193,17 +194,12 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
     // Model +X front -> mission vehicle -Z front.
     body.rotation.y=Math.PI/2;g.add(body);
     if(burnt){g.rotation.z=.12;return {g};}
-    const lights=[];
-    for(const side of [-1,1]){
-      const b=new T.Mesh(new T.BoxGeometry(.30,.16,.30),
-        new T.MeshBasicMaterial({color:0x2a6bff,toneMapped:false}));
-      b.position.set(side*.55,2.75,-L/2+1.1);g.add(b);lights.push(b);
-    }
+    const lights=[];body.traverse(o=>{if(o.isMesh&&o.material?.color?.getHex()===0x0066c9)lights.push(o);});
     const head=new T.SpotLight(0xfff4e0,low?0:26,26,.55,.6,1.4);
     head.position.set(0,1.1,-L/2);head.target.position.set(0,0,-L/2-12);
     g.add(head);g.add(head.target);
     const flash=new T.PointLight(0x3a72ff,0,14,2);
-    flash.position.set(0,3,-L/2+1);g.add(flash);
+    flash.position.set(0,3.25,-L/2+1);g.add(flash);
     return {g,lights,flash,body};
   }
   function winchPost(x,z){
@@ -431,8 +427,9 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
       if (beacon) { beacon.off += ((beaconOff ? 1 : 0) - beacon.off) * Math.min(1, dt * 2); const on = 1 - beacon.off;
         beacon.beam.material.opacity = (.18 + .1 * Math.sin(t * 4)) * on; beacon.ring.material.opacity = .6 * on * (.5 + .5 * Math.sin(t * 6)); beacon.head.rotation.y = t * 2; beacon.head.material.color.set(on > .5 ? 0xff2f45 : 0x3dff8a); }
       if (van && amb) {
+        amb.body.userData.updateVehicle?.(dt,{speed:van.moving?VAN.speed:0});
         amb.g.position.set(van.x, 0, van.z); amb.g.rotation.y = van.yaw;
-        const flash = Math.sin(t * 9) > 0; amb.lights[0].material.color.set(flash ? 0x2a6bff : 0x0a1430); amb.lights[1].material.color.set(flash ? 0x0a1430 : 0x2a6bff);
+        const flash = Math.sin(t * 9) > 0; for(const lamp of amb.lights)lamp.material.emissiveIntensity=flash?2.5:.12;
         amb.flash.intensity = low ? 0 : (van.moving || van.waiting === 'machines' ? 5 : 2) * (flash ? 1 : .2);
         const hurt = Math.max(0, 1 - van.hp / 60);
         smoke.forEach((s, i) => { const k = (t * .4 + i / smoke.length) % 1; s.position.set(van.x + Math.sin(i) * .4, 2.2 + k * 3, van.z); s.scale.setScalar(.8 + k * 2.2); s.material.opacity = hurt * .35 * (1 - k); });

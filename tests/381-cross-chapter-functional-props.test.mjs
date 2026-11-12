@@ -13,7 +13,7 @@ import {createCouronneArt} from '../dist/couronne-art.js';
 import {createBreachDressing} from '../dist/breach-dressing.js';
 
 const materialSet=()=>Object.fromEntries(['steel','galva','white','panel','paintedMetal','dark','black','glass','rubber','yellow','wood','red','redGlow','helixWhite','helixRed','plate','fabric','tarp','cyan','ledCyan'].map(k=>[k,new T.MeshStandardMaterial({name:k,side:T.DoubleSide})]));
-function checkGeometry(root,limit=200000){
+function checkGeometry(root,limit=200000,maxMeshes=16){
  let triangles=0,meshCount=0;
  root.traverse(node=>{
   if(!node.isMesh)return;meshCount++;
@@ -22,7 +22,7 @@ function checkGeometry(root,limit=200000){
   for(const p of a.array)assert.ok(Number.isFinite(p),'no NaN vertex');
   triangles+=a.count/3;
  });
- assert.ok(meshCount>0&&meshCount<=16,'merged batches stay manageable');
+ assert.ok(meshCount>0&&meshCount<=maxMeshes,'merged batches stay manageable');
  assert.ok(triangles>24&&triangles<limit,'models remain within geometry budget');
  return {meshCount,triangles};
 }
@@ -69,7 +69,17 @@ test('all chapter modelers route known cuboid props to coherent reusable silhoue
 test('different chapters reuse vehicle families without replacing original hitbox specification',()=>{
  const M=materialSet();
  checkGeometry(createCivilCar(T,{length:4.2,width:1.9,low:true,M}));
- checkGeometry(createRescueVehicle(T,{kind:'vsav',length:5.8,width:2.4,low:true,M}));
+ const oldDocument=globalThis.document;
+ const context=new Proxy({measureText:()=>({width:120}),createLinearGradient:()=>({addColorStop(){}})}, {get:(o,k)=>k in o?o[k]:()=>{}});
+ globalThis.document={createElement:()=>({width:0,height:0,getContext:()=>context})};
+ try{for(const kind of ['vsav','fpt']){
+  const vehicle=createRescueVehicle(T,{kind,length:kind==='vsav'?5.8:7.6,width:kind==='vsav'?2.4:2.7,low:true,M});
+  checkGeometry(vehicle,350000,90);
+  const b=new T.Box3().setFromObject(vehicle),size=b.getSize(new T.Vector3());
+  assert.ok(size.x<=vehicle.userData.vehicle.length+.001&&size.z<=vehicle.userData.vehicle.width+.001);
+  assert.ok(b.min.y>=-.001);assert.ok(vehicle.userData.vehicle.paintWear);assert.match(vehicle.userData.vehicle.source,/RLH/);
+ }}finally{globalThis.document=oldDocument;}
+
  const n=createFunctionalProp(T,'cot',{w:1.1,d:1.7,h:.85,low:true,M});
  const bounds=new T.Box3().setFromObject(n);
  assert.ok(bounds.max.y<1.1,'cot is not an impassable wall');

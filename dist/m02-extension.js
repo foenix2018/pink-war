@@ -170,7 +170,7 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
     // Groups of the stage not deployed yet come back on restore; a deployed group is cleared (no enemy left).
     const s = { version: 2, characterId, stage: id, streetStage:street?.stage??0,patrolCleared:!!street?.patrolCleared,collectedSupplies:[...collectedSupplies],dualAmmo:{...game.dual.ammo}, restore: (RESTORE[id] || []).filter(name => !groups.has(name)), opened: [...opened], done: [...done], reads: [...reads], kills: game.kills,score:game.score,time:game.time,
       weaponIndex: game.weaponIndex, owned: [...game.ownedWeapons], ammo: [...game.ammo], health: Math.max(1, game.player.hp), shield: game.player.shield, charges: game.charges, savedAt: Date.now() };
-    try { (storage || globalThis.localStorage).setItem(CHECKPOINT_KEY + characterId, JSON.stringify(s)); checkpointStorageError=false;return true; } catch { checkpointStorageError=true;return false; }
+    try { (storage || globalThis.localStorage).setItem(CHECKPOINT_KEY + characterId, JSON.stringify(s)); checkpointStorageError=false;game.checkpointPosition={...(id===X.STREET.id?M02_STREET_CHECKPOINTS[s.streetStage]:X.STAGE[id].checkpoint),id:id+':'+s.streetStage};return true; } catch { checkpointStorageError=true;return false; }
   }
   function place(cp) { Object.assign(game.player, { x: cp.x, z: cp.z, elevation: game.surfaceHeight(cp.x, cp.z, game.time,(cp.elevation||0)+.3), grounded: true, verticalSpeed: 0, yaw: cp.yaw, onLift:null,jumpHeld:false,airJumps:0,jumpImpulseX:0,jumpImpulseZ:0,shieldDeployed:false }); }
   function restoreCheckpoint(s) {
@@ -194,6 +194,7 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
     // Older checkpoints may omit door flags even though their objective is already inside the vault.
     if(['x-manifeste','x-quai','x-fin','x-done'].includes(s.stage))opened.add('coffre');if(s.stage==='x-fin')opened.add('convoi');
     rebuild(); for (const d of X.DOORS) h.setDoor(d.id, !!d.open || opened.has(d.id));
+    game.checkpointPosition={...(street?M02_STREET_CHECKPOINTS[s.streetStage||0]:X.STAGE[s.stage].checkpoint),id:s.stage+':'+(s.streetStage||0)};
     place(street?M02_STREET_CHECKPOINTS[s.streetStage||0]:X.STAGE[s.stage].checkpoint); supplies(prologueDone ? 'tour' : null);
     if(street){setStage(null);h.core({stage:s.streetStage||0,patrolCleared:!!s.patrolCleared});return true;}
     setStage(s.stage); for (const name of Array.isArray(s.restore) ? s.restore : RESTORE[s.stage] || []) if(Object.hasOwn(X.ENCOUNTERS,name))deploy(name, { alert: false });

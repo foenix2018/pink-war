@@ -140,6 +140,19 @@ export function segmentBox(start, end, box) {
   return lo >= 0 && lo <= 1 ? lo : null;
 }
 
+// An arm or a long barrel may extend beyond nearby cover. Always start a shot on
+// the player's side of the nearest wall, in every mission and in WebXR.
+export function clipMuzzleOrigin(player, muzzle, obstacles) {
+  const eye={x:player.x,y:(player.elevation||0)+(player.crouched?.95:1.55),z:player.z};
+  const distance=Math.hypot(muzzle.x-eye.x,muzzle.y-eye.y,muzzle.z-eye.z);
+  // Far-away origins belong to turrets / companion / simulation shots, not the held weapon.
+  if(distance>3.5||distance<1e-6)return {...muzzle};
+  let nearest=1;
+  for(const box of obstacles){const t=segmentBox(eye,muzzle,box);if(t!==null)nearest=Math.min(nearest,t);}
+  const t=Math.max(0,nearest-(nearest<1?.035/distance:0));
+  return {x:eye.x+(muzzle.x-eye.x)*t,y:eye.y+(muzzle.y-eye.y)*t,z:eye.z+(muzzle.z-eye.z)*t};
+}
+
 export function moveInArena(entity, dx, dz, radius, obstacles) {
   const edge = ARENA_SIZE / 2 - radius - 1;
   let x = clamp(entity.x + dx, -edge, edge), z = entity.z;
@@ -301,6 +314,7 @@ export class ArenaGame {
     this.searchFields=new Map();
   }
   reset(characterId=this.characterId||'ghju') {
+    this.checkpointPosition=null;
     this.companionAmplifyUntil=0;this.companionHazards=[];this.companionWard=null;
     this.searchFields=new Map();
     this.navigation.refreshAt = -1; this.navigation.goal = -1;
@@ -548,6 +562,7 @@ export class ArenaGame {
     if(!origin||!direction||![origin.x,origin.y,origin.z,direction.x,direction.y,direction.z].every(Number.isFinite))return false;
     const length = Math.hypot(direction.x, direction.y, direction.z);
     if (length < .001) return false;
+    origin=clipMuzzleOrigin(this.player,origin,this.obstacles);
     const bulletId=this.nextId;
     const w = this.weapon, power = w.chargeTime ? .3 + .7 * clamp(charge, 0, 1) : 1;
     const nx = direction.x / length, ny = direction.y / length, nz = direction.z / length;
@@ -961,7 +976,7 @@ export class ArenaGame {
         const box=turretHitbox(turret),hit=segmentBox(start,end,box);
         if(hit!==null&&hit<nearest){nearest=hit;target=b.hostile?null:turret;hitBox=b.hostile?box:null;surface='metal';zone='torso';multiplier=1;}
       }
-      for (const obstacle of this.obstacles) { const t = segmentBox(start, end, obstacle); if (t !== null && t < nearest) { nearest = t; target = null;shieldContact=false;hitBox=obstacle;surface=obstacle.surface||'concrete'; } }
+      for (const obstacle of this.obstacles) { const t = segmentBox(start, end, obstacle); if (t !== null && t <= nearest) { nearest = t; target = null;shieldContact=false;hitBox=obstacle;surface=obstacle.surface||'concrete'; } }
       if (end.y < .06 && start.y >= .06) { const t = (start.y - .06) / (start.y - end.y); if (t < nearest) { nearest = t; target = null;shieldContact=false;hitBox=null;surface='ground'; } }
       if(b.hostile&&this.companionWard?.until>this.time&&this.companionWard.remaining>0){
         const shieldHit=segmentSphere(start,end,{x:this.player.x,y:this.player.elevation+(this.player.crouched?.58:1.25),z:this.player.z},1.7);

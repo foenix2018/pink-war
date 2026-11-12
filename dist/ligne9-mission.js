@@ -51,7 +51,7 @@ export function createLigne9Mission({ game, characterId = 'lylu', hooks = {} }) 
 
   const alive = name => (groups.get(name) || []).filter(id => game.enemies.some(e => e.id === id)).length;
   const say = (id, { again = false } = {}) => { if (!again && said.has(id)) return; said.add(id); h.say(id); };
-  const setStage = next => { stage = next; h.stage(stage, L.STAGES[stage]); };
+  const setStage = next => { stage = next; game.checkpointPosition={...L.STAGES[stage].checkpoint,id:L.STAGES[stage].id,label:L.STAGES[stage].label}; h.stage(stage, L.STAGES[stage]); };
   const roomOfPlayer = () => L.roomAt(game.player.x, game.player.z);
   function rebuild() { collisions = L.buildCollisions({ open: [...opened], drained: [...drained] }); game.replaceObstacles(collisions); h.setObstacles(collisions); }
   function openDoor(id) { if (opened.has(id)) return; opened.add(id); rebuild(); h.setDoor(id, true); h.cue('door'); }

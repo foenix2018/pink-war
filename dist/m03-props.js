@@ -5,7 +5,7 @@
 // object is built in its place: same footprint, same height, same collision box (physics is not touched).
 // All parts are merged per material: about twenty draw calls for the whole set.
 import { roundedBox } from './webgpu-upgrade.js';
-import { AREAS } from './m03-layout.js';
+import { AREAS, sectorPropOffset } from './m03-layout.js';
 
 const TAU = Math.PI * 2;
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
@@ -58,7 +58,8 @@ export function classifySectorProps(meta, world, { bounds = meta.bounds } = {}) 
     else if (indoor && kind === 'post') kind = 'riser';
     for (const i of quads) drop.add(i);
     const along = w >= d ? 'x' : 'z', mx = (c.x1 + c.x2) / 2, mz = (c.z1 + c.z2) / 2;
-    out.push({ kind, c, cx: mx, cz: mz, y, h, len: hi, wid: lo, along, face: mx > 0 ? -Math.PI / 2 : Math.PI / 2 });
+    const offset=sectorPropOffset(c);
+    out.push({ kind, c, cx: mx+offset.x, cz: mz+offset.z, y, h, len: hi, wid: lo, along, face: mx > 0 ? -Math.PI / 2 : Math.PI / 2 });
   }
   return { props: out, drop };
 }

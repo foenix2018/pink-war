@@ -107,7 +107,7 @@ export function updateProbe(game, e, dt, segmentBox) {
       const x = shot.x - origin.x, y = shot.y - origin.y, z = shot.z - origin.z;
       const distance = Math.hypot(x, y, z) || 1, speed = hostileShotProfile(game.wave,'probe').speed;
       // A moved player can dodge. A new wall in the original line stops the shot.
-      if (!game.blocked(origin, shot)) {
+      if (!game.blocked({x:e.x,y:e.elevation+PROBE.aimHeight,z:e.z},origin) && !game.blocked(origin, shot)) {
         game.bullets.push({id: game.nextId++, ...origin, vx: x / distance * speed, vy: y / distance * speed, vz: z / distance * speed,
           life: 3, damage: enemyVolley(game.wave,'probe').damage, hostile: true, weapon: 'probe', splash: 0});
         e.lastShotAt = game.time; game.event('enemy-shot', {...origin, form: 'probe'});

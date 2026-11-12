@@ -20,10 +20,13 @@ export function m03Target(mission, game) {
   }
   const id = STAGE_TARGET[s]; if (!id) return null;
   const it = L.INTERACTIONS.find(i => i.id === id); if (!it) return null;
-  // A cleared device first needs its machines down: the arrow leads to the nearest one until then.
-  if ((s === 'kit' && (mission.done || []).includes('kit')) || (s === 'verin' && mission.alive?.('atelier') > 0)) {
-    const foe = game.enemies.reduce((b, e) => !b || Math.hypot(e.x - p.x, e.z - p.z) < Math.hypot(b.x - p.x, b.z - p.z) ? e : b, null);
-    if (foe) return { x: foe.x, z: foe.z, y: foe.elevation || 0, label: 'NEUTRALISER LES MACHINES', id: 'enemy' };
+  // Name the local encounter that locks this device. Never send the player
+  // after an unrelated patrol on the other side of the district.
+  const lock=s==='kit'&&(mission.done||[]).includes('kit')?['annexe',0]:s==='verin'?['atelier',0]:s==='balise'?['fracture',1]:s==='echangeur'?['echangeur',1]:s==='arrimage'?['gare',0]:null;
+  if(lock&&mission.alive?.(lock[0])>lock[1]){
+    const foes=game.enemies.filter(e=>e.mission===lock[0]);
+    const foe=foes.reduce((b,e)=>!b||Math.hypot(e.x-p.x,e.z-p.z)<Math.hypot(b.x-p.x,b.z-p.z)?e:b,null);
+    if(foe)return{x:foe.x,z:foe.z,y:foe.elevation||0,label:'SÉCURISER LA ZONE · '+foes.length+' MACHINE'+(foes.length>1?'S':''),id:'enemy'};
   }
   return { x: it.x, z: it.z, y: it.y || 0, label: it.label, id };
 }

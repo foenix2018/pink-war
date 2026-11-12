@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {createRequire} from 'node:module';
+import {physicalGeometry} from './repair-m03-collisions.mjs';
 
 const [mode, a, b] = process.argv.slice(2);
 
@@ -83,6 +84,7 @@ function bake(input, outDir) {
   const meta = {version: 1, scale: .01, quads: world.n, portalQuads: portal.n, droneQuads: drone.n, offsets, ranges: world.ranges, signs, signLabels: d.signs,
     colliders: colliders(boxes(d.v), d.collide, d.stairs), stairs: d.stairs, decks: d.decks, drones: d.drones.map(r => Object.fromEntries(Object.entries(r).map(([k, val]) => [k, +(+val).toFixed(3)]))),
     portal: {x: 0, y: 11, z: -111, spin: .052}, bounds: d.bounds};
+  const physical=physicalGeometry({meta,world});meta.physicalSolids=physical.solids;meta.physicalFloors=physical.floors;meta.physicsRevision=2;
   fs.writeFileSync(path.join(outDir, 'vesper-sector.json'), JSON.stringify(meta));
   console.log('quads', world.n, 'bytes', bin.length, 'colliders', meta.colliders.length, '(page', d.collide.length + ')');
 }

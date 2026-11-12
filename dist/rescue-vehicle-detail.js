@@ -1,186 +1,49 @@
-// Pink Wars / M01 — original metric rescue vehicle geometry.
-// This replaces the two cuboid emergency-vehicle proxies with detailed,
- // batched meshes. One sealed Group per real authored collider; no new collision
-// hulls, lights, runtime generators, gameplay assets or remote downloads.
-// Local forward = +X; mesh center and tires remain inside the prop footprint.
-import {Assembly,bevelBox,matrix} from './geo.js';
-
+// Actual RLH CMIA ambulance and CCRM Gallin; see docs/vehicules-rlh.md.
+import {createAmbulance} from './rlh/ambulance-model.js';
+import {createCCRM} from './rlh/ccrm-desautel-v942.js';
+import {Assembly} from './geo.js';
 export const RESCUE_VEHICLE_PROFILE=Object.freeze({
- vsav:Object.freeze({type:'VSAV',name:'AMBULANCE 07',role:'rescue',maxHeight:2.8}),
- fpt:Object.freeze({type:'FPT',name:'CAMION 07',role:'fire-engine',maxHeight:3.2})
+ vsav:Object.freeze({type:'CMIA',name:'AMBULANCE CMIA',role:'rescue',maxHeight:3.65}),
+ fpt:Object.freeze({type:'CCRM',name:'CCRM GALLIN',role:'fire-engine',maxHeight:3.4})
 });
-export function createRescueVehicle(T,{kind,length,width,low=false,M,signTexture=null}={}){
- kind=kind==='ambulance'?'vsav':kind;
- const info=RESCUE_VEHICLE_PROFILE[kind];if(!info)throw Error('Unknown rescue vehicle '+kind);
+function wornPaint(T,material,seed,burnt){
+ const size=256,data=new Uint8Array(size*size*4),rough=new Uint8Array(data.length);
+ let state=seed;const random=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296;};
+ for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+  const i=(y*size+x)*4,n=random(),scratch=((x*13+y*7)%113<2&&n>.32),chip=n>.994;
+  const dust=.89+random()*.10-(y/size)*.06,v=burnt?.18+random()*.14:chip?.34:scratch?.55:dust;
+  data.set([255*v,251*v,244*v,255],i);rough.set([200,chip?250:170+random()*65,200,255],i);
+ }
+ const texture=pixels=>{const t=new T.DataTexture(pixels,size,size);t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(2,2);t.generateMipmaps=true;t.minFilter=T.LinearMipmapLinearFilter;t.magFilter=T.LinearFilter;t.needsUpdate=true;return t;};
+ material.map=texture(data);material.map.colorSpace=T.SRGBColorSpace;material.roughnessMap=texture(rough);material.roughness=.86;
+ if('clearcoat'in material){material.clearcoat=.14;material.clearcoatRoughness=.7;}
+ material.userData.paintWear=true;material.needsUpdate=true;
+}
+// Merge the closed ambulance body by material, keeping wheels separately animated.
+// Source geometries are shared in RLH's bevel cache and must never be disposed here.
+function batchClosedBody(T,parent){
+ parent.updateMatrixWorld(true);const inverse=parent.matrixWorld.clone().invert(),a=new Assembly(),old=[];
+ parent.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&!Array.isArray(o.material)){a.add(o.geometry,o.material,new T.Matrix4().multiplyMatrices(inverse,o.matrixWorld),false);old.push(o);}});
+ for(const o of old)o.removeFromParent();a.build(parent,{name:'RLH / carrosserie fermée'});
+ for(const i of a.items)i.geometry.dispose();
+}
+export function createRescueVehicle(T,{kind,length,width,low=false,burnt=false}={}){
+ kind=kind==='ambulance'?'vsav':kind;const info=RESCUE_VEHICLE_PROFILE[kind];
+ if(!info)throw Error('Unknown rescue vehicle '+kind);
  if(!(length>4&&width>1.5))throw Error('Invalid rescue vehicle envelope');
- const g=new T.Group();g.name='AEGIS 07 / '+info.name+' · véhicule hard-surface';
- g.userData.vehicle={kind,length,width,role:info.role,revision:'rescue-RLH-vehicle-finishes-v3-2026-11',source:'RLH V750 utility / V644 automotive detailing, adapted to existing Pink Wars VSAV',authoritativeCollider:'M01 extension obstacle'};
- const parts=new Assembly();const bat=(m,s,p,r=[0,0,0],round=.012)=>{
-  parts.add(round?bevelBox(...s,Math.min(round,Math.min(...s)*.20),low?1:2):new T.BoxGeometry(...s),m,matrix(p,r));
- };
- const rod=(m,p1,p2,r=.015,rad=8)=>{
-  const a=new T.Vector3(...p1),b=new T.Vector3(...p2),delta=b.clone().sub(a);
-  const q=new T.Quaternion().setFromUnitVectors(new T.Vector3(0,1,0),delta.clone().normalize());
-  parts.add(new T.CylinderGeometry(r,r,delta.length(),low?6:rad),m,new T.Matrix4().compose(a.add(b).multiplyScalar(.5),q,new T.Vector3(1,1,1)));
- };
- const disc=(m,x,y,z,r,h=.018,seg=low?10:18)=>parts.add(new T.CylinderGeometry(r,r,h,seg),m,matrix([x,y,z],[Math.PI/2,0,0]));
- const cabX=length/2-1.19,frontX=length/2-.11,backX=-length/2+.10,boxLen=length-2.45,boxX=(backX+cabX-1.08)*.5;
- const bodyColor=kind==='vsav'?M.white:M.red;
- // Functional rails under the body, not a black rectangle intersecting tyres.
- for(const side of [-1,1]){
-  bat(M.dark,[length-.32,.15,.11],[-.08,.55,side*(width*.31)]);
-  bat(M.steel,[length-.32,.035,.07],[-.08,.47,side*(width*.31)]);
- }
- bat(M.dark,[length-.35,.22,width-.34],[-.05,.65,0]);
- // A lowered box body separates the wheels from the equipment area.
- const boxHeight=kind==='vsav'?1.52:1.88;
- bat(bodyColor,[boxLen,boxHeight,width-.16],[boxX,.91+boxHeight*.5,0],[0,0,0],.035);
- bat(M.dark,[boxLen+.04,.075,width+.02],[boxX,.91+boxHeight+.06,0],[0,0,0],.014);
- bat(M.steel,[boxLen+.01,.040,width-.16],[boxX,.91,0]);
- // Cab, sloping front windscreen, actual dark windows and edged front grille.
- bat(bodyColor,[2.13,1.36,width-.18],[cabX,1.39,0],[0,0,0],.075);
- bat(bodyColor,[1.50,.22,width-.35],[cabX-.25,2.17,0],[0,0,0],.045);
- bat(M.dark,[.12,.39,width-.29],[frontX-.07,.86,0],[0,0,0],.018);
- bat(M.steel,[.09,.24,width*.53],[frontX+.017,1.15,0]);
- // RLH automobile fascia: independent narrow grille slots and recessed radiator.
- // They stay inside the authored rescue-vehicle dimensions, with no extra lights.
+ const model=kind==='vsav'?createAmbulance({THREE:T}):createCCRM({THREE:T,fusion:true,poste:false});
+ const body=model.rig||model.root;
+ const painted=new Set();
  if(kind==='vsav'){
-  bat(M.dark,[.025,.20,width*.50],[frontX+.068,1.13,0],[],.005);
-  for(let k=0;k<5;k++)bat(M.steel,[.014,.012,width*.44],[frontX+.087,1.045+k*.040,0],[],.002);
-  for(const s of [-1,1]){
-   bat(M.dark,[.030,.13,.25],[frontX+.075,.78,s*(width*.32)],[],.010);
-   bat(M.white,[.010,.048,.17],[frontX+.092,.79,s*(width*.32)],[],.006);
-  }
- }
- for(const z of [-width*.24,0,width*.24]){
-  bat(M.dark,[.02,.027,width*.16],[frontX+.071,1.1,z]);
- }
- // The windshield is angled rather than a glass-coloured cuboid.
- const glassQuad=(onSide=false,side=1)=>{
-  const verts=onSide?[
-   cabX-.58,1.73,side*(width/2-.075),
-   cabX+.55,1.73,side*(width/2-.075),
-   cabX+.55,2.04,side*(width/2-.075),
-   cabX-.62,2.04,side*(width/2-.075)
-  ]:[
-   frontX-.13,1.43,-width*.43,
-   frontX-.13,1.43,width*.43,
-   frontX-.47,2.06,width*.39,
-   frontX-.47,2.06,-width*.39
-  ];
-  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(verts,3));
-  geo.setAttribute('uv',new T.Float32BufferAttribute([0,0,1,0,1,1,0,1],2));
-  geo.setIndex([0,1,2,0,2,3]);geo.computeVertexNormals();parts.add(geo,M.glass);
- };
- glassQuad();
- // Windows, door-panel grooves, realistic hinges and actual wing mirrors.
- for(const side of [-1,1]){
-  glassQuad(true,side);
-  const z=side*(width*.5-.030);
-  bat(M.dark,[.026,.84,.018],[cabX-.72,1.58,z],[],.001);
-  bat(M.dark,[.84,.026,.015],[cabX-.05,1.15,z],[],.002);
-  bat(M.dark,[.04,.30,.020],[cabX-.58,1.72,z]);
-  bat(M.steel,[.19,.027,.028],[cabX+.07,1.36,z+side*.016]);
-  rod(M.dark,[cabX+.55,1.72,z],[cabX+.80,1.73,side*(width*.5+.07)],.018);
-  bat(M.dark,[.21,.16,.08],[cabX+.83,1.75,side*(width*.5+.08)],[],.015);
-  bat(M.steel,[.026,.13,.12],[cabX+.95,1.75,side*(width*.5+.09)]);
- }
- // Grille with proportional headlamp pods, reflective strips, side markers.
- for(const side of [-1,1]){
-  const z=side*(width*.5-.23);
-  bat(M.dark,[.025,.25,.31],[frontX+.07,1.31,z]);
-  bat(M.white,[.009,.16,.24],[frontX+.086,1.31,z],[],.001);
-  bat(M.yellow,[.010,.062,.18],[frontX+.088,1.15,z],[],.001);
-  bat(M.black,[.06,.21,.13],[-length/2+.07,1.1,side*(width*.5-.16)]);
-  bat(M.redGlow,[.008,.13,.11],[-length/2+.109,1.1,side*(width*.5-.16)],[],.001);
- }
- bat(M.steel,[.13,.15,width-.15],[frontX+.045,.73,0]);
- for(const x of [frontX-.25,boxX,backX+.38])bat(M.dark,[.045,.03,width-.19],[x,.74,0]);
- const axles=[length/2-1.24,-length/2+.95];
- for(const x of axles)for(const side of [-1,1]){
-  const z=side*(width*.5-.19);
-  parts.add(new T.CylinderGeometry(.47,.47,.23,low?12:22),M.black,matrix([x,.49,z],[Math.PI/2,0,0]));
-  // Sidewall ring, radial hub, cap, rim screws. Each is batched by material.
-  const exposed=z+side*.126;
-  disc(M.dark,x,.49,exposed,.36,.018);
-  disc(M.steel,x,.49,exposed+side*.012,.23,.020);
-  disc(M.dark,x,.49,exposed+side*.025,.085,.028);
-  if(!low)for(let i=0;i<8;i++){
-   const a=i*Math.PI/4;disc(M.steel,x+Math.cos(a)*.145,.49+Math.sin(a)*.145,exposed+side*.03,.016,.012,8);
-   if(kind==='vsav')disc(M.dark,x+Math.cos(a)*.283,.49+Math.sin(a)*.283,exposed+side*.022,.018,.008,8);
-  }
-  // The visible arch follows the tyre instead of pretending a wheel is a ball.
-  parts.add(new T.TorusGeometry(.525,.031,5,low?12:24,Math.PI),M.steel,matrix([x,.49,side*(width*.5-.016)]));
-  bat(M.dark,[1.09,.11,.16],[x,1.01,side*(width*.5-.10)],[],.018);
- }
- // RLH utilitaire-inspired roof skids and reinforcing seams; no moving parts.
- if(kind==='vsav'){
-  for(const s of [-1,1]){
-   const z=s*(width*.5-.22);
-   bat(M.steel,[boxLen*.84,.040,.065],[boxX,2.49,z],[],.006);
-   for(const xx of [boxX-boxLen*.32,boxX+boxLen*.32])bat(M.dark,[.10,.070,.10],[xx,2.45,z],[],.008);
-   bat(M.dark,[boxLen*.83,.030,.019],[boxX,2.24,s*(width*.5-.048)],[],.002);
-  }
- }
- // Reflective body markings and actual equipment compartments.
- for(const side of [-1,1]){
-  const z=side*(width*.5-.066);
-  bat(kind==='vsav'?M.red:M.white,[boxLen-.20,.11,.012],[boxX,1.08,z+side*.023],[],.001);
-  bat(M.yellow,[boxLen-.24,.038,.013],[boxX,1.185,z+side*.029],[],.001);
-  if(kind==='fpt'){
-   const panelLen=(boxLen-.48)/3;
-   for(let k=0;k<3;k++){
-    const px=backX+.25+panelLen*(k+.5);
-    bat(M.shutter,[panelLen-.10,1.05,.015],[px,1.93,z+side*.027],[],.006);
-    bat(M.steel,[panelLen-.06,.035,.025],[px,2.51,z+side*.043]);
-    bat(M.dark,[.18,.034,.038],[px,1.35,z+side*.06],[],.005);
-    for(let row=0;row<(low?3:7);row++)bat(M.steel,[panelLen-.12,.017,.012],[px,1.50+row*.125,z+side*.05],[],.001);
-   }
-  }else{
-   // Ambulance side access door, glazed quarter-panel and medical cross.
-   const px=boxX+.33;
-   bat(M.dark,[.023,1.22,.016],[px,1.74,z+side*.028],[],.001);
-   bat(M.dark,[.30,.02,.016],[px-.13,1.80,z+side*.035]);
-   bat(M.steel,[.18,.035,.020],[px+.18,1.40,z+side*.041]);
-   bat(M.red,[.26,.09,.018],[boxX-.76,1.74,z+side*.049]);
-   bat(M.red,[.09,.26,.019],[boxX-.76,1.74,z+side*.050]);
-  }
- }
- if(kind==='fpt'){
-  // Pump inlet and couplings on the rear face; ladder rails on the roof.
-  for(const z of [-.36,0,.36]){
-   parts.add(new T.CylinderGeometry(.10,.10,.065,low?10:18),M.steel,matrix([backX-.025,1.58,z],[0,0,Math.PI/2]));
-   parts.add(new T.CylinderGeometry(.06,.06,.075,low?10:18),M.dark,matrix([backX-.061,1.58,z],[0,0,Math.PI/2]));
-  }
-  for(const z of [-.37,.37]){
-   bat(M.steel,[boxLen-.28,.045,.045],[boxX,3.01,z],[],.004);
-  }
-  for(let k=0;k<8;k++)bat(M.steel,[.05,.028,.79],[backX+.33+k*(boxLen-.42)/7,3.02,0],[],.003);
- }else{
-  // Rear step for medical crew, split rear doors and grab handles.
-  bat(M.steel,[.23,.09,width-.32],[backX-.04,.62,0]);
-  bat(M.dark,[.013,1.38,.018],[backX-.059,1.69,0]);
-  // RLH-inspired rear access: sealed two-leaf doors, glazed upper portholes and handle hardware.
-  for(const side of [-1,1]){
-   bat(M.steel,[.019,.31,.036],[backX-.058,1.75,side*.27]);
-   bat(M.dark,[.016,.35,width*.25],[backX-.060,2.05,side*width*.24],[],.007);
-   bat(M.glass,[.010,.29,width*.20],[backX-.071,2.05,side*width*.24],[],.007);
-   bat(M.steel,[.027,.13,.03],[backX-.079,1.50,side*.29],[],.004);
-   for(const yy of [1.20,2.28])bat(M.yellow,[.015,.034,width*.25],[backX-.072,yy,side*width*.25],[],.002);
-  }
- }
- // Rotating beacons are unlit, preserving historical deactivation in 2189.
- for(const z of [-.57,.57]){bat(M.dark,[.31,.10,.22],[cabX-.25,2.30,z],[],.015);bat(M.red,[.20,.065,.14],[cabX-.25,2.37,z],[],.012);}
- const meshes=parts.build(g,{name:'AEGIS / véhicules de secours détaillés'});
- for(const x of parts.items)x.geometry.dispose();parts.items.length=0;
- // A true two-line station ID, not an unreadable placeholder rectangle.
- if(signTexture){
-  const tex=signTexture(info.name);
-  const mat=new T.MeshStandardMaterial({map:tex,transparent:true,alphaTest:.04,roughness:.82,metalness:.04,side:T.DoubleSide});
-  const text=new T.Mesh(new T.PlaneGeometry(Math.min(2.5,boxLen*.63),.33),mat);
-  text.position.set(boxX,1.95,width*.5+.012);g.add(text);
-  const textBack=text.clone();textBack.position.z=-width*.5-.012;textBack.rotation.y=Math.PI;g.add(textBack);
- }
- g.userData.batchCount=meshes.length;
+  const colors=new Set([0xe9eef1,0x0062a5,0xdce719,0xc31b24]);body.traverse(o=>{if(o.isMesh&&colors.has(o.material?.color?.getHex()))painted.add(o.material);});
+  batchClosedBody(T,model.car);
+  for(const wheel of model.wheels)batchClosedBody(T,wheel.roll);
+ }else {for(const key of ['rouge','jaune','blanc','bandeJaune'])if(model.materials[key])painted.add(model.materials[key]);batchClosedBody(T,body);}
+ let seed=831;for(const mat of painted)wornPaint(T,mat,seed++,burnt);
+ body.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(body),size=bounds.getSize(new T.Vector3()),center=bounds.getCenter(new T.Vector3());
+ const scale=Math.min(length/size.x,width/size.z);const fit=new T.Group();fit.add(body);body.position.set(-center.x,-bounds.min.y,-center.z);fit.scale.setScalar(scale);
+ const g=new T.Group();g.name=info.name+' / RLH · peinture usée';g.add(fit);
+ g.userData.vehicle={kind,length,width,height:size.y*scale,role:info.role,revision:'RLH-original-worn-v1',source:kind==='vsav'?'RLH CMIA ambulance-model':'RLH CCRM Gallin V942',sourceCommit:'566da00',uniformScale:scale,paintWear:true};
+ let wheelSpin=0;g.userData.updateVehicle=(dt,state={})=>{wheelSpin-=(state.speed||0)*dt/.48;model.update?.(dt,{...state,wheelSpin});};
  return g;
 }

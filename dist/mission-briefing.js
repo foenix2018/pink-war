@@ -32,7 +32,7 @@ export const BRIEFINGS = Object.freeze({
   3: { title: 'Le Convoi des Oubliés', zone: 'Vesper // Secteur 03 · Archives A3', image: () => 'art/mission03-cover.svg?v=1',
     text: () => 'AEGIS prépare l’évacuation des prisonniers du Directoire. Escorte l’ambulance d’Inès de l’annexe médicale jusqu’à la gare de fret de l’Anneau logistique, avant qu’ORDRE ne verrouille la zone.',
     objectives: [['medic', 'Fouiller l’annexe médicale', 'Rallumer le courant et prendre les kits.'], ['doc', 'Récupérer le manifeste du convoi', 'Dans l’atelier de maintenance.'],
-      ['up', 'Rejoindre les archives A3', 'Accéder au niveau supérieur.'], ['target', 'Couper la balise d’ORDRE', 'Au pied du pylône, puis escorter l’ambulance jusqu’à la gare.']] },
+      ['up', 'Rejoindre les archives A3', 'Accéder au niveau supérieur.'], ['target', 'Couper la balise d’ORDRE', 'Depuis la borne du barrage, puis escorter l’ambulance jusqu’à la gare.']] },
   4: { title: 'Le Protocole Interdit', zone: 'Vesper // Station énergétique Est · JANUS', image: () => null,
     text: () => 'Avec la cellule AEGIS de Mara Voss, entre dans la station énergétique Est. Au-dessus du réacteur, une colonne violette : ORDRE y synchronise ses systèmes. Sous le portique dort une archive des anciens systèmes de secours.',
     objectives: [['door', 'Passer le sas d’inspection', 'Le badge du garde, puis la cour du réacteur.'], ['bolt', 'Réactiver les deux relais', 'Hangar de drones à l’ouest, atelier serveur à l’est.'],
