@@ -64,7 +64,7 @@ function signAtlas(T, labels) { return canvasTexture(T, 1024, 1024, g => drawSig
 // Window bays of the baked facades: the detailed city atlas (frames, mullions, blinds, lit interiors).
 function windowTextures(T, low = false) { return cityWindowAtlas(T, low ? 512 : 1024); }
 
-export function createSectorMeshes(T, sector, { quality = 'normal', tile = {}, webgpu = false } = {}) {
+export function createSectorMeshes(T, sector, { quality = 'normal', tile = {}, webgpu = false, drop = null } = {}) {
   const low = quality === 'low', group = new T.Group(); group.name = 'M03 / Vesper, secteur 03 (carte de visite cuite)';
   const loader = new T.TextureLoader(), textures = new Map();
   const tex = (url, srgb = true) => {
@@ -114,7 +114,7 @@ export function createSectorMeshes(T, sector, { quality = 'normal', tile = {}, w
   tubes.build();stats.neons=tubes.stats();
 
   function build(src, filter, material, { tile: t = 2, lift = 1, emissive = false, signsUv = false, dropEvery = 0 }) {
-    const idx = []; for (let i = 0; i < src.n; i++) if (!(src===sector.world&&replaced.has(i)) && filter(src.mat[i]) && !(dropEvery && i % dropEvery === 0)) idx.push(i);
+    const idx = []; for (let i = 0; i < src.n; i++) if (!(src===sector.world&&(replaced.has(i)||drop?.has(i))) && filter(src.mat[i]) && !(dropEvery && i % dropEvery === 0)) idx.push(i);
     if (!idx.length) return null;
     const P = new Float32Array(idx.length * 12), N = new Float32Array(idx.length * 12), C = new Float32Array(idx.length * 12), U = new Float32Array(idx.length * 8), I = new Uint32Array(idx.length * 6);
     const s = sector.meta.scale;

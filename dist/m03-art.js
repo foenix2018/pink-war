@@ -11,6 +11,7 @@ import {createLevelNeons} from './level-neons.js';
 import { INTERACTIONS, MOVABLE, VAN, areaAt } from './m03-layout.js';
 import { createSectorMeshes, neonSpots } from './m03-sector.js';
 import { createCyberCity } from './m03-city.js';
+import { classifySectorProps, createSectorProps } from './m03-props.js';
 import { createSignage, BLADES } from './signage.js';
 import {createCivilCar} from './civil-vehicle-detail.js';
 import {createFreightTruck} from './freight-truck-detail.js';
@@ -36,12 +37,26 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
   scene.fog = new T.FogExp2(0x0b1424, low ? .011 : .0095);
   const sky = new T.HemisphereLight(0x6680b0, 0x2a2024, 1.6); scene.add(sky);
   const moon = new T.DirectionalLight(0x9db6dc, 1.15); moon.position.set(-40, 70, 30); scene.add(moon);
+  // Reflected radiance for every metal and lacquer of the level (sector, objects, machines, weapons): night sky,
+  // a band of neon city light at the horizon, the glow of the wet street below. Without it metal reads black.
+  const reflection = canvasTexture(T, 512, 256, (c, w, h) => {
+    const g = c.createLinearGradient(0, 0, 0, h);
+    for (const [at, col] of [[0, '#0b1222'], [.32, '#1b2338'], [.44, '#3a3150'], [.5, '#5a4256'], [.56, '#2a2c3a'], [.75, '#1a1c24'], [1, '#121318']]) g.addColorStop(at, col);
+    c.fillStyle = g; c.fillRect(0, 0, w, h); const r = seeded(4401);
+    for (let i = 0; i < 260; i++) { const x = r() * w, y = h * (.36 + r() * .16), k = r(); c.globalAlpha = .25 + r() * .6; c.fillStyle = k > .7 ? '#ff4fa1' : k > .45 ? '#5fe0f0' : k > .25 ? '#ffb35c' : '#f2e2c0'; c.fillRect(x, y, 2 + r() * 8, 1 + r() * 4); }
+    c.globalAlpha = .5; for (let i = 0; i < 14; i++) { const x = r() * w, gg = c.createRadialGradient(x, h * .62, 0, x, h * .62, 30 + r() * 40); gg.addColorStop(0, ['#ff4fa1', '#5fe0f0', '#ffb35c'][i % 3]); gg.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gg; c.fillRect(x - 70, h * .5, 140, h * .3); }
+    c.globalAlpha = 1;
+  });
+  reflection.mapping = T.EquirectangularReflectionMapping; scene.environment = reflection; scene.environmentIntensity = low ? .5 : .7;
   // A starless, polluted sky dome with the glow of the city on the horizon.
   const skyTex = canvasTexture(T, 16, 256, (c, w, h) => { const g = c.createLinearGradient(0, 0, 0, h); for (const [a, col] of [[0, '#02040a'], [.55, '#0a1426'], [.78, '#2a1838'], [.9, '#4a2042'], [1, '#160d18']]) g.addColorStop(a, col); c.fillStyle = g; c.fillRect(0, 0, w, h); });
   const dome = new T.Mesh(new T.SphereGeometry(380, 24, 12), new T.MeshBasicMaterial({ map: skyTex, side: T.BackSide, fog: false, depthWrite: false })); dome.renderOrder = -1; add(dome);
 
   // ---------- The baked sector ----------
-  const sectorMeshes = createSectorMeshes(T, sector, { quality, webgpu }); root.add(sectorMeshes.group);
+  // Street and interior objects: the baked boxes are replaced by modelled objects (same footprint, same collisions).
+  let sectorProps = null, propList = { props: [], drop: null };
+  try { propList = classifySectorProps(sector.meta, sector.world); } catch (error) { console.warn('M03 / objets : classement impossible', error); }
+  const sectorMeshes = createSectorMeshes(T, sector, { quality, webgpu, drop: propList.drop }); root.add(sectorMeshes.group);
   const spots = neonSpots(sector, { max: low ? 90 : 200 });
 
   // ---------- Materials for what the mission adds ----------
@@ -60,7 +75,7 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
     galva: std(0xaeb8bf, .38, .75, { ...coat(.3, .3), map: tex('./assets/cc0/vesper-steel_diff_512.jpg', true, 2) }),
     paint: std(0xd9d9d2, .55, .2, { ...coat(.45, .3), map: tex('./assets/cc0/vesper-paint_diff_512.jpg', true, 2) }),
     dark: std(0x1a2028, .5, .6, coat(.25, .4)), black: std(0x0b0d10, .6, .3), rubber: std(0x111214, .9, 0), glass: std(0x6f8f9c, .05, .6, { transparent: true, opacity: .35 }),
-    white: std(0xe8ebee, .35, .25, coat(.6, .15)), red: std(0xb5161e, .4, .3, coat(.6, .15)), yellow: std(0xd9b021, .5, .2, coat(.5, .2)), rust: std(0x7a4a32, .8, .4), container: [std(0x23566e, .6, .45, coat(.35, .35)), std(0x8a2a22, .6, .45, coat(.35, .35)), std(0x3d6b3a, .6, .45, coat(.35, .35))],
+    white: std(0xe8ebee, .35, .25, coat(.6, .15)), red: std(0xb5161e, .4, .3, coat(.6, .15)), yellow: std(0xd9b021, .5, .2, coat(.5, .2)), rust: std(0x7a4a32, .8, .4), container: [0x5a8fae, 0xc0573f, 0x6f9f5f].map(c => std(c, .5, .18, { ...coat(.35, .35), map: tex('./assets/cc0/corrugated_iron_diff_512.jpg', true, 1), ...(low ? {} : { normalMap: tex('./assets/cc0/corrugated_iron_normal_512.jpg', false, 1), roughnessMap: tex('./assets/cc0/corrugated_iron_rough_512.jpg', false, 1) }) })),
     neonCyan: glow(0x5fe0f0), neonPink: glow(0xff4fa1), neonAmber: glow(0xffb35c), neonRed: glow(0xff2f45), neonWhite: glow(0xe8f6ff)
   };
   // Thick boxes get rounded edges (soft-pieces.js); thin strips stay plain.
@@ -402,6 +417,7 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
     for (const m of movable.values()) m.apply(0);
     neons.meshes();neons.build();
     // The city around and above the sector (towers, skybridges, traffic, reflections): visual only, no collision.
+    try { sectorProps = createSectorProps(T, root, propList.props, { low, rich }); stats.props = sectorProps.stats(); } catch (error) { console.warn('M03 / objets modélisés désactivés', error); }
     try { city = createCyberCity(T, root, { low, rich, advert: (name, o) => signs.advert(name, o), bounds: sector.meta.bounds }); stats.city = city.stats(); } catch (error) { console.warn('M03 / ville désactivée', error); city = null; }
   }
 

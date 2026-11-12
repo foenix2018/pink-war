@@ -37,7 +37,7 @@ test('chapter 03 gets the same WebGPU tier: baked sector and mission props, stan
  const gpu=kinds({webgpu:true}),gl=kinds({webgpu:false}),low=kinds({webgpu:true,quality:'low'});
  assert.ok(gpu.filter(m=>m.isMeshPhysicalMaterial).length>=6);assert.ok(gpu.some(m=>m.clearcoat>=1),'rain-wet road');assert.ok(gpu.some(m=>m.sheen>0),'cloth');
  assert.equal(gl.filter(m=>m.isMeshPhysicalMaterial).length,0);assert.equal(low.filter(m=>m.isMeshPhysicalMaterial).length,0);
- const art=read('m03-art.js');assert.match(art,/createSectorMeshes\(T, sector, \{ quality, webgpu \}\)/);assert.match(art,/const rich = webgpu && !low/);
+ const art=read('m03-art.js');assert.match(art,/createSectorMeshes\(T, sector, \{ quality, webgpu, drop: propList.drop \}\)/);assert.match(art,/const rich = webgpu && !low/);
  assert.match(read('niveau3.js'),/webgpu:!!renderer\.backend\?\.isWebGPUBackend/);
 });
 
