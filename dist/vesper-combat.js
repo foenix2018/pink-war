@@ -1,3 +1,4 @@
+import {applyFPSCameraMotion} from './fps-motion.js';
 import {rendererBackend,rendererLabel} from './renderer-policy.js';
 import {createElectricPortalSet} from './electric-portal.js';
 import {levelArrow,arrowGuidance} from './objective-arrow.js';
@@ -115,7 +116,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const torch=new T.SpotLight(0xffefd4,22,22,.38,.72,2);torch.target=torchTarget;camera.add(torch);
   const atmosphere=createVesperAtmosphere(T,scene,renderer,profile,{extraLights:[torch]});
   onProgress(.36,'Construction de Vesper');
-  const missionArt=createCampaignArt(T,scene,null,{quality:profile.phone||requestedQuality==='low'?'low':requestedQuality,photographic:true});
+  const missionArt=createCampaignArt(T,scene,null,{quality:profile.phone||requestedQuality==='low'?'low':requestedQuality,photographic:true,webgpu:!!renderer.backend?.isWebGPUBackend});
   missionArt.setVisible(true);
   const dressing=missionArt.dressing;
   const salvage=await createM01Salvage(T,missionArt.root,{performance:profile.phone||requestedQuality==='low'});
@@ -249,6 +250,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       gun.userData.animateHands?.(Number(held),.5,game.reloadRemaining>0?.8:0,dt);
     }
     if(rig)rig.model.root.visible=!s.free&&effectiveView()==='third';
+    if(effectiveView()==='fps')applyFPSCameraMotion(camera,game,{tracked:!!xr?.active,active:!s.free});
     camera.updateMatrixWorld(true);
   }
   function syncSoldier(dt,s){

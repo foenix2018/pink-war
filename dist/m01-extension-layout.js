@@ -1,3 +1,4 @@
+import {chapterCovers} from './fps-level-layout.js';
 // M01 « Le Dernier Signal » — extension of the existing quarter (bible §12 M01: « parcours déjà présent, à
 // enrichir sans le remplacer »). Two built areas outside the original fence, on free ground of the same arena:
 //  - CASERNE 07 (west strip): the rescue station the heroes served in before 2189. Prologue.
@@ -126,7 +127,7 @@ function props() {
   // Locker room: lockers, bench.
   add('lockers', -96.4, 69, .5, 4.2, 2.1); add('lockers', -91, 73.4, 4.2, .5, 2.1); add('bench', -91, 68.6, 2.4, .3, .45, 'wood');
   // Apparatus bay: ambulance (VSAV), pump engine (FPT), breathing-apparatus rack, hose rack, workbench.
-  add('vsav', -90, 90, 3.1, 1.25, 2.8, 'metal', { vehicle: 'vsav' }); add('fpt', -90.5, 81, 3.8, 1.35, 3.2, 'metal', { vehicle: 'fpt' });
+  add('vsav', -90, 90, 3.1, 1.25, 3.25, 'metal', { vehicle: 'vsav' }); add('fpt', -90.5, 81, 3.8, 1.35, 2.85, 'metal', { vehicle: 'fpt' });
   add('ari-rack', -96.4, 77.5, .45, 2.2, 2); add('hose-rack', -96.4, 93, .45, 2, 1.8); add('workbench', -86, 95.3, 2, .5, .95);
   // Forecourt planters.
   add('planter', 0.4, -65, 1, 1.5, .9, 'concrete'); add('planter', 11.6, -65, 1, 1.5, .9, 'concrete');
@@ -213,5 +214,5 @@ export const HOLD_WAVES = Object.freeze({ groupe: [[3, 'nid'], [16, 'nid2']], co
 // Collision world for an extension state: open doors are left out.
 export function extensionObstacles({ open = [] } = {}) {
   const openSet = new Set(open);
-  return [...walls(), ...props(), ...DOORS.filter(d => !d.open && !openSet.has(d.id)).map(doorCollider)].map(o => ({ ...o }));
+  return [...chapterCovers('m01'), ...walls(), ...props(), ...DOORS.filter(d => !d.open && !openSet.has(d.id)).map(doorCollider)].map(o => ({ ...o }));
 }

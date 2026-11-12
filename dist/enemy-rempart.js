@@ -1,3 +1,4 @@
+import {createImpactMotion} from './enemy-body-response.js';
 import * as T from './vendor/three.webgpu.min.js';
 import {reco1Assets} from './reco1-assets.js';
 import {createReco1Pose} from './reco1-pose.js';
@@ -80,11 +81,13 @@ export function createRempart({elite=false,environment=null,detail='high'}={}){
  const cannonBind=pose.bones.get('mixamorigRightForeArm').matrixWorld.clone().invert(),borePoint=new T.Vector3(...REMPART.cannonMuzzle).applyMatrix4(cannonBind),boreEnd=new T.Vector3(...REMPART.cannonMuzzle).add(new T.Vector3(0,0,1)).applyMatrix4(cannonBind);
  root.userData.muzzle=()=>{root.updateMatrixWorld(true);const m=pose.bones.get('mixamorigRightForeArm').matrixWorld,origin=borePoint.clone().applyMatrix4(m),end=boreEnd.clone().applyMatrix4(m);visual.localToWorld(origin);visual.localToWorld(end);return {origin,direction:end.sub(origin).normalize()};};
  let previous=null,px=0,pz=0,speed=0;
+ const impactMotion=createImpactMotion();
  root.userData.animate=(time,phase=0,moving=true,enemy={},simulationTime=time)=>{
   const elapsed=previous===null?0:Math.max(0,time-previous),dt=Math.min(.1,elapsed),x=enemy.x??root.position.x,z=enemy.z??root.position.z,dist=Math.hypot(x-px,z-pz);
   const measured=moving&&elapsed>0&&dist<2&&(enemy.stunnedUntil||0)<=simulationTime?Math.min(5,dist/elapsed):0;speed+=(measured-speed)*(1-Math.exp(-dt*18));if(measured<.01&&speed<.03)speed=0;previous=time;px=x;pz=z;
+  const impact=impactMotion.update(dt,simulationTime,enemy.hitImpulse);
   const alert=enemyAlertState(enemy,simulationTime);states.motion=speed>2.9?'run':speed>.06?'walk':'idle';states.aim=alert!=='idle';states.mode=alert==='engaged'?'attack':alert==='alert'?'search':'patrol';
-  pose.setPose({speed,guard:(enemy.combatPose||enemy.tactics?.state)==='guard'?1:0,coverCrouch:enemy.coverCrouch||0,aimPitch:T.MathUtils.clamp(enemy.aimPitch||0,REMPART.minPitch,REMPART.maxPitch),aimYaw:enemy.aimYaw||0,hitPulse:Math.max(0,1-(simulationTime-(enemy.hitAt??-99))/.22)});pose.update(dt,time,0);
+  pose.setPose({speed,guard:(enemy.combatPose||enemy.tactics?.state)==='guard'?1:0,coverCrouch:enemy.coverCrouch||0,aimPitch:T.MathUtils.clamp(enemy.aimPitch||0,REMPART.minPitch,REMPART.maxPitch),aimYaw:enemy.aimYaw||0,impact:enemy.hitImpulse?impact:null,hitPulse:enemy.hitImpulse?0:Math.max(0,1-(simulationTime-(enemy.hitAt??-99))/.22)});pose.update(dt,time,0);
   if(lastEnemy&&lastEnemy!==enemy)clearRempartWeaponMotion(lastEnemy,weaponOffset);
   lastEnemy=enemy;setRempartWeaponMotion(enemy,weaponOffset);
   materials.eye.color.setHex(ENEMY_OPTICS[alert]);root.userData.alertState=alert;root.userData.motionSpeed=speed;root.userData.nativeMotion=states.motion;

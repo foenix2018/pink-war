@@ -1,3 +1,7 @@
+import {inertialMove} from './locomotion.js';
+import {createFPSMotion} from './fps-motion.js';
+import {microSurfaceMaps} from './fps-environments.js';
+import {createWorldEffects} from './webgpu-world-fx.js';
 import {rendererLabel} from './renderer-policy.js';
 // PROTOTYPE — forêt des Sources (chapitre 07 « Mémoires locales », docs/pink-wars/SCENARIO_CH07_MEMOIRES_LOCALES.md).
 // Banc d'essai de performance, sans combat : un vallon de 200 × 200 m avec sous-bois, rivière et gué, moulin et
@@ -339,7 +343,7 @@ function terrainMesh(quality) {
   g.setAttribute('color', new T.BufferAttribute(c, 3)); g.computeVertexNormals();
   const m = new T.Mesh(g, new T.MeshStandardMaterial({ vertexColors: true, map: groundDetail(), roughness: .95 })); m.receiveShadow = true; m.name = 'terrain'; return m;
 }
-function riverMesh() {
+function riverMesh({webgpu=false,low=false}={}) {
   // Ribbon below the waterfall, a channel on the plateau; uv.y runs along the flow.
   const make = (z0, z1, width, step) => {
     const pos = [], uv = [], idx = []; let n = 0, along = 0, prev = null;
@@ -352,11 +356,12 @@ function riverMesh() {
     const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); return g;
   };
   const tex = waterTexture(false); tex.wrapS = tex.wrapT = T.RepeatWrapping;
-  const mat = new T.MeshStandardMaterial({ map: tex, color: 0x9fc4c8, emissive: 0x3a1c10, roughness: .1, metalness: .25, transparent: true, opacity: .88, depthWrite: false });
+  const fx=createWorldEffects(T,{webgpu,low});
+  const mat=webgpu?fx.water({color:0x729da6,opacity:.88,refraction:!low,normalMap:tex}):new T.MeshStandardMaterial({ map: tex, color: 0x9fc4c8, emissive: 0x3a1c10, roughness: .1, metalness: .25, transparent: true, opacity: .88, depthWrite: false });
   const group = new T.Group(); group.name = 'rivière';
   group.add(new T.Mesh(make(POOL.z - 2, HALF, 11, 1.5), mat), new T.Mesh(make(-HALF, CLIFF_Z - 4, 7, 2), mat));
   const pool = new T.Mesh(new T.CircleGeometry(POOL.r + 1.5, 40).rotateX(-Math.PI / 2), mat); pool.position.set(riverX(POOL.z), waterY(POOL.z) + .01, POOL.z); group.add(pool);
-  return { group, tex };
+  return { group, tex, fx };
 }
 function waterfall(scene, quality) {
   const xw = (riverX(CLIFF_Z - 6) + riverX(POOL.z)) / 2, top = waterY(CLIFF_Z - 6) + .2, bottom = waterY(POOL.z), h = top - bottom;
@@ -675,8 +680,9 @@ export async function boot() {
   const hemi = new T.HemisphereLight(0xb79ac4, 0x4a3a2a, 1.7); scene.add(hemi);
   const sun = new T.DirectionalLight(0xffa765, 3.1); sun.position.copy(SUN_DIR).multiplyScalar(120); scene.add(sun, sun.target);
   if (shadows) { sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 260 }); sun.shadow.bias = -.0006; }
-  scene.add(terrainMesh(quality));
-  const river = riverMesh(); scene.add(river.group);
+  const micro=microSurfaceMaps(T),terrain=terrainMesh(quality);terrain.material.normalMap=micro.normal;terrain.material.normalScale=new T.Vector2(.16,.16);scene.add(terrain);
+  const radiance=new Uint8Array(64*32*4);for(let y=0;y<32;y++)for(let x=0;x<64;x++){const i=(y*64+x)*4,k=y/31;radiance.set([Math.round(70+60*k),Math.round(91+9*k),Math.round(113-37*k),255],i);}const env=new T.DataTexture(radiance,64,32);env.colorSpace=T.SRGBColorSpace;env.mapping=T.EquirectangularReflectionMapping;env.needsUpdate=true;scene.environment=env;scene.environmentIntensity=.4;
+  const river = riverMesh({webgpu:backend==='WebGPU',low:quality==='low'}); scene.add(river.group);
   const fall = waterfall(scene, quality), colliders = [];
   ruins(scene, colliders); const grotte = cave(scene); sunbeams(scene);
   const relics = remnants(scene, colliders); skyline(scene); const drones = probes(scene), dust = motes(scene, quality === 'low' ? 120 : 260);
@@ -693,13 +699,14 @@ export async function boot() {
     vegetation(scene, 'feuillus', brd, [instanced(broadleaf(0), leaf, brd.length, { shadow: shadows }), instanced(broadleaf(1), leaf, brd.length, { shadow: shadows }), instanced(impostor(7.5, 8.5), imp('imp-broadleaf'), brd.length)], { near: 32, mid: 75, far: 260, radius: 4 }),
     vegetation(scene, 'fougères', world.ferns, [instanced(withUV([0, 1, 2, 3, 4, 5].map(i => new T.PlaneGeometry(1.4, 1.1).translate(0, .55, 0).rotateY(i * Math.PI / 3 + (i > 2 ? Math.PI : 0)))), plant('fern'), 3500), null, null], { near: 34, mid: 34, far: 34, radius: .7, fade: true }),
     vegetation(scene, 'herbes', world.grass, [instanced(withUV([0, 1, 2, 3].map(i => new T.PlaneGeometry(1.2, .7).translate(0, .35, 0).rotateY(i * Math.PI / 2))), plant('grass'), 6000), null, null], { near: 24, mid: 24, far: 24, radius: .4, fade: true }),
-    vegetation(scene, 'rochers', world.rocks, [instanced(rock(3, 3), new T.MeshStandardMaterial({ vertexColors: true, roughness: .95 }), world.rocks.length), instanced(rock(3, 1), new T.MeshStandardMaterial({ vertexColors: true, roughness: .95 }), world.rocks.length), null], { near: 50, mid: 160, far: 160, radius: 1.2 })
+    vegetation(scene, 'rochers', world.rocks, [instanced(rock(3, 3), new T.MeshStandardMaterial({ vertexColors: true, roughness: .95,normalMap:micro.normal,normalScale:new T.Vector2(.2,.2) }), world.rocks.length), instanced(rock(3, 1), new T.MeshStandardMaterial({ vertexColors: true, roughness: .95,normalMap:micro.normal,normalScale:new T.Vector2(.2,.2) }), world.rocks.length), null], { near: 50, mid: 160, far: 160, radius: 1.2 })
   ];
   // Trunks and rocks block the player (the stepping stones of the ford stay walkable).
   const trunks = new Map();
   for (const t of [...world.trees.map(t => ({ x: t.x, z: t.z, radius: .4 * t.s + .15 })), ...world.rocks.filter(r => !r.step && r.s > .55).map(r => ({ x: r.x, z: r.z, radius: .82 * r.s * Math.max(r.sx, r.sz) }))]) { const k = `${Math.floor(t.x / 6)},${Math.floor(t.z / 6)}`; (trunks.get(k) || trunks.set(k, []).get(k)).push(t); }
 
   // Player.
+  const planarVelocity={x:0,z:0},motion=createFPSMotion();let actualVelocity={x:0,z:0};
   const ctl = controls(canvas), player = { x: 6, z: 96, y: 0 }; ctl.look.yaw = 0;
    let terrainY=groundHeight(player.x,player.z),jumpOffset=0,jumpVelocity=0;
   const characterId = params.get('character') === 'lylu' ? 'lylu' : 'ghju', story = createStory(characterId, grotte.relay);
@@ -723,7 +730,7 @@ export async function boot() {
   let last = performance.now(), refresh = 0, fpsAcc = 0, fpsN = 0, fps = 0, time = 0;
   const hud = $('hud'), zone = $('zone');
   const stats = () => ({ backend, quality, fps: Math.round(fps), calls: renderer.info.render.drawCalls ?? renderer.info.render.calls, triangles: renderer.info.render.triangles,
-    instances: Object.fromEntries(kinds.map(k => [k.kind, k.visible])), total: Object.fromEntries(kinds.map(k => [k.kind, k.count])), zone: zoneAt(player.x, player.z), player: { ...player } });
+    fpsUpgrade:{inertia:true,water:river.fx.stats(),microSurfaces:true},instances: Object.fromEntries(kinds.map(k => [k.kind, k.visible])), total: Object.fromEntries(kinds.map(k => [k.kind, k.count])), zone: zoneAt(player.x, player.z), player: { ...player } });
   function frame(now) {
     const raw = now - last, dt = Math.min(.05, raw / 1000); last = now;
     if(gameplayHud.paused){requestAnimationFrame(frame);return;}
@@ -734,7 +741,7 @@ export async function boot() {
       if (u >= 1) { bench.done = true; const f = [...bench.frames].sort((a, b) => a - b); bench.result = { frames: f.length, avgMs: f.reduce((a, b) => a + b, 0) / f.length, p95Ms: f[Math.floor(f.length * .95)], ...stats(), calls: bench.maxCalls, triangles: bench.maxTris, avgTriangles: Math.round(bench.sumTris / bench.n), updateMs: bench.cpuUpdate / bench.n, renderMs: bench.cpuRender / bench.n }; }
     } else {
       const inp = ctl.input(), sp = (inp.run ? 7 : 3.6) * (Math.abs(player.x - riverX(player.z)) < 4 && player.z > CLIFF_Z ? .55 : 1);
-      const sin = Math.sin(ctl.look.yaw), cos = Math.cos(ctl.look.yaw), dx = (inp.x * cos + inp.z * sin) * sp * dt, dz = (-inp.x * sin + inp.z * cos) * sp * dt;
+      const sin = Math.sin(ctl.look.yaw), cos = Math.cos(ctl.look.yaw),previous={x:player.x,z:player.z},travel=inertialMove(planarVelocity,(inp.x*cos+inp.z*sin)*sp,(-inp.x*sin+inp.z*cos)*sp,dt,{grounded:jumpOffset<=.015}),dx=travel.x,dz=travel.z;
       const tryMove = (nx, nz) => {
         if (Math.abs(nx) > HALF - 1 || Math.abs(nz) > HALF - 1) return false;
         const inCave = nz < CLIFF_Z && caveDistance(nx, nz) < 2, gh = groundHeight(nx, nz);
@@ -743,6 +750,8 @@ export async function boot() {
         if (blockedBy(nx, nz, colliders, trunks)) return false; player.x = nx; player.z = nz; return true;
       };
       if (!tryMove(player.x + dx, player.z + dz)) { tryMove(player.x + dx, player.z); tryMove(player.x, player.z + dz); }
+      actualVelocity={x:(player.x-previous.x)/Math.max(dt,.001),z:(player.z-previous.z)/Math.max(dt,.001)};
+      if(Math.abs(player.x-previous.x)<Math.abs(dx)*.35)planarVelocity.x=0;if(Math.abs(player.z-previous.z)<Math.abs(dz)*.35)planarVelocity.z=0;
     }
     const gy = groundHeight(player.x, player.z), wy = Math.abs(player.x - riverX(player.z)) < 6 ? waterY(player.z) - .45 : -1e9;
     terrainY=lerp(terrainY,Math.max(gy,wy),Math.min(1,dt*12));
@@ -755,6 +764,8 @@ export async function boot() {
     }
     player.y=terrainY+jumpOffset;
     camera.position.set(player.x, player.y + 1.65, player.z); camera.rotation.set(ctl.look.pitch, ctl.look.yaw, 0, 'YXZ');
+    if(!bench){const pose=motion.update({time,dt,velocity:actualVelocity,yaw:ctl.look.yaw,pitch:ctl.look.pitch,grounded:jumpOffset<=.015,verticalSpeed:jumpVelocity});camera.position.y+=pose.cameraY;camera.rotation.z+=pose.cameraRoll;}
+    river.fx.update(time,camera.position);
     skyDome.position.copy(camera.position);
     camera.updateMatrixWorld();
     // Culling uses a wider view than the screen, and is redone as soon as the view turns or moves: nothing pops at the edges.

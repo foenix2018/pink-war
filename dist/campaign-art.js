@@ -1,3 +1,4 @@
+import {createFPSChapter} from './fps-environments.js';
 import {createStairHardware} from './stair-hardware.js';
 import {replaceBakedNeonMesh} from './baked-neons.js';
 import {createLevelNeons} from './level-neons.js';
@@ -25,7 +26,7 @@ import {FENCE_GAPS} from './m01-extension-layout.js';
 
 // Independent Blender-built map. Geometry is bundled locally, including in the
 // standalone HTML: no CDN, GLTF loader or late asset request is needed to play.
-export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=false}={}){
+export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=false,webgpu=false}={}){
  const root=new T.Group();root.name='VESPER / SECOURS 07 — carte narrative Blender';root.visible=false;scene.add(root);
  const obstacles=createLevel1Obstacles(),geometries=[],materials=[],textures=[],screens=[],routes=[],terminalDisplays=[],mountedInfoPanels=[];
  let stage='approach',lastState='',disposed=false,currentObjective=null;
@@ -144,8 +145,9 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
  box(maps.steel,lift.x,-.10,lift.z,6,.20,6,carriage);
  for(const side of [-1,1]){box(maps.steel,lift.x+side*2.92,.55,lift.z,.10,1.1,6,carriage);box(maps.amber,lift.x+side*2.9,1.07,lift.z,.045,.07,5.9,carriage);}
  const neons=createLevelNeons(T,root,{low:quality==='low',metal:maps.steel,back:maps.dark,materials:[maps.amber]});const bakedAmber=root.getObjectByName('Blender / amber');if(bakedAmber)replaceBakedNeonMesh(bakedAmber,neons);neons.meshes();neons.build();
+ const fpsChapter=createFPSChapter(T,root,{chapter:'m01',obstacles,areas:LEVEL1_MAP.buildings.map(([x,z,w,d,h],i)=>({id:String(i),label:'QUARTIER / BÂTIMENT '+String(i+1).padStart(2,'0'),x1:x-w/2,x2:x+w/2,z1:z-d/2,z2:z+d/2,roof:h})),low:quality==='low',webgpu,details:true});
  function updateLift(time){if(root.visible)carriage.position.y=liftHeightAt(lift,time);}
- function update(game,time=0){const s=game?.campaign;if(!s||!root.visible)return;stage=s.stage;currentObjective=s.objective;story.update(game);systems.update(game,time);courtyard.update(game);workshop.update(game);rlh.update(game);powerSwitch.setState(!['approach','power'].includes(stage));updateLift(game.time);boundary.update({...game.player,y:game.player.elevation+1.65},.55,1.2);
+ function update(game,time=0){const s=game?.campaign;if(!s||!root.visible)return;stage=s.stage;currentObjective=s.objective;fpsChapter.update(time,1/60,{x:game.player.x,y:(game.player.elevation||0)+1.65,z:game.player.z});story.update(game);systems.update(game,time);courtyard.update(game);workshop.update(game);rlh.update(game);powerSwitch.setState(!['approach','power'].includes(stage));updateLift(game.time);boundary.update({...game.player,y:game.player.elevation+1.65},.55,1.2);
   const key=[stage,s.sibling,s.objective?.id,...s.archive].join('|');if(key!==lastState){lastState=key;const powered=!['approach','power'].includes(stage);computers.setPowered(powered);for(const screen of terminalDisplays)screen.material.color.setScalar(powered?.72:.30);investigation.mesh.material.color.setScalar(s.workshopReleased?.72:.20);
    power.paint(stage==='approach'?['DÉPARTS NON ISOLÉS','CONVOI / AILE TECHNIQUE']:stage==='power'?['Courant coupé. Réarmer le circuit.','F / clic du stick libre : interagir']:['CIRCUIT LOCAL : ACTIF','Réseau ORDRE : DÉCONNECTÉ']);
    archive.paint(['approach','power'].includes(stage)?['Mémoire hors tension.','Boîtier de secours à gauche.']:stage==='archive'?['Journal humain retrouvé.','F / clic du stick libre : lire']:s.archive);
@@ -159,8 +161,8 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
   marker.visible=!!s.objective;if(s.objective){const p=s.objective.position;marker.position.set(p.x,p.y+3.2+Math.sin(time*2)*.05,p.z);marker.rotation.y=time*.5;}
  }
  function setVisible(enabled){root.visible=!!enabled;lastState='';if(enabled)pbr.start();}
- function stats(){return{neons:neons.stats(),visible:root.visible,contactOcclusion:contactOcclusion.stats(),courtyard:courtyard.stats(),workshop:workshop.stats(),ceilings:ceilings.stats(),rlh:rlh.stats(),computers:computers.stats(),systems:systems.stats(),story:story.stats(),stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:5,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:3,boundary:boundary.stats(),pbr:pbr.stats()};}
- function dispose(){if(disposed)return;disposed=true;stairDetails.forEach(s=>s.dispose());neons.dispose();contactOcclusion.dispose();pbr.dispose();powerSwitch.dispose();computers.dispose();dressing?.dispose();boundary.dispose();story.dispose();systems.dispose();courtyard.dispose();workshop.dispose();ceilings.dispose();rlh.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();for(const board of mountedInfoPanels)board.userData.dispose?.();root.clear();}
+ function stats(){return{fps:fpsChapter.stats(),neons:neons.stats(),visible:root.visible,contactOcclusion:contactOcclusion.stats(),courtyard:courtyard.stats(),workshop:workshop.stats(),ceilings:ceilings.stats(),rlh:rlh.stats(),computers:computers.stats(),systems:systems.stats(),story:story.stats(),stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:5,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:3,boundary:boundary.stats(),pbr:pbr.stats()};}
+ function dispose(){if(disposed)return;disposed=true;fpsChapter.dispose();stairDetails.forEach(s=>s.dispose());neons.dispose();contactOcclusion.dispose();pbr.dispose();powerSwitch.dispose();computers.dispose();dressing?.dispose();boundary.dispose();story.dispose();systems.dispose();courtyard.dispose();workshop.dispose();ceilings.dispose();rlh.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();for(const board of mountedInfoPanels)board.userData.dispose?.();root.clear();}
 
  return{root,obstacles,update,setVisible,stats,dispose,updateLift,ready,materials:maps,dressing};
 }

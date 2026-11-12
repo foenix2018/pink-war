@@ -11,12 +11,13 @@ export function writeM01Checkpoint(game,storage){
  const s={version:3,savedAt:Date.now(),characterId:game.characterId,stage:game.stage,kills:game.kills,
   investigationRead:game.investigationRead,sabotaged:game.sabotaged,circuitIsolated:game.circuitIsolated,circuitRoute:game.circuitRoute,spawned:game.spawned,shield:game.player.shield,charges:game.charges,
   weaponIndex:game.weaponIndex,owned:[...game.ownedWeapons],ammo:[...game.ammo],dualAmmo:{...game.dual.ammo},health:Math.max(1,game.player.hp)};
- try{(storage||globalThis.localStorage).setItem(KEY+game.characterId,JSON.stringify(s));return true;}catch{return false;}
+ try{(storage||globalThis.localStorage).setItem(KEY+game.characterId,JSON.stringify(s));game.checkpointPosition={...POINTS[s.stage],id:s.stage};return true;}catch{return false;}
 }
 export function restoreM01Checkpoint(game,s){
  if(!s||![1,2,3].includes(s.version)||s.version===1&&!['investigation','sabotage','exit'].includes(s.stage)||s.characterId!==game.characterId||!STAGES.has(s.stage))return false;
  // An old shop save precedes the west encounter: resume at its new approach.
  if(s.version<3&&s.stage==='investigation')s={...s,stage:'workshop'};
+game.planarVelocity={x:0,z:0};game.playerVelocity={x:0,y:0,z:0};
  game.workshopReleased=['investigation','sabotage','exit'].includes(s.stage);
  game.enemies=[];game.openingActivated=true;game.openingSpawned=8;game.circuitIsolated=true;game.circuitRoute=['isolate-convoy','isolate-service'].includes(s.circuitRoute)?s.circuitRoute:null;game.powerAlarm=s.stage!=='power';game.preArchiveLimit=4;game.courtyardPending=false;game.archiveRead=!['power','archive'].includes(s.stage);game.investigationRead=!!s.investigationRead;game.sabotaged=!!s.sabotaged;
  game.encounter=['power','archive','workshop'].includes(s.stage)?0:['investigation','sabotage'].includes(s.stage)?1:2;game.spawned=s.stage==='power'?0:s.stage==='archive'?4:8;game.toSpawn=0;game.nextSpawnAt=Infinity;game.activePortals=[];
@@ -27,7 +28,7 @@ export function restoreM01Checkpoint(game,s){
  game.restoreDualAmmo(s.dualAmmo);
  if(s.version>=2){if(Number.isFinite(s.shield))game.player.shield=Math.max(0,Math.min(game.shieldCapacity||60,s.shield));if(Number.isFinite(s.charges))game.charges=Math.max(0,Math.min(CHARGE_MAX,s.charges));}
  if(game.characterId==='ghju'&&s.weaponIndex===0&&!s.owned?.includes(7))game.weaponIndex=7;
- game.setStage(s.stage);
+ game.setStage(s.stage);game.checkpointPosition={...POINTS[s.stage],id:s.stage};
  if(['workshop','investigation'].includes(s.stage)&&!game.ownedWeapons.has(1))game.offerWeapon(1);
  if(s.stage==='sabotage'&&!game.ownedWeapons.has(2))game.offerWeapon(2);
  return true;

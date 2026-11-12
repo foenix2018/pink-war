@@ -2008,7 +2008,7 @@ async function boot(){try{
  if(!referenceVisit){
   const {createPauseMenu}=await import('./fracture-menu.js?v=3.74.0');
   missionMenu=createPauseMenu({title:'HISTOIRE / LE DERNIER SIGNAL',canOpen:()=>started,settingsSelectors:['#controlsPanel','#audioToggle'],view:{getView:()=>combatWorld?.view||'fps',onSelect:next=>{isFree=false;combatWorld?.setView(next);},canChange:()=>!!combatWorld?.viewReady},onPause(){gamePaused=true;combatWorld?.pause();keys.clear();firing=false;isAiming=false;},onResume:resumeMission,onVR:()=>combatWorld?.enterVR(),onHome:async()=>{await combatWorld?.exitVR();location.assign('./index.html');}});missionMenu.setVisible(false);
-  const {createVesperCombat}=await import('./vesper-combat.js?v=20261107-native-world-fx-v3');missionLoading?.set(.16,'Ressources du secteur chargées');
+  const {createVesperCombat}=await import('./vesper-combat.js?v=3.80.0');missionLoading?.set(.16,'Ressources du secteur chargées');
   let renderFailed=false;
   const fail=error=>{
    console.warn('Vesper / échec du rendu, repli compatible :',error);

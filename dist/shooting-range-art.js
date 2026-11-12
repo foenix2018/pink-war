@@ -1,3 +1,4 @@
+import {createFPSChapter} from './fps-environments.js';
 import {createIndustrialLightBatch} from './industrial-light.js';
 import {createModernSwitch,switchVariant} from './modern-switch.js';
 import {createNeonFixtures} from './neon-fixtures.js';
@@ -427,7 +428,9 @@ export function createShootingRangeArt(T,scene,options={}){
     const item={carrier,target,pole,foot,hinge,marked:false,track:null};
     targetGroups.set(id,item);return item;
   }
+  const fpsChapter=createFPSChapter(T,root,{chapter:'range',obstacles,areas:[{id:'armurerie',label:'ARMURERIE / CONFIGURATION',x1:-16,x2:16,z1:24,z2:40},{id:'pas-de-tir',label:'STAND / LIGNES DE TIR',x1:-16,x2:16,z1:-48,z2:24}],low:!!options.low,details:false});
   function update(sim){
+    fpsChapter.update(sim?.time||0,1/60,{x:sim?.player?.x||0,y:1.65,z:sim?.player?.z||0});
     siege.update(sim?.time||0,sim);
     for(const control of controlGroups)control.setState(!!sim?.trainingActive);
     if(!sim?.targets){for(const item of targetGroups.values())releaseTarget(item);targetGroups.clear();return;}
@@ -466,6 +469,7 @@ export function createShootingRangeArt(T,scene,options={}){
     for(const [id,item] of targetGroups)if(!existing.has(id)){releaseTarget(item);targetGroups.delete(id);}
   }
   function dispose(){
+    fpsChapter.dispose();
     rackFixture?.dispose();controlGroups.forEach(control=>control.dispose());neons.dispose();surfaces.dispose();siege.dispose();outlineMat.dispose();hoverGeometry.dispose();armoryHover.material.dispose();
     clearArmoryModels();displayModels.removeFromParent();shadows.dispose();pbr.dispose();for(const item of targetGroups.values())releaseTarget(item);
     targetGroups.clear();for(const sign of signs){sign.panel.removeFromParent();if(sign.glass)sign.panel.userData.dispose?.();else{sign.panel.geometry.dispose();sign.material.dispose();sign.texture.dispose();}}
@@ -473,5 +477,5 @@ export function createShootingRangeArt(T,scene,options={}){
     root.traverse(node=>{if(node.isMesh&&!hardwareGeos.includes(node.geometry)&&node.geometry!==circle)node.geometry.dispose();});
     circle.dispose();hardwareGeos.forEach(g=>g.dispose());Object.values(mats).forEach(m=>m.dispose());textures.forEach(t=>t?.dispose());
   }
-  return {root,obstacles,update,dispose,shadows,setArmoryModels,setArmoryHover,enableMaterials:()=>Promise.all([pbr.enable(),surfaces.enable()]),get ready(){return Promise.all([pbr.ready,surfaces.ready]);},stats:()=>({...pbr.stats(),surfaces:surfaces.stats(),neons:neons.stats(),ambiance:siege.stats(),shadows:shadows.stats(),armoryModels:displayModels.children.filter(s=>s.children.length).length}),get targetCount(){return targetGroups.size;}};
+  return {root,obstacles,update,dispose,shadows,setArmoryModels,setArmoryHover,enableMaterials:()=>Promise.all([pbr.enable(),surfaces.enable()]),get ready(){return Promise.all([pbr.ready,surfaces.ready]);},stats:()=>({fps:fpsChapter.stats(),...pbr.stats(),surfaces:surfaces.stats(),neons:neons.stats(),ambiance:siege.stats(),shadows:shadows.stats(),armoryModels:displayModels.children.filter(s=>s.children.length).length}),get targetCount(){return targetGroups.size;}};
 }

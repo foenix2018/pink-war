@@ -11,7 +11,7 @@ import {M03_STEPS} from '../dist/mission3-visit.js';
 const read=path=>readFileSync(new URL('../dist/'+path,import.meta.url),'utf8');
 const meta=JSON.parse(read('assets/m03/vesper-sector.json'));
 const bin=readFileSync(new URL('../dist/assets/m03/vesper-sector.bin',import.meta.url));
-const inside=(o,x,z,y=0,r=.6,h=1.8)=>Math.abs(x-o.x)<o.hx+r&&Math.abs(z-o.z)<o.hz+r&&y<(o.y||0)+o.height-.02&&y+h>(o.y||0);
+const inside=(o,x,z,y=0,r=.6,h=1.8)=>!o.walkableSurface&&Math.abs(x-o.x)<o.hx+r&&Math.abs(z-o.z)<o.hz+r&&y<(o.y||0)+o.height-.02&&y+h>(o.y||0);
 const world=(open=[])=>sectorObstacles(meta,[...L.extraObstacles({open}),...L.CHECKPOINT_POSTS]);
 function mission(characterId='ghju',choice='escort'){
   const traversal=sectorTraversal(meta),base=sectorObstacles(meta);
@@ -36,7 +36,7 @@ test('the baked Vesper sector decodes, stays in the arena and keeps the first ve
   // The first version’s steps: annex archive, workshop manifest, A3 relay (high), ORDRE beacon at the fracture.
   const near=(id,step)=>{const it=L.INTERACTIONS.find(i=>i.id===id);return Math.hypot(it.x-step.x,it.z-step.z)<8;};
   assert.ok(near('dossier',M03_STEPS[0])&&near('manifeste',M03_STEPS[1])&&near('relais',M03_STEPS[2]));
-  assert.equal(L.INTERACTIONS.find(i=>i.id==='relais').y>4,true);assert.ok(Math.abs(L.INTERACTIONS.find(i=>i.id==='balise').z-M03_STEPS[3].z)<8);
+  assert.equal(L.INTERACTIONS.find(i=>i.id==='relais').y>4,true);assert.ok(Math.hypot(L.INTERACTIONS.find(i=>i.id==='balise').x,L.INTERACTIONS.find(i=>i.id==='balise').z+34)<9,'the pylon uplink is controlled locally at the barrage');
 });
 
 test('interactions, caches, machines and the van route stand clear; every place is reachable, the A3 deck by its stairway',()=>{

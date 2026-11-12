@@ -1,3 +1,4 @@
+import {createFPSChapter} from './fps-environments.js';
 import {createDispensaryDetails} from './dispensary-details.js';
 import {createLightShafts} from './light-shafts.js';
 import {createWorldEffects} from './webgpu-world-fx.js';
@@ -37,6 +38,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
   const low = quality === 'low', rng = seeded(2202), worldFx=createWorldEffects(T,{webgpu,low});
   const root = new T.Group(); root.name = 'M02 / enclave du marché et tour de transit'; scene.add(root);
   const details = createVesperProps(T, root, {low});
+  let fpsChapter=null;
   const animated = [], stats = { meshes: 0, instances: 0, textures: 0, fixtures: 0 };
   const add = (o, parent = root) => { parent.add(o); stats.meshes++; return o; };
 
@@ -322,6 +324,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
   const clinic=createDispensaryDetails(T,root,{M,low});
   const helixLogo = (bg = null) => signTex(['DIRECTOIRE', 'SÉCURITÉ'], { bg, fg: '#ff2f45', w: 512, h: 256 });
   function dress(o) {
+    if(o.kind==='fps-cover')return;
     if(roomAt(o.x,o.z)==='dispensaire'&&['bed','cabinet','desk'].includes(o.kind)){clinic[o.kind](o);return;}
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, h = o.height;
     // Reuse physically distinct functional props across the whole game.
@@ -596,8 +599,10 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       for (const o of obstacles) if (o.extension) { dress(o); details.accessories(o); }
       buildFixtureMeshes(); buildDoors(); buildDevices(obstacles); buildSigns(); buildCyber();
       neons.meshes(); neons.build(); flushGeometry(); flushPieces(); details.finish(); livedIn.build(obstacles); life.build();clinic.finish();
+      fpsChapter=createFPSChapter(T,root,{chapter:'m02',obstacles:obstacles,areas:ROOMS,low,webgpu,worldFx});
     },
     update(t, dt, eye, player = eye.position, { crank = false } = {}) {
+      fpsChapter?.update(t,dt,eye.position);
       worldFx.update(t,eye.position);updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt, crank);
       // Volumetric light and dust under the big fixtures (built once the fixtures exist).
       if (shafts === undefined) { try { shafts = createLightShafts(T, root, fixtures.filter(f => ['bulb','highbay','panel'].includes(f.kind)).map(f => ({ x: f.x, y: f.y - .25, z: f.z, color: f.color.getHex() })), { low }); } catch (error) { shafts = null; console.warn('light shafts skipped', error); } }
@@ -628,6 +633,6 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     setPower(zone, on) { power[zone] = !!on; },
     markDone(id, done = true) { const d = devices.get(id); if (d) { d.done = done; if (!done) { d.turn = 0; if (d.moving) d.moving.rotation.set(0, 0, 0); } } },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
-    stats() { return { ...stats, neons:neons.stats(), details: details.stats(), livedIn: livedIn.stats(), life: life.stats(), worldEffects:worldFx.stats(), power: { ...power }, shelter: +shelter.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, fps:fpsChapter?.stats(), neons:neons.stats(), details: details.stats(), livedIn: livedIn.stats(), life: life.stats(), worldEffects:worldFx.stats(), power: { ...power }, shelter: +shelter.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }

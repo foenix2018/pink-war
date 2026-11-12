@@ -1,3 +1,7 @@
+import {describeEnemyImpact} from './enemy-body-response.js';
+import {searchContactOrder,pendingMeleeOrder,updateMeleeIntent,prepareHostileShot} from './enemy-engagement.js';
+import {turnEnemy,steerEnemyTravel} from './enemy-motion.js';
+import {inertialMove} from './locomotion.js';
 import {ensureEnemyBubble,shieldFacesSource,tracePlayerShield,traceEnemyShield,playerShieldFrame,enemyShieldFrame} from './projected-shield-logic.js';
 import {createArenaTurrets,fortressWaveUnit,turretHitbox,damageDefenseTurret,updateArenaTurrets} from './arena-defense.js';
 import {isReco1,RECO1_HIT_ZONES,reco1ProjectileScale} from './reco1-profile.js';
@@ -138,6 +142,19 @@ export function segmentBox(start, end, box) {
     else { const a = (min - start[axis]) / d, b = (max - start[axis]) / d; lo = Math.max(lo, Math.min(a, b)); hi = Math.min(hi, Math.max(a, b)); if (lo > hi) return null; }
   }
   return lo >= 0 && lo <= 1 ? lo : null;
+}
+
+// An arm or a long barrel may extend beyond nearby cover. Always start a shot on
+// the player's side of the nearest wall, in every mission and in WebXR.
+export function clipMuzzleOrigin(player, muzzle, obstacles) {
+  const eye={x:player.x,y:(player.elevation||0)+(player.crouched?.95:1.55),z:player.z};
+  const distance=Math.hypot(muzzle.x-eye.x,muzzle.y-eye.y,muzzle.z-eye.z);
+  // Far-away origins belong to turrets / companion / simulation shots, not the held weapon.
+  if(distance>3.5||distance<1e-6)return {...muzzle};
+  let nearest=1;
+  for(const box of obstacles){const t=segmentBox(eye,muzzle,box);if(t!==null)nearest=Math.min(nearest,t);}
+  const t=Math.max(0,nearest-(nearest<1?.035/distance:0));
+  return {x:eye.x+(muzzle.x-eye.x)*t,y:eye.y+(muzzle.y-eye.y)*t,z:eye.z+(muzzle.z-eye.z)*t};
 }
 
 export function moveInArena(entity, dx, dz, radius, obstacles) {
@@ -301,11 +318,12 @@ export class ArenaGame {
     this.searchFields=new Map();
   }
   reset(characterId=this.characterId||'ghju') {
+    this.checkpointPosition=null;
     this.companionAmplifyUntil=0;this.companionHazards=[];this.companionWard=null;
     this.searchFields=new Map();
     this.navigation.refreshAt = -1; this.navigation.goal = -1;
     this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0, verticalSpeed: 0, grounded: true, jumpHeld: false, crouched:false,airJumps:0,jumpImpulseX:0,jumpImpulseZ:0,lastGroundedAt:0 };
-    this.playerVelocity={x:0,y:0,z:0};
+    this.playerVelocity={x:0,y:0,z:0};this.planarVelocity={x:0,z:0};
     this.bladePrevious=null;this.bladeHitTimes=new Map();this.bladeSlashAt=-99;this.bladeSlashSide=1;this.bladeSpeed=0;this.bladeGuard=false;this.bladeHumAt=0;
     this.enemies = []; this.bullets = []; this.events = [];
     this.turrets=this.fortressArena?createArenaTurrets():[];
@@ -548,6 +566,7 @@ export class ArenaGame {
     if(!origin||!direction||![origin.x,origin.y,origin.z,direction.x,direction.y,direction.z].every(Number.isFinite))return false;
     const length = Math.hypot(direction.x, direction.y, direction.z);
     if (length < .001) return false;
+    origin=clipMuzzleOrigin(this.player,origin,this.obstacles);
     const bulletId=this.nextId;
     const w = this.weapon, power = w.chargeTime ? .3 + .7 * clamp(charge, 0, 1) : 1;
     const nx = direction.x / length, ny = direction.y / length, nz = direction.z / length;
@@ -684,6 +703,7 @@ export class ArenaGame {
     if(zone==='rotor'&&rotorResult?.destroyed)target.limpUntil=Math.max(target.limpUntil||0,this.time+1);
     if(zone==='limb')target.limpUntil=Math.max(target.limpUntil||0,this.time+2);
     if(zone==='head')target.stunnedUntil=Math.max(target.stunnedUntil||0,this.time+.32);
+    target.hitImpulse=describeEnemyImpact(target,at,source,scaled,this.time);if(target.hitImpulse)target.hitSide=target.hitImpulse.side;
     target.hitAt=this.time;target.hitZone=zone;target.suppressedUntil=this.time+1.6;
     this.event('hit', { id: target.id, zone, damage:scaled,playerSource:!source?.companion,shielded:(target.damageScale??1)<1 });
     if (target.hp <= 0) {
@@ -738,8 +758,8 @@ export class ArenaGame {
     p.jumpHeld = jumpDown;
     const speed = p.crouched ? 3.0 : input.sprint ? 10 : 7, moveYaw = input.moveYaw ?? yaw;
     const oldX=p.x,oldZ=p.z,oldY=p.elevation,wasGrounded=p.grounded;
-    const dx=(Math.cos(moveYaw)*ix+Math.sin(moveYaw)*iz)*speed*dt,
-      dz=(-Math.sin(moveYaw)*ix+Math.cos(moveYaw)*iz)*speed*dt;
+    const travel=inertialMove(this.planarVelocity,(Math.cos(moveYaw)*ix+Math.sin(moveYaw)*iz)*speed,(-Math.sin(moveYaw)*ix+Math.cos(moveYaw)*iz)*speed,dt,{grounded:p.grounded,crouched:p.crouched});
+    const dx=travel.x,dz=travel.z;
     // Fine treads must be sampled along the whole move, including sprint at low FPS.
     // Subdivide locomotion and gravity together; AI, firing and mission time still tick once.
     const impulseX=(p.jumpImpulseX||0)*dt,impulseZ=(p.jumpImpulseZ||0)*dt;
@@ -751,6 +771,10 @@ export class ArenaGame {
     }
     if(impulseX||impulseZ){p.jumpImpulseX*=Math.exp(-dt*5);p.jumpImpulseZ*=Math.exp(-dt*5);}
     if(p.grounded){p.airJumps=0;p.jumpImpulseX=p.jumpImpulseZ=0;p.lastGroundedAt=this.time;}
+    // Stop storing momentum into a blocked face; sliding along its other axis remains free.
+    if(Math.abs(p.x-oldX)<Math.abs(dx)*.35)this.planarVelocity.x=0;
+    if(Math.abs(p.z-oldZ)<Math.abs(dz)*.35)this.planarVelocity.z=0;
+    this.movement={sprint:!!input.sprint,aiming:!!this.aimingPrecision,grounded:p.grounded};
     if(dt>0)this.playerVelocity={x:(p.x-oldX)/dt,y:(p.elevation-oldY)/dt,z:(p.z-oldZ)/dt};
     if(!wasGrounded&&p.grounded)this.emitNoise('land',NOISE_RADIUS.land);
     if(p.grounded){
@@ -866,7 +890,8 @@ export class ArenaGame {
       relayVisualContact(e,tacticContext);
       specialistVisualRelay(e,tacticContext);
       // Grenade avoidance and survival retain priority over specialist tactics.
-      const order=!stairRoute?(grenadeAvoidance(e,tacticContext)||individualCombatOrder(e,tacticContext)||specialistCombatOrder(e,tacticContext)||tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext)||this.sectorOrder?.(e,tacticContext)):null;
+      const coverFirst=(e.suppressedUntil||0)>this.time||!!e.tactics?.cover;
+      const order=!stairRoute?(grenadeAvoidance(e,tacticContext)||individualCombatOrder(e,tacticContext)||pendingMeleeOrder(e,this.time)||searchContactOrder(e,tacticContext)||(coverFirst?(tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext)):null)||specialistCombatOrder(e,tacticContext)||tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext)||this.sectorOrder?.(e,tacticContext)):null;
       e.combatPose=order?.state||'advance';
       e.coverCrouch=((e.coverCrouch||0)+((order?.crouchAmount??Number(!!order?.crouched))-(e.coverCrouch||0))*(1-Math.exp(-dt*12)));
       if(order){destinationX=order.point.x;destinationZ=order.point.z;}
@@ -896,30 +921,37 @@ export class ArenaGame {
       }
       const norm=Math.hypot(dx,dz)||1;
       const stopDistance=order?order.stopDistance:stairRoute?.15:slot?.3:e.awareness==='engaged' ? (e.ranged?14:1.45) : e.awareness==='search'?1.8:.7;
-      if((goalDistance>stopDistance||retreat)&&(e.stunnedUntil||0)<=this.time){
-        const injury=(e.limpUntil>this.time?.62:1)*(order?.speedScale??1);
-        const searchSpeed=retreat?.8:e.awareness==='engaged'?1:e.awareness==='search'?.75:.48;
-        moveInArena(e,dx/norm*e.speed*dt*injury*searchSpeed,dz/norm*e.speed*dt*injury*searchSpeed,e.radius,this.obstacles);
-      }
+      const walking=(goalDistance>stopDistance||retreat)&&(e.stunnedUntil||0)<=this.time&&(order?.speedScale??1)>0;
+      const injury=(e.limpUntil>this.time?.62:1)*(order?.speedScale??1),searchSpeed=retreat?.8:e.awareness==='engaged'?1:e.awareness==='search'?.75:.48;
+      const travel=steerEnemyTravel(e,walking?dx/norm*e.speed*injury*searchSpeed:0,walking?dz/norm*e.speed*injury*searchSpeed:0,dt,{stop:!walking});
+      moveInArena(e,travel.x,travel.z,e.radius,this.obstacles);
+      if(Math.abs(e.x-motionOrigin.x)<Math.abs(travel.x)*.35)e.travelVelocity.x=0;
+      if(Math.abs(e.z-motionOrigin.z)<Math.abs(travel.z)*.35)e.travelVelocity.z=0;
       this.settle(e,dt);
-      if(order)e.yaw=order.yaw??(Math.atan2(e.lastKnownX-e.x,e.lastKnownZ-e.z)+Math.PI);
-      else if(e.ranged&&seen)e.yaw=Math.atan2(this.player.x-e.x,this.player.z-e.z)+Math.PI;
-      else if(e.awareness!=='patrol'&&goalDistance>.15)e.yaw=Math.atan2(dx,dz)+Math.PI;
-      else if(e.awareness==='patrol')e.yaw=(e.patrolAngle||0)+Math.PI;
+      e.motionX=(e.x-motionOrigin.x)/Math.max(dt,.001);e.motionZ=(e.z-motionOrigin.z)/Math.max(dt,.001);
+      let desiredYaw=e.yaw;
+      if(order)desiredYaw=order.yaw??(Math.atan2(e.lastKnownX-e.x,e.lastKnownZ-e.z)+Math.PI);
+      else if(e.ranged&&seen)desiredYaw=Math.atan2(this.player.x-e.x,this.player.z-e.z)+Math.PI;
+      else if(e.awareness!=='patrol'&&goalDistance>.15)desiredYaw=Math.atan2(dx,dz)+Math.PI;
+      else if(e.awareness==='patrol')desiredYaw=(e.patrolAngle||0)+Math.PI;
+      turnEnemy(e,desiredYaw,dt);
       if(seen&&isReco1(e.form))aimReco1(e,playerHead);
       if((e.stunnedUntil||0)<=this.time)e.attackTimer-=dt;
-      if(!seen||e.stunnedUntil>this.time){e.burstRemaining=0;e.chargeProgress=0;}
+      if(!seen||e.stunnedUntil>this.time){e.burstRemaining=0;e.chargeProgress=0;e.shotIntent=null;}
       else e.chargeProgress=e.ranged&&e.attackTimer>0&&e.attackTimer<.25?1-e.attackTimer/.25:0;
       // Never attack through walls or while merely searching the last seen position.
-      if((!order||order.canFire)&&seen&&e.awareness==='engaged'&&distance<2&&e.attackTimer<=0&&(e.stunnedUntil||0)<=this.time){
-        e.attackTimer=.85;this.damage(e.elite?20+this.wave:10+Math.floor(this.wave/2),e);
-      }else if((!order||order.canFire)&&seen&&e.awareness==='engaged'&&e.ranged&&distance<38&&e.attackTimer<=0&&(e.stunnedUntil||0)<=this.time){
+      const attackAllowed=(!order||order.canFire)&&e.awareness==='engaged';
+      const meleeHit=updateMeleeIntent(e,{time:this.time,seen,allowed:attackAllowed,player:this.player,blocked:(a,b)=>this.blocked(a,b)});
+      if(meleeHit){
+        this.damage(e.elite?20+this.wave:10+Math.floor(this.wave/2),e);
+      }else if(e.ranged&&Math.abs(e.facingError||0)<.22&&distance<38&&prepareHostileShot(e,{time:this.time,seen,allowed:attackAllowed,allies:this.enemies})){
         const profile=hostileShotProfile(this.wave,e.form),speed=profile.speed;
         const volley=enemyVolley(this.wave,e.form);let muzzle=rangedMuzzle(e);
         const target=predictShot(muzzle,playerHead,this.playerVelocity,speed,profile.lead);
         if(isReco1(e.form)){aimReco1(e,target);muzzle=rangedMuzzle(e);}
         if(!this.blocked(eye,muzzle)&&!this.blocked(muzzle,target)&&clearSquadFiringLane(e,muzzle,target,this.enemies)){
           const n=Math.hypot(target.x-muzzle.x,target.y-muzzle.y,target.z-muzzle.z)||1;
+          e.shotIntent=null;e.firedAt=this.time;
           this.bullets.push({id:this.nextId++,...muzzle,vx:(target.x-muzzle.x)/n*speed,
             vy:(target.y-muzzle.y)/n*speed,vz:(target.z-muzzle.z)/n*speed,
             life:3,damage:volley.damage,hostile:true,weapon:e.form==='sentinel'?(Math.floor(this.time/4)%2?'nova':'r9'):'enemy',splash:e.form==='sentinel'&&Math.floor(this.time/4)%2?2.8:0});
@@ -961,7 +993,7 @@ export class ArenaGame {
         const box=turretHitbox(turret),hit=segmentBox(start,end,box);
         if(hit!==null&&hit<nearest){nearest=hit;target=b.hostile?null:turret;hitBox=b.hostile?box:null;surface='metal';zone='torso';multiplier=1;}
       }
-      for (const obstacle of this.obstacles) { const t = segmentBox(start, end, obstacle); if (t !== null && t < nearest) { nearest = t; target = null;shieldContact=false;hitBox=obstacle;surface=obstacle.surface||'concrete'; } }
+      for (const obstacle of this.obstacles) { const t = segmentBox(start, end, obstacle); if (t !== null && t <= nearest) { nearest = t; target = null;shieldContact=false;hitBox=obstacle;surface=obstacle.surface||'concrete'; } }
       if (end.y < .06 && start.y >= .06) { const t = (start.y - .06) / (start.y - end.y); if (t < nearest) { nearest = t; target = null;shieldContact=false;hitBox=null;surface='ground'; } }
       if(b.hostile&&this.companionWard?.until>this.time&&this.companionWard.remaining>0){
         const shieldHit=segmentSphere(start,end,{x:this.player.x,y:this.player.elevation+(this.player.crouched?.58:1.25),z:this.player.z},1.7);

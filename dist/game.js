@@ -1,3 +1,4 @@
+import {applyFPSCameraMotion} from './fps-motion.js';
 import {createTouchOrbit} from './touch-orbit.js';
 import {createCameraFeel} from './camera-feel.js';
 import {mountFilmLook} from './film-look.js';
@@ -447,18 +448,18 @@ function updateCamera() {
     for (const box of world.obstacles) { const hit = segmentBox(start, end, { ...box, hx: box.hx + .2, hz: box.hz + .2 }); if (hit !== null) nearest = Math.min(nearest, Math.max(.09, hit - .05)); }
     camera.position.set(start.x + (end.x - start.x) * nearest, Math.max(.35, start.y + (end.y - start.y) * nearest), start.z + (end.z - start.z) * nearest);
   }
-  // Living camera (bob, lean, landing dip, trauma shake): flat screen, first person, while playing.
-  if(view==='fps'&&flatScreen&&vr?.mode!=='xr'&&game.state==='playing')cameraFeel.apply(camera);
-  const bob = Math.hypot(move.x, move.y) > .1 || keys.has('KeyW') || keys.has('KeyZ') || keys.has('KeyS') || keys.has('ArrowUp') || keys.has('ArrowDown') || keys.has('ArrowLeft') || keys.has('ArrowRight');
   const ads=flatSightPose(optic,aimBlend);
-  weapon.position.set(ads.x+kickPose.x, ads.y + (bob ? Math.sin(clock * 11) * .009*(1-aimBlend) : 0) + kickPose.y + reloadLift * .045, ads.z + kickPose.z - reloadLift * .028);
-  weapon.rotation.set(kickPose.pitch + reloadLift * Math.PI / 2,kickPose.yaw+ads.yaw,Math.sin(clock * 1.8) * .003+kickPose.roll+ads.roll);
+  weapon.position.set(ads.x+kickPose.x, ads.y+kickPose.y, ads.z+kickPose.z);
+  weapon.rotation.set(kickPose.pitch,kickPose.yaw+ads.yaw,Math.sin(clock * 1.8) * .003+kickPose.roll+ads.roll);
   if(game.weapon.melee){const slash=bladeSwingPose(game.bladePhase,game.bladeSlashSide);weapon.rotation.x=slash.x-.12;weapon.rotation.y=slash.y;weapon.rotation.z=slash.z;}
   else{const strike=meleeKick(game);if(strike){MELEE_POSE.apply(weapon,game);}}
   // The ARES X9 optic is a full-screen sight picture in flat FPS ADS: the
   // 3D tube is not drawn over the line of sight, but the gun/muzzle still exist
   // and the shot ray is derived from this same camera centre.
   if(view==='fps'&&game.weapon.id==='lance'&&aiming&&aimBlend>.97&&vr?.mode==='off')weapon.visible=false;
+  if(view==='fps'&&flatScreen)applyFPSCameraMotion(camera,game);
+  // Trauma shake on top (hits taken, kills at close range, own shots); walk bob and landing come from fps-motion.
+  if(view==='fps'&&flatScreen&&vr?.mode!=='xr'&&game.state==='playing')cameraFeel.apply(camera,{motion:false});
   camera.updateProjectionMatrix(); camera.updateMatrixWorld(true);
 }
 function reloadPose() {
@@ -889,7 +890,7 @@ function stepFrame(timestamp, xrFrame) {
     game.precisionAiming=aimBlend>.55;
     game.step(dt, { x, z, yaw: facing, moveYaw, sprint: currentSprinting, jump,crouchToggle });
     cameraFeel.update(dt,{speed:Math.hypot(game.playerVelocity.x,game.playerVelocity.z),grounded:game.player.grounded,verticalSpeed:game.player.verticalSpeed,strafe:x,sprint:currentSprinting,aim:aimBlend});
-    try{filmLook ||= mountFilmLook({canvas:document.getElementById('world')});const on=game.state==='playing'&&vr?.mode!=='xr'&&vr?.mode!=='stereo';if(on!==filmOn){filmOn=on;filmLook.setEnabled(on);}filmLook.update(dt,{health:game.player.hp/100});}catch{}
+    try{filmLook ||= mountFilmLook({canvas:document.getElementById('world'),graded:()=>!!world?.renderer?.fpsPresentation?.stats?.().enabled});const on=game.state==='playing'&&vr?.mode!=='xr'&&vr?.mode!=='stereo';if(on!==filmOn){filmOn=on;filmLook.setEnabled(on);}filmLook.update(dt,{health:game.player.hp/100});}catch{}
     portalAudio.sync(game.activePortals,game.time);
     crouchCameraBlend+=(Number(game.player.crouched)-crouchCameraBlend)*Math.min(1,dt*8);
     if(pickupQueued||vrInput.pickup){game.collectWeapon();pickupQueued=false;syncRangeArmory();}

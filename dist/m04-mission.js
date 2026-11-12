@@ -22,7 +22,7 @@ export function createM04Mission({ game, characterId = 'ghju', hooks = {} }) {
   const id = () => L.STAGES[stage].id;
   const alive = name => (groups.get(name) || []).filter(e => game.enemies.some(x => x.id === e)).length;
   const say = (key, { again = false } = {}) => { if (!again && said.has(key)) return; said.add(key); h.say(key); };
-  const setStage = next => { stage = typeof next === 'string' ? S[next] : next; h.stage(stage, L.STAGES[stage]); };
+  const setStage = next => { stage = typeof next === 'string' ? S[next] : next; game.checkpointPosition={...L.STAGES[stage].checkpoint,id:L.STAGES[stage].id,label:L.STAGES[stage].label}; h.stage(stage, L.STAGES[stage]); };
   const areaOfPlayer = () => L.areaAt(game.player.x, game.player.z);
   function rebuild() { collisions = L.buildCollisions({ open: [...opened] }); game.replaceObstacles(collisions); h.setObstacles(collisions); }
   function openDoor(name) { if (opened.has(name)) return; opened.add(name); rebuild(); h.setDoor(name, true); h.cue('door'); }

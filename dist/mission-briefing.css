@@ -99,3 +99,14 @@
 .pw-briefing.pwb-cover-only{background:#03050c var(--pwb-art,none) center/contain no-repeat!important}
 .pw-briefing.pwb-cover-only::before{background:linear-gradient(0deg,#03050ccc 0%,transparent 22%)}
 @media (max-aspect-ratio:16/9){.pw-briefing.pwb-cover-only{background-position:center 38%!important}}
+
+/* The approved illustrations already include the wordmark and chapter title.
+   Keep the separate objective presentation out of loading and start screens. */
+.pw-briefing:not(.ended):not(.lost){background-position:center!important;background-size:contain!important}
+.pw-briefing:not(.ended):not(.lost)::before{display:none}
+.pw-briefing:not(.ended):not(.lost) .pwb-content :is(.pwb-logo,.pwb-crumb,.pwb-head,.pwb-zone,.pwb-text,.pwb-objectives,.pwb-small,.kicker){display:none!important}
+.pw-briefing:not(.ended):not(.lost) .pwb-content>a:not(.pwb-back){display:none!important}
+@media(max-width:760px){
+ .pw-briefing:not(.ended):not(.lost) .chars{position:fixed;z-index:3;left:16px;right:16px;bottom:calc(max(26px,env(safe-area-inset-bottom)) + 82px);display:flex;gap:8px;margin:0!important}
+ .pw-briefing:not(.ended):not(.lost) .chars a{flex:1;text-align:center;padding:10px!important}
+}

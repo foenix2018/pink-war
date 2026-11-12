@@ -4,7 +4,9 @@
 //  · a red pulse at the edges when the player is hit, a steady one at low health.
 // Off in the headset; grain off for « reduced motion » and in Performance.
 const STYLE = 'pw-film-style';
-export function mountFilmLook({ canvas, doc = document, low = false, tint = 'cool' } = {}) {
+// `graded()` true = the renderer already grades the image (fps-grade.js: bloom, contact occlusion, tone, vignette):
+// only the grain and the hit pulse are added then, so nothing is applied twice.
+export function mountFilmLook({ canvas, doc = document, low = false, tint = 'cool', graded = () => false } = {}) {
   if (!canvas || !doc?.body) return { update() {}, hit() {}, setEnabled() {}, dispose() {} };
   if (!doc.getElementById(STYLE)) { const s = doc.createElement('style'); s.id = STYLE; s.textContent = `
 .pw-film{position:fixed;inset:0;pointer-events:none}
@@ -19,16 +21,19 @@ export function mountFilmLook({ canvas, doc = document, low = false, tint = 'coo
   const hurt = layer('pw-film-hurt'), grain = low ? null : layer('pw-film-grain'), tintEl = layer('pw-film-tint ' + tint), vignette = layer('pw-film-vignette');
   if (grain) { const c = doc.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'), img = g?.createImageData?.(128, 128);
     if (img) { let seed = 1234567; for (let i = 0; i < img.data.length; i += 4) { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; const v = seed >>> 24; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255; } g.putImageData(img, 0, 0); grain.style.backgroundImage = `url(${c.toDataURL()})`; } }
-  const previous = canvas.style.filter; canvas.style.filter = low ? 'contrast(1.05) saturate(1.06)' : 'contrast(1.09) saturate(1.1) brightness(1.02)';
-  let pulse = 0, enabled = true, shown = -1;
+  const previous = canvas.style.filter, css = low ? 'contrast(1.05) saturate(1.06)' : 'contrast(1.09) saturate(1.1) brightness(1.02)';
+  let pulse = 0, enabled = true, shown = -1, gpu = null;
+  const sync = () => { const g = !!graded(); if (g === gpu) return; gpu = g; canvas.style.filter = enabled && !g ? css : previous; vignette.hidden = tintEl.hidden = !enabled || g; };
+  sync();
   return {
     hit(amount = .55) { pulse = Math.min(1, pulse + amount); },
     update(dt, { health = 1 } = {}) {
+      sync();
       pulse = Math.max(0, pulse - dt * 1.6); const lowHp = health < .3 ? (.3 - health) / .3 : 0;
       const v = enabled ? Math.min(1, pulse + lowHp * (.35 + .15 * Math.sin(performance.now() / 200))) : 0;
       if (Math.abs(v - shown) > .01) { shown = v; hurt.style.opacity = v.toFixed(2); }
     },
-    setEnabled(on) { enabled = !!on; for (const el of [hurt, grain, tintEl, vignette]) if (el) el.hidden = !on; canvas.style.filter = on ? (low ? 'contrast(1.05) saturate(1.06)' : 'contrast(1.09) saturate(1.1) brightness(1.02)') : previous; },
+    setEnabled(on) { enabled = !!on; hurt.hidden = !on; if (grain) grain.hidden = !on; gpu = null; sync(); },
     dispose() { for (const el of [hurt, grain, tintEl, vignette]) el?.remove(); canvas.style.filter = previous; }
   };
 }

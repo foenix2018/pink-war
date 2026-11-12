@@ -1,3 +1,4 @@
+import {createFPSChapter} from './fps-environments.js';
 import {createWorldEffects} from './webgpu-world-fx.js';
 import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
 import {createStairHardware} from './stair-hardware.js';
@@ -36,6 +37,7 @@ export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, on
   const low = quality === 'low', rng = seeded(905);
   const worldFx=createWorldEffects(T,{webgpu,low,reflections:true});
   const root = new T.Group(); root.name = 'LIGNE 9'; scene.add(root);if(worldFx.reflectionTarget)root.add(worldFx.reflectionTarget);
+  let fpsChapter=null;
   const animated = [], stats = { meshes: 0, instances: 0, textures: 0, fixtures: 0 };
   const add = (o, parent = root) => { parent.add(o); stats.meshes++; return o; };
 
@@ -454,6 +456,7 @@ export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, on
   // ---------- Props from the colliders ----------
   const fans = [], pumpRotors = [], racks = [];
   function dress(o) {
+    if(o.kind==='fps-cover')return;
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, y = o.y || 0, h = o.height, along = w >= d;
     // Functional silhouettes replace previous heavy box-based station props.
     // Machines with animation (pump motor, dynamic rack LEDs) remain specialized.
@@ -908,8 +911,10 @@ export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, on
       for (const o of collisions) dress(o);
       buildFixtureMeshes(); buildDoors(); buildWater(); buildFlood(); buildDevices(collisions); buildSigns();
       neons.meshes();neons.build();flushGeometry(); flushPieces();
+      fpsChapter=createFPSChapter(T,root,{chapter:'ligne9',obstacles:collisions,areas:ROOMS,low,webgpu,worldFx});
     },
     update(t, dt, eye = camera, player = eye.position) {
+      fpsChapter?.update(t,dt,eye.position);
       worldFx.update(t,eye.position);
 
       updateLights(t, dt, eye.position); updateAmbient(dt, eye.position); updateDoors(dt, player); updateWater(t, dt); updateDevices(t, dt);
@@ -933,6 +938,6 @@ export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, on
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
     // Is the place dark enough to want the head lamp?
     dark(x, z) { const r = ROOM[roomAt(x, z)]; if (!r) return true; if (r.id === 'rue' || r.id === 'chambre') return false; return (r.id === 'tunnel' ? power.tunnel : power.station) !== 'secours'; },
-    stats() { return { ...stats, worldEffects:worldFx.stats(), neons:neons.stats(), power: { ...power }, lights: pool.filter(s => s.fixture).length, portals: portals.length, anchor: +anchorPower.toFixed(2), flooding, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])), water: Object.fromEntries([...waters].map(([k, v]) => [k, +v.level.toFixed(2)])) }; }
+    stats() { return { ...stats, fps:fpsChapter?.stats(), worldEffects:worldFx.stats(), neons:neons.stats(), power: { ...power }, lights: pool.filter(s => s.fixture).length, portals: portals.length, anchor: +anchorPower.toFixed(2), flooding, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])), water: Object.fromEntries([...waters].map(([k, v]) => [k, +v.level.toFixed(2)])) }; }
   };
 }

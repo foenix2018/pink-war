@@ -20,11 +20,12 @@ test('living camera: bob follows ground speed, landing dips, trauma shake decays
  camera.position.set(0,1.6,0);feel.shake(1);feel.update(1/60,{speed:4,grounded:true});feel.apply(camera);
  for(const v of [camera.position.x,camera.position.y,camera.position.z,camera.rotation.x,camera.rotation.z,camera.fov])assert.ok(Number.isFinite(v));
  assert.ok(Math.abs(camera.position.y-1.6)<.25);
+ const only=new T.PerspectiveCamera(72);only.rotation.order='YXZ';only.position.set(0,1.6,0);feel.apply(only,{motion:false});assert.equal(only.position.y,1.6,'shake only: the walk bob belongs to fps-motion');assert.equal(only.fov,72);
  const calm=createCameraFeel({reduced:true});for(let i=0;i<120;i++)calm.update(1/60,{speed:4.5,grounded:true});assert.ok(Math.abs(calm.pose().y)<peak*.5,'reduced motion is respected');
 });
 
 test('levels 1, 2 and 3 share the film look, the living camera, the light shafts and the firing tell',async()=>{
- for(const page of ['game.js','level2-test.js','niveau3.js']){const s=read(page);assert.match(s,/createCameraFeel\(\)/);assert.match(s,/mountFilmLook\(/);assert.match(s,/cameraFeel\.apply\(camera\)/);assert.match(s,/cameraFeel\.shake\(\.45\)/);}
+ for(const page of ['game.js','level2-test.js','niveau3.js']){const s=read(page);assert.match(s,/createCameraFeel\(\)/);assert.match(s,/mountFilmLook\(/);assert.match(s,/cameraFeel\.apply\(camera,\{motion:false\}\)/);assert.match(s,/applyFPSCameraMotion\(camera,game/);assert.match(s,/graded:\(\)=>/);assert.match(s,/cameraFeel\.shake\(\.45\)/);}
  for(const page of ['level2-test.js','niveau3.js'])assert.match(read(page),/view==='fps'&&!xr\?\.active&&running&&!endCine\)cameraFeel\.apply/,'never in the headset or the end scene');
  for(const art of ['m01-extension-art.js','m02-extension-art.js','m03-art.js'])assert.match(read(art),/createLightShafts\(T, root,/);
  assert.match(read('enemy-destruction-fx.js'),/e\.chargeProgress/);assert.match(read('film-look.js'),/prefers-reduced-motion/);

@@ -32,7 +32,7 @@ export const BRIEFINGS = Object.freeze({
   3: { title: 'Le Convoi des Oubliés', zone: 'Vesper // Secteur 03 · Archives A3', image: () => 'art/mission03-cover.svg?v=1',
     text: () => 'AEGIS prépare l’évacuation des prisonniers du Directoire. Escorte l’ambulance d’Inès de l’annexe médicale jusqu’à la gare de fret de l’Anneau logistique, avant qu’ORDRE ne verrouille la zone.',
     objectives: [['medic', 'Fouiller l’annexe médicale', 'Rallumer le courant et prendre les kits.'], ['doc', 'Récupérer le manifeste du convoi', 'Dans l’atelier de maintenance.'],
-      ['up', 'Rejoindre les archives A3', 'Accéder au niveau supérieur.'], ['target', 'Couper la balise d’ORDRE', 'Au pied du pylône, puis escorter l’ambulance jusqu’à la gare.']] },
+      ['up', 'Rejoindre les archives A3', 'Accéder au niveau supérieur.'], ['target', 'Couper la balise d’ORDRE', 'Depuis la borne du barrage, puis escorter l’ambulance jusqu’à la gare.']] },
   4: { title: 'Le Protocole Interdit', zone: 'Vesper // Station énergétique Est · JANUS', image: () => null,
     text: () => 'Avec la cellule AEGIS de Mara Voss, entre dans la station énergétique Est. Au-dessus du réacteur, une colonne violette : ORDRE y synchronise ses systèmes. Sous le portique dort une archive des anciens systèmes de secours.',
     objectives: [['door', 'Passer le sas d’inspection', 'Le badge du garde, puis la cour du réacteur.'], ['bolt', 'Réactiver les deux relais', 'Hangar de drones à l’ouest, atelier serveur à l’est.'],
@@ -52,7 +52,7 @@ export function briefingFor(mission = 1, characterId = 'ghju') {
     objectives: b.objectives.map(([icon, title, detail], i) => ({ icon, title, detail, n: String(i + 1).padStart(2, '0') })) };
 }
 
-const STYLE_URL = new URL('./mission-briefing.css?v=3.75.0', import.meta.url).href;
+const STYLE_URL = new URL('./mission-briefing.css?v=20261112-art-only', import.meta.url).href;
 const LOGO_URL = new URL('./art/pink-wars-wordmark.svg?v=2', import.meta.url).href;
 export function ensureBriefingStyle(doc = document) {
   if (doc.querySelector('[data-pw-briefing-style]')) return;
@@ -109,13 +109,13 @@ export function decorateShade(shade, { mission, characterId = 'ghju', backHref =
   return parts;
 }
 
-// Loading cover of a chapter (mission-loading.js): same layout, a progress gauge in place of COMMENCER.
+// Loading cover keeps the approved illustration and actual progress controls.
 export function buildLoadingCover(root, mission, characterId, { doc = document, backHref = './index.html' } = {}) {
   ensureBriefingStyle(doc);
   const info = briefingFor(mission, characterId);
   root.classList.add('pw-briefing', 'pwb-loading'); if (info.image) root.style.setProperty('--pwb-art', `url("${new URL(info.image, import.meta.url).href}")`); root.dataset.mission = String(mission);
   // The official chapter covers already carry the PINK WARS logo and the chapter title: the loading screen shows
-  // that art alone (no second logo, title or objectives over it). Objectives stay on the start panel. Chapters
+  // that art alone (no second logo, title or objectives over it). Chapters
   // without a cover keep the composed screen.
   const coverOnly = !!chapterCover(mission);
   if (coverOnly) { root.classList.add('pwb-cover-only'); root.setAttribute('aria-label', `Chapitre ${info.number} · ${info.title} — chargement`); }

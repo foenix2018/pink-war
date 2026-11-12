@@ -27,11 +27,11 @@ export function createCameraFeel({ reduced = globalThis.matchMedia?.('(prefers-r
       return { y: Math.sin(s.bobT * 2) * .028 * s.bob * k - s.dip, x: Math.cos(s.bobT) * .02 * s.bob * k,
         roll: s.lean * k + noise(s.t * 23) * .05 * sh, pitch: noise(s.t * 19 + 7) * .03 * sh, yaw: noise(s.t * 21 + 3) * .03 * sh, fov: s.sprint * 5 * k };
     },
-    apply(camera) {
+    // motion:false keeps only the trauma shake (levels whose walk bob and landing come from fps-motion.js).
+    apply(camera, { motion = true } = {}) {
       const p = this.pose(), yaw = camera.rotation.y;
-      camera.position.y += p.y; camera.position.x += Math.cos(yaw) * p.x; camera.position.z -= Math.sin(yaw) * p.x;
-      camera.rotation.z += p.roll; camera.rotation.x += p.pitch; camera.rotation.y += p.yaw;
-      if (p.fov > .01 && camera.isPerspectiveCamera) camera.fov += p.fov;
+      if (motion) { camera.position.y += p.y; camera.position.x += Math.cos(yaw) * p.x; camera.position.z -= Math.sin(yaw) * p.x; if (p.fov > .01 && camera.isPerspectiveCamera) camera.fov += p.fov; }
+      camera.rotation.z += motion ? p.roll : p.roll - s.lean; camera.rotation.x += p.pitch; camera.rotation.y += p.yaw;
       return p;
     },
     reset() { Object.assign(s, { bob: 0, lean: 0, dip: 0, shake: 0, sprint: 0, wasGrounded: true, fall: 0 }); }

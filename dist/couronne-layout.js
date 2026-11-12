@@ -1,3 +1,4 @@
+import {chapterCovers} from './fps-level-layout.js';
 // COURONNE HELIX — standalone level (cyberpunk setting, sandbox combat in the spirit of the roadmap).
 // Book: W09 « Couronne HELIX » (Tome II §23) at dusk on the heights of Vesper (§34), mission path of M10
 // (place → lobby → centre de sécurité → terrasse) and the phase anchors owned by HELIX (§27).
@@ -164,7 +165,7 @@ export const GATES = Object.freeze(STAIRS.filter(s => s.to === 'ancrage').map(s 
   Object.freeze(at('gate', s.x, s.bottomZ + .4, s.halfWidth + .3, .15, s.base, 3.2, { surface: 'metal', gate: 'securite' }))));
 
 export function buildCollisions({ gatesOpen = false } = {}) {
-  return [...podiums(), ...stairSides(), ...perimeter(), ...architecture(), ...(gatesOpen ? [] : GATES)].map(o => ({ ...o }));
+  return [...chapterCovers('couronne'), ...podiums(), ...stairSides(), ...perimeter(), ...architecture(), ...(gatesOpen ? [] : GATES)].map(o => ({ ...o }));
 }
 
 // Height of the walkable surface under (x, z), ignoring surfaces above `max` (to walk under them).

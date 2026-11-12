@@ -75,21 +75,21 @@ export const SCRIPT = Object.freeze({
     ghju: L(['gaby', 'Le relais A3, là-haut. Il doit savoir qui nous piste.'])
   },
   relais: {
-    lylu: L(['ravel', 'Si vous lisez ça, vous avez le convoi 03. Ici Ravel, du Directoire. La balise d’ORDRE au pied du pylône suit chaque véhicule du secteur. Coupez-la, sinon ils vous attendront à la gare.'],
-      ['lylu', 'Une agente du Directoire qui nous aide ?'], ['cara', 'Celle qui ne signait plus les bordereaux. On la croit, pour l’instant.']),
-    ghju: L(['ravel', 'Si vous lisez ça, vous avez le convoi 03. Ici Ravel, du Directoire. La balise d’ORDRE au pied du pylône suit chaque véhicule du secteur. Coupez-la, sinon ils vous attendront à la gare.'],
-      ['ghju', 'Ravel… celle des consignes, à la tour.'], ['gaby', 'Elle prend des risques pour nous. Allons couper cette balise.'])
+    lylu: L(['ravel', 'Si vous lisez ça, vous avez le convoi 03. Ici Ravel, du Directoire. La balise d’ORDRE au pied du pylône suit chaque véhicule du secteur. La commande à droite du barrage peut la brouiller à distance. Coupez-la avant la gare.'],
+      ['lylu', 'Une agente du Directoire qui nous aide ?'], ['cara', 'Celle qui ne signait plus les bordereaux. On la croit. La commande de brouillage est en bas, à droite du barrage.']),
+    ghju: L(['ravel', 'Si vous lisez ça, vous avez le convoi 03. Ici Ravel, du Directoire. La balise d’ORDRE au pied du pylône suit chaque véhicule du secteur. La commande à droite du barrage peut la brouiller à distance. Coupez-la avant la gare.'],
+      ['ghju', 'Ravel… celle des consignes, à la tour.'], ['gaby', 'Elle prend des risques pour nous. Redescendons à la borne du barrage.'])
   },
   fracture: {
-    lylu: L(['cara', 'Le pylône de surveillance. Et une embuscade : un châssis lourd devant la balise.']),
-    ghju: L(['gaby', 'Châssis lourd devant la balise, au pied du pylône. C’est leur embuscade.'])
+    lylu: L(['cara', 'ORDRE protège la liaison du barrage. Un châssis lourd arrive par l’avenue.']),
+    ghju: L(['gaby', 'Châssis lourd au-delà du barrage. Il protège la liaison du pylône.'])
   },
   balise: {
     all: L(['ordre', 'BROUILLAGE DÉTECTÉ · RENFORTS DÉPLOYÉS'])
   },
   baliseOk: {
-    lylu: L(['lylu', 'Liaison d’ORDRE coupée. Les données du convoi sont sauvegardées hors réseau.'], ['cara', 'Et la piste mène à l’Anneau logistique. Retour à la barrière.']),
-    ghju: L(['ghju', 'Liaison d’ORDRE coupée. On est hors de leur vue.'], ['gaby', 'Les données du convoi sont à nous. Retour à la barrière, Inès attend.'])
+    lylu: L(['lylu', 'Liaison d’ORDRE coupée. Les données du convoi sont sauvegardées hors réseau.'], ['cara', 'Et la piste mène à l’Anneau logistique. Le vérin peut maintenant lever la barrière.']),
+    ghju: L(['ghju', 'Liaison d’ORDRE coupée. On est hors de leur vue.'], ['gaby', 'Les données du convoi sont à nous. Le vérin peut lever la barrière. Inès attend juste derrière.'])
   },
   barriere: {
     all: L(['ines', 'Vérin en place. La barrière se lève lentement, trente secondes. Tenez-les loin du poteau.'])
@@ -172,7 +172,7 @@ export const LOGS = Object.freeze({
       '« Je ne signe plus les bordereaux. Je ne sais pas ce qu’est un centre de stabilisation. Je sais qu’on n’y envoie pas des gens qu’on veut soigner. »'],
     footer: 'Ravel est l’agente qui doutait, dans les consignes du poste de la tour de transit.',
     speech: 'La balise d’ORDRE au pied du pylône suit chaque véhicule du secteur. Coupez-la avant la gare.' }),
-  balise: () => ({ title: 'LIAISON ORDRE INTERROMPUE', stamp: 'BALISE DE POURSUITE · PIED DU PYLÔNE',
+  balise: () => ({ title: 'LIAISON ORDRE INTERROMPUE', stamp: 'BALISE DE POURSUITE · LIAISON DU BARRAGE',
     lines: ['Les données du convoi sont sauvegardées hors réseau. Une piste mène désormais vers l’Anneau logistique.',
       'Journal de la balise : 63 véhicules suivis en sept jours. 61 classés « transfert du Directoire autorisé ». 2 classés « non autorisé » : l’ambulance d’Inès, et une équipe AEGIS il y a deux jours.',
       'Note de la balise : « Équipe AEGIS — deux signatures Shadow Unit relevées dans le secteur cette semaine. Couleurs : rose, bleue. »'],

@@ -1,3 +1,4 @@
+import {createImpactMotion} from './enemy-body-response.js';
 import * as T from './vendor/three.webgpu.min.js';
 import {reco1Assets} from './reco1-assets.js';
 import {createReco1Pose} from './reco1-pose.js';
@@ -20,12 +21,14 @@ export function createReco1({elite=false,environment=null}={}){
  }
  root.userData.form=RECO1_FORM;root.userData.reco1=true;root.userData.designRevision='RECO1 V10 / 3.65';root.userData.profile={name:RECO1.name};root.userData.skeleton=skin;root.userData.nativeSkeleton=pose.skeleton;root.userData.humanoidReference={source:asset.source,sourceBoneCount:41};root.userData.sensorAnchor=[.047,RECO1.sensorY];root.userData.optics=materials.find(m=>m.userData.reco1Key==='optics');
  let previous=null,previousX=0,previousZ=0,speed=0,lastAlert='';
+ const impactMotion=createImpactMotion();
  root.userData.animate=(time,phase=0,moving=true,enemy={},simulationTime=time)=>{
   const elapsed=previous===null?0:Math.max(0,time-previous),dt=Math.min(.1,elapsed),distance=Math.hypot((enemy.x??root.position.x)-previousX,(enemy.z??root.position.z)-previousZ);
   const measured=elapsed>0&&distance<2&&(enemy.stunnedUntil||0)<=simulationTime?Math.min(5,distance/elapsed):0;speed+=(measured-speed)*(1-Math.exp(-dt*18));if(measured<.01&&speed<.03)speed=0;
   previous=time;previousX=enemy.x??root.position.x;previousZ=enemy.z??root.position.z;
+  const impact=impactMotion.update(dt,simulationTime,enemy.hitImpulse);
   const alert=enemyAlertState(enemy,simulationTime);states.motion=speed>2.9?'run':speed>.06?'walk':'idle';states.aim=alert!=='idle';states.mode=alert==='engaged'?'attack':alert==='alert'?'search':'patrol';
-  pose.setPose({coverCrouch:enemy.coverCrouch||0,aimPitch:Math.max(RECO1_WEAPON.minPitch,Math.min(RECO1_WEAPON.maxPitch,enemy.aimPitch||0)),aimYaw:enemy.aimYaw||0,speed,hitPulse:Math.max(0,1-(simulationTime-(enemy.hitAt??-99))/.22)});pose.update(dt,time,0);pose.poseRoot.updateMatrixWorld(true);
+  pose.setPose({coverCrouch:enemy.coverCrouch||0,aimPitch:Math.max(RECO1_WEAPON.minPitch,Math.min(RECO1_WEAPON.maxPitch,enemy.aimPitch||0)),aimYaw:enemy.aimYaw||0,speed,impact:enemy.hitImpulse?impact:null,hitPulse:enemy.hitImpulse?0:Math.max(0,1-(simulationTime-(enemy.hitAt??-99))/.22)});pose.update(dt,time,0);pose.poseRoot.updateMatrixWorld(true);
   root.userData.nativeMotion=states.motion==='idle'?(states.aim?'rifle':'idle'):states.motion==='run'?'run':'walkRifle';root.userData.motionSpeed=speed;root.userData.alertState=alert;
   if(alert!==lastAlert){const color=ENEMY_OPTICS[alert];for(const m of owned){m.color.setHex(color);if(m.emissive)m.emissive.setHex(color);}lastAlert=alert;}
   root.userData.lastShotAt=enemy.lastShotAt??-99;

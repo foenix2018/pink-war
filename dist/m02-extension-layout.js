@@ -1,3 +1,4 @@
+import {chapterCovers} from './fps-level-layout.js';
 import {enclaveLifeSolids} from './m02-life-layout.js';
 // M02 « Sous les Néons » — extension of the existing street (Tome II M02: enclave secourue → galerie marchande →
 // tour de transit). Two built areas at the open ends of the street, on free ground of the same arena:
@@ -170,5 +171,5 @@ export const HOLD_WAVES = Object.freeze({ grille: [[2, 'grille1'], [12, 'grille2
 
 export function extensionObstacles({ open = [] } = {}) {
   const openSet = new Set(open);
-  return [...walls(), ...props(), ...enclaveLifeSolids(), ...CEILINGS, ...DOORS.filter(d => !d.open && !openSet.has(d.id)).map(doorCollider)].map(o => ({ ...o }));
+  return [...chapterCovers('m02'), ...walls(), ...props(), ...enclaveLifeSolids(), ...CEILINGS, ...DOORS.filter(d => !d.open && !openSet.has(d.id)).map(doorCollider)].map(o => ({ ...o }));
 }

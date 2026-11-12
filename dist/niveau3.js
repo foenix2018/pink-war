@@ -1,3 +1,4 @@
+import {applyFPSCameraMotion} from './fps-motion.js';
 import {rendererBackend,rendererLabel} from './renderer-policy.js';
 import {createSupplyPickup} from './power-props.js';
 import {createHologramComms} from './hologram-comms.js';
@@ -288,8 +289,9 @@ function snapCamera(){
   const area=L.AREAS.find(a=>a.id===L.areaAt(p.x,p.z)),ceiling=area?.roof?area.roof-.3:Infinity;
   camera.position.set(start.x+(end.x-start.x)*nearest,Math.min(ceiling,Math.max(p.elevation+.35,start.y+(end.y-start.y)*nearest)),start.z+(end.z-start.z)*nearest);
  }
+ if(view==='fps')applyFPSCameraMotion(camera,game,{tracked:!!xr?.active});
  // Living camera (bob, lean, landing dip, trauma shake): first person on screen only, never during the end scene.
- if(view==='fps'&&!xr?.active&&running&&!endCine)cameraFeel.apply(camera);
+ if(view==='fps'&&!xr?.active&&running&&!endCine)cameraFeel.apply(camera,{motion:false});
  camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
  weapon.visible=view==='fps';if(playerRig?.model)playerRig.model.root.visible=view==='third';
 }
@@ -456,7 +458,7 @@ function gameTick(dt){
 const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;return;}if(!running||paused)return;audioReady();if(kind==='melee')meleeQueued=true;else if(kind==='charge')chargeQueued=true;else if(kind==='reload')game.reload();else if(kind==='next')game.cycleWeapon();else if(kind==='interact')interact();else if(kind==='crouch')crouchQueued=true;};
 let lastDevices='';
 const HOLD_LABEL={balise:'BROUILLAGE DE LA BALISE D’ORDRE',barriere:'LEVÉE DE LA BARRIÈRE',treuil:'TRACTION DU TREUIL',arrimage:'ARRIMAGE DE L’AMBULANCE AU TRAIN'};
-const VAN_WAIT={escorte:'attend son escorte',machines:'machines devant',stop:'à l’arrêt',stage:'à l’arrêt'};
+const VAN_WAIT={passage:'dégage le passage',escorte:'attend son escorte',machines:'machines devant',stop:'à l’arrêt',stage:'à l’arrêt'};
 let endCine=null,webgpuFinish=null,m03Guide=null,m03GuideAt=0,m03Waypoint=null;
 function updateHUD(){
  (combatHud ||= mountCombatHud({characterId,onAction:armorTouch})).update(game);
@@ -561,7 +563,7 @@ async function boot(){
   bootStep='premier rendu';status.textContent='Premier rendu…';
   startMission();snapCamera();art.update(0,0,camera,game.player,{van:mission.van});
   if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);
-  try{filmLook=mountFilmLook({canvas,low:low()});}catch(error){console.warn('film look skipped',error);}
+  try{filmLook=mountFilmLook({canvas,low:low(),graded:()=>!!renderer?.fpsPresentation?.stats?.().enabled});}catch(error){console.warn('film look skipped',error);}
   bootStep='prêt';hud.hidden=false;started=true;requestAnimationFrame(animation);
   touchControls=createPinkWarsTouch(canvas,{onFire:down=>{if(down)audioReady();heldFire=down;if(down)firePressQueued=true;},onJump:()=>{jumpQueued=true;},onInteract:()=>interact(),
    onNext:()=>game.cycleWeapon(),onReload:()=>game.reload(),onCrouch:()=>{crouchQueued=true;},onView:()=>changeView(),onPause:()=>pauseMission(),onAim:down=>{if(down)audioReady();mouseAim=down;}});
@@ -636,7 +638,7 @@ for(const name of ['pointerup','pointercancel'])window.addEventListener(name,e=>
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
 
 window.__PINK_M03=Object.freeze({
- snapshot:()=>({level:L.LEVEL_ID,revision:'3.74.0',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,choice,time:game?.time,missionTime,
+ snapshot:()=>({level:L.LEVEL_ID,revision:'3.81.0',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,choice,time:game?.time,missionTime,
   area:game&&L.areaAt(game.player.x,game.player.z),health:game?.player.hp,shield:game?.player.shield,charges:game?.charges,
   position:game&&{x:+game.player.x.toFixed(2),z:+game.player.z.toFixed(2),elevation:+game.player.elevation.toFixed(2)},
   weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,opened:mission?.opened,done:mission?.done,reads:mission?.reads,

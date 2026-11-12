@@ -9,7 +9,7 @@ export const FUNCTIONAL_KINDS=Object.freeze([
  'cabinet','rack','servers','batteries','generator','transformer','ticket-machine','vending',
  'scanner','terminal','security-desk','console','kiosk','booth','pump','winch','chair'
 ]);
-export function createFunctionalProp(T,kind,{w=2,d=1,h=2,low=false,M={}}={}){
+export function createFunctionalProp(T,kind,{w=2,d=1,h=2,low=false,compact=false,M={}}={}){
  if(!FUNCTIONAL_KINDS.includes(kind))return null;
  const root=new T.Group();root.name='PW / '+kind+' · géométrie fonctionnelle';
  root.userData.visualRevision=FUNCTIONAL_PROP_REV;
@@ -31,7 +31,7 @@ export function createFunctionalProp(T,kind,{w=2,d=1,h=2,low=false,M={}}={}){
  const light=material('white','ceramic','helixWhite','paper','metal');
  function box(m,s,p,r=[0,0,0],v=.01){
    if(s.some(x=>x<=0))return;
-   const g=v?bevelBox(...s,Math.min(v,...s.map(x=>x*.18)),low?1:2):new T.BoxGeometry(...s);
+   const g=v&&!(compact&&Math.min(...s)<.18)?bevelBox(...s,Math.min(v,...s.map(x=>x*.18)),low?1:2):new T.BoxGeometry(...s);
    a.add(g,m,matrix(p,r),!low);g.dispose();
  }
  function cyl(m,p,r,height,rot=[0,0,0],segments=low?9:16){

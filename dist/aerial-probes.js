@@ -1,6 +1,9 @@
+import {hasLocalFireSlot} from './enemy-engagement.js';
 // S-03: former municipal surveillance probes now controlled by the hostile AI.
 // Flight is simulated in three dimensions; roofs and catwalk undersides remain
 // solid, and projectiles keep their locked direction after the warning.
+import {inertialMove} from './locomotion.js';
+import {turnEnemy} from './enemy-motion.js';
 import { hostileShotProfile, predictShot } from './enemy-fire.js';
 import { enemyVolley } from './enemy-combat.js';
 import {probeFlightState} from './probe-damage.js';
@@ -86,11 +89,14 @@ export function updateProbe(game, e, dt, segmentBox) {
     else {vx = 0; vz = 0;}
   }
   const beforeX = e.x, beforeZ = e.z, beforeY = e.elevation;
-  moveProbe(game, e, vx * dt, clamp(desiredHeight - e.elevation, -2.3, 2.3) * dt, vz * dt, segmentBox);
+  const momentum=e.flightVelocity||(e.flightVelocity={x:0,z:0}),travel=inertialMove(momentum,vx,vz,dt,{grounded:false});
+  moveProbe(game, e, travel.x, clamp(desiredHeight - e.elevation, -2.3, 2.3) * dt, travel.z, segmentBox);
+  if(Math.abs(e.x-beforeX)<Math.abs(travel.x)*.35)momentum.x=0;if(Math.abs(e.z-beforeZ)<Math.abs(travel.z)*.35)momentum.z=0;
   e.motionX = (e.x - beforeX) / dt; e.motionZ = (e.z - beforeZ) / dt;
   e.verticalSpeed = (e.elevation - beforeY) / dt;
   const sight = e.chargeRemaining > 0 && e.lockedTarget ? e.lockedTarget : target;
-  e.yaw = e.awareness === 'engaged' ? Math.atan2(sight.x-eye.x, sight.z-eye.z) + Math.PI : Math.atan2(vx, vz) + Math.PI;
+  const desiredYaw = e.awareness === 'engaged' ? Math.atan2(sight.x-eye.x, sight.z-eye.z) + Math.PI : Math.atan2(vx, vz) + Math.PI;
+  turnEnemy(e,desiredYaw,dt);
   e.aimPitch = Math.atan2(sight.y-eye.y, Math.hypot(sight.x-eye.x,sight.z-eye.z)||.001);
 
   if (stunned || !seen || e.awareness !== 'engaged' || range > 35) {
@@ -107,7 +113,7 @@ export function updateProbe(game, e, dt, segmentBox) {
       const x = shot.x - origin.x, y = shot.y - origin.y, z = shot.z - origin.z;
       const distance = Math.hypot(x, y, z) || 1, speed = hostileShotProfile(game.wave,'probe').speed;
       // A moved player can dodge. A new wall in the original line stops the shot.
-      if (!game.blocked(origin, shot)) {
+      if (!game.blocked({x:e.x,y:e.elevation+PROBE.aimHeight,z:e.z},origin) && !game.blocked(origin, shot)) {
         game.bullets.push({id: game.nextId++, ...origin, vx: x / distance * speed, vy: y / distance * speed, vz: z / distance * speed,
           life: 3, damage: enemyVolley(game.wave,'probe').damage, hostile: true, weapon: 'probe', splash: 0});
         e.lastShotAt = game.time; game.event('enemy-shot', {...origin, form: 'probe'});
@@ -117,6 +123,7 @@ export function updateProbe(game, e, dt, segmentBox) {
   } else {
     e.attackTimer = (e.attackTimer || 0) - dt;
     if (e.attackTimer <= 0) {
+      if(!hasLocalFireSlot(e,{time:game.time,allies:game.enemies})){e.attackTimer=.15;return;}
       const profile=hostileShotProfile(game.wave,'probe');
       e.lockedTarget = predictShot(eye,target,game.playerVelocity,profile.speed,profile.lead);
       // Damaged stabilizers cause a visible, reproducible loss of aim precision.

@@ -1,3 +1,6 @@
+import {createWorldEffects} from './webgpu-world-fx.js';
+import {createPhotoResponse,metricGround} from './world-material-response.js';
+import {createFPSChapter} from './fps-environments.js';
 import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
 import {createFloorRampHardware} from './stair-hardware.js';
 import {createIndustrialLightBatch} from './industrial-light.js';
@@ -22,23 +25,24 @@ function canvasTexture(T, w, h, paint) { const c = document.createElement('canva
 export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPortalClose=()=>{}, accent = 0xff6fb4 } = {}) {
   const low = quality === 'low', rng = seeded(606);
   const root = new T.Group(); root.name = 'M06 / Le Cœur d’Acier'; scene.add(root);
+  let fpsChapter=null;
   const animated = [], stats = { meshes: 0, instances: 0, lights: 0 };
   const add = (o, parent = root) => { parent.add(o); stats.meshes++; return o; };
 
   // ---------- Late afternoon: low sun through smoke, sooty haze ----------
   scene.background = new T.Color(0x6b4a3a);
   scene.fog = new T.FogExp2(0x8a5d45, low ? .011 : .009);
-  const sky = new T.HemisphereLight(0xffc89a, 0x3a2a22, 1.6); scene.add(sky);
+  const sky = new T.HemisphereLight(0xffc89a, 0x3a2a22, 1.2); scene.add(sky);
   const sun = new T.DirectionalLight(0xffb070, 2.6); sun.position.set(-70, 45, 40); scene.add(sun);
   const skyTex = canvasTexture(T, 16, 256, (c, w, h) => { const g = c.createLinearGradient(0, 0, 0, h); for (const [a, col] of [[0, '#2b2a4a'], [.4, '#6a4a5a'], [.62, '#c9764a'], [.74, '#f0a868'], [.82, '#8a5d45'], [1, '#2a1c16']]) g.addColorStop(a, col); c.fillStyle = g; c.fillRect(0, 0, w, h); });
   add(new T.Mesh(new T.SphereGeometry(400, 24, 12), new T.MeshBasicMaterial({ map: skyTex, side: T.BackSide, fog: false, depthWrite: false })));
 
   // ---------- Materials ----------
-  const loader = new T.TextureLoader();
+  const loader = new T.TextureLoader(),photo=createPhotoResponse(T,{low});
   const tex = (url, srgb = true) => { const t = loader.load(url); t.wrapS = t.wrapT = T.RepeatWrapping; if (srgb) t.colorSpace = T.SRGBColorSpace; t.anisotropy = low ? 2 : 6; return t; };
   const L9 = n => `./assets/ligne9/l9-${n}_diff_512.jpg`, CC = n => `./assets/cc0/${n}_diff_512.jpg`;
   const std = (color, roughness = .6, metalness = .2, extra = {}) => new T.MeshStandardMaterial({ color, roughness, metalness, ...extra });
-  const tiled = (url, color, roughness, metalness, tile, extra = {}) => { const m = std(color, roughness, metalness, { map: tex(url), ...extra }); m.userData.tile = tile; return m; };
+  const tiled = (url, color, roughness, metalness, tile, extra = {}) => { const m = std(color, roughness, metalness, { map: tex(url), ...extra }); m.userData.tile = tile; return photo.bind(m,url); };
   const glow = color => new T.MeshBasicMaterial({ color, toneMapped: false });
   const additive = (color, opacity = .6) => new T.MeshBasicMaterial({ color, transparent: true, opacity, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false, side: T.DoubleSide });
   const M = {
@@ -91,7 +95,7 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
   // ---------- Grounds, roofs (skylights broken: light shafts come through) ----------
   const FLOOR = { voie: M.asphalt, ferraille: M.asphalt, coulee: M.slab, chaine: M.antiSkid, coeur: M.plate, quai: M.slab, cabine: M.grid };
   function buildGrounds() {
-    const ground = new T.Mesh(new T.PlaneGeometry(220, 220), M.asphalt); ground.rotation.x = -Math.PI / 2; ground.position.y = -.01; M.asphalt.map.repeat?.set(30, 30); add(ground);
+    const ground = new T.Mesh(metricGround(T,220,220,M.asphalt.userData.tile), M.asphalt); ground.rotation.x = -Math.PI / 2; ground.position.y = -.01; M.asphalt.map.repeat?.set(1, 1); add(ground);
     for (const a of AREAS) {
       if (a.id === 'cabine') continue; floorRect(FLOOR[a.id] || M.slab, a.x1, a.x2, a.z1, a.z2, .006);
       if (a.roof) {
@@ -108,9 +112,13 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
     for (let z = -16; z < 62; z += 4) piece(M.yellow, 60, .008, z, .14, .004, 2), piece(M.yellow, 76, .008, z, .14, .004, 2);
     for (let a = 0; a < 40; a++) { const ang = a / 40 * TAU; piece(a % 2 ? M.yellow : M.black, Math.cos(ang) * 9, .009, -70 + Math.sin(ang) * 9, 1.4, .004, .6, -ang); }
   }
-  function shaft(x, y, z, len) {
-    const m = new T.Mesh(new T.PlaneGeometry(len, y * 1.4), additive(0xffb070, .07)); m.position.set(x - 6, y * .5, z + 4); m.rotation.set(-.55, 0, .35); add(m);
+  const shafts=[],shaftVolumes=[];
+  const shaftFx=webgpu&&!low&&!/OculusBrowser|Quest|PicoBrowser/i.test(globalThis.navigator?.userAgent||'')?createWorldEffects(T,{webgpu:true,low:false}):null;
+  function shaft(x,y,z,len){shafts.push({x,y,z,len});}
+  function updateShafts(t,eye){if(!shaftFx)return;shaftFx.update(t,eye);const nearest=shafts.map(s=>({...s,d:Math.hypot(s.x-eye.x,s.z+4-eye.z)})).filter(s=>s.d<35).sort((a,b)=>a.d-b.d);
+    shaftVolumes.forEach((mesh,i)=>{const s=nearest[i];mesh.visible=!!s;if(!s)return;mesh.position.set(s.x-2,s.y*.5,s.z+4);mesh.scale.set(Math.min(14,s.len*.5)/2,(s.y-1)/2,1.8);mesh.rotation.set(-.45,0,.22);});
   }
+
   // Booth deck, crane deck, ramps.
   function buildDecks() {
     for (const f of FLOORS) {
@@ -236,6 +244,7 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
     line.chassis.push({ g, z0: z });
   }
   function dress(o) {
+    if(o.kind==='fps-cover')return;
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, h = o.height;
     switch (o.kind) {
       case 'wagons': for (const [x, c] of [[-20, M.rust], [-4, M.graphite], [12, M.rust], [28, M.corrugated]]) { const car = createFunctionalProp(T, 'railcar', { w: 14, d: 2.6, h: 4, low, M: { ...M, paintedMetal: c, white: c, glass: M.glass, ledCyan: M.ledYellow } }); car.position.set(x, 0, 97.5); add(car); } break;
@@ -406,12 +415,15 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
 
 
   return {
-    root, M, openPortal,
+    root, M, sun, openPortal,get ready(){return photo.ready;},
     build(obstacles) {
       buildGrounds(); buildDecks(); buildWalls(obstacles); for (const o of obstacles) dress(o); buildEffects(); buildDoors(); buildDevices(); buildSigns(); buildFixtures();
       neons.meshes(); neons.build(); flushGeometry(); flushPieces();
+      if(shaftFx)for(let i=0;i<3;i++)shaftVolumes.push(shaftFx.fog(root,{width:8,height:10,depth:3,color:0xffb581,opacity:.075,beam:true}));
+      fpsChapter=createFPSChapter(T,root,{chapter:'m06',obstacles:obstacles,areas:AREAS,low,webgpu});
     },
     update(t, dt, eye, player) {
+      updateShafts(t,eye.position);fpsChapter?.update(t,dt,eye.position);
       const e = eye.position; updatePool(dt, e); updateEffects(t, dt); updatePortals(t, dt, e); updateDevices(t, dt); if (player) updateDoors(dt, player);
       for (const f of animated) f(t, dt); signs.update(t);
     },
@@ -421,6 +433,6 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
     adapt(spot) { if (!learnt.ring) return; learnt.ring.position.set(spot.x, .05, spot.z); learnt.level = 1; },
     markDone(id, isDone = true) { const d = devices.get(id); if (d) d.done = isDone; },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
-    stats() { return { ...stats, neons:neons.stats(), portals: portals.length, line: line.running, chassis: line.chassis.length, signs: signs.stats().signs, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, photo:photo.stats(),shaftVolumes:shaftVolumes.filter(m=>m.visible).length, fps:fpsChapter?.stats(), neons:neons.stats(), portals: portals.length, line: line.running, chassis: line.chassis.length, signs: signs.stats().signs, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }

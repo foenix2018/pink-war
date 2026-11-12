@@ -54,14 +54,15 @@ function buildRifle(){
  cylinder(rifle,-3.02,2.80,0,.85,.17,.17,mat.gunmetal,24);cylinder(rifle,-3.30,2.80,0,.12,.21,.21,mat.black);
  // Connector details
  box(rifle,-.90,2.46,0,.35,.51,.78,mat.titan,.04);
+ const removableMag=new THREE.Group();removableMag.name='Removable energy magazine';rifle.add(removableMag);
  // Magazine shell, tapered and fluted
- poly(rifle,[[-2.63,2.25],[-1.76,2.25],[-1.70,1.44],[-2.58,1.35],[-2.68,1.72]],.55,0,mat.black,.025);
+ poly(removableMag,[[-2.63,2.25],[-1.76,2.25],[-1.70,1.44],[-2.58,1.35],[-2.68,1.72]],.55,0,mat.black,.025);
  for(let z of [-.291,.291]){
-  poly(rifle,[[-2.52,2.17],[-1.89,2.17],[-1.83,1.53],[-2.43,1.47]],.034,z,mat.body,.025);
-  for(let i=0;i<6;i++)strip(rifle,-2.19,1.54+i*.105,z>0?.32:-.32,.47,.027,.011,mat.dark);
-  bolt(rifle,-2.5,2.09,z>0?.345:-.345,.031);
+  poly(removableMag,[[-2.52,2.17],[-1.89,2.17],[-1.83,1.53],[-2.43,1.47]],.034,z,mat.body,.025);
+  for(let i=0;i<6;i++)strip(removableMag,-2.19,1.54+i*.105,z>0?.32:-.32,.47,.027,.011,mat.dark);
+  bolt(removableMag,-2.5,2.09,z>0?.345:-.345,.031);
  }
- box(rifle,-2.17,1.38,0,.81,.09,.63,mat.gunmetal,.015);
+ box(removableMag,-2.17,1.38,0,.81,.09,.63,mat.gunmetal,.015);
  // Trigger guard and forward mag release, cosmetic
  beam(rifle,[-3.33,2.18,.03],[-3.09,1.99,.03],.028,mat.black);beam(rifle,[-3.09,1.99,.03],[-2.69,1.98,.03],.028,mat.black);beam(rifle,[-2.69,1.98,.03],[-2.59,2.19,.03],.028,mat.black);
  box(rifle,-3.35,1.79,0,.38,.82,.43,mat.rubber,.078,-.2);
@@ -184,19 +185,20 @@ function createPrototype(){
       if(x < -3.35)xyz.setX(v,-3.35+(x+3.35)*.82);
     }
     xyz.needsUpdate=true;geo.computeVertexNormals();
-    const key=o.material.uuid;
-    if(!batches.has(key))batches.set(key,{material:o.material,parts:[]});
+    const moving=o.parent.name==='Removable energy magazine';const key=o.material.uuid+(moving?'-mag':'');
+    if(!batches.has(key))batches.set(key,{material:o.material,parts:[],moving});
     batches.get(key).parts.push(geo);
   });
   const gun=new THREE.Group();gun.name='ARES X9 — fusil de précision numérique';
   const axis=new THREE.Group();axis.rotation.y=Math.PI/2;axis.scale.setScalar(.092);gun.add(axis);
   const palm=new THREE.Group();palm.position.set(3.35,-1.79,0);axis.add(palm);
   let parts=0;
-  for(const {material,parts:geos} of batches.values()){
+  const actionMag=new THREE.Group();actionMag.name='Reload magazine';palm.add(actionMag);
+  for(const {material,parts:geos,moving} of batches.values()){
     const fused=new THREE.Mesh(merge(geos),material);
     fused.castShadow=!material.transparent&&!material.isMeshBasicMaterial;
     fused.receiveShadow=false;
-    palm.add(fused);parts++;
+    (moving?actionMag:palm).add(fused);parts++;
     for(const part of geos)part.dispose();
   }
   source.traverse(o=>{if(o.isMesh)o.geometry.dispose();});

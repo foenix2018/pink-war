@@ -1,3 +1,4 @@
+import {chapterCovers} from './fps-level-layout.js';
 // LIGNE 9 — « La Ligne Noyée » (campaign mission M05, Tome II W05 / B05 / B06, storyboard 05A–05C).
 // Pure data shared by the renderer, the mission flow and the tests: rooms, walls, doors, water, props,
 // interactions, encounters and stages. Metres, 1 unit = 1 m. The route goes towards +z then west (-x);
@@ -258,7 +259,7 @@ export const STAGE_INDEX = Object.freeze(Object.fromEntries(STAGES.map((s, i) =>
 export function buildCollisions({ open = [], drained = [] } = {}) {
   const openSet = new Set(open), drainedSet = new Set(drained);
   return [
-    ...podiums(), ...stairSides(), ...walls(), ...props(),
+    ...chapterCovers('ligne9'), ...podiums(), ...stairSides(), ...walls(), ...props(),
     ...DOORS.filter(d => !d.open && !openSet.has(d.id)).map(doorCollider),
     ...WATER.filter(w => !(w.drainable && drainedSet.has(w.id))).map(waterCollider)
   ].map(o => ({ ...o }));

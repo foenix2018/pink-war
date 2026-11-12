@@ -1,3 +1,5 @@
+import {createFPSChapter} from './fps-environments.js';
+import {applyFPSCameraMotion} from './fps-motion.js';
 import {M02_STREET_OBJECTIVES,createM02Street} from './m02-street.js';
 import {overheadServiceLift} from './overhead-clearance.js';
 import {createLandingFinish} from './landing-finish.js';
@@ -89,7 +91,7 @@ let yaw=0,pitch=0,stage=0,reported=-1;
 let noticeUntil=0,signal=0,rain,enemyFactory,root,architecture,pbrController,atmosphere;
 let worldShadows=null,groundOcclusion=null,environmentFinish=null,electricPortals=null;
 // 3.70 extension: enclave (prologue) and transit tower (epilogue) around the street.
-let extension=null,extArt=null,helixFactory=null,subtitles=null,skyLights=null,journalOpen=false,checkpointSaved=null,checkpointClock=0,checkpointRestoring=false,checkpointStorageFailed=false,checkpointDecisionMade=false,streetMission=null;
+let fpsDistrict=null,extension=null,extArt=null,helixFactory=null,subtitles=null,skyLights=null,journalOpen=false,checkpointSaved=null,checkpointClock=0,checkpointRestoring=false,checkpointStorageFailed=false,checkpointDecisionMade=false,streetMission=null;
 let view=readPreferredView(),aimBlend=0,mouseAim=false,playerRig=null,touchControls=null,paused=false;
 const aimRelease=createAimRelease();
 const exitAim=document.createElement('button');exitAim.textContent='↶ VUE NORMALE';exitAim.id='pw-exit-aim';exitAim.hidden=true;exitAim.style.cssText='position:fixed;top:calc(env(safe-area-inset-top) + 88px);left:50%;transform:translateX(-50%);z-index:30;border:1px solid #99d9df99;border-radius:22px;padding:9px 15px;background:#081a24e8;color:#e5faff;font:700 12px system-ui;touch-action:manipulation';document.body.append(exitAim);exitAim.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();cancelAim();});exitAim.addEventListener('click',()=>cancelAim());
@@ -459,6 +461,7 @@ function createEnvironment(){
  catch(error){console.warn('M02 extension dressing degraded, the mission stays playable:',error);extArt=null;}
  worldShadows=createWorldShadows(T,{scene,renderer,light:moon,profile:{artQuality:low()?'low':'auto'},direction:{x:-28,y:56,z:28}});
  groundOcclusion=createGroundOcclusion(T,root,collisions,{compact:low()});
+ fpsDistrict=createFPSChapter(T,root,{chapter:'m02',obstacles:collisions,areas:[{id:'rue',label:'BAS-NIVEAUX / RUE',x1:-10,x2:10,z1:-58,z2:60},{id:'dispensaire',label:'BAS-NIVEAUX / ÎLOT OUEST',x1:-46,x2:-10,z1:-20,z2:55},{id:'atelier',label:'BAS-NIVEAUX / ÎLOT EST',x1:10,x2:46,z1:-30,z2:50}],low:low(),webgpu:!!renderer.backend?.isWebGPUBackend});
  try{atmosphere=createStreetAtmosphere(T,root,{performance:low(),webgpu:!!renderer.backend?.isWebGPUBackend});}
  catch(error){console.warn('M02 atmosphere disabled for compatibility:',error);}
 }
@@ -632,8 +635,9 @@ function snapCamera(){
   }
   camera.position.set(start.x+(end.x-start.x)*nearest,Math.max(.35,start.y+(end.y-start.y)*nearest),start.z+(end.z-start.z)*nearest);
  }
+ if(view==='fps')applyFPSCameraMotion(camera,game,{tracked:!!xr?.active});
  // Living camera (bob, lean, landing dip, trauma shake): first person on screen only, never during the end scene.
- if(view==='fps'&&!xr?.active&&running&&!endCine)cameraFeel.apply(camera);
+ if(view==='fps'&&!xr?.active&&running&&!endCine)cameraFeel.apply(camera,{motion:false});
  camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
  weapon.visible=view==='fps';
  if(playerRig?.model)playerRig.model.root.visible=view==='third';
@@ -905,6 +909,7 @@ function animation(t,frame){
   running=false;shade.style.display='grid';status.textContent='Erreur de mission : '+(error?.message||String(error));
   startButton.disabled=false;startButton.textContent='RECOMMENCER LE NIVEAU 2 →';
  }
+ fpsDistrict?.update(clock,dt,camera.position);
  if(extArt&&game)try{
   const eye=xr?.active?{position:renderer.xr.getCamera().getWorldPosition(new T.Vector3())}:camera;
   extArt.update(clock,dt,eye,game.player,{crank:extension?.hold?.name==='grille'});extArt.syncPickups(game.pickups,clock);
@@ -993,7 +998,7 @@ async function boot(){
   snapCamera();
   await electricPortals.prepare(renderer,camera);
   if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);
-  try{filmLook=mountFilmLook({canvas,low:low()});}catch(error){console.warn('film look skipped',error);}
+  try{filmLook=mountFilmLook({canvas,low:low(),graded:()=>!!renderer?.fpsPresentation?.stats?.().enabled});}catch(error){console.warn('film look skipped',error);}
   bootStep='prêt';hud.hidden=false;started=true;requestAnimationFrame(animation);
   touchControls=createPinkWarsTouch(canvas,{
    onFire:down=>{if(down)audioReady();heldFire=down;if(down)firePressQueued=true;},
@@ -1120,7 +1125,7 @@ document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockEleme
 window.addEventListener('pagehide',()=>saveCheckpoint());
 window.addEventListener('orientationchange',()=>{cancelAim();keys.clear();});
 window.addEventListener('pointerdown',e=>reconcileAimModifiers(keys,e),{capture:true});
-window.__PINK_M02=Object.freeze({snapshot:()=>({music:screenMusicSnapshot(),revision:'3.76.0',neons:root?.userData?.neons,running,paused,view:xr?.active?'fps':view,playerVisible:playerRig?.model.root.visible||false,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,extension:extension&&{stage:extension.stage,hold:extension.hold,done:extension.done,reads:extension.reads,opened:extension.opened,groups:extension.groups(),interaction:extension.interaction()},subtitle:subtitles?.current||null,journal:journalOpen,dressing:extArt?.stats(),health:game?.player.hp,
+window.__PINK_M02=Object.freeze({snapshot:()=>({music:screenMusicSnapshot(),revision:'3.80.0',fps:fpsDistrict?.stats(),neons:root?.userData?.neons,running,paused,view:xr?.active?'fps':view,playerVisible:playerRig?.model.root.visible||false,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,extension:extension&&{stage:extension.stage,hold:extension.hold,done:extension.done,reads:extension.reads,opened:extension.opened,groups:extension.groups(),interaction:extension.interaction()},subtitle:subtitles?.current||null,journal:journalOpen,dressing:extArt?.stats(),health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
  shadowing:worldShadows?.stats(),backend:rendererBackend(renderer),rig:!!playerRig,webgpuFinish,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
  effects:combatEffects?.stats(),projectedShields:armorFx?.shieldStats(),armor:game&&{shieldDeployed:!!game.player.shieldDeployed,shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt}}),

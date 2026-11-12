@@ -65,6 +65,7 @@ function batch(T) {
   };
   // Box from (x1,y1,z1) to (x2,y2,z2). `facade` maps window bays on the four sides; `top`/`bottom` add those faces.
   const box = (x1, y1, z1, x2, y2, z2, col, { facade = false, top = true, bottom = false, seed = 0 } = {}) => {
+    if(x1>x2)[x1,x2]=[x2,x1];if(y1>y2)[y1,y2]=[y2,y1];if(z1>z2)[z1,z2]=[z2,z1];
     const uv = (len, off) => facade ? [off, y1 / (FLOOR * CELLS), off + len / (BAY * CELLS), y2 / (FLOOR * CELLS)] : [0, 0, 1, 1];
     const w = x2 - x1, d = z2 - z1, o = seed * .25;
     let q = uv(w, o); quad([x1, y1, z2], [x2, y1, z2], [x2, y2, z2], [x1, y2, z2], 0, 0, 1, col, q[0], q[1], q[2], q[3]);
@@ -92,7 +93,7 @@ const NEON = [0xff4fa1, 0x5fe0f0, 0xffb35c, 0xc06bff, 0x58ffb4, 0xff3b4e];
 // Towers standing on the existing buildings ([x1, x2, z1, z2, roof, height, tiers]) and the bridges between them.
 export const PODIUM_TOWERS = Object.freeze([
   [-58, -32, -20, -3, 13, 84, 3], [25, 52, -29, -1, 12, 96, 3], [-56, -25, -87, -64, 19, 118, 3], [24, 57, -89, -68, 17, 104, 3],
-  [-44, -16, 14, 50, 8.6, 66, 2], [20, 41, 17, 41, 7.3, 58, 2]
+  [-44, -16, 14, 50, 9.55, 66, 2], [20, 41, 17, 41, 8, 58, 2]
 ]);
 export const SKYBRIDGES = Object.freeze([
   { z: -12, x1: -32, x2: 25, y: 26, glow: 0x5fe0f0 }, { z: -78, x1: -25, x2: 24, y: 33, glow: 0xff4fa1 }, { z: 30, x1: -16, x2: 20, y: 19, glow: 0xffb35c }
@@ -120,9 +121,10 @@ export function createCyberCity(T, root, { low = false, rich = false, advert = n
   function tower(x1, x2, z1, z2, base, top, tiers = 3, { accent = NEON[Math.floor(rng() * NEON.length)], detail = true } = {}) {
     stats.towers++;
     const tint = mix([.78, .82, .9], [1, .94, .86], rng()), a = hex(accent);
-    let y = base, ax1 = x1, ax2 = x2, az1 = z1, az2 = z2;
+    const layers=[];let y = base, ax1 = x1, ax2 = x2, az1 = z1, az2 = z2;
     for (let t = 0; t < tiers; t++) {
       const frac = (tiers >= 3 ? [.5, .3, .2] : tiers === 2 ? [.62, .38] : [1])[t] || .2, y2 = t === tiers - 1 ? top : y + (top - base) * frac;
+      layers.push({x1:ax1,x2:ax2,z1:az1,z2:az2,y1:y,y2});
       facade.box(ax1, y, az1, ax2, y2, az2, tint, { facade: true, seed: stats.towers + t });
       if (detail) {
         // Corner pilasters with a light line, floor ledges every two floors, a brighter belt at the tier foot.
@@ -154,7 +156,7 @@ export function createCyberCity(T, root, { low = false, rich = false, advert = n
       trim.box(cx - .18, y, cz - .18, cx + .18, y + 16, cz + .18, STEEL); trim.box(cx - 1.6, y + 9, cz - .06, cx + 1.6, y + 9.12, cz + .06, STEEL);
     }
     beacons.push([cx, y + (detail ? 16.4 : 1), cz]);
-    return { x1, x2, z1, z2, base, top: y, accent };
+    return { x1, x2, z1, z2, base, top: y, accent,layers };
   }
 
   // ---------- Far towers: one box, hazed by distance ----------
@@ -226,18 +228,28 @@ export function createCyberCity(T, root, { low = false, rich = false, advert = n
   if (!low) { row('z', B.minX - 40, -160, 110, 34, 110, 230, .55, -1); row('z', 138, -160, 110, 34, 110, 240, .55, 1); row('x', B.maxZ + 40, -150, 150, 30, 100, 220, .55, 1); row('x', -236, -170, 170, 36, 150, 290, .62, -1); }
 
   // Neon blades on the faces that look at the avenue, adverts high on the towers.
-  const blades = [[-30.4, 30, -8], [23.4, 34, -20], [-23.4, 40, -70], [22.4, 36, -84], [-14.4, 24, 22], [18.4, 22, 28], [-14.4, 31, 44], [23.4, 47, -6], [-23.4, 57, -84], [22.4, 53, -72]];
-  blades.slice(0, low ? 5 : blades.length).forEach(([x, y, z], i) => blade(bladeWords[i % bladeWords.length], NEON[i % NEON.length], x, y, z, 0, 2.6, 13));
-  if (advert) {
-    const ads = [['janus', 22, 9, -31.7, 52, -12, Math.PI / 2], ['kitsune', 20, 8, 24.7, 58, -16, -Math.PI / 2], ['vesperTransit', 24, 9, -24.7, 70, -76, Math.PI / 2], ['koi', 18, 8, 23.7, 64, -78, -Math.PI / 2],
-      ['nova', 16, 7, -15.7, 40, 32, Math.PI / 2], ['helix', 18, 6, 19.7, 36, 29, -Math.PI / 2], ['aegis', 14, 6, 0, 30.5, -9.6, 0], ['ordre', 16, 6, 0, 37.5, -75.6, 0]];
-    for (const [name, w, h, x, y, z, yaw] of ads.slice(0, low ? 4 : ads.length)) { try { advert(name, { w, h, x, y, z, yaw }); stats.signs++; reflections.push({ x: Math.max(-11, Math.min(11, x)), z, color: 0xc7a8ff, size: 10 }); } catch { /* signage optional */ } }
+  const attachments=[];
+  const wallAt=(host,y,h)=>{const tower=built[host],layer=tower.layers.find(l=>y>=l.y1&&y<=l.y2)||tower.layers.at(-1);return {...layer,y:Math.max(layer.y1+h/2+.3,Math.min(layer.y2-h/2-.3,y)),side:host%2===0?1:-1};};
+  const bladeSpecs=[[0,30,-8],[1,34,-20],[2,40,-70],[3,36,-84],[4,24,22],[5,22,28],[4,31,44],[1,47,-6],[2,57,-84],[3,53,-72]];
+  bladeSpecs.slice(0,low?5:bladeSpecs.length).forEach(([host,y,z],i)=>{
+    const wall=wallAt(host,y,13),face=wall.side>0?wall.x2:wall.x1,atZ=Math.max(wall.z1+1,Math.min(wall.z2-1,z));
+    blade(bladeWords[i%bladeWords.length],NEON[i%NEON.length],face+wall.side*.85,wall.y,atZ,0,2.6,13);attachments.push({kind:'blade',host,wall:face,x:face+wall.side*.85,y:wall.y,z:atZ});
+  });
+  if(advert){
+    const ads=[[0,'janus',16,6,36,-12],[1,'kitsune',16,6,38,-16],[2,'vesperTransit',18,7,70,-76],[3,'koi',18,7,64,-78],[4,'nova',16,6,30,32],[5,'helix',16,6,36,29]];
+    for(const[host,name,width,h,y,z]of ads.slice(0,low?4:ads.length)){
+      const wall=wallAt(host,y,h),w=Math.min(width,wall.z2-wall.z1-2),atZ=Math.max(wall.z1+w/2+.5,Math.min(wall.z2-w/2-.5,z)),face=wall.side>0?wall.x2:wall.x1,x=face+wall.side*.12;
+      advert(name,{w,h,x,y:wall.y,z:atZ,yaw:wall.side*Math.PI/2,holo:false});stats.signs++;
+      trim.box(face-Math.abs(.07),wall.y-h/2-.15,atZ-w/2-.15,face+Math.abs(.07),wall.y+h/2+.15,atZ+w/2+.15,STEEL);
+      attachments.push({kind:'advert',host,wall:face,x,y:wall.y,z:atZ});
+    }
   }
   // Light pools under the street lamps of the avenue (the sector's lamps, alternately warm and cold).
   for (let z = 58; z > -96; z -= 16) for (const s of [-1, 1]) reflections.push({ x: s * 9.2, z, color: s > 0 ? 0xffb070 : 0x9fdcff, size: 8 });
 
   // Lantern garlands across the avenue.
   for (const [z, y] of [[52, 7.4], [20, 7.8], [-54, 8.2], [-66, 7.6], [4, 8]].slice(0, low ? 2 : 5)) {
+    for(const x of[-12.5,12.5]){trim.box(x-.09,0,z-.09,x+.09,y+.15,z+.09,STEEL);trim.box(x-.28,0,z-.28,x+.28,.15,z+.28,DARK);}
     const n = 14; for (let k = 0; k < n; k++) {
       const u0 = k / n, u1 = (k + 1) / n, x0 = -12.5 + u0 * 25, x1 = -12.5 + u1 * 25, sag = u => y - Math.sin(u * Math.PI) * 1.3;
       trim.box(x0, Math.min(sag(u0), sag(u1)) - .02, z - .02, x1, Math.max(sag(u0), sag(u1)) + .02, z + .02, DARK);
@@ -247,7 +259,7 @@ export function createCyberCity(T, root, { low = false, rich = false, advert = n
   }
   // Maglev beam hung on the western towers.
   const railX = B.minX - 4.2, railY = 17; trim.box(railX - .5, railY - .7, -128, railX + .5, railY, 78, STEEL, { bottom: true });
-  for (let z = -120; z < 78; z += 14) trim.box(railX - .35, railY - 3, z - .35, railX - .05, railY - .7, z + .35, DARK);
+  for (let z = -120; z < 78; z += 14) {trim.box(railX-.3,0,z-.3,railX+.3,railY-.7,z+.3,DARK);trim.box(railX-.8,railY-.85,z-.5,railX+.8,railY-.7,z+.5,STEEL);}
   glow.box(railX + .5, railY - .5, -128, railX + .56, railY - .38, 78, hex(0x5fe0f0), { top: false });
 
   facadeMat.userData.webgpuPhysical = trimMat.userData.webgpuPhysical = rich;
@@ -267,7 +279,7 @@ export function createCyberCity(T, root, { low = false, rich = false, advert = n
     { axis: 'z', at: 0, y: 78, from: -170, to: 110, dir: 1 }, { axis: 'x', at: -44, y: 92, from: -150, to: 150, dir: -1 }];
   const perLane = low ? 7 : 18, lanes = low ? 3 : LANES.length, vehicles = [];
   for (let l = 0; l < lanes; l++) for (let i = 0; i < perLane; i++) vehicles.push({ lane: LANES[l], u: rng(), speed: (14 + rng() * 16), off: (rng() - .5) * 5, high: (rng() - .5) * 4 });
-  const craft = new T.InstancedMesh(new T.BoxGeometry(.5, .32, 2.4), new T.MeshBasicMaterial({ toneMapped: false, fog: false }), vehicles.length); craft.frustumCulled = false; craft.userData.webgpuShape = 'fx'; group.add(craft);
+  const craftGeo=new T.CapsuleGeometry(.3,1.6,2,6);craftGeo.rotateX(Math.PI/2);const craft = new T.InstancedMesh(craftGeo,new T.MeshStandardMaterial({color:0x9ba6b8,metalness:.65,roughness:.4}),vehicles.length); craft.frustumCulled = false; craft.userData.webgpuShape = 'fx'; group.add(craft);
   const col = new T.Color(); vehicles.forEach((v, i) => craft.setColorAt(i, col.set(v.lane.dir > 0 ? 0xfff0d0 : 0xff3040))); stats.vehicles = vehicles.length;
   animated.push((t, dt) => {
     vehicles.forEach((v, i) => { const L = v.lane, len = L.to - L.from; v.u = (v.u + v.speed * dt / len) % 1; const p = L.dir > 0 ? L.from + v.u * len : L.to - v.u * len;
@@ -278,7 +290,7 @@ export function createCyberCity(T, root, { low = false, rich = false, advert = n
 
   // Maglev train: six lit cars passing along the western beam.
   const cars = new T.InstancedMesh(new T.BoxGeometry(2.2, 2.4, 9), new T.MeshBasicMaterial({ map: farMat.map, color: 0xbfd8ff, toneMapped: false }), 6); cars.frustumCulled = false; cars.userData.webgpuShape = 'fx'; group.add(cars);
-  animated.push(t => { const cycle = (t * .055) % 1, head = 140 - cycle * 420; for (let i = 0; i < 6; i++) { dummy.position.set(railX + 1.7, railY + .6, head + i * 9.4); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(1); dummy.updateMatrix(); cars.setMatrixAt(i, dummy.matrix); } cars.instanceMatrix.needsUpdate = true; });
+  animated.push(t => { const cycle = (t * .055) % 1, head = 140 - cycle * 420; for (let i = 0; i < 6; i++) { dummy.position.set(railX,railY+1.2,head+i*9.4); dummy.rotation.set(0, 0, 0); dummy.scale.setScalar(dummy.position.z>=-123&&dummy.position.z<=73?1:0); dummy.updateMatrix(); cars.setMatrixAt(i, dummy.matrix); } cars.instanceMatrix.needsUpdate = true; });
 
   // Searchlights from three crowns and the hologram ring above the tallest tower.
   if (!low) {
@@ -298,5 +310,5 @@ export function createCyberCity(T, root, { low = false, rich = false, advert = n
   const steam = Array.from({ length: low ? 3 : 8 }, (_, i) => { const s = new T.Sprite(new T.SpriteMaterial({ map: soft, color: 0x9fb6c8, transparent: true, opacity: 0, depthWrite: false })); s.userData.at = [(i % 2 ? 11.2 : -11.2), 58 - i * 19]; s.userData.webgpuShape = 'fx'; group.add(s); return s; });
   animated.push(t => steam.forEach((s, i) => { const k = (t * .22 + i * .37) % 1; s.position.set(s.userData.at[0] + Math.sin(t * .7 + i) * .3, .3 + k * 4.2, s.userData.at[1]); s.scale.setScalar(1 + k * 3.4); s.material.opacity = .16 * Math.sin(k * Math.PI); }));
 
-  return { group, stats: () => ({ ...stats }), update(t, dt) { for (const f of animated) f(t, dt); } };
+  return { group,attachments,towers:built, stats: () => ({ ...stats,mountedSigns:attachments.length }), update(t, dt) { for (const f of animated) f(t, dt); } };
 }

@@ -1,3 +1,4 @@
+import {createFPSMotion,reloadPose} from './fps-motion.js';
 import * as T from './vendor/three.webgpu.min.js';
 import { Assembly, bevelBox, profile, turned, matrix } from './geo.js';
 import { createGlove } from './hands.js';
@@ -362,9 +363,11 @@ export function attachViewmodelLight(camera,{rim=0xff6fb8,key=0xfff1e6}={}){
 export function buildGun({ mats, gloves, sleeve = true, arm = sleeve, makeFlash }) {
   mats=weaponMetals(mats);
   const g = new T.Group(), models = createWeaponModels(mats);
+  const actionRoot=new T.Group();actionRoot.name='Articulated weapon action';g.add(actionRoot);
+  const movement=createFPSMotion();let action=reloadPose(0),activeReload=false;
   const originalWeaponMeshes=models.map(model=>[...model.children]);
   g.userData.weaponModels=models;
-  for (const model of models) { model.visible = false; g.add(model); }
+  for (const model of models) { model.visible = false; actionRoot.add(model); }
   const optics=models.map(attachOptic),eye=new T.Vector3(),target=new T.Vector3();
   g.userData.optics=optics;
   // A model that carries its own reticle owns the sight axis: the glass sits on it and the extra dot hides
@@ -400,8 +403,8 @@ export function buildGun({ mats, gloves, sleeve = true, arm = sleeve, makeFlash 
   const batteryTint = new T.Color(), batteryCharge = new T.Color(), batteryWhite = new T.Color(0xffffff);
   let batteryStateKey = '';
   const hand = createGlove(gloves, { sleeve, arm }), support = createGlove(gloves, { mirror: true, sleeve, arm });
-  support.visible = false; g.add(hand, support);
-  const flash = makeFlash(g); flash.visible = false;
+  support.visible = false; actionRoot.add(hand, support);
+  const flash = makeFlash(actionRoot); flash.visible = false;
   const dualRight=models[7].getObjectByName('DUO right'),dualLeft=models[7].getObjectByName('DUO left');
   const leftFlash=makeFlash(dualLeft);leftFlash.visible=false;
   g.userData.dualLeft=dualLeft;g.userData.flashFor=hand=>g.userData.index===7&&hand==='left'?leftFlash:flash;
@@ -411,17 +414,28 @@ export function buildGun({ mats, gloves, sleeve = true, arm = sleeve, makeFlash 
   };
   // Small moving emitter collars and residual heat make the discharge visible
   // at the barrel rather than a large floating light in front of the hand.
-  const collar=new T.Mesh(new T.CylinderGeometry(.012,.014,.014,12),mats.steel);collar.rotation.x=Math.PI/2;g.add(collar);
+  const collar=new T.Mesh(new T.CylinderGeometry(.012,.014,.014,12),mats.steel);collar.rotation.x=Math.PI/2;actionRoot.add(collar);
   collar.name='Dynamic emitter collar';
   const heatMaterial=new T.MeshBasicMaterial({color:mats.rose.color,transparent:true,opacity:0,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false});
-  const heatRing=new T.Mesh(new T.TorusGeometry(.012,.0018,6,20),heatMaterial);g.add(heatRing);
+  const heatRing=new T.Mesh(new T.TorusGeometry(.012,.0018,6,20),heatMaterial);actionRoot.add(heatRing);
   heatRing.name='Barrel heat ring';
   const emitterRadii=[.0105,.0165,.031,.029,.062,.023,.026,.0105,.022];let blade=null;
   g.userData.getBladeSegment=()=>g.userData.index===5?blade?.segment():null;
   Object.defineProperty(g.userData,'blade',{get:()=>blade});
   Object.assign(g.userData, { flash, hand, support, showSupport: true });
   g.userData.setLevel = level => { hand.userData.setLevel(level); support.userData.setLevel(level); };
+  g.userData.setMovementState=state=>movement.update(state);
+  g.userData.motionState=movement.state;g.userData.actionRoot=actionRoot;
+  const magazines=models.map(model=>model.getObjectByName('Reload magazine'));
+  const magazineBind=magazines.map(o=>o?{position:o.position.clone(),rotation:o.rotation.clone()}:null);
+  const magDelta=new T.Vector3();
   g.userData.setCombatState = ({ ammo = 0, capacity = 1, charge = 0, reloadProgress = 0, reloading = false, time = 0,heat=0,kick=0,impulse=0,bladeHeld=false,dualState=null } = {}) => {
+    activeReload=!!reloading;action=reloadPose(reloading?reloadProgress:0,{pistol:g.userData.index===0||g.userData.index===7,heavy:[2,3,4,6].includes(g.userData.index)});
+    const move=movement.state,tracked=!!g.userData.recoilTracked;
+    actionRoot.position.set(move.x+(tracked?0:action.x),move.y+(tracked?0:action.y),move.z+(tracked?0:action.z));
+    actionRoot.rotation.set(move.pitch+(tracked?0:action.pitch),move.yaw+(tracked?0:action.yaw),move.roll+(tracked?0:action.roll));
+    const mag=magazines[g.userData.index],bind=magazineBind[g.userData.index];
+    if(mag){mag.parent.updateWorldMatrix(true,false);g.updateWorldMatrix(true,false);const inverse=mag.parent.matrixWorld.clone().invert(),linear=new T.Matrix3().setFromMatrix4(inverse.multiply(g.matrixWorld));magDelta.set(0,action.magazineY,action.magazineZ).applyMatrix3(linear);mag.position.copy(bind.position).add(magDelta);mag.rotation.copy(bind.rotation);}
     if(g.userData.index===8)updateVortexAmmo(models[8],ammo,capacity);
     if(dualState)g.userData.dualState=dualState;
     if(g.userData.index===7){
@@ -463,19 +477,27 @@ export function buildGun({ mats, gloves, sleeve = true, arm = sleeve, makeFlash 
     if(g.userData.index===6&&support.visible){const p=M12_FRAME.support;support.userData.setBasePosition?.([p[0],p[1],p[2]+(models[6].userData.pumpOffset||0)]);}
     // The free hand has no trigger: its index closes round the foregrip with the other fingers.
     if (support.visible) support.userData.animate?.({ trigger:g.userData.index===7?trigger:0, grip: reload ? 0 : grip, reload, wrap:g.userData.index!==7&&!reload }, dt);
+    if(support.visible&&activeReload&&action.hand>0&&!g.userData.recoilTracked&&g.userData.index!==7){
+      const mag=magazines[g.userData.index];
+      if(mag){actionRoot.updateWorldMatrix(true,true);const p=new T.Box3().setFromObject(mag).getCenter(new T.Vector3());actionRoot.worldToLocal(p);p.x-=.035;support.position.lerp(p,Math.min(1,action.hand*1.5));}
+      else{support.position.y+=action.magazineY*.72;support.position.z+=action.magazineZ;}
+      support.rotation.z-=action.hand*.18;
+    }
   };
   const supportCuff=[...KENNEY_SUPPORT_CUFF];supportCuff[0]=-supportCuff[0];
   const handCuff=new T.Vector3(),rakeAxis=new T.Vector3(1,0,0);
   g.userData.palm=new T.Vector3();
   g.userData.setVariant = index => {
     if(!WEAPON_FRAME[index])return;
+    movement.reset();actionRoot.position.set(0,0,0);actionRoot.rotation.set(0,0,0);
+    for(let i=0;i<magazines.length;i++)if(magazines[i]){magazines[i].position.copy(magazineBind[i].position);magazines[i].rotation.copy(magazineBind[i].rotation);}
     if(g.userData.index===6&&index!==6)models[6].userData.resetAnimation();
     models.forEach((model, i) => model.visible = i === index);
     const frame = WEAPON_FRAME[index],hold=index===6?M12_HOLD:AUTHORED_HOLD[index]|| (g.userData.kenneyAssets?.loadedByIndex?.[index]?KENNEY_HOLD[index]:null);
     if(index===7){dualRight.add(hand,flash);dualLeft.add(support);support.scale.x=Math.abs(support.scale.x);}
-    else {g.add(hand,support,flash);support.scale.x=-Math.abs(support.scale.x);}
+    else {actionRoot.add(hand,support,flash);support.scale.x=-Math.abs(support.scale.x);}
     dualLeft.visible=index===7&&!!g.userData.showSupport;leftFlash.visible=false;
-    if(index===5&&!blade){blade=createEnergyBlade(mats.rose.color);g.add(blade.root);}
+    if(index===5&&!blade){blade=createEnergyBlade(mats.rose.color);actionRoot.add(blade.root);}
     if(index!==5)blade?.reset?.();
     const muzzle=models[index].userData.muzzle||frame.muzzle;
     flash.position.set(...muzzle); flash.scale.setScalar([.14,.12,.25,.19,.38,0,.27,.14,.18][index]);

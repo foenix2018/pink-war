@@ -1,3 +1,5 @@
+import {createImpactMotion} from './enemy-body-response.js';
+import {strideFrame} from './enemy-motion.js';
 import {createReco1} from './reco1.js';
 import {createRempart} from './enemy-rempart.js';
 import {probeFlightState} from './probe-damage.js';
@@ -300,11 +302,13 @@ export function createEnemyFactory(mats,{detail='high'}={}){
       root.userData.mocapRevision=MOCAP_REVISION;root.userData.mocapTraits=mocap.traits;root.userData.nativeSkeleton=mocap.pose.skeleton;
       root.addEventListener('removed',()=>mocap.dispose());
     }
+    const impactMotion=createImpactMotion();let impactTime=null;
     const motionSample=new Float64Array(5);
     let previousTime=null,previousX=0,previousZ=0,motionSpeed=0,cycle=0;
     let previousProbeTime=null,dronePitch=0,droneRoll=0;
     root.userData.animate=(time,phase=0,moving=true,flight={},simulationTime=time)=>{
       const alert=enemyAlertState(flight,simulationTime);
+      const reaction=impactMotion.update(impactTime===null?0:Math.max(0,simulationTime-impactTime),simulationTime,flight.hitImpulse);impactTime=simulationTime;
       if(form==='spectre')for(const index of kit.humanoid.bladeRig)joints[index].scale.y=alert==='engaged'?1:.22;
       if(root.userData.alertState!==alert){eyeMaterial.color.setHex(ENEMY_OPTICS[alert]);root.userData.alertState=alert;}
       if(kit.groundGun!==null){
@@ -334,6 +338,7 @@ export function createEnemyFactory(mats,{detail='high'}={}){
             dronePitch+Math.sin(time*2+phase)*(state.lost?.042:.012),
           0,state.crashing?Math.min(1.6,fallTime*2.4):
             droneRoll+Math.sin(time*1.7+phase)*(state.lost?.06:.012)+(damaged?.035:0));
+        pelvis.rotation.x+=reaction.pitch;pelvis.rotation.z+=reaction.roll;
         pelvis.position.y=.55+Math.sin(time*(state.lost?5:2.1)+phase)*(state.lost?.038:.018);
         for(const [i,rotor] of kit.rotors.entries()){
           const broken=!!flight.rotorDestroyed?.[i];
@@ -377,15 +382,16 @@ export function createEnemyFactory(mats,{detail='high'}={}){
           q.copy(leg.upper.quaternion).multiply(leg.lower.quaternion);leg.foot.quaternion.copy(q).invert();
         }
       }else{
-        const pose=flight.combatPose||flight.tactics?.state,covered=['cover','return','relocate'].includes(pose),guard=pose==='guard',windup=pose==='windup';
+        const pose=flight.combatPose||flight.tactics?.state,covered=['cover','return','relocate'].includes(pose),guard=pose==='guard',windup=pose==='windup'||pose==='melee-windup';
         const brace=(form==='listener'?.035:0)+(covered?.085:windup?.06:guard?.035:0)+.52*(flight.coverCrouch||0),aiming=alert==='engaged'&&!!flight.ranged;
         const recoil=Math.max(0,1-(simulationTime-(flight.lastShotAt??-99))/.16);
         if(mocap){
           const hit=Math.max(0,1-(simulationTime-(flight.hitAt??-99))/.25),pulse=simulationTime-(flight.lastShotAt??-99)<.12?1:0;
           const lowered=form==='listener'&&alert!=='engaged'?LISTENER_TOOL.patrolPitch:riflePose&&alert==='idle'?-.30:undefined;
-          const r=mocap.update(dt,time,{speed:motionSpeed,alert,aiming,brace,recoil,hit,hitSide:(flight.hitSide||(Math.floor((flight.hitAt||0)*10)%2?1:-1)),covered,guard:guard||windup,
+          const stride=strideFrame(flight.motionX||0,flight.motionZ||0,flight.yaw||0);
+          const r=mocap.update(dt,time,{frame:{x:root.position.x,z:root.position.z,yaw:root.rotation.y,scale:root.scale.x},grounded:flight.grounded!==false,impact:flight.hitImpulse?reaction:null,strideAngle:stride.angle,turnRate:flight.turnRate||0,speed:motionSpeed,alert,aiming,brace,recoil,hit,hitSide:(flight.hitSide||(Math.floor((flight.hitAt||0)*10)%2?1:-1)),covered,guard:guard||windup,meleeWindup:pose==='melee-windup'?flight.chargeProgress||0:0,meleeStrike:Math.max(0,1-(simulationTime-(flight.lastMeleeAt??-99))/.24),
             pitch:T.MathUtils.clamp(flight.aimPitch||0,FIELD_RIFLE.minPitch,FIELD_RIFLE.maxPitch),lowered,pulse,phase:cycle,cover:flight.coverCrouch||0});
-          root.userData.nativeMotion=r.clip;riflePose?.update(joints[kit.groundGun]);return;
+          root.userData.nativeMotion=r.clip;root.userData.footContacts=r.plantedFeet;if(pose!=='melee-windup'&&simulationTime-(flight.lastMeleeAt??-99)>.24)riflePose?.update(joints[kit.groundGun]);return;
         }
         const gait=Math.sin(cycle)*amount;sampleHumanStep(cycle,runBlend,motionSample);
         pelvis.position.y=kit.humanoid.hipHeight-brace+motionSample[4]*amount+humanIdleBob(time)*.12*(1-amount);

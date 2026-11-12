@@ -49,6 +49,14 @@ test('the iPhone route never constructs a GPU renderer and WebGL does not await 
   const result=await createCompatibleRenderer({canvas:target,WebGPU:GPU,WebGL:GL,profile:graphicsProfile({userAgent:'iPhone',gpu:{}})});
   await warmRenderer(result.renderer,{},{});assert.equal(gpu,0);assert.equal(parallel,0);assert.equal(compiles,1);
 });
+test('the node renderer falling back internally to WebGL keeps direct rendering instead of receiving legacy shaders',async()=>{
+  const target=canvas();target.ownerDocument={};
+  class GPU{constructor(o){this.domElement=o.canvas;this.backend={isWebGLBackend:true};}async init(){}}
+  class GL{constructor(){throw new Error('an internal fallback already succeeded');}}
+  const result=await createCompatibleRenderer({canvas:target,WebGPU:GPU,WebGL:GL,profile:graphicsProfile({gpu:{}})});
+  assert.ok(result.renderer instanceof GPU);assert.match(result.initialFailure,/WebGL 2/);
+  assert.equal(result.renderer.fpsPresentation,undefined);
+});
 test('safe restart uses the hosted game for a downloaded file and keeps the current host for previews',()=>{
   const file=new URL(compatibleLaunchURL('file:///private/mobile/Pink_war.html'));
   assert.equal(file.origin,'https://pink-war.vercel.app');assert.equal(file.searchParams.get('renderer'),'webgl');assert.equal(file.searchParams.get('v'),GAME_VERSION);

@@ -1,3 +1,5 @@
+import {createContactShadows,contactShadowPose} from './contact-shadows.js';
+import {createCheckpointBeacon} from './checkpoint-beacon.js';
 import {createProjectedShieldFX} from './projected-shield-fx.js';
 // Feedback of the armour layer (armor-combat.js) shared by M01, M02, the Arena and the Range: synthesised sounds,
 // controller rumble, impulse charges in flight and their pulse, and the strike motion of the held weapon.
@@ -63,7 +65,7 @@ export const MELEE_POSE = Object.freeze({ x: -.07, y: .03, z: -.2, pitch: -.45,
   } });
 
 export function createArmorFeedback({ T, scene, camera=null, renderer=null,getGame=()=>null,getModel=()=>null,getWeapon=()=>null,getLeftController=()=>null,canControl=()=>true,low=false, audio = () => null, haptic = () => {}, listener = () => null, accent = 0xffffff } = {}) {
-  let projected=null;
+  let projected=null,checkpoint=null,contacts=null,contactChecked=false;
   const projectedFor=game=>{if(game?.projectedShieldsEnabled&&!projected)projected=createProjectedShieldFX(T,{scene,camera,renderer,getGame:()=>getGame()||game,getModel,getWeapon,getLeftController,canControl,low});return projected;};
   const hitFeedback=camera?createHitFeedback(T,camera):null;
   const colour = new T.Color(accent),spinAxis=new T.Vector3(),spinStep=new T.Quaternion();
@@ -186,6 +188,11 @@ export function createArmorFeedback({ T, scene, camera=null, renderer=null,getGa
     },
     update(game, dt) {
       projectedFor(game)?.update(game,dt);
+      const held=getWeapon?.();held?.userData.setMovementState?.({time:game.time,dt,velocity:game.playerVelocity,yaw:game.player?.yaw||0,pitch:camera?.rotation.x||0,grounded:game.player?.grounded,verticalSpeed:game.player?.verticalSpeed||0,crouched:game.player?.crouched,aiming:Number(held.userData.aiming||game.aimingPrecision||game.precisionAiming),sprinting:!!game.movement?.sprint,tracked:!!renderer?.xr?.isPresenting});
+      if(game?.checkpointPosition&&!checkpoint)checkpoint=createCheckpointBeacon(T,{scene,renderer});
+      checkpoint?.update(game,dt);
+      if(!contactChecked&&(game.enemies?.length||0)>0){contactChecked=true;if(!scene.getObjectByName('Ombres de contact mobiles')&&!scene.getObjectByName('Ombres de contact douces'))contacts=createContactShadows(T,scene,48);}
+      if(contacts){const bodies=(game.enemies||[]).filter(e=>e.form!=='probe').map(e=>{const p=contactShadowPose(e,(x,z,t,max)=>game.surfaceHeight(x,z,t,max),game.time),s=(e.elite?1.3:1)*(e.form==='brute'||e.form==='bulwark'?1.5:1);return{...p,y:p.y+.012,w:1.15*s*p.scale,d:.85*s*p.scale,yaw:e.yaw};});contacts.update(bodies);}
       hitFeedback?.update(dt);
       const live = new Set();
       for (const c of game?.thrownCharges || []) {
@@ -204,6 +211,7 @@ export function createArmorFeedback({ T, scene, camera=null, renderer=null,getGa
     setAccent(hex) { colour.setHex(hex); rimMaterial.color.copy(colour); },
     dispose() {
       projected?.dispose();
+      checkpoint?.dispose();contacts?.dispose();
       hitFeedback?.dispose();
       for (const g of flying.values()) scene.remove(g); flying.clear();
       explosion.dispose();

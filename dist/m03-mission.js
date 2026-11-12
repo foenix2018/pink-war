@@ -2,7 +2,7 @@
 // Ligne 9). Stages in m03-layout.js; the medical van follows VAN_PATH, waits at each stop until its stage clears the
 // way, waits for the player (leash) and for the machines in front of it, and loses integrity while machines sabotage
 // it at close range. The page supplies presentation hooks.
-import {WEAPONS,weaponAllowedForCharacter} from './game-logic.js';
+import {WEAPONS,weaponAllowedForCharacter,segmentBox} from './game-logic.js';
 import {configureUnit} from './ligne9-mission.js';
 import {keepPressure} from './ligne9-layout.js';
 import * as L from './m03-layout.js';
@@ -22,17 +22,17 @@ export function createM03Mission({ game, characterId = 'ghju', choice = null, ba
   const h = { setObstacles: noop, setMovable: noop, openPortal: noop, cue: noop, notice: noop, say: noop, stage: noop, finish: noop, lost: noop, clear: noop, setPower: noop, ...hooks };
   const groups = new Map(), pending = [], done = new Set(), said = new Set(), reads = new Set(), opened = new Set();
   let stage = 0, hold = null, completed = false, serial = 0, pressureAt = 0, waitNotice = 0, sabotageSaid = 0;
-  const van = { x: L.VAN_PATH[0].x, z: L.VAN_PATH[0].z, yaw: 0, index: 0, hp: L.VAN.hp, moving: false, waiting: null, obstacle: { kind: 'van', x: 0, z: 0, hx: 1.15, hz: 2.9, y: 0, height: 2.7, surface: 'metal', van: true, navPad: .9 } };
+  const van = { x: L.VAN_PATH[0].x, z: L.VAN_PATH[0].z, yaw: 0, index: 0, hp: L.VAN.hp, moving: false, waiting: null, obstacle: { kind: 'van', x: 0, z: 0, hx: 1.15, hz: 2.9, y: 0, height: L.VAN.height, surface: 'metal', van: true, navPad: .9 } };
   let collisions = [];
 
   const id = () => L.STAGES[stage].id;
   const alive = name => (groups.get(name) || []).filter(e => game.enemies.some(x => x.id === e)).length;
   const say = (key, { again = false } = {}) => { if (!again && said.has(key)) return; said.add(key); h.say(key); };
-  const setStage = next => { stage = typeof next === 'string' ? S[next] : next; h.stage(stage, L.STAGES[stage]); };
+  const setStage = next => { stage = typeof next === 'string' ? S[next] : next; game.checkpointPosition={...L.STAGES[stage].checkpoint,id:L.STAGES[stage].id,label:L.STAGES[stage].label}; h.stage(stage, L.STAGES[stage]); };
   const areaOfPlayer = () => L.areaAt(game.player.x, game.player.z);
   function rebuild() { collisions = [...base, ...L.extraObstacles({ open: [...opened] }), ...L.CHECKPOINT_POSTS.map(o => ({ ...o })), van.obstacle]; syncVanObstacle(); game.replaceObstacles(collisions); h.setObstacles(collisions); }
   function open(name) { if (opened.has(name)) return; opened.add(name); rebuild(); h.setMovable(name, true); h.cue('door'); }
-  function syncVanObstacle() { const o = van.obstacle, along = Math.abs(Math.sin(van.yaw)) > .7; Object.assign(o, { x: van.x, z: van.z, hx: along ? L.VAN.halfLength : L.VAN.halfWidth, hz: along ? L.VAN.halfWidth : L.VAN.halfLength }); }
+  function syncVanObstacle() { const o = van.obstacle, c=Math.abs(Math.cos(van.yaw)), s=Math.abs(Math.sin(van.yaw)); Object.assign(o, { x: van.x, z: van.z, hx:c*L.VAN.halfWidth+s*L.VAN.halfLength, hz:c*L.VAN.halfLength+s*L.VAN.halfWidth }); }
   function placeVan(index) { const p = L.VAN_PATH[index], q = L.VAN_PATH[Math.min(index + 1, L.VAN_PATH.length - 1)]; Object.assign(van, { x: p.x, z: p.z, index, hp: L.VAN.hp, moving: false, waiting: null, yaw: Math.atan2(-(q.x - p.x), -(q.z - p.z)) || van.yaw }); syncVanObstacle(); }
 
   // ---------- Encounters ----------
@@ -59,13 +59,14 @@ export function createM03Mission({ game, characterId = 'ghju', choice = null, ba
     game.ownedWeapons = new Set([game.weaponIndex, 0, 1, 2, 3, 4].filter(i => weaponAllowedForCharacter(i, characterId) && !WEAPONS[i].melee));
     game.ammo = WEAPONS.map(w => w.capacity);
   }
-  function place(cp) { Object.assign(game.player, { x: cp.x, z: cp.z, elevation: game.surfaceHeight(cp.x, cp.z), grounded: true, verticalSpeed: 0, yaw: cp.yaw || 0 }); }
+  function place(cp) { Object.assign(game.player, { x: cp.x, z: cp.z, elevation: game.surfaceHeight(cp.x, cp.z, game.time, (cp.elevation||0)+.3), grounded: true, verticalSpeed: 0, yaw: cp.yaw || 0 }); }
   function freshGame(cp) {
     game.reset(characterId); armWeapons(); place(cp);
     game.nextWave = Infinity; game.toSpawn = 0; game.spawnTimer = Infinity; game.spawned = 0;
     pending.length = 0; groups.clear(); hold = null; pressureAt = 0; h.clear(); rebuild(); supplies();
   }
 
+  const reachesVan=e=>Math.abs(e.elevation||0)<2&&!collisions.some(o=>o!==van.obstacle&&segmentBox({x:e.x,y:(e.elevation||0)+1,z:e.z},{x:van.x,y:1,z:van.z},o)!==null);
   // ---------- The van ----------
   function driveVan(dt) {
     van.moving = false; van.waiting = null;
@@ -76,17 +77,24 @@ export function createM03Mission({ game, characterId = 'ghju', choice = null, ba
     if (!DRIVING.has(id())) { van.waiting = 'stage'; return; }
     const p = game.player;
     if (Math.hypot(p.x - van.x, p.z - van.z) > L.VAN.leash) { van.waiting = 'escorte'; if (game.time > waitNotice) { waitNotice = game.time + 9; h.notice('L’AMBULANCE VOUS ATTEND · RESTEZ À MOINS DE ' + L.VAN.leash + ' M'); } return; }
-    const ahead = game.enemies.some(e => e.form !== 'probe' && Math.hypot(e.x - van.x, e.z - van.z) < 11);
+    const ahead = game.enemies.some(e => e.form !== 'probe' && Math.hypot(e.x - van.x, e.z - van.z) < 11 && reachesVan(e));
     if (ahead) { van.waiting = 'machines'; return; }
     const dx = next.x - van.x, dz = next.z - van.z, d = Math.hypot(dx, dz), stepLen = Math.min(d, L.VAN.speed * dt);
-    const target = Math.atan2(-dx, -dz); let turn = target - van.yaw; turn = Math.atan2(Math.sin(turn), Math.cos(turn)); van.yaw += Math.max(-dt * 1.4, Math.min(dt * 1.4, turn));
-    van.x += dx / (d || 1) * stepLen; van.z += dz / (d || 1) * stepLen; van.moving = stepLen > 0;
+    const target = Math.atan2(-dx, -dz); let turn = target - van.yaw; turn = Math.atan2(Math.sin(turn), Math.cos(turn));
+    const yaw=van.yaw+Math.max(-dt*1.4,Math.min(dt*1.4,turn));
+    const nx=van.x+dx/(d||1)*stepLen,nz=van.z+dz/(d||1)*stepLen,c=Math.abs(Math.cos(yaw)),s=Math.abs(Math.sin(yaw));
+    const hx=c*L.VAN.halfWidth+s*L.VAN.halfLength,hz=c*L.VAN.halfLength+s*L.VAN.halfWidth;
+    // Sweep the complete vehicle hull, including rotation and roof clearance.
+    if(collisions.some(o=>o!==van.obstacle&&!o.walkableSurface&&(o.y||0)<L.VAN.height&&(o.y||0)+o.height>.3&&segmentBox({x:van.x,y:.5,z:van.z},{x:nx,y:.5,z:nz},{...o,y:0,height:1,hx:o.hx+hx,hz:o.hz+hz})!==null)){van.waiting='passage';return;}
+    const px=p.x-nx,pz=p.z-nz,localX=px*Math.cos(yaw)-pz*Math.sin(yaw),localZ=px*Math.sin(yaw)+pz*Math.cos(yaw);
+    if((p.elevation||0)<L.VAN.height&&Math.hypot(Math.max(0,Math.abs(localX)-L.VAN.halfWidth),Math.max(0,Math.abs(localZ)-L.VAN.halfLength))<.58){van.waiting='passage';return;}
+    van.yaw=yaw;van.x=nx;van.z=nz;van.moving=stepLen>0;
     if (d - stepLen < .05) { van.index++; van.x = next.x; van.z = next.z; }
     syncVanObstacle();
   }
   function sabotage(dt) {
     let near = 0;
-    for (const e of game.enemies) if (e.form !== 'probe' && Math.hypot(e.x - van.x, e.z - van.z) < L.VAN.sabotageRange) near++;
+    for (const e of game.enemies) if (e.form !== 'probe' && Math.hypot(e.x - van.x, e.z - van.z) < L.VAN.sabotageRange && reachesVan(e)) near++;
     if (!near) return;
     van.hp = Math.max(0, van.hp - near * L.VAN.sabotage * dt);
     if (game.time > sabotageSaid) { sabotageSaid = game.time + 20; say('sabotage', { again: true }); h.notice('L’AMBULANCE EST SABOTÉE · ' + Math.ceil(van.hp) + ' %'); }
@@ -127,6 +135,7 @@ export function createM03Mission({ game, characterId = 'ghju', choice = null, ba
       const p = game.player;
       for (const it of L.INTERACTIONS) {
         if (Math.abs((p.elevation || 0) - (it.y || 0)) > 1.6 || Math.hypot(p.x - it.x, p.z - it.z) > it.radius) continue;
+        if (collisions.some(o=>o.blocksInteraction&&segmentBox({x:p.x,y:(p.elevation||0)+1.3,z:p.z},{x:it.x,y:(it.y||0)+1.3,z:it.z},o)!==null)) continue;
         if (it.log && !['dossier', 'manifeste', 'relais', 'regulation'].includes(it.id)) return it;
         if (api.available(it.id)) return it;
       }
@@ -209,7 +218,7 @@ export function createM03Mission({ game, characterId = 'ghju', choice = null, ba
       if (s === 'kit' && done.has('kit') && groups.has('annexe') && alive('annexe') === 0) { say('kitOk'); setStage(S.atelier); }
       if (s === 'atelier' && room === 'atelier' && !groups.has('atelier')) { deploy('atelier', { alert: true }); say('atelier'); }
       if (s === 'verin' && !groups.has('atelier')) deploy('atelier', { alert: true });
-      if (s === 'balise' && room === 'fracture' && !groups.has('fracture')) { deploy('fracture', { alert: true }); say('fracture'); }
+      if (s === 'balise' && !groups.has('fracture')) { deploy('fracture', { alert: true }); say('fracture'); }
     }
   };
   return api;

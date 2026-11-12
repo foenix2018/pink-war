@@ -1,3 +1,4 @@
+import {createFPSChapter} from './fps-environments.js';
 import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
 import {createStairHardware} from './stair-hardware.js';
 import {createModernSwitch} from './modern-switch.js';
@@ -31,6 +32,7 @@ function tiledPlane(T, w, h, tile) {
 export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, onPortalClose=()=>{}, camera } = {}) {
   const low = quality === 'low', rng = seeded(9091);
   const root = new T.Group(); root.name = 'COURONNE HELIX'; scene.add(root);
+  let fpsChapter=null;
   const animated = [], stats = { instances: 0, meshes: 0 };
   const add = (o, parent = root) => { parent.add(o); stats.meshes++; return o; };
 
@@ -205,6 +207,7 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
   // ---------- Elements built from the colliders ----------
   const posts = [];
   function dress(o) {
+    if(o.kind==='fps-cover')return;
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, y = o.y;
     const surface={bench:'bench',kiosk:'kiosk',scanner:'scanner',desk:'desk'};
     if(surface[o.kind]){
@@ -489,8 +492,9 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
   // Build everything queued.
   return {
     root, M,
-    build(collisions) { for (const o of collisions) dress(o); flushPosts(); neons.meshes(); neons.build(); flushBoxes(); },
+    build(collisions) { fpsChapter=createFPSChapter(T,root,{chapter:'couronne',obstacles:collisions,areas:[{id:'esplanade',label:'Esplanade HELIX',x1:-40,x2:40,z1:4,z2:60},...FLOORS.map(f=>({...f,floor:f.height,label:f.id}))],low,webgpu});for (const o of collisions) dress(o); flushPosts(); neons.meshes(); neons.build(); flushBoxes(); },
     update(t, dt, cam = camera) {
+      fpsChapter?.update(t,dt,cam?.position);
       if (cam) { skyDome.position.copy(cam.position); sun.position.copy(cam.position).addScaledVector(sunDir, 800); sun.lookAt(cam.position); }
       for (const c of clouds) c.material.map.offset.x += c.userData.speed * dt;
       for(const c of consoles.values())c.control.setState(c.done,{dt});
@@ -500,6 +504,6 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
     setGatesOpen(open) { gatesOpen = open; },
     setConsole(id, done) { const c = consoles.get(id); if (c) {c.done=!!done;c.control.setState(c.done);} },
     setAnchorPower(value) { anchorTarget = value; },
-    stats() { return { ...stats, neons:neons.stats(), portals: portals.length, anchorPower: +anchorPower.toFixed(2), gatesOpen }; }
+    stats() { return { ...stats, fps:fpsChapter?.stats(), neons:neons.stats(), portals: portals.length, anchorPower: +anchorPower.toFixed(2), gatesOpen }; }
   };
 }
