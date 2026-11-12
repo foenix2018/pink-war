@@ -51,3 +51,10 @@ test('M03: a machine behind a wall cannot halt or sabotage the ambulance',async(
  m.update(.05);assert.equal(m.van.hp,before.hp);assert.equal(m.van.moving,true);
  g.enemies=[];Object.assign(g.player,{x:m.van.x,z:m.van.z-1});m.update(.05);assert.equal(m.van.moving,false);assert.equal(m.van.waiting,'passage','the ambulance waits instead of crossing the player');
 });
+
+test('relocated street furniture carries its horizontal lenses and light sources too',async()=>{
+ const{sectorFaceOffset,neonSpots}=await import('../dist/m03-sector.js');
+ const src={n:1,pos:new Int16Array([1000,950,-4120,1200,950,-4120,1200,950,-4080,1000,950,-4080]),mat:new Uint8Array([6]),col:new Uint8Array([100,230,255])};
+ assert.deepEqual(sectorFaceOffset(src,0,.01),{x:0,z:-7});
+ const spot=neonSpots({meta:{scale:.01},world:src},{minArea:.1})[0];assert.ok(Math.abs(spot.z+48)<.001);
+});

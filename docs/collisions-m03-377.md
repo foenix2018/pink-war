@@ -21,3 +21,4 @@ Les véhicules sont les modèles RLH CMIA et CCRM Gallin, et non les anciennes a
 - 28 modules JavaScript vérifiés syntaxiquement ; `git diff --check` sans erreur.
 - Chromium local : démarrage réel et premières interactions M03 en WebGL puis WebGPU natif, balise visible et quatre instances d’ambulance du nouveau modèle dans la scène, zéro erreur JavaScript. Le test masque les appels de polices externes indisponibles dans l’environnement.
 - Rendu hors écran WebGPU natif des deux véhicules et de la balise, contrôlé visuellement. Cette vérification sur GPU logiciel ne mesure pas les performances d’un iPhone ou d’un Quest.
+- Contrôle de cohérence du mobilier déplacé : les lentilles horizontales, tubes néon et sources de halo suivent aussi le support métallique. Parcours complet et sécurité du convoi revérifiés après cette finition : 11/11.

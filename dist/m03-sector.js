@@ -109,7 +109,9 @@ export function createSectorMeshes(T, sector, { quality = 'normal', tile = {}, w
     const ids=[],faces=[],src=sector.world;
     for(let i=0;i<src.n;i++)if(src.mat[i]===id){ids.push(i);faces.push([0,1,2,3].map(v=>[0,1,2].map(a=>src.pos[i*12+v*3+a]*sector.meta.scale)));}
     for(const run of findBakedNeonRuns(faces)){
-      tubes.bar(run.size,run.position,[0,0,0],color);
+      const [rx,ry,rz]=run.position,[sx,sy,sz]=run.size;
+      const off=sectorPropOffset({x1:rx-sx/2,x2:rx+sx/2,y1:ry-sy/2,y2:ry+sy/2,z1:rz-sz/2,z2:rz+sz/2});
+      tubes.bar(run.size,[rx+off.x,ry,rz+off.z],[0,0,0],color);
       for(const i of run.indices)replaced.add(ids[i]);
     }
   }
@@ -170,7 +172,8 @@ export function neonSpots(sector, { minArea = .35, max = 220 } = {}) {
     const b = q * 12, p = src.pos;
     const ux = (p[b + 3] - p[b]) * s, uy = (p[b + 4] - p[b + 1]) * s, uz = (p[b + 5] - p[b + 2]) * s, vx = (p[b + 6] - p[b]) * s, vy = (p[b + 7] - p[b + 1]) * s, vz = (p[b + 8] - p[b + 2]) * s;
     const area = Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx); if (area < minArea) continue;
-    const x = (p[b] + p[b + 6]) / 2 * s, y = (p[b + 1] + p[b + 7]) / 2 * s, z = (p[b + 2] + p[b + 8]) / 2 * s;
+    const off=sectorFaceOffset(src,q,s);
+    const x = (p[b] + p[b + 6]) / 2 * s+off.x, y = (p[b + 1] + p[b + 7]) / 2 * s, z = (p[b + 2] + p[b + 8]) / 2 * s+off.z;
     if (out.some(o => Math.hypot(o.x - x, o.y - y, o.z - z) < 4)) continue;
     out.push({ x, y, z, area, r: src.col[q * 3] / 255, g: src.col[q * 3 + 1] / 255, b: src.col[q * 3 + 2] / 255, mat: src.mat[q] });
   }

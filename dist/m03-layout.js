@@ -157,6 +157,6 @@ export const STAGE_INDEX = Object.freeze(Object.fromEntries(STAGES.map((s, i) =>
 export function sectorPropOffset(c) {
  const x=(c.x1+c.x2)/2,z=(c.z1+c.z2)/2;
  const barrier=c.label==='barrière béton'&&Math.abs(x-16.4)<.1&&Math.abs(z+41)<.1;
- const furniture=c.x1>=8.4&&c.x2<=15.1&&c.z1>=-42.5&&c.z2<=-40.7&&c.y2<=9&&c.y2-c.y1>.02;
+ const furniture=c.x1>=8.4&&c.x2<=15.1&&c.z1>=-42.5&&c.z2<=-40.7&&c.y2<=11&&c.y2>.25;
  return barrier||furniture?{x:0,z:-7}:{x:0,z:0};
 }
