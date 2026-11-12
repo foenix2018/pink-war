@@ -11,11 +11,11 @@ export function createMissionLoading({mission=1,characterId='ghju'}={}){
  let musicEnabled=true;try{musicEnabled=JSON.parse(localStorage.getItem('rosee-settings')||'{}').music!==false;}catch{}
  setScreenMusic('loading',mission,musicEnabled);
  if(!document.querySelector('[data-mission-loading-style]')){
-  const link=document.createElement('link');link.rel='stylesheet';link.href=new URL('./mission-loading.css?v=3.74.0',import.meta.url).href;link.dataset.missionLoadingStyle='';document.head.append(link);
+  const link=document.createElement('link');link.rel='stylesheet';link.href=new URL('./mission-loading.css?v=20261112-art-only',import.meta.url).href;link.dataset.missionLoadingStyle='';document.head.append(link);
  }
  const root=document.createElement('section');root.className='pw-mission-loading';root.setAttribute('data-mission',String(mission));root.id='pw-mission-loading';
  root.setAttribute('role','status');root.setAttribute('aria-label','Chargement du chapitre');
- // Same level screen as the start panels (mission-briefing.js): art, logo, chapter, objectives; progress at the bottom right.
+ // Keep the graphic cover alone, with real loading progress and recovery controls.
  buildLoadingCover(root,mission,characterId);document.body.append(root);
  let progress=0,failed=false,complete=null;
  function set(value,label){
