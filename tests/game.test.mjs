@@ -78,7 +78,7 @@ test('portal levels spawn gradually and grow without an instant health refill', 
 });
 test('contact damage ends the game, and reset starts a clean round', () => {
   const g = new ArenaGame();g.nextWave = 999;g.player.hp = 10;g.enemies = [enemy(999, 22, 1)];g.enemies[0].attackTimer = 0;
-  g.step(.02);assert.equal(g.state, 'over');assert.equal(g.player.hp, 0);assert.equal(g.shoot({x:0,y:1,z:0},{x:0,y:0,z:-1}),false);
+  g.step(.02);assert.equal(g.state,'playing');assert.ok(g.enemies[0].meleeIntent,'contact is announced before damage');advance(g,.5);assert.equal(g.state, 'over');assert.equal(g.player.hp, 0);assert.equal(g.shoot({x:0,y:1,z:0},{x:0,y:0,z:-1}),false);
   const elapsed = g.time;g.step(.02);assert.equal(g.time, elapsed);g.reset();assert.equal(g.player.hp, 100);assert.equal(g.wave, 0);assert.equal(g.score, 0);assert.equal(g.enemies.length, 0);
 });
 
@@ -235,7 +235,7 @@ test('a thin wall blocks contact damage even when a monster is within attack ran
   const g=new ArenaGame([{x:0,z:21.2,hx:3,hz:.1,height:2.65}]);g.nextWave=999;
   const e=enemy(999,20.4);e.attackTimer=0;g.enemies=[e];g.step(.02);
   assert.equal(g.player.hp,100);
-  g.obstacles=[];g.enemies[0].attackTimer=0;g.step(.02);assert.ok(g.player.hp<100);
+  g.obstacles=[];g.enemies[0].attackTimer=0;g.step(.02);assert.equal(g.player.hp,100,'a visible strike still needs its windup');advance(g,.5);assert.ok(g.player.hp<100);
 });
 test('protective walls stop hostile projectiles and permit recovery behind them', () => {
   assert.equal(COVER_WALLS.length,8);

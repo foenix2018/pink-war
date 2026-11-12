@@ -6,24 +6,24 @@ import {createDistrictArchitecture} from '../dist/level2-architecture.js';
 
 const text=file=>readFileSync(new URL('../dist/'+file,import.meta.url),'utf8');
 
-test('M02 has own cyberpunk artwork in menu, loading screen, and start page',()=>{
- const cover=readFileSync(new URL('../dist/art/mission02-cover.webp',import.meta.url));
+test('M02 loads its chapter artwork while preserving the chosen hero on the welcome screen',()=>{
+ const cover=readFileSync(new URL('../dist/art/chapters/chapter-02.webp',import.meta.url));
  assert.equal(cover.toString('ascii',0,4),'RIFF');
  assert.equal(cover.toString('ascii',8,12),'WEBP');
  const title={textContent:''},description={textContent:''},credit={textContent:''};
  const img=(name)=>({dataset:{ghjuSrc:'art/accueil.webp',lyluSrc:'art/accueil-lylu.webp'},
-   attr:{src:'art/accueil.webp'},getAttribute(key){return this.attr[key];},setAttribute(key,value){this.attr[key]=value;}});
+   closest:selector=>selector==='#welcome-art'&&name==='welcome',attr:{src:'art/accueil.webp'},getAttribute(key){return this.attr[key];},setAttribute(key,value){this.attr[key]=value;}});
  const images=[img('welcome'),img('loading')];
  const root={querySelectorAll:()=>images,getElementById:(id)=>({'loading-title':title,'loading-description':description}[id]),
  querySelector:()=>credit};
  syncMenuArtwork('ghju','campaign2',root);
- assert.ok(images.every(im=>im.attr.src.includes('mission02-cover.webp')));
+ assert.equal(images[0].attr.src,'art/accueil.webp');assert.match(images[1].attr.src,/chapter-02\.webp/);
  assert.match(title.textContent,/Les Profondeurs/);
  assert.match(description.textContent,/Directoire/);
  syncMenuArtwork('lylu','campaign2',root);
- assert.ok(images.every(im=>im.attr.src.includes('mission02-cover.webp')));
+ assert.equal(images[0].attr.src,'art/accueil-lylu.webp');assert.match(images[1].attr.src,/chapter-02\.webp/);
  syncMenuArtwork('lylu','campaign',root);
- assert.ok(images.every(im=>im.attr.src==='art/accueil-lylu.webp'));
+ assert.equal(images[0].attr.src,'art/accueil-lylu.webp');assert.match(images[1].attr.src,/chapter-01\.webp/);
  assert.equal(title.textContent,'01 — Le Dernier Signal');
  assert.match(text('level2-test.html'),/mission02-cover\.webp/);
 });

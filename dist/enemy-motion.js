@@ -11,3 +11,12 @@ export function strideFrame(vx,vz,yaw){
  const x=(vx||0)*Math.cos(yaw)-(vz||0)*Math.sin(yaw),z=(vx||0)*Math.sin(yaw)+(vz||0)*Math.cos(yaw);
  return {x,z,angle:Math.hypot(x,z)<.05?0:Math.atan2(x,-z)};
 }
+// Analytic steering: heavier frames take longer to gather speed, while stopping
+// for a committed attack or a stun is immediate and cannot drift through cover.
+export function steerEnemyTravel(e,vx,vz,dt,{stop=false}={}){
+ const v=e.travelVelocity||(e.travelVelocity={x:0,z:0});
+ if(stop){v.x=v.z=0;return{x:0,z:0};}
+ const rate=['brute','bulwark'].includes(e.form)?8:e.form==='spectre'?21:14,decay=Math.exp(-rate*dt),integral=(1-decay)/rate;
+ const x=vx*dt+(v.x-vx)*integral,z=vz*dt+(v.z-vz)*integral;
+ v.x=vx+(v.x-vx)*decay;v.z=vz+(v.z-vz)*decay;return{x,z};
+}

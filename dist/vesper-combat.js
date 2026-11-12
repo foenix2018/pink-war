@@ -116,7 +116,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const torch=new T.SpotLight(0xffefd4,22,22,.38,.72,2);torch.target=torchTarget;camera.add(torch);
   const atmosphere=createVesperAtmosphere(T,scene,renderer,profile,{extraLights:[torch]});
   onProgress(.36,'Construction de Vesper');
-  const missionArt=createCampaignArt(T,scene,null,{quality:profile.phone||requestedQuality==='low'?'low':requestedQuality,photographic:true});
+  const missionArt=createCampaignArt(T,scene,null,{quality:profile.phone||requestedQuality==='low'?'low':requestedQuality,photographic:true,webgpu:!!renderer.backend?.isWebGPUBackend});
   missionArt.setVisible(true);
   const dressing=missionArt.dressing;
   const salvage=await createM01Salvage(T,missionArt.root,{performance:profile.phone||requestedQuality==='low'});

@@ -1,3 +1,4 @@
+import {chapterCovers} from './fps-level-layout.js';
 // MISSION 04 — « La Brèche Violette » (Tome II M04, W04 « Puits et stations de phase »: cour réacteur → hangar → relais
 // → stabilisateurs → portique ; neutraliser 3 stabilisateurs, réactiver 2 relais, boss de portique BS01 ; remparts et
 // sondes ; brèche volontaire, signatures humaines). The JANUS energy station East, where the « lot spécial » of the
@@ -129,7 +130,7 @@ export function doorCollider(d) {
 }
 export function buildCollisions({ open = [] } = {}) {
   const openSet = new Set(open);
-  return [...walls(), ...supports(), ...props(), ...DOORS.filter(d => !d.open && !openSet.has(d.id)).map(doorCollider)]
+  return [...chapterCovers('m04'), ...walls(), ...supports(), ...props(), ...DOORS.filter(d => !d.open && !openSet.has(d.id)).map(doorCollider)]
     .map(o => ({ ...o, navPad: Math.min(o.hx, o.hz) < .7 ? .7 : 1.3 }));
 }
 

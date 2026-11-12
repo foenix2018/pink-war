@@ -1,3 +1,4 @@
+import {hasLocalFireSlot} from './enemy-engagement.js';
 // S-03: former municipal surveillance probes now controlled by the hostile AI.
 // Flight is simulated in three dimensions; roofs and catwalk undersides remain
 // solid, and projectiles keep their locked direction after the warning.
@@ -122,6 +123,7 @@ export function updateProbe(game, e, dt, segmentBox) {
   } else {
     e.attackTimer = (e.attackTimer || 0) - dt;
     if (e.attackTimer <= 0) {
+      if(!hasLocalFireSlot(e,{time:game.time,allies:game.enemies})){e.attackTimer=.15;return;}
       const profile=hostileShotProfile(game.wave,'probe');
       e.lockedTarget = predictShot(eye,target,game.playerVelocity,profile.speed,profile.lead);
       // Damaged stabilizers cause a visible, reproducible loss of aim precision.

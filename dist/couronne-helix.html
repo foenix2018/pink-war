@@ -66,7 +66,7 @@ body.pw-graphics-open #quality{display:block}
 <script type="module">
 const lylu=new URLSearchParams(location.search).get('character')==='lylu';
 document.getElementById(lylu?'pick-lylu':'pick-ghju').setAttribute('aria-current','true');
-import('./couronne-helix.js?v=20261108-projected-shields').catch(error=>{
+import('./couronne-helix.js?v=3.79.0').catch(error=>{
  const status=document.getElementById('status'),button=document.getElementById('start');
  if(status)status.textContent='Erreur de chargement : '+(error?.message||String(error))+' — essaye le mode compatibilité WebGL.';
  if(button){button.disabled=false;button.textContent='RECHARGER →';button.addEventListener('click',()=>location.reload());}

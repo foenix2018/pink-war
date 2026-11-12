@@ -84,7 +84,7 @@ test('the level is standalone: same production engine, not linked from the lobby
   const engine=read('couronne-helix.js'),page=read('couronne-helix.html');
   for(const module of ['./game-logic.js','./combat-hud.js','./armor-feedback.js','./mission-xr.js','./level2-input.js','./couronne-layout.js','./couronne-art.js','./couronne-mission.js'])assert.ok(engine.includes(`from '${module}'`),module);
   assert.match(engine,/game\.enableArmorShield\(\)/);assert.match(engine,/mountCombatHud\(\{characterId,onAction:armorTouch\}\)/);
-  assert.match(page,/import\('\.\/couronne-helix\.js\?v=\d+'\)/);
+  assert.match(page,/import\('\.\/couronne-helix\.js\?v=[^']+'\)/);
   for(const file of ['index.html','entry.js','game.js','story-chapters.js','launch-ui.js'])assert.ok(!read(file).includes('couronne-helix'),file+' does not link it yet');
   const art=read('couronne-art.js');
   assert.match(art,/M\.phase/,'magenta stays on the phase anchor');assert.ok(!/new T\.(Point|Spot)Light/.test(art.replace(/anchorLight = new T\.PointLight|lobbyLight = new T\.PointLight/g,'')),'only the two planned point lights');

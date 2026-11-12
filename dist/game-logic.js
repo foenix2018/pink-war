@@ -1,4 +1,5 @@
-import {turnEnemy} from './enemy-motion.js';
+import {searchContactOrder,pendingMeleeOrder,updateMeleeIntent,prepareHostileShot} from './enemy-engagement.js';
+import {turnEnemy,steerEnemyTravel} from './enemy-motion.js';
 import {inertialMove} from './locomotion.js';
 import {ensureEnemyBubble,shieldFacesSource,tracePlayerShield,traceEnemyShield,playerShieldFrame,enemyShieldFrame} from './projected-shield-logic.js';
 import {createArenaTurrets,fortressWaveUnit,turretHitbox,damageDefenseTurret,updateArenaTurrets} from './arena-defense.js';
@@ -887,7 +888,8 @@ export class ArenaGame {
       relayVisualContact(e,tacticContext);
       specialistVisualRelay(e,tacticContext);
       // Grenade avoidance and survival retain priority over specialist tactics.
-      const order=!stairRoute?(grenadeAvoidance(e,tacticContext)||individualCombatOrder(e,tacticContext)||specialistCombatOrder(e,tacticContext)||tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext)||this.sectorOrder?.(e,tacticContext)):null;
+      const coverFirst=(e.suppressedUntil||0)>this.time||!!e.tactics?.cover;
+      const order=!stairRoute?(grenadeAvoidance(e,tacticContext)||individualCombatOrder(e,tacticContext)||pendingMeleeOrder(e,this.time)||searchContactOrder(e,tacticContext)||(coverFirst?(tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext)):null)||specialistCombatOrder(e,tacticContext)||tacticalOrder(e,tacticContext)||squadOrder(e,tacticContext)||this.sectorOrder?.(e,tacticContext)):null;
       e.combatPose=order?.state||'advance';
       e.coverCrouch=((e.coverCrouch||0)+((order?.crouchAmount??Number(!!order?.crouched))-(e.coverCrouch||0))*(1-Math.exp(-dt*12)));
       if(order){destinationX=order.point.x;destinationZ=order.point.z;}
@@ -917,11 +919,12 @@ export class ArenaGame {
       }
       const norm=Math.hypot(dx,dz)||1;
       const stopDistance=order?order.stopDistance:stairRoute?.15:slot?.3:e.awareness==='engaged' ? (e.ranged?14:1.45) : e.awareness==='search'?1.8:.7;
-      if((goalDistance>stopDistance||retreat)&&(e.stunnedUntil||0)<=this.time){
-        const injury=(e.limpUntil>this.time?.62:1)*(order?.speedScale??1);
-        const searchSpeed=retreat?.8:e.awareness==='engaged'?1:e.awareness==='search'?.75:.48;
-        moveInArena(e,dx/norm*e.speed*dt*injury*searchSpeed,dz/norm*e.speed*dt*injury*searchSpeed,e.radius,this.obstacles);
-      }
+      const walking=(goalDistance>stopDistance||retreat)&&(e.stunnedUntil||0)<=this.time&&(order?.speedScale??1)>0;
+      const injury=(e.limpUntil>this.time?.62:1)*(order?.speedScale??1),searchSpeed=retreat?.8:e.awareness==='engaged'?1:e.awareness==='search'?.75:.48;
+      const travel=steerEnemyTravel(e,walking?dx/norm*e.speed*injury*searchSpeed:0,walking?dz/norm*e.speed*injury*searchSpeed:0,dt,{stop:!walking});
+      moveInArena(e,travel.x,travel.z,e.radius,this.obstacles);
+      if(Math.abs(e.x-motionOrigin.x)<Math.abs(travel.x)*.35)e.travelVelocity.x=0;
+      if(Math.abs(e.z-motionOrigin.z)<Math.abs(travel.z)*.35)e.travelVelocity.z=0;
       this.settle(e,dt);
       e.motionX=(e.x-motionOrigin.x)/Math.max(dt,.001);e.motionZ=(e.z-motionOrigin.z)/Math.max(dt,.001);
       let desiredYaw=e.yaw;
@@ -932,18 +935,21 @@ export class ArenaGame {
       turnEnemy(e,desiredYaw,dt);
       if(seen&&isReco1(e.form))aimReco1(e,playerHead);
       if((e.stunnedUntil||0)<=this.time)e.attackTimer-=dt;
-      if(!seen||e.stunnedUntil>this.time){e.burstRemaining=0;e.chargeProgress=0;}
+      if(!seen||e.stunnedUntil>this.time){e.burstRemaining=0;e.chargeProgress=0;e.shotIntent=null;}
       else e.chargeProgress=e.ranged&&e.attackTimer>0&&e.attackTimer<.25?1-e.attackTimer/.25:0;
       // Never attack through walls or while merely searching the last seen position.
-      if((!order||order.canFire)&&seen&&e.awareness==='engaged'&&distance<2&&e.attackTimer<=0&&(e.stunnedUntil||0)<=this.time){
-        e.attackTimer=.85;this.damage(e.elite?20+this.wave:10+Math.floor(this.wave/2),e);
-      }else if((!order||order.canFire)&&seen&&e.awareness==='engaged'&&e.ranged&&Math.abs(e.facingError||0)<.22&&distance<38&&e.attackTimer<=0&&(e.stunnedUntil||0)<=this.time){
+      const attackAllowed=(!order||order.canFire)&&e.awareness==='engaged';
+      const meleeHit=updateMeleeIntent(e,{time:this.time,seen,allowed:attackAllowed,player:this.player,blocked:(a,b)=>this.blocked(a,b)});
+      if(meleeHit){
+        this.damage(e.elite?20+this.wave:10+Math.floor(this.wave/2),e);
+      }else if(e.ranged&&Math.abs(e.facingError||0)<.22&&distance<38&&prepareHostileShot(e,{time:this.time,seen,allowed:attackAllowed,allies:this.enemies})){
         const profile=hostileShotProfile(this.wave,e.form),speed=profile.speed;
         const volley=enemyVolley(this.wave,e.form);let muzzle=rangedMuzzle(e);
         const target=predictShot(muzzle,playerHead,this.playerVelocity,speed,profile.lead);
         if(isReco1(e.form)){aimReco1(e,target);muzzle=rangedMuzzle(e);}
         if(!this.blocked(eye,muzzle)&&!this.blocked(muzzle,target)&&clearSquadFiringLane(e,muzzle,target,this.enemies)){
           const n=Math.hypot(target.x-muzzle.x,target.y-muzzle.y,target.z-muzzle.z)||1;
+          e.shotIntent=null;e.firedAt=this.time;
           this.bullets.push({id:this.nextId++,...muzzle,vx:(target.x-muzzle.x)/n*speed,
             vy:(target.y-muzzle.y)/n*speed,vz:(target.z-muzzle.z)/n*speed,
             life:3,damage:volley.damage,hostile:true,weapon:e.form==='sentinel'?(Math.floor(this.time/4)%2?'nova':'r9'):'enemy',splash:e.form==='sentinel'&&Math.floor(this.time/4)%2?2.8:0});

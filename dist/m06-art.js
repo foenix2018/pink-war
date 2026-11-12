@@ -1,3 +1,4 @@
+import {createFPSChapter} from './fps-environments.js';
 import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
 import {createFloorRampHardware} from './stair-hardware.js';
 import {createIndustrialLightBatch} from './industrial-light.js';
@@ -22,13 +23,14 @@ function canvasTexture(T, w, h, paint) { const c = document.createElement('canva
 export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPortalClose=()=>{}, accent = 0xff6fb4 } = {}) {
   const low = quality === 'low', rng = seeded(606);
   const root = new T.Group(); root.name = 'M06 / Le Cœur d’Acier'; scene.add(root);
+  let fpsChapter=null;
   const animated = [], stats = { meshes: 0, instances: 0, lights: 0 };
   const add = (o, parent = root) => { parent.add(o); stats.meshes++; return o; };
 
   // ---------- Late afternoon: low sun through smoke, sooty haze ----------
   scene.background = new T.Color(0x6b4a3a);
   scene.fog = new T.FogExp2(0x8a5d45, low ? .011 : .009);
-  const sky = new T.HemisphereLight(0xffc89a, 0x3a2a22, 1.6); scene.add(sky);
+  const sky = new T.HemisphereLight(0xffc89a, 0x3a2a22, 1.2); scene.add(sky);
   const sun = new T.DirectionalLight(0xffb070, 2.6); sun.position.set(-70, 45, 40); scene.add(sun);
   const skyTex = canvasTexture(T, 16, 256, (c, w, h) => { const g = c.createLinearGradient(0, 0, 0, h); for (const [a, col] of [[0, '#2b2a4a'], [.4, '#6a4a5a'], [.62, '#c9764a'], [.74, '#f0a868'], [.82, '#8a5d45'], [1, '#2a1c16']]) g.addColorStop(a, col); c.fillStyle = g; c.fillRect(0, 0, w, h); });
   add(new T.Mesh(new T.SphereGeometry(400, 24, 12), new T.MeshBasicMaterial({ map: skyTex, side: T.BackSide, fog: false, depthWrite: false })));
@@ -236,6 +238,7 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
     line.chassis.push({ g, z0: z });
   }
   function dress(o) {
+    if(o.kind==='fps-cover')return;
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, h = o.height;
     switch (o.kind) {
       case 'wagons': for (const [x, c] of [[-20, M.rust], [-4, M.graphite], [12, M.rust], [28, M.corrugated]]) { const car = createFunctionalProp(T, 'railcar', { w: 14, d: 2.6, h: 4, low, M: { ...M, paintedMetal: c, white: c, glass: M.glass, ledCyan: M.ledYellow } }); car.position.set(x, 0, 97.5); add(car); } break;
@@ -410,8 +413,10 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
     build(obstacles) {
       buildGrounds(); buildDecks(); buildWalls(obstacles); for (const o of obstacles) dress(o); buildEffects(); buildDoors(); buildDevices(); buildSigns(); buildFixtures();
       neons.meshes(); neons.build(); flushGeometry(); flushPieces();
+      fpsChapter=createFPSChapter(T,root,{chapter:'m06',obstacles:obstacles,areas:AREAS,low,webgpu});
     },
     update(t, dt, eye, player) {
+      fpsChapter?.update(t,dt,eye.position);
       const e = eye.position; updatePool(dt, e); updateEffects(t, dt); updatePortals(t, dt, e); updateDevices(t, dt); if (player) updateDoors(dt, player);
       for (const f of animated) f(t, dt); signs.update(t);
     },
@@ -421,6 +426,6 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
     adapt(spot) { if (!learnt.ring) return; learnt.ring.position.set(spot.x, .05, spot.z); learnt.level = 1; },
     markDone(id, isDone = true) { const d = devices.get(id); if (d) d.done = isDone; },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
-    stats() { return { ...stats, neons:neons.stats(), portals: portals.length, line: line.running, chassis: line.chassis.length, signs: signs.stats().signs, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, fps:fpsChapter?.stats(), neons:neons.stats(), portals: portals.length, line: line.running, chassis: line.chassis.length, signs: signs.stats().signs, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }

@@ -1,3 +1,4 @@
+import {chapterCovers} from './fps-level-layout.js';
 // M01 « Le Dernier Signal » — extension of the existing quarter (bible §12 M01: « parcours déjà présent, à
 // enrichir sans le remplacer »). Two built areas outside the original fence, on free ground of the same arena:
 //  - CASERNE 07 (west strip): the rescue station the heroes served in before 2189. Prologue.
@@ -213,5 +214,5 @@ export const HOLD_WAVES = Object.freeze({ groupe: [[3, 'nid'], [16, 'nid2']], co
 // Collision world for an extension state: open doors are left out.
 export function extensionObstacles({ open = [] } = {}) {
   const openSet = new Set(open);
-  return [...walls(), ...props(), ...DOORS.filter(d => !d.open && !openSet.has(d.id)).map(doorCollider)].map(o => ({ ...o }));
+  return [...chapterCovers('m01'), ...walls(), ...props(), ...DOORS.filter(d => !d.open && !openSet.has(d.id)).map(doorCollider)].map(o => ({ ...o }));
 }

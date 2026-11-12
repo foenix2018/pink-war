@@ -378,16 +378,16 @@ export function createEnemyFactory(mats,{detail='high'}={}){
           q.copy(leg.upper.quaternion).multiply(leg.lower.quaternion);leg.foot.quaternion.copy(q).invert();
         }
       }else{
-        const pose=flight.combatPose||flight.tactics?.state,covered=['cover','return','relocate'].includes(pose),guard=pose==='guard',windup=pose==='windup';
+        const pose=flight.combatPose||flight.tactics?.state,covered=['cover','return','relocate'].includes(pose),guard=pose==='guard',windup=pose==='windup'||pose==='melee-windup';
         const brace=(form==='listener'?.035:0)+(covered?.085:windup?.06:guard?.035:0)+.52*(flight.coverCrouch||0),aiming=alert==='engaged'&&!!flight.ranged;
         const recoil=Math.max(0,1-(simulationTime-(flight.lastShotAt??-99))/.16);
         if(mocap){
           const hit=Math.max(0,1-(simulationTime-(flight.hitAt??-99))/.25),pulse=simulationTime-(flight.lastShotAt??-99)<.12?1:0;
           const lowered=form==='listener'&&alert!=='engaged'?LISTENER_TOOL.patrolPitch:riflePose&&alert==='idle'?-.30:undefined;
           const stride=strideFrame(flight.motionX||0,flight.motionZ||0,flight.yaw||0);
-          const r=mocap.update(dt,time,{strideAngle:stride.angle,turnRate:flight.turnRate||0,speed:motionSpeed,alert,aiming,brace,recoil,hit,hitSide:(flight.hitSide||(Math.floor((flight.hitAt||0)*10)%2?1:-1)),covered,guard:guard||windup,
+          const r=mocap.update(dt,time,{strideAngle:stride.angle,turnRate:flight.turnRate||0,speed:motionSpeed,alert,aiming,brace,recoil,hit,hitSide:(flight.hitSide||(Math.floor((flight.hitAt||0)*10)%2?1:-1)),covered,guard:guard||windup,meleeWindup:pose==='melee-windup'?flight.chargeProgress||0:0,meleeStrike:Math.max(0,1-(simulationTime-(flight.lastMeleeAt??-99))/.24),
             pitch:T.MathUtils.clamp(flight.aimPitch||0,FIELD_RIFLE.minPitch,FIELD_RIFLE.maxPitch),lowered,pulse,phase:cycle,cover:flight.coverCrouch||0});
-          root.userData.nativeMotion=r.clip;riflePose?.update(joints[kit.groundGun]);return;
+          root.userData.nativeMotion=r.clip;if(pose!=='melee-windup'&&simulationTime-(flight.lastMeleeAt??-99)>.24)riflePose?.update(joints[kit.groundGun]);return;
         }
         const gait=Math.sin(cycle)*amount;sampleHumanStep(cycle,runBlend,motionSample);
         pelvis.position.y=kit.humanoid.hipHeight-brace+motionSample[4]*amount+humanIdleBob(time)*.12*(1-amount);

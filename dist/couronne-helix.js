@@ -1,3 +1,4 @@
+import {applyFPSCameraMotion} from './fps-motion.js';
 import {rendererBackend,rendererLabel} from './renderer-policy.js';
 import {createSupplyPickup} from './power-props.js';
 import {playPortalLaser,loadPortalSamples} from './portal-laser-audio.js';
@@ -165,7 +166,7 @@ function snapCamera(){
   for(const box of collisions){const t=segmentBox(start,end,{...box,hx:box.hx+.2,hz:box.hz+.2});if(t!==null)nearest=Math.min(nearest,Math.max(.09,t-.05));}
   camera.position.set(start.x+(end.x-start.x)*nearest,Math.max(p.elevation+.35,start.y+(end.y-start.y)*nearest),start.z+(end.z-start.z)*nearest);
  }
- camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
+ if(view==='fps')applyFPSCameraMotion(camera,game,{tracked:!!xr?.active});camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
  weapon.visible=view==='fps';if(playerRig?.model)playerRig.model.root.visible=view==='third';
 }
 function changeView(){view=view==='fps'?'third':'fps';if(!playerRig&&view==='third'){view='fps';notice('PERSONNAGE SHADOW UNIT EN COURS DE CHARGEMENT');}snapCamera();}

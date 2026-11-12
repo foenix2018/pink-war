@@ -1,3 +1,4 @@
+import {createFPSChapter} from './fps-environments.js';
 import {upgradeLightBlocks} from './industrial-light.js';
 import {createModernSwitch,switchVariant} from './modern-switch.js';
 import {createLevelNeons,roundPoweredTubes} from './level-neons.js';
@@ -33,6 +34,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera, we
   const low = quality === 'low', rng = seeded(707);
   const root = new T.Group(); root.name = 'M01 / Station 07 et Archives végétales'; scene.add(root);
   const details = createVesperProps(T, root, {low});
+  let fpsChapter=null;
   const animated = [], stats = { meshes: 0, instances: 0, textures: 0, fixtures: 0 };
   const add = (o, parent = root) => { parent.add(o); stats.meshes++; return o; };
 
@@ -324,6 +326,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera, we
     stats.vehicles=(stats.vehicles||0)+1;
   }
   function dress(o) {
+    if(o.kind==='fps-cover')return;
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, h = o.height, along = w >= d;
     // Furniture gets authored, recognizable geometry instead of collision proxies.
     // Greenhouse 'bed' remains a PLANT BED, not a sleeping mattress.
@@ -571,8 +574,10 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera, we
       }
       buildFixtureMeshes(); buildDoors(); buildDevices(obstacles); buildSigns(); buildCyber();
       neons.meshes(); neons.build(); flushGeometry(); flushPieces(); furnishings.finish(); stationGear.finish(); details.finish(); livedIn.build(obstacles);
+      fpsChapter=createFPSChapter(T,root,{chapter:'m01',obstacles:obstacles,areas:ROOMS,low,webgpu});
     },
     update(t, dt, eye, player = eye.position) {
+      fpsChapter?.update(t,dt,eye.position);
       updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt); details.update(power); livedIn.update(t,dt,power);
       for (const r of rotors) r.rotation.x += (power.caserne ? 14 : 0) * dt;
       for (const f of animated) f(t, dt, eye);
@@ -603,6 +608,6 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera, we
     markDone(id, done = true) { const d = devices.get(id); if (d) { d.done = done; if (!done) { d.turn = 0; if (d.moving) d.moving.rotation.set(0, 0, 0); } } },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
     daylightAt,
-    stats() { return { ...stats, neons:neons.stats(), furniture: {...furnishings.stats}, stationEquipment: {...stationGear.stats}, details: details.stats(), livedIn: livedIn.stats(), power: power.caserne, adapt: +adapt.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, fps:fpsChapter?.stats(), neons:neons.stats(), furniture: {...furnishings.stats}, stationEquipment: {...stationGear.stats}, details: details.stats(), livedIn: livedIn.stats(), power: power.caserne, adapt: +adapt.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }

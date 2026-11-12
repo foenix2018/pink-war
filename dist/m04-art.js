@@ -1,3 +1,4 @@
+import {createFPSChapter} from './fps-environments.js';
 import {createWorldEffects} from './webgpu-world-fx.js';
 import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
 import {createFloorRampHardware} from './stair-hardware.js';
@@ -23,13 +24,14 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
   const low = quality === 'low', rng = seeded(404);
   const worldFx=createWorldEffects(T,{webgpu,low});
   const root = new T.Group(); root.name = 'M04 / Le Protocole Interdit'; scene.add(root);
+  let fpsChapter=null;
   const animated = [], stats = { meshes: 0, instances: 0, lights: 0 };
   const add = (o, parent = root) => { parent.add(o); stats.meshes++; return o; };
 
   // ---------- Night sky with the breach's glow, fog, moon and sky light ----------
   scene.background = new T.Color(0x07061a);
   scene.fog = new T.FogExp2(0x120d26, low ? .010 : .0085);
-  const sky = new T.HemisphereLight(0x7479c4, 0x262030, 2.2); scene.add(sky);
+  const sky = new T.HemisphereLight(0x7479c4, 0x262030, 1.65); scene.add(sky);
   const moon = new T.DirectionalLight(0xb4bfe6, 1.5); moon.position.set(40, 70, 50); scene.add(moon);
   const skyTex = canvasTexture(T, 16, 256, (c, w, h) => { const g = c.createLinearGradient(0, 0, 0, h); for (const [a, col] of [[0, '#020210'], [.45, '#0d0a26'], [.72, '#3a1450'], [.86, '#6a1d5e'], [1, '#14081a']]) g.addColorStop(a, col); c.fillStyle = g; c.fillRect(0, 0, w, h); });
   add(new T.Mesh(new T.SphereGeometry(400, 24, 12), new T.MeshBasicMaterial({ map: skyTex, side: T.BackSide, fog: false, depthWrite: false })));
@@ -145,6 +147,7 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
   // ---------- Props ----------
   const breach = { level: 1, target: 1 }, relays = new Map(), stabs = [];
   function dress(o) {
+    if(o.kind==='fps-cover')return;
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, h = o.height;
     // All stages share the same hard-surface silhouettes, independent of PBR palette.
     const shared={bench:'bench',scanner:'scanner',transformer:'transformer',
@@ -360,8 +363,10 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
     build(obstacles) {
       buildGrounds(); buildDecks(); buildWalls(obstacles); for (const o of obstacles) dress(o); gantryStabilizer(); buildRelays(); buildBreach(); buildDoors(); buildDevices(); buildSigns(); buildFixtures();
       neons.meshes(); neons.build(); flushGeometry(); flushPieces();
+      fpsChapter=createFPSChapter(T,root,{chapter:'m04',obstacles:obstacles,areas:AREAS,low,webgpu,worldFx});
     },
     update(t, dt, eye, player) {
+      fpsChapter?.update(t,dt,eye.position);
       worldFx.update(t,eye.position);
       const e = eye.position; updatePool(dt, e); updateBreach(t, dt); updatePortals(t, dt, e); updateDevices(t, dt); if (player) updateDoors(dt, player);
       for (const [, r] of relays) { r.lamps.forEach((l, k) => l.material.color.set(r.on ? (Math.sin(t * 6 + k) > 0 ? 0x3dff8a : 0x1a6a3a) : 0x3a1414)); r.coil.material.color.set(r.on ? 0x5fe0f0 : 0x203040); r.coil.rotation.z += dt * (r.on ? 4 : 0); }
@@ -372,6 +377,6 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
     breach(v) { breach.target = Math.max(0, Math.min(1, v)); },
     markDone(id, isDone = true) { const d = devices.get(id); if (d) d.done = isDone; if (id.startsWith('stab-')) { if (isDone) done.add(id); else done.delete(id); } },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
-    stats() { return { ...stats, worldEffects:worldFx.stats(), neons:neons.stats(), portals: portals.length, breach: +breach.level.toFixed(2), signs: signs.stats().signs, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, fps:fpsChapter?.stats(), worldEffects:worldFx.stats(), neons:neons.stats(), portals: portals.length, breach: +breach.level.toFixed(2), signs: signs.stats().signs, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }

@@ -42,6 +42,7 @@ export function createMocapDriver({form,ranged,legs,arms,pelvis,thorax,head,gun,
  const desired=new T.Matrix4(),rel=new T.Matrix4(),m=new T.Matrix4(),gunQ=new T.Quaternion(),one=new T.Vector3(1,1,1),gp=new T.Vector3();
  const nativeDir=(from,to,out)=>flipV(out.copy(P(nb(to))).sub(P(nb(from)))).normalize();
 
+ const meleeTarget=new T.Vector3();
  let strideYaw=0;
  function update(dt,time,c){
   // c: {speed, alert, aiming, brace, recoil, hit, crouch, covered, pitch, lowered, pulse, phase}
@@ -87,6 +88,8 @@ export function createMocapDriver({form,ranged,legs,arms,pelvis,thorax,head,gun,
    if(traits.arms!==1){a.lerp(arm.dirU,1-traits.arms).normalize();}
    if(c.guard){a.set(arm.side*.35,-.45,-.82).normalize();b.set(-arm.side*.25,.55,-.8).normalize();} // guard / wind-up: fists raised
    if(form==='spectre'&&engaged){a.set(arm.side*.25,-.55,-.8).normalize();b.set(arm.side*.1,-.2,-1).normalize();} // blades forward
+   if(c.meleeWindup>0){const w=Math.min(1,c.meleeWindup);a.lerp(meleeTarget.set(arm.side*.38,.2,.48).normalize(),w).normalize();b.lerp(meleeTarget.set(arm.side*.15,.7,-.3).normalize(),w).normalize();}
+   if(c.meleeStrike>0&&arm.side>0){a.lerp(meleeTarget.set(.12,-.15,-1).normalize(),c.meleeStrike).normalize();b.lerp(meleeTarget.set(0,0,-1),c.meleeStrike).normalize();}
    uq.setFromUnitVectors(arm.dirU,a);arm.upper.quaternion.copy(q2.copy(thoraxRootQ).invert().multiply(uq));
    tq.setFromUnitVectors(arm.dirL,b);arm.lower.quaternion.copy(q2.copy(uq).invert().multiply(tq));arm.wrist.quaternion.identity();
   }

@@ -1,3 +1,4 @@
+import {chapterCovers} from './fps-level-layout.js';
 // CHAPITRE 06 — « Le Cœur d’Acier » (bible « Les Héritiers du Silence », Acte II, chapitre 6). La fonderie
 // automatisée de Vesper-Nord, celle que nomment les bons de fabrication P-0 trouvés sous la Ligne 9 (chapitre 05).
 // GHJU y entre avec des techniciens d’AEGIS ; des Brutes sont assemblées sur la chaîne lourde, des Remparts gardent
@@ -131,7 +132,7 @@ export function doorCollider(d) {
 }
 export function buildCollisions({ open = [] } = {}) {
   const openSet = new Set(open);
-  return [...walls(), ...supports(), ...props(), ...DOORS.filter(d => !d.open && !openSet.has(d.id)).map(doorCollider)]
+  return [...chapterCovers('m06'), ...walls(), ...supports(), ...props(), ...DOORS.filter(d => !d.open && !openSet.has(d.id)).map(doorCollider)]
     .map(o => ({ ...o, navPad: Math.min(o.hx, o.hz) < .7 ? .7 : 1.3 }));
 }
 

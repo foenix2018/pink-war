@@ -396,7 +396,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
     })();
     try { return await recovery; } finally { recovery = null; }
   }
-  const baseCampaignArt=createCampaignArt(T,scene,obstacles,{quality:profile.artQuality,photographic:true});
+  const baseCampaignArt=createCampaignArt(T,scene,obstacles,{quality:profile.artQuality,photographic:true,webgpu:!!renderer.backend?.isWebGPUBackend});
   let campaignArt=baseCampaignArt,breachArt=null,breachActive=false;
   const arenaObstacles=[...obstacles];
   const arenaOcclusion=createGroundOcclusion(T,arenaRoot,arenaObstacles,{compact:profile.artQuality==='low'});
