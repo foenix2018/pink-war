@@ -1,3 +1,4 @@
+import {strideFrame} from './enemy-motion.js';
 import {createReco1} from './reco1.js';
 import {createRempart} from './enemy-rempart.js';
 import {probeFlightState} from './probe-damage.js';
@@ -383,7 +384,8 @@ export function createEnemyFactory(mats,{detail='high'}={}){
         if(mocap){
           const hit=Math.max(0,1-(simulationTime-(flight.hitAt??-99))/.25),pulse=simulationTime-(flight.lastShotAt??-99)<.12?1:0;
           const lowered=form==='listener'&&alert!=='engaged'?LISTENER_TOOL.patrolPitch:riflePose&&alert==='idle'?-.30:undefined;
-          const r=mocap.update(dt,time,{speed:motionSpeed,alert,aiming,brace,recoil,hit,hitSide:(flight.hitSide||(Math.floor((flight.hitAt||0)*10)%2?1:-1)),covered,guard:guard||windup,
+          const stride=strideFrame(flight.motionX||0,flight.motionZ||0,flight.yaw||0);
+          const r=mocap.update(dt,time,{strideAngle:stride.angle,turnRate:flight.turnRate||0,speed:motionSpeed,alert,aiming,brace,recoil,hit,hitSide:(flight.hitSide||(Math.floor((flight.hitAt||0)*10)%2?1:-1)),covered,guard:guard||windup,
             pitch:T.MathUtils.clamp(flight.aimPitch||0,FIELD_RIFLE.minPitch,FIELD_RIFLE.maxPitch),lowered,pulse,phase:cycle,cover:flight.coverCrouch||0});
           root.userData.nativeMotion=r.clip;riflePose?.update(joints[kit.groundGun]);return;
         }

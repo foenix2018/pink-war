@@ -179,6 +179,7 @@ export function createM02Extension(game, { characterId = 'ghju', obstacles, hook
     opened.clear(); for(const id of s.opened||[])if(X.DOORS.some(d=>d.id===id))opened.add(id); done.clear(); for (const id of keepDone) done.add(id); reads.clear(); for (const id of s.reads || []) reads.add(id);
     said.clear(); hold = null; pending.length = 0; groups.clear();supplyIds.clear();collectedSupplies.clear();for(const key of s.collectedSupplies||[])if(typeof key==='string')collectedSupplies.add(key);game.pickups=game.pickups.filter(p=>!p.extension);
     game.enemies = []; game.bullets = []; game.activePortals = []; game.toSpawn = 0; game.nextWave = Infinity;
+game.planarVelocity={x:0,z:0};game.playerVelocity={x:0,y:0,z:0};
     game.state='playing';game.kills=Math.max(0,Math.floor(Number(s.kills)||0));game.score=Math.max(0,Number(s.score)||0);game.time=Math.max(0,Number(s.time)||0);
     game.ownedWeapons=new Set([...starterWeaponOrder(characterId),...(Array.isArray(s.owned)?s.owned:[]).filter(i=>Number.isInteger(i)&&weaponAllowedForCharacter(i,characterId))]);
     if(!game.ownedWeapons.has(game.weaponIndex))game.weaponIndex=starterWeaponOrder(characterId)[0];if(game.ownedWeapons.has(s.weaponIndex))game.selectWeapon?.(s.weaponIndex);

@@ -131,14 +131,15 @@ for(let i=0;i<8;i++){
 
 // 4. Chargeur long : puits haut précis et corps trapézoïdal, devant la détente.
 const magwell=new THREE.Group();root.add(magwell);magwell.name='Magasin et chargeur';
+const magazine=new THREE.Group();magazine.name='Removable energy magazine';magwell.add(magazine);
 outlinePanel(magwell,'Corps puits chargeur',[[-.53,-.22],[-.24,-.22],[-.17,-.43],[-.26,-.61],[-.54,-.55]],-.16,.32,mat.chassis,.014);
-outlinePanel(magwell,'Chargeur',[[-.51,-.52],[-.23,-.51],[-.15,-1.78],[-.22,-1.90],[-.43,-1.87],[-.48,-1.69]],-.134,.268,mat.polymer,.012);
-outlinePanel(magwell,'Renfort chargeur',[[-.45,-.60],[-.31,-.59],[-.25,-1.69],[-.32,-1.78],[-.4,-1.73]],.133,.014,mat.armor,.005);
-for(let j=0;j<12;j++)roundedBox(magwell,'Joint longitudinal',[-.17-(j%2)*.03,-.71-j*.078,.141],[.012,.037,.013],mat.frame,.004);
-outlinePanel(magwell,'Talon chargeur',[[-.46,-1.76],[-.18,-1.79],[-.12,-1.96],[-.19,-2.02],[-.47,-1.99]],-.169,.338,mat.chassis,.014);
-led(magwell,'Témoin de chargeur',[-.385,-1.42,.151],[.025,.35,.014]);
+outlinePanel(magazine,'Chargeur',[[-.51,-.52],[-.23,-.51],[-.15,-1.78],[-.22,-1.90],[-.43,-1.87],[-.48,-1.69]],-.134,.268,mat.polymer,.012);
+outlinePanel(magazine,'Renfort chargeur',[[-.45,-.60],[-.31,-.59],[-.25,-1.69],[-.32,-1.78],[-.4,-1.73]],.133,.014,mat.armor,.005);
+for(let j=0;j<12;j++)roundedBox(magazine,'Joint longitudinal',[-.17-(j%2)*.03,-.71-j*.078,.141],[.012,.037,.013],mat.frame,.004);
+outlinePanel(magazine,'Talon chargeur',[[-.46,-1.76],[-.18,-1.79],[-.12,-1.96],[-.19,-2.02],[-.47,-1.99]],-.169,.338,mat.chassis,.014);
+led(magazine,'Témoin de chargeur',[-.385,-1.42,.151],[.025,.35,.014]);
 // Indicateurs blancs minimalistes sur le chargeur.
-roundedBox(magwell,'Pictogramme bas',[-.345,-1.79,.157],[.035,.028,.004],mat.steel,.002);
+roundedBox(magazine,'Pictogramme bas',[-.345,-1.79,.157],[.035,.028,.004],mat.steel,.002);
 
 // 5. Poignée pistolet complexe : silhouette anatomique, bossage paume et zones texturées.
 const grip=new THREE.Group();root.add(grip);grip.name='Poignée ergonomique remaniée';
@@ -243,7 +244,7 @@ function labelTexture(lines){const can=document.createElement('canvas');can.widt
 function label(parent,lines,x,y,z,w,h,flip=false){if(typeof document==='undefined')return;const texture=labelTexture(lines);const o=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,color:0xa7b3bc,side:THREE.DoubleSide}));o.position.set(x,y,z);if(flip)o.rotation.y=Math.PI;parent.add(o)}
 label(chassis,['NEXUS','D E F E N S E    /   V9'],.45,-.016,.273,.50,.145);
 label(chassis,['NEXUS','D E F E N S E    /   V9'],.45,-.016,-.273,.50,.145,true);
-label(magwell,['9×19','SMART CELL · V09'],-.35,-.77,.153,.27,.10);
+label(magazine,['9×19','SMART CELL · V09'],-.35,-.77,.153,.27,.10);
 // Bande gravée, rivets autour du pontet.
 for(const [x,y,z] of [[.66,-.33,.25],[.99,-.37,.25],[-.55,-.32,.24],[.73,-.22,.27]])screw(x,y,z,.016);
 addScrews();
@@ -262,10 +263,10 @@ addScrews();
       if(o.material.transparent || o.material.isMeshBasicMaterial){
         const copy=new THREE.Mesh(baked,o.material);copy.name=o.name;
         copy.renderOrder=o.material.depthTest===false?8:0;
-        transparent.push(copy);
+        copy.userData.magazinePart=o.parent===magazine;transparent.push(copy);
       }else{
-        const key=o.material.uuid;
-        if(!grouped.has(key))grouped.set(key,{material:o.material,geometries:[]});
+        const moving=o.parent===magazine;const key=o.material.uuid+(moving?'-mag':'');
+        if(!grouped.has(key))grouped.set(key,{material:o.material,geometries:[],moving});
         grouped.get(key).geometries.push(baked);
       }
     }else if(o.isLineSegments){
@@ -276,12 +277,13 @@ addScrews();
   const result=new THREE.Group();result.name='NEXUS V9 / mitraillette automatique';
   const oriented=new THREE.Group();oriented.rotation.y=-Math.PI/2;oriented.scale.setScalar(.185);result.add(oriented);
   const centered=new THREE.Group();centered.position.set(-.83,.50,0);oriented.add(centered);
-  for(const {material,geometries} of grouped.values()){
+  const actionMag=new THREE.Group();actionMag.name='Reload magazine';centered.add(actionMag);
+  for(const {material,geometries,moving} of grouped.values()){
     const m=new THREE.Mesh(merge(geometries),material);m.castShadow=false;
-    m.receiveShadow=false;centered.add(m);
+    m.receiveShadow=false;(moving?actionMag:centered).add(m);
     for(const geo of geometries)geo.dispose();
   }
-  for(const o of transparent)centered.add(o);
+  for(const o of transparent)(o.userData.magazinePart?actionMag:centered).add(o);
   for(const o of other)centered.add(o);
   root.traverse(o=>{if((o.isMesh||o.isLineSegments)&&!o.isInstancedMesh)o.geometry.dispose();});
   result.updateMatrixWorld(true);centered.localToWorld(sightCentre);

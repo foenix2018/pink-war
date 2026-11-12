@@ -1,3 +1,5 @@
+import {turnEnemy} from './enemy-motion.js';
+import {inertialMove} from './locomotion.js';
 import {ensureEnemyBubble,shieldFacesSource,tracePlayerShield,traceEnemyShield,playerShieldFrame,enemyShieldFrame} from './projected-shield-logic.js';
 import {createArenaTurrets,fortressWaveUnit,turretHitbox,damageDefenseTurret,updateArenaTurrets} from './arena-defense.js';
 import {isReco1,RECO1_HIT_ZONES,reco1ProjectileScale} from './reco1-profile.js';
@@ -319,7 +321,7 @@ export class ArenaGame {
     this.searchFields=new Map();
     this.navigation.refreshAt = -1; this.navigation.goal = -1;
     this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0, verticalSpeed: 0, grounded: true, jumpHeld: false, crouched:false,airJumps:0,jumpImpulseX:0,jumpImpulseZ:0,lastGroundedAt:0 };
-    this.playerVelocity={x:0,y:0,z:0};
+    this.playerVelocity={x:0,y:0,z:0};this.planarVelocity={x:0,z:0};
     this.bladePrevious=null;this.bladeHitTimes=new Map();this.bladeSlashAt=-99;this.bladeSlashSide=1;this.bladeSpeed=0;this.bladeGuard=false;this.bladeHumAt=0;
     this.enemies = []; this.bullets = []; this.events = [];
     this.turrets=this.fortressArena?createArenaTurrets():[];
@@ -753,8 +755,8 @@ export class ArenaGame {
     p.jumpHeld = jumpDown;
     const speed = p.crouched ? 3.0 : input.sprint ? 10 : 7, moveYaw = input.moveYaw ?? yaw;
     const oldX=p.x,oldZ=p.z,oldY=p.elevation,wasGrounded=p.grounded;
-    const dx=(Math.cos(moveYaw)*ix+Math.sin(moveYaw)*iz)*speed*dt,
-      dz=(-Math.sin(moveYaw)*ix+Math.cos(moveYaw)*iz)*speed*dt;
+    const travel=inertialMove(this.planarVelocity,(Math.cos(moveYaw)*ix+Math.sin(moveYaw)*iz)*speed,(-Math.sin(moveYaw)*ix+Math.cos(moveYaw)*iz)*speed,dt,{grounded:p.grounded,crouched:p.crouched});
+    const dx=travel.x,dz=travel.z;
     // Fine treads must be sampled along the whole move, including sprint at low FPS.
     // Subdivide locomotion and gravity together; AI, firing and mission time still tick once.
     const impulseX=(p.jumpImpulseX||0)*dt,impulseZ=(p.jumpImpulseZ||0)*dt;
@@ -766,6 +768,10 @@ export class ArenaGame {
     }
     if(impulseX||impulseZ){p.jumpImpulseX*=Math.exp(-dt*5);p.jumpImpulseZ*=Math.exp(-dt*5);}
     if(p.grounded){p.airJumps=0;p.jumpImpulseX=p.jumpImpulseZ=0;p.lastGroundedAt=this.time;}
+    // Stop storing momentum into a blocked face; sliding along its other axis remains free.
+    if(Math.abs(p.x-oldX)<Math.abs(dx)*.35)this.planarVelocity.x=0;
+    if(Math.abs(p.z-oldZ)<Math.abs(dz)*.35)this.planarVelocity.z=0;
+    this.movement={sprint:!!input.sprint,aiming:!!this.aimingPrecision,grounded:p.grounded};
     if(dt>0)this.playerVelocity={x:(p.x-oldX)/dt,y:(p.elevation-oldY)/dt,z:(p.z-oldZ)/dt};
     if(!wasGrounded&&p.grounded)this.emitNoise('land',NOISE_RADIUS.land);
     if(p.grounded){
@@ -917,10 +923,13 @@ export class ArenaGame {
         moveInArena(e,dx/norm*e.speed*dt*injury*searchSpeed,dz/norm*e.speed*dt*injury*searchSpeed,e.radius,this.obstacles);
       }
       this.settle(e,dt);
-      if(order)e.yaw=order.yaw??(Math.atan2(e.lastKnownX-e.x,e.lastKnownZ-e.z)+Math.PI);
-      else if(e.ranged&&seen)e.yaw=Math.atan2(this.player.x-e.x,this.player.z-e.z)+Math.PI;
-      else if(e.awareness!=='patrol'&&goalDistance>.15)e.yaw=Math.atan2(dx,dz)+Math.PI;
-      else if(e.awareness==='patrol')e.yaw=(e.patrolAngle||0)+Math.PI;
+      e.motionX=(e.x-motionOrigin.x)/Math.max(dt,.001);e.motionZ=(e.z-motionOrigin.z)/Math.max(dt,.001);
+      let desiredYaw=e.yaw;
+      if(order)desiredYaw=order.yaw??(Math.atan2(e.lastKnownX-e.x,e.lastKnownZ-e.z)+Math.PI);
+      else if(e.ranged&&seen)desiredYaw=Math.atan2(this.player.x-e.x,this.player.z-e.z)+Math.PI;
+      else if(e.awareness!=='patrol'&&goalDistance>.15)desiredYaw=Math.atan2(dx,dz)+Math.PI;
+      else if(e.awareness==='patrol')desiredYaw=(e.patrolAngle||0)+Math.PI;
+      turnEnemy(e,desiredYaw,dt);
       if(seen&&isReco1(e.form))aimReco1(e,playerHead);
       if((e.stunnedUntil||0)<=this.time)e.attackTimer-=dt;
       if(!seen||e.stunnedUntil>this.time){e.burstRemaining=0;e.chargeProgress=0;}
@@ -928,7 +937,7 @@ export class ArenaGame {
       // Never attack through walls or while merely searching the last seen position.
       if((!order||order.canFire)&&seen&&e.awareness==='engaged'&&distance<2&&e.attackTimer<=0&&(e.stunnedUntil||0)<=this.time){
         e.attackTimer=.85;this.damage(e.elite?20+this.wave:10+Math.floor(this.wave/2),e);
-      }else if((!order||order.canFire)&&seen&&e.awareness==='engaged'&&e.ranged&&distance<38&&e.attackTimer<=0&&(e.stunnedUntil||0)<=this.time){
+      }else if((!order||order.canFire)&&seen&&e.awareness==='engaged'&&e.ranged&&Math.abs(e.facingError||0)<.22&&distance<38&&e.attackTimer<=0&&(e.stunnedUntil||0)<=this.time){
         const profile=hostileShotProfile(this.wave,e.form),speed=profile.speed;
         const volley=enemyVolley(this.wave,e.form);let muzzle=rangedMuzzle(e);
         const target=predictShot(muzzle,playerHead,this.playerVelocity,speed,profile.lead);

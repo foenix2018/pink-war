@@ -1,3 +1,4 @@
+import {applyFPSCameraMotion} from './fps-motion.js';
 import {rendererBackend,rendererLabel} from './renderer-policy.js';
 import {createSupplyPickup} from './power-props.js';
 import {createHologramComms} from './hologram-comms.js';
@@ -285,7 +286,7 @@ function snapCamera(){
   const area=L.AREAS.find(a=>a.id===L.areaAt(p.x,p.z)),ceiling=area?.roof?area.roof-.3:Infinity;
   camera.position.set(start.x+(end.x-start.x)*nearest,Math.min(ceiling,Math.max(p.elevation+.35,start.y+(end.y-start.y)*nearest)),start.z+(end.z-start.z)*nearest);
  }
- camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
+ if(view==='fps')applyFPSCameraMotion(camera,game,{tracked:!!xr?.active});camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
  weapon.visible=view==='fps';if(playerRig?.model)playerRig.model.root.visible=view==='third';
 }
 function changeView(){view=view==='fps'?'third':'fps';if(!playerRig&&view==='third'){view='fps';notice('PERSONNAGE SHADOW UNIT EN COURS DE CHARGEMENT');}snapCamera();}
@@ -625,7 +626,7 @@ for(const name of ['pointerup','pointercancel'])window.addEventListener(name,e=>
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
 
 window.__PINK_M03=Object.freeze({
- snapshot:()=>({level:L.LEVEL_ID,revision:'3.77.0',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,choice,time:game?.time,missionTime,
+ snapshot:()=>({level:L.LEVEL_ID,revision:'3.78.0',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,choice,time:game?.time,missionTime,
   area:game&&L.areaAt(game.player.x,game.player.z),health:game?.player.hp,shield:game?.player.shield,charges:game?.charges,
   position:game&&{x:+game.player.x.toFixed(2),z:+game.player.z.toFixed(2),elevation:+game.player.elevation.toFixed(2)},
   weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,opened:mission?.opened,done:mission?.done,reads:mission?.reads,

@@ -17,7 +17,8 @@ test('both stairways carry players smoothly up and back down to street level',()
     const seconds=(stair.bottomZ-stair.topZ+1)/7;advance(g,seconds,{z:-1});
     assert.ok(Math.abs(g.player.elevation-stair.height)<.001,stair.id);
     assert.equal(g.player.grounded,true);
-    advance(g,seconds,{z:1});assert.equal(g.player.elevation,0);
+    // Reversing direction now brakes the previous uphill momentum before descending.
+    advance(g,seconds+.25,{z:1});assert.equal(g.player.elevation,0);
   }
 });
 test('automatic elevators carry a rider through a full cycle and update ballistic cover',()=>{

@@ -22,3 +22,16 @@ export function tryJump(player,obstacles,time){
   if(wall){player.jumpImpulseX=wall.x*JUMP_RULES.wallPush;player.jumpImpulseZ=wall.z*JUMP_RULES.wallPush;}
   return wall?'wall':'double';
 }
+
+// Exact integration of a damped horizontal velocity: acceleration and braking
+// have the same travelled distance at 30, 60, 90 and 120 Hz.
+export function inertialMove(state,targetX,targetZ,dt,{grounded=true,crouched=false}={}){
+ if(!(dt>0))return{x:0,z:0};
+ state.x=Number.isFinite(state.x)?state.x:0;state.z=Number.isFinite(state.z)?state.z:0;
+ const stopping=Math.hypot(targetX,targetZ)<.01,rate=grounded?(stopping?26:crouched?40:16):7;
+ const decay=Math.exp(-rate*dt),integral=(1-decay)/rate;
+ const x=targetX*dt+(state.x-targetX)*integral,z=targetZ*dt+(state.z-targetZ)*integral;
+ state.x=targetX+(state.x-targetX)*decay;state.z=targetZ+(state.z-targetZ)*decay;
+ if(stopping&&Math.hypot(state.x,state.z)<.008)state.x=state.z=0;
+ return{x,z};
+}

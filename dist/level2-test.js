@@ -1,3 +1,4 @@
+import {applyFPSCameraMotion} from './fps-motion.js';
 import {M02_STREET_OBJECTIVES,createM02Street} from './m02-street.js';
 import {overheadServiceLift} from './overhead-clearance.js';
 import {createLandingFinish} from './landing-finish.js';
@@ -629,6 +630,7 @@ function snapCamera(){
   }
   camera.position.set(start.x+(end.x-start.x)*nearest,Math.max(.35,start.y+(end.y-start.y)*nearest),start.z+(end.z-start.z)*nearest);
  }
+ if(view==='fps')applyFPSCameraMotion(camera,game,{tracked:!!xr?.active});
  camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
  weapon.visible=view==='fps';
  if(playerRig?.model)playerRig.model.root.visible=view==='third';

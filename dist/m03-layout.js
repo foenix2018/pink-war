@@ -54,6 +54,11 @@ function eastZone() {
   out.push(at('post', 72, -86, .45, .45, 1.3, { surface: 'metal', device: 'arrimage' }));
   return out;
 }
+export const COMBAT_STATIONS=Object.freeze([
+ Object.freeze(at('medical-island',-32,32,1.6,.55,1.05,{surface:'metal',prop:'stretcher'})),
+ Object.freeze(at('medical-island',-38,43,1.2,.65,1.8,{surface:'metal',prop:'cabinet'})),
+ Object.freeze(at('workshop-island',30,30,1.6,.65,1.05,{surface:'metal',prop:'workbench'}))
+]);
 // Movable pieces: the ORDRE barrier across the avenue and the jack-knifed trailer at the interchange.
 export const MOVABLE = Object.freeze({
   barriere: Object.freeze(at('boom', 0, -34, 9, .3, 1.25, { surface: 'metal', movable: 'barriere' })),
@@ -61,7 +66,7 @@ export const MOVABLE = Object.freeze({
 });
 export function extraObstacles({ open = [] } = {}) {
   const gone = new Set(open);
-  return [...sectorFixes(), ...eastZone(), ...Object.entries(MOVABLE).filter(([id]) => !gone.has(id)).map(([, o]) => o)].map(o => ({ ...o, navPad: Math.min(o.hx, o.hz) < .7 ? .7 : 1.3 }));
+  return [...sectorFixes(), ...eastZone(), ...COMBAT_STATIONS, ...Object.entries(MOVABLE).filter(([id]) => !gone.has(id)).map(([, o]) => o)].map(o => ({ ...o, navPad: Math.min(o.hx, o.hz) < .7 ? .7 : 1.3 }));
 }
 // Barrier posts of the ORDRE checkpoint stay; pedestrians pass along the pavements (x ±11).
 export const CHECKPOINT_POSTS = Object.freeze([at('post', -9.6, -34, .35, .35, 1.6, { surface: 'metal' }), at('post', 9.6, -34, .35, .35, 1.6, { surface: 'metal' })]);

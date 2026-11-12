@@ -1,3 +1,4 @@
+import {applyFPSCameraMotion} from './fps-motion.js';
 import {rendererBackend,rendererLabel} from './renderer-policy.js';
 import {createSupplyPickup} from './power-props.js';
 import {createHologramComms} from './hologram-comms.js';
@@ -266,7 +267,7 @@ function snapCamera(){
   const area=L.AREAS.find(a=>a.id===L.areaAt(p.x,p.z)),ceiling=area?.roof?area.roof-.3:Infinity;
   camera.position.set(start.x+(end.x-start.x)*nearest,Math.min(ceiling,Math.max(p.elevation+.35,start.y+(end.y-start.y)*nearest)),start.z+(end.z-start.z)*nearest);
  }
- camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
+ if(view==='fps')applyFPSCameraMotion(camera,game,{tracked:!!xr?.active});camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
  weapon.visible=view==='fps';if(playerRig?.model)playerRig.model.root.visible=view==='third';
 }
 function changeView(){view=view==='fps'?'third':'fps';if(!playerRig&&view==='third'){view='fps';notice('PERSONNAGE SHADOW UNIT EN COURS DE CHARGEMENT');}snapCamera();}

@@ -1,3 +1,4 @@
+import {applyFPSCameraMotion} from './fps-motion.js';
 import {rendererBackend,rendererLabel} from './renderer-policy.js';
 import {createElectricPortalSet} from './electric-portal.js';
 import {levelArrow,arrowGuidance} from './objective-arrow.js';
@@ -249,6 +250,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
       gun.userData.animateHands?.(Number(held),.5,game.reloadRemaining>0?.8:0,dt);
     }
     if(rig)rig.model.root.visible=!s.free&&effectiveView()==='third';
+    if(effectiveView()==='fps')applyFPSCameraMotion(camera,game,{tracked:!!xr?.active,active:!s.free});
     camera.updateMatrixWorld(true);
   }
   function syncSoldier(dt,s){

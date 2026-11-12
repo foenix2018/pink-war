@@ -1,3 +1,4 @@
+import {applyFPSCameraMotion} from './fps-motion.js';
 import {createTouchOrbit} from './touch-orbit.js';
 import {levelArrow,arrowGuidance} from './objective-arrow.js';
 import { ArenaGame, PORTAL, MAX_LEVEL, WEAPONS, starterWeaponIndex, weaponCycleOrder, clamp, segmentSphere, segmentBox, COMBO_WINDOW, PICKUP_HEAL, comboMultiplier } from './game-logic.js';
@@ -444,16 +445,16 @@ function updateCamera() {
     for (const box of world.obstacles) { const hit = segmentBox(start, end, { ...box, hx: box.hx + .2, hz: box.hz + .2 }); if (hit !== null) nearest = Math.min(nearest, Math.max(.09, hit - .05)); }
     camera.position.set(start.x + (end.x - start.x) * nearest, Math.max(.35, start.y + (end.y - start.y) * nearest), start.z + (end.z - start.z) * nearest);
   }
-  const bob = Math.hypot(move.x, move.y) > .1 || keys.has('KeyW') || keys.has('KeyZ') || keys.has('KeyS') || keys.has('ArrowUp') || keys.has('ArrowDown') || keys.has('ArrowLeft') || keys.has('ArrowRight');
   const ads=flatSightPose(optic,aimBlend);
-  weapon.position.set(ads.x+kickPose.x, ads.y + (bob ? Math.sin(clock * 11) * .009*(1-aimBlend) : 0) + kickPose.y + reloadLift * .045, ads.z + kickPose.z - reloadLift * .028);
-  weapon.rotation.set(kickPose.pitch + reloadLift * Math.PI / 2,kickPose.yaw+ads.yaw,Math.sin(clock * 1.8) * .003+kickPose.roll+ads.roll);
+  weapon.position.set(ads.x+kickPose.x, ads.y+kickPose.y, ads.z+kickPose.z);
+  weapon.rotation.set(kickPose.pitch,kickPose.yaw+ads.yaw,Math.sin(clock * 1.8) * .003+kickPose.roll+ads.roll);
   if(game.weapon.melee){const slash=bladeSwingPose(game.bladePhase,game.bladeSlashSide);weapon.rotation.x=slash.x-.12;weapon.rotation.y=slash.y;weapon.rotation.z=slash.z;}
   else{const strike=meleeKick(game);if(strike){MELEE_POSE.apply(weapon,game);}}
   // The ARES X9 optic is a full-screen sight picture in flat FPS ADS: the
   // 3D tube is not drawn over the line of sight, but the gun/muzzle still exist
   // and the shot ray is derived from this same camera centre.
   if(view==='fps'&&game.weapon.id==='lance'&&aiming&&aimBlend>.97&&vr?.mode==='off')weapon.visible=false;
+  if(view==='fps'&&flatScreen)applyFPSCameraMotion(camera,game);
   camera.updateProjectionMatrix(); camera.updateMatrixWorld(true);
 }
 function reloadPose() {

@@ -1,3 +1,5 @@
+import {ARENA_COMBAT_LAYOUT,ARENA_COMBAT_ZONES} from './arena-combat-layout.js';
+import {createFunctionalProp} from './functional-props.js';
 import {createWorldEffects} from './webgpu-world-fx.js';
 import {createArenaWeathering} from './arena-weathering.js';
 import {createArenaOptics} from './arena-optics.js';
@@ -140,6 +142,27 @@ export function createFortifiedArena(T,scene,obstacles,coverWalls,{quality='low'
   box(M.concrete,[w,h,d],[o.x,h/2,o.z],[],true);box(M.steel,[w*.94,.10,d*.9],[o.x,h-.04,o.z]);
   for(const s of [-1,1]){box(M.black,[w*.80,.12,.04],[o.x,h*.62,o.z+s*(o.hz+.025)]);box(pink,[.35,.07,.04],[o.x-w*.30,h*.64,o.z+s*(o.hz+.05)],[0,s<0?Math.PI:0,0]);}
  }
+ // Pumps and power columns break long firing lines and define three linked spaces.
+ for(const o of ARENA_COMBAT_LAYOUT){
+  obstacles.push({...o});
+  if(o.role==='pylon'){
+   add(new T.CylinderGeometry(.86,.9,.16,16),M.black,[o.x,.08,o.z]);
+   add(new T.CylinderGeometry(.55,.68,4.9,12),M.paint,[o.x,2.6,o.z]);
+   for(const y of [.38,4.7])add(new T.TorusGeometry(.69,.045,5,16),M.steel,[o.x,y,o.z],[Math.PI/2,0,0]);
+   for(const side of [-1,1]){rod(M.steel,[o.x+side*.8,.2,o.z],[o.x+side*.8,5.4,o.z],.07);if(side===-Math.sign(o.x))box(pink,[.08,1.6,.06],[o.x+side*.73,3.8,o.z+.25]);}
+   box(M.steel,[1.8,.18,1.8],[o.x,5.31,o.z]);
+  }else{
+   const prop=createFunctionalProp(T,o.role==='pump'?'pump':'generator',{w:o.hx*2,d:o.hz*2,h:o.height,low:true,compact:true,M});prop.position.set(o.x,0,o.z);prop.updateMatrixWorld(true);prop.traverse(part=>{if(part.isMesh){a.add(part.geometry,part.material,part.matrixWorld,!low);part.geometry.dispose();}});
+  }
+ }
+ for(const zone of ARENA_COMBAT_ZONES){
+  if(typeof document==='undefined')continue;
+  const map=canvas(512,96,(c,w,h)=>{c.fillStyle='#0e1a23';c.fillRect(0,0,w,h);c.fillStyle='#eef4f2';c.font='bold 30px sans-serif';c.textAlign='center';c.fillText(zone.label,w/2,58);});
+  const m=new T.MeshBasicMaterial({map,side:T.DoubleSide,toneMapped:false});owned.push(m);const sign=new T.Mesh(new T.PlaneGeometry(5,.94),m);sign.position.set(zone.x,3.7,zone.z);root.add(sign);
+  // Two slender supporting rods, kept outside the combat lane.
+  for(const dx of [-2.45,2.45])rod(M.steel,[zone.x+dx,0,zone.z],[zone.x+dx,4.2,zone.z],.035);
+ }
+ stat.combatSpaces=ARENA_COMBAT_ZONES.length;stat.tacticalCovers=ARENA_COMBAT_LAYOUT.length;
  // Low transport cases and thick barriers leave the central lanes unobstructed.
  for(const [x,z] of [[-35,-42],[37,-53],[-48,35],[46,53],[-65,-8],[62,16]]){
   obstacles.push({x,z,hx:3.2,hz:1.2,height:1.2,surface:'concrete',cover:true});box(M.concrete,[6.4,1.2,2.4],[x,.6,z],[],true);

@@ -17,6 +17,7 @@ export function restoreM01Checkpoint(game,s){
  if(!s||![1,2,3].includes(s.version)||s.version===1&&!['investigation','sabotage','exit'].includes(s.stage)||s.characterId!==game.characterId||!STAGES.has(s.stage))return false;
  // An old shop save precedes the west encounter: resume at its new approach.
  if(s.version<3&&s.stage==='investigation')s={...s,stage:'workshop'};
+game.planarVelocity={x:0,z:0};game.playerVelocity={x:0,y:0,z:0};
  game.workshopReleased=['investigation','sabotage','exit'].includes(s.stage);
  game.enemies=[];game.openingActivated=true;game.openingSpawned=8;game.circuitIsolated=true;game.circuitRoute=['isolate-convoy','isolate-service'].includes(s.circuitRoute)?s.circuitRoute:null;game.powerAlarm=s.stage!=='power';game.preArchiveLimit=4;game.courtyardPending=false;game.archiveRead=!['power','archive'].includes(s.stage);game.investigationRead=!!s.investigationRead;game.sabotaged=!!s.sabotaged;
  game.encounter=['power','archive','workshop'].includes(s.stage)?0:['investigation','sabotage'].includes(s.stage)?1:2;game.spawned=s.stage==='power'?0:s.stage==='archive'?4:8;game.toSpawn=0;game.nextSpawnAt=Infinity;game.activePortals=[];

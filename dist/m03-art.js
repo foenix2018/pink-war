@@ -1,3 +1,6 @@
+import {createIndustrialLightBatch} from './industrial-light.js';
+import {createWorldEffects} from './webgpu-world-fx.js';
+import {createGroundOcclusion} from './world-shadows.js';
 import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
 import {createStairHardware} from './stair-hardware.js';
 import {createModernSwitch,switchVariant} from './modern-switch.js';
@@ -8,8 +11,8 @@ import {createLevelNeons} from './level-neons.js';
 // fracture, the blocked interchange (ramps leaving the route haute, wrecks, the jack-knifed trailer and its winch)
 // and the freight station of the Anneau logistique line (medical train, gantry, containers, regulation booth).
 // W03 palette (Tome II): galvanised metal, dusty haze, white/red marking; Vesper neon on the avenue.
-import { INTERACTIONS, MOVABLE, VAN, areaAt } from './m03-layout.js';
-import { createSectorMeshes, neonSpots } from './m03-sector.js';
+import { INTERACTIONS, MOVABLE, VAN, areaAt, COMBAT_STATIONS, extraObstacles } from './m03-layout.js';
+import { createSectorMeshes, neonSpots, sectorObstacles } from './m03-sector.js';
 import { createCyberCity } from './m03-city.js';
 import { classifySectorProps, createSectorProps } from './m03-props.js';
 import { createSignage, BLADES } from './signage.js';
@@ -28,14 +31,15 @@ function canvasTexture(T, w, h, paint) {
 
 export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPortalClose=()=>{}, sector, accent = 0xff6fb4 } = {}) {
   const low = quality === 'low', rng = seeded(303);
-  const root = new T.Group(); root.name = 'M03 / Le Convoi des Oubliés'; scene.add(root);
+  const worldFx=createWorldEffects(T,{webgpu,low,reflections:true});
+  const root = new T.Group(); root.name = 'M03 / Le Convoi des Oubliés'; scene.add(root);if(worldFx.reflectionTarget)root.add(worldFx.reflectionTarget);
   const animated = [], stats = { meshes: 0, halos: 0, lights: 0 };
   const add = (o, parent = root) => { parent.add(o); stats.meshes++; return o; };
 
   // ---------- Night: sky, fog, moon and sky light ----------
   scene.background = new T.Color(0x070c16);
   scene.fog = new T.FogExp2(0x0b1424, low ? .011 : .0095);
-  const sky = new T.HemisphereLight(0x6680b0, 0x2a2024, 1.6); scene.add(sky);
+  const sky = new T.HemisphereLight(0x6680b0, 0x2a2024, 1.2); scene.add(sky);
   const moon = new T.DirectionalLight(0x9db6dc, 1.15); moon.position.set(-40, 70, 30); scene.add(moon);
   // Reflected radiance for every metal and lacquer of the level (sector, objects, machines, weapons): night sky,
   // a band of neon city light at the horizon, the glow of the wet street below. Without it metal reads black.
@@ -405,7 +409,17 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
   const power = { annexe: false };
   const neons=createLevelNeons(T,root,{low,metal:M.galva,back:M.dark,materials:[M.neonCyan,M.neonPink,M.neonAmber,M.neonRed,M.neonWhite]});
   function build() {
-    buildCity(); buildEast(); buildBarrier(); buildTrailer(); buildBeacon(); buildDevices();
+    buildCity(); buildEast();
+    for(const o of COMBAT_STATIONS){const prop=createFunctionalProp(T,o.prop,{w:o.hx*2,d:o.hz*2,h:o.height,low,M});prop.position.set(o.x,0,o.z);root.add(prop);}
+    const contacts=createGroundOcclusion(T,root,sectorObstacles(sector.meta,extraObstacles()),{compact:low,floor:.025});stats.contactOcclusion=contacts.stats();
+    const wet=worldFx.water({color:0x182c39,puddle:true,refraction:false,opacity:.68}),puddles=new T.InstancedMesh(new T.CircleGeometry(1,low?16:24),wet,5),pose=new T.Object3D();
+    for(const [i,p]of [[-28,29,2.2,4.2],[27,28,2,3],[0,42,2.8,5.3],[2,-26,2.5,4],[78,-76,2.2,4]].entries()){pose.position.set(p[0],.034,p[1]);pose.rotation.x=-Math.PI/2;pose.scale.set(p[2],p[3],1);pose.updateMatrix();puddles.setMatrixAt(i,pose.matrix);}root.add(puddles);
+    const taskLights=[{position:[-29,7.7,31],size:[.8,.55,.8],color:0xa6dfff},{position:[29,6.5,27],size:[.8,.55,.8],color:0xffb47b}];
+    createIndustrialLightBatch(T,root,taskLights,{kind:'highbay',low});
+    for(const fixture of taskLights){const [x,y,z]=fixture.position,cable=new T.Mesh(new T.CylinderGeometry(.012,.012,.7,6),M.dark);cable.position.set(x,y+.4,z);root.add(cable);if(!low){const source=new T.SpotLight(fixture.color,48,13,.55,.7,1.7);source.position.set(x,y-.15,z);source.target.position.set(x,0,z);root.add(source,source.target);}}
+    stats.taskLights=low?0:taskLights.length;
+    for(const [x,z,color]of [[-29,31,0x8dd6e8],[29,27,0xb8ccde]])worldFx.fog(root,{x,y:4.1,z,width:4.2,height:7,depth:4.2,color,opacity:.085,beam:true});
+    buildBarrier(); buildTrailer(); buildBeacon(); buildDevices();
     for(const [i,s] of sector.meta.stairs.entries())createStairHardware(T,root,{id:'m03-'+i,x:(s.x1+s.x2)/2,halfWidth:(s.x2-s.x1)/2-.05,bottomZ:s.zStart,topZ:s.zEnd,height:s.height},{low,steps:28,stepOffset:.5,rails:'fittings',postCount:11,railInset:-.17,railHeight:1.13,materials:{steel:M.galva,dark:M.dark}});
     amb = aegisVan(-6, 46, 0);
     // Smoke of a damaged van.
@@ -421,7 +435,7 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
     root, M, build, openPortal,
     update(t, dt, eye, player, { van = null, beaconOff = false, crank = false } = {}) {
       const e = eye.position;
-      sectorMeshes.update(t); updatePool(dt, e); updateHalos(e); updateRain(dt, e); updatePortals(t, dt, e); updateDevices(t, e, dt);
+      worldFx.update(t,e);sectorMeshes.update(t); updatePool(dt, e); updateHalos(e); updateRain(dt, e); updatePortals(t, dt, e); updateDevices(t, e, dt);
       for (const m of movable.values()) { m.open += Math.sign(m.target - m.open) * Math.min(Math.abs(m.target - m.open), dt * .35); m.apply(m.open); }
       if (devicesExtra.treuil && crank) devicesExtra.treuil.rotation.x += dt * 6;
       if (beacon) { beacon.off += ((beaconOff ? 1 : 0) - beacon.off) * Math.min(1, dt * 2); const on = 1 - beacon.off;
@@ -443,6 +457,6 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
     setPower(zone, on) { power[zone] = !!on; },
     markDone(id, done = true) { const d = devices.get(id); if (d) d.done = done; },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
-    stats() { return { ...stats, neons:neons.stats(), sector: sectorMeshes.stats, portals: portals.length, movable: Object.fromEntries([...movable].map(([k, v]) => [k, +v.open.toFixed(2)])), beacon: beacon ? +(1 - beacon.off).toFixed(2) : null }; }
+    stats() { return { ...stats, worldEffects:worldFx.stats(),neons:neons.stats(), sector: sectorMeshes.stats, portals: portals.length, movable: Object.fromEntries([...movable].map(([k, v]) => [k, +v.open.toFixed(2)])), beacon: beacon ? +(1 - beacon.off).toFixed(2) : null }; }
   };
 }

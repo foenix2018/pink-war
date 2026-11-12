@@ -42,6 +42,7 @@ export function createMocapDriver({form,ranged,legs,arms,pelvis,thorax,head,gun,
  const desired=new T.Matrix4(),rel=new T.Matrix4(),m=new T.Matrix4(),gunQ=new T.Quaternion(),one=new T.Vector3(1,1,1),gp=new T.Vector3();
  const nativeDir=(from,to,out)=>flipV(out.copy(P(nb(to))).sub(P(nb(from)))).normalize();
 
+ let strideYaw=0;
  function update(dt,time,c){
   // c: {speed, alert, aiming, brace, recoil, hit, crouch, covered, pitch, lowered, pulse, phase}
   states.motion=c.speed>2.9?'run':c.speed>.06?'walk':'idle';states.aim=!!ranged&&c.alert!=='idle';
@@ -62,7 +63,7 @@ export function createMocapDriver({form,ranged,legs,arms,pelvis,thorax,head,gun,
   e.setFromQuaternion(nativePelvis.invert().multiply(tq),'YXZ');
   e.x=e.x*.5-traits.hunch*(moving?1:.6)-(run?.06:0)-(c.covered?.10:0)+c.recoil*.07+c.hit*.12;
   e.x=THREE_CLAMP(pelvisPitch+e.x,-.40,.22)-pelvisPitch; // a robot leans into the run, it never folds flat
-  e.y=e.y*traits.sway+c.hit*.16*(c.hitSide||1);e.z=e.z*traits.sway;
+  e.y=e.y*traits.sway+c.hit*.16*(c.hitSide||1);e.z=e.z*traits.sway-THREE_CLAMP((c.turnRate||0)*.008,-.065,.065);
   thorax.quaternion.setFromEuler(e);
   pelvis.updateMatrix();thorax.updateMatrix();
   // Head: native look, counter the hunch to keep the sensors on target, then the chassis' scanning style.
@@ -100,6 +101,13 @@ export function createMocapDriver({form,ranged,legs,arms,pelvis,thorax,head,gun,
    leg.lift-=support;if(!moving&&leg.lift<.03)leg.lift=0;
    leg.dx=leg.ankle[0]-leg.hip[0]+(leg.dx-(leg.ankle[0]-leg.hip[0]))*(moving?1:.5);
    if(!moving)leg.dz=leg.ankle[2]-leg.hip[2]+(leg.dz-(leg.ankle[2]-leg.hip[2]))*.5;
+  }
+  // Orient the native step along real travel: side steps and backing away no
+  // longer play a forward walk while the body slides sideways.
+  if(Number.isFinite(c.strideAngle)){const d=Math.atan2(Math.sin(c.strideAngle-strideYaw),Math.cos(c.strideAngle-strideYaw));strideYaw+=d*(1-Math.exp(-dt*12));}
+  if(moving&&Number.isFinite(c.strideAngle))for(const leg of legData){
+   const bx=leg.ankle[0]-leg.hip[0],bz=leg.ankle[2]-leg.hip[2],x=leg.dx-bx,z=leg.dz-bz,cs=Math.cos(strideYaw),sn=Math.sin(strideYaw);
+   leg.dx=bx+x*cs-z*sn;leg.dz=bz+x*sn+z*cs;
   }
   // Keep both feet within reach of the hips (the pelvis lowers rather than letting a foot float).
   for(const leg of legData){

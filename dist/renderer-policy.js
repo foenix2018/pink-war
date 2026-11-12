@@ -17,7 +17,7 @@ export function graphicsProfile(environment={},quality='auto',forceWebGL=false){
   return {ios,phone,headset,compatible,preferWebGL:forceWebGL||ios||compatible||!environment.gpu,
     antialias:!phone&&!compatible,shadows:true,
     pixelRatioCap:phone?(quality==='high'?1.15:1):compatible?1:quality==='low'?1:quality==='balanced'?1.4:quality==='high'?2:1.8,
-    maxPixels:phone?750000:compatible?1100000:quality==='balanced'?2000000:Infinity,
+    maxPixels:phone?750000:compatible?1100000:quality==='balanced'?2000000:quality==='high'?3200000:2400000,
     artQuality:phone||compatible?'low':quality==='balanced'?'high':quality,skyWidth:phone||compatible||quality==='low'?1024:2048};
 }
 
@@ -35,6 +35,7 @@ function deadline(promise,milliseconds,label){
 
 export async function createCompatibleRenderer({canvas,WebGPU,WebGL,profile,timeout=6000}){
   let renderer,initialFailure=null,retired=false;
+  const present=async r=>{if((r.backend?.isWebGPUBackend||r.isWebGLRenderer)&&!profile.phone&&!profile.headset&&!profile.compatible&&!['low','performance'].includes(profile.artQuality)&&r.domElement?.ownerDocument){const {installFPSGrade}=await import('./fps-grade.js');installFPSGrade(r,profile);}return r;};
   const make=Renderer=>new Renderer({canvas,antialias:profile.antialias,alpha:false,powerPreference:profile.phone?'default':'high-performance'});
   if(!profile.preferWebGL){
     try{
@@ -44,6 +45,7 @@ export async function createCompatibleRenderer({canvas,WebGPU,WebGL,profile,time
         const initialisation=Promise.resolve(candidate.init()).then(()=>{if(retired)try{candidate.dispose();}catch{}});
         await deadline(initialisation,timeout,'Initialisation WebGPU interrompue.');
       }
+      await present(renderer);
       return {renderer,canvas,profile,initialFailure:rendererBackend(renderer)==='webgl'?'WebGPU indisponible : repli WebGL 2.':initialFailure};
     }catch(error){
       retired=true;
@@ -54,7 +56,7 @@ export async function createCompatibleRenderer({canvas,WebGPU,WebGL,profile,time
       canvas.removeAttribute?.('data-controls-bound');previous.replaceWith(canvas);
     }
   }
-  renderer=make(WebGL);
+  renderer=make(WebGL);await present(renderer);
   return {renderer,canvas,profile,initialFailure};
 }
 
