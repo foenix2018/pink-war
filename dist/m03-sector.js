@@ -1,4 +1,5 @@
-import {sectorPropOffset} from './m03-layout.js';
+import {sectorPropOffset,AREAS} from './m03-layout.js';
+import {retiredDecoration,serviceRampHeight} from './m03-coherence.js';
 import {cityWindowAtlas} from './m03-city.js';
 import {findBakedNeonRuns} from './baked-neons.js';
 import {createNeonFixtures} from './neon-fixtures.js';
@@ -27,7 +28,7 @@ export function decodeSector(meta, bin) {
 
 // ---------- Collision and walkable surfaces (game-logic obstacle format) ----------
 export function sectorObstacles(meta, extra = []) {
-  const out = [...meta.colliders, ...(meta.physicalSolids || [])].map(c => ({ x: (c.x1 + c.x2) / 2 + sectorPropOffset(c).x, z: (c.z1 + c.z2) / 2 + sectorPropOffset(c).z, hx: (c.x2 - c.x1) / 2, hz: (c.z2 - c.z1) / 2, y: Math.max(0, c.y1), height: c.y2 - Math.max(0, c.y1),
+  const out = [...meta.colliders, ...(meta.physicalSolids || [])].filter(c=>!retiredDecoration(c)).map(c => ({ x: (c.x1 + c.x2) / 2 + sectorPropOffset(c).x, z: (c.z1 + c.z2) / 2 + sectorPropOffset(c).z, hx: (c.x2 - c.x1) / 2, hz: (c.z2 - c.z1) / 2, y: Math.max(0, c.y1), height: c.y2 - Math.max(0, c.y1),
     surface: [0,13,16].includes(c.mat) || c.label === 'barrière béton' ? 'concrete' : 'metal', sector: true, kind: c.label, stairBody: !!c.stairBody, walkableSurface: !!c.walkableSurface, blocksInteraction: c.source === 'page' || /paroi|dalle/.test(c.label),
     // Thin walls, barriers and posts keep a narrower margin in the machines' navigation grid (doorways stay open).
     navPad: Math.min(c.x2 - c.x1, c.z2 - c.z1) < 1.4 ? .7 : 1.3 }));
@@ -44,11 +45,12 @@ export function sectorTraversal(meta, extraFloors = []) {
   return {
     maxMoveStep: .12,
     routes: stairs.map(s => ({ id: s.id, x: (s.x1 + s.x2) / 2, halfWidth: (s.x2 - s.x1) / 2, bottomZ: s.zStart, topZ: s.zEnd, height: s.height, base: 0 })), lifts: [],
-    surfaces(x, z) { return [...floors.filter(f => onFloor(f, x, z)).map(f => ({ id: f.id, height: rampHeight(f, x, z) })), ...stairs.filter(s => onStair(s, x, z)).map(s => ({ id: s.id, height: stairHeight(s, z) }))]; },
+    surfaces(x, z) { const h=serviceRampHeight(x,z);return [...floors.filter(f => onFloor(f, x, z)).map(f => ({ id: f.id, height: rampHeight(f, x, z) })), ...stairs.filter(s => onStair(s, x, z)).map(s => ({ id: s.id, height: stairHeight(s, z) })),...(h===null?[]:[{id:'bretelle-est',height:h}])]; },
     height(x, z, time = 0, max = Infinity) {
       let h = 0;
       for (const f of floors) if (onFloor(f, x, z)) { const v = rampHeight(f, x, z); if (v <= max + .01) h = Math.max(h, v); }
       for (const s of stairs) if (onStair(s, x, z)) { const v = stairHeight(s, z); if (v <= max + .01) h = Math.max(h, v); }
+      const road=serviceRampHeight(x,z);if(road!==null&&road<=max+.01)h=Math.max(h,road);
       return h;
     },
     routeForSurface(id) { return id && (id.startsWith('escalier') || id.startsWith('pont')) ? 'escalier-0' : null; }
@@ -100,6 +102,8 @@ export function createSectorMeshes(T, sector, { quality = 'normal', tile = {}, w
     [MAT.SIGN]: { m: new T.MeshBasicMaterial({ map: signs, toneMapped: false }), tile: 1, lift: 1, signs: true }
   };
   const neon = new T.MeshBasicMaterial({ vertexColors: true, toneMapped: false });
+  const indoorGlass=new T.MeshStandardMaterial({color:0x304858,vertexColors:true,metalness:.15,roughness:.28});
+  const interiorPanel=q=>{const p=sector.world.pos,b=q*12,x=(p[b]+p[b+3]+p[b+6]+p[b+9])*sector.meta.scale/4,z=(p[b+2]+p[b+5]+p[b+8]+p[b+11])*sector.meta.scale/4,y=(p[b+1]+p[b+4]+p[b+7]+p[b+10])*sector.meta.scale/4;return AREAS.some(a=>a.roof&&x>=a.x1&&x<=a.x2&&z>=a.z1&&z<=a.z2&&y<a.roof);};
   const stats = { quads: 0, meshes: 0, emissiveQuads: 0 };
   const signUv = new Map((sector.meta.signs || []).map(([i, u0, v0, u1, v1]) => [i, [u0, v0, u1, v1]]));
 
@@ -107,7 +111,7 @@ export function createSectorMeshes(T, sector, { quality = 'normal', tile = {}, w
   const replaced=new Set();
   for(const [id,color] of [[MAT.PINK,0xff4fa1],[MAT.CYAN,0x5fe0f0],[MAT.AMBER,0xffb35c],[MAT.RED,0xff2f45]]){
     const ids=[],faces=[],src=sector.world;
-    for(let i=0;i<src.n;i++)if(src.mat[i]===id){ids.push(i);faces.push([0,1,2,3].map(v=>[0,1,2].map(a=>src.pos[i*12+v*3+a]*sector.meta.scale)));}
+    for(let i=0;i<src.n;i++)if(src.mat[i]===id&&!drop?.has(i)){ids.push(i);faces.push([0,1,2,3].map(v=>[0,1,2].map(a=>src.pos[i*12+v*3+a]*sector.meta.scale)));}
     for(const run of findBakedNeonRuns(faces)){
       const [rx,ry,rz]=run.position,[sx,sy,sz]=run.size;
       const off=sectorPropOffset({x1:rx-sx/2,x2:rx+sx/2,y1:ry-sy/2,y2:ry+sy/2,z1:rz-sz/2,z2:rz+sz/2});
@@ -118,7 +122,7 @@ export function createSectorMeshes(T, sector, { quality = 'normal', tile = {}, w
   tubes.build();stats.neons=tubes.stats();
 
   function build(src, filter, material, { tile: t = 2, lift = 1, emissive = false, signsUv = false, dropEvery = 0 }) {
-    const idx = []; for (let i = 0; i < src.n; i++) if (!(src===sector.world&&(replaced.has(i)||drop?.has(i))) && filter(src.mat[i]) && !(dropEvery && i % dropEvery === 0)) idx.push(i);
+    const idx = []; for (let i = 0; i < src.n; i++) if (!(src===sector.world&&(replaced.has(i)||drop?.has(i))) && filter(src.mat[i],i) && !(dropEvery && i % dropEvery === 0)) idx.push(i);
     if (!idx.length) return null;
     const P = new Float32Array(idx.length * 12), N = new Float32Array(idx.length * 12), C = new Float32Array(idx.length * 12), U = new Float32Array(idx.length * 8), I = new Uint32Array(idx.length * 6);
     const s = sector.meta.scale;
@@ -146,7 +150,8 @@ export function createSectorMeshes(T, sector, { quality = 'normal', tile = {}, w
     const mesh = new T.Mesh(geo, material); mesh.matrixAutoUpdate = false; mesh.updateMatrix(); mesh.receiveShadow = !emissive; mesh.castShadow = false;
     group.add(mesh); stats.meshes++; stats.quads += idx.length; if (emissive) stats.emissiveQuads += idx.length; return mesh;
   }
-  for (const [m, f] of Object.entries(FAMILY)) build(sector.world, x => x === +m, f.m, { tile: f.tile, lift: f.lift, signsUv: f.signs, dropEvery: low && +m === MAT.PLANT ? 3 : 0 });
+  for (const [m, f] of Object.entries(FAMILY)) build(sector.world, (x,q) => x === +m&&(+m!==MAT.WINDOW||!interiorPanel(q)), f.m, { tile: f.tile, lift: f.lift, signsUv: f.signs, dropEvery: low && +m === MAT.PLANT ? 3 : 0 });
+  const panels=build(sector.world,(m,q)=>m===MAT.WINDOW&&interiorPanel(q),indoorGlass,{lift:1.4});if(panels)panels.name='vitres et écrans éteints des intérieurs';
   // Neon tubes, signs and holograms: unlit, slightly brightened so they read as light sources.
   const neonMesh = build(sector.world, x => EMISSIVE.has(x), neon, { lift: 1.45, emissive: true });
   const portal = new T.Group(); portal.position.set(sector.meta.portal.x, sector.meta.portal.y, sector.meta.portal.z); group.add(portal);
@@ -165,10 +170,10 @@ export function createSectorMeshes(T, sector, { quality = 'normal', tile = {}, w
 }
 
 // Points along neon geometry, for light halos and the light pool: centres of large emissive quads.
-export function neonSpots(sector, { minArea = .35, max = 220 } = {}) {
+export function neonSpots(sector, { minArea = .35, max = 220,drop=null } = {}) {
   const out = [], s = sector.meta.scale, src = sector.world;
   for (let q = 0; q < src.n; q++) {
-    if (!EMISSIVE.has(src.mat[q])) continue;
+    if (!EMISSIVE.has(src.mat[q])||drop?.has(q)) continue;
     const b = q * 12, p = src.pos;
     const ux = (p[b + 3] - p[b]) * s, uy = (p[b + 4] - p[b + 1]) * s, uz = (p[b + 5] - p[b + 2]) * s, vx = (p[b + 6] - p[b]) * s, vy = (p[b + 7] - p[b + 1]) * s, vz = (p[b + 8] - p[b + 2]) * s;
     const area = Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx); if (area < minArea) continue;

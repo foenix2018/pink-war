@@ -6,6 +6,7 @@
 // All parts are merged per material: about twenty draw calls for the whole set.
 import { roundedBox } from './webgpu-upgrade.js';
 import { AREAS, sectorPropOffset } from './m03-layout.js';
+import {faceBounds,inside,retiredDecoration} from './m03-coherence.js';
 
 const TAU = Math.PI * 2;
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
@@ -21,6 +22,7 @@ export function classifySectorProps(meta, world, { bounds = meta.bounds } = {}) 
     let x = 0, y = 0, z = 0; const b = i * 12;
     for (let k = 0; k < 4; k++) { x += world.pos[b + k * 3]; y += world.pos[b + k * 3 + 1]; z += world.pos[b + k * 3 + 2]; }
     cx[i] = x / 4 * s; cy[i] = y / 4 * s; cz[i] = z / 4 * s;
+    if(retiredDecoration(faceBounds(world,i,s))||world.mat[i]===4&&AREAS.some(a=>a.roof&&cx[i]>=a.x1&&cx[i]<=a.x2&&cz[i]>=a.z1&&cz[i]<=a.z2&&cy[i]<a.roof))drop.add(i);
     const key = cellKey(cx[i], cz[i]); let list = cells.get(key); if (!list) cells.set(key, list = []); list.push(i);
   }
   const quadsIn = (c, pad = .06, top = .3) => {
@@ -56,10 +58,16 @@ export function classifySectorProps(meta, world, { bounds = meta.bounds } = {}) 
     const indoor = AREAS.some(a => a.roof && (c.x1 + c.x2) / 2 >= a.x1 && (c.x1 + c.x2) / 2 <= a.x2 && (c.z1 + c.z2) / 2 >= a.z1 && (c.z1 + c.z2) / 2 <= a.z2);
     if (indoor && (kind === 'lamp' || kind === 'tree')) kind = 'column';
     else if (indoor && kind === 'post') kind = 'riser';
-    for (const i of quads) drop.add(i);
+    // Centroids can sit inside a small prop while the actual face spans a wall
+    // or ceiling. Retire only complete owned faces, never a whole building face.
+    const owned={...c,y1:Math.max(0,c.y1)-.15,y2:c.y2+.3};
+    if(kind==='rack'){owned.x1-=.2;owned.x2+=.2;owned.z1-=.2;owned.z2+=.2;}
+    if(kind==='lamp'||kind==='post'&&h>4.5){owned.x1-=3.2;owned.x2+=3.2;owned.y2+=.5;}
+    for(let gx=Math.floor(owned.x1/C);gx<=Math.floor(owned.x2/C);gx++)for(let gz=Math.floor(owned.z1/C);gz<=Math.floor(owned.z2/C);gz++)for(const i of cells.get(gx+','+gz)||[])if(inside(faceBounds(world,i,s),owned,.06))drop.add(i);
     const along = w >= d ? 'x' : 'z', mx = (c.x1 + c.x2) / 2, mz = (c.z1 + c.z2) / 2;
     const offset=sectorPropOffset(c);
-    out.push({ kind, c, cx: mx+offset.x, cz: mz+offset.z, y, h, len: hi, wid: lo, along, face: mx > 0 ? -Math.PI / 2 : Math.PI / 2 });
+    const ground=Math.max(0,...meta.decks.filter(f=>mx>=f.x1&&mx<=f.x2&&mz>=f.z1&&mz<=f.z2&&f.h<=y+.1).map(f=>f.h));
+    out.push({ kind, c, cx: mx+offset.x, cz: mz+offset.z, y:ground, h:c.y2-ground, len: hi, wid: lo, along, face: mx > 0 ? -Math.PI / 2 : Math.PI / 2 });
   }
   return { props: out, drop };
 }

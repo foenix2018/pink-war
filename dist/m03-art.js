@@ -1,3 +1,4 @@
+import {createServiceInfrastructure,WORKSHOP_EQUIPMENT,STREET_BLADES,createStreetSignSupports} from './m03-coherence.js';
 import {createIndustrialLightBatch} from './industrial-light.js';
 import {createWorldEffects} from './webgpu-world-fx.js';
 import {createGroundOcclusion} from './world-shadows.js';
@@ -61,7 +62,7 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
   let sectorProps = null, propList = { props: [], drop: null };
   try { propList = classifySectorProps(sector.meta, sector.world); } catch (error) { console.warn('M03 / objets : classement impossible', error); }
   const sectorMeshes = createSectorMeshes(T, sector, { quality, webgpu, drop: propList.drop }); root.add(sectorMeshes.group);
-  const spots = neonSpots(sector, { max: low ? 90 : 200 });
+  const spots = neonSpots(sector, { max: low ? 90 : 200,drop:propList.drop });
 
   // ---------- Materials for what the mission adds ----------
   const loader = new T.TextureLoader();
@@ -96,18 +97,14 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
   const signs = createSignage(T, { root, low });
   // The avenue and the city around it: shop blades, brand holograms, wayfinding towards the annex, the workshop and the freight station.
   function buildCity() {
-    const blades = [[-12.6, 5.6, 17, '救急', '#ff4fa1', 'SOINS'], [-12.6, 5.2, 46, '薬局', '#5fe0f0', 'PHARMA'], [17.4, 5.4, 22, '修理', '#ffb35c', 'ATELIER'], [17.4, 5.8, 38, '電脳', '#c06bff', 'IMPLANTS'],
-      [12.6, 5.6, -8, '夜市', '#ff4fa1', 'MARCHÉ'], [12.6, 5.2, -24, '酒場', '#ffb35c', 'BAR'], [-12.6, 5.6, -46, '倉庫', '#5fe0f0', 'DÉPÔT'], [12.6, 5.6, -70, '屋台', '#ff4fa1', 'NOUILLES'],
-      [-12.6, 5.6, -82, '危険', '#ff3b4e', 'ZONE ROUGE'], [-12.6, 5.4, 62, '市場', '#ffb35c', 'MARCHÉ'], [12.6, 5.6, 50, '東', '#5fe0f0', 'EST']];
-    for (const [x, y, z, word, color, sub] of blades.slice(0, low ? 6 : blades.length)) signs.blade(word, { color, sub, x, y, z, yaw: 0 });
-    signs.advert('vesperTransit', { w: 10, h: 4, x: 20.6, y: 8.5, z: -16, yaw: -Math.PI / 2 });
-    signs.advert('kitsune', { w: 8, h: 3.4, x: -22.6, y: 9, z: -76, yaw: Math.PI / 2 });
-    signs.advert('janus', { w: 16, h: 5, x: 0, y: 19, z: -103, yaw: 0 });
-    signs.advert('nova', { w: 5, h: 2.2, x: 17.6, y: 7.2, z: 30, yaw: -Math.PI / 2, holo: false });
-    signs.advert('ordre', { w: 6, h: 2.4, x: -12.4, y: 7.5, z: -40, yaw: Math.PI / 2 });
-    signs.advert('helix', { w: 9, h: 1.7, x: 30, y: 7.1, z: -52.1, yaw: 0, holo: false });
-    signs.advert('koi', { w: 5, h: 2.4, x: -12.4, y: 7.6, z: 4, yaw: Math.PI / 2 });
-    signs.advert('aegis', { w: 4, h: 1.8, x: -12.4, y: 6.8, z: 34, yaw: Math.PI / 2, holo: false });
+    createStreetSignSupports(T,root,M);
+    for(const[x,y,z,word,color,sub]of STREET_BLADES.slice(0,low?6:STREET_BLADES.length))signs.blade(word,{color,sub,x,y,z,yaw:0});
+    signs.advert('vesperTransit', { w: 10, h: 4, x: 22.42, y: 8.5, z: -16, yaw: -Math.PI / 2 });
+    signs.advert('kitsune', { w: 8, h: 3.4, x: -22.42, y: 9, z: -76, yaw: Math.PI / 2 });
+    signs.advert('nova', { w: 5, h: 2.2, x: 17.82, y: 5.6, z: 36, yaw: -Math.PI / 2, holo: false });
+    signs.advert('helix', { w: 9, h: .8, x: 30, y: 8.1, z: -52.1, yaw: 0, holo: false });
+    signs.advert('koi', { w: 5, h: 2.4, x: -29.92, y: 7.6, z: -6, yaw: Math.PI / 2 });
+    signs.advert('aegis', { w: 4, h: 1.8, x: -11.4, y: 6.8, z: 38, yaw: Math.PI / 2, holo: false });
     signs.wayfinding('01 · ANNEXE MÉDICALE', { sub: 'DISPENSAIRE DU SECTEUR 03', jp: '医療棟', picto: 'medic', arrow: Math.PI / 2, color: '#ff6fb4', w: 3, h: .8, x: 11.6, y: 3.2, z: 47, yaw: 0 });
     signs.wayfinding('02 · ATELIER TECHNIQUE', { sub: 'PIÈCES · VÉRINS · POMPES', jp: '整備工場', picto: 'bolt', arrow: -Math.PI / 2, color: '#ffb35c', w: 3, h: .8, x: -11.6, y: 3.2, z: 32, yaw: 0 });
     signs.wayfinding('03 · RELAIS A3', { sub: 'TERRASSE · ESCALIER', jp: '記録 · 中継', picto: 'lift', arrow: 0, color: '#5fe0f0', w: 3, h: .8, x: -6.4, y: 3.2, z: -5, yaw: 0 });
@@ -125,18 +122,8 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
     // Noise walls with an LED strip, the south wall of the interchange.
     box(M.concrete, 97, 0, -64, 1, 5, 68); box(M.concrete, 79.5, 0, -30.1, 35, 5, 1);
     const strip = box(M.neonCyan, 96.45, 3.8, -64, .05, .08, 66); strip.material = M.neonCyan;
-    // Elevated ramps leaving the route haute (viaduct deck at y 8.5, east end x 62.5): two decks curving down.
-    const ramp = (pts, width) => {
-      for (let i = 0; i + 1 < pts.length; i++) {
-        const [x1, y1, z1] = pts[i], [x2, y2, z2] = pts[i + 1], len = Math.hypot(x2 - x1, z2 - z1), mid = new T.Vector3((x1 + x2) / 2, (y1 + y2) / 2, (z1 + z2) / 2);
-        const deck = new T.Mesh(new T.BoxGeometry(width, .55, len + .2), M.concrete); deck.position.copy(mid); deck.rotation.order = 'YXZ'; deck.rotation.y = Math.atan2(x2 - x1, z2 - z1); deck.rotation.x = -Math.atan2(y2 - y1, len); add(deck);
-        for (const s of [-1, 1]) { const rail = new T.Mesh(new T.BoxGeometry(.12, .9, len + .2), M.galva); rail.position.copy(mid); rail.rotation.copy(deck.rotation); rail.translateX(s * width / 2); rail.translateY(.7); add(rail);
-          const led = new T.Mesh(new T.BoxGeometry(.05, .05, len), s > 0 ? M.neonRed : M.neonWhite); led.position.copy(rail.position); led.rotation.copy(deck.rotation); led.translateY(.48); add(led); }
-      }
-    };
-    ramp([[62, 8.2, -56], [70, 8, -60], [78, 7.2, -62], [86, 6.1, -59], [92, 4.6, -52], [94, 3, -44], [94, 1.6, -38]], 7);
-    ramp([[62, 8.4, -54], [70, 9.4, -46], [76, 10, -38], [84, 10.4, -34], [96, 10.6, -34]], 6.5);
-    for (const [x, z, h] of [[68, -60, 8], [76, -62, 7.2], [86, -60, 6.1], [92, -52, 4.6], [70, -34.6, 9.6], [88, -34.6, 10.2]]) { const p = new T.Mesh(new T.CylinderGeometry(.7, .8, h, 12), M.concrete); p.position.set(x, h / 2, z); add(p); }
+    const infrastructure=createServiceInfrastructure(T,root,M,{low});animated.push(t=>infrastructure.update(t));
+    for(const x of[89.25,92.75]){box(M.concrete,x,.18,-34.2,3.5,1.42,.7);box(M.red,x,1.15,-33.84,3.3,.18,.025);}
     // Wrecks: a car, a crashed truck, an AEGIS van from two days ago (the one ORDRE stopped), concrete barriers.
     car(68, -42, 0); car(90, -44, Math.PI / 2, M.rust);
     truck(70, -66, 0, M.paint, 'TRANSPORTS VESPER'); aegisVan(92, -66, Math.PI / 2, true);
@@ -149,8 +136,6 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
     for (let x = 64; x < 96; x += 2) box(x % 4 ? M.yellow : M.black, x, .01, -93.6, 1, .006, .3);
     containers();
     booth();
-    for (const [x, z] of [[64.5, -76], [95.5, -86]]) { const leg = new T.Mesh(new T.BoxGeometry(1.2, 12, 1.2), M.yellow); leg.position.set(x, 6, z); add(leg); }
-    box(M.yellow, 80, 11.4, -81, 33, 1, 1.4); const trolley = box(M.dark, 76, 9.6, -81, 3, 1.4, 2.2); animated.push(t => { trolley.position.x = 80 + Math.sin(t * .15) * 10; });
     arrimagePost(72, -86);
     // Lamp posts along the service lane and the interchange (each one is also a source of the light pool).
     for (const [x, z, k] of [[20, -33.4, 0], [34, -33.4, 1], [48, -33.4, 0], [62, -33.4, 1], [74, -32, 0], [86, -32, 1], [64.4, -50, 0], [64.4, -66, 1], [95.6, -60, 0], [95.6, -72, 1], [64.4, -90, 0]]) lampPost(x, z, k);
@@ -223,7 +208,6 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
     box(k ? M.neonAmber : M.neonWhite, x, 6.93, z, 1.1, .04, .32);
     for (const side of [-1, 1]) box(M.galva, x + side * .62, 6.91, z, .09, .2, .54);
     box(M.galva, x, 6.8, z, .13, .17, .13);
-    const cone = new T.Mesh(new T.ConeGeometry(2.4, 6.8, 18, 1, true), additive(k ? 0xffb35c : 0xcfe8ff, .045)); cone.position.set(x, 3.6, z); add(cone);
     sources.push({ x, y: 6.8, z, color: new T.Color(k ? 0xffb070 : 0xdcecff), intensity: 14, range: 20 });
   }
   function arrimagePost(x, z) { box(M.dark, x, 0, z, .9, 1.3, .9); box(M.neonAmber, x, 1.3, z + .46, .5, .3, .02); }
@@ -295,15 +279,15 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
     animated.push(t => { holo.material.opacity *= Math.sin(t * 17) > .95 ? .3 : 1; });
   }
   function buildTrailer() {
-    const o = MOVABLE.remorque, g = new T.Group(); g.position.set(o.x, 0, o.z); add(g);
+    const o = MOVABLE.remorque, g = new T.Group(); g.position.set(o.x, 0, o.z);g.name='remorque de fret'; add(g);
     const body = new T.Mesh(softCube(T, .04).clone().scale(o.hx * 2, 3, o.hz * 2), M.container[0]); body.position.y = 2; g.add(body);
     const base = new T.Mesh(new T.BoxGeometry(o.hx * 2, .4, o.hz * 2 - .2), M.dark); base.position.y = .5; g.add(base);
     for (const k of [-5, -3.6, 4.6]) for (const s of [-1, 1]) { const w = new T.Mesh(new T.CylinderGeometry(.45, .45, .3, 14), M.rubber); w.rotation.x = Math.PI / 2; w.position.set(k, .45, s * (o.hz - .1)); g.add(w); }
     const s = new T.Mesh(new T.PlaneGeometry(6, .8), new T.MeshStandardMaterial({ map: signTex('DIRECTOIRE · FRET SÉCURISÉ', { bg: null, fg: '#e9ecee', w: 512, h: 80 }), transparent: true, alphaTest: .05 })); s.position.set(0, 2.4, o.hz + .01); g.add(s);
     g.rotation.y = .1;
     const cable = new T.Mesh(new T.CylinderGeometry(.03, .03, 1, 5), M.black); add(cable);
-    movable.set('remorque', { open: 0, target: 0, apply: v => { g.position.set(o.x + 12 * v, 0, o.z - 2 * v); g.rotation.y = .1 + v * .5;
-      const a = new T.Vector3(70, 1, -45.5), bpt = new T.Vector3(g.position.x - 6, 1.2, g.position.z); cable.position.copy(a).lerp(bpt, .5); cable.scale.y = a.distanceTo(bpt); cable.lookAt(bpt); cable.rotateX(Math.PI / 2); } });
+    movable.set('remorque', { open: 0, target: 0, apply: v => { g.position.set(o.x+9*v,0,o.z-9*v);g.rotation.y=.1+v*(Math.PI/2-.1);g.updateMatrixWorld(true);cable.visible=v<.99;
+      const a = new T.Vector3(70, 1, -45.5), bpt=g.localToWorld(new T.Vector3(-6,1.2,0)); cable.position.copy(a).lerp(bpt, .5); cable.scale.y = a.distanceTo(bpt); cable.lookAt(bpt); cable.rotateX(Math.PI / 2); } });
   }
   let beacon = null;
   function buildBeacon() {
@@ -319,17 +303,18 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
   const devices = new Map(), devicesExtra = {};
   function buildDevices() {
     for (const it of INTERACTIONS) {
-      const g = new T.Group(); g.position.set(it.x, (it.y || 0), it.z); add(g);
-      const gem = new T.Mesh(new T.OctahedronGeometry(.13, 0), new T.MeshBasicMaterial({ color: 0xffb35c, toneMapped: false })); gem.position.y = 1.9; g.add(gem);
+      const g = new T.Group();g.name='borne mission / '+it.id; g.position.set(it.x, (it.y || 0), it.z); add(g);
+      const gem = new T.Mesh(new T.CylinderGeometry(.055,.055,.035,12), new T.MeshBasicMaterial({ color: 0xffb35c, toneMapped: false })); gem.rotation.x=Math.PI/2;gem.position.set(.17,1.2,.0475);g.add(gem);
       const ring = new T.Mesh(new T.RingGeometry(.5, .58, 28), additive(0xffb35c, .35)); ring.rotation.x = -Math.PI / 2; ring.position.y = .03; g.add(ring);
-      if (it.log && !it.id.startsWith('doc-')) { const pad = new T.Mesh(new T.BoxGeometry(.5, .32, .05), M.dark); pad.position.set(0, 1.2, 0); g.add(pad); const scr = new T.Mesh(new T.PlaneGeometry(.42, .24), M.neonCyan); scr.position.set(0, 1.2, .03); g.add(scr); }
-      else if (it.id.startsWith('doc-')) { const paper = new T.Mesh(new T.PlaneGeometry(.3, .4), std(0xe8e1cf, .9, 0, { side: T.DoubleSide })); paper.position.set(0, 1.15, 0); paper.rotation.x = -.3; g.add(paper); }
+      if (it.log && !it.id.startsWith('doc-')) { const stand=createFunctionalProp(T,'terminal',{w:.58,d:.5,h:1.28,low,M});g.add(stand);const pad = new T.Mesh(new T.BoxGeometry(.5, .32, .05), M.dark); pad.position.set(0, 1.2, 0); g.add(pad); const scr = new T.Mesh(new T.PlaneGeometry(.42, .24), M.neonCyan); scr.position.set(0, 1.2, .03); g.add(scr); }
+      else if (it.id.startsWith('doc-')) { const stand=createFunctionalProp(T,'terminal',{w:.52,d:.45,h:1.25,low,M});g.add(stand);const paper = new T.Mesh(new T.PlaneGeometry(.3, .4), std(0xe8e1cf, .9, 0, { side: T.DoubleSide })); paper.position.set(0, 1.15, 0); paper.rotation.x = -.3; g.add(paper); }
       let control=null;
       if(["alimentation", "balise", "barriere", "treuil", "arrimage"].includes(it.id)){
         const mount=new T.Group();mount.rotation.y=Math.abs(it.x)>40?-Math.sign(it.x)*Math.PI/2:0;g.add(mount);
         const post=new T.Mesh(new T.CylinderGeometry(.055,.085,1.12,8),M.dark);post.position.y=.56;mount.add(post);
         control=createModernSwitch(T,mount,{y:1.35,z:.06,scale:.72,variant:it.id==='treuil'?'rotary':it.id==='arrimage'?'access':switchVariant(it.id),id:it.id,label:it.id==='treuil'?'TREUIL':it.id==='arrimage'?'ARRIMAGE':it.id.replaceAll('-',' '),onLabel:it.id==='treuil'?'TREUIL ACTIVÉ':it.id==='arrimage'?'ARRIMAGE LANCÉ':/disj|stab|balise/.test(it.id)?'CIRCUIT ISOLÉ':'VALIDÉ',low});
       }
+      if(!it.log&&!control){const base=new T.Mesh(new T.CylinderGeometry(.18,.22,.06,12),M.galva);base.position.y=.03;g.add(base);const post=new T.Mesh(new T.CylinderGeometry(.045,.065,1.28,10),M.galva);post.position.y=.67;g.add(post);const plate=new T.Mesh(new T.BoxGeometry(.52,.25,.06),M.dark);plate.position.y=1.34;g.add(plate);}
       devices.set(it.id, { it, g, gem, ring, control, done: false, available: false });
     }
   }
@@ -340,8 +325,8 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
       const doc = !!d.it.log, color = d.done ? 0x3dff8a : doc ? 0xe8f6ff : d.available ? 0xffb35c : 0x3a2a1a;
       d.gem.material.color.set(color); d.ring.material.color.set(color);
       const show = d.available || (doc && !d.done) || d.done;
-      d.gem.visible = show; d.ring.visible = show && !d.done;
-      d.gem.position.y = 1.9 + Math.sin(t * 2 + d.it.x) * .08; d.gem.rotation.y = t * 1.6;
+      d.gem.visible=show&&!d.control; d.ring.visible = show && !d.done;
+      d.gem.position.y=d.it.log?1.2:1.34;
       d.ring.material.opacity = d.available ? .25 + .35 * blink : doc ? .22 : .12;
       if (eye && Math.hypot(eye.x - d.it.x, eye.z - d.it.z) > 60) d.g.visible = false; else d.g.visible = true;
     }
@@ -410,6 +395,8 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
   const neons=createLevelNeons(T,root,{low,metal:M.galva,back:M.dark,materials:[M.neonCyan,M.neonPink,M.neonAmber,M.neonRed,M.neonWhite]});
   function build() {
     buildCity(); buildEast();
+    for(const o of WORKSHOP_EQUIPMENT){const prop=createFunctionalProp(T,o.prop,{w:o.hx*2,d:o.hz*2,h:o.height,low,M});prop.position.set(o.x,0,o.z);root.add(prop);const face=o.prop==='pump'?.51:.75;box(M.dark,o.x,o.height*.5-.13,o.z+face,1.3,.26,.04);sign(o.prop==='pump'?'POMPE HYDRAULIQUE':'GROUPE DE SECOURS',o.x,o.height*.5,o.z+face+.025,0,1.25,.22,{w:512,h:96,bg:'#14212a',fg:'#ffc890'});}
+
     for(const o of COMBAT_STATIONS){const prop=createFunctionalProp(T,o.prop,{w:o.hx*2,d:o.hz*2,h:o.height,low,M});prop.position.set(o.x,0,o.z);root.add(prop);}
     const contacts=createGroundOcclusion(T,root,sectorObstacles(sector.meta,extraObstacles()),{compact:low,floor:.025});stats.contactOcclusion=contacts.stats();
     const wet=worldFx.water({color:0x182c39,puddle:true,refraction:false,opacity:.68}),puddles=new T.InstancedMesh(new T.CircleGeometry(1,low?16:24),wet,5),pose=new T.Object3D();

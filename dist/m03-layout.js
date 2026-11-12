@@ -7,6 +7,7 @@
 // The four steps of the first version of this chapter (annex archive, workshop manifest, A3 relay, ORDRE beacon at
 // the fracture, controlled from the barrage) are kept as the spine of the mission.
 // Yaw as on the other three.js pages: 0 looks towards −z, π/2 towards −x.
+import {rampPillars,rampDeckHulls,FREIGHT_GANTRY,WORKSHOP_EQUIPMENT,STREET_BLADES} from './m03-coherence.js';
 
 export const LEVEL_ID = 'convoi-des-absents';
 export const START = Object.freeze({ x: 2, z: 62, yaw: 0 });
@@ -39,8 +40,9 @@ function eastZone() {
   // Noise walls closing the zone (east edge and the south side of the interchange).
   out.push(box('wall', 96.5, 97.5, -98, -30, 0, 5, { surface: 'concrete', look: 'noise' }));
   out.push(box('wall', 62, 97, -30.6, -29.6, 0, 5, { surface: 'concrete', look: 'noise' }));
-  // Pillars of the two elevated ramps leaving the route haute (decks drawn by the art, out of reach).
-  for (const [x, z] of [[68, -60], [76, -62], [86, -60], [92, -52], [70, -34.6], [88, -34.6]]) out.push(at('pillar', x, z, .7, .7, 9, { surface: 'concrete' }));
+  // Piers and deck of the single closed service ramp, shared with the rendered structure.
+  for(const p of rampPillars())out.push({...p,kind:'pillar',surface:'concrete'});
+  out.push(...rampDeckHulls());
   // Wrecks of the interchange: cover for the fights, the lane of the van kept clear (x 78…82).
   out.push(at('wreck', 68, -42, 2.1, 1, 1.6, { surface: 'metal', vehicle: 'car' }), at('wreck', 90, -44, 1, 2.2, 1.6, { surface: 'metal', vehicle: 'car' }));
   out.push(at('wreck', 70, -66, 4, 1.3, 3, { surface: 'metal', vehicle: 'truck' }), at('wreck', 92, -66, 1.3, 3.6, 3, { surface: 'metal', vehicle: 'van' }));
@@ -48,9 +50,10 @@ function eastZone() {
   out.push(at('post', 70, -46, .45, .45, 1.3, { surface: 'metal', device: 'treuil' }));
   // Gare de fret: track bed and the medical train (north edge), containers, the dispatch booth, gantry legs.
   out.push(box('train', 64, 96, -97.6, -94.4, 0, 4.2, { surface: 'metal', look: 'train' }));
-  for (const [x, z, w, d] of [[67, -80, 1.3, 3], [92, -82, 3, 1.3], [68, -88, 1.3, 2.4]]) out.push(at('container', x, z, w, d, 2.7, { surface: 'metal' }));
+  for (const [x, z, w, d] of [[67, -80, 1.3, 3], [92, -82, 3, 1.3], [68, -88, 1.3, 2.4]]) out.push(at('container', x, z, w, d, x===67?5.4:2.7, { surface: 'metal' }));
   out.push(box('booth', 90, 96, -78, -72, 0, 3.2, { surface: 'metal', look: 'booth' }));
-  for (const [x, z] of [[64.5, -76], [95.5, -86]]) out.push(at('gantry', x, z, .6, .6, 12, { surface: 'metal' }));
+  for(const x of[FREIGHT_GANTRY.x1,FREIGHT_GANTRY.x2])out.push(at('gantry',x,FREIGHT_GANTRY.z,.6,.6,FREIGHT_GANTRY.height+1,{surface:'metal'}));
+  for(const x of[89.25,92.75])out.push(at('barrier',x,-34.2,1.75,.35,1.6,{surface:'concrete',rampClosure:true}));
   out.push(at('post', 72, -86, .45, .45, 1.3, { surface: 'metal', device: 'arrimage' }));
   return out;
 }
@@ -66,7 +69,7 @@ export const MOVABLE = Object.freeze({
 });
 export function extraObstacles({ open = [] } = {}) {
   const gone = new Set(open);
-  return [...sectorFixes(), ...eastZone(), ...COMBAT_STATIONS, ...Object.entries(MOVABLE).filter(([id]) => !gone.has(id)).map(([, o]) => o)].map(o => ({ ...o, navPad: Math.min(o.hx, o.hz) < .7 ? .7 : 1.3 }));
+  return [...sectorFixes(), ...eastZone(), ...COMBAT_STATIONS,...STREET_BLADES.map(([x,y,z])=>at('sign-post',x+Math.sign(x)*.65,z,.1,.1,y+1.1,{surface:'metal'})),...WORKSHOP_EQUIPMENT.map(o=>({...o,y:0,kind:'workshop-machine',surface:'metal'})), ...(gone.has('remorque')?[at('trailer-parked',89,-60,1.4,6.5,3.6,{surface:'metal',parked:'remorque'})]:[]), ...Object.entries(MOVABLE).filter(([id]) => !gone.has(id)).map(([, o]) => o)].map(o => ({ ...o, navPad: Math.min(o.hx, o.hz) < .7 ? .7 : 1.3 }));
 }
 // Barrier posts of the ORDRE checkpoint stay; pedestrians pass along the pavements (x ±11).
 export const CHECKPOINT_POSTS = Object.freeze([at('post', -9.6, -34, .35, .35, 1.6, { surface: 'metal' }), at('post', 9.6, -34, .35, .35, 1.6, { surface: 'metal' })]);

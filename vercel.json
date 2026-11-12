@@ -2445,6 +2445,24 @@
       ]
     },
     {
+      "source": "/m03-coherence.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/m03-city.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
       "source": "/enemy-rempart.js",
       "headers": [
         {
