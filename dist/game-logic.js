@@ -1,3 +1,4 @@
+import {describeEnemyImpact} from './enemy-body-response.js';
 import {searchContactOrder,pendingMeleeOrder,updateMeleeIntent,prepareHostileShot} from './enemy-engagement.js';
 import {turnEnemy,steerEnemyTravel} from './enemy-motion.js';
 import {inertialMove} from './locomotion.js';
@@ -702,6 +703,7 @@ export class ArenaGame {
     if(zone==='rotor'&&rotorResult?.destroyed)target.limpUntil=Math.max(target.limpUntil||0,this.time+1);
     if(zone==='limb')target.limpUntil=Math.max(target.limpUntil||0,this.time+2);
     if(zone==='head')target.stunnedUntil=Math.max(target.stunnedUntil||0,this.time+.32);
+    target.hitImpulse=describeEnemyImpact(target,at,source,scaled,this.time);if(target.hitImpulse)target.hitSide=target.hitImpulse.side;
     target.hitAt=this.time;target.hitZone=zone;target.suppressedUntil=this.time+1.6;
     this.event('hit', { id: target.id, zone, damage:scaled,playerSource:!source?.companion,shielded:(target.damageScale??1)<1 });
     if (target.hp <= 0) {

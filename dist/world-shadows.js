@@ -36,7 +36,7 @@ export function createWorldShadows(T,{scene,renderer,light,profile={},direction=
   for(const source of extraLights)source.castShadow=enabled;
   const y=Number(focus.elevation)||0,texel=budget.span/budget.size,x=Math.round(focus.x/texel)*texel,z=Math.round(focus.z/texel)*texel;
   light.target.position.set(x,y,z);light.position.set(x+direction.x,y+direction.y,z+direction.z);
-  const moved=Math.hypot(x-lastFocus.x,z-lastFocus.z,y-lastFocus.y)>.3;
+  const moved=Math.hypot(x-lastFocus.x,z-lastFocus.z,y-lastFocus.y)>(profile.shadowMoveThreshold??.3);
   if(enabled&&(force||lastEnabled!==enabled||time<lastMap||time-lastMap>=1/budget.hz||moved)){
    renderer.shadowMap.needsUpdate=true;light.shadow.needsUpdate=true;
    for(const source of extraLights)if(source.visible)source.shadow.needsUpdate=true;

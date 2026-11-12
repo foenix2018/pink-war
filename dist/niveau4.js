@@ -1,3 +1,4 @@
+import {createWorldShadows} from './world-shadows.js';
 import {applyFPSCameraMotion} from './fps-motion.js';
 import {rendererBackend,rendererLabel} from './renderer-policy.js';
 import {createSupplyPickup} from './power-props.js';
@@ -45,6 +46,7 @@ document.documentElement.dataset.universe=characterId==='lylu'?'blue':'pink';
 const shade=$('shade'),startButton=$('start'),status=$('status'),quality=$('quality'),hud=$('hud');
 if(params.get('quality')==='low')quality.value='low';
 const low=()=>quality.value==='low';
+let sunShadows=null;
 let canvas=$('game'),renderer,scene,camera,game,weapon,art,clock=0,running=false,started=false,last=0,framePending=false,recovering=false,bootStep='modules';
 let yaw=0,pitch=0,noticeUntil=0,hitUntil=0,paused=false,view='fps',aimBlend=0,mouseAim=false,playerRig=null,touchControls=null;
 let jumpQueued=false,crouchQueued=false,firePressQueued=false,heldFire=false,weaponReady=false,audioCtx=null;
@@ -468,6 +470,7 @@ function animation(t,frame){
  try{art.update(clock,dt,eye,game?.player);}catch(error){console.warn('M04 / décor animé désactivé',error);art.update=()=>{};}
  if(xr?.active){xr.update(dt,weaponFeel.state,weaponFeel.state.kick>.025?.075:0);xr.renderScope();}
  if(!framePending&&!recovering){
+  sunShadows?.update(clock,game.player,{entities:[...game.enemies,game.player],heightAt:e=>game.surfaceHeight(e.x,e.z,game.time,(e.elevation||0)+.3)});
   try{const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);
    if(result&&typeof result.then==='function'){framePending=true;result.then(()=>{framePending=false;}).catch(err=>{framePending=false;onRenderFailure(err);});}}
   catch(err){onRenderFailure(err);}
@@ -510,6 +513,8 @@ async function boot(){
   traversal=L.createTraversal();
   scene=new T.Scene();camera=new T.PerspectiveCamera(70,innerWidth/innerHeight,.06,600);scene.add(camera);enemyDestructionFX=createEnemyDestructionFX(T,scene,{camera,low:low()||profile.phone||profile.headset,maxDeaths:7,onSound:(kind,source)=>robotShutdownAudio.play(kind,source)});
   createWorld();
+  await art.ready;
+  if(!profile.phone&&!profile.headset&&!low())sunShadows=createWorldShadows(T,{scene,renderer,light:art.sun,profile:{...profile,shadowMoveThreshold:2,artQuality:quality.value==='high'?'high':'low'},direction:art.sun.position.clone()});
   bootStep='jouabilité';status.textContent='Armes, commandes et machines…';
   setupPlayer();resize();
   xr=createMissionXR({getWorld:()=>({T,scene,camera,renderer,game,weapon,soldier:playerRig?.model.root,obstacles:collisions,accent:characterId==='lylu'?'#80baff':'#ef91b4',
@@ -518,7 +523,7 @@ async function boot(){
    onResume:()=>{unpauseMission();pauseMenu.hide(false);},onHome:()=>location.assign('./index.html'),onExit:()=>{snapCamera();resize();requestAnimationFrame(animation);},skillsInput:args=>skillMenu?.xrInput(args)});
   $('renderer').textContent=rendererLabel(renderer);
   bootStep='premier rendu';status.textContent='Premier rendu…';
-  startMission();snapCamera();art.update(0,0,camera,game.player);
+  startMission();snapCamera();art.update(0,0,camera,game.player);sunShadows?.update(0,game.player,{force:true});
   if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);
   bootStep='prêt';hud.hidden=false;started=true;requestAnimationFrame(animation);
   touchControls=createPinkWarsTouch(canvas,{onFire:down=>{if(down)audioReady();heldFire=down;if(down)firePressQueued=true;},onJump:()=>{jumpQueued=true;},onInteract:()=>interact(),
@@ -594,12 +599,12 @@ for(const name of ['pointerup','pointercancel'])window.addEventListener(name,e=>
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
 
 window.__PINK_M04=Object.freeze({
- snapshot:()=>({level:L.LEVEL_ID,revision:'3.79.0',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,time:game?.time,missionTime,
+ snapshot:()=>({level:L.LEVEL_ID,revision:'3.80.0',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,time:game?.time,missionTime,
   area:game&&L.areaAt(game.player.x,game.player.z),health:game?.player.hp,shield:game?.player.shield,charges:game?.charges,
   position:game&&{x:+game.player.x.toFixed(2),z:+game.player.z.toFixed(2),elevation:+game.player.elevation.toFixed(2)},
   weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,opened:mission?.opened,done:mission?.done,reads:mission?.reads,
   hold:mission?.hold,pending:mission?.pending,groups:mission?.groups(),guardian:mission?.guardian,reading,vr:!!xr?.active,lamp:lampOn,subtitle:subtitle&&{who:subtitle.who,text:subtitle.text},queued:subtitles.length,
-  backend:renderer?rendererBackend(renderer):null,rig:!!playerRig,art:art?.stats(),render:renderer?.info?.render}),
+  backend:renderer?rendererBackend(renderer):null,rig:!!playerRig,art:art?.stats(),shadows:sunShadows?.stats(),render:renderer?.info?.render}),
  // QA hooks (?debug=1): move the player, look, clear an encounter, fast-forward the mission clock, use an interaction.
  debug:params.has('debug')?{teleport:(x,z)=>{Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0});snapCamera();if(game.state==='playing'){game.step(1/60,{});mission.update(1/60);}},
   look:(y,p)=>{yaw=y;pitch=p;snapCamera();},clear:(keepGuardian=false)=>{game.enemies=game.enemies.filter(e=>keepGuardian&&e.guardian);mission.update(1/60);},

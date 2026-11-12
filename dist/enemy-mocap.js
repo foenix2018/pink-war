@@ -1,3 +1,4 @@
+import {createFootPlant} from './enemy-body-response.js';
 // Motion-capture layer for the factory humanoids (PO-07, SY-05, TR-15, BR-11, K-9).
 // REC-01's native 41-bone RLH skeleton plays its real clips (idle, walk, walkRifle, rifle, run); every robot bone then
 // follows its native counterpart: pelvis, chest and head by rotation, arms by segment direction, legs by foot targets
@@ -35,7 +36,7 @@ export function createMocapDriver({form,ranged,legs,arms,pelvis,thorax,head,gun,
  const bindWorld=bone=>{const v=bone.position.clone();let p=bone.parent;while(p&&p.isBone){v.add(p.position);p=p.parent;}return v;};
  const pelvisBind=pelvis.position.clone(),thoraxBind=bindWorld(thorax);
  const armData=arms.map(a=>{const s=bindWorld(a.upper),e=bindWorld(a.lower),w=bindWorld(a.wrist);return {...a,dirU:e.clone().sub(s).normalize(),dirL:w.clone().sub(e).normalize(),native:a.side===-1?'Left':'Right'};});
- const legData=legs.map(l=>({...l,native:l.side===-1?'Left':'Right',ratio:(l.upperLength+l.lowerLength)/nativeLeg}));
+ const legData=legs.map(l=>({...l,plant:createFootPlant(),native:l.side===-1?'Left':'Right',ratio:(l.upperLength+l.lowerLength)/nativeLeg}));
  const reverse=form==='stalker'||form==='spectre';
  const q=new T.Quaternion(),q2=new T.Quaternion(),pq=new T.Quaternion(),tq=new T.Quaternion(),uq=new T.Quaternion(),nativePelvis=new T.Quaternion(),e=new T.Euler();
  const a=new T.Vector3(),b=new T.Vector3(),hip=new T.Vector3(),target=new T.Vector3(),dir=new T.Vector3(),bend=new T.Vector3(),knee=new T.Vector3();
@@ -62,9 +63,9 @@ export function createMocapDriver({form,ranged,legs,arms,pelvis,thorax,head,gun,
   // Chest: native spine relative to the pelvis, hunch, recoil kick, hit flinch, cover lean.
   flipQ(q.copy(Q(nb('Spine2'))).multiply(q2.copy(rest.spine).invert()),tq);
   e.setFromQuaternion(nativePelvis.invert().multiply(tq),'YXZ');
-  e.x=e.x*.5-traits.hunch*(moving?1:.6)-(run?.06:0)-(c.covered?.10:0)+c.recoil*.07+c.hit*.12;
+  e.x=e.x*.5-traits.hunch*(moving?1:.6)-(run?.06:0)-(c.covered?.10:0)+c.recoil*.07+(c.impact?.pitch??c.hit*.12);
   e.x=THREE_CLAMP(pelvisPitch+e.x,-.40,.22)-pelvisPitch; // a robot leans into the run, it never folds flat
-  e.y=e.y*traits.sway+c.hit*.16*(c.hitSide||1);e.z=e.z*traits.sway-THREE_CLAMP((c.turnRate||0)*.008,-.065,.065);
+  e.y=e.y*traits.sway+(c.impact?.yaw??c.hit*.16*(c.hitSide||1));e.z=e.z*traits.sway+(c.impact?.roll||0)-THREE_CLAMP((c.turnRate||0)*.008,-.065,.065);
   thorax.quaternion.setFromEuler(e);
   pelvis.updateMatrix();thorax.updateMatrix();
   // Head: native look, counter the hunch to keep the sensors on target, then the chassis' scanning style.
@@ -112,6 +113,9 @@ export function createMocapDriver({form,ranged,legs,arms,pelvis,thorax,head,gun,
    const bx=leg.ankle[0]-leg.hip[0],bz=leg.ankle[2]-leg.hip[2],x=leg.dx-bx,z=leg.dz-bz,cs=Math.cos(strideYaw),sn=Math.sin(strideYaw);
    leg.dx=bx+x*cs-z*sn;leg.dz=bz+x*sn+z*cs;
   }
+  // The support foot remains in world space until lift-off, including strafes
+  // and gradual turns. Teleports, airborne frames and rapid pivots release it.
+  for(const leg of legData){const foot=leg.plant.update(leg.hip[0]+leg.dx,leg.hip[2]+leg.dz,{frame:c.frame,lift:leg.lift,moving,grounded:c.grounded!==false,reach:(leg.upperLength+leg.lowerLength)*.42});leg.planted=foot.planted;leg.dx=foot.x-leg.hip[0];leg.dz=foot.z-leg.hip[2];}
   // Keep both feet within reach of the hips (the pelvis lowers rather than letting a foot float).
   for(const leg of legData){
    hip.set(leg.hip[0]-pelvisBind.x,leg.hip[1]-pelvisBind.y,leg.hip[2]-pelvisBind.z).applyQuaternion(pq);
@@ -136,7 +140,7 @@ export function createMocapDriver({form,ranged,legs,arms,pelvis,thorax,head,gun,
    desired.compose(gp,gunQ,one);rel.multiplyMatrices(pelvis.matrix,thorax.matrix).invert();m.multiplyMatrices(rel,desired);
    m.decompose(gun.position,gun.quaternion,a);
   }
-  return {clip:run?'run':moving?(ranged?'walkRifle':'walk'):(ranged?'rifle':'idle')};
+  return {clip:run?'run':moving?(ranged?'walkRifle':'walk'):(ranged?'rifle':'idle'),plantedFeet:legData.filter(leg=>leg.planted).length};
  }
  return {update,traits,pose,dispose(){pose.dispose();}};
 }

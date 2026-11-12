@@ -33,7 +33,7 @@ canvas#game{position:fixed;inset:0;width:100%;height:100%;display:block;touch-ac
 <p>Qualité : <a href="?quality=low">basse</a> · <a href="?quality=balanced">moyenne</a> · <a href="?quality=high">haute</a> · <a href="?bench=40">mesure automatique</a></p>
 <button id="go" disabled>PRÉPARATION…</button> <a href="index.html?mode=foret" style="margin-left:10px;color:#ffb27a">← Retour au menu</a></div></div>
 <script type="module">
-import {boot} from './foret.js?v=3.79.0';
+import {boot} from './foret.js?v=3.80.0';
 const go=document.getElementById('go');
 boot().then(()=>{go.disabled=false;go.textContent='ENTRER DANS LA FORÊT →';if(new URLSearchParams(location.search).get('bench')){document.getElementById('start').remove();document.body.classList.add('m07-playing');}})
  .catch(e=>{go.textContent='Erreur : '+(e?.message||e);console.error(e);});

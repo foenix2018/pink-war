@@ -1,3 +1,4 @@
+import {createPhotoResponse,metricGround} from './world-material-response.js';
 import {createFPSChapter} from './fps-environments.js';
 import {createWorldEffects} from './webgpu-world-fx.js';
 import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
@@ -37,11 +38,11 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
   add(new T.Mesh(new T.SphereGeometry(400, 24, 12), new T.MeshBasicMaterial({ map: skyTex, side: T.BackSide, fog: false, depthWrite: false })));
 
   // ---------- Materials ----------
-  const loader = new T.TextureLoader();
+  const loader = new T.TextureLoader(),photo=createPhotoResponse(T,{low});
   const tex = (url, srgb = true) => { const t = loader.load(url); t.wrapS = t.wrapT = T.RepeatWrapping; if (srgb) t.colorSpace = T.SRGBColorSpace; t.anisotropy = low ? 2 : 6; return t; };
   const L9 = n => `./assets/ligne9/l9-${n}_diff_512.jpg`, CC = n => `./assets/cc0/${n}_diff_512.jpg`;
   const std = (color, roughness = .6, metalness = .2, extra = {}) => new T.MeshStandardMaterial({ color, roughness, metalness, ...extra });
-  const tiled = (url, color, roughness, metalness, tile, extra = {}) => { const m = std(color, roughness, metalness, { map: tex(url), ...extra }); m.userData.tile = tile; return m; };
+  const tiled = (url, color, roughness, metalness, tile, extra = {}) => { const m = std(color, roughness, metalness, { map: tex(url), ...extra }); m.userData.tile = tile; return photo.bind(m,url); };
   const glow = color => new T.MeshBasicMaterial({ color, toneMapped: false });
   const additive = (color, opacity = .6) => new T.MeshBasicMaterial({ color, transparent: true, opacity, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false, side: T.DoubleSide });
   const M = {
@@ -94,7 +95,7 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
   // ---------- Grounds, roofs ----------
   const FLOOR = { quai: M.antiSkid, sas: M.panel, cour: M.slab, hangar: M.slab, atelier: M.antiSkid, 'relais-est': M.grid, maintenance: M.grid, anneau: M.plate, portique: M.plate };
   function buildGrounds() {
-    const ground = new T.Mesh(new T.PlaneGeometry(220, 220), M.asphalt); ground.rotation.x = -Math.PI / 2; ground.position.y = -.01; M.asphalt.map.repeat?.set(30, 30); add(ground);
+    const ground = new T.Mesh(metricGround(T,220,220,M.asphalt.userData.tile), M.asphalt); ground.rotation.x = -Math.PI / 2; ground.position.y = -.01; M.asphalt.map.repeat?.set(1, 1); add(ground);
     for (const a of AREAS) { if (a.id === 'portique') continue; floorRect(FLOOR[a.id] || M.slab, a.x1, a.x2, a.z1, a.z2, .006); if (a.roof) { ceilRect(a.id === 'hangar' ? M.corrugated : M.panel, a.x1, a.x2, a.z1, a.z2, a.roof); floorRect(M.concrete, a.x1 - .2, a.x2 + .2, a.z1 - .2, a.z2 + .2, a.roof + .3); } }
     // Yellow maintenance markings, the lane through the court, hazard hatching at the breach.
     for (let z = -26; z < 60; z += 4) piece(M.yellow, -6, .008, z, .14, .004, 2);
@@ -359,7 +360,7 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
 
 
   return {
-    root, M, openPortal,
+    root, M, sun:moon, openPortal,get ready(){return photo.ready;},
     build(obstacles) {
       buildGrounds(); buildDecks(); buildWalls(obstacles); for (const o of obstacles) dress(o); gantryStabilizer(); buildRelays(); buildBreach(); buildDoors(); buildDevices(); buildSigns(); buildFixtures();
       neons.meshes(); neons.build(); flushGeometry(); flushPieces();
@@ -377,6 +378,6 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
     breach(v) { breach.target = Math.max(0, Math.min(1, v)); },
     markDone(id, isDone = true) { const d = devices.get(id); if (d) d.done = isDone; if (id.startsWith('stab-')) { if (isDone) done.add(id); else done.delete(id); } },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
-    stats() { return { ...stats, fps:fpsChapter?.stats(), worldEffects:worldFx.stats(), neons:neons.stats(), portals: portals.length, breach: +breach.level.toFixed(2), signs: signs.stats().signs, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, photo:photo.stats(), fps:fpsChapter?.stats(), worldEffects:worldFx.stats(), neons:neons.stats(), portals: portals.length, breach: +breach.level.toFixed(2), signs: signs.stats().signs, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }

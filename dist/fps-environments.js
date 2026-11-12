@@ -1,3 +1,4 @@
+import {fillWorldRadiance} from './world-material-response.js';
 import {Assembly,bevelBox,matrix,limb} from './geo.js';
 import {createFunctionalProp} from './functional-props.js';
 import {createIndustrialLightBatch} from './industrial-light.js';
@@ -23,6 +24,7 @@ export function microSurfaceMaps(T){
 export function createFPSChapter(T,parent,{chapter,obstacles=[],areas=[],low=false,webgpu=false,worldFx=null,details=true}={}){
  const compact=low||/OculusBrowser|Quest|PicoBrowser|iPhone|iPad/i.test(globalThis.navigator?.userAgent||'');
  const palette=FPS_PALETTES[chapter]||FPS_PALETTES.m03,root=new T.Group();root.name='FPS / '+chapter+' / finition des espaces';parent.add(root);
+ const radiance=fillWorldRadiance(T,parent,{...palette,low:compact});
  const own=[],textures=[],a=new Assembly(),maps=microSurfaceMaps(T);textures.push(maps.normal,maps.rough);
  const mat=(color,metalness,roughness)=>{const m=new T.MeshStandardMaterial({color,metalness,roughness,normalMap:maps.normal,normalScale:new T.Vector2(.12,.12)});own.push(m);return m;};
  const M={steel:mat(0x8b9ba5,.78,.35),dark:mat(0x18242c,.5,.62),paint:mat(palette.paint,.45,.66)};
@@ -80,5 +82,5 @@ export function createFPSChapter(T,parent,{chapter,obstacles=[],areas=[],low=fal
   const sorted=stations.map(s=>({...s,d:Math.hypot(s.x-eye.x,s.z-eye.z,(s.y-(eye.y||1.6))*.3)})).filter(s=>s.d<17).sort((a,b)=>a.d-b.d);
   pool.forEach((l,i)=>{const s=sorted[i];l.intensity=s?(s.nx||s.nz?48:110):0;if(s){l.color.setHex(s.color);l.position.set(s.x+s.nx*.12,s.y-.2,s.z+s.nz*.12);l.target.position.set(s.x+s.nx*1.8,s.floor,s.z+s.nz*1.8);}});
  };
- return {root,update,stats:()=>({...stat,draws:root.children.filter(o=>o.isMesh).length,worldEffects:fx.stats()}),dispose(){fixtures?.dispose();contacts?.dispose();if(!worldFx)fx.dispose();root.traverse(o=>{if(o.isMesh)o.geometry.dispose();});for(const [m,old]of touched){Object.assign(m,old);delete m.userData.fpsSurface;m.needsUpdate=true;}own.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());root.removeFromParent();}};
+ return {root,update,stats:()=>({...stat,draws:root.children.filter(o=>o.isMesh).length,indirectLight:!!radiance,worldEffects:fx.stats()}),dispose(){radiance?.dispose();fixtures?.dispose();contacts?.dispose();if(!worldFx)fx.dispose();root.traverse(o=>{if(o.isMesh)o.geometry.dispose();});for(const [m,old]of touched){Object.assign(m,old);delete m.userData.fpsSurface;m.needsUpdate=true;}own.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());root.removeFromParent();}};
 }

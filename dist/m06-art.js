@@ -1,3 +1,5 @@
+import {createWorldEffects} from './webgpu-world-fx.js';
+import {createPhotoResponse,metricGround} from './world-material-response.js';
 import {createFPSChapter} from './fps-environments.js';
 import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
 import {createFloorRampHardware} from './stair-hardware.js';
@@ -36,11 +38,11 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
   add(new T.Mesh(new T.SphereGeometry(400, 24, 12), new T.MeshBasicMaterial({ map: skyTex, side: T.BackSide, fog: false, depthWrite: false })));
 
   // ---------- Materials ----------
-  const loader = new T.TextureLoader();
+  const loader = new T.TextureLoader(),photo=createPhotoResponse(T,{low});
   const tex = (url, srgb = true) => { const t = loader.load(url); t.wrapS = t.wrapT = T.RepeatWrapping; if (srgb) t.colorSpace = T.SRGBColorSpace; t.anisotropy = low ? 2 : 6; return t; };
   const L9 = n => `./assets/ligne9/l9-${n}_diff_512.jpg`, CC = n => `./assets/cc0/${n}_diff_512.jpg`;
   const std = (color, roughness = .6, metalness = .2, extra = {}) => new T.MeshStandardMaterial({ color, roughness, metalness, ...extra });
-  const tiled = (url, color, roughness, metalness, tile, extra = {}) => { const m = std(color, roughness, metalness, { map: tex(url), ...extra }); m.userData.tile = tile; return m; };
+  const tiled = (url, color, roughness, metalness, tile, extra = {}) => { const m = std(color, roughness, metalness, { map: tex(url), ...extra }); m.userData.tile = tile; return photo.bind(m,url); };
   const glow = color => new T.MeshBasicMaterial({ color, toneMapped: false });
   const additive = (color, opacity = .6) => new T.MeshBasicMaterial({ color, transparent: true, opacity, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false, side: T.DoubleSide });
   const M = {
@@ -93,7 +95,7 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
   // ---------- Grounds, roofs (skylights broken: light shafts come through) ----------
   const FLOOR = { voie: M.asphalt, ferraille: M.asphalt, coulee: M.slab, chaine: M.antiSkid, coeur: M.plate, quai: M.slab, cabine: M.grid };
   function buildGrounds() {
-    const ground = new T.Mesh(new T.PlaneGeometry(220, 220), M.asphalt); ground.rotation.x = -Math.PI / 2; ground.position.y = -.01; M.asphalt.map.repeat?.set(30, 30); add(ground);
+    const ground = new T.Mesh(metricGround(T,220,220,M.asphalt.userData.tile), M.asphalt); ground.rotation.x = -Math.PI / 2; ground.position.y = -.01; M.asphalt.map.repeat?.set(1, 1); add(ground);
     for (const a of AREAS) {
       if (a.id === 'cabine') continue; floorRect(FLOOR[a.id] || M.slab, a.x1, a.x2, a.z1, a.z2, .006);
       if (a.roof) {
@@ -110,9 +112,13 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
     for (let z = -16; z < 62; z += 4) piece(M.yellow, 60, .008, z, .14, .004, 2), piece(M.yellow, 76, .008, z, .14, .004, 2);
     for (let a = 0; a < 40; a++) { const ang = a / 40 * TAU; piece(a % 2 ? M.yellow : M.black, Math.cos(ang) * 9, .009, -70 + Math.sin(ang) * 9, 1.4, .004, .6, -ang); }
   }
-  function shaft(x, y, z, len) {
-    const m = new T.Mesh(new T.PlaneGeometry(len, y * 1.4), additive(0xffb070, .07)); m.position.set(x - 6, y * .5, z + 4); m.rotation.set(-.55, 0, .35); add(m);
+  const shafts=[],shaftVolumes=[];
+  const shaftFx=webgpu&&!low&&!/OculusBrowser|Quest|PicoBrowser/i.test(globalThis.navigator?.userAgent||'')?createWorldEffects(T,{webgpu:true,low:false}):null;
+  function shaft(x,y,z,len){shafts.push({x,y,z,len});}
+  function updateShafts(t,eye){if(!shaftFx)return;shaftFx.update(t,eye);const nearest=shafts.map(s=>({...s,d:Math.hypot(s.x-eye.x,s.z+4-eye.z)})).filter(s=>s.d<35).sort((a,b)=>a.d-b.d);
+    shaftVolumes.forEach((mesh,i)=>{const s=nearest[i];mesh.visible=!!s;if(!s)return;mesh.position.set(s.x-2,s.y*.5,s.z+4);mesh.scale.set(Math.min(14,s.len*.5)/2,(s.y-1)/2,1.8);mesh.rotation.set(-.45,0,.22);});
   }
+
   // Booth deck, crane deck, ramps.
   function buildDecks() {
     for (const f of FLOORS) {
@@ -409,14 +415,15 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
 
 
   return {
-    root, M, openPortal,
+    root, M, sun, openPortal,get ready(){return photo.ready;},
     build(obstacles) {
       buildGrounds(); buildDecks(); buildWalls(obstacles); for (const o of obstacles) dress(o); buildEffects(); buildDoors(); buildDevices(); buildSigns(); buildFixtures();
       neons.meshes(); neons.build(); flushGeometry(); flushPieces();
+      if(shaftFx)for(let i=0;i<3;i++)shaftVolumes.push(shaftFx.fog(root,{width:8,height:10,depth:3,color:0xffb581,opacity:.075,beam:true}));
       fpsChapter=createFPSChapter(T,root,{chapter:'m06',obstacles:obstacles,areas:AREAS,low,webgpu});
     },
     update(t, dt, eye, player) {
-      fpsChapter?.update(t,dt,eye.position);
+      updateShafts(t,eye.position);fpsChapter?.update(t,dt,eye.position);
       const e = eye.position; updatePool(dt, e); updateEffects(t, dt); updatePortals(t, dt, e); updateDevices(t, dt); if (player) updateDoors(dt, player);
       for (const f of animated) f(t, dt); signs.update(t);
     },
@@ -426,6 +433,6 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
     adapt(spot) { if (!learnt.ring) return; learnt.ring.position.set(spot.x, .05, spot.z); learnt.level = 1; },
     markDone(id, isDone = true) { const d = devices.get(id); if (d) d.done = isDone; },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
-    stats() { return { ...stats, fps:fpsChapter?.stats(), neons:neons.stats(), portals: portals.length, line: line.running, chassis: line.chassis.length, signs: signs.stats().signs, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, photo:photo.stats(),shaftVolumes:shaftVolumes.filter(m=>m.visible).length, fps:fpsChapter?.stats(), neons:neons.stats(), portals: portals.length, line: line.running, chassis: line.chassis.length, signs: signs.stats().signs, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }

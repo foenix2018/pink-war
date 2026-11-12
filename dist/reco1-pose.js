@@ -47,6 +47,7 @@ export function createReco1Pose(asset,states,rig={}){
   // Optional mech proportions retarget bone translations after the native clip.
   // The saved animation layer above stays unmodified, so widening never accumulates.
   if(rig.proportions)for(const [name,factor] of Object.entries(rig.proportions))bone(name).position.multiplyScalar(factor);
+  if(pose.impact)bone('Spine2').quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(-pose.impact.pitch,pose.impact.yaw,-pose.impact.roll)));
   if(pose.hitPulse)bone('Spine2').quaternion.multiply(new T.Quaternion().setFromEuler(new T.Euler(-.045*pose.hitPulse,0,0)));
 
   for(const side of ['Left','Right'])for(const n of ['UpLeg','Leg','Foot'])lastNative[side+n]=bone(side+n).quaternion.toArray();

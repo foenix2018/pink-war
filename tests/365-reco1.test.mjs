@@ -28,7 +28,7 @@ test('RECO1 keeps the same bore and projectile direction with tracked room heigh
 
 test('RECO1 replaces the lightweight Sentinel through the shared factory in campaign and Arena',()=>{
  const g=setup();g.beginWave();for(let i=0;i<3;i++)g.spawnEnemy();const e=g.enemies.find(e=>e.form==='seer');assert.ok(e);assert.equal(e.hp,750);
- const m=factory.create(e.elite,e.ranged,e.form);assert.match(m.name,/RECO1/);assert.equal(m.userData.reco1,true);assert.match(ENEMY_PROFILES.seer.name,/RECO1/);
+ const m=factory.create(e.elite,e.ranged,e.form);assert.match(m.name,/RECO1/);assert.equal(m.userData.reco1,true);assert.equal(ENEMY_PROFILES.seer.name,RECO1.name);
  const campaign=new CampaignLevel1([],()=>.5);const c=campaign.makeEnemy('seer',{id:1,x:0,z:-8,yaw:0});assert.equal(c.hp,enemyDurability(1+campaign.encounter,'seer'));assert.equal(c.ranged,true);
  assert.ok(enemyDurability(10,'seer')>enemyDurability(1,'seer'));assert.ok(enemyDurability(1,'seer',true)>750);
 });
@@ -58,7 +58,7 @@ test('rendered bore and physical projectile origin coincide through pitch, yaw, 
 });
 test('enemy bullets leave the real bore, point at the player and take health on a clear firing lane',()=>{
  const g=setup(),e=fixture({z:-14,yaw:Math.PI,stunnedUntil:0,attackTimer:0});g.enemies=[e];g.step(.01,{});
- const event=g.drainEvents().find(e=>e.type==='enemy-shot'),bullet=g.bullets.find(b=>b.hostile);assert.ok(event&&bullet);
+ let event=g.drainEvents().find(e=>e.type==='enemy-shot');assert.equal(event,undefined,'the first shot is announced before release');for(let i=0;i<60&&!event;i++){g.step(.01,{});event=g.drainEvents().find(e=>e.type==='enemy-shot');}const bullet=g.bullets.find(b=>b.hostile);assert.ok(event&&bullet);
  const r=model();r.position.set(e.x,e.elevation,e.z);r.rotation.y=e.yaw;r.userData.animate(g.time,0,true,e,g.time);r.updateMatrixWorld(true);const bore=r.userData.muzzle();assert.ok(bore.origin.distanceTo(new T.Vector3(event.x,event.y,event.z))<1e-6);assert.ok(bore.direction.dot(new T.Vector3(bullet.vx,bullet.vy,bullet.vz).normalize())>.999999);
  for(let i=0;i<70;i++)g.step(.01,{});assert.ok(g.player.hp<100);
 });
