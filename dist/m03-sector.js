@@ -1,4 +1,4 @@
-import {sectorPropOffset,AREAS} from './m03-layout.js';
+import {sectorPropOffset,AREAS,isDepotHull} from './m03-layout.js';
 import {retiredDecoration,serviceRampHeight} from './m03-coherence.js';
 import {cityWindowAtlas} from './m03-city.js';
 import {findBakedNeonRuns} from './baked-neons.js';
@@ -28,7 +28,7 @@ export function decodeSector(meta, bin) {
 
 // ---------- Collision and walkable surfaces (game-logic obstacle format) ----------
 export function sectorObstacles(meta, extra = []) {
-  const out = [...meta.colliders, ...(meta.physicalSolids || [])].filter(c=>!retiredDecoration(c)).map(c => ({ x: (c.x1 + c.x2) / 2 + sectorPropOffset(c).x, z: (c.z1 + c.z2) / 2 + sectorPropOffset(c).z, hx: (c.x2 - c.x1) / 2, hz: (c.z2 - c.z1) / 2, y: Math.max(0, c.y1), height: c.y2 - Math.max(0, c.y1),
+  const out = [...meta.colliders, ...(meta.physicalSolids || [])].filter(c=>!retiredDecoration(c)&&!isDepotHull(c)).map(c => ({ x: (c.x1 + c.x2) / 2 + sectorPropOffset(c).x, z: (c.z1 + c.z2) / 2 + sectorPropOffset(c).z, hx: (c.x2 - c.x1) / 2, hz: (c.z2 - c.z1) / 2, y: Math.max(0, c.y1), height: c.y2 - Math.max(0, c.y1),
     surface: [0,13,16].includes(c.mat) || c.label === 'barrière béton' ? 'concrete' : 'metal', sector: true, kind: c.label, stairBody: !!c.stairBody, walkableSurface: !!c.walkableSurface, blocksInteraction: c.source === 'page' || /paroi|dalle/.test(c.label),
     // Thin walls, barriers and posts keep a narrower margin in the machines' navigation grid (doorways stay open).
     navPad: Math.min(c.x2 - c.x1, c.z2 - c.z1) < 1.4 ? .7 : 1.3 }));

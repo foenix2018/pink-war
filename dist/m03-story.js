@@ -123,6 +123,33 @@ export const SCRIPT = Object.freeze({
   arrimageOk: {
     all: L(['ines', 'Ambulance arrimée ! Le registre de régulation est dans la cabine, au bout du quai. Lisez-le avant le départ.'])
   },
+  // Added beats: the Directoire depot, the substation under the viaduct, the holding yard.
+  depot: {
+    lylu: L(['cara', 'Dépôt du Directoire. Rayonnages pleins, portes ouvertes, personne. Donc quelqu’un.'], ['ines', 'Les cellules sont au fond, sur le quai intérieur. Sans elles, l’ambulance ne passe pas le viaduc.']),
+    ghju: L(['gaby', 'Dépôt logistique du Directoire. Trop de machines pour un entrepôt qui dort.'], ['ines', 'Les cellules d’énergie sont au fond. Sans elles, l’ambulance s’arrête avant le viaduc.'])
+  },
+  cellules: {
+    lylu: L(['lylu', 'Cellules chargées. Deux palettes marquées « Anneau logistique ».'], ['cara', 'Et une porte de quai qui grésille. Ils arrivent par l’avenue.'], ['voss', 'Avant de rouler : le Directoire retient des soignants derrière l’atelier. Sortez-les.']),
+    ghju: L(['ghju', 'J’ai les cellules. Elles étaient étiquetées pour le convoi 02.'], ['gaby', 'Portail devant la porte du quai. On sort en force.'], ['voss', 'Avant de rouler : le Directoire retient des soignants derrière l’atelier. Sortez-les.'])
+  },
+  viaduc: {
+    all: L(['ines', 'La barrière n’a plus de courant : le Directoire a coupé le poste électrique du viaduc. Il est au bout du boulevard, côté ouest.'])
+  },
+  transfo: {
+    lylu: L(['cara', 'Réarmement lancé. Vingt-huit secondes, et tout le secteur sait où on est.']),
+    ghju: L(['gaby', 'Réarmement en cours. Vingt-huit secondes : je couvre tes angles.'])
+  },
+  transfoOk: {
+    all: L(['ines', 'Le courant revient sur la barrière ! Revenez poser le vérin.'])
+  },
+  retention: {
+    lylu: L(['cara', 'Cour de rétention. Deux modules, des gardes, et des signatures de chaleur à l’intérieur.'], ['voss', 'Ce sont des soignants de l’annexe. Le Directoire les garde pour le convoi suivant.']),
+    ghju: L(['gaby', 'Modules de rétention. Je compte quatre personnes enfermées.'], ['voss', 'Les soignants de l’annexe. On ne part pas sans eux, GHJU.'])
+  },
+  detenus: {
+    lylu: L(['lylu', 'Module ouvert. Quatre soignants, debout, vivants.'], ['ines', 'Amenez-les à l’ambulance. J’ai besoin de bras pour les blessés.']),
+    ghju: L(['ghju', 'C’est ouvert. Venez, on vous ramène à l’ambulance.'], ['ines', 'Quatre de plus à bord. On repart dès que vous êtes là.'])
+  },
   // End-of-chapter cinematic (end-cinematic.js): on the quay, the hero and her sphere watch the train leave.
   fin: {
     ghju: L(['gaby', 'Le train sanitaire s’en va. Inès a ses kits, AEGIS a sa route. Tu as fait ce qu’il fallait.'],

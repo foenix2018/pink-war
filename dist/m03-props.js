@@ -5,7 +5,7 @@
 // object is built in its place: same footprint, same height, same collision box (physics is not touched).
 // All parts are merged per material: about twenty draw calls for the whole set.
 import { roundedBox } from './webgpu-upgrade.js';
-import { AREAS, sectorPropOffset } from './m03-layout.js';
+import { AREAS, sectorPropOffset, DEPOT } from './m03-layout.js';
 import {faceBounds,inside,retiredDecoration} from './m03-coherence.js';
 
 const TAU = Math.PI * 2;
@@ -56,6 +56,8 @@ export function classifySectorProps(meta, world, { bounds = meta.bounds } = {}) 
     if (!kind) continue;
     // Inside the annexe or the workshop a pole is a structural column or a service riser, never a street lamp.
     const indoor = AREAS.some(a => a.roof && (c.x1 + c.x2) / 2 >= a.x1 && (c.x1 + c.x2) / 2 <= a.x2 && (c.z1 + c.z2) / 2 >= a.z1 && (c.z1 + c.z2) / 2 <= a.z2);
+    // The row at z −56 carries the viaduct (« route haute »): piers, not lamps. Other tall poles are steel stanchions.
+    if (kind === 'lamp') kind = Math.abs((c.z1 + c.z2) / 2 + 56) < 1.5 ? 'pier' : 'stanchion';
     if (indoor && (kind === 'lamp' || kind === 'tree')) kind = 'column';
     else if (indoor && kind === 'mast') kind = 'riser';
     // Centroids can sit inside a small prop while the actual face spans a wall
@@ -77,6 +79,8 @@ export function classifySectorProps(meta, world, { bounds = meta.bounds } = {}) 
   const owned = i => (colCells.get(cellKey(cx[i], cz[i])) || []).some(c => cx[i] >= c.x1 - .15 && cx[i] <= c.x2 + .15 && cz[i] >= c.z1 - .15 && cz[i] <= c.z2 + .15 && cy[i] <= c.y2 + .5);
   let scatter = 0;
   for (let i = 0; i < n; i++) {
+    // The depot is rebuilt as an interior (m03-depot.js): its baked closed hull goes.
+    if (cx[i] > DEPOT.x1 - .3 && cx[i] < DEPOT.x2 + .3 && cz[i] > DEPOT.z1 - .3 && cz[i] < DEPOT.z2 + .3 && cy[i] < DEPOT.height + .3) { drop.add(i); continue; }
     if (drop.has(i) || cx[i] < bounds.minX || cx[i] > bounds.maxX || cz[i] < bounds.minZ || cz[i] > bounds.maxZ) continue;
     const m = world.mat[i]; if (KEEP.has(m)) continue;
     let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9]; const b = i * 12;
@@ -359,7 +363,18 @@ export function createSectorProps(T, root, props, { low = false, rich = false } 
     if (levels === 2) { for (let k = 0; k < 9; k++) put(M.galva, box(.9, .04, .26), w / 2 + .5, .16 + k * hh / 9, -d / 2 + .5 + k * .3); put(M.galva, box(1, .04, 1.2), w / 2 + .5, hh, d / 2 - .6); put(M.galva, box(.04, 1, 1.2), w / 2 + 1, hh + .5, d / 2 - .6); }
     put(M.galva, cyl(.03, .03, 1.6, 8), -w / 2 + .4, levels * hh + .8, -d / 2 + .4); put(M.red, sph(.05, 10), -w / 2 + .4, levels * hh + 1.62, -d / 2 + .4);
   }
-  const build = { jersey, drum, lamp, tree, bush, bollard, mast, cabin, post, rack, workbench, medcase, bed, generator, vending, barricade, column, riser };
+  function pier(p) { // viaduct pier: plinth, shaft with chamfers, flared head, impact band, number plate
+    begin(p, 0); const H = p.h, w = .74;
+    put(M.concrete, box(1.3, .5, 1.3, .06), 0, .25, 0); put(M.concrete, box(w, H - 1.4, w, .07), 0, .5 + (H - 1.4) / 2, 0);
+    put(M.concrete, box(w + .5, .45, w + .2, .05), 0, H - .68, 0); put(M.concrete, box(w + 1.3, .45, w + .3, .05), 0, H - .23, 0);
+    put(M.hazard, box(w + .01, .5, w + .01), 0, 1.1, 0); put(M.enamel, box(.3, .2, .01), 0, 2.1, w / 2 + .006); put(M.galva, box(.06, H - 2, .06), w / 2 + .03, 1.2 + (H - 2) / 2, -.2); put(M.cyan, box(.5, .03, .03), 0, H - 1, w / 2 + .12);
+  }
+  function stanchion(p) { // steel H-stanchion on a base plate
+    begin(p, 0); const H = p.h;
+    put(M.galva, box(.5, .03, .5), 0, .015, 0); for (const z of [-.14, .14]) put(M.steel, box(.3, H, .025), 0, H / 2, z); put(M.steel, box(.02, H, .28), 0, H / 2, 0);
+    for (let y = 2.5; y < H; y += 3) put(M.steel, box(.3, .02, .28), 0, y, 0); put(M.yellow, box(.31, .8, .3), 0, .42, 0);
+  }
+  const build = { jersey, drum, lamp, tree, bush, bollard, mast, cabin, pier, stanchion, post, rack, workbench, medcase, bed, generator, vending, barricade, column, riser };
   for (const p of props) build[p.kind]?.(p);
   const result = out.build(group, 'M03 objets');
   for (const gg of geo.values()) gg.dispose?.();

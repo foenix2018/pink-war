@@ -1,4 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import{readFileSync}from'node:fs';
+import {DEPOT} from '../dist/m03-layout.js';
 import*as T from'../dist/vendor/three.webgpu.min.js';
 import{decodeSector,sectorObstacles,sectorTraversal,createSectorMeshes}from'../dist/m03-sector.js';
 import{classifySectorProps}from'../dist/m03-props.js';
@@ -17,7 +18,9 @@ test('retiring a small prop never deletes an entire wall, roof or road through i
  let buildings=0,retired=0;
  for(let q=0;q<sector.world.n;q++){
   const b=faceBounds(sector.world,q,meta.scale),w=b.x2-b.x1,h=b.y2-b.y1,d=b.z2-b.z1;
-  if(Math.max(w*h,w*d,h*d)>60){assert.equal(props.drop.has(q),false,'architectural face '+q);buildings++;}
+  // The depot hull is the one building rebuilt as an interior (m03-depot.js): its faces are replaced, not lost.
+  const depot=(b.x1+b.x2)/2>DEPOT.x1-.3&&(b.x1+b.x2)/2<DEPOT.x2+.3&&(b.z1+b.z2)/2>DEPOT.z1-.3&&(b.z1+b.z2)/2<DEPOT.z2+.3&&(b.y1+b.y2)/2<DEPOT.height+.3;
+  if(Math.max(w*h,w*d,h*d)>60&&!depot){assert.equal(props.drop.has(q),false,'architectural face '+q);buildings++;}
   if(retiredMachineHull(b)){assert.ok(props.drop.has(q));retired++;}
  }
  assert.ok(buildings>100&&retired>100);

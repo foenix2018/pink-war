@@ -46,7 +46,7 @@ test('M03: a machine behind a wall cannot halt or sabotage the ambulance',async(
  const g=new ArenaGame([],()=>.5,{routes:[],lifts:[],height:()=>0,surfaces:()=>[]}),wall={x:-3,z:46,hx:.12,hz:4,y:0,height:4,blocksInteraction:true};
  const m=createM03Mission({game:g,base:[wall]});m.start();
  for(const id of ['ines','alimentation','dossier','kit']){const it=L.INTERACTIONS.find(i=>i.id===id);Object.assign(g.player,{x:it.x,z:it.z,elevation:it.y||0});assert.equal(m.interact()?.id,id);}
- g.enemies=[];m.update(0);const use=id=>{const it=L.INTERACTIONS.find(i=>i.id===id);Object.assign(g.player,{x:it.x,z:it.z,elevation:it.y||0});g.enemies=[];m.update(0);g.enemies=[];assert.equal(m.interact()?.id,id);};use('manifeste');use('verin');
+ g.enemies=[];m.update(0);const use=id=>{const it=L.INTERACTIONS.find(i=>i.id===id);Object.assign(g.player,{x:it.x,z:it.z,elevation:it.y||0});g.enemies=[];m.update(0);g.enemies=[];assert.equal(m.interact()?.id,id);};use('manifeste');use('verin');use('cellules');use('cellule'); // the two added stops before the convoy leaves
  g.enemies=[{id:999,form:'stalker',x:-1,z:46,elevation:0}];Object.assign(g.player,{x:-8,z:50});const before=m.van;
  m.update(.05);assert.equal(m.van.hp,before.hp);assert.equal(m.van.moving,true);
  g.enemies=[];Object.assign(g.player,{x:m.van.x,z:m.van.z-1});m.update(.05);assert.equal(m.van.moving,false);assert.equal(m.van.waiting,'passage','the ambulance waits instead of crossing the player');

@@ -67,12 +67,18 @@ test('the first part plays: Inès, the annex power, the convoy file, the resusci
   Object.assign(g.player,{x:24,z:28});step(g,m);assert.equal(m.groups().atelier.deployed,4,'patrol at the workshop');
   use(g,m,'manifeste');assert.equal(m.stageId,'verin');
   Object.assign(g.player,{x:34,z:38.4});assert.equal(m.nearInteraction(),null,'the patrol first');
-  g.enemies.length=0;use(g,m,'verin');assert.equal(m.stageId,'escorte');assert.ok(log.said.includes('escorte'));
+  g.enemies.length=0;use(g,m,'verin');assert.equal(m.stageId,'depot','the ambulance needs energy cells first');
+  Object.assign(g.player,{x:30,z:-15});step(g,m);assert.equal(m.groups().depot.deployed,5,'guards inside the depot');assert.ok(log.said.includes('depot'));
+  Object.assign(g.player,{x:50.4,z:-15});assert.equal(m.nearInteraction(),null,'the guards first');
+  g.enemies.length=0;use(g,m,'cellules');assert.equal(m.stageId,'detenus');assert.deepEqual(m.pending,['depot2'],'a portal opens at the dock door');
+  g.enemies.length=0;Object.assign(g.player,{x:52,z:60,elevation:0});step(g,m);assert.equal(m.groups().detention.deployed,5,'guards in the holding yard');
+  Object.assign(g.player,{x:64,z:66});assert.equal(m.nearInteraction(),null,'the guards first');
+  g.enemies.length=0;use(g,m,'cellule');assert.equal(m.stageId,'escorte');assert.ok(log.said.includes('escorte')&&log.said.includes('detenus'));
 });
 
 test('the convoy: escort, ORDRE barrier, A3 relay, beacon at the fracture, the barrier repaired, the interchange, the freight station',()=>{
   const {g,m,log}=mission('ghju');m.start();
-  for(const id of ['ines','alimentation','dossier','kit'])use(g,m,id);g.enemies.length=0;step(g,m);use(g,m,'manifeste');g.enemies.length=0;use(g,m,'verin');
+  for(const id of ['ines','alimentation','dossier','kit'])use(g,m,id);g.enemies.length=0;step(g,m);use(g,m,'manifeste');g.enemies.length=0;use(g,m,'verin');g.enemies.length=0;use(g,m,'cellules');g.enemies.length=0;use(g,m,'cellule');g.enemies.length=0;
   // The van waits for its escort.
   Object.assign(g.player,{x:0,z:-60});run(g,m,2,{clear:true});assert.equal(m.van.waiting,'escorte');assert.ok(m.van.z>40);
   escortVan(g,m,90);assert.equal(m.stageId,'a3','the van stops at the ORDRE barrier');assert.equal(L.VAN_PATH[m.van.index].stop,'barriere');
@@ -83,7 +89,9 @@ test('the convoy: escort, ORDRE barrier, A3 relay, beacon at the fracture, the b
   Object.assign(g.player,{x:0,z:-91.4});assert.equal(m.nearInteraction(),null,'the ambush first');
   g.enemies.length=0;use(g,m,'balise');assert.equal(m.hold.name,'balise');
   run(g,m,2+PORTAL_CHARGE+.2);assert.equal(m.groups().balise1.deployed,3,'portal reinforcements');
-  run(g,m,L.HOLDS.balise);assert.equal(m.hold,null);assert.equal(m.stageId,'barriere');assert.ok(m.reads.includes('balise'));
+  run(g,m,L.HOLDS.balise);assert.equal(m.hold,null);assert.equal(m.stageId,'transfo','the barrier has no power');assert.ok(m.reads.includes('balise'));
+  g.enemies.length=0;Object.assign(g.player,{x:-30,z:-53,elevation:0});step(g,m);assert.equal(m.groups().transfo.deployed,5,'the substation is guarded');
+  g.enemies.length=0;use(g,m,'transfo');assert.equal(m.hold.name,'transfo');run(g,m,L.HOLDS.transfo+1);assert.equal(m.stageId,'barriere');assert.equal(log.power.viaduc,true);
   g.enemies.length=0;use(g,m,'barriere');run(g,m,L.HOLDS.barriere+1);g.enemies.length=0;step(g,m);
   assert.equal(m.stageId,'escorte2');assert.equal(log.movable.barriere,true);assert.ok(!m.collisions.some(o=>o.movable==='barriere'));
   escortVan(g,m,60);assert.equal(m.stageId,'echangeur');assert.equal(L.VAN_PATH[m.van.index].stop,'remorque');assert.ok(m.groups().voie);
@@ -96,7 +104,7 @@ test('the convoy: escort, ORDRE barrier, A3 relay, beacon at the fracture, the b
 
 test('the van loses integrity when machines reach it, and the checkpoint puts everything back at the stage',()=>{
   const {g,m,log}=mission('lylu');m.start();
-  for(const id of ['ines','alimentation','dossier','kit'])use(g,m,id);g.enemies.length=0;step(g,m);use(g,m,'manifeste');g.enemies.length=0;use(g,m,'verin');
+  for(const id of ['ines','alimentation','dossier','kit'])use(g,m,id);g.enemies.length=0;step(g,m);use(g,m,'manifeste');g.enemies.length=0;use(g,m,'verin');g.enemies.length=0;use(g,m,'cellules');g.enemies.length=0;use(g,m,'cellule');g.enemies.length=0;
   // Machines around the van, the player beside it: the van stops and is sabotaged.
   const v=m.van;g.toSpawn=1;g.activePortals=[{id:1,x:v.x+2,z:v.z-3,yaw:0,openedAt:0}];g.spawnEnemy();g.activePortals=[];const e=g.enemies.at(-1);e.form='stalker';
   for(let t=0;t<5;t+=1/30){Object.assign(e,{x:v.x+2,z:v.z-3});Object.assign(g.player,{x:v.x-2,z:v.z+2});step(g,m);}

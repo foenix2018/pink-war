@@ -17,6 +17,7 @@ import { createSectorMeshes, neonSpots, sectorObstacles } from './m03-sector.js'
 import { createCyberCity } from './m03-city.js';
 import { createLightShafts } from './light-shafts.js';
 import { createSectorGrounds } from './m03-grounds.js';
+import { createAddedPlaces } from './m03-depot.js';
 import { classifySectorProps, createSectorProps } from './m03-props.js';
 import { createSignage, BLADES } from './signage.js';
 import {createCivilCar} from './civil-vehicle-detail.js';
@@ -311,7 +312,7 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
       if (it.log && !it.id.startsWith('doc-')) { const stand=createFunctionalProp(T,'terminal',{w:.58,d:.5,h:1.28,low,M});g.add(stand);const pad = new T.Mesh(new T.BoxGeometry(.5, .32, .05), M.dark); pad.position.set(0, 1.2, 0); g.add(pad); const scr = new T.Mesh(new T.PlaneGeometry(.42, .24), M.neonCyan); scr.position.set(0, 1.2, .03); g.add(scr); }
       else if (it.id.startsWith('doc-')) { const stand=createFunctionalProp(T,'terminal',{w:.52,d:.45,h:1.25,low,M});g.add(stand);const paper = new T.Mesh(new T.PlaneGeometry(.3, .4), std(0xe8e1cf, .9, 0, { side: T.DoubleSide })); paper.position.set(0, 1.15, 0); paper.rotation.x = -.3; g.add(paper); }
       let control=null;
-      if(["alimentation", "balise", "barriere", "treuil", "arrimage"].includes(it.id)){
+      if(["alimentation", "balise", "transfo", "barriere", "treuil", "arrimage"].includes(it.id)){
         const mount=new T.Group();mount.rotation.y=Math.abs(it.x)>40?-Math.sign(it.x)*Math.PI/2:0;g.add(mount);
         const post=new T.Mesh(new T.CylinderGeometry(.055,.085,1.12,8),M.dark);post.position.y=.56;mount.add(post);
         control=createModernSwitch(T,mount,{y:1.35,z:.06,scale:.72,variant:it.id==='treuil'?'rotary':it.id==='arrimage'?'access':switchVariant(it.id),id:it.id,label:it.id==='treuil'?'TREUIL':it.id==='arrimage'?'ARRIMAGE':it.id.replaceAll('-',' '),onLabel:it.id==='treuil'?'TREUIL ACTIVÉ':it.id==='arrimage'?'ARRIMAGE LANCÉ':/disj|stab|balise/.test(it.id)?'CIRCUIT ISOLÉ':'VALIDÉ',low});
@@ -366,7 +367,7 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
   const rainGeo = new T.BufferGeometry(); rainGeo.setAttribute('position', new T.BufferAttribute(rainPos, 3));
   const rain = new T.LineSegments(rainGeo, new T.LineBasicMaterial({ color: 0x8fb8d6, transparent: true, opacity: low ? .22 : .3, depthWrite: false })); rain.frustumCulled = false; add(rain);
   function updateRain(dt, eye) {
-    const covered = (x, z) => { const a = areaAt(x, z); return a === 'annexe' || a === 'atelier'; };
+    const covered = (x, z) => { const a = areaAt(x, z); return a === 'annexe' || a === 'atelier' || a === 'depot'; }; // no rain under a roof
     for (let i = 0; i < RAIN; i++) { const d = drops[i]; d.y -= d.v * dt; if (d.y < 0) { d.y = 24; d.x = (rng() - .5) * 60; d.z = (rng() - .5) * 60; }
       const x = eye.x + d.x, z = eye.z + d.z, o = i * 6, hide = covered(x, z) ? -50 : 0;
       rainPos[o] = x; rainPos[o + 1] = d.y + hide; rainPos[o + 2] = z; rainPos[o + 3] = x - .05; rainPos[o + 4] = d.y - .5 + hide; rainPos[o + 5] = z - .03; }
@@ -418,9 +419,10 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
     // The city around and above the sector (towers, skybridges, traffic, reflections): visual only, no collision.
     try { stats.grounds = createSectorGrounds(T, root, { low, rich }).stats(); } catch (error) { console.warn('M03 / sols des parcelles désactivés', error); }
     try { sectorProps = createSectorProps(T, root, propList.props, { low, rich }); stats.props = sectorProps.stats(); } catch (error) { console.warn('M03 / objets modélisés désactivés', error); }
-    // Volumetric light and dust under every street lamp of the sector.
-    try { shafts = createLightShafts(T, root, propList.props.filter(p => p.kind === 'lamp' || (p.kind === 'post' && p.h >= 4.5)).map(p => p.kind === 'lamp'
-      ? { x: p.cx + (p.cx > 0 ? -1 : 1) * (Math.min(2.6, p.h * .26) + .3), y: p.h - .12, z: p.cz, color: 0xffd9a0 } : { x: p.cx, y: p.h - .16, z: p.cz + (p.cx > 0 ? 1 : -1), color: 0xcfe6ff }), { low }); } catch (error) { console.warn('M03 / faisceaux désactivés', error); }
+    // The three added places (depot interior, substation, holding yard) and their lights.
+    let places = null; try { places = createAddedPlaces(T, root, { low, rich }); stats.places = places.stats(); for (const l of places.lights) sources.push({ ...l, color: new T.Color(l.color) }); } catch (error) { console.warn('M03 / lieux ajoutés désactivés', error); }
+    // Volumetric light and dust under the avenue lamps and the lamps of the added places.
+    try { shafts = createLightShafts(T, root, [...(places?.lamps || []), ...lamps.map(l => ({ x: l.x * .82, y: l.y - .1, z: l.z, color: l.color.getHex() }))], { low, max: low ? 12 : 40 }); } catch (error) { console.warn('M03 / faisceaux désactivés', error); }
     try { city = createCyberCity(T, root, { low, rich, advert: (name, o) => signs.advert(name, o), bounds: sector.meta.bounds }); stats.city = city.stats(); } catch (error) { console.warn('M03 / ville désactivée', error); city = null; }
   }
 
