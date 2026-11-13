@@ -82,7 +82,7 @@ test('chapter 03 plots: paved aprons, a real boulevard, marked yards and a perim
 test('chapter 03 has three more places to play: the depot interior, the substation under the viaduct, the holding yard',async()=>{
  const L=await import('../dist/m03-layout.js');const {sectorObstacles}=await import('../dist/m03-sector.js');const {createAddedPlaces}=await import('../dist/m03-depot.js');
  const ids=L.STAGES.map(s=>s.id);
- assert.deepEqual(ids.slice(ids.indexOf('verin'),ids.indexOf('a3')),['verin','depot','detenus','escorte']);assert.equal(ids[ids.indexOf('balise')+1],'transfo');assert.equal(ids[ids.indexOf('transfo')+1],'barriere');
+ assert.deepEqual(ids.slice(ids.indexOf('verin'),ids.indexOf('a3')),['verin','depot','detenus','escorte']);assert.equal(ids[ids.indexOf('balise')+1],'transfo');assert.equal(ids[ids.indexOf('transfo')+1],'usine');assert.equal(ids[ids.indexOf('usine')+1],'barriere');assert.equal(ids[ids.indexOf('arrimage')+1],'assaut');assert.equal(ids[ids.indexOf('assaut')+1],'regulation');
  const world=sectorObstacles(meta,L.extraObstacles());
  assert.ok(!world.some(o=>o.kind==='entrepôt fermé'&&Math.abs(o.x-38)<1&&Math.abs(o.z+15)<1),'the closed hull of the depot is gone');
  const D=L.DEPOT,solidAt=(x,z,y=1)=>world.some(o=>!o.walkableSurface&&Math.abs(x-o.x)<o.hx&&Math.abs(z-o.z)<o.hz&&y>=(o.y||0)&&y<(o.y||0)+o.height);
@@ -93,6 +93,6 @@ test('chapter 03 has three more places to play: the depot interior, the substati
  assert.equal(L.HOLDS.transfo,28);assert.equal(L.HOLD_WAVES.transfo.length,2);
  T.TextureLoader.prototype.load=function(){return new T.Texture();};
  const places=createAddedPlaces(T,new T.Group(),{rich:true}),s=places.stats();
- assert.equal(s.racks,6);assert.ok(s.pallets>40,'loaded racks: '+s.pallets);assert.equal(s.lamps,12);assert.ok(s.meshes<=28);assert.ok(places.lights.length>=18&&places.lamps.length>=16);
- const {linesFor}=await import('../dist/m03-story.js');for(const k of ['depot','cellules','viaduc','transfo','transfoOk','retention','detenus'])for(const c of ['ghju','lylu'])assert.ok(linesFor(k,c).length>=1,k);
+ assert.equal(s.racks,6);assert.ok(s.pallets>40,'loaded racks: '+s.pallets);assert.equal(s.lamps,20,'depot 12 + plant 8');assert.ok(s.meshes<=28);assert.ok(places.lights.length>=18&&places.lamps.length>=16);
+ const {linesFor}=await import('../dist/m03-story.js');for(const k of ['depot','cellules','viaduc','transfo','transfoOk','retention','detenus','usine','chaine','assaut','assautOk'])for(const c of ['ghju','lylu'])assert.ok(linesFor(k,c).length>=1,k);
 });

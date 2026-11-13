@@ -5,7 +5,7 @@
 // object is built in its place: same footprint, same height, same collision box (physics is not touched).
 // All parts are merged per material: about twenty draw calls for the whole set.
 import { roundedBox } from './webgpu-upgrade.js';
-import { AREAS, sectorPropOffset, DEPOT } from './m03-layout.js';
+import { AREAS, sectorPropOffset, DEPOT, FACTORY } from './m03-layout.js';
 import {faceBounds,inside,retiredDecoration} from './m03-coherence.js';
 
 const TAU = Math.PI * 2;
@@ -81,6 +81,7 @@ export function classifySectorProps(meta, world, { bounds = meta.bounds } = {}) 
   for (let i = 0; i < n; i++) {
     // The depot is rebuilt as an interior (m03-depot.js): its baked closed hull goes.
     if (cx[i] > DEPOT.x1 - .3 && cx[i] < DEPOT.x2 + .3 && cz[i] > DEPOT.z1 - .3 && cz[i] < DEPOT.z2 + .3 && cy[i] < DEPOT.height + .3) { drop.add(i); continue; }
+    if (cx[i] > FACTORY.x1 - .3 && cx[i] < FACTORY.x2 - .7 && cz[i] > FACTORY.z1 - .3 && cz[i] < FACTORY.z2 + .3 && cy[i] < FACTORY.height + .3) { drop.add(i); continue; } // the plant, rebuilt as an interior (its east-face balconies stay)
     if (drop.has(i) || cx[i] < bounds.minX || cx[i] > bounds.maxX || cz[i] < bounds.minZ || cz[i] > bounds.maxZ) continue;
     const m = world.mat[i]; if (KEEP.has(m)) continue;
     let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9]; const b = i * 12;

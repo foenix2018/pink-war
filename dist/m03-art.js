@@ -367,7 +367,7 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
   const rainGeo = new T.BufferGeometry(); rainGeo.setAttribute('position', new T.BufferAttribute(rainPos, 3));
   const rain = new T.LineSegments(rainGeo, new T.LineBasicMaterial({ color: 0x8fb8d6, transparent: true, opacity: low ? .22 : .3, depthWrite: false })); rain.frustumCulled = false; add(rain);
   function updateRain(dt, eye) {
-    const covered = (x, z) => { const a = areaAt(x, z); return a === 'annexe' || a === 'atelier' || a === 'depot'; }; // no rain under a roof
+    const covered = (x, z) => { const a = areaAt(x, z); return a === 'annexe' || a === 'atelier' || a === 'depot' || a === 'usine'; }; // no rain under a roof
     for (let i = 0; i < RAIN; i++) { const d = drops[i]; d.y -= d.v * dt; if (d.y < 0) { d.y = 24; d.x = (rng() - .5) * 60; d.z = (rng() - .5) * 60; }
       const x = eye.x + d.x, z = eye.z + d.z, o = i * 6, hide = covered(x, z) ? -50 : 0;
       rainPos[o] = x; rainPos[o + 1] = d.y + hide; rainPos[o + 2] = z; rainPos[o + 3] = x - .05; rainPos[o + 4] = d.y - .5 + hide; rainPos[o + 5] = z - .03; }

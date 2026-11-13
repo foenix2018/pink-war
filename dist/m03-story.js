@@ -132,6 +132,21 @@ export const SCRIPT = Object.freeze({
     lylu: L(['lylu', 'Cellules chargées. Deux palettes marquées « Anneau logistique ».'], ['cara', 'Et une porte de quai qui grésille. Ils arrivent par l’avenue.'], ['voss', 'Avant de rouler : le Directoire retient des soignants derrière l’atelier. Sortez-les.']),
     ghju: L(['ghju', 'J’ai les cellules. Elles étaient étiquetées pour le convoi 02.'], ['gaby', 'Portail devant la porte du quai. On sort en force.'], ['voss', 'Avant de rouler : le Directoire retient des soignants derrière l’atelier. Sortez-les.'])
   },
+  usine: {
+    lylu: L(['cara', 'Une chaîne de reconditionnement. Ils remontent les machines qu’on a abattues dans le secteur.'], ['lylu', 'Alors on coupe la chaîne. Le pupitre est au bout.']),
+    ghju: L(['gaby', 'Ils réparent leurs machines ici. Celles qu’on a détruites cette nuit repartent de cette chaîne.'], ['ghju', 'Plus maintenant. Le pupitre est au bout de la ligne.'])
+  },
+  chaine: {
+    lylu: L(['lylu', 'Chaîne coupée. Plus rien ne sort d’ici.'], ['ines', 'Le courant est revenu sur la barrière. Revenez poser le vérin.']),
+    ghju: L(['ghju', 'La chaîne est coupée.'], ['ines', 'Le courant est revenu sur la barrière. Revenez poser le vérin.'])
+  },
+  assaut: {
+    lylu: L(['cara', 'Signatures lourdes sur le quai. Deux unités d’assaut, et tout ce qui restait dans le secteur.'], ['ines', 'L’ambulance est arrimée, mais le train ne part pas sous le feu !']),
+    ghju: L(['gaby', 'Deux unités lourdes arrivent sur le quai. Ils veulent le train.'], ['ines', 'L’ambulance est arrimée. Tenez le quai, le train ne partira pas sous le feu.'])
+  },
+  assautOk: {
+    all: L(['ines', 'Quai dégagé ! Le registre de régulation est dans la cabine, au bout du quai.'])
+  },
   viaduc: {
     all: L(['ines', 'La barrière n’a plus de courant : le Directoire a coupé le poste électrique du viaduc. Il est au bout du boulevard, côté ouest.'])
   },
@@ -140,7 +155,7 @@ export const SCRIPT = Object.freeze({
     ghju: L(['gaby', 'Réarmement en cours. Vingt-huit secondes : je couvre tes angles.'])
   },
   transfoOk: {
-    all: L(['ines', 'Le courant revient sur la barrière ! Revenez poser le vérin.'])
+    all: L(['ines', 'Le courant revient… mais une partie part vers l’usine du Directoire, juste au sud du boulevard.'])
   },
   retention: {
     lylu: L(['cara', 'Cour de rétention. Deux modules, des gardes, et des signatures de chaleur à l’intérieur.'], ['voss', 'Ce sont des soignants de l’annexe. Le Directoire les garde pour le convoi suivant.']),

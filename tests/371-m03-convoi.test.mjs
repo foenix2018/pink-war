@@ -91,13 +91,16 @@ test('the convoy: escort, ORDRE barrier, A3 relay, beacon at the fracture, the b
   run(g,m,2+PORTAL_CHARGE+.2);assert.equal(m.groups().balise1.deployed,3,'portal reinforcements');
   run(g,m,L.HOLDS.balise);assert.equal(m.hold,null);assert.equal(m.stageId,'transfo','the barrier has no power');assert.ok(m.reads.includes('balise'));
   g.enemies.length=0;Object.assign(g.player,{x:-30,z:-53,elevation:0});step(g,m);assert.equal(m.groups().transfo.deployed,5,'the substation is guarded');
-  g.enemies.length=0;use(g,m,'transfo');assert.equal(m.hold.name,'transfo');run(g,m,L.HOLDS.transfo+1);assert.equal(m.stageId,'barriere');assert.equal(log.power.viaduc,true);
+  g.enemies.length=0;use(g,m,'transfo');assert.equal(m.hold.name,'transfo');run(g,m,L.HOLDS.transfo+1);assert.equal(m.stageId,'usine');assert.equal(log.power.viaduc,true);
+  g.enemies.length=0;Object.assign(g.player,{x:-40,z:-70,elevation:0});step(g,m);assert.equal(m.groups().usine.deployed,6,'the plant is guarded');
+  assert.equal(m.available('chaine'),false,'the line cannot be cut under fire');g.enemies.length=0;step(g,m);use(g,m,'chaine');assert.equal(m.stageId,'barriere');
   g.enemies.length=0;use(g,m,'barriere');run(g,m,L.HOLDS.barriere+1);g.enemies.length=0;step(g,m);
   assert.equal(m.stageId,'escorte2');assert.equal(log.movable.barriere,true);assert.ok(!m.collisions.some(o=>o.movable==='barriere'));
   escortVan(g,m,60);assert.equal(m.stageId,'echangeur');assert.equal(L.VAN_PATH[m.van.index].stop,'remorque');assert.ok(m.groups().voie);
   g.enemies.length=0;use(g,m,'treuil');run(g,m,L.HOLDS.treuil+1);g.enemies.length=0;step(g,m);assert.equal(m.stageId,'gare');assert.equal(log.movable.remorque,true);
   escortVan(g,m,60);assert.equal(m.stageId,'arrimage');assert.ok(m.groups().gare);
   g.enemies.length=0;step(g,m);use(g,m,'arrimage');run(g,m,L.HOLDS.arrimage+1);assert.equal(m.groups().arrimage3.deployed,4,'three waves on the platform');
+  assert.equal(m.stageId,'assaut');assert.equal(m.groups().assaut.deployed,7,'the final assault on the quay');g.enemies.length=0;step(g,m);
   assert.equal(m.stageId,'regulation');g.enemies.length=0;
   assert.equal(use(g,m,'regulation').log,'regulation');assert.equal(m.completed,true);assert.equal(log.finished,1);
 });

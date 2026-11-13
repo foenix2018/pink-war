@@ -7,7 +7,7 @@ import {arrowGuidance} from './objective-arrow.js';
 
 // The interaction each stage is waiting for (readings included: they move the story on).
 export const STAGE_TARGET = Object.freeze({ arrivee: 'ines', alimentation: 'alimentation', dossier: 'dossier', kit: 'kit', atelier: 'manifeste', verin: 'verin',
-  depot: 'cellules', transfo: 'transfo', detenus: 'cellule', a3: 'relais', balise: 'balise', barriere: 'barriere', echangeur: 'treuil', arrimage: 'arrimage', regulation: 'regulation' });
+  depot: 'cellules', transfo: 'transfo', usine: 'chaine', detenus: 'cellule', a3: 'relais', balise: 'balise', barriere: 'barriere', echangeur: 'treuil', arrimage: 'arrimage', regulation: 'regulation' });
 const ESCORT = new Set(['escorte', 'escorte2', 'gare']);
 
 export function m03Target(mission, game) {
@@ -18,7 +18,10 @@ export function m03Target(mission, game) {
     const v = mission.van, back = { x: v.x + Math.sin(v.yaw) * 5, z: v.z + Math.cos(v.yaw) * 5 };
     return { x: back.x, z: back.z, y: 0, label: 'ESCORTER L’AMBULANCE', id: 'van', near: 6 };
   }
-  const id = STAGE_TARGET[s]; if (!id) return null;
+  const id = STAGE_TARGET[s];
+  if (!id) { // a fight with no device (the assault on the quay): the arrow leads to the nearest machine
+    const foe = game.enemies.reduce((b, e) => !b || Math.hypot(e.x - p.x, e.z - p.z) < Math.hypot(b.x - p.x, b.z - p.z) ? e : b, null);
+    return foe && s !== 'fin' ? { x: foe.x, z: foe.z, y: foe.elevation || 0, label: 'REPOUSSER L’ASSAUT', id: 'enemy' } : null; }
   const it = L.INTERACTIONS.find(i => i.id === id); if (!it) return null;
   // Name the local encounter that locks this device. Never send the player
   // after an unrelated patrol on the other side of the district.

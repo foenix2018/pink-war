@@ -5,7 +5,7 @@
 //  · the substation under the viaduct: fenced transformer bay, switchgear cabinets, cable trench;
 //  · the holding yard: two locked modules with barred windows, a guard post, floodlights.
 // Static boxes merged per material; returns the light sources for the level's light pool and the lamps for shafts.
-import { DEPOT, RETENTION_MODULES, INTERACTIONS, extraObstacles } from './m03-layout.js';
+import { DEPOT, FACTORY, RETENTION_MODULES, INTERACTIONS, extraObstacles } from './m03-layout.js';
 
 function canvasTexture(T, w, h, paint) { const c = document.createElement('canvas'); c.width = w; c.height = h; paint(c.getContext('2d'), w, h); const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.wrapS = t.wrapT = T.RepeatWrapping; t.anisotropy = 8; return t; }
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
@@ -88,6 +88,39 @@ export function createAddedPlaces(T, root, { low = false, rich = false } = {}) {
   for (const dz of [-1.6, 1.6]) { const x = cell.x + 1.3, z = cell.z + dz; solid(M.wood, x - .55, x + .55, 0, .14, z - .5, z + .5);
     for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) { solid(M.dark, x - .5 + a * .34, x - .22 + a * .34, .14, .7, z - .46 + b * .32, z - .2 + b * .32); solid(M.cell, x - .46 + a * .34, x - .26 + a * .34, .7, .72, z - .42 + b * .32, z - .24 + b * .32); } }
   lights.push({ x: cell.x + 1.2, y: 1, z: cell.z, color: 0x5fe0f0, intensity: 8, range: 7 });
+
+  // ---------- Reconditioning plant ----------
+  const F = FACTORY;
+  for (const o of obstacles.filter(o => o.look === 'factory')) { const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, y1 = o.y || 0;
+    solid(M.clad, x1, x2, y1, y1 + o.height, z1, z2, 3); if (y1 === 0) solid(M.concrete, x1 - .05, x2 + .05, 0, .9, z1 - .05, z2 + .05); }
+  solid(M.floor, F.x1 + .6, F.x2 - .6, -.04, .012, F.z1 + .6, F.z2 - .6, 6); solid(M.clad, F.x1, F.x2, F.height - .5, F.height, F.z1, F.z2, 3);
+  for (const x of [F.door.x1 - .25, F.door.x2]) solid(M.yellow, x, x + .25, 0, F.door.height, F.z2 - .68, F.z2 + .08);
+  solid(M.steel, F.door.x1 - .25, F.door.x2 + .25, F.door.height, F.door.height + .7, F.z2 - .8, F.z2 + .2); solid(M.alarm, F.door.x1 + 2.6, F.door.x2 - 2.6, F.door.height + .2, F.door.height + .5, F.z2 + .2, F.z2 + .22);
+  // Assembly line: steel frame, rubber belt, rollers, gantries with welding heads, robot frames being rebuilt.
+  const L = F.line;
+  solid(M.steel, L.x1, L.x2, .75, .95, L.z - .9, L.z + .9); solid(M.dark, L.x1 + .1, L.x2 - .1, .95, 1.02, L.z - .75, L.z + .75);
+  for (let x = L.x1 + .5; x < L.x2; x += 2) for (const z of [L.z - .82, L.z + .82]) solid(M.steel, x - .06, x + .06, 0, .75, z - .06, z + .06);
+  for (const x of [-48, -41, -34]) {
+    for (const z of [L.z - 1.6, L.z + 1.6]) solid(M.yellow, x - .12, x + .12, 0, 4.2, z - .12, z + .12); solid(M.yellow, x - .14, x + .14, 4.2, 4.5, L.z - 1.8, L.z + 1.8);
+    solid(M.steel, x - .2, x + .2, 3, 4.2, L.z - .2, L.z + .2); solid(M.cell, x - .05, x + .05, 2.9, 3, L.z - .05, L.z + .05); lights.push({ x, y: 2.6, z: L.z, color: 0x5fe0f0, intensity: 6, range: 5 });
+    // robot frame on the belt: legs, hip block, torso cage, head with a dark optic
+    solid(M.dark, x - .55, x + .55, 1.02, 1.12, L.z - .5, L.z + .5);
+    for (const s of [-1, 1]) { solid(M.steel, x + s * .22 - .07, x + s * .22 + .07, 1.12, 1.9, L.z - .07, L.z + .07); solid(M.steel, x + s * .42 - .06, x + s * .42 + .06, 2.2, 2.9, L.z - .06, L.z + .06); }
+    solid(M.trafo, x - .35, x + .35, 1.9, 2.15, L.z - .22, L.z + .22); for (let k = 0; k < 4; k++) solid(M.steel, x - .32, x + .32, 2.2 + k * .2, 2.24 + k * .2, L.z - .2, L.z + .2);
+    solid(M.trafo, x - .18, x + .18, 3.05, 3.35, L.z - .16, L.z + .16); solid(M.alarm, x - .1, x + .1, 3.18, 3.24, L.z - .17, L.z - .16);
+  }
+  // Pillars, parts racks, the control pulpit at the end of the line, roof trusses and lamps.
+  for (const o of obstacles.filter(o => o.look === 'factory-pillar')) { solid(M.concrete, o.x - o.hx, o.x + o.hx, 0, F.height - .5, o.z - o.hz, o.z + o.hz, 3); solid(M.yellow, o.x - o.hx - .01, o.x + o.hx + .01, 0, 1.2, o.z - o.hz - .01, o.z + o.hz + .01); }
+  for (const o of obstacles.filter(o => o.look === 'factory-rack')) { const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz;
+    for (const x of [x1, (x1 + x2) / 2, x2]) for (const z of [z1, z2]) solid(M.rackOrange, x - .04, x + .04, 0, o.height, z - .04, z + .04);
+    for (const y of [.1, 1.3, 2.5]) { solid(M.steel, x1, x2, y, y + .05, z1, z2); for (let x = x1 + .2; x < x2 - .5; x += .8) if (r() < .8) solid(r() < .5 ? M.trafo : M.dark, x, x + .5 + r() * .2, y + .05, y + .35 + r() * .4, z1 + .1, z2 - .1); } }
+  const pu = obstacles.find(o => o.look === 'factory-pulpit');
+  solid(M.steel, pu.x - pu.hx, pu.x + pu.hx, 0, 1, pu.z - pu.hz, pu.z + pu.hz); solid(M.dark, pu.x - pu.hx - .1, pu.x + pu.hx, 1, 1.25, pu.z - pu.hz, pu.z + pu.hz);
+  for (let k = 0; k < 3; k++) solid([M.cell, M.amber, M.alarm][k], pu.x - pu.hx - .11, pu.x - pu.hx - .1, 1.05, 1.2, pu.z - .9 + k * .6, pu.z - .5 + k * .6);
+  for (let x = F.x1 + 3; x < F.x2 - 1; x += 6) solid(M.steel, x - .12, x + .12, F.height - 2, F.height - 1.6, F.z1 + .6, F.z2 - .6);
+  for (const x of [-52, -44, -36, -28]) for (const z of [-82, -70]) { solid(M.dark, x - .32, x + .32, F.height - 7.4, F.height - 7.1, z - .32, z + .32); solid(M.lamp, x - .26, x + .26, F.height - 7.43, F.height - 7.4, z - .26, z + .26);
+    solid(M.dark, x - .02, x + .02, F.height - 7.1, F.height - .5, z - .02, z + .02); lights.push({ x, y: F.height - 7.6, z, color: 0xfff1d8, intensity: 30, range: 18 }); lamps.push({ x, y: F.height - 7.45, z, color: 0xfff1d8, radius: 2.6 }); stats.lamps++; }
+  for (let x = F.x1 + 1; x < F.x2 - 1; x += 1.6) solid(M.yellow, x, x + .8, .012, .016, L.z - 2.4, L.z - 2.3); for (let x = F.x1 + 1; x < F.x2 - 1; x += 1.6) solid(M.yellow, x, x + .8, .012, .016, L.z + 2.3, L.z + 2.4);
 
   // ---------- Substation under the viaduct ----------
   const tr = INTERACTIONS.find(i => i.id === 'transfo'), tx = tr.x, tz = tr.z;

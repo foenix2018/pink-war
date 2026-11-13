@@ -16,6 +16,7 @@ const area = (id, x1, x2, z1, z2, label, extra = {}) => Object.freeze({ id, x1, 
 // Most specific first.
 export const AREAS = Object.freeze([
   area('depot', 22.5, 53.5, -31, 1, 'Dépôt logistique du Directoire', { roof: 11 }),
+  area('usine', -57.5, -22.5, -88.5, -61.5, 'Usine de reconditionnement du Directoire', { roof: 18 }),
   area('viaduc-ouest', -77, -15, -62, -50, 'Sous le viaduc · poste électrique'),
   area('retention', 43, 77, 43, 71, 'Cour de rétention du Directoire'),
   area('annexe', -46, -12, 11, 53, 'Annexe médicale · dispensaire du secteur 03', { roof: 8.5 }),
@@ -73,7 +74,21 @@ export const COMBAT_STATIONS=Object.freeze([
 // Directoire logistics depot: the closed warehouse of the visitor map (22.5…53.5, −31…1) is opened. Shell with a
 // dock door on the avenue side, two rows of pallet racks with a cross aisle, two containers, crates.
 export const DEPOT = Object.freeze({ x1: 22.5, x2: 53.5, z1: -31, z2: 1, height: 12, door: Object.freeze({ z1: -18.5, z2: -11.5, height: 4.6 }) });
-export const isDepotHull = c => c.label === 'entrepôt fermé' && Math.abs(c.x1 - DEPOT.x1) < .6 && Math.abs(c.z1 - DEPOT.z1) < .6;
+export const isDepotHull = c => c.label === 'entrepôt fermé' && ((Math.abs(c.x1 - DEPOT.x1) < .6 && Math.abs(c.z1 - DEPOT.z1) < .6) || (Math.abs(c.x1 - FACTORY.x1) < .6 && Math.abs(c.z1 - FACTORY.z1) < .6));
+// Reconditioning plant of the Directoire: the closed south-west warehouse (−57.5…−22.5, −88.5…−61.5) is opened on
+// the boulevard (door in its north face). Inside: an assembly line where machines are rebuilt, robot frames on the
+// line, a control pulpit at the far end (the line is cut there), parts racks, pillars.
+export const FACTORY = Object.freeze({ x1: -57.5, x2: -22.5, z1: -88.5, z2: -61.5, height: 19, door: Object.freeze({ x1: -42, x2: -35, height: 5.2 }), line: Object.freeze({ x1: -52, x2: -30, z: -76 }) });
+function factoryZone() {
+  const F = FACTORY, w = { surface: 'concrete', look: 'factory' }, out = [];
+  out.push(box('wall', F.x1, F.door.x1, F.z2 - .6, F.z2, 0, F.height, w), box('wall', F.door.x2, F.x2, F.z2 - .6, F.z2, 0, F.height, w), box('wall', F.door.x1, F.door.x2, F.z2 - .6, F.z2, F.door.height, F.height - F.door.height, w));
+  out.push(box('wall', F.x1, F.x2, F.z1, F.z1 + .6, 0, F.height, w), box('wall', F.x1, F.x1 + .6, F.z1, F.z2, 0, F.height, w), box('wall', F.x2 - .6, F.x2, F.z1, F.z2, 0, F.height, w));
+  out.push(box('conveyor', F.line.x1, F.line.x2, F.line.z - .9, F.line.z + .9, 0, 1.05, { surface: 'metal', look: 'factory-line' }));
+  for (const x of [-50, -40, -30]) for (const z of [-82, -68]) out.push(at('pillar', x, z, .45, .45, F.height, { surface: 'concrete', look: 'factory-pillar' }));
+  for (const x of [-54, -46]) out.push(at('rack', x, -86, 2.4, .6, 3.6, { surface: 'metal', look: 'factory-rack' }));
+  out.push(at('pulpit', -27, -76, .8, 1.6, 1.25, { surface: 'metal', look: 'factory-pulpit' }));
+  return out;
+}
 function depotZone() {
   const D = DEPOT, out = [], w = { surface: 'concrete', look: 'depot' };
   out.push(box('wall', D.x1, D.x1 + .6, D.z1, D.door.z1, 0, D.height, w), box('wall', D.x1, D.x1 + .6, D.door.z2, D.z2, 0, D.height, w), box('wall', D.x1, D.x1 + .6, D.door.z1, D.door.z2, D.door.height, D.height - D.door.height, w));
@@ -92,7 +107,7 @@ export const MOVABLE = Object.freeze({
 });
 export function extraObstacles({ open = [] } = {}) {
   const gone = new Set(open);
-  return [...sectorFixes(), ...depotZone(), ...retentionZone(), ...eastZone(), ...COMBAT_STATIONS,...STREET_BLADES.map(([x,y,z])=>at('sign-post',x+Math.sign(x)*.65,z,.1,.1,y+1.1,{surface:'metal'})),...WORKSHOP_EQUIPMENT.map(o=>({...o,y:0,kind:'workshop-machine',surface:'metal'})), ...(gone.has('remorque')?[at('trailer-parked',89,-60,1.4,6.5,3.6,{surface:'metal',parked:'remorque'})]:[]), ...Object.entries(MOVABLE).filter(([id]) => !gone.has(id)).map(([, o]) => o)].map(o => ({ ...o, navPad: Math.min(o.hx, o.hz) < .7 ? .7 : 1.3 }));
+  return [...sectorFixes(), ...depotZone(), ...factoryZone(), ...retentionZone(), ...eastZone(), ...COMBAT_STATIONS,...STREET_BLADES.map(([x,y,z])=>at('sign-post',x+Math.sign(x)*.65,z,.1,.1,y+1.1,{surface:'metal'})),...WORKSHOP_EQUIPMENT.map(o=>({...o,y:0,kind:'workshop-machine',surface:'metal'})), ...(gone.has('remorque')?[at('trailer-parked',89,-60,1.4,6.5,3.6,{surface:'metal',parked:'remorque'})]:[]), ...Object.entries(MOVABLE).filter(([id]) => !gone.has(id)).map(([, o]) => o)].map(o => ({ ...o, navPad: Math.min(o.hx, o.hz) < .7 ? .7 : 1.3 }));
 }
 // Barrier posts of the ORDRE checkpoint stay; pedestrians pass along the pavements (x ±11).
 export const CHECKPOINT_POSTS = Object.freeze([at('post', -9.6, -34, .35, .35, 1.6, { surface: 'metal' }), at('post', 9.6, -34, .35, .35, 1.6, { surface: 'metal' })]);
@@ -120,6 +135,7 @@ export const INTERACTIONS = Object.freeze([
   it('relais', -18.4, -29.5, 'CROISER LES COORDONNÉES AU RELAIS A3', { y: 5.06, log: 'relais' }),
   it('balise', 5.6, -29.5, 'BROUILLER LE PYLÔNE · COMMANDE DU BARRAGE'),
   it('transfo', -70, -52.6, 'RÉARMER LE POSTE ÉLECTRIQUE DU VIADUC'),
+  it('chaine', -26.6, -72.8, 'COUPER LA CHAÎNE DE RECONDITIONNEMENT'),
   it('barriere', -8.4, -32.4, 'POSER LE VÉRIN SUR LA BARRIÈRE'),
   it('treuil', 70, -44.4, 'COMMANDER LE TREUIL DE L’ÉCHANGEUR'),
   it('arrimage', 72, -84.4, 'LANCER L’ARRIMAGE DE L’AMBULANCE'),
@@ -146,6 +162,9 @@ export const ENCOUNTERS = Object.freeze({
   transfo: { wave: 4, units: [unit('stalker', -40, -53), unit('seer', -52, -58.6), unit('scuttler', -60, -53), unit('bulwark', -66, -58.6), unit('probe', -46, -53)] },
   transfo1: { wave: 4, portal: { x: -58, z: -53 }, units: [unit('stalker', -58, -53), unit('scuttler', -55, -52), unit('scuttler', -61.5, -58.8)] },
   transfo2: { wave: 4, units: [unit('seer', -32, -53), unit('stalker', -35, -58.6), unit('probe', -37, -52.5)] },
+  usine: { wave: 4, units: [unit('stalker', -45, -70), unit('seer', -36, -82), unit('scuttler', -54, -72), unit('bulwark', -33, -71), unit('stalker', -47, -81), unit('probe', -40, -80)] },
+  usine2: { wave: 4, portal: { x: -38.5, z: -57 }, units: [unit('stalker', -38.5, -57), unit('scuttler', -35, -57.5), unit('seer', -42, -57)] },
+  assaut: { wave: 6, units: [unit('brute', 88, -62, { elite: true }), unit('brute', 72, -70, { elite: true }), unit('bulwark', 86, -72), unit('seer', 66, -60), unit('stalker', 86, -88), unit('seer', 74, -78), unit('probe', 84, -64)] },
   detention: { wave: 3, units: [unit('stalker', 52, 58), unit('seer', 70, 56), unit('scuttler', 48, 64), unit('bulwark', 58, 66.5), unit('probe', 66, 48)] },
   detention2: { wave: 3, portal: { x: 47, z: 46.5 }, units: [unit('stalker', 47, 46.5), unit('scuttler', 49.5, 48), unit('seer', 46, 50)] },
   route1: { wave: 3, units: [unit('stalker', -8, 2), unit('scuttler', 6, 0), unit('scuttler', 8, -6), unit('probe', 0, -10)] },
@@ -186,11 +205,13 @@ export const STAGES = Object.freeze([
   stage('a3', 'CROISER LES COORDONNÉES AU RELAIS A3', '03 · BARRAGE. Inès attend en bas. Prends l’escalier A3 à gauche pour obtenir l’accès au brouillage.', { x: -2, z: -24, yaw: 0 }),
   stage('balise', 'COUPER LE SUIVI D’ORDRE', 'Redescends du relais A3. Borne de brouillage à droite du barrage : elle coupe le pylône à distance. Tiens 22 secondes.', { x: 2, z: -25, yaw: 0 }),
   stage('transfo', 'RÉARMER LE POSTE ÉLECTRIQUE DU VIADUC', 'La barrière n’a plus de courant. Sous le viaduc, à gauche de l’avenue, au bout du boulevard. Tiens 28 secondes.', { x: -19, z: -53, yaw: Math.PI / 2 }),
+  stage('usine', 'COUPER LA CHAÎNE DE RECONDITIONNEMENT', 'Le poste alimentait l’usine du Directoire, juste au sud du boulevard : porte ouverte côté boulevard. Pupitre de commande au bout de la chaîne.', { x: -38.5, z: -57, yaw: Math.PI }),
   stage('barriere', 'RÉPARER LA BARRIÈRE', 'Poser le vérin sur le poteau gauche, puis tenir pendant la levée.', { x: -4, z: -26, yaw: 0 }),
   stage('escorte2', 'PASSER SOUS LA ROUTE HAUTE', 'L’ambulance prend la voie de service vers l’échangeur. Reste avec elle.', { x: 0, z: -40, yaw: -Math.PI / 2 }),
   stage('echangeur', 'DÉGAGER L’ÉCHANGEUR', 'Une remorque bloque la bretelle. Le treuil de dépannage est à gauche du passage.', { x: 64, z: -36, yaw: -Math.PI / 2 }),
   stage('gare', 'REJOINDRE LA GARE DE FRET', 'Suis l’ambulance jusqu’au quai du train sanitaire.', { x: 80, z: -56, yaw: 0 }),
   stage('arrimage', 'ARRIMER L’AMBULANCE AU TRAIN', 'Commande d’arrimage au pied du portique. Quarante-cinq secondes.', { x: 76, z: -78, yaw: 0 }),
+  stage('assaut', 'REPOUSSER L’ASSAUT SUR LE QUAI', 'Le Directoire envoie tout ce qu’il lui reste contre le train. Deux unités lourdes : vise les têtes.', { x: 78, z: -80, yaw: 0 }),
   stage('regulation', 'LIRE LE REGISTRE DE RÉGULATION', 'Cabine de régulation, au bout du quai.', { x: 84, z: -80, yaw: -Math.PI / 2 }),
   stage('fin', 'LE CONVOI DES ABSENTS', 'Le train sanitaire part vers l’Anneau logistique.', { x: 84, z: -80, yaw: -Math.PI / 2 })
 ]);
