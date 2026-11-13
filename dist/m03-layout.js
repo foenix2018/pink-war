@@ -31,8 +31,12 @@ const box = (kind, x1, x2, z1, z2, y, height, extra = {}) => ({ kind, x: (x1 + x
 const at = (kind, x, z, hx, hz, height, extra = {}) => ({ kind, x, z, hx, hz, y: 0, height, extra: true, ...extra });
 
 // West building of the visitor map drawn without a collider in the page, and the edges of the new east zone.
+// Perimeter wall closing the sector on the west, the north and the north-east (the towers of the city start right
+// behind it); drawn by m03-grounds.js.
+export const PERIMETER = Object.freeze([box('wall', -78, -77.2, -123, 72, 0, 3.4, { surface: 'concrete', look: 'perimeter' }), box('wall', -78, 78, 71.2, 72, 0, 3.4, { surface: 'concrete', look: 'perimeter' }),
+  box('wall', 77.2, 78, -29.6, 72, 0, 3.4, { surface: 'concrete', look: 'perimeter' })].map(o => Object.freeze(o)));
 function sectorFixes() {
-  return []; // The bake already contains the exact building hull (-60…-30, -21.5…-.5).
+  return PERIMETER.map(o => ({ ...o })); // The bake already contains the exact building hull (-60…-30, -21.5…-.5).
 }
 // Échangeur bloqué and gare de fret (x 62…98). Pillars of the ramps, wrecks, noise walls, the train and the platform.
 function eastZone() {

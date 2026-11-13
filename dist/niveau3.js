@@ -277,6 +277,7 @@ function missionLost(reason='over'){
 // ---------- Camera, weapon and rig ----------
 function snapCamera(){
  if(xr?.active){xr.syncPose();return;}
+ if(debugCam){camera.fov=debugCam.fov;camera.position.set(debugCam.x,debugCam.y,debugCam.z);camera.up.set(0,debugCam.top?0:1,debugCam.top?-1:0);camera.lookAt(debugCam.lx,debugCam.ly,debugCam.lz);camera.updateProjectionMatrix();camera.updateMatrixWorld(true);weapon.visible=false;return;}
  const p=game.player,eye=characterId==='lylu'?1.71:1.61,optic=OPTICS[game.weapon.id],normal=view==='fps'?72:64;
  camera.fov=normal+(optic?(magnifiedFov(normal,optic.magnification)-normal)*aimBlend:0);
  camera.rotation.set(pitch+weaponFeel.state.pitch*.18,yaw+weaponFeel.state.yaw*.07,0,'YXZ');
@@ -459,7 +460,7 @@ const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;retur
 let lastDevices='';
 const HOLD_LABEL={balise:'BROUILLAGE DE LA BALISE D’ORDRE',barriere:'LEVÉE DE LA BARRIÈRE',treuil:'TRACTION DU TREUIL',arrimage:'ARRIMAGE DE L’AMBULANCE AU TRAIN'};
 const VAN_WAIT={passage:'dégage le passage',escorte:'attend son escorte',machines:'machines devant',stop:'à l’arrêt',stage:'à l’arrêt'};
-let endCine=null,webgpuFinish=null,m03Guide=null,m03GuideAt=0,m03Waypoint=null;
+let debugCam=null,endCine=null,webgpuFinish=null,m03Guide=null,m03GuideAt=0,m03Waypoint=null;
 function updateHUD(){
  (combatHud ||= mountCombatHud({characterId,onAction:armorTouch})).update(game);
  const it=reading?null:mission.nearInteraction(),stageInfo=L.STAGES[mission.stage];combatHud.setContext(it?.label);
@@ -645,7 +646,7 @@ window.__PINK_M03=Object.freeze({
   hold:mission?.hold,pending:mission?.pending,groups:mission?.groups(),van:mission?.van,reading,vr:!!xr?.active,subtitlePlane:!!subtitlePlane?.visible,lamp:lampOn,subtitle:subtitle&&{who:subtitle.who,text:subtitle.text},queued:subtitles.length,
   backend:renderer?rendererBackend(renderer):null,rig:!!playerRig,webgpuFinish,art:art?.stats(),render:renderer?.info?.render}),
  // QA hooks (?debug=1): move the player, look, clear an encounter, fast-forward the mission clock, use an interaction, move the van.
- debug:params.has('debug')?{get scene(){return scene;},teleport:(x,z)=>{Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0});snapCamera();if(game.state==='playing'){game.step(1/60,{});mission.update(1/60);}},
+ debug:params.has('debug')?{get scene(){return scene;},cam:(x,y,z,lx,ly,lz,fov=60,top=false)=>{debugCam=x===null?null:{x,y,z,lx,ly,lz,fov,top};if(scene.fog)scene.fog.density=debugCam?.top?0:.0095;snapCamera();},teleport:(x,z)=>{Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0});snapCamera();if(game.state==='playing'){game.step(1/60,{});mission.update(1/60);}},
   look:(y,p)=>{yaw=y;pitch=p;snapCamera();},clear:()=>{game.enemies.length=0;mission.update(1/60);},
   interact:()=>{interact();return reading;},close:()=>closeDocument(),skip:seconds=>{game.time+=seconds;mission.update(1/60);},god:()=>{game.invulnerable=1e9;},
   use:id=>{const it=L.INTERACTIONS.find(i=>i.id===id);Object.assign(game.player,{x:it.x,z:it.z,elevation:it.y||0,grounded:true,verticalSpeed:0});interact();return {reading,stage:mission.stageId};},

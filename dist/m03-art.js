@@ -16,6 +16,7 @@ import { INTERACTIONS, MOVABLE, VAN, areaAt, COMBAT_STATIONS, extraObstacles } f
 import { createSectorMeshes, neonSpots, sectorObstacles } from './m03-sector.js';
 import { createCyberCity } from './m03-city.js';
 import { createLightShafts } from './light-shafts.js';
+import { createSectorGrounds } from './m03-grounds.js';
 import { classifySectorProps, createSectorProps } from './m03-props.js';
 import { createSignage, BLADES } from './signage.js';
 import {createCivilCar} from './civil-vehicle-detail.js';
@@ -415,6 +416,7 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
     for (const m of movable.values()) m.apply(0);
     neons.meshes();neons.build();
     // The city around and above the sector (towers, skybridges, traffic, reflections): visual only, no collision.
+    try { stats.grounds = createSectorGrounds(T, root, { low, rich }).stats(); } catch (error) { console.warn('M03 / sols des parcelles désactivés', error); }
     try { sectorProps = createSectorProps(T, root, propList.props, { low, rich }); stats.props = sectorProps.stats(); } catch (error) { console.warn('M03 / objets modélisés désactivés', error); }
     // Volumetric light and dust under every street lamp of the sector.
     try { shafts = createLightShafts(T, root, propList.props.filter(p => p.kind === 'lamp' || (p.kind === 'post' && p.h >= 4.5)).map(p => p.kind === 'lamp'

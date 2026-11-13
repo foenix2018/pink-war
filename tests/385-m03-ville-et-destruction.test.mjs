@@ -52,10 +52,11 @@ test('chapter 03 objects: every baked prop box becomes a modelled object with th
  const {props,drop}=classifySectorProps(meta,sector.world);
  const count=k=>props.filter(p=>p.kind===k).length;
  assert.equal(count('jersey'),28);assert.equal(count('workbench'),7);assert.equal(count('bed'),5);assert.equal(count('barricade'),3);
- assert.ok(count('drum')>=20&&count('lamp')>=12&&count('post')>=20&&count('medcase')>=6&&count('rack')>=6&&count('bush')>=4);
- assert.ok(props.length>=150);assert.ok(drop.size>2000,'the baked boxes are dropped: '+drop.size);
+ assert.equal(count('bollard'),25,'kerb bollards every 12 m, not oil drums');assert.ok(count('lamp')>=12&&count('mast')>=20&&count('medcase')>=6&&count('rack')>=6&&count('cabin')>=4);
+ assert.equal(count('drum')+count('bush')+count('post'),0,'no random drums, shrub blocks or anonymous poles');
+ assert.ok(props.length>=150);assert.ok(drop.size>40000,'baked boxes and the loose scatter are dropped: '+drop.size);
  // No street furniture inside the annexe or the workshop.
- for(const p of props.filter(p=>p.kind==='lamp'||p.kind==='post'))assert.ok(!AREAS.some(a=>a.roof&&p.cx>=a.x1&&p.cx<=a.x2&&p.cz>=a.z1&&p.cz<=a.z2),'street object indoors at '+p.cx+','+p.cz);
+ for(const p of props.filter(p=>p.kind==='lamp'||p.kind==='mast'))assert.ok(!AREAS.some(a=>a.roof&&p.cx>=a.x1&&p.cx<=a.x2&&p.cz>=a.z1&&p.cz<=a.z2),'street object indoors at '+p.cx+','+p.cz);
  T.TextureLoader.prototype.load=function(){return new T.Texture();};
  const group=new T.Group(),r=createSectorProps(T,group,props,{rich:true}).stats();
  assert.ok(r.meshes<=32,'merged per material: '+r.meshes);assert.ok(r.triangles<220000,'triangles '+r.triangles);
@@ -64,4 +65,16 @@ test('chapter 03 objects: every baked prop box becomes a modelled object with th
  assert.equal(JSON.stringify(meta.colliders),before,'collisions are not modified');
  const low=createSectorProps(T,new T.Group(),props,{low:true}).stats();assert.ok(low.triangles<r.triangles*.6);
  assert.match(read('m03-art.js'),/createSectorProps\(T, root, propList\.props, \{ low, rich \}\)/);
+});
+
+test('chapter 03 plots: paved aprons, a real boulevard, marked yards and a perimeter wall with matching collisions',async()=>{
+ const {createSectorGrounds,APRONS,BOULEVARD}=await import('../dist/m03-grounds.js');const L=await import('../dist/m03-layout.js');
+ const g=createSectorGrounds(T,new T.Group(),{rich:true}),s=g.stats();
+ assert.ok(s.quads>400&&s.meshes<=8);assert.ok(s.bays>=30,'parking bays: '+s.bays);
+ for(const [x1,x2] of APRONS)assert.ok(Math.min(Math.abs(x1),Math.abs(x2))>=15,'aprons never cover the avenue or its pavements');
+ assert.equal(BOULEVARD.median,-56,'the median sits under the lamp row');
+ const box=new T.Box3().setFromObject(g.group);assert.ok(box.min.y>-.06&&box.max.y<4.2);
+ const walls=L.extraObstacles().filter(o=>o.look==='perimeter');assert.equal(walls.length,L.PERIMETER.length);
+ for(const w of walls)assert.ok(Math.abs(w.x)-w.hx>=77||Math.abs(w.z)-w.hz>=71,'the wall stands on the boundary, outside every route');
+ for(const p of L.VAN_PATH)assert.ok(!walls.some(w=>Math.abs(p.x-w.x)<w.hx+3&&Math.abs(p.z-w.z)<w.hz+3));
 });
