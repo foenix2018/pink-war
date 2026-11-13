@@ -1,0 +1,193 @@
+{
+ "license": "CC0-1.0",
+ "author": "Poly Haven",
+ "textures": [
+  {
+   "file": "anti_slip_concrete_diff_1024.jpg",
+   "asset": "anti_slip_concrete",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/anti_slip_concrete"
+  },
+  {
+   "file": "anti_slip_concrete_nor_1024.jpg",
+   "asset": "anti_slip_concrete",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/anti_slip_concrete"
+  },
+  {
+   "file": "anti_slip_concrete_rough_512.jpg",
+   "asset": "anti_slip_concrete",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/anti_slip_concrete"
+  },
+  {
+   "file": "blue_metal_plate_diff_1024.jpg",
+   "asset": "blue_metal_plate",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/blue_metal_plate"
+  },
+  {
+   "file": "blue_metal_plate_nor_1024.jpg",
+   "asset": "blue_metal_plate",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/blue_metal_plate"
+  },
+  {
+   "file": "blue_metal_plate_rough_512.jpg",
+   "asset": "blue_metal_plate",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/blue_metal_plate"
+  },
+  {
+   "file": "concrete_floor_worn_001_diff_1024.jpg",
+   "asset": "concrete_floor_worn_001",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/concrete_floor_worn_001"
+  },
+  {
+   "file": "concrete_floor_worn_001_nor_1024.jpg",
+   "asset": "concrete_floor_worn_001",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/concrete_floor_worn_001"
+  },
+  {
+   "file": "concrete_floor_worn_001_rough_512.jpg",
+   "asset": "concrete_floor_worn_001",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/concrete_floor_worn_001"
+  },
+  {
+   "file": "concrete_wall_008_diff_1024.jpg",
+   "asset": "concrete_wall_008",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/concrete_wall_008"
+  },
+  {
+   "file": "concrete_wall_008_nor_1024.jpg",
+   "asset": "concrete_wall_008",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/concrete_wall_008"
+  },
+  {
+   "file": "concrete_wall_008_rough_512.jpg",
+   "asset": "concrete_wall_008",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/concrete_wall_008"
+  },
+  {
+   "file": "container_side_diff_1024.jpg",
+   "asset": "container_side",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/container_side"
+  },
+  {
+   "file": "container_side_nor_1024.jpg",
+   "asset": "container_side",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/container_side"
+  },
+  {
+   "file": "container_side_rough_512.jpg",
+   "asset": "container_side",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/container_side"
+  },
+  {
+   "file": "factory_wall_diff_1024.jpg",
+   "asset": "factory_wall",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/factory_wall"
+  },
+  {
+   "file": "factory_wall_nor_1024.jpg",
+   "asset": "factory_wall",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/factory_wall"
+  },
+  {
+   "file": "factory_wall_rough_512.jpg",
+   "asset": "factory_wall",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/factory_wall"
+  },
+  {
+   "file": "metal_grate_rusty_diff_1024.jpg",
+   "asset": "metal_grate_rusty",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/metal_grate_rusty"
+  },
+  {
+   "file": "metal_grate_rusty_nor_1024.jpg",
+   "asset": "metal_grate_rusty",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/metal_grate_rusty"
+  },
+  {
+   "file": "metal_grate_rusty_rough_512.jpg",
+   "asset": "metal_grate_rusty",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/metal_grate_rusty"
+  },
+  {
+   "file": "metal_plate_02_diff_1024.jpg",
+   "asset": "metal_plate_02",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/metal_plate_02"
+  },
+  {
+   "file": "metal_plate_02_nor_1024.jpg",
+   "asset": "metal_plate_02",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/metal_plate_02"
+  },
+  {
+   "file": "metal_plate_02_rough_512.jpg",
+   "asset": "metal_plate_02",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/metal_plate_02"
+  },
+  {
+   "file": "painted_metal_shutter_diff_1024.jpg",
+   "asset": "painted_metal_shutter",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/painted_metal_shutter"
+  },
+  {
+   "file": "painted_metal_shutter_nor_1024.jpg",
+   "asset": "painted_metal_shutter",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/painted_metal_shutter"
+  },
+  {
+   "file": "painted_metal_shutter_rough_512.jpg",
+   "asset": "painted_metal_shutter",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/painted_metal_shutter"
+  },
+  {
+   "file": "painted_steel_diff_1024.jpg",
+   "asset": "painted_steel",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/rusty_metal_02",
+   "note": "dérivée de rusty_metal_02 : rouille éclaircie en usure de peinture"
+  },
+  {
+   "file": "rusty_metal_02_diff_1024.jpg",
+   "asset": "rusty_metal_02",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/rusty_metal_02"
+  },
+  {
+   "file": "rusty_metal_02_nor_1024.jpg",
+   "asset": "rusty_metal_02",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/rusty_metal_02"
+  },
+  {
+   "file": "rusty_metal_02_rough_512.jpg",
+   "asset": "rusty_metal_02",
+   "license": "CC0-1.0",
+   "source": "https://polyhaven.com/a/rusty_metal_02"
+  }
+ ]
+}
