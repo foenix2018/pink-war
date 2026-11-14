@@ -7,7 +7,7 @@ const wrap=n=>n-Math.floor(n);
 // uses a virtual translation, so it runs exactly the same contact solver.
 export function createHeroFootsteps(model,solveChain){
  const {root,actor,hips,legs,knees,feet}=model,virtual=new T.Vector3(),velocity=new T.Vector3(),planning=new T.Vector3();
- const native=feet.map(()=>({p:new T.Vector3(),q:new T.Quaternion()}));let solePoints=[];
+ let solePoints=[];
  const initialFeet=feet.map(f=>root.worldToLocal(f.getWorldPosition(new T.Vector3())));
  const flat=feet.map(f=>new T.Quaternion().setFromRotationMatrix(new T.Matrix4().fromArray(actor.data.bones[actor.bones.indexOf(f)].inverse).invert()));
  const pads=feet.map(()=>new T.Vector3()),probes=feet.map(()=>[]),point=new T.Vector3();
@@ -47,27 +47,18 @@ export function createHeroFootsteps(model,solveChain){
   if(flight.airborne){frequency=0;wasMoving=false;state.frequency=0;return {phase:wrap(phase),frequency:0,moving:false};}
   const moving=actualSpeed>.025&&!flight.airborne,scale=root.getWorldScale(new T.Vector3()).y,speed=actualSpeed/scale;
   const run=motion==='run',side=Math.abs(model.state.travelDirection.x);
-  const forward=forwardWeight(),nativeDistance=2.6*(actor.actions[motion]?.getClip().duration||1);
-  const desired=T.MathUtils.lerp(nativeDistance,flight.crouched?clamp(speed*.70,.85,1.65):run?clamp(speed*.70,2.0,5.8):clamp(speed*.80,.70,2.0),forward);
+  const desired=T.MathUtils.lerp(flight.crouched?clamp(speed*.65,.65,1.2):run?clamp(speed*.58,1.8,4.0):clamp(speed*.60,.65,1.65),clamp(speed*.50,.65,.85),side);
   stride+=(desired-stride)*(1-Math.exp(-dt*12));
-  duty=run?clamp(.80/stride,.15,.36):flight.crouched?.62:Math.min(.72/stride,.62-.30*smooth(speed,1.2,3.2));
-  if(!landingNow)duty/=1+2*Math.abs(clamp((flight.velocity?.y||0)/Math.max(.1,actualSpeed),-.6,.6));
-  lift=flight.crouched?.085:run?.24:.115;
+  // Walking includes double support. A distance divided by stride used to
+  // drive this below .5, leaving both boots airborne even during a sidestep.
+  duty=run?clamp(.90/stride,.18,.40):flight.crouched?.62:.54;
+  lift=flight.crouched?.055:run?.20:T.MathUtils.lerp(.085,.065,side);
   frequency=moving?actualSpeed/(stride*scale):0;
-  if(moving&&!wasMoving){phase=duty*(landingNow?.75:.25);for(let i=0;i<2;i++){const c=contacts[i];c.anchor.copy(c.position);c.cycle=Math.floor(phase+i*.5);c.mode='stance';}}
+  if(moving&&!wasMoving){phase=duty*(landingNow?.75:.25)+(model.state.lateral<-.2?.5:0);for(let i=0;i<2;i++){const c=contacts[i];c.anchor.copy(c.position);c.cycle=Math.floor(phase+i*.5);c.mode='stance';}}
   if(moving){phase+=travel/(stride*scale);state.distance+=travel;}
   wasMoving=moving;
   Object.assign(state,{phase:wrap(phase),stride,frequency,duty});
   return {phase:wrap(phase),frequency,moving};
- }
- function forwardWeight(){const d=model.state.travelDirection;return (1-smooth(Math.abs(d.x),.15,.55))*(1-smooth(d.z,-.5,-.1));}
- function captureNative(){root.updateMatrixWorld(true);for(let i=0;i<2;i++){native[i].p.copy(root.worldToLocal(feet[i].getWorldPosition(new T.Vector3())));native[i].q.copy(feet[i].getWorldQuaternion(new T.Quaternion()));}}
- function directionalTarget(i){
-  const n=native[i],d=model.state.travelDirection,sign=i===0?-1:1,side=Math.abs(d.x),back=smooth(d.z,-.2,.4),p=n.p.clone();
-  const centre=actor.gaitReference[actor.motion]?.centres[i]||0,excursion=-(p.z-centre)*(1-.30*side-.30*back),warp=smooth(model.state.speed,.05,.5);
-  p.x+=excursion*d.x*warp;p.z=T.MathUtils.lerp(p.z,centre+excursion*d.z,warp);
-  const min=T.MathUtils.lerp(.065,.095,side),x=sign*p.x;p.x=sign*.5*(x+min+Math.sqrt((x-min)**2+.0001));
-  return {p:world(p),q:new T.Quaternion().setFromAxisAngle(up,d.x*.10*(1-back*.4)).multiply(n.q)};
  }
  function surface(p,i,yawQ){
   const s=root.getWorldScale(new T.Vector3()).y,h=height(p.x,p.z),e=.055*s;
@@ -77,7 +68,7 @@ export function createHeroFootsteps(model,solveChain){
   p.y=h+.003*s;return q;
  }
  function landing(i,horizon){
-  const side=Math.abs(model.state.travelDirection.x),p=world(new T.Vector3((i===0?-1:1)*(.14+.09*side),0,.025));
+  const side=Math.abs(model.state.travelDirection.x),p=world(new T.Vector3((i===0?-1:1)*(.14+.16*side),0,.025));
   p.add(pads[i].clone().applyQuaternion(root.getWorldQuaternion(new T.Quaternion()).multiply(flat[i])).multiplyScalar(root.getWorldScale(new T.Vector3()).y));
   p.addScaledVector(planning,horizon);return p;
  }
@@ -95,16 +86,27 @@ export function createHeroFootsteps(model,solveChain){
    if(moving){
     c.stopAge=0;
     if(on&&(c.mode!=='stance'||cycle!==c.cycle)){
-     // The final swing position is the contact; it cannot jump sideways to a
-     // newly predicted target on the first frame of support.
-     c.anchor.copy(c.position);c.q.copy(c.toQ);surface(c.anchor,i,rootQ);c.mode='stance';
+     // Complete the planned swing even when the sample crosses heel strike;
+     // truncating it one frame early made the release vary with frame rate.
+     c.anchor.copy(c.mode==='swing'&&c.targetReady?c.to:c.position);c.q.copy(c.toQ);surface(c.anchor,i,rootQ);c.mode='stance';
     }else if(!on&&c.mode==='stance'){
-     c.from.copy(c.position);c.fromQ.copy(c.q);c.mode='swing';c.swingStart=Math.max(duty,t-Math.max(.001,frequency*dt));c.targetReady=false;
+     c.from.copy(c.position);c.fromQ.copy(c.q);c.mode='swing';c.swingStart=duty;c.targetReady=false;
     }
     if(on){c.position.copy(c.anchor);c.position.y=height(c.anchor.x,c.anchor.z)+.003*scale;}
     else{
      const progress=clamp((t-c.swingStart)/(1-c.swingStart),0,1),ease=progress*progress*(3-2*progress);
-     if(progress<.60||!c.targetReady){const predicted=landing(i,(1-t+duty*.5)/Math.max(.01,frequency));if(!c.targetReady)c.to.copy(predicted);else c.to.lerp(predicted,1-Math.exp(-dt*20));c.targetReady=true;}
+     // Commit the step at lift-off. Continually chasing a new destination
+     // through the swing added a second acceleration during direction changes.
+     if(!c.targetReady){c.to.copy(landing(i,(1-t+duty*.5)/Math.max(.01,frequency)));c.targetReady=true;}
+     // Plan the landing on the same side of the supporting boot. Merely
+     // separating the current swing pose let its uncorrected destination
+     // cross the support foot at touchdown after a direction change.
+     const other=contacts[1-i];
+     if(other.mode==='stance'){
+      const right=new T.Vector3(1,0,0).applyQuaternion(rootQ),sign=i===0?-1:1;
+      const separation=sign*c.to.clone().sub(other.position).dot(right);
+      if(separation<.18*scale)c.to.addScaledVector(right,sign*(.18*scale-separation));
+     }
      c.toQ.copy(surface(c.to,i,rootQ));
      c.position.lerpVectors(c.from,c.to,ease);c.position.y+=Math.sin(Math.PI*progress)**2*lift*scale;
      c.position.y=Math.max(c.position.y,height(c.position.x,c.position.z)+.003*scale);c.q.slerpQuaternions(c.fromQ,c.toQ,ease);
@@ -126,19 +128,13 @@ export function createHeroFootsteps(model,solveChain){
    for(const p of probes[i]){point.copy(p).applyQuaternion(c.q).multiplyScalar(scale).add(ankle);ankle.y=Math.max(ankle.y,height(point.x,point.z)-point.y+ankle.y+.003*scale);}
    targets.push(ankle);stance.push(c.mode==='stance'&&Math.abs(c.position.y-height(c.position.x,c.position.z))<.02*scale);
   }
-  // Retain the established sideways/backward knee paths. Only forward travel
-  // uses long running strides; a sidestep must not become a crossing run.
-  const forward=forwardWeight(),footQ=contacts.map(c=>c.q.clone());
-  if(forward<.999)for(let i=0;i<2;i++){
-   const target=directionalTarget(i);let lowest=Infinity;
-   for(const p of solePoints[i])lowest=Math.min(lowest,point.copy(p).applyQuaternion(target.q).y);
-   target.p.y=Math.max(target.p.y,height(target.p.x,target.p.z)-lowest*scale+.003*scale);
-   targets[i].lerp(target.p,1-forward);footQ[i].slerp(target.q,1-forward);stance[i]=false;contacts[i].mobility=1-forward+forward*contacts[i].mobility;
-  }
+  // Every direction uses the same world contacts. Warping the native forward
+  // clip here used to discard both support feet during side/back travel.
+  const footQ=contacts.map(c=>c.q.clone());
   // A closing sidestep never scissors through the supporting shin. Move the
   // airborne foot, retaining the supporting contact exactly in world space.
   const L=local(targets[0].clone()),R=local(targets[1].clone()),gap=.15;
-  if(R.x-L.x<gap+.04){const d=gap-(R.x-L.x),missing=.5*(d+Math.sqrt(d*d+.0001)),sum=contacts[0].mobility+contacts[1].mobility;
+  if(R.x-L.x<gap){const missing=gap-(R.x-L.x),sum=contacts[0].mobility+contacts[1].mobility;
    if(sum>1e-8){L.x-=missing*contacts[0].mobility/sum;R.x+=missing*contacts[1].mobility/sum;targets[0].copy(world(L));targets[1].copy(world(R));for(let i=0;i<2;i++)if(!stance[i])contacts[i].position.copy(targets[i]).add(pads[i].clone().applyQuaternion(contacts[i].q).multiplyScalar(scale));}
   }
   // The original running clip's vertical offset was authored for different
@@ -147,8 +143,16 @@ export function createHeroFootsteps(model,solveChain){
   const nativeHipY=hips.position.y,running=actor.motion==='run'&&moving;
   // Longer walking strides need a lower, flexed pelvis before support ends;
   // otherwise an almost straight leg forces a late reach correction.
-  const walkFlex=.075+.10*smooth(stride,1.4,2.0);
-  const targetY=standingY-(flight.crouched?.265:running?.11:moving?walkFlex:0)+(moving&&!flight.crouched?(running?.015:.008)*(1-Math.cos(phase*Math.PI*4)):0);
+  // Anticipate the whole support stride, rather than compressing the pelvis
+  // only when one leg is already overextended. The old last-minute correction
+  // produced a visible dip at each release (and a different dip on each side).
+  const side=Math.abs(model.state.travelDirection.x),extent=stride*duty*.5+.035,halfWidth=.14+.16*side;
+  const reach=Math.min(...knees.map((k,i)=>k.position.length()+feet[i].position.length()-.035));
+  const horizontal=Math.hypot(halfWidth-.105+side*extent,Math.abs(model.state.travelDirection.z)*extent);
+  const supportY=.104+.060+Math.sqrt(Math.max(.12,reach*reach-horizontal*horizontal))-.02;
+  const walkFlex=.07+.04*smooth(stride,1.4,2.0);
+  const baseline=standingY-(flight.crouched?.265:running?.16:moving?walkFlex:0);
+  const targetY=Math.min(baseline,moving?supportY:baseline)+(moving&&!flight.crouched?.004*(1-Math.cos(phase*Math.PI*4)):0);
   if(pelvisY===null)pelvisY=nativeHipY;
   const omega=20,e=Math.exp(-omega*dt),change=pelvisY-targetY,temp=(pelvisVelocity+omega*change)*dt;
   pelvisY=targetY+(change+temp)*e;pelvisVelocity=(pelvisVelocity-omega*temp)*e;hips.position.y=pelvisY;root.updateMatrixWorld(true);
@@ -174,5 +178,5 @@ export function createHeroFootsteps(model,solveChain){
   }
   wasAir=false;landingNow=false;
  }
- return {state,frame,advance,plant,setSoles,captureNative};
+ return {state,frame,advance,plant,setSoles};
 }

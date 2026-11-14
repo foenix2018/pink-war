@@ -280,7 +280,9 @@ test('a complete campaign reaches level 20 after 670 real projectile kills and s
     for(const offset of [0,-.4,.4,-.8,.8,-1.2,1.2,Math.PI]){
       const x=Math.sin(heading+offset),z=Math.cos(heading+offset);let score=2*Math.cos(offset);
       if(Math.abs(g.player.x+x*10)>92||Math.abs(g.player.z+z*10)>92)score-=20;
-      for(const b of bolts){const rx=b.x-g.player.x,rz=b.z-g.player.z,vx=b.vx-x*10,vz=b.vz-z*10;
+      const lateral=Math.max(-PLAYER_SPEEDS.strafeMax,Math.min(PLAYER_SPEEDS.strafeMax,x*PLAYER_SPEEDS.sprint*PLAYER_SPEEDS.side));
+      const forward=z*PLAYER_SPEEDS.sprint*(z>0?PLAYER_SPEEDS.back:1);
+      for(const b of bolts){const rx=b.x-g.player.x,rz=b.z-g.player.z,vx=b.vx-lateral,vz=b.vz-forward;
         const t=Math.max(0,Math.min(.75,-(rx*vx+rz*vz)/(vx*vx+vz*vz||1))),d=Math.hypot(rx+vx*t,rz+vz*t);
         score-=5/(d*d+.1);
       }

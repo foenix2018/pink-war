@@ -79,7 +79,6 @@ export function createHeroLocomotion(model,solveChain){
  }
  function pose(dt,flight){
   root.updateMatrixWorld(true);
-  steps.captureNative();
   model.hips.quaternion.premultiply(new T.Quaternion().setFromAxisAngle(up,legYaw));root.updateMatrixWorld(true);
   const axis=up.clone().applyQuaternion(root.getWorldQuaternion(new T.Quaternion())).applyQuaternion(model.spine.parent.getWorldQuaternion(new T.Quaternion()).invert());
   model.spine.quaternion.premultiply(new T.Quaternion().setFromAxisAngle(axis,-legYaw));

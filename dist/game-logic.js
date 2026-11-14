@@ -758,8 +758,11 @@ export class ArenaGame {
     p.jumpHeld = jumpDown;
     const speed = p.crouched ? PLAYER_SPEEDS.crouch : input.sprint ? PLAYER_SPEEDS.sprint : PLAYER_SPEEDS.walk, moveYaw = input.moveYaw ?? yaw;
     ix*=PLAYER_SPEEDS.side;if(iz>0)iz*=PLAYER_SPEEDS.back;
+    // A sprint boosts forward travel. A full-speed sideways run cannot retain
+    // a forward-facing, non-crossing combat stance.
+    const lateralSpeed=Math.max(-PLAYER_SPEEDS.strafeMax,Math.min(PLAYER_SPEEDS.strafeMax,ix*speed));
     const oldX=p.x,oldZ=p.z,oldY=p.elevation,wasGrounded=p.grounded;
-    const travel=inertialMove(this.planarVelocity,(Math.cos(moveYaw)*ix+Math.sin(moveYaw)*iz)*speed,(-Math.sin(moveYaw)*ix+Math.cos(moveYaw)*iz)*speed,dt,{grounded:p.grounded,crouched:p.crouched});
+    const travel=inertialMove(this.planarVelocity,Math.cos(moveYaw)*lateralSpeed+Math.sin(moveYaw)*iz*speed,-Math.sin(moveYaw)*lateralSpeed+Math.cos(moveYaw)*iz*speed,dt,{grounded:p.grounded,crouched:p.crouched});
     const dx=travel.x,dz=travel.z;
     // Fine treads must be sampled along the whole move, including sprint at low FPS.
     // Subdivide locomotion and gravity together; AI, firing and mission time still tick once.

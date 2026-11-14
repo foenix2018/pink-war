@@ -1,4 +1,4 @@
-export const PLAYER_SPEEDS=Object.freeze({walk:2.2,sprint:4.8,crouch:1.1,side:.9,back:.75});
+export const PLAYER_SPEEDS=Object.freeze({walk:2.2,sprint:4.8,crouch:1.1,side:.75,strafeMax:2.2,back:.75});
 export const JUMP_RULES=Object.freeze({ground:7.25,air:6.65,wall:7.0,wallPush:6.2,wallReach:.82,coyote:.10});
 export function nearbyJumpWall(player,obstacles){
   let closest=null;
