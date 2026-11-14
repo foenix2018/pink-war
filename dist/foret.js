@@ -1,4 +1,4 @@
-import {inertialMove} from './locomotion.js';
+import {inertialMove,PLAYER_SPEEDS} from './locomotion.js';
 import {createFPSMotion} from './fps-motion.js';
 import {microSurfaceMaps} from './fps-environments.js';
 import {createWorldEffects} from './webgpu-world-fx.js';
@@ -740,7 +740,7 @@ export async function boot() {
       player.x = p.x; player.z = p.z; ctl.look.yaw = Math.atan2(-(q.x - p.x), -(q.z - p.z)); ctl.look.pitch = -.05; if (bench.t > .5) bench.frames.push(raw);
       if (u >= 1) { bench.done = true; const f = [...bench.frames].sort((a, b) => a - b); bench.result = { frames: f.length, avgMs: f.reduce((a, b) => a + b, 0) / f.length, p95Ms: f[Math.floor(f.length * .95)], ...stats(), calls: bench.maxCalls, triangles: bench.maxTris, avgTriangles: Math.round(bench.sumTris / bench.n), updateMs: bench.cpuUpdate / bench.n, renderMs: bench.cpuRender / bench.n }; }
     } else {
-      const inp = ctl.input(), sp = (inp.run ? 7 : 3.6) * (Math.abs(player.x - riverX(player.z)) < 4 && player.z > CLIFF_Z ? .55 : 1);
+      const inp = ctl.input(), sp = (inp.run ? PLAYER_SPEEDS.sprint : PLAYER_SPEEDS.walk) * (Math.abs(player.x - riverX(player.z)) < 4 && player.z > CLIFF_Z ? .55 : 1);
       const sin = Math.sin(ctl.look.yaw), cos = Math.cos(ctl.look.yaw),previous={x:player.x,z:player.z},travel=inertialMove(planarVelocity,(inp.x*cos+inp.z*sin)*sp,(-inp.x*sin+inp.z*cos)*sp,dt,{grounded:jumpOffset<=.015}),dx=travel.x,dz=travel.z;
       const tryMove = (nx, nz) => {
         if (Math.abs(nx) > HALF - 1 || Math.abs(nz) > HALF - 1) return false;

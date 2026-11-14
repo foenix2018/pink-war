@@ -1,3 +1,4 @@
+export const PLAYER_SPEEDS=Object.freeze({walk:2.2,sprint:4.8,crouch:1.1,side:.9,back:.75});
 export const JUMP_RULES=Object.freeze({ground:7.25,air:6.65,wall:7.0,wallPush:6.2,wallReach:.82,coyote:.10});
 export function nearbyJumpWall(player,obstacles){
   let closest=null;
@@ -28,7 +29,7 @@ export function tryJump(player,obstacles,time){
 export function inertialMove(state,targetX,targetZ,dt,{grounded=true,crouched=false}={}){
  if(!(dt>0))return{x:0,z:0};
  state.x=Number.isFinite(state.x)?state.x:0;state.z=Number.isFinite(state.z)?state.z:0;
- const stopping=Math.hypot(targetX,targetZ)<.01,rate=grounded?(stopping?26:crouched?40:16):7;
+ const stopping=Math.hypot(targetX,targetZ)<.01,rate=grounded?(stopping?12:crouched?14:8):7;
  const decay=Math.exp(-rate*dt),integral=(1-decay)/rate;
  const x=targetX*dt+(state.x-targetX)*integral,z=targetZ*dt+(state.z-targetZ)*integral;
  state.x=targetX+(state.x-targetX)*decay;state.z=targetZ+(state.z-targetZ)*decay;

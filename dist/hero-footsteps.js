@@ -48,7 +48,7 @@ export function createHeroFootsteps(model,solveChain){
   const moving=actualSpeed>.025&&!flight.airborne,scale=root.getWorldScale(new T.Vector3()).y,speed=actualSpeed/scale;
   const run=motion==='run',side=Math.abs(model.state.travelDirection.x);
   const forward=forwardWeight(),nativeDistance=2.6*(actor.actions[motion]?.getClip().duration||1);
-  const desired=T.MathUtils.lerp(nativeDistance,flight.crouched?clamp(speed*.70,.85,1.65):run?clamp(speed*.50,2.0,5.8):clamp(speed*.80,.70,2.0),forward);
+  const desired=T.MathUtils.lerp(nativeDistance,flight.crouched?clamp(speed*.70,.85,1.65):run?clamp(speed*.70,2.0,5.8):clamp(speed*.80,.70,2.0),forward);
   stride+=(desired-stride)*(1-Math.exp(-dt*12));
   duty=run?clamp(.80/stride,.15,.36):flight.crouched?.62:Math.min(.72/stride,.62-.30*smooth(speed,1.2,3.2));
   if(!landingNow)duty/=1+2*Math.abs(clamp((flight.velocity?.y||0)/Math.max(.1,actualSpeed),-.6,.6));
@@ -161,7 +161,7 @@ export function createHeroFootsteps(model,solveChain){
    const supported=targets[i].y>=referenceY-.5*scale?1-smooth(Math.max(0,clearance)/scale,.010,.060):0;
    softness[i]=1-supported;
    if(!supported)continue;
-   const hip=legs[i].getWorldPosition(new T.Vector3()).add(virtual),reach=(knees[i].position.length()+feet[i].position.length()-.020)*scale,h2=(hip.x-targets[i].x)**2+(hip.z-targets[i].z)**2;
+   const hip=legs[i].getWorldPosition(new T.Vector3()).add(virtual),reach=(knees[i].position.length()+feet[i].position.length()-.035)*scale,h2=(hip.x-targets[i].x)**2+(hip.z-targets[i].z)**2;
    needed=Math.max(needed,(hip.y-targets[i].y-Math.sqrt(Math.max(.002,reach*reach-h2)))*supported);
   }
   needed=clamp(needed/scale,0,.24);drop+=(needed-drop)*(1-Math.exp(-dt*24));const correction=Math.max(needed,drop);hips.position.y-=correction;state.pelvisDrop=nativeHipY-hips.position.y;

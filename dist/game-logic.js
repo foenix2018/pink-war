@@ -1,7 +1,7 @@
 import {describeEnemyImpact} from './enemy-body-response.js';
 import {searchContactOrder,pendingMeleeOrder,updateMeleeIntent,prepareHostileShot} from './enemy-engagement.js';
 import {turnEnemy,steerEnemyTravel} from './enemy-motion.js';
-import {inertialMove} from './locomotion.js';
+import {inertialMove,PLAYER_SPEEDS} from './locomotion.js';
 import {ensureEnemyBubble,shieldFacesSource,tracePlayerShield,traceEnemyShield,playerShieldFrame,enemyShieldFrame} from './projected-shield-logic.js';
 import {createArenaTurrets,fortressWaveUnit,turretHitbox,damageDefenseTurret,updateArenaTurrets} from './arena-defense.js';
 import {isReco1,RECO1_HIT_ZONES,reco1ProjectileScale} from './reco1-profile.js';
@@ -756,7 +756,8 @@ export class ArenaGame {
     if(input.crouchToggle) { p.crouched=!p.crouched;this.event('crouch',{active:p.crouched}); }
     if (jumpDown && !p.jumpHeld) { const kind=tryJump(p,this.obstacles,this.time);if(kind){this.event('jump',{kind});this.emitNoise('jump',14);} }
     p.jumpHeld = jumpDown;
-    const speed = p.crouched ? 3.0 : input.sprint ? 10 : 7, moveYaw = input.moveYaw ?? yaw;
+    const speed = p.crouched ? PLAYER_SPEEDS.crouch : input.sprint ? PLAYER_SPEEDS.sprint : PLAYER_SPEEDS.walk, moveYaw = input.moveYaw ?? yaw;
+    ix*=PLAYER_SPEEDS.side;if(iz>0)iz*=PLAYER_SPEEDS.back;
     const oldX=p.x,oldZ=p.z,oldY=p.elevation,wasGrounded=p.grounded;
     const travel=inertialMove(this.planarVelocity,(Math.cos(moveYaw)*ix+Math.sin(moveYaw)*iz)*speed,(-Math.sin(moveYaw)*ix+Math.cos(moveYaw)*iz)*speed,dt,{grounded:p.grounded,crouched:p.crouched});
     const dx=travel.x,dz=travel.z;
@@ -779,7 +780,7 @@ export class ArenaGame {
     if(!wasGrounded&&p.grounded)this.emitNoise('land',NOISE_RADIUS.land);
     if(p.grounded){
       this.footstepDistance+=Math.hypot(p.x-oldX,p.z-oldZ);
-      if(this.footstepDistance>(p.crouched?1.25:input.sprint?1.9:1.65)){
+      if(this.footstepDistance>(p.crouched?.65:input.sprint?1.7:1.0)){
         this.footstepDistance=0;const kind=p.crouched?'crouch':input.sprint?'sprint':'step';
         this.emitNoise(kind,NOISE_RADIUS[kind]);
       }

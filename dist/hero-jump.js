@@ -78,7 +78,7 @@ export function createHeroJump(model,solveChain,footFloor){
    for(let i=0;i<2;i++){
     if(!locomotion.planted[i])continue;
     const hip=legs[i].getWorldPosition(new T.Vector3()),foot=root.localToWorld(targets[i].p.clone());
-    const reach=Math.min(start[i].reach+.10*smooth(landAge,0,.18),knees[i].position.length()+feet[i].position.length()-.020)*scale;
+    const reach=T.MathUtils.lerp(start[i].reach,knees[i].position.length()+feet[i].position.length()-.035,smooth(landAge,0,.40))*scale;
     const horizontal=(hip.x-foot.x)**2+(hip.z-foot.z)**2;lower=Math.max(lower,hip.y-foot.y-Math.sqrt(Math.max(.001,reach*reach-horizontal)));
    }
    hips.position.y-=Math.max(0,lower)/scale;
@@ -89,7 +89,7 @@ export function createHeroJump(model,solveChain,footFloor){
   for(let i=0;i<2;i++){
    const t=targets[i],q=rootQ.clone().multiply(t.q),sign=i===0?-1:1;
    t.p.x=sign*Math.max(.075,sign*t.p.x);t.p.y=Math.max(t.p.y,footFloor(i,q));
-   const target=root.localToWorld(t.p.clone()),pole=root.localToWorld(new T.Vector3(sign*.24,.55,-.68));
+   const target=root.localToWorld(t.p.clone()),pole=root.localToWorld(new T.Vector3(sign*.24,airborne?.55:.52,airborne?-.68:-.65));
    solveChain(legs[i],knees[i],feet[i],target,pole,airborne?state.tuck:0);
    feet[i].quaternion.copy(feet[i].parent.getWorldQuaternion(new T.Quaternion()).invert().multiply(q));
   }

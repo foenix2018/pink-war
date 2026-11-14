@@ -1,3 +1,4 @@
+import {PLAYER_SPEEDS} from '../dist/locomotion.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ArenaGame, ARENA_SIZE, segmentSphere, segmentBox, moveInArena, MAX_LEVEL, WEAPONS, COVER_WALLS, REGEN_DELAY, levelCount, traceEnemyHit, PORTAL_SITES, chooseWavePortals } from '../dist/game-logic.js';
@@ -11,11 +12,11 @@ test('the 200 m arena confines movement in every direction', () => {
   moveInArena(p, 1000, -1000, .55, []); assert.equal(p.x, 98.45); assert.equal(p.z, -98.45);
   moveInArena(p, -2000, 2000, .55, []); assert.equal(p.x, -98.45); assert.equal(p.z, 98.45);
 });
-test('movement is camera relative, with equal straight and diagonal speeds', () => {
+test('movement is camera relative, with bounded diagonal speed and a slower sidestep', () => {
   const straight = new ArenaGame(), diagonal = new ArenaGame(), turned = new ArenaGame();
   advance(straight, .5, { z: -1 }); advance(diagonal, .5, { x: 1, z: -1 }); advance(turned, .5, { z: -1, yaw: Math.PI / 2 });
-  assert.ok(Math.abs(Math.hypot(diagonal.player.x, diagonal.player.z - 22) - Math.abs(straight.player.z - 22)) < .001);
-  assert.ok(turned.player.x < -3); assert.ok(Math.abs(turned.player.z - 22) < .001);
+  assert.ok(Math.hypot(diagonal.player.x, diagonal.player.z-22) <= Math.abs(straight.player.z-22)+.001);
+  assert.ok(turned.player.x < -.7); assert.ok(Math.abs(turned.player.z - 22) < .001);
 });
 test('cover blocks movement and allows sliding along its surface', () => {
   const p = { x: 0, z: 4 }, boxes = [{ x: 0, z: 0, hx: 2, hz: 2, height: 3 }];
@@ -185,7 +186,7 @@ test('crouch toggles, lowers speed, keeps grounded trajectory, and refuses a jum
   g.step(.02,{crouchToggle:true});assert.equal(g.player.crouched,true);
   const original=g.player.z;for(let n=0;n<8;n++)g.step(.05,{z:-1,jump:true,sprint:true});
   assert.equal(g.player.grounded,true);assert.equal(g.player.verticalSpeed,0);
-  assert.ok(Math.abs(g.player.z-original+1.2)<.08);
+  assert.ok(Math.abs(g.player.z-original + PLAYER_SPEEDS.crouch*(.4-(1-Math.exp(-14*.4))/14))<.01);
   g.step(.02,{crouchToggle:true,jump:false});
   assert.equal(g.player.crouched,false);
   g.step(.02,{jump:true});assert.equal(g.player.grounded,false);

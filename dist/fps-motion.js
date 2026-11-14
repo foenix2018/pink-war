@@ -20,7 +20,7 @@ export function createFPSMotion(){
   if(lastGround===false&&grounded)landing=Math.min(.11,Math.max(0,-lastVertical)*.009);
   landing*=Math.exp(-dt*13);lastGround=grounded;lastVertical=verticalSpeed;
   phase+=speed*dt*(crouched?2.1:2.55);bob+=(Math.min(1,speed/6)*Number(grounded)-bob)*(1-Math.exp(-dt*12));
-  sprint+=(Number(sprinting&&speed>6&&ads<.2)-sprint)*(1-Math.exp(-dt*10));
+  sprint+=(Number(sprinting&&speed>3.2&&ads<.2)-sprint)*(1-Math.exp(-dt*10));
   const dy=lastYaw===null?0:Math.atan2(Math.sin(yaw-lastYaw),Math.cos(yaw-lastYaw));const dp=lastPitch===null?0:pitch-lastPitch;lastYaw=yaw;lastPitch=pitch;
   turn+=(clamp(dy/Math.max(.001,dt)*.006,-.045,.045)-turn)*(1-Math.exp(-dt*16));
   tilt+=(clamp(dp/Math.max(.001,dt)*.006,-.035,.035)-tilt)*(1-Math.exp(-dt*16));

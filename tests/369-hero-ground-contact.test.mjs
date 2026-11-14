@@ -32,7 +32,7 @@ function follow(m,g,dt,input={}){g.step(dt,input);m.root.position.set(g.player.x
 for(const profile of CHARACTERS)test(profile.id+': the feet use the actual rising ramp and retain their world contact as the body climbs',()=>{
  const m=hero(profile),g=new ArenaGame([]),boots=vertices(m);g.nextWave=999;g.toSpawn=0;Object.assign(g.player,{x:-48,z:60,elevation:g.surfaceHeight(-48,60),grounded:true});
  const previous=[null,null];let pairs=0,maxSlip=0,maxDepth=0;
- for(let i=0;i<160;i++){
+ for(let i=0;i<520;i++){
   follow(m,g,1/60,{z:-.7});assert.equal(g.player.grounded,true);
   if(i<40)continue;
   for(let f=0;f<2;f++)if(m.locomotion.planted[f]){const p=vertex(boots[f]);if(previous[f]){pairs++;maxSlip=Math.max(maxSlip,p.distanceTo(previous[f]));}previous[f]=p;for(const b of boots[f].all){const v=vertex(b),height=g.footGroundHeight(v.x,v.z,g.player.elevation);maxDepth=Math.max(maxDepth,height-v.y);}}else previous[f]=null;

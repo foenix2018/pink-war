@@ -45,7 +45,7 @@ export function createHeroLocomotion(model,solveChain){
   if(velocity)local.set(velocity.x||0,0,velocity.z||0);
   else if(dt>0&&!teleport)local.copy(delta).multiplyScalar(1/dt);
   else local.set(0,0,0);
-  if(!initialized&&moving&&!velocity)local.set(0,0,-(flight.sprint?9:3.2)).applyQuaternion(root.quaternion);
+  if(!initialized&&moving&&!velocity)local.set(0,0,-(flight.sprint?4.8:2.2)).applyQuaternion(root.quaternion);
   if(!moving||teleport)local.set(0,0,0);
   steps.frame(dt,flight,local,teleport);
   local.applyQuaternion(root.getWorldQuaternion(inverse).invert());

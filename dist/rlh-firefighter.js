@@ -1,3 +1,4 @@
+import {naturalHeroClips} from './hero-motion.js';
 import * as T from './vendor/three.webgpu.min.js';
 import {decompressSync} from './vendor/fflate.module.js';
 import {RLH_FIREFIGHTER_GZIP} from './rlh-firefighter-data.js';
@@ -56,7 +57,7 @@ function militaryGeometry(part){
   militaryGeometries.set(part,geometry);return geometry;
 }
 export function createRLHFirefighterActor(kit,{includeGloves=true,military=false}={}){
-  const data=rlhFirefighterData(),root=new T.Group(),bones=data.bones.map(b=>{const bone=new T.Bone();bone.name=b.name;bone.position.fromArray(b.p);bone.quaternion.fromArray(b.q);return bone;});root.name='RLH pompier complet';
+  const original=rlhFirefighterData(),data=military?{...original,clips:naturalHeroClips(original)}:original,root=new T.Group(),bones=data.bones.map(b=>{const bone=new T.Bone();bone.name=b.name;bone.position.fromArray(b.p);bone.quaternion.fromArray(b.q);return bone;});root.name='RLH pompier complet';
   for(let i=0;i<bones.length;i++){const parent=data.bones[i].parent;(parent<0?root:bones[parent]).add(bones[i]);}
   root.updateMatrixWorld(true);
   const skeleton=new T.Skeleton(bones,data.bones.map(b=>new T.Matrix4().fromArray(b.inverse))),m=materials(kit),parts=[];
@@ -90,7 +91,11 @@ export function createRLHFirefighterActor(kit,{includeGloves=true,military=false
     get motion(){return state;},
     dispose(){mixer.stopAllAction();mixer.uncacheRoot(root);skeleton.dispose();for(const g of gloves)g.userData.dispose();}
   };
-  api.animateNative(0,.016);return api;
+  api.animateNative(0,.016);
+  // Fit canonical armour and sole probes in the established neutral frame,
+  // before any new source animation is allowed to pose the fitted character.
+  if(military){for(const track of original.clips.find(c=>c.name==='idle').animation.tracks){const [name,key]=track.name.split('.'),b=byName.get(name);if(b)b[key].fromArray(track.createInterpolant().evaluate(.016));}root.updateMatrixWorld(true);for(const v of nativePose){v.p.copy(v.b.position);v.q.copy(v.b.quaternion);}}
+  return api;
 }
 
 // Pose a real Mixamo chain. The child's rest offset defines its anatomical axis;
@@ -130,7 +135,7 @@ export function poseUnarmedForInspection(model,gloves,dt=.016,{mirrorFromRight=t
   for(let i=0;i<2;i++){
     const side=i===0?'Left':'Right',sign=i===0?-1:1;
     const upper=actor.bone(side+'Arm'),fore=actor.bone(side+'ForeArm'),hand=actor.bone(side+'Hand');
-    const target=root.localToWorld(new T.Vector3(sign*.315,1.005,-.020));
+    const target=root.localToWorld(new T.Vector3(sign*.315,1.005,-.035));
     const pole=root.localToWorld(new T.Vector3(sign*.43,1.18,.045));
     solveChain(upper,fore,hand,target,pole);
     const glove=gloves?.[i];
@@ -173,7 +178,7 @@ export function createRLHSoldier(kit,createGun,profile){
     // twisted the greaves at the walk/flight boundary despite a fixed ankle.
     upper.quaternion.copy(legRest.get(upper));lower.quaternion.copy(legRest.get(lower));
     upper.updateWorldMatrix(true,true);const hip=upper.getWorldPosition(new T.Vector3()),delta=target.clone().sub(hip);
-    const reach=(lower.position.length()+end.position.length()-.020)*root.getWorldScale(new T.Vector3()).y;
+    const reach=(lower.position.length()+end.position.length()-.035)*root.getWorldScale(new T.Vector3()).y;
     const distance=delta.length(),start=reach-.10;
     const soft=distance>start?start+.10*(1-Math.exp(-(distance-start)/.10)):distance;
     const radius=T.MathUtils.lerp(Math.min(distance,reach),soft,clamp(softness));
@@ -227,7 +232,7 @@ export function createRLHSoldier(kit,createGun,profile){
       const motionState=locomotion.sample(moving,dt,flight,this._lastRootPosition);this._lastRootPosition=root.position.clone();this.locomotion=motionState;
       this.jumpPose=jump.sample(dt,flight);
       const speed=motionState.speed,travelling=moving&&speed>.08,forward=Math.abs(motionState.travelDirection.x)<.85&&!motionState.backward;
-      this._runMode=!flight.crouched&&forward&&(!!flight.sprint||speed>(this._runMode?4.8:5.8));
+      this._runMode=!flight.crouched&&forward&&(!!flight.sprint||speed>(this._runMode?3.2:3.8));
       const run=this._runMode,aiming=trigger>.1||!!flight?.firing||!!flight?.aim,motion=travelling&&!flight.airborne?(run?'run':aiming?'walkRifle':'walk'):aiming?'rifle':'idle';this.nativeMotion=motion;
       previewCarry=!!flight?.preview&&!moving&&!aiming&&!reload&&!WEAPON_FRAME[weapon].melee;
       rest.visible=!supported();gun.userData.support.visible=supported()&&gun.userData.showSupport;
