@@ -429,7 +429,7 @@ export class VRController {
       syncTrackedHands(this.controllers,this.session,frame,this.hooks.world().renderer.xr.getReferenceSpace());
       this.applyRoles();
     }
-    const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, fire: false, fireHands:{left:false,right:false}, sprint: false, precision: false, aim:false, jump: false, pickup: false, crouchToggle: false, melee: false, charge: false };
+    const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, gamepadMoving:false, fire: false, fireHands:{left:false,right:false}, sprint: false, precision: false, aim:false, jump: false, pickup: false, crouchToggle: false, melee: false, charge: false };
     const dual=!!this.hooks.game?.()?.weapon?.dual,rawHands={left:false,right:false},trackedHands={left:false,right:false};
     const xr = this.mode === 'xr', cfg = settingsOf(this), mainHand = cfg.hand, sideHand = otherHand(mainHand);
     const focused=typeof document==='undefined'||(!document.hidden&&(!document.hasFocus||document.hasFocus()));
@@ -522,6 +522,7 @@ export class VRController {
     if(skillsConsumed){this.cancelTrigger();this.precision=this.aiming=false;return { ...result,x:0,z:0,turn:0,tilt:0,snap:0,fire:false,fireHands:{left:false,right:false},sprint:false,precision:false,aim:false,jump:false,pickup:false,crouchToggle:false };}
     if (!playing) { result.x = result.z = result.turn = result.tilt = result.snap = 0; result.sprint = result.precision = result.aim = false; result.jump = false;result.pickup = false; if (xr) this.cancelTrigger(); }
     if((!xr||mainTracked)&&(dual&&xr?!rawHands.left&&!rawHands.right:!rawFire))this.triggerBlocked=false;
+    result.gamepadMoving=playing&&!xr&&!!(result.x||result.z);
     result.jump = playing && actions.has('jump');result.pickup = playing && actions.has('pickup');result.crouchToggle=playing && actions.has('crouch');
     result.melee = playing && actions.has('melee'); result.charge = playing && actions.has('charge');
     result.fire = playing && mainTracked && rawFire && (!xr || !this.triggerBlocked);

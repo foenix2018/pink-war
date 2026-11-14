@@ -27,6 +27,7 @@ export function createPinkWarsInput(){
     actions[action]=!!state;
   }
   return {
+   gamepadMoving:!!(desktopAxis(normalized[0])||desktopAxis(normalized[1])),
    moveX:desktopAxis(normalized[0])+(held(keys,...PINK_WARS_KEYS.right)?1:0)-(held(keys,...PINK_WARS_KEYS.left)?1:0),
    moveZ:desktopAxis(normalized[1])+(held(keys,...PINK_WARS_KEYS.back)?1:0)-(held(keys,...PINK_WARS_KEYS.forward)?1:0),
    lookX:desktopAxis(normalized[2])*1.6,

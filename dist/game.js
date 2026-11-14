@@ -889,7 +889,7 @@ function stepFrame(timestamp, xrFrame) {
     $('aim-button').setAttribute('aria-pressed',String(aiming));
     currentSprinting=!aiming&&(touchSprinting||vrInput.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight')||(move.id!==null&&Math.hypot(move.x,move.y)>=.88));
     game.precisionAiming=aimBlend>.55;
-    game.step(dt, { x, z, yaw: facing, moveYaw, sprint: currentSprinting, jump,crouchToggle });
+    game.step(dt, { x, z, yaw: facing, moveYaw, gamepadMoving:vrInput.gamepadMoving, sprint: currentSprinting, jump,crouchToggle });
     cameraFeel.update(dt,{speed:Math.hypot(game.playerVelocity.x,game.playerVelocity.z),grounded:game.player.grounded,verticalSpeed:game.player.verticalSpeed,strafe:x,sprint:currentSprinting,aim:aimBlend});
     try{filmLook ||= mountFilmLook({canvas:document.getElementById('world'),graded:()=>!!world?.renderer?.fpsPresentation?.stats?.().enabled});const on=game.state==='playing'&&vr?.mode!=='xr'&&vr?.mode!=='stereo';if(on!==filmOn){filmOn=on;filmLook.setEnabled(on);}filmLook.update(dt,{health:game.player.hp/100});}catch{}
     portalAudio.sync(game.activePortals,game.time);

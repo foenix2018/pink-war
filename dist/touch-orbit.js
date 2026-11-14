@@ -2,7 +2,8 @@
 // Hold a finger to either side of its initial right-half contact point to turn.
 export const TOUCH_ORBIT_DEADZONE=12;
 export const TOUCH_ORBIT_REACH=112;
-export const TOUCH_ORBIT_MAX_SPEED=2.8; // radians per second
+export const TOUCH_ORBIT_MAX_SPEED=4.2; // radians per second
+export const TOUCH_SWIPE_GAIN=1.5;
 export function createTouchOrbit({deadzone=TOUCH_ORBIT_DEADZONE,reach=TOUCH_ORBIT_REACH,maxSpeed=TOUCH_ORBIT_MAX_SPEED}={}){
  let pointer=null,startX=0,lastX=0,lastY=0,offset=0;
  function start(id,x,y){
@@ -14,7 +15,7 @@ export function createTouchOrbit({deadzone=TOUCH_ORBIT_DEADZONE,reach=TOUCH_ORBI
   const old=offset,dx=Math.max(-90,Math.min(90,x-lastX)),dy=Math.max(-90,Math.min(90,y-lastY));
   lastX=x;lastY=y;offset=x-startX;
   // Fine flick corrections at center; outside, finger position controls rate.
-  return {fineX:Math.abs(old)<=deadzone&&Math.abs(offset)<=deadzone?dx:0,deltaY:dy};
+  return {fineX:Math.abs(old)<=deadzone&&Math.abs(offset)<=deadzone?dx*TOUCH_SWIPE_GAIN:0,deltaY:dy*TOUCH_SWIPE_GAIN};
  }
  function speed(){
   if(pointer===null)return 0;

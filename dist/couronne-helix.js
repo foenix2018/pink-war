@@ -245,6 +245,7 @@ function gameTick(dt){
  yaw-=(controls.lookX*1.8+touch.lookX*1.8)*sensitivity*dt;
  pitch=clamp(pitch-(controls.lookY+touch.lookY)*1.35*sensitivity*dt,-.85,.7);
  yaw-=(touch.lookDX||0)*.004*sensitivity;pitch=clamp(pitch-(touch.lookDY||0)*.004*sensitivity,-.85,.7);touch.lookDX=touch.lookDY=0;
+ yaw-=(touchControls?.step(dt)||0)*sensitivity;
  const x=controls.moveX+touch.x,z=controls.moveZ+touch.z;
  const aiming=!!OPTICS[game.weapon.id]&&game.reloadRemaining<=0&&(mouseAim||touch.aim||controls.aim);
  aimBlend+=(Number(aiming)-aimBlend)*(1-Math.exp(-dt*14));document.body.classList.toggle('aiming',aiming);
@@ -257,7 +258,7 @@ function gameTick(dt){
  if(jumpQueued)game.player.jumpHeld=false;
  const jump=controls.jump||jumpQueued;jumpQueued=false;
  game.nextWave=Infinity;game.toSpawn=0;
- game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,sprint,jump,crouchToggle});
+ game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,gamepadMoving:controls.gamepadMoving,sprint,jump,crouchToggle});
  missionTime+=dt;weaponFeel.update(dt);snapCamera();
  if(meleeQueued||controls.melee){const view=new T.Vector3();camera.getWorldDirection(view);game.melee({x:view.x,z:view.z});}
  if(chargeQueued||controls.charge){const eye=xr?.active?renderer.xr.getCamera():camera,from=new T.Vector3(),dir=new T.Vector3();eye.getWorldPosition(from);eye.getWorldDirection(dir);
