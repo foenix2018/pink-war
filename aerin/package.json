@@ -1,13 +1,14 @@
 {
   "name": "aerin",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "Aerin — HUD iPhone et entraînement à l’épée",
   "scripts": {
     "dev": "python3 -m http.server 8082 --directory dist",
-    "check": "node --check dist/game/aerin-game.js && node --check dist/game/mobile.js",
+    "check": "node --check dist/game/aerin-game.js && node --check dist/game/mobile.js && node --check dist/game/boot.js",
     "test:iphone": "node tests/iphone.cjs",
-    "test:hud": "node tests/hud-browser.cjs"
+    "test:hud": "node tests/hud-browser.cjs",
+    "test:startup": "node tests/startup.cjs"
   },
   "devDependencies": {
     "playwright": "1.62.1"

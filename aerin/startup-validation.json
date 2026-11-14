@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "checks": [
+    "Model download failure exposes a retry; retry loads and starts the game",
+    "A brief sword tap starts an attack without waiting for a render frame",
+    "A brief keyboard activation also starts an attack",
+    "GPU interruption pauses gameplay and exposes a visible retry",
+    "A blocked engine script shows a retry instead of an endless loading button"
+  ],
+  "physicalIPhoneTest": false
+}

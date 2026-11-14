@@ -54,3 +54,9 @@ Le code est publié dans `foenix2018/pink-war`, branche `aerin-iphone`, dossier 
 La création du projet dans l’équipe FLASHOVER X a été refusée par Vercel (403, permission insuffisante). Le projet n’est donc pas annoncé comme déployé sur Vercel. Un accès autorisant la création du projet est nécessaire.
 
 Pour rejouer les tests : `npm install`, `npx playwright install chromium`, lancer `npm run dev`, puis `npm run test:iphone` ou `npm run test:hud` dans un autre terminal. Le navigateur système est utilisé quand disponible ; `CHROMIUM_PATH` et `BASE_URL` peuvent être définis.
+
+## Démarrage et dépannage
+
+Le bouton **JOUER** devient disponible dès que le personnage est chargé. Un échec réseau, un script bloqué ou une interruption de la 3D affiche **RECHARGER LE JEU**. Les appuis brefs sur l’épée déclenchent désormais le coup immédiatement, même entre deux images. Vérifications automatisées : `npm run test:startup` ; résultats dans `startup-validation.json`.
+
+L’aperçu ChatGPT Sites est privé : sur iPhone, ouvrir le lien dans Safari avec le même compte ChatGPT. Le ZIP est du code à servir via HTTP ; l’ouvrir directement dans Fichiers ne lance pas le jeu.

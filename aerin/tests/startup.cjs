@@ -1,0 +1,50 @@
+const {chromium} = require('playwright');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const base = process.env.BASE_URL || 'http://127.0.0.1:8082';
+(async () => {
+  const browser = await chromium.launch({executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium', args: ['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+  const checks = [];
+  try {
+    const page = await browser.newPage({viewport: {width:390,height:844}, isMobile:true, hasTouch:true});
+    let failModel = true;
+    await page.route('**/assets/aerin.glb', route => { if (failModel) {failModel=false; return route.abort();} return route.continue(); });
+    await page.goto(base);
+    await page.locator('#reload-button').waitFor({state:'visible'});
+    assert.match(await page.locator('#load-error').textContent(), /téléchargé/);
+    await page.tap('#reload-button');
+    await page.waitForFunction(() => window.aerinGame?.state.ready);
+    assert.equal(await page.locator('#start-button').textContent(),'JOUER →');
+    await page.tap('#start-button');
+    assert(await page.evaluate(() => aerinGame.state.started && !aerinGame.state.paused));
+    checks.push('Model download failure exposes a retry; retry loads and starts the game');
+    // Suspend frames: a quick contact must start an attack even before the next frame.
+    await page.evaluate(() => aerinGame.renderer.setAnimationLoop(null));
+    const box = await page.locator('#attack-button').boundingBox();
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{id:1,x:box.x+box.width/2,y:box.y+box.height/2}]});
+    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    assert.equal(await page.evaluate(() => aerinGame.state.action),'attack');
+    assert.equal(await page.evaluate(() => aerinGame.input.attack.size),0);
+    checks.push('A brief sword tap starts an attack without waiting for a render frame');
+    await page.evaluate(() => {aerinGame.reset();const b=document.querySelector('#attack-button');b.dispatchEvent(new KeyboardEvent('keydown',{bubbles:true,code:'Space'}));b.dispatchEvent(new KeyboardEvent('keyup',{bubbles:true,code:'Space'}));});
+    assert.equal(await page.evaluate(() => aerinGame.state.action),'attack');
+    checks.push('A brief keyboard activation also starts an attack');
+    await page.evaluate(() => aerinGame.renderer.domElement.dispatchEvent(new Event('webglcontextlost',{cancelable:true})));
+    await page.locator('#reload-button').waitFor({state:'visible'});
+    assert(await page.evaluate(() => aerinGame.state.paused));
+    assert.equal(await page.locator('dialog[open]').count(),0);
+    checks.push('GPU interruption pauses gameplay and exposes a visible retry');
+    await page.close();
+    const broken = await browser.newPage();
+    await broken.route('**/preview/three.min.js',r=>r.abort());
+    await broken.goto(base);
+    await broken.locator('#reload-button').waitFor({state:'visible'});
+    assert.match(await broken.locator('#load-error').textContent(), /démarrer/);
+    checks.push('A blocked engine script shows a retry instead of an endless loading button');
+    const report={passed:true,checks,physicalIPhoneTest:false};
+    fs.writeFileSync(path.join(__dirname,'../startup-validation.json'),JSON.stringify(report,null,2));
+    console.log(JSON.stringify(report,null,2));
+  } finally {await browser.close();}
+})().catch(e=>{console.error(e);process.exit(1);});
