@@ -6,6 +6,9 @@ import {levelArrow,arrowGuidance} from './objective-arrow.js';
 import {createM03Guidance,m03Target} from './m03-guidance.js';
 import {playEndCinematic} from './end-cinematic.js';
 import {upgradeForWebGPU} from './webgpu-upgrade.js';
+import {createCameraFeel} from './camera-feel.js';
+import {mountFilmLook} from './film-look.js';
+const cameraFeel=createCameraFeel();let filmLook=null,filmXr=false;
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import {walkingSurface} from './surface-steps.js';
 // MISSION 03 — « Le Convoi des Absents » (campaign M03). Night Vesper sector of the visitor map, baked for three.js
@@ -274,6 +277,7 @@ function missionLost(reason='over'){
 // ---------- Camera, weapon and rig ----------
 function snapCamera(){
  if(xr?.active){xr.syncPose();return;}
+ if(debugCam){camera.fov=debugCam.fov;camera.position.set(debugCam.x,debugCam.y,debugCam.z);camera.up.set(0,debugCam.top?0:1,debugCam.top?-1:0);camera.lookAt(debugCam.lx,debugCam.ly,debugCam.lz);camera.updateProjectionMatrix();camera.updateMatrixWorld(true);weapon.visible=false;return;}
  const p=game.player,eye=characterId==='lylu'?1.71:1.61,optic=OPTICS[game.weapon.id],normal=view==='fps'?72:64;
  camera.fov=normal+(optic?(magnifiedFov(normal,optic.magnification)-normal)*aimBlend:0);
  camera.rotation.set(pitch+weaponFeel.state.pitch*.18,yaw+weaponFeel.state.yaw*.07,0,'YXZ');
@@ -286,7 +290,10 @@ function snapCamera(){
   const area=L.AREAS.find(a=>a.id===L.areaAt(p.x,p.z)),ceiling=area?.roof?area.roof-.3:Infinity;
   camera.position.set(start.x+(end.x-start.x)*nearest,Math.min(ceiling,Math.max(p.elevation+.35,start.y+(end.y-start.y)*nearest)),start.z+(end.z-start.z)*nearest);
  }
- if(view==='fps')applyFPSCameraMotion(camera,game,{tracked:!!xr?.active});camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
+ if(view==='fps')applyFPSCameraMotion(camera,game,{tracked:!!xr?.active});
+ // Living camera (bob, lean, landing dip, trauma shake): first person on screen only, never during the end scene.
+ if(view==='fps'&&!xr?.active&&running&&!endCine)cameraFeel.apply(camera,{motion:false});
+ camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
  weapon.visible=view==='fps';if(playerRig?.model)playerRig.model.root.visible=view==='third';
 }
 function changeView(){view=view==='fps'?'third':'fps';if(!playerRig&&view==='third'){view='fps';notice('PERSONNAGE SHADOW UNIT EN COURS DE CHARGEMENT');}snapCamera();}
@@ -400,7 +407,7 @@ function gameTick(dt){
  const jump=controls.jump||jumpQueued;jumpQueued=false;
  game.nextWave=Infinity;game.toSpawn=0;
  game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,sprint,jump,crouchToggle});
- missionTime+=dt;weaponFeel.update(dt);snapCamera();
+ missionTime+=dt;weaponFeel.update(dt);cameraFeel.update(dt,{speed:Math.hypot(game.playerVelocity.x,game.playerVelocity.z),grounded:game.player.grounded,verticalSpeed:game.player.verticalSpeed,strafe:x,sprint,aim:aimBlend});snapCamera();
  if(meleeQueued||controls.melee){const view=new T.Vector3();camera.getWorldDirection(view);game.melee({x:view.x,z:view.z});}
  if(chargeQueued||controls.charge){const eye=xr?.active?renderer.xr.getCamera():camera,from=new T.Vector3(),dir=new T.Vector3();eye.getWorldPosition(from);eye.getWorldDirection(dir);
   if(view!=='fps'&&!xr?.active)from.set(game.player.x,game.player.elevation+1.5,game.player.z);
@@ -422,6 +429,10 @@ function gameTick(dt){
   if(e.type==='shot'){shotsFired++;xr?.haptic('shot',e.weapon,e.hand);weaponFeel.fire(e.weapon||game.weapon.id,e.power||1,aimBlend>.5);if(enableAudio&&audioCtx)try{playLaserShot(audioCtx,e.weapon||game.weapon.id,e.power||1);}catch{}}
   if(e.type==='hit'){hits++;hitUntil=clock+.12;}
   if(e.type==='damage')$('damage').style.boxShadow='inset 0 0 105px #c52c5e77';
+  if(e.type==='damage'){cameraFeel.shake(.45);filmLook?.hit(.55);}
+  if(e.type==='kill')cameraFeel.shake(Math.max(.06,.55-Math.hypot((e.x||0)-game.player.x,(e.z||0)-game.player.z)/16));
+  if(e.type==='shot'&&!e.companion)cameraFeel.shake(.045);
+  if(e.type==='land')cameraFeel.shake(.05);
   if(e.type==='weapon')weaponFeel.reset();
   if(e.type==='reload'&&audioCtx)try{playWeaponAction(audioCtx,game.weapon.id,'reload-out');}catch{}
   if(e.type==='reloaded'&&audioCtx)try{playWeaponAction(audioCtx,game.weapon.id,'reload-ready');}catch{}
@@ -449,7 +460,7 @@ const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;retur
 let lastDevices='';
 const HOLD_LABEL={balise:'BROUILLAGE DE LA BALISE D’ORDRE',barriere:'LEVÉE DE LA BARRIÈRE',treuil:'TRACTION DU TREUIL',arrimage:'ARRIMAGE DE L’AMBULANCE AU TRAIN'};
 const VAN_WAIT={passage:'dégage le passage',escorte:'attend son escorte',machines:'machines devant',stop:'à l’arrêt',stage:'à l’arrêt'};
-let endCine=null,webgpuFinish=null,m03Guide=null,m03GuideAt=0,m03Waypoint=null;
+let debugCam=null,endCine=null,webgpuFinish=null,m03Guide=null,m03GuideAt=0,m03Waypoint=null;
 function updateHUD(){
  (combatHud ||= mountCombatHud({characterId,onAction:armorTouch})).update(game);
  const it=reading?null:mission.nearInteraction(),stageInfo=L.STAGES[mission.stage];combatHud.setContext(it?.label);
@@ -494,6 +505,7 @@ function animation(t,frame){
  const eye=xr?.active?renderer.xr.getCamera():camera;
  try{art.update(clock,dt,eye,game?.player,{van:mission?.van,beaconOff:!!mission?.done.includes('balise'),crank:mission?.hold?.name==='treuil'});}catch(error){console.warn('M03 / décor animé désactivé',error);art.update=()=>{};}
  if(xr?.active){xr.update(dt,weaponFeel.state,weaponFeel.state.kick>.025?.075:0);xr.renderScope();}
+ if(filmLook){if(filmXr!==!!xr?.active){filmXr=!!xr?.active;filmLook.setEnabled(!filmXr);}filmLook.update(dt,{health:(game?.player.hp??100)/100});}
  if(endCine)try{endCine.update(dt);}catch(error){console.warn('M03 end cinematic frame:',error);endCine.skip();}
  if(!framePending&&!recovering){
   try{const result=renderer.renderAsync?renderer.renderAsync(scene,camera):renderer.render(scene,camera);
@@ -552,6 +564,7 @@ async function boot(){
   bootStep='premier rendu';status.textContent='Premier rendu…';
   startMission();snapCamera();art.update(0,0,camera,game.player,{van:mission.van});
   if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);
+  try{filmLook=mountFilmLook({canvas,low:low(),graded:()=>!!renderer?.fpsPresentation?.stats?.().enabled});}catch(error){console.warn('film look skipped',error);}
   bootStep='prêt';hud.hidden=false;started=true;requestAnimationFrame(animation);
   touchControls=createPinkWarsTouch(canvas,{onFire:down=>{if(down)audioReady();heldFire=down;if(down)firePressQueued=true;},onJump:()=>{jumpQueued=true;},onInteract:()=>interact(),
    onNext:()=>game.cycleWeapon(),onReload:()=>game.reload(),onCrouch:()=>{crouchQueued=true;},onView:()=>changeView(),onPause:()=>pauseMission(),onAim:down=>{if(down)audioReady();mouseAim=down;}});
@@ -633,7 +646,7 @@ window.__PINK_M03=Object.freeze({
   hold:mission?.hold,pending:mission?.pending,groups:mission?.groups(),van:mission?.van,reading,vr:!!xr?.active,subtitlePlane:!!subtitlePlane?.visible,lamp:lampOn,subtitle:subtitle&&{who:subtitle.who,text:subtitle.text},queued:subtitles.length,
   backend:renderer?rendererBackend(renderer):null,rig:!!playerRig,webgpuFinish,art:art?.stats(),render:renderer?.info?.render}),
  // QA hooks (?debug=1): move the player, look, clear an encounter, fast-forward the mission clock, use an interaction, move the van.
- debug:params.has('debug')?{get scene(){return scene;},teleport:(x,z)=>{Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0});snapCamera();if(game.state==='playing'){game.step(1/60,{});mission.update(1/60);}},
+ debug:params.has('debug')?{get scene(){return scene;},cam:(x,y,z,lx,ly,lz,fov=60,top=false)=>{debugCam=x===null?null:{x,y,z,lx,ly,lz,fov,top};if(scene.fog)scene.fog.density=debugCam?.top?0:.0095;snapCamera();},teleport:(x,z)=>{Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0});snapCamera();if(game.state==='playing'){game.step(1/60,{});mission.update(1/60);}},
   look:(y,p)=>{yaw=y;pitch=p;snapCamera();},clear:()=>{game.enemies.length=0;mission.update(1/60);},
   interact:()=>{interact();return reading;},close:()=>closeDocument(),skip:seconds=>{game.time+=seconds;mission.update(1/60);},god:()=>{game.invulnerable=1e9;},
   use:id=>{const it=L.INTERACTIONS.find(i=>i.id===id);Object.assign(game.player,{x:it.x,z:it.z,elevation:it.y||0,grounded:true,verticalSpeed:0});interact();return {reading,stage:mission.stageId};},

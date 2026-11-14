@@ -98,6 +98,23 @@ export const SCRIPT = Object.freeze({
       ['gaby', 'Une partie a été effacée avant la Chute. Je m’approche du terminal, je peux peut-être lire le reste…'],
       ['ordre', 'SIGNATURE INCOMPATIBLE · ARCHITECTURE NON AUTORISÉE · PROCÉDURE DE RÉCUPÉRATION PRIORITAIRE'],
       ['voss', 'ORDRE vient d’identifier GAB-1 comme une menace. Unités de poursuite lancées. On décroche, GHJU. Nira Solen nous attend sous la Ligne 9.'])
+  },
+  // End scene in the engine, under the gantry, while Voss's team prepares the way out.
+  fin: {
+    ghju: L(['gaby', 'Pardon. Je me suis approchée trop près du terminal. Maintenant ORDRE sait que j’existe.'],
+      ['ghju', 'Tu n’as rien à te faire pardonner. Tu as lu ce que personne n’avait lu depuis la Chute.'],
+      ['gaby', '« Architecture non autorisée. » C’est comme ça qu’il m’appelle. Comme si je n’étais qu’une erreur dans son code.'],
+      ['ghju', 'Pour moi, tu es GAB. Ma sœur. Le reste, ORDRE peut le garder.'],
+      ['gaby', 'Le protocole PINK… il y avait un fragment de signature dans l’archive. Bleu. Comme celle de l’échangeur.'],
+      ['ghju', 'Alors on le garde. On le compare sous la Ligne 9. Reste près de moi.'],
+      ['gaby', 'Toujours. C’est la seule promesse que je sais tenir.']),
+    lylu: L(['cara', 'Bon. J’ai réveillé la plus grosse intelligence de Vesper. Tu peux le dire, je suis douée.'],
+      ['lylu', 'Tu es surtout recherchée, maintenant. Ça ne te fait pas peur ?'],
+      ['cara', 'Si. Mais l’archive disait que PINK a été fait pour que les humains gardent la main. Je veux savoir pourquoi j’y ressemble autant.'],
+      ['lylu', 'On le saura. Ensemble, Carla. Pas de détour, pas de mission en solo.'],
+      ['cara', 'Promis. Et puis… tu as vu le fragment de signature ? Bleu. Le même que sur l’échangeur.'],
+      ['lylu', 'Je l’ai vu. Je n’ose pas encore y croire.'],
+      ['cara', 'Alors je vais y croire pour nous deux, le temps que tu y arrives.'])
   }
 });
 export function linesFor(id, characterId = 'ghju') {

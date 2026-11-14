@@ -16,6 +16,8 @@ import { AREAS, DOORS, INTERACTIONS, FLOORS, HEIGHTS, areaAt } from './m04-layou
 import { createSignage } from './signage.js';
 import {createFunctionalProp} from './functional-props.js';
 import { softCube, splitPieces } from './soft-pieces.js';
+import { createStationKit } from './m04-station.js';
+import { createLightShafts } from './light-shafts.js';
 
 const TAU = Math.PI * 2;
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
@@ -45,10 +47,12 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
   const tiled = (url, color, roughness, metalness, tile, extra = {}) => { const m = std(color, roughness, metalness, { map: tex(url), ...extra }); m.userData.tile = tile; return photo.bind(m,url); };
   const glow = color => new T.MeshBasicMaterial({ color, toneMapped: false });
   const additive = (color, opacity = .6) => new T.MeshBasicMaterial({ color, transparent: true, opacity, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false, side: T.DoubleSide });
+  // Photo-scanned station surfaces and the plant equipment models (m04-station.js).
+  const station = createStationKit(T, root, { low }), S = station.M;
   const M = {
-    concrete: tiled(L9('concrete_wall_006'), 0x8f949c, .9, .02, 3), slab: tiled(CC('concrete_floor'), 0x7d8288, .85, .05, 3), asphalt: tiled(CC('vesper-asphalt'), 0x6c7076, .55, .1, 4),
-    plate: tiled(L9('metal_plate'), 0x8a95a3, .45, .65, 2), grid: tiled(L9('rusty_metal_grid'), 0x8c8f96, .5, .55, 1.5), shutter: tiled(L9('rusted_shutter'), 0xa9b4be, .55, .4, 3),
-    panel: tiled(L9('long_white_tiles'), 0xc7ced8, .4, .2, 1.6), antiSkid: tiled(L9('anti_skid_tiles'), 0x7f868e, .7, .2, 2), corrugated: tiled(CC('corrugated_iron'), 0x7a8592, .45, .6, 2),
+    concrete: S.precast, slab: S.slab, asphalt: tiled(CC('vesper-asphalt'), 0x6c7076, .55, .1, 4),
+    plate: S.plate, grid: S.tread, shutter: S.shutter,
+    panel: tiled(L9('long_white_tiles'), 0xc7ced8, .4, .2, 1.6), antiSkid: S.antiSlip, corrugated: S.cladding, raised: Object.assign(S.raised, { userData: { tile: 1.2 } }),
     steel: tiled(CC('vesper-steel'), 0x9aa3ad, .35, .8, 2),
     blue: std(0x1d4f8c, .45, .4), yellow: std(0xe0b21e, .5, .2), dark: std(0x161b24, .5, .6), black: std(0x0b0d10, .6, .3), white: std(0xdfe3e8, .4, .2), rust: std(0x6e4530, .8, .4),
     glass: std(0x6f8fb0, .05, .6, { transparent: true, opacity: .3 }),
@@ -93,7 +97,7 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
   const cylinder = (m, x, y, z, r, h, { segments = 20, r2 = r, axis = 'y' } = {}) => { const c = new T.Mesh(new T.CylinderGeometry(r2, r, h, segments), m); c.position.set(x, y, z); if (axis === 'x') c.rotation.z = Math.PI / 2; if (axis === 'z') c.rotation.x = Math.PI / 2; return add(c); };
 
   // ---------- Grounds, roofs ----------
-  const FLOOR = { quai: M.antiSkid, sas: M.panel, cour: M.slab, hangar: M.slab, atelier: M.antiSkid, 'relais-est': M.grid, maintenance: M.grid, anneau: M.plate, portique: M.plate };
+  const FLOOR = { quai: M.antiSkid, sas: M.panel, cour: M.slab, hangar: M.slab, atelier: M.raised, 'relais-est': M.grid, maintenance: M.grid, anneau: M.plate, portique: M.plate };
   function buildGrounds() {
     const ground = new T.Mesh(metricGround(T,220,220,M.asphalt.userData.tile), M.asphalt); ground.rotation.x = -Math.PI / 2; ground.position.y = -.01; M.asphalt.map.repeat?.set(1, 1); add(ground);
     for (const a of AREAS) { if (a.id === 'portique') continue; floorRect(FLOOR[a.id] || M.slab, a.x1, a.x2, a.z1, a.z2, .006); if (a.roof) { ceilRect(a.id === 'hangar' ? M.corrugated : M.panel, a.x1, a.x2, a.z1, a.z2, a.roof); floorRect(M.concrete, a.x1 - .2, a.x2 + .2, a.z1 - .2, a.z2 + .2, a.roof + .3); } }
@@ -149,6 +153,7 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
   const breach = { level: 1, target: 1 }, relays = new Map(), stabs = [];
   function dress(o) {
     if(o.kind==='fps-cover')return;
+    if (station.dress(o)) return;
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, h = o.height;
     // All stages share the same hard-surface silhouettes, independent of PBR palette.
     const shared={bench:'bench',scanner:'scanner',transformer:'transformer',
@@ -209,7 +214,7 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
         const core = new T.Mesh(new T.OctahedronGeometry(.7, 1), glow(0xff3fb4)); core.position.y = h * .55; g.add(core);
         const ring = new T.Mesh(new T.TorusGeometry(1.1, .06, 6, 32), glow(0xff3fb4)); ring.position.y = h * .55; g.add(ring);
         const top = new T.Mesh(new T.CylinderGeometry(o.hx, o.hx, .3, 16), M.dark); top.position.y = h; g.add(top);
-        stabs.push({ g, core, ring, off: 0, id: 'stab-' + (stabs.length + 1) }); break;
+        station.stabilizer(g, o.hx, h); stabs.push({ g, core, ring, off: 0, id: 'stab-' + (stabs.length + 1) }); break;
       }
       case 'console': box(M.dark, x1, x2, 0, h - .05, z1, z2); piece(M.screen, o.x, h, o.z - o.hz + .2, w * .8, .5, .04); piece(M.ledMagenta, o.x, h - .1, z2 + .01, w * .9, .05, .02); break;
       case 'coolant': cylinder(M.white, o.x, h / 2, o.z, o.hx, h); cylinder(M.ledCyan, o.x, h + .05, o.z, o.hx * .5, .1); break;
@@ -330,7 +335,10 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
       (s.indoor?indoor:outdoor).push({position:[s.x,s.y+.10,s.z],size:s.indoor?[1,.25,1]:[1.3,.24,.55],color:s.color});
     }
     createIndustrialLightBatch(T,root,indoor,{kind:'highbay',low});createIndustrialLightBatch(T,root,outdoor,{kind:'sodium',low});
+    // Light shafts and dust under the hangar high-bays and the court's sodium heads.
+    try { shafts = createLightShafts(T, root, sources.map(s => ({ x: s.x, y: s.y, z: s.z, color: s.color.getHex() })), { low, max: low ? 12 : 36 }); } catch (error) { console.warn('M04 / faisceaux désactivés', error); }
   }
+  let shafts = null;
 
   const POOL = low ? 3 : 6, pool = Array.from({ length: POOL }, () => { const l = new T.PointLight(0xffffff, 0, 14, 1.6); add(l, scene); return { l, s: null, level: 0 }; });
   function updatePool(dt, e) {
@@ -362,8 +370,8 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
   return {
     root, M, sun:moon, openPortal,get ready(){return photo.ready;},
     build(obstacles) {
-      buildGrounds(); buildDecks(); buildWalls(obstacles); for (const o of obstacles) dress(o); gantryStabilizer(); buildRelays(); buildBreach(); buildDoors(); buildDevices(); buildSigns(); buildFixtures();
-      neons.meshes(); neons.build(); flushGeometry(); flushPieces();
+      buildGrounds(); buildDecks(); buildWalls(obstacles); station.walls(obstacles); station.hangar(AREAS.find(a => a.id === 'hangar')); station.plantBeyond(); for (const o of obstacles) dress(o); gantryStabilizer(); buildRelays(); buildBreach(); buildDoors(); buildDevices(); buildSigns(); buildFixtures();
+      neons.meshes(); neons.build(); flushGeometry(); flushPieces(); station.finish();
       fpsChapter=createFPSChapter(T,root,{chapter:'m04',obstacles:obstacles,areas:AREAS,low,webgpu,worldFx});
     },
     update(t, dt, eye, player) {
@@ -371,13 +379,13 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
       worldFx.update(t,eye.position);
       const e = eye.position; updatePool(dt, e); updateBreach(t, dt); updatePortals(t, dt, e); updateDevices(t, dt); if (player) updateDoors(dt, player);
       for (const [, r] of relays) { r.lamps.forEach((l, k) => l.material.color.set(r.on ? (Math.sin(t * 6 + k) > 0 ? 0x3dff8a : 0x1a6a3a) : 0x3a1414)); r.coil.material.color.set(r.on ? 0x5fe0f0 : 0x203040); r.coil.rotation.z += dt * (r.on ? 4 : 0); }
-      for (const f of animated) f(t, dt); signs.update(t);
+      for (const f of animated) f(t, dt); station.update(t, dt); shafts?.update(dt); signs.update(t);
     },
     setDoor(id, open) { const d = doors.get(id); if (d) d.state = open ? (d.d.open ? 'auto' : 'open') : 'closed'; },
     setPower(id, on) { const r = relays.get(id); if (r) r.on = !!on; },
     breach(v) { breach.target = Math.max(0, Math.min(1, v)); },
     markDone(id, isDone = true) { const d = devices.get(id); if (d) d.done = isDone; if (id.startsWith('stab-')) { if (isDone) done.add(id); else done.delete(id); } },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
-    stats() { return { ...stats, photo:photo.stats(), fps:fpsChapter?.stats(), worldEffects:worldFx.stats(), neons:neons.stats(), portals: portals.length, breach: +breach.level.toFixed(2), signs: signs.stats().signs, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, station: station.stats, photo:photo.stats(), fps:fpsChapter?.stats(), worldEffects:worldFx.stats(), neons:neons.stats(), portals: portals.length, breach: +breach.level.toFixed(2), signs: signs.stats().signs, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }

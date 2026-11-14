@@ -414,3 +414,8 @@ body.pw-immersion-hud .pw-hud.pw-guided .pw-hud-context span{display:block!impor
 .pw-hud-guide .pw-guide-route b{font:700 15px/1 'Oxanium',system-ui,sans-serif;letter-spacing:.03em;font-variant-numeric:tabular-nums;color:#f1f7ff}
 @media (pointer:fine) and (min-width:900px){.pw-hud-guide{top:calc(var(--pw-top) + 8px)!important}}
 @media(orientation:landscape) and (max-height:540px){.pw-hud-guide{top:calc(var(--pw-top) + 4px)!important;width:auto!important;padding:4px 10px!important}.pw-hud-guide .pw-guide-route b{font-size:13px}}
+/* Objective arrow on the top row, centred between the health panel (left) and the ammo panel (right), vertically
+   aligned with them. On a phone the gap between the two panels is about 100 px: the chip shrinks to fit there. */
+.pw-hud .pw-hud-guide{top:calc(var(--pw-top) + 30px)!important;left:50%!important;transform:translate(-50%,-50%)!important;max-width:calc(100vw - 2 * (var(--pw-left) + 136px));z-index:2}
+@media (pointer:fine) and (min-width:900px){.pw-hud .pw-hud-guide{top:calc(var(--pw-top) + 48px)!important;max-width:calc(100vw - 2 * (var(--pw-left) + 380px))}}
+@media (max-width:440px){.pw-hud .pw-hud-guide{padding:5px 9px!important}.pw-hud .pw-hud-guide .pw-guide-route{gap:5px}.pw-hud .pw-hud-guide .pw-guide-route i{font-size:18px;line-height:18px}.pw-hud .pw-hud-guide .pw-guide-route b{font-size:13px}}

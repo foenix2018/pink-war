@@ -7,7 +7,7 @@ import {arrowGuidance} from './objective-arrow.js';
 
 // The interaction each stage is waiting for (readings included: they move the story on).
 export const STAGE_TARGET = Object.freeze({ arrivee: 'ines', alimentation: 'alimentation', dossier: 'dossier', kit: 'kit', atelier: 'manifeste', verin: 'verin',
-  a3: 'relais', balise: 'balise', barriere: 'barriere', echangeur: 'treuil', arrimage: 'arrimage', regulation: 'regulation' });
+  depot: 'cellules', transfo: 'transfo', usine: 'chaine', detenus: 'cellule', a3: 'relais', balise: 'balise', barriere: 'barriere', echangeur: 'treuil', arrimage: 'arrimage', regulation: 'regulation' });
 const ESCORT = new Set(['escorte', 'escorte2', 'gare']);
 
 export function m03Target(mission, game) {
@@ -18,7 +18,10 @@ export function m03Target(mission, game) {
     const v = mission.van, back = { x: v.x + Math.sin(v.yaw) * 5, z: v.z + Math.cos(v.yaw) * 5 };
     return { x: back.x, z: back.z, y: 0, label: 'ESCORTER L’AMBULANCE', id: 'van', near: 6 };
   }
-  const id = STAGE_TARGET[s]; if (!id) return null;
+  const id = STAGE_TARGET[s];
+  if (!id) { // a fight with no device (the assault on the quay): the arrow leads to the nearest machine
+    const foe = game.enemies.reduce((b, e) => !b || Math.hypot(e.x - p.x, e.z - p.z) < Math.hypot(b.x - p.x, b.z - p.z) ? e : b, null);
+    return foe && s !== 'fin' ? { x: foe.x, z: foe.z, y: foe.elevation || 0, label: 'REPOUSSER L’ASSAUT', id: 'enemy' } : null; }
   const it = L.INTERACTIONS.find(i => i.id === id); if (!it) return null;
   // Name the local encounter that locks this device. Never send the player
   // after an unrelated patrol on the other side of the district.
@@ -31,7 +34,7 @@ export function m03Target(mission, game) {
   return { x: it.x, z: it.z, y: it.y || 0, label: it.label, id };
 }
 
-const GRID = { x0: -64, z0: -102, w: 166, h: 178, cell: 1 };
+const GRID = { x0: -80, z0: -125, w: 182, h: 201, cell: 1 };
 const RADIUS = .7;
 export function createM03Guidance({ traversal = null } = {}) {
   let solid = null, source = null, fields = new Map();
@@ -45,14 +48,17 @@ export function createM03Guidance({ traversal = null } = {}) {
       for (let gz = az; gz <= bz; gz++) for (let gx = ax; gx <= bx; gx++) solid[idx(gx, gz)] = 1;
     }
     for (const o of obstacles) {
-      if (o.walkableSurface || (o.y || 0) > 1.6 || (o.y || 0) + (o.height || 0) < .35) continue;
+      if (o.van || o.walkableSurface || (o.y || 0) > 1.6 || (o.y || 0) + (o.height || 0) < .35) continue; // the ambulance moves: handled live
       const [ax, az] = cellOf(o.x - o.hx - RADIUS, o.z - o.hz - RADIUS), [bx, bz] = cellOf(o.x + o.hx + RADIUS, o.z + o.hz + RADIUS);
       for (let gz = az; gz <= bz; gz++) for (let gx = ax; gx <= bx; gx++) {
         const c = centre(gx, gz); if (Math.abs(c.x - o.x) < o.hx + RADIUS && Math.abs(c.z - o.z) < o.hz + RADIUS) solid[idx(gx, gz)] = 1;
       }
     }
   }
-  const open = (gx, gz) => gx >= 0 && gz >= 0 && gx < GRID.w && gz < GRID.h && !solid[idx(gx, gz)];
+  // The ambulance is tested where it stands now (it drives during the mission), not where it was when the grid was built.
+  let van = null;
+  const inVan = (gx, gz) => { if (!van) return false; const c = centre(gx, gz); return Math.abs(c.x - van.x) < van.hx + RADIUS && Math.abs(c.z - van.z) < van.hz + RADIUS; };
+  const open = (gx, gz) => gx >= 0 && gz >= 0 && gx < GRID.w && gz < GRID.h && !solid[idx(gx, gz)] && !inVan(gx, gz);
   function nearestOpen(x, z) {
     const [gx, gz] = cellOf(x, z); if (open(gx, gz)) return [gx, gz];
     for (let r = 1; r < 6; r++) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) if (Math.max(Math.abs(dx), Math.abs(dz)) === r && open(gx + dx, gz + dz)) return [gx + dx, gz + dz];
@@ -60,7 +66,7 @@ export function createM03Guidance({ traversal = null } = {}) {
   }
   // Distance field (8-neighbour, no corner cutting) from a goal cell; cached per goal.
   function field(goal) {
-    const key = goal[0] + ',' + goal[1]; if (fields.has(key)) return fields.get(key);
+    const key = goal[0] + ',' + goal[1] + (van ? '|' + Math.round(van.x) + ',' + Math.round(van.z) + ',' + (van.hx > van.hz ? 1 : 0) : ''); if (fields.has(key)) return fields.get(key);
     const d = new Float64Array(GRID.w * GRID.h).fill(Infinity), heap = [[0, goal[0], goal[1]]]; d[idx(goal[0], goal[1])] = 0;
     const push = n => { heap.push(n); let i = heap.length - 1; while (i) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
     const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
@@ -100,6 +106,7 @@ export function createM03Guidance({ traversal = null } = {}) {
     waypoint(player, target, obstacles) {
       if (!player || !target) return null;
       if (obstacles !== source) build(obstacles);
+      van = obstacles.find(o => o.van) || null;
       const y = player.elevation || 0, ty = target.y || 0, s = stair();
       // Mid-flight on the stairway: finish it in its lane before heading anywhere (cutting across drops you off its side).
       if (s && y > .15 && y < s.height - .25 && Math.abs(player.x - s.x) < s.halfWidth + .8 && player.z <= s.bottomZ + .4 && player.z >= s.topZ - .6) {

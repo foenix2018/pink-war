@@ -52,10 +52,11 @@ test('chapter 03 objects: every baked prop box becomes a modelled object with th
  const {props,drop}=classifySectorProps(meta,sector.world);
  const count=k=>props.filter(p=>p.kind===k).length;
  assert.equal(count('jersey'),28);assert.equal(count('workbench'),7);assert.equal(count('bed'),5);assert.equal(count('barricade'),3);
- assert.ok(count('drum')>=20&&count('lamp')>=12&&count('post')>=20&&count('medcase')>=6&&count('rack')>=6&&count('bush')>=4);
- assert.ok(props.length>=150);assert.ok(drop.size>2000,'the baked boxes are dropped: '+drop.size);
+ assert.equal(count('bollard'),25,'kerb bollards every 12 m, not oil drums');assert.equal(count('pier'),12,'the row at z −56 carries the viaduct');assert.equal(count('lamp'),0);assert.ok(count('mast')>=20&&count('medcase')>=6&&count('rack')>=6&&count('cabin')>=4);
+ assert.equal(count('drum')+count('bush')+count('post'),0,'no random drums, shrub blocks or anonymous poles');
+ assert.ok(props.length>=150);assert.ok(drop.size>40000,'baked boxes and the loose scatter are dropped: '+drop.size);
  // No street furniture inside the annexe or the workshop.
- for(const p of props.filter(p=>p.kind==='lamp'||p.kind==='post'))assert.ok(!AREAS.some(a=>a.roof&&p.cx>=a.x1&&p.cx<=a.x2&&p.cz>=a.z1&&p.cz<=a.z2),'street object indoors at '+p.cx+','+p.cz);
+ for(const p of props.filter(p=>p.kind==='pier'||p.kind==='mast'))assert.ok(!AREAS.some(a=>a.roof&&p.cx>=a.x1&&p.cx<=a.x2&&p.cz>=a.z1&&p.cz<=a.z2),'street object indoors at '+p.cx+','+p.cz);
  T.TextureLoader.prototype.load=function(){return new T.Texture();};
  const group=new T.Group(),r=createSectorProps(T,group,props,{rich:true}).stats();
  assert.ok(r.meshes<=32,'merged per material: '+r.meshes);assert.ok(r.triangles<220000,'triangles '+r.triangles);
@@ -64,4 +65,34 @@ test('chapter 03 objects: every baked prop box becomes a modelled object with th
  assert.equal(JSON.stringify(meta.colliders),before,'collisions are not modified');
  const low=createSectorProps(T,new T.Group(),props,{low:true}).stats();assert.ok(low.triangles<r.triangles*.6);
  assert.match(read('m03-art.js'),/createSectorProps\(T, root, propList\.props, \{ low, rich \}\)/);
+});
+
+test('chapter 03 plots: paved aprons, a real boulevard, marked yards and a perimeter wall with matching collisions',async()=>{
+ const {createSectorGrounds,APRONS,BOULEVARD}=await import('../dist/m03-grounds.js');const L=await import('../dist/m03-layout.js');
+ const g=createSectorGrounds(T,new T.Group(),{rich:true}),s=g.stats();
+ assert.ok(s.quads>400&&s.meshes<=8);assert.ok(s.bays>=30,'parking bays: '+s.bays);
+ for(const [x1,x2] of APRONS)assert.ok(Math.min(Math.abs(x1),Math.abs(x2))>=15,'aprons never cover the avenue or its pavements');
+ assert.equal(BOULEVARD.median,-56,'the median sits under the lamp row');
+ const box=new T.Box3().setFromObject(g.group);assert.ok(box.min.y>-.06&&box.max.y<4.2);
+ const walls=L.extraObstacles().filter(o=>o.look==='perimeter');assert.equal(walls.length,L.PERIMETER.length);
+ for(const w of walls)assert.ok(Math.abs(w.x)-w.hx>=77||Math.abs(w.z)-w.hz>=71,'the wall stands on the boundary, outside every route');
+ for(const p of L.VAN_PATH)assert.ok(!walls.some(w=>Math.abs(p.x-w.x)<w.hx+3&&Math.abs(p.z-w.z)<w.hz+3));
+});
+
+test('chapter 03 has three more places to play: the depot interior, the substation under the viaduct, the holding yard',async()=>{
+ const L=await import('../dist/m03-layout.js');const {sectorObstacles}=await import('../dist/m03-sector.js');const {createAddedPlaces}=await import('../dist/m03-depot.js');
+ const ids=L.STAGES.map(s=>s.id);
+ assert.deepEqual(ids.slice(ids.indexOf('verin'),ids.indexOf('a3')),['verin','depot','detenus','escorte']);assert.equal(ids[ids.indexOf('balise')+1],'transfo');assert.equal(ids[ids.indexOf('transfo')+1],'usine');assert.equal(ids[ids.indexOf('usine')+1],'barriere');assert.equal(ids[ids.indexOf('arrimage')+1],'assaut');assert.equal(ids[ids.indexOf('assaut')+1],'regulation');
+ const world=sectorObstacles(meta,L.extraObstacles());
+ assert.ok(!world.some(o=>o.kind==='entrepôt fermé'&&Math.abs(o.x-38)<1&&Math.abs(o.z+15)<1),'the closed hull of the depot is gone');
+ const D=L.DEPOT,solidAt=(x,z,y=1)=>world.some(o=>!o.walkableSurface&&Math.abs(x-o.x)<o.hx&&Math.abs(z-o.z)<o.hz&&y>=(o.y||0)&&y<(o.y||0)+o.height);
+ assert.ok(!solidAt(D.x1+.3,-15),'the dock door is open');assert.ok(solidAt(D.x1+.3,-15,6),'with a lintel above');assert.ok(solidAt(D.x1+.3,-25)&&solidAt(D.x2-.3,-15)&&solidAt(38,D.z1+.3)&&solidAt(38,D.z2-.3),'four walls');
+ assert.ok(!solidAt(33.5,-18)&&!solidAt(50.4,-15),'aisles and the cells are clear');assert.equal(world.filter(o=>o.look==='depot-rack').length,6);
+ for(const [id,area] of [['cellules','depot'],['transfo','viaduc-ouest'],['cellule','retention']])assert.equal(L.areaAt(...(i=>[i.x,i.z])(L.INTERACTIONS.find(i=>i.id===id))),area);
+ for(const n of ['depot','depot2','transfo','transfo1','transfo2','detention','detention2'])assert.ok(L.ENCOUNTERS[n].units.length>=3,n);
+ assert.equal(L.HOLDS.transfo,28);assert.equal(L.HOLD_WAVES.transfo.length,2);
+ T.TextureLoader.prototype.load=function(){return new T.Texture();};
+ const places=createAddedPlaces(T,new T.Group(),{rich:true}),s=places.stats();
+ assert.equal(s.racks,6);assert.ok(s.pallets>40,'loaded racks: '+s.pallets);assert.equal(s.lamps,20,'depot 12 + plant 8');assert.ok(s.meshes<=28);assert.ok(places.lights.length>=18&&places.lamps.length>=16);
+ const {linesFor}=await import('../dist/m03-story.js');for(const k of ['depot','cellules','viaduc','transfo','transfoOk','retention','detenus','usine','chaine','assaut','assautOk'])for(const c of ['ghju','lylu'])assert.ok(linesFor(k,c).length>=1,k);
 });

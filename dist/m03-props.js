@@ -5,7 +5,7 @@
 // object is built in its place: same footprint, same height, same collision box (physics is not touched).
 // All parts are merged per material: about twenty draw calls for the whole set.
 import { roundedBox } from './webgpu-upgrade.js';
-import { AREAS, sectorPropOffset } from './m03-layout.js';
+import { AREAS, sectorPropOffset, DEPOT, FACTORY } from './m03-layout.js';
 import {faceBounds,inside,retiredDecoration} from './m03-coherence.js';
 
 const TAU = Math.PI * 2;
@@ -44,20 +44,22 @@ export function classifySectorProps(meta, world, { bounds = meta.bounds } = {}) 
     else if (label === 'lit médical') kind = 'bed';
     else if (label === 'barricade') kind = 'barricade';
     else if (label !== 'géométrie') kind = null;
-    else if (lo >= 2.8 && h <= 7 && plant / total > .45) kind = 'bush';
+    else if (lo >= 2.8 && h <= 7 && plant / total > .45) kind = 'cabin';
     else if (lo >= .45 && hi <= 1.2 && h <= 1.3 && white > 0 && red > 0) kind = 'medcase';
     else if (lo >= .6 && hi <= 1.25 && h >= 1.2 && h <= 1.9 && cyan > 0) kind = 'vending';
     else if (lo >= 1.4 && hi <= 2.4 && h <= 1.3 && quads.length >= 20) kind = 'generator';
     else if (lo >= .55 && hi <= 1.05 && h >= 4 && h <= 5.5 && y > .3 && (cyan || amber)) kind = 'rack';
-    else if (lo >= .7 && hi <= .9 && h <= 1.25 && y < .1) kind = 'drum';
+    else if (lo >= .7 && hi <= .9 && h <= 1.25 && y < .1) kind = 'bollard';
     else if (lo >= .45 && hi <= .9 && h >= 7.5 && h <= 13 && plant / total > .4) kind = 'tree';
     else if (lo >= .45 && hi <= .9 && h >= 7.5 && h <= 13) kind = 'lamp';
-    else if (lo >= .5 && hi <= .7 && h >= 1.3 && h <= 6.2) kind = 'post';
+    else if (lo >= .5 && hi <= .7 && h >= 1.3 && h <= 6.2) kind = 'mast';
     if (!kind) continue;
     // Inside the annexe or the workshop a pole is a structural column or a service riser, never a street lamp.
     const indoor = AREAS.some(a => a.roof && (c.x1 + c.x2) / 2 >= a.x1 && (c.x1 + c.x2) / 2 <= a.x2 && (c.z1 + c.z2) / 2 >= a.z1 && (c.z1 + c.z2) / 2 <= a.z2);
+    // The row at z −56 carries the viaduct (« route haute »): piers, not lamps. Other tall poles are steel stanchions.
+    if (kind === 'lamp') kind = Math.abs((c.z1 + c.z2) / 2 + 56) < 1.5 ? 'pier' : 'stanchion';
     if (indoor && (kind === 'lamp' || kind === 'tree')) kind = 'column';
-    else if (indoor && kind === 'post') kind = 'riser';
+    else if (indoor && kind === 'mast') kind = 'riser';
     // Centroids can sit inside a small prop while the actual face spans a wall
     // or ceiling. Retire only complete owned faces, never a whole building face.
     const owned={...c,y1:Math.max(0,c.y1)-.15,y2:c.y2+.3};
@@ -69,7 +71,26 @@ export function classifySectorProps(meta, world, { bounds = meta.bounds } = {}) 
     const ground=Math.max(0,...meta.decks.filter(f=>mx>=f.x1&&mx<=f.x2&&mz>=f.z1&&mz<=f.z2&&f.h<=y+.1).map(f=>f.h));
     out.push({ kind, c, cx: mx+offset.x, cz: mz+offset.z, y:ground, h:c.y2-ground, len: hi, wid: lo, along, face: mx > 0 ? -Math.PI / 2 : Math.PI / 2 });
   }
-  return { props: out, drop };
+  // Loose scatter of the visitor map (thousands of tiny debris quads and floating foliage sown at random over the
+  // ground): dropped, so the ground reads as a paved, maintained sector. Anything that belongs to a collider (walls,
+  // furniture, vehicles), every light and sign, and the road surface are kept.
+  const KEEP = new Set([2, 5, 6, 7, 9, 11, 12, 15, 17]), colCells = new Map();
+  for (const c of meta.colliders) for (let gx = Math.floor((c.x1 - .15) / C); gx <= Math.floor((c.x2 + .15) / C); gx++) for (let gz = Math.floor((c.z1 - .15) / C); gz <= Math.floor((c.z2 + .15) / C); gz++) { const k = gx + ',' + gz; let l = colCells.get(k); if (!l) colCells.set(k, l = []); l.push(c); }
+  const owned = i => (colCells.get(cellKey(cx[i], cz[i])) || []).some(c => cx[i] >= c.x1 - .15 && cx[i] <= c.x2 + .15 && cz[i] >= c.z1 - .15 && cz[i] <= c.z2 + .15 && cy[i] <= c.y2 + .5);
+  let scatter = 0;
+  for (let i = 0; i < n; i++) {
+    // The depot is rebuilt as an interior (m03-depot.js): its baked closed hull goes.
+    if (cx[i] > DEPOT.x1 - .3 && cx[i] < DEPOT.x2 + .3 && cz[i] > DEPOT.z1 - .3 && cz[i] < DEPOT.z2 + .3 && cy[i] < DEPOT.height + .3) { drop.add(i); continue; }
+    if (cx[i] > FACTORY.x1 - .3 && cx[i] < FACTORY.x2 - .7 && cz[i] > FACTORY.z1 - .3 && cz[i] < FACTORY.z2 + .3 && cy[i] < FACTORY.height + .3) { drop.add(i); continue; } // the plant, rebuilt as an interior (its east-face balconies stay)
+    if (drop.has(i) || cx[i] < bounds.minX || cx[i] > bounds.maxX || cz[i] < bounds.minZ || cz[i] > bounds.maxZ) continue;
+    const m = world.mat[i]; if (KEEP.has(m)) continue;
+    let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9]; const b = i * 12;
+    for (let k = 0; k < 4; k++) for (let a = 0; a < 3; a++) { const v = world.pos[b + k * 3 + a] * s; if (v < lo[a]) lo[a] = v; if (v > hi[a]) hi[a] = v; }
+    const ext = Math.max(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
+    const loosePlant = m === 4 && ext < 3, debris = ext < .7 && hi[1] < 3 && hi[1] > .02;
+    if ((loosePlant || debris) && !owned(i)) { drop.add(i); scatter++; }
+  }
+  return { props: out, drop, scatter };
 }
 
 // ---------- Geometry helpers ----------
@@ -152,6 +173,9 @@ export function createSectorProps(T, root, props, { low = false, rich = false } 
     bark: mat('écorce', { color: 0x4b3b2d, roughness: .96, metalness: 0, ...nor(l9('concrete_wall_006', 'nor'), 1.4) }),
     leaves: mat('feuillage', { vertexColors: true, roughness: .78, metalness: 0 }, { sheen: .6, sheenRoughness: .5, sheenColor: 0x9fd08a }),
     glass: mat('verre', { color: 0x0e161d, roughness: .05, metalness: .2, transparent: true, opacity: .5 }, { clearcoat: 1, clearcoatRoughness: .02 }),
+    cabinA: mat('module blanc', { map: tex(cc('corrugated_iron_diff_512.jpg')), color: 0xd9dee0, roughness: .5, metalness: .2, ...nor(cc('corrugated_iron_normal_512.jpg'), 1) }, { clearcoat: .3, clearcoatRoughness: .35 }),
+    cabinB: mat('module bleu', { map: tex(cc('corrugated_iron_diff_512.jpg')), color: 0x4f86a8, roughness: .5, metalness: .2, ...nor(cc('corrugated_iron_normal_512.jpg'), 1) }, { clearcoat: .3, clearcoatRoughness: .35 }),
+    cabinC: mat('module orange', { map: tex(cc('corrugated_iron_diff_512.jpg')), color: 0xc7743a, roughness: .5, metalness: .2, ...nor(cc('corrugated_iron_normal_512.jpg'), 1) }, { clearcoat: .3, clearcoatRoughness: .35 }),
     vending: new T.MeshBasicMaterial({ map: vendingTex, toneMapped: false }), monitor: new T.MeshBasicMaterial({ map: monitorTex, toneMapped: false }),
     warm: glow('lumière chaude', 0xffd9a0), red: glow('feu rouge', 0xff2433), amber: glow('feu orange', 0xffa62b), cyan: glow('témoin cyan', 0x5fe0f0), green: glow('feu vert', 0x3dff8a)
   };
@@ -314,7 +338,44 @@ export function createSectorProps(T, root, props, { low = false, rich = false } 
     put(M.galva, cyl(.04, .04, .22, 10), .2, 1.1, 0, 0, 0, Math.PI / 2); put(M.steel, g('wheel', () => new T.TorusGeometry(.12, .015, 6, 20)), .32, 1.1, 0, 0, Math.PI / 2, 0);
     put(M.enamel, cyl(.06, .06, .03, 16), 0, 1.5, r + .02, Math.PI / 2, 0, 0); put(M.dark, cyl(.065, .065, .02, 16), 0, 1.5, r + .005, Math.PI / 2, 0, 0);
   }
-  const build = { jersey, drum, lamp, tree, bush, post, rack, workbench, medcase, bed, generator, vending, barricade, column, riser };
+  // Kerb bollard of the avenue (one every 12 m on both pavements): chamfered concrete block, steel cap, amber marker.
+  function bollard(p) {
+    begin(p, 0); put(M.concrete, box(.66, .8, .66, .06), 0, .4, 0); put(M.steel, box(.7, .06, .7, .02), 0, .83, 0);
+    put(M.stripe, box(.662, .1, .662), 0, .55, 0); put(M.amber, box(.3, .04, .3), 0, .875, 0); put(M.dark, box(.74, .05, .74), 0, .025, 0);
+  }
+  // ORDRE surveillance mast (same model everywhere, height from the map): base plate, mast, camera head, status light.
+  function mast(p) {
+    begin(p, p.face); const H = p.h;
+    put(M.concrete, box(.58, .18, .58, .03), 0, .09, 0); put(M.galva, cyl(.16, .18, .06, 16), 0, .21, 0);
+    for (const [x, z] of [[-.11, -.11], [.11, -.11], [-.11, .11], [.11, .11]]) put(M.galva, cyl(.018, .018, .05, 6), x, .26, z);
+    put(M.steel, cyl(.055, .075, H - .5, 14), 0, .24 + (H - .5) / 2, 0); put(M.dark, box(.2, .34, .14, .02), 0, 1.35, .1); put(M.red, box(.04, .04, .01), 0, 1.46, .172);
+    put(M.steel, box(.34, .06, .06), .12, H - .28, 0); put(M.enamel, box(.2, .16, .34, .04), .3, H - .34, .04, .28, 0, 0); put(M.dark, cyl(.05, .05, .04, 12), .3, H - .4, .22, Math.PI / 2 + .28, 0, 0);
+    put(M.red, sph(.045, 10), 0, H - .02, 0); put(M.galva, cyl(.012, .012, .5, 6), -.08, H + .06, 0);
+  }
+  // Site cabin / freight module filling its collider: corrugated shell, corner castings, door, lit window, unit.
+  function cabin(p) {
+    begin(p, 0); const w = p.c.x2 - p.c.x1 - .2, d = p.c.z2 - p.c.z1 - .2, levels = p.h > 4.4 ? 2 : 1, hh = Math.min(2.9, p.h / levels);
+    for (let k = 0; k < levels; k++) { const y0 = k * hh, body = [M.cabinA, M.cabinB, M.cabinC][(stats.cabin + k) % 3];
+      put(body, box(w, hh - .16, d, .04), 0, y0 + .12 + (hh - .16) / 2, 0); put(M.steel, box(w + .06, .1, d + .06), 0, y0 + .05, 0); put(M.steel, box(w + .06, .08, d + .06), 0, y0 + hh - .04, 0);
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) put(M.steel, box(.16, hh, .16), sx * (w / 2 - .06), y0 + hh / 2, sz * (d / 2 - .06));
+      const front = d / 2 + .012; put(M.dark, box(1.0, hh * .72, .03, .01), -w * .28, y0 + .1 + hh * .36, front); put(M.chrome, box(.04, .16, .03), -w * .28 + .36, y0 + hh * .42, front + .02);
+      put(M.warm, box(Math.min(1.6, w * .3), hh * .28, .02), w * .18, y0 + hh * .6, front); put(M.steel, box(Math.min(1.7, w * .32), hh * .3, .03), w * .18, y0 + hh * .6, front - .008);
+      put(M.hazard, box(w * .9, .12, .01), 0, y0 + .2, front); put(M.enamel, box(.7, .5, .3, .04), w * .36, y0 + hh * .78, -d / 2 - .16); }
+    if (levels === 2) { for (let k = 0; k < 9; k++) put(M.galva, box(.9, .04, .26), w / 2 + .5, .16 + k * hh / 9, -d / 2 + .5 + k * .3); put(M.galva, box(1, .04, 1.2), w / 2 + .5, hh, d / 2 - .6); put(M.galva, box(.04, 1, 1.2), w / 2 + 1, hh + .5, d / 2 - .6); }
+    put(M.galva, cyl(.03, .03, 1.6, 8), -w / 2 + .4, levels * hh + .8, -d / 2 + .4); put(M.red, sph(.05, 10), -w / 2 + .4, levels * hh + 1.62, -d / 2 + .4);
+  }
+  function pier(p) { // viaduct pier: plinth, shaft with chamfers, flared head, impact band, number plate
+    begin(p, 0); const H = p.h, w = .74;
+    put(M.concrete, box(1.3, .5, 1.3, .06), 0, .25, 0); put(M.concrete, box(w, H - 1.4, w, .07), 0, .5 + (H - 1.4) / 2, 0);
+    put(M.concrete, box(w + .5, .45, w + .2, .05), 0, H - .68, 0); put(M.concrete, box(w + 1.3, .45, w + .3, .05), 0, H - .23, 0);
+    put(M.hazard, box(w + .01, .5, w + .01), 0, 1.1, 0); put(M.enamel, box(.3, .2, .01), 0, 2.1, w / 2 + .006); put(M.galva, box(.06, H - 2, .06), w / 2 + .03, 1.2 + (H - 2) / 2, -.2); put(M.cyan, box(.5, .03, .03), 0, H - 1, w / 2 + .12);
+  }
+  function stanchion(p) { // steel H-stanchion on a base plate
+    begin(p, 0); const H = p.h;
+    put(M.galva, box(.5, .03, .5), 0, .015, 0); for (const z of [-.14, .14]) put(M.steel, box(.3, H, .025), 0, H / 2, z); put(M.steel, box(.02, H, .28), 0, H / 2, 0);
+    for (let y = 2.5; y < H; y += 3) put(M.steel, box(.3, .02, .28), 0, y, 0); put(M.yellow, box(.31, .8, .3), 0, .42, 0);
+  }
+  const build = { jersey, drum, lamp, tree, bush, bollard, mast, cabin, pier, stanchion, post, rack, workbench, medcase, bed, generator, vending, barricade, column, riser };
   for (const p of props) build[p.kind]?.(p);
   const result = out.build(group, 'M03 objets');
   for (const gg of geo.values()) gg.dispose?.();

@@ -162,6 +162,12 @@ export function createCyberCity(T, root, { low = false, rich = false, advert = n
   // ---------- Far towers: one box, hazed by distance ----------
   function farTower(x1, x2, z1, z2, h, haze) {
     stats.farTowers++;
+    // Towers of the first ring stand right behind the perimeter wall: they get the detailed window bays, a plinth
+    // and floor ledges like the towers of the avenue; only the rings in the haze use the flat far texture.
+    if (haze < .2) { const tint = mix([.74, .8, .9], [1, .93, .85], rng()), a = hex(NEON[Math.floor(rng() * NEON.length)]);
+      facade.box(x1, 4, z1, x2, h, z2, tint, { facade: true, seed: stats.farTowers }); trim.box(x1 - .3, 0, z1 - .3, x2 + .3, 4, z2 + .3, DARK); glow.box(x1 - .32, 4, z1 - .32, x2 + .32, 4.12, z2 + .32, a, { top: false });
+      for (let ly = 4 + FLOOR * 4; ly < h - 2; ly += FLOOR * 4) { trim.box(x1 - .25, ly - .15, z2, x2 + .25, ly + .15, z2 + .25, DARK); trim.box(x1 - .25, ly - .15, z1 - .25, x2 + .25, ly + .15, z1, DARK); trim.box(x2, ly - .15, z1, x2 + .25, ly + .15, z2, DARK); trim.box(x1 - .25, ly - .15, z1, x1, ly + .15, z2, DARK); }
+      trim.box(x1 - .4, h, z1 - .4, x2 + .4, h + .5, z2 + .4, STEEL); glow.box(x1, h + .5, z1, x2, h + .62, z2, a, { top: false }); if (rng() < .6) beacons.push([(x1 + x2) / 2, h + 2, (z1 + z2) / 2]); return; }
     const body = mix([.62, .68, .8], FOG, haze), w = x2 - x1, d = z2 - z1;
     const face = (a, b, c, e, nx, nz, len) => { const u = Math.floor(rng() * 16) / 16; far.quad(a, b, c, e, nx, 0, nz, body, u, 0, u + len / 56, h / 56); };
     face([x1, 0, z2], [x2, 0, z2], [x2, h, z2], [x1, h, z2], 0, 1, w); face([x2, 0, z1], [x1, 0, z1], [x1, h, z1], [x2, h, z1], 0, -1, w);

@@ -1,5 +1,6 @@
 import {createFPSChapter} from './fps-environments.js';
 import {createDispensaryDetails} from './dispensary-details.js';
+import {createLightShafts} from './light-shafts.js';
 import {createWorldEffects} from './webgpu-world-fx.js';
 import {upgradeLightBlocks} from './industrial-light.js';
 import {createEnclaveLife} from './m02-enclave-life.js';
@@ -182,6 +183,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
   const glowDisc = canvasTexture(T, 64, 64, (c, w, h) => { const g = c.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.3, 'rgba(255,255,255,.4)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, w, h); });
 
   // ---------- Fixtures and the light pool ----------
+  let shafts;
   const fixtures = [], power = { enclave: false, tower: true };
   const fixture = (kind, x, y, z, { zone = 'tower', color = 0xeaf4ff, intensity = 12, range = 14, axis = 'x', flicker = 0 } = {}) => {
     const f = { kind, x, y, z, zone, color: new T.Color(color), intensity, range, axis, flicker, room: roomAt(x, z), level: 0, phase: rng() * 100 }; fixtures.push(f); return f;
@@ -601,7 +603,10 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     },
     update(t, dt, eye, player = eye.position, { crank = false } = {}) {
       fpsChapter?.update(t,dt,eye.position);
-      worldFx.update(t,eye.position);updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt, crank); details.update(power); livedIn.update(t,dt,power); life.update(t,dt,power);
+      worldFx.update(t,eye.position);updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt, crank);
+      // Volumetric light and dust under the big fixtures (built once the fixtures exist).
+      if (shafts === undefined) { try { shafts = createLightShafts(T, root, fixtures.filter(f => ['bulb','highbay','panel'].includes(f.kind)).map(f => ({ x: f.x, y: f.y - .25, z: f.z, color: f.color.getHex() })), { low }); } catch (error) { shafts = null; console.warn('light shafts skipped', error); } }
+      shafts?.update(dt); details.update(power); livedIn.update(t,dt,power); life.update(t,dt,power);
       for (const s of steam) { const u = s.userData, k = (t * .25 + u.phase) % 1; s.position.set(u.x + Math.sin(t + u.phase) * .3, u.y + k * 3, u.z); s.scale.setScalar(.8 + k * 2.4); s.material.opacity = .14 * (1 - k); }
       for (const f of animated) f(t, dt, eye);
     },

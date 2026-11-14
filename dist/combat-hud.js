@@ -7,7 +7,7 @@ import {paintCompanionPortrait} from './companion-portrait.js';
 import {renderDigitalCounter} from './digital-display.js';
 let activeCombatHud = null;
 export const getActiveCombatHud = () => activeCombatHud;
-const STYLESHEET = 'combat-hud.css?v=20261107-arrow-chip';
+const STYLESHEET = 'combat-hud.css?v=20261113-arrow-top';
 const HEROES = Object.freeze({ ghju: 'GHJU', lylu: 'LYLU' });
 export const HUD_SEGMENTS = 10;
 

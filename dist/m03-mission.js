@@ -10,12 +10,12 @@ import * as L from './m03-layout.js';
 export const PORTAL_CHARGE = 3.2, PRESSURE_EVERY = 2;
 const S = L.STAGE_INDEX, noop = () => {};
 // Groups kept on the player by the encounter director, per stage.
-const ACTIVE = Object.freeze({ kit: ['annexe'], atelier: ['atelier'], verin: ['atelier'], escorte: ['route1', 'route2'], a3: ['a3', 'route2'], balise: ['fracture', 'balise1', 'balise2'],
-  barriere: ['barriere1', 'barriere2'], escorte2: ['voie'], echangeur: ['echangeur', 'treuil1', 'treuil2'], gare: ['gare'], arrimage: ['gare', 'arrimage1', 'arrimage2', 'arrimage3'] });
+const ACTIVE = Object.freeze({ kit: ['annexe'], atelier: ['atelier'], verin: ['atelier'], depot: ['depot'], transfo: ['transfo', 'transfo1', 'transfo2'], detenus: ['depot2', 'detention'], usine: ['usine'], assaut: ['assaut'], escorte: ['detention2', 'route1', 'route2'], a3: ['a3', 'route2'], balise: ['fracture', 'balise1', 'balise2'],
+  barriere: ['usine2', 'barriere1', 'barriere2'], escorte2: ['voie'], echangeur: ['echangeur', 'treuil1', 'treuil2'], gare: ['gare'], arrimage: ['gare', 'arrimage1', 'arrimage2', 'arrimage3'] });
 // Encounter set again when the player restarts at the checkpoint of a stage.
-const RESTORE = Object.freeze({ a3: ['a3'], balise: ['fracture'], echangeur: ['echangeur'], arrimage: ['gare'] });
+const RESTORE = Object.freeze({ assaut: ['assaut'], a3: ['a3'], balise: ['fracture'], echangeur: ['echangeur'], arrimage: ['gare'] });
 // Van position (path index) at the checkpoint of each stage.
-const VAN_AT = Object.freeze({ arrivee: 0, alimentation: 0, dossier: 0, kit: 0, atelier: 0, verin: 0, escorte: 0, a3: 2, balise: 2, barriere: 2, escorte2: 2, echangeur: 6, gare: 6, arrimage: 8, regulation: 8, fin: 8 });
+const VAN_AT = Object.freeze({ arrivee: 0, alimentation: 0, dossier: 0, kit: 0, atelier: 0, verin: 0, depot: 0, detenus: 0, escorte: 0, a3: 2, balise: 2, transfo: 2, usine: 2, barriere: 2, escorte2: 2, echangeur: 6, gare: 6, arrimage: 8, assaut: 8, regulation: 8, fin: 8 });
 const DRIVING = new Set(['escorte', 'escorte2', 'gare']);
 
 export function createM03Mission({ game, characterId = 'ghju', choice = null, base = [], hooks = {} }) {
@@ -124,6 +124,10 @@ export function createM03Mission({ game, characterId = 'ghju', choice = null, ba
       if (sid === 'verin') done.delete('verin');
       if (sid === 'balise') done.delete('balise');
       if (sid === 'barriere') done.delete('barriere');
+      if (sid === 'transfo') done.delete('transfo');
+      if (sid === 'usine') done.delete('chaine');
+      if (sid === 'depot') done.delete('cellules');
+      if (sid === 'detenus') done.delete('cellule');
       if (sid === 'echangeur') done.delete('treuil');
       if (sid === 'arrimage') done.delete('arrimage');
       placeVan(VAN_AT[sid]); freshGame(L.STAGES[at].checkpoint); setStage(at);
@@ -150,6 +154,10 @@ export function createM03Mission({ game, characterId = 'ghju', choice = null, ba
       if (key === 'kit') return s === 'kit' && !done.has('kit');
       if (key === 'manifeste') return S[s] >= S.atelier;
       if (key === 'verin') return s === 'verin' && alive('atelier') === 0;
+      if (key === 'cellules') return s === 'depot' && alive('depot') === 0;
+      if (key === 'transfo') return s === 'transfo' && alive('transfo') <= 1;
+      if (key === 'chaine') return s === 'usine' && alive('usine') === 0;
+      if (key === 'cellule') return s === 'detenus' && alive('detention') === 0;
       if (key === 'relais') return S[s] >= S.a3;
       if (key === 'balise') return s === 'balise' && alive('fracture') <= 1;
       if (key === 'barriere') return s === 'barriere';
@@ -175,7 +183,11 @@ export function createM03Mission({ game, characterId = 'ghju', choice = null, ba
       if (key === 'ines') { say('ines'); setStage(S.alimentation); h.cue('console'); }
       else if (key === 'alimentation') { done.add(key); h.setPower('annexe', true); say('courant'); setStage(S.dossier); h.cue('console'); h.notice('ANNEXE MÉDICALE ALIMENTÉE'); }
       else if (key === 'kit') { done.add(key); deploy('annexe', { alert: true }); say('kit'); h.cue('alarm'); h.notice('KITS DE RÉANIMATION RÉCUPÉRÉS · MACHINES EN APPROCHE'); }
-      else if (key === 'verin') { done.add(key); say('verin'); setStage(S.escorte); say('escorte'); h.cue('valve'); h.notice('VÉRIN HYDRAULIQUE DÉMONTÉ · L’AMBULANCE DÉMARRE'); game.grantCharges(1); }
+      else if (key === 'verin') { done.add(key); say('verin'); setStage(S.depot); h.cue('valve'); h.notice('VÉRIN DÉMONTÉ · IL MANQUE DES CELLULES D’ÉNERGIE'); game.grantCharges(1); }
+      else if (key === 'cellules') { done.add(key); say('cellules'); setStage(S.detenus); h.cue('console'); h.notice('CELLULES CHARGÉES · DES SOIGNANTS SONT RETENUS DERRIÈRE L’ATELIER'); game.grantCharges(1); release('depot2'); }
+      else if (key === 'chaine') { done.add(key); say('chaine'); setStage(S.barriere); h.cue('console'); h.notice('CHAÎNE COUPÉE · RETOUR À LA BARRIÈRE'); game.grantCharges(1); release('usine2'); }
+      else if (key === 'transfo') { say('transfo'); startHold('transfo'); h.notice('POSTE ÉLECTRIQUE · RÉARMEMENT EN COURS'); }
+      else if (key === 'cellule') { done.add(key); say('detenus'); setStage(S.escorte); say('escorte'); h.cue('door'); h.notice('SOIGNANTS LIBÉRÉS · L’AMBULANCE DÉMARRE'); game.grantCharges(1); release('detention2'); }
       else if (key === 'balise') { say('balise'); startHold('balise'); h.notice('BALISE ORDRE · BROUILLAGE EN COURS'); }
       else if (key === 'barriere') { say('barriere'); startHold('barriere'); h.notice('BARRIÈRE · LEVÉE EN COURS'); }
       else if (key === 'treuil') { say('treuil'); startHold('treuil'); h.notice('TREUIL DE DÉPANNAGE · TRACTION'); }
@@ -192,10 +204,11 @@ export function createM03Mission({ game, characterId = 'ghju', choice = null, ba
         while (hold.waves.length && game.time >= hold.start + hold.waves[0][0]) release(hold.waves.shift()[1]);
         if (game.time >= hold.until) {
           const name = hold.name; hold = null; done.add(name); h.cue('stage');
-          if (name === 'balise') { reads.add('balise'); say('baliseOk'); setStage(S.barriere); h.notice('LIAISON ORDRE INTERROMPUE'); h.read?.('balise'); game.grantCharges(1); }
+          if (name === 'balise') { reads.add('balise'); say('baliseOk'); setStage(S.transfo); h.notice('LIAISON ORDRE INTERROMPUE'); h.read?.('balise'); game.grantCharges(1); }
+          if (name === 'transfo') { say('transfoOk'); setStage(S.usine); h.setPower('viaduc', true); h.notice('COURANT RÉTABLI · L’USINE DU DIRECTOIRE TOURNE'); game.grantCharges(1); }
           if (name === 'barriere') { open('barriere'); say('barriereOk'); setStage(S.escorte2); h.notice('BARRIÈRE LEVÉE · L’AMBULANCE REPART'); }
           if (name === 'treuil') { open('remorque'); say('treuilOk'); setStage(S.gare); h.notice('BRETELLE DÉGAGÉE'); game.grantCharges(1); }
-          if (name === 'arrimage') { say('arrimageOk'); setStage(S.regulation); h.notice('AMBULANCE ARRIMÉE AU TRAIN SANITAIRE'); }
+          if (name === 'arrimage') { say('arrimageOk'); setStage(S.assaut); deploy('assaut', { alert: true }); say('assaut'); h.cue('alarm'); h.notice('AMBULANCE ARRIMÉE · ASSAUT DU DIRECTOIRE SUR LE QUAI'); }
         }
       }
       // The van, and what its progress triggers.
@@ -218,6 +231,11 @@ export function createM03Mission({ game, characterId = 'ghju', choice = null, ba
       if (s === 'kit' && done.has('kit') && groups.has('annexe') && alive('annexe') === 0) { say('kitOk'); setStage(S.atelier); }
       if (s === 'atelier' && room === 'atelier' && !groups.has('atelier')) { deploy('atelier', { alert: true }); say('atelier'); }
       if (s === 'verin' && !groups.has('atelier')) deploy('atelier', { alert: true });
+      if (s === 'depot' && room === 'depot' && !groups.has('depot')) { deploy('depot', { alert: true }); say('depot'); }
+      if (s === 'transfo' && room === 'viaduc-ouest' && !groups.has('transfo')) { deploy('transfo', { alert: true }); say('viaduc'); }
+      if (s === 'usine' && room === 'usine' && !groups.has('usine')) { deploy('usine', { alert: true }); say('usine'); }
+      if (s === 'assaut' && groups.has('assaut') && alive('assaut') === 0 && !pending.some(p => p.name === 'assaut')) { say('assautOk'); setStage(S.regulation); h.notice('ASSAUT REPOUSSÉ · LE TRAIN PEUT PARTIR'); game.grantCharges(1); }
+      if (s === 'detenus' && room === 'retention' && !groups.has('detention')) { deploy('detention', { alert: true }); say('retention'); }
       if (s === 'balise' && !groups.has('fracture')) { deploy('fracture', { alert: true }); say('fracture'); }
     }
   };

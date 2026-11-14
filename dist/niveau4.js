@@ -1,5 +1,10 @@
 import {createWorldShadows} from './world-shadows.js';
 import {applyFPSCameraMotion} from './fps-motion.js';
+import {playEndCinematic} from './end-cinematic.js';
+import {upgradeForWebGPU} from './webgpu-upgrade.js';
+import {createCameraFeel} from './camera-feel.js';
+import {mountFilmLook} from './film-look.js';
+const cameraFeel=createCameraFeel();let filmLook=null,filmXr=false,debugCam=null,endCine=null,webgpuFinish=null;
 import {rendererBackend,rendererLabel} from './renderer-policy.js';
 import {createSupplyPickup} from './power-props.js';
 import {createHologramComms} from './hologram-comms.js';
@@ -243,8 +248,20 @@ function finishMission(){
  $('panel-text').textContent=ENDING.text[characterId];
  const docs=Object.keys(LOGS).filter(id=>mission.reads.includes(id)).length;
  $('panel-small').textContent=`Temps ${minutes}:${seconds} · Machines neutralisées ${game.kills} · Précision ${shotsFired?Math.round(hits/shotsFired*100):0} % · Documents ${docs}/${Object.keys(LOGS).length} · ${ENDING.next}`;
- startButton.textContent='REJOUER LE NIVEAU 4 →';startButton.disabled=false;status.textContent='';shade.style.display='grid';shade.classList.add('ended');document.body.classList.add('pw-shaded');
- $('home').hidden=false;
+ const showPanel=()=>{startButton.textContent='REJOUER LE NIVEAU 4 →';startButton.disabled=false;status.textContent='';shade.style.display='grid';shade.classList.add('ended');document.body.classList.add('pw-shaded');
+  $('home').hidden=false;};
+ // In-engine end scene under the gantry (the hero and her sphere, their exchange in the transmission panel), once the
+ // archive has been read and closed. The headset goes straight to the end panel.
+ const stage=()=>{
+  if(reading){setTimeout(stage,300);return;}
+  if(xr?.active||!scene){showPanel();return;}
+  const lines={clear(){subtitles.length=0;subtitle=null;comms.clear();},say(list){subtitles.push(...list);},get current(){return subtitle;},get queued(){return subtitles.length;}};
+  try{endCine=playEndCinematic({T,camera,hero:playerRig?.model||null,sphere:companion,player:game.player,yaw,lines:linesFor('fin',characterId),subtitles:lines,firstPerson:[weapon],
+   clip:(from,to)=>{let n=1;for(const box of collisions){if(box.walkableSurface)continue;const t=segmentBox(from,to,{...box,hx:box.hx+.25,hz:box.hz+.25});if(t!==null)n=Math.min(n,t-.06);}return n;},
+   title:'Chapitre 04 · Le Protocole Interdit',onDone:()=>{endCine=null;showPanel();}});}
+  catch(error){console.warn('M04 end cinematic skipped:',error);endCine=null;showPanel();}
+ };
+ setTimeout(stage,700);
 }
 function missionLost(){
  if(!running)return;running=false;document.exitPointerLock?.();closeDocument();
@@ -257,6 +274,7 @@ function missionLost(){
 // ---------- Camera, weapon and rig ----------
 function snapCamera(){
  if(xr?.active){xr.syncPose();return;}
+ if(debugCam){camera.fov=debugCam.fov;camera.position.set(debugCam.x,debugCam.y,debugCam.z);camera.up.set(0,debugCam.top?0:1,debugCam.top?-1:0);camera.lookAt(debugCam.lx,debugCam.ly,debugCam.lz);camera.updateProjectionMatrix();camera.updateMatrixWorld(true);weapon.visible=false;return;}
  const p=game.player,eye=characterId==='lylu'?1.71:1.61,optic=OPTICS[game.weapon.id],normal=view==='fps'?72:64;
  camera.fov=normal+(optic?(magnifiedFov(normal,optic.magnification)-normal)*aimBlend:0);
  camera.rotation.set(pitch+weaponFeel.state.pitch*.18,yaw+weaponFeel.state.yaw*.07,0,'YXZ');
@@ -269,7 +287,8 @@ function snapCamera(){
   const area=L.AREAS.find(a=>a.id===L.areaAt(p.x,p.z)),ceiling=area?.roof?area.roof-.3:Infinity;
   camera.position.set(start.x+(end.x-start.x)*nearest,Math.min(ceiling,Math.max(p.elevation+.35,start.y+(end.y-start.y)*nearest)),start.z+(end.z-start.z)*nearest);
  }
- if(view==='fps')applyFPSCameraMotion(camera,game,{tracked:!!xr?.active});camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
+ if(view==='fps')applyFPSCameraMotion(camera,game,{tracked:!!xr?.active});
+ if(view==='fps'&&!xr?.active&&running&&!endCine)cameraFeel.apply(camera,{motion:false});camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
  weapon.visible=view==='fps';if(playerRig?.model)playerRig.model.root.visible=view==='third';
 }
 function changeView(){view=view==='fps'?'third':'fps';if(!playerRig&&view==='third'){view='fps';notice('PERSONNAGE SHADOW UNIT EN COURS DE CHARGEMENT');}snapCamera();}
@@ -383,7 +402,7 @@ function gameTick(dt){
  const jump=controls.jump||jumpQueued;jumpQueued=false;
  game.nextWave=Infinity;game.toSpawn=0;
  game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,sprint,jump,crouchToggle});
- missionTime+=dt;weaponFeel.update(dt);snapCamera();
+ missionTime+=dt;weaponFeel.update(dt);cameraFeel.update(dt,{speed:Math.hypot(game.playerVelocity.x,game.playerVelocity.z),grounded:game.player.grounded,verticalSpeed:game.player.verticalSpeed,strafe:x,sprint,aim:aimBlend});snapCamera();
  if(meleeQueued||controls.melee){const view=new T.Vector3();camera.getWorldDirection(view);game.melee({x:view.x,z:view.z});}
  if(chargeQueued||controls.charge){const eye=xr?.active?renderer.xr.getCamera():camera,from=new T.Vector3(),dir=new T.Vector3();eye.getWorldPosition(from);eye.getWorldDirection(dir);
   if(view!=='fps'&&!xr?.active)from.set(game.player.x,game.player.elevation+1.5,game.player.z);
@@ -404,7 +423,10 @@ function gameTick(dt){
   combatEffects?.event(e);armorFx.handle(e);
   if(e.type==='shot'){shotsFired++;xr?.haptic('shot',e.weapon,e.hand);weaponFeel.fire(e.weapon||game.weapon.id,e.power||1,aimBlend>.5);if(enableAudio&&audioCtx)try{playLaserShot(audioCtx,e.weapon||game.weapon.id,e.power||1);}catch{}}
   if(e.type==='hit'){hits++;hitUntil=clock+.12;}
-  if(e.type==='damage')$('damage').style.boxShadow='inset 0 0 105px #c52c5e77';
+  if(e.type==='damage'){$('damage').style.boxShadow='inset 0 0 105px #c52c5e77';cameraFeel.shake(.45);filmLook?.hit(.55);}
+  if(e.type==='kill')cameraFeel.shake(Math.max(.06,.55-Math.hypot((e.x||0)-game.player.x,(e.z||0)-game.player.z)/16));
+  if(e.type==='shot'&&!e.companion)cameraFeel.shake(.045);
+  if(e.type==='land')cameraFeel.shake(.05);
   if(e.type==='weapon')weaponFeel.reset();
   if(e.type==='reload'&&audioCtx)try{playWeaponAction(audioCtx,game.weapon.id,'reload-out');}catch{}
   if(e.type==='reloaded'&&audioCtx)try{playWeaponAction(audioCtx,game.weapon.id,'reload-ready');}catch{}
@@ -463,9 +485,11 @@ function animation(t,frame){
   console.error('M04 / simulation',error);running=false;shade.style.display='grid';status.textContent='Erreur : '+(error?.message||String(error));
   startButton.disabled=false;startButton.textContent='RECOMMENCER →';
  }
- if(started){updateSubtitles(running?dt:0);updateLamp(dt);
+ if(started){updateSubtitles(running||endCine?dt:0);updateLamp(dt);
   const area=L.areaAt(game.player.x,game.player.z);
   cityBed?.update(dt,{active:running,area:area==='anneau'||area==='portique'?'gare':area,indoor:!!L.AREAS.find(a=>a.id===area)?.roof});}
+ if(filmLook){if(filmXr!==!!xr?.active){filmXr=!!xr?.active;filmLook.setEnabled(!filmXr);}filmLook.update(dt,{health:(game?.player.hp??100)/100});}
+ if(endCine)try{endCine.update(dt);}catch(error){console.warn('M04 end cinematic frame:',error);endCine.skip();}
  const eye=xr?.active?renderer.xr.getCamera():camera;
  try{art.update(clock,dt,eye,game?.player);}catch(error){console.warn('M04 / décor animé désactivé',error);art.update=()=>{};}
  if(xr?.active){xr.update(dt,weaponFeel.state,weaponFeel.state.kick>.025?.075:0);xr.renderScope();}
@@ -514,6 +538,10 @@ async function boot(){
   scene=new T.Scene();camera=new T.PerspectiveCamera(70,innerWidth/innerHeight,.06,600);scene.add(camera);enemyDestructionFX=createEnemyDestructionFX(T,scene,{camera,low:low()||profile.phone||profile.headset,maxDeaths:7,onSound:(kind,source)=>robotShutdownAudio.play(kind,source)});
   createWorld();
   await art.ready;
+  // WebGPU finish: rounded edges, rounder parts, clear-coated surfaces (again once late textures/models are in).
+  const finishWebGPU=()=>{if(!(renderer?.backend?.isWebGPUBackend||params.get('finish')==='1')||low())return null;try{const add=upgradeForWebGPU(T,scene,{camera});webgpuFinish=Object.fromEntries(Object.keys(add).map(k=>[k,(webgpuFinish?.[k]||0)+add[k]]));return webgpuFinish;}catch(error){console.warn('M04 WebGPU finish skipped:',error);return null;}};
+  finishWebGPU();setTimeout(finishWebGPU,8000);
+  try{filmLook=mountFilmLook({canvas,low:low(),graded:()=>!!renderer?.fpsPresentation?.stats?.().enabled});}catch(error){console.warn('film look skipped',error);}
   if(!profile.phone&&!profile.headset&&!low())sunShadows=createWorldShadows(T,{scene,renderer,light:art.sun,profile:{...profile,shadowMoveThreshold:2,artQuality:quality.value==='high'?'high':'low'},direction:art.sun.position.clone()});
   bootStep='jouabilité';status.textContent='Armes, commandes et machines…';
   setupPlayer();resize();
@@ -604,9 +632,9 @@ window.__PINK_M04=Object.freeze({
   position:game&&{x:+game.player.x.toFixed(2),z:+game.player.z.toFixed(2),elevation:+game.player.elevation.toFixed(2)},
   weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,opened:mission?.opened,done:mission?.done,reads:mission?.reads,
   hold:mission?.hold,pending:mission?.pending,groups:mission?.groups(),guardian:mission?.guardian,reading,vr:!!xr?.active,lamp:lampOn,subtitle:subtitle&&{who:subtitle.who,text:subtitle.text},queued:subtitles.length,
-  backend:renderer?rendererBackend(renderer):null,rig:!!playerRig,art:art?.stats(),shadows:sunShadows?.stats(),render:renderer?.info?.render}),
+  backend:renderer?rendererBackend(renderer):null,rig:!!playerRig,webgpuFinish,art:art?.stats(),shadows:sunShadows?.stats(),render:renderer?.info?.render}),
  // QA hooks (?debug=1): move the player, look, clear an encounter, fast-forward the mission clock, use an interaction.
- debug:params.has('debug')?{teleport:(x,z)=>{Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0});snapCamera();if(game.state==='playing'){game.step(1/60,{});mission.update(1/60);}},
+ debug:params.has('debug')?{get scene(){return scene;},cam:(x,y,z,lx,ly,lz,fov=60,top=false)=>{debugCam=x===null?null:{x,y,z,lx,ly,lz,fov,top};snapCamera();},endScene:()=>finishMission(),cine:()=>endCine,teleport:(x,z)=>{Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0});snapCamera();if(game.state==='playing'){game.step(1/60,{});mission.update(1/60);}},
   look:(y,p)=>{yaw=y;pitch=p;snapCamera();},clear:(keepGuardian=false)=>{game.enemies=game.enemies.filter(e=>keepGuardian&&e.guardian);mission.update(1/60);},
   interact:()=>{interact();return reading;},close:()=>closeDocument(),skip:seconds=>{game.time+=seconds;mission.update(1/60);},god:()=>{game.invulnerable=1e9;},
   use:id=>{const it=L.INTERACTIONS.find(i=>i.id===id);Object.assign(game.player,{x:it.x,z:it.z,elevation:it.y||0,grounded:true,verticalSpeed:0});interact();return {reading,stage:mission.stageId};},

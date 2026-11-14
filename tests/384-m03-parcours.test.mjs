@@ -39,8 +39,8 @@ function playthrough(character){
 for(const character of ['ghju','lylu'])test(`chapter 03 can be played end to end on foot by following the arrow (${character})`,()=>{
  const r=playthrough(character);
  assert.equal(r.lost,null);assert.equal(r.finished,true,'reached: '+r.seen.join(' → '));
- assert.deepEqual(r.seen,['arrivee','alimentation','dossier','kit','atelier','verin','escorte','a3','balise','barriere','escorte2','echangeur','gare','arrimage','regulation']);
- assert.ok(r.time<600,'about four minutes of play without fights: '+r.time.toFixed(0)+' s');
+ assert.deepEqual(r.seen,['arrivee','alimentation','dossier','kit','atelier','verin','depot','detenus','escorte','a3','balise','transfo','usine','barriere','escorte2','echangeur','gare','arrimage','assaut','regulation']);
+ assert.ok(r.time>280&&r.time<900,'walking alone, without a single fight: '+r.time.toFixed(0)+' s');
 });
 test('the arrow leads to the readings the story waits for and to the ambulance during escorts',()=>{
  const g={player:{x:0,z:0},enemies:[]};
