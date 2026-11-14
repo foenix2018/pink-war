@@ -1,14 +1,16 @@
-import test from 'node:test';import assert from 'node:assert/strict';import{HERO_MOTION_PACK}from'../dist/hero-motion-data.js';import{naturalHeroClips}from'../dist/hero-motion.js';import{rlhFirefighterData}from'../dist/rlh-firefighter.js';import{ArenaGame}from'../dist/game-logic.js';import{PLAYER_SPEEDS}from'../dist/locomotion.js';
-test('the CC0 motion pack contains actual sampled humanoid idle, walk and jogging rotations',()=>{
- assert.equal(HERO_MOTION_PACK.author,'Quaternius');assert.equal(HERO_MOTION_PACK.license,'CC0-1.0');
- for(const c of HERO_MOTION_PACK.clips){assert.equal(c.tracks.length,22);assert.ok(c.duration>.5);for(const t of c.tracks){assert.equal(t.values.length,t.times.length*4);assert.ok(t.values.every(Number.isFinite));for(let i=0;i<t.values.length;i+=4)assert.ok(Math.abs(Math.hypot(...t.values.slice(i,i+4))-1)<.00001);}const spine=c.tracks.find(t=>t.name==='mixamorigSpine2.quaternion');assert.ok(spine.values.some((v,i)=>i>3&&Math.abs(v-spine.values[i%4])>.001));}
+import test from 'node:test';import assert from 'node:assert/strict';import{mixamoPlayerMotions,naturalHeroClips}from'../dist/hero-motion.js';import{rlhFirefighterData}from'../dist/rlh-firefighter.js';import{ArenaGame}from'../dist/game-logic.js';import{PLAYER_SPEEDS}from'../dist/locomotion.js';
+test('the player pack contains finite, normalized full-body Mixamo animation tracks',()=>{
+ const pack=mixamoPlayerMotions();assert.equal(pack.author,'Adobe Mixamo');assert.ok(pack.license.includes('Mixamo'));
+ for(const c of pack.clips)for(const t of c.tracks){const size=t.type==='vector'?3:4;assert.equal(t.values.length,t.times.length*size);assert.ok(t.values.every(Number.isFinite));if(size===4)for(let i=0;i<t.values.length;i+=4)assert.ok(Math.abs(Math.hypot(...t.values.slice(i,i+4))-1)<.00001);}
 });
-test('human counter-motion preserves the canonical leg, pelvis and weapon-aim tracks without modifying shared source clips',()=>{
+test('Mixamo movement replaces the legacy leg tracks while preserving shared source data and native idles',()=>{
  const original=rlhFirefighterData(),before=original.clips.map(c=>c.animation.toJSON()),clips=naturalHeroClips(original);
- for(const c of clips){const old=original.clips.find(v=>v.name===c.name);assert.equal(c.duration,old.duration);for(const t of old.animation.tracks.filter(t=>/mixamorig(Hips|Left(UpLeg|Leg|Foot|Toe)|Right(UpLeg|Leg|Foot|Toe))/.test(t.name))){const kept=c.animation.tracks.find(k=>k.name===t.name);assert.deepEqual(kept.values,t.values);assert.deepEqual(kept.times,t.times);}if(c.name!=='rifle')assert.notEqual(c.animation,old.animation);}
+ for(const name of ['idle','rifle'])assert.equal(clips.find(c=>c.name===name),original.clips.find(c=>c.name===name));
+ const walk=clips.find(c=>c.name==='walk'),old=original.clips.find(c=>c.name==='walk');assert.notEqual(walk.animation,old.animation);assert.ok(walk.mocap.file.endsWith('.fbx'));
+ const hips=walk.animation.tracks.find(t=>t.name==='mixamorigHips.position');assert.ok(hips.values.some((v,i)=>i%3===0&&Math.abs(v)>.005),'keep recorded pelvis sway instead of pinning it to zero');
  assert.deepEqual(original.clips.map(c=>c.animation.toJSON()),before);
 });
-test('walking and sprinting respect the slower profile and preserve exact acceleration at different frame rates',()=>{
+test('walking and sprinting preserve the existing physical speed and frame-rate-independent acceleration',()=>{
  const run=(hz,sprint)=>{const g=new ArenaGame([],()=>.5,{routes:[],lifts:[],height:()=>0,surfaces:()=>[]});g.nextWave=Infinity;g.toSpawn=0;g.player.z=0;for(let i=0;i<hz;i++)g.step(1/hz,{z:-1,sprint});return -g.player.z;};
  for(const sprint of[false,true]){const distance=run(30,sprint),expected=(sprint?PLAYER_SPEEDS.sprint:PLAYER_SPEEDS.walk)*(1-(1-Math.exp(-8))/8);assert.ok(Math.abs(distance-expected)<1e-8);for(const hz of[60,120])assert.ok(Math.abs(run(hz,sprint)-distance)<1e-8);}
  assert.ok(PLAYER_SPEEDS.walk<3&&PLAYER_SPEEDS.sprint<6&&PLAYER_SPEEDS.crouch<PLAYER_SPEEDS.walk);

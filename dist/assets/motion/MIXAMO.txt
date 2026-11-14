@@ -1,0 +1,6 @@
+Motion capture: Adobe Mixamo — https://www.mixamo.com/
+Terms and royalty-free use in games: https://helpx.adobe.com/creative-cloud/faq/mixamo-faq.html
+
+The game embeds retargeted animation tracks, not the source FBX collection.
+Source archive revisions, file paths, hashes and transformations are recorded
+in mixamo-sources.json. Raw source files remain outside the release directory.

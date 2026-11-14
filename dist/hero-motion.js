@@ -1,16 +1,18 @@
 import*as T from './vendor/three.webgpu.min.js';
-import{HERO_MOTION_PACK}from './hero-motion-data.js';
+import{MIXAMO_PLAYER_GZIP}from './mixamo-player-data.js';
+import{decompressSync}from './vendor/fflate.module.js';
 let cache;
-// Imported human motion supplies the torso/head/arm counter-motion. The native
-// Mixamo pelvis and legs retain the calibrated contact and airborne IK frame.
+let pack;
+export function mixamoPlayerMotions(){
+ return pack??=JSON.parse(new TextDecoder().decode(decompressSync(Uint8Array.from(atob(MIXAMO_PLAYER_GZIP),c=>c.charCodeAt(0)))));
+}
+// Full recorded locomotion, including hips, legs and feet. The ground adapter
+// may change height on terrain; it never authors a horizontal foot trajectory.
 export function naturalHeroClips(data){
  if(cache)return cache;
- const lower=t=>/mixamorig(Hips|Left(UpLeg|Leg|Foot|Toe)|Right(UpLeg|Leg|Foot|Toe))/.test(t.name);
- return cache=data.clips.map(original=>{
-  if(original.name==='rifle')return original;
-  const source=HERO_MOTION_PACK.clips.find(c=>c.name===(original.name==='walkRifle'?'walk':original.name));if(!source)return original;
-  const tracks=source.tracks.filter(t=>!lower(t)&&!(original.name==='walkRifle'&&/Arm|Hand|Shoulder/.test(t.name))).map(t=>new T.QuaternionKeyframeTrack(t.name,t.times.map(v=>v/source.duration*original.duration),t.values));
-  for(const t of original.animation.tracks)if(lower(t)||original.name==='walkRifle'&&/Arm|Hand|Shoulder/.test(t.name))tracks.push(t.clone());
-  return {name:original.name,duration:original.duration,animation:new T.AnimationClip(original.name,original.duration,tracks)};
+ const clips=mixamoPlayerMotions().clips.map(c=>{
+  const tracks=c.tracks.map(t=>new(t.type==='vector'?T.VectorKeyframeTrack:T.QuaternionKeyframeTrack)(t.name,t.times,t.values));
+  return {name:c.name,duration:c.duration,mocap:Object.fromEntries(Object.entries(c).filter(([k])=>k!=='tracks')),animation:new T.AnimationClip(c.name,c.duration,tracks)};
  });
+ return cache=[...data.clips.filter(c=>c.name==='idle'||c.name==='rifle'),...clips];
 }

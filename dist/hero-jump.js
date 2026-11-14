@@ -6,14 +6,18 @@ const smooth=T.MathUtils.smoothstep,clamp=T.MathUtils.clamp;
 // this layer only poses the body, with the same leg IK and boot contact frame.
 export function createHeroJump(model,solveChain,footFloor){
  const {root,actor,hips,spine,body,legs,knees,feet,freeArm}=model;
- const neutral=feet.map(f=>new T.Quaternion().setFromRotationMatrix(new T.Matrix4().fromArray(actor.data.bones[actor.bones.indexOf(f)].inverse).invert()));
+ root.updateMatrixWorld(true);
+ const inverseRoot=root.getWorldQuaternion(new T.Quaternion()).invert();
+ const neutral=feet.map(f=>inverseRoot.clone().multiply(f.getWorldQuaternion(new T.Quaternion())));
  const start=feet.map(()=>({p:new T.Vector3(),q:new T.Quaternion(),reach:0})),pelvis={p:new T.Vector3(),q:new T.Quaternion()},restPelvis=new T.Vector3();
+ const articulated=[...legs,...knees],captured=articulated.map(b=>b.quaternion.clone());
  let wasAirborne=false,lastVertical=0,age=0,landAge=Infinity,launched=false,lead=0,impact=0,entryWeight=0;
  const state={phase:'grounded',airTime:0,landingTime:0,tuck:0,compression:0,weight:0,launches:0};
  function capture(){
   root.updateMatrixWorld(true);const inverse=root.getWorldQuaternion(new T.Quaternion()).invert();
   for(let i=0;i<2;i++){const foot=feet[i].getWorldPosition(new T.Vector3());start[i].reach=foot.distanceTo(legs[i].getWorldPosition(new T.Vector3()))/root.getWorldScale(new T.Vector3()).y;start[i].p.copy(root.worldToLocal(foot));start[i].q.copy(inverse).multiply(feet[i].getWorldQuaternion(new T.Quaternion()));}
   pelvis.p.copy(hips.position);pelvis.q.copy(hips.quaternion);
+  articulated.forEach((b,i)=>captured[i].copy(b.quaternion));
  }
  function sample(dt,flight){
   const airborne=!!flight.airborne,vy=Number.isFinite(flight.verticalSpeed)?flight.verticalSpeed:0;
@@ -46,6 +50,7 @@ export function createHeroJump(model,solveChain,footFloor){
  function pose(flight,locomotion,freeLeft=false){
   if(state.phase==='grounded')return;
   root.updateMatrixWorld(true);const airborne=!!flight.airborne,rootQ=root.getWorldQuaternion(new T.Quaternion());
+  const nativeRotations=articulated.map(b=>b.quaternion.clone()),nativeFeet=feet.map(f=>f.getWorldQuaternion(new T.Quaternion()));
   const targets=feet.map(f=>({p:root.worldToLocal(f.getWorldPosition(new T.Vector3())),q:rootQ.clone().invert().multiply(f.getWorldQuaternion(new T.Quaternion()))}));
   if(airborne){
    const tuck=state.tuck,push=launched?(1-smooth(age,.065,.17)):0,prepare=smooth(-lastVertical,.6,5.2),travel=locomotion.travelDirection;
@@ -64,12 +69,17 @@ export function createHeroJump(model,solveChain,footFloor){
     p.z+=push*(leading?-.015:.035);p.x=sign*Math.max(.085,sign*p.x);
     const pitch=(-.19*push-tuck*(leading?.08:.20))*(1-prepare);
     const q=new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),pitch).multiply(neutral[i]);
-    p.lerpVectors(start[i].p,p,settle);q.slerpQuaternions(start[i].q,q,settle);
+    p.lerpVectors(start[i].p,p,settle);q.slerpQuaternions(start[i].q,q.clone(),settle);
     targets[i].p.copy(p);targets[i].q.copy(q);
    }
    rotate(spine,(-.045*push-.13*tuck-.04*prepare+.02*Math.sin(age*5)*tuck)*state.weight,-travel.x*.025*state.weight);
    rotate(body,.025*tuck*state.weight);
   }else{
+   // The old contact planner used to hide this transition by retaining its
+   // anchors. Blend the captured flight pose into the real clip explicitly.
+   const settle=smooth(landAge,0,.20);
+   for(let i=0;i<2;i++){targets[i].p.lerpVectors(start[i].p,targets[i].p,settle);targets[i].q.slerpQuaternions(start[i].q,targets[i].q.clone(),settle);}
+   hips.position.y=T.MathUtils.lerp(pelvis.p.y,hips.position.y,settle);
    hips.quaternion.slerp(pelvis.q,state.weight);
    hips.position.y-=.14*state.compression;
    root.updateMatrixWorld(true);const scale=root.getWorldScale(new T.Vector3()).y;let lower=0;
@@ -78,7 +88,7 @@ export function createHeroJump(model,solveChain,footFloor){
    for(let i=0;i<2;i++){
     if(!locomotion.planted[i])continue;
     const hip=legs[i].getWorldPosition(new T.Vector3()),foot=root.localToWorld(targets[i].p.clone());
-    const reach=T.MathUtils.lerp(start[i].reach,knees[i].position.length()+feet[i].position.length()-.035,smooth(landAge,0,.40))*scale;
+    const reach=T.MathUtils.lerp(start[i].reach,knees[i].position.length()+feet[i].position.length()-.004,smooth(landAge,0,.40))*scale;
     const horizontal=(hip.x-foot.x)**2+(hip.z-foot.z)**2;lower=Math.max(lower,hip.y-foot.y-Math.sqrt(Math.max(.001,reach*reach-horizontal)));
    }
    hips.position.y-=Math.max(0,lower)/scale;
@@ -86,12 +96,21 @@ export function createHeroJump(model,solveChain,footFloor){
   }
   if(freeLeft&&freeArm)rotate(freeArm,-.20*state.tuck+.10*state.compression,-.14*state.weight-.05*state.compression);
   root.updateMatrixWorld(true);
+  articulated.forEach((b,i)=>b.quaternion.copy(captured[i]));root.updateMatrixWorld(true);
   for(let i=0;i<2;i++){
    const t=targets[i],q=rootQ.clone().multiply(t.q),sign=i===0?-1:1;
-   t.p.x=sign*Math.max(.075,sign*t.p.x);t.p.y=Math.max(t.p.y,footFloor(i,q));
+   if(airborne)t.p.x=sign*Math.max(.075,sign*t.p.x);t.p.y=Math.max(t.p.y,footFloor(i,q));
    const target=root.localToWorld(t.p.clone()),pole=root.localToWorld(new T.Vector3(sign*.24,airborne?.55:.52,airborne?-.68:-.65));
    solveChain(legs[i],knees[i],feet[i],target,pole,airborne?state.tuck:0);
    feet[i].quaternion.copy(feet[i].parent.getWorldQuaternion(new T.Quaternion()).invert().multiply(q));
+  }
+  if(!airborne){
+   const weight=Math.max(state.weight,state.compression),solvedFeet=feet.map(f=>f.getWorldQuaternion(new T.Quaternion())),solvedRotations=articulated.map(b=>b.quaternion.clone());
+   articulated.forEach((b,i)=>b.quaternion.slerpQuaternions(nativeRotations[i],solvedRotations[i],weight));root.updateMatrixWorld(true);
+   for(let i=0;i<2;i++){const q=nativeFeet[i].slerp(solvedFeet[i],weight);feet[i].quaternion.copy(feet[i].parent.getWorldQuaternion(new T.Quaternion()).invert().multiply(q));}
+   root.updateMatrixWorld(true);let raise=0;
+   for(let i=0;i<2;i++){const p=root.worldToLocal(feet[i].getWorldPosition(new T.Vector3()));raise=Math.max(raise,footFloor(i,feet[i].getWorldQuaternion(new T.Quaternion()))-p.y);}
+   hips.position.y+=Math.max(0,raise);root.updateMatrixWorld(true);
   }
  }
  return {state,sample,pose};
