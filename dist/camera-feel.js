@@ -1,3 +1,4 @@
+import {PLAYER_SPEEDS} from './locomotion.js';
 // Living first-person camera, shared by the story levels (after the reference « SUBLEVEL 07 »): head bob driven by
 // the real ground speed, a lean into strafes, a dip on landings, a wider field of view while sprinting, and a trauma
 // shake (explosions, kills at close range, hits taken) that decays quadratically. Pure state + one apply() after the
@@ -15,7 +16,7 @@ export function createCameraFeel({ reduced = globalThis.matchMedia?.('(prefers-r
       if (grounded && speed > .8) s.bobT += dt * speed * 1.55;
       s.bob = damp(s.bob, grounded ? Math.min(1, speed / 4.5) * (1 - aim * .7) : 0, 8, dt);
       s.lean = damp(s.lean, -strafe * .012 * Math.min(1, speed / 4), 8, dt);
-      s.sprint = damp(s.sprint, sprint && speed > 5 ? 1 : 0, 9, dt);
+      s.sprint = damp(s.sprint, sprint && speed > PLAYER_SPEEDS.sprint*.7 ? 1 : 0, 9, dt);
       if (!grounded) s.fall = Math.min(s.fall, verticalSpeed);
       if (grounded && !s.wasGrounded && s.fall < -3) s.dip = Math.min(.16, -s.fall * .018) * k;
       if (grounded) s.fall = 0;
