@@ -1758,6 +1758,7 @@ const GAME_WEAPONS=[
  {name:'AURORA',mag:0,damage:95,cooldown:380,reload:0,color:'#54c6ff'}
 ];
 let weaponIndex=0,ammo=GAME_WEAPONS.map(w=>w.mag),isAiming=false,firing=false,gamePaused=false,weaponCooldown=0,reloadFinish=0,lastHit=0,score=0,shots=0,hits=0,jumpCount=0,lastGamepadButtons=[],gamepadMove={x:0,y:0},padLook={x:0,y:0},padRun=false,gamepadAiming=false,crouching=false,gunKick=0,hitMarkers=0;
+function setAimState(value){isAiming=!!value;document.getElementById('btnAimMobile')?.setAttribute('aria-pressed',String(isAiming));}
 function changeWeapon(delta){if(isFree)return;if(combatWorld){combatWorld.cycle(delta);weaponIndex=combatWorld.snapshot().weaponIndex;return;}weaponIndex=(weaponIndex+delta+GAME_WEAPONS.length)%GAME_WEAPONS.length;reloadFinish=0;updateWeaponUI();notify('ÉQUIPÉ : '+GAME_WEAPONS[weaponIndex].name,1100);}
 function reloadWeapon(){if(combatWorld){combatWorld.reload();return;}const w=GAME_WEAPONS[weaponIndex];if(reloadFinish||w.mag===0||ammo[weaponIndex]===w.mag)return;reloadFinish=performance.now()+w.reload;notify('RECHARGEMENT • '+w.name,Math.min(w.reload,1000));}
 function shoot(){if(!started||isFree||gamePaused||document.getElementById('help').classList.contains('show'))return;
@@ -1836,13 +1837,13 @@ function inputSetup(){
   if(ev.code==='KeyX')combatWorld?.melee?.();
   if(ev.code==='KeyB'||grenadeModifier(ev)){if(grenadeModifier(ev))ev.preventDefault();combatWorld?.throwCharge?.();}
   if(ev.code==='KeyJ'||(ev.code==='Space'&&!isFree))jumpQueued=true;
-  if(ev.code==='KeyO')isAiming=true;
+  if(ev.code==='KeyO')setAimState(true);
   if(ev.code==='KeyC')crouching=!crouching;
   if(ev.code==='Escape')toggleMissionPause();
 
  });
- document.addEventListener('keyup',ev=>{keys.delete(ev.code);if(ev.code==='KeyO')isAiming=false;});
- const cancelInputs=()=>{keys.clear();firing=isAiming=padFiring=padRun=jumpQueued=false;touch.moveX=touch.moveY=0;touch.sprint=false;touchOrbit?.reset();combatWorld?.pause();};
+ document.addEventListener('keyup',ev=>{keys.delete(ev.code);if(ev.code==='KeyO')setAimState(false);});
+ const cancelInputs=()=>{keys.clear();firing=padFiring=padRun=jumpQueued=false;setAimState(false);touch.moveX=touch.moveY=0;touch.sprint=false;touchOrbit?.reset();combatWorld?.pause();};
  window.addEventListener('blur',cancelInputs);document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelInputs();});
  canvas.addEventListener('mousedown',ev=>{if(ev.button===0){firing=true;shoot()}if(ev.button===1){ev.preventDefault();combatWorld?.melee?.();}if(ev.button===2){ev.preventDefault();if(started&&!isFree&&!gamePaused&&!combatWorld?.paused)jumpQueued=true;if(started&&!matchMedia('(pointer: coarse)').matches&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch?.(()=>{});}});
  document.addEventListener('mouseup',ev=>{if(ev.button===0)firing=false;});
@@ -1859,7 +1860,7 @@ function inputSetup(){
  const end=ev=>{if(stickId===ev.pointerId){stickId=null;touch.moveX=0;touch.moveY=0;$('nub').style.transform=''}};
  stick.addEventListener('pointerup',end);stick.addEventListener('pointercancel',end);
  $('btnJump').onpointerdown=e=>{e.preventDefault();jumpQueued=true;keys.add('KeyJ');try{e.currentTarget.setPointerCapture(e.pointerId)}catch{}};for(const t of ['pointerup','pointercancel','lostpointercapture'])$('btnJump').addEventListener(t,()=>keys.delete('KeyJ'));
- $('btnUse').onclick=interact;const tb=document.getElementById('touchButtons');if(tb){const fire=document.createElement('button');fire.textContent='TIR';fire.style.borderColor='#e6579d';fire.onpointerdown=e=>{e.preventDefault();firing=true;shoot();try{fire.setPointerCapture(e.pointerId)}catch{}};for(const type of ['pointerup','pointercancel','lostpointercapture'])fire.addEventListener(type,()=>{firing=false;});fire.id='btnFireMobile';fire.setAttribute('aria-label','Tirer');tb.prepend(fire);const aim=document.createElement('button');aim.id='btnAimMobile';aim.textContent='VISER';aim.setAttribute('aria-label','Viser');aim.onpointerdown=e=>{e.preventDefault();isAiming=true;try{aim.setPointerCapture(e.pointerId)}catch{}};for(const t of ['pointerup','pointercancel','lostpointercapture'])aim.addEventListener(t,()=>isAiming=false);tb.append(aim);}
+ $('btnUse').onclick=interact;const tb=document.getElementById('touchButtons');if(tb){const fire=document.createElement('button');fire.textContent='TIR';fire.style.borderColor='#e6579d';fire.onpointerdown=e=>{e.preventDefault();firing=true;shoot();try{fire.setPointerCapture(e.pointerId)}catch{}};for(const type of ['pointerup','pointercancel','lostpointercapture'])fire.addEventListener(type,()=>{firing=false;});fire.id='btnFireMobile';fire.setAttribute('aria-label','Tirer');tb.prepend(fire);const aim=document.createElement('button');aim.id='btnAimMobile';aim.textContent='VISER';aim.setAttribute('aria-label','Activer ou désactiver la visée');aim.setAttribute('aria-pressed','false');let aimTouchPointer=null;aim.onpointerdown=e=>{e.preventDefault();aimTouchPointer=e.pointerType==='touch'?e.pointerId:null;setAimState(e.pointerType==='touch'?!isAiming:true);try{aim.setPointerCapture(e.pointerId)}catch{}};for(const t of ['pointerup','pointercancel','lostpointercapture'])aim.addEventListener(t,e=>{if(e.pointerId!==aimTouchPointer)setAimState(false);});tb.append(aim);}
  $('btnRun').onpointerdown=e=>{touch.sprint=true;try{e.currentTarget.setPointerCapture(e.pointerId)}catch{}};for(const type of ['pointerup','pointercancel','lostpointercapture'])$('btnRun').addEventListener(type,()=>touch.sprint=false);
  const actions=document.getElementById('touchButtons');
  for(const [id,label,description,action] of [
@@ -1987,7 +1988,7 @@ function toggleSurfaceMode(value){
 let missionLoading=null,missionMenu=null;
 // DS4 in Safari uses the shared normalized gamepad mapping; no anonymous raw HID fallback.
 
-function resumeMission(){gamePaused=false;keys.clear();firing=false;isAiming=false;combatWorld?.resume();}
+function resumeMission(){gamePaused=false;keys.clear();firing=false;setAimState(false);combatWorld?.resume();}
 function toggleMissionPause(){if(missionMenu){missionMenu.isOpen?missionMenu.hide():missionMenu.show();}else{gamePaused=!gamePaused;combatWorld?.pause();}}
 async function boot(){try{
   const [{DesktopGamepadInput},{createGamepadAid},{createTouchOrbit}]=await Promise.all([import('./desktop-input.js?v=3.74.0'),import('./ios-gamepad.js?v=3.74.0'),import('./touch-orbit.js?v=1')]);
@@ -2007,7 +2008,7 @@ async function boot(){try{
  $('bootInfo').textContent='Initialisation du moteur WebGPU…';
  if(!referenceVisit){
   const {createPauseMenu}=await import('./fracture-menu.js?v=3.74.0');
-  missionMenu=createPauseMenu({title:'HISTOIRE / LE DERNIER SIGNAL',canOpen:()=>started,settingsSelectors:['#controlsPanel','#audioToggle'],view:{getView:()=>combatWorld?.view||'fps',onSelect:next=>{isFree=false;combatWorld?.setView(next);},canChange:()=>!!combatWorld?.viewReady},onPause(){gamePaused=true;combatWorld?.pause();keys.clear();firing=false;isAiming=false;},onResume:resumeMission,onVR:()=>combatWorld?.enterVR(),onHome:async()=>{await combatWorld?.exitVR();location.assign('./index.html');}});missionMenu.setVisible(false);
+  missionMenu=createPauseMenu({title:'HISTOIRE / LE DERNIER SIGNAL',canOpen:()=>started,settingsSelectors:['#controlsPanel','#audioToggle'],view:{getView:()=>combatWorld?.view||'fps',onSelect:next=>{isFree=false;combatWorld?.setView(next);},canChange:()=>!!combatWorld?.viewReady},onPause(){gamePaused=true;combatWorld?.pause();keys.clear();firing=false;setAimState(false);},onResume:resumeMission,onVR:()=>combatWorld?.enterVR(),onHome:async()=>{await combatWorld?.exitVR();location.assign('./index.html');}});missionMenu.setVisible(false);
   const {createVesperCombat}=await import('./vesper-combat.js?v=3.80.0');missionLoading?.set(.16,'Ressources du secteur chargées');
   let renderFailed=false;
   const fail=error=>{
@@ -2021,7 +2022,7 @@ async function boot(){try{
    onControl:(kind,value)=>{if(kind==='crouch')crouching=!crouching;if(kind==='sprint')touch.sprint=!!value;},
    setPlayer:p=>{position.x=p.x;position.y=p.elevation+eyeHeight;position.z=p.z;grounded=p.grounded;},
     getState:()=>({input:{x:Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('KeyQ')||keys.has('ArrowLeft'))+touch.moveX+gamepadMove.x,z:Number(keys.has('KeyS')||keys.has('ArrowDown'))-Number(keys.has('KeyW')||keys.has('KeyZ')||keys.has('ArrowUp'))+touch.moveY+gamepadMove.y,jump:jumpQueued||keys.has('KeyJ')||keys.has('Space'),sprint:touch.sprint||padRun||keys.has('ShiftLeft')},position,yaw,pitch,aiming:isAiming||zoomModifier()||gamepadAiming,crouching,grounded,sprint:touch.sprint||padRun||keys.has('ShiftLeft'),free:isFree,menuPaused:gamePaused,day:timeOfDay,shadows:shadowsEnabled,quality,flashlight}),
-   onPauseRequest:()=>{if(combatWorld?.xrActive){gamePaused=true;combatWorld.pause();}else missionMenu?.show();},onResumeRequest:()=>{missionMenu?.hide(false);resumeMission();},onHeading:heading=>{yaw=-heading;},onProgress:(value,label)=>missionLoading?.set(value,label),onCanvas:value=>{canvas=value;},onFailure:fail,onMenuChange:()=>{keys.clear();firing=false;padFiring=false;touch.moveX=touch.moveY=0;touch.sprint=false;gamepadMove.x=gamepadMove.y=0;isAiming=false;}});
+   onPauseRequest:()=>{if(combatWorld?.xrActive){gamePaused=true;combatWorld.pause();}else missionMenu?.show();},onResumeRequest:()=>{missionMenu?.hide(false);resumeMission();},onHeading:heading=>{yaw=-heading;},onProgress:(value,label)=>missionLoading?.set(value,label),onCanvas:value=>{canvas=value;},onFailure:fail,onMenuChange:()=>{keys.clear();firing=false;padFiring=false;touch.moveX=touch.moveY=0;touch.sprint=false;gamepadMove.x=gamepadMove.y=0;setAimState(false);}});
   renderer=combatWorld;gpuKind=renderer.kind;
   document.body.classList.add('pw-live-combat');
    document.querySelector('#help h2').textContent='Le Dernier Signal';
