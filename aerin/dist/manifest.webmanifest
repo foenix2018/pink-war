@@ -1,0 +1,26 @@
+{
+  "name": "Aerin — La clairière",
+  "short_name": "Aerin",
+  "description": "Jeu d’entraînement à l’épée avec HUD iPhone et double joystick.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#14281e",
+  "theme_color": "#12281f",
+  "icons": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

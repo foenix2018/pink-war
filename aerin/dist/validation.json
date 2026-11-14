@@ -1,0 +1,174 @@
+{
+  "passed": true,
+  "renderer": "Chromium / SwiftShader software WebGL",
+  "bones": 41,
+  "clips": [
+    {
+      "name": "Idle",
+      "duration": 9.966666221618652,
+      "minY": 0.02768065088265309,
+      "maxY": 1.7542383227069265,
+      "maxDelta": 0.6713570093625434,
+      "finite": true,
+      "weightError": 2.9802322387695312e-08
+    },
+    {
+      "name": "Walk",
+      "duration": 1.0666667222976685,
+      "minY": 0.018390689384780667,
+      "maxY": 1.7694340165969766,
+      "maxDelta": 2.9528556441687686,
+      "finite": true,
+      "weightError": 2.9802322387695312e-08
+    },
+    {
+      "name": "Run",
+      "duration": 0.5666666626930237,
+      "minY": 0.047938260613168915,
+      "maxY": 1.7335856181075795,
+      "maxDelta": 3.9313053656278862,
+      "finite": true,
+      "weightError": 2.9802322387695312e-08
+    },
+    {
+      "name": "Combat_Idle",
+      "duration": 1.6333333253860474,
+      "minY": 0.0049997851994205145,
+      "maxY": 1.7812655588013682,
+      "maxDelta": 0.28471243751671593,
+      "finite": true,
+      "weightError": 2.9802322387695312e-08
+    },
+    {
+      "name": "Sword_Slash",
+      "duration": 0.8999999761581421,
+      "minY": 0.0049997851994205145,
+      "maxY": 1.984718061670811,
+      "maxDelta": 3.655317637065586,
+      "finite": true,
+      "weightError": 2.9802322387695312e-08
+    },
+    {
+      "name": "Sword_Backslash",
+      "duration": 0.9666666388511658,
+      "minY": 0.0049997851994205145,
+      "maxY": 1.936819459313201,
+      "maxDelta": 3.668041458925294,
+      "finite": true,
+      "weightError": 2.9802322387695312e-08
+    },
+    {
+      "name": "Sword_Overhead",
+      "duration": 1.1333333253860474,
+      "minY": 0.00486902970159947,
+      "maxY": 2.3495984871506495,
+      "maxDelta": 3.495419622869634,
+      "finite": true,
+      "weightError": 2.9802322387695312e-08
+    },
+    {
+      "name": "Sword_Thrust",
+      "duration": 0.9666666388511658,
+      "minY": 0.0049997851994205145,
+      "maxY": 1.765486264530837,
+      "maxDelta": 2.6261841464499476,
+      "finite": true,
+      "weightError": 2.9802322387695312e-08
+    },
+    {
+      "name": "Shield_Raise",
+      "duration": 0.5666666626930237,
+      "minY": 0.0049997851994205145,
+      "maxY": 1.765486264530837,
+      "maxDelta": 1.1309249382224986,
+      "finite": true,
+      "weightError": 2.9802322387695312e-08
+    },
+    {
+      "name": "Shield_Hold",
+      "duration": 1.5333333015441895,
+      "minY": 0.0049997851994205145,
+      "maxY": 1.762747183816431,
+      "maxDelta": 0.0296463889883522,
+      "finite": true,
+      "weightError": 2.9802322387695312e-08
+    },
+    {
+      "name": "Shield_Hit",
+      "duration": 0.699999988079071,
+      "minY": 0.0044789077390235965,
+      "maxY": 1.766342012848169,
+      "maxDelta": 1.702284964224727,
+      "finite": true,
+      "weightError": 2.9802322387695312e-08
+    },
+    {
+      "name": "Shield_Lower",
+      "duration": 0.5666666626930237,
+      "minY": 0.0049997851994205145,
+      "maxY": 1.7654701834034299,
+      "maxDelta": 1.1268821105725075,
+      "finite": true,
+      "weightError": 2.9802322387695312e-08
+    },
+    {
+      "name": "Hit_React",
+      "duration": 0.8999999761581421,
+      "minY": 0.0046496263653534875,
+      "maxY": 1.8159270051592316,
+      "maxDelta": 2.04035014748926,
+      "finite": true,
+      "weightError": 2.9802322387695312e-08
+    },
+    {
+      "name": "Jump",
+      "duration": 1.2333333492279053,
+      "minY": 0.002868224570033495,
+      "maxY": 2.032490349264517,
+      "maxDelta": 1.148067092409177,
+      "finite": true,
+      "weightError": 2.9802322387695312e-08
+    },
+    {
+      "name": "Dodge_Back",
+      "duration": 0.8999999761581421,
+      "minY": 0.003876288523973037,
+      "maxY": 1.806791882364513,
+      "maxDelta": 2.2195152140157894,
+      "finite": true,
+      "weightError": 2.9802322387695312e-08
+    }
+  ],
+  "browserChecks": [
+    "15 animated clips, finite skinned vertices and normalized skin weights",
+    "ground penetration < 2.5 cm across 32 samples per clip",
+    "Shield_Raise → Shield_Hold",
+    "Sword_Slash → Combat_Idle",
+    "pause, skeleton display, playback speed",
+    "desktop 1380×1000 and mobile layout 390×844",
+    "GLB, FBX and Blender downloads"
+  ],
+  "fbxReimport": {
+    "bones": 41,
+    "meshes": 3,
+    "actions": 15,
+    "tool": "Blender 4.3.2"
+  },
+  "errors": [],
+  "failed": [],
+  "limitations": [
+    "No actual mobile device test",
+    "No Unity/Unreal/Pink Wars runtime test",
+    "No game collision or damage logic"
+  ],
+  "rigIdentity": {
+    "passed": true,
+    "bones": 41,
+    "checks": [
+      "Same bone names",
+      "Same hierarchy",
+      "Same local bind matrices within 1e-6"
+    ],
+    "source": "RLH source/idle.fbx"
+  }
+}
