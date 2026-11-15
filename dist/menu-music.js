@@ -26,6 +26,12 @@ export function setScreenMusic(next,mission=level,on=enabled){
  const changed=surface!==next||enabled!==!!on;
  level=mission;surface=next;enabled=!!on;sync(changed);
 }
+export function setMusicEnabled(value){
+ enabled=!!value;
+ try{const settings=JSON.parse(localStorage.getItem('rosee-settings')||'{}');localStorage.setItem('rosee-settings',JSON.stringify({...settings,music:enabled}));}catch{}
+ if(typeof document!=='undefined')for(const input of document.querySelectorAll?.('[data-music-setting],#music-setting')||[])input.checked=enabled;
+ sync(true);return enabled;
+}
 export function screenMusicSnapshot(){return {surface,level,enabled,playing:activePlayer?.playing||false,source:activePlayer?.source||null,...activePlayer?.stats};}
 if(typeof document!=='undefined'){
  const unlock=()=>{unlocked=true;try{window.sessionStorage.setItem('pink-war-menu-audio-unlocked','1');}catch{}sync(true);};

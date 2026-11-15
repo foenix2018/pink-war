@@ -1,5 +1,5 @@
 import {readM02Checkpoint} from './m02-checkpoint-index.js';
-import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
+import {setScreenMusic,setMusicEnabled,screenMusicSnapshot} from './menu-music.js';
 import {DesktopGamepadInput} from './desktop-input.js';
 import {createGamepadAid,gamepadsNow} from './ios-gamepad.js';
 import {graphicsProfile} from './renderer-policy.js';
@@ -78,7 +78,7 @@ const earlyCancel=e=>e.currentTarget.close();
 for(const d of document.querySelectorAll('dialog'))d.addEventListener('cancel',earlyCancel);
 $('sound-button').onclick=()=>{settings.sound=!settings.sound;save();refresh();};
 $('sound-setting').onchange=e=>{settings.sound=e.target.checked;save();};
-$('music-setting').onchange=e=>{settings.music=e.target.checked;save();refresh();};
+$('music-setting').onchange=e=>{settings.music=setMusicEnabled(e.target.checked);save();refresh();};
 $('sensitivity').oninput=e=>{settings.sensitivity=Number(e.target.value);save();};
 $('quality').onchange=e=>{settings.quality=e.target.value;save();};
 const earlyViewControl=mountViewControl($('settings-dialog'),{getView:()=>view,onSelect:next=>{view=next;savePreferredView(view);}});

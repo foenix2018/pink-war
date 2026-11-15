@@ -1,4 +1,5 @@
 import {createHudContrastControl} from './hud-appearance.js';
+import {createMusicControl} from './music-options.js';
 import {bindViewButton,mountViewControl} from './view-options.js?v=3.74.0';
 // Shared screen pause menu. A click requesting WebXR keeps its user activation.
 export function createPauseMenu({title='PINK WARS',onPause=()=>{},onResume=()=>{},onVR=()=>{},onHome=()=>location.assign('./index.html'),canOpen=()=>true,vrLabel='Passer en VR',settingsSelectors=[],view=null}={}){
@@ -10,6 +11,7 @@ export function createPauseMenu({title='PINK WARS',onPause=()=>{},onResume=()=>{
  const settings=document.createElement('section');settings.className='fracture-settings';settings.hidden=true;settings.setAttribute('aria-label','Réglages de la partie');settings.append(createHudContrastControl());
  const settingsContent=document.createElement('div');settingsContent.className='fracture-settings-content';settings.append(settingsContent);
  const viewControl=view?mountViewControl(settingsContent,view):null;
+ settingsContent.append(createMusicControl());
  const back=document.createElement('button');back.type='button';back.className='fracture-settings-back';back.textContent='Retour à la pause';settings.append(back);dialog.append(settings);let settingsOpen=false;const moved=[];
  function showSettings(value){viewControl?.refresh();settingsOpen=!!value;settings.hidden=!settingsOpen;dialog.querySelector('.fracture-choices').hidden=settingsOpen;dialog.querySelector('h2').textContent=settingsOpen?'Réglages.':'En pause.';if(settingsOpen&&!moved.length)for(const selector of settingsSelectors){const node=document.querySelector(selector);if(node){moved.push({node,parent:node.parentNode,next:node.nextSibling});settingsContent.append(node);}}(settingsOpen?back:dialog.querySelector('[data-pause-action=settings]')).focus();}
  back.onclick=()=>showSettings(false);

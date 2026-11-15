@@ -3,18 +3,25 @@ import assert from 'node:assert/strict';
 import {audioMock} from './audio-mock.mjs';
 
 test('menu and gameplay share one owner; pause, prologue, mute and page exit stop it',async t=>{
- const old={window:globalThis.window,document:globalThis.document,Audio:globalThis.Audio};
+ const old={window:globalThis.window,document:globalThis.document,Audio:globalThis.Audio,localStorage:globalThis.localStorage};
+ const stored=new Map([['rosee-settings',JSON.stringify({sound:true,quality:'low',sensitivity:1.4})]]);
+ globalThis.localStorage={getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v)};
  const events=new Map(),winEvents=new Map(),streams=[],session=new Map();const {ctx}=audioMock();
  ctx.createMediaElementSource=()=>({connect(){},disconnect(){}});
  globalThis.window={sessionStorage:{getItem:k=>session.get(k),setItem:(k,v)=>session.set(k,v)},AudioContext:function(){return ctx},addEventListener:(type,fn)=>winEvents.set(type,fn)};
  globalThis.document={hidden:false,addEventListener:(type,fn)=>{const list=events.get(type)||[];list.push(fn);events.set(type,list);},removeEventListener:(type,fn)=>events.set(type,(events.get(type)||[]).filter(f=>f!==fn))};
  globalThis.Audio=class{constructor(){this.paused=true;this.currentTime=0;streams.push(this)}play(){this.paused=false;return Promise.resolve()}pause(){this.paused=true}removeAttribute(){}load(){}};
  t.after(()=>{Object.assign(globalThis,old)});
- const {setScreenMusic,screenMusicSnapshot}=await import('../dist/menu-music.js?menu-test');
+ const {setScreenMusic,setMusicEnabled,screenMusicSnapshot}=await import('../dist/menu-music.js?menu-test');
  setScreenMusic('menu',1,true);assert.equal(streams.length,0,'no media before a user gesture');
  events.get('pointerdown').forEach(fn=>fn());await Promise.resolve();assert.equal(screenMusicSnapshot().playing,true);
  setScreenMusic('loading',1);assert.equal(streams.length,1,'loading reuses menu stream');
  setScreenMusic('gameplay');await Promise.resolve();assert.match(screenMusicSnapshot().source,/iron-maw/);assert.equal(streams.filter(m=>!m.paused).length,1);setScreenMusic('paused');assert.ok(streams.every(m=>m.paused));
+ setMusicEnabled(false);setScreenMusic('gameplay');await Promise.resolve();assert.ok(streams.every(m=>m.paused),'mute survives the gameplay update loop');
+ assert.deepEqual(JSON.parse(stored.get('rosee-settings')),{sound:true,quality:'low',sensitivity:1.4,music:false},'music leaves sound effects and other preferences intact');
+ setMusicEnabled(true);await Promise.resolve();assert.equal(screenMusicSnapshot().playing,true,'enabling music during gameplay resumes the existing stream');
+ assert.equal(streams.length,2,'toggling music reuses both audio streams');
+ setScreenMusic('paused');setMusicEnabled(false);setMusicEnabled(true);assert.ok(streams.every(m=>m.paused),'changing the preference during pause does not start gameplay audio');
  events.get('pointerdown').forEach(fn=>fn());assert.ok(streams.every(m=>m.paused),'shooting cannot restart music');
  setScreenMusic('menu',2);await Promise.resolve();assert.match(screenMusicSnapshot().source,/velvet-siege/);assert.equal(streams.length,2,'menu and mission streams are reused');assert.equal(streams.filter(m=>!m.paused).length,1);
  setScreenMusic('prologue');assert.ok(streams.every(m=>m.paused));

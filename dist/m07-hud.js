@@ -1,4 +1,5 @@
 import {hudIcon} from './hud-appearance.js';
+import {createMusicControl} from './music-options.js';
 // Chapter 07 exploration HUD – classic Pink Wars placement and authentic companion portrait.
 import {paintCompanionPortrait} from './companion-portrait.js';
 export function createM07Hud({characterId='ghju',onMove=()=>{},onRun=()=>{},onInteract=()=>{}}={}){
@@ -18,6 +19,7 @@ export function createM07Hud({characterId='ghju',onMove=()=>{},onRun=()=>{},onIn
 <span class="m07-help">ZQSD · Souris · Maj courir · E lire · Échap pause</span>
 <div class="m07-pause-screen" hidden><div class="m07-pause-panel m07-glass"><h2>PAUSE</h2><p>Chapitre 07 · Mémoires locales</p><button type="button" data-resume>REPRENDRE</button><a href="./index.html?mode=foret">RETOUR À L'ACCUEIL</a></div></div>`;
   document.body.append(root);document.body.classList.add('m07-hud-enabled');
+  root.querySelector('[data-resume]').before(createMusicControl());
   const q=sel=>root.querySelector(sel), portrait=q('.m07-companion'),detail=q('.m07-companion-detail'),
     objective=q('.m07-objective'),info=q('.m07-objective-detail'),pause=q('.m07-pause-screen'),action=q('.m07-action'),
     stick=q('.m07-joystick'),knob=q('.m07-knob');

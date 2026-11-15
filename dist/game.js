@@ -16,7 +16,7 @@ import { characterForId } from './characters.js';
 import { playLaserShot,playEnemyShot,loadRealLaserSample,loadCombatSamples,playLaserImpact,setLaserAudioEnabled,disposeLaserAudio,playWeaponAction,setWeaponCharge } from './laser-sound.js';
 import { createAmbience } from './ambience.js';
 import { ACTIVE_INSTALLATIONS, BRIDGES, BRIDGE_LANDINGS, BRIDGE_APPROACHES, bridgeSegments } from './world-layout.js';
-import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
+import {setScreenMusic,setMusicEnabled,screenMusicSnapshot} from './menu-music.js';
 import { portalIndicators } from './portal-indicator.js';
 import { objectiveIndicator, createObjectiveSmoother } from './objective-guidance.js';
 import { OPTICS } from './weapons.js';
@@ -183,7 +183,7 @@ $('settings-dialog').insertBefore(createHudContrastControl(),$('settings-dialog'
 syncSound(); $('sensitivity').value = settings.sensitivity; $('quality').value = settings.quality;
 $('sound-button').onclick = () => { settings.sound = !settings.sound; if(!settings.sound)robotShutdownAudio.stop();syncSound(); audioReady(); persist(); };
 $('sound-setting').onchange = e => { settings.sound = e.target.checked; if(!settings.sound)robotShutdownAudio.stop();syncSound(); audioReady(); persist(); };
-$('music-setting').onchange=e=>{settings.music=e.target.checked;audioReady();persist();};
+$('music-setting').onchange=e=>{settings.music=setMusicEnabled(e.target.checked);audioReady();persist();};
 $('sensitivity').oninput = e => { settings.sensitivity = Number(e.target.value); persist(); };
 $('quality').onchange = e => { settings.quality = e.target.value; world?.resize(settings.quality); persist(); };
 
