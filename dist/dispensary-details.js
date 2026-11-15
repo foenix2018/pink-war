@@ -1,7 +1,9 @@
 import {Assembly,bevelBox,matrix,limb} from './geo.js';
-// Proposal only: the authored room, interaction IDs and walking footprints stay authoritative.
-export function createDispensaryDetails(T,parent,{M,low=false}={}){
- const root=new T.Group();root.name='Proposition / dispensaire détaillé';parent.add(root);
+import {createMedicalCurtains,M02_CARE_CURTAINS} from './medical-curtains.js';
+// The authored room, interaction IDs and walking footprints stay authoritative.
+export function createDispensaryDetails(T,parent,{M,low=false,webgpu=false}={}){
+ const root=new T.Group();root.name='Dispensaire / mobilier et box de soins';parent.add(root);
+ const curtains=createMedicalCurtains(T,root,{webgpu,low,color:0x789792});
  const assembly=new Assembly(),owned=[],maps=[];let built=false;
  const mat=(color,roughness=.6,metalness=.1,extra={})=>{const m=new T.MeshStandardMaterial({color,roughness,metalness,...extra});owned.push(m);return m;};
  const steel=mat(0x8c9ea4,.34,.8),paint=mat(0x8c9b9a,.7,.25),rubber=mat(0x19262b,.87,.05),linen=mat(0x9daea7,.97),pillow=mat(0xb6bcb0,.94),blanket=mat(0x496e71,.95),glass=mat(0x9cd3ce,.17,.08,{transparent:true,opacity:.24,depthWrite:false}),fluid=mat(0x8fbbc4,.25,.05,{transparent:true,opacity:.48}),label=mat(0xdfddcb,.88);
@@ -56,12 +58,8 @@ export function createDispensaryDetails(T,parent,{M,low=false}={}){
   for(let i=0;i<3;i++)cyl(.018,.014,[x+.15+i*.045,y-.19,z+.065],i===0?glow:rubber,[Math.PI/2,0,0]);
  }
  function room(){
-  // Curtains on real ceiling tracks, with rings, hems and pleats in the mesh.
-  for(const [x,z,w] of [[18.9,85,2.6],[24.3,84.4,2.4]]){
-   tube([[x,2.70,z-w/2],[x,2.70,z+w/2]],.018);for(const end of [-1,1]){rod([x,2.70,z+end*(w/2-.1)],[x,3.35,z+end*(w/2-.1)],.012);box([.13,.025,.13],[x,3.37,z+end*(w/2-.1)],paint);}
-   const g=new T.PlaneGeometry(w,1.9,low?16:40,low?4:10),p=g.attributes.position;for(let i=0;i<p.count;i++){const u=p.getX(i),v=p.getY(i);p.setZ(i,Math.sin(u*23)*.055+Math.sin(u*7)*.015);p.setY(i,v+Math.cos(u*23)*.007*(1-v/2));}g.computeVertexNormals();const fabric=linen.clone();fabric.side=T.DoubleSide;owned.push(fabric);put(g,fabric,[x,1.55,z],[0,Math.PI/2,0]);for(let i=0;i<12;i++){const zz=z-w/2+(i+.5)*w/12;put(new T.TorusGeometry(.025,.004,4,8),steel,[x,2.53,zz],[0,Math.PI/2,0]);rod([x,2.55,zz],[x,2.69,zz],.003);}
-   rod([x+.028,.61,z-w/2],[x+.028,.61,z+w/2],.006,blanket);
-  }
+  for(const spec of M02_CARE_CURTAINS)curtains.span(spec);
+  curtains.build();
   for(const [x,z] of [[17.4,82.9],[17.4,87.4]]){
    for(let i=0;i<5;i++){const a=i*Math.PI*2/5,xx=x+Math.cos(a)*.25,zz=z+Math.sin(a)*.25;rod([x,.14,z],[xx,.08,zz],.017);caster(xx,.044,zz,a);}
    rod([x,.12,z],[x,2.12,z],.013);cyl(.024,.12,[x,1.07,z],rubber);tube([[x-.19,2.02,z],[x-.19,2.12,z],[x+.19,2.12,z],[x+.19,2.04,z]],.01);
@@ -72,5 +70,5 @@ export function createDispensaryDetails(T,parent,{M,low=false}={}){
   tube([[x-.40,.73,z-.20],[x-.40,.91,z-.20],[x+.40,.91,z-.20],[x+.40,.73,z-.20]],.016);
   for(let i=0;i<3;i++){cyl(.028,.11,[x-.25+i*.15,.84,z],i%2?glass:label);cyl(.029,.024,[x-.25+i*.15,.905,z],rubber);}box([.28,.045,.18],[x+.23,.815,z+.05],linen);box([.22,.05,.18],[x-.16,.28,z],blanket);
  }
- return{root,bed,cabinet,desk,finish(){if(built)return;built=true;room();assembly.build(root);for(const item of assembly.items)item.geometry.dispose();assembly.items.length=0;},dispose(){root.removeFromParent();root.traverse(o=>o.geometry?.dispose());for(const m of owned)m.dispose();for(const t of maps)t.dispose();}};
+ return{root,bed,cabinet,desk,update:(time,eye)=>curtains.update(time,eye),stats:()=>({curtains:curtains.stats()}),finish(){if(built)return;built=true;room();assembly.build(root);for(const item of assembly.items)item.geometry.dispose();assembly.items.length=0;},dispose(){curtains.dispose();root.removeFromParent();root.traverse(o=>o.geometry?.dispose());for(const m of owned)m.dispose();for(const t of maps)t.dispose();}};
 }

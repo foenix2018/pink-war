@@ -1,4 +1,6 @@
 import * as T from './vendor/three.webgpu.min.js';
+import {sampleFabricWind} from './fabric-motion.js';
+import {createFabricFinish} from './fabric-surface.js';
 
 /**
  * Cape et tabard tissés, attachés au squelette natif de Pink War.
@@ -28,7 +30,7 @@ export function addCapeToOriginalSoldier(model, profile, {front=false}={}) {
     const i=(y*size+x)*4;
     const diagonal=((x+y)%12<2)||((x-y+size)%12<2);
     const thread=(x%3===0||y%3===0)?3:0;
-    const c=diagonal?30:15+thread;
+    const c=diagonal?54:29+thread;
     pixels.set([c,c,c+2,255],i);
   }
   const texture=new T.DataTexture(pixels,size,size);
@@ -45,10 +47,9 @@ export function addCapeToOriginalSoldier(model, profile, {front=false}={}) {
   geometry.setAttribute('uv',new T.BufferAttribute(uv,2));
   geometry.setIndex(indices);
 
-  const fabric=new T.MeshStandardMaterial({
-    map:texture,color:0x949498,side:T.DoubleSide,roughness:.98,metalness:0,
-    emissive:0x000000,emissiveIntensity:0
-  });
+  const fabric=createFabricFinish(T,{map:texture,color:0xb6bbc7,roughness:.84,
+    sheenColor:profile.masculine?0x7599b3:0xb17d99});
+  fabric.bumpMap=texture;fabric.bumpScale=.0012;
   const cloth=new T.Mesh(geometry,fabric);
   cloth.name=(front?'Shadow / tabard frontal tissé, bordure ':'Shadow / cape dorsale tissée, bordure ')+(profile.masculine?'bleue':'rose');
   cloth.castShadow=true;
@@ -141,6 +142,7 @@ export function addCapeToOriginalSoldier(model, profile, {front=false}={}) {
   const billow=new Float32Array(rows+1);
   const billowVelocity=new Float32Array(rows+1);
   let previousTime=null, activitySmooth=.12;
+  const fabricWind={};
   function update(time,motion='idle',wind=.6,{symmetric=false,velocity=0,lateral=0,turn=0}={}) {
     const dt=previousTime==null?.016:Math.max(0,Math.min(.04,time-previousTime));
     previousTime=time;
@@ -150,7 +152,7 @@ export function addCapeToOriginalSoldier(model, profile, {front=false}={}) {
       motion==='jump'?.76:.12;
     // Pas de rupture de vitesse lors des changements marche/course/repos.
     activitySmooth+=(targetActivity-activitySmooth)*(1-Math.exp(-dt*3.1));
-    const strength=Math.max(0,Math.min(1,wind))*activitySmooth;
+    const strength=Math.max(0,Math.min(1,wind))*(.32+.68*activitySmooth);
     for(let j=1;j<=rows;j++) {
       const v=j/rows,lag=Math.pow(v,1.50);
       // Ondulation retardée depuis l'attache : l'ourlet garde son inertie.
@@ -198,6 +200,10 @@ export function addCapeToOriginalSoldier(model, profile, {front=false}={}) {
         // Deux plis verticaux amples, sans vibrations rapides.
         const fold=(symmetric?.0025*Math.sin(v*Math.PI)*Math.cos(edge*Math.PI*2):
           Math.sin(u*Math.PI*3.2+v*1.8-time*.72)*(.0035+.005*strength)*lag)*release;
+        // Broad resting pleats and the reference's three delayed ripples.
+        // Apply these before leg collision so wind cannot push cloth through armour.
+        const pleat=Math.cos(u*Math.PI*8)*(.008+.008*v)*lag;
+        sampleFabricWind(u,v,time,strength,fabricWind);
         const x=edge*width*.5;
         const z=surface(Math.max(.95,y),x);
         point.set(x,y,z);
@@ -214,10 +220,10 @@ export function addCapeToOriginalSoldier(model, profile, {front=false}={}) {
           point.z+=z-surface(1.06,x);
         }
         if(!symmetric){
-          point.x+=(sway[j]+fold)*release;
-          point.y+=.008*lag*Math.sin(time*1.05-v*2.9+edge*1.1)*(strength+.10)*release;
+          point.x+=(sway[j]+fold+fabricWind.x*.18)*release;
+          point.y+=(.008*lag*Math.sin(time*1.05-v*2.9+edge*1.1)*(strength+.10)+fabricWind.y*.18)*release;
         }
-        point.z+=direction*(billow[j]+fold*.45)*release;
+        point.z+=direction*(billow[j]+fold*.45+pleat+(symmetric?0:fabricWind.z*.24))*release;
         if(y<1.06)avoidLegs(point);
         point.y=Math.max(.055,point.y);
         point.applyMatrix4(toAnchor).toArray(positions,n);

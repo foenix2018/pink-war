@@ -5,8 +5,9 @@
 // object is built in its place: same footprint, same height, same collision box (physics is not touched).
 // All parts are merged per material: about twenty draw calls for the whole set.
 import { roundedBox } from './webgpu-upgrade.js';
-import { AREAS, sectorPropOffset, DEPOT, FACTORY } from './m03-layout.js';
+import { AREAS, sectorPropOffset, DEPOT, FACTORY,COMBAT_STATIONS } from './m03-layout.js';
 import {faceBounds,inside,retiredDecoration} from './m03-coherence.js';
+import {createMedicalCurtains,medicalBedCurtains,curtainFootprint} from './medical-curtains.js';
 
 const TAU = Math.PI * 2;
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
@@ -127,8 +128,9 @@ function merged(T) {
   };
 }
 
-export function createSectorProps(T, root, props, { low = false, rich = false } = {}) {
+export function createSectorProps(T, root, props, { low = false, rich = false,webgpu=false } = {}) {
   const group = new T.Group(); group.name = 'M03 / objets du secteur (modélisés)'; root.add(group);
+  let careCurtains=null;
   const rng = seeded(300311), seg = low ? .6 : 1, S = n => Math.max(6, Math.round(n * seg));
   const loader = new T.TextureLoader(), cache = new Map();
   const tex = (url, srgb = true, repeat = 1) => { const key = url + repeat; if (cache.has(key)) return cache.get(key); const t = loader.load(url, () => {}, undefined, () => {}); t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(repeat, repeat); if (srgb) t.colorSpace = T.SRGBColorSpace; t.anisotropy = low ? 2 : 8; cache.set(key, t); return t; };
@@ -292,6 +294,11 @@ export function createSectorProps(T, root, props, { low = false, rich = false } 
     put(M.red, box(.06, .02, .02), W / 2 - .08, H - .04, D / 2 + .005);
   }
   function bed(p) {
+    careCurtains??=createMedicalCurtains(T,group,{webgpu,low,color:0x7b929f});
+    for(const spec of medicalBedCurtains(p)){
+      const b=curtainFootprint(spec);
+      if(!COMBAT_STATIONS.some(o=>Math.abs(o.x-b.x)<o.hx+b.hx&&Math.abs(o.z-b.z)<o.hz+b.hz))careCurtains.span(spec);
+    }
     begin(p, longYaw(p)); const L = 2.05, W = .95, deck = .58;
     for (const x of [-L / 2 + .12, L / 2 - .12]) for (const z of [-W / 2 + .08, W / 2 - .08]) { put(M.chrome, cyl(.02, .02, deck - .12, 8), x, (deck - .12) / 2 + .1, z); put(M.dark, cyl(.06, .06, .04, 14), x, .06, z, Math.PI / 2, 0, 0); }
     put(M.galva, box(L, .06, W, .02), 0, deck, 0); put(M.mattress, box(L - .1, .16, W - .08, .06), 0, deck + .11, 0); put(M.linen, box(L * .62, .04, W - .04, .02), .3, deck + .2, 0);
@@ -378,6 +385,7 @@ export function createSectorProps(T, root, props, { low = false, rich = false } 
   const build = { jersey, drum, lamp, tree, bush, bollard, mast, cabin, pier, stanchion, post, rack, workbench, medcase, bed, generator, vending, barricade, column, riser };
   for (const p of props) build[p.kind]?.(p);
   const result = out.build(group, 'M03 objets');
+  careCurtains?.build();
   for (const gg of geo.values()) gg.dispose?.();
-  return { group, stats: () => ({ ...stats, meshes: result.meshes, triangles: Math.round(result.triangles) }), materials: M };
+  return { group,update:(time,eye)=>careCurtains?.update(time,eye),stats: () => ({ ...stats, meshes: result.meshes, triangles: Math.round(result.triangles),curtains:careCurtains?.stats() }), materials: M };
 }

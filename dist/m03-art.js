@@ -418,7 +418,7 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
     neons.meshes();neons.build();
     // The city around and above the sector (towers, skybridges, traffic, reflections): visual only, no collision.
     try { stats.grounds = createSectorGrounds(T, root, { low, rich }).stats(); } catch (error) { console.warn('M03 / sols des parcelles désactivés', error); }
-    try { sectorProps = createSectorProps(T, root, propList.props, { low, rich }); stats.props = sectorProps.stats(); } catch (error) { console.warn('M03 / objets modélisés désactivés', error); }
+    try { sectorProps = createSectorProps(T, root, propList.props, { low, rich,webgpu }); stats.props = sectorProps.stats(); } catch (error) { console.warn('M03 / objets modélisés désactivés', error); }
     // The three added places (depot interior, substation, holding yard) and their lights.
     let places = null; try { places = createAddedPlaces(T, root, { low, rich }); stats.places = places.stats(); for (const l of places.lights) sources.push({ ...l, color: new T.Color(l.color) }); } catch (error) { console.warn('M03 / lieux ajoutés désactivés', error); }
     // Volumetric light and dust under the avenue lamps and the lamps of the added places.
@@ -430,7 +430,7 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
     root, M, build, openPortal,
     update(t, dt, eye, player, { van = null, beaconOff = false, crank = false } = {}) {
       const e = eye.position;
-      worldFx.update(t,e);sectorMeshes.update(t); updatePool(dt, e); updateHalos(e); updateRain(dt, e); updatePortals(t, dt, e); updateDevices(t, e, dt);
+      worldFx.update(t,e);sectorMeshes.update(t);sectorProps?.update(t,e); updatePool(dt, e); updateHalos(e); updateRain(dt, e); updatePortals(t, dt, e); updateDevices(t, e, dt);
       for (const m of movable.values()) { m.open += Math.sign(m.target - m.open) * Math.min(Math.abs(m.target - m.open), dt * .35); m.apply(m.open); }
       if (devicesExtra.treuil && crank) devicesExtra.treuil.rotation.x += dt * 6;
       if (beacon) { beacon.off += ((beaconOff ? 1 : 0) - beacon.off) * Math.min(1, dt * 2); const on = 1 - beacon.off;
