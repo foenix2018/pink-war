@@ -43,7 +43,7 @@ test('a destroyed machine is thrown, slammed and blown up in well under a second
  fx.reset();assert.equal(fx.stats().burst,0);fx.dispose();
 });
 
-test('chapter 03 objects: every baked prop box becomes a modelled object with the same footprint, collisions untouched',async()=>{
+test('chapter 03 keeps useful authored props and retires anonymous visitor-map clutter',async()=>{
  const {decodeSector}=await import('../dist/m03-sector.js');const {classifySectorProps,createSectorProps}=await import('../dist/m03-props.js');
  const {AREAS}=await import('../dist/m03-layout.js');
  const bin=readFileSync(new URL('../dist/assets/m03/vesper-sector.bin',import.meta.url));
@@ -52,9 +52,10 @@ test('chapter 03 objects: every baked prop box becomes a modelled object with th
  const {props,drop}=classifySectorProps(meta,sector.world);
  const count=k=>props.filter(p=>p.kind===k).length;
  assert.equal(count('jersey'),28);assert.equal(count('workbench'),7);assert.equal(count('bed'),5);assert.equal(count('barricade'),3);
- assert.equal(count('bollard'),25,'kerb bollards every 12 m, not oil drums');assert.equal(count('pier'),12,'the row at z −56 carries the viaduct');assert.equal(count('lamp'),0);assert.ok(count('mast')>=20&&count('medcase')>=6&&count('rack')>=6&&count('cabin')>=4);
+ assert.equal(count('bollard'),25,'kerb bollards every 12 m, not oil drums');assert.equal(count('pier'),12,'the row at z −56 carries the viaduct');assert.equal(count('lamp'),0);assert.equal(count('column'),12);assert.equal(count('wreck'),3);assert.equal(count('rack'),8);
+ assert.equal(count('mast')+count('riser')+count('medcase')+count('cabin'),0,'retire the arbitrary field kits, duplicate cabinets and shrub blocks');
  assert.equal(count('drum')+count('bush')+count('post'),0,'no random drums, shrub blocks or anonymous poles');
- assert.ok(props.length>=150);assert.ok(drop.size>40000,'baked boxes and the loose scatter are dropped: '+drop.size);
+ assert.ok(props.length>=100&&props.length<=120);assert.ok(drop.size>68000,'baked boxes and the loose scatter are dropped: '+drop.size);
  // No street furniture inside the annexe or the workshop.
  for(const p of props.filter(p=>p.kind==='pier'||p.kind==='mast'))assert.ok(!AREAS.some(a=>a.roof&&p.cx>=a.x1&&p.cx<=a.x2&&p.cz>=a.z1&&p.cz<=a.z2),'street object indoors at '+p.cx+','+p.cz);
  T.TextureLoader.prototype.load=function(){return new T.Texture();};
@@ -64,7 +65,7 @@ test('chapter 03 objects: every baked prop box becomes a modelled object with th
  const box=new T.Box3().setFromObject(group);assert.ok(box.max.y<14);
  assert.equal(JSON.stringify(meta.colliders),before,'collisions are not modified');
  const low=createSectorProps(T,new T.Group(),props,{low:true}).stats();assert.ok(low.triangles<r.triangles*.6);
- assert.match(read('m03-art.js'),/createSectorProps\(T, root, propList\.props, \{ low, rich \}\)/);
+ assert.match(read('m03-art.js'),/createSectorProps\(T, root, propList\.props, \{ low, rich,webgpu \}\)/);
 });
 
 test('chapter 03 plots: paved aprons, a real boulevard, marked yards and a perimeter wall with matching collisions',async()=>{

@@ -3,6 +3,7 @@ import {retiredDecoration,serviceRampHeight} from './m03-coherence.js';
 import {cityWindowAtlas} from './m03-city.js';
 import {findBakedNeonRuns} from './baked-neons.js';
 import {createNeonFixtures} from './neon-fixtures.js';
+import {createM03Cleanup} from './m03-cleanup.js';
 // Mission 03 — the night Vesper sector of the visitor map, baked by tools/bake-m03-vesper.mjs (quads quantised to the
 // centimetre, one colour and one material index per quad) and rebuilt here for three.js: one mesh per material family,
 // planar world UVs, CC0 surfaces, neon and lit windows emissive, sign atlas redrawn from the page's labels.
@@ -28,7 +29,8 @@ export function decodeSector(meta, bin) {
 
 // ---------- Collision and walkable surfaces (game-logic obstacle format) ----------
 export function sectorObstacles(meta, extra = []) {
-  const out = [...meta.colliders, ...(meta.physicalSolids || [])].filter(c=>!retiredDecoration(c)&&!isDepotHull(c)).map(c => ({ x: (c.x1 + c.x2) / 2 + sectorPropOffset(c).x, z: (c.z1 + c.z2) / 2 + sectorPropOffset(c).z, hx: (c.x2 - c.x1) / 2, hz: (c.z2 - c.z1) / 2, y: Math.max(0, c.y1), height: c.y2 - Math.max(0, c.y1),
+  const cleanup=createM03Cleanup(meta);
+  const out = [...meta.colliders, ...(meta.physicalSolids || [])].filter(c=>!retiredDecoration(c)&&!isDepotHull(c)&&!cleanup.retiredSolid(c)).map(c => ({ x: (c.x1 + c.x2) / 2 + sectorPropOffset(c).x, z: (c.z1 + c.z2) / 2 + sectorPropOffset(c).z, hx: (c.x2 - c.x1) / 2, hz: (c.z2 - c.z1) / 2, y: Math.max(0, c.y1), height: c.y2 - Math.max(0, c.y1),
     surface: [0,13,16].includes(c.mat) || c.label === 'barrière béton' ? 'concrete' : 'metal', sector: true, kind: c.label, stairBody: !!c.stairBody, walkableSurface: !!c.walkableSurface, blocksInteraction: c.source === 'page' || /paroi|dalle/.test(c.label),
     // Thin walls, barriers and posts keep a narrower margin in the machines' navigation grid (doorways stay open).
     navPad: Math.min(c.x2 - c.x1, c.z2 - c.z1) < 1.4 ? .7 : 1.3 }));
@@ -37,7 +39,7 @@ export function sectorObstacles(meta, extra = []) {
 // Height of the walkable surfaces: the stairway rises towards −z, the decks are reached from the stairway.
 export function sectorTraversal(meta, extraFloors = []) {
   const stairs = meta.stairs.map((s, k) => ({ id: 'escalier-' + k, ...s })), decks = meta.decks.map((d, k) => ({ id: 'pont-' + k, x1: d.x1, x2: d.x2, z1: d.z1, z2: d.z2, height: d.h }));
-  const floors = [...decks, ...(meta.physicalFloors || []), ...extraFloors];
+  const floors = [...decks, ...(meta.physicalFloors || []).filter(f=>!createM03Cleanup(meta).retiredFloor(f)), ...extraFloors];
   const onStair = (s, x, z) => x >= s.x1 && x <= s.x2 && z <= s.zStart && z >= s.zEnd;
   const stairHeight = (s, z) => s.height * Math.min(1, Math.max(0, (s.zStart - z) / (s.zStart - s.zEnd)));
   const onFloor = (f, x, z) => x >= f.x1 && x <= f.x2 && z >= f.z1 && z <= f.z2;

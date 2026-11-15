@@ -25,6 +25,7 @@ import {createFreightTruck} from './freight-truck-detail.js';
 import {createRescueVehicle} from './rescue-vehicle-detail.js';
 import {createFunctionalProp} from './functional-props.js';
 import { softCube, softEnough, splitPieces } from './soft-pieces.js';
+import {createCargoContainer,createFreightTrailer,createMedicalRailcar,createMedicalPartitions} from './m03-industrial-models.js';
 
 const TAU = Math.PI * 2;
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
@@ -213,29 +214,27 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
     box(M.galva, x, 6.8, z, .13, .17, .13);
     sources.push({ x, y: 6.8, z, color: new T.Color(k ? 0xffb070 : 0xdcecff), intensity: 14, range: 20 });
   }
-  function arrimagePost(x, z) { box(M.dark, x, 0, z, .9, 1.3, .9); box(M.neonAmber, x, 1.3, z + .46, .5, .3, .02); }
+  function arrimagePost(x, z) {
+    box(M.galva,x,0,z,.9,.10,.9);
+    for(const side of [-1,1]){
+      const post=new T.Mesh(new T.CylinderGeometry(.10,.13,.83,low?10:18),M.dark);post.position.set(x+side*.23,.515,z);add(post);
+      box(M.yellow,x+side*.23,.87,z,.24,.07,.24);
+    }
+    const cleat=new T.Mesh(new T.CylinderGeometry(.075,.075,.75,low?10:18),M.galva);cleat.rotation.z=Math.PI/2;cleat.position.set(x,1.03,z);add(cleat);
+  }
   function train() {
     const cars=[[67,'LOCO'],[76,'SANITAIRE 7'],[85,'SANITAIRE 7'],[93.5,'FRET']];
     for(const [x,name] of cars){
       const L=name==='FRET'?5:8.4;
-      const wagon=createFunctionalProp(T,'railcar',{w:L,d:3,h:4.0,low,
-        M:{...M,paintedMetal:name==='LOCO'?M.dark:M.white,
-          white:name==='LOCO'?M.dark:M.white,ledCyan:name.startsWith('SANITAIRE')?M.red:M.neonWhite,
-          steel:M.galva,glass:M.glass,rubber:M.rubber}});
+      const wagon=createMedicalRailcar(T,{length:L,width:3,height:4,low,locomotive:name==='LOCO',freight:name==='FRET',M});
       wagon.position.set(x,0,-96);add(wagon);
       if(name.startsWith('SANITAIRE')){
-        const label=new T.Mesh(new T.PlaneGeometry(3.45,.76),
+        const label=new T.Mesh(new T.PlaneGeometry(3.45,.45),
           new T.MeshBasicMaterial({map:signTex(['✚ '+name,'ANNEAU LOGISTIQUE'],
           {bg:'#e8ebee',fg:'#c1121f',w:512,h:128}),toneMapped:false}));
-        label.position.set(x,2.26,-94.44);add(label);
+        label.position.set(x,1.88,-94.44);add(label);
         const stripe=new T.Mesh(new T.BoxGeometry(L-.25,.12,.038),M.red);
         stripe.position.set(x,3.12,-94.43);add(stripe);
-      }
-      if(name==='LOCO'){
-        for(const z of [-97.0,-95.0]){
-          const light=new T.Mesh(new T.BoxGeometry(.03,.18,.21),M.neonWhite);
-          light.position.set(x-L/2-.015,1.28,z);add(light);
-        }
       }
     }
     // Loading ramp for Inès' vehicle remains aligned with original choreography.
@@ -243,18 +242,10 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
   }
   function containers() {
     for (const [x, z, w, d, k] of [[67, -80, 2.6, 6, 0], [92, -82, 6, 2.6, 1], [68, -88, 2.6, 4.8, 2]]) {
-      const c = box(M.container[k], x, 0, z, w, 2.7, d);
-      for (let i = 0; i < 10; i++) box(M.dark, x + (w > d ? -w / 2 + .3 + i * (w - .6) / 9 : w / 2 + .01), .1, z + (w > d ? d / 2 + .01 : -d / 2 + .3 + i * (d - .6) / 9), w > d ? .06 : .02, 2.5, w > d ? .02 : .06);
-      // Corner posts and door locking bars add structure without affecting cover.
-      for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(M.galva, x + sx * (w / 2 - .07), .04, z + sz * (d / 2 - .07), .14, 2.62, .14);
-      for (const sx of [-1, 1]) {
-        box(M.dark, x + sx * w * .23, .18, z + d / 2 + .025, .045, 2.3, .045);
-        box(M.galva, x + sx * w * .23, 1.05, z + d / 2 + .055, .22, .05, .05);
-      }
-      box(M.galva, x, 2.6, z, w + .03, .1, d + .03);
-      void c;
+      const c=createCargoContainer(T,{length:Math.max(w,d),width:Math.min(w,d),height:2.7,M,low,body:M.container[k]});
+      c.position.set(x,0,z);c.rotation.y=w>d?0:Math.PI/2;add(c);
     }
-    box(M.container[1], 67, 2.7, -80, 2.6, 2.7, 6);
+    const upper=createCargoContainer(T,{length:6,width:2.6,height:2.7,M,low,body:M.container[1]});upper.position.set(67,2.7,-80);upper.rotation.y=Math.PI/2;add(upper);
   }
   function booth() {
     const office=createFunctionalProp(T,'booth',{w:6,d:6,h:3.2,low,M:{
@@ -283,10 +274,8 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
   }
   function buildTrailer() {
     const o = MOVABLE.remorque, g = new T.Group(); g.position.set(o.x, 0, o.z);g.name='remorque de fret'; add(g);
-    const body = new T.Mesh(softCube(T, .04).clone().scale(o.hx * 2, 3, o.hz * 2), M.container[0]); body.position.y = 2; g.add(body);
-    const base = new T.Mesh(new T.BoxGeometry(o.hx * 2, .4, o.hz * 2 - .2), M.dark); base.position.y = .5; g.add(base);
-    for (const k of [-5, -3.6, 4.6]) for (const s of [-1, 1]) { const w = new T.Mesh(new T.CylinderGeometry(.45, .45, .3, 14), M.rubber); w.rotation.x = Math.PI / 2; w.position.set(k, .45, s * (o.hz - .1)); g.add(w); }
-    const s = new T.Mesh(new T.PlaneGeometry(6, .8), new T.MeshStandardMaterial({ map: signTex('DIRECTOIRE · FRET SÉCURISÉ', { bg: null, fg: '#e9ecee', w: 512, h: 80 }), transparent: true, alphaTest: .05 })); s.position.set(0, 2.4, o.hz + .01); g.add(s);
+    g.add(createFreightTrailer(T,{length:o.hx*2,width:o.hz*2,height:o.height,M,low}));
+    const s = new T.Mesh(new T.PlaneGeometry(6, .8), new T.MeshStandardMaterial({ map: signTex('DIRECTOIRE · FRET SÉCURISÉ', { bg: null, fg: '#e9ecee', w: 512, h: 80 }), transparent: true, alphaTest: .05 })); s.position.set(0, 2.4, o.hz + .065); g.add(s);
     g.rotation.y = .1;
     const cable = new T.Mesh(new T.CylinderGeometry(.03, .03, 1, 5), M.black); add(cable);
     movable.set('remorque', { open: 0, target: 0, apply: v => { g.position.set(o.x+9*v,0,o.z-9*v);g.rotation.y=.1+v*(Math.PI/2-.1);g.updateMatrixWorld(true);cable.visible=v<.99;
@@ -295,11 +284,19 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
   let beacon = null;
   function buildBeacon() {
     const g = new T.Group(); g.position.set(0, 0, -93.6); add(g);
+    box(M.galva,0,0,0,.85,.16,.85,g);
     const mast = new T.Mesh(new T.CylinderGeometry(.18, .3, 4.2, 10), M.dark); mast.position.y = 2.1; g.add(mast);
-    const head = new T.Mesh(new T.OctahedronGeometry(.45, 0), M.neonRed); head.position.y = 4.5; g.add(head);
+    const head=new T.Group();head.name='Balise ORDRE / antennes et capteur rotatif';head.position.y=4.5;g.add(head);
+    const hub=new T.Mesh(new T.CylinderGeometry(.32,.38,.58,low?10:18),M.galva);head.add(hub);
+    for(const side of [-1,1]){
+      const array=new T.Mesh(softCube(T,.03).clone().scale(.18,.85,.55),M.dark);array.position.set(side*.44,.13,0);array.rotation.z=side*-.15;head.add(array);
+      for(let y=-.12;y<.5;y+=.15){const band=new T.Mesh(new T.BoxGeometry(.19,.025,.49),M.galva);band.position.set(side*.44,y,0);head.add(band);}
+    }
+    const indicator=new T.Mesh(new T.CylinderGeometry(.12,.12,.07,low?10:18),M.neonRed.clone());indicator.rotation.x=Math.PI/2;indicator.position.set(0,.03,.37);head.add(indicator);
+    const lens=new T.Mesh(new T.TorusGeometry(.15,.025,6,18),M.dark);lens.position.copy(indicator.position);head.add(lens);
     const beam = new T.Mesh(new T.CylinderGeometry(.15, .5, 60, 12, 1, true), additive(0xff2f45, .25)); beam.position.y = 34; g.add(beam);
     const ring = new T.Mesh(new T.RingGeometry(1.2, 1.4, 36), additive(0xff2f45, .6)); ring.rotation.x = -Math.PI / 2; ring.position.y = .05; g.add(ring);
-    beacon = { g, head, beam, ring, off: 0 };
+    beacon = { g, head,indicator, beam, ring, off: 0 };
   }
 
   // ---------- Interaction markers ----------
@@ -309,7 +306,7 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
       const g = new T.Group();g.name='borne mission / '+it.id; g.position.set(it.x, (it.y || 0), it.z); add(g);
       const gem = new T.Mesh(new T.CylinderGeometry(.055,.055,.035,12), new T.MeshBasicMaterial({ color: 0xffb35c, toneMapped: false })); gem.rotation.x=Math.PI/2;gem.position.set(.17,1.2,.0475);g.add(gem);
       const ring = new T.Mesh(new T.RingGeometry(.5, .58, 28), additive(0xffb35c, .35)); ring.rotation.x = -Math.PI / 2; ring.position.y = .03; g.add(ring);
-      if (it.log && !it.id.startsWith('doc-')) { const stand=createFunctionalProp(T,'terminal',{w:.58,d:.5,h:1.28,low,M});g.add(stand);const pad = new T.Mesh(new T.BoxGeometry(.5, .32, .05), M.dark); pad.position.set(0, 1.2, 0); g.add(pad); const scr = new T.Mesh(new T.PlaneGeometry(.42, .24), M.neonCyan); scr.position.set(0, 1.2, .03); g.add(scr); }
+      if (it.log && !it.id.startsWith('doc-')) { const screen=new T.MeshBasicMaterial({map:signTex(['ARCHIVES','HORS RÉSEAU'],{bg:'#071820',fg:'#a7e9e4',w:256,h:128}),toneMapped:false});const stand=createFunctionalProp(T,'terminal',{w:.58,d:.5,h:1.28,low,M:{...M,glass:screen}});g.add(stand); }
       else if (it.id.startsWith('doc-')) { const stand=createFunctionalProp(T,'terminal',{w:.52,d:.45,h:1.25,low,M});g.add(stand);const paper = new T.Mesh(new T.PlaneGeometry(.3, .4), std(0xe8e1cf, .9, 0, { side: T.DoubleSide })); paper.position.set(0, 1.15, 0); paper.rotation.x = -.3; g.add(paper); }
       let control=null;
       if(["alimentation", "balise", "transfo", "barriere", "treuil", "arrimage"].includes(it.id)){
@@ -398,6 +395,7 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
   const neons=createLevelNeons(T,root,{low,metal:M.galva,back:M.dark,materials:[M.neonCyan,M.neonPink,M.neonAmber,M.neonRed,M.neonWhite]});
   function build() {
     buildCity(); buildEast();
+    createMedicalPartitions(T,root,M,{low});
     for(const o of WORKSHOP_EQUIPMENT){const prop=createFunctionalProp(T,o.prop,{w:o.hx*2,d:o.hz*2,h:o.height,low,M});prop.position.set(o.x,0,o.z);root.add(prop);const face=o.prop==='pump'?.51:.75;box(M.dark,o.x,o.height*.5-.13,o.z+face,1.3,.26,.04);sign(o.prop==='pump'?'POMPE HYDRAULIQUE':'GROUPE DE SECOURS',o.x,o.height*.5,o.z+face+.025,0,1.25,.22,{w:512,h:96,bg:'#14212a',fg:'#ffc890'});}
 
     for(const o of COMBAT_STATIONS){const prop=createFunctionalProp(T,o.prop,{w:o.hx*2,d:o.hz*2,h:o.height,low,M});prop.position.set(o.x,0,o.z);root.add(prop);}
@@ -434,7 +432,7 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
       for (const m of movable.values()) { m.open += Math.sign(m.target - m.open) * Math.min(Math.abs(m.target - m.open), dt * .35); m.apply(m.open); }
       if (devicesExtra.treuil && crank) devicesExtra.treuil.rotation.x += dt * 6;
       if (beacon) { beacon.off += ((beaconOff ? 1 : 0) - beacon.off) * Math.min(1, dt * 2); const on = 1 - beacon.off;
-        beacon.beam.material.opacity = (.18 + .1 * Math.sin(t * 4)) * on; beacon.ring.material.opacity = .6 * on * (.5 + .5 * Math.sin(t * 6)); beacon.head.rotation.y = t * 2; beacon.head.material.color.set(on > .5 ? 0xff2f45 : 0x3dff8a); }
+        beacon.beam.material.opacity = (.18 + .1 * Math.sin(t * 4)) * on; beacon.ring.material.opacity = .6 * on * (.5 + .5 * Math.sin(t * 6)); beacon.head.rotation.y = t * .6; beacon.indicator.material.color.set(on > .5 ? 0xff2f45 : 0x3dff8a); }
       if (van && amb) {
         amb.body.userData.updateVehicle?.(dt,{speed:van.moving?VAN.speed:0});
         amb.g.position.set(van.x, 0, van.z); amb.g.rotation.y = van.yaw;
@@ -452,6 +450,6 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
     setPower(zone, on) { power[zone] = !!on; },
     markDone(id, done = true) { const d = devices.get(id); if (d) d.done = done; },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
-    stats() { return { ...stats, worldEffects:worldFx.stats(),neons:neons.stats(), sector: sectorMeshes.stats, portals: portals.length, movable: Object.fromEntries([...movable].map(([k, v]) => [k, +v.open.toFixed(2)])), beacon: beacon ? +(1 - beacon.off).toFixed(2) : null }; }
+    stats() { return { ...stats,cleanup:propList.cleanup, worldEffects:worldFx.stats(),neons:neons.stats(), sector: sectorMeshes.stats, portals: portals.length, movable: Object.fromEntries([...movable].map(([k, v]) => [k, +v.open.toFixed(2)])), beacon: beacon ? +(1 - beacon.off).toFixed(2) : null }; }
   };
 }
