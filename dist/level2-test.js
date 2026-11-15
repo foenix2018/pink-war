@@ -967,7 +967,7 @@ async function boot(){
  try{
   const environment={userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu};
   const profile=graphicsProfile(environment,renderingQuality(),new URLSearchParams(location.search).get('renderer')==='webgl'||low()||await immersiveRendererPreferred());
-  if(profile.phone&&!new URLSearchParams(location.search).has('quality'))quality.value='low';
+  if((profile.phone||profile.economy)&&!new URLSearchParams(location.search).has('quality'))quality.value='low';
   const prepared=await createCompatibleRenderer({canvas,WebGPU:T.WebGPURenderer,WebGL:WebGLRenderer,profile});
   missionLoading?.set(.28,'Construction des Bas-Niveaux');
   bootStep='création de la scène';status.textContent='Création du quartier cyberpunk…';

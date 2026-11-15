@@ -364,6 +364,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   function resize(nextQuality=quality){
     quality=nextQuality;const current=graphicsProfile(deviceEnvironment,quality,forceWebGL);
     const ratio=renderPixelRatio(current,devicePixelRatio,innerWidth,innerHeight);
+    renderer.frameBudget?.configure(current);
     renderer.setPixelRatio(ratio);renderer.setSize(innerWidth,innerHeight,false);
     camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.shadowMap.enabled=current.shadows;
   }
