@@ -1,3 +1,4 @@
+import {readPreferredView,savePreferredView,normalizeView} from './view-options.js';
 import {frameDelta} from './frame-timing.js';
 import {GAME_VERSION} from './launch-ui.js';
 import {applyFPSCameraMotion} from './fps-motion.js';
@@ -56,7 +57,7 @@ const shade=$('shade'),startButton=$('start'),status=$('status'),quality=$('qual
 if(params.get('quality')==='low')quality.value='low';
 const low=()=>quality.value==='low';
 let canvas=$('game'),renderer,scene,camera,game,weapon,art,clock=0,running=false,started=false,last=0,framePending=false,recovering=false,bootStep='modules';
-let yaw=0,pitch=0,noticeUntil=0,hitUntil=0,paused=false,view='fps',aimBlend=0,mouseAim=false,playerRig=null,touchControls=null;
+let yaw=0,pitch=0,noticeUntil=0,hitUntil=0,paused=false,view=readPreferredView(),aimBlend=0,mouseAim=false,playerRig=null,touchControls=null;
 let jumpQueued=false,crouchQueued=false,firePressQueued=false,heldFire=false,weaponReady=false,audioCtx=null;
 let combatEffects=null,companion=null,ambience=null,companionSkills=null,skillMenu=null,enemyFactory=null,armorFx=null,combatHud=null;
 let meleeQueued=false,chargeQueued=false,touchSprinting=false,xr=null,fallbackGun=null,fallbackHand=null;
@@ -71,6 +72,7 @@ const completed=()=>!!mission?.completed;
 const heroName=characterId==='lylu'?'LYLU':'GHJU';
 
 const pauseMenu=createPauseMenu({title:'03 — LE CONVOI DES ABSENTS',canOpen:()=>started&&!completed()&&!reading,
+ view:{getView:()=>xr?.active?'fps':view,onSelect:next=>changeView(next),canChange:next=>!xr?.active&&(next==='fps'||!!playerRig)},
  onPause:()=>pauseMission(),onResume:()=>unpauseMission(),onVR:()=>xr?.enter(),onHome:async()=>{await xr?.exit();location.assign('./index.html');}});
 pauseMenu.setVisible(false);
 
@@ -298,7 +300,12 @@ function snapCamera(){
  camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
  weapon.visible=view==='fps';if(playerRig?.model)playerRig.model.root.visible=view==='third';
 }
-function changeView(){view=view==='fps'?'third':'fps';if(!playerRig&&view==='third'){view='fps';notice('PERSONNAGE SHADOW UNIT EN COURS DE CHARGEMENT');}snapCamera();}
+function changeView(next=view==='fps'?'third':'fps'){
+ if(xr?.active)return false;
+ const selected=normalizeView(next);
+ if(!playerRig&&selected==='third'){notice('PERSONNAGE SHADOW UNIT EN COURS DE CHARGEMENT');return false;}
+ view=selected;savePreferredView(view);snapCamera();return true;
+}
 function toggleLamp(){lampMode=lampMode==='auto'?(lampOn?'off':'on'):lampMode==='on'?'off':'on';notice(lampMode==='on'?'LAMPE FRONTALE ALLUMÉE':'LAMPE FRONTALE ÉTEINTE',1.6);}
 function updateLamp(dt){
  const want=lampMode==='on'||(lampMode==='auto'&&!!L.AREAS.find(a=>a.id===L.areaAt(game.player.x,game.player.z))?.roof);
@@ -641,7 +648,7 @@ for(const name of ['pointerup','pointercancel'])window.addEventListener(name,e=>
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
 
 window.__PINK_M03=Object.freeze({
- snapshot:()=>({level:L.LEVEL_ID,revision:GAME_VERSION,running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,choice,time:game?.time,missionTime,
+ snapshot:()=>({level:L.LEVEL_ID,revision:GAME_VERSION,running,paused,view,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,choice,time:game?.time,missionTime,
   area:game&&L.areaAt(game.player.x,game.player.z),health:game?.player.hp,shield:game?.player.shield,charges:game?.charges,
   position:game&&{x:+game.player.x.toFixed(2),z:+game.player.z.toFixed(2),elevation:+game.player.elevation.toFixed(2)},
   weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,opened:mission?.opened,done:mission?.done,reads:mission?.reads,

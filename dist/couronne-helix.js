@@ -1,3 +1,4 @@
+import {readPreferredView,savePreferredView,normalizeView} from './view-options.js';
 import {frameDelta} from './frame-timing.js';
 import {applyFPSCameraMotion} from './fps-motion.js';
 import {rendererBackend,rendererLabel} from './renderer-policy.js';
@@ -41,7 +42,7 @@ const shade=$('shade'),startButton=$('start'),status=$('status'),quality=$('qual
 if(params.get('quality')==='low')quality.value='low';
 const low=()=>quality.value==='low';
 let canvas=$('game'),renderer,scene,camera,game,weapon,art,clock=0,running=false,started=false,last=0,framePending=false,recovering=false,bootStep='modules';
-let yaw=0,pitch=0,noticeUntil=0,hitUntil=0,paused=false,view='fps',aimBlend=0,mouseAim=false,playerRig=null,touchControls=null;
+let yaw=0,pitch=0,noticeUntil=0,hitUntil=0,paused=false,view=readPreferredView(),aimBlend=0,mouseAim=false,playerRig=null,touchControls=null;
 let jumpQueued=false,crouchQueued=false,firePressQueued=false,heldFire=false,weaponReady=false,audioCtx=null;
 let combatEffects=null,companion=null,ambience=null,companionSkills=null,skillMenu=null,enemyFactory=null,armorFx=null,combatHud=null;
 let meleeQueued=false,chargeQueued=false,touchSprinting=false,xr=null,fallbackGun=null,fallbackHand=null;
@@ -53,6 +54,7 @@ let collisions=L.buildCollisions(),mission=null,missionTime=0,shotsFired=0,hits=
 const completed=()=>!!mission?.completed;
 
 const pauseMenu=createPauseMenu({title:'COURONNE HELIX / NIVEAU AUTONOME',canOpen:()=>started&&!completed(),
+ view:{getView:()=>xr?.active?'fps':view,onSelect:next=>changeView(next),canChange:next=>!xr?.active&&(next==='fps'||!!playerRig)},
  onPause:()=>pauseMission(),onResume:()=>unpauseMission(),onVR:()=>xr?.enter(),onHome:async()=>{await xr?.exit();location.assign('./index.html');}});
 pauseMenu.setVisible(false);
 
@@ -170,7 +172,12 @@ function snapCamera(){
  if(view==='fps')applyFPSCameraMotion(camera,game,{tracked:!!xr?.active});camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
  weapon.visible=view==='fps';if(playerRig?.model)playerRig.model.root.visible=view==='third';
 }
-function changeView(){view=view==='fps'?'third':'fps';if(!playerRig&&view==='third'){view='fps';notice('PERSONNAGE SHADOW UNIT EN COURS DE CHARGEMENT');}snapCamera();}
+function changeView(next=view==='fps'?'third':'fps'){
+ if(xr?.active)return false;
+ const selected=normalizeView(next);
+ if(!playerRig&&selected==='third'){notice('PERSONNAGE SHADOW UNIT EN COURS DE CHARGEMENT');return false;}
+ view=selected;savePreferredView(view);snapCamera();return true;
+}
 async function loadAuthenticSoldier(){
  if(weaponReady)return;weaponReady=true;
  try{

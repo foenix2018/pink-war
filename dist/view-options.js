@@ -9,7 +9,7 @@ export function bindViewButton(button,{getView=readPreferredView,onSelect=savePr
  button.dataset.viewToggle='';
  let previousView,previousDisabled;
  function refresh(){
-  const third=normalizeView(getView())==='third',disabled=!canChange();
+  const third=normalizeView(getView())==='third',disabled=!canChange(third?'fps':'third');
   if(previousView===third&&previousDisabled===disabled)return;
   previousView=third;previousDisabled=disabled;button.disabled=disabled;
   button.textContent=third?'3P · Passer en FPS':'FPS · Passer en 3P';

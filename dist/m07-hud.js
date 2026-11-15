@@ -1,3 +1,4 @@
+import {hudIcon} from './hud-appearance.js';
 // Chapter 07 exploration HUD – classic Pink Wars placement and authentic companion portrait.
 import {paintCompanionPortrait} from './companion-portrait.js';
 export function createM07Hud({characterId='ghju',onMove=()=>{},onRun=()=>{},onInteract=()=>{}}={}){
@@ -11,7 +12,7 @@ export function createM07Hud({characterId='ghju',onMove=()=>{},onRun=()=>{},onIn
 <button class="m07-companion m07-glass" type="button" aria-expanded="false" aria-label="Afficher les informations de ${companion}"><canvas width="128" height="128" aria-hidden="true"></canvas><span>${companion}</span></button>
 <div class="m07-companion-detail m07-glass" hidden><strong>${companion} · SUPPORT</strong><p>Reconnaissance et assistance. L'arsenal, les grenades et les capacités de combat seront disponibles dans le niveau jouable complet.</p></div>
 <button class="m07-pause m07-glass" type="button" aria-label="Mettre en pause">Ⅱ</button>
-<button class="m07-action m07-glass" type="button" hidden>◉ ACTION</button>
+<button class="m07-action m07-glass" type="button" hidden>${hudIcon('interact')}ACTION</button>
 <div class="m07-joystick" role="group" aria-label="Déplacement tactile"><div class="m07-knob"></div></div>
 <span class="m07-run-label">Joystick : incliner pour courir</span>
 <span class="m07-help">ZQSD · Souris · Maj courir · E lire · Échap pause</span>

@@ -432,7 +432,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   onProgress(.98,'Rendu du secteur validé');
   const api={
     get view(){return effectiveView();},get viewReady(){return !!rig&&!xr?.active;},
-    setView(next){if(xr?.active||!rig)return false;view=normalizeView(next);savePreferredView(view);syncCamera(getState(),0);return true;},
+    setView(next){if(xr?.active)return false;const selected=normalizeView(next);if(selected==='third'&&!rig)return false;view=selected;savePreferredView(view);syncCamera(getState(),0);return true;},
     get xrActive(){return xr.active;},enterVR(){return xr.enter();},exitVR(){return xr.exit();},
     kind:rendererLabel(renderer)+' · M01',managedResolution:true,canonical:true,
     get paused(){return journalOpen||skillMenu.isOpen;},
