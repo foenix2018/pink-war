@@ -29,7 +29,7 @@ const BULLET='<svg class="pw-hud-bullet" viewBox="0 0 8 20" aria-hidden="true"><
 export function combatEquipmentState(game,hero='ghju'){
  const owned=game?.ownedWeapons instanceof Set?game.ownedWeapons:new Set();
  return {hero:hero==='lylu'?'lylu':'ghju',weaponIndex:game?.weaponIndex??-1,charges:Math.max(0,Number(game?.charges)||0),
-  weapons:weaponCycleOrder(owned,game?.characterId||hero).map(index=>({index,name:WEAPONS[index].name,
+  weapons:weaponCycleOrder(owned,game?.characterId||hero).filter(index=>game?.isWeaponAvailable?.(index)!==false).map(index=>({index,name:WEAPONS[index].name,
    ammo:game?.ammo?.[index]??0,capacity:WEAPONS[index].capacity,melee:!!WEAPONS[index].melee}))};
 }
 

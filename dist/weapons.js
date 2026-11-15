@@ -1,3 +1,4 @@
+import {createIEMWeapon,IEM_FRAME,IEM_HOLD} from './voltis-iem.js';
 import {createFPSMotion,reloadPose} from './fps-motion.js';
 import * as T from './vendor/three.webgpu.min.js';
 import { Assembly, bevelBox, profile, turned, matrix } from './geo.js';
@@ -24,7 +25,8 @@ export const WEAPON_FRAME = Object.freeze([
   Object.freeze({ id:'aurora',muzzle:Object.freeze([0,.14,0]),support:null,length:1.22,melee:true }),
   M12_FRAME,
   Object.freeze({id:'duor9',muzzle:Object.freeze([0,.124,-.329]),support:Object.freeze([-.44,0,0]),length:.40,dual:true}),
-  Object.freeze({id:'vortex',muzzle:Object.freeze([0,.138,-.729]),support:Object.freeze([0,.045,-.41]),length:1.08})
+  Object.freeze({id:'vortex',muzzle:Object.freeze([0,.138,-.729]),support:Object.freeze([0,.045,-.41]),length:1.08}),
+  IEM_FRAME
 ]);
 // The Kenney blasters are placed by their muzzle, so their own pistol grips are not at the origin, and they are
 // toy-wide (grips 4.3 to 7.2 cm across). `slim` narrows each one (x only) to a 3.6 cm grip, which the glove's
@@ -41,7 +43,8 @@ export const AUTHORED_HOLD = Object.freeze({
   2:Object.freeze({palm:Object.freeze([0,0,0]),support:Object.freeze([0,-.052,-.300]),rake:0}),
   3:Object.freeze({palm:Object.freeze([0,0,0]),support:Object.freeze([0,-.050,-.340]),rake:0}),
   7:Object.freeze({palm:Object.freeze([0,0,0]),support:Object.freeze([-.44,0,0]),rake:0}),
-  8:Object.freeze({palm:Object.freeze([0,0,0]),support:Object.freeze([0,.045,-.41]),rake:-.12})
+  8:Object.freeze({palm:Object.freeze([0,0,0]),support:Object.freeze([0,.045,-.41]),rake:-.12}),
+  9:IEM_HOLD
 });
 export const KENNEY_HOLD = Object.freeze([
   // X offsets put the palm OUTSIDE the grip's right flank, not through its
@@ -64,6 +67,7 @@ const PI = Math.PI;
 // measured on the authored VX-9, NEXUS, ARES and THORN models (their userData.optic) and on the NOVA reflex sight.
 // eyeRelief (default radius × 7, at least 12 cm) is how far the eye sits behind that centre when aiming.
 export const OPTICS = Object.freeze({
+  iem:Object.freeze({y:.23134,z:.01,radius:.018,magnification:1.15,eyeRelief:.56,xrEyeRelief:.3,iron:true}),
   r9:Object.freeze({y:.221,z:-.0487,radius:.0214,magnification:1.15,eyeRelief:.26}),
   bloom:Object.freeze({y:.2586,z:-.1939,radius:.0342,magnification:2}),
   lance:Object.freeze({y:.1693,z:-.2714,radius:.0309,magnification:4}),
@@ -342,7 +346,7 @@ export function createWeaponModels(mats) {
   duo.name='VX-9 DUO / GHJU';right.name='DUO right';left.name='DUO left';left.position.x=-.44;left.scale.x=-1;
   right.add(models[0].clone());left.add(models[0].clone());duo.add(right,left);
   Object.assign(duo.userData,{frame:WEAPON_FRAME[7],dual:true,integratedEmitter:true});models.push(duo);
-  const vortex=createVortexAR7();vortex.userData.frame=WEAPON_FRAME[8];models.push(vortex);
+  const vortex=createVortexAR7();vortex.userData.frame=WEAPON_FRAME[8];models.push(vortex);models.push(createIEMWeapon(T));
   return models;
 }
 
@@ -409,7 +413,7 @@ export function buildGun({ mats, gloves, sleeve = true, arm = sleeve, makeFlash 
   const leftFlash=makeFlash(dualLeft);leftFlash.visible=false;
   g.userData.dualLeft=dualLeft;g.userData.flashFor=hand=>g.userData.index===7&&hand==='left'?leftFlash:flash;
   g.userData.setFlash=(active,time=0)=>{
-    if(g.userData.index!==7){flash.visible=!!active;leftFlash.visible=false;return;}
+    if(g.userData.index!==7){flash.visible=g.userData.index!==9&&!!active;leftFlash.visible=false;return;}
     for(const [hand,light] of [['right',flash],['left',leftFlash]]){const age=time-(g.userData.dualState?.shotAt?.[hand]??-Infinity);light.visible=!!active&&age>=0&&age<.045;}
   };
   // Small moving emitter collars and residual heat make the discharge visible
@@ -419,7 +423,8 @@ export function buildGun({ mats, gloves, sleeve = true, arm = sleeve, makeFlash 
   const heatMaterial=new T.MeshBasicMaterial({color:mats.rose.color,transparent:true,opacity:0,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false});
   const heatRing=new T.Mesh(new T.TorusGeometry(.012,.0018,6,20),heatMaterial);actionRoot.add(heatRing);
   heatRing.name='Barrel heat ring';
-  const emitterRadii=[.0105,.0165,.031,.029,.062,.023,.026,.0105,.022];let blade=null;
+  const iemTint=new T.Color(0x57ddff);
+  const emitterRadii=[.0105,.0165,.031,.029,.062,.023,.026,.0105,.022,.018];let blade=null;
   g.userData.getBladeSegment=()=>g.userData.index===5?blade?.segment():null;
   Object.defineProperty(g.userData,'blade',{get:()=>blade});
   Object.assign(g.userData, { flash, hand, support, showSupport: true });
@@ -436,6 +441,7 @@ export function buildGun({ mats, gloves, sleeve = true, arm = sleeve, makeFlash 
     actionRoot.rotation.set(move.pitch+(tracked?0:action.pitch),move.yaw+(tracked?0:action.yaw),move.roll+(tracked?0:action.roll));
     const mag=magazines[g.userData.index],bind=magazineBind[g.userData.index];
     if(mag){mag.parent.updateWorldMatrix(true,false);g.updateWorldMatrix(true,false);const inverse=mag.parent.matrixWorld.clone().invert(),linear=new T.Matrix3().setFromMatrix4(inverse.multiply(g.matrixWorld));magDelta.set(0,action.magazineY,action.magazineZ).applyMatrix3(linear);mag.position.copy(bind.position).add(magDelta);mag.rotation.copy(bind.rotation);}
+    if(g.userData.index===9)models[9].userData.updatePulse(Math.max(impulse,heat*.3));
     if(g.userData.index===8)updateVortexAmmo(models[8],ammo,capacity);
     if(dualState)g.userData.dualState=dualState;
     if(g.userData.index===7){
@@ -451,8 +457,8 @@ export function buildGun({ mats, gloves, sleeve = true, arm = sleeve, makeFlash 
     blade?.update(time,g.userData.index===5&&!!bladeHeld,mats.rose.color);
     collar.visible=g.userData.index!==5&&!models[g.userData.index].userData.integratedEmitter;
     if(g.userData.index===5){heatRing.visible=false;flash.visible=false;return;}
-    const accent = mats.rose?.color || new T.Color(0xff80b2);
-    const frame=WEAPON_FRAME[g.userData.index],muzzle=models[g.userData.index].userData.muzzle||frame.muzzle,radius=models[g.userData.index].userData.integratedEmitter?[.012,.017,.014,.022,.030,0,.026,.012,.022][g.userData.index]:emitterRadii[g.userData.index];
+    const accent = g.userData.index===9?iemTint:mats.rose?.color || new T.Color(0xff80b2);
+    const frame=WEAPON_FRAME[g.userData.index],muzzle=models[g.userData.index].userData.muzzle||frame.muzzle,radius=models[g.userData.index].userData.integratedEmitter?[.012,.017,.014,.022,.030,0,.026,.012,.022,.018][g.userData.index]:emitterRadii[g.userData.index];
     collar.position.set(muzzle[0],muzzle[1],muzzle[2]+.009+Math.min(.014,kick*.16));
     collar.scale.set(radius/.012,1,radius/.012);
     heatRing.position.set(muzzle[0],muzzle[1],muzzle[2]-.001);heatRing.scale.setScalar(radius/.012);
@@ -500,7 +506,7 @@ export function buildGun({ mats, gloves, sleeve = true, arm = sleeve, makeFlash 
     if(index===5&&!blade){blade=createEnergyBlade(mats.rose.color);actionRoot.add(blade.root);}
     if(index!==5)blade?.reset?.();
     const muzzle=models[index].userData.muzzle||frame.muzzle;
-    flash.position.set(...muzzle); flash.scale.setScalar([.14,.12,.25,.19,.38,0,.27,.14,.18][index]);
+    flash.position.set(...muzzle); flash.scale.setScalar([.14,.12,.25,.19,.38,0,.27,.14,.18,.10][index]);
     leftFlash.position.set(...muzzle);leftFlash.scale.setScalar(.14);
     collar.visible=index!==5&&!models[index].userData.integratedEmitter;
     collar.position.set(frame.muzzle[0],frame.muzzle[1],frame.muzzle[2]+.009);collar.scale.set(emitterRadii[index]/.012,1,emitterRadii[index]/.012);

@@ -18,7 +18,7 @@ export function createCampaignCombatEffects(T,scene,characterId='ghju'){
       }
     },
     update(game,dt,camera){
-      laser.update(game.bullets,dt);impacts.update(dt,camera);
+      laser.update(game.bullets,dt,game);impacts.update(dt,camera);
       enemyBullets.length=0;
       for(const b of game.bullets)if(b.hostile)enemyBullets.push({...b,hostile:false,weapon:'bloom'});
       enemyLaser.update(enemyBullets,dt);

@@ -198,7 +198,7 @@ function enemyMaterials(){
 }
 function setupPlayer(){
  const base=sectorObstacles(sector.meta);collisions=base;
- game=new ArenaGame(collisions,Math.random,traversal,characterId);game.reset(characterId);game.enableArmorShield();game.enableProjectedShields();
+ game=new ArenaGame(collisions,Math.random,traversal,characterId);game.reset(characterId);game.configureWeaponAccess({mode:'campaign',level:3});game.enableArmorShield();game.enableProjectedShields();
  mission=createM03Mission({game,characterId,choice,base,hooks:{
   setObstacles:list=>{collisions=list;},openPortal:(x,y,z,o)=>{lastPortalSource={x,y,z};art.openPortal(x,y,z,o);},setMovable:(id,open)=>art.setMovable(id,open),setPower:(zone,state)=>art.setPower(zone,state),
   cue,notice:text=>notice(text,4),say,stage:showStage,finish:finishMission,lost:()=>missionLost('van'),clear:clearVisuals,read:id=>{art.markDone('balise');openDocument(id);}}});

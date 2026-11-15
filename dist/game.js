@@ -74,7 +74,7 @@ function syncRangeArmory(){
   rangeArmoryMenu?.sync({active:phase==='playing'&&!recovering,xrMode:vr?.mode==='xr'});
 }
 // Every session wears the armour layer of 3.63 (shield, strike, impulse charges).
-const armed=session=>{session.enableArmorShield();session.enableProjectedShields();return session;};
+const armed=session=>{session.enableArmorShield();session.enableProjectedShields();session.configureWeaponAccess({mode:session.mode||'arena',level:session.campaign?.level||session.missionLevel||1});return session;};
 const heroAccent=()=>character.id==='lylu'?0x80baff:0xef91b4;
 function armorFeedback(){
   // The scene changes when the renderer is recovered: rebuild the effects on the live one.

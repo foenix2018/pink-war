@@ -196,7 +196,7 @@ function enemyMaterials(){
 }
 function setupPlayer(){
  collisions=L.buildCollisions();
- game=new ArenaGame(collisions,Math.random,traversal,characterId);game.reset(characterId);game.enableArmorShield();game.enableProjectedShields();
+ game=new ArenaGame(collisions,Math.random,traversal,characterId);game.reset(characterId);game.configureWeaponAccess({mode:'campaign',level:4});game.enableArmorShield();game.enableProjectedShields();
  mission=createM04Mission({game,characterId,hooks:{
   setObstacles:list=>{collisions=list;},openPortal:(x,y,z,o)=>{lastPortalSource={x,y,z};art.openPortal(x,y,z,o);},setDoor:(id,open)=>art.setDoor(id,open),setPower:(id,on)=>art.setPower(id,on),breach:v=>art.breach(v),
   cue,notice:text=>notice(text,4),say,stage:showStage,finish:finishMission,clear:clearVisuals}});

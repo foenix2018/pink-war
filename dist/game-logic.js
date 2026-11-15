@@ -1,3 +1,4 @@
+import {IEM_INDEX,IEM_RULES,iemAvailable} from './voltis-iem.js';
 import {describeEnemyImpact} from './enemy-body-response.js';
 import {searchContactOrder,pendingMeleeOrder,updateMeleeIntent,prepareHostileShot} from './enemy-engagement.js';
 import {turnEnemy,steerEnemyTravel} from './enemy-motion.js';
@@ -79,7 +80,8 @@ export const WEAPONS = Object.freeze([
   Object.freeze({ id:'aurora',name:'AURORA',label:'Sabre à énergie',level:2,damage:155,capacity:0,interval:.48,reload:0,speed:0,pellets:0,spread:0,semiAuto:true,chargeTime:0,splash:0,melee:true }),
   Object.freeze({id:'m12',name:'M–12',label:'Fusil à pompe',level:4,damage:18,capacity:8,interval:.88,reload:2.8,speed:170,pellets:8,spread:.038,semiAuto:true,chargeTime:0,splash:0,falloffStart:12,falloffEnd:40,minDamage:.2}),
   Object.freeze({id:'duor9',name:'VX-9 DUO',label:'Doubles pistolets Orbital',level:1,damage:24,capacity:24,handCapacity:12,interval:.2,reload:1.65,speed:110,pellets:1,spread:0,chargeTime:0,splash:0,dual:true}),
-  Object.freeze({id:'vortex',name:'VORTEX AR-7',label:'Fusil d’assaut tactique · indicateur rose',level:6,damage:43,capacity:36,interval:.115,reload:1.95,speed:175,pellets:1,spread:.009,chargeTime:0,splash:0})
+  Object.freeze({id:'vortex',name:'VORTEX AR-7',label:'Fusil d’assaut tactique · indicateur rose',level:6,damage:43,capacity:36,interval:.115,reload:1.95,speed:175,pellets:1,spread:.009,chargeTime:0,splash:0}),
+  Object.freeze({id:'iem',name:IEM_RULES.name,label:'Fusil à impulsion électromagnétique · immobilisation 3 s',level:10,damage:8,capacity:6,interval:1.3,reload:2.4,speed:160,pellets:1,spread:0,semiAuto:true,chargeTime:0,splash:0,stunSeconds:3})
 ]);
 export const starterWeaponIndex=characterId=>characterId==='lylu'?6:7;
 export const VORTEX_SECONDARY_INDEX=8;
@@ -345,6 +347,7 @@ export class ArenaGame {
     this.player.shield = this.shieldCapacity || 0; this.player.shieldDeployed=false;this.player.shieldHitAt=-100;this.player.shieldBreakAt=-100;this.shieldGeneration=(this.shieldGeneration||0)+1; this.shieldCharging = false; this.lastHit = null;
     this.charges = CHARGE_START; this.thrownCharges = []; this.chargeReadyAt = 0; this.meleeReadyAt = 0; this.meleeAt = -99; this.meleePending = null; this.meleeDelay = 0; this.chargeAt = -99;
     for(const nav of this.stairNavigation){nav.refreshAt=-1;nav.goal=-1;}
+    if(this.mode)this.configureWeaponAccess();
     this.updateLifts(0);
   }
   surfacesAt(x,z,time=this.time) { return this.traversal?.surfaces(x,z,time)||traversalSurfaces(x,z,time); }
@@ -396,6 +399,18 @@ export class ArenaGame {
     if(entity.grounded)for(const l of this.lifts)if(insideSurface(entity.x,entity.z,l) && Math.abs(entity.elevation-liftHeightAt(l,this.time))<.025){entity.onLift=l.id;break;}
   }
   get equipment() { return equipmentForLevel(this.wave); }
+  isWeaponAvailable(index){
+    return index!==IEM_INDEX||iemAvailable(this.mode||'arena',this.missionLevel??this.campaign?.level??1);
+  }
+  configureWeaponAccess({mode=this.mode||'arena',level=this.missionLevel??this.campaign?.level??1}={}){
+    this.mode=mode;this.missionLevel=Math.max(1,Math.floor(Number(level)||1));
+    if(this.isWeaponAvailable(IEM_INDEX)){this.ownedWeapons.add(IEM_INDEX);}
+    else{
+      this.ownedWeapons.delete(IEM_INDEX);this.weaponOffers=this.weaponOffers.filter(o=>o.index!==IEM_INDEX);
+      if(this.weaponIndex===IEM_INDEX){this.weaponIndex=starterWeaponIndex(this.characterId);this.reloadRemaining=0;this.charge=0;}
+    }
+    return this;
+  }
   get weapon() { return WEAPONS[this.weaponIndex]; }
   get nextDualHand(){const hand=this.dual.next,other=hand==='right'?'left':'right';return this.dual.ammo[hand]>0&&this.time>=this.dual.readyAt[hand]?hand:this.dual.ammo[other]>0&&this.time>=this.dual.readyAt[other]?other:hand;}
   refillWeapon(){this.ammo[this.weaponIndex]=this.weapon.capacity;if(this.weapon.dual)this.dual.ammo={left:12,right:12};}
@@ -404,7 +419,7 @@ export class ArenaGame {
     const valid=['left','right'].every(hand=>Number.isInteger(saved?.[hand])&&saved[hand]>=0&&saved[hand]<=12)&&saved.left+saved.right===total;
     this.dual.ammo=valid?{...saved}:{left:Math.floor(total/2),right:Math.ceil(total/2)};
   }
-  get unlockedWeapons() { return WEAPONS.filter((w,i) => this.ownedWeapons.has(i)&&weaponAllowedForCharacter(i,this.characterId)); }
+  get unlockedWeapons() { return WEAPONS.filter((w,i) => this.ownedWeapons.has(i)&&weaponAllowedForCharacter(i,this.characterId)&&this.isWeaponAvailable(i)); }
   event(type, data = {}) { this.events.push({ type, ...data }); }
   emitNoise(kind,radius,position={x:this.player.x,y:this.player.elevation+1,z:this.player.z}) {
     const heard=propagateNoise(this.enemies,{...position,elevation:this.player.elevation,kind,radius},this.obstacles,segmentBox,this.time);
@@ -427,21 +442,21 @@ export class ArenaGame {
   drainEvents() { const e = this.events; this.events = []; return e; }
   blocked(start, end) { return this.obstacles.some(b => segmentBox(start, end, b) !== null); }
   selectWeapon(index) {
-    if (this.state !== 'playing' || !weaponAllowedForCharacter(index,this.characterId) || !this.ownedWeapons.has(index) || index === this.weaponIndex) return false;
+    if (this.state !== 'playing' || !this.isWeaponAvailable(index) || !weaponAllowedForCharacter(index,this.characterId) || !this.ownedWeapons.has(index) || index === this.weaponIndex) return false;
     this.weaponIndex = index; this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false; this.semiPending=false;
     this.dual.held={left:false,right:false};
     this.bladePrevious=null;this.bladeHitTimes.clear();this.bladeSlashAt=-99;this.bladeSpeed=0;this.bladeGuard=false;
     this.cooldown = Math.max(this.cooldown, .25); this.event('weapon', { index, name: this.weapon.name }); return true;
   }
   cycleWeapon(direction = 1) {
-    const slots=weaponCycleOrder(this.ownedWeapons,this.characterId);
+    const slots=weaponCycleOrder(this.ownedWeapons,this.characterId).filter(i=>this.isWeaponAvailable(i));
     if(slots.length<2)return false;
     const at=slots.indexOf(this.weaponIndex),offset=direction<0?-1:1;
     return this.selectWeapon(slots[(Math.max(0,at)+offset+slots.length)%slots.length]);
   }
   // Weapons rise from a tactical holographic pedestal. Acquiring one is a deliberate action.
   offerWeapon(index) {
-    if(!weaponAllowedForCharacter(index,this.characterId))return;
+    if(!this.isWeaponAvailable(index)||!weaponAllowedForCharacter(index,this.characterId))return;
     if(this.ownedWeapons.has(index)||this.weaponOffers.some(offer=>offer.index===index))return;
     const p=this.player;
     // Candidate pedestals are just ahead or to the side of the player,
@@ -494,7 +509,9 @@ export class ArenaGame {
     this.event('portals',{count:this.activePortals.length,sites:this.activePortals.map(p=>({...p}))});
     this.ammo = WEAPONS.map(w => w.capacity); this.reloadRemaining = 0; this.charge = 0;
     this.dual.ammo={left:12,right:12};
-    const offered = WEAPONS.findIndex(w => w.level === this.wave);
+    // IEM access follows the campaign chapter; arena/range grant it directly.
+    // An encounter wave inside an earlier chapter must not create a pickup.
+    const offered = WEAPONS.findIndex((w,i) => i!==IEM_INDEX && w.level === this.wave);
     if (offered > 0) this.offerWeapon(offered);
     this.event('equipment', this.equipment);
     this.event('wave', { wave: this.wave, count: this.toSpawn });
@@ -557,6 +574,7 @@ export class ArenaGame {
     return field.waypoint(enemy)||soundWaypoint(enemy,target,this.obstacles,segmentBox);
   }
   shoot(origin, direction, charge = 1, hand = null) {
+    if(!this.isWeaponAvailable(this.weaponIndex))return false;
     if(this.weapon.melee){
       if(this.state!=='playing'||this.cooldown>0)return false;
       this.cooldown=this.weapon.interval;this.bladeSlashAt=this.time;this.bladeSlashSide*=-1;
@@ -687,6 +705,8 @@ export class ArenaGame {
         if(amount<=0){this.event('hit',{id:target.id,zone:'shield',damage:0,absorbed:held,shielded:true,playerSource:!source?.companion});return;}
       }
     }
+    const electromagnetic=source.weapon==='iem';
+    if(electromagnetic){multiplier=1;zone='torso';}
     const armor=target.form?Math.min(.18,Math.max(0,(target.tier||1)-1)*.025):0;
     const support=source?.companion?1:(this.time<(target.companionMarkUntil||0)?1.2:1)*(this.time<(this.companionAmplifyUntil||0)?1.15:1);
     const effective=target.form==='sentinel' ? amount*support*(zone==='head'?5:zone==='limb'?.65:1) : amount*multiplier*support*(1-armor*(zone==='head'?.35:1));
@@ -699,6 +719,7 @@ export class ArenaGame {
     // External motor damage bleeds through only 20% to the main hull.
     // damageScale: a phase shield (mission bosses) lets only a share of the damage through.
     const scaled=(rotorResult?effective*.2:effective)*(target.damageScale??1);target.hp -= scaled;
+    if(electromagnetic&&scaled>0&&target.hp>0){target.iemAt=this.time;target.iemUntil=Math.max(target.iemUntil||0,this.time+IEM_RULES.stunSeconds);target.stunnedUntil=Math.max(target.stunnedUntil||0,target.iemUntil);target.motionX=target.motionZ=0;target.shotIntent=null;target.burstRemaining=0;target.chargeProgress=0;this.event('iem-stun',{id:target.id,until:target.iemUntil,...at});}
     target.lastKnownX=source.x;target.lastKnownZ=source.z;target.lastKnownHeight=source.elevation??this.player.elevation;
     target.alertedUntil=this.time+5;target.awareness='search';target.lastSeenAt=this.time;
     if(zone==='rotor'&&rotorResult?.destroyed)target.limpUntil=Math.max(target.limpUntil||0,this.time+1);
@@ -738,6 +759,7 @@ export class ArenaGame {
   }
   step(dt, input = {}) {
     if (this.state !== 'playing') return;
+    if(this.mode==='campaign'&&this.isWeaponAvailable(IEM_INDEX))this.ownedWeapons.add(IEM_INDEX);
     // At 10–20 FPS, preserve elapsed travel using small collision/AI steps.
     // One-shot toggles apply once; held jump remains held across the substeps.
     if(dt>MAX_SIMULATION_STEP){
@@ -807,6 +829,7 @@ export class ArenaGame {
     this.navigation.update(this.player, this.time);
     const pack=meleePack(this.enemies,this.player);
     for (const e of this.enemies) {
+      if(e.iemUntil>this.time){e.motionX=e.motionZ=0;e.shotIntent=null;e.burstRemaining=0;e.chargeProgress=0;continue;}
       if(e.form==='probe'){updateProbe(this,e,dt,segmentBox);continue;}
       e.maxHp ??= e.hp;
       e.aimHeight ??= e.elite ? 1.35 : 1.15;
@@ -1023,7 +1046,7 @@ export class ArenaGame {
         this.event('impact', { ...at, bulletId:b.id, enemy: !!target, hostile: b.hostile, splash: b.splash,weapon:b.weapon,power:b.power||1,surface:target?'robot':surface,normal,direction:{x:b.vx,y:b.vy,z:b.vz} });
         if (target === this.player) { const n=Math.hypot(b.vx,b.vz)||1; this.damage(b.damage,{x:this.player.x-b.vx/n*8,z:this.player.z-b.vz/n*8},{at,shieldContact}); }
         else if(target?.defenceTurret)this.damageDefenseTurret(target,projectileDamage(b,at),{weapon:b.weapon,at,source:{x:b.originX??start.x,y:b.originY??start.y,z:b.originZ??start.z,companion:!!b.companion}});
-        else if (target) this.damageEnemy(target, projectileDamage(b,at)*reco1ProjectileScale(target,zone), at, zone, multiplier,{x:b.originX??this.player.x,z:b.originZ??this.player.z,elevation:b.originElevation??this.player.elevation,...(b.companion?{companion:true}:{})});
+        else if (target) this.damageEnemy(target, projectileDamage(b,at)*reco1ProjectileScale(target,zone), at, zone, multiplier,{x:b.originX??this.player.x,z:b.originZ??this.player.z,elevation:b.originElevation??this.player.elevation,weapon:b.weapon,...(b.companion?{companion:true}:{})});
         if (!b.hostile && b.splash > 0) for (const e of [...this.enemies]) {
           if (e === target) continue;
           const center = { x: e.x, y: e.elevation + e.aimHeight, z: e.z }, d = Math.hypot(e.x - at.x, e.z - at.z, center.y - at.y);

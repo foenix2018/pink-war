@@ -236,7 +236,7 @@ export function installM01Extension(game, hooks = {}) {
     // The core chapter is complete when the epilogue runs.
     if (EPILOGUE_IDS.includes(s.stage)) Object.assign(game, { workshopReleased: true, investigationRead: true, sabotaged: true, archiveRead: true, circuitIsolated: true, powerAlarm: true, openingActivated: true, openingSpawned: 8, encounter: 2 });
     game.kills = Number(s.kills) || 0;
-    game.ownedWeapons = new Set([starterWeaponIndex(game.characterId), 0, ...(s.owned || []).filter(i => Number.isInteger(i) && weaponAllowedForCharacter(i, game.characterId))]);
+    game.ownedWeapons = new Set([starterWeaponIndex(game.characterId), 0, ...(s.owned || []).filter(i => Number.isInteger(i) && weaponAllowedForCharacter(i, game.characterId)&&game.isWeaponAvailable(i))]);
     game.weaponIndex = game.ownedWeapons.has(s.weaponIndex) ? s.weaponIndex : starterWeaponIndex(game.characterId);
     for (let i = 0; i < game.ammo.length; i++) if (Number.isFinite(s.ammo?.[i])) game.ammo[i] = Math.max(0, Math.min(game.ammo[i], s.ammo[i]));
     game.player.hp = Math.min(100, Math.max(1, Number(s.health) || 100));

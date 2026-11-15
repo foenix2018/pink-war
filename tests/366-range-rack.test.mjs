@@ -5,18 +5,18 @@ import {WEAPONS} from '../dist/game-logic.js';
 import {ShootingRangeGame,RANGE_ARMORY,RANGE_ARMORY_SLOTS,RANGE_WEAPON_SLOTS,traceRangeArmory} from '../dist/shooting-range.js';
 import {createShootingRangeArt} from '../dist/shooting-range-art.js';
 
-test('the eight-bay rack is wider, equally spaced, and selectable at the displayed position',()=>{
-  assert.equal(RANGE_WEAPON_SLOTS.length,8);
+test('the nine-bay rack is wider, equally spaced, and selectable at the displayed position',()=>{
+  assert.equal(RANGE_WEAPON_SLOTS.length,9);
   assert.ok(RANGE_ARMORY.width>=9,'large cabinet across the rear wall');
   assert.ok(RANGE_ARMORY.height>=2.8,'clearance above long guns');
-  assert.equal(RANGE_ARMORY_SLOTS.length,8);
+  assert.equal(RANGE_ARMORY_SLOTS.length,9);
   for(let i=0;i<RANGE_ARMORY_SLOTS.length;i++){
     const slot=RANGE_ARMORY_SLOTS[i],hit=traceRangeArmory({x:slot.x,y:slot.y,z:32.8},{x:0,y:0,z:1});
     assert.equal(hit?.index,slot.index);
     assert.ok(Math.abs(slot.x)+slot.width/2<RANGE_ARMORY.width/2);
     if(i>0)assert.ok(slot.x-slot.width/2>RANGE_ARMORY_SLOTS[i-1].x+RANGE_ARMORY_SLOTS[i-1].width/2,'positive aisle between adjacent weapons');
   }
-  assert.equal(WEAPONS[RANGE_WEAPON_SLOTS.at(-1)].id,'vortex');
+  assert.equal(WEAPONS[RANGE_WEAPON_SLOTS.at(-1)].id,'iem');
 });
 test('ray, direct touch and visual highlight use matching rack slots for both characters',()=>{
   const art=createShootingRangeArt(T,new T.Scene());

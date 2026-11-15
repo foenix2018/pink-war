@@ -470,7 +470,7 @@ function enemyMaterials(){
  return {monster:materials.wall,monsterFace:materials.black,cyan:materials.cyan,rose:materials.rose,violet:materials.blue,pale:materials.white};
 }
 function setupPlayer(){
- game=new ArenaGame(collisions,Math.random,traversal);game.reset(characterId);game.enableArmorShield();game.enableProjectedShields();
+ game=new ArenaGame(collisions,Math.random,traversal);game.reset(characterId);game.configureWeaponAccess({mode:'campaign',level:2});game.enableArmorShield();game.enableProjectedShields();
  Object.assign(game.player,{x:0,z:72,elevation:0,yaw:0,hp:100,grounded:true});
  game.wave=2;game.nextWave=Infinity;game.toSpawn=0;game.spawnTimer=Infinity;
  game.ownedWeapons=new Set([...starterWeaponOrder(characterId),1,2]);game.ammo=WEAPONS.map(w=>w.capacity);

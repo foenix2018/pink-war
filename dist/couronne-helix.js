@@ -104,7 +104,7 @@ function enemyMaterials(){
  return {monster:m(0x3d4955,.62,.48),monsterFace:m(0x0b1119,.5,.4),cyan:g(0x3acddd),rose:g(0xff4fa1),violet:g(0x4ba8ff),pale:g(0xc2e5eb)};
 }
 function setupPlayer(){
- game=new ArenaGame(collisions,Math.random,traversal,characterId);game.reset(characterId);game.enableArmorShield();game.enableProjectedShields();
+ game=new ArenaGame(collisions,Math.random,traversal,characterId);game.reset(characterId);game.configureWeaponAccess({mode:'campaign',level:8});game.enableArmorShield();game.enableProjectedShields();
  mission=createCouronneMission({game,characterId,hooks:{
   setObstacles:list=>{collisions=list;},openPortal:(x,y,z,o)=>{lastPortalSource={x,y,z};return art.openPortal(x,y,z,o);},setGatesOpen:open=>art.setGatesOpen(open),
   setConsole:(id,done)=>art.setConsole(id,done),setAnchorPower:v=>art.setAnchorPower(v),cue,notice:text=>notice(text,4),
