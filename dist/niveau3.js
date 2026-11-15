@@ -662,4 +662,4 @@ window.__PINK_M03=Object.freeze({
   van:index=>{mission.placeVan(index);},drive:seconds=>{for(let t=0;t<seconds;t+=1/30){const v=mission.van;game.enemies.length=0;Object.assign(game.player,{x:v.x+3,z:v.z+3,elevation:0});game.step(1/30,{});mission.update(1/30);}return mission.stageId;},
   endScene:()=>finishMission(),cine:()=>endCine,portal:(x,z)=>art.openPortal(x,0,z,{charge:30}),view:()=>changeView(),lamp:()=>toggleLamp(),vr:()=>xr.enter()}:null
 });
-if(params.get('autostart')==='1'){startButton.disabled=true;void boot();}
+if(params.get('manual')!=='1'){startButton.disabled=true;void boot();}

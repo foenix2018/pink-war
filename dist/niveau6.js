@@ -623,4 +623,4 @@ window.__PINK_M06=Object.freeze({
   use:id=>{const it=L.INTERACTIONS.find(i=>i.id===id);Object.assign(game.player,{x:it.x,z:it.z,elevation:it.y||0,grounded:true,verticalSpeed:0});interact();return {reading,stage:mission.stageId};},
   weapon:i=>{game.ownedWeapons?.add(i);game.selectWeapon(i);return game.weaponIndex;},aimRay:()=>{const r=aimRay(),f=new T.Vector3();camera.getWorldDirection(f);return {origin:r.origin.toArray(),direction:r.direction.toArray(),eye:camera.position.toArray(),forward:f.toArray()};},game:()=>game,portal:(x,z)=>art.openPortal(x,0,z,{charge:30}),view:()=>changeView(),lamp:()=>toggleLamp(),vr:()=>xr.enter()}:null
 });
-if(params.get('autostart')==='1'){startButton.disabled=true;void boot();}
+if(params.get('manual')!=='1'){startButton.disabled=true;void boot();}

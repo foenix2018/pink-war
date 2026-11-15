@@ -615,4 +615,4 @@ window.__PINK_LIGNE9=Object.freeze({
   interact:()=>{interact();return reading;},close:()=>closeDocument(),skip:seconds=>{game.time+=seconds;mission.update();},god:()=>{game.invulnerable=1e9;},
   portal:(x,z)=>art.openPortal(x,0,z,{charge:30}),emerge:(x,z)=>art.emerge(x,z),view:()=>changeView(),lamp:()=>toggleLamp(),vr:()=>xr.enter()}:null
 });
-if(params.get('autostart')==='1'){startButton.disabled=true;void boot();}
+if(params.get('manual')!=='1'){startButton.disabled=true;void boot();}

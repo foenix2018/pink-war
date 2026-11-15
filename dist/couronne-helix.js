@@ -468,4 +468,4 @@ window.__PINK_COURONNE=Object.freeze({
  debug:params.has('debug')?{teleport:(x,z)=>Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0}),look:(y,p)=>{yaw=y;pitch=p;},clear:()=>{game.enemies.length=0;},
   interact:()=>mission.interact(),portal:(x,z)=>art.openPortal(x,traversal.height(x,z),z,{charge:30}),anchor:v=>art.setAnchorPower(v),vr:()=>xr.enter()}:null
 });
-if(params.get('autostart')==='1'){startButton.disabled=true;void boot();}
+if(params.get('manual')!=='1'){startButton.disabled=true;void boot();}

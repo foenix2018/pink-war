@@ -648,4 +648,4 @@ window.__PINK_M04=Object.freeze({
   use:id=>{const it=L.INTERACTIONS.find(i=>i.id===id);Object.assign(game.player,{x:it.x,z:it.z,elevation:it.y||0,grounded:true,verticalSpeed:0});interact();return {reading,stage:mission.stageId};},
   portal:(x,z)=>art.openPortal(x,0,z,{charge:30}),view:()=>changeView(),lamp:()=>toggleLamp(),vr:()=>xr.enter()}:null
 });
-if(params.get('autostart')==='1'){startButton.disabled=true;void boot();}
+if(params.get('manual')!=='1'){startButton.disabled=true;void boot();}
