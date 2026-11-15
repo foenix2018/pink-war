@@ -1,10 +1,11 @@
 import {createTouchOrbit} from './touch-orbit.js';
+import {touchAnalogSprint} from './locomotion.js';
+export {touchAnalogSprint} from './locomotion.js';
 // M02 official Pink Wars controls adapter.
 // Input mappings are imported from the game's production desktop-input module
 // instead of copying arbitrary button values.
 import {DesktopGamepadInput,DESKTOP_BUTTONS,desktopAxis} from './desktop-input.js';
 import {desktopZoomHeld} from './desktop-modifier-controls.js';
-export const touchAnalogSprint=(x,z)=>Math.hypot(Number(x)||0,Number(z)||0)>=.88;
 export const PINK_WARS_KEYS=Object.freeze({
   forward:['KeyW','KeyZ','ArrowUp'],back:['KeyS','ArrowDown'],left:['KeyA','KeyQ','ArrowLeft'],right:['KeyD','ArrowRight'],
   fire:'MouseLeft',jump:['Space','KeyJ'],interact:'KeyF',next:'KeyE',reload:'KeyR',

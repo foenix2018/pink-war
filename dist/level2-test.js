@@ -1,3 +1,4 @@
+import {frameDelta} from './frame-timing.js';
 import {createFPSChapter} from './fps-environments.js';
 import {applyFPSCameraMotion} from './fps-motion.js';
 import {M02_STREET_OBJECTIVES,createM02Street} from './m02-street.js';
@@ -761,7 +762,7 @@ function gameTick(dt){
  if(jumpQueued)game.player.jumpHeld=false;
  const jump=controls.jump||jumpQueued;jumpQueued=false;
  game.nextWave=Infinity;game.toSpawn=0;
- game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,gamepadMoving:controls.gamepadMoving,sprint,jump,crouchToggle});
+ game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,gamepadMoving:controls.gamepadMoving,touchMoving:!xc&&!!(touch.x||touch.z),sprint,jump,crouchToggle});
  weaponFeel.update(dt);
  cameraFeel.update(dt,{speed:Math.hypot(game.playerVelocity.x,game.playerVelocity.z),grounded:game.player.grounded,verticalSpeed:game.player.verticalSpeed,strafe:x,sprint,aim:aimBlend});
  snapCamera();
@@ -889,9 +890,10 @@ function animation(t,frame){
  if(started)setScreenMusic(running&&!paused&&!journalOpen&&!skillMenu?.isOpen&&game?.state==='playing'?'gameplay':'paused',2);
  if(xr?.active&&!frame)return;
  if(!xr?.active)requestAnimationFrame(animation);
- const dt=Math.min(.040,Math.max(0,(t-last)/1000));last=t;
- // Never mutate or retire GPU resources while the previous asynchronous frame compiles.
+ // Preserve elapsed time while an asynchronous frame is pending.
+ // Never mutate or retire GPU resources while the previous frame compiles.
  if(framePending||recovering)return;
+ const dt=frameDelta(last?(t-last)/1000:1/60,!!xr?.active);last=t;
  if(!renderer||!scene)return;
  if(xr?.active)xr.input(frame,dt);
  skillMenu?.setVisible(started&&running);

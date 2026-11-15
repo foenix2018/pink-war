@@ -1748,7 +1748,7 @@ function interact(){const p=activeInteraction();if(!p||isFree||gamePaused)return
 function notify(message,ms=4000){$('toastText').textContent=message;$('toast').classList.add('show');noticeTime=performance.now()+ms;}
 const objectives=['Réarmer le circuit de l’annexe de secours','Lire les archives médicales hors réseau','Relever la liaison câblée de l’atelier, puis neutraliser la balise ORDRE','Atteindre le relais A3 sur la terrasse','Exploration libre — archives sécurisées'];
 function refreshObjective(){$('objective').textContent=isChapter3?mission3?.objective()||'Préparation du manifeste HELIX':combatWorld?.objective||objectives[missionIndex];$('objCount').textContent=isChapter3?`${String(mission3?.progress()||0).padStart(2,'0')}/04`:`0${Math.min(4,missionIndex)}/04`;const brief=$('objectivePanel');brief.classList.add('open');clearTimeout(window.__pwVesperBrief);window.__pwVesperBrief=setTimeout(()=>brief.classList.remove('open'),3800);}
-let touch={moveX:0,moveY:0,sprint:false},touchOrbit=null;
+let touch={moveX:0,moveY:0,sprint:false},touchOrbit=null,frameTiming=null,mobileMovement=null;
 const GAME_WEAPONS=[
  {name:'R9',mag:32,damage:18,cooldown:120,reload:1150,color:'#a2d7eb'},
  {name:'BLOOM',mag:40,damage:12,cooldown:72,reload:1400,color:'#e45d9d'},
@@ -1856,9 +1856,9 @@ function inputSetup(){
  for(const type of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(type,ev=>touchOrbit?.end(ev.pointerId));
  let stick=$('stick');let stickId=null;stick.addEventListener('pointerdown',ev=>{stickId=ev.pointerId;stick.setPointerCapture(ev.pointerId);moveStick(ev)});
  stick.addEventListener('pointermove',ev=>{if(stickId===ev.pointerId)moveStick(ev)});
- function moveStick(ev){const b=stick.getBoundingClientRect(),cx=b.left+b.width/2,cy=b.top+b.height/2;touch.moveX=clamp((ev.clientX-cx)/(b.width*.41),-1,1);touch.moveY=clamp((ev.clientY-cy)/(b.height*.41),-1,1);$('nub').style.transform=`translate(${touch.moveX*37}px,${touch.moveY*37}px)`}
+ function moveStick(ev){const b=stick.getBoundingClientRect(),cx=b.left+b.width/2,cy=b.top+b.height/2,r=b.width*.32,dx=ev.clientX-cx,dy=ev.clientY-cy,norm=Math.min(1,r/(Math.hypot(dx,dy)||1));touch.moveX=Math.abs(dx*norm/r)<.08?0:dx*norm/r;touch.moveY=Math.abs(dy*norm/r)<.08?0:dy*norm/r;$('nub').style.transform=`translate(${dx*norm}px,${dy*norm}px)`;}
  const end=ev=>{if(stickId===ev.pointerId){stickId=null;touch.moveX=0;touch.moveY=0;$('nub').style.transform=''}};
- stick.addEventListener('pointerup',end);stick.addEventListener('pointercancel',end);
+ for(const type of ['pointerup','pointercancel','lostpointercapture'])stick.addEventListener(type,end);
  $('btnJump').onpointerdown=e=>{e.preventDefault();jumpQueued=true;keys.add('KeyJ');try{e.currentTarget.setPointerCapture(e.pointerId)}catch{}};for(const t of ['pointerup','pointercancel','lostpointercapture'])$('btnJump').addEventListener(t,()=>keys.delete('KeyJ'));
  $('btnUse').onclick=interact;const tb=document.getElementById('touchButtons');if(tb){const fire=document.createElement('button');fire.textContent='TIR';fire.style.borderColor='#e6579d';fire.onpointerdown=e=>{e.preventDefault();firing=true;shoot();try{fire.setPointerCapture(e.pointerId)}catch{}};for(const type of ['pointerup','pointercancel','lostpointercapture'])fire.addEventListener(type,()=>{firing=false;});fire.id='btnFireMobile';fire.setAttribute('aria-label','Tirer');tb.prepend(fire);const aim=document.createElement('button');aim.id='btnAimMobile';aim.textContent='VISER';aim.setAttribute('aria-label','Activer ou désactiver la visée');aim.setAttribute('aria-pressed','false');let aimTouchPointer=null;aim.onpointerdown=e=>{e.preventDefault();aimTouchPointer=e.pointerType==='touch'?e.pointerId:null;setAimState(e.pointerType==='touch'?!isAiming:true);try{aim.setPointerCapture(e.pointerId)}catch{}};for(const t of ['pointerup','pointercancel','lostpointercapture'])aim.addEventListener(t,e=>{if(e.pointerId!==aimTouchPointer)setAimState(false);});tb.append(aim);}
  $('btnRun').onpointerdown=e=>{touch.sprint=true;try{e.currentTarget.setPointerCapture(e.pointerId)}catch{}};for(const type of ['pointerup','pointercancel','lostpointercapture'])$('btnRun').addEventListener(type,()=>touch.sprint=false);
@@ -1910,7 +1910,7 @@ function sceneUI(t){if(t-lastUiTime<180)return;lastUiTime=t;
  if(noticeTime&&t>noticeTime){$('toast').classList.remove('show');noticeTime=0;}
 }
 let lastUiTime=0;
-function render(t){if(!started)return;if(combatWorld?.xrActive){requestAnimationFrame(render);return;}const sec=t/1000,dt=Math.min(.045,(t-last)/1000||.016);last=t;
+function render(t){if(!started)return;if(combatWorld?.xrActive){requestAnimationFrame(render);return;}const sec=t/1000,dt=frameTiming.frameDelta(last?(t-last)/1000:1/60);last=t;
  pollGamepad(dt);
  if(!gamePaused&&!combatWorld?.paused){
   yaw+=touchOrbit?.step(dt)||0;
@@ -1991,7 +1991,8 @@ let missionLoading=null,missionMenu=null;
 function resumeMission(){gamePaused=false;keys.clear();firing=false;setAimState(false);combatWorld?.resume();}
 function toggleMissionPause(){if(missionMenu){missionMenu.isOpen?missionMenu.hide():missionMenu.show();}else{gamePaused=!gamePaused;combatWorld?.pause();}}
 async function boot(){try{
-  const [{DesktopGamepadInput},{createGamepadAid},{createTouchOrbit}]=await Promise.all([import('./desktop-input.js?v=3.74.0'),import('./ios-gamepad.js?v=3.74.0'),import('./touch-orbit.js?v=1')]);
+  const [{DesktopGamepadInput},{createGamepadAid},{createTouchOrbit},timing,movement]=await Promise.all([import('./desktop-input.js?v=3.74.0'),import('./ios-gamepad.js?v=3.74.0'),import('./touch-orbit.js?v=1'),import('./frame-timing.js'),import('./locomotion.js')]);
+  frameTiming=timing;mobileMovement=movement;
    touchOrbit=createTouchOrbit();
   legacyPS4Input=new DesktopGamepadInput();createGamepadAid();
  if(!referenceVisit){const {createMissionLoading}=await import('./mission-loading.js?v=3.74.0');missionLoading=createMissionLoading({mission:1,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});missionLoading.set(.08,'Chargement du scénario');}
@@ -2021,7 +2022,7 @@ async function boot(){try{
   combatWorld=await createVesperCombat({canvas,staticMesh,portalMesh,signAtlas:atlas,collide,stairs,decks,interactions,notify,
    onControl:(kind,value)=>{if(kind==='crouch')crouching=!crouching;if(kind==='sprint')touch.sprint=!!value;},
    setPlayer:p=>{position.x=p.x;position.y=p.elevation+eyeHeight;position.z=p.z;grounded=p.grounded;},
-    getState:()=>({input:{gamepadMoving:!combatWorld?.xrActive&&!!(gamepadMove.x||gamepadMove.y),x:Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('KeyQ')||keys.has('ArrowLeft'))+touch.moveX+gamepadMove.x,z:Number(keys.has('KeyS')||keys.has('ArrowDown'))-Number(keys.has('KeyW')||keys.has('KeyZ')||keys.has('ArrowUp'))+touch.moveY+gamepadMove.y,jump:jumpQueued||keys.has('KeyJ')||keys.has('Space'),sprint:touch.sprint||padRun||keys.has('ShiftLeft')},position,yaw,pitch,aiming:isAiming||zoomModifier()||gamepadAiming,crouching,grounded,sprint:touch.sprint||padRun||keys.has('ShiftLeft'),free:isFree,menuPaused:gamePaused,day:timeOfDay,shadows:shadowsEnabled,quality,flashlight}),
+    getState:()=>({input:{gamepadMoving:!combatWorld?.xrActive&&!!(gamepadMove.x||gamepadMove.y),touchMoving:!combatWorld?.xrActive&&!!(touch.moveX||touch.moveY),x:Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('KeyQ')||keys.has('ArrowLeft'))+touch.moveX+gamepadMove.x,z:Number(keys.has('KeyS')||keys.has('ArrowDown'))-Number(keys.has('KeyW')||keys.has('KeyZ')||keys.has('ArrowUp'))+touch.moveY+gamepadMove.y,jump:jumpQueued||keys.has('KeyJ')||keys.has('Space'),sprint:touch.sprint||mobileMovement.touchAnalogSprint(touch.moveX,touch.moveY)||padRun||keys.has('ShiftLeft')},position,yaw,pitch,aiming:isAiming||zoomModifier()||gamepadAiming,crouching,grounded,sprint:touch.sprint||mobileMovement.touchAnalogSprint(touch.moveX,touch.moveY)||padRun||keys.has('ShiftLeft'),free:isFree,menuPaused:gamePaused,day:timeOfDay,shadows:shadowsEnabled,quality,flashlight}),
    onPauseRequest:()=>{if(combatWorld?.xrActive){gamePaused=true;combatWorld.pause();}else missionMenu?.show();},onResumeRequest:()=>{missionMenu?.hide(false);resumeMission();},onHeading:heading=>{yaw=-heading;},onProgress:(value,label)=>missionLoading?.set(value,label),onCanvas:value=>{canvas=value;},onFailure:fail,onMenuChange:()=>{keys.clear();firing=false;padFiring=false;touch.moveX=touch.moveY=0;touch.sprint=false;gamepadMove.x=gamepadMove.y=0;setAimState(false);}});
   renderer=combatWorld;gpuKind=renderer.kind;
   document.body.classList.add('pw-live-combat');

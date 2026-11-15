@@ -1,5 +1,6 @@
 import {applyFPSCameraMotion} from './fps-motion.js';
 import {createTouchOrbit} from './touch-orbit.js';
+import {frameDelta} from './frame-timing.js';
 import {createCameraFeel} from './camera-feel.js';
 import {mountFilmLook} from './film-look.js';
 const cameraFeel=createCameraFeel();let filmLook=null,filmOn=null;
@@ -856,7 +857,8 @@ function frame(timestamp, xrFrame) {
 }
 function stepFrame(timestamp, xrFrame) {
   if(recovering||phase==='error'){rangeArmoryMenu?.sync({active:false,xrMode:vr?.mode==='xr'});return;}
-  const dt = lastTime ? Math.min((timestamp - lastTime) / 1000, .05) : .016; lastTime = timestamp; clock += dt;
+  const elapsed=lastTime?(timestamp-lastTime)/1000:.016;lastTime=timestamp;
+  const dt=vr.mode==='xr'?Math.max(0,Math.min(elapsed,.05)):frameDelta(elapsed);clock+=dt;
   const feel=weaponFeel.update(dt);recoil=feel.pitch;flashTimer=feel.flash;
   // The standard Bluetooth/USB gamepad is available outside VR as well.
   syncRangeArmory();const vrInput = vr.input(xrFrame);
@@ -889,7 +891,7 @@ function stepFrame(timestamp, xrFrame) {
     $('aim-button').setAttribute('aria-pressed',String(aiming));
     currentSprinting=!aiming&&(touchSprinting||vrInput.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight')||(move.id!==null&&Math.hypot(move.x,move.y)>=.88));
     game.precisionAiming=aimBlend>.55;
-    game.step(dt, { x, z, yaw: facing, moveYaw, gamepadMoving:vrInput.gamepadMoving, sprint: currentSprinting, jump,crouchToggle });
+    game.step(dt, { x, z, yaw: facing, moveYaw, gamepadMoving:vrInput.gamepadMoving, touchMoving:vr.mode!=='xr'&&move.id!==null&&!!(move.x||move.y), sprint: currentSprinting, jump,crouchToggle });
     cameraFeel.update(dt,{speed:Math.hypot(game.playerVelocity.x,game.playerVelocity.z),grounded:game.player.grounded,verticalSpeed:game.player.verticalSpeed,strafe:x,sprint:currentSprinting,aim:aimBlend});
     try{filmLook ||= mountFilmLook({canvas:document.getElementById('world'),graded:()=>!!world?.renderer?.fpsPresentation?.stats?.().enabled});const on=game.state==='playing'&&vr?.mode!=='xr'&&vr?.mode!=='stereo';if(on!==filmOn){filmOn=on;filmLook.setEnabled(on);}filmLook.update(dt,{health:game.player.hp/100});}catch{}
     portalAudio.sync(game.activePortals,game.time);

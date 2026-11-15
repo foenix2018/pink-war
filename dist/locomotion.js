@@ -1,5 +1,7 @@
 export const PLAYER_SPEEDS=Object.freeze({walk:2.2,sprint:4.8,crouch:1.1,side:.75,strafeMax:2.2,back:.75});
 export const GAMEPAD_SPEED_MULTIPLIER=1.25;
+export const TOUCH_SPEED_MULTIPLIER=1.25;
+export const touchAnalogSprint=(x,z)=>Math.hypot(Number(x)||0,Number(z)||0)>=.88;
 export const JUMP_RULES=Object.freeze({ground:7.25,air:6.65,wall:7.0,wallPush:6.2,wallReach:.82,coyote:.10});
 export function nearbyJumpWall(player,obstacles){
   let closest=null;

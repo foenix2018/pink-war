@@ -1,3 +1,4 @@
+import {frameDelta} from './frame-timing.js';
 import {createWorldShadows} from './world-shadows.js';
 import {applyFPSCameraMotion} from './fps-motion.js';
 import {playEndCinematic} from './end-cinematic.js';
@@ -401,7 +402,7 @@ function gameTick(dt){
  if(jumpQueued)game.player.jumpHeld=false;
  const jump=controls.jump||jumpQueued;jumpQueued=false;
  game.nextWave=Infinity;game.toSpawn=0;
- game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,gamepadMoving:controls.gamepadMoving,sprint,jump,crouchToggle});
+ game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,gamepadMoving:controls.gamepadMoving,touchMoving:!xc&&!!(touch.x||touch.z),sprint,jump,crouchToggle});
  missionTime+=dt;weaponFeel.update(dt);cameraFeel.update(dt,{speed:Math.hypot(game.playerVelocity.x,game.playerVelocity.z),grounded:game.player.grounded,verticalSpeed:game.player.verticalSpeed,strafe:x,sprint,aim:aimBlend});snapCamera();
  if(meleeQueued||controls.melee){const view=new T.Vector3();camera.getWorldDirection(view);game.melee({x:view.x,z:view.z});}
  if(chargeQueued||controls.charge){const eye=xr?.active?renderer.xr.getCamera():camera,from=new T.Vector3(),dir=new T.Vector3();eye.getWorldPosition(from);eye.getWorldDirection(dir);
@@ -477,7 +478,7 @@ function animation(t,frame){
  if(started)setScreenMusic(running&&!paused&&!reading&&!skillMenu?.isOpen&&game?.state==='playing'?'gameplay':'paused',4);
  if(xr?.active&&!frame)return;
  if(!xr?.active)requestAnimationFrame(animation);
- const dt=Math.min(.04,Math.max(0,(t-last)/1000));last=t;
+ const dt=frameDelta(last?(t-last)/1000:1/60,!!xr?.active);last=t;
  if(!renderer||!scene)return;
  if(xr?.active)xr.input(frame,dt);
  skillMenu?.setVisible(started&&running&&!reading);clock+=dt;

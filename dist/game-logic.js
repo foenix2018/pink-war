@@ -1,7 +1,8 @@
 import {describeEnemyImpact} from './enemy-body-response.js';
 import {searchContactOrder,pendingMeleeOrder,updateMeleeIntent,prepareHostileShot} from './enemy-engagement.js';
 import {turnEnemy,steerEnemyTravel} from './enemy-motion.js';
-import {inertialMove,PLAYER_SPEEDS,GAMEPAD_SPEED_MULTIPLIER} from './locomotion.js';
+import {inertialMove,PLAYER_SPEEDS,GAMEPAD_SPEED_MULTIPLIER,TOUCH_SPEED_MULTIPLIER} from './locomotion.js';
+import {MAX_SIMULATION_STEP,simulationSlices} from './frame-timing.js';
 import {ensureEnemyBubble,shieldFacesSource,tracePlayerShield,traceEnemyShield,playerShieldFrame,enemyShieldFrame} from './projected-shield-logic.js';
 import {createArenaTurrets,fortressWaveUnit,turretHitbox,damageDefenseTurret,updateArenaTurrets} from './arena-defense.js';
 import {isReco1,RECO1_HIT_ZONES,reco1ProjectileScale} from './reco1-profile.js';
@@ -737,6 +738,13 @@ export class ArenaGame {
   }
   step(dt, input = {}) {
     if (this.state !== 'playing') return;
+    // At 10–20 FPS, preserve elapsed travel using small collision/AI steps.
+    // One-shot toggles apply once; held jump remains held across the substeps.
+    if(dt>MAX_SIMULATION_STEP){
+      const slices=simulationSlices(dt);
+      for(let i=0;i<slices.count;i++)this.step(slices.dt,i?{...input,crouchToggle:false}:input);
+      return;
+    }
     this.autoReload();
     if(this.projectedShieldsEnabled){for(const e of this.enemies)ensureEnemyBubble(e);if(this.player.hp<=0)this.player.shieldDeployed=false;}
     dt = clamp(dt, 0, .05); const previousTime=this.time;this.time += dt;this.updateLifts(previousTime);
@@ -762,7 +770,7 @@ export class ArenaGame {
     // a forward-facing, non-crossing combat stance.
     const lateralSpeed=Math.max(-PLAYER_SPEEDS.strafeMax,Math.min(PLAYER_SPEEDS.strafeMax,ix*speed));
     const oldX=p.x,oldZ=p.z,oldY=p.elevation,wasGrounded=p.grounded;
-    const moveScale=input.gamepadMoving?GAMEPAD_SPEED_MULTIPLIER:1;
+    const moveScale=input.touchMoving?TOUCH_SPEED_MULTIPLIER:input.gamepadMoving?GAMEPAD_SPEED_MULTIPLIER:1;
     const travel=inertialMove(this.planarVelocity,(Math.cos(moveYaw)*lateralSpeed+Math.sin(moveYaw)*iz*speed)*moveScale,(-Math.sin(moveYaw)*lateralSpeed+Math.cos(moveYaw)*iz*speed)*moveScale,dt,{grounded:p.grounded,crouched:p.crouched});
     const dx=travel.x,dz=travel.z;
     // Fine treads must be sampled along the whole move, including sprint at low FPS.
