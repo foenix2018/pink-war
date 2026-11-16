@@ -1,0 +1,132 @@
+/* AERIN — HUD PINK WARS (adapted from the verified Foenix2018 combat HUD).
+   Input mapping: left joystick movement/sprint, right half camera swipe,
+   one red sword action, frontal guard, dodge and jump. Safe areas retained. */
+:root{--accent:#c5e5b5;--bright:#f2f9ec;--muted:#bdd3c5;--border:rgba(224,244,230,.31);--glass-edge:rgba(245,255,246,.5)}
+.glass,.combo-indicator{border:1px solid rgba(245,255,246,.38);border-top-color:rgba(255,255,255,.58);background:linear-gradient(155deg,rgba(222,253,235,.18),rgba(28,65,57,.4) 78%),rgba(9,28,32,.68);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);box-shadow:0 7px 28px #03100c33,inset 0 1px #fff3;color:#f5fff8;text-shadow:0 1px 5px #0007}
+.hud-top{top:max(12px,env(safe-area-inset-top));left:max(15px,env(safe-area-inset-left));right:max(15px,env(safe-area-inset-right));align-items:flex-start}
+.vitals{padding:11px 14px 13px;border-left:1px solid #f3fff866;border-radius:17px;width:190px;min-width:135px}
+.hud-unit{margin-bottom:4px}.hud-unit svg{width:23px;height:23px}.hud-unit b{font:700 13px system-ui;letter-spacing:.13em}.hud-unit small{font-size:7px;letter-spacing:.06em}
+.track{height:5px;border-radius:5px}.track i{border-radius:5px;background:linear-gradient(90deg,#93dbad,#d0f3c4)}.track.stamina{height:3px}.track.stamina i{background:linear-gradient(90deg,#d5a76a,#ffe1a0)}
+.sector{border-radius:16px;margin-top:0;display:flex;align-items:center;padding:12px;letter-spacing:.08em;font-size:10px}
+.hud-actions .icon-button,.hud-actions .view-button{border-radius:15px;min-height:42px}.hud-actions{gap:7px}
+.objective{border-radius:16px;top:155px;left:max(15px,env(safe-area-inset-left));opacity:.92}
+.crosshair{top:50%;opacity:.42}#hit-marker{top:50%}
+.renderer-status{position:fixed;z-index:2;pointer-events:none;top:max(78px,calc(env(safe-area-inset-top) + 61px));right:max(15px,env(safe-area-inset-right));font:600 9px/1.4 system-ui;letter-spacing:.13em;color:#d4efe0;padding:5px 10px;border:1px solid #defcde42;border-radius:10px;background:#0928218a;backdrop-filter:blur(8px)}
+.combo-indicator{position:fixed;right:max(15px,env(safe-area-inset-right));top:max(111px,calc(env(safe-area-inset-top) + 92px));border-radius:14px;min-width:121px;display:flex;flex-direction:column;gap:3px;align-items:flex-start;padding:9px 13px;pointer-events:none}
+.combo-indicator>span{font:500 8px system-ui;letter-spacing:.15em;color:#bfe0ca}.combo-indicator>strong{font:800 16px/1.2 system-ui;letter-spacing:.02em;color:#fff}.combo-indicator>small{font:600 10px system-ui;letter-spacing:.12em;color:#bdedca}
+/* Crucially this entire control layer is transparent to canvas gestures between buttons. */
+.game-hud .touch-controls{position:fixed!important;inset:0!important;display:block!important;width:100%!important;height:100%!important;pointer-events:none!important;transform:none!important;padding:0!important;margin:0!important}
+.game-hud .joystick-area:not(.look-area){position:fixed!important;left:max(16px,calc(env(safe-area-inset-left) + 7px))!important;bottom:max(18px,calc(env(safe-area-inset-bottom) + 9px))!important;min-width:0!important;width:110px!important;height:110px!important;display:block!important;z-index:4}
+.game-hud .joystick-area .control-label,.game-hud .joystick-area .sprint-button,.game-hud .look-area{display:none!important}
+.game-hud #move-stick{width:110px!important;height:110px!important;border-radius:50%!important;background:linear-gradient(145deg,#dfffea18,#233c4a44),#1129319c!important;border:1px solid #f2fff969!important;box-shadow:0 5px 22px #0003,inset 0 1px #ffffff4d!important;pointer-events:auto!important}
+.game-hud #move-stick .joystick-knob{width:46px!important;height:46px!important;left:calc(50% - 23px)!important;top:calc(50% - 23px)!important;background:linear-gradient(145deg,#e5f9e3ad,#95bbad66)!important;border:1px solid #edfff9da!important;box-shadow:inset 0 1px #fff8,0 4px 12px #0004!important}
+.game-hud #move-stick .joystick-knob svg{width:21px!important}
+.game-hud .combat-area{position:fixed!important;inset:0!important;width:100%!important;height:100%!important;display:block!important;pointer-events:none!important;transform:none!important;bottom:auto!important;left:auto!important;right:auto!important;gap:0!important;align-items:initial!important}
+.game-hud .action-row{position:fixed!important;inset:0!important;display:block!important;width:100%!important;height:100%!important;pointer-events:none!important;transform:none!important}
+.game-hud .action-cell{position:fixed!important;display:flex!important;justify-content:center!important;gap:4px!important;pointer-events:none!important;z-index:4}
+.game-hud .action-cell button{pointer-events:auto;touch-action:none!important;min-width:44px;min-height:44px}
+.game-hud .action-cell>span{display:none!important}
+.game-hud .action-cell.main-action{right:max(16px,calc(env(safe-area-inset-right) + 7px))!important;bottom:max(20px,calc(env(safe-area-inset-bottom) + 10px))!important;left:auto!important;top:auto!important}
+.game-hud #attack-button{width:78px!important;height:78px!important;border-radius:50%!important;border:1px solid #ffd4d6de!important;background:linear-gradient(140deg,#dd6c69d9,#963c4ca6)!important;color:white!important;box-shadow:inset 0 1px #fff6,0 0 0 5px #a9444c24,0 5px 20px #290a0b45!important;display:grid;place-items:center}
+.game-hud #attack-button:active,.game-hud #attack-button.active{background:linear-gradient(140deg,#ff8f7b,#b94b53)!important;box-shadow:0 0 0 6px #ff969a24,0 0 32px #e9504f7d!important}
+.game-hud #attack-button svg{width:34px;height:34px}
+.game-hud .action-cell:has(#block-button){right:max(27px,calc(env(safe-area-inset-right) + 15px))!important;bottom:max(116px,calc(env(safe-area-inset-bottom) + 106px))!important;left:auto!important;top:auto!important}
+.game-hud .action-cell:has(#jump-button){left:50%!important;transform:translateX(-50%)!important;bottom:max(101px,calc(env(safe-area-inset-bottom) + 90px))!important;top:auto!important;right:auto!important}
+.game-hud .action-cell:has(#dodge-button){left:50%!important;transform:translateX(-50%)!important;bottom:max(21px,calc(env(safe-area-inset-bottom) + 10px))!important;top:auto!important;right:auto!important}
+.game-hud .round-control{border:1px solid #e7fff3a3!important;border-radius:50%!important;background:linear-gradient(140deg,#b4e5c82b,#183d4a78),#0e2732c9!important;box-shadow:inset 0 1px #fff4,0 7px 15px #0003!important;width:56px!important;height:56px!important;min-width:48px!important;display:grid!important;place-items:center!important}
+.game-hud .round-control svg{width:27px;height:27px}.game-hud #dodge-button{width:49px!important;height:49px!important}
+.game-hud #block-button[aria-pressed=true]{background:#b4e5c880!important;border-color:#e4ffe1!important}
+.game-hud #jump-button:active,.game-hud #dodge-button:active{background:#a6e5ca88!important}
+.game-tip{display:none!important}.game-hud .camera-mode{display:none!important}
+@media (pointer:fine){.game-hud .joystick-area:not(.look-area){opacity:.35}.game-hud .action-cell{opacity:.7}}
+@media (orientation:portrait){
+ .sector{display:none!important}.vitals{width:151px!important;padding:10px 12px!important}.vitals .hud-unit small{display:none!important}
+ .game-hud .joystick-area:not(.look-area){width:102px!important;height:102px!important;left:max(12px,env(safe-area-inset-left))!important}
+ .game-hud #move-stick{width:102px!important;height:102px!important}
+ .game-hud #attack-button{width:76px!important;height:76px!important}
+ .objective{display:none!important}
+ .game-hud .action-cell:has(#block-button){bottom:max(118px,calc(env(safe-area-inset-bottom) + 106px))!important}
+ .game-hud .action-cell:has(#jump-button){bottom:max(104px,calc(env(safe-area-inset-bottom) + 92px))!important}
+ .combo-indicator{top:max(112px,calc(env(safe-area-inset-top) + 96px))}
+}
+@media (orientation:landscape) and (max-height:550px){
+ .vitals{width:172px!important;padding:7px 11px!important}.hud-unit{margin-bottom:1px!important}.bar-caption{margin:4px 0 3px!important}.sector{display:none!important}
+ .game-hud .joystick-area:not(.look-area){bottom:max(9px,calc(env(safe-area-inset-bottom) + 6px))!important;width:94px!important;height:94px!important}
+ .game-hud #move-stick{width:94px!important;height:94px!important}
+ .game-hud #attack-button{width:66px!important;height:66px!important}
+ .game-hud .action-cell.main-action{bottom:max(11px,calc(env(safe-area-inset-bottom) + 6px))!important}
+ .game-hud .action-cell:has(#block-button){bottom:max(92px,calc(env(safe-area-inset-bottom) + 83px))!important;right:max(18px,env(safe-area-inset-right))!important}
+ .game-hud .action-cell:has(#jump-button){bottom:max(85px,calc(env(safe-area-inset-bottom) + 76px))!important}
+ .game-hud .action-cell:has(#dodge-button){bottom:max(13px,calc(env(safe-area-inset-bottom) + 7px))!important}
+ .game-hud .round-control{width:46px!important;height:46px!important}
+ .game-hud #dodge-button{width:44px!important;height:44px!important}
+ .combo-indicator{top:max(61px,calc(env(safe-area-inset-top) + 46px));padding:5px 8px;min-width:108px}
+ .combo-indicator>strong{font-size:13px}.combo-indicator>span{font-size:7px}.combo-indicator>small{font-size:8px}
+ .renderer-status{top:max(60px,calc(env(safe-area-inset-top) + 48px));right:140px}
+ .objective{display:none!important}
+}
+@media (max-width:360px) and (orientation:portrait){.hud-actions .view-button{padding:0 8px!important}.hud-actions #view-label{display:none!important}.vitals{width:132px!important}.game-hud #move-stick{width:92px!important;height:92px!important}.game-hud .joystick-area:not(.look-area){width:92px!important;height:92px!important}.game-hud .round-control{width:47px!important;height:47px!important}.combo-indicator{min-width:105px}}
+@media(prefers-reduced-transparency:reduce){.glass,.combo-indicator{background:#102b2aef!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}}
+
+
+/* Apple Activity inspired rings for Aerin: beige, light green, pale pink. */
+.combo-indicator{display:none!important}
+.vitals{display:flex;flex-direction:column;gap:10px;min-width:248px!important;width:248px!important;padding:12px 14px!important}
+.activity-vitals{display:flex;align-items:center;gap:12px}
+.activity-cluster{position:relative;flex:0 0 96px;width:96px;height:96px;display:grid;place-items:center}
+.activity-rings{width:96px;height:96px;overflow:visible;filter:drop-shadow(0 6px 16px rgba(0,0,0,.18))}
+.activity-rings circle{fill:none;transform:rotate(-90deg);transform-origin:60px 60px;stroke-linecap:round}
+.activity-track{stroke:rgba(255,255,255,.12)}
+.activity-track-energy{stroke-width:10}
+.activity-track-shield{stroke-width:9}
+.activity-track-magic{stroke-width:8}
+.activity-progress{transition:stroke-dashoffset .2s ease,opacity .2s ease}
+.activity-energy{stroke:#d8c1a6;stroke-width:10;stroke-dasharray:282.743;stroke-dashoffset:0}
+.activity-shield{stroke:#c9e4c0;stroke-width:9;stroke-dasharray:213.628;stroke-dashoffset:0}
+.activity-magic{stroke:#edc7d5;stroke-width:8;stroke-dasharray:144.513;stroke-dashoffset:0}
+.activity-center{position:absolute;inset:34px;border-radius:50%;display:grid;place-items:center;text-align:center;background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.25),rgba(255,255,255,.06) 45%,rgba(10,23,21,.35) 100%);border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px rgba(255,255,255,.25)}
+.activity-center strong{font:800 11px/1 system-ui;color:#fff;letter-spacing:-.03em}
+.activity-center small{font:700 6px/1 system-ui;letter-spacing:.16em;color:#dce8d7;margin-top:2px}
+.activity-legend{display:grid;gap:7px;min-width:108px;flex:1}
+.activity-item{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;padding-left:12px;font:700 10px/1.1 system-ui;letter-spacing:.08em;color:#eff8ef}
+.activity-item::before{content:'';position:absolute;left:0;top:50%;width:6px;height:6px;border-radius:50%;transform:translateY(-50%)}
+.activity-item strong{font:800 14px/1 system-ui;color:#fff;letter-spacing:-.03em}
+.activity-item span{opacity:.9}
+.activity-item.energy::before{background:#d8c1a6;box-shadow:0 0 10px rgba(216,193,166,.45)}
+.activity-item.shield::before{background:#c9e4c0;box-shadow:0 0 10px rgba(201,228,192,.4)}
+.activity-item.magic::before{background:#edc7d5;box-shadow:0 0 10px rgba(237,199,213,.42)}
+@media (orientation:portrait){.vitals{width:230px!important;min-width:230px!important;padding:10px 12px!important}.activity-cluster,.activity-rings{width:88px;height:88px}.activity-center{inset:31px}.activity-center strong{font-size:10px}.activity-legend{min-width:98px;gap:6px}.activity-item strong{font-size:13px}}
+@media (orientation:landscape) and (max-height:550px){.vitals{width:215px!important;min-width:215px!important;padding:8px 11px!important;gap:7px}.activity-vitals{gap:10px}.activity-cluster,.activity-rings{width:82px;height:82px}.activity-center{inset:29px}.activity-center strong{font-size:10px}.activity-center small{font-size:5px}.activity-legend{gap:5px;min-width:88px}.activity-item{font-size:9px}.activity-item strong{font-size:12px}}
+@media (max-width:360px) and (orientation:portrait){.vitals{width:212px!important;min-width:212px!important}.activity-cluster,.activity-rings{width:80px;height:80px}.activity-center{inset:28px}.activity-center strong{font-size:9px}}
+
+
+/* V06 — Minimal rings only, no legend or render comment. */
+.renderer-status{display:none!important}
+.vitals{background:transparent!important;border:0!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:none!important;padding:0!important;min-width:auto!important;width:auto!important;gap:0!important}
+.vitals .hud-unit,.vitals .activity-legend,.vitals .activity-center small{display:none!important}
+.activity-vitals{display:block!important}
+.activity-cluster{width:96px!important;height:96px!important;flex:none!important}
+.activity-rings{width:96px!important;height:96px!important;filter:drop-shadow(0 6px 16px rgba(0,0,0,.24))}
+.activity-center{inset:31px!important;background:transparent!important;border:0!important;box-shadow:none!important}
+.activity-center strong{font:800 16px/1 system-ui!important;color:#fff!important;text-shadow:0 1px 4px rgba(0,0,0,.35)}
+@media (orientation:portrait){.vitals{padding:0!important}.activity-cluster,.activity-rings{width:92px!important;height:92px!important}.activity-center{inset:29px!important}.activity-center strong{font-size:15px!important}}
+@media (orientation:landscape) and (max-height:550px){.activity-cluster,.activity-rings{width:84px!important;height:84px!important}.activity-center{inset:26px!important}.activity-center strong{font-size:14px!important}}
+
+/* V08 — rolling action next to Jump, and stow / draw weapon action. */
+.game-hud .action-cell:has(#roll-button){left:calc(50% - 79px)!important;bottom:max(126px,calc(env(safe-area-inset-bottom) + 114px))!important;right:auto!important;top:auto!important}
+.game-hud .action-cell:has(#gear-button){right:max(25px,calc(env(safe-area-inset-right) + 15px))!important;bottom:max(219px,calc(env(safe-area-inset-bottom) + 207px))!important;left:auto!important;top:auto!important}
+.game-hud #roll-button{width:49px!important;height:49px!important;border-color:#d7c8b2b5!important;background:linear-gradient(150deg,#e1c7a833,#183d4a78),#0e2732b9!important}
+.game-hud #gear-button{width:49px!important;height:49px!important;border-color:#e2e7c6aa!important;background:linear-gradient(150deg,#dae7b833,#183d4a78),#0e2732b9!important}
+.game-hud #roll-button svg{width:25px!important;height:25px!important}
+.game-hud #gear-button svg{width:26px!important;height:26px!important}
+.game-hud #gear-button[aria-pressed=false]{border-color:#d0b7a2aa!important;background:linear-gradient(140deg,#806f6290,#192b2ca8)!important}
+.game-hud #roll-button:active,.game-hud #roll-button.active{background:#dbcca87f!important;box-shadow:0 0 0 5px #e1d6c030!important}
+@media (orientation:landscape) and (max-height:550px){
+ .game-hud .action-cell:has(#roll-button){left:calc(50% - 71px)!important;bottom:max(98px,calc(env(safe-area-inset-bottom) + 88px))!important}
+ .game-hud .action-cell:has(#gear-button){right:max(19px,calc(env(safe-area-inset-right) + 8px))!important;bottom:max(151px,calc(env(safe-area-inset-bottom) + 139px))!important}
+ .game-hud #roll-button,.game-hud #gear-button{width:44px!important;height:44px!important}
+}
+@media (max-width:360px) and (orientation:portrait){.game-hud .action-cell:has(#roll-button){left:calc(50% - 76px)!important;bottom:max(135px,calc(env(safe-area-inset-bottom) + 124px))!important}}
+
+/* Separate roll and jump completely on compact landscape displays. */
+@media (orientation:landscape) and (max-height:550px){.game-hud .action-cell:has(#roll-button){left:calc(50% - 93px)!important}}

@@ -1,0 +1,15 @@
+/* Aerin V11 — bouton CIBLER (verrouillage), placé à gauche du bouton Armes. */
+.game-hud .action-cell:has(#lock-button){right:max(87px,calc(env(safe-area-inset-right) + 77px))!important;bottom:max(219px,calc(env(safe-area-inset-bottom) + 207px))!important;left:auto!important;top:auto!important}
+.game-hud #lock-button{width:49px!important;height:49px!important;border-color:#f3d79caa!important;background:linear-gradient(150deg,#f2d38f33,#183d4a78),#0e2732b9!important}
+.game-hud #lock-button svg{width:25px!important;height:25px!important}
+.game-hud #lock-button[aria-pressed=true]{background:linear-gradient(140deg,#e9b95acc,#8a5a1fcc)!important;border-color:#ffe7b0!important;box-shadow:0 0 0 5px #ffd27a33,0 0 22px #ffcf6a66!important}
+@media (orientation:landscape) and (max-height:550px){.game-hud .action-cell:has(#lock-button){right:max(75px,calc(env(safe-area-inset-right) + 64px))!important;bottom:max(151px,calc(env(safe-area-inset-bottom) + 139px))!important}.game-hud #lock-button{width:44px!important;height:44px!important}}
+/* Aerin V12 — ACCROUPIR au-dessus du joystick, AGIR contextuel au centre (visible près du coffre). */
+.game-hud .action-cell:has(#crouch-button){left:max(30px,calc(env(safe-area-inset-left) + 22px))!important;bottom:max(146px,calc(env(safe-area-inset-bottom) + 136px))!important;right:auto!important;top:auto!important}
+.game-hud #crouch-button,.game-hud #act-button{width:49px!important;height:49px!important;border-color:#cfe2c0aa!important;background:linear-gradient(150deg,#cfe2c033,#183d4a78),#0e2732b9!important}
+.game-hud #crouch-button svg,.game-hud #act-button svg{width:25px!important;height:25px!important}
+.game-hud #crouch-button[aria-pressed=true]{background:linear-gradient(140deg,#8fb98acc,#2e5a3ccc)!important;border-color:#e4ffe1!important}
+.game-hud .action-cell:has(#act-button){left:50%!important;transform:translateX(-50%)!important;bottom:max(176px,calc(env(safe-area-inset-bottom) + 166px))!important;right:auto!important;top:auto!important}
+.game-hud #act-button{width:58px!important;height:58px!important;border-color:#ffe7b0!important;background:linear-gradient(140deg,#e9b95acc,#8a5a1fcc)!important;box-shadow:0 0 0 6px #ffd27a33,0 0 24px #ffcf6a66!important}
+.game-hud .action-cell.act-cell.off{visibility:hidden!important;pointer-events:none!important}
+@media (orientation:landscape) and (max-height:550px){.game-hud .action-cell:has(#crouch-button){bottom:max(116px,calc(env(safe-area-inset-bottom) + 106px))!important}.game-hud #crouch-button{width:44px!important;height:44px!important}.game-hud .action-cell:has(#act-button){bottom:max(150px,calc(env(safe-area-inset-bottom) + 140px))!important}}

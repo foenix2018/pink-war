@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "engine": "chromium",
+  "checks": [
+    "iPhone automatically selects large touch HUD and mobile renderer",
+    "Welcome start button visible on five iPhone portrait/landscape layouts",
+    "Controls >=44px, non-overlapping and outside simulated notch/home-indicator in five iPhone layouts",
+    "Touch HUD and quality preferences work and persist",
+    "Three-finger move + look + attack and touch cancellation",
+    "Safari pagehide/pageshow clears controls and keeps resumed pages paused",
+    "Home-screen manifest and Apple icon are available"
+  ],
+  "errors": [],
+  "failed": [],
+  "physicalIPhoneTest": false
+}

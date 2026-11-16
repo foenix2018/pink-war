@@ -1,0 +1,40 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "mode": "local-without-network",
+      "milliseconds": 5133,
+      "externalRequests": 0,
+      "hair": 36,
+      "body": true,
+      "clips": 75,
+      "canvases": 1,
+      "renderer": "128",
+      "errors": []
+    },
+    {
+      "mode": "gpu-download-stalled",
+      "milliseconds": 7566,
+      "externalRequests": 3,
+      "hair": 36,
+      "body": true,
+      "clips": 75,
+      "canvases": 1,
+      "renderer": "128",
+      "errors": []
+    },
+    {
+      "mode": "standalone-offline",
+      "milliseconds": 5091,
+      "externalRequests": 0,
+      "hair": 36,
+      "body": true,
+      "clips": 75,
+      "canvases": 1,
+      "renderer": "128",
+      "errors": []
+    }
+  ],
+  "physicalIPhoneTest": false,
+  "standaloneNote": "Served as one HTML document with all external requests blocked; file:// navigation is prohibited by the test browser policy."
+}

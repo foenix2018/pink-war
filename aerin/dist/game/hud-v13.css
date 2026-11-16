@@ -1,0 +1,126 @@
+/* Aerin V13 — HUD refait : vitalité en haut à gauche, système en haut à droite, état au centre,
+   déplacement en bas à gauche, actions en arc autour de Frappe en bas à droite.
+   Icônes : game-icons.net (CC BY 3.0). Remplace pink-hud.css et aerin-v11.css. */
+#game-hud.h13{--ink:#f4efe1;--muted:#c9c2ad;--gold:#e7c26b;--gold-d:#a8803a;--glass:rgba(14,22,19,.62);--line:rgba(244,232,200,.22);
+ --hp:#e5484d;--hp2:#ff7a6b;--st:#7fd17a;--st2:#c6f08a;--sh:#62a8e8;--mg:#b88cf2;
+ --safe-l:max(14px,env(safe-area-inset-left));--safe-r:max(14px,env(safe-area-inset-right));--safe-t:max(12px,env(safe-area-inset-top));--safe-b:max(14px,env(safe-area-inset-bottom));
+ position:fixed;inset:0;z-index:3;pointer-events:none;font:600 12px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);letter-spacing:.04em}
+#game-hud.h13 svg{fill:currentColor;stroke:none;display:block;flex:none}
+#game-hud.h13 button{pointer-events:auto;touch-action:none;-webkit-tap-highlight-color:transparent;font:inherit;color:inherit;cursor:pointer}
+#game-hud.h13 kbd{font:700 9px/1 system-ui,sans-serif;letter-spacing:.02em}
+
+/* ---------- vitalité */
+.h13 .h13-vitals{position:absolute;left:var(--safe-l);top:var(--safe-t);width:clamp(190px,24vw,280px);padding:10px 12px 9px;border-radius:14px;background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 6px 22px rgba(0,0,0,.25)}
+.h13 .h13-bar{display:grid;grid-template-columns:20px 1fr 28px;align-items:center;gap:8px;margin:0 0 7px}
+.h13 .h13-bar svg{width:20px;height:20px}
+.h13 .h13-bar b{font:800 12px/1 ui-monospace,"SF Mono",Menlo,monospace;text-align:right;color:var(--ink)}
+.h13 .h13-track{position:relative;height:12px;border-radius:7px;background:rgba(0,0,0,.45);overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.h13 .h13-track i{position:absolute;inset:0;transform-origin:left center;border-radius:inherit;transition:transform .18s ease-out}
+.h13 .hp svg{color:var(--hp2)}.h13 .hp i{background:linear-gradient(90deg,var(--hp),var(--hp2))}
+.h13 .st svg{color:var(--st2)}.h13 .st .h13-track{height:8px}.h13 .st i{background:linear-gradient(90deg,var(--st),var(--st2))}
+.h13 .h13-minis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.h13 .h13-bar.mini{grid-template-columns:15px 1fr;margin:0}.h13 .h13-bar.mini svg{width:15px;height:15px}.h13 .h13-bar.mini b{display:none}.h13 .h13-bar.mini .h13-track{height:6px}
+.h13 .sh svg{color:var(--sh)}.h13 .sh i{background:var(--sh)}.h13 .mg svg{color:var(--mg)}.h13 .mg i{background:var(--mg)}
+body.hp-low .h13 .hp .h13-track{animation:h13pulse 1s ease-in-out infinite}
+@keyframes h13pulse{50%{box-shadow:inset 0 0 0 1px rgba(255,120,110,.9),0 0 12px rgba(255,80,80,.6)}}
+
+/* ---------- système */
+.h13 .h13-system{position:absolute;right:var(--safe-r);top:var(--safe-t);display:flex;gap:8px}
+.h13 .h13-sys{height:40px;min-width:40px;padding:0 10px;display:flex;align-items:center;gap:7px;border-radius:12px;border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.h13 .h13-sys svg{width:20px;height:20px}.h13 .h13-sys span{font-size:11px}
+.h13 .h13-sys:hover{border-color:var(--gold)}
+
+/* ---------- centre : état et messages */
+.h13 .h13-center{position:absolute;left:50%;top:var(--safe-t);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;max-width:min(62vw,520px)}
+.h13 .h13-state{padding:5px 12px;border-radius:999px;background:var(--glass);border:1px solid var(--line);font-size:10.5px;letter-spacing:.16em;color:var(--gold)}
+.h13 .h13-toast{opacity:0;transform:translateY(-4px);transition:opacity .2s,transform .2s;padding:8px 14px;border-radius:10px;background:rgba(20,16,8,.78);border:1px solid rgba(231,194,107,.45);font-size:12px;text-align:center}
+.h13 .h13-toast.visible{opacity:1;transform:none}
+#game-hud.h13 #hit-marker{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);font-size:26px;color:#fff3c4;text-shadow:0 0 10px #ffcf6a;opacity:0;transition:opacity .08s}
+#game-hud.h13 #damage-flash{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 45%,rgba(200,20,20,.55));opacity:0}
+
+/* ---------- boutons d'action (rond, icône, raccourci) */
+.h13 .h13-btn{position:absolute;display:grid;place-items:center;border-radius:50%;border:1.5px solid rgba(244,232,200,.42);background:radial-gradient(circle at 35% 30%,rgba(60,74,64,.85),rgba(14,22,19,.82));box-shadow:0 4px 14px rgba(0,0,0,.35),inset 0 1px rgba(255,255,255,.12);transition:transform .08s,border-color .15s,background .15s}
+.h13 .h13-btn svg{width:52%;height:52%}
+.h13 .h13-btn kbd{position:absolute;right:-4px;top:-4px;min-width:16px;padding:3px 4px;border-radius:6px;background:var(--gold);color:#241a06;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.h13 .h13-btn:active,.h13 .h13-btn.active{transform:scale(.93);border-color:var(--gold);background:radial-gradient(circle at 35% 30%,rgba(231,194,107,.55),rgba(80,56,18,.85))}
+.h13 .h13-btn[aria-pressed=true]{border-color:var(--gold);background:radial-gradient(circle at 35% 30%,rgba(231,194,107,.5),rgba(60,44,14,.85));box-shadow:0 0 0 4px rgba(231,194,107,.18),0 4px 14px rgba(0,0,0,.35)}
+.h13 .h13-actions{position:absolute;right:var(--safe-r);bottom:var(--safe-b);width:250px;height:290px;transform-origin:right bottom;pointer-events:none}
+/* Frappe dans le coin ; anneau 1 (r ≈ 98) : bouclier, roulade, saut ; anneau 2 (r ≈ 162) : esquive, cible, armes */
+#game-hud.h13 #attack-button{right:0;bottom:0;width:88px;height:88px;border-color:rgba(255,214,200,.7);background:radial-gradient(circle at 35% 30%,#e8736b,#8c2f35);box-shadow:0 0 0 5px rgba(229,72,77,.18),0 6px 20px rgba(0,0,0,.4)}
+#game-hud.h13 #attack-button svg{width:50%;height:50%;color:#fff}
+#game-hud.h13 #attack-button.active,#game-hud.h13 #attack-button:active{background:radial-gradient(circle at 35% 30%,#ff9a86,#b5414a)}
+.h13 .block{right:112px;bottom:13px;width:62px;height:62px}
+.h13 .roll{right:92px;bottom:92px;width:56px;height:56px}
+.h13 .jump{right:13px;bottom:112px;width:62px;height:62px}
+.h13 .small{width:48px;height:48px}
+.h13 .dodge{right:180px;bottom:44px}
+.h13 .lock{right:146px;bottom:122px}
+.h13 .gear{right:76px;bottom:174px}
+.h13 .gear[aria-pressed=false]{opacity:.8}
+.h13 .h13-act{position:absolute;right:0;bottom:238px;pointer-events:none}
+#game-hud.h13 #act-button{position:relative;width:auto;height:46px;padding:0 16px 0 12px;border-radius:999px;display:flex;gap:8px;align-items:center;border-color:#ffe2a0;background:linear-gradient(140deg,#e9b95a,#8a5a1f);color:#241a06;box-shadow:0 0 0 5px rgba(255,210,122,.22),0 0 22px rgba(255,207,106,.5)}
+#game-hud.h13 #act-button svg{width:26px;height:26px}
+#game-hud.h13 #act-button span{font-weight:800;letter-spacing:.1em}
+.h13 .h13-act.off{visibility:hidden}
+.h13 .crouch{left:calc(var(--safe-l) + 34px);bottom:calc(var(--safe-b) + 132px);width:50px;height:50px}
+
+/* ---------- déplacement */
+.h13 .h13-move{position:absolute;left:var(--safe-l);bottom:var(--safe-b)}
+#game-hud.h13 .h13-stick{position:relative;width:118px;height:118px;border-radius:50%;pointer-events:auto;touch-action:none;background:radial-gradient(circle,rgba(14,22,19,.18) 0 40%,rgba(14,22,19,.5) 41% 100%);border:1.5px solid var(--line);box-shadow:inset 0 0 0 10px rgba(255,255,255,.03)}
+#game-hud.h13 .joystick-knob{position:absolute!important;left:50%!important;top:50%!important;width:50px!important;height:50px!important;margin:-25px 0 0 -25px!important;border-radius:50%!important;display:grid!important;place-items:center!important;background:radial-gradient(circle at 35% 30%,#f2e6c4,#b89a57)!important;color:#2b2210!important;border:0!important;box-shadow:0 4px 12px rgba(0,0,0,.4)!important;transition:none}
+#game-hud.h13 .joystick-knob svg{width:24px;height:24px}
+.h13 .h13-legend{display:none;gap:6px;flex-wrap:wrap;max-width:330px}
+.h13 .h13-legend span{padding:5px 9px;border-radius:8px;background:var(--glass);border:1px solid var(--line);font-size:11px;color:var(--muted)}
+.h13 .h13-legend kbd{color:var(--gold);margin-right:4px}
+.h13 .h13-renderer{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);font-size:9px;letter-spacing:.14em;color:rgba(244,239,225,.38)}
+.h13 .h13-legacy{display:none!important}
+
+/* ---------- ordinateur (pas de tactile) : légende clavier au lieu du joystick, boutons plus discrets */
+body:not(.touch-layout) .h13 .h13-stick{display:none}
+body:not(.touch-layout) .h13 .h13-legend{display:flex}
+body:not(.touch-layout) .h13 .crouch{left:var(--safe-l);bottom:calc(var(--safe-b) + 46px)}
+body:not(.touch-layout) .h13 .h13-actions{transform:scale(.82);opacity:.92}
+body.touch-layout .h13 kbd{display:none}
+
+/* ---------- petits écrans */
+@media (max-height:460px){.h13 .h13-actions{transform:scale(.78)}.h13 .h13-vitals{width:200px;padding:8px 10px 7px}.h13 .h13-bar{margin-bottom:5px}#game-hud.h13 .h13-stick{width:104px;height:104px}.h13 .crouch{left:calc(var(--safe-l) + 28px);bottom:calc(var(--safe-b) + 116px)}}
+@media (max-width:400px){.h13 .h13-actions{transform:scale(.84)}.h13 .h13-vitals{width:170px}.h13 .h13-sys.wide span{display:none}.h13 .h13-center{top:calc(var(--safe-t) + 112px);max-width:86vw}}
+.paused .h13 .h13-actions,.paused .h13 .h13-move,.paused .h13 .crouch{opacity:.35}
+
+/* ---------- V14 — disposition tactile reprise de Pink Wars (mobile-controls-v7.css, foenix2018/pink-war)
+   Gauche = joystick de déplacement ; moitié droite = glisser pour la caméra (aucun second joystick) ;
+   colonne centrale = action maintenue en bas (Bouclier, comme « Viser ») et Saut juste au-dessus ;
+   à gauche du centre = Roulade (place de « Recharger ») et Accroupi ; à droite = Frappe (place de « Tir »),
+   Cible au-dessus (place d'« Interagir »), Esquive à sa gauche (« Arme suivante »), Armes en diagonale (« Vue »),
+   OUVRIR au-dessus (place de l'étiquette d'arme). Mêmes cotes que Pink Wars. Le clavier n'est pas concerné. */
+body.touch-layout #game-hud.h13 .h13-actions{position:fixed;inset:0;width:auto;height:auto;transform:none!important;opacity:1}
+body.touch-layout #game-hud.h13 .h13-move{left:max(12px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom))}
+body.touch-layout #game-hud.h13 .h13-stick{width:116px;height:116px}
+body.touch-layout #game-hud.h13 .joystick-knob{width:48px!important;height:48px!important;margin:-24px 0 0 -24px!important}
+body.touch-layout #game-hud.h13 .h13-btn{position:fixed}
+body.touch-layout #game-hud.h13 .block{left:50%;right:auto;transform:translateX(-50%);bottom:max(21px,calc(env(safe-area-inset-bottom) + 8px));width:56px;height:56px}
+body.touch-layout #game-hud.h13 .jump{left:50%;right:auto;transform:translateX(-50%);bottom:max(91px,calc(env(safe-area-inset-bottom) + 78px));width:56px;height:56px}
+body.touch-layout #game-hud.h13 .block:active,body.touch-layout #game-hud.h13 .jump:active,body.touch-layout #game-hud.h13 .jump.active{transform:translateX(-50%) scale(.93)}
+body.touch-layout #game-hud.h13 .roll{left:calc(50% - 88px);right:auto;bottom:max(25px,calc(env(safe-area-inset-bottom) + 10px));width:49px;height:49px}
+body.touch-layout #game-hud.h13 .crouch{left:calc(50% - 86px);right:auto;bottom:max(92px,calc(env(safe-area-inset-bottom) + 80px));width:45px;height:45px}
+body.touch-layout #game-hud.h13 #attack-button{right:max(12px,env(safe-area-inset-right));bottom:max(22px,calc(env(safe-area-inset-bottom) + 7px));width:78px;height:78px}
+body.touch-layout #game-hud.h13 .lock{right:max(24px,calc(env(safe-area-inset-right) + 13px));bottom:max(111px,calc(env(safe-area-inset-bottom) + 97px));width:56px;height:56px}
+body.touch-layout #game-hud.h13 .dodge{right:max(90px,calc(env(safe-area-inset-right) + 83px));bottom:max(21px,calc(env(safe-area-inset-bottom) + 8px));width:46px;height:46px}
+body.touch-layout #game-hud.h13 .gear{right:max(92px,calc(env(safe-area-inset-right) + 80px));bottom:max(111px,calc(env(safe-area-inset-bottom) + 97px));width:46px;height:46px}
+body.touch-layout #game-hud.h13 .h13-act{position:fixed;right:max(9px,env(safe-area-inset-right));bottom:max(175px,calc(env(safe-area-inset-bottom) + 159px))}
+/* jeu calme (règle Pink Wars) : pas de consignes sur le terrain, les commandes restent */
+body.touch-layout #game-hud.h13 .h13-legend{display:none}
+@media (max-width:390px){
+ body.touch-layout #game-hud.h13 .h13-stick{width:101px;height:101px}
+ body.touch-layout #game-hud.h13 .roll{left:calc(50% - 72px)}
+ body.touch-layout #game-hud.h13 .crouch{left:calc(50% - 72px)}
+}
+@media (max-width:350px){ /* iPhone SE 1re génération : on rétrécit le joystick pour libérer la colonne de gauche */
+ body.touch-layout #game-hud.h13 .h13-stick{width:86px;height:86px}
+ body.touch-layout #game-hud.h13 .roll,body.touch-layout #game-hud.h13 .crouch{left:calc(50% - 64px)}
+ #game-hud.h13 .h13-vitals{width:148px;padding:7px 9px 6px}
+ #game-hud.h13 .h13-system{gap:5px}
+ #game-hud.h13 .h13-sys{height:36px;min-width:36px;padding:0 8px}
+}
+@media (max-width:640px){#game-hud.h13 .h13-center{top:calc(var(--safe-t) + 112px);max-width:86vw}}
+@media (min-width:641px){#game-hud.h13 .h13-center{max-width:min(520px,calc(100vw - 2*clamp(190px,24vw,280px) - 2*var(--safe-l) - 40px))}}

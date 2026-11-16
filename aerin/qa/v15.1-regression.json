@@ -1,0 +1,33 @@
+{
+  "hair": {
+    "passed": true,
+    "locks": 36,
+    "tipY": 1.23,
+    "shoulderY": 1.31,
+    "motionDistance": 0.299,
+    "restDistance": 0.011,
+    "hiddenInFirstPerson": true
+  },
+  "mobileHUD": {
+    "passed": true,
+    "formats": [
+      "iPhone SE",
+      "iPhone 13",
+      "iPhone 14 Pro Max",
+      "iPhone 13 landscape"
+    ],
+    "checks": [
+      "layout",
+      "jump",
+      "roll",
+      "sword",
+      "shield"
+    ]
+  },
+  "blender": {
+    "bones": 41,
+    "actions": 75,
+    "hairMesh": true
+  },
+  "physicalIPhoneTest": false
+}

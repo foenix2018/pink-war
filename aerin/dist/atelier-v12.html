@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#12281f">
+<title>Aerin · Galerie des animations</title>
+<style>
+:root{--bg:#13251e;--panel:#1b3329;--ink:#f0f3e8;--muted:#b2c0b2;--accent:#e9c46a;--line:rgba(213,234,204,.18)}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px system-ui,-apple-system,sans-serif;overflow:hidden}
+#app{display:grid;grid-template-columns:1fr 330px;height:100%}#view{position:relative;min-width:0}#view canvas{display:block;width:100%;height:100%;touch-action:none}
+aside{background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+header{padding:16px 18px 10px;border-bottom:1px solid var(--line)}h1{font-size:17px;margin:0 0 4px;letter-spacing:.04em}header p{margin:0;color:var(--muted);font-size:12.5px;line-height:1.4}
+#list{overflow-y:auto;padding:6px 12px 18px;flex:1}h2{font-size:11px;letter-spacing:.14em;color:var(--accent);margin:16px 6px 6px;text-transform:uppercase}
+.clips{display:flex;flex-wrap:wrap;gap:6px}.clips button{border:1px solid var(--line);background:#ffffff0d;color:var(--ink);border-radius:999px;padding:6px 11px;font:inherit;font-size:12.5px;cursor:pointer;min-height:32px}
+.clips button:hover{background:#ffffff1c}.clips button[aria-pressed=true]{background:var(--accent);color:#1d1606;border-color:var(--accent);font-weight:600}
+#hud{position:absolute;left:16px;top:14px;right:16px;display:flex;justify-content:space-between;gap:10px;pointer-events:none}
+#now{background:#0d1d17c9;border:1px solid var(--line);border-radius:10px;padding:9px 13px;pointer-events:auto}#now b{display:block;font-size:15px}#now small{color:var(--muted)}
+#ctrl{display:flex;gap:8px;align-items:center;background:#0d1d17c9;border:1px solid var(--line);border-radius:10px;padding:8px 12px;pointer-events:auto}#ctrl label{display:flex;gap:6px;align-items:center;color:var(--muted);font-size:12px}
+#ctrl button{border:1px solid var(--line);background:#ffffff12;color:var(--ink);border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit;font-size:12px}
+a{color:var(--accent)}footer{padding:10px 18px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+#status{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted)}
+@media (max-width:760px){#app{grid-template-columns:1fr;grid-template-rows:55% 45%}aside{border-left:0;border-top:1px solid var(--line)}#hud{flex-direction:column;align-items:flex-start}}
+</style></head>
+<body><div id="app"><main id="view"><div id="status">Chargement du chevalier…</div><div id="hud"><div id="now"><b id="name">—</b><small id="meta"></small></div><div id="ctrl"><button id="play">Pause</button><label>Vitesse <input id="speed" type="range" min=".1" max="2" step=".05" value="1"></label><label><input id="cel" type="checkbox" checked> Cel shading</label></div></div></main>
+<aside><header><h1>AERIN · GALERIE DES ANIMATIONS</h1><p>Toutes les animations du chevalier, classées par famille. Glisse sur la scène pour tourner autour, molette ou pincement pour zoomer.</p></header><div id="list"></div><footer><a href="index.html">← Retour au jeu</a></footer></aside></div>
+<script src="preview/three.min.js"></script><script src="preview/GLTFLoader.js"></script>
+<script src="game/aerin-style-v12.js?v=13"></script><script src="game/aerin-body-v13.js?v=15"></script><script src="game/aerin-hair-v15.js?v=15"></script><script src="game/aerin-motion-v11.js?v=13"></script><script src="game/aerin-motion-adventure-v12.js?v=13"></script><script src="game/aerin-knight-v11.js?v=13"></script>
+<script>
+(()=>{'use strict';
+const T=THREE,view=document.querySelector('#view');
+const renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputEncoding=T.sRGBEncoding;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.9;renderer.shadowMap.enabled=true;view.prepend(renderer.domElement);
+const scene=new T.Scene();scene.background=new T.Color(0x718571);scene.fog=new T.Fog(0x718571,9,26);
+scene.add(new T.HemisphereLight(0xe9eed1,0x3d5541,.65));const sun=new T.DirectionalLight(0xffecc5,1.25);sun.position.set(-4,8,5);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.normalBias=.03;Object.assign(sun.shadow.camera,{left:-4,right:4,top:5,bottom:-3});scene.add(sun);
+const ground=new T.Mesh(new T.CircleGeometry(12,64),new T.MeshStandardMaterial({color:0x475e38,roughness:1}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+const ring=new T.Mesh(new T.RingGeometry(1.45,1.5,64),new T.MeshBasicMaterial({color:0xc8cfaa}));ring.rotation.x=-Math.PI/2;ring.position.y=.005;scene.add(ring);
+const camera=new T.PerspectiveCamera(38,1,.05,60);let yaw=.55,pitch=.18,dist=4.4;
+const holder=new T.Group();scene.add(holder);
+let actor,mixer,clips={},meta={},current=null,action=null,knight=null,paused=false,lift=0,styleApplied=false,materialsStd=new Map();
+const LEGACY={Idle:'Base RLH/Mixamo',Walk:'Base RLH/Mixamo',Run:'Base RLH/Mixamo',Combat_Idle:'Combat V09',Sword_Slash:'Combat V09',Sword_Backslash:'Combat V09',Sword_Overhead:'Combat V09',Sword_Thrust:'Combat V09',Shield_Raise:'Bouclier',Shield_Hold:'Bouclier',Shield_Hit:'Bouclier',Shield_Lower:'Bouclier',Hit_React:'Dégâts',Jump:'Déplacement',Dodge_Back:'Esquive',Weapons_Stow:'Équipement',Weapons_Draw:'Équipement',Roll_Forward:'Esquive'};
+const V11={K_Guard:'Combat V11',K_StrafeL:'Combat V11',K_StrafeR:'Combat V11',K_GuardFwd:'Combat V11',K_GuardBack:'Combat V11',K_Slash1:'Combat V11',K_Slash2:'Combat V11',K_Slash3:'Combat V11',K_Slash4:'Combat V11',K_Spin:'Combat V11',K_Charge:'Combat V11',K_JumpSlash:'Combat V11',K_ShieldBash:'Bouclier',K_HopL:'Esquive',K_HopR:'Esquive',K_Backflip:'Esquive',K_Run:'Déplacement',K_Stagger:'Dégâts'};
+const ORDER=['Déplacement','Escalade','Nage','Interaction','Expression','Combat V11','Combat V09','Bouclier','Esquive','Dégâts','Équipement','Base RLH/Mixamo'];
+const LABEL={K_Crouch:'Accroupi',K_Sneak:'Marche furtive',K_Balance:'Équilibre',K_Slide:'Glissade',K_Fall:'Chute',K_LandHard:'Réception lourde',K_LedgeHang:'Suspendu au rebord',K_LedgeShimmyL:'Déplacement suspendu ←',K_LedgeShimmyR:'Déplacement suspendu →',K_ClimbUp:'Rétablissement',K_ClimbWall:'Escalade de paroi',K_Ladder:'Échelle',K_SwimTread:'Nage sur place',K_Swim:'Brasse',K_PickUp:'Ramasser',K_CarryIdle:'Porter (arrêt)',K_CarryWalk:'Porter (marche)',K_Throw:'Lancer',K_Push:'Pousser',K_Pull:'Tirer',K_OpenChest:'Ouvrir un coffre',K_ItemGet:'Objet obtenu',K_OpenDoor:'Ouvrir une porte',K_Lever:'Actionner un levier',K_Talk:'Parler',K_Wave:'Saluer',K_Victory:'Victoire',K_LookAround:'Regarder autour',K_Sit:'Assis',K_Kneel:'Genou à terre',K_KnockDown:'Renversé',K_GetUp:'Se relever',K_Death:'Mort',K_Sheathe:'Rengainer (fourreau gauche, écu au dos)',K_Unsheathe:'Dégainer',K_JumpStart:'Impulsion de saut',K_JumpAir:'En l’air',K_RunJump:'Saut en course',K_Land:'Réception',
+ K_Guard:'Garde',K_StrafeL:'Pas chassé ←',K_StrafeR:'Pas chassé →',K_GuardFwd:'Marche en garde',K_GuardBack:'Recul en garde',K_Slash1:'Taille',K_Slash2:'Revers',K_Slash3:'Coup vertical',K_Slash4:'Estoc',K_Spin:'Attaque tournoyante',K_Charge:'Charge',K_JumpSlash:'Saut frappé',K_ShieldBash:'Coup de bouclier',K_HopL:'Bond ←',K_HopR:'Bond →',K_Backflip:'Salto arrière',K_Run:'Course armée',K_Stagger:'Vacille'};
+function resize(){const r=view.getBoundingClientRect();renderer.setSize(r.width,r.height);camera.aspect=r.width/r.height;camera.updateProjectionMatrix();}addEventListener('resize',resize);resize();
+new T.GLTFLoader().load('assets/aerin.glb',g=>{
+ actor=g.scene;holder.add(actor);actor.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;}});
+ const idle=g.animations.find(c=>c.name==='Idle'),S=window.AerinStyleV12;
+ if(S){S.stripTracks(g.animations);lift=S.proportions(T,actor,idle);}
+ if(window.AerinBodyV13)AerinBodyV13.build(T,actor,{neutral:idle});
+ const hair=window.AerinHairV15?AerinHairV15.build(T,actor,{neutral:idle}):null;window._hair=hair;
+ const built=AerinMotionV11.build(T,actor,idle);meta=built.meta;
+ knight=AerinKnightV11.dress(T,actor,{neutral:idle,noTassets:!!window.AerinBodyV13,greaveScale:1.16,greaveDepth:1.2});
+ actor.traverse(o=>{if(o.isMesh)materialsStd.set(o,o.material);});
+ if(S){S.celShade(T,actor);styleApplied=true;}
+ holder.position.y=lift;mixer=new T.AnimationMixer(actor);
+ for(const c of g.animations)clips[c.name]=c;Object.assign(clips,built.clips);
+ const groups={};for(const n in clips){const m=meta[n]||{};const c=m.cat||V11[n]||LEGACY[n]||'Autres';(groups[c]=groups[c]||[]).push(n);}
+ const list=document.querySelector('#list');let count=0;
+ for(const c of [...ORDER,...Object.keys(groups).filter(k=>!ORDER.includes(k))]){if(!groups[c])continue;const h=document.createElement('h2');h.textContent=c+' · '+groups[c].length;list.append(h);const box=document.createElement('div');box.className='clips';list.append(box);
+  for(const n of groups[c]){const b=document.createElement('button');b.textContent=LABEL[n]||n.replace(/_/g,' ');b.title=n;b.dataset.clip=n;b.onclick=()=>play(n);box.append(b);count++;}}
+ document.querySelector('#status').remove();window.aerinGallery={clips,count,play,get current(){return current;}};play('K_Guard');
+},undefined,e=>{document.querySelector('#status').textContent='Le modèle n’a pas pu être chargé (ouvrir via un serveur HTTP).';console.error(e);});
+function play(n){if(!mixer||!clips[n])return;const m=meta[n]||{};const next=mixer.clipAction(clips[n]);
+ if(action&&action!==next)action.fadeOut(.2);next.reset();next.setLoop(m.loop===false&&!m.hold?T.LoopRepeat:m.loop?T.LoopRepeat:T.LoopRepeat,Infinity);next.clampWhenFinished=!!m.hold;if(m.hold)next.setLoop(T.LoopOnce,1);next.fadeIn(.2).play();action=next;current=n;knight?.cape.reset();
+ document.querySelectorAll('[data-clip]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.clip===n)));
+ document.querySelector('#name').textContent=(LABEL[n]||n)+'  ·  '+n;
+ const root=m.root?' · déplacement du corps '+m.root.map(v=>v.toFixed(2)).join(' / ')+' m':'';
+ document.querySelector('#meta').textContent=clips[n].duration.toFixed(2)+' s'+(m.loop?' · boucle':m.hold?' · pose finale tenue':'')+root;}
+document.querySelector('#play').onclick=e=>{paused=!paused;e.target.textContent=paused?'Lecture':'Pause';};
+document.querySelector('#speed').oninput=e=>{if(mixer)mixer.timeScale=+e.target.value;};
+document.querySelector('#cel').onchange=e=>{if(!actor)return;const on=e.target.checked;actor.traverse(o=>{if(o.userData.outlineV12)o.visible=on;});if(!window._toon){window._toon=new Map();actor.traverse(o=>{if(o.isMesh&&!o.userData.outlineV12)window._toon.set(o,o.material);});}
+ actor.traverse(o=>{if(o.isMesh&&!o.userData.outlineV12){const std=materialsStd.get(o);if(std)o.material=on?window._toon.get(o):std;}});};
+let drag=null;renderer.domElement.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY};renderer.domElement.setPointerCapture(e.pointerId);});
+renderer.domElement.addEventListener('pointermove',e=>{if(!drag)return;yaw-=(e.clientX-drag.x)*.008;pitch=Math.max(-.2,Math.min(1.1,pitch+(e.clientY-drag.y)*.006));drag={x:e.clientX,y:e.clientY};});
+renderer.domElement.addEventListener('pointerup',()=>drag=null);renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();dist=Math.max(1.8,Math.min(9,dist*(1+Math.sign(e.deltaY)*.08)));},{passive:false});
+const clock=new T.Clock();renderer.setAnimationLoop(()=>{const dt=Math.min(clock.getDelta(),.05);if(mixer&&!paused){mixer.update(dt);holder.updateMatrixWorld(true);knight?.cape.update(dt*mixer.timeScale,clock.elapsedTime);window._hair?.update(dt*mixer.timeScale);}
+ const hipsY=knight?knight.bones.Hips.getWorldPosition(new T.Vector3()).y:1;const ty=Math.max(.9,Math.min(2.6,hipsY+.15));
+ camera.position.set(Math.sin(yaw)*Math.cos(pitch)*dist,ty+Math.sin(pitch)*dist,Math.cos(yaw)*Math.cos(pitch)*dist);camera.lookAt(0,ty,0);renderer.render(scene,camera);});
+})();
+</script></body></html>

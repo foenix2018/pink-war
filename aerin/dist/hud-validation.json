@@ -1,0 +1,32 @@
+{
+  "passed": true,
+  "checks": [
+    "Model loads and starts",
+    "Keyboard movement and release",
+    "Sprint speed and stamina use",
+    "Camera keyboard rotation",
+    "Estoc applies damage once, in reach and facing target",
+    "Frontal shield blocks a real riposte and consumes stamina",
+    "Unblocked riposte reduces health",
+    "Shield cannot block an attack from behind",
+    "Dodge moves the character away",
+    "Jump animation completes",
+    "Insufficient stamina rejects attack",
+    "Arena boundary prevents leaving the ground",
+    "Pause freezes gameplay and clears held keys",
+    "First-person and third-person modes with animated weapons and forearms",
+    "Help pauses the game and camera setting updates",
+    "Atelier and existing downloads remain accessible",
+    "Three simultaneous touch contacts: move, camera and sword; release clears all",
+    "Portrait, landscape and 320 px control bounds",
+    "Focus loss pauses and releases touch controls"
+  ],
+  "errors": [],
+  "httpErrors": [],
+  "renderer": "Chromium / SwiftShader; mobile touch emulated via CDP",
+  "limitations": [
+    "No physical iPhone/Android test",
+    "No VR mode; desktop/touch only"
+  ],
+  "reference": "https://github.com/foenix2018/pink-war/blob/main/dist/index.html"
+}

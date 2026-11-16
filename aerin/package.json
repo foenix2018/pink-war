@@ -1,0 +1,22 @@
+{
+  "name": "aerin",
+  "version": "1.5.1",
+  "private": true,
+  "description": "Aerin V15 — cheveux mi-longs animés, disposition tactile Pink Wars, HUD refait (icônes game-icons.net), chevalier au corps entièrement refait sans bonnet, écu dans le dos et épée au fourreau gauche, vrai saut et roulade en mouvement, 75 animations ; moteur local et WebGPU optionnel et HTML autonome",
+  "scripts": {
+    "dev": "python3 -m http.server 8082 --directory dist",
+    "check": "node --check dist/game/aerin-game-webgpu.js && node --check dist/game/aerin-game-webgl.js && node --check dist/game/entry-webgpu.js && node --check dist/game/mobile.js && node --check dist/game/aerin-style-v12.js && node --check dist/game/aerin-body-v13.js && node --check dist/game/aerin-hair-v15.js && node --check dist/game/aerin-motion-v11.js && node --check dist/game/aerin-motion-adventure-v12.js && node --check dist/game/aerin-knight-v11.js && node tests/pinkhud-contract.cjs && node tests/guard-contract.cjs && node tests/v10-combat-contract.cjs && node tests/v11-contract.cjs && node tests/v12-contract.cjs && node tests/v13-contract.cjs && node tests/v14-contract.cjs && node tests/v15-contract.cjs",
+    "test:contract": "node tests/pinkhud-contract.cjs",
+    "test:guard": "node tests/guard-contract.cjs",
+    "test:v11": "node tests/v11-knight-browser.cjs",
+    "build:standalone": "python3 tools/build-standalone.py ..",
+    "test:v12": "node tests/v12-adventure-browser.cjs",
+    "test:v13": "node tests/v13-knight-browser.cjs",
+    "test:v14": "node tests/v14-mobile-layout-browser.cjs",
+    "test:v15": "node tests/v15-hair-browser.cjs",
+    "test:startup": "node tests/v151-startup.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}
