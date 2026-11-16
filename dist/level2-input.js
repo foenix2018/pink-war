@@ -1,10 +1,11 @@
 import {createTouchOrbit} from './touch-orbit.js';
+import {touchAnalogSprint} from './locomotion.js';
+export {touchAnalogSprint} from './locomotion.js';
 // M02 official Pink Wars controls adapter.
 // Input mappings are imported from the game's production desktop-input module
 // instead of copying arbitrary button values.
 import {DesktopGamepadInput,DESKTOP_BUTTONS,desktopAxis} from './desktop-input.js';
 import {desktopZoomHeld} from './desktop-modifier-controls.js';
-export const touchAnalogSprint=(x,z)=>Math.hypot(Number(x)||0,Number(z)||0)>=.88;
 export const PINK_WARS_KEYS=Object.freeze({
   forward:['KeyW','KeyZ','ArrowUp'],back:['KeyS','ArrowDown'],left:['KeyA','KeyQ','ArrowLeft'],right:['KeyD','ArrowRight'],
   fire:'MouseLeft',jump:['Space','KeyJ'],interact:'KeyF',next:'KeyE',reload:'KeyR',
@@ -27,6 +28,7 @@ export function createPinkWarsInput(){
     actions[action]=!!state;
   }
   return {
+   gamepadMoving:!!(desktopAxis(normalized[0])||desktopAxis(normalized[1])),
    moveX:desktopAxis(normalized[0])+(held(keys,...PINK_WARS_KEYS.right)?1:0)-(held(keys,...PINK_WARS_KEYS.left)?1:0),
    moveZ:desktopAxis(normalized[1])+(held(keys,...PINK_WARS_KEYS.back)?1:0)-(held(keys,...PINK_WARS_KEYS.forward)?1:0),
    lookX:desktopAxis(normalized[2])*1.6,
@@ -54,8 +56,13 @@ export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onRelo
    '<div class="m02-actions"><button data-m02="aim">VISER</button><button data-m02="fire">TIR</button><button data-m02="jump">↑ SAUT</button><button data-m02="interact">F · ACTION</button><button data-m02="next">ARME</button><button data-m02="reload">↻</button><button data-m02="crouch">ACCROUPI</button><button data-m02="view">VUE</button><button data-m02="pause">Ⅱ</button></div>';
  document.body.append(root);
  const state={x:0,z:0,lookX:0,lookY:0,lookDX:0,lookDY:0,fire:false,aim:false,sprint:false};
+ const aimButton=root.querySelector('[data-m02="aim"]');let aimLatched=false;
+ const setAim=value=>{state.aim=!!value;aimButton.setAttribute('aria-pressed',String(state.aim));onAim?.(state.aim);};
+ const resetAim=()=>{aimLatched=false;setAim(false);};
+ aimButton.setAttribute('aria-pressed','false');aimButton.setAttribute('aria-label','Activer ou désactiver la visée');
  // iOS Safari can lose a pointerup / pointercancel (system gesture, notification, a second finger, the page losing
- // focus). Every control therefore registers a forced release, and the safety nets below call them all as soon as the
+ // focus). Held controls register a forced release; latched touch aim persists until the next tap or a lifecycle reset.
+ // The safety nets below release held controls as soon as the
  // screen is known to be untouched, so the stick can never stay deflected and the fire button can never stay held.
  const releasers=new Set();let fingers=0,idleFor=0,sawTouch=false;
  const releaseAll=()=>{for(const release of [...releasers])release();};
@@ -63,8 +70,8 @@ export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onRelo
  document.addEventListener('touchstart',e=>{sawTouch=true;fingers=e.touches.length;},{passive:true,capture:true});
  document.addEventListener('touchend',countFingers,{passive:true,capture:true});
  document.addEventListener('touchcancel',countFingers,{passive:true,capture:true});
- for(const name of ['blur','pagehide','orientationchange'])window.addEventListener(name,releaseAll);
- document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAll();});
+ for(const name of ['blur','pagehide','orientationchange'])window.addEventListener(name,()=>{resetAim();releaseAll();});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden){resetAim();releaseAll();}});
  const bindStick=(id,ax,az)=>{
   const element=root.querySelector(id),ring=element.querySelector('.m02-stick-ring'),knob=element.querySelector('.m02-stick-knob');
   let pointer=null;
@@ -107,22 +114,22 @@ export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onRelo
  for(const b of root.querySelectorAll('button')){
   const name=b.dataset.m02;
   if(name==='fire')releasers.add(()=>{if(state.fire){state.fire=false;onFire?.(false);}});
-  if(name==='aim')releasers.add(()=>{if(state.aim){state.aim=false;onAim?.(false);}});
+  if(name==='aim')releasers.add(()=>{if(state.aim&&!aimLatched)setAim(false);});
   b.addEventListener('pointerdown',e=>{
    e.preventDefault();e.stopPropagation();
    try{b.setPointerCapture(e.pointerId);}catch{}
    if(name==='fire'){state.fire=true;onFire?.(true);}
-   else if(name==='aim'){state.aim=true;onAim?.(true);}
+   else if(name==='aim'){if(e.pointerType==='touch'){aimLatched=!aimLatched;setAim(aimLatched);}else{aimLatched=false;setAim(true);}}
    else actions[name]?.();
   });
   for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>{
    if(name==='fire'){state.fire=false;onFire?.(false);}
-   else if(name==='aim'){state.aim=false;onAim?.(false);}
+   else if(name==='aim'&&!aimLatched)setAim(false);
   });
  }
  // Watchdog: a control still marked held while no finger has touched the screen for a moment is a stale one.
- return {state,root,releaseAim(){state.aim=false;onAim?.(false);},step(dt){
-  const held=state.x||state.z||state.fire||state.aim||lookPointer!==null;
+ return {state,root,releaseAim:resetAim,step(dt){
+  const held=state.x||state.z||state.fire||(state.aim&&!aimLatched)||lookPointer!==null;
   if(held&&sawTouch&&fingers===0){idleFor+=dt||0;if(idleFor>.25){releaseAll();idleFor=0;}}else idleFor=0;
-  return orbit.step(dt);},reset(){state.x=state.z=state.lookX=state.lookY=state.lookDX=state.lookDY=0;state.aim=state.fire=state.sprint=false;orbit.reset();lookPointer=null;onFire?.(false);onAim?.(false);}};
+  return orbit.step(dt);},reset(){state.x=state.z=state.lookX=state.lookY=state.lookDX=state.lookDY=0;state.fire=state.sprint=false;orbit.reset();lookPointer=null;onFire?.(false);resetAim();}};
 }

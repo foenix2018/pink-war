@@ -1,3 +1,6 @@
+import {readPreferredView,savePreferredView,normalizeView} from './view-options.js';
+import {frameDelta} from './frame-timing.js';
+import {GAME_VERSION} from './launch-ui.js';
 import {applyFPSCameraMotion} from './fps-motion.js';
 import {rendererBackend,rendererLabel} from './renderer-policy.js';
 import {createSupplyPickup} from './power-props.js';
@@ -54,7 +57,7 @@ const shade=$('shade'),startButton=$('start'),status=$('status'),quality=$('qual
 if(params.get('quality')==='low')quality.value='low';
 const low=()=>quality.value==='low';
 let canvas=$('game'),renderer,scene,camera,game,weapon,art,clock=0,running=false,started=false,last=0,framePending=false,recovering=false,bootStep='modules';
-let yaw=0,pitch=0,noticeUntil=0,hitUntil=0,paused=false,view='fps',aimBlend=0,mouseAim=false,playerRig=null,touchControls=null;
+let yaw=0,pitch=0,noticeUntil=0,hitUntil=0,paused=false,view=readPreferredView(),aimBlend=0,mouseAim=false,playerRig=null,touchControls=null;
 let jumpQueued=false,crouchQueued=false,firePressQueued=false,heldFire=false,weaponReady=false,audioCtx=null;
 let combatEffects=null,companion=null,ambience=null,companionSkills=null,skillMenu=null,enemyFactory=null,armorFx=null,combatHud=null;
 let meleeQueued=false,chargeQueued=false,touchSprinting=false,xr=null,fallbackGun=null,fallbackHand=null;
@@ -69,6 +72,7 @@ const completed=()=>!!mission?.completed;
 const heroName=characterId==='lylu'?'LYLU':'GHJU';
 
 const pauseMenu=createPauseMenu({title:'03 — LE CONVOI DES ABSENTS',canOpen:()=>started&&!completed()&&!reading,
+ view:{getView:()=>xr?.active?'fps':view,onSelect:next=>changeView(next),canChange:next=>!xr?.active&&(next==='fps'||!!playerRig)},
  onPause:()=>pauseMission(),onResume:()=>unpauseMission(),onVR:()=>xr?.enter(),onHome:async()=>{await xr?.exit();location.assign('./index.html');}});
 pauseMenu.setVisible(false);
 
@@ -194,7 +198,7 @@ function enemyMaterials(){
 }
 function setupPlayer(){
  const base=sectorObstacles(sector.meta);collisions=base;
- game=new ArenaGame(collisions,Math.random,traversal,characterId);game.reset(characterId);game.enableArmorShield();game.enableProjectedShields();
+ game=new ArenaGame(collisions,Math.random,traversal,characterId);game.reset(characterId);game.configureWeaponAccess({mode:'campaign',level:3});game.enableArmorShield();game.enableProjectedShields();
  mission=createM03Mission({game,characterId,choice,base,hooks:{
   setObstacles:list=>{collisions=list;},openPortal:(x,y,z,o)=>{lastPortalSource={x,y,z};art.openPortal(x,y,z,o);},setMovable:(id,open)=>art.setMovable(id,open),setPower:(zone,state)=>art.setPower(zone,state),
   cue,notice:text=>notice(text,4),say,stage:showStage,finish:finishMission,lost:()=>missionLost('van'),clear:clearVisuals,read:id=>{art.markDone('balise');openDocument(id);}}});
@@ -296,7 +300,12 @@ function snapCamera(){
  camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
  weapon.visible=view==='fps';if(playerRig?.model)playerRig.model.root.visible=view==='third';
 }
-function changeView(){view=view==='fps'?'third':'fps';if(!playerRig&&view==='third'){view='fps';notice('PERSONNAGE SHADOW UNIT EN COURS DE CHARGEMENT');}snapCamera();}
+function changeView(next=view==='fps'?'third':'fps'){
+ if(xr?.active)return false;
+ const selected=normalizeView(next);
+ if(!playerRig&&selected==='third'){notice('PERSONNAGE SHADOW UNIT EN COURS DE CHARGEMENT');return false;}
+ view=selected;savePreferredView(view);snapCamera();return true;
+}
 function toggleLamp(){lampMode=lampMode==='auto'?(lampOn?'off':'on'):lampMode==='on'?'off':'on';notice(lampMode==='on'?'LAMPE FRONTALE ALLUMÉE':'LAMPE FRONTALE ÉTEINTE',1.6);}
 function updateLamp(dt){
  const want=lampMode==='on'||(lampMode==='auto'&&!!L.AREAS.find(a=>a.id===L.areaAt(game.player.x,game.player.z))?.roof);
@@ -406,7 +415,7 @@ function gameTick(dt){
  if(jumpQueued)game.player.jumpHeld=false;
  const jump=controls.jump||jumpQueued;jumpQueued=false;
  game.nextWave=Infinity;game.toSpawn=0;
- game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,sprint,jump,crouchToggle});
+ game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,gamepadMoving:controls.gamepadMoving,touchMoving:!xc&&!!(touch.x||touch.z),sprint,jump,crouchToggle});
  missionTime+=dt;weaponFeel.update(dt);cameraFeel.update(dt,{speed:Math.hypot(game.playerVelocity.x,game.playerVelocity.z),grounded:game.player.grounded,verticalSpeed:game.player.verticalSpeed,strafe:x,sprint,aim:aimBlend});snapCamera();
  if(meleeQueued||controls.melee){const view=new T.Vector3();camera.getWorldDirection(view);game.melee({x:view.x,z:view.z});}
  if(chargeQueued||controls.charge){const eye=xr?.active?renderer.xr.getCamera():camera,from=new T.Vector3(),dir=new T.Vector3();eye.getWorldPosition(from);eye.getWorldDirection(dir);
@@ -491,7 +500,7 @@ function animation(t,frame){
  if(started)setScreenMusic(running&&!paused&&!reading&&!skillMenu?.isOpen&&game?.state==='playing'?'gameplay':'paused',3);
  if(xr?.active&&!frame)return;
  if(!xr?.active)requestAnimationFrame(animation);
- const dt=Math.min(.04,Math.max(0,(t-last)/1000));last=t;
+ const dt=frameDelta(last?(t-last)/1000:1/60,!!xr?.active);last=t;
  if(!renderer||!scene)return;
  if(xr?.active)xr.input(frame,dt);
  skillMenu?.setVisible(started&&running&&!reading);clock+=dt;
@@ -539,7 +548,7 @@ async function boot(){
  try{
   const environment={userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu};
   const profile=graphicsProfile(environment,low()?'low':'auto',params.get('renderer')==='webgl'||low()||await immersiveRendererPreferred());
-  if(profile.phone&&!params.has('quality'))quality.value='low';
+  if((profile.phone||profile.economy)&&!params.has('quality'))quality.value='low';
   const prepared=await createCompatibleRenderer({canvas,WebGPU:T.WebGPURenderer,WebGL:WebGLRenderer,profile});
   canvas=prepared.canvas;renderer=prepared.renderer;
   renderer.onDeviceLost=info=>onRenderFailure(new Error('Périphérique graphique perdu : '+(info?.message||info?.reason||'WebGPU')));
@@ -639,12 +648,12 @@ for(const name of ['pointerup','pointercancel'])window.addEventListener(name,e=>
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
 
 window.__PINK_M03=Object.freeze({
- snapshot:()=>({level:L.LEVEL_ID,revision:'3.81.0',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,choice,time:game?.time,missionTime,
+ snapshot:()=>({level:L.LEVEL_ID,revision:GAME_VERSION,running,paused,view,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,choice,time:game?.time,missionTime,
   area:game&&L.areaAt(game.player.x,game.player.z),health:game?.player.hp,shield:game?.player.shield,charges:game?.charges,
   position:game&&{x:+game.player.x.toFixed(2),z:+game.player.z.toFixed(2),elevation:+game.player.elevation.toFixed(2)},
   weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,opened:mission?.opened,done:mission?.done,reads:mission?.reads,
   hold:mission?.hold,pending:mission?.pending,groups:mission?.groups(),van:mission?.van,reading,vr:!!xr?.active,subtitlePlane:!!subtitlePlane?.visible,lamp:lampOn,subtitle:subtitle&&{who:subtitle.who,text:subtitle.text},queued:subtitles.length,
-  backend:renderer?rendererBackend(renderer):null,rig:!!playerRig,webgpuFinish,art:art?.stats(),render:renderer?.info?.render}),
+  backend:renderer?rendererBackend(renderer):null,renderBudget:renderer?.frameBudget?.stats(),quality:quality.value,rig:!!playerRig,webgpuFinish,art:art?.stats(),render:renderer?.info?.render}),
  // QA hooks (?debug=1): move the player, look, clear an encounter, fast-forward the mission clock, use an interaction, move the van.
  debug:params.has('debug')?{get scene(){return scene;},cam:(x,y,z,lx,ly,lz,fov=60,top=false)=>{debugCam=x===null?null:{x,y,z,lx,ly,lz,fov,top};if(scene.fog)scene.fog.density=debugCam?.top?0:.0095;snapCamera();},teleport:(x,z)=>{Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0});snapCamera();if(game.state==='playing'){game.step(1/60,{});mission.update(1/60);}},
   look:(y,p)=>{yaw=y;pitch=p;snapCamera();},clear:()=>{game.enemies.length=0;mission.update(1/60);},
@@ -653,4 +662,4 @@ window.__PINK_M03=Object.freeze({
   van:index=>{mission.placeVan(index);},drive:seconds=>{for(let t=0;t<seconds;t+=1/30){const v=mission.van;game.enemies.length=0;Object.assign(game.player,{x:v.x+3,z:v.z+3,elevation:0});game.step(1/30,{});mission.update(1/30);}return mission.stageId;},
   endScene:()=>finishMission(),cine:()=>endCine,portal:(x,z)=>art.openPortal(x,0,z,{charge:30}),view:()=>changeView(),lamp:()=>toggleLamp(),vr:()=>xr.enter()}:null
 });
-if(params.get('autostart')==='1'){startButton.disabled=true;void boot();}
+if(params.get('manual')!=='1'){startButton.disabled=true;void boot();}

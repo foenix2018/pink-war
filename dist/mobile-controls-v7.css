@@ -160,3 +160,6 @@ body.playing #game-tip{display:none!important}
  body.playing .game-hud #game-view-label{display:none!important}
  body.playing .game-hud .wave-hud small{display:none!important}
 }
+/* Touch aim is latched until the next tap. */
+#m02-touch-controls [data-m02="aim"][aria-pressed="true"],
+#btnAimMobile[aria-pressed="true"] {background:#e6579d!important;color:#101723!important;border-color:#ffa5d0!important;}

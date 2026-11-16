@@ -1,4 +1,5 @@
-import {inertialMove} from './locomotion.js';
+import {inertialMove,PLAYER_SPEEDS,TOUCH_SPEED_MULTIPLIER,touchAnalogSprint} from './locomotion.js';
+import {frameDelta} from './frame-timing.js';
 import {createFPSMotion} from './fps-motion.js';
 import {microSurfaceMaps} from './fps-environments.js';
 import {createWorldEffects} from './webgpu-world-fx.js';
@@ -601,7 +602,7 @@ function controls(canvas) {
       let x = move.x+virtual.x, z = move.z+virtual.z;
       if (keys.has('KeyW') || keys.has('KeyZ') || keys.has('ArrowUp')) z -= 1; if (keys.has('KeyS') || keys.has('ArrowDown')) z += 1;
       if (keys.has('KeyA') || keys.has('KeyQ') || keys.has('ArrowLeft')) x -= 1; if (keys.has('KeyD') || keys.has('ArrowRight')) x += 1;
-      const l = Math.hypot(x, z); return { x: l > 1 ? x / l : x, z: l > 1 ? z / l : z, run: keys.has('ShiftLeft') || keys.has('ShiftRight') || virtual.run };
+      const l = Math.hypot(x, z); return { x: l > 1 ? x / l : x, z: l > 1 ? z / l : z, touchMoving:!!(move.x||move.z||virtual.x||virtual.z), run: keys.has('ShiftLeft') || keys.has('ShiftRight') || virtual.run || touchAnalogSprint(move.x+virtual.x,move.z+virtual.z) };
     }
   };
 }
@@ -732,7 +733,7 @@ export async function boot() {
   const stats = () => ({ backend, quality, fps: Math.round(fps), calls: renderer.info.render.drawCalls ?? renderer.info.render.calls, triangles: renderer.info.render.triangles,
     fpsUpgrade:{inertia:true,water:river.fx.stats(),microSurfaces:true},instances: Object.fromEntries(kinds.map(k => [k.kind, k.visible])), total: Object.fromEntries(kinds.map(k => [k.kind, k.count])), zone: zoneAt(player.x, player.z), player: { ...player } });
   function frame(now) {
-    const raw = now - last, dt = Math.min(.05, raw / 1000); last = now;
+    const raw = now - last, dt = frameDelta(raw / 1000); last = now;
     if(gameplayHud.paused){requestAnimationFrame(frame);return;}
     time += dt;
     if (bench && !bench.done) {
@@ -740,8 +741,9 @@ export async function boot() {
       player.x = p.x; player.z = p.z; ctl.look.yaw = Math.atan2(-(q.x - p.x), -(q.z - p.z)); ctl.look.pitch = -.05; if (bench.t > .5) bench.frames.push(raw);
       if (u >= 1) { bench.done = true; const f = [...bench.frames].sort((a, b) => a - b); bench.result = { frames: f.length, avgMs: f.reduce((a, b) => a + b, 0) / f.length, p95Ms: f[Math.floor(f.length * .95)], ...stats(), calls: bench.maxCalls, triangles: bench.maxTris, avgTriangles: Math.round(bench.sumTris / bench.n), updateMs: bench.cpuUpdate / bench.n, renderMs: bench.cpuRender / bench.n }; }
     } else {
-      const inp = ctl.input(), sp = (inp.run ? 7 : 3.6) * (Math.abs(player.x - riverX(player.z)) < 4 && player.z > CLIFF_Z ? .55 : 1);
-      const sin = Math.sin(ctl.look.yaw), cos = Math.cos(ctl.look.yaw),previous={x:player.x,z:player.z},travel=inertialMove(planarVelocity,(inp.x*cos+inp.z*sin)*sp,(-inp.x*sin+inp.z*cos)*sp,dt,{grounded:jumpOffset<=.015}),dx=travel.x,dz=travel.z;
+      const inp = ctl.input(), sp = (inp.run ? PLAYER_SPEEDS.sprint : PLAYER_SPEEDS.walk) * (Math.abs(player.x - riverX(player.z)) < 4 && player.z > CLIFF_Z ? .55 : 1);
+      const sideSpeed=inp.x*Math.min(sp*PLAYER_SPEEDS.side,PLAYER_SPEEDS.strafeMax),forwardSpeed=inp.z*sp*(inp.z>0?PLAYER_SPEEDS.back:1);
+      const sin = Math.sin(ctl.look.yaw), cos = Math.cos(ctl.look.yaw),previous={x:player.x,z:player.z},travel=inertialMove(planarVelocity,(sideSpeed*cos+forwardSpeed*sin)*(inp.touchMoving?TOUCH_SPEED_MULTIPLIER:1),(-sideSpeed*sin+forwardSpeed*cos)*(inp.touchMoving?TOUCH_SPEED_MULTIPLIER:1),dt,{grounded:jumpOffset<=.015}),dx=travel.x,dz=travel.z;
       const tryMove = (nx, nz) => {
         if (Math.abs(nx) > HALF - 1 || Math.abs(nz) > HALF - 1) return false;
         const inCave = nz < CLIFF_Z && caveDistance(nx, nz) < 2, gh = groundHeight(nx, nz);
@@ -749,7 +751,10 @@ export async function boot() {
         if (nz < CLIFF_Z - 1 && !inCave && player.z >= CLIFF_Z - 1 && caveDistance(player.x, player.z) >= 2) return false;
         if (blockedBy(nx, nz, colliders, trunks)) return false; player.x = nx; player.z = nz; return true;
       };
-      if (!tryMove(player.x + dx, player.z + dz)) { tryMove(player.x + dx, player.z); tryMove(player.x, player.z + dz); }
+      const moveSteps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.15));
+      for(let i=0;i<moveSteps;i++){
+        if (!tryMove(player.x + dx/moveSteps, player.z + dz/moveSteps)) { tryMove(player.x + dx/moveSteps, player.z); tryMove(player.x, player.z + dz/moveSteps); }
+      }
       actualVelocity={x:(player.x-previous.x)/Math.max(dt,.001),z:(player.z-previous.z)/Math.max(dt,.001)};
       if(Math.abs(player.x-previous.x)<Math.abs(dx)*.35)planarVelocity.x=0;if(Math.abs(player.z-previous.z)<Math.abs(dz)*.35)planarVelocity.z=0;
     }

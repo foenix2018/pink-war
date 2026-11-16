@@ -5,7 +5,8 @@ import {graphicsProfile} from '../dist/renderer-policy.js';
 const material=()=>new T.MeshStandardMaterial();
 test('iPhone, compatible, performance and Quest profiles retain shadow maps with a bounded device budget',()=>{
  for(const [env,quality]of [[{userAgent:'iPhone'},'auto'],[{userAgent:'Quest 3 OculusBrowser'},'low'],[{rendererHint:'webgl'},'low']]){const p=graphicsProfile(env,quality);assert.equal(p.shadows,true);const b=shadowBudget(p);assert.equal(b.size,1024);assert.ok(b.hz<=6);assert.equal(b.torchSize,256);}
- assert.equal(shadowBudget(graphicsProfile({gpu:{},userAgent:'Macintosh'})).size,2048);
+ assert.equal(shadowBudget(graphicsProfile({gpu:{},userAgent:'Macintosh'})).size,1024);
+ assert.equal(shadowBudget(graphicsProfile({gpu:{},userAgent:'Macintosh'},'high')).size,2048);
 });
 test('opaque actors, skinning, scenery and foliage cast, with no floating first-person or transparent-glass silhouette',()=>{
  const root=new T.Group(),camera=new T.PerspectiveCamera();root.add(camera);

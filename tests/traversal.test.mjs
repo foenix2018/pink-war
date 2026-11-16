@@ -1,3 +1,4 @@
+import {PLAYER_SPEEDS} from '../dist/locomotion.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {ArenaGame,moveInArena,segmentBox} from '../dist/game-logic.js';
@@ -14,11 +15,11 @@ test('walking under an elevated deck does not teleport the player or enemies ont
 test('both stairways carry players smoothly up and back down to street level',()=>{
   for(const stair of STAIRS){
     const g=create();Object.assign(g.player,{x:stair.x,z:stair.bottomZ+.1});
-    const seconds=(stair.bottomZ-stair.topZ+1)/7;advance(g,seconds,{z:-1});
+    const seconds=(stair.bottomZ-stair.topZ+1)/PLAYER_SPEEDS.walk+.5;advance(g,seconds,{z:-1});
     assert.ok(Math.abs(g.player.elevation-stair.height)<.001,stair.id);
     assert.equal(g.player.grounded,true);
     // Reversing direction now brakes the previous uphill momentum before descending.
-    advance(g,seconds+.25,{z:1});assert.equal(g.player.elevation,0);
+    advance(g,seconds/PLAYER_SPEEDS.back+.5,{z:1});assert.equal(g.player.elevation,0);
   }
 });
 test('automatic elevators carry a rider through a full cycle and update ballistic cover',()=>{
@@ -35,8 +36,8 @@ test('automatic elevators carry a rider through a full cycle and update ballisti
 });
 test('a rider can walk from the lift onto its terrace, then falls naturally off an open edge',()=>{
   const g=create(),lift=LIFTS[0],deck=PLATFORMS[0];Object.assign(g.player,{x:lift.x,z:lift.z});advance(g,10.1);
-  advance(g,1,{x:1});assert.equal(g.player.onLift,null);assert.equal(g.player.elevation,deck.height);
-  Object.assign(g.player,{x:deck.x,z:deck.z-deck.hz+.1});g.step(.05,{z:-1});
+  advance(g,3.5,{x:1});assert.equal(g.player.onLift,null);assert.equal(g.player.elevation,deck.height);
+  Object.assign(g.player,{x:deck.x,z:deck.z-deck.hz+.1});advance(g,.35,{z:-1});
   assert.equal(g.player.grounded,false);assert.ok(g.player.elevation>4);
   advance(g,1);assert.equal(g.player.elevation,0);assert.equal(g.player.grounded,true);
 });

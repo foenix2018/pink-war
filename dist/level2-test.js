@@ -1,3 +1,4 @@
+import {frameDelta} from './frame-timing.js';
 import {createFPSChapter} from './fps-environments.js';
 import {applyFPSCameraMotion} from './fps-motion.js';
 import {M02_STREET_OBJECTIVES,createM02Street} from './m02-street.js';
@@ -106,7 +107,7 @@ let xr=null,fallbackGun=null,fallbackHand=null;
 let armorFx=null,meleeQueued=false,chargeQueued=false,touchSprinting=false;
 const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;return;}if(!running||paused)return;audioReady();if(kind==='melee')meleeQueued=true;else if(kind==='charge')chargeQueued=true;else if(kind==='reload')game.reload();else if(kind==='next')game.cycleWeapon();else if(kind==='interact')interact();else if(kind==='crouch')crouchQueued=true;};
 const pauseMenu=createPauseMenu({title:'HISTOIRE / LES PROFONDEURS',canOpen:()=>started,settingsSelectors:['#quality'],
- view:{getView:()=>xr?.active?'fps':view,onSelect:next=>changeView(next),canChange:()=>!!playerRig&&!xr?.active},
+ view:{getView:()=>xr?.active?'fps':view,onSelect:next=>changeView(next),canChange:next=>!xr?.active&&(next==='fps'||!!playerRig)},
  onPause:()=>pauseMission(),onResume:()=>unpauseMission(),onVR:()=>xr?.enter(),onHome:async()=>{await xr?.exit();location.assign('./index.html');}});pauseMenu.setVisible(false);
 let endCine=null,webgpuFinish=null,combatEffects=null,companion=null,environmentAudio=null,warZone=null,battleAudio=null;
 let enemyDestructionFX=null;
@@ -469,7 +470,7 @@ function enemyMaterials(){
  return {monster:materials.wall,monsterFace:materials.black,cyan:materials.cyan,rose:materials.rose,violet:materials.blue,pale:materials.white};
 }
 function setupPlayer(){
- game=new ArenaGame(collisions,Math.random,traversal);game.reset(characterId);game.enableArmorShield();game.enableProjectedShields();
+ game=new ArenaGame(collisions,Math.random,traversal);game.reset(characterId);game.configureWeaponAccess({mode:'campaign',level:2});game.enableArmorShield();game.enableProjectedShields();
  Object.assign(game.player,{x:0,z:72,elevation:0,yaw:0,hp:100,grounded:true});
  game.wave=2;game.nextWave=Infinity;game.toSpawn=0;game.spawnTimer=Infinity;
  game.ownedWeapons=new Set([...starterWeaponOrder(characterId),1,2]);game.ammo=WEAPONS.map(w=>w.capacity);
@@ -761,7 +762,7 @@ function gameTick(dt){
  if(jumpQueued)game.player.jumpHeld=false;
  const jump=controls.jump||jumpQueued;jumpQueued=false;
  game.nextWave=Infinity;game.toSpawn=0;
- game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,sprint,jump,crouchToggle});
+ game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,gamepadMoving:controls.gamepadMoving,touchMoving:!xc&&!!(touch.x||touch.z),sprint,jump,crouchToggle});
  weaponFeel.update(dt);
  cameraFeel.update(dt,{speed:Math.hypot(game.playerVelocity.x,game.playerVelocity.z),grounded:game.player.grounded,verticalSpeed:game.player.verticalSpeed,strafe:x,sprint,aim:aimBlend});
  snapCamera();
@@ -889,9 +890,10 @@ function animation(t,frame){
  if(started)setScreenMusic(running&&!paused&&!journalOpen&&!skillMenu?.isOpen&&game?.state==='playing'?'gameplay':'paused',2);
  if(xr?.active&&!frame)return;
  if(!xr?.active)requestAnimationFrame(animation);
- const dt=Math.min(.040,Math.max(0,(t-last)/1000));last=t;
- // Never mutate or retire GPU resources while the previous asynchronous frame compiles.
+ // Preserve elapsed time while an asynchronous frame is pending.
+ // Never mutate or retire GPU resources while the previous frame compiles.
  if(framePending||recovering)return;
+ const dt=frameDelta(last?(t-last)/1000:1/60,!!xr?.active);last=t;
  if(!renderer||!scene)return;
  if(xr?.active)xr.input(frame,dt);
  skillMenu?.setVisible(started&&running);
@@ -965,7 +967,7 @@ async function boot(){
  try{
   const environment={userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu};
   const profile=graphicsProfile(environment,renderingQuality(),new URLSearchParams(location.search).get('renderer')==='webgl'||low()||await immersiveRendererPreferred());
-  if(profile.phone&&!new URLSearchParams(location.search).has('quality'))quality.value='low';
+  if((profile.phone||profile.economy)&&!new URLSearchParams(location.search).has('quality'))quality.value='low';
   const prepared=await createCompatibleRenderer({canvas,WebGPU:T.WebGPURenderer,WebGL:WebGLRenderer,profile});
   missionLoading?.set(.28,'Construction des Bas-Niveaux');
   bootStep='création de la scène';status.textContent='Création du quartier cyberpunk…';

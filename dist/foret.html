@@ -20,22 +20,25 @@ canvas#game{position:fixed;inset:0;width:100%;height:100%;display:block;touch-ac
 #doc small{color:#c7a27d;letter-spacing:.08em}#doc h2{margin:.3em 0 .6em;font-size:20px}#doc .foot{font-size:13px;color:#b9a48f}
 #doc button,#fin a{padding:10px 16px;border:1px solid #ffb27a;border-radius:8px;background:#3a2218;color:#fff;font:inherit;cursor:pointer;text-decoration:none}
 #fin{position:fixed;right:14px;bottom:14px;max-width:340px;padding:14px;border-radius:12px;background:#17110ee6;border:1px solid #ffb27a}#fin p{margin:.3em 0 .8em;font-weight:700}
-</style><link rel="stylesheet" href="./m07-hud.css?v=2"><script defer src="./pw-identity.js?v=2"></script></head><body>
+</style><link rel="stylesheet" href="./m07-hud.css?v=2"><link rel="stylesheet" href="./mission-briefing.css?v=3.86.2"><script defer src="./pw-identity.js?v=2"></script></head><body>
 <canvas id="game"></canvas><div id="hud">Chargement…</div><div id="zone"></div>
 <div id="sub" hidden><b></b><span></span></div><button id="prompt" hidden></button>
 <div id="doc" hidden><div class="card"><small></small><h2></h2><div class="lines"></div><p class="foot"></p><button>FERMER</button></div></div>
 <div id="fin" hidden><small>FIN DU PROTOTYPE · CHAPITRE 07</small><p></p><small>Dans le niveau complet : le Centre de la Cascade, le dossier TRANSCENDANCE, la SY-05 et la fuite par l’aqueduc.</small><br><br><a href="index.html?mode=foret">← RETOUR AU MENU</a></div>
 <div id="help">Flèches / ZQSD / WASD : marcher · Souris : regarder · Espace / clic droit : sauter · Maj : courir · E : lire — tactile : gauche se déplacer, droite regarder</div>
-<div id="start"><div class="card"><small>PINK WARS · ACTE II · CHAPITRE 07 · VERSION DE TRAVAIL</small><h1>Mémoires locales</h1><p style="margin-top:-4px;color:#ffb27a">La forêt des Sources</p>
+<div id="start" class="pw-briefing pwb-wallpaper" style="--pwb-art:url('./art/chapters/chapter-07.webp?v=20261031');--pwb-portrait-focus:0%"><div class="card pwb-content"><small>PINK WARS · ACTE II · CHAPITRE 07 · VERSION DE TRAVAIL</small><h1>Mémoires locales</h1><p style="margin-top:-4px;color:#ffb27a">La forêt des Sources</p>
 <p>2196, sept ans après la Chute. Au sortir de la fonderie d’ORDRE (chapitre 06), le camion d’AEGIS dépose GHJU à la lisière de la forêt des Sources, au coucher du soleil. Le dossier des Tilleuls parle d’une antenne de recherche de ses parents, quelque part derrière la cascade.</p>
 <p>Prototype de décor et de mise en scène : sous-bois, rivière et gué, moulin et aqueduc en ruine, cascade, grotte et relais indépendant. Dialogues et documents du chapitre 07, pas encore de combat. Au bout : la suite vers le chapitre 08, « Les Ordres de JANUS ».</p>
 <p>Héros : <a href="?character=ghju">GHJU · GAB-1</a> · <a href="?character=lylu">LYLU · CAR-14</a></p>
 <p>Qualité : <a href="?quality=low">basse</a> · <a href="?quality=balanced">moyenne</a> · <a href="?quality=high">haute</a> · <a href="?bench=40">mesure automatique</a></p>
 <button id="go" disabled>PRÉPARATION…</button> <a href="index.html?mode=foret" style="margin-left:10px;color:#ffb27a">← Retour au menu</a></div></div>
 <script type="module">
-import {boot} from './foret.js?v=3.80.0';
+import {createMissionLoading} from './mission-loading.js?v=3.86.2';
+const params=new URLSearchParams(location.search),manual=params.get('manual')==='1';
+const loading=manual?null:createMissionLoading({mission:7,characterId:params.get('character')==='lylu'?'lylu':'ghju'});
+if(manual)document.getElementById('start').classList.remove('pwb-wallpaper');
 const go=document.getElementById('go');
-boot().then(()=>{go.disabled=false;go.textContent='ENTRER DANS LA FORÊT →';if(new URLSearchParams(location.search).get('bench')){document.getElementById('start').remove();document.body.classList.add('m07-playing');}})
- .catch(e=>{go.textContent='Erreur : '+(e?.message||e);console.error(e);});
+import('./foret.js?v=3.80.0').then(({boot})=>boot()).then(async()=>{go.disabled=false;go.textContent='ENTRER DANS LA FORÊT →';if(!manual||params.get('bench')){if(loading&&!await loading.finish())return;document.getElementById('start').remove();document.body.classList.add('m07-playing');}})
+ .catch(e=>{loading?.fail('Erreur : '+(e?.message||e));go.textContent='Erreur : '+(e?.message||e);console.error(e);});
 go.onclick=()=>{document.getElementById('start').remove();document.body.classList.add('m07-playing');};
 </script></body></html>

@@ -9,7 +9,7 @@ test('iPhone and desktop-mode iPad choose WebGL even when WebGPU exists; desktop
   assert.equal(iphone.skyWidth,1024);assert.equal(iphone.pixelRatioCap,1.15);
   assert.equal(graphicsProfile({userAgent:'Mozilla/5.0 Macintosh',platform:'MacIntel',maxTouchPoints:5,gpu:{}}).preferWebGL,true);
   const desktop=graphicsProfile({userAgent:'Mozilla/5.0 Macintosh',platform:'MacIntel',maxTouchPoints:0,gpu:{}});
-  assert.equal(desktop.preferWebGL,false);assert.equal(desktop.shadows,true);
+  assert.equal(desktop.preferWebGL,false);assert.equal(desktop.shadows,false);
   const quest=graphicsProfile({userAgent:'Mozilla/5.0 (Linux; Android 12; Quest 3) OculusBrowser',gpu:{}},'high',true);
   assert.equal(quest.preferWebGL,true);assert.equal(quest.artQuality,'high');assert.equal(quest.compatible,false);
   const questMobile=graphicsProfile({userAgent:'Mozilla/5.0 (Linux; Android 12; Quest 3) OculusBrowser Mobile Safari',gpu:{}},'high',true);

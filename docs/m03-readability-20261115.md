@@ -1,0 +1,13 @@
+# Niveau 3 : lisibilité du décor — 3.85.0
+
+L’audit porte sur les 185 916 faces de l’ancienne carte et sur huit vues du niveau : avenue, annexe, atelier, A3, viaduc, échangeur, gare et usine. Les captures avant/après sont conservées dans `/workspace/livraison/pink-wars-m03-audit-20261115/`.
+
+Le décor superposait plusieurs générations de mobilier. Les volumes des anciens équipements subsistaient autour des modèles plus récents : lits supplémentaires, fragments d’établis, plaques flottantes, petits équipements placés aléatoirement et panneaux lumineux sans support. Le classement transformait également dix poteaux intérieurs en structures de rue.
+
+Le nettoyage retire les 39 anciens équipements dispersés, dix grandes formes sans fonction, deux silhouettes statiques et sept panneaux sans support, ainsi que les doublons et les petits gravats géométriques des abords. Il remet les deux intérieurs sur les meubles utiles déjà prévus : cinq lits et leurs rideaux, sept établis, les rangements et les équipements de mission. Les douze poteaux médicaux ont leur modèle structurel correct. Les deux cloisons gardent leur implantation et leur collision ; elles sont désormais vitrées et encadrées. Les façades, sols, toits et escaliers sont protégés du nettoyage.
+
+Les trois épaves sont remplacées par des carrosseries identifiables. La remorque possède un châssis, trois essieux, des béquilles, une caisse nervurée et des portes. Les wagons ont une section de toiture courbe, des fenêtres, deux bogies et des roues alignées sur les rails ; la locomotive et le fourgon de fret ont leurs formes propres. Les conteneurs, le chariot de levage, l’ancrage et la balise sont détaillés. Les bornes rondes remplacent les petits cubes du trottoir. Les nouveaux modèles sont fusionnés par matériau.
+
+Les règles de retrait sont communes à l’affichage et à la physique. Elles retirent 79 anciennes collisions ; les obstacles de mission, les voies d’accès, le trajet de l’ambulance et les points de contrôle restent en place. Le fichier binaire de la carte et ses métadonnées ne sont pas modifiés. Le classement est calculé au chargement, avec un index spatial pour les volumes retirés.
+
+Validation : parcours complets pour LYLU et GHJU, étapes du convoi et restauration des checkpoints ; protection des façades et des escaliers ; accès aux cloisons et aux objectifs ; dimensions, appuis au sol et budget de géométrie des modèles ; contacts des roues sur les deux rails. Rendus de contrôle en WebGL sur les huit vues et en WebGPU natif dans l’annexe, à l’échangeur et à la gare. Les avertissements du pilote sur la lecture des pixels sont enregistrés séparément des erreurs de l’application.

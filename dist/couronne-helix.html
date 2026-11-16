@@ -64,6 +64,8 @@ body.pw-graphics-open #quality{display:block}
   <div id="status" class="small">Clavier / souris, manette, tactile ou casque WebXR · rendu WebGPU avec repli WebGL</div>
 </div></div>
 <script type="module">
+import {decorateShade} from './mission-briefing.js?v=3.86.2';
+decorateShade(document.getElementById('shade'),{mission:10,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});
 const lylu=new URLSearchParams(location.search).get('character')==='lylu';
 document.getElementById(lylu?'pick-lylu':'pick-ghju').setAttribute('aria-current','true');
 import('./couronne-helix.js?v=3.80.0').catch(error=>{

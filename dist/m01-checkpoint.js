@@ -21,7 +21,7 @@ game.planarVelocity={x:0,z:0};game.playerVelocity={x:0,y:0,z:0};
  game.workshopReleased=['investigation','sabotage','exit'].includes(s.stage);
  game.enemies=[];game.openingActivated=true;game.openingSpawned=8;game.circuitIsolated=true;game.circuitRoute=['isolate-convoy','isolate-service'].includes(s.circuitRoute)?s.circuitRoute:null;game.powerAlarm=s.stage!=='power';game.preArchiveLimit=4;game.courtyardPending=false;game.archiveRead=!['power','archive'].includes(s.stage);game.investigationRead=!!s.investigationRead;game.sabotaged=!!s.sabotaged;
  game.encounter=['power','archive','workshop'].includes(s.stage)?0:['investigation','sabotage'].includes(s.stage)?1:2;game.spawned=s.stage==='power'?0:s.stage==='archive'?4:8;game.toSpawn=0;game.nextSpawnAt=Infinity;game.activePortals=[];
- game.kills=s.kills;game.ownedWeapons=new Set([starterWeaponIndex(game.characterId),0,...(Array.isArray(s.owned)?s.owned:[]).filter(i=>Number.isInteger(i)&&weaponAllowedForCharacter(i,game.characterId))]);
+ game.kills=s.kills;game.ownedWeapons=new Set([starterWeaponIndex(game.characterId),0,...(Array.isArray(s.owned)?s.owned:[]).filter(i=>Number.isInteger(i)&&weaponAllowedForCharacter(i,game.characterId)&&game.isWeaponAvailable(i))]);
  game.weaponIndex=game.ownedWeapons.has(s.weaponIndex)?s.weaponIndex:(game.ownedWeapons.has(2)?2:game.ownedWeapons.has(1)?1:starterWeaponIndex(game.characterId));game.player.hp=Math.min(100,Math.max(1,Number(s.health)||100));
  Object.assign(game.player,POINTS[s.stage],{grounded:true,verticalSpeed:0,onLift:null});
  for(let i=0;i<game.ammo.length;i++)if(Number.isFinite(s.ammo?.[i]))game.ammo[i]=Math.max(0,Math.min(game.ammo[i],s.ammo[i]));

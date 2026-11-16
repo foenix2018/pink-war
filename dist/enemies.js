@@ -422,5 +422,5 @@ export function createEnemyFactory(mats,{detail='high'}={}){
     };
     return root;
   }
-  return {create};
+  return {create(...args){const actor=create(...args),animate=actor.userData.animate;if(animate)actor.userData.animate=(...pose)=>{const entity=pose[3],time=pose[4]??pose[0];if(entity?.iemUntil>time)return;return animate.apply(actor.userData,pose);};return actor;}};
 }

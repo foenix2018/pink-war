@@ -16,13 +16,16 @@ const guns=()=>buildGun({mats:mats(),gloves:gloves(),sleeve:false,makeFlash:flas
 const FIREARMS=WEAPON_FRAME.map((f,i)=>f.melee?null:i).filter(i=>i!==null);
 const near=(a,b,epsilon=1e-6)=>a.distanceTo(b)<=epsilon;
 
-test('all eight ranged weapons follow the actual visible barrel and muzzle in Quest pose',()=>{
- assert.equal(FIREARMS.length,8);
+test('all nine ranged weapons follow the actual visible barrel and muzzle in Quest pose',()=>{
+ assert.equal(FIREARMS.length,9);
  const rig=new T.Group();rig.position.set(2,.4,-4);rig.rotation.y=.41;
  const controller=new T.Group();controller.position.set(.25,1.29,-.4);rig.add(controller);
  const gun=guns();controller.add(gun);
  for(const index of FIREARMS){
   gun.userData.setVariant(index);
+  gun.userData.setCombatState({time:1,kick:.02,impulse:.5,heat:.3,ammo:2,capacity:6});
+  gun.updateMatrixWorld(true);
+  gun.traverse(node=>assert.ok(node.matrixWorld.elements.every(Number.isFinite),WEAPON_FRAME[index].id+' finite firing pose: '+node.name));
   for(const angle of [-.17,0,.19]){
    gun.rotation.set(angle,.12,-.04);
    const s=trackedBarrelRay(T,gun,{});

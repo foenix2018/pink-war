@@ -110,3 +110,13 @@
  .pw-briefing:not(.ended):not(.lost) .chars{position:fixed;z-index:3;left:16px;right:16px;bottom:calc(max(26px,env(safe-area-inset-bottom)) + 82px);display:flex;gap:8px;margin:0!important}
  .pw-briefing:not(.ended):not(.lost) .chars a{flex:1;text-align:center;padding:10px!important}
 }
+
+/* 3.86.2: loading is the illustration alone, filling the viewport in both orientations. */
+.pw-briefing.pwb-loading:not(.ended):not(.lost),.pw-briefing.pwb-wallpaper:not(.ended):not(.lost):not(.pwb-error){background-size:cover!important;background-position:center!important;overflow:hidden!important}
+.pw-briefing.pwb-loading:not([data-load-error])::before,.pw-briefing.pwb-wallpaper:not(.ended):not(.lost):not(.pwb-error)::before{display:none!important}
+.pw-briefing.pwb-wallpaper:not(.ended):not(.lost):not(.pwb-error) .pwb-content{visibility:hidden!important;pointer-events:none!important}
+.pwb-loading:not([data-load-error]) .pwb-back{display:none!important}
+.pwb-loading:not([data-load-error]) .pwb-gauge{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;border:0!important;overflow:hidden!important;clip-path:inset(50%)!important;pointer-events:none!important}
+@media(orientation:portrait){
+ .pw-briefing.pwb-loading:not(.ended):not(.lost),.pw-briefing.pwb-wallpaper:not(.ended):not(.lost):not(.pwb-error){background-position:var(--pwb-portrait-focus,50%) center!important}
+}

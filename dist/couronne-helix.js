@@ -1,3 +1,5 @@
+import {readPreferredView,savePreferredView,normalizeView} from './view-options.js';
+import {frameDelta} from './frame-timing.js';
 import {applyFPSCameraMotion} from './fps-motion.js';
 import {rendererBackend,rendererLabel} from './renderer-policy.js';
 import {createSupplyPickup} from './power-props.js';
@@ -40,7 +42,7 @@ const shade=$('shade'),startButton=$('start'),status=$('status'),quality=$('qual
 if(params.get('quality')==='low')quality.value='low';
 const low=()=>quality.value==='low';
 let canvas=$('game'),renderer,scene,camera,game,weapon,art,clock=0,running=false,started=false,last=0,framePending=false,recovering=false,bootStep='modules';
-let yaw=0,pitch=0,noticeUntil=0,hitUntil=0,paused=false,view='fps',aimBlend=0,mouseAim=false,playerRig=null,touchControls=null;
+let yaw=0,pitch=0,noticeUntil=0,hitUntil=0,paused=false,view=readPreferredView(),aimBlend=0,mouseAim=false,playerRig=null,touchControls=null;
 let jumpQueued=false,crouchQueued=false,firePressQueued=false,heldFire=false,weaponReady=false,audioCtx=null;
 let combatEffects=null,companion=null,ambience=null,companionSkills=null,skillMenu=null,enemyFactory=null,armorFx=null,combatHud=null;
 let meleeQueued=false,chargeQueued=false,touchSprinting=false,xr=null,fallbackGun=null,fallbackHand=null;
@@ -52,6 +54,7 @@ let collisions=L.buildCollisions(),mission=null,missionTime=0,shotsFired=0,hits=
 const completed=()=>!!mission?.completed;
 
 const pauseMenu=createPauseMenu({title:'COURONNE HELIX / NIVEAU AUTONOME',canOpen:()=>started&&!completed(),
+ view:{getView:()=>xr?.active?'fps':view,onSelect:next=>changeView(next),canChange:next=>!xr?.active&&(next==='fps'||!!playerRig)},
  onPause:()=>pauseMission(),onResume:()=>unpauseMission(),onVR:()=>xr?.enter(),onHome:async()=>{await xr?.exit();location.assign('./index.html');}});
 pauseMenu.setVisible(false);
 
@@ -101,7 +104,7 @@ function enemyMaterials(){
  return {monster:m(0x3d4955,.62,.48),monsterFace:m(0x0b1119,.5,.4),cyan:g(0x3acddd),rose:g(0xff4fa1),violet:g(0x4ba8ff),pale:g(0xc2e5eb)};
 }
 function setupPlayer(){
- game=new ArenaGame(collisions,Math.random,traversal,characterId);game.reset(characterId);game.enableArmorShield();game.enableProjectedShields();
+ game=new ArenaGame(collisions,Math.random,traversal,characterId);game.reset(characterId);game.configureWeaponAccess({mode:'campaign',level:8});game.enableArmorShield();game.enableProjectedShields();
  mission=createCouronneMission({game,characterId,hooks:{
   setObstacles:list=>{collisions=list;},openPortal:(x,y,z,o)=>{lastPortalSource={x,y,z};return art.openPortal(x,y,z,o);},setGatesOpen:open=>art.setGatesOpen(open),
   setConsole:(id,done)=>art.setConsole(id,done),setAnchorPower:v=>art.setAnchorPower(v),cue,notice:text=>notice(text,4),
@@ -169,7 +172,12 @@ function snapCamera(){
  if(view==='fps')applyFPSCameraMotion(camera,game,{tracked:!!xr?.active});camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
  weapon.visible=view==='fps';if(playerRig?.model)playerRig.model.root.visible=view==='third';
 }
-function changeView(){view=view==='fps'?'third':'fps';if(!playerRig&&view==='third'){view='fps';notice('PERSONNAGE SHADOW UNIT EN COURS DE CHARGEMENT');}snapCamera();}
+function changeView(next=view==='fps'?'third':'fps'){
+ if(xr?.active)return false;
+ const selected=normalizeView(next);
+ if(!playerRig&&selected==='third'){notice('PERSONNAGE SHADOW UNIT EN COURS DE CHARGEMENT');return false;}
+ view=selected;savePreferredView(view);snapCamera();return true;
+}
 async function loadAuthenticSoldier(){
  if(weaponReady)return;weaponReady=true;
  try{
@@ -245,6 +253,7 @@ function gameTick(dt){
  yaw-=(controls.lookX*1.8+touch.lookX*1.8)*sensitivity*dt;
  pitch=clamp(pitch-(controls.lookY+touch.lookY)*1.35*sensitivity*dt,-.85,.7);
  yaw-=(touch.lookDX||0)*.004*sensitivity;pitch=clamp(pitch-(touch.lookDY||0)*.004*sensitivity,-.85,.7);touch.lookDX=touch.lookDY=0;
+ yaw-=(touchControls?.step(dt)||0)*sensitivity;
  const x=controls.moveX+touch.x,z=controls.moveZ+touch.z;
  const aiming=!!OPTICS[game.weapon.id]&&game.reloadRemaining<=0&&(mouseAim||touch.aim||controls.aim);
  aimBlend+=(Number(aiming)-aimBlend)*(1-Math.exp(-dt*14));document.body.classList.toggle('aiming',aiming);
@@ -257,7 +266,7 @@ function gameTick(dt){
  if(jumpQueued)game.player.jumpHeld=false;
  const jump=controls.jump||jumpQueued;jumpQueued=false;
  game.nextWave=Infinity;game.toSpawn=0;
- game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,sprint,jump,crouchToggle});
+ game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,gamepadMoving:controls.gamepadMoving,touchMoving:!xc&&!!(touch.x||touch.z),sprint,jump,crouchToggle});
  missionTime+=dt;weaponFeel.update(dt);snapCamera();
  if(meleeQueued||controls.melee){const view=new T.Vector3();camera.getWorldDirection(view);game.melee({x:view.x,z:view.z});}
  if(chargeQueued||controls.charge){const eye=xr?.active?renderer.xr.getCamera():camera,from=new T.Vector3(),dir=new T.Vector3();eye.getWorldPosition(from);eye.getWorldDirection(dir);
@@ -317,7 +326,7 @@ function updateHUD(){
 function animation(t,frame){
  if(xr?.active&&!frame)return;
  if(!xr?.active)requestAnimationFrame(animation);
- const dt=Math.min(.04,Math.max(0,(t-last)/1000));last=t;
+ const dt=frameDelta(last?(t-last)/1000:1/60,!!xr?.active);last=t;
  if(!renderer||!scene)return;
  if(xr?.active)xr.input(frame,dt);
  skillMenu?.setVisible(started&&running);clock+=dt;
@@ -359,7 +368,7 @@ async function boot(){
  try{
   const environment={userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu};
   const profile=graphicsProfile(environment,low()?'low':'auto',params.get('renderer')==='webgl'||low()||await immersiveRendererPreferred());
-  if(profile.phone&&!params.has('quality'))quality.value='low';
+  if((profile.phone||profile.economy)&&!params.has('quality'))quality.value='low';
   const prepared=await createCompatibleRenderer({canvas,WebGPU:T.WebGPURenderer,WebGL:WebGLRenderer,profile});
   canvas=prepared.canvas;renderer=prepared.renderer;
   renderer.onDeviceLost=info=>onRenderFailure(new Error('Périphérique graphique perdu : '+(info?.message||info?.reason||'WebGPU')));
@@ -459,4 +468,4 @@ window.__PINK_COURONNE=Object.freeze({
  debug:params.has('debug')?{teleport:(x,z)=>Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0}),look:(y,p)=>{yaw=y;pitch=p;},clear:()=>{game.enemies.length=0;},
   interact:()=>mission.interact(),portal:(x,z)=>art.openPortal(x,traversal.height(x,z),z,{charge:30}),anchor:v=>art.setAnchorPower(v),vr:()=>xr.enter()}:null
 });
-if(params.get('autostart')==='1'){startButton.disabled=true;void boot();}
+if(params.get('manual')!=='1'){startButton.disabled=true;void boot();}

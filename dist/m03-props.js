@@ -5,8 +5,11 @@
 // object is built in its place: same footprint, same height, same collision box (physics is not touched).
 // All parts are merged per material: about twenty draw calls for the whole set.
 import { roundedBox } from './webgpu-upgrade.js';
-import { AREAS, sectorPropOffset, DEPOT, FACTORY } from './m03-layout.js';
+import { AREAS, sectorPropOffset, DEPOT, FACTORY,COMBAT_STATIONS } from './m03-layout.js';
 import {faceBounds,inside,retiredDecoration} from './m03-coherence.js';
+import {createMedicalCurtains,medicalBedCurtains,curtainFootprint} from './medical-curtains.js';
+import {createM03Cleanup} from './m03-cleanup.js';
+import {createCivilCar} from './civil-vehicle-detail.js';
 
 const TAU = Math.PI * 2;
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
@@ -15,6 +18,7 @@ const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>
 // Returns [{ kind, c (collider), cx, cz, y, h, len, wid, along ('x'|'z'), face (yaw toward the avenue) }] and the set of
 // world quads to drop.
 export function classifySectorProps(meta, world, { bounds = meta.bounds } = {}) {
+  const cleanup=createM03Cleanup(meta);
   const s = meta.scale, n = world?.n || 0, cells = new Map(), C = 4, out = [], drop = new Set();
   const cellKey = (x, z) => Math.floor(x / C) + ',' + Math.floor(z / C);
   const cx = new Float32Array(n), cy = new Float32Array(n), cz = new Float32Array(n);
@@ -22,7 +26,9 @@ export function classifySectorProps(meta, world, { bounds = meta.bounds } = {}) 
     let x = 0, y = 0, z = 0; const b = i * 12;
     for (let k = 0; k < 4; k++) { x += world.pos[b + k * 3]; y += world.pos[b + k * 3 + 1]; z += world.pos[b + k * 3 + 2]; }
     cx[i] = x / 4 * s; cy[i] = y / 4 * s; cz[i] = z / 4 * s;
-    if(retiredDecoration(faceBounds(world,i,s))||world.mat[i]===4&&AREAS.some(a=>a.roof&&cx[i]>=a.x1&&cx[i]<=a.x2&&cz[i]>=a.z1&&cz[i]<=a.z2&&cy[i]<a.roof))drop.add(i);
+    const shape=faceBounds(world,i,s);
+    shape.mat=world.mat[i];
+    if(retiredDecoration(shape)||cleanup.retiredFace(shape)||world.mat[i]===4&&AREAS.some(a=>a.roof&&cx[i]>=a.x1&&cx[i]<=a.x2&&cz[i]>=a.z1&&cz[i]<=a.z2&&cy[i]<a.roof))drop.add(i);
     const key = cellKey(cx[i], cz[i]); let list = cells.get(key); if (!list) cells.set(key, list = []); list.push(i);
   }
   const quadsIn = (c, pad = .06, top = .3) => {
@@ -32,6 +38,7 @@ export function classifySectorProps(meta, world, { bounds = meta.bounds } = {}) 
     return res;
   };
   for (const c of meta.colliders) {
+    if(cleanup.retiredSolid(c))continue;
     if (!(c.x2 > bounds.minX && c.x1 < bounds.maxX && c.z2 > bounds.minZ && c.z1 < bounds.maxZ)) continue;
     const w = c.x2 - c.x1, d = c.z2 - c.z1, y = Math.max(0, c.y1), h = c.y2 - y, lo = Math.min(w, d), hi = Math.max(w, d);
     const quads = quadsIn(c), mats = {}; let red = 0, plant = 0, cyan = 0, amber = 0, white = 0;
@@ -43,6 +50,7 @@ export function classifySectorProps(meta, world, { bounds = meta.bounds } = {}) 
     else if (label === 'établi') kind = 'workbench';
     else if (label === 'lit médical') kind = 'bed';
     else if (label === 'barricade') kind = 'barricade';
+    else if (label === 'épave') kind = 'wreck';
     else if (label !== 'géométrie') kind = null;
     else if (lo >= 2.8 && h <= 7 && plant / total > .45) kind = 'cabin';
     else if (lo >= .45 && hi <= 1.2 && h <= 1.3 && white > 0 && red > 0) kind = 'medcase';
@@ -57,9 +65,9 @@ export function classifySectorProps(meta, world, { bounds = meta.bounds } = {}) 
     // Inside the annexe or the workshop a pole is a structural column or a service riser, never a street lamp.
     const indoor = AREAS.some(a => a.roof && (c.x1 + c.x2) / 2 >= a.x1 && (c.x1 + c.x2) / 2 <= a.x2 && (c.z1 + c.z2) / 2 >= a.z1 && (c.z1 + c.z2) / 2 <= a.z2);
     // The row at z −56 carries the viaduct (« route haute »): piers, not lamps. Other tall poles are steel stanchions.
-    if (kind === 'lamp') kind = Math.abs((c.z1 + c.z2) / 2 + 56) < 1.5 ? 'pier' : 'stanchion';
     if (indoor && (kind === 'lamp' || kind === 'tree')) kind = 'column';
     else if (indoor && kind === 'mast') kind = 'riser';
+    else if (kind === 'lamp') kind = Math.abs((c.z1 + c.z2) / 2 + 56) < 1.5 ? 'pier' : 'stanchion';
     // Centroids can sit inside a small prop while the actual face spans a wall
     // or ceiling. Retire only complete owned faces, never a whole building face.
     const owned={...c,y1:Math.max(0,c.y1)-.15,y2:c.y2+.3};
@@ -90,7 +98,7 @@ export function classifySectorProps(meta, world, { bounds = meta.bounds } = {}) 
     const loosePlant = m === 4 && ext < 3, debris = ext < .7 && hi[1] < 3 && hi[1] > .02;
     if ((loosePlant || debris) && !owned(i)) { drop.add(i); scatter++; }
   }
-  return { props: out, drop, scatter };
+  return { props: out, drop, scatter,cleanup:cleanup.stats() };
 }
 
 // ---------- Geometry helpers ----------
@@ -127,8 +135,9 @@ function merged(T) {
   };
 }
 
-export function createSectorProps(T, root, props, { low = false, rich = false } = {}) {
+export function createSectorProps(T, root, props, { low = false, rich = false,webgpu=false } = {}) {
   const group = new T.Group(); group.name = 'M03 / objets du secteur (modélisés)'; root.add(group);
+  let careCurtains=null;
   const rng = seeded(300311), seg = low ? .6 : 1, S = n => Math.max(6, Math.round(n * seg));
   const loader = new T.TextureLoader(), cache = new Map();
   const tex = (url, srgb = true, repeat = 1) => { const key = url + repeat; if (cache.has(key)) return cache.get(key); const t = loader.load(url, () => {}, undefined, () => {}); t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(repeat, repeat); if (srgb) t.colorSpace = T.SRGBColorSpace; t.anisotropy = low ? 2 : 8; cache.set(key, t); return t; };
@@ -292,6 +301,11 @@ export function createSectorProps(T, root, props, { low = false, rich = false } 
     put(M.red, box(.06, .02, .02), W / 2 - .08, H - .04, D / 2 + .005);
   }
   function bed(p) {
+    careCurtains??=createMedicalCurtains(T,group,{webgpu,low,color:0x7b929f});
+    for(const spec of medicalBedCurtains(p)){
+      const b=curtainFootprint(spec);
+      if(!COMBAT_STATIONS.some(o=>Math.abs(o.x-b.x)<o.hx+b.hx&&Math.abs(o.z-b.z)<o.hz+b.hz))careCurtains.span(spec);
+    }
     begin(p, longYaw(p)); const L = 2.05, W = .95, deck = .58;
     for (const x of [-L / 2 + .12, L / 2 - .12]) for (const z of [-W / 2 + .08, W / 2 - .08]) { put(M.chrome, cyl(.02, .02, deck - .12, 8), x, (deck - .12) / 2 + .1, z); put(M.dark, cyl(.06, .06, .04, 14), x, .06, z, Math.PI / 2, 0, 0); }
     put(M.galva, box(L, .06, W, .02), 0, deck, 0); put(M.mattress, box(L - .1, .16, W - .08, .06), 0, deck + .11, 0); put(M.linen, box(L * .62, .04, W - .04, .02), .3, deck + .2, 0);
@@ -338,10 +352,14 @@ export function createSectorProps(T, root, props, { low = false, rich = false } 
     put(M.galva, cyl(.04, .04, .22, 10), .2, 1.1, 0, 0, 0, Math.PI / 2); put(M.steel, g('wheel', () => new T.TorusGeometry(.12, .015, 6, 20)), .32, 1.1, 0, 0, Math.PI / 2, 0);
     put(M.enamel, cyl(.06, .06, .03, 16), 0, 1.5, r + .02, Math.PI / 2, 0, 0); put(M.dark, cyl(.065, .065, .02, 16), 0, 1.5, r + .005, Math.PI / 2, 0, 0);
   }
-  // Kerb bollard of the avenue (one every 12 m on both pavements): chamfered concrete block, steel cap, amber marker.
+  // Round street bollards replace the anonymous concrete cubes along the kerb.
   function bollard(p) {
-    begin(p, 0); put(M.concrete, box(.66, .8, .66, .06), 0, .4, 0); put(M.steel, box(.7, .06, .7, .02), 0, .83, 0);
-    put(M.stripe, box(.662, .1, .662), 0, .55, 0); put(M.amber, box(.3, .04, .3), 0, .875, 0); put(M.dark, box(.74, .05, .74), 0, .025, 0);
+    begin(p, 0);put(M.galva,cyl(.25,.28,.075,20),0,.0375,0);
+    put(M.steel,cyl(.15,.18,.76,22),0,.45,0);
+    put(M.stripe,cyl(.174,.174,.10,22),0,.64,0);
+    put(M.steel,sph(.15,20),0,.83,0,0,0,0,1,.5,1);
+    put(M.amber,g('bollard-light-ring',()=>new T.TorusGeometry(.154,.009,6,S(24))),0,.79,0,Math.PI/2,0,0);
+    for(const x of[-.14,.14])for(const z of[-.14,.14])put(M.dark,cyl(.018,.018,.026,6),x,.088,z);
   }
   // ORDRE surveillance mast (same model everywhere, height from the map): base plate, mast, camera head, status light.
   function mast(p) {
@@ -375,9 +393,15 @@ export function createSectorProps(T, root, props, { low = false, rich = false } 
     put(M.galva, box(.5, .03, .5), 0, .015, 0); for (const z of [-.14, .14]) put(M.steel, box(.3, H, .025), 0, H / 2, z); put(M.steel, box(.02, H, .28), 0, H / 2, 0);
     for (let y = 2.5; y < H; y += 3) put(M.steel, box(.3, .02, .28), 0, y, 0); put(M.yellow, box(.31, .8, .3), 0, .42, 0);
   }
-  const build = { jersey, drum, lamp, tree, bush, bollard, mast, cabin, pier, stanchion, post, rack, workbench, medcase, bed, generator, vending, barricade, column, riser };
+  function wreck(p){
+    stats.wreck=(stats.wreck||0)+1;
+    const car=createCivilCar(T,{length:p.len,width:p.wid,low,M:{...M,red:M.rust,redGlow:M.red,steel:M.galva,white:M.enamel,black:M.dark,rubber:M.dark,yellow:M.amber,glass:M.glass}});
+    car.name='Épave / voiture civile identifiable';car.position.set(p.cx,p.y,p.cz);car.rotation.y=p.along==='x'?0:Math.PI/2;group.add(car);
+  }
+  const build = { jersey, drum, lamp, tree, bush, bollard, mast, cabin, pier, stanchion, post, rack, workbench, medcase, bed, generator, vending, barricade, column, riser,wreck };
   for (const p of props) build[p.kind]?.(p);
   const result = out.build(group, 'M03 objets');
+  careCurtains?.build();
   for (const gg of geo.values()) gg.dispose?.();
-  return { group, stats: () => ({ ...stats, meshes: result.meshes, triangles: Math.round(result.triangles) }), materials: M };
+  return { group,update:(time,eye)=>careCurtains?.update(time,eye),stats: () => ({ ...stats, meshes: result.meshes, triangles: Math.round(result.triangles),curtains:careCurtains?.stats() }), materials: M };
 }

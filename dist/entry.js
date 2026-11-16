@@ -1,5 +1,5 @@
 import {readM02Checkpoint} from './m02-checkpoint-index.js';
-import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
+import {setScreenMusic,setMusicEnabled,screenMusicSnapshot} from './menu-music.js';
 import {DesktopGamepadInput} from './desktop-input.js';
 import {createGamepadAid,gamepadsNow} from './ios-gamepad.js';
 import {graphicsProfile} from './renderer-policy.js';
@@ -16,7 +16,7 @@ import {mountViewControl,readPreferredView,savePreferredView} from './view-optio
 const $=id=>document.getElementById(id);
 let character='ghju',mode='campaign',view=readPreferredView(),trainingWeapon=0,loading=false,modulePromise=null;
 const settings={sound:true,music:true,sensitivity:1,quality:'auto'};
-try{character=localStorage.getItem('pink-war-character')==='lylu'?'lylu':'ghju';Object.assign(settings,JSON.parse(localStorage.getItem('rosee-settings')||'{}'));const stored=Number(localStorage.getItem('pink-war-training-weapon'));if(Number.isInteger(stored)&&stored>=0&&stored<7&&stored!==5)trainingWeapon=stored;}catch{}
+try{character=localStorage.getItem('pink-war-character')==='lylu'?'lylu':'ghju';Object.assign(settings,JSON.parse(localStorage.getItem('rosee-settings')||'{}'));const stored=Number(localStorage.getItem('pink-war-training-weapon'));if(Number.isInteger(stored)&&stored>=0&&stored<=9&&stored!==5)trainingWeapon=stored;}catch{}
 const requestedMode=new URLSearchParams(location.search).get('mode');
 if(['arena','training','campaign','campaign2','campaign3','campaign4','ligne9','campaign6','foret','breach'].includes(requestedMode))mode=requestedMode;
 const profile=graphicsProfile(navigator,settings.quality);
@@ -78,7 +78,7 @@ const earlyCancel=e=>e.currentTarget.close();
 for(const d of document.querySelectorAll('dialog'))d.addEventListener('cancel',earlyCancel);
 $('sound-button').onclick=()=>{settings.sound=!settings.sound;save();refresh();};
 $('sound-setting').onchange=e=>{settings.sound=e.target.checked;save();};
-$('music-setting').onchange=e=>{settings.music=e.target.checked;save();refresh();};
+$('music-setting').onchange=e=>{settings.music=setMusicEnabled(e.target.checked);save();refresh();};
 $('sensitivity').oninput=e=>{settings.sensitivity=Number(e.target.value);save();};
 $('quality').onchange=e=>{settings.quality=e.target.value;save();};
 const earlyViewControl=mountViewControl($('settings-dialog'),{getView:()=>view,onSelect:next=>{view=next;savePreferredView(view);}});

@@ -286,7 +286,7 @@ function tick(ms,frame){
   }
   if(mode==='ready'){if(!assets)info(assetError||'CHARGEMENT DU LABORATOIRE');else if(floors().length)info(playAreaSource==='quest-boundary'?'ZONE QUEST PRÊTE : A OU GÂCHETTE DROITE':'SOL SCANNÉ PRÊT : A OU GÂCHETTE DROITE');else if(seconds-startTime>2)info(startRequested?'DÉMARRAGE EN ATTENTE : SCAN GÂCHETTE GAUCHE':'SOL NON DÉTECTÉ : GÂCHETTE GAUCHE POUR SCANNER');}
   ambience?.update(dt,{active:active&&mode==='combat',position:head,moving:true,grounded:true,elevation:game.player.elevation,probes:game.enemies});
-  laser.update(game.bullets,dt);updateBoards();
+  laser.update(game.bullets,dt,game);updateBoards();
  }worldShadows.update(seconds,game.player,{enabled:mode!=='idle',entities:game.enemies,heightAt:e=>room.floorAt({x:e.x,y:e.elevation,z:e.z})??game.player.elevation});renderer.render(scene,camera);frames++;
 }
 async function initiateScan(){

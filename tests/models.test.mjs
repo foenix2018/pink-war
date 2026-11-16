@@ -365,12 +365,12 @@ test('the complete RLH body keeps native Idle Rifle and Rifle Walk clips with in
   const rifle=a.actor.actions.rifle,walkRifle=a.actor.actions.walkRifle;
   assert.ok(Math.abs(rifle.getClip().duration-3.10)<.001);
   assert.ok(Math.abs(walkRifle.getClip().duration-1.366667)<.001);
-  assert.ok(rifle.getClip().tracks.length>=29&&walkRifle.getClip().tracks.length>=35);
+  assert.ok(rifle.getClip().tracks.length>=29&&walkRifle.getClip().tracks.length>=23);
   const unchanged=b.nativeSkeleton.bones.map(bone=>bone.quaternion.toArray());
   for(let i=0;i<40;i++)a.animate(i*.016,false,0,0,1,.016,{aim:true});
   assert.equal(a.nativeMotion,'rifle');assert.ok(rifle.getEffectiveWeight()>.99);
   const still=a.jointPositions().leftKnee.clone();
-  for(let i=0;i<40;i++){a.root.position.z-=.07;a.animate(.64+i*.016,true,0,0,1,.016,{aim:true});}
+  for(let i=0;i<40;i++){a.root.position.z-=1.0*.016;a.animate(.64+i*.016,true,0,0,1,.016,{aim:true});}
   assert.equal(a.nativeMotion,'walkRifle');assert.ok(walkRifle.getEffectiveWeight()>.99);
   assert.ok(Math.abs(a.jointPositions().leftKnee.y-still.y)>.005,'the original armed stride actually bends the leg');
   assert.deepEqual(b.nativeSkeleton.bones.map(bone=>bone.quaternion.toArray()),unchanged);

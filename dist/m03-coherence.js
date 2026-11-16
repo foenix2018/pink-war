@@ -1,4 +1,5 @@
 import {Assembly,matrix,limb} from './geo.js';
+import {createHoistTrolley} from './m03-industrial-models.js';
 
 // One authored structure per function. These coordinates also supply the hulls.
 export const SERVICE_RAMP=Object.freeze([
@@ -100,7 +101,7 @@ export function createServiceInfrastructure(T,parent,M,{low=false}={}){
  assembly.build(root,{name:'structure porteuse'});
  // The trolley, cable and hook remain connected to the overhead rail.
  const trolley=new T.Group();trolley.name='chariot de levage sur rail';trolley.position.set(76,B.height-.55,B.z);root.add(trolley);
- const body=new T.Mesh(new T.BoxGeometry(2,.9,1.15),M.dark);trolley.add(body);
+ const body=createHoistTrolley(T,{...M,rubber:M.dark},{low});trolley.add(body);
  const cable=new T.Mesh(new T.CylinderGeometry(.035,.035,2.2,6),M.galva);cable.position.y=-1.55;trolley.add(cable);
  const hook=new T.Mesh(new T.TorusGeometry(.22,.055,6,16,Math.PI*1.5),M.galva);hook.position.y=-2.7;trolley.add(hook);
  return {root,update(t){trolley.position.x=80+Math.sin(t*.15)*10;}};

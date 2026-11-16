@@ -321,7 +321,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       g.add(label);
     }
   }
-  const clinic=createDispensaryDetails(T,root,{M,low});
+  const clinic=createDispensaryDetails(T,root,{M,low,webgpu});
   const helixLogo = (bg = null) => signTex(['DIRECTOIRE', 'SÉCURITÉ'], { bg, fg: '#ff2f45', w: 512, h: 256 });
   function dress(o) {
     if(o.kind==='fps-cover')return;
@@ -606,7 +606,7 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
       worldFx.update(t,eye.position);updateLights(t, dt, eye.position); updateDoors(dt, player); updateDevices(t, dt, crank);
       // Volumetric light and dust under the big fixtures (built once the fixtures exist).
       if (shafts === undefined) { try { shafts = createLightShafts(T, root, fixtures.filter(f => ['bulb','highbay','panel'].includes(f.kind)).map(f => ({ x: f.x, y: f.y - .25, z: f.z, color: f.color.getHex() })), { low }); } catch (error) { shafts = null; console.warn('light shafts skipped', error); } }
-      shafts?.update(dt); details.update(power); livedIn.update(t,dt,power); life.update(t,dt,power);
+      shafts?.update(dt); details.update(power); livedIn.update(t,dt,power); life.update(t,dt,power);clinic.update(t,eye.position);
       for (const s of steam) { const u = s.userData, k = (t * .25 + u.phase) % 1; s.position.set(u.x + Math.sin(t + u.phase) * .3, u.y + k * 3, u.z); s.scale.setScalar(.8 + k * 2.4); s.material.opacity = .14 * (1 - k); }
       for (const f of animated) f(t, dt, eye);
     },
@@ -633,6 +633,6 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     setPower(zone, on) { power[zone] = !!on; },
     markDone(id, done = true) { const d = devices.get(id); if (d) { d.done = done; if (!done) { d.turn = 0; if (d.moving) d.moving.rotation.set(0, 0, 0); } } },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
-    stats() { return { ...stats, fps:fpsChapter?.stats(), neons:neons.stats(), details: details.stats(), livedIn: livedIn.stats(), life: life.stats(), worldEffects:worldFx.stats(), power: { ...power }, shelter: +shelter.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, fps:fpsChapter?.stats(), neons:neons.stats(), details: details.stats(), livedIn: livedIn.stats(), life: life.stats(),clinic:clinic.stats(), worldEffects:worldFx.stats(), power: { ...power }, shelter: +shelter.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }

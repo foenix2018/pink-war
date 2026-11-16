@@ -1,8 +1,9 @@
 import {SCENARIO_LOADING_ART} from './scenario-loading.js?v=hq-20261106b';
+import {portraitFocusFor} from './mission-briefing.js';
 // Menu illustration selected by mission and existing playable character.
 // The original level-1 GHJU / LYLU art is never overwritten.
 const coverFor = n => 'art/chapters/chapter-' + String(n).padStart(2,'0') + '.webp?v=20261031';
-const MODE_CHAPTER = { campaign:1, campaign2:2, campaign3:3, campaign4:4, ligne9:5 };
+const MODE_CHAPTER = { campaign:1, campaign2:2, campaign3:3, campaign4:4, ligne9:5, campaign6:6, foret:7 };
 export function syncMenuArtwork(characterId,mode='campaign',root=document){
   const hero=characterId==='lylu'?'lylu':'ghju';
   const level2=mode==='campaign2',level3=mode==='campaign3';
@@ -16,6 +17,7 @@ export function syncMenuArtwork(characterId,mode='campaign',root=document){
     if(source&&image.getAttribute('src')!==source)image.setAttribute('src',source);
     image.dataset.hero=hero;
     image.dataset.mission=mission?'m'+String(mission).padStart(2,'0'):'m01';
+    if(!isWelcome&&mission)image.style.setProperty('--pwb-portrait-focus',portraitFocusFor(mission,hero)+'%');
   }
   const description=root.getElementById('loading-description');
   if(description)description.textContent=level3?'Le convoi des oubliés : annexe médicale, atelier, relais A3, pylône de surveillance.':level2

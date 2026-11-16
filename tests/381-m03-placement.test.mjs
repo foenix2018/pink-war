@@ -6,6 +6,7 @@ import{classifySectorProps}from'../dist/m03-props.js';
 import{createCyberCity,PODIUM_TOWERS}from'../dist/m03-city.js';
 import{createServiceInfrastructure,rampPillars,SERVICE_RAMP,FREIGHT_GANTRY,retiredMachineHull,faceBounds,serviceRampHeight}from'../dist/m03-coherence.js';
 import{extraObstacles}from'../dist/m03-layout.js';
+import {MEDICAL_PARTITIONS} from '../dist/m03-cleanup.js';
 const ctx=new Proxy({},{get:(o,k)=>o[k]??(k==='measureText'?()=>({width:10}):k.startsWith('create')?()=>({addColorStop(){},data:new Uint8ClampedArray(4)}):()=>{}),set:(o,k,v)=>(o[k]=v,true)});
 globalThis.document={createElement:()=>({width:0,height:0,getContext:()=>ctx})};T.TextureLoader.prototype.load=function(){return new T.Texture();};
 const meta=JSON.parse(readFileSync(new URL('../dist/assets/m03/vesper-sector.json',import.meta.url))),bin=readFileSync(new URL('../dist/assets/m03/vesper-sector.bin',import.meta.url)),sector=decodeSector(meta,bin.buffer.slice(bin.byteOffset,bin.byteOffset+bin.byteLength));
@@ -21,7 +22,8 @@ test('retiring a small prop never deletes an entire wall, roof or road through i
   // The depot hull is the one building rebuilt as an interior (m03-depot.js): its faces are replaced, not lost.
   const depot=(b.x1+b.x2)/2>DEPOT.x1-.3&&(b.x1+b.x2)/2<DEPOT.x2+.3&&(b.z1+b.z2)/2>DEPOT.z1-.3&&(b.z1+b.z2)/2<DEPOT.z2+.3&&(b.y1+b.y2)/2<DEPOT.height+.3
    ||(b.x1+b.x2)/2>FACTORY.x1-.3&&(b.x1+b.x2)/2<FACTORY.x2-.7&&(b.z1+b.z2)/2>FACTORY.z1-.3&&(b.z1+b.z2)/2<FACTORY.z2+.3&&(b.y1+b.y2)/2<FACTORY.height+.3;
-  if(Math.max(w*h,w*d,h*d)>60&&!depot){assert.equal(props.drop.has(q),false,'architectural face '+q);buildings++;}
+  const glazed=MEDICAL_PARTITIONS.some(p=>b.x1>=p.x-p.width/2-.01&&b.x2<=p.x+p.width/2+.01&&b.z1>=p.z-.16&&b.z2<=p.z+.16&&b.y2<=p.height);
+  if(Math.max(w*h,w*d,h*d)>60&&!depot&&!glazed){assert.equal(props.drop.has(q),false,'architectural face '+q);buildings++;}
   if(retiredMachineHull(b)){assert.ok(props.drop.has(q));retired++;}
  }
  assert.ok(buildings>100&&retired>100);

@@ -1,3 +1,4 @@
+import {installRenderBudget} from './render-budget.js';
 // The wrapper's class is not its backend: WebGPURenderer can fall back to WebGL2.
 export function rendererBackend(renderer){
  if(!renderer)return 'unavailable';
@@ -14,11 +15,14 @@ export function graphicsProfile(environment={},quality='auto',forceWebGL=false){
   const headset=/OculusBrowser|Quest|PicoBrowser/i.test(ua);
   const phone=!headset&&(ios||/Android.*Mobile/i.test(ua));
   const compatible=environment.rendererHint==='webgl';
-  return {ios,phone,headset,compatible,preferWebGL:forceWebGL||ios||compatible||!environment.gpu,
-    antialias:!phone&&!compatible,shadows:true,
-    pixelRatioCap:phone?(quality==='high'?1.15:1):compatible?1:quality==='low'?1:quality==='balanced'?1.4:quality==='high'?2:1.8,
-    maxPixels:phone?750000:compatible?1100000:quality==='balanced'?2000000:quality==='high'?3200000:2400000,
-    artQuality:phone||compatible?'low':quality==='balanced'?'high':quality,skyWidth:phone||compatible||quality==='low'?1024:2048};
+  const mac=!ios&&(/Macintosh|Mac OS X/i.test(ua)||/^Mac/i.test(environment.platform||''));
+  const economy=mac&&['auto','balanced'].includes(quality);
+  const adaptive=!headset&&['auto','balanced','low','performance'].includes(quality);
+  return {ios,mac,phone,headset,compatible,economy,adaptive,preferWebGL:forceWebGL||ios||compatible||!environment.gpu,
+    antialias:!phone&&!compatible&&!economy,shadows:!economy,
+    pixelRatioCap:phone?(quality==='high'?1.15:1):compatible||economy?1:quality==='low'?1:quality==='balanced'?1.4:quality==='high'?2:1.8,
+    maxPixels:phone?750000:compatible||economy?1100000:quality==='balanced'?2000000:quality==='high'?3200000:2400000,
+    artQuality:phone||compatible||economy?'low':quality==='balanced'?'high':quality,skyWidth:phone||compatible||economy||quality==='low'?1024:2048};
 }
 
 export function renderPixelRatio(profile,deviceRatio,width,height){
@@ -35,7 +39,7 @@ function deadline(promise,milliseconds,label){
 
 export async function createCompatibleRenderer({canvas,WebGPU,WebGL,profile,timeout=6000}){
   let renderer,initialFailure=null,retired=false;
-  const present=async r=>{if((r.backend?.isWebGPUBackend||r.isWebGLRenderer)&&!profile.phone&&!profile.headset&&!profile.compatible&&!['low','performance'].includes(profile.artQuality)&&r.domElement?.ownerDocument){const {installFPSGrade}=await import('./fps-grade.js');installFPSGrade(r,profile);}return r;};
+  const present=async r=>{if((r.backend?.isWebGPUBackend||r.isWebGLRenderer)&&!profile.phone&&!profile.headset&&!profile.compatible&&!['low','performance'].includes(profile.artQuality)&&r.domElement?.ownerDocument){const {installFPSGrade}=await import('./fps-grade.js');installFPSGrade(r,profile);}installRenderBudget(r,profile);return r;};
   const make=Renderer=>new Renderer({canvas,antialias:profile.antialias,alpha:false,powerPreference:profile.phone?'default':'high-performance'});
   if(!profile.preferWebGL){
     try{

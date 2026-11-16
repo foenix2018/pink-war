@@ -116,10 +116,10 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const torch=new T.SpotLight(0xffefd4,22,22,.38,.72,2);torch.target=torchTarget;camera.add(torch);
   const atmosphere=createVesperAtmosphere(T,scene,renderer,profile,{extraLights:[torch]});
   onProgress(.36,'Construction de Vesper');
-  const missionArt=createCampaignArt(T,scene,null,{quality:profile.phone||requestedQuality==='low'?'low':requestedQuality,photographic:true,webgpu:!!renderer.backend?.isWebGPUBackend});
+  const missionArt=createCampaignArt(T,scene,null,{quality:profile.artQuality==='low'?'low':requestedQuality,photographic:true,webgpu:!!renderer.backend?.isWebGPUBackend});
   missionArt.setVisible(true);
   const dressing=missionArt.dressing;
-  const salvage=await createM01Salvage(T,missionArt.root,{performance:profile.phone||requestedQuality==='low'});
+  const salvage=await createM01Salvage(T,missionArt.root,{performance:profile.artQuality==='low'});
   onProgress(.58,'Objets et surfaces du secteur');
   const obstacles=missionArt.obstacles;obstacles.push(...salvage.colliders);
   const game=new CampaignLevel1(obstacles,Math.random,characterId);
@@ -127,7 +127,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   const checkpoint=readM01Checkpoint(characterId),resuming=params.get('resume')==='1';
   const coreRestored=resuming&&!!checkpoint&&restoreM01Checkpoint(game,checkpoint);
   // Extended chapter (3.69): Caserne 07 prologue and Archives végétales epilogue around the original quarter.
-  const extArt=createM01ExtensionArt(T,scene,{quality:profile.phone||requestedQuality==='low'?'low':'normal',camera,webgpu:!!renderer.backend?.isWebGPUBackend});
+  const extArt=createM01ExtensionArt(T,scene,{quality:profile.artQuality==='low'?'low':'normal',camera,webgpu:!!renderer.backend?.isWebGPUBackend});
   const subtitles=createSubtitles({T,camera});
   const extension=installM01Extension(game,{setDoor:(id,state)=>extArt.setDoor(id,state),say:id=>subtitles.say(extensionLines(id,characterId)),cue:kind=>extensionCue(kind),notice:text=>notify(text,3800)});
   const extensionSave=resuming?readExtensionCheckpoint(characterId):null;
@@ -158,7 +158,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   // Armour layer (3.63): queued strikes and throws from the page controls, played on the next simulation step.
   let meleeQueued=false,chargeQueued=false;
   const armorTouch=(kind,value)=>{if(kind==='melee')api.melee();else if(kind==='charge')api.throwCharge();else if(kind==='reload')api.reload();else if(kind==='next')api.cycle();else if(kind==='interact')api.interact();else onControl(kind,value);};
-  const armorFx=createArmorFeedback({T,scene,camera,renderer,getGame:()=>game,getModel:()=>rig?.model,getWeapon:()=>gun,getLeftController:()=>xr?.entries.find(e=>e.source?.handedness==='left'&&e.tracked)?.mount,canControl:()=>!getState().menuPaused&&!journalOpen&&!completed,low:profile.phone||requestedQuality==='low',accent:characterId==='lylu'?0x80baff:0xef91b4,listener:()=>game.player,
+  const armorFx=createArmorFeedback({T,scene,camera,renderer,getGame:()=>game,getModel:()=>rig?.model,getWeapon:()=>gun,getLeftController:()=>xr?.entries.find(e=>e.source?.handedness==='left'&&e.tracked)?.mount,canControl:()=>!getState().menuPaused&&!journalOpen&&!completed,low:profile.artQuality==='low',accent:characterId==='lylu'?0x80baff:0xef91b4,listener:()=>game.player,
     audio:()=>sound&&audio?.state==='running'?audio:null,haptic:kind=>xr?.active&&xr.haptic(kind)});
   const gamepadInput=new DesktopGamepadInput();
   const fireInput=createFireBuffer();
@@ -191,7 +191,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   }
   document.addEventListener('pointerdown',audioReady,{once:true,capture:true,passive:true});
   document.addEventListener('keydown',audioReady,{once:true,capture:true});
-  const electricPortals=createElectricPortalSet(T,scene,{height:3.5,low:profile.phone||requestedQuality==='low',webgpu:!!renderer.backend?.isWebGPUBackend});
+  const electricPortals=createElectricPortalSet(T,scene,{height:3.5,low:profile.artQuality==='low',webgpu:!!renderer.backend?.isWebGPUBackend});
   const portalMarker=document.createElement('div');portalMarker.className='pw-portal-marker';portalMarker.setAttribute('aria-label','Direction du portail ORDRE');portalMarker.hidden=true;
   portalMarker.style.cssText='position:fixed;top:max(58px,env(safe-area-inset-top));width:7px;height:7px;border-radius:50%;background:#ff72b4;box-shadow:0 0 10px #ff3388;pointer-events:none;z-index:4';document.body.append(portalMarker);
   const objectiveMarker=document.createElement('div');objectiveMarker.className='pw-objective-marker';objectiveMarker.setAttribute('aria-label','Direction de l’objectif');
@@ -432,7 +432,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   onProgress(.98,'Rendu du secteur validé');
   const api={
     get view(){return effectiveView();},get viewReady(){return !!rig&&!xr?.active;},
-    setView(next){if(xr?.active||!rig)return false;view=normalizeView(next);savePreferredView(view);syncCamera(getState(),0);return true;},
+    setView(next){if(xr?.active)return false;const selected=normalizeView(next);if(selected==='third'&&!rig)return false;view=selected;savePreferredView(view);syncCamera(getState(),0);return true;},
     get xrActive(){return xr.active;},enterVR(){return xr.enter();},exitVR(){return xr.exit();},
     kind:rendererLabel(renderer)+' · M01',managedResolution:true,canonical:true,
     get paused(){return journalOpen||skillMenu.isOpen;},

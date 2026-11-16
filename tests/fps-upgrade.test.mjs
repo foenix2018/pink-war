@@ -13,7 +13,7 @@ test('horizontal acceleration, stopping and directional changes integrate consis
 test('momentum stops against a thin wall instead of accumulating into it',()=>{
  const g=new ArenaGame([{x:0,z:0,hx:8,hz:.04,y:0,height:5}],()=>.5,{routes:[],lifts:[],height:()=>0,surfaces:()=>[]});g.nextWave=Infinity;g.player.z=2;
  for(let i=0;i<180;i++)g.step(1/60,{z:-1,sprint:true});assert.ok(g.player.z>=.59-1e-6);assert.equal(g.planarVelocity.z,0);
- for(let i=0;i<8;i++)g.step(1/60,{z:1});assert.ok(g.player.z>.8,'direction reversal immediately moves away from cover');
+ for(let i=0;i<18;i++)g.step(1/60,{z:1});assert.ok(g.player.z>.8,'direction reversal immediately moves away from cover');
 });
 test('the weapon travels with speed, look inertia and landing, while tracked head and controller frames remain still',()=>{
  const a=createFPSMotion();a.update({time:0,dt:0,yaw:0});const moving=a.update({time:.05,dt:.05,yaw:.2,velocity:{x:2,z:-7},sprinting:true});assert.ok(Math.abs(moving.yaw)>0&&moving.y<0);

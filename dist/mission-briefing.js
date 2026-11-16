@@ -20,7 +20,17 @@ export const chapterCover = n => Number.isInteger(n) && n >= 1 && n <= 20
   ? 'art/chapters/chapter-' + String(n).padStart(2, '0') + '.webp?v=20261031'
   : null;
 
+// Percent positions account for the wide artwork cropped to a portrait screen.
+// Single-character covers keep their own subject, regardless of the selected hero.
+const PORTRAIT_FOCUS=Object.freeze({1:[55,55],2:[65,65],3:[0,100],4:[0,100],5:[100,100],6:[45,45],7:[0,0],8:[100,100]});
+export const portraitFocusFor=(mission,characterId='ghju')=>(PORTRAIT_FOCUS[mission]||[0,100])[characterId==='lylu'?1:0];
+function frameCover(root,mission,characterId){
+ root.dataset.hero=characterId==='lylu'?'lylu':'ghju';root.style.setProperty('--pwb-portrait-focus',portraitFocusFor(mission,characterId)+'%');
+}
+
 export const BRIEFINGS = Object.freeze({
+  7: {title:'Mémoires Locales',zone:'Vesper // La forêt des Sources',image:()=>null,text:()=>"Suivre la piste de l’antenne de recherche des parents jusqu’à la cascade.",objectives:[]},
+  10: {title:'La Couronne HELIX',zone:'Vesper // Les hauteurs de HELIX',image:()=>null,text:()=>"Désynchroniser l’ancrage de phase sur les hauteurs de Vesper.",objectives:[]},
   1: { title: 'Le Dernier Signal', zone: 'Vesper // Quartier des secours', image: c => c === 'lylu' ? 'art/chargement-lylu.webp?v=3.47' : 'art/chargement.webp?v=3.47',
     text: c => `Une transmission dégradée est passée sur le canal 07. Elle porte VEILLE-4, l’indicatif que tes parents utilisaient avant la Chute. Les patrouilles d’ORDRE quadrillent le secteur. ${ia(c)} reste au-dessus de ton épaule.`,
     objectives: [['door', 'Revenir à la station 07', 'Lire le journal de la nuit de la Chute.'], ['bolt', 'Libérer les survivants', 'Groupe électrogène, atelier de maintenance, puis la porte.'],
@@ -89,6 +99,9 @@ export function decorateShade(shade, { mission, characterId = 'ghju', backHref =
   ensureBriefingStyle(doc);
   const info = briefingFor(mission, characterId), panel = shade.querySelector('.panel') || shade;
   shade.classList.add('pw-briefing'); if (info.image) shade.style.setProperty('--pwb-art', `url("${new URL(info.image, import.meta.url).href}")`); shade.dataset.mission = String(mission);
+  frameCover(shade,mission,characterId);
+  if(new URLSearchParams(globalThis.location?.search||'').get('manual')!=='1')shade.classList.add('pwb-wallpaper');
+  shade.setAttribute('role','status');
   panel.classList.add('pwb-content');
   panel.querySelector('.kicker')?.classList.add('pwb-hidden');
   const h1 = panel.querySelector('h1'), text = panel.querySelector('#panel-text') || panel.querySelector('p');
@@ -106,6 +119,14 @@ export function decorateShade(shade, { mission, characterId = 'ghju', backHref =
   }
   const back = el(doc, 'a', 'pwb-back', 'Retour'); back.href = backHref; panel.append(back);
   const small = panel.querySelector('.small:not(#status)'); small?.classList.add('pwb-small');
+  const status=panel.querySelector('#status');
+  const sync=()=>{
+    const failed=!start?.disabled&&/erreur|impossible|échec|failed|interrompu/i.test(status?.textContent||'');
+    shade.classList.toggle('pwb-error',failed);
+    shade.setAttribute('aria-busy',String(!!start?.disabled));
+    if(!shade.classList.contains('ended')&&!shade.classList.contains('lost'))shade.setAttribute('aria-label',status?.textContent||'Chargement du chapitre '+info.number);
+  };
+  new MutationObserver(sync).observe(panel,{childList:true,characterData:true,subtree:true,attributes:true,attributeFilter:['disabled']});sync();
   return parts;
 }
 
@@ -114,6 +135,7 @@ export function buildLoadingCover(root, mission, characterId, { doc = document, 
   ensureBriefingStyle(doc);
   const info = briefingFor(mission, characterId);
   root.classList.add('pw-briefing', 'pwb-loading'); if (info.image) root.style.setProperty('--pwb-art', `url("${new URL(info.image, import.meta.url).href}")`); root.dataset.mission = String(mission);
+  frameCover(root,mission,characterId);
   // The official chapter covers already carry the PINK WARS logo and the chapter title: the loading screen shows
   // that art alone (no second logo, title or objectives over it). Chapters
   // without a cover keep the composed screen.

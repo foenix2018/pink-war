@@ -1,5 +1,6 @@
 import {applyFPSCameraMotion} from './fps-motion.js';
 import {createTouchOrbit} from './touch-orbit.js';
+import {frameDelta} from './frame-timing.js';
 import {createCameraFeel} from './camera-feel.js';
 import {mountFilmLook} from './film-look.js';
 const cameraFeel=createCameraFeel();let filmLook=null,filmOn=null;
@@ -15,7 +16,7 @@ import { characterForId } from './characters.js';
 import { playLaserShot,playEnemyShot,loadRealLaserSample,loadCombatSamples,playLaserImpact,setLaserAudioEnabled,disposeLaserAudio,playWeaponAction,setWeaponCharge } from './laser-sound.js';
 import { createAmbience } from './ambience.js';
 import { ACTIVE_INSTALLATIONS, BRIDGES, BRIDGE_LANDINGS, BRIDGE_APPROACHES, bridgeSegments } from './world-layout.js';
-import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
+import {setScreenMusic,setMusicEnabled,screenMusicSnapshot} from './menu-music.js';
 import { portalIndicators } from './portal-indicator.js';
 import { objectiveIndicator, createObjectiveSmoother } from './objective-guidance.js';
 import { OPTICS } from './weapons.js';
@@ -73,7 +74,7 @@ function syncRangeArmory(){
   rangeArmoryMenu?.sync({active:phase==='playing'&&!recovering,xrMode:vr?.mode==='xr'});
 }
 // Every session wears the armour layer of 3.63 (shield, strike, impulse charges).
-const armed=session=>{session.enableArmorShield();session.enableProjectedShields();return session;};
+const armed=session=>{session.enableArmorShield();session.enableProjectedShields();session.configureWeaponAccess({mode:session.mode||'arena',level:session.campaign?.level||session.missionLevel||1});return session;};
 const heroAccent=()=>character.id==='lylu'?0x80baff:0xef91b4;
 function armorFeedback(){
   // The scene changes when the renderer is recovered: rebuild the effects on the live one.
@@ -146,6 +147,7 @@ let jumpQueued = false, pickupQueued = false,crouchQueued=false,firePressQueued=
 let fireZoomBlend=0;
 let crouchCameraBlend=0, currentSprinting=false, aimBlend=0, aiming=false, mouseAim=false;
 const aimPointers=new Set();
+let touchAimLatched=false;
 const persist = () => { try { localStorage.setItem('rosee-settings', JSON.stringify(settings)); } catch {} };
 const timeString = time => `${String(Math.floor(time / 60)).padStart(2, '0')}:${String(Math.floor(time % 60)).padStart(2, '0')}`;
 
@@ -181,7 +183,7 @@ $('settings-dialog').insertBefore(createHudContrastControl(),$('settings-dialog'
 syncSound(); $('sensitivity').value = settings.sensitivity; $('quality').value = settings.quality;
 $('sound-button').onclick = () => { settings.sound = !settings.sound; if(!settings.sound)robotShutdownAudio.stop();syncSound(); audioReady(); persist(); };
 $('sound-setting').onchange = e => { settings.sound = e.target.checked; if(!settings.sound)robotShutdownAudio.stop();syncSound(); audioReady(); persist(); };
-$('music-setting').onchange=e=>{settings.music=e.target.checked;audioReady();persist();};
+$('music-setting').onchange=e=>{settings.music=setMusicEnabled(e.target.checked);audioReady();persist();};
 $('sensitivity').oninput = e => { settings.sensitivity = Number(e.target.value); persist(); };
 $('quality').onchange = e => { settings.quality = e.target.value; world?.resize(settings.quality); persist(); };
 
@@ -215,7 +217,7 @@ function resetInput() {
   combatHud?.reset();touchSprinting=false;
   vr?.desktopGamepads?.reset();
   if(vr&&vr.mode!=='xr'){vr.previous?.clear();vr.desktopPadKey=null;}
-  meleeQueued=chargeQueued=false;keys.clear(); firingPointers.clear(); aimPointers.clear(); firePressQueued=false; mouseAim=false; aiming=false; aimBlend=0;fireZoomBlend=0; document.body.classList.remove('scoped','aiming'); $('aim-button')?.setAttribute('aria-pressed','false'); jumpQueued = false; pickupQueued = false;crouchQueued=false; canvasPointer = null; lastDrag = null;touchOrbit.reset();
+  meleeQueued=chargeQueued=false;keys.clear(); firingPointers.clear(); aimPointers.clear();touchAimLatched=false; firePressQueued=false; mouseAim=false; aiming=false; aimBlend=0;fireZoomBlend=0; document.body.classList.remove('scoped','aiming'); $('aim-button')?.setAttribute('aria-pressed','false'); jumpQueued = false; pickupQueued = false;crouchQueued=false; canvasPointer = null; lastDrag = null;touchOrbit.reset();
   for (const s of [move, look]) { s.x = 0; s.y = 0; s.id = null; }
   for (const id of ['move-stick', 'look-stick']) $(id).querySelector('.joystick-knob').style.transform = '';
   $('fire-button').classList.remove('firing');
@@ -251,7 +253,7 @@ $('fire-button').addEventListener('pointerdown', e => { if (phase !== 'playing')
 for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) $('fire-button').addEventListener(type, e => { firingPointers.delete(e.pointerId); if (!firingPointers.size) $('fire-button').classList.remove('firing'); });
 $('crouch-button').addEventListener('click',()=>{if(phase==='playing')crouchQueued=true;});
 $('pickup-button').addEventListener('click', () => { if(phase === 'playing')pickupQueued = true; });
-$('aim-button').addEventListener('pointerdown',e=>{if(phase!=='playing')return;e.preventDefault();aimPointers.add(e.pointerId);try{e.currentTarget.setPointerCapture(e.pointerId);}catch{}});
+$('aim-button').addEventListener('pointerdown',e=>{if(phase!=='playing')return;e.preventDefault();if(e.pointerType==='touch'&&!game.weapon.melee)touchAimLatched=!touchAimLatched;else aimPointers.add(e.pointerId);try{e.currentTarget.setPointerCapture(e.pointerId);}catch{}});
 for(const type of ['pointerup','pointercancel','lostpointercapture'])$('aim-button').addEventListener(type,e=>aimPointers.delete(e.pointerId));
 $('jump-button').addEventListener('pointerdown', e => { if (phase !== 'playing') return; e.preventDefault(); jumpQueued = true; });
 $('jump-button').addEventListener('click', e => { if (e.detail === 0 && phase === 'playing') jumpQueued = true; });
@@ -558,7 +560,7 @@ function handleEvents() {
     if (event.type === 'wave') { const offered=WEAPONS.find((w,i)=>w.level===event.wave&&!game.ownedWeapons.has(i)); if(game.mode!=='campaign')announce(game.endless?`SURVIE / VAGUE ${event.wave}`:`NIVEAU ${String(event.wave).padStart(2, '0')} / ${MAX_LEVEL}`, offered && event.wave>1 ? `${offered.name} DISPONIBLE AU FAISCEAU · APPROCHEZ-VOUS` : `${event.count} MACHINES · LA BRÈCHE S’OUVRE`); /* The portals now produce their own spatial, non-beep opening laser sound. */ }
     if (event.type === 'equipment') { const equipment=equipmentForCharacter(event.level,character.id);world.setEquipment(event.level);$('equipment-unlock-title').textContent=`${equipment.name} · NIV. ${event.level}`;$('equipment-unlock-detail').textContent=equipment.addition;equipmentUntil=clock+4;$('equipment-unlock').hidden=false; }
     if (event.type === 'clear'&&game.mode!=='campaign') { portalAudio.closeAll();announce('NIVEAU TERMINÉ', '+ BONUS · LA BRÈCHE SE RECHARGE'); }
-    if (event.type === 'weapon') { weaponFeel.reset();recoil=0;flashTimer=0;world.setWeapon(game.weaponIndex); vr.haptic('weapon'); tone(510, 760, .1, .03); }
+    if (event.type === 'weapon') { touchAimLatched=false;weaponFeel.reset();recoil=0;flashTimer=0;world.setWeapon(game.weaponIndex); vr.haptic('weapon'); tone(510, 760, .1, .03); }
     if (event.type === 'jump') {tone(event.kind==='wall'?240:165,110,.075,.012);vr.haptic('jump');}
     if (event.type === 'land') tone(105, 55, .075, .013);
     if (event.type === 'reload') { reloadInserted=false;vr.startReloadGesture(); vr.haptic('reload');if(settings.sound){if(game.ammo[game.weaponIndex]===0)playWeaponAction(audioContext,game.weapon.id,'empty');playWeaponAction(audioContext,game.weapon.id,'reload-out');} }
@@ -855,7 +857,8 @@ function frame(timestamp, xrFrame) {
 }
 function stepFrame(timestamp, xrFrame) {
   if(recovering||phase==='error'){rangeArmoryMenu?.sync({active:false,xrMode:vr?.mode==='xr'});return;}
-  const dt = lastTime ? Math.min((timestamp - lastTime) / 1000, .05) : .016; lastTime = timestamp; clock += dt;
+  const elapsed=lastTime?(timestamp-lastTime)/1000:.016;lastTime=timestamp;
+  const dt=vr.mode==='xr'?Math.max(0,Math.min(elapsed,.05)):frameDelta(elapsed);clock+=dt;
   const feel=weaponFeel.update(dt);recoil=feel.pitch;flashTimer=feel.flash;
   // The standard Bluetooth/USB gamepad is available outside VR as well.
   syncRangeArmory();const vrInput = vr.input(xrFrame);
@@ -882,13 +885,13 @@ function stepFrame(timestamp, xrFrame) {
     if(jumpQueued)game.player.jumpHeld=false;
     const jump = jumpQueued || vrInput.jump || keys.has('Space') || keys.has('KeyJ'); jumpQueued = false;
     const crouchToggle=crouchQueued||vrInput.crouchToggle;crouchQueued=false;
-    aiming=!!OPTICS[game.weapon.id]&&!game.reloadRemaining&&(vr.mode==='xr'?vrInput.aim:desktopZoomHeld(keys)||mouseAim||aimPointers.size>0||vrInput.precision);
+    aiming=!!OPTICS[game.weapon.id]&&!game.reloadRemaining&&(vr.mode==='xr'?vrInput.aim:desktopZoomHeld(keys)||mouseAim||touchAimLatched||aimPointers.size>0||vrInput.precision);
     aimBlend+=(Number(aiming)-aimBlend)*(1-Math.exp(-dt*14));
     document.body.classList.toggle('aiming',aiming);document.body.classList.toggle('scoped',aiming&&game.weapon.id==='lance'&&view==='fps'&&vr.mode==='off');
     $('aim-button').setAttribute('aria-pressed',String(aiming));
     currentSprinting=!aiming&&(touchSprinting||vrInput.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight')||(move.id!==null&&Math.hypot(move.x,move.y)>=.88));
     game.precisionAiming=aimBlend>.55;
-    game.step(dt, { x, z, yaw: facing, moveYaw, sprint: currentSprinting, jump,crouchToggle });
+    game.step(dt, { x, z, yaw: facing, moveYaw, gamepadMoving:vrInput.gamepadMoving, touchMoving:vr.mode!=='xr'&&move.id!==null&&!!(move.x||move.y), sprint: currentSprinting, jump,crouchToggle });
     cameraFeel.update(dt,{speed:Math.hypot(game.playerVelocity.x,game.playerVelocity.z),grounded:game.player.grounded,verticalSpeed:game.player.verticalSpeed,strafe:x,sprint:currentSprinting,aim:aimBlend});
     try{filmLook ||= mountFilmLook({canvas:document.getElementById('world'),graded:()=>!!world?.renderer?.fpsPresentation?.stats?.().enabled});const on=game.state==='playing'&&vr?.mode!=='xr'&&vr?.mode!=='stereo';if(on!==filmOn){filmOn=on;filmLook.setEnabled(on);}filmLook.update(dt,{health:game.player.hp/100});}catch{}
     portalAudio.sync(game.activePortals,game.time);

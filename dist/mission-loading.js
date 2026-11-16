@@ -30,7 +30,7 @@ export function createMissionLoading({mission=1,characterId='ghju'}={}){
    set(1,'Secteur prêt');complete=new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>{if(!failed){setScreenMusic('gameplay',mission);root.hidden=true;}resolve(!failed);})));return complete;
   },
   fail(message='Le chargement a été interrompu.'){
-   failed=true;setScreenMusic('loading',mission);root.hidden=false;root.querySelector('.pw-load-state').textContent=message;
+   failed=true;root.dataset.loadError='true';setScreenMusic('loading',mission);root.hidden=false;root.querySelector('.pw-load-state').textContent=message;
    const button=root.querySelector('.pw-load-error');button.hidden=false;button.onclick=()=>location.reload();
   },
   get progress(){return progress;}
