@@ -352,8 +352,8 @@ export function createStationKit(T, root, { low = false, models = true, fetchImp
       flush(); flushLeds();
       const fallback = error => { if (error) console.warn('M04 / modèles Blender indisponibles, modèles de repli', error); for (const o of deferred) ({ reactor, transformer, rack: droneRack })[o.kind](o); deferred.length = 0; flush(); stats.blender = null; };
       if (!deferred.length) { ready = Promise.resolve(); return ready; }
-      const timeout = new Promise((_, reject) => setTimeout(() => reject(Error('délai dépassé')), 20000));
-      ready = Promise.race([loadStationModels(T, { M, low, fetchImpl }), timeout]).then(lib => {
+      // No deadline (the level waits for these files while it loads); a failed request falls back to the code models.
+      ready = loadStationModels(T, { M, low, fetchImpl }).then(lib => {
         for (const [kind, key] of Object.entries(BLENDER)) lib.place(key, deferred.filter(o => o.kind === kind).map(o => ({ x: o.x, z: o.z, yaw: 0 })), group);
         deferred.length = 0; stats.blender = lib.stats;
       }).catch(fallback);

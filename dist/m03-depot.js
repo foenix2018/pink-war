@@ -5,12 +5,15 @@
 //  · the substation under the viaduct: fenced transformer bay, switchgear cabinets, cable trench;
 //  · the holding yard: two locked modules with barred windows, a guard post, floodlights.
 // Static boxes merged per material; returns the light sources for the level's light pool and the lamps for shafts.
-import { DEPOT, FACTORY, RETENTION_MODULES, INTERACTIONS, extraObstacles } from './m03-layout.js';
+import { DEPOT, FACTORY, RETENTION_MODULES, INTERACTIONS, MOVABLE, extraObstacles } from './m03-layout.js';
+import { loadBlenderModels } from './blender-models.js';
+// Pieces modelled in Blender (tools/blender/m03_assets.py); the box versions below stay as their fallback.
+export const M03_MODEL_FILES = Object.freeze({ line: 'factory_line', module: 'detention_module', barrier: 'barrier_posts' });
 
 function canvasTexture(T, w, h, paint) { const c = document.createElement('canvas'); c.width = w; c.height = h; paint(c.getContext('2d'), w, h); const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.wrapS = t.wrapT = T.RepeatWrapping; t.anisotropy = 8; return t; }
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
 
-export function createAddedPlaces(T, root, { low = false, rich = false } = {}) {
+export function createAddedPlaces(T, root, { low = false, rich = false, models = true, fetchImpl = globalThis.fetch } = {}) {
   const group = new T.Group(); group.name = 'M03 / dépôt, poste électrique, cour de rétention'; root.add(group);
   const r = seeded(77031), loader = new T.TextureLoader(), Mat = rich ? T.MeshPhysicalMaterial : T.MeshStandardMaterial;
   const tex = (url, srgb = true) => { const t = loader.load(url, () => {}, undefined, () => {}); t.wrapS = t.wrapT = T.RepeatWrapping; if (srgb) t.colorSpace = T.SRGBColorSpace; t.anisotropy = low ? 2 : 8; return t; };
@@ -32,9 +35,9 @@ export function createAddedPlaces(T, root, { low = false, rich = false } = {}) {
     lamp: new T.MeshBasicMaterial({ color: 0xfff1d8, toneMapped: false }), cell: new T.MeshBasicMaterial({ color: 0x5fe0f0, toneMapped: false }), alarm: new T.MeshBasicMaterial({ color: 0xff2f45, toneMapped: false }), amber: new T.MeshBasicMaterial({ color: 0xffb35c, toneMapped: false })
   };
   for (const m of Object.values(M)) m.userData.webgpuPhysical = !!m.isMeshPhysicalMaterial;
-  const buckets = new Map(), stats = { boxes: 0, racks: 0, pallets: 0, lamps: 0 };
+  const buckets = new Map(), spare = new Map(), stats = { boxes: 0, racks: 0, pallets: 0, lamps: 0 }; let into = buckets;
   const solid = (m, x1, x2, y1, y2, z1, z2, tile = 2) => {
-    let b = buckets.get(m); if (!b) buckets.set(m, b = { P: [], N: [], U: [], I: [], n: 0 }); stats.boxes++;
+    let b = into.get(m); if (!b) into.set(m, b = { P: [], N: [], U: [], I: [], n: 0 }); stats.boxes++;
     const q = (p, n, uv) => { b.P.push(...p); for (let k = 0; k < 4; k++) b.N.push(...n); b.U.push(...uv); b.I.push(b.n, b.n + 1, b.n + 2, b.n, b.n + 2, b.n + 3); b.n += 4; };
     const u = (a, e) => [a / tile, y1 / tile, e / tile, y1 / tile, e / tile, y2 / tile, a / tile, y2 / tile], t = [x1 / tile, z2 / tile, x2 / tile, z2 / tile, x2 / tile, z1 / tile, x1 / tile, z1 / tile];
     q([x1, y1, z2, x2, y1, z2, x2, y2, z2, x1, y2, z2], [0, 0, 1], u(x1, x2)); q([x2, y1, z1, x1, y1, z1, x1, y2, z1, x2, y2, z1], [0, 0, -1], u(x1, x2));
@@ -97,6 +100,7 @@ export function createAddedPlaces(T, root, { low = false, rich = false } = {}) {
   for (const x of [F.door.x1 - .25, F.door.x2]) solid(M.yellow, x, x + .25, 0, F.door.height, F.z2 - .68, F.z2 + .08);
   solid(M.steel, F.door.x1 - .25, F.door.x2 + .25, F.door.height, F.door.height + .7, F.z2 - .8, F.z2 + .2); solid(M.alarm, F.door.x1 + 2.6, F.door.x2 - 2.6, F.door.height + .2, F.door.height + .5, F.z2 + .2, F.z2 + .22);
   // Assembly line: steel frame, rubber belt, rollers, gantries with welding heads, robot frames being rebuilt.
+  into = spare;
   const L = F.line;
   solid(M.steel, L.x1, L.x2, .75, .95, L.z - .9, L.z + .9); solid(M.dark, L.x1 + .1, L.x2 - .1, .95, 1.02, L.z - .75, L.z + .75);
   for (let x = L.x1 + .5; x < L.x2; x += 2) for (const z of [L.z - .82, L.z + .82]) solid(M.steel, x - .06, x + .06, 0, .75, z - .06, z + .06);
@@ -109,6 +113,7 @@ export function createAddedPlaces(T, root, { low = false, rich = false } = {}) {
     solid(M.trafo, x - .35, x + .35, 1.9, 2.15, L.z - .22, L.z + .22); for (let k = 0; k < 4; k++) solid(M.steel, x - .32, x + .32, 2.2 + k * .2, 2.24 + k * .2, L.z - .2, L.z + .2);
     solid(M.trafo, x - .18, x + .18, 3.05, 3.35, L.z - .16, L.z + .16); solid(M.alarm, x - .1, x + .1, 3.18, 3.24, L.z - .17, L.z - .16);
   }
+  into = buckets;
   // Pillars, parts racks, the control pulpit at the end of the line, roof trusses and lamps.
   for (const o of obstacles.filter(o => o.look === 'factory-pillar')) { solid(M.concrete, o.x - o.hx, o.x + o.hx, 0, F.height - .5, o.z - o.hz, o.z + o.hz, 3); solid(M.yellow, o.x - o.hx - .01, o.x + o.hx + .01, 0, 1.2, o.z - o.hz - .01, o.z + o.hz + .01); }
   for (const o of obstacles.filter(o => o.look === 'factory-rack')) { const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz;
@@ -134,6 +139,7 @@ export function createAddedPlaces(T, root, { low = false, rich = false } = {}) {
   lights.push({ x: tx - 1, y: 2.6, z: tz - 1.4, color: 0xffb35c, intensity: 10, range: 9 });
 
   // ---------- Holding yard ----------
+  into = spare;
   RETENTION_MODULES.forEach((m, i) => {
     solid(M.module, m.x1, m.x2, .15, 2.9, m.z1, m.z2, 2.4); solid(M.steel, m.x1 - .05, m.x2 + .05, 0, .15, m.z1 - .05, m.z2 + .05); solid(M.steel, m.x1 - .05, m.x2 + .05, 2.9, 3, m.z1 - .05, m.z2 + .05);
     const zf = m.z2, cx = (m.x1 + m.x2) / 2;
@@ -142,14 +148,26 @@ export function createAddedPlaces(T, root, { low = false, rich = false } = {}) {
     solid(M.white, m.x1 + .3, m.x1 + 1.5, 2.3, 2.7, zf, zf + .02); solid(M.dark, m.x2 - .5, m.x2 - .2, 3, 3.5, m.z1 + .3, m.z1 + .6); solid(M.lamp, m.x2 - .55, m.x2 - .15, 3.5, 3.56, m.z1 + .2, m.z1 + .7);
     lights.push({ x: cx, y: 3.4, z: zf + 2, color: i ? 0xff6a5a : 0xfff1d8, intensity: 14, range: 12 });
   });
+  into = buckets;
   const cu = INTERACTIONS.find(i => i.id === 'cellule'); // guard post beside the lock
   solid(M.module, cu.x + 3, cu.x + 5.2, .1, 2.5, cu.z - 1, cu.z + 1.2, 2.4); solid(M.dark, cu.x + 3, cu.x + 3.04, 1, 1.9, cu.z - .6, cu.z + .8); solid(M.steel, cu.x + 2.9, cu.x + 5.3, 2.5, 2.6, cu.z - 1.1, cu.z + 1.3);
   for (const [x, z] of [[45.5, 45.5], [75, 45.5], [45.5, 69.5], [75, 69.5]]) { solid(M.steel, x - .08, x + .08, 0, 7, z - .08, z + .08); solid(M.dark, x - .5, x + .5, 7, 7.2, z - .3, z + .3); solid(M.lamp, x - .44, x + .44, 6.97, 7, z - .24, z + .24); lamps.push({ x, y: 6.95, z, color: 0xdfeaff, radius: 3 }); lights.push({ x, y: 6.6, z, color: 0xdfeaff, intensity: 18, range: 16 }); }
 
-  for (const [material, b] of buckets) {
+  const fallback = new T.Group(); fallback.name = 'M03 / chaîne et modules (repli)'; group.add(fallback);
+  for (const [material, b] of [...buckets, ...[...spare].map(([m, v]) => [m, v, fallback])]) {
     const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(new Float32Array(b.P), 3)); g.setAttribute('normal', new T.BufferAttribute(new Float32Array(b.N), 3)); g.setAttribute('uv', new T.BufferAttribute(new Float32Array(b.U), 2));
     g.setIndex(new T.BufferAttribute(b.n > 65535 ? new Uint32Array(b.I) : new Uint16Array(b.I), 1)); g.computeBoundingSphere(); g.userData.webgpuShape = 'place';
-    const mesh = new T.Mesh(g, material); mesh.matrixAutoUpdate = false; mesh.updateMatrix(); mesh.userData.webgpuShape = 'place'; group.add(mesh);
+    const mesh = new T.Mesh(g, material); mesh.matrixAutoUpdate = false; mesh.updateMatrix(); mesh.userData.webgpuShape = 'place'; (b === spare.get(material) ? fallback : group).add(mesh);
   }
-  return { group, lights, lamps, stats: () => ({ ...stats, meshes: buckets.size }) };
+  // Blender models: the factory line, the two detention modules and the barrier posts replace the box versions.
+  let blender = null, onBarrier = () => {};
+  const alias = { rubber: 'dark', black: 'dark', glass: 'wrap', galv: 'steel' };
+  // No deadline: on a slow device the files may arrive after the city is built; they replace the boxes when they do.
+  const ready = !models ? Promise.resolve() : loadBlenderModels(T, { files: M03_MODEL_FILES, M, alias, base: './assets/m03/models/', low, fetchImpl }).then(lib => {
+    lib.place('line', [{ x: (F.line.x1 + F.line.x2) / 2, z: F.line.z }], group);
+    lib.place('module', RETENTION_MODULES.map(m => ({ x: (m.x1 + m.x2) / 2, z: (m.z1 + m.z2) / 2 })), group);
+    lib.place('barrier', [{ x: 0, z: MOVABLE.barriere.z }], group);
+    fallback.removeFromParent(); fallback.traverse(o => o.geometry?.dispose()); blender = lib.stats; onBarrier();
+  }).catch(error => { console.warn('M03 / modèles Blender indisponibles, modèles de repli', error); });
+  return { group, lights, lamps, ready, set onBarrier(f) { onBarrier = f; if (blender) f(); }, stats: () => ({ ...stats, meshes: buckets.size, blender }) };
 }

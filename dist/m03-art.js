@@ -262,9 +262,10 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
 
   // ---------- The avenue: ORDRE barrier, tracking beacon at the fracture ----------
   const movable = new Map();
+  const barrierPosts = [];
   function buildBarrier() {
     const b = MOVABLE.barriere;
-    for (const s of [-1, 1]) { box(M.dark, s * 9.6, 0, b.z, .7, 1.6, .7); box(M.neonRed, s * 9.6, 1.6, b.z, .3, .3, .3); }
+    for (const s of [-1, 1]) barrierPosts.push(box(M.dark, s * 9.6, 0, b.z, .7, 1.6, .7), box(M.neonRed, s * 9.6, 1.6, b.z, .3, .3, .3));
     const pivot = new T.Group(); pivot.position.set(-9.6, 1.2, b.z); add(pivot);
     const boom = new T.Mesh(new T.BoxGeometry(18.6, .28, .22), M.white); boom.position.x = 9.3; pivot.add(boom);
     for (let k = 0; k < 9; k++) { const s = new T.Mesh(new T.BoxGeometry(1, .29, .23), M.red); s.position.x = 1 + k * 2; pivot.add(s); }
@@ -418,7 +419,7 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
     try { stats.grounds = createSectorGrounds(T, root, { low, rich }).stats(); } catch (error) { console.warn('M03 / sols des parcelles désactivés', error); }
     try { sectorProps = createSectorProps(T, root, propList.props, { low, rich,webgpu }); stats.props = sectorProps.stats(); } catch (error) { console.warn('M03 / objets modélisés désactivés', error); }
     // The three added places (depot interior, substation, holding yard) and their lights.
-    let places = null; try { places = createAddedPlaces(T, root, { low, rich }); stats.places = places.stats(); for (const l of places.lights) sources.push({ ...l, color: new T.Color(l.color) }); } catch (error) { console.warn('M03 / lieux ajoutés désactivés', error); }
+    let places = null; try { places = createAddedPlaces(T, root, { low, rich }); stats.places = places.stats(); for (const l of places.lights) sources.push({ ...l, color: new T.Color(l.color) }); places.onBarrier = () => { for (const o of barrierPosts) o.visible = false; }; } catch (error) { console.warn('M03 / lieux ajoutés désactivés', error); }
     // Volumetric light and dust under the avenue lamps and the lamps of the added places.
     try { shafts = createLightShafts(T, root, [...(places?.lamps || []), ...lamps.map(l => ({ x: l.x * .82, y: l.y - .1, z: l.z, color: l.color.getHex() }))], { low, max: low ? 12 : 40 }); } catch (error) { console.warn('M03 / faisceaux désactivés', error); }
     try { city = createCyberCity(T, root, { low, rich, advert: (name, o) => signs.advert(name, o), bounds: sector.meta.bounds }); stats.city = city.stats(); } catch (error) { console.warn('M03 / ville désactivée', error); city = null; }

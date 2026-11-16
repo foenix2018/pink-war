@@ -85,6 +85,8 @@ function factoryZone() {
   out.push(box('wall', F.x1, F.x2, F.z1, F.z1 + .6, 0, F.height, w), box('wall', F.x1, F.x1 + .6, F.z1, F.z2, 0, F.height, w), box('wall', F.x2 - .6, F.x2, F.z1, F.z2, 0, F.height, w));
   out.push(box('conveyor', F.line.x1, F.line.x2, F.line.z - .9, F.line.z + .9, 0, 1.05, { surface: 'metal', look: 'factory-line' }));
   for (const x of [-50, -40, -30]) for (const z of [-82, -68]) out.push(at('pillar', x, z, .45, .45, F.height, { surface: 'concrete', look: 'factory-pillar' }));
+  // Six-axis welding robots on both sides of the line (bases of the Blender model, factory_line).
+  for (const x of [-48, -41, -34]) for (const s of [-1, 1]) out.push(at('robot', x + s * .25, F.line.z + s * 1.95, .5, .5, 1.9, { surface: 'metal', look: 'factory-robot' }));
   for (const x of [-54, -46]) out.push(at('rack', x, -86, 2.4, .6, 3.6, { surface: 'metal', look: 'factory-rack' }));
   out.push(at('pulpit', -27, -76, .8, 1.6, 1.25, { surface: 'metal', look: 'factory-pulpit' }));
   return out;

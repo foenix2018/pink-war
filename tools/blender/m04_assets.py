@@ -16,8 +16,7 @@
 import bpy, bmesh, math, os, sys
 from mathutils import Vector, Matrix
 
-OUT = os.path.abspath(sys.argv[-1] if len(sys.argv) > 1 and not sys.argv[-1].endswith('.py') else os.path.join(os.path.dirname(__file__), '../../dist/assets/m04/models'))
-os.makedirs(OUT, exist_ok=True)
+OUT = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../dist/assets/m04/models'))
 TAU = math.pi * 2
 
 def G(x, y, z):  # game → Blender (Z up)
@@ -257,7 +256,8 @@ def drone_rack():
 
 # ---------------------------------------------------------------- build, unwrap, bake, export
 MATCOLOR = {'glowMagenta': (1, .25, .7, 1), 'ledRed': (1, .2, .1, 1), 'ledGreen': (.2, 1, .4, 1)}
-def build(asset, ao_size, samples):
+def build(asset, ao_size, samples, out=None):
+    OUT_DIR = out or OUT; os.makedirs(OUT_DIR, exist_ok=True)
     bpy.ops.wm.read_factory_settings(use_empty=True)
     sc = bpy.context.scene; objs = []; thin = []
     for (mat_name, bevelled), bm in asset.parts.items():
@@ -298,7 +298,7 @@ def build(asset, ao_size, samples):
     bpy.ops.object.select_all(action='DESELECT'); ob.select_set(True); bpy.context.view_layer.objects.active = ob
     sc.render.bake.margin = 6
     bpy.ops.object.bake(type='AO')
-    png = os.path.join(OUT, asset.name + '_ao.png'); img.filepath_raw = png; img.file_format = 'PNG'; img.save()
+    png = os.path.join(OUT_DIR, asset.name + '_ao.png'); img.filepath_raw = png; img.file_format = 'PNG'; img.save()
     # Plain named materials for export (no bake nodes, glowing ones flagged by colour).
     for m in ob.data.materials:
         for n in list(m.node_tree.nodes):
@@ -308,12 +308,12 @@ def build(asset, ao_size, samples):
     me.uv_layers.active = me.uv_layers['UVMap']; me.uv_layers['UVMap'].active_render = True
     bpy.data.objects.remove(floor)
     bpy.ops.object.select_all(action='DESELECT'); ob.select_set(True)
-    bpy.ops.export_scene.gltf(filepath=os.path.join(OUT, asset.name + '.glb'), export_format='GLB', use_selection=True, export_apply=True,
+    bpy.ops.export_scene.gltf(filepath=os.path.join(OUT_DIR, asset.name + '.glb'), export_format='GLB', use_selection=True, export_apply=True,
                               export_texcoords=True, export_normals=True, export_materials='EXPORT', export_image_format='NONE', export_yup=True)
     tris = sum(len(p.vertices) - 2 for p in me.polygons)
-    compact(os.path.join(OUT, asset.name + '.glb'), os.path.join(OUT, asset.name + '.pwm'))
+    compact(os.path.join(OUT_DIR, asset.name + '.glb'), os.path.join(OUT_DIR, asset.name + '.pwm'))
     from PIL import Image
-    Image.open(png).convert('L').save(os.path.join(OUT, asset.name + '_ao.jpg'), quality=78, optimize=True); os.remove(png)
+    Image.open(png).convert('L').save(os.path.join(OUT_DIR, asset.name + '_ao.jpg'), quality=78, optimize=True); os.remove(png)
     print(f'{asset.name}: {tris} triangles, {len(me.materials)} matériaux')
 
 # Compact runtime format « PWM1 » read by dist/m04-models.js: JSON header + one binary block.
