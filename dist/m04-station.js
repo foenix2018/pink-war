@@ -11,9 +11,10 @@
 //    plant outside the walls (cooling tower, high-voltage pylons and lines) as silhouettes in the fog.
 // Static geometry is merged per material (a handful of draw calls); only the fans and server activity LEDs move.
 // No lights are added: the level's pool lights the fixtures it already knows.
+import { loadStationModels } from './m04-models.js';
 const TAU = Math.PI * 2;
 
-export function createStationKit(T, root, { low = false } = {}) {
+export function createStationKit(T, root, { low = false, models = true, fetchImpl = globalThis.fetch } = {}) {
   const group = new T.Group(); group.name = 'M04 / équipements de la station'; root.add(group);
   const loader = new T.TextureLoader(), stats = { pieces: 0, meshes: 0, drones: 0, racks: 0, fans: 0 };
   const tex = (file, srgb) => { const t = loader.load('./assets/m04/' + file, undefined, undefined, () => {}); t.wrapS = t.wrapT = T.RepeatWrapping; t.colorSpace = srgb ? T.SRGBColorSpace : T.NoColorSpace; t.anisotropy = low ? 2 : 8; return t; };
@@ -102,7 +103,8 @@ export function createStationKit(T, root, { low = false } = {}) {
     }
     buckets.clear();
   }
-  const animated = [];
+  const animated = [], deferred = [], BLENDER = { reactor: 'reactor', transformer: 'transformer', rack: 'rack' };
+  let ready = Promise.resolve();
 
   // ---------- Equipment ----------
   // Oil-filled power transformer on its skid: tank, radiator banks on both long sides, conservator, bushings.
@@ -336,6 +338,8 @@ export function createStationKit(T, root, { low = false } = {}) {
     M, group, stats, animated,
     has: kind => ['transformer', 'tank', 'container', 'piperack', 'coolant', 'servers', 'rack', 'crates', 'guard-post', 'reactor'].includes(kind),
     dress(o) {
+      // Blender centrepieces: wait for their models; the code-built versions stay as the fallback.
+      if (models && BLENDER[o.kind]) { deferred.push(o); return true; }
       switch (o.kind) {
         case 'transformer': transformer(o); break; case 'tank': vessel(o); break; case 'container': container(o); break;
         case 'piperack': piperack(o); break; case 'coolant': cooler(o); break; case 'servers': serverRow(o); break; case 'rack': droneRack(o); break;
@@ -344,7 +348,18 @@ export function createStationKit(T, root, { low = false } = {}) {
       return true;
     },
     stabilizer, walls, hangar, plantBeyond,
-    finish() { flush(); flushLeds(); },
+    finish() {
+      flush(); flushLeds();
+      const fallback = error => { if (error) console.warn('M04 / modèles Blender indisponibles, modèles de repli', error); for (const o of deferred) ({ reactor, transformer, rack: droneRack })[o.kind](o); deferred.length = 0; flush(); stats.blender = null; };
+      if (!deferred.length) { ready = Promise.resolve(); return ready; }
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(Error('délai dépassé')), 20000));
+      ready = Promise.race([loadStationModels(T, { M, low, fetchImpl }), timeout]).then(lib => {
+        for (const [kind, key] of Object.entries(BLENDER)) lib.place(key, deferred.filter(o => o.kind === kind).map(o => ({ x: o.x, z: o.z, yaw: 0 })), group);
+        deferred.length = 0; stats.blender = lib.stats;
+      }).catch(fallback);
+      return ready;
+    },
+    get ready() { return ready; },
     update(t, dt) { for (const f of animated) f(t, dt); }
   };
 }

@@ -368,7 +368,7 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
 
 
   return {
-    root, M, sun:moon, openPortal,get ready(){return photo.ready;},
+    root, M, sun:moon, openPortal,get ready(){return Promise.all([photo.ready,station.ready]);},
     build(obstacles) {
       buildGrounds(); buildDecks(); buildWalls(obstacles); station.walls(obstacles); station.hangar(AREAS.find(a => a.id === 'hangar')); station.plantBeyond(); for (const o of obstacles) dress(o); gantryStabilizer(); buildRelays(); buildBreach(); buildDoors(); buildDevices(); buildSigns(); buildFixtures();
       neons.meshes(); neons.build(); flushGeometry(); flushPieces(); station.finish();
