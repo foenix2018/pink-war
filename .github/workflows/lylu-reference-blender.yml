@@ -1,0 +1,66 @@
+name: Standalone LYLU reference V2 Blender model
+on:
+  push:
+    branches:
+      - workshop/ghju-lylu-blender-exports
+    paths:
+      - tools/modeling/lylu_reference_upgrade.py
+      - tools/modeling/gltf_helpers.py
+      - tools/modeling/create_lylu_reference_blend.py
+      - .github/workflows/lylu-reference-blender.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  model:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out isolated workshop (not the game)
+        uses: actions/checkout@v4
+      - name: Retrieve previously extracted real LYLU Blender model
+        uses: actions/download-artifact@v4
+        with:
+          name: Pink-Wars-GHJU-LYLU-Blender
+          run-id: 43894909418
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: base
+      - name: Install geometry libraries
+        run: python3 -m pip install --user numpy scipy
+      - name: Build LYLU reference V2, retaining skin and original animation
+        run: python3 tools/modeling/lylu_reference_upgrade.py
+      - name: Install Blender 4 with glTF importer
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y blender python3-numpy
+      - name: Create native Blender project and material studio
+        run: blender -b --python tools/modeling/create_lylu_reference_blend.py
+      - name: Validate model and project
+        run: |
+          python3 - <<'PY'
+          import json,struct,pathlib
+          p=pathlib.Path('finished')
+          glb=p/'LYLU-REFERENCE-V2.glb'
+          blend=p/'LYLU-REFERENCE-V2.blend'
+          assert glb.is_file() and glb.stat().st_size>1000000
+          assert blend.is_file() and blend.stat().st_size>1000000
+          with glb.open('rb') as f:
+              magic,ver,total=struct.unpack('<4sII',f.read(12))
+              assert magic==b'glTF' and ver==2 and total==glb.stat().st_size
+              n,_=struct.unpack('<I4s',f.read(8))
+              d=json.loads(f.read(n))
+          assert len(d.get('animations',[]))==16
+          assert len(d.get('skins',[]))==3
+          assert len(d.get('nodes',[]))>=200
+          with blend.open('rb') as f:assert f.read(7)==b'BLENDER'
+          print('VALIDATED',glb.stat().st_size,blend.stat().st_size)
+          PY
+      - name: Upload fully standalone LYLU assets
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pink-Wars-LYLU-REFERENCE-V2
+          path: finished/
+          if-no-files-found: warn
+          retention-days: 30
