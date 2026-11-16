@@ -1,0 +1,51 @@
+name: GHJU LYLU glove orientation corrective Blender files
+on:
+  push:
+    branches: [workshop/ghju-lylu-blender-exports]
+    paths:
+      - tools/blender/fix-glove-orientation-blend.py
+      - .github/workflows/fix-hero-hands.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  fix:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout isolated working branch
+        uses: actions/checkout@v4
+      - name: Retrieve verified Blender scenes from standalone export
+        uses: actions/download-artifact@v4
+        with:
+          name: Pink-Wars-GHJU-LYLU-Blender
+          run-id: 43894909418
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: previous
+      - name: Install Blender
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y blender python3-numpy
+      - name: Rotate both hand assemblies around wrist anchors and save Blender scenes
+        run: blender -b --python tools/blender/fix-glove-orientation-blend.py
+      - name: Confirm Blender outputs
+        run: |
+          python3 - <<'PY'
+          import pathlib
+          d=pathlib.Path('hands-fixed')
+          for hero in ('GHJU','LYLU'):
+            f=d/(hero+'-HANDS-FIX.blend')
+            assert f.exists() and f.stat().st_size>100000
+            with f.open('rb') as b: assert b.read(7)==b'BLENDER'
+            print(hero,f.stat().st_size)
+          print((d/'fix-report.json').read_text())
+          PY
+      - name: Upload corrected Blender files
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Pink-Wars-HANDS-FIX-Blender
+          path: hands-fixed/
+          if-no-files-found: warn
+          retention-days: 30
