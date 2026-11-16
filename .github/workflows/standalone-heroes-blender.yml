@@ -28,7 +28,7 @@ jobs:
       - name: Install Blender
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y blender
+          sudo apt-get install -y blender python3-numpy
           blender --version | head -n 3
       - name: Extract actual playable heroes and their skeletons
         run: node tools/export-heroes-standalone.mjs
