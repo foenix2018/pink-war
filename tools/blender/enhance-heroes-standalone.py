@@ -148,12 +148,7 @@ def one(hero):
          use_selection=True,export_animations=True,export_skins=True,
          export_normals=True,export_yup=True,export_lights=False,export_cameras=False)
     if not glb.exists() or glb.stat().st_size<1024:raise RuntimeError('GLB failed '+hero)
-    # Fast independent inspection preview (materials shown via Workbench studio lights).
-    scene.render.engine='BLENDER_WORKBENCH'
-    scene.display.shading.light='STUDIO'
-    scene.display.shading.color_type='MATERIAL'
-    scene.render.filepath=str(FINAL/(hero+'-PREVIEW.png'))
-    bpy.ops.render.render(write_still=True)
+    # Keep studio scene in the .blend; headless EGL preview rendering is handled separately.
     return {'hero':hero,'source_bytes':source.stat().st_size,'output_bytes':glb.stat().st_size,
        'rigs':len(rigs),'bones':sum(len(o.data.bones) for o in rigs),
        'actions':[a.name for a in bpy.data.actions],
