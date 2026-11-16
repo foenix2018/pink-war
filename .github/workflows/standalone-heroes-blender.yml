@@ -1,0 +1,57 @@
+name: Standalone GHJU + LYLU Blender exports
+on:
+  push:
+    branches:
+      - workshop/ghju-lylu-blender-exports
+    paths:
+      - .github/workflows/standalone-heroes-blender.yml
+      - tools/export-heroes-standalone.mjs
+      - tools/blender/enhance-heroes-standalone.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - name: Checkout isolated workshop branch
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser export packages
+        run: npm install --no-save playwright@1.56.1 esbuild@0.25.11 three@0.181.0
+      - name: Install Chromium (Playwright)
+        run: npx playwright install --with-deps chromium
+      - name: Install Blender
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y blender
+          blender --version | head -n 3
+      - name: Extract actual playable heroes and their skeletons
+        run: node tools/export-heroes-standalone.mjs
+      - name: Improve both models and write native Blender files
+        run: blender -b --python tools/blender/enhance-heroes-standalone.py
+      - name: Verify generated files and binary signatures
+        run: |
+          python3 - <<'PY'
+          import json, pathlib
+          root=pathlib.Path('exports/heroes/final')
+          for hero in ('GHJU','LYLU'):
+            for ext in ('blend','glb'):
+              f=root/(hero+'-ENHANCED.'+ext)
+              assert f.exists() and f.stat().st_size>1000,(f,'not created')
+              print(f,f.stat().st_size)
+            assert (root/(hero+'-PREVIEW.png')).is_file()
+          print((root/'enhancement-report.json').read_text()[:3000])
+          PY
+      - name: Upload standalone deliverables (no game integration)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pink-Wars-GHJU-LYLU-Blender
+          path: exports/heroes
+          if-no-files-found: warn
+          retention-days: 30
