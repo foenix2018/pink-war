@@ -53,7 +53,12 @@ jobs:
           assert len(d.get('animations',[]))==16
           assert len(d.get('skins',[]))==3
           assert len(d.get('nodes',[]))>=200
-          with blend.open('rb') as f:assert f.read(7)==b'BLENDER'
+          with blend.open('rb') as f:
+              header=f.read(7)
+              assert header.startswith(b'BLENDER') or header.startswith(bytes.fromhex('28b52ffd')),header
+          report=json.loads((p/'blender-report.json').read_text())
+          assert len(report['actions'])==16
+          assert any(r['bones']==34 for r in report['rigs'])
           print('VALIDATED',glb.stat().st_size,blend.stat().st_size)
           PY
       - name: Upload fully standalone LYLU assets
