@@ -59,15 +59,16 @@ def mat(name,col,met=.0,rough=.5,glow=0,scratches=False):
         m.node_tree.links.new(b.outputs['Normal'],p.inputs['Normal'])
     return m
 
-base=mat('S19 | main cast graphite',0x292932,.88,.34,scratches=True)
-plate=mat('S19 | dark weathered gunmetal plates',0x3E3C47,.86,.41,scratches=True)
-edge=mat('S19 | chipped titanium bevels',0x68616B,.91,.30,scratches=True)
+base=mat('S19 | main cast graphite',0x22232A,.88,.39,scratches=True)
+plate=mat('S19 | dark weathered gunmetal plates',0x323139,.86,.43,scratches=True)
+edge=mat('S19 | chipped titanium bevels',0x55505C,.91,.34,scratches=True)
 inset=mat('S19 | carbon black vents',0x101016,.4,.52)
-motor=mat('S19 | alloy servo steel',0x6A6872,.90,.32)
-blade=mat('S19 | black scimitar turbine blades',0x1B1A22,.82,.27)
+motor=mat('S19 | alloy servo steel',0x57565F,.90,.33)
+blade=mat('S19 | black scimitar turbine blades',0x17171E,.86,.23)
+disc=mat('S19 | high-speed black turbine ceramic disc',0x080810,.84,.17)
 hot=mat('S19 | red external tracking LEDs',0xFF1239,.09,.16,11)
 deep=mat('S19 | warm crimson iris',0xEC003D,.18,.12,7)
-core=mat('S19 | core emissive ruby',0xFF3866,.06,.12,20)
+core=mat('S19 | core emissive ruby',0xFF2454,.06,.13,6.5)
 rubber=mat('S19 | ribbed flexible cable',0x131118,.05,.73)
 mark=mat('S19 | bone-grey stencilled fleet ID',0xAEA4AB,.44,.64)
 dark_red=mat('S19 | black glass optical lens',0x380512,.42,.13,.9)
@@ -264,7 +265,7 @@ cylinder('IRIS 06 / central carbon isolation',(0,.654,.55),.106,.009,inset,36,
          (math.pi/2,0,0))
 cylinder('IRIS 07 / ruby emission eye',(0,.665,.55),.070,.018,deep,32,
          (math.pi/2,0,0))
-uv_sphere('IRIS 08 / photonic central pupil',(0,.681,.55),(.038,.019,.038),core,32)
+uv_sphere('IRIS 08 / photonic central pupil',(0,.681,.55),(.027,.015,.027),core,32)
 for i in range(12):
     theta=i*math.tau/12
     x=.203*math.cos(theta);z=.55+.203*math.sin(theta)
@@ -343,6 +344,7 @@ for sx in (-1,1):
               cx,cy,.354,.263,.672,.493,base,48)
     ring_mesh(tag+' / machined lower inner sleeve',
               cx,cy,.272,.260,.606,.529,motor,48)
+    cylinder(tag+' / enclosed high speed dark rotor disc',(cx,cy,.571),.257,.011,disc,64)
     # 16 separately segmented top ring armour tiles, alternate slightly proud.
     for k in range(16):
         a1=2*math.pi*k/16+.014
@@ -361,6 +363,11 @@ for sx in (-1,1):
         elif k%4==1:
             arc(tag+' / narrow red status rim '+str(k),
                 cx,cy,.354,.540,a1+.045,a2-.045,deep,.006)
+    # Realistic optical warning strip in the inner upper rim (reference: red curved diode).
+    for q in range(8):
+        ang=q*math.tau/8+.035
+        arc(tag+' / INNER RUBY STATUS CHANNEL '+str(q),
+            cx,cy,.265,.694,ang,ang+.44,hot,.0035)
     # Side breathing slits, beyond the armoured radial facade
     for k in range(8):
         a=2*math.pi*(k+.3)/8
@@ -391,7 +398,7 @@ for sx in (-1,1):
     cylinder(tag+' / polished hub lock',(cx,cy,.642),.034,.026,
              motor,18)
     cylinder(tag+' / turbine hub warning rune',(cx,cy,.658),
-             .018,.006,deep,18)
+             .018,.006,inset,18)
 
 # Modular independent rotor bones and glTF-compatible active spin action.
 arm_data=bpy.data.armatures.new('S19 V3 | Rig data')
@@ -461,9 +468,9 @@ def camera(name,at,scale):
     ob=bpy.data.objects.new(name,d);link(ob,studio,False)
     ob.location=at;ob.rotation_euler=(Vector((0,0,.59))-ob.location).to_track_quat('-Z','Y').to_euler()
     return ob
-area_light('Cool grey top strip',(-3,1.2,4.0),(.86,.88,1),430,4.0)
-area_light('Scarlet low fill',(3,-2.3,1.8),(1,.23,.35),160,2.8)
-area_light('Rim silver back',(-1.4,-3,3.5),(.84,.84,1),310,3.0)
+area_light('Cool grey top strip',(-3,1.2,4.0),(.86,.88,1),345,4.0)
+area_light('Scarlet low fill',(3,-2.3,1.8),(1,.23,.35),70,2.8)
+area_light('Rim silver back',(-1.4,-3,3.5),(.84,.84,1),245,3.0)
 camera_front=camera('S19 / HERO THREE QUARTER',(-2.6,3.25,2.0),2.8)
 camera('S19 / FRONT', (0,3.7,1.17),2.65)
 camera('S19 / TOP',(.1,-.02,5),2.62)
