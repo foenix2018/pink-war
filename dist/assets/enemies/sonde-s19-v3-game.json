@@ -1,0 +1,134 @@
+{
+  "source_meshes": 407,
+  "optimized_meshes": 17,
+  "fan_bones": [
+    "FAN_LEFT_FRONT",
+    "FAN_LEFT_REAR",
+    "FAN_RIGHT_FRONT",
+    "FAN_RIGHT_REAR"
+  ],
+  "actions": 1,
+  "asset_bytes": 6931624,
+  "batches": [
+    {
+      "material": [
+        "S19 | dark weathered gunmetal plates"
+      ],
+      "parent": "",
+      "bone": "",
+      "merged": 54
+    },
+    {
+      "material": [
+        "S19 | core emissive ruby"
+      ],
+      "parent": "",
+      "bone": "",
+      "merged": 2
+    },
+    {
+      "material": [
+        "S19 | red external tracking LEDs"
+      ],
+      "parent": "",
+      "bone": "",
+      "merged": 59
+    },
+    {
+      "material": [
+        "S19 | alloy servo steel"
+      ],
+      "parent": "",
+      "bone": "",
+      "merged": 124
+    },
+    {
+      "material": [
+        "S19 | main cast graphite"
+      ],
+      "parent": "",
+      "bone": "",
+      "merged": 15
+    },
+    {
+      "material": [
+        "S19 | carbon black vents"
+      ],
+      "parent": "",
+      "bone": "",
+      "merged": 58
+    },
+    {
+      "material": [
+        "S19 | chipped titanium bevels"
+      ],
+      "parent": "",
+      "bone": "",
+      "merged": 38
+    },
+    {
+      "material": [
+        "S19 | warm crimson iris"
+      ],
+      "parent": "",
+      "bone": "",
+      "merged": 17
+    },
+    {
+      "material": [
+        "S19 | high-speed black turbine ceramic disc"
+      ],
+      "parent": "",
+      "bone": "",
+      "merged": 4
+    },
+    {
+      "material": [
+        "S19 | black scimitar turbine blades"
+      ],
+      "parent": "S19 V3 | Mechanical control armature",
+      "bone": "FAN_LEFT_FRONT",
+      "merged": 5
+    },
+    {
+      "material": [
+        "S19 | ribbed flexible cable"
+      ],
+      "parent": "",
+      "bone": "",
+      "merged": 10
+    },
+    {
+      "material": [
+        "S19 | black scimitar turbine blades"
+      ],
+      "parent": "S19 V3 | Mechanical control armature",
+      "bone": "FAN_LEFT_REAR",
+      "merged": 5
+    },
+    {
+      "material": [
+        "S19 | bone-grey stencilled fleet ID"
+      ],
+      "parent": "",
+      "bone": "",
+      "merged": 4
+    },
+    {
+      "material": [
+        "S19 | black scimitar turbine blades"
+      ],
+      "parent": "S19 V3 | Mechanical control armature",
+      "bone": "FAN_RIGHT_FRONT",
+      "merged": 5
+    },
+    {
+      "material": [
+        "S19 | black scimitar turbine blades"
+      ],
+      "parent": "S19 V3 | Mechanical control armature",
+      "bone": "FAN_RIGHT_REAR",
+      "merged": 5
+    }
+  ]
+}

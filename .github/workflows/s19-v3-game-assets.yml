@@ -1,0 +1,79 @@
+name: S19 V3 game asset - optimize and integrate
+on:
+  push:
+    branches: [feature/sonde-s19-v3-in-game]
+    paths:
+      - tools/sonde_s19_integration/**
+      - .github/workflows/s19-v3-game-assets.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  optimize-and-commit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact game integration branch
+        uses: actions/checkout@v4
+      - name: Download verified Blender V3 source artwork (separate workshop run)
+        uses: actions/download-artifact@v4
+        with:
+          name: SONDE-S19-FIDELITY-V3
+          run-id: 44131671769
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifacts
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install GLB loader build modules
+        run: npm install --no-save three@0.181.0 esbuild@0.25.11
+      - name: Build compatible, self-hosted GLB loader with existing Three.js classes
+        run: |
+          node --input-type=module <<'JS'
+          import path from 'node:path';
+          import {build} from 'esbuild';
+          const vendor=path.resolve('dist/vendor/three.webgpu.min.js');
+          await build({
+            entryPoints:['tools/sonde_s19_integration/loader-entry.js'],
+            bundle:true,platform:'browser',format:'esm',minify:true,
+            outfile:'dist/vendor/s19-gltf-loader.js',
+            plugins:[{name:'match-existing-three',setup(build){
+              build.onResolve({filter:/^three$/},()=>({path:vendor}));
+            }}],
+            logLevel:'info'
+          });
+          JS
+      - name: Install Blender 4.0 and NumPy
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y blender python3-numpy
+      - name: Merge 400 Blender parts into low draw-call game asset
+        run: blender -b --python tools/sonde_s19_integration/optimize_glb.py
+      - name: Check GLB geometry, fan action and production budget
+        run: |
+          python3 - <<'PY'
+          import pathlib,json,struct
+          p=pathlib.Path('dist/assets/enemies/sonde-s19-v3-game.glb')
+          x=p.read_bytes()
+          assert x[:4]==b'glTF'
+          n=struct.unpack_from('<I',x,12)[0]
+          gltf=json.loads(x[20:20+n].decode('utf-8'))
+          names={node.get('name') for node in gltf['nodes']}
+          assert all('FAN_'+name in names for name in ['LEFT_REAR','LEFT_FRONT','RIGHT_REAR','RIGHT_FRONT'])
+          assert gltf.get('animations'), 'Four rotor animations lost'
+          assert len(gltf['meshes'])<=36, ('too many draw calls',len(gltf['meshes']))
+          print('Verified',len(gltf['meshes']),'meshes; bytes',len(x),'animations',len(gltf['animations']))
+          PY
+          node --check dist/probe-s19-v3.js
+          node --check dist/enemies.js
+      - name: Commit only the optimization output (no changes to gameplay elsewhere)
+        run: |
+          git config user.name "Pink Wars S19 Blender Integration"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dist/assets/enemies/sonde-s19-v3-game.glb dist/assets/enemies/sonde-s19-v3-game.json dist/vendor/s19-gltf-loader.js
+          git diff --cached --quiet || git commit -m "Bundle optimized S19 V3 Blender GLB and local GLTF loader"
+          git fetch origin feature/sonde-s19-v3-in-game
+          git rebase origin/feature/sonde-s19-v3-in-game
+          git push origin HEAD:feature/sonde-s19-v3-in-game

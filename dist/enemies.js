@@ -3,6 +3,7 @@ import {strideFrame} from './enemy-motion.js';
 import {createReco1} from './reco1.js';
 import {createRempart} from './enemy-rempart.js';
 import {probeFlightState} from './probe-damage.js';
+import {installProbeS19V3} from './probe-s19-v3.js';
 import * as T from './vendor/three.webgpu.min.js';
 import { Assembly, loft, matrix, merge, bevelBox, limb as lightweightLimb } from './geo.js';
 import {equipmentSurfaces} from './equipment-surfaces.js';
@@ -258,7 +259,7 @@ export function createEnemyFactory(mats,{detail='high'}={}){
     const kit=template(elite,ranged,form),root=new T.Group(),crawler=form==='scuttler',probe=form==='probe';
     root.name=({synth:'SY-05 / Synthétique',stalker:'PO-07 / Poursuivant',scuttler:'RPT-17 / Rampant',brute:'BR-11 / Brute',seer:'REC-01 / Reconnaissance',probe:'S-19 / Sonde',listener:'TR-15 / Traqueur',bulwark:'R-11 / Rempart'})[form];
     if(form==='spectre')root.name='SPECTRE K-9 / ombre traqueuse';
-    root.userData.form=form;root.userData.designRevision='3.63.2';if(probe)root.userData.probeRevision='S-03 / destructible rotors 3.73';root.userData.profile=ENEMY_PROFILES[form];root.userData.surfaceStyle=form==='listener'?'worn titanium / open thoracic cage / directional acoustic reflectors / hydraulic limbs':form==='brute'?'worn graphite / large sharply bevelled siege plates / segmented piston mechanics / recessed scarlet reactor': 'weathered alloy / faceted humanoid armour / RLH joint proportions / articulated rifle stance';
+    root.userData.form=form;root.userData.designRevision='3.63.2';if(probe)root.userData.probeRevision='S-19 / original rig + Blender V3 visual';root.userData.profile=ENEMY_PROFILES[form];root.userData.surfaceStyle=form==='listener'?'worn titanium / open thoracic cage / directional acoustic reflectors / hydraulic limbs':form==='brute'?'worn graphite / large sharply bevelled siege plates / segmented piston mechanics / recessed scarlet reactor': 'weathered alloy / faceted humanoid armour / RLH joint proportions / articulated rifle stance';
     if(form==='brute')root.userData.bruteRevision=BRUTE_V3.revision;
     if(form==='stalker'||form==='synth')root.userData.posterRevision=POSTER_CHASSIS_REVISION;
     if(form==='spectre'){root.userData.designRevision='K9-independent-hunter-v2';root.userData.surfaceStyle='graphite separated plates / exposed tendons / reverse knees / retractable blades';}
@@ -348,6 +349,7 @@ export function createEnemyFactory(mats,{detail='high'}={}){
         joints[kit.probeHead].rotation.x=T.MathUtils.clamp((flight.aimPitch||0)-dronePitch,-.55,.4);
         const charge=T.MathUtils.clamp(flight.chargeProgress||0,0,1),flash=simulationTime-(flight.lastShotAt??-99)<.13?1:0;
         joints[kit.probeSignal].scale.setScalar(1+charge*(.35+.15*Math.sin(time*27))+flash*.7);
+        root.userData.s19V3?.animate(time,flight,simulationTime);
         return;
       }
       // Infer real travelled distance: a stunned enemy or a shooter holding its
@@ -420,6 +422,7 @@ export function createEnemyFactory(mats,{detail='high'}={}){
         riflePose?.update(joints[kit.groundGun]);
       }
     };
+    if(probe)installProbeS19V3(root,pelvis);
     return root;
   }
   return {create(...args){const actor=create(...args),animate=actor.userData.animate;if(animate)actor.userData.animate=(...pose)=>{const entity=pose[3],time=pose[4]??pose[0];if(entity?.iemUntil>time)return;return animate.apply(actor.userData,pose);};return actor;}};
