@@ -3,6 +3,7 @@ import {createGlove} from './hands.js';
 import {poseUnarmedForInspection} from './rlh-firefighter.js';
 import { addCapeToOriginalSoldier } from './personnage-cape-addon.js?v=3.55';
 import { attachShadowConcept } from './personnage-shadow-concept.js?v=3.55';
+import { attachHeroGear } from './hero-gear.js';
 import * as T from './vendor/three.webgpu.min.js';
 import { WebGLRenderer } from './vendor/three.module.min.js';
 import { createCharacterKit, createSoldier } from './soldier.js';
@@ -90,7 +91,7 @@ const createGun=(options={})=>buildGun({
   makeFlash:parent=>{const flash=new T.Object3D();parent.add(flash);return flash;}
 });
 const capeParts=new Map();
-const shadowParts=new Map();
+const shadowParts=new Map(),tabardParts=new Map();
 const subjects=new Map();
 const inspectionHands=new Map();
 for(const id of ['lylu','ghju']){
@@ -100,6 +101,9 @@ for(const id of ['lylu','ghju']){
   // Masquer l'ancien casque et monter les plaques/visière Shadow avant la cape.
   shadowParts.set(id,attachShadowConcept(model,characterForId(id)));
   capeParts.set(id,addCapeToOriginalSoldier(model,characterForId(id)));
+  // Same Blender gear as the game (cowl, belt, slung rifle, riveted plates, torn cloak and front tabard).
+  tabardParts.set(id,addCapeToOriginalSoldier(model,characterForId(id),{front:true}));
+  attachHeroGear(model,characterForId(id),{cape:capeParts.get(id),tabard:tabardParts.get(id),armour:shadowParts.get(id)});
   model.root.traverse(o=>{if(o.isMesh&&o.material?.isMeshStandardMaterial){o.material.envMap=surfaces.environment;o.material.envMapIntensity=o.material.userData.studioReflection??(o.material.name==='Shadow dark visor'?.18:.65);}});
   const gloves=[createGlove(kit.gloves,{mirror:true,sleeve:false}),createGlove(kit.gloves,{sleeve:false})];
   for(const glove of gloves){glove.visible=false;model.root.add(glove);}
@@ -176,7 +180,7 @@ $('sound-preview').addEventListener('click',async()=>{
     playLaserShot(previewAudio,['r9','bloom','lance','thorn','nova'][state.weapon],1);
   }catch(error){console.warn('Essai audio laser non disponible',error);}
 });
-$('cape-toggle').addEventListener('change',e=>{state.capeEnabled=e.target.checked;for(const v of capeParts.values())v.anchor.visible=state.capeEnabled;});
+$('cape-toggle').addEventListener('change',e=>{state.capeEnabled=e.target.checked;for(const v of [...capeParts.values(),...tabardParts.values()])v.anchor.visible=state.capeEnabled;});
 $('cape-wind').addEventListener('input',e=>{state.capeWind=Number(e.target.value)/100;$('cape-wind-value').textContent=e.target.value;});
 $('bones').addEventListener('change',e=>{state.showBones=e.target.checked;markers.visible=state.showBones;});
 $('grid').addEventListener('change',e=>{grid.visible=ground.visible=e.target.checked;});
@@ -281,6 +285,7 @@ function tick(now){
  }
  const symmetric=state.weapon<0&&state.motion==='idle';
  capeParts.get(state.character).update(state.clock,state.motion,state.capeWind,{symmetric});
+ tabardParts.get(state.character).update(state.clock,state.motion,state.capeWind,{symmetric});
  refreshSkeleton(model);
  const w=canvas.clientWidth,h=canvas.clientHeight;
  // Portrait inspection keeps the entire boot-to-helmet silhouette above the mobile control drawer.
