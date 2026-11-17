@@ -308,9 +308,9 @@ def camera(name,location,scale):
     d=bpy.data.cameras.new(name);ob=bpy.data.objects.new(name,d);studio_col.objects.link(ob)
     ob.location=location;ob.rotation_euler=(Vector((0,0,.59))-ob.location).to_track_quat("-Z","Y").to_euler()
     d.type="ORTHO";d.ortho_scale=scale;return ob
-area("Overhead strip softbox",(-2,1,4),(.95,.93,1),430,3
-area("Red side bounce",(2,-2,1.5),(1,.18,.35),310,2.7
-area("Front rim",-Vector((1,3,-2)),(.65,.8,1),200,2.5
+area("Overhead strip softbox",(-2,1,4),(.95,.93,1),430,3)
+area("Red side bounce",(2,-2,1.5),(1,.18,.35),310,2.7)
+area("Front rim",-Vector((1,3,-2)),(.65,.8,1),200,2.5)
 cam_front=camera("S19 Front 3-quarter", (2.45,3.55,1.75),2.48)
 camera("S19 Top identification",(.1,.18,5),3.0)
 camera("S19 Rear 3-quarter",(-3,-2.4,2.2),3.25)
