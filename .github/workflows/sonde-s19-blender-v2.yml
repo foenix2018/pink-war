@@ -45,7 +45,7 @@ jobs:
             assert f.is_file() and f.stat().st_size>100000,(str(f),'missing')
             with f.open('rb') as b:
               sig=b.read(4)
-            assert sig==b'glTF' if n.endswith('.glb') else sig==b'BLEN'
+            assert (sig==b'glTF') if n.endswith('.glb') else (b'BLENDER' in f.read_bytes()[:64])
             print(n,f.stat().st_size)
           report=json.loads((d/'S19_FIDELITY_V3_REPORT.json').read_text())
           assert len(report['fan_centers'])==4,report
