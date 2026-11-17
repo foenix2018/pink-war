@@ -1,0 +1,43 @@
+name: Pink Wars - S19 V3 in-game browser QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - dist/enemies.js
+      - dist/probe-s19-v3.js
+      - dist/vendor/s19-gltf-loader.js
+      - dist/assets/enemies/sonde-s19-v3-game.glb
+      - tests/436-sonde-s19-v3.test.mjs
+      - tools/sonde_s19_integration/smoke_browser.mjs
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run S19 asset and tactical behavior tests
+        run: |
+          node --check dist/probe-s19-v3.js
+          node --check dist/enemies.js
+          node --test tests/436-sonde-s19-v3.test.mjs
+      - name: Install browser
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Browser smoke - real S19 in enemy gallery, desktop and iPhone
+        run: node tools/sonde_s19_integration/smoke_browser.mjs
+      - name: Upload screenshots for visual audit
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: SONDE-S19-V3-INGAME-DESKTOP-MOBILE
+          path: e2e-previews/
+          if-no-files-found: warn
+          retention-days: 15
