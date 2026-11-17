@@ -1,4 +1,4 @@
-name: SONDE S-19 Reference V2 - Standalone Blender Model
+name: SONDE S-19 Fidelity V3 - standalone Blender
 on:
   push:
     branches:
@@ -10,53 +10,71 @@ on:
 permissions:
   contents: read
 jobs:
-  blender-sonde:
+  build-fidelity:
     runs-on: ubuntu-24.04
-    timeout-minutes: 50
+    timeout-minutes: 60
     steps:
-      - name: Checkout workshop without touching game deployment
+      - name: Checkout independent workshop branch
         uses: actions/checkout@v4
-      - name: Node 22
+      - name: Install Node 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install source-model export dependencies
+      - name: Dependencies for real original S19 export
         run: npm install --no-save playwright@1.56.1 esbuild@0.25.11 three@0.181.0
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-      - name: Install Blender and CPU lighting support
+      - name: Install Blender and headless render support
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y blender python3-numpy libegl1 libgles2 libgl1-mesa-dri libopengl0 xvfb
           blender --version | head -n 2
-      - name: Extract Pink Wars real S19 probe mesh + rotor bones
+      - name: Validate Python source syntax
+        run: python3 -m py_compile tools/standalone_s19/enhance_s19_fidelity_v3.py tools/standalone_s19/render_s19_v3.py
+      - name: Extract existing playable drone rig and geometry
         run: node tools/standalone_s19/extract_s19.mjs
-      - name: Build upgraded S19 with Blender hard-surface detailing and metallic shaders
-        run: blender -b --python tools/standalone_s19/enhance_s19.py
-      - name: Verify final GLB and Blender files
+      - name: Rebuild S19 V3 against reference in Blender
+        run: blender -b --python tools/standalone_s19/enhance_s19_fidelity_v3.py
+      - name: Validate native Blender file, GLB, frame and articulated turbines
         run: |
           python3 - <<'PY'
           import pathlib,json,struct
-          p=pathlib.Path('exports/sonde-s19/final')
-          for n in ['SONDE-S19-REFERENCE-V2.glb','SONDE-S19-REFERENCE-V2.blend']:
-            f=p/n
-            assert f.is_file() and f.stat().st_size>50000,(n,'missing or empty')
-            with f.open('rb') as g:
-              assert (g.read(4)==b'glTF') if n.endswith('glb') else (b'BLEN' in f.read_bytes()[:32])
-            print('Verified',n,f.stat().st_size)
-          print(json.dumps(json.loads((p/'S19-VALIDATION.json').read_text())['features'],ensure_ascii=False))
+          d=pathlib.Path('exports/sonde-s19/v3-fidelity')
+          for n in ['SONDE-S19-FIDELITY-V3.glb','SONDE-S19-FIDELITY-V3.blend']:
+            f=d/n
+            assert f.is_file() and f.stat().st_size>100000,(str(f),'missing')
+            with f.open('rb') as b:
+              sig=b.read(4)
+            assert sig==b'glTF' if n.endswith('.glb') else sig==b'BLEN'
+            print(n,f.stat().st_size)
+          report=json.loads((d/'S19_FIDELITY_V3_REPORT.json').read_text())
+          assert len(report['fan_centers'])==4,report
+          assert report['new_skeleton_bones']>=6,report
+          assert report['new_objects']>=150,report
+          # Inspect GLB JSON's node geometry and actual exported animation.
+          glb=(d/'SONDE-S19-FIDELITY-V3.glb').read_bytes()
+          _,version,total=struct.unpack_from('<4sII',glb,0)
+          assert total==len(glb) and version==2
+          ln,typ=struct.unpack_from('<I4s',glb,12)
+          doc=json.loads(glb[20:20+ln].decode('utf-8'))
+          assert len(doc.get('meshes',[]))>=100
+          assert doc.get('animations'), 'No fan spin animation in exported GLB'
+          print('Verified',len(doc['meshes']),'meshes; animations',len(doc['animations']))
           PY
-      - name: Render S19 front, top and rear views with Blender Cycles
-        continue-on-error: true
+      - name: Generate 4 Cycles reference-matched orthographic views
         env:
           LIBGL_ALWAYS_SOFTWARE: '1'
-        run: xvfb-run -a blender -b --python tools/standalone_s19/render_s19.py
-      - name: Upload original and enhanced Blender models with visual previews
+        run: xvfb-run -a blender -b --python tools/standalone_s19/render_s19_v3.py
+      - name: Upload verified Blender / GLB / screenshots, leave Pink Wars unchanged
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: SONDE-S19-PINK-WARS-BLENDER-V2
-          path: exports/sonde-s19/
-          if-no-files-found: warn
+          name: SONDE-S19-FIDELITY-V3
+          path: |
+            exports/sonde-s19/SONDE-S19-SOURCE.glb
+            exports/sonde-s19/SONDE-S19-ORIGINAL.png
+            exports/sonde-s19/source-report.json
+            exports/sonde-s19/v3-fidelity/
           retention-days: 30
+          if-no-files-found: warn
           compression-level: 6
