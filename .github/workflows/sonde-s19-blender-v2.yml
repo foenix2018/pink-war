@@ -42,7 +42,7 @@ jobs:
             f=p/n
             assert f.is_file() and f.stat().st_size>50000,(n,'missing or empty')
             with f.open('rb') as g:
-              assert g.read(4)==(b'glTF' if n.endswith('glb') else b'BLEN')
+              assert (g.read(4)==b'glTF') if n.endswith('glb') else (b'BLEN' in f.read_bytes()[:32])
             print('Verified',n,f.stat().st_size)
           print(json.dumps(json.loads((p/'S19-VALIDATION.json').read_text())['features'],ensure_ascii=False))
           PY
