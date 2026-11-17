@@ -53,13 +53,13 @@ def material(name,hexcolor,metallic=.0,roughness=.5,emission=0):
     return m
 
 graphite=material("Chipped graphite | reinforced housing",0x282A31,.78,.39)
-armor=material("Chipped titanium | slate shell",0x555660,.83,.36)
-armor2=material("Weathered edge | dark titan",0x3B3C46,.9,.33)
+armor=material("Chipped titanium | slate shell",0x393B44,.83,.36)
+armor2=material("Weathered edge | dark titan",0x303138,.9,.33)
 dark=material("Ceramic black | intake",0x0B0B12,.44,.37)
-turbine=material("Brushed steel | blade",0x696B76,.88,.30)
-stainless=material("Bright nickel | rivets",0xA3A1A7,.86,.26)
-red=material("NEON S-19 | red signal",0xFF174F,.12,.23,7)
-red2=material("NEON S-19 | magenta optical",0xFF397D,.05,.16,13)
+turbine=material("Brushed steel | blade",0x50515B,.88,.30)
+stainless=material("Bright nickel | rivets",0x95969C,.86,.26)
+red=material("NEON S-19 | red signal",0xFF0D30,.12,.23,7)
+red2=material("NEON S-19 | magenta optical",0xFF2852,.05,.16,13)
 lens=material("Optical core | deep ruby glass",0x59001F,.42,.07,1.1)
 ink=material("Stencilled S19 | light titanium",0xE4DEE2,.18,.76)
 cable_mat=material("Black rubber | hydraulic loom",0x121218,.03,.78)
@@ -69,6 +69,21 @@ original_materials=[]
 for mat in list(bpy.data.materials):
     if mat in {graphite,armor,armor2,dark,turbine,stainless,red,red2,lens,ink,cable_mat}: continue
     if not mat.use_nodes: continue
+    # Stock enemy uses cyan unlit shader for optics; explicitly replace the full node
+    # graph so that all emitted/reflected cyan becomes scarlet, not merely the base tint.
+    if mat.name in {"Material_4", "ORDRE independent optics"}:
+        mat.node_tree.nodes.clear()
+        out=mat.node_tree.nodes.new("ShaderNodeOutputMaterial")
+        p=mat.node_tree.nodes.new("ShaderNodeBsdfPrincipled")
+        p.inputs["Base Color"].default_value=(.96,.012,.057,1)
+        p.inputs["Emission Color"].default_value=(1.0,.008,.046,1)
+        p.inputs["Emission Strength"].default_value=4.5
+        p.inputs["Metallic"].default_value=.18
+        p.inputs["Roughness"].default_value=.2
+        mat.node_tree.links.new(p.outputs["BSDF"],out.inputs["Surface"])
+        mat.name="SOURCE CYAN CORRECTED / S-19 RED WARNING"
+        original_materials.append(mat.name)
+        continue
     p=next((n for n in mat.node_tree.nodes if n.type=="BSDF_PRINCIPLED"),None)
     if p is None:continue
     c=p.inputs["Base Color"].default_value
@@ -149,7 +164,7 @@ def marking(text,name,loc,size,mat,rotation=(0,0,0)):
 
 # Hull: original skinned châssis kept, with fitted angular panels layered on top.
 shell("S-19 / outer roof pentagon",
- [(-.27,-.36,.886),(.16,-.43,.89),(.33,-.12,.86),(.28,.23,.834),(.09,.39,.812),(-.24,.34,.829),(-.34,.02,.86)],armor,.026)
+ [(-.27,-.36,.951),(.16,-.43,.956),(.33,-.12,.938),(.28,.23,.892),(.09,.39,.872),(-.24,.34,.897),(-.34,.02,.93)],armor,.026)
 for sign in [-1,1]:
     shell("S-19 / angular dorsal cheek %s"%sign,
       [(sign*.19,-.34,.865),(sign*.32,-.18,.84),(sign*.362,.16,.738),
@@ -213,7 +228,7 @@ for sx in [-1,1]:
     rod(tag+" / polished shock rod",(sx*.36,sy*.20,.52),(sx*.55,sy*.32,.51),.011,stainless,12)
     curve(tag+" / power line",[(sx*.25,sy*.12,.58),(sx*.38,sy*.24,.54),(sx*.54,sy*.32,.51),(sx*.61,sy*.42,.47)],.008,cable_mat)
     curve(tag+" / warning cable",[(sx*.26,sy*.12,.64),(sx*.41,sy*.26,.63),(sx*.56,sy*.39,.52)],.004,red)
-    cube(tag+" / motor armour pod",(x,y,.542),(.22,.22,.045),armor2,.032)
+    cube(tag+" / motor armour pod",(x,y,.451),(.105,.105,.035),armor2,.025)
     # Outer duct and nested intake, keeping the original fan bones in the real imported rig.
     torus(tag+" / primary metal annulus",(x,y,z),.246,.044,armor)
     torus(tag+" / double-layer chamfer",(x,y,z+.021),.231,.018,armor2)
@@ -251,9 +266,9 @@ for sx in [-1,1]:
 rod("Rear tactical radio",(.062,-.16,.88),(.062,-.17,1.19),.009,stainless,10)
 sphere("Rear radio status",(.062,-.17,1.19),(.013,.013,.013),red)
 rod("Secondary aerial",(-.11,-.22,.88),(-.15,-.26,1.08),.006,graphite,10)
-marking("S-19","S-19 | top number",(-.105,.10,.919),.133,ink)
-marking("ORDRE","ORDRE | manufactured identifier",(.072,-.17,.918),.058,ink)
-marking("PW / EN-019","PW reference code",(0,-.33,.902),.034,red)
+marking("S-19","S-19 | top number",(-.105,.10,.973),.133,ink)
+marking("ORDRE","ORDRE | manufactured identifier",(.072,-.17,.972),.058,ink)
+marking("PW / EN-019","PW reference code",(0,-.33,.969),.034,red)
 # Incised armored vent slots and directional red beacons.
 for k in range(5):
     cube("Hull overhead vent",( -.25+k*.10,-.32,.901),(.059,.009,.011),dark,.003)
