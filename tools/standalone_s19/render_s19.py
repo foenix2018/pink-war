@@ -5,7 +5,10 @@ root=Path("exports/sonde-s19/final").resolve()
 bpy.ops.wm.open_mainfile(filepath=str(root/"SONDE-S19-REFERENCE-V2.blend"))
 s=bpy.context.scene
 s.render.engine="CYCLES"
-s.cycles.samples=18
+s.cycles.samples=24
+s.cycles.use_denoising=False
+for layer in s.view_layers:
+    if hasattr(layer,"cycles"):layer.cycles.use_denoising=False
 s.render.resolution_x=1000;s.render.resolution_y=800;s.render.resolution_percentage=100
 s.render.image_settings.file_format="PNG"
 for name,filename in [
