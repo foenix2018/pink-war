@@ -169,6 +169,14 @@ for sign in [-1,1]:
     shell("S-19 / angular dorsal cheek %s"%sign,
       [(sign*.19,-.34,.865),(sign*.32,-.18,.84),(sign*.362,.16,.738),
        (sign*.306,.312,.715),(sign*.23,.02,.858)],armor2,.017)
+    # External titanium scutes over the original hull — exposed seams and rivets.
+    shell("S19 / shoulder facet %s"%sign,
+      [(sign*.185,-.27,.967),(sign*.255,-.20,.959),(sign*.263,-.045,.941),
+       (sign*.152,.025,.953),(sign*.119,-.15,.969)],armor2,.015,.003)
+    for k in range(3):
+      cube("S19 / diagonal machined plate %s %s"%(sign,k),
+        (sign*(.13+k*.037),-.26+k*.085,.974-k*.007),
+        (.045,.066,.012),graphite,.004,(0,0,sign*.17))
     shell("S-19 / fore-quarter armor %s"%sign,
       [(sign*.20,.39,.80),(sign*.37,.31,.744),(sign*.383,.365,.592),
        (sign*.27,.51,.60),(sign*.12,.51,.75)],graphite,.020)
@@ -266,9 +274,9 @@ for sx in [-1,1]:
 rod("Rear tactical radio",(.062,-.16,.88),(.062,-.17,1.19),.009,stainless,10)
 sphere("Rear radio status",(.062,-.17,1.19),(.013,.013,.013),red)
 rod("Secondary aerial",(-.11,-.22,.88),(-.15,-.26,1.08),.006,graphite,10)
-marking("S-19","S-19 | top number",(-.105,.10,.973),.133,ink)
-marking("ORDRE","ORDRE | manufactured identifier",(.072,-.17,.972),.058,ink)
-marking("PW / EN-019","PW reference code",(0,-.33,.969),.034,red)
+marking("S-19","S-19 | top number",(-.105,.10,.973),.133,ink,(0,0,math.pi))
+marking("ORDRE","ORDRE | manufactured identifier",(.072,-.17,.972),.058,ink,(0,0,math.pi))
+marking("PW / EN-019","PW reference code",(0,-.33,.969),.034,red,(0,0,math.pi))
 # Incised armored vent slots and directional red beacons.
 for k in range(5):
     cube("Hull overhead vent",( -.25+k*.10,-.32,.901),(.059,.009,.011),dark,.003)
@@ -300,17 +308,17 @@ def camera(name,location,scale):
     d=bpy.data.cameras.new(name);ob=bpy.data.objects.new(name,d);studio_col.objects.link(ob)
     ob.location=location;ob.rotation_euler=(Vector((0,0,.59))-ob.location).to_track_quat("-Z","Y").to_euler()
     d.type="ORTHO";d.ortho_scale=scale;return ob
-area("Overhead strip softbox",(-2,1,4),(.95,.93,1),920,3)
-area("Red side bounce",(2,-2,1.5),(1,.18,.35),760,2.7)
-area("Front rim",-Vector((1,3,-2)),(.65,.8,1),410,2.5)
-cam_front=camera("S19 Front 3-quarter", (2.7,3.75,2.7),3.2)
+area("Overhead strip softbox",(-2,1,4),(.95,.93,1),430,3
+area("Red side bounce",(2,-2,1.5),(1,.18,.35),310,2.7
+area("Front rim",-Vector((1,3,-2)),(.65,.8,1),200,2.5
+cam_front=camera("S19 Front 3-quarter", (2.45,3.55,1.75),2.48)
 camera("S19 Top identification",(.1,.18,5),3.0)
 camera("S19 Rear 3-quarter",(-3,-2.4,2.2),3.25)
 scene.camera=cam_front
 scene.world=bpy.data.worlds.new("S19 Nocturne")
 scene.world.use_nodes=True
 scene.world.node_tree.nodes.get("Background").inputs["Color"].default_value=(.012,.014,.024,1)
-scene.world.node_tree.nodes.get("Background").inputs["Strength"].default_value=.55
+scene.world.node_tree.nodes.get("Background").inputs["Strength"].default_value=.33
 scene.render.resolution_x=1200;scene.render.resolution_y=950
 scene.render.resolution_percentage=100
 scene.render.image_settings.file_format="PNG"
