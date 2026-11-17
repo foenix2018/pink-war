@@ -1,0 +1,62 @@
+name: SONDE S-19 Reference V2 - Standalone Blender Model
+on:
+  push:
+    branches:
+      - workshop/sonde-s19-blender-v2
+    paths:
+      - tools/standalone_s19/**
+      - .github/workflows/sonde-s19-blender-v2.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  blender-sonde:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - name: Checkout workshop without touching game deployment
+        uses: actions/checkout@v4
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install source-model export dependencies
+        run: npm install --no-save playwright@1.56.1 esbuild@0.25.11 three@0.181.0
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Install Blender and CPU lighting support
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y blender python3-numpy libegl1 libgles2 libgl1-mesa-dri libopengl0 xvfb
+          blender --version | head -n 2
+      - name: Extract Pink Wars real S19 probe mesh + rotor bones
+        run: node tools/standalone_s19/extract_s19.mjs
+      - name: Build upgraded S19 with Blender hard-surface detailing and metallic shaders
+        run: blender -b --python tools/standalone_s19/enhance_s19.py
+      - name: Verify final GLB and Blender files
+        run: |
+          python3 - <<'PY'
+          import pathlib,json,struct
+          p=pathlib.Path('exports/sonde-s19/final')
+          for n in ['SONDE-S19-REFERENCE-V2.glb','SONDE-S19-REFERENCE-V2.blend']:
+            f=p/n
+            assert f.is_file() and f.stat().st_size>50000,(n,'missing or empty')
+            with f.open('rb') as g:
+              assert g.read(4)==(b'glTF' if n.endswith('glb') else b'BLEN')
+            print('Verified',n,f.stat().st_size)
+          print(json.dumps(json.loads((p/'S19-VALIDATION.json').read_text())['features'],ensure_ascii=False))
+          PY
+      - name: Render S19 front, top and rear views with Blender Cycles
+        continue-on-error: true
+        env:
+          LIBGL_ALWAYS_SOFTWARE: '1'
+        run: xvfb-run -a blender -b --python tools/standalone_s19/render_s19.py
+      - name: Upload original and enhanced Blender models with visual previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SONDE-S19-PINK-WARS-BLENDER-V2
+          path: exports/sonde-s19/
+          if-no-files-found: warn
+          retention-days: 30
+          compression-level: 6
