@@ -276,21 +276,30 @@ def build(asset, ao_size, samples, out=None):
         bpy.ops.object.select_all(action='DESELECT')
         for t in thin: t.select_set(True)
         ob.select_set(True); bpy.context.view_layer.objects.active = ob; bpy.ops.object.join(); ob = bpy.context.view_layer.objects.active
-    # UV0: metric box projection.
-    me = ob.data; uv0 = me.uv_layers.new(name='UVMap'); bm = bmesh.new(); bm.from_mesh(me); lay = bm.loops.layers.uv['UVMap']
-    for f in bm.faces:
-        n = f.normal; ax = max(range(3), key=lambda i: abs(n[i]))
-        for l in f.loops:
-            co = l.vert.co; l[lay].uv = (co.y, co.z) if ax == 0 else (co.x, co.z) if ax == 1 else (co.x, co.y)
-    bm.to_mesh(me); bm.free()
+    finish(ob, asset.name, ao_size, samples, OUT_DIR)
+
+def finish(ob, name, ao_size, samples, OUT_DIR, keep_uv0=False, ao_distance=1.6, floor=True):
+    """UVs, baked occlusion, export and compaction of a finished mesh object (also used for simulated cloth)."""
+    sc = bpy.context.scene; me = ob.data
+    class asset: pass
+    asset.name = name
+    if keep_uv0: me.uv_layers[0].name = 'UVMap'
+    else:
+      # UV0: metric box projection.
+      uv0 = me.uv_layers.new(name='UVMap'); bm = bmesh.new(); bm.from_mesh(me); lay = bm.loops.layers.uv['UVMap']
+      for f in bm.faces:
+          n = f.normal; ax = max(range(3), key=lambda i: abs(n[i]))
+          for l in f.loops:
+              co = l.vert.co; l[lay].uv = (co.y, co.z) if ax == 0 else (co.x, co.z) if ax == 1 else (co.x, co.y)
+      bm.to_mesh(me); bm.free()
     # UV1: lightmap unwrap.
     uv1 = me.uv_layers.new(name='Lightmap'); me.uv_layers.active = uv1
     bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.uv.smart_project(angle_limit=math.radians(60), island_margin=.004, area_weight=0.0, correct_aspect=True, scale_to_bounds=True)
     bpy.ops.object.mode_set(mode='OBJECT')
     # Bake ambient occlusion with a floor under the piece.
-    bpy.ops.mesh.primitive_plane_add(size=80, location=(0, 0, -.001)); floor = bpy.context.active_object
-    world = bpy.data.worlds.new('w'); sc.world = world; world.light_settings.distance = 1.6
+    if floor: bpy.ops.mesh.primitive_plane_add(size=80, location=(0, 0, -.001)); floor = bpy.context.active_object
+    world = bpy.data.worlds.new('w'); sc.world = world; world.light_settings.distance = ao_distance
     sc.render.engine = 'CYCLES'; sc.cycles.device = 'CPU'; sc.cycles.samples = samples
     img = bpy.data.images.new(asset.name + '_ao', ao_size, ao_size, alpha=False)
     for m in ob.data.materials:
@@ -306,12 +315,12 @@ def build(asset, ao_size, samples, out=None):
         bsdf = m.node_tree.nodes.get('Principled BSDF')
         if bsdf and m.name in MATCOLOR: bsdf.inputs['Base Color'].default_value = MATCOLOR[m.name]
     me.uv_layers.active = me.uv_layers['UVMap']; me.uv_layers['UVMap'].active_render = True
-    bpy.data.objects.remove(floor)
+    if floor: bpy.data.objects.remove(floor)
     bpy.ops.object.select_all(action='DESELECT'); ob.select_set(True)
     bpy.ops.export_scene.gltf(filepath=os.path.join(OUT_DIR, asset.name + '.glb'), export_format='GLB', use_selection=True, export_apply=True,
                               export_texcoords=True, export_normals=True, export_materials='EXPORT', export_image_format='NONE', export_yup=True)
     tris = sum(len(p.vertices) - 2 for p in me.polygons)
-    compact(os.path.join(OUT_DIR, asset.name + '.glb'), os.path.join(OUT_DIR, asset.name + '.pwm'))
+    compact(os.path.join(OUT_DIR, asset.name + '.glb'), os.path.join(OUT_DIR, asset.name + '.pwm'), keep_uv0)
     from PIL import Image
     Image.open(png).convert('L').save(os.path.join(OUT_DIR, asset.name + '_ao.jpg'), quality=78, optimize=True); os.remove(png)
     print(f'{asset.name}: {tris} triangles, {len(me.materials)} matériaux')
@@ -319,7 +328,7 @@ def build(asset, ao_size, samples, out=None):
 # Compact runtime format « PWM1 » read by dist/m04-models.js: JSON header + one binary block.
 # Positions int16 normalised to the asset bounds, normals int8, lightmap UV uint16, indices uint16/uint32.
 # The texture UV is not stored: the game recomputes the same metric box projection from position and normal.
-def compact(glb_path, out_path):
+def compact(glb_path, out_path, keep_uv0=False):
     import json, struct
     import numpy as np
     b = open(glb_path, 'rb').read(); n = struct.unpack('<I', b[12:16])[0]; j = json.loads(b[20:20 + n]); off = 20 + n; bn = struct.unpack('<I', b[off:off + 4])[0]; blob = b[off + 8:off + 8 + bn]
@@ -339,8 +348,10 @@ def compact(glb_path, out_path):
         nn = np.zeros((len(nor), 4), np.int8); nn[:, :3] = np.round(nor * 127)
         uu = np.round(np.clip(uv1, 0, 1) * 65535).astype(np.uint16)
         ii = idx.astype(np.uint16 if len(pos) < 65536 else np.uint32)
-        head.append({'material': j['materials'][p['material']]['name'], 'vertices': len(pos), 'indices': len(ii), 'index32': len(pos) >= 65536,
-                     'position': push(q), 'normal': push(nn), 'uv1': push(uu), 'index': push(ii)})
+        entry = {'material': j['materials'][p['material']]['name'], 'vertices': len(pos), 'indices': len(ii), 'index32': len(pos) >= 65536,
+                 'position': push(q), 'normal': push(nn), 'uv1': push(uu), 'index': push(ii)}
+        if keep_uv0: entry['uv0'] = push(np.ascontiguousarray(acc(p['attributes']['TEXCOORD_0']), np.float32))
+        head.append(entry)
     meta = json.dumps({'format': 'PWM1', 'min': lo.tolist(), 'max': hi.tolist(), 'primitives': head}).encode(); meta += b' ' * ((-len(meta)) % 4)
     with open(out_path, 'wb') as f: f.write(b'PWM1' + struct.pack('<I', len(meta)) + meta + b''.join(parts))
     os.remove(glb_path)

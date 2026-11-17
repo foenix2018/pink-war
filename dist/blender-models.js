@@ -18,6 +18,8 @@ export function parsePWM(T, buffer) {
     }
     const index = p.index32 ? new Uint32Array(buffer, base + p.index, p.indices) : new Uint16Array(buffer, base + p.index, p.indices);
     const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(pos, 3)); g.setAttribute('normal', new T.BufferAttribute(nor, 3)); g.setAttribute('uv1', new T.BufferAttribute(uv1, 2));
+    // Authored texture UV (fabric, decals) when the model carries one; otherwise boxUV() derives it.
+    if (p.uv0 !== undefined) { const uv = new Float32Array(buffer.slice(base + p.uv0, base + p.uv0 + count * 8)); for (let i = 1; i < uv.length; i += 2) uv[i] = 1 - uv[i]; g.setAttribute('uv', new T.BufferAttribute(uv, 2)); } // glTF V is flipped
     g.setIndex(new T.BufferAttribute(p.index32 ? new Uint32Array(index) : new Uint16Array(index), 1)); g.computeBoundingSphere(); g.userData.webgpuShape = 'blender';
     return { material: p.material, geometry: g, triangles: p.indices / 3 };
   });
@@ -47,7 +49,7 @@ export async function loadBlenderModels(T, { files, M, alias = {}, base, low = f
     const res = await fetchImpl(base + file + '.pwm'); if (!res.ok) throw Error(file + ' ' + res.status);
     const model = parsePWM(T, await res.arrayBuffer()), ao = await aoTexture(file);
     for (const p of model.primitives) {
-      const src = M[ALIAS[p.material] || p.material] || M.steel; boxUV(T, p.geometry, src.userData?.tile || 2);
+      const src = M[ALIAS[p.material] || p.material] || M.steel; if (!p.geometry.attributes.uv) boxUV(T, p.geometry, src.userData?.tile || 2);
       p.mat = src.clone(); p.mat.name = 'Blender / ' + file + ' / ' + p.material;
       if (!p.mat.isMeshBasicMaterial) { p.mat.aoMap = ao; p.mat.aoMapIntensity = 1; }
     }

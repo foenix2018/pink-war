@@ -81,7 +81,8 @@ export function addCapeToOriginalSoldier(model, profile, {front=false}={}) {
     const mesh=new T.Mesh(g,ribbonMaterial);mesh.frustumCulled=false;cloth.add(mesh);return {g,a};
   });
 
-  const direction=front?-1:1,topHeight=front?1.32:1.48,length=front?.84:1.13;
+  // Back cloak after the concept art: falls to the ankles and opens wide (torn hem cut by the fabric's alpha).
+  const direction=front?-1:1,topHeight=front?1.32:1.48,length=front?.84:1.30;
   // Cross-sections of the fitted cuirass, waist and belt in the rig's bind
   // frame. The cloth wraps around them instead of hanging on a distant plane.
   const sections=[
@@ -194,7 +195,7 @@ export function addCapeToOriginalSoldier(model, profile, {front=false}={}) {
       const v=j/rows,lag=Math.pow(v,1.4);
       const y=topHeight-length*v;
       const release=T.MathUtils.smoothstep(1.22-y,0,.30);
-      const width=front?(.265+.060*v):(.340+.240*Math.pow(v,1.25));
+      const width=front?(.265+.060*v):(.420+.600*Math.pow(v,1.15));
       for(let i=0;i<=columns;i++) {
         const u=i/columns,edge=2*u-1,n=(j*(columns+1)+i)*3;
         // Deux plis verticaux amples, sans vibrations rapides.

@@ -52,7 +52,8 @@ for(const profile of CHARACTERS){
     assert.equal(entry.armour.helmet.parent,soldier.actor.bone('Head'));
     assert.equal(entry.armour.spine.parent,soldier.actor.bone('Spine2'));
     assert.equal(entry.cape.anchor.parent,soldier.body);
-    assert.equal(entry.tabard,undefined,'front tabard is removed');
+    // Concept art of November 2026: a torn front tabard hangs from the sternum again (same animated cloth).
+    assert.equal(entry.tabard?.anchor?.parent,soldier.body,'torn front tabard follows the chest');
     const capeMesh=entry.cape.anchor.children[0];
     assert.ok(capeMesh.material.map.isDataTexture,'woven texture needs no external asset');
     const before=capeMesh.geometry.attributes.position.array.slice();
@@ -247,7 +248,8 @@ for(const profile of CHARACTERS){
       }
       const width=p.getX(rows*(columns+1)+columns)-p.getX(rows*(columns+1));
       const ratio=width/shoulderWidth;
-      assert.ok(ratio>.80&&ratio<.98,'the flared hem follows the wider cape visible in the wallpapers');
+      // Concept art of November 2026: a wide cloak to the ankles, much wider than the shoulders at the hem.
+      assert.ok(ratio>1.3&&ratio<2.1,'the torn cloak opens wide like the concept art: '+ratio.toFixed(2));
     }
     for(const hand of hands)hand.userData.dispose();soldier.dispose();
   });

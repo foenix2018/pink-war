@@ -2,6 +2,7 @@
 // The base Mixamo/RLH rig, weapon hands and combat logic remain unchanged.
 import {attachShadowConcept} from './personnage-shadow-concept.js?v=3.74.0';
 import {addCapeToOriginalSoldier} from './personnage-cape-addon.js?v=3.74.0';
+import {attachHeroGear} from './hero-gear.js';
 
 export function applyShadowMaterials(kit,profile){
   // Keep both teams' glow/accent colors while replacing the pale AÉGIS shell
@@ -22,6 +23,9 @@ export function installShadowUnit(model,profile){
   if(model.shadowUnit)return model.shadowUnit;
   const armour=attachShadowConcept(model,profile);
   const cape=addCapeToOriginalSoldier(model,profile);
+  // Torn front tabard and the Blender gear of the concept art (cowl, belt, slung rifle, riveted plates).
+  const tabard=addCapeToOriginalSoldier(model,profile,{front:true});
+  const gear=attachHeroGear(model,profile,{cape,tabard,armour});
 
   // Drive the cape with the soldier's actual animation clock. This covers
   // 3rd-person campaign, arena, stand, outfit, lobby and AT HOME companion.
@@ -35,13 +39,14 @@ export function installShadowUnit(model,profile){
     const movement=flight.airborne?'jump':flight.crouched&&travelling?'crouchWalk':
       model.nativeMotion==='run'?'run':travelling?'walk':'idle';
     cape.update(time,movement,.63,{velocity:locomotion.forward||0,lateral:locomotion.lateral||0,turn:locomotion.turn||0});
+    tabard.update(time,movement,.63,{velocity:locomotion.forward||0,lateral:locomotion.lateral||0,turn:locomotion.turn||0});
   };
   const dispose=model.dispose.bind(model);
   model.dispose=()=>{
     armour.dispose();
-    cape.dispose();
+    cape.dispose();tabard.dispose();gear.dispose();
     dispose();
   };
-  model.shadowUnit={armour,cape,profile:profile.id};
+  model.shadowUnit={armour,cape,tabard,gear,profile:profile.id};
   return model.shadowUnit;
 }
