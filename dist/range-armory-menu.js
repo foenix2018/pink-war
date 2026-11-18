@@ -1,7 +1,7 @@
 import {WEAPONS} from './game-logic.js';
 import {rangeSessionTime} from './shooting-range.js';
 
-export function armoryRegions(indices){return [...indices.map((index,i)=>({index,x:48+i%3*318,y:184+Math.floor(i/3)*148,w:292,h:124})),{index:-1,x:48,y:746,w:928,h:96}];}
+export function armoryRegions(indices){return [...indices.map((index,i)=>({index,x:48+i%3*318,y:184+Math.floor(i/3)*148,w:292,h:124})),{index:-1,x:48,y:782,w:928,h:90}];}
 export function armoryChoiceAt(indices,x,y){return armoryRegions(indices).find(r=>x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h)?.index??null;}
 
 export function createRangeArmoryMenu({getGame,onChoose,onChange=()=>{}}){

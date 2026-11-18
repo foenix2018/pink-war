@@ -7,7 +7,8 @@ export const FIRING_FEEL=Object.freeze({
   lance:{kick:.102,pitch:.185,yaw:.006,returnSpeed:13,flash:.06,heat:.34},
   thorn:{kick:.111,pitch:.205,yaw:.008,returnSpeed:17,flash:.06,heat:.42},
   nova:{kick:.137,pitch:.27,yaw:.023,returnSpeed:12,flash:.10,heat:.55},
-  m12:{kick:.126,pitch:.25,yaw:.012,returnSpeed:16,flash:.065,heat:.36}
+  m12:{kick:.126,pitch:.25,yaw:.012,returnSpeed:16,flash:.065,heat:.36},
+  groza40:{kick:.076,pitch:.138,yaw:.013,returnSpeed:23,flash:.043,heat:.22}
 });
 const profile=id=>FIRING_FEEL[id==='duor9'?'r9':id]||FIRING_FEEL.r9;
 

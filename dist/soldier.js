@@ -490,7 +490,7 @@ export function createLegacySoldier(kit, createGun, profileInfo) {
     // Choose the weapon in the hands: the right palm takes the grip, the free hand takes the support or rests.
     setWeapon(index){
       gun.userData.setVariant(index);
-      const frame=WEAPON_FRAME[index],p=new T.Vector3(...STANCE[index]),support=frame.support;
+      const frame=WEAPON_FRAME[index],p=new T.Vector3(...(STANCE[index]||STANCE[2])),support=frame.support;
       // Wrists where the gloves actually are on this weapon (its own grip and foregrip).
       const wristOf=glove=>new T.Vector3(...GRIP.wrist).multiply(glove.scale).applyEuler(glove.rotation).add(glove.position).multiplyScalar(CARRY);
       const wristR=()=>p.clone().add(wristOf(gun.userData.hand));

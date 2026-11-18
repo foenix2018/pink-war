@@ -318,10 +318,10 @@ export function createShootingRangeArt(T,scene,options={}){
   function cabinetBox(name,x,y,z,w,h,d,mat=mats.trim){
     const mesh=new T.Mesh(metricSurfaceUV(bevelBox(w,h,d,Math.min(.025,w/5,h/5,d/5),2),2),mat);mesh.name=name;mesh.position.set(x,y,z);root.add(mesh);return mesh;
   }
-  // Wider, reinforced steel rack: nine real bays, no overlapping long barrels.
+  // Wider, reinforced steel rack: ten real bays, no overlapping long barrels.
   const rackWidth=cabinet.width,edgeX=rackWidth/2-.075;
   cabinetBox('Socle élargi de l’armoire',0,.12,cabinet.z,rackWidth,.24,cabinet.depth,mats.metal);
-  cabinetBox('Fond blindé / rack neuf armes',0,cabinet.height/2,35.18,rackWidth-.18,cabinet.height-.26,.10,mats.padding);
+  cabinetBox('Fond blindé / rack dix armes',0,cabinet.height/2,35.18,rackWidth-.18,cabinet.height-.26,.10,mats.padding);
   cabinetBox('Traverse supérieure du rack',0,cabinet.height-.09,cabinet.z,rackWidth,.18,cabinet.depth,mats.metal);
   for(const x of [-edgeX,edgeX]){
     cabinetBox('Montant acier du rack',x,cabinet.height/2,cabinet.z,.15,cabinet.height-.16,cabinet.depth,mats.metal);
@@ -338,12 +338,12 @@ export function createShootingRangeArt(T,scene,options={}){
       cabinetBox('Cloison verticale de rangement',(x+next.x)/2,1.53,35.02,.035,2.43,.28,mats.trim);
     }
     box('Repère LED d’emplacement',x,2.71,34.56,.28,.025,.035,index===8?mats.rose:mats.light);
-    sign(WEAPONS[index].name,index===7?'GHJU':index===8?'36 CELLULES':index===9?'IEM · 3 SECONDES':'ÉQUIPER',x,.345,cabinet.frontZ,slot.width-.055,.20,index===8?'#ffa0cf':'#e0c48b');
+    sign(WEAPONS[index].name,index===7?'GHJU':index===8?'36 CELLULES':index===9?'IEM · 3 SECONDES':index===10?'40 MM · 30 S':'ÉQUIPER',x,.345,cabinet.frontZ,slot.width-.055,.20,index===8?'#ffa0cf':'#e0c48b');
     const displaySlot=new T.Group();displaySlot.position.set(x,slot.y,34.78);
     displaySlot.userData.weaponIndex=index;displaySlot.userData.bayWidth=slot.width;
     displayModels.add(displaySlot);displaySlots.set(index,displaySlot);
   });
-  sign('ARMURERIE  /  8 ARMES','VR : POINTER + GÂCHETTE  /  F : MENU',0,3.21,cabinet.frontZ,rackWidth-.28,.49,'#eadab5');
+  sign('ARMURERIE  /  10 ARMES','VR : POINTER + GÂCHETTE  /  F : MENU',0,3.21,cabinet.frontZ,rackWidth-.28,.49,'#eadab5');
   const hoverHalfWidth=RANGE_ARMORY.slotWidth/2-.035,hoverHalfHeight=RANGE_ARMORY_SLOTS[0].height/2;
   const hoverGeometry=new T.BufferGeometry().setFromPoints([
     new T.Vector3(-hoverHalfWidth,-hoverHalfHeight,0),new T.Vector3(hoverHalfWidth,-hoverHalfHeight,0),
