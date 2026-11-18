@@ -35,3 +35,11 @@ test('stand has ten real weapon locations including the Groza bay',()=>{
  assert.equal(traceRangeArmory({x:slot.x,y:slot.y,z:slot.z-1},{x:0,y:0,z:1})?.index,10);
  assert.equal(g.selectWeapon(10),true);
 });
+
+test('range 40 mm uses an independent timer, not the classic charge stock',()=>{
+ const g=new ShootingRangeGame([],()=>.5);g.selectWeapon(10);g.charges=0;
+ const origin={x:0,y:1.6,z:22},dir={x:0,y:0,z:-1};
+ assert.equal(g.throwCharge(origin,dir),true);assert.equal(g.charges,0);
+ assert.equal(g.trainingShots,1);assert.equal(g.throwCharge(origin,dir),false);
+ g.time=30;assert.equal(g.throwCharge(origin,dir),true);assert.equal(g.trainingShots,2);
+});
