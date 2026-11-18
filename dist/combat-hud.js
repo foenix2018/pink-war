@@ -20,7 +20,7 @@ const GLYPHS=Object.freeze({
   shotgun:'M2 6h8l2-1h33v4H27l-2 2h-6l-4 4H9l3-4H2z',
   heavy:'M3 5h28l3-2h11v9H34l-3-2H22l-2 5h-5l1-5H3z',
   blade:'M2 9h9l2-2h3v5h-3l-2-2H2zM17 8l29-4-27 7z'});
-const GLYPH_OF=Object.freeze({r9:'pistol',duor9:'dual',bloom:'rifle',vortex:'rifle',lance:'sniper',m12:'shotgun',thorn:'heavy',nova:'heavy',aurora:'blade'});
+const GLYPH_OF=Object.freeze({r9:'pistol',duor9:'dual',bloom:'rifle',vortex:'rifle',groza40:'rifle',lance:'sniper',m12:'shotgun',thorn:'heavy',nova:'heavy',aurora:'blade'});
 export function weaponGlyph(index){
   const id=WEAPONS[index]?.id;return `<svg class="pw-hud-glyph" viewBox="0 0 48 16" aria-hidden="true"><path d="${GLYPHS[GLYPH_OF[id]]||GLYPHS.rifle}"/></svg>`;
 }
@@ -49,6 +49,7 @@ export function combatHudState(game) {
     // Armour layer (3.63): shield over health, impulse charges, and the direction of the last hit.
     shieldCapacity: Math.max(0, Number(game?.shieldCapacity) || 0), shield: Math.max(0, Number(player.shield) || 0),
     shieldCharging: !!game?.shieldCharging, charges: Math.max(0, Number(game?.charges) || 0),
+    launcher40:weapon.id==='groza40',launcherRemaining:weapon.id==='groza40'?Math.max(0,Math.ceil((Number(game?.grenade40ReadyAt)||0)-(Number(game?.time)||0))):0,
     hit: hitBearing(game)
   };
 }
@@ -140,10 +141,11 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
     if(!game.selectWeapon(index))return false;
     setGearOpen(false);refreshEquipment();return true;
   }
+  const canLaunch=()=>currentGame?.weapon?.id==='groza40'?(Number(currentGame?.time)||0)>=(Number(currentGame?.grenade40ReadyAt)||0):(Number(currentGame?.charges)||0)>0;
   function refreshEquipment(){
     if(!gearOpen)return;
     const s=equipmentState(),game=currentGame,unlocked=doc.querySelector('.pw-companion')?.dataset.unlocked==='true';
-    const signature=JSON.stringify([s.hero,s.weaponIndex,s.charges,s.weapons.map(w=>[w.index,w.ammo]),unlocked]);
+    const signature=JSON.stringify([s.hero,s.weaponIndex,s.charges,game?.weapon?.id==='groza40'?Math.max(0,Math.ceil((game.grenade40ReadyAt||0)-(game.time||0))):null,s.weapons.map(w=>[w.index,w.ammo]),unlocked]);
     if(signature===gearSignature)return;gearSignature=signature;
     gearList.replaceChildren();
     for(const w of s.weapons){
@@ -155,7 +157,7 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
       const check=doc.createElement('b');check.className='pw-hud-gear-check';check.setAttribute('aria-hidden','true');check.textContent=w.index===s.weaponIndex?'✓':'';
       b.append(glyph,name,amount,check);b.onclick=()=>chooseWeapon(w.index);gearList.append(b);
     }
-    $('.pw-hud-gear-charges').textContent=String(s.charges);gearGrenade.disabled=s.charges<=0||game?.state!=='playing';
+    $('.pw-hud-gear-charges').textContent=game?.weapon?.id==='groza40'?Math.max(0,Math.ceil((game.grenade40ReadyAt||0)-(game.time||0)))+' S':String(s.charges);gearGrenade.disabled=!canLaunch()||game?.state!=='playing';
     gearSkills.hidden=!unlocked;$('.pw-hud-gear-locked').hidden=unlocked;
   }
   const gearTabs=[...root.querySelectorAll('[data-gear-tab]')];
@@ -165,7 +167,7 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
   portrait.onclick=e=>{e.preventDefault();e.stopPropagation();setGearOpen(!gearOpen);};
   gear.addEventListener('pointerdown',e=>e.stopPropagation());
   $('.pw-hud-gear-close').onclick=()=>setGearOpen(false);
-  gearGrenade.onclick=()=>{if(currentGame?.charges>0){setGearOpen(false);command('charge');}};
+  gearGrenade.onclick=()=>{if(canLaunch()){setGearOpen(false);command('charge');}};
   gearSkills.onclick=()=>{setGearOpen(false);doc.dispatchEvent(new CustomEvent('pw-hud-open-skills'));};
   let open=false,sprinting=false,disposed=false,active=true,objectiveKey='',contextLabel='';
   const last=new Map(),digitalKeys=new Set(['hp','shield','ammo','capacity']);
@@ -174,7 +176,7 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
   const flag=(element,name,on)=>{if(element.classList.contains(name)!==on)element.classList.toggle(name,on);};
   function setOpen(value){open=!!value&&!root.hidden&&active;palette.hidden=!open;more.setAttribute('aria-expanded',String(open));root.classList.toggle('pw-actions-open',open);if(open){objective.hidden=true;mission.setAttribute('aria-expanded','false');}}
   function reset(){setGearOpen(false);setOpen(false);objective.hidden=true;mission.setAttribute('aria-expanded','false');if(sprinting){sprinting=false;onAction?.('sprint',false);}sprintButton.setAttribute('aria-pressed','false');root.classList.remove('pw-sprinting');}
-  function command(kind){if(!active||root.hidden||disposed)return;setOpen(false);if(kind==='sprint'){sprinting=!sprinting;sprintButton.setAttribute('aria-pressed',String(sprinting));root.classList.toggle('pw-sprinting',sprinting);onAction?.(kind,sprinting);}else if(kind==='grenade'){if((Number(currentGame?.charges)||0)>0)onAction?.('charge');}else onAction?.(kind);}
+  function command(kind){if(!active||root.hidden||disposed)return;setOpen(false);if(kind==='sprint'){sprinting=!sprinting;sprintButton.setAttribute('aria-pressed',String(sprinting));root.classList.toggle('pw-sprinting',sprinting);onAction?.(kind,sprinting);}else if(kind==='grenade'){if(canLaunch())onAction?.('charge');}else onAction?.(kind);}
   // Native click provides one command per tap and keyboard/screen-reader activation.
   // Held fire/aim keep their original captured pointer handlers in each engine.
   for(const button of root.querySelectorAll('[data-armor],[data-hud-action]')){
@@ -213,7 +215,7 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
   const key=e=>{if(e.code==='Escape'&&(open||gearOpen||!objective.hidden)){e.preventDefault();e.stopImmediatePropagation();setGearOpen(false);setOpen(false);objective.hidden=true;mission.setAttribute('aria-expanded','false');portrait.focus({preventScroll:true});}};
   const blur=()=>reset(),visibility=()=>{if(doc.hidden)reset();};
   doc.addEventListener('pointerdown',outside,true);doc.addEventListener('keydown',key,true);doc.addEventListener('pw-hud-overlay',blur);doc.defaultView.addEventListener('blur',blur);doc.addEventListener('visibilitychange',visibility);
-  const api={root,setOpen,setGearOpen,reset,equipmentState,chooseWeapon,throwGrenade(){if(currentGame?.charges>0&&active){command('charge');return true;}return false;},get isOpen(){return open||gearOpen;},
+  const api={root,setOpen,setGearOpen,reset,equipmentState,chooseWeapon,throwGrenade(){if(canLaunch()&&active){command('charge');return true;}return false;},get isOpen(){return open||gearOpen;},
     setCharacter(id){const hero=id==='lylu'?'lylu':'ghju';root.dataset.hero=hero;doc.body.dataset.pwHero=hero;text('tag',HEROES[hero]);
       if(portraitHero!==hero){portraitHero=hero;paintCompanionPortrait(portrait.querySelector('canvas').getContext('2d'),hero,128);
         const label=hero==='lylu'?'CAR-14':'GAB-1';$('.pw-hud-companion-name').textContent=label;portrait.setAttribute('aria-label','Ouvrir les armes et grenades de '+label);gearSignature='';}
@@ -227,7 +229,12 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
       const shielded=s.shieldCapacity>0,broken=shielded&&s.shield<=0;shieldBar.hidden=shieldNumber.hidden=!shielded;
       if(shielded)prop(shieldBar,'--fill',(s.shield/s.shieldCapacity).toFixed(3));
       flag(vitals,'shield-broken',broken);flag(vitals,'shield-charging',s.shieldCharging);
-      text('vitalNote',s.critical?'CRITIQUE':broken?'BOUCLIER ROMPU':'');text('charges',String(s.charges));chargeButton.disabled=s.charges<=0;chargeButton.setAttribute('aria-label','Lancer une charge à impulsion · '+s.charges+' disponible'+(s.charges>1?'s':''));grenadeButton.disabled=!active||s.charges<=0;grenadeButton.querySelector('.pw-hud-grenade-count').textContent=String(s.charges);grenadeButton.setAttribute('aria-label','Lancer une grenade à impulsion · '+s.charges+' disponible'+(s.charges>1?'s':''));
+      text('vitalNote',s.critical?'CRITIQUE':broken?'BOUCLIER ROMPU':'');text('charges',String(s.charges));
+      const ready=!s.launcher40||s.launcherRemaining===0,can=ready&&(s.launcher40||s.charges>0);
+      chargeButton.disabled=!can;chargeButton.setAttribute('aria-label',s.launcher40?'Tirer une grenade 40 mm · '+(ready?'prête':'rechargement '+s.launcherRemaining+' secondes'):'Lancer une charge à impulsion · '+s.charges+' disponibles');
+      grenadeButton.disabled=!active||!can;
+      grenadeButton.querySelector('.pw-hud-grenade-count').textContent=s.launcher40?(ready?'40':String(s.launcherRemaining)):String(s.charges);
+      grenadeButton.setAttribute('aria-label',s.launcher40?'Lance-grenades 40 mm · '+(ready?'PRÊT':'Recharge dans '+s.launcherRemaining+' secondes'):'Lancer une grenade à impulsion · '+s.charges+' disponibles');
       crouchButton.setAttribute('aria-pressed',String(!!game.player?.crouched));
       const arc=s.hit?(s.hit.angle*180/Math.PI).toFixed(0)+'|'+s.hit.strength.toFixed(2):'';
       if(last.get('arc')!==arc){last.set('arc',arc);hitRing.style.opacity=s.hit?s.hit.strength.toFixed(2):'0';if(s.hit)hitRing.style.setProperty('--angle',(s.hit.angle*180/Math.PI).toFixed(1)+'deg');}
