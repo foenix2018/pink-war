@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pink Wars — Export REMPART B-11 original</title>
+<style>body{background:#10141b;color:#e8edf5;font:16px system-ui;margin:2rem;max-width:780px}button{padding:14px 22px;background:#c43b55;color:white;border:0;border-radius:9px;font-weight:700}pre{white-space:pre-wrap;color:#bac7d7}small{color:#9cabbc}</style>
+<h1>REMPART B-11 — Extraction du modèle original</h1>
+<p>Cette page reconstruit la géométrie à partir de <code>enemy-rempart-model.js</code> du jeu, sans créer un autre robot. Les pièces conservent leur nom d'os d'origine pour faciliter le travail dans Blender.</p>
+<button id="export">Exporter la géométrie originale (.glb)</button><pre id="status">Prêt.</pre>
+<small>Extraction de la géométrie native et des groupes de matériaux ; les animations et le skinning ne sont pas exportés par cet outil. Le modèle ne doit pas remplacer directement le personnage animé dans le jeu.</small>
+<script type="module">
+import * as THREE from 'https://esm.sh/three@0.180.0';
+import {GLTFExporter} from 'https://esm.sh/three@0.180.0/examples/jsm/exporters/GLTFExporter.js';
+import {rempartGeometry} from './enemy-rempart-model.js';
+const status=document.getElementById('status');
+document.getElementById('export').onclick=async()=>{
+ try{
+ status.textContent='Lecture des pièces géométriques du jeu…';
+ const native=rempartGeometry('high');
+ const root=new THREE.Group();root.name='PINK_WARS_REMPART_B11_NATIVE_GEOMETRY';
+ const groups=new Map(),materials={
+ plate:new THREE.MeshStandardMaterial({color:0x505357,metalness:.62,roughness:.84}),
+ dark:new THREE.MeshStandardMaterial({color:0x171a1c,metalness:.7,roughness:.68}),
+ metal:new THREE.MeshStandardMaterial({color:0x555b61,metalness:.85,roughness:.4}),
+ red:new THREE.MeshBasicMaterial({color:0xff0a21}),
+ eye:new THREE.MeshBasicMaterial({color:0xff263a}),
+ decal:new THREE.MeshStandardMaterial({color:0xbcc0c5,roughness:.95})
+ };
+ for(const [i,part] of native.parts.entries()){
+  const source=part.geometry,geo=new THREE.BufferGeometry();
+  for(const name of ['position','normal','uv']){
+   const attr=source.getAttribute(name);if(!attr)continue;
+   const array=Float32Array.from(attr.array);
+   geo.setAttribute(name,new THREE.BufferAttribute(array,attr.itemSize,attr.normalized));
+  }
+  if(source.index)geo.setIndex(Array.from(source.index.array));
+  if(!geo.getAttribute('normal'))geo.computeVertexNormals();
+  const bone=native.names[source.getAttribute('skinIndex')?.getX(0)||0]||'Root';
+  let group=groups.get(bone);if(!group){group=new THREE.Group();group.name='SOURCE_BONE_'+bone;root.add(group);groups.set(bone,group);}
+  const mesh=new THREE.Mesh(geo,materials[part.key]||materials.plate);mesh.name=bone+'_'+part.key+'_'+i;group.add(mesh);
+ }
+ status.textContent='Export des '+native.parts.length+' pièces et '+groups.size+' groupes d’os…';
+ const binary=await new GLTFExporter().parseAsync(root,{binary:true,onlyVisible:true});
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([binary],{type:'model/gltf-binary'}));a.download='PINK_WARS_REMPART_B11_GEOMETRIE_ORIGINALE.glb';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+ status.textContent='Export terminé : '+native.parts.length+' pièces. Importer le GLB dans Blender (Fichier > Importer > glTF 2.0).';
+ }catch(err){status.textContent='Erreur : '+(err?.stack||err);}
+};
+</script>
