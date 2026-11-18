@@ -8,8 +8,8 @@ export const TRAINING_BARRIER=Object.freeze({z:19.12,stopZ:19.80,height:1.13,wid
 export const RANGE_CONTROLS=Object.freeze([-2,-1,0,1,2].map(lane=>Object.freeze({x:lane*4.6+.55,y:1.25,z:20.05})));
 // Rack 3.86: 9 full-size, independently selectable bays. The physical supports,
  // WebXR rays and hand-reach targets all consume these same coordinates.
-export const RANGE_ARMORY=Object.freeze({x:0,y:1.50,z:34.9,frontZ:34.48,width:10.6,height:2.95,depth:.7,slotPitch:1.12,slotWidth:1.00});
-export const RANGE_WEAPON_SLOTS=Object.freeze([0,1,2,3,4,6,7,8,9]);
+export const RANGE_ARMORY=Object.freeze({x:0,y:1.50,z:34.9,frontZ:34.48,width:11.95,height:2.95,depth:.7,slotPitch:1.12,slotWidth:1.00});
+export const RANGE_WEAPON_SLOTS=Object.freeze([0,1,2,3,4,6,7,8,9,10]);
 export const RANGE_ARMORY_SLOTS=Object.freeze(RANGE_WEAPON_SLOTS.map((index,i)=>Object.freeze({
   index,x:RANGE_ARMORY.x+(i-(RANGE_WEAPON_SLOTS.length-1)/2)*RANGE_ARMORY.slotPitch,
   y:RANGE_ARMORY.y,z:RANGE_ARMORY.frontZ,width:RANGE_ARMORY.slotWidth,height:2.36
@@ -32,7 +32,7 @@ export function targetContains(x,y){
   }
   return inside;
 }
-export const TARGET_IMPULSE=Object.freeze({r9:.32,duor9:.32,bloom:.26,lance:.82,thorn:.85,nova:1,m12:1});
+export const TARGET_IMPULSE=Object.freeze({r9:.32,duor9:.32,bloom:.26,lance:.82,thorn:.85,nova:1,m12:1,groza40:.72});
 export const TRAINING_STAGES=Object.freeze([
   Object.freeze({id:'near',label:'CIBLES FIXES · 15 M',duration:20,kind:'fixed-near'}),
   Object.freeze({id:'far',label:'CIBLES FIXES · 40 À 60 M',duration:20,kind:'fixed-far'}),
@@ -92,7 +92,7 @@ export class ShootingRangeGame extends ArenaGame {
     this.state='playing';
   }
   // The range is for practice: impulse charges come back as soon as one is thrown.
-  throwCharge(origin,direction){if(this.rangeArmoryOpen)return false;const thrown=super.throwCharge(origin,direction);if(thrown)this.charges=CHARGE_MAX;return thrown;}
+  throwCharge(origin,direction){if(this.rangeArmoryOpen)return false;const thrown=super.throwCharge(origin,direction);if(thrown&&this.weapon.id!=='groza40')this.charges=CHARGE_MAX;return thrown;}
   get trainingAccuracy(){return this.trainingShots?Math.round(this.trainingHits/this.trainingShots*100):100;}
   get trainingLevel(){return trainingStage(this.trainingElapsed);}
   get trainingMotionSpeed(){return trainingSpeed(this.trainingElapsed);}

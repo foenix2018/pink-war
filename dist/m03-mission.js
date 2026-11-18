@@ -56,7 +56,7 @@ export function createM03Mission({ game, characterId = 'ghju', choice = null, ba
   function startHold(name) { hold = { name, start: game.time, until: game.time + L.HOLDS[name], waves: [...L.HOLD_WAVES[name]] }; h.cue('hold'); }
   function supplies() { for (const s of L.SUPPLIES) game.pickups.push({ id: game.nextId++, kind: s.kind, x: s.x, y: s.y || 0, z: s.z, until: Infinity }); }
   function armWeapons() {
-    game.ownedWeapons = new Set([game.weaponIndex, 0, 1, 2, 3, 4].filter(i => weaponAllowedForCharacter(i, characterId) && !WEAPONS[i].melee));
+    game.ownedWeapons = new Set([game.weaponIndex, 0, 1, 2, 3, 4, 10].filter(i => weaponAllowedForCharacter(i, characterId) && !WEAPONS[i].melee));
     game.ammo = WEAPONS.map(w => w.capacity);
   }
   function place(cp) { Object.assign(game.player, { x: cp.x, z: cp.z, elevation: game.surfaceHeight(cp.x, cp.z, game.time, (cp.elevation||0)+.3), grounded: true, verticalSpeed: 0, yaw: cp.yaw || 0 }); }

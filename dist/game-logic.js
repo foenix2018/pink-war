@@ -81,7 +81,8 @@ export const WEAPONS = Object.freeze([
   Object.freeze({id:'m12',name:'M–12',label:'Fusil à pompe',level:4,damage:18,capacity:8,interval:.88,reload:2.8,speed:170,pellets:8,spread:.038,semiAuto:true,chargeTime:0,splash:0,falloffStart:12,falloffEnd:40,minDamage:.2}),
   Object.freeze({id:'duor9',name:'VX-9 DUO',label:'Doubles pistolets Orbital',level:1,damage:24,capacity:24,handCapacity:12,interval:.2,reload:1.65,speed:110,pellets:1,spread:0,chargeTime:0,splash:0,dual:true}),
   Object.freeze({id:'vortex',name:'VORTEX AR-7',label:'Fusil d’assaut tactique · indicateur rose',level:6,damage:43,capacity:36,interval:.115,reload:1.95,speed:175,pellets:1,spread:.009,chargeTime:0,splash:0}),
-  Object.freeze({id:'iem',name:IEM_RULES.name,label:'Fusil à impulsion électromagnétique · immobilisation 3 s',level:10,damage:8,capacity:6,interval:1.3,reload:2.4,speed:160,pellets:1,spread:0,semiAuto:true,chargeTime:0,splash:0,stunSeconds:3})
+  Object.freeze({id:'iem',name:IEM_RULES.name,label:'Fusil à impulsion électromagnétique · immobilisation 3 s',level:10,damage:8,capacity:6,interval:1.3,reload:2.4,speed:160,pellets:1,spread:0,semiAuto:true,chargeTime:0,splash:0,stunSeconds:3}),
+  Object.freeze({id:'groza40',name:'GROZA–40 VESPER',label:'Bullpup 7,62 mm · lance-grenades 40 mm / 30 s',level:3,damage:26,capacity:30,interval:.12,reload:1.95,speed:180,pellets:1,spread:.011,chargeTime:0,splash:0})
 ]);
 export const starterWeaponIndex=characterId=>characterId==='lylu'?6:7;
 export const VORTEX_SECONDARY_INDEX=8;
@@ -345,7 +346,7 @@ export class ArenaGame {
     this.lastDamage = 0; this.regenerating = false;
     // Armour layer (armor-combat.js): shield on when an engine enables it, two impulse charges to start.
     this.player.shield = this.shieldCapacity || 0; this.player.shieldDeployed=false;this.player.shieldHitAt=-100;this.player.shieldBreakAt=-100;this.shieldGeneration=(this.shieldGeneration||0)+1; this.shieldCharging = false; this.lastHit = null;
-    this.charges = CHARGE_START; this.thrownCharges = []; this.chargeReadyAt = 0; this.meleeReadyAt = 0; this.meleeAt = -99; this.meleePending = null; this.meleeDelay = 0; this.chargeAt = -99;
+    this.grenade40ReadyAt=0;this.charges = CHARGE_START; this.thrownCharges = []; this.chargeReadyAt = 0; this.meleeReadyAt = 0; this.meleeAt = -99; this.meleePending = null; this.meleeDelay = 0; this.chargeAt = -99;
     for(const nav of this.stairNavigation){nav.refreshAt=-1;nav.goal=-1;}
     if(this.mode)this.configureWeaponAccess();
     this.updateLifts(0);
@@ -400,6 +401,7 @@ export class ArenaGame {
   }
   get equipment() { return equipmentForLevel(this.wave); }
   isWeaponAvailable(index){
+    if(index===10)return this.mode!=='campaign'||(this.missionLevel??this.campaign?.level??1)>=3;
     return index!==IEM_INDEX||iemAvailable(this.mode||'arena',this.missionLevel??this.campaign?.level??1);
   }
   configureWeaponAccess({mode=this.mode||'arena',level=this.missionLevel??this.campaign?.level??1}={}){
@@ -409,6 +411,8 @@ export class ArenaGame {
       this.ownedWeapons.delete(IEM_INDEX);this.weaponOffers=this.weaponOffers.filter(o=>o.index!==IEM_INDEX);
       if(this.weaponIndex===IEM_INDEX){this.weaponIndex=starterWeaponIndex(this.characterId);this.reloadRemaining=0;this.charge=0;}
     }
+    if(this.isWeaponAvailable(10))this.ownedWeapons.add(10);
+    else{this.ownedWeapons.delete(10);this.weaponOffers=this.weaponOffers.filter(o=>o.index!==10);if(this.weaponIndex===10)this.weaponIndex=starterWeaponIndex(this.characterId);}
     return this;
   }
   get weapon() { return WEAPONS[this.weaponIndex]; }
@@ -665,7 +669,24 @@ export class ArenaGame {
     this.player.shieldDeployed=!this.player.shieldDeployed;this.event('projected-shield-toggle',{active:this.player.shieldDeployed});return true;
   }
   melee(forward = forwardOf(this.player.yaw)) { return meleeStrike(this, forward); }
-  throwCharge(origin, direction) { return throwCharge(this, origin, direction); }
+  // GROZA 40 mm uses the grenade control; armour charges keep their own pool.
+  throwCharge(origin,direction){
+    if(this.weapon?.id!=='groza40')return throwCharge(this,origin,direction);
+    if(this.state!=='playing'||!this.isWeaponAvailable(this.weaponIndex)||this.time<this.grenade40ReadyAt)return false;
+    if(!origin||!direction||![origin.x,origin.y,origin.z,direction.x,direction.y,direction.z].every(Number.isFinite))return false;
+    const length=Math.hypot(direction.x,direction.y,direction.z);if(length<.001)return false;
+    const dir={x:direction.x/length,y:direction.y/length,z:direction.z/length};
+    const from=clipMuzzleOrigin(this.player,origin,this.obstacles),bulletId=this.nextId++;
+    this.bullets.push({id:bulletId,x:from.x,y:from.y,z:from.z,
+      vx:dir.x*62,vy:dir.y*62,vz:dir.z*62,life:2.4,
+      originX:from.x,originY:from.y,originZ:from.z,originElevation:this.player.elevation,
+      damage:85,splash:3.5,power:1,weapon:'groza40',hostile:false});
+    this.grenade40ReadyAt=this.time+30;
+    this.emitNoise('shot',95,from);
+    this.event('shot',{weapon:'groza40',launcher:true,bulletId,power:1,origin:{...from},direction:dir});
+    this.event('groza40-launch',{bulletId,cooldown:30,readyAt:this.grenade40ReadyAt});
+    return true;
+  }
   grantCharges(count = 1) { grantCharges(this, count); }
   knockback(enemy, dx, dz) { moveInArena(enemy, dx, dz, enemy.radius || .5, this.obstacles); }
   // Visible charges in flight join the companions' energy spheres as dangers the machines step away from.

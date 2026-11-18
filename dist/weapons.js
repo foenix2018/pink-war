@@ -12,6 +12,7 @@ import {createNexusV9} from './nexus-v9.js';
 import {createVX9Orbital} from './vx9-orbital.js';
 import {createThornV8} from './thorn-v8.js';
 import {createVortexAR7,updateVortexAmmo} from './vortex-ar7.js';
+import {createGroza40,GROZA40_FRAME,GROZA40_HOLD} from './groza40.js';
 
 // Every weapon is modelled in one frame: the origin is the centre of its pistol grip (where the palm rests),
 // -z is the barrel direction, +y is up. The gloved hand (hands.js) is built in the same frame, so any weapon
@@ -26,7 +27,8 @@ export const WEAPON_FRAME = Object.freeze([
   M12_FRAME,
   Object.freeze({id:'duor9',muzzle:Object.freeze([0,.124,-.329]),support:Object.freeze([-.44,0,0]),length:.40,dual:true}),
   Object.freeze({id:'vortex',muzzle:Object.freeze([0,.138,-.729]),support:Object.freeze([0,.045,-.41]),length:1.08}),
-  IEM_FRAME
+  IEM_FRAME,
+  GROZA40_FRAME
 ]);
 // The Kenney blasters are placed by their muzzle, so their own pistol grips are not at the origin, and they are
 // toy-wide (grips 4.3 to 7.2 cm across). `slim` narrows each one (x only) to a 3.6 cm grip, which the glove's
@@ -44,7 +46,8 @@ export const AUTHORED_HOLD = Object.freeze({
   3:Object.freeze({palm:Object.freeze([0,0,0]),support:Object.freeze([0,-.050,-.340]),rake:0}),
   7:Object.freeze({palm:Object.freeze([0,0,0]),support:Object.freeze([-.44,0,0]),rake:0}),
   8:Object.freeze({palm:Object.freeze([0,0,0]),support:Object.freeze([0,.045,-.41]),rake:-.12}),
-  9:IEM_HOLD
+  9:IEM_HOLD,
+  10:GROZA40_HOLD
 });
 export const KENNEY_HOLD = Object.freeze([
   // X offsets put the palm OUTSIDE the grip's right flank, not through its
@@ -77,7 +80,8 @@ export const OPTICS = Object.freeze({
   // Hip pose closer and lower on the right, the stock under the shoulder (FPS reference of 4 Nov 2026).
   vortex:Object.freeze({y:.334,z:-.249,radius:.026,magnification:1.30,eyeRelief:.26,hip:Object.freeze({x:.05,y:-.035,z:.07,yaw:.05,roll:-.02})}),
   // The M12's receiver hides the shooting hand from the eye: at the hip it sits lower and turns slightly outwards.
-  m12:Object.freeze({y:.177,z:-.165,radius:.018,magnification:1.15,eyeRelief:.62,xrEyeRelief:.30,iron:true,hip:Object.freeze({x:.03,y:-.05,yaw:-.13,roll:.08})})
+  m12:Object.freeze({y:.177,z:-.165,radius:.018,magnification:1.15,eyeRelief:.62,xrEyeRelief:.30,iron:true,hip:Object.freeze({x:.03,y:-.05,yaw:-.13,roll:.08})}),
+  groza40:Object.freeze({y:.249,z:-.028,radius:.025,magnification:1.35,eyeRelief:.29,xrEyeRelief:.27})
 });
 // NOVA's compact reflex sight, mounted on its flat receiver top (y ≈ .086 from z +.04 to -.16).
 export function createNovaSight(mats){
@@ -346,7 +350,7 @@ export function createWeaponModels(mats) {
   duo.name='VX-9 DUO / GHJU';right.name='DUO right';left.name='DUO left';left.position.x=-.44;left.scale.x=-1;
   right.add(models[0].clone());left.add(models[0].clone());duo.add(right,left);
   Object.assign(duo.userData,{frame:WEAPON_FRAME[7],dual:true,integratedEmitter:true});models.push(duo);
-  const vortex=createVortexAR7();vortex.userData.frame=WEAPON_FRAME[8];models.push(vortex);models.push(createIEMWeapon(T));
+  const vortex=createVortexAR7();vortex.userData.frame=WEAPON_FRAME[8];models.push(vortex);models.push(createIEMWeapon(T));models.push(createGroza40());
   return models;
 }
 
@@ -424,7 +428,7 @@ export function buildGun({ mats, gloves, sleeve = true, arm = sleeve, makeFlash 
   const heatRing=new T.Mesh(new T.TorusGeometry(.012,.0018,6,20),heatMaterial);actionRoot.add(heatRing);
   heatRing.name='Barrel heat ring';
   const iemTint=new T.Color(0x57ddff);
-  const emitterRadii=[.0105,.0165,.031,.029,.062,.023,.026,.0105,.022,.018];let blade=null;
+  const emitterRadii=[.0105,.0165,.031,.029,.062,.023,.026,.0105,.022,.018,.023];let blade=null;
   g.userData.getBladeSegment=()=>g.userData.index===5?blade?.segment():null;
   Object.defineProperty(g.userData,'blade',{get:()=>blade});
   Object.assign(g.userData, { flash, hand, support, showSupport: true });
@@ -506,7 +510,7 @@ export function buildGun({ mats, gloves, sleeve = true, arm = sleeve, makeFlash 
     if(index===5&&!blade){blade=createEnergyBlade(mats.rose.color);actionRoot.add(blade.root);}
     if(index!==5)blade?.reset?.();
     const muzzle=models[index].userData.muzzle||frame.muzzle;
-    flash.position.set(...muzzle); flash.scale.setScalar([.14,.12,.25,.19,.38,0,.27,.14,.18,.10][index]);
+    flash.position.set(...muzzle); flash.scale.setScalar([.14,.12,.25,.19,.38,0,.27,.14,.18,.10,.21][index]);
     leftFlash.position.set(...muzzle);leftFlash.scale.setScalar(.14);
     collar.visible=index!==5&&!models[index].userData.integratedEmitter;
     collar.position.set(frame.muzzle[0],frame.muzzle[1],frame.muzzle[2]+.009);collar.scale.set(emitterRadii[index]/.012,1,emitterRadii[index]/.012);

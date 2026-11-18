@@ -16,8 +16,8 @@ const guns=()=>buildGun({mats:mats(),gloves:gloves(),sleeve:false,makeFlash:flas
 const FIREARMS=WEAPON_FRAME.map((f,i)=>f.melee?null:i).filter(i=>i!==null);
 const near=(a,b,epsilon=1e-6)=>a.distanceTo(b)<=epsilon;
 
-test('all nine ranged weapons follow the actual visible barrel and muzzle in Quest pose',()=>{
- assert.equal(FIREARMS.length,9);
+test('all ten ranged weapons follow the actual visible barrel and muzzle in Quest pose',()=>{
+ assert.equal(FIREARMS.length,10);
  const rig=new T.Group();rig.position.set(2,.4,-4);rig.rotation.y=.41;
  const controller=new T.Group();controller.position.set(.25,1.29,-.4);rig.add(controller);
  const gun=guns();controller.add(gun);
