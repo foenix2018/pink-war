@@ -266,7 +266,7 @@ export function attachShadowConcept(model, profile) {
     const shoulder=boneAnchor(model.actor.bone(sideName+'Arm'),
       [side*.250,1.510,-.015]);
     shoulder.name='Shadow V6 / épaule '+sideName;
-    shoulder.scale.set(blue?.88:.82,.88,.88);
+    shoulder.scale.set(blue?.88:.70,blue?.88:.76,blue?.88:.78); // GHJU: small, close-fitting pauldrons
     shape(shoulder,[[-.090,-.068],[-.096,.014],[-.047,.084],
       [.020,.096],[.094,.018],[.073,-.080]],graphite,
       [0,0,-.021],[.17,side*.17,side*.17],.011);
@@ -390,7 +390,7 @@ export function attachShadowConcept(model, profile) {
   const abdomen=boneAnchor(model.actor.bone('Spine'),[0,1.171,0]);
   abdomen.name='Shadow VII / abdomen articulé';
   for(let j=0;j<3;j++){
-    const width=(blue?.145:.133)-j*.007,y=.081-j*.049;
+    const width=(blue?.145:.112)-j*(blue?.007:.005),y=.081-j*.049; // GHJU: the abdominal plates follow her narrower waist
     shape(abdomen,[[-width,.023],[width,.023],[width*.92,-.013],[.062,-.026],[-.062,-.026],[-width*.92,-.013]],
       j===0?graphite:dark,[0,y,-.117-j*.003],[.10,0,0],.005);
     block(abdomen,.072,.003,.003,black,0,y+.008,-.135-j*.003);

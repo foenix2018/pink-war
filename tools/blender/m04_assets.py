@@ -44,8 +44,8 @@ class Asset:
         M = Matrix.Translation(G(*c)) @ Matrix.Rotation(yaw, 4, 'Z')
         if tilt: M = M @ Matrix.Rotation(tilt[1], 4, tilt[0])
         bmesh.ops.create_cube(self.bm(mat), size=1.0, matrix=M @ Matrix.Diagonal((sx, sz, sy, 1)))
-    def cyl(self, mat, c, r, h, seg=24, r2=None, axis='y', yaw=0.0, caps=True):
-        bmesh.ops.create_cone(self.bm(mat), cap_ends=caps, cap_tris=False, segments=seg, radius1=r, radius2=r if r2 is None else r2, depth=h, matrix=self.place(c, yaw, axis))
+    def cyl(self, mat, c, r, h, seg=24, r2=None, axis='y', yaw=0.0, caps=True, scale=(1, 1, 1)):
+        bmesh.ops.create_cone(self.bm(mat), cap_ends=caps, cap_tris=False, segments=seg, radius1=r, radius2=r if r2 is None else r2, depth=h, matrix=self.place(c, yaw, axis, scale))
     def sphere(self, mat, c, r, seg=16, scale=(1, 1, 1)):
         bmesh.ops.create_uvsphere(self.bm(mat), u_segments=seg, v_segments=max(6, seg // 2), radius=r, matrix=Matrix.Translation(G(*c)) @ Matrix.Diagonal((scale[0], scale[2], scale[1], 1)))
     def bar(self, mat, a, b, r, seg=8, square=False):
