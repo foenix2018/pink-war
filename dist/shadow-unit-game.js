@@ -4,6 +4,7 @@ import {attachShadowConcept} from './personnage-shadow-concept.js?v=3.74.0';
 import {addCapeToOriginalSoldier} from './personnage-cape-addon.js?v=3.74.0';
 import {attachHeroGear} from './hero-gear.js';
 import {shapeHeroFigure} from './hero-figure.js';
+import {applyHexSuit} from './hero-suit.js';
 
 export function applyShadowMaterials(kit,profile){
   // Keep both teams' glow/accent colors while replacing the pale AÉGIS shell
@@ -29,6 +30,8 @@ export function installShadowUnit(model,profile){
   const gear=attachHeroGear(model,profile,{cape,tabard,armour});
   // GHJU's feminine figure: the rig itself is reshaped last, once every plate and cloth has been fitted in bind pose.
   const figure=shapeHeroFigure(model,profile);
+  // The undersuit: honeycomb of small hexagonal cells (plum for GHJU, blue for LYLU) instead of a plain black.
+  const suit=applyHexSuit(model,profile);
 
   // Drive the cape with the soldier's actual animation clock. This covers
   // 3rd-person campaign, arena, stand, outfit, lobby and AT HOME companion.
@@ -47,9 +50,9 @@ export function installShadowUnit(model,profile){
   const dispose=model.dispose.bind(model);
   model.dispose=()=>{
     armour.dispose();
-    cape.dispose();tabard.dispose();gear.dispose();figure?.dispose();
+    cape.dispose();tabard.dispose();gear.dispose();suit.dispose();figure?.dispose();
     dispose();
   };
-  model.shadowUnit={armour,cape,tabard,gear,figure,profile:profile.id};
+  model.shadowUnit={armour,cape,tabard,gear,figure,suit,profile:profile.id};
   return model.shadowUnit;
 }
