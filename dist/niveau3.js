@@ -34,6 +34,7 @@ import {installPinkWarsSoldier} from './level2-player.js';
 import {createCampaignCombatEffects} from './campaign-combat-effects.js';
 import {createAICompanion} from './ai-companions.js';
 import {createAmbience} from './ambience.js';
+import {createLevelSounds} from './level-sounds.js';
 import {createFireBuffer} from './fire-input.js';
 import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
@@ -84,33 +85,12 @@ function audioReady(){
   const Context=window.AudioContext||window.webkitAudioContext;if(!Context)return;
   audioCtx=window.__PINKWAR_BOOT_AUDIO||new Context();audioCtx.resume?.().catch?.(()=>{});
   setLaserAudioEnabled(audioCtx,true);void loadRealLaserSample(audioCtx);void loadCombatSamples(audioCtx);void loadPortalSamples(audioCtx);ambience=createAmbience(audioCtx);
-  cityBed=createCityBed(audioCtx);
+  cityBed=createLevelSounds(audioCtx,{chapter:3});
  }catch(error){console.warn('M03 audio',error);}
 }
 document.addEventListener('pointerdown',audioReady,{once:true,capture:true,passive:true});
 document.addEventListener('keydown',audioReady,{once:true,capture:true});
 // Night city bed: rain on the asphalt (filtered noise), the hum of the neon, distant freight and, now and then, a siren.
-function createCityBed(ctx){
- const out=ctx.createGain();out.gain.value=0;out.connect(ctx.destination);
- const buffer=ctx.createBuffer(1,ctx.sampleRate*3,ctx.sampleRate),data=buffer.getChannelData(0);
- for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;
- const noise=ctx.createBufferSource();noise.buffer=buffer;noise.loop=true;
- const rain=ctx.createBiquadFilter();rain.type='highpass';rain.frequency.value=1800;const rainGain=ctx.createGain();rainGain.gain.value=.22;
- noise.connect(rain);rain.connect(rainGain);rainGain.connect(out);
- const hum=ctx.createOscillator();hum.type='sawtooth';hum.frequency.value=60;const humFilter=ctx.createBiquadFilter();humFilter.type='lowpass';humFilter.frequency.value=180;
- const humGain=ctx.createGain();humGain.gain.value=.025;hum.connect(humFilter);humFilter.connect(humGain);humGain.connect(out);
- const rumble=ctx.createOscillator();rumble.type='triangle';rumble.frequency.value=34;const rumbleGain=ctx.createGain();rumbleGain.gain.value=0;rumble.connect(rumbleGain);rumbleGain.connect(out);
- noise.start();hum.start();rumble.start();
- let nextSiren=12;
- return{update(dt,{active,area,indoor}){
-  const t=ctx.currentTime;out.gain.setTargetAtTime(active?.18:0,t,.4);
-  rainGain.gain.setTargetAtTime(indoor?.06:.22,t,.5);rumbleGain.gain.setTargetAtTime(area==='gare'||area==='echangeur'?.3:.06,t,1.2);
-  nextSiren-=dt;
-  if(active&&nextSiren<=0){nextSiren=25+Math.random()*30;
-   const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';for(let k=0;k<4;k++){o.frequency.setValueAtTime(620,t+k*1.2);o.frequency.linearRampToValueAtTime(880,t+k*1.2+.6);o.frequency.linearRampToValueAtTime(620,t+k*1.2+1.2);}
-   g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.025,t+.5);g.gain.exponentialRampToValueAtTime(.0001,t+4.8);o.connect(g);g.connect(out);o.start(t);o.stop(t+5);}
- }};
-}
 // Short synthesised cues for the mission beats.
 let lastPortalSource=null;
 function cue(kind){

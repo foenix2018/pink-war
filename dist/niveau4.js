@@ -33,6 +33,7 @@ import {installPinkWarsSoldier} from './level2-player.js';
 import {createCampaignCombatEffects} from './campaign-combat-effects.js';
 import {createAICompanion} from './ai-companions.js';
 import {createAmbience} from './ambience.js';
+import {createLevelSounds} from './level-sounds.js';
 import {createFireBuffer} from './fire-input.js';
 import {createCompanionSkills} from './companion-skills.js';
 import {createCompanionMenu} from './companion-menu.js';
@@ -61,7 +62,7 @@ let combatEffects=null,companion=null,ambience=null,companionSkills=null,skillMe
 let meleeQueued=false,chargeQueued=false,touchSprinting=false,xr=null,fallbackGun=null,fallbackHand=null;
 let enemyDestructionFX=null;
 const robotShutdownAudio=createRobotShutdownAudio({getContext:()=>enableAudio&&audioCtx?.state==='running'?audioCtx:null,getListener:()=>game?.player,getYaw:()=>yaw});
-let reading=null,lamp=null,lampMode='auto',lampOn=false,cityBed=null,subtitlePlane=null;
+let reading=null,lamp=null,lampMode='auto',lampOn=false,cityBed=null,subtitlePlane=null,breachLevel=1;
 const weaponFeel=createWeaponFeel(),pinkControls=createPinkWarsInput(),fireInput=createFireBuffer();
 let enableAudio=true;try{enableAudio=JSON.parse(localStorage.getItem('rosee-settings')||'{}').sound!==false;}catch{}
 const keys=new Set(),enemyMeshes=new Map(),shotMeshes=new Map(),pickupMeshes=new Map();
@@ -82,33 +83,12 @@ function audioReady(){
   const Context=window.AudioContext||window.webkitAudioContext;if(!Context)return;
   audioCtx=window.__PINKWAR_BOOT_AUDIO||new Context();audioCtx.resume?.().catch?.(()=>{});
   setLaserAudioEnabled(audioCtx,true);void loadRealLaserSample(audioCtx);void loadCombatSamples(audioCtx);void loadPortalSamples(audioCtx);ambience=createAmbience(audioCtx);
-  cityBed=createCityBed(audioCtx);
+  cityBed=createLevelSounds(audioCtx,{chapter:4});
  }catch(error){console.warn('M04 audio',error);}
 }
 document.addEventListener('pointerdown',audioReady,{once:true,capture:true,passive:true});
 document.addEventListener('keydown',audioReady,{once:true,capture:true});
 // Night city bed: rain on the asphalt (filtered noise), the hum of the neon, distant freight and, now and then, a siren.
-function createCityBed(ctx){
- const out=ctx.createGain();out.gain.value=0;out.connect(ctx.destination);
- const buffer=ctx.createBuffer(1,ctx.sampleRate*3,ctx.sampleRate),data=buffer.getChannelData(0);
- for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;
- const noise=ctx.createBufferSource();noise.buffer=buffer;noise.loop=true;
- const rain=ctx.createBiquadFilter();rain.type='highpass';rain.frequency.value=1800;const rainGain=ctx.createGain();rainGain.gain.value=.22;
- noise.connect(rain);rain.connect(rainGain);rainGain.connect(out);
- const hum=ctx.createOscillator();hum.type='sawtooth';hum.frequency.value=60;const humFilter=ctx.createBiquadFilter();humFilter.type='lowpass';humFilter.frequency.value=180;
- const humGain=ctx.createGain();humGain.gain.value=.025;hum.connect(humFilter);humFilter.connect(humGain);humGain.connect(out);
- const rumble=ctx.createOscillator();rumble.type='triangle';rumble.frequency.value=34;const rumbleGain=ctx.createGain();rumbleGain.gain.value=0;rumble.connect(rumbleGain);rumbleGain.connect(out);
- noise.start();hum.start();rumble.start();
- let nextSiren=12;
- return{update(dt,{active,area,indoor}){
-  const t=ctx.currentTime;out.gain.setTargetAtTime(active?.18:0,t,.4);
-  rainGain.gain.setTargetAtTime(indoor?.06:.22,t,.5);rumbleGain.gain.setTargetAtTime(area==='gare'||area==='echangeur'?.3:.06,t,1.2);
-  nextSiren-=dt;
-  if(active&&nextSiren<=0){nextSiren=25+Math.random()*30;
-   const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';for(let k=0;k<4;k++){o.frequency.setValueAtTime(620,t+k*1.2);o.frequency.linearRampToValueAtTime(880,t+k*1.2+.6);o.frequency.linearRampToValueAtTime(620,t+k*1.2+1.2);}
-   g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.025,t+.5);g.gain.exponentialRampToValueAtTime(.0001,t+4.8);o.connect(g);g.connect(out);o.start(t);o.stop(t+5);}
- }};
-}
 // Short synthesised cues for the mission beats.
 let lastPortalSource=null;
 function cue(kind){
@@ -198,7 +178,7 @@ function setupPlayer(){
  collisions=L.buildCollisions();
  game=new ArenaGame(collisions,Math.random,traversal,characterId);game.reset(characterId);game.configureWeaponAccess({mode:'campaign',level:4});game.enableArmorShield();game.enableProjectedShields();
  mission=createM04Mission({game,characterId,hooks:{
-  setObstacles:list=>{collisions=list;},openPortal:(x,y,z,o)=>{lastPortalSource={x,y,z};art.openPortal(x,y,z,o);},setDoor:(id,open)=>art.setDoor(id,open),setPower:(id,on)=>art.setPower(id,on),breach:v=>art.breach(v),
+  setObstacles:list=>{collisions=list;},openPortal:(x,y,z,o)=>{lastPortalSource={x,y,z};art.openPortal(x,y,z,o);},setDoor:(id,open)=>art.setDoor(id,open),setPower:(id,on)=>art.setPower(id,on),breach:v=>{breachLevel=v;art.breach(v);},
   cue,notice:text=>notice(text,4),say,stage:showStage,finish:finishMission,clear:clearVisuals}});
  const lylu=characterId==='lylu',mat=(c,r=.5,m=.5)=>new T.MeshStandardMaterial({color:c,roughness:r,metalness:m}),glow=c=>new T.MeshBasicMaterial({color:c,toneMapped:false});
  const heroGlow=glow(lylu?0x4da8ff:0xff4fa1);
@@ -495,7 +475,7 @@ function animation(t,frame){
  }
  if(started){updateSubtitles(running||endCine?dt:0);updateLamp(dt);
   const area=L.areaAt(game.player.x,game.player.z);
-  cityBed?.update(dt,{active:running,area:area==='anneau'||area==='portique'?'gare':area,indoor:!!L.AREAS.find(a=>a.id===area)?.roof});}
+  cityBed?.update(dt,{active:running,area,indoor:!!L.AREAS.find(a=>a.id===area)?.roof,breach:breachLevel});}
  if(filmLook){if(filmXr!==!!xr?.active){filmXr=!!xr?.active;filmLook.setEnabled(!filmXr);}filmLook.update(dt,{health:(game?.player.hp??100)/100});}
  if(endCine)try{endCine.update(dt);}catch(error){console.warn('M04 end cinematic frame:',error);endCine.skip();}
  const eye=xr?.active?renderer.xr.getCamera():camera;
