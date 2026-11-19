@@ -25,7 +25,7 @@ export function createJetpackAudio(getContext){
   function update(wanted){
     const ctx=getContext();if(!wanted||!ctx||ctx.state!=='running'){active=false;stop();return;}
     if(active&&source)return;active=true;load();
-    const s=ctx.createBufferSource();s.context=ctx;s.buffer=clip||noise(ctx);s.loop=true;
+    const s=ctx.createBufferSource();s.buffer=clip||noise(ctx);s.loop=true;
     const filter=ctx.createBiquadFilter();filter.type='lowpass';filter.frequency.value=clip?4800:1650;
     const volume=ctx.createGain();volume.gain.setValueAtTime(0,ctx.currentTime);
     volume.gain.setTargetAtTime(clip?.22:.065,ctx.currentTime,.04);
