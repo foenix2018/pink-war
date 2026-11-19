@@ -16,7 +16,7 @@ import { PLATFORMS, STAIRS, LIFTS, BRIDGES, BRIDGE_APPROACHES, insideSurface, tr
 import { PROBE, updateProbe } from './aerial-probes.js';
 import {PROBE_ROTORS,probeRotorAt,probeRotorIndex,probeRotorMaxHp,damageProbeRotor} from './probe-damage.js';
 import { NOISE_RADIUS, SHOT_RADIUS, propagateNoise, soundWaypoint } from './hearing.js';
-import { tryJump } from './locomotion.js';
+import { tryJump, updateJetpack, JETPACK_RULES } from './locomotion.js';
 import { hostileShotProfile, predictShot } from './enemy-fire.js';
 import { enemyDurability, enemyVolley, rangedMuzzle, enemyScale, enemySightPoint, remembersCoverContact, aimReco1 } from './enemy-combat.js';
 import { sweepBlade, bladeBulletContact, reflectedVelocity } from './blade-combat.js';
@@ -326,7 +326,7 @@ export class ArenaGame {
     this.companionAmplifyUntil=0;this.companionHazards=[];this.companionWard=null;
     this.searchFields=new Map();
     this.navigation.refreshAt = -1; this.navigation.goal = -1;
-    this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0, verticalSpeed: 0, grounded: true, jumpHeld: false, crouched:false,airJumps:0,jumpImpulseX:0,jumpImpulseZ:0,lastGroundedAt:0 };
+    this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0, verticalSpeed: 0, grounded: true, jumpHeld: false, crouched:false,airJumps:0,jumpImpulseX:0,jumpImpulseZ:0,lastGroundedAt:0,jetpackArmed:false,jetpackActive:false,jetpackElapsed:0 };
     this.playerVelocity={x:0,y:0,z:0};this.planarVelocity={x:0,z:0};
     this.bladePrevious=null;this.bladeHitTimes=new Map();this.bladeSlashAt=-99;this.bladeSlashSide=1;this.bladeSpeed=0;this.bladeGuard=false;this.bladeHumAt=0;
     this.enemies = []; this.bullets = []; this.events = [];
@@ -387,14 +387,14 @@ export class ArenaGame {
     if(entity.grounded && previous-floor>.32){entity.grounded=false;entity.verticalSpeed=0;}
     if(entity.grounded){entity.elevation=floor;entity.verticalSpeed=0;}
     else{
-      entity.verticalSpeed=Math.max(-18,(entity.verticalSpeed||0)-18*dt);
+      entity.verticalSpeed=Math.max(-18,(entity.verticalSpeed||0)-(isPlayer&&entity.jetpackActive&&entity.jetpackElapsed>JETPACK_RULES.boostWindow?0:18)*dt);
       entity.elevation=previous+entity.verticalSpeed*dt;
       const bodyHeight=entity.crouched?.95:1.8;
       if(entity.verticalSpeed>0)for(const b of this.obstacles){
         const underside=b.y||0;
         if(b.walkableSurface && Math.abs(entity.x-b.x)<b.hx && Math.abs(entity.z-b.z)<b.hz && previous+bodyHeight<=underside && entity.elevation+bodyHeight>underside){entity.elevation=underside-bodyHeight;entity.verticalSpeed=0;}
       }
-      if(entity.elevation<=floor){entity.elevation=floor;entity.verticalSpeed=0;entity.grounded=true;if(isPlayer)this.event('land');}
+      if(entity.elevation<=floor){entity.elevation=floor;entity.verticalSpeed=0;entity.grounded=true;if(isPlayer){entity.jetpackArmed=false;entity.jetpackActive=false;this.event('land');}}
     }
     entity.onLift=null;
     if(entity.grounded)for(const l of this.lifts)if(insideSurface(entity.x,entity.z,l) && Math.abs(entity.elevation-liftHeightAt(l,this.time))<.025){entity.onLift=l.id;break;}
@@ -807,6 +807,7 @@ export class ArenaGame {
     if(input.crouchToggle) { p.crouched=!p.crouched;this.event('crouch',{active:p.crouched}); }
     if (jumpDown && !p.jumpHeld) { const kind=tryJump(p,this.obstacles,this.time);if(kind){this.event('jump',{kind});this.emitNoise('jump',14);} }
     p.jumpHeld = jumpDown;
+    updateJetpack(p,dt,jumpDown);
     const speed = p.crouched ? PLAYER_SPEEDS.crouch : input.sprint ? PLAYER_SPEEDS.sprint : PLAYER_SPEEDS.walk, moveYaw = input.moveYaw ?? yaw;
     ix*=PLAYER_SPEEDS.side;if(iz>0)iz*=PLAYER_SPEEDS.back;
     // A sprint boosts forward travel. A full-speed sideways run cannot retain
@@ -826,7 +827,7 @@ export class ArenaGame {
       this.settle(p,dt/substeps,true);
     }
     if(impulseX||impulseZ){p.jumpImpulseX*=Math.exp(-dt*5);p.jumpImpulseZ*=Math.exp(-dt*5);}
-    if(p.grounded){p.airJumps=0;p.jumpImpulseX=p.jumpImpulseZ=0;p.lastGroundedAt=this.time;}
+    if(p.grounded){p.airJumps=0;p.jumpImpulseX=p.jumpImpulseZ=0;p.lastGroundedAt=this.time;p.jetpackArmed=false;p.jetpackActive=false;p.jetpackElapsed=0;}
     // Stop storing momentum into a blocked face; sliding along its other axis remains free.
     if(Math.abs(p.x-oldX)<Math.abs(dx)*.35)this.planarVelocity.x=0;
     if(Math.abs(p.z-oldZ)<Math.abs(dz)*.35)this.planarVelocity.z=0;

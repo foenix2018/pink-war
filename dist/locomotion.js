@@ -3,6 +3,23 @@ export const GAMEPAD_SPEED_MULTIPLIER=1.25;
 export const TOUCH_SPEED_MULTIPLIER=1.25;
 export const touchAnalogSprint=(x,z)=>Math.hypot(Number(x)||0,Number(z)||0)>=.88;
 export const JUMP_RULES=Object.freeze({ground:7.25,air:6.65,wall:7.0,wallPush:6.2,wallReach:.82,coyote:.10});
+// The second airborne press arms the compact thrusters for a short, finite hold.
+// Hold the second press to hover for up to two seconds; releasing stops the thrusters at once and they do not recharge in the air.
+export const JETPACK_RULES=Object.freeze({maxDuration:2,boostWindow:.16,brake:14,settleSpeed:.08,lowFuel:.2});
+// Fuel left, from 1 (full) to 0 (empty): drives the gauge on the pack and the sputter of the thrusters.
+export const jetpackFuel=player=>player?.jetpackArmed?Math.max(0,Math.min(1,1-(player.jetpackElapsed||0)/JETPACK_RULES.maxDuration)):0;
+export function updateJetpack(player,dt,held){
+  if(player.grounded||!held||!player.jetpackArmed){player.jetpackArmed=false;player.jetpackActive=false;return false;}
+  player.jetpackElapsed=(player.jetpackElapsed||0)+Math.max(0,dt);
+  if(player.jetpackElapsed>=JETPACK_RULES.maxDuration){player.jetpackArmed=false;player.jetpackActive=false;return false;}
+  player.jetpackActive=true;
+  if(player.jetpackElapsed>JETPACK_RULES.boostWindow){
+    const alpha=1-Math.exp(-JETPACK_RULES.brake*dt);
+    player.verticalSpeed+=(JETPACK_RULES.settleSpeed-player.verticalSpeed)*alpha;
+  }
+  return true;
+}
+
 export function nearbyJumpWall(player,obstacles){
   let closest=null;
   for(const wall of obstacles){
@@ -19,10 +36,11 @@ export function nearbyJumpWall(player,obstacles){
 export function tryJump(player,obstacles,time){
   if(player.crouched)return null;
   const ground=player.grounded||(time-(player.lastGroundedAt??-99)<JUMP_RULES.coyote&&!player.airJumps);
-  if(ground){player.grounded=false;player.verticalSpeed=JUMP_RULES.ground;player.airJumps=0;player.lastGroundedAt=-99;return 'ground';}
+  if(ground){player.grounded=false;player.verticalSpeed=JUMP_RULES.ground;player.airJumps=0;player.lastGroundedAt=-99;player.jetpackArmed=false;player.jetpackActive=false;player.jetpackElapsed=0;return 'ground';}
   if((player.airJumps||0)>=1)return null;
   const wall=nearbyJumpWall(player,obstacles);
   player.airJumps=1;player.verticalSpeed=wall?JUMP_RULES.wall:JUMP_RULES.air;
+  player.jetpackArmed=!wall;player.jetpackActive=!wall;player.jetpackElapsed=0;
   if(wall){player.jumpImpulseX=wall.x*JUMP_RULES.wallPush;player.jumpImpulseZ=wall.z*JUMP_RULES.wallPush;}
   return wall?'wall':'double';
 }
