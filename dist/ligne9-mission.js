@@ -57,7 +57,7 @@ export function createLigne9Mission({ game, characterId = 'lylu', hooks = {} }) 
   function openDoor(id) { if (opened.has(id)) return; opened.add(id); rebuild(); h.setDoor(id, true); h.cue('door'); }
   function drain(id) { if (drained.has(id)) return; drained.add(id); rebuild(); h.setWater(id, 'drained'); }
   function armWeapons() {
-    game.ownedWeapons = new Set([game.weaponIndex, 0, 1, 2, 3, 4].filter(i => weaponAllowedForCharacter(i, characterId) && !WEAPONS[i].melee));
+    game.ownedWeapons = new Set([game.weaponIndex, 0, 1, 2, 3, 4, 10].filter(i => weaponAllowedForCharacter(i, characterId) && !WEAPONS[i].melee));
     game.ammo = WEAPONS.map(w => w.capacity);
   }
   function place(cp) { Object.assign(game.player, { x: cp.x, z: cp.z, elevation: game.surfaceHeight(cp.x, cp.z), grounded: true, verticalSpeed: 0, yaw: cp.yaw || 0 }); }

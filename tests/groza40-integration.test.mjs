@@ -43,3 +43,29 @@ test('range 40 mm uses an independent timer, not the classic charge stock',()=>{
  assert.equal(g.trainingShots,1);assert.equal(g.throwCharge(origin,dir),false);
  g.time=30;assert.equal(g.throwCharge(origin,dir),true);assert.equal(g.trainingShots,2);
 });
+
+test('GROZA–40 survives each campaign mission reset and checkpoint from chapter 3 through 6',async()=>{
+ const {createM03Mission}=await import('../dist/m03-mission.js');
+ const {createM04Mission}=await import('../dist/m04-mission.js');
+ const {createLigne9Mission}=await import('../dist/ligne9-mission.js');
+ const {createM06Mission}=await import('../dist/m06-mission.js');
+ const missions=[
+   [3,({game,characterId})=>createM03Mission({game,characterId})],
+   [4,({game,characterId})=>createM04Mission({game,characterId})],
+   [5,({game,characterId})=>createLigne9Mission({game,characterId})],
+   [6,({game,characterId})=>createM06Mission({game,characterId})]
+ ];
+ for(const characterId of ['ghju','lylu'])for(const [level,create] of missions){
+   const game=new ArenaGame([],()=>.5,null,characterId);
+   game.configureWeaponAccess({mode:'campaign',level});
+   const mission=create({game,characterId});
+   mission.start();
+   assert.equal(game.ownedWeapons.has(10),true,`chapter ${level}: startup unlock for ${characterId}`);
+   assert.equal(game.selectWeapon(10),true,`chapter ${level}: equipped after startup`);
+   assert.equal(game.weapon.id,'groza40');
+   mission.restoreCheckpoint();
+   assert.equal(game.ownedWeapons.has(10),true,`chapter ${level}: checkpoint unlock for ${characterId}`);
+   assert.equal(game.selectWeapon(10),true,`chapter ${level}: equipped after checkpoint`);
+   assert.equal(game.weapon.id,'groza40');
+ }
+});
