@@ -43,3 +43,8 @@ Volume normalisé autour de -18 LUFS : le jeu applique lui-même le niveau de ch
 | `server-blip.mp3` | deux bips de terminal, 0,3 s |
 
 `jetpack-epidemic.mp3` : jet de gaz de 3 secondes pour le mini-jetpack (bouclé tant que les propulseurs fonctionnent).
+
+
+## Sons fournis
+
+Les sons CC0 listés dans [CREDITS.md](CREDITS.md) sont déjà présents ; ils remplacent la synthèse pour leur emplacement. Pour changer un son, remplacer le fichier du même nom.
