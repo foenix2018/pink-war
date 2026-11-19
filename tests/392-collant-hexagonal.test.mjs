@@ -21,9 +21,16 @@ function hero(profile){
 }
 const suitMesh=m=>{let r=null;m.root.traverse(o=>{if(o.isSkinnedMesh&&o.name==='AÉGIS IV suit')r=o;});return r;};
 
-test('the honeycomb textures exist: one colour map per hero, a shared relief and roughness',()=>{
- for(const f of ['suit_hex_ghju.jpg','suit_hex_lylu.jpg','suit_hex_nor.jpg','suit_hex_rough.jpg'])assert.ok(existsSync(url(f)),f);
+test('the honeycomb textures exist: one colour map and one outline glow per hero, a shared relief and roughness',()=>{
+ for(const f of ['suit_hex_ghju.jpg','suit_hex_lylu.jpg','suit_hex_nor.jpg','suit_hex_rough.jpg','suit_hex_glow_ghju.jpg','suit_hex_glow_lylu.jpg'])assert.ok(existsSync(url(f)),f);
  assert.ok(readFileSync(url('suit_hex_ghju.jpg')).length>50000,'real detail, not a flat fill');
+ // Near-black carbon: the generator's cell colours stay dark; only the outlines (rim, glow) carry the hero's colour.
+ const src=readFileSync(new URL('../tools/blender/hex_suit_textures.py',import.meta.url),'utf8');
+ for(const id of ['ghju','lylu']){
+  const row=src.split('\n').find(l=>l.includes(`'${id}': dict(`)),num=k=>row.match(new RegExp(k+'=\\((\\d+), (\\d+), (\\d+)\\)')).slice(1).map(Number);
+  assert.ok(Math.max(...num('hi'))<=60&&Math.max(...num('lo'))<=24,id+' cells are near-black carbon');
+  assert.ok(Math.max(...num('rim'))>=100,id+' outline stays visible, just discreet');
+ }
 });
 test('every triangle is projected on its own dominant axis in metres, on an unindexed copy of the suit geometry',()=>{
  const g=new T.BoxGeometry(.4,.8,.2,2,2,2),uvGeo=projectHexUV(g,.3);

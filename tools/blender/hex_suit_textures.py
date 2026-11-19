@@ -4,7 +4,8 @@
 #   python tools/blender/hex_suit_textures.py        (numpy + Pillow seulement, pas de Blender)
 #
 # Produit, dans dist/assets/heroes/ :
-#   suit_hex_ghju.jpg / suit_hex_lylu.jpg    couleur (prune pour GHJU, bleu pour LYLU)
+#   suit_hex_ghju.jpg / suit_hex_lylu.jpg    couleur : carbone presque noir, contours des alvéoles teintés (rose pour GHJU, bleu pour LYLU)
+#   suit_hex_glow_ghju.jpg / _lylu.jpg       lueur très discrète le long des contours (émissif)
 #   suit_hex_nor.jpg                         relief tangent (rainures biseautées, léger dôme par alvéole), commun
 #   suit_hex_rough.jpg                       rugosité (rainures mates, sommet des alvéoles plus lisse, usure brillante), commune
 # La dalle se répète sans couture : 10 × 2 colonnes d'alvéoles à plat (angle en haut), 17 rangées ; elle couvre 30 cm en x et
@@ -74,9 +75,10 @@ def build():
     Image.fromarray(((nrm * .5 + .5) * 255).astype(np.uint8)).save(os.path.join(OUT, 'suit_hex_nor.jpg'), quality=90)
     rough = np.clip(.62 - .22 * groove * (.6 + .4 * dome) - .16 * wear * groove - .12 * scratches + .30 * (1 - groove) + .05 * (fine - .5), .15, 1)
     Image.fromarray((rough * 255).astype(np.uint8)).resize((512, 512), Image.LANCZOS).save(os.path.join(OUT, 'suit_hex_rough.jpg'), quality=88)
-    palettes = {   # cell colour at shade 0 / shade 1, groove colour, lit-edge colour (0-255)
-        'ghju': dict(lo=(30, 21, 36), hi=(74, 44, 70), groove=(8, 6, 10), rim=(150, 86, 134)),
-        'lylu': dict(lo=(22, 34, 58), hi=(52, 82, 126), groove=(6, 9, 15), rim=(110, 158, 214)),
+    # Near-black carbon cells; only the hexagon outlines carry the hero's colour, very discreetly.
+    palettes = {   # cell colour at shade 0 / shade 1, groove colour, lit-edge colour (0-255), outline glow colour
+        'ghju': dict(lo=(15, 15, 18), hi=(40, 39, 44), groove=(30, 9, 22), rim=(170, 52, 112), glow=(255, 60, 150)),
+        'lylu': dict(lo=(14, 16, 20), hi=(38, 42, 50), groove=(8, 17, 34), rim=(64, 140, 226), glow=(70, 160, 255)),
     }
     for name, pal in palettes.items():
         lo, hi, gv, rm = (np.array(pal[k], np.float32) for k in ('lo', 'hi', 'groove', 'rim'))
@@ -85,9 +87,13 @@ def build():
         cell = cell * (.94 + .08 * dome[..., None]) * (.85 + .45 * wear[..., None] * (.5 + .5 * r3[..., None]))
         cell = cell + 38 * scratches[..., None] + 10 * (fine[..., None] - .5)
         img = gv + (cell - gv) * groove[..., None]
-        img = img + (rm - img) * (.34 * rim * groove)[..., None]
+        img = img + (rm - img) * (.30 * rim * groove)[..., None]
         Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)).save(os.path.join(OUT, f'suit_hex_{name}.jpg'), quality=90)
-    print('collant en nid d\'abeille : 4 fichiers')
+        # Outline glow (emissive map): a thin line along every groove, nothing in the cells.
+        line = np.exp(-((e - .045) / .032) ** 2) * (.75 + .25 * r3)
+        glow = np.array(pal['glow'], np.float32)[None, None, :] * line[..., None]
+        Image.fromarray(np.clip(glow, 0, 255).astype(np.uint8)).save(os.path.join(OUT, f'suit_hex_glow_{name}.jpg'), quality=90)
+    print('collant en nid d\'abeille : 6 fichiers')
 
 if __name__ == '__main__':
     build()

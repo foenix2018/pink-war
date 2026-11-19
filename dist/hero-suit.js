@@ -1,8 +1,8 @@
 import * as T from './vendor/three.webgpu.min.js';
 
-// The heroes' undersuit ("collant"): a honeycomb of small hexagonal cells — bevelled grooves, a thin lit edge, a different
-// shade for every cell, worn scuffs — instead of a plain black (tools/blender/hex_suit_textures.py): plum for GHJU, blue for
-// LYLU. The suit is the visible "AÉGIS IV suit" skinned mesh; the rest of the body is covered by the plates.
+// The heroes' undersuit ("collant"): a honeycomb of small hexagonal cells in near-black carbon — bevelled grooves, worn
+// scuffs — whose outlines alone carry the hero's colour, very discreetly (tools/blender/hex_suit_textures.py): pink for GHJU,
+// blue for LYLU. The suit is the visible "AÉGIS IV suit" skinned mesh; the rest of the body is covered by the plates.
 //
 // The mesh's own UVs are not made for a pattern, so every triangle is projected along its dominant axis in BIND pose, in
 // metres, on a non-indexed copy of the geometry (a seam is then a clean pattern shift along a triangle edge, never a smear);
@@ -46,11 +46,14 @@ export function applyHexSuit(model, profile) {
     mesh.geometry = geometry; mesh.material = material;
   }
   const ready = !meshes.length ? Promise.resolve(false) : Promise.all([
-    texture(blue ? 'suit_hex_lylu.jpg' : 'suit_hex_ghju.jpg'), texture('suit_hex_nor.jpg', { srgb: false }), texture('suit_hex_rough.jpg', { srgb: false })
-  ]).then(([map, normalMap, roughnessMap]) => {
+    texture(blue ? 'suit_hex_lylu.jpg' : 'suit_hex_ghju.jpg'), texture('suit_hex_nor.jpg', { srgb: false }), texture('suit_hex_rough.jpg', { srgb: false }),
+    texture(blue ? 'suit_hex_glow_lylu.jpg' : 'suit_hex_glow_ghju.jpg')
+  ]).then(([map, normalMap, roughnessMap, glowMap]) => {
     if (disposed) return false;
     for (const [mesh] of restored) {
-      const m = mesh.material; m.color.setHex(0xffffff); m.map = map; m.normalMap = normalMap; m.normalScale.set(.5, .5); m.roughnessMap = roughnessMap; m.needsUpdate = true;
+      const m = mesh.material; m.color.setHex(0xffffff); m.map = map; m.normalMap = normalMap; m.normalScale.set(.5, .5); m.roughnessMap = roughnessMap;
+      m.emissive.setHex(0xffffff); m.emissiveMap = glowMap; m.emissiveIntensity = .28; // the outlines, very discreetly
+      m.needsUpdate = true;
     }
     return true;
   }).catch(error => { console.warn('Collant hexagonal indisponible', error); return false; });
