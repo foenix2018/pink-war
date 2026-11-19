@@ -1,0 +1,26 @@
+name: GHJU feminine preview (isolated checks)
+on:
+  pull_request:
+    paths:
+      - 'dist/ghju-feminine-*'
+      - 'tests/ghju-feminine-preview.test.mjs'
+      - '.github/workflows/ghju-feminine-checks.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Validate isolated preview JavaScript syntax
+        run: |
+          node --check dist/ghju-feminine-fit.js
+          node --check dist/ghju-feminine-preview.js
+      - name: Check morphology and original-identity invariants
+        run: node --test tests/ghju-feminine-preview.test.mjs
