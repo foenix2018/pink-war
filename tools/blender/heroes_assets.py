@@ -222,20 +222,8 @@ def rifle():
     a.box('label', (.06, .0, .0285), (.05, .02, .001))
     return a
 
-# ---------------------------------------------------------------- GHJU: sculpted bust shells and hip guards
-# Worn by GHJU only (hero-gear.js), on top of the reshaped rig (hero-figure.js). Rig frame, front = -z.
-def bust():
-    a = Asset('bust')
-    for s in (-1, 1):
-        cx, cy, cz = s * .090, 1.392, -.112
-        a.sphere('gunDark', (cx, cy, cz), .072, seg=28, scale=(1.0, .78, .86))             # sculpted shell: flattened ellipsoid, flank of the sternum shield
-        a.sphere('gunSteel', (cx + s * .004, cy + .008, cz - .008), .056, seg=24, scale=(1.0, .72, .80))  # raised plate on top
-        a.torus('glow', (cx, cy - .020, cz - .004), .064, .0036, seg=40, tseg=6, axis='z', arc=math.pi * .8)  # under-bust light line
-        for k in range(3): a.cyl('gunSteel', (cx + s * (.034 + k * .004), cy + .022 - k * .016, cz - .060 + k * .003), .004, .005, seg=8, axis='z')
-    a.box('gunDark', (0, 1.312, -.152), (.20, .016, .05))                                      # slim under-bust band
-    for s in (-1, 1): a.box('gunSteel', (s * .085, 1.309, -.177), (.05, .008, .008))
-    return a
-
+# ---------------------------------------------------------------- GHJU: hip guards (the chest's forward swell is in the plates)
+# Worn by GHJU only (hero-gear.js), on top of the reshaped body (hero-figure.js). Rig frame, front = -z.
 def hip_guards():
     a = Asset('hips')
     for s in (-1, 1):
@@ -251,6 +239,6 @@ if __name__ == '__main__':
     if not only or only == 'fabric': fabric_textures()
     if not only or only == 'plates': plates()
     if not only or only == 'mantle': mantle()
-    for fn, size in ((belt, 1024), (rifle, 1024), (bust, 1024), (hip_guards, 1024)):
+    for fn, size in ((belt, 1024), (rifle, 1024), (hip_guards, 1024)):
         if only and only != fn.__name__: continue
         build(fn(), size, 48, out=OUT)  # bust and hip_guards are GHJU's

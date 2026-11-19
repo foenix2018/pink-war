@@ -19,8 +19,8 @@ function texture(name, { srgb = true, repeat = true, channel = 0, flipY = true }
   return textures.get(key);
 }
 export const HERO_GEAR_FILES = Object.freeze(['mantle', 'belt', 'rifle']);
-// Sculpted bust shells and flared hip guards: GHJU's figure (hero-figure.js reshapes the rig underneath them).
-export const HERO_FIGURE_FILES = Object.freeze(['bust', 'hips']);
+// Flared hip guards: GHJU's figure (hero-figure.js reshapes the body, the chest plates swell forward by themselves).
+export const HERO_FIGURE_FILES = Object.freeze(['hips']);
 export const PLATE_TILE = .24;
 
 // Metric box projection of the armour batches (rig frame), so the riveted plates keep their real size everywhere.
@@ -88,10 +88,8 @@ export function attachHeroGear(model, profile, { cape = null, tabard = null, arm
     place(anchor(hips, 'ceinture tactique'), belt, aoBelt);
     // Slung across the back, muzzle over the right shoulder, over the cloak.
     if (!blue) { // GHJU's figure
-      const [bust, hipsGuard] = await Promise.all(HERO_FIGURE_FILES.map(n => file(n).then(b => parsePWM(T, b))));
-      const [aoBust, aoHips] = await Promise.all(HERO_FIGURE_FILES.map(n => texture(n + '_ao.jpg', { srgb: false, repeat: false, channel: 1, flipY: false })));
+      const hipsGuard = await file('hips').then(b => parsePWM(T, b)), aoHips = await texture('hips_ao.jpg', { srgb: false, repeat: false, channel: 1, flipY: false });
       if (disposed) return;
-      place(anchor(chest, 'poitrine sculptée'), bust, aoBust);
       place(anchor(hips, 'protections de hanche'), hipsGuard, aoHips);
     }
     place(anchor(chest, 'fusil porté dans le dos', new T.Matrix4().compose(new T.Vector3(.0, 1.28, .215), new T.Quaternion().setFromEuler(new T.Euler(0, 0, 1.08)), new T.Vector3(1, 1, 1))), rifle, aoRifle);

@@ -1,5 +1,6 @@
 // GHJU's figure: a feminine silhouette made by reshaping the SKINNED BODY MESH itself, never the skeleton. A waist is
-// drawn in between the ribcage and the pelvis, and the arms are slimmed around their axis. Every bone keeps its exact
+// drawn in between the ribcage and the pelvis, the front of the chest swells slightly forward (one soft contour, not
+// separate shapes), and the arms are slimmed around their axis. Every bone keeps its exact
 // position, rotation and length, so the animations, the weapon IK (grips exact to the millimetre), the feet's floor
 // contact, the hit zones and the plates and cloak hung from the bones are untouched.
 //
@@ -11,6 +12,7 @@ import * as T from './vendor/three.webgpu.min.js';
 
 export const FEMININE_FIGURE = Object.freeze({
   waist:  Object.freeze({ y0: 1.00, y1: 1.34, peak: .46, across: .80, depth: .90, centerZ: .01 }), // waist band (bind y) and its narrowing
+  chest:  Object.freeze({ y0: 1.27, y1: 1.47, forward: .013, halfWidth: .17, centerZ: .01 }),           // the chest swells slightly forward, as one contour
   arms:   .92,                                                                                          // radial scale of the arms around their axis
 });
 const smooth = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -19,6 +21,14 @@ const smooth = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a
 export function waistProfile(y, { y0, y1, peak } = FEMININE_FIGURE.waist) {
   const u = (y - y0) / (y1 - y0); if (u <= 0 || u >= 1) return 0;
   return smooth(0, peak, u) * (1 - smooth(peak, 1, u));
+}
+
+// Forward swell of the chest: 1 at the middle of the front of the ribcage, easing to 0 above, below, towards the flanks and
+// at the back (the part of the body behind the spine axis does not move).
+export function chestSwell(x, y, z, { y0, y1, halfWidth, centerZ } = FEMININE_FIGURE.chest) {
+  if (y <= y0 || y >= y1 || Math.abs(x) >= halfWidth || z >= centerZ) return 0;
+  const u = (y - y0) / (y1 - y0), across = 1 - smooth(.35, 1, Math.abs(x) / halfWidth), front = smooth(0, .08, centerZ - z);
+  return Math.sin(Math.PI * u) ** 1.2 * across * front;
 }
 
 export function shapeHeroFigure(model, profile, figure = FEMININE_FIGURE) {
@@ -49,6 +59,8 @@ export function shapeHeroFigure(model, profile, figure = FEMININE_FIGURE) {
         const x0 = p.x, y0 = p.y, z0 = p.z; let sx = 1, sz = 1;
         const f = waistProfile(p.y, w) * Math.min(1, torso);
         if (f > 0) { sx = 1 - (1 - w.across) * f; sz = 1 - (1 - w.depth) * f; p.x = x0 * sx; p.z = w.centerZ + (z0 - w.centerZ) * sz; }
+        const c0 = figure.chest, fc = chestSwell(p.x, p.y, p.z, c0) * Math.min(1, torso);
+        if (fc > 0) p.z -= c0.forward * fc;
         const arm = left > right ? left : right, side = left > right ? 'Left' : 'Right';
         if (arm > .5 && axes[side][0]) { // the arm: shrink around the nearest point of its axis
           const a = axes[side]; c.copy(onSegment(p, a[0], a[1])); const c2 = onSegment(p, a[1], a[2]); if (c2.distanceToSquared(p) < c.distanceToSquared(p)) c.copy(c2);

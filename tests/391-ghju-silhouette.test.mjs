@@ -5,7 +5,7 @@ import {createCharacterKit,createSoldier} from '../dist/soldier.js';
 import {CHARACTERS} from '../dist/characters.js';
 import {buildGun} from '../dist/weapons.js';
 import {installShadowUnit,applyShadowMaterials} from '../dist/shadow-unit-game.js';
-import {FEMININE_FIGURE,waistProfile} from '../dist/hero-figure.js';
+import {FEMININE_FIGURE,waistProfile,chestSwell} from '../dist/hero-figure.js';
 
 // Headless stand-ins for the canvas used by the cloth and gear textures.
 const ctx=new Proxy({},{get:(t,k)=>k==='createLinearGradient'?()=>({addColorStop(){}}):()=>{},set:()=>true});
@@ -46,10 +46,25 @@ test('GHJU has a narrower waist than LYLU, at the same bind height, with exact b
  const theirs=new Set(bodyMeshes(lylu).map(m=>m.geometry));for(const m of own)assert.ok(!theirs.has(m.geometry));
  ghju.dispose();lylu.dispose();
 });
-test('the sculpted bust and hip guards ship for GHJU only, with their baked occlusion',async()=>{
- const {HERO_FIGURE_FILES}=await import('../dist/hero-gear.js'),{existsSync}=await import('node:fs');
- assert.deepEqual([...HERO_FIGURE_FILES],['bust','hips']);
- for(const f of HERO_FIGURE_FILES)for(const ext of ['.pwm','_ao.jpg'])assert.ok(existsSync(new URL('../dist/assets/heroes/'+f+ext,import.meta.url)),f+ext);
- const src=(await import('node:fs')).readFileSync(new URL('../dist/hero-gear.js',import.meta.url),'utf8');assert.match(src,/if \(!blue\) \{ \/\/ GHJU's figure/);
+test('the chest swells slightly forward as one soft contour: body and plates, nothing at the back, the flanks, the collar or the waist',()=>{
+ const c=FEMININE_FIGURE.chest,mid=(c.y0+c.y1)/2;
+ assert.equal(chestSwell(0,mid,.05),0,'the back does not move');assert.equal(chestSwell(c.halfWidth+.01,mid,-.1),0,'nothing past the flanks');
+ assert.equal(chestSwell(0,c.y1+.02,-.1),0);assert.equal(chestSwell(0,c.y0-.02,-.1),0);
+ assert.ok(chestSwell(0,mid,-.1)>.9,'full swell at the middle of the front');assert.ok(chestSwell(.1,mid,-.1)<chestSwell(0,mid,-.1),'easing towards the flanks');
+ assert.ok(c.forward<=.015,'discreet: at most 1.5 cm on the body');
+ const ghju=hero(CHARACTERS.find(c=>c.id==='ghju')),lylu=hero(CHARACTERS.find(c=>c.id==='lylu'));
+ const front=m=>{let z=Infinity;for(const mesh of bodyMeshes(m)){const p=mesh.geometry.attributes.position;for(let i=0;i<p.count;i++)if(Math.abs(p.getX(i))<.05&&p.getY(i)>mid-.03&&p.getY(i)<mid+.03)z=Math.min(z,p.getZ(i));}return z;};
+ const dz=front(lylu)-front(ghju);assert.ok(dz>.006&&dz<.02,'the body front sits slightly forward: '+dz.toFixed(4));
+ // The armour plates carry the swell: GHJU's front plates reach further forward than LYLU's.
+ const plateFront=m=>{let z=Infinity;for(const b of m.shadowUnit.armour.batches){const p=b.geometry.attributes.position;for(let i=0;i<p.count;i++)if(Math.abs(p.getX(i))<.06&&p.getY(i)>1.38&&p.getY(i)<1.46)z=Math.min(z,p.getZ(i));}return z;};
+ const dp=plateFront(lylu)-plateFront(ghju);assert.ok(dp>.008&&dp<.03,'the chest plates swell forward: '+dp.toFixed(4));
+ ghju.dispose();lylu.dispose();
+});
+test('GHJU wears flared hip guards with their baked occlusion; nothing separate on the chest',async()=>{
+ const {HERO_FIGURE_FILES}=await import('../dist/hero-gear.js'),{existsSync,readFileSync}=await import('node:fs');
+ assert.deepEqual([...HERO_FIGURE_FILES],['hips']);
+ for(const ext of ['.pwm','_ao.jpg'])assert.ok(existsSync(new URL('../dist/assets/heroes/hips'+ext,import.meta.url)),'hips'+ext);
+ assert.ok(!existsSync(new URL('../dist/assets/heroes/bust.pwm',import.meta.url)),'no separate bust shells');
+ assert.match(readFileSync(new URL('../dist/hero-gear.js',import.meta.url),'utf8'),/if \(!blue\) \{ \/\/ GHJU's figure/);
 });
 test.after?.(()=>{console.warn=warn;});

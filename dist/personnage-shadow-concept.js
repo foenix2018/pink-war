@@ -5,6 +5,7 @@ import {merge,bevelBox,loft} from './geo.js';
 import {batchHeroArmor} from './hero-armor-batches.js';
 
 // Shared reference armour: fitted to the native bones for both game and viewer.
+const smoothstep01=t=>{t=Math.min(1,Math.max(0,t));return t*t*(3-2*t);};
 export function attachShadowConcept(model, profile) {
   // Author attachment transforms in the rig's bind pose, never in the transient
   // weapon IK pose active when the scene happens to instantiate this soldier.
@@ -421,6 +422,17 @@ export function attachShadowConcept(model, profile) {
           // two flat shields suspended in front of and behind the soldier.
           const wrap=Math.sqrt(Math.max(.16,1-(p.getX(i)/.245)**2));
           p.setZ(i,p.getZ(i)*.65*wrap);
+        }
+        baked.computeVertexNormals();
+      }
+      if(group===spine&&!blue){
+        // GHJU: the front of the chest swells slightly forward, as one soft contour carried by the plates themselves
+        // (no separate shapes): highest in the middle of the ribcage, easing to nothing at the collar, the flanks and the waist.
+        const p=baked.attributes.position;
+        for(let i=0;i<p.count;i++){
+          const x=p.getX(i),y=p.getY(i),z=p.getZ(i);if(z>=-.02||y<=-.115||y>=.075||Math.abs(x)>=.17)continue;
+          const u=(y+.115)/.19,across=1-smoothstep01((Math.abs(x)/.17-.35)/.65),front=smoothstep01(-(z+.02)/.07);
+          p.setZ(i,z-.019*Math.sin(Math.PI*u)**1.2*across*front);
         }
         baked.computeVertexNormals();
       }
