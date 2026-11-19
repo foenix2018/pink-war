@@ -205,7 +205,7 @@ export function createRLHSoldier(kit,createGun,profile){
   actor.gaitReference=heroGaitReference(data,soleSamples);
   const locomotion=createHeroLocomotion({root,actor,hips,spine,body,legs,knees,feet});
   const jump=createHeroJump({root,actor,hips,spine,body,legs,knees,feet,freeArm:arms[0].upper},solveLegChain,locomotion.footFloor);
-   const jetpackFX=createJetpackFX(root,body,{masculine:!!profile?.masculine});
+   const jetpackFX=createJetpackFX(root,spine,{masculine:!!profile?.masculine}); // low on the back, on the lumbar bone: clear of the shoulder-slung rifle
   // A one-handed weapon must not leave the free hand holding an invisible
   // rifle. Its counter-swing comes from the existing idle/walk/run takes.
   const freeArmNames=['LeftShoulder','LeftArm','LeftForeArm','LeftHand'],freeArmPose=new Map(freeArmNames.map(n=>[n,bone(n)?.quaternion.clone()])),freeArmTracks={};
@@ -287,7 +287,7 @@ export function createRLHSoldier(kit,createGun,profile){
       }
       if(WEAPON_FRAME[weapon].melee){const slash=flight?.saberSwing||{};gun.rotation.set((slash.x||0)-.12,slash.y||0,slash.z||0);}else{gun.rotation.y=gun.rotation.z=0;}
       gun.userData.animateHands(trigger,.18+recoilBody*.3,reload,dt);rest.userData.animate({relax:.65},dt);attachFreeHand();
-      solveArms();actor.skeleton.update();jetpackFX.update(dt,!!flight.jetpack);
+      solveArms();actor.skeleton.update();jetpackFX.update(dt,!!flight.jetpack,flight.jetpackFuel??1);
     },
     dispose(){jetpackFX.dispose();armor.dispose();actor.dispose();rest.userData.dispose();gun.userData.disposeDynamic?.();}
   };

@@ -22,6 +22,10 @@ export const HERO_GEAR_FILES = Object.freeze(['mantle', 'belt', 'rifle']);
 // Flared hip guards: GHJU's figure (hero-figure.js reshapes the body, the chest plates swell forward by themselves).
 export const HERO_FIGURE_FILES = Object.freeze(['hips']);
 export const PLATE_TILE = .24;
+// The rifle is slung across the shoulder blades, high on the back, stock to the lower left and muzzle over the right shoulder;
+// the mini-jetpack (jetpack-fx.js) sits below it, low on the back, so the two never cross. Rig frame, metres; roll in radians about z.
+// The rifle is 1.02 m long (x from -0.46 to +0.60 in its own frame).
+export const RIFLE_MOUNT = Object.freeze({ position: [0.02, 1.56, 0.215], roll: 0.85 });
 
 // Metric box projection of the armour batches (rig frame), so the riveted plates keep their real size everywhere.
 export function plateUV(geometry, tile = PLATE_TILE) {
@@ -92,7 +96,7 @@ export function attachHeroGear(model, profile, { cape = null, tabard = null, arm
       if (disposed) return;
       place(anchor(hips, 'protections de hanche'), hipsGuard, aoHips);
     }
-    place(anchor(chest, 'fusil porté dans le dos', new T.Matrix4().compose(new T.Vector3(.0, 1.28, .215), new T.Quaternion().setFromEuler(new T.Euler(0, 0, 1.08)), new T.Vector3(1, 1, 1))), rifle, aoRifle);
+    place(anchor(chest, 'fusil porté dans le dos', new T.Matrix4().compose(new T.Vector3(...RIFLE_MOUNT.position), new T.Quaternion().setFromEuler(new T.Euler(0, 0, RIFLE_MOUNT.roll)), new T.Vector3(1, 1, 1))), rifle, aoRifle);
     return true;
   })().catch(error => { console.warn('Shadow Unit / équipement Blender indisponible', error); return false; });
   return {

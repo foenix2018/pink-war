@@ -4,7 +4,10 @@ export const TOUCH_SPEED_MULTIPLIER=1.25;
 export const touchAnalogSprint=(x,z)=>Math.hypot(Number(x)||0,Number(z)||0)>=.88;
 export const JUMP_RULES=Object.freeze({ground:7.25,air:6.65,wall:7.0,wallPush:6.2,wallReach:.82,coyote:.10});
 // The second airborne press arms the compact thrusters for a short, finite hold.
-export const JETPACK_RULES=Object.freeze({maxDuration:.88,boostWindow:.16,brake:14,settleSpeed:.08});
+// Hold the second press to hover for up to two seconds; releasing stops the thrusters at once and they do not recharge in the air.
+export const JETPACK_RULES=Object.freeze({maxDuration:2,boostWindow:.16,brake:14,settleSpeed:.08,lowFuel:.2});
+// Fuel left, from 1 (full) to 0 (empty): drives the gauge on the pack and the sputter of the thrusters.
+export const jetpackFuel=player=>player?.jetpackArmed?Math.max(0,Math.min(1,1-(player.jetpackElapsed||0)/JETPACK_RULES.maxDuration)):0;
 export function updateJetpack(player,dt,held){
   if(player.grounded||!held||!player.jetpackArmed){player.jetpackArmed=false;player.jetpackActive=false;return false;}
   player.jetpackElapsed=(player.jetpackElapsed||0)+Math.max(0,dt);

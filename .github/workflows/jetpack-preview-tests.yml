@@ -11,6 +11,10 @@ on:
       - 'dist/rlh-firefighter.js'
       - 'dist/game.js'
       - 'tests/411-jetpack-hover.test.mjs'
+      - 'tests/412-jetpack-deux-secondes.test.mjs'
+      - 'dist/hero-gear.js'
+      - 'dist/blender-models.js'
+      - 'dist/assets/heroes/jetpack.pwm'
 permissions:
   contents: read
 jobs:
@@ -27,9 +31,11 @@ jobs:
         run: |
           node --check dist/jetpack-fx.js
           node --check dist/jetpack-audio.js
+          node --check dist/blender-models.js
+          node --check dist/hero-gear.js
           node --check dist/locomotion.js
           node --check dist/game-logic.js
           node --check dist/rlh-firefighter.js
           node --check dist/game.js
       - name: Tester les sauts GHJU et LYLU à 30, 60 et 120 Hz
-        run: node --test tests/411-jetpack-hover.test.mjs
+        run: node --test tests/411-jetpack-hover.test.mjs tests/412-jetpack-deux-secondes.test.mjs

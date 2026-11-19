@@ -23,7 +23,7 @@ for(const id of ['ghju','lylu'])for(const hz of [30,60,120]){
     assert.equal(g.player.grounded,false,'must still be airborne during sustained second press');
     assert.ok(Math.abs(y1-y0)<.20,`hover drift should be small: ${y1-y0}`);
     assert.ok(g.player.jetpackActive);
-    for(let i=0;i<Math.round(2*hz);i++)tick(g,dt,true);
+    for(let i=0;i<Math.round(3*hz);i++)tick(g,dt,true);
     assert.equal(g.player.jetpackActive,false,'fuel time must be capped');
     assert.equal(g.player.grounded,true,'released by gravity after fuel exhaustion');
     assert.equal(g.player.elevation,0,'no penetration through floor');
@@ -49,15 +49,15 @@ test('jump normally without a second press never activates the back thrusters',(
 });
 test('jetpack smoke stays lightweight, attaches to the chest, and clears on release',()=>{
  const root=new T.Group(),chest=new T.Bone();root.add(chest);
- const fx=createJetpackFX(root,chest,{masculine:false});
+ const fx=createJetpackFX(root,chest,{masculine:false,models:false});
  assert.equal(fx.root.parent,chest);
  for(let i=0;i<12;i++)fx.update(1/60,true);
  const smoke=fx.root.getObjectByName('Jetpack / smoke particles');
- assert.equal(smoke.count,36);
+ assert.equal(smoke.count,56);
  for(let i=0;i<80;i++)fx.update(1/60,false);
  assert.equal(smoke.count,0);
  fx.dispose();assert.equal(fx.root.parent,null);
 });
 test('fuel use remains limited even if the player holds forever',()=>{
- assert.ok(JETPACK_RULES.maxDuration<1.5);
+ assert.ok(JETPACK_RULES.maxDuration<=2,'two seconds at most');
 });

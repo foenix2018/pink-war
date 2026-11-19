@@ -50,6 +50,7 @@ import {desktopZoomHeld,grenadeShortcut} from './desktop-modifier-controls.js';
 import {createHudContrastControl} from './hud-appearance.js';
 import {createArmorFeedback,meleeKick,MELEE_POSE} from './armor-feedback.js';
 import {createJetpackAudio} from './jetpack-audio.js';
+import {jetpackFuel} from './locomotion.js';
 
 const $ = id => document.getElementById(id);
 createGamepadAid();
@@ -486,7 +487,7 @@ function updateWeaponVisuals(dt, firing, moving) {
   // WebXR deliberately keeps the player mesh hidden: tracked controllers own the visible hands.
   if (vr?.mode !== 'xr') {
     world.soldier.animate(clock, moving, recoil, reloadLift, trigger, dt, {
-      airborne: !game.player.grounded, verticalSpeed: game.player.verticalSpeed,jetpack:!!game.player.jetpackActive,
+      airborne: !game.player.grounded, verticalSpeed: game.player.verticalSpeed,jetpack:!!game.player.jetpackActive,jetpackFuel:game.player.grounded?1:jetpackFuel(game.player), // full on the ground, spent once released in the air,
       velocity:game.playerVelocity,
       ground:(x,z,y)=>game.footGroundHeight(x,z,y),
       crouched: game.player.crouched, firing: trigger>0,
@@ -896,7 +897,7 @@ function stepFrame(timestamp, xrFrame) {
     currentSprinting=!aiming&&(touchSprinting||vrInput.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight')||(move.id!==null&&Math.hypot(move.x,move.y)>=.88));
     game.precisionAiming=aimBlend>.55;
     game.step(dt, { x, z, yaw: facing, moveYaw, gamepadMoving:vrInput.gamepadMoving, touchMoving:vr.mode!=='xr'&&move.id!==null&&!!(move.x||move.y), sprint: currentSprinting, jump,crouchToggle });
-    jetpackAudio.update(!!game.player.jetpackActive&&settings.sound);
+    jetpackAudio.update(!!game.player.jetpackActive&&settings.sound,jetpackFuel(game.player));
     cameraFeel.update(dt,{speed:Math.hypot(game.playerVelocity.x,game.playerVelocity.z),grounded:game.player.grounded,verticalSpeed:game.player.verticalSpeed,strafe:x,sprint:currentSprinting,aim:aimBlend});
     try{filmLook ||= mountFilmLook({canvas:document.getElementById('world'),graded:()=>!!world?.renderer?.fpsPresentation?.stats?.().enabled});const on=game.state==='playing'&&vr?.mode!=='xr'&&vr?.mode!=='stereo';if(on!==filmOn){filmOn=on;filmLook.setEnabled(on);}filmLook.update(dt,{health:game.player.hp/100});}catch{}
     portalAudio.sync(game.activePortals,game.time);
