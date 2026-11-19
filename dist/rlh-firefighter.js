@@ -7,6 +7,7 @@ import {WEAPON_FRAME} from './weapons.js';
 import {createAegisArmor} from './aegis-v3.js';
 import {createHeroLocomotion,heroGaitReference} from './hero-locomotion.js';
 import {createHeroJump} from './hero-jump.js';
+import {createJetpackFX} from './jetpack-fx.js';
 
 let cached;
 const kits=new WeakMap(),clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
@@ -204,6 +205,7 @@ export function createRLHSoldier(kit,createGun,profile){
   actor.gaitReference=heroGaitReference(data,soleSamples);
   const locomotion=createHeroLocomotion({root,actor,hips,spine,body,legs,knees,feet});
   const jump=createHeroJump({root,actor,hips,spine,body,legs,knees,feet,freeArm:arms[0].upper},solveLegChain,locomotion.footFloor);
+   const jetpackFX=createJetpackFX(root,body,{masculine:!!profile?.masculine});
   // A one-handed weapon must not leave the free hand holding an invisible
   // rifle. Its counter-swing comes from the existing idle/walk/run takes.
   const freeArmNames=['LeftShoulder','LeftArm','LeftForeArm','LeftHand'],freeArmPose=new Map(freeArmNames.map(n=>[n,bone(n)?.quaternion.clone()])),freeArmTracks={};
@@ -229,7 +231,7 @@ export function createRLHSoldier(kit,createGun,profile){
   function solveArms(){fitMount();const targets=wristTargets();for(let i=0;i<2;i++){const arm=arms[i];
     if(i!==0||supported()){const pole=root.localToWorld(new T.Vector3(i===0?-.55:.55,1.05,.15));solveChain(arm.upper,arm.fore,arm.hand,targets[i],pole);const glove=i===0?gun.userData.support:gun.userData.hand;arm.hand.quaternion.copy(arm.hand.parent.getWorldQuaternion(new T.Quaternion()).invert().multiply(glove.getWorldQuaternion(new T.Quaternion())).multiply(glove.userData.rlh.quaternion));arm.hand.updateWorldMatrix(false,true);}
     arm.elbow.copy(arm.shoulder.worldToLocal(arm.fore.getWorldPosition(new T.Vector3())));arm.wrist.copy(arm.shoulder.worldToLocal(arm.hand.getWorldPosition(new T.Vector3())));arm.upper.userData.length=arm.fore.position.length();arm.fore.userData.length=arm.hand.position.length();}}
-  const api={root,hips,spine,body,rig:root,head,hair:new T.Group(),legs,knees,feet,gun,freeHand:rest,arms,pennants:[],actor,armor,nativeSkeleton:actor.skeleton,targetHeight,heightScale:targetHeight/2,measuredUnscaledHeight:2,weapon:0,
+  const api={root,hips,spine,body,rig:root,head,hair:new T.Group(),legs,knees,feet,gun,freeHand:rest,arms,pennants:[],actor,armor,jetpackFX,nativeSkeleton:actor.skeleton,targetHeight,heightScale:targetHeight/2,measuredUnscaledHeight:2,weapon:0,
     setFootSoles(points){locomotion.setSoles(points);},
     jointPositions(){root.updateWorldMatrix(true,true);const at=o=>o.getWorldPosition(new T.Vector3()),out={pelvis:at(hips),chest:at(body),head:at(head)};for(let i=0;i<2;i++){const side=i===0?'left':'right',prefix=i===0?'Left':'Right';out[side+'Hip']=at(legs[i]);out[side+'Knee']=at(knees[i]);out[side+'Ankle']=at(feet[i]);out[side+'Toe']=at(bone(prefix+'ToeBase'));out[side+'Shoulder']=at(arms[i].upper);out[side+'Elbow']=at(arms[i].fore);out[side+'Wrist']=at(arms[i].hand);}return out;},
     setWeapon(index){weapon=index;this.weapon=index;gun.userData.setVariant(index);rest.visible=!WEAPON_FRAME[index].support;
@@ -285,9 +287,9 @@ export function createRLHSoldier(kit,createGun,profile){
       }
       if(WEAPON_FRAME[weapon].melee){const slash=flight?.saberSwing||{};gun.rotation.set((slash.x||0)-.12,slash.y||0,slash.z||0);}else{gun.rotation.y=gun.rotation.z=0;}
       gun.userData.animateHands(trigger,.18+recoilBody*.3,reload,dt);rest.userData.animate({relax:.65},dt);attachFreeHand();
-      solveArms();actor.skeleton.update();
+      solveArms();actor.skeleton.update();jetpackFX.update(dt,!!flight.jetpack);
     },
-    dispose(){armor.dispose();actor.dispose();rest.userData.dispose();gun.userData.disposeDynamic?.();}
+    dispose(){jetpackFX.dispose();armor.dispose();actor.dispose();rest.userData.dispose();gun.userData.disposeDynamic?.();}
   };
   api.setWeapon(0);api.setLevel(1);api.animate(0,false);
   root.updateMatrixWorld(true);const standingBounds=new T.Box3().setFromObject(root,true);api.measuredUnscaledHeight=standingBounds.max.y-standingBounds.min.y;api.heightScale=targetHeight/api.measuredUnscaledHeight;return api;
