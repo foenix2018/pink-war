@@ -180,8 +180,11 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
   // Native click provides one command per tap and keyboard/screen-reader activation.
   // Held fire/aim keep their original captured pointer handlers in each engine.
   for(const button of root.querySelectorAll('[data-armor],[data-hud-action]')){
-    button.addEventListener('pointerdown',e=>{e.stopPropagation();});
-    button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();command(button.dataset.armor||button.dataset.hudAction);if(e.detail>0)button.blur();});
+    // Crouch (and so the slide) acts on the press itself: with a thumb already on the joystick, iOS does not reliably deliver
+    // the click of a second finger, so the button looked dead exactly when running. The click that may follow is ignored.
+    const pressNow=button.dataset.hudAction==='crouch';
+    button.addEventListener('pointerdown',e=>{e.stopPropagation();if(pressNow){window.__pwCrouchPressAt=performance.now();command('crouch');}});
+    button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(pressNow&&performance.now()-(window.__pwCrouchPressAt||-1e4)<900)return;command(button.dataset.armor||button.dataset.hudAction);if(e.detail>0)button.blur();});
   }
   root.addEventListener('keydown',e=>{if(['Space','Enter'].includes(e.code))e.stopPropagation();});
   more.onclick=e=>{e.stopPropagation();setOpen(!open);};

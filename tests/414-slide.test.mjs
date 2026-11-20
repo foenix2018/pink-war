@@ -49,3 +49,17 @@ test('the slide pose is wired in every level and in the character',async()=>{
   for(const f of ['niveau3','niveau4','niveau6','ligne9','couronne-helix'])assert.match(readFileSync(new URL(`../dist/${f}.js`,import.meta.url),'utf8'),/slide:!!game\.player\.sliding/,f);
   assert.match(readFileSync(new URL('../dist/rlh-firefighter.js',import.meta.url),'utf8'),/applySlidePose/);
 });
+test('the stand (shooting range) slides too',async()=>{
+  const {ShootingRangeGame}=await import('../dist/shooting-range.js');
+  const g=new ShootingRangeGame([],Math.random,0,'ghju');g.start?.();g.player.z=40;
+  const run={x:0,z:-1,yaw:0,sprint:true,touchMoving:true};
+  for(let i=0;i<60;i++)g.step(1/60,run);
+  g.step(1/60,{...run,crouchToggle:true});
+  assert.equal(g.player.sliding,true);
+});
+test('crouch acts on the press, not only on the click (iPhone, second finger)',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const hud=readFileSync(new URL('../dist/combat-hud.js',import.meta.url),'utf8'),game=readFileSync(new URL('../dist/game.js',import.meta.url),'utf8');
+  assert.match(hud,/pressNow/);assert.match(hud,/__pwCrouchPressAt/);
+  assert.match(game,/\$\('crouch-button'\)\.addEventListener\('pointerdown'/);
+});

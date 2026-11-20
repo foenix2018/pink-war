@@ -255,7 +255,9 @@ for (const type of ['blur', 'pagehide', 'orientationchange']) window.addEventLis
 document.addEventListener('visibilitychange', () => { if (document.hidden) freeTouchControls(); });
 $('fire-button').addEventListener('pointerdown', e => { if (phase !== 'playing') return; e.preventDefault(); audioReady(); firePressQueued=true; firingPointers.add(e.pointerId); try { e.target.closest('button').setPointerCapture(e.pointerId); } catch {} $('fire-button').classList.add('firing'); });
 for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) $('fire-button').addEventListener(type, e => { firingPointers.delete(e.pointerId); if (!firingPointers.size) $('fire-button').classList.remove('firing'); });
-$('crouch-button').addEventListener('click',()=>{if(phase==='playing')crouchQueued=true;});
+// Acts on the press (a second finger's click is unreliable on iOS while the joystick is held); the click that follows is ignored.
+$('crouch-button').addEventListener('pointerdown',()=>{if(phase==='playing'){window.__pwCrouchPressAt=performance.now();crouchQueued=true;}});
+$('crouch-button').addEventListener('click',()=>{if(phase==='playing'&&performance.now()-(window.__pwCrouchPressAt||-1e4)>=900)crouchQueued=true;});
 $('pickup-button').addEventListener('click', () => { if(phase === 'playing')pickupQueued = true; });
 $('aim-button').addEventListener('pointerdown',e=>{if(phase!=='playing')return;e.preventDefault();if(e.pointerType==='touch'&&!game.weapon.melee)touchAimLatched=!touchAimLatched;else aimPointers.add(e.pointerId);try{e.currentTarget.setPointerCapture(e.pointerId);}catch{}});
 for(const type of ['pointerup','pointercancel','lostpointercapture'])$('aim-button').addEventListener(type,e=>aimPointers.delete(e.pointerId));
