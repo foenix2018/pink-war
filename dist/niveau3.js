@@ -313,7 +313,7 @@ function updateSoldier(dt,moving,sprint,firing){
   if(model.weapon!==game.weaponIndex)model.setWeapon(game.weaponIndex);
   model.gun.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,dualState:game.dual,reloading:game.reloadRemaining>0,
    reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,charge:game.charge});
-  model.animate(game.time,moving,weaponFeel.state.pitch,0,Number(firing),dt,{airborne:!game.player.grounded,verticalSpeed:game.player.verticalSpeed,crouched:game.player.crouched,firing:!!firing,sprint,aim:aimBlend>.2});
+  model.animate(game.time,moving,weaponFeel.state.pitch,0,Number(firing),dt,{airborne:!game.player.grounded,verticalSpeed:game.player.verticalSpeed,crouched:game.player.crouched,slide:!!game.player.sliding,firing:!!firing,sprint,aim:aimBlend>.2});
  }catch(error){console.warn('M03 / animation',error);scene.remove(model.root);playerRig=null;}
 }
 function aimRay(){

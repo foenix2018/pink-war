@@ -60,11 +60,14 @@ export function inertialMove(state,targetX,targetZ,dt,{grounded=true,crouched=fa
 
 // Slide: pressing crouch while sprinting throws the player low along the run direction, feet first. The speed is a burst
 // that eases out over the slide, the body stays crouched (low hitbox and camera), and a cooldown stops it being chained.
-export const SLIDE_RULES=Object.freeze({duration:.8,boost:1.45,minSpeed:3.2,maxSpeed:8.2,cooldown:1.3,jumpCancelAfter:.18});
-export function canSlide(player,velocity,sprinting){
+export const SLIDE_RULES=Object.freeze({duration:.8,boost:1.45,minSpeed:2.9,runSpeed:3.6,runGrace:.5,maxSpeed:8.2,cooldown:1.3,jumpCancelAfter:.18});
+export function canSlide(player,velocity,sprinting,time=0){
   if(!player||!player.grounded||player.crouched||(player.slideTime||0)>0||(player.slideCooldown||0)>0)return false;
   const speed=Math.hypot(velocity?.x||0,velocity?.z||0);
-  return !!sprinting&&speed>=SLIDE_RULES.minSpeed;
+  // A run is what counts, not the exact stick position at the instant of the press: a thumb that slips off full tilt while
+  // reaching for the button, or a sprint released a moment ago, still slides while the body is carrying the speed.
+  const recentRun=time-(player.lastRunAt??-99)<=SLIDE_RULES.runGrace;
+  return speed>=SLIDE_RULES.minSpeed&&(!!sprinting||speed>=SLIDE_RULES.runSpeed||recentRun);
 }
 export function startSlide(player,velocity){
   const speed=Math.hypot(velocity.x,velocity.z);

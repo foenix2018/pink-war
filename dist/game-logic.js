@@ -805,9 +805,10 @@ export class ArenaGame {
     // RLH-inspired locomotion: jump is an edge-triggered ballistic state, independent of frame rate.
     const p = this.player, jumpDown = !!input.jump;
     tickSlideCooldown(p,dt);
+    if(input.sprint||Math.hypot(this.planarVelocity.x,this.planarVelocity.z)>=SLIDE_RULES.runSpeed)p.lastRunAt=this.time;
     if(input.crouchToggle) {
       if(p.sliding){endSlide(p);this.event('crouch',{active:false});}
-      else if(canSlide(p,this.planarVelocity,input.sprint)){startSlide(p,this.planarVelocity);this.event('slide',{speed:p.slideSpeed});this.emitNoise('sprint',NOISE_RADIUS.sprint);}
+      else if(canSlide(p,this.planarVelocity,input.sprint,this.time)){startSlide(p,this.planarVelocity);this.event('slide',{speed:p.slideSpeed});this.emitNoise('sprint',NOISE_RADIUS.sprint);}
       else { p.crouched=!p.crouched;this.event('crouch',{active:p.crouched}); }
     }
     if(p.sliding&&input.jump&&!p.jumpHeld&&SLIDE_RULES.duration-p.slideTime>=SLIDE_RULES.jumpCancelAfter)endSlide(p);

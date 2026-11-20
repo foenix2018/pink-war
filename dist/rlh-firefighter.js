@@ -192,7 +192,21 @@ export function createRLHSoldier(kit,createGun,profile){
   const mount=new T.Group(),gun=createGun({sleeve:false}),rest=createGlove(kit.gloves,{mirror:true,sleeve:false});rest.name='Free RLH hand';root.add(mount,rest);mount.add(gun);gun.scale.setScalar(.88);
   const arms=['Left','Right'].map(side=>({side,shoulder:bone(side+'Arm'),upper:bone(side+'Arm'),fore:bone(side+'ForeArm'),hand:bone(side+'Hand'),elbow:new T.Vector3(),wrist:new T.Vector3()}));
   const armor=createAegisArmor(actor,kit,profile);
-  const chestRest=body.getWorldPosition(new T.Vector3());let level=1,weapon=0,anchor=new T.Vector3(),low=0,gait=0,recoilBody=0,carry=0,previewCarry=false;
+  const chestRest=body.getWorldPosition(new T.Vector3());let slideAmount=0;
+  // Slide: the pelvis drops to the ground and tips back, so the legs point forward, feet first; the spine folds half of it back forward
+  // (chest and rifle stay up, the head looks where it runs). Done in the root's frame, so it does not depend on the bones' own axes.
+  const SLIDE_POSE={drop:.58,pelvis:1.15,spine:.6};
+  function applySlidePose(k){
+    root.updateMatrixWorld(true);
+    const axis=new T.Vector3(1,0,0).transformDirection(root.matrixWorld),parentQ=hips.parent.getWorldQuaternion(new T.Quaternion()),
+      tilt=(angle,bone)=>{const wq=bone.getWorldQuaternion(new T.Quaternion()),pq=bone.parent.getWorldQuaternion(new T.Quaternion());
+        bone.quaternion.copy(pq.invert().multiply(new T.Quaternion().setFromAxisAngle(axis,angle).multiply(wq)));bone.updateMatrixWorld(true);};
+    hips.position.y-=SLIDE_POSE.drop*k;
+    tilt(SLIDE_POSE.pelvis*k,hips);
+    tilt(-SLIDE_POSE.spine*k,spine);
+    void parentQ;
+  }
+  let level=1,weapon=0,anchor=new T.Vector3(),low=0,gait=0,recoilBody=0,carry=0,previewCarry=false;
   const supported=()=>!!WEAPON_FRAME[weapon].dual||!!WEAPON_FRAME[weapon].support&&!previewCarry;
   const soleSamples=[];
   for(const mesh of actor.parts){if(mesh.name!=='RLH rubber')continue;const p=mesh.geometry.attributes.position;
@@ -269,6 +283,8 @@ export function createRLHSoldier(kit,createGun,profile){
       body.quaternion.multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),recoilBody*.025));
       if(lower>.001&&!flight?.airborne)for(let i=0;i<2;i++){solveLegChain(legs[i],knees[i],feet[i],footTargets[i],root.localToWorld(new T.Vector3(i===0?-.12:.12,.55,-.55)));feet[i].quaternion.copy(feet[i].parent.getWorldQuaternion(new T.Quaternion()).invert().multiply(footQuats[i]));}
       locomotion.pose(dt,flight);locomotion.plant(dt,flight);
+      slideAmount+=(Number(!!flight.slide)-slideAmount)*(1-Math.exp(-dt*(flight.slide?16:10)));this._slide=slideAmount;
+      if(slideAmount>.01)applySlidePose(slideAmount);
       poseFreeArm(dt,gaitCycle,flight);
       jump.pose(flight,motionState,!supported());
       root.updateMatrixWorld(true);
