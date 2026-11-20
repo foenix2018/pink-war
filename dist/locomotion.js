@@ -57,3 +57,32 @@ export function inertialMove(state,targetX,targetZ,dt,{grounded=true,crouched=fa
  if(stopping&&Math.hypot(state.x,state.z)<.008)state.x=state.z=0;
  return{x,z};
 }
+
+// Slide: pressing crouch while sprinting throws the player low along the run direction, feet first. The speed is a burst
+// that eases out over the slide, the body stays crouched (low hitbox and camera), and a cooldown stops it being chained.
+export const SLIDE_RULES=Object.freeze({duration:.8,boost:1.45,minSpeed:3.2,maxSpeed:8.2,cooldown:1.3,jumpCancelAfter:.18});
+export function canSlide(player,velocity,sprinting){
+  if(!player||!player.grounded||player.crouched||(player.slideTime||0)>0||(player.slideCooldown||0)>0)return false;
+  const speed=Math.hypot(velocity?.x||0,velocity?.z||0);
+  return !!sprinting&&speed>=SLIDE_RULES.minSpeed;
+}
+export function startSlide(player,velocity){
+  const speed=Math.hypot(velocity.x,velocity.z);
+  player.sliding=true;player.slideTime=SLIDE_RULES.duration;player.crouched=true;
+  player.slideSpeed=Math.min(SLIDE_RULES.maxSpeed,speed*SLIDE_RULES.boost);
+  player.slideDirX=velocity.x/speed;player.slideDirZ=velocity.z/speed;
+  return player.slideSpeed;
+}
+export function endSlide(player){
+  if(!player.sliding)return;
+  player.sliding=false;player.slideTime=0;player.slideSpeed=0;player.crouched=false;player.slideCooldown=SLIDE_RULES.cooldown;
+}
+// Advance the slide by dt: returns the planar velocity to apply, or null when it is over (the player stands up).
+export function slideVelocity(player,dt){
+  if(!player.sliding)return null;
+  player.slideTime=Math.max(0,player.slideTime-dt);
+  if(player.slideTime<=0||!player.grounded){endSlide(player);return null;}
+  const k=player.slideTime/SLIDE_RULES.duration,speed=player.slideSpeed*(.25+.75*k*k);
+  return{x:player.slideDirX*speed,z:player.slideDirZ*speed};
+}
+export function tickSlideCooldown(player,dt){if((player.slideCooldown||0)>0)player.slideCooldown=Math.max(0,player.slideCooldown-dt);}

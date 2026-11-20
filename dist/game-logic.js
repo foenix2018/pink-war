@@ -16,7 +16,7 @@ import { PLATFORMS, STAIRS, LIFTS, BRIDGES, BRIDGE_APPROACHES, insideSurface, tr
 import { PROBE, updateProbe } from './aerial-probes.js';
 import {PROBE_ROTORS,probeRotorAt,probeRotorIndex,probeRotorMaxHp,damageProbeRotor} from './probe-damage.js';
 import { NOISE_RADIUS, SHOT_RADIUS, propagateNoise, soundWaypoint } from './hearing.js';
-import { tryJump, updateJetpack, JETPACK_RULES } from './locomotion.js';
+import { tryJump, updateJetpack, JETPACK_RULES, SLIDE_RULES, canSlide, startSlide, endSlide, slideVelocity, tickSlideCooldown } from './locomotion.js';
 import { hostileShotProfile, predictShot } from './enemy-fire.js';
 import { enemyDurability, enemyVolley, rangedMuzzle, enemyScale, enemySightPoint, remembersCoverContact, aimReco1 } from './enemy-combat.js';
 import { sweepBlade, bladeBulletContact, reflectedVelocity } from './blade-combat.js';
@@ -326,7 +326,7 @@ export class ArenaGame {
     this.companionAmplifyUntil=0;this.companionHazards=[];this.companionWard=null;
     this.searchFields=new Map();
     this.navigation.refreshAt = -1; this.navigation.goal = -1;
-    this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0, verticalSpeed: 0, grounded: true, jumpHeld: false, crouched:false,airJumps:0,jumpImpulseX:0,jumpImpulseZ:0,lastGroundedAt:0,jetpackArmed:false,jetpackActive:false,jetpackElapsed:0 };
+    this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0, verticalSpeed: 0, grounded: true, jumpHeld: false, crouched:false,sliding:false,slideTime:0,slideCooldown:0,airJumps:0,jumpImpulseX:0,jumpImpulseZ:0,lastGroundedAt:0,jetpackArmed:false,jetpackActive:false,jetpackElapsed:0 };
     this.playerVelocity={x:0,y:0,z:0};this.planarVelocity={x:0,z:0};
     this.bladePrevious=null;this.bladeHitTimes=new Map();this.bladeSlashAt=-99;this.bladeSlashSide=1;this.bladeSpeed=0;this.bladeGuard=false;this.bladeHumAt=0;
     this.enemies = []; this.bullets = []; this.events = [];
@@ -804,7 +804,13 @@ export class ArenaGame {
     if (magnitude > 1) { ix /= magnitude; iz /= magnitude; }
     // RLH-inspired locomotion: jump is an edge-triggered ballistic state, independent of frame rate.
     const p = this.player, jumpDown = !!input.jump;
-    if(input.crouchToggle) { p.crouched=!p.crouched;this.event('crouch',{active:p.crouched}); }
+    tickSlideCooldown(p,dt);
+    if(input.crouchToggle) {
+      if(p.sliding){endSlide(p);this.event('crouch',{active:false});}
+      else if(canSlide(p,this.planarVelocity,input.sprint)){startSlide(p,this.planarVelocity);this.event('slide',{speed:p.slideSpeed});this.emitNoise('sprint',NOISE_RADIUS.sprint);}
+      else { p.crouched=!p.crouched;this.event('crouch',{active:p.crouched}); }
+    }
+    if(p.sliding&&input.jump&&!p.jumpHeld&&SLIDE_RULES.duration-p.slideTime>=SLIDE_RULES.jumpCancelAfter)endSlide(p);
     if (jumpDown && !p.jumpHeld) { const kind=tryJump(p,this.obstacles,this.time);if(kind){this.event('jump',{kind});this.emitNoise('jump',14);} }
     p.jumpHeld = jumpDown;
     updateJetpack(p,dt,jumpDown);
@@ -815,7 +821,8 @@ export class ArenaGame {
     const lateralSpeed=Math.max(-PLAYER_SPEEDS.strafeMax,Math.min(PLAYER_SPEEDS.strafeMax,ix*speed));
     const oldX=p.x,oldZ=p.z,oldY=p.elevation,wasGrounded=p.grounded;
     const moveScale=input.touchMoving?TOUCH_SPEED_MULTIPLIER:input.gamepadMoving?GAMEPAD_SPEED_MULTIPLIER:1;
-    const travel=inertialMove(this.planarVelocity,(Math.cos(moveYaw)*lateralSpeed+Math.sin(moveYaw)*iz*speed)*moveScale,(-Math.sin(moveYaw)*lateralSpeed+Math.cos(moveYaw)*iz*speed)*moveScale,dt,{grounded:p.grounded,crouched:p.crouched});
+    const slide=slideVelocity(p,dt);
+    const travel=slide?(this.planarVelocity.x=slide.x,this.planarVelocity.z=slide.z,{x:slide.x*dt,z:slide.z*dt}):inertialMove(this.planarVelocity,(Math.cos(moveYaw)*lateralSpeed+Math.sin(moveYaw)*iz*speed)*moveScale,(-Math.sin(moveYaw)*lateralSpeed+Math.cos(moveYaw)*iz*speed)*moveScale,dt,{grounded:p.grounded,crouched:p.crouched});
     const dx=travel.x,dz=travel.z;
     // Fine treads must be sampled along the whole move, including sprint at low FPS.
     // Subdivide locomotion and gravity together; AI, firing and mission time still tick once.
