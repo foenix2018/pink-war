@@ -254,6 +254,19 @@ for (const type of ['touchend', 'touchcancel']) document.addEventListener(type, 
 for (const type of ['blur', 'pagehide', 'orientationchange']) window.addEventListener(type, freeTouchControls);
 document.addEventListener('visibilitychange', () => { if (document.hidden) freeTouchControls(); });
 $('fire-button').addEventListener('pointerdown', e => { if (phase !== 'playing') return; e.preventDefault(); audioReady(); firePressQueued=true; firingPointers.add(e.pointerId); try { e.target.closest('button').setPointerCapture(e.pointerId); } catch {} $('fire-button').classList.add('firing'); });
+// Fire + aim with one thumb: while a finger holds the fire button, sliding it INSIDE the button's circle turns the view.
+// The rest of the screen keeps its normal swipe/orbit camera (a second finger there still looks around).
+const fireDrag=new Map();
+$('fire-button').addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse')fireDrag.set(e.pointerId,{x:e.clientX,y:e.clientY});});
+$('fire-button').addEventListener('pointermove',e=>{
+  const last=fireDrag.get(e.pointerId);if(!last||phase!=='playing'||!firingPointers.has(e.pointerId))return;
+  const dx=e.clientX-last.x,dy=e.clientY-last.y;fireDrag.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  const r=$('fire-button').getBoundingClientRect(),inside=Math.hypot(e.clientX-(r.left+r.width/2),e.clientY-(r.top+r.height/2))<=Math.max(r.width,r.height)/2*1.15;
+  if(!inside)return;
+  const fine=aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend),k=.004*settings.sensitivity*fine*1.5;
+  yaw-=Math.max(-90,Math.min(90,dx))*k;pitch=clamp(pitch-Math.max(-90,Math.min(90,dy))*k,-.85,.7);
+});
+for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) $('fire-button').addEventListener(type,e=>fireDrag.delete(e.pointerId));
 for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) $('fire-button').addEventListener(type, e => { firingPointers.delete(e.pointerId); if (!firingPointers.size) $('fire-button').classList.remove('firing'); });
 // Acts on the press (a second finger's click is unreliable on iOS while the joystick is held); the click that follows is ignored.
 $('crouch-button').addEventListener('pointerdown',()=>{if(phase==='playing'){window.__pwCrouchPressAt=performance.now();crouchQueued=true;}});

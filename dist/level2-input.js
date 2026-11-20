@@ -122,6 +122,18 @@ export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onRelo
    else if(name==='aim'){if(e.pointerType==='touch'){aimLatched=!aimLatched;setAim(aimLatched);}else{aimLatched=false;setAim(true);}}
    else actions[name]?.();
   });
+  if(name==='fire'){ // fire + aim with one thumb: sliding inside the button's circle turns the view; the screen swipe stays as it was
+   let last=null;
+   b.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse')last={id:e.pointerId,x:e.clientX,y:e.clientY};});
+   b.addEventListener('pointermove',e=>{
+    if(!last||e.pointerId!==last.id||!state.fire)return;
+    const dx=e.clientX-last.x,dy=e.clientY-last.y;last.x=e.clientX;last.y=e.clientY;
+    const r=b.getBoundingClientRect();
+    if(Math.hypot(e.clientX-(r.left+r.width/2),e.clientY-(r.top+r.height/2))>Math.max(r.width,r.height)/2*1.15)return;
+    state.lookDX+=Math.max(-90,Math.min(90,dx))*1.5;state.lookDY+=Math.max(-90,Math.min(90,dy))*1.5;
+   });
+   for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>{last=null;});
+  }
   for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>{
    if(name==='fire'){state.fire=false;onFire?.(false);}
    else if(name==='aim'&&!aimLatched)setAim(false);

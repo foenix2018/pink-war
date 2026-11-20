@@ -63,3 +63,11 @@ test('crouch acts on the press, not only on the click (iPhone, second finger)',a
   assert.match(hud,/pressNow/);assert.match(hud,/__pwCrouchPressAt/);
   assert.match(game,/\$\('crouch-button'\)\.addEventListener\('pointerdown'/);
 });
+test('fire + aim with one thumb: sliding inside the fire button turns the view, in the arena engine and the level engine',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const game=readFileSync(new URL('../dist/game.js',import.meta.url),'utf8'),input=readFileSync(new URL('../dist/level2-input.js',import.meta.url),'utf8');
+  assert.match(game,/fireDrag/);assert.match(game,/\*1\.15/);assert.match(game,/firingPointers\.has\(e\.pointerId\)/);
+  assert.match(input,/name==='fire'\)\{ \/\/ fire \+ aim/);assert.match(input,/state\.lookDX\+=/);
+  // the free swipe on the screen is untouched
+  assert.match(game,/canvas\.addEventListener\('pointermove'/);assert.match(input,/host\.addEventListener\('pointermove'/);
+});
