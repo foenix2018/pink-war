@@ -4,7 +4,7 @@
 // substation transformers and the drone racks of the core. Everything overhead or flush with a wall (crane runways, pipes,
 // columns, lamps, vents, perimeter fence) has no collision. Static pieces go through the art's merged/instanced helpers;
 // barrels, tyres and steam are their own instanced meshes. No dynamic light is added (the pooled lights stay in charge).
-import { DRESSING } from './m06-layout.js';
+import { DRESSING, AREAS } from './m06-layout.js';
 import { loadBlenderModels } from './blender-models.js';
 
 const TAU = Math.PI * 2;
@@ -15,6 +15,7 @@ export function buildDressing({ T, M, box, piece, add, low, stats, animated }) {
   const cyl = new Map(); // material → [x, y, z, radius, height]
   const addCyl = (m, x, y, z, r, h) => { if (!cyl.has(m)) cyl.set(m, []); cyl.get(m).push([x, y, z, r, h]); };
   const deferred = [];
+  const m4 = new T.Matrix4(), q = new T.Quaternion(), p = new T.Vector3(), s = new T.Vector3(), up = new T.Vector3(0, 1, 0);
 
   for (const o of DRESSING) {
     const { x, z, hx, hz, kind } = o;
@@ -47,6 +48,12 @@ export function buildDressing({ T, M, box, piece, add, low, stats, animated }) {
       case 'container-stack':
         for (let k = 0; k < 2; k++) { const m = k ? pick([M.graphite, M.rust]) : pick([M.rust, M.corrugated]); box(m, x - hx, x + hx, k * 2.7, k * 2.7 + 2.7, z - hz, z + hz); for (let r = 0; r < 9; r++) piece(M.dark, x - hx + .3 + r * (hx * 2 - .6) / 8, k * 2.7 + .1, z + hz + .01, .05, 2.5, .02); }
         break;
+      case 'server': { // coordination monoliths of the N-08: dark slabs ribbed with LED columns
+        const along = hx >= hz, w = along ? hx * 2 : hz * 2, d = along ? hz * 2 : hx * 2, ry = along ? 0 : Math.PI / 2, h = o.height;
+        piece(M.black, x, 0, z, along ? w : d, .3, along ? d : w); piece(M.graphite, x, .3, z, along ? w - .1 : d - .1, h - .5, along ? d - .1 : w - .1); piece(M.dark, x, h - .2, z, along ? w + .1 : d + .1, .25, along ? d + .1 : w + .1);
+        for (let k = 0; k < 4; k++) { const off = (k - 1.5) * (w / 4.4); for (const side of [-1, 1]) { const px = along ? x + off : x + side * (d / 2 + .01), pz = along ? z + side * (d / 2 + .01) : z + off; piece(k % 3 ? M.ledRed : M.ledBlue, px, .9, pz, along ? .06 : .02, h - 1.8, along ? .02 : .06); } }
+        void ry; break;
+      }
       case 'transformer': case 'drone-rack': deferred.push(o); break;
       default: break;
     }
@@ -78,8 +85,50 @@ export function buildDressing({ T, M, box, piece, add, low, stats, animated }) {
   for (let x = 20; x < 36; x += 1.2) piece(M.rust, x, 0, 94.8, .25, .06, 2.4); for (const z of [93.8, 95.2]) piece(M.steel, 28, .02, z, 16, .12, .12);
   piece(M.yellow, 36.5, 0, 94.5, .5, 1.2, 1.6);
 
+  // ---------- Floor decals: oil, soot, rust bleed, cracks (four instanced quads, no depth write) ----------
+  const decalTex = (paint) => { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'); paint(g); const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.anisotropy = low ? 2 : 6; return t; };
+  const blob = (g, cx, cy, r, color, n = 26) => { for (let i = 0; i < n; i++) { const a = rnd() * TAU, d = rnd() * r * .55, px = cx + Math.cos(a) * d, py = cy + Math.sin(a) * d, rr = r * (.2 + rnd() * .45), gr = g.createRadialGradient(px, py, 0, px, py, rr); gr.addColorStop(0, color(.55)); gr.addColorStop(1, color(0)); g.fillStyle = gr; g.beginPath(); g.arc(px, py, rr, 0, TAU); g.fill(); } };
+  const decals = [
+    { tex: decalTex(g => { blob(g, 128, 128, 120, a => `rgba(10,8,7,${a})`, 34); blob(g, 118, 132, 60, a => `rgba(60,40,70,${a * .35})`, 8); }), rough: .18, n: low ? 22 : 46 },                // oil, with a faint sheen
+    { tex: decalTex(g => blob(g, 128, 128, 126, a => `rgba(18,14,12,${a * .8})`, 40)), rough: .95, n: low ? 18 : 40 },                                                                     // soot
+    { tex: decalTex(g => { blob(g, 128, 128, 110, a => `rgba(120,58,24,${a * .7})`, 30); }), rough: .9, n: low ? 12 : 26 },                                                                   // rust bleed
+    { tex: decalTex(g => { g.strokeStyle = 'rgba(12,10,9,.8)'; g.lineCap = 'round'; for (let k = 0; k < 5; k++) { let x = 128, y = 128, a = rnd() * TAU; g.lineWidth = 3 - k * .4; g.beginPath(); g.moveTo(x, y); for (let i = 0; i < 14; i++) { a += (rnd() - .5) * 1.1; x += Math.cos(a) * 9; y += Math.sin(a) * 9; g.lineTo(x, y); } g.stroke(); } }), rough: .9, n: low ? 10 : 24 } // cracks
+  ];
+  const floors = AREAS.filter(a => a.id !== 'cabine'), quadGeo = new T.PlaneGeometry(1, 1); quadGeo.rotateX(-Math.PI / 2);
+  decals.forEach((d, di) => {
+    const mat = new T.MeshStandardMaterial({ map: d.tex, transparent: true, depthWrite: false, roughness: d.rough, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    const mesh = new T.InstancedMesh(quadGeo, mat, d.n); mesh.renderOrder = 1;
+    for (let i = 0; i < d.n; i++) { const a = floors[Math.floor(rnd() * floors.length)], k = (di === 3 ? 2 : 1.6) + rnd() * (di === 1 ? 5 : 3.4);
+      m4.compose(p.set(a.x1 + 3 + rnd() * (a.x2 - a.x1 - 6), .015 + di * .002, a.z1 + 3 + rnd() * (a.z2 - a.z1 - 6)), q.setFromAxisAngle(up, rnd() * TAU), s.set(k, 1, k * (.6 + rnd() * .6))); mesh.setMatrixAt(i, m4); }
+    mesh.instanceMatrix.needsUpdate = true; mesh.computeBoundingSphere(); add(mesh);
+  });
+
+  // ---------- The core: cables to the column, data rings on the floor, a holographic band, wall screens ----------
+  {
+    const C = { x: 0, z: -70, top: 14 }, cableMat = M.black;
+    for (const [ex, ey, ez] of [[-59.4, 12, -82], [-59.4, 9, -56], [59.4, 12, -84], [59.4, 9, -52], [-30, 15.7, -94], [30, 15.7, -94], [-22, 15.7, -30], [24, 15.7, -30], [0, 15.7, -95], [-45, 15.7, -70], [45, 15.7, -66]]) {
+      const a = new T.Vector3(C.x + Math.sign(ex || 1) * 1.4, C.top - 1, C.z + Math.sign(ez - C.z) * 1.2), b = new T.Vector3(ex, ey, ez), mid = a.clone().lerp(b, .5); mid.y = Math.min(a.y, b.y) - 4 - Math.abs(ex) * .04;
+      const tube = new T.Mesh(new T.TubeGeometry(new T.QuadraticBezierCurve3(a, mid, b), low ? 14 : 28, .22 + rnd() * .16, low ? 5 : 8, false), cableMat); add(tube);
+    }
+    const ringMat = new T.MeshBasicMaterial({ color: 0xff3b4e, transparent: true, opacity: .5, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false });
+    const rings = [[11.5, 11.8], [15, 15.15], [19, 19.1]].map(([r1, r2]) => { const r = new T.Mesh(new T.RingGeometry(r1, r2, 96), ringMat.clone()); r.rotation.x = -Math.PI / 2; r.position.set(C.x, .03, C.z); add(r); return r; });
+    for (let k = 0; k < 16; k++) { const ang = k / 16 * TAU; piece(M.ledRed, C.x + Math.cos(ang) * 15.3, .02, C.z + Math.sin(ang) * 15.3, .08, .01, 3.4, -ang); }   // radial spokes
+    const holo = (() => { const c = document.createElement('canvas'); c.width = 1024; c.height = 128; const g = c.getContext('2d'); g.fillStyle = 'rgba(0,0,0,0)'; g.fillRect(0, 0, 1024, 128);
+      g.font = 'bold 30px monospace'; g.fillStyle = 'rgba(255,80,90,.95)'; for (let i = 0; i < 4; i++) g.fillText('SY-05 · MODÈLE ' + (17 + i) + ' · ADAPTATION ' + (62 + i * 9) + ' %', 20 + i * 256 - (i ? 0 : 0), 44 + (i % 2) * 40);
+      g.fillStyle = 'rgba(255,170,90,.8)'; for (let i = 0; i < 96; i++) { const h = 6 + rnd() * 34; g.fillRect(8 + i * 10.6, 124 - h, 6, h); }
+      const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.wrapS = T.RepeatWrapping; t.repeat.set(2, 1); return t; })();
+    const band = new T.Mesh(new T.CylinderGeometry(7.5, 7.5, 2.4, 64, 1, true), new T.MeshBasicMaterial({ map: holo, transparent: true, opacity: .85, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false }));
+    band.position.set(C.x, 11.6, C.z); add(band);
+    const screenTex = (() => { const c = document.createElement('canvas'); c.width = 512; c.height = 288; const g = c.getContext('2d'); g.fillStyle = '#1a0608'; g.fillRect(0, 0, 512, 288); g.strokeStyle = 'rgba(255,90,90,.25)'; for (let x = 0; x < 512; x += 32) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 288); g.stroke(); } for (let y = 0; y < 288; y += 32) { g.beginPath(); g.moveTo(0, y); g.lineTo(512, y); g.stroke(); }
+      for (const [col, base] of [['#ff4a52', 200], ['#ffb05a', 140], ['#7ac8ff', 90]]) { g.strokeStyle = col; g.lineWidth = 3; g.beginPath(); let y = base; for (let x = 0; x <= 512; x += 16) { y += (rnd() - .5) * 26; g.lineTo(x, Math.max(20, Math.min(270, y))); } g.stroke(); }
+      g.fillStyle = '#ff6a70'; g.font = 'bold 22px monospace'; g.fillText('ANALYSE DES COMBATS · VESPER', 16, 30); const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; return t; })();
+    const screenMat = new T.MeshBasicMaterial({ map: screenTex, toneMapped: false });
+    for (const [x, z, ry] of [[-59.55, -84, Math.PI / 2], [-59.55, -40, Math.PI / 2], [59.55, -78, -Math.PI / 2], [59.55, -36, -Math.PI / 2]]) { const sc = new T.Mesh(new T.PlaneGeometry(7, 3.9), screenMat); sc.position.set(x, 6.5, z); sc.rotation.y = ry; add(sc); piece(M.dark, x, 4.4, z, ry > 0 ? .2 : .2, 4.2, 7.4); }
+    animated.push(t => { band.rotation.y = t * .18; holo.offset.x = (t * .03) % 1; rings.forEach((r, i) => { r.material.opacity = .28 + .22 * Math.sin(t * 2 - i * .9); }); });
+  }
+
   // ---------- Instanced cylinders (barrels, tyres) ----------
-  const geo = new T.CylinderGeometry(1, 1, 1, low ? 8 : 14), m4 = new T.Matrix4(), q = new T.Quaternion(), p = new T.Vector3(), s = new T.Vector3();
+  const geo = new T.CylinderGeometry(1, 1, 1, low ? 8 : 14);
   for (const [m, list] of cyl) {
     const mesh = new T.InstancedMesh(geo, m, list.length);
     list.forEach(([x, y, z, r, h], i) => mesh.setMatrixAt(i, m4.compose(p.set(x, y + h / 2, z), q.identity(), s.set(r, h, r))));

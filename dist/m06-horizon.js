@@ -178,11 +178,21 @@ export function createFoundryHorizon(T, { scene, low = false, fogColor = 0x8a5d4
     const dir = new T.Vector3(...sun).normalize(), at = dir.clone().multiplyScalar(1800);
     const glow = new T.Sprite(own(new T.SpriteMaterial({ map: glowTexture(), color: 0xffa860, blending: T.AdditiveBlending, depthWrite: false, fog: false, transparent: true, opacity: .9 }))); glow.scale.set(1500, 1500, 1); glow.position.copy(at); glow.renderOrder = -6; group.add(glow);
     const disc = new T.Mesh(own(new T.CircleGeometry(70, 32)), basic(0xfff0cf, { fog: false })); disc.position.copy(at.clone().multiplyScalar(.99)); disc.lookAt(0, 0, 0); disc.renderOrder = -5; group.add(disc);
-    const cloud = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 64; const x = c.getContext('2d'); for (let i = 0; i < 46; i++) { const px = 20 + Math.random() * 216, py = 20 + Math.random() * 24, r = 10 + Math.random() * 22, g = x.createRadialGradient(px, py, 0, px, py, r); g.addColorStop(0, 'rgba(255,255,255,.34)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.beginPath(); x.arc(px, py, r, 0, TAU); x.fill(); } const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; own(t); return t; })();
-    const tints = [0xffb078, 0xe08a6a, 0xb86a6a, 0x8a5a6e];
+    // Clouds: fbm noise shaped into flat-bottomed cumulus banks, lit warm on top (low sun), shadowed underneath.
+    const cloudTex = v => { const W = 512, H = 160, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'), img = g.createImageData(W, H), nz = makeNoise(900 + v * 37);
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const u = x / W, w = y / H, edge = Math.sin(Math.PI * u) ** .6, base = smooth(.92, .62, w), top = smooth(.02, .4, w + (nz(u * 5, 3.1, 3) - .5) * .5);
+        const n = nz(u * 9 + v * 3, w * 3.2, 5), dens = smooth(.42, .62, n * edge * base * top * 1.35);
+        const lit = smooth(.85, .15, w) * .7 + (n - .4) * .6, i = (y * W + x) * 4;
+        img.data[i] = 120 + 135 * lit; img.data[i + 1] = 82 + 120 * lit; img.data[i + 2] = 92 + 90 * lit; img.data[i + 3] = 255 * dens * .92;
+      }
+      g.putImageData(img, 0, 0); const t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; own(t); return t; };
+    const clouds = [0, 1, 2].map(cloudTex);
+    const cloud = clouds[0];
+    const tints = [0xffd2b0, 0xffc0a0, 0xe8b0b0, 0xd8b8c0];
     for (let i = 0; i < (low ? 9 : 16); i++) {
-      const a = rng() * TAU, el = .06 + rng() * .3, rad = 1700, m = new T.Sprite(own(new T.SpriteMaterial({ map: cloud, color: tints[i % 4], depthWrite: false, fog: false, transparent: true, opacity: .55 + rng() * .3 })));
-      m.position.set(Math.cos(a) * rad * Math.cos(el), rad * Math.sin(el), Math.sin(a) * rad * Math.cos(el)); m.scale.set(900 + rng() * 700, 160 + rng() * 120, 1); m.renderOrder = -7; group.add(m);
+      const a = rng() * TAU, el = .05 + rng() * .22, rad = 1700, m = new T.Sprite(own(new T.SpriteMaterial({ map: clouds[i % 3], color: tints[i % 4], depthWrite: false, fog: false, transparent: true, opacity: .55 + rng() * .3 })));
+      m.position.set(Math.cos(a) * rad * Math.cos(el), rad * Math.sin(el), Math.sin(a) * rad * Math.cos(el)); m.scale.set(1000 + rng() * 900, 260 + rng() * 160, 1); m.renderOrder = -7; group.add(m);
     }
   }
 
