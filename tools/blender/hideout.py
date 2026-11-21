@@ -33,7 +33,9 @@ material('Cuivre et outils',(.42,.23,.11),.5,.7)
 material('Bras robot orange',(.82,.32,.065),.42,.4)
 material('Végétation',(.18,.28,.12),.82)
 material('Feuilles claires',(.33,.40,.16),.81)
+for name in ['Végétation','Feuilles claires']:META[name]['doubleSided']=True
 material('Verre',(.30,.57,.65),.17,.2,alpha=.14)
+material('Miroir poli',(.80,.84,.88),.065,1)
 material('Néon rose',(1,.025,.37),.24,.15,5)
 material('Néon bleu',(.025,.58,1),.24,.15,4.5)
 material('Néon ambre',(1,.52,.14),.3,.1,3)
@@ -41,6 +43,29 @@ material('Néon blanc',(.70,.90,1),.28,.0,2.4)
 material('Écran sombre',(.016,.07,.11),.32,.15,.25)
 material('Ville lointaine',(.10,.065,.13),.85,.1)
 material('Brume rose',(.51,.15,.32),1,0,.5)
+# Material maps are original to this room, with metre based UVs. They are packed
+# in the editable source and use the same scale in both Blender and WebGPU.
+def pbr(name,stem,uvscale=1):
+ m=MATS[name];n=m.node_tree.nodes.get('Principled BSDF');links=m.node_tree.links
+ texcoord=m.node_tree.nodes.new('ShaderNodeTexCoord');mapping=m.node_tree.nodes.new('ShaderNodeVectorMath');mapping.operation='SCALE';mapping.inputs[3].default_value=uvscale;links.new(texcoord.outputs['UV'],mapping.inputs[0])
+ for kind,socket in [('color','Base Color'),('rough','Roughness'),('normal','Normal')]:
+  path=OUT/(stem+'-'+kind+'.jpg')
+  if not path.exists():raise RuntimeError('Run python3 tools/blender/hideout-textures.py first')
+  image=bpy.data.images.load(str(path),check_existing=True);image.pack()
+  if kind!='color':image.colorspace_settings.name='Non-Color'
+  t=m.node_tree.nodes.new('ShaderNodeTexImage');t.image=image;links.new(mapping.outputs['Vector'],t.inputs['Vector'])
+  if kind=='color':
+   mix=m.node_tree.nodes.new('ShaderNodeMixRGB');mix.blend_type='MULTIPLY';mix.inputs[0].default_value=1;mix.inputs[2].default_value=m.diffuse_color;links.new(t.outputs['Color'],mix.inputs[1]);links.new(mix.outputs['Color'],n.inputs[socket])
+  elif kind=='normal':
+   normal=m.node_tree.nodes.new('ShaderNodeNormalMap');normal.inputs['Strength'].default_value=.55;links.new(t.outputs['Color'],normal.inputs['Color']);links.new(normal.outputs[0],n.inputs[socket])
+  else:links.new(t.outputs['Color'],n.inputs[socket])
+ META[name].update(texture=stem+'-color.jpg',normalMap=stem+'-normal.jpg',roughnessMap=stem+'-rough.jpg',textureSpace='hideout',uvScale=uvscale)
+for name in ['Acier patiné','Métal brossé','Cadres anthracite','Bras robot orange']:pbr(name,'steel')
+pbr('Sol graphite','deck',.8);pbr('Béton sombre','concrete',.65)
+for name in ['Tissu rose','Tissu bleu','Tissu neutre','Cuir et joints']:pbr(name,'fabric',2)
+pbr('Peinture médicale','ceramic',1)
+META['Écran sombre'].update(texture='display.jpg',textureSpace='hideout',localUV=True)
+display=bpy.data.images.load(str(OUT/'display.jpg'),check_existing=True);display.pack();dn=MATS['Écran sombre'].node_tree.nodes;dt=dn.new('ShaderNodeTexImage');dt.image=display;dp=dn.get('Principled BSDF');dl=MATS['Écran sombre'].node_tree.links;dl.new(dt.outputs['Color'],dp.inputs['Base Color']);dl.new(dt.outputs['Color'],dp.inputs['Emission Color']);dp.inputs['Emission Strength'].default_value=.55
 def bm(mat):
  key=(ZONE,mat)
  if key not in BUILD:BUILD[key]=bmesh.new()
@@ -52,17 +77,44 @@ def cyl(mat,c,r,h,n=12,r2=None,axis='y'):
  ma=Matrix.Translation(G(*c))
  if axis=='x':ma=ma@Matrix.Rotation(math.pi/2,4,'Y')
  if axis=='z':ma=ma@Matrix.Rotation(math.pi/2,4,'X')
- bmesh.ops.create_cone(bm(mat),cap_ends=True,cap_tris=False,segments=n,radius1=r,radius2=r if r2 is None else r2,depth=h,matrix=ma)
+ result=bmesh.ops.create_cone(bm(mat),cap_ends=True,cap_tris=False,segments=n,radius1=r,radius2=r if r2 is None else r2,depth=h,matrix=ma)
+ for v in result['verts']:
+  for f in v.link_faces:
+   if len(f.verts)==4:f.smooth=True
 def ellipsoid(mat,c,size,n=12):
- w,h,d=size;bmesh.ops.create_uvsphere(bm(mat),u_segments=n,v_segments=max(6,n//2),radius=1,matrix=Matrix.Translation(G(*c))@Matrix.Diagonal((w/2,d/2,h/2,1)))
+ w,h,d=size;result=bmesh.ops.create_uvsphere(bm(mat),u_segments=n,v_segments=max(6,n//2),radius=1,matrix=Matrix.Translation(G(*c))@Matrix.Diagonal((w/2,d/2,h/2,1)))
+ for v in result['verts']:
+  for f in v.link_faces:f.smooth=True
 def rod(mat,a,b,r=.025,n=8):
  A,B=G(*a),G(*b);delta=B-A
  if delta.length<1e-5:return
  ma=Matrix.Translation((A+B)/2)@delta.to_track_quat('Z','Y').to_matrix().to_4x4()
- bmesh.ops.create_cone(bm(mat),cap_ends=True,cap_tris=False,segments=n,radius1=r,radius2=r,depth=delta.length,matrix=ma)
+ result=bmesh.ops.create_cone(bm(mat),cap_ends=True,cap_tris=False,segments=n,radius1=r,radius2=r,depth=delta.length,matrix=ma)
+ for v in result['verts']:
+  for f in v.link_faces:
+   if len(f.verts)==4:f.smooth=True
 def mesh(mat,vertices,faces):
  b=bm(mat);v=[b.verts.new(G(*p)) for p in vertices]
  for f in faces:b.faces.new([v[i] for i in f])
+def cushion(mat,c,size):
+ # A low-poly sewn superellipsoid, not an extruded rectangular block.
+ b=bm(mat);v=[];w,h,d=size;power=.35
+ signed=lambda a:math.copysign(abs(a)**power,a)
+ for j in range(9):
+  lat=-math.pi/2+math.pi*(j+.025)/8.05
+  for i in range(24):
+   a=i*TAU/24;v.append(b.verts.new(G(c[0]+w*.5*signed(math.cos(lat))*signed(math.cos(a)),c[1]+h*.5*signed(math.sin(lat)),c[2]+d*.5*signed(math.cos(lat))*signed(math.sin(a)))))
+ for j in range(8):
+  for i in range(24):f=b.faces.new([v[j*24+i],v[j*24+(i+1)%24],v[(j+1)*24+(i+1)%24],v[(j+1)*24+i]]);f.smooth=True
+ b.faces.new(list(reversed(v[:24])));b.faces.new(v[-24:])
+def basin(mat,c,w,d,depth):
+ # Closed rounded shell with a real concave bowl and rolled rim.
+ x,y,z=c;b=bm(mat);vs=[];n=40
+ for radius,drop in [(1,0),(.94,.02),(.82,-.02),(.66,-depth*.72),(.28,-depth)]:
+  vs.extend(b.verts.new(G(x+math.cos(i*TAU/n)*w*.5*radius,y+drop,z+math.sin(i*TAU/n)*d*.5*radius))for i in range(n))
+ for j in range(4):
+  for i in range(n):f=b.faces.new([vs[j*n+i],vs[j*n+(i+1)%n],vs[(j+1)*n+(i+1)%n],vs[(j+1)*n+i]]);f.smooth=True
+ b.faces.new(vs[-n:])
 def profile(mat,x,z,outline,depth):
  # A genuinely chamfered shape extruded along game z.
  n=len(outline);v=[(x+xx,yy,z+side*depth/2) for side in [-1,1] for xx,yy in outline]
@@ -91,20 +143,29 @@ def crate(x,z,accent='Tissu rose',scale=1):
  box('Acier patiné',(x,y,z),(w,h,d),solid=True);box('Cadres anthracite',(x,h+.025,z),(w+.05,.065,d+.05))
  for xx in [-.38,.38]:box('Cadres anthracite',(x+xx*scale,y,z),(w*.08,h+.04,d+.04))
  for xx in [-.37,.37]:box('Métal brossé',(x+xx*scale,h*.58,z+d/2+.02),(.11,.15,.05))
+ for side in [-1,1]:
+  for dz in [-1,1]:box('Métal brossé',(x+side*w*.46,.11*scale,z+dz*d*.43),(.13*scale,.20*scale,.13*scale))
+ # Recessed folding handle and separate hinge pins on the lid.
+ polyline('Métal brossé',[(x-.14*scale,y+.12*scale,z+d*.53),(x-.14*scale,y-.02*scale,z+d*.56),(x+.14*scale,y-.02*scale,z+d*.56),(x+.14*scale,y+.12*scale,z+d*.53)],.018*scale)
+ for xx in [-.32,.32]:cyl('Métal brossé',(x+xx*scale,h,z-d*.48),.028*scale,.16*scale,10,axis='x')
  box(accent,(x,y,z+d/2+.027),(.28,.30,.015));text('P',x,y-.05,z+d/2+.04,.25)
 def plant(x,y,z,s=.7):
- cyl('Béton sombre',(x,y+.15*s,z),.25*s,.3*s,12,r2=.34*s)
+ cyl('Béton sombre',(x,y+.15*s,z),.25*s,.3*s,20,r2=.34*s);cyl('Cuir et joints',(x,y+.305*s,z),.28*s,.015*s,20)
  for j in range(7):
   a=j*2.4;end=(x+math.sin(a)*s*.4,y+s*(.6+random.random()*.6),z+math.cos(a)*s*.4);rod('Végétation',(x,y+.25*s,z),end,.012*s,5)
   for k in range(3):
    u=.45+k*.25;c=(x+(end[0]-x)*u,y+.25*s+(end[1]-y-.25*s)*u,z+(end[2]-z)*u);dx=math.sin(a+k)*.21*s;dz=math.cos(a+k)*.21*s
-   mesh('Végétation'if j%2 else'Feuilles claires',[c,(c[0]+dx,c[1]+.1*s,c[2]+dz),(c[0]+dx*1.8,c[1]+.04*s,c[2]+dz*1.8),(c[0]+dx*.7,c[1]-.025*s,c[2]+dz*.7)],[(0,1,2),(0,2,3)])
+   mat='Végétation'if j%2 else'Feuilles claires';b=bm(mat);vs=[];length=max(.01,math.hypot(dx,dz));px=-dz/length; pz=dx/length
+   for q in range(6):
+    t=q/5;w=math.sin(t*math.pi)*.075*s+.001
+    for side in [-1,1]:vs.append(b.verts.new(G(c[0]+dx*1.8*t+px*w*side,c[1]+s*(.13*math.sin(t*math.pi)-.02*t)-w*.2,c[2]+dz*1.8*t+pz*w*side)))
+   for q in range(5):f=b.faces.new([vs[q*2],vs[q*2+1],vs[q*2+3],vs[q*2+2]]);f.smooth=True
+   rod('Végétation',c,(c[0]+dx*1.8,c[1]-.02*s,c[2]+dz*1.8),.003*s,4)
 def screen(x,y,z,w=.8,h=.5,accent='Néon bleu'):
- box('Cadres anthracite',(x,y,z),(w+.1,h+.1,.10));box('Écran sombre',(x,y,z+.058),(w,h,.012))
+ box('Cadres anthracite',(x,y,z),(w+.1,h+.1,.10))
+ mesh('Écran sombre',[(x-w/2,y-h/2,z+.058),(x+w/2,y-h/2,z+.058),(x+w/2,y+h/2,z+.058),(x-w/2,y+h/2,z+.058)],[(0,1,2,3)])
  for yy in [-h*.43,h*.43]:neon((x-w*.44,y+yy,z+.07),(x+w*.44,y+yy,z+.07),accent,.006)
- for i in range(3):box(accent,(x-w*.3+i*w*.23,y-h*.23,z+.075),(w*.15,.015,.008))
- # Instrument traces and crosshairs, physical luminous wire lines.
- polyline(accent,[(x-w*.4,y-.04,z+.08),(x-w*.15,y+.07,z+.08),(x,y-.02,z+.08),(x+w*.2,y+.12,z+.08),(x+w*.4,y+.1,z+.08)],.004)
+ for side in [-1,1]:cyl('Métal brossé',(x+side*(w/2+.025),y-h/2-.02,z+.058),.009,.01,6,axis='z')
 def books(x,y,z,n=9):
  for i in range(n):
   h=random.uniform(.18,.34);mat=['Tissu rose','Tissu bleu','Papier ivoire','Cuivre et outils'][i%4];box(mat,(x+i*.075,y+h/2,z),(.055,h,.17));box('Papier ivoire',(x+i*.075,y+h*.7,z+.087),(.043,.015,.008))
@@ -150,9 +211,15 @@ print('Planque: dortoir et salle de bain',flush=True)
 ZONE='Dortoir'
 for x,name,cloth,light in [(-8.9,'GHJU','Tissu rose','Néon rose'),(-6.4,'LYLU','Tissu bleu','Néon bleu')]:
  box('Cadres anthracite',(x,.23,-8.5),(1.65,.44,3),solid=True);box('Acier patiné',(x,.46,-8.5),(1.58,.15,2.95))
- box('Tissu neutre',(x,.62,-8.5),(1.47,.25,2.8));box(cloth,(x,.77,-8.13),(1.5,.14,1.9))
+ cushion('Tissu neutre',(x,.62,-8.5),(1.47,.29,2.8));cushion(cloth,(x,.79,-8.13),(1.5,.20,1.9))
+ # Bed frame feet, visible mattress piping and stitched padded blanket panels.
+ for dx in [-.61,.61]:
+  for zz in [-9.65,-7.35]:cyl('Métal brossé',(x+dx,.13,zz),.045,.24,10)
+ for j in range(7):
+  zz=-8.9+j*.245;rod(cloth,(x-.67,.898,zz),(x+.67,.898,zz),.007,5)
+ for side in [-1,1]:rod('Tissu neutre',(x+side*.71,.69,-9.65),(x+side*.71,.69,-7.2),.012,6)
  for side in [-1,1]:rod('Papier ivoire',(x+side*.69,.79,-9.0),(x+side*.69,.79,-7.3),.018)
- ellipsoid('Papier ivoire',(x,.84,-9.45),(1.18,.29,.60),16);ellipsoid(cloth,(x,.89,-9.45),(1.08,.22,.56),16)
+ cushion('Papier ivoire',(x,.84,-9.45),(1.18,.29,.60));cushion(cloth,(x,.89,-9.45),(1.08,.22,.56))
  box('Acier patiné',(x,.95,-10.0),(1.63,1.10,.17));neon((x-.64,1.38,-9.87),(x+.64,1.38,-9.87),light,.022)
  text(name,x,.80,-6.96,.32)
  box('Acier patiné',(x+1.0,.4,-9.4),(.38,.8,.55));cyl('Cuivre et outils',(x+1,.86,-9.4),.13,.08);rod('Métal brossé',(x+1,.89,-9.4),(x+1,1.20,-9.4),.025);ellipsoid(light,(x+1,1.23,-9.4),(.23,.20,.23))
@@ -163,15 +230,25 @@ plant(-10.35,1.5,-10.6,.8);plant(-5.3,0,-10.4,.6)
 plaque('Dortoir',-7.8,-5.02,3.2)
 ZONE='Salle de bain'
 box('Peinture médicale',(7.8,.04,-8),(5.6,.07,5.6))
+box('Peinture médicale',(7.85,1.65,-11.25),(5.65,2.7,.12),solid=True,name='mur carrelé de la salle de bain')
 # Shower tray, glass enclosure, mixer, head, drain.
 box('Peinture médicale',(6.25,.15,-9.4),(2,.24,2.4),solid=True);box('Cadres anthracite',(6.25,.28,-9.4),(1.72,.025,2.1));cyl('Métal brossé',(6.25,.3,-9.4),.07,.015,12)
 for x in [5.25,7.25]:rod('Métal brossé',(x,.3,-10.5),(x,2.65,-10.5),.035);rod('Métal brossé',(x,2.65,-10.5),(x,2.65,-8.3),.035)
 box('Verre',(5.25,1.5,-9.4),(.018,2.4,2.2));box('Verre',(7.25,1.5,-9.4),(.018,2.4,2.2));rod('Métal brossé',(6.25,1.0,-10.6),(6.25,2.4,-10.6),.035);rod('Métal brossé',(6.25,2.4,-10.6),(6.25,2.4,-10.2),.035);cyl('Métal brossé',(6.25,2.37,-10.1),.18,.05,20);ring('Néon bleu',(6.25,2.34,-10.1),.15,.005,24)
 for x in [6.05,6.45]:cyl('Métal brossé',(x,1.18,-10.5),.045,.10,12,axis='z')
 # Basin on a ribbed cabinet, mirror, modern faucet; toilet has a sculpted bowl.
-box('Acier patiné',(8.65,.58,-10.45),(1.6,1.16,.65),solid=True);box('Peinture médicale',(8.65,1.17,-10.40),(1.75,.11,.8));ellipsoid('Peinture médicale',(8.65,1.19,-10.32),(1.05,.15,.53));ellipsoid('Cadres anthracite',(8.65,1.24,-10.32),(.7,.03,.33));polyline('Métal brossé',[(8.65,1.2,-10.7),(8.65,1.53,-10.7),(8.65,1.53,-10.46)],.025)
-box('Métal brossé',(8.65,2.0,-11.1),(1.5,1.35,.08));box('Verre',(8.65,2.0,-11.03),(1.35,1.2,.025));neon((8.03,2.57,-10.99),(9.27,2.57,-10.99),'Néon blanc',.012)
-ellipsoid('Peinture médicale',(10,.37,-9.65),(.68,.7,.85));ellipsoid('Peinture médicale',(10,.66,-9.6),(.74,.11,1.0));ellipsoid('Cadres anthracite',(10,.69,-9.57),(.46,.02,.65));box('Peinture médicale',(10,.86,-10.1),(.7,1.0,.32),solid=True)
+box('Acier patiné',(8.65,.58,-10.45),(1.6,1.16,.65),solid=True);box('Métal brossé',(8.65,1.15,-10.40),(1.75,.08,.8));basin('Peinture médicale',(8.65,1.35,-10.32),1.14,.64,.24);cyl('Métal brossé',(8.65,1.115,-10.32),.042,.01,12);polyline('Métal brossé',[(8.65,1.2,-10.7),(8.65,1.63,-10.7),(8.65,1.63,-10.32)],.025)
+for xx in [8.25,9.05]:rod('Métal brossé',(xx-.13,.87,-10.10),(xx+.13,.87,-10.10),.018)
+for j in range(9):box('Cadres anthracite',(7.98+j*.16,.55,-10.11),(.016,.83,.015))
+box('Métal brossé',(8.65,2.0,-11.1),(1.5,1.35,.08));box('Miroir poli',(8.65,2.0,-11.03),(1.35,1.2,.025));neon((8.03,2.57,-10.99),(9.27,2.57,-10.99),'Néon blanc',.012)
+ellipsoid('Peinture médicale',(10,.37,-9.65),(.68,.7,.85),20);basin('Peinture médicale',(10,.69,-9.6),.74,1.0,.25);box('Peinture médicale',(10,.86,-10.1),(.7,1.0,.32),solid=True)
+box('Métal brossé',(10,1.37,-10.1),(.23,.025,.12))
+# Glazed wall tiles, shower perforations and threshold grille give human scale.
+for xx in [5.45+j*.38 for j in range(14)]:rod('Métal brossé',(xx,.32,-11.182),(xx,2.95,-11.182),.003,4)
+for yy in [.45,.9,1.35,1.8,2.25,2.7]:rod('Métal brossé',(5.35,yy,-11.182),(10.5,yy,-11.182),.003,4)
+for j in range(9):rod('Métal brossé',(5.50+j*.18,.305,-8.55),(5.50+j*.18,.305,-8.35),.009,6)
+for xx in [-.08,0,.08]:
+ for zz in [-.08,0,.08]:cyl('Cadres anthracite',(6.25+xx,2.34,-10.1+zz),.008,.005,6)
 box('Tissu rose',(8.3,.9,-9.6),(.32,.65,.06));rod('Métal brossé',(8.08,1.25,-9.6),(8.53,1.25,-9.6),.018);plant(10.1,0,-6.2,.55)
 plaque('Salle de bain',7.8,-5.02,4.0)
 
@@ -194,10 +271,17 @@ plaque('Livre de l’Histoire',0,-6.80,4.0,'RÉCAPITULATIF DE L’AVENTURE')
 ZONE='Salon central'
 box('Tissu rose',(0,.028,1),(5.5,.035,4.0))
 for side in [-1,1]:
- x=side*2.08;box('Acier patiné',(x,.29,1),(1.2,.5,3.1),solid=True);box('Tissu neutre',(x,.63,1),(1.16,.28,2.95));box('Tissu neutre',(x+side*.48,1.05,1),(.25,.9,3.0))
- for z in [-.52,2.52]:box('Acier patiné',(x,.86,z),(1.25,.45,.24));box('Tissu rose'if side<0 else'Tissu bleu',(x-side*.1,1.12,z-side*.2),(.55,.43,.36),yaw=.15*side)
+ x=side*2.08;box('Acier patiné',(x,.29,1),(1.2,.5,3.1),solid=True)
+ for z in [.04,1,1.96]:
+  cushion('Tissu neutre',(x,.65,z),(1.12,.34,.91));cushion('Tissu neutre',(x+side*.48,1.08,z),(.30,.88,.91))
+  rod('Tissu neutre',(x-side*.52,.70,z-.38),(x-side*.52,.70,z+.38),.009,6)
+ for z in [-.52,2.52]:
+  cushion('Cuir et joints',(x,.86,z),(1.25,.45,.24));cushion('Tissu rose'if side<0 else'Tissu bleu',(x-side*.1,1.12,z-side*.2),(.55,.43,.36))
+ for dx in [-.44,.44]:
+  for z in [-.32,2.32]:cyl('Métal brossé',(x+dx,.12,z),.045,.23,10)
 box('Cadres anthracite',(0,.39,1),(1.5,.65,1.7),solid=True);box('Métal brossé',(0,.74,1),(1.6,.08,1.8));screen(0,.86,.8,.55,.3)
-for x,z in [(-.48,.6),(.45,1.5)]:cyl('Cuivre et outils',(x,.86,z),.08,.16,12);ring('Cadres anthracite',(x,.946,z),.064,.008,16)
+for x,z in [(-.48,.6),(.45,1.5)]:
+ cyl('Cuivre et outils',(x,.86,z),.08,.16,20);ring('Cadres anthracite',(x,.946,z),.064,.008,20);ring('Cuivre et outils',(x+.09,.86,z),.045,.012,20,axis='z')
 ZONE='Mur d’armes'
 box('Cadres anthracite',(-7.7,1.6,-4.52),(5.6,2.65,.22),solid=True)
 for x in [-10.0,-8.8,-7.6,-6.4,-5.3]:
@@ -210,6 +294,12 @@ def rifle(x,y,z,accent='Néon rose',length=1.8,pistol=False):
  cyl('Cuir et joints',(x+.95*s,y+.04,z),.046*s,.025,12,axis='x');box('Cuir et joints',(x-.16*s,y-.25,z),(.15,.35,.12),yaw=-.12);box('Métal brossé',(x+.17*s,y-.21,z),(.22,.28,.13))
  box('Cadres anthracite',(x-.08*s,y+.20,z),(.32,.07,.13));ellipsoid('Verre',(x+.05*s,y+.24,z),(.10,.08,.08));neon((x-.42*s,y+.06,z+.08),(x+.24*s,y+.06,z+.08),accent,.008)
  for xx in [-.47,-.33,-.19]:box('Cuir et joints',(x+xx*s,y+.12,z+.09),(.025,.035,.01))
+ # Actual trigger guard, optic tube, ejection port, handguard vents and sling ring.
+ polyline('Cadres anthracite',[(x-.20*s,y-.08,z),(x-.20*s,y-.19,z),(x+.02*s,y-.19,z),(x+.02*s,y-.08,z)],.014)
+ cyl('Cadres anthracite',(x-.12*s,y+.27,z),.050,.34*s,16,axis='x');cyl('Verre',(x+.06*s,y+.27,z),.038,.008,16,axis='x')
+ box('Cuir et joints',(x+.10*s,y+.06,z+.068),(.15*s,.065,.008))
+ for j in range(6):box('Cuir et joints',(x+(.40+j*.065)*s,y+.045,z+.047),(.028*s,.055,.008))
+ ring('Métal brossé',(x-.62*s,y-.13,z),.028,.009,12,axis='z')
 for y,accent in [(2.26,'Néon rose'),(1.53,'Néon blanc'),(.82,'Néon bleu')]:
  rifle(-8.9,y,-4.26,accent,1.80);rifle(-6.7,y,-4.26,accent,1.85)
 rifle(-9.25,.28,-3.85,'Néon rose',1.2);rifle(-6.4,.28,-3.85,'Néon bleu',1.2)
@@ -242,6 +332,15 @@ for x,name,accent in [(-2.15,'GAB-1','Néon rose'),(2.15,'CAR-14','Néon bleu')]
  profile('Acier patiné',x,6.6,outline,.40);profile('Cadres anthracite',x,6.85,[(xx*.85,.2+(yy-.2)*.92)for xx,yy in outline],.08)
  cyl('Acier patiné',(x,.22,7.30),.98,.32,12);ring(accent,(x,.40,7.30),.73,.025);ring(accent,(x,.43,7.30),.49,.015)
  for side in [-1,1]:neon((x+side*.93,.5,6.97),(x+side*.93,2.27,6.97),accent,.025)
+ # Segmented service housing, vented core, ceramic contacts and locking clamps.
+ for side in [-1,1]:
+  for yy in [.55,1.15,1.75,2.3]:
+   box('Métal brossé',(x+side*1.01,yy,6.96),(.19,.07,.13));cyl('Cuir et joints',(x+side*1.01,yy,7.04),.025,.025,8,axis='z')
+ for j in range(9):box('Métal brossé',(x-.5+j*.125,.7,6.95),(.045,.35,.025))
+ for j in range(8):
+  a=j*TAU/8;cyl('Métal brossé',(x+math.cos(a)*.85,.407,7.30+math.sin(a)*.85),.045,.03,10)
+ for side in [-1,1]:
+  polyline('Cuir et joints',[(x+side*.75,.20,6.95),(x+side*.65,.30,7.3),(x+side*.45,.46,7.65)],.035)
  box('Cadres anthracite',(x,2.63,6.97),(1.85,.46,.12));text('Recharge',x,2.71,7.05,.17);text(name,x,2.47,7.05,.23,accent)
  for yy,rr in [(1,.5),(1.6,.35)]:ring(accent,(x,yy,7.3),rr,.008)
  ellipsoid('Métal brossé',(x,1.5,7.3),(.52,.37,.42));ellipsoid('Cadres anthracite',(x,1.52,7.49),(.32,.16,.06));ellipsoid(accent,(x,1.53,7.535),(.18,.08,.025));rod('Métal brossé',(x,1.64,7.3),(x,1.85,7.3),.025)
@@ -265,8 +364,13 @@ for x,z in [(5.2,-.6),(7.8,-1.3),(8.5,-.8)]:
 cyl('Cadres anthracite',(9.3,1.49,-1.3),.25,.24,16);cyl('Bras robot orange',(9.3,1.72,-1.3),.20,.30,12)
 for A,B in [((9.3,1.78,-1.3),(9.9,2.65,-1.5)),((9.9,2.65,-1.5),(8.8,2.95,-1.25)),((8.8,2.95,-1.25),(8.15,2.4,-1.0))]:
  rod('Bras robot orange',A,B,.12,8);ellipsoid('Cadres anthracite',A,(.31,.31,.31));ellipsoid('Métal brossé',B,(.23,.23,.23));rod('Cuir et joints',(A[0],A[1],A[2]+.16),(B[0],B[1],B[2]+.16),.025)
+ cyl('Métal brossé',A,.13,.34,16,axis='z')
+ for s in [-1,1]:cyl('Cuir et joints',(A[0],A[1],A[2]+s*.18),.06,.03,10,axis='z')
+ # Offset piston and protective ribbed hose do not intrude into the player aisle.
+ pa=(A[0]-.10,A[1]+.1,A[2]-.16);pb=((A[0]+B[0])*.5,(A[1]+B[1])*.5,A[2]-.16)
+ rod('Cadres anthracite',pa,pb,.055,10);rod('Métal brossé',pb,(B[0]-.1,B[1]-.1,B[2]-.16),.025,10)
 for s in [-1,1]:polyline('Métal brossé',[(8.15,2.4,-1),(8.15+s*.12,2.2,-1),(8.15+s*.06,2.05,-1)],.03)
-cyl('Métal brossé',(7.7,.35,1.2),.06,.6);cyl('Cadres anthracite',(7.7,.72,1.2),.40,.12,12);box('Tissu rose',(7.7,.83,1.2),(.65,.19,.65));box('Tissu rose',(7.7,1.14,1.48),(.64,.65,.15))
+cyl('Métal brossé',(7.7,.35,1.2),.06,.6);cyl('Cadres anthracite',(7.7,.72,1.2),.40,.12,16);cushion('Tissu rose',(7.7,.83,1.2),(.65,.19,.65));cushion('Tissu rose',(7.7,1.14,1.48),(.64,.65,.15))
 SOLIDS.append({'kind':'siège d’atelier','x':7.7,'z':1.2,'hx':.45,'hz':.45,'y':0,'height':1.5})
 for j in range(5):
  a=j/5*TAU;rod('Métal brossé',(7.7,.13,1.2),(7.7+math.sin(a)*.48,.10,1.2+math.cos(a)*.48),.03);ellipsoid('Cuir et joints',(7.7+math.sin(a)*.48,.08,1.2+math.cos(a)*.48),(.12,.12,.1))
@@ -280,6 +384,11 @@ profile('Acier patiné',0,11.15,outline,.65);profile('Cadres anthracite',0,11.52
 for side in [-1,1]:
  profile('Métal brossé',side*.88,11.60,[(-.82,.15),(.82,.15),(.82,3.1),(-.82,3.1)],.08)
  box('Cadres anthracite',(side*.85,1.65,11.66),(1.52,2.7,.025));rod('Métal brossé',(side*.24,1.35,11.72),(side*.24,1.80,11.72),.035)
+ for yy in [.55,2.66]:
+  profile('Acier patiné',side*.91,11.70,[(-.64,yy-.16),(.5,yy-.16),(.66,yy),(.5,yy+.16),(-.64,yy+.16)],.04)
+  for xx in [-.48,.48]:cyl('Métal brossé',(side*.91+xx,yy,11.74),.025,.02,8,axis='z')
+ rod('Cadres anthracite',(side*2.27,.68,11.60),(side*2.27,2.45,11.60),.075,12)
+ rod('Métal brossé',(side*2.27,2.45,11.60),(side*2.27,3.0,11.60),.035,12)
 pts=[(x*.88,.12+y*.88,11.73)for x,y in outline];polyline('Néon rose',pts+[pts[0]],.034);text('P',0,1.25,11.76,1.05,'Néon rose')
 box('Cadres anthracite',(0,3.75,11.34),(4.4,.7,.35));text('PORTE MISSION',0,3.78,11.56,.30);text('PROCHAINE DESTINATION',0,3.53,11.56,.12,'Néon bleu')
 for z in [9.0,9.65,10.3]:
@@ -294,10 +403,23 @@ for side in [-1,1]:
   for j in range(7):box('Métal brossé',(side*4-.25+j*.08,.055,z),(.025,.012,.15))
 for k in range(140):
  x=random.uniform(-10.5,10.5);z=random.uniform(-11,11);box('Cadres anthracite',(x,.025,z),(random.uniform(.02,.16),.002,.008),yaw=random.uniform(0,TAU))
+# Service panels with screws, vent louvers and exposed cable elbows, rather than
+# detail floating around the room. Every fitting stays on an existing support.
+ZONE='Finitions techniques'
+for x,z in [(-10.65,-7),(-10.65,5),(10.65,-7),(10.65,5)]:
+ side=-1 if x<0 else 1;box('Acier patiné',(x,1.25,z),(.16,1.5,1.2))
+ for j in range(8):box('Cadres anthracite',(x-side*.087,.83+j*.105,z),(.018,.033,.95))
+ for zz in [-.48,.48]:
+  for yy in [.6,1.9]:cyl('Métal brossé',(x-side*.10,yy,z+zz),.021,.015,8,axis='x')
+for x,z in [(-4.55,-5),(-4.55,3),(4.55,-5),(4.55,3)]:
+ box('Métal brossé',(x,1.16,z+.21),(.22,.35,.035));box('Cadres anthracite',(x,1.16,z+.24),(.17,.29,.025))
+ for yy,mat in [(1.23,'Néon bleu'),(1.1,'Néon ambre')]:cyl(mat,(x,yy,z+.265),.04,.02,14,axis='z')
+ polyline('Cuir et joints',[(x,.98,z+.20),(x,.83,z+.20),(x+.10,.72,z+.20)],.018)
 
 # The overview cuts away the roof; the first-person visit restores a complete room.
 ZONE='Toiture complète'
 material('Toiture technique',(.10,.12,.16),.67,.45,texture='vesper-steel_diff_512.jpg');META['Toiture technique']['interior']=True
+pbr('Toiture technique','steel')
 material('Néons de plafond',(.52,.72,.92),.3,0,2.5);META['Néons de plafond']['interior']=True
 box('Toiture technique',(0,4.94,0),(22,.18,23.6),solid=True)
 for x in [-10.9,10.9]:box('Toiture technique',(x,3.5,0),(.3,2.8,23.4),solid=True)
@@ -335,14 +457,16 @@ for (zone,mat),b in BUILD.items():
  coll.objects.link(o);me.materials.append(MATS[mat])
  # Deliberately mild chamfers preserve the metre-based collision footprint.
  if mat in ['Acier patiné','Métal brossé','Cadres anthracite','Tissu rose','Tissu bleu','Tissu neutre','Peinture médicale','Bras robot orange']and 'Vesper'not in zone:
-  bevel=o.modifiers.new('Arêtes usinées et coussins adoucis','BEVEL');bevel.width=.025 if 'Tissu'not in mat else .075;bevel.segments=2;bevel.affect='EDGES';bevel.use_clamp_overlap=True
+  bevel=o.modifiers.new('Arêtes usinées et coussins adoucis','BEVEL');bevel.width=.025 if 'Tissu'not in mat else .045;bevel.segments=2;bevel.affect='EDGES';bevel.use_clamp_overlap=True;bevel.limit_method='ANGLE';bevel.angle_limit=.7
   o.modifiers.new('Normales pondérées','WEIGHTED_NORMAL')
  # Metric box projection, also exported to the browser.
  uv=me.uv_layers.new(name='UVMap');me.update()
  for poly in me.polygons:
   a=max(range(3),key=lambda i:abs(poly.normal[i]))
+  coords=[me.vertices[me.loops[li].vertex_index].co for li in poly.loop_indices]
+  xmin=min(v.x for v in coords);xmax=max(v.x for v in coords);zmin=min(v.z for v in coords);zmax=max(v.z for v in coords)
   for li in poly.loop_indices:
-   co=me.vertices[me.loops[li].vertex_index].co;uv.data[li].uv=(co.y,co.z)if a==0 else(co.x,co.z)if a==1 else(co.x,co.y)
+   co=me.vertices[me.loops[li].vertex_index].co;uv.data[li].uv=((co.x-xmin)/max(.001,xmax-xmin),(co.z-zmin)/max(.001,zmax-zmin))if META[mat].get('localUV')else(co.y,co.z)if a==0 else(co.x,co.z)if a==1 else(co.x,co.y)
 
 sc=bpy.context.scene;sc.render.engine='CYCLES';sc.cycles.samples=96;sc.cycles.use_denoising=False;sc.render.resolution_x=1280;sc.render.resolution_y=960;sc.render.resolution_percentage=100
 sc.world.color=(.12,.06,.12);sc.world.use_nodes=True;sc.world.node_tree.nodes['Background'].inputs[0].default_value=(.14,.07,.16,1);sc.world.node_tree.nodes['Background'].inputs[1].default_value=.55
@@ -410,7 +534,7 @@ for obj in list(sc.objects):
  for tri in me.loop_triangles:
   mat=me.materials[tri.material_index].name if me.materials else'Acier patiné';arr=prims.setdefault(mat,[])
   for li in tri.loops:
-   loop=me.loops[li];v=ma@me.vertices[loop.vertex_index].co;n=normal_ma@me.corner_normals[li].vector;n.normalize();p=(v.x,v.z,-v.y);nn=(n.x,n.z,-n.y);a=max(range(3),key=lambda i:abs(nn[i]));uv=tuple(me.uv_layers.active.data[li].uv)if mat=='Panorama Vesper'else(p[2],p[1])if a==0 else(p[0],p[2])if a==1 else(p[0],p[1]);arr.append((p,nn,uv))
+   loop=me.loops[li];v=ma@me.vertices[loop.vertex_index].co;n=normal_ma@me.corner_normals[li].vector;n.normalize();p=(v.x,v.z,-v.y);nn=(n.x,n.z,-n.y);uv=tuple(me.uv_layers.active.data[li].uv);arr.append((p,nn,uv))
    for k in range(3):bounds_min[k]=min(bounds_min[k],p[k]);bounds_max[k]=max(bounds_max[k],p[k])
  evaluated.to_mesh_clear()
 chunks=[];offset=0;descriptions=[]
