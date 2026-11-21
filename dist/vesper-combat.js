@@ -261,6 +261,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     if(!rig||xr?.active)return;const model=rig.model,p=game.player;
     model.root.position.set(p.x,p.elevation||0,p.z);model.root.rotation.y=p.yaw;
     if(model.weapon!==game.weaponIndex)model.setWeapon(game.weaponIndex);
+  if(game.hideoutArmorLevel&&model.equipmentLevel!==game.hideoutArmorLevel)model.setLevel(game.hideoutArmorLevel);
     model.gun.userData.setCombatState?.({time:game.time,dualState:game.dual,ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,reloading:game.reloadRemaining>0,charge:game.charge});
     const reload=game.reloadRemaining>0?Math.sin((1-game.reloadRemaining/game.weapon.reload)*Math.PI):0;
     model.animate(game.time,Math.hypot(game.playerVelocity.x,game.playerVelocity.z)>.1,feel.state.pitch,reload,Number(held),dt,{
@@ -375,7 +376,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     const dialog=document.createElement('dialog');dialog.id='end-dialog';
     const p=document.createElement('p');p.textContent=M01_ENDING.text[characterId];clearExtensionCheckpoint(characterId);
     dialog.innerHTML='<h2>LE DERNIER SIGNAL</h2><button id="retry-button">RETOUR AU MENU</button>';dialog.insertBefore(p,dialog.querySelector('#retry-button'));
-    document.body.append(dialog);attachCampaignStory(dialog,{level:1,characterId});
+    document.body.append(dialog);attachCampaignStory(dialog,{level:1,characterId,game});
     dialog.querySelector('#retry-button').onclick=()=>location.assign('./index.html');dialog.showModal();
   }
   function openJournal(entry,then){

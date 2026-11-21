@@ -1,3 +1,4 @@
+import {addHideoutDebrief} from './hideout-links.js';
 import {nanoSnapshot} from './nano-forge.js';
 import {readPreferredView,savePreferredView,normalizeView} from './view-options.js';
 import {heroFlightFlags,createHeroCapabilityAudio} from './hero-capabilities.js';
@@ -246,14 +247,14 @@ function syncDevices(){
 }
 function finishMission(){
  running=false;ambience?.pause?.();document.exitPointerLock?.();
- try{const current=Number(localStorage.getItem('pink-wars-last-cleared'))||0;localStorage.setItem('pink-wars-last-cleared',String(Math.max(current,4)));}catch{}
+ try{const current=Number(localStorage.getItem('pink-wars-last-cleared'))||0;localStorage.setItem('pink-wars-last-cleared',String(Math.max(current,6)));}catch{}
  const minutes=Math.floor(missionTime/60),seconds=String(Math.floor(missionTime%60)).padStart(2,'0');
  $('panel-title').innerHTML='Le Cœur <em>d’Acier</em>';
  $('panel-text').textContent=ENDING.text[characterId];
  const docs=Object.keys(LOGS).filter(id=>mission.reads.includes(id)).length;
  $('panel-small').textContent=`Temps ${minutes}:${seconds} · Machines neutralisées ${game.kills} · Précision ${shotsFired?Math.round(hits/shotsFired*100):0} % · Documents ${docs}/${Object.keys(LOGS).length} · ${ENDING.next}`;
- startButton.textContent='REJOUER LE NIVEAU 4 →';startButton.disabled=false;status.textContent='';shade.style.display='grid';shade.classList.add('ended');document.body.classList.add('pw-shaded');
- $('home').hidden=false;
+ startButton.textContent='REJOUER LE NIVEAU 6 →';startButton.disabled=false;status.textContent='';shade.style.display='grid';shade.classList.add('ended');document.body.classList.add('pw-shaded');
+ $('home').hidden=false;addHideoutDebrief($('panel-text').parentElement,{level:6,characterId,game});
 }
 function missionLost(){
  if(!running)return;running=false;document.exitPointerLock?.();closeDocument();
@@ -312,6 +313,7 @@ function updateSoldier(dt,moving,sprint,firing){
  try{
   model.root.position.set(game.player.x,game.player.elevation,game.player.z);model.root.rotation.y=yaw;
   if(model.weapon!==game.weaponIndex)model.setWeapon(game.weaponIndex);
+  if(game.hideoutArmorLevel&&model.equipmentLevel!==game.hideoutArmorLevel)model.setLevel(game.hideoutArmorLevel);
   model.gun.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,dualState:game.dual,reloading:game.reloadRemaining>0,
    reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,charge:game.charge});
   model.animate(game.time,moving,weaponFeel.state.pitch,0,Number(firing),dt,{airborne:!game.player.grounded,verticalSpeed:game.player.verticalSpeed,crouched:game.player.crouched,...heroFlightFlags(game.player),firing:!!firing,sprint,aim:aimBlend>.2});

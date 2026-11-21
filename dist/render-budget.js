@@ -39,7 +39,7 @@ export function installRenderBudget(renderer,profile={},now=()=>performance.now(
  }
  renderer.setPixelRatio=value=>{baseRatio=value;if(busy){pendingRatio=true;return;}return setRatio(value*budget.snapshot().scale);};
  function configure(next){effects(false);activeProfile=next;budget=createFrameBudget({enabled:!!next.adaptive});last=null;setRatio(baseRatio);}
- const main=(scene,camera)=>!busy&&!disposed&&scene?.isScene&&camera?.isPerspectiveCamera
+ const main=(scene,camera)=>!busy&&!disposed&&scene?.isScene&&(camera?.isPerspectiveCamera||activeProfile.orthographicBudget&&camera?.isOrthographicCamera)
   &&!renderer.xr?.isPresenting&&!renderer.getRenderTarget?.()&&!renderer.getScissorTest?.();
  function draw(original,scene,camera,args){
   if(!main(scene,camera))return original(scene,camera,...args);

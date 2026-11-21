@@ -540,7 +540,7 @@ function setupExtension(){
    setTimeout(()=>startEndScene(),900);}
  }});
 }
-async function startEndScene(){let wasXr=false;try{if(xr?.active){wasXr=true;await xr.exit();}}catch{}const showFinale=()=>showChapter2Finale({characterId,onDecide:()=>{checkpointDecisionMade=true;clearM02Checkpoint(characterId);checkpointSaved=null;},onReplay:()=>restartCheckpoint(true)});
+async function startEndScene(){let wasXr=false;try{if(xr?.active){wasXr=true;await xr.exit();}}catch{}const showFinale=()=>showChapter2Finale({characterId,game,onDecide:()=>{checkpointDecisionMade=true;clearM02Checkpoint(characterId);checkpointSaved=null;},onReplay:()=>restartCheckpoint(true)});
    // In-engine end scene: the hero and her sphere on the dock, their exchange in the transmission panel.
    if(wasXr||!scene){showFinale();return;}
    try{endCine=playEndCinematic({T,camera,hero:playerRig?.model||null,sphere:companion,player:game.player,yaw,lines:m02Lines('fin',characterId),subtitles,firstPerson:[weapon],clip:(from,to)=>{let n=1;for(const box of game.obstacles){if(box.walkableSurface)continue;const t=segmentBox(from,to,{...box,hx:box.hx+.25,hz:box.hz+.25});if(t!==null)n=Math.min(n,t-.06);}return n;},title:'Chapitre 02 · Les Profondeurs',onDone:()=>{endCine=null;showFinale();}});}
@@ -660,6 +660,7 @@ function updateOriginalSoldier(dt,moving,sprint,firing){
   model.root.position.set(game.player.x,game.player.elevation,game.player.z);
   model.root.rotation.y=yaw;
   if(model.weapon!==game.weaponIndex)model.setWeapon(game.weaponIndex);
+  if(game.hideoutArmorLevel&&model.equipmentLevel!==game.hideoutArmorLevel)model.setLevel(game.hideoutArmorLevel);
   model.gun.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,dualState:game.dual,
     reloading:game.reloadRemaining>0,reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,charge:game.charge});
   model.animate(game.time,moving,weaponFeel.state.pitch,0,Number(firing),dt,{

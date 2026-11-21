@@ -1,4 +1,5 @@
 import {IEM_INDEX,IEM_RULES,iemAvailable} from './voltis-iem.js';
+import {applyHideoutPreparation} from './hideout-state.js';
 import {configureNanoForge,applyNanoLoadout,nanoWeapon,dropNanoSalvage,updateNanoForge,nanoSnapshot,fabricateNano,setNanoConfiguration} from './nano-forge.js';
 import {createGrappleState,toggleGrapple,releaseGrapple,updateGrapple,grappleAttached} from './grapple-logic.js';
 import {describeEnemyImpact} from './enemy-body-response.js';
@@ -324,6 +325,7 @@ export class ArenaGame {
     this.searchFields=new Map();
   }
   reset(characterId=this.characterId||'ghju') {
+    this.hideoutPreparationChecked=false;this.hideoutArmorLevel=null;
     this.nano=null;this.nanoStats=null;this.nanoCraftAt=-100;
     if(this.baseShieldCapacity)this.shieldCapacity=this.baseShieldCapacity;
     this.checkpointPosition=null;
@@ -404,7 +406,7 @@ export class ArenaGame {
     entity.onLift=null;
     if(entity.grounded)for(const l of this.lifts)if(insideSurface(entity.x,entity.z,l) && Math.abs(entity.elevation-liftHeightAt(l,this.time))<.025){entity.onLift=l.id;break;}
   }
-  get equipment() { return equipmentForLevel(this.wave); }
+  get equipment() { return equipmentForLevel(this.hideoutArmorLevel||this.wave); }
   toggleGrapple(aim){return toggleGrapple(this,aim);}
   releaseGrapple(options){return releaseGrapple(this,options);}
   isWeaponAvailable(index){
@@ -793,6 +795,7 @@ export class ArenaGame {
   }
   step(dt, input = {}) {
     if (this.state !== 'playing') return;
+    applyHideoutPreparation(this);
     if(this.mode==='campaign'&&this.isWeaponAvailable(IEM_INDEX))this.ownedWeapons.add(IEM_INDEX);
     // At 10–20 FPS, preserve elapsed travel using small collision/AI steps.
     // One-shot toggles apply once; held jump remains held across the substeps.

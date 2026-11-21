@@ -1,3 +1,5 @@
+import {addHideoutDebrief} from './hideout-links.js';
+import {hideoutURL,recordHideoutArrival} from './hideout-state.js';
 // Pink Wars - narrative illustrations at the conclusion of each completed
 // campaign mission. Images and texts are kept separate from the physics engine.
 // Same optimized cover used by the chapter selector and its mission briefing.
@@ -30,7 +32,7 @@ export function chapterStory(level,characterId='ghju',choice='escort'){
    text:'Une nouvelle transmission confirme que Vesper cache encore les traces de la Chute. La recherche continue.',
    eyebrow:'FIN DE MISSION · '+String(level).padStart(2,'0'),next:'CONTINUER'};
 }
-export function attachCampaignStory(dialog,{level=1,characterId='ghju'}={}){
+export function attachCampaignStory(dialog,{level=1,characterId='ghju',game=null}={}){
  if(!dialog)return;
  styles();dialog.querySelector('.pw-story-card')?.remove();dialog.querySelector('.pw-story-next')?.remove();
  const story=chapterStory(level,characterId);
@@ -45,14 +47,10 @@ export function attachCampaignStory(dialog,{level=1,characterId='ghju'}={}){
  const h=document.createElement('strong');h.textContent=story.heading;
  desc.append(h,document.createTextNode(story.text));card.append(eyebrow,image,desc);
  const score=dialog.querySelector('.end-stats');if(score)dialog.insertBefore(card,score);else dialog.appendChild(card);
- if(level===1){
-  const next=document.createElement('button');next.className='pw-story-next';
-  next.textContent='CONTINUER L’HISTOIRE → '+story.next;
-  next.addEventListener('click',()=>location.assign('./level2-test.html?character='+encodeURIComponent(characterId)+'&source=campaign'));
-  const retry=dialog.querySelector('#retry-button');if(retry)dialog.insertBefore(next,retry);else dialog.append(next);
- }
+ const next=addHideoutDebrief(dialog,{level,characterId,game});next.classList.add('pw-story-next');
+
 }
-export function showChapter2Finale({characterId='ghju',onReplay,onDecide}={}){
+export function showChapter2Finale({characterId='ghju',game=null,onReplay,onDecide}={}){
  styles();document.getElementById('pink-story-final')?.remove();
  store('pink-wars-last-cleared',2);
  const modal=document.createElement('div');modal.id='pink-story-final';modal.className='pw-story-modal';modal.setAttribute('role','dialog');
@@ -69,18 +67,18 @@ export function showChapter2Finale({characterId='ghju',onReplay,onDecide}={}){
  const actions=document.createElement('div');actions.className='pw-story-choice';
  const escort=document.createElement('button');escort.textContent='LIBÉRER LES PRISONNIERS';
  const proof=document.createElement('button');proof.className='amber';proof.textContent='RÉCUPÉRER LES ARCHIVES HELIX';
- const continueButton=document.createElement('button');continueButton.textContent='CONTINUER → CHAPITRE 03 · LE CONVOI DES OUBLIÉS';
+ const continueButton=document.createElement('button');continueButton.textContent='REJOINDRE LA PLANQUE →';
  continueButton.hidden=true;
  const replay=document.createElement('button');replay.className='secondary';replay.textContent='REJOUER LE NIVEAU 2';
  const decide=choice=>{
-   store('pink-wars-m02-choice',choice);onDecide?.(choice);
+   store('pink-wars-m02-choice',choice);recordHideoutArrival({characterId,level:2,game,completed:true,choice});onDecide?.(choice);
    const story=chapterStory(2,characterId,choice);
    header.textContent=story.heading;feedback.textContent=story.text;
    escort.hidden=true;proof.hidden=true;continueButton.hidden=false;
  };
  escort.addEventListener('click',()=>decide('escort'));
  proof.addEventListener('click',()=>decide('proof'));
- continueButton.addEventListener('click',()=>location.assign('./niveau3.html?chapter=3&character='+encodeURIComponent(characterId)+'&source=campaign'));
+ continueButton.addEventListener('click',()=>location.assign(hideoutURL({characterId,level:2,renderer:new URLSearchParams(location.search).get('renderer')})));
  replay.addEventListener('click',()=>{modal.remove();onReplay?.();});
  actions.append(escort,proof,continueButton,replay);
  shell.append(meta,header,image,intro,feedback,actions);modal.append(shell);document.body.appendChild(modal);

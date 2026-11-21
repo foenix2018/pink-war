@@ -1,3 +1,4 @@
+import {hideoutURL} from './hideout-state.js';
 import {applyFPSCameraMotion} from './fps-motion.js';
 import {createTouchOrbit} from './touch-orbit.js';
 import {frameDelta} from './frame-timing.js';
@@ -197,6 +198,7 @@ function selectCharacter(id,save=true){
   const next=characterForId(id),changed=next.id!==character.id;character=next;
   syncMenuArtwork(character.id,selectedMode);
   document.documentElement.dataset.universe=character.universe;
+  if($('hideout-open'))$('hideout-open').href=hideoutURL({characterId:character.id,renderer:new URLSearchParams(location.search).get('renderer')});
   for(const button of document.querySelectorAll('[data-character]')){
     const selected=button.dataset.character===character.id;button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));
   }
@@ -572,6 +574,7 @@ function handleEvents() {
       const marker=$('hit-marker');marker.classList.remove('hit');void marker.offsetWidth;marker.classList.add('hit');
       vr.haptic('hit');
     }
+    if(event.type==='hideout-prepared')world.setEquipment(event.armorLevel);
     if(event.type==='training-control'){if(settings.sound&&audioContext)playWeaponAction(audioContext,game.weapon.id,'reload-in');}
     if(event.type==='training-stage'){if(vr.mode!=='xr')announce(event.label,'NOUVEL EXERCICE · VITESSE CROISSANTE');tone(460,820,.24,.03,'sine');}
     if(event.type==='training-escaped'){tone(240,130,.09,.01,'triangle');}
@@ -637,7 +640,7 @@ function gameOver(won = false) {
     $('end-title').innerHTML=won?'Une trace.<br>Un espoir.':'Le signal<br>vous attend.';
     $('end-message').textContent=won?`Une intervention récente porte l’indicatif ${character.id==='ghju'?'LYLU':'GHJU'}. Destination suivante : les Bas-Niveaux de Vesper. Le niveau 2 est désormais accessible.`:'Reprenez depuis l’entrée du laboratoire. Activez le courant, consultez l’archive, puis rejoignez le relais en hauteur.';
     $('survival-button').hidden=true;$('retry-button').textContent='REJOUER LE NIVEAU 1 →';
-    if(won&&selectedMode!=='breach')attachCampaignStory($('end-dialog'),{level:1,characterId:character.id});
+    if(won&&selectedMode!=='breach')attachCampaignStory($('end-dialog'),{level:1,characterId:character.id,game});
     if(selectedMode==='breach'){$('end-eyebrow').textContent='OPÉRATION BRÈCHE';$('end-title').textContent=won?'Extraction réussie.':'Opération interrompue.';$('end-message').textContent=won?'Les relais sont activés et le complexe neutralisé.':`Reprise au dernier secteur sécurisé : ${game.checkpoint}.`;$('retry-button').textContent=won?'REJOUER L’OPÉRATION':'REPRENDRE AU POINT DE CONTRÔLE';}
   }
   $('end-score').textContent = game.score; $('end-wave').textContent = game.wave; $('end-time').textContent = timeString(game.time); $('best-label').textContent = best;
@@ -663,7 +666,7 @@ function updateHud() {
     $('training-speed').textContent=!game.trainingActive?'Chronomètre arrêté':game.trainingLevel.number===5?`×${game.trainingMotionSpeed.toFixed(1)}`:`${Math.ceil(stage.remaining)} s avant la suite`;
   }
   updatePortalHUD();
-  const equipment=equipmentForCharacter(game.wave,character.id);
+  const equipment=equipmentForCharacter(game.hideoutArmorLevel||game.wave,character.id);
   $('gear-label').textContent=`TENUE ${String(equipment.level).padStart(2,'0')} · ${equipment.name.toUpperCase()}`;
   // Shared combat HUD (same panels as M01 and M02); the legacy readouts below stay for their own logic.
   (combatHud ||= mountCombatHud({characterId:character.id,lobbyPage:true,onAction:armorTouch})).update(game);

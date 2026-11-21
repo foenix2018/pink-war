@@ -195,6 +195,7 @@ function updateSoldier(dt,moving,sprint,firing){
  try{
   model.root.position.set(game.player.x,game.player.elevation,game.player.z);model.root.rotation.y=yaw;
   if(model.weapon!==game.weaponIndex)model.setWeapon(game.weaponIndex);
+  if(game.hideoutArmorLevel&&model.equipmentLevel!==game.hideoutArmorLevel)model.setLevel(game.hideoutArmorLevel);
   model.gun.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,dualState:game.dual,reloading:game.reloadRemaining>0,
    reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,charge:game.charge});
   model.animate(game.time,moving,weaponFeel.state.pitch,0,Number(firing),dt,{airborne:!game.player.grounded,verticalSpeed:game.player.verticalSpeed,crouched:game.player.crouched,...heroFlightFlags(game.player),firing:!!firing,sprint,aim:aimBlend>.2});

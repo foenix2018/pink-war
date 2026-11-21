@@ -1,3 +1,4 @@
+import {addHideoutDebrief} from './hideout-links.js';
 import {inertialMove,PLAYER_SPEEDS,TOUCH_SPEED_MULTIPLIER,touchAnalogSprint} from './locomotion.js';
 import {frameDelta} from './frame-timing.js';
 import {createFPSMotion} from './fps-motion.js';
@@ -657,7 +658,7 @@ function createStory(characterId, relay) {
     seen,
     update(p, dt) {
       for (const [id, test] of SCENES) if (!seen.has(id) && test(p.x, p.z)) say(id);
-      if (!ended && seen.has('turbineOk') && !queue.length && !line) { ended = true; $('fin').hidden = false; $('fin').querySelector('p').textContent = ENDING.next; }
+      if (!ended && seen.has('turbineOk') && !queue.length && !line) { ended = true; $('fin').hidden = false; $('fin').querySelector('p').textContent = ENDING.next;addHideoutDebrief($('fin'),{level:7,characterId}); }
       if (line && (left -= dt) <= 0) line = null;
       if (!line && queue.length) { line = queue.shift(); left = lineSeconds(line.text); sub.hidden = false; sub.querySelector('b').textContent = line.speaker.name; sub.querySelector('b').style.color = line.speaker.color; sub.querySelector('span').textContent = line.text; }
       if (!line) sub.hidden = true;

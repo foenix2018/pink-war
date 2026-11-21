@@ -1,3 +1,4 @@
+import {addHideoutDebrief} from './hideout-links.js';
 import {nanoSnapshot} from './nano-forge.js';
 import {readPreferredView,savePreferredView,normalizeView} from './view-options.js';
 import {heroFlightFlags,createHeroCapabilityAudio} from './hero-capabilities.js';
@@ -238,7 +239,7 @@ function finishMission(){
  const docs=Object.keys(LOGS).filter(id=>mission.reads.includes(id)).length;
  $('panel-small').textContent=`Temps ${minutes}:${seconds} · Machines neutralisées ${game.kills} · Précision ${shotsFired?Math.round(hits/shotsFired*100):0} % · Ambulance ${Math.ceil(mission.van.hp)} % · Documents ${docs}/${Object.keys(LOGS).length} · ${ENDING.next}`;
  const showPanel=()=>{startButton.textContent='REJOUER LE NIVEAU 3 →';startButton.disabled=false;status.textContent='';shade.style.display='grid';shade.classList.add('ended');document.body.classList.add('pw-shaded');
-  $('home').hidden=false;};
+  $('home').hidden=false;addHideoutDebrief($('panel-text').parentElement,{level:3,characterId,game});};
  // In-engine end scene on the quay (the hero and her sphere, their exchange in the transmission panel), once the
  // regulation register has been read and closed. The headset goes straight to the end panel.
  const stage=()=>{
@@ -314,6 +315,7 @@ function updateSoldier(dt,moving,sprint,firing){
  try{
   model.root.position.set(game.player.x,game.player.elevation,game.player.z);model.root.rotation.y=yaw;
   if(model.weapon!==game.weaponIndex)model.setWeapon(game.weaponIndex);
+  if(game.hideoutArmorLevel&&model.equipmentLevel!==game.hideoutArmorLevel)model.setLevel(game.hideoutArmorLevel);
   model.gun.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,dualState:game.dual,reloading:game.reloadRemaining>0,
    reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,charge:game.charge});
   model.animate(game.time,moving,weaponFeel.state.pitch,0,Number(firing),dt,{airborne:!game.player.grounded,verticalSpeed:game.player.verticalSpeed,crouched:game.player.crouched,...heroFlightFlags(game.player),firing:!!firing,sprint,aim:aimBlend>.2});

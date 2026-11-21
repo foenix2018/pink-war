@@ -1,3 +1,4 @@
+import {hideoutURL} from './hideout-state.js';
 import {readM02Checkpoint} from './m02-checkpoint-index.js';
 import {setScreenMusic,setMusicEnabled,screenMusicSnapshot} from './menu-music.js';
 import {DesktopGamepadInput} from './desktop-input.js';
@@ -25,6 +26,7 @@ function save(){try{localStorage.setItem('pink-war-character',character);localSt
 function refresh(){
   setScreenMusic(loading?'loading':'menu',mode==='campaign2'?2:mode==='campaign3'||mode==='campaign4'?3:1,settings.music!==false);
   document.documentElement.dataset.universe=character==='lylu'?'blue':'pink';
+  $('hideout-open').href=hideoutURL({characterId:character,renderer:new URLSearchParams(location.search).get('renderer')});
   syncMenuArtwork(character,mode);
   $('character-choice-status').textContent=character==='lylu'?'LYLU · UNIVERS BLEU':'GHJU · UNIVERS ROSE';
   $('lobby-character-name').textContent=character==='lylu'?'LYLU':'GHJU';
