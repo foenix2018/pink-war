@@ -18,6 +18,8 @@ import { createSignage } from './signage.js';
 import { createFunctionalProp } from './functional-props.js';
 import { softCube, splitPieces } from './soft-pieces.js';
 import { loadFoundryModels, M06_BUNDLES, M06_YAW } from './m06-models.js';
+import { createFoundryHorizon } from './m06-horizon.js';
+import { buildDressing } from './m06-dressing.js';
 
 const TAU = Math.PI * 2;
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
@@ -32,11 +34,12 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
 
   // ---------- Late afternoon: low sun through smoke, sooty haze ----------
   scene.background = new T.Color(0x6b4a3a);
-  scene.fog = new T.FogExp2(0x8a5d45, low ? .011 : .009);
+  scene.fog = new T.FogExp2(0x8a5d45, low ? .0052 : .0042); // light haze: the skyline and the ridges beyond the fence stay readable
   const sky = new T.HemisphereLight(0xffc89a, 0x3a2a22, 1.2); scene.add(sky);
   const sun = new T.DirectionalLight(0xffb070, 2.6); sun.position.set(-70, 45, 40); scene.add(sun);
   const skyTex = canvasTexture(T, 16, 256, (c, w, h) => { const g = c.createLinearGradient(0, 0, 0, h); for (const [a, col] of [[0, '#2b2a4a'], [.4, '#6a4a5a'], [.62, '#c9764a'], [.74, '#f0a868'], [.82, '#8a5d45'], [1, '#2a1c16']]) g.addColorStop(a, col); c.fillStyle = g; c.fillRect(0, 0, w, h); });
-  add(new T.Mesh(new T.SphereGeometry(400, 24, 12), new T.MeshBasicMaterial({ map: skyTex, side: T.BackSide, fog: false, depthWrite: false })));
+  add(new T.Mesh(new T.SphereGeometry(2400, 32, 16), new T.MeshBasicMaterial({ map: skyTex, side: T.BackSide, fog: false, depthWrite: false })));
+  let horizon = null; try { horizon = createFoundryHorizon(T, { scene: root, low, sun: [sun.position.x, sun.position.y, sun.position.z] }); } catch (error) { console.warn('M06 / horizon simplifié', error); }
 
   // ---------- Materials ----------
   const loader = new T.TextureLoader(),photo=createPhotoResponse(T,{low});
@@ -431,13 +434,18 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
   return {
     root, M, sun, openPortal,get ready(){return Promise.all([photo.ready,modelsReady]);},
     build(obstacles) {
-      buildGrounds(); buildDecks(); buildWalls(obstacles); for (const o of obstacles) dress(o); loadModels(); buildEffects(); buildDoors(); buildDevices(); buildSigns(); buildFixtures();
+      buildGrounds(); buildDecks(); buildWalls(obstacles); for (const o of obstacles) dress(o); loadModels();
+      const dressing = buildDressing({ T, M, box, piece, add, low, stats, animated });
+      stats.dressing = dressing.count;
+      const dressed = dressing.ready.then(lib => { if (!lib) return; for (const [kind, key] of [['transformer', 'transformer'], ['drone-rack', 'rack']]) lib.place(key, dressing.deferred.filter(o => o.kind === kind).map(o => ({ x: o.x, z: o.z, yaw: o.yaw || 0 })), root); })
+        .catch(error => { console.warn('M06 / modèles du chapitre 4 indisponibles, volumes de repli', error); dressing.fallback(); flushGeometry(); });
+      modelsReady = Promise.all([modelsReady, dressed]); buildEffects(); buildDoors(); buildDevices(); buildSigns(); buildFixtures();
       neons.meshes(); neons.build(); flushGeometry(); flushPieces();
       if(shaftFx)for(let i=0;i<3;i++)shaftVolumes.push(shaftFx.fog(root,{width:8,height:10,depth:3,color:0xffb581,opacity:.075,beam:true}));
       fpsChapter=createFPSChapter(T,root,{chapter:'m06',obstacles:obstacles,areas:AREAS,low,webgpu});
     },
     update(t, dt, eye, player) {
-      updateShafts(t,eye.position);fpsChapter?.update(t,dt,eye.position);
+      updateShafts(t,eye.position);fpsChapter?.update(t,dt,eye.position);horizon?.update(t);
       const e = eye.position; updatePool(dt, e); updateEffects(t, dt); updatePortals(t, dt, e); updateDevices(t, dt); if (player) updateDoors(dt, player);
       for (const f of animated) f(t, dt); signs.update(t);
     },

@@ -527,7 +527,7 @@ async function boot(){
   renderer.shadowMap.enabled=false;
   bootStep='décor';status.textContent='Construction de la station énergétique Est…';
   traversal=L.createTraversal();
-  scene=new T.Scene();camera=new T.PerspectiveCamera(70,innerWidth/innerHeight,.06,600);scene.add(camera);enemyDestructionFX=createEnemyDestructionFX(T,scene,{camera,low:low()||profile.phone||profile.headset,maxDeaths:7,onSound:(kind,source)=>robotShutdownAudio.play(kind,source)});
+  scene=new T.Scene();camera=new T.PerspectiveCamera(70,innerWidth/innerHeight,.06,3600);scene.add(camera);enemyDestructionFX=createEnemyDestructionFX(T,scene,{camera,low:low()||profile.phone||profile.headset,maxDeaths:7,onSound:(kind,source)=>robotShutdownAudio.play(kind,source)});
   createWorld();
   await art.ready;
   if(!profile.phone&&!profile.headset&&!low())sunShadows=createWorldShadows(T,{scene,renderer,light:art.sun,profile:{...profile,shadowMoveThreshold:2,artQuality:quality.value==='high'?'high':'low'},direction:art.sun.position.clone()});

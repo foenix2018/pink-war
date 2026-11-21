@@ -135,7 +135,7 @@ export function doorCollider(d) {
 }
 export function buildCollisions({ open = [] } = {}) {
   const openSet = new Set(open);
-  return [...chapterCovers('m06'), ...walls(), ...supports(), ...props(), ...DOORS.filter(d => !d.open && !openSet.has(d.id)).map(doorCollider)]
+  return [...chapterCovers('m06'), ...walls(), ...supports(), ...props(), ...DRESSING.map(d => at(d.kind, d.x, d.z, d.hx, d.hz, d.height, { surface: d.surface || 'metal', yaw: d.yaw })), ...DOORS.filter(d => !d.open && !openSet.has(d.id)).map(doorCollider)]
     .map(o => ({ ...o, navPad: Math.min(o.hx, o.hz) < .7 ? .7 : 1.3 }));
 }
 
@@ -200,3 +200,38 @@ export const STAGES = Object.freeze([
   stage('fin', 'LE CŒUR D’ACIER', 'Le camion d’AEGIS part vers la forêt des Sources.', { x: -80, z: -66, yaw: Math.PI / 2 })
 ]);
 export const STAGE_INDEX = Object.freeze(Object.fromEntries(STAGES.map((s, i) => [s.id, i])));
+
+// ---------- Set dressing with collision: the yards, the halls and the core are filled so the foundry feels worked in ----------
+// Placed once, deterministically, by rejection sampling inside hand-drawn zones: nothing lands on a wall, a door, an
+// interaction, a spawn, a checkpoint, a supply, a portal or another prop, and a 3 m margin keeps every corridor open.
+const ZONES = [
+  // kind, count, x1, x2, z1, z2, hx, hz, height, margin
+  ['mast', 3, -94, -34, 34, 94, .45, .45, 12], ['mast', 4, 44, 92, 68, 94, .45, .45, 12],
+  ['barrels', 10, -94, -34, 34, 94, 1.1, 1.1, 1.2], ['cars', 5, -94, -34, 34, 94, 2.3, 1.2, 2.4], ['tires', 4, -94, -34, 34, 94, 1.3, 1.3, 1.3],
+  ['jersey', 3, -26, 36, 70, 92, 1.6, .4, .9], ['barrels', 3, -26, 36, 70, 92, 1.1, 1.1, 1.2],
+  ['barrels', 7, -28, 38, -16, 64, 1.1, 1.1, 1.2], ['console', 3, -28, 38, -16, 64, 1.1, .6, 1.3],
+  ['cabinet-row', 4, 42, 94, -16, 64, 1.6, .6, 2.2], ['barrels', 5, 42, 94, -16, 64, 1.1, 1.1, 1.2], ['console', 2, 42, 94, -16, 64, 1.1, .6, 1.3],
+  ['container-stack', 3, 44, 94, 70, 94, 3, 1.3, 5.4], ['transformer', 2, 56, 90, 72, 92, 2.8, 2.2, 4.2],
+  ['drone-rack', 2, -42, 42, -94, -84, 6.1, .75, 3.3], ['transformer', 2, -57, 57, -70, -38, 2.2, 2.8, 4.2, 'x'], ['console', 5, -56, 56, -92, -26, 1.1, .6, 1.3],
+  ['container-stack', 4, -94, -62, -94, -44, 3, 1.3, 5.4], ['barrels', 5, -94, -62, -94, -44, 1.1, 1.1, 1.2]
+];
+function dressingProps() {
+  let seed = 90210; const rnd = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+  const base = [...chapterCovers('m06'), ...walls(), ...supports(), ...props(), ...DOORS.map(doorCollider)].filter(o => (o.y || 0) < 3);
+  const keep = [...INTERACTIONS.map(i => [i.x, i.z, 4.5]), ...SUPPLIES.map(i => [i.x, i.z, 2.5]), ...STAGES.map(s => [s.checkpoint.x, s.checkpoint.z, 5]), [START.x, START.z, 6],
+    ...DOORS.map(d => d.axis === 'x' ? [d.centre, d.fixed, 6] : [d.fixed, d.centre, 6]), ...Object.values(ENCOUNTERS).flatMap(e => [...e.units.map(u => [u.x, u.z, 3.5]), ...(e.portal ? [[e.portal.x, e.portal.z, 5]] : [])])];
+  const out = [];
+  for (const [kind, count, x1, x2, z1, z2, hx0, hz0, height, face] of ZONES) {
+    let placed = 0;
+    for (let tries = 0; tries < 600 && placed < count; tries++) {
+      const yaw = face === 'x' ? Math.PI / 2 : 0, hx = hx0, hz = hz0; // dimensions are world-aligned already
+      const x = Math.round((x1 + hx + rnd() * (x2 - x1 - 2 * hx)) * 2) / 2, z = Math.round((z1 + hz + rnd() * (z2 - z1 - 2 * hz)) * 2) / 2, m = 3;
+      if (base.some(b => Math.abs(x - b.x) < hx + b.hx + m && Math.abs(z - b.z) < hz + b.hz + m)) continue;
+      if (out.some(b => Math.abs(x - b.x) < hx + b.hx + m && Math.abs(z - b.z) < hz + b.hz + m)) continue;
+      if (keep.some(([kx, kz, r]) => Math.abs(x - kx) < hx + r && Math.abs(z - kz) < hz + r)) continue;
+      out.push({ kind, x, z, hx, hz, height, yaw: kind === 'drone-rack' ? 0 : yaw, surface: kind === 'barrels' || kind === 'tires' ? 'metal' : 'metal' }); placed++;
+    }
+  }
+  return Object.freeze(out.map(o => Object.freeze(o)));
+}
+export const DRESSING = dressingProps();
