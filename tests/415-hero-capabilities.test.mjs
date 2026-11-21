@@ -30,3 +30,8 @@ test('the capability list and the flags helper',()=>{
   assert.deepEqual(heroFlightFlags({sliding:true,jetpackActive:false,grounded:true}),{slide:true,jetpack:false,jetpackFuel:1});
   const f=heroFlightFlags({jetpackActive:true,grounded:false,jetpackArmed:true,jetpackElapsed:1});assert.equal(f.jetpackFuel,.5);
 });
+test('the grappling hook is shared by the engine levels and switched off in chapter 1 (own controller)',()=>{
+  for(const f of ['game.js','level2-test.js','ligne9.js','niveau3.js','niveau4.js','niveau6.js','couronne-helix.js'])assert.match(read(f),/createArmorFeedback/,f);
+  assert.match(read('vesper-combat.js'),/defineProperty\(game,'grappleEnabled'/);
+  assert.ok('grapple' in HERO_CAPABILITIES);
+});

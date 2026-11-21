@@ -124,6 +124,8 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   onProgress(.58,'Objets et surfaces du secteur');
   const obstacles=missionArt.obstacles;obstacles.push(...salvage.colliders);
   const game=new CampaignLevel1(obstacles,Math.random,characterId);
+  // Chapter 1 moves the player with its own controller (vesper-level1-v7.html), which the grappling hook cannot drive: no hook here.
+  Object.defineProperty(game,'grappleEnabled',{get:()=>false,set(){}});
   let combatHud=null;game.enableArmorShield();game.enableProjectedShields();
   const checkpoint=readM01Checkpoint(characterId),resuming=params.get('resume')==='1';
   const coreRestored=resuming&&!!checkpoint&&restoreM01Checkpoint(game,checkpoint);
