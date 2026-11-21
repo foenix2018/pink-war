@@ -72,19 +72,23 @@ export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
   right.getWorldPosition(xr.origin);right.getWorldQuaternion(xr.q);xr.direction.set(0,0,-1).applyQuaternion(xr.q);
   xr.ray.set(xr.origin,xr.direction);xr.ray.near=.025;xr.ray.far=2;
   const hit=xr.ray.intersectObject(mesh)[0],down=trigger&&!xr.pressed;xr.pressed=!!trigger;
-  const hud=getActiveCombatHud(),equip=hud?.equipmentState(),weapons=equip?.weapons||[],status=getStatus(),pages=Math.max(1,Math.ceil(weapons.length/4));
+  const hud=getActiveCombatHud(),equip=hud?.equipmentState(),weapons=equip?.weapons||[],status=getStatus(),nano=open&&xr.tab==='nano'?hud?.nanoState?.():null,recipes=nano?.recipes||[],pages=Math.max(1,Math.ceil((xr.tab==='nano'?recipes.length:weapons.length)/4));
   xr.page=Math.min(xr.page,pages-1);
-  const signature=JSON.stringify([equip?.hero,equip?.weaponIndex,equip?.charges,weapons.map(w=>[w.index,w.ammo]),xr.tab,xr.page,status?.unlocked]);
+  const signature=JSON.stringify([equip?.hero,equip?.weaponIndex,equip?.charges,weapons.map(w=>[w.index,w.ammo]),xr.tab,xr.page,status?.unlocked,nano?.balance,recipes.map(r=>[r.id,r.rank,r.known,r.enabled]),nano?.configurations]);
   if(xr.lastGearKey!==signature){xr.lastGearKey=signature;xr.dirty=true;}
   if(hit&&down){
    if(!open){xr.tab='equipment';xr.page=0;setOpen(true);}
    else{
     const x=hit.uv.x*768,y=(1-hit.uv.y)*640;
-    if(y<94){if(x>=670)setOpen(false);else if(x>=330&&status?.unlocked)xr.tab='skills';else xr.tab='equipment';}
+    if(y<94){if(x>=670)setOpen(false);else{const tab=x>=485&&hud?.hasNanoForge?.()?'nano':x>=250&&x<485&&status?.unlocked?'skills':'equipment';if(tab!==xr.tab)xr.page=0;xr.tab=tab;}}
     else if(xr.tab==='equipment'){
      if(y>=110&&y<195&&equip?.charges>0){if(hud?.throwGrenade())setOpen(false);}
      else if(y>=232&&y<515){const i=Math.floor((y-232)/70),w=weapons[xr.page*4+i];if(i>=0&&i<4&&w&&hud?.chooseWeapon(w.index))setOpen(false);}
      else if(y>=540){xr.page=x<345?Math.max(0,xr.page-1):Math.min(pages-1,xr.page+1);}
+    }else if(xr.tab==='nano'&&nano){
+     if(y>=174&&y<220){hud?.setNanoConfiguration?.(x<384?'impact':'precision');}
+     else if(y>=232&&y<515){const i=Math.floor((y-232)/70),r=recipes[xr.page*4+i];if(i>=0&&i<4&&r?.enabled)hud?.fabricateNano?.(r.id);}
+     else if(y>=540)xr.page=x<345?Math.max(0,xr.page-1):Math.min(pages-1,xr.page+1);
     }else if(xr.tab==='skills'&&status?.unlocked){
      const i=Math.floor((y-178)/126),skill=status.skills[i];if(i>=0&&i<3&&skill?.enabled)use(skill.id);
     }
@@ -99,9 +103,10 @@ export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
     c.drawImage(xr.portrait,274,55,220,220);c.textAlign='center';c.fillStyle=tint;c.font='bold 50px sans-serif';c.fillText(LABEL[status.name]||status.name.toUpperCase(),384,352);
     c.font='28px sans-serif';c.fillText('ÉQUIPEMENT',384,413);c.textAlign='left';
    }else{
-    c.fillStyle=tint;c.fillRect(0,0,12,640);c.font='bold 30px sans-serif';
+    c.fillStyle=tint;c.fillRect(0,0,12,640);c.font='bold 24px sans-serif';
     c.fillStyle=xr.tab==='equipment'?tint:'#9cabc2';c.fillText('ÉQUIPEMENT',35,60);
-    c.fillStyle=xr.tab==='skills'?tint:'#9cabc2';c.fillText(status.unlocked?'COMPÉTENCES':'VERROUILLÉ',347,60);
+    c.fillStyle=xr.tab==='skills'?tint:'#9cabc2';c.fillText(status.unlocked?'COMPÉTENCES':'VERROUILLÉ',260,60);
+    c.fillStyle=xr.tab==='nano'?tint:'#9cabc2';c.fillText('ATELIER NANO',490,60);
     c.fillStyle='#eaf1ff';c.font='bold 35px sans-serif';c.fillText('×',704,61);
     if(xr.tab==='equipment'){
      c.fillStyle=equip?.charges>0?'#584739':'#28313c';c.beginPath();c.roundRect(28,110,712,85,22);c.fill();
@@ -116,6 +121,12 @@ export function createCompanionMenu({getStatus,onUse,onChange=()=>{}}){
      c.fillStyle='#c6d7e9';c.font='22px sans-serif';
      if(pages>1){c.fillText('‹ PRÉCÉDENT',36,597);c.textAlign='center';c.fillText((xr.page+1)+' / '+pages,384,597);c.textAlign='right';c.fillText('SUIVANT ›',720,597);c.textAlign='left';}
      else c.fillText('Index droit : sélectionner · main gauche : panneau',36,597);
+    }else if(xr.tab==='nano'&&nano){
+     c.fillStyle='#a2f5db';c.font='bold 30px sans-serif';c.fillText(nano.balance+' NP · '+nano.companion,36,128,690);
+     c.fillStyle='#d9e8f6';c.font='23px sans-serif';c.fillText('Arme : '+nano.weapon,36,166,690);
+     c.font='21px sans-serif';c.fillStyle='#b5cfde';c.fillText('IMPACT',55,208);c.fillText('PRÉCISION',405,208);
+     recipes.slice(xr.page*4,xr.page*4+4).forEach((r,i)=>{const y=234+i*70;c.fillStyle=r.enabled?'#24534e':'#243442';c.beginPath();c.roundRect(28,y,712,62,15);c.fill();c.fillStyle=r.enabled?'#e1fff3':'#b4c4d1';c.font='bold 23px sans-serif';c.fillText(r.name,44,y+27,660);c.font='18px sans-serif';c.fillText(!r.known?'Plan à découvrir · niveau '+r.level:r.rank>=r.max?'Acquis · rang '+r.rank:r.cost+' NP · rang '+r.rank+' / '+r.max,44,y+51,660);});
+     c.fillStyle='#c6d7e9';c.font='22px sans-serif';c.fillText('‹ PRÉCÉDENT',36,597);c.textAlign='center';c.fillText((xr.page+1)+' / '+pages,384,597);c.textAlign='right';c.fillText('SUIVANT ›',720,597);c.textAlign='left';
     }else{
      c.fillStyle='#d0dedb';c.font='25px sans-serif';c.fillText('ÉNERGIE '+status.energy+' / 100',36,128);
      status.skills.forEach((skill,i)=>{const y=178+i*126;c.fillStyle=skill.enabled?'#344b50':'#222e32';c.beginPath();c.roundRect(28,y,712,112,30);c.fill();

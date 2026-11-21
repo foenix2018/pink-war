@@ -1,3 +1,4 @@
+import {nanoSnapshot} from './nano-forge.js';
 import {frameDelta} from './frame-timing.js';
 import {createFPSChapter} from './fps-environments.js';
 import {applyFPSCameraMotion} from './fps-motion.js';
@@ -738,6 +739,7 @@ function gameTick(dt){
  const controls=xc?{moveX:xc.x,moveZ:xc.z,lookX:0,lookY:0,jump:xc.jump,interact:xc.interact,aim:xc.aim,fire:xc.fire,sprint:xc.sprint,melee:xc.melee,charge:xc.charge}:pinkControls.read(dt,keys,navigator.getGamepads?.()||[],{focused:!document.hidden});
  if(controls.companion)skillMenu?.setOpen(!skillMenu.isOpen);
  if(skillMenu?.isOpen)return;
+ if(combatHud?.isOpen){heldFire=false;firePressQueued=false;keys.clear();fireInput.reset();touchControls?.reset();combatHud.update(game);return;}
  const touch=touchControls?.state||{x:0,z:0,lookX:0,lookY:0,fire:false,aim:false};
  const sensitivity=aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend);
  yaw-=(controls.lookX*1.8+touch.lookX*1.8)*sensitivity*dt;
@@ -1106,7 +1108,6 @@ window.addEventListener('mousemove',e=>{
 let dragPointer=null,dragX=0,dragY=0;
 window.addEventListener('pointerdown',e=>{
  if(!running||e.target!==canvas)return;
- if(e.button===2&&e.pointerType==='mouse'){jumpQueued=true;e.preventDefault();if(document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch(()=>{});return;}
  if(e.button===1&&e.pointerType==='mouse'){meleeQueued=true;e.preventDefault();return;}
  if(e.button!==0||e.pointerType!=='mouse')return;
  // On phones, the canvas is a camera surface, not a fire trigger.
@@ -1127,7 +1128,7 @@ document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockEleme
 window.addEventListener('pagehide',()=>saveCheckpoint());
 window.addEventListener('orientationchange',()=>{cancelAim();keys.clear();});
 window.addEventListener('pointerdown',e=>reconcileAimModifiers(keys,e),{capture:true});
-window.__PINK_M02=Object.freeze({snapshot:()=>({music:screenMusicSnapshot(),revision:'3.80.0',fps:fpsDistrict?.stats(),neons:root?.userData?.neons,running,paused,view:xr?.active?'fps':view,playerVisible:playerRig?.model.root.visible||false,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,extension:extension&&{stage:extension.stage,hold:extension.hold,done:extension.done,reads:extension.reads,opened:extension.opened,groups:extension.groups(),interaction:extension.interaction()},subtitle:subtitles?.current||null,journal:journalOpen,dressing:extArt?.stats(),health:game?.player.hp,
+window.__PINK_M02=Object.freeze({snapshot:()=>({nano:nanoSnapshot(game),music:screenMusicSnapshot(),revision:'3.80.0',fps:fpsDistrict?.stats(),neons:root?.userData?.neons,running,paused,view:xr?.active?'fps':view,playerVisible:playerRig?.model.root.visible||false,time:game?.time,vr:xr?.active||false,menuOpen:pauseMenu.isOpen,stage,characterId,extension:extension&&{stage:extension.stage,hold:extension.hold,done:extension.done,reads:extension.reads,opened:extension.opened,groups:extension.groups(),interaction:extension.interaction()},subtitle:subtitles?.current||null,journal:journalOpen,dressing:extArt?.stats(),health:game?.player.hp,
  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],capacity:game?.weapon.capacity,enemies:game?.enemies.length,
  shadowing:worldShadows?.stats(),backend:rendererBackend(renderer),rig:!!playerRig,webgpuFinish,skills:companionSkills?.snapshot(game),skillsMenuOpen:skillMenu?.isOpen||false,companion:companion?.snapshot(),pbr:pbrController?.stats,architecture:architecture?.stats,signage:districtSigns?.stats(),war:warZone?.stats,
  effects:combatEffects?.stats(),projectedShields:armorFx?.shieldStats(),armor:game&&{shieldDeployed:!!game.player.shieldDeployed,shield:game.player.shield,shieldCapacity:game.shieldCapacity,shieldCharging:game.shieldCharging,charges:game.charges,thrown:game.thrownCharges.length,meleeAt:game.meleeAt}}),

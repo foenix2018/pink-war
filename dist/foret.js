@@ -18,6 +18,8 @@ import {linesFor,lineSeconds,logFor,ENDING} from './m07-story.js';
 import {softCube,softEnough} from './soft-pieces.js';
 import {createMapInfoPanel} from './world-info-panel.js';
 import {createM07Hud} from './m07-hud.js?v=2';
+import {configureNanoForge,discoverNanoBlueprint,nanoSnapshot} from './nano-forge.js';
+import {createNanoForgeFX} from './nano-forge-fx.js';
 
 const params = new URLSearchParams(globalThis.location?.search ?? '');
 if(params.has('debug'))document.body.classList.add('m07-debug');
@@ -711,6 +713,14 @@ export async function boot() {
   const ctl = controls(canvas), player = { x: 6, z: 96, y: 0 }; ctl.look.yaw = 0;
    let terrainY=groundHeight(player.x,player.z),jumpOffset=0,jumpVelocity=0;
   const characterId = params.get('character') === 'lylu' ? 'lylu' : 'ghju', story = createStory(characterId, grotte.relay);
+  // This chapter remains unarmed exploration. Its recovered schematic travels
+  // with the same hero to the next combat chapter, where the workshop is available.
+  const nanoEvents=[],nanoGame={characterId,mode:'campaign',missionLevel:7,time:0,state:'playing',player:{x:player.x,z:player.z,elevation:0,hp:100},ownedWeapons:new Set(),isWeaponAvailable:()=>false,event:(type,data)=>nanoEvents.push({type,...data})};
+  configureNanoForge(nanoGame);nanoGame.nano.placed=true;
+  const nanoPoint={x:grotte.relay.position.x+.8,y:CAVE_FLOOR,z:grotte.relay.position.z+1.3};
+  if(!nanoGame.nano.profile.discovered.includes('spectral'))nanoGame.nano.plans.push({id:'spectral',name:'Filtre de récupération spectral',blueprints:['spectral'],...nanoPoint});
+  const nanoFx=createNanoForgeFX(T,{scene,camera,workshopAvailable:false});
+  const nanoStyle=document.createElement('link');nanoStyle.rel='stylesheet';nanoStyle.href=new URL('./nano-forge.css',import.meta.url).href;document.head.append(nanoStyle);
   const gameplayHud=createM07Hud({characterId,onMove:(x,z)=>ctl.setVirtualMove(x,z),onRun:value=>ctl.setVirtualRun(value),onInteract:()=>{const button=$('prompt');if(button&&!button.hidden&&$('doc').hidden)button.click();}});
   const frustum = new T.Frustum(), pv = new T.Matrix4();
   let audio = null;
@@ -768,6 +778,9 @@ export async function boot() {
       if(jumpOffset<=0){jumpOffset=0;jumpVelocity=0;}
     }
     player.y=terrainY+jumpOffset;
+    Object.assign(nanoGame.player,{x:player.x,z:player.z,elevation:player.y});nanoGame.time=time;
+    if(zoneAt(player.x,player.z)==='La grotte'&&Math.hypot(player.x-nanoPoint.x,player.z-nanoPoint.z)<1.8&&Math.abs(player.y-nanoPoint.y)<1.2&&discoverNanoBlueprint(nanoGame,'spectral'))nanoGame.nano.plans.length=0;
+    for(const event of nanoEvents.splice(0))nanoFx.handle(event);nanoFx.update(nanoGame,dt);
     camera.position.set(player.x, player.y + 1.65, player.z); camera.rotation.set(ctl.look.pitch, ctl.look.yaw, 0, 'YXZ');
     if(!bench){const pose=motion.update({time,dt,velocity:actualVelocity,yaw:ctl.look.yaw,pitch:ctl.look.pitch,grounded:jumpOffset<=.015,verticalSpeed:jumpVelocity});camera.position.y+=pose.cameraY;camera.rotation.z+=pose.cameraRoll;}
     river.fx.update(time,camera.position);
@@ -795,7 +808,7 @@ export async function boot() {
     requestAnimationFrame(frame);
   }
   addEventListener('resize', () => { renderer.setPixelRatio(renderPixelRatio(profile, devicePixelRatio, innerWidth, innerHeight)); renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); cull.aspect = camera.aspect * 1.25; cull.updateProjectionMatrix(); });
-  window.__FORET = { scene, stats, story, hud: gameplayHud, get bench() { return bench?.result || null; }, teleport(x, z, yaw = 0) { player.x = x; player.z = z; terrainY=groundHeight(x,z);player.y=terrainY;jumpOffset=0;jumpVelocity=0;ctl.look.yaw=yaw; refresh = 0; }, look(yaw, pitch = 0) { ctl.look.yaw = yaw; ctl.look.pitch = pitch; refresh = 0; } };
+  window.__FORET = { scene, stats, story, nano:()=>nanoSnapshot(nanoGame), hud: gameplayHud, get bench() { return bench?.result || null; }, teleport(x, z, yaw = 0) { player.x = x; player.z = z; terrainY=groundHeight(x,z);player.y=terrainY;jumpOffset=0;jumpVelocity=0;ctl.look.yaw=yaw; refresh = 0; }, look(yaw, pitch = 0) { ctl.look.yaw = yaw; ctl.look.pitch = pitch; refresh = 0; } };
   requestAnimationFrame(frame);
   return window.__FORET;
 }

@@ -839,7 +839,6 @@ function bindCanvas() {
     if(hit&&game.openRangeTerminal(hit.terminal.id)){e.preventDefault();e.stopImmediatePropagation();syncRangeArmory();}
   },{capture:true});
   canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===0&&phase==='playing'){firingPointers.add(e.pointerId);firePressQueued=true;audioReady();if(vr.mode==='off'&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch(()=>{});}});
-  canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===2&&phase==='playing'){e.preventDefault();jumpQueued=true;audioReady();if(vr.mode==='off'&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.().catch(()=>{});}});
   canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button===1&&phase==='playing'){e.preventDefault();meleeQueued=true;}});
   canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
   canvas.addEventListener('pointerdown',e=>{
@@ -890,7 +889,8 @@ function stepFrame(timestamp, xrFrame) {
   world.animatePortal(clock);
   if (phase === 'lobby') world.lobby(clock,Math.max(1,game.wave));
   if (phase === 'outfit') world.outfit(clock,previewLevel,Number($('outfit-rotation').value)*Math.PI/180);
-  if (phase === 'playing' && !recovering && !skillMenu?.isOpen && !rangeArmoryMenu?.isOpen) {
+  if(phase==='playing'&&combatHud?.isOpen){keys.clear();firingPointers.clear();firePressQueued=false;touchJumpPointers.clear();jumpQueued=false;}
+  if (phase === 'playing' && !recovering && !skillMenu?.isOpen && !rangeArmoryMenu?.isOpen && !combatHud?.isOpen) {
     const sensitivity = settings.sensitivity*(vr.mode==='xr'?1:aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend));
     yaw -= (look.x * 1.8 + vrInput.turn * 1.6) * sensitivity * dt;
     yaw -= vrInput.snap;

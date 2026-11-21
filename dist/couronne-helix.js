@@ -1,3 +1,4 @@
+import {nanoSnapshot} from './nano-forge.js';
 import {readPreferredView,savePreferredView,normalizeView} from './view-options.js';
 import {frameDelta} from './frame-timing.js';
 import {applyFPSCameraMotion} from './fps-motion.js';
@@ -248,6 +249,7 @@ function gameTick(dt){
   :pinkControls.read(dt,keys,navigator.getGamepads?.()||[],{focused:!document.hidden});
  if(controls.companion)skillMenu?.setOpen(!skillMenu.isOpen);
  if(skillMenu?.isOpen)return;
+ if(combatHud?.isOpen){heldFire=false;firePressQueued=false;keys.clear();fireInput.reset();touchControls?.reset();combatHud.update(game);return;}
  const touch=touchControls?.state||{x:0,z:0,lookX:0,lookY:0,fire:false,aim:false};
  const sensitivity=aimSensitivity(OPTICS[game.weapon.id]?.magnification,aimBlend);
  yaw-=(controls.lookX*1.8+touch.lookX*1.8)*sensitivity*dt;
@@ -443,7 +445,6 @@ window.addEventListener('mousemove',e=>{
 let dragPointer=null,dragX=0,dragY=0;
 window.addEventListener('pointerdown',e=>{
  if(!running||e.target!==canvas)return;
- if(e.button===2){mouseAim=true;e.preventDefault();return;}
  if(e.button===1&&e.pointerType==='mouse'){meleeQueued=true;e.preventDefault();return;}
  if(e.button!==0||e.pointerType!=='mouse')return;
  heldFire=true;firePressQueued=true;dragPointer=e.pointerId;dragX=e.clientX;dragY=e.clientY;
@@ -458,7 +459,7 @@ for(const name of ['pointerup','pointercancel'])window.addEventListener(name,e=>
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
 
 window.__PINK_COURONNE=Object.freeze({
- snapshot:()=>({level:L.LEVEL_ID,running,paused,completed:completed(),stage:mission?.stage,objective:L.STAGES[mission?.stage??0]?.label,characterId,time:game?.time,missionTime,
+ snapshot:()=>({nano:nanoSnapshot(game),level:L.LEVEL_ID,running,paused,completed:completed(),stage:mission?.stage,objective:L.STAGES[mission?.stage??0]?.label,characterId,time:game?.time,missionTime,
   health:game?.player.hp,shield:game?.player.shield,charges:game?.charges,thrown:game?.thrownCharges.length,meleeAt:game?.meleeAt,
   position:game&&{x:+game.player.x.toFixed(2),z:+game.player.z.toFixed(2),elevation:+game.player.elevation.toFixed(2)},
   weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,gatesOpen:mission?.gatesOpen,consoles:mission?.consoles,

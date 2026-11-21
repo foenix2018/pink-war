@@ -50,3 +50,8 @@ personne et impulsion via le bouton Saut, sans erreur JavaScript.
 Le rendu natif WebGPU est compilé et lu sur GPU avec le câble actif (25 appels,
 53 432 triangles dans la scène de vérification). Aucun casque physique ni
 iPhone matériel n’est attaché ; le geste Quest est vérifié sur le contrôle 3D.
+
+
+## Mise à jour 3.88
+
+Sur PC, le clic droit lance ou décroche désormais le grappin. T reste un raccourci secondaire. Le bouton d’atelier du compagnon permet aussi de découvrir et assembler le microtreuil renforcé : traction +10 % par rang, jusqu’à deux rangs, sans dépasser 20 m. Voir [l’atelier nano](nanoforge-388.md).

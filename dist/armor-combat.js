@@ -45,7 +45,7 @@ export function rechargeShield(game, dt) {
   if (capacity <= 0 || p.shield >= capacity) { game.shieldCharging = false; return; }
   if (game.time - game.lastDamage < SHIELD_DELAY) return;
   if (!game.shieldCharging) { game.shieldCharging = true; game.event('shield-recharge', { shield: p.shield }); }
-  p.shield = Math.min(capacity, p.shield + SHIELD_RATE * dt);
+  p.shield = Math.min(capacity, p.shield + SHIELD_RATE * (game.nanoStats?.shieldRate||1) * dt);
   if (p.shield >= capacity) { game.shieldCharging = false; game.event('shield-full'); }
 }
 

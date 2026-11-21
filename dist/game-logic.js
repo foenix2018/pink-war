@@ -1,4 +1,5 @@
 import {IEM_INDEX,IEM_RULES,iemAvailable} from './voltis-iem.js';
+import {configureNanoForge,applyNanoLoadout,nanoWeapon,dropNanoSalvage,updateNanoForge,nanoSnapshot,fabricateNano,setNanoConfiguration} from './nano-forge.js';
 import {createGrappleState,toggleGrapple,releaseGrapple,updateGrapple,grappleAttached} from './grapple-logic.js';
 import {describeEnemyImpact} from './enemy-body-response.js';
 import {searchContactOrder,pendingMeleeOrder,updateMeleeIntent,prepareHostileShot} from './enemy-engagement.js';
@@ -323,6 +324,8 @@ export class ArenaGame {
     this.searchFields=new Map();
   }
   reset(characterId=this.characterId||'ghju') {
+    this.nano=null;this.nanoStats=null;this.nanoCraftAt=-100;
+    if(this.baseShieldCapacity)this.shieldCapacity=this.baseShieldCapacity;
     this.checkpointPosition=null;
     this.companionAmplifyUntil=0;this.companionHazards=[];this.companionWard=null;
     this.searchFields=new Map();
@@ -417,9 +420,13 @@ export class ArenaGame {
     }
     if(this.isWeaponAvailable(10))this.ownedWeapons.add(10);
     else{this.ownedWeapons.delete(10);this.weaponOffers=this.weaponOffers.filter(o=>o.index!==10);if(this.weaponIndex===10)this.weaponIndex=starterWeaponIndex(this.characterId);}
+    this.nanoWeapons=WEAPONS;this.nanoWeaponAllowed=i=>weaponAllowedForCharacter(i,this.characterId);
+    configureNanoForge(this);applyNanoLoadout(this);
     return this;
   }
-  get weapon() { return WEAPONS[this.weaponIndex]; }
+  get weapon() { return nanoWeapon(this,WEAPONS[this.weaponIndex]); }
+  fabricateNano(id){return fabricateNano(this,id);}
+  setNanoConfiguration(mode){return setNanoConfiguration(this,mode);}
   get nextDualHand(){if(grappleAttached(this.grapple))return 'right';const hand=this.dual.next,other=hand==='right'?'left':'right';return this.dual.ammo[hand]>0&&this.time>=this.dual.readyAt[hand]?hand:this.dual.ammo[other]>0&&this.time>=this.dual.readyAt[other]?other:hand;}
   refillWeapon(){this.ammo[this.weaponIndex]=this.weapon.capacity;if(this.weapon.dual)this.dual.ammo={left:12,right:12};}
   restoreDualAmmo(saved){
@@ -657,7 +664,7 @@ export class ArenaGame {
     const protectedNow=!this.projectedShieldsEnabled||this.player.shieldDeployed&&(shieldContact||shieldFacesSource(this.player,source));
     const soaked = protectedNow?soakDamage(this.player, amount):{held:0,rest:amount,broke:false};
     if(soaked.held>0){this.player.shieldHitAt=this.time;this.event('projected-shield-hit',{id:'player',frame:playerShieldFrame(this.player),...at,absorbed:soaked.held,shield:this.player.shield,source});}
-    this.player.hp = Math.max(0, this.player.hp - soaked.rest); this.invulnerable = .3;
+    this.player.hp = Math.max(0, this.player.hp - soaked.rest*(this.nanoStats?.armor??1)); this.invulnerable = .3;
     this.lastDamage = this.time; this.regenerating = false; this.shieldCharging = false;
     if (source && Number.isFinite(source.x) && Number.isFinite(source.z)) this.lastHit = { x: source.x, z: source.z, time: this.time };
     if (soaked.broke) {this.player.shieldDeployed=false;this.player.shieldBreakAt=this.time;this.event('shield-break');this.event('projected-shield-break',{id:'player',frame:playerShieldFrame(this.player),...at});}
@@ -665,7 +672,7 @@ export class ArenaGame {
     if (this.player.hp <= 0) { this.grapple=createGrappleState();this.grappleCollider=null;this.player.shieldDeployed=false;this.state = 'over'; this.charge = 0; this.event('over'); }
   }
   // Armour layer API for the engines (armor-combat.js holds the rules).
-  enableArmorShield(capacity = SHIELD_MAX) { this.meleeDelay = MELEE_IMPACT_DELAY; this.shieldCapacity = capacity; this.player.shield = capacity; this.shieldCharging = false; }
+  enableArmorShield(capacity = SHIELD_MAX) { this.meleeDelay = MELEE_IMPACT_DELAY;this.baseShieldCapacity=capacity; this.shieldCapacity = capacity+(this.nanoStats?.shieldBonus||0); this.player.shield = this.shieldCapacity; this.shieldCharging = false; }
   enableProjectedShields(){this.projectedShieldsEnabled=true;if(!this.shieldCapacity)this.enableArmorShield();this.player.shieldDeployed=false;for(const e of this.enemies)ensureEnemyBubble(e);}
   toggleProjectedShield(){
     if(!this.projectedShieldsEnabled||this.state!=='playing')return false;
@@ -762,6 +769,7 @@ export class ArenaGame {
       this.enemies.splice(this.enemies.indexOf(target), 1); this.event('kill', { ...at, id:target.id, form:target.form, elite: target.elite, x:target.x, y:target.elevation+target.aimHeight, z:target.z, combo:this.combo });
       if (this.combo > 1) this.event('combo', { count: this.combo, multiplier });
       this.dropPickup(target);
+      dropNanoSalvage(this,target);
     }
   }
   // Survival only: an elite, or every fifth kill, leaves a pickup where it fell: a medkit when the player is
@@ -862,6 +870,7 @@ export class ArenaGame {
       }
     }
     if (this.pickups.length) this.collectPickups();
+    updateNanoForge(this,segmentBox);
     if (this.nextWave >= 0) { this.nextWave -= dt; if (this.nextWave <= 0) this.beginWave(); }
     if (this.toSpawn > 0 && this.enemies.length<MAX_ACTIVE_ENEMIES) { this.spawnTimer -= dt; if (this.spawnTimer <= 0) {
       const available=this.activePortals.filter(p=>p.openedAt<=this.time);
@@ -1110,7 +1119,7 @@ export class ArenaGame {
     }
   }
   snapshot() { return { fortressArena:!!this.fortressArena,turrets:this.turrets.map(t=>({...t,target:t.target&&{...t.target}})), equipment: this.equipment, state: this.state, player: { ...this.player }, wave: this.wave, maxLevel: MAX_LEVEL, endless:this.endless, score: this.score, kills: this.kills, time: this.time,
-    grapple:{...this.grapple,anchor:this.grapple.anchor&&{...this.grapple.anchor},velocity:{...this.grapple.velocity}},weaponIndex: this.weaponIndex, weapon: { ...this.weapon }, unlockedWeapons: this.unlockedWeapons.map(w => w.id),weaponOffers:this.weaponOffers.map(offer=>({...offer})), ammo: this.ammo[this.weaponIndex],
+    nano:nanoSnapshot(this),grapple:{...this.grapple,anchor:this.grapple.anchor&&{...this.grapple.anchor},velocity:{...this.grapple.velocity}},weaponIndex: this.weaponIndex, weapon: { ...this.weapon }, unlockedWeapons: this.unlockedWeapons.map(w => w.id),weaponOffers:this.weaponOffers.map(offer=>({...offer})), ammo: this.ammo[this.weaponIndex],
     reloadRemaining: this.reloadRemaining, charge: this.charge, regenerating: this.regenerating, regenIn: Math.max(0, REGEN_DELAY - (this.time - this.lastDamage)),
     toSpawn: this.toSpawn, nextWave: this.nextWave, activePortals:this.activePortals.map(p=>({...p})), enemies: this.enemies.map(e => ({ ...e })), bullets: this.bullets.map(b => ({ ...b })),
     shield: this.player.shield || 0, shieldCapacity: this.shieldCapacity || 0, shieldDeployed:!!this.player.shieldDeployed,projectedShields:!!this.projectedShieldsEnabled, shieldCharging: !!this.shieldCharging, charges: this.charges, thrownCharges: (this.thrownCharges || []).map(c => ({ ...c })), lastHit: this.lastHit && { ...this.lastHit }, meleeAt: this.meleeAt,

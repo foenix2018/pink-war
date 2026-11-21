@@ -77,7 +77,7 @@ export function updateGrapple(game,dt){
   if(sight&&sight.box!==box&&sight.distance<Math.hypot(d.x,d.y,d.z)-.08){releaseGrapple(game,{reason:'obstructed'});return false;}
   const floor=game.surfaceHeight?.(p.x,p.z,game.time,(p.elevation||0)+.3)||0;
   const target={x:g.anchor.x+g.anchor.normal.x*GRAPPLE.clearance,y:Math.max(floor,g.anchor.y-chestHeight),z:g.anchor.z+g.anchor.normal.z*GRAPPLE.clearance};
-  const to={x:target.x-p.x,y:target.y-(p.elevation||0),z:target.z-p.z},distance=Math.hypot(to.x,to.y,to.z),speed=Math.min(GRAPPLE.pullSpeed,Math.max(2,distance*9)),step=Math.min(distance,speed*dt),n=distance>1e-6?step/distance:0;
+  const to={x:target.x-p.x,y:target.y-(p.elevation||0),z:target.z-p.z},distance=Math.hypot(to.x,to.y,to.z),speed=Math.min(GRAPPLE.pullSpeed*(game.nanoStats?.grappleSpeed||1),Math.max(2,distance*9)),step=Math.min(distance,speed*dt),n=distance>1e-6?step/distance:0;
   p.grounded=false;p.onLift=null;p.verticalSpeed=0;p.jumpImpulseX=p.jumpImpulseZ=0;game.planarVelocity.x=game.planarVelocity.z=0;
   if(distance<.035){g.phase='hold';g.velocity={x:0,y:0,z:0};return true;}
   g.phase='pull';const result=sweepGrapplePlayer(game,{x:to.x*n,y:to.y*n,z:to.z*n});g.velocity={x:to.x*n/Math.max(dt,.001),y:to.y*n/Math.max(dt,.001),z:to.z*n/Math.max(dt,.001)};
