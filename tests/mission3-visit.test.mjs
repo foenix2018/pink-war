@@ -44,5 +44,6 @@ test('mission 03 can be launched from the story menu and the M02 finale',()=>{
  assert.match(menu,/data-chapter="campaign3"/);
  assert.match(entry,/if\(mode==='campaign3'\)/);
  assert.match(entry,/searchParams\.set\('chapter','3'\)/);
- assert.match(story,/chapter=3&character=/);
+ // The M02 finale now goes through the hideout (planque), which routes on to chapter 3.
+ assert.match(story,/hideoutURL\(\{characterId,level:2/);assert.match(read('hideout-state.js'),/3:'niveau3\.html'/);
 });
