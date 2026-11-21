@@ -16,6 +16,13 @@ const guns=()=>buildGun({mats:mats(),gloves:gloves(),sleeve:false,makeFlash:flas
 const FIREARMS=WEAPON_FRAME.map((f,i)=>f.melee?null:i).filter(i=>i!==null);
 const near=(a,b,epsilon=1e-6)=>a.distanceTo(b)<=epsilon;
 
+test('an occupied left arm hides the supporting hand and DUO pistol through firing and weapon changes, then restores them',()=>{
+ const gun=guns();gun.userData.leftArmBusy=true;gun.userData.setVariant(7);gun.userData.setCombatState({time:1,ammo:20,capacity:24});
+ assert.equal(gun.userData.dualLeft.visible,false);assert.equal(gun.userData.support.visible,false);
+ gun.userData.setVariant(1);gun.userData.setCombatState({time:2,ammo:20,capacity:24});assert.equal(gun.userData.support.visible,false);
+ gun.userData.leftArmBusy=false;gun.userData.setVariant(7);gun.userData.setCombatState({time:3,ammo:20,capacity:24});assert.equal(gun.userData.dualLeft.visible,true);assert.equal(gun.userData.support.visible,true);
+});
+
 test('all ten ranged weapons follow the actual visible barrel and muzzle in Quest pose',()=>{
  assert.equal(FIREARMS.length,10);
  const rig=new T.Group();rig.position.set(2,.4,-4);rig.rotation.y=.41;

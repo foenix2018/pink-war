@@ -631,7 +631,7 @@ window.__PINK_M03=Object.freeze({
  snapshot:()=>({level:L.LEVEL_ID,revision:GAME_VERSION,running,paused,view,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,choice,time:game?.time,missionTime,
   area:game&&L.areaAt(game.player.x,game.player.z),health:game?.player.hp,shield:game?.player.shield,charges:game?.charges,
   position:game&&{x:+game.player.x.toFixed(2),z:+game.player.z.toFixed(2),elevation:+game.player.elevation.toFixed(2)},
-  weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,opened:mission?.opened,done:mission?.done,reads:mission?.reads,
+  grapple:game?.grapple&&{...game.grapple},weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,opened:mission?.opened,done:mission?.done,reads:mission?.reads,
   hold:mission?.hold,pending:mission?.pending,groups:mission?.groups(),van:mission?.van,reading,vr:!!xr?.active,subtitlePlane:!!subtitlePlane?.visible,lamp:lampOn,subtitle:subtitle&&{who:subtitle.who,text:subtitle.text},queued:subtitles.length,
   backend:renderer?rendererBackend(renderer):null,renderBudget:renderer?.frameBudget?.stats(),quality:quality.value,rig:!!playerRig,webgpuFinish,art:art?.stats(),render:renderer?.info?.render}),
  // QA hooks (?debug=1): move the player, look, clear an encounter, fast-forward the mission clock, use an interaction, move the van.

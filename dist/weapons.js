@@ -439,6 +439,7 @@ export function buildGun({ mats, gloves, sleeve = true, arm = sleeve, makeFlash 
   const magazineBind=magazines.map(o=>o?{position:o.position.clone(),rotation:o.rotation.clone()}:null);
   const magDelta=new T.Vector3();
   g.userData.setCombatState = ({ ammo = 0, capacity = 1, charge = 0, reloadProgress = 0, reloading = false, time = 0,heat=0,kick=0,impulse=0,bladeHeld=false,dualState=null } = {}) => {
+    if(g.userData.leftArmBusy)support.visible=false;
     activeReload=!!reloading;action=reloadPose(reloading?reloadProgress:0,{pistol:g.userData.index===0||g.userData.index===7,heavy:[2,3,4,6].includes(g.userData.index)});
     const move=movement.state,tracked=!!g.userData.recoilTracked;
     actionRoot.position.set(move.x+(tracked?0:action.x),move.y+(tracked?0:action.y),move.z+(tracked?0:action.z));
@@ -449,7 +450,7 @@ export function buildGun({ mats, gloves, sleeve = true, arm = sleeve, makeFlash 
     if(g.userData.index===8)updateVortexAmmo(models[8],ammo,capacity);
     if(dualState)g.userData.dualState=dualState;
     if(g.userData.index===7){
-      dualLeft.visible=!!g.userData.showSupport;collar.visible=heatRing.visible=false;
+      dualLeft.visible=!!g.userData.showSupport&&!g.userData.leftArmBusy;collar.visible=heatRing.visible=false;
       for(const [side,carrier] of [['right',dualRight],['left',dualLeft]]){
         const age=time-(g.userData.dualState?.shotAt?.[side]??-Infinity),pose=dualRecoilPose(age,{tracked:!!g.userData.recoilTracked}),sign=side==='left'?-1:1;
         carrier.position.y=pose.y;carrier.position.z=pose.z;
@@ -506,7 +507,7 @@ export function buildGun({ mats, gloves, sleeve = true, arm = sleeve, makeFlash 
     const frame = WEAPON_FRAME[index],hold=index===6?M12_HOLD:AUTHORED_HOLD[index]|| (g.userData.kenneyAssets?.loadedByIndex?.[index]?KENNEY_HOLD[index]:null);
     if(index===7){dualRight.add(hand,flash);dualLeft.add(support);support.scale.x=Math.abs(support.scale.x);}
     else {actionRoot.add(hand,support,flash);support.scale.x=-Math.abs(support.scale.x);}
-    dualLeft.visible=index===7&&!!g.userData.showSupport;leftFlash.visible=false;
+    dualLeft.visible=index===7&&!!g.userData.showSupport&&!g.userData.leftArmBusy;leftFlash.visible=false;
     if(index===5&&!blade){blade=createEnergyBlade(mats.rose.color);actionRoot.add(blade.root);}
     if(index!==5)blade?.reset?.();
     const muzzle=models[index].userData.muzzle||frame.muzzle;
@@ -515,7 +516,7 @@ export function buildGun({ mats, gloves, sleeve = true, arm = sleeve, makeFlash 
     collar.visible=index!==5&&!models[index].userData.integratedEmitter;
     collar.position.set(frame.muzzle[0],frame.muzzle[1],frame.muzzle[2]+.009);collar.scale.set(emitterRadii[index]/.012,1,emitterRadii[index]/.012);
     heatRing.visible=false;
-    support.visible = g.userData.showSupport && !!frame.support;
+    support.visible = g.userData.showSupport && !!frame.support && !g.userData.leftArmBusy;
     g.userData.supportPoint=index===7?[-.44-(hold?.palm[0]||0),hold?.palm[1]||0,hold?.palm[2]||0]:hold?.support||frame.support;
     support.userData.setBasePosition?.(index===7?(hold?.palm||[0,0,0]):g.userData.supportPoint || [0,0,0]);
     // The palm closes on the blaster's own grip: raked like it, the cuff heading back towards the elbow

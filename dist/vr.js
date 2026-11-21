@@ -57,6 +57,7 @@ export function questControls(hand = 'right') {
     [`Gâchette INDEX ${sideF}`, `VX-9 DUO : tirer avec la ${sideF} · sinon : charge à impulsion`],
     [`Clic joystick ${mainM}`, 'Frappe de mêlée'],
     ['Bouclier au poignet gauche', 'Icône bouclier : pointer avec la main droite puis gâchette INDEX pour activer / replier'],
+    ['Grappin au poignet gauche', 'Viser un mur avec la main gauche, puis sélectionner GRAPPIN avec la main droite · Saut : décrochage et impulsion'],
     ['Pupitre au poignet gauche', 'Pointer avec la main droite puis gâchette INDEX : compétences GAB-1 / CAR-14'],
     [b.pause, 'Pause / reprise']
   ];
@@ -351,7 +352,7 @@ export class VRController {
   }
   finishXR() {
     if (this.mode !== 'xr') return;
-    this.scope?.dispose();this.scope=null;this.opticalEye=null;this.shieldButton?.dispose();this.shieldButton=null;
+    this.scope?.dispose();this.scope=null;this.opticalEye=null;this.shieldButton?.dispose();this.shieldButton=null;this.grappleButton?.dispose();this.grappleButton=null;
     const world = this.hooks.world(); this.removeHUD(); this.removeSight();this.removePauseBoard();this.cancelTrigger();
     world.scene.add(world.camera);
     this.rig?.removeFromParent();
@@ -440,6 +441,9 @@ export class VRController {
       const world=this.hooks.world(),game=this.hooks.game(),left=controllerOf(this,'left'),right=controllerOf(this,'right');
       if(game?.projectedShieldsEnabled&&!this.shieldButton)this.shieldButton=createXRShieldButton(world.T,world.scene,{getGame:()=>this.hooks.game(),haptic:()=>this.haptic('weapon')});
       const shieldConsumed=this.shieldButton?.update({active:this.hooks.phase()==='playing'&&!skillsConsumed&&!!left?.tracked&&!!right?.tracked&&(!this.session?.visibilityState||this.session.visibilityState==='visible'),left:left?.anchor,ray:right?.ray,camera:world.camera,trigger:pressed(padOf(this,'right')?.buttons?.[0])});
+      if(game?.grappleEnabled&&!this.grappleButton)this.grappleButton=createXRShieldButton(world.T,world.scene,{kind:'grapple',getGame:()=>this.hooks.game(),onToggle:()=>this.hooks.game().toggleGrapple(),haptic:()=>this.haptic('weapon')});
+      const grappleConsumed=this.grappleButton?.update({active:this.hooks.phase()==='playing'&&!skillsConsumed&&!shieldConsumed&&!!left?.tracked&&!!right?.tracked&&(!this.session?.visibilityState||this.session.visibilityState==='visible'),left:left?.anchor,ray:right?.ray,camera:world.camera,trigger:pressed(padOf(this,'right')?.buttons?.[0])});
+      skillsConsumed ||= !!grappleConsumed;
       skillsConsumed ||= !!shieldConsumed;
     }
     if (!xr && this.desktopPadKey !== this.desktopGamepads.activeKey) { this.previous.clear(); this.desktopPadKey = this.desktopGamepads.activeKey; }

@@ -1,4 +1,5 @@
 import {IEM_INDEX,IEM_RULES,iemAvailable} from './voltis-iem.js';
+import {createGrappleState,toggleGrapple,releaseGrapple,updateGrapple,grappleAttached} from './grapple-logic.js';
 import {describeEnemyImpact} from './enemy-body-response.js';
 import {searchContactOrder,pendingMeleeOrder,updateMeleeIntent,prepareHostileShot} from './enemy-engagement.js';
 import {turnEnemy,steerEnemyTravel} from './enemy-motion.js';
@@ -328,6 +329,7 @@ export class ArenaGame {
     this.navigation.refreshAt = -1; this.navigation.goal = -1;
     this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0, verticalSpeed: 0, grounded: true, jumpHeld: false, crouched:false,sliding:false,slideTime:0,slideCooldown:0,airJumps:0,jumpImpulseX:0,jumpImpulseZ:0,lastGroundedAt:0,jetpackArmed:false,jetpackActive:false,jetpackElapsed:0 };
     this.playerVelocity={x:0,y:0,z:0};this.planarVelocity={x:0,z:0};
+    this.grappleEnabled=true;this.grapple=createGrappleState();this.grappleAim=null;this.grappleCollider=null;this.grappleLastPosition=null;
     this.bladePrevious=null;this.bladeHitTimes=new Map();this.bladeSlashAt=-99;this.bladeSlashSide=1;this.bladeSpeed=0;this.bladeGuard=false;this.bladeHumAt=0;
     this.enemies = []; this.bullets = []; this.events = [];
     this.turrets=this.fortressArena?createArenaTurrets():[];
@@ -400,6 +402,8 @@ export class ArenaGame {
     if(entity.grounded)for(const l of this.lifts)if(insideSurface(entity.x,entity.z,l) && Math.abs(entity.elevation-liftHeightAt(l,this.time))<.025){entity.onLift=l.id;break;}
   }
   get equipment() { return equipmentForLevel(this.wave); }
+  toggleGrapple(aim){return toggleGrapple(this,aim);}
+  releaseGrapple(options){return releaseGrapple(this,options);}
   isWeaponAvailable(index){
     if(index===10)return this.mode!=='campaign'||(this.missionLevel??this.campaign?.level??1)>=3;
     return index!==IEM_INDEX||iemAvailable(this.mode||'arena',this.missionLevel??this.campaign?.level??1);
@@ -416,7 +420,7 @@ export class ArenaGame {
     return this;
   }
   get weapon() { return WEAPONS[this.weaponIndex]; }
-  get nextDualHand(){const hand=this.dual.next,other=hand==='right'?'left':'right';return this.dual.ammo[hand]>0&&this.time>=this.dual.readyAt[hand]?hand:this.dual.ammo[other]>0&&this.time>=this.dual.readyAt[other]?other:hand;}
+  get nextDualHand(){if(grappleAttached(this.grapple))return 'right';const hand=this.dual.next,other=hand==='right'?'left':'right';return this.dual.ammo[hand]>0&&this.time>=this.dual.readyAt[hand]?hand:this.dual.ammo[other]>0&&this.time>=this.dual.readyAt[other]?other:hand;}
   refillWeapon(){this.ammo[this.weaponIndex]=this.weapon.capacity;if(this.weapon.dual)this.dual.ammo={left:12,right:12};}
   restoreDualAmmo(saved){
     const total=clamp(Math.floor(Number(this.ammo[7])||0),0,24);
@@ -585,7 +589,7 @@ export class ArenaGame {
       this.emitNoise('blade-swing',14,origin);this.event('blade-swing',{weapon:'aurora',origin:{...origin}});return true;
     }
     if (this.state !== 'playing' || this.cooldown > 0 || this.reloadRemaining > 0 || this.ammo[this.weaponIndex] <= 0) return false;
-    if(this.weapon.dual){hand=hand||this.nextDualHand;if(!['left','right'].includes(hand)||this.dual.ammo[hand]<=0||this.time<this.dual.readyAt[hand])return false;}
+    if(this.weapon.dual){hand=hand||this.nextDualHand;if(hand==='left'&&grappleAttached(this.grapple)||!['left','right'].includes(hand)||this.dual.ammo[hand]<=0||this.time<this.dual.readyAt[hand])return false;}
     if(!origin||!direction||![origin.x,origin.y,origin.z,direction.x,direction.y,direction.z].every(Number.isFinite))return false;
     const length = Math.hypot(direction.x, direction.y, direction.z);
     if (length < .001) return false;
@@ -658,7 +662,7 @@ export class ArenaGame {
     if (source && Number.isFinite(source.x) && Number.isFinite(source.z)) this.lastHit = { x: source.x, z: source.z, time: this.time };
     if (soaked.broke) {this.player.shieldDeployed=false;this.player.shieldBreakAt=this.time;this.event('shield-break');this.event('projected-shield-break',{id:'player',frame:playerShieldFrame(this.player),...at});}
     this.event('damage', { hp: this.player.hp, shield: this.player.shield, absorbed: soaked.held, from: source ? { x: source.x, z: source.z } : null });
-    if (this.player.hp <= 0) { this.player.shieldDeployed=false;this.state = 'over'; this.charge = 0; this.event('over'); }
+    if (this.player.hp <= 0) { this.grapple=createGrappleState();this.grappleCollider=null;this.player.shieldDeployed=false;this.state = 'over'; this.charge = 0; this.event('over'); }
   }
   // Armour layer API for the engines (armor-combat.js holds the rules).
   enableArmorShield(capacity = SHIELD_MAX) { this.meleeDelay = MELEE_IMPACT_DELAY; this.shieldCapacity = capacity; this.player.shield = capacity; this.shieldCharging = false; }
@@ -666,6 +670,7 @@ export class ArenaGame {
   toggleProjectedShield(){
     if(!this.projectedShieldsEnabled||this.state!=='playing')return false;
     if(!this.player.shieldDeployed&&(this.player.shield<=0||this.player.hp<=0))return false;
+    if(!this.player.shieldDeployed)releaseGrapple(this,{reason:'shield'});
     this.player.shieldDeployed=!this.player.shieldDeployed;this.event('projected-shield-toggle',{active:this.player.shieldDeployed});return true;
   }
   melee(forward = forwardOf(this.player.yaw)) { return meleeStrike(this, forward); }
@@ -808,11 +813,17 @@ export class ArenaGame {
     if(input.sprint||Math.hypot(this.planarVelocity.x,this.planarVelocity.z)>=SLIDE_RULES.runSpeed)p.lastRunAt=this.time;
     if(input.crouchToggle) {
       if(p.sliding){endSlide(p);this.event('crouch',{active:false});}
-      else if(canSlide(p,this.planarVelocity,input.sprint,this.time)){startSlide(p,this.planarVelocity);this.event('slide',{speed:p.slideSpeed});this.emitNoise('sprint',NOISE_RADIUS.sprint);}
+      else if(!grappleAttached(this.grapple)&&canSlide(p,this.planarVelocity,input.sprint,this.time)){startSlide(p,this.planarVelocity);this.event('slide',{speed:p.slideSpeed});this.emitNoise('sprint',NOISE_RADIUS.sprint);}
       else { p.crouched=!p.crouched;this.event('crouch',{active:p.crouched}); }
     }
     if(p.sliding&&input.jump&&!p.jumpHeld&&SLIDE_RULES.duration-p.slideTime>=SLIDE_RULES.jumpCancelAfter)endSlide(p);
-    if (jumpDown && !p.jumpHeld) { const kind=tryJump(p,this.obstacles,this.time);if(kind){this.event('jump',{kind});this.emitNoise('jump',14);} }
+    if (jumpDown && !p.jumpHeld) {
+      let kind=null;
+      if(this.grapple.phase==='flying'){releaseGrapple(this);kind=tryJump(p,this.obstacles,this.time);}
+      else if(grappleAttached(this.grapple))kind=releaseGrapple(this,{jump:true})?'grapple':null;
+      else if(this.grapple.phase!=='glide')kind=tryJump(p,this.obstacles,this.time);
+      if(kind){this.event('jump',{kind});this.emitNoise('jump',14);}
+    }
     p.jumpHeld = jumpDown;
     updateJetpack(p,dt,jumpDown);
     const speed = p.crouched ? PLAYER_SPEEDS.crouch : input.sprint ? PLAYER_SPEEDS.sprint : PLAYER_SPEEDS.walk, moveYaw = input.moveYaw ?? yaw;
@@ -829,7 +840,8 @@ export class ArenaGame {
     // Subdivide locomotion and gravity together; AI, firing and mission time still tick once.
     const impulseX=(p.jumpImpulseX||0)*dt,impulseZ=(p.jumpImpulseZ||0)*dt;
     const substeps=Math.max(1,Math.ceil((Math.hypot(dx,dz)+Math.hypot(impulseX,impulseZ))/(this.traversal?.maxMoveStep||Infinity)));
-    for(let step=0;step<substeps;step++){
+    const grappleMoved=updateGrapple(this,dt);
+    if(!grappleMoved)for(let step=0;step<substeps;step++){
       moveInArena(p,dx/substeps,dz/substeps,.55,this.obstacles);
       if(impulseX||impulseZ)moveInArena(p,impulseX/substeps,impulseZ/substeps,.55,this.obstacles);
       this.settle(p,dt/substeps,true);
@@ -1098,7 +1110,7 @@ export class ArenaGame {
     }
   }
   snapshot() { return { fortressArena:!!this.fortressArena,turrets:this.turrets.map(t=>({...t,target:t.target&&{...t.target}})), equipment: this.equipment, state: this.state, player: { ...this.player }, wave: this.wave, maxLevel: MAX_LEVEL, endless:this.endless, score: this.score, kills: this.kills, time: this.time,
-    weaponIndex: this.weaponIndex, weapon: { ...this.weapon }, unlockedWeapons: this.unlockedWeapons.map(w => w.id),weaponOffers:this.weaponOffers.map(offer=>({...offer})), ammo: this.ammo[this.weaponIndex],
+    grapple:{...this.grapple,anchor:this.grapple.anchor&&{...this.grapple.anchor},velocity:{...this.grapple.velocity}},weaponIndex: this.weaponIndex, weapon: { ...this.weapon }, unlockedWeapons: this.unlockedWeapons.map(w => w.id),weaponOffers:this.weaponOffers.map(offer=>({...offer})), ammo: this.ammo[this.weaponIndex],
     reloadRemaining: this.reloadRemaining, charge: this.charge, regenerating: this.regenerating, regenIn: Math.max(0, REGEN_DELAY - (this.time - this.lastDamage)),
     toSpawn: this.toSpawn, nextWave: this.nextWave, activePortals:this.activePortals.map(p=>({...p})), enemies: this.enemies.map(e => ({ ...e })), bullets: this.bullets.map(b => ({ ...b })),
     shield: this.player.shield || 0, shieldCapacity: this.shieldCapacity || 0, shieldDeployed:!!this.player.shieldDeployed,projectedShields:!!this.projectedShieldsEnabled, shieldCharging: !!this.shieldCharging, charges: this.charges, thrownCharges: (this.thrownCharges || []).map(c => ({ ...c })), lastHit: this.lastHit && { ...this.lastHit }, meleeAt: this.meleeAt,

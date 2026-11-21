@@ -1,6 +1,7 @@
 import {createContactShadows,contactShadowPose} from './contact-shadows.js';
 import {createCheckpointBeacon} from './checkpoint-beacon.js';
 import {createProjectedShieldFX} from './projected-shield-fx.js';
+import {createGrappleFX} from './grapple-fx.js';
 // Feedback of the armour layer (armor-combat.js) shared by M01, M02, the Arena and the Range: synthesised sounds,
 // controller rumble, impulse charges in flight and their pulse, and the strike motion of the held weapon.
 // No dynamic light is added (a new light recompiles every material on Quest): additive meshes only.
@@ -66,6 +67,7 @@ export const MELEE_POSE = Object.freeze({ x: -.07, y: .03, z: -.2, pitch: -.45,
 
 export function createArmorFeedback({ T, scene, camera=null, renderer=null,getGame=()=>null,getModel=()=>null,getWeapon=()=>null,getLeftController=()=>null,canControl=()=>true,low=false, audio = () => null, haptic = () => {}, listener = () => null, accent = 0xffffff } = {}) {
   let projected=null,checkpoint=null,contacts=null,contactChecked=false;
+  const grapple=camera?createGrappleFX(T,{scene,camera,renderer,getGame,getModel,getWeapon,getLeftController,canControl,audio,haptic}):null;
   const projectedFor=game=>{if(game?.projectedShieldsEnabled&&!projected)projected=createProjectedShieldFX(T,{scene,camera,renderer,getGame:()=>getGame()||game,getModel,getWeapon,getLeftController,canControl,low});return projected;};
   const hitFeedback=camera?createHitFeedback(T,camera):null;
   const colour = new T.Color(accent),spinAxis=new T.Vector3(),spinStep=new T.Quaternion();
@@ -168,6 +170,7 @@ export function createArmorFeedback({ T, scene, camera=null, renderer=null,getGa
   return {
     // Engines pass every event here; confirmed hits and armour events are used.
     handle(event) {
+      grapple?.handle(event);
       projectedFor(getGame())?.handle(event,getGame());
       switch (event?.type) {
         case 'hit': hitFeedback?.hit(event); break;
@@ -188,6 +191,7 @@ export function createArmorFeedback({ T, scene, camera=null, renderer=null,getGa
     },
     update(game, dt) {
       projectedFor(game)?.update(game,dt);
+      grapple?.update(game,dt);
       const held=getWeapon?.();held?.userData.setMovementState?.({time:game.time,dt,velocity:game.playerVelocity,yaw:game.player?.yaw||0,pitch:camera?.rotation.x||0,grounded:game.player?.grounded,verticalSpeed:game.player?.verticalSpeed||0,crouched:game.player?.crouched,aiming:Number(held.userData.aiming||game.aimingPrecision||game.precisionAiming),sprinting:!!game.movement?.sprint,tracked:!!renderer?.xr?.isPresenting});
       if(game?.checkpointPosition&&!checkpoint)checkpoint=createCheckpointBeacon(T,{scene,renderer});
       checkpoint?.update(game,dt);
@@ -208,8 +212,10 @@ export function createArmorFeedback({ T, scene, camera=null, renderer=null,getGa
       explosion.update(dt);
     },
     shieldStats(){return projected?.stats()||null;},
+    grappleStats(){return grapple?.stats()||null;},
     setAccent(hex) { colour.setHex(hex); rimMaterial.color.copy(colour); },
     dispose() {
+      grapple?.dispose();
       projected?.dispose();
       checkpoint?.dispose();contacts?.dispose();
       hitFeedback?.dispose();
