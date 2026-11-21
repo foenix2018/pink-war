@@ -107,6 +107,18 @@ def cushion(mat,c,size):
  for j in range(8):
   for i in range(24):f=b.faces.new([v[j*24+i],v[j*24+(i+1)%24],v[(j+1)*24+(i+1)%24],v[(j+1)*24+i]]);f.smooth=True
  b.faces.new(list(reversed(v[:24])));b.faces.new(v[-24:])
+def quilt(mat,c,w,d):
+ # Sewn puffy cells with a folded-over edge instead of lines above a flat slab.
+ b=bm(mat);nx,nz=24,32;vs=[]
+ for j in range(nz+1):
+  v=j/nz
+  for i in range(nx+1):
+   u=i/nx;edge=max(abs(u-.5)*2,abs(v-.5)*2)
+   y=c[1]+.025*math.sin(u*math.pi)*math.sin(v*math.pi)+.024*math.sin(u*math.pi*6)**2*math.sin(v*math.pi*8)**2-.105*max(0,(edge-.88)/.12)**1.4
+   vs.append(b.verts.new(G(c[0]+(u-.5)*w,y,c[2]+(v-.5)*d)))
+ for j in range(nz):
+  for i in range(nx):
+   a=j*(nx+1)+i;f=b.faces.new([vs[a],vs[a+nx+1],vs[a+nx+2],vs[a+1]]);f.smooth=True
 def basin(mat,c,w,d,depth):
  # Closed rounded shell with a real concave bowl and rolled rim.
  x,y,z=c;b=bm(mat);vs=[];n=40
@@ -211,12 +223,10 @@ print('Planque: dortoir et salle de bain',flush=True)
 ZONE='Dortoir'
 for x,name,cloth,light in [(-8.9,'GHJU','Tissu rose','Néon rose'),(-6.4,'LYLU','Tissu bleu','Néon bleu')]:
  box('Cadres anthracite',(x,.23,-8.5),(1.65,.44,3),solid=True);box('Acier patiné',(x,.46,-8.5),(1.58,.15,2.95))
- cushion('Tissu neutre',(x,.62,-8.5),(1.47,.29,2.8));cushion(cloth,(x,.79,-8.13),(1.5,.20,1.9))
+ cushion('Tissu neutre',(x,.62,-8.5),(1.47,.29,2.8));quilt(cloth,(x,.795,-8.13),1.55,1.98)
  # Bed frame feet, visible mattress piping and stitched padded blanket panels.
  for dx in [-.61,.61]:
   for zz in [-9.65,-7.35]:cyl('Métal brossé',(x+dx,.13,zz),.045,.24,10)
- for j in range(7):
-  zz=-8.9+j*.245;rod(cloth,(x-.67,.898,zz),(x+.67,.898,zz),.007,5)
  for side in [-1,1]:rod('Tissu neutre',(x+side*.71,.69,-9.65),(x+side*.71,.69,-7.2),.012,6)
  for side in [-1,1]:rod('Papier ivoire',(x+side*.69,.79,-9.0),(x+side*.69,.79,-7.3),.018)
  cushion('Papier ivoire',(x,.84,-9.45),(1.18,.29,.60));cushion(cloth,(x,.89,-9.45),(1.08,.22,.56))
@@ -286,41 +296,38 @@ ZONE='Mur d’armes'
 box('Cadres anthracite',(-7.7,1.6,-4.52),(5.6,2.65,.22),solid=True)
 for x in [-10.0,-8.8,-7.6,-6.4,-5.3]:
  for y in [.65,1.15,1.65,2.15,2.65]:cyl('Métal brossé',(x,y,-4.38),.017,.02,6,axis='z')
-def rifle(x,y,z,accent='Néon rose',length=1.8,pistol=False):
- # Profiled receivers, magazines, trigger guards, barrel jacket, stock, sight and actual muzzle bore.
- s=length/1.8
- profile('Acier patiné',x,z,[(-.58*s,y-.09),(.32*s,y-.09),(.46*s,y+.03),(.35*s,y+.16),(-.56*s,y+.12),(-.66*s,y+.03)],.12)
- box('Cuir et joints',(x-.80*s,y-.03,z),(.39*s,.25,.15));rod('Métal brossé',(x+.34*s,y+.04,z),(x+.95*s,y+.04,z),.055*s,12)
- cyl('Cuir et joints',(x+.95*s,y+.04,z),.046*s,.025,12,axis='x');box('Cuir et joints',(x-.16*s,y-.25,z),(.15,.35,.12),yaw=-.12);box('Métal brossé',(x+.17*s,y-.21,z),(.22,.28,.13))
- box('Cadres anthracite',(x-.08*s,y+.20,z),(.32,.07,.13));ellipsoid('Verre',(x+.05*s,y+.24,z),(.10,.08,.08));neon((x-.42*s,y+.06,z+.08),(x+.24*s,y+.06,z+.08),accent,.008)
- for xx in [-.47,-.33,-.19]:box('Cuir et joints',(x+xx*s,y+.12,z+.09),(.025,.035,.01))
- # Actual trigger guard, optic tube, ejection port, handguard vents and sling ring.
- polyline('Cadres anthracite',[(x-.20*s,y-.08,z),(x-.20*s,y-.19,z),(x+.02*s,y-.19,z),(x+.02*s,y-.08,z)],.014)
- cyl('Cadres anthracite',(x-.12*s,y+.27,z),.050,.34*s,16,axis='x');cyl('Verre',(x+.06*s,y+.27,z),.038,.008,16,axis='x')
- box('Cuir et joints',(x+.10*s,y+.06,z+.068),(.15*s,.065,.008))
- for j in range(6):box('Cuir et joints',(x+(.40+j*.065)*s,y+.045,z+.047),(.028*s,.055,.008))
- ring('Métal brossé',(x-.62*s,y-.13,z),.028,.009,12,axis='z')
-for y,accent in [(2.26,'Néon rose'),(1.53,'Néon blanc'),(.82,'Néon bleu')]:
- rifle(-8.9,y,-4.26,accent,1.80);rifle(-6.7,y,-4.26,accent,1.85)
-rifle(-9.25,.28,-3.85,'Néon rose',1.2);rifle(-6.4,.28,-3.85,'Néon bleu',1.2)
+# Native weapons are installed by hideout-showcase.js. Only their physical
+# cradles are modelled here; no decorative substitute rifle is exported.
+SHOWCASE_WEAPONS=[]
+CATALOGUE_NAMES={0:'VX-9',1:'NEXUS V9',2:'ARES X9',3:'THORN',4:'NOVA',5:'AURORA',6:'M-12',7:'VX-9 DUO',8:'VORTEX AR-7',9:'VOLTIS IEM',10:'GROZA-40 VESPER'}
+for row,indices in enumerate([(0,1,2),(3,4,6),(9,10,5)]):
+ for col,index in enumerate(indices):
+  x=-9.45+col*1.75;y=2.48-row*.83
+  SHOWCASE_WEAPONS.append({'index':index,'x':x,'y':y,'z':-4.30})
+  for side in [-1,1]:
+   polyline('Métal brossé',[(x+side*.26,y-.08,-4.36),(x+side*.26,y-.08,-4.10),(x+side*.26,y-.03,-4.10)],.014)
+  box('Acier patiné',(x,y-.365,-4.34),(1.3,.105,.025));text(CATALOGUE_NAMES[index],x,y-.388,-4.30,.073,'Néon bleu')
+box('Acier patiné',(-7.7,.25,-3.8),(4.7,.5,.75),solid=True,name='vitrine de pistoles')
+box('Verre',(-7.7,.57,-3.8),(4.5,.10,.66))
+for xx in [-8.12,-7.28]:
+ for zz in [-3.91,-3.69]:box('Cuir et joints',(xx,.64,zz),(.09,.04,.09))
+text('VX-9 DUO',-7.7,.35,-3.40,.12,'Néon rose')
+SHOWCASE_WEAPONS.append({'index':7,'x':-7.7,'y':.65,'z':-3.8,'bench':True})
+SHOWCASE_WEAPONS.append({'index':8,'x':6.9,'y':1.465,'z':-.90,'bench':True})
 neon((-10.2,2.97,-4.28),(-5.25,2.97,-4.28),'Néon rose',.025)
 for x in [-10.15,-5.2]:crate(x,-3.45,scale=.65)
 plaque('Mur d’armes',-7.8,1.8,4)
 
 print('Planque: armures et recharge',flush=True)
-def mannequin(x,z,accent):
- cyl('Cadres anthracite',(x,.16,z),.43,.2,12)
- for side in [-1,1]:
-  hip=(x+side*.15,1.0,z);knee=(x+side*.18,.60,z+.025);ankle=(x+side*.18,.25,z)
-  rod('Cuir et joints',hip,knee,.10,10);rod('Acier patiné',hip,knee,.082,8);rod('Acier patiné',knee,ankle,.07,8);ellipsoid('Métal brossé',knee,(.18,.18,.18));box('Cuir et joints',(x+side*.18,.19,z+.06),(.18,.16,.37))
-  shoulder=(x+side*.32,1.53,z);elbow=(x+side*.42,1.17,z);hand=(x+side*.44,.9,z+.04);rod('Cuir et joints',shoulder,elbow,.075);rod('Acier patiné',elbow,hand,.065);ellipsoid('Acier patiné',shoulder,(.28,.23,.27));ellipsoid('Cuir et joints',hand,(.14,.18,.11))
- profile('Acier patiné',x,z,[(-.21,1.03),(.21,1.03),(.29,1.47),(.21,1.62),(-.21,1.62),(-.29,1.47)],.28)
- box(accent,(x,1.43,z+.155),(.10,.1,.015));ellipsoid('Cadres anthracite',(x,1.82,z),(.34,.4,.34));neon((x-.13,1.84,z+.16),(x+.13,1.84,z+.16),accent,.014)
 ZONE='Tenues de combat'
 for x,accent in [(-8.9,'Néon rose'),(-6.4,'Néon bleu')]:
  box('Acier patiné',(x,1.35,3.7),(1.85,2.65,.36),solid=True);box('Cadres anthracite',(x,1.37,3.95),(1.60,2.4,.18))
  for xx in [-.83,.83]:neon((x+xx,.25,4.05),(x+xx,2.55,4.05),accent,.018)
- mannequin(x,4.3,accent);screen(x,2.64,4.05,1.2,.32,accent)
+ cyl('Cadres anthracite',(x,.15,4.3),.58,.24,32);ring(accent,(x,.28,4.3),.47,.012,48);screen(x,2.64,4.05,1.2,.32,accent)
+ text('GHJU'if x< -7.7 else'LYLU',x,2.29,4.08,.19,accent)
+ SOLIDS.append({'kind':'tenue exposée','x':x,'z':4.3,'hx':.64,'hz':.64,'y':0,'height':2.45})
+ for side in [-1,1]:
+  box('Métal brossé',(x+side*.67,1.43,4.03),(.10,.16,.16));cyl('Cuir et joints',(x+side*.67,1.43,4.13),.04,.02,12,axis='z')
 for x in [-10.1,-5.2]:
  for y in [.45,1.13,1.81]:
   box('Acier patiné',(x,y,3.9),(.65,.64,.65));box('Cadres anthracite',(x,y,4.25),(.53,.53,.03));rod('Métal brossé',(x+.19,y-.1,4.30),(x+.19,y+.1,4.30),.025)
@@ -356,8 +363,17 @@ for j in range(6):
  x=5.35+j*.16;rod('Métal brossé',(x,1.25,-4.27),(x,1.7,-4.27),.025);ellipsoid('Cuivre et outils',(x,1.25,-4.24),(.07,.09,.03))
 for x in [5.3,9.3]:
  box('Acier patiné',(x,.63,-1.1),(1.2,1.25,1.35),solid=True)
- for k in range(5):box('Cadres anthracite',(x,.22+k*.22,-.40),(1.06,.17,.04));rod('Métal brossé',(x-.30,.24+k*.22,-.36),(x+.30,.24+k*.22,-.36),.018)
-box('Métal brossé',(7.35,1.31,-1.1),(5.5,.17,1.6),solid=True);box('Cadres anthracite',(7.35,1.41,-1.1),(5.30,.06,1.4));rifle(6.9,1.55,-.8,'Néon rose',2.15)
+ for k in range(5):box('Cadres anthracite',(x,.22+k*.22,-.40),(1.06,.17,.04))
+ for k in range(5):
+  yy=.22+k*.22;box('Acier patiné',(x,yy,-.363),(1.01,.145,.025))
+  polyline('Métal brossé',[(x-.27,yy,-.34),(x-.27,yy,-.30),(x+.27,yy,-.30),(x+.27,yy,-.34)],.014)
+  cyl('Cuir et joints',(x+.40,yy,-.34),.018,.014,10,axis='z')
+box('Métal brossé',(7.35,1.31,-1.1),(5.5,.17,1.6),solid=True);box('Cadres anthracite',(7.35,1.41,-1.1),(5.30,.06,1.4))
+# Soft service pad and adjustable rests support the real VORTEX AR7.
+cushion('Cuir et joints',(6.9,1.454,-.9),(1.7,.025,.6))
+for xx in [6.45,7.25]:
+ box('Métal brossé',(xx,1.47,-.9),(.09,.045,.32))
+ for zz in [-1.03,-.77]:cyl('Cuir et joints',(xx,1.50,zz),.035,.06,12,axis='x')
 for x,z in [(5.2,-.6),(7.8,-1.3),(8.5,-.8)]:
  cyl('Cuivre et outils',(x,1.49,z),.065,.10,10);box('Acier patiné',(x+.22,1.49,z),(.25,.08,.12))
 # Industrial articulated service arm: pedestal, shoulder, joints, tapering links, wrist and two-finger tool.
@@ -505,7 +521,7 @@ po=bpy.data.objects.new('Panorama de Vesper / baie vitrée',pme);sc.collection.o
 for o in sc.objects:
  if o.name.startswith(('Vesper au-delà','Toiture complète')):o.hide_render=True
 
-layout={'version':1,'name':'La Planque · Les Héritiers du Silence','author':'Pink Wars · Blender','bounds':{'x1':-10.65,'x2':10.65,'z1':-11.25,'z2':11.35},'spawn':{'x':0,'z':9.0,'yaw':0},'colliders':SOLIDS,'stations':[
+layout={'version':1,'name':'La Planque · Les Héritiers du Silence','author':'Pink Wars · Blender','showcase':{'weapons':SHOWCASE_WEAPONS,'outfits':[{'hero':'ghju','x':-8.9,'y':.285,'z':4.45},{'hero':'lylu','x':-6.4,'y':.285,'z':4.45}]},'bounds':{'x1':-10.65,'x2':10.65,'z1':-11.25,'z2':11.35},'spawn':{'x':0,'z':9.0,'yaw':0},'colliders':SOLIDS,'stations':[
  {'id':'rest','name':'Dortoir','action':'Se reposer et régénérer','x':-6.1,'z':-6.35,'radius':2.4},
  {'id':'weapons','name':'Mur d’armes','action':'Préparer les armes','x':-7.8,'z':-.2,'radius':2.7},
  {'id':'outfits','name':'Tenues de combat','action':'Préparer l’équipement','x':-7.8,'z':6.3,'radius':2.4},

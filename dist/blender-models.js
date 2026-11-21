@@ -20,6 +20,7 @@ export function parsePWM(T, buffer) {
     const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(pos, 3)); g.setAttribute('normal', new T.BufferAttribute(nor, 3)); g.setAttribute('uv1', new T.BufferAttribute(uv1, 2));
     // Authored texture UV (fabric, decals) when the model carries one; otherwise boxUV() derives it.
     if (p.uv0 !== undefined) { const uv = new Float32Array(buffer.slice(base + p.uv0, base + p.uv0 + count * 8)); for (let i = 1; i < uv.length; i += 2) uv[i] = 1 - uv[i]; g.setAttribute('uv', new T.BufferAttribute(uv, 2)); } // glTF V is flipped
+    if(p.color!==undefined)g.setAttribute('color',new T.BufferAttribute(new Float32Array(buffer.slice(base+p.color,base+p.color+count*12)),3));
     g.setIndex(new T.BufferAttribute(p.index32 ? new Uint32Array(index) : new Uint16Array(index), 1)); g.computeBoundingSphere(); g.userData.webgpuShape = 'blender';
     return { material: p.material, geometry: g, triangles: p.indices / 3 };
   });

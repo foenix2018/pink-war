@@ -1,10 +1,10 @@
 {
   "source": "Blender 4.3 · original editable scene",
-  "triangles": 340454,
+  "triangles": 319770,
   "batches": 25,
-  "vertices": 455783,
-  "pwmBytes": 13485776,
-  "downloadBytes": 4074607,
-  "colliders": 62,
+  "vertices": 428526,
+  "pwmBytes": 12625120,
+  "downloadBytes": 3747917,
+  "colliders": 65,
   "stations": 9
 }
