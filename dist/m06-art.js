@@ -17,6 +17,7 @@ import { AREAS, DOORS, INTERACTIONS, FLOORS, HEIGHTS } from './m06-layout.js';
 import { createSignage } from './signage.js';
 import { createFunctionalProp } from './functional-props.js';
 import { softCube, splitPieces } from './soft-pieces.js';
+import { loadFoundryModels, M06_BUNDLES, M06_YAW } from './m06-models.js';
 
 const TAU = Math.PI * 2;
 const seeded = seed => () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
@@ -243,6 +244,18 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
     for (const s of [-1, 1]) { const arm = new T.Mesh(new T.BoxGeometry(.4, 1.6, .45), M.graphite); arm.position.set(s * 1.25, 2.1, 0); g.add(arm); }
     line.chassis.push({ g, z0: z });
   }
+  const deferredModels = []; let modelsReady = Promise.resolve();
+  // Blender centrepieces (pump, valve, relay cabinets, pipe bundles); the code-built boxes are the fallback.
+  function fallbackModels(list) { for (const o of list) { const h = o.height; box(o.kind === 'relay' ? M.graphite : M.plate, o.x - o.hx, o.x + o.hx, 0, h, o.z - o.hz, o.z + o.hz); } }
+  function loadModels() {
+    if (!deferredModels.length) return;
+    const list = deferredModels.splice(0);
+    modelsReady = loadFoundryModels(T, { M, low }).then(lib => {
+      for (const kind of ['pump', 'valve', 'relay']) lib.place(kind, list.filter(o => o.kind === kind).map(o => ({ x: o.x, z: o.z, yaw: M06_YAW[kind] })), root);
+      lib.place('bundle', M06_BUNDLES.map(([x, z, yaw]) => ({ x, z, yaw })), root);
+      stats.blender = lib.stats;
+    }).catch(error => { console.warn('M06 / modèles Blender indisponibles, volumes de repli', error); fallbackModels(list); flushGeometry(); });
+  }
   function dress(o) {
     if(o.kind==='fps-cover')return;
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, h = o.height;
@@ -266,6 +279,7 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
       case 'ladle': cylinder(M.soot, o.x, h / 2, o.z, o.hx, h, { r2: o.hx * 1.15 }); { const top = new T.Mesh(new T.CircleGeometry(o.hx * 1.05, 24), M.molten); top.rotation.x = -Math.PI / 2; top.position.set(o.x, h + .01, o.z); add(top); } piece(M.steel, o.x, h, o.z, w + 1.2, .3, .3); break;
       case 'moulds': for (let k = 0; k < 3; k++) { piece(M.dark, x1 + .9 + k * (w - 1.8) / 2, 0, o.z, 1.6, h, d); piece(k === 1 ? M.molten : M.soot, x1 + .9 + k * (w - 1.8) / 2, h, o.z, 1.2, .02, d - .4); } break;
       case 'slag': box(M.soot, x1, x2, 0, h, z1, z2); piece(M.molten, o.x, h, o.z, w - 1, .02, d - 1); break;
+      case 'pump': case 'valve': case 'relay': deferredModels.push(o); break;
       case 'cabinet': case 'terminal': { const prop = createFunctionalProp(T, o.kind, { w, d, h, low, M }); prop.position.set(o.x, 0, o.z); add(prop); break; }
       case 'conveyor': {
         box(M.dark, x1, x2, 0, h - .1, z1, z2); box(M.black, x1 + .1, x2 - .1, h - .1, h, z1, z2, { skip: ['bottom'] });
@@ -415,9 +429,9 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
 
 
   return {
-    root, M, sun, openPortal,get ready(){return photo.ready;},
+    root, M, sun, openPortal,get ready(){return Promise.all([photo.ready,modelsReady]);},
     build(obstacles) {
-      buildGrounds(); buildDecks(); buildWalls(obstacles); for (const o of obstacles) dress(o); buildEffects(); buildDoors(); buildDevices(); buildSigns(); buildFixtures();
+      buildGrounds(); buildDecks(); buildWalls(obstacles); for (const o of obstacles) dress(o); loadModels(); buildEffects(); buildDoors(); buildDevices(); buildSigns(); buildFixtures();
       neons.meshes(); neons.build(); flushGeometry(); flushPieces();
       if(shaftFx)for(let i=0;i<3;i++)shaftVolumes.push(shaftFx.fog(root,{width:8,height:10,depth:3,color:0xffb581,opacity:.075,beam:true}));
       fpsChapter=createFPSChapter(T,root,{chapter:'m06',obstacles:obstacles,areas:AREAS,low,webgpu});

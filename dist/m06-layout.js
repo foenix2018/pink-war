@@ -105,7 +105,10 @@ function props() {
   // Casting hall: the furnace, two ladles on their stands, ingot moulds, the slag pit wall.
   add('furnace', -12, 4, 6, 5, 10, 'metal', { furnace: true }); add('ladle', 10, 16, 2.4, 2.4, 3.6, 'metal', { round: true }); add('ladle', 24, 36, 2.4, 2.4, 3.6, 'metal', { round: true });
   for (const [x, z] of [[-4, 30], [8, 30], [-4, 50], [8, 50]]) add('moulds', x, z, 3, 1.2, 1.2);
-  add('slag', 28, 4, 4, 3, 1.4); add('cabinet', -26, 32, .6, 2, 2.2); add('crates', 30, 58, 1.4, 1.2, 1.6);
+  // Cooling circuit of the furnace (Blender models: pump, gate valve) and the three breaker cabinets of the heavy chain.
+  add('pump', -24, 6, 3, 1.6, 2.6); add('valve', -24, 13, 1.6, .7, 2.6);
+  for (const [x, z] of [[50, 60], [95, 46], [50, -14]]) add('relay', x, z, .5, 1.5, 2.4);
+    add('slag', 28, 4, 4, 3, 1.4); add('cabinet', -26, 32, .6, 2, 2.2); add('crates', 30, 58, 1.4, 1.2, 1.6);
   // Heavy chain: the assembly line (low conveyor) with Brute chassis, robot arms, parts racks.
   add('conveyor', 68, 22, 2, 30, 1.2, 'metal', { line: true });
   for (const z of [-4, 12, 28, 44]) { add('robot-arm', 61.6, z, .9, .9, 3.4); add('robot-arm', 74.4, z + 6, .9, .9, 3.4); }
