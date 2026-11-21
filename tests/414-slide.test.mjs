@@ -46,7 +46,7 @@ test('a thumb off full tilt still slides while carrying a run (touch)',()=>{
 });
 test('the slide pose is wired in every level and in the character',async()=>{
   const {readFileSync}=await import('node:fs');
-  for(const f of ['niveau3','niveau4','niveau6','ligne9','couronne-helix'])assert.match(readFileSync(new URL(`../dist/${f}.js`,import.meta.url),'utf8'),/slide:!!game\.player\.sliding/,f);
+  for(const f of ['niveau3','niveau4','niveau6','ligne9','couronne-helix'])assert.match(readFileSync(new URL(`../dist/${f}.js`,import.meta.url),'utf8'),/heroFlightFlags\(game\.player\)/,f);
   assert.match(readFileSync(new URL('../dist/rlh-firefighter.js',import.meta.url),'utf8'),/applySlidePose/);
 });
 test('the stand (shooting range) slides too',async()=>{

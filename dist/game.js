@@ -50,6 +50,7 @@ import {desktopZoomHeld,grenadeShortcut} from './desktop-modifier-controls.js';
 import {createHudContrastControl} from './hud-appearance.js';
 import {createArmorFeedback,meleeKick,MELEE_POSE} from './armor-feedback.js';
 import {createJetpackAudio} from './jetpack-audio.js';
+import {heroFlightFlags} from './hero-capabilities.js';
 import {jetpackFuel} from './locomotion.js';
 
 const $ = id => document.getElementById(id);
@@ -502,7 +503,7 @@ function updateWeaponVisuals(dt, firing, moving) {
   // WebXR deliberately keeps the player mesh hidden: tracked controllers own the visible hands.
   if (vr?.mode !== 'xr') {
     world.soldier.animate(clock, moving, recoil, reloadLift, trigger, dt, {
-      airborne: !game.player.grounded, verticalSpeed: game.player.verticalSpeed,jetpack:!!game.player.jetpackActive,jetpackFuel:game.player.grounded?1:jetpackFuel(game.player), // full on the ground, spent once released in the air,
+      airborne: !game.player.grounded, verticalSpeed: game.player.verticalSpeed,...heroFlightFlags(game.player), // full on the ground, spent once released in the air,
       velocity:game.playerVelocity,
       ground:(x,z,y)=>game.footGroundHeight(x,z,y),
       crouched: game.player.crouched, firing: trigger>0,

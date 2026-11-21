@@ -5,6 +5,7 @@ import {levelArrow,arrowGuidance} from './objective-arrow.js';
 import {createM01SiegeAmbiance} from './m01-siege-ambiance.js';
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import {walkingSurface} from './surface-steps.js';
+import {createHeroCapabilityAudio} from './hero-capabilities.js';
 import {assistedAim,firingView} from './aim-assist.js';
 import {sightPoint} from './sight-line.js';
 // M01's book reference map, production combat, and locked Shadow Unit rigs.
@@ -177,6 +178,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     const flash=new T.Mesh(new T.SphereGeometry(.06,8,6),heroGlow);flash.visible=false;parent.add(flash);return flash;
   }});camera.add(gun);
   let audio=null,ambience=null,saber=null;
+  const heroAudio=createHeroCapabilityAudio(()=>sound&&audio?.state==='running'?audio:null);
   let sound=true;try{const settings=JSON.parse(localStorage.getItem('rosee-settings')||'{}');sound=settings.sound!==false;}catch{}
   let ambientEnabled=sound;
   const portalAudio=createPortalLaserController({
@@ -261,11 +263,12 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     const reload=game.reloadRemaining>0?Math.sin((1-game.reloadRemaining/game.weapon.reload)*Math.PI):0;
     model.animate(game.time,Math.hypot(game.playerVelocity.x,game.playerVelocity.z)>.1,feel.state.pitch,reload,Number(held),dt,{
       velocity:game.playerVelocity,ground:(x,z,y)=>game.footGroundHeight(x,z,y),airborne:!p.grounded,verticalSpeed:p.verticalSpeed,
-      crouched:p.crouched,sprint:!!s.sprint,aim:!!s.aiming,firing:held
+      crouched:p.crouched,slide:!!s.sliding,jetpack:!!s.jetpackActive,jetpackFuel:s.grounded?1:(s.jetpackFuel??1),sprint:!!s.sprint,aim:!!s.aiming,firing:held
     });
   }
   let portalFrame=0;
   function update(dt,s){
+    heroAudio.update({player:{jetpackActive:!!s.jetpackActive,grounded:s.grounded,jetpackArmed:true,jetpackElapsed:(1-(s.jetpackFuel??1))*2}},sound&&game.state==='playing');
     portalFrame+=dt;electricPortals.sync(completed?[]:game.activePortals,game.time,portalFrame);
     setScreenMusic(ready&&!completed&&!journalOpen&&!skillMenu.isOpen&&game.state==='playing'?'gameplay':'paused',1);
     if(!ready||completed||journalOpen||skillMenu.isOpen)return;
@@ -453,7 +456,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     cycle(delta=1){game.cycleWeapon(delta);},
     select(index){game.selectWeapon(index);},
     interact:onInteract,
-    pause(){setScreenMusic('paused');combatHud?.reset();held=false;fireInput.reset();gamepadInput.reset();skillMenu.setOpen(false);ambience?.pause();saber?.update({active:false});},
+    pause(){heroAudio.stop();setScreenMusic('paused');combatHud?.reset();held=false;fireInput.reset();gamepadInput.reset();skillMenu.setOpen(false);ambience?.pause();saber?.update({active:false});},
     resume(){held=false;fireInput.reset();if(game.state==='playing'){audioReady();}},
     gamepad(devices){return gamepadInput.select(devices,{focused:!document.hidden});},
     resize(width,height){

@@ -1,5 +1,6 @@
 import {nanoSnapshot} from './nano-forge.js';
 import {readPreferredView,savePreferredView,normalizeView} from './view-options.js';
+import {heroFlightFlags,createHeroCapabilityAudio} from './hero-capabilities.js';
 import {frameDelta} from './frame-timing.js';
 import {GAME_VERSION} from './launch-ui.js';
 import {applyFPSCameraMotion} from './fps-motion.js';
@@ -68,6 +69,7 @@ const robotShutdownAudio=createRobotShutdownAudio({getContext:()=>enableAudio&&a
 let reading=null,lamp=null,lampMode='auto',lampOn=false,cityBed=null,subtitlePlane=null,sector=null;
 const weaponFeel=createWeaponFeel(),pinkControls=createPinkWarsInput(),fireInput=createFireBuffer();
 let enableAudio=true;try{enableAudio=JSON.parse(localStorage.getItem('rosee-settings')||'{}').sound!==false;}catch{}
+const heroAudio=createHeroCapabilityAudio(()=>enableAudio&&audioCtx?.state==='running'?audioCtx:null);
 const keys=new Set(),enemyMeshes=new Map(),shotMeshes=new Map(),pickupMeshes=new Map();
 let traversal=null,collisions=[],mission=null,missionTime=0,shotsFired=0,hits=0;
 const completed=()=>!!mission?.completed;
@@ -314,7 +316,7 @@ function updateSoldier(dt,moving,sprint,firing){
   if(model.weapon!==game.weaponIndex)model.setWeapon(game.weaponIndex);
   model.gun.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,dualState:game.dual,reloading:game.reloadRemaining>0,
    reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,charge:game.charge});
-  model.animate(game.time,moving,weaponFeel.state.pitch,0,Number(firing),dt,{airborne:!game.player.grounded,verticalSpeed:game.player.verticalSpeed,crouched:game.player.crouched,slide:!!game.player.sliding,firing:!!firing,sprint,aim:aimBlend>.2});
+  model.animate(game.time,moving,weaponFeel.state.pitch,0,Number(firing),dt,{airborne:!game.player.grounded,verticalSpeed:game.player.verticalSpeed,crouched:game.player.crouched,...heroFlightFlags(game.player),firing:!!firing,sprint,aim:aimBlend>.2});
  }catch(error){console.warn('M03 / animation',error);scene.remove(model.root);playerRig=null;}
 }
 function aimRay(){
@@ -398,6 +400,7 @@ function gameTick(dt){
  const jump=controls.jump||jumpQueued;jumpQueued=false;
  game.nextWave=Infinity;game.toSpawn=0;
  game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,gamepadMoving:controls.gamepadMoving,touchMoving:!xc&&!!(touch.x||touch.z),sprint,jump,crouchToggle});
+ heroAudio.update(game,enableAudio);
  missionTime+=dt;weaponFeel.update(dt);cameraFeel.update(dt,{speed:Math.hypot(game.playerVelocity.x,game.playerVelocity.z),grounded:game.player.grounded,verticalSpeed:game.player.verticalSpeed,strafe:x,sprint,aim:aimBlend});snapCamera();
  if(meleeQueued||controls.melee){const view=new T.Vector3();camera.getWorldDirection(view);game.melee({x:view.x,z:view.z});}
  if(chargeQueued||controls.charge){const eye=xr?.active?renderer.xr.getCamera():camera,from=new T.Vector3(),dir=new T.Vector3();eye.getWorldPosition(from);eye.getWorldDirection(dir);
@@ -515,7 +518,7 @@ function resize(){
  const profile=graphicsProfile({userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu},low()?'low':'auto');
  renderer.setPixelRatio(renderPixelRatio(profile,devicePixelRatio,width,height));renderer.setSize(width,height,false);
 }
-function pauseMission(){
+function pauseMission(){heroAudio.stop();
  combatHud?.reset();touchSprinting=false;
  if(!running||paused)return;paused=true;running=false;ambience?.pause?.();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
  touchControls?.reset();pinkControls.reset();document.exitPointerLock?.();pauseMenu.show();

@@ -1706,6 +1706,20 @@ function groundAt(x,z,oldY=0){let h=0;
 }
 function blockedAt(x,y,z){for(const c of collide){if(y-1.5>c.y2||y<c.y1)continue; if(x+playerRadius>c.x1&&x-playerRadius<c.x2&&z+playerRadius>c.z1&&z-playerRadius<c.z2)return true}return false;}
 let airborne=false, liftCool=0,jumpLatch=false,jumpQueued=false;
+// Same abilities as every other chapter (locomotion.js is the reference; keep these numbers in sync, tests/415 checks them).
+const SLIDE={duration:.8,boost:1.45,maxSpeed:8.2,cooldown:1.3,jumpCancelAfter:.18},JETPACK={maxDuration:2,boostWindow:.16,brake:14,settleSpeed:.08};
+let slideT=0,slideCd=0,slideDx=0,slideDz=0,slideV=0,planarSpeed=0,lastRunAt=-9,jetArmed=false,jetActive=false,jetT=0;
+function toggleCrouch(){
+ const now=performance.now()/1000,runSpeed=moveSpeed*1.25,minSpeed=moveSpeed*.95;
+ if(slideT>0){endSlide();return;}
+ if(!isFree&&grounded&&!crouching&&slideCd<=0&&planarSpeed>=minSpeed&&(planarSpeed>=runSpeed||now-lastRunAt<=.5)&&planarSpeed>0){
+  const k=planarSpeed;slideDx=lastDirX;slideDz=lastDirZ;slideV=Math.min(SLIDE.maxSpeed,k*SLIDE.boost);slideT=SLIDE.duration;crouching=true;return;
+ }
+ crouching=!crouching;
+}
+let lastDirX=0,lastDirZ=-1;
+function endSlide(){slideT=0;slideV=0;crouching=false;slideCd=SLIDE.cooldown;}
+
 function physics(dt){
  const f={x:Math.sin(yaw),z:-Math.cos(yaw)},r={x:Math.cos(yaw),z:Math.sin(yaw)};
  let ax=0,az=0;
@@ -1716,7 +1730,16 @@ function physics(dt){
  ax+=f.x*clamp(-touch.moveY-gamepadMove.y,-1,1)+r.x*clamp(touch.moveX+gamepadMove.x,-1,1);az+=f.z*clamp(-touch.moveY-gamepadMove.y,-1,1)+r.z*clamp(touch.moveX+gamepadMove.x,-1,1);
  const a=Math.hypot(ax,az);if(a>1){ax/=a;az/=a}
  const speed=moveSpeed*(keys.has('ShiftLeft')||touch.sprint||padRun?1.65:1)*(crouching?.55:1)*(isFree?2.5:1);
- let nx=clamp(position.x+ax*speed*dt,worldBounds.minX,worldBounds.maxX),nz=clamp(position.z+az*speed*dt,worldBounds.minZ,worldBounds.maxZ);
+ if(slideCd>0)slideCd=Math.max(0,slideCd-dt);
+ planarSpeed=Math.hypot(ax,az)*speed;
+ if(planarSpeed>.2){lastDirX=ax/Math.hypot(ax,az);lastDirZ=az/Math.hypot(ax,az);}
+ if((keys.has('ShiftLeft')||touch.sprint||padRun)&&planarSpeed>.2)lastRunAt=performance.now()/1000;
+ if(slideT>0&&!isFree){
+  slideT=Math.max(0,slideT-dt);const k=slideT/SLIDE.duration,v=slideV*(.25+.75*k*k);
+  if(slideT<=0||!grounded)endSlide();else{ax=slideDx;az=slideDz;planarSpeed=v;}
+ }
+ const slideSpeed=slideT>0?slideV*(.25+.75*Math.pow(slideT/SLIDE.duration,2)):0;
+ let nx=clamp(position.x+ax*(slideT>0?slideSpeed:speed)*dt,worldBounds.minX,worldBounds.maxX),nz=clamp(position.z+az*(slideT>0?slideSpeed:speed)*dt,worldBounds.minZ,worldBounds.maxZ);
  if(isFree){position.x=nx;position.z=nz;position.y+=(Number(keys.has('Space'))-Number(keys.has('ControlLeft')||keys.has('KeyC')))*speed*dt;return}
  if(!blockedAt(nx,position.y,nz))position.x=nx,position.z=nz;
  else{if(!blockedAt(nx,position.y,position.z))position.x=nx;if(!blockedAt(position.x,position.y,nz))position.z=nz}
@@ -1724,8 +1747,13 @@ function physics(dt){
  const jumpWasHeld=keys.has('KeyJ');
  if(jumpQueued){jumpLatch=false;keys.add('KeyJ');}
  if(!keys.has('KeyJ'))jumpLatch=false;
- if(keys.has('KeyJ')&&!jumpLatch && (grounded||jumpCount<2)){velocityY=jumpCount===0?6.3:5.8;grounded=false;airborne=true;jumpCount++;jumpLatch=true;}
+ if(slideT>0&&keys.has('KeyJ')&&!jumpLatch&&SLIDE.duration-slideT>=SLIDE.jumpCancelAfter)endSlide();
+ if(!crouching&&keys.has('KeyJ')&&!jumpLatch && (grounded||jumpCount<2)){const second=!grounded;velocityY=jumpCount===0?6.3:5.8;grounded=false;airborne=true;jumpCount++;jumpLatch=true;if(second){jetArmed=true;jetT=0;}}
  if(jumpQueued&&!jumpWasHeld)keys.delete('KeyJ');jumpQueued=false;
+ // Mini-jetpack: hold the jump after the second press to hover for up to two seconds.
+ const jetHeld=keys.has('KeyJ')||keys.has('Space');
+ if(grounded||!jetHeld||!jetArmed){jetArmed=false;jetActive=false;if(grounded)jetT=0;}
+ else{jetT+=dt;if(jetT>=JETPACK.maxDuration){jetArmed=false;jetActive=false;}else{jetActive=true;if(jetT>JETPACK.boostWindow)velocityY+=(JETPACK.settleSpeed-velocityY)*(1-Math.exp(-JETPACK.brake*dt));}}
  velocityY-=17.5*dt;position.y+=velocityY*dt;
  const targetGround=desiredGround+eyeHeight;
  if(position.y<=targetGround || (grounded&&targetGround>position.y&&targetGround-position.y<.35)){position.y=targetGround;velocityY=0;grounded=true;airborne=false;jumpCount=0;}
@@ -1810,7 +1838,7 @@ function pollGamepad(dt){const devices=navigator.getGamepads?.()||[],gp=combatWo
  if(missionMenu?.isOpen){lastGamepadButtons=Array.from(gp.buttons,b=>!!b.pressed||(b.value||0)>.55);return;}
  gamepadMove.x=d(gp.axes[0]||0);gamepadMove.y=d(gp.axes[1]||0);padLook.x=d(gp.axes[2]||0);padLook.y=d(gp.axes[3]||0);padRun=btn(10);gamepadAiming=btn(6);
  if(!combatWorld?.paused){yaw+=padLook.x*dt*1.9;pitch=clamp(pitch-padLook.y*dt*1.55,-1.46,1.46);}
- if(edge(12))combatWorld?.toggleSkills();padFiring=btn(7);if(edge(0))jumpQueued=true;if(edge(2))reloadWeapon();if(edge(3))changeWeapon(1);if(edge(1))crouching=!crouching;if(edge(11)){document.getElementById('help').classList.remove('show');interact();}if(edge(9))toggleMissionPause();if(edge(5))combatWorld?.melee?.();if(edge(4))combatWorld?.throwCharge?.();
+ if(edge(12))combatWorld?.toggleSkills();padFiring=btn(7);if(edge(0))jumpQueued=true;if(edge(2))reloadWeapon();if(edge(3))changeWeapon(1);if(edge(1))toggleCrouch();if(edge(11)){document.getElementById('help').classList.remove('show');interact();}if(edge(9))toggleMissionPause();if(edge(5))combatWorld?.melee?.();if(edge(4))combatWorld?.throwCharge?.();
  lastGamepadButtons=Array.from(gp.buttons,b=>!!b.pressed||(b.value||0)>.55);
 }
 
@@ -1838,7 +1866,7 @@ function inputSetup(){
   if(ev.code==='KeyB'||grenadeModifier(ev)){if(grenadeModifier(ev))ev.preventDefault();combatWorld?.throwCharge?.();}
   if(ev.code==='KeyJ'||(ev.code==='Space'&&!isFree))jumpQueued=true;
   if(ev.code==='KeyO')setAimState(true);
-  if(ev.code==='KeyC')crouching=!crouching;
+  if(ev.code==='KeyC')toggleCrouch();
   if(ev.code==='Escape')toggleMissionPause();
 
  });
@@ -1860,7 +1888,9 @@ function inputSetup(){
  const end=ev=>{if(stickId===ev.pointerId){stickId=null;touch.moveX=0;touch.moveY=0;$('nub').style.transform=''}};
  for(const type of ['pointerup','pointercancel','lostpointercapture'])stick.addEventListener(type,end);
  $('btnJump').onpointerdown=e=>{e.preventDefault();jumpQueued=true;keys.add('KeyJ');try{e.currentTarget.setPointerCapture(e.pointerId)}catch{}};for(const t of ['pointerup','pointercancel','lostpointercapture'])$('btnJump').addEventListener(t,()=>keys.delete('KeyJ'));
- $('btnUse').onclick=interact;const tb=document.getElementById('touchButtons');if(tb){const fire=document.createElement('button');fire.textContent='TIR';fire.style.borderColor='#e6579d';fire.onpointerdown=e=>{e.preventDefault();firing=true;shoot();try{fire.setPointerCapture(e.pointerId)}catch{}};for(const type of ['pointerup','pointercancel','lostpointercapture'])fire.addEventListener(type,()=>{firing=false;});fire.id='btnFireMobile';fire.setAttribute('aria-label','Tirer');tb.prepend(fire);const aim=document.createElement('button');aim.id='btnAimMobile';aim.textContent='VISER';aim.setAttribute('aria-label','Activer ou désactiver la visée');aim.setAttribute('aria-pressed','false');let aimTouchPointer=null;aim.onpointerdown=e=>{e.preventDefault();aimTouchPointer=e.pointerType==='touch'?e.pointerId:null;setAimState(e.pointerType==='touch'?!isAiming:true);try{aim.setPointerCapture(e.pointerId)}catch{}};for(const t of ['pointerup','pointercancel','lostpointercapture'])aim.addEventListener(t,e=>{if(e.pointerId!==aimTouchPointer)setAimState(false);});tb.append(aim);}
+ $('btnUse').onclick=interact;const tb=document.getElementById('touchButtons');if(tb){const fire=document.createElement('button');fire.textContent='TIR';fire.style.borderColor='#e6579d';fire.onpointerdown=e=>{e.preventDefault();firing=true;shoot();try{fire.setPointerCapture(e.pointerId)}catch{}};let fireLast=null;fire.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse')fireLast={id:e.pointerId,x:e.clientX,y:e.clientY};});
+fire.addEventListener('pointermove',e=>{if(!fireLast||e.pointerId!==fireLast.id||!firing)return;const dx=e.clientX-fireLast.x,dy=e.clientY-fireLast.y;fireLast.x=e.clientX;fireLast.y=e.clientY;const r=fire.getBoundingClientRect();if(Math.hypot(e.clientX-(r.left+r.width/2),e.clientY-(r.top+r.height/2))>Math.max(r.width,r.height)/2*1.15)return;yaw+=clamp(dx,-90,90)*.0042*1.5;pitch=clamp(pitch-clamp(dy,-90,90)*.0042*1.5,-1.4,1.4);});
+for(const type of ['pointerup','pointercancel','lostpointercapture'])fire.addEventListener(type,()=>{fireLast=null;});for(const type of ['pointerup','pointercancel','lostpointercapture'])fire.addEventListener(type,()=>{firing=false;});fire.id='btnFireMobile';fire.setAttribute('aria-label','Tirer');tb.prepend(fire);const aim=document.createElement('button');aim.id='btnAimMobile';aim.textContent='VISER';aim.setAttribute('aria-label','Activer ou désactiver la visée');aim.setAttribute('aria-pressed','false');let aimTouchPointer=null;aim.onpointerdown=e=>{e.preventDefault();aimTouchPointer=e.pointerType==='touch'?e.pointerId:null;setAimState(e.pointerType==='touch'?!isAiming:true);try{aim.setPointerCapture(e.pointerId)}catch{}};for(const t of ['pointerup','pointercancel','lostpointercapture'])aim.addEventListener(t,e=>{if(e.pointerId!==aimTouchPointer)setAimState(false);});tb.append(aim);}
  $('btnRun').onpointerdown=e=>{touch.sprint=true;try{e.currentTarget.setPointerCapture(e.pointerId)}catch{}};for(const type of ['pointerup','pointercancel','lostpointercapture'])$('btnRun').addEventListener(type,()=>touch.sprint=false);
  const actions=document.getElementById('touchButtons');
  for(const [id,label,description,action] of [
@@ -2020,9 +2050,9 @@ async function boot(){try{
    else{missionLoading?.fail('Le rendu a été interrompu. Réessayez le chargement.');console.error('Vesper render',error);$('intro').classList.remove('gone');$('bootInfo').textContent='Rendu interrompu. Recharge le secteur pour reprendre.';$('start').disabled=false;$('start').textContent='RECHARGER LE SECTEUR →';$('start').onclick=()=>location.reload();}
   };
   combatWorld=await createVesperCombat({canvas,staticMesh,portalMesh,signAtlas:atlas,collide,stairs,decks,interactions,notify,
-   onControl:(kind,value)=>{if(kind==='crouch')crouching=!crouching;if(kind==='sprint')touch.sprint=!!value;},
+   onControl:(kind,value)=>{if(kind==='crouch')toggleCrouch();if(kind==='sprint')touch.sprint=!!value;},
    setPlayer:p=>{position.x=p.x;position.y=p.elevation+eyeHeight;position.z=p.z;grounded=p.grounded;},
-    getState:()=>({input:{gamepadMoving:!combatWorld?.xrActive&&!!(gamepadMove.x||gamepadMove.y),touchMoving:!combatWorld?.xrActive&&!!(touch.moveX||touch.moveY),x:Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('KeyQ')||keys.has('ArrowLeft'))+touch.moveX+gamepadMove.x,z:Number(keys.has('KeyS')||keys.has('ArrowDown'))-Number(keys.has('KeyW')||keys.has('KeyZ')||keys.has('ArrowUp'))+touch.moveY+gamepadMove.y,jump:jumpQueued||keys.has('KeyJ')||keys.has('Space'),sprint:touch.sprint||mobileMovement.touchAnalogSprint(touch.moveX,touch.moveY)||padRun||keys.has('ShiftLeft')},position,yaw,pitch,aiming:isAiming||zoomModifier()||gamepadAiming,crouching,grounded,sprint:touch.sprint||mobileMovement.touchAnalogSprint(touch.moveX,touch.moveY)||padRun||keys.has('ShiftLeft'),free:isFree,menuPaused:gamePaused,day:timeOfDay,shadows:shadowsEnabled,quality,flashlight}),
+    getState:()=>({input:{gamepadMoving:!combatWorld?.xrActive&&!!(gamepadMove.x||gamepadMove.y),touchMoving:!combatWorld?.xrActive&&!!(touch.moveX||touch.moveY),x:Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('KeyQ')||keys.has('ArrowLeft'))+touch.moveX+gamepadMove.x,z:Number(keys.has('KeyS')||keys.has('ArrowDown'))-Number(keys.has('KeyW')||keys.has('KeyZ')||keys.has('ArrowUp'))+touch.moveY+gamepadMove.y,jump:jumpQueued||keys.has('KeyJ')||keys.has('Space'),sprint:touch.sprint||mobileMovement.touchAnalogSprint(touch.moveX,touch.moveY)||padRun||keys.has('ShiftLeft')},position,yaw,pitch,sliding:slideT>0,jetpackActive:jetActive,jetpackFuel:jetArmed?Math.max(0,1-jetT/JETPACK.maxDuration):0,aiming:isAiming||zoomModifier()||gamepadAiming,crouching,grounded,sprint:touch.sprint||mobileMovement.touchAnalogSprint(touch.moveX,touch.moveY)||padRun||keys.has('ShiftLeft'),free:isFree,menuPaused:gamePaused,day:timeOfDay,shadows:shadowsEnabled,quality,flashlight}),
    onPauseRequest:()=>{if(combatWorld?.xrActive){gamePaused=true;combatWorld.pause();}else missionMenu?.show();},onResumeRequest:()=>{missionMenu?.hide(false);resumeMission();},onHeading:heading=>{yaw=-heading;},onProgress:(value,label)=>missionLoading?.set(value,label),onCanvas:value=>{canvas=value;},onFailure:fail,onMenuChange:()=>{keys.clear();firing=false;padFiring=false;touch.moveX=touch.moveY=0;touch.sprint=false;gamepadMove.x=gamepadMove.y=0;setAimState(false);}});
   renderer=combatWorld;gpuKind=renderer.kind;
   document.body.classList.add('pw-live-combat');

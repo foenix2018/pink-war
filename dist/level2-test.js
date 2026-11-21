@@ -1,5 +1,6 @@
 import {nanoSnapshot} from './nano-forge.js';
 import {frameDelta} from './frame-timing.js';
+import {heroFlightFlags,createHeroCapabilityAudio} from './hero-capabilities.js';
 import {createFPSChapter} from './fps-environments.js';
 import {applyFPSCameraMotion} from './fps-motion.js';
 import {M02_STREET_OBJECTIVES,createM02Street} from './m02-street.js';
@@ -103,6 +104,7 @@ const weaponFeel=createWeaponFeel(),pinkControls=createPinkWarsInput();
 const fireInput=createFireBuffer();
 
 let enableAudio=true;try{enableAudio=JSON.parse(localStorage.getItem('rosee-settings')||'{}').sound!==false;}catch{}
+const heroAudio=createHeroCapabilityAudio(()=>enableAudio&&audioCtx?.state==='running'?audioCtx:null);
 let xr=null,fallbackGun=null,fallbackHand=null;
 // Armour layer (3.63): strikes and throws queued by the keyboard, the mouse and the touch buttons.
 let armorFx=null,meleeQueued=false,chargeQueued=false,touchSprinting=false;
@@ -661,14 +663,14 @@ function updateOriginalSoldier(dt,moving,sprint,firing){
   model.gun.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,dualState:game.dual,
     reloading:game.reloadRemaining>0,reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,charge:game.charge});
   model.animate(game.time,moving,weaponFeel.state.pitch,0,Number(firing),dt,{
-    airborne:!game.player.grounded,verticalSpeed:game.player.verticalSpeed,crouched:game.player.crouched,slide:!!game.player.sliding,
+    airborne:!game.player.grounded,verticalSpeed:game.player.verticalSpeed,crouched:game.player.crouched,...heroFlightFlags(game.player),
     velocity:game.playerVelocity,
     ground:(x,z,y)=>game.footGroundHeight(x,z,y),
     firing:!!firing,sprint,aim:aimBlend>.2
   });
  }catch(error){console.warn('M02 authentic animation fallback',error);scene.remove(model.root);playerRig=null;}
 }
-function pauseMission(){
+function pauseMission(){heroAudio.stop();
  if(!running||paused)return;
  saveCheckpoint();updateCheckpointMenu();
  cancelAim();keys.clear();doorAudio.reset();combatHud?.reset();touchSprinting=false;paused=true;running=false;battleAudio?.pause();environmentAudio?.pause();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
@@ -765,6 +767,7 @@ function gameTick(dt){
  const jump=controls.jump||jumpQueued;jumpQueued=false;
  game.nextWave=Infinity;game.toSpawn=0;
  game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,gamepadMoving:controls.gamepadMoving,touchMoving:!xc&&!!(touch.x||touch.z),sprint,jump,crouchToggle});
+ heroAudio.update(game,enableAudio);
  weaponFeel.update(dt);
  cameraFeel.update(dt,{speed:Math.hypot(game.playerVelocity.x,game.playerVelocity.z),grounded:game.player.grounded,verticalSpeed:game.player.verticalSpeed,strafe:x,sprint,aim:aimBlend});
  snapCamera();
