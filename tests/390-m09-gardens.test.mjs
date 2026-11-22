@@ -66,7 +66,13 @@ test('extended locomotion, grapple and navigation bounds are chapter-local and t
 test('both metric LODs contain a finite Blender mesh, authored glazing, neon tubes and texture coordinates',()=>{
  const stats=[];
  for(const file of ['gardens.pwm.gz','gardens-low.pwm.gz']){const gz=read('dist/assets/m09/'+file),raw=gunzipSync(gz),asset=parse(raw);stats.push(asset.triangles);assert.ok(asset.triangles>400000&&asset.triangles<1200000);assert.ok(asset.primitives.length<60);assert.ok(gz.length<(file.includes('low')?13e6:20e6));
-  for(const p of asset.primitives){assert.ok(p.geometry.attributes.uv);assert.ok([...p.geometry.attributes.position.array].every(Number.isFinite));p.geometry.dispose();}}
+  for(const p of asset.primitives){assert.ok(p.geometry.attributes.uv);assert.ok([...p.geometry.attributes.position.array].every(Number.isFinite));
+   if(/^(leaf|blossom)/.test(p.material)){
+    assert.ok([...p.geometry.attributes.uv.array].every(v=>v>=0&&v<=1),'botanical atlas UVs survive the metric export');
+    const indices=p.geometry.index.array;assert.equal(indices.length%6,0,'mobile and desktop retain complete twig cards');
+    for(let i=0;i<indices.length;i+=6)assert.equal(new Set(indices.slice(i,i+6)).size,4,'a twig is a complete quad, not isolated triangles');
+   }
+   p.geometry.dispose();}}
  assert.ok(stats[1]<stats[0]*.8,'mobile has a geometric canopy LOD, not missing architecture');
  const source=read('assets/m09/PinkWars_N09_Jardins_Suspendus.blend'),publicCopy=read('dist/assets/m09/PinkWars_N09_Jardins_Suspendus.blend');assert.ok(source.length>1e6);assert.equal(createHash('sha256').update(source).digest('hex'),createHash('sha256').update(publicCopy).digest('hex'));
 });
@@ -74,4 +80,13 @@ function parse(raw){return parsePWM(T,raw.buffer.slice(raw.byteOffset,raw.byteOf
 test('chapter 9 launches from the story menu and its completed record returns to the actual hideout',()=>{
  assert.equal(CHAPTER_ROUTES[9],'niveau9.html');assert.match(chapterURL(9,{characterId:'lylu'}),/niveau9.html\?character=lylu/);assert.match(read('dist/index.html').toString(),/data-chapter="campaign9"/);
  const store=storage();recordHideoutArrival({level:9,characterId:'lylu',completed:true,storage:store});const profile=readHideoutProfile('lylu',store);assert.deepEqual(profile.completed,[9]);assert.equal(historyForHero(profile)[0].title,'Les Jardins suspendus');
+});
+
+test('botanical silhouettes and touchscreen art carry authored UVs and local material maps',()=>{
+ const materials=JSON.parse(read('dist/assets/m09/materials.json'));
+ for(const name of ['leaf','leaf-light','leaf-dark','blossom','blossom-light','blossom-pale','terminal-ui']){
+  const m=materials[name];assert.equal(m.textureSpace,'m09');assert.equal(m.authoredUV,true);assert.equal(m.uvScale,1);assert.ok(read('dist/assets/m09/'+m.texture).length>1000);
+  if(name!=='terminal-ui'){assert.ok(m.alphaTest>.3&&m.alphaTest<.6);assert.equal(m.alpha,1,'cutout foliage writes depth without transparent sorting');assert.equal(read('dist/assets/m09/'+m.texture)[25],6,'the botanical PNG contains its alpha silhouette');}
+ }
+ for(const name of ['bark','biotic']){const m=materials[name];assert.ok(m.emissive<.5,'wood retains a shaded volume');assert.ok(read('dist/assets/m09/'+m.normalTexture).length>1000);assert.ok(read('dist/assets/m09/'+m.roughTexture).length>1000);}
 });

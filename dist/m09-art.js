@@ -78,12 +78,12 @@ export function createM09Art(T,scene,{quality='normal',webgpu=false,onPortalClos
   compiled=parsePWM(T,bytes);const defs=await matResponse.json(),loader=new T.TextureLoader(),cache=new Map();
   const texture=async(path,scale,color=false)=>{const key=path+'/'+scale+'/'+color;if(!cache.has(key))cache.set(key,loader.loadAsync(new URL('./assets/'+path,import.meta.url).href).then(t=>{t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.setScalar(scale);t.anisotropy=low?2:4;t.colorSpace=color?T.SRGBColorSpace:T.NoColorSpace;return t;}));return cache.get(key);};
   await Promise.all(Object.entries(defs).map(async([name,m])=>{
-   const stem=/stone|facade/.test(name)?'concrete':name==='deck'?'deck':/steel|bronze/.test(name)?'steel':null,scale=name==='bark'?.32:stem==='concrete'?.16:.45;
-   const [map,normalMap,roughnessMap]=await Promise.all([m.texture?texture('cc0/'+m.texture,scale,true):null,stem&&(!low||name==='deck')?texture('hideout/'+stem+'-normal.jpg',scale):null,stem?texture('hideout/'+stem+'-rough.jpg',scale):null]);
+   const stem=/stone|facade/.test(name)?'concrete':name==='deck'?'deck':/steel|bronze/.test(name)?'steel':null,scale=m.uvScale??(name==='bark'?.32:stem==='concrete'?.16:.45);
+   const [map,normalMap,roughnessMap]=await Promise.all([m.texture?texture((m.textureSpace||'cc0')+'/'+m.texture,scale,true):null,m.normalTexture?texture('m09/'+m.normalTexture,scale):stem&&(!low||name==='deck')?texture('hideout/'+stem+'-normal.jpg',scale):null,m.roughTexture?texture('m09/'+m.roughTexture,scale):stem?texture('hideout/'+stem+'-rough.jpg',scale):null]);
    const Kind=webgpu&&/^(leaf|blossom)/.test(name)?T.MeshStandardNodeMaterial:T.MeshStandardMaterial;
-   const params={color:new T.Color(...m.color),map,normalMap,normalScale:new T.Vector2(.45,.45),roughnessMap,roughness:roughnessMap?1:m.roughness,metalness:m.metalness,transparent:m.alpha<1,opacity:m.alpha,depthWrite:m.alpha>=1,side:m.alpha<1||m.doubleSided?T.DoubleSide:T.FrontSide};
+   const params={color:new T.Color(...m.color),map,normalMap,normalScale:new T.Vector2(.45,.45),roughnessMap,roughness:roughnessMap?1:m.roughness,metalness:m.metalness,alphaTest:m.alphaTest||0,transparent:m.alpha<1,opacity:m.alpha,depthWrite:m.alpha>=1,forceSinglePass:true,side:m.alpha<1||m.doubleSided?T.DoubleSide:T.FrontSide};
    const material=m.emissive>=2?new T.MeshBasicMaterial({color:new T.Color(...m.color),transparent:m.alpha<1,opacity:m.alpha,depthWrite:m.alpha>=1,side:T.DoubleSide,toneMapped:false}):new Kind(params);
-   if(m.emissive&&m.emissive<2){material.emissive=new T.Color(...m.color);material.emissiveIntensity=m.emissive;}
+   if(m.emissive&&m.emissive<2){material.emissive=new T.Color(...m.color);material.emissiveIntensity=m.emissive;if(map)material.emissiveMap=map;}
    if(Kind===T.MeshStandardNodeMaterial){const {positionLocal,vec3,sin}=T.TSL;material.positionNode=positionLocal.add(vec3(sin(positionLocal.z.mul(.7).add(clock)).mul(.045),0,sin(positionLocal.x.mul(.5).add(clock.mul(.7))).mul(.035)));}
    materials.set(name,material);
   }));

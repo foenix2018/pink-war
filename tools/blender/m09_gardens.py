@@ -277,6 +277,14 @@ def laboratory(p,variant=0):
     if math.hypot(xx-aa['x']-dx*t,z+zz-aa['z']-dz*t)<l['width']/2+3.8:blocked=True
    if blocked:continue
    box('ivory',(xx,y+.8,z+zz),(r*.26,1.6,5.5));box('soil',(xx,y+1.62,z+zz),(r*.24,.06,5.25))
+   for end in [-1,1]:
+    box('steel',(xx,y+1.67,z+zz+end*2.55),(r*.25,.10,.16));rod('bronze',(xx-r*.115,y+1.72,z+zz+end*2.4),(xx+r*.115,y+1.72,z+zz+end*2.4),.05,10)
+   for edge in [-1,1]:
+    rod('steel',(xx+edge*r*.122,y+1.69,z+zz-2.5),(xx+edge*r*.122,y+1.69,z+zz+2.5),.06,10)
+    for zz2 in [-1.8,0,1.8]:
+     cyl('bronze',(xx+edge*r*.125,y+1.1,z+zz+zz2),.09,.10,12,axis='x')
+   box('dark',(xx,y+.75,z+zz+2.77),(1.1,.64,.04))
+   for row in range(4):rod('steel',(xx-.45,y+.55+row*.12,z+zz+2.80),(xx+.45,y+.55+row*.12,z+zz+2.80),.02,6)
    for j in range(4):fern(xx+random.uniform(-1,1),y+1.65,z+zz-2+j*1.2,.65)
    collider('culture hydroponique',(xx-r*.13,z+zz-2.75),(xx+r*.13,z+zz+2.75),y,1.65,pad=.1)
   # Irrigation loops, copper verticals, folded solar shades.
@@ -292,6 +300,9 @@ def console(it):
  ring('rose',(x,y+1.32,z+.37),.15,.018,24,axis='z');text(str(it['number']).zfill(2),x,y+1.88,z+.36,.25,'white')
  collider('console',(x-.55,z-.3),(x+.55,z+.3),y,1.9,pad=.05)
 
+sys.path.insert(0,str(pathlib.Path(__file__).parent))
+from m09_details import install as install_details
+install_details(globals())
 print('N09: terrasses et parcours',flush=True)
 for p in PLAN['platforms']:
  ZONE=str(p['label']);floor_circle(p)
@@ -343,6 +354,17 @@ box('facade',(x-8,y+28,z-12),(20,20,14));box('dark',(x-8,y+39,z-12),(22,2,16));n
 polyline('rose',[(x-13,y+35,z-4.7),(x-8,y+42,z-4.7),(x-3,y+35,z-4.7),(x-8,y+37,z-4.7),(x-13,y+35,z-4.7)],.16)
 text('JANUS',x-8,y+31,z-4.85,2.8,'rose');text('ORDRE / HELIX',x,y+20.4,z+6,1,'ivory')
 for xx in [x-11,x-5]:rod('steel',(xx,y+40,z-12),(xx,y+52,z-12),.12,10);cyl('rose',(xx,y+52,z-12),.23,.4,12)
+# Recessed cladding fins, rain gutters and roof-mounted air treatment.
+for xx in [x-17.8,x+17.8]:
+ for yy in [y+2,y+7,y+12,y+17]:
+  box('ivory',(xx,yy,z+4.77),(1.3,3.7,.32));box('dark',(xx,yy,z+4.96),(.65,2.8,.08))
+for xx in [x+3,x+10]:
+ box('steel',(xx,y+21,z-12),(5.4,2.8,7));box('dark',(xx,y+22.43,z-12),(4.5,.08,5.8))
+ for zz in [z-13.6,z-10.5]:
+  cyl('dark',(xx,y+22.5,zz),1.22,.12,24);ring('steel',(xx,y+22.6,zz),1.15,.05,28)
+  for k in range(6):
+   a=k*TAU/6;rod('steel',(xx,y+22.62,zz),(xx+math.cos(a)*1.05,y+22.62,zz+math.sin(a)*1.05),.12,6)
+rod('steel',(x-19,y+18.2,z+5),(x+19,y+18.2,z+5),.16,12)
 # Entry sas: recessed armour, copper inlays, mechanical portal support and true opening.
 ZONE='Accès ORDRE';p=PS['access'];x,y,z=p['x'],p['y'],p['z']
 for side in [-1,1]:
@@ -365,11 +387,22 @@ for xx in [-3.6,3.6]:box('white',(x+xx,y+.12,z),(.8,.10,10))
 box('white',(x,y+.12,z),(7.4,.10,.8));text('AEGIS',x,y-5,z+r+.25,3.2,'ivory')
 # Physical original evacuation aircraft; fuselage, glazing, engines, skids and wings are separate shapes.
 ZONE='Navette AEGIS';
-ellipsoid('ivory',(x+3,y+2.6,z-2),(13,4.5,8),24);ellipsoid('glass-blue',(x-1,y+3,z-.5),(7,2.2,6),24)
-profile('steel',x+2,z-2,[(-9,y+1.7),(-7,y+1.2),(7,y+1.2),(9,y+1.7),(3,y+2.3),(-3,y+2.3)],3.4)
+shuttle(x,y,z)
 for side in [-1,1]:
  cyl('dark',(x+5,y+2.2,z-2+side*5),1.6,4,28,axis='x');cyl('cyan',(x+7.04,y+2.2,z-2+side*5),1.15,.05,28,axis='x')
  rod('steel',(x-2,y+.4,z+side*2.5),(x+8,y+.4,z+side*2.5),.16,10);rod('steel',(x+2,y+.4,z+side*2.5),(x+2,y+1.7,z+side*2),.12,10)
+for side in [-1,1]:
+ zz=z-2+side*5
+ for ax in [x+3.05,x+6.85]:
+  cyl('steel',(ax,y+2.2,zz),1.67,.20,32,axis='x')
+ cyl('dark',(x+7.1,y+2.2,zz),1.22,.13,28,axis='x');cyl('bronze',(x+7.19,y+2.2,zz),.30,.19,16,axis='x')
+ for k in range(12):
+  a=k*TAU/12;rod('steel',(x+7.2,y+2.2+math.cos(a)*.34,zz+math.sin(a)*.34),(x+7.2,y+2.2+math.cos(a+.2)*1.12,zz+math.sin(a+.2)*1.12),.07,6)
+ for ax in [x-.8,x+5.6]:
+  rod('dark',(ax,y+.5,z+side*2.4),(ax+.6,y+1.6,z+side*1.7),.20,12);rod('steel',(ax,y+.65,z+side*2.3),(ax+.45,y+1.5,z+side*1.8),.11,10)
+  ellipsoid('steel',(ax,y+.5,z+side*2.4),(.45,.45,.45),12)
+ box('dark',(x+5,y+4.43,z-2+side*1.3),(2.2,.12,.6))
+ for k in range(5):rod('steel',(x+4.15+k*.4,y+4.50,z-2+side*1.3-.2),(x+4.15+k*.4,y+4.50,z-2+side*1.3+.2),.026,6)
 # Trees on every garden rim, cascading vines; deliberately clear doors, views and walking lanes.
 print('N09: végétation et cascades',flush=True)
 for p in PLAN['platforms']:
@@ -425,17 +458,16 @@ for(zone,ma),b in BUILD.items():
  bmesh.ops.recalc_face_normals(b,faces=list(b.faces));me=bpy.data.meshes.new(zone+' / '+ma);b.to_mesh(me);b.free();obj=bpy.data.objects.new(zone+' / '+ma,me)
  collection=bpy.data.collections.get(zone)
  if not collection:collection=bpy.data.collections.new(zone);bpy.context.scene.collection.children.link(collection)
- collection.objects.link(obj);me.materials.append(MATS[ma]);uv=me.uv_layers.new(name='UVMap');me.update()
+ collection.objects.link(obj);me.materials.append(MATS[ma]);uv=me.uv_layers.get('UVMap')or me.uv_layers.new(name='UVMap');me.update()
  for poly in me.polygons:
+  if META[ma].get('authoredUV'):continue
   axis=max(range(3),key=lambda i:abs(poly.normal[i]))
   for li in poly.loop_indices:
    co=me.vertices[me.loops[li].vertex_index].co;uv.data[li].uv=(co.y,co.z)if axis==0 else(co.x,co.z)if axis==1 else(co.x,co.y)
- if ma in ['ivory']and not zone.startswith('Vesper'):
-  bevel=obj.modifiers.new('Arêtes usinées','BEVEL');bevel.width=.025;bevel.segments=2;bevel.limit_method='ANGLE';bevel.angle_limit=.75
 # Font objects are editable; exported evaluated meshes receive their own UVs.
 for obj in TEXT:
  obj['role']='functional identifier'
-sc=bpy.context.scene;sc.unit_settings.system='METRIC';sc['plan_m09']=json.dumps(PLAN,ensure_ascii=False);sc['mission_order']='01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09'
+sc=bpy.context.scene;sc['object_refinement']=json.dumps(DETAILS);sc.unit_settings.system='METRIC';sc['plan_m09']=json.dumps(PLAN,ensure_ascii=False);sc['mission_order']='01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09'
 sc.render.engine='CYCLES';sc.cycles.samples=32;sc.cycles.use_denoising=False;sc.render.resolution_x=1600;sc.render.resolution_y=1000;sc.render.resolution_percentage=100
 sc.world.use_nodes=True;sc.world.node_tree.nodes['Background'].inputs[0].default_value=(.31,.12,.22,1);sc.world.node_tree.nodes['Background'].inputs[1].default_value=.6
 sun=bpy.data.lights.new('Soleil de Vesper','SUN');sun.energy=3;sun.color=(1,.65,.38);o=bpy.data.objects.new('Soleil de Vesper',sun);sc.collection.objects.link(o);o.rotation_euler=(.65,-.35,-.9)
@@ -493,13 +525,19 @@ def export_pwm(objects,filename):
 
 drone_objects=[o for o in sc.objects if o.name.startswith('Drones de surveillance')];export_pwm(drone_objects,'surveillance.pwm.gz')
 static=[o for o in sc.objects if not o.name.startswith(('Eau animée','Drones de surveillance','Sas / '))];stats=export_pwm(static,'gardens.pwm.gz');stats.update(colliders=len(SOLIDS),platforms=len(PLAN['platforms']),objectives=len(PLAN['objectives']),trees=len(TREES));(OUT/'stats.json').write_text(json.dumps(stats,indent=2));print(json.dumps(stats),flush=True)
-# A true geometric LOD retains closed canopy volumes; do not thin leaves by deleting arbitrary triangles.
-reduced=[]
+# Keep entire botanical twig cards in the mobile LOD: UV islands and their
+# silhouettes stay intact. Stems and architectural geometry are unchanged.
+reduced=[];branch_lod=[]
 for o in static:
- if o.type=='MESH' and o.data.materials and o.data.materials[0].name.startswith(('leaf','blossom')):
-  mod=o.modifiers.new('LOD mobile / feuillage','DECIMATE');mod.ratio=.36;mod.use_collapse_triangulate=True;reduced.append((o,mod))
-bpy.context.view_layer.update();low_stats=export_pwm(static,'gardens-low.pwm.gz');low_stats['lod']='mobile';(OUT/'stats-low.json').write_text(json.dumps(low_stats,indent=2));print(json.dumps(low_stats),flush=True)
-for o,mod in reduced:o.modifiers.remove(mod)
+ if o.type=='MESH' and o.data.materials and o.data.materials[0].name in ['bark','biotic']:
+  mod=o.modifiers.new('LOD mobile / ramification','DECIMATE');mod.ratio=.6;mod.use_collapse_triangulate=True;branch_lod.append((o,mod))
+ if o.type=='MESH' and o.data.attributes.get('mobile'):
+  original=o.data;reduced.append((o,original));o.data=original.copy();b=bmesh.new();b.from_mesh(o.data);layer=b.faces.layers.int.get('mobile')
+  drop=[f for f in b.faces if f[layer]==2];bmesh.ops.delete(b,geom=drop,context='FACES');bmesh.ops.delete(b,geom=[v for v in b.verts if not v.link_faces],context='VERTS');b.to_mesh(o.data);b.free()
+bpy.context.view_layer.update();low_stats=export_pwm(static,'gardens-low.pwm.gz');low_stats['lod']='mobile / intact twig cards';(OUT/'stats-low.json').write_text(json.dumps(low_stats,indent=2));print(json.dumps(low_stats),flush=True)
+for o,original in reduced:
+ copy=o.data;o.data=original;bpy.data.meshes.remove(copy)
+for o,mod in branch_lod:o.modifiers.remove(mod)
 if '--render' in sys.argv:
  sc.render.filepath=str(OUT/'blender-overview.png');bpy.ops.render.render(write_still=True)
 print('N09: terminé',flush=True)

@@ -86,12 +86,12 @@ body.pw-shaded .pw-hud,body.pw-shaded #hud,body.pw-shaded .pw-minimal-action{vis
   <a href="./jardins.html" style="color:#ff8cbe;font-size:13px">VOIR LE PLAN 3D DES JARDINS</a><div id="status" class="small">Clavier / souris, manette, tactile ou casque WebXR · rendu WebGPU avec repli WebGL</div>
 </div></div>
 <script type="module">
-import {decorateShade} from './mission-briefing.js?v=3.90.0';
+import {decorateShade} from './mission-briefing.js?v=3.90.1';
 decorateShade(document.getElementById('shade'),{mission:9,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});
 const lylu=new URLSearchParams(location.search).get('character')==='lylu';
 document.getElementById(lylu?'pick-lylu':'pick-ghju').setAttribute('aria-current','true');
 if(lylu)document.getElementById('compat').href='./niveau9.html?character=lylu&renderer=webgl';
-import('./niveau9.js?v=3.90.0').catch(error=>{
+import('./niveau9.js?v=3.90.1').catch(error=>{
  const status=document.getElementById('status'),button=document.getElementById('start');
  if(status)status.textContent='Erreur de chargement : '+(error?.message||String(error))+' — essaye le mode compatibilité WebGL.';
  if(button){button.disabled=false;button.textContent='RECHARGER';button.addEventListener('click',()=>location.reload());}
