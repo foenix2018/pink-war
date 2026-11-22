@@ -805,7 +805,7 @@ export class ArenaGame {
     // One-shot toggles apply once; held jump remains held across the substeps.
     if(dt>MAX_SIMULATION_STEP){
       const slices=simulationSlices(dt);
-      for(let i=0;i<slices.count;i++)this.step(slices.dt,i?{...input,crouchToggle:false}:input);
+      for(let i=0;i<slices.count;i++)this.step(slices.dt,i?{...input,crouchToggle:false,jumpPressed:false}:input);
       return;
     }
     this.autoReload();
@@ -823,7 +823,7 @@ export class ArenaGame {
     let ix = input.x || 0, iz = input.z || 0; const magnitude = Math.hypot(ix, iz);
     if (magnitude > 1) { ix /= magnitude; iz /= magnitude; }
     // RLH-inspired locomotion: jump is an edge-triggered ballistic state, independent of frame rate.
-    const p = this.player, jumpDown = !!input.jump;
+    const p = this.player, jumpDown = !!(input.jump||input.jumpPressed);
     tickSlideCooldown(p,dt);
     if(input.sprint||Math.hypot(this.planarVelocity.x,this.planarVelocity.z)>=SLIDE_RULES.runSpeed)p.lastRunAt=this.time;
     if(input.crouchToggle) {
@@ -832,7 +832,7 @@ export class ArenaGame {
       else { p.crouched=!p.crouched;this.event('crouch',{active:p.crouched}); }
     }
     if(p.sliding&&input.jump&&!p.jumpHeld&&SLIDE_RULES.duration-p.slideTime>=SLIDE_RULES.jumpCancelAfter)endSlide(p);
-    if (jumpDown && !p.jumpHeld) {
+    if (input.jumpPressed || (jumpDown && !p.jumpHeld)) {
       let kind=null;
       if(this.grapple.phase==='flying'){releaseGrapple(this);kind=tryJump(p,this.obstacles,this.time);}
       else if(grappleAttached(this.grapple))kind=releaseGrapple(this,{jump:true})?'grapple':null;

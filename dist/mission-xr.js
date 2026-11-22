@@ -66,7 +66,7 @@ export function createMissionXR({getWorld,onFrame,onPause,onResume,onHome,onExit
    const axis=v=>Math.abs(v||0)>.16?v:0;yaw-=axis(rp?.axes?.[2]||0)*1.8*dt;setYaw(yaw);api.syncPose();
    const forward=new T.Vector3();w.camera.getWorldDirection(forward);const moveYaw=Math.atan2(-forward.x,-forward.z);
    // Same grips as the Arena and the range: left grip raises the optic to the eye, right grip sprints.
-   return controls={x:axis(lp?.axes?.[2]),z:axis(lp?.axes?.[3]),moveYaw,yaw,jump,interact,fire:trigger&&!blocked,leftFire:leftTrigger&&!blocked,melee,charge:charge&&!blocked,aim:down(lp?.buttons[1]),sprint:down(rp?.buttons[1])};
+   return controls={x:axis(lp?.axes?.[2]),z:axis(lp?.axes?.[3]),moveYaw,yaw,jump:down(rp?.buttons[4]),jumpPressed:jump,interact,fire:trigger&&!blocked,leftFire:leftTrigger&&!blocked,melee,charge:charge&&!blocked,aim:down(lp?.buttons[1]),sprint:down(rp?.buttons[1])};
   },
   aim(hand='right'){
    const w=getWorld(),T=w.T,e=entries.find(e=>e.source?.handedness===hand),source=e?.ray||w.camera;

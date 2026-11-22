@@ -72,7 +72,7 @@ test('the menu tells the twenty chapters in five acts; only the built ones are p
   const html=read('index.html'),section=html.slice(html.indexOf('<section id="story-chapters"'),html.indexOf('</section>',html.indexOf('<section id="story-chapters"')));
   for(const act of ['ACTE I — LES CENDRES DE VESPER','ACTE II — LES ORIGINES DU SOULÈVEMENT','ACTE III — LA GUERRE DES SURVIVANTS','ACTE IV — LES ENFANTS DE LA TRANSCENDANCE','ACTE V — LE DERNIER ORDRE'])assert.ok(section.includes(act),act);
   for(let n=1;n<=20;n++)assert.match(section,new RegExp('>'+String(n).padStart(2,'0')+' — '),`chapter ${n}`);
-  assert.equal((section.match(/data-chapter="(campaign|campaign2|campaign3|campaign4|ligne9|campaign6|foret|campaign8|campaign9)"/g)||[]).length,9);
-  assert.equal((section.match(/disabled aria-disabled="true"/g)||[]).length,11);
+  assert.equal((section.match(/data-chapter="(campaign|campaign2|campaign3|campaign4|ligne9|campaign6|foret|campaign8|campaign9|campaign10)"/g)||[]).length,10);
+  assert.equal((section.match(/disabled aria-disabled="true"/g)||[]).length,10);
   assert.match(html,/<title>PINK WARS — LES HÉRITIERS DU SILENCE<\/title>/);assert.doesNotMatch(html,/LA FRACTURE|tenues de pompier/);
 });

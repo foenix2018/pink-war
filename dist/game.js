@@ -907,8 +907,8 @@ function stepFrame(timestamp, xrFrame) {
     const facing = yaw + (vr.mode==='stereo' && vr.sensor ? vr.phoneYaw : 0);
     let moveYaw = facing;
     if(vr.mode==='xr')moveYaw=vr.movementYaw(facing);
-    if(jumpQueued)game.player.jumpHeld=false;
-    const jump = jumpQueued || touchJumpPointers.size>0 || vrInput.jump || keys.has('Space') || keys.has('KeyJ'); jumpQueued = false;
+    const jumpPressed=jumpQueued||vrInput.jump;
+    const jump = jumpQueued || touchJumpPointers.size>0 || vrInput.jumpHeld || vrInput.jump || keys.has('Space') || keys.has('KeyJ'); jumpQueued = false;
     const crouchToggle=crouchQueued||vrInput.crouchToggle;crouchQueued=false;
     aiming=!!OPTICS[game.weapon.id]&&!game.reloadRemaining&&(vr.mode==='xr'?vrInput.aim:desktopZoomHeld(keys)||mouseAim||touchAimLatched||aimPointers.size>0||vrInput.precision);
     aimBlend+=(Number(aiming)-aimBlend)*(1-Math.exp(-dt*14));
@@ -916,7 +916,7 @@ function stepFrame(timestamp, xrFrame) {
     $('aim-button').setAttribute('aria-pressed',String(aiming));
     currentSprinting=!aiming&&(touchSprinting||vrInput.sprint||keys.has('ShiftLeft')||keys.has('ShiftRight')||(move.id!==null&&Math.hypot(move.x,move.y)>=.88));
     game.precisionAiming=aimBlend>.55;
-    game.step(dt, { x, z, yaw: facing, moveYaw, gamepadMoving:vrInput.gamepadMoving, touchMoving:vr.mode!=='xr'&&move.id!==null&&!!(move.x||move.y), sprint: currentSprinting, jump,crouchToggle });
+    game.step(dt, { x, z, yaw: facing, moveYaw, gamepadMoving:vrInput.gamepadMoving, touchMoving:vr.mode!=='xr'&&move.id!==null&&!!(move.x||move.y), sprint: currentSprinting, jump,jumpPressed,crouchToggle });
     jetpackAudio.update(!!game.player.jetpackActive&&settings.sound,jetpackFuel(game.player));
     cameraFeel.update(dt,{speed:Math.hypot(game.playerVelocity.x,game.playerVelocity.z),grounded:game.player.grounded,verticalSpeed:game.player.verticalSpeed,strafe:x,sprint:currentSprinting,aim:aimBlend});
     try{filmLook ||= mountFilmLook({canvas:document.getElementById('world'),graded:()=>!!world?.renderer?.fpsPresentation?.stats?.().enabled});const on=game.state==='playing'&&vr?.mode!=='xr'&&vr?.mode!=='stereo';if(on!==filmOn){filmOn=on;filmLook.setEnabled(on);}filmLook.update(dt,{health:game.player.hp/100});}catch{}

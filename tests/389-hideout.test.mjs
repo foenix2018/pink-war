@@ -41,7 +41,7 @@ test('completed chapters, current equipment and health reach the refuge and the 
  const p=recordHideoutArrival({level:6,characterId:'ghju',game:g,completed:true,storage:store});assert.deepEqual(p.completed,[6]);assert.equal(nextHideoutChapter(p),7);assert.equal(p.health,37);assert.equal(p.shield,12);assert.equal(p.selectedWeapon,2);assert.ok(p.owned.includes(2));
  const seven=recordHideoutArrival({level:7,characterId:'ghju',completed:true,storage:store});assert.equal(nextHideoutChapter(seven),8);
  const eight=recordHideoutArrival({level:8,characterId:'ghju',completed:true,storage:store});assert.equal(nextHideoutChapter(eight),9);
- const end=recordHideoutArrival({level:9,characterId:'ghju',completed:true,storage:store});assert.equal(nextHideoutChapter(end),null);assert.equal(nextHideoutChapter(readHideoutProfile('lylu',store)),1);
+ const nine=recordHideoutArrival({level:9,characterId:'ghju',completed:true,storage:store});assert.equal(nextHideoutChapter(nine),10);const end=recordHideoutArrival({level:10,characterId:'ghju',completed:true,storage:store});assert.equal(nextHideoutChapter(end),null);assert.equal(nextHideoutChapter(readHideoutProfile('lylu',store)),1);
 });
 test('history records only completed events and preserves the actual chapter two decision',()=>{
  const store=storage();recordHideoutArrival({level:2,completed:true,choice:'proof',storage:store});const past=historyForHero(readHideoutProfile('ghju',store));assert.deepEqual(past.map(e=>e.level),[2]);assert.match(past[0].text,/archives HELIX ont été protégées/);assert.ok(!past.some(e=>e.level===3));

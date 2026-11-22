@@ -1,6 +1,6 @@
 import {jetpackFuel} from './locomotion.js';
 import {createJetpackAudio} from './jetpack-audio.js';
-// What GHJU and LYLU can do, in every mission, from the stand to chapter 6. The physics lives once, in ArenaGame
+// What GHJU and LYLU can do, in every mission, from the stand through every playable chapter. The physics lives once, in ArenaGame
 // (game-logic.js + locomotion.js); each level only has to show and sound it. This module is that shared "show and sound"
 // layer, so a new ability is added here and in the engine, never level by level.
 export const HERO_CAPABILITIES=Object.freeze({

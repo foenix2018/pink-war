@@ -430,7 +430,7 @@ export class VRController {
       syncTrackedHands(this.controllers,this.session,frame,this.hooks.world().renderer.xr.getReferenceSpace());
       this.applyRoles();
     }
-    const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, gamepadMoving:false, fire: false, fireHands:{left:false,right:false}, sprint: false, precision: false, aim:false, jump: false, pickup: false, crouchToggle: false, melee: false, charge: false };
+    const result = { x: 0, z: 0, turn: 0, tilt: 0, snap: 0, gamepadMoving:false, fire: false, fireHands:{left:false,right:false}, sprint: false, precision: false, aim:false, jump: false, jumpHeld:false, pickup: false, crouchToggle: false, melee: false, charge: false };
     const dual=!!this.hooks.game?.()?.weapon?.dual,rawHands={left:false,right:false},trackedHands={left:false,right:false};
     const xr = this.mode === 'xr', cfg = settingsOf(this), mainHand = cfg.hand, sideHand = otherHand(mainHand);
     const focused=typeof document==='undefined'||(!document.hidden&&(!document.hasFocus||document.hasFocus()));
@@ -439,9 +439,9 @@ export class VRController {
     skillsConsumed ||= xr&&!!this.hooks.skillsInput?.(this);
     if(xr){
       const world=this.hooks.world(),game=this.hooks.game(),left=controllerOf(this,'left'),right=controllerOf(this,'right');
-      if(game?.projectedShieldsEnabled&&!this.shieldButton)this.shieldButton=createXRShieldButton(world.T,world.scene,{getGame:()=>this.hooks.game(),haptic:()=>this.haptic('weapon')});
+      if(typeof document!=='undefined'&&game?.projectedShieldsEnabled&&!this.shieldButton)this.shieldButton=createXRShieldButton(world.T,world.scene,{getGame:()=>this.hooks.game(),haptic:()=>this.haptic('weapon')});
       const shieldConsumed=this.shieldButton?.update({active:this.hooks.phase()==='playing'&&!skillsConsumed&&!!left?.tracked&&!!right?.tracked&&(!this.session?.visibilityState||this.session.visibilityState==='visible'),left:left?.anchor,ray:right?.ray,camera:world.camera,trigger:pressed(padOf(this,'right')?.buttons?.[0])});
-      if(game?.grappleEnabled&&!this.grappleButton)this.grappleButton=createXRShieldButton(world.T,world.scene,{kind:'grapple',getGame:()=>this.hooks.game(),onToggle:()=>this.hooks.game().toggleGrapple(),haptic:()=>this.haptic('weapon')});
+      if(typeof document!=='undefined'&&game?.grappleEnabled&&!this.grappleButton)this.grappleButton=createXRShieldButton(world.T,world.scene,{kind:'grapple',getGame:()=>this.hooks.game(),onToggle:()=>this.hooks.game().toggleGrapple(),haptic:()=>this.haptic('weapon')});
       const grappleConsumed=this.grappleButton?.update({active:this.hooks.phase()==='playing'&&!skillsConsumed&&!shieldConsumed&&!!left?.tracked&&!!right?.tracked&&(!this.session?.visibilityState||this.session.visibilityState==='visible'),left:left?.anchor,ray:right?.ray,camera:world.camera,trigger:pressed(padOf(this,'right')?.buttons?.[0])});
       skillsConsumed ||= !!grappleConsumed;
       skillsConsumed ||= !!shieldConsumed;
@@ -484,9 +484,9 @@ export class VRController {
         result.aim ||= tracked && pressed(pad.buttons[1]);
       }
       const edge = (key, index, action = key) => { const id = `${source.handedness}:${key}`, down = pressed(pad.buttons[index]); if (down && !this.previous.get(id) && tracked) actions.add(action); this.previous.set(id, down); };
-      if(xr&&source.handedness==='right'){edge('jump',4);edge('reload',5);}
+      if(xr&&source.handedness==='right'){result.jumpHeld ||= tracked&&pressed(pad.buttons[4]);edge('jump',4);edge('reload',5);}
       if(xr&&source.handedness==='left'){edge('pause',4);edge('next',5);}
-      if(!xr&&main){edge('reload',DESKTOP_BUTTONS.reload);edge('next',DESKTOP_BUTTONS.next);}
+      if(!xr&&main){result.jumpHeld ||= tracked&&pressed(pad.buttons[DESKTOP_BUTTONS.jump]);edge('reload',DESKTOP_BUTTONS.reload);edge('next',DESKTOP_BUTTONS.next);}
       // Armour layer: bumpers on a gamepad; in the headset the main stick click strikes and the free index
       // trigger of the other hand throws (dual pistols keep both triggers for firing).
       if(!xr&&main){edge('melee',DESKTOP_BUTTONS.melee);edge('charge',DESKTOP_BUTTONS.charge);}
@@ -506,7 +506,7 @@ export class VRController {
     this.trackingLost=xr&&!mainTracked;
     const primary=controllerOf(this,'right');
     const pauseConsumed=xr&&this.fracturePause?.update({active:phase==='paused',camera:this.hooks.world().camera,ray:primary?.tracked?primary.ray:null,trigger:mainTracked&&pressed(padOf(this,'right')?.buttons?.[0])});
-    if(pauseConsumed){this.cancelTrigger();if(actions.has('pause')&&this.hooks.phase()===phase)this.hooks.togglePause();return {...result,x:0,z:0,turn:0,tilt:0,fire:false,fireHands:{left:false,right:false},jump:false,pickup:false,crouchToggle:false};}
+    if(pauseConsumed){this.cancelTrigger();if(actions.has('pause')&&this.hooks.phase()===phase)this.hooks.togglePause();return {...result,x:0,z:0,turn:0,tilt:0,fire:false,fireHands:{left:false,right:false},jump:false,jumpHeld:false,pickup:false,crouchToggle:false};}
     if (actions.has('pause')) { this.hooks.togglePause(); if (xr) this.cancelTrigger(); }
     else if(actions.has('companion'))this.hooks.toggleSkills?.();
     else if (phase === 'over' && actions.has('reload') && xr) { this.hooks.begin(); this.cancelTrigger(); }
@@ -523,8 +523,8 @@ export class VRController {
       if(!visible||lostTrackingNow&&phase==='playing')this.hooks.pause?.();
     }
     const playing = (this.hooks.phase?.() || phase) === 'playing';
-    if(skillsConsumed){this.cancelTrigger();this.precision=this.aiming=false;return { ...result,x:0,z:0,turn:0,tilt:0,snap:0,fire:false,fireHands:{left:false,right:false},sprint:false,precision:false,aim:false,jump:false,pickup:false,crouchToggle:false };}
-    if (!playing) { result.x = result.z = result.turn = result.tilt = result.snap = 0; result.sprint = result.precision = result.aim = false; result.jump = false;result.pickup = false; if (xr) this.cancelTrigger(); }
+    if(skillsConsumed){this.cancelTrigger();this.precision=this.aiming=false;return { ...result,x:0,z:0,turn:0,tilt:0,snap:0,fire:false,fireHands:{left:false,right:false},sprint:false,precision:false,aim:false,jump:false,jumpHeld:false,pickup:false,crouchToggle:false };}
+    if (!playing) { result.x = result.z = result.turn = result.tilt = result.snap = 0; result.sprint = result.precision = result.aim = false; result.jump = false;result.jumpHeld=false;result.pickup = false; if (xr) this.cancelTrigger(); }
     if((!xr||mainTracked)&&(dual&&xr?!rawHands.left&&!rawHands.right:!rawFire))this.triggerBlocked=false;
     result.gamepadMoving=playing&&!xr&&!!(result.x||result.z);
     result.jump = playing && actions.has('jump');result.pickup = playing && actions.has('pickup');result.crouchToggle=playing && actions.has('crouch');

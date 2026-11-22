@@ -37,7 +37,7 @@ export function createPinkWarsInput(){
    companion:edges.has('companion'),
    aim:actions.aim||desktopZoomHeld(keys),
    sprint:actions.sprint||held(keys,...PINK_WARS_KEYS.sprint),
-   jump:edges.has('jump')||held(keys,...PINK_WARS_KEYS.jump),
+   jump:actions.jump||held(keys,...PINK_WARS_KEYS.jump),jumpPressed:edges.has('jump'),
    crouchToggle:edges.has('crouch'),
    interact:edges.has('interact'),next:edges.has('next'),reload:edges.has('reload'),pause:edges.has('pause'),
    melee:edges.has('melee'),charge:edges.has('charge')
@@ -49,13 +49,13 @@ export function createPinkWarsInput(){
 // Keep gamepad/keyboard mappings from DesktopGamepadInput unchanged.
 export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onReload,onCrouch,onView,onPause,onAim}={}){
  const touch=(window.matchMedia?.('(pointer:coarse)')?.matches??(navigator.maxTouchPoints>0));
- if(!touch)return {state:{x:0,z:0,lookX:0,lookY:0,lookDX:0,lookDY:0,fire:false,aim:false,sprint:false},step(){return 0;},reset(){}};
+ if(!touch)return {state:{x:0,z:0,lookX:0,lookY:0,lookDX:0,lookDY:0,fire:false,aim:false,sprint:false,jump:false},step(){return 0;},reset(){}};
  const root=document.createElement('div');root.id='m02-touch-controls';
  root.innerHTML='<div class="m02-stick" id="m02-move" aria-label="Déplacement"><div class="m02-stick-ring"><span class="m02-stick-knob"></span></div><small>SE DÉPLACER</small></div>'+
    
-   '<div class="m02-actions"><button data-m02="aim">VISER</button><button data-m02="fire">TIR</button><button data-m02="jump">↑ SAUT</button><button data-m02="interact">F · ACTION</button><button data-m02="next">ARME</button><button data-m02="reload">↻</button><button data-m02="crouch">ACCROUPI</button><button data-m02="view">VUE</button><button data-m02="pause">Ⅱ</button></div>';
+   '<div class="m02-actions"><button data-m02="aim">VISER</button><button data-m02="fire">TIR</button><button data-m02="jump" aria-label="Saut : deux appuis pour le double saut">SAUT ×2</button><button data-m02="interact">F · ACTION</button><button data-m02="next">ARME</button><button data-m02="reload">↻</button><button data-m02="crouch">ACCROUPI</button><button data-m02="view">VUE</button><button data-m02="pause">Ⅱ</button></div>';
  document.body.append(root);
- const state={x:0,z:0,lookX:0,lookY:0,lookDX:0,lookDY:0,fire:false,aim:false,sprint:false};
+ const state={x:0,z:0,lookX:0,lookY:0,lookDX:0,lookDY:0,fire:false,aim:false,sprint:false,jump:false};
  const aimButton=root.querySelector('[data-m02="aim"]');let aimLatched=false;
  const setAim=value=>{state.aim=!!value;aimButton.setAttribute('aria-pressed',String(state.aim));onAim?.(state.aim);};
  const resetAim=()=>{aimLatched=false;setAim(false);};
@@ -113,6 +113,7 @@ export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onRelo
  const actions={jump:onJump,interact:onInteract,next:onNext,reload:onReload,crouch:onCrouch,view:onView,pause:onPause};
  for(const b of root.querySelectorAll('button')){
   const name=b.dataset.m02;
+  if(name==='jump')releasers.add(()=>{state.jump=false;});
   if(name==='fire')releasers.add(()=>{if(state.fire){state.fire=false;onFire?.(false);}});
   if(name==='aim')releasers.add(()=>{if(state.aim&&!aimLatched)setAim(false);});
   b.addEventListener('pointerdown',e=>{
@@ -120,8 +121,9 @@ export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onRelo
    try{b.setPointerCapture(e.pointerId);}catch{}
    if(name==='fire'){state.fire=true;onFire?.(true);}
    else if(name==='aim'){if(e.pointerType==='touch'){aimLatched=!aimLatched;setAim(aimLatched);}else{aimLatched=false;setAim(true);}}
-   else actions[name]?.();
+   else {if(name==='jump')state.jump=true;actions[name]?.();}
   });
+  if(name==='jump')for(const event of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(event,()=>{state.jump=false;});
   if(name==='fire'){ // fire + aim with one thumb: sliding inside the button's circle turns the view; the screen swipe stays as it was
    let last=null;
    b.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse')last={id:e.pointerId,x:e.clientX,y:e.clientY};});
@@ -141,7 +143,7 @@ export function createPinkWarsTouch(host,{onFire,onJump,onInteract,onNext,onRelo
  }
  // Watchdog: a control still marked held while no finger has touched the screen for a moment is a stale one.
  return {state,root,releaseAim:resetAim,step(dt){
-  const held=state.x||state.z||state.fire||(state.aim&&!aimLatched)||lookPointer!==null;
+  const held=state.x||state.z||state.fire||state.jump||(state.aim&&!aimLatched)||lookPointer!==null;
   if(held&&sawTouch&&fingers===0){idleFor+=dt||0;if(idleFor>.25){releaseAll();idleFor=0;}}else idleFor=0;
-  return orbit.step(dt);},reset(){state.x=state.z=state.lookX=state.lookY=state.lookDX=state.lookDY=0;state.fire=state.sprint=false;orbit.reset();lookPointer=null;onFire?.(false);resetAim();}};
+  return orbit.step(dt);},reset(){state.x=state.z=state.lookX=state.lookY=state.lookDX=state.lookDY=0;state.fire=state.sprint=state.jump=false;orbit.reset();lookPointer=null;onFire?.(false);resetAim();}};
 }

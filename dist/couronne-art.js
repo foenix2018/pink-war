@@ -1,3 +1,4 @@
+import {createHelixPlanting} from './helix-botanical.js';
 import {createFPSChapter} from './fps-environments.js';
 import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
 import {createStairHardware} from './stair-hardware.js';
@@ -29,7 +30,7 @@ function tiledPlane(T, w, h, tile) {
   return g;
 }
 
-export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, onPortalClose=()=>{}, camera } = {}) {
+export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, onPortalClose=()=>{}, camera, chapter=0 } = {}) {
   const low = quality === 'low', rng = seeded(9091);
   const root = new T.Group(); root.name = 'COURONNE HELIX'; scene.add(root);
   let fpsChapter=null;
@@ -145,6 +146,8 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
     mesh.position.set((x1 + x2) / 2, y + .002, (z1 + z2) / 2); mesh.receiveShadow = true; return add(mesh);
   };
 
+  const planting=chapter===10?createHelixPlanting(T,root,{queue,M,low,webgpu,random:rng}):null;
+
   // ---------- Sky, sun, clouds, fog and light ----------
   const skyDome = new T.Mesh(new T.SphereGeometry(950, 32, 16), new T.MeshBasicMaterial({ map: sky, side: T.BackSide, fog: false, depthWrite: false }));
   skyDome.renderOrder = -10; add(skyDome, scene);
@@ -208,6 +211,7 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
   const posts = [];
   function dress(o) {
     if(o.kind==='fps-cover')return;
+    if(planting&&['planter','hedge'].includes(o.kind)){planting.add(o);return;}
     const x1 = o.x - o.hx, x2 = o.x + o.hx, z1 = o.z - o.hz, z2 = o.z + o.hz, w = o.hx * 2, d = o.hz * 2, y = o.y;
     const surface={bench:'bench',kiosk:'kiosk',scanner:'scanner',desk:'desk'};
     if(surface[o.kind]){
@@ -254,7 +258,7 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
       }
       case 'scanner': queue(M.white, o.x, y, o.z, w, o.height, d); queue(M.ice, o.x, y + .3, o.z, w + .02, o.height - .6, .06); break;
       case 'fountain': queue(M.white, o.x, y, o.z, w, o.height, d); queue(M.water, o.x, y + o.height - .05, o.z, w - .5, .02, d - .5); break;
-      case 'sculpture': { queue(M.white, o.x, y, o.z, w, .5, d); const k = new T.Mesh(new T.TorusKnotGeometry(.75, .2, 90, 10, 2, 3), M.metal); k.position.set(o.x, y + 2.1, o.z); k.castShadow = !low; animated.push(t => { k.rotation.y = t * .15; }); add(k); break; }
+      case 'sculpture': { queue(M.white, o.x, y, o.z, w, .5, d); const k = new T.Mesh(new T.TorusKnotGeometry(.75, .2, 90, 10, 2, 3), M.metal); k.position.set(o.x, y + 2.1, o.z); k.castShadow = !low; k.userData.keepDynamic=true;animated.push(t => { k.rotation.y = t * .15; }); add(k); break; }
       case 'barrier': queue(M.metal, o.x, y, o.z, w, o.height, d); queue(M.helix, o.x, y + o.height - .12, o.z, w + .02, .05, d + .02); break;
       case 'desk': queue(M.white, o.x, y, o.z, w, o.height, d); queue(M.ice, o.x, y + o.height, o.z, w * .6, .02, d * .6); break;
       case 'pillar': queue(M.white, o.x, y, o.z, w, o.height, d); break;
@@ -302,7 +306,7 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
     for (const [phase, color] of [[0, 0x9fefff], [Math.PI, 0xffd6a8]]) holo.add(new T.Mesh(new T.TubeGeometry(curve(phase), 120, .07, 6), M.additive(color, .85)));
     for (let k = 0; k < 9; k++) { const rung = new T.Mesh(new T.BoxGeometry(3.2, .03, .03), M.additive(0xc8f2ff, .45)); rung.position.y = 1.6 + k * .7; rung.rotation.y = k * .7; holo.add(rung); }
     const halo = new T.Mesh(new T.PlaneGeometry(9, 9), M.additive(0x7fdcff, .22, glowDisc)); halo.rotation.x = -Math.PI / 2; halo.position.y = .05; holo.add(halo);
-    animated.push(t => { holo.rotation.y = t * .35; }); add(holo);
+    holo.userData.keepDynamic=true;animated.push(t => { holo.rotation.y = t * .35; }); add(holo);
   }
   // Heliport marking: ring and HELIX glyph painted on the pad.
   {
@@ -322,7 +326,7 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
   queue(M.white, 0, 15, -25, 40.4, .6, 18.4); queue(M.white, 0, 13.6, -13.6, 14, .4, 5); queue(M.warm, 0, 13.55, -13.6, 12, .05, 4.2);
   floorPlane(-19.6, 19.6, -33.6, -16.2, HEIGHTS.parvis + .01, std({ color: 0x3a3f47, roughness: .08, metalness: .4 }));
   {
-    const helixSign = new T.Mesh(new T.PlaneGeometry(10, 2.4), new T.MeshBasicMaterial({ map: sign('HELIX', 'L’ANCRAGE VOUS RELIE', '#f4f7fb', 512, 128), transparent: true, depthWrite: false, toneMapped: false }));
+    const helixSign = new T.Mesh(new T.PlaneGeometry(10, 2.4), new T.MeshBasicMaterial({ map: sign('HELIX', chapter===10?'LA COURONNE':'L’ANCRAGE VOUS RELIE', '#f4f7fb', 512, 128), transparent: true, depthWrite: false, toneMapped: false }));
     helixSign.position.set(0, 12.2, -15.9); add(helixSign);
     const dot = new T.Mesh(new T.CircleGeometry(.35, 20), M.helix); dot.position.set(4.6, 12.7, -15.88); add(dot);
   }
@@ -330,19 +334,19 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
   const gateFields = STAIRS.filter(s => s.to === 'ancrage').map(s => {
     const field = new T.Mesh(new T.PlaneGeometry(s.halfWidth * 2 + .6, 3.2), M.additive(0xff4659, .32)); field.position.set(s.x, s.base + 1.6, s.bottomZ + .4); add(field);
     const bar = new T.Mesh(new T.BoxGeometry(s.halfWidth * 2 + .8, .12, .12), M.helix); bar.position.set(s.x, s.base + 3.25, s.bottomZ + .4); add(bar);
-    return { field, bar };
+    field.userData.keepDynamic=bar.userData.keepDynamic=true;return { field, bar };
   });
   let gatesOpen = false, gateFade = 1;
   animated.push((t, dt) => { gateFade = Math.max(0, Math.min(1, gateFade + (gatesOpen ? -dt : dt) * 1.5)); for (const g of gateFields) { g.field.material.opacity = (.22 + .1 * Math.sin(t * 7)) * gateFade; g.field.visible = gateFade > .01; g.bar.visible = gateFade > .5; } });
   // Consoles (lobby security, two phase stabilizers): screens whose colour reports their state.
   const consoles = new Map();
   for (const [id, x, z, y, text] of [['securite', 0, -29.4, HEIGHTS.parvis, 'SÉCURITÉ'], ['ancrage-ouest', -11, -45.9, HEIGHTS.ancrage, 'STAB. OUEST'], ['ancrage-est', 11, -45.9, HEIGHTS.ancrage, 'STAB. EST']]) {
-    const control=createModernSwitch(T,root,{x,y:y+1.55,z:z+.52,scale:.9,id,variant:id==='securite'?'access':'rotary',label:text,onLabel:id==='securite'?'ACCÈS OUVERT':'DÉSYNCHRONISÉ',offLabel:'VERROUILLÉ',materials:{paint:M.white,metal:M.metal,dark:M.dark},low});
-    control.root.rotation.x=-.35;consoles.set(id,{control,done:false});
+    const control=createModernSwitch(T,root,{x,y:y+1.55,z:z+.52,scale:.9,id,variant:id==='securite'?'access':'rotary',label:chapter===10?(id==='ancrage-est'?'CONFINEMENT':id==='ancrage-ouest'?'RECHERCHE':'SÉCURITÉ'):text,onLabel:id==='securite'?'ACCÈS OUVERT':'DÉSYNCHRONISÉ',offLabel:'VERROUILLÉ',materials:{paint:M.white,metal:M.metal,dark:M.dark},low});
+    control.root.userData.keepDynamic=true;control.root.rotation.x=-.35;consoles.set(id,{control,done:false});
   }
 
   // ---------- The phase anchor ----------
-  const anchor = new T.Group(); anchor.position.set(0, HEIGHTS.ancrage, -64); root.add(anchor);
+  const anchor = new T.Group(); anchor.position.set(0, HEIGHTS.ancrage, -64); root.add(anchor);anchor.userData.keepDynamic=true;
   {
     const plinth = new T.Mesh(new T.CylinderGeometry(7.58, 7.58, 4, 8), M.dark); plinth.rotation.y = Math.PI / 8; plinth.position.y = 2; plinth.receiveShadow = true; anchor.add(plinth);
     const lip = new T.Mesh(new T.TorusGeometry(7.2, .08, 6, 48), M.phase); lip.rotation.x = Math.PI / 2; lip.position.y = 4.02; anchor.add(lip);
@@ -367,7 +371,7 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
     });
     const beamTex = canvasTexture(T, 8, 256, (c, w, h) => { const g = c.createLinearGradient(0, h, 0, 0); g.addColorStop(0, 'rgba(255,120,210,1)'); g.addColorStop(.6, 'rgba(255,90,200,.45)'); g.addColorStop(1, 'rgba(255,90,200,0)'); c.fillStyle = g; c.fillRect(0, 0, w, h); });
     const beam = new T.Mesh(new T.CylinderGeometry(1.4, 2.6, 700, 12, 1, true), M.additive(0xffffff, .8, beamTex)); beam.position.y = 174 + 350; beam.material.fog = false; anchor.add(beam);
-    anchor.userData = { core, heart, heartHalo, rings, beam, seam };
+    anchor.userData = { keepDynamic:true,core, heart, heartHalo, rings, beam, seam };
   }
   let anchorPower = 1, anchorTarget = 1;
   animated.push((t, dt) => {
@@ -467,7 +471,7 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
     const body = new T.Mesh(new T.SphereGeometry(.45, 14, 10), M.white); d.add(body);
     const screen = new T.Mesh(new T.PlaneGeometry(1.6, .6), new T.MeshBasicMaterial({ map: sign('ZONE HELIX', 'CIRCULATION SURVEILLÉE', '#e8f6ff', 512, 192), transparent: true, toneMapped: false, side: T.DoubleSide })); screen.position.y = -.75; d.add(screen);
     const eye = new T.Mesh(new T.CircleGeometry(.12, 12), M.ice); eye.position.z = .46; d.add(eye);
-    d.userData = { radius: 14 + i * 7, height: 11 + i * 3, speed: .12 + i * .04, phase: i * 2 }; drones.push(d); add(d);
+    d.userData = { radius: 14 + i * 7, height: 11 + i * 3, speed: .12 + i * .04, phase: i * 2 }; d.userData.keepDynamic=true;drones.push(d); add(d);
   }
   animated.push(t => { for (const d of drones) { const u = d.userData, a = t * u.speed + u.phase; d.position.set(Math.cos(a) * u.radius, u.height + Math.sin(t * .9 + u.phase) * .4, 34 + Math.sin(a) * u.radius * .9); d.rotation.y = -a; } });
 
@@ -491,10 +495,10 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
 
   // Build everything queued.
   return {
-    root, M,
-    build(collisions) { fpsChapter=createFPSChapter(T,root,{chapter:'couronne',obstacles:collisions,areas:[{id:'esplanade',label:'Esplanade HELIX',x1:-40,x2:40,z1:4,z2:60},...FLOORS.map(f=>({...f,floor:f.height,label:f.id}))],low,webgpu});for (const o of collisions) dress(o); flushPosts(); neons.meshes(); neons.build(); flushBoxes(); },
+    root, M,ready:planting?.ready||Promise.resolve(),
+    build(collisions) { fpsChapter=createFPSChapter(T,root,{chapter:'couronne',obstacles:collisions,areas:[{id:'esplanade',label:'Esplanade HELIX',x1:-40,x2:40,z1:4,z2:60},...FLOORS.map(f=>({...f,floor:f.height,label:f.id}))],low,webgpu});for (const o of collisions) dress(o); flushPosts(); neons.meshes(); neons.build(); flushBoxes();planting?.build(); },
     update(t, dt, cam = camera) {
-      fpsChapter?.update(t,dt,cam?.position);
+      planting?.update(t);fpsChapter?.update(t,dt,cam?.position);
       if (cam) { skyDome.position.copy(cam.position); sun.position.copy(cam.position).addScaledVector(sunDir, 800); sun.lookAt(cam.position); }
       for (const c of clouds) c.material.map.offset.x += c.userData.speed * dt;
       for(const c of consoles.values())c.control.setState(c.done,{dt});
@@ -504,6 +508,6 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
     setGatesOpen(open) { gatesOpen = open; },
     setConsole(id, done) { const c = consoles.get(id); if (c) {c.done=!!done;c.control.setState(c.done);} },
     setAnchorPower(value) { anchorTarget = value; },
-    stats() { return { ...stats, fps:fpsChapter?.stats(), neons:neons.stats(), portals: portals.length, anchorPower: +anchorPower.toFixed(2), gatesOpen }; }
+    stats() { return { ...stats,foliage:planting?.stats(), fps:fpsChapter?.stats(), neons:neons.stats(), portals: portals.length, anchorPower: +anchorPower.toFixed(2), gatesOpen }; }
   };
 }

@@ -1,0 +1,2233 @@
+{
+  "chapter": 10,
+  "title": "La Couronne HELIX",
+  "units": "metres",
+  "start": {
+    "x": 0,
+    "z": 78,
+    "y": 0,
+    "yaw": 0
+  },
+  "floors": [
+    {
+      "id": "terrasse-est",
+      "x1": 30,
+      "x2": 40,
+      "z1": 14,
+      "z2": 50,
+      "height": 3
+    },
+    {
+      "id": "parvis",
+      "x1": -36,
+      "x2": 36,
+      "z1": -34,
+      "z2": 4,
+      "height": 6
+    },
+    {
+      "id": "ancrage",
+      "x1": -32,
+      "x2": 32,
+      "z1": -86,
+      "z2": -34,
+      "height": 12
+    },
+    {
+      "id": "liaison-aegis",
+      "x1": 32,
+      "x2": 46,
+      "z1": -57,
+      "z2": -51,
+      "height": 12
+    },
+    {
+      "id": "quai-aegis",
+      "x1": 44,
+      "x2": 72,
+      "z1": -80,
+      "z2": -44,
+      "height": 12
+    }
+  ],
+  "stairs": [
+    {
+      "id": "grand-escalier",
+      "x": 0,
+      "halfWidth": 7,
+      "bottomZ": 15,
+      "topZ": 4,
+      "base": 0,
+      "height": 6,
+      "to": "parvis"
+    },
+    {
+      "id": "rampe-est",
+      "x": 35,
+      "halfWidth": 2.5,
+      "bottomZ": 58,
+      "topZ": 50,
+      "base": 0,
+      "height": 3,
+      "to": "terrasse-est"
+    },
+    {
+      "id": "escalier-est",
+      "x": 34,
+      "halfWidth": 2,
+      "bottomZ": 14,
+      "topZ": 4,
+      "base": 3,
+      "height": 6,
+      "to": "parvis"
+    },
+    {
+      "id": "montee-ouest",
+      "x": -28,
+      "halfWidth": 2.5,
+      "bottomZ": -22,
+      "topZ": -34,
+      "base": 6,
+      "height": 12,
+      "to": "ancrage"
+    },
+    {
+      "id": "montee-est",
+      "x": 28,
+      "halfWidth": 2.5,
+      "bottomZ": -22,
+      "topZ": -34,
+      "base": 6,
+      "height": 12,
+      "to": "ancrage"
+    }
+  ],
+  "rooms": [
+    {
+      "id": "laboratoires",
+      "x1": -28,
+      "x2": -9,
+      "z1": -81,
+      "z2": -58,
+      "y": 12,
+      "doorX": -20
+    },
+    {
+      "id": "archives",
+      "x1": 9,
+      "x2": 28,
+      "z1": -81,
+      "z2": -58,
+      "y": 12,
+      "doorX": 20
+    }
+  ],
+  "fixtures": [
+    {
+      "kind": "paillasse",
+      "x": -25.7,
+      "z": -71,
+      "hx": 1.3000000000000007,
+      "hz": 7,
+      "y": 12,
+      "height": 1.05
+    },
+    {
+      "kind": "baies archives",
+      "x": 26,
+      "z": -71,
+      "hx": 1.1000000000000014,
+      "hz": 7,
+      "y": 12,
+      "height": 3
+    },
+    {
+      "kind": "terminal laboratoire",
+      "x": -20,
+      "z": -70.25,
+      "hx": 0.5500000000000007,
+      "hz": 0.29999999999999716,
+      "y": 12,
+      "height": 1.85
+    },
+    {
+      "kind": "terminal archives",
+      "x": 20,
+      "z": -70.25,
+      "hx": 0.5500000000000007,
+      "hz": 0.29999999999999716,
+      "y": 12,
+      "height": 1.85
+    },
+    {
+      "kind": "terminal confinement",
+      "x": 11,
+      "z": -45.8,
+      "hx": 0.5500000000000007,
+      "hz": 0.3000000000000007,
+      "y": 12,
+      "height": 1.85
+    },
+    {
+      "kind": "terminal extraction",
+      "x": 57.400000000000006,
+      "z": -60.8,
+      "hx": 0.5500000000000007,
+      "hz": 0.3000000000000007,
+      "y": 12,
+      "height": 1.85
+    }
+  ],
+  "doors": [
+    {
+      "id": "access",
+      "x": 0,
+      "z": 60,
+      "y": 0,
+      "width": 6.2,
+      "height": 3.8,
+      "axis": "x"
+    },
+    {
+      "id": "laboratoires",
+      "x": -20,
+      "z": -58,
+      "y": 12,
+      "width": 3.8,
+      "height": 3.6,
+      "axis": "x"
+    },
+    {
+      "id": "archives",
+      "x": 20,
+      "z": -58,
+      "y": 12,
+      "width": 3.8,
+      "height": 3.6,
+      "axis": "x"
+    },
+    {
+      "id": "evacuation",
+      "x": 33,
+      "z": -54,
+      "y": 12,
+      "width": 5.8,
+      "height": 3.7,
+      "axis": "z"
+    }
+  ],
+  "objectives": [
+    {
+      "id": "access",
+      "x": 0,
+      "z": 63,
+      "y": 0,
+      "label": "Ouvrir le sas HELIX",
+      "hint": "Le lecteur est devant les portiques. Franchis le sas puis longe la fontaine par la droite.",
+      "number": 1,
+      "radius": 2.5
+    },
+    {
+      "id": "esplanade",
+      "x": 26,
+      "z": 51,
+      "y": 0,
+      "label": "Isoler la surveillance extérieure",
+      "hint": "Neutralise la patrouille. Le pupitre se trouve à droite de l’esplanade, au pied de la terrasse.",
+      "number": 2,
+      "radius": 2.5
+    },
+    {
+      "id": "security",
+      "x": 0,
+      "z": -28.2,
+      "y": 6,
+      "label": "Déverrouiller les laboratoires",
+      "hint": "Monte le grand escalier. Entre au milieu de la façade vitrée ; contourne le comptoir pour atteindre le pupitre du fond.",
+      "number": 3,
+      "radius": 2.5
+    },
+    {
+      "id": "laboratoires",
+      "x": -20,
+      "z": -68.3,
+      "y": 12,
+      "label": "Sécuriser les chercheurs",
+      "hint": "Prends l’escalier ouest, à gauche du hall. Le laboratoire s’ouvre par sa porte vitrée côté sud.",
+      "number": 4,
+      "radius": 2.5
+    },
+    {
+      "id": "kessler",
+      "x": 0,
+      "z": -51,
+      "y": 12,
+      "label": "Établir la liaison avec Kessler",
+      "hint": "Sors du laboratoire par sa porte. La liaison privée se trouve devant le grand noyau central.",
+      "number": 5,
+      "radius": 2.5
+    },
+    {
+      "id": "archives",
+      "x": 20,
+      "z": -68.3,
+      "y": 12,
+      "label": "Copier les archives HELIX",
+      "hint": "Le sas est du laboratoire est déverrouillé. Les baies de données révèlent les autorisations de 2189.",
+      "number": 6,
+      "radius": 2.5
+    },
+    {
+      "id": "confinement",
+      "x": 11,
+      "z": -44.2,
+      "y": 12,
+      "label": "Couper le confinement",
+      "hint": "HELIX tente de capturer vos deux unités. Reviens au pupitre de sûreté, devant le noyau, puis rejoins la passerelle à l’est.",
+      "number": 7,
+      "radius": 2.5
+    },
+    {
+      "id": "extraction",
+      "x": 56,
+      "z": -60,
+      "y": 12,
+      "label": "Rejoindre AEGIS avec les archives",
+      "hint": "Franchis la porte à droite de la Couronne et traverse la passerelle vitrée jusqu’au quai d’extraction.",
+      "number": 8,
+      "radius": 2.5
+    }
+  ],
+  "waypoints": [
+    {
+      "x": 0,
+      "z": 78
+    },
+    {
+      "x": 0,
+      "z": 63
+    },
+    {
+      "x": 0,
+      "z": 56
+    },
+    {
+      "x": 6,
+      "z": 56
+    },
+    {
+      "x": 23,
+      "z": 56
+    },
+    {
+      "x": 23,
+      "z": 51
+    },
+    {
+      "x": 26,
+      "z": 51
+    },
+    {
+      "x": 25,
+      "z": 44
+    },
+    {
+      "x": 25,
+      "z": 16
+    },
+    {
+      "x": 0,
+      "z": 16
+    },
+    {
+      "x": 0,
+      "z": 15
+    },
+    {
+      "x": 0,
+      "z": 2
+    },
+    {
+      "x": 0,
+      "z": -13
+    },
+    {
+      "x": 0,
+      "z": -19
+    },
+    {
+      "x": 7,
+      "z": -19
+    },
+    {
+      "x": 7,
+      "z": -28.2
+    },
+    {
+      "x": 0,
+      "z": -28.2
+    },
+    {
+      "x": 7,
+      "z": -28
+    },
+    {
+      "x": 7,
+      "z": -19
+    },
+    {
+      "x": 0,
+      "z": -19
+    },
+    {
+      "x": 0,
+      "z": -13
+    },
+    {
+      "x": -23,
+      "z": -13
+    },
+    {
+      "x": -28,
+      "z": -20
+    },
+    {
+      "x": -28,
+      "z": -36
+    },
+    {
+      "x": -21,
+      "z": -42
+    },
+    {
+      "x": -20,
+      "z": -55
+    },
+    {
+      "x": -20,
+      "z": -61
+    },
+    {
+      "x": -20,
+      "z": -68.3
+    },
+    {
+      "x": -20,
+      "z": -55.5
+    },
+    {
+      "x": 0,
+      "z": -55.5
+    },
+    {
+      "x": 0,
+      "z": -51
+    },
+    {
+      "x": 0,
+      "z": -55.5
+    },
+    {
+      "x": 20,
+      "z": -55.5
+    },
+    {
+      "x": 20,
+      "z": -61
+    },
+    {
+      "x": 20,
+      "z": -68.3
+    },
+    {
+      "x": 20,
+      "z": -55
+    },
+    {
+      "x": 17,
+      "z": -44.2
+    },
+    {
+      "x": 11,
+      "z": -44.2
+    },
+    {
+      "x": 22,
+      "z": -48
+    },
+    {
+      "x": 28,
+      "z": -54
+    },
+    {
+      "x": 40,
+      "z": -54
+    },
+    {
+      "x": 47,
+      "z": -54
+    },
+    {
+      "x": 56,
+      "z": -60
+    }
+  ],
+  "referenceColliders": [
+    {
+      "id": "fps-couronne-esplanade-0",
+      "kind": "fps-cover",
+      "x": -24,
+      "z": 40,
+      "hx": 1.4,
+      "hz": 0.65,
+      "y": 0,
+      "height": 1.15,
+      "surface": "metal",
+      "cover": true,
+      "prop": "cabinet",
+      "sector": "esplanade"
+    },
+    {
+      "id": "fps-couronne-esplanade-1",
+      "kind": "fps-cover",
+      "x": 22,
+      "z": 26,
+      "hx": 1.4,
+      "hz": 0.65,
+      "y": 0,
+      "height": 1.15,
+      "surface": "metal",
+      "cover": true,
+      "prop": "cabinet",
+      "sector": "esplanade"
+    },
+    {
+      "kind": "podium",
+      "x": 35,
+      "z": 31.3,
+      "hx": 5,
+      "hz": 17.3,
+      "y": 0,
+      "height": 3,
+      "surface": "concrete",
+      "render": false
+    },
+    {
+      "kind": "podium",
+      "x": 31.1,
+      "z": 49.3,
+      "hx": 1.1000000000000014,
+      "hz": 0.6999999999999993,
+      "y": 0,
+      "height": 3,
+      "surface": "concrete",
+      "render": false
+    },
+    {
+      "kind": "podium",
+      "x": 38.9,
+      "z": 49.3,
+      "hx": 1.1000000000000014,
+      "hz": 0.6999999999999993,
+      "y": 0,
+      "height": 3,
+      "surface": "concrete",
+      "render": false
+    },
+    {
+      "kind": "podium",
+      "x": 0,
+      "z": -15.7,
+      "hx": 36,
+      "hz": 18.3,
+      "y": 0,
+      "height": 6,
+      "surface": "concrete",
+      "render": false
+    },
+    {
+      "kind": "podium",
+      "x": -21.65,
+      "z": 3.3,
+      "hx": 14.35,
+      "hz": 0.7,
+      "y": 0,
+      "height": 6,
+      "surface": "concrete",
+      "render": false
+    },
+    {
+      "kind": "podium",
+      "x": 19.5,
+      "z": 3.3,
+      "hx": 12.2,
+      "hz": 0.7,
+      "y": 0,
+      "height": 6,
+      "surface": "concrete",
+      "render": false
+    },
+    {
+      "kind": "podium",
+      "x": 0,
+      "z": -60.7,
+      "hx": 32,
+      "hz": 25.3,
+      "y": 0,
+      "height": 12,
+      "surface": "concrete",
+      "render": false
+    },
+    {
+      "kind": "podium",
+      "x": -31.4,
+      "z": -34.7,
+      "hx": 0.5999999999999996,
+      "hz": 0.6999999999999993,
+      "y": 0,
+      "height": 12,
+      "surface": "concrete",
+      "render": false
+    },
+    {
+      "kind": "podium",
+      "x": 0,
+      "z": -34.7,
+      "hx": 25.2,
+      "hz": 0.6999999999999993,
+      "y": 0,
+      "height": 12,
+      "surface": "concrete",
+      "render": false
+    },
+    {
+      "kind": "podium",
+      "x": 31.4,
+      "z": -34.7,
+      "hx": 0.5999999999999996,
+      "hz": 0.6999999999999993,
+      "y": 0,
+      "height": 12,
+      "surface": "concrete",
+      "render": false
+    },
+    {
+      "kind": "stair-side",
+      "x": -7.15,
+      "z": 13.625,
+      "hx": 0.15000000000000036,
+      "hz": 1.375,
+      "y": 0,
+      "height": 2.55,
+      "surface": "metal",
+      "stair": "grand-escalier"
+    },
+    {
+      "kind": "stair-side",
+      "x": -7.15,
+      "z": 10.875,
+      "hx": 0.15000000000000036,
+      "hz": 1.375,
+      "y": 0,
+      "height": 4.05,
+      "surface": "metal",
+      "stair": "grand-escalier"
+    },
+    {
+      "kind": "stair-side",
+      "x": -7.15,
+      "z": 8.125,
+      "hx": 0.15000000000000036,
+      "hz": 1.375,
+      "y": 0,
+      "height": 5.55,
+      "surface": "metal",
+      "stair": "grand-escalier"
+    },
+    {
+      "kind": "stair-side",
+      "x": -7.15,
+      "z": 5.375,
+      "hx": 0.15000000000000036,
+      "hz": 1.375,
+      "y": 0,
+      "height": 7.05,
+      "surface": "metal",
+      "stair": "grand-escalier"
+    },
+    {
+      "kind": "stair-side",
+      "x": 7.15,
+      "z": 13.625,
+      "hx": 0.15000000000000036,
+      "hz": 1.375,
+      "y": 0,
+      "height": 2.55,
+      "surface": "metal",
+      "stair": "grand-escalier"
+    },
+    {
+      "kind": "stair-side",
+      "x": 7.15,
+      "z": 10.875,
+      "hx": 0.15000000000000036,
+      "hz": 1.375,
+      "y": 0,
+      "height": 4.05,
+      "surface": "metal",
+      "stair": "grand-escalier"
+    },
+    {
+      "kind": "stair-side",
+      "x": 7.15,
+      "z": 8.125,
+      "hx": 0.15000000000000036,
+      "hz": 1.375,
+      "y": 0,
+      "height": 5.55,
+      "surface": "metal",
+      "stair": "grand-escalier"
+    },
+    {
+      "kind": "stair-side",
+      "x": 7.15,
+      "z": 5.375,
+      "hx": 0.15000000000000036,
+      "hz": 1.375,
+      "y": 0,
+      "height": 7.05,
+      "surface": "metal",
+      "stair": "grand-escalier"
+    },
+    {
+      "kind": "stair-side",
+      "x": 32.35,
+      "z": 57,
+      "hx": 0.14999999999999858,
+      "hz": 1,
+      "y": 0,
+      "height": 1.8,
+      "surface": "metal",
+      "stair": "rampe-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 32.35,
+      "z": 55,
+      "hx": 0.14999999999999858,
+      "hz": 1,
+      "y": 0,
+      "height": 2.55,
+      "surface": "metal",
+      "stair": "rampe-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 32.35,
+      "z": 53,
+      "hx": 0.14999999999999858,
+      "hz": 1,
+      "y": 0,
+      "height": 3.3,
+      "surface": "metal",
+      "stair": "rampe-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 32.35,
+      "z": 51,
+      "hx": 0.14999999999999858,
+      "hz": 1,
+      "y": 0,
+      "height": 4.05,
+      "surface": "metal",
+      "stair": "rampe-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 37.65,
+      "z": 57,
+      "hx": 0.14999999999999858,
+      "hz": 1,
+      "y": 0,
+      "height": 1.8,
+      "surface": "metal",
+      "stair": "rampe-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 37.65,
+      "z": 55,
+      "hx": 0.14999999999999858,
+      "hz": 1,
+      "y": 0,
+      "height": 2.55,
+      "surface": "metal",
+      "stair": "rampe-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 37.65,
+      "z": 53,
+      "hx": 0.14999999999999858,
+      "hz": 1,
+      "y": 0,
+      "height": 3.3,
+      "surface": "metal",
+      "stair": "rampe-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 37.65,
+      "z": 51,
+      "hx": 0.14999999999999858,
+      "hz": 1,
+      "y": 0,
+      "height": 4.05,
+      "surface": "metal",
+      "stair": "rampe-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 31.85,
+      "z": 12.75,
+      "hx": 0.14999999999999858,
+      "hz": 1.25,
+      "y": 0,
+      "height": 4.8,
+      "surface": "metal",
+      "stair": "escalier-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 31.85,
+      "z": 10.25,
+      "hx": 0.14999999999999858,
+      "hz": 1.25,
+      "y": 0,
+      "height": 5.55,
+      "surface": "metal",
+      "stair": "escalier-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 31.85,
+      "z": 7.75,
+      "hx": 0.14999999999999858,
+      "hz": 1.25,
+      "y": 0,
+      "height": 6.3,
+      "surface": "metal",
+      "stair": "escalier-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 31.85,
+      "z": 5.25,
+      "hx": 0.14999999999999858,
+      "hz": 1.25,
+      "y": 0,
+      "height": 7.05,
+      "surface": "metal",
+      "stair": "escalier-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 36.15,
+      "z": 12.75,
+      "hx": 0.14999999999999858,
+      "hz": 1.25,
+      "y": 0,
+      "height": 4.8,
+      "surface": "metal",
+      "stair": "escalier-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 36.15,
+      "z": 10.25,
+      "hx": 0.14999999999999858,
+      "hz": 1.25,
+      "y": 0,
+      "height": 5.55,
+      "surface": "metal",
+      "stair": "escalier-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 36.15,
+      "z": 7.75,
+      "hx": 0.14999999999999858,
+      "hz": 1.25,
+      "y": 0,
+      "height": 6.3,
+      "surface": "metal",
+      "stair": "escalier-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 36.15,
+      "z": 5.25,
+      "hx": 0.14999999999999858,
+      "hz": 1.25,
+      "y": 0,
+      "height": 7.05,
+      "surface": "metal",
+      "stair": "escalier-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": -30.65,
+      "z": -23.5,
+      "hx": 0.14999999999999858,
+      "hz": 1.5,
+      "y": 0,
+      "height": 8.55,
+      "surface": "metal",
+      "stair": "montee-ouest"
+    },
+    {
+      "kind": "stair-side",
+      "x": -30.65,
+      "z": -26.5,
+      "hx": 0.14999999999999858,
+      "hz": 1.5,
+      "y": 0,
+      "height": 10.05,
+      "surface": "metal",
+      "stair": "montee-ouest"
+    },
+    {
+      "kind": "stair-side",
+      "x": -30.65,
+      "z": -29.5,
+      "hx": 0.14999999999999858,
+      "hz": 1.5,
+      "y": 0,
+      "height": 11.55,
+      "surface": "metal",
+      "stair": "montee-ouest"
+    },
+    {
+      "kind": "stair-side",
+      "x": -30.65,
+      "z": -32.5,
+      "hx": 0.14999999999999858,
+      "hz": 1.5,
+      "y": 0,
+      "height": 13.05,
+      "surface": "metal",
+      "stair": "montee-ouest"
+    },
+    {
+      "kind": "stair-side",
+      "x": -25.35,
+      "z": -23.5,
+      "hx": 0.14999999999999858,
+      "hz": 1.5,
+      "y": 0,
+      "height": 8.55,
+      "surface": "metal",
+      "stair": "montee-ouest"
+    },
+    {
+      "kind": "stair-side",
+      "x": -25.35,
+      "z": -26.5,
+      "hx": 0.14999999999999858,
+      "hz": 1.5,
+      "y": 0,
+      "height": 10.05,
+      "surface": "metal",
+      "stair": "montee-ouest"
+    },
+    {
+      "kind": "stair-side",
+      "x": -25.35,
+      "z": -29.5,
+      "hx": 0.14999999999999858,
+      "hz": 1.5,
+      "y": 0,
+      "height": 11.55,
+      "surface": "metal",
+      "stair": "montee-ouest"
+    },
+    {
+      "kind": "stair-side",
+      "x": -25.35,
+      "z": -32.5,
+      "hx": 0.14999999999999858,
+      "hz": 1.5,
+      "y": 0,
+      "height": 13.05,
+      "surface": "metal",
+      "stair": "montee-ouest"
+    },
+    {
+      "kind": "stair-side",
+      "x": 25.35,
+      "z": -23.5,
+      "hx": 0.14999999999999858,
+      "hz": 1.5,
+      "y": 0,
+      "height": 8.55,
+      "surface": "metal",
+      "stair": "montee-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 25.35,
+      "z": -26.5,
+      "hx": 0.14999999999999858,
+      "hz": 1.5,
+      "y": 0,
+      "height": 10.05,
+      "surface": "metal",
+      "stair": "montee-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 25.35,
+      "z": -29.5,
+      "hx": 0.14999999999999858,
+      "hz": 1.5,
+      "y": 0,
+      "height": 11.55,
+      "surface": "metal",
+      "stair": "montee-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 25.35,
+      "z": -32.5,
+      "hx": 0.14999999999999858,
+      "hz": 1.5,
+      "y": 0,
+      "height": 13.05,
+      "surface": "metal",
+      "stair": "montee-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 30.65,
+      "z": -23.5,
+      "hx": 0.14999999999999858,
+      "hz": 1.5,
+      "y": 0,
+      "height": 8.55,
+      "surface": "metal",
+      "stair": "montee-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 30.65,
+      "z": -26.5,
+      "hx": 0.14999999999999858,
+      "hz": 1.5,
+      "y": 0,
+      "height": 10.05,
+      "surface": "metal",
+      "stair": "montee-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 30.65,
+      "z": -29.5,
+      "hx": 0.14999999999999858,
+      "hz": 1.5,
+      "y": 0,
+      "height": 11.55,
+      "surface": "metal",
+      "stair": "montee-est"
+    },
+    {
+      "kind": "stair-side",
+      "x": 30.65,
+      "z": -32.5,
+      "hx": 0.14999999999999858,
+      "hz": 1.5,
+      "y": 0,
+      "height": 13.05,
+      "surface": "metal",
+      "stair": "montee-est"
+    },
+    {
+      "kind": "screen",
+      "x": -16,
+      "z": 72,
+      "hx": 0.14999999999999947,
+      "hz": 12,
+      "y": 0,
+      "height": 3,
+      "surface": "glass"
+    },
+    {
+      "kind": "screen",
+      "x": 16,
+      "z": 72,
+      "hx": 0.14999999999999947,
+      "hz": 12,
+      "y": 0,
+      "height": 3,
+      "surface": "glass"
+    },
+    {
+      "kind": "screen",
+      "x": 0,
+      "z": 84,
+      "hx": 16,
+      "hz": 0.15000000000000568,
+      "y": 0,
+      "height": 3,
+      "surface": "glass"
+    },
+    {
+      "kind": "filter-wall",
+      "x": -10,
+      "z": 60,
+      "hx": 6,
+      "hz": 0.14999999999999858,
+      "y": 0,
+      "height": 4.2,
+      "surface": "concrete"
+    },
+    {
+      "kind": "filter-wall",
+      "x": 10,
+      "z": 60,
+      "hx": 6,
+      "hz": 0.14999999999999858,
+      "y": 0,
+      "height": 4.2,
+      "surface": "concrete"
+    },
+    {
+      "kind": "screen",
+      "x": -28,
+      "z": 60,
+      "hx": 12,
+      "hz": 0.14999999999999858,
+      "y": 0,
+      "height": 3,
+      "surface": "glass"
+    },
+    {
+      "kind": "screen",
+      "x": 28,
+      "z": 60,
+      "hx": 12,
+      "hz": 0.14999999999999858,
+      "y": 0,
+      "height": 3,
+      "surface": "glass"
+    },
+    {
+      "kind": "screen",
+      "x": -40,
+      "z": 32,
+      "hx": 0.14999999999999858,
+      "hz": 28,
+      "y": 0,
+      "height": 3,
+      "surface": "glass"
+    },
+    {
+      "kind": "screen",
+      "x": 40,
+      "z": 32,
+      "hx": 0.14999999999999858,
+      "hz": 28,
+      "y": 0,
+      "height": 3,
+      "surface": "glass"
+    },
+    {
+      "kind": "screen",
+      "x": -38,
+      "z": 4,
+      "hx": 2,
+      "hz": 0.15000000000000013,
+      "y": 0,
+      "height": 3,
+      "surface": "glass"
+    },
+    {
+      "kind": "screen",
+      "x": 38,
+      "z": 4,
+      "hx": 2,
+      "hz": 0.15000000000000013,
+      "y": 0,
+      "height": 3,
+      "surface": "glass"
+    },
+    {
+      "kind": "hedge",
+      "x": 30,
+      "z": 32,
+      "hx": 0.14999999999999858,
+      "hz": 18,
+      "y": 3,
+      "height": 1.05,
+      "surface": "plant"
+    },
+    {
+      "kind": "rail",
+      "x": 31.1,
+      "z": 50,
+      "hx": 1.1000000000000014,
+      "hz": 0.14999999999999858,
+      "y": 3,
+      "height": 1.05,
+      "surface": "metal"
+    },
+    {
+      "kind": "rail",
+      "x": 38.9,
+      "z": 50,
+      "hx": 1.1000000000000014,
+      "hz": 0.14999999999999858,
+      "y": 3,
+      "height": 1.05,
+      "surface": "metal"
+    },
+    {
+      "kind": "rail",
+      "x": 30.85,
+      "z": 14,
+      "hx": 0.8499999999999996,
+      "hz": 0.15000000000000036,
+      "y": 3,
+      "height": 1.05,
+      "surface": "metal"
+    },
+    {
+      "kind": "rail",
+      "x": 38.15,
+      "z": 14,
+      "hx": 1.8500000000000014,
+      "hz": 0.15000000000000036,
+      "y": 3,
+      "height": 1.05,
+      "surface": "metal"
+    },
+    {
+      "kind": "screen",
+      "x": 40,
+      "z": 32,
+      "hx": 0.14999999999999858,
+      "hz": 18,
+      "y": 3,
+      "height": 3,
+      "surface": "glass"
+    },
+    {
+      "kind": "rail",
+      "x": -21.65,
+      "z": 3.85,
+      "hx": 14.35,
+      "hz": 0.1499999999999999,
+      "y": 6,
+      "height": 1.05,
+      "surface": "glass"
+    },
+    {
+      "kind": "rail",
+      "x": 19.5,
+      "z": 3.85,
+      "hx": 12.2,
+      "hz": 0.1499999999999999,
+      "y": 6,
+      "height": 1.05,
+      "surface": "glass"
+    },
+    {
+      "kind": "screen",
+      "x": -36,
+      "z": -15,
+      "hx": 0.14999999999999858,
+      "hz": 19,
+      "y": 6,
+      "height": 3,
+      "surface": "glass"
+    },
+    {
+      "kind": "screen",
+      "x": 36,
+      "z": -15,
+      "hx": 0.14999999999999858,
+      "hz": 19,
+      "y": 6,
+      "height": 3,
+      "surface": "glass"
+    },
+    {
+      "kind": "screen",
+      "x": -32,
+      "z": -60,
+      "hx": 0.14999999999999858,
+      "hz": 26,
+      "y": 12,
+      "height": 3,
+      "surface": "glass"
+    },
+    {
+      "kind": "screen",
+      "x": 0,
+      "z": -86,
+      "hx": 32,
+      "hz": 0.15000000000000568,
+      "y": 12,
+      "height": 3,
+      "surface": "glass"
+    },
+    {
+      "kind": "rail",
+      "x": -31.4,
+      "z": -33.85,
+      "hx": 0.5999999999999996,
+      "hz": 0.14999999999999858,
+      "y": 12,
+      "height": 1.05,
+      "surface": "glass"
+    },
+    {
+      "kind": "rail",
+      "x": -22.6,
+      "z": -33.85,
+      "hx": 2.5999999999999996,
+      "hz": 0.14999999999999858,
+      "y": 12,
+      "height": 1.05,
+      "surface": "glass"
+    },
+    {
+      "kind": "rail",
+      "x": 22.6,
+      "z": -33.85,
+      "hx": 2.5999999999999996,
+      "hz": 0.14999999999999858,
+      "y": 12,
+      "height": 1.05,
+      "surface": "glass"
+    },
+    {
+      "kind": "rail",
+      "x": 31.4,
+      "z": -33.85,
+      "hx": 0.5999999999999996,
+      "hz": 0.14999999999999858,
+      "y": 12,
+      "height": 1.05,
+      "surface": "glass"
+    },
+    {
+      "kind": "shuttle",
+      "x": -7,
+      "z": 73,
+      "hx": 3.2,
+      "hz": 5.6,
+      "y": 0,
+      "height": 2.7,
+      "surface": "metal"
+    },
+    {
+      "kind": "crate",
+      "x": 8.5,
+      "z": 68.5,
+      "hx": 0.75,
+      "hz": 0.75,
+      "y": 0,
+      "height": 1.5,
+      "surface": "metal"
+    },
+    {
+      "kind": "crate",
+      "x": 10.2,
+      "z": 70.4,
+      "hx": 0.75,
+      "hz": 0.75,
+      "y": 0,
+      "height": 1.5,
+      "surface": "metal"
+    },
+    {
+      "kind": "crate",
+      "x": 9.2,
+      "z": 69.6,
+      "hx": 0.75,
+      "hz": 0.75,
+      "y": 1.5,
+      "height": 1.2,
+      "surface": "metal"
+    },
+    {
+      "kind": "scanner",
+      "x": -3.6,
+      "z": 60,
+      "hx": 0.35,
+      "hz": 0.7,
+      "y": 0,
+      "height": 3.4,
+      "surface": "metal"
+    },
+    {
+      "kind": "scanner",
+      "x": 3.6,
+      "z": 60,
+      "hx": 0.35,
+      "hz": 0.7,
+      "y": 0,
+      "height": 3.4,
+      "surface": "metal"
+    },
+    {
+      "kind": "fountain",
+      "x": 0,
+      "z": 33,
+      "hx": 5,
+      "hz": 5,
+      "y": 0,
+      "height": 0.75,
+      "surface": "concrete"
+    },
+    {
+      "kind": "planter",
+      "x": -12,
+      "z": 46,
+      "hx": 2.2,
+      "hz": 0.6,
+      "y": 0,
+      "height": 0.95,
+      "surface": "plant"
+    },
+    {
+      "kind": "planter",
+      "x": 12,
+      "z": 46,
+      "hx": 2.2,
+      "hz": 0.6,
+      "y": 0,
+      "height": 0.95,
+      "surface": "plant"
+    },
+    {
+      "kind": "planter",
+      "x": -12,
+      "z": 21,
+      "hx": 2.2,
+      "hz": 0.6,
+      "y": 0,
+      "height": 0.95,
+      "surface": "plant"
+    },
+    {
+      "kind": "planter",
+      "x": 12,
+      "z": 21,
+      "hx": 2.2,
+      "hz": 0.6,
+      "y": 0,
+      "height": 0.95,
+      "surface": "plant"
+    },
+    {
+      "kind": "planter",
+      "x": -22,
+      "z": 37,
+      "hx": 2.2,
+      "hz": 0.6,
+      "y": 0,
+      "height": 0.95,
+      "surface": "plant"
+    },
+    {
+      "kind": "planter",
+      "x": 22,
+      "z": 37,
+      "hx": 2.2,
+      "hz": 0.6,
+      "y": 0,
+      "height": 0.95,
+      "surface": "plant"
+    },
+    {
+      "kind": "monolith",
+      "x": -20,
+      "z": 28,
+      "hx": 0.9,
+      "hz": 0.9,
+      "y": 0,
+      "height": 4.6,
+      "surface": "concrete"
+    },
+    {
+      "kind": "monolith",
+      "x": 20,
+      "z": 28,
+      "hx": 0.9,
+      "hz": 0.9,
+      "y": 0,
+      "height": 4.6,
+      "surface": "concrete"
+    },
+    {
+      "kind": "monolith",
+      "x": -8,
+      "z": 18.5,
+      "hx": 0.9,
+      "hz": 0.9,
+      "y": 0,
+      "height": 4.6,
+      "surface": "concrete"
+    },
+    {
+      "kind": "monolith",
+      "x": 8,
+      "z": 18.5,
+      "hx": 0.9,
+      "hz": 0.9,
+      "y": 0,
+      "height": 4.6,
+      "surface": "concrete"
+    },
+    {
+      "kind": "monolith",
+      "x": -18,
+      "z": 52,
+      "hx": 0.9,
+      "hz": 0.9,
+      "y": 0,
+      "height": 4.6,
+      "surface": "concrete"
+    },
+    {
+      "kind": "monolith",
+      "x": 18,
+      "z": 52,
+      "hx": 0.9,
+      "hz": 0.9,
+      "y": 0,
+      "height": 4.6,
+      "surface": "concrete"
+    },
+    {
+      "kind": "column",
+      "x": -31,
+      "z": 16,
+      "hx": 0.45,
+      "hz": 0.45,
+      "y": 0,
+      "height": 5.6,
+      "surface": "concrete"
+    },
+    {
+      "kind": "column",
+      "x": -31,
+      "z": 22,
+      "hx": 0.45,
+      "hz": 0.45,
+      "y": 0,
+      "height": 5.6,
+      "surface": "concrete"
+    },
+    {
+      "kind": "column",
+      "x": -31,
+      "z": 28,
+      "hx": 0.45,
+      "hz": 0.45,
+      "y": 0,
+      "height": 5.6,
+      "surface": "concrete"
+    },
+    {
+      "kind": "column",
+      "x": -31,
+      "z": 34,
+      "hx": 0.45,
+      "hz": 0.45,
+      "y": 0,
+      "height": 5.6,
+      "surface": "concrete"
+    },
+    {
+      "kind": "column",
+      "x": -31,
+      "z": 40,
+      "hx": 0.45,
+      "hz": 0.45,
+      "y": 0,
+      "height": 5.6,
+      "surface": "concrete"
+    },
+    {
+      "kind": "column",
+      "x": -31,
+      "z": 46,
+      "hx": 0.45,
+      "hz": 0.45,
+      "y": 0,
+      "height": 5.6,
+      "surface": "concrete"
+    },
+    {
+      "kind": "column",
+      "x": -31,
+      "z": 52,
+      "hx": 0.45,
+      "hz": 0.45,
+      "y": 0,
+      "height": 5.6,
+      "surface": "concrete"
+    },
+    {
+      "kind": "bench",
+      "x": -36,
+      "z": 31,
+      "hx": 0.5,
+      "hz": 2.4,
+      "y": 0,
+      "height": 0.55,
+      "surface": "concrete"
+    },
+    {
+      "kind": "bench",
+      "x": -36,
+      "z": 43,
+      "hx": 0.5,
+      "hz": 2.4,
+      "y": 0,
+      "height": 0.55,
+      "surface": "concrete"
+    },
+    {
+      "kind": "kiosk",
+      "x": 26,
+      "z": 54,
+      "hx": 1.1,
+      "hz": 1.1,
+      "y": 0,
+      "height": 2.6,
+      "surface": "metal"
+    },
+    {
+      "kind": "planter",
+      "x": 35,
+      "z": 40,
+      "hx": 0.6,
+      "hz": 2.2,
+      "y": 3,
+      "height": 0.95,
+      "surface": "plant"
+    },
+    {
+      "kind": "planter",
+      "x": 35,
+      "z": 26,
+      "hx": 0.6,
+      "hz": 2.2,
+      "y": 3,
+      "height": 0.95,
+      "surface": "plant"
+    },
+    {
+      "kind": "planter",
+      "x": -12,
+      "z": -4,
+      "hx": 2.4,
+      "hz": 0.6,
+      "y": 6,
+      "height": 0.95,
+      "surface": "plant"
+    },
+    {
+      "kind": "planter",
+      "x": 12,
+      "z": -4,
+      "hx": 2.4,
+      "hz": 0.6,
+      "y": 6,
+      "height": 0.95,
+      "surface": "plant"
+    },
+    {
+      "kind": "sculpture",
+      "x": -26,
+      "z": -8,
+      "hx": 1.1,
+      "hz": 1.1,
+      "y": 6,
+      "height": 3.4,
+      "surface": "concrete"
+    },
+    {
+      "kind": "sculpture",
+      "x": 26,
+      "z": -8,
+      "hx": 1.1,
+      "hz": 1.1,
+      "y": 6,
+      "height": 3.4,
+      "surface": "concrete"
+    },
+    {
+      "kind": "barrier",
+      "x": -6,
+      "z": -10,
+      "hx": 1.8,
+      "hz": 0.25,
+      "y": 6,
+      "height": 1.1,
+      "surface": "metal"
+    },
+    {
+      "kind": "barrier",
+      "x": 6,
+      "z": -10,
+      "hx": 1.8,
+      "hz": 0.25,
+      "y": 6,
+      "height": 1.1,
+      "surface": "metal"
+    },
+    {
+      "kind": "barrier",
+      "x": -17,
+      "z": 0,
+      "hx": 1.8,
+      "hz": 0.25,
+      "y": 6,
+      "height": 1.1,
+      "surface": "metal"
+    },
+    {
+      "kind": "barrier",
+      "x": 17,
+      "z": 0,
+      "hx": 1.8,
+      "hz": 0.25,
+      "y": 6,
+      "height": 1.1,
+      "surface": "metal"
+    },
+    {
+      "kind": "kiosk",
+      "x": -28,
+      "z": -2,
+      "hx": 1.1,
+      "hz": 1.1,
+      "y": 6,
+      "height": 2.6,
+      "surface": "metal"
+    },
+    {
+      "kind": "kiosk",
+      "x": 24,
+      "z": -14,
+      "hx": 1.1,
+      "hz": 1.1,
+      "y": 6,
+      "height": 2.6,
+      "surface": "metal"
+    },
+    {
+      "kind": "glass-wall",
+      "x": -12,
+      "z": -16.2,
+      "hx": 8,
+      "hz": 0.14999999999999858,
+      "y": 6,
+      "height": 9,
+      "surface": "glass"
+    },
+    {
+      "kind": "glass-wall",
+      "x": 12,
+      "z": -16.2,
+      "hx": 8,
+      "hz": 0.14999999999999858,
+      "y": 6,
+      "height": 9,
+      "surface": "glass"
+    },
+    {
+      "kind": "lobby-wall",
+      "x": -19.8,
+      "z": -25,
+      "hx": 0.1999999999999993,
+      "hz": 9,
+      "y": 6,
+      "height": 9,
+      "surface": "concrete"
+    },
+    {
+      "kind": "lobby-wall",
+      "x": 19.8,
+      "z": -25,
+      "hx": 0.1999999999999993,
+      "hz": 9,
+      "y": 6,
+      "height": 9,
+      "surface": "concrete"
+    },
+    {
+      "kind": "lobby-wall",
+      "x": 0,
+      "z": -33.8,
+      "hx": 20,
+      "hz": 0.1999999999999993,
+      "y": 6,
+      "height": 9,
+      "surface": "concrete"
+    },
+    {
+      "kind": "desk",
+      "x": 0,
+      "z": -22.6,
+      "hx": 5,
+      "hz": 0.4,
+      "y": 6,
+      "height": 1.1,
+      "surface": "metal"
+    },
+    {
+      "kind": "pillar",
+      "x": -10,
+      "z": -25,
+      "hx": 0.45,
+      "hz": 0.45,
+      "y": 6,
+      "height": 9,
+      "surface": "concrete"
+    },
+    {
+      "kind": "pillar",
+      "x": 10,
+      "z": -25,
+      "hx": 0.45,
+      "hz": 0.45,
+      "y": 6,
+      "height": 9,
+      "surface": "concrete"
+    },
+    {
+      "kind": "console",
+      "x": 0,
+      "z": -29.4,
+      "hx": 0.9,
+      "hz": 0.4,
+      "y": 6,
+      "height": 1.25,
+      "surface": "metal",
+      "console": "securite"
+    },
+    {
+      "kind": "anchor-base",
+      "x": 0,
+      "z": -64,
+      "hx": 7,
+      "hz": 7,
+      "y": 12,
+      "height": 4,
+      "surface": "metal"
+    },
+    {
+      "kind": "stabilizer",
+      "x": -15,
+      "z": -52,
+      "hx": 1.6,
+      "hz": 1.6,
+      "y": 12,
+      "height": 4.5,
+      "surface": "metal"
+    },
+    {
+      "kind": "stabilizer",
+      "x": 15,
+      "z": -52,
+      "hx": 1.6,
+      "hz": 1.6,
+      "y": 12,
+      "height": 4.5,
+      "surface": "metal"
+    },
+    {
+      "kind": "stabilizer",
+      "x": -15,
+      "z": -76,
+      "hx": 1.6,
+      "hz": 1.6,
+      "y": 12,
+      "height": 4.5,
+      "surface": "metal"
+    },
+    {
+      "kind": "stabilizer",
+      "x": 15,
+      "z": -76,
+      "hx": 1.6,
+      "hz": 1.6,
+      "y": 12,
+      "height": 4.5,
+      "surface": "metal"
+    },
+    {
+      "kind": "console",
+      "x": -11,
+      "z": -45.9,
+      "hx": 0.9,
+      "hz": 0.45,
+      "y": 12,
+      "height": 1.25,
+      "surface": "metal",
+      "console": "ancrage-ouest"
+    },
+    {
+      "kind": "console",
+      "x": 11,
+      "z": -45.9,
+      "hx": 0.9,
+      "hz": 0.45,
+      "y": 12,
+      "height": 1.25,
+      "surface": "metal",
+      "console": "ancrage-est"
+    },
+    {
+      "kind": "barrier",
+      "x": -6,
+      "z": -40,
+      "hx": 2.2,
+      "hz": 0.3,
+      "y": 12,
+      "height": 1.05,
+      "surface": "metal"
+    },
+    {
+      "kind": "barrier",
+      "x": 6,
+      "z": -40,
+      "hx": 2.2,
+      "hz": 0.3,
+      "y": 12,
+      "height": 1.05,
+      "surface": "metal"
+    },
+    {
+      "kind": "barrier",
+      "x": -24,
+      "z": -60,
+      "hx": 0.3,
+      "hz": 2.2,
+      "y": 12,
+      "height": 1.05,
+      "surface": "metal"
+    },
+    {
+      "kind": "barrier",
+      "x": 24,
+      "z": -60,
+      "hx": 0.3,
+      "hz": 2.2,
+      "y": 12,
+      "height": 1.05,
+      "surface": "metal"
+    },
+    {
+      "kind": "barrier",
+      "x": 0,
+      "z": -81,
+      "hx": 4,
+      "hz": 0.3,
+      "y": 12,
+      "height": 1.05,
+      "surface": "metal"
+    },
+    {
+      "kind": "crate",
+      "x": -23,
+      "z": -44,
+      "hx": 0.75,
+      "hz": 0.75,
+      "y": 12,
+      "height": 1.5,
+      "surface": "metal"
+    },
+    {
+      "kind": "crate",
+      "x": 23,
+      "z": -44,
+      "hx": 0.75,
+      "hz": 0.75,
+      "y": 12,
+      "height": 1.5,
+      "surface": "metal"
+    },
+    {
+      "kind": "crate",
+      "x": -24,
+      "z": -80,
+      "hx": 0.75,
+      "hz": 0.75,
+      "y": 12,
+      "height": 1.5,
+      "surface": "metal"
+    },
+    {
+      "kind": "crate",
+      "x": 24,
+      "z": -80,
+      "hx": 0.75,
+      "hz": 0.75,
+      "y": 12,
+      "height": 1.5,
+      "surface": "metal"
+    },
+    {
+      "kind": "screen",
+      "x": 32,
+      "z": -71.5,
+      "hx": 0.14999999999999858,
+      "hz": 14.5,
+      "y": 12,
+      "height": 3,
+      "surface": "glass"
+    },
+    {
+      "kind": "screen",
+      "x": 32,
+      "z": -42.5,
+      "hx": 0.14999999999999858,
+      "hz": 8.5,
+      "y": 12,
+      "height": 3,
+      "surface": "glass"
+    },
+    {
+      "kind": "rail liaison",
+      "x": 38,
+      "z": -57,
+      "hx": 6,
+      "hz": 0.10000000000000142,
+      "y": 12,
+      "height": 1.2
+    },
+    {
+      "kind": "rail liaison",
+      "x": 38,
+      "z": -51,
+      "hx": 6,
+      "hz": 0.10000000000000142,
+      "y": 12,
+      "height": 1.2
+    },
+    {
+      "kind": "rail AEGIS",
+      "x": 58,
+      "z": -80,
+      "hx": 14,
+      "hz": 0.09999999999999432,
+      "y": 12,
+      "height": 1.2
+    },
+    {
+      "kind": "rail AEGIS",
+      "x": 58,
+      "z": -44,
+      "hx": 14,
+      "hz": 0.10000000000000142,
+      "y": 12,
+      "height": 1.2
+    },
+    {
+      "kind": "rail AEGIS",
+      "x": 72,
+      "z": -62,
+      "hx": 0.09999999999999432,
+      "hz": 18,
+      "y": 12,
+      "height": 1.2
+    },
+    {
+      "kind": "rail AEGIS",
+      "x": 44,
+      "z": -68.5,
+      "hx": 0.10000000000000142,
+      "hz": 11.5,
+      "y": 12,
+      "height": 1.2
+    },
+    {
+      "kind": "rail AEGIS",
+      "x": 44,
+      "z": -47.5,
+      "hx": 0.10000000000000142,
+      "hz": 3.5,
+      "y": 12,
+      "height": 1.2
+    },
+    {
+      "kind": "verrière laboratoire",
+      "x": -27.9,
+      "z": -69.5,
+      "hx": 0.09999999999999964,
+      "hz": 11.5,
+      "y": 12,
+      "height": 4.2
+    },
+    {
+      "kind": "verrière laboratoire",
+      "x": -9.1,
+      "z": -69.5,
+      "hx": 0.09999999999999964,
+      "hz": 11.5,
+      "y": 12,
+      "height": 4.2
+    },
+    {
+      "kind": "verrière laboratoire",
+      "x": -18.5,
+      "z": -80.9,
+      "hx": 9.5,
+      "hz": 0.10000000000000142,
+      "y": 12,
+      "height": 4.2
+    },
+    {
+      "kind": "verrière laboratoire",
+      "x": -25,
+      "z": -58,
+      "hx": 3,
+      "hz": 0.10000000000000142,
+      "y": 12,
+      "height": 4.2
+    },
+    {
+      "kind": "verrière laboratoire",
+      "x": -13.5,
+      "z": -58,
+      "hx": 4.5,
+      "hz": 0.10000000000000142,
+      "y": 12,
+      "height": 4.2
+    },
+    {
+      "kind": "linteau laboratoire",
+      "x": -20,
+      "z": -58,
+      "hx": 2,
+      "hz": 0.14000000000000057,
+      "y": 15.7,
+      "height": 0.5
+    },
+    {
+      "kind": "verrière laboratoire",
+      "x": 9.1,
+      "z": -69.5,
+      "hx": 0.09999999999999964,
+      "hz": 11.5,
+      "y": 12,
+      "height": 4.2
+    },
+    {
+      "kind": "verrière laboratoire",
+      "x": 27.9,
+      "z": -69.5,
+      "hx": 0.09999999999999964,
+      "hz": 11.5,
+      "y": 12,
+      "height": 4.2
+    },
+    {
+      "kind": "verrière laboratoire",
+      "x": 18.5,
+      "z": -80.9,
+      "hx": 9.5,
+      "hz": 0.10000000000000142,
+      "y": 12,
+      "height": 4.2
+    },
+    {
+      "kind": "verrière laboratoire",
+      "x": 13.5,
+      "z": -58,
+      "hx": 4.5,
+      "hz": 0.10000000000000142,
+      "y": 12,
+      "height": 4.2
+    },
+    {
+      "kind": "verrière laboratoire",
+      "x": 25,
+      "z": -58,
+      "hx": 3,
+      "hz": 0.10000000000000142,
+      "y": 12,
+      "height": 4.2
+    },
+    {
+      "kind": "linteau laboratoire",
+      "x": 20,
+      "z": -58,
+      "hx": 2,
+      "hz": 0.14000000000000057,
+      "y": 15.7,
+      "height": 0.5
+    },
+    {
+      "kind": "paillasse",
+      "x": -25.7,
+      "z": -71,
+      "hx": 1.3000000000000007,
+      "hz": 7,
+      "y": 12,
+      "height": 1.05
+    },
+    {
+      "kind": "baies archives",
+      "x": 26,
+      "z": -71,
+      "hx": 1.1000000000000014,
+      "hz": 7,
+      "y": 12,
+      "height": 3
+    },
+    {
+      "kind": "terminal laboratoire",
+      "x": -20,
+      "z": -70.25,
+      "hx": 0.5500000000000007,
+      "hz": 0.29999999999999716,
+      "y": 12,
+      "height": 1.85
+    },
+    {
+      "kind": "terminal archives",
+      "x": 20,
+      "z": -70.25,
+      "hx": 0.5500000000000007,
+      "hz": 0.29999999999999716,
+      "y": 12,
+      "height": 1.85
+    },
+    {
+      "kind": "terminal confinement",
+      "x": 11,
+      "z": -45.8,
+      "hx": 0.5500000000000007,
+      "hz": 0.3000000000000007,
+      "y": 12,
+      "height": 1.85
+    },
+    {
+      "kind": "terminal extraction",
+      "x": 57.400000000000006,
+      "z": -60.8,
+      "hx": 0.5500000000000007,
+      "hz": 0.3000000000000007,
+      "y": 12,
+      "height": 1.85
+    }
+  ]
+}

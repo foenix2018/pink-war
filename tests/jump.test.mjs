@@ -25,8 +25,10 @@ test('jump is edge-triggered, follows gravity and ends exactly on the floor', ()
 test('a running jump crosses a low service obstacle but not a tall wall', () => {
   const low = { x:0, z:19, hx:1, hz:.45, height:1 };
   const game = new ArenaGame([low]); game.nextWave = 999;
-  game.step(.02, { z:-1, jump:true });
-  simulate(game, .7, { z:-1 });
+  // Establish the advertised running momentum before takeoff.
+  game.player.z=24;simulate(game,.5,{z:-1,sprint:true});
+  game.step(.02, { z:-1, jump:true, sprint:true });
+  simulate(game, .7, { z:-1, sprint:true });
   assert.ok(game.player.z < 19, 'the low obstacle should be cleared');
   const wall = { x:0, z:0, hx:1, hz:.45, height:3 };
   const p = { x:0, z:2, elevation:1.3 };

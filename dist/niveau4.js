@@ -369,7 +369,7 @@ function updateActors(dt){
 // ---------- Simulation tick ----------
 function gameTick(dt){
  const xc=xr?.active?xr.controls:null;
- const controls=xc?{moveX:xc.x,moveZ:xc.z,lookX:0,lookY:0,jump:xc.jump,interact:xc.interact,aim:xc.aim,fire:xc.fire,sprint:xc.sprint,melee:xc.melee,charge:xc.charge}
+ const controls=xc?{moveX:xc.x,moveZ:xc.z,lookX:0,lookY:0,jump:xc.jump,jumpPressed:xc.jumpPressed,interact:xc.interact,aim:xc.aim,fire:xc.fire,sprint:xc.sprint,melee:xc.melee,charge:xc.charge}
   :pinkControls.read(dt,keys,navigator.getGamepads?.()||[],{focused:!document.hidden});
  // Reading a document pauses the world; any action button closes it.
  if(reading){if(controls.interact||controls.pause||controls.fire||controls.jump)closeDocument();updateHUD();return;}
@@ -392,10 +392,10 @@ function gameTick(dt){
  if(controls.interact)interact();
  if(reading)return;
  const crouchToggle=controls.crouchToggle||crouchQueued;crouchQueued=false;
- if(jumpQueued)game.player.jumpHeld=false;
- const jump=controls.jump||jumpQueued;jumpQueued=false;
+ const jumpPressed=jumpQueued||controls.jumpPressed;
+ const jump=controls.jump||touch.jump||jumpQueued;jumpQueued=false;
  game.nextWave=Infinity;game.toSpawn=0;
- game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,gamepadMoving:controls.gamepadMoving,touchMoving:!xc&&!!(touch.x||touch.z),sprint,jump,crouchToggle});
+ game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,gamepadMoving:controls.gamepadMoving,touchMoving:!xc&&!!(touch.x||touch.z),sprint,jump,jumpPressed,crouchToggle});
  heroAudio.update(game,enableAudio);
  missionTime+=dt;weaponFeel.update(dt);cameraFeel.update(dt,{speed:Math.hypot(game.playerVelocity.x,game.playerVelocity.z),grounded:game.player.grounded,verticalSpeed:game.player.verticalSpeed,strafe:x,sprint,aim:aimBlend});snapCamera();
  if(meleeQueued||controls.melee){const view=new T.Vector3();camera.getWorldDirection(view);game.melee({x:view.x,z:view.z});}
@@ -581,7 +581,7 @@ window.addEventListener('keydown',e=>{
  if(!running)return;
  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
  keys.add(e.code);if(e.repeat)return;
- if(e.code==='KeyJ')jumpQueued=true;
+ if(e.code==='KeyJ'||e.code==='Space')jumpQueued=true;
  if(e.code==='KeyF')interact();
  if(e.code==='KeyE')game.cycleWeapon();
  if(e.code==='KeyR')game.reload();
@@ -628,7 +628,7 @@ window.__PINK_M04=Object.freeze({
   hold:mission?.hold,pending:mission?.pending,groups:mission?.groups(),guardian:mission?.guardian,reading,vr:!!xr?.active,lamp:lampOn,subtitle:subtitle&&{who:subtitle.who,text:subtitle.text},queued:subtitles.length,
   backend:renderer?rendererBackend(renderer):null,rig:!!playerRig,webgpuFinish,art:art?.stats(),shadows:sunShadows?.stats(),render:renderer?.info?.render}),
  // QA hooks (?debug=1): move the player, look, clear an encounter, fast-forward the mission clock, use an interaction.
- debug:params.has('debug')?{get scene(){return scene;},cam:(x,y,z,lx,ly,lz,fov=60,top=false)=>{debugCam=x===null?null:{x,y,z,lx,ly,lz,fov,top};snapCamera();},endScene:()=>finishMission(),cine:()=>endCine,teleport:(x,z)=>{Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0});snapCamera();if(game.state==='playing'){game.step(1/60,{});mission.update(1/60);}},
+ debug:params.has('debug')?{game:()=>game,get scene(){return scene;},cam:(x,y,z,lx,ly,lz,fov=60,top=false)=>{debugCam=x===null?null:{x,y,z,lx,ly,lz,fov,top};snapCamera();},endScene:()=>finishMission(),cine:()=>endCine,teleport:(x,z)=>{Object.assign(game.player,{x,z,elevation:traversal.height(x,z),grounded:true,verticalSpeed:0});snapCamera();if(game.state==='playing'){game.step(1/60,{});mission.update(1/60);}},
   look:(y,p)=>{yaw=y;pitch=p;snapCamera();},clear:(keepGuardian=false)=>{game.enemies=game.enemies.filter(e=>keepGuardian&&e.guardian);mission.update(1/60);},
   interact:()=>{interact();return reading;},close:()=>closeDocument(),skip:seconds=>{game.time+=seconds;mission.update(1/60);},god:()=>{game.invulnerable=1e9;},
   use:id=>{const it=L.INTERACTIONS.find(i=>i.id===id);Object.assign(game.player,{x:it.x,z:it.z,elevation:it.y||0,grounded:true,verticalSpeed:0});interact();return {reading,stage:mission.stageId};},

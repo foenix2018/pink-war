@@ -5,7 +5,7 @@ import {levelArrow,arrowGuidance} from './objective-arrow.js';
 import {createM01SiegeAmbiance} from './m01-siege-ambiance.js';
 import {setScreenMusic,screenMusicSnapshot} from './menu-music.js';
 import {walkingSurface} from './surface-steps.js';
-import {createHeroCapabilityAudio} from './hero-capabilities.js';
+import {createHeroCapabilityAudio,heroFlightFlags} from './hero-capabilities.js';
 import {assistedAim,firingView} from './aim-assist.js';
 import {sightPoint} from './sight-line.js';
 // M01's book reference map, production combat, and locked Shadow Unit rigs.
@@ -266,12 +266,12 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
     const reload=game.reloadRemaining>0?Math.sin((1-game.reloadRemaining/game.weapon.reload)*Math.PI):0;
     model.animate(game.time,Math.hypot(game.playerVelocity.x,game.playerVelocity.z)>.1,feel.state.pitch,reload,Number(held),dt,{
       velocity:game.playerVelocity,ground:(x,z,y)=>game.footGroundHeight(x,z,y),airborne:!p.grounded,verticalSpeed:p.verticalSpeed,
-      crouched:p.crouched,slide:!!s.sliding,jetpack:!!s.jetpackActive,jetpackFuel:s.grounded?1:(s.jetpackFuel??1),sprint:!!s.sprint,aim:!!s.aiming,firing:held
+      crouched:p.crouched,...heroFlightFlags({...p,sliding:!!s.sliding||p.sliding}),sprint:!!s.sprint,aim:!!s.aiming,firing:held
     });
   }
   let portalFrame=0;
   function update(dt,s){
-    heroAudio.update({player:{jetpackActive:!!s.jetpackActive,grounded:s.grounded,jetpackArmed:true,jetpackElapsed:(1-(s.jetpackFuel??1))*2}},sound&&game.state==='playing');
+    heroAudio.update(game,sound&&game.state==='playing'&&!s.free&&ready&&!completed&&!journalOpen&&!skillMenu.isOpen);
     portalFrame+=dt;electricPortals.sync(completed?[]:game.activePortals,game.time,portalFrame);
     setScreenMusic(ready&&!completed&&!journalOpen&&!skillMenu.isOpen&&game.state==='playing'?'gameplay':'paused',1);
     if(!ready||completed||journalOpen||skillMenu.isOpen)return;
