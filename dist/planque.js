@@ -118,7 +118,7 @@ function openStation(id){
    const level=NANO_ARMOR_TIERS[actual.tier-1].gameLevel;
    if(forgeHero!==characterId)message('Sas ouvert. Sélectionne '+forgeHero.toUpperCase()+' dans l’en-tête pour équiper cette tenue.',7);
    else if(level>maximum)message('Sas ouvert pour inspection. Niveau '+level+' requis pour équiper cette tenue en mission.',7);
-   else{armorLevel=level;game.hideoutArmorLevel=level;rig?.model.setLevel(level);saveCurrent();message('Tenue '+actual.tier+' équipée et sauvegardée pour '+characterId.toUpperCase()+'.',6);}
+   else{armorLevel=level;game.hideoutArmorLevel=level;rig?.model.setLevel(level);saveCurrent();nanoChambers.equip(forgeHero);message('Tenue '+actual.tier+' équipée et sauvegardée pour '+characterId.toUpperCase()+'.',6);}
    nanoUI?.refresh();
   });
   controls.append(heroes,tiers,material,meter,status,inject,recover);content.append(controls);
@@ -132,11 +132,13 @@ function openStation(id){
      phase==='loading'?'CHARGEMENT DES MODÈLES SHADOW UNIT…':
      phase==='ready'?'ARMURE TERMINÉE · SAS DISPONIBLE':
      phase==='open'?'SAS OUVERT · ACCÈS À LA TENUE':
+     phase==='retrieving'?'TRANSFERT DE LA TENUE · SAS OUVERT':
+     phase==='equipped'?'TENUE ÉQUIPÉE · CHAMBRE VIDE':
      phase==='error'?'CHARGEMENT IMPOSSIBLE · RELANCER':
      'RÉSERVOIR PRÊT · CHAMBRE VIDE';
    inject.disabled=phase==='injecting'||phase==='loading';
    recover.disabled=!['ready','open'].includes(phase)||state?.tier!==forgeTier;
-   recover.textContent=state?.doorOpen?'SAS OUVERT · ÉQUIPER':'OUVRIR LE SAS & ÉQUIPER';
+   recover.textContent=phase==='equipped'?'TENUE TRANSFÉRÉE':state?.doorOpen?'SAS OUVERT · ÉQUIPER':'OUVRIR LE SAS & ÉQUIPER';
   }};nanoUI.refresh();
   const details=element('details','','hub-nano-details');
   details.append(element('summary','Progression détaillée originale · 10 modules'));
