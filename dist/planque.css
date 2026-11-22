@@ -5,3 +5,24 @@
 body.hideout-page .pw-nano-notice{display:none!important}
 #panel{margin:0;overflow-y:auto}#panel>header{position:sticky;top:0;z-index:2;background:#202e42;padding-bottom:10px}
 @media(max-width:650px){#panel{bottom:auto;height:calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 205px);max-height:calc(100dvh - 205px)}}
+
+/* Native in-world Shadow Unit nano-forge controls in the Tenues station. */
+.hub-nano-controls{display:grid;gap:10px;margin:10px 0 20px}
+.hub-nano-heroes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hub-nano-heroes button{font-weight:800;letter-spacing:2px;padding:11px}
+.hub-nano-heroes [data-forge-hero=ghju][aria-pressed=true]{border-color:#ff55ac;background:#652744}
+.hub-nano-heroes [data-forge-hero=lylu][aria-pressed=true]{border-color:#63beff;background:#25456c}
+.hub-nano-tiers{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
+.hub-nano-tiers button{min-width:0;padding:9px 2px;display:grid;gap:5px;justify-items:center}
+.hub-nano-tiers strong{font-size:20px;font-weight:900;color:#f9c4dd;font-variant-numeric:tabular-nums}
+.hub-nano-tiers small{font-size:9px;line-height:1.2;hyphens:auto;color:#b9c6d6;overflow-wrap:anywhere}
+.hub-nano-tiers [aria-pressed=true]{background:#5e2e57;border-color:#ff80c1}
+#panel .hub-nano-material{font-size:11px;color:#c5d8e9;margin:0}
+#panel .hub-nano-state{font-size:11px;color:#ff9ed1;margin:0;font-weight:750;letter-spacing:.4px}
+.hub-nano-controls .hub-progress{margin:0;accent-color:#ff65af}
+.hub-nano-controls .hub-primary{margin:0}
+.hub-nano-controls .hub-primary:last-child{background:#193a4b}
+.hub-nano-details{margin-top:8px;border-top:1px solid #a7b6c544;padding-top:13px}
+.hub-nano-details summary{cursor:pointer;color:#bed2df;font-size:11px;letter-spacing:.7px;margin-bottom:12px}
+#panel .hub-nano-details .hub-list{margin-top:12px}
+@media(max-width:650px){.hub-nano-tiers{gap:3px}.hub-nano-tiers button{padding:7px 1px}.hub-nano-tiers small{font-size:8px}}
