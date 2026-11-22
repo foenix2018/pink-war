@@ -137,7 +137,9 @@ export function createHideoutNanoChambers(T,{scene,locations,low=false,onStatus=
     });
     c.rig=rig;rig.model.root.position.set(c.base.position.x,.30,c.base.position.z);
     rig.model.root.rotation.y=Math.PI;
-    rig.model.root.visible=true;
+    // Absolute guarantee: no mannequin silhouette can appear while the
+    // asynchronous high-detail cloak/gear textures are still downloading.
+    rig.model.root.visible=false;
     // Await the actual Blender cloak, tactical belt and slung rifle: they must
     // not flash into the room partway through the formation animation.
     await rig.model.shadowUnit?.gear?.ready;
@@ -160,12 +162,13 @@ export function createHideoutNanoChambers(T,{scene,locations,low=false,onStatus=
   // The existing model retains the real ten-step armour progression internally.
   c.rig.model.setLevel(NANO_ARMOR_TIERS[tier-1].gameLevel);
   applyMaterialProgression(c);
-  collectArmor(c);c.phase='idle';onStatus();return true;
+  collectArmor(c);c.rig.model.root.visible=false;c.phase='idle';onStatus();return true;
  }
 
  async function inject(hero,tier){
   if(!await prepare(hero,tier))return false;
-  const c=cells.get(hero);c.phase='injecting';c.age=0;c.targetDoor=0;onStatus();return true;
+  const c=cells.get(hero);c.phase='injecting';c.age=0;c.targetDoor=0;
+  c.rig.model.root.visible=true;onStatus();return true;
  }
  function recover(hero){
   const c=cells.get(hero);if(!c||!['ready','open'].includes(c.phase))return false;
