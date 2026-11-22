@@ -28,7 +28,7 @@ export const NANO_RECIPES=Object.freeze([
 const SITE={
  1:[{x:-4,z:59},{x:0,z:47}],2:[{x:20,z:84},{x:34,z:84}],
  3:[{x:8,z:26},{x:10,z:26},{x:-8,z:14}],4:[{x:0,z:30},{x:-18,z:28}],
- 5:[{x:0,z:-46}],6:[{x:0,z:44}],7:[{x:6,z:82}],8:[{x:0,z:64}],10:[{x:0,z:22}]
+ 5:[{x:0,z:-46}],6:[{x:0,z:44}],7:[{x:6,z:82}],8:[{x:0,z:64}],9:[{x:-94,y:14,z:62}],10:[{x:0,z:22}]
 };
 const integer=(v,max=1e8)=>Number.isFinite(v)?Math.max(0,Math.min(max,Math.floor(v))):0;
 export const nanoCompanion=hero=>hero==='lylu'?'Cara · CAR-14':'Gaby · GAB-1';

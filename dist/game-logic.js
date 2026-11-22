@@ -165,7 +165,7 @@ export function clipMuzzleOrigin(player, muzzle, obstacles) {
 }
 
 export function moveInArena(entity, dx, dz, radius, obstacles) {
-  const edge = ARENA_SIZE / 2 - radius - 1;
+  const edge = (entity.worldBounds?.max ?? (ARENA_SIZE / 2 - 1)) - radius;
   let x = clamp(entity.x + dx, -edge, edge), z = entity.z;
   for (const b of obstacles) {
     // Stair treads meet the feet before a capsule's forward radius. Allow this
@@ -239,14 +239,15 @@ export function traceEnemyHit(start, end, enemy) {
 // A shared navigation field lets a crowd actually go around cover. Rebuilding it
 // twice per second costs far less than finding a separate path for each monster.
 class CoverNavigation {
-  constructor(obstacles) {
-    this.size = 99; this.cell = 2; this.edge = -98; this.obstacles = obstacles;
+  constructor(obstacles, terrain=null) {
+    this.size = terrain?.size || 99; this.cell = 2; this.edge = terrain?.edge ?? -98; this.obstacles = obstacles;
     this.solid = new Uint8Array(this.size * this.size); this.distance = new Int16Array(this.solid.length);
     this.queue = new Int32Array(this.solid.length); this.refreshAt = -1; this.goal = -1;
-    const groundSolids=obstacles.filter(b=>!b.walkableSurface&&(b.y||0)<2);
+    const groundSolids=obstacles.filter(b=>!b.walkableSurface&&(terrain?.surface||(b.y||0)<2));
     for (let z = 0; z < this.size; z++) for (let x = 0; x < this.size; x++) {
       const wx = this.edge + x * 2, wz = this.edge + z * 2;
-      this.solid[z * this.size + x] = groundSolids.some(b => Math.abs(wx-b.x) < b.hx+(b.navPad??1.3) && Math.abs(wz-b.z) < b.hz+(b.navPad??1.3)) ? 1 : 0;
+      const floor=terrain?.surface?terrain.surface(wx,wz):0;
+      this.solid[z * this.size + x] = (terrain?.surface&&floor< -40)||groundSolids.some(b => (!terrain?.surface||(b.y||0)<floor+2&&(b.y||0)+b.height>floor+.3)&&Math.abs(wx-b.x) < b.hx+(b.navPad??1.3) && Math.abs(wz-b.z) < b.hz+(b.navPad??1.3)) ? 1 : 0;
     }
   }
   point(index) { return { x: this.edge + index % this.size * 2, z: this.edge + Math.floor(index / this.size) * 2 }; }
@@ -316,12 +317,12 @@ export function brokenBridgeDetour(enemy,player) {
   return null;
 }
 export class ArenaGame {
-  constructor(obstacles = [], random = Math.random, traversal = null, characterId='ghju') { this.traversal=traversal;this.routes=traversal?.routes||ELEVATED_ROUTES;this.lifts=traversal?.lifts||LIFTS;this.obstacles = obstacles; this.random = random; this.navigation = new CoverNavigation(obstacles); this.stairNavigation=this.routes.map(()=>new CoverNavigation(obstacles)); this.fortressArena=this.constructor===ArenaGame&&obstacles.some(o=>o.kind==='fortress-wall'); this.reset(characterId); }
+  constructor(obstacles = [], random = Math.random, traversal = null, characterId='ghju') { this.traversal=traversal;this.routes=traversal?.routes||ELEVATED_ROUTES;this.lifts=traversal?.lifts||LIFTS;this.obstacles = obstacles; this.random = random; this.navigation = new CoverNavigation(obstacles,this.traversal?.navigation); this.stairNavigation=this.routes.map(()=>new CoverNavigation(obstacles,this.traversal?.navigation)); this.fortressArena=this.constructor===ArenaGame&&obstacles.some(o=>o.kind==='fortress-wall'); this.reset(characterId); }
   replaceObstacles(obstacles) {
     // Renderer recovery / entering WebXR rebuilds the scene. Keep aiming and
     // simulation on the same moving lift and gate colliders after that switch.
     this.obstacles=obstacles;this.updateLifts(this.time);
-    this.navigation=new CoverNavigation(obstacles);this.stairNavigation=this.routes.map(()=>new CoverNavigation(obstacles));
+    this.navigation=new CoverNavigation(obstacles,this.traversal?.navigation);this.stairNavigation=this.routes.map(()=>new CoverNavigation(obstacles,this.traversal?.navigation));
     this.searchFields=new Map();
   }
   reset(characterId=this.characterId||'ghju') {
@@ -333,6 +334,7 @@ export class ArenaGame {
     this.searchFields=new Map();
     this.navigation.refreshAt = -1; this.navigation.goal = -1;
     this.player = { x: 0, z: 22, elevation: 0, hp: 100, yaw: 0, verticalSpeed: 0, grounded: true, jumpHeld: false, crouched:false,sliding:false,slideTime:0,slideCooldown:0,airJumps:0,jumpImpulseX:0,jumpImpulseZ:0,lastGroundedAt:0,jetpackArmed:false,jetpackActive:false,jetpackElapsed:0 };
+    if(this.traversal?.bounds)this.player.worldBounds=this.traversal.bounds;
     this.playerVelocity={x:0,y:0,z:0};this.planarVelocity={x:0,z:0};
     this.grappleEnabled=true;this.grapple=createGrappleState();this.grappleAim=null;this.grappleCollider=null;this.grappleLastPosition=null;
     this.bladePrevious=null;this.bladeHitTimes=new Map();this.bladeSlashAt=-99;this.bladeSlashSide=1;this.bladeSpeed=0;this.bladeGuard=false;this.bladeHumAt=0;
@@ -480,9 +482,10 @@ export class ArenaGame {
     // on open ground and within their immediate line of sight.
     const dirX=Math.sin(p.yaw||0),dirZ=-Math.cos(p.yaw||0);
     const offsets=[[0,4],[2.6,3],[-2.6,3],[4,1],[-4,1],[0,-4],[5,-3],[-5,-3]];
+    const offerEdge=(this.traversal?.bounds?.max??98)-4;
     const candidates=offsets.map(([side,forward])=>({
-      x:clamp(p.x+dirX*forward+dirZ*side,-94,94),
-      z:clamp(p.z+dirZ*forward-dirX*side,-94,94)
+      x:clamp(p.x+dirX*forward+dirZ*side,-offerEdge,offerEdge),
+      z:clamp(p.z+dirZ*forward-dirX*side,-offerEdge,offerEdge)
     }));
     const clear=point=>this.obstacles.every(b=>b.walkableSurface||
       Math.abs(point.x-b.x)>b.hx+1.4||Math.abs(point.z-b.z)>b.hz+1.4);
@@ -562,6 +565,7 @@ export class ArenaGame {
       awareness:'patrol',lastSeenAt:-999,lastKnownX:x,lastKnownZ:z,lastKnownHeight:homeHeight,patrolAngle:angle,patrolTimer:.7+this.random()*2,alertedUntil:0 };
 
     if(form==='sentinel'){enemy.awareness='engaged';enemy.lastSeenAt=this.time;enemy.yaw=Math.PI;}
+    if(this.traversal?.bounds)enemy.worldBounds=this.traversal.bounds;
     enemy.maxHp=enemy.hp;if(this.projectedShieldsEnabled)ensureEnemyBubble(enemy);
     this.enemies.push(enemy); this.toSpawn--; this.event('spawn', { id: enemy.id, x: enemy.x, y: enemy.elevation + enemy.aimHeight, z: enemy.z });
   }
@@ -585,7 +589,7 @@ export class ArenaGame {
     let field=this.searchFields.get(key);
     if(!field){
       if(this.searchFields.size>=6)this.searchFields.delete(this.searchFields.keys().next().value);
-      field=new CoverNavigation(this.obstacles);this.searchFields.set(key,field);
+      field=new CoverNavigation(this.obstacles,this.traversal?.navigation);this.searchFields.set(key,field);
     }
     field.update(target,this.time);
     return field.waypoint(enemy)||soundWaypoint(enemy,target,this.obstacles,segmentBox);

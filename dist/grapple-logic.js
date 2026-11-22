@@ -59,7 +59,8 @@ export function sweepGrapplePlayer(game,delta){
  const length=Math.hypot(delta.x,delta.y,delta.z),t=nearest?Math.max(0,nearest.t-.008/Math.max(.001,length)):1;
  p.x+=delta.x*t;p.z+=delta.z*t;p.elevation=start.y+delta.y*t;
  // The same arena envelope as ordinary locomotion, including during a boost.
- p.x=Math.max(-98.45,Math.min(98.45,p.x));p.z=Math.max(-98.45,Math.min(98.45,p.z));
+ const edge=p.worldBounds?(p.worldBounds.max-.55):98.45;
+ p.x=Math.max(-edge,Math.min(edge,p.x));p.z=Math.max(-edge,Math.min(edge,p.z));
  return {blocked:t<.999,normal:nearest?.normal,t};
 }
 // Returns true only when this module has integrated the player's movement.

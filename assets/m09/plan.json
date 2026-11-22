@@ -1,0 +1,399 @@
+{
+  "version": 1,
+  "chapter": 9,
+  "name": "Les Jardins suspendus",
+  "units": "metres",
+  "north": [
+    0,
+    0,
+    -1
+  ],
+  "platforms": [
+    {
+      "id": "access",
+      "x": -105,
+      "z": 112,
+      "y": 10,
+      "r": 17,
+      "label": "Accès au complexe"
+    },
+    {
+      "id": "research",
+      "x": -90,
+      "z": 58,
+      "y": 14,
+      "r": 24,
+      "label": "Serres de recherche"
+    },
+    {
+      "id": "landing",
+      "x": -112,
+      "z": 5,
+      "y": 18,
+      "r": 9,
+      "label": "Palier botanique"
+    },
+    {
+      "id": "pavilion",
+      "x": -66,
+      "z": -5,
+      "y": 22,
+      "r": 21,
+      "label": "Pavillon de culture"
+    },
+    {
+      "id": "bridge",
+      "x": -6,
+      "z": 22,
+      "y": 26,
+      "r": 10,
+      "label": "Passerelle centrale"
+    },
+    {
+      "id": "meeting",
+      "x": 0,
+      "z": -20,
+      "y": 34,
+      "r": 20,
+      "label": "Réunion · GHJU et LYLU"
+    },
+    {
+      "id": "core",
+      "x": -8,
+      "z": -102,
+      "y": 44,
+      "r": 50,
+      "label": "Cœur biotique JANUS"
+    },
+    {
+      "id": "control",
+      "x": 92,
+      "z": -73,
+      "y": 44,
+      "r": 26,
+      "label": "Nœud de contrôle ORDRE"
+    },
+    {
+      "id": "liberation",
+      "x": 92,
+      "z": 4,
+      "y": 32,
+      "r": 24,
+      "label": "Libération des Jardins"
+    },
+    {
+      "id": "extraction",
+      "x": 104,
+      "z": 82,
+      "y": 22,
+      "r": 27,
+      "label": "Extraction AEGIS"
+    }
+  ],
+  "links": [
+    {
+      "id": "access-research",
+      "a": "access",
+      "b": "research",
+      "width": 10
+    },
+    {
+      "id": "research-landing",
+      "a": "research",
+      "b": "landing",
+      "width": 10
+    },
+    {
+      "id": "landing-pavilion",
+      "a": "landing",
+      "b": "pavilion",
+      "width": 10
+    },
+    {
+      "id": "pavilion-bridge",
+      "a": "pavilion",
+      "b": "bridge",
+      "width": 12
+    },
+    {
+      "id": "bridge-meeting",
+      "a": "bridge",
+      "b": "meeting",
+      "width": 10
+    },
+    {
+      "id": "meeting-core",
+      "a": "meeting",
+      "b": "core",
+      "width": 10,
+      "end": [
+        -8,
+        -76
+      ],
+      "endRadius": 24
+    },
+    {
+      "id": "core-promenade",
+      "a": "core",
+      "b": "core",
+      "start": [
+        -8,
+        -76
+      ],
+      "end": [
+        20,
+        -76
+      ],
+      "width": 8,
+      "startRadius": 0,
+      "endRadius": 0
+    },
+    {
+      "id": "core-control",
+      "a": "core",
+      "b": "control",
+      "width": 10,
+      "start": [
+        20,
+        -76
+      ],
+      "end": [
+        92,
+        -54
+      ],
+      "startRadius": 12.8,
+      "endRadius": 7
+    },
+    {
+      "id": "control-liberation",
+      "a": "control",
+      "b": "liberation",
+      "width": 10,
+      "start": [
+        92,
+        -54
+      ],
+      "startRadius": 7
+    },
+    {
+      "id": "liberation-extraction",
+      "a": "liberation",
+      "b": "extraction",
+      "width": 10
+    }
+  ],
+  "objectives": [
+    {
+      "id": "access",
+      "number": 1,
+      "label": "Infiltrer le complexe",
+      "x": -105,
+      "z": 119,
+      "y": 10,
+      "radius": 3.3
+    },
+    {
+      "id": "research",
+      "number": 2,
+      "label": "Collecter les données PINK",
+      "x": -90,
+      "z": 64,
+      "y": 14,
+      "radius": 3.3
+    },
+    {
+      "id": "pavilion",
+      "number": 3,
+      "label": "Désactiver la surveillance",
+      "x": -66,
+      "z": 0,
+      "y": 22,
+      "radius": 3.3
+    },
+    {
+      "id": "bridge",
+      "number": 4,
+      "label": "Rejoindre la zone haute",
+      "x": -6,
+      "z": 22,
+      "y": 26,
+      "radius": 3.3
+    },
+    {
+      "id": "meeting",
+      "number": 5,
+      "label": "Retrouver GHJU et LYLU",
+      "x": 0,
+      "z": -20,
+      "y": 34,
+      "radius": 3.3
+    },
+    {
+      "id": "core",
+      "number": 6,
+      "label": "Arrêter le programme JANUS",
+      "x": -8,
+      "z": -76,
+      "y": 44,
+      "radius": 3.3,
+      "consoleOffset": -2.6
+    },
+    {
+      "id": "control",
+      "number": 7,
+      "label": "Envoyer l’attaque de données",
+      "x": 92,
+      "z": -54,
+      "y": 44,
+      "radius": 3.3
+    },
+    {
+      "id": "liberation",
+      "number": 8,
+      "label": "Neutraliser la défense",
+      "x": 92,
+      "z": 4,
+      "y": 32,
+      "radius": 3.3
+    },
+    {
+      "id": "extraction",
+      "number": 9,
+      "label": "Rejoindre l’extraction AEGIS",
+      "x": 104,
+      "z": 82,
+      "y": 22,
+      "radius": 3.3
+    }
+  ],
+  "start": {
+    "x": -105,
+    "z": 122,
+    "y": 10,
+    "yaw": 0
+  },
+  "overview": {
+    "position": [
+      305,
+      300,
+      390
+    ],
+    "target": [
+      0,
+      16,
+      -10
+    ],
+    "span": 345
+  },
+  "waterfalls": [
+    {
+      "x": 25,
+      "z": 18,
+      "y": 23,
+      "bottom": -10,
+      "width": 23,
+      "yaw": 0
+    },
+    {
+      "x": -28,
+      "z": 62,
+      "y": -10,
+      "bottom": -29,
+      "width": 20,
+      "yaw": 0.2
+    },
+    {
+      "x": 6,
+      "z": 103,
+      "y": -29,
+      "bottom": -45,
+      "width": 25,
+      "yaw": -0.1
+    },
+    {
+      "x": -64,
+      "z": -24,
+      "y": 16,
+      "bottom": -16,
+      "width": 12,
+      "yaw": 0.4
+    }
+  ],
+  "pools": [
+    {
+      "x": 17,
+      "z": 42,
+      "y": -10,
+      "rx": 40,
+      "rz": 25
+    },
+    {
+      "x": -19,
+      "z": 86,
+      "y": -29,
+      "rx": 40,
+      "rz": 26
+    },
+    {
+      "x": 27,
+      "z": 116,
+      "y": -45,
+      "rx": 40,
+      "rz": 23
+    },
+    {
+      "x": 26,
+      "z": 1,
+      "y": 23,
+      "rx": 19,
+      "rz": 12
+    },
+    {
+      "x": -64,
+      "z": -30,
+      "y": 16,
+      "rx": 9,
+      "rz": 8
+    },
+    {
+      "x": -64,
+      "z": -10,
+      "y": -16,
+      "rx": 15,
+      "rz": 13
+    }
+  ],
+  "drones": [
+    [
+      -113,
+      30,
+      80
+    ],
+    [
+      -60,
+      37,
+      35
+    ],
+    [
+      72,
+      68,
+      -35
+    ],
+    [
+      118,
+      58,
+      10
+    ],
+    [
+      40,
+      85,
+      -110
+    ]
+  ],
+  "palette": {
+    "rose": "#ff167f",
+    "cyan": "#5ee7f2",
+    "stone": "#4a5361",
+    "bronze": "#a4a086"
+  }
+}

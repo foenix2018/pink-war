@@ -29,6 +29,7 @@ function frameCover(root,mission,characterId){
 }
 
 export const BRIEFINGS = Object.freeze({
+  9:{title:'Les Jardins suspendus',zone:'Vesper // Complexe Biotech ORDRE / HELIX',image:()=>null,text:()=>"Traverse les serres, retrouve l’autre héros, arrête JANUS et libère les Jardins.",objectives:[]},
   7: {title:'Mémoires Locales',zone:'Vesper // La forêt des Sources',image:()=>null,text:()=>"Suivre la piste de l’antenne de recherche des parents jusqu’à la cascade.",objectives:[]},
   10: {title:'La Couronne HELIX',zone:'Vesper // Les hauteurs de HELIX',image:()=>null,text:()=>"Désynchroniser l’ancrage de phase sur les hauteurs de Vesper.",objectives:[]},
   1: { title: 'Le Dernier Signal', zone: 'Vesper // Quartier des secours', image: c => c === 'lylu' ? 'art/chargement-lylu.webp?v=3.47' : 'art/chargement.webp?v=3.47',
