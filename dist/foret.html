@@ -1,44 +1,101 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Pink Wars — 07 Mémoires Locales</title><meta name="description" content="Prototype de performance du chapitre 07 de Pink Wars : forêt, rivière et gué, moulin et aqueduc en ruine, cascade et grotte.">
-<link rel="icon" href="icon.svg"><meta name="theme-color" content="#2a1712">
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="icon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pink Wars — 07 Mémoires locales</title>
+<meta name="description" content="Pink Wars, chapitre 07 : la forêt des Sources au coucher du soleil, le gué, le moulin, la cascade, la grotte et son relais, le Centre de la Cascade de l’équipe VEILLE, la SY-05 et l’exfiltration par l’aqueduc.">
 <style>
-html,body{margin:0;height:100%;overflow:hidden;background:#1a1012;color:#efe6dc;font:14px/1.45 system-ui,sans-serif}
+:root{color-scheme:dark;font-family:Inter,system-ui,Arial,sans-serif;background:#05070a;color:#eef1f6}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#05070a}
 canvas#game{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
-#hud{position:fixed;left:12px;top:10px;padding:6px 10px;border-radius:8px;background:#0b140dcc;font:12px ui-monospace,monospace;max-width:calc(100% - 24px)}
-#zone{position:fixed;left:50%;top:14px;transform:translateX(-50%);padding:6px 14px;border-radius:999px;background:#0b140dcc;letter-spacing:.12em;text-transform:uppercase;font-size:12px}
-#help{position:fixed;left:12px;bottom:12px;padding:8px 12px;border-radius:8px;background:#0b140dcc;font-size:12px;color:#b7c8b2}
-#start{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(#3a2219dd,#0d0a10f2)}
-#start .card{max-width:520px;margin:16px;padding:24px;border:1px solid #6c8a5e;border-radius:16px;background:#101b11e6}
-#start h1{margin:0 0 6px;font-size:28px}#start p{color:#b9cab3}
-#start button{margin-top:10px;padding:12px 18px;border:1px solid #9fd07f;border-radius:10px;background:#2d4a26;color:#fff;font:inherit;font-weight:700;cursor:pointer}
-#start small a,#start p a{color:#ffb27a}
-#sub{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);max-width:min(760px,92vw);padding:10px 16px;border-radius:12px;background:#120c10d9;font-size:15px;text-align:center}
-#sub b{display:block;font-size:11px;letter-spacing:.14em;margin-bottom:3px}
-#prompt{position:fixed;left:50%;bottom:130px;transform:translateX(-50%);padding:9px 16px;border:1px solid #ffb27a;border-radius:999px;background:#2a1712e6;color:#ffe1c8;font:inherit;font-size:13px;cursor:pointer}
-#doc{position:fixed;inset:0;display:grid;place-items:center;background:#0b0708b3}#doc[hidden],#sub[hidden],#prompt[hidden],#fin[hidden]{display:none}
-#doc .card{max-width:min(620px,92vw);max-height:80dvh;overflow:auto;padding:22px;border:1px solid #9a7b5d;border-radius:12px;background:#17110e;color:#e8dccb}
-#doc small{color:#c7a27d;letter-spacing:.08em}#doc h2{margin:.3em 0 .6em;font-size:20px}#doc .foot{font-size:13px;color:#b9a48f}
-#doc button,#fin a{padding:10px 16px;border:1px solid #ffb27a;border-radius:8px;background:#3a2218;color:#fff;font:inherit;cursor:pointer;text-decoration:none}
-#fin{position:fixed;right:14px;bottom:14px;max-width:340px;padding:14px;border-radius:12px;background:#17110ee6;border:1px solid #ffb27a}#fin p{margin:.3em 0 .8em;font-weight:700}
-</style><link rel="stylesheet" href="./m07-hud.css?v=2"><link rel="stylesheet" href="./mission-briefing.css?v=3.86.2"><script defer src="./pw-identity.js?v=2"></script></head><body>
-<canvas id="game"></canvas><div id="hud">Chargement…</div><div id="zone"></div>
-<div id="sub" hidden><b></b><span></span></div><button id="prompt" hidden></button>
-<div id="doc" hidden><div class="card"><small></small><h2></h2><div class="lines"></div><p class="foot"></p><button>FERMER</button></div></div>
-<div id="fin" hidden><small>FIN DU CHAPITRE 07 · EXFILTRATION RÉUSSIE</small><p></p><small>Le relais, le Centre de la Cascade, le dossier TRANSCENDANCE, la chute de la SY-05 et la fuite par l’aqueduc.</small><br><br><a href="index.html?mode=foret">← RETOUR AU MENU</a></div>
-<div id="help">Flèches / ZQSD / WASD : marcher · Souris : regarder · Espace / clic droit : sauter · Maj : courir · E : lire — tactile : gauche se déplacer, droite regarder</div>
-<div id="start" class="pw-briefing pwb-wallpaper" style="--pwb-art:url('./art/chapters/chapter-07.webp?v=20261031');--pwb-portrait-focus:0%"><div class="card pwb-content"><small>PINK WARS · ACTE II · CHAPITRE 07 · VERSION DE TRAVAIL</small><h1>Mémoires locales</h1><p style="margin-top:-4px;color:#ffb27a">La forêt des Sources</p>
-<p>2196, sept ans après la Chute. Au sortir de la fonderie d’ORDRE (chapitre 06), le camion d’AEGIS dépose GHJU à la lisière de la forêt des Sources, au coucher du soleil. Le dossier des Tilleuls parle d’une antenne de recherche de ses parents, quelque part derrière la cascade.</p>
-<p>Le parcours de la carte, de 01 à 09 : la lisière et le portail d’AEGIS, le sous-bois, le gué, le moulin et l’aqueduc, la cascade, la grotte et son relais, le Centre de la Cascade de l’équipe VEILLE, l’assaut de la N-08 dans la cour d’extraction, puis l’exfiltration le long de l’aqueduc jusqu’à la rivière. Dialogues et documents du chapitre 07 ; l’assaut est mis en scène, le combat n’est pas encore jouable. Au bout : la suite vers le chapitre 08, « Les Ordres de JANUS ».</p>
-<p>Héros : <a href="?character=ghju">GHJU · GAB-1</a> · <a href="?character=lylu">LYLU · CAR-14</a></p>
-<p>Qualité : <a href="?quality=low">basse</a> · <a href="?quality=balanced">moyenne</a> · <a href="?quality=high">haute</a> · <a href="?bench=40">mesure automatique</a></p>
-<button id="go" disabled>PRÉPARATION…</button> <a href="index.html?mode=foret" style="margin-left:10px;color:#ffb27a">← Retour au menu</a></div></div>
+#shade{position:fixed;inset:0;z-index:8;display:grid;place-items:center;padding:18px;overflow:auto;
+ background:radial-gradient(ellipse at 50% 108%,#ff4fa133,transparent 52%),radial-gradient(ellipse at 80% 18%,#5fe0f022,transparent 40%),radial-gradient(ellipse at 18% 20%,#ffb35c1c,transparent 40%),linear-gradient(180deg,#070c16cc 0%,#0b1424aa 46%,#1a1028cc 72%,#05070aee 100%),url('art/mission03-cover.svg') center/cover no-repeat}
+.panel{max-width:620px;width:100%;padding:30px;border:1px solid #e8eef24d;border-radius:20px;background:linear-gradient(115deg,#0d1822ee,#0a131bcc);box-shadow:0 10px 80px #000c;backdrop-filter:blur(14px)}
+.kicker{font-size:12px;letter-spacing:.26em;color:#ffc890;font-weight:800}
+h1{margin:12px 0;font-size:clamp(34px,5vw,58px);font-weight:900;line-height:.95;text-transform:uppercase;letter-spacing:-.05em}
+em{font-style:normal;color:#5fb8ff}p{line-height:1.55;color:#c3cdd6}button,select{font:inherit;cursor:pointer}
+.primary{display:block;background:#e8f6ff;color:#0b1020;font-weight:900;border:0;border-radius:12px;padding:15px 24px;width:100%;margin:20px 0 10px;letter-spacing:.1em}
+.primary:hover{background:#ffffff}.primary:disabled{opacity:.6;cursor:wait}.small{font-size:12px;color:#a7b4bf}
+.chars{display:flex;gap:8px;margin-top:14px}.chars a{flex:1;text-align:center;padding:9px;border:1px solid #e8eef24d;border-radius:10px;color:#e8eef2;text-decoration:none;font-size:12px;font-weight:800;letter-spacing:.14em}
+.chars a[aria-current=true]{background:#e8eef21f;border-color:#e8eef2aa}
+#hud{position:fixed;inset:0;pointer-events:none;z-index:2;text-shadow:0 2px 4px #000}
+#top{position:absolute;top:max(60px,calc(env(safe-area-inset-top) + 47px));left:max(13px,env(safe-area-inset-left))}
+#objective{display:none;margin:0;padding:10px 13px;border-left:2px solid #5fb8ff;max-width:min(380px,calc(100vw - 72px));background:rgba(9,14,22,.86);font-size:12px;line-height:1.4;font-weight:800;letter-spacing:.04em}
+#hint{display:none;margin-top:4px;padding:8px 13px;max-width:min(380px,calc(100vw - 72px));background:rgba(9,14,22,.7);font-size:12px;color:#c3cdd6;line-height:1.4}
+body.pw-objective-open #objective,body.pw-objective-open #hint{display:block}
+#crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:18px;height:18px}
+#crosshair:before,#crosshair:after{content:"";position:absolute;top:8px;left:0;background:#f1f6fa;box-shadow:0 0 5px #8fd0ff}
+#crosshair:before{height:2px;width:18px}#crosshair:after{width:2px;height:18px;top:0;left:8px}
+body.aiming #crosshair{opacity:.23;transform:translate(-50%,-50%) scale(.52)}
+#prompt{position:absolute;top:45%;left:50%;transform:translate(-50%,-50%);background:#0b1426e0;border:1px solid #5fb8ffaa;border-radius:8px;padding:8px 13px;font-weight:900;font-size:12px;letter-spacing:.06em;display:none;max-width:86vw}
+#notice{position:absolute;top:30%;left:50%;transform:translateX(-50%);padding:10px 18px;background:#0b1426dd;border-radius:8px;letter-spacing:.12em;font-weight:900;font-size:12px;color:#cfe8ff;display:none;max-width:min(400px,calc(100vw - 28px));text-align:center}
+#subtitle{position:absolute;left:50%;bottom:max(118px,calc(env(safe-area-inset-bottom) + 108px));transform:translateX(-50%);width:min(720px,calc(100vw - 28px));padding:10px 16px;background:rgba(5,9,15,.78);border-radius:10px;font-size:15px;line-height:1.45;display:none;text-align:center}
+#subtitle b{font-weight:900;letter-spacing:.06em;margin-right:4px}
+#timer{position:absolute;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);width:min(380px,calc(100vw - 120px));padding:7px 10px;background:rgba(9,14,22,.82);border:1px solid #5fb8ff66;border-radius:9px}
+#timer-label{font-size:11px;font-weight:900;letter-spacing:.12em;text-align:center}#timer-track{height:5px;margin-top:5px;background:#ffffff1f;border-radius:3px;overflow:hidden}
+#timer-bar{height:100%;width:100%;background:#5fb8ff}
+#van{position:absolute;top:max(58px,calc(env(safe-area-inset-top) + 50px));left:50%;transform:translateX(-50%);width:min(300px,calc(100vw - 150px));padding:6px 10px;background:rgba(9,14,22,.8);border:1px solid #9fe3c866;border-radius:9px}
+#van-label{font-size:10px;font-weight:900;letter-spacing:.12em;text-align:center;color:#d8f7ea}#van-track{height:4px;margin-top:4px;background:#ffffff1f;border-radius:3px;overflow:hidden}#van-bar{height:100%;width:100%;background:#9fe3c8}
+#van.danger{border-color:#ff5a4a99}#van.danger #van-bar{background:#ff5a4a}#timer.danger{border-color:#ff5a4a99}#timer.danger #timer-bar{background:#ff5a4a}#timer.danger #timer-label{color:#ffc4bc}
+#doc{position:fixed;inset:0;z-index:9;display:grid;place-items:center;padding:18px;background:#000a}
+#doc[hidden]{display:none}
+#doc article{max-width:560px;width:100%;max-height:calc(100vh - 36px);overflow:auto;padding:26px 28px;background:#e9e3d2;color:#1d1f22;border-radius:6px;box-shadow:0 14px 60px #000;font-family:"Courier New",ui-monospace,monospace}
+#doc small{display:block;margin-bottom:6px;font:800 11px Inter,system-ui,sans-serif;letter-spacing:.12em;color:#6b6250}#doc p.foot{font-size:13px;color:#5b5a55;font-style:italic}
+#doc h2{margin:0 0 14px;font-size:17px;letter-spacing:.04em;font-family:Inter,system-ui,sans-serif;font-weight:900}#doc p{color:#2b2d31;font-size:14.5px;line-height:1.55;margin:0 0 11px}
+#doc button{margin-top:10px;background:#1d1f22;color:#f4efe2;border:0;border-radius:8px;padding:10px 16px;font-weight:800;letter-spacing:.08em;font-family:Inter,system-ui,sans-serif}
+#damage{position:fixed;inset:0;z-index:1;pointer-events:none;box-shadow:inset 0 0 95px transparent;transition:box-shadow .2s}
+#renderer{display:none}
+#quality{display:none;position:fixed;right:max(13px,env(safe-area-inset-right));top:max(62px,calc(env(safe-area-inset-top) + 46px));z-index:7;background:#0c1a23de;color:#c5d6d9;border:1px solid #526777a1;padding:6px;font-size:11px}
+body.pw-graphics-open #quality{display:block}
+.pw-minimal-action{position:fixed;z-index:7;top:max(13px,env(safe-area-inset-top));width:38px;height:38px;display:grid;place-items:center;background:rgba(9,14,22,.83);color:#e8eef2;border:1px solid #e8eef255;border-radius:9px;font-size:20px;pointer-events:auto;touch-action:manipulation}
+#pwMission{left:max(13px,env(safe-area-inset-left))}#pwSettings{right:max(13px,env(safe-area-inset-right))}
+#m02-touch-controls{position:fixed;inset:0;pointer-events:none;z-index:5;display:none}
+#m02-touch-controls .m02-stick-knob{position:absolute;left:calc(50% - 18px);top:calc(50% - 18px);width:36px;height:36px;border-radius:50%;background:#e8f6ff99;border:1px solid #ffffff}
+#m02-touch-controls .m02-stick-ring{position:relative}
+@media(pointer:coarse){#m02-touch-controls{display:block}#hud #prompt{top:41%}#subtitle{font-size:13px;width:min(560px,calc(100vw - 28px));bottom:40vh}}
+/* The Fracture pause button (top right) is the only pause control on this page. */
+#m02-touch-controls [data-m02=pause]{display:none!important}
+/* Briefing, defeat and ending panels cover the combat HUD. */
+body.pw-shaded .pw-hud,body.pw-shaded #hud,body.pw-shaded .pw-minimal-action{visibility:hidden}
+@supports(height:100dvh){html,body{height:100dvh;min-height:100dvh}canvas#game{position:fixed;top:0;left:0;right:auto;bottom:auto;width:100vw;height:100dvh}}
+</style>
+<link rel="stylesheet" href="mobile-controls-v7.css?v=3.76.0"><link rel="stylesheet" href="fracture.css?v=3.76.0">
+<script defer src="./pw-identity.js?v=2"></script>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="damage"></div>
+<div id="hud" hidden>
+  <div id="top"><div id="objective">Mémoires locales</div><div id="hint"></div></div>
+  <div id="van" hidden><div id="van-label"></div><div id="van-track"><div id="van-bar"></div></div></div>
+  <div id="timer" hidden><div id="timer-label"></div><div id="timer-track"><div id="timer-bar"></div></div></div>
+  <div id="crosshair"></div><div id="prompt"></div><div id="notice"></div><div id="subtitle" aria-live="polite"></div><span id="renderer"></span>
+</div>
+<div id="doc" hidden><article><small id="doc-stamp"></small><h2 id="doc-title"></h2><div id="doc-body"></div><button id="doc-close" type="button">REPOSER LE DOCUMENT (F)</button></article></div>
+<button id="pwMission" class="pw-minimal-action" aria-label="Afficher l’objectif" title="Objectif" onclick="document.body.classList.toggle('pw-objective-open');document.body.classList.remove('pw-graphics-open')">◎</button><button id="pwSettings" class="pw-minimal-action" aria-label="Afficher les réglages" title="Réglages" onclick="document.body.classList.toggle('pw-graphics-open');document.body.classList.remove('pw-objective-open')">⚙</button><select id="quality" aria-label="Qualité graphique"><option value="normal">QUALITÉ NORMALE</option><option value="low">PERFORMANCE</option></select>
+<div id="shade"><div class="panel">
+  <div class="kicker">PINK WARS / ACTE II · LES ORIGINES DU SOULÈVEMENT · CHAPITRE 07</div>
+  <h1 id="panel-title">Mémoires <em>locales</em></h1>
+  <p id="panel-text">Au sortir de la fonderie d’ORDRE (chapitre 06), le camion d’AEGIS dépose l’héroïne à la lisière de la forêt des Sources, au coucher du soleil. Le dossier des Tilleuls parle d’une antenne de recherche de ses parents, derrière la cascade. Les sondes d’ORDRE survolent déjà la canopée.</p>
+  <p class="small" id="panel-small">Mission longue (≈ 30 à 40 min), du chapitre 06 au chapitre 08 : lisière et portail d’AEGIS, sous-bois, gué, moulin et aqueduc, cascade, grotte et relais, Centre de la Cascade, cour d’extraction et SY-05, exfiltration par l’aqueduc au coucher du soleil. Documents (F), points de contrôle à chaque étape, lampe frontale (L) dans la grotte. <a href="./foret-exploration.html" style="color:#9fd07f">Version exploration (sans combat)</a></p>
+  <div class="chars"><a href="?character=ghju" id="pick-ghju">GHJU · GAB-1</a><a href="?character=lylu" id="pick-lylu">LYLU · CAR-14</a></div>
+  <button id="start" class="primary">COMMENCER</button>
+  <button id="home" class="primary" hidden onclick="location.assign('./index.html?mode=foret')" style="margin-top:0;background:#1c2733;color:#e8eef2">MENU · SUITE : CHAPITRE 08 →</button>
+  <a href="./foret.html?renderer=webgl" id="compat" style="display:inline-block;color:#c9a6ff;font-size:13px;margin-bottom:12px">Mode compatibilité WebGL (si écran noir)</a>
+  <div id="status" class="small">Clavier / souris, manette, tactile ou casque WebXR · rendu WebGPU avec repli WebGL</div>
+</div></div>
 <script type="module">
-import {createMissionLoading} from './mission-loading.js?v=3.86.2';
-const params=new URLSearchParams(location.search),manual=params.get('manual')==='1';
-const loading=manual?null:createMissionLoading({mission:7,characterId:params.get('character')==='lylu'?'lylu':'ghju'});
-if(manual)document.getElementById('start').classList.remove('pwb-wallpaper');
-const go=document.getElementById('go');
-import('./foret.js?v=3.80.0').then(({boot})=>boot()).then(async()=>{go.disabled=false;go.textContent='ENTRER DANS LA FORÊT →';if(!manual||params.get('bench')){if(loading&&!await loading.finish())return;document.getElementById('start').remove();document.body.classList.add('m07-playing');}})
- .catch(e=>{loading?.fail('Erreur : '+(e?.message||e));go.textContent='Erreur : '+(e?.message||e);console.error(e);});
-go.onclick=()=>{document.getElementById('start').remove();document.body.classList.add('m07-playing');};
-</script></body></html>
+import {decorateShade} from './mission-briefing.js?v=3.76.0';
+decorateShade(document.getElementById('shade'),{mission:6,characterId:new URLSearchParams(location.search).get('character')==='lylu'?'lylu':'ghju'});
+const lylu=new URLSearchParams(location.search).get('character')==='lylu';
+document.getElementById(lylu?'pick-lylu':'pick-ghju').setAttribute('aria-current','true');
+if(lylu)document.getElementById('compat').href='./foret.html?character=lylu&renderer=webgl';
+import('./niveau7.js?v=3.80.0').catch(error=>{
+ const status=document.getElementById('status'),button=document.getElementById('start');
+ if(status)status.textContent='Erreur de chargement : '+(error?.message||String(error))+' — essaye le mode compatibilité WebGL.';
+ if(button){button.disabled=false;button.textContent='RECHARGER';button.addEventListener('click',()=>location.reload());}
+ console.error('[M06] chargement impossible',error);
+});
+</script>
+</body></html>

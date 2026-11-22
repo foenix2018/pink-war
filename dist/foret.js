@@ -851,25 +851,18 @@ function createStory(characterId, relay, n08 = { land: () => true, down: true })
   };
 }
 
-// ---------------------------------------------------------------- Boot -------------------------------------------
-export async function boot() {
-  const quality = ['low', 'balanced', 'high'].includes(params.get('quality')) ? params.get('quality') : (matchMedia('(pointer:coarse)').matches ? 'low' : 'balanced');
-  const profile = graphicsProfile({ userAgent: navigator.userAgent, maxTouchPoints: navigator.maxTouchPoints, platform: navigator.platform, gpu: !!navigator.gpu, rendererHint: params.get('renderer') }, quality);
-  const { renderer, canvas } = await createCompatibleRenderer({ canvas: $('game'), WebGPU: T.WebGPURenderer, WebGL: WebGLRenderer, profile });
-  const backend = rendererLabel(renderer);
-  renderer.setPixelRatio(renderPixelRatio(profile, devicePixelRatio, innerWidth, innerHeight)); renderer.setSize(innerWidth, innerHeight);
-  renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
-  const shadows = quality === 'high'; renderer.shadowMap.enabled = shadows; renderer.shadowMap.type = T.PCFSoftShadowMap;
-  const FOG = quality === 'low' ? .016 : .012; const scene = new T.Scene(); scene.fog = new T.FogExp2(0xb27a63, FOG);
-  const camera = new T.PerspectiveCamera(70, innerWidth / innerHeight, .1, 900);
-  const cull = new T.PerspectiveCamera(100, innerWidth / innerHeight * 1.25, .1, 650), lastView = { yaw: 0, pitch: 0, x: 0, z: 0 };
+// The whole forest world (sky, light, terrain, water, ruins, medical centre, cave, remnants, vegetation, hills), shared by
+// the exploration prototype (boot below) and the combat chapter (niveau7.js). update() animates it and culls the vegetation.
+export function buildForestWorld(scene, { quality = 'balanced', webgpu = false, shadows = false, fog = null } = {}) {
+  const FOG = fog ?? (quality === 'low' ? .016 : .012);
+  if (!scene.fog) scene.fog = new T.FogExp2(0xb27a63, FOG);
   const skyDome = sky(scene);
   const hemi = new T.HemisphereLight(0xb79ac4, 0x4a3a2a, 1.7); scene.add(hemi);
   const sun = new T.DirectionalLight(0xffa765, 3.1); sun.position.copy(SUN_DIR).multiplyScalar(120); scene.add(sun, sun.target);
   if (shadows) { sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -45, right: 45, top: 45, bottom: -45, near: 1, far: 260 }); sun.shadow.bias = -.0006; }
   const micro=microSurfaceMaps(T),terrain=terrainMesh(quality);terrain.material.normalMap=micro.normal;terrain.material.normalScale=new T.Vector2(.16,.16);scene.add(terrain);
   const radiance=new Uint8Array(64*32*4);for(let y=0;y<32;y++)for(let x=0;x<64;x++){const i=(y*64+x)*4,k=y/31;radiance.set([Math.round(70+60*k),Math.round(91+9*k),Math.round(113-37*k),255],i);}const env=new T.DataTexture(radiance,64,32);env.colorSpace=T.SRGBColorSpace;env.mapping=T.EquirectangularReflectionMapping;env.needsUpdate=true;scene.environment=env;scene.environmentIntensity=.4;
-  const river = riverMesh({webgpu:backend==='WebGPU',low:quality==='low'}); scene.add(river.group);
+  const river = riverMesh({webgpu,low:quality==='low'}); scene.add(river.group);
   const fall = waterfall(scene, quality), colliders = [];
   ruins(scene, colliders); const centre = medicalCentre(scene, colliders); const grotte = cave(scene); sunbeams(scene);
   const relics = remnants(scene, colliders); skyline(scene); const drones = probes(scene), dust = motes(scene, quality === 'low' ? 120 : 260);
@@ -893,6 +886,42 @@ export async function boot() {
   const trunks = new Map();
   for (const t of [...world.trees.map(t => ({ x: t.x, z: t.z, radius: .4 * t.s + .15 })), ...world.rocks.filter(r => !r.step && r.s > .55).map(r => ({ x: r.x, z: r.z, radius: .82 * r.s * Math.max(r.sx, r.sz) }))]) { const k = `${Math.floor(t.x / 6)},${Math.floor(t.z / 6)}`; (trunks.get(k) || trunks.set(k, []).get(k)).push(t); }
 
+  const cull = new T.PerspectiveCamera(100, 1.6, .1, 650), frustum = new T.Frustum(), pv = new T.Matrix4(), lastView = { q: new T.Quaternion(), x: 1e9, z: 1e9 };
+  let refresh = 0;
+  return {
+    skyDome, hemi, sun, terrain, river, fall, colliders, centre, grotte, relics, drones, dust, world, kinds, trunks, Q, FOG,
+    // Per frame: water, waterfall, beacons, probes, dust, cave darkness, vegetation levels of detail.
+    update({ time, dt, camera, player, aspect = 1.6 }) {
+      river.fx.update(time, camera.position); skyDome.position.copy(camera.position);
+      cull.aspect = aspect * 1.25; cull.updateProjectionMatrix(); cull.position.copy(camera.position); cull.quaternion.copy(camera.quaternion); cull.updateMatrixWorld();
+      pv.multiplyMatrices(cull.projectionMatrix, cull.matrixWorldInverse); frustum.setFromProjectionMatrix(pv);
+      if (camera.quaternion.angleTo(lastView.q) > .07 || Math.hypot(camera.position.x - lastView.x, camera.position.z - lastView.z) > 1.2) { refresh = 0; lastView.q.copy(camera.quaternion); lastView.x = camera.position.x; lastView.z = camera.position.z; }
+      if ((refresh -= dt) <= 0) { refresh = .1; for (const k of kinds) k.update(camera, frustum, Q); }
+      river.tex.offset.y = (river.tex.offset.y - dt * .35) % 1; fall.update(time);
+      grotte.glow.intensity = 52 + Math.sin(time * 3) * 10; drones.update(time); dust.update(time, camera.position);
+      for (const [k, l] of [...relics.lights, ...centre.lights].entries()) l.visible = Math.sin(time * (2 + k) + k) > -.2;
+      const inCave = zoneAt(player.x, player.z) === 'La grotte'; scene.fog.density = inCave ? .06 : FOG;
+      const shade = inCave ? clamp((CAVE[0][1] - player.z) / 6, 0, 1) : 0; hemi.intensity = lerp(1.7, .1, shade); sun.intensity = lerp(3.1, 0, shade);
+      if (shadows) { sun.position.set(player.x + SUN_DIR.x * 120, SUN_DIR.y * 120, player.z + SUN_DIR.z * 120); sun.target.position.set(player.x, 0, player.z); }
+      return inCave;
+    }
+  };
+}
+
+// ---------------------------------------------------------------- Boot -------------------------------------------
+export async function boot() {
+  const quality = ['low', 'balanced', 'high'].includes(params.get('quality')) ? params.get('quality') : (matchMedia('(pointer:coarse)').matches ? 'low' : 'balanced');
+  const profile = graphicsProfile({ userAgent: navigator.userAgent, maxTouchPoints: navigator.maxTouchPoints, platform: navigator.platform, gpu: !!navigator.gpu, rendererHint: params.get('renderer') }, quality);
+  const { renderer, canvas } = await createCompatibleRenderer({ canvas: $('game'), WebGPU: T.WebGPURenderer, WebGL: WebGLRenderer, profile });
+  const backend = rendererLabel(renderer);
+  renderer.setPixelRatio(renderPixelRatio(profile, devicePixelRatio, innerWidth, innerHeight)); renderer.setSize(innerWidth, innerHeight);
+  renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.15;
+  const shadows = quality === 'high'; renderer.shadowMap.enabled = shadows; renderer.shadowMap.type = T.PCFSoftShadowMap;
+  const FOG = quality === 'low' ? .016 : .012; const scene = new T.Scene(); scene.fog = new T.FogExp2(0xb27a63, FOG);
+  const camera = new T.PerspectiveCamera(70, innerWidth / innerHeight, .1, 900);
+  const cull = new T.PerspectiveCamera(100, innerWidth / innerHeight * 1.25, .1, 650), lastView = { yaw: 0, pitch: 0, x: 0, z: 0 };
+  const W = buildForestWorld(scene, { quality, webgpu: backend === 'WebGPU', shadows, fog: FOG });
+  const { skyDome, hemi, sun, river, fall, colliders, centre, grotte, relics, drones, dust, world, kinds, trunks, Q } = W;
   // Player.
   const planarVelocity={x:0,z:0},motion=createFPSMotion();let actualVelocity={x:0,z:0};
   const ctl = controls(canvas), player = { x: -84, z: 95, y: 0 }; ctl.look.yaw = 0;
