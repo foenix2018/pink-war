@@ -19,5 +19,6 @@ export function createHideoutNavigation(layout,{radius=.55,step=.25}={}){
   if(previous[goal]===-1)return null;const points=[];for(let i=goal;i!==start;i=previous[i])points.push(point(i));points.push(point(start));points.reverse();
   const compact=[];let at=from,i=0;while(i<points.length){let j=i;while(j+1<points.length&&clear(at,points[j+1]))j++;compact.push(points[j]);at=points[j];i=j+1;}if(free(to.x,to.z)&&clear(at,to))compact.push({...to});return compact;
  }
- return{path,free,clear,point,index,solid,width:w,height:h,step};
+ const inRoom=(point,id)=>{const room=layout.rooms?.find(r=>r.id===id);if(!room)return !layout.rooms?.length;const [x1,z1,x2,z2]=room.bounds;return point.x>=x1&&point.x<=x2&&point.z>=z1&&point.z<=z2;};
+ return{path,free,clear,point,index,solid,width:w,height:h,step,inRoom};
 }

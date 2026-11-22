@@ -46,7 +46,7 @@ async function boot(){
   overview=new T.OrthographicCamera(-15,15,15,-15,.05,230);overview.position.set(0,26,29);overview.lookAt(0,.2,-1);visit=new T.PerspectiveCamera(64,innerWidth/innerHeight,.05,180);camera=overview;
   art=await loadHideoutArt(T,{onProgress:progress,low:graphics.phone||graphics.economy||graphics.artQuality==='low'});scene.add(art.root);navigation=createHideoutNavigation(art.layout);
   const flat={height:()=>0,surfaces:()=>[],routes:[],lifts:[]},level=nextHideoutChapter(profile)||profile.lastChapter;
-  game=new ArenaGame(art.layout.colliders,Math.random,flat,characterId);game.configureWeaponAccess({mode:'campaign',level});game.inHideout=true;game.grappleEnabled=false;game.enableArmorShield();game.nextWave=Infinity;game.toSpawn=0;game.invulnerable=Infinity;game.nano.placed=true;game.nano.plans=[];game.wave=1;
+  game=new ArenaGame([...art.layout.colliders,...art.doorColliders],Math.random,flat,characterId);game.configureWeaponAccess({mode:'campaign',level});game.inHideout=true;game.grappleEnabled=false;game.enableArmorShield();game.nextWave=Infinity;game.toSpawn=0;game.invulnerable=Infinity;game.nano.placed=true;game.nano.plans=[];game.wave=1;
   for(const i of profile.owned)if(game.isWeaponAvailable(i)&&game.nanoWeaponAllowed(i))game.ownedWeapons.add(i);
   if(profile.selectedWeapon!==null&&game.ownedWeapons.has(profile.selectedWeapon)&&game.isWeaponAvailable(profile.selectedWeapon)&&game.nanoWeaponAllowed(profile.selectedWeapon))game.weaponIndex=profile.selectedWeapon;
   Object.assign(game.player,{x:0,z:4.6,elevation:0,hp:profile.health,shield:Math.min(game.shieldCapacity,profile.shield)});game.charges=profile.charges;
@@ -63,14 +63,14 @@ function resize(graphics){if(!renderer)return;const aspect=innerWidth/innerHeigh
 function navigate(point,station=null){
  if(!ready||opened)return;const route=navigation.path(game.player,point);if(!route){message('Le passage est occupé. Approche par l’allée centrale.');return;}
  path=route;destination=station;if(station)message('En route vers '+station.name+'.',5);for(const b of document.querySelectorAll('[data-station]'))b.setAttribute('aria-current',String(b.dataset.station===station?.id));
- if(station&&Math.hypot(game.player.x-station.x,game.player.z-station.z)<station.radius){path=[];destination=null;openStation(station.id);}
+ if(station&&navigation.inRoom(game.player,station.room)&&Math.hypot(game.player.x-station.x,game.player.z-station.z)<station.radius){path=[];destination=null;openStation(station.id);}
 }
 function chooseStation(id){const station=art?.layout.stations.find(s=>s.id===id);if(station)navigate(station,station);}
 function element(tag,text,cls=''){const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;}
 function primary(text,action){const b=element('button',text,'hub-primary');b.type='button';b.onclick=action;return b;}
 function closePanel(){if(healing)return;opened=null;keys.clear();touch.x=touch.z=0;$('panel').close();document.body.classList.remove('panel-open');nanoPanel?.dispose();nanoPanel=null;}
 function openStation(id){
- if(!ready)return;const s=art.layout.stations.find(s=>s.id===id);if(!s)return;path=[];destination=null;opened=id;keys.clear();touch.x=touch.z=0;
+ if(!ready)return;const s=art.layout.stations.find(s=>s.id===id);if(!s)return;if(!navigation.inRoom(game.player,s.room)){navigate(s,s);return;}path=[];destination=null;opened=id;keys.clear();touch.x=touch.z=0;
  nanoPanel?.dispose();nanoPanel=null;$('panel-content').replaceChildren();$('panel-title').textContent=s.name;$('panel-kicker').textContent='LA PLANQUE · '+characterId.toUpperCase();document.body.classList.add('panel-open');if(!$('panel').open)$('panel').showModal();
  const content=$('panel-content');
  if(id==='weapons'){
@@ -138,13 +138,14 @@ function update(dt){
  if(opened){x=z=0;}
  else if(Math.hypot(x,z)>.12){path=[];destination=null;}
  else if(path.length){const goal=path[0],dx=goal.x-game.player.x,dz=goal.z-game.player.z,d=Math.hypot(dx,dz);if(d<.18){path.shift();if(!path.length&&destination){const target=destination;destination=null;if(Math.hypot(game.player.x-target.x,game.player.z-target.z)<target.radius)openStation(target.id);}}else{yaw=-Math.atan2(dx,-dz);x=0;z=-Math.min(1,d/.4);}}
+ art.updateDoors(dt,game.player,{moving:!opened&&Math.hypot(x,z)>.03});
  if(!opened)game.step(dt,{x,z,yaw,moveYaw:yaw,sprint:control.sprint,gamepadMoving:control.gamepadMoving,touchMoving:!!(touch.x||touch.z)});
  moving=Math.hypot(game.playerVelocity?.x||0,game.playerVelocity?.z||0)>.15;
  if(rig){const m=rig.model;m.root.position.set(game.player.x,0,game.player.z);m.root.rotation.y=game.player.yaw;m.root.visible=view==='overview';if(m.weapon!==game.weaponIndex)m.setWeapon(game.weaponIndex);m.animate(game.time,moving,0,0,0,opened?0:dt,{velocity:game.playerVelocity,ground:()=>0,airborne:false,verticalSpeed:0,crouched:false,sprint:!!control.sprint,aim:false,firing:false});}
  if(view==='visit'){
   const p=game.player;visit.position.set(p.x,1.65,p.z);visit.rotation.set(cameraPitch,cameraYaw,0,'YXZ');
  }
- near=art.layout.stations.map(s=>({s,d:Math.hypot(game.player.x-s.x,game.player.z-s.z)})).filter(o=>o.d<o.s.radius).sort((a,b)=>a.d-b.d)[0]?.s||null;$('action').hidden=!near||!!opened;if(near)$('action').textContent='F · '+near.action;
+ near=art.layout.stations.map(s=>({s,d:Math.hypot(game.player.x-s.x,game.player.z-s.z)})).filter(o=>o.d<o.s.radius&&navigation.inRoom(game.player,o.s.room)).sort((a,b)=>a.d-b.d)[0]?.s||null;$('action').hidden=!near||!!opened;if(near)$('action').textContent='F · '+near.action;
  const status=[Math.ceil(game.player.hp),Math.ceil(game.player.shield),game.nano.profile.balance].join(':');if(status!==lastStatus){lastStatus=status;$('vitals').textContent='SANTÉ '+Math.ceil(game.player.hp)+' · BOUCLIER '+Math.ceil(game.player.shield);$('nanites').textContent=game.nano.profile.balance+' NP';}
  for(const e of game.drainEvents()){nanoFx.handle(e);if(e.type==='nano-crafted')message(e.name+' · assemblage terminé');if(e.type==='nano-error')message(e.message,7);}
  nanoFx.update(game,dt);
@@ -152,7 +153,7 @@ function update(dt){
 }
 function frame(now){
  if(pending||!game)return;const dt=frameDelta(previous?(now-previous)/1000:.016);previous=now;clock+=dt;update(dt);
- try{if(renderer.renderAsync){pending=true;renderer.renderAsync(scene,camera).then(()=>pending=false).catch(error=>{pending=false;console.error(error);message('Le rendu a été interrompu. Recharge la planque.',8);});}else renderer.render(scene,camera);}catch(error){console.error(error);renderer.setAnimationLoop(null);message('Le rendu a été interrompu. Recharge la planque.',8);}
+ try{if(renderer.renderAsync){pending=true;(async()=>{await art.renderExterior(renderer,camera,clock);await renderer.renderAsync(scene,camera);})().then(()=>pending=false).catch(error=>{pending=false;console.error(error);message('Le rendu a été interrompu. Recharge la planque.',8);});}else{art.renderExterior(renderer,camera,clock);renderer.render(scene,camera);}}catch(error){console.error(error);renderer.setAnimationLoop(null);message('Le rendu a été interrompu. Recharge la planque.',8);}
 }
-window.__PINK_HIDEOUT={snapshot:()=>({ready,version:GAME_VERSION,characterId,view,station:opened,pathLength:path.length,routeTarget:destination?.id,nextPoint:path[0]&&{x:path[0].x,z:path[0].z},simulationTime:game?.time,position:game&&{x:game.player.x,z:game.player.z},health:game?.player.hp,shield:game?.player.shield,weapon:game?.weapon.id,weaponIndex:game?.weaponIndex,owned:game&&[...game.ownedWeapons],armorLevel,nano:game?.nano.profile.balance,history:historyForHero(profile),completed:[...profile.completed],next:nextHideoutChapter(profile),source:art?.source,triangles:art?.triangles,batches:art?.batches,downloadBytes:art?.downloadBytes,surfaces:art?.surfaces,showcase:art?.showcase(),backend:rendererBackend(renderer),renderBudget:renderer?.frameBudget?.stats(),heroReady:!!rig,healing:!!healing}),debug:params.has('debug')?{get game(){return game;},get scene(){return scene;},get camera(){return camera;},get renderer(){return renderer;},go:chooseStation,open:openStation,close:closePanel,teleport(x,z){if(navigation.free(x,z)){path=[];Object.assign(game.player,{x,z});}},navigation:()=>navigation,complete(level){profile.completed.push(level);profile.lastChapter=level;saveHideoutProfile(characterId,profile);}}:null};
+window.__PINK_HIDEOUT={snapshot:()=>({ready,version:GAME_VERSION,characterId,view,station:opened,pathLength:path.length,routeTarget:destination?.id,nextPoint:path[0]&&{x:path[0].x,z:path[0].z},simulationTime:game?.time,position:game&&{x:game.player.x,z:game.player.z},health:game?.player.hp,shield:game?.player.shield,weapon:game?.weapon.id,weaponIndex:game?.weaponIndex,owned:game&&[...game.ownedWeapons],armorLevel,nano:game?.nano.profile.balance,history:historyForHero(profile),completed:[...profile.completed],next:nextHideoutChapter(profile),source:art?.source,triangles:art?.triangles,batches:art?.batches,downloadBytes:art?.downloadBytes,surfaces:art?.surfaces,showcase:art?.showcase(),doors:art?.doors(),city:art?.city(),backend:rendererBackend(renderer),renderBudget:renderer?.frameBudget?.stats(),heroReady:!!rig,healing:!!healing}),debug:params.has('debug')?{get game(){return game;},get scene(){return scene;},get camera(){return camera;},get renderer(){return renderer;},get art(){return art;},get time(){return clock;},openDoor:id=>art.openDoor(id),go:chooseStation,open:openStation,close:closePanel,teleport(x,z){if(navigation.free(x,z)){path=[];Object.assign(game.player,{x,z});}},navigation:()=>navigation,complete(level){profile.completed.push(level);profile.lastChapter=level;saveHideoutProfile(characterId,profile);}}:null};
 void boot();

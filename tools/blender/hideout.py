@@ -64,6 +64,8 @@ for name in ['Acier patiné','Métal brossé','Cadres anthracite','Bras robot or
 pbr('Sol graphite','deck',.8);pbr('Béton sombre','concrete',.65)
 for name in ['Tissu rose','Tissu bleu','Tissu neutre','Cuir et joints']:pbr(name,'fabric',2)
 pbr('Peinture médicale','ceramic',1)
+material('Verre dépoli des portes',(.78,.84,.86),.64,0);pbr('Verre dépoli des portes','frost');META['Verre dépoli des portes']['frost']=True
+material('Cloisons hautes',(.25,.28,.32),.62,.18);pbr('Cloisons hautes','steel');META['Cloisons hautes']['interior']=True
 META['Écran sombre'].update(texture='display.jpg',textureSpace='hideout',localUV=True)
 display=bpy.data.images.load(str(OUT/'display.jpg'),check_existing=True);display.pack();dn=MATS['Écran sombre'].node_tree.nodes;dt=dn.new('ShaderNodeTexImage');dt.image=display;dp=dn.get('Principled BSDF');dl=MATS['Écran sombre'].node_tree.links;dl.new(dt.outputs['Color'],dp.inputs['Base Color']);dl.new(dt.outputs['Color'],dp.inputs['Emission Color']);dp.inputs['Emission Strength'].default_value=.55
 def bm(mat):
@@ -142,7 +144,7 @@ fontpath='/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf';FONT=bpy.data.fonts.l
 def text(body,x,y,z,size=.20,mat='Néon blanc',floor=False):
  curve=bpy.data.curves.new(body,'FONT');curve.body=body;curve.align_x='CENTER';curve.size=size;curve.extrude=.0005;curve.resolution_u=2
  if FONT:curve.font=FONT
- o=bpy.data.objects.new(body,curve);bpy.context.collection.objects.link(o);o.location=G(x,y,z);o.rotation_euler=(0,0,0)if floor else(math.pi/2,0,0);curve.materials.append(MATS[mat]);TEXT.append(o)
+ o=bpy.data.objects.new(body,curve);bpy.context.collection.objects.link(o);o.location=G(x,y,z);o.rotation_euler=(0,0,0)if floor else(math.pi/2,0,0);curve.materials.append(MATS[mat]);TEXT.append(o);return o
 def plaque(title,x,z,width=4.6,subtitle=None):
  box('Cadres anthracite',(x,.83,z),(width,.48,.10));box('Métal brossé',(x,.83,z+.054),(width+.04,.51,.014));box('Cadres anthracite',(x,.83,z+.065),(width-.04,.45,.015));text(title,x,.79,z+.081,.36)
  if subtitle:text(subtitle,x,.64,z+.083,.09)
@@ -197,8 +199,8 @@ for x in [-10.9,10.9]:
  for z in [-11.4,-5,2.8,9,11.4]:
   box('Acier patiné',(x,1.7,z),(.48,3.4,.45));box('Cadres anthracite',(x,3.42,z),(.65,.18,.65))
   for yy in [.25,2.8]:box('Métal brossé',(x,yy,z),(.56,.17,.52))
-for x in [-7.6,7.6]:box('Béton sombre',(x,.6,11.5),(6.2,1.2,.35),solid=True)
-SOLIDS += [{'kind':'limite de planque','x':0,'z':11.9,'hx':11.3,'hz':.15,'y':0,'height':5},{'kind':'baie panoramique','x':0,'z':-11.7,'hx':11.3,'hz':.15,'y':0,'height':5}]
+for x in [-6.95,6.95]:box('Béton sombre',(x,.6,11.5),(8.1,1.2,.35),solid=True)
+SOLIDS += [{'kind':'limite de planque','x':0,'z':11.9,'hx':11.3,'hz':.15,'y':0,'height':5},{'kind':'baie panoramique','x':0,'z':-11.5,'hx':11.3,'hz':.19,'y':0,'height':5}]
 box('Béton sombre',(0,.55,-11.5),(22,1.1,.38))
 box('Verre',(0,3.0,-11.52),(21.8,3.4,.035))
 for x in [-10.7,-7.15,-3.58,0,3.58,7.15,10.7]:box('Cadres anthracite',(x,2.9,-11.42),(.10,3.6,.15))
@@ -206,12 +208,71 @@ for y in [1.15,4.75]:box('Acier patiné',(0,y,-11.4),(22,.2,.3))
 neon((-10.4,4.5,-11.24),(10.4,4.5,-11.24),'Néon rose',.025)
 for x in [-10.2,10.2]:
  box('Tissu rose',(x,3.25,-10.98),(1.10,2.5,.025));text('P',x,3.7,-10.95,.8);text('PINK',x,3.23,-10.95,.19);text('WARS',x,2.98,-10.95,.19)
-for x in [-4.55,4.55]:
- for z,d in [(-10.1,2.2),(-5.0,.4),(-2.9,1.3),(3.2,1.0),(8.8,1.2)]:box('Acier patiné',(x,1.05,z),(.2,2.1,d),solid=True)
- for z in [-9,-5,3.0,9.2]:
-  box('Cadres anthracite',(x,1.43,z),(.4,2.86,.36));neon((x,1.5,z+.20),(x,2.5,z+.20),'Néon rose'if x<0 else'Néon bleu',.02)
-for z in [-5,3]:box('Acier patiné',(-7.7,.55,z),(6.2,1.1,.20),solid=True)
-box('Acier patiné',(7.8,.55,-5),(6,1.1,.2),solid=True)
+# Eight genuinely enclosed rooms; the upper walls are removed only in cutaway.
+DOORS=[
+ {'id':'dortoir','name':'Dortoir','axis':'x','x':-4.55,'z':-6.35,'width':2.10},
+ {'id':'armurerie','name':'Armurerie','axis':'x','x':-4.55,'z':0,'width':2.10},
+ {'id':'tenues','name':'Tenues','axis':'x','x':-4.55,'z':6.25,'width':2.10},
+ {'id':'bain','name':'Salle de bain','axis':'x','x':4.55,'z':-6.35,'width':2.10},
+ {'id':'atelier','name':'Atelier','axis':'x','x':4.55,'z':1.25,'width':2.10},
+ {'id':'archives-ouest','name':'Archives · ouest','axis':'z','x':-3.70,'z':-5,'width':1.55},
+ {'id':'archives-centre','name':'Archives · salon','axis':'z','x':0,'z':-5,'width':2.10},
+ {'id':'archives-est','name':'Archives · est','axis':'z','x':3.70,'z':-5,'width':1.55},
+ {'id':'salon','name':'Salon','axis':'z','x':0,'z':3.2,'width':2.10},
+ {'id':'recharge-ouest','name':'Recharge · ouest','axis':'z','x':-3.70,'z':3.2,'width':1.55},
+ {'id':'recharge-est','name':'Recharge · est','axis':'z','x':3.70,'z':3.2,'width':1.55}
+]
+ROOMS=[
+ {'id':'dortoir','name':'Dortoir','bounds':[-10.75,-11.5,-4.55,-5]},
+ {'id':'bain','name':'Salle de bain','bounds':[4.55,-11.5,10.75,-5]},
+ {'id':'armurerie','name':'Armurerie','bounds':[-10.75,-5,-4.55,3.2]},
+ {'id':'tenues','name':'Tenues de combat','bounds':[-10.75,3.2,-4.55,11.45]},
+ {'id':'atelier','name':'Atelier nano','bounds':[4.55,-5,10.75,11.45]},
+ {'id':'archives','name':'Archives','bounds':[-4.55,-11.5,4.55,-5]},
+ {'id':'salon','name':'Salon','bounds':[-2.95,-5,2.95,3.2]},
+ {'id':'recharge','name':'Recharge et mission','bounds':[-4.55,3.2,4.55,11.45]}
+]
+def wall(axis,at,start,end,openings=()):
+ cuts=sorted((max(start,c-w/2),min(end,c+w/2))for c,w in openings)
+ spans=[];cursor=start
+ for lo,hi in cuts:
+  if lo>cursor:spans.append((cursor,lo))
+  cursor=max(cursor,hi)
+ if cursor<end:spans.append((cursor,end))
+ for lo,hi in spans:
+  length=hi-lo;center=(lo+hi)/2;c=(at,0,center)if axis=='x'else(center,0,at)
+  box('Acier patiné',(c[0],.575,c[2]),(.16,1.15,length)if axis=='x'else(length,1.15,.16),solid=True,name='cloison de pièce')
+  box('Cloisons hautes',(c[0],3.0,c[2]),(.16,3.7,length)if axis=='x'else(length,3.7,.16),solid=True,name='cloison haute')
+  box('Cadres anthracite',(c[0],.085,c[2]),(.19,.17,length)if axis=='x'else(length,.17,.19))
+ for c,w in openings:
+  center=(at,3.75,c)if axis=='x'else(c,3.75,at)
+  box('Cloisons hautes',center,(.16,2.2,w)if axis=='x'else(w,2.2,.16),solid=True,name='linteau de porte')
+ZONE='Cloisons fermées'
+for at in [-4.55,4.55]:wall('x',at,-11.5,11.45,[(d['z'],d['width'])for d in DOORS if d['axis']=='x'and d['x']==at])
+wall('z',-5,-10.75,10.75,[(d['x'],d['width'])for d in DOORS if d['z']==-5])
+wall('z',3.2,-10.75,4.55,[(d['x'],d['width'])for d in DOORS if d['z']==3.2])
+for at in [-2.95,2.95]:wall('x',at,-5,3.2)
+for door in DOORS:
+ ZONE='Cadres de portes'
+ x,z,w=door['x'],door['z'],door['width'];axis=door['axis']
+ def pos(along,y,depth=0):return(x+depth,y,z+along)if axis=='x'else(x+along,y,z+depth)
+ def size(along,y,depth):return(depth,y,along)if axis=='x'else(along,y,depth)
+ for side in [-1,1]:
+  box('Métal brossé',pos(side*(w/2+.04),1.3),size(.08,2.6,.27));box('Cuir et joints',pos(side*(w/2+.005),1.3),size(.018,2.57,.12))
+ box('Cadres anthracite',pos(0,2.73),size(w+.5,.25,.38));rod('Métal brossé',pos(-w*.85,2.70,.10),pos(w*.85,2.70,.10),.026,12)
+ for side in [-1,1]:cyl('Métal brossé',pos(side*w*.4,2.74,.15),.052,.035,16,axis='x'if axis=='x'else'z')
+ box('Cadres anthracite',pos(w/2+.16,1.18,.16),size(.19,.37,.07));cyl('Néon bleu',pos(w/2+.16,1.23,.21),.035,.02,14,axis='x'if axis=='x'else'z')
+ for direction in [-1,1]:
+  label=text(door['name'].upper(),*pos(0,2.69,direction*.205),.13,'Néon blanc');label.name='Portes mobiles / signal / '+door['id']+' / '+str(direction);label.rotation_euler.z=(direction*math.pi/2)if axis=='x'else(math.pi if direction<0 else 0)
+ # The source file includes closed glass leaves. Runtime instances slide them.
+ ZONE='Portes mobiles / '+door['id']
+ for side in [-1,1]:
+  mid=side*w/4;box('Verre dépoli des portes',pos(mid,1.29),size(w*.455,2.38,.042))
+  for edge in [-1,1]:box('Métal brossé',pos(mid+edge*w*.244,1.29),size(w*.0225,2.52,.075))
+  for yy in [.06,2.52]:box('Métal brossé',pos(mid,yy),size(w*.465,.065,.075))
+  box('Cuir et joints',pos(mid-side*w*.175,1.16,.05),size(.075,.15,.016))
+  neon(pos(mid-side*w*.22,1.73,.047),pos(mid-side*w*.22,2.15,.047),'Néon bleu',.006)
+ZONE='Architecture'
 # Ceiling service beams and conduit runs leave the diorama open, as in the reference.
 for z in [-10.8,-4.9,3.2,10.8]:
  for x in [-7.8,7.8]:
@@ -281,16 +342,16 @@ plaque('Livre de l’Histoire',0,-6.80,4.0,'RÉCAPITULATIF DE L’AVENTURE')
 ZONE='Salon central'
 box('Tissu rose',(0,.028,1),(5.5,.035,4.0))
 for side in [-1,1]:
- x=side*2.08;box('Acier patiné',(x,.29,1),(1.2,.5,3.1),solid=True)
+ x=side*2.28;box('Acier patiné',(x,.29,1),(.85,.5,3.1),solid=True)
  for z in [.04,1,1.96]:
-  cushion('Tissu neutre',(x,.65,z),(1.12,.34,.91));cushion('Tissu neutre',(x+side*.48,1.08,z),(.30,.88,.91))
-  rod('Tissu neutre',(x-side*.52,.70,z-.38),(x-side*.52,.70,z+.38),.009,6)
+  cushion('Tissu neutre',(x,.65,z),(.82,.34,.91));cushion('Tissu neutre',(x+side*.34,1.08,z),(.22,.88,.91))
+  rod('Tissu neutre',(x-side*.37,.70,z-.38),(x-side*.37,.70,z+.38),.009,6)
  for z in [-.52,2.52]:
-  cushion('Cuir et joints',(x,.86,z),(1.25,.45,.24));cushion('Tissu rose'if side<0 else'Tissu bleu',(x-side*.1,1.12,z-side*.2),(.55,.43,.36))
+  cushion('Cuir et joints',(x,.86,z),(.88,.45,.24));cushion('Tissu rose'if side<0 else'Tissu bleu',(x-side*.1,1.12,z-side*.2),(.55,.43,.36))
  for dx in [-.44,.44]:
   for z in [-.32,2.32]:cyl('Métal brossé',(x+dx,.12,z),.045,.23,10)
-box('Cadres anthracite',(0,.39,1),(1.5,.65,1.7),solid=True);box('Métal brossé',(0,.74,1),(1.6,.08,1.8));screen(0,.86,.8,.55,.3)
-for x,z in [(-.48,.6),(.45,1.5)]:
+box('Cadres anthracite',(0,.39,1),(.90,.65,1.7),solid=True);box('Métal brossé',(0,.74,1),(1.0,.08,1.8));screen(0,.86,.8,.55,.3)
+for x,z in [(-.30,.6),(.30,1.5)]:
  cyl('Cuivre et outils',(x,.86,z),.08,.16,20);ring('Cadres anthracite',(x,.946,z),.064,.008,20);ring('Cuivre et outils',(x+.09,.86,z),.045,.012,20,axis='z')
 ZONE='Mur d’armes'
 box('Cadres anthracite',(-7.7,1.6,-4.52),(5.6,2.65,.22),solid=True)
@@ -395,11 +456,12 @@ for x in [5.35,9.8]:
  for j in range(3):box('Cadres anthracite',(x,.25+j*.28,5.31),(1.0,.19,.04));neon((x-.35,.25+j*.28,5.34),(x+.35,.25+j*.28,5.34),'Néon rose',.007)
 plant(10.1,1.2,-4.0,.55);plaque('Atelier',7.8,8.7,4.5,'ARMES · NANOPARTICULES · AMÉLIORATIONS')
 ZONE='Porte de mission'
+SOLIDS.append({'kind':'porte de mission','x':0,'z':11.15,'hx':2.9,'hz':.37,'y':0,'height':4.85})
 outline=[(-2.1,0),(2.1,0),(2.9,.8),(2.9,2.8),(2.1,3.6),(-2.1,3.6),(-2.9,2.8),(-2.9,.8)]
 profile('Acier patiné',0,11.15,outline,.65);profile('Cadres anthracite',0,11.52,[(x*.84,.1+y*.90)for x,y in outline],.12)
 for side in [-1,1]:
  profile('Métal brossé',side*.88,11.60,[(-.82,.15),(.82,.15),(.82,3.1),(-.82,3.1)],.08)
- box('Cadres anthracite',(side*.85,1.65,11.66),(1.52,2.7,.025));rod('Métal brossé',(side*.24,1.35,11.72),(side*.24,1.80,11.72),.035)
+ box('Verre dépoli des portes',(side*.85,1.65,11.66),(1.52,2.7,.025));box('Verre dépoli des portes',(side*.85,1.65,10.79),(1.52,2.7,.025));rod('Métal brossé',(side*.24,1.35,11.72),(side*.24,1.80,11.72),.035)
  for yy in [.55,2.66]:
   profile('Acier patiné',side*.91,11.70,[(-.64,yy-.16),(.5,yy-.16),(.66,yy),(.5,yy+.16),(-.64,yy+.16)],.04)
   for xx in [-.48,.48]:cyl('Métal brossé',(side*.91+xx,yy,11.74),.025,.02,8,axis='z')
@@ -439,40 +501,68 @@ pbr('Toiture technique','steel')
 material('Néons de plafond',(.52,.72,.92),.3,0,2.5);META['Néons de plafond']['interior']=True
 box('Toiture technique',(0,4.94,0),(22,.18,23.6),solid=True)
 for x in [-10.9,10.9]:box('Toiture technique',(x,3.5,0),(.3,2.8,23.4),solid=True)
-for x in [-7.6,7.6]:box('Toiture technique',(x,3.05,11.5),(6.2,3.7,.35),solid=True)
+for x in [-6.95,6.95]:box('Toiture technique',(x,3.05,11.5),(8.1,3.7,.35),solid=True)
 box('Toiture technique',(0,4.4,11.5),(5.8,1.1,.35),solid=True)
 for z in [-9,-5,-1,3,7,10]:
  box('Toiture technique',(0,4.7,z),(21.5,.23,.20))
  for x in [-7.5,0,7.5]:rod('Néons de plafond',(x-.8,4.52,z),(x+.8,4.52,z),.023,10)
 
 print('Planque: skyline de Vesper',flush=True)
-ZONE='Vesper au-delà de la baie'
-box('Ville lointaine',(0,-1,-59),(160,1,84))
-for k in range(44):
- x=random.uniform(-70,70);z=random.uniform(-100,-24);w=random.uniform(2,5);d=random.uniform(2,6);h=random.uniform(5,28)
- # Chamfered ruined towers, exposed floors, antennas and cables. Never a field of floating cubes.
- outline=[(-w*.5,.0),(w*.5,.0),(w*.5,h*.65),(w*.34,h),(-w*.3,h*.91),(-w*.5,h*.72)]
- profile('Ville lointaine',x,z,outline,d)
- for y in range(3,int(h)-1,3):
-  box('Cadres anthracite',(x,y,z+d/2+.04),(w*.95,.12,.08))
-  for j in range(3):box('Brume rose',(x+(j-1)*w*.28,y-1,z+d/2+.05),(.20,.70,.035))
- for y in [h*.8,h*.94]:rod('Ville lointaine',(x-w*.3,y,z),(x+w*.3,y,z),.07)
- rod('Ville lointaine',(x,h*.8,z),(x,h+random.uniform(1,4),z),.08)
-for x in [-20,10,35]:
- rod('Ville lointaine',(x,4,-38),(x,25,-38),.28);rod('Ville lointaine',(x-10,12,-38),(x+12,12,-38),.22)
- for i in [-1,1]:rod('Ville lointaine',(x,24,-38),(x+i*12,12,-38),.045)
-ring('Brume rose',(3,23,-73),9,.12,64);cyl('Brume rose',(3,23,-73),8.4,.15,64)
-
+ZONE='Vesper extérieure'
+# The refuge overlooks a real avenue sixteen metres below. Facades, roofs,
+# service balcony and skybridges occupy distinct depths; nothing floats.
+box('Béton sombre',(0,-16.6,-80),(150,1.0,135))
+for x in [-7.5,7.5]:
+ box('Acier patiné',(x,-15.95,-65),(1.0,.25,100))
+ for z in range(-108,-19,8):box('Néon ambre',(x,-15.80,z),(.12,.01,2.0))
+def city_tower(x,z,w,d,h,far=False):
+ base=-16;mat='Ville lointaine'if far else'Béton sombre'
+ outline=[(-w/2,base),(w/2,base),(w/2,base+h*.8),(w*.38,base+h),(-w*.30,base+h),(-w/2,base+h*.86)]
+ profile(mat,x,z,outline,d)
+ for side in [-1,1]:
+  rod('Cadres anthracite',(x+side*w*.43,base+.2,z+d*.51),(x+side*w*.43,base+h*.85,z+d*.51),.065,8)
+ for yy in range(2,int(h)-2,3):
+  y=base+yy;box('Acier patiné',(x,y-.35,z+d*.505),(w*.93,.12,.13))
+  for j in range(max(2,int(w/1.5))):
+   xx=x-w*.35+j*w*.7/max(1,int(w/1.5)-1)
+   material_name=random.choice(['Néon ambre','Néon bleu','Cuir et joints','Cuir et joints','Néon rose'])
+   box('Cadres anthracite',(xx,y+.5,z+d*.515),(.75,1.40,.10));box(material_name,(xx,y+.5,z+d*.525),(.60,1.16,.015))
+ if not far:
+  roof=base+h;box('Acier patiné',(x,roof+.15,z),(w*.56,.3,d*.72))
+  for side in [-1,1]:
+   box('Cadres anthracite',(x+side*w*.17,roof+.65,z),(w*.24,1.0,d*.40))
+   for k in range(4):rod('Métal brossé',(x+side*w*.17-.35+k*.22,roof+1.17,z-d*.12),(x+side*w*.17-.35+k*.22,roof+1.17,z+d*.12),.025,6)
+  rod('Métal brossé',(x,roof+.4,z),(x,roof+3.4,z),.04,10);ellipsoid('Néon rose',(x,roof+3.4,z),(.12,.12,.12),8)
+  neon((x-w*.45,base+3,z+d*.54),(x-w*.45,base+h*.7,z+d*.54),'Néon rose',.023)
+for args in [(-18,-29,9,9,24),(17,-33,10,10,28),(-22,-54,13,13,39),(22,-59,14,12,43),(-29,-84,14,15,46),(27,-88,15,15,51),(0,-122,15,18,66)]:city_tower(*args)
+for x,z,h in [(-52,-102,54),(-35,-123,58),(-16,-142,63),(16,-146,67),(43,-122,62),(55,-98,48)]:city_tower(x,z,11,12,h,True)
+# Two connected maintenance bridges spanning the avenue.
+for z,y,left,right in [(-55,-1.5,-18.5,18.5),(-84,7.0,-24,22)]:
+ box('Acier patiné',((left+right)/2,y,z),(right-left,.55,3.0))
+ for side in [-1,1]:
+  rod('Métal brossé',(left,y+1,z+side*1.35),(right,y+1,z+side*1.35),.06,10)
+  for x in range(math.ceil(left),math.floor(right)+1,3):
+   rod('Métal brossé',(x,y+.3,z+side*1.35),(x,y+1,z+side*1.35),.04,8)
+   if x+3<=right:rod('Cadres anthracite',(x,y-.7,z+side*1.2),(x+3,y+.1,z+side*1.2),.055,8)
+ neon((left+2,y-.25,z+1.56),(right-2,y-.25,z+1.56),'Néon bleu',.018)
+# Attached service balcony: visible close to the glass and below the window.
+box('Acier patiné',(0,-1.5,-13.6),(22.2,.20,4.0))
+for x in range(-10,11,2):
+ rod('Métal brossé',(x,-1.4,-15.5),(x,-.35,-15.5),.035,10)
+ rod('Cadres anthracite',(x,-2.6,-11.8),(x,-1.55,-15.4),.06,8)
+rod('Métal brossé',(-10.8,-.35,-15.5),(10.8,-.35,-15.5),.045,10)
+for x in [-9,9]:
+ box('Cadres anthracite',(x,-.7,-14.0),(1.5,1.4,1.2));cyl('Métal brossé',(x,.15,-14),.21,.35,20);ring('Métal brossé',(x,.34,-14),.23,.035,24)
 print('Planque: construction des maillages',flush=True)
 for (zone,mat),b in BUILD.items():
- if 'Vesper' in zone:
+ if zone=='Vesper au-delà de la baie':
   for v in b.verts:v.co.z-=28
  bmesh.ops.recalc_face_normals(b,faces=list(b.faces));me=bpy.data.meshes.new(zone+' / '+mat);b.to_mesh(me);b.free();o=bpy.data.objects.new(zone+' / '+mat,me)
  coll=bpy.data.collections.get(zone)
  if not coll:coll=bpy.data.collections.new(zone);bpy.context.scene.collection.children.link(coll)
  coll.objects.link(o);me.materials.append(MATS[mat])
  # Deliberately mild chamfers preserve the metre-based collision footprint.
- if mat in ['Acier patiné','Métal brossé','Cadres anthracite','Tissu rose','Tissu bleu','Tissu neutre','Peinture médicale','Bras robot orange']and 'Vesper'not in zone:
+ if mat in ['Acier patiné','Métal brossé','Cadres anthracite','Tissu rose','Tissu bleu','Tissu neutre','Peinture médicale','Bras robot orange','Verre dépoli des portes']and 'Vesper'not in zone:
   bevel=o.modifiers.new('Arêtes usinées et coussins adoucis','BEVEL');bevel.width=.025 if 'Tissu'not in mat else .045;bevel.segments=2;bevel.affect='EDGES';bevel.use_clamp_overlap=True;bevel.limit_method='ANGLE';bevel.angle_limit=.7
   o.modifiers.new('Normales pondérées','WEIGHTED_NORMAL')
  # Metric box projection, also exported to the browser.
@@ -519,21 +609,24 @@ pme=bpy.data.meshes.new('Panorama derrière le vitrage');pme.from_pydata([G(-10.
 for i,p in enumerate([(0,0),(1,0),(1,1),(0,1)]):uv.data[i].uv=p
 po=bpy.data.objects.new('Panorama de Vesper / baie vitrée',pme);sc.collection.objects.link(po);pme.materials.append(pm)
 for o in sc.objects:
- if o.name.startswith(('Vesper au-delà','Toiture complète')):o.hide_render=True
+ if o.name.startswith(('Vesper extérieure','Toiture complète'))or any(META.get(m.name,{}).get('interior')for m in getattr(o.data,'materials',[])):o.hide_render=True
 
-layout={'version':1,'name':'La Planque · Les Héritiers du Silence','author':'Pink Wars · Blender','showcase':{'weapons':SHOWCASE_WEAPONS,'outfits':[{'hero':'ghju','x':-8.9,'y':.285,'z':4.45},{'hero':'lylu','x':-6.4,'y':.285,'z':4.45}]},'bounds':{'x1':-10.65,'x2':10.65,'z1':-11.25,'z2':11.35},'spawn':{'x':0,'z':9.0,'yaw':0},'colliders':SOLIDS,'stations':[
+layout={'version':1,'name':'La Planque · Les Héritiers du Silence','author':'Pink Wars · Blender','doors':DOORS,'rooms':ROOMS,'showcase':{'weapons':SHOWCASE_WEAPONS,'outfits':[{'hero':'ghju','x':-8.9,'y':.285,'z':4.45},{'hero':'lylu','x':-6.4,'y':.285,'z':4.45}]},'bounds':{'x1':-10.65,'x2':10.65,'z1':-11.25,'z2':11.35},'spawn':{'x':0,'z':9.0,'yaw':0},'colliders':SOLIDS,'stations':[
  {'id':'rest','name':'Dortoir','action':'Se reposer et régénérer','x':-6.1,'z':-6.35,'radius':2.4},
  {'id':'weapons','name':'Mur d’armes','action':'Préparer les armes','x':-7.8,'z':-.2,'radius':2.7},
  {'id':'outfits','name':'Tenues de combat','action':'Préparer l’équipement','x':-7.8,'z':6.3,'radius':2.4},
- {'id':'archive','name':'Livre de l’Histoire','action':'Relire les événements vécus','x':0,'z':-5.5,'radius':2.4},
+ {'id':'archive','name':'Livre de l’Histoire','action':'Relire les événements vécus','x':0,'z':-6.1,'radius':2.4},
  {'id':'workshop','name':'Atelier nano','action':'Fabriquer et améliorer','x':7.5,'z':3.0,'radius':3},
  {'id':'charge-gaby','name':'GAB-1','action':'Régénérer le bouclier et recharger','x':-2.2,'z':9.0,'radius':1.6},
  {'id':'charge-cara','name':'CAR-14','action':'Régénérer le bouclier et recharger','x':2.2,'z':9.0,'radius':1.6},
  {'id':'mission','name':'Porte Mission','action':'Choisir la prochaine mission','x':0,'z':9.3,'radius':2.2},
  {'id':'bath','name':'Salle de bain','action':'Récupérer au calme','x':8.5,'z':-6.4,'radius':2.4}
 ]}
+for station in layout['stations']:
+ station['room']={'rest':'dortoir','weapons':'armurerie','outfits':'tenues','archive':'archives','workshop':'atelier','bath':'bain'}.get(station['id'],'recharge')
 (OUT/'layout.json').write_text(json.dumps(layout,ensure_ascii=False,separators=(',',':')))
 sc['description']='Planque GHJU / LYLU : dortoir, salle de bain, armes, tenues, ateliers de nanites, recharge, archives et mission.'
+sc['hideout_rooms']=json.dumps(ROOMS,ensure_ascii=False);sc['hideout_doors']=json.dumps(DOORS,ensure_ascii=False)
 sc['units']='mètres';sc.unit_settings.system='METRIC'
 bpy.ops.file.pack_all()
 bpy.context.preferences.filepaths.save_version=0
@@ -541,40 +634,43 @@ bpy.ops.wm.save_as_mainfile(filepath=str(SRC/'PinkWars_Planque.blend'),compress=
 shutil.copyfile(SRC/'PinkWars_Planque.blend',OUT/'PinkWars_Planque.blend')
 
 print('Planque: export PWM1',flush=True)
-# Evaluate Blender modifiers and text curves, then merge by material for the game.
-deps=bpy.context.evaluated_depsgraph_get();prims={};bounds_min=[1e9]*3;bounds_max=[-1e9]*3
-for obj in list(sc.objects):
- if obj.type not in ['MESH','FONT']:continue
- if obj.name.startswith('Vesper au-delà'):continue
- evaluated=obj.evaluated_get(deps);me=evaluated.to_mesh();me.calc_loop_triangles();ma=obj.matrix_world;normal_ma=ma.to_3x3().inverted().transposed()
- for tri in me.loop_triangles:
-  mat=me.materials[tri.material_index].name if me.materials else'Acier patiné';arr=prims.setdefault(mat,[])
-  for li in tri.loops:
-   loop=me.loops[li];v=ma@me.vertices[loop.vertex_index].co;n=normal_ma@me.corner_normals[li].vector;n.normalize();p=(v.x,v.z,-v.y);nn=(n.x,n.z,-n.y);uv=tuple(me.uv_layers.active.data[li].uv);arr.append((p,nn,uv))
-   for k in range(3):bounds_min[k]=min(bounds_min[k],p[k]);bounds_max[k]=max(bounds_max[k],p[k])
- evaluated.to_mesh_clear()
-chunks=[];offset=0;descriptions=[]
-def append(data):
- global offset
- padding=(-offset)%4
- if padding:chunks.append(bytes(padding));offset+=padding
- at=offset;chunks.append(data);offset+=len(data);return at
-for mat,vertices in prims.items():
- unique={};values=[];indices=[]
- for p,n,uv in vertices:
-  key=tuple(round(x,5)for x in (*p,*n,*uv))
-  if key not in unique:unique[key]=len(values);values.append((p,n,uv))
-  indices.append(unique[key])
- positions=bytearray();normals=bytearray();uv0=bytearray();uv1=bytes(len(values)*4)
- for p,n,uv in values:
-  positions+=struct.pack('<hhh',*[max(-32767,min(32767,round((p[k]-bounds_min[k])/max(1e-6,bounds_max[k]-bounds_min[k])*65534-32767)))for k in range(3)])
-  normals+=struct.pack('<bbbb',*[max(-127,min(127,round(c*127)))for c in n],0);uv0+=struct.pack('<ff',uv[0],1-uv[1])
- desc={'material':mat,'vertices':len(values),'indices':len(indices),'index32':len(values)>65535}
- desc['position']=append(positions);desc['normal']=append(normals);desc['uv1']=append(uv1);desc['uv0']=append(uv0);desc['index']=append(struct.pack('<'+('I'if desc['index32']else'H')*len(indices),*indices));descriptions.append(desc)
-meta={'min':bounds_min,'max':bounds_max,'primitives':descriptions,'materials':META,'source':'PinkWars_Planque.blend','units':'metres'}
-encoded=json.dumps(meta,ensure_ascii=False,separators=(',',':')).encode();encoded+=b' '*((-len(encoded))%4)
-raw=b'PWM1'+struct.pack('<I',len(encoded))+encoded+b''.join(chunks);(OUT/'planque.pwm.gz').write_bytes(gzip.compress(raw,compresslevel=9,mtime=0));(OUT/'materials.json').write_text(json.dumps(META,ensure_ascii=False,separators=(',',':')))
-stats={'source':'Blender 4.3 · original editable scene','triangles':sum(p['indices']//3 for p in descriptions),'batches':len(descriptions),'vertices':sum(p['vertices']for p in descriptions),'pwmBytes':len(raw),'downloadBytes':(OUT/'planque.pwm.gz').stat().st_size,'colliders':len(SOLIDS),'stations':len(layout['stations'])};(OUT/'stats.json').write_text(json.dumps(stats,ensure_ascii=False,indent=2));print(json.dumps(stats),flush=True)
+def export_pwm(objects,filename):
+ deps=bpy.context.evaluated_depsgraph_get();prims={};bounds_min=[1e9]*3;bounds_max=[-1e9]*3
+ for obj in objects:
+  if obj.type not in ['MESH','FONT']:continue
+  evaluated=obj.evaluated_get(deps);me=evaluated.to_mesh();me.calc_loop_triangles();ma=obj.matrix_world;normal_ma=ma.to_3x3().inverted().transposed()
+  for tri in me.loop_triangles:
+   mat=me.materials[tri.material_index].name if me.materials else'Acier patiné';arr=prims.setdefault(mat,[])
+   for li in tri.loops:
+    loop=me.loops[li];v=ma@me.vertices[loop.vertex_index].co;n=normal_ma@me.corner_normals[li].vector;n.normalize();p=(v.x,v.z,-v.y);nn=(n.x,n.z,-n.y);uv=tuple(me.uv_layers.active.data[li].uv);arr.append((p,nn,uv))
+    for k in range(3):bounds_min[k]=min(bounds_min[k],p[k]);bounds_max[k]=max(bounds_max[k],p[k])
+  evaluated.to_mesh_clear()
+ chunks=[];offset=0;descriptions=[]
+ def append(data):
+  nonlocal offset
+  padding=(-offset)%4
+  if padding:chunks.append(bytes(padding));offset+=padding
+  at=offset;chunks.append(data);offset+=len(data);return at
+ for mat,vertices in prims.items():
+  unique={};values=[];indices=[]
+  for p,n,uv in vertices:
+   key=tuple(round(x,5)for x in (*p,*n,*uv))
+   if key not in unique:unique[key]=len(values);values.append((p,n,uv))
+   indices.append(unique[key])
+  positions=bytearray();normals=bytearray();uv0=bytearray();uv1=bytes(len(values)*4)
+  for p,n,uv in values:
+   positions+=struct.pack('<hhh',*[max(-32767,min(32767,round((p[k]-bounds_min[k])/max(1e-6,bounds_max[k]-bounds_min[k])*65534-32767)))for k in range(3)])
+   normals+=struct.pack('<bbbb',*[max(-127,min(127,round(c*127)))for c in n],0);uv0+=struct.pack('<ff',uv[0],1-uv[1])
+  desc={'material':mat,'vertices':len(values),'indices':len(indices),'index32':len(values)>65535}
+  desc['position']=append(positions);desc['normal']=append(normals);desc['uv1']=append(uv1);desc['uv0']=append(uv0);desc['index']=append(struct.pack('<'+('I'if desc['index32']else'H')*len(indices),*indices));descriptions.append(desc)
+ meta={'min':bounds_min,'max':bounds_max,'primitives':descriptions,'materials':META,'source':'PinkWars_Planque.blend','units':'metres'}
+ encoded=json.dumps(meta,ensure_ascii=False,separators=(',',':')).encode();encoded+=b' '*((-len(encoded))%4)
+ raw=b'PWM1'+struct.pack('<I',len(encoded))+encoded+b''.join(chunks);(OUT/filename).write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+ return {'source':'Blender 4.3 · original editable scene','triangles':sum(p['indices']//3 for p in descriptions),'batches':len(descriptions),'vertices':sum(p['vertices']for p in descriptions),'pwmBytes':len(raw),'downloadBytes':(OUT/filename).stat().st_size}
+room_objects=[o for o in sc.objects if not o.name.startswith(('Vesper extérieure','Portes mobiles'))]
+city_objects=[o for o in sc.objects if o.name.startswith('Vesper extérieure')]
+stats=export_pwm(room_objects,'planque.pwm.gz');stats.update(colliders=len(SOLIDS),stations=len(layout['stations']),doors=len(DOORS),rooms=len(ROOMS));(OUT/'stats.json').write_text(json.dumps(stats,ensure_ascii=False,indent=2))
+city_stats=export_pwm(city_objects,'city.pwm.gz');(OUT/'city-stats.json').write_text(json.dumps(city_stats,ensure_ascii=False,indent=2));(OUT/'materials.json').write_text(json.dumps(META,ensure_ascii=False,separators=(',',':')));print(json.dumps(stats),flush=True)
 # Standard exchange file, not used by the runtime (which downloads only PWM1).
 if '--glb' in sys.argv:bpy.ops.export_scene.gltf(filepath=str(SRC/'planque.glb'),export_format='GLB',export_apply=True,export_cameras=False,export_lights=False)
 if '--render'in sys.argv:

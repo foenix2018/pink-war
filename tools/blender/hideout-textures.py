@@ -47,6 +47,10 @@ cloud=np.asarray(Image.fromarray(np.clip(128+noise*25,0,255).astype('uint8')).fi
 write('ceramic',225+cloud*.4+noise*.25,noise*.002,76+noise*.7,.5)
 write('concrete',177+cloud*2.5+noise*3.0,cloud*.05+noise*.035,218+noise*2,.9)
 
+# Fine etched glass: opaque privacy glazing with a soft, irregular highlight.
+frost=noise*.035+np.sin(x*.17)*np.sin(y*.21)*.018
+write('frost',229+noise*1.8,frost,208+noise*3,1.4)
+
 # Instrument display, reused by screens with proper local UV coordinates.
 im=Image.new('RGB',(1024,640),'#07151e');d=ImageDraw.Draw(im)
 font='/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'

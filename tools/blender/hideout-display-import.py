@@ -12,6 +12,7 @@ old=bpy.data.collections.get('Équipement officiel Pink Wars')
 if old:
  for obj in list(old.objects):bpy.data.objects.remove(obj,do_unlink=True)
  bpy.data.collections.remove(old)
+ bpy.data.orphans_purge(do_local_ids=True,do_linked_ids=True,do_recursive=True)
 collection=bpy.data.collections.new('Équipement officiel Pink Wars');bpy.context.scene.collection.children.link(collection)
 data=gzip.decompress((OUT/'showcase.pwm.gz').read_bytes());size=struct.unpack_from('<I',data,4)[0];meta=json.loads(data[8:8+size]);offset=8+size
 native=json.loads((OUT/'showcase-materials.json').read_text());images={i['uuid']:i for i in native['images']};textures={t['uuid']:t for t in native['textures']}
@@ -77,6 +78,11 @@ for i,part in enumerate(meta['primitives']):
  rgb=read('<f4',part['color'],n*3).reshape(-1,3);rgba=np.ones((n,4),dtype=np.float32);rgba[:,:3]=rgb;mesh.color_attributes.new(name='Couleurs originales',type='FLOAT_COLOR',domain='POINT').data.foreach_set('color',rgba.ravel())
  obj=bpy.data.objects.new('Tenues et armes officielles / '+str(i),mesh);collection.objects.link(obj);mesh.materials.append(materials[part['material']]);obj['provenance']='createWeaponModels / installPinkWarsSoldier';obj['triangles']=part['indices']//3
 bpy.context.scene['equipment_catalogue']=json.dumps(native['catalogue'],ensure_ascii=False)
+# Keep the optional Blender window preview in sync with the latest city render.
+panorama_mat=bpy.data.materials.get('Panorama Vesper')
+if panorama_mat:
+ for node in panorama_mat.node_tree.nodes:
+  if node.type=='TEX_IMAGE':node.image=bpy.data.images.load(str(OUT/'panorama.jpg'),check_existing=False);node.image.pack()
 bpy.ops.file.pack_all();bpy.context.preferences.filepaths.save_version=0;bpy.ops.wm.save_as_mainfile(filepath=str(SOURCE),compress=True);shutil.copyfile(SOURCE,OUT/'PinkWars_Planque.blend')
 print(json.dumps({'canonicalObjects':len(collection.objects),'canonicalTriangles':native['triangles'],'weapons':len(native['catalogue']['weapons']),'outfits':len(native['catalogue']['outfits'])}))
 temporary.cleanup()
