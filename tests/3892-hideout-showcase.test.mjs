@@ -4,6 +4,7 @@ import * as T from '../dist/vendor/three.webgpu.min.js';
 import {freezeShowcase,showcaseMaterialResolver} from '../dist/hideout-showcase.js';
 import {readFileSync} from 'node:fs';
 import {gunzipSync} from 'node:zlib';
+import {createCompanionModel} from '../dist/companion-model.js';
 import {parsePWM} from '../dist/blender-models.js';
 
 test('native model scale and conversion axes survive freezing; hidden source parts stay hidden',()=>{
@@ -32,7 +33,19 @@ test('sharing a showcase finish preserves the native colour of each part in vert
 test('the baked catalogue contains every real weapon, both native outfits and finite per-vertex colours',()=>{
  const base=new URL('../dist/assets/hideout/',import.meta.url),catalogue=JSON.parse(readFileSync(new URL('showcase-materials.json',base))),layout=JSON.parse(readFileSync(new URL('layout.json',base)));
  assert.deepEqual(catalogue.catalogue.weapons.map(w=>w.index).sort((a,b)=>a-b),Array.from({length:11},(_,i)=>i));assert.deepEqual(catalogue.catalogue.outfits.map(o=>o.hero),['ghju','lylu']);assert.equal(layout.showcase.weapons.length,11);
- const gz=readFileSync(new URL('showcase.pwm.gz',base)),raw=gunzipSync(gz),parsed=parsePWM(T,raw.buffer.slice(raw.byteOffset,raw.byteOffset+raw.byteLength));assert.ok(parsed.triangles>400000&&parsed.triangles<550000);assert.ok(parsed.primitives.length<=90);assert.ok(gz.length<6e6);
+ const gz=readFileSync(new URL('showcase.pwm.gz',base)),raw=gunzipSync(gz),parsed=parsePWM(T,raw.buffer.slice(raw.byteOffset,raw.byteOffset+raw.byteLength));assert.ok(parsed.triangles>400000&&parsed.triangles<550000);assert.ok(parsed.primitives.length<=100);assert.ok(gz.length<6e6);
  const materials=new Set(catalogue.materials.map(m=>m.uuid));for(const p of parsed.primitives){assert.ok(materials.has(p.material));assert.equal(p.geometry.attributes.color.count,p.geometry.attributes.position.count);assert.ok([...p.geometry.attributes.color.array].every(Number.isFinite));p.geometry.dispose();}
  for(const w of catalogue.catalogue.weapons){assert.equal(w.source,'createWeaponModels');assert.ok(w.bounds.min.every(Number.isFinite));if(w.bench){assert.ok(w.bounds.min[1]>=.64);if(w.index===7)assert.ok(w.size[1]<.5,'both pistols sit at the same height');}else{assert.ok(w.bounds.min[2]>=-4.301);assert.ok(w.size[0]<1.5);assert.ok(w.size[1]<.7);}}
+});
+
+test('both docked companions are exact native phase shells at the game scale and idle pose',()=>{
+ const base=new URL('../dist/assets/hideout/',import.meta.url),catalogue=JSON.parse(readFileSync(new URL('showcase-materials.json',base))).catalogue,layout=JSON.parse(readFileSync(new URL('layout.json',base)));
+ assert.deepEqual(catalogue.companions.map(c=>c.id),['gaby','cara']);assert.equal(layout.showcase.companions.length,2);
+ for(const slot of layout.showcase.companions){
+  const native=new T.Group(),model=createCompanionModel(T,native,slot.hero==='ghju');for(let i=0;i<20;i++)model.update(.05);
+  const frozen=freezeShowcase(native),entry=catalogue.companions.find(c=>c.id===slot.id),size=frozen.bounds.getSize(new T.Vector3());
+  assert.equal(entry.source,'createCompanionModel');assert.equal(entry.name,model.stats().name);assert.equal(entry.revision,model.stats().revision);assert.equal(entry.petals,slot.id==='gaby'?4:6);assert.equal(entry.triangles,frozen.triangles);assert.equal(entry.scale,1);
+  for(let axis=0;axis<3;axis++){assert.ok(Math.abs(entry.size[axis]-size.getComponent(axis))<1e-6);assert.ok(Math.abs(entry.bounds.min[axis]-frozen.bounds.min.getComponent(axis)-[slot.x,slot.y,slot.z][axis])<1e-6);}
+  assert.ok(size.x>.3&&size.x<.4,'the native orbital stabilizer stays at its real scale');assert.ok(frozen.root.children.every(m=>!m.isSkinnedMesh),'no extra live skeleton in the charging dock');frozen.dispose();model.dispose();
+ }
 });

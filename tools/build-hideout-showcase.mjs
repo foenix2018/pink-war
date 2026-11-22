@@ -11,7 +11,7 @@ try{
   const T=await import('/vendor/three.webgpu.min.js'),{createHideoutShowcase,freezeShowcase,showcaseMaterialResolver}=await import('/hideout-showcase.js');
   const layout=await(await fetch('/assets/hideout/layout.json')).json();
   const source=await createHideoutShowcase({layout,levels:{ghju:10,lylu:10}});
-  const baked=freezeShowcase(source.root,{name:'Armes et tenues officielles',resolveMaterial:showcaseMaterialResolver()});
+  const baked=freezeShowcase(source.root,{name:'Armes, tenues et compagnons officiels',resolveMaterial:showcaseMaterialResolver()});
   const pending=[];for(const mesh of baked.root.children)for(const value of Object.values(mesh.material))if(value?.isTexture&&value.image instanceof HTMLImageElement&&!value.image.complete)pending.push(new Promise((yes,no)=>{value.image.addEventListener('load',yes,{once:true});value.image.addEventListener('error',no,{once:true});}));await Promise.all(pending);
   const json=baked.root.toJSON();delete json.geometries;delete json.object;
   const images=new Map(json.images.map(i=>[i.uuid,i]));
@@ -45,7 +45,7 @@ for(const {material,a}of decoded){
 }
 const meta={min,max,primitives,source:'Canonical Pink Wars builders · offline static capture',units:'metres'};let header=Buffer.from(JSON.stringify(meta));header=Buffer.concat([header,Buffer.alloc((-header.length)&3,32)]);const prefix=Buffer.alloc(8);prefix.write('PWM1');prefix.writeUInt32LE(header.length,4);
 const packed=gzipSync(Buffer.concat([prefix,header,...chunks]),{level:9});
-const materials={...result.materials,catalogue:result.snapshot,source:'createWeaponModels + installPinkWarsSoldier + poseUnarmedForInspection',triangles:result.triangles,batches:result.batches,downloadBytes:packed.byteLength};
+const materials={...result.materials,catalogue:result.snapshot,source:'createWeaponModels + installPinkWarsSoldier + poseUnarmedForInspection + createCompanionModel',triangles:result.triangles,batches:result.batches,downloadBytes:packed.byteLength};
 writeFileSync(new URL('showcase.pwm.gz',out),packed);writeFileSync(new URL('showcase-materials.json',out),JSON.stringify(materials));
-writeFileSync(new URL('showcase-stats.json',out),JSON.stringify({triangles:result.triangles,batches:primitives.length,vertices:primitives.reduce((s,p)=>s+p.vertices,0),downloadBytes:packed.byteLength,materialBytes:JSON.stringify(materials).length,weapons:result.snapshot.weapons.length,outfits:result.snapshot.outfits.length},null,2));
-console.log(JSON.stringify({triangles:result.triangles,batches:primitives.length,downloadBytes:packed.byteLength,weapons:result.snapshot.weapons.length,outfits:result.snapshot.outfits.length}));
+writeFileSync(new URL('showcase-stats.json',out),JSON.stringify({triangles:result.triangles,batches:primitives.length,vertices:primitives.reduce((s,p)=>s+p.vertices,0),downloadBytes:packed.byteLength,materialBytes:JSON.stringify(materials).length,companions:result.snapshot.companions.length,weapons:result.snapshot.weapons.length,outfits:result.snapshot.outfits.length},null,2));
+console.log(JSON.stringify({triangles:result.triangles,batches:primitives.length,downloadBytes:packed.byteLength,companions:result.snapshot.companions.length,weapons:result.snapshot.weapons.length,outfits:result.snapshot.outfits.length}));

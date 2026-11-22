@@ -145,9 +145,6 @@ def text(body,x,y,z,size=.20,mat='Néon blanc',floor=False):
  curve=bpy.data.curves.new(body,'FONT');curve.body=body;curve.align_x='CENTER';curve.size=size;curve.extrude=.0005;curve.resolution_u=2
  if FONT:curve.font=FONT
  o=bpy.data.objects.new(body,curve);bpy.context.collection.objects.link(o);o.location=G(x,y,z);o.rotation_euler=(0,0,0)if floor else(math.pi/2,0,0);curve.materials.append(MATS[mat]);TEXT.append(o);return o
-def plaque(title,x,z,width=4.6,subtitle=None):
- box('Cadres anthracite',(x,.83,z),(width,.48,.10));box('Métal brossé',(x,.83,z+.054),(width+.04,.51,.014));box('Cadres anthracite',(x,.83,z+.065),(width-.04,.45,.015));text(title,x,.79,z+.081,.36)
- if subtitle:text(subtitle,x,.64,z+.083,.09)
 def neon(a,b,mat='Néon rose',r=.025):
  # Tube, opaque housing, connectors. No rectangular emissive strips.
  rod('Cadres anthracite',(a[0],a[1]-.032,a[2]+.01),(b[0],b[1]-.032,b[2]+.01),r*2.1,8);rod(mat,a,b,r,10)
@@ -262,8 +259,6 @@ for door in DOORS:
  box('Cadres anthracite',pos(0,2.73),size(w+.5,.25,.38));rod('Métal brossé',pos(-w*.85,2.70,.10),pos(w*.85,2.70,.10),.026,12)
  for side in [-1,1]:cyl('Métal brossé',pos(side*w*.4,2.74,.15),.052,.035,16,axis='x'if axis=='x'else'z')
  box('Cadres anthracite',pos(w/2+.16,1.18,.16),size(.19,.37,.07));cyl('Néon bleu',pos(w/2+.16,1.23,.21),.035,.02,14,axis='x'if axis=='x'else'z')
- for direction in [-1,1]:
-  label=text(door['name'].upper(),*pos(0,2.69,direction*.205),.13,'Néon blanc');label.name='Portes mobiles / signal / '+door['id']+' / '+str(direction);label.rotation_euler.z=(direction*math.pi/2)if axis=='x'else(math.pi if direction<0 else 0)
  # The source file includes closed glass leaves. Runtime instances slide them.
  ZONE='Portes mobiles / '+door['id']
  for side in [-1,1]:
@@ -298,7 +293,6 @@ box('Acier patiné',(-8,2.08,-10.9),(5.15,.13,.52));books(-9.9,2.16,-10.8,23)
 box('Cadres anthracite',(-8.1,1.45,-11.08),(3.1,.75,.04))
 for i in range(9):box('Papier ivoire',(-9.3+(i%5)*.5,1.45+(i//5)*.3,-11.04),(.32,.22,.015),yaw=random.uniform(-.1,.1))
 plant(-10.35,1.5,-10.6,.8);plant(-5.3,0,-10.4,.6)
-plaque('Dortoir',-7.8,-5.02,3.2)
 ZONE='Salle de bain'
 box('Peinture médicale',(7.8,.04,-8),(5.6,.07,5.6))
 box('Peinture médicale',(7.85,1.65,-11.25),(5.65,2.7,.12),solid=True,name='mur carrelé de la salle de bain')
@@ -321,7 +315,6 @@ for j in range(9):rod('Métal brossé',(5.50+j*.18,.305,-8.55),(5.50+j*.18,.305,
 for xx in [-.08,0,.08]:
  for zz in [-.08,0,.08]:cyl('Cadres anthracite',(6.25+xx,2.34,-10.1+zz),.008,.005,6)
 box('Tissu rose',(8.3,.9,-9.6),(.32,.65,.06));rod('Métal brossé',(8.08,1.25,-9.6),(8.53,1.25,-9.6),.018);plant(10.1,0,-6.2,.55)
-plaque('Salle de bain',7.8,-5.02,4.0)
 
 print('Planque: livre, salon, armes',flush=True)
 ZONE='Archives de l’histoire'
@@ -338,7 +331,6 @@ ring('Néon rose',(0,1.35,-8),1.15,.012,48)
 for x in [-2.05,2.05]:
  screen(x,1.6,-8.2,.8,.6);rod('Métal brossé',(x,1.25,-8.4),(x,2.05,-8.5),.04);screen(x,2.05,-8.5,1.15,.67)
 books(-2.65,1.29,-7.9,4);books(2.1,1.29,-7.6,4);plant(-3.7,1.1,-10.7,.7);plant(3.7,1.1,-10.7,.7)
-plaque('Livre de l’Histoire',0,-6.80,4.0,'RÉCAPITULATIF DE L’AVENTURE')
 ZONE='Salon central'
 box('Tissu rose',(0,.028,1),(5.5,.035,4.0))
 for side in [-1,1]:
@@ -377,7 +369,6 @@ SHOWCASE_WEAPONS.append({'index':7,'x':-7.7,'y':.65,'z':-3.8,'bench':True})
 SHOWCASE_WEAPONS.append({'index':8,'x':6.9,'y':1.465,'z':-.90,'bench':True})
 neon((-10.2,2.97,-4.28),(-5.25,2.97,-4.28),'Néon rose',.025)
 for x in [-10.15,-5.2]:crate(x,-3.45,scale=.65)
-plaque('Mur d’armes',-7.8,1.8,4)
 
 print('Planque: armures et recharge',flush=True)
 ZONE='Tenues de combat'
@@ -392,7 +383,7 @@ for x,accent in [(-8.9,'Néon rose'),(-6.4,'Néon bleu')]:
 for x in [-10.1,-5.2]:
  for y in [.45,1.13,1.81]:
   box('Acier patiné',(x,y,3.9),(.65,.64,.65));box('Cadres anthracite',(x,y,4.25),(.53,.53,.03));rod('Métal brossé',(x+.19,y-.1,4.30),(x+.19,y+.1,4.30),.025)
-crate(-9.8,7.45);crate(-5.6,7.5,scale=.8);plaque('Tenues de combat',-7.8,8.72,4.5,'COMBINAISONS ET ÉQUIPEMENTS')
+crate(-9.8,7.45);crate(-5.6,7.5,scale=.8)
 for x,z in [(-10.0,9.9),(-8.4,10.0),(-6.8,10.0),(6.0,10.0),(7.6,10.0),(9.2,10.0)]:crate(x,z,scale=.8)
 ZONE='Stations des compagnons'
 for x,name,accent in [(-2.15,'GAB-1','Néon rose'),(2.15,'CAR-14','Néon bleu')]:
@@ -410,8 +401,8 @@ for x,name,accent in [(-2.15,'GAB-1','Néon rose'),(2.15,'CAR-14','Néon bleu')]
  for side in [-1,1]:
   polyline('Cuir et joints',[(x+side*.75,.20,6.95),(x+side*.65,.30,7.3),(x+side*.45,.46,7.65)],.035)
  box('Cadres anthracite',(x,2.63,6.97),(1.85,.46,.12));text('Recharge',x,2.71,7.05,.17);text(name,x,2.47,7.05,.23,accent)
- for yy,rr in [(1,.5),(1.6,.35)]:ring(accent,(x,yy,7.3),rr,.008)
- ellipsoid('Métal brossé',(x,1.5,7.3),(.52,.37,.42));ellipsoid('Cadres anthracite',(x,1.52,7.49),(.32,.16,.06));ellipsoid(accent,(x,1.53,7.535),(.18,.08,.025));rod('Métal brossé',(x,1.64,7.3),(x,1.85,7.3),.025)
+ for yy,rr in [(.82,.5),(1.05,.35)]:ring(accent,(x,yy,7.3),rr,.008)
+ # Real Cara / Gaby are captured from createCompanionModel by the catalogue bake.
  SOLIDS.append({'kind':'station '+name,'x':x,'z':6.6,'hx':1.2,'hz':.4,'y':0,'height':2.7});SOLIDS.append({'kind':'socle '+name,'x':x,'z':7.3,'hx':.96,'hz':.96,'y':0,'height':.4})
 screen(0,1.06,6.7,.55,.42);box('Acier patiné',(0,.5,6.65),(.68,.95,.46),solid=True)
 for side in [-1,1]:polyline('Cuir et joints',[(side*.3,.1,6.7),(side*.7,.10,7.1),(side*1.1,.12,6.8)],.045)
@@ -454,7 +445,7 @@ for j in range(5):
 for x in [5.35,9.8]:
  box('Acier patiné',(x,.6,4.8),(1.25,1.2,1.0),solid=True);screen(x,1.6,4.5,.95,.5)
  for j in range(3):box('Cadres anthracite',(x,.25+j*.28,5.31),(1.0,.19,.04));neon((x-.35,.25+j*.28,5.34),(x+.35,.25+j*.28,5.34),'Néon rose',.007)
-plant(10.1,1.2,-4.0,.55);plaque('Atelier',7.8,8.7,4.5,'ARMES · NANOPARTICULES · AMÉLIORATIONS')
+plant(10.1,1.2,-4.0,.55)
 ZONE='Porte de mission'
 SOLIDS.append({'kind':'porte de mission','x':0,'z':11.15,'hx':2.9,'hz':.37,'y':0,'height':4.85})
 outline=[(-2.1,0),(2.1,0),(2.9,.8),(2.9,2.8),(2.1,3.6),(-2.1,3.6),(-2.9,2.8),(-2.9,.8)]
@@ -611,7 +602,7 @@ po=bpy.data.objects.new('Panorama de Vesper / baie vitrée',pme);sc.collection.o
 for o in sc.objects:
  if o.name.startswith(('Vesper extérieure','Toiture complète'))or any(META.get(m.name,{}).get('interior')for m in getattr(o.data,'materials',[])):o.hide_render=True
 
-layout={'version':1,'name':'La Planque · Les Héritiers du Silence','author':'Pink Wars · Blender','doors':DOORS,'rooms':ROOMS,'showcase':{'weapons':SHOWCASE_WEAPONS,'outfits':[{'hero':'ghju','x':-8.9,'y':.285,'z':4.45},{'hero':'lylu','x':-6.4,'y':.285,'z':4.45}]},'bounds':{'x1':-10.65,'x2':10.65,'z1':-11.25,'z2':11.35},'spawn':{'x':0,'z':9.0,'yaw':0},'colliders':SOLIDS,'stations':[
+layout={'version':1,'name':'La Planque · Les Héritiers du Silence','author':'Pink Wars · Blender','doors':DOORS,'rooms':ROOMS,'showcase':{'companions':[{'id':'gaby','hero':'ghju','x':-2.15,'y':1.5,'z':7.3},{'id':'cara','hero':'lylu','x':2.15,'y':1.5,'z':7.3}],'weapons':SHOWCASE_WEAPONS,'outfits':[{'hero':'ghju','x':-8.9,'y':.285,'z':4.45},{'hero':'lylu','x':-6.4,'y':.285,'z':4.45}]},'bounds':{'x1':-10.65,'x2':10.65,'z1':-11.25,'z2':11.35},'spawn':{'x':0,'z':9.0,'yaw':0},'colliders':SOLIDS,'stations':[
  {'id':'rest','name':'Dortoir','action':'Se reposer et régénérer','x':-6.1,'z':-6.35,'radius':2.4},
  {'id':'weapons','name':'Mur d’armes','action':'Préparer les armes','x':-7.8,'z':-.2,'radius':2.7},
  {'id':'outfits','name':'Tenues de combat','action':'Préparer l’équipement','x':-7.8,'z':6.3,'radius':2.4},

@@ -5,6 +5,7 @@ import {installPinkWarsSoldier} from './level2-player.js';
 import {poseUnarmedForInspection} from './rlh-firefighter.js';
 import {createGlove} from './hands.js';
 import {WEAPONS} from './game-logic.js';
+import {createCompanionModel} from './companion-model.js';
 
 // Freeze the *visible*, evaluated native model. Preserve skin deformation,
 // vertex colours, reflected instances, material groups and both texture UVs.
@@ -78,7 +79,7 @@ export function showcaseMaterialResolver(){
 
 export async function createHideoutShowcase({layout,levels={ghju:1,lylu:1},onProgress=()=>{}}={}){
  const root=new T.Group();root.name='Présentoirs · modèles officiels Pink Wars';
- const sources=[],frozen=[],outfits=new Map(),catalogue=[];
+ const sources=[],frozen=[],outfits=new Map(),catalogue=[],companions=[],companionModels=[];
  const shell=c=>new T.MeshStandardMaterial({color:c,metalness:.65,roughness:.4}),light=c=>new T.MeshBasicMaterial({color:c,toneMapped:false});
  const mats={armor:shell(0x232630),armorLight:shell(0x616773),dark:shell(0x15171d),steel:shell(0x444a55),suit:shell(0x101218),rose:light(0xff66a5),pale:light(0xdef4ff),white:shell(0xc6d3df),cyan:light(0x61caff),violet:light(0xa575ff)};
  async function productionReady(progress){const deadline=performance.now()+20000;while(progress.loaded+progress.failed<progress.total){if(performance.now()>deadline)throw Error('Chargement des modèles de production interrompu');await new Promise(r=>setTimeout(r,20));}if(progress.failed)throw Error('Modèle de production indisponible');}
@@ -106,6 +107,16 @@ export async function createHideoutShowcase({layout,levels={ghju:1,lylu:1},onPro
   const entry={slot,rig,gloves,frozen:null,carrier:new T.Group(),level:0};root.add(entry.carrier);outfits.set(slot.hero,entry);
   updateOutfit(slot.hero,levels[slot.hero]||1);
  }
+ // The charging docks use the same phase-shell models as active companions,
+ // at their original metre scale. Capture an evaluated native idle pose.
+ for(const slot of layout.showcase.companions){
+  const nativeRoot=new T.Group(),model=createCompanionModel(T,nativeRoot,slot.hero==='ghju');companionModels.push(model);
+  for(let i=0;i<20;i++)model.update(.05);
+  const stats=model.stats(),capture=freezeShowcase(nativeRoot,{name:stats.name+' · modèle officiel'});frozen.push(capture);
+  const carrier=new T.Group();carrier.add(capture.root);carrier.position.set(slot.x,slot.y,slot.z);root.add(carrier);carrier.updateMatrixWorld(true);
+  const bounds=new T.Box3().setFromObject(carrier);
+  companions.push({id:slot.id,hero:slot.hero,name:stats.name,source:'createCompanionModel',revision:stats.revision,petals:stats.petals,pose:'native idle',scale:1,triangles:capture.triangles,size:bounds.getSize(new T.Vector3()).toArray(),bounds:{min:bounds.min.toArray(),max:bounds.max.toArray()}});
+ }
  function updateOutfit(hero,level){
   const entry=outfits.get(hero);if(!entry)return;level=Math.max(1,Math.min(10,Math.floor(level)||1));if(entry.level===level)return;
   entry.frozen?.dispose();const {rig,gloves,slot}=entry;
@@ -114,5 +125,5 @@ export async function createHideoutShowcase({layout,levels={ghju:1,lylu:1},onPro
   entry.carrier.position.set(0,0,0);entry.carrier.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(entry.carrier),center=bounds.getCenter(new T.Vector3());
   entry.carrier.position.set(slot.x-center.x,slot.y-bounds.min.y,slot.z-center.z);entry.level=level;
  }
- return{root,setArmorLevel:updateOutfit,snapshot(){return{weapons:catalogue,outfits:[...outfits].map(([hero,e])=>({hero,level:e.level,source:'installPinkWarsSoldier',pose:'poseUnarmedForInspection',triangles:e.frozen.triangles,batches:e.frozen.batches})),triangles:frozen.reduce((s,f)=>s+f.triangles,0)+[...outfits.values()].reduce((s,e)=>s+e.frozen.triangles,0),batches:frozen.reduce((s,f)=>s+f.batches,0)+[...outfits.values()].reduce((s,e)=>s+e.frozen.batches,0)};},dispose(){root.removeFromParent();for(const f of frozen)f.dispose();for(const e of outfits.values()){e.frozen.dispose();for(const g of e.gloves)g.userData.dispose?.();}for(const r of sources)r.dispose();for(const m of Object.values(mats))m.dispose();}};
+ return{root,setArmorLevel:updateOutfit,snapshot(){return{weapons:catalogue,companions,outfits:[...outfits].map(([hero,e])=>({hero,level:e.level,source:'installPinkWarsSoldier',pose:'poseUnarmedForInspection',triangles:e.frozen.triangles,batches:e.frozen.batches})),triangles:frozen.reduce((s,f)=>s+f.triangles,0)+[...outfits.values()].reduce((s,e)=>s+e.frozen.triangles,0),batches:frozen.reduce((s,f)=>s+f.batches,0)+[...outfits.values()].reduce((s,e)=>s+e.frozen.batches,0)};},dispose(){root.removeFromParent();for(const f of frozen)f.dispose();for(const e of outfits.values()){e.frozen.dispose();for(const g of e.gloves)g.userData.dispose?.();}for(const model of companionModels)model.dispose();for(const r of sources)r.dispose();for(const m of Object.values(mats))m.dispose();}};
 }
