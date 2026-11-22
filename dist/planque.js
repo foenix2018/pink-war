@@ -9,6 +9,7 @@ import {readHideoutProfile,saveHideoutProfile,nextHideoutChapter,chapterURL,prep
 import {createNanoForgePanel} from './nano-forge-ui.js';
 import {createNanoForgeFX} from './nano-forge-fx.js';
 import {ARMOR_STAGES} from './armor-progression.js';
+import {createHideoutNanoChambers,NANO_ARMOR_TIERS} from './hideout-nano-chambers.js';
 import {createPinkWarsInput} from './level2-input.js';
 import {installPinkWarsSoldier} from './level2-player.js';
 import {setScreenMusic} from './menu-music.js';
@@ -21,7 +22,7 @@ try{localStorage.setItem('pink-war-character',characterId);}catch{}
 document.body.classList.add('hideout-page');document.documentElement.style.setProperty('--accent',lylu?'#65bfff':'#ff6cae');
 for(const b of document.querySelectorAll('[data-hero]')){b.setAttribute('aria-pressed',String(b.dataset.hero===characterId));b.onclick=()=>{saveCurrent();const u=new URL(location.href);u.searchParams.set('character',b.dataset.hero);location.assign(u.href);};}
 let savedQuality='auto';try{const q=JSON.parse(localStorage.getItem('rosee-settings')||'{}').quality;if(['auto','low','balanced','high','performance'].includes(q))savedQuality=q;}catch{}
-let profile=readHideoutProfile(characterId),renderer,canvas=$('world'),scene,camera,overview,visit,art,game,navigation,rig,nanoFx,nanoPanel,ready=false,view='overview',cameraYaw=0,cameraPitch=-.13,armorLevel=profile.armorLevel;
+let profile=readHideoutProfile(characterId),renderer,canvas=$('world'),scene,camera,overview,visit,art,game,navigation,rig,nanoFx,nanoPanel,nanoChambers,nanoUI=null,ready=false,view='overview',cameraYaw=0,cameraPitch=-.13,armorLevel=profile.armorLevel;
 let path=[],destination=null,near=null,opened=null,healing=null,clock=0,previous=0,pending=false,messageUntil=0,lastStatus='',moving=false;
 const keys=new Set(),touch={x:0,z:0},pads=createPinkWarsInput(),ray=new T.Raycaster(),mouse=new T.Vector2(),floor=new T.Plane(new T.Vector3(0,1,0),0),floorPoint=new T.Vector3();
 function message(text,seconds=4){$('notice').textContent=text;$('notice').hidden=false;messageUntil=performance.now()+seconds*1000;}
@@ -45,6 +46,7 @@ async function boot(){
   for(const [color,x,z,intensity]of [[0xff80ae,-7,-7,48],[0x72caff,7,-2,38]]){const light=new T.PointLight(color,intensity,18,2);light.position.set(x,3,z);scene.add(light);}
   overview=new T.OrthographicCamera(-15,15,15,-15,.05,230);overview.position.set(0,26,29);overview.lookAt(0,.2,-1);visit=new T.PerspectiveCamera(64,innerWidth/innerHeight,.05,180);camera=overview;
   art=await loadHideoutArt(T,{onProgress:progress,low:graphics.phone||graphics.economy||graphics.artQuality==='low'});scene.add(art.root);navigation=createHideoutNavigation(art.layout);
+   nanoChambers=createHideoutNanoChambers(T,{scene,locations:art.layout.showcase.outfits,low:graphics.phone||graphics.economy,onStatus:()=>nanoUI?.refresh()});
   const flat={height:()=>0,surfaces:()=>[],routes:[],lifts:[]},level=nextHideoutChapter(profile)||profile.lastChapter;
   game=new ArenaGame([...art.layout.colliders,...art.doorColliders],Math.random,flat,characterId);game.configureWeaponAccess({mode:'campaign',level});game.inHideout=true;game.grappleEnabled=false;game.enableArmorShield();game.nextWave=Infinity;game.toSpawn=0;game.invulnerable=Infinity;game.nano.placed=true;game.nano.plans=[];game.wave=1;
   for(const i of profile.owned)if(game.isWeaponAvailable(i)&&game.nanoWeaponAllowed(i))game.ownedWeapons.add(i);
@@ -68,10 +70,10 @@ function navigate(point,station=null){
 function chooseStation(id){const station=art?.layout.stations.find(s=>s.id===id);if(station)navigate(station,station);}
 function element(tag,text,cls=''){const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;}
 function primary(text,action){const b=element('button',text,'hub-primary');b.type='button';b.onclick=action;return b;}
-function closePanel(){if(healing)return;opened=null;keys.clear();touch.x=touch.z=0;$('panel').close();document.body.classList.remove('panel-open');nanoPanel?.dispose();nanoPanel=null;}
+function closePanel(){if(healing)return;nanoUI=null;opened=null;keys.clear();touch.x=touch.z=0;$('panel').close();document.body.classList.remove('panel-open');nanoPanel?.dispose();nanoPanel=null;}
 function openStation(id){
  if(!ready)return;const s=art.layout.stations.find(s=>s.id===id);if(!s)return;if(!navigation.inRoom(game.player,s.room)){navigate(s,s);return;}path=[];destination=null;opened=id;keys.clear();touch.x=touch.z=0;
- nanoPanel?.dispose();nanoPanel=null;$('panel-content').replaceChildren();$('panel-title').textContent=s.name;$('panel-kicker').textContent='LA PLANQUE · '+characterId.toUpperCase();document.body.classList.add('panel-open');if(!$('panel').open)$('panel').showModal();
+ nanoPanel?.dispose();nanoPanel=null;nanoUI=null;$('panel-content').replaceChildren();$('panel-title').textContent=s.name;$('panel-kicker').textContent='LA PLANQUE · '+characterId.toUpperCase();document.body.classList.add('panel-open');if(!$('panel').open)$('panel').showModal();
  const content=$('panel-content');
  if(id==='weapons'){
   content.append(element('p','Prépare une arme de ton inventaire pour la prochaine mission. Les nouveaux modèles s’assemblent à l’atelier nano.'));
@@ -89,8 +91,63 @@ function openStation(id){
   if(!past.length)content.append(element('p','Aucun chapitre terminé pour le moment. Le premier récit sera archivé à ton retour de mission.'));
   for(const event of past){const card=element('article','','hub-archive');card.dataset.historyLevel=String(event.level);card.append(element('h3',String(event.level).padStart(2,'0')+' · '+event.title),element('p',event.text));content.append(card);}
  }else if(id==='outfits'){
-  const maximum=Math.min(10,Math.max(profile.lastChapter,...profile.completed.map(n=>n+1),1));content.append(element('p','Les pièces de l’armure sont celles du personnage dans le jeu. Choisis une tenue déjà accessible. Les améliorations de protection se fabriquent à l’atelier.'));
-  const list=element('div','','hub-list');for(const stage of ARMOR_STAGES){const b=element('button');b.dataset.hubArmor=String(stage.level);b.disabled=stage.level>maximum;b.setAttribute('aria-pressed',String(stage.level===armorLevel));b.append(element('strong',stage.name),element('small',stage.addition+(b.disabled?' · progression requise':'')));b.onclick=()=>{armorLevel=stage.level;game.hideoutArmorLevel=armorLevel;rig?.model.setLevel(armorLevel);saveCurrent();openStation('outfits');};list.append(b);}content.append(list);
+  const maximum=Math.min(10,Math.max(profile.lastChapter,...profile.completed.map(n=>n+1),1));
+  content.append(element('p','Les deux anciennes tenues sont remplacées par des centrifugeuses GHJU et LYLU. Injecte les nanites depuis le réservoir au sol : le vortex assemble l’armure réelle, puis la cape se tisse en dernier.'));
+  const controls=element('section','','hub-nano-controls');
+  const heroes=element('div','','hub-nano-heroes'),tiers=element('div','','hub-nano-tiers'),heroButtons={},tierButtons={};
+  let forgeHero=characterId,forgeTier=NANO_ARMOR_TIERS.filter(t=>t.gameLevel<=armorLevel).at(-1)?.tier||1;
+  for(const id of ['ghju','lylu']){
+   const b=element('button',id.toUpperCase());b.type='button';b.dataset.forgeHero=id;
+   b.onclick=()=>{forgeHero=id;nanoUI?.refresh();};heroes.append(b);heroButtons[id]=b;
+  }
+  for(const t of NANO_ARMOR_TIERS){
+   const b=element('button');b.type='button';b.dataset.forgeTier=String(t.tier);
+   b.append(element('strong',String(t.tier).padStart(2,'0')),element('small',t.name));
+   b.onclick=()=>{forgeTier=t.tier;nanoUI?.refresh();};tiers.append(b);tierButtons[t.tier]=b;
+  }
+  const material=element('p','','hub-nano-material'),status=element('p','','hub-nano-state');
+  const meter=element('progress','','hub-progress');meter.max=1;meter.value=0;
+  const inject=primary('INJECTER & FABRIQUER',async()=>{
+   inject.disabled=true;status.textContent='Initialisation des modèles officiels…';
+   const hero=forgeHero,tier=forgeTier;
+   if(!await nanoChambers.inject(hero,tier))message('Modèle Shadow Unit indisponible. Réessaie.',6);
+   nanoUI?.refresh();
+  });
+  const recover=primary('OUVRIR LE SAS & ÉQUIPER',()=>{
+   const actual=nanoChambers.phase(forgeHero);if(!actual||!nanoChambers.recover(forgeHero))return;
+   const level=NANO_ARMOR_TIERS[actual.tier-1].gameLevel;
+   if(forgeHero!==characterId)message('Sas ouvert. Sélectionne '+forgeHero.toUpperCase()+' dans l’en-tête pour équiper cette tenue.',7);
+   else if(level>maximum)message('Sas ouvert pour inspection. Niveau '+level+' requis pour équiper cette tenue en mission.',7);
+   else{armorLevel=level;game.hideoutArmorLevel=level;rig?.model.setLevel(level);saveCurrent();message('Tenue '+actual.tier+' équipée et sauvegardée pour '+characterId.toUpperCase()+'.',6);}
+   nanoUI?.refresh();
+  });
+  controls.append(heroes,tiers,material,meter,status,inject,recover);content.append(controls);
+  nanoUI={refresh(){
+   const state=nanoChambers?.phase(forgeHero),selected=NANO_ARMOR_TIERS[forgeTier-1],phase=state?.phase||'idle';
+   for(const [id,b]of Object.entries(heroButtons))b.setAttribute('aria-pressed',String(id===forgeHero));
+   for(const [id,b]of Object.entries(tierButtons))b.setAttribute('aria-pressed',String(Number(id)===forgeTier));
+   material.textContent=selected.material+(selected.gameLevel>maximum?' · prévisualisation, niveau '+selected.gameLevel+' requis':' · équipement débloqué');
+   meter.value=state?.progress||0;
+   status.textContent=phase==='injecting'?'CENTRIFUGATION · '+Math.round((state?.progress||0)*100)+' %':
+     phase==='loading'?'CHARGEMENT DES MODÈLES SHADOW UNIT…':
+     phase==='ready'?'ARMURE TERMINÉE · SAS DISPONIBLE':
+     phase==='open'?'SAS OUVERT · ACCÈS À LA TENUE':
+     phase==='error'?'CHARGEMENT IMPOSSIBLE · RELANCER':
+     'RÉSERVOIR PRÊT · CHAMBRE VIDE';
+   inject.disabled=phase==='injecting'||phase==='loading';
+   recover.disabled=!['ready','open'].includes(phase)||state?.tier!==forgeTier;
+   recover.textContent=state?.doorOpen?'SAS OUVERT · ÉQUIPER':'OUVRIR LE SAS & ÉQUIPER';
+  }};nanoUI.refresh();
+  const details=element('details','','hub-nano-details');
+  details.append(element('summary','Progression détaillée originale · 10 modules'));
+  const list=element('div','','hub-list');
+  for(const stage of ARMOR_STAGES){
+   const b=element('button');b.dataset.hubArmor=String(stage.level);b.disabled=stage.level>maximum;
+   b.setAttribute('aria-pressed',String(stage.level===armorLevel));
+   b.append(element('strong',stage.name),element('small',stage.addition+(b.disabled?' · progression requise':'')));
+   b.onclick=()=>{armorLevel=stage.level;game.hideoutArmorLevel=armorLevel;rig?.model.setLevel(armorLevel);saveCurrent();openStation('outfits');};list.append(b);
+  }
+  details.append(list);content.append(details);
  }else if(id==='mission'){
   const next=nextHideoutChapter(profile);content.append(element('p',next?'Prépare ton équipement, puis rejoins le chapitre suivant. Tu peux aussi repartir librement dans un chapitre disponible.':'Les chapitres disponibles sont archivés. Tu peux retourner dans Vesper en attendant la suite.'));
   if(next)content.append(primary('PARTIR · '+HIDEOUT_HISTORY.find(c=>c.level===next).title,()=>depart(next)));
@@ -148,12 +205,13 @@ function update(dt){
  near=art.layout.stations.map(s=>({s,d:Math.hypot(game.player.x-s.x,game.player.z-s.z)})).filter(o=>o.d<o.s.radius&&navigation.inRoom(game.player,o.s.room)).sort((a,b)=>a.d-b.d)[0]?.s||null;$('action').hidden=!near||!!opened;if(near)$('action').textContent='F · '+near.action;
  const status=[Math.ceil(game.player.hp),Math.ceil(game.player.shield),game.nano.profile.balance].join(':');if(status!==lastStatus){lastStatus=status;$('vitals').textContent='SANTÉ '+Math.ceil(game.player.hp)+' · BOUCLIER '+Math.ceil(game.player.shield);$('nanites').textContent=game.nano.profile.balance+' NP';}
  for(const e of game.drainEvents()){nanoFx.handle(e);if(e.type==='nano-crafted')message(e.name+' · assemblage terminé');if(e.type==='nano-error')message(e.message,7);}
- nanoFx.update(game,dt);
+ nanoFx.update(game,dt);nanoChambers?.update(dt,clock);
+ if(opened==='outfits')nanoUI?.refresh();
  if(performance.now()>messageUntil)$('notice').hidden=true;
 }
 function frame(now){
  if(pending||!game)return;const dt=frameDelta(previous?(now-previous)/1000:.016);previous=now;clock+=dt;update(dt);
  try{if(renderer.renderAsync){pending=true;(async()=>{await art.renderExterior(renderer,camera,clock);await renderer.renderAsync(scene,camera);})().then(()=>pending=false).catch(error=>{pending=false;console.error(error);message('Le rendu a été interrompu. Recharge la planque.',8);});}else{art.renderExterior(renderer,camera,clock);renderer.render(scene,camera);}}catch(error){console.error(error);renderer.setAnimationLoop(null);message('Le rendu a été interrompu. Recharge la planque.',8);}
 }
-window.__PINK_HIDEOUT={snapshot:()=>({ready,version:GAME_VERSION,characterId,view,station:opened,pathLength:path.length,routeTarget:destination?.id,nextPoint:path[0]&&{x:path[0].x,z:path[0].z},simulationTime:game?.time,position:game&&{x:game.player.x,z:game.player.z},health:game?.player.hp,shield:game?.player.shield,weapon:game?.weapon.id,weaponIndex:game?.weaponIndex,owned:game&&[...game.ownedWeapons],armorLevel,nano:game?.nano.profile.balance,history:historyForHero(profile),completed:[...profile.completed],next:nextHideoutChapter(profile),source:art?.source,triangles:art?.triangles,batches:art?.batches,downloadBytes:art?.downloadBytes,surfaces:art?.surfaces,showcase:art?.showcase(),doors:art?.doors(),city:art?.city(),backend:rendererBackend(renderer),renderBudget:renderer?.frameBudget?.stats(),heroReady:!!rig,healing:!!healing}),debug:params.has('debug')?{get game(){return game;},get scene(){return scene;},get camera(){return camera;},get renderer(){return renderer;},get art(){return art;},get time(){return clock;},openDoor:id=>art.openDoor(id),go:chooseStation,open:openStation,close:closePanel,teleport(x,z){if(navigation.free(x,z)){path=[];Object.assign(game.player,{x,z});}},navigation:()=>navigation,complete(level){profile.completed.push(level);profile.lastChapter=level;saveHideoutProfile(characterId,profile);}}:null};
+window.__PINK_HIDEOUT={snapshot:()=>({ready,version:GAME_VERSION,characterId,view,station:opened,pathLength:path.length,routeTarget:destination?.id,nextPoint:path[0]&&{x:path[0].x,z:path[0].z},simulationTime:game?.time,position:game&&{x:game.player.x,z:game.player.z},health:game?.player.hp,shield:game?.player.shield,weapon:game?.weapon.id,weaponIndex:game?.weaponIndex,owned:game&&[...game.ownedWeapons],armorLevel,nano:game?.nano.profile.balance,history:historyForHero(profile),completed:[...profile.completed],next:nextHideoutChapter(profile),source:art?.source,triangles:art?.triangles,batches:art?.batches,downloadBytes:art?.downloadBytes,surfaces:art?.surfaces,showcase:art?.showcase(),nanoChambers:nanoChambers?.snapshot(),doors:art?.doors(),city:art?.city(),backend:rendererBackend(renderer),renderBudget:renderer?.frameBudget?.stats(),heroReady:!!rig,healing:!!healing}),debug:params.has('debug')?{get game(){return game;},get scene(){return scene;},get camera(){return camera;},get renderer(){return renderer;},get art(){return art;},get nanoChambers(){return nanoChambers;},get time(){return clock;},openDoor:id=>art.openDoor(id),go:chooseStation,open:openStation,close:closePanel,teleport(x,z){if(navigation.free(x,z)){path=[];Object.assign(game.player,{x,z});}},navigation:()=>navigation,complete(level){profile.completed.push(level);profile.lastChapter=level;saveHideoutProfile(characterId,profile);}}:null};
 void boot();
