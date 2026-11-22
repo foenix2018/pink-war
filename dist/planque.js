@@ -138,7 +138,7 @@ function openStation(id){
      'RÉSERVOIR PRÊT · CHAMBRE VIDE';
    inject.disabled=phase==='injecting'||phase==='loading';
    recover.disabled=!['ready','open'].includes(phase)||state?.tier!==forgeTier;
-   recover.textContent=state?.doorOpen?'SAS OUVERT · ÉQUIPER':'OUVRIR LE SAS & ÉQUIPER';
+   recover.textContent=phase==='equipped'?'TENUE TRANSFÉRÉE':state?.doorOpen?'SAS OUVERT · ÉQUIPER':'OUVRIR LE SAS & ÉQUIPER';
   }};nanoUI.refresh();
   const details=element('details','','hub-nano-details');
   details.append(element('summary','Progression détaillée originale · 10 modules'));
