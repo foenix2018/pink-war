@@ -128,6 +128,7 @@ function openStation(id){
    const state=nanoChambers?.phase(forgeHero),selected=NANO_ARMOR_TIERS[forgeTier-1],phase=state?.phase||'idle';
    for(const [id,b]of Object.entries(heroButtons))b.setAttribute('aria-pressed',String(id===forgeHero));
    for(const [id,b]of Object.entries(tierButtons))b.setAttribute('aria-pressed',String(Number(id)===forgeTier));
+   for(const b of content.querySelectorAll('[data-hub-armor]')){b.disabled=Number(b.dataset.hubArmor)>game.nano.profile.suitStage;b.setAttribute('aria-pressed',String(Number(b.dataset.hubArmor)===armorLevel));}
    const recipe=nanoRecipes(game).find(r=>r.id==='suit:'+forgeTier),owned=forgeTier<=game.nano.profile.suitStage;
    material.textContent=selected.material+(owned?' · tenue fabriquée':' · plan niveau '+selected.planLevel+' · '+selected.cost+' NP');
    meter.value=state?.progress||0;
@@ -151,7 +152,7 @@ function openStation(id){
    const b=element('button');b.dataset.hubArmor=String(stage.level);b.disabled=stage.level>maximum;
    b.setAttribute('aria-pressed',String(stage.level===armorLevel));
    b.append(element('strong',stage.name),element('small',stage.addition+(b.disabled?' · plan niveau '+stage.chapter+' · '+stage.cost+' NP':' · fabriquée')));
-   b.onclick=()=>{if(stage.level!==game.nano.profile.equippedSuit&&!equipNanoSuit(game,stage.level))return;armorLevel=game.nano.profile.equippedSuit;rig?.model.setLevel(armorLevel);saveCurrent();openStation('outfits');};list.append(b);
+   b.onclick=()=>{if(stage.level!==game.nano.profile.equippedSuit&&!equipNanoSuit(game,stage.level))return;armorLevel=game.nano.profile.equippedSuit;rig?.model.setLevel(armorLevel);const chamber=nanoChambers.phase(characterId);if(chamber?.tier===armorLevel&&['ready','open'].includes(chamber.phase)){nanoChambers.recover(characterId);nanoChambers.equip(characterId);}saveCurrent();openStation('outfits');};list.append(b);
   }
   details.append(list);content.append(details);
  }else if(id==='mission'){

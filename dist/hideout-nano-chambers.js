@@ -160,7 +160,7 @@ export function createHideoutNanoChambers(T,{scene,locations,low=false,onStatus=
  }
 
  async function ensure(hero){
-  const c=cells.get(hero);if(!c)return null;if(c.rig)return c;
+  const c=cells.get(hero);if(!c)return null;if(c.loading)return c.loading;if(c.rig)return c;
   if(!c.loading){
    c.loading=(async()=>{
     const installPinkWarsSoldier=installSoldier||(await import('./level2-player.js')).installPinkWarsSoldier;
@@ -193,10 +193,10 @@ export function createHideoutNanoChambers(T,{scene,locations,low=false,onStatus=
 
  async function prepare(hero,tier){
   const c=cells.get(hero);if(!c)return false;
-  tier=Math.max(1,Math.min(5,Math.floor(Number(tier)||1)));
+  tier=Math.max(1,Math.min(5,Math.floor(Number(tier)||1)));const request=(c.request||0)+1;c.request=request;
   c.tier=tier;c.age=0;c.phase='loading';c.targetDoor=0;
   onStatus();
-  try{await ensure(hero);}catch{c.phase='error';onStatus();return false;}
+  try{await ensure(hero);}catch{if(request===c.request){c.phase='error';onStatus();}return false;}if(request!==c.request)return false;
   // Material stage and actual equipment use the same five-step canonical progression.
   c.rig.model.setLevel(NANO_ARMOR_TIERS[tier-1].gameLevel);c.pose?.();
   alignModelOnDeck(c);

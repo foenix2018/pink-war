@@ -4,7 +4,7 @@ import {gzipSync} from 'node:zlib';
 import {createHash} from 'node:crypto';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
 const base=process.env.PINK_WARS_BASE_URL||'http://127.0.0.1:4176',out=new URL('../dist/assets/hideout/',import.meta.url);
-mkdirSync(out,{recursive:true});const scope=process.env.SHOWCASE_SCOPE||'all',stage=Number(process.env.SHOWCASE_STAGE)||1,hero=process.env.SHOWCASE_HERO||'ghju',stem=scope==='common'?'showcase':scope==='outfit'?'outfit-'+hero+'-'+stage:'showcase';
+mkdirSync(out,{recursive:true});const scope=process.env.SHOWCASE_SCOPE||'common',stage=Number(process.env.SHOWCASE_STAGE)||1,hero=process.env.SHOWCASE_HERO||'ghju',stem=scope==='common'?'showcase':scope==='outfit'?'outfit-'+hero+'-'+stage:'showcase';
 const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});let result;
 try{
  const page=await browser.newPage();page.on('pageerror',e=>{throw e;});await page.route('**/showcase-build',r=>r.fulfill({contentType:'text/html',body:'<!doctype html>'}));await page.goto(base+'/showcase-build');
