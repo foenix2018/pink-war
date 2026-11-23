@@ -1,3 +1,5 @@
+import { createWorldEffects } from './webgpu-world-fx.js';
+import { cascadeGeometry, createCascadeWater } from './water-detail.js';
 import {createVesperAltitude} from './vesper-altitude.js';
 import {parsePWM} from './blender-models.js';
 import {bevelBox} from './geo.js';
@@ -39,50 +41,55 @@ export function createM09Art(T,scene,{quality='normal',webgpu=false,onPortalClos
  }
  // A soft, layered volume gives waterfall spray a thickness, without a fullscreen fog pass.
  const foamCanvas=document.createElement('canvas');foamCanvas.width=foamCanvas.height=128;const fc=foamCanvas.getContext('2d'),fg=fc.createRadialGradient(64,64,2,64,64,63);fg.addColorStop(0,'rgba(220,247,241,.55)');fg.addColorStop(.45,'rgba(189,228,223,.2)');fg.addColorStop(1,'rgba(189,228,223,0)');fc.fillStyle=fg;fc.fillRect(0,0,128,128);const foamMap=new T.CanvasTexture(foamCanvas);
- const flowCanvas=document.createElement('canvas');flowCanvas.width=128;flowCanvas.height=512;const flow=flowCanvas.getContext('2d');flow.fillStyle='#33828e';flow.fillRect(0,0,128,512);
+ const waterFX=createWorldEffects(T,{webgpu,low});
+ const cascade=createCascadeWater(T,{webgpu,low,color:0xe1eddf});
  let seed=9;const random=()=>((seed=Math.imul(seed,1664525)+1013904223)>>>0)/4294967296;
- for(let i=0;i<950;i++){flow.fillStyle='rgba(215,252,248,'+(.05+random()*.30)+')';flow.fillRect(random()*128,random()*512,.3+random()*2,4+random()*95);}
- const flowMap=new T.CanvasTexture(flowCanvas);flowMap.colorSpace=T.SRGBColorSpace;flowMap.wrapS=flowMap.wrapT=T.RepeatWrapping;
-
- function waterMaterial(fall=false){
-  if(!webgpu)return new T.MeshStandardMaterial({color:fall?0xc7e9e7:0x247785,map:fall?flowMap:null,roughness:fall?.3:.18,metalness:.35,transparent:fall,opacity:fall?.76:1,side:T.DoubleSide,depthWrite:!fall});
-  const {uv,positionLocal,vec2,vec3,mix,color,mx_noise_float,sin,smoothstep}=T.TSL,m=new T.MeshStandardNodeMaterial({roughness:fall?.28:.15,metalness:.28,side:T.DoubleSide,transparent:fall,depthWrite:!fall});
-  if(fall){
-   const wave=sin(positionLocal.x.mul(1.5).add(clock.mul(3)).add(positionLocal.y.mul(.6)));
-   m.positionNode=positionLocal.add(vec3(wave.mul(.06),0,uv().y.oneMinus().mul(2.6).add(wave.mul(.22))));
-   const ribbons=sin(uv().x.mul(150).add(mx_noise_float(vec2(uv().x.mul(13),uv().y.mul(4).sub(clock.mul(1.1)))).mul(7))).mul(.5).add(.5);
-   const foam=mx_noise_float(vec3(uv().x.mul(18),uv().y.mul(7).sub(clock.mul(1.7)),clock.mul(.13))).mul(.5).add(.5);
-   m.colorNode=mix(color(0x226b79),color(0xe7fffa),ribbons.mul(.45).add(foam.mul(.65)).clamp(0,1));
-   m.opacityNode=smoothstep(0,.045,uv().x).mul(smoothstep(0,.045,uv().x.oneMinus())).mul(.82);
-  }else{
-   const wave=sin(positionLocal.x.mul(12).add(clock.mul(1.5))).mul(sin(positionLocal.z.mul(15).sub(clock.mul(.9))));
-   m.positionNode=positionLocal.add(vec3(0,wave.mul(.09),0));m.colorNode=mix(color(0x174e5b),color(0x54b1b1),wave.mul(.15).add(.25));
-  }
-  return m;
- }
- const fallMaterial=waterMaterial(true),poolMaterial=waterMaterial(false);
+ const fallsAt=[];
  for(const f of DATA.plan.waterfalls){
-  const mesh=addMesh(new T.PlaneGeometry(f.width,f.y-f.bottom,low?12:24,low?20:48),fallMaterial,[f.x,(f.y+f.bottom)/2,f.z]);mesh.name='Cascade · eau WebGPU';falls.push(mesh);
-  const count=low?3:6;
+  const yaw=f.yaw||0,run=2.35+f.width*.019,bottomZ=f.z+Math.cos(yaw)*run,bottomX=f.x+Math.sin(yaw)*run;
+  const mesh=addMesh(cascadeGeometry(T,{width:f.width,height:f.y-f.bottom,run,low}),cascade.material,[f.x,(f.y+f.bottom)/2,f.z]);
+  mesh.rotation.y=yaw;mesh.name='Cascade · nappe courbe et courants filtrés';falls.push(mesh);
+  fallsAt.push({x:bottomX,z:bottomZ,y:f.bottom,radius:f.width*.70,yaw});
+  const count=low?2:4;
   for(let j=0;j<count;j++){
-   const m=addMesh(new T.PlaneGeometry(1,1),new T.MeshBasicMaterial({map:foamMap,color:0xc8e6e1,transparent:true,opacity:.28,depthWrite:false,toneMapped:false}),[f.x+(j/count-.5)*f.width,f.bottom+2+random()*3,f.z+3]);m.scale.set(9+random()*8,6+random()*7,1);mist.push({mesh:m,base:m.position.clone(),phase:random()*6.28});
+   const lateral=(j/(count-1)-.5)*f.width*.7,position=[bottomX+Math.cos(yaw)*lateral,f.bottom+1.3+random()*1.8,bottomZ-Math.sin(yaw)*lateral];
+   const mat=new T.MeshBasicMaterial({map:foamMap,color:0xc8e6e1,transparent:true,opacity:.37,depthWrite:false,toneMapped:false});
+   const mistMesh=addMesh(new T.PlaneGeometry(1,1),mat,position);
+   mistMesh.scale.set(5.5+random()*5.8,3.2+random()*4.7,1);
+   mist.push({mesh:mistMesh,base:mistMesh.position.clone(),phase:random()*6.28});
   }
  }
- for(const p of DATA.plan.pools){
-  const geometry=new T.CircleGeometry(1,64);geometry.rotateX(-Math.PI/2);const mesh=addMesh(geometry,poolMaterial,[p.x,p.y+.04,p.z]);mesh.scale.set(p.rx,1,p.rz);mesh.name='Bassin · vaguelettes WebGPU';waters.push(mesh);
+ for(const [i,p] of DATA.plan.pools.entries()){
+  const hit=fallsAt.find(f=>Math.abs(f.y-p.y)<.3&&((f.x-p.x)/p.rx)**2+((f.z-p.z)/p.rz)**2<1.2);
+  const material=waterFX.water({color:i<3?0x1c5359:0x245f60,shallowColor:0x649888,skyColor:0xc4a3ac,
+    opacity:.92,flow:i<3?.96:.63,foam:hit});
+  const geometry=new T.RingGeometry(.0001,1,low?56:88,low?5:11);
+  geometry.rotateX(-Math.PI/2);
+  if(!webgpu){
+   const uv=geometry.attributes.uv;
+   for(let j=0;j<uv.count;j++)uv.setXY(j,uv.getX(j)*p.rx/8,uv.getY(j)*p.rz/8);
+  }
+  const mesh=addMesh(geometry,material,[p.x,p.y+.036,p.z]);
+  mesh.scale.set(p.rx,1,p.rz);mesh.name='Bassin · eau profonde et écume du déversoir';waters.push(mesh);
  }
+ // The upper aqueduct feeds the first spillway, beyond the reservoir's natural lip.
+ const upstream=DATA.plan.waterfalls[0],feedMat=waterFX.water({color:0x2d6b63,skyColor:0xc4a3ac,opacity:.93,flow:1.38});
+ const feedGeo=new T.PlaneGeometry(upstream.width*.95,6.5,12,5).rotateX(-Math.PI/2), feedPos=feedGeo.attributes.position;
+ for(let j=0;j<feedPos.count;j++)feedPos.setY(j,-.055-.06*(feedPos.getZ(j)/6.5+.5));
+ feedGeo.computeVertexNormals();
+ addMesh(feedGeo,feedMat,[upstream.x,upstream.y,upstream.z-3.24]).name='Canal du déversoir supérieur';
  const petals=new T.InstancedMesh(new T.PlaneGeometry(.19,.13),new T.MeshStandardMaterial({color:0xff8db6,roughness:.7,side:T.DoubleSide}),low?64:160);petals.name='Pétales dans le vent';petals.frustumCulled=false;root.add(petals);const petalRest=Array.from({length:petals.count},()=>({x:-8+(random()-.5)*52,y:47+random()*25,z:-102+(random()-.5)*52,phase:random()*20})),temp=new T.Object3D();
  const ready=(async()=>{
   const base=new URL('./assets/m09/',import.meta.url),[meshResponse,matResponse]=await Promise.all([fetch(new URL(low?'gardens-low.pwm.gz':'gardens.pwm.gz',base)),fetch(new URL('materials.json',base))]);
   if(!meshResponse.ok||!matResponse.ok)throw Error('Ressource des Jardins indisponible');const compressed=await meshResponse.arrayBuffer();downloadBytes=compressed.byteLength;
   let bytes;if(String.fromCharCode(...new Uint8Array(compressed,0,4))==='PWM1')bytes=compressed;else if(typeof DecompressionStream!=='undefined')bytes=await new Response(new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();else{const {gunzipSync}=await import('./vendor/fflate.module.js');const raw=gunzipSync(new Uint8Array(compressed));bytes=raw.buffer.slice(raw.byteOffset,raw.byteOffset+raw.byteLength);}
   compiled=parsePWM(T,bytes);const defs=await matResponse.json(),loader=new T.TextureLoader(),cache=new Map();
-  const texture=async(path,scale,color=false)=>{const key=path+'/'+scale+'/'+color;if(!cache.has(key))cache.set(key,loader.loadAsync(new URL('./assets/'+path,import.meta.url).href).then(t=>{t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.setScalar(scale);t.anisotropy=low?2:4;t.colorSpace=color?T.SRGBColorSpace:T.NoColorSpace;return t;}));return cache.get(key);};
+  const texture=async(path,scale,color=false)=>{const key=path+'/'+scale+'/'+color;if(!cache.has(key))cache.set(key,loader.loadAsync(new URL('./assets/'+path,import.meta.url).href).then(t=>{t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.setScalar(scale);t.anisotropy=low?2:6;t.colorSpace=color?T.SRGBColorSpace:T.NoColorSpace;return t;}));return cache.get(key);};
   await Promise.all(Object.entries(defs).map(async([name,m])=>{
    const stem=/stone|facade/.test(name)?'concrete':name==='deck'?'deck':/steel|bronze/.test(name)?'steel':null,scale=m.uvScale??(name==='bark'?.32:stem==='concrete'?.16:.45);
    const [map,normalMap,roughnessMap]=await Promise.all([m.texture?texture((m.textureSpace||'cc0')+'/'+m.texture,scale,true):null,m.normalTexture?texture('m09/'+m.normalTexture,scale):stem&&(!low||name==='deck')?texture('hideout/'+stem+'-normal.jpg',scale):null,m.roughTexture?texture('m09/'+m.roughTexture,scale):stem?texture('hideout/'+stem+'-rough.jpg',scale):null]);
    const Kind=webgpu&&/^(leaf|blossom)/.test(name)?T.MeshStandardNodeMaterial:T.MeshStandardMaterial;
-   const params={color:new T.Color(...m.color),map,normalMap,normalScale:new T.Vector2(.45,.45),roughnessMap,roughness:roughnessMap?1:m.roughness,metalness:m.metalness,alphaTest:m.alphaTest||0,transparent:m.alpha<1,opacity:m.alpha,depthWrite:m.alpha>=1,forceSinglePass:true,side:m.alpha<1||m.doubleSided?T.DoubleSide:T.FrontSide};
+   const params={color:new T.Color(...m.color),map,normalMap,normalScale:new T.Vector2(...(name==='deck'?[.22,.22]:name==='wetstone'?[.25,.25]:[.36,.36])),roughnessMap,roughness:roughnessMap?1:m.roughness,metalness:m.metalness,alphaTest:m.alphaTest||0,transparent:m.alpha<1,opacity:m.alpha,depthWrite:m.alpha>=1,forceSinglePass:true,side:m.alpha<1||m.doubleSided?T.DoubleSide:T.FrontSide};
    const material=m.emissive>=2?new T.MeshBasicMaterial({color:new T.Color(...m.color),transparent:m.alpha<1,opacity:m.alpha,depthWrite:m.alpha>=1,side:T.DoubleSide,toneMapped:false}):new Kind(params);
    if(m.emissive&&m.emissive<2){material.emissive=new T.Color(...m.color);material.emissiveIntensity=m.emissive;if(map)material.emissiveMap=map;}
    if(Kind===T.MeshStandardNodeMaterial){const {positionLocal,vec3,sin}=T.TSL;material.positionNode=positionLocal.add(vec3(sin(positionLocal.z.mul(.7).add(clock)).mul(.045),0,sin(positionLocal.x.mul(.5).add(clock.mul(.7))).mul(.035)));}
@@ -112,7 +119,7 @@ export function createM09Art(T,scene,{quality='normal',webgpu=false,onPortalClos
  function openPortal(x,y,z,{charge=3.2,hold=2.2}={}){const fx=createElectricPortal(T,{height:3.6,low,webgpu,lights:!low});fx.group.position.set(x,y,z);root.add(fx.group);portals.push({fx,age:0,charge,hold,closing:false});}
  function update(t,dt,eye,player){
   altitude.update(t);clock.value=t;gateOpen+=(gateTarget-gateOpen)*(1-Math.exp(-dt*3));for(const {group,side}of gateLeaves)group.position.x=d.x+side*(2+gateOpen*4.2);
-  flowMap.offset.y=-t*.5;coreLight.intensity=(janus?2500:850)*(1+Math.sin(t*1.7)*.035);
+  cascade.update(t);waterFX.update(t,eye?.position);coreLight.intensity=(janus?2500:850)*(1+Math.sin(t*1.7)*.035);
   for(const v of devices.values()){v.group.visible=v.available||v.done;v.ring.material.color.set(v.done?0x65e6ae:0xff2488);v.beacon.position.y=2.35+Math.sin(t*1.9)*.08;v.beacon.rotation.y=t;}
   for(const p of mist){p.mesh.position.copy(p.base);p.mesh.position.x+=Math.sin(t*.4+p.phase)*1.2;p.mesh.position.y+=Math.sin(t*.7+p.phase)*.6;if(eye?.quaternion)p.mesh.quaternion.copy(eye.quaternion);}
   for(const [i,b]of beams.entries()){const end=b.end.clone();end.x+=Math.sin(t*.28+i)*1.7;end.z+=Math.cos(t*.22+i)*1.7;const delta=b.origin.clone().sub(end);b.mesh.position.copy(b.origin).add(end).multiplyScalar(.5);b.mesh.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),delta.clone().normalize());b.mesh.scale.y=delta.length()/b.h;}
@@ -123,7 +130,7 @@ export function createM09Art(T,scene,{quality='normal',webgpu=false,onPortalClos
  }
  return{root,sun,ready,build(){},update,openPortal,setDoor(id,open){if(id==='access')gateTarget=open?1:0;},setLine:on=>{janus=on;},adapt(){},markDone(id,done=true){const d=devices.get(id);if(d)d.done=done;},setAvailable(ids){const set=new Set(ids);for(const [id,d]of devices)d.available=set.has(id);},
   stats:()=>({skyline:altitude.stats(),source:'assets/m09/PinkWars_N09_Jardins_Suspendus.blend',triangles:compiled?.triangles||0,batches:compiled?.primitives.length||0,downloadBytes,waterfalls:falls.length,pools:waters.length,patrolDrones:beams.length,wind:webgpu,waterShader:webgpu?'TSL → WGSL':'material flow',reunionHero:npc?characterId==='ghju'?'lylu':'ghju':null,reunionVisible:!!npc?.model.root.visible,portals:portals.length}),
-  dispose(){if(disposed)return;disposed=true;root.removeFromParent();altitude.dispose();npc?.dispose();for(const p of portals)p.fx.dispose();for(const p of compiled?.primitives||[])p.geometry.dispose();for(const m of materials.values())m.dispose();skyMap.dispose();foamMap.dispose();flowMap.dispose();}
+  dispose(){if(disposed)return;disposed=true;root.removeFromParent();altitude.dispose();npc?.dispose();for(const p of portals)p.fx.dispose();for(const p of compiled?.primitives||[])p.geometry.dispose();for(const m of materials.values())m.dispose();skyMap.dispose();foamMap.dispose();cascade.dispose();waterFX.dispose();for(const m of [...falls,...waters])m.geometry.dispose();for(const p of mist){p.mesh.geometry.dispose();p.mesh.material.dispose();}feedGeo.dispose();}
  };
 }
 

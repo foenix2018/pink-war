@@ -1,11 +1,11 @@
 {
   "source": "Blender 4.3 \u00b7 original editable scene",
-  "triangles": 745824,
-  "batches": 44,
-  "vertices": 1073677,
-  "pwmBytes": 30620168,
-  "downloadBytes": 10197568,
-  "coincidentFacesRemoved": 2954,
-  "collapsedFacesRemoved": 2600,
+  "triangles": 766839,
+  "batches": 45,
+  "vertices": 1090831,
+  "pwmBytes": 31086348,
+  "downloadBytes": 10496785,
+  "coincidentFacesRemoved": 2963,
+  "collapsedFacesRemoved": 2206,
   "lod": "mobile / intact twig cards"
 }

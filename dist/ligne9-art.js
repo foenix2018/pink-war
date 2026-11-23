@@ -642,7 +642,8 @@ export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, on
   function buildWater() {
     waterNormal.repeat.set(1, 1);
     for (const w of WATER) {
-      const mat = worldFx.water({color:w.live?0x0c1a20:0x0a1316,opacity:.9,normalMap:waterNormal});
+      const mat = worldFx.water({color:w.live?0x243f42:0x192c36,shallowColor:0x557777,
+        skyColor:w.live?0x778373:0x829cae,flow:w.drainable?1.06:.61,opacity:.91,normalMap:waterNormal});
       const geo = new T.PlaneGeometry(w.x2-w.x1,w.z2-w.z1,worldFx.native?Math.min(24,Math.ceil((w.x2-w.x1)/2)):1,worldFx.native?Math.min(24,Math.ceil((w.z2-w.z1)/2)):1), uv = geo.attributes.uv;
       for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * (w.x2 - w.x1) / 6, uv.getY(i) * (w.z2 - w.z1) / 6);
       const mesh = new T.Mesh(geo, mat); mesh.rotation.x = -Math.PI / 2; mesh.position.set((w.x1 + w.x2) / 2, w.level, (w.z1 + w.z2) / 2); add(mesh);
@@ -656,6 +657,16 @@ export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, on
           for (const z of [46.3, 47.8, 48.6, 50.1]) piece(M.rail, (w.x1 + w.x2) / 2, bed + .14, z, w.x2 - w.x1, .14, .08);
           for (let x = w.x1 + .4; x < w.x2; x += .65) { piece(M.wood, x, bed, 47.05, .22, .14, 2.4); piece(M.wood, x, bed, 49.35, .22, .14, 2.4); }
           piece(M.dark, (w.x1 + w.x2) / 2, bed, 44.7, w.x2 - w.x1, .5, .5);
+          // Separate running heads and clamps remain readable through shallow water.
+          for(const z of [46.3,47.8,48.6,50.1]){
+            piece(M.steel,(w.x1+w.x2)/2,bed+.224,z,w.x2-w.x1,.042,.097);
+            for(let x=w.x1+.28;x<w.x2-.2;x+=1.3)piece(M.dark,x,bed+.09,z,.19,.082,.28);
+          }
+          for(let x=w.x1+1.5;x<w.x2-1;x+=4.1){
+            const shingle=new T.Mesh(new T.DodecahedronGeometry(.38,0),M.trackbed);
+            shingle.position.set(x+(rng()-.5),bed+.01,47.9+(rng()-.5)*.82);
+            shingle.scale.set(1.4,.41,1.05);shingle.rotation.y=rng()*6.28;add(shingle);
+          }
         } else {
           for (let k = 0; k < 18; k++) piece(k % 3 ? M.concrete : M.floorTile, w.x1 + 1 + rng() * (w.x2 - w.x1 - 2), bed, w.z1 + 1 + rng() * (w.z2 - w.z1 - 2), .8 + rng() * 2.6, .3 + rng() * 1.6, .8 + rng() * 2.2, rng() * 3);
           // Broken slab edges leaning into the collapse and hazard tape posts around it.
@@ -676,7 +687,7 @@ export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, on
     for (const v of waters.values()) {
       // Drainable bodies empty in about five seconds; the flooded tracks drop slowly while the P9 pumps run.
       const speed = v.w.drainable ? .36 : .12; v.level += Math.sign(v.target - v.level) * Math.min(Math.abs(v.target - v.level), dt * speed);
-      v.mesh.position.y = v.level; v.mesh.visible = v.level > v.hideBelow;
+      v.mesh.position.y = v.level; v.mesh.visible = v.level > v.hideBelow && !(flooding && v.w.id==='voie');
     }
   }
 
@@ -684,7 +695,8 @@ export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, on
   const floodPlanes = [];
   function buildFlood() {
     for (const id of ['chambre', 'voie', 'sas']) {
-      const r = ROOM[id], mat = worldFx.water({color:0x0b1518,opacity:.82,normalMap:waterNormal});
+      const r = ROOM[id], mat = worldFx.water({color:0x1b373d,shallowColor:0x668079,skyColor:0x6a888d,
+        opacity:.88,flow:1.44,normalMap:waterNormal});
       const mesh = new T.Mesh(new T.PlaneGeometry(r.x2-r.x1,r.z2-r.z1,worldFx.native?Math.min(24,Math.ceil((r.x2-r.x1)/2)):1,worldFx.native?Math.min(24,Math.ceil((r.z2-r.z1)/2)):1), mat); mesh.rotation.x = -Math.PI / 2; mesh.position.set((r.x1 + r.x2) / 2, -.05, (r.z1 + r.z2) / 2); mesh.visible = false; add(mesh);
       floodPlanes.push(mesh);
     }
@@ -842,15 +854,31 @@ export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, on
   const drips = new T.InstancedMesh(cube, new T.MeshBasicMaterial({ color: 0x9fb8c4, transparent: true, opacity: .7, toneMapped: false }), DRIPS);
   drips.frustumCulled = false; add(drips);
   const dripState = Array.from({ length: DRIPS }, () => ({ x: 0, y: -10, z: 0, v: 0, floor: 0 }));
-  const ripples = Array.from({ length: low ? 6 : 12 }, () => { const r = new T.Mesh(new T.RingGeometry(.05, .09, 20), additive(0xbfd8e4, 0)); r.rotation.x = -Math.PI / 2; r.visible = false; add(r); return { mesh: r, age: 9 }; });
-  const ripple = (x, y, z, size = 1) => { const r = ripples.find(r => r.age > 1.2) || ripples[0]; r.age = 0; r.size = size; r.mesh.position.set(x, y + .01, z); r.mesh.visible = true; };
-  const levelAt = (x, z) => { for (const v of waters.values()) if (v.mesh.visible && x >= v.w.x1 && x <= v.w.x2 && z >= v.w.z1 && z <= v.w.z2) return v.level; return 0; };
+  const rippleMap=canvasTexture(T,64,64,(ctx)=>{
+    const gradient=ctx.createRadialGradient(32,32,0,32,32,32);
+    for(const [offset,alpha] of [[0,0],[.55,0],[.62,.24],[.68,0],[.78,0],[.855,.7],[.94,0],[1,0]])
+      gradient.addColorStop(offset,`rgba(255,255,255,${alpha})`);
+    ctx.fillStyle=gradient;ctx.fillRect(0,0,64,64);
+  });
+  const rippleGeometry=new T.CircleGeometry(.1,20).rotateX(-Math.PI/2);
+  const ripples=Array.from({length:low?6:12},()=>{
+    const mesh=new T.Mesh(rippleGeometry,additive(0xb2cbd6,0,rippleMap));mesh.visible=false;add(mesh);
+    return {mesh,age:9};
+  });
+  const ripple=(x,y,z,size=1)=>{
+    const r=ripples.find(r=>r.age>1.2)||ripples[0];
+    r.age=0;r.size=size;r.mesh.position.set(x,y+(webgpu?.037:.012),z);r.mesh.visible=true;
+  };
+  const levelAt=(x,z)=>{
+    for(const v of waters.values())if(v.mesh.visible&&x>=v.w.x1&&x<=v.w.x2&&z>=v.w.z1&&z<=v.w.z2)return v.level;
+    return null;
+  };
   const RAIN = low ? 220 : 520, rain = new T.InstancedMesh(cube, new T.MeshBasicMaterial({ color: 0x9fb2c8, transparent: true, opacity: .35, toneMapped: false, depthWrite: false }), RAIN);
   rain.frustumCulled = false; add(rain);
   const rainDrops = Array.from({ length: RAIN }, () => ({ x: -8 + rng() * 16, y: HEIGHTS.rue + rng() * 18, z: -97 + rng() * 11, v: 9 + rng() * 4 }));
   const splashes = [];
   function emerge(x, z) {
-    const y = levelAt(x, z + 1.6) || levelAt(x, z) || 0, g = new T.InstancedMesh(cube, new T.MeshBasicMaterial({ color: 0xcfe3ec, transparent: true, opacity: .8, toneMapped: false }), 16);
+    const y = levelAt(x, z + 1.6) ?? levelAt(x, z) ?? 0, g = new T.InstancedMesh(cube, new T.MeshBasicMaterial({ color: 0xcfe3ec, transparent: true, opacity: .8, toneMapped: false }), 16);
     g.frustumCulled = false; add(g); splashes.push({ g, age: 0, x, y, z, parts: Array.from({ length: 16 }, () => ({ vx: (rng() - .5) * 3, vy: 2 + rng() * 3, vz: (rng() - .5) * 3 })) });
     ripple(x, y, z + 1, 3); ripple(x + .6, y, z + .5, 2);
   }
@@ -859,14 +887,14 @@ export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, on
     const here = ROOM[roomAt(eye.x, eye.z)];
     dripState.forEach((d, i) => {
       if (d.y < d.floor) {
-        if (d.y > -9) ripple(d.x, d.floor, d.z, .6);
-        if (here && here.id !== 'rue' && rng() < dt * 3) { d.x = eye.x + (rng() - .5) * 14; d.z = eye.z + (rng() - .5) * 14; const r = ROOM[roomAt(d.x, d.z)]; if (r && r.id !== 'rue') { d.y = r.ceiling - .05; d.v = 0; d.floor = levelAt(d.x, d.z); } else d.y = -10; }
+        if (d.y > -9 && levelAt(d.x,d.z)!==null) ripple(d.x, d.floor, d.z, .6);
+        if (here && here.id !== 'rue' && rng() < dt * 3) { d.x = eye.x + (rng() - .5) * 14; d.z = eye.z + (rng() - .5) * 14; const r = ROOM[roomAt(d.x, d.z)]; if (r && r.id !== 'rue') { d.y = r.ceiling - .05; d.v = 0; d.floor = levelAt(d.x, d.z) ?? 0; } else d.y = -10; }
         else d.y = -10;
       } else { d.v += 9.8 * dt; d.y -= d.v * dt; }
       drips.setMatrixAt(i, mm.compose(pp.set(d.x, d.y, d.z), qq, ss.set(.015, .07 + d.v * .01, .015)));
     });
     drips.instanceMatrix.needsUpdate = true;
-    for (const r of ripples) { r.age += dt; const k = r.age / 1.2; r.mesh.visible = k < 1; if (k < 1) { r.mesh.scale.setScalar(1 + k * 8 * (r.size || 1)); r.mesh.material.opacity = .5 * (1 - k); } }
+    for (const r of ripples) { r.age += dt; const k = r.age / 1.2; r.mesh.visible = k < 1; if (k < 1) { r.mesh.scale.setScalar(1 + k * 8 * r.size); r.mesh.material.opacity = .33 * (1 - k)**2; } }
     const showRain = eye.z < -80;
     rain.visible = showRain;
     if (showRain) rainDrops.forEach((d, i) => {

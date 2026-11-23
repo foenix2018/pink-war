@@ -1,3 +1,4 @@
+import { createCascadeWater } from './water-detail.js';
 import { createChapterHorizon } from './chapter-horizon.js';
 import {addHideoutDebrief} from './hideout-links.js';
 import {inertialMove,PLAYER_SPEEDS,TOUCH_SPEED_MULTIPLIER,touchAnalogSprint} from './locomotion.js';
@@ -155,14 +156,6 @@ const stoneTexture = () => canvasTexture(256, 256, (g, w, h) => {
   g.strokeStyle = 'rgba(40,40,36,.55)'; g.lineWidth = 3;
   for (let row = 0; row <= 8; row++) { g.beginPath(); g.moveTo(0, row * 32); g.lineTo(w, row * 32); g.stroke(); }
 });
-const waterTexture = (streak) => canvasTexture(128, 256, (g, w, h) => {
-  g.fillStyle = streak ? 'rgba(220,240,245,0.42)' : '#2f6a73'; g.fillRect(0, 0, w, h); const r = rng(streak ? 3 : 5);
-  for (let i = 0; i < (streak ? 190 : 90); i++) {
-    const x = r() * w, y = r() * h, len = streak ? 30 + r() * 120 : 6 + r() * 18;
-    g.strokeStyle = streak ? `rgba(235,248,255,${.25 + r() * .55})` : `rgba(170,215,220,${.15 + r() * .35})`;
-    g.lineWidth = streak ? 1 + r() * 3 : 1; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (streak ? 0 : (r() - .5) * 10), y + len); g.stroke();
-  }
-}, { alpha: streak });
 function plantTexture(kind) {
   return canvasTexture(128, 128, (g, w, h) => {
     g.clearRect(0, 0, w, h); const r = rng(kind.length * 31);
@@ -401,21 +394,25 @@ function riverMesh({webgpu=false,low=false}={}) {
     const list = RIVER.filter(p => p.z >= from && p.z <= to);
     for (let i = 0; i < list.length; i++) {
       const p = list[i], a = list[Math.max(0, i - 1)], b = list[Math.min(list.length - 1, i + 1)], tx = b.x - a.x, tz = b.z - a.z, l = Math.hypot(tx, tz) || 1, nx = -tz / l, nz = tx / l;
-      const y = waterY(p.z), w = p.z < CLIFF_Z ? width * .7 : Math.hypot(p.x - POOL.x, p.z - POOL.z) < POOL.r ? width * 1.6 : width;
-      pos.push(p.x - nx * w / 2, y, p.z - nz * w / 2, p.x + nx * w / 2, y, p.z + nz * w / 2); uv.push(0, p.s / 7, 1, p.s / 7);
-      if (n) idx.push(n * 2 - 2, n * 2, n * 2 - 1, n * 2 - 1, n * 2, n * 2 + 1); n++;
+      const y=waterY(p.z), distance=Math.abs(p.z-POOL.z);
+      const widened=Math.max(0,1-(distance/(POOL.r+1.3))**2)**.67*(POOL.r+1.25);
+      const w=p.z<CLIFF_Z?width*.7:Math.max(width,widened*2);
+      pos.push(p.x-nx*w/2,y,p.z-nz*w/2,p.x+nx*w/2,y,p.z+nz*w/2);
+      uv.push(0,p.s/7,w/6,p.s/7);
+      if(n)idx.push(n*2-2,n*2-1,n*2,n*2-1,n*2+1,n*2);
+      n++;
     }
     const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); return g;
   };
-  const tex = waterTexture(false); tex.wrapS = tex.wrapT = T.RepeatWrapping;
   const fx=createWorldEffects(T,{webgpu,low});
-  const mat=webgpu?fx.water({color:0x729da6,opacity:.88,refraction:!low,normalMap:tex}):new T.MeshStandardMaterial({ map: tex, color: 0x9fc4c8, emissive: 0x3a1c10, roughness: .1, metalness: .25, transparent: true, opacity: .88, depthWrite: false });
-  const group = new T.Group(); group.name = 'rivière';
-  group.add(new T.Mesh(make(POOL.z - 2, 200, 11), mat), new T.Mesh(make(-200, CLIFF_Z - 4, 7), mat));
-  const pool = new T.Mesh(new T.CircleGeometry(POOL.r + 1.5, 40).rotateX(-Math.PI / 2), mat); pool.position.set(POOL.x, waterY(POOL.z) + .01, POOL.z); group.add(pool);
-  return { group, tex, fx };
+  const mat=fx.water({color:0x254d50,shallowColor:0x639887,skyColor:0xac999c,opacity:.86,flow:1.28,
+    foam:{x:POOL.x,z:POOL.z-5,radius:6.8}});
+  const group=new T.Group();group.name='Rivière · un seul lit jusqu’au bassin';
+  group.add(new T.Mesh(make(CLIFF_Z-.08,200,11),mat),new T.Mesh(make(-200,CLIFF_Z-4,7),mat));
+  return {group,fx};
 }
-function waterfall(scene, quality) {
+
+function waterfall(scene, quality, webgpu) {
   const xw = (riverX(CLIFF_Z - 6) + POOL.x) / 2, top = waterY(CLIFF_Z - 6) + .2, bottom = waterY(POOL.z), h = top - bottom;
   // The curtain leaves the lip of the cliff and falls slightly outwards, in front of the rock face.
   const curtain = new T.PlaneGeometry(1, 1, 12, 16), cp = curtain.attributes.position;
@@ -424,9 +421,20 @@ function waterfall(scene, quality) {
     cp.setXYZ(k, x, lerp(top, bottom, t), lerp(CLIFF_Z - 6.6, CLIFF_Z + .2, Math.pow(t, .8)) + bow);
   }
   curtain.computeVertexNormals();
-  const t1 = waterTexture(true), t2 = waterTexture(true); for (const t of [t1, t2]) { t.wrapS = t.wrapT = T.RepeatWrapping; } t1.repeat.set(3, 1.5); t2.repeat.set(5, 2.4);
-  const mk = (tex, opacity) => new T.Mesh(curtain, new T.MeshStandardMaterial({ map: tex, color: 0xfff1e6, transparent: true, opacity, depthWrite: false, side: T.DoubleSide, roughness: .3, emissive: 0x4a3028 }));
-  const back = mk(t1, .95), front = mk(t2, .7); scene.add(back, front); front.position.z = .25;
+  const flow=createCascadeWater(T,{webgpu,low:quality==='low',color:0xe7dbcc});
+  const sheet=new T.Mesh(curtain,flow.material);sheet.name='Cascade des Sources · nappe unique';scene.add(sheet);
+  // A foot of irregular, water-darkened rock replaces the bare curtain edge.
+  const stone=lumpy(new T.IcosahedronGeometry(1,1),.38,223);
+  const wet=new T.MeshStandardMaterial({color:0x4a5852,roughness:.57,metalness:.035,normalMap:microSurfaceMaps(T).normal,normalScale:new T.Vector2(.17,.17)});
+  const rocks=new T.InstancedMesh(stone,wet,quality==='low'?14:22),pose=new T.Object3D(),shape=rng(293);
+  for(let i=0;i<rocks.count;i++){
+    const side=i%2?1:-1, bank=4.1+shape()*4.4;
+    pose.position.set(xw+side*bank,bottom-.42+shape()*.42,POOL.z-6.3+shape()*4.1);
+    pose.rotation.set(shape()*.4,shape()*TAU,shape()*.4);
+    pose.scale.set(1+shape()*1.5,.38+shape()*.74,.65+shape()*.93);pose.updateMatrix();
+    rocks.setMatrixAt(i,pose.matrix);
+  }
+  rocks.name='Cascade des Sources · enrochements humides';rocks.computeBoundingSphere();scene.add(rocks);
   // Mist and foam: a few hundred points that rise and fade, recycled.
   const count = quality === 'low' ? 160 : 420, pos = new Float32Array(count * 3), seeds = new Float32Array(count), r = rng(9);
   for (let i = 0; i < count; i++) seeds[i] = r();
@@ -436,7 +444,7 @@ function waterfall(scene, quality) {
   mist.frustumCulled = false; scene.add(mist);
   return {
     x: xw, z: POOL.z - 7, update(t) {
-      t1.offset.y = (t * .9) % 1; t2.offset.y = (t * 1.6) % 1;
+      flow.update(t);
       for (let i = 0; i < count; i++) {
         const life = (t * .35 + seeds[i]) % 1, a = seeds[i] * TAU * 7;
         pos[i * 3] = xw + Math.cos(a) * (2 + life * 5) * (seeds[(i + 7) % count] + .4); pos[i * 3 + 1] = bottom + life * 4.5; pos[i * 3 + 2] = POOL.z - 6 + Math.sin(a) * (1.5 + life * 3);
@@ -889,7 +897,7 @@ export function buildForestWorld(scene, { quality = 'balanced', webgpu = false, 
   const micro=microSurfaceMaps(T),terrain=terrainMesh(quality);terrain.material.normalMap=micro.normal;terrain.material.normalScale=new T.Vector2(.16,.16);scene.add(terrain);
   const radiance=new Uint8Array(64*32*4);for(let y=0;y<32;y++)for(let x=0;x<64;x++){const i=(y*64+x)*4,k=y/31;radiance.set([Math.round(70+60*k),Math.round(91+9*k),Math.round(113-37*k),255],i);}const env=new T.DataTexture(radiance,64,32);env.colorSpace=T.SRGBColorSpace;env.mapping=T.EquirectangularReflectionMapping;env.needsUpdate=true;scene.environment=env;scene.environmentIntensity=.4;
   const river = riverMesh({webgpu,low:quality==='low'}); scene.add(river.group);
-  const fall = waterfall(scene, quality), colliders = [];
+  const fall = waterfall(scene, quality, webgpu), colliders = [];
   ruins(scene, colliders); const centre = medicalCentre(scene, colliders); const grotte = cave(scene); sunbeams(scene);
   const relics = remnants(scene, colliders); skyline(scene); const drones = probes(scene), dust = motes(scene, quality === 'low' ? 120 : 260);
 
@@ -923,7 +931,7 @@ export function buildForestWorld(scene, { quality = 'balanced', webgpu = false, 
       pv.multiplyMatrices(cull.projectionMatrix, cull.matrixWorldInverse); frustum.setFromProjectionMatrix(pv);
       if (camera.quaternion.angleTo(lastView.q) > .07 || Math.hypot(camera.position.x - lastView.x, camera.position.z - lastView.z) > 1.2) { refresh = 0; lastView.q.copy(camera.quaternion); lastView.x = camera.position.x; lastView.z = camera.position.z; }
       if ((refresh -= dt) <= 0) { refresh = .1; for (const k of kinds) k.update(camera, frustum, Q); }
-      river.tex.offset.y = (river.tex.offset.y - dt * .35) % 1; fall.update(time);
+      fall.update(time);
       grotte.glow.intensity = 52 + Math.sin(time * 3) * 10; drones.update(time); dust.update(time, camera.position);
       for (const [k, l] of [...relics.lights, ...centre.lights].entries()) l.visible = Math.sin(time * (2 + k) + k) > -.2;
       const inCave = zoneAt(player.x, player.z) === 'La grotte'; scene.fog.density = inCave ? .06 : FOG; horizon.setOutside(!inCave); skyDome.visible=!inCave;
@@ -1034,7 +1042,7 @@ export async function boot() {
     const turned = Math.abs(ctl.look.yaw - lastView.yaw) > .07 || Math.abs(ctl.look.pitch - lastView.pitch) > .07 || Math.hypot(player.x - lastView.x, player.z - lastView.z) > 1.2;
     if (turned) { refresh = 0; Object.assign(lastView, { yaw: ctl.look.yaw, pitch: ctl.look.pitch, x: player.x, z: player.z }); }
     const t0 = performance.now(); if ((refresh -= dt) <= 0) { refresh = .1; for (const k of kinds) k.update(camera, frustum, Q); } const t1 = performance.now();
-    river.tex.offset.y = (river.tex.offset.y - dt * .35) % 1; fall.update(time);
+    fall.update(time);
     grotte.glow.intensity = 52 + Math.sin(time * 3) * 10; drones.update(time); dust.update(time, camera.position);
     for (const [k, l] of [...relics.lights, ...centre.lights].entries()) l.visible = Math.sin(time * (2 + k) + k) > -.2;
     n08.update(time, dt);

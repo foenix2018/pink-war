@@ -21,6 +21,7 @@ def material(name,c,rough=.6,metal=0,glow=0,alpha=1,texture=None):
  MATS[name]=m;META[name]=data
 material('stone',(.34,.39,.42),.89,.03,texture='vesper-concrete_diff_512.jpg')
 material('facade',(.26,.31,.34),.68,.2,texture='vesper-concrete_diff_512.jpg')
+material('wetstone',(.22,.31,.31),.62,.06,texture='vesper-concrete_diff_512.jpg')
 material('deck',(.34,.38,.36),.43,.32,texture='vesper-steel_diff_512.jpg')
 material('steel',(.31,.36,.38),.3,.82,texture='vesper-steel_diff_512.jpg')
 material('dark',(.035,.055,.065),.57,.55)
@@ -149,7 +150,7 @@ def floor_circle(p):
  for k in range(8):
   a=k*TAU/8;ellipsoid('stone',(x+math.cos(a)*r*.65,-37,z+math.sin(a)*r*.65),(r*.55,40,r*.5),10)
  if p['id']not in ['bridge','landing','meeting']:cyl('facade',(x,(y-25)/2-.5,z),r*.975,y+24,64)
- cyl('facade',(x,y-2.2,z),r,4.4,64);cyl('deck',(x,y-.14,z),r+.10,.28,96);ring('bronze',(x,y+.04,z),r-.1,.12,80)
+ cyl('facade',(x,y-2.35,z),r,4.1,64);cyl('deck',(x,y-.14,z),r+.10,.28,96);ring('bronze',(x,y+.04,z),r-.1,.12,80)
  for k in range(48 if r>30 else 28):
   n=48 if r>30 else 28;a=k*TAU/n;b=(k+1)*TAU/n;mid=(a+b)/2;px=x+math.cos(mid)*(r+.5);pz=z+math.sin(mid)*(r+.5)
   if on_walk(px,pz,y,p['id']):continue
@@ -172,13 +173,23 @@ def floor_circle(p):
 def walkway(link):
  a,b=link_ends(link);dx,dz=b['x']-a['x'],b['z']-a['z'];length=math.hypot(dx,dz);nx,nz=-dz/length,dx/length;w=link['width']/2
  n=max(8,math.ceil(length/.33),math.ceil(abs(b['y']-a['y'])/.17)*2)
+ # A continuous recessed join reaches under each terrace without triangles on
+ # the same depth plane. Interpolate the inset through the first exposed tread.
+ def bridge_top(x,y,z):
+  inset=0
+  for p in PLAN['platforms']:
+   d=math.hypot(x-p['x'],z-p['z'])-p['r']
+   if abs(y-p['y'])<.14:
+    inset=max(inset,.075*max(0,min(1,(1.4-d)/1.4))*max(0,1-abs(y-p['y'])/.14))
+  return y-inset
  rows=[]
  for i in range(n+1):
-  x,y,z=point_on_link(link,i/n);rows.extend([(x+nx*w,y,z+nz*w),(x-nx*w,y,z-nz*w),(x+nx*w,y-.6,z+nz*w),(x-nx*w,y-.6,z-nz*w)])
+  x,y,z=point_on_link(link,i/n)
+  left=(x+nx*w,z+nz*w);right=(x-nx*w,z-nz*w)
+  rows.extend([(left[0],bridge_top(left[0],y,left[1]),left[1]),(right[0],bridge_top(right[0],y,right[1]),right[1]),(left[0],y-.6,left[1]),(right[0],y-.6,right[1])])
  faces=[]
  for i in range(n):
-  j=i*4;mid=point_on_link(link,(i+.5)/n)
-  if any(math.hypot(mid[0]-p['x'],mid[2]-p['z'])<p['r']-.05 and abs(mid[1]-p['y'])<.01 for p in PLAN['platforms']):continue
+  j=i*4
   faces.extend([(j,j+4,j+5,j+1),(j+2,j+3,j+7,j+6),(j,j+2,j+6,j+4),(j+1,j+5,j+7,j+3)])
  mesh('deck',rows,faces)
  # Actual treads with slim anti-slip nosings. Collision floor uses this same stair equation.
@@ -418,18 +429,36 @@ for p in PLAN['platforms']:
   for j in range(10):
    leaf_patch(random.choice(['leaf','leaf-light']),(pts[j][0],pts[j][1],pts[j][2]),random.uniform(.6,1.3))
    if j%2==0:crown(random.choice(['leaf','leaf-light','leaf-dark']),pts[j],(2.6,3.3,2.5))
-# Canyon ledges carry the pools and the waterfalls, avoiding unsupported sheets of water.
+# A deeper rock bed, a darker wet band and broken stone benches support the water.
 ZONE='Ravin et bassins'
-for p in PLAN['pools']:
- cliff(p['x'],p['z'],p['y']-.25,-67,p['rx']*1.01,p['rz']*1.01)
- # Geometry has elliptical banks and smaller rippled water surface (animated runtime).
- for k in range(14):
-  a=k*TAU/14;xx=p['x']+math.cos(a)*p['rx'];zz=p['z']+math.sin(a)*p['rz'];crown('stone',(xx,p['y']-.8,zz),(random.uniform(3,7),random.uniform(2,5),random.uniform(3,7)));fern(xx,p['y']+.2,zz,1.5)
+for index,p in enumerate(PLAN['pools']):
+ x,y,z,rx,rz=p['x'],p['y'],p['z'],p['rx'],p['rz']
+ cliff(x,z,y-1.75,-67,rx*1.015,rz*1.015)
+ for k in range(26):
+  a=k*TAU/26
+  radial=1.012+math.sin(k*2.51+index)*.027
+  xx=x+math.cos(a)*rx*radial; zz=z+math.sin(a)*rz*radial
+  width=(3.0+random.random()*3.1)*(1 if rx>20 else .58)
+  crown('wetstone',(xx,y-1.02,zz),(width,1.5+random.random()*1.2,width*.84))
+  if k%2==0:
+   crown('stone',(xx+math.cos(a)*1.4,y-.42,zz+math.sin(a)*1.4),(width*.92,1.7+random.random()*1.5,width*.86))
+  if k%4==0:fern(xx+math.cos(a)*.7,y+.08,zz+math.sin(a)*.7,1.2)
 for f in PLAN['waterfalls']:
- x,y,z,w=f['x'],f['y'],f['z'],f['width'];box('stone',(x,y-1.1,z-2),(w+5,2.2,6))
+ x,y,z,w,yaw=f['x'],f['y'],f['z'],f['width'],f['yaw']
+ def local(u,v,h):
+  return (x+math.cos(yaw)*u+math.sin(yaw)*v,y+h,z-math.sin(yaw)*u+math.cos(yaw)*v)
+ # Stone sill behind the lip and interleaved, nonplanar wet rock faces.
+ box('wetstone',local(0,-2.85,-1.29),(w+4.2,2.16,4.7),yaw=yaw)
+ for k in range(11):
+  u=(k/10-.5)*(w+4)
+  crown('wetstone',local(u,-.66,-.68-random.random()*.26),(2.4+random.random()*1.9,1.05,1.8))
  for side in [-1,1]:
-  xx=x+side*(w/2+2);ellipsoid('stone',(xx,(y+f['bottom'])/2,z-1),(6,y-f['bottom']+3,7),12)
-  for j in range(15):leaf_patch('leaf-light',(xx+random.uniform(-2,2),y-random.random()*12,z+random.uniform(0,2)),1)
+  xx,_,zz=local(side*(w/2+2.2),-.42,0)
+  ellipsoid('stone',(xx,(y+f['bottom'])/2,zz),(5.8,y-f['bottom']+2.6,6.4),12)
+  for k in range(5):
+   h=-2-k*(y-f['bottom'])*.16
+   crown('wetstone',local(side*(w/2+1.0+random.random()),.65,h),(3.2+random.random()*2.3,2.4,3.3))
+  for k in range(12):leaf_patch('leaf-light',(xx+random.uniform(-2,2),y-random.random()*12,zz+random.uniform(0,2)),1)
 # Background is a modelled Vesper skyline beyond the northern campus, graded by distance.
 ZONE='Vesper / skyline'
 for row in range(3):

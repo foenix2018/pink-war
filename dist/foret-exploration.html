@@ -38,7 +38,7 @@ const params=new URLSearchParams(location.search),manual=params.get('manual')===
 const loading=manual?null:createMissionLoading({mission:7,characterId:params.get('character')==='lylu'?'lylu':'ghju'});
 if(manual)document.getElementById('start').classList.remove('pwb-wallpaper');
 const go=document.getElementById('go');
-import('./foret.js?v=3.95.0').then(({boot})=>boot()).then(async()=>{go.disabled=false;go.textContent='ENTRER DANS LA FORÊT →';if(!manual||params.get('bench')){if(loading&&!await loading.finish())return;document.getElementById('start').remove();document.body.classList.add('m07-playing');}})
+import('./foret.js?v=3.96.0').then(({boot})=>boot()).then(async()=>{go.disabled=false;go.textContent='ENTRER DANS LA FORÊT →';if(!manual||params.get('bench')){if(loading&&!await loading.finish())return;document.getElementById('start').remove();document.body.classList.add('m07-playing');}})
  .catch(e=>{loading?.fail('Erreur : '+(e?.message||e));go.textContent='Erreur : '+(e?.message||e);console.error(e);});
 go.onclick=()=>{document.getElementById('start').remove();document.body.classList.add('m07-playing');};
 </script></body></html>

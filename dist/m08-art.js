@@ -25,6 +25,7 @@ function canvasTexture(T, w, h, paint) { const c = document.createElement('canva
 
 export function createM08Art(T, scene, { quality = 'normal', webgpu=false, onPortalClose=()=>{}, accent = 0xff6fb4 } = {}) {
   const low = quality === 'low', rng = seeded(606);
+  const rainWater=createWorldEffects(T,{webgpu,low});
   const root = new T.Group(); root.name = 'M08 / Les ordres de JANUS'; scene.add(root);
   let fpsChapter=null;
   const animated = [], stats = { meshes: 0, instances: 0, lights: 0 };
@@ -98,7 +99,6 @@ export function createM08Art(T, scene, { quality = 'normal', webgpu=false, onPor
   M.panel = tiled(L9('metal_plate'), 0x8a8494, .45, .6, 2.5);
   M.window = new T.MeshBasicMaterial({ color: 0x9fc8ff, toneMapped: false, transparent: true, opacity: .55 });
   M.windowPink = new T.MeshBasicMaterial({ color: 0xff7ad0, toneMapped: false, transparent: true, opacity: .6 });
-  M.puddle = std(0x0c0b12, .04, .6);
   M.screen = glow(0x3aa0ff); M.ledPink = M.ledMagenta; M.paintGrey = M.aegis; M.rubber = M.black; M.concrete = M.concreteDark;
 
   // ---------- Grounds, roofs ----------
@@ -114,7 +114,19 @@ export function createM08Art(T, scene, { quality = 'normal', webgpu=false, onPor
       }
     }
     // Rain puddles on the open grounds, lane markings on the dock, hazard ring around the network core.
-    for (const a of AREAS.filter(a => !a.roof)) for (let k = 0; k < (low ? 6 : 14); k++) { const x = a.x1 + 3 + rng() * (a.x2 - a.x1 - 6), z = a.z1 + 3 + rng() * (a.z2 - a.z1 - 6), r = 1 + rng() * 3; piece(M.puddle, x, .012, z, r * 2, .004, r * (1 + rng()), rng() * TAU); }
+    const openAreas=AREAS.filter(a=>!a.roof),puddlesPerArea=low?6:14;
+    const water=rainWater.water({puddle:true,color:0x131325,skyColor:0x8984b0,flow:.4,opacity:.56});
+    const puddles=new T.InstancedMesh(new T.CircleGeometry(1,20).rotateX(-Math.PI/2),water,openAreas.length*puddlesPerArea);
+    const pose=new T.Object3D();
+    let index=0;
+    for(const a of openAreas)for(let k=0;k<puddlesPerArea;k++){
+      const x=a.x1+3+rng()*(a.x2-a.x1-6),z=a.z1+3+rng()*(a.z2-a.z1-6),radius=1+rng()*3;
+      pose.position.set(x,.025,z);
+      pose.scale.set(radius,1,radius*(1+rng())*.5);
+      pose.rotation.y=rng()*TAU;pose.updateMatrix();
+      puddles.setMatrixAt(index++,pose.matrix);
+    }
+    puddles.computeBoundingSphere();puddles.name='Flaques des cours et du quai';add(puddles);stats.instances+=puddles.count;
     for (let x = 0; x < 92; x += 4) piece(M.yellow, x, .01, 46, 2.2, .004, .14);
     for (const x of [28, 52]) for (let z = 50; z < 96; z += 4) piece(M.yellow, x, .01, z, .14, .004, 2.2);
     for (let k = 0; k < 40; k++) { const ang = k / 40 * TAU; piece(k % 2 ? M.yellow : M.black, 20 + Math.cos(ang) * 8, .009, Math.sin(ang) * 8, 1.3, .004, .6, -ang); }
@@ -367,7 +379,7 @@ export function createM08Art(T, scene, { quality = 'normal', webgpu=false, onPor
       neons.meshes(); neons.build(); flushGeometry(); flushPieces();
     },
     update(t, dt, eye, player) {
-      const e = eye.position; updatePool(dt, e); updateEffects(t, dt, e); updatePortals(t, dt, e); updateDevices(t, dt); if (player) updateDoors(dt, player);
+      const e = eye.position; rainWater.update(t); updatePool(dt, e); updateEffects(t, dt, e); updatePortals(t, dt, e); updateDevices(t, dt); if (player) updateDoors(dt, player);
       for (const f of animated) f(t, dt); signs.update(t);
     },
     setDoor(id, open) { const d = doors.get(id); if (d) d.state = open ? 'open' : 'closed'; },

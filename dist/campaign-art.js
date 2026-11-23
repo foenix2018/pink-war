@@ -1,5 +1,6 @@
 import { extendPaving } from './chapter-horizon.js';
 import {createFPSChapter} from './fps-environments.js';
+import {createWorldEffects} from './webgpu-world-fx.js';
 import {createStairHardware} from './stair-hardware.js';
 import {replaceBakedNeonMesh} from './baked-neons.js';
 import {createLevelNeons} from './level-neons.js';
@@ -88,7 +89,8 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
  const continuation=extendPaving(T,maps.road,{radius:220,tile:5,low:quality==='low',y:-.14,drop:.42});
  ownG(continuation.geometry);root.add(continuation);
  const stairDetails=LEVEL1_MAP.stairs.map(s=>createStairHardware(T,root,s,{low:quality==='low',steps:24,railInset:.12,wall:true,materials:{steel:maps.steel,dark:maps.dark}}));
- const puddleMat=ownM(new T.MeshStandardMaterial({color:0x435854,roughness:.20,metalness:.30,transparent:true,opacity:.38,depthWrite:false}));
+ const rainWater=createWorldEffects(T,{webgpu,low:quality==='low'});
+ const puddleMat=rainWater.water({puddle:true,color:0x32484c,skyColor:0x93a5ad,flow:.48,opacity:.49});
  for(const [x,z,sx,sz] of [[-3,47,2.5,1.5],[5,28,2,3],[21,8,2.8,1.8],[-2,64,1.5,2]]){const o=new T.Mesh(ownG(new T.CircleGeometry(1,18)),puddleMat);o.rotation.x=-Math.PI/2;o.position.set(x,.018,z);o.scale.set(sx,sz,1);root.add(o);}
  const boundary=createBoundaryFence(T,root,{material:maps.steel});const bounds=LEVEL1_MAP.bounds;boundary.setPolygon([{x:bounds.minX,z:bounds.minZ},{x:bounds.maxX,z:bounds.minZ},{x:bounds.maxX,z:bounds.maxZ},{x:bounds.minX,z:bounds.maxZ}]);
  // Static rails are already in Blender. Retain the shared proximity warning.
@@ -150,7 +152,7 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
  const neons=createLevelNeons(T,root,{low:quality==='low',metal:maps.steel,back:maps.dark,materials:[maps.amber]});const bakedAmber=root.getObjectByName('Blender / amber');if(bakedAmber)replaceBakedNeonMesh(bakedAmber,neons);neons.meshes();neons.build();
  const fpsChapter=createFPSChapter(T,root,{chapter:'m01',obstacles,areas:LEVEL1_MAP.buildings.map(([x,z,w,d,h],i)=>({id:String(i),label:'QUARTIER / BÂTIMENT '+String(i+1).padStart(2,'0'),x1:x-w/2,x2:x+w/2,z1:z-d/2,z2:z+d/2,roof:h})),low:quality==='low',webgpu,details:true});
  function updateLift(time){if(root.visible)carriage.position.y=liftHeightAt(lift,time);}
- function update(game,time=0){const s=game?.campaign;if(!s||!root.visible)return;stage=s.stage;currentObjective=s.objective;fpsChapter.update(time,1/60,{x:game.player.x,y:(game.player.elevation||0)+1.65,z:game.player.z});story.update(game);systems.update(game,time);courtyard.update(game);workshop.update(game);rlh.update(game);powerSwitch.setState(!['approach','power'].includes(stage));updateLift(game.time);boundary.update({...game.player,y:game.player.elevation+1.65},.55,1.2);
+ function update(game,time=0){const s=game?.campaign;if(!s||!root.visible)return;stage=s.stage;currentObjective=s.objective;rainWater.update(time);fpsChapter.update(time,1/60,{x:game.player.x,y:(game.player.elevation||0)+1.65,z:game.player.z});story.update(game);systems.update(game,time);courtyard.update(game);workshop.update(game);rlh.update(game);powerSwitch.setState(!['approach','power'].includes(stage));updateLift(game.time);boundary.update({...game.player,y:game.player.elevation+1.65},.55,1.2);
   const key=[stage,s.sibling,s.objective?.id,...s.archive].join('|');if(key!==lastState){lastState=key;const powered=!['approach','power'].includes(stage);computers.setPowered(powered);for(const screen of terminalDisplays)screen.material.color.setScalar(powered?.72:.30);investigation.mesh.material.color.setScalar(s.workshopReleased?.72:.20);
    power.paint(stage==='approach'?['DÉPARTS NON ISOLÉS','CONVOI / AILE TECHNIQUE']:stage==='power'?['Courant coupé. Réarmer le circuit.','F / clic du stick libre : interagir']:['CIRCUIT LOCAL : ACTIF','Réseau ORDRE : DÉCONNECTÉ']);
    archive.paint(['approach','power'].includes(stage)?['Mémoire hors tension.','Boîtier de secours à gauche.']:stage==='archive'?['Journal humain retrouvé.','F / clic du stick libre : lire']:s.archive);
@@ -165,7 +167,7 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
  }
  function setVisible(enabled){root.visible=!!enabled;lastState='';if(enabled)pbr.start();}
  function stats(){return{fps:fpsChapter.stats(),neons:neons.stats(),visible:root.visible,contactOcclusion:contactOcclusion.stats(),courtyard:courtyard.stats(),workshop:workshop.stats(),ceilings:ceilings.stats(),rlh:rlh.stats(),computers:computers.stats(),systems:systems.stats(),story:story.stats(),stage,objective:currentObjective?.id||null,colliders:obstacles.length,terminals:5,revision:MESH_INFO.revision,ruinedInteriors:MESH_INFO.hollowBuildings,rustedVehicles:MESH_INFO.rustedVehicles,foliage:MESH_INFO.foliage,surfaceFamilies:Object.keys(SURFACE_INFO).length,loadedMaps,textureResolution:quality==='low'?256:512,geometrySource:MESH_INFO.tool,triangles:MESH_INFO.triangles,staticBatches:MESH_INFO.batches,footprint:{...LEVEL1_MAP.bounds},ceiling:5.7,independentMap:true,buildings:LEVEL1_MAP.buildings.length,lifts:1,stairs:1,encounters:3,boundary:boundary.stats(),pbr:pbr.stats()};}
- function dispose(){if(disposed)return;disposed=true;fpsChapter.dispose();stairDetails.forEach(s=>s.dispose());neons.dispose();contactOcclusion.dispose();pbr.dispose();powerSwitch.dispose();computers.dispose();dressing?.dispose();boundary.dispose();story.dispose();systems.dispose();courtyard.dispose();workshop.dispose();ceilings.dispose();rlh.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();for(const board of mountedInfoPanels)board.userData.dispose?.();root.clear();}
+ function dispose(){if(disposed)return;disposed=true;rainWater.dispose();fpsChapter.dispose();stairDetails.forEach(s=>s.dispose());neons.dispose();contactOcclusion.dispose();pbr.dispose();powerSwitch.dispose();computers.dispose();dressing?.dispose();boundary.dispose();story.dispose();systems.dispose();courtyard.dispose();workshop.dispose();ceilings.dispose();rlh.dispose();scene.remove(root);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();for(const board of mountedInfoPanels)board.userData.dispose?.();root.clear();}
 
  return{root,obstacles,update,setVisible,stats,dispose,updateLift,ready,materials:maps,dressing};
 }

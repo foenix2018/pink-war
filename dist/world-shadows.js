@@ -24,7 +24,7 @@ export function createWorldShadows(T,{scene,renderer,light,profile={},direction=
  // A single instanced soft footprint supplements contact under moving bodies.
  const size=64,data=new Uint8Array(size*size*4);
  for(let y=0;y<size;y++)for(let x=0;x<size;x++){const d=Math.hypot((x+.5-size/2)/(size/2),(y+.5-size/2)/(size/2)),i=(y*size+x)*4;data[i+3]=Math.round(Math.max(0,1-d)**2*220);}
- const texture=new T.DataTexture(data,size,size);texture.minFilter=texture.magFilter=T.LinearFilter;texture.needsUpdate=true;
+ const texture=new T.DataTexture(data,size,size);texture.generateMipmaps=true;texture.minFilter=T.LinearMipmapLinearFilter;texture.magFilter=T.LinearFilter;texture.needsUpdate=true;
  const geometry=new T.PlaneGeometry(1,1),material=new T.MeshBasicMaterial({map:texture,transparent:true,opacity:.27,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1,toneMapped:false});
  const contacts=new T.InstancedMesh(geometry,material,64);contacts.name='Ombres de contact mobiles';contacts.frustumCulled=false;contacts.count=0;contacts.renderOrder=1;scene.add(contacts);
  const matrix=new T.Matrix4(),rotation=new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),-Math.PI/2),position=new T.Vector3(),scale=new T.Vector3();
@@ -72,7 +72,7 @@ export function createGroundOcclusion(T,parent,boxes,{compact=false,floor=0}={})
   }
  }
  for(let i=0;i<alpha.length;i++)data[i*4+3]=Math.round(alpha[i]*255);
- const texture=new T.DataTexture(data,size,size);texture.minFilter=texture.magFilter=T.LinearFilter;texture.needsUpdate=true;
+ const texture=new T.DataTexture(data,size,size);texture.generateMipmaps=true;texture.minFilter=T.LinearMipmapLinearFilter;texture.magFilter=T.LinearFilter;texture.needsUpdate=true;
  const material=new T.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1,toneMapped:false});
  const geometry=new T.PlaneGeometry(w,d),mesh=new T.Mesh(geometry,material);mesh.rotation.x=-Math.PI/2;mesh.position.set((bounds.minX+bounds.maxX)/2,floor+.018,(bounds.minZ+bounds.maxZ)/2);mesh.renderOrder=1;root.add(mesh);
  return {root,stats:()=>({boxes:solids.length,draws:1,resolution:size}),dispose(){root.removeFromParent();geometry.dispose();material.dispose();texture.dispose();}};

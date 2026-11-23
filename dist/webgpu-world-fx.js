@@ -1,3 +1,4 @@
+import { rippleNormalMap, waterPuddleMask } from './water-detail.js';
 // Reflection cameras contain lens/pose data only; cloning a player's camera also
 // clones its held weapons and their large/circular model metadata.
 export function bareReflectionCamera(T,source,cache){
@@ -32,7 +33,7 @@ export function createReflectionScene(T,{objectLimit=96,triangleLimit=100000}={}
 export function createWorldEffects(T,{webgpu=false,low=false,reflections=false}={}){
  const native=!!(webgpu&&T.TSL&&T.MeshBasicNodeMaterial),S=T.TSL;
  const clock=native?S.uniform(0):{value:0},materials=new Set(),geometry=new Set(),volumes=[],volumeMaterials=new Map();
- let mirror=null,mirrorHeight=null,disposed=false,depthSample=null,reflectionScene=null;
+ let mirror=null,mirrorHeight=null,disposed=false,depthSample=null,reflectionScene=null,waterDepth=null,defaultWaterNormal=null,puddleMask=null;
  if(native&&reflections&&!low){mirrorHeight=S.uniform(.034);mirror=S.reflector({resolutionScale:.25,bounces:false,generateMipmaps:false});mirror.target.position.y=.034;mirror.target.rotation.x=-Math.PI/2;
   const base=mirror.reflector,renderReflection=base.updateBefore;reflectionScene=createReflectionScene(T);
   base.getVirtualCamera=source=>bareReflectionCamera(T,source,base.virtualCameras);
@@ -53,21 +54,79 @@ export function createWorldEffects(T,{webgpu=false,low=false,reflections=false}=
   m.positionNode=S.positionLocal.add(S.normalLocal.mul(sin(S.positionLocal.y.mul(15).sub(clock.mul(2))).mul(.004)));
   m.userData.worldEffect=scanner?'scanner':'hologram';return m;
  }
- function water({color=0x102a34,opacity=.88,refraction=true,puddle=false,normalMap=null}={}){
-  if(!native)return own(new T.MeshStandardMaterial({color,roughness:.09,metalness:.12,transparent:true,opacity,normalMap,normalScale:new T.Vector2(.35,.35),side:T.DoubleSide}));
+ function water({
+  color=0x102a34,shallowColor=0x4e8b89,skyColor=0x738da8,opacity=.88,
+  refraction=true,puddle=false,normalMap=null,flow=.75,foam=null,
+ }={}){
+  if(!native){
+   const normal=normalMap||(defaultWaterNormal??=rippleNormalMap(T));
+   const alphaMap=puddle?(puddleMask??=waterPuddleMask(T)):null;
+   const material=own(new T.MeshStandardMaterial({color,
+    roughness:puddle?.21:.16,metalness:.08,transparent:true,opacity,
+    normalMap:normal,normalScale:new T.Vector2(.42,.42),alphaMap,
+    depthWrite:!puddle,side:T.FrontSide}));
+   material.userData.worldEffect=puddle?'reflective-puddle':'water';
+   return material;
+  }
   const {positionWorld:p,positionLocal,normalLocal,vec2,vec3,sin,cos,materialOpacity}=S;
-  const a=p.x.mul(.93).add(p.z.mul(.41)).add(clock.mul(.8)),b=p.z.mul(1.43).sub(p.x.mul(.57)).sub(clock.mul(.61));
-  const ripple=sin(a).mul(.009).add(sin(b).mul(.006));
-  const dx=cos(a).mul(.055).sub(cos(b).mul(.038)),dz=cos(a).mul(.025).add(cos(b).mul(.094));
-  const m=own(new T.MeshStandardNodeMaterial({color,roughness:puddle?.16:.10,metalness:.16,transparent:true,opacity,side:T.DoubleSide,depthWrite:!puddle}));
+  const a=p.x.mul(.78).add(p.z.mul(.56)).sub(clock.mul(flow));
+  const b=p.z.mul(1.37).sub(p.x.mul(.62)).add(clock.mul(flow*.83));
+  const fine=p.x.mul(3.11).add(p.z.mul(2.48)).add(sin(a.mul(.65))).sub(clock.mul(flow*1.43));
+  // Filter the short waves at the pixel footprint. Thin crests must not sparkle from the catwalks.
+  const resolved=S.float(1).sub(S.smoothstep(.28,1.25,S.fwidth(fine)));
+  const detail=cos(fine).mul(resolved).mul(puddle?.024:.061);
+  const dx=cos(a).mul(.046).sub(cos(b).mul(.054)).add(detail);
+  const dz=cos(a).mul(.032).add(cos(b).mul(.082)).add(detail.mul(.81));
+  const normal=S.normalize(vec3(dx.negate(),1,dz.negate()));
+  const ripple=sin(a).mul(.018).add(sin(b).mul(.013));
+  const m=own(new T.MeshStandardNodeMaterial({color,roughness:puddle?.23:.16,metalness:.10,
+    transparent:true,opacity,side:T.FrontSide,depthWrite:!puddle}));
   m.positionNode=positionLocal.add(normalLocal.mul(puddle?0:ripple));
-  m.normalNode=S.normalMap(vec3(dx.mul(.5).add(.5),dz.mul(.5).add(.5),1));
-  let surface=S.color(color);
-  if(refraction&&!puddle&&!low){const behind=S.viewportSharedTexture(S.screenUV.add(vec2(dx,dz).mul(.012)));surface=surface.mix(behind.rgb,.24);}
-  if(mirror){const mask=S.float(1).sub(S.smoothstep(.04,.12,S.abs(p.y.sub(mirrorHeight))));const fresnel=S.float(1).sub(S.normalView.dot(S.positionViewDirection).abs()).pow(3).mul(.5).add(.12);surface=surface.mix(mirror.rgb,fresnel.mul(mask).min(.65));}
+  m.normalNode=S.transformNormalToView(normal);
+  const facing=S.normalView.dot(S.positionViewDirection).abs().clamp(0,1);
+  const fresnel=S.float(1).sub(facing).pow(3.4).mul(.67).add(.035);
+  m.roughnessNode=resolved.oneMinus().mul(.12).add(puddle?.2:.135);
+  let base=S.color(color), clarity=S.float(.2);
+  if(refraction&&!puddle&&!low){
+   waterDepth??=S.viewportDepthTexture(S.screenUV);
+   const bottom=S.getViewPosition(S.screenUV,waterDepth,S.cameraProjectionMatrixInverse);
+   const thickness=S.length(bottom.sub(S.positionView)).clamp(0,15);
+   clarity=S.float(1).sub(S.smoothstep(.10,3.4,thickness));
+   const shifted=S.screenUV.add(vec2(dx,dz).mul(.039).mul(clarity)).clamp(.002,.998);
+   const behind=S.viewportSharedTexture(shifted);
+   base=S.mix(base,S.color(shallowColor),clarity.mul(.34));
+   base=S.mix(base,behind.rgb.mul(S.color(0xa2d8d3)),clarity.mul(.48));
+  }
+  let surface=S.mix(base,S.color(skyColor),fresnel.mul(.74));
+  if(mirror){
+   const mask=S.float(1).sub(S.smoothstep(.035,.14,S.abs(p.y.sub(mirrorHeight))));
+   surface=S.mix(surface,mirror.rgb,fresnel.mul(mask).mul(.80));
+  }
+  let bubbles=S.float(0);
+  if(foam){
+   const yaw=foam.yaw||0,offset=p.xz.sub(vec2(foam.x,foam.z));
+   const lateral=offset.dot(vec2(Math.cos(yaw),-Math.sin(yaw)));
+   const forward=offset.dot(vec2(Math.sin(yaw),Math.cos(yaw)));
+   const distance=vec2(lateral,forward.mul(1.6)).length().div(foam.radius);
+   const field=vec2(lateral.mul(.75),forward.mul(1.36).sub(clock.mul(.92)));
+   const broad=S.mx_noise_float(field);
+   const drift=field.mul(1.77).add(vec2(broad.mul(1.32),clock.mul(-.43)));
+   const lacing=S.mx_noise_float(drift).mul(.33).mul(resolved.add(.28).min(1));
+   const edge=S.float(1).sub(S.smoothstep(.11,1,distance.add(broad.mul(.18))));
+   const patches=S.smoothstep(-.13,.36,broad.mul(.73).add(lacing).add(edge.mul(.23)));
+   bubbles=edge.mul(patches).mul(.73);
+   surface=S.mix(surface,S.color(0xd5efe8),bubbles);
+  }
   m.colorNode=surface;
-  if(puddle){const u=S.uv().sub(.5).mul(2),edge=S.float(1).sub(S.smoothstep(.5,1,u.length()));m.opacityNode=materialOpacity.mul(edge);}
-  m.userData.worldEffect=puddle?'reflective-puddle':'water';return m;
+  m.emissiveNode=S.color(skyColor).mul(fresnel.mul(.08)).add(S.color(0xb4e2de).mul(bubbles.mul(.11)));
+  if(puddle){
+   const uv=S.uv().sub(.5).mul(2),edge=S.float(1).sub(S.smoothstep(.40,1,uv.length()));
+   m.opacityNode=materialOpacity.mul(edge).mul(fresnel.mul(.25).add(.74));
+  }else{
+   m.opacityNode=materialOpacity.mul(S.float(1).sub(clarity.mul(.49))).add(fresnel.mul(.13)).add(bubbles.mul(.10)).clamp(0,1);
+  }
+  m.userData.worldEffect=puddle?'reflective-puddle':'water';
+  return m;
  }
  // Analytic ray/ellipsoid intersections and bounded density integration. The copied
  // opaque depth clamps the exit point, so steam does not show through solid walls.
@@ -106,11 +165,12 @@ export function createWorldEffects(T,{webgpu=false,low=false,reflections=false}=
  const worldPosition=native?new T.Vector3():null;
  function update(t,eye=null){
   clock.value=t;
+  if(defaultWaterNormal)defaultWaterNormal.offset.set(t*.022,t*.014);
   if(eye)for(const v of volumes){v.mesh.getWorldPosition(worldPosition);const dx=eye.x-worldPosition.x,dz=eye.z-worldPosition.z;v.mesh.visible=dx*dx+dz*dz<(low?30:55)**2;}
  }
  return{native,clock,hologram,water,volume,fog,update,reflectionTarget:mirror?.target,
   setReflectionHeight(y){if(mirrorHeight){mirrorHeight.value=y;mirror.target.position.y=y;}},
   stats:()=>({native,volumes:volumes.length,reflectionPasses:mirror?1:0,reflectionResolutionScale:mirror?.25:0,volumeSteps:native?(low?6:10):0,reflectionObjects:reflectionScene?.stats().objects||0,reflectionObjectLimit:reflectionScene?.stats().objectLimit||0}),
-  dispose(){if(disposed)return;disposed=true;for(const v of volumes)v.mesh.removeFromParent();for(const m of materials)m.dispose();for(const g of geometry)g.dispose();mirror?.target.removeFromParent();mirror?.dispose();reflectionScene?.dispose();}
+  dispose(){if(disposed)return;disposed=true;for(const v of volumes)v.mesh.removeFromParent();for(const m of materials)m.dispose();for(const g of geometry)g.dispose();mirror?.target.removeFromParent();mirror?.dispose();reflectionScene?.dispose();defaultWaterNormal?.dispose();puddleMask?.dispose();}
  };
 }

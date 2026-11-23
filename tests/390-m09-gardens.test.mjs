@@ -65,7 +65,20 @@ test('extended locomotion, grapple and navigation bounds are chapter-local and t
 });
 test('both metric LODs contain a finite Blender mesh, authored glazing, neon tubes and texture coordinates',()=>{
  const stats=[];
+ const surfaceMaterial=new T.MeshBasicMaterial();
+ const floorRay=new T.Raycaster(undefined,new T.Vector3(0,-1,0),0,.55);
  for(const file of ['gardens.pwm.gz','gardens-low.pwm.gz']){const gz=read('dist/assets/m09/'+file),raw=gunzipSync(gz),asset=parse(raw);stats.push(asset.triangles);assert.ok(asset.triangles>400000&&asset.triangles<1200000);assert.ok(asset.primitives.length<60);assert.ok(gz.length<(file.includes('low')?13e6:20e6));
+  const floors=Object.fromEntries(asset.primitives
+   .filter(p=>p.material==='deck'||p.material==='facade')
+   .map(p=>[p.material,new T.Mesh(p.geometry,surfaceMaterial)]));
+  for(const terrace of L.DATA.platforms)for(let i=0;i<8;i++){
+   const angle=(i+.13)*Math.PI/4,radius=terrace.r*.73;
+   floorRay.ray.origin.set(terrace.x+Math.cos(angle)*radius,terrace.y+.13,terrace.z+Math.sin(angle)*radius);
+   const deck=floorRay.intersectObject(floors.deck).find(hit=>Math.abs(hit.point.y-terrace.y)<.019);
+   assert.ok(deck,`${file} missing visible floor at ${terrace.id}`);
+   const duplicate=floorRay.intersectObject(floors.facade).some(hit=>Math.abs(hit.point.y-deck.point.y)<.018);
+   assert.equal(duplicate,false,`${file} has a facade cap at the same depth as ${terrace.id}`);
+  }
   for(const p of asset.primitives){assert.ok(p.geometry.attributes.uv);assert.ok([...p.geometry.attributes.position.array].every(Number.isFinite));
    if(/^(leaf|blossom)/.test(p.material)){
     assert.ok([...p.geometry.attributes.uv.array].every(v=>v>=0&&v<=1),'botanical atlas UVs survive the metric export');
@@ -73,6 +86,7 @@ test('both metric LODs contain a finite Blender mesh, authored glazing, neon tub
     for(let i=0;i<indices.length;i+=6)assert.equal(new Set(indices.slice(i,i+6)).size,4,'a twig is a complete quad, not isolated triangles');
    }
    p.geometry.dispose();}}
+ surfaceMaterial.dispose();
  assert.ok(stats[1]<stats[0]*.8,'mobile has a geometric canopy LOD, not missing architecture');
  const source=read('assets/m09/PinkWars_N09_Jardins_Suspendus.blend'),publicCopy=read('dist/assets/m09/PinkWars_N09_Jardins_Suspendus.blend');assert.ok(source.length>1e6);assert.equal(createHash('sha256').update(source).digest('hex'),createHash('sha256').update(publicCopy).digest('hex'));
 });
