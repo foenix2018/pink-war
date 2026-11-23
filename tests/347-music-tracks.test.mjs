@@ -9,12 +9,12 @@ function fixture(){
  return {ctx,nodes,media,track:createMusicBed(ctx,{mediaFactory:()=>media})};
 }
 test('both active soundtrack references resolve to bundled compressed creator audio',()=>{
- assert.match(MUSIC_TRACKS.lobby,/velvet-siege\.m4a/);assert.match(MUSIC_TRACKS.game,/iron-maw\.m4a/);
+ assert.match(MUSIC_TRACKS.lobby,/under-the-iron-spire\.m4a/);assert.match(MUSIC_TRACKS.game,/under-the-iron-spire\.m4a/);
  for(const path of Object.values(MUSIC_TRACKS)){const size=statSync(new URL(path,new URL('../dist/',import.meta.url))).size;assert.ok(size>100000&&size<3000000);}
 });
 test('mission streaming respects pause, position, mute, ducking and disposal without synth overlap',async()=>{
  const {ctx,nodes,media,track}=fixture();track.start();await Promise.resolve();assert.equal(track.playing,true);assert.equal(media.preload,'none');assert.equal(media.loop,true);
- assert.equal(nodes.filter(n=>n.kind==='oscillator').length,0);track.duck();assert.equal(track.stats.gain,.29);
+ assert.equal(nodes.filter(n=>n.kind==='oscillator').length,0);track.duck();assert.ok(Math.abs(track.stats.gain-.232)<1e-8);
  track.pause();assert.equal(media.paused,true);assert.equal(media.currentTime,12);track.start();await Promise.resolve();track.setEnabled(false);assert.equal(track.playing,false);assert.equal(media.paused,true);
  track.setEnabled(true);await Promise.resolve();track.update(.016,{active:true,threat:.8});assert.equal(track.section,'combat');ctx.tick(.5);track.dispose();assert.equal(media.src,'');assert.equal(track.playing,false);
 });

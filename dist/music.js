@@ -20,6 +20,7 @@ export function musicSectionFor({threat=0,intermission=false}={}){
 }
 export function createMusicBed(initialContext=null){
   let ctx=null,master=null,enabled=true,active=false,disposed=false,audible=false;
+  let masterLevel=.62;
   let section='exploration',requested='exploration',nextBeat=0,beat=0,phrases=0,scheduled=0;
   const voices=new Set();
   function stopVoices(){
@@ -45,7 +46,7 @@ export function createMusicBed(initialContext=null){
   }
   function graph(){
     if(!master){master=ctx.createGain();master.gain.value=0;master.connect(ctx.destination);}
-    if(!audible){master.gain.cancelScheduledValues(ctx.currentTime);master.gain.setTargetAtTime(.62,ctx.currentTime,.8);audible=true;}
+    if(!audible){master.gain.cancelScheduledValues(ctx.currentTime);master.gain.setTargetAtTime(masterLevel,ctx.currentTime,.8);audible=true;}
   }
   function voice(note,time,length,level,type='sine',pan=0,attack=.3,cutoff=950){
     if(voices.size>=30)return;
@@ -95,6 +96,7 @@ export function createMusicBed(initialContext=null){
       if('active' in options)active=!!options.active;
       requested=musicSectionFor(options);pump();
     },
+    setMix(value){masterLevel=clamp(value,0,.55);if(master&&audible){master.gain.cancelScheduledValues(ctx.currentTime);master.gain.setTargetAtTime(masterLevel,ctx.currentTime,.2);}},
     pause(){active=false;mute();stopVoices();},
     setEnabled(value){enabled=!!value;if(!enabled){mute();stopVoices();}},
     dispose(){if(disposed)return;active=false;mute();stopVoices();master?.disconnect();master=null;ctx=null;disposed=true;},

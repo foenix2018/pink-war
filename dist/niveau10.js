@@ -468,7 +468,7 @@ function updateHUD(){
 
 // ---------- Loop, pause, boot ----------
 function animation(t,frame){
- if(started)setScreenMusic(running&&!paused&&!reading&&!skillMenu?.isOpen&&game?.state==='playing'?'gameplay':'paused',10);
+ if(started)setScreenMusic(running&&!paused&&!reading&&!skillMenu?.isOpen&&game?.state==='playing'?'gameplay':'paused',10,undefined,{game,dialogue:!!subtitle,finale:['confinement','extraction'].includes(mission?.stageId)});
  if(xr?.active&&!frame)return;
  if(!xr?.active)requestAnimationFrame(animation);
  const dt=frameDelta(last?(t-last)/1000:1/60,!!xr?.active);last=t;

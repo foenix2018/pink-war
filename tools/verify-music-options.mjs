@@ -23,7 +23,7 @@ try{
   const press=locator=>mobile?locator.tap():locator.click();
   await page.goto(base+'/qa-music');await page.waitForFunction(()=>window.qa);
   await press(page.locator('#start'));await page.waitForFunction(()=>qa.snapshot().playing);
-  assert.match(await page.evaluate(()=>qa.snapshot().source),/iron-maw/);
+  assert.match(await page.evaluate(()=>qa.snapshot().source),/locked-corridor/);
   const pause=()=>press(page.locator('[data-session="pause"]'));
   const options=()=>press(page.locator('[data-pause-action="settings"]'));
   const resume=async()=>{await press(page.locator('.fracture-settings-back'));await press(page.locator('[data-pause-action="resume"]'));};

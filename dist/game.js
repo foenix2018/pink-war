@@ -158,7 +158,7 @@ const persist = () => { try { localStorage.setItem('rosee-settings', JSON.string
 const timeString = time => `${String(Math.floor(time / 60)).padStart(2, '0')}:${String(Math.floor(time % 60)).padStart(2, '0')}`;
 
 function audioReady() {
-  setScreenMusic(['lobby','outfit'].includes(phase)?'menu':phase==='loading'?'loading':phase==='playing'?'gameplay':'paused',selectedMode==='campaign2'?2:1,settings.music!==false);
+  setScreenMusic(['lobby','outfit'].includes(phase)?'menu':phase==='loading'?'loading':phase==='playing'?'gameplay':'paused',selectedMode==='campaign2'?2:1,settings.music!==false,{game,mode:selectedMode});
   ambience?.setEnabled(settings.sound);
   if(audioContext)setLaserAudioEnabled(audioContext,settings.sound);
   if (!settings.sound && settings.music===false) return;
@@ -986,7 +986,7 @@ function stepFrame(timestamp, xrFrame) {
     moving:phase==='playing',elevation:game.player.elevation,onLift:!!game.player.onLift,
     grounded:game.player.grounded,crouched:game.player.crouched,probes:game.enemies,surface:walkingSurface(game),
     ...(selectedMode==='breach'?{installations:BREACH_INSTALLATIONS,shelter:breachShelter(game.player),alarm:game.stage==='extraction'}:{})});
-  setScreenMusic(['lobby','outfit'].includes(phase)?'menu':phase==='loading'?'loading':phase==='playing'?'gameplay':'paused',selectedMode==='campaign2'?2:1,settings.music!==false);
+  setScreenMusic(['lobby','outfit'].includes(phase)?'menu':phase==='loading'?'loading':phase==='playing'?'gameplay':'paused',selectedMode==='campaign2'?2:1,settings.music!==false,{game,mode:selectedMode});
   if(audioContext)setWeaponCharge(audioContext,game.weapon.id,game.charge,audioActive&&settings.sound&&game.charge>.015);
   if(audioActive&&game.reloadRemaining>0&&!reloadInserted&&1-game.reloadRemaining/game.weapon.reload>=.58){reloadInserted=true;if(settings.sound)playWeaponAction(audioContext,game.weapon.id,'reload-in');}
   for(const gun of [world.soldier.gun,world.fpsGun])gun.userData.setFlash(phase === 'playing' && flashTimer > 0,game.time);

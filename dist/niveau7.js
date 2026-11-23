@@ -462,7 +462,7 @@ function updateHUD(){
 
 // ---------- Loop, pause, boot ----------
 function animation(t,frame){
- if(started)setScreenMusic(running&&!paused&&!reading&&!skillMenu?.isOpen&&game?.state==='playing'?'gameplay':'paused',4);
+ if(started)setScreenMusic(running&&!paused&&!reading&&!skillMenu?.isOpen&&game?.state==='playing'?'gameplay':'paused',7,undefined,{game,dialogue:!!subtitle});
  if(xr?.active&&!frame)return;
  if(!xr?.active)requestAnimationFrame(animation);
  const dt=frameDelta(last?(t-last)/1000:1/60,!!xr?.active);last=t;

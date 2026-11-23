@@ -27,7 +27,7 @@
       "measuredLUFS": -20.89,
       "measuredTruePeakDBTP": -5.3,
       "originalSha256": "4b276b61066d1045c331087a495f7e6ab2297d6ede927aa1547e47a16caae026",
-      "usage": "Main menu and loading screens"
+      "usage": "Archived previous score; not selected by the current soundtrack owner."
     },
     {
       "level": 2,
@@ -53,9 +53,9 @@
       },
       "measuredLUFS": -21.04,
       "measuredTruePeakDBTP": -5.07,
-      "usage": "Gameplay, all missions and arena"
+      "usage": "Archived previous score; not selected by the current soundtrack owner."
     }
   ],
-  "activeMenuTrack": "velvet-siege.m4a",
-  "activeGameplayTrack": "iron-maw.m4a"
+  "activeCatalogue": "score-3930/manifest.json",
+  "selection": "../../score-catalogue.js"
 }

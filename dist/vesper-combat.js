@@ -273,7 +273,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   function update(dt,s){
     heroAudio.update(game,sound&&game.state==='playing'&&!s.free&&ready&&!completed&&!journalOpen&&!skillMenu.isOpen);
     portalFrame+=dt;electricPortals.sync(completed?[]:game.activePortals,game.time,portalFrame);
-    setScreenMusic(ready&&!completed&&!journalOpen&&!skillMenu.isOpen&&game.state==='playing'?'gameplay':'paused',1);
+    setScreenMusic(ready&&!completed&&!journalOpen&&!skillMenu.isOpen&&game.state==='playing'?'gameplay':'paused',1,undefined,{game,dialogue:!!subtitles.current});
     if(!ready||completed||journalOpen||skillMenu.isOpen)return;
     syncCamera(s,dt);
     const p=game.player;

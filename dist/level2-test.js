@@ -893,7 +893,7 @@ function updateHUD(){
  if(clock>noticeUntil)$('notice').style.display='none';
 }
 function animation(t,frame){
- if(started)setScreenMusic(running&&!paused&&!journalOpen&&!skillMenu?.isOpen&&game?.state==='playing'?'gameplay':'paused',2);
+ if(started)setScreenMusic(running&&!paused&&!journalOpen&&!skillMenu?.isOpen&&game?.state==='playing'?'gameplay':'paused',2,undefined,{game,dialogue:!!subtitles?.current});
  if(xr?.active&&!frame)return;
  if(!xr?.active)requestAnimationFrame(animation);
  // Preserve elapsed time while an asynchronous frame is pending.

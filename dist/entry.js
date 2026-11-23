@@ -1,3 +1,4 @@
+import {chapterForMode} from './score-catalogue.js';
 import {hideoutURL} from './hideout-state.js';
 import {readM02Checkpoint} from './m02-checkpoint-index.js';
 import {setScreenMusic,setMusicEnabled,screenMusicSnapshot} from './menu-music.js';
@@ -24,7 +25,7 @@ const profile=graphicsProfile(navigator,settings.quality);
 document.documentElement.classList.toggle('iphone-launch',profile.ios);
 function save(){try{localStorage.setItem('pink-war-character',character);localStorage.setItem('rosee-settings',JSON.stringify(settings));}catch{}}
 function refresh(){
-  setScreenMusic(loading?'loading':'menu',mode==='campaign2'?2:mode==='campaign3'||mode==='campaign4'?3:1,settings.music!==false);
+  setScreenMusic(loading?'loading':'menu',chapterForMode(mode),settings.music!==false,{mode});
   document.documentElement.dataset.universe=character==='lylu'?'blue':'pink';
   $('hideout-open').href=hideoutURL({characterId:character,renderer:new URLSearchParams(location.search).get('renderer')});
   syncMenuArtwork(character,mode);
@@ -127,7 +128,7 @@ async function begin(intent='play',afterPrologue=false){
   if(settings.sound||settings.music!==false)try{const Audio=window.AudioContext||window.webkitAudioContext;
     window.__PINKWAR_BOOT_AUDIO ||=new Audio();window.__PINKWAR_BOOT_AUDIO.resume().catch(()=>{});}catch{}
   try{
-    modulePromise ||=import('./game.js?v=3.92.1');await modulePromise;
+    modulePromise ||=import('./game.js?v=3.93.0');await modulePromise;
     for(const d of document.querySelectorAll('dialog'))d.removeEventListener('cancel',earlyCancel);
     if(!window.__PINKWAR||window.__PINKWAR.snapshot().phase==='error')throw new Error('Initialisation interrompue.');
     loading=false;

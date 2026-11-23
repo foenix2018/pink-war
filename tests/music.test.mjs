@@ -46,5 +46,5 @@ test('background-tab return starts a fresh musical phrase without a burst of mis
 test('local real laser sample remains available without an external runtime request',async()=>{
   const fs=await import('node:fs/promises'),bytes=await fs.readFile(new URL('../dist/'+REAL_LASER_SAMPLE,import.meta.url));
   assert.equal(bytes.toString('ascii',0,4),'RIFF');assert.ok(bytes.length>3000);
-  assert.equal(Object.keys(LASER_PROFILES).length,7);
+  for(const id of ['r9','bloom','vortex','lance','thorn','m12','nova','iem'])assert.ok(LASER_PROFILES[id],id);
 });

@@ -56,7 +56,7 @@ async function boot(){
   Object.assign(game.player,{x:0,z:4.6,elevation:0,hp:profile.health,shield:Math.min(game.shieldCapacity,profile.shield)});game.charges=profile.charges;
   nanoFx=createNanoForgeFX(T,{scene,camera:overview,getWeapon:()=>rig?.model.gun});
   progress(.9,'Ouverture du refuge');resize(graphics);bindWorld();renderer.setAnimationLoop(frame);
-  ready=true;$('loading').hidden=true;setScreenMusic('menu',1);message('Bienvenue dans la planque. Choisis une pièce ou promène-toi.',6);
+  ready=true;$('loading').hidden=true;setScreenMusic('menu',1,undefined,{mode:'planque'});message('Bienvenue dans la planque. Choisis une pièce ou promène-toi.',6);
   void loadHero();
  }catch(error){console.error('La Planque',error);$('loading').hidden=false;progress(0,error?.message||'Le refuge n’a pas pu s’ouvrir.');$('retry').hidden=false;}
 }

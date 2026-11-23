@@ -1,3 +1,4 @@
+import {duckScreenMusic} from './menu-music.js';
 // Pink War — local procedural weapon sound, with an optional bundled CC0 recording layer.
 // Layered filtered plasma transient, pitched coil discharge and restrained low-frequency tail.
 // Audio nodes are created only on an actual shot; a single 0.18s noise sample is cached per context.
@@ -131,6 +132,7 @@ export function playLaserShot(ctx,weapon='r9',power=1){
   if(weapon==='duor9')weapon='r9';
   if(!ctx||ctx.state!=='running')return false;
   const space=spaceFor(ctx);if(!space.enabled)return false;
+  duckScreenMusic(.18);
   stopCharge(space,ctx.currentTime);
   const shotSample={r9:'pistol-shot',bloom:'automatic-shot',vortex:'automatic-shot',lance:'sniper-shot',thorn:'shotgun-body',nova:'sniper-shot'}[weapon];
   const physical=shotSample?recorded(ctx,space,shotSample,space.master,{r9:.55,bloom:.43,vortex:.40,lance:.64,thorn:.50,nova:.55}[weapon],{rate:weapon==='thorn'?.76:weapon==='nova'?.70:1,limit:weapon==='bloom'||weapon==='vortex'?.14:.72}):weapon==='m12'&&combatBuffers.get(ctx)?.has('shotgun-body');
