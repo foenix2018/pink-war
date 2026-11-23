@@ -7,10 +7,12 @@ https://creativecommons.org/publicdomain/zero/1.0/
 
 Commercial use, modification and redistribution permitted. Attribution optional.
 
-Files downloaded from the public mirror novincode/atomcut-library, pack kenney-sci-fi-sounds (M4A conversions of the original OGG samples). Exact filenames, URLs and SHA-256 hashes are recorded in manifest.json. WAV files are local decode copies for inspection.
+Files downloaded from the public mirror novincode/atomcut-library, pack kenney-sci-fi-sounds (M4A conversions of the original OGG samples). Exact filenames, URLs and SHA-256 hashes are recorded in source-manifest.json. WAV files are local decode copies for inspection.
 
 V3 portal mix uses forceField 000/002/004, laserLarge 000/001/003, laserSmall 001/003 and computerNoise 000, with trimming, reversals, pitch, stereo panning, envelopes and short echoes.
 
 Pixabay/Freesound downloads could not be accessed from the execution environment. No Pixabay or Wakerone audio is included in this revision.
 
 V4: Suppression des signaux intermédiaires pendant le passage ouvert et la traversée. Sons d’ouverture et de fermeture conservés.
+
+V5 adds original Pink Wars crackle designed for the opening arc and final discharge. Pink Wars releases the added layer under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). The v4 Kenney mix is retained as the input for `tools/mix-portal-crackle.py`. The new cues are stereo PCM at 32 kHz. Timing, hashes and file sizes are recorded in `mix-v5.json`.

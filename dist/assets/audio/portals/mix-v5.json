@@ -1,0 +1,28 @@
+{
+  "sound": "Approved Kenney mix with original Pink Wars electrical crackle",
+  "license": "CC0-1.0",
+  "sourceRegister": "source-manifest.json",
+  "sampleRateHz": 32000,
+  "files": [
+    {
+      "phase": "open",
+      "file": "open-cc0-v5.wav",
+      "sha256": "d1845500a714b2630bcb348f630380e07862ae3cbf90c8e7db42f540b0cf1153",
+      "base": "open-cc0-v4.wav",
+      "baseSha256": "708951cf33bb213af6e9cc9fcc59dbce2d9e715a45f6fe604a784ec973028544",
+      "bytes": 381484,
+      "seconds": 2.98,
+      "peakDBFS": -4.13
+    },
+    {
+      "phase": "close",
+      "file": "close-cc0-v5.wav",
+      "sha256": "8195eba6843f6dcc9a87a7c00247eb3e453f11d9c14ebf4e78241821d95aefef",
+      "base": "close-cc0-v4.wav",
+      "baseSha256": "c2d16d45dac0995838f35a36cb75b9df8c06ec8286a0ca588dd58db38e36326b",
+      "bytes": 345644,
+      "seconds": 2.7,
+      "peakDBFS": -3.8
+    }
+  ]
+}

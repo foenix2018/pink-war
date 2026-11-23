@@ -1,4 +1,4 @@
-// Validated CC0 portal mix, revision 4. Only opening and closing: no loop or spawn beep.
+// Spatial portal one-shots with an original electrical crackle, mixed into the approved CC0 cues.
 // Kenney Sci-fi Sounds — see assets/audio/portals/CREDITS.md.
 const decoded=new WeakMap(),pending=new WeakMap();let files;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -6,7 +6,7 @@ export function loadPortalSamples(ctx){
  if(!ctx?.decodeAudioData)return Promise.resolve(null);
  if(decoded.has(ctx))return Promise.resolve(decoded.get(ctx));
  if(pending.has(ctx))return pending.get(ctx);
- files??=Promise.all(['open','close'].map(async kind=>{const r=await fetch(new URL(`./assets/audio/portals/${kind}-cc0-v4.wav`,import.meta.url));if(!r.ok)throw Error(`Portal sample ${r.status}`);return[kind,await r.arrayBuffer()];})).catch(error=>{files=null;throw error;});
+ files??=Promise.all(['open','close'].map(async kind=>{const r=await fetch(new URL(`./assets/audio/portals/${kind}-cc0-v5.wav`,import.meta.url));if(!r.ok)throw Error(`Portal sample ${r.status}`);return[kind,await r.arrayBuffer()];})).catch(error=>{files=null;throw error;});
  const task=files.then(entries=>Promise.all(entries.map(async([kind,bytes])=>[kind,await ctx.decodeAudioData(bytes.slice(0))])))
   .then(entries=>{const buffers=Object.fromEntries(entries);decoded.set(ctx,buffers);pending.delete(ctx);return buffers;})
   .catch(error=>{pending.delete(ctx);console.warn('Portal audio unavailable',error);return null;});
