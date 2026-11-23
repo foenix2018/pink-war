@@ -26,3 +26,9 @@ body.hideout-page .pw-nano-notice{display:none!important}
 .hub-nano-details summary{cursor:pointer;color:#bed2df;font-size:11px;letter-spacing:.7px;margin-bottom:12px}
 #panel .hub-nano-details .hub-list{margin-top:12px}
 @media(max-width:650px){.hub-nano-tiers{gap:3px}.hub-nano-tiers button{padding:7px 1px}.hub-nano-tiers small{font-size:8px}}
+
+.hub-nano-tiers .hub-forge-badge{font-size:9px;color:#9bb7c8;letter-spacing:.04em;margin-top:5px}.hub-nano-tiers [aria-pressed=true] .hub-forge-badge{color:#fff}.hub-nano-capabilities{font-size:12px;color:#bacbda;line-height:1.5}.hub-nano-state[role=status]{min-height:2em}
+
+.hub-nano-tiers small{overflow-wrap:anywhere}
+
+.hub-nano-preview{overflow:hidden;border:1px solid #728a9c66;border-radius:12px;background:#10121d;position:relative}.hub-nano-preview canvas{display:block;width:100%;height:auto;aspect-ratio:4/3;touch-action:pan-y;cursor:grab}.hub-nano-preview canvas:active{cursor:grabbing}.hub-nano-preview small{position:absolute;bottom:5px;left:0;right:0;text-align:center;color:#acc4d5;font-size:9px;pointer-events:none}

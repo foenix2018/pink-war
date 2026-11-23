@@ -57,6 +57,11 @@ test('native suit stays fixed above the deck and leaves the capsule after equipm
  };
  const forge=createHideoutNanoChambers(T,{scene,low:true,
   locations:[{hero:'ghju',x:-8.9,z:4.45}],installSoldier});
+ assert.equal(await forge.preview('ghju',2),true);
+ assert.equal(forge.phase('ghju').phase,'preview');assert.equal(forge.phase('ghju').tier,2);assert.equal(forge.phase('ghju').progress,0);assert.ok(forge.phase('ghju').visible);
+ assert.equal(forge.recover('ghju'),false,'a preview alone is not a completed fabrication');
+ const camera=new T.PerspectiveCamera(34,4/3,.05,80);assert.ok(forge.framePreview('ghju',camera));assert.ok(camera.layers.isEnabled(28));assert.ok(!camera.layers.isEnabled(29));assert.equal(forge.framePreview('missing',camera),false);const previewLights=scene.getObjectByName('Éclairage de sélection des tenues');assert.ok(previewLights.children.every(light=>!light.layers.isEnabled(0)),'studio lights never change the normal room lighting');
+ forge.update(.1,.1);assert.ok(forge.phase('ghju').visible,'the selected suit remains visible without running the combat animation');
  assert.equal(await forge.inject('ghju',5),true);
  const modelRoot=installedModel.root;
  assert.ok(forge.root.children.includes(modelRoot),'original rig is attached to the forge scene');

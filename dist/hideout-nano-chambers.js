@@ -9,7 +9,9 @@ const smooth=x=>{x=clamp01(x);return x*x*(3-2*x);};
 const hash=n=>{let x=Math.sin(n*127.1+31.7)*43758.5453;return x-Math.floor(x);};
 
 export function createHideoutNanoChambers(T,{scene,locations,low=false,onStatus=()=>{},installSoldier=null}){
- const root=new T.Group();root.name='Planque / nano-forges GHJU et LYLU';scene.add(root);
+ const root=new T.Group();root.name='Planque / nano-forges GHJU et LYLU';scene.add(root);scene.traverse(o=>{if(o.isLight){o.layers.enable(28);o.layers.enable(29);}});
+ const previewLights=new T.Group();previewLights.name='Éclairage de sélection des tenues';scene.add(previewLights);
+ const fill=new T.HemisphereLight(0xe1ecff,0x334458,1.8),key=new T.DirectionalLight(0xffffff,3),rim=new T.DirectionalLight(0x9acbff,1.5);key.position.set(-3,5,5);rim.position.set(3,3,-4);for(const light of[fill,key,rim]){light.layers.set(28);light.layers.enable(29);previewLights.add(light);}
  const cells=new Map(),temp=new T.Object3D();
  const particleShape=new T.IcosahedronGeometry(1,0);
  const mat=(hex,metalness=.45,roughness=.3)=>new T.MeshStandardMaterial({color:hex,metalness,roughness});
@@ -180,7 +182,7 @@ export function createHideoutNanoChambers(T,{scene,locations,low=false,onStatus=
     await Promise.all([rig.model.shadowUnit?.gear?.ready,rig.model.shadowUnit?.suit?.ready,rig.model.shadowUnit?.outfits?.ready]);
     if(rig.model.actor&&rig.kit){const{createGlove}=await import('./hands.js');const{poseUnarmedForInspection}=await import('./rlh-firefighter.js');c.gloves=[createGlove(rig.kit.gloves,{mirror:true,sleeve:false,arm:false}),createGlove(rig.kit.gloves,{sleeve:false,arm:false})];rig.model.root.add(...c.gloves);c.pose=()=>poseUnarmedForInspection(rig.model,c.gloves);}
     rig.model.setLevel(NANO_ARMOR_TIERS[c.tier-1].gameLevel);
-    rig.model.animate(0,false,0,0,0,0,{ground:()=>0,airborne:false,crouched:false});c.pose?.();
+    rig.model.animate(0,false,0,0,0,0,{ground:()=>0,airborne:false,crouched:false});c.pose?.();rig.model.root.traverse(o=>o.layers.enable(hero==='ghju'?28:29));
     alignModelOnDeck(c);
     applyMaterialProgression(c);
     collectArmor(c);
@@ -209,8 +211,13 @@ export function createHideoutNanoChambers(T,{scene,locations,low=false,onStatus=
   const c=cells.get(hero);c.phase='injecting';c.age=0;c.targetDoor=0;
   c.rig.model.root.visible=true;onStatus();return true;
  }
- function recover(hero){
-  const c=cells.get(hero);if(!c||!['ready','open'].includes(c.phase))return false;
+ async function preview(hero,tier){
+  if(!await prepare(hero,tier))return false;
+  const c=cells.get(hero);for(const r of [...c.records,...c.cape]){r.mesh.visible=r.wasVisible;if(r.drawCount!==undefined)r.mesh.geometry.setDrawRange(0,r.drawCount);}
+  c.rig.model.root.visible=true;c.phase='preview';c.age=0;onStatus();return true;
+ }
+ function recover(hero,{allowPreview=false}={}){
+  const c=cells.get(hero);if(!c||!(['ready','open'].includes(c.phase)||allowPreview&&c.phase==='preview'))return false;
   c.targetDoor=1;c.phase='open';onStatus();return true;
  }
  function equip(hero){
@@ -220,7 +227,7 @@ export function createHideoutNanoChambers(T,{scene,locations,low=false,onStatus=
  function close(hero){const c=cells.get(hero);if(!c)return;c.targetDoor=0;if(c.phase==='open')c.phase='ready';onStatus();}
  function phase(hero){const c=cells.get(hero);return c?{
   hero,phase:c.phase,tier:c.tier,progress:c.phase==='injecting'?clamp01(c.age/14):['ready','open','retrieving'].includes(c.phase)?1:0,
-  loaded:!!c.rig,doorOpen:c.door>.95
+  loaded:!!c.rig,visible:!!c.rig?.model.root.visible,outfit:c.rig?.model.shadowUnit?.outfits?.snapshot()||null,doorOpen:c.door>.95
  }:null;}
 
  function renderParticles(c,time){
@@ -362,9 +369,10 @@ export function createHideoutNanoChambers(T,{scene,locations,low=false,onStatus=
   }
  }
 
- return{root,prepare,inject,recover,equip,close,phase,update,
+ function framePreview(hero,camera,angle=0){const c=cells.get(hero);if(!c?.rig)return false;camera.layers.set(hero==='ghju'?28:29);camera.position.set(c.base.position.x+Math.sin(angle)*3.8,1.42,c.base.position.z+Math.cos(angle)*3.8);camera.lookAt(c.base.position.x,1.25,c.base.position.z);camera.updateMatrixWorld();return true;}
+ return{root,prepare,preview,framePreview,inject,recover,equip,close,phase,update,
   snapshot:()=>Object.fromEntries([...cells.keys()].map(id=>[id,phase(id)])),
-  dispose(){root.removeFromParent();for(const c of cells.values()){for(const g of c.gloves||[])g.userData.dispose();c.rig?.dispose();}
+  dispose(){root.removeFromParent();previewLights.removeFromParent();for(const c of cells.values()){for(const g of c.gloves||[])g.userData.dispose();c.rig?.dispose();}
    for(const geometry of [particleShape,ringGeo,tubeShape,doorShape])geometry.dispose();
    for(const material of [black,metal,glass,tankGlass])material.dispose();
    for(const c of cells.values()){
