@@ -1,5 +1,6 @@
 import { createCascadeWater } from './water-detail.js';
 import { createChapterHorizon } from './chapter-horizon.js';
+import { createM07SourceTreeGeometry } from './m07-source-trees.js';
 import {addHideoutDebrief} from './hideout-links.js';
 import {inertialMove,PLAYER_SPEEDS,TOUCH_SPEED_MULTIPLIER,touchAnalogSprint} from './locomotion.js';
 import {frameDelta} from './frame-timing.js';
@@ -903,14 +904,23 @@ export function buildForestWorld(scene, { quality = 'balanced', webgpu = false, 
 
   // Vegetation.
   const world = scatter(42), Q = { low: .65, balanced: 1, high: 1.35 }[quality];
-  const leaf = new T.MeshStandardMaterial({ vertexColors: true, roughness: .9 });
+  // M07 / Forêt des Sources: original chêne + épicéa models supplied by the creator.
+  // Bake authored branch and leaf geometry once per species and LOD; the existing
+  // visibility/instancing system still handles each of the 2600 potential trees.
+  // Shorter high-detail ranges keep Quest/iPhone performance bounded.
+  const leaf = new T.MeshStandardMaterial({ vertexColors: true, roughness: .9, side: T.DoubleSide });
   const imp = kind => new T.MeshStandardMaterial({ map: plantTexture(kind), alphaTest: .5, roughness: 1 });
   const plant = kind => new T.MeshStandardMaterial({ map: plantTexture(kind), alphaTest: .45, roughness: 1 });
   const con = world.trees.filter(t => t.conifer), brd = world.trees.filter(t => !t.conifer);
   const impostor = (w, h) => withUV([new T.PlaneGeometry(w, h).translate(0, h / 2, 0), new T.PlaneGeometry(w, h).translate(0, h / 2, 0).rotateY(Math.PI)]);
+  const spruceMid = createM07SourceTreeGeometry(T, 'spruce', 'mid');
+  const oakMid = createM07SourceTreeGeometry(T, 'oak', 'mid');
+  const spruceNear = quality === 'low' ? spruceMid : createM07SourceTreeGeometry(T, 'spruce', 'near');
+  const oakNear = quality === 'low' ? oakMid : createM07SourceTreeGeometry(T, 'oak', 'near');
+  const treeNear = quality === 'low' ? 16 : 20, treeMid = quality === 'low' ? 38 : 46;
   const kinds = [
-    vegetation(scene, 'conifères', con, [instanced(conifer(0), leaf, con.length, { shadow: shadows }), instanced(conifer(1), leaf, con.length, { shadow: shadows }), instanced(impostor(6, 10.5), imp('imp-conifer'), con.length)], { near: 32, mid: 75, far: 260, radius: 4 }),
-    vegetation(scene, 'feuillus', brd, [instanced(broadleaf(0), leaf, brd.length, { shadow: shadows }), instanced(broadleaf(1), leaf, brd.length, { shadow: shadows }), instanced(impostor(7.5, 8.5), imp('imp-broadleaf'), brd.length)], { near: 32, mid: 75, far: 260, radius: 4 }),
+    vegetation(scene, 'épicéas alpins', con, [instanced(spruceNear, leaf, con.length, { shadow: shadows }), instanced(spruceMid, leaf, con.length, { shadow: shadows }), instanced(impostor(6, 10.5), imp('imp-conifer'), con.length)], { near: treeNear, mid: treeMid, far: 260, radius: 5.2 }),
+    vegetation(scene, 'chênes', brd, [instanced(oakNear, leaf, brd.length, { shadow: shadows }), instanced(oakMid, leaf, brd.length, { shadow: shadows }), instanced(impostor(7.5, 8.5), imp('imp-broadleaf'), brd.length)], { near: treeNear, mid: treeMid, far: 260, radius: 5.0 }),
     vegetation(scene, 'fougères', world.ferns, [instanced(withUV([0, 1, 2, 3, 4, 5].map(i => new T.PlaneGeometry(1.4, 1.1).translate(0, .55, 0).rotateY(i * Math.PI / 3 + (i > 2 ? Math.PI : 0)))), plant('fern'), 3500), null, null], { near: 34, mid: 34, far: 34, radius: .7, fade: true }),
     vegetation(scene, 'herbes', world.grass, [instanced(withUV([0, 1, 2, 3].map(i => new T.PlaneGeometry(1.2, .7).translate(0, .35, 0).rotateY(i * Math.PI / 2))), plant('grass'), 6000), null, null], { near: 24, mid: 24, far: 24, radius: .4, fade: true }),
     vegetation(scene, 'rochers', world.rocks, [instanced(rock(3, 3), new T.MeshStandardMaterial({ vertexColors: true, roughness: .95,normalMap:micro.normal,normalScale:new T.Vector2(.2,.2) }), world.rocks.length), instanced(rock(3, 1), new T.MeshStandardMaterial({ vertexColors: true, roughness: .95,normalMap:micro.normal,normalScale:new T.Vector2(.2,.2) }), world.rocks.length), null], { near: 50, mid: 160, far: 160, radius: 1.2 })
