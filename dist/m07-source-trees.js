@@ -112,6 +112,7 @@ function makeLeaves(){
  leafInfo.textContent=`${count.toLocaleString('fr-FR')} feuilles · ${tips.length} rameaux`;
 }
 
+ buildTree();createLeafGeometry();makeLeaves();
  } else if(species==='spruce') {
 function pushRingMesh(points,radii,kind){
  skeleton.push({points,radii,kind});
@@ -306,8 +307,8 @@ function makeLeaves(){
  leafInfo.textContent=`${count.toLocaleString('fr-FR')} rameaux · ${tips.length.toLocaleString('fr-FR')} branches fines`;
 }
 
- } else throw new RangeError('Unsupported M07 tree species: '+species);
  buildTree();createLeafGeometry();makeLeaves();
+ } else throw new RangeError('Unsupported M07 tree species: '+species);
  return {branchData,branchIndices,leafVertices,leafIndices,leafInstances};
 }
 
