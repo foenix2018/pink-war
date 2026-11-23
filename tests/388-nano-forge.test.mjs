@@ -61,11 +61,11 @@ test('precision is a purchased, freely switchable configuration with real disper
  assert.ok(g.setNanoConfiguration('impact'));assert.equal(g.weapon.spread,WEAPONS[8].spread);assert.equal(g.nano.profile.balance,balance);
 });
 test('equipment changes affect actual shield capacity, regeneration, armour and grapple speed without stacking on reload',()=>{
- const g=fixture({level:6});fund(g,5000);plan(g,'capaciteur','recycleur','blindage','treuil');g.enableArmorShield();
- assert.ok(g.fabricateNano('shield'));assert.equal(g.shieldCapacity,70);assert.equal(g.player.shield,60,'upgrade adds capacity, not a free refill');
- applyNanoLoadout(g);assert.equal(g.shieldCapacity,70);g.enableArmorShield();assert.equal(g.shieldCapacity,70);
+ const g=fixture({level:9});fund(g,10000);g.inHideout=true;for(const stage of [2,3,4]){plan(g,'tenue-'+stage);assert.ok(g.fabricateNano('suit:'+stage));}g.inHideout=false;fund(g,5000);plan(g,'capaciteur','recycleur','blindage','treuil');g.enableArmorShield();
+ assert.ok(g.fabricateNano('shield'));assert.equal(g.shieldCapacity,110);assert.equal(g.player.shield,100,'upgrade adds capacity, not a free refill');
+ applyNanoLoadout(g);assert.equal(g.shieldCapacity,110);g.enableArmorShield();assert.equal(g.shieldCapacity,110);
  assert.ok(g.fabricateNano('regen'));g.player.shield=0;g.time=10;g.lastDamage=0;rechargeShield(g,.1);assert.equal(g.player.shield,32*1.15*.1);
- assert.ok(g.fabricateNano('armor'));g.player.shield=0;g.damage(20);assert.equal(g.player.hp,81);
+ assert.ok(g.fabricateNano('armor'));g.player.shield=0;g.damage(20);assert.equal(g.player.hp,84.8);
  assert.ok(g.fabricateNano('grapple'));assert.equal(g.nanoStats.grappleSpeed,1.1);
 });
 test('balance, plans, crafted weapons, modifications and configurations survive a chapter change and checkpoint replay',()=>{

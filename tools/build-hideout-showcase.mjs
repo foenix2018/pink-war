@@ -1,16 +1,18 @@
 // Bake the actual game builders offline: the refuge never creates extra rigs.
 import {mkdirSync,writeFileSync} from 'node:fs';
 import {gzipSync} from 'node:zlib';
+import {createHash} from 'node:crypto';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
 const base=process.env.PINK_WARS_BASE_URL||'http://127.0.0.1:4176',out=new URL('../dist/assets/hideout/',import.meta.url);
-mkdirSync(out,{recursive:true});
+mkdirSync(out,{recursive:true});const scope=process.env.SHOWCASE_SCOPE||'all',stage=Number(process.env.SHOWCASE_STAGE)||1,hero=process.env.SHOWCASE_HERO||'ghju',stem=scope==='common'?'showcase':scope==='outfit'?'outfit-'+hero+'-'+stage:'showcase';
 const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox']});let result;
 try{
  const page=await browser.newPage();page.on('pageerror',e=>{throw e;});await page.route('**/showcase-build',r=>r.fulfill({contentType:'text/html',body:'<!doctype html>'}));await page.goto(base+'/showcase-build');
- result=await page.evaluate(async()=>{
+ result=await page.evaluate(async({scope,stage,hero})=>{
   const T=await import('/vendor/three.webgpu.min.js'),{createHideoutShowcase,freezeShowcase,showcaseMaterialResolver}=await import('/hideout-showcase.js');
   const layout=await(await fetch('/assets/hideout/layout.json')).json();
-  const source=await createHideoutShowcase({layout,levels:{ghju:10,lylu:10}});
+  if(scope==='common')layout.showcase.outfits=[];if(scope==='outfit'){layout.showcase.weapons=[];layout.showcase.companions=[];layout.showcase.outfits=layout.showcase.outfits.filter(s=>s.hero===hero);}
+  const source=await createHideoutShowcase({layout,levels:{ghju:stage,lylu:stage}});
   const baked=freezeShowcase(source.root,{name:'Armes, tenues et compagnons officiels',resolveMaterial:showcaseMaterialResolver()});
   const pending=[];for(const mesh of baked.root.children)for(const value of Object.values(mesh.material))if(value?.isTexture&&value.image instanceof HTMLImageElement&&!value.image.complete)pending.push(new Promise((yes,no)=>{value.image.addEventListener('load',yes,{once:true});value.image.addEventListener('error',no,{once:true});}));await Promise.all(pending);
   const json=baked.root.toJSON();delete json.geometries;delete json.object;
@@ -27,7 +29,7 @@ try{
   }
   const encode=array=>{const bytes=new Uint8Array(array.buffer,array.byteOffset,array.byteLength);let text='';for(let i=0;i<bytes.length;i+=16384)text+=String.fromCharCode(...bytes.subarray(i,i+16384));return btoa(text);};
   return{snapshot:source.snapshot(),materials:json,parts:baked.root.children.map(m=>({material:m.material.uuid,attributes:Object.fromEntries(['position','normal','uv','uv1','color'].map(k=>[k,encode(m.geometry.attributes[k].array)]))})),batches:baked.batches,triangles:baked.triangles};
- });
+ },{scope,stage,hero});
 }finally{await browser.close();}
 const min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
 const decoded=result.parts.map(p=>{const a=Object.fromEntries(Object.entries(p.attributes).map(([k,b])=>{const bytes=Buffer.from(b,'base64');return[k,new Float32Array(bytes.buffer,bytes.byteOffset,bytes.byteLength/4)];}));for(let i=0;i<a.position.length;i++) {const k=i%3;min[k]=Math.min(min[k],a.position[i]);max[k]=Math.max(max[k],a.position[i]);}return{material:p.material,a};});
@@ -46,6 +48,9 @@ for(const {material,a}of decoded){
 const meta={min,max,primitives,source:'Canonical Pink Wars builders · offline static capture',units:'metres'};let header=Buffer.from(JSON.stringify(meta));header=Buffer.concat([header,Buffer.alloc((-header.length)&3,32)]);const prefix=Buffer.alloc(8);prefix.write('PWM1');prefix.writeUInt32LE(header.length,4);
 const packed=gzipSync(Buffer.concat([prefix,header,...chunks]),{level:9});
 const materials={...result.materials,catalogue:result.snapshot,source:'createWeaponModels + installPinkWarsSoldier + poseUnarmedForInspection + createCompanionModel',triangles:result.triangles,batches:result.batches,downloadBytes:packed.byteLength};
-writeFileSync(new URL('showcase.pwm.gz',out),packed);writeFileSync(new URL('showcase-materials.json',out),JSON.stringify(materials));
-writeFileSync(new URL('showcase-stats.json',out),JSON.stringify({triangles:result.triangles,batches:primitives.length,vertices:primitives.reduce((s,p)=>s+p.vertices,0),downloadBytes:packed.byteLength,materialBytes:JSON.stringify(materials).length,companions:result.snapshot.companions.length,weapons:result.snapshot.weapons.length,outfits:result.snapshot.outfits.length},null,2));
+// Shared grain/normal textures are referenced once instead of embedded in every outfit JSON.
+mkdirSync(new URL('showcase-images/',out),{recursive:true});
+for(const image of materials.images){if(typeof image.url!=='string'||!image.url.startsWith('data:image/png;base64,'))continue;const bytes=Buffer.from(image.url.split(',')[1],'base64'),name=createHash('sha256').update(bytes).digest('hex').slice(0,24)+'.png';writeFileSync(new URL('showcase-images/'+name,out),bytes);image.url='./assets/hideout/showcase-images/'+name;}
+writeFileSync(new URL(stem+'.pwm.gz',out),packed);writeFileSync(new URL(stem+'-materials.json',out),JSON.stringify(materials));
+writeFileSync(new URL(stem+'-stats.json',out),JSON.stringify({triangles:result.triangles,batches:primitives.length,vertices:primitives.reduce((s,p)=>s+p.vertices,0),downloadBytes:packed.byteLength,materialBytes:JSON.stringify(materials).length,companions:result.snapshot.companions.length,weapons:result.snapshot.weapons.length,outfits:result.snapshot.outfits.length},null,2));
 console.log(JSON.stringify({triangles:result.triangles,batches:primitives.length,downloadBytes:packed.byteLength,companions:result.snapshot.companions.length,weapons:result.snapshot.weapons.length,outfits:result.snapshot.outfits.length}));

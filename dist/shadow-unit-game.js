@@ -1,3 +1,4 @@
+import {installOutfitStages} from './hero-outfit-stages.js';
 // Shared Pink War Shadow Unit skin for the playable GHJU/LYLU soldiers.
 // The base Mixamo/RLH rig, weapon hands and combat logic remain unchanged.
 import {attachShadowConcept} from './personnage-shadow-concept.js?v=3.74.0';
@@ -32,6 +33,7 @@ export function installShadowUnit(model,profile){
   const figure=shapeHeroFigure(model,profile);
   // The undersuit: honeycomb of small hexagonal cells (plum for GHJU, blue for LYLU) instead of a plain black.
   const suit=applyHexSuit(model,profile);
+  const outfits=installOutfitStages(model,profile,{armour,gear});
 
   // Drive the cape with the soldier's actual animation clock. This covers
   // 3rd-person campaign, arena, stand, outfit, lobby and AT HOME companion.
@@ -49,10 +51,10 @@ export function installShadowUnit(model,profile){
   };
   const dispose=model.dispose.bind(model);
   model.dispose=()=>{
-    armour.dispose();
+    outfits.dispose();armour.dispose();
     cape.dispose();tabard.dispose();gear.dispose();suit.dispose();figure?.dispose();
     dispose();
   };
-  model.shadowUnit={armour,cape,tabard,gear,figure,suit,profile:profile.id};
+  model.shadowUnit={outfits,armour,cape,tabard,gear,figure,suit,profile:profile.id};
   return model.shadowUnit;
 }

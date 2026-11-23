@@ -9,7 +9,7 @@ export const JETPACK_RULES=Object.freeze({maxDuration:2,boostWindow:.16,brake:14
 // Fuel left, from 1 (full) to 0 (empty): drives the gauge on the pack and the sputter of the thrusters.
 export const jetpackFuel=player=>player?.jetpackArmed?Math.max(0,Math.min(1,1-(player.jetpackElapsed||0)/JETPACK_RULES.maxDuration)):0;
 export function updateJetpack(player,dt,held){
-  if(player.grounded||!held||!player.jetpackArmed){player.jetpackArmed=false;player.jetpackActive=false;return false;}
+  if(player.jetpackEnabled===false||player.grounded||!held||!player.jetpackArmed){player.jetpackArmed=false;player.jetpackActive=false;return false;}
   player.jetpackElapsed=(player.jetpackElapsed||0)+Math.max(0,dt);
   if(player.jetpackElapsed>=JETPACK_RULES.maxDuration){player.jetpackArmed=false;player.jetpackActive=false;return false;}
   player.jetpackActive=true;
@@ -37,10 +37,10 @@ export function tryJump(player,obstacles,time){
   if(player.crouched)return null;
   const ground=player.grounded||(time-(player.lastGroundedAt??-99)<JUMP_RULES.coyote&&!player.airJumps);
   if(ground){player.grounded=false;player.verticalSpeed=JUMP_RULES.ground;player.airJumps=0;player.lastGroundedAt=-99;player.jetpackArmed=false;player.jetpackActive=false;player.jetpackElapsed=0;return 'ground';}
-  if((player.airJumps||0)>=1)return null;
+  if(player.doubleJumpEnabled===false||(player.airJumps||0)>=1)return null;
   const wall=nearbyJumpWall(player,obstacles);
   player.airJumps=1;player.verticalSpeed=wall?JUMP_RULES.wall:JUMP_RULES.air;
-  player.jetpackArmed=!wall;player.jetpackActive=!wall;player.jetpackElapsed=0;
+  player.jetpackArmed=!wall&&player.jetpackEnabled!==false;player.jetpackActive=player.jetpackArmed;player.jetpackElapsed=0;
   if(wall){player.jumpImpulseX=wall.x*JUMP_RULES.wallPush;player.jumpImpulseZ=wall.z*JUMP_RULES.wallPush;}
   return wall?'wall':'double';
 }

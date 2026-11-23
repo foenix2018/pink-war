@@ -1,6 +1,6 @@
 import {IEM_INDEX,IEM_RULES,iemAvailable} from './voltis-iem.js';
 import {applyHideoutPreparation} from './hideout-state.js';
-import {configureNanoForge,applyNanoLoadout,nanoWeapon,dropNanoSalvage,updateNanoForge,nanoSnapshot,fabricateNano,setNanoConfiguration} from './nano-forge.js';
+import {configureNanoForge,applyNanoLoadout,applySuitLoadout,nanoWeapon,dropNanoSalvage,updateNanoForge,nanoSnapshot,fabricateNano,setNanoConfiguration} from './nano-forge.js';
 import {createGrappleState,toggleGrapple,releaseGrapple,updateGrapple,grappleAttached} from './grapple-logic.js';
 import {describeEnemyImpact} from './enemy-body-response.js';
 import {searchContactOrder,pendingMeleeOrder,updateMeleeIntent,prepareHostileShot} from './enemy-engagement.js';
@@ -327,7 +327,7 @@ export class ArenaGame {
   }
   reset(characterId=this.characterId||'ghju') {
     this.hideoutPreparationChecked=false;this.hideoutArmorLevel=null;
-    this.nano=null;this.nanoStats=null;this.nanoCraftAt=-100;
+    this.nano=null;this.nanoStats=null;this.suitStats=null;this.suitStage=null;this.nanoCraftAt=-100;
     if(this.baseShieldCapacity)this.shieldCapacity=this.baseShieldCapacity;
     this.checkpointPosition=null;
     this.companionAmplifyUntil=0;this.companionHazards=[];this.companionWard=null;
@@ -408,7 +408,7 @@ export class ArenaGame {
     entity.onLift=null;
     if(entity.grounded)for(const l of this.lifts)if(insideSurface(entity.x,entity.z,l) && Math.abs(entity.elevation-liftHeightAt(l,this.time))<.025){entity.onLift=l.id;break;}
   }
-  get equipment() { return equipmentForLevel(this.hideoutArmorLevel||this.wave); }
+  get equipment() { const e=equipmentForLevel(this.suitStage||this.hideoutArmorLevel||this.wave);if(this.nano)e.unlocked=equipmentForLevel(this.nano.profile.suitStage).unlocked;return e; }
   toggleGrapple(aim){return toggleGrapple(this,aim);}
   releaseGrapple(options){return releaseGrapple(this,options);}
   isWeaponAvailable(index){
@@ -667,10 +667,12 @@ export class ArenaGame {
   // `source` (optional {x,z}) is where the hit came from, for the HUD's direction arcs.
   damage(amount, source = null, {pierceInvulnerability=false,at=null,shieldContact=false} = {}) {
     if (this.state !== 'playing' || (this.invulnerable > 0 && !pierceInvulnerability)) return;
-    const protectedNow=!this.projectedShieldsEnabled||this.player.shieldDeployed&&(shieldContact||shieldFacesSource(this.player,source));
-    const soaked = protectedNow?soakDamage(this.player, amount):{held:0,rest:amount,broke:false};
+    const protectedNow=this.shieldCapacity>0&&(!this.projectedShieldsEnabled||this.player.shieldDeployed&&(shieldContact||shieldFacesSource(this.player,source)));
+    const shieldResistance=this.suitStats?.shieldResistance??1;
+    const soaked = protectedNow?soakDamage(this.player, amount*shieldResistance):{held:0,rest:amount,broke:false};
+    if(protectedNow)soaked.rest=Math.max(0,amount-soaked.held/shieldResistance);
     if(soaked.held>0){this.player.shieldHitAt=this.time;this.event('projected-shield-hit',{id:'player',frame:playerShieldFrame(this.player),...at,absorbed:soaked.held,shield:this.player.shield,source});}
-    this.player.hp = Math.max(0, this.player.hp - soaked.rest*(this.nanoStats?.armor??1)); this.invulnerable = .3;
+    this.player.hp = Math.max(0, this.player.hp - soaked.rest*(this.nanoStats?.armor??1)*(this.suitStats?.resistance??1)); this.invulnerable = .3;
     this.lastDamage = this.time; this.regenerating = false; this.shieldCharging = false;
     if (source && Number.isFinite(source.x) && Number.isFinite(source.z)) this.lastHit = { x: source.x, z: source.z, time: this.time };
     if (soaked.broke) {this.player.shieldDeployed=false;this.player.shieldBreakAt=this.time;this.event('shield-break');this.event('projected-shield-break',{id:'player',frame:playerShieldFrame(this.player),...at});}
@@ -678,10 +680,10 @@ export class ArenaGame {
     if (this.player.hp <= 0) { this.grapple=createGrappleState();this.grappleCollider=null;this.player.shieldDeployed=false;this.state = 'over'; this.charge = 0; this.event('over'); }
   }
   // Armour layer API for the engines (armor-combat.js holds the rules).
-  enableArmorShield(capacity = SHIELD_MAX) { this.meleeDelay = MELEE_IMPACT_DELAY;this.baseShieldCapacity=capacity; this.shieldCapacity = capacity+(this.nanoStats?.shieldBonus||0); this.player.shield = this.shieldCapacity; this.shieldCharging = false; }
+  enableArmorShield(capacity = SHIELD_MAX) { if(this.suitStats)capacity=this.suitStats.shield;this.meleeDelay = MELEE_IMPACT_DELAY;this.baseShieldCapacity=capacity; this.shieldCapacity = capacity>0?capacity+(this.nanoStats?.shieldBonus||0):0; this.player.shield = this.shieldCapacity; this.shieldCharging = false; }
   enableProjectedShields(){this.projectedShieldsEnabled=true;if(!this.shieldCapacity)this.enableArmorShield();this.player.shieldDeployed=false;for(const e of this.enemies)ensureEnemyBubble(e);}
   toggleProjectedShield(){
-    if(!this.projectedShieldsEnabled||this.state!=='playing')return false;
+    if(!this.projectedShieldsEnabled||this.state!=='playing'||this.suitStats?.level<2)return false;
     if(!this.player.shieldDeployed&&(this.player.shield<=0||this.player.hp<=0))return false;
     if(!this.player.shieldDeployed)releaseGrapple(this,{reason:'shield'});
     this.player.shieldDeployed=!this.player.shieldDeployed;this.event('projected-shield-toggle',{active:this.player.shieldDeployed});return true;
@@ -808,6 +810,7 @@ export class ArenaGame {
       for(let i=0;i<slices.count;i++)this.step(slices.dt,i?{...input,crouchToggle:false,jumpPressed:false}:input);
       return;
     }
+    if(this.nano)applySuitLoadout(this);
     this.autoReload();
     if(this.projectedShieldsEnabled){for(const e of this.enemies)ensureEnemyBubble(e);if(this.player.hp<=0)this.player.shieldDeployed=false;}
     dt = clamp(dt, 0, .05); const previousTime=this.time;this.time += dt;this.updateLifts(previousTime);

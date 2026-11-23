@@ -308,7 +308,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   function sync(sim,time,dt){
     if(arenaRoot.visible)city.sync?.(sim);
     if(!campaignActive)city.fence?.update({...sim.player,y:(sim.player.elevation||0)+(sim.player.crouched?1.05:1.65)},.65,1.2);traversal.update(sim.time);campaignArt.updateLift(sim.time);combatFX.update(dt,camera);laserFX.update(sim.bullets,dt,sim);shadowTime=sim.time;shadowEntities=rangeActive?[sim.player,...sim.targets.map(t=>({...targetPosition(t,sim.time),radius:.28}))]:[...sim.enemies,sim.player];shadowHeight=e=>sim.surfaceHeight(e.x,e.z,sim.time,(e.elevation||0)+.3);trackShadows(sim.player.x,sim.player.z,sim.player.elevation||0);
-    setWeapon(sim.weaponIndex);setEquipment(Math.max(1,sim.wave));updateStations(sim,time);syncSecondaryPortals(sim,sim.time);rangeArt.update(rangeActive?sim:null);
+    setWeapon(sim.weaponIndex);setEquipment(sim.equipment.level);updateStations(sim,time);syncSecondaryPortals(sim,sim.time);rangeArt.update(rangeActive?sim:null);
     if(rangeActive){const observer=sim.interactionPosition||sim.player;if(Math.hypot(observer.x,observer.z-34.9)<12)rangeArt.setArmoryModels(fpsGun.userData.weaponModels,fpsGun.userData.kenneyVersion||0,character.id);rangeArt.shadows.update(sim.time,sim);}
     for(const event of sim.events||[]){
       if(event.type==='kill')beginDeath(event.id,sim,event);

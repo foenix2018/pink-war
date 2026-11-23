@@ -1,0 +1,35 @@
+import {readHideoutProfile,saveHideoutProfile} from '../dist/hideout-state.js';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {ArenaGame,segmentBox} from '../dist/game-logic.js';
+import {ARMOR_STAGES} from '../dist/armor-progression.js';
+import {configureNanoForge,discoverNanoBlueprint,fabricateNano,equipNanoSuit,normaliseNanoProfile,readNanoProfile,updateNanoForge} from '../dist/nano-forge.js';
+import {tryJump,updateJetpack} from '../dist/locomotion.js';
+const storage=()=>{const m=new Map();return{getItem:k=>m.get(k),setItem:(k,v)=>m.set(k,v)};};
+function fixture({hero='ghju',level=15,store=storage(),mode='campaign'}={}){const g=new ArenaGame([],()=>.5,{height:()=>0,surfaces:()=>[],routes:[],lifts:[]},hero);g.configureWeaponAccess({mode,level});g.nano=null;configureNanoForge(g,{storage:store});g.enableArmorShield();g.enableProjectedShields();g.nextWave=Infinity;g.toSpawn=0;return{g,store};}
+function craft(g,n){g.inHideout=true;g.nano.profile.balance=10000;for(let i=2;i<=n;i++){discoverNanoBlueprint(g,'tenue-'+i);assert.ok(fabricateNano(g,'suit:'+i));}g.inHideout=false;g.step(.01,{});}
+test('five material stages are gated by recovered plans at chapters 2, 5, 9 and 15, with a cumulative cost of 5900 NP',()=>{assert.equal(ARMOR_STAGES.length,5);assert.deepEqual(ARMOR_STAGES.map(s=>s.chapter),[1,2,5,9,15]);assert.equal(ARMOR_STAGES.reduce((n,s)=>n+s.cost,0),5900);});
+for(const hero of ['ghju','lylu'])for(let stage=1;stage<=5;stage++)test(hero+' outfit '+stage+': the actual jump, thruster, shield and grapple follow manufactured equipment',()=>{
+ const{g}=fixture({hero});if(stage>1)craft(g,stage);const p=g.player;assert.equal(g.equipment.level,stage);assert.equal(g.shieldCapacity,ARMOR_STAGES[stage-1].shield);assert.equal(g.grappleEnabled,stage>=4);
+ Object.assign(p,{grounded:true,crouched:false,lastGroundedAt:0});assert.equal(tryJump(p,[],1),'ground');assert.equal(tryJump(p,[],1.1),stage>=2?'double':null);assert.equal(updateJetpack(p,.1,true),stage>=3);
+ p.shield=g.shieldCapacity;assert.equal(g.toggleProjectedShield(),stage>=2);
+});
+test('missions never unlock or auto-manufacture an outfit and fabricating requires a plan, predecessor, wallet and hideout',()=>{
+ const{g}=fixture();g.nano.profile.balance=5900;assert.equal(g.suitStage,1);assert.equal(fabricateNano(g,'suit:2'),false);discoverNanoBlueprint(g,'tenue-2');assert.equal(fabricateNano(g,'suit:2'),false);g.inHideout=true;g.nano.profile.balance=199;assert.equal(fabricateNano(g,'suit:2'),false);g.nano.profile.balance=5900;discoverNanoBlueprint(g,'tenue-5');assert.equal(fabricateNano(g,'suit:5'),false);assert.ok(fabricateNano(g,'suit:2'));assert.equal(g.nano.profile.balance,5700);assert.equal(fabricateNano(g,'suit:2'),false);assert.equal(g.nano.profile.balance,5700);
+});
+test('the final plan cannot be recovered or manufactured at chapter 14 even with abundant nanites',()=>{const{g}=fixture({level:14});craft(g,4);g.inHideout=true;assert.equal(discoverNanoBlueprint(g,'tenue-5'),false);assert.equal(fabricateNano(g,'suit:5'),false);assert.equal(g.suitStage,4);});
+test('a failed save refunds all nanites and grants neither equipment nor capabilities',()=>{const{g,store}=fixture();g.inHideout=true;g.nano.profile.balance=200;discoverNanoBlueprint(g,'tenue-2');store.setItem=()=>{throw Error('quota');};assert.equal(fabricateNano(g,'suit:2'),false);assert.equal(g.nano.profile.balance,200);assert.equal(g.suitStage,1);assert.equal(g.player.doubleJumpEnabled,false);});
+test('purchased suits and equipped choice persist per hero across chapters, legacy wallets and weapons are retained without cosmetic unlocks',()=>{
+ const{g,store}=fixture();craft(g,4);g.inHideout=true;assert.ok(equipNanoSuit(g,2));const next=fixture({level:3,store}).g;assert.equal(next.suitStage,2);assert.equal(next.nano.profile.suitStage,4);assert.equal(next.player.jetpackEnabled,false);assert.equal(readNanoProfile('lylu',store).suitStage,1);assert.equal(equipNanoSuit(next,4),false);next.inHideout=true;next.player.shield=7;assert.ok(equipNanoSuit(next,4));assert.equal(next.suitStage,4);assert.equal(next.player.shield,7,'switching gear cannot refill a shield');
+ const old=normaliseNanoProfile({version:1,balance:1750,totalCollected:2000,discovered:['matrice','ares'],crafted:[2],upgrades:{'impact:7':1}});assert.equal(old.balance,1750);assert.equal(old.suitStage,1);assert.deepEqual(old.crafted,[2]);assert.equal(old.upgrades['impact:7'],1);
+});
+test('Bastion reduces actual health damage by half and deployed shield damage by 35%, without stacking on reload',()=>{
+ const{g}=fixture();craft(g,5);g.player.shield=0;g.damage(20);assert.equal(g.player.hp,90);g.invulnerable=0;g.player.shield=180;g.player.shieldDeployed=true;g.damage(20,{x:0,z:-10});assert.equal(g.player.shield,167);g.invulnerable=0;g.player.shield=13;g.damage(40,{x:0,z:-10});assert.equal(g.player.shield,0);assert.equal(g.player.hp,80,'only the unabsorbed half reaches health');g.configureWeaponAccess({mode:'campaign',level:15});assert.equal(g.shieldCapacity,180);assert.equal(g.nanoStats.armor,1);
+});
+test('arena and range allow all systems without writing campaign progression',()=>{for(const mode of ['arena','training']){const store=storage(),{g}=fixture({mode,store});assert.equal(g.suitStage,5);assert.equal(g.player.doubleJumpEnabled,true);assert.equal(g.player.jetpackEnabled,true);assert.equal(g.grappleEnabled,true);assert.equal(readNanoProfile('ghju',store).suitStage,1);}});
+test('future suits and weapon ranks cannot be forged by skipping the predecessor plans',()=>{const p=normaliseNanoProfile({version:1,suitVersion:1,suitStage:5,equippedSuit:5,discovered:['tenue-5']});assert.equal(p.suitStage,1);assert.equal(p.equippedSuit,1);});
+test('chapter 9 outfit plan and catch-up archive stand on real accessible surfaces',async()=>{const L=await import('../dist/m09-layout.js'),{g}=fixture({level:9});g.traversal=L.createTraversal();g.obstacles=L.buildCollisions();Object.assign(g.player,{x:90,z:90,elevation:0});updateNanoForge(g,segmentBox);const p=g.nano.plans.find(p=>p.blueprints.includes('tenue-4'));assert.ok(p);assert.equal(g.surfaceHeight(p.x,p.z,0,p.y+.3),p.y);assert.ok(!g.nano.plans.some(p=>p.blueprints.includes('tenue-5')));});
+
+test("old capacitor upgrades cannot create a shield on an unmanufactured first-stage suit",()=>{const{g}=fixture();g.nano.profile.discovered.push("capaciteur");g.nano.profile.upgrades.shield=3;g.nano.profile.revision++;g.configureWeaponAccess({mode:"campaign",level:15});g.enableArmorShield();assert.equal(g.shieldCapacity,0);assert.equal(g.player.shield,0);assert.equal(g.toggleProjectedShield(),false);});
+
+test("Bastion with three capacitor ranks retains all 210 shield points in the hideout save",()=>{const{g,store}=fixture();craft(g,5);g.inHideout=true;discoverNanoBlueprint(g,"capaciteur");for(let i=0;i<3;i++)assert.ok(fabricateNano(g,"shield"));g.enableArmorShield();assert.equal(g.shieldCapacity,210);saveHideoutProfile("ghju",{version:1,shield:210},store);assert.equal(readHideoutProfile("ghju",store).shield,210);});

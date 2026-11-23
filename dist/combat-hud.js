@@ -231,6 +231,9 @@ export function mountCombatHud({ characterId = 'ghju', parent = null, lobbyPage 
     setObjective({label='',detail='',guided=false,guidance=null}={}){setGuidance(guided?{label,title:detail,instruction:'',...guidance}:null);const signature=label+'|'+detail;mission.hidden=!label;if(signature===objectiveKey)return;objectiveKey=signature;mission.querySelector('span').textContent=label;objective.querySelector('small').textContent=label;objective.querySelector('p').textContent=detail;mission.setAttribute('aria-label',label+' : afficher l’objectif');objective.hidden=true;mission.setAttribute('aria-expanded','false');},
     setContext(label){label=label||'';if(contextLabel===label)return;contextLabel=label;context.hidden=!label;context.querySelector('span').textContent=label;context.setAttribute('aria-label',label||'Interagir');},
     update(game){
+      const jumpButton=doc.getElementById('m02-touch-controls')?.querySelector('[data-m02=jump]'),double=game?.player?.doubleJumpEnabled!==false;
+      if(jumpButton&&jumpButton.dataset.doubleJump!==String(double)){jumpButton.dataset.doubleJump=String(double);jumpButton.textContent=double?'SAUT ×2':'SAUT';jumpButton.setAttribute('aria-label',double?'Saut : deux appuis pour le double saut':'Saut simple · le double saut nécessite la tenue Céramique');}
+
       dockEngineFire();currentGame=game;const s=combatHudState(game);active=game.state!=='paused'&&game.state!=='lost'&&game.state!=='won'&&s.hp>0;if(!active)reset();
       text('hp',String(Math.ceil(s.hp)));text('shield',String(Math.ceil(s.shield)));prop(vitals,'--fill',(s.hp/100).toFixed(3));
       flag(vitals,'critical',s.critical);flag(vitals,'regenerating',s.regenerating);

@@ -1,3 +1,4 @@
+import {configureNanoForge,discoverNanoBlueprint} from '../dist/nano-forge.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -52,16 +53,16 @@ test('legacy campaign progress can be read without revealing future chapters',()
  store.setItem(HIDEOUT_KEY+'ghju','invalid');assert.deepEqual(readHideoutProfile('ghju',store).completed,[],'corrupt data fails closed');
 });
 test('weapon, wardrobe, regenerated health and replenished charges are applied after checkpoint initialization',()=>{
- const store=storage(),hub=fixture(4);hub.inHideout=true;hub.ownedWeapons.add(2);hub.weaponIndex=2;hub.player.hp=100;hub.charges=4;
+ const store=storage(),hub=fixture(5);hub.inHideout=true;hub.nano=null;configureNanoForge(hub,{storage:store});hub.nano.profile.balance=1100;for(const n of[2,3]){discoverNanoBlueprint(hub,'tenue-'+n);assert.ok(hub.fabricateNano('suit:'+n));}hub.ownedWeapons.add(2);hub.weaponIndex=2;hub.player.hp=100;hub.charges=4;
  const p=readHideoutProfile('ghju',store);p.completed=[1,2,3];p.rested=true;p.recharged=true;saveHideoutProfile('ghju',p,store);
  assert.ok(prepareHideoutDeparture(hub,{level:4,armorLevel:3,storage:store,now:123}));
- const mission=fixture(4);mission.player.hp=22;mission.player.shield=0;mission.ammo.fill(0);mission.charges=0;assert.ok(applyHideoutPreparation(mission,{storage:store}));
- assert.equal(mission.weaponIndex,2);assert.ok(mission.ownedWeapons.has(2));assert.equal(mission.player.hp,100);assert.equal(mission.player.shield,60);assert.equal(mission.charges,4);assert.equal(mission.hideoutArmorLevel,3);assert.equal(mission.ammo[2],WEAPONS[2].capacity);assert.equal(readHideoutProfile('ghju',store).pendingLevel,null);
+ const mission=fixture(4);mission.nano=null;configureNanoForge(mission,{storage:store});mission.enableArmorShield();mission.player.hp=22;mission.player.shield=0;mission.ammo.fill(0);mission.charges=0;assert.ok(applyHideoutPreparation(mission,{storage:store}));
+ assert.equal(mission.weaponIndex,2);assert.ok(mission.ownedWeapons.has(2));assert.equal(mission.player.hp,100);assert.equal(mission.player.shield,80);assert.equal(mission.charges,4);assert.equal(mission.hideoutArmorLevel,3);assert.equal(mission.ammo[2],WEAPONS[2].capacity);assert.equal(readHideoutProfile('ghju',store).pendingLevel,null);
  assert.equal(applyHideoutPreparation(mission,{storage:store}),false);assert.equal(mission.drainEvents().filter(e=>e.type==='hideout-prepared').length,1);
 });
 test('rest restores health and shield without granting ammunition; recharge does not heal',()=>{
- const store=storage(),hub=fixture();hub.inHideout=true;const p=readHideoutProfile('ghju',store);p.rested=true;saveHideoutProfile('ghju',p,store);prepareHideoutDeparture(hub,{level:3,storage:store,now:12});const m=fixture();m.player.hp=20;m.player.shield=0;m.ammo.fill(1);applyHideoutPreparation(m,{storage:store});assert.equal(m.player.hp,100);assert.equal(m.player.shield,60);assert.equal(m.ammo[0],1);
- const q=readHideoutProfile('ghju',store);q.rested=false;q.recharged=true;saveHideoutProfile('ghju',q,store);prepareHideoutDeparture(hub,{level:3,storage:store,now:13});const n=fixture();n.player.hp=20;n.player.shield=0;applyHideoutPreparation(n,{storage:store});assert.equal(n.player.hp,20);assert.equal(n.player.shield,60);
+ const store=storage(),hub=fixture();hub.inHideout=true;const p=readHideoutProfile('ghju',store);p.rested=true;saveHideoutProfile('ghju',p,store);prepareHideoutDeparture(hub,{level:3,storage:store,now:12});const m=fixture();m.player.hp=20;m.player.shield=0;m.ammo.fill(1);applyHideoutPreparation(m,{storage:store});assert.equal(m.player.hp,100);assert.equal(m.player.shield,0);assert.equal(m.ammo[0],1);
+ const q=readHideoutProfile('ghju',store);q.rested=false;q.recharged=true;saveHideoutProfile('ghju',q,store);prepareHideoutDeparture(hub,{level:3,storage:store,now:13});const n=fixture();n.player.hp=20;n.player.shield=0;applyHideoutPreparation(n,{storage:store});assert.equal(n.player.hp,20);assert.equal(n.player.shield,0);
 });
 test('preparation never consumes in the refuge, wrong chapter, arena, or another hero profile',()=>{
  const store=storage(),hub=fixture();hub.inHideout=true;prepareHideoutDeparture(hub,{level:3,storage:store,now:123});assert.equal(applyHideoutPreparation(hub,{storage:store}),false);

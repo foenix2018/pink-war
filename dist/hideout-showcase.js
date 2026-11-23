@@ -118,7 +118,7 @@ export async function createHideoutShowcase({layout,levels={ghju:1,lylu:1},onPro
   companions.push({id:slot.id,hero:slot.hero,name:stats.name,source:'createCompanionModel',revision:stats.revision,petals:stats.petals,pose:'native idle',scale:1,triangles:capture.triangles,size:bounds.getSize(new T.Vector3()).toArray(),bounds:{min:bounds.min.toArray(),max:bounds.max.toArray()}});
  }
  function updateOutfit(hero,level){
-  const entry=outfits.get(hero);if(!entry)return;level=Math.max(1,Math.min(10,Math.floor(level)||1));if(entry.level===level)return;
+  const entry=outfits.get(hero);if(!entry)return;level=Math.max(1,Math.min(5,Math.floor(level)||1));if(entry.level===level)return;
   entry.frozen?.dispose();const {rig,gloves,slot}=entry;
   rig.model.setLevel(level);poseUnarmedForInspection(rig.model,gloves);rig.model.shadowUnit.cape.update(0,'idle',.63);rig.model.shadowUnit.tabard.update(0,'idle',.63);rig.model.root.updateMatrixWorld(true);
   entry.frozen=freezeShowcase(rig.model.root,{name:'Tenue officielle '+hero.toUpperCase()});entry.carrier.clear();entry.carrier.add(entry.frozen.root);entry.carrier.rotation.y=Math.PI;

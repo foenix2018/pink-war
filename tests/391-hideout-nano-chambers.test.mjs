@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import * as T from '../dist/vendor/three.webgpu.min.js';
 import {createHideoutNanoChambers,NANO_ARMOR_TIERS} from '../dist/hideout-nano-chambers.js';
 
-test('five material tiers retain the canonical ten-step game armour progression',()=>{
- assert.deepEqual(NANO_ARMOR_TIERS.map(t=>t.gameLevel),[1,3,5,7,10]);
- assert.match(NANO_ARMOR_TIERS[0].name,/blanc/i);
- assert.match(NANO_ARMOR_TIERS[4].material,/carbotanium.*kevlar.*céramique/i);
+test('five material tiers match the crafted stages and chapter plan gates',()=>{
+ assert.deepEqual(NANO_ARMOR_TIERS.map(t=>t.gameLevel),[1,2,3,4,5]);
+ assert.deepEqual(NANO_ARMOR_TIERS.map(t=>t.planLevel),[1,2,5,9,15]);
+ assert.match(NANO_ARMOR_TIERS[4].material,/carbonatium.*kevlar.*céramique/i);
 });
 
 test('both chambers start empty and have a separate bottom injection and articulated front door',()=>{

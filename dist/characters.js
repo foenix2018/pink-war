@@ -11,7 +11,7 @@ export const CHARACTERS = Object.freeze([
       sky:['#071329','#152c49','#38689a','#81b4d8','#2d5179','#142b44'],
       portal:['rgba(231,247,255,.86)','rgba(124,196,255,.72)','rgba(66,107,222,.47)','rgba(83,161,255,.36)','rgba(181,224,255,.85)','rgba(74,149,255,0)'],portalLine:'160,215,255',star:'220,238,255'}),
     radar:Object.freeze({background:'#15253b',frame:'#547391',grid:'#243c57',wall:'#6e89a5',elite:'#76c9ff',enemy:'#a7caff',player:'#edf8ff'}),
-    outfitNames:Object.freeze({4:'Éclaireur',7:'Atlas',8:'Azur',9:'Séraphin',10:'Impérateur'})}),
+    outfitNames:Object.freeze({})}),
   Object.freeze({id:'ghju',name:'GHJU',masculine:false,universe:'pink',universeName:'UNIVERS ROSE',colorWord:'rose',accent:'#ff80b2',finish:'champagne',palette:Object.freeze(pink),
     armor:Object.freeze({rose:0xe52d83,pearl:0xe5e3e6,dark:0x1b1920,gold:0x998f9b,steel:0x85818d,suit:0x17171d,skin:0xe5adab,hair:0x8f3e70,visor:0x180e1b,lens:0xc22880,glow:0xff53a6,pale:0xfff6fa,cyan:0x9ce7de}),
     world:Object.freeze({background:0x302439,fog:0x423042,ground:0x292731,tile:0x33303d,structure:0x393442,lightStone:0x796673,armor:0xd96799,armorLight:0xf3b1cc,suit:0x292235,hair:0xf1a5cb,visor:0x251d39,monster:0x43345b,monsterElite:0x63415a,monsterFace:0x211d31,cyan:0x9fe6da,moon:0xe3b6c6,moonRing:0xc794bc,skyLight:0xcfb7db,groundLight:0x442737,sun:0xffd7da,rim:0x996acf,fence:0xff77ac,

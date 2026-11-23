@@ -1,3 +1,4 @@
+import {readNanoProfile} from './nano-forge.js';
 // Shared campaign travel and preparation. No renderer, DOM, network or combat imports.
 export const HIDEOUT_KEY='pink-wars-hideout-v1-';
 export const CHAPTER_ROUTES=Object.freeze({1:'vesper-level1-v7.html',2:'level2-test.html',3:'niveau3.html',4:'niveau4.html',5:'ligne9.html',6:'niveau6.html',7:'foret.html',8:'niveau8.html',9:'niveau9.html',10:'niveau10.html'});
@@ -22,7 +23,7 @@ export function readHideoutProfile(hero,storage=storageOrNull()){
  try{const s=JSON.parse(storage?.getItem(HIDEOUT_KEY+heroOf(hero))||'null');if(s?.version!==1){const p=freshHideoutProfile(),old=Math.min(10,Math.max(0,Math.floor(Number(storage?.getItem('pink-wars-last-cleared'))||0)));p.completed=Array.from({length:old},(_,i)=>i+1);p.lastChapter=Math.min(10,old+1);return p;}const p=freshHideoutProfile();
   p.completed=[...new Set((Array.isArray(s.completed)?s.completed:[]).filter(n=>Number.isInteger(n)&&CHAPTER_ROUTES[n]))].sort((a,b)=>a-b);p.lastChapter=chapter(s.lastChapter);
   p.owned=[...new Set((Array.isArray(s.owned)?s.owned:[]).filter(validIndex))];p.selectedWeapon=validIndex(s.selectedWeapon)?s.selectedWeapon:null;
-  p.armorLevel=Math.max(1,Math.min(10,Math.floor(Number(s.armorLevel)||1)));p.health=Math.max(1,Math.min(100,Number(s.health)||100));p.shield=Math.max(0,Math.min(200,Number(s.shield)||0));p.charges=Math.max(0,Math.min(4,Math.floor(Number(s.charges)||0)));
+  p.armorLevel=readNanoProfile(hero,storage).equippedSuit;p.health=Math.max(1,Math.min(100,Number(s.health)||100));p.shield=Math.max(0,Math.min(210,Number(s.shield)||0));p.charges=Math.max(0,Math.min(4,Math.floor(Number(s.charges)||0)));
   p.rested=s.rested===true;p.recharged=s.recharged===true;p.choice=['escort','proof'].includes(s.choice)?s.choice:null;p.preparedAt=Number.isFinite(s.preparedAt)?s.preparedAt:0;p.pendingLevel=CHAPTER_ROUTES[s.pendingLevel]?Number(s.pendingLevel):null;return p;
  }catch{return freshHideoutProfile();}
 }
@@ -50,7 +51,7 @@ export function chapterURL(level,{characterId='ghju',renderer=null,resume=false}
 export function historyForHero(profile){return HIDEOUT_HISTORY.filter(e=>profile.completed.includes(e.level)).map(e=>({...e,text:e.level===2?e.text+(profile.choice==='proof'?' Les archives HELIX ont été protégées.':profile.choice==='escort'?' Les prisonniers du convoi 03 ont été libérés.':''):e.text}));}
 export function prepareHideoutDeparture(game,{level,armorLevel=1,storage=storageOrNull(),now=Date.now()}={}){
  if(!CHAPTER_ROUTES[level]||!game?.player||game.player.hp<=0)return false;
- const p=readHideoutProfile(game.characterId,storage);p.owned=[...game.ownedWeapons].filter(i=>validIndex(i)&&game.isWeaponAvailable(i)&&game.nanoWeaponAllowed?.(i)!==false);p.selectedWeapon=game.weaponIndex;p.armorLevel=Math.min(Math.max(1,Math.floor(armorLevel)),Math.min(10,Math.max(1,...p.completed)+1));
+ const p=readHideoutProfile(game.characterId,storage);p.owned=[...game.ownedWeapons].filter(i=>validIndex(i)&&game.isWeaponAvailable(i)&&game.nanoWeaponAllowed?.(i)!==false);p.selectedWeapon=game.weaponIndex;p.armorLevel=game.nano?.profile.equippedSuit||1;
  p.health=game.player.hp;p.shield=game.player.shield||0;p.charges=game.charges||0;p.pendingLevel=Number(level);p.preparedAt=now;
  return saveHideoutProfile(game.characterId,p,storage);
 }
@@ -60,7 +61,7 @@ export function applyHideoutPreparation(game,{storage=storageOrNull()}={}){
  if(p.pendingLevel!==level||!p.preparedAt){game.hideoutPreparationChecked=true;return false;}
  for(const i of p.owned)if(game.isWeaponAvailable(i)&&game.nanoWeaponAllowed?.(i)!==false)game.ownedWeapons.add(i);
  if(p.selectedWeapon!==null&&game.ownedWeapons.has(p.selectedWeapon)&&game.isWeaponAvailable(p.selectedWeapon)&&game.nanoWeaponAllowed?.(p.selectedWeapon)!==false){game.weaponIndex=p.selectedWeapon;game.reloadRemaining=0;game.triggerHeld=false;}
- game.hideoutArmorLevel=p.armorLevel;
+ game.hideoutArmorLevel=game.nano?.profile.equippedSuit||1;
  if(p.rested){game.player.hp=100;game.player.shield=game.shieldCapacity||0;}
  if(p.recharged){game.player.shield=game.shieldCapacity||0;game.charges=Math.max(game.charges||0,p.charges);game.ammo=game.ammo.map((_,i)=>game.nanoWeapons[i].capacity);game.dual.ammo={left:12,right:12};}
  game.hideoutPreparationChecked=true;p.pendingLevel=null;saveHideoutProfile(game.characterId,p,storage);game.event?.('hideout-prepared',{weaponIndex:game.weaponIndex,armorLevel:p.armorLevel,rested:p.rested,recharged:p.recharged});return true;

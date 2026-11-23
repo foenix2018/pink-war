@@ -1,3 +1,4 @@
+import {readNanoProfile,equipNanoSuit,nanoRecipes} from './nano-forge.js';
 import * as T from './vendor/three.webgpu.min.js';
 import {WebGLRenderer} from './vendor/three.module.min.js';
 import {ArenaGame,WEAPONS,clamp} from './game-logic.js';
@@ -22,7 +23,7 @@ try{localStorage.setItem('pink-war-character',characterId);}catch{}
 document.body.classList.add('hideout-page');document.documentElement.style.setProperty('--accent',lylu?'#65bfff':'#ff6cae');
 for(const b of document.querySelectorAll('[data-hero]')){b.setAttribute('aria-pressed',String(b.dataset.hero===characterId));b.onclick=()=>{saveCurrent();const u=new URL(location.href);u.searchParams.set('character',b.dataset.hero);location.assign(u.href);};}
 let savedQuality='auto';try{const q=JSON.parse(localStorage.getItem('rosee-settings')||'{}').quality;if(['auto','low','balanced','high','performance'].includes(q))savedQuality=q;}catch{}
-let profile=readHideoutProfile(characterId),renderer,canvas=$('world'),scene,camera,overview,visit,art,game,navigation,rig,nanoFx,nanoPanel,nanoChambers,nanoUI=null,ready=false,view='overview',cameraYaw=0,cameraPitch=-.13,armorLevel=profile.armorLevel;
+let profile=readHideoutProfile(characterId),renderer,canvas=$('world'),scene,camera,overview,visit,art,game,navigation,rig,nanoFx,nanoPanel,nanoChambers,nanoUI=null,ready=false,view='overview',cameraYaw=0,cameraPitch=-.13,armorLevel=readNanoProfile(characterId).equippedSuit;
 let path=[],destination=null,near=null,opened=null,healing=null,clock=0,previous=0,pending=false,messageUntil=0,lastStatus='',moving=false;
 const keys=new Set(),touch={x:0,z:0},pads=createPinkWarsInput(),ray=new T.Raycaster(),mouse=new T.Vector2(),floor=new T.Plane(new T.Vector3(0,1,0),0),floorPoint=new T.Vector3();
 function message(text,seconds=4){$('notice').textContent=text;$('notice').hidden=false;messageUntil=performance.now()+seconds*1000;}
@@ -45,7 +46,7 @@ async function boot(){
   scene.add(new T.HemisphereLight(0xb5c6f2,0x302637,.95));const sun=new T.DirectionalLight(0xe3def2,2.5);sun.position.set(0,13,7);sun.castShadow=renderer.shadowMap.enabled;sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-14,right:14,top:14,bottom:-14,near:.5,far:42});sun.shadow.bias=-.0006;scene.add(sun);
   for(const [color,x,z,intensity]of [[0xff80ae,-7,-7,48],[0x72caff,7,-2,38]]){const light=new T.PointLight(color,intensity,18,2);light.position.set(x,3,z);scene.add(light);}
   overview=new T.OrthographicCamera(-15,15,15,-15,.05,230);overview.position.set(0,26,29);overview.lookAt(0,.2,-1);visit=new T.PerspectiveCamera(64,innerWidth/innerHeight,.05,180);camera=overview;
-  art=await loadHideoutArt(T,{onProgress:progress,low:graphics.phone||graphics.economy||graphics.artQuality==='low'});scene.add(art.root);navigation=createHideoutNavigation(art.layout);
+  art=await loadHideoutArt(T,{displayOutfits:false,onProgress:progress,low:graphics.phone||graphics.economy||graphics.artQuality==='low'});scene.add(art.root);navigation=createHideoutNavigation(art.layout);
    nanoChambers=createHideoutNanoChambers(T,{scene,locations:art.layout.showcase.outfits,low:graphics.phone||graphics.economy,onStatus:()=>nanoUI?.refresh()});
   const flat={height:()=>0,surfaces:()=>[],routes:[],lifts:[]},level=nextHideoutChapter(profile)||profile.lastChapter;
   game=new ArenaGame([...art.layout.colliders,...art.doorColliders],Math.random,flat,characterId);game.configureWeaponAccess({mode:'campaign',level});game.inHideout=true;game.grappleEnabled=false;game.enableArmorShield();game.nextWave=Infinity;game.toSpawn=0;game.invulnerable=Infinity;game.nano.placed=true;game.nano.plans=[];game.wave=1;
@@ -84,14 +85,14 @@ function openStation(id){
   }content.append(list);
  }else if(id==='workshop'){
   content.append(element('p',(lylu?'Cara · CAR-14':'Gaby · GAB-1')+' réassemble ton équipement avec les nanoparticules récupérées en mission.'));
-  nanoPanel=createNanoForgePanel({parent:content,getGame:()=>game,onRefresh:()=>{saveCurrent();rig?.model.setWeapon(game.weaponIndex);}});
+  nanoPanel=createNanoForgePanel({parent:content,getGame:()=>game,onRefresh:()=>{const changed=armorLevel!==game.nano.profile.equippedSuit;armorLevel=game.nano.profile.equippedSuit;rig?.model.setLevel(armorLevel);saveCurrent();rig?.model.setWeapon(game.weaponIndex);if(changed)void nanoChambers.inject(characterId,armorLevel);}});
   nanoPanel.refresh();
  }else if(id==='archive'){
   const past=historyForHero(profile);content.append(element('p','Le livre conserve les événements déjà vécus. Aucune révélation des chapitres à venir.'));
   if(!past.length)content.append(element('p','Aucun chapitre terminé pour le moment. Le premier récit sera archivé à ton retour de mission.'));
   for(const event of past){const card=element('article','','hub-archive');card.dataset.historyLevel=String(event.level);card.append(element('h3',String(event.level).padStart(2,'0')+' · '+event.title),element('p',event.text));content.append(card);}
  }else if(id==='outfits'){
-  const maximum=Math.min(10,Math.max(profile.lastChapter,...profile.completed.map(n=>n+1),1));
+  const maximum=game.nano.profile.suitStage;
   content.append(element('p','Les deux anciennes tenues sont remplacées par des centrifugeuses GHJU et LYLU. Injecte les nanites depuis le réservoir au sol : le vortex assemble l’armure réelle, puis la cape se tisse en dernier.'));
   const controls=element('section','','hub-nano-controls');
   const heroes=element('div','','hub-nano-heroes'),tiers=element('div','','hub-nano-tiers'),heroButtons={},tierButtons={};
@@ -110,6 +111,7 @@ function openStation(id){
   const inject=primary('INJECTER & FABRIQUER',async()=>{
    inject.disabled=true;status.textContent='Initialisation des modèles officiels…';
    const hero=forgeHero,tier=forgeTier;
+   if(hero===characterId&&tier>game.nano.profile.suitStage){if(!game.fabricateNano('suit:'+tier)){message(nanoRecipes(game).find(r=>r.id==='suit:'+tier)?.reason||'Plan et nanoparticules requis.',6);nanoUI?.refresh();return;}armorLevel=game.nano.profile.equippedSuit;rig?.model.setLevel(armorLevel);saveCurrent();}
    if(!await nanoChambers.inject(hero,tier))message('Modèle Shadow Unit indisponible. Réessaie.',6);
    nanoUI?.refresh();
   });
@@ -117,16 +119,17 @@ function openStation(id){
    const actual=nanoChambers.phase(forgeHero);if(!actual||!nanoChambers.recover(forgeHero))return;
    const level=NANO_ARMOR_TIERS[actual.tier-1].gameLevel;
    if(forgeHero!==characterId)message('Sas ouvert. Sélectionne '+forgeHero.toUpperCase()+' dans l’en-tête pour équiper cette tenue.',7);
-   else if(level>maximum)message('Sas ouvert pour inspection. Niveau '+level+' requis pour équiper cette tenue en mission.',7);
-   else{armorLevel=level;game.hideoutArmorLevel=level;rig?.model.setLevel(level);saveCurrent();nanoChambers.equip(forgeHero);message('Tenue '+actual.tier+' équipée et sauvegardée pour '+characterId.toUpperCase()+'.',6);}
+   else if(level>game.nano.profile.suitStage)message('Plan et fabrication à l’atelier requis avant d’équiper cette tenue.',7);
+   else{if(level!==game.nano.profile.equippedSuit&&!equipNanoSuit(game,level))return;armorLevel=game.nano.profile.equippedSuit;rig?.model.setLevel(level);saveCurrent();nanoChambers.equip(forgeHero);message('Tenue '+actual.tier+' équipée et sauvegardée pour '+characterId.toUpperCase()+'.',6);}
    nanoUI?.refresh();
   });
-  controls.append(heroes,tiers,material,meter,status,inject,recover);content.append(controls);
+  inject.dataset.nanoChamberInject='';recover.dataset.nanoChamberRecover='';controls.append(heroes,tiers,material,meter,status,inject,recover);content.append(controls);
   nanoUI={refresh(){
    const state=nanoChambers?.phase(forgeHero),selected=NANO_ARMOR_TIERS[forgeTier-1],phase=state?.phase||'idle';
    for(const [id,b]of Object.entries(heroButtons))b.setAttribute('aria-pressed',String(id===forgeHero));
    for(const [id,b]of Object.entries(tierButtons))b.setAttribute('aria-pressed',String(Number(id)===forgeTier));
-   material.textContent=selected.material+(selected.gameLevel>maximum?' · prévisualisation, niveau '+selected.gameLevel+' requis':' · équipement débloqué');
+   const recipe=nanoRecipes(game).find(r=>r.id==='suit:'+forgeTier),owned=forgeTier<=game.nano.profile.suitStage;
+   material.textContent=selected.material+(owned?' · tenue fabriquée':' · plan niveau '+selected.planLevel+' · '+selected.cost+' NP');
    meter.value=state?.progress||0;
    status.textContent=phase==='injecting'?'CENTRIFUGATION · '+Math.round((state?.progress||0)*100)+' %':
      phase==='loading'?'CHARGEMENT DES MODÈLES SHADOW UNIT…':
@@ -136,18 +139,19 @@ function openStation(id){
      phase==='equipped'?'TENUE ÉQUIPÉE · CHAMBRE VIDE':
      phase==='error'?'CHARGEMENT IMPOSSIBLE · RELANCER':
      'RÉSERVOIR PRÊT · CHAMBRE VIDE';
-   inject.disabled=phase==='injecting'||phase==='loading';
+   inject.disabled=phase==='injecting'||phase==='loading'||forgeHero===characterId&&!owned&&!recipe?.enabled;
+   inject.textContent=forgeHero!==characterId?'APERÇU · SANS FABRICATION':owned?'RECOMPOSER LA TENUE':'FABRIQUER · '+selected.cost+' NP';
    recover.disabled=!['ready','open'].includes(phase)||state?.tier!==forgeTier;
    recover.textContent=phase==='equipped'?'TENUE TRANSFÉRÉE':state?.doorOpen?'SAS OUVERT · ÉQUIPER':'OUVRIR LE SAS & ÉQUIPER';
   }};nanoUI.refresh();
   const details=element('details','','hub-nano-details');
-  details.append(element('summary','Progression détaillée originale · 10 modules'));
+  details.append(element('summary','Choisir une tenue fabriquée · 5 stades'));
   const list=element('div','','hub-list');
   for(const stage of ARMOR_STAGES){
    const b=element('button');b.dataset.hubArmor=String(stage.level);b.disabled=stage.level>maximum;
    b.setAttribute('aria-pressed',String(stage.level===armorLevel));
-   b.append(element('strong',stage.name),element('small',stage.addition+(b.disabled?' · progression requise':'')));
-   b.onclick=()=>{armorLevel=stage.level;game.hideoutArmorLevel=armorLevel;rig?.model.setLevel(armorLevel);saveCurrent();openStation('outfits');};list.append(b);
+   b.append(element('strong',stage.name),element('small',stage.addition+(b.disabled?' · plan niveau '+stage.chapter+' · '+stage.cost+' NP':' · fabriquée')));
+   b.onclick=()=>{if(stage.level!==game.nano.profile.equippedSuit&&!equipNanoSuit(game,stage.level))return;armorLevel=game.nano.profile.equippedSuit;rig?.model.setLevel(armorLevel);saveCurrent();openStation('outfits');};list.append(b);
   }
   details.append(list);content.append(details);
  }else if(id==='mission'){

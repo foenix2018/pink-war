@@ -1,10 +1,10 @@
 {
-  "triangles": 531968,
-  "batches": 92,
-  "vertices": 532105,
-  "downloadBytes": 5339247,
-  "materialBytes": 2758948,
+  "triangles": 237424,
+  "batches": 55,
+  "vertices": 297073,
+  "downloadBytes": 2141838,
+  "materialBytes": 32645,
   "companions": 2,
   "weapons": 11,
-  "outfits": 2
+  "outfits": 0
 }

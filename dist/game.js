@@ -310,10 +310,10 @@ for (const dialog of document.querySelectorAll('dialog')) {
   dialog.addEventListener('click', e => { if (e.target !== dialog || ['pause-dialog', 'end-dialog'].includes(dialog.id)) return; const r = dialog.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) closePanel(dialog); });
 }
 function showOutfitLevel(level) {
-  previewLevel=level;const equipment=equipmentForCharacter(level,character.id),current=Math.max(1,game.wave);
+  previewLevel=level;const equipment=equipmentForCharacter(level,character.id),current=game.equipment.level;
   $('outfit-title').textContent=equipment.name+'.';$('outfit-description').textContent=equipment.description;
-  $('outfit-count').textContent=`${String(level).padStart(2,'0')} / 10`;
-  $('outfit-status').textContent=level===current?'TENUE ACTUELLE':level>current?`APERÇU · AU NIVEAU ${level}`:'ÉTAPE PRÉCÉDENTE';
+  $('outfit-count').textContent=`${String(level).padStart(2,'0')} / 5`;
+  $('outfit-status').textContent=level===current?'TENUE ACTUELLE':level>(game.nano?.profile.suitStage||1)?`PLAN NIVEAU ${equipment.chapter} · ${equipment.cost} NP`:'TENUE FABRIQUÉE';
   for(const button of $('outfit-levels').children){const selected=Number(button.dataset.level)===level;button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));}
 }
 function openOutfit() {
@@ -325,14 +325,14 @@ function openOutfit() {
     const equipment=equipmentForCharacter(stage.level,character.id);
     const button=document.createElement('button');button.dataset.level=equipment.level;
     button.className='outfit-level';button.title=equipment.addition;
-    button.innerHTML=`<small>${String(equipment.level).padStart(2,'0')}</small><span>${equipment.name}</span>${equipment.level>Math.max(1,game.wave)?'<b>◇</b>':'<b>✓</b>'}`;
+    button.innerHTML=`<small>${String(equipment.level).padStart(2,'0')}</small><span>${equipment.name}</span>${equipment.level>game.equipment.level?'<b>◇</b>':'<b>✓</b>'}`;
     button.onclick=()=>showOutfitLevel(equipment.level);$('outfit-levels').append(button);
   }
-  showOutfitLevel(Math.max(1,game.wave));$('outfit-dialog').showModal();
+  showOutfitLevel(game.equipment.level);$('outfit-dialog').showModal();
 }
 function closeOutfit() {
   $('outfit-dialog').close();document.body.classList.remove('outfit-mode');world.setInspection(false);phase=outfitReturn;
-  world.camera.clearViewOffset();world.setEquipment(Math.max(1,game.wave));resetInput();lastTime=0;
+  world.camera.clearViewOffset();world.setEquipment(game.equipment.level);resetInput();lastTime=0;
   if(phase==='lobby')world.lobby(clock,Math.max(1,game.wave));
   else{world.sync(game,clock,0);updateCamera();if(phase==='paused')$('pause-dialog').showModal();else if(phase==='over')$('end-dialog').showModal();}
 }
@@ -667,7 +667,7 @@ function updateHud() {
     $('training-speed').textContent=!game.trainingActive?'Chronomètre arrêté':game.trainingLevel.number===5?`×${game.trainingMotionSpeed.toFixed(1)}`:`${Math.ceil(stage.remaining)} s avant la suite`;
   }
   updatePortalHUD();
-  const equipment=equipmentForCharacter(game.hideoutArmorLevel||game.wave,character.id);
+  const equipment=equipmentForCharacter(game.equipment.level,character.id);
   $('gear-label').textContent=`TENUE ${String(equipment.level).padStart(2,'0')} · ${equipment.name.toUpperCase()}`;
   // Shared combat HUD (same panels as M01 and M02); the legacy readouts below stay for their own logic.
   (combatHud ||= mountCombatHud({characterId:character.id,lobbyPage:true,onAction:armorTouch})).update(game);

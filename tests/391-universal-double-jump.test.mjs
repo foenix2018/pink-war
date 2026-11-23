@@ -1,3 +1,5 @@
+import {applyNanoLoadout} from '../dist/nano-forge.js';
+const ownDoubleJump=g=>{if(g.mode==='campaign'){Object.assign(g.nano.profile,{discovered:['tenue-2'],suitStage:2,equippedSuit:2});g.nano.profile.revision++;applyNanoLoadout(g);}};
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -5,7 +7,7 @@ import {ArenaGame} from '../dist/game-logic.js';
 import {createPinkWarsInput} from '../dist/level2-input.js';
 import * as T from '../dist/vendor/three.webgpu.min.js';
 import {batchStaticGeometry} from '../dist/static-geometry-batch.js';
-const sandbox=(hero,mode,level)=>{const g=new ArenaGame([]);g.reset(hero);g.configureWeaponAccess({mode,level});g.nextWave=Infinity;g.toSpawn=0;return g;};
+const sandbox=(hero,mode,level)=>{const g=new ArenaGame([]);g.reset(hero);g.configureWeaponAccess({mode,level});ownDoubleJump(g);g.nextWave=Infinity;g.toSpawn=0;return g;};
 function verify(g,dt){
  g.step(dt,{jump:true,jumpPressed:true});assert.equal(g.player.grounded,false);g.step(dt,{jump:true});assert.equal(g.player.airJumps,0,'holding the first press never spends the second jump');
  g.drainEvents();g.step(dt,{jump:true,jumpPressed:true});assert.equal(g.player.airJumps,1);assert.ok(g.player.verticalSpeed>0);assert.equal(g.drainEvents().filter(e=>e.type==='jump'&&e.kind==='double').length,1,'one edge across all low-FPS simulation slices');
@@ -28,7 +30,7 @@ test('every playable campaign adapter, arena and range forwards the press indepe
  assert.match(read('game.js'),/jump,jumpPressed,crouchToggle/);assert.match(read('vesper-level1-v7.html'),/jumpPressed:jumpQueued,jump:jumpQueued\|\|padJump/);assert.match(read('mission-xr.js'),/jump:down\(rp\?\.buttons\[4\]\),jumpPressed:jump/);assert.match(read('level2-input.js'),/state\.jump=false/);
 });
 for(const [n,file]of [[3,'m03-layout'],[4,'m04-layout'],[5,'ligne9-layout'],[6,'m06-layout'],[7,'m07-layout'],[8,'m08-layout'],[9,'m09-layout'],[10,'m10-layout']])test('actual chapter '+n+' spawn keeps the shared second impulse above its own floor',async()=>{
- const L=await import('../dist/'+file+'.js');let obstacles,traversal;if(n===3){const S=await import('../dist/m03-sector.js'),meta=JSON.parse(readFileSync(new URL('../dist/assets/m03/vesper-sector.json',import.meta.url)));obstacles=S.sectorObstacles(meta);traversal=S.sectorTraversal(meta);}else{obstacles=L.buildCollisions();traversal=L.createTraversal();}const g=new ArenaGame(obstacles,()=>.5,traversal,'lylu');g.nextWave=Infinity;g.toSpawn=0;g.configureWeaponAccess({mode:'campaign',level:n});const p=L.START;Object.assign(g.player,{x:p.x,z:p.z,elevation:g.surfaceHeight(p.x,p.z),grounded:true});
+ const L=await import('../dist/'+file+'.js');let obstacles,traversal;if(n===3){const S=await import('../dist/m03-sector.js'),meta=JSON.parse(readFileSync(new URL('../dist/assets/m03/vesper-sector.json',import.meta.url)));obstacles=S.sectorObstacles(meta);traversal=S.sectorTraversal(meta);}else{obstacles=L.buildCollisions();traversal=L.createTraversal();}const g=new ArenaGame(obstacles,()=>.5,traversal,'lylu');g.nextWave=Infinity;g.toSpawn=0;g.configureWeaponAccess({mode:'campaign',level:n});ownDoubleJump(g);const p=L.START;Object.assign(g.player,{x:p.x,z:p.z,elevation:g.surfaceHeight(p.x,p.z),grounded:true});
  const floor=g.player.elevation;assert.ok(Number.isFinite(floor));g.step(1/60,{jump:true,jumpPressed:true});g.step(1/60,{jump:true});g.step(1/60,{jump:true,jumpPressed:true});assert.equal(g.player.airJumps,1);assert.ok(g.player.elevation>floor);assert.ok(g.player.verticalSpeed>0);
 });
 test('static batching preserves real world geometry and UVs while keeping glass and moving groups separate',()=>{

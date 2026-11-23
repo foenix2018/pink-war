@@ -1,13 +1,8 @@
 // Pink Wars · two native 3D nano-forges in the hideout suit room.
 // No external viewer, iframe, downloaded GLB or surrogate armour: the meshes
 // are the same Shadow Unit soldiers installed by level2-player.js.
-export const NANO_ARMOR_TIERS=Object.freeze([
-  {tier:1,gameLevel:1,name:'Tissu technique + blanc',material:'Tissu renforcé / casque léger'},
-  {tier:2,gameLevel:3,name:'Céramique',material:'Plaques céramiques / casque composite'},
-  {tier:3,gameLevel:5,name:'Titane',material:'Plaques de titane / casque renforcé'},
-  {tier:4,gameLevel:7,name:'Carbotanium',material:'Coque composite sombre / casque carbotanium'},
-  {tier:5,gameLevel:10,name:'Composite MAX',material:'Carbotanium + Kevlar + céramique / cape finale'}
-]);
+import {ARMOR_STAGES} from './armor-progression.js';
+export const NANO_ARMOR_TIERS=Object.freeze(ARMOR_STAGES.map(s=>Object.freeze({tier:s.level,gameLevel:s.level,name:s.name,material:s.level===5?'Carbonatium + Kevlar + céramique':s.name,planLevel:s.chapter,cost:s.cost})));
 
 const clamp01=x=>Math.min(1,Math.max(0,x));
 const smooth=x=>{x=clamp01(x);return x*x*(3-2*x);};
@@ -124,6 +119,7 @@ export function createHideoutNanoChambers(T,{scene,locations,low=false,onStatus=
   model.root.updateWorldMatrix(true,true);
  }
  function applyMaterialProgression(cell){
+  if(cell.rig.model.shadowUnit?.outfits)return;
   // White ceramic-looking plates gradually darken to the exact canonical
   // graphite/riveted Shadow Unit finish at tier five. Fabric, visor, glowing
   // seams and character identity colours remain untouched.
@@ -181,9 +177,10 @@ export function createHideoutNanoChambers(T,{scene,locations,low=false,onStatus=
     rig.model.root.visible=false;
     // Await the actual Blender cloak, tactical belt and slung rifle: they must
     // not flash into the room partway through the formation animation.
-    await rig.model.shadowUnit?.gear?.ready;
+    await Promise.all([rig.model.shadowUnit?.gear?.ready,rig.model.shadowUnit?.suit?.ready,rig.model.shadowUnit?.outfits?.ready]);
+    if(rig.model.actor&&rig.kit){const{createGlove}=await import('./hands.js');const{poseUnarmedForInspection}=await import('./rlh-firefighter.js');c.gloves=[createGlove(rig.kit.gloves,{mirror:true,sleeve:false,arm:false}),createGlove(rig.kit.gloves,{sleeve:false,arm:false})];rig.model.root.add(...c.gloves);c.pose=()=>poseUnarmedForInspection(rig.model,c.gloves);}
     rig.model.setLevel(NANO_ARMOR_TIERS[c.tier-1].gameLevel);
-    rig.model.animate(0,false,0,0,0,0,{ground:()=>0,airborne:false,crouched:false});
+    rig.model.animate(0,false,0,0,0,0,{ground:()=>0,airborne:false,crouched:false});c.pose?.();
     alignModelOnDeck(c);
     applyMaterialProgression(c);
     collectArmor(c);
@@ -200,8 +197,8 @@ export function createHideoutNanoChambers(T,{scene,locations,low=false,onStatus=
   c.tier=tier;c.age=0;c.phase='loading';c.targetDoor=0;
   onStatus();
   try{await ensure(hero);}catch{c.phase='error';onStatus();return false;}
-  // The existing model retains the real ten-step armour progression internally.
-  c.rig.model.setLevel(NANO_ARMOR_TIERS[tier-1].gameLevel);
+  // Material stage and actual equipment use the same five-step canonical progression.
+  c.rig.model.setLevel(NANO_ARMOR_TIERS[tier-1].gameLevel);c.pose?.();
   alignModelOnDeck(c);
   applyMaterialProgression(c);
   collectArmor(c);c.rig.model.root.visible=false;c.phase='idle';onStatus();return true;
@@ -367,7 +364,7 @@ export function createHideoutNanoChambers(T,{scene,locations,low=false,onStatus=
 
  return{root,prepare,inject,recover,equip,close,phase,update,
   snapshot:()=>Object.fromEntries([...cells.keys()].map(id=>[id,phase(id)])),
-  dispose(){root.removeFromParent();for(const c of cells.values())c.rig?.dispose();
+  dispose(){root.removeFromParent();for(const c of cells.values()){for(const g of c.gloves||[])g.userData.dispose();c.rig?.dispose();}
    for(const geometry of [particleShape,ringGeo,tubeShape,doorShape])geometry.dispose();
    for(const material of [black,metal,glass,tankGlass])material.dispose();
    for(const c of cells.values()){

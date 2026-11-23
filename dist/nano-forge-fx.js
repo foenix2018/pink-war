@@ -8,7 +8,7 @@ export function createNanoForgeFX(T,{scene,camera,getWeapon=()=>null,workshopAva
  const shards=new T.InstancedMesh(shardGeometry,steel,192),cores=new T.InstancedMesh(particleGeometry,glow,64),swarm=new T.InstancedMesh(particleGeometry,glow,96);
  for(const mesh of [shards,cores,swarm]){mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);mesh.frustumCulled=false;mesh.count=0;root.add(mesh);}
  const baseGeometry=new T.CylinderGeometry(.23,.28,.07,12),stemGeometry=new T.CylinderGeometry(.045,.07,.23,10),caseGeometry=new T.CylinderGeometry(.36,.36,.055,6).rotateX(Math.PI/2),screenGeometry=new T.PlaneGeometry(.4,.46),ringGeometry=new T.TorusGeometry(.09,.008,5,20);
- const plans=new Map(),bursts=[],dummy=new T.Object3D(),center=new T.Vector3();let lastMessageUntil=0,collectValue=0,craftUntil=-100;
+ const plans=new Map(),bursts=[],dummy=new T.Object3D(),center=new T.Vector3();let lastMessageUntil=0,collectValue=0,craftUntil=-100,craftSuit=false;
  const doc=globalThis.document,notice=doc?.createElement('aside');
  if(notice){notice.className='pw-nano-notice';notice.hidden=true;notice.setAttribute('role','status');notice.setAttribute('aria-live','polite');notice.innerHTML='<strong></strong><small></small><button type="button">Atelier nano →</button>';notice.querySelector('button').onpointerdown=e=>e.stopPropagation();notice.querySelector('button').onclick=e=>{e.stopPropagation();doc.dispatchEvent(new CustomEvent('pw-open-nanoforge'));notice.hidden=true;};doc.body.append(notice);}
  function message(title,detail='',duration=5){if(!notice)return;notice.querySelector('strong').textContent=title;notice.querySelector('small').textContent=detail;notice.hidden=!!doc.querySelector('.pw-gear-open');lastMessageUntil=performance.now()+duration*1000;}
@@ -32,7 +32,7 @@ export function createNanoForgeFX(T,{scene,camera,getWeapon=()=>null,workshopAva
   handle(e){
    if(e.type==='nano-plan'){message(e.companion+' · '+e.name,e.story+(workshopAvailable?' · Portrait du compagnon → Atelier nano.':' · Plan conservé pour le prochain chapitre de combat.'),8);if(notice)notice.querySelector('button').hidden=!workshopAvailable;}
    else if(e.type==='nano-collected'){if(performance.now()>lastMessageUntil)collectValue=0;collectValue+=e.value;message('+'+collectValue+' nanoparticules','Réserve : '+e.balance+' NP · récupérées sur les débris.',3);if(bursts.length>=4)bursts.shift();bursts.push({x:e.x,y:e.y,z:e.z,until:0,age:0});}
-   else if(e.type==='nano-crafted'){craftUntil=1.8;message(e.companion+' · '+e.name,'Les nanoparticules réassemblent ton équipement.',5);}
+   else if(e.type==='nano-crafted'){craftUntil=1.8;craftSuit=!!e.suitStage;message(e.companion+' · '+e.name,'Les nanoparticules réassemblent ton équipement.',5);}
    else if(e.type==='nano-error')message('Fabrication suspendue',e.message,7);
   },
   update(game,dt){
@@ -43,9 +43,9 @@ export function createNanoForgeFX(T,{scene,camera,getWeapon=()=>null,workshopAva
    shards.count=n.drops.length*3;cores.count=n.drops.length;
    for(let i=0;i<n.drops.length;i++){const d=n.drops[i];for(let j=0;j<3;j++){const a=d.id*2.4+j*2.1;instance(shards,i*3+j,d.x+Math.sin(a)*.16,d.y+.08+j*.025,d.z+Math.cos(a)*.16,.07,.035,.11,a);}const pulse=.045+.012*Math.sin(game.time*4+i);instance(cores,i,d.x,d.y+.2,d.z,pulse,pulse,pulse);}
    shards.instanceMatrix.needsUpdate=true;cores.instanceMatrix.needsUpdate=true;
-   const at=getWeapon();if(at?.getWorldPosition)at.getWorldPosition(center);else center.set(game.player.x,(game.player.elevation||0)+1.1,game.player.z);
+   const at=craftSuit?null:getWeapon();if(at?.getWorldPosition)at.getWorldPosition(center);else center.set(game.player.x,(game.player.elevation||0)+1.1,game.player.z);
    craftUntil-=dt;swarm.count=0;
-   if(craftUntil>0)for(let i=0;i<64;i++){const u=i/64,a=i*2.399+game.time*4.2,r=.18+.1*Math.sin(a*1.3),s=.004+.006*Math.sin(Math.PI*Math.min(1,craftUntil/1.8));instance(swarm,swarm.count++,center.x+Math.cos(a)*r,center.y+(u-.5)*.48,center.z+Math.sin(a)*r,s,s,s);}
+   if(craftUntil>0)for(let i=0;i<64;i++){const u=i/64,a=i*2.399+game.time*4.2,r=(craftSuit?.34:.18)+.1*Math.sin(a*1.3),s=.004+.006*Math.sin(Math.PI*Math.min(1,craftUntil/1.8));instance(swarm,swarm.count++,center.x+Math.cos(a)*r,center.y+(u-.5)*(craftSuit?1.5:.48),center.z+Math.sin(a)*r,s,s,s);}
    for(let i=bursts.length-1;i>=0;i--){const b=bursts[i];b.age+=dt;if(b.age>.65){bursts.splice(i,1);continue;}const u=b.age/.65;for(let j=0;j<8;j++){const a=j*.785+u*5,s=.01*(1-u)+.002;instance(swarm,swarm.count++,b.x*(1-u)+game.player.x*u+Math.cos(a)*.18*(1-u),b.y*(1-u)+((game.player.elevation||0)+1.1)*u,b.z*(1-u)+game.player.z*u+Math.sin(a)*.18*(1-u),s,s,s);}}
    swarm.instanceMatrix.needsUpdate=true;
   },

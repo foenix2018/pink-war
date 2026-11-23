@@ -150,9 +150,19 @@ export function poseUnarmedForInspection(model,gloves,dt=.016,{mirrorFromRight=t
     glove.userData.animate({relax:.85},dt);
     root.updateMatrixWorld(true);
     const p=root.worldToLocal(hand.getWorldPosition(new T.Vector3()));
-    glove.quaternion.copy(root.getWorldQuaternion(new T.Quaternion()).invert()
-      .multiply(hand.getWorldQuaternion(new T.Quaternion()))
-      .multiply(glove.userData.rlh.quaternion.clone().invert()));
+    // The native hand's bind roll belongs to its weapon pose. A relaxed
+    // inspection hand needs fingers down, thumb forward (-Z), palm inward.
+    // RLH's own anatomical frame is +Y fingers, -X thumb, +Z knuckles.
+    // Reflect once in character space: the nested mirrored adapter otherwise
+    // reverses the left palm a second time.
+    const native=glove.userData.rlh;
+    native.scale.x=Math.abs(native.scale.x);
+    const anatomical=new T.Matrix4().makeBasis(
+      new T.Vector3(0,0,1),new T.Vector3(0,-1,0),new T.Vector3(1,0,0));
+    const adapter=new T.Matrix4().makeRotationFromQuaternion(
+      new T.Quaternion().setFromRotationMatrix(anatomical).multiply(native.quaternion.clone().invert()));
+    if(i===0)adapter.premultiply(new T.Matrix4().makeScale(-1,1,1));
+    adapter.decompose(new T.Vector3(),glove.quaternion,glove.scale);
     glove.userData.setBasePosition(p.sub(new T.Vector3(...GRIP.wrist)
       .multiply(glove.scale).applyQuaternion(glove.quaternion)).toArray());
     glove.visible=true;

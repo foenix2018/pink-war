@@ -1,6 +1,8 @@
+import {ARMOR_STAGES,suitStage} from './armor-progression.js';
 // Campaign nanofabrication. No renderer, DOM or circular combat imports.
 export const NANO_STORAGE_PREFIX='pink-wars-nanoforge-v1-';
 export const NANO_BLUEPRINTS=Object.freeze([
+ ...ARMOR_STAGES.slice(1).map(s=>({id:'tenue-'+s.level,level:s.chapter,name:'Plan de tenue · '+s.name,source:({2:'Dispensaire · maintenance',3:'Ligne 9 · atelier',4:'Jardins · archives Biotech',5:'Chapitre 15 · laboratoire de blindage'})[s.level],suit:s.level,cost:s.cost,story:s.addition})),
  {id:'matrice',level:1,name:'Matrice de manipulation nanométrique',source:'Archives du laboratoire',story:'Les nanites d’ORDRE peuvent réassembler notre matériel. Récupère-les sur les machines détruites.'},
  {id:'nexus',level:1,name:'Plan NEXUS V9',source:'Atelier de maintenance',weapon:1,cost:90},
  {id:'capaciteur',level:2,name:'Condensateur de bouclier',source:'Dispensaire · maintenance',story:'Une matrice médicale pour densifier le bouclier sans alourdir l’armure.'},
@@ -32,9 +34,10 @@ const SITE={
 };
 const integer=(v,max=1e8)=>Number.isFinite(v)?Math.max(0,Math.min(max,Math.floor(v))):0;
 export const nanoCompanion=hero=>hero==='lylu'?'Cara · CAR-14':'Gaby · GAB-1';
-export function freshNanoProfile(){return{version:1,revision:0,balance:0,discovered:[],crafted:[],upgrades:{},configurations:{},totalCollected:0};}
+export function freshNanoProfile(){return{version:1,revision:0,balance:0,discovered:[],crafted:[],upgrades:{},configurations:{},totalCollected:0,suitVersion:1,suitStage:1,equippedSuit:1};}
 export function normaliseNanoProfile(value){
  const p=freshNanoProfile();if(!value||value.version!==1)return p;
+ let manufactured=1;if(value.suitVersion===1)for(const stage of ARMOR_STAGES.slice(1)){if(stage.level!==manufactured+1||!value.discovered?.includes('tenue-'+stage.level)||integer(value.suitStage,5)<stage.level)break;manufactured=stage.level;}p.suitStage=manufactured;p.equippedSuit=Math.min(manufactured,suitStage(value.equippedSuit||manufactured));
  p.balance=integer(value.balance);p.totalCollected=integer(value.totalCollected);p.revision=integer(value.revision);
  p.discovered=NANO_BLUEPRINTS.filter(b=>value.discovered?.includes(b.id)).map(b=>b.id);
  p.crafted=NANO_BLUEPRINTS.filter(b=>Number.isInteger(b.weapon)&&value.crafted?.includes(b.weapon)&&p.discovered.includes(b.id)).map(b=>b.weapon);
@@ -56,7 +59,7 @@ export function configureNanoForge(game,{storage=browserStorage()}={}){
  const campaign=game.mode==='campaign',hero=game.characterId==='lylu'?'lylu':'ghju',previous=game.nano;
  if(previous?.hero===hero&&previous.campaign===campaign&&previous.level===game.missionLevel)return previous;
  const profile=campaign?readNanoProfile(hero,storage):freshNanoProfile();
- if(!campaign){profile.balance=1500;profile.discovered=NANO_BLUEPRINTS.map(b=>b.id);}
+ if(!campaign){profile.balance=1500;profile.discovered=NANO_BLUEPRINTS.map(b=>b.id);profile.suitStage=5;profile.equippedSuit=5;}
  const level=game.missionLevel||1;
  game.nano={hero,campaign,level,profile,storage:campaign?storage:null,drops:[],plans:[],placed:false,saveOK:true,serial:0,revisionApplied:-1,weaponCache:null};
  applyNanoLoadout(game);return game.nano;
@@ -73,13 +76,14 @@ export function discoverNanoBlueprint(game,id){
 }
 export function nanoRecipes(game){
  const n=game.nano;if(!n)return[];const p=n.profile,w=game.weaponIndex,alive=game.state==='playing'&&game.player.hp>0;
+ const outfits=ARMOR_STAGES.slice(1).map(s=>{const known=p.discovered.includes('tenue-'+s.level),owned=p.suitStage>=s.level;const reason=owned?'Tenue fabriquée':!known?'Plan à découvrir · niveau '+s.chapter:p.suitStage!==s.level-1?'Fabriquer d’abord le stade '+(s.level-1):!game.inHideout?'Assemblage à l’atelier de la planque':p.balance<s.cost?'Nanoparticules insuffisantes':'';return{id:'suit:'+s.level,blueprint:'tenue-'+s.level,name:'Tenue '+s.level+' / 5 · '+s.name,detail:s.addition,level:s.chapter,cost:s.cost,known,rank:owned?1:0,max:1,reason,enabled:alive&&known&&!owned&&p.suitStage===s.level-1&&!!game.inHideout&&p.balance>=s.cost};});
  const weapons=NANO_BLUEPRINTS.filter(b=>Number.isInteger(b.weapon)).map(b=>{
   const owned=game.ownedWeapons.has(b.weapon),known=p.discovered.includes(b.id),allowed=game.isWeaponAvailable(b.weapon);
   return{id:'create:'+b.id,name:'Fabriquer '+(game.nanoWeapons?.[b.weapon]?.name||b.name.replace('Plan ','')),detail:'Assemblage par '+nanoCompanion(n.hero)+'. Arme ajoutée à l’inventaire.',blueprint:b.id,known,level:b.level,cost:b.cost,rank:owned?1:0,max:1,reason:!known?'Plan à découvrir · niveau '+b.level:!allowed?'Disponible au niveau '+b.level:owned?'Déjà dans l’inventaire':p.balance<b.cost?'Nanoparticules insuffisantes':'',enabled:alive&&known&&allowed&&!owned&&p.balance>=b.cost};
  });
- return[...NANO_RECIPES.filter(r=>!(r.weapon&&game.nanoWeapons?.[w]?.melee&&r.id==='reload')).map(r=>{
-  const rank=p.upgrades[upgradeKey(r,w)]||0,known=p.discovered.includes(r.blueprint),cost=r.cost*(rank+1),blueprint=NANO_BLUEPRINTS.find(b=>b.id===r.blueprint),max=rank>=r.max;
-  return{...r,rank,cost,known,level:blueprint.level,reason:!known?'Plan à découvrir · niveau '+blueprint.level:max?'Amélioration maximale':p.balance<cost?'Nanoparticules insuffisantes':'',enabled:alive&&known&&!max&&p.balance>=cost};
+ return[...outfits,...NANO_RECIPES.filter(r=>!(r.weapon&&game.nanoWeapons?.[w]?.melee&&r.id==='reload')).map(r=>{
+  const required=({shield:2,regen:2,grapple:4})[r.id]||1,locked=p.equippedSuit<required,rank=p.upgrades[upgradeKey(r,w)]||0,known=p.discovered.includes(r.blueprint),cost=r.cost*(rank+1),blueprint=NANO_BLUEPRINTS.find(b=>b.id===r.blueprint),max=rank>=r.max;
+  return{...r,rank,cost,known,level:blueprint.level,reason:locked?'Tenue de stade '+required+' requise':!known?'Plan à découvrir · niveau '+blueprint.level:max?'Amélioration maximale':p.balance<cost?'Nanoparticules insuffisantes':'',enabled:alive&&!locked&&known&&!max&&p.balance>=cost};
  }),...weapons];
 }
 export function fabricateNano(game,id){
@@ -87,10 +91,11 @@ export function fabricateNano(game,id){
  // Persist the whole purchase before applying it. A failed write never spends resources.
  const before=structuredClone(n.profile);
  n.profile.balance-=recipe.cost;
- if(id.startsWith('create:')){const b=NANO_BLUEPRINTS.find(b=>b.id===recipe.blueprint);n.profile.crafted.push(b.weapon);}
+ if(id.startsWith('suit:')){n.profile.suitStage=Number(id.split(':')[1]);n.profile.equippedSuit=n.profile.suitStage;}
+ else if(id.startsWith('create:')){const b=NANO_BLUEPRINTS.find(b=>b.id===recipe.blueprint);n.profile.crafted.push(b.weapon);}
  else{const r=NANO_RECIPES.find(r=>r.id===id);n.profile.upgrades[upgradeKey(r,game.weaponIndex)]=(n.profile.upgrades[upgradeKey(r,game.weaponIndex)]||0)+1;}
  if(!persist(game)){n.profile=before;game.event('nano-error',{message:'Sauvegarde indisponible : fabrication annulée, nanoparticules conservées.'});return false;}
- applyNanoLoadout(game);game.nanoCraftAt=game.time;game.event('nano-crafted',{name:recipe.name,cost:recipe.cost,companion:nanoCompanion(n.hero),weaponIndex:game.weaponIndex});return true;
+ applyNanoLoadout(game);game.nanoCraftAt=game.time;game.event('nano-crafted',{name:recipe.name,cost:recipe.cost,companion:nanoCompanion(n.hero),weaponIndex:game.weaponIndex,suitStage:id.startsWith('suit:')?n.profile.equippedSuit:null});return true;
 }
 export function setNanoConfiguration(game,mode){
  const n=game.nano,index=game.weaponIndex;if(!n||game.state!=='playing'||game.player.hp<=0||!['impact','precision'].includes(mode)||mode==='precision'&&!n.profile.upgrades['precision:'+index]||(n.profile.configurations[index]||'impact')===mode)return false;
@@ -103,8 +108,9 @@ export function applyNanoLoadout(game){
  for(const i of n.profile.crafted)if(game.isWeaponAvailable(i)&&game.nanoWeaponAllowed?.(i)!==false)game.ownedWeapons.add(i);
  if(n.revisionApplied===n.profile.revision)return;n.revisionApplied=n.profile.revision;n.weaponCache=null;
  const u=n.profile.upgrades;
+ applySuitLoadout(game);
  game.nanoStats={shieldBonus:10*(u.shield||0),shieldRate:1+.15*(u.regen||0),grappleSpeed:1+.1*(u.grapple||0),armor:1-.05*(u.armor||0),salvage:.15*(u.salvage||0)};
- if(game.shieldCapacity>0)game.shieldCapacity=(game.baseShieldCapacity||60)+game.nanoStats.shieldBonus;
+ if(game.shieldCapacity>0)game.shieldCapacity=game.baseShieldCapacity+game.nanoStats.shieldBonus;
 }
 export function nanoWeapon(game,base){
  const n=game.nano;if(!n)return base;const key=game.weaponIndex+':'+n.profile.revision;if(n.weaponCache?.key===key)return n.weaponCache.value;
@@ -156,5 +162,21 @@ export function updateNanoForge(game,trace){
  }
 }
 export function nanoSnapshot(game){
- const n=game?.nano;return n?{hero:n.hero,companion:nanoCompanion(n.hero),campaign:n.campaign,saveOK:n.saveOK,balance:n.profile.balance,totalCollected:n.profile.totalCollected,discovered:[...n.profile.discovered],crafted:[...n.profile.crafted],upgrades:{...n.profile.upgrades},configurations:{...n.profile.configurations},plans:n.plans.map(p=>({...p,blueprints:[...p.blueprints]})),drops:n.drops.map(d=>({...d})),stats:{...game.nanoStats}}:null;
+ const n=game?.nano;return n?{hero:n.hero,companion:nanoCompanion(n.hero),campaign:n.campaign,saveOK:n.saveOK,balance:n.profile.balance,totalCollected:n.profile.totalCollected,discovered:[...n.profile.discovered],crafted:[...n.profile.crafted],suitStage:n.profile.suitStage,equippedSuit:n.profile.equippedSuit,upgrades:{...n.profile.upgrades},configurations:{...n.profile.configurations},plans:n.plans.map(p=>({...p,blueprints:[...p.blueprints]})),drops:n.drops.map(d=>({...d})),stats:{...game.nanoStats}}:null;
+}
+
+// This profile, not the selected mission or an old cosmetic choice, owns campaign abilities.
+export function applySuitLoadout(game){
+ const n=game.nano;if(!n)return;const stage=n.campaign?suitStage(n.profile.equippedSuit):suitStage(n.profile.equippedSuit||5),spec=ARMOR_STAGES[stage-1];
+ game.suitStage=stage;game.hideoutArmorLevel=stage;game.suitStats=spec;
+ Object.assign(game.player,{doubleJumpEnabled:stage>=2,jetpackEnabled:stage>=3});
+ if(stage<3){game.player.jetpackArmed=false;game.player.jetpackActive=false;}
+ game.grappleEnabled=stage>=4&&!game.inHideout;
+ if(!game.grappleEnabled&&game.grapple?.phase!=='idle'){game.releaseGrapple?.();game.grapple.phase='idle';}
+ game.baseShieldCapacity=spec.shield;game.shieldCapacity=spec.shield+(spec.shield?(game.nanoStats?.shieldBonus||0):0);
+ game.player.shield=Math.min(game.player.shield||0,game.shieldCapacity);if(stage<2)game.player.shieldDeployed=false;
+}
+export function equipNanoSuit(game,stage){
+ const n=game.nano;stage=suitStage(stage);if(!n||!game.inHideout||game.state!=='playing'||game.player.hp<=0||stage>n.profile.suitStage||stage===n.profile.equippedSuit)return false;
+ const before=structuredClone(n.profile);n.profile.equippedSuit=stage;if(!persist(game)){n.profile=before;return false;}applyNanoLoadout(game);game.event('nano-equipped',{stage,name:ARMOR_STAGES[stage-1].name});return true;
 }

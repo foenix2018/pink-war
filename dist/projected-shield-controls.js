@@ -19,7 +19,7 @@ export function createProjectedShieldControl({getGame,canControl=()=>true}={}){
  const button=document.createElement('button');button.id='pw-projected-shield';button.type='button';button.className='pw-hud-shield-direct pw-glass';button.hidden=true;button.innerHTML='<svg viewBox="0 0 24 28" aria-hidden="true"><path d="M12 2 22 6v9c0 5-5 9-10 11C7 24 2 20 2 15V6Z"/><path d="m7 14 3 3 7-8"/></svg><span class="pw-shield-count" aria-hidden="true"></span><kbd aria-hidden="true">H</kbd>';document.body.append(button);
  let disposed=false,frame=0,pads=new Map();
  const hud=()=>document.querySelector('.pw-hud');
- const active=()=>{const g=getGame?.(),root=hud();return !!(g?.projectedShieldsEnabled&&g.state==='playing'&&g.player.hp>0&&canControl()&&!document.hidden&&!document.querySelector('dialog[open]')&&!(root?.hidden||root?.classList.contains('pw-gear-open'))&&!document.body.matches('.xr-mode,.in-xr'));};
+ const active=()=>{const g=getGame?.(),root=hud();return !!(g?.projectedShieldsEnabled&&g.suitStats?.level!==1&&g.state==='playing'&&g.player.hp>0&&canControl()&&!document.hidden&&!document.querySelector('dialog[open]')&&!(root?.hidden||root?.classList.contains('pw-gear-open'))&&!document.body.matches('.xr-mode,.in-xr'));};
  const toggle=()=>{if(active())getGame().toggleProjectedShield();sync();};
  const key=e=>{if(e.code!=='KeyH'||e.repeat||e.ctrlKey||e.metaKey||e.altKey||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName)||e.target?.isContentEditable)return;if(active()){e.preventDefault();toggle();}};
  const pointer=e=>{e.preventDefault();e.stopPropagation();toggle();};button.addEventListener('pointerdown',pointer);button.addEventListener('click',e=>{if(e.detail===0)toggle();});window.addEventListener('keydown',key);
