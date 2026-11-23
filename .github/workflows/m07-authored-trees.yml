@@ -1,0 +1,26 @@
+name: Pink War - M07 authored trees
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dist/m07-source-trees.js'
+      - 'dist/foret.js'
+      - 'tests/427-m07-authored-trees.test.mjs'
+      - '.github/workflows/m07-authored-trees.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  geometry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Verify source tree module syntax
+        run: node --check dist/m07-source-trees.js
+      - name: Verify both species and LODs
+        run: node --test tests/427-m07-authored-trees.test.mjs
