@@ -1,3 +1,4 @@
+import { createChapterHorizon } from './chapter-horizon.js';
 import {applyFPSCameraMotion} from './fps-motion.js';
 import {rendererBackend,rendererLabel} from './renderer-policy.js';
 import {createElectricPortalSet} from './electric-portal.js';
@@ -119,6 +120,7 @@ export async function createVesperCombat({canvas,staticMesh,portalMesh,signAtlas
   onProgress(.36,'Construction de Vesper');
   const missionArt=createCampaignArt(T,scene,null,{quality:profile.artQuality==='low'?'low':requestedQuality,photographic:true,webgpu:!!renderer.backend?.isWebGPUBackend});
   missionArt.setVisible(true);
+  createChapterHorizon(T,scene,{chapter:1,low:profile.artQuality==='low',webgpu:!!renderer.backend?.isWebGPUBackend});
   const dressing=missionArt.dressing;
   const salvage=await createM01Salvage(T,missionArt.root,{performance:profile.artQuality==='low'});
   onProgress(.58,'Objets et surfaces du secteur');

@@ -1,3 +1,4 @@
+import { radialGround } from './chapter-horizon.js';
 // CHAPITRE 06 — what lies beyond the foundry fence: relief, ridges, forest, a working industrial skyline and a late-afternoon
 // sky. The play area is flat inside ±112 m (the asphalt plane of m06-art.js); beyond it the ground rises into a quarry rim,
 // slag heaps and wooded hills, with three layers of ridges lost in haze, cooling towers and chimneys breathing smoke, a
@@ -37,19 +38,20 @@ export function createFoundryHorizon(T, { scene, low = false, fogColor = 0x8a5d4
     for (const [hx, hz, r, hh] of HEAPS) { const dd = Math.hypot(x - hx, z - hz) / r; if (dd < 1.8) h += hh * Math.exp(-dd * dd * 1.9) * (1 - .35 * Math.exp(-(((dd - .35) / .25) ** 2))); }
     return h;
   }
-  const SEG = low ? 120 : 220, SIZE = 1500, tg = own(new T.PlaneGeometry(SIZE, SIZE, SEG, SEG)); tg.rotateX(-Math.PI / 2);
-  {
-    const p = tg.attributes.position, col = new Float32Array(p.count * 3), c = new T.Color(), soil = new T.Color(0x3b2d26), rust = new T.Color(0x6f4128), grass = new T.Color(0x39402a), rock = new T.Color(0x6a5f58), soot = new T.Color(0x24201e);
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), z = p.getZ(i), h = height(x, z); p.setY(i, h);
-      const n = noise(x * .03, z * .03, 3), m = noise(x * .004 + 40, z * .004, 3), d = Math.max(Math.abs(x), Math.abs(z));
-      c.copy(soil).lerp(rust, smooth(.4, .8, n) * .5).lerp(grass, smooth(.42, .62, m) * smooth(140, 260, d) * (1 - smooth(55, 95, h)));
-      c.lerp(rock, smooth(40, 90, h) * .8).lerp(soot, (1 - smooth(112, 190, d)) * .75);
-      col.set([c.r, c.g, c.b], i * 3);
-    }
-    tg.setAttribute('color', new T.BufferAttribute(col, 3)); tg.computeVertexNormals();
-    const uv = new Float32Array(p.count * 2); for (let i = 0; i < p.count; i++) { uv[i * 2] = p.getX(i) / 14; uv[i * 2 + 1] = p.getZ(i) / 14; } tg.setAttribute('uv', new T.BufferAttribute(uv, 2));
-  }
+  const rings = low ? 62 : 84, SIZE = 1550;
+  const c = new T.Color(), soil = new T.Color(0x3b2d26), rust = new T.Color(0x6f4128);
+  const grass = new T.Color(0x39402a), rock = new T.Color(0x6a5f58), soot = new T.Color(0x24201e);
+  const tg = own(radialGround(T, {
+    radius: SIZE, segments: low ? 148 : 224, uvMetres:14,
+    radii: Array.from({length:rings}, (_,i) => ((i+1)/rings)**1.58),
+    sample(x,z) {
+      const h = height(x,z), n = noise(x*.03,z*.03,3), m = noise(x*.004+40,z*.004,3);
+      const d = Math.max(Math.abs(x),Math.abs(z));
+      c.copy(soil).lerp(rust,smooth(.4,.8,n)*.5).lerp(grass,smooth(.42,.62,m)*smooth(140,260,d)*(1-smooth(55,95,h)));
+      c.lerp(rock,smooth(40,90,h)*.8).lerp(soot,(1-smooth(112,190,d))*.75);
+      return { y:h,color:c };
+    },
+  }));
   const map = new T.TextureLoader().load(textureUrl); map.wrapS = map.wrapT = T.RepeatWrapping; map.colorSpace = T.SRGBColorSpace; map.anisotropy = low ? 2 : 6; own(map);
   const terrain = new T.Mesh(tg, own(new T.MeshStandardMaterial({ map, vertexColors: true, roughness: .96, metalness: 0 }))); terrain.name = 'terrain'; terrain.receiveShadow = false; group.add(terrain);
 
@@ -164,10 +166,10 @@ export function createFoundryHorizon(T, { scene, low = false, fogColor = 0x8a5d4
 
   // ---------- Smoke plumes: drifting translucent puffs rising from the stacks and towers ----------
   {
-    const per = low ? 12 : 24, total = plumeSources.length * per, puff = new T.InstancedMesh(own(new T.IcosahedronGeometry(1, 1)), own(new T.MeshBasicMaterial({ color: 0x4b3a3a, transparent: true, opacity: .3, depthWrite: false, fog: true })), total);
+    const per = low ? 12 : 24, total = plumeSources.length * per, puff = new T.InstancedMesh(own(new T.PlaneGeometry(2, 2)), own(new T.MeshBasicMaterial({ map:glowTexture(),color:0x6d5962,transparent:true,opacity:.36,depthWrite:false,fog:true,side:T.DoubleSide })), total);
     puff.frustumCulled = false; group.add(puff);
     const m4 = new T.Matrix4(), q = new T.Quaternion(), p = new T.Vector3(), s = new T.Vector3(), wind = new T.Vector3(.6, 0, -.25);
-    animated.push(t => { let i = 0; for (const [x, y, z, r, kind] of plumeSources) for (let k = 0; k < per; k++) {
+    animated.push((t, eye) => { if (eye) q.copy(eye.quaternion); let i = 0; for (const [x, y, z, r, kind] of plumeSources) for (let k = 0; k < per; k++) {
       const u = ((t * (kind === 1 ? .018 : .024) + k / per + x * .001) % 1), rise = u * (kind === 1 ? 140 : 110), sz = r * (1.1 + u * (kind === 1 ? 4.6 : 5));
       p.set(x + wind.x * rise * 1.1 + Math.sin(k * 3.1 + x) * r * .3, y + rise, z + wind.z * rise * 1.1); s.set(sz, sz * .8, sz); puff.setMatrixAt(i++, m4.compose(p, q, s)); }
       puff.instanceMatrix.needsUpdate = true; });
@@ -198,7 +200,7 @@ export function createFoundryHorizon(T, { scene, low = false, fogColor = 0x8a5d4
 
   return {
     group, height, terrain,
-    update(t) { for (const f of animated) f(t); const on = Math.sin(t * 2.2) > .2; for (const l of lights) l.visible = on; },
+    update(t, eye) { for (const f of animated) f(t, eye); const on = Math.sin(t * 2.2) > .2; for (const l of lights) l.visible = on; },
     dispose() { scene.remove(group); for (const o of disposables) o.dispose?.(); }
   };
 }

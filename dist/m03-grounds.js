@@ -1,3 +1,4 @@
+import { extendPaving } from './chapter-horizon.js';
 // MISSION 03 — defined ground for the plots beside the avenue. The visitor map left them as one bare base plane
 // strewn with debris; here every plot is a paved apron with slab joints, the cross street of the lamp row (z −56) is
 // a real two-lane boulevard with a median, the service yards have painted bays and hatched keep-clear zones, and the
@@ -42,6 +43,8 @@ export function createSectorGrounds(T, root, { low = false, rich = false } = {})
     q([x2, y1, z2, x2, y1, z1, x2, y2, z1, x2, y2, z2], [1, 0, 0], u(z1, z2)); q([x1, y1, z1, x1, y1, z2, x1, y2, z2, x1, y2, z1], [-1, 0, 0], u(z1, z2));
     q([x1, y2, z2, x2, y2, z2, x2, y2, z1, x1, y2, z1], [0, 1, 0], [x1 / tile, z2 / tile, x2 / tile, z2 / tile, x2 / tile, z1 / tile, x1 / tile, z1 / tile]); void w; void d; };
 
+  // Drop below the authored blocks and boulevard with enough overlap for rooftop views.
+  root.add(extendPaving(T,mats.road,{radius:292,tile:8,low,y:-.14,drop:.46}));
   // Aprons.
   for (const [x1, x2, z1, z2] of APRONS) flat(mats.apron, x1, x2, z1, z2, -.045);
   // Boulevard: asphalt, median under the lamp row, kerbs, lane dashes, stop lines and zebra at the avenue.

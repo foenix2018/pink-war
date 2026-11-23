@@ -1,3 +1,4 @@
+import { createChapterHorizon } from './chapter-horizon.js';
 import {createFPSChapter} from './fps-environments.js';
 import {createWorldEffects} from './webgpu-world-fx.js';
 import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
@@ -341,6 +342,11 @@ export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, on
   // ---------- Ambient, fog ----------
   const hemi = new T.HemisphereLight(0x9fb2c4, 0x2a2622, .2); add(hemi, scene);
   scene.background = new T.Color(0x040507);
+  const streetStair=STAIRS[0];
+  const horizon=createChapterHorizon(T,scene,{chapter:5,low,webgpu,opening:{
+    x1:streetStair.x-streetStair.halfWidth-.32,x2:streetStair.x+streetStair.halfWidth+.32,
+    z1:streetStair.topZ-.15,z2:streetStair.bottomZ+.18,
+  }});
   scene.fog = new T.Fog(0x07090b, 4, 60);
   let ambient = .2, fogFar = 60;
   function updateAmbient(dt, eye) {
@@ -914,6 +920,7 @@ export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, on
       fpsChapter=createFPSChapter(T,root,{chapter:'ligne9',obstacles:collisions,areas:ROOMS,low,webgpu,worldFx});
     },
     update(t, dt, eye = camera, player = eye.position) {
+      horizon.setOutside(roomAt(player.x,player.z)==='rue' && eye.position.y>=HEIGHTS.rue);
       fpsChapter?.update(t,dt,eye.position);
       worldFx.update(t,eye.position);
 
@@ -938,6 +945,6 @@ export function createLigne9Art(T, scene, { quality = 'normal', webgpu=false, on
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
     // Is the place dark enough to want the head lamp?
     dark(x, z) { const r = ROOM[roomAt(x, z)]; if (!r) return true; if (r.id === 'rue' || r.id === 'chambre') return false; return (r.id === 'tunnel' ? power.tunnel : power.station) !== 'secours'; },
-    stats() { return { ...stats, fps:fpsChapter?.stats(), worldEffects:worldFx.stats(), neons:neons.stats(), power: { ...power }, lights: pool.filter(s => s.fixture).length, portals: portals.length, anchor: +anchorPower.toFixed(2), flooding, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])), water: Object.fromEntries([...waters].map(([k, v]) => [k, +v.level.toFixed(2)])) }; }
+    stats() { return { ...stats, horizon:horizon.stats(), fps:fpsChapter?.stats(), worldEffects:worldFx.stats(), neons:neons.stats(), power: { ...power }, lights: pool.filter(s => s.fixture).length, portals: portals.length, anchor: +anchorPower.toFixed(2), flooding, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])), water: Object.fromEntries([...waters].map(([k, v]) => [k, +v.level.toFixed(2)])) }; }
   };
 }

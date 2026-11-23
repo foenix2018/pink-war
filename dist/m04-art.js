@@ -1,4 +1,5 @@
-import {createPhotoResponse,metricGround} from './world-material-response.js';
+import { createChapterHorizon, extendPaving } from './chapter-horizon.js';
+import {createPhotoResponse} from './world-material-response.js';
 import {createFPSChapter} from './fps-environments.js';
 import {createWorldEffects} from './webgpu-world-fx.js';
 import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
@@ -36,8 +37,7 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
   scene.fog = new T.FogExp2(0x120d26, low ? .010 : .0085);
   const sky = new T.HemisphereLight(0x7479c4, 0x262030, 1.65); scene.add(sky);
   const moon = new T.DirectionalLight(0xb4bfe6, 1.5); moon.position.set(40, 70, 50); scene.add(moon);
-  const skyTex = canvasTexture(T, 16, 256, (c, w, h) => { const g = c.createLinearGradient(0, 0, 0, h); for (const [a, col] of [[0, '#020210'], [.45, '#0d0a26'], [.72, '#3a1450'], [.86, '#6a1d5e'], [1, '#14081a']]) g.addColorStop(a, col); c.fillStyle = g; c.fillRect(0, 0, w, h); });
-  add(new T.Mesh(new T.SphereGeometry(400, 24, 12), new T.MeshBasicMaterial({ map: skyTex, side: T.BackSide, fog: false, depthWrite: false })));
+  stats.horizon=createChapterHorizon(T,scene,{chapter:4,low,webgpu}).stats();
 
   // ---------- Materials ----------
   const loader = new T.TextureLoader(),photo=createPhotoResponse(T,{low});
@@ -99,7 +99,7 @@ export function createM04Art(T, scene, { quality = 'normal', webgpu=false, onPor
   // ---------- Grounds, roofs ----------
   const FLOOR = { quai: M.antiSkid, sas: M.panel, cour: M.slab, hangar: M.slab, atelier: M.raised, 'relais-est': M.grid, maintenance: M.grid, anneau: M.plate, portique: M.plate };
   function buildGrounds() {
-    const ground = new T.Mesh(metricGround(T,220,220,M.asphalt.userData.tile), M.asphalt); ground.rotation.x = -Math.PI / 2; ground.position.y = -.01; M.asphalt.map.repeat?.set(1, 1); add(ground);
+    add(extendPaving(T,M.asphalt,{radius:280,tile:M.asphalt.userData.tile,low,y:-.01,drop:.48}));
     for (const a of AREAS) { if (a.id === 'portique') continue; floorRect(FLOOR[a.id] || M.slab, a.x1, a.x2, a.z1, a.z2, .006); if (a.roof) { ceilRect(a.id === 'hangar' ? M.corrugated : M.panel, a.x1, a.x2, a.z1, a.z2, a.roof); floorRect(M.concrete, a.x1 - .2, a.x2 + .2, a.z1 - .2, a.z2 + .2, a.roof + .3); } }
     // Yellow maintenance markings, the lane through the court, hazard hatching at the breach.
     for (let z = -26; z < 60; z += 4) piece(M.yellow, -6, .008, z, .14, .004, 2);

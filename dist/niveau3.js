@@ -544,7 +544,7 @@ async function boot(){
   renderer.shadowMap.enabled=false;
   bootStep='décor';status.textContent='Chargement du secteur 03 de Vesper…';
   sector=await fetchSector();traversal=sectorTraversal(sector.meta);
-  scene=new T.Scene();camera=new T.PerspectiveCamera(70,innerWidth/innerHeight,.06,600);scene.add(camera);enemyDestructionFX=createEnemyDestructionFX(T,scene,{camera,low:low()||profile.phone||profile.headset,maxDeaths:7,onSound:(kind,source)=>robotShutdownAudio.play(kind,source)});
+  scene=new T.Scene();camera=new T.PerspectiveCamera(70,innerWidth/innerHeight,.06,820);scene.add(camera);enemyDestructionFX=createEnemyDestructionFX(T,scene,{camera,low:low()||profile.phone||profile.headset,maxDeaths:7,onSound:(kind,source)=>robotShutdownAudio.play(kind,source)});
   createWorld();
   bootStep='jouabilité';status.textContent='Armes, commandes et machines…';
   setupPlayer();resize();

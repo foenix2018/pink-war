@@ -1,5 +1,6 @@
+import { createChapterHorizon, extendPaving } from './chapter-horizon.js';
 import {createWorldEffects} from './webgpu-world-fx.js';
-import {createPhotoResponse,metricGround} from './world-material-response.js';
+import {createPhotoResponse} from './world-material-response.js';
 import {createFPSChapter} from './fps-environments.js';
 import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
 import {createFloorRampHardware} from './stair-hardware.js';
@@ -37,8 +38,7 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
   scene.fog = new T.FogExp2(0x8a5d45, low ? .0052 : .0042); // light haze: the skyline and the ridges beyond the fence stay readable
   const sky = new T.HemisphereLight(0xffc89a, 0x3a2a22, 1.2); scene.add(sky);
   const sun = new T.DirectionalLight(0xffb070, 2.6); sun.position.set(-70, 45, 40); scene.add(sun);
-  const skyTex = canvasTexture(T, 16, 256, (c, w, h) => { const g = c.createLinearGradient(0, 0, 0, h); for (const [a, col] of [[0, '#2b2a4a'], [.4, '#6a4a5a'], [.62, '#c9764a'], [.74, '#f0a868'], [.82, '#8a5d45'], [1, '#2a1c16']]) g.addColorStop(a, col); c.fillStyle = g; c.fillRect(0, 0, w, h); });
-  add(new T.Mesh(new T.SphereGeometry(2400, 32, 16), new T.MeshBasicMaterial({ map: skyTex, side: T.BackSide, fog: false, depthWrite: false })));
+  stats.horizon=createChapterHorizon(T,scene,{chapter:6,low,webgpu}).stats();
   let horizon = null; try { horizon = createFoundryHorizon(T, { scene: root, low, sun: [sun.position.x, sun.position.y, sun.position.z] }); } catch (error) { console.warn('M06 / horizon simplifié', error); }
 
   // ---------- Materials ----------
@@ -99,7 +99,7 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
   // ---------- Grounds, roofs (skylights broken: light shafts come through) ----------
   const FLOOR = { voie: M.asphalt, ferraille: M.asphalt, coulee: M.slab, chaine: M.antiSkid, coeur: M.plate, quai: M.slab, cabine: M.grid };
   function buildGrounds() {
-    const ground = new T.Mesh(metricGround(T,220,220,M.asphalt.userData.tile), M.asphalt); ground.rotation.x = -Math.PI / 2; ground.position.y = -.01; M.asphalt.map.repeat?.set(1, 1); add(ground);
+    add(extendPaving(T,M.asphalt,{radius:128,tile:M.asphalt.userData.tile,low,y:-.01,drop:.48}));
     for (const a of AREAS) {
       if (a.id === 'cabine') continue; floorRect(FLOOR[a.id] || M.slab, a.x1, a.x2, a.z1, a.z2, .006);
       if (a.roof) {
@@ -445,7 +445,7 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
       fpsChapter=createFPSChapter(T,root,{chapter:'m06',obstacles:obstacles,areas:AREAS,low,webgpu});
     },
     update(t, dt, eye, player) {
-      updateShafts(t,eye.position);fpsChapter?.update(t,dt,eye.position);horizon?.update(t);
+      updateShafts(t,eye.position);fpsChapter?.update(t,dt,eye.position);horizon?.update(t, eye);
       const e = eye.position; updatePool(dt, e); updateEffects(t, dt); updatePortals(t, dt, e); updateDevices(t, dt); if (player) updateDoors(dt, player);
       for (const f of animated) f(t, dt); signs.update(t);
     },

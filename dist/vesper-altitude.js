@@ -67,6 +67,7 @@ function atlas(T) {
 
 function fogMaterial(T, config, webgpu, map = null) {
   const mist = new T.Color(config.mist), horizon = new T.Color(config.horizon);
+  const [near, far] = config.distance || [190, 1020];
   const params = { fog: false, toneMapped: false };
   if (webgpu) {
     const { attribute, cameraPosition, color, length, mix, positionWorld, smoothstep, texture, uv } = T.TSL;
@@ -74,7 +75,7 @@ function fogMaterial(T, config, webgpu, map = null) {
     const tint = attribute('color', 'vec3');
     const skin = map ? tint.mul(texture(map, uv()).rgb) : tint;
     const height = smoothstep(config.fogBase, config.clear, positionWorld.y);
-    const distance = smoothstep(190, 1020, length(positionWorld.xz.sub(cameraPosition.xz)));
+    const distance = smoothstep(near, far, length(positionWorld.xz.sub(cameraPosition.xz)));
     material.colorNode = mix(mix(color(mist), skin, height), color(horizon), distance.mul(.91));
     return material;
   }
@@ -83,13 +84,14 @@ function fogMaterial(T, config, webgpu, map = null) {
     Object.assign(shader.uniforms, {
       vesperMist: { value: mist }, vesperHorizon: { value: horizon },
       vesperFloor: { value: config.fogBase }, vesperClear: { value: config.clear },
+      vesperNear: { value: near }, vesperFar: { value: far },
     });
     shader.vertexShader = 'varying vec3 vesperWorld;\n' + shader.vertexShader.replace('#include <project_vertex>',
       '#include <project_vertex>\nvesperWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-    shader.fragmentShader = 'varying vec3 vesperWorld;\nuniform vec3 vesperMist, vesperHorizon;\nuniform float vesperFloor, vesperClear;\n'
+    shader.fragmentShader = 'varying vec3 vesperWorld;\nuniform vec3 vesperMist, vesperHorizon;\nuniform float vesperFloor, vesperClear, vesperNear, vesperFar;\n'
       + shader.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
         float altitude = smoothstep(vesperFloor, vesperClear, vesperWorld.y);
-        float depth = smoothstep(190.0, 1020.0, distance(vesperWorld.xz, cameraPosition.xz));
+        float depth = smoothstep(vesperNear, vesperFar, distance(vesperWorld.xz, cameraPosition.xz));
         diffuseColor.rgb = mix(mix(vesperMist, diffuseColor.rgb, altitude), vesperHorizon, depth * 0.91);`);
   };
   return material;
@@ -162,15 +164,28 @@ function cloudTexture(T) {
   return texture;
 }
 
-export function createVesperAltitude(T, parent, { district, low = false, webgpu = false }) {
-  const config = DISTRICTS[district], layout = vesperTowerLayout(district, low);
-  const group = new T.Group();
-  group.name = 'Vesper · ville à 360°'; group.userData.keepDynamic = true; parent.add(group);
+export function createVesperBuildings(T, parent, layout, config, webgpu) {
   const map = atlas(T), geometry = cityGeometry(T, layout, config);
   const city = new T.Mesh(geometry[0], fogMaterial(T, config, webgpu, map));
   const crowns = new T.Mesh(geometry[1], fogMaterial(T, config, webgpu));
   city.name = 'Vesper · façades et étages éclairés'; crowns.name = 'Vesper · toits, antennes et balises';
-  group.add(city, crowns);
+  parent.add(city, crowns);
+
+  return {
+    dispose() {
+      for (const mesh of [city, crowns]) {
+        mesh.removeFromParent(); mesh.geometry.dispose(); mesh.material.dispose();
+      }
+      map.dispose();
+    },
+  };
+}
+
+export function createVesperAltitude(T, parent, { district, low = false, webgpu = false }) {
+  const config = DISTRICTS[district], layout = vesperTowerLayout(district, low);
+  const group = new T.Group();
+  group.name = 'Vesper · ville à 360°'; group.userData.keepDynamic = true; parent.add(group);
+  const buildings = createVesperBuildings(T, group, layout, config, webgpu);
 
   const texture = cloudTexture(T); texture.repeat.set(2, 2);
   const heights = district === 'gardens' ? [-69, -115, -192] : [-93, -157, -245];
@@ -184,8 +199,18 @@ export function createVesperAltitude(T, parent, { district, low = false, webgpu 
     disc.name = 'Vesper · nappe de brume basse'; group.add(disc);
     return disc;
   });
-  const basin = new T.Mesh(new T.CircleGeometry(1430, 64),
-    new T.MeshBasicMaterial({ color: config.mist, fog: false, toneMapped: false }));
+  const basinGeometry = new T.RingGeometry(.1, 2400, 96, 18);
+  const colors = [];
+  const base = new T.Color(config.mist), lower = new T.Color(district === 'gardens' ? 0x202c3c : 0x120f1a);
+  const position = basinGeometry.attributes.position;
+  for (let i = 0; i < position.count; i++) {
+    const radius = Math.hypot(position.getX(i), position.getY(i));
+    const color = base.clone().lerp(lower, Math.min(1, Math.max(0, (radius - 750) / 1200)));
+    colors.push(color.r, color.g, color.b);
+  }
+  basinGeometry.setAttribute('color', new T.Float32BufferAttribute(colors, 3));
+  const basin = new T.Mesh(basinGeometry,
+    new T.MeshBasicMaterial({ vertexColors: true, fog: false, toneMapped: false }));
   basin.rotation.x = -Math.PI / 2;
   basin.position.y = config.floor - .15;
   basin.name = 'Vesper · fond de brume'; group.add(basin);
@@ -203,8 +228,9 @@ export function createVesperAltitude(T, parent, { district, low = false, webgpu 
     stats() { return { towers: layout.length, districts: SECTORS, depthBands: 3, lowMistLayers: layers.length }; },
     dispose() {
       group.removeFromParent();
-      for (const mesh of [city, crowns, basin, ...layers]) { mesh.geometry.dispose(); mesh.material.dispose(); }
-      map.dispose(); texture.dispose();
+      buildings.dispose();
+      for (const mesh of [basin, ...layers]) { mesh.geometry.dispose(); mesh.material.dispose(); }
+      texture.dispose();
     }
   };
 }

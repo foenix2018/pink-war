@@ -1,3 +1,4 @@
+import { createChapterHorizon } from './chapter-horizon.js';
 import {addHideoutDebrief} from './hideout-links.js';
 import {inertialMove,PLAYER_SPEEDS,TOUCH_SPEED_MULTIPLIER,touchAnalogSprint} from './locomotion.js';
 import {frameDelta} from './frame-timing.js';
@@ -568,17 +569,7 @@ function cave(scene) {
 // Sunset: the sun sits low in the west-north-west, behind the cliff; the light is long, orange and warm.
 export const SUN_DIR = new T.Vector3(-.78, .16, -.6).normalize();
 function sky(scene) {
-  const g = new T.SphereGeometry(600, 48, 24), p = g.attributes.position, c = new Float32Array(p.count * 3), k = new T.Color(), v = new T.Vector3();
-  const zenith = new T.Color(0x232a55), high = new T.Color(0x5b4a78), horizon = new T.Color(0xe98a55), glow = new T.Color(0xffc27a), ground = new T.Color(0x3a2a2a);
-  for (let i = 0; i < p.count; i++) {
-    v.fromBufferAttribute(p, i).normalize(); const y = v.y, toward = Math.max(0, v.dot(SUN_DIR));
-    if (y < 0) k.copy(horizon).lerp(ground, clamp(-y * 4, 0, 1)); else k.copy(horizon).lerp(high, smooth(0, .35, y)).lerp(zenith, smooth(.3, 1, y));
-    k.lerp(glow, Math.pow(toward, 6) * (1 - smooth(0, .5, y)) * .9);
-    if (toward > .9985) k.set(0xfff1c8);
-    c[i * 3] = k.r; c[i * 3 + 1] = k.g; c[i * 3 + 2] = k.b;
-  }
-  g.setAttribute('color', new T.BufferAttribute(c, 3));
-  const m = new T.Mesh(g, new T.MeshBasicMaterial({ vertexColors: true, side: T.BackSide, fog: false, depthWrite: false })); m.renderOrder = -1; scene.add(m);
+  const m = new T.Group(); scene.add(m);
   // The sun disc and its halo, always at the same place in the sky.
   const halo = canvasTexture(128, 128, (gc, w) => { const gr = gc.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, 'rgba(255,245,220,1)'); gr.addColorStop(.12, 'rgba(255,214,150,.95)'); gr.addColorStop(.4, 'rgba(255,150,80,.28)'); gr.addColorStop(1, 'rgba(255,120,60,0)'); gc.fillStyle = gr; gc.fillRect(0, 0, w, w); }, { alpha: true });
   const disc = new T.Sprite(new T.SpriteMaterial({ map: halo, fog: false, depthWrite: false, blending: T.AdditiveBlending, transparent: true }));
@@ -778,13 +769,47 @@ function createN08(scene) {
 }
 
 // Beyond the playable square (±100 m): wooded hills on a coarse terrain, and conifer impostors on them.
-function skirt(scene, impostorGeometry, impostorMaterial, quality) {
-  const SIZE = 900, seg = quality === 'low' ? 70 : 110, g = new T.PlaneGeometry(SIZE, SIZE, seg, seg).rotateX(-Math.PI / 2), p = g.attributes.position, c = new Float32Array(p.count * 3), k = new T.Color(), a = new T.Color(0x2e4424), b = new T.Color(0x4a5a34);
-  const outer = (x, z) => { const e = Math.max(Math.abs(x), Math.abs(z)); if (e <= HALF) return terrainHeight(clamp(x, -HALF, HALF), clamp(z, -HALF, HALF)) - .4; const cx = clamp(x, -HALF, HALF), cz = clamp(z, -HALF, HALF), edge = terrainHeight(cx, cz), u = smooth(HALF, HALF + 140, e);
-    return lerp(edge - .4, edge + 6 + fbm(x * .012, z * .012) * 55 * (z < 0 ? 1.4 : .8), u); };
-  for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i), h = outer(x, z); p.setY(i, h); k.copy(a).lerp(b, fbm(x * .02, z * .02)); c.set([k.r, k.g, k.b], i * 3); }
-  g.setAttribute('color', new T.BufferAttribute(c, 3)); g.computeVertexNormals();
-  const m = new T.Mesh(g, new T.MeshStandardMaterial({ vertexColors: true, roughness: 1 })); m.name = 'collines'; scene.add(m);
+function skirt(scene, terrain, impostorGeometry, impostorMaterial, quality) {
+  const shade = new T.Color(), nearColor = new T.Color(), rangeColor = new T.Color();
+  const dark = new T.Color(0x2e4424), light = new T.Color(0x4a5a34);
+  const outer = (x, z) => {
+    const e = Math.max(Math.abs(x), Math.abs(z)), cx = clamp(x,-HALF,HALF), cz = clamp(z,-HALF,HALF);
+    const edge = terrainHeight(cx,cz), u = smooth(HALF,HALF+140,e);
+    return edge + (6 + fbm(x*.012,z*.012)*55*(z<0?1.4:.8))*u;
+  };
+  // Reuse the exact edge vertices of the playable terrain, with the same UVs
+  // and normals, then gradually open their ring into the surrounding valley.
+  const src=terrain.geometry.attributes, stride=Math.sqrt(src.position.count), last=stride-1;
+  const border=[];
+  for(let i=0;i<last;i++)border.push(i);
+  for(let i=0;i<last;i++)border.push(i*stride+last);
+  for(let i=0;i<last;i++)border.push(last*stride+last-i);
+  for(let i=0;i<last;i++)border.push((last-i)*stride);
+  const position=[],color=[],uv=[],indices=[],perimeter=border.length,rings=quality==='low'?12:18;
+  for(let ring=0;ring<=rings;ring++){
+    const t=(ring/rings)**1.6;
+    for(let j=0;j<perimeter;j++){
+      const b=border[j], edgeX=src.position.getX(b), edgeZ=src.position.getZ(b), edgeR=Math.hypot(edgeX,edgeZ);
+      const scale=1+t*(740/edgeR-1),x=edgeX*scale,z=edgeZ*scale;
+      const y=ring===0?src.position.getY(b):outer(x,z);
+      nearColor.fromBufferAttribute(src.color,b);
+      shade.copy(nearColor).lerp(rangeColor.copy(dark).lerp(light,fbm(x*.02,z*.02)),smooth(0,.18,t));
+      position.push(x,y,z);color.push(shade.r,shade.g,shade.b);
+      uv.push(src.uv.getX(b)+(x-edgeX)/(2*HALF),src.uv.getY(b)-(z-edgeZ)/(2*HALF));
+      if(ring){
+        const a=(ring-1)*perimeter,c=ring*perimeter,next=(j+1)%perimeter;
+        indices.push(a+j,a+next,c+j,a+next,c+next,c+j);
+      }
+    }
+  }
+  const geometry=new T.BufferGeometry();
+  geometry.setAttribute('position',new T.Float32BufferAttribute(position,3));
+  geometry.setAttribute('color',new T.Float32BufferAttribute(color,3));
+  geometry.setAttribute('uv',new T.Float32BufferAttribute(uv,2));geometry.setIndex(indices);geometry.computeVertexNormals();
+  const normal=geometry.attributes.normal;
+  border.forEach((b,i)=>normal.setXYZ(i,src.normal.getX(b),src.normal.getY(b),src.normal.getZ(b)));
+  const ground=new T.Mesh(geometry,terrain.material);
+  ground.name='Forêt · vallon continu';scene.add(ground);
   const r = rng(404), count = quality === 'low' ? 900 : 2200, trees = new T.InstancedMesh(impostorGeometry, impostorMaterial, count), m4 = new T.Matrix4(), q = new T.Quaternion(), sc = new T.Vector3(), pos = new T.Vector3(); let n = 0;
   for (let i = 0; i < count * 4 && n < count; i++) { const x = (r() - .5) * 560, z = (r() - .5) * 560; if (Math.max(Math.abs(x), Math.abs(z)) < HALF + 4) continue; if (z > 160 && Math.abs(x) < 200) continue;
     const s = 1.1 + r() * 1.3; trees.setMatrixAt(n++, m4.compose(pos.set(x, outer(x, z) - .3, z), q.setFromAxisAngle(new T.Vector3(0, 1, 0), r() * TAU), sc.set(s, s * (.9 + r() * .4), s))); }
@@ -856,6 +881,7 @@ function createStory(characterId, relay, n08 = { land: () => true, down: true })
 export function buildForestWorld(scene, { quality = 'balanced', webgpu = false, shadows = false, fog = null } = {}) {
   const FOG = fog ?? (quality === 'low' ? .016 : .012);
   if (!scene.fog) scene.fog = new T.FogExp2(0xb27a63, FOG);
+  const horizon = createChapterHorizon(T,scene,{chapter:7,low:quality==='low',webgpu});
   const skyDome = sky(scene);
   const hemi = new T.HemisphereLight(0xb79ac4, 0x4a3a2a, 1.7); scene.add(hemi);
   const sun = new T.DirectionalLight(0xffa765, 3.1); sun.position.copy(SUN_DIR).multiplyScalar(120); scene.add(sun, sun.target);
@@ -881,7 +907,7 @@ export function buildForestWorld(scene, { quality = 'balanced', webgpu = false, 
     vegetation(scene, 'herbes', world.grass, [instanced(withUV([0, 1, 2, 3].map(i => new T.PlaneGeometry(1.2, .7).translate(0, .35, 0).rotateY(i * Math.PI / 2))), plant('grass'), 6000), null, null], { near: 24, mid: 24, far: 24, radius: .4, fade: true }),
     vegetation(scene, 'rochers', world.rocks, [instanced(rock(3, 3), new T.MeshStandardMaterial({ vertexColors: true, roughness: .95,normalMap:micro.normal,normalScale:new T.Vector2(.2,.2) }), world.rocks.length), instanced(rock(3, 1), new T.MeshStandardMaterial({ vertexColors: true, roughness: .95,normalMap:micro.normal,normalScale:new T.Vector2(.2,.2) }), world.rocks.length), null], { near: 50, mid: 160, far: 160, radius: 1.2 })
   ];
-  skirt(scene, impostor(6, 10.5), imp('imp-conifer'), quality);
+  skirt(scene, terrain, impostor(6, 10.5), imp('imp-conifer'), quality);
   // Trunks and rocks block the player (the stepping stones of the ford stay walkable).
   const trunks = new Map();
   for (const t of [...world.trees.map(t => ({ x: t.x, z: t.z, radius: .4 * t.s + .15 })), ...world.rocks.filter(r => !r.step && r.s > .55).map(r => ({ x: r.x, z: r.z, radius: .82 * r.s * Math.max(r.sx, r.sz) }))]) { const k = `${Math.floor(t.x / 6)},${Math.floor(t.z / 6)}`; (trunks.get(k) || trunks.set(k, []).get(k)).push(t); }
@@ -889,7 +915,7 @@ export function buildForestWorld(scene, { quality = 'balanced', webgpu = false, 
   const cull = new T.PerspectiveCamera(100, 1.6, .1, 650), frustum = new T.Frustum(), pv = new T.Matrix4(), lastView = { q: new T.Quaternion(), x: 1e9, z: 1e9 };
   let refresh = 0;
   return {
-    skyDome, hemi, sun, terrain, river, fall, colliders, centre, grotte, relics, drones, dust, world, kinds, trunks, Q, FOG,
+    skyDome, horizon, hemi, sun, terrain, river, fall, colliders, centre, grotte, relics, drones, dust, world, kinds, trunks, Q, FOG,
     // Per frame: water, waterfall, beacons, probes, dust, cave darkness, vegetation levels of detail.
     update({ time, dt, camera, player, aspect = 1.6 }) {
       river.fx.update(time, camera.position); skyDome.position.copy(camera.position);
@@ -900,7 +926,7 @@ export function buildForestWorld(scene, { quality = 'balanced', webgpu = false, 
       river.tex.offset.y = (river.tex.offset.y - dt * .35) % 1; fall.update(time);
       grotte.glow.intensity = 52 + Math.sin(time * 3) * 10; drones.update(time); dust.update(time, camera.position);
       for (const [k, l] of [...relics.lights, ...centre.lights].entries()) l.visible = Math.sin(time * (2 + k) + k) > -.2;
-      const inCave = zoneAt(player.x, player.z) === 'La grotte'; scene.fog.density = inCave ? .06 : FOG;
+      const inCave = zoneAt(player.x, player.z) === 'La grotte'; scene.fog.density = inCave ? .06 : FOG; horizon.setOutside(!inCave); skyDome.visible=!inCave;
       const shade = inCave ? clamp((CAVE[0][1] - player.z) / 6, 0, 1) : 0; hemi.intensity = lerp(1.7, .1, shade); sun.intensity = lerp(3.1, 0, shade);
       if (shadows) { sun.position.set(player.x + SUN_DIR.x * 120, SUN_DIR.y * 120, player.z + SUN_DIR.z * 120); sun.target.position.set(player.x, 0, player.z); }
       return inCave;
@@ -921,7 +947,7 @@ export async function boot() {
   const camera = new T.PerspectiveCamera(70, innerWidth / innerHeight, .1, 900);
   const cull = new T.PerspectiveCamera(100, innerWidth / innerHeight * 1.25, .1, 650), lastView = { yaw: 0, pitch: 0, x: 0, z: 0 };
   const W = buildForestWorld(scene, { quality, webgpu: backend === 'WebGPU', shadows, fog: FOG });
-  const { skyDome, hemi, sun, river, fall, colliders, centre, grotte, relics, drones, dust, world, kinds, trunks, Q } = W;
+  const { skyDome, horizon, hemi, sun, river, fall, colliders, centre, grotte, relics, drones, dust, world, kinds, trunks, Q } = W;
   // Player.
   const planarVelocity={x:0,z:0},motion=createFPSMotion();let actualVelocity={x:0,z:0};
   const ctl = controls(canvas), player = { x: -84, z: 95, y: 0 }; ctl.look.yaw = 0;
@@ -1015,7 +1041,7 @@ export async function boot() {
     story.update(player, dt);
     gameplayHud.update({zone:zoneAt(player.x,player.z),canInteract:!$('prompt').hidden&&!$('doc').hidden,finished:!$('fin').hidden});
     if (shadows) { sun.position.set(player.x + SUN_DIR.x * 120, SUN_DIR.y * 120, player.z + SUN_DIR.z * 120); sun.target.position.set(player.x, 0, player.z); }
-    const inCave = zoneAt(player.x, player.z) === 'La grotte'; scene.fog.density = debugView ? .0025 : inCave ? .06 : FOG;
+    const inCave = zoneAt(player.x, player.z) === 'La grotte'; scene.fog.density = debugView ? .0025 : inCave ? .06 : FOG; horizon.setOutside(!inCave || debugView);
     // Inside the cave the sky no longer lights the rock: only the relay does.
     const shade = inCave ? clamp((CAVE[0][1] - player.z) / 6, 0, 1) : 0; hemi.intensity = lerp(1.7, .1, shade); sun.intensity = lerp(3.1, 0, shade);
     if (audio) audio.gain.gain.value = .22 * clamp(1 - Math.hypot(player.x - fall.x, player.z - fall.z) / 70, 0, 1) + .03;

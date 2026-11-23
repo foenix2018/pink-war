@@ -1,3 +1,4 @@
+import { createChapterHorizon } from './chapter-horizon.js';
 import {createServiceInfrastructure,WORKSHOP_EQUIPMENT,STREET_BLADES,createStreetSignSupports} from './m03-coherence.js';
 import {createIndustrialLightBatch} from './industrial-light.js';
 import {createWorldEffects} from './webgpu-world-fx.js';
@@ -57,9 +58,8 @@ export function createM03Art(T, scene, { quality = 'normal', webgpu=false, onPor
     c.globalAlpha = 1;
   });
   reflection.mapping = T.EquirectangularReflectionMapping; scene.environment = reflection; scene.environmentIntensity = low ? .5 : .7;
-  // A starless, polluted sky dome with the glow of the city on the horizon.
-  const skyTex = canvasTexture(T, 16, 256, (c, w, h) => { const g = c.createLinearGradient(0, 0, 0, h); for (const [a, col] of [[0, '#02040a'], [.55, '#0a1426'], [.78, '#2a1838'], [.9, '#4a2042'], [1, '#160d18']]) g.addColorStop(a, col); c.fillStyle = g; c.fillRect(0, 0, w, h); });
-  const dome = new T.Mesh(new T.SphereGeometry(380, 24, 12), new T.MeshBasicMaterial({ map: skyTex, side: T.BackSide, fog: false, depthWrite: false })); dome.renderOrder = -1; add(dome);
+  const horizon=createChapterHorizon(T,scene,{chapter:3,low,webgpu});
+  stats.horizon=horizon.stats();
 
   // ---------- The baked sector ----------
   // Street and interior objects: the baked boxes are replaced by modelled objects (same footprint, same collisions).

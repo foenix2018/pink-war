@@ -1,3 +1,4 @@
+import { createChapterHorizon, extendPaving } from './chapter-horizon.js';
 import {nanoSnapshot} from './nano-forge.js';
 import {frameDelta} from './frame-timing.js';
 import {heroFlightFlags,createHeroCapabilityAudio} from './hero-capabilities.js';
@@ -242,9 +243,7 @@ function tower(side,z,idx){
 function street(){
  // The old road ended before several facade setbacks, exposing the clear
  // colour under the pavements. The entire district now has a real ground.
- const groundGeometry=new T.PlaneGeometry(104,204),uv=groundGeometry.attributes.uv;
- for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)*13,uv.getY(i)*12.75);
- const ground=new T.Mesh(groundGeometry,materials.concrete);ground.name='M02 / continuous district ground';ground.rotation.x=-Math.PI/2;ground.position.set(0,-.02,-1);ground.receiveShadow=true;root.add(ground);
+ root.add(extendPaving(T,materials.concrete,{radius:242,tile:8,low:low(),drop:.34}));
  solid(0,-.16,0,22,.3,158,materials.asphalt,false);
  // Continuous tileable asphalt skin fixes the stretched UVs of the 158 m road.
  // The underlying collision plane is unchanged, and the atlas is shared.
@@ -435,6 +434,7 @@ function optimizeStaticBoxes(){
 function createEnvironment(){
  scene.background=new T.Color(0x1c252d);scene.fog=new T.FogExp2(0x263139,low()?.008:.009);
  root=new T.Group();root.name='M02 / W02 LES BAS-NIVEAUX';scene.add(root);
+ root.userData.horizon=createChapterHorizon(T,scene,{chapter:2,low:low(),webgpu:!!renderer.backend?.isWebGPUBackend}).stats();
  districtSigns=createDistrictSignage(T,{performance:low()});
  architecture=createDistrictArchitecture({T,root,materials,solid,beam,sign,collisions,floors,low:low(),rng});
  // Metals need reflected sky radiance, not brighter emissive colour. A tiny
@@ -982,7 +982,7 @@ async function boot(){
   canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();onRenderFailure(new Error('Contexte WebGL perdu'));});
   renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;
-  scene=new T.Scene();camera=new T.PerspectiveCamera(67,innerWidth/innerHeight,.08,320);
+  scene=new T.Scene();camera=new T.PerspectiveCamera(67,innerWidth/innerHeight,.08,640);
   scene.add(camera);enemyDestructionFX=createEnemyDestructionFX(T,scene,{camera,low:low()||profile.phone||profile.headset,maxDeaths:7,onSound:(kind,source)=>robotShutdownAudio.play(kind,source)});createEnvironment();
   missionLoading?.set(.52,'Quartier et voies de transit prêts');
   bootStep='jouabilité';status.textContent='Installation des commandes et des armes…';

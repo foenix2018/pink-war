@@ -530,7 +530,7 @@ async function boot(){
   renderer.shadowMap.enabled=false;
   bootStep='décor';status.textContent='Construction de la station énergétique Est…';
   traversal=L.createTraversal();
-  scene=new T.Scene();camera=new T.PerspectiveCamera(70,innerWidth/innerHeight,.06,600);scene.add(camera);enemyDestructionFX=createEnemyDestructionFX(T,scene,{camera,low:low()||profile.phone||profile.headset,maxDeaths:7,onSound:(kind,source)=>robotShutdownAudio.play(kind,source)});
+  scene=new T.Scene();camera=new T.PerspectiveCamera(70,innerWidth/innerHeight,.06,820);scene.add(camera);enemyDestructionFX=createEnemyDestructionFX(T,scene,{camera,low:low()||profile.phone||profile.headset,maxDeaths:7,onSound:(kind,source)=>robotShutdownAudio.play(kind,source)});
   createWorld();
   await art.ready;
   // WebGPU finish: rounded edges, rounder parts, clear-coated surfaces (again once late textures/models are in).

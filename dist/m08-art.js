@@ -1,5 +1,6 @@
+import { createChapterHorizon, extendPaving } from './chapter-horizon.js';
 import {createWorldEffects} from './webgpu-world-fx.js';
-import {createPhotoResponse,metricGround} from './world-material-response.js';
+import {createPhotoResponse} from './world-material-response.js';
 import {createFPSChapter} from './fps-environments.js';
 import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
 import {createFloorRampHardware} from './stair-hardware.js';
@@ -34,8 +35,7 @@ export function createM08Art(T, scene, { quality = 'normal', webgpu=false, onPor
   scene.fog = new T.FogExp2(0x1a1024, low ? .0105 : .0085);
   const sky = new T.HemisphereLight(0x9a88c8, 0x3a2430, 1.7); scene.add(sky); scene.add(new T.AmbientLight(0x4a3a5a, .7));
   const sun = new T.DirectionalLight(0x9fb0ff, 1.5); sun.position.set(60, 90, -40); scene.add(sun);   // moonlight through the clouds
-  const skyTex = canvasTexture(T, 16, 256, (c, w, h) => { const g = c.createLinearGradient(0, 0, 0, h); for (const [a, col] of [[0, '#05040b'], [.45, '#0f0a1e'], [.62, '#2a1236'], [.72, '#5a1f4a'], [.8, '#1a1024'], [1, '#08060c']]) g.addColorStop(a, col); c.fillStyle = g; c.fillRect(0, 0, w, h); });
-  add(new T.Mesh(new T.SphereGeometry(2400, 32, 16), new T.MeshBasicMaterial({ map: skyTex, side: T.BackSide, fog: false, depthWrite: false })));
+  stats.horizon=createChapterHorizon(T,scene,{chapter:8,low,webgpu}).stats();
 
   // ---------- Materials ----------
   const loader = new T.TextureLoader(),photo=createPhotoResponse(T,{low});
@@ -104,7 +104,7 @@ export function createM08Art(T, scene, { quality = 'normal', webgpu=false, onPor
   // ---------- Grounds, roofs ----------
   const FLOOR = { entree: M.wet, quai: M.wet, antenne: M.wet, ateliers: M.antiSkid, centre: M.plate, securite: M.slab, couloir: M.slab, archives: M.plate, galerie: M.slab, supervision: M.plate, ascenseur: M.plate };
   function buildGrounds() {
-    const ground = new T.Mesh(metricGround(T, 220, 220, M.wet.userData.tile), M.wet); ground.rotation.x = -Math.PI / 2; ground.position.y = -.01; add(ground);
+    add(extendPaving(T,M.wet,{radius:340,tile:M.wet.userData.tile,low,y:-.01,drop:.48}));
     for (const a of AREAS) {
       floorRect(FLOOR[a.id] || M.slab, a.x1, a.x2, a.z1, a.z2, .006);
       if (a.roof) {
@@ -233,16 +233,6 @@ export function createM08Art(T, scene, { quality = 'normal', webgpu=false, onPor
       const g = new T.Group(); soft(M.graphite, 0, 0, 0, .9, .3, .9, 0, g); for (const s of [-1, 1]) for (const t of [-1, 1]) soft(M.dark, s * .6, .05, t * .6, .5, .05, .5, 0, g);
       const eye = new T.Mesh(new T.SphereGeometry(.1, 8, 6), M.ledRed); eye.position.set(0, -.1, .46); g.add(eye); const beam = new T.Mesh(new T.ConeGeometry(1.4, 5, 16, 1, true), additive(0xff3b4e, .06)); beam.geometry.translate(0, -2.5, 0); beam.position.y = -.2; g.add(beam);
       add(g); effects.drones.push({ g, cx, cz, r, y, sp });
-    }
-    // Vesper at night: towers in silhouette around the complex, lit windows, pink beacons.
-    const winTex = canvasTexture(T, 64, 128, (c, w, h) => { c.fillStyle = '#05050a'; c.fillRect(0, 0, w, h); for (let y = 4; y < h; y += 6) for (let x = 3; x < w; x += 6) { if (rng() < .38) { c.fillStyle = rng() < .2 ? '#ff6fc8' : rng() < .5 ? '#ffd9a0' : '#7fc8ff'; c.fillRect(x, y, 3, 3); } } });
-    winTex.wrapS = winTex.wrapT = T.RepeatWrapping; winTex.magFilter = T.NearestFilter;
-    const cityMat = new T.MeshBasicMaterial({ map: winTex, fog: false, color: 0x8f8fa8 }), beacon = new T.MeshBasicMaterial({ color: 0xff3fb4, fog: false });
-    for (let i = 0; i < (low ? 40 : 90); i++) {
-      const a = rng() * TAU, d = 260 + rng() * 420, wdt = 18 + rng() * 40, hgt = 40 + rng() * 180 * (rng() < .25 ? 1.8 : 1), g = new T.BoxGeometry(wdt, hgt, wdt * (.6 + rng() * .6));
-      const uv = g.attributes.uv; for (let k = 0; k < uv.count; k++) uv.setXY(k, uv.getX(k) * wdt / 14, uv.getY(k) * hgt / 26);
-      const m = new T.Mesh(g, cityMat); m.position.set(Math.cos(a) * d, hgt / 2 - 4, Math.sin(a) * d); m.rotation.y = rng() * TAU; add(m);
-      if (rng() < .4) { const b = new T.Mesh(new T.SphereGeometry(1.4, 8, 6), beacon); b.position.set(m.position.x, hgt, m.position.z); add(b); }
     }
   }
   function updateEffects(t, dt, eye) {

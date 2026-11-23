@@ -1,3 +1,4 @@
+import { extendPaving } from './chapter-horizon.js';
 import {createFPSChapter} from './fps-environments.js';
 import {createStairHardware} from './stair-hardware.js';
 import {replaceBakedNeonMesh} from './baked-neons.js';
@@ -84,6 +85,8 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
   cutFenceOpenings(g);
   const mesh=new T.Mesh(g,maps[name]);mesh.name='Blender / '+name;mesh.castShadow=quality!=='low'&&name!=='amber';mesh.receiveShadow=true;root.add(mesh);
  }
+ const continuation=extendPaving(T,maps.road,{radius:220,tile:5,low:quality==='low',y:-.14,drop:.42});
+ ownG(continuation.geometry);root.add(continuation);
  const stairDetails=LEVEL1_MAP.stairs.map(s=>createStairHardware(T,root,s,{low:quality==='low',steps:24,railInset:.12,wall:true,materials:{steel:maps.steel,dark:maps.dark}}));
  const puddleMat=ownM(new T.MeshStandardMaterial({color:0x435854,roughness:.20,metalness:.30,transparent:true,opacity:.38,depthWrite:false}));
  for(const [x,z,sx,sz] of [[-3,47,2.5,1.5],[5,28,2,3],[21,8,2.8,1.8],[-2,64,1.5,2]]){const o=new T.Mesh(ownG(new T.CircleGeometry(1,18)),puddleMat);o.rotation.x=-Math.PI/2;o.position.set(x,.018,z);o.scale.set(sx,sz,1);root.add(o);}
