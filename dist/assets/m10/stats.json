@@ -1,11 +1,13 @@
 {
-  "source": "Blender 4.3 \u00b7 original editable scene",
-  "triangles": 47216,
+  "source": "Blender 4.3 · original editable scene",
+  "triangles": 46571,
   "batches": 13,
   "vertices": 74354,
   "pwmBytes": 1922240,
-  "downloadBytes": 520177,
+  "downloadBytes": 518407,
   "rooms": 2,
   "objectives": 8,
-  "doors": 4
+  "doors": 4,
+  "coincidentFacesRemoved": 389,
+  "collapsedFacesRemoved": 256
 }

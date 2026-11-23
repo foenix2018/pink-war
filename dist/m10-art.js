@@ -48,6 +48,6 @@ export function createM10Art(T,scene,{quality='normal',webgpu=false,characterId=
   markDone,setAvailable(ids){const active=new Set(ids);for(const[id,p]of markers){p.available=active.has(id);markDone(id,p.done);}},adapt(){},
   openPortal:(...args)=>base.openPortal(...args),
   stats:()=>({source:'assets/m10/PinkWars_N10_Couronne_HELIX.blend',triangles:compiled?.triangles||0,batches:compiled?.primitives.length||0,downloadBytes,rooms:2,doors:doors.size,batching,scanShader:holo?'TSL → WGSL':'material',reunionHero:npc?.id||null,secondSphere:buddySphere?.name||null,...base.stats()}),
-  dispose(){if(disposed)return;disposed=true;npc?.dispose();buddySphere?.model.dispose();buddySphere?.root.removeFromParent();for(const p of compiled?.primitives||[])p.geometry.dispose();const textures=new Set();for(const m of materials.values()){for(const k of ['map','normalMap','roughnessMap'])if(m[k])textures.add(m[k]);m.dispose();}for(const t of textures)t.dispose();root.removeFromParent();}
+  dispose(){if(disposed)return;disposed=true;base.dispose();npc?.dispose();buddySphere?.model.dispose();buddySphere?.root.removeFromParent();for(const p of compiled?.primitives||[])p.geometry.dispose();const textures=new Set();for(const m of materials.values()){for(const k of ['map','normalMap','roughnessMap'])if(m[k])textures.add(m[k]);m.dispose();}for(const t of textures)t.dispose();root.removeFromParent();}
  };
 }

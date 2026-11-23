@@ -1,3 +1,4 @@
+import {createVesperAltitude} from './vesper-altitude.js';
 import {parsePWM} from './blender-models.js';
 import {bevelBox} from './geo.js';
 import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
@@ -19,7 +20,7 @@ export function createM09Art(T,scene,{quality='normal',webgpu=false,onPortalClos
  const sunOrb=new T.Mesh(new T.SphereGeometry(6.5,32,16),glow(0xffbd69));sunOrb.position.set(100,55,-155);scene.add(sunOrb);
  const coreLight=new T.PointLight(0xff147e,2500,78,2);coreLight.position.set(-8,59,-102);root.add(coreLight);
  if(!low){const light=new T.PointLight(0x5de7f1,700,55,2);light.position.set(92,52,-50);root.add(light);}
- const ground=new T.Mesh(new T.PlaneGeometry(1300,1300),new T.MeshStandardMaterial({color:0x343f3c,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-67;root.add(ground);
+ const altitude=createVesperAltitude(T,root,{district:'gardens',low,webgpu});
 
  function addMesh(g,m,p=[0,0,0],parent=root){const mesh=new T.Mesh(g,m);mesh.position.set(...p);parent.add(mesh);return mesh;}
  const gate=new T.Group();gate.name='Sas ORDRE · vantaux rétractables';root.add(gate);const d=DOORS[0];
@@ -110,7 +111,7 @@ export function createM09Art(T,scene,{quality='normal',webgpu=false,onPortalClos
  })();
  function openPortal(x,y,z,{charge=3.2,hold=2.2}={}){const fx=createElectricPortal(T,{height:3.6,low,webgpu,lights:!low});fx.group.position.set(x,y,z);root.add(fx.group);portals.push({fx,age:0,charge,hold,closing:false});}
  function update(t,dt,eye,player){
-  clock.value=t;gateOpen+=(gateTarget-gateOpen)*(1-Math.exp(-dt*3));for(const {group,side}of gateLeaves)group.position.x=d.x+side*(2+gateOpen*4.2);
+  altitude.update(t);clock.value=t;gateOpen+=(gateTarget-gateOpen)*(1-Math.exp(-dt*3));for(const {group,side}of gateLeaves)group.position.x=d.x+side*(2+gateOpen*4.2);
   flowMap.offset.y=-t*.5;coreLight.intensity=(janus?2500:850)*(1+Math.sin(t*1.7)*.035);
   for(const v of devices.values()){v.group.visible=v.available||v.done;v.ring.material.color.set(v.done?0x65e6ae:0xff2488);v.beacon.position.y=2.35+Math.sin(t*1.9)*.08;v.beacon.rotation.y=t;}
   for(const p of mist){p.mesh.position.copy(p.base);p.mesh.position.x+=Math.sin(t*.4+p.phase)*1.2;p.mesh.position.y+=Math.sin(t*.7+p.phase)*.6;if(eye?.quaternion)p.mesh.quaternion.copy(eye.quaternion);}
@@ -121,8 +122,8 @@ export function createM09Art(T,scene,{quality='normal',webgpu=false,onPortalClos
   for(let i=portals.length-1;i>=0;i--){const p=portals[i];p.age+=dt;const closingAge=p.age>p.charge+p.hold?p.age-p.charge-p.hold:null;if(closingAge!==null&&!p.closing){p.closing=true;onPortalClose(p.fx.group.position);}p.fx.update(t,{age:p.age,closingAge});if(eye?.position)p.fx.group.lookAt(eye.position.x,p.fx.group.position.y,eye.position.z);if(closingAge>=PORTAL_CLOSE_SECONDS&&closingAge!==null){p.fx.dispose();portals.splice(i,1);}}
  }
  return{root,sun,ready,build(){},update,openPortal,setDoor(id,open){if(id==='access')gateTarget=open?1:0;},setLine:on=>{janus=on;},adapt(){},markDone(id,done=true){const d=devices.get(id);if(d)d.done=done;},setAvailable(ids){const set=new Set(ids);for(const [id,d]of devices)d.available=set.has(id);},
-  stats:()=>({source:'assets/m09/PinkWars_N09_Jardins_Suspendus.blend',triangles:compiled?.triangles||0,batches:compiled?.primitives.length||0,downloadBytes,waterfalls:falls.length,pools:waters.length,patrolDrones:beams.length,wind:webgpu,waterShader:webgpu?'TSL → WGSL':'material flow',reunionHero:npc?characterId==='ghju'?'lylu':'ghju':null,reunionVisible:!!npc?.model.root.visible,portals:portals.length}),
-  dispose(){if(disposed)return;disposed=true;root.removeFromParent();npc?.dispose();for(const p of portals)p.fx.dispose();for(const p of compiled?.primitives||[])p.geometry.dispose();for(const m of materials.values())m.dispose();skyMap.dispose();foamMap.dispose();flowMap.dispose();}
+  stats:()=>({skyline:altitude.stats(),source:'assets/m09/PinkWars_N09_Jardins_Suspendus.blend',triangles:compiled?.triangles||0,batches:compiled?.primitives.length||0,downloadBytes,waterfalls:falls.length,pools:waters.length,patrolDrones:beams.length,wind:webgpu,waterShader:webgpu?'TSL → WGSL':'material flow',reunionHero:npc?characterId==='ghju'?'lylu':'ghju':null,reunionVisible:!!npc?.model.root.visible,portals:portals.length}),
+  dispose(){if(disposed)return;disposed=true;root.removeFromParent();altitude.dispose();npc?.dispose();for(const p of portals)p.fx.dispose();for(const p of compiled?.primitives||[])p.geometry.dispose();for(const m of materials.values())m.dispose();skyMap.dispose();foamMap.dispose();flowMap.dispose();}
  };
 }
 

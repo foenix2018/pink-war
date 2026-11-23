@@ -1,3 +1,4 @@
+import {createVesperAltitude} from './vesper-altitude.js';
 import {createHelixPlanting} from './helix-botanical.js';
 import {createFPSChapter} from './fps-environments.js';
 import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
@@ -55,18 +56,6 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
   const panelGlow = canvasTexture(T, 512, 512, (c, w, h) => {
     c.fillStyle = '#000'; c.fillRect(0, 0, w, h);
     for (let x = w / 8, k = 0; x < w; x += w / 4, k++) { c.fillStyle = k % 2 ? '#ffb46a' : '#7fe7ff'; c.fillRect(x - 2, h * .1, 4, h * .55); }
-  }, { repeat: true });
-  const windowTex = density => canvasTexture(T, 128, 256, (c, w, h) => {
-    c.fillStyle = '#05070b'; c.fillRect(0, 0, w, h);
-    const cols = 4, rows = 8, palette = ['#ffcf8a', '#ffb05a', '#8ff0ff', '#d8ecff', '#b9a6ff'];
-    for (let r = 0; r < rows; r++) {
-      if (rng() < .12) continue;
-      for (let k = 0; k < cols; k++) if (rng() < density) {
-        c.fillStyle = palette[Math.floor(rng() * (rng() < .7 ? 2 : palette.length))]; c.globalAlpha = .55 + rng() * .45;
-        c.fillRect(k * w / cols + 5, r * h / rows + 6, w / cols - 10, h / rows - 12);
-      }
-    }
-    c.globalAlpha = 1;
   }, { repeat: true });
   const sky = canvasTexture(T, 4, 512, (c, w, h) => {
     const g = c.createLinearGradient(0, 0, 0, h);
@@ -385,60 +374,25 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
     if (camera) heartHalo.quaternion.copy(camera.quaternion);
   });
 
-  // ---------- The city below and the skyline ----------
-  const towers = [], cityBase = -280;
-  // Window tile: 4 × 8 windows over 12 × 26 m. Classes by footprint and height keep the windows at scale.
-  const towerTextures = [windowTex(.42), windowTex(.3), windowTex(.22)];
-  const classes = [];
-  for (const [k, w, d] of [[0, 22, 22], [1, 32, 28], [2, 44, 36]]) for (const h of [200, 330]) {
-    const geometry = new T.BoxGeometry(1, 1, 1), uv = geometry.attributes.uv;
-    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w / 12, uv.getY(i) * h / 26);
-    classes.push({ k, w, d, h, geometry, list: [] });
-  }
-  const towerCount = low ? 120 : 280;
-  for (let i = 0; i < towerCount; i++) {
-    const a = rng() * TAU, r = 150 + Math.pow(rng(), .7) * 500, x = Math.cos(a) * r, z = Math.sin(a) * r * 1.15 - 10;
-    // Near the Crown the city stays below its terraces, apart from a few landmark towers framing the view.
-    const landmark = rng() < (r < 280 ? .1 : .16), top = landmark ? 40 + rng() * 120 : -190 + rng() * (r < 280 ? 200 : 170);
-    const height = top - cityBase, k = Math.floor(rng() * 3), cls = classes.find(c => c.k === k && c.h === (height > 265 ? 330 : 200));
-    cls.list.push([x, cityBase, z, cls.w * (.8 + rng() * .4), height, cls.d * (.8 + rng() * .4), rng() * Math.PI]);
-    towers.push({ x, z, top });
-  }
-  const towerMaterials = towerTextures.map(tex => std({ color: 0x141a24, roughness: .55, metalness: .5, emissiveMap: tex, emissive: new T.Color(1, 1, 1), emissiveIntensity: low ? 1 : 1.25 }));
-  for (const cls of classes) {
-    if (!cls.list.length) continue;
-    const mesh = new T.InstancedMesh(cls.geometry, towerMaterials[cls.k], cls.list.length), m = new T.Matrix4(), q = new T.Quaternion(), e = new T.Euler(), p = new T.Vector3(), s = new T.Vector3();
-    cls.list.forEach(([x, y, z, sx, sy, sz, ry], i) => mesh.setMatrixAt(i, m.compose(p.set(x, y + sy / 2, z), q.setFromEuler(e.set(0, ry, 0)), s.set(sx, sy, sz))));
-    mesh.instanceMatrix.needsUpdate = true; mesh.computeBoundingSphere(); add(mesh); stats.instances += cls.list.length;
-  }
-  // Neon strips and rooftop beacons in one coloured instanced mesh.
-  {
-    const neonColors = [0xffb35c, 0x3fe6d4, 0x9f8cff, 0xe8f6ff, 0xff7a3c, 0x55a8ff].map(c => new T.Color(c));
-    const items = [];
-    for (const tw of towers) {
-      if (rng() < .6) items.push([tw.x + (rng() - .5) * 18, tw.top - 12 - rng() * 60, tw.z + (rng() - .5) * 18, .8, 8 + rng() * 26, .8, neonColors[Math.floor(rng() * neonColors.length)]]);
-      if (rng() < .5) items.push([tw.x, tw.top + .5, tw.z, 1.4, 1, 1.4, neonColors[3]]);
-    }
-    const mesh = new T.InstancedMesh(new T.CylinderGeometry(.5,.5,1,6), new T.MeshBasicMaterial({ toneMapped: false }), items.length), m = new T.Matrix4(), q = new T.Quaternion(), p = new T.Vector3(), s = new T.Vector3();
-    items.forEach(([x, y, z, sx, sy, sz, color], i) => { mesh.setMatrixAt(i, m.compose(p.set(x, y, z), q, s.set(sx, sy, sz))); mesh.setColorAt(i, color); });
-    mesh.instanceMatrix.needsUpdate = true; mesh.instanceColor.needsUpdate = true; mesh.computeBoundingSphere(); add(mesh); stats.instances += items.length;
-  }
+  // ---------- Vesper below the terraces ----------
+  const altitude = createVesperAltitude(T, root, { district: 'helix', low, webgpu });
+  animated.push(t => altitude.update(t));
   // Holographic billboards facing the Crown (fictional brands of Vesper).
   const billboards = [];
-  for (const [text, sub, color, a, r, y] of [
-    ['HELIX', 'L’ANCRAGE VOUS RELIE', '#f4f7fb', -.6, 170, 26], ['SOMNIA', 'DORMEZ CERTIFIÉ', '#9f8cff', .35, 190, 8], ['VESPER TRANSIT', 'LIGNE 9 · COURONNE', '#3fe6d4', 2.4, 160, 14],
-    ['NOVA-KAÏ', 'PROTÉINES DE SYNTHÈSE', '#ffb35c', -2.2, 200, 20], ['AEGIS NE VOUS', 'PROTÈGE PAS · HELIX VEILLE', '#e8f6ff', 1.2, 175, -4], ['ZONE COURONNE', 'ACCÈS RÉSERVÉ', '#ffb35c', -1.3, 150, 34]
+  for (const [text, sub, color, a, r] of [
+    ['HELIX', 'L’ANCRAGE VOUS RELIE', '#f4f7fb', -.6, 170], ['SOMNIA', 'DORMEZ CERTIFIÉ', '#9f8cff', .35, 190], ['VESPER TRANSIT', 'LIGNE 9 · COURONNE', '#3fe6d4', 2.4, 160],
+    ['NOVA-KAÏ', 'PROTÉINES DE SYNTHÈSE', '#ffb35c', -2.2, 200], ['AEGIS NE VOUS', 'PROTÈGE PAS · HELIX VEILLE', '#e8f6ff', 1.2, 175], ['ZONE COURONNE', 'ACCÈS RÉSERVÉ', '#ffb35c', -1.3, 150]
   ].slice(0, low ? 4 : 6)) {
-    const x = Math.cos(a) * r, z = Math.sin(a) * r * 1.1 - 10;
-    const bb = new T.Mesh(new T.PlaneGeometry(46, 17), new T.MeshBasicMaterial({ map: sign(text, sub, color), transparent: true, depthWrite: false, toneMapped: false, side: T.DoubleSide }));
-    bb.position.set(x, y, z); bb.lookAt(0, y * .4, -10); bb.userData.phase = rng() * 10; billboards.push(bb); add(bb);
-    queue(M.dark, x - Math.cos(a) * 3, y - 60, z - Math.sin(a) * 3, 3, 52, 3);
+    const roof = altitude.nearestRoof(Math.cos(a) * r, Math.sin(a) * r);
+    const { x, z, top, width } = roof;
+    const panelWidth = Math.min(34, width * 1.1), panelHeight = panelWidth * .37;
+    const bb = new T.Mesh(new T.PlaneGeometry(panelWidth, panelHeight), new T.MeshBasicMaterial({ map: sign(text, sub, color), transparent: true, depthWrite: false, toneMapped: false, side: T.DoubleSide }));
+    bb.position.set(x, top + 10 + panelHeight / 2, z);
+    bb.lookAt(0, bb.position.y, -10);
+    bb.userData.phase = rng() * 10; billboards.push(bb); add(bb);
+    queue(M.dark, x, top + 5, z, 1.2, 10, 1.2);
   }
   animated.push(t => { for (const bb of billboards) bb.material.opacity = .78 + .22 * Math.sin(t * 1.3 + bb.userData.phase) * (Math.sin(t * 17 + bb.userData.phase) > .97 ? .2 : 1); });
-  // City glow and haze layers between the Crown and the streets.
-  for (const [y, color, opacity] of [[-60, 0xffa86a, .2], [-140, 0x58d6ff, .16], [-220, 0xffc18a, .22]]) {
-    const haze = new T.Mesh(new T.PlaneGeometry(1800, 1800), M.additive(color, opacity, glowDisc)); haze.rotation.x = -Math.PI / 2; haze.position.set(0, y, -40); haze.material.fog = false; add(haze);
-  }
   // Air traffic lanes: light streaks gliding between the towers.
   const lanes = [], laneCount = low ? 6 : 12, carsPerLane = low ? 10 : 18;
   // Each lane is a chord well away from the Crown, mostly below its terraces: traffic is seen, never overhead.
@@ -508,6 +462,7 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
     setGatesOpen(open) { gatesOpen = open; },
     setConsole(id, done) { const c = consoles.get(id); if (c) {c.done=!!done;c.control.setState(c.done);} },
     setAnchorPower(value) { anchorTarget = value; },
-    stats() { return { ...stats,foliage:planting?.stats(), fps:fpsChapter?.stats(), neons:neons.stats(), portals: portals.length, anchorPower: +anchorPower.toFixed(2), gatesOpen }; }
+    dispose() { altitude.dispose(); },
+    stats() { return { ...stats,skyline:altitude.stats(),foliage:planting?.stats(), fps:fpsChapter?.stats(), neons:neons.stats(), portals: portals.length, anchorPower: +anchorPower.toFixed(2), gatesOpen }; }
   };
 }

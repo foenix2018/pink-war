@@ -1,6 +1,8 @@
 """Material-batched metric PWM1 export, shared by authored scenery generators."""
-import bpy,json,struct,gzip,pathlib
-def export_pwm(objects,path,materials,source):
+import bpy,struct,gzip,pathlib
+from pwm_depth_cleanup import clean, pack
+
+def export_pwm(objects,path,materials,source,*,emissive_double_sided=False):
  path=pathlib.Path(path);OUT=path.parent;filename=path.name;META=materials
  deps=bpy.context.evaluated_depsgraph_get();prims={};bounds_min=[1e9]*3;bounds_max=[-1e9]*3
  for obj in objects:
@@ -32,7 +34,8 @@ def export_pwm(objects,path,materials,source):
   desc={'material':mat,'vertices':len(values),'indices':len(indices),'index32':len(values)>65535}
   desc['position']=append(positions);desc['normal']=append(normals);desc['uv1']=append(uv1);desc['uv0']=append(uv0);desc['index']=append(struct.pack('<'+('I'if desc['index32']else'H')*len(indices),*indices));descriptions.append(desc)
  meta={'min':bounds_min,'max':bounds_max,'primitives':descriptions,'materials':META,'source':source,'units':'metres'}
- encoded=json.dumps(meta,ensure_ascii=False,separators=(',',':')).encode();encoded+=b' '*((-len(encoded))%4)
- raw=b'PWM1'+struct.pack('<I',len(encoded))+encoded+b''.join(chunks);(OUT/filename).write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
- return {'source':'Blender 4.3 · original editable scene','triangles':sum(p['indices']//3 for p in descriptions),'batches':len(descriptions),'vertices':sum(p['vertices']for p in descriptions),'pwmBytes':len(raw),'downloadBytes':(OUT/filename).stat().st_size}
-
+ payload=bytearray(b''.join(chunks))
+ cleanup=clean(meta,payload,emissive_double_sided=emissive_double_sided)
+ raw=pack(meta,payload)
+ (OUT/filename).write_bytes(gzip.compress(raw,compresslevel=9,mtime=0))
+ return {'source':'Blender 4.3 · original editable scene','triangles':sum(p['indices']//3 for p in descriptions),'batches':len(descriptions),'vertices':sum(p['vertices']for p in descriptions),'pwmBytes':len(raw),'downloadBytes':(OUT/filename).stat().st_size,**cleanup}
