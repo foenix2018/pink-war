@@ -1,9 +1,9 @@
-name: LYLU civilian Blender V2
+name: LYLU civilian Blender V3
 on:
   push:
     branches: [workshop/lylu-civil-blender-v2]
     paths:
-      - tools/blender/lylu_civil_v2.py
+      - tools/blender/lylu_civil_v3.py
       - .github/workflows/lylu-civil-blender-v2.yml
   workflow_dispatch:
 permissions:
@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           sparse-checkout: |
-            tools/blender/lylu_civil_v2.py
+            tools/blender/lylu_civil_v3.py
           sparse-checkout-cone-mode: false
           persist-credentials: false
       - uses: actions/setup-python@v5
@@ -35,39 +35,29 @@ jobs:
           OPENBLAS_NUM_THREADS: '1'
           PYTHONUNBUFFERED: '1'
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('tools/blender/lylu_civil_v2.py')
-          s=p.read_text()
-          s=s.replace('scene.render.engine="BLENDER_EEVEE"','scene.render.engine="CYCLES"\nscene.cycles.device="CPU"\nscene.cycles.samples=16\nscene.cycles.use_denoising=True\nscene.render.threads_mode="FIXED"\nscene.render.threads=4')
-          s=s.replace('scene.render.resolution_x=1000;scene.render.resolution_y=1100','scene.render.resolution_x=800;scene.render.resolution_y=880')
-          s=s.replace('for name,pos in [("front"', 'bpy.ops.wm.save_as_mainfile(filepath=str(OUT/"LYLU_civil_V2.blend"))\nfor name,pos in [("front"')
-          s=s.replace('Vector())/len(ids)','Vector((0,0,0)))/len(ids)')
-          p.write_text(s)
-          PY
-          python -u tools/blender/lylu_civil_v2.py
+          python -u tools/blender/lylu_civil_v3.py
       - name: Validate model and renders
         run: |
           python - <<'PY'
           import pathlib, struct, json
           p=pathlib.Path('lylu_output')
-          assert (p/'LYLU_civil_V2.blend').stat().st_size>100000
-          x=(p/'LYLU_civil_V2.glb').read_bytes()
+          assert (p/'LYLU_civil_V3.blend').stat().st_size>100000
+          x=(p/'LYLU_civil_V3.glb').read_bytes()
           assert x[:4]==b'glTF'
           n=struct.unpack_from('<I',x,12)[0]
           d=json.loads(x[20:20+n])
           print('Meshes:',len(d['meshes']), 'Materials:',len(d['materials']))
-          for name in ['front','three_quarter','back']:
+          for name in ['front','three_quarter','back','portrait']:
               assert (p/('LYLU_'+name+'.png')).stat().st_size>10000
           PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: LYLU-civil-Blender-V2
+          name: LYLU-civil-Blender-V3
           if-no-files-found: warn
           path: |
             lylu_output/*.blend
             lylu_output/*.glb
             lylu_output/*.png
             lylu_output/README.txt
-            tools/blender/lylu_civil_v2.py
+            tools/blender/lylu_civil_v3.py
