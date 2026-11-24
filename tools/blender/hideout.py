@@ -234,12 +234,14 @@ DOORS=[
  {'id':'recharge-ouest','name':'Recharge · ouest','axis':'z','x':-3.70,'z':3.2,'width':1.55},
  {'id':'recharge-est','name':'Recharge · est','axis':'z','x':3.70,'z':3.2,'width':1.55}
 ]
+PORTALS=[{'id':'gym','name':'Salle de sport','axis':'x','x':4.55,'z':7.65,'width':3.05,'height':2.65}]
 ROOMS=[
  {'id':'dortoir','name':'Dortoir','bounds':[-10.75,-11.5,-4.55,-5]},
  {'id':'bain','name':'Salle de bain','bounds':[4.55,-11.5,10.75,-5]},
  {'id':'armurerie','name':'Armurerie','bounds':[-10.75,-5,-4.55,3.2]},
  {'id':'tenues','name':'Tenues de combat','bounds':[-10.75,3.2,-4.55,11.45]},
- {'id':'atelier','name':'Atelier nano','bounds':[4.55,-5,10.75,11.45]},
+ {'id':'atelier','name':'Atelier nano','bounds':[4.55,-5,10.75,3.2]},
+ {'id':'gym','name':'Salle de sport','bounds':[4.55,3.2,10.75,11.45]},
  {'id':'archives','name':'Archives','bounds':[-4.55,-11.5,4.55,-5]},
  {'id':'salon','name':'Salon','bounds':[-2.95,-5,2.95,3.2]},
  {'id':'recharge','name':'Recharge et mission','bounds':[-4.55,3.2,4.55,11.45]}
@@ -260,9 +262,10 @@ def wall(axis,at,start,end,openings=()):
   center=(at,3.75,c)if axis=='x'else(c,3.75,at)
   box('Cloisons hautes',center,(.16,2.2,w)if axis=='x'else(w,2.2,.16),solid=True,name='linteau de porte')
 ZONE='Cloisons fermées'
-for at in [-4.55,4.55]:wall('x',at,-11.5,11.45,[(d['z'],d['width'])for d in DOORS if d['axis']=='x'and d['x']==at])
+for at in [-4.55,4.55]:wall('x',at,-11.5,11.45,[(d['z'],d['width'])for d in DOORS+PORTALS if d['axis']=='x'and d['x']==at])
 wall('z',-5,-10.75,10.75,[(d['x'],d['width'])for d in DOORS if d['z']==-5])
 wall('z',3.2,-10.75,4.55,[(d['x'],d['width'])for d in DOORS if d['z']==3.2])
+wall('z',3.2,4.55,10.75)
 for at in [-2.95,2.95]:wall('x',at,-5,3.2)
 for door in DOORS:
  ZONE='Cadres de portes'
@@ -282,6 +285,25 @@ for door in DOORS:
   for yy in [.06,2.52]:box('Métal brossé',pos(mid,yy),size(w*.465,.065,.075))
   box('Cuir et joints',pos(mid-side*w*.175,1.16,.05),size(.075,.15,.016))
   neon(pos(mid-side*w*.22,1.73,.047),pos(mid-side*w*.22,2.15,.047),'Néon bleu',.006)
+# Open gym entrance: chamfered industrial portal, visible from the entrance.
+ZONE='Cadres de portes'
+for portal in PORTALS:
+ x,z,w=portal['x'],portal['z'],portal['width']
+ for side in [-1,1]:
+  zz=z+side*(w/2+.10)
+  box('Cadres anthracite',(x,1.30,zz),(.38,2.60,.20))
+  box('Métal brossé',(x-.19,1.17,zz),(.035,2.34,.095))
+  neon((x-.22,.25,zz),(x-.22,2.10,zz),'Néon bleu',.012)
+  rod('Acier patiné',(x-.08,2.28,z+side*(w/2-.12)),(x-.08,2.58,z+side*(w/2-.43)),.10,8)
+ box('Cadres anthracite',(x,2.73,z),(.42,.23,w+.38))
+ neon((x-.24,2.68,z-w*.37),(x-.24,2.68,z+w*.37),'Néon rose',.013)
+ # No leaf or invisible collision across the aperture.
+ o=text('PINKWARS  /  GYM',x-.25,2.52,z,.16,'Néon blanc');o.rotation_euler=(math.pi/2,0,-math.pi/2)
+ # Workshop label on the shared pier, visible from the central hall.
+ box('Cadres anthracite',(4.31,1.83,4.00),(.08,.75,1.1))
+ for label,yy in [('ATELIER',1.97),('NANO',1.73)]:
+  o=text(label,4.25,yy,4.00,.15,'Néon blanc');o.rotation_euler=(math.pi/2,0,-math.pi/2)
+ neon((4.24,1.49,3.67),(4.24,1.49,4.33),'Néon rose',.010)
 ZONE='Architecture'
 # Ceiling service beams and conduit runs leave the diorama open, as in the reference.
 for z in [-10.8,-4.9,3.2,10.8]:
@@ -424,7 +446,7 @@ for x in [-10.1,-5.2]:
  for y in [.45,1.13,1.81]:
   box('Acier patiné',(x,y,3.9),(.65,.64,.65));box('Cadres anthracite',(x,y,4.25),(.53,.53,.03));rod('Métal brossé',(x+.19,y-.1,4.30),(x+.19,y+.1,4.30),.025)
 crate(-9.8,7.45);crate(-5.6,7.5,scale=.8)
-for x,z in [(-10.0,9.9),(-8.4,10.0),(-6.8,10.0),(6.0,10.0),(7.6,10.0),(9.2,10.0)]:crate(x,z,scale=.8)
+for x,z in [(-10.0,9.9),(-8.4,10.0),(-6.8,10.0)]:crate(x,z,scale=.8)
 ZONE='Stations des compagnons'
 for x,name,accent in [(-2.15,'GAB-1','Néon rose'),(2.15,'CAR-14','Néon bleu')]:
  dock_mark=mark_furniture()
@@ -493,12 +515,128 @@ SOLIDS.append({'kind':'siège d’atelier','x':7.7,'z':1.2,'hx':.45,'hz':.45,'y'
 for j in range(5):
  a=j/5*TAU;rod('Métal brossé',(7.7,.13,1.2),(7.7+math.sin(a)*.48,.10,1.2+math.cos(a)*.48),.03);ellipsoid('Cuir et joints',(7.7+math.sin(a)*.48,.08,1.2+math.cos(a)*.48),(.12,.12,.1))
 fit_furniture(seat_mark,(7.7,0,1.2),(.90,.50/.925,.90))
-for x in [5.35,9.8]:
- side_mark=mark_furniture()
- box('Acier patiné',(x,.6,4.8),(1.25,1.2,1.0),solid=True);screen(x,1.6,4.5,.95,.5)
- for j in range(3):box('Cadres anthracite',(x,.25+j*.28,5.31),(1.0,.19,.04));neon((x-.35,.25+j*.28,5.34),(x+.35,.25+j*.28,5.34),'Néon rose',.007)
- fit_furniture(side_mark,(x,0,4.8),(.85,.80,.85))
+# Former rear nano storage is replaced by the gym. Main nano bench stays intact.
+# Retain a compact wall cabinet inside the workshop, outside the walking aisle.
+x=10.10
+box('Acier patiné',(x,.48,1.65),(.65,.96,.85),solid=True)
+for j in range(3):
+ box('Cadres anthracite',(x,.21+j*.23,2.09),(.53,.17,.04))
+ neon((x-.18,.21+j*.23,2.12),(x+.18,.21+j*.23,2.12),'Néon bleu',.007)
 plant(10.1,0,-4.0,.55)
+# Gym equipment is authored at metric scale, exported as material-batched PWM
+# geometry and rendered by the existing WebGPU scene. No extra runtime rig.
+ZONE='Salle de sport'
+# Tiled rubber training floor, a perimeter pink LED strip, and wall graphics.
+for i in range(6):
+ for j in range(8):
+  box('Cuir et joints',(5.14+i*.91,.034,3.79+j*.94),(.90,.035,.93))
+for a,b in [((4.83,.058,3.43),(10.48,.058,3.43)),((10.48,.058,3.43),(10.48,.058,11.15)),((10.48,.058,11.15),(4.83,.058,11.15)),((4.83,.058,11.15),(4.83,.058,9.25)),((4.83,.058,6.05),(4.83,.058,3.43))]:
+ neon(a,b,'Néon rose',.012)
+# Back-wall logo visible as the player enters from the west.
+box('Cadres anthracite',(10.60,2.25,7.35),(.08,.85,2.8))
+for label,y,size,mat in [('PINKWARS',2.43,.28,'Néon rose'),('GYM  ///',2.08,.22,'Néon blanc')]:
+ o=text(label,10.55,y,7.35,size,mat);o.rotation_euler=(math.pi/2,0,-math.pi/2)
+# Four-post squat cage, 2.25 m tall, 1.4 m wide, 1.25 m deep.
+rx,rz=8.75,4.75
+for dx in [-.70,.70]:
+ for dz in [-.62,.62]:
+  xx,zz=rx+dx,rz+dz
+  box('Cadres anthracite',(xx,1.14,zz),(.075,2.20,.075))
+  box('Acier patiné',(xx,.09,zz),(.25,.12,.34))
+  box('Tissu rose',(xx,1.18,zz+.044),(.043,1.96,.014))
+  for k in range(15):cyl('Cuir et joints',(xx,.44+k*.112,zz+.056),.013,.009,8,axis='z')
+  for yy in [.12,2.15]:box('Métal brossé',(xx,yy,zz),(.11,.09,.11))
+ for yy in [.15,2.18]:box('Acier patiné',(rx+dx,yy,rz),(.08,.075,1.32))
+for dz in [-.62,.62]:
+ box('Acier patiné',(rx,2.22,rz+dz),(1.49,.085,.085))
+rod('Métal brossé',(rx-.67,2.10,rz+.64),(rx+.67,2.10,rz+.64),.019,12)
+for dx in [-.70,.70]:
+ box('Métal brossé',(rx+dx,1.30,rz+.68),(.13,.13,.17))
+ box('Cadres anthracite',(rx+dx,1.36,rz+.77),(.11,.09,.05))
+# Olympic barbell and plates (2.20 m overall; 450 mm plate diameter).
+bar_y,bar_z=1.40,rz+.73
+rod('Métal brossé',(rx-1.10,bar_y,bar_z),(rx+1.10,bar_y,bar_z),.014,16)
+for side in [-1,1]:
+ rod('Métal brossé',(rx+side*.65,bar_y,bar_z),(rx+side*1.10,bar_y,bar_z),.025,16)
+ for i in range(3):
+  xx=rx+side*(.79+i*.065);r=.225 if i<2 else .18
+  cyl('Cuir et joints',(xx,bar_y,bar_z),r,.055,24,axis='x')
+  cyl('Acier patiné',(xx+side*.029,bar_y,bar_z),.045,.008,16,axis='x')
+  # rings face outward on the plate faces
+  for k in range(6):
+   a=k*TAU/6;cyl('Métal brossé',(xx+side*.030,bar_y+math.cos(a)*r*.72,bar_z+math.sin(a)*r*.72),.011,.009,8,axis='x')
+ cyl('Métal brossé',(rx+side*1.035,bar_y,bar_z),.038,.035,16,axis='x')
+# Flat utility bench within the rack station, 45 cm seat height.
+bx,bz=rx,5.90
+for zz in [bz-.53,bz+.53]:
+ box('Acier patiné',(bx,.10,zz),(.55,.085,.14))
+ rod('Métal brossé',(bx,.13,zz),(bx,.35,zz),.043,8)
+box('Cadres anthracite',(bx,.34,bz),(.19,.075,1.29))
+cushion('Cuir et joints',(bx,.409,bz),(.32,.085,1.28))
+for side in [-1,1]:rod('Tissu rose',(bx+side*.15,.424,bz-.54),(bx+side*.15,.424,bz+.54),.007,6)
+SOLIDS.append({'kind':'Gym squat et banc','x':rx,'z':5.02,'hx':1.12,'hz':1.53,'y':0,'height':2.25})
+# Three-tier dumbbell rack on east wall: individually modelled hex heads,
+# progressive weights, knurled metal handles and pink weight markers.
+dx,dz=10.03,7.65
+for zz in [dz-1.32,dz+1.32]:
+ rod('Acier patiné',(dx-.34,.10,zz),(dx+.15,1.30,zz),.045,8)
+ box('Cadres anthracite',(dx,.08,zz),(.72,.07,.13))
+for level in range(3):
+ y=.36+level*.36
+ box('Acier patiné',(dx,y,dz),(.57,.07,2.66))
+ box('Cuir et joints',(dx,y+.043,dz),(.49,.035,2.58))
+ box('Cadres anthracite',(dx-.275,y+.045,dz),(.055,.09,2.65))
+ for j in range(8):
+  zz=dz-1.12+j*.32;rr=.085+(.017*(2-level))+.004*j;yy=y+.065+rr
+  rod('Métal brossé',(dx-.18,yy,zz),(dx+.18,yy,zz),.018,12)
+  for side in [-1,1]:
+   xx=dx+side*.135
+   cyl('Cadres anthracite',(xx,yy,zz),rr,.095,6,axis='x')
+   cyl('Tissu rose',(xx+side*.05,yy,zz),rr*.32,.012,8,axis='x')
+SOLIDS.append({'kind':'Gym rack haltères','x':dx,'z':dz,'hx':.38,'hz':1.38,'y':0,'height':1.38})
+# Rower, 2.44 m rail and flywheel, positioned parallel to the south wall.
+xx,zz=7.30,10.14
+for x in [xx-.91,xx+.96]:
+ box('Cadres anthracite',(x,.10,zz),(.15,.09,.65))
+ rod('Acier patiné',(x,.13,zz),(x,.29,zz),.047,8)
+box('Métal brossé',(xx-.20,.30,zz),(1.82,.10,.12))
+box('Cadres anthracite',(xx-.20,.24,zz),(1.85,.065,.17))
+cushion('Cuir et joints',(xx-.50,.385,zz),(.31,.09,.31))
+for side in [-1,1]:
+ box('Cadres anthracite',(xx+.36,.26,zz+side*.16),(.27,.075,.13),yaw=0)
+ box('Tissu rose',(xx+.36,.305,zz+side*.16),(.055,.025,.15))
+rod('Acier patiné',(xx+.73,.18,zz),(xx+.88,.62,zz),.08,10)
+cyl('Cadres anthracite',(xx+.88,.66,zz),.32,.25,32,axis='z')
+for side in [-1,1]:
+ cyl('Métal brossé',(xx+.88,.66,zz+side*.13),.28,.018,32,axis='z')
+ ring('Néon rose',(xx+.88,.66,zz+side*.145),.256,.009,32,axis='z')
+ for k in range(12):
+  a=k*TAU/12;cyl('Cuir et joints',(xx+.88+math.cos(a)*.20,.66+math.sin(a)*.20,zz+side*.143),.018,.008,8,axis='z')
+rod('Métal brossé',(xx+.58,.60,zz),(xx+.23,1.04,zz),.025,10)
+box('Cadres anthracite',(xx+.22,1.06,zz),(.17,.13,.24))
+box('Néon bleu',(xx+.13,1.07,zz),(.009,.073,.16))
+rod('Métal brossé',(xx+.40,.65,zz-.19),(xx+.40,.65,zz+.19),.017,12)
+rod('Cuir et joints',(xx+.40,.65,zz-.18),(xx+.40,.65,zz-.075),.026,10)
+rod('Cuir et joints',(xx+.40,.65,zz+.075),(xx+.40,.65,zz+.18),.026,10)
+SOLIDS.append({'kind':'Gym rameur','x':xx,'z':zz,'hx':1.25,'hz':.35,'y':0,'height':1.12})
+# Storage locker, towels and small equipment, under a cyan-lit shelf.
+box('Acier patiné',(10.10,.96,10.55),(.72,1.85,.88),solid=True,name='Gym casier')
+box('Cadres anthracite',(9.70,.96,10.55),(.045,1.74,.78))
+rod('Métal brossé',(9.66,.85,10.79),(9.66,1.13,10.79),.015)
+neon((9.65,.18,10.20),(9.65,.18,10.90),'Néon rose',.009)
+box('Acier patiné',(10.18,2.11,10.55),(.70,.08,1.02))
+neon((9.83,2.04,10.10),(9.83,2.04,11.00),'Néon bleu',.012)
+for j in range(3):
+ cyl('Cadres anthracite',(10.2,2.24,10.22+j*.26),.075,.19,12)
+ cyl('Tissu rose',(10.2,2.34,10.22+j*.26),.078,.035,12)
+# Kettlebell pair and rolled training mat near the rack, outside the entry.
+for j in range(2):
+ x,z=9.83,5.85+j*.27
+ ellipsoid('Cuir et joints',(x,.17,z),(.22,.23,.22),12)
+ polyline('Métal brossé',[(x-.055,.23,z),(x-.055,.34,z),(x+.055,.34,z),(x+.055,.23,z)],.023)
+# Ambient gym panel lighting, no additional expensive shadow pass.
+box('Cadres anthracite',(7.6,3.43,7.45),(2.7,.10,.72))
+box('Néon blanc',(7.6,3.367,7.45),(2.55,.025,.60))
 ZONE='Porte de mission'
 SOLIDS.append({'kind':'porte de mission','x':0,'z':11.15,'hx':2.9,'hz':.37,'y':0,'height':4.85})
 outline=[(-2.1,0),(2.1,0),(2.9,.8),(2.9,2.8),(2.1,3.6),(-2.1,3.6),(-2.9,2.8),(-2.9,.8)]
@@ -665,12 +803,12 @@ po=bpy.data.objects.new('Panorama de Vesper / baie vitrée',pme);sc.collection.o
 for o in sc.objects:
  if o.name.startswith(('Vesper extérieure','Toiture complète'))or any(META.get(m.name,{}).get('interior')for m in getattr(o.data,'materials',[])):o.hide_render=True
 
-layout={'version':1,'proportionsRevision':2,'atelierScale':{'benchTop':.95,'benchDepth':1.44,'robotScale':.88,'screenDrop':.15},'name':'La Planque · Les Héritiers du Silence','author':'Pink Wars · Blender','doors':DOORS,'rooms':ROOMS,'showcase':{'companions':[{'id':'gaby','hero':'ghju','x':-2.15,'y':1.5,'z':7.3},{'id':'cara','hero':'lylu','x':2.15,'y':1.5,'z':7.3}],'weapons':SHOWCASE_WEAPONS,'outfits':[{'hero':'ghju','x':-8.9,'y':.285,'z':4.45},{'hero':'lylu','x':-6.4,'y':.285,'z':4.45}]},'bounds':{'x1':-10.65,'x2':10.65,'z1':-11.25,'z2':11.35},'spawn':{'x':0,'z':9.0,'yaw':0},'colliders':SOLIDS,'stations':[
+layout={'version':1,'proportionsRevision':2,'gymRevision':1,'portals':PORTALS,'atelierScale':{'benchTop':.95,'benchDepth':1.44,'robotScale':.88,'screenDrop':.15},'name':'La Planque · Les Héritiers du Silence','author':'Pink Wars · Blender','doors':DOORS,'rooms':ROOMS,'showcase':{'companions':[{'id':'gaby','hero':'ghju','x':-2.15,'y':1.5,'z':7.3},{'id':'cara','hero':'lylu','x':2.15,'y':1.5,'z':7.3}],'weapons':SHOWCASE_WEAPONS,'outfits':[{'hero':'ghju','x':-8.9,'y':.285,'z':4.45},{'hero':'lylu','x':-6.4,'y':.285,'z':4.45}]},'bounds':{'x1':-10.65,'x2':10.65,'z1':-11.25,'z2':11.35},'spawn':{'x':0,'z':9.0,'yaw':0},'colliders':SOLIDS,'stations':[
  {'id':'rest','name':'Dortoir','action':'Se reposer et régénérer','x':-6.1,'z':-6.35,'radius':2.4},
  {'id':'weapons','name':'Mur d’armes','action':'Préparer les armes','x':-7.8,'z':-.2,'radius':2.7},
  {'id':'outfits','name':'Tenues de combat','action':'Préparer l’équipement','x':-7.8,'z':6.3,'radius':2.4},
  {'id':'archive','name':'Livre de l’Histoire','action':'Relire les événements vécus','x':0,'z':-6.1,'radius':2.4},
- {'id':'workshop','name':'Atelier nano','action':'Fabriquer et améliorer','x':7.5,'z':3.0,'radius':3},
+ {'id':'workshop','name':'Atelier nano','action':'Fabriquer et améliorer','x':6.0,'z':1.55,'radius':2.1},
  {'id':'charge-gaby','name':'GAB-1','action':'Régénérer le bouclier et recharger','x':-2.2,'z':9.0,'radius':1.6},
  {'id':'charge-cara','name':'CAR-14','action':'Régénérer le bouclier et recharger','x':2.2,'z':9.0,'radius':1.6},
  {'id':'mission','name':'Porte Mission','action':'Choisir la prochaine mission','x':0,'z':9.3,'radius':2.2},
