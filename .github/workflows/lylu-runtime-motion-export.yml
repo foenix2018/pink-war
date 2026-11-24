@@ -1,0 +1,88 @@
+name: LYLU canonical runtime body poses
+on:
+  push:
+    branches: [feature/lylu-canonical-motion]
+    paths: ['.github/workflows/lylu-runtime-motion-export.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Sample actual LYLU armored model controller
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          mkdir -p lylu-runtime-export
+          printf '<!doctype html><title>LYLU runtime pose lab</title>' > dist/lylu-runtime-motion-lab.html
+          python -m http.server 4173 --directory dist >/tmp/lylu-motion-server.log 2>&1 &
+          node --input-type=module <<'NODE'
+          import {chromium} from 'playwright';
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+          try{
+            const page=await browser.newPage();
+            await page.goto('http://127.0.0.1:4173/lylu-runtime-motion-lab.html');
+            const result=await page.evaluate(async()=>{
+              const T=await import('/vendor/three.webgpu.min.js');
+              const {installPinkWarsSoldier}=await import('/level2-player.js');
+              const {JUMP_RULES,PLAYER_SPEEDS,SLIDE_RULES}=await import('/locomotion.js');
+              const {bladeSwingPose}=await import('/blade-combat.js');
+              const scene=new T.Scene(),mat=c=>new T.MeshStandardMaterial({color:c}),glow=c=>new T.MeshBasicMaterial({color:c});
+              const rig=await installPinkWarsSoldier(T,scene,'lylu',{monster:mat(0x394653),monsterFace:mat(0x09121d),cyan:glow(0x6dcfff),rose:glow(0xff639f),violet:glow(0x9d72ff),pale:glow(0xd8efff)});
+              const m=rig.model,dt=1/30,clips=[];
+              const modes=[
+                ['jump',1.4,1],['doubleJump',1.8,1],['wallJump',1.65,1],['jetpack',2.6,1],['slide',1.5,1],
+                ['crouchTransition',1.6,1],['aim',1.5,1],['fireRifle',1.4,1],['reloadRifle',2.0,1],
+                ['firePistol',1.4,0],['reloadPistol',2.0,0],['meleeBlade',1.0,5],['fireDual',1.4,7],['reloadDual',2.0,7]
+              ];
+              let now=0;
+              for(const [name,duration,weapon] of modes){
+                m.setWeapon(weapon);
+                // Settle all controller layers and mixer to the source idle.
+                for(let i=0;i<75;i++){now+=dt;m.animate(now,false,0,0,0,dt,{velocity:{x:0,z:0},ground:()=>0,airborne:false,verticalSpeed:0,crouched:false,sprint:false,aim:false,firing:false,slide:false,jetpack:false});}
+                const count=Math.round(duration/dt)+1,times=[],tracks=m.actor.bones.map(b=>({name:b.name+'.quaternion',type:'quaternion',times,values:[]})),hip={name:m.hips.name+'.position',type:'vector',times,values:[]};tracks.push(hip);
+                for(let k=0;k<count;k++){
+                  const t=k*dt,flight={velocity:{x:0,z:0},ground:()=>0,airborne:false,verticalSpeed:0,crouched:false,sprint:false,aim:false,firing:false,slide:false,jetpack:false};let recoil=0,reload=0,trigger=0;
+                  if(['jump','doubleJump','wallJump','jetpack'].includes(name)){
+                    const start=.15,second=.48,a=t-start;
+                    if(a>=0){let vy=JUMP_RULES.ground-18*a,air=a<2*JUMP_RULES.ground/18;
+                      if(name==='doubleJump'&&t>=second){vy=JUMP_RULES.air-18*(t-second);air=t-second<.88;}
+                      if(name==='wallJump'&&t>=second){vy=JUMP_RULES.wall-18*(t-second);air=t-second<.95;flight.velocity.x=air?2.2:0;}
+                      if(name==='jetpack'&&t>=second){const age=t-second;vy=age<.16?JUMP_RULES.air-18*age:age<1.45?.08:-18*(age-1.45);air=age<1.85;flight.jetpack=age<1.45;flight.jetpackFuel=Math.max(0,1-age/2);}
+                      flight.airborne=air;flight.verticalSpeed=air?vy:0;flight.velocity.z=air?-PLAYER_SPEEDS.walk:0;
+                    }
+                  }
+                  if(name==='slide'){flight.velocity.z=t<.25?-PLAYER_SPEEDS.sprint:t<.95?-PLAYER_SPEEDS.sprint*(1-(t-.25)/.9):0;flight.sprint=t<.25;flight.slide=t>=.25&&t<.95;flight.crouched=flight.slide;}
+                  if(name==='crouchTransition')flight.crouched=t>.25&&t<1.2;
+                  if(name==='aim'||name.startsWith('fire')||name.startsWith('reload')){flight.aim=t>.15&&t<duration-.15;}
+                  if(name.startsWith('fire')){flight.firing=t>.35&&t<.83;trigger=flight.firing?1:0;recoil=flight.firing?.16*Math.exp(-((t-.35)%.16)*20):0;}
+                  if(name.startsWith('reload'))reload=t>.2&&t<duration-.2?Math.min(1,(t-.2)/(duration-.4)):0;
+                  if(name==='meleeBlade')flight.saberSwing=bladeSwingPose(Math.max(0,Math.min(1,(t-.1)/.7)),1);
+                  now+=dt;const moving=Math.hypot(flight.velocity.x,flight.velocity.z)>.08;
+                  m.animate(now,moving,recoil,reload,trigger,dt,flight);m.root.updateMatrixWorld(true);
+                  times.push(t);
+                  for(let i=0;i<m.actor.bones.length;i++)tracks[i].values.push(...m.actor.bones[i].quaternion.toArray());
+                  hip.values.push(...m.hips.position.toArray());
+                }
+                clips.push({name,duration:times.at(-1),tracks,runtime:true,weapon});
+              }
+              return {bones:m.actor.data.bones,clips};
+            });
+            assert.equal(result.clips.length,14);
+            for(const c of result.clips)for(const t of c.tracks)assert.ok(t.values.every(Number.isFinite));
+            const manifest={sourceCommit:process.env.GITHUB_SHA,controller:'dist/rlh-firefighter.js via dist/level2-player.js',clips:result.clips.map(c=>({name:c.name,duration:c.duration,tracks:c.tracks.length,weapon:c.weapon}))};
+            fs.writeFileSync('lylu-runtime-export/runtime-source.json',JSON.stringify(result));
+            fs.writeFileSync('lylu-runtime-export/manifest.json',JSON.stringify(manifest,null,2));
+            console.log(JSON.stringify(manifest,null,2));
+          }finally{await browser.close();}
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LYLU-runtime-motion-source
+          path: lylu-runtime-export/
