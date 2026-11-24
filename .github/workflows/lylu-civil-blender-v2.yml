@@ -1,0 +1,46 @@
+name: LYLU civilian Blender V2
+on:
+  push:
+    branches: [workshop/lylu-civil-blender-v2]
+    paths:
+      - tools/blender/lylu_civil_v2.py
+      - .github/workflows/lylu-civil-blender-v2.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Blender and software rendering
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y blender xvfb libgl1-mesa-dri
+      - name: Generate and render actual editable Blender model
+        run: |
+          xvfb-run -a blender -b -t 4 --python-exit-code 1 --python tools/blender/lylu_civil_v2.py
+      - name: Validate artifact formats
+        run: |
+          python - <<'PY'
+          import pathlib, struct, json
+          p=pathlib.Path('lylu_output')
+          assert (p/'LYLU_civil_V2.blend').stat().st_size>100000
+          x=(p/'LYLU_civil_V2.glb').read_bytes()
+          assert x[:4]==b'glTF'
+          n=struct.unpack_from('<I',x,12)[0]
+          d=json.loads(x[20:20+n])
+          print('Meshes:',len(d['meshes']), 'Materials:',len(d['materials']))
+          for name in ['front','three_quarter','back']:
+              assert (p/('LYLU_'+name+'.png')).stat().st_size>10000
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LYLU-civil-Blender-V2
+          path: |
+            lylu_output/*.blend
+            lylu_output/*.glb
+            lylu_output/*.png
+            lylu_output/README.txt
+            tools/blender/lylu_civil_v2.py
