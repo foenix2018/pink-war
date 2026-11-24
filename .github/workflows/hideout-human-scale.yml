@@ -1,0 +1,44 @@
+name: Hideout human-scale Blender furniture
+on:
+  push:
+    branches: [feature/hideout-human-scale]
+    paths: ['tools/blender/hideout.py','dist/hideout-showcase-assets.js','dist/hideout-art.js','tools/verify-hideout-human-scale.mjs','tests/394-hideout-human-scale.test.mjs','.github/workflows/hideout-human-scale.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  rebuild:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Blender 4.3.2
+        run: |
+          curl --fail --location --retry 3 https://download.blender.org/release/Blender4.3/blender-4.3.2-linux-x64.tar.xz -o /tmp/blender.tar.xz
+          tar -xf /tmp/blender.tar.xz -C /tmp
+          /tmp/blender-4.3.2-linux-x64/blender --version
+      - name: Rebuild editable scene, metric meshes and physical colliders
+        run: |
+          /tmp/blender-4.3.2-linux-x64/blender -b --python-exit-code 1 --python tools/blender/hideout.py
+          node --check dist/hideout-showcase-assets.js
+          node --test tests/394-hideout-human-scale.test.mjs tests/393-dock-vortex.test.mjs tests/389-hideout.test.mjs tests/3892-hideout-showcase.test.mjs tests/3893-hideout-rooms-city.test.mjs
+      - name: Capture real game views
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          python -m http.server 4173 --directory dist >/tmp/hideout-scale-server.log 2>&1 &
+          node tools/verify-hideout-human-scale.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hideout-human-scale-preview
+          path: |
+            human-scale-check/
+            dist/assets/hideout/layout.json
+            dist/assets/hideout/stats.json
+      - name: Save validated Blender source and game meshes on feature branch
+        run: |
+          git config user.name "Pink Wars validation"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/blender/hideout.py assets/hideout/PinkWars_Planque.blend dist/assets/hideout/PinkWars_Planque.blend dist/assets/hideout/planque.pwm.gz dist/assets/hideout/layout.json dist/assets/hideout/stats.json
+          git diff --cached --quiet || git commit -m "Bundle validated human-scale hideout Blender meshes and colliders"
+          git push origin HEAD:feature/hideout-human-scale

@@ -1,0 +1,13 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {gunzipSync} from 'node:zlib';import * as T from '../dist/vendor/three.webgpu.min.js';import {parsePWM} from '../dist/blender-models.js';import {alignWorkbenchWeapon} from '../dist/hideout-showcase-assets.js';
+const base=new URL('../dist/assets/hideout/',import.meta.url),read=f=>readFileSync(new URL(f,base)),layout=JSON.parse(read('layout.json'));
+const close=(a,b,e=.02)=>assert.ok(Math.abs(a-b)<e,a+' != '+b);
+test('new furniture footprint and physical heights match human-scale source',()=>{assert.equal(layout.version,2);
+ const pick=(x,z,k)=>layout.colliders.find(c=>Math.abs(c.x-x)<.02&&Math.abs(c.z-z)<.02&&c.kind===k);
+ const desk=pick(7.35,-1.1,'Atelier nanométrique');close(desk.y+desk.height,1.395*.95/1.44);close(desk.hz,.6);
+ const chair=pick(7.7,1.2,'siège d’atelier');close(chair.hx,.45*.82);close(chair.height,1.5-.445);
+ const table=pick(0,-8,'table des archives');close(table.hx,3.1*.62);close(table.hz,1.1*.65);close(table.height,1.2*.95/1.265);
+ const bed=pick(-8.9,-8.5,'Dortoir');close(bed.hz,1.05);close(bed.hx,.825*.82);
+ const sink=pick(8.65,-10.45,'Salle de bain');close(sink.height,1.16*.90/1.37);
+ assert.equal(layout.showcase.weapons.find(w=>w.index===8).y,.975);
+});
+test('authentic weapon follows the workbench without scaling or other showcase alterations',()=>{const bytes=gunzipSync(read('showcase.pwm.gz')),parsed=parsePWM(T,bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)),root=new T.Group(),weapons=JSON.parse(read('showcase-materials.json')).catalogue.weapons;const original=JSON.parse(JSON.stringify(weapons));for(const p of parsed.primitives)root.add(new T.Mesh(p.geometry));alignWorkbenchWeapon(root,weapons);close(weapons.find(w=>w.index===8).bounds.min[1],.975,.00001);assert.deepEqual(weapons.filter(w=>w.index!==8),original.filter(w=>w.index!==8));});

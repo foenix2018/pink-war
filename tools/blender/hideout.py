@@ -181,6 +181,26 @@ def books(x,y,z,n=9):
  for i in range(n):
   h=random.uniform(.18,.34);mat=['Tissu rose','Tissu bleu','Papier ivoire','Cuivre et outils'][i%4];box(mat,(x+i*.075,y+h/2,z),(.055,h,.17));box('Papier ivoire',(x+i*.075,y+h*.7,z+.087),(.043,.015,.008))
 
+# Metric furniture groups: transform only the newly authored geometry, and
+# update its physical bounds and labels with the same mapping before export.
+def furniture_begin():
+ return ({k:set(b.verts) for k,b in BUILD.items() if k[0]==ZONE},len(SOLIDS),len(TEXT))
+def furniture_end(mark,anchor=(0,0),sx=1,sz=1,old=1,new=1,upper_shift=True):
+ before,solids,texts=mark;cx,cz=anchor
+ def height(y):return y*new/old if y<=old or not upper_shift else y+new-old
+ def coord(x,y,z):return (cx+(x-cx)*sx,height(y),cz+(z-cz)*sz)
+ for k,b in BUILD.items():
+  if k[0]!=ZONE:continue
+  previous=before.get(k,set())
+  for v in b.verts:
+   if v not in previous:v.co=G(*coord(v.co.x,v.co.z,-v.co.y))
+ for item in SOLIDS[solids:]:
+  item['x'],bottom,item['z']=coord(item['x'],item['y'],item['z'])
+  item['height']=height(item['y']+item['height'])-bottom;item['y']=bottom
+  item['hx']*=sx;item['hz']*=sz
+ for obj in TEXT[texts:]:
+  obj.location=G(*coord(obj.location.x,obj.location.z,-obj.location.y))
+  obj.scale*=min(1,sx,sz,new/old)
 print('Planque: architecture',flush=True)
 ZONE='Architecture'
 box('Cadres anthracite',(0,-.25,0),(22.4,.5,24));box('Béton sombre',(0,-.09,0),(22,.18,23.6))
@@ -278,6 +298,7 @@ for x in [-10.5,10.5]:
 print('Planque: dortoir et salle de bain',flush=True)
 ZONE='Dortoir'
 for x,name,cloth,light in [(-8.9,'GHJU','Tissu rose','Néon rose'),(-6.4,'LYLU','Tissu bleu','Néon bleu')]:
+ bed_group=furniture_begin()
  box('Cadres anthracite',(x,.23,-8.5),(1.65,.44,3),solid=True);box('Acier patiné',(x,.46,-8.5),(1.58,.15,2.95))
  cushion('Tissu neutre',(x,.62,-8.5),(1.47,.29,2.8));quilt(cloth,(x,.795,-8.13),1.55,1.98)
  # Bed frame feet, visible mattress piping and stitched padded blanket panels.
@@ -288,6 +309,7 @@ for x,name,cloth,light in [(-8.9,'GHJU','Tissu rose','Néon rose'),(-6.4,'LYLU',
  cushion('Papier ivoire',(x,.84,-9.45),(1.18,.29,.60));cushion(cloth,(x,.89,-9.45),(1.08,.22,.56))
  box('Acier patiné',(x,.95,-10.0),(1.63,1.10,.17));neon((x-.64,1.38,-9.87),(x+.64,1.38,-9.87),light,.022)
  text(name,x,.80,-6.96,.32)
+ furniture_end(bed_group,(x,-8.5),sx=.82,sz=.70,old=.84,new=.58,upper_shift=False)
  box('Acier patiné',(x+1.0,.4,-9.4),(.38,.8,.55));cyl('Cuivre et outils',(x+1,.86,-9.4),.13,.08);rod('Métal brossé',(x+1,.89,-9.4),(x+1,1.20,-9.4),.025);ellipsoid(light,(x+1,1.23,-9.4),(.23,.20,.23))
 box('Acier patiné',(-8,2.08,-10.9),(5.15,.13,.52));books(-9.9,2.16,-10.8,23)
 box('Cadres anthracite',(-8.1,1.45,-11.08),(3.1,.75,.04))
@@ -302,12 +324,16 @@ for x in [5.25,7.25]:rod('Métal brossé',(x,.3,-10.5),(x,2.65,-10.5),.035);rod(
 box('Verre',(5.25,1.5,-9.4),(.018,2.4,2.2));box('Verre',(7.25,1.5,-9.4),(.018,2.4,2.2));rod('Métal brossé',(6.25,1.0,-10.6),(6.25,2.4,-10.6),.035);rod('Métal brossé',(6.25,2.4,-10.6),(6.25,2.4,-10.2),.035);cyl('Métal brossé',(6.25,2.37,-10.1),.18,.05,20);ring('Néon bleu',(6.25,2.34,-10.1),.15,.005,24)
 for x in [6.05,6.45]:cyl('Métal brossé',(x,1.18,-10.5),.045,.10,12,axis='z')
 # Basin on a ribbed cabinet, mirror, modern faucet; toilet has a sculpted bowl.
+basin_group=furniture_begin()
 box('Acier patiné',(8.65,.58,-10.45),(1.6,1.16,.65),solid=True);box('Métal brossé',(8.65,1.15,-10.40),(1.75,.08,.8));basin('Peinture médicale',(8.65,1.35,-10.32),1.14,.64,.24);cyl('Métal brossé',(8.65,1.115,-10.32),.042,.01,12);polyline('Métal brossé',[(8.65,1.2,-10.7),(8.65,1.63,-10.7),(8.65,1.63,-10.32)],.025)
 for xx in [8.25,9.05]:rod('Métal brossé',(xx-.13,.87,-10.10),(xx+.13,.87,-10.10),.018)
 for j in range(9):box('Cadres anthracite',(7.98+j*.16,.55,-10.11),(.016,.83,.015))
 box('Métal brossé',(8.65,2.0,-11.1),(1.5,1.35,.08));box('Miroir poli',(8.65,2.0,-11.03),(1.35,1.2,.025));neon((8.03,2.57,-10.99),(9.27,2.57,-10.99),'Néon blanc',.012)
+furniture_end(basin_group,(8.65,-10.45),sx=.85,sz=.90,old=1.37,new=.90)
+toilet_group=furniture_begin()
 ellipsoid('Peinture médicale',(10,.37,-9.65),(.68,.7,.85),20);basin('Peinture médicale',(10,.69,-9.6),.74,1.0,.25);box('Peinture médicale',(10,.86,-10.1),(.7,1.0,.32),solid=True)
 box('Métal brossé',(10,1.37,-10.1),(.23,.025,.12))
+furniture_end(toilet_group,(10,-9.75),sx=.82,sz=.76,old=.71,new=.43)
 # Glazed wall tiles, shower perforations and threshold grille give human scale.
 for xx in [5.45+j*.38 for j in range(14)]:rod('Métal brossé',(xx,.32,-11.182),(xx,2.95,-11.182),.003,4)
 for yy in [.45,.9,1.35,1.8,2.25,2.7]:rod('Métal brossé',(5.35,yy,-11.182),(10.5,yy,-11.182),.003,4)
@@ -318,6 +344,7 @@ box('Tissu rose',(8.3,.9,-9.6),(.32,.65,.06));rod('Métal brossé',(8.08,1.25,-9
 
 print('Planque: livre, salon, armes',flush=True)
 ZONE='Archives de l’histoire'
+archive_group=furniture_begin()
 profile('Acier patiné',0,-8.0,[(-2.8,.1),(2.8,.1),(3.1,.45),(3.1,.95),(2.7,1.2),(-2.7,1.2),(-3.1,.95),(-3.1,.45)],2.2)
 SOLIDS.append({'kind':'table des archives','x':0,'z':-8,'hx':3.1,'hz':1.1,'y':0,'height':1.2})
 box('Cadres anthracite',(0,1.22,-8),(5.75,.09,2.0));neon((-2.5,.42,-6.83),(2.5,.42,-6.83),'Néon rose',.018)
@@ -330,10 +357,13 @@ for side in [-1,1]:
 ring('Néon rose',(0,1.35,-8),1.15,.012,48)
 for x in [-2.05,2.05]:
  screen(x,1.6,-8.2,.8,.6);rod('Métal brossé',(x,1.25,-8.4),(x,2.05,-8.5),.04);screen(x,2.05,-8.5,1.15,.67)
-books(-2.65,1.29,-7.9,4);books(2.1,1.29,-7.6,4);plant(-3.7,1.1,-10.7,.7);plant(3.7,1.1,-10.7,.7)
+books(-2.65,1.29,-7.9,4);books(2.1,1.29,-7.6,4)
+furniture_end(archive_group,(0,-8),sx=.62,sz=.65,old=1.265,new=.95)
+plant(-3.7,1.1,-10.7,.7);plant(3.7,1.1,-10.7,.7)
 ZONE='Salon central'
 box('Tissu rose',(0,.028,1),(5.5,.035,4.0))
 for side in [-1,1]:
+ sofa_group=furniture_begin()
  x=side*2.28;box('Acier patiné',(x,.29,1),(.85,.5,3.1),solid=True)
  for z in [.04,1,1.96]:
   cushion('Tissu neutre',(x,.65,z),(.82,.34,.91));cushion('Tissu neutre',(x+side*.34,1.08,z),(.22,.88,.91))
@@ -342,9 +372,12 @@ for side in [-1,1]:
   cushion('Cuir et joints',(x,.86,z),(.88,.45,.24));cushion('Tissu rose'if side<0 else'Tissu bleu',(x-side*.1,1.12,z-side*.2),(.55,.43,.36))
  for dx in [-.44,.44]:
   for z in [-.32,2.32]:cyl('Métal brossé',(x+dx,.12,z),.045,.23,10)
+ furniture_end(sofa_group,(x,1),old=.82,new=.45)
+coffee_group=furniture_begin()
 box('Cadres anthracite',(0,.39,1),(.90,.65,1.7),solid=True);box('Métal brossé',(0,.74,1),(1.0,.08,1.8));screen(0,.86,.8,.55,.3)
 for x,z in [(-.30,.6),(.30,1.5)]:
  cyl('Cuivre et outils',(x,.86,z),.08,.16,20);ring('Cadres anthracite',(x,.946,z),.064,.008,20);ring('Cuivre et outils',(x+.09,.86,z),.045,.012,20,axis='z')
+furniture_end(coffee_group,(0,1),old=.78,new=.45)
 ZONE='Mur d’armes'
 box('Cadres anthracite',(-7.7,1.6,-4.52),(5.6,2.65,.22),solid=True)
 for x in [-10.0,-8.8,-7.6,-6.4,-5.3]:
@@ -366,7 +399,7 @@ for xx in [-8.12,-7.28]:
  for zz in [-3.91,-3.69]:box('Cuir et joints',(xx,.64,zz),(.09,.04,.09))
 text('VX-9 DUO',-7.7,.35,-3.40,.12,'Néon rose')
 SHOWCASE_WEAPONS.append({'index':7,'x':-7.7,'y':.65,'z':-3.8,'bench':True})
-SHOWCASE_WEAPONS.append({'index':8,'x':6.9,'y':1.465,'z':-.90,'bench':True})
+SHOWCASE_WEAPONS.append({'index':8,'x':6.9,'y':.975,'z':-.95,'bench':True})
 neon((-10.2,2.97,-4.28),(-5.25,2.97,-4.28),'Néon rose',.025)
 for x in [-10.15,-5.2]:crate(x,-3.45,scale=.65)
 
@@ -411,8 +444,11 @@ print('Planque: atelier et porte',flush=True)
 ZONE='Atelier nanométrique'
 box('Cadres anthracite',(7.8,1.7,-4.5),(5.6,3.15,.25),solid=True)
 screen(7.75,2.05,-4.3,2.45,1.45);screen(5.75,2.35,-4.25,.75,.62);screen(5.75,1.55,-4.25,.75,.6);screen(9.95,2.4,-4.25,.56,.7)
+wall_tools=furniture_begin()
 for j in range(6):
  x=5.35+j*.16;rod('Métal brossé',(x,1.25,-4.27),(x,1.7,-4.27),.025);ellipsoid('Cuivre et outils',(x,1.25,-4.24),(.07,.09,.03))
+furniture_end(wall_tools,(7.35,-4.27),old=1.7,new=1.35)
+workbench_group=furniture_begin()
 for x in [5.3,9.3]:
  box('Acier patiné',(x,.63,-1.1),(1.2,1.25,1.35),solid=True)
  for k in range(5):box('Cadres anthracite',(x,.22+k*.22,-.40),(1.06,.17,.04))
@@ -438,10 +474,13 @@ for A,B in [((9.3,1.78,-1.3),(9.9,2.65,-1.5)),((9.9,2.65,-1.5),(8.8,2.95,-1.25))
  pa=(A[0]-.10,A[1]+.1,A[2]-.16);pb=((A[0]+B[0])*.5,(A[1]+B[1])*.5,A[2]-.16)
  rod('Cadres anthracite',pa,pb,.055,10);rod('Métal brossé',pb,(B[0]-.1,B[1]-.1,B[2]-.16),.025,10)
 for s in [-1,1]:polyline('Métal brossé',[(8.15,2.4,-1),(8.15+s*.12,2.2,-1),(8.15+s*.06,2.05,-1)],.03)
+furniture_end(workbench_group,(7.35,-1.1),sz=.75,old=1.44,new=.95)
+chair_group=furniture_begin()
 cyl('Métal brossé',(7.7,.35,1.2),.06,.6);cyl('Cadres anthracite',(7.7,.72,1.2),.40,.12,16);cushion('Tissu rose',(7.7,.83,1.2),(.65,.19,.65));cushion('Tissu rose',(7.7,1.14,1.48),(.64,.65,.15))
 SOLIDS.append({'kind':'siège d’atelier','x':7.7,'z':1.2,'hx':.45,'hz':.45,'y':0,'height':1.5})
 for j in range(5):
  a=j/5*TAU;rod('Métal brossé',(7.7,.13,1.2),(7.7+math.sin(a)*.48,.10,1.2+math.cos(a)*.48),.03);ellipsoid('Cuir et joints',(7.7+math.sin(a)*.48,.08,1.2+math.cos(a)*.48),(.12,.12,.1))
+furniture_end(chair_group,(7.7,1.2),sx=.82,sz=.82,old=.925,new=.48)
 for x in [5.35,9.8]:
  box('Acier patiné',(x,.6,4.8),(1.25,1.2,1.0),solid=True);screen(x,1.6,4.5,.95,.5)
  for j in range(3):box('Cadres anthracite',(x,.25+j*.28,5.31),(1.0,.19,.04));neon((x-.35,.25+j*.28,5.34),(x+.35,.25+j*.28,5.34),'Néon rose',.007)
@@ -602,7 +641,7 @@ po=bpy.data.objects.new('Panorama de Vesper / baie vitrée',pme);sc.collection.o
 for o in sc.objects:
  if o.name.startswith(('Vesper extérieure','Toiture complète'))or any(META.get(m.name,{}).get('interior')for m in getattr(o.data,'materials',[])):o.hide_render=True
 
-layout={'version':1,'name':'La Planque · Les Héritiers du Silence','author':'Pink Wars · Blender','doors':DOORS,'rooms':ROOMS,'showcase':{'companions':[{'id':'gaby','hero':'ghju','x':-2.15,'y':1.5,'z':7.3},{'id':'cara','hero':'lylu','x':2.15,'y':1.5,'z':7.3}],'weapons':SHOWCASE_WEAPONS,'outfits':[{'hero':'ghju','x':-8.9,'y':.285,'z':4.45},{'hero':'lylu','x':-6.4,'y':.285,'z':4.45}]},'bounds':{'x1':-10.65,'x2':10.65,'z1':-11.25,'z2':11.35},'spawn':{'x':0,'z':9.0,'yaw':0},'colliders':SOLIDS,'stations':[
+layout={'version':2,'name':'La Planque · Les Héritiers du Silence','author':'Pink Wars · Blender','doors':DOORS,'rooms':ROOMS,'showcase':{'companions':[{'id':'gaby','hero':'ghju','x':-2.15,'y':1.5,'z':7.3},{'id':'cara','hero':'lylu','x':2.15,'y':1.5,'z':7.3}],'weapons':SHOWCASE_WEAPONS,'outfits':[{'hero':'ghju','x':-8.9,'y':.285,'z':4.45},{'hero':'lylu','x':-6.4,'y':.285,'z':4.45}]},'bounds':{'x1':-10.65,'x2':10.65,'z1':-11.25,'z2':11.35},'spawn':{'x':0,'z':9.0,'yaw':0},'colliders':SOLIDS,'stations':[
  {'id':'rest','name':'Dortoir','action':'Se reposer et régénérer','x':-6.1,'z':-6.35,'radius':2.4},
  {'id':'weapons','name':'Mur d’armes','action':'Préparer les armes','x':-7.8,'z':-.2,'radius':2.7},
  {'id':'outfits','name':'Tenues de combat','action':'Préparer l’équipement','x':-7.8,'z':6.3,'radius':2.4},

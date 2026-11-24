@@ -4,7 +4,7 @@ import {WebGLRenderer,WebGLRenderTarget} from './vendor/three.module.min.js';
 import {ArenaGame,WEAPONS,clamp,segmentBox} from './game-logic.js';
 import {graphicsProfile,createCompatibleRenderer,renderPixelRatio,rendererBackend} from './renderer-policy.js';
 import {frameDelta} from './frame-timing.js';
-import {loadHideoutArt} from './hideout-art.js';
+import {loadHideoutArt} from './hideout-art.js?v=human-scale-1';
 import {createHideoutNavigation} from './hideout-navigation.js';
 import {readHideoutProfile,saveHideoutProfile,nextHideoutChapter,chapterURL,prepareHideoutDeparture,historyForHero,HIDEOUT_HISTORY,CHAPTER_ROUTES} from './hideout-state.js';
 import {createNanoForgePanel} from './nano-forge-ui.js';

@@ -43,7 +43,7 @@ export async function loadHideoutArt(T,{onProgress=()=>{},low=false,displayOutfi
 function addHideoutContacts(T,root){
  const canvas=document.createElement('canvas');canvas.width=canvas.height=128;const c=canvas.getContext('2d'),g=c.createRadialGradient(64,64,12,64,64,63);g.addColorStop(0,'rgba(1,3,8,.8)');g.addColorStop(.48,'rgba(1,3,8,.48)');g.addColorStop(1,'rgba(1,3,8,0)');c.fillStyle=g;c.fillRect(0,0,128,128);
  const map=new T.CanvasTexture(canvas),geometry=new T.PlaneGeometry(1,1),material=new T.MeshBasicMaterial({map,transparent:true,opacity:.65,depthWrite:false,toneMapped:false});
- const footprints=[[-8.9,-8.5,2.3,3.7],[-6.4,-8.5,2.3,3.7],[0,-8,7.3,3.4],[-2.28,1,1.5,3.7],[2.28,1,1.5,3.7],[0,1,1.6,2.6],[6.25,-9.4,2.7,3],[8.65,-10.45,2.3,1.4],[10,-9.6,1.3,1.8],[5.3,-1.1,1.9,2.1],[9.3,-1.1,1.9,2.1],[7.7,1.2,1.6,1.6],[-2.15,7.3,2.8,2.8],[2.15,7.3,2.8,2.8],[-8.9,4.3,2.2,1.5],[-6.4,4.3,2.2,1.5]];
+ const footprints=[[-8.9,-8.5,1.9,2.6],[-6.4,-8.5,1.9,2.6],[0,-8,4.5,2.2],[-2.28,1,1.5,3.7],[2.28,1,1.5,3.7],[0,1,1.6,2.6],[6.25,-9.4,2.7,3],[8.65,-10.45,1.95,1.26],[10,-9.6,1.07,1.37],[5.3,-1.1,1.9,1.58],[9.3,-1.1,1.9,1.58],[7.7,1.2,1.31,1.31],[-2.15,7.3,2.8,2.8],[2.15,7.3,2.8,2.8],[-8.9,4.3,2.2,1.5],[-6.4,4.3,2.2,1.5]];
  for(const x of [-10,-8.4,-6.8,6,7.6,9.2])footprints.push([x,10,1.65,1.3]);
  const mesh=new T.InstancedMesh(geometry,material,footprints.length),o=new T.Object3D();mesh.name='Ombres de contact du mobilier';mesh.renderOrder=1;
  footprints.forEach(([x,z,w,d],i)=>{o.position.set(x,.061,z);o.rotation.x=-Math.PI/2;o.scale.set(w,d,1);o.updateMatrix();mesh.setMatrixAt(i,o.matrix);});mesh.instanceMatrix.needsUpdate=true;root.add(mesh);
