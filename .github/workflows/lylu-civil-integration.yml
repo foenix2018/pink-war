@@ -1,4 +1,4 @@
-name: LYLU civilian V4 integration
+name: LYLU V4 game asset - test and bundle
 on:
   push:
     branches: [feature/lylu-civil-hideout-v4]
@@ -6,32 +6,41 @@ on:
       - .github/workflows/lylu-civil-integration.yml
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
+  actions: read
 jobs:
-  build:
+  optimize-and-commit:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install Blender Python module
-        run: |
-          python -m pip install --disable-pip-version-check --retries 3 --timeout 60 --only-binary=:all: bpy==4.3.0
-          python -c 'import bpy; print(bpy.app.version_string)'
-      - name: Build and test
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh run download 45313491080 --name LYLU-civil-Blender-V4 --dir workshop-artifact
-          python -u tools/blender/lylu_civil_game.py
-          python tools/blender/verify_lylu_game.py
-          node --check dist/lylu-civil-hideout.js
-          node --check dist/planque.js
-      - uses: actions/upload-artifact@v4
+      - name: Download validated rigged LYLU V4
+        uses: actions/download-artifact@v4
         with:
           name: LYLU-civil-V4-integration
-          path: |
-            lylu-integration/
-            dist/assets/heroes/lylu-civil-v4.glb
+          run-id: 45316290138
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: .
+      - name: Check GLB and game logic
+        run: |
+          python tools/blender/verify_lylu_game.py
+          node --check dist/planque.js
+          node --check dist/lylu-civil-hideout.js
+          node --test tests/389-hideout.test.mjs tests/391-hideout-nano-chambers.test.mjs tests/392-outfit-stages.test.mjs
+      - name: Browser smoke test
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          python -m http.server 4173 --directory dist >/tmp/lylu-server.log 2>&1 &
+          node tools/verify-lylu-civil.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: LYLU-V4-in-game-check
+          path: lylu-integration/*.png
+      - name: Bundle validated GLB on integration branch
+        run: |
+          git config user.name "Pink Wars LYLU Integration"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dist/assets/heroes/lylu-civil-v4.glb
+          git diff --cached --quiet || git commit -m "Bundle validated LYLU civilian V4 GLB"
+          git push origin HEAD:feature/lylu-civil-hideout-v4
