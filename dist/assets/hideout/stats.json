@@ -1,11 +1,11 @@
 {
   "source": "Blender 4.3 · original editable scene",
-  "triangles": 311726,
+  "triangles": 308142,
   "batches": 27,
-  "vertices": 426742,
-  "pwmBytes": 12557248,
-  "downloadBytes": 3706439,
-  "colliders": 98,
+  "vertices": 422811,
+  "pwmBytes": 12429100,
+  "downloadBytes": 3677293,
+  "colliders": 101,
   "stations": 9,
   "doors": 11,
   "rooms": 8
