@@ -12,8 +12,8 @@ const read=name=>readFileSync(new URL('../dist/assets/hideout/'+name,import.meta
 const layout=JSON.parse(read('layout.json'));
 const atHeight=(b,y)=>(b.y||0)<=y&&(b.y||0)+b.height>=y;
 
-test('every room has a continuous, closed perimeter at human eye height',()=>{
- assert.equal(layout.rooms.length,layout.gymRevision?9:8);assert.equal(layout.doors.length,11);
+test('every room has a continuous perimeter at human eye height, except intentional open portals',()=>{
+ assert.equal(layout.rooms.length,layout.gymRevision?9:8);assert.equal(layout.doors.length,layout.gymRevision?10:11);
  const doors=createHideoutDoorState(layout),boxes=[...layout.colliders,...doors.colliders];
  const blocked=(x,z)=>boxes.some(b=>atHeight(b,1.65)&&Math.abs(b.x-x)<=b.hx+.005&&Math.abs(b.z-z)<=b.hz+.005)||(layout.portals||[]).some(p=>Math.abs(x-p.x)<.01&&Math.abs(z-p.z)<=p.width/2+.01);
  for(const room of layout.rooms){const[x1,z1,x2,z2]=room.bounds;for(let t=0;t<=1;t+=.013){assert.ok(blocked(x1+(x2-x1)*t,z1),room.name+' north');assert.ok(blocked(x1+(x2-x1)*t,z2),room.name+' south');assert.ok(blocked(x1,z1+(z2-z1)*t),room.name+' west');assert.ok(blocked(x2,z1+(z2-z1)*t),room.name+' east');}}

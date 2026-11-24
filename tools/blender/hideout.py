@@ -226,7 +226,6 @@ DOORS=[
  {'id':'armurerie','name':'Armurerie','axis':'x','x':-4.55,'z':0,'width':2.10},
  {'id':'tenues','name':'Tenues','axis':'x','x':-4.55,'z':6.25,'width':2.10},
  {'id':'bain','name':'Salle de bain','axis':'x','x':4.55,'z':-6.35,'width':2.10},
- {'id':'atelier','name':'Atelier','axis':'x','x':4.55,'z':1.25,'width':2.10},
  {'id':'archives-ouest','name':'Archives · ouest','axis':'z','x':-3.70,'z':-5,'width':1.55},
  {'id':'archives-centre','name':'Archives · salon','axis':'z','x':0,'z':-5,'width':2.10},
  {'id':'archives-est','name':'Archives · est','axis':'z','x':3.70,'z':-5,'width':1.55},
@@ -234,7 +233,7 @@ DOORS=[
  {'id':'recharge-ouest','name':'Recharge · ouest','axis':'z','x':-3.70,'z':3.2,'width':1.55},
  {'id':'recharge-est','name':'Recharge · est','axis':'z','x':3.70,'z':3.2,'width':1.55}
 ]
-PORTALS=[{'id':'gym','name':'Salle de sport','axis':'x','x':4.55,'z':7.65,'width':3.05,'height':2.65}]
+PORTALS=[{'id':'atelier','name':'Atelier nano','axis':'x','x':4.55,'z':1.25,'width':2.10,'height':2.65},{'id':'gym','name':'Salle de sport','axis':'x','x':4.55,'z':7.65,'width':3.05,'height':2.65}]
 ROOMS=[
  {'id':'dortoir','name':'Dortoir','bounds':[-10.75,-11.5,-4.55,-5]},
  {'id':'bain','name':'Salle de bain','bounds':[4.55,-11.5,10.75,-5]},
@@ -298,12 +297,12 @@ for portal in PORTALS:
  box('Cadres anthracite',(x,2.73,z),(.42,.23,w+.38))
  neon((x-.24,2.68,z-w*.37),(x-.24,2.68,z+w*.37),'Néon rose',.013)
  # No leaf or invisible collision across the aperture.
- o=text('PINKWARS  /  GYM',x-.25,2.52,z,.16,'Néon blanc');o.rotation_euler=(math.pi/2,0,-math.pi/2)
- # Workshop label on the shared pier, visible from the central hall.
- box('Cadres anthracite',(4.31,1.83,4.00),(.08,.75,1.1))
- for label,yy in [('ATELIER',1.97),('NANO',1.73)]:
-  o=text(label,4.25,yy,4.00,.15,'Néon blanc');o.rotation_euler=(math.pi/2,0,-math.pi/2)
- neon((4.24,1.49,3.67),(4.24,1.49,4.33),'Néon rose',.010)
+ o=text('PINKWARS  /  GYM' if portal['id']=='gym' else 'ATELIER NANO',x-.25,2.52,z,.16,'Néon blanc');o.rotation_euler=(math.pi/2,0,-math.pi/2)
+# Workshop label on the shared pier, visible from the central hall.
+box('Cadres anthracite',(4.31,1.83,4.00),(.08,.75,1.1))
+for label,yy in [('ATELIER',1.97),('NANO',1.73)]:
+ o=text(label,4.25,yy,4.00,.15,'Néon blanc');o.rotation_euler=(math.pi/2,0,-math.pi/2)
+neon((4.24,1.49,3.67),(4.24,1.49,4.33),'Néon rose',.010)
 ZONE='Architecture'
 # Ceiling service beams and conduit runs leave the diorama open, as in the reference.
 for z in [-10.8,-4.9,3.2,10.8]:
