@@ -83,8 +83,8 @@ export async function createLyluCivil(scene,{load}={}){
      const swing=Math.sin(sourcePhase)*sourceWeight*sign;
      const run=sprint?1:0;
      const reach=side==='R'?gesture:gesture*.16;
-     rot('UpperArm_'+side,-swing*(run?.58:.32)-reach*.92,0,-sign*(.43-reach*.10));
-     rot('ForeArm_'+side,.14+run*.48+Math.max(0,-swing)*.24+reach*.63,0,sign*.035);
+     rot('UpperArm_'+side,swing*(run?.58:.32)+reach*.92,0,sign*(.43-reach*.10));
+     rot('ForeArm_'+side,.14+run*.48+Math.max(0,-swing)*.24+reach*.63,0,-sign*.035);
      rot('Hand_'+side,.025+reach*.15,0,-sign*.04);
    }
    // Correct height using the actual lowest animated ankle so the different leg proportions do not float.
@@ -102,7 +102,7 @@ export async function createLyluCivil(scene,{load}={}){
    if(source)canonicalPose(time,step,{moving,sprint,station});
    else{
      motion='idle'; // Only a short loading/diagnostic fallback; no invented walk cycle.
-     for(const [s,sign] of [['L',1],['R',-1]]){rot('UpperArm_'+s,0,0,-sign*.43);rot('ForeArm_'+s,.12,0,sign*.025);}
+     for(const [s,sign] of [['L',1],['R',-1]]){rot('UpperArm_'+s,0,0,sign*.43);rot('ForeArm_'+s,.12,0,sign*.025);}
    }
    const targetFace=lyluExpressionState(time,{moving,station});if(override)Object.assign(targetFace,override);
    for(const key of LYLU_EXPRESSIONS){const k=key==='Blink'?1-Math.exp(-step*45):1-Math.exp(-step*8);state[key]+=(targetFace[key]-state[key])*k;}
