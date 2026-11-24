@@ -32,3 +32,25 @@ body.hideout-page .pw-nano-notice{display:none!important}
 .hub-nano-tiers small{overflow-wrap:anywhere}
 
 .hub-nano-preview{overflow:hidden;border:1px solid #728a9c66;border-radius:12px;background:#10121d;position:relative}.hub-nano-preview canvas{display:block;width:100%;height:auto;aspect-ratio:4/3;touch-action:pan-y;cursor:grab}.hub-nano-preview canvas:active{cursor:grabbing}.hub-nano-preview small{position:absolute;bottom:5px;left:0;right:0;text-align:center;color:#acc4d5;font-size:9px;pointer-events:none}
+
+/* Pause: same visual vocabulary as the standard Pink Wars pause dialog. */
+.hideout-page{--rose:var(--accent);--paper:#f5eaf3;--muted:#bda7c0;--border:#ad8da54d}
+.hideout-page .pause-dialog{position:fixed;inset:0;margin:auto;width:540px;max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);padding:38px;color:var(--paper);background:rgba(22,17,29,.96);border:1px solid var(--border);border-radius:8px;box-shadow:0 30px 160px #000b;overflow-y:auto;touch-action:pan-y}
+.hideout-page .pause-dialog::backdrop{background:rgba(9,7,17,.6);backdrop-filter:blur(8px)}
+.pause-dialog .eyebrow{font:600 10px monospace;letter-spacing:2px;color:var(--rose)}
+.pause-dialog h2{font-size:42px;letter-spacing:-1.8px;line-height:1.1;margin:24px 0 20px}
+.pause-dialog p{font-size:12px;line-height:1.8;color:var(--muted)}
+.pause-dialog .solid-button,.pause-dialog .secondary-button{display:block;width:100%;text-align:center;font-size:10px;font-weight:700;letter-spacing:1.2px;border-radius:3px;padding:16px;margin-top:10px}
+.pause-dialog .solid-button{background:var(--rose);color:#171522;border:1px solid var(--rose)}
+.pause-dialog .secondary-button{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.pause-dialog .secondary-button:hover{border-color:var(--rose);color:var(--rose)}
+.pause-dialog .fracture-controls{margin:18px 0;border-block:1px solid var(--border);padding:12px 0;font-size:12px}
+.pause-dialog summary{cursor:pointer;color:var(--rose)}
+.pause-commands h3,.pause-commands h4{font-size:11px;letter-spacing:1px}
+.pause-commands-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pause-commands dl{display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:10px}.pause-commands dd{margin:0;color:var(--muted)}
+.pause-dialog .setting-row{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid var(--border);font-size:12px;gap:10px}
+.pause-dialog select{background:#253140;color:#eef1f7;border:1px solid var(--border);padding:8px}
+body[data-view=third] #stick{display:block}
+.hub-status{gap:8px;flex-wrap:wrap}.hub-status button{margin-left:0}.hub-status #view{margin-left:auto}.hub-status #pause-button{font-size:17px;line-height:1;padding:7px 12px}
+@media(max-width:650px),(max-height:550px){.hideout-page .pause-dialog{padding:20px;max-height:calc(100dvh - 18px)}.pause-dialog h2{font-size:28px;margin:12px 0}.pause-dialog .solid-button,.pause-dialog .secondary-button{padding:11px;margin-top:6px}.hub-status button{padding:6px 8px;font-size:9px}.hub-status #view{margin-left:0}.hub-status{gap:5px}}
