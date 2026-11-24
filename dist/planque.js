@@ -15,7 +15,7 @@ import {createPinkWarsInput} from './level2-input.js';
 import {installPinkWarsSoldier} from './level2-player.js';
 import {setScreenMusic,setMusicEnabled} from './menu-music.js';
 import {GAME_VERSION} from './launch-ui.js';
-import {createLyluCivil} from './lylu-civil-hideout.js?v=20261124v5';
+import {createLyluCivil} from './lylu-civil-hideout.js?v=20261124fitness1';
 import {bindViewButton,mountViewControl,savePreferredView} from './view-options.js';
 
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search);
@@ -89,11 +89,13 @@ function navigate(point,station=null){
 function chooseStation(id){const station=art?.layout.stations.find(s=>s.id===id);if(station)navigate(station,station);}
 function element(tag,text,cls=''){const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;}
 function primary(text,action){const b=element('button',text,'hub-primary');b.type='button';b.onclick=action;return b;}
-function closePanel(){if(healing)return;outfitPreview=null;nanoUI=null;opened=null;keys.clear();touch.x=touch.z=0;$('panel').close();document.body.classList.remove('panel-open');nanoPanel?.dispose();nanoPanel=null;}
+function closePanel(){if(healing)return;civil?.playFitness(null);outfitPreview=null;nanoUI=null;opened=null;keys.clear();touch.x=touch.z=0;$('panel').close();document.body.classList.remove('panel-open');nanoPanel?.dispose();nanoPanel=null;}
 function openStation(id){
- if(!ready||paused)return;const s=art.layout.stations.find(s=>s.id===id);if(!s)return;if(!navigation.inRoom(game.player,s.room)){navigate(s,s);return;}path=[];destination=null;if(civilMode)civil?.triggerAction(id);opened=id;keys.clear();touch.x=touch.z=0;
+ if(!ready||paused)return;const s=art.layout.stations.find(s=>s.id===id)||fitnessStations().find(s=>s.id===id);if(!s)return;if(!navigation.inRoom(game.player,s.room)){navigate(s,s);return;}path=[];destination=null;if(civilMode)civil?.triggerAction(id);opened=id;keys.clear();touch.x=touch.z=0;
  nanoPanel?.dispose();nanoPanel=null;nanoUI=null;outfitPreview=null;$('panel-content').replaceChildren();$('panel-title').textContent=s.name;$('panel-kicker').textContent='LA PLANQUE · '+characterId.toUpperCase();document.body.classList.add('panel-open');if(!$('panel').open)$('panel').showModal();
  const content=$('panel-content');
+ if(id.startsWith('fitness-')){const equipment=id.slice(8);content.append(element('p','Aperçu du mouvement sur le squelette civil. Les accessoires et les gains de statistiques seront synchronisés lors de la prochaine étape.'));content.append(primary('Jouer le mouvement',()=>{closePanel();civil?.playFitness(equipment);message('Animation sportive · F pour arrêter',5);}));return;
+ }
  if(id==='weapons'){
   content.append(element('p','Prépare une arme de ton inventaire pour la prochaine mission. Les nouveaux modèles s’assemblent à l’atelier nano.'));
   const list=element('div','','hub-list');for(const [i,w]of WEAPONS.entries()){
@@ -214,7 +216,7 @@ function bindWorld(){
  canvas.addEventListener('pointerup',e=>{const p=pointers.get(e.pointerId);pointers.delete(e.pointerId);if(!p||p.moved||opened||paused||view==='portrait')return;mouse.set(e.clientX/innerWidth*2-1,1-e.clientY/innerHeight*2);ray.setFromCamera(mouse,camera);const hit=ray.intersectObject(art.root,true)[0];if(hit){const s=art.layout.stations.map(s=>({s,d:Math.hypot(s.x-hit.point.x,s.z-hit.point.z)})).sort((a,b)=>a.d-b.d)[0];if(s?.d<3){chooseStation(s.s.id);return;}}if(ray.ray.intersectPlane(floor,floorPoint))navigate(floorPoint);});
  for(const name of ['pointercancel','lostpointercapture'])canvas.addEventListener(name,e=>pointers.delete(e.pointerId));
  canvas.addEventListener('wheel',e=>{if(view!=='overview'||opened||paused)return;e.preventDefault();overview.zoom=clamp(overview.zoom*Math.exp(-e.deltaY*.001),.7,2.5);overview.updateProjectionMatrix();},{passive:false});
- window.addEventListener('keydown',e=>{if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName))return;if(e.code==='Escape'){e.preventDefault();if(opened)closePanel();else if(paused)resumeHideout();else pauseHideout();return;}if(opened||paused)return;if(e.code==='KeyV'&&!e.repeat){selectPlayView(lastPlayView==='visit'?'third':'fps');return;}if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='KeyF'&&!e.repeat&&near)openStation(near.id);});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();touch.x=touch.z=0;});
+ window.addEventListener('keydown',e=>{if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName))return;if(e.code==='Escape'){e.preventDefault();if(opened)closePanel();else if(paused)resumeHideout();else pauseHideout();return;}if(opened||paused)return;if(e.code==='KeyV'&&!e.repeat){selectPlayView(lastPlayView==='visit'?'third':'fps');return;}if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='KeyF'&&!e.repeat&&near){if(civil?.snapshot().clip?.startsWith('fitness'))civil.playFitness(null);else openStation(near.id);}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();touch.x=touch.z=0;});
  const stick=$('stick'),knob=stick.querySelector('i');let stickPointer=null;
  const steer=e=>{const r=stick.getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dz=e.clientY-r.top-r.height/2,max=r.width*.34,n=Math.max(1,Math.hypot(dx,dz)/max);touch.x=dx/(n*max);touch.z=dz/(n*max);knob.style.transform='translate('+touch.x*max+'px,'+touch.z*max+'px)';};
  stick.onpointerdown=e=>{if(opened||paused)return;stickPointer=e.pointerId;stick.setPointerCapture(e.pointerId);steer(e);};stick.onpointermove=e=>{if(!paused&&!opened&&e.pointerId===stickPointer)steer(e);};for(const name of ['pointerup','pointercancel','lostpointercapture'])stick.addEventListener(name,e=>{if(e.pointerId===stickPointer){stickPointer=null;touch.x=touch.z=0;knob.style.transform='';}});
@@ -232,18 +234,19 @@ function updatePlayerCamera(){
   const p=game.player;visit.position.set(p.x,1.65,p.z);visit.rotation.set(cameraPitch,cameraYaw,0,'YXZ');
  }
 }
+function fitnessStations(){return civilMode?(art?.layout.fitnessEquipment||[]).map(e=>({...e,id:'fitness-'+e.id,room:'gym',radius:1.0,action:'Tester '+e.name})):[];}
 function update(dt){
  const control=pads.read(dt,keys,navigator.getGamepads?.()||[],{focused:!document.hidden});
  if(paused){updatePlayerCamera();if(control.pause)resumeHideout();return;}
  if(control.pause){if(opened)closePanel();else pauseHideout();return;}
  if(!opened&&(view==='visit'||view==='third')){cameraYaw-=control.lookX*dt;cameraPitch=clamp(cameraPitch-control.lookY*dt,-.65,.3);}
- if(!opened&&control.interact&&near)openStation(near.id);
+ if(!opened&&control.interact&&near){if(civil?.snapshot().clip?.startsWith('fitness'))civil.playFitness(null);else openStation(near.id);}
  if(healing){const h=healing;h.age+=dt;const u=Math.min(1,h.age/h.life);h.progress.value=u;if(h.rest)game.player.hp=h.startHP+(100-h.startHP)*u;game.player.shield=h.startShield+(game.shieldCapacity-h.startShield)*u;
   if(u>=1){if(h.rest)profile.rested=true;else{profile.recharged=true;game.ammo=WEAPONS.map(w=>w.capacity);game.dual.ammo={left:12,right:12};game.charges=4;}game.player.shield=game.shieldCapacity;saveCurrent();profile.rested=profile.rested||h.rest;profile.recharged=profile.recharged||!h.rest;saveHideoutProfile(characterId,profile);h.button.textContent=h.rest?'RÉGÉNÉRATION TERMINÉE':'ÉQUIPEMENT RECHARGÉ';$('close').disabled=false;healing=null;}
  }
  let x=control.moveX+touch.x,z=control.moveZ+touch.z,yaw=(view==='visit'||view==='third')?cameraYaw:0;
  if(opened||view==='portrait'){x=z=0;}
- else if(Math.hypot(x,z)>.12){path=[];destination=null;}
+ else if(Math.hypot(x,z)>.12){civil?.playFitness(null);path=[];destination=null;}
  else if(path.length){const goal=path[0],dx=goal.x-game.player.x,dz=goal.z-game.player.z,d=Math.hypot(dx,dz);if(d<.18){path.shift();if(!path.length&&destination){const target=destination;destination=null;if(Math.hypot(game.player.x-target.x,game.player.z-target.z)<target.radius)openStation(target.id);}}else{yaw=-Math.atan2(dx,-dz);x=0;z=-Math.min(1,d/.4);}}
  art.updateDoors(dt,game.player,{moving:!opened&&Math.hypot(x,z)>.03});
  if(!opened&&view!=='portrait')game.step(dt,{x,z,yaw,moveYaw:yaw,sprint:control.sprint,gamepadMoving:control.gamepadMoving,touchMoving:!!(touch.x||touch.z)});
@@ -254,7 +257,7 @@ function update(dt){
   const p=game.player,angle=p.yaw;portrait.position.set(p.x-Math.sin(angle)*.83,1.64,p.z-Math.cos(angle)*.83);portrait.lookAt(p.x,1.65,p.z);
  }
  updatePlayerCamera();
- near=art.layout.stations.map(s=>({s,d:Math.hypot(game.player.x-s.x,game.player.z-s.z)})).filter(o=>o.d<o.s.radius&&navigation.inRoom(game.player,o.s.room)).sort((a,b)=>a.d-b.d)[0]?.s||null;$('action').hidden=!near||!!opened;if(near)$('action').textContent='F · '+near.action;
+ near=[...art.layout.stations,...fitnessStations()].map(s=>({s,d:Math.hypot(game.player.x-s.x,game.player.z-s.z)})).filter(o=>o.d<o.s.radius&&navigation.inRoom(game.player,o.s.room)).sort((a,b)=>a.d-b.d)[0]?.s||null;$('action').hidden=!near||!!opened;if(near)$('action').textContent='F · '+near.action;
  const status=[Math.ceil(game.player.hp),Math.ceil(game.player.shield),game.nano.profile.balance].join(':');if(status!==lastStatus){lastStatus=status;$('vitals').textContent='SANTÉ '+Math.ceil(game.player.hp)+' · BOUCLIER '+Math.ceil(game.player.shield);$('nanites').textContent=game.nano.profile.balance+' NP';}
  for(const e of game.drainEvents()){nanoFx.handle(e);if(e.type==='nano-crafted')message(e.name+' · assemblage terminé');if(e.type==='nano-error')message(e.message,7);}
  nanoFx.update(game,dt);nanoChambers?.update(dt,clock);art.updateEnhancements?.(clock);

@@ -1,0 +1,40 @@
+name: Civil locomotion and gym motion validation
+on:
+  push:
+    branches: [feature/planque-fitness-20261124]
+    paths: ['dist/lylu-civil-hideout.js', 'dist/lylu-civil-motion.js', 'dist/planque.js', 'tools/verify-planque-fitness.mjs', '.github/workflows/planque-fitness.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build-verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify dimensions, collisions and existing planque logic
+        run: |
+          node --check dist/lylu-civil-motion.js
+          node --check dist/lylu-civil-hideout.js
+          node --check dist/planque.js
+          node --check dist/hideout-art.js
+          node --check dist/hideout-showcase-assets.js
+          node --test tests/planque-open.test.mjs tests/planque-gym.test.mjs tests/planque-proportions.test.mjs tests/389-hideout.test.mjs tests/3893-hideout-rooms-city.test.mjs tests/391-hideout-nano-chambers.test.mjs
+      - name: Capture actual in-game previews
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+          python -m http.server 4173 --directory dist >/tmp/planque-server.log 2>&1 &
+          node tools/verify-planque-fitness.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: planque-fitness-preview
+          path: planque-fitness-check/
+      - name: Bundle validated geometry in the preview branch
+        run: |
+          git config user.name "Pink Wars validation"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f planque-fitness-check/*.png
+          git diff --cached --quiet || git commit -m "Bundle tested civil movement and fitness captures"
+          git push origin HEAD:feature/planque-fitness-20261124

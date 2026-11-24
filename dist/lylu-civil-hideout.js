@@ -1,4 +1,5 @@
 import * as T from './vendor/three.webgpu.min.js';
+import {buildCivilMotion,FITNESS_CLIPS} from './lylu-civil-motion.js';
 // LYLU only, planque only. The game simulation and mission equipment are not altered.
 export const LYLU_CIVIL_ASSET=new URL('./assets/heroes/lylu-civil-v5.glb?v=20261124v5',import.meta.url).href;
 export const LYLU_EXPRESSIONS=Object.freeze(['Blink','Smile','Focus','Surprise']);
@@ -24,10 +25,11 @@ export async function createLyluCivil(scene,{load}={}){
  const required=['Pelvis','Spine','Chest','Neck','Head',...['L','R'].flatMap(s=>['UpperArm','ForeArm','Hand','Thigh','Shin','Foot'].map(n=>n+'_'+s))];
  if(required.some(n=>!bones.has(n))||LYLU_EXPRESSIONS.some(n=>!morphs.some(o=>n in o.morphTargetDictionary)))throw new Error('LYLU civil: missing skeleton or facial morphs');
  // Blender exports front +Z; the Pink Wars hero faces -Z. Keep world gameplay root separate.
+ const civilClips=buildCivilMotion(T,visual,bones,gltf.animations);
  visual.rotation.y=Math.PI;visual.position.y=.015;
  scene.add(root);
  // All 30 tracks are retargeted from the actual armored actor. The mixer owns bone poses.
- const mixer=new T.AnimationMixer(visual),actions=new Map(gltf.animations.map(c=>[c.name,mixer.clipAction(c)]));
+ const mixer=new T.AnimationMixer(visual),actions=new Map([...gltf.animations,...civilClips].map(c=>[c.name,mixer.clipAction(c)]));
  const requiredClips=['idle','rifle','walk','walkRifle','run','walkLeft','walkRight','walkBack','runLeft','runRight','runBack','crouchIdle','crouchWalk','crouchLeft','crouchRight','crouchBack','jump','doubleJump','wallJump','jetpack','slide','crouchTransition','aim','fireRifle','reloadRifle','firePistol','reloadPistol','meleeBlade','fireDual','reloadDual'];
  if(requiredClips.some(n=>!actions.has(n)))throw new Error('LYLU V5: animation library incomplete');
  const state={Blink:0,Smile:0,Focus:0,Surprise:0};
@@ -36,10 +38,10 @@ export async function createLyluCivil(scene,{load}={}){
    const next=actions.get(name);if(!next)return;
    if(current===next)return;
    const old=current;next.reset().setEffectiveTimeScale(1).setEffectiveWeight(1);next.setLoop(once?T.LoopOnce:T.LoopRepeat,once?1:Infinity);next.clampWhenFinished=once;
-   if(old&&!once&&/^(walk|run|crouch)/.test(name)&&/^(walk|run|crouch)/.test(clipName))next.time=(old.time/old.getClip().duration%1)*next.getClip().duration;
+   if(old&&!once&&/^(civil_)?(walk|run|crouch)/.test(name)&&/^(civil_)?(walk|run|crouch)/.test(clipName))next.time=(old.time/old.getClip().duration%1)*next.getClip().duration;
    next.play();if(old)next.crossFadeFrom(old,.18,false);current=next;clipName=name;
  }
- play('idle');mixer.update(0);
+ play('civil_idle');mixer.update(0);
  function select({moving,sprint,crouched,velocity,yaw,speed}){
    if(!moving)return crouched?'crouchIdle':'idle';
    const vx=velocity?.x||0,vz=velocity?.z||0,lx=vx*Math.cos(yaw)-vz*Math.sin(yaw),lz=vx*Math.sin(yaw)+vz*Math.cos(yaw);
@@ -52,15 +54,15 @@ export async function createLyluCivil(scene,{load}={}){
    const step=clamp(dt,0,.08);actionAge+=step;
    const interact=actionAge<1.05;
    // Interaction is an unarmed adaptation of the original aim gesture; no combat is enabled in the refuge.
-   const name=preview|| (interact?'aim':select({moving,sprint,crouched,velocity,yaw,speed}));
+   const name=preview||('civil_'+select({moving,sprint,crouched,velocity,yaw,speed}));
    motion=preview|| (interact?'action':moving?(sprint?'run':'walk'):'idle');
-   play(name,interact&&!preview);sourceWeight+=(Number(moving)-sourceWeight)*(1-Math.exp(-step*9));
-   if(current&&moving&&!preview&&!interact){const nominal=name.startsWith('run')?4.2:name.startsWith('crouch')?1.2:1.6;current.setEffectiveTimeScale(clamp(speed/nominal,.35,1.75));}
+   play(name,false);sourceWeight+=(Number(moving)-sourceWeight)*(1-Math.exp(-step*9));
+   if(current&&moving&&!preview&&!interact){const nominal=name.startsWith('civil_run')?4.2:name.startsWith('civil_crouch')?1.2:1.6;current.setEffectiveTimeScale(clamp(speed/nominal,.35,1.75));}
    else current?.setEffectiveTimeScale(1);
    mixer.update(step);sourcePhase=(current?.time||0)/(current?.getClip().duration||1);
    const targetFace=lyluExpressionState(time,{moving,station});if(override)Object.assign(targetFace,override);
    for(const key of LYLU_EXPRESSIONS){const k=key==='Blink'?1-Math.exp(-step*45):1-Math.exp(-step*8);state[key]+=(targetFace[key]-state[key])*k;}
    for(const o of morphs)for(const key of LYLU_EXPRESSIONS){const i=o.morphTargetDictionary[key];if(i!==undefined)o.morphTargetInfluences[i]=state[key];}
  }
- return {root,update,triggerAction(kind='interact'){actionAge=0;actionKind=kind;},setExpression(value=null){override=value;},playPreview(name=null){if(name!==null&&!actions.has(name))throw Error('Unknown clip');preview=name;},snapshot:()=>({ready:alive,visible:root.visible,triangles,draws,bones:bones.size,motion,clip:clipName,clips:[...actions.keys()],canonical:true,sourcePhase,sourceWeight,action:actionAge<1.05?actionKind:null,expressions:{...state},morphs:morphs.length}),dispose(){alive=false;mixer.stopAllAction();mixer.uncacheRoot(visual);root.removeFromParent();visual.traverse(o=>{if(o.isMesh){o.geometry.dispose();for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});}};
+ return {root,update,triggerAction(kind='interact'){actionAge=0;actionKind=kind;},setExpression(value=null){override=value;},playPreview(name=null){if(name!==null&&!actions.has(name))throw Error('Unknown clip');preview=name;},playFitness(id=null){preview=id?FITNESS_CLIPS[id]||null:null;},snapshot:()=>({ready:alive,visible:root.visible,triangles,draws,bones:bones.size,motion,clip:clipName,clips:[...actions.keys()],canonical:true,sourcePhase,sourceWeight,action:actionAge<1.05?actionKind:null,expressions:{...state},morphs:morphs.length}),dispose(){alive=false;mixer.stopAllAction();mixer.uncacheRoot(visual);root.removeFromParent();visual.traverse(o=>{if(o.isMesh){o.geometry.dispose();for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});}};
 }
