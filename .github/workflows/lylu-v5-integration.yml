@@ -2,7 +2,7 @@ name: LYLU V5 integration and regression
 on:
   push:
     branches: [feature/lylu-v5-animated-integration]
-    paths: ['.github/workflows/lylu-v5-integration.yml']
+    paths: ['.github/workflows/lylu-v5-integration.yml', 'tools/blender/lylu_v5_animated.py', 'dist/lylu-civil-hideout.js', 'dist/planque.js', 'tools/verify-lylu-v5-motion.mjs', 'tools/verify-planque-civil-pause.mjs']
   workflow_dispatch:
 permissions:
   contents: write
@@ -43,6 +43,7 @@ jobs:
         with:
           name: LYLU-V5-integration-check
           path: |
+            dist/assets/heroes/lylu-civil-v5.glb
             lylu-v5-check/
             planque-civil-pause-check/
       - name: Bundle asset only after successful tests

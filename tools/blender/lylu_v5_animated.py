@@ -93,6 +93,8 @@ def floor(w):
  for p,j,wg in soles:
   ms=np.sum(mm[j]*wg[:,:,None,None],axis=1);ys.append(np.min(np.einsum('ni,ni->n',ms[:,1,:3],p)+ms[:,1,3]))
  return min(ys) if ys else 0
+data=bytearray(data) # detach live NumPy views before appending animation buffers
+assert len(data)%4==0
 def accessor(v,typ):
  v=np.ascontiguousarray(v,dtype='<f4');off=len(data);data.extend(v.tobytes());bv=len(g['bufferViews']);g['bufferViews'].append({'buffer':0,'byteOffset':off,'byteLength':v.nbytes});a={'bufferView':bv,'componentType':5126,'count':len(v),'type':typ}
  if typ=='SCALAR':a.update(min=[float(v.min())],max=[float(v.max())])
