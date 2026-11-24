@@ -1,0 +1,38 @@
+name: Planque civilian and pause validation
+on:
+  push:
+    branches: [feature/planque-civil-pause-v2]
+    paths:
+      - .github/workflows/planque-civil-pause.yml
+      - dist/planque.js
+      - dist/planque.html
+      - dist/planque.css
+      - dist/lylu-civil-hideout.js
+      - dist/hideout-nano-chambers.js
+      - tools/verify-planque-civil-pause.mjs
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify source and existing logic
+        run: |
+          node --check dist/planque.js
+          node --check dist/hideout-nano-chambers.js
+          node --test tests/389-hideout.test.mjs tests/391-hideout-nano-chambers.test.mjs tests/392-outfit-stages.test.mjs tests/3853-camera-options.test.mjs
+      - name: Verify real game on desktop
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          python -m http.server 4173 --directory dist >/tmp/planque-server.log 2>&1 &
+          node tools/verify-planque-civil-pause.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Planque-civil-pause-check
+          path: planque-civil-pause-check/
