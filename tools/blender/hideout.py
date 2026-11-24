@@ -452,7 +452,7 @@ for side in [-1,1]:polyline('Cuir et joints',[(side*.3,.1,6.7),(side*.7,.10,7.1)
 print('Planque: atelier et porte',flush=True)
 ZONE='Atelier nanométrique'
 box('Cadres anthracite',(7.8,1.7,-4.5),(5.6,3.15,.25),solid=True)
-screen(7.75,2.05,-4.3,2.45,1.45);screen(5.75,2.35,-4.25,.75,.62);screen(5.75,1.55,-4.25,.75,.6);screen(9.95,2.4,-4.25,.56,.7)
+screen(7.75,1.90,-4.3,2.15,1.25);screen(5.75,2.20,-4.25,.68,.56);screen(5.75,1.40,-4.25,.68,.54);screen(9.95,2.25,-4.25,.50,.63)
 for j in range(6):
  x=5.35+j*.16;rod('Métal brossé',(x,1.25,-4.27),(x,1.7,-4.27),.025);ellipsoid('Cuivre et outils',(x,1.25,-4.24),(.07,.09,.03))
 bench_mark=mark_furniture()
@@ -464,7 +464,7 @@ for x in [5.3,9.3]:
   polyline('Métal brossé',[(x-.27,yy,-.34),(x-.27,yy,-.30),(x+.27,yy,-.30),(x+.27,yy,-.34)],.014)
   cyl('Cuir et joints',(x+.40,yy,-.34),.018,.014,10,axis='z')
 box('Métal brossé',(7.35,1.31,-1.1),(5.5,.17,1.6),solid=True);box('Cadres anthracite',(7.35,1.41,-1.1),(5.30,.06,1.4))
-fit_furniture(bench_mark,(7.35,0,-1.1),(1,.95/1.44,1))
+fit_furniture(bench_mark,(7.35,0,-1.1),(1,.95/1.44,.90))
 SOLIDS[-1]['height']=.95-SOLIDS[-1]['y']
 tool_mark=mark_furniture()
 # Soft service pad and adjustable rests support the real VORTEX AR7.
@@ -475,6 +475,7 @@ for xx in [6.45,7.25]:
 for x,z in [(5.2,-.6),(7.8,-1.3),(8.5,-.8)]:
  cyl('Cuivre et outils',(x,1.49,z),.065,.10,10);box('Acier patiné',(x+.22,1.49,z),(.25,.08,.12))
 # Industrial articulated service arm: pedestal, shoulder, joints, tapering links, wrist and two-finger tool.
+robot_mark=mark_furniture()
 cyl('Cadres anthracite',(9.3,1.49,-1.3),.25,.24,16);cyl('Bras robot orange',(9.3,1.72,-1.3),.20,.30,12)
 for A,B in [((9.3,1.78,-1.3),(9.9,2.65,-1.5)),((9.9,2.65,-1.5),(8.8,2.95,-1.25)),((8.8,2.95,-1.25),(8.15,2.4,-1.0))]:
  rod('Bras robot orange',A,B,.12,8);ellipsoid('Cadres anthracite',A,(.31,.31,.31));ellipsoid('Métal brossé',B,(.23,.23,.23));rod('Cuir et joints',(A[0],A[1],A[2]+.16),(B[0],B[1],B[2]+.16),.025)
@@ -484,6 +485,7 @@ for A,B in [((9.3,1.78,-1.3),(9.9,2.65,-1.5)),((9.9,2.65,-1.5),(8.8,2.95,-1.25))
  pa=(A[0]-.10,A[1]+.1,A[2]-.16);pb=((A[0]+B[0])*.5,(A[1]+B[1])*.5,A[2]-.16)
  rod('Cadres anthracite',pa,pb,.055,10);rod('Métal brossé',pb,(B[0]-.1,B[1]-.1,B[2]-.16),.025,10)
 for s in [-1,1]:polyline('Métal brossé',[(8.15,2.4,-1),(8.15+s*.12,2.2,-1),(8.15+s*.06,2.05,-1)],.03)
+fit_furniture(robot_mark,(9.3,1.37,-1.3),(.88,.88,.88),(0,.07,0))
 fit_furniture(tool_mark,(7.35,0,-1.1),(1,1,1),(0,-.49,0))
 seat_mark=mark_furniture()
 cyl('Métal brossé',(7.7,.35,1.2),.06,.6);cyl('Cadres anthracite',(7.7,.72,1.2),.40,.12,16);cushion('Tissu rose',(7.7,.83,1.2),(.65,.19,.65));cushion('Tissu rose',(7.7,1.14,1.48),(.64,.65,.15))
@@ -663,7 +665,7 @@ po=bpy.data.objects.new('Panorama de Vesper / baie vitrée',pme);sc.collection.o
 for o in sc.objects:
  if o.name.startswith(('Vesper extérieure','Toiture complète'))or any(META.get(m.name,{}).get('interior')for m in getattr(o.data,'materials',[])):o.hide_render=True
 
-layout={'version':1,'proportionsRevision':1,'name':'La Planque · Les Héritiers du Silence','author':'Pink Wars · Blender','doors':DOORS,'rooms':ROOMS,'showcase':{'companions':[{'id':'gaby','hero':'ghju','x':-2.15,'y':1.5,'z':7.3},{'id':'cara','hero':'lylu','x':2.15,'y':1.5,'z':7.3}],'weapons':SHOWCASE_WEAPONS,'outfits':[{'hero':'ghju','x':-8.9,'y':.285,'z':4.45},{'hero':'lylu','x':-6.4,'y':.285,'z':4.45}]},'bounds':{'x1':-10.65,'x2':10.65,'z1':-11.25,'z2':11.35},'spawn':{'x':0,'z':9.0,'yaw':0},'colliders':SOLIDS,'stations':[
+layout={'version':1,'proportionsRevision':2,'atelierScale':{'benchTop':.95,'benchDepth':1.44,'robotScale':.88,'screenDrop':.15},'name':'La Planque · Les Héritiers du Silence','author':'Pink Wars · Blender','doors':DOORS,'rooms':ROOMS,'showcase':{'companions':[{'id':'gaby','hero':'ghju','x':-2.15,'y':1.5,'z':7.3},{'id':'cara','hero':'lylu','x':2.15,'y':1.5,'z':7.3}],'weapons':SHOWCASE_WEAPONS,'outfits':[{'hero':'ghju','x':-8.9,'y':.285,'z':4.45},{'hero':'lylu','x':-6.4,'y':.285,'z':4.45}]},'bounds':{'x1':-10.65,'x2':10.65,'z1':-11.25,'z2':11.35},'spawn':{'x':0,'z':9.0,'yaw':0},'colliders':SOLIDS,'stations':[
  {'id':'rest','name':'Dortoir','action':'Se reposer et régénérer','x':-6.1,'z':-6.35,'radius':2.4},
  {'id':'weapons','name':'Mur d’armes','action':'Préparer les armes','x':-7.8,'z':-.2,'radius':2.7},
  {'id':'outfits','name':'Tenues de combat','action':'Préparer l’équipement','x':-7.8,'z':6.3,'radius':2.4},
