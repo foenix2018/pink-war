@@ -225,15 +225,11 @@ DOORS=[
  {'id':'dortoir','name':'Dortoir','axis':'x','x':-4.55,'z':-6.35,'width':2.10},
  {'id':'armurerie','name':'Armurerie','axis':'x','x':-4.55,'z':0,'width':2.10},
  {'id':'tenues','name':'Tenues','axis':'x','x':-4.55,'z':6.25,'width':2.10},
- {'id':'bain','name':'Salle de bain','axis':'x','x':4.55,'z':-6.35,'width':2.10},
- {'id':'archives-ouest','name':'Archives · ouest','axis':'z','x':-3.70,'z':-5,'width':1.55},
- {'id':'archives-centre','name':'Archives · salon','axis':'z','x':0,'z':-5,'width':2.10},
- {'id':'archives-est','name':'Archives · est','axis':'z','x':3.70,'z':-5,'width':1.55},
- {'id':'salon','name':'Salon','axis':'z','x':0,'z':3.2,'width':2.10},
- {'id':'recharge-ouest','name':'Recharge · ouest','axis':'z','x':-3.70,'z':3.2,'width':1.55},
- {'id':'recharge-est','name':'Recharge · est','axis':'z','x':3.70,'z':3.2,'width':1.55}
+ {'id':'bain','name':'Salle de bain','axis':'x','x':4.55,'z':-6.35,'width':2.10}
 ]
-PORTALS=[{'id':'atelier','name':'Atelier nano','axis':'x','x':4.55,'z':1.25,'width':2.10,'height':2.65},{'id':'gym','name':'Salle de sport','axis':'x','x':4.55,'z':7.65,'width':3.05,'height':2.65}]
+PORTALS=[{'id':'atelier','name':'Atelier nano','axis':'x','x':4.55,'z':1.25,'width':2.10,'height':2.65},{'id':'gym','name':'Salle de sport','axis':'x','x':4.55,'z':7.65,'width':3.05,'height':2.65},
+ {'id':'recharge-ouvert','name':'Recharge et salon','axis':'z','x':0,'z':3.2,'width':8.9,'height':2.65},
+ {'id':'archives-ouvert','name':'Livre de l’Histoire','axis':'z','x':0,'z':-5,'width':8.9,'height':2.65}]
 ROOMS=[
  {'id':'dortoir','name':'Dortoir','bounds':[-10.75,-11.5,-4.55,-5]},
  {'id':'bain','name':'Salle de bain','bounds':[4.55,-11.5,10.75,-5]},
@@ -262,8 +258,8 @@ def wall(axis,at,start,end,openings=()):
   box('Cloisons hautes',center,(.16,2.2,w)if axis=='x'else(w,2.2,.16),solid=True,name='linteau de porte')
 ZONE='Cloisons fermées'
 for at in [-4.55,4.55]:wall('x',at,-11.5,11.45,[(d['z'],d['width'])for d in DOORS+PORTALS if d['axis']=='x'and d['x']==at])
-wall('z',-5,-10.75,10.75,[(d['x'],d['width'])for d in DOORS if d['z']==-5])
-wall('z',3.2,-10.75,4.55,[(d['x'],d['width'])for d in DOORS if d['z']==3.2])
+wall('z',-5,-10.75,10.75,[(d['x'],d['width'])for d in DOORS+PORTALS if d['axis']=='z' and d['z']==-5])
+wall('z',3.2,-10.75,4.55,[(d['x'],d['width'])for d in DOORS+PORTALS if d['axis']=='z' and d['z']==3.2])
 wall('z',3.2,4.55,10.75)
 for at in [-2.95,2.95]:wall('x',at,-5,3.2)
 for door in DOORS:
@@ -288,6 +284,17 @@ for door in DOORS:
 ZONE='Cadres de portes'
 for portal in PORTALS:
  x,z,w=portal['x'],portal['z'],portal['width']
+ if portal['axis']=='z':
+  # One continuous 8.2 m clear opening, no sliding leaves or intermediate posts.
+  for side in [-1,1]:
+   xx=x+side*(w/2+.10)
+   box('Cadres anthracite',(xx,1.30,z),(.20,2.60,.32))
+   box('Métal brossé',(xx,1.17,z+.17),(.09,2.34,.035))
+   neon((xx,.25,z+.20),(xx,2.10,z+.20),'Néon bleu',.012)
+  box('Cadres anthracite',(x,2.73,z),(w+.35,.23,.38))
+  for side in [-1,1]:
+   neon((x-w*.46,2.67,z+side*.20),(x+w*.46,2.67,z+side*.20),'Néon rose',.012)
+  continue
  for side in [-1,1]:
   zz=z+side*(w/2+.10)
   box('Cadres anthracite',(x,1.30,zz),(.38,2.60,.20))
@@ -463,7 +470,7 @@ for x,name,accent in [(-2.15,'GAB-1','Néon rose'),(2.15,'CAR-14','Néon bleu')]
  for side in [-1,1]:
   polyline('Cuir et joints',[(x+side*.75,.20,6.95),(x+side*.65,.30,7.3),(x+side*.45,.46,7.65)],.035)
  box('Cadres anthracite',(x,2.63,6.97),(1.85,.46,.12));text('Recharge',x,2.71,7.05,.17);text(name,x,2.47,7.05,.23,accent)
- for yy,rr in [(.82,.5),(1.05,.35)]:ring(accent,(x,yy,7.3),rr,.008)
+ # Dynamic charging vortex is rendered by hideout-enhancements.js.
  # Real Cara / Gaby are captured from createCompanionModel by the catalogue bake.
  SOLIDS.append({'kind':'station '+name,'x':x,'z':6.6,'hx':1.2,'hz':.4,'y':0,'height':2.7});SOLIDS.append({'kind':'socle '+name,'x':x,'z':7.3,'hx':.96,'hz':.96,'y':0,'height':.4})
  fit_furniture(dock_mark,(x,0,7.3),(.76,.80,.76))
@@ -633,6 +640,43 @@ for j in range(2):
  x,z=9.83,5.85+j*.27
  ellipsoid('Cuir et joints',(x,.17,z),(.22,.23,.22),12)
  polyline('Métal brossé',[(x-.055,.23,z),(x-.055,.34,z),(x+.055,.34,z),(x+.055,.23,z)],.023)
+# Detailed mechanical hardware: gussets, floor bolts, safety catches, knurling,
+# recessed plate rings, rubber feet and rower track hardware.
+for sx in [-1,1]:
+ for sz in [-1,1]:
+  x,z=8.75+sx*.70,4.75+sz*.62
+  rod('Acier patiné',(x,.18,z),(x-sx*.18,.09,z),.035,8)
+  for ox in [-.085,.085]:
+   for oz in [-.10,.10]:cyl('Métal brossé',(x+ox,.156,z+oz),.019,.018,8)
+ for yy in [.66,1.08]:
+  box('Métal brossé',(8.75+sx*.70,yy,4.75),(.065,.055,1.18))
+ for i in range(12):
+  x=8.75+sx*(.25+i*.022)
+  cyl('Acier patiné',(x,1.4,5.48),.015,.009,12,axis='x')
+ x=8.75+sx*.92
+ ring('Métal brossé',(x,1.4,5.48),.163,.008,24,axis='x')
+ for z in [5.37,6.43]:
+  box('Cuir et joints',(8.75+sx*.24,.055,z),(.13,.065,.13))
+ rod('Acier patiné',(8.75,.13,5.90+sx*.53),(8.75,.33,5.90+sx*.28),.039,8)
+for level in range(3):
+ y=.36+level*.36
+ for j in range(8):
+  z=7.65-1.12+j*.32
+  rr=.085+.017*(2-level)+.004*j
+  for side in [-1,1]:
+   x=10.03+side*.135
+   cyl('Acier patiné',(x+side*.043,y+.065+rr,z),rr*.86,.016,6,axis='x')
+   cyl('Tissu rose',(x+side*.055,y+.065+rr,z),rr*.28,.012,8,axis='x')
+for z in [10.14-.045,10.14+.045]:
+ box('Métal brossé',(7.10,.357,z),(1.72,.014,.024))
+for side in [-1,1]:
+ x,z=8.18,10.14+side*.16
+ ring('Métal brossé',(x,.66,z),.29,.012,32,axis='z')
+ for k in range(16):
+  a=k*TAU/16
+  rod('Cadres anthracite',(x+math.cos(a)*.21,.66+math.sin(a)*.21,z),(x+math.cos(a)*.27,.66+math.sin(a)*.27,z),.009,6)
+ for x in [6.39,8.26]:
+  box('Cuir et joints',(x,.055,10.14+side*.25),(.18,.06,.14))
 # Ambient gym panel lighting, no additional expensive shadow pass.
 box('Cadres anthracite',(7.6,3.43,7.45),(2.7,.10,.72))
 box('Néon blanc',(7.6,3.367,7.45),(2.55,.025,.60))
@@ -802,7 +846,7 @@ po=bpy.data.objects.new('Panorama de Vesper / baie vitrée',pme);sc.collection.o
 for o in sc.objects:
  if o.name.startswith(('Vesper extérieure','Toiture complète'))or any(META.get(m.name,{}).get('interior')for m in getattr(o.data,'materials',[])):o.hide_render=True
 
-layout={'version':1,'proportionsRevision':2,'gymRevision':1,'portals':PORTALS,'atelierScale':{'benchTop':.95,'benchDepth':1.44,'robotScale':.88,'screenDrop':.15},'name':'La Planque · Les Héritiers du Silence','author':'Pink Wars · Blender','doors':DOORS,'rooms':ROOMS,'showcase':{'companions':[{'id':'gaby','hero':'ghju','x':-2.15,'y':1.5,'z':7.3},{'id':'cara','hero':'lylu','x':2.15,'y':1.5,'z':7.3}],'weapons':SHOWCASE_WEAPONS,'outfits':[{'hero':'ghju','x':-8.9,'y':.285,'z':4.45},{'hero':'lylu','x':-6.4,'y':.285,'z':4.45}]},'bounds':{'x1':-10.65,'x2':10.65,'z1':-11.25,'z2':11.35},'spawn':{'x':0,'z':9.0,'yaw':0},'colliders':SOLIDS,'stations':[
+layout={'version':1,'proportionsRevision':2,'gymRevision':1,'openPlanRevision':1,'enhancementRevision':1,'fitnessEquipment':[{'id':'squat','name':'Rack à squat et banc','x':6.85,'z':5.4,'stat':'strength'},{'id':'dumbbells','name':'Haltères','x':8.75,'z':7.65,'stat':'dexterity'},{'id':'rower','name':'Rameur','x':7.1,'z':9.1,'stat':'endurance'}],'portals':PORTALS,'atelierScale':{'benchTop':.95,'benchDepth':1.44,'robotScale':.88,'screenDrop':.15},'name':'La Planque · Les Héritiers du Silence','author':'Pink Wars · Blender','doors':DOORS,'rooms':ROOMS,'showcase':{'companions':[{'id':'gaby','hero':'ghju','x':-2.15,'y':1.5,'z':7.3},{'id':'cara','hero':'lylu','x':2.15,'y':1.5,'z':7.3}],'weapons':SHOWCASE_WEAPONS,'outfits':[{'hero':'ghju','x':-8.9,'y':.285,'z':4.45},{'hero':'lylu','x':-6.4,'y':.285,'z':4.45}]},'bounds':{'x1':-10.65,'x2':10.65,'z1':-11.25,'z2':11.35},'spawn':{'x':0,'z':8.9,'yaw':-1.30},'colliders':SOLIDS,'stations':[
  {'id':'rest','name':'Dortoir','action':'Se reposer et régénérer','x':-6.1,'z':-6.35,'radius':2.4},
  {'id':'weapons','name':'Mur d’armes','action':'Préparer les armes','x':-7.8,'z':-.2,'radius':2.7},
  {'id':'outfits','name':'Tenues de combat','action':'Préparer l’équipement','x':-7.8,'z':6.3,'radius':2.4},
