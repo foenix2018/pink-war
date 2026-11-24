@@ -60,12 +60,13 @@ async function boot(){
   for(const [color,x,z,intensity]of [[0xff80ae,-7,-7,48],[0x72caff,7,-2,38]]){const light=new T.PointLight(color,intensity,18,2);light.position.set(x,3,z);scene.add(light);}
   overview=new T.OrthographicCamera(-15,15,15,-15,.05,230);overview.position.set(0,26,29);overview.lookAt(0,.2,-1);visit=new T.PerspectiveCamera(64,innerWidth/innerHeight,.05,180);portrait=new T.PerspectiveCamera(40,innerWidth/innerHeight,.025,180);third=new T.PerspectiveCamera(64,innerWidth/innerHeight,.05,180);camera=overview;
   art=await loadHideoutArt(T,{displayOutfits:false,onProgress:progress,low:graphics.phone||graphics.economy||graphics.artQuality==='low'});scene.add(art.root);navigation=createHideoutNavigation(art.layout);
+  if(art.layout.gymRevision){const gymLight=new T.PointLight(0xc4dfff,32,10,2);gymLight.position.set(7.65,3.1,7.65);scene.add(gymLight);}
    nanoChambers=createHideoutNanoChambers(T,{scene,locations:art.layout.showcase.outfits,low:graphics.phone||graphics.economy,onStatus:()=>nanoUI?.refresh()});
   const flat={height:()=>0,surfaces:()=>[],routes:[],lifts:[]},level=nextHideoutChapter(profile)||profile.lastChapter;
   game=new ArenaGame([...art.layout.colliders,...art.doorColliders],Math.random,flat,characterId);game.configureWeaponAccess({mode:'campaign',level});game.inHideout=true;game.grappleEnabled=false;game.enableArmorShield();game.nextWave=Infinity;game.toSpawn=0;game.invulnerable=Infinity;game.nano.placed=true;game.nano.plans=[];game.wave=1;
   for(const i of profile.owned)if(game.isWeaponAvailable(i)&&game.nanoWeaponAllowed(i))game.ownedWeapons.add(i);
   if(profile.selectedWeapon!==null&&game.ownedWeapons.has(profile.selectedWeapon)&&game.isWeaponAvailable(profile.selectedWeapon)&&game.nanoWeaponAllowed(profile.selectedWeapon))game.weaponIndex=profile.selectedWeapon;
-  Object.assign(game.player,{x:0,z:4.6,elevation:0,hp:profile.health,shield:Math.min(game.shieldCapacity,profile.shield)});game.charges=profile.charges;
+  const spawn=art.layout.openPlanRevision?art.layout.spawn:{x:0,z:4.6,yaw:0};cameraYaw=spawn.yaw||0;Object.assign(game.player,{x:spawn.x,z:spawn.z,yaw:cameraYaw,elevation:0,hp:profile.health,shield:Math.min(game.shieldCapacity,profile.shield)});game.charges=profile.charges;
   nanoFx=createNanoForgeFX(T,{scene,camera:overview,getWeapon:()=>rig?.model.gun});
   progress(.9,'Chargement de '+characterId.toUpperCase());resize(graphics);bindWorld();
   await loadHero();setView(lylu?'third':'overview');renderer.setAnimationLoop(frame);

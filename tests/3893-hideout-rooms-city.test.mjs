@@ -13,15 +13,23 @@ const layout=JSON.parse(read('layout.json'));
 const atHeight=(b,y)=>(b.y||0)<=y&&(b.y||0)+b.height>=y;
 
 test('every room has a continuous perimeter at human eye height, except intentional open portals',()=>{
- assert.equal(layout.rooms.length,layout.gymRevision?9:8);assert.equal(layout.doors.length,layout.gymRevision?10:11);
+ assert.equal(layout.rooms.length,layout.gymRevision?9:8);assert.equal(layout.doors.length,layout.openPlanRevision?4:layout.gymRevision?10:11);
  const doors=createHideoutDoorState(layout),boxes=[...layout.colliders,...doors.colliders];
- const blocked=(x,z)=>boxes.some(b=>atHeight(b,1.65)&&Math.abs(b.x-x)<=b.hx+.005&&Math.abs(b.z-z)<=b.hz+.005)||(layout.portals||[]).some(p=>Math.abs(x-p.x)<.01&&Math.abs(z-p.z)<=p.width/2+.01);
+ const blocked=(x,z)=>boxes.some(b=>atHeight(b,1.65)&&Math.abs(b.x-x)<=b.hx+.005&&Math.abs(b.z-z)<=b.hz+.005)||(layout.portals||[]).some(p=>p.axis==='x'?Math.abs(x-p.x)<.01&&Math.abs(z-p.z)<=p.width/2+.01:Math.abs(z-p.z)<.01&&Math.abs(x-p.x)<=p.width/2+.01);
  for(const room of layout.rooms){const[x1,z1,x2,z2]=room.bounds;for(let t=0;t<=1;t+=.013){assert.ok(blocked(x1+(x2-x1)*t,z1),room.name+' north');assert.ok(blocked(x1+(x2-x1)*t,z2),room.name+' south');assert.ok(blocked(x1,z1+(z2-z1)*t),room.name+' west');assert.ok(blocked(x2,z1+(z2-z1)*t),room.name+' east');}}
  const materials=JSON.parse(read('materials.json'));assert.equal(materials['Verre dépoli des portes'].alpha,1);assert.ok(materials['Verre dépoli des portes'].frost);
 });
 test('a closed door blocks the real player; it opens on approach and closes after leaving',()=>{
  const doors=createHideoutDoorState(layout),flat={height:()=>0,surfaces:()=>[],routes:[],lifts:[]},g=new ArenaGame([...layout.colliders,...doors.colliders],()=>.5,flat);
  g.inHideout=true;g.nextWave=Infinity;g.toSpawn=0;Object.assign(g.player,{x:0,z:4.6});
+ if(layout.openPlanRevision){
+  // The salon portal is now deliberately open. Test the same door behavior at the dormitory.
+  const d=doors.states.find(d=>d.id==='dortoir');Object.assign(g.player,{x:-3.15,z:d.z});
+  for(let i=0;i<120;i++)g.step(1/60,{x:-1,z:0});assert.ok(g.player.x>d.x+.50,'closed dormitory leaf is solid');
+  for(let i=0;i<120;i++){doors.update(1/60,g.player,{moving:true});g.step(1/60,{x:-1,z:0});}
+  assert.ok(g.player.x<d.x-.55,'the player crosses the dormitory door');
+  Object.assign(g.player,{x:0,z:4.8});for(let i=0;i<240;i++)doors.update(1/60,g.player,{moving:false});assert.equal(d.open,0);return;
+ }
  for(let i=0;i<120;i++)g.step(1/60,{x:0,z:-1});assert.ok(g.player.z>3.2+.5,'closed leaf is solid');
  for(let i=0;i<180;i++){doors.update(1/60,g.player,{moving:true});g.step(1/60,{x:0,z:-1});}
  assert.ok(g.player.z<2.5,'the real player enters the salon');

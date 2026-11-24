@@ -225,15 +225,11 @@ DOORS=[
  {'id':'dortoir','name':'Dortoir','axis':'x','x':-4.55,'z':-6.35,'width':2.10},
  {'id':'armurerie','name':'Armurerie','axis':'x','x':-4.55,'z':0,'width':2.10},
  {'id':'tenues','name':'Tenues','axis':'x','x':-4.55,'z':6.25,'width':2.10},
- {'id':'bain','name':'Salle de bain','axis':'x','x':4.55,'z':-6.35,'width':2.10},
- {'id':'archives-ouest','name':'Archives · ouest','axis':'z','x':-3.70,'z':-5,'width':1.55},
- {'id':'archives-centre','name':'Archives · salon','axis':'z','x':0,'z':-5,'width':2.10},
- {'id':'archives-est','name':'Archives · est','axis':'z','x':3.70,'z':-5,'width':1.55},
- {'id':'salon','name':'Salon','axis':'z','x':0,'z':3.2,'width':2.10},
- {'id':'recharge-ouest','name':'Recharge · ouest','axis':'z','x':-3.70,'z':3.2,'width':1.55},
- {'id':'recharge-est','name':'Recharge · est','axis':'z','x':3.70,'z':3.2,'width':1.55}
+ {'id':'bain','name':'Salle de bain','axis':'x','x':4.55,'z':-6.35,'width':2.10}
 ]
-PORTALS=[{'id':'atelier','name':'Atelier nano','axis':'x','x':4.55,'z':1.25,'width':2.10,'height':2.65},{'id':'gym','name':'Salle de sport','axis':'x','x':4.55,'z':7.65,'width':3.05,'height':2.65}]
+PORTALS=[{'id':'atelier','name':'Atelier nano','axis':'x','x':4.55,'z':1.25,'width':2.10,'height':2.65},{'id':'gym','name':'Salle de sport','axis':'x','x':4.55,'z':7.65,'width':3.05,'height':2.65},
+ {'id':'recharge-ouvert','name':'Recharge et salon','axis':'z','x':0,'z':3.2,'width':8.2,'height':2.65},
+ {'id':'archives-ouvert','name':'Livre de l’Histoire','axis':'z','x':0,'z':-5,'width':8.2,'height':2.65}]
 ROOMS=[
  {'id':'dortoir','name':'Dortoir','bounds':[-10.75,-11.5,-4.55,-5]},
  {'id':'bain','name':'Salle de bain','bounds':[4.55,-11.5,10.75,-5]},
@@ -242,7 +238,6 @@ ROOMS=[
  {'id':'atelier','name':'Atelier nano','bounds':[4.55,-5,10.75,3.2]},
  {'id':'gym','name':'Salle de sport','bounds':[4.55,3.2,10.75,11.45]},
  {'id':'archives','name':'Archives','bounds':[-4.55,-11.5,4.55,-5]},
- {'id':'salon','name':'Salon','bounds':[-2.95,-5,2.95,3.2]},
  {'id':'recharge','name':'Recharge et mission','bounds':[-4.55,3.2,4.55,11.45]}
 ]
 def wall(axis,at,start,end,openings=()):
@@ -262,8 +257,8 @@ def wall(axis,at,start,end,openings=()):
   box('Cloisons hautes',center,(.16,2.2,w)if axis=='x'else(w,2.2,.16),solid=True,name='linteau de porte')
 ZONE='Cloisons fermées'
 for at in [-4.55,4.55]:wall('x',at,-11.5,11.45,[(d['z'],d['width'])for d in DOORS+PORTALS if d['axis']=='x'and d['x']==at])
-wall('z',-5,-10.75,10.75,[(d['x'],d['width'])for d in DOORS if d['z']==-5])
-wall('z',3.2,-10.75,4.55,[(d['x'],d['width'])for d in DOORS if d['z']==3.2])
+wall('z',-5,-10.75,10.75,[(d['x'],d['width'])for d in DOORS+PORTALS if d['axis']=='z' and d['z']==-5])
+wall('z',3.2,-10.75,4.55,[(d['x'],d['width'])for d in DOORS+PORTALS if d['axis']=='z' and d['z']==3.2])
 wall('z',3.2,4.55,10.75)
 for at in [-2.95,2.95]:wall('x',at,-5,3.2)
 for door in DOORS:
@@ -288,6 +283,17 @@ for door in DOORS:
 ZONE='Cadres de portes'
 for portal in PORTALS:
  x,z,w=portal['x'],portal['z'],portal['width']
+ if portal['axis']=='z':
+  # One continuous 8.2 m clear opening, no sliding leaves or intermediate posts.
+  for side in [-1,1]:
+   xx=x+side*(w/2+.10)
+   box('Cadres anthracite',(xx,1.30,z),(.20,2.60,.32))
+   box('Métal brossé',(xx,1.17,z+.17),(.09,2.34,.035))
+   neon((xx,.25,z+.20),(xx,2.10,z+.20),'Néon bleu',.012)
+  box('Cadres anthracite',(x,2.73,z),(w+.35,.23,.38))
+  for side in [-1,1]:
+   neon((x-w*.46,2.67,z+side*.20),(x+w*.46,2.67,z+side*.20),'Néon rose',.012)
+  continue
  for side in [-1,1]:
   zz=z+side*(w/2+.10)
   box('Cadres anthracite',(x,1.30,zz),(.38,2.60,.20))
@@ -802,7 +808,7 @@ po=bpy.data.objects.new('Panorama de Vesper / baie vitrée',pme);sc.collection.o
 for o in sc.objects:
  if o.name.startswith(('Vesper extérieure','Toiture complète'))or any(META.get(m.name,{}).get('interior')for m in getattr(o.data,'materials',[])):o.hide_render=True
 
-layout={'version':1,'proportionsRevision':2,'gymRevision':1,'portals':PORTALS,'atelierScale':{'benchTop':.95,'benchDepth':1.44,'robotScale':.88,'screenDrop':.15},'name':'La Planque · Les Héritiers du Silence','author':'Pink Wars · Blender','doors':DOORS,'rooms':ROOMS,'showcase':{'companions':[{'id':'gaby','hero':'ghju','x':-2.15,'y':1.5,'z':7.3},{'id':'cara','hero':'lylu','x':2.15,'y':1.5,'z':7.3}],'weapons':SHOWCASE_WEAPONS,'outfits':[{'hero':'ghju','x':-8.9,'y':.285,'z':4.45},{'hero':'lylu','x':-6.4,'y':.285,'z':4.45}]},'bounds':{'x1':-10.65,'x2':10.65,'z1':-11.25,'z2':11.35},'spawn':{'x':0,'z':9.0,'yaw':0},'colliders':SOLIDS,'stations':[
+layout={'version':1,'proportionsRevision':2,'gymRevision':1,'openPlanRevision':1,'portals':PORTALS,'atelierScale':{'benchTop':.95,'benchDepth':1.44,'robotScale':.88,'screenDrop':.15},'name':'La Planque · Les Héritiers du Silence','author':'Pink Wars · Blender','doors':DOORS,'rooms':ROOMS,'showcase':{'companions':[{'id':'gaby','hero':'ghju','x':-2.15,'y':1.5,'z':7.3},{'id':'cara','hero':'lylu','x':2.15,'y':1.5,'z':7.3}],'weapons':SHOWCASE_WEAPONS,'outfits':[{'hero':'ghju','x':-8.9,'y':.285,'z':4.45},{'hero':'lylu','x':-6.4,'y':.285,'z':4.45}]},'bounds':{'x1':-10.65,'x2':10.65,'z1':-11.25,'z2':11.35},'spawn':{'x':0,'z':8.9,'yaw':-1.30},'colliders':SOLIDS,'stations':[
  {'id':'rest','name':'Dortoir','action':'Se reposer et régénérer','x':-6.1,'z':-6.35,'radius':2.4},
  {'id':'weapons','name':'Mur d’armes','action':'Préparer les armes','x':-7.8,'z':-.2,'radius':2.7},
  {'id':'outfits','name':'Tenues de combat','action':'Préparer l’équipement','x':-7.8,'z':6.3,'radius':2.4},

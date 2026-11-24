@@ -15,5 +15,5 @@ test('metric furniture colliders and original hero scale',()=>{
  const ceiling=l.colliders.find(c=>c.kind==='Toiture complète'&&c.hx===11);
  near(ceiling.y,3.65);
  for(const c of l.colliders)assert.ok(c.height>0&&c.hx>0&&c.hz>0);
- assert.equal(l.doors.length,l.gymRevision?10:11);assert.equal(l.stations.length,9);
+ assert.equal(l.doors.length,l.openPlanRevision?4:l.gymRevision?10:11);assert.equal(l.stations.length,9);
 });
