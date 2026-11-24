@@ -238,6 +238,7 @@ ROOMS=[
  {'id':'atelier','name':'Atelier nano','bounds':[4.55,-5,10.75,3.2]},
  {'id':'gym','name':'Salle de sport','bounds':[4.55,3.2,10.75,11.45]},
  {'id':'archives','name':'Archives','bounds':[-4.55,-11.5,4.55,-5]},
+ {'id':'salon','name':'Salon','bounds':[-2.95,-5,2.95,3.2]},
  {'id':'recharge','name':'Recharge et mission','bounds':[-4.55,3.2,4.55,11.45]}
 ]
 def wall(axis,at,start,end,openings=()):

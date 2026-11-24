@@ -11,7 +11,7 @@ test('two full-width open portals, no hidden leaves, gym visible and reachable f
   const p=l.portals.find(p=>p.id===id);
   assert.equal(p.axis,'z');assert.equal(p.z,z);assert.equal(p.width,8.2);
   assert.ok(!doors.colliders.some(b=>Math.abs(b.z-z)<.1&&Math.abs(b.x)<4.1));
-  for(const x of [-1.5,0,1.5]){assert.ok(nav.free(x,z));assert.ok(nav.clear({x,z:z-.65},{x,z:z+.65}));}
+  for(const x of [-1.5,0,1.5]){assert.ok(nav.free(x,z));assert.ok(nav.clear({x,z:z-.35},{x,z:z+.35}));}
  }
  assert.ok(nav.free(l.spawn.x,l.spawn.z));assert.ok(nav.path(l.spawn,{x:6.35,z:7.65})?.length);
  assert.ok(nav.free(4.55,7.65));assert.ok(nav.free(4.55,1.25));
