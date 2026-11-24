@@ -1,4 +1,5 @@
 import {parsePWM} from './blender-models.js';
+import {extractDockCompanions,floatDockCompanions} from './hideout-dock-fx.js';
 import {readNanoProfile} from './nano-forge.js';
 import {suitStage} from './armor-progression.js';
 
@@ -18,8 +19,8 @@ export async function loadHideoutShowcase(T,{low=false,displayOutfits=true}={}){
   const snapshot={...definitions.catalogue,source:definitions.source,batches:parsed.primitives.length,triangles:parsed.triangles,downloadBytes:compressed.byteLength,static:true};
   return{root,snapshot,dispose(){root.removeFromParent();for(const p of parsed.primitives)p.geometry.dispose();for(const m of Object.values(materials))m.dispose();for(const t of Object.values(textures))t.dispose();}};
  }
- const root=new T.Group();root.name='Présentoirs officiels · cinq tenues fabriquées';const common=await load('showcase');root.add(common.root);const outfits=new Map(),requests=new Map();let disposed=false;
+ const root=new T.Group();root.name='Présentoirs officiels · cinq tenues fabriquées';const common=await load('showcase');root.add(common.root);const floating=extractDockCompanions(T,common.root,common.snapshot.companions);const outfits=new Map(),requests=new Map();let disposed=false;
  async function setArmorLevel(hero,stage){if(!displayOutfits)return;stage=suitStage(stage);const token=(requests.get(hero)||0)+1;requests.set(hero,token);if(outfits.get(hero)?.stage===stage)return;const p=await load('outfit-'+hero+'-'+stage);if(disposed||requests.get(hero)!==token){p.dispose();return;}outfits.get(hero)?.pack.dispose();root.add(p.root);outfits.set(hero,{stage,pack:p});}
  if(displayOutfits)await Promise.all(['ghju','lylu'].map(hero=>setArmorLevel(hero,readNanoProfile(hero).equippedSuit)));
- return{root,setArmorLevel,snapshot(){const entries=[...outfits.values()];return{...common.snapshot,outfits:entries.flatMap(e=>e.pack.snapshot.outfits),triangles:common.snapshot.triangles+entries.reduce((n,e)=>n+e.pack.snapshot.triangles,0),batches:common.snapshot.batches+entries.reduce((n,e)=>n+e.pack.snapshot.batches,0),downloadBytes:common.snapshot.downloadBytes+entries.reduce((n,e)=>n+e.pack.snapshot.downloadBytes,0),stages:5};},dispose(){disposed=true;common.dispose();for(const e of outfits.values())e.pack.dispose();root.removeFromParent();}};
+ return{root,setArmorLevel,update(time){floatDockCompanions(floating,time);},snapshot(){const entries=[...outfits.values()];return{...common.snapshot,companionFloat:floating.map(e=>({id:e.entry.id,y:e.group.position.y,triangles:e.triangles})),outfits:entries.flatMap(e=>e.pack.snapshot.outfits),triangles:common.snapshot.triangles+entries.reduce((n,e)=>n+e.pack.snapshot.triangles,0),batches:common.snapshot.batches+entries.reduce((n,e)=>n+e.pack.snapshot.batches,0),downloadBytes:common.snapshot.downloadBytes+entries.reduce((n,e)=>n+e.pack.snapshot.downloadBytes,0),stages:5};},dispose(){disposed=true;for(const e of floating)for(const m of e.group.children)m.geometry.dispose();common.dispose();for(const e of outfits.values())e.pack.dispose();root.removeFromParent();}};
 }

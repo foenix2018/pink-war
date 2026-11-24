@@ -1,0 +1,27 @@
+name: Hideout companion float and vortex
+on:
+  push:
+    branches: [feature/hideout-companion-vortex]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          node --check dist/hideout-dock-fx.js
+          node --check dist/hideout-showcase-assets.js
+          node --check dist/hideout-art.js
+          node --test tests/393-dock-vortex.test.mjs tests/389-hideout.test.mjs tests/3892-hideout-showcase.test.mjs
+      - run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          python -m http.server 4173 --directory dist >/tmp/dock-server.log 2>&1 &
+          node tools/verify-dock-vortex.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hideout-dock-vortex-check
+          path: dock-check/
