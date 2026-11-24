@@ -65,7 +65,12 @@ async function boot(){
  }catch(error){console.error('La Planque',error);$('loading').hidden=false;progress(0,error?.message||'Le refuge n’a pas pu s’ouvrir.');$('retry').hidden=false;}
 }
 async function loadHero(){
- try{const mat=(c)=>new T.MeshStandardMaterial({color:c,roughness:.65,metalness:.4}),glow=c=>new T.MeshBasicMaterial({color:c});rig=await installPinkWarsSoldier(T,scene,characterId,{monster:mat(0x394653),monsterFace:mat(0x09121d),cyan:glow(0x6dcfff),rose:glow(0xff639f),violet:glow(0x9d72ff),pale:glow(0xd8efff)});rig.model.root.visible=true;rig.model.setWeapon(game.weaponIndex);rig.model.setLevel(armorLevel);if(lylu){civilLoading=true;void createLyluCivil(scene).then(model=>{civil=model;civilLoading=false;$('civil-outfit').disabled=false;$('civil-portrait').disabled=false;setCivilMode(civilMode);}).catch(error=>{civilLoading=false;setCivilMode(false);console.warn('Planque / LYLU civil, armure de secours',error);});}}catch(error){console.warn('Planque / personnage',error);message('Le refuge est prêt. Le personnage est encore indisponible : les pièces restent accessibles.');}
+ if(lylu){
+  civilLoading=true;
+  try{civil=await createLyluCivil(scene);civilLoading=false;for(const id of ['civil-outfit','civil-portrait']){const b=$(id);if(b)b.disabled=false;}setCivilMode(true);}
+  catch(error){civilLoading=false;console.error('Planque / LYLU civil',error);message('Impossible de charger la tenue civile de LYLU. Recharge la planque.',10);}
+ }
+ try{const mat=(c)=>new T.MeshStandardMaterial({color:c,roughness:.65,metalness:.4}),glow=c=>new T.MeshBasicMaterial({color:c});rig=await installPinkWarsSoldier(T,scene,characterId,{monster:mat(0x394653),monsterFace:mat(0x09121d),cyan:glow(0x6dcfff),rose:glow(0xff639f),violet:glow(0x9d72ff),pale:glow(0xd8efff)});rig.model.root.visible=!lylu||!civilMode;rig.model.setWeapon(game.weaponIndex);rig.model.setLevel(armorLevel);}catch(error){console.warn('Planque / personnage',error);message('Le refuge est prêt. Le personnage est encore indisponible : les pièces restent accessibles.');}
 }
 function resize(graphics){if(!renderer)return;const aspect=innerWidth/innerHeight,span=Math.max(26,24/aspect);overview.left=-span*aspect/2;overview.right=span*aspect/2;overview.top=span/2;overview.bottom=-span/2;overview.updateProjectionMatrix();visit.aspect=aspect;visit.updateProjectionMatrix();portrait.aspect=aspect;portrait.updateProjectionMatrix();renderer.setPixelRatio(renderPixelRatio(graphics,devicePixelRatio,innerWidth,innerHeight));renderer.setSize(innerWidth,innerHeight);}
 function navigate(point,station=null){
@@ -207,7 +212,7 @@ function update(dt){
  art.updateDoors(dt,game.player,{moving:!opened&&Math.hypot(x,z)>.03});
  if(!opened&&view!=='portrait')game.step(dt,{x,z,yaw,moveYaw:yaw,sprint:control.sprint,gamepadMoving:control.gamepadMoving,touchMoving:!!(touch.x||touch.z)});
  moving=view!=='portrait'&&Math.hypot(game.playerVelocity?.x||0,game.playerVelocity?.z||0)>.15;
- if(rig){const m=rig.model;m.root.position.set(game.player.x,0,game.player.z);m.root.rotation.y=game.player.yaw;m.root.visible=view==='overview'&&!(civil&&civilMode);if(m.weapon!==game.weaponIndex)m.setWeapon(game.weaponIndex);if(!(civil&&civilMode))m.animate(game.time,moving,0,0,0,opened?0:dt,{velocity:game.playerVelocity,ground:()=>0,airborne:false,verticalSpeed:0,crouched:false,sprint:!!control.sprint,aim:false,firing:false});}
+ if(rig){const m=rig.model;m.root.position.set(game.player.x,0,game.player.z);m.root.rotation.y=game.player.yaw;m.root.visible=view==='overview'&&!civilMode;if(m.weapon!==game.weaponIndex)m.setWeapon(game.weaponIndex);if(!(civil&&civilMode))m.animate(game.time,moving,0,0,0,opened?0:dt,{velocity:game.playerVelocity,ground:()=>0,airborne:false,verticalSpeed:0,crouched:false,sprint:!!control.sprint,aim:false,firing:false});}
  if(civil)civil.update(clock,dt,{position:game.player,yaw:game.player.yaw,speed:Math.hypot(game.playerVelocity?.x||0,game.playerVelocity?.z||0),moving,station:opened,visible:civilMode&&view!=='visit'});
  if(view==='portrait'){
   const p=game.player,angle=p.yaw;portrait.position.set(p.x-Math.sin(angle)*.83,1.64,p.z-Math.cos(angle)*.83);portrait.lookAt(p.x,1.65,p.z);
