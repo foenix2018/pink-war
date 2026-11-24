@@ -17,6 +17,7 @@ export async function createLyluCivil(scene,{load}={}){
    if(o.isBone){bones.set(o.name,{bone:o,rest:o.quaternion.clone(),worldInv:o.getWorldQuaternion(new T.Quaternion()).invert(),pos:o.position.clone()});}
    if(o.isMesh){
      o.castShadow=true;o.receiveShadow=false;o.frustumCulled=false;
+     for(const m of Array.isArray(o.material)?o.material:[o.material])if(m?.color&&/skin|chair|peau|flesh/i.test(m.name)){m.color.setHex(0xd6a184);m.roughness=.72;m.metalness=0;}
      draws+=Math.max(1,o.geometry.groups.length);triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;
      if(o.morphTargetDictionary&&o.morphTargetInfluences)morphs.push(o);
    }
@@ -32,7 +33,7 @@ export async function createLyluCivil(scene,{load}={}){
    for(const [a,v] of [[axisX,x],[axisY,y],[axisZ,z]])if(Math.abs(v)>1e-5){axis.copy(a).applyQuaternion(b.worldInv);b.bone.quaternion.multiply(q.setFromAxisAngle(axis,v));}
  }
  const state={Blink:0,Smile:0,Focus:0,Surprise:0};let gait=0,speedBlend=0,override=null,alive=true;
- function update(time,dt,{position,yaw=0,speed=0,moving=false,station=null,visible=true}={}){
+ function update(time,dt,{position,yaw=0,speed=0,moving=false,station=null,visible=true,native=null}={}){
    if(!alive)return;root.visible=visible;if(position)root.position.set(position.x,0,position.z);root.rotation.y=yaw;
    const step=clamp(dt,0,.08),target=moving?clamp(speed/2.5,.25,1.25):0;
    speedBlend+=(target-speedBlend)*(1-Math.exp(-step*9));gait+=step*(2.9+speedBlend*4.6)*Math.min(1,speedBlend*2);
@@ -49,7 +50,19 @@ export async function createLyluCivil(scene,{load}={}){
      rot('Shin_'+s,-Math.max(0,-stride)*amp*.95,0,0);
      rot('Foot_'+s,-stride*amp*.28,0,0);
    }
-   visual.position.y=.015+.011*Math.abs(Math.sin(gait))*Math.min(1,speedBlend);
+   // Retarget canonical procedural joint rotations into the Blender bind axes.
+   // Civil mesh faces +Z before the visual half-turn, unlike the game rig.
+   if(native){
+     const apply=(name,o)=>{if(o)rot(name,-o.rotation.x,o.rotation.y,-o.rotation.z);};
+     apply('Pelvis',native.hips);apply('Spine',native.spine);apply('Chest',native.body);apply('Head',native.head);
+     for(const [i,side] of ['L','R'].entries()){
+       apply('Thigh_'+side,native.legs[i]);apply('Shin_'+side,native.knees[i]);apply('Foot_'+side,native.feet[i]);
+       const swing=Math.sin(native._gaitPhase||0)*(native._gaitWeight||0)*(i===0?1:-1);
+       rot('UpperArm_'+side,swing*.32,0,-(i===0?1:-1)*.43);
+       rot('ForeArm_'+side,.12+Math.max(0,swing)*.18,0,0);
+     }
+   }
+   visual.position.y=native?.hips?.position ? .015+(native.hips.position.y-.97)*.75 : .015+.011*Math.abs(Math.sin(gait))*Math.min(1,speedBlend);
    const targetFace=lyluExpressionState(time,{moving,station});if(override)Object.assign(targetFace,override);
    for(const key of LYLU_EXPRESSIONS){const k=key==='Blink'?1-Math.exp(-step*45):1-Math.exp(-step*8);state[key]+=(targetFace[key]-state[key])*k;}
    for(const o of morphs)for(const key of LYLU_EXPRESSIONS){const i=o.morphTargetDictionary[key];if(i!==undefined)o.morphTargetInfluences[i]=state[key];}
