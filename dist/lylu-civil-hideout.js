@@ -1,6 +1,6 @@
 import * as T from './vendor/three.webgpu.min.js';
 // LYLU only, planque only. The game simulation and mission equipment are not altered.
-export const LYLU_CIVIL_ASSET=new URL('./assets/heroes/lylu-civil-v4.glb',import.meta.url).href;
+export const LYLU_CIVIL_ASSET=new URL('./assets/heroes/lylu-civil-v4.glb?v=20261124b',import.meta.url).href;
 export const LYLU_EXPRESSIONS=Object.freeze(['Blink','Smile','Focus','Surprise']);
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v)),pulse=(t,start,duration)=>{const x=(t-start)/duration;return x>0&&x<1?Math.sin(Math.PI*x)**2:0;};
 export function lyluExpressionState(time,{moving=false,station=null}={}){
@@ -9,7 +9,7 @@ export function lyluExpressionState(time,{moving=false,station=null}={}){
  return {Blink:Math.max(pulse(blinkPhase,1.4,.19),pulse(phase,12.4,.19)),Smile:station==='rest'?.65:moving?0:.42*pulse(phase,2,4),Focus:moving?.38:station==='workshop'?.72:.40*pulse(phase,8,4),Surprise:station==='archive'?.42:.22*pulse(phase,14,1.3)};
 }
 export async function createLyluCivil(scene,{load}={}){
- const gltf=await (load?load():import('./vendor/s19-gltf-loader.js').then(({GLTFLoader})=>new GLTFLoader().loadAsync(LYLU_CIVIL_ASSET)));
+ const gltf=await (load?load():import('./vendor/s19-gltf-loader.js?v=20261124b').then(({GLTFLoader})=>new GLTFLoader().loadAsync(LYLU_CIVIL_ASSET)));
  const root=new T.Group();root.name='LYLU Civil V4 / planque';root.visible=false;
  const visual=gltf.scene;root.add(visual);visual.updateMatrixWorld(true);
  const bones=new Map(),morphs=[];let draws=0,triangles=0;
