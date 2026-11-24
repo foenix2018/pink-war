@@ -1,15 +1,9 @@
 name: LYLU civilian V4 hideout integration
 on:
   push:
-    branches: [feature/lylu-civil-hideout-v4]
-    paths:
-      - .github/workflows/lylu-civil-integration.yml
-      - tools/blender/lylu_civil_game.py
-      - tools/verify-lylu-civil.mjs
-      - dist/lylu-civil-hideout.js
-      - dist/planque.js
-      - dist/planque.html
-  workflow_dispatch:
+    branches: ['feature/lylu-civil-hideout-v4']
+    paths: ['.github/workflows/lylu-civil-integration.yml', 'tools/blender/lylu_civil_game.py', 'tools/verify-lylu-civil.mjs', 'dist/lylu-civil-hideout.js', 'dist/planque.js', 'dist/planque.html']
+  workflow_dispatch: {}
 permissions:
   contents: write
   actions: read
@@ -17,7 +11,7 @@ concurrency:
   group: lylu-civil-game-integration
   cancel-in-progress: true
 jobs:
-  build-test-publish:
+  build:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -27,7 +21,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: LYLU-civil-Blender-V4
-          run-id: 45313491080
+          run-id: '45313491080'
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: workshop-artifact
       - uses: actions/setup-python@v5
