@@ -12,9 +12,10 @@ try{
  await page.waitForFunction(()=>window.__PINK_HIDEOUT?.snapshot().ready,null,{timeout:180000});
  assert.equal(await page.evaluate(()=>__PINK_HIDEOUT.debug.art.layout.gymRevision),1);
  assert.equal(await page.evaluate(()=>__PINK_HIDEOUT.debug.art.layout.openPlanRevision),1);
+ const extras=await page.evaluate(()=>__PINK_HIDEOUT.snapshot().enhancements);assert.equal(extras.speakers,4);assert.equal(extras.vortices,2);assert.ok(extras.screenCount>=3);assert.equal(extras.fitnessEquipment.length,3);
  const spawn=await page.evaluate(()=>__PINK_HIDEOUT.snapshot().position);assert.ok(Math.hypot(spawn.x,spawn.z-8.9)<.02);
  await page.evaluate(()=>__PINK_HIDEOUT.debug.captureFrame());await page.screenshot({path:dir+'/arrivee-gym.png',timeout:120000});
- const shots=[['ouverture-recharge',0,4.6,0],['ouverture-archives',0,-3.8,0],['entree',3.75,5.35,-1.9],['gym-entree',3.75,7.65,-Math.PI/2],['gym-interieur',6.35,7.65,-Math.PI/2],['gym-rack',7.0,7.45,-.5],['gym-rameur',6.1,8.55,-2.5],['atelier',6.0,1.55,-.3]];
+ const shots=[['salon-enceintes',0,-.2,Math.PI],['vortex-recharge',0,9.0,0],['ouverture-recharge',0,4.6,0],['ouverture-archives',0,-3.8,0],['entree',3.75,5.35,-1.9],['gym-entree',3.75,7.65,-Math.PI/2],['gym-interieur',6.35,7.65,-Math.PI/2],['gym-rack',7.0,7.45,-.5],['gym-rameur',6.1,8.55,-2.5],['atelier',6.0,1.55,-.3]];
  for(const [name,x,z,yaw] of shots){
   const position=await page.evaluate(({x,z,yaw})=>{const d=__PINK_HIDEOUT.debug;d.teleport(x,z);d.look(yaw);return {x:d.game.player.x,z:d.game.player.z};},{x,z,yaw});
   assert.ok(Math.hypot(position.x-x,position.z-z)<.01,name+' blocked');

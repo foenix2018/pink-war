@@ -18,13 +18,13 @@ const heroOf=id=>id==='lylu'?'lylu':'ghju';
 const chapter=n=>Number.isInteger(Number(n))&&CHAPTER_ROUTES[Number(n)]?Number(n):1;
 const validIndex=i=>Number.isInteger(i)&&i>=0&&i<=10;
 const storageOrNull=()=>{try{return globalThis.localStorage||null;}catch{return null;}};
-export function freshHideoutProfile(){return{version:1,completed:[],lastChapter:1,selectedWeapon:null,owned:[],armorLevel:1,health:100,shield:60,charges:2,rested:false,recharged:false,choice:null,preparedAt:0,pendingLevel:null};}
+export function freshHideoutProfile(){return{version:1,completed:[],lastChapter:1,selectedWeapon:null,owned:[],armorLevel:1,health:100,shield:60,charges:2,rested:false,recharged:false,choice:null,preparedAt:0,pendingLevel:null,fitness:{strength:0,dexterity:0,endurance:0}};}
 export function readHideoutProfile(hero,storage=storageOrNull()){
  try{const s=JSON.parse(storage?.getItem(HIDEOUT_KEY+heroOf(hero))||'null');if(s?.version!==1){const p=freshHideoutProfile(),old=Math.min(10,Math.max(0,Math.floor(Number(storage?.getItem('pink-wars-last-cleared'))||0)));p.completed=Array.from({length:old},(_,i)=>i+1);p.lastChapter=Math.min(10,old+1);return p;}const p=freshHideoutProfile();
   p.completed=[...new Set((Array.isArray(s.completed)?s.completed:[]).filter(n=>Number.isInteger(n)&&CHAPTER_ROUTES[n]))].sort((a,b)=>a-b);p.lastChapter=chapter(s.lastChapter);
   p.owned=[...new Set((Array.isArray(s.owned)?s.owned:[]).filter(validIndex))];p.selectedWeapon=validIndex(s.selectedWeapon)?s.selectedWeapon:null;
   p.armorLevel=readNanoProfile(hero,storage).equippedSuit;p.health=Math.max(1,Math.min(100,Number(s.health)||100));p.shield=Math.max(0,Math.min(210,Number(s.shield)||0));p.charges=Math.max(0,Math.min(4,Math.floor(Number(s.charges)||0)));
-  p.rested=s.rested===true;p.recharged=s.recharged===true;p.choice=['escort','proof'].includes(s.choice)?s.choice:null;p.preparedAt=Number.isFinite(s.preparedAt)?s.preparedAt:0;p.pendingLevel=CHAPTER_ROUTES[s.pendingLevel]?Number(s.pendingLevel):null;return p;
+  p.rested=s.rested===true;p.recharged=s.recharged===true;p.choice=['escort','proof'].includes(s.choice)?s.choice:null;p.preparedAt=Number.isFinite(s.preparedAt)?s.preparedAt:0;p.pendingLevel=CHAPTER_ROUTES[s.pendingLevel]?Number(s.pendingLevel):null;for(const key of Object.keys(p.fitness))p.fitness[key]=Math.max(0,Math.min(100,Math.floor(Number(s.fitness?.[key])||0)));return p;
  }catch{return freshHideoutProfile();}
 }
 export function saveHideoutProfile(hero,profile,storage=storageOrNull()){

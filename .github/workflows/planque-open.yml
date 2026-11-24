@@ -2,7 +2,7 @@ name: Planque open portals and gym visibility
 on:
   push:
     branches: [feature/planque-open-20261124]
-    paths: ['tools/blender/hideout.py', '.github/workflows/planque-open.yml', 'dist/hideout-art.js', 'dist/hideout-showcase-assets.js', 'tests/planque-proportions.test.mjs', 'tools/verify-planque-open.mjs', 'tests/planque-open.test.mjs', 'tests/planque-gym.test.mjs', 'dist/planque.js']
+    paths: ['tools/blender/hideout.py', '.github/workflows/planque-open.yml', 'dist/hideout-art.js', 'dist/hideout-showcase-assets.js', 'tests/planque-proportions.test.mjs', 'tools/verify-planque-open.mjs', 'tests/planque-open.test.mjs', 'tests/planque-gym.test.mjs', 'dist/planque.js', 'dist/hideout-enhancements.js', 'dist/hideout-state.js']
   workflow_dispatch:
 permissions:
   contents: write
@@ -19,6 +19,7 @@ jobs:
           /tmp/blender-4.3.2-linux-x64/blender -b --python-exit-code 1 --python tools/blender/hideout.py
       - name: Verify dimensions, collisions and existing planque logic
         run: |
+          node --check dist/hideout-enhancements.js
           node --check dist/hideout-art.js
           node --check dist/hideout-showcase-assets.js
           node --test tests/planque-open.test.mjs tests/planque-gym.test.mjs tests/planque-proportions.test.mjs tests/389-hideout.test.mjs tests/3893-hideout-rooms-city.test.mjs tests/391-hideout-nano-chambers.test.mjs
