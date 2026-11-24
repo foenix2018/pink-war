@@ -1,0 +1,41 @@
+name: LYLU native animation source extraction
+on:
+  push:
+    branches: [feature/lylu-canonical-motion]
+    paths: ['.github/workflows/lylu-native-motion-export.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Extract actual armor animation data without modifying game
+        run: |
+          mkdir -p lylu-native-export
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          import {gunzipSync} from 'node:zlib';
+          import {RLH_FIREFIGHTER_GZIP} from './dist/rlh-firefighter-data.js';
+          import {MIXAMO_PLAYER_GZIP} from './dist/mixamo-player-data.js';
+          const decode=s=>JSON.parse(gunzipSync(Buffer.from(s,'base64')).toString('utf8'));
+          const rlh=decode(RLH_FIREFIGHTER_GZIP),mixamo=decode(MIXAMO_PLAYER_GZIP);
+          function floats(s){if(Array.isArray(s))return s;const b=Buffer.from(s,'base64');assert.equal(b.length%4,0);return Array.from({length:b.length/4},(_,i)=>b.readFloatLE(i*4));}
+          const normalize=c=>({...c,tracks:c.tracks.map(t=>({...t,times:floats(t.times),values:floats(t.values)}))});
+          const clips=[...rlh.clips.filter(c=>['idle','rifle'].includes(c.name)),...mixamo.clips].map(normalize);
+          assert.ok(clips.length>10);assert.equal(new Set(clips.map(c=>c.name)).size,clips.length);
+          for(const c of clips){assert.ok(c.duration>0);assert.ok(c.tracks.length>0);for(const t of c.tracks){assert.ok(t.times.every(Number.isFinite)&&t.values.every(Number.isFinite));}}
+          const manifest={sourceCommit:process.env.GITHUB_SHA,sourceFiles:['dist/rlh-firefighter-data.js','dist/mixamo-player-data.js','dist/hero-motion.js'],clips:clips.map(c=>({name:c.name,duration:c.duration,tracks:c.tracks.length}))};
+          fs.writeFileSync('lylu-native-export/motion-source.json',JSON.stringify({bones:rlh.bones,clips}));
+          fs.writeFileSync('lylu-native-export/manifest.json',JSON.stringify(manifest,null,2));
+          console.log(JSON.stringify(manifest,null,2));
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LYLU-native-motion-source
+          path: lylu-native-export/
