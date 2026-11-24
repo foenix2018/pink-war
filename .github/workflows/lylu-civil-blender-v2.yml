@@ -8,20 +8,45 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: lylu-civil-blender-workshop
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - name: Install Blender and software rendering
+        with:
+          sparse-checkout: |
+            tools/blender/lylu_civil_v2.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install official Blender Python module (no apt dependencies)
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y blender xvfb libgl1-mesa-dri
-      - name: Generate and render actual editable Blender model
+          python -m pip install --disable-pip-version-check --retries 3 --timeout 60 --only-binary=:all: bpy==4.3.0
+          python -c 'import bpy; print("Blender", bpy.app.version_string)'
+      - name: Generate editable Blender model and CPU renders
+        env:
+          OMP_NUM_THREADS: '4'
+          OPENBLAS_NUM_THREADS: '1'
+          PYTHONUNBUFFERED: '1'
         run: |
-          xvfb-run -a blender -b -t 4 --python-exit-code 1 --python tools/blender/lylu_civil_v2.py
-      - name: Validate artifact formats
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('tools/blender/lylu_civil_v2.py')
+          s=p.read_text()
+          s=s.replace('scene.render.engine="BLENDER_EEVEE"','scene.render.engine="CYCLES"\nscene.cycles.device="CPU"\nscene.cycles.samples=16\nscene.cycles.use_denoising=True\nscene.render.threads_mode="FIXED"\nscene.render.threads=4')
+          s=s.replace('scene.render.resolution_x=1000;scene.render.resolution_y=1100','scene.render.resolution_x=800;scene.render.resolution_y=880')
+          s=s.replace('for name,pos in [("front"', 'bpy.ops.wm.save_as_mainfile(filepath=str(OUT/"LYLU_civil_V2.blend"))\nfor name,pos in [("front"')
+          s=s.replace('Vector())/len(ids)','Vector((0,0,0)))/len(ids)')
+          p.write_text(s)
+          PY
+          python -u tools/blender/lylu_civil_v2.py
+      - name: Validate model and renders
         run: |
           python - <<'PY'
           import pathlib, struct, json
@@ -36,8 +61,10 @@ jobs:
               assert (p/('LYLU_'+name+'.png')).stat().st_size>10000
           PY
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: LYLU-civil-Blender-V2
+          if-no-files-found: warn
           path: |
             lylu_output/*.blend
             lylu_output/*.glb
