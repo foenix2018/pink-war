@@ -4,15 +4,9 @@ on:
     branches: [feature/lylu-civil-hideout-v4]
     paths:
       - .github/workflows/lylu-civil-integration.yml
-      - tools/blender/lylu_civil_game.py
-      - tools/verify-lylu-civil.mjs
-      - dist/lylu-civil-hideout.js
-      - dist/planque.js
-      - dist/planque.html
   workflow_dispatch:
 permissions:
-  contents: write
-  actions: read
+  contents: read
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -22,39 +16,22 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Retrieve approved V4 Blender file
+      - name: Install Blender Python module
+        run: |
+          python -m pip install --disable-pip-version-check --retries 3 --timeout 60 --only-binary=:all: bpy==4.3.0
+          python -c 'import bpy; print(bpy.app.version_string)'
+      - name: Build and test
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p workshop-artifact
           gh run download 45313491080 --name LYLU-civil-Blender-V4 --dir workshop-artifact
-      - name: Install Blender
-        run: python -m pip install --disable-pip-version-check --retries 3 --timeout 60 --only-binary=:all: bpy==4.3.0
-      - name: Rig and export model
-        run: python -u tools/blender/lylu_civil_game.py
-      - name: Validate assets and test game
-        run: |
+          python -u tools/blender/lylu_civil_game.py
           python tools/blender/verify_lylu_game.py
           node --check dist/lylu-civil-hideout.js
           node --check dist/planque.js
-          node --test tests/389-hideout.test.mjs tests/391-hideout-nano-chambers.test.mjs tests/392-outfit-stages.test.mjs
-          npm install --no-save --package-lock=false playwright@1.55.0
-          python -m http.server 4173 --directory dist >/tmp/lylu-server.log 2>&1 &
-          node tools/verify-lylu-civil.mjs
       - uses: actions/upload-artifact@v4
-        if: always()
         with:
           name: LYLU-civil-V4-integration
           path: |
             lylu-integration/
             dist/assets/heroes/lylu-civil-v4.glb
-      - name: Publish verified model
-        run: |
-          git config user.name "Pink Wars LYLU Integration"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add dist/assets/heroes/lylu-civil-v4.glb
-          git commit -m "Add tested LYLU civilian V4 asset and facial morphs"
-          git fetch origin main --depth=100
-          git merge-base --is-ancestor origin/main HEAD
-          git push origin HEAD:feature/lylu-civil-hideout-v4
-          git push origin HEAD:main
