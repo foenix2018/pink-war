@@ -3,7 +3,7 @@ import {readNanoProfile} from './nano-forge.js';
 import {suitStage} from './armor-progression.js';
 
 // Offline captures of the true animated rigs. No extra live rigs in the hideout.
-export async function loadHideoutShowcase(T,{low=false,displayOutfits=true}={}){
+export async function loadHideoutShowcase(T,{low=false,displayOutfits=true,layout=null}={}){
  async function load(stem){
   const [meshResponse,materialResponse]=await Promise.all([stem+'.pwm.gz',stem+'-materials.json'].map(name=>fetch(new URL('./assets/hideout/'+name,import.meta.url))));
   if(!meshResponse.ok||!materialResponse.ok)throw Error('Présentoir indisponible : '+stem);
@@ -14,6 +14,14 @@ export async function loadHideoutShowcase(T,{low=false,displayOutfits=true}={}){
   const definitions=await materialResponse.json(),loader=new T.ObjectLoader(),images=await loader.parseImagesAsync(definitions.images),textures=loader.parseTextures(definitions.textures,images);
   for(const texture of Object.values(textures))texture.anisotropy=low?2:4;
   const materials=loader.parseMaterials(definitions.materials,textures),parsed=parsePWM(T,bytes),root=new T.Group();
+  // The catalogue is an immutable baked native-weapon mesh; move only the
+  // VORTEX AR7 to the corrected tabletop. Never scale the weapon itself.
+  if(stem==='showcase'&&layout?.proportionsRevision){
+   const item=definitions.catalogue.weapons.find(w=>w.index===8),slot=layout.showcase.weapons.find(w=>w.index===8),dy=slot.y-item.bounds.min[1];
+   const {min,max}=item.bounds,eps=.004;
+   for(const p of parsed.primitives){const a=p.geometry.attributes.position;for(let i=0;i<a.count;i++){const x=a.getX(i),y=a.getY(i),z=a.getZ(i);if(x>=min[0]-eps&&x<=max[0]+eps&&y>=min[1]-eps&&y<=max[1]+eps&&z>=min[2]-eps&&z<=max[2]+eps)a.setY(i,y+dy);}a.needsUpdate=true;p.geometry.computeBoundingBox();p.geometry.computeBoundingSphere();}
+   min[1]+=dy;max[1]+=dy;
+  }
   for(const p of parsed.primitives){const m=materials[p.material];if(!m)throw Error('Finition de présentoir manquante');const mesh=new T.Mesh(p.geometry,m);mesh.castShadow=!m.transparent&&!m.isMeshBasicMaterial;mesh.receiveShadow=true;root.add(mesh);}
   const snapshot={...definitions.catalogue,source:definitions.source,batches:parsed.primitives.length,triangles:parsed.triangles,downloadBytes:compressed.byteLength,static:true};
   return{root,snapshot,dispose(){root.removeFromParent();for(const p of parsed.primitives)p.geometry.dispose();for(const m of Object.values(materials))m.dispose();for(const t of Object.values(textures))t.dispose();}};
