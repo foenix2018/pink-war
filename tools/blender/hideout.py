@@ -559,19 +559,8 @@ rod('Métal brossé',(rx-.67,2.10,rz+.64),(rx+.67,2.10,rz+.64),.019,12)
 for dx in [-.70,.70]:
  box('Métal brossé',(rx+dx,1.30,rz+.68),(.13,.13,.17))
  box('Cadres anthracite',(rx+dx,1.36,rz+.77),(.11,.09,.05))
-# Olympic barbell and plates (2.20 m overall; 450 mm plate diameter).
-bar_y,bar_z=1.40,rz+.73
-rod('Métal brossé',(rx-1.10,bar_y,bar_z),(rx+1.10,bar_y,bar_z),.014,16)
-for side in [-1,1]:
- rod('Métal brossé',(rx+side*.65,bar_y,bar_z),(rx+side*1.10,bar_y,bar_z),.025,16)
- for i in range(3):
-  xx=rx+side*(.79+i*.065);r=.225 if i<2 else .18
-  cyl('Cuir et joints',(xx,bar_y,bar_z),r,.055,24,axis='x')
-  cyl('Acier patiné',(xx+side*.029,bar_y,bar_z),.045,.008,16,axis='x')
-  # rings face outward on the plate faces
-  for k in range(6):
-   a=k*TAU/6;cyl('Métal brossé',(xx+side*.030,bar_y+math.cos(a)*r*.72,bar_z+math.sin(a)*r*.72),.011,.009,8,axis='x')
- cyl('Métal brossé',(rx+side*1.035,bar_y,bar_z),.038,.035,16,axis='x')
+# Olympic barbell and plates are now separate runtime meshes, so the bar can leave the rack.
+# Static bar dimensions retained below for source documentation.
 # Flat utility bench within the rack station, 45 cm seat height.
 bx,bz=rx,5.90
 for zz in [bz-.53,bz+.53]:
@@ -607,7 +596,7 @@ for x in [xx-.91,xx+.96]:
  rod('Acier patiné',(x,.13,zz),(x,.29,zz),.047,8)
 box('Métal brossé',(xx-.20,.30,zz),(1.82,.10,.12))
 box('Cadres anthracite',(xx-.20,.24,zz),(1.85,.065,.17))
-cushion('Cuir et joints',(xx-.50,.385,zz),(.31,.09,.31))
+# Sliding seat is created by the runtime fitness equipment module.
 for side in [-1,1]:
  box('Cadres anthracite',(xx+.36,.26,zz+side*.16),(.27,.075,.13),yaw=0)
  box('Tissu rose',(xx+.36,.305,zz+side*.16),(.055,.025,.15))
@@ -621,9 +610,6 @@ for side in [-1,1]:
 rod('Métal brossé',(xx+.58,.60,zz),(xx+.23,1.04,zz),.025,10)
 box('Cadres anthracite',(xx+.22,1.06,zz),(.17,.13,.24))
 box('Néon bleu',(xx+.13,1.07,zz),(.009,.073,.16))
-rod('Métal brossé',(xx+.40,.65,zz-.19),(xx+.40,.65,zz+.19),.017,12)
-rod('Cuir et joints',(xx+.40,.65,zz-.18),(xx+.40,.65,zz-.075),.026,10)
-rod('Cuir et joints',(xx+.40,.65,zz+.075),(xx+.40,.65,zz+.18),.026,10)
 SOLIDS.append({'kind':'Gym rameur','x':xx,'z':zz,'hx':1.25,'hz':.35,'y':0,'height':1.12})
 # Storage locker, towels and small equipment, under a cyan-lit shelf.
 box('Acier patiné',(10.10,.96,10.55),(.72,1.85,.88),solid=True,name='Gym casier')
@@ -650,11 +636,6 @@ for sx in [-1,1]:
    for oz in [-.10,.10]:cyl('Métal brossé',(x+ox,.156,z+oz),.019,.018,8)
  for yy in [.66,1.08]:
   box('Métal brossé',(8.75+sx*.70,yy,4.75),(.065,.055,1.18))
- for i in range(12):
-  x=8.75+sx*(.25+i*.022)
-  cyl('Acier patiné',(x,1.4,5.48),.015,.009,12,axis='x')
- x=8.75+sx*.92
- ring('Métal brossé',(x,1.4,5.48),.163,.008,24,axis='x')
  for z in [5.37,6.43]:
   box('Cuir et joints',(8.75+sx*.24,.055,z),(.13,.065,.13))
  rod('Acier patiné',(8.75,.13,5.90+sx*.53),(8.75,.33,5.90+sx*.28),.039,8)
@@ -846,7 +827,7 @@ po=bpy.data.objects.new('Panorama de Vesper / baie vitrée',pme);sc.collection.o
 for o in sc.objects:
  if o.name.startswith(('Vesper extérieure','Toiture complète'))or any(META.get(m.name,{}).get('interior')for m in getattr(o.data,'materials',[])):o.hide_render=True
 
-layout={'version':1,'proportionsRevision':2,'gymRevision':1,'openPlanRevision':1,'enhancementRevision':1,'fitnessEquipment':[{'id':'squat','name':'Rack à squat et banc','x':6.85,'z':5.4,'stat':'strength'},{'id':'dumbbells','name':'Haltères','x':8.75,'z':7.65,'stat':'dexterity'},{'id':'rower','name':'Rameur','x':7.1,'z':9.1,'stat':'endurance'}],'portals':PORTALS,'atelierScale':{'benchTop':.95,'benchDepth':1.44,'robotScale':.88,'screenDrop':.15},'name':'La Planque · Les Héritiers du Silence','author':'Pink Wars · Blender','doors':DOORS,'rooms':ROOMS,'showcase':{'companions':[{'id':'gaby','hero':'ghju','x':-2.15,'y':1.5,'z':7.3},{'id':'cara','hero':'lylu','x':2.15,'y':1.5,'z':7.3}],'weapons':SHOWCASE_WEAPONS,'outfits':[{'hero':'ghju','x':-8.9,'y':.285,'z':4.45},{'hero':'lylu','x':-6.4,'y':.285,'z':4.45}]},'bounds':{'x1':-10.65,'x2':10.65,'z1':-11.25,'z2':11.35},'spawn':{'x':0,'z':8.9,'yaw':-1.30},'colliders':SOLIDS,'stations':[
+layout={'version':1,'proportionsRevision':2,'gymRevision':1,'openPlanRevision':1,'enhancementRevision':1,'fitnessRuntimeRevision':1,'fitnessEquipment':[{'id':'squat','name':'Rack à squat et banc','x':6.85,'z':5.4,'stat':'strength'},{'id':'dumbbells','name':'Haltères','x':8.75,'z':7.65,'stat':'dexterity'},{'id':'rower','name':'Rameur','x':7.1,'z':9.1,'stat':'endurance'}],'portals':PORTALS,'atelierScale':{'benchTop':.95,'benchDepth':1.44,'robotScale':.88,'screenDrop':.15},'name':'La Planque · Les Héritiers du Silence','author':'Pink Wars · Blender','doors':DOORS,'rooms':ROOMS,'showcase':{'companions':[{'id':'gaby','hero':'ghju','x':-2.15,'y':1.5,'z':7.3},{'id':'cara','hero':'lylu','x':2.15,'y':1.5,'z':7.3}],'weapons':SHOWCASE_WEAPONS,'outfits':[{'hero':'ghju','x':-8.9,'y':.285,'z':4.45},{'hero':'lylu','x':-6.4,'y':.285,'z':4.45}]},'bounds':{'x1':-10.65,'x2':10.65,'z1':-11.25,'z2':11.35},'spawn':{'x':0,'z':8.9,'yaw':-1.30},'colliders':SOLIDS,'stations':[
  {'id':'rest','name':'Dortoir','action':'Se reposer et régénérer','x':-6.1,'z':-6.35,'radius':2.4},
  {'id':'weapons','name':'Mur d’armes','action':'Préparer les armes','x':-7.8,'z':-.2,'radius':2.7},
  {'id':'outfits','name':'Tenues de combat','action':'Préparer l’équipement','x':-7.8,'z':6.3,'radius':2.4},
