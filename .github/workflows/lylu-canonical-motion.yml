@@ -1,0 +1,38 @@
+name: LYLU canonical motion validation
+on:
+  push:
+    branches: [feature/lylu-canonical-motion]
+    paths:
+      - .github/workflows/lylu-canonical-motion.yml
+      - dist/lylu-civil-hideout.js
+      - dist/planque.js
+      - tools/verify-lylu-canonical-motion.mjs
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check source and regression suite
+        run: |
+          node --check dist/lylu-civil-hideout.js
+          node --check dist/planque.js
+          node --test tests/389-hideout.test.mjs tests/391-hideout-nano-chambers.test.mjs tests/392-outfit-stages.test.mjs tests/3853-camera-options.test.mjs
+      - name: Test animated model in actual planque
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          python -m http.server 4173 --directory dist >/tmp/lylu-motion-server.log 2>&1 &
+          node tools/verify-lylu-canonical-motion.mjs
+          node tools/verify-planque-civil-pause.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: LYLU-canonical-motion-check
+          path: |
+            lylu-motion-check/
+            planque-civil-pause-check/
