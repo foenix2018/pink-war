@@ -216,6 +216,12 @@ export function createHideoutNanoChambers(T,{scene,locations,low=false,onStatus=
   const c=cells.get(hero);for(const r of [...c.records,...c.cape]){r.mesh.visible=r.wasVisible;if(r.drawCount!==undefined)r.mesh.geometry.setDrawRange(0,r.drawCount);}
   c.rig.model.root.visible=true;c.phase='preview';c.age=0;onStatus();return true;
  }
+ // Physical return of an already-owned suit: no nanoparticle charge or crafting.
+ async function store(hero,tier){
+  const c=cells.get(hero);if(!c||!await prepare(hero,tier))return false;
+  for(const r of [...c.records,...c.cape]){r.mesh.visible=r.wasVisible;if(r.drawCount!==undefined)r.mesh.geometry.setDrawRange(0,r.drawCount);}
+  c.rig.model.root.visible=true;c.age=0;c.targetDoor=0;c.phase='ready';onStatus();return true;
+ }
  function recover(hero,{allowPreview=false}={}){
   const c=cells.get(hero);if(!c||!(['ready','open'].includes(c.phase)||allowPreview&&c.phase==='preview'))return false;
   c.targetDoor=1;c.phase='open';onStatus();return true;
@@ -370,7 +376,7 @@ export function createHideoutNanoChambers(T,{scene,locations,low=false,onStatus=
  }
 
  function framePreview(hero,camera,angle=0){const c=cells.get(hero);if(!c?.rig)return false;camera.layers.set(hero==='ghju'?28:29);camera.position.set(c.base.position.x+Math.sin(angle)*3.8,1.42,c.base.position.z+Math.cos(angle)*3.8);camera.lookAt(c.base.position.x,1.25,c.base.position.z);camera.updateMatrixWorld();return true;}
- return{root,prepare,preview,framePreview,inject,recover,equip,close,phase,update,
+ return{root,prepare,preview,framePreview,inject,recover,equip,store,close,phase,update,
   snapshot:()=>Object.fromEntries([...cells.keys()].map(id=>[id,phase(id)])),
   dispose(){root.removeFromParent();previewLights.removeFromParent();for(const c of cells.values()){for(const g of c.gloves||[])g.userData.dispose();c.rig?.dispose();}
    for(const geometry of [particleShape,ringGeo,tubeShape,doorShape])geometry.dispose();
