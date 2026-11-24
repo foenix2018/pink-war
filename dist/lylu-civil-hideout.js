@@ -72,8 +72,8 @@ export async function createLyluCivil(scene,{load}={}){
    pelvis.bone.parent.updateWorldMatrix(true,false);
    offset.applyQuaternion(pelvis.bone.parent.getWorldQuaternion(parentInv).invert());
    pelvis.bone.position.add(offset);
-   for(const [name,node] of [['Pelvis',source.hips],['Spine',source.spine],['Chest',source.body],['Head',source.head]])worldPose(name,sourceOrientation(node));
-   rot('Neck',0,0,0);
+   for(const [name,node] of [['Pelvis',source.hips],['Spine',source.spine],['Chest',source.body]])worldPose(name,sourceOrientation(node));
+   rot('Neck',0,0,0);worldPose('Head',sourceOrientation(source.head));
    // Sample both knee and ankle trajectories from the armored model; preserve civil proportions.
    for(const [side,key,i,sign] of [['L','left',0,1],['R','right',1,-1]]){
      alignSegment('Thigh_'+side,'Shin_'+side,joints[key+'Hip'],joints[key+'Knee']);
