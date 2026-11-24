@@ -42,8 +42,9 @@ function addHideoutContacts(T,root,layout){
  const canvas=document.createElement('canvas');canvas.width=canvas.height=128;const c=canvas.getContext('2d'),g=c.createRadialGradient(64,64,12,64,64,63);g.addColorStop(0,'rgba(1,3,8,.8)');g.addColorStop(.48,'rgba(1,3,8,.48)');g.addColorStop(1,'rgba(1,3,8,0)');c.fillStyle=g;c.fillRect(0,0,128,128);
  const map=new T.CanvasTexture(canvas),geometry=new T.PlaneGeometry(1,1),material=new T.MeshBasicMaterial({map,transparent:true,opacity:.65,depthWrite:false,toneMapped:false});
  const footprints=[[-8.9,-8.5,2.3,3.7],[-6.4,-8.5,2.3,3.7],[0,-8,7.3,3.4],[-2.28,1,1.5,3.7],[2.28,1,1.5,3.7],[0,1,1.6,2.6],[6.25,-9.4,2.7,3],[8.65,-10.45,2.3,1.4],[10,-9.6,1.3,1.8],[5.3,-1.1,1.9,2.1],[9.3,-1.1,1.9,2.1],[7.7,1.2,1.6,1.6],[-2.15,7.3,2.8,2.8],[2.15,7.3,2.8,2.8],[-8.9,4.3,2.2,1.5],[-6.4,4.3,2.2,1.5]];
- if(layout.proportionsRevision){const sizes=[[1.65,2.7],[1.65,2.7],[4.9,2.35],[1.5,3.05],[1.5,3.05],[1.45,2.15],[1.65,1.9],[1.85,1.4],[1.0,1.4],[1.9,2.1],[1.9,2.1],[1.45,1.45],[2.15,2.15],[2.15,2.15]];sizes.forEach(([w,d],i)=>{footprints[i][2]=w;footprints[i][3]=d;});}
- for(const x of [-10,-8.4,-6.8,6,7.6,9.2])footprints.push([x,10,1.65,1.3]);
+ if(layout.proportionsRevision){const sizes=[[1.65,2.7],[1.65,2.7],[4.9,2.35],[1.5,3.05],[1.5,3.05],[1.45,2.15],[1.65,1.9],[1.85,1.4],[1.0,1.4],[1.9,layout.proportionsRevision>=2?1.9:2.1],[1.9,layout.proportionsRevision>=2?1.9:2.1],[1.45,1.45],[2.15,2.15],[2.15,2.15]];sizes.forEach(([w,d],i)=>{footprints[i][2]=w;footprints[i][3]=d;});}
+ for(const x of (layout.gymRevision?[-10,-8.4,-6.8]:[-10,-8.4,-6.8,6,7.6,9.2]))footprints.push([x,10,1.65,1.3]);
+ if(layout.gymRevision)footprints.push([8.75,5.02,2.55,3.3],[10.03,7.65,1.05,3.0],[7.3,10.14,2.9,1.0],[10.1,10.55,1.05,1.2]);
  const mesh=new T.InstancedMesh(geometry,material,footprints.length),o=new T.Object3D();mesh.name='Ombres de contact du mobilier';mesh.renderOrder=1;
  footprints.forEach(([x,z,w,d],i)=>{o.position.set(x,.061,z);o.rotation.x=-Math.PI/2;o.scale.set(w,d,1);o.updateMatrix();mesh.setMatrixAt(i,o.matrix);});mesh.instanceMatrix.needsUpdate=true;root.add(mesh);
  return{dispose(){mesh.dispose();geometry.dispose();material.dispose();map.dispose();}};
