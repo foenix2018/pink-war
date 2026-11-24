@@ -15,7 +15,7 @@ import {createPinkWarsInput} from './level2-input.js';
 import {installPinkWarsSoldier} from './level2-player.js';
 import {setScreenMusic,setMusicEnabled} from './menu-music.js';
 import {GAME_VERSION} from './launch-ui.js';
-import {createLyluCivil} from './lylu-civil-hideout.js?v=20261124b';
+import {createLyluCivil} from './lylu-civil-hideout.js?v=20261124v5';
 import {bindViewButton,mountViewControl,savePreferredView} from './view-options.js';
 
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search);
@@ -36,7 +36,7 @@ function clearMotion(){keys.clear();touch.x=touch.z=0;path=[];destination=null;c
 function pauseHideout(){if(!ready||paused||opened)return;$('pause-character').textContent=characterId.toUpperCase()+' / LA PLANQUE';paused=true;clearMotion();document.exitPointerLock?.();setScreenMusic('paused');$('pause-dialog').showModal();pauseViewControl?.refresh();}
 function resumeHideout(){if(!paused)return;for(const id of ['pause-dialog','hideout-settings'])if($(id).open)$(id).close();paused=false;clearMotion();setScreenMusic('menu',1,undefined,{mode:'planque'});}
 function pauseStation(id){resumeHideout();chooseStation(id);}
-async function returnArmor(){if(!lylu||civilMode||returningArmor||!civil||!rig)return false;returningArmor=true;try{if(!await nanoChambers.store(characterId,armorLevel)){message('La capsule est indisponible. Réessaie.',6);return false;}setCivilMode(true);message('Armure reposée dans la capsule de LYLU.',5);return true;}finally{returningArmor=false;nanoUI?.refresh();}}
+async function returnArmor(){if(!lylu||civilMode||returningArmor||!civil||!rig)return false;returningArmor=true;try{if(!await nanoChambers.store(characterId,armorLevel)){message('La capsule est indisponible. Réessaie.',6);return false;}setCivilMode(true);civil?.triggerAction('armor-return');message('Armure reposée dans la capsule de LYLU.',5);return true;}finally{returningArmor=false;nanoUI?.refresh();}}
 let path=[],destination=null,near=null,opened=null,healing=null,clock=0,previous=0,pending=false,messageUntil=0,lastStatus='',moving=false;
 const keys=new Set(),touch={x:0,z:0},pads=createPinkWarsInput(),ray=new T.Raycaster(),mouse=new T.Vector2(),floor=new T.Plane(new T.Vector3(0,1,0),0),floorPoint=new T.Vector3();
 function message(text,seconds=4){$('notice').textContent=text;$('notice').hidden=false;messageUntil=performance.now()+seconds*1000;}
@@ -90,7 +90,7 @@ function element(tag,text,cls=''){const n=document.createElement(tag);if(text)n.
 function primary(text,action){const b=element('button',text,'hub-primary');b.type='button';b.onclick=action;return b;}
 function closePanel(){if(healing)return;outfitPreview=null;nanoUI=null;opened=null;keys.clear();touch.x=touch.z=0;$('panel').close();document.body.classList.remove('panel-open');nanoPanel?.dispose();nanoPanel=null;}
 function openStation(id){
- if(!ready||paused)return;const s=art.layout.stations.find(s=>s.id===id);if(!s)return;if(!navigation.inRoom(game.player,s.room)){navigate(s,s);return;}path=[];destination=null;opened=id;keys.clear();touch.x=touch.z=0;
+ if(!ready||paused)return;const s=art.layout.stations.find(s=>s.id===id);if(!s)return;if(!navigation.inRoom(game.player,s.room)){navigate(s,s);return;}path=[];destination=null;if(civilMode)civil?.triggerAction(id);opened=id;keys.clear();touch.x=touch.z=0;
  nanoPanel?.dispose();nanoPanel=null;nanoUI=null;outfitPreview=null;$('panel-content').replaceChildren();$('panel-title').textContent=s.name;$('panel-kicker').textContent='LA PLANQUE · '+characterId.toUpperCase();document.body.classList.add('panel-open');if(!$('panel').open)$('panel').showModal();
  const content=$('panel-content');
  if(id==='weapons'){
@@ -248,7 +248,7 @@ function update(dt){
  if(!opened&&view!=='portrait')game.step(dt,{x,z,yaw,moveYaw:yaw,sprint:control.sprint,gamepadMoving:control.gamepadMoving,touchMoving:!!(touch.x||touch.z)});
  moving=view!=='portrait'&&Math.hypot(game.playerVelocity?.x||0,game.playerVelocity?.z||0)>.15;
  if(rig){const m=rig.model;m.root.position.set(game.player.x,0,game.player.z);m.root.rotation.y=game.player.yaw;m.root.visible=(view==='overview'||view==='third')&&(!lylu||!civilMode);if(m.weapon!==game.weaponIndex)m.setWeapon(game.weaponIndex);if(!lylu||!civilMode)m.animate(game.time,moving,0,0,0,opened?0:dt,{velocity:game.playerVelocity,ground:()=>0,airborne:false,verticalSpeed:0,crouched:false,sprint:!!control.sprint,aim:false,firing:false});}
- if(civil)civil.update(clock,dt,{position:game.player,yaw:game.player.yaw,speed:Math.hypot(game.playerVelocity?.x||0,game.playerVelocity?.z||0),moving,station:opened,visible:civilMode&&view!=='visit'});
+ if(civil)civil.update(clock,dt,{position:game.player,yaw:game.player.yaw,speed:Math.hypot(game.playerVelocity?.x||0,game.playerVelocity?.z||0),moving:!opened&&moving,sprint:!!control.sprint,velocity:game.playerVelocity,station:opened,visible:civilMode&&view!=='visit'});
  if(view==='portrait'){
   const p=game.player,angle=p.yaw;portrait.position.set(p.x-Math.sin(angle)*.83,1.64,p.z-Math.cos(angle)*.83);portrait.lookAt(p.x,1.65,p.z);
  }

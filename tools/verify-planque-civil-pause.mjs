@@ -14,7 +14,7 @@ try {
  await page.goto(url,{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>window.__PINK_HIDEOUT?.snapshot().ready&&__PINK_HIDEOUT.snapshot().civil?.visible,null,{timeout:180000});
  await page.waitForFunction(()=>__PINK_HIDEOUT.snapshot().nanoChambers.lylu.phase==='ready',null,{timeout:120000});
- const initial=await snap();assert.equal(initial.civilMode,true);assert.equal(initial.view,'third');assert.ok(initial.nanoChambers.lylu.visible);
+ const initial=await snap();assert.equal(initial.civil.clips.length,30);assert.equal(initial.civil.bones,17);assert.equal(initial.civil.canonical,true);assert.equal(initial.civilMode,true);assert.equal(initial.view,'third');assert.ok(initial.nanoChambers.lylu.visible);
  await page.screenshot({path:out+'/01-civil-third.png'});
  await page.locator('#pause-button').click();await page.waitForFunction(()=>__PINK_HIDEOUT.snapshot().paused);
  const t=(await snap()).simulationTime;
@@ -41,7 +41,7 @@ try {
  writeFileSync(out+'/result.json',JSON.stringify({initial,equipped,returned,errors},null,2));console.log('Planque civil/armor/pause/browser checks passed');
  // A failed network request must never substitute armor.
  const fail=await browser.newPage({viewport:{width:900,height:700}});
- await fail.route('**/lylu-civil-v4.glb*',r=>r.abort());await fail.goto(url,{waitUntil:'domcontentloaded'});
+ await fail.route('**/lylu-civil-v5.glb*',r=>r.abort());await fail.goto(url,{waitUntil:'domcontentloaded'});
  await fail.waitForFunction(()=>!document.getElementById('retry').hidden,null,{timeout:180000});
  const failure=await fail.evaluate(()=>__PINK_HIDEOUT.snapshot());assert.equal(failure.ready,false);assert.equal(failure.civilMode,true);assert.equal(failure.heroReady,false);await fail.close();
 }finally{await browser.close();}
