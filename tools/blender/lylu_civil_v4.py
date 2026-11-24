@@ -230,7 +230,7 @@ for side in (-1,1):
             phi=2*pi*i/Neye
             vs.append((cx+rad*sin(th)*cos(phi),cy-rad*cos(th),cz+rad*sin(th)*sin(phi)))
     for j in range(len(angles)-1):
-        for i in range(Neye):fs.append((j*Neye+i,j*Neye+(i+1)%Neye,(j+1)*Neye+(i+1)%Neye,(j+1)*Neye+i))
+        for i in range(Neye):fs.append((j*Neye+i,(j+1)*Neye+i,(j+1)*Neye+(i+1)%Neye,j*Neye+(i+1)%Neye))
     eye=mesh("LYLU / recessed anatomically shaped eye",vs,fs,sclera)
     for m in (pupil,iris,irisLight,limbal):eye.data.materials.append(m)
     for p in eye.data.polygons:
