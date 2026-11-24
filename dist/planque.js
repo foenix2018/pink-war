@@ -15,7 +15,7 @@ import {createPinkWarsInput} from './level2-input.js';
 import {installPinkWarsSoldier} from './level2-player.js';
 import {setScreenMusic,setMusicEnabled} from './menu-music.js';
 import {GAME_VERSION} from './launch-ui.js';
-import {createLyluCivil} from './lylu-civil-hideout.js?v=20261124b';
+import {createLyluCivil} from './lylu-civil-hideout.js?v=20261124c';
 import {bindViewButton,mountViewControl,savePreferredView} from './view-options.js';
 
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search);
@@ -247,8 +247,8 @@ function update(dt){
  art.updateDoors(dt,game.player,{moving:!opened&&Math.hypot(x,z)>.03});
  if(!opened&&view!=='portrait')game.step(dt,{x,z,yaw,moveYaw:yaw,sprint:control.sprint,gamepadMoving:control.gamepadMoving,touchMoving:!!(touch.x||touch.z)});
  moving=view!=='portrait'&&Math.hypot(game.playerVelocity?.x||0,game.playerVelocity?.z||0)>.15;
- if(rig){const m=rig.model;m.root.position.set(game.player.x,0,game.player.z);m.root.rotation.y=game.player.yaw;m.root.visible=(view==='overview'||view==='third')&&(!lylu||!civilMode);if(m.weapon!==game.weaponIndex)m.setWeapon(game.weaponIndex);if(!lylu||!civilMode)m.animate(game.time,moving,0,0,0,opened?0:dt,{velocity:game.playerVelocity,ground:()=>0,airborne:false,verticalSpeed:0,crouched:false,sprint:!!control.sprint,aim:false,firing:false});}
- if(civil)civil.update(clock,dt,{position:game.player,yaw:game.player.yaw,speed:Math.hypot(game.playerVelocity?.x||0,game.playerVelocity?.z||0),moving,station:opened,visible:civilMode&&view!=='visit'});
+ if(rig){const m=rig.model;m.root.position.set(game.player.x,0,game.player.z);m.root.rotation.y=game.player.yaw;m.root.visible=(view==='overview'||view==='third')&&(!lylu||!civilMode);if(m.weapon!==game.weaponIndex)m.setWeapon(game.weaponIndex);m.animate(game.time,moving,0,0,0,opened?0:dt,{velocity:game.playerVelocity,ground:()=>0,airborne:false,verticalSpeed:0,crouched:false,sprint:!!control.sprint,aim:false,firing:false});}
+ if(civil)civil.update(clock,dt,{position:game.player,yaw:game.player.yaw,speed:Math.hypot(game.playerVelocity?.x||0,game.playerVelocity?.z||0),moving,station:opened,visible:civilMode&&view!=='visit',native:rig?.model});
  if(view==='portrait'){
   const p=game.player,angle=p.yaw;portrait.position.set(p.x-Math.sin(angle)*.83,1.64,p.z-Math.cos(angle)*.83);portrait.lookAt(p.x,1.65,p.z);
  }
