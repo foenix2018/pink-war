@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import {mkdirSync,writeFileSync} from 'node:fs';
+import {chromium} from 'playwright';
+const base=process.env.PINK_WARS_BASE_URL||'http://127.0.0.1:4173';
+const out='lylu-integration';mkdirSync(out,{recursive:true});
+const browser=await chromium.launch({channel:'chrome',headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+try{
+ const page=await browser.newPage({viewport:{width:1000,height:760}});
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('https://fonts.googleapis.com/**',r=>r.fulfill({contentType:'text/css',body:''}));
+ await page.route('https://fonts.gstatic.com/**',r=>r.abort());
+ await page.goto(base+'/planque.html?character=lylu&renderer=webgl&quality=low&debug=1',{waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>window.__PINK_HIDEOUT?.snapshot().civil?.ready,null,{timeout:180000});
+ const start=await page.evaluate(()=>__PINK_HIDEOUT.snapshot());
+ assert.equal(start.characterId,'lylu');assert.equal(start.civilMode,true);assert.ok(start.civil.visible);assert.ok(start.civil.bones>=17);assert.ok(start.civil.morphs>0);assert.ok(start.civil.triangles<230000);assert.ok(start.civil.draws<=30);
+ await page.locator('#civil-portrait').click();
+ await page.waitForFunction(()=>__PINK_HIDEOUT.snapshot().view==='portrait');
+ await page.evaluate(()=>__PINK_HIDEOUT.debug.civil.setExpression({Blink:0,Smile:.65,Focus:0,Surprise:0}));
+ await page.waitForFunction(()=>__PINK_HIDEOUT.snapshot().civil.expressions.Smile>.5);
+ await page.screenshot({path:out+'/LYLU-smile-in-game.png'});
+ await page.evaluate(()=>__PINK_HIDEOUT.debug.civil.setExpression({Blink:1,Smile:0,Focus:0,Surprise:0}));
+ await page.waitForFunction(()=>__PINK_HIDEOUT.snapshot().civil.expressions.Blink>.8);
+ await page.screenshot({path:out+'/LYLU-blink-in-game.png'});
+ await page.evaluate(()=>__PINK_HIDEOUT.debug.civil.setExpression(null));
+ await page.locator('#civil-portrait').click();await page.locator('#civil-outfit').click();
+ await page.waitForFunction(()=>!__PINK_HIDEOUT.snapshot().civilMode&&!__PINK_HIDEOUT.snapshot().civil.visible);
+ await page.locator('#civil-outfit').click();
+ await page.waitForFunction(()=>__PINK_HIDEOUT.snapshot().civil.visible);
+ const before=await page.evaluate(()=>__PINK_HIDEOUT.snapshot().position);
+ await page.keyboard.down('w');await page.waitForFunction(z=>__PINK_HIDEOUT.snapshot().position.z<z-.1,before.z,{timeout:30000});await page.keyboard.up('w');
+ await page.locator('#view').click();await page.waitForFunction(()=>__PINK_HIDEOUT.snapshot().view==='visit'&&!__PINK_HIDEOUT.snapshot().civil.visible);
+ await page.locator('#view').click();
+ assert.deepEqual(errors,[]);
+ const result=await page.evaluate(()=>__PINK_HIDEOUT.snapshot());writeFileSync(out+'/smoke.json',JSON.stringify({start,result,errors},null,2));console.log('LYLU civil integration validated',start.civil);
+}finally{await browser.close();}
