@@ -1,0 +1,28 @@
+name: Planque biomechanics and campaign fitness
+on:
+  push:
+    branches: [feature/fitness-biomechanics-20261125]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax and regression checks
+        run: |
+          for f in dist/lylu-civil-motion.js dist/lylu-civil-hideout.js dist/hideout-fitness-props.js dist/hideout-fitness.js dist/hideout-state.js dist/planque.js dist/game-logic.js dist/armor-combat.js tools/verify-planque-biomechanics.mjs; do node --check "$f"; done
+          node --test tests/planque-fitness.test.mjs tests/planque-open.test.mjs tests/planque-gym.test.mjs tests/planque-proportions.test.mjs tests/389-hideout.test.mjs tests/3893-hideout-rooms-city.test.mjs tests/391-hideout-nano-chambers.test.mjs
+      - name: Capture actual rendered poses and measure equipment contact
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+          python -m http.server 4173 --directory dist >/tmp/planque-server.log 2>&1 &
+          node tools/verify-planque-biomechanics.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: planque-biomechanics-previews
+          path: planque-biomechanics-check/
