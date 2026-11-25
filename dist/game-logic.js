@@ -350,7 +350,7 @@ export class ArenaGame {
     this.weaponIndex = starterWeaponIndex(this.characterId); this.ammo = WEAPONS.map(w => w.capacity);
     this.dual={ammo:{left:12,right:12},readyAt:{left:0,right:0},shotAt:{left:-Infinity,right:-Infinity},held:{left:false,right:false},next:'right',flatAt:0};
     this.ownedWeapons = new Set(starterWeaponOrder(this.characterId)); this.weaponOffers = []; // Primary + VORTEX AR-7 as second weapon; preserve the VX-9.
-    this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false; this.semiPending=false;
+    this.fitnessBonuses=null; this.reloadRemaining = 0; this.charge = 0; this.triggerHeld = false; this.semiPending=false;
     this.aimingPrecision=false;
     this.lastDamage = 0; this.regenerating = false;
     // Armour layer (armor-combat.js): shield on when an engine enables it, two impulse charges to start.
@@ -512,7 +512,7 @@ export class ArenaGame {
   reload() {
     if(this.weapon.melee)return false;
     if (this.state !== 'playing' || this.reloadRemaining > 0 || this.ammo[this.weaponIndex] >= this.weapon.capacity) return false;
-    this.reloadRemaining = this.weapon.reload; this.charge = 0;this.semiPending=false;
+    this.reloadRemaining = this.weapon.reload * (this.mode==='campaign'&&!this.inHideout?(this.fitnessBonuses?.reloadMultiplier||1):1); this.charge = 0;this.semiPending=false;
     this.emitNoise('reload',NOISE_RADIUS.reload);
     this.event('reload', { duration: this.reloadRemaining }); return true;
   }
@@ -727,8 +727,8 @@ export class ArenaGame {
       for(const hit of sweepBlade(previous,segment,[...this.enemies,...this.turrets.filter(t=>t.hp>0)],this.obstacles,eye,segmentBox,(a,b,e)=>{if(!e.defenceTurret)return traceEnemyHit(a,b,e);const t=segmentBox(a,b,turretHitbox(e));return t===null?null:{t,zone:'torso',multiplier:1};})){
         if(this.time-(this.bladeHitTimes.get(hit.enemy.id)??-99)<.48)continue;
         this.bladeHitTimes.set(hit.enemy.id,this.time);
-        if(hit.enemy.defenceTurret)this.damageDefenseTurret(hit.enemy,this.weapon.damage,{weapon:'aurora',at:hit.point});
-        else this.damageEnemy(hit.enemy,this.weapon.damage,hit.point,hit.zone,hit.multiplier);
+        if(hit.enemy.defenceTurret)this.damageDefenseTurret(hit.enemy,this.weapon.damage*(this.mode==='campaign'&&!this.inHideout?(this.fitnessBonuses?.meleeMultiplier||1):1),{weapon:'aurora',at:hit.point});
+        else this.damageEnemy(hit.enemy,this.weapon.damage*(this.mode==='campaign'&&!this.inHideout?(this.fitnessBonuses?.meleeMultiplier||1):1),hit.point,hit.zone,hit.multiplier);
         this.event('blade-hit',{...hit.point,surface:'robot',weapon:'aurora',power:1,normal:{x:0,y:1,z:0}});
       }
     }
@@ -844,7 +844,7 @@ export class ArenaGame {
     }
     p.jumpHeld = jumpDown;
     updateJetpack(p,dt,jumpDown);
-    const speed = p.crouched ? PLAYER_SPEEDS.crouch : input.sprint ? PLAYER_SPEEDS.sprint : PLAYER_SPEEDS.walk, moveYaw = input.moveYaw ?? yaw;
+    const speed = p.crouched ? PLAYER_SPEEDS.crouch : input.sprint ? PLAYER_SPEEDS.sprint * (this.mode==='campaign'&&!this.inHideout?(this.fitnessBonuses?.sprintMultiplier||1):1) : PLAYER_SPEEDS.walk, moveYaw = input.moveYaw ?? yaw;
     ix*=PLAYER_SPEEDS.side;if(iz>0)iz*=PLAYER_SPEEDS.back;
     // A sprint boosts forward travel. A full-speed sideways run cannot retain
     // a forward-facing, non-crossing combat stance.

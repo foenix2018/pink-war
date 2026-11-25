@@ -1,3 +1,4 @@
+import {fitnessBonuses} from './hideout-fitness.js';
 import {readNanoProfile} from './nano-forge.js';
 // Shared campaign travel and preparation. No renderer, DOM, network or combat imports.
 export const HIDEOUT_KEY='pink-wars-hideout-v1-';
@@ -58,6 +59,7 @@ export function prepareHideoutDeparture(game,{level,armorLevel=1,storage=storage
 export function applyHideoutPreparation(game,{storage=storageOrNull()}={}){
  if(game.inHideout||game.mode!=='campaign'||game.hideoutPreparationChecked||!game.nanoWeapons)return false;
  const p=readHideoutProfile(game.characterId,storage),level=game.missionLevel??game.campaign?.level??1;
+ game.fitnessBonuses=fitnessBonuses(p.fitness);
  if(p.pendingLevel!==level||!p.preparedAt){game.hideoutPreparationChecked=true;return false;}
  for(const i of p.owned)if(game.isWeaponAvailable(i)&&game.nanoWeaponAllowed?.(i)!==false)game.ownedWeapons.add(i);
  if(p.selectedWeapon!==null&&game.ownedWeapons.has(p.selectedWeapon)&&game.isWeaponAvailable(p.selectedWeapon)&&game.nanoWeaponAllowed?.(p.selectedWeapon)!==false){game.weaponIndex=p.selectedWeapon;game.reloadRemaining=0;game.triggerHeld=false;}
