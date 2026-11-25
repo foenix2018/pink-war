@@ -83,8 +83,9 @@ function resolveMelee(game, forward) {
   const push = Math.min(.8, Math.max(0, MELEE_RANGE + .6 - bestDistance));
   if (!best.defenceTurret && push > 0 && game.knockback) game.knockback(best, fx * push, fz * push);
   game.event('melee', { hit: true, back, id: best.id, ...at });
-  if(best.defenceTurret)game.damageDefenseTurret(best,MELEE_DAMAGE,{weapon:'melee',at});
-  else game.damageEnemy(best, MELEE_DAMAGE * (back ? MELEE_BACK_MULTIPLIER : 1), at, 'torso', 1, p);
+  const damage=MELEE_DAMAGE*(game.mode==='campaign'&&!game.inHideout?(game.fitnessBonuses?.meleeMultiplier||1):1);
+  if(best.defenceTurret)game.damageDefenseTurret(best,damage,{weapon:'melee',at});
+  else game.damageEnemy(best, damage * (back ? MELEE_BACK_MULTIPLIER : 1), at, 'torso', 1, p);
   return true;
 }
 
