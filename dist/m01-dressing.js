@@ -62,10 +62,41 @@ export function createM01Dressing(T,parent,maps,{performance=false}={}){
  for(const [x,z] of [[-14.4,48],[-13.7,31],[14.3,44],[13.9,25],[-13.7,-14],[29.9,-13],[-9.8,-47],[25,-50]]){
   details.plant(x,.02,z,.65,'fern');details.plant(x+.16,.02,z-.18,.43);stats.ferns++;
  }
+ // Architectural window hardware follows the actual Blender aperture data.
+ // Only the external edge of each aperture is dressed; broken glass and
+ // the traversable opening remain exactly as authored.
+ const frames=material(0x505650,.72,.55),sills=material(0x77756a,.92),oxide=material(0x745c45,.86,.28);
+ const parts=new Map([[frames,[]],[sills,[]],[oxide,[]]]);
+ const put=(m,x,y,z,w,h,d)=>parts.get(m).push([x,y,z,w,h,d]);
+ let windows=0;
+ for(const p of LEVEL1_MAP.buildingParts){
+  if(!p.window||p.y<4.5||p.y>18||(performance&&p.y>12))continue;
+  const side=p.side||1,alongX=p.axis==='x',span=alongX?p.w:p.d;
+  if(span<.8)continue;
+  const face=alongX?p.z+side*.19:p.x+side*.19;
+  const mount=(u,y,w,h,depth,m,offset=0)=>{
+   if(alongX)put(m,p.x+u,y,face+side*offset,w,h,depth);
+   else put(m,face+side*offset,y,p.z+u,depth,h,w);
+  };
+  // Narrow heads and jambs, with a projecting stone drip sill.
+  // Locate the jambs outside the clear span, not over the glass.
+  for(const sideU of [-1,1])mount(sideU*(span/2+.025),p.y,.065,p.h+.09,.07,frames);
+  mount(0,p.y+p.h/2+.025,span+.12,.065,.07,frames);
+  mount(0,p.y-p.h/2-.07,span+.22,.10,.15,sills,.035);
+  if(!performance&&windows%5===0)mount(span*.32,p.y-p.h/2-.13,.10,.045,.055,oxide,.05);
+  windows++;
+ }
+ const frameGeo=new T.BoxGeometry(1,1,1),pose=new T.Object3D(),facadeMeshes=[];
+ for(const [m,list] of parts)if(list.length){
+  const mesh=new T.InstancedMesh(frameGeo,m,list.length);mesh.name='Vesper / encadrements et appuis de façade';
+  list.forEach(([x,y,z,w,h,d],i)=>{pose.position.set(x,y,z);pose.scale.set(w,h,d);pose.updateMatrix();mesh.setMatrixAt(i,pose.matrix);});
+  mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();mesh.receiveShadow=true;mesh.castShadow=false;root.add(mesh);facadeMeshes.push(mesh);
+ }
+ stats.facadeWindows=windows;stats.facadeInstances=[...parts.values()].reduce((n,list)=>n+list.length,0);
  details.finish();
  a.mount(root);a.setLevel(1);
  // Contact darkening and sun projection are owned by the shared shadow layer.
  for(const mesh of a.meshes){mesh.castShadow=!performance&&!mesh.material.transparent;mesh.receiveShadow=true;stats.triangles+=(mesh.geometry.index?.count||mesh.geometry.attributes.position.count)/3;}
- stats.details=details.stats();stats.draws=a.meshes.length+stats.details.batches;stats.triangles+=stats.details.triangles;
- return {root,stats,dispose(){details.dispose();root.removeFromParent();root.traverse(o=>o.geometry?.dispose());for(const m of owned)m.dispose();for(const t of textures)t.dispose();}};
+ stats.details=details.stats();stats.draws=a.meshes.length+stats.details.batches+facadeMeshes.length;stats.triangles+=stats.facadeInstances*12;stats.triangles+=stats.details.triangles;
+ return {root,stats,dispose(){details.dispose();for(const mesh of facadeMeshes)mesh.dispose();frameGeo.dispose();root.removeFromParent();root.traverse(o=>o.geometry?.dispose());for(const m of owned)m.dispose();for(const t of textures)t.dispose();}};
 }
