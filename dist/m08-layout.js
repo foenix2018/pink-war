@@ -184,7 +184,7 @@ export const SUPPLIES = Object.freeze([['heal', -14, 80], ['cell', 30, 62], ['he
 // ---------- Encounters ----------
 const unit = (form, x, z, extra = {}) => Object.freeze({ form, x, z, ...extra });
 export const ENCOUNTERS = Object.freeze({
-  quai: { wave: 4, units: [unit('stalker', 30, 66), unit('probe', 50, 60), unit('bulwark', 56, 86), unit('stalker', 76, 80), unit('probe', 20, 84), unit('scuttler', 46, 92)] },
+  quai: { wave: 4, units: [unit('stalker', 30, 66), unit('probe', 50, 60), unit('se04', 56, 86), unit('stalker', 76, 80), unit('probe', 20, 84), unit('scuttler', 46, 92)] },
   ateliers: { wave: 5, units: [unit('stalker', -36, 50), unit('scuttler', -48, 30), unit('scuttler', -66, 50), unit('probe', -50, 64), unit('seer', -80, 32), unit('stalker', -20, 14), unit('bulwark', -74, 16), unit('stalker', -30, 64), unit('listener', -56, 14)] },
   ateliers2: { wave: 5, portal: { x: -84, z: 60 }, units: [unit('brute', -84, 60)] },
   noeud1: { wave: 5, portal: { x: 36, z: 20 }, units: [unit('stalker', 36, 20), unit('scuttler', 34, 24), unit('probe', 38, 16)] },

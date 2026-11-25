@@ -21,6 +21,7 @@ export function pendingMeleeOrder(e,time){
  return {point:{x:e.x,z:e.z},stopDistance:.1,canFire:true,state:'melee-windup',speedScale:0,yaw:e.meleeIntent.yaw};
 }
 export function updateMeleeIntent(e,{time,seen,allowed,player,blocked}){
+ if(e.form==='se04'){e.meleeIntent=null;return false;}
  const target={x:player.x,z:player.z},range=distance(e,target),floorGap=Math.abs((e.elevation||0)-(player.elevation||0));
  if(!seen||!allowed||(e.stunnedUntil||0)>time||floorGap>1.3){e.meleeIntent=null;return false;}
  if(!e.meleeIntent){

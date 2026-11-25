@@ -8,28 +8,37 @@ export function remembersCoverContact(enemy,time){
  return !!enemy.tactics?.cover&&time-Math.max(enemy.lastSeenAt??-Infinity,enemy.lastHeardAt??-Infinity)<12;
 }
 export function enemySightPoint(enemy){
+ if(enemy.form==='se04'){const a=enemy.yaw||0;return {x:enemy.x-.42*Math.sin(a),y:(enemy.elevation||0)+3.83,z:enemy.z-.42*Math.cos(a)};}
  const scale=enemyScale(enemy.form,enemy.elite)*(enemy.roomScale||1),y=isReco1(enemy.form)?RECO1.sensorY:enemy.form==='bulwark'?REMPART.sensorY:enemy.form==='probe'?.55:enemy.form==='scuttler'?.92:ROBOT_SENSOR_Y,z=isReco1(enemy.form)?-.11:enemy.form==='probe'?-.665:enemy.form==='scuttler'?-.673:-.156,angle=enemy.yaw||0;
  return {x:enemy.x+z*Math.sin(angle)*scale,y:(enemy.elevation||0)+(y-ROBOT_CROUCH_DROP*(enemy.coverCrouch||0))*scale,z:enemy.z+z*Math.cos(angle)*scale};
 }
 // Chest durability distinguishes light frames, infantry and armoured chassis.
 // Sensor/head multipliers remain in the shared hitboxes; no minimum-hit invulnerability.
-export const ROBOT_DURABILITY=Object.freeze({probe:100,scuttler:140,stalker:180,spectre:160,seer:RECO1.health,synth:250,listener:275,brute:340,bulwark:400});
+export const ROBOT_DURABILITY=Object.freeze({probe:100,scuttler:140,stalker:180,spectre:160,seer:RECO1.health,synth:250,listener:275,brute:340,bulwark:400,se04:1200});
 export function enemyDurability(wave,form='stalker',elite=false){
+ if(form==='se04')return 1200;
  const tier=Math.max(1,Number(wave)||1),base=ROBOT_DURABILITY[form]||ROBOT_DURABILITY.stalker;
  return Math.round(base*(1+(tier-1)*.055)*(elite?1.55:1));
 }
 export function enemyVolley(wave, form='stalker') {
+  if(form==='se04')return {count:4,gap:.13,damage:19+Math.floor(wave*.7)};
   return {count:wave>=8&&form==='bulwark'?3:wave>=5&&['seer','brute','listener'].includes(form)?2:1,gap:.16,
     damage:form==='probe'?10+Math.floor(wave*.65):11+Math.floor(wave*.8)};
 }
 export function rangedMuzzle(enemy) {
-  const crawler=enemy.form==='scuttler',scale=enemyScale(enemy.form,enemy.elite)*(enemy.roomScale||1);
+  if(enemy.form==='se04'){
+  const a=enemy.yaw||0,i=enemy.se04ShotIndex||0,missile=enemy.se04Attack==='missile';
+  const x=(i%2?1:-1)*(missile?1.10:1.32),y=missile?3.95:2.69,z=missile?-.25:-1.48;
+  return {x:enemy.x+x*Math.cos(a)+z*Math.sin(a),y:(enemy.elevation||0)+y,z:enemy.z-x*Math.sin(a)+z*Math.cos(a)};
+ }
+ const crawler=enemy.form==='scuttler',scale=enemyScale(enemy.form,enemy.elite)*(enemy.roomScale||1);
   const rifle=isReco1(enemy.form)?reco1MuzzleLocal(enemy.aimPitch,enemy.aimYaw,enemy.coverCrouch):enemy.form==='bulwark'?rempartMuzzleLocal(enemy.aimPitch,enemy.aimYaw,enemy.coverCrouch,getRempartWeaponMotion(enemy)):enemy.form==='listener'?listenerToolMuzzle(enemy.aimPitch||0):carriesFieldRifle(enemy.form)?fieldRifleMuzzle(enemy.aimPitch||0):null;
   const x=rifle?.x??(crawler?0:.37),z=rifle?.z??(crawler?-.28:-.345),y=(rifle?.y??(crawler?1.04:1.69))-(isReco1(enemy.form)||enemy.form==='bulwark'?0:.52*(enemy.coverCrouch||0)),angle=enemy.yaw||0;
   return {x:enemy.x+(x*Math.cos(angle)+z*Math.sin(angle))*scale,
     y:(enemy.elevation||0)+y*scale,z:enemy.z+(-x*Math.sin(angle)+z*Math.cos(angle))*scale};
 }
 export function enemyScale(form='stalker',elite=false){
+  if(form==='se04')return 1;
   return elite?(form==='probe'?1.13:1.3):form==='scuttler'?.98:1;
 }
 

@@ -65,7 +65,7 @@ export const OPEN_FOR=Object.freeze({access:['access'],security:['security','lab
 export const SUPPLIES=Object.freeze([{kind:'heal',x:7,z:63,y:0},{kind:'cell',x:27,z:47,y:0},{kind:'heal',x:7,z:-27,y:6},{kind:'cell',x:-22,z:-64,y:12},{kind:'heal',x:21,z:-62,y:12},{kind:'cell',x:47,z:-54,y:12}]);
 export const ENCOUNTERS=Object.freeze({
  access:[{form:'stalker',x:3,z:69},{form:'probe',x:0,z:66}],
- esplanade:[{form:'stalker',x:-10,z:40},{form:'synth',x:10,z:40},{form:'probe',x:0,z:44}],
+ esplanade:[{form:'stalker',x:-10,z:40},{form:'se04',x:10,z:40},{form:'probe',x:0,z:44}],
  security:[{form:'synth',x:-10,z:-6},{form:'stalker',x:4,z:-12},{form:'probe',x:14,z:-10}],
  laboratoires:[{form:'stalker',x:-20,z:-64},{form:'synth',x:-20,z:-74}],
  archives:[{form:'bulwark',x:20,z:-64},{form:'stalker',x:20,z:-74}],

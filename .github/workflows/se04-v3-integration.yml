@@ -1,0 +1,65 @@
+name: SE-04 V3 game asset and validation
+on:
+  push:
+    branches: [feature/se04-sentinel-v3-20261125]
+    paths:
+      - tools/se04/**
+      - .github/workflows/se04-v3-integration.yml
+      - dist/se04-sentinel-v3.js
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Generate approved V3 with SE04 stencil
+        run: |
+          python -m pip install numpy==2.3.5 scipy==1.17.0 pillow==12.3.0
+          cat tools/se04/geometry.py.part tools/se04/detail-and-export.py.part > tools/se04/build.py
+          python tools/se04/build.py
+          mkdir -p dist/assets/enemies
+          cp tools/se04/SE04_Sentinel.glb dist/assets/enemies/se04-sentinel-v3.glb
+      - name: Validate model and clips
+        run: |
+          python - <<'PY'
+          import json, struct, pathlib, numpy as np
+          p=pathlib.Path('dist/assets/enemies/se04-sentinel-v3.glb')
+          b=p.read_bytes(); assert b[:4]==b'glTF'; n=struct.unpack_from('<I',b,12)[0]; g=json.loads(b[20:20+n]); raw=b[28+n:]
+          assert len(g['nodes'])==90
+          assert {a['name'] for a in g['animations']}=={'Idle','Move_Tracked','Walk_Heavy','Fire_Cannons','Fire_Missiles','Hit','Shutdown'}
+          assert len([n for n in g['nodes'] if n['name'].startswith('Tread_')])==56
+          assert len([n for n in g['nodes'] if n['name'].startswith('MuzzleFX_')])==4
+          assert len([n for n in g['nodes'] if n['name'].startswith('Missile_pod_')])==2
+          tris=sum(sum(g['accessors'][p['indices']]['count']//3 for p in g['meshes'][n['mesh']]['primitives']) for n in g['nodes'] if 'mesh' in n)
+          assert 95000<tris<97000 and len(b)<8_000_000,(tris,len(b))
+          for a in g['animations']:
+            for ch in a['channels']:
+              s=a['samplers'][ch['sampler']]; v=g['accessors'][s['input']]; bv=g['bufferViews'][v['bufferView']]
+              t=np.frombuffer(raw,dtype='<f4',count=v['count'],offset=bv.get('byteOffset',0)+v.get('byteOffset',0)); assert np.all(np.diff(t)>0)
+          print('Validated',tris,'triangles,',len(b),'bytes, 90 nodes and 7 native animations')
+          PY
+          node --check dist/se04-sentinel-v3.js
+          node --check dist/game-logic.js
+          node --check dist/gallery-3d.js
+          node --test tests/se04-sentinel-v3.test.mjs
+          npm test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SE04-Sentinel-V3
+          path: dist/assets/enemies/se04-sentinel-v3.glb
+      - name: Commit validated game asset to feature branch
+        run: |
+          git config user.name "Pink Wars SE04 integration"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dist/assets/enemies/se04-sentinel-v3.glb
+          git diff --cached --quiet || git commit -m "SE04: bundle verified V3 GLB and seven animations"
+          git push origin HEAD:feature/se04-sentinel-v3-20261125

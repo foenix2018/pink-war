@@ -169,7 +169,7 @@ export const ENCOUNTERS = Object.freeze({
   ferraille: { wave: 4, units: [unit('scuttler', -70, 60), unit('scuttler', -64, 66), unit('stalker', -84, 74), unit('probe', -50, 80), unit('scuttler', -76, 46), unit('seer', -40, 60)] },
   portail1: { wave: 4, portal: { x: 30, z: 74 }, units: [unit('bulwark', 30, 74), unit('stalker', 28, 78)] },
   portail2: { wave: 4, portal: { x: -22, z: 78 }, units: [unit('stalker', -22, 78), unit('probe', -20, 74), unit('scuttler', -24, 74)] },
-  coulee: { wave: 5, units: [unit('bulwark', 0, 56), unit('stalker', 20, 50), unit('seer', -20, 20), unit('probe', 18, 42), unit('stalker', 32, 24), unit('listener', -10, 40)] },
+  coulee: { wave: 5, units: [unit('se04', 0, 56), unit('stalker', 20, 50), unit('seer', -20, 20), unit('probe', 18, 42), unit('stalker', 32, 24), unit('listener', -10, 40)] },
   chaine: { wave: 5, units: [unit('bulwark', 56, 50), unit('stalker', 84, 20), unit('probe', 70, 56), unit('seer', 88, -6), unit('stalker', 50, -4)] },
   ligne1: { wave: 5, portal: { x: 63, z: 52 }, units: [unit('brute', 63, 52), unit('scuttler', 62, 48)] },
   ligne2: { wave: 6, portal: { x: 80, z: 24 }, units: [unit('brute', 80, 24), unit('stalker', 82, 20)] },

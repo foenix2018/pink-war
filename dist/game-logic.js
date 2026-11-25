@@ -212,7 +212,15 @@ export function traceEnemyHit(start, end, enemy) {
     }
     if(rotorHit)return rotorHit;
   }
-  const zones=isReco1(enemy.form)?RECO1_HIT_ZONES:enemy.form==='probe'?[
+  const zones=enemy.form==='se04'?[
+    ['head',0,3.83,-.4,.20],
+    ['weakpoint',0,3.15,.72,.32],
+    ['weakpoint',-1.10,3.96,-.2,.43],['weakpoint',1.10,3.96,-.2,.43],
+    ['torso',0,3.10,-.10,.87],['torso',0,2.25,0,.48],
+    ['limb',-1.20,2.65,0,.40],['limb',1.20,2.65,0,.40],
+    ['limb',-.81,1.40,0,.42],['limb',.81,1.40,0,.42],
+    ['limb',-.89,.39,0,.54],['limb',.89,.39,0,.54]
+  ]:isReco1(enemy.form)?RECO1_HIT_ZONES:enemy.form==='probe'?[
     ['head',0,.55,-.48,.18],['torso',0,.55,0,.44],
     ['limb',-.61,.49,-.42,.24],['limb',.61,.49,-.42,.24],
     ['limb',-.61,.49,.42,.24],['limb',.61,.49,.42,.24]
@@ -229,9 +237,9 @@ export function traceEnemyHit(start, end, enemy) {
   if(enemy.form==='bulwark')for(const zone of zones){if(zone[0]==='head'){zone[2]=1.738;zone[3]=-.20;zone[4]=.18;}else if(zone[0]==='limb'&&zone[2]>1){zone[1]=Math.sign(zone[1])*.64;zone[2]=1.15;zone[3]=-.18;zone[4]=.34;}}
   let best=null;
   for(const [zone,ox,oy,oz,r] of zones) {
-    const lowered=oy-(enemy.coverCrouch||0)*(oy>1?.52:.16);
+    const lowered=oy-(enemy.form==='se04'?0:enemy.coverCrouch||0)*(oy>1?.52:.16);
     const hit=segmentSphere(start,end,{x:enemy.x+(ox*cos+oz*sin)*elite,y:height+lowered*elite,z:enemy.z+(-ox*sin+oz*cos)*elite},r*elite);
-    if(hit!==null && (best===null || hit<best.t))best={t:hit,zone,multiplier:HIT_ZONE_DAMAGE[zone]*(enemy.form==='bulwark'&&zone==='torso'?.72:1)};
+    if(hit!==null && (best===null || hit<best.t))best={t:hit,zone,multiplier:(enemy.form==='se04'?(zone==='weakpoint'?2.8:zone==='head'?1.7:zone==='limb'?.72:1):HIT_ZONE_DAMAGE[zone])*(enemy.form==='bulwark'&&zone==='torso'?.72:1)};
   }
   return best;
 }
@@ -1043,17 +1051,21 @@ export class ArenaGame {
         this.damage(e.elite?20+this.wave:10+Math.floor(this.wave/2),e);
       }else if(e.ranged&&Math.abs(e.facingError||0)<.22&&distance<38&&prepareHostileShot(e,{time:this.time,seen,allowed:attackAllowed,allies:this.enemies})){
         const profile=hostileShotProfile(this.wave,e.form),speed=profile.speed;
-        const volley=enemyVolley(this.wave,e.form);let muzzle=rangedMuzzle(e);
+        const volley=enemyVolley(this.wave,e.form);
+        if(e.form==='se04'&&!(e.burstRemaining>0)){e.se04Attack=(e.se04Volleys||0)%3===2?'missile':'cannon';e.se04ShotIndex=0;}
+        let muzzle=rangedMuzzle(e);
         const target=predictShot(muzzle,playerHead,this.playerVelocity,speed,profile.lead);
         if(isReco1(e.form)){aimReco1(e,target);muzzle=rangedMuzzle(e);}
         if(!this.blocked(eye,muzzle)&&!this.blocked(muzzle,target)&&clearSquadFiringLane(e,muzzle,target,this.enemies)){
           const n=Math.hypot(target.x-muzzle.x,target.y-muzzle.y,target.z-muzzle.z)||1;
           e.shotIntent=null;e.firedAt=this.time;
+          if(e.form==='se04'&&!(e.burstRemaining>0)){e.se04AttackAt=this.time-(e.se04Attack==='missile'?.50:.40);e.se04Volleys=(e.se04Volleys||0)+1;}
           this.bullets.push({id:this.nextId++,...muzzle,vx:(target.x-muzzle.x)/n*speed,
             vy:(target.y-muzzle.y)/n*speed,vz:(target.z-muzzle.z)/n*speed,
-            life:3,damage:volley.damage,hostile:true,weapon:e.form==='sentinel'?(Math.floor(this.time/4)%2?'nova':'r9'):'enemy',splash:e.form==='sentinel'&&Math.floor(this.time/4)%2?2.8:0});
+            life:3,damage:volley.damage,hostile:true,weapon:e.form==='se04'?(e.se04Attack==='missile'?'nova':'r9'):e.form==='sentinel'?(Math.floor(this.time/4)%2?'nova':'r9'):'enemy',splash:e.form==='se04'&&e.se04Attack==='missile'?1.7:e.form==='sentinel'&&Math.floor(this.time/4)%2?2.8:0});
+          if(e.form==='se04')e.se04ShotIndex=(e.se04ShotIndex||0)+1;
           e.burstRemaining=e.burstRemaining>0?e.burstRemaining-1:volley.count-1;
-          e.attackTimer=e.burstRemaining>0?volley.gap:profile.interval;e.lastShotAt=this.time;e.chargeProgress=0;if(e.tactics)e.tactics.shots++;
+          e.attackTimer=e.burstRemaining>0?(e.form==='se04'&&e.se04Attack==='missile'?.22:volley.gap):e.form==='se04'?3.4:profile.interval;e.lastShotAt=this.time;e.chargeProgress=0;if(e.tactics)e.tactics.shots++;
           e.aimPitch=Math.atan2(target.y-muzzle.y,Math.hypot(target.x-muzzle.x,target.z-muzzle.z));
           this.event('enemy-shot',{...muzzle,form:e.form,id:e.id});
         }else{e.attackTimer=.3;e.burstRemaining=0;}

@@ -77,6 +77,11 @@ async function actualObject(name){
   const root=createReco1();
   return {root,animate:(t)=>root.userData.animate?.(t,0,false,{},t),source:'REC-01 · modèle RECO1 V10 et squelette originaux'};
  }
+ if(name==='SE-04'){
+  const {createSE04}=await import('./se04-sentinel-v3.js');
+  const root=createSE04();await root.userData.ready;
+  return {root,animate:t=>root.userData.preview(t),source:'SE-04 · Sentinel lourd V3, 4,40 m, 7 animations du GLB',dispose:()=>root.userData.dispose()};
+ }
  if(name==='SE-03'){
   const {createSentinel}=await import('./sentinel-mk9.js');
   const actor=createSentinel(T,scene,{health:1200});
@@ -407,7 +412,7 @@ async function renderGalleryThumbnail(name){
   const size=box.getSize(new T.Vector3());
   const center=box.getCenter(new T.Vector3());
   const isPerson=name==='GHJU'||name==='LYLU';
-  const isPortrait=isPerson||Object.hasOwn(enemyForms,name)||name==='REC-01'||name==='SE-03';
+  const isPortrait=isPerson||Object.hasOwn(enemyForms,name)||name==='REC-01'||name==='SE-03'||name==='SE-04';
   const centered=new T.Group();
   centered.add(actor.root);
   stage.thumbPivot.add(centered);
@@ -433,6 +438,7 @@ async function renderGalleryThumbnail(name){
     cropHeight=Math.max(size.y*.72,.32);
    }else{
     if(name==='BR-11')cropHeight=Math.max(size.y*.27,.30);
+    if(name==='SE-04')cropHeight=Math.max(size.y*.88,size.x*1.05,.35);
     if(name==='SE-03')cropHeight=Math.max(size.y*.35,.35);
     // Native skeletons on BRUTE, SYNTH and RECO1/REMPART expose different head-bone names.
     // Prefer their true 3D head position to a bbox polluted by weapons or shoulders.
