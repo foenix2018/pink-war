@@ -1,6 +1,6 @@
 import * as T from './vendor/three.webgpu.min.js';
 import {createStationaryFootLock} from './hero-locomotion.js';
-import {buildCivilMotion,FITNESS_CLIPS} from './lylu-civil-motion.js?v=20261124fitness2';
+import {buildCivilMotion,FITNESS_CLIPS} from './lylu-civil-motion.js?v=20261125armsync';
 // LYLU only, planque only. The game simulation and mission equipment are not altered.
 export const LYLU_CIVIL_ASSET=new URL('./assets/heroes/lylu-civil-v5.glb?v=20261124v5',import.meta.url).href;
 export const LYLU_EXPRESSIONS=Object.freeze(['Blink','Smile','Focus','Surprise']);
