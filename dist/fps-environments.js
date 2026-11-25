@@ -11,12 +11,22 @@ export const FPS_PALETTES=Object.freeze({
  m03:{paint:0x40525b,cool:0x98d8f3,warm:0xffbe8a},m04:{paint:0x464661,cool:0x9daaff,warm:0xffc98b},
  ligne9:{paint:0x405b56,cool:0x82e1db,warm:0xffba78},m06:{paint:0x615343,cool:0xa6d8e9,warm:0xff9d55},
  couronne:{paint:0xa6afb6,cool:0xb6e2ff,warm:0xffc8a1},range:{paint:0x405361,cool:0x8bd7fa,warm:0xff79b6},
- foret:{paint:0x575e4a,cool:0xabcfd6,warm:0xffc28a}
+ foret:{paint:0x575e4a,cool:0xabcfd6,warm:0xffc28a},m08:{paint:0x53636a,cool:0xb2d9e7,warm:0xcbb28e},m09:{paint:0x72836d,cool:0xd0e8dd,warm:0xffca9a},m10:{paint:0xa1b2b6,cool:0xc0e2ed,warm:0xffdbb8}
 });
-export function microSurfaceMaps(T){
- const n=128,normal=new Uint8Array(n*n*4),rough=new Uint8Array(n*n*4);let seed=379;
- for(let y=0;y<n;y++)for(let x=0;x<n;x++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;const noise=(seed>>>24)/255-.5,i=(y*n+x)*4,scratch=(y%31===0)?.5:0;
-  normal.set([128+Math.round(noise*12),128+Math.round(noise*9+scratch*18),255,255],i);const v=Math.round(190+noise*26-scratch*22);rough.set([v,v,v,255],i);
+export function microSurfaceMaps(T,{family='paint'}={}){
+ const n=128,normal=new Uint8Array(n*n*4),rough=new Uint8Array(n*n*4),height=new Float32Array(n*n);let seed=379;
+ const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+ const metal=family==='metal',mineral=family==='mineral';
+ for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+  const grain=random()-.5,band=Math.sin(y*.49+Math.sin(x*.098)*.4),cloud=Math.sin(x*Math.PI/16)*Math.sin(y*Math.PI/32)+.4*Math.cos((x+y)*Math.PI/8);
+  height[y*n+x]=metal?grain*.11+band*.12+(y%32===0?-.19:0):mineral?grain*.32+cloud*.12:grain*.18+cloud*.045;
+ }
+ const sample=(x,y)=>height[((y+n)%n)*n+(x+n)%n];
+ for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+  const i=(y*n+x)*4,h=sample(x,y),dx=sample(x+1,y)-sample(x-1,y),dy=sample(x,y+1)-sample(x,y-1);
+  const len=Math.hypot(dx,dy,1);
+  normal.set([Math.round(127.5-127.5*dx/len),Math.round(127.5-127.5*dy/len),Math.round(127.5+127.5/len),255],i);
+  const v=Math.max(0,Math.min(255,Math.round((metal?137:mineral?222:190)+h*52)));rough.set([v,v,v,255],i);
  }
  const make=data=>{const t=new T.DataTexture(data,n,n);t.wrapS=t.wrapT=T.RepeatWrapping;t.magFilter=T.LinearFilter;t.minFilter=T.LinearMipmapLinearFilter;t.generateMipmaps=true;t.needsUpdate=true;return t;};
  return {normal:make(normal),rough:make(rough)};
@@ -25,12 +35,14 @@ export function createFPSChapter(T,parent,{chapter,obstacles=[],areas=[],low=fal
  const compact=low||/OculusBrowser|Quest|PicoBrowser|iPhone|iPad/i.test(globalThis.navigator?.userAgent||'');
  const palette=FPS_PALETTES[chapter]||FPS_PALETTES.m03,root=new T.Group();root.name='FPS / '+chapter+' / finition des espaces';parent.add(root);
  const radiance=fillWorldRadiance(T,parent,{...palette,low:compact});
- const own=[],textures=[],a=new Assembly(),maps=microSurfaceMaps(T);textures.push(maps.normal,maps.rough);
+ const own=[],textures=[],a=new Assembly(),maps=microSurfaceMaps(T);
+ const metalMaps=microSurfaceMaps(T,{family:'metal'}),stoneMaps=microSurfaceMaps(T,{family:'mineral'});
+ for(const pair of [maps,metalMaps,stoneMaps])textures.push(pair.normal,pair.rough);
  const mat=(color,metalness,roughness)=>{const m=new T.MeshStandardMaterial({color,metalness,roughness,normalMap:maps.normal,normalScale:new T.Vector2(.12,.12)});own.push(m);return m;};
- const M={steel:mat(0x8b9ba5,.78,.35),dark:mat(0x18242c,.5,.62),paint:mat(palette.paint,.45,.66)};
- const stat={chapter,materialDetails:0,coverModels:0,wallStations:0,sectors:0,lightBudget:compact?0:2};
+ const M={steel:mat(0x8b9ba5,.78,.35),dark:mat(0x18242c,.5,.62),paint:mat(palette.paint,.45,.66),rubber:mat(0x30332d,.02,.94),copper:mat(0x79604a,.55,.62)};
+ const stat={chapter,materialDetails:0,coverModels:0,wallStations:0,sectors:0,serviceDetails:0,lightBudget:compact?0:2};
  const touched=new Map();parent.traverse(o=>{if(!o.isMesh||o.isSkinnedMesh)return;for(const m of [].concat(o.material||[])){if(!m.isMeshStandardMaterial||m.transparent||m.normalMap||m.bumpMap||m.userData.fpsSurface)continue;
-  touched.set(m,{normalMap:m.normalMap,normalScale:m.normalScale.clone(),roughnessMap:m.roughnessMap});m.normalMap=maps.normal;m.normalScale.set(.10,.10);if(!m.roughnessMap)m.roughnessMap=maps.rough;m.userData.fpsSurface=true;m.needsUpdate=true;stat.materialDetails++;
+  touched.set(m,{normalMap:m.normalMap,normalScale:m.normalScale.clone(),roughnessMap:m.roughnessMap});const pair=m.metalness>.5?metalMaps:m.roughness>.78?stoneMaps:maps;m.normalMap=pair.normal;m.normalScale.set(.16,.16);if(!m.roughnessMap)m.roughnessMap=pair.rough;m.userData.fpsSurface=true;m.needsUpdate=true;stat.materialDetails++;
  }});
  function part(g,m,p,r){a.add(g,m,matrix(p,r),false);g.dispose();}
  const box=(s,p,m=M.paint)=>part(bevelBox(...s,Math.min(.025,...s.map(v=>v*.15)),1),m,p);
@@ -64,6 +76,16 @@ export function createFPSChapter(T,parent,{chapter,obstacles=[],areas=[],low=fal
      part(bevelBox(1.32,.45,.065,.025,1),M.paint,at(0,-.7,-.012),[0,yaw,0]);
      for(let k=0;k<5;k++)part(new T.BoxGeometry(1.12,.025,.035),M.dark,at(0,-.83+k*.065,.025),[0,yaw,0]);
     }
+    // Small cable junctions and fasteners stay flush to the wall and use
+    // the same batched materials. They are omitted on the compact profile.
+    if(!compact){
+     for(const dx of [-.62,.62])for(const dy of [-.92,-.48])
+      part(new T.CylinderGeometry(.018,.018,.015,6),M.steel,at(dx,dy,.045),[Math.PI/2,yaw,0]);
+     if(electric){part(bevelBox(.19,.16,.045,.015,1),M.dark,at(.66,-.99,.012),[0,yaw,0]);
+      part(limb(at(.66,-.91,.03),at(.66,-.42,.03),.014,.014,6),M.rubber,[0,0,0]);}
+     if(wet)part(limb(at(-.34,-1.05,.024),at(-.62,-1.19,.024),.025,.025,6),M.copper,[0,0,0]);
+    }
+    stat.serviceDetails++;
     const from=at(.94,-1.25,0),to=at(.94,.18,0);part(limb(from,to,.026,.026,6),M.steel,[0,0,0]);
     for(const dy of [-1.1,0])part(new T.TorusGeometry(.042,.009,4,8),M.steel,at(.94,dy,0),[Math.PI/2,0,0]);
    }
