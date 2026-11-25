@@ -49,25 +49,33 @@ function renderPanel(ctx,W,H,{title,subtitle,sector,accent,compact}){
 // Diegetic art direction: signs communicate the history of each faction and
 // the function of each place, instead of duplicating the HUD in the world.
 export function worldSignFamily(title='',sector=''){
- const t=(title+' '+sector).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
- if(/ORDRE|HELIX|DIRECTOIRE|JANUS|CONFINEMENT|ARENE/.test(t))return 'occupation';
- if(/LIGNE 9|METRO|QUAI|STATION|ASCENSEUR|RESEAU DE VESPER|HALLES/.test(t))return 'transit';
- if(/ATELIER|TECHNIQUE|POMPE|VANNE|ALIMENTATION|MAINTENANCE|GROUPE|SECURITE/.test(t))return 'industrial';
- if(/RESISTANCE|ENCLAVE|MARCHE|EPARS|REFUGE|HORS RESEAU/.test(t))return 'resistance';
- return 'civic';
+ const normalize=v=>String(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+ const t=normalize(title),scope=normalize(sector);
+ const classify=v=>{
+  if(/ORDRE|HELIX|DIRECTOIRE|JANUS|CONFINEMENT|ARENE/.test(v))return 'occupation';
+  if(/AEGIS|SECOURS|DISPENSAIRE|CLINIQUE|SOINS|MEDICAL|INFIRMERIE/.test(v))return 'medical';
+  if(/BIOTECH|BOTANI|VEGETA|SERRE|JARDIN|FORET|TILLEUL|SOURCE/.test(v))return 'botanical';
+  if(/RESISTANCE|ENCLAVE|MARCHE|EPARS|REFUGE|HORS RESEAU/.test(v))return 'resistance';
+  if(/ATELIER|TECHNIQUE|POMPE|VANNE|ALIMENTATION|MAINTENANCE|GROUPE|SECURITE|FONDERIE|COULEE|CHAINE LOURDE|ARMURERIE/.test(v))return 'industrial';
+  if(/LIGNE 9|METRO|QUAI|STATION|ASCENSEUR|RESEAU DE VESPER|HALLES/.test(v))return 'transit';
+  return null;
+ };
+ return classify(t)||classify(scope)||'civic';
 }
 const SIGN_PALETTES={
  occupation:['#2b3031','#ece8df','#a43237','#5d6261'],
  transit:['#25424d','#eee9db','#b5a374','#65716e'],
  industrial:['#bc9f54','#272925','#40372c','#7c6944'],
  resistance:['#c1b093','#302d27','#914e3a','#80735e'],
+ medical:['#e2dfd2','#31534e','#a44642','#9ca9a1'],
+ botanical:['#c4ccb6','#354d3c','#677f54','#88937b'],
  civic:['#d9d2bf','#2d403d','#984a3b','#8a877b']
 };
 export function paintPhysicalSign(ctx,W,H,{title,subtitle='',sector='',family=worldSignFamily(title,sector)}){
  const [base,ink,accent]=SIGN_PALETTES[family]||SIGN_PALETTES.civic;
  let seed=Array.from(String(title)).reduce((n,c)=>Math.imul(n^c.charCodeAt(0),16777619),2166136261)>>>0;
  const rnd=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
- const pad=H*.10,left=family==='occupation'?H*.40:pad+H*.05,maxW=W-left-pad;
+ const pad=Math.min(H*.10,W*.08),left=family==='occupation'?Math.min(H*.40,W*.29):pad+Math.min(H*.05,W*.04),maxW=Math.max(1,W-left-pad);
  ctx.clearRect(0,0,W,H);ctx.fillStyle=base;ctx.fillRect(0,0,W,H);
  if(family==='occupation'){
   ctx.fillStyle=accent;ctx.fillRect(0,0,H*.30,H);
