@@ -377,7 +377,7 @@ export function createM06Art(T, scene, { quality = 'normal', webgpu=false, onPor
   // ---------- Signage (rust, hazard yellow, ORDRE red) ----------
   const signs = createSignage(T, { root, low });
   function buildSigns() {
-    signs.neon(['FONDERIE DE VESPER-NORD', 'PRODUCTION CONTINUE'], { color: '#ff8a2a', color2: '#ff3b4e', kanji: '鋳造', w: 12, h: 2.4, x: 0, y: 9.4, z: 66.34, yaw: 0 });
+    signs.mounted(['FONDERIE DE VESPER-NORD', 'PRODUCTION CONTINUE'], { color: '#ff8a2a', color2: '#ff3b4e', kanji: '鋳造', w: 12, h: 2.4, x: 0, y: 9.4, z: 66.34, yaw: 0 });
     signs.advert('ordre', { w: 8, h: 3.2, x: 30, y: 9, z: 66.34, yaw: 0 });
     signs.hazard('CHANTIER INTERDIT', { sub: 'AUCUN PERSONNEL HUMAIN', picto: 'eye', w: 1.6, h: .8, x: -30.25, y: 2, z: 80, yaw: -Math.PI / 2 });
     signs.wayfinding('HALLE DE COULÉE', { sub: 'FOUR 1 · POCHES · MOULES', jp: '鋳造場', picto: 'bolt', arrow: 0, color: '#ff8a2a', w: 3.4, h: .8, x: -8, y: 7, z: 66.34, yaw: 0 });
