@@ -16,7 +16,7 @@ import {installPinkWarsSoldier} from './level2-player.js';
 import {setScreenMusic,setMusicEnabled} from './menu-music.js';
 import {GAME_VERSION} from './launch-ui.js';
 import {createLyluCivil} from './lylu-civil-hideout.js?v=20261125fitness3';
-import {FITNESS_PROGRAMS,FITNESS_LABELS,createFitnessSession,advanceFitness,claimFitness} from './hideout-fitness.js';
+import {FITNESS_PROGRAMS,FITNESS_LABELS,FITNESS_BENEFITS,fitnessBonuses,createFitnessSession,advanceFitness,claimFitness} from './hideout-fitness.js';
 import {createFitnessProps} from './hideout-fitness-props.js';
 import {bindViewButton,mountViewControl,savePreferredView} from './view-options.js';
 
@@ -96,7 +96,7 @@ function openStation(id){
  if(!ready||paused)return;if(training)stopTraining();const s=art.layout.stations.find(s=>s.id===id)||fitnessStations().find(s=>s.id===id);if(!s)return;if(!navigation.inRoom(game.player,s.room)){navigate(s,s);return;}path=[];destination=null;if(civilMode)civil?.triggerAction(id);opened=id;keys.clear();touch.x=touch.z=0;
  nanoPanel?.dispose();nanoPanel=null;nanoUI=null;outfitPreview=null;$('panel-content').replaceChildren();$('panel-title').textContent=s.name;$('panel-kicker').textContent='LA PLANQUE · '+characterId.toUpperCase();document.body.classList.add('panel-open');if(!$('panel').open)$('panel').showModal();
  const content=$('panel-content');
- if(id.startsWith('fitness-')){const equipment=id.slice(8),p=FITNESS_PROGRAMS[equipment];if(!p)return;const fresh=readHideoutProfile(characterId);content.append(element('p',p.reps+' répétitions · '+FITNESS_LABELS[p.stat]+' '+fresh.fitness[p.stat]+'/100 · +1 par série terminée.'));content.append(element('p','Approche de l’appareil, lance la série et observe ton personnage utiliser le matériel. F ou Arrêter pour interrompre.'));content.append(primary('COMMENCER LA SÉRIE',()=>{closePanel();startTraining(equipment);}));return;
+ if(id.startsWith('fitness-')){const equipment=id.slice(8),p=FITNESS_PROGRAMS[equipment];if(!p)return;const fresh=readHideoutProfile(characterId);content.append(element('p',p.reps+' répétitions · '+FITNESS_LABELS[p.stat]+' '+fresh.fitness[p.stat]+'/100 · +1 par série terminée.'));content.append(element('p',FITNESS_BENEFITS[p.stat]+' en campagne.'));content.append(element('p','Approche de l’appareil, lance la série et observe ton personnage utiliser le matériel. F ou Arrêter pour interrompre.'));content.append(primary('COMMENCER LA SÉRIE',()=>{closePanel();startTraining(equipment);}));return;
  }
  if(id==='weapons'){
   content.append(element('p','Prépare une arme de ton inventaire pour la prochaine mission. Les nouveaux modèles s’assemblent à l’atelier nano.'));
