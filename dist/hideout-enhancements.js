@@ -88,6 +88,33 @@ export function createHideoutEnhancements(T,layout,materials,{low=false}={}){
   for(let j=0;j<uv.count;j++)uv.setXY(j,((i%4)+.02+.96*uv.getX(j))/4,(1-Math.floor(i/4)+.02+.96*uv.getY(j))/2);
   mesh(plane,plateMat,g,0,0,.009).receiveShadow=true;
  });
+ // Small everyday objects anchored on the existing, metric furniture.
+ // No new floor footprint: all dimensions fit the authored tabletop extents.
+ const personal=new T.Group();personal.name='Planque / objets du quotidien';root.add(personal);
+ const ceramic=new T.MeshStandardMaterial({color:0xc8bba8,roughness:.64,metalness:0}),coffee=new T.MeshStandardMaterial({color:0x34241d,roughness:.87}),paper=new T.MeshStandardMaterial({color:0xcfc4aa,roughness:.97}),cover=new T.MeshStandardMaterial({color:0x514e43,roughness:.87}),fabricWarm=new T.MeshStandardMaterial({color:0x76634f,roughness:.99});
+ own.push(ceramic,coffee,paper,cover,fabricWarm);
+ const mugGeo=new T.LatheGeometry([[.041,0],[.047,.005],[.048,.085],[.046,.09],[.041,.09],[.039,.078],[.039,.011]].map(([x,y])=>new T.Vector2(x,y)),low?12:20);geo.push(mugGeo);
+ const handleGeo=new T.TorusGeometry(.026,.008,5,low?10:16);geo.push(handleGeo);
+ const liquidGeo=new T.CircleGeometry(.039,low?12:20);geo.push(liquidGeo);
+ function cup(x,y,z,angle=0){
+  const g=new T.Group();g.position.set(x,y,z);g.rotation.y=angle;personal.add(g);
+  g.add(new T.Mesh(mugGeo,ceramic));const handle=new T.Mesh(handleGeo,ceramic);handle.position.set(.061,.047,0);g.add(handle);
+  const liquid=new T.Mesh(liquidGeo,coffee);liquid.rotation.x=-Math.PI/2;liquid.position.y=.073;g.add(liquid);
+ }
+ function book(x,y,z,angle=0,w=.17,d=.24){
+  const g=new T.Group();g.position.set(x,y,z);g.rotation.y=angle;personal.add(g);
+  mesh(new T.BoxGeometry(w,.022,d),paper,g,0,.015,0);
+  for(const yy of [.003,.029])mesh(new T.BoxGeometry(w+.008,.006,d+.008),cover,g,0,yy,0);
+  mesh(new T.BoxGeometry(.008,.032,d+.008),cover,g,-w/2,0.016,0);
+ }
+ // Archive table, lounge table, two nightstands and nano workshop.
+ cup(-1.25,.851,-8.15,.45);book(-1.53,.851,-8.18,.18,.21,.29);
+ cup(.17,.489,.79,-.8);book(-.15,.489,1.23,-.22,.18,.23);
+ book(-8.14,.573,-9.12,.15,.13,.20);book(-5.64,.573,-9.12,-.16,.13,.20);
+ cup(8.28,.951,-1.32,1.2);book(7.92,.951,-1.34,.2,.16,.23);
+ // Closed fabric pouch and folded repair cloth on the workbench.
+ mesh(new T.BoxGeometry(.23,.07,.15),fabricWarm,personal,8.65,.987,-1.32);
+ mesh(new T.BoxGeometry(.25,.025,.18),fabricWarm,personal,7.48,.963,-1.32);
  const dummy=new T.Object3D();
- return{root,update(t){for(const e of effects){e.g.rotation.y=t*.7;e.light.opacity=.65+.17*Math.sin(t*2);for(let i=0;i<e.points;i++){const u=((i/e.points+t*.22)%1),a=i*2.399+t*1.8,r=.59-.14*u;dummy.position.set(Math.cos(a)*r,u*1.32,Math.sin(a)*r);dummy.scale.setScalar(.011+.008*Math.sin(i*1.4+t*3)**2);dummy.updateMatrix();e.particles.setMatrixAt(i,dummy.matrix);}e.particles.instanceMatrix.needsUpdate=true;}},snapshot(){return{speakers:speakers.length,vortices:effects.length,trainingDisplay:1,physicalRoomSigns:placements.length,fitnessEquipment:layout.fitnessEquipment||[]};},dispose(){root.removeFromParent();for(const e of effects)e.particles.dispose();for(const g of new Set(geo))g.dispose();for(const m of own)m.dispose();fabricMat.map?.dispose();fabricMat.normalMap?.dispose();screenMap.dispose();livedMap.dispose();}};
+ return{root,update(t){for(const e of effects){e.g.rotation.y=t*.7;e.light.opacity=.65+.17*Math.sin(t*2);for(let i=0;i<e.points;i++){const u=((i/e.points+t*.22)%1),a=i*2.399+t*1.8,r=.59-.14*u;dummy.position.set(Math.cos(a)*r,u*1.32,Math.sin(a)*r);dummy.scale.setScalar(.011+.008*Math.sin(i*1.4+t*3)**2);dummy.updateMatrix();e.particles.setMatrixAt(i,dummy.matrix);}e.particles.instanceMatrix.needsUpdate=true;}},snapshot(){return{speakers:speakers.length,vortices:effects.length,trainingDisplay:1,physicalRoomSigns:placements.length,personalProps:personal.children.length,fitnessEquipment:layout.fitnessEquipment||[]};},dispose(){root.removeFromParent();for(const e of effects)e.particles.dispose();for(const g of new Set(geo))g.dispose();for(const m of own)m.dispose();fabricMat.map?.dispose();fabricMat.normalMap?.dispose();screenMap.dispose();livedMap.dispose();}};
 }
