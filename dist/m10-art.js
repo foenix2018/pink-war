@@ -1,3 +1,4 @@
+import {createMapInfoPanel} from './world-info-panel.js';
 import {createCouronneArt} from './couronne-art.js';
 import {parsePWM} from './blender-models.js';
 import {batchStaticGeometry} from './static-geometry-batch.js';
@@ -9,6 +10,7 @@ export function createM10Art(T,scene,{quality='normal',webgpu=false,characterId=
  const low=quality==='low',base=createCouronneArt(T,scene,{quality,webgpu,onPortalClose,chapter:10}),root=base.root;
  const sun=scene.children.find(o=>o.isDirectionalLight);if(sun)sun.castShadow=false;
  const clock=T.TSL.uniform(0),doors=new Map(),markers=new Map(),materials=new Map();let compiled=null,downloadBytes=0,npc=null,buddySphere=null,disposed=false,batching=null;
+ const physicalDoorSigns=[];
  const dark=new T.MeshStandardMaterial({color:0x26333e,metalness:.72,roughness:.4}),steel=new T.MeshStandardMaterial({color:0x8497a0,metalness:.8,roughness:.32}),frost=new T.MeshStandardMaterial({color:0x87b0bc,metalness:.12,roughness:.48,transparent:true,opacity:.78,side:T.DoubleSide}),glow=new T.MeshBasicMaterial({color:0x50daf1,toneMapped:false});
  function mesh(g,m,p,parent=root){const o=new T.Mesh(g,m);o.position.set(...p);parent.add(o);return o;}
  for(const d of L.DOORS){
@@ -19,7 +21,12 @@ export function createM10Art(T,scene,{quality='normal',webgpu=false,characterId=
    for(const xx of [-w/2+.08,w/2-.08])mesh(new T.CylinderGeometry(.022,.022,d.height-.25,8),glow,[xx,d.height/2,.14],leaf);
    const handle=mesh(new T.CylinderGeometry(.025,.025,.31,10),steel,[-side*w*.28,d.height*.45,.17],leaf);handle.rotation.z=Math.PI/2;
    leaf.position.x=side*d.width/4;return{leaf,side};
-  });doors.set(d.id,{data:d,group,leaves,target:0,open:0});
+  });
+  const names={access:['HELIX','ACCÈS PRINCIPAL'],laboratoires:['LABORATOIRES','RECHERCHE · PERSONNEL AUTORISÉ'],archives:['ARCHIVES','DONNÉES CLASSIFIÉES'],evacuation:['QUAI EST','LIAISON AEGIS']};
+  const [title,subtitle]=names[d.id]||['HELIX','ACCÈS RÉSERVÉ'];
+  const panel=createMapInfoPanel(T,{title,subtitle,sector:d.id==='evacuation'?'AEGIS / TRANSIT':'HELIX / SITE CENTRAL',width:Math.min(1.55,d.width*.42),height:.43,low,style:'physical'});
+  panel.position.set(0,d.height*.145,.116);leaves[0].leaf.add(panel);physicalDoorSigns.push(panel);
+  doors.set(d.id,{data:d,group,leaves,target:0,open:0});
  }
  for(const it of L.INTERACTIONS){const ring=mesh(new T.TorusGeometry(.48,.028,6,24),new T.MeshBasicMaterial({color:0x526275,toneMapped:false}),[it.x,it.y+.04,it.z]);ring.rotation.x=-Math.PI/2;markers.set(it.id,{ring,done:false,available:false});}
  // The bureau screen has a native WGSL scan mask, rather than an unlit solid rectangle.
@@ -47,7 +54,7 @@ export function createM10Art(T,scene,{quality='normal',webgpu=false,characterId=
   ,setDoor(id,open){if(id==='security')base.setGatesOpen(open);const p=doors.get(id);if(p)p.target=open?1:0;},setLine:on=>base.setAnchorPower(on?1:0),
   markDone,setAvailable(ids){const active=new Set(ids);for(const[id,p]of markers){p.available=active.has(id);markDone(id,p.done);}},adapt(){},
   openPortal:(...args)=>base.openPortal(...args),
-  stats:()=>({source:'assets/m10/PinkWars_N10_Couronne_HELIX.blend',triangles:compiled?.triangles||0,batches:compiled?.primitives.length||0,downloadBytes,rooms:2,doors:doors.size,batching,scanShader:holo?'TSL → WGSL':'material',reunionHero:npc?.id||null,secondSphere:buddySphere?.name||null,...base.stats()}),
-  dispose(){if(disposed)return;disposed=true;base.dispose();npc?.dispose();buddySphere?.model.dispose();buddySphere?.root.removeFromParent();for(const p of compiled?.primitives||[])p.geometry.dispose();const textures=new Set();for(const m of materials.values()){for(const k of ['map','normalMap','roughnessMap'])if(m[k])textures.add(m[k]);m.dispose();}for(const t of textures)t.dispose();root.removeFromParent();}
+  stats:()=>({source:'assets/m10/PinkWars_N10_Couronne_HELIX.blend',triangles:compiled?.triangles||0,batches:compiled?.primitives.length||0,downloadBytes,rooms:2,doors:doors.size,physicalDoorSigns:physicalDoorSigns.length,batching,scanShader:holo?'TSL → WGSL':'material',reunionHero:npc?.id||null,secondSphere:buddySphere?.name||null,...base.stats()}),
+  dispose(){if(disposed)return;disposed=true;base.dispose();for(const p of physicalDoorSigns)p.userData.dispose?.();npc?.dispose();buddySphere?.model.dispose();buddySphere?.root.removeFromParent();for(const p of compiled?.primitives||[])p.geometry.dispose();const textures=new Set();for(const m of materials.values()){for(const k of ['map','normalMap','roughnessMap'])if(m[k])textures.add(m[k]);m.dispose();}for(const t of textures)t.dispose();root.removeFromParent();}
  };
 }
