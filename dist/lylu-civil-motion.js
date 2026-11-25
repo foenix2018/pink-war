@@ -12,21 +12,53 @@ export function buildCivilMotion(T,visual,bones,original){
  const pelvisRest=pos('Pelvis');
  const setPelvis=(dx,dy,dz)=>{const b=bone('Pelvis');b.position.copy(b.parent.worldToLocal(pelvisRest.clone().add(V(dx,dy,dz))));visual.updateMatrixWorld(true);};
  const feet=(targets)=>{for(const s of ['L','R']){solve('Thigh_'+s,'Shin_'+s,'Foot_'+s,targets[s],targets[s].clone().add(V(0,.55,.70)));bone('Foot_'+s).quaternion.copy(bone('Foot_'+s).parent.getWorldQuaternion(Q()).invert().multiply(footRot[s]));visual.updateMatrixWorld(true);}};
+ // The actual thigh directions, not a separate animation clock, drive
+ // the contralateral arm swing. Local +Z is forward on the civilian GLB.
+ const gaitArms=mode=>{
+  const idle=mode==='idle'||mode==='crouchIdle',running=mode.startsWith('run'),crouched=mode.startsWith('crouch'),sideStep=/(Left|Right)$/.test(mode);
+  const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+  const thigh=s=>pos('Shin_'+s).sub(pos('Thigh_'+s)).normalize();
+  const l=thigh('L'),r=thigh('R');
+  const phase=idle||sideStep?0:clamp((l.z-r.z)/(running?.95:.70),-1,1);
+  const lateral=sideStep&&!idle?clamp((pos('Foot_L').y-pos('Foot_R').y)/.09,-1,1):0;
+  // Counter-rotate the shoulders against the advancing leg; retain a
+  // relaxed torso instead of the combat stance from the source clip.
+  const rotateWorld=(n,axis,angle)=>{
+   const b=bone(n),world=Q().setFromAxisAngle(axis,angle).multiply(wq(n));
+   b.quaternion.copy(b.parent.getWorldQuaternion(Q()).invert().multiply(world));visual.updateMatrixWorld(true);
+  };
+  rotateWorld('Spine',V(1,0,0),running?.10:crouched?.20:0);
+  rotateWorld('Chest',V(0,1,0),phase*(running?.095:.065));
+  for(const [s,side] of [['L',1],['R',-1]]){
+   const swing=-side*phase*(running?.66:crouched?.22:.37);
+   const balance=side*lateral;
+   const abduction=(sideStep?.17:.13)+(sideStep?.045*balance:0);
+   const bend=idle?.16:sideStep?.30:running?1.02:crouched?.53:.30;
+   const elbow=bend+(idle||sideStep?0:.09*side*phase);
+   // Orient each segment using its own rest length. The elbows flex
+   // forward in the sagittal plane; no arbitrary wrist target or pole
+   // pushes them outwards or backwards.
+   const upper=V(side*abduction,-Math.cos(swing),Math.sin(swing));
+   const lower=V(side*.035,-Math.cos(swing+elbow),Math.sin(swing+elbow));
+   direction('UpperArm_'+s,'ForeArm_'+s,upper);
+   direction('ForeArm_'+s,'Hand_'+s,lower);
+  }
+ };
  const arms=(mode,u)=>{for(const [s,side] of [['L',1],['R',-1]]){const sh=pos('UpperArm_'+s);let target,pole;
  if(mode==='fitnessCurl'){const a=(.10+2.0*u),el=sh.clone().add(V(side*.035,-.26,0));target=el.clone().add(V(side*.025,-.25*Math.cos(a),.25*Math.sin(a)));pole=el.clone();}
  else if(mode==='fitnessSquat'){target=sh.clone().add(V(side*.16,-.015,-.105));pole=sh.clone().add(V(side*.36,-.22,-.18));}
  else if(mode==='fitnessRow'){target=V(side*.18,.67+.09*u,.58-.41*u);pole=sh.clone().add(V(side*.22,-.22,-.12));}
- else {const swing=(mode.startsWith('run')?.14:.085)*Math.sin(u*Math.PI*2+(side>0?0:Math.PI));target=sh.clone().add(V(side*.065,-.47,swing));pole=sh.clone().add(V(side*.12,-.24,-.08));}
+ else {throw Error('Unknown fitness animation: '+mode);}
  solve('UpperArm_'+s,'ForeArm_'+s,'Hand_'+s,target,pole);
  }};
  const clips=[];
  const lateral=/^(walk|run)(Left|Right)$/;
- const sideStep=(name,u)=>{const sign=name.endsWith('Left')?1:-1,fast=name.startsWith('run'),stride=fast?.20:.135,phase=u%1;setPelvis(sign*.018*Math.sin(phase*Math.PI*2),-.035-.013*Math.cos(phase*Math.PI*4),0);const targets={};for(const s of ['L','R']){const lead=(s==='L')===(sign>0),p=(phase+(lead?0:.5))%1;const swing=p<.5;const f=swing?-.5+.5*(1-Math.cos(p*2*Math.PI)):.5-((p-.5)*2);targets[s]=footRest[s].clone().add(V(sign*stride*f,swing?(fast?.095:.06)*Math.sin(p*2*Math.PI):0,0));}feet(targets);arms(name,u);};
+ const sideStep=(name,u)=>{const sign=name.endsWith('Left')?1:-1,fast=name.startsWith('run'),stride=fast?.20:.135,phase=u%1;setPelvis(sign*.018*Math.sin(phase*Math.PI*2),-.035-.013*Math.cos(phase*Math.PI*4),0);const targets={};for(const s of ['L','R']){const lead=(s==='L')===(sign>0),p=(phase+(lead?0:.5))%1;const swing=p<.5;const f=swing?-.5+.5*(1-Math.cos(p*2*Math.PI)):.5-((p-.5)*2);targets[s]=footRest[s].clone().add(V(sign*stride*f,swing?(fast?.095:.06)*Math.sin(p*2*Math.PI):0,0));}feet(targets);gaitArms(name);};
  // Keep exact retargeted leg/pelvis tracks for directional locomotion; replace combat upper body.
  for(const name of ['idle','walk','run','walkLeft','walkRight','walkBack','runLeft','runRight','runBack','crouchIdle','crouchWalk','crouchLeft','crouchRight','crouchBack']){
   const source=original.find(c=>c.name===name);if(!source)continue;
   if(lateral.test(name)){const duration=name.startsWith('run')?.62:1.02,n=Math.ceil(duration*30)+1,times=Array.from({length:n},(_,i)=>i*duration/(n-1)),values=Object.fromEntries(names.map(k=>[k,[]])),hip=[];for(let i=0;i<n;i++){reset();sideStep(name,i/(n-1));for(const k of names){const q=bone(k).quaternion,a=values[k];if(a.length&&q.dot(Q().fromArray(a,a.length-4))<0)q.set(-q.x,-q.y,-q.z,-q.w);a.push(...q.toArray());}hip.push(...bone('Pelvis').position.toArray());}const tracks=names.map(k=>new T.QuaternionKeyframeTrack(k+'.quaternion',times,values[k]));tracks.push(new T.VectorKeyframeTrack('Pelvis.position',times,hip));clips.push(new T.AnimationClip('civil_'+name,duration,tracks));continue;}const duration=Math.max(.1,source.duration),n=Math.max(3,Math.ceil(duration*30)+1),times=Array.from({length:n},(_,i)=>i*duration/(n-1)),upper=names.filter(n=>/^(Spine|Chest|Neck|Head|UpperArm|ForeArm|Hand)/.test(n)),values=Object.fromEntries(upper.map(n=>[n,[]]));
-  for(let i=0;i<n;i++){reset();for(const tr of source.tracks){const [id,prop]=tr.name.split('.');if(!bones.has(id)||upper.includes(id))continue;const a=tr.createInterpolant().evaluate(times[i]);if(prop==='quaternion')bone(id).quaternion.fromArray(a);else if(prop==='position')bone(id).position.fromArray(a);}visual.updateMatrixWorld(true);arms(name,name.includes('Idle')||name==='idle'?0:i/(n-1));for(const k of upper){const q=bone(k).quaternion,arr=values[k];if(arr.length&&q.dot(new T.Quaternion().fromArray(arr,arr.length-4))<0)q.set(-q.x,-q.y,-q.z,-q.w);arr.push(...q.toArray());}}
+  for(let i=0;i<n;i++){reset();for(const tr of source.tracks){const [id,prop]=tr.name.split('.');if(!bones.has(id)||upper.includes(id))continue;const a=tr.createInterpolant().evaluate(times[i]);if(prop==='quaternion')bone(id).quaternion.fromArray(a);else if(prop==='position')bone(id).position.fromArray(a);}visual.updateMatrixWorld(true);gaitArms(name);for(const k of upper){const q=bone(k).quaternion,arr=values[k];if(arr.length&&q.dot(new T.Quaternion().fromArray(arr,arr.length-4))<0)q.set(-q.x,-q.y,-q.z,-q.w);arr.push(...q.toArray());}}
   const tracks=source.tracks.filter(t=>!upper.includes(t.name.split('.')[0])).map(t=>t.clone());for(const k of upper)tracks.push(new T.QuaternionKeyframeTrack(k+'.quaternion',times,values[k]));clips.push(new T.AnimationClip('civil_'+name,duration,tracks));
  }
  // Looping original fitness poses; the feet are solved against fixed anchors.
