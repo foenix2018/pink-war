@@ -43,6 +43,13 @@ export function createSignage(T, { root, low = false } = {}) {
   const place = (m, x, y, z, yaw) => { m.position.set(x, y, z); m.rotation.y = yaw; return add(m); };
   const flicker = (mesh, rate = .93) => animated.push(t => { mesh.material.opacity = Math.sin(t * 17 + mesh.id) > rate ? .35 : 1; });
 
+  // Non-powered lettering on a real plate, for industrial, transit and public
+  // buildings. Retains exact source coordinates and dimensions.
+  function mounted(lines,{w=4,h=1.2,x=0,y=0,z=0,yaw=0,kanji='',familySector='VESPER / INFRASTRUCTURE'}={}){
+    const rows=Array.isArray(lines)?lines:[lines];
+    const board=createMapInfoPanel(T,{title:rows[0],subtitle:rows.slice(1).join(' · '),sector:kanji?familySector+' / '+kanji:familySector,width:w,height:h,low,style:'physical'});
+    return place(board,x,y,z,yaw);
+  }
   // Neon lettering on a dark back plate: one or two lines, optional kanji, tube glow.
   function neon(lines, { color = '#ff4fa1', color2 = '#5fe0f0', kanji = '', w = 4, h = 1.2, plate = true, x = 0, y = 0, z = 0, yaw = 0, flick = true } = {}) {
     const rows = Array.isArray(lines) ? lines : [lines], W = 1024, H = Math.round(W * h / w), c = canvas(W, H), g = c.getContext('2d');
@@ -115,7 +122,7 @@ export function createSignage(T, { root, low = false } = {}) {
     if (sub) { g.font = `700 ${Math.round(H * .1)}px ${COND}`; g.fillText(sub, H * .8, H * .62, W - H * .9); }
     return place(plane(texture(T, c), w, h, { emissive: false, transparent: false }), x, y, z, yaw);
   }
-  return { neon, blade, advert, wayfinding, hazard, update(t) { for (const f of animated) f(t); }, stats: () => ({ ...stats }) };
+  return { mounted, neon, blade, advert, wayfinding, hazard, update(t) { for (const f of animated) f(t); }, stats: () => ({ ...stats }) };
 }
 
 // Sign atlas of the visitor map (16 slots of 256 px) redrawn in the same signage style: neon frame, kanji, icon.
