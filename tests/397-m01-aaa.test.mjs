@@ -21,7 +21,7 @@ test('60 FPS budget responds earlier than legacy 30 FPS',()=>{
  for(let i=0;i<300;i++)a.sample(40);assert.ok(a.snapshot().scale>=.65);
 });
 test('telemetry measures rendered intervals and resets after interruption',()=>{
- const t=createM01Telemetry();for(let i=0;i<=60;i++)t.sample(i/60);assert.equal(t.snapshot().fps,60);assert.equal(t.snapshot().p95Ms,16.7);t.sample(4);assert.equal(t.snapshot().fps,null);
+ const t=createM01Telemetry();for(let i=0;i<=60;i++)t.sample(i/60);assert.equal(t.snapshot().fps,60);assert.equal(t.snapshot().p95Ms,16.7);t.sample(1.5);assert.ok(t.snapshot().p95Ms>=16.7);t.sample(4);assert.equal(t.snapshot().fps,null);
 });
 test('exposure adapts without accumulation',()=>{
  const e=createM01Exposure(),r={toneMappingExposure:1};e.update(r,1,.016);

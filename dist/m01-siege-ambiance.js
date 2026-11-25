@@ -118,7 +118,7 @@ export function createM01SiegeAmbiance(T,scene,{obstacles=[],performance=false}=
  const search=new T.SpotLight(0xbad7ff,0,85,.19,.75,1.4);root.add(search,search.target);search.castShadow=false;
  const down=new T.Vector3(0,-1,0),direction=new T.Vector3(),target=new T.Vector3();
  const sunTint=new T.Color(0xa6b9da),skyTint=new T.Color(0xc4b4cd),groundTint=new T.Color(0x34313f),fogTint=new T.Color(0x423546);
- let lastTime=null,skySource=null,environmentSource=null,skyCanvas=null,stormSky=null,stormReflection=null,lastWeight=-1,disposed=false,covered=false,weight=1;
+ let lastBeamUpdate=-Infinity,lastTime=null,skySource=null,environmentSource=null,skyCanvas=null,stormSky=null,stormReflection=null,lastWeight=-1,disposed=false,covered=false,weight=1;
  function lighting(atmosphere,renderer,day,eye){
   const k=m01DuskWeight(day);weight=k;
   if(atmosphere){const d=Math.max(0,Math.min(1,Number.isFinite(day)?day:.43));
@@ -146,11 +146,11 @@ export function createM01SiegeAmbiance(T,scene,{obstacles=[],performance=false}=
   covered=m01Covered(eye,obstacles);lighting(atmosphere,renderer,day,eye);
   beamMaterial.opacity=.052*weight;hazeMaterial.opacity=.15*weight;reflection.opacity=.22*weight;glowMat.opacity=.5*weight;rainMaterial.opacity=.27*weight;
   air.visible=!covered&&weight>.03;
-  for(const [i,b] of beams.entries()){
+  if(!low||time-lastBeamUpdate>=.10||time<lastBeamUpdate){lastBeamUpdate=time;for(const [i,b] of beams.entries()){
    target.set(b.d.to[0]+Math.sin(time*.13+b.phase)*3.2,b.d.to[1],b.d.to[2]+Math.cos(time*.11+b.phase)*2.1);
    const end=m01BeamEnd(b.origin,target,obstacles);b.end.set(end.x,end.y,end.z);direction.copy(b.end).sub(b.origin);const length=direction.length();
    b.mesh.visible=length>.1&&weight>.03;if(length>.001){b.mesh.position.copy(b.origin);b.mesh.quaternion.setFromUnitVectors(down,direction.normalize());b.mesh.scale.set(length*.075,length,length*.075);b.mount.lookAt(b.end);}
-  }
+  }}
   const distanceSquared=p=>(p.x-eye.x)**2+(p.y-eye.y)**2+(p.z-eye.z)**2;
   const score=p=>(p[0]-eye.x)**2+(p[1]-eye.y)**2+(p[2]-eye.z)**2;
   const nearest=practical.filter(p=>!covered&&score(p.at)<900&&!obstacles.some(o=>segmentBox({x:p.at[0],y:p.at[1],z:p.at[2]},eye,o)!==null)).sort((a,b)=>score(a.at)-score(b.at));

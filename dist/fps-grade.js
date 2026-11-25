@@ -3,14 +3,14 @@ import * as T from './vendor/three.webgpu.min.js';
 // Shared HDR presentation. Bounded glow, cool shadows/warm highlights and mild
 // edge falloff; no blur of the aiming point. XR and offscreen/optical renders bypass it.
 export function gradePolicy(profile={}){
- const mobile=!!profile.mobileCinema;
+ const mobile=!!(profile.mobileCinema||profile.mobileCinemaAvailable);
  const enabled=mobile||(!profile.phone&&!profile.headset&&!profile.compatible&&!['low','performance'].includes(profile.artQuality));
  return {enabled,mobile,bloom:mobile?.10:.12,threshold:1.25,vignette:mobile?.07:.13,samples:enabled?(mobile?4:8):0};
 }
 export function installFPSGrade(renderer,profile={}){
  if(renderer.fpsPresentation)return renderer.fpsPresentation;
  const policy=gradePolicy(profile),native=!!renderer.backend?.isWebGPUBackend;
- let enabled=policy.enabled,busy=false,frames=0,scene=null,camera=null,pass=null,post=null,target=null,quadScene=null,quadCamera=null,material=null;
+ let enabled=policy.enabled&&(!policy.mobile||!!profile.mobileCinema),busy=false,frames=0,scene=null,camera=null,pass=null,post=null,target=null,quadScene=null,quadCamera=null,material=null;
  const raw=renderer.render.bind(renderer),rawAsync=renderer.renderAsync?.bind(renderer),rawDispose=renderer.dispose.bind(renderer),size=new T.Vector2(),texel=new T.Vector2(1,1);
  const uniform=native?T.TSL.uniform(texel):null,inverseProjection=native?T.TSL.uniform(new T.Matrix4()):null,aoStrength=native?T.TSL.uniform(1.15):null,focal=native?T.TSL.uniform(.7):null;
  const cameraUniforms=c=>{if(native){inverseProjection.value.copy(c.projectionMatrixInverse);focal.value=c.projectionMatrix.elements[5]*.5;}};

@@ -39,7 +39,7 @@ function deadline(promise,milliseconds,label){
 
 export async function createCompatibleRenderer({canvas,WebGPU,WebGL,profile,timeout=6000}){
   let renderer,initialFailure=null,retired=false;
-  const present=async r=>{if(((r.backend?.isWebGPUBackend&&profile.mobileCinema)||((r.backend?.isWebGPUBackend||r.isWebGLRenderer)&&!profile.phone&&!profile.headset&&!profile.compatible&&!['low','performance'].includes(profile.artQuality)))&&r.domElement?.ownerDocument){const {installFPSGrade}=await import('./fps-grade.js');installFPSGrade(r,profile);}installRenderBudget(r,profile);return r;};
+  const present=async r=>{if(((r.backend?.isWebGPUBackend&&(profile.mobileCinema||profile.mobileCinemaAvailable))||((r.backend?.isWebGPUBackend||r.isWebGLRenderer)&&!profile.phone&&!profile.headset&&!profile.compatible&&!['low','performance'].includes(profile.artQuality)))&&r.domElement?.ownerDocument){const {installFPSGrade}=await import('./fps-grade.js');installFPSGrade(r,profile);}installRenderBudget(r,profile);return r;};
   const make=Renderer=>new Renderer({canvas,antialias:profile.antialias,alpha:false,powerPreference:profile.phone?'default':'high-performance'});
   if(!profile.preferWebGL){
     try{

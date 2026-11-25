@@ -5,11 +5,14 @@ import { armorPanel, bevelBox, ball, limb, loft, matrix, bake, merge } from './g
 // skinned to its real bones. Cloth, finger rigs and native animations remain RLH.
 // Broad military sci-fi influences only: no franchise meshes, marks or textures.
 export const AEGIS = Object.freeze({ name:'AÉGIS', generation:2 });
-const templateCache=new WeakMap();
+// Equivalent native bind poses are decoded into separate data objects. Share
+// immutable armour templates by full bone order and inverse bind matrices.
+const templateCache=new Map();
+export const armorBindKey=data=>JSON.stringify(data.bones.map(b=>[b.name,Array.from(b.inverse)]));
 
 function template(data,masculine) {
-  let variants=templateCache.get(data);
-  if(!variants){variants=new Map();templateCache.set(data,variants);}
+  const key=armorBindKey(data);let variants=templateCache.get(key);
+  if(!variants){variants=new Map();templateCache.set(key,variants);}
   if(variants.has(masculine))return variants.get(masculine);
   const byName=new Map(data.bones.map((b,i)=>[b.name.replace('mixamorig',''),i])),items=[];
   const at=name=>new T.Vector3().setFromMatrixPosition(new T.Matrix4().fromArray(data.bones[byName.get(name)].inverse).invert());
