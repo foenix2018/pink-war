@@ -42,8 +42,28 @@ export function createFPSChapter(T,parent,{chapter,obstacles=[],areas=[],low=fal
   let count=0;for(const p of near){if(count>=2)break;if(stations.some(s=>Math.hypot(p.x-s.x,p.z-s.z)<4))continue;const y=floor+Math.min(3.6,(region.ceiling||region.roof||p.o.height)-.45);if(y<floor+2)continue;const index=stations.length;
    stations.push({...p,y,floor,label:count===0?(region.label||region.id):'',color:count===0?palette.cool:palette.warm});count++;
    if(details){const yaw=Math.atan2(p.nx,p.nz),tangent=[p.nz,0,-p.nx],at=(dx,dy,dz)=>[p.x+tangent[0]*dx+p.nx*dz,y+dy,p.z+tangent[2]*dx+p.nz*dz];
-    part(bevelBox(1.7,.55,.065,.025,1),M.paint,at(0,-.7,-.012),[0,yaw,0]);
-    for(let k=0;k<6;k++)part(new T.BoxGeometry(1.38,.027,.035),M.dark,at(0,-.86+k*.065,.025),[0,yaw,0]);
+    // Replace the same generic grille in every room with compact physical
+    // infrastructure chosen by the authored area's purpose. All parts are
+    // attached to the same validated wall; preserve the original clearance.
+    const label=String(region.label||region.id||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+    const wet=/POMPE|EAU|SANITAIRE|SERRE|DRAIN|FILTRE/.test(label);
+    const electric=/TECHNIQUE|ENERGIE|ATELIER|MAINTENANCE|GENERATEUR|SERVEUR|RELAIS|INDUSTR/.test(label);
+    if(wet){
+     for(const dx of [-.34,.34]){
+      part(limb(at(dx,-1.05,.024),at(dx,-.38,.024),.035,.035,8),M.steel,[0,0,0]);
+      part(bevelBox(.15,.15,.065,.018,1),M.paint,at(dx,-.71,.025),[0,yaw,0]);
+      for(const dy of [-.93,-.46])part(new T.BoxGeometry(.13,.04,.08),M.dark,at(dx,dy,.02),[0,yaw,0]);
+     }
+     part(limb(at(-.34,-.38,.024),at(.34,-.38,.024),.035,.035,8),M.steel,[0,0,0]);
+    }else if(electric){
+     part(bevelBox(.76,.66,.075,.022,1),M.paint,at(-.18,-.70,-.004),[0,yaw,0]);
+     part(new T.BoxGeometry(.62,.018,.025),M.dark,at(-.18,-.91,.04),[0,yaw,0]);
+     part(bevelBox(.038,.19,.035,.008,1),M.steel,at(.07,-.71,.054),[0,yaw,0]);
+     for(const dx of [-.37,-.13])part(limb(at(dx,-1.22,.02),at(dx,-1.03,.02),.018,.018,6),M.steel,[0,0,0]);
+    }else{
+     part(bevelBox(1.32,.45,.065,.025,1),M.paint,at(0,-.7,-.012),[0,yaw,0]);
+     for(let k=0;k<5;k++)part(new T.BoxGeometry(1.12,.025,.035),M.dark,at(0,-.83+k*.065,.025),[0,yaw,0]);
+    }
     const from=at(.94,-1.25,0),to=at(.94,.18,0);part(limb(from,to,.026,.026,6),M.steel,[0,0,0]);
     for(const dy of [-1.1,0])part(new T.TorusGeometry(.042,.009,4,8),M.steel,at(.94,dy,0),[Math.PI/2,0,0]);
    }
@@ -65,9 +85,13 @@ export function createFPSChapter(T,parent,{chapter,obstacles=[],areas=[],low=fal
  // Sector labels share one atlas and one draw call; labels name the actual room.
  if(typeof document!=='undefined'&&stations.some(s=>s.label)){
   const labels=stations.filter(s=>s.label),canvas=document.createElement('canvas');canvas.width=1024;canvas.height=labels.length*64;const c=canvas.getContext('2d');
-  c.fillStyle='#0c1b24';c.fillRect(0,0,canvas.width,canvas.height);c.font='600 25px sans-serif';
-  labels.forEach((s,i)=>{c.fillStyle='#b3e4ed';c.fillText(String(i+1).padStart(2,'0')+' / '+s.label.toUpperCase(),24,i*64+42,976);});
-  const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;textures.push(texture);const material=new T.MeshBasicMaterial({map:texture,toneMapped:false});own.push(material);
+  const scheme=chapter==='couronne'?['#d9dce0','#27363e','#778592']:chapter==='ligne9'?['#25434a','#e0d9c6','#b9a578']:chapter==='m06'?['#bd9e55','#2b2923','#6b5631']:['#c7c2ad','#283634','#8e4436'];
+  c.font='700 28px sans-serif';
+  labels.forEach((s,i)=>{const y=i*64;c.fillStyle=scheme[0];c.fillRect(0,y,1024,64);c.fillStyle=scheme[2];c.fillRect(0,y,62,64);c.fillStyle=scheme[1];c.fillText(String(s.label).toUpperCase(),82,y+43,912);
+   c.fillStyle=scheme[0];c.fillText(String(i+1).padStart(2,'0'),11,y+43,48);
+   c.fillStyle='rgba(52,41,28,.24)';c.fillRect(70,y+4,3,56);for(const xx of [6,1014])for(const yy of [y+6,y+57])c.fillRect(xx,yy,3,3);
+  });
+  const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;textures.push(texture);const material=new T.MeshStandardMaterial({map:texture,roughness:.83,metalness:.05});own.push(material);
   labels.forEach((s,i)=>{const geo=new T.PlaneGeometry(2.9,.18),uv=geo.attributes.uv;for(let j=0;j<uv.count;j++)uv.setY(j,(labels.length-i-1+uv.getY(j))/labels.length);part(geo,material,[s.x+s.nx*.04,s.y-.3,s.z+s.nz*.04],[0,Math.atan2(s.nx,s.nz),0]);});
  }
  a.build(root);for(const item of a.items)item.geometry.dispose();a.items.length=0;
