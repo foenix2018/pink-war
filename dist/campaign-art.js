@@ -102,6 +102,68 @@ export function createCampaignArt(T,scene,_unused,{quality='auto',photographic=f
  function panel(title,x,y,z,w=2.4,h=1,width=768,height=320,equipment=false){
   // Wall signs and contextual objectives share the validated native 3D
   // Liquid Glass panel; the salvaged computers keep their dedicated screens.
+  // Diegetic signage: actual enamel, notices and industrial plates. Only
+  // the moving gameplay objective keeps its distinct navigational display.
+  if(!equipment && title!=='OBJECTIF'){
+   const isOrder=/ORDRE|BALISE/.test(title), isCivic=/VESPER \/ SECOURS|RUE DES|RELAIS DES/.test(title);
+   const isTechnical=/ALIMENTATION|ATELIER/.test(title);
+   const family=isOrder?'occupation':isCivic?'civic':isTechnical?'technical':'resistance';
+   const palettes={
+    occupation:['#202628','#e8e6df','#ae3534','#5e6260'],
+    civic:['#d6d0bd','#273e3d','#a34536','#777467'],
+    technical:['#b89a56','#212a2b','#40372b','#74613b'],
+    resistance:['#c1b49a','#2c302b','#753c36','#857961']
+   };
+   const [base,ink,accent,edge]=palettes[family], board=new T.Group();
+   board.name='M01 / '+family+' / '+title;board.position.set(x,y,z);root.add(board);
+   const paper=family==='resistance', thick=paper ? .006 : .035;
+   const backing=ownM(new T.MeshStandardMaterial({color:edge,roughness:.83,metalness:paper?0:.42}));
+   const body=new T.Mesh(boxGeo,backing);body.scale.set(w,h,thick);body.position.z=-thick*.5;board.add(body);
+   const W=quality==='low'?384:768,H=Math.max(96,Math.round(W*h/w));
+   const data=paintTexture(W,H,()=>{}),face=new T.Mesh(ownG(new T.PlaneGeometry(w*.985,h*.97)),ownM(new T.MeshStandardMaterial({map:data.map,roughness:paper ? .99 : .76,metalness:paper?0:.12})));
+   face.position.z=.003;face.receiveShadow=true;board.add(face);
+   const keySeed=Array.from(title).reduce((n,c)=>Math.imul(n^c.charCodeAt(0),16777619),2166136261)>>>0;
+   function paint(lines,caption=title){
+    const c=data.context;let seed=keySeed;const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+    const pad=Math.max(12,H*.11),rows=(Array.isArray(lines)?lines:[String(lines??'')]).filter(Boolean);
+    c.fillStyle=base;c.fillRect(0,0,W,H);
+    if(family==='occupation'){
+     c.fillStyle=accent;c.fillRect(0,0,H*.32,H);
+     c.strokeStyle='#e8e6df';c.lineWidth=Math.max(1,H*.018);
+     c.beginPath();c.arc(H*.16,H*.24,H*.095,0,Math.PI*2);c.stroke();
+     c.beginPath();c.moveTo(H*.10,H*.24);c.lineTo(H*.22,H*.24);c.stroke();
+    }else if(family==='civic'){
+     c.strokeStyle=accent;c.lineWidth=Math.max(2,H*.026);c.strokeRect(pad*.4,pad*.4,W-pad*.8,H-pad*.8);
+     c.fillStyle=accent;c.fillRect(pad,H*.16,H*.07,H*.68);
+    }else if(family==='technical'){
+     c.fillStyle=ink;for(let j=0;j<W;j+=H*.19){c.beginPath();c.moveTo(j,0);c.lineTo(j+H*.075,0);c.lineTo(j+H*.15,H*.075);c.lineTo(j+H*.075,H*.075);c.fill();}
+    }else{
+     c.strokeStyle='rgba(75,51,32,.35)';c.lineWidth=2;c.beginPath();c.moveTo(pad,H*.19);c.lineTo(W-pad,H*.19);c.stroke();
+    }
+    const left=family==='occupation'?H*.42:family==='civic'?pad+H*.14:pad;
+    const maxW=W-left-pad;
+    c.textAlign='left';c.textBaseline='middle';c.fillStyle=ink;
+    c.font=(paper?'700 ':'900 ')+Math.max(13,Math.floor(H*(rows.length>2 ? .20 : .29)))+'px '+(paper?'Georgia,serif':'Arial,sans-serif');
+    c.fillText(caption,left,H*.31,maxW);
+    const lineStep=Math.min(H*.19,H*.45/Math.max(1,rows.length));
+    c.font='600 '+Math.max(10,Math.floor(lineStep*.78))+'px '+(paper?'Georgia,serif':'Arial,sans-serif');
+    rows.forEach((line,i)=>c.fillText(String(line),left,H*.54+i*lineStep,maxW));
+    // Real mounting screws, oxidised corners and irregular print loss, baked
+    // into the same texture; no extra particles or per-frame uploads.
+    if(!paper)for(const sx of [pad*.42,W-pad*.42])for(const sy of [pad*.42,H-pad*.42]){
+     c.fillStyle='#6c665a';c.beginPath();c.arc(sx,sy,Math.max(2,H*.018),0,Math.PI*2);c.fill();
+     c.strokeStyle='#34332e';c.lineWidth=1;c.beginPath();c.moveTo(sx-2,sy+1);c.lineTo(sx+2,sy-1);c.stroke();
+    }
+    for(let i=0;i<Math.round(W*H/420);i++){
+     const xx=random()*W,yy=random()*H;const nearEdge=Math.min(xx,W-xx,yy,H-yy)<pad*.7;
+     c.fillStyle=nearEdge?'rgba(50,38,24,.20)':'rgba(55,43,31,.045)';
+     c.fillRect(xx,yy,1+random()*(nearEdge?5:2),1+random()*2);
+    }
+    data.map.needsUpdate=true;
+   }
+   paint([],title);
+   const display={mesh:board,paint};screens.push(display);return display;
+  }
   if(!equipment){
    const board=createMapInfoPanel(T,{title,subtitle:'VESPER / MÉMOIRE LOCALE',sector:'VESPER / SECTEUR 07',width:w,height:h,low:quality==='low',accent:title.includes('ORDRE')?'#60e5ff':'#ff4fac'});
    board.position.set(x,y,z);root.add(board);mountedInfoPanels.push(board);
