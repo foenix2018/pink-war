@@ -1,3 +1,4 @@
+import {createMapInfoPanel} from './world-info-panel.js';
 import { createWorldEffects } from './webgpu-world-fx.js';
 import { cascadeGeometry, createCascadeWater } from './water-detail.js';
 import {createVesperAltitude} from './vesper-altitude.js';
@@ -14,8 +15,8 @@ export function createM09Art(T,scene,{quality='normal',webgpu=false,onPortalClos
  let compiled=null,downloadBytes=0,janus=true,npc=null,disposed=false;
  const glow=c=>new T.MeshBasicMaterial({color:c,toneMapped:false});
  const sun=new T.DirectionalLight(0xffd0a0,3.2);sun.position.set(170,210,-150);scene.add(sun);
- const fill=new T.DirectionalLight(0x9dbbe7,1.6);fill.position.set(-100,65,180);scene.add(fill);scene.add(new T.HemisphereLight(0xb7cfe3,0x4a3044,1.5));
- scene.fog=new T.FogExp2(0x77566d,.00052);
+ const fill=new T.DirectionalLight(0x9dbbe7,1.25);fill.position.set(-100,65,180);scene.add(fill);scene.add(new T.HemisphereLight(0xc4dce0,0x41504a,1.25));
+ scene.fog=new T.FogExp2(0x788c91,.00065);
  const sky=document.createElement('canvas');sky.width=1024;sky.height=512;const ctx=sky.getContext('2d'),gradient=ctx.createLinearGradient(0,0,0,512);
  for(const [at,c]of [[0,'#1b2443'],[.35,'#6e466a'],[.49,'#ed9971'],[.55,'#c7796f'],[.7,'#55405a'],[1,'#202c3c']])gradient.addColorStop(at,c);
  ctx.fillStyle=gradient;ctx.fillRect(0,0,1024,512);const skyMap=new T.CanvasTexture(sky);skyMap.colorSpace=T.SRGBColorSpace;skyMap.mapping=T.EquirectangularReflectionMapping;scene.background=skyMap;scene.environment=skyMap;scene.environmentIntensity=.7;
@@ -33,6 +34,11 @@ export function createM09Art(T,scene,{quality='normal',webgpu=false,onPortalClos
   for(const x of [-1.7,1.7])addMesh(new T.CylinderGeometry(.055,.055,7.2,10),glow(0xff2788),[x,0,.21],group);
   return{group,side};
  });let gateOpen=0,gateTarget=0;
+ const gateSigns=gateLeaves.map(({group,side})=>{
+  const panel=createMapInfoPanel(T,{title:side<0?'BIOTECH':'ACCÈS CONTRÔLÉ',subtitle:side<0?'JARDINS SUSPENDUS':'AUTORISATION ORDRE',sector:side<0?'VESPER / RECHERCHE VÉGÉTALE':'ORDRE / SÉCURITÉ',width:2.75,height:.72,low,style:'physical'});
+  panel.position.set(0,-1.75,.155);group.add(panel);return panel;
+ });
+
  for(const it of INTERACTIONS){
   const g=new T.Group();g.position.set(it.x,it.y,it.z);g.name='Objectif '+it.number;root.add(g);
   const ring=addMesh(new T.TorusGeometry(.65,.045,8,32),glow(0xff2488),[0,.08,0],g);ring.rotation.x=-Math.PI/2;
@@ -129,8 +135,8 @@ export function createM09Art(T,scene,{quality='normal',webgpu=false,onPortalClos
   for(let i=portals.length-1;i>=0;i--){const p=portals[i];p.age+=dt;const closingAge=p.age>p.charge+p.hold?p.age-p.charge-p.hold:null;if(closingAge!==null&&!p.closing){p.closing=true;onPortalClose(p.fx.group.position);}p.fx.update(t,{age:p.age,closingAge});if(eye?.position)p.fx.group.lookAt(eye.position.x,p.fx.group.position.y,eye.position.z);if(closingAge>=PORTAL_CLOSE_SECONDS&&closingAge!==null){p.fx.dispose();portals.splice(i,1);}}
  }
  return{root,sun,ready,build(){},update,openPortal,setDoor(id,open){if(id==='access')gateTarget=open?1:0;},setLine:on=>{janus=on;},adapt(){},markDone(id,done=true){const d=devices.get(id);if(d)d.done=done;},setAvailable(ids){const set=new Set(ids);for(const [id,d]of devices)d.available=set.has(id);},
-  stats:()=>({skyline:altitude.stats(),source:'assets/m09/PinkWars_N09_Jardins_Suspendus.blend',triangles:compiled?.triangles||0,batches:compiled?.primitives.length||0,downloadBytes,waterfalls:falls.length,pools:waters.length,patrolDrones:beams.length,wind:webgpu,waterShader:webgpu?'TSL → WGSL':'material flow',reunionHero:npc?characterId==='ghju'?'lylu':'ghju':null,reunionVisible:!!npc?.model.root.visible,portals:portals.length}),
-  dispose(){if(disposed)return;disposed=true;root.removeFromParent();altitude.dispose();npc?.dispose();for(const p of portals)p.fx.dispose();for(const p of compiled?.primitives||[])p.geometry.dispose();for(const m of materials.values())m.dispose();skyMap.dispose();foamMap.dispose();cascade.dispose();waterFX.dispose();for(const m of [...falls,...waters])m.geometry.dispose();for(const p of mist){p.mesh.geometry.dispose();p.mesh.material.dispose();}feedGeo.dispose();}
+  stats:()=>({skyline:altitude.stats(),source:'assets/m09/PinkWars_N09_Jardins_Suspendus.blend',triangles:compiled?.triangles||0,batches:compiled?.primitives.length||0,downloadBytes,waterfalls:falls.length,pools:waters.length,patrolDrones:beams.length,wind:webgpu,waterShader:webgpu?'TSL → WGSL':'material flow',reunionHero:npc?characterId==='ghju'?'lylu':'ghju':null,reunionVisible:!!npc?.model.root.visible,portals:portals.length,physicalGateSigns:gateSigns.length}),
+  dispose(){if(disposed)return;disposed=true;root.removeFromParent();for(const p of gateSigns)p.userData.dispose?.();altitude.dispose();npc?.dispose();for(const p of portals)p.fx.dispose();for(const p of compiled?.primitives||[])p.geometry.dispose();for(const m of materials.values())m.dispose();skyMap.dispose();foamMap.dispose();cascade.dispose();waterFX.dispose();for(const m of [...falls,...waters])m.geometry.dispose();for(const p of mist){p.mesh.geometry.dispose();p.mesh.material.dispose();}feedGeo.dispose();}
  };
 }
 
