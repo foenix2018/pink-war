@@ -15,7 +15,7 @@ import {createPinkWarsInput} from './level2-input.js';
 import {installPinkWarsSoldier} from './level2-player.js';
 import {setScreenMusic,setMusicEnabled} from './menu-music.js';
 import {GAME_VERSION} from './launch-ui.js';
-import {createLyluCivil} from './lylu-civil-hideout.js?v=20261124fitness2';
+import {createLyluCivil} from './lylu-civil-hideout.js?v=20261125fitness3';
 import {FITNESS_PROGRAMS,FITNESS_LABELS,createFitnessSession,advanceFitness,claimFitness} from './hideout-fitness.js';
 import {createFitnessProps} from './hideout-fitness-props.js';
 import {bindViewButton,mountViewControl,savePreferredView} from './view-options.js';
@@ -227,17 +227,17 @@ function bindWorld(){
 }
 function updatePlayerCamera(){
  if(view==='third'){
-  const p=training?FITNESS_PROGRAMS[training.id].anchor:game.player,sy=Math.sin(cameraYaw),cy=Math.cos(cameraYaw),distance=2.55;
+  const p=training?FITNESS_PROGRAMS[training.id].anchor:game.player,sy=Math.sin(cameraYaw),cy=Math.cos(cameraYaw),distance=training?(training.id==='rower'?2.75:2.85):2.55;
   const start={x:p.x,y:1.40,z:p.z},end={x:p.x+sy*distance+cy*.32,y:1.85-Math.sin(cameraPitch)*distance,z:p.z+cy*distance-sy*.32};let fraction=1;
   for(const box of [...art.layout.colliders,...art.doorColliders]){if(box.noCollision||(training?.id==='rower'&&box.kind==='Gym rameur'))continue;const hit=segmentBox(start,end,{...box,hx:box.hx+.10,hz:box.hz+.10});if(hit!==null)fraction=Math.min(fraction,Math.max(.10,hit-.04));}
-  third.position.set(start.x+(end.x-start.x)*fraction,start.y+(end.y-start.y)*fraction,start.z+(end.z-start.z)*fraction);third.lookAt(p.x-sy*(training?.id==='rower'?.15:.75),(training?.id==='rower'?.88:1.40)+Math.sin(cameraPitch)*.8,p.z-cy*(training?.id==='rower'?.15:.75));
+  third.position.set(start.x+(end.x-start.x)*fraction,start.y+(end.y-start.y)*fraction,start.z+(end.z-start.z)*fraction);third.lookAt(p.x-sy*(training?.id==='rower'?.15:training?.id==='squat'?0:.75),(training?(training.id==='rower'?.85:training.id==='squat'?1.0:1.12):1.40)+Math.sin(cameraPitch)*.8,p.z-cy*(training?.id==='rower'?.15:training?.id==='squat'?0:.75));
  }
  if(view==='visit'){
   const p=game.player;visit.position.set(p.x,1.65,p.z);visit.rotation.set(cameraPitch,cameraYaw,0,'YXZ');
  }
 }
 function fitnessStations(){return civilMode&&fitnessProps?(art?.layout.fitnessEquipment||[]).map(e=>({...e,id:'fitness-'+e.id,room:'gym',radius:1.0,action:'Utiliser '+e.name})):[];}
-function startTraining(id){const p=FITNESS_PROGRAMS[id],s=fitnessStations().find(s=>s.id==='fitness-'+id);if(!p||!s||!ready||paused||opened||!civilMode||!navigation.inRoom(game.player,'gym')||Math.hypot(game.player.x-s.x,game.player.z-s.z)>s.radius)return false;clearMotion();Object.assign(game.player,{x:s.x,z:s.z,yaw:p.anchor.yaw});cameraYaw=p.anchor.yaw-.65;cameraPitch=-.12;setView('third');training=createFitnessSession(id);civil.playFitness(id);$('fitness-hud').hidden=false;refreshTrainingHUD();return true;}
+function startTraining(id){const p=FITNESS_PROGRAMS[id],s=fitnessStations().find(s=>s.id==='fitness-'+id);if(!p||!s||!ready||paused||opened||!civilMode||!navigation.inRoom(game.player,'gym')||Math.hypot(game.player.x-s.x,game.player.z-s.z)>s.radius)return false;clearMotion();Object.assign(game.player,{x:s.x,z:s.z,yaw:p.anchor.yaw});cameraYaw=p.anchor.yaw-(id==='squat'?1.3:id==='rower'?1.55:1.05);cameraPitch=-.06;setView('third');training=createFitnessSession(id);civil.playFitness(id);$('fitness-hud').hidden=false;refreshTrainingHUD();return true;}
 function refreshTrainingHUD(){if(!training)return;const p=FITNESS_PROGRAMS[training.id];$('fitness-title').textContent=p.label.toUpperCase();$('fitness-reps').textContent=training.reps+' / '+training.goal+' répétitions';$('fitness-progress').value=training.reps/training.goal;$('fitness-stat').textContent=FITNESS_LABELS[p.stat]+' · '+readHideoutProfile(characterId).fitness[p.stat]+'/100';}
 function stopTraining(completed=false){if(!training)return;const p=FITNESS_PROGRAMS[training.id];if(completed){const fresh=readHideoutProfile(characterId),gain=claimFitness(training,fresh);const saved=saveHideoutProfile(characterId,fresh);if(saved)profile=fresh;message(saved?'Série terminée · '+FITNESS_LABELS[p.stat]+' +'+gain:'Série terminée, sauvegarde indisponible',5);}else message('Série interrompue',3);training=null;civil?.playFitness(null);fitnessProps?.update(null,null);$('fitness-hud').hidden=true;}
 function update(dt){
