@@ -984,10 +984,13 @@ export async function boot() {
   let audio = null;
   function startAudio() {
     if (audio) return; try {
+      if(JSON.parse(localStorage.getItem('rosee-settings')||'{}').sound===false)return;
       const ctx = new (window.AudioContext || window.webkitAudioContext)(), buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), d = buf.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
       const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true; const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900;
-      const gain = ctx.createGain(); gain.gain.value = 0; src.connect(f).connect(gain).connect(ctx.destination); src.start(); audio = { ctx, gain };
+      const gain = ctx.createGain(); gain.gain.value = 0; src.connect(f).connect(gain).connect(ctx.destination);
+      const leaves=ctx.createBiquadFilter(),leafGain=ctx.createGain();leaves.type='bandpass';leaves.frequency.value=2400;leaves.Q.value=.8;leafGain.gain.value=0;
+      src.connect(leaves).connect(leafGain).connect(ctx.destination);src.start();void ctx.resume?.().catch(()=>{});audio={ctx,gain,f,leafGain,src};
     } catch {}
   }
   addEventListener('pointerdown', startAudio, { once: true }); addEventListener('keydown', startAudio, { once: true });
@@ -1003,7 +1006,7 @@ export async function boot() {
     fpsUpgrade:{inertia:true,water:river.fx.stats(),microSurfaces:true},instances: Object.fromEntries(kinds.map(k => [k.kind, k.visible])), total: Object.fromEntries(kinds.map(k => [k.kind, k.count])), zone: zoneAt(player.x, player.z), player: { ...player } });
   function frame(now) {
     const raw = now - last, dt = frameDelta(raw / 1000); last = now;
-    if(gameplayHud.paused){requestAnimationFrame(frame);return;}
+    if(gameplayHud.paused){if(audio){audio.gain.gain.setTargetAtTime(0,audio.ctx.currentTime,.1);audio.leafGain.gain.setTargetAtTime(0,audio.ctx.currentTime,.1);}requestAnimationFrame(frame);return;}
     time += dt;
     if (bench && !bench.done) {
       bench.t += dt; const u = clamp(bench.t / bench.duration, 0, 1), p = route.getPointAt(u), q = route.getPointAt(Math.min(1, u + .01));
@@ -1062,7 +1065,12 @@ export async function boot() {
     const inCave = zoneAt(player.x, player.z) === 'La grotte'; scene.fog.density = debugView ? .0025 : inCave ? .06 : FOG; horizon.setOutside(!inCave || debugView);
     // Inside the cave the sky no longer lights the rock: only the relay does.
     const shade = inCave ? clamp((CAVE[0][1] - player.z) / 6, 0, 1) : 0; hemi.intensity = lerp(1.7, .1, shade); sun.intensity = lerp(3.1, 0, shade);
-    if (audio) audio.gain.gain.value = .22 * clamp(1 - Math.hypot(player.x - fall.x, player.z - fall.z) / 70, 0, 1) + .03;
+    if(audio){
+      const waterfall=clamp(1-Math.hypot(player.x-fall.x,player.z-fall.z)/70,0,1),cave=zoneAt(player.x,player.z)==='La grotte',t=audio.ctx.currentTime;
+      const enabled=!document.hidden;audio.gain.gain.setTargetAtTime(enabled?(.035+.17*waterfall)*(cave?.52:1):0,t,.28);
+      audio.f.frequency.setTargetAtTime(cave?350:650+waterfall*700,t,.35);
+      audio.leafGain.gain.setTargetAtTime(enabled&&!cave?(.013+.009*Math.sin(time*.44))*(1-waterfall*.6):0,t,.4);
+    }
     renderer.render(scene, camera); const t2 = performance.now();
     if (bench && !bench.done) { bench.cpuUpdate = (bench.cpuUpdate || 0) + t1 - t0; bench.cpuRender = (bench.cpuRender || 0) + t2 - t1; const c = renderer.info.render.drawCalls ?? renderer.info.render.calls, t3 = renderer.info.render.triangles; bench.maxCalls = Math.max(bench.maxCalls || 0, c); bench.maxTris = Math.max(bench.maxTris || 0, t3); bench.sumTris = (bench.sumTris || 0) + t3; bench.n = (bench.n || 0) + 1; }
     fpsAcc += dt; fpsN++; if (fpsAcc > .5) { fps = fpsN / fpsAcc; fpsAcc = fpsN = 0; const s = stats(); hud.textContent = `${s.backend} · qualité ${quality} · ${s.fps} i/s · ${s.calls} appels · ${(s.triangles / 1000).toFixed(0)} k triangles · arbres ${s.instances['conifères'] + s.instances['feuillus']}/${world.trees.length}`; zone.textContent = s.zone; }
