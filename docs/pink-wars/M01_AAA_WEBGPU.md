@@ -14,3 +14,6 @@ Branche de validation, non production. Parcours, collisions, rigs et objectifs i
 - Interception ORDRE structurée, signal de contact selon perception existante, titres de progression non bloquants, cues audio originaux, style tactile ciblé M01.
 - Réduction du coût CPU des projecteurs mobiles ; profil de post-traitement commutable et reprise sans post-traitement si son premier rendu échoue.
 - Toujours à valider : rendu visuel réel, tests complets, capture Safari/iPhone, métriques physiques. Ce lot n'est pas une refonte complète des modèles Blender, animations mocap, doublages, IA ou cinématiques.
+
+## QA navigateur
+Le workflow M01 AAA browser validation capture les deux héros dans la caserne, le quartier, les archives et la serre, avec rapport de backend et télémétrie. Le test utilise Chromium logiciel émulant le mobile ; il ne prouve ni Safari ni les 60 FPS sur iPhone. Les téléportations de QA ne prouvent pas un parcours complet.
