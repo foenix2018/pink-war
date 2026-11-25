@@ -34,8 +34,8 @@ export function createM08Art(T, scene, { quality = 'normal', webgpu=false, onPor
   // ---------- Night over Vesper: wet haze lit from below by the city, magenta and cyan ----------
   scene.background = new T.Color(0x07060d);
   scene.fog = new T.FogExp2(0x1a1024, low ? .0105 : .0085);
-  const sky = new T.HemisphereLight(0x9a88c8, 0x3a2430, 1.7); scene.add(sky); scene.add(new T.AmbientLight(0x4a3a5a, .7));
-  const sun = new T.DirectionalLight(0x9fb0ff, 1.5); sun.position.set(60, 90, -40); scene.add(sun);   // moonlight through the clouds
+  const sky = new T.HemisphereLight(0x9caec3, 0x332a2b, 1.25); scene.add(sky); scene.add(new T.AmbientLight(0x404c60, .35));
+  const sun = new T.DirectionalLight(0xc5d7fa, 1.8); sun.position.set(60, 90, -40); scene.add(sun);   // moonlight through the clouds
   stats.horizon=createChapterHorizon(T,scene,{chapter:8,low,webgpu}).stats();
 
   // ---------- Materials ----------
@@ -315,10 +315,10 @@ export function createM08Art(T, scene, { quality = 'normal', webgpu=false, onPor
   // ---------- Signage (JANUS magenta, HELIX cyan, AEGIS) ----------
   const signs = createSignage(T, { root, low });
   function buildSigns() {
-    signs.neon(['JANUS', 'PROGRAMME INDUSTRIEL HELIX'], { color: '#ff4fb4', color2: '#ff9ad8', kanji: 'ヤヌス', w: 16, h: 4, x: 62, y: 14, z: 45.4, yaw: 0 });
-    signs.neon(['CENTRE D’INTERCONNEXION', 'CŒUR RÉSEAU HELIX / JANUS'], { color: '#6fd8ff', color2: '#ff4fb4', kanji: '接続', w: 9, h: 2, x: 20, y: 9, z: 30.4, yaw: 0 });
-    signs.neon(['HELIX', 'ARCHIVES INDUSTRIELLES'], { color: '#6fd8ff', color2: '#ffffff', kanji: '記録', w: 8, h: 2, x: -70, y: 6.2, z: -39.6, yaw: 0 });
-    signs.neon(['AEGIS'], { color: '#9fd8ff', color2: '#ff4fb4', kanji: '盾', w: 5, h: 1.6, x: 88, y: 10, z: -97.6, yaw: 0 });
+    signs.mounted(['JANUS', 'PROGRAMME INDUSTRIEL HELIX'], { color: '#ff4fb4', color2: '#ff9ad8', kanji: 'ヤヌス', w: 16, h: 4, x: 62, y: 14, z: 45.4, yaw: 0 });
+    signs.mounted(['CENTRE D’INTERCONNEXION', 'CŒUR RÉSEAU HELIX / JANUS'], { color: '#6fd8ff', color2: '#ff4fb4', kanji: '接続', w: 9, h: 2, x: 20, y: 9, z: 30.4, yaw: 0 });
+    signs.mounted(['HELIX', 'ARCHIVES INDUSTRIELLES'], { color: '#6fd8ff', color2: '#ffffff', kanji: '記録', w: 8, h: 2, x: -70, y: 6.2, z: -39.6, yaw: 0 });
+    signs.mounted(['AEGIS'], { color: '#9fd8ff', color2: '#ff4fb4', kanji: '盾', w: 5, h: 1.6, x: 88, y: 10, z: -97.6, yaw: 0 });
     signs.neon(['SALLE DE SÉCURITÉ', 'SURVEILLANCE ACTIVE'], { color: '#ff3b4e', kanji: '警備', w: 6, h: 1.6, x: -45.3, y: 6, z: -10, yaw: Math.PI / 2 });
     signs.advert('helix', { w: 6, h: 2.6, x: 75.6, y: 7, z: -10, yaw: -Math.PI / 2, holo: false });
     signs.advert('ordre', { w: 8, h: 3.2, x: -20, y: 7.5, z: 70.3, yaw: 0 });
