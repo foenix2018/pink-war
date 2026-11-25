@@ -150,12 +150,40 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera, we
   const signTex = (lines, { bg = '#0d3b5e', fg = '#f2f4f2', w = 512, h = 128, border = null } = {}) => canvasTexture(T, w, h, (c, W, H) => {
     if (bg) { c.fillStyle = bg; c.fillRect(0, 0, W, H); }
     if (border) { c.strokeStyle = border; c.lineWidth = Math.max(4, H * .05); c.strokeRect(c.lineWidth / 2, c.lineWidth / 2, W - c.lineWidth, H - c.lineWidth); }
-    const rows = Array.isArray(lines) ? lines : [lines]; c.fillStyle = fg; c.textAlign = 'center'; c.textBaseline = 'middle';
+    const rows = Array.isArray(lines) ? lines : [lines];
+    // AEGIS and the municipal archive use different historic design languages.
+    // Weathering is painted into the face, not an expensive extra shader.
+    const title=rows.join(' '), civic=/ARCHIVES|REGISTRES|HERBIERS|SERRE/.test(title);
+    const rescue=/AEGIS|STATION|SECOURS|VESTIAIRES|HANGAR|VEILLE/.test(title);
+    if(bg && !bg.startsWith('rgba')){
+      const pad=H*.07;
+      c.fillStyle=civic?'rgba(42,61,38,.16)':'rgba(24,22,19,.17)';
+      c.fillRect(0,H-pad,W,pad);
+      if(civic||rescue){
+        c.strokeStyle=fg;c.lineWidth=Math.max(1,H*.012);
+        c.strokeRect(pad,pad,W-pad*2,H-pad*2);
+      }
+      // Four fastener heads and a scratched, irregular edge.
+      for(const x of [pad*.55,W-pad*.55])for(const y of [pad*.55,H-pad*.55]){
+        c.fillStyle='rgba(80,74,64,.62)';c.beginPath();c.arc(x,y,Math.max(2,H*.017),0,TAU);c.fill();
+        c.strokeStyle='rgba(20,18,15,.6)';c.lineWidth=1;c.beginPath();c.moveTo(x-2,y+1);c.lineTo(x+2,y-1);c.stroke();
+      }
+      const wear=seeded(Array.from(title).reduce((n,l)=>Math.imul(n^l.charCodeAt(0),16777619),2166136261)>>>0);
+      for(let i=0;i<W*H/330;i++){const x=wear()*W,y=wear()*H;c.fillStyle=Math.min(x,y,W-x,H-y)<H*.12?'rgba(69,48,29,.20)':'rgba(69,48,29,.04)';c.fillRect(x,y,1+wear()*4,1+wear()*2);}
+    }
+    c.fillStyle = fg; c.textAlign = 'center'; c.textBaseline = 'middle';
     rows.forEach((row, k) => { c.font = `${k ? 700 : 900} ${Math.round(H * (k ? .2 : .42) / Math.max(1, rows.length * .7))}px ${FONT}`; c.fillText(row, W / 2, H * (rows.length === 1 ? .52 : (k + .8) / (rows.length + .6)), W * .92); });
   });
   function sign(tex, x, y, z, yaw, w, h, { lit = false, see = false } = {}) {
     const mat = lit ? new T.MeshBasicMaterial({ map: tex, toneMapped: false, transparent: see, alphaTest: see ? .05 : 0 }) : new T.MeshStandardMaterial({ map: tex, roughness: .7, metalness: .05, transparent: see, alphaTest: see ? .05 : 0 });
-    const mesh = new T.Mesh(new T.PlaneGeometry(w, h), mat); mesh.position.set(x, y, z); mesh.rotation.y = yaw; return add(mesh);
+    const mesh = new T.Mesh(new T.PlaneGeometry(w, h), mat); mesh.position.set(x, y, z); mesh.rotation.y = yaw; mesh.receiveShadow=!lit;
+    // Shared instanced backing plates are recessed behind the sign face.
+    // Translucent graffiti, lettering and holograms must stay flat.
+    if(!see && !lit){
+      const depth=.028,offset=depth*.5+.006;
+      piece(M.dark,x-Math.sin(yaw)*offset,y-h*.5,z-Math.cos(yaw)*offset,w,h,depth,yaw);
+    }
+    return add(mesh);
   }
   const paperTex = (title, seed) => canvasTexture(T, 128, 180, (c, w, h) => {
     const r = seeded(seed); c.fillStyle = '#e8e1cf'; c.fillRect(0, 0, w, h); c.fillStyle = '#2b2b2b'; c.font = `800 11px ${FONT}`; c.fillText(title, 8, 16, w - 16);
@@ -550,8 +578,12 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera, we
     animated.push(t => { const a = Math.sin(t * .7) * .55; scanner.rotation.set(-.55, a, 0); spot.position.set(6 + Math.sin(a) * 3.4, .02, -64.6 + Math.cos(a) * .4); beam.material.opacity = .08 + .05 * Math.sin(t * 9); });
     // Greenhouse: floating botanical catalogue tags (old HELIX-made holograms, still on batteries).
     for (const [x, z, name] of [[20, -91, 'FOUGÈRE DES TOITS'], [36, -91, 'MOUSSE DE VESPER'], [20, -75, 'LIERRE DES QUAIS'], [36, -75, 'ORCHIDÉE GRISE'], [30.5, -88.5, 'CHÊNE DE LA SERRE · 1998']]) {
-      const tag = new T.Mesh(new T.PlaneGeometry(1.6, .5), new T.MeshBasicMaterial({ map: signTex([name, 'ARCHIVES VÉGÉTALES · FICHE'], { bg: 'rgba(8,40,30,.55)', fg: '#9fffcf', w: 512, h: 160, border: '#6dff9c' }), transparent: true, opacity: .8, depthWrite: false, toneMapped: false, side: T.DoubleSide }));
-      const baseY=name.startsWith('CHÊNE')?2.4:1.9; tag.name='M01 / catalogue botanique '+name; tag.position.set(x,baseY,z); add(tag); animated.push((t, dt, eye) => { tag.position.y=baseY+Math.sin(t*1.3+x)*.025; tag.lookAt(eye.position.x, tag.position.y, eye.position.z); });
+      // A real botanical accession label, with a steel stake and enamel face.
+      // Keep it within the existing planter footprint; no floating billboards.
+      const tag = new T.Mesh(new T.PlaneGeometry(.56,.22),new T.MeshStandardMaterial({map:signTex([name,'HERBIER · VESPER'],{bg:'#d8d4bc',fg:'#344538',w:512,h:192,border:'#747c56'}),roughness:.86,side:T.DoubleSide}));
+      const baseY=name.startsWith('CHÊNE')?1.2:.85;
+      tag.name='M01 / catalogue botanique '+name;tag.position.set(x,baseY,z);tag.rotation.x=-Math.PI*.22;tag.receiveShadow=true;add(tag);
+      piece(M.frame,x,0,z,.035,baseY,.035);
     }
     // Vesper beyond the walls: neon advertising on the Archives' blind side wall, seen from the relay terrace.
     sign(signTex(['HELIX', 'LA MÉMOIRE DE VESPER EST EN SÉCURITÉ'], { bg: '#06121a', fg: '#ff4d5e', w: 1024, h: 256, border: '#ff4d5e' }), -30.2, 8.2, -84, -Math.PI / 2, 9, 2.25, { lit: true });
