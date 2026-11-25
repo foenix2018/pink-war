@@ -1,3 +1,4 @@
+import {createAmbience} from './ambience.js';
 import {readNanoProfile,equipNanoSuit,nanoRecipes} from './nano-forge.js';
 import * as T from './vendor/three.webgpu.min.js';
 import {WebGLRenderer,WebGLRenderTarget} from './vendor/three.module.min.js';
@@ -190,7 +191,20 @@ function depart(level){
  saveCurrent();if(!prepareHideoutDeparture(game,{level,armorLevel})){message('La préparation n’a pas pu être sauvegardée. Réessaie avant de quitter la planque.',7);return;}
  const url=chapterURL(level,{characterId,renderer:params.get('renderer'),resume:!profile.completed.includes(level)&&level===profile.lastChapter});if(url)location.assign(url);
 }
+let refugeAudio=null,refugeContext=null;
+function unlockRefugeAudio(){
+ if(refugeAudio||!ready)return;
+ try{
+  const settings=JSON.parse(localStorage.getItem('rosee-settings')||'{}');if(settings.sound===false)return;
+  const Context=window.AudioContext||window.webkitAudioContext;if(!Context)return;
+  refugeContext=window.__PINKWAR_BOOT_AUDIO||new Context();
+  void refugeContext.resume?.().catch(()=>{});
+  refugeAudio=createAmbience(refugeContext,{chapter:'hideout'});
+ }catch(error){console.warn('Planque / ambiance',error);}
+}
 function bindWorld(){
+ window.addEventListener('pointerdown',unlockRefugeAudio,{passive:true});window.addEventListener('keydown',unlockRefugeAudio);
+ window.addEventListener('pagehide',()=>{refugeAudio?.dispose();refugeAudio=null;});
  for(const b of document.querySelectorAll('[data-station]'))b.onclick=()=>chooseStation(b.dataset.station);
  $('close').onclick=closePanel;$('panel').addEventListener('cancel',e=>{e.preventDefault();closePanel();});$('retry').onclick=()=>location.reload();
  $('view').onclick=()=>selectPlayView(view==='visit'?'third':'fps');
@@ -281,7 +295,7 @@ async function paintOutfitPreview(){
  if(outfitPreview!==p||p.hero!==state.hero||p.tier!==state.tier)return;const pixels=new Uint8ClampedArray(384*288*4),stride=bytes.length/(288);for(let row=0;row<288;row++){const y=renderer.isWebGLRenderer?287-row:row;pixels.set(bytes.subarray(y*stride,y*stride+1536),row*1536);}p.canvas.getContext('2d').putImageData(new ImageData(pixels,384,288),0,0);p.canvas.dataset.modelStage=String(state.tier);p.canvas.dataset.modelHero=state.hero;p.canvas.dataset.modelAngle=String(angle);p.painted=key;
 }
 function frame(now){
- if(pending||!game)return;const dt=frameDelta(previous?(now-previous)/1000:.016);previous=now;if(!paused)clock+=dt;update(dt);pending=true;
+ if(pending||!game)return;const dt=frameDelta(previous?(now-previous)/1000:.016);previous=now;if(!paused)clock+=dt;update(dt);refugeAudio?.update(dt,{active:!paused&&!document.hidden,position:game.player,moving:!opened&&moving,grounded:true,shelter:1,yaw:cameraYaw,surface:'concrete'});pending=true;
  (async()=>{await art.renderExterior(renderer,camera,clock);if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);await paintOutfitPreview();})().then(()=>pending=false).catch(error=>{pending=false;console.error(error);message('Le rendu a été interrompu. Recharge la planque.',8);});
 }
 
