@@ -48,7 +48,7 @@ function saveCurrent(){
 }
 function environment(){
  scene.background=new T.Color(0x10121d);
- const env=document.createElement('canvas');env.width=512;env.height=256;const e=env.getContext('2d');e.fillStyle='#243245';e.fillRect(0,0,512,256);e.fillStyle='#c2b6c7';e.fillRect(0,15,512,40);e.fillStyle='#b85589';e.fillRect(70,75,90,40);e.fillStyle='#58a8ce';e.fillRect(335,75,75,40);const tex=new T.CanvasTexture(env);tex.colorSpace=T.SRGBColorSpace;tex.mapping=T.EquirectangularReflectionMapping;scene.environment=tex;scene.environmentIntensity=.65;
+ const env=document.createElement('canvas');env.width=512;env.height=256;const e=env.getContext('2d');e.fillStyle='#243245';e.fillRect(0,0,512,256);e.fillStyle='#c2b6c7';e.fillRect(0,15,512,40);e.fillStyle='#b28b6e';e.fillRect(70,75,90,40);e.fillStyle='#89a7b6';e.fillRect(335,75,75,40);const tex=new T.CanvasTexture(env);tex.colorSpace=T.SRGBColorSpace;tex.mapping=T.EquirectangularReflectionMapping;scene.environment=tex;scene.environmentIntensity=.65;
 }
 async function boot(){
  try{
@@ -57,9 +57,9 @@ async function boot(){
   const compatible=await createCompatibleRenderer({canvas,WebGPU:T.WebGPURenderer,WebGL:WebGLRenderer,profile:graphics});renderer=compatible.renderer;canvas=compatible.canvas;
   renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(renderPixelRatio(graphics,devicePixelRatio,innerWidth,innerHeight));renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
   renderer.shadowMap.enabled=!graphics.phone&&graphics.shadows&&!['low','performance'].includes(graphics.artQuality);renderer.shadowMap.type=T.PCFSoftShadowMap;
-  scene=new T.Scene();scene.fog=new T.FogExp2(0x733d61,.006);environment();
-  scene.add(new T.HemisphereLight(0xb5c6f2,0x302637,.95));const sun=new T.DirectionalLight(0xe3def2,2.5);sun.position.set(0,13,7);sun.castShadow=renderer.shadowMap.enabled;sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-14,right:14,top:14,bottom:-14,near:.5,far:42});sun.shadow.bias=-.0006;scene.add(sun);
-  for(const [color,x,z,intensity]of [[0xff80ae,-7,-7,48],[0x72caff,7,-2,38]]){const light=new T.PointLight(color,intensity,18,2);light.position.set(x,3,z);scene.add(light);}
+  scene=new T.Scene();scene.fog=new T.FogExp2(0x443b36,.0035);environment();
+  scene.add(new T.HemisphereLight(0xd5d8dc,0x514032,1.05));const sun=new T.DirectionalLight(0xffe1be,2.25);sun.position.set(0,13,7);sun.castShadow=renderer.shadowMap.enabled;sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-14,right:14,top:14,bottom:-14,near:.5,far:42});sun.shadow.bias=-.0006;scene.add(sun);
+  for(const [color,x,z,intensity]of [[0xffc48e,-7,-7,40],[0xaad9e4,7,-2,30]]){const light=new T.PointLight(color,intensity,18,2);light.position.set(x,3,z);scene.add(light);}
   overview=new T.OrthographicCamera(-15,15,15,-15,.05,230);overview.position.set(0,26,29);overview.lookAt(0,.2,-1);visit=new T.PerspectiveCamera(64,innerWidth/innerHeight,.05,180);portrait=new T.PerspectiveCamera(40,innerWidth/innerHeight,.025,180);third=new T.PerspectiveCamera(64,innerWidth/innerHeight,.05,180);camera=overview;
   art=await loadHideoutArt(T,{displayOutfits:false,onProgress:progress,low:graphics.phone||graphics.economy||graphics.artQuality==='low'});scene.add(art.root);navigation=createHideoutNavigation(art.layout);if(art.layout.fitnessRuntimeRevision)fitnessProps=createFitnessProps(T,scene,art.materials);
   if(art.layout.gymRevision){const gymLight=new T.PointLight(0xc4dfff,32,10,2);gymLight.position.set(7.65,3.1,7.65);scene.add(gymLight);}
