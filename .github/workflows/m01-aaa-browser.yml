@@ -1,0 +1,46 @@
+name: M01 AAA browser validation
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'dist/m01-aaa*.js'
+      - 'dist/vesper-combat.js'
+      - 'dist/m01-extension-art.js'
+      - 'dist/renderer-policy.js'
+      - 'tools/m01-aaa-browser.mjs'
+      - '.github/workflows/m01-aaa-browser.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  visual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Syntax and focused tests
+        run: |
+          node --check dist/vesper-combat.js
+          node --check dist/m01-extension-art.js
+          node --check dist/m01-siege-ambiance.js
+          node --check dist/fps-grade.js
+          node --test tests/397-m01-aaa.test.mjs tests/398-m01-aaa-presentation.test.mjs
+      - name: Install browser
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Actual mission browser smoke
+        run: node tools/m01-aaa-browser.mjs
+      - name: Upload screenshots and measured software rendering report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: M01-AAA-BROWSER-SCREENSHOTS
+          path: m01-aaa-previews/
+          if-no-files-found: warn
+          retention-days: 15

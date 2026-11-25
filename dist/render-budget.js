@@ -1,6 +1,6 @@
 // Resolution follows sustained foreground frame cost, never a single loading hitch.
 // CSS/HUD size, world geometry, movement speed and offscreen/XR renders stay intact.
-export function createFrameBudget({enabled=true,minScale=.55}={}){
+export function createFrameBudget({enabled=true,minScale=.55,targetFPS=30}={}){
  let scale=1,average=0,samples=0,total=0,fastWindows=0,warmup=2,degraded=false,window=[];
  function resetWindow(){samples=0;total=0;fastWindows=0;window=[];}
  const snapshot=()=>({enabled,scale,average,degraded});
@@ -13,8 +13,8 @@ export function createFrameBudget({enabled=true,minScale=.55}={}){
   // Trim one outlier at each end so shader compilation cannot trigger a downgrade.
   const sorted=window.sort((a,b)=>a-b).slice(1,-1);
   average=sorted.reduce((sum,value)=>sum+value,0)/sorted.length;window=[];samples=total=0;
-  if(average>36){scale=Math.max(minScale,scale*.85);fastWindows=0;degraded=scale<.85||average>45;}
-  else if(average<23){
+  if(average>(targetFPS===60?19.5:36)){scale=Math.max(minScale,scale*.85);fastWindows=0;degraded=scale<.85||average>(targetFPS===60?26:45);}
+  else if(average<(targetFPS===60?16.9:23)){
    if(++fastWindows>=4){scale=Math.min(1,scale+.05);fastWindows=0;if(scale===1)degraded=false;}
   }else fastWindows=0;
   return snapshot();
@@ -25,7 +25,7 @@ export function installRenderBudget(renderer,profile={},now=()=>performance.now(
  if(renderer.frameBudget||!renderer.render||!renderer.setPixelRatio)return renderer.frameBudget;
  const render=renderer.render.bind(renderer),renderAsync=renderer.renderAsync?.bind(renderer);
  const setRatio=renderer.setPixelRatio.bind(renderer),dispose=renderer.dispose?.bind(renderer);
- let activeProfile=profile,budget=createFrameBudget({enabled:!!profile.adaptive}),baseRatio=renderer.getPixelRatio?.()||1;
+ let activeProfile=profile,budget=createFrameBudget({enabled:!!profile.adaptive,minScale:profile.minScale??.55,targetFPS:profile.targetFPS??30}),baseRatio=renderer.getPixelRatio?.()||1;
  let last=null,busy=false,disposed=false,savedShadows=null,savedGrade=null,pendingProfile=null,pendingRatio=false;
  const foreground=()=>!renderer.domElement?.ownerDocument?.hidden;
  function effects(degraded){
@@ -38,7 +38,7 @@ export function installRenderBudget(renderer,profile={},now=()=>performance.now(
   }
  }
  renderer.setPixelRatio=value=>{baseRatio=value;if(busy){pendingRatio=true;return;}return setRatio(value*budget.snapshot().scale);};
- function configure(next){effects(false);activeProfile=next;budget=createFrameBudget({enabled:!!next.adaptive});last=null;setRatio(baseRatio);}
+ function configure(next){effects(false);activeProfile=next;budget=createFrameBudget({enabled:!!next.adaptive,minScale:next.minScale??.55,targetFPS:next.targetFPS??30});last=null;setRatio(baseRatio);}
  const main=(scene,camera)=>!busy&&!disposed&&scene?.isScene&&(camera?.isPerspectiveCamera||activeProfile.orthographicBudget&&camera?.isOrthographicCamera)
   &&!renderer.xr?.isPresenting&&!renderer.getRenderTarget?.()&&!renderer.getScissorTest?.();
  function draw(original,scene,camera,args){

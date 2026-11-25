@@ -1,3 +1,4 @@
+import {createM01RoomFinish} from './m01-aaa-room-finish.js';
 import {createFPSChapter} from './fps-environments.js';
 import {upgradeLightBlocks} from './industrial-light.js';
 import {createLightShafts} from './light-shafts.js';
@@ -31,11 +32,12 @@ function canvasTexture(T, w, h, paint, { repeat = false, color = true } = {}) {
   const t = new T.CanvasTexture(c); if (color) t.colorSpace = T.SRGBColorSpace; if (repeat) t.wrapS = t.wrapT = T.RepeatWrapping; t.anisotropy = 4; return t;
 }
 
-export function createM01ExtensionArt(T, scene, { quality = 'normal', camera, webgpu=false } = {}) {
+export function createM01ExtensionArt(T, scene, { quality = 'normal', camera, webgpu=false, enhanced=false } = {}) {
   const low = quality === 'low', rng = seeded(707);
   const root = new T.Group(); root.name = 'M01 / Station 07 et Archives végétales'; scene.add(root);
   const details = createVesperProps(T, root, {low});
   let fpsChapter=null;
+  let roomFinish=null;
   const animated = [], stats = { meshes: 0, instances: 0, textures: 0, fixtures: 0 };
   const add = (o, parent = root) => { parent.add(o); stats.meshes++; return o; };
 
@@ -48,7 +50,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera, we
   };
   const pbr = (maps, { tile = 2, color = 0xffffff, roughness = 1, metalness = 0, label } = {}) => {
     const m = new T.MeshStandardMaterial({ color, roughness, metalness, name: label }); m.userData.tile = tile;
-    Promise.all([maps.diff && load(maps.diff, true), maps.nor && !low && load(maps.nor, false), maps.rough && load(maps.rough, false)]).then(([d, n, r]) => {
+    Promise.all([maps.diff && load(maps.diff, true), maps.nor && (!low || (enhanced && ['brique','béton','pierre des Archives','dalle béton','enrobé','tôle'].includes(label))) && load(maps.nor, false), maps.rough && load(maps.rough, false)]).then(([d, n, r]) => {
       if (d) m.map = d; if (n) { m.normalMap = n; m.normalScale = new T.Vector2(.8, .8); } if (r) m.roughnessMap = r; m.needsUpdate = true;
     });
     return m;
@@ -576,6 +578,7 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera, we
       }
       buildFixtureMeshes(); buildDoors(); buildDevices(obstacles); buildSigns(); buildCyber();
       neons.meshes(); neons.build(); flushGeometry(); flushPieces(); furnishings.finish(); stationGear.finish(); details.finish(); livedIn.build(obstacles);
+      roomFinish=createM01RoomFinish(T,root,ROOMS,{low});
       fpsChapter=createFPSChapter(T,root,{chapter:'m01',obstacles:obstacles,areas:ROOMS,low,webgpu});
     },
     update(t, dt, eye, player = eye.position) {
@@ -613,6 +616,6 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera, we
     markDone(id, done = true) { const d = devices.get(id); if (d) { d.done = done; if (!done) { d.turn = 0; if (d.moving) d.moving.rotation.set(0, 0, 0); } } },
     setAvailable(list) { const set = new Set(list); for (const [id, d] of devices) d.available = set.has(id); },
     daylightAt,
-    stats() { return { ...stats, fps:fpsChapter?.stats(), neons:neons.stats(), furniture: {...furnishings.stats}, stationEquipment: {...stationGear.stats}, details: details.stats(), livedIn: livedIn.stats(), power: power.caserne, adapt: +adapt.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
+    stats() { return { ...stats, roomFinish:roomFinish?.stats(), fps:fpsChapter?.stats(), neons:neons.stats(), furniture: {...furnishings.stats}, stationEquipment: {...stationGear.stats}, details: details.stats(), livedIn: livedIn.stats(), power: power.caserne, adapt: +adapt.toFixed(2), lights: pool.filter(s => s.fixture).length, doors: Object.fromEntries([...doors].map(([k, v]) => [k, +v.open.toFixed(2)])) }; }
   };
 }
