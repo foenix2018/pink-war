@@ -16,7 +16,7 @@ try{
    for(const clip of ['civil_idle','civil_walk','civil_run','civil_walkBack','civil_walkLeft','civil_walkRight']){
     for(const phase of [0,.25,.50,.75]){
      await page.evaluate(({clip,phase})=>__PINK_HIDEOUT.debug.civil.samplePreview(clip,phase),{clip,phase});
-     await page.evaluate(()=>__PINK_HIDEOUT.debug.captureFrame());
+     await page.evaluate(()=>__PINK_HIDEOUT.debug.captureFrame(Math.PI*.65));
      const p=await page.evaluate(()=>{const v=__PINK_HIDEOUT.debug.civil.fitnessPose();return Object.fromEntries(['leftWristPoint','rightWristPoint','pelvis','leftFoot','rightFoot'].map(k=>[k,v[k].toArray()]));});
      assert.ok(Object.values(p).flat().every(Number.isFinite));
      await page.screenshot({path:dir+'/'+device+'-'+clip+'-'+Math.round(phase*100)+'.png',timeout:120000});
