@@ -161,9 +161,23 @@ export function createM02ExtensionArt(T, scene, { quality = 'normal', accent = 0
     const rows = Array.isArray(lines) ? lines : [lines]; c.fillStyle = fg; c.textAlign = 'center'; c.textBaseline = 'middle';
     rows.forEach((row, k) => { c.font = `${k ? 700 : 900} ${Math.round(H * (k ? .2 : .42) / Math.max(1, rows.length * .7))}px ${FONT}`; c.fillText(row, W / 2, H * (rows.length === 1 ? .52 : (k + .8) / (rows.length + .6)), W * .92); });
   });
+  function ageMountedSign(tex){
+    const canvas=tex.image;if(!canvas?.getContext)return tex;
+    const c=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+    let seed=(W*31+H*17)>>>0;const rand=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+    const pad=H*.075;
+    c.save();c.strokeStyle='rgba(48,43,33,.40)';c.lineWidth=Math.max(1,H*.015);c.strokeRect(pad*.5,pad*.5,W-pad,H-pad);
+    for(const x of [pad,W-pad])for(const y of [pad,H-pad]){
+      c.fillStyle='#777467';c.beginPath();c.arc(x,y,Math.max(2,H*.016),0,Math.PI*2);c.fill();
+      c.strokeStyle='#34342e';c.lineWidth=1;c.beginPath();c.moveTo(x-2,y+1);c.lineTo(x+2,y-1);c.stroke();
+    }
+    for(let i=0;i<W*H/360;i++){const x=rand()*W,y=rand()*H,edge=Math.min(x,y,W-x,H-y)<pad*1.5;c.fillStyle=edge?'rgba(50,36,25,.22)':'rgba(50,36,25,.045)';c.fillRect(x,y,1+rand()*4,1+rand()*2);}
+    c.restore();tex.needsUpdate=true;return tex;
+  }
   function sign(tex, x, y, z, yaw, w, h, { lit = false, see = false } = {}) {
+    if(!lit&&!see)ageMountedSign(tex);
     const mat = lit ? new T.MeshBasicMaterial({ map: tex, toneMapped: false, transparent: see, alphaTest: see ? .05 : 0 }) : new T.MeshStandardMaterial({ map: tex, roughness: .7, metalness: .05, transparent: see, alphaTest: see ? .05 : 0 });
-    const mesh = new T.Mesh(new T.PlaneGeometry(w, h), mat); mesh.position.set(x, y, z); mesh.rotation.y = yaw; return add(mesh);
+    const mesh = new T.Mesh(new T.PlaneGeometry(w, h), mat); mesh.position.set(x, y, z); mesh.rotation.y = yaw; mesh.receiveShadow=!lit; return add(mesh);
   }
   const paperTex = (title, seed) => canvasTexture(T, 128, 180, (c, w, h) => {
     const r = seeded(seed); c.fillStyle = '#e8e1cf'; c.fillRect(0, 0, w, h); c.fillStyle = '#2b2b2b'; c.font = `800 11px ${FONT}`; c.fillText(title, 8, 16, w - 16);
