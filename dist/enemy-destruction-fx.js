@@ -17,12 +17,12 @@ export function enemyDamageStage(hp,maxHp){
  return {damage,stage:4,smoke:4,sparks:3,interval:.17};
 }
 export function robotDeathDuration(form='stalker'){
- return form==='probe'?.40:form==='sentinel'?.86:['brute','bulwark'].includes(form)?.70:.54;
+ return form==='probe'?.40:['sentinel','se04'].includes(form)?.86:['brute','bulwark'].includes(form)?.70:.54;
 }
 // Knock-back of the chassis on the killing hit (m/s along the shot, lift in m/s, tumble in rad).
 export function robotKnockback(form='stalker'){
  if(form==='probe')return {speed:7.5,lift:1.2,tumble:2.6,chunks:7};
- if(form==='sentinel')return {speed:1.4,lift:.6,tumble:1.15,chunks:18};
+ if(['sentinel','se04'].includes(form))return {speed:1.4,lift:.6,tumble:1.15,chunks:18};
  if(form==='brute'||form==='bulwark')return {speed:2.4,lift:1.1,tumble:1.3,chunks:14};
  return {speed:4.6,lift:2.6,tumble:1.5,chunks:10};
 }

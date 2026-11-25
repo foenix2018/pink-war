@@ -29,14 +29,15 @@ const noop = () => {};
 export function configureUnit(e, u, wave) {
   const form = u.form, elite = !!u.elite, probe = form === 'probe';
   Object.assign(e, { x: u.x, z: u.z, form, elite,
-    ranged: probe || ['seer', 'synth', 'listener', 'bulwark'].includes(form) || (form === 'brute' && wave >= 5),
-    aimHeight: probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : ['seer', 'listener'].includes(form) ? 1.38 : ['brute', 'bulwark'].includes(form) ? 1.42 : 1.15,
-    radius: probe ? PROBE.radius : elite ? 1.05 : form === 'scuttler' ? .86 : form === 'brute' ? .95 : .8,
-    hitRadius: probe ? .44 : form === 'scuttler' ? .91 : form === 'brute' ? 1.18 : form === 'seer' ? .94 : 1.05,
+    ranged: probe || ['seer', 'synth', 'listener', 'bulwark','se04'].includes(form) || (form === 'brute' && wave >= 5),
+    aimHeight: form==='se04'?3.15:probe ? PROBE.aimHeight : form === 'scuttler' ? .88 : ['seer', 'listener'].includes(form) ? 1.38 : ['brute', 'bulwark'].includes(form) ? 1.42 : 1.15,
+    radius: form==='se04'?1.65:probe ? PROBE.radius : elite ? 1.05 : form === 'scuttler' ? .86 : form === 'brute' ? .95 : .8,
+    hitRadius: form==='se04'?1.65:probe ? .44 : form === 'scuttler' ? .91 : form === 'brute' ? 1.18 : form === 'seer' ? .94 : 1.05,
     hp: enemyDurability(wave, form, elite) * (u.boss || 1), boss: u.boss ? u.name || 'ÉLITE' : undefined, tier: Math.max(1, Math.ceil(wave / 2)),
-    speed: probe ? Math.min(5, 3.6 + wave * .07) : Math.min(4.3, 2.4 + (wave - 1) * .055) * (form === 'bulwark' ? .7 : form === 'scuttler' ? 1.12 : 1),
+    speed: form==='se04'?1.35:probe ? Math.min(5, 3.6 + wave * .07) : Math.min(4.3, 2.4 + (wave - 1) * .055) * (form === 'bulwark' ? .7 : form === 'scuttler' ? 1.12 : 1),
     elevation: probe ? PROBE.hover : 0, homeHeight: 0, grounded: !probe, verticalSpeed: 0,
     homeX: u.x, homeZ: u.z, lastKnownX: u.x, lastKnownZ: u.z, lastKnownHeight: 0 });
+  if(form==='se04'){e.elite=false;e.coverCrouch=0;e.hp=1200;e.se04ShotIndex=0;e.se04Attack='cannon';}
   e.maxHp=e.hp;
   return e;
 }

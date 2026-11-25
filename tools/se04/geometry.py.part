@@ -1,0 +1,140 @@
+import numpy as np, math, struct, json, os, io
+from PIL import Image, ImageDraw, ImageFilter
+from scipy.spatial import ConvexHull
+from scipy.spatial.transform import Rotation
+from collections import defaultdict
+from pathlib import Path
+O=Path(__file__).parent
+P=np.pi
+materials=[]
+def mat(name,c,metal=.7,rough=.42,em=None):
+ d={'name':name,'pbrMetallicRoughness':{'baseColorFactor':[*c,1],'metallicFactor':metal,'roughnessFactor':rough}}
+ if em: d['emissiveFactor']=em; d['extensions']={'KHR_materials_emissive_strength':{'emissiveStrength':2.0}}
+ materials.append(d); return len(materials)-1
+armor=mat('Gunmetal worn armor',(.22,.205,.19)); light=mat('Ceramic grey armor',(.31,.29,.27)); dark=mat('Dark graphite frame',(.032,.037,.043)); edge=mat('Machined steel',(.23,.25,.27),.9,.3); black=mat('Recesses',(.015,.019,.025),.25); track=mat('Track links',(.13,.12,.12),.85); rubber=mat('Track pads',(.035,.033,.034),.05,.85); red=mat('Crimson energy',(.8,.015,.07),.15,.28,[1,.008,.045]); blue=mat('Cyan optic',(.02,.47,.8),.1,.21,[.01,.55,1]); ivory=mat('Stencilled paint',(.68,.64,.58),.1,.65); copper=mat('Oxidised fasteners',(.34,.17,.095),.8); glass=mat('Optical center',(.45,.85,1),.1,.2,[.2,.7,1]); scratch=mat('Edge wear',(.51,.47,.43),.65,.55)
+charcoal=mat("Charcoal ceramic",(.10,.097,.092),.72,.62); pale=mat("Titanium facets",(.39,.36,.33),.82,.48); orange=mat("Warning paint",(.52,.19,.035),.25,.7); brass=mat("Hydraulic fittings",(.28,.22,.14),.85,.35)
+flare=mat('Cannon flash',(1,.34,.035),.0,.3,[1,.4,.035]); flarecore=mat('Cannon flash core',(1,.86,.4),.0,.3,[1,.85,.35])
+nodes=[]; geo=defaultdict(lambda:defaultdict(list)); anims=[]
+def node(name,t=(0,0,0),parent=None):
+ i=len(nodes); nodes.append({'name':name,'translation':list(t)})
+ if parent is not None: nodes[parent].setdefault('children',[]).append(i)
+ return i
+def mesh(n,m,v,f):
+ v=np.array(v,float); f=np.array(f,int); p=v[f]; norm=np.cross(p[:,1]-p[:,0],p[:,2]-p[:,0]); norm/=np.maximum(1e-9,np.linalg.norm(norm,axis=1))[:,None]; geo[n][m].append((p.reshape(-1,3),np.repeat(norm,3,axis=0)))
+def hull(n,m,v):
+ v=np.array(v); h=ConvexHull(v); f=h.simplices.copy(); p=v[f]; norm=np.cross(p[:,1]-p[:,0],p[:,2]-p[:,0]); flip=(norm*h.equations[:,:3]).sum(1)<0; f[flip]=f[flip][:,[0,2,1]]; mesh(n,m,v,f)
+def box(n,m,c,s,b=.03,rot=None):
+ h=np.array(s)/2; b=min(b,min(h)*.8); v=[]
+ for a in range(3):
+  for signs in np.ndindex(2,2,2):
+   q=h-b; q=q.copy(); q[a]=h[a]; v.append(q*(np.array(signs)*2-1))
+ v=np.array(v); v=v if rot is None else v@Rotation.from_euler('xyz',rot).as_matrix().T; hull(n,m,v+np.array(c))
+def cyl(n,m,a,b,r,r2=None,k=12,inner=None):
+ a=np.array(a,float); b=np.array(b,float); d=b-a; d/=np.linalg.norm(d); u=np.cross(d,[0,1,0] if abs(d[1])<.95 else [1,0,0]); u/=np.linalg.norm(u); w=np.cross(d,u); angles=np.arange(k)*2*P/k; q=np.cos(angles)[:,None]*u+np.sin(angles)[:,None]*w; r2=r if r2 is None else r2; v=np.concatenate([a+r*q,b+r2*q]); f=[]
+ for j in range(k):
+  l=(j+1)%k; f.extend([[j,l,k+l],[j,k+l,k+j]])
+ if inner is None:
+  v=np.vstack([v,a,b])
+  for j in range(k): l=(j+1)%k; f.extend([[2*k,l,j],[2*k+1,k+j,k+l]])
+ else:
+  v=np.vstack([v,a+inner*q,b+inner*q])
+  for j in range(k):
+   l=(j+1)%k; f.extend([[2*k+j,3*k+l,2*k+l],[2*k+j,3*k+j,3*k+l],[j,2*k+l,l],[j,2*k+j,2*k+l],[k+j,k+l,3*k+l],[k+j,3*k+l,3*k+j]])
+ mesh(n,m,v,f)
+def bolt(n,x,y,z,r=.025): cyl(n,black,(x,y,z-.005),(x,y,z+.004),r*1.38,k=12); cyl(n,edge,(x,y,z+.004),(x,y,z+.010),r*.85,k=8); cyl(n,black,(x,y,z+.010),(x,y,z+.012),r*.34,k=6)
+def shell(n,poly,z,depth,m=armor,slope=0,bolts=True):
+ p=np.array(poly,float); mid=p.mean(0); rings=[]
+ for f,o in [(0.89,-depth),(1,-min(.065,depth*.45)),(.88,0)]:
+  for q in mid+(p-mid)*f: rings.append([q[0],q[1],z+slope*(q[1]-mid[1])+o])
+ hull(n,m,rings)
+ if bolts:
+  for q in mid+(p-mid)*.79: bolt(n,*q,z+slope*(q[1]-mid[1])+.002,.014)
+def plate(n,c,s,m=armor,rot=None):
+ x,y,z=c; w,h,d=s; poly=[(-.50,.23),(-.28,.50),(.22,.50),(.50,.29),(.47,-.24),(.22,-.50),(-.30,-.43),(-.50,-.20)]
+ name=nodes[n]['name']
+ if name.startswith('Hip_joint'): poly=[(-.39,.38),(-.15,.50),(.35,.43),(.50,.12),(.32,-.43),(-.10,-.50),(-.48,-.32)]
+ elif name.startswith('Knee_'): poly=[(-.48,.20),(-.22,.50),(.29,.45),(.50,.07),(.25,-.50),(-.37,-.43)]
+ elif name.startswith('Shoulder_'): poly=[(-.48,.22),(-.19,.50),(.30,.40),(.50,.06),(.36,-.39),(-.26,-.50),(-.46,-.22)]
+ q=np.array([[a*w,b*h,0] for a,b in poly]); q=q if rot is None else q@Rotation.from_euler('xyz',rot).as_matrix().T
+ shell(n,[(x+a,y+b) for a,b,c in q],z+d*.5+.04,d+.03,m,-.15)
+def piston(n,a,b,r=.065):
+ a=np.array(a); b=np.array(b); p=a+(b-a)*.57; cyl(n,dark,a,p,r*1.27); cyl(n,edge,p,b,r*.65); cyl(n,edge,a,a+(b-a)*.13,r*1.44)
+def vent(n,c,count=4,step=.075):
+ for i in range(count): box(n,black,(c[0]+(i-(count-1)/2)*step,c[1],c[2]),(.035,.17,.018),.006, (0,0,-.16))
+def led(n,c,s=(.055,.22,.028),rot=None): box(n,black,c,np.array(s)+[.055,.04,.015],.014,rot); box(n,red,np.array(c)+[0,0,.018],s,.009,rot)
+root=node('SE-04_SENTINEL'); hip=node('Pelvis',(0,2.27,0),root); torso=node('Torso',(0,.45,0),hip)
+box(hip,dark,(0,0,0),(.95,.48,.68),.12); plate(hip,(0,-.08,.34),(.42,.47,.19),light); vent(hip,(0,-.08,.49),3,.067)
+box(torso,dark,(0,.43,0),(1.28,1.02,.78),.18); box(torso,armor,(0,.51,-.25),(1.42,.93,.51),.18)
+hull(torso,armor,[(-.73,.9,.28),(.73,.9,.28),(-.48,.38,.47),(.64,.38,.47),(-.43,.08,.33),(.43,.08,.33),(-.63,.91,.56),(.63,.91,.56),(-.54,.43,.68),(.54,.43,.68),(-.35,.19,.56),(.35,.19,.56)])
+shell(torso,[(-.73,.84),(-.49,.98),(.49,.98),(.73,.84),(.66,.48),(.40,.23),(0,.15),(-.40,.23),(-.66,.48)],.76,.28,armor,.10)
+for s in [-1,1]:
+ hull(torso,light,[(s*.41,.88,.50),(s*.70,.93,.35),(s*.73,.70,.43),(s*.50,.55,.59),(s*.41,.65,.63),(s*.41,.88,.62),(s*.70,.93,.48),(s*.73,.70,.56),(s*.50,.55,.70),(s*.41,.65,.73)])
+ plate(torso,(s*.62,.39,.36),(.32,.55,.25),armor,(0,s*.30,-s*.37)); led(torso,(s*.40,.24,.62),(.27,.047,.025),(0,0,s*.38)); piston(torso,(s*.39,-.30,.24),(s*.55,.12,.33),.063); box(torso,black,(s*.37,.04,.4),(.21,.17,.14),.03)
+back=node('Dorsal_weakpoint',(0,.46,-.45),torso); box(back,dark,(0,0,-.11),(.88,.80,.38),.09); box(back,armor,(0,0,-.31),(.60,.68,.17),.07); box(back,red,(0,0,-.405),(.15,.43,.03),.015)
+for s in [-1,1]:
+ for j in range(5): box(back,edge,(s*.22,-.25+j*.12,-.405),(.18,.055,.035),.006)
+font={'S':['01111','10000','10000','01110','00001','00001','11110'],'E':['11111','10000','10000','11110','10000','10000','11111'],'-':['000','000','000','111','000','000','000'],'0':['01110','11011','10001','10001','10001','11011','01110'],'4':['10010','10010','10010','11111','00010','00010','00010']}
+scale=.022; txt='SE-04'; width=sum(len(font[ch][0])+1 for ch in txt)-1; xx=-width*scale/2
+for ch in txt:
+ for j,row in enumerate(font[ch]):
+  for i,val in enumerate(row):
+   if val=='1': box(torso,ivory,(xx+i*scale,.72+(3-j)*scale,.778),(scale*.94,scale*.94,.005),.001)
+ xx+=(len(font[ch][0])+1)*scale
+for s in [-1,1]:
+ box(torso,ivory,(s*.10,.43,.751),(.18,.027,.008),.002,(0,0,s*.54)); box(torso,ivory,(s*.047,.38,.751),(.026,.13,.008),.002,(0,0,-s*.45))
+head=node('Head_optic',(0,1.00,.03),torso); box(head,dark,(0,-.04,0),(.47,.28,.46),.08); box(head,armor,(0,.14,0),(.58,.31,.60),.12); plate(head,(0,.11,.24),(.55,.25,.14),dark)
+cyl(head,edge,(0,.12,.31),(0,.12,.385),.146,k=40,inner=.112); cyl(head,blue,(0,.12,.37),(0,.12,.397),.110,k=40); cyl(head,glass,(0,.12,.398),(0,.12,.41),.050,k=40)
+for s in [-1,1]: led(head,(s*.235,.13,.32),(.034,.12,.02),(0,0,-s*.24)); box(head,light,(s*.21,.29,-.01),(.20,.13,.41),.04)
+attackoptic=node('Optic_attack_red',(0,.12,.415),head); cyl(attackoptic,red,(0,0,-.008),(0,0,.006),.110,k=40); nodes[attackoptic]['scale']=[0,0,0]
+for s,l in [(-1,.37),(1,.24)]: cyl(torso,dark,(s*.29,1.0,-.35),(s*.29,1.0+l,-.35),.018,k=8); cyl(torso,red,(s*.29,1.0+l,-.35),(s*.29,1.035+l,-.35),.022,k=8)
+legs=[]; arms=[]; pods=[]; wheels=[]; links=[]
+def path(t):
+ R=.275; L=.38; a=2*L; b=P*R; q=(t%1)*(2*a+2*b)
+ if q<a: return R,-L+q,0
+ q-=a
+ if q<b:
+  u=q/R; return R*math.cos(u),L+R*math.sin(u),u
+ q-=b
+ if q<a: return -R,L-q,P
+ q-=a; u=q/R; return -R*math.cos(u),-L-R*math.sin(u),P+u
+for s,side in [(-1,'L'),(1,'R')]:
+ pod=node('Missile_pod_'+side,(s*1.06,1.25,-.31),torso); pods.append(pod)
+ box(pod,dark,(0,0,0),(.76,.80,.83),.13); box(pod,armor,(0,-.006,-.04),(.74,.77,.80),.12); box(pod,edge,(0,0,.385),(.74,.73,.14),.10); box(pod,black,(0,0,.47),(.67,.65,.045),.07)
+ for x in [-.165,.165]:
+  for y in [-.165,.165]:
+   cyl(pod,edge,(x,y,.46),(x,y,.525),.147,k=32,inner=.116); cyl(pod,red,(x,y,.525),(x,y,.536),.129,k=32,inner=.112); cyl(pod,black,(x,y,.475),(x,y,.49),.110,k=24); cyl(pod,black,(x,y,.495),(x,y,.505),.068,k=24)
+ for x in [-.28,.28]:
+  for y in [-.27,.27]: bolt(pod,x,y,.47,.018)
+ for j in range(3): box(pod,light,(s*.392,.16-j*.16,-.02),(.025,.08,.47),.015)
+ shoulder=node('Shoulder_'+side,(s*1.00,.67,0),torso); elbow=node('Elbow_'+side,(s*.11,-.79,.015),shoulder); arms.append((shoulder,elbow))
+ cyl(shoulder,dark,(-.27,0,0),(.27,0,0),.27,k=16); cyl(shoulder,edge,(-.3,0,0),(.3,0,0),.18,k=16); box(shoulder,dark,(s*.05,-.31,0),(.30,.60,.36),.09); plate(shoulder,(s*.06,-.09,.17),(.78,.72,.46),light,(0,s*.13,-s*.22)); led(shoulder,(s*.19,-.17,.42),(.052,.17,.025),(0,0,-s*.18))
+ for j in range(3): box(shoulder,edge,(s*.34,-.04-j*.11,-.08),(.06,.052,.29),.012)
+ for x in [-.12,.12]: piston(shoulder,(x,-.20,.15),(x,-.65,.15),.090)
+ cyl(elbow,dark,(-.27,0,0),(.27,0,0),.18,k=16); box(elbow,dark,(0,-.30,.03),(.52,.56,.47),.08); plate(elbow,(0,-.24,.19),(.68,.56,.40),armor); led(elbow,(s*.19,-.22,.395),(.055,.23,.025))
+ recoil=node('Cannon_recoil_'+side,(0,-.40,.14),elbow)
+ for x in [-.135,.135]:
+  cyl(recoil,dark,(x,0,0),(x,-.78,.035),.126,k=16); cyl(recoil,edge,(x,-.05,0),(x,-.19,.01),.145,k=16); cyl(recoil,armor,(x,-.22,.01),(x,-.71,.03),.114,k=16); cyl(recoil,edge,(x,-.70,.03),(x,-.83,.038),.139,k=20,inner=.092); cyl(recoil,red,(x,-.83,.038),(x,-.845,.039),.120,k=32,inner=.108); cyl(recoil,black,(x,-.75,.033),(x,-.78,.035),.091,k=16)
+ for x in [-.135,.135]:
+  flash=node('MuzzleFX_'+side+'_'+str(x),(x,-.845,.039),recoil); nodes[flash]['scale']=[0,0,0]; cyl(flash,flare,(0,0,0),(0,-.40,.018),.065,.006,k=8); cyl(flash,flarecore,(0,-.025,0),(0,-.26,.01),.043,.003,k=8)
+ arms[-1]+=(recoil,)
+ thigh=node('Hip_joint_'+side,(s*.59,-.10,0),hip); knee=node('Knee_'+side,(s*.075,-.77,0),thigh); ankle=node('Ankle_'+side,(s*.065,-.90,0),knee); legs.append((thigh,knee,ankle))
+ cyl(thigh,dark,(-.27,0,0),(.27,0,0),.25,k=16); box(thigh,dark,(0,-.30,0),(.43,.65,.45),.09); plate(thigh,(0,-.27,.22),(.64,.72,.31),light); vent(thigh,(0,-.28,.41),3,.085)
+ hull(thigh,armor,[(s*.24,-.02,-.19),(s*.39,-.11,-.12),(s*.39,-.48,-.10),(s*.24,-.62,-.16),(s*.24,-.02,.17),(s*.39,-.11,.23),(s*.39,-.48,.24),(s*.24,-.62,.14)])
+ for j in range(3): box(thigh,copper,(s*.225,-.44-j*.042,.397),(.075,.018,.012),.003,(0,0,s*.4))
+ for x in [-.16,.16]: piston(thigh,(x,-.12,-.22),(x,-.60,-.22),.065)
+ cyl(knee,edge,(-.29,0,0),(.29,0,0),.20,k=16); cyl(knee,dark,(-.32,0,0),(.32,0,0),.13,k=16); plate(knee,(0,-.04,.22),(.64,.48,.34),armor); box(knee,dark,(0,-.40,0),(.35,.72,.38),.09)
+ for x in [-.17,.17]: piston(knee,(x,-.19,.08),(x,-.76,.12),.096)
+ hull(knee,light,[(s*.19,-.20,-.16),(s*.37,-.29,-.11),(s*.34,-.57,-.14),(s*.18,-.67,-.15),(s*.19,-.20,.16),(s*.37,-.29,.27),(s*.34,-.57,.22),(s*.18,-.67,.15)])
+ plate(knee,(0,-.41,-.14),(.54,.48,.28),armor); box(knee,light,(s*.28,-.40,0),(.14,.49,.42),.07)
+ foot=node('Track_'+side,(0,0,.08),ankle); box(foot,dark,(0,0,0),(.64,.40,1.03),.10); box(foot,armor,(0,.26,-.05),(.69,.27,.85),.10); plate(foot,(0,.25,.35),(.61,.27,.25),light); led(foot,(s*.22,.23,.51),(.048,.12,.023))
+ for z,r in [(-.38,.215),(-.13,.175),(.13,.175),(.38,.215)]:
+  wh=node('Wheel_'+side+'_'+str(z),(0,-.025,z),foot); wheels.append(wh); cyl(wh,rubber,(-.35,0,0),(.35,0,0),r,k=20); cyl(wh,edge,(-.37,0,0),(.37,0,0),r*.75,k=16); cyl(wh,dark,(-.39,0,0),(.39,0,0),r*.42,k=12)
+  for j in range(6):
+   a=j*P/3; cyl(wh,copper,(s*.39,math.cos(a)*r*.52,math.sin(a)*r*.52),(s*.41,math.cos(a)*r*.52,math.sin(a)*r*.52),.016,k=6)
+ for j in range(28):
+  y,z,ang=path(j/28); ln=node('Tread_'+side+'_%02d'%j,(0,y,z),foot); nodes[ln]['rotation']=Rotation.from_euler('x',ang).as_quat().tolist(); links.append((ln,j/28))
+  if j==0 and s==-1:
+   treadmesh=ln; box(ln,track,(0,0,0),(.80,.075,.112),.015); box(ln,rubber,(0,.053,0),(.63,.018,.072),.008)
+   for x in [-.32,.32]: box(ln,edge,(x,.06,0),(.07,.035,.095),.008); cyl(ln,edge,(x-.035,.005,-.048),(x+.035,.005,-.048),.025,k=10)
+   for x in [-.18,.18]: box(ln,track,(x,.074,0),(.31,.025,.037),.004,(0,0,0))
+  else: nodes[ln]['_reuse']=treadmesh

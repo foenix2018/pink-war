@@ -1,3 +1,4 @@
+import {createSE04} from './se04-sentinel-v3.js';
 import {createImpactMotion} from './enemy-body-response.js';
 import {strideFrame} from './enemy-motion.js';
 import {createReco1} from './reco1.js';
@@ -252,6 +253,7 @@ export function createEnemyFactory(mats,{detail='high'}={}){
   }
 
   function create(elite=false,ranged=false,form='stalker'){
+    if(form==='se04')return createSE04({environment:mats.monster?.envMap,detail,fallback:()=>create(false,true,'brute')});
     if(form==='spectre')ranged=false;
     if(form==='seer')return createReco1({elite,environment:mats.monster?.envMap});
     if(form==='bulwark')return createRempart({elite,environment:mats.monster?.envMap,detail});

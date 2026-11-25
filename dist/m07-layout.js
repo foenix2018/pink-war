@@ -114,7 +114,7 @@ export const SUPPLIES = Object.freeze([['heal', -78, 60], ['cell', -66, 22], ['h
   ['heal', 44, -88], ['cell', 28, -20], ['heal', 36, 14], ['cell', 74, 10], ['heal', 70, 36], ['cell', 86, 46]].map(([kind, x, z]) => Object.freeze({ kind, x, z, y: walkHeight(x, z) })));
 
 // ---------- Encounters (budget of m07-story.js: 6 · 8 · 14 · 6 · 12 · 4 · 18 · 8 units) ----------
-const unit = (form, x, z, extra = {}) => { const p = freeSpot(x, z, form === 'brute' || extra.elite || form === 'bulwark' ? 1.2 : 1); return Object.freeze({ form, x: p.x, z: p.z, ...extra }); };
+const unit = (form, x, z, extra = {}) => { const p = freeSpot(x, z, form==='se04'?1.85:form === 'brute' || extra.elite || form === 'bulwark' ? 1.2 : 1); return Object.freeze({ form, x: p.x, z: p.z, ...extra }); };
 export const ENCOUNTERS = Object.freeze({
   sousbois: { wave: 3, units: [unit('probe', -72, 40), unit('stalker', -60, 30), unit('scuttler', -66, 20), unit('probe', -50, 10), unit('stalker', -76, 26), unit('scuttler', -56, 22)] },
   gue: { wave: 4, units: [unit('stalker', -6, 14), unit('bulwark', -4, 2), unit('probe', -10, -4)] },
@@ -129,7 +129,7 @@ export const ENCOUNTERS = Object.freeze({
   centre: { wave: 6, units: [unit('stalker', 46, -14), unit('probe', 60, -14), unit('seer', 76, -4), unit('stalker', 28, -28)] },
   cour1: { wave: 7, portal: { x: 70, z: 22 }, units: [unit('stalker', 70, 22), unit('stalker', 68, 18), unit('scuttler', 72, 26), unit('probe', 66, 24)] },
   cour2: { wave: 7, portal: { x: 40, z: 8 }, units: [unit('bulwark', 40, 8), unit('stalker', 42, 12), unit('seer', 38, 14), unit('scuttler', 44, 6)] },
-  cour3: { wave: 7, portal: { x: 62, z: -2 }, units: [unit('brute', 62, -2), unit('stalker', 58, -2), unit('probe', 66, 0), unit('scuttler', 60, 2), unit('scuttler', 64, 2)] },
+  cour3: { wave: 7, portal: { x: 62, z: -2 }, units: [unit('se04', 62, -2), unit('stalker', 58, -2), unit('probe', 66, 0), unit('scuttler', 60, 2), unit('scuttler', 64, 2)] },
   cour4: { wave: 7, portal: { x: 48, z: 26 }, units: [unit('stalker', 48, 26), unit('stalker', 52, 28), unit('seer', 46, 22), unit('probe', 54, 24), unit('scuttler', 50, 22)] },
   n08: { wave: 7, units: [unit('synth', 55, 4, { elite: true, boss: 2.4, name: 'SY-05 · UNITÉ EXPÉRIMENTALE', n08: true })] },
   sortie: { wave: 7, units: [unit('stalker', 78, 38), unit('probe', 84, 44), unit('scuttler', 74, 34), unit('stalker', 90, 48)] },

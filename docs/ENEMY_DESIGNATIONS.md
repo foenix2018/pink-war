@@ -4,6 +4,7 @@
 |---|---|---|---|
 | Reconnaissance | REC-01 | `seer` (modèle interne RECO1) | Jouable |
 | Sentinel | SE-03 | `sentinel` | Jouable |
+| Sentinel lourd V3 | SE-04 | `se04` | Nouveau châssis indépendant, missions M06, M07, M08, M10 et galerie |
 | Synthétique | SY-05 | `synth` (ancienne étiquette N-08) | Jouable |
 | Poursuivant | PO-07 | `stalker` | Jouable |
 | Spectre, unité sniper | SP-09 | Pas encore de type spécifique | Fiche de galerie uniquement, 3D désactivée |
