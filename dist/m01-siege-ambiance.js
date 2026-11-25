@@ -117,19 +117,19 @@ export function createM01SiegeAmbiance(T,scene,{obstacles=[],performance=false}=
  const pointLights=Array.from({length:low?1:2},()=>{const light=new T.PointLight(0xff397a,0,15,1.6);root.add(light);return light;});
  const search=new T.SpotLight(0xbad7ff,0,85,.19,.75,1.4);root.add(search,search.target);search.castShadow=false;
  const down=new T.Vector3(0,-1,0),direction=new T.Vector3(),target=new T.Vector3();
- const sunTint=new T.Color(0xa6b9da),skyTint=new T.Color(0xc4b4cd),groundTint=new T.Color(0x34313f),fogTint=new T.Color(0x423546);
+ const sunTint=new T.Color(0xffc69a),skyTint=new T.Color(0x9db6cc),groundTint=new T.Color(0x292d35),fogTint=new T.Color(0x465467);
  let lastTime=null,skySource=null,environmentSource=null,skyCanvas=null,stormSky=null,stormReflection=null,lastWeight=-1,disposed=false,covered=false,weight=1;
  function lighting(atmosphere,renderer,day,eye){
   const k=m01DuskWeight(day);weight=k;
   if(atmosphere){const d=Math.max(0,Math.min(1,Number.isFinite(day)?day:.43));
-   atmosphere.sun.intensity*=1+(((.63+d*.65)/(1.12+d*.55))-1)*k;
-   atmosphere.ambient.intensity*=1+(((.94+d*.26)/(.51+d*.26))-1)*k;
+   atmosphere.sun.intensity*=1+(((.88+d*.65)/(1.12+d*.55))-1)*k;
+   atmosphere.ambient.intensity*=1+(((.65+d*.26)/(.51+d*.26))-1)*k;
    atmosphere.sun.color.setHex(0xffe3bb).lerp(sunTint,k);
    atmosphere.ambient.color.setHex(0xc2cdcf).lerp(skyTint,k);
    atmosphere.ambient.groundColor.setHex(0x34332c).lerp(groundTint,k);
   }
-  if(renderer)renderer.toneMappingExposure=.84+.24*k;
-  if(scene.fog?.isFog){scene.fog.color.setHex(0x747b79).lerp(fogTint,k);scene.fog.near=52-12*k;scene.fog.far=265-40*k;}
+  if(renderer)renderer.toneMappingExposure=.84+.15*k;
+  if(scene.fog?.isFog){scene.fog.color.setHex(0x747b79).lerp(fogTint,k);scene.fog.near=52-8*k;scene.fog.far=265-52*k;}
   if(!skySource&&scene.background?.isTexture&&scene.background.image&&typeof document!=='undefined'){
    skySource=scene.background;environmentSource=scene.environment;
    skyCanvas=document.createElement('canvas');skyCanvas.width=low?1024:2048;skyCanvas.height=skyCanvas.width/2;
@@ -144,7 +144,7 @@ export function createM01SiegeAmbiance(T,scene,{obstacles=[],performance=false}=
  function update(time,dt,camera,{atmosphere=null,renderer=null,day=.43}={}){
   if(disposed)return;const eye=camera.position||camera;dt=lastTime===null?0:Math.max(0,Math.min(.08,time-lastTime));lastTime=time;
   covered=m01Covered(eye,obstacles);lighting(atmosphere,renderer,day,eye);
-  beamMaterial.opacity=.052*weight;hazeMaterial.opacity=.15*weight;reflection.opacity=.22*weight;glowMat.opacity=.5*weight;rainMaterial.opacity=.27*weight;
+  beamMaterial.opacity=.052*weight;hazeMaterial.opacity=.10*weight;reflection.opacity=.22*weight;glowMat.opacity=.5*weight;rainMaterial.opacity=.27*weight;
   air.visible=!covered&&weight>.03;
   for(const [i,b] of beams.entries()){
    target.set(b.d.to[0]+Math.sin(time*.13+b.phase)*3.2,b.d.to[1],b.d.to[2]+Math.cos(time*.11+b.phase)*2.1);
@@ -161,7 +161,7 @@ export function createM01SiegeAmbiance(T,scene,{obstacles=[],performance=false}=
   for(let i=0;i<haze.length;i++)haze[i].m.position.x=haze[i].x+Math.sin(time*.09+i)*1.6;
   if(air.visible){for(let i=0;i<count;i++){rainPositions[i*3+1]-=dt*(8+i%4);if(rainPositions[i*3+1]<0)rainPositions[i*3+1]+=17;}rainGeo.attributes.position.needsUpdate=true;}
  }
- const stat={revision:'m01-siege-01',searchlights:beams.length,banners:banners.length,watchPosts:4,practicals:practical.length,puddles:pools.length,rainParticles:count,maxDynamicLights:pointLights.length+1,addedColliders:0,meshes:0,triangles:0};
+ const stat={revision:'m01-siege-02-art-direction',searchlights:beams.length,banners:banners.length,watchPosts:4,practicals:practical.length,puddles:pools.length,rainParticles:count,maxDynamicLights:pointLights.length+1,addedColliders:0,meshes:0,triangles:0};
  root.traverse(o=>{if(o.isMesh){stat.meshes++;stat.triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3*(o.isInstancedMesh?o.count:1);o.castShadow=false;o.receiveShadow=!o.material.isMeshBasicMaterial;}});
  return {root,update,stats:()=>({...stat,neons:neons.stats(),covered,duskWeight:weight,dynamicLights:pointLights.filter(l=>l.visible).length+Number(search.visible)}),
   dispose(){if(disposed)return;disposed=true;neons.dispose();root.removeFromParent();if(skySource){scene.background=skySource;scene.environment=environmentSource;}
