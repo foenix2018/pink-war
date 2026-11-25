@@ -42,9 +42,56 @@ function terrainIK(upper,lower,foot,target,pole,fallback){
  orient(upper,lower,p.clone().addScaledVector(direction,along).addScaledVector(normal,bend));orient(lower,foot,p.clone().addScaledVector(direction,length));
 }
 
+// Hold the grounded ankles in world space after the stop blend. Never
+// apply the idle constraint during travel, a turn, a jump or a scripted pose.
+export function createStationaryFootLock({root,hips,legs,knees,feet}){
+ const v=()=>new T.Vector3(),q=()=>new T.Quaternion();
+ const last=v(),lastRotation=q(),origin=v(),originRotation=q();
+ let initialized=false,age=0,mode=null,anchors=null;
+ function reset(){initialized=false;age=0;mode=null;anchors=null;}
+ function update(dt,active,key){
+  if(!active){reset();return false;}
+  root.updateMatrixWorld(true);
+  const p=root.getWorldPosition(v()),rotation=root.getWorldQuaternion(q()),scale=root.getWorldScale(v()).y;
+  if(!initialized||mode!==key||p.distanceTo(last)>.003*scale||rotation.angleTo(lastRotation)>.008||
+     (anchors&&(p.distanceTo(origin)>.035*scale||rotation.angleTo(originRotation)>.035))){
+   reset();initialized=true;mode=key;origin.copy(p);originRotation.copy(rotation);
+  }
+  last.copy(p);lastRotation.copy(rotation);age+=Math.max(0,dt);
+  // Let the ordinary crossfade bring both feet into the new resting stance.
+  if(age<.30)return false;
+  if(!anchors){
+   origin.copy(p);originRotation.copy(rotation);
+   anchors=feet.map(f=>({p:f.getWorldPosition(v()),q:f.getWorldQuaternion(q())}));
+  }
+  const poles=knees.map(k=>k.getWorldPosition(v()));
+  let drop=0;
+  for(let i=0;i<2;i++){
+   const a=legs[i].getWorldPosition(v()),b=knees[i].getWorldPosition(v()),c=feet[i].getWorldPosition(v()),target=anchors[i].p;
+   const reach=a.distanceTo(b)+b.distanceTo(c)-.001;
+   const horizontal=(a.x-target.x)**2+(a.z-target.z)**2;
+   drop=Math.max(drop,a.y-target.y-Math.sqrt(Math.max(0,reach*reach-horizontal)));
+  }
+  if(drop>0){
+   const offset=Math.min(drop,.12*scale),hp=hips.getWorldPosition(v());hp.y-=offset;
+   hips.position.copy(hips.parent.worldToLocal(hp));root.updateMatrixWorld(true);
+   for(const pole of poles)pole.y-=offset;
+  }
+  for(let i=0;i<2;i++){
+   const target=anchors[i],fallback=root.localToWorld(new T.Vector3(i===0?-.2:.2,.5,-.6));
+   if(feet[i].getWorldPosition(v()).distanceToSquared(target.p)>1e-12)terrainIK(legs[i],knees[i],feet[i],target.p,poles[i],fallback);
+   feet[i].quaternion.copy(feet[i].parent.getWorldQuaternion(q()).invert().multiply(target.q));
+   feet[i].updateWorldMatrix(false,true);
+  }
+  return true;
+ }
+ return {update,reset};
+}
+
 export function createHeroLocomotion(model){
  const {root,actor,hips,legs,knees,feet}=model,lastPosition=root.position.clone(),direction=new T.Vector3(0,0,-1),local=new T.Vector3(),delta=new T.Vector3();
  const definitions=Object.fromEntries(actor.data.clips.map(c=>[c.name,c]));
+ const stationary=createStationaryFootLock({root,hips,legs,knees,feet});
  let soles=[],runFloors={},runAnkles={},runSupport=false,ground=null,groundVelocity=0,lastYaw=0,initialized=false,actualSpeed=0,speed=0,turn=0,clock=0,drop=0;
  const state={speed:0,forward:0,lateral:0,turn:0,legYaw:0,backward:false,planted:[false,false],supportWeight:[0,0],airborne:false,verticalSpeed:0,landing:0,travelDirection:direction};
  const gait=state.gait={phase:0,stride:1,frequency:0,distance:0,pelvisDrop:0,contacts:[null,null],source:'Adobe Mixamo'};
@@ -103,7 +150,7 @@ export function createHeroLocomotion(model){
   ground=target+(change+temp)*e;groundVelocity=(groundVelocity-omega*temp)*e;return ground;
  }
  function footFloor(i,q){let lowest=Infinity;const point=new T.Vector3();for(const p of soles[i])lowest=Math.min(lowest,point.copy(p).applyQuaternion(q).y);return -lowest+.004;}
- function plant(dt,flight){
+ function plantGround(dt,flight){
   if(flight.airborne)return;
   root.updateMatrixWorld(true);const scale=root.getWorldScale(new T.Vector3()).y,rootY=root.getWorldPosition(new T.Vector3()).y;
   const height=(x,z)=>{const y=flight.ground?.(x,z,rootY);return Number.isFinite(y)?y:rootY;};
@@ -143,6 +190,11 @@ export function createHeroLocomotion(model){
    feet[i].quaternion.copy(feet[i].parent.getWorldQuaternion(new T.Quaternion()).invert().multiply(p.q));
    state.planted[i]=p.weight>.95;state.supportWeight[i]=p.weight;gait.contacts[i]={point:p.target.clone(),planted:state.planted[i]};
   }
+ }
+ function plant(dt,flight){
+  plantGround(dt,flight);
+  const locked=stationary.update(dt,actualSpeed<=.025&&!flight.airborne&&!flight.slide&&!flight.preview,gait.motion);
+  if(locked)for(let i=0;i<2;i++){state.planted[i]=true;state.supportWeight[i]=1;gait.contacts[i]={point:feet[i].getWorldPosition(new T.Vector3()),planted:true};}
  }
  return {state,sample,advanceGait,pose(){},plant,groundCorrection,groundTarget,setSoles,footFloor,groundOffset:()=> (ground??0)+drop};
 }

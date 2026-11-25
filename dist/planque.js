@@ -15,7 +15,7 @@ import {createPinkWarsInput} from './level2-input.js';
 import {installPinkWarsSoldier} from './level2-player.js';
 import {setScreenMusic,setMusicEnabled} from './menu-music.js';
 import {GAME_VERSION} from './launch-ui.js';
-import {createLyluCivil} from './lylu-civil-hideout.js?v=20261124fitness2';
+import {createLyluCivil} from './lylu-civil-hideout.js?v=20261125footlock';
 import {FITNESS_PROGRAMS,FITNESS_LABELS,createFitnessSession,advanceFitness,claimFitness} from './hideout-fitness.js';
 import {createFitnessProps} from './hideout-fitness-props.js';
 import {bindViewButton,mountViewControl,savePreferredView} from './view-options.js';
