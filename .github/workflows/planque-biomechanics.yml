@@ -2,6 +2,9 @@ name: Planque biomechanics and campaign fitness
 on:
   push:
     branches: [feature/fitness-biomechanics-20261125]
+  pull_request:
+    branches: [main]
+    paths: ['dist/lylu-civil-motion.js','dist/lylu-civil-hideout.js','dist/hideout-fitness-props.js','dist/hideout-fitness.js','dist/hideout-state.js','dist/planque.js','dist/game-logic.js','dist/armor-combat.js','tests/planque-fitness.test.mjs','tools/verify-planque-biomechanics.mjs','.github/workflows/planque-biomechanics.yml']
   workflow_dispatch:
 permissions:
   contents: read
