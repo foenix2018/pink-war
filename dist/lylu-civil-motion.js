@@ -12,10 +12,10 @@ export function buildCivilMotion(T,visual,bones,original){
  const pelvisRest=pos('Pelvis');
  const setPelvis=(dx,dy,dz)=>{const b=bone('Pelvis');b.position.copy(b.parent.worldToLocal(pelvisRest.clone().add(V(dx,dy,dz))));visual.updateMatrixWorld(true);};
  const feet=(targets)=>{for(const s of ['L','R']){solve('Thigh_'+s,'Shin_'+s,'Foot_'+s,targets[s],targets[s].clone().add(V(0,.55,.70)));bone('Foot_'+s).quaternion.copy(bone('Foot_'+s).parent.getWorldQuaternion(Q()).invert().multiply(footRot[s]));visual.updateMatrixWorld(true);}};
- const arms=(mode,u)=>{for(const [s,side] of [['L',1],['R',-1]]){const sh=pos('UpperArm_'+s);let target,pole;
- if(mode==='fitnessCurl'){const a=(.10+2.0*u),el=sh.clone().add(V(side*.035,-.26,0));target=el.clone().add(V(side*.025,-.25*Math.cos(a),.25*Math.sin(a)));pole=el.clone();}
- else if(mode==='fitnessSquat'){target=sh.clone().add(V(side*.16,-.015,-.105));pole=sh.clone().add(V(side*.36,-.22,-.18));}
- else if(mode==='fitnessRow'){target=V(side*.18,.67+.09*u,.58-.41*u);pole=sh.clone().add(V(side*.22,-.22,-.12));}
+ const arms=(mode,u,row=null)=>{for(const [s,side] of [['L',1],['R',-1]]){const sh=pos('UpperArm_'+s);let target,pole;
+ if(mode==='fitnessCurl'){const a=.12+2.15*u,el=sh.clone().add(V(side*.045,-.27,.025));target=el.clone().add(V(side*.015,-.25*Math.cos(a),.25*Math.sin(a)));pole=el.clone().add(V(0,0,-.08));}
+ else if(mode==='fitnessSquat'){const chest=pos('Chest');target=V(side*.34,chest.y+.105,chest.z-.12);pole=sh.clone().add(V(side*.38,-.20,-.24));}
+ else if(mode==='fitnessRow'){target=V(side*.18,.69+.07*row.pull,.58-.34*row.legs-.12*row.swing-.25*row.pull);pole=sh.clone().add(V(side*.22,-.22,-.12));}
  else {const swing=(mode.startsWith('run')?.14:.085)*Math.sin(u*Math.PI*2+(side>0?0:Math.PI));target=sh.clone().add(V(side*.065,-.47,swing));pole=sh.clone().add(V(side*.12,-.24,-.08));}
  solve('UpperArm_'+s,'ForeArm_'+s,'Hand_'+s,target,pole);
  }};
@@ -32,10 +32,10 @@ export function buildCivilMotion(T,visual,bones,original){
  // Looping original fitness poses; the feet are solved against fixed anchors.
  for(const [name,duration] of [['fitnessCurl',3.0],['fitnessSquat',3.6],['fitnessRow',2.8]]){
   const n=Math.ceil(duration*30)+1,times=Array.from({length:n},(_,i)=>i*duration/(n-1)),values=Object.fromEntries(names.map(n=>[n,[]])),hip=[];
-  for(let i=0;i<n;i++){reset();const t=i/(n-1),u=.5-.5*Math.cos(t*2*Math.PI);
-   if(name==='fitnessSquat'){setPelvis(0,-.34*u,-.12*u);direction('Spine','Chest',V(0,1,.32*u));feet(footRest);}
-   if(name==='fitnessRow'){setPelvis(0,-.49,-.18-.34*u);direction('Spine','Chest',V(0,1,.35-.62*u));feet({L:footRest.L.clone().add(V(0,.12,.51)),R:footRest.R.clone().add(V(0,.12,.51))});}
-   arms(name,u);for(const k of names){const q=bone(k).quaternion,a=values[k];if(a.length&&q.dot(new T.Quaternion().fromArray(a,a.length-4))<0)q.set(-q.x,-q.y,-q.z,-q.w);a.push(...q.toArray());}hip.push(...bone('Pelvis').position.toArray());
+  for(let i=0;i<n;i++){reset();const t=i/(n-1),smooth=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};let u=smooth(t/.48)*(1-smooth((t-.55)/.40));let row=null;
+   if(name==='fitnessSquat'){setPelvis(0,-.40*u,-.19*u);direction('Spine','Chest',V(0,1,.42*u));feet(footRest);}
+   if(name==='fitnessRow'){const legs=smooth(t/.29)*(1-smooth((t-.70)/.30)),swing=smooth((t-.16)/.20)*(1-smooth((t-.53)/.20)),pull=smooth((t-.27)/.16)*(1-smooth((t-.43)/.16));row={legs,swing,pull};setPelvis(0,-.49,-.12-.40*legs);direction('Spine','Chest',V(0,1,.38-.66*swing));feet({L:footRest.L.clone().add(V(0,.12,.51)),R:footRest.R.clone().add(V(0,.12,.51))});}
+   arms(name,u,row);for(const k of names){const q=bone(k).quaternion,a=values[k];if(a.length&&q.dot(new T.Quaternion().fromArray(a,a.length-4))<0)q.set(-q.x,-q.y,-q.z,-q.w);a.push(...q.toArray());}hip.push(...bone('Pelvis').position.toArray());
   }
   const tracks=names.map(k=>new T.QuaternionKeyframeTrack(k+'.quaternion',times,values[k]));tracks.push(new T.VectorKeyframeTrack('Pelvis.position',times,hip));clips.push(new T.AnimationClip(name,duration,tracks));
  }
