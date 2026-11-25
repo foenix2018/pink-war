@@ -332,6 +332,28 @@ export function createM01ExtensionArt(T, scene, { quality = 'normal', camera, we
         }
       }
     }
+    // Station and botanical archive: architectural fittings mounted on the
+    // actual solid facade segments. All protrusions are above head height.
+    // Never bridge door gaps or alter colliders.
+    for(const o of obstacles){
+      if(o.kind!=='wall'||!['facade','stone'].includes(o.look)||o.height<3.4)continue;
+      const station=o.look==='facade',alongX=o.hx>o.hz,len=2*(alongX?o.hx:o.hz);
+      if(len<2.6)continue;
+      const side=station?(alongX?(o.z<70?-1:1):(o.x<-88?-1:1)):(alongX?(o.z<-82?-1:1):(o.x<0?-1:1));
+      const face=(alongX?o.z:o.x)+side*((alongX?o.hz:o.hx)+.045);
+      const fitting=(t,y,w,h,d,m)=>alongX?piece(m,o.x+t,y,face,w,h,d):piece(m,face,y,o.z+t,d,h,w);
+      // Rain cap and recessed fascia, contrasted with the original brick or stone.
+      const top=o.height-.22;
+      fitting(0,top,len-.16,.13,.18,station?M.concrete:M.stone);
+      if(o.height>=6){
+        fitting(0,top-.32,len-.32,.085,.12,station?M.dark:M.concrete);
+        // Downpipe segments stay above the player and terminate at the cornice.
+        for(const offset of [-len*.38,len*.38]){
+          fitting(offset,3.05,.085,Math.max(.15,top-3.05),.12,station?M.steel:M.paintedMetal);
+          for(let yy=3.4;yy<top-.15;yy+=1.35)fitting(offset,yy,.15,.055,.15,M.dark);
+        }
+      }
+    }
     // Caserne: white band and cornice on the brick facade, apparatus-bay door frame painted red.
     piece(M.white, -80.2, 3.4, 59, .12, .3, 30); piece(M.white, -80.2, 7.6, 85, .12, .35, 22);
     for (const z of [83.35, 88.65]) piece(M.red, -80, 0, z, .5, 4.4, .3); piece(M.red, -80, 4.2, 86, .5, .3, 5.6);
