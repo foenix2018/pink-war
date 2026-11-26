@@ -38,9 +38,11 @@ export function installOutfitStages(model,profile,{armour,gear}={}){
   if(model.jetpackFX?.root)model.jetpackFX.root.visible=current>=3;
   for(const g of gear.anchors)if(/protections de hanche/.test(g.name))g.visible=current>=5;
  }
- model.setLevel=n=>{const stage=suitStage(n);if(current===stage)return;current=stage;mask(armour.bindings,stageFor);mask(extras.bindings,s=>s.parent.userData.outfitStage);refresh();};
+ // Tenues 4-5 : le casque fourni (hero-helmets.js) remplace la coque Shadow dès qu'il est chargé.
+ let helmetOverride=()=>false;const armourStage=source=>helmetOverride()&&source.parent===armour.helmet?Infinity:stageFor(source);
+ model.setLevel=n=>{const stage=suitStage(n);if(current===stage)return;current=stage;mask(armour.bindings,armourStage);mask(extras.bindings,s=>s.parent.userData.outfitStage);refresh();};
  for(let i=0;i<pose.length;i++){model.actor.bones[i].position.copy(pose[i].p);model.actor.bones[i].quaternion.copy(pose[i].q);}model.root.updateMatrixWorld(true);
  Object.defineProperty(model,'equipmentLevel',{configurable:true,get:()=>current});
  const ready=gear.ready.then(()=>{if(disposed)return false;refresh();return true;});model.setLevel(1);
- return{ready,get stage(){return current;},snapshot:()=>({stage:current,name:ARMOR_STAGES[current-1].name,triangles:[...armour.batches,...extras.batches].reduce((n,m)=>n+(m.visible?m.geometry.index.count/3:0),0),batches:armour.batches.filter(m=>m.visible).length+extras.batches.filter(m=>m.visible).length,jetpack:model.jetpackFX?.root.visible}),dispose(){disposed=true;extras.dispose();for(const g of groups)g.removeFromParent();for(const g of extraGeo)g.dispose();for(const m of owned)m.dispose();for(const t of textures.values())t.dispose();}};
+ return{ready,get stage(){return current;},setHelmetOverride(fn){helmetOverride=fn||(()=>false);},refreshHelmet(){if(current)mask(armour.bindings,armourStage);},snapshot:()=>({stage:current,name:ARMOR_STAGES[current-1].name,triangles:[...armour.batches,...extras.batches].reduce((n,m)=>n+(m.visible?m.geometry.index.count/3:0),0),batches:armour.batches.filter(m=>m.visible).length+extras.batches.filter(m=>m.visible).length,jetpack:model.jetpackFX?.root.visible}),dispose(){disposed=true;extras.dispose();for(const g of groups)g.removeFromParent();for(const g of extraGeo)g.dispose();for(const m of owned)m.dispose();for(const t of textures.values())t.dispose();}};
 }

@@ -6,6 +6,7 @@ import {addCapeToOriginalSoldier} from './personnage-cape-addon.js?v=3.74.0';
 import {attachHeroGear} from './hero-gear.js';
 import {shapeHeroFigure} from './hero-figure.js';
 import {applyHexSuit} from './hero-suit.js';
+import {attachHeroHelmet} from './hero-helmets.js';
 
 export function applyShadowMaterials(kit,profile){
   // Keep both teams' glow/accent colors while replacing the pale AÉGIS shell
@@ -34,6 +35,9 @@ export function installShadowUnit(model,profile){
   // The undersuit: honeycomb of small hexagonal cells (plum for GHJU, blue for LYLU) instead of a plain black.
   const suit=applyHexSuit(model,profile);
   const outfits=installOutfitStages(model,profile,{armour,gear});
+  // Tenues 4 et 5 : casques fournis (GHJU rose, LYLU bleu à visière animée).
+  const helmet=attachHeroHelmet(model,profile,{armour,outfits});
+  const stageLevel=model.setLevel;model.setLevel=n=>{stageLevel(n);helmet.sync(n);};
 
   // Drive the cape with the soldier's actual animation clock. This covers
   // 3rd-person campaign, arena, stand, outfit, lobby and AT HOME companion.
@@ -41,6 +45,7 @@ export function installShadowUnit(model,profile){
   const animate=model.animate.bind(model);
   model.animate=(time,moving,recoil,reload,trigger,dt,flight={})=>{
     armour.restoreAttachments();
+    helmet.update(dt);
     animate(time,moving,recoil,reload,trigger,dt,flight);
     const locomotion=model.locomotion||{};
     const travelling=(locomotion.speed||0)>.1;
@@ -51,10 +56,10 @@ export function installShadowUnit(model,profile){
   };
   const dispose=model.dispose.bind(model);
   model.dispose=()=>{
-    outfits.dispose();armour.dispose();
+    helmet.dispose();outfits.dispose();armour.dispose();
     cape.dispose();tabard.dispose();gear.dispose();suit.dispose();figure?.dispose();
     dispose();
   };
-  model.shadowUnit={outfits,armour,cape,tabard,gear,figure,suit,profile:profile.id};
+  model.shadowUnit={outfits,helmet,armour,cape,tabard,gear,figure,suit,profile:profile.id};
   return model.shadowUnit;
 }

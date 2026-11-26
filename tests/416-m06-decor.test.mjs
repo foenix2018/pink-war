@@ -25,8 +25,8 @@ test('the dressed level stays fully playable: every interaction and every spawn 
 });
 test('relief and horizon: flat play area matching the asphalt, ridges, skyline, forest; art wires the dressing and the Blender models',()=>{
   const h=read('m06-horizon.js'),art=read('m06-art.js'),dr=read('m06-dressing.js');
-  assert.match(h,/PLAY_HALF = 112/);assert.match(art,/metricGround\(T,220,220/);   // asphalt plane ±110, terrain flat to ±112
+  assert.match(h,/PLAY_HALF = 112/);assert.match(art,/extendPaving\(T,M.asphalt/);   // asphalt paving extended by the shared chapter horizon
   for(const part of ['function height','ridge(1050','LatheGeometry','InstancedMesh','LineSegments','train','Sprite'])assert.ok(h.includes(part),part);
-  assert.match(art,/createFoundryHorizon/);assert.match(art,/buildDressing/);assert.match(art,/horizon\?\.update\(t\)/);
+  assert.match(art,/createFoundryHorizon/);assert.match(art,/buildDressing/);assert.match(art,/horizon\?\.update\(t[,)]/);
   assert.match(dr,/m04\/models/);assert.match(read('niveau6.js'),/PerspectiveCamera\(70,innerWidth\/innerHeight,\.06,3600\)/);
 });
