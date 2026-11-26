@@ -20,6 +20,10 @@ import {createLyluCivil} from './lylu-civil-hideout.js?v=20261125footlock';
 import {FITNESS_PROGRAMS,FITNESS_LABELS,createFitnessSession,advanceFitness,claimFitness} from './hideout-fitness.js';
 import {createFitnessProps} from './hideout-fitness-props.js';
 import {bindViewButton,mountViewControl,savePreferredView} from './view-options.js';
+import {createGlove} from './hands.js';
+import {immersiveRendererPreferred} from './mission-xr.js';
+import {createHideoutVR,headsetAvailable} from './planque-vr.js';
+import {stationMenu,archiveEntryMenu,pauseMenu,stationHint,nearestStation,faceYaw,arrivalSpot} from './planque-vr-stations.js';
 
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search);
 let savedHero='ghju';try{savedHero=localStorage.getItem('pink-war-character')||'ghju';}catch{}
@@ -30,6 +34,7 @@ for(const b of document.querySelectorAll('[data-hero]')){b.setAttribute('aria-pr
 let savedQuality='auto';try{const q=JSON.parse(localStorage.getItem('rosee-settings')||'{}').quality;if(['auto','low','balanced','high','performance'].includes(q))savedQuality=q;}catch{}
 let profile=readHideoutProfile(characterId),renderer,canvas=$('world'),scene,camera,overview,visit,art,game,navigation,rig,nanoFx,nanoPanel,nanoChambers,nanoUI=null,ready=false,view='overview',cameraYaw=0,cameraPitch=-.13,armorLevel=readNanoProfile(characterId).equippedSuit;
 let outfitPreview=null,outfitTarget=null,outfitCamera=null,training=null,fitnessProps=null;
+let vr=null,vrMessage=null,vrMenuId=null,vrEye=null,vrView='third',vrGraphics=null;
 let civil=null,civilMode=lylu,civilLoading=false,portrait=null,third=null,paused=false,pauseViewControl=null,optionsViewControl=null,lastPlayView='third',returningArmor=false;
 function visibleHero(){if(rig)rig.model.root.visible=(view==='overview'||view==='third')&&(!lylu||!civilMode);if(civil)civil.root.visible=civilMode&&view!=='visit';}
 function setCivilMode(on){if(!on)stopTraining();civilMode=!!(lylu&&on);const b=$('civil-outfit');if(b){b.textContent=civilMode?'RÉCUPÉRER ARMURE':'REPOSER ARMURE';b.setAttribute('aria-pressed',String(!civilMode));}if(!civilMode&&view==='portrait')setView(lastPlayView);visibleHero();}
@@ -42,7 +47,7 @@ function pauseStation(id){resumeHideout();chooseStation(id);}
 async function returnArmor(){if(!lylu||civilMode||returningArmor||!civil||!rig)return false;returningArmor=true;try{if(!await nanoChambers.store(characterId,armorLevel)){message('La capsule est indisponible. Réessaie.',6);return false;}setCivilMode(true);civil?.triggerAction('armor-return');message('Armure reposée dans la capsule de LYLU.',5);return true;}finally{returningArmor=false;nanoUI?.refresh();}}
 let path=[],destination=null,near=null,opened=null,healing=null,clock=0,previous=0,pending=false,messageUntil=0,lastStatus='',moving=false;
 const keys=new Set(),touch={x:0,z:0},pads=createPinkWarsInput(),ray=new T.Raycaster(),mouse=new T.Vector2(),floor=new T.Plane(new T.Vector3(0,1,0),0),floorPoint=new T.Vector3();
-function message(text,seconds=4){$('notice').textContent=text;$('notice').hidden=false;messageUntil=performance.now()+seconds*1000;}
+function message(text,seconds=4){$('notice').textContent=text;$('notice').hidden=false;messageUntil=performance.now()+seconds*1000;vrMessage={text,until:messageUntil};}
 function progress(value,text){$('loading').querySelector('progress').value=value;$('loading').querySelector('p').textContent=text;}
 function saveCurrent(){
  if(!game)return;const fresh=readHideoutProfile(characterId);Object.assign(fresh,{owned:[...game.ownedWeapons],selectedWeapon:game.weaponIndex,armorLevel,health:game.player.hp,shield:game.player.shield||0,charges:game.charges});profile=fresh;saveHideoutProfile(characterId,profile);
@@ -53,7 +58,7 @@ function environment(){
 }
 async function boot(){
  try{
-  const quality=params.get('quality')||savedQuality,graphics=graphicsProfile({userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu,rendererHint:params.get('renderer')},quality);
+  const quality=params.get('quality')||savedQuality,graphics=graphicsProfile({userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu,rendererHint:params.get('renderer')},quality,params.get('renderer')==='webgl'||await immersiveRendererPreferred());
   graphics.orthographicBudget=true;
   const compatible=await createCompatibleRenderer({canvas,WebGPU:T.WebGPURenderer,WebGL:WebGLRenderer,profile:graphics});renderer=compatible.renderer;canvas=compatible.canvas;
   renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(renderPixelRatio(graphics,devicePixelRatio,innerWidth,innerHeight));renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
@@ -72,7 +77,7 @@ async function boot(){
   const spawn=art.layout.openPlanRevision?art.layout.spawn:{x:0,z:4.6,yaw:0};cameraYaw=spawn.yaw||0;Object.assign(game.player,{x:spawn.x,z:spawn.z,yaw:cameraYaw,elevation:0,hp:profile.health,shield:Math.min(game.shieldCapacity,profile.shield)});game.charges=profile.charges;
   nanoFx=createNanoForgeFX(T,{scene,camera:overview,getWeapon:()=>rig?.model.gun});
   progress(.9,'Chargement de '+characterId.toUpperCase());resize(graphics);bindWorld();
-  await loadHero();setView(lylu?'third':'overview');renderer.setAnimationLoop(frame);
+  await loadHero();setView(lylu?'third':'overview');setupVR(graphics);renderer.setAnimationLoop(frame);
   ready=true;$('loading').hidden=true;setScreenMusic('menu',1,undefined,{mode:'planque'});message('Bienvenue dans la planque. Choisis une pièce ou promène-toi.',6);
   if(lylu)void nanoChambers.store(characterId,armorLevel).catch(error=>console.warn('Capsule LYLU',error));
  }catch(error){console.error('La Planque',error);$('loading').hidden=false;progress(0,error?.message||'Le refuge n’a pas pu s’ouvrir.');$('retry').hidden=false;}
@@ -299,5 +304,74 @@ function frame(now){
  (async()=>{await art.renderExterior(renderer,camera,clock);if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);await paintOutfitPreview();})().then(()=>pending=false).catch(error=>{pending=false;console.error(error);message('Le rendu a été interrompu. Recharge la planque.',8);});
 }
 
-window.__PINK_HIDEOUT={snapshot:()=>({ready,version:GAME_VERSION,characterId,view,station:opened,pathLength:path.length,routeTarget:destination?.id,nextPoint:path[0]&&{x:path[0].x,z:path[0].z},simulationTime:game?.time,position:game&&{x:game.player.x,z:game.player.z},health:game?.player.hp,shield:game?.player.shield,weapon:game?.weapon.id,weaponIndex:game?.weaponIndex,owned:game&&[...game.ownedWeapons],armorLevel,nano:game?.nano.profile.balance,history:historyForHero(profile),completed:[...profile.completed],next:nextHideoutChapter(profile),source:art?.source,triangles:art?.triangles,batches:art?.batches,downloadBytes:art?.downloadBytes,surfaces:art?.surfaces,showcase:art?.showcase(),enhancements:art?.enhancements?.(),nanoChambers:nanoChambers?.snapshot(),doors:art?.doors(),city:art?.city(),backend:rendererBackend(renderer),renderBudget:renderer?.frameBudget?.stats(),heroReady:lylu?!!civil:!!rig,paused,civilMode,civilLoading,civil:civil?.snapshot()||null,healing:!!healing,training:training?{...training}:null,fitness:readHideoutProfile(characterId).fitness,fitnessProps:fitnessProps?.snapshot()}),debug:params.has('debug')?{get game(){return game;},get scene(){return scene;},get camera(){return camera;},get renderer(){return renderer;},get art(){return art;},get nanoChambers(){return nanoChambers;},get civil(){return civil;},startTraining,stopTraining,advanceTraining(seconds){if(!training)return;for(let t=0;t<seconds&&training;t+=.05){advanceFitness(training,.05);if(training.complete)stopTraining(true);}return training;},get time(){return clock;},openDoor:id=>art.openDoor(id),go:chooseStation,open:openStation,close:closePanel,teleport(x,z){if(navigation.free(x,z)){path=[];Object.assign(game.player,{x,z});}},look(yaw,pitch=-.12){cameraYaw=yaw;cameraPitch=pitch;game.player.yaw=yaw;},async captureFrame(){renderer.setAnimationLoop(null);const deadline=performance.now()+90000;while(pending){if(performance.now()>deadline)throw Error('Pending frame did not finish');await new Promise(r=>setTimeout(r,25));}update(.016);await art.renderExterior(renderer,camera,clock);if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);},navigation:()=>navigation,complete(level){profile.completed.push(level);profile.lastChapter=level;saveHideoutProfile(characterId,profile);}}:null};
+window.__PINK_HIDEOUT={snapshot:()=>({vr:!!vr?.active,vrMenu:vr?.menu?.open?vrMenuId:null,vrHint:vr?.active?stationHint(near):'',vrTracked:vr?.active?vr.entries.map(e=>[e.source?.handedness||null,e.tracked]):null,vrHover:vr?.menu?.open?vr.menu.hover:null,vrPanel:vr?.menu?.open?{x:vr.menu.mesh.position.x,y:vr.menu.mesh.position.y,z:vr.menu.mesh.position.z,yaw:vr.yaw,matrix:vr.menu.mesh.matrixWorld.toArray()}:null,ready,version:GAME_VERSION,characterId,view,station:opened,pathLength:path.length,routeTarget:destination?.id,nextPoint:path[0]&&{x:path[0].x,z:path[0].z},simulationTime:game?.time,position:game&&{x:game.player.x,z:game.player.z},health:game?.player.hp,shield:game?.player.shield,weapon:game?.weapon.id,weaponIndex:game?.weaponIndex,owned:game&&[...game.ownedWeapons],armorLevel,nano:game?.nano.profile.balance,history:historyForHero(profile),completed:[...profile.completed],next:nextHideoutChapter(profile),source:art?.source,triangles:art?.triangles,batches:art?.batches,downloadBytes:art?.downloadBytes,surfaces:art?.surfaces,showcase:art?.showcase(),enhancements:art?.enhancements?.(),nanoChambers:nanoChambers?.snapshot(),doors:art?.doors(),city:art?.city(),backend:rendererBackend(renderer),renderBudget:renderer?.frameBudget?.stats(),heroReady:lylu?!!civil:!!rig,paused,civilMode,civilLoading,civil:civil?.snapshot()||null,healing:!!healing,training:training?{...training}:null,fitness:readHideoutProfile(characterId).fitness,fitnessProps:fitnessProps?.snapshot()}),debug:params.has('debug')?{get game(){return game;},get scene(){return scene;},get camera(){return camera;},get renderer(){return renderer;},get art(){return art;},get nanoChambers(){return nanoChambers;},get civil(){return civil;},startTraining,stopTraining,advanceTraining(seconds){if(!training)return;for(let t=0;t<seconds&&training;t+=.05){advanceFitness(training,.05);if(training.complete)stopTraining(true);}return training;},get time(){return clock;},openDoor:id=>art.openDoor(id),go:chooseStation,open:openStation,close:closePanel,teleport(x,z){if(navigation.free(x,z)){path=[];Object.assign(game.player,{x,z});}},look(yaw,pitch=-.12){cameraYaw=yaw;cameraPitch=pitch;game.player.yaw=yaw;},async captureFrame(){renderer.setAnimationLoop(null);const deadline=performance.now()+90000;while(pending){if(performance.now()>deadline)throw Error('Pending frame did not finish');await new Promise(r=>setTimeout(r,25));}update(.016);await art.renderExterior(renderer,camera,clock);if(renderer.renderAsync)await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);},navigation:()=>navigation,complete(level){profile.completed.push(level);profile.lastChapter=level;saveHideoutProfile(characterId,profile);}}:null};
+// ─── VR : même monde, mêmes stations, menus 3D à la place des panneaux HTML ───
+function vrMakeHand(){
+ if(rig)return createGlove(rig.kit.gloves,{sleeve:false});
+ const g=new T.Group();g.add(new T.Mesh(new T.SphereGeometry(.045,12,8),new T.MeshStandardMaterial({color:0x394653,roughness:.6})));return g;
+}
+async function setupVR(graphics){
+ vrGraphics=graphics;const button=$('vr');if(!button)return;
+ vrEye=new T.PerspectiveCamera(64,1,.05,180);
+ vr=createHideoutVR({
+  getWorld:()=>({T,scene,camera,renderer,game,accent:lylu?'#80baff':'#ef91b4',createHand:vrMakeHand,onHidden:()=>{if(vr?.menu&&!vr.menu.open)openVRPause();}}),
+  onFrame:vrFrame,getYaw:()=>cameraYaw,setYaw:v=>{cameraYaw=v;},
+  onEnter:()=>{previous=0;pending=false;vrMessage=null;message('Marche au stick gauche, tourne au stick droit. A pour utiliser une station, X pour la pause.',8);},
+  onExit:()=>{setView(vrView==='visit'?'visit':'third');resize(vrGraphics);clearMotion();previous=0;pending=false;renderer.setAnimationLoop(frame);},
+  onClosePanel:()=>{vrMenuId=null;}
+ });
+ button.onclick=()=>{
+  if(vr.active){void vr.exit();return;}
+  // La caméra de la vue « visite » doit être active AVANT l'entrée : c'est elle que le rig VR emporte.
+  if(paused)resumeHideout();if(opened)closePanel();clearMotion();vrView=view==='visit'||lastPlayView==='visit'?'visit':'third';setView('visit');
+  vr.enter().catch(error=>{setView(vrView);console.warn('VR planque',error);message(error?.message||'La VR n’a pas pu démarrer.',9);});
+ };
+ if(await headsetAvailable())button.hidden=false;
+}
+function vrContext(){
+ return{game,weapons:WEAPONS,profile,tiers:NANO_ARMOR_TIERS,stages:ARMOR_STAGES,recipes:nanoRecipes(game),chapters:HIDEOUT_HISTORY,next:nextHideoutChapter(profile),history:historyForHero(profile),
+  actions:{
+   selectWeapon:i=>{if(i!==game.weaponIndex)game.selectWeapon(i);saveCurrent();rig?.model.setWeapon(i);message(WEAPONS[i].name+' préparé pour '+characterId.toUpperCase());vrRefresh();},
+   equipTier:tier=>{const level=NANO_ARMOR_TIERS[tier-1].gameLevel;if(level>game.nano.profile.suitStage)return;if(level!==game.nano.profile.equippedSuit&&!equipNanoSuit(game,level)){message('Cette tenue ne peut pas être équipée.',5);return;}vrSuitChanged();message('Tenue '+tier+' équipée');vrRefresh();},
+   fabricateTier:tier=>{if(!game.fabricateNano('suit:'+tier)){message(nanoRecipes(game).find(r=>r.id==='suit:'+tier)?.reason||'Plan et nanoparticules requis.',6);vrRefresh();return;}vrSuitChanged();message('Tenue '+tier+' fabriquée et équipée');vrRefresh();},
+   heal:rest=>{game.player.shield=game.shieldCapacity;if(rest)game.player.hp=100;else{game.ammo=WEAPONS.map(w=>w.capacity);game.dual.ammo={left:12,right:12};game.charges=4;}saveCurrent();profile.rested=profile.rested||rest;profile.recharged=profile.recharged||!rest;saveHideoutProfile(characterId,profile);message(rest?'Santé et bouclier régénérés.':'Équipement rechargé.');vrRefresh();},
+   depart:level=>depart(level),
+   readArchive:entry=>vr.menu.show(archiveEntryMenu(entry,()=>openVRStation('archive')))
+  }};
+}
+function vrSuitChanged(){const changed=armorLevel!==game.nano.profile.equippedSuit;armorLevel=game.nano.profile.equippedSuit;rig?.model.setLevel(armorLevel);saveCurrent();rig?.model.setWeapon(game.weaponIndex);if(changed)void nanoChambers?.inject(characterId,armorLevel).catch(()=>{});}
+function openVRStation(id){vrMenuId=id;vr.menu.show(stationMenu(id,vrContext()));}
+function vrRefresh(){if(vr?.menu.open&&vrMenuId&&vrMenuId!=='pause')vr.menu.refresh(stationMenu(vrMenuId,vrContext()),{keepPage:true});}
+function closeVRMenu(){vr.menu.hide();vrMenuId=null;}
+const vrPauseModel=()=>pauseMenu({settings:vr.settings,stations:art.layout.stations,actions:vrPauseActions});
+const vrPauseActions={resume:()=>closeVRMenu(),toggleTurn:()=>{vr.toggleTurn();vr.menu.refresh(vrPauseModel());},goTo:s=>vrGoTo(s),
+ home:()=>{saveCurrent();void vr.exit().then(()=>location.assign('./index.html'));},exit:()=>{closeVRMenu();void vr.exit();}};
+function openVRPause(){vrMenuId='pause';vr.menu.show(vrPauseModel());}
+function vrGoTo(station){
+ const route=navigation.path(game.player,station);if(!route?.length){message('Le passage est occupé. Avance par l’allée centrale.',5);return;}
+ const spot=arrivalSpot(route,station);Object.assign(game.player,{x:spot.x,z:spot.z,elevation:0});
+ vr.face(faceYaw(spot,station));closeVRMenu();message('Tu es devant : '+station.name+'.',4);
+}
+function vrFrame(now,xrFrame){
+ // Un rappel sans image XR n'a aucune pose de manette : l'ignorer évite de remettre le suivi à zéro et de simuler deux fois.
+ if(!game||!vr?.active||!xrFrame)return;
+ const dt=frameDelta(previous?(now-previous)/1000:.016);previous=now;clock+=dt;
+ const c=vr.input(xrFrame,dt);cameraYaw=c.yaw;
+ if(c.pause){if(vr.menu.open&&vrMenuId==='pause')closeVRMenu();else openVRPause();}
+ else if(c.interact&&!vr.menu.open&&near)openVRStation(near.id);
+ const free=!vr.menu.open,sx=free?c.x:0,sz=free?c.z:0;
+ art.updateDoors(dt,game.player,{moving:Math.hypot(sx,sz)>.03});
+ if(free)game.step(dt,{x:sx,z:sz,yaw:c.yaw,moveYaw:c.moveYaw,sprint:false,gamepadMoving:true,touchMoving:false});
+ moving=Math.hypot(game.playerVelocity?.x||0,game.playerVelocity?.z||0)>.15;
+ near=free?nearestStation(art.layout.stations,game.player,(p,room)=>navigation.inRoom(p,room)):null;
+ vr.say(vrMessage&&performance.now()<vrMessage.until?vrMessage.text:free?stationHint(near):'');
+ for(const e of game.drainEvents()){nanoFx.handle(e);if(e.type==='nano-crafted')message(e.name+' · assemblage terminé');if(e.type==='nano-error')message(e.message,7);}
+ nanoFx.update(game,dt);nanoChambers?.update(dt,clock);art.updateEnhancements?.(clock);
+ refugeAudio?.update(dt,{active:!document.hidden,position:game.player,moving:free&&moving,grounded:true,shelter:1,yaw:c.yaw,surface:'concrete'});
+ // Vue sur la ville par les fenêtres : rendu dans une texture, hors caméra du casque.
+ vrEye.position.set(game.player.x,1.65,game.player.z);vrEye.rotation.set(0,c.yaw,0);vrEye.updateMatrixWorld(true);
+ const xrOn=renderer.xr.enabled;renderer.xr.enabled=false;try{art.renderExterior(renderer,vrEye,clock);}finally{renderer.xr.enabled=xrOn;}
+ renderer.render(scene,camera);
+}
+
 void boot();
