@@ -236,15 +236,48 @@ const NOMS_DOIGTS={index:'index',middle:'majeur',ring:'annulaire',pinky:'auricul
 // Low-poly, closed, bevelled composite shell in local dorsal (+Z) coordinates.
  // Every finger plate is bound to its original phalanx; the palm and grip
  // surface stay unchanged. Curve the transverse edges down onto the liner.
+// Closed, doubly curved hard shell: a broad convex crown, rolled bevels,
+// anatomically tapered outline and a recessed underside. Real subdivisions
+// keep the surface curved even in close-up, rather than a flat extruded polygon.
 function dorsalGuard(width,length,depth=.0022,bevel=.0008,curve=.0018){
-  const w=width/2,l=length;
-  const points=[[-.72*w,0],[.62*w,0],[w,.18*l],[.94*w,.68*l],[.61*w,l],[-.65*w,l],[-w,.74*l],[-w,.20*l]];
-  const shape=new THREE.Shape();
-  points.forEach(([x,y],i)=>i?shape.lineTo(x,y):shape.moveTo(x,y));shape.closePath();
-  const g=new THREE.ExtrudeGeometry(shape,{depth,bevelEnabled:true,bevelThickness:bevel,bevelSize:bevel,bevelSegments:1,curveSegments:1});
-  const a=g.attributes.position;
-  for(let i=0;i<a.count;i++){const u=Math.min(1,Math.abs(a.getX(i))/w);a.setZ(i,a.getZ(i)-curve*u*u);}
-  a.needsUpdate=true;g.computeVertexNormals();return g;
+ const nx=width>.04?8:width>.012?4:2,ny=length>.04?10:length>.015?5:3,stride=nx+1,layer=stride*(ny+1),pos=[],uv=[],idx=[];
+ const clamp=THREE.MathUtils.clamp;
+ for(let side=0;side<2;side++)for(let j=0;j<=ny;j++){
+   const v=j/ny, taper=.73+.27*Math.sin(Math.PI*v)**.46;
+   for(let i=0;i<=nx;i++){
+     const u=i/nx*2-1, x=width*.5*taper*u, y=length*v;
+     const rim=clamp(Math.min((1-Math.abs(u))*width*.5,v*length,(1-v)*length)/Math.max(bevel,1e-6),0,1);
+     const dome=(1-u*u)*Math.sin(Math.PI*v);
+     const z=-curve*u*u + .18*curve*dome+(side?depth*(.40+.60*Math.sin(rim*Math.PI/2))+.34*curve*dome:0);
+     pos.push(x,y,z);uv.push(x*40,y*40);
+   }
+ }
+ for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){
+   const a=j*stride+i,b=a+1,c=a+stride,d=c+1;
+   idx.push(a,c,b,b,c,d,a+layer,b+layer,c+layer,b+layer,d+layer,c+layer);
+ }
+ const outline=[];for(let i=0;i<nx;i++)outline.push(i);
+ for(let j=0;j<ny;j++)outline.push(j*stride+nx);
+ for(let i=nx;i>0;i--)outline.push(ny*stride+i);
+ for(let j=ny;j>0;j--)outline.push(j*stride);
+ for(let i=0;i<outline.length;i++){const a=outline[i],b=outline[(i+1)%outline.length];idx.push(a,b,a+layer,b,b+layer,a+layer);}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();return g;
+}
+// Palm flank panels follow the actual superellipse and do not cross the
+// finger roots. A welded perimeter joins the outer shell and inner backing.
+function dorsalFlank(S,{y0,y1,t0,t1,off=.002,depth=.002}){
+ const rows=7,cols=6,stride=cols+1,layer=(rows+1)*stride,pos=[],uv=[],idx=[];
+ for(let side=0;side<2;side++)for(let j=0;j<=rows;j++)for(let i=0;i<=cols;i++){
+   const v=j/rows,u=i/cols,y=y0+(y1-y0)*v;
+   const trim=.13*Math.abs(2*v-1)**3,t=t0+(t1-t0)*(trim+(1-2*trim)*u);
+   const crown=Math.sin(Math.PI*u)*Math.sin(Math.PI*v);
+   const p=pointLoft(S,t,y,off+(side?depth*(.45+.55*crown):0),1);
+   pos.push(p.x,p.y,p.z);uv.push(u*.8,y*40);
+ }
+ for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){const a=j*stride+i,b=a+1,c=a+stride,d=c+1;idx.push(a,b,c,b,d,c,a+layer,c+layer,b+layer,b+layer,c+layer,d+layer);}
+ const outline=[];for(let i=0;i<cols;i++)outline.push(i);for(let j=0;j<rows;j++)outline.push(j*stride+cols);for(let i=cols;i>0;i--)outline.push(rows*stride+i);for(let j=rows;j>0;j--)outline.push(j*stride);
+ for(let i=0;i<outline.length;i++){const a=outline[i],b=outline[(i+1)%outline.length];idx.push(a,a+layer,b,b,a+layer,b+layer);}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();return g;
 }
 
 /* =======================================================================
@@ -358,6 +391,12 @@ function buildSourceGlove(M,labelMaterial,{sleeve=true,arm=false}={}){
   maille(new THREE.CylinderGeometry(.010,.011,.005,16),M.hardEdge,main,{p:pivot,r:[0,0,Math.PI/2],nom:pref+'pivot_poignet'});
   maille(new THREE.TorusGeometry(.0068,.0009,5,16),M.hardAccent,main,{p:[.046,-.003,.004],r:[0,Math.PI/2,0],nom:pref+'pivot_liseré'});
   maille(new THREE.CylinderGeometry(.004,.004,.0015,12),M.metal,main,{p:[.0465,-.003,.004],r:[0,0,Math.PI/2],nom:pref+'pivot_axe'});
+  maille(new THREE.TorusGeometry(.009,.0010,6,24),M.hardPlate,main,{p:[.046,-.003,.004],r:[0,Math.PI/2,0],nom:pref+'cerclage_pivot'});
+  for(let i=0;i<4;i++){const a=i*Math.PI/2+Math.PI/4;maille(new THREE.CylinderGeometry(.00115,.00115,.0011,8),M.metal,main,{p:[.0472,-.003+.0085*Math.cos(a),.004+.0085*Math.sin(a)],r:[0,0,Math.PI/2],nom:pref+'vis_pivot'});}
+  // Fastening strap and clasp follow the cuff's existing wrist blend.
+  maille(loft(SEC,{y0:-.024,y1:-.016,ny:2,nt:32,sx,off:.0025}),M.velcro,avantBras,{nom:pref+'sangle_poignet'});
+  maille(dorsalGuard(.023,.010,.002,.0008,.001),M.hardPlate,avantBras,{p:[0,-.024,.029],nom:pref+'boucle_poignet'});
+  maille(dorsalGuard(.012,.003,.0007,.0003,0),M.hardAccent,avantBras,{p:[0,-.020,.0318],nom:pref+'verrou_bleu'});
   /* ---------- corps de la main ---------- */
   maille(loft(RLH_PALM_SECTIONS,{y0:-.014,y1:.124,ny:30,nt:64,sx,capHaut:true}),M.textile,main,{nom:pref+'corps'});
   /* éminence thénar (base du pouce, côté paume) */
@@ -394,15 +433,34 @@ function buildSourceGlove(M,labelMaterial,{sleeve=true,arm=false}={}){
   const td0=.70, td1=Math.PI-.70;
   // LYLU/GHJU AÉGIS dorsal plate: chamfered outline, dark carrier, blue/rose inlay.
   maille(bouclier(),M.hardEdge,protections,{nom:pref+'support_dorsal'});
-  maille(dorsalGuard(.066,.060,.0026,.0011,.005),M.hardPlate,protections,{p:[0,.031,.026],nom:pref+'coque_dorsale'});
+  // Raised central shield and independent floating side shells, with narrow
+  // dark seams between the armour pieces. All stay on the dorsal side.
+  maille(dorsalGuard(.067,.061,.0016,.0015,.006),M.hardEdge,protections,{p:[0,.029,.025],nom:pref+'socle_dorsal'});
+  maille(dorsalGuard(.056,.059,.0033,.0016,.005),M.hardPlate,protections,{p:[0,.030,.027],nom:pref+'coque_dorsale'});
+  for(const [t0,t1] of [[.27,.92],[Math.PI-.92,Math.PI-.27]]){
+    maille(dorsalFlank(RLH_PALM_SECTIONS,{y0:.038,y1:.092,t0,t1,off:.0024,depth:.0026}),M.hardPlate,protections,{nom:pref+'coque_latérale'});
+    maille(dorsalFlank(RLH_PALM_SECTIONS,{y0:.043,y1:.051,t0,t1,off:.0052,depth:.0008}),M.hardAccent,protections,{nom:pref+'insert_latéral'});
+  }
+  maille(dorsalGuard(.035,.014,.0025,.001,.003),M.hardPlate,protections,{p:[0,.009,.025],nom:pref+'plaque_carpienne'});
+  maille(dorsalGuard(.027,.003,.0007,.0003,.001),M.hardAccent,protections,{p:[0,.014,.028],nom:pref+'bande_carpienne'});
   for(const x of [-.023,.023])for(const y of [.041,.079]){
-    maille(new THREE.CylinderGeometry(.0015,.0015,.0009,8),M.metal,protections,{p:[x,y,.0277],r:[Math.PI/2,0,0],nom:pref+'vis_dorsale'});
+    maille(new THREE.CylinderGeometry(.0015,.0015,.0009,8),M.metal,protections,{p:[x,y,.0295],r:[Math.PI/2,0,0],nom:pref+'vis_dorsale'});
   }
   // Thin identity chevrons as actual geometry (not mirrored text).
-  for(const sign of [-1,1])maille(dorsalGuard(.0035,.023,.0006,.0002,0),M.hardAccent,protections,{p:[sign*.008,.055,.0295],r:[0,0,sign*.35],nom:pref+'embleme_dorsal'});
+  for(const sign of [-1,1])maille(dorsalGuard(.0035,.023,.0006,.0002,0),M.hardAccent,protections,{p:[sign*.008,.055,.0334],r:[0,0,sign*.35],nom:pref+'embleme_dorsal'});
   {
     const pts=[]; for(let j=0;j<=26;j++) pts.push(pointLoft(RLH_PALM_SECTIONS,td0+(td1-td0)*j/26,.094,.0012,sx)); couture(main,pts);
     const pts2=[]; for(let j=0;j<=26;j++) pts2.push(pointLoft(RLH_PALM_SECTIONS,td0+(td1-td0)*j/26,.046,.0012,sx)); couture(main,pts2);
+  }
+  // Four individual metacarpal caps bridge the shield and the articulated
+  // fingers. The distal edge stops before the moving finger root.
+  for(const d of Object.values(RLH_DIGITS)){
+    const y=d.y-.023,section=interpSections(RLH_PALM_SECTIONS,y+.009);
+    const u=Math.abs((d.x-(section.cx||0))/section.w);
+    const z=(section.cz||0)+section.db*Math.pow(Math.max(0,1-u**section.n),1/section.n)+.001;
+    maille(dorsalGuard(d.r*1.72,.020,.0013,.0007,.002),M.hardEdge,protections,{p:[d.x,y,z-.0006],r:[-.12,0,0],nom:pref+'socle_metacarpe'});
+    maille(dorsalGuard(d.r*1.48,.017,.0026,.0008,.002),M.hardPlate,protections,{p:[d.x,y+.001,z+.0004],r:[-.12,0,0],nom:pref+'coque_metacarpe'});
+    maille(dorsalGuard(d.r*.70,.0028,.0005,.0003,.0006),M.hardAccent,protections,{p:[d.x,y+.003,z+.0034],nom:pref+'insert_metacarpe'});
   }
   main.add(protections);
 
@@ -426,11 +484,14 @@ function buildSourceGlove(M,labelMaterial,{sleeve=true,arm=false}={}){
       if(i>0){ for(let k=0;k<2;k++) maille(new THREE.TorusGeometry(r0*1.0,.0007,5,18,Math.PI),M.textile,j,{p:[0,.002+k*.0035,0],r:[Math.PI/2,0,0],s:[1,.9,1],ombre:false}); }
       // Three independent, anatomically tapered dorsal shells, with clear joint gaps.
       const start=L*(i===2?.24:.16), length=L*(i===2?.46:.62), z=r0*.90+.0005;
-      maille(dorsalGuard(r0*1.52,length,.0019,.00055,r0*.19),M.hardPlate,j,{p:[0,start,z],nom:pref+NOMS_DOIGTS[nom]+'_prot'+(i+1)});
-      maille(dorsalGuard(r0*.80,.0027,.0006,.00025,.0004),M.hardAccent,j,{p:[0,start+length-.003,z+.002],nom:pref+NOMS_DOIGTS[nom]+'_liseré'+(i+1)});
+      // A separate dark gasket surrounds the rigid floating plate.
+      maille(dorsalGuard(r0*1.72,length+.0015,.0010,.0006,r0*.29),M.hardEdge,j,{p:[0,start-.0006,z-.0006],nom:pref+NOMS_DOIGTS[nom]+'_joint'+(i+1)});
+      maille(dorsalGuard(r0*1.49,length,.0025,.00075,r0*.24),M.hardPlate,j,{p:[0,start,z],nom:pref+NOMS_DOIGTS[nom]+'_prot'+(i+1)});
+      maille(dorsalGuard(r0*.80,.0027,.0006,.00025,.0004),M.hardAccent,j,{p:[0,start+length-.003,z+.0030],nom:pref+NOMS_DOIGTS[nom]+'_liseré'+(i+1)});
       if(i===0){
         // Knuckle is attached to the moving proximal bone, not the palm.
-        maille(dorsalGuard(r0*1.55,.008,.0014,.0006,r0*.16),M.hardEdge,j,{p:[0,-.004,z],nom:pref+NOMS_DOIGTS[nom]+'_jointure'});
+        maille(dorsalGuard(r0*1.72,.009,.0016,.0007,r0*.23),M.hardEdge,j,{p:[0,-.004,z],nom:pref+NOMS_DOIGTS[nom]+'_jointure'});
+        maille(dorsalGuard(r0*1.36,.006,.0020,.0007,r0*.18),M.hardPlate,j,{p:[0,-.003,z+.001],nom:pref+NOMS_DOIGTS[nom]+'_capot_jointure'});
       }
       /* bout de doigt renforcé */
       if(i===2){
@@ -460,8 +521,9 @@ function buildSourceGlove(M,labelMaterial,{sleeve=true,arm=false}={}){
       maille(tour(prof,22),M.textile2,j,{s:[1,1,.92]});
       maille(tour(decaler(prof,.0009,-r0*.2,len+r1*.25),16,Math.PI-1.2,2.4),M.cuir,j,{s:[1,1,.92],ombre:false});
       if(i>0){
-        maille(dorsalGuard(r0*1.38,len*.54,.0019,.0007,r0*.19),M.hardPlate,j,{p:[0,len*.20,r0*.92+.0006],nom:pref+'pouce_prot'+i});
-        maille(dorsalGuard(r0*.66,.003,.0006,.00025,.0004),M.hardAccent,j,{p:[0,len*.65,r0*.92+.0025],nom:pref+'pouce_liseré'+i});
+        maille(dorsalGuard(r0*1.53,len*.56,.001,.0006,r0*.26),M.hardEdge,j,{p:[0,len*.19,r0*.92],nom:pref+'pouce_support'+i});
+        maille(dorsalGuard(r0*1.34,len*.54,.0025,.0008,r0*.24),M.hardPlate,j,{p:[0,len*.20,r0*.92+.0006],nom:pref+'pouce_prot'+i});
+        maille(dorsalGuard(r0*.66,.003,.0006,.00025,.0004),M.hardAccent,j,{p:[0,len*.65,r0*.92+.0034],nom:pref+'pouce_liseré'+i});
       }
       if(i===2) maille(tour(decaler(prof,.0011,len*.55),20),M.cuirF,j,{s:[1,1,.92]});
       if(i>0) maille(new THREE.TorusGeometry(r0,.0007,5,18,Math.PI),M.textile,j,{p:[0,.002,0],r:[Math.PI/2,0,0],ombre:false});
@@ -533,13 +595,30 @@ export const RLH_POSES={
 
 const textureCache={value:null},materialSets=new WeakMap(),templates=new Map();
 const MATERIAL_KEYS=['textile','textile2','doublure','cuir','cuirF','carbone','caout','ceramique','reflect','hiVis','matelasse','velcro','fil','metal','hardPlate','hardEdge','hardAccent'];
+// Shared micro-finish: subtle deterministic paint wear, directional titanium
+// brushing and woven carbon. Linear roughness/normal maps are not colour maps.
+function armorMicro(kind){
+ const N=128,albedo=new Uint8Array(N*N*4),rough=new Uint8Array(N*N*4),normal=new Uint8Array(N*N*4);
+ const h=(x,y)=>{x=(x+N)%N;y=(y+N)%N;const noise=((Math.imul(x+17,73856093)^Math.imul(y+23,19349663))>>>0)%101/100;
+   const wave=kind==='carbon'?.45*Math.sin(x*Math.PI/4)*Math.sin(y*Math.PI/4):kind==='titanium'?.20*Math.sin(x*Math.PI/2):.10*Math.sin((x+y)*Math.PI/4);
+   return .5+wave+.16*(noise-.5);};
+ for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+   const i=(y*N+x)*4,f=h(x,y),scratch=(x+3*y)%127===0?.12:0;
+   const v=Math.round(255*THREE.MathUtils.clamp((kind==='carbon'?.84:.93)+(f-.5)*.12-scratch,.55,1));
+   const r=Math.round(255*THREE.MathUtils.clamp(.82+(f-.5)*.30+scratch,.5,1));
+   const n=new THREE.Vector3((h(x-1,y)-h(x+1,y))*.45,(h(x,y-1)-h(x,y+1))*.45,1).normalize();
+   albedo.set([v,v,v,255],i);rough.set([r,r,r,255],i);normal.set([Math.round((n.x*.5+.5)*255),Math.round((n.y*.5+.5)*255),Math.round((n.z*.5+.5)*255),255],i);
+ }
+ const tex=(data,srgb=false)=>{const t=new THREE.DataTexture(data,N,N);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.magFilter=THREE.LinearFilter;t.minFilter=THREE.LinearMipmapLinearFilter;t.generateMipmaps=true;t.anisotropy=4;if(srgb)t.colorSpace=THREE.SRGBColorSpace;t.needsUpdate=true;return t;};
+ return {map:tex(albedo,true),roughnessMap:tex(rough),normalMap:tex(normal)};
+}
 function sourceTextures(){
   if(textureCache.value)return textureCache.value;
   return textureCache.value={
     textile:texTextile('#a8adb4','#e4e7eb','#969da7'),textileBump:texTextileBump(),
     textile2:texTextile('#929aa3','#dce0e5','#808996'),doublure:texTextile('#24272b','#4d545c','#333941'),
     cuir:texCuir('#3c4045','#25292d'),cuirBump:texCuirBump(),cuirF:texCuir('#292d31','#171a1d'),
-    carbone:texCarbone(),carboneBump:texCarboneBump(),reflect:texReflect(),velcro:texVelcro()
+    carbone:texCarbone(),carboneBump:texCarboneBump(),reflect:texReflect(),velcro:texVelcro(),armorMicro:[armorMicro('ceramic'),armorMicro('titanium'),armorMicro('carbon')]
   };
 }
 function paintLabel(texture,accent,name,side){
@@ -557,7 +636,7 @@ export function syncRLHMaterials(gloves){
   const M=set.materials;
   M.textile.color.copy(fabric).lerp(accent,.08);M.textile2.color.copy(fabric).lerp(accent,.06);
   M.hiVis.color.copy(accent);M.hiVis.emissive.copy(accent).multiplyScalar(.05);
-  M.matelasse.color.copy(accent).lerp(white,.08);M.fil.color.copy(white).multiplyScalar(.75);
+  M.matelasse.color.copy(accent).lerp(white,.08);M.fil.color.copy(white).multiplyScalar(.20);
   M.ceramique.color.copy(white).lerp(new THREE.Color(0xffffff),.35);M.reflect.color.copy(white).multiplyScalar(.78);M.metal.color.copy(white).multiplyScalar(.60);
   const name=accent.b>accent.r?'LYLU':'GHJU',hex='#'+accent.getHexString();
   for(const [side,label] of Object.entries(set.labels))paintLabel(label.map,hex,name,side);
@@ -605,7 +684,10 @@ function applyStageFinish(M,stage,identity){
   for(const key of ['hardPlate','ceramique','reflect','matelasse']){
     const m=M[key];m.color.setHex(f.plate);m.metalness=f.metalness;m.roughness=f.roughness;
   }
+  const micro=sourceTextures().armorMicro[stage>=4?2:stage===3?1:0];
+  Object.assign(M.hardPlate,micro);M.hardPlate.normalScale.setScalar(stage>=4?.65:.38);M.hardPlate.needsUpdate=true;
   for(const key of ['hardEdge','carbone','metal'])M[key].color.setHex(f.edge);
+  M.metal.color.setHex(stage<=3?0x717984:0x56606c);M.metal.roughness=.42;
   for(const key of ['hardAccent','hiVis']){M[key].color.copy(accent);M[key].emissive.copy(accent).multiplyScalar(.10);}
 }
 function stageMaterials(set,gloves,level){
