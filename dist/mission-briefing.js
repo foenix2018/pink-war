@@ -29,6 +29,7 @@ function frameCover(root,mission,characterId){
 }
 
 export const BRIEFINGS = Object.freeze({
+  11:{title:'La Traversée',zone:'Vesper // District Ouest — Anneau logistique',image:()=>null,text:()=>"AEGIS ouvre un corridor pour les civils. GHJU et LYLU doivent franchir le barrage d’ORDRE ensemble.",objectives:[['door','Quitter HELIX','Rejoindre le regroupement.'],['medic','Sécuriser les civils','Ouvrir le corridor.'],['signal','Couper la surveillance','Poste ORDRE.'],['up','Accéder au barrage','Monter les rampes.'],['bolt','Désactiver A, B et C','Trois relais.'],['wave','Ouvrir les vannes','Rétablir la traversée.'],['target','Repousser la contre-attaque','Tenir la crête.'],['van','Extraction AEGIS','Rejoindre la zone ouest.']]},
   9:{title:'Les Jardins suspendus',zone:'Vesper // Complexe Biotech ORDRE / HELIX',image:()=>null,text:()=>"Traverse les serres, retrouve l’autre héros, arrête JANUS et libère les Jardins.",objectives:[]},
   7: {title:'Mémoires Locales',zone:'Vesper // La forêt des Sources',image:()=>null,text:()=>"Suivre la piste de l’antenne de recherche des parents jusqu’à la cascade.",objectives:[]},
   10: {title:'La Couronne HELIX',zone:'Vesper // Siège HELIX — laboratoires et archives',image:()=>null,text:()=>"Infiltrer le siège HELIX, sécuriser les chercheurs, confronter Kessler aux archives et échapper au confinement avec les deux sphères.",objectives:[]},
