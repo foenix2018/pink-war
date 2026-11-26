@@ -39,7 +39,7 @@ import {createGlove} from './hands.js';
 import {mountCombatHud} from './combat-hud.js';
 import {createArmorFeedback,meleeKick,MELEE_POSE} from './armor-feedback.js';
 import * as L from './m12-layout.js';
-import {createM12Art} from './m12-art.js';
+import {createM12Art} from './m12-art.js?v=m12-art-v3';
 import {createM12Mission} from './m12-mission.js';
 import {linesFor,lineSeconds,logFor,LOGS,ENDING} from './m12-story.js';
 
@@ -85,26 +85,43 @@ function audioReady(){
 }
 document.addEventListener('pointerdown',audioReady,{once:true,capture:true,passive:true});
 document.addEventListener('keydown',audioReady,{once:true,capture:true});
-// Night city bed: rain on the asphalt (filtered noise), the hum of the neon, distant freight and, now and then, a siren.
+// Original procedural sound design: a quiet global bed + two nearest spatial sources.
 function createCityBed(ctx){
  const out=ctx.createGain();out.gain.value=0;out.connect(ctx.destination);
- const buffer=ctx.createBuffer(1,ctx.sampleRate*3,ctx.sampleRate),data=buffer.getChannelData(0);
- for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;
- const noise=ctx.createBufferSource();noise.buffer=buffer;noise.loop=true;
- const rain=ctx.createBiquadFilter();rain.type='highpass';rain.frequency.value=1800;const rainGain=ctx.createGain();rainGain.gain.value=.22;
- noise.connect(rain);rain.connect(rainGain);rainGain.connect(out);
- const hum=ctx.createOscillator();hum.type='sawtooth';hum.frequency.value=60;const humFilter=ctx.createBiquadFilter();humFilter.type='lowpass';humFilter.frequency.value=180;
- const humGain=ctx.createGain();humGain.gain.value=.025;hum.connect(humFilter);humFilter.connect(humGain);humGain.connect(out);
- const rumble=ctx.createOscillator();rumble.type='triangle';rumble.frequency.value=34;const rumbleGain=ctx.createGain();rumbleGain.gain.value=0;rumble.connect(rumbleGain);rumbleGain.connect(out);
- noise.start();hum.start();rumble.start();
- let nextSiren=12;
- return{update(dt,{active,area,indoor}){
-  const t=ctx.currentTime;out.gain.setTargetAtTime(active?.18:0,t,.4);
-  rainGain.gain.setTargetAtTime(indoor?.06:.22,t,.5);rumbleGain.gain.setTargetAtTime(area==='gare'||area==='echangeur'?.3:.06,t,1.2);
-  nextSiren-=dt;
-  if(active&&nextSiren<=0){nextSiren=25+Math.random()*30;
-   const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';for(let k=0;k<4;k++){o.frequency.setValueAtTime(620,t+k*1.2);o.frequency.linearRampToValueAtTime(880,t+k*1.2+.6);o.frequency.linearRampToValueAtTime(620,t+k*1.2+1.2);}
-   g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.025,t+.5);g.gain.exponentialRampToValueAtTime(.0001,t+4.8);o.connect(g);g.connect(out);o.start(t);o.stop(t+5);}
+ const rate=ctx.sampleRate;let seed=1203;const rand=()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/4294967296)*2-1;
+ function buffer(kind){const len=rate*4,b=ctx.createBuffer(1,len,rate),d=b.getChannelData(0);let slow=0,mid=0;
+  for(let i=0;i<len;i++){const t=i/rate,n=rand();slow=.992*slow+.008*n;mid=.84*mid+.16*n;let v=0;
+   if(kind==='rain')v=(n-mid)*.45+mid*.14;
+   else if(kind==='wind')v=slow*3+mid*.18;
+   else if(kind==='falls')v=mid*1.1+slow*.9+n*.08;
+   else if(kind==='fire')v=mid*.56+(Math.abs(n)>.995?rand()*.85:0);
+   else if(kind==='generator')v=Math.sin(2*Math.PI*55*t)*.45+Math.sin(2*Math.PI*110*t)*.16+mid*.13;
+   else if(kind==='medical')v=mid*.14+Math.sin(2*Math.PI*780*t)*.12*(Math.sin(Math.PI*(t%1.0)/.09)**2)*(t%1<.09?1:0);
+   else if(kind==='core')v=Math.sin(2*Math.PI*82*t)*.28+Math.sin(2*Math.PI*123*t)*.18+slow*.22;
+   else if(kind==='resonance')v=Math.sin(2*Math.PI*110*t)*.22+Math.sin(2*Math.PI*165*t)*.15+Math.sin(2*Math.PI*220*t)*.12*Math.sin(2*Math.PI*.5*t);
+   else if(kind==='relay')v=Math.sin(2*Math.PI*138*t)*.22+Math.sin(2*Math.PI*414*t)*.10*(1+Math.sin(2*Math.PI*2*t))+mid*.13;
+   else if(kind==='vtol')v=(Math.sin(2*Math.PI*48*t)*.27+mid*.4)*(.76+.24*Math.sin(2*Math.PI*6*t));
+   d[i]=v;
+  } // crossfade the wrap, eliminating audible ticks on cyclic loops
+  const n=Math.floor(rate*.035);for(let i=0;i<n;i++){const f=i/n;d[i]=d[len-n+i]*(1-f)+d[i]*f;}for(let i=0;i<n;i++)d[len-n+i]=d[len-n+i]*(1-i/n)+d[0]*(i/n);
+  return b;
+ }
+ const cache=new Map(),get=k=>{if(!cache.has(k))cache.set(k,buffer(k));return cache.get(k);};
+ function loop(kind,gain){const src=ctx.createBufferSource(),g=ctx.createGain(),pan=ctx.createStereoPanner?.()||null,filter=ctx.createBiquadFilter();filter.type='lowpass';filter.frequency.value=16000;g.gain.value=0;src.buffer=get(kind);src.loop=true;src.connect(filter);filter.connect(g);if(pan){g.connect(pan);pan.connect(out);}else g.connect(out);src.start();return{src,g,pan,filter,kind,gain};}
+ const rain=loop('rain',.09),wind=loop('wind',.10),voices=[null,null];
+ const sources=[{id:'med',kind:'medical',x:-87,y:4,z:39,r:17,v:.11},{id:'gen-a',kind:'generator',x:-75,y:4,z:8,r:23,v:.19},{id:'gen-b',kind:'generator',x:-91,y:4,z:8,r:23,v:.19},{id:'gen-c',kind:'generator',x:-102,y:4,z:8,r:23,v:.19},{id:'breche',kind:'fire',x:-93,y:10,z:-27,r:24,v:.22},{id:'core',kind:'core',x:-40,y:0,z:-36,r:21,v:.18},{id:'dome',kind:'resonance',x:5,y:16,z:-44,r:26,v:.12},{id:'relay',kind:'relay',x:87,y:12,z:-35,r:24,v:.16},{id:'vtol',kind:'vtol',x:111,y:4,z:35,r:30,v:.21},...[[ -55,4,45],[29,16,-23],[67,12,-16],[94,4,62],[128,4,59]].map(([x,y,z],i)=>({id:'falls'+i,kind:'falls',x,y,z,r:31,v:.20}))];
+ let scan=0,lastDone=new Set(),lastRes=false,nextAlarm=18,wasActive=false;
+ function tone(freq,end,duration,delay,amp=.08,type='sine'){const t=ctx.currentTime+delay,o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);o.frequency.exponentialRampToValueAtTime(end,t+duration);g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(amp,t+.035);g.gain.exponentialRampToValueAtTime(.0001,t+duration);o.connect(g);g.connect(out);o.start(t);o.stop(t+duration+.02);o.onended=()=>{o.disconnect();g.disconnect();};}
+ function retire(v){if(!v)return;const t=ctx.currentTime;v.g.gain.setTargetAtTime(0,t,.08);v.src.stop(t+.4);v.src.onended=()=>{v.src.disconnect();v.filter.disconnect();v.g.disconnect();v.pan?.disconnect();};}
+ function mute(){out.gain.setTargetAtTime(0,ctx.currentTime,.06);}
+ return{mute,update(dt,{active,area,indoor,player,yaw=0,done=[],resonance=false,stage}){
+  const t=ctx.currentTime;active=!!active&&!document.hidden;out.gain.setTargetAtTime(active?.72:0,t,.14);if(!active){wasActive=false;return;}
+  const inCore=area==='noyau'||indoor;rain.g.gain.setTargetAtTime(inCore?.014:.085,t,.25);rain.filter.frequency.setTargetAtTime(inCore?950:7500,t,.25);wind.g.gain.setTargetAtTime(inCore?.016:.09,t,.25);
+  const completed=new Set(done);if(!wasActive){lastDone=completed;lastRes=resonance;wasActive=true;}else{for(const id of completed)if(!lastDone.has(id)){if(id.startsWith('gen-')){tone(42,92,.85,0,.12,'triangle');tone(392,523,.2,.24,.05);}else if(id==='relais'){tone(520,90,.6,0,.10,'triangle');}else if(id==='evacuation'||id==='extraction'){tone(392,392,.25,0,.06);tone(523,523,.32,.25,.07);}}if(resonance&&!lastRes){tone(110,220,1.7,0,.08);tone(165,330,1.7,.06,.06);tone(220,440,1.7,.12,.045);}lastDone=completed;lastRes=resonance;}
+  scan-=dt;if(player&&scan<=0){scan=.16;const ranked=sources.map(q=>{const dx=q.x-player.x,dz=q.z-player.z,dy=q.y-(player.elevation||0),dist=Math.hypot(dx,dz,dy),v=q.v*Math.max(0,1-dist/q.r)**1.6*(q.id.startsWith('gen-')&&!completed.has(q.id)?.12:q.id==='relay'&&completed.has('relais')?.05:q.id==='dome'&&resonance?2:1);return{...q,dx,dz,v,dist};}).filter(q=>q.v>.001).sort((a,b)=>b.v-a.v).slice(0,2);
+   for(let i=0;i<voices.length;i++){const q=ranked[i];let v=voices[i];if(!q){if(v){retire(v);voices[i]=null;}continue;}if(!v||v.id!==q.id){retire(v);v=voices[i]=loop(q.kind,q.v);v.id=q.id;}v.g.gain.setTargetAtTime(q.v,t,.13);v.filter.frequency.setTargetAtTime(inCore&&q.kind!=='core'?1300:8000,t,.2);if(v.pan)v.pan.pan.setTargetAtTime(Math.max(-.85,Math.min(.85,(q.dx*Math.cos(yaw)-q.dz*Math.sin(yaw))/Math.max(q.dist,1))),t,.12);}
+  }
+  nextAlarm-=dt;if(nextAlarm<0){nextAlarm=20+Math.random()*18;if(['breche','assaut'].includes(stage)){tone(420,620,.8,0,.045);tone(620,420,.8,.8,.04);}}
  }};
 }
 // Short synthesised cues for the mission beats.
@@ -244,7 +261,7 @@ function syncDevices(){
  for(const it of L.INTERACTIONS)art.markDone(it.id,it.log?reads.has(it.log):done.has(it.id));
 }
 function finishMission(){
- running=false;ambience?.pause?.();document.exitPointerLock?.();
+ cityBed?.mute();running=false;ambience?.pause?.();document.exitPointerLock?.();
  try{const current=Number(localStorage.getItem('pink-wars-last-cleared'))||0;localStorage.setItem('pink-wars-last-cleared',String(Math.max(current,12)));}catch{}
  const minutes=Math.floor(missionTime/60),seconds=String(Math.floor(missionTime%60)).padStart(2,'0');
  $('panel-title').innerHTML='La nuit <em>d’ORDRE</em>';
@@ -446,7 +463,7 @@ function gameTick(dt){
 }
 const armorTouch=(kind,value)=>{if(kind==='sprint'){touchSprinting=!!value;return;}if(!running||paused)return;audioReady();if(kind==='melee')meleeQueued=true;else if(kind==='charge')chargeQueued=true;else if(kind==='reload')game.reload();else if(kind==='next')game.cycleWeapon();else if(kind==='interact')interact();else if(kind==='crouch')crouchQueued=true;};
 let lastDevices='';
-const HOLD_LABEL={archives:'COPIE DES ARCHIVES',confinement:'DÉSACTIVATION DU CONFINEMENT',extraction:'LIAISON AEGIS'};
+const HOLD_LABEL={'gen-a':'GÉNÉRATEUR A','gen-b':'GÉNÉRATEUR B','gen-c':'GÉNÉRATEUR C',breche:'DÉFENSE DE LA BRÈCHE',noyau:'NOYAU DE CONTRÔLE',resonance:'RÉSONANCE',assaut:'ASSAUT ORDRE',relais:'NEUTRALISATION DU RELAIS',extraction:'EMBARQUEMENT DES CIVILS',evacuation:'ÉVACUATION FINALE'};
 function updateHUD(){
  (combatHud ||= mountCombatHud({characterId,onAction:armorTouch})).update(game);
  const it=reading?null:mission.nearInteraction(),stageInfo=L.STAGES[mission.stage];combatHud.setContext(it?.label);
@@ -481,7 +498,7 @@ function animation(t,frame){
  }
  if(started){updateSubtitles(running?dt:0);updateLamp(dt);
   const area=L.areaAt(game.player.x,game.player.z);
-  cityBed?.update(dt,{active:running,area:area==='anneau'||area==='portique'?'gare':area,indoor:!!L.AREAS.find(a=>a.id===area)?.roof});}
+  cityBed?.update(dt,{active:running&&enableAudio&&!paused,area,indoor:area==='noyau',player:game.player,yaw,done:mission?.done||[],resonance:!!mission?.resonance,stage:mission?.stageId});}
  const eye=xr?.active?renderer.xr.getCamera():camera;
  try{art.update(clock,dt,eye,game?.player);}catch(error){console.warn('M12 / décor animé désactivé',error);art.update=()=>{};}
  if(xr?.active){xr.update(dt,weaponFeel.state,weaponFeel.state.kick>.025?.075:0);xr.renderScope();}
@@ -503,7 +520,7 @@ function resize(){
  const profile=graphicsProfile({userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu},low()?'low':'auto');
  renderer.setPixelRatio(renderPixelRatio(profile,devicePixelRatio,width,height));renderer.setSize(width,height,false);
 }
-function pauseMission(){heroAudio.stop();
+function pauseMission(){heroAudio.stop();cityBed?.mute();
  combatHud?.reset();touchSprinting=false;
  if(!running||paused)return;paused=true;running=false;ambience?.pause?.();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();
  touchControls?.reset();pinkControls.reset();document.exitPointerLock?.();pauseMenu.show();
@@ -589,7 +606,7 @@ window.addEventListener('keydown',e=>{
 window.addEventListener('keyup',e=>keys.delete(e.code));
 const releaseAll=()=>{keys.clear();heldFire=false;mouseAim=false;firePressQueued=false;fireInput.reset();pinkControls.reset();touchControls?.reset();};
 window.addEventListener('blur',releaseAll);
-document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseAll();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){releaseAll();cityBed?.mute();}});
 window.addEventListener('contextmenu',e=>{if(e.target===canvas)e.preventDefault();});
 window.addEventListener('mousemove',e=>{
  if(!running||reading||document.pointerLockElement!==canvas)return;
@@ -614,7 +631,7 @@ for(const name of ['pointerup','pointercancel'])window.addEventListener(name,e=>
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
 
 window.__PINK_M12=Object.freeze({
- snapshot:()=>({nano:nanoSnapshot(game),level:L.LEVEL_ID,revision:'m12-art-v2',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,time:game?.time,missionTime,
+ snapshot:()=>({nano:nanoSnapshot(game),level:L.LEVEL_ID,revision:'m12-art-v3',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,time:game?.time,missionTime,
   area:game&&L.areaAt(game.player.x,game.player.z),health:game?.player.hp,shield:game?.player.shield,charges:game?.charges,
   position:game&&{x:+game.player.x.toFixed(2),z:+game.player.z.toFixed(2),elevation:+game.player.elevation.toFixed(2)},
   weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,opened:mission?.opened,done:mission?.done,reads:mission?.reads,
