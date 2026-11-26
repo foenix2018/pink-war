@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {ROUTE,INTERACTIONS,buildCollisions,createTraversal,STAGES,ENCOUNTERS} from '../dist/m12-layout.js';
+const t=createTraversal(),obs=buildCollisions();const blocked=(x,y,z)=>obs.some(o=>Math.abs(x-o.x)<o.hx+.3&&Math.abs(z-o.z)<o.hz+.3&&y+1.65>o.y&&y<o.y+o.height);
+test('M12 34 segments are supported and clear of authored obstacles',()=>{assert.equal(ROUTE.length,35);for(let i=0;i<ROUTE.length-1;i++)for(let k=0;k<=40;k++){const [x,y,z]=ROUTE[i].map((v,j)=>v+(ROUTE[i+1][j]-v)*k/40);assert.ok(t.surfaces(x,z).some(s=>Math.abs(s.height-y)<.35),'surface '+i+'/'+k);assert.equal(blocked(x,y,z),false,'collision '+i+'/'+k);}});
+test('M12 twelve actions and their combat groups have a usable floor',()=>{assert.equal(INTERACTIONS.length,12);assert.equal(STAGES.length,13);for(const p of INTERACTIONS){assert.equal(t.height(p.x,p.z,0,p.y+.3),p.y,p.id);assert.equal(blocked(p.x,p.y,p.z),false,p.id);for(const u of ENCOUNTERS[p.id]){const y=t.height(u.x,u.z);assert.ok(y>=0,p.id+' spawn floor');assert.equal(blocked(u.x,y,u.z),false,p.id+' spawn obstacle');}}});
