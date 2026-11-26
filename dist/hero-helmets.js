@@ -11,7 +11,7 @@ export const HERO_HELMETS=Object.freeze({
 });
 // Pose sur la tête du rig (repère de liaison du personnage, face vers -Z) :
 // le col coiffe le haut du cou, la calotte enveloppe la tête du rig.
-export const HELMET_FIT=Object.freeze({position:[0,1.672,.004],scale:.93,yaw:Math.PI});
+export const HELMET_FIT=Object.freeze({position:[0,1.617,.026],scale:.86,yaw:Math.PI});
 export const helmetForStage=stage=>HELMET_STAGES.includes(suitStage(stage));
 
 const cache=new Map();

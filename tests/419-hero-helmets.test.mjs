@@ -51,6 +51,11 @@ for(const profile of CHARACTERS){
       model.setLevel(4);model.root.updateMatrixWorld(true);
       const box=new T.Box3().setFromObject(helmet.anchor),head=model.actor.bone('Head').getWorldPosition(new T.Vector3());
       assert.ok(box.containsPoint(head.clone().add(new T.Vector3(0,.08,0))),'head inside the helmet');
+      // Proportions : mêmes dimensions que le casque Shadow remplacé, posé sur le col, pas au-dessus des épaules.
+      const old=new T.Box3().setFromObject(unit.armour.helmet),shoulders=model.actor.bone('LeftArm').getWorldPosition(new T.Vector3()).distanceTo(model.actor.bone('RightArm').getWorldPosition(new T.Vector3()));
+      assert.ok(Math.abs((box.max.y-box.min.y)-(old.max.y-old.min.y))<.03,'same height as the former helmet');
+      assert.ok(box.min.y>=old.min.y-.03&&box.min.y<=old.min.y+.03&&box.max.y<=old.max.y+.05,'base on the collar, top within 5 cm of the former top');
+      const ratio=(box.max.x-box.min.x)/shoulders;assert.ok(ratio>.75&&ratio<.9,'helmet width / shoulder span '+ratio.toFixed(2));
       if(profile.id==='lylu'){assert.ok(helmet.visor(true));helmet.update(.6);assert.ok(helmet.visor(false));}
       model.dispose();
     }finally{globalThis.fetch=previous;}
