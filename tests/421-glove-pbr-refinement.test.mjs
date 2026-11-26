@@ -10,7 +10,8 @@ test('refined curved shells have stage-specific PBR and remain inside a mobile g
  assert.ok(count<55000);assert.equal(g.userData.skeleton.bones.length,28);
  const maps=[];
  for(let n=1;n<=5;n++){g.userData.setLevel(n);assert.equal(plate.material.color.getHex(),GLOVE_FINISHES[n-1].plate);assert.ok(plate.material.normalMap?.isDataTexture);maps.push(plate.material.normalMap);}
- assert.equal(maps[0],maps[1]);assert.notEqual(maps[1],maps[2]);assert.notEqual(maps[2],maps[3]);assert.equal(maps[3],maps[4]);
+ // Standard (1–2) céramique, titane (3), Stealth carbone (4), Heavy (5) composite blanc cassé : grain céramique (planche LYLU).
+ assert.ok(maps[0]===maps[1]&&maps[1]!==maps[2]&&maps[2]!==maps[3]&&maps[4]===maps[0]&&maps[4]!==maps[3],'micro-textures par variante');
  for(const pose of ['open','grip','fist','point']){g.userData.rig.pose(pose,true);g.updateMatrixWorld(true);g.userData.skeleton.update();const p=plate.geometry.attributes.position,v=new T.Vector3();for(let i=0;i<p.count;i+=31){v.fromBufferAttribute(p,i);plate.applyBoneTransform(i,v);assert.ok([v.x,v.y,v.z].every(Number.isFinite));}}
  g.userData.dispose();
 });

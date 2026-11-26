@@ -280,6 +280,25 @@ function dorsalFlank(S,{y0,y1,t0,t1,off=.002,depth=.002}){
  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();return g;
 }
 
+// Angular vambrace plate (reference sheet: Standard / Stealth / Heavy): a closed shell that follows the
+// forearm sections with few, flat facets and a chamfered crown, so it reads as machined armour, not cloth.
+function armorShell(S,{y0,y1,t0,t1,off=.006,depth=.004,nt=4,ny=3,chamfer=.35,sx=1}){
+ const ring=(o,inset)=>{const rows=[];const dy=(y1-y0)*inset*.10,dt=(t1-t0)*inset*.10;
+   for(let j=0;j<=ny;j++){const y=y0+dy+(y1-y0-2*dy)*j/ny,row=[];for(let i=0;i<=nt;i++){const t=t0+dt+(t1-t0-2*dt)*i/nt;row.push(pointLoft(S,t,y,o,sx));}rows.push(row);}return rows;};
+ const inner=ring(off,0),outer=ring(off+depth,chamfer),pos=[];
+ const quad=(a,b,c,d)=>{pos.push(a.x,a.y,a.z,b.x,b.y,b.z,c.x,c.y,c.z,b.x,b.y,b.z,d.x,d.y,d.z,c.x,c.y,c.z);};
+ const flip=sx<0;
+ const face=(a,b,c,d)=>flip?quad(a,c,b,d):quad(a,b,c,d);
+ for(let j=0;j<ny;j++)for(let i=0;i<nt;i++){face(outer[j][i],outer[j][i+1],outer[j+1][i],outer[j+1][i+1]);face(inner[j][i],inner[j+1][i],inner[j][i+1],inner[j+1][i+1]);}
+ for(let i=0;i<nt;i++){face(inner[0][i],inner[0][i+1],outer[0][i],outer[0][i+1]);face(outer[ny][i],outer[ny][i+1],inner[ny][i],inner[ny][i+1]);}
+ for(let j=0;j<ny;j++){face(inner[j][0],outer[j][0],inner[j+1][0],outer[j+1][0]);face(outer[j][nt],inner[j][nt],outer[j+1][nt],inner[j+1][nt]);}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+ const uv=[];for(let i=0;i<pos.length;i+=3)uv.push(pos[i]*40,pos[i+1]*40);g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+ g.computeVertexNormals();return g;
+}
+// Outfit tiers carried by a glove part: visible from `min` to `max` (outfit stages 1–5).
+const tier=(mesh,min=1,max=10)=>{mesh.userData.minLevel=min;mesh.userData.maxLevel=max;return mesh;};
+
 /* =======================================================================
    CONSTRUCTION D'UN GANT (côté 'D' ou 'G')
    ======================================================================= */
@@ -361,17 +380,39 @@ function buildSourceGlove(M,labelMaterial,{sleeve=true,arm=false}={}){
     // Back-of-forearm armour plate and a padded elbow, on the same anatomical sections.
     const plate=(mat,ya,yb,ta,tb,off,name)=>maille(loft(ARM_SEC,{y0:ya,y1:yb,ny:8,nt:18,t0:ta,t1:tb,sx,off}),mat,avantBras,{nom:pref+name});
     // Shadow Unit ceramic vambrace: shells that follow the forearm's own sections, a dark spine under the accent line.
-    plate(M.ceramique,-.535,-.255,.30,Math.PI-.30,.0058,'brassard_ceramique');
-    plate(M.ceramique,-.535,-.255,Math.PI+.42,Math.PI*2-.42,.0040,'brassard_ceramique_interne');
-    plate(M.carbone,-.470,-.300,.74,Math.PI-.74,.0098,'brassard_nervure');
-    plate(M.hiVis,-.490,-.285,1.50,1.64,.0112,'liseré_avant_bras');
+    // Tenue 1 (tissu technique) : the light ceramic vambrace with its cinch straps.
+    tier(plate(M.ceramique,-.535,-.255,.30,Math.PI-.30,.0058,'brassard_ceramique'),1,1);
+    tier(plate(M.ceramique,-.535,-.255,Math.PI+.42,Math.PI*2-.42,.0040,'brassard_ceramique_interne'),1,1);
+    tier(plate(M.carbone,-.470,-.300,.74,Math.PI-.74,.0098,'brassard_nervure'),1,1);
+    tier(plate(M.hiVis,-.490,-.285,1.50,1.64,.0112,'liseré_avant_bras'),1,1);
     plate(M.matelasse,-.545,-.478,.30,Math.PI-.30,.0030,'coudiere');
-    // Two cinch straps with metal buckles on the back of the forearm, and a stitched seam down each flank.
     for(const y of [-.352,-.448]){
-      maille(loft(ARM_SEC,{y0:y-.020,y1:y,ny:2,nt:44,sx,off:.0070}),M.velcro,avantBras,{nom:pref+'sangle_avant_bras'});
+      tier(maille(loft(ARM_SEC,{y0:y-.020,y1:y,ny:2,nt:44,sx,off:.0070}),M.velcro,avantBras,{nom:pref+'sangle_avant_bras'}),1,1);
       const p=pointLoft(ARM_SEC,Math.PI/2,y-.010,.0105,sx);
-      maille(new THREE.BoxGeometry(.034,.026,.007),M.metal,avantBras,{p:p.toArray(),nom:pref+'boucle_avant_bras'});
-      maille(new THREE.BoxGeometry(.020,.012,.0075),M.caout,avantBras,{p:[p.x,p.y,p.z+.0012],nom:pref+'boucle_fenetre'});
+      tier(maille(new THREE.BoxGeometry(.034,.026,.007),M.metal,avantBras,{p:p.toArray(),nom:pref+'boucle_avant_bras'}),1,1);
+      tier(maille(new THREE.BoxGeometry(.020,.012,.0075),M.caout,avantBras,{p:[p.x,p.y,p.z+.0012],nom:pref+'boucle_fenetre'}),1,1);
+    }
+    // Tenues 2 à 5 (planche LYLU : Standard / Stealth / Heavy) : matte black sleeve under angular armour.
+    tier(plate(M.caout,-.535,-.255,.30,Math.PI-.30,.0040,'manche_tactique'),2);
+    tier(plate(M.caout,-.535,-.255,Math.PI+.42,Math.PI*2-.42,.0034,'manche_tactique_interne'),2);
+    const shell=(mat,o,name,min,max)=>tier(maille(armorShell(ARM_SEC,{...o,sx}),mat,avantBras,{nom:pref+name}),min,max);
+    const H=Math.PI/2;
+    // Standard (2–3) / Stealth (4): three dorsal plates, an outer flank plate, a dark underlay and one accent line.
+    shell(M.hardEdge,{y0:-.482,y1:-.296,t0:H-.74,t1:H+.74,off:.0046,depth:.0016,nt:5,ny:2,chamfer:0},'brassard_socle',2,4);
+    shell(M.hardPlate,{y0:-.468,y1:-.312,t0:H-.62,t1:H+.62,off:.0062,depth:.0048,nt:4,ny:3},'brassard_plaque',2,4);
+    shell(M.hardPlate,{y0:-.528,y1:-.486,t0:H-.56,t1:H+.56,off:.0058,depth:.0040,nt:4,ny:1},'brassard_coude',2,4);
+    shell(M.hardPlate,{y0:-.292,y1:-.262,t0:H-.52,t1:H+.52,off:.0058,depth:.0036,nt:4,ny:1},'brassard_poignet',2,4);
+    shell(M.hardPlate,{y0:-.448,y1:-.330,t0:.06,t1:.82,off:.0052,depth:.0036,nt:3,ny:2},'brassard_flanc',2,4);
+    shell(M.hardAccent,{y0:-.452,y1:-.328,t0:H-.035,t1:H+.035,off:.0112,depth:.0010,nt:1,ny:2,chamfer:0},'brassard_liseré',2,4);
+    // Heavy (5): thickened layered plating, cobalt side blocks and a raised spine.
+    shell(M.hardEdge,{y0:-.505,y1:-.280,t0:H-.86,t1:H+.86,off:.0046,depth:.0020,nt:6,ny:2,chamfer:0},'blindage_socle',5);
+    shell(M.hardPlate,{y0:-.492,y1:-.300,t0:H-.74,t1:H+.74,off:.0066,depth:.0085,nt:5,ny:3,chamfer:.45},'blindage_plaque',5);
+    shell(M.hardPlate,{y0:-.540,y1:-.500,t0:H-.68,t1:H+.68,off:.0062,depth:.0068,nt:4,ny:1},'blindage_coude',5);
+    shell(M.hardPlate,{y0:-.292,y1:-.258,t0:H-.62,t1:H+.62,off:.0062,depth:.0060,nt:4,ny:1},'blindage_poignet',5);
+    shell(M.hardEdge,{y0:-.470,y1:-.322,t0:H-.07,t1:H+.07,off:.0150,depth:.0026,nt:1,ny:2,chamfer:0},'blindage_arete',5);
+    for(const [ta,tb,name] of [[-.34,.42,'blindage_bloc_externe'],[Math.PI-.42,Math.PI+.34,'blindage_bloc_interne']]){
+      shell(M.hardEdge,{y0:-.462,y1:-.338,t0:ta-.04,t1:tb+.04,off:.0050,depth:.0030,nt:3,ny:2,chamfer:0},name+'_socle',5);
+      shell(M.hardAccent,{y0:-.452,y1:-.348,t0:ta,t1:tb,off:.0080,depth:.0100,nt:3,ny:2,chamfer:.5},name,5);
     }
     for(const t of [.10,Math.PI-.10]){
       const pts=Array.from({length:20},(_,i)=>pointLoft(ARM_SEC,t,-.52+i*.0145,.0016,sx));
@@ -393,6 +434,10 @@ function buildSourceGlove(M,labelMaterial,{sleeve=true,arm=false}={}){
   maille(new THREE.CylinderGeometry(.004,.004,.0015,12),M.metal,main,{p:[.0465,-.003,.004],r:[0,0,Math.PI/2],nom:pref+'pivot_axe'});
   maille(new THREE.TorusGeometry(.009,.0010,6,24),M.hardPlate,main,{p:[.046,-.003,.004],r:[0,Math.PI/2,0],nom:pref+'cerclage_pivot'});
   for(let i=0;i<4;i++){const a=i*Math.PI/2+Math.PI/4;maille(new THREE.CylinderGeometry(.00115,.00115,.0011,8),M.metal,main,{p:[.0472,-.003+.0085*Math.cos(a),.004+.0085*Math.sin(a)],r:[0,0,Math.PI/2],nom:pref+'vis_pivot'});}
+  // Wrist coupling (reference: circular armour interface, locked and articulated) from tenue 2.
+  tier(maille(new THREE.TorusGeometry(.0132,.0021,6,28),M.hardEdge,main,{p:[.0462,-.003,.004],r:[0,Math.PI/2,0],nom:pref+'couplage_bague'}),2);
+  tier(maille(new THREE.TorusGeometry(.0114,.0009,5,28),M.hardAccent,main,{p:[.0486,-.003,.004],r:[0,Math.PI/2,0],nom:pref+'couplage_anneau'}),2);
+  tier(maille(new THREE.TorusGeometry(.0158,.0026,6,30),M.hardPlate,main,{p:[.0455,-.003,.004],r:[0,Math.PI/2,0],nom:pref+'couplage_lunette'}),5);
   // Fastening strap and clasp follow the cuff's existing wrist blend.
   maille(loft(SEC,{y0:-.024,y1:-.016,ny:2,nt:32,sx,off:.0025}),M.velcro,avantBras,{nom:pref+'sangle_poignet'});
   maille(dorsalGuard(.023,.010,.002,.0008,.001),M.hardPlate,avantBras,{p:[0,-.024,.029],nom:pref+'boucle_poignet'});
@@ -669,14 +714,15 @@ function materialSet(gloves){
   }
   const set={materials,labels,stages:new Map()};materialSets.set(gloves,set);syncRLHMaterials(gloves);return set;
 }
-// Match the actual manufactured outfit palette in hero-outfit-stages.js.
+// Planche LYLU « Armor lineup » : Standard (tenues 1–2 blanc cassé, 3 titane), Stealth (4, graphite, accents
+// atténués), Heavy (5, plaques composites blanc cassé, blocs d'accent vifs). GHJU reprend les mêmes formes en rose.
 // Stage materials are shared by a kit and a stage (not per mesh or frame).
 export const GLOVE_FINISHES=Object.freeze([
   {plate:0xe0e2e6,edge:0x353c46,metalness:.14,roughness:.52,accent:.65},
   {plate:0xe6e7e9,edge:0x333b46,metalness:.14,roughness:.52,accent:1},
   {plate:0x929ca8,edge:0x414a56,metalness:.82,roughness:.29,accent:.82},
   {plate:0x343d48,edge:0x222832,metalness:.58,roughness:.38,accent:.54},
-  {plate:0x202733,edge:0x181d27,metalness:.58,roughness:.38,accent:1}
+  {plate:0xdadde2,edge:0x262c35,metalness:.20,roughness:.44,accent:1.2}
 ].map(Object.freeze));
 const STAGE_KEYS=['hardPlate','hardEdge','hardAccent','ceramique','reflect','matelasse','carbone','hiVis','metal'];
 function applyStageFinish(M,stage,identity){
@@ -684,8 +730,8 @@ function applyStageFinish(M,stage,identity){
   for(const key of ['hardPlate','ceramique','reflect','matelasse']){
     const m=M[key];m.color.setHex(f.plate);m.metalness=f.metalness;m.roughness=f.roughness;
   }
-  const micro=sourceTextures().armorMicro[stage>=4?2:stage===3?1:0];
-  Object.assign(M.hardPlate,micro);M.hardPlate.normalScale.setScalar(stage>=4?.65:.38);M.hardPlate.needsUpdate=true;
+  const micro=sourceTextures().armorMicro[stage===4?2:stage===3?1:0];
+  Object.assign(M.hardPlate,micro);M.hardPlate.normalScale.setScalar(stage===4?.65:stage===5?.48:.38);M.hardPlate.needsUpdate=true;
   for(const key of ['hardEdge','carbone','metal'])M[key].color.setHex(f.edge);
   M.metal.color.setHex(stage<=3?0x717984:0x56606c);M.metal.roughness=.42;
   for(const key of ['hardAccent','hiVis']){M[key].color.copy(accent);M[key].emissive.copy(accent).multiplyScalar(.10);}
@@ -717,8 +763,8 @@ function template(sleeve,arm=false){
   for(const mesh of meshes){
     let joint=mesh.parent;while(joint&&!joint.isBone)joint=joint.parent;
     const bone=bones.indexOf(joint),g=mesh.geometry.index?mesh.geometry.toNonIndexed():mesh.geometry.clone();g.applyMatrix4(mesh.matrixWorld);
-    const key=mesh.material.name,level=mesh.userData.minLevel||1,batchKey=key+':'+level;
-    if(!groups.has(batchKey))groups.set(batchKey,{key,level,parts:[],indices:[],blend:[],count:0});
+    const key=mesh.material.name,level=mesh.userData.minLevel||1,max=mesh.userData.maxLevel||10,batchKey=key+':'+level+':'+max;
+    if(!groups.has(batchKey))groups.set(batchKey,{key,level,max,parts:[],indices:[],blend:[],count:0});
     const group=groups.get(batchKey),y=g.attributes.position,blend=onForearm(joint);group.parts.push(g);group.count++;
     for(let i=0;i<y.count;i++){
       group.indices.push(bone);
@@ -780,10 +826,10 @@ export function createRLHGlove(gloves,{mirror=false,sleeve=true,arm=false}={}){
     get finishStage(){return Math.min(5,level);},
     setLevel(n){level=Math.max(1,Math.min(10,Math.floor(n||1)));if(appliedLevel===level)return;appliedLevel=level;
       const finish=stageMaterials(set,gloves,level);group.userData.materials=finish;
-      for(const {mesh,part} of meshes){mesh.visible=part.level<=level;if(part.key!=='label')mesh.material=finish[part.key];}
+      for(const {mesh,part} of meshes){mesh.visible=part.level<=level&&level<=(part.max||10);if(part.key!=='label')mesh.material=finish[part.key];}
     },
     dispose(){if(disposed)return;disposed=true;skeleton.dispose();},
-    assembly:{get count(){return meshes.filter(({part})=>part.level<=level).reduce((sum,{part})=>sum+part.count,0);}}
+    assembly:{get count(){return meshes.filter(({part})=>part.level<=level&&level<=(part.max||10)).reduce((sum,{part})=>sum+part.count,0);}}
   });
   if(mirror)group.scale.x=-1;group.userData.setLevel(1);return group;
 }
