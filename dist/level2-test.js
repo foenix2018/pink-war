@@ -660,7 +660,8 @@ function updateOriginalSoldier(dt,moving,sprint,firing){
   model.root.position.set(game.player.x,game.player.elevation,game.player.z);
   model.root.rotation.y=yaw;
   if(model.weapon!==game.weaponIndex)model.setWeapon(game.weaponIndex);
-  if(game.hideoutArmorLevel&&model.equipmentLevel!==game.hideoutArmorLevel)model.setLevel(game.hideoutArmorLevel);
+  const stage=game.suitStage||game.hideoutArmorLevel||game.equipment?.level||1;
+  if(model.equipmentLevel!==stage)model.setLevel(stage);
   model.gun.userData.setCombatState?.({ammo:game.ammo[game.weaponIndex],capacity:game.weapon.capacity,time:game.time,dualState:game.dual,
     reloading:game.reloadRemaining>0,reloadProgress:game.weapon.reload?1-game.reloadRemaining/game.weapon.reload:0,charge:game.charge});
   model.animate(game.time,moving,weaponFeel.state.pitch,0,Number(firing),dt,{
@@ -844,6 +845,7 @@ function gameTick(dt){
  const shotFlash=running&&!game.weapon.melee&&(game.weapon.dual||weaponFeel.state.flash>0);
  weapon.userData.setFlash?.(shotFlash,game.time);playerRig?.model.gun.userData.setFlash?.(shotFlash,game.time);
  weapon.userData.animateHands?.(Number(firing),firing ? .34 : .18,game.reloadRemaining > 0 ? .8 : 0,dt);
+ weapon.userData.setLevel?.(game.suitStage||game.hideoutArmorLevel||game.equipment?.level||1);
  if(weapon.userData.index!==game.weaponIndex)weapon.userData.setVariant(game.weaponIndex);
  if(rain)rain.position.y=-(game.time*9%18);
  for(const b of beacons){b.halo.rotation.z+=dt*.4;b.dot.position.y=1.6+Math.sin(game.time*2)*.13;}

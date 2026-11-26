@@ -24,7 +24,7 @@ export function attachNativeARHands(soldier,kit){
    const bone=soldier.actor.bone(side+'Hand');
    if(!bone)throw new Error('Os de poignet '+side+' introuvable.');
    const glove=createRLHGlove(kit.gloves,{mirror:i===0,sleeve:false,arm:false});
-   result.push(glove);
+   result.push(glove);glove.userData.setLevel(soldier.equipmentLevel||1);
    glove.name='Galerie AR · vrai gant '+side;
    // Left hand is a reflection of the original right glove; preserve the
    // reflected X axis while rotating its native +Y finger axis downward.

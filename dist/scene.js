@@ -206,7 +206,7 @@ export async function createScene(canvas, quality, forceWebGL = false, character
   holsterGun.visible=false;camera.add(holsterGun);
   holsterGun.position.set(-.24,-.22,-.53);
 
-  function setEquipment(level){soldier.setLevel(level);fpsGun.userData.setLevel(level);}
+  function setEquipment(level){soldier.setLevel(level);fpsGun.userData.setLevel(level);holsterGun.userData.setLevel(level);}
 
   function setCharacter(id){
     const next=characterForId(id);if(themeApplied&&next.id===character.id)return;

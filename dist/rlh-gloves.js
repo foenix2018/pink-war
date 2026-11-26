@@ -233,6 +233,20 @@ export const RLH_DIGITS={
 };
 const NOMS_DOIGTS={index:'index',middle:'majeur',ring:'annulaire',pinky:'auriculaire'};
 
+// Low-poly, closed, bevelled composite shell in local dorsal (+Z) coordinates.
+ // Every finger plate is bound to its original phalanx; the palm and grip
+ // surface stay unchanged. Curve the transverse edges down onto the liner.
+function dorsalGuard(width,length,depth=.0022,bevel=.0008,curve=.0018){
+  const w=width/2,l=length;
+  const points=[[-.72*w,0],[.62*w,0],[w,.18*l],[.94*w,.68*l],[.61*w,l],[-.65*w,l],[-w,.74*l],[-w,.20*l]];
+  const shape=new THREE.Shape();
+  points.forEach(([x,y],i)=>i?shape.lineTo(x,y):shape.moveTo(x,y));shape.closePath();
+  const g=new THREE.ExtrudeGeometry(shape,{depth,bevelEnabled:true,bevelThickness:bevel,bevelSize:bevel,bevelSegments:1,curveSegments:1});
+  const a=g.attributes.position;
+  for(let i=0;i<a.count;i++){const u=Math.min(1,Math.abs(a.getX(i))/w);a.setZ(i,a.getZ(i)-curve*u*u);}
+  a.needsUpdate=true;g.computeVertexNormals();return g;
+}
+
 /* =======================================================================
    CONSTRUCTION D'UN GANT (côté 'D' ou 'G')
    ======================================================================= */
@@ -336,6 +350,14 @@ function buildSourceGlove(M,labelMaterial,{sleeve=true,arm=false}={}){
   const patte=new THREE.Bone();patte.name=pref+'patte_serrage';
   patte.position.copy(pointLoft(SEC,.12,-.025,.002,sx));avantBras.add(patte);
   maille(new THREE.CylinderGeometry(.005,.005,.003,12),M.metal,patte,{r:[Math.PI/2,0,0],nom:pref+'verrou_poignet'});
+  // A compact segmented wrist closure on the short 3P/VR cuff and the long FPS sleeve.
+  maille(loft(SEC,{y0:-.022,y1:-.014,ny:2,nt:32,sx,off:.0016}),M.hardEdge,avantBras,{nom:pref+'bague_poignet'});
+  maille(loft(SEC,{y0:-.021,y1:-.018,ny:2,nt:18,t0:.72,t1:Math.PI-.72,sx,off:.0024}),M.hardAccent,avantBras,{nom:pref+'bague_liseré'});
+  // Low-profile pivot on the outer wrist, not in the palm or trigger space.
+  const pivot=[.043,-.003,.004];
+  maille(new THREE.CylinderGeometry(.010,.011,.005,16),M.hardEdge,main,{p:pivot,r:[0,0,Math.PI/2],nom:pref+'pivot_poignet'});
+  maille(new THREE.TorusGeometry(.0068,.0009,5,16),M.hardAccent,main,{p:[.046,-.003,.004],r:[0,Math.PI/2,0],nom:pref+'pivot_liseré'});
+  maille(new THREE.CylinderGeometry(.004,.004,.0015,12),M.metal,main,{p:[.0465,-.003,.004],r:[0,0,Math.PI/2],nom:pref+'pivot_axe'});
   /* ---------- corps de la main ---------- */
   maille(loft(RLH_PALM_SECTIONS,{y0:-.014,y1:.124,ny:30,nt:64,sx,capHaut:true}),M.textile,main,{nom:pref+'corps'});
   /* éminence thénar (base du pouce, côté paume) */
@@ -370,7 +392,14 @@ function buildSourceGlove(M,labelMaterial,{sleeve=true,arm=false}={}){
     g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2)); g.setIndex(idx); g.computeVertexNormals(); return g;
   }
   const td0=.70, td1=Math.PI-.70;
-  maille(bouclier(),M.matelasse,protections,{nom:pref+'bouclier_dos'});
+  // LYLU/GHJU AÉGIS dorsal plate: chamfered outline, dark carrier, blue/rose inlay.
+  maille(bouclier(),M.hardEdge,protections,{nom:pref+'support_dorsal'});
+  maille(dorsalGuard(.066,.060,.0026,.0011,.005),M.hardPlate,protections,{p:[0,.031,.026],nom:pref+'coque_dorsale'});
+  for(const x of [-.023,.023])for(const y of [.041,.079]){
+    maille(new THREE.CylinderGeometry(.0015,.0015,.0009,8),M.metal,protections,{p:[x,y,.0277],r:[Math.PI/2,0,0],nom:pref+'vis_dorsale'});
+  }
+  // Thin identity chevrons as actual geometry (not mirrored text).
+  for(const sign of [-1,1])maille(dorsalGuard(.0035,.023,.0006,.0002,0),M.hardAccent,protections,{p:[sign*.008,.055,.0295],r:[0,0,sign*.35],nom:pref+'embleme_dorsal'});
   {
     const pts=[]; for(let j=0;j<=26;j++) pts.push(pointLoft(RLH_PALM_SECTIONS,td0+(td1-td0)*j/26,.094,.0012,sx)); couture(main,pts);
     const pts2=[]; for(let j=0;j<=26;j++) pts2.push(pointLoft(RLH_PALM_SECTIONS,td0+(td1-td0)*j/26,.046,.0012,sx)); couture(main,pts2);
@@ -395,10 +424,13 @@ function buildSourceGlove(M,labelMaterial,{sleeve=true,arm=false}={}){
       maille(tour(decaler(prof,.0009,-r0*.2,L+r1*.25),16,Math.PI-1.15,2.3),M.cuir,j,{s:[1,1,.90],ombre:false});
       /* pli d'articulation côté dos */
       if(i>0){ for(let k=0;k<2;k++) maille(new THREE.TorusGeometry(r0*1.0,.0007,5,18,Math.PI),M.textile,j,{p:[0,.002+k*.0035,0],r:[Math.PI/2,0,0],s:[1,.9,1],ombre:false}); }
-      /* protections moulées dos des phalanges 1 et 2 */
-      if(i<2){
-        const pr=decaler(profilPhalange(r0,r1,L),.0016,L*.15,L*.82);
-        maille(tour(pr,14,-.95,1.9),M.carbone,j,{s:[1,1,.90],nom:pref+NOMS_DOIGTS[nom]+'_prot'+(i+1)});
+      // Three independent, anatomically tapered dorsal shells, with clear joint gaps.
+      const start=L*(i===2?.24:.16), length=L*(i===2?.46:.62), z=r0*.90+.0005;
+      maille(dorsalGuard(r0*1.52,length,.0019,.00055,r0*.19),M.hardPlate,j,{p:[0,start,z],nom:pref+NOMS_DOIGTS[nom]+'_prot'+(i+1)});
+      maille(dorsalGuard(r0*.80,.0027,.0006,.00025,.0004),M.hardAccent,j,{p:[0,start+length-.003,z+.002],nom:pref+NOMS_DOIGTS[nom]+'_liseré'+(i+1)});
+      if(i===0){
+        // Knuckle is attached to the moving proximal bone, not the palm.
+        maille(dorsalGuard(r0*1.55,.008,.0014,.0006,r0*.16),M.hardEdge,j,{p:[0,-.004,z],nom:pref+NOMS_DOIGTS[nom]+'_jointure'});
       }
       /* bout de doigt renforcé */
       if(i===2){
@@ -427,7 +459,10 @@ function buildSourceGlove(M,labelMaterial,{sleeve=true,arm=false}={}){
       const r0=rr[i], r1=rr[i]*.9, prof=profilPhalange(r0,r1,len);
       maille(tour(prof,22),M.textile2,j,{s:[1,1,.92]});
       maille(tour(decaler(prof,.0009,-r0*.2,len+r1*.25),16,Math.PI-1.2,2.4),M.cuir,j,{s:[1,1,.92],ombre:false});
-      if(i>0) maille(tour(decaler(prof,.0016,len*.15,len*.8),14,-.9,1.8),M.carbone,j,{s:[1,1,.92],nom:pref+'pouce_prot'+i});
+      if(i>0){
+        maille(dorsalGuard(r0*1.38,len*.54,.0019,.0007,r0*.19),M.hardPlate,j,{p:[0,len*.20,r0*.92+.0006],nom:pref+'pouce_prot'+i});
+        maille(dorsalGuard(r0*.66,.003,.0006,.00025,.0004),M.hardAccent,j,{p:[0,len*.65,r0*.92+.0025],nom:pref+'pouce_liseré'+i});
+      }
       if(i===2) maille(tour(decaler(prof,.0011,len*.55),20),M.cuirF,j,{s:[1,1,.92]});
       if(i>0) maille(new THREE.TorusGeometry(r0,.0007,5,18,Math.PI),M.textile,j,{p:[0,.002,0],r:[Math.PI/2,0,0],ombre:false});
       parent=j;
@@ -497,7 +532,7 @@ export const RLH_POSES={
 
 
 const textureCache={value:null},materialSets=new WeakMap(),templates=new Map();
-const MATERIAL_KEYS=['textile','textile2','doublure','cuir','cuirF','carbone','caout','ceramique','reflect','hiVis','matelasse','velcro','fil','metal'];
+const MATERIAL_KEYS=['textile','textile2','doublure','cuir','cuirF','carbone','caout','ceramique','reflect','hiVis','matelasse','velcro','fil','metal','hardPlate','hardEdge','hardAccent'];
 function sourceTextures(){
   if(textureCache.value)return textureCache.value;
   return textureCache.value={
@@ -517,7 +552,8 @@ function paintLabel(texture,accent,name,side){
 }
 export function syncRLHMaterials(gloves){
   const set=materialSets.get(gloves);if(!set)return;
-  const accent=gloves.plate.color,white=gloves.trim.color,fabric=gloves.fabric.color;
+  // Shadow Unit deliberately sets plate=graphite; the glow retains the actual hero identity.
+  const accent=gloves.glow?.color||gloves.plate.color,white=gloves.trim.color,fabric=gloves.fabric.color;
   const M=set.materials;
   M.textile.color.copy(fabric).lerp(accent,.08);M.textile2.color.copy(fabric).lerp(accent,.06);
   M.hiVis.color.copy(accent);M.hiVis.emissive.copy(accent).multiplyScalar(.05);
@@ -525,6 +561,7 @@ export function syncRLHMaterials(gloves){
   M.ceramique.color.copy(white).lerp(new THREE.Color(0xffffff),.35);M.reflect.color.copy(white).multiplyScalar(.78);M.metal.color.copy(white).multiplyScalar(.60);
   const name=accent.b>accent.r?'LYLU':'GHJU',hex='#'+accent.getHexString();
   for(const [side,label] of Object.entries(set.labels))paintLabel(label.map,hex,name,side);
+  for(const [stage,finish] of set.stages)applyStageFinish(finish,stage,accent);
 }
 function materialSet(gloves){
   if(materialSets.has(gloves))return materialSets.get(gloves);
@@ -541,14 +578,45 @@ function materialSet(gloves){
     reflect:standard({map:t.reflect,roughness:.28,metalness:.82,envMap:gloves.trim.envMap||null,envMapIntensity:.85}),
     hiVis:standard({roughness:.6,emissiveIntensity:.1}),
     matelasse:standard({roughness:.37,metalness:.65,envMap:gloves.plate.envMap||null,envMapIntensity:.65}),
-    velcro:standard({map:t.velcro,roughness:.98}),fil:standard({roughness:.90}),metal:standard({roughness:.35,metalness:.8})
+    velcro:standard({map:t.velcro,roughness:.98}),fil:standard({roughness:.90}),metal:standard({roughness:.35,metalness:.8}),
+    hardPlate:standard({roughness:.45,metalness:.24,envMap:gloves.trim.envMap||null,envMapIntensity:.55}),
+    hardEdge:standard({color:0x252b33,roughness:.46,metalness:.52}),
+    hardAccent:standard({roughness:.42,metalness:.25,emissiveIntensity:.09})
   };
   const labels={};for(const side of ['D','G']){
     const map=cvTex(512,160,()=>{});map.wrapS=map.wrapT=THREE.ClampToEdgeWrapping;
     if(side==='G'){map.repeat.x=-1;map.offset.x=1;}
     labels[side]=standard({map,roughness:.84});
   }
-  const set={materials,labels};materialSets.set(gloves,set);syncRLHMaterials(gloves);return set;
+  const set={materials,labels,stages:new Map()};materialSets.set(gloves,set);syncRLHMaterials(gloves);return set;
+}
+// Match the actual manufactured outfit palette in hero-outfit-stages.js.
+// Stage materials are shared by a kit and a stage (not per mesh or frame).
+export const GLOVE_FINISHES=Object.freeze([
+  {plate:0xe0e2e6,edge:0x353c46,metalness:.14,roughness:.52,accent:.65},
+  {plate:0xe6e7e9,edge:0x333b46,metalness:.14,roughness:.52,accent:1},
+  {plate:0x929ca8,edge:0x414a56,metalness:.82,roughness:.29,accent:.82},
+  {plate:0x343d48,edge:0x222832,metalness:.58,roughness:.38,accent:.54},
+  {plate:0x202733,edge:0x181d27,metalness:.58,roughness:.38,accent:1}
+].map(Object.freeze));
+const STAGE_KEYS=['hardPlate','hardEdge','hardAccent','ceramique','reflect','matelasse','carbone','hiVis','metal'];
+function applyStageFinish(M,stage,identity){
+  const f=GLOVE_FINISHES[stage-1],accent=identity.clone().multiplyScalar(f.accent);
+  for(const key of ['hardPlate','ceramique','reflect','matelasse']){
+    const m=M[key];m.color.setHex(f.plate);m.metalness=f.metalness;m.roughness=f.roughness;
+  }
+  for(const key of ['hardEdge','carbone','metal'])M[key].color.setHex(f.edge);
+  for(const key of ['hardAccent','hiVis']){M[key].color.copy(accent);M[key].emissive.copy(accent).multiplyScalar(.10);}
+}
+function stageMaterials(set,gloves,level){
+  const stage=Math.max(1,Math.min(5,level));
+  if(!set.stages.has(stage)){
+    const M={...set.materials};
+    for(const key of STAGE_KEYS)M[key]=M[key].clone();
+    applyStageFinish(M,stage,gloves.glow?.color||gloves.plate.color);
+    set.stages.set(stage,M);
+  }
+  return set.stages.get(stage);
 }
 function template(sleeve,arm=false){
   const templateKey=sleeve?(arm?'arm':'sleeve'):'short';
@@ -624,10 +692,14 @@ export function createRLHGlove(gloves,{mirror=false,sleeve=true,arm=false}={}){
     mesh.boundingSphere=new THREE.Sphere(new THREE.Vector3(0,long?-.10:.02,0),long?.66:.39);
     group.add(mesh);meshes.push({mesh,part});
   }
-  const rig=controlRig(root);let disposed=false,level=1,side=mirror?'G':'D';
+  const rig=controlRig(root);let disposed=false,level=1,side=mirror?'G':'D',appliedLevel=0;
   Object.assign(group.userData,{source:'RLH V40',armor:'AEGIS-II',arm:sleeve&&arm,skeleton,rig,parts:meshes,materials:set.materials,
     setSide(next){if(next===side||!set.labels[next])return;side=next;for(const {mesh,part} of meshes)if(part.key==='label')mesh.material=set.labels[side];},
-    setLevel(n){level=Math.max(1,Math.min(10,Math.floor(n||1)));for(const {mesh,part} of meshes)mesh.visible=part.level<=level;},
+    get finishStage(){return Math.min(5,level);},
+    setLevel(n){level=Math.max(1,Math.min(10,Math.floor(n||1)));if(appliedLevel===level)return;appliedLevel=level;
+      const finish=stageMaterials(set,gloves,level);group.userData.materials=finish;
+      for(const {mesh,part} of meshes){mesh.visible=part.level<=level;if(part.key!=='label')mesh.material=finish[part.key];}
+    },
     dispose(){if(disposed)return;disposed=true;skeleton.dispose();},
     assembly:{get count(){return meshes.filter(({part})=>part.level<=level).reduce((sum,{part})=>sum+part.count,0);}}
   });

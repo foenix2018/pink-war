@@ -97,6 +97,8 @@ export function createMissionXR({getWorld,onFrame,onPause,onResume,onHome,onExit
    if(!session)return;const w=getWorld(),g=w.game;api.syncPose();
    for(const e of entries){const hand=e.source?.handedness,main=hand==='right',armed=main||!!g.weapon.dual;const grip=e.source?.gamepad?.buttons?.[1]?.value||0,trigger=e.source?.gamepad?.buttons?.[0]?.value||0;const gun=e.gun,reload=g.reloadRemaining?1-g.reloadRemaining/g.weapon.reload:0;
     gun.visible=!!(e.tracked&&armed);e.bare.visible=!!(e.tracked&&!armed);e.bare.scale.x=(hand==='left'?-1:1)*Math.abs(e.bare.scale.x);gun.scale.x=hand==='left'?-1:1;
+    const level=g.suitStage||g.hideoutArmorLevel||g.equipment?.level||1;
+    if(e.gloveStage!==level){gun.userData.setLevel?.(level);e.bare.userData.setLevel?.(level);e.gloveStage=level;}
     if(gun.userData.index!==g.weaponIndex)gun.userData.setVariant?.(g.weaponIndex);
     gun.userData.setCombatState?.({time:g.time,ammo:g.ammo[g.weaponIndex],capacity:g.weapon.capacity,dualState:g.weapon.dual?{...g.dual,shotAt:{right:g.dual.shotAt[hand],left:-Infinity}}:g.dual,reloading:g.reloadRemaining>0,reloadProgress:reload,charge:g.charge,heat:feel.heat||0,kick:feel.kick||0,bladeHeld:!blocked&&trigger>.15});
     const pose=recoilPose(g.weapon.id,feel,{tracked:true,dual:!!g.weapon.dual,aiming:Number(!!controls?.aim)});

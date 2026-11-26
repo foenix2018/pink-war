@@ -40,7 +40,7 @@ export function installOutfitStages(model,profile,{armour,gear}={}){
  }
  // Tenues 4-5 : le casque fourni (hero-helmets.js) remplace la coque Shadow dès qu'il est chargé.
  let helmetOverride=()=>false;const armourStage=source=>helmetOverride()&&source.parent===armour.helmet?Infinity:stageFor(source);
- model.setLevel=n=>{const stage=suitStage(n);if(current===stage)return;current=stage;mask(armour.bindings,armourStage);mask(extras.bindings,s=>s.parent.userData.outfitStage);refresh();};
+ model.setLevel=n=>{const stage=suitStage(n);if(current===stage)return;current=stage;mask(armour.bindings,armourStage);mask(extras.bindings,s=>s.parent.userData.outfitStage);model.gun?.userData.setLevel?.(stage);model.freeHand?.userData.setLevel?.(stage);refresh();};
  for(let i=0;i<pose.length;i++){model.actor.bones[i].position.copy(pose[i].p);model.actor.bones[i].quaternion.copy(pose[i].q);}model.root.updateMatrixWorld(true);
  Object.defineProperty(model,'equipmentLevel',{configurable:true,get:()=>current});
  const ready=gear.ready.then(()=>{if(disposed)return false;refresh();return true;});model.setLevel(1);
