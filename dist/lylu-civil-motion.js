@@ -1,5 +1,7 @@
 // Original civil animations, authored on LYLU's existing skeleton. No third-party motion files.
 export const FITNESS_CLIPS=Object.freeze({squat:'fitnessSquat',dumbbells:'fitnessCurl',rower:'fitnessRow'});
+// Seated work: pelvis joint height above the floor for the workshop chair (seat ≈ 0,48 m).
+export const SIT=Object.freeze({pelvis:.57});
 export function buildCivilMotion(T,visual,bones,original){
  const names=[...bones.keys()],V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z),Q=()=>new T.Quaternion();
  const bone=n=>bones.get(n).bone,base=new Map(names.map(n=>[n,{q:bone(n).quaternion.clone(),p:bone(n).position.clone()}]));
@@ -16,7 +18,13 @@ export function buildCivilMotion(T,visual,bones,original){
  if(mode==='fitnessCurl'){const a=(.10+2.0*u),el=sh.clone().add(V(side*.035,-.26,0));target=el.clone().add(V(side*.025,-.25*Math.cos(a),.25*Math.sin(a)));pole=el.clone();}
  else if(mode==='fitnessSquat'){target=sh.clone().add(V(side*.16,-.015,-.105));pole=sh.clone().add(V(side*.36,-.22,-.18));}
  else if(mode==='fitnessRow'){target=V(side*.18,.67+.09*u,.58-.41*u);pole=sh.clone().add(V(side*.22,-.22,-.12));}
- else {const swing=(mode.startsWith('run')?.14:.085)*Math.sin(u*Math.PI*2+(side>0?0:Math.PI));target=sh.clone().add(V(side*.065,-.47,swing));pole=sh.clone().add(V(side*.12,-.24,-.08));}
+ else if(mode==='civilSit'){const tap=.008*Math.sin(u*Math.PI*4+(side>0?0:Math.PI));target=sh.clone().add(V(-side*.105,-.30+tap,.27));pole=sh.clone().add(V(side*.26,-.30,-.05));}
+ else {
+  // Arms hang from the shoulder (reach .52 m): hand beside the thigh, elbow slightly bent and pointing back,
+  // swinging opposite to the legs. The former .47 m target with an outward pole read as hands on the hips.
+  const run=mode.startsWith('run'),walking=!/idle/i.test(mode),swing=walking?(run?.20:.12)*Math.sin(u*Math.PI*2+(side>0?0:Math.PI)):0;
+  target=sh.clone().add(V(side*.028,run?-.47:-.502,.03+swing));pole=sh.clone().add(V(side*.04,-.22,run?-.30:-.26));
+ }
  solve('UpperArm_'+s,'ForeArm_'+s,'Hand_'+s,target,pole);
  }};
  const clips=[];
@@ -30,10 +38,11 @@ export function buildCivilMotion(T,visual,bones,original){
   const tracks=source.tracks.filter(t=>!upper.includes(t.name.split('.')[0])).map(t=>t.clone());for(const k of upper)tracks.push(new T.QuaternionKeyframeTrack(k+'.quaternion',times,values[k]));clips.push(new T.AnimationClip('civil_'+name,duration,tracks));
  }
  // Looping original fitness poses; the feet are solved against fixed anchors.
- for(const [name,duration] of [['fitnessCurl',3.0],['fitnessSquat',3.6],['fitnessRow',2.8]]){
+ for(const [name,duration] of [['fitnessCurl',3.0],['fitnessSquat',3.6],['fitnessRow',2.8],['civilSit',4.0]]){
   const n=Math.ceil(duration*30)+1,times=Array.from({length:n},(_,i)=>i*duration/(n-1)),values=Object.fromEntries(names.map(n=>[n,[]])),hip=[];
   for(let i=0;i<n;i++){reset();const t=i/(n-1),u=.5-.5*Math.cos(t*2*Math.PI);
    if(name==='fitnessSquat'){setPelvis(0,-.34*u,-.12*u);direction('Spine','Chest',V(0,1,.32*u));feet(footRest);}
+   if(name==='civilSit'){const seat=SIT.pelvis-pelvisRest.y;setPelvis(0,seat,-.06);direction('Spine','Chest',V(0,1,.16+.015*u));direction('Neck','Head',V(0,1,.42));feet({L:footRest.L.clone().add(V(.02,0,.36)),R:footRest.R.clone().add(V(-.02,0,.36))});}
    if(name==='fitnessRow'){setPelvis(0,-.49,-.18-.34*u);direction('Spine','Chest',V(0,1,.35-.62*u));feet({L:footRest.L.clone().add(V(0,.12,.51)),R:footRest.R.clone().add(V(0,.12,.51))});}
    arms(name,u);for(const k of names){const q=bone(k).quaternion,a=values[k];if(a.length&&q.dot(new T.Quaternion().fromArray(a,a.length-4))<0)q.set(-q.x,-q.y,-q.z,-q.w);a.push(...q.toArray());}hip.push(...bone('Pelvis').position.toArray());
   }

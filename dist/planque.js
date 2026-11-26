@@ -16,7 +16,7 @@ import {createPinkWarsInput} from './level2-input.js';
 import {installPinkWarsSoldier} from './level2-player.js';
 import {setScreenMusic,setMusicEnabled} from './menu-music.js';
 import {GAME_VERSION} from './launch-ui.js';
-import {createLyluCivil} from './lylu-civil-hideout.js?v=20261125footlock';
+import {createLyluCivil} from './lylu-civil-hideout.js?v=20261126pose';
 import {FITNESS_PROGRAMS,FITNESS_LABELS,createFitnessSession,advanceFitness,claimFitness} from './hideout-fitness.js';
 import {createFitnessProps} from './hideout-fitness-props.js';
 import {bindViewButton,mountViewControl,savePreferredView} from './view-options.js';
@@ -82,8 +82,17 @@ async function boot(){
   if(lylu)void nanoChambers.store(characterId,armorLevel).catch(error=>console.warn('Capsule LYLU',error));
  }catch(error){console.error('La Planque',error);$('loading').hidden=false;progress(0,error?.message||'Le refuge n’a pas pu s’ouvrir.');$('retry').hidden=false;}
 }
+// Furniture poses of LYLU in civil clothes: seated on the workshop chair, lying on her dormitory bed.
+function civilSpots(){
+ const station=id=>art.layout.stations.find(s=>s.id===id)||{x:0,z:0};
+ // The nearest piece to its station: the dormitory has two beds, LYLU uses the one by the rest station.
+ const find=(kind,id)=>{const st=station(id);return art.layout.colliders.filter(c=>c.kind===kind).sort((a,b)=>Math.hypot(a.x-st.x,a.z-st.z)-Math.hypot(b.x-st.x,b.z-st.z))[0];},chair=find('siège d’atelier','workshop'),bed=find('Dortoir','rest'),spots={};
+ if(chair)spots.workshop={kind:'sit',x:chair.x,z:chair.z-.02,yaw:0};
+ if(bed)spots.rest={kind:'lie',x:bed.x,y:(bed.y||0)+bed.height+.11,z:bed.z+bed.hz-.22,yaw:0};
+ return spots;
+}
 async function loadHero(){
- if(lylu){civilLoading=true;try{civil=await createLyluCivil(scene);setCivilMode(true);}catch(error){throw new Error('Tenue civile de LYLU indisponible : '+(error?.message||error));}finally{civilLoading=false;}}
+ if(lylu){civilLoading=true;try{civil=await createLyluCivil(scene);civil.setSpots(civilSpots());setCivilMode(true);}catch(error){throw new Error('Tenue civile de LYLU indisponible : '+(error?.message||error));}finally{civilLoading=false;}}
  const mat=c=>new T.MeshStandardMaterial({color:c,roughness:.65,metalness:.4}),glow=c=>new T.MeshBasicMaterial({color:c});
  try{rig=await installPinkWarsSoldier(T,scene,characterId,{monster:mat(0x394653),monsterFace:mat(0x09121d),cyan:glow(0x6dcfff),rose:glow(0xff639f),violet:glow(0x9d72ff),pale:glow(0xd8efff)});rig.model.setWeapon(game.weaponIndex);rig.model.setLevel(armorLevel);visibleHero();}catch(error){if(!lylu)throw error;console.warn('Armure LYLU indisponible',error);}
  if(lylu){$('civil-outfit').disabled=!rig;$('civil-portrait').disabled=false;}
@@ -256,7 +265,7 @@ function updatePlayerCamera(){
  }
 }
 function fitnessStations(){return civilMode&&fitnessProps?(art?.layout.fitnessEquipment||[]).map(e=>({...e,id:'fitness-'+e.id,room:'gym',radius:1.0,action:'Utiliser '+e.name})):[];}
-function startTraining(id){const p=FITNESS_PROGRAMS[id],s=fitnessStations().find(s=>s.id==='fitness-'+id);if(!p||!s||!ready||paused||opened||!civilMode||!navigation.inRoom(game.player,'gym')||Math.hypot(game.player.x-s.x,game.player.z-s.z)>s.radius)return false;clearMotion();Object.assign(game.player,{x:s.x,z:s.z,yaw:p.anchor.yaw});cameraYaw=p.anchor.yaw-.65;cameraPitch=-.12;setView('third');training=createFitnessSession(id);civil.playFitness(id);$('fitness-hud').hidden=false;refreshTrainingHUD();return true;}
+function startTraining(id){const p=FITNESS_PROGRAMS[id],s=fitnessStations().find(s=>s.id==='fitness-'+id);if(!p||!s||!ready||paused||opened||!civilMode||!navigation.inRoom(game.player,'gym')||Math.hypot(game.player.x-s.x,game.player.z-s.z)>s.radius)return false;clearMotion();Object.assign(game.player,{x:s.x,z:s.z,yaw:p.anchor.yaw});cameraYaw=p.anchor.yaw+(id==='squat'?Math.PI-.6:-.65);cameraPitch=-.12;setView('third');training=createFitnessSession(id);civil.playFitness(id);$('fitness-hud').hidden=false;refreshTrainingHUD();return true;}
 function refreshTrainingHUD(){if(!training)return;const p=FITNESS_PROGRAMS[training.id];$('fitness-title').textContent=p.label.toUpperCase();$('fitness-reps').textContent=training.reps+' / '+training.goal+' répétitions';$('fitness-progress').value=training.reps/training.goal;$('fitness-stat').textContent=FITNESS_LABELS[p.stat]+' · '+readHideoutProfile(characterId).fitness[p.stat]+'/100';}
 function stopTraining(completed=false){if(!training)return;const p=FITNESS_PROGRAMS[training.id];if(completed){const fresh=readHideoutProfile(characterId),gain=claimFitness(training,fresh);const saved=saveHideoutProfile(characterId,fresh);if(saved)profile=fresh;message(saved?'Série terminée · '+FITNESS_LABELS[p.stat]+' +'+gain:'Série terminée, sauvegarde indisponible',5);}else message('Série interrompue',3);training=null;civil?.playFitness(null);fitnessProps?.update(null,null);$('fitness-hud').hidden=true;}
 function update(dt){

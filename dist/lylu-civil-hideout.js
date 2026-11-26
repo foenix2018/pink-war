@@ -1,6 +1,6 @@
 import * as T from './vendor/three.webgpu.min.js';
 import {createStationaryFootLock} from './hero-locomotion.js';
-import {buildCivilMotion,FITNESS_CLIPS} from './lylu-civil-motion.js?v=20261124fitness2';
+import {buildCivilMotion,FITNESS_CLIPS} from './lylu-civil-motion.js?v=20261126pose';
 // LYLU only, planque only. The game simulation and mission equipment are not altered.
 export const LYLU_CIVIL_ASSET=new URL('./assets/heroes/lylu-civil-v5.glb?v=20261124v5',import.meta.url).href;
 export const LYLU_EXPRESSIONS=Object.freeze(['Blink','Smile','Focus','Surprise']);
@@ -36,6 +36,15 @@ export async function createLyluCivil(scene,{load}={}){
  const state={Blink:0,Smile:0,Focus:0,Surprise:0};
  const joint=n=>bones.get(n).bone,stationary=createStationaryFootLock({root,hips:joint('Pelvis'),legs:['L','R'].map(s=>joint('Thigh_'+s)),knees:['L','R'].map(s=>joint('Shin_'+s)),feet:['L','R'].map(s=>joint('Foot_'+s))});
  let current=null,motion='idle',clipName='idle',actionAge=99,actionKind=null,override=null,alive=true,sourceWeight=0,sourcePhase=0,preview=null;
+ // Furniture poses (set by the refuge): seated at the workshop chair, lying on the dormitory bed.
+ let spots={},spotBlend=0,lastSpot=null;
+ const standQ=new T.Quaternion(),targetQ=new T.Quaternion(),standP=new T.Vector3(),targetP=new T.Vector3(),yAxis=new T.Vector3(0,1,0),scratch=new T.Vector3();
+ // Lying: head toward the spot's yaw direction, face up, back on the mattress.
+ const lieQ=new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(new T.Vector3(-1,0,0),new T.Vector3(0,0,-1),new T.Vector3(0,-1,0)));
+ const tablet=new T.Group();tablet.name='LYLU / tablette de travail';tablet.visible=false;
+ {const shell=new T.Mesh(new T.BoxGeometry(.25,.011,.17),new T.MeshStandardMaterial({color:0x1b2029,roughness:.45,metalness:.5}));
+  const screen=new T.Mesh(new T.PlaneGeometry(.225,.145),new T.MeshBasicMaterial({color:0x3f8fd8,toneMapped:false}));screen.rotation.x=-Math.PI/2;screen.position.y=.0062;tablet.add(shell,screen);}
+ scene.add(tablet);
  function play(name,once=false){
    const next=actions.get(name);if(!next)return;
    if(current===next)return;
@@ -52,19 +61,29 @@ export async function createLyluCivil(scene,{load}={}){
    if(lz>.05)return family+'Back';return family==='crouch'?'crouchWalk':family;
  }
  function update(time,dt,{position,yaw=0,speed=0,velocity,moving=false,sprint=false,crouched=false,station=null,visible=true}={}){
-   if(!alive)return;root.visible=visible;if(position)root.position.set(position.x,position.elevation||0,position.z);root.rotation.y=yaw;
+   if(!alive)return;root.visible=visible;if(position)root.position.set(position.x,position.elevation||0,position.z);root.rotation.set(0,yaw,0);
    const step=clamp(dt,0,.08);actionAge+=step;
    const interact=actionAge<1.05;
    // Interaction is an unarmed adaptation of the original aim gesture; no combat is enabled in the refuge.
-   const name=preview||('civil_'+select({moving,sprint,crouched,velocity,yaw,speed}));
+   const spot=!preview&&station?spots[station]||null:null;if(spot)lastSpot=spot;
+   spotBlend=clamp(spotBlend+(spot?step:-step)/.45);
+   const name=preview||(spot?(spot.kind==='sit'?'civilSit':'civil_idle'):'civil_'+select({moving,sprint,crouched,velocity,yaw,speed}));
    motion=preview|| (interact?'action':moving?(sprint?'run':'walk'):'idle');
    play(name,false);sourceWeight+=(Number(moving)-sourceWeight)*(1-Math.exp(-step*9));
    if(current&&moving&&!preview&&!interact){const nominal=name.startsWith('civil_run')?4.2:name.startsWith('civil_crouch')?1.2:1.6;current.setEffectiveTimeScale(clamp(speed/nominal,.35,1.75));}
    else current?.setEffectiveTimeScale(1);
-   mixer.update(step);stationary.update(step,visible&&!moving&&!preview&&(name==='civil_idle'||name==='civil_crouchIdle'),name);sourcePhase=(current?.time||0)/(current?.getClip().duration||1);
+   if(spotBlend>0&&lastSpot){
+     const e=spotBlend*spotBlend*(3-2*spotBlend),sp=lastSpot;standP.copy(root.position);standQ.setFromAxisAngle(yAxis,yaw);
+     targetP.set(sp.x,sp.y||0,sp.z);targetQ.setFromAxisAngle(yAxis,sp.yaw||0);if(sp.kind==='lie')targetQ.multiply(lieQ);
+     root.position.lerpVectors(standP,targetP,e);root.quaternion.slerpQuaternions(standQ,targetQ,e);
+   }
+   mixer.update(step);stationary.update(step,visible&&!moving&&!preview&&spotBlend===0&&(name==='civil_idle'||name==='civil_crouchIdle'),name);
+   tablet.visible=visible&&spotBlend>.6&&lastSpot?.kind==='sit';
+   if(tablet.visible){root.updateMatrixWorld(true);const l=bones.get('Hand_L').bone.getWorldPosition(scratch).clone(),r=bones.get('Hand_R').bone.getWorldPosition(scratch);
+     tablet.position.copy(l.add(r).multiplyScalar(.5));tablet.position.y+=.025;tablet.quaternion.copy(root.quaternion).multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),.55));}sourcePhase=(current?.time||0)/(current?.getClip().duration||1);
    const targetFace=lyluExpressionState(time,{moving,station});if(override)Object.assign(targetFace,override);
    for(const key of LYLU_EXPRESSIONS){const k=key==='Blink'?1-Math.exp(-step*45):1-Math.exp(-step*8);state[key]+=(targetFace[key]-state[key])*k;}
    for(const o of morphs)for(const key of LYLU_EXPRESSIONS){const i=o.morphTargetDictionary[key];if(i!==undefined)o.morphTargetInfluences[i]=state[key];}
  }
- return {root,update,triggerAction(kind='interact'){actionAge=0;actionKind=kind;},setExpression(value=null){override=value;},playPreview(name=null){stationary.reset();if(name!==null&&!actions.has(name))throw Error('Unknown clip');preview=name;},playFitness(id=null){stationary.reset();preview=id?FITNESS_CLIPS[id]||null:null;if(preview){play(preview);mixer.stopAllAction();current.reset().setEffectiveWeight(1).play();mixer.update(0);}},fitnessPose(){root.updateMatrixWorld(true);const point=n=>bones.get(n).bone.getWorldPosition(new T.Vector3());return{left:point('Hand_L'),right:point('Hand_R'),pelvis:point('Pelvis'),leftWrist:bones.get('Hand_L').bone.getWorldQuaternion(new T.Quaternion()),rightWrist:bones.get('Hand_R').bone.getWorldQuaternion(new T.Quaternion())};},samplePreview(name,phase=.5){stationary.reset();if(!actions.has(name))throw Error('Unknown clip');preview=name;play(name);mixer.stopAllAction();current.reset().setEffectiveWeight(1).play();current.time=current.getClip().duration*clamp(phase);mixer.update(0);},snapshot:()=>({ready:alive,visible:root.visible,triangles,draws,bones:bones.size,motion,clip:clipName,clips:[...actions.keys()],canonical:true,sourcePhase,sourceWeight,action:actionAge<1.05?actionKind:null,expressions:{...state},morphs:morphs.length}),dispose(){alive=false;mixer.stopAllAction();mixer.uncacheRoot(visual);root.removeFromParent();visual.traverse(o=>{if(o.isMesh){o.geometry.dispose();for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});}};
+ return {root,update,tablet,setSpots(next={}){spots={...next};},get pose(){return spotBlend>0&&lastSpot?lastSpot.kind:null;},triggerAction(kind='interact'){actionAge=0;actionKind=kind;},setExpression(value=null){override=value;},playPreview(name=null){stationary.reset();if(name!==null&&!actions.has(name))throw Error('Unknown clip');preview=name;},playFitness(id=null){stationary.reset();preview=id?FITNESS_CLIPS[id]||null:null;if(preview){play(preview);mixer.stopAllAction();current.reset().setEffectiveWeight(1).play();mixer.update(0);}},fitnessPose(){root.updateMatrixWorld(true);const point=n=>bones.get(n).bone.getWorldPosition(new T.Vector3());return{left:point('Hand_L'),right:point('Hand_R'),pelvis:point('Pelvis'),leftWrist:bones.get('Hand_L').bone.getWorldQuaternion(new T.Quaternion()),rightWrist:bones.get('Hand_R').bone.getWorldQuaternion(new T.Quaternion())};},samplePreview(name,phase=.5){stationary.reset();if(!actions.has(name))throw Error('Unknown clip');preview=name;play(name);mixer.stopAllAction();current.reset().setEffectiveWeight(1).play();current.time=current.getClip().duration*clamp(phase);mixer.update(0);},snapshot:()=>({ready:alive,visible:root.visible,triangles,draws,bones:bones.size,motion,clip:clipName,clips:[...actions.keys()],canonical:true,sourcePhase,sourceWeight,action:actionAge<1.05?actionKind:null,expressions:{...state},morphs:morphs.length}),dispose(){alive=false;mixer.stopAllAction();mixer.uncacheRoot(visual);root.removeFromParent();visual.traverse(o=>{if(o.isMesh){o.geometry.dispose();for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});}};
 }
