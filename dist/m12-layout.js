@@ -11,7 +11,7 @@ export const FLOORS=[
  ['resonance',5,-44,16,36,36,'06 · Dôme de Résonance'],
  ['assaut',42,-40,16,38,32,'07 · Cour de défense'],
  ['relais',85,-28,12,27,24,'08 · Relais ORDRE'],
- ['civils-extraction',89,30,4,42,29,'09 · Embarquement'],
+ ['civils-extraction',93,30,4,50,32,'09 · Embarquement'],
  ['evacuation',118,49,4,33,25,'10 · Évacuation finale']
 ].map(([id,x,z,height,w,d,label])=>({id,x,z,height,w,d,label,x1:x-w/2,x2:x+w/2,z1:z-d/2,z2:z+d/2}));
 export const AREAS=FLOORS;export const areaAt=(x,z)=>AREAS.find(a=>x>=a.x1&&x<=a.x2&&z>=a.z1&&z<=a.z2)?.id||'passerelle';
