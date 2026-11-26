@@ -180,7 +180,7 @@ function closeDocument(){
 
 // ---------- World ----------
 function createWorld(){
- art=createM12Art(T,scene,{webgpu:!!renderer.backend?.isWebGPUBackend,onPortalClose:source=>{if(enableAudio)playPortalLaser(audioCtx,'close',{source,listener:game?.player||{},yaw});},quality:low()?'low':'normal',characterId,reunion:true,accent:characterId==='lylu'?0x6fb8ff:0xff6fb4});
+ art=createM12Art(T,scene,{webgpu:!!renderer.backend?.isWebGPUBackend,onPortalClose:source=>{if(enableAudio)playPortalLaser(audioCtx,'close',{source,listener:game?.player||{},yaw});},quality:low()?'low':'normal',mobile:!!profile.phone,characterId,reunion:true,accent:characterId==='lylu'?0x6fb8ff:0xff6fb4});
  art.build(L.buildCollisions());
  // Head lamp of the AEGIS helmet: on automatically in the dark, L to force it.
  lamp=new T.SpotLight(0xf4f1e6,0,30,.46,.6,1.15);lamp.position.set(.12,.05,0);lamp.target.position.set(0,-.4,-6);camera.add(lamp);camera.add(lamp.target);
@@ -614,7 +614,7 @@ for(const name of ['pointerup','pointercancel'])window.addEventListener(name,e=>
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
 
 window.__PINK_M12=Object.freeze({
- snapshot:()=>({nano:nanoSnapshot(game),level:L.LEVEL_ID,revision:'m12-preview-1',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,time:game?.time,missionTime,
+ snapshot:()=>({nano:nanoSnapshot(game),level:L.LEVEL_ID,revision:'m12-art-v2',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,time:game?.time,missionTime,
   area:game&&L.areaAt(game.player.x,game.player.z),health:game?.player.hp,shield:game?.player.shield,charges:game?.charges,
   position:game&&{x:+game.player.x.toFixed(2),z:+game.player.z.toFixed(2),elevation:+game.player.elevation.toFixed(2)},
   weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,opened:mission?.opened,done:mission?.done,reads:mission?.reads,
