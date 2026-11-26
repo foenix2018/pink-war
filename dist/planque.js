@@ -66,7 +66,7 @@ async function boot(){
   scene=new T.Scene();scene.fog=new T.FogExp2(0x443b36,.0035);environment();
   scene.add(new T.HemisphereLight(0xd5d8dc,0x514032,1.05));const sun=new T.DirectionalLight(0xffe1be,2.25);sun.position.set(0,13,7);sun.castShadow=renderer.shadowMap.enabled;sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-14,right:14,top:14,bottom:-14,near:.5,far:42});sun.shadow.bias=-.0006;scene.add(sun);
   for(const [color,x,z,intensity]of [[0xffc48e,-7,-7,40],[0xaad9e4,7,-2,30]]){const light=new T.PointLight(color,intensity,18,2);light.position.set(x,3,z);scene.add(light);}
-  overview=new T.OrthographicCamera(-15,15,15,-15,.05,230);overview.position.set(0,26,29);overview.lookAt(0,.2,-1);visit=new T.PerspectiveCamera(64,innerWidth/innerHeight,.05,180);portrait=new T.PerspectiveCamera(40,innerWidth/innerHeight,.025,180);third=new T.PerspectiveCamera(64,innerWidth/innerHeight,.05,180);camera=overview;
+  overview=new T.OrthographicCamera(-15,15,15,-15,.05,230);overview.position.set(0,36,42);overview.lookAt(0,.2,-1);visit=new T.PerspectiveCamera(64,innerWidth/innerHeight,.05,180);portrait=new T.PerspectiveCamera(40,innerWidth/innerHeight,.025,180);third=new T.PerspectiveCamera(64,innerWidth/innerHeight,.05,180);camera=overview;
   art=await loadHideoutArt(T,{displayOutfits:false,onProgress:progress,low:graphics.phone||graphics.economy||graphics.artQuality==='low'});scene.add(art.root);navigation=createHideoutNavigation(art.layout);if(art.layout.fitnessRuntimeRevision)fitnessProps=createFitnessProps(T,scene,art.materials);
   if(art.layout.gymRevision){const gymLight=new T.PointLight(0xc4dfff,32,10,2);gymLight.position.set(7.65,3.1,7.65);scene.add(gymLight);}
    nanoChambers=createHideoutNanoChambers(T,{scene,locations:art.layout.showcase.outfits,low:graphics.phone||graphics.economy,onStatus:()=>nanoUI?.refresh()});
@@ -97,7 +97,7 @@ async function loadHero(){
  try{rig=await installPinkWarsSoldier(T,scene,characterId,{monster:mat(0x394653),monsterFace:mat(0x09121d),cyan:glow(0x6dcfff),rose:glow(0xff639f),violet:glow(0x9d72ff),pale:glow(0xd8efff)});rig.model.setWeapon(game.weaponIndex);rig.model.setLevel(armorLevel);visibleHero();}catch(error){if(!lylu)throw error;console.warn('Armure LYLU indisponible',error);}
  if(lylu){$('civil-outfit').disabled=!rig;$('civil-portrait').disabled=false;}
 }
-function resize(graphics){if(!renderer)return;const aspect=innerWidth/innerHeight,span=Math.max(26,24/aspect);overview.left=-span*aspect/2;overview.right=span*aspect/2;overview.top=span/2;overview.bottom=-span/2;overview.updateProjectionMatrix();visit.aspect=aspect;visit.updateProjectionMatrix();portrait.aspect=aspect;portrait.updateProjectionMatrix();third.aspect=aspect;third.updateProjectionMatrix();renderer.setPixelRatio(renderPixelRatio(graphics,devicePixelRatio,innerWidth,innerHeight));renderer.setSize(innerWidth,innerHeight);}
+function resize(graphics){if(!renderer)return;const aspect=innerWidth/innerHeight,span=Math.max(32,56/aspect);overview.left=-span*aspect/2;overview.right=span*aspect/2;overview.top=span/2;overview.bottom=-span/2;overview.updateProjectionMatrix();visit.aspect=aspect;visit.updateProjectionMatrix();portrait.aspect=aspect;portrait.updateProjectionMatrix();third.aspect=aspect;third.updateProjectionMatrix();renderer.setPixelRatio(renderPixelRatio(graphics,devicePixelRatio,innerWidth,innerHeight));renderer.setSize(innerWidth,innerHeight);}
 function navigate(point,station=null){
  if(!ready||opened||paused)return;if(training)stopTraining();const route=navigation.path(game.player,point);if(!route){message('Le passage est occupé. Approche par l’allée centrale.');return;}
  path=route;destination=station;if(station)message('En route vers '+station.name+'.',5);for(const b of document.querySelectorAll('[data-station]'))b.setAttribute('aria-current',String(b.dataset.station===station?.id));
@@ -220,6 +220,7 @@ function bindWorld(){
  window.addEventListener('pointerdown',unlockRefugeAudio,{passive:true});window.addEventListener('keydown',unlockRefugeAudio);
  window.addEventListener('pagehide',()=>{refugeAudio?.dispose();refugeAudio=null;});
  for(const b of document.querySelectorAll('[data-station]'))b.onclick=()=>chooseStation(b.dataset.station);
+ for(const b of document.querySelectorAll('[data-aegis]'))b.onclick=()=>{const [x,z]=b.dataset.aegis.split(',').map(Number);navigate({x,z});};
  $('close').onclick=closePanel;$('panel').addEventListener('cancel',e=>{e.preventDefault();closePanel();});$('retry').onclick=()=>location.reload();
  $('view').onclick=()=>selectPlayView(view==='visit'?'third':'fps');
  $('overview-view').onclick=()=>setView(view==='overview'?lastPlayView:'overview');
