@@ -34,9 +34,9 @@ export const baseInside=(x,z)=>DECKS.some(f=>insideRect(f,x,z));
 function exact(x,z){for(const f of DECKS)if(insideRect(f,x,z))return{id:f.id,height:f.height};for(const r of RAMPS)if(insideRect(r,x,z))return{id:r.id,height:rampHeight(r,x,z)};return null;}
 function near(x,z){let best=null;const add=(d,h,id,limit)=>{const score=d/limit;if(score<=1&&(!best||score<best.score))best={id,height:h,score};};for(const f of DECKS)add(rectDist(f,x,z),f.height,f.id,6);for(const r of RAMPS)add(rectDist(r,x,z),rampHeight(r,x,Math.max(r.z1,Math.min(r.z2,z))),r.id,5);for(const s of segs){const q=nearestSeg(s,x,z);add(q.d,q.h,s.id,s.width/2);}return best;}
 export const inside=(x,z)=>!!(exact(x,z)||near(x,z));
-export function walkSurfaces(x,z,t=0){const e=exact(x,z)||near(x,z);return e?[{id:e.id,height:e.height}]:[];}
-export function createTraversal(){const height=(x,z,t=0,max=Infinity)=>{const s=walkSurfaces(x,z)[0];return s&&s.height<=max+.011?s.height:-65;};return{routes:[],lifts:[],bounds:{min:-190,max:190},surfaces:walkSurfaces,height,routeForSurface:()=>null,maxMoveStep:.055,navigation:{edge:-189,size:190,surface:height}};}
-export const areaAt=(x,z)=>walkSurfaces(x,z)[0]?.id||'montagne';
+export function walkSurfaces(x,z,t=0){return x>=-190&&x<=190&&z>=-190&&z<=190?[{id:'mountain',height:groundSample(x,z)}]:[];}
+export function createTraversal(){const height=(x,z,t=0,max=Infinity)=>{const s=walkSurfaces(x,z)[0];return s?s.height:-65;};return{routes:[],lifts:[],bounds:{min:-190,max:190},surfaces:walkSurfaces,height,routeForSurface:()=>null,maxMoveStep:.055,navigation:{edge:-189,size:190,surface:height}};}
+export const areaAt=(x,z)=>(exact(x,z)||near(x,z))?.id||'montagne';
 export const UPPER_RAILS=[],RAILS=[],SLOPE_RAILS=[];
 const S=(id,x,z,y,w,d,h,material)=>({id,x,z,y,w,d,h,material});
 export const WALLS=ROOMS.flatMap(r=>{const w=(r.w-10)/2,d=(r.d-10)/2;return [-1,1].flatMap(a=>[-1,1].flatMap(b=>[S(r.id+'-n'+a+b,r.x+b*(w+10)/2,r.z+a*r.d/2,r.height,w,.6,r.h,'wall'),S(r.id+'-e'+a+b,r.x+a*r.w/2,r.z+b*(d+10)/2,r.height,.6,d,r.h,'wall')]))});
@@ -52,6 +52,11 @@ export function terrainHeight(x,z){const e=exact(x,z)||near(x,z);if(e)return e.h
  for(const s of segs){const q=nearestSeg(s,x,z);blend(Math.max(0,q.d-s.width/2),q.h,19);}
  const ridge=85*Math.exp(-Math.pow((z+175)/39,2))*Math.exp(-Math.pow((x+22)/150,2));
  return Math.max(value,valley+ridge+5*Math.sin(x*.11+z*.062));}
+// The same triangulated heightfield drives terrain rendering and ground contact.
+export const GROUND_GRID={min:-190,max:190,step:2,n:191};
+let groundGrid=null;
+export function groundSamples(){if(groundGrid)return groundGrid;const {min,step,n}=GROUND_GRID;groundGrid=new Float32Array(n*n);for(let j=0;j<n;j++)for(let i=0;i<n;i++)groundGrid[j*n+i]=terrainHeight(min+i*step,min+j*step);return groundGrid;}
+export function groundSample(x,z){const {min,max,step,n}=GROUND_GRID;if(x<min||x>max||z<min||z>max)return terrainHeight(x,z);const g=groundSamples(),u=(x-min)/step,v=(z-min)/step,i=Math.min(n-2,Math.floor(u)),j=Math.min(n-2,Math.floor(v)),fx=u-i,fz=v-j,a=g[j*n+i],b=g[(j+1)*n+i],c=g[(j+1)*n+i+1],d=g[j*n+i+1];return fx+fz<=1?a+(d-a)*fx+(b-a)*fz:c+(b-c)*(1-fx)+(d-c)*(1-fz);}
 export function buildCollisions(){const solid=SOLIDS.map(p=>({kind:p.material,x:p.x,z:p.z,y:p.y,hx:p.w/2,hz:p.d/2,height:p.h,navPad:.12}));return [...solid,...[...UPPER_RAILS,...SLOPE_RAILS].flatMap(r=>{const n=r.y0===r.y1?1:Math.max(1,Math.ceil(Math.hypot(r.b-r.x,r.d-r.z)/2));return Array.from({length:n},(_,i)=>{const t=(i+.5)/n;return{kind:'rail',x:r.x+(r.b-r.x)*t,z:r.z+(r.d-r.z)*t,y:r.y0+(r.y1-r.y0)*t-.25,hx:Math.max(.12,Math.abs(r.b-r.x)/n/2),hz:Math.max(.12,Math.abs(r.d-r.z)/n/2),height:1.65,navPad:.12};});})];}
 const defs=[
  ['access',-110,116,8,'Atteindre le laboratoire PINK'],['gate',-110,96,8,'Déverrouiller le sas'],
