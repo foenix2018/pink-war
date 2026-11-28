@@ -271,7 +271,7 @@ function createM13Art(T,scene,{quality='normal',webgpu=false,characterId='ghju',
 
 const $=id=>document.getElementById(id),q=new URLSearchParams(location.search),mobile=/iPhone|iPad|Android/.test(navigator.userAgent),gpu=false;
 const timeout=(p,ms)=>Promise.race([p,new Promise((_,r)=>setTimeout(()=>r(Error('Délai graphique dépassé')),ms))]);let T,renderer,canvas=$('world');const status=s=>$('status').textContent=s;
-async function init(){status('Initialisation WebGL 2 autonome…');T=THREE;renderer=new T.WebGLRenderer({canvas,antialias:!mobile,preserveDrawingBuffer:true});}
+async function init(){status('Initialisation WebGL 2 autonome…');T={...CORE,...THREE};renderer=new T.WebGLRenderer({canvas,antialias:!mobile,preserveDrawingBuffer:true});}
 try{await init();renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;renderer.setPixelRatio(Math.min(devicePixelRatio,mobile?1:1.6));renderer.setSize(innerWidth,innerHeight,false);
 const scene=new T.Scene(),camera=new T.PerspectiveCamera(65,innerWidth/innerHeight,.08,1400);
 status('Construction de la géométrie réelle M13…');const art=createM13Art(T,scene,{quality:mobile?'normal':'high',mobile,webgpu:!!renderer.backend?.isWebGPUBackend});await timeout(art.ready,12000);
