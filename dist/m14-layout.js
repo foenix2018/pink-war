@@ -14,7 +14,7 @@ export const FLOORS=[
  F('transfer',105,25,48,40,44,'09 · Baie AEGIS'),
  F('evac',105,120,54,50,8,'10 · Héliport AEGIS')
 ];
-export const BRIDGES=[F('lab-data',-65,-55,24,9,32,'Passerelle de recherche'),F('locks-lift',2,-125,22,9,44,'Passerelle ascenseur'),F('core-pink',69,-125,36,9,68,'Passerelle noyau')];
+export const BRIDGES=[F('lab-data',-64,-55,24,9,32,'Passerelle de recherche'),F('locks-lift',6.5,-125,23,9,44,'Passerelle ascenseur'),F('core-pink',67.5,-125,31,9,68,'Passerelle noyau')];
 export const DECKS=[...FLOORS,...BRIDGES],AREAS=FLOORS,ANNEXES=[],ROOMS=[...FLOORS.filter(f=>['admin','lab','data','locks','transfer'].includes(f.id)).map(f=>({...f,w:f.w-8,d:f.d-8,h:8}))];
 const R=(id,x,z1,z2,y1,y2,w=9)=>({id,axis:'z',x1:x-w/2,x2:x+w/2,z1:Math.min(z1,z2),z2:Math.max(z1,z2),from:z1,to:z2,y0:y1,y1:y2});
 export const RAMPS=[R('access-admin',-100,61,32,8,20),R('admin-lab',-100,-4,-36,20,32),R('data-locks',-30,-74,-105,32,44),R('pink-arena',105,-105,-72,68,56),R('arena-transfer',105,-28,5,56,44),R('transfer-evac-a',105,45,75,44,26),R('transfer-evac-b',105,75,95,26,8)];
@@ -32,7 +32,7 @@ export const UPPER_RAILS=DECKS.flatMap(edgeRails),RAILS=[],SLOPE_RAILS=RAMPS.fla
 const S=(id,x,z,y,w,d,h,material)=>({id,x,z,y,w,d,h,material});
 export const WALLS=ROOMS.flatMap(r=>{const w=(r.w-10)/2,d=(r.d-10)/2;return [-1,1].flatMap(a=>[-1,1].flatMap(b=>[S(r.id+'-n'+a+b,r.x+b*(w+10)/2,r.z+a*r.d/2,r.height,w,.6,r.h,'wall'),S(r.id+'-e'+a+b,r.x+a*r.w/2,r.z+b*(d+10)/2,r.height,.6,d,r.h,'wall')]))});
 export const PROPS=FLOORS.filter(f=>!['lift','core','evac'].includes(f.id)).flatMap(f=>[-1,1].flatMap(q=>[-1,1].map((k,i)=>S(f.id+'-prop-'+q+'-'+k,f.x+q*(f.w*.29),f.z+k*(f.d*.27),f.height,4,3,3.3,({admin:'desk',lab:'pod',data:'rack',locks:'terminal',pink:'terminal',arena:'cover',transfer:'rack',access:'gate'}[f.id])))));
-export const MACHINES=[S('spire',35,-83,-30,26,24,192,'spire'),S('brain',105,-134,68,11,8,10,'brain'),S('aircraft',114,128,8,15,10,4,'aircraft')];
+export const MACHINES=[S('spire',35,-83,-30,26,24,192,'spire'),S('brain',105,-134,68,11,8,10,'brain'),S('aircraft',117,132,8,15,10,4,'aircraft')];
 export const SOLIDS=[...WALLS,...PROPS,...MACHINES],DRESS_PROPS=PROPS;
 export function buildCollisions(){const solid=SOLIDS.map(p=>({kind:p.material,x:p.x,z:p.z,y:p.y,hx:p.w/2,hz:p.d/2,height:p.h,navPad:.12}));return [...solid,...[...UPPER_RAILS,...SLOPE_RAILS].flatMap(r=>{const n=Math.max(1,Math.ceil(Math.hypot(r.b-r.x,r.d-r.z)/2));return Array.from({length:n},(_,i)=>{const t=(i+.5)/n;return{kind:'rail',x:r.x+(r.b-r.x)*t,z:r.z+(r.d-r.z)*t,y:r.y0+(r.y1-r.y0)*t-.25,hx:Math.max(.12,Math.abs(r.b-r.x)/n/2),hz:Math.max(.12,Math.abs(r.d-r.z)/n/2),height:1.65,navPad:.12};});})];}
 const defs=[
