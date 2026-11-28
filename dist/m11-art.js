@@ -1,3 +1,4 @@
+import {createHeroPartnerActor} from './hero-partner-actor.js';
 import * as L from './m11-layout.js';
 import {createM11Materials} from './m11-materials.js';
 import {createM11Neon} from './m11-lighting.js';
@@ -214,56 +215,31 @@ export function createM11Art(T,scene,{quality='normal',webgpu=false,characterId=
   r.rotation.x=-Math.PI/2;
   markers.set(it.id,{r,done:false,active:false});
  }
- let npc=null,buddySphere=null;
- const secondHeroReady=(async()=>{
-  try{
-   const [{installPinkWarsSoldier},{poseUnarmedForInspection},{createGlove},{readNanoProfile},{createCompanionModel}]=await Promise.all([
-    import('./level2-player.js'),import('./rlh-firefighter.js'),import('./hands.js'),import('./nano-forge.js'),import('./companion-model.js'),
-   ]);
-   const id=characterId==='ghju'?'lylu':'ghju',rig=await installPinkWarsSoldier(T,scene,id);
-   await Promise.all([rig.model.shadowUnit.gear.ready,rig.model.shadowUnit.suit.ready]);
-   if(disposed){rig.dispose();return;}
-   const model=rig.model;
-   model.root.position.set(-91,2,57);model.root.visible=true;
-   model.setLevel(readNanoProfile(id).equippedSuit);
-   const gloves=[true,false].map(mirror=>createGlove(rig.kit.gloves,{mirror,sleeve:false,arm:false}));
-   model.root.add(...gloves);poseUnarmedForInspection(model,gloves);npc={...rig,id};
-   const group=new T.Group();scene.add(group);
-   buddySphere={root:group,model:createCompanionModel(T,group,id==='ghju')};
-  }catch(error){console.warn('M11 / second héros optionnel',error);}
- })();
+ const partner=createHeroPartnerActor(T,scene,{characterId,low,showcase:{x:-91,y:2,z:57}});
  function markDone(id,value=true){
   const marker=markers.get(id);
   if(marker){marker.done=value;marker.r.material.color.setHex(value?0x7bbb9a:marker.active?0x78d8e7:0x778680);}
   relays.get(id)?.setState(value,marker?.active);
  }
  return {
-  root,sun,ready:Promise.all([secondHeroReady,materials.ready,skyReady]),build(){},setDoor(){},adapt(){},openPortal(){},markDone,
+  root,sun,partner,ready:Promise.all([partner.ready,materials.ready,skyReady]),build(){},setDoor(){},adapt(){},openPortal(){},markDone,
   setLine(closed){hydraulics.setOpen(!closed);},
   setAvailable(ids){
    const active=new Set(ids);
    for(const [id,p] of markers){p.active=active.has(id);markDone(id,p.done);}
   },
-  update(t,dt,camera,player){
+  update(t,dt,camera){
    kit.update(camera?.position);cascade.update(t);effects.update(t,camera?.position);
    neon.update(t,dt,camera?.position);hydraulics.update(dt);
-   if(npc&&player){
-    const it=L.INTERACTIONS.find(i=>markers.get(i.id)?.active)||L.INTERACTIONS[0],x=it.x-2,z=it.z+1;
-    const h=traversal.height(x,z);
-    npc.model.root.position.set(x,h,z);npc.model.root.visible=h>-40;npc.model.root.lookAt(player.x,h,player.z);
-    if(buddySphere){
-     buddySphere.root.position.set(x+.9,h+1.8+Math.sin(t*1.6)*.1,z);
-     buddySphere.root.visible=npc.model.root.visible;buddySphere.model.update(dt,{pulse:0});
-    }
-   }
+   partner.update(t,dt,camera);
   },
-  stats:()=>({source:'Vesper · La Traversée',...kit.stats(),relays:relays.size,secondHero:npc?.id||null,
+  stats:()=>({source:'Vesper · La Traversée',...kit.stats(),relays:relays.size,secondHero:partner.hero,partner:partner.stats(),
    waterfalls:falls.length,rampSubdivisions,textures:materials.stats(),nativeWater:effects.native,
    duskSky:!!skyMap,neon:neon.stats()}),
   dispose(){
    if(disposed)return;disposed=true;
    if(scene.background===skyMap)scene.background=null;skyMap?.dispose();
-   npc?.dispose();buddySphere?.model.dispose();buddySphere?.root.removeFromParent();
+   partner.dispose();
    neon.dispose();hydraulics.dispose();for(const relay of relays.values())relay.dispose();
    kit.dispose();skyline.dispose();effects.dispose();cascade.dispose();materials.dispose();
    for(const g of ownedGeometry)g.dispose();for(const m of ownedMaterials)m.dispose();

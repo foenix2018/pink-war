@@ -1,3 +1,4 @@
+import {createHeroPartnerActor} from './hero-partner-actor.js';
 import {createMapInfoPanel} from './world-info-panel.js';
 import {createCouronneArt} from './couronne-art.js';
 import {parsePWM} from './blender-models.js';
@@ -10,8 +11,9 @@ import * as L from './m10-layout.js';
 export function createM10Art(T,scene,{quality='normal',webgpu=false,characterId='ghju',onPortalClose=()=>{}}={}){
  const low=quality==='low',base=createCouronneArt(T,scene,{quality,webgpu,onPortalClose,chapter:10}),root=base.root;
  const accents=createHelixAccents(T,root,base.M,{low});
+ const partner=createHeroPartnerActor(T,scene,{characterId,low,showcase:{x:-4,y:12,z:-49,yaw:.3}});
  const sun=scene.children.find(o=>o.isDirectionalLight);if(sun)sun.castShadow=false;
- const clock=T.TSL.uniform(0),doors=new Map(),markers=new Map(),materials=new Map();let compiled=null,downloadBytes=0,npc=null,buddySphere=null,disposed=false,batching=null;
+ const clock=T.TSL.uniform(0),doors=new Map(),markers=new Map(),materials=new Map();let compiled=null,downloadBytes=0,disposed=false,batching=null;
  const physicalDoorSigns=[],doorGeometry=new Set();
  const dark=new T.MeshStandardMaterial({color:0x26333e,metalness:.62,roughness:.48});
  const steel=new T.MeshStandardMaterial({color:0x97a2ad,metalness:.75,roughness:.44});
@@ -90,19 +92,17 @@ export function createM10Art(T,scene,{quality='normal',webgpu=false,characterId=
    const mat=m.emissive>=2||name==='terminal-ui'?new T.MeshBasicMaterial({color,map,toneMapped:false}):new T.MeshStandardMaterial({color,map,normalMap,normalScale:new T.Vector2(.35,.35),roughnessMap,roughness:m.roughness,metalness:m.metalness,transparent:m.alpha<1,opacity:m.alpha,depthWrite:m.alpha>=1,side:m.alpha<1?T.DoubleSide:T.FrontSide,forceSinglePass:name==='pane'});materials.set(name,mat);
   }));
   for(const p of compiled.primitives){const o=mesh(p.geometry,materials.get(p.material),[0,0,0]);o.name='Blender HELIX / '+p.material;o.castShadow=!/glass|ice|rose|screen/.test(p.material);o.receiveShadow=true;}
-  const{installPinkWarsSoldier}=await import('./level2-player.js'),{poseUnarmedForInspection}=await import('./rlh-firefighter.js'),{createGlove}=await import('./hands.js');const id=characterId==='ghju'?'lylu':'ghju';
-  const rig=await installPinkWarsSoldier(T,scene,id);await rig.model.shadowUnit.gear.ready;await rig.model.shadowUnit.suit.ready;
-  if(rig){const model=rig.model;model.root.position.set(-4,12,-49);model.root.rotation.y=.3;model.root.visible=true;model.setLevel((await import('./nano-forge.js')).readNanoProfile(id).equippedSuit);const gloves=[createGlove(rig.kit.gloves,{mirror:true,sleeve:false,arm:false}),createGlove(rig.kit.gloves,{sleeve:false,arm:false})];model.root.add(...gloves);poseUnarmedForInspection(model,gloves);npc={...rig,id};const{createCompanionModel}=await import('./companion-model.js');const root=new T.Group();root.name=(id==='ghju'?'Gaby':'Cara')+' / unité du second héros';scene.add(root);buddySphere={root,model:createCompanionModel(T,root,id==='ghju'),name:id==='ghju'?'Gaby':'Cara'};}
+  await partner.ready;
   return{...compiled,source:'assets/m10/PinkWars_N10_Couronne_HELIX.blend'};
  })();
  function markDone(id,value=true){const p=markers.get(id);if(p){p.done=value;p.ring.material.color.setHex(value?0x73e3b5:p.available?0x62dfff:0x526275);}if(id==='security')base.setConsole('securite',value);if(id==='confinement')base.setConsole('ancrage-est',value);}
- return{root,sun,ready,
+ return{root,sun,ready,partner,
   build(collisions){base.build(collisions.filter(c=>!['verrière laboratoire','linteau laboratoire','paillasse','baies archives','terminal laboratoire','terminal archives','terminal confinement','terminal extraction','rail liaison','rail AEGIS','porte opaque HELIX'].includes(c.kind)));batching=batchStaticGeometry(T,root);},
-  update(t,dt,camera,player){clock.value=t;base.update(t,dt,camera);accents.update(t,dt,camera?.position);for(const p of doors.values()){p.open+=(p.target-p.open)*(1-Math.exp(-dt*4));for(const l of p.leaves)l.leaf.position.x=l.side*(p.data.width/4+p.open*(p.data.width/2+.1));}if(npc){const p=player||camera?.position;npc.model.root.visible=!p||Math.hypot(p.x+4,p.z+49)<60;if(buddySphere){buddySphere.root.visible=npc.model.root.visible;buddySphere.root.position.set(-3.1,13.8+Math.sin(t*1.4)*.08,-48.3);if(camera)buddySphere.root.lookAt(camera.position.x,13.8,camera.position.z);if(buddySphere.root.visible)buddySphere.model.update(dt,{pulse:0});}}}
+  update(t,dt,camera){clock.value=t;base.update(t,dt,camera);accents.update(t,dt,camera?.position);for(const p of doors.values()){p.open+=(p.target-p.open)*(1-Math.exp(-dt*4));for(const l of p.leaves)l.leaf.position.x=l.side*(p.data.width/4+p.open*(p.data.width/2+.1));}partner.update(t,dt,camera);}
   ,setDoor(id,open){if(id==='security')base.setGatesOpen(open);const p=doors.get(id);if(p){p.target=open?1:0;p.indicator.color.setHex(open?0x79d9a5:0x80d9ef);}},setLine:on=>base.setAnchorPower(on?1:0),
   markDone,setAvailable(ids){const active=new Set(ids);for(const[id,p]of markers){p.available=active.has(id);markDone(id,p.done);}},adapt(){},
   openPortal:(...args)=>base.openPortal(...args),
-  stats:()=>({source:'assets/m10/PinkWars_N10_Couronne_HELIX.blend',triangles:compiled?.triangles||0,batches:compiled?.primitives.length||0,downloadBytes,rooms:2,doors:doors.size,physicalDoorSigns:physicalDoorSigns.length,batching,scanShader:holo?'TSL → WGSL':'material',reunionHero:npc?.id||null,secondSphere:buddySphere?.name||null,...base.stats(),...base.atmosphere?.stats(),roseAccents:accents.stats()}),
-  dispose(){if(disposed)return;disposed=true;accents.dispose();base.dispose();for(const p of physicalDoorSigns)p.userData.dispose?.();for(const geometry of doorGeometry)geometry.dispose();for(const p of doors.values())p.indicator.dispose();for(const material of [dark,steel,seal,frost,glow])material.dispose();npc?.dispose();buddySphere?.model.dispose();buddySphere?.root.removeFromParent();for(const p of compiled?.primitives||[])p.geometry.dispose();const textures=new Set();for(const m of materials.values()){for(const k of ['map','normalMap','roughnessMap'])if(m[k])textures.add(m[k]);m.dispose();}for(const t of textures)t.dispose();root.removeFromParent();}
+  stats:()=>({source:'assets/m10/PinkWars_N10_Couronne_HELIX.blend',triangles:compiled?.triangles||0,batches:compiled?.primitives.length||0,downloadBytes,rooms:2,doors:doors.size,physicalDoorSigns:physicalDoorSigns.length,batching,scanShader:holo?'TSL → WGSL':'material',reunionHero:partner.hero,secondSphere:partner.sphereName,partner:partner.stats(),...base.stats(),...base.atmosphere?.stats(),roseAccents:accents.stats()}),
+  dispose(){if(disposed)return;disposed=true;accents.dispose();base.dispose();for(const p of physicalDoorSigns)p.userData.dispose?.();for(const geometry of doorGeometry)geometry.dispose();for(const p of doors.values())p.indicator.dispose();for(const material of [dark,steel,seal,frost,glow])material.dispose();partner.dispose();for(const p of compiled?.primitives||[])p.geometry.dispose();const textures=new Set();for(const m of materials.values()){for(const k of ['map','normalMap','roughnessMap'])if(m[k])textures.add(m[k]);m.dispose();}for(const t of textures)t.dispose();root.removeFromParent();}
  };
 }

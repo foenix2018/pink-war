@@ -196,7 +196,7 @@ function closeDocument(){
 }
 
 // ---------- World ----------
-function createWorld(){
+function createWorld(profile){
  art=createM12Art(T,scene,{webgpu:!!renderer.backend?.isWebGPUBackend,onPortalClose:source=>{if(enableAudio)playPortalLaser(audioCtx,'close',{source,listener:game?.player||{},yaw});},quality:low()?'low':'normal',mobile:!!profile.phone,characterId,reunion:true,accent:characterId==='lylu'?0x6fb8ff:0xff6fb4});
  art.build(L.buildCollisions());
  // Head lamp of the AEGIS helmet: on automatically in the dark, L to force it.
@@ -242,7 +242,7 @@ function lookFrom(cp){yaw=cp.yaw||0;pitch=-.04;}
 // ---------- Mission presentation (rules in m12-mission.js) ----------
 function startMission(){
  subtitles.length=0;subtitle=null;comms.clear();for(const it of L.INTERACTIONS)art.markDone(it.id,false);
- mission.start({resume:params.get('resume')!=='0'});lookFrom(L.STAGES[mission.stage].checkpoint);missionTime=0;shotsFired=0;hits=0;
+ mission.start({resume:params.get('resume')!=='0'});art.partner?.sync(game,mission.stage);lookFrom(L.STAGES[mission.stage].checkpoint);missionTime=0;shotsFired=0;hits=0;
 }
 function clearVisuals(){
  for(const o of enemyMeshes.values())scene.remove(o);enemyMeshes.clear();enemyDestructionFX?.reset();robotShutdownAudio.stop();
@@ -415,6 +415,7 @@ function gameTick(dt){
  const jump=controls.jump||touch.jump||jumpQueued;jumpQueued=false;
  game.nextWave=Infinity;game.toSpawn=0;
  game.step(dt,{x,z,yaw,moveYaw:xc?.moveYaw??yaw,gamepadMoving:controls.gamepadMoving,touchMoving:!xc&&!!(touch.x||touch.z),sprint,jump,jumpPressed,crouchToggle});
+ art.partner?.step(game,mission.stage,dt,subtitle?.who);
  heroAudio.update(game,enableAudio);
  missionTime+=dt;weaponFeel.update(dt);snapCamera();
  if(meleeQueued||controls.melee){const view=new T.Vector3();camera.getWorldDirection(view);game.melee({x:view.x,z:view.z});}
@@ -436,7 +437,8 @@ function gameTick(dt){
  for(const e of game.drainEvents()){
   combatEffects?.event(e);armorFx.handle(e);
   if(e.type==='shot'){shotsFired++;xr?.haptic('shot',e.weapon,e.hand);weaponFeel.fire(e.weapon||game.weapon.id,e.power||1,aimBlend>.5);if(enableAudio&&audioCtx)try{playLaserShot(audioCtx,e.weapon||game.weapon.id,e.power||1);}catch{}}
-  if(e.type==='hit'){hits++;hitUntil=clock+.12;}
+  if(e.type==='partner-shot'&&enableAudio&&audioCtx&&Math.hypot(e.origin.x-game.player.x,e.origin.z-game.player.z)<19)try{playLaserShot(audioCtx,e.weapon,.39);}catch{}
+  if(e.type==='hit'&&e.playerSource!==false){hits++;hitUntil=clock+.12;}
   if(e.type==='damage')$('damage').style.boxShadow='inset 0 0 105px #c52c5e77';
   if(e.type==='weapon')weaponFeel.reset();
   if(e.type==='reload'&&audioCtx)try{playWeaponAction(audioCtx,game.weapon.id,'reload-out');}catch{}
@@ -496,7 +498,7 @@ function animation(t,frame){
   console.error('M12 / simulation',error);running=false;shade.style.display='grid';status.textContent='Erreur : '+(error?.message||String(error));
   startButton.disabled=false;startButton.textContent='RECOMMENCER →';
  }
- if(started){updateSubtitles(running?dt:0);updateLamp(dt);
+ if(started){updateSubtitles(running||completed()?dt:0);updateLamp(dt);
   const area=L.areaAt(game.player.x,game.player.z);
   cityBed?.update(dt,{active:running&&enableAudio&&!paused,area,indoor:area==='noyau',player:game.player,yaw,done:mission?.done||[],resonance:!!mission?.resonance,stage:mission?.stageId});}
  const eye=xr?.active?renderer.xr.getCamera():camera;
@@ -545,7 +547,7 @@ async function boot(){
   bootStep='décor';status.textContent='Chargement du barrage de Vesper…';
   traversal=L.createTraversal();
   scene=new T.Scene();camera=new T.PerspectiveCamera(70,innerWidth/innerHeight,.06,3600);scene.add(camera);enemyDestructionFX=createEnemyDestructionFX(T,scene,{camera,low:low()||profile.phone||profile.headset,maxDeaths:7,onSound:(kind,source)=>robotShutdownAudio.play(kind,source)});
-  createWorld();
+  createWorld(profile);
   await art.ready;
   if(!profile.phone&&!profile.headset&&!low())sunShadows=createWorldShadows(T,{scene,renderer,light:art.sun,profile:{...profile,shadowMoveThreshold:2,artQuality:quality.value==='high'?'high':'low'},direction:art.sun.position.clone()});
   bootStep='jouabilité';status.textContent='Armes, commandes et machines…';
@@ -631,7 +633,7 @@ for(const name of ['pointerup','pointercancel'])window.addEventListener(name,e=>
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
 
 window.__PINK_M12=Object.freeze({
- snapshot:()=>({nano:nanoSnapshot(game),level:L.LEVEL_ID,revision:'m12-art-v3',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,time:game?.time,missionTime,
+ snapshot:()=>({nano:nanoSnapshot(game),level:L.LEVEL_ID,revision:'m12-coequipier',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,time:game?.time,missionTime,
   area:game&&L.areaAt(game.player.x,game.player.z),health:game?.player.hp,shield:game?.player.shield,charges:game?.charges,
   position:game&&{x:+game.player.x.toFixed(2),z:+game.player.z.toFixed(2),elevation:+game.player.elevation.toFixed(2)},
   weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,opened:mission?.opened,done:mission?.done,reads:mission?.reads,

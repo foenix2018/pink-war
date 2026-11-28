@@ -1061,6 +1061,7 @@ export class ArenaGame {
       if (this.state !== 'playing') break;
     }
     updateArenaTurrets(this);
+    const {min: bulletMin = -99, max: bulletMax = 99} = this.player.worldBounds || {};
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const b = this.bullets[i], start = { x: b.x, y: b.y, z: b.z };
       const end = { x: b.x + b.vx * dt, y: b.y + b.vy * dt, z: b.z + b.vz * dt };
@@ -1104,7 +1105,7 @@ export class ArenaGame {
           const faces=[['x',hitBox.x-hitBox.hx,-1],['x',hitBox.x+hitBox.hx,1],['y',hitBox.y||0,-1],['y',(hitBox.y||0)+hitBox.height,1],['z',hitBox.z-hitBox.hz,-1],['z',hitBox.z+hitBox.hz,1]];
           faces.sort((a,c)=>Math.abs(at[a[0]]-a[1])-Math.abs(at[c[0]]-c[1]));normal={x:0,y:0,z:0};normal[faces[0][0]]=faces[0][2];
         }
-        this.event('impact', { ...at, bulletId:b.id, enemy: !!target, hostile: b.hostile, splash: b.splash,weapon:b.weapon,power:b.power||1,surface:target?'robot':surface,normal,direction:{x:b.vx,y:b.vy,z:b.vz} });
+        this.event('impact', { ...at, bulletId:b.id, enemy: !!target, hostile: b.hostile, splash: b.splash,weapon:b.weapon,power:b.power||1,...(b.partner?{color:b.color}:{}),surface:target?'robot':surface,normal,direction:{x:b.vx,y:b.vy,z:b.vz} });
         if (target === this.player) { const n=Math.hypot(b.vx,b.vz)||1; this.damage(b.damage,{x:this.player.x-b.vx/n*8,z:this.player.z-b.vz/n*8},{at,shieldContact}); }
         else if(target?.defenceTurret)this.damageDefenseTurret(target,projectileDamage(b,at),{weapon:b.weapon,at,source:{x:b.originX??start.x,y:b.originY??start.y,z:b.originZ??start.z,companion:!!b.companion}});
         else if (target) this.damageEnemy(target, projectileDamage(b,at)*reco1ProjectileScale(target,zone), at, zone, multiplier,{x:b.originX??this.player.x,z:b.originZ??this.player.z,elevation:b.originElevation??this.player.elevation,weapon:b.weapon,...(b.companion?{companion:true}:{})});
@@ -1118,7 +1119,7 @@ export class ArenaGame {
         this.bullets.splice(i, 1);
       } else {
         b.x = end.x; b.y = end.y; b.z = end.z; b.life -= dt;
-        if (b.life <= 0 || Math.abs(b.x) >= 99 || Math.abs(b.z) >= 99 || b.y < 0) this.bullets.splice(i, 1);
+        if (b.life <= 0 || b.x <= bulletMin || b.x >= bulletMax || b.z <= bulletMin || b.z >= bulletMax || b.y < 0) this.bullets.splice(i, 1);
       }
     }
     if (this.wave > 0 && this.toSpawn === 0 && this.enemies.length === 0 && this.nextWave < 0 && this.state === 'playing') {

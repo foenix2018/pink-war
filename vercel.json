@@ -6,6 +6,26 @@
   "outputDirectory": "dist",
   "headers": [
     {
+      "source": "/hero-partner.js",
+      "headers": [{"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}]
+    },
+    {
+      "source": "/hero-partner-:name.js",
+      "headers": [{"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}]
+    },
+    {
+      "source": "/niveau12.html",
+      "headers": [{"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}]
+    },
+    {
+      "source": "/niveau12.js",
+      "headers": [{"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}]
+    },
+    {
+      "source": "/m12-:name.js",
+      "headers": [{"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}]
+    },
+    {
       "source": "/niveau11.html",
       "headers": [{"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}]
     },

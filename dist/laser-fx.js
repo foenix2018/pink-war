@@ -62,6 +62,8 @@ export function createLaserFX(T,scene,palette={}) {
     contactMatrix=new T.Matrix4(),contactTint=new T.Color(),contactWhite=new T.Color(0xfff9ef);
 
   const up=new T.Vector3(0,1,0),a=new T.Vector3(),b=new T.Vector3(),delta=new T.Vector3(),mid=new T.Vector3(),scale=new T.Vector3(),q=new T.Quaternion(),matrix=new T.Matrix4();
+  const tint=new T.Color();
+  const projectileTint=(weapon,color)=>weapon==='iem'?iemBlue:color===undefined?accent:tint.setHex(color);
   let cursor=0,clock=0,disposed=false;
   function illuminate(p,energy,life=.09,color=accent) {
     if(!p||![p.x,p.y,p.z].every(Number.isFinite))return;
@@ -73,14 +75,14 @@ export function createLaserFX(T,scene,palette={}) {
     const p=LASER_TRAILS[event.weapon]||LASER_TRAILS.r9;
     history.set(event.bulletId,{...event.origin,weapon:event.weapon,at:clock});
     // A muzzle a few decimetres from a wall must not flood it: the flash is a fraction of the impact light.
-    illuminate(event.origin,p.light*.28*(event.power||1),.06,event.weapon==='iem'?iemBlue:accent);
+    illuminate(event.origin,p.light*.28*(event.power||1),.06,projectileTint(event.weapon,event.color));
   }
   function impact(event) {
     if(disposed||event.hostile)return;
     const previous=history.get(event.bulletId),profile=LASER_TRAILS[event.weapon]||LASER_TRAILS.r9;
-    if(previous){residuals.push({from:previous,to:{x:event.x,y:event.y,z:event.z},profile,life:.075});if(residuals.length>capacity)residuals.shift();history.delete(event.bulletId);}
+    if(previous){residuals.push({from:previous,to:{x:event.x,y:event.y,z:event.z},profile,color:event.color,life:.075});if(residuals.length>capacity)residuals.shift();history.delete(event.bulletId);}
     const normal=event.normal||{x:0,y:1,z:0};
-    illuminate({x:event.x+normal.x*.08,y:event.y+normal.y*.08,z:event.z+normal.z*.08},profile.light*.5,.12,event.weapon==='iem'?iemBlue:accent);
+    illuminate({x:event.x+normal.x*.08,y:event.y+normal.y*.08,z:event.z+normal.z*.08},profile.light*.5,.12,projectileTint(event.weapon,event.color));
     if([event.x,event.y,event.z].every(Number.isFinite)){
       const raw=event.normal;
       contactNormal.set(raw?.x??-event.direction?.x??0,raw?.y??-event.direction?.y??1,raw?.z??-event.direction?.z??0);
@@ -99,23 +101,23 @@ export function createLaserFX(T,scene,palette={}) {
       if(groundAfterglow.length>footprintCapacity)groundAfterglow.shift();
     }
   }
-  function renderTrail(from,to,profile,index,fade=1) {
+  function renderTrail(from,to,profile,index,fade=1,color) {
     a.set(from.x,from.y,from.z);b.set(to.x,to.y,to.z);delta.subVectors(b,a);
     let length=delta.length();if(length<.001)return index;
     delta.divideScalar(length);length=Math.min(length,profile.length);a.copy(b).addScaledVector(delta,-length);
     mid.addVectors(a,b).multiplyScalar(.5);q.setFromUnitVectors(up,delta);
     scale.set(profile.radius*fade,length,profile.radius*fade);matrix.compose(mid,q,scale);core.setMatrixAt(index,matrix);core.setColorAt(index,profile.color?iemBlue:plainWhite);
-    scale.set(profile.radius*3.2*fade,length,profile.radius*3.2*fade);matrix.compose(mid,q,scale);halo.setMatrixAt(index,matrix);halo.setColorAt(index,profile.color?iemBlue:accent);return index+1;
+    scale.set(profile.radius*3.2*fade,length,profile.radius*3.2*fade);matrix.compose(mid,q,scale);halo.setMatrixAt(index,matrix);halo.setColorAt(index,profile.color?iemBlue:projectileTint(null,color));return index+1;
   }
   function update(bullets=[],dt=0,game=null) {
     if(disposed)return;electrical.update(game);dt=Math.max(0,Math.min(.1,dt));clock+=dt;let count=0;
     for(const bullet of bullets) {
       if(bullet.hostile||count>=capacity)continue;
       const previous=history.get(bullet.id),origin=Number.isFinite(bullet.originX)?{x:bullet.originX,y:bullet.originY,z:bullet.originZ}:previous;
-      if(origin)count=renderTrail(origin,bullet,LASER_TRAILS[bullet.weapon]||LASER_TRAILS.r9,count);
+      if(origin)count=renderTrail(origin,bullet,LASER_TRAILS[bullet.weapon]||LASER_TRAILS.r9,count,1,bullet.partner?bullet.color:undefined);
       history.set(bullet.id,{x:bullet.x,y:bullet.y,z:bullet.z,at:clock,weapon:bullet.weapon});
     }
-    for(let i=residuals.length-1;i>=0;i--){const p=residuals[i];p.life-=dt;if(p.life<=0){residuals.splice(i,1);continue;}if(count<capacity)count=renderTrail(p.from,p.to,p.profile,count,p.life/.075);}
+    for(let i=residuals.length-1;i>=0;i--){const p=residuals[i];p.life-=dt;if(p.life<=0){residuals.splice(i,1);continue;}if(count<capacity)count=renderTrail(p.from,p.to,p.profile,count,p.life/.075,p.color);}
     for(const [id,p] of history)if(clock-p.at>3)history.delete(id);
     for(const mesh of [core,halo]){mesh.count=count;mesh.visible=count>0;mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;}
     // Render live moving glows directly below laser projectiles. Height controls

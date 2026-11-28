@@ -297,11 +297,12 @@ export function createRLHSoldier(kit,createGun,profile){
       if(slideAmount>.01)applySlidePose(slideAmount);
       poseFreeArm(dt,gaitCycle,flight);
       jump.pose(flight,motionState,!supported());
+      flight.upperBodyPose?.(actor);
       root.updateMatrixWorld(true);
       const chest=root.worldToLocal(body.getWorldPosition(new T.Vector3())),delta=chest.clone().sub(chestRest);
       mount.position.copy(anchor).add(delta);mount.position.y-=low*.06;mount.position.z+=recoil*.08;
       if(flight?.preview){mount.position.y-=.14;mount.position.z+=.10;}
-      gun.rotation.x=clamp(reload)*Math.PI/2+recoil*.17;
+      gun.rotation.x=clamp(reload)*Math.PI/2+recoil*.17+(flight.aimPitch||0);
       const lowerWeapon=!aiming&&!reload&&!WEAPON_FRAME[weapon].melee&&!flight?.airborne&&!flight?.crouched;
       carry+=(Number(lowerWeapon)-carry)*(1-Math.exp(-dt*7));
       if(carry>.001){

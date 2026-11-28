@@ -1,3 +1,4 @@
+import {createHeroPartnerActor} from './hero-partner-actor.js';
 import {createMapInfoPanel} from './world-info-panel.js';
 import { createWorldEffects } from './webgpu-world-fx.js';
 import { cascadeGeometry, createCascadeWater } from './water-detail.js';
@@ -5,14 +6,16 @@ import {createVesperAltitude} from './vesper-altitude.js';
 import {parsePWM} from './blender-models.js';
 import {bevelBox} from './geo.js';
 import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
-import {DATA,INTERACTIONS,DOORS} from './m09-layout.js';
+import {DATA,INTERACTIONS,DOORS,STAGE_INDEX} from './m09-layout.js';
 
 // The exported meshes are the Blender scene, in metres. Effects use native TSL
 // on WebGPU; the same model remains available with ordinary materials on WebGL.
 export function createM09Art(T,scene,{quality='normal',webgpu=false,onPortalClose=()=>{},characterId='ghju',reunion=false}={}){
  const low=quality==='low',root=new T.Group();root.name='N09 · Les Jardins suspendus · Blender';scene.add(root);
  const clock=T.TSL.uniform(0),materials=new Map(),devices=new Map(),portals=[],falls=[],waters=[],mist=[],beams=[];
- let compiled=null,downloadBytes=0,janus=true,npc=null,disposed=false;
+ let compiled=null,downloadBytes=0,janus=true,disposed=false;
+ const meeting={stage:STAGE_INDEX.meeting,x:2.5,y:34,z:-22};
+ const partner=reunion?createHeroPartnerActor(T,scene,{characterId,low,meeting}):null;
  const glow=c=>new T.MeshBasicMaterial({color:c,toneMapped:false});
  const sun=new T.DirectionalLight(0xffd0a0,3.2);sun.position.set(170,210,-150);scene.add(sun);
  const fill=new T.DirectionalLight(0x9dbbe7,1.25);fill.position.set(-100,65,180);scene.add(fill);scene.add(new T.HemisphereLight(0xc4dce0,0x41504a,1.25));
@@ -116,27 +119,22 @@ export function createM09Art(T,scene,{quality='normal',webgpu=false,onPortalClos
     const mesh=addMesh(new T.ConeGeometry(3.5,h,24,1,true),beamMaterial);mesh.name='Volume du projecteur ORDRE';beams.push({mesh,origin,end,h});
    }
   }
-  if(reunion){
-   const {installPinkWarsSoldier}=await import('./level2-player.js'),{poseUnarmedForInspection}=await import('./rlh-firefighter.js'),{createGlove}=await import('./hands.js');
-   const other=characterId==='ghju'?'lylu':'ghju',rig=await installPinkWarsSoldier(T,scene,other);await rig.model.shadowUnit.gear.ready;await rig.model.shadowUnit.suit.ready;
-   const gloves=[createGlove(rig.kit.gloves,{mirror:true,sleeve:false,arm:false}),createGlove(rig.kit.gloves,{sleeve:false,arm:false})];rig.model.root.add(...gloves);rig.model.setLevel(9);poseUnarmedForInspection(rig.model,gloves);rig.model.root.visible=true;rig.model.root.position.set(2.5,34,-22);rig.model.root.rotation.y=Math.PI;npc=rig;
-  }
+  await partner?.ready;
  })();
  function openPortal(x,y,z,{charge=3.2,hold=2.2}={}){const fx=createElectricPortal(T,{height:3.6,low,webgpu,lights:!low});fx.group.position.set(x,y,z);root.add(fx.group);portals.push({fx,age:0,charge,hold,closing:false});}
- function update(t,dt,eye,player){
+ function update(t,dt,eye){
   altitude.update(t);clock.value=t;gateOpen+=(gateTarget-gateOpen)*(1-Math.exp(-dt*3));for(const {group,side}of gateLeaves)group.position.x=d.x+side*(2+gateOpen*4.2);
   cascade.update(t);waterFX.update(t,eye?.position);coreLight.intensity=(janus?2500:850)*(1+Math.sin(t*1.7)*.035);
   for(const v of devices.values()){v.group.visible=v.available||v.done;v.ring.material.color.set(v.done?0x65e6ae:0xff2488);v.beacon.position.y=2.35+Math.sin(t*1.9)*.08;v.beacon.rotation.y=t;}
   for(const p of mist){p.mesh.position.copy(p.base);p.mesh.position.x+=Math.sin(t*.4+p.phase)*1.2;p.mesh.position.y+=Math.sin(t*.7+p.phase)*.6;if(eye?.quaternion)p.mesh.quaternion.copy(eye.quaternion);}
   for(const [i,b]of beams.entries()){const end=b.end.clone();end.x+=Math.sin(t*.28+i)*1.7;end.z+=Math.cos(t*.22+i)*1.7;const delta=b.origin.clone().sub(end);b.mesh.position.copy(b.origin).add(end).multiplyScalar(.5);b.mesh.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),delta.clone().normalize());b.mesh.scale.y=delta.length()/b.h;}
   for(let i=0;i<petals.count;i++){const p=petalRest[i],fall=(t*.65+p.phase)%20;temp.position.set(p.x+Math.sin(t*.3+p.phase)*2,p.y-fall,p.z+Math.cos(t*.2+p.phase)*2);temp.rotation.set(t+p.phase,p.phase+t*.2,t*.5);temp.updateMatrix();petals.setMatrixAt(i,temp.matrix);}petals.instanceMatrix.needsUpdate=true;
-  if(npc&&player)npc.model.root.visible=Math.hypot(player.x-2.5,player.z+22)<55;
-  npc?.model.shadowUnit.cape.update(t,'idle',.4);npc?.model.shadowUnit.tabard.update(t,'idle',.4);
+  partner?.update(t,dt,eye);
   for(let i=portals.length-1;i>=0;i--){const p=portals[i];p.age+=dt;const closingAge=p.age>p.charge+p.hold?p.age-p.charge-p.hold:null;if(closingAge!==null&&!p.closing){p.closing=true;onPortalClose(p.fx.group.position);}p.fx.update(t,{age:p.age,closingAge});if(eye?.position)p.fx.group.lookAt(eye.position.x,p.fx.group.position.y,eye.position.z);if(closingAge>=PORTAL_CLOSE_SECONDS&&closingAge!==null){p.fx.dispose();portals.splice(i,1);}}
  }
- return{root,sun,ready,build(){},update,openPortal,setDoor(id,open){if(id==='access')gateTarget=open?1:0;},setLine:on=>{janus=on;},adapt(){},markDone(id,done=true){const d=devices.get(id);if(d)d.done=done;},setAvailable(ids){const set=new Set(ids);for(const [id,d]of devices)d.available=set.has(id);},
-  stats:()=>({skyline:altitude.stats(),source:'assets/m09/PinkWars_N09_Jardins_Suspendus.blend',triangles:compiled?.triangles||0,batches:compiled?.primitives.length||0,downloadBytes,waterfalls:falls.length,pools:waters.length,patrolDrones:beams.length,wind:webgpu,waterShader:webgpu?'TSL → WGSL':'material flow',reunionHero:npc?characterId==='ghju'?'lylu':'ghju':null,reunionVisible:!!npc?.model.root.visible,portals:portals.length,physicalGateSigns:gateSigns.length}),
-  dispose(){if(disposed)return;disposed=true;root.removeFromParent();for(const p of gateSigns)p.userData.dispose?.();altitude.dispose();npc?.dispose();for(const p of portals)p.fx.dispose();for(const p of compiled?.primitives||[])p.geometry.dispose();for(const m of materials.values())m.dispose();skyMap.dispose();foamMap.dispose();cascade.dispose();waterFX.dispose();for(const m of [...falls,...waters])m.geometry.dispose();for(const p of mist){p.mesh.geometry.dispose();p.mesh.material.dispose();}feedGeo.dispose();}
+ return{root,sun,ready,partner,build(){},update,openPortal,setDoor(id,open){if(id==='access')gateTarget=open?1:0;},setLine:on=>{janus=on;},adapt(){},markDone(id,done=true){const d=devices.get(id);if(d)d.done=done;},setAvailable(ids){const set=new Set(ids);for(const [id,d]of devices)d.available=set.has(id);},
+  stats:()=>({skyline:altitude.stats(),source:'assets/m09/PinkWars_N09_Jardins_Suspendus.blend',triangles:compiled?.triangles||0,batches:compiled?.primitives.length||0,downloadBytes,waterfalls:falls.length,pools:waters.length,patrolDrones:beams.length,wind:webgpu,waterShader:webgpu?'TSL → WGSL':'material flow',reunionHero:partner?.hero||null,reunionVisible:!!partner?.visible,partner:partner?.stats()||null,portals:portals.length,physicalGateSigns:gateSigns.length}),
+  dispose(){if(disposed)return;disposed=true;root.removeFromParent();for(const p of gateSigns)p.userData.dispose?.();altitude.dispose();partner?.dispose();for(const p of portals)p.fx.dispose();for(const p of compiled?.primitives||[])p.geometry.dispose();for(const m of materials.values())m.dispose();skyMap.dispose();foamMap.dispose();cascade.dispose();waterFX.dispose();for(const m of [...falls,...waters])m.geometry.dispose();for(const p of mist){p.mesh.geometry.dispose();p.mesh.material.dispose();}feedGeo.dispose();}
  };
 }
 
