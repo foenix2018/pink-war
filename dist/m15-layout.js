@@ -72,6 +72,12 @@ const defs=[
 export const INTERACTIONS=defs.map(([id,x,z,y,label],i)=>({id,x,z,y,label,hint:label,radius:3.2,number:i+1}));
 export const STAGES=[...INTERACTIONS.map((p,i)=>({...p,checkpoint:i?{...INTERACTIONS[i-1],yaw:0}:START})),{id:'fin',label:'Laboratoire évacué',checkpoint:INTERACTIONS.at(-1)}];
 export const HOLDS={gate:15,'security-scan':20,'lab-scan':24,'archive-copy':25,'archive-decode':24,'pod-a':12,'pod-b':12,'pod-c':18,'pod-d':18,truth:35,upload:35,destruct:20,purge:30,arena:45,'wave-b':40,extract:25};
+export const EXPLORATION_LOGS=[
+ {id:'intel-ridge',log:'ridge',x:-174,z:38,y:8,label:'Registre du poste de montagne',radius:3},
+ {id:'intel-maintenance',log:'maintenance',x:-174,z:-48,y:18,label:'Carnet de maintenance B2',radius:3},
+ {id:'intel-ravine',log:'ravine',x:-6,z:-43,y:22,label:'Journal de refroidissement',radius:3},
+ {id:'intel-supply',log:'supply',x:177,z:3,y:12,label:'Rapport de relève AEGIS',radius:3}
+];
 export const EXPLORATION_SUPPLIES=[{kind:'heal',x:-174,z:38,y:8},{kind:'cell',x:-174,z:-48,y:18},{kind:'heal',x:-6,z:-43,y:22},{kind:'cell',x:177,z:3,y:12}];
 export const SUPPLIES=INTERACTIONS.filter((_,i)=>[0,2,4,6,9,15,19,21].includes(i)).map((p,i)=>({kind:i%2?'cell':'heal',x:p.x,z:p.z+2,y:p.y})).concat(EXPLORATION_SUPPLIES);
 const combat=new Set(['access','security','security-scan','lab','lab-scan','archives','archive-copy','archive-decode','data','upload','destruct','purge','arena','wave-b','evac','extract']);
