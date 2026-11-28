@@ -39,7 +39,7 @@ import {createGlove} from './hands.js';
 import {mountCombatHud} from './combat-hud.js';
 import {createArmorFeedback,meleeKick,MELEE_POSE} from './armor-feedback.js';
 import * as L from './m15-layout.js';
-import {createM15Art} from './m15-art.js?v=m15-art-v1';
+import {createM15Art} from './m15-art.js?v=m15-art-v2';
 import {createM15Mission} from './m15-mission.js';
 import {linesFor,lineSeconds,logFor,LOGS,ENDING} from './m15-story.js';
 
@@ -267,7 +267,7 @@ function finishMission(){
  $('panel-title').innerHTML='Les quatre <em>enfants</em>';
  $('panel-text').textContent=ENDING.text[characterId];
  const docs=Object.keys(LOGS).filter(id=>mission.reads.includes(id)).length;
- $('panel-small').textContent=`Temps ${minutes}:${seconds} · Machines neutralisées ${game.kills} · Précision ${shotsFired?Math.round(hits/shotsFired*100):0} % · Données transmises · ${ENDING.next}`;
+ $('panel-small').textContent=`Temps ${minutes}:${seconds} · Machines neutralisées ${game.kills} · Précision ${shotsFired?Math.round(hits/shotsFired*100):0} % · Données transmises · Archives secondaires ${docs}/4 · ${ENDING.next}`;
  startButton.textContent='REJOUER LE NIVEAU 15 →';startButton.disabled=false;status.textContent='';shade.style.display='grid';shade.classList.add('ended');document.body.classList.add('pw-shaded');
  $('home').hidden=false;const debrief={href:'./index.html'};$('home').onclick=()=>location.assign(debrief.href);
 }
@@ -634,7 +634,7 @@ for(const name of ['pointerup','pointercancel'])window.addEventListener(name,e=>
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
 
 window.__PINK_M15=Object.freeze({
- snapshot:()=>({nano:nanoSnapshot(game),level:L.LEVEL_ID,revision:'m15-preview-v1',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,time:game?.time,missionTime,
+ snapshot:()=>({nano:nanoSnapshot(game),level:L.LEVEL_ID,revision:'m15-preview-v2',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,time:game?.time,missionTime,
   area:game&&L.areaAt(game.player.x,game.player.z),health:game?.player.hp,shield:game?.player.shield,charges:game?.charges,
   position:game&&{x:+game.player.x.toFixed(2),z:+game.player.z.toFixed(2),elevation:+game.player.elevation.toFixed(2)},
   weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,opened:mission?.opened,done:mission?.done,reads:mission?.reads,
