@@ -5,6 +5,9 @@
   "installCommand": "",
   "outputDirectory": "dist",
   "headers": [
+    {"source":"/niveau14.html","headers":[{"key":"Cache-Control","value":"public, max-age=0, must-revalidate"}]},
+    {"source":"/niveau14.js","headers":[{"key":"Cache-Control","value":"public, max-age=0, must-revalidate"}]},
+    {"source":"/m14-:name.js","headers":[{"key":"Cache-Control","value":"public, max-age=0, must-revalidate"}]},
     {"source":"/niveau13.html","headers":[{"key":"Cache-Control","value":"public, max-age=0, must-revalidate"}]},
     {"source":"/niveau13.js","headers":[{"key":"Cache-Control","value":"public, max-age=0, must-revalidate"}]},
     {"source":"/m13-:name.js","headers":[{"key":"Cache-Control","value":"public, max-age=0, must-revalidate"}]},
