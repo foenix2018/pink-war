@@ -228,7 +228,7 @@ function setupPlayer(){
  attachViewmodelLight(camera,{rim:characterId==='lylu'?0x5fb0ff:0xff6fb8});
  combatEffects=createCampaignCombatEffects(T,scene,characterId);
  companion=createAICompanion(T,scene,characterId);
- companionSkills=createCompanionSkills({characterId,mission:13,mode:'campaign'});
+ companionSkills=createCompanionSkills({characterId,mission:17,mode:'campaign'});
  skillMenu=createCompanionMenu({getStatus:()=>companionSkills.snapshot(game),onUse:id=>companionSkills.use(id,{game,...aimRay()}),
   onChange(open){heldFire=false;keys.clear();fireInput.reset();touchControls?.reset();if(open)document.exitPointerLock?.();}});
  armorFx=createArmorFeedback({T,scene,camera,renderer,getGame:()=>game,getModel:()=>playerRig?.model,getWeapon:()=>weapon,getLeftController:()=>xr?.entries.find(e=>e.source?.handedness==='left'&&e.tracked)?.mount,canControl:()=>running&&!paused&&!reading&&!skillMenu?.isOpen,low:low(),accent:lylu?0x80baff:0xef91b4,listener:()=>game.player,

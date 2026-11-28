@@ -228,8 +228,8 @@ function setupPlayer(){
  attachViewmodelLight(camera,{rim:characterId==='lylu'?0x5fb0ff:0xff6fb8});
  combatEffects=createCampaignCombatEffects(T,scene,characterId);
  companion=createAICompanion(T,scene,characterId);
- companionSkills=createCompanionSkills({characterId,mission:13,mode:'campaign'});
- skillMenu=createCompanionMenu({getStatus:()=>companionSkills.snapshot(game),onUse:id=>companionSkills.use(id,{game,...aimRay()}),
+ companionSkills=createCompanionSkills({characterId,mission:20,mode:'campaign'});
+ skillMenu=createCompanionMenu({getStatus:()=>companionSkills.snapshot(game),onUse:id=>!mission?.done.includes('s7-2')&&companionSkills.use(id,{game,...aimRay()}),
   onChange(open){heldFire=false;keys.clear();fireInput.reset();touchControls?.reset();if(open)document.exitPointerLock?.();}});
  armorFx=createArmorFeedback({T,scene,camera,renderer,getGame:()=>game,getModel:()=>playerRig?.model,getWeapon:()=>weapon,getLeftController:()=>xr?.entries.find(e=>e.source?.handedness==='left'&&e.tracked)?.mount,canControl:()=>running&&!paused&&!reading&&!skillMenu?.isOpen,low:low(),accent:lylu?0x80baff:0xef91b4,listener:()=>game.player,
   audio:()=>enableAudio&&audioCtx?.state==='running'?audioCtx:null,haptic:kind=>xr?.active&&xr.haptic(kind)});
@@ -248,7 +248,7 @@ function clearVisuals(){
  for(const o of enemyMeshes.values())scene.remove(o);enemyMeshes.clear();enemyDestructionFX?.reset();robotShutdownAudio.stop();
  for(const o of shotMeshes.values())scene.remove(o);shotMeshes.clear();
  for(const o of pickupMeshes.values()){o.userData.dispose?.();scene.remove(o);}pickupMeshes.clear();
- combatEffects?.reset();companion?.reset?.();
+ combatEffects?.reset();companion?.reset?.();if(companion?.root)companion.root.visible=true;
 }
 function interact(){
  if(!running)return;if(reading){closeDocument();return;}
@@ -260,7 +260,9 @@ function syncDevices(){
  const done=new Set(mission.done),reads=new Set(mission.reads);
  for(const it of [...L.INTERACTIONS,...L.EXPLORATION_LOGS])art.markDone(it.id,it.log?reads.has(it.log):done.has(it.id));
 }
+let epilogue=false;
 function finishMission(){
+ $('epilogue').hidden=!!xr?.active;if(companion?.root)companion.root.visible=false;art.markDone('s7-2',true);art.markDone('extract',true);
  cityBed?.mute();running=false;ambience?.pause?.();document.exitPointerLock?.();
  if(!params.has('aerial'))try{localStorage.setItem('pink-wars-last-cleared',String(Math.max(Number(localStorage.getItem('pink-wars-last-cleared'))||0,20)));}catch{}
  const minutes=Math.floor(missionTime/60),seconds=String(Math.floor(missionTime%60)).padStart(2,'0');
@@ -393,7 +395,7 @@ function gameTick(dt){
   :pinkControls.read(dt,keys,navigator.getGamepads?.()||[],{focused:!document.hidden});
  // Reading a document pauses the world; any action button closes it.
  if(reading){if(controls.interact||controls.pause||controls.fire||controls.jump)closeDocument();updateHUD();return;}
- if(controls.companion)skillMenu?.setOpen(!skillMenu.isOpen);
+ if(controls.companion&&!mission.done.includes('s7-2'))skillMenu?.setOpen(!skillMenu.isOpen);
  if(skillMenu?.isOpen)return;
  if(combatHud?.isOpen){heldFire=false;firePressQueued=false;keys.clear();fireInput.reset();touchControls?.reset();combatHud.update(game);return;}
  const touch=touchControls?.state||{x:0,z:0,lookX:0,lookY:0,fire:false,aim:false};
@@ -449,7 +451,7 @@ function gameTick(dt){
  }
  if(running)mission.update(dt);
  combatEffects?.update(game,dt,camera);armorFx.update(game,dt);
- companion?.update(dt,{game,camera,active:false});companionSkills?.update(dt,{game});skillMenu?.refresh();
+ if(mission.done.includes('s7-2')){if(companion?.root)companion.root.visible=false;companionSkills?.reset();skillMenu?.setOpen(false);}else{if(companion?.root)companion.root.visible=true;companion?.update(dt,{game,camera,active:false});companionSkills?.update(dt,{game});skillMenu?.refresh();}
  ambience?.update(dt,{active:running,position:game.player,moving:Math.hypot(x,z)>.1,grounded:game.player.grounded,elevation:game.player.elevation,yaw,probes:game.enemies,surface:walkingSurface(game)});
  if(game.player.hp>0)$('damage').style.boxShadow='inset 0 0 '+(100-game.player.hp)*1.2+'px #c52c5e44';
  const ads=flatSightPose(OPTICS[game.weapon.id],aimBlend),held=game.weapon.dual?{yaw:0,kick:0,pitch:0}:weaponFeel.state;
@@ -494,7 +496,7 @@ function animation(t,frame){
  const dt=frameDelta(last?(t-last)/1000:1/60,!!xr?.active);last=t;
  if(!renderer||!scene)return;
  if(xr?.active)xr.input(frame,dt);
- skillMenu?.setVisible(started&&running&&!reading);clock+=dt;
+ skillMenu?.setVisible(started&&running&&!reading&&!mission?.done.includes('s7-2'));clock+=dt;
  if(running)try{gameTick(dt);}catch(error){
   console.error('M20 / simulation',error);running=false;shade.style.display='grid';status.textContent='Erreur : '+(error?.message||String(error));
   startButton.disabled=false;startButton.textContent='RECOMMENCER →';
@@ -502,6 +504,7 @@ function animation(t,frame){
  if(started){updateSubtitles(running||completed()?dt:0);updateLamp(dt);
   const area=L.areaAt(game.player.x,game.player.z);
   cityBed?.update(dt,{active:running&&enableAudio&&!paused,area,indoor:area==='noyau',player:game.player,yaw,done:mission?.done||[],resonance:!!mission?.resonance,stage:mission?.stageId});}
+ if(epilogue){const p=L.MACHINES[1];camera.fov=52;camera.position.set(p.x+7,p.y+4,p.z+9);camera.lookAt(p.x,p.y+2.5,p.z);camera.updateProjectionMatrix();camera.updateMatrixWorld(true);}
  const eye=xr?.active?renderer.xr.getCamera():camera;
  try{art.update(clock,dt,eye,game?.player);}catch(error){console.warn('M20 / décor animé désactivé',error);art.update=()=>{};}
  if(xr?.active){xr.update(dt,weaponFeel.state,weaponFeel.state.kick>.025?.075:0);xr.renderScope();}
@@ -572,6 +575,7 @@ async function boot(){
  }
 }
 function begin(){
+ epilogue=false;$('epilogue-close').hidden=true;$('epilogue').hidden=true;hud.hidden=false;art.stopEpilogue?.();
  running=true;paused=false;shade.style.display='none';shade.classList.remove('ended','lost');document.body.classList.remove('pw-shaded');startButton.disabled=false;
  fireInput.reset();heldFire=mouseAim=jumpQueued=crouchQueued=firePressQueued=meleeQueued=chargeQueued=false;aimBlend=0;keys.clear();pinkControls.reset();touchControls?.reset();weaponFeel.reset();
  audioReady();
@@ -584,6 +588,8 @@ startButton.addEventListener('click',()=>{
  if(completed()){startMission();}
  begin();
 });
+$('epilogue').addEventListener('click',()=>{if(!completed()||xr?.active)return;epilogue=true;shade.style.display='none';hud.hidden=true;$('epilogue-close').hidden=false;art.playEpilogue?.();if(weapon)weapon.visible=false;if(playerRig?.model)playerRig.model.root.visible=false;});
+$('epilogue-close').addEventListener('click',()=>{epilogue=false;art.stopEpilogue?.();$('epilogue-close').hidden=true;shade.style.display='grid';snapCamera();});
 $('doc-close').addEventListener('click',()=>closeDocument());
 quality.addEventListener('change',()=>{if(!started)return;const url=new URL(location.href);url.searchParams.set('quality',quality.value);location.assign(url.href);});
 window.addEventListener('resize',resize);

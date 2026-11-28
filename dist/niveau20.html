@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <link rel="icon" href="icon.svg" type="image/svg+xml"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Pink Wars — 13 La dernière veille</title>
+<title>Pink Wars — 20 La dernière veille</title>
 <meta name="description" content="Préversion 3D du complexe ORDRE et du programme PINK.">
 <style>
 :root{color-scheme:dark;font-family:Inter,system-ui,Arial,sans-serif;background:#05070a;color:#eef1f6}
@@ -74,13 +74,14 @@ body.pw-shaded .pw-hud,body.pw-shaded #hud,body.pw-shaded .pw-minimal-action{vis
 </div>
 <div id="doc" hidden><article><small id="doc-stamp"></small><h2 id="doc-title"></h2><div id="doc-body"></div><button id="doc-close" type="button">REPOSER LE DOCUMENT (F)</button></article></div>
 <button id="pwMission" class="pw-minimal-action" aria-label="Afficher l’objectif" title="Objectif" onclick="document.body.classList.toggle('pw-objective-open');document.body.classList.remove('pw-graphics-open')">◎</button><button id="pwSettings" class="pw-minimal-action" aria-label="Afficher les réglages" title="Réglages" onclick="document.body.classList.toggle('pw-graphics-open');document.body.classList.remove('pw-objective-open')">⚙</button><select id="quality" aria-label="Qualité graphique"><option value="normal">QUALITÉ NORMALE</option><option value="low">PERFORMANCE</option></select>
-<div id="shade"><div class="panel">
-  <div class="kicker">PINK WARS / ACTE IV · LES ENFANTS DE LA TRANSCENDANCE · CHAPITRE 20</div>
+<button id="epilogue-close" hidden style="position:fixed;right:18px;top:18px;z-index:9999;background:#14273b;color:#fff;border:1px solid #ef83bc;border-radius:9px;padding:12px 18px">RETOUR AU BILAN</button><div id="shade"><div class="panel">
+  <div class="kicker">PINK WARS / ACTE V · LA DERNIÈRE VEILLE · CHAPITRE 20</div>
   <h1 id="panel-title">20 — LA DERNIÈRE VEILLE</h1>
   <p id="panel-text">Le canal est instable. GAB-1 et CAR-14 savent ce qu’il leur reste à faire.</p>
   <p class="small" id="panel-small">AEGIS · corridor de séparation · 22 objectifs · 4 itinéraires secondaires et archives. Durée cible : 30 minutes.</p>
   <div class="chars"><a href="?character=ghju" id="pick-ghju">GHJU · GAB-1</a><a href="?character=lylu" id="pick-lylu">LYLU · CAR-14</a></div>
   <button id="start" class="primary">COMMENCER</button>
+  <button id="epilogue" class="primary" hidden>VOIR L’ÉPILOGUE 3D</button>
   <button id="home" class="primary" hidden onclick="location.assign('./planque.html')">RETOUR À LA PLANQUE →</button>
   <a href="./niveau20.html?renderer=webgl" id="compat" style="display:inline-block;color:#c9a6ff;font-size:13px;margin-bottom:12px">Mode compatibilité WebGL (si écran noir)</a>
   <a href="./index.html" style="color:#ff8cbe;font-size:13px">RETOUR AU MENU</a><div id="status" class="small">Clavier / souris, manette, tactile ou casque WebXR · rendu WebGPU avec repli WebGL</div>
