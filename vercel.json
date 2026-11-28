@@ -5,46 +5,185 @@
   "installCommand": "",
   "outputDirectory": "dist",
   "headers": [
-    {"source":"/niveau15.html","headers":[{"key":"Cache-Control","value":"public, max-age=0, must-revalidate"}]},
-    {"source":"/niveau15.js","headers":[{"key":"Cache-Control","value":"public, max-age=0, must-revalidate"}]},
-    {"source":"/m15-:name.js","headers":[{"key":"Cache-Control","value":"public, max-age=0, must-revalidate"}]},
-    {"source":"/niveau14.html","headers":[{"key":"Cache-Control","value":"public, max-age=0, must-revalidate"}]},
-    {"source":"/niveau14.js","headers":[{"key":"Cache-Control","value":"public, max-age=0, must-revalidate"}]},
-    {"source":"/m14-:name.js","headers":[{"key":"Cache-Control","value":"public, max-age=0, must-revalidate"}]},
-    {"source":"/niveau13.html","headers":[{"key":"Cache-Control","value":"public, max-age=0, must-revalidate"}]},
-    {"source":"/niveau13.js","headers":[{"key":"Cache-Control","value":"public, max-age=0, must-revalidate"}]},
-    {"source":"/m13-:name.js","headers":[{"key":"Cache-Control","value":"public, max-age=0, must-revalidate"}]},
+    {
+      "source": "/niveau16.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/niveau16.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/m16-:name.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/niveau15.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/niveau15.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/m15-:name.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/niveau14.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/niveau14.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/m14-:name.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/niveau13.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/niveau13.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/m13-:name.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
     {
       "source": "/hero-partner.js",
-      "headers": [{"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
     },
     {
       "source": "/hero-partner-:name.js",
-      "headers": [{"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
     },
     {
       "source": "/niveau12.html",
-      "headers": [{"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
     },
     {
       "source": "/niveau12.js",
-      "headers": [{"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
     },
     {
       "source": "/m12-:name.js",
-      "headers": [{"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
     },
     {
       "source": "/niveau11.html",
-      "headers": [{"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
     },
     {
       "source": "/niveau11.js",
-      "headers": [{"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
     },
     {
       "source": "/m11-:name.js",
-      "headers": [{"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
     },
     {
       "source": "/",
