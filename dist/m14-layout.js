@@ -15,7 +15,9 @@ export const FLOORS=[
  F('evac',105,120,54,50,8,'10 · Héliport AEGIS')
 ];
 export const BRIDGES=[F('lab-data',-64,-55,24,9,32,'Passerelle de recherche'),F('locks-lift',6.5,-125,23,9,44,'Passerelle ascenseur'),F('core-pink',67.5,-125,31,9,68,'Passerelle noyau')];
-export const DECKS=[...FLOORS,...BRIDGES],AREAS=FLOORS,ANNEXES=[],ROOMS=[...FLOORS.filter(f=>['admin','lab','data','locks','transfer'].includes(f.id)).map(f=>({...f,w:f.w-8,d:f.d-8,h:8}))];
+export const GROUNDED=['access','admin','lab','data','locks','transfer','evac'];
+export const TERRACES=[F('access-yard',-134,85,24,48,8,'Cour extérieure / accès'),F('admin-yard',-136,14,24,36,20,'Parvis administratif'),F('lab-yard',-136,-55,24,38,32,'Terrasse rocheuse / recherche'),F('data-yard',-30,-24,44,24,32,'Cour technique'),F('locks-yard',-67,-125,24,40,44,'Poste électrique extérieur'),F('transfer-yard',141,25,24,40,44,'Parvis de transmission'),F('evac-yard',105,157,54,24,8,'Aire de service AEGIS')];
+export const DECKS=[...FLOORS,...BRIDGES,...TERRACES],AREAS=FLOORS,ANNEXES=[],ROOMS=[...FLOORS.filter(f=>['admin','lab','data','locks','transfer'].includes(f.id)).map(f=>({...f,w:f.w-8,d:f.d-8,h:8}))];
 const R=(id,x,z1,z2,y1,y2,w=9)=>({id,axis:'z',x1:x-w/2,x2:x+w/2,z1:Math.min(z1,z2),z2:Math.max(z1,z2),from:z1,to:z2,y0:y1,y1:y2});
 export const RAMPS=[R('access-admin',-100,61,32,8,20),R('admin-lab',-100,-4,-36,20,32),R('data-locks',-30,-74,-105,32,44),R('pink-arena',105,-105,-72,68,56),R('arena-transfer',105,-28,5,56,44),R('transfer-evac-a',105,45,75,44,26),R('transfer-evac-b',105,75,95,26,8)];
 // Mid-descent switchback landing; its two ramps use the same real surfaces.
@@ -33,7 +35,11 @@ const S=(id,x,z,y,w,d,h,material)=>({id,x,z,y,w,d,h,material});
 export const WALLS=ROOMS.flatMap(r=>{const w=(r.w-10)/2,d=(r.d-10)/2;return [-1,1].flatMap(a=>[-1,1].flatMap(b=>[S(r.id+'-n'+a+b,r.x+b*(w+10)/2,r.z+a*r.d/2,r.height,w,.6,r.h,'wall'),S(r.id+'-e'+a+b,r.x+a*r.w/2,r.z+b*(d+10)/2,r.height,.6,d,r.h,'wall')]))});
 export const PROPS=FLOORS.filter(f=>!['lift','core','evac'].includes(f.id)).flatMap(f=>[-1,1].flatMap(q=>[-1,1].map((k,i)=>S(f.id+'-prop-'+q+'-'+k,f.x+q*(f.w*.29),f.z+k*(f.d*.27),f.height,4,3,3.3,({admin:'desk',lab:'pod',data:'rack',locks:'terminal',pink:'terminal',arena:'cover',transfer:'rack',access:'gate'}[f.id])))));
 export const MACHINES=[S('spire',35,-83,-30,26,24,192,'spire'),S('brain',105,-134,68,11,8,10,'brain'),S('aircraft',117,132,8,15,10,4,'aircraft')];
-export const SOLIDS=[...WALLS,...PROPS,...MACHINES],DRESS_PROPS=PROPS;
+export const EQUIPMENT=TERRACES.flatMap(f=>[-1,1].flatMap(q=>[-1,1].map(k=>S(f.id+'-'+q+'-'+k,f.x+q*f.w*.30,f.z+k*f.d*.30,f.height,3.3,2.7,2.5,({ 'access-yard':'barrier','admin-yard':'utility','lab-yard':'coolant','data-yard':'generator','locks-yard':'transformer','transfer-yard':'antenna','evac-yard':'cargo'}[f.id])))));
+export const SOLIDS=[...WALLS,...PROPS,...MACHINES,...EQUIPMENT],DRESS_PROPS=[...PROPS,...EQUIPMENT];
+// Rock mesa height under each grounded zone. Gameplay remains on exact registered surfaces.
+export function terrainHeight(x,z){let base=-58+5*Math.sin(x*.08)*Math.cos(z*.09),value=base;for(const f of [...FLOORS.filter(a=>GROUNDED.includes(a.id)),...TERRACES]){const dist=Math.hypot(Math.max(f.x1-x,0,x-f.x2),Math.max(f.z1-z,0,z-f.z2));const slope=Math.max(0,1-dist/21);value=Math.max(value,base+(f.height-.95-base)*slope*slope);}for(const r of RAMPS.filter(a=>['access-admin','admin-lab','data-locks','transfer-evac-a','transfer-evac-b'].includes(a.id))){const dist=Math.hypot(Math.max(r.x1-x,0,x-r.x2),Math.max(r.z1-z,0,z-r.z2)),slope=Math.max(0,1-dist/15),h=rampHeight(r,x,Math.max(r.z1,Math.min(r.z2,z)));value=Math.max(value,base+(h-.95-base)*slope*slope);}const walk=walkSurfaces(x,z);if(walk.length)value=Math.min(value,Math.min(...walk.map(a=>a.height))-.85);return value;}
+
 export function buildCollisions(){const solid=SOLIDS.map(p=>({kind:p.material,x:p.x,z:p.z,y:p.y,hx:p.w/2,hz:p.d/2,height:p.h,navPad:.12}));return [...solid,...[...UPPER_RAILS,...SLOPE_RAILS].flatMap(r=>{const n=r.y0===r.y1?1:Math.max(1,Math.ceil(Math.hypot(r.b-r.x,r.d-r.z)/2));return Array.from({length:n},(_,i)=>{const t=(i+.5)/n;return{kind:'rail',x:r.x+(r.b-r.x)*t,z:r.z+(r.d-r.z)*t,y:r.y0+(r.y1-r.y0)*t-.25,hx:Math.max(.12,Math.abs(r.b-r.x)/n/2),hz:Math.max(.12,Math.abs(r.d-r.z)/n/2),height:1.65,navPad:.12};});})];}
 const defs=[
  ['access',-100,88,8,'Infiltrer le sas ORDRE'],['scan',-100,69,8,'Détourner le contrôle d’accès'],
