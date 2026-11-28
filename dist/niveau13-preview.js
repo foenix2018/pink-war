@@ -39,7 +39,7 @@ import {createGlove} from './hands.js';
 import {mountCombatHud} from './combat-hud.js';
 import {createArmorFeedback,meleeKick,MELEE_POSE} from './armor-feedback.js';
 import * as L from './m13-layout.js';
-import {createM13Art} from './m13-art.js?v=m13-art-v1';
+import {createM13Art} from './m13-art.js?v=m13-art-v3.1';
 import {createM13Mission} from './m13-mission.js';
 import {linesFor,lineSeconds,logFor,LOGS,ENDING} from './m13-story.js';
 
@@ -488,7 +488,7 @@ function updateHUD(){
 
 // ---------- Loop, pause, boot ----------
 function animation(t,frame){
- if(started)setScreenMusic(running&&!paused&&!reading&&!skillMenu?.isOpen&&game?.state==='playing'?'gameplay':'paused',13,undefined,{game,dialogue:!!subtitle,finale:['assaut','evacuation'].includes(mission?.stageId)});
+ if(started)setScreenMusic(running&&!paused&&!reading&&!skillMenu?.isOpen&&game?.state==='playing'?'gameplay':'paused',13,undefined,{game,dialogue:!!subtitle,finale:['shutdown','evacuation'].includes(mission?.stageId)});
  if(xr?.active&&!frame)return;
  if(!xr?.active)requestAnimationFrame(animation);
  const dt=frameDelta(last?(t-last)/1000:1/60,!!xr?.active);last=t;
@@ -538,14 +538,14 @@ async function boot(){
  try{
   const environment={userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu};
   const profile=graphicsProfile(environment,low()?'low':'auto',params.get('renderer')==='webgl'||low()||await immersiveRendererPreferred());
-  if(params.get('quality')==='high')quality.value='high';else if((profile.phone||profile.economy)&&!params.has('quality'))quality.value='low';
+  if(params.get('quality')==='high')quality.value='high';else if((profile.phone||profile.economy)&&!params.has('quality'))quality.value='normal';
   const prepared=await createCompatibleRenderer({canvas,WebGPU:T.WebGPURenderer,WebGL:WebGLRenderer,profile:{...profile,antialias:profile.antialias&&!low()}});
   canvas=prepared.canvas;renderer=prepared.renderer;
   renderer.onDeviceLost=info=>onRenderFailure(new Error('Périphérique graphique perdu : '+(info?.message||info?.reason||'WebGPU')));
   canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();onRenderFailure(new Error('Contexte WebGL perdu'));});
   renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
   renderer.shadowMap.enabled=false;
-  bootStep='décor';status.textContent='Chargement du barrage de Vesper…';
+  bootStep='décor';status.textContent='Chargement du complexe BIO-LAB…';
   traversal=L.createTraversal();
   scene=new T.Scene();camera=new T.PerspectiveCamera(70,innerWidth/innerHeight,.06,3600);scene.add(camera);enemyDestructionFX=createEnemyDestructionFX(T,scene,{camera,low:low()||profile.phone||profile.headset,maxDeaths:7,onSound:(kind,source)=>robotShutdownAudio.play(kind,source)});
   createWorld(profile);
@@ -634,7 +634,7 @@ for(const name of ['pointerup','pointercancel'])window.addEventListener(name,e=>
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
 
 window.__PINK_M13=Object.freeze({
- snapshot:()=>({nano:nanoSnapshot(game),level:L.LEVEL_ID,revision:'m13-preview-v1',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,time:game?.time,missionTime,
+ snapshot:()=>({nano:nanoSnapshot(game),level:L.LEVEL_ID,revision:'m13-preview-v3',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,time:game?.time,missionTime,
   area:game&&L.areaAt(game.player.x,game.player.z),health:game?.player.hp,shield:game?.player.shield,charges:game?.charges,
   position:game&&{x:+game.player.x.toFixed(2),z:+game.player.z.toFixed(2),elevation:+game.player.elevation.toFixed(2)},
   weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,opened:mission?.opened,done:mission?.done,reads:mission?.reads,
