@@ -78,7 +78,7 @@ body.pw-shaded .pw-hud,body.pw-shaded #hud,body.pw-shaded .pw-minimal-action{vis
   <div class="kicker">PINK WARS / ACTE IV · LES ENFANTS DE LA TRANSCENDANCE · CHAPITRE 13</div>
   <h1>13 — LES VIES <em>SOUS CONTRÔLE</em></h1>
   <p id="panel-text">Infiltrez le BIO-LAB d’ORDRE. Retrouvez les archives PINK, les sujets humains et la vérité sur GAB-1 et CAR-14.</p>
-  <p class="small" id="panel-small">Préversion de validation : sept secteurs, géométrie 3D et commandes du niveau 12. Aucun ajout au menu de campagne.</p>
+  <p class="small" id="panel-small">Préversion de validation : sept secteurs, quatre annexes, 22 objectifs, cible 30 minutes et commandes du niveau 12. Aucun ajout au menu de campagne.</p>
   <div class="chars"><a href="?character=ghju" id="pick-ghju">GHJU · GAB-1</a><a href="?character=lylu" id="pick-lylu">LYLU · CAR-14</a></div>
   <button id="start" class="primary">COMMENCER</button><a href="?aerial=1&amp;quality=high" style="color:#ff8cbe">Vue aérienne 3D de validation</a>
   <button id="home" class="primary" hidden onclick="location.assign('./planque.html')">RETOUR À LA PLANQUE →</button>
@@ -91,7 +91,7 @@ body.pw-shaded .pw-hud,body.pw-shaded #hud,body.pw-shaded .pw-minimal-action{vis
 const lylu=new URLSearchParams(location.search).get('character')==='lylu';
 document.getElementById(lylu?'pick-lylu':'pick-ghju').setAttribute('aria-current','true');
 if(lylu)document.getElementById('compat').href='./niveau13-preview.html?character=lylu&renderer=webgl';
-import('./niveau13-preview.js?v=m13-preview-v1').catch(error=>{
+import('./niveau13-preview.js?v=m13-preview-v3').catch(error=>{
  const status=document.getElementById('status'),button=document.getElementById('start');
  if(status)status.textContent='Erreur de chargement : '+(error?.message||String(error))+' — essaye le mode compatibilité WebGL.';
  if(button){button.disabled=false;button.textContent='RECHARGER';button.addEventListener('click',()=>location.reload());}
