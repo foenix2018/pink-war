@@ -22,9 +22,9 @@ export const RAMPS=[R('security-lab',-110,25,-1,8,14),R('lab-archives',-110,-43,
 export const rampHeight=(r,x,z)=>r.y0+(r.y1-r.y0)*(z-r.from)/(r.to-r.from);
 const insideRect=(f,x,z)=>x>=f.x1-.0001&&x<=f.x2+.0001&&z>=f.z1-.0001&&z<=f.z2+.0001;
 export const EXPLORATION=[
- {id:'ridge',label:'Sentier des anciens postes',width:8,points:[[-110,82,8],[-135,76,8],[-154,65,8],[-174,38,8],[-170,5,11],[-152,-22,14],[-110,-22,14]]},
- {id:'maintenance',label:'Galerie de maintenance B2',width:8,points:[[-110,-22,14],[-148,-22,14],[-174,-48,18],[-170,-78,24],[-152,-100,26],[-110,-100,26]]},
- {id:'ravine',label:'Sentier du ravin',width:10,points:[[-25,-90,26],[-25,-66,26],[-6,-43,22],[24,-48,24],[48,-68,26],[60,-100,26]]},
+ {id:'ridge',label:'Sentier des anciens postes',width:8,points:[[-110,82,8],[-135,76,8],[-154,65,8],[-174,38,8],[-174,8,14],[-170,-22,14],[-152,-22,14],[-110,-22,14]]},
+ {id:'maintenance',label:'Galerie de maintenance B2',width:8,points:[[-110,-22,14],[-170,-22,14],[-174,-48,18],[-174,-72,26],[-174,-100,26],[-152,-100,26],[-110,-100,26]]},
+ {id:'ravine',label:'Sentier du ravin',width:10,points:[[-25,-90,26],[-25,-66,26],[-6,-43,22],[24,-48,24],[60,-68,26],[60,-100,26]]},
  {id:'supply',label:'Piste de ravitaillement AEGIS',width:9,points:[[125,-25,14],[153,-25,14],[177,3,12],[171,39,10],[153,61,8],[125,79,8]]}
 ];
 const segs=EXPLORATION.flatMap(r=>r.points.slice(1).map((b,i)=>({id:r.id,a:r.points[i],b,width:r.width})));
