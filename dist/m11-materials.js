@@ -45,10 +45,10 @@ export function createM11Materials(T,scene,{low=false}={}){
  solid('olive',0x454d35,.92,0);
  for(const name of ['leaf','redleaf'])materials[name].side=T.DoubleSide;
  solid('line',0xb5a084,.92,.02);
- for(const [name,color] of [['red',0xe66e53],['warm',0xffd6a0],['blue',0x72bfc9],['green',0x78d6a1],['pink',0xe74378]])
+ for(const [name,color] of [['red',0xe66e53],['warm',0xffd6a0],['blue',0x72bfc9],['green',0x78d6a1],['pink',0xf652a1]])
   materials[name]=new T.MeshBasicMaterial({name:'M11 · '+name,color,toneMapped:false});
- const light=createWorldRadiance(T,{cool:0x9baed0,warm:0xffc290,low});
- scene.environment=light;scene.environmentIntensity=.58;
+ const light=createWorldRadiance(T,{cool:0x9ca4d2,warm:0xf4a1ba,low});
+ scene.environment=light;scene.environmentIntensity=.64;
  return {materials,ready:photo.ready,stats:photo.stats,dispose(){photo.dispose();finish.dispose();for(const map of maps.values())map.dispose();
   if(scene.environment===light)scene.environment=null;light.dispose();for(const m of Object.values(materials))m.dispose();}};
 }

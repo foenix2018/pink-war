@@ -40,3 +40,7 @@ La surface de brique `m01-brick-{diff,normal,orm}_512.jpg` provient du **Downtow
 ## 3.63.5 — textures de proximité
 
 Béton `concrete_floor` et asphalte `asphalt_03`, cartes couleur, normales OpenGL et rugosité en 1024 × 1024, provenant des mêmes sources Poly Haven CC0 que les versions 512 existantes. Sources, empreintes des originaux et empreintes des fichiers JPEG optimisés : `materials-3635.json`. Les motifs des équipements dans `machine-finishes.js` sont des créations procédurales originales.
+
+## La Traversée · Crépuscule
+
+`assets/m11/vesper-crepuscule.webp` est un étalonnage de `vesper-morning-sky.webp` utilisant la même photographie CC0 **Kloppenheim 06 Pure Sky** de Greg Zaal et Jarod Guest. Le traitement directionnel et les contrastes des nuages sont reproductibles avec `python3 tools/build-m11-dusk-sky.py`.

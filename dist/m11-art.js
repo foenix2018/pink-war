@@ -1,5 +1,7 @@
 import * as L from './m11-layout.js';
 import {createM11Materials} from './m11-materials.js';
+import {createM11Neon} from './m11-lighting.js';
+import {addTriageEquipment, buildDamValves, buildRelayHardware} from './m11-hardware.js';
 import {createM11Construction,districtBuilding,watchTower,evacuationTent,reliefTree,railM11} from './m11-construction.js';
 import {buildM11Roads,buildM11Aircraft} from './m11-structures.js';
 import {createWorldEffects} from './webgpu-world-fx.js';
@@ -8,22 +10,24 @@ import {createVesperBuildings} from './vesper-altitude.js';
 
 export function createM11Art(T,scene,{quality='normal',webgpu=false,characterId='ghju'}={}){
  const low=quality==='low',root=new T.Group();root.name='Vesper · La Traversée';scene.add(root);
- scene.background=new T.Color(0x949ca3);
- scene.fog=new T.FogExp2(0x899197,.0039);
- const sun=new T.DirectionalLight(0xffd6af,2.3);
- sun.position.set(-85,110,-140);
- const sky=new T.HemisphereLight(0xd3d9e5,0x514c45,1.55);scene.add(sun,sky);
- let disposed=false;
- const skyMap=new T.TextureLoader().load('./assets/cc0/vesper-morning-sky.webp',texture=>{
-  if(disposed)return;
-  texture.mapping=T.EquirectangularReflectionMapping;texture.colorSpace=T.SRGBColorSpace;
-  scene.background=texture;scene.backgroundIntensity=.83;scene.backgroundRotation.y=-.68;
- });
+ scene.background=new T.Color(0x79506b);
+ scene.fog=new T.FogExp2(0x85607d,.0038);
+ const sun=new T.DirectionalLight(0xffcca9,2.18);
+ sun.position.set(-94,68,-129);
+ const sky=new T.HemisphereLight(0xced0ec,0x51414b,1.66);scene.add(sun,sky);
+ let disposed=false,skyMap=null;
+ const skyReady=new T.TextureLoader().loadAsync(new URL('./assets/m11/vesper-crepuscule.webp',import.meta.url).href).then(texture=>{
+  if(disposed){texture.dispose();return;}
+  skyMap=texture;texture.mapping=T.EquirectangularReflectionMapping;texture.colorSpace=T.SRGBColorSpace;
+  scene.background=texture;scene.backgroundIntensity=1;scene.backgroundRotation.y=-.58;
+ }).catch(error=>console.warn('M11 / ciel crépusculaire',error));
+
  const materials=createM11Materials(T,scene,{low}),M=materials.materials;
  const kit=createM11Construction(T,root,M,{low});
- const {box,rod,ring,cylinder,quad,add,trimSign,stamp,sector}=kit;
+ const {box,rod,ring,cylinder,quad,trimSign,stamp,sector}=kit;
+ const neon=createM11Neon(T,root,M,{low});
  const effects=createWorldEffects(T,{webgpu,low}),cascade=createCascadeWater(T,{webgpu,low,color:0xe0eadf});
- const falls=[],markers=new Map(),relays=new Map(),valves=[],ownedGeometry=new Set(),ownedMaterials=new Set();
+ const falls=[],markers=new Map(),relays=new Map(),ownedGeometry=new Set(),ownedMaterials=new Set();
  const traversal=L.createTraversal();
  let seed=11;
  const rnd=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
@@ -67,8 +71,8 @@ export function createM11Art(T,scene,{quality='normal',webgpu=false,characterId=
     top:19+band*7+rnd()*44+Number(i%9===0)*14,height:-29,style:i%3,band,phase:rnd()*8,yaw:angle+.17});
   }
  }
- const skyline=createVesperBuildings(T,skylineRoot,towers,{floor:-28,fogBase:-23,clear:32,distance:[100,490],mist:0x82888b,horizon:0x929c9e,
-  facades:[0x9e9d93,0x8b9293,0x95877c],roofs:[0x676d6d,0x737575,0x7b746f]},webgpu);
+ const skyline=createVesperBuildings(T,skylineRoot,towers,{floor:-28,fogBase:-23,clear:32,distance:[100,490],mist:0x906982,horizon:0x9c7190,
+  facades:[0x8a7d89,0x748091,0x9a7e87],roofs:[0x605967,0x655768,0x705968]},webgpu);
 
  const rampSubdivisions=buildM11Roads(kit);
  for(const f of L.FLOORS.filter(f=>f.id!=='barrage')){
@@ -120,7 +124,9 @@ export function createM11Art(T,scene,{quality='normal',webgpu=false,characterId=
  });
  for(const [i,[x,z]] of [[-78,16],[-78,25],[-59,13]].entries()){
   sector('Évacuation civile · '+(i+1));
-  evacuationTent(T,kit,x,8,z,i?'POSTE '+(i===1?'B':'C'):'TRIAGE');
+  const name=i?'POSTE '+(i===1?'B':'C'):'TRIAGE';
+  evacuationTent(T,kit,x,8,z,name);
+  addTriageEquipment(T,kit,x,8,z,name);
  }
  // Thick structural portals around three spillways. The moving water
  // covers one contoured surface, with no second transparent sheet.
@@ -163,7 +169,7 @@ export function createM11Art(T,scene,{quality='normal',webgpu=false,characterId=
    position.setZ(j,position.getZ(j)*238*Math.sqrt(Math.max(0,1-r*r)));
   }
   plane.computeBoundingSphere();
-  const material=effects.water({color:0x255456,shallowColor:0x6a836f,skyColor:0xa2b3ba,
+  const material=effects.water({color:0x294850,shallowColor:0x6a836f,skyColor:0xc38da9,
    opacity:.94,refraction:false,flow:.92,foam});
   mesh(plane,material,[centre,bottom+.012,0],'Gorge / eau et écume du déversoir '+i);
  }
@@ -181,32 +187,13 @@ export function createM11Art(T,scene,{quality='normal',webgpu=false,characterId=
  trimSign('ORDRE','COMPLEXE HYDRAULIQUE OUEST',[-9,20.5,-37.96],0,6.9,1.24,'ordre');
  trimSign('BARRAGE 04','DÉVERSOIRS AUTOMATISÉS',[98,20.5,-37.96],0,6.1,1.13,'ordre');
  for(const [i,x] of L.RELAYS.entries()){
-  sector('Relais '+(i+1));const id='relais-'+'abc'[i];
-  box([x,25.32,-51],[5.98,.63,5.98],'concrete');
-  box([x,25.66,-51],[5.45,.16,5.36],'edge');
-  cylinder([x,28.2,-51],1.66,4.53,'dark');
-  for(const yy of [26.03,26.27,29.65,30.70,31.49]){
-   cylinder([x,yy,-51],2.20,.24,'edge');ring([x,yy+.135,-51],2.13,.045,'gold');
-  }
-  for(let k=0;k<6;k++){
-   const angle=k*Math.PI/3,dx=Math.cos(angle),dz=Math.sin(angle),cx=x+dx*2.09,cz=-51+dz*2.09;
-   rod([cx,25.74,cz],[cx,31.76,cz],.118,'edge');
-   rod([cx,26.12,cz],[x+dx*2.7,25.73,-51+dz*2.7],.082);
-   box([cx,26.71,cz],[.35,.53,.35],'paint');
-  }
-  const core=mesh(new T.CylinderGeometry(.98,1.17,1.13,low?12:20),M.red.clone(),[x,30.30,-51],id+' / état',true);
-  relays.set(id,core);
-  trimSign('RELAIS '+'ABC'[i],'LIAISON HAUTE TENSION',[x,27.52,-48.70],0,2.35,.55,'ordre');
+  sector('Relais '+(i+1));
+  const relay=buildRelayHardware(T,root,kit,x,i,{low});
+  relays.set('relais-'+'abc'[i],relay);
+  neon.addSource(relay.light);
  }
  sector('Vannes de crête');
- const valveGeometry=new T.TorusGeometry(.252,.038,low?5:8,low?16:25);
- for(const x of [45.5,48.4,51.3]){
-  box([x,25.28,-38.6],[1.08,.54,.76],'concrete');
-  rod([x,25.28,-39],[x,26.22,-39],.128,'steel');
-  const v=mesh(valveGeometry,M.paintRed,[x,26.21,-39],'Volant de commande');
-  v.rotation.x=-Math.PI/2;valves.push(v);
-  cylinder([x,26.21,-39],.081,.12,'edge');
- }
+ const hydraulics=buildDamValves(T,root,kit,M,{low});
  trimSign('VANNES','COMMANDE LOCALE  ·  BARRAGE 04',[50,27.25,-45.74],0,3.65,.74,'ordre');
  sector('Hélisurface AEGIS');
  cylinder([109,32.025,-70],10.9,.047,'dark');
@@ -215,7 +202,8 @@ export function createM11Art(T,scene,{quality='normal',webgpu=false,characterId=
  box([109,32.073,-70],[2.6,.024,.28],'line');
  for(let i=0;i<8;i++){
   const a=i*Math.PI/4,x=109+Math.cos(a)*9.43,z=-70+Math.sin(a)*9.43;
-  cylinder([x,32.105,z],.14,.17,'edge');cylinder([x,32.22,z],.074,.082,'warm');
+  cylinder([x,32.105,z],.14,.17,'edge');
+  cylinder([x,32.22,z],.074,.082,i===1||i===7?'pink':'warm');
  }
  trimSign('EXTRACTION AEGIS','HÉLISURFACE MÉDICALE',[109,31.08,-55.95],0,6.15,1.04,'aegis');
  buildM11Aircraft(T,kit,low);
@@ -247,17 +235,18 @@ export function createM11Art(T,scene,{quality='normal',webgpu=false,characterId=
  function markDone(id,value=true){
   const marker=markers.get(id);
   if(marker){marker.done=value;marker.r.material.color.setHex(value?0x7bbb9a:marker.active?0x78d8e7:0x778680);}
-  const light=relays.get(id);if(light)light.material.color.setHex(value?0x7bbb9a:0xd97b62);
+  relays.get(id)?.setState(value,marker?.active);
  }
  return {
-  root,sun,ready:Promise.all([secondHeroReady,materials.ready]),build(){},setDoor(){},setLine(){},adapt(){},openPortal(){},markDone,
+  root,sun,ready:Promise.all([secondHeroReady,materials.ready,skyReady]),build(){},setDoor(){},adapt(){},openPortal(){},markDone,
+  setLine(closed){hydraulics.setOpen(!closed);},
   setAvailable(ids){
    const active=new Set(ids);
    for(const [id,p] of markers){p.active=active.has(id);markDone(id,p.done);}
   },
   update(t,dt,camera,player){
    kit.update(camera?.position);cascade.update(t);effects.update(t,camera?.position);
-   if(markers.get('vannes')?.done)for(const v of valves)v.rotation.z+=dt*.30;
+   neon.update(t,dt,camera?.position);hydraulics.update(dt);
    if(npc&&player){
     const it=L.INTERACTIONS.find(i=>markers.get(i.id)?.active)||L.INTERACTIONS[0],x=it.x-2,z=it.z+1;
     const h=traversal.height(x,z);
@@ -269,11 +258,13 @@ export function createM11Art(T,scene,{quality='normal',webgpu=false,characterId=
    }
   },
   stats:()=>({source:'Vesper · La Traversée',...kit.stats(),relays:relays.size,secondHero:npc?.id||null,
-   waterfalls:falls.length,rampSubdivisions,textures:materials.stats(),nativeWater:effects.native}),
+   waterfalls:falls.length,rampSubdivisions,textures:materials.stats(),nativeWater:effects.native,
+   duskSky:!!skyMap,neon:neon.stats()}),
   dispose(){
    if(disposed)return;disposed=true;
-   if(scene.background===skyMap)scene.background=null;skyMap.dispose();
+   if(scene.background===skyMap)scene.background=null;skyMap?.dispose();
    npc?.dispose();buddySphere?.model.dispose();buddySphere?.root.removeFromParent();
+   neon.dispose();hydraulics.dispose();for(const relay of relays.values())relay.dispose();
    kit.dispose();skyline.dispose();effects.dispose();cascade.dispose();materials.dispose();
    for(const g of ownedGeometry)g.dispose();for(const m of ownedMaterials)m.dispose();
    root.removeFromParent();sun.removeFromParent();sky.removeFromParent();

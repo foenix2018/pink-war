@@ -1,4 +1,4 @@
-import {loft} from './geo.js';
+import {bevelBox,loft} from './geo.js';
 import {FLOORS,ROUTE} from './m11-layout.js';
 
 export function buildM11Roads(k){
@@ -64,7 +64,7 @@ export function buildM11Roads(k){
 }
 export function buildM11Aircraft(T,k,low){
  const x=109,y=32,z=-71;
- const {box,rod,ring,cylinder,add,quad,trimSign}=k;
+ const {box,rod,cylinder,add,quad,trimSign}=k;
  k.sector('AEGIS / Navette de secours');
  const hull=loft([[-3.22,.22,.23],[-2.78,1.06,.53],[-1.63,1.48,.73],[.43,1.51,.82],[2.01,1.25,.74],[3.18,.74,.44]],low?12:20);
  add(hull,'white',[x,y+1.52,z],[Math.PI/2,0,0]);
@@ -77,27 +77,36 @@ export function buildM11Aircraft(T,k,low){
   // The four facets are visible from either side of the approach.
   if(s>0)quad(d,c,b,a,'glass');else quad(a,b,c,d,'glass');
   for(const [p,q] of [[a,b],[b,c],[c,d]])rod(p,q,.039,'edge');
-  rod([x+s*.96,y+.39,z-2.09],[x+s*1.05,y+1.16,z-1.45],.10,'edge');
-  rod([x+s*.99,y+.39,z+2.13],[x+s*1.14,y+1.20,z+1.41],.10,'edge');
-  rod([x+s*.98,y+.29,z-2.3],[x+s*1.01,y+.29,z+2.29],.107,'edge');
-  rod([x+s*.98,y+.32,z-2.50],[x+s*.98,y+.29,z-2.31],.091,'edge');
-  box([x+s*1.44,y+1.56,z+1.13],[.072,.80,1.69],'paintRed');
-  box([x+s*1.49,y+1.61,z+.67],[.052,.073,.31],'edge');
-  const p0=[x+s*1.13,y+2.15,z+.32],p1=[x+s*3.55,y+2.14,z+.74],p2=[x+s*4.43,y+2.14,z+2.19],p3=[x+s*1.23,y+2.19,z+2.34];
+  // Skids actually bear on their replaceable soles. The two angled struts
+  // are supported by a piston and fixed to the hull with collars.
+  for(const [foot,upper] of [[-2.09,-1.45],[2.13,1.41]]){
+   const a=[x+s*.98,y+.18,z+foot],b=[x+s*1.10,y+1.18,z+upper];
+   const piston=a.map((v,i)=>v+(b[i]-v)*.61);
+   rod(a,piston,.105,'edge');rod(piston,b,.079,'steel');
+   cylinder([piston[0],piston[1],piston[2]],.106,.139,'dark');
+   add(bevelBox(.25,.062,.51,.025,1),'rubber',[a[0],y+.079,a[2]]);
+  }
+  rod([x+s*.98,y+.151,z-2.30],[x+s*1.01,y+.151,z+2.30],.102,'edge');
+  rod([x+s*.98,y+.19,z-2.53],[x+s*.98,y+.151,z-2.30],.096,'edge');
+  // Chamfered baggage door with inset seal, two hinges and a folding handle.
+  add(bevelBox(.157,.68,1.37,.061,1),'dark',[x+s*1.393,y+1.52,z+.66]);
+  add(bevelBox(.097,.61,1.25,.052,1),'paintRed',[x+s*1.455,y+1.52,z+.66]);
+  for(const dz of [.29,1.03])cylinder([x+s*1.507,y+1.80,z+dz],.049,.145,'edge',[Math.PI/2,0,0]);
+  box([x+s*1.515,y+1.54,z+.33],[.034,.111,.231],'dark');
+  rod([x+s*1.547,y+1.54,z+.253],[x+s*1.547,y+1.54,z+.406],.021,'edge');
+  for(const dy of [-.184,.184])for(const dz of [.19,1.11]){
+   cylinder([x+s*1.51,y+1.52+dy,z+dz],.020,.026,'edge',[0,0,Math.PI/2]);
+  }
+  const p0=[x+s*1.13,y+2.15,z+.32],p1=[x+s*2.72,y+2.14,z+.68],p2=[x+s*2.72,y+2.14,z+1.93],p3=[x+s*1.23,y+2.19,z+2.34];
   const a0=p0.map((v,i)=>v-(i===1?.19:0)),a1=p1.map((v,i)=>v-(i===1?.19:0)),a2=p2.map((v,i)=>v-(i===1?.19:0)),a3=p3.map((v,i)=>v-(i===1?.19:0));
   for(const face of [[p0,p1,p2,p3],[a3,a2,a1,a0],[p1,a1,a2,p2],[p2,a2,a3,p3],[p0,a0,a1,p1]]){
    if(s>0)quad(...face.reverse(),'paint');else quad(...face,'paint');
   }
-  const ex=x+s*3.55,ez=z+1.29;
-  cylinder([ex,y+2.18,ez],1.11,.51,'dark');
-  ring([ex,y+2.47,ez],1.08,.071,'edge');
-  ring([ex,y+2.46,ez],.88,.044,'steel');
-  cylinder([ex,y+2.47,ez],.31,.28,'steel');
-  for(let j=0;j<8;j++){
-   const angle=j*Math.PI/4;
-   box([ex+.58*Math.sin(angle),y+2.51,ez+.58*Math.cos(angle)],[.146,.048,.55],'edge',angle+.22);
+  buildM11Rotor(T,k,x+s*3.55,y+2.28,z+1.29,s,low);
+  for(const offset of [0,.10]){
+   rod([x+s*1.49,y+2.05,z+.61+offset],[x+s*2.47,y+2.17,z+.71+offset],.035,'rubber');
+   rod([x+s*2.47,y+2.17,z+.71+offset],[x+s*2.83,y+2.28,z+.94+offset],.036,'edge');
   }
-  cylinder([ex,y+1.92,ez],.45,.09,s<0?'red':'blue');
   for(const dz of [-.27,.02,.31])box([x+s*1.43,y+1.69,z+dz],[.053,.086,.17],'dark');
  }
  rod([x-.14,py+.40,z-2.58],[x+.14,py+.40,z-2.58],.035,'edge');
@@ -107,4 +116,33 @@ export function buildM11Aircraft(T,k,low){
  box([x,y+1.40,z-3.06],[.71,.092,.038],'warm');
  box([x,y+1.35,z+2.99],[.89,.064,.19],'red');
  trimSign('AEGIS  ·  C-07','ÉVACUATION SANITAIRE',[x,y+1.30,z+3.20],0,1.47,.39,'aegis');
+}
+
+function buildM11Rotor(T,{add,box,cylinder,rod,ring},x,y,z,side,low){
+ // An open duct with a rounded leading lip. The spars and rotor sit inside the throat.
+ const section=[
+  [.88,-.20],[.96,-.24],[1.05,-.24],[1.13,-.18],[1.16,-.11],[1.15,.13],
+  [1.11,.21],[1.05,.242],[.966,.21],[.915,.15],[.897,.02],[.895,-.112],[.88,-.20]
+ ].map(([radius,height])=>new T.Vector2(radius,height));
+ add(new T.LatheGeometry(section,low?20:34),'white',[x,y,z]);
+ ring([x,y-.164,z],1.115,.028,'edge');
+ ring([x,y+.133,z],.921,.022,'edge');
+ cylinder([x,y-.025,z],.24,.29,'steel');
+ cylinder([x,y+.14,z],.185,.077,'edge');
+ cylinder([x,y-.184,z],.166,.10,'dark');
+ for(let j=0;j<5;j++){
+  const a=j*Math.PI*2/5,s=Math.sin(a),c=Math.cos(a);
+  rod([x+.18*s,y-.144,z+.18*c],[x+.90*s,y-.144,z+.90*c],.035,'steel');
+ }
+ for(let j=0;j<7;j++){
+  const a=j*Math.PI*2/7,s=Math.sin(a),c=Math.cos(a);
+  box([x+.552*s,y+.036,z+.552*c],[.135,.042,.624],'dark',a+side*.22);
+ }
+ for(const d of [-1,1]){
+  const near=x+side*1.032;
+  box([near,y-.026,z+d*.39],[.21,.11,.245],'edge');
+ }
+ // Navigation lamp in a caged recess, supported by the outer housing.
+ cylinder([x+side*1.141,y+.019,z],.125,.096,'dark',[0,0,Math.PI/2]);
+ cylinder([x+side*1.198,y+.019,z],.069,.044,side<0?'red':'blue',[0,0,Math.PI/2]);
 }
