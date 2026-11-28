@@ -281,6 +281,7 @@ function missionLost(){
 
 // ---------- Camera, weapon and rig ----------
 function snapCamera(){
+ if(params.has('aerial')&&!xr?.active){camera.fov=57;camera.position.set(35,170,220);camera.lookAt(12,2,-3);camera.updateProjectionMatrix();camera.updateMatrixWorld(true);if(weapon)weapon.visible=false;return;}
  if(xr?.active){xr.syncPose();return;}
  const p=game.player,eye=characterId==='lylu'?1.71:1.61,optic=OPTICS[game.weapon.id],normal=view==='fps'?72:64;
  camera.fov=normal+(optic?(magnifiedFov(normal,optic.magnification)-normal)*aimBlend:0);
@@ -537,7 +538,7 @@ async function boot(){
  try{
   const environment={userAgent:navigator.userAgent,platform:navigator.platform,maxTouchPoints:navigator.maxTouchPoints,gpu:navigator.gpu};
   const profile=graphicsProfile(environment,low()?'low':'auto',params.get('renderer')==='webgl'||low()||await immersiveRendererPreferred());
-  if((profile.phone||profile.economy)&&!params.has('quality'))quality.value='low';
+  if(params.get('quality')==='high')quality.value='high';else if((profile.phone||profile.economy)&&!params.has('quality'))quality.value='low';
   const prepared=await createCompatibleRenderer({canvas,WebGPU:T.WebGPURenderer,WebGL:WebGLRenderer,profile:{...profile,antialias:profile.antialias&&!low()}});
   canvas=prepared.canvas;renderer=prepared.renderer;
   renderer.onDeviceLost=info=>onRenderFailure(new Error('Périphérique graphique perdu : '+(info?.message||info?.reason||'WebGPU')));
@@ -563,7 +564,7 @@ async function boot(){
   bootStep='prêt';hud.hidden=false;started=true;requestAnimationFrame(animation);
   touchControls=createPinkWarsTouch(canvas,{onFire:down=>{if(down)audioReady();heldFire=down;if(down)firePressQueued=true;},onJump:()=>{jumpQueued=true;},onInteract:()=>interact(),
    onNext:()=>game.cycleWeapon(),onReload:()=>game.reload(),onCrouch:()=>{crouchQueued=true;},onView:()=>changeView(),onPause:()=>pauseMission(),onAim:down=>{if(down)audioReady();mouseAim=down;}});
-  begin();pauseMenu.setVisible(true);void loadAuthenticSoldier();
+  if(params.has('aerial')){shade.style.display='none';hud.hidden=true;running=false;pauseMenu.setVisible(false);touchControls?.root?.setAttribute?.('hidden','');}else{begin();pauseMenu.setVisible(true);void loadAuthenticSoldier();}
  }catch(error){
   console.error('[M13] démarrage impossible ('+bootStep+')',error);
   status.textContent='Impossible de lancer ('+bootStep+') : '+(error?.message||error);startButton.textContent='RÉESSAYER →';startButton.disabled=false;
