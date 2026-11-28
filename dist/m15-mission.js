@@ -4,9 +4,9 @@ import * as L from './m15-layout.js';
 const noop=()=>{};
 export function createM15Mission({game,characterId='ghju',hooks={},storage=globalThis.localStorage,campaign=false}={}){
  const h={setObstacles:noop,setDoor:noop,setLine:noop,openPortal:noop,say:noop,stage:noop,cue:noop,notice:noop,finish:noop,clear:noop,resonance:noop,...hooks};
- const done=new Set(),groups=new Map();let stage=0,completed=false,hold=null,serial=15000,resonance=false;
+ const done=new Set(),reads=new Set(),groups=new Map();let stage=0,completed=false,hold=null,serial=15000,resonance=false;
  const key=(campaign?'pink-wars-m15-checkpoint-v1-':'pink-wars-preview-m15-checkpoint-v1-')+characterId;
- const save=()=>{try{storage?.setItem(key,JSON.stringify({version:1,stage,done:[...done]}));}catch{}};
+ const save=()=>{try{storage?.setItem(key,JSON.stringify({version:1,stage,done:[...done],reads:[...reads]}));}catch{}};
  function world(){const cols=L.buildCollisions();game.replaceObstacles(cols);h.setObstacles(cols);h.setLine(!done.has('purge'));}
  function place(p){Object.assign(game.player,{x:p.x,z:p.z,elevation:game.surfaceHeight(p.x,p.z,game.time,p.y+.3),grounded:true,verticalSpeed:0,yaw:p.yaw||0});}
  function setResonance(on){if(resonance===on)return;resonance=on;h.resonance(on);if(!on){if(game.companionWard?.resonance)game.companionWard=null;game.companionAmplifyUntil=Math.min(game.companionAmplifyUntil||0,game.time);}}
@@ -19,12 +19,12 @@ export function createM15Mission({game,characterId='ghju',hooks={},storage=globa
  function setStage(i){stage=i;const s=L.STAGES[i];game.checkpointPosition={...s.checkpoint,id:s.id,label:s.label};h.stage(i,s);if(i<L.INTERACTIONS.length)deploy(s.id);setResonance(false);save();}
  function advance(){const id=L.STAGES[stage].id;done.add(id);if(!L.HOLDS[id])h.say(id);world();if(stage===L.INTERACTIONS.length-1){completed=true;setStage(L.INTERACTIONS.length);try{storage?.removeItem(key);}catch{}h.say('fin');h.finish();}else setStage(stage+1);}
  function begin(it){if(L.HOLDS[it.id]){hold={id:it.id,until:game.time+L.HOLDS[it.id],reinforced:false};h.say(it.id);h.cue('hold');if(it.id==='truth')setResonance(true);}else advance();}
- const api={get stage(){return stage;},get stageId(){return L.STAGES[stage].id;},get completed(){return completed;},get done(){return[...done];},get reads(){return[];},get opened(){return[];},get pending(){return[];},get n08(){return null;},get resonance(){return resonance;},get hold(){return hold&&{name:hold.id,remaining:Math.max(0,hold.until-game.time),total:L.HOLDS[hold.id]};},groups:()=>Object.fromEntries([...groups].map(([id,units])=>[id,{deployed:units.length,alive:alive(id)}])),alive,
- start({resume=false}={}){done.clear();stage=0;completed=false;if(resume)try{const p=JSON.parse(storage?.getItem(key)||'null');if(p?.version===1&&Number.isInteger(p.stage)&&p.stage>0&&p.stage<L.INTERACTIONS.length&&p.done?.length===p.stage&&p.done.every((id,i)=>id===L.INTERACTIONS[i].id)){stage=p.stage;for(const id of p.done)done.add(id);}}catch{}fresh(L.STAGES[stage].checkpoint);setStage(stage);h.say('intro');},
+ const api={get stage(){return stage;},get stageId(){return L.STAGES[stage].id;},get completed(){return completed;},get done(){return[...done];},get reads(){return[...reads];},get opened(){return[];},get pending(){return[];},get n08(){return null;},get resonance(){return resonance;},get hold(){return hold&&{name:hold.id,remaining:Math.max(0,hold.until-game.time),total:L.HOLDS[hold.id]};},groups:()=>Object.fromEntries([...groups].map(([id,units])=>[id,{deployed:units.length,alive:alive(id)}])),alive,
+ start({resume=false}={}){done.clear();reads.clear();stage=0;completed=false;if(resume)try{const p=JSON.parse(storage?.getItem(key)||'null');if(p?.version===1&&Number.isInteger(p.stage)&&p.stage>0&&p.stage<L.INTERACTIONS.length&&p.done?.length===p.stage&&p.done.every((id,i)=>id===L.INTERACTIONS[i].id)){stage=p.stage;for(const id of p.done)done.add(id);for(const id of p.reads||[])if(L.EXPLORATION_LOGS.some(i=>i.log===id))reads.add(id);}}catch{}fresh(L.STAGES[stage].checkpoint);setStage(stage);h.say('intro');},
  restoreCheckpoint(){completed=false;fresh(L.STAGES[Math.min(stage,L.INTERACTIONS.length-1)].checkpoint);setStage(Math.min(stage,L.INTERACTIONS.length-1));h.notice('POINT DE CONTRÔLE · '+L.STAGES[stage].label);},
  available(id){return !completed&&!hold&&id===L.STAGES[stage].id&&!done.has(id)&&alive(id)===0;},
- nearInteraction(){const p=game.player;return L.INTERACTIONS.find(i=>api.available(i.id)&&Math.abs(p.elevation-i.y)<1.2&&Math.hypot(p.x-i.x,p.z-i.z)<i.radius)||null;},
- interact(){if(game.state!=='playing')return null;const it=api.nearInteraction();if(!it)return null;begin(it);return it;},
+ nearInteraction(){const p=game.player;return L.INTERACTIONS.find(i=>api.available(i.id)&&Math.abs(p.elevation-i.y)<1.2&&Math.hypot(p.x-i.x,p.z-i.z)<i.radius)||(!hold&&!completed?L.EXPLORATION_LOGS.find(i=>!reads.has(i.log)&&Math.abs(p.elevation-L.groundSample(i.x,i.z))<1.5&&Math.hypot(p.x-i.x,p.z-i.z)<i.radius):null)||null;},
+ interact(){if(game.state!=='playing')return null;const it=api.nearInteraction();if(!it)return null;if(it.log){reads.add(it.log);save();h.notice('ARCHIVE SECONDAIRE RÉCUPÉRÉE');return it;}begin(it);return it;},
  update(){if(completed||game.state!=='playing')return;
   // Canonical spontaneous synchronisation at the dome; no button is required.
   if(!hold&&api.stageId==='truth'){const it=api.nearInteraction();if(it)begin(it);}
