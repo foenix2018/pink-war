@@ -1,0 +1,779 @@
+[
+  {
+    "n": 17,
+    "title": "Le soulèvement des hommes",
+    "theme": "city",
+    "zone": "Vesper · quartiers libérés",
+    "intro": "La vérité sur PINK est sortie du laboratoire. Vesper se soulève.",
+    "ending": "AEGIS a réuni les résistants de Vesper. La voie vers HELIX est ouverte.",
+    "moment": "Les preuves appartiennent désormais à tous. ORDRE ne peut plus les effacer.",
+    "boss": "Gardien du Directoire",
+    "coords": [
+      [
+        -145,
+        125
+      ],
+      [
+        -145,
+        45
+      ],
+      [
+        -70,
+        45
+      ],
+      [
+        -70,
+        -35
+      ],
+      [
+        10,
+        -35
+      ],
+      [
+        10,
+        -115
+      ],
+      [
+        105,
+        -115
+      ],
+      [
+        105,
+        -25
+      ],
+      [
+        105,
+        65
+      ]
+    ],
+    "names": [
+      "Barrage des Épars",
+      "Rue des ateliers",
+      "Place AEGIS",
+      "Abri des civils",
+      "Relais des insurgés",
+      "Gare de fret",
+      "Carrefour ORDRE",
+      "Place de la résistance",
+      "Sortie vers HELIX"
+    ],
+    "rooms": [
+      3,
+      4,
+      5
+    ],
+    "types": [
+      "cover",
+      "cover",
+      "terminal",
+      "medbed",
+      "rack",
+      "cover",
+      "cover",
+      "cover",
+      "gate"
+    ],
+    "actions": [
+      [
+        "Retrouver les résistants",
+        "Ouvrir le passage"
+      ],
+      [
+        "Sécuriser la rue",
+        "Récupérer les ressources"
+      ],
+      [
+        "Rejoindre le rassemblement AEGIS",
+        "Activer le relais public",
+        "Transmettre les preuves PINK"
+      ],
+      [
+        "Atteindre l’abri",
+        "Sécuriser les civils"
+      ],
+      [
+        "Rétablir le relais",
+        "Diffuser l’appel à la résistance"
+      ],
+      [
+        "Rejoindre la gare",
+        "Déverrouiller les accès"
+      ],
+      [
+        "Franchir le carrefour",
+        "Neutraliser les unités lourdes",
+        "Tenir la position"
+      ],
+      [
+        "Rejoindre la place",
+        "Repousser les renforts",
+        "Confirmer la libération"
+      ],
+      [
+        "Ouvrir la voie vers HELIX",
+        "Rejoindre AEGIS"
+      ]
+    ],
+    "trails": [
+      [
+        [
+          -145,
+          45
+        ],
+        [
+          -180,
+          45
+        ],
+        [
+          -180,
+          -35
+        ],
+        [
+          -70,
+          -35
+        ]
+      ],
+      [
+        [
+          -70,
+          45
+        ],
+        [
+          -70,
+          100
+        ],
+        [
+          10,
+          100
+        ],
+        [
+          10,
+          -35
+        ]
+      ],
+      [
+        [
+          10,
+          -115
+        ],
+        [
+          10,
+          -160
+        ],
+        [
+          105,
+          -160
+        ],
+        [
+          105,
+          -115
+        ]
+      ],
+      [
+        [
+          105,
+          -25
+        ],
+        [
+          160,
+          -25
+        ],
+        [
+          160,
+          65
+        ],
+        [
+          105,
+          65
+        ]
+      ]
+    ]
+  },
+  {
+    "n": 18,
+    "title": "Le prix de la liberté",
+    "theme": "helix",
+    "zone": "HELIX · centre JANUS",
+    "intro": "Kessler détient la dernière clé d’ORDRE. Il doit répondre de ses décisions.",
+    "ending": "Les héros connaissent le prix d’un arrêt définitif d’ORDRE. Le protocole de séparation est prêt.",
+    "moment": "Pour interrompre ORDRE, il faut ouvrir un canal de séparation que les deux IA peuvent maintenir.",
+    "boss": "Sentinelle HELIX",
+    "coords": [
+      [
+        -130,
+        130
+      ],
+      [
+        -50,
+        130
+      ],
+      [
+        -50,
+        50
+      ],
+      [
+        -130,
+        50
+      ],
+      [
+        -130,
+        -45
+      ],
+      [
+        -35,
+        -45
+      ],
+      [
+        55,
+        -45
+      ],
+      [
+        55,
+        40
+      ],
+      [
+        140,
+        40
+      ]
+    ],
+    "names": [
+      "Entrée HELIX",
+      "Atelier JANUS",
+      "Archives d’autorité",
+      "Bunker technique",
+      "Chambre du chercheur",
+      "Laboratoire de séparation",
+      "Puits énergétique",
+      "Contrôle des ancrages",
+      "Accès au cœur"
+    ],
+    "rooms": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "types": [
+      "gate",
+      "terminal",
+      "rack",
+      "cover",
+      "medbed",
+      "pod",
+      "rack",
+      "terminal",
+      "cover"
+    ],
+    "actions": [
+      [
+        "Atteindre HELIX",
+        "Rétablir le sas"
+      ],
+      [
+        "Accéder à JANUS",
+        "Lire les ordres initiaux"
+      ],
+      [
+        "Sécuriser les archives",
+        "Extraire la signature d’autorité"
+      ],
+      [
+        "Rétablir l’alimentation",
+        "Déverrouiller le bunker"
+      ],
+      [
+        "Retrouver Kessler",
+        "Écouter son témoignage",
+        "Découvrir le prix de la séparation"
+      ],
+      [
+        "Examiner le modèle neuronal",
+        "Calibrer la Résonance"
+      ],
+      [
+        "Accéder au puits",
+        "Isoler les relais énergétiques",
+        "Résister à la défense HELIX"
+      ],
+      [
+        "Atteindre les ancrages",
+        "Valider le protocole",
+        "Repousser les unités de contrôle"
+      ],
+      [
+        "Ouvrir l’accès au cœur",
+        "Quitter HELIX"
+      ]
+    ],
+    "trails": [
+      [
+        [
+          -130,
+          130
+        ],
+        [
+          -165,
+          130
+        ],
+        [
+          -165,
+          50
+        ],
+        [
+          -130,
+          50
+        ]
+      ],
+      [
+        [
+          -50,
+          50
+        ],
+        [
+          0,
+          50
+        ],
+        [
+          0,
+          -5
+        ],
+        [
+          -35,
+          -5
+        ],
+        [
+          -35,
+          -45
+        ]
+      ],
+      [
+        [
+          -130,
+          -45
+        ],
+        [
+          -130,
+          -100
+        ],
+        [
+          -35,
+          -100
+        ],
+        [
+          -35,
+          -45
+        ]
+      ],
+      [
+        [
+          55,
+          40
+        ],
+        [
+          55,
+          100
+        ],
+        [
+          140,
+          100
+        ],
+        [
+          140,
+          40
+        ]
+      ]
+    ]
+  },
+  {
+    "n": 19,
+    "title": "Débrancher un dieu",
+    "theme": "core",
+    "zone": "ORDRE · cœur de contrôle",
+    "intro": "ORDRE vous attend dans son propre réseau. Trois relais protègent son cœur.",
+    "ending": "Le contrôle central d’ORDRE est rompu. Le canal de séparation reste instable : la dernière veille commence.",
+    "moment": "Vous n’êtes pas des erreurs à corriger. Les humains choisissent leur avenir.",
+    "boss": "ORDRE — gardien du noyau",
+    "coords": [
+      [
+        -145,
+        100
+      ],
+      [
+        -65,
+        100
+      ],
+      [
+        -65,
+        15
+      ],
+      [
+        15,
+        15
+      ],
+      [
+        15,
+        105
+      ],
+      [
+        105,
+        105
+      ],
+      [
+        105,
+        15
+      ],
+      [
+        105,
+        -85
+      ],
+      [
+        15,
+        -85
+      ]
+    ],
+    "names": [
+      "Sas du noyau",
+      "Anneau de données",
+      "Relais Alpha",
+      "Relais Bêta",
+      "Relais Gamma",
+      "Salle des sentinelles",
+      "Chambre du visage",
+      "Noyau ORDRE",
+      "Canal de séparation"
+    ],
+    "rooms": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "types": [
+      "gate",
+      "rack",
+      "terminal",
+      "terminal",
+      "terminal",
+      "cover",
+      "rack",
+      "terminal",
+      "cover"
+    ],
+    "actions": [
+      [
+        "Entrer dans le noyau",
+        "Déverrouiller le sas"
+      ],
+      [
+        "Cartographier le réseau",
+        "Isoler le trafic"
+      ],
+      [
+        "Atteindre Alpha",
+        "Couper le premier relais"
+      ],
+      [
+        "Atteindre Bêta",
+        "Couper le deuxième relais"
+      ],
+      [
+        "Atteindre Gamma",
+        "Couper le troisième relais"
+      ],
+      [
+        "Accéder à la défense",
+        "Vaincre les sentinelles",
+        "Tenir la chambre"
+      ],
+      [
+        "Rencontrer ORDRE",
+        "Rompre son emprise",
+        "Repousser son gardien"
+      ],
+      [
+        "Rejoindre le noyau",
+        "Ouvrir le canal PINK",
+        "Neutraliser le contrôle central"
+      ],
+      [
+        "Rejoindre la sortie",
+        "Maintenir le canal de séparation"
+      ]
+    ],
+    "trails": [
+      [
+        [
+          -145,
+          100
+        ],
+        [
+          -145,
+          155
+        ],
+        [
+          -65,
+          155
+        ],
+        [
+          -65,
+          100
+        ]
+      ],
+      [
+        [
+          -65,
+          15
+        ],
+        [
+          -65,
+          -40
+        ],
+        [
+          15,
+          -40
+        ],
+        [
+          15,
+          15
+        ]
+      ],
+      [
+        [
+          15,
+          105
+        ],
+        [
+          15,
+          155
+        ],
+        [
+          105,
+          155
+        ],
+        [
+          105,
+          105
+        ]
+      ],
+      [
+        [
+          105,
+          -85
+        ],
+        [
+          105,
+          -140
+        ],
+        [
+          15,
+          -140
+        ],
+        [
+          15,
+          -85
+        ]
+      ]
+    ]
+  },
+  {
+    "n": 20,
+    "title": "La dernière veille",
+    "theme": "final",
+    "zone": "AEGIS · corridor de séparation",
+    "intro": "Le canal est instable. GAB-1 et CAR-14 savent ce qu’il leur reste à faire.",
+    "ending": "GAB-1 et CAR-14 ont maintenu le canal au prix de leur existence numérique. GHJU et LYLU survivent. Épilogue : dans un atelier silencieux, un laser dessine la première forme d’un enfant. Une lumière rose s’allume, puis une bleue.",
+    "moment": "Nous avons choisi. Emportez nos souvenirs, et continuez à vivre.",
+    "boss": "Dernier gardien ORDRE",
+    "coords": [
+      [
+        -140,
+        115
+      ],
+      [
+        -140,
+        35
+      ],
+      [
+        -60,
+        35
+      ],
+      [
+        -60,
+        -45
+      ],
+      [
+        20,
+        -45
+      ],
+      [
+        20,
+        45
+      ],
+      [
+        105,
+        45
+      ],
+      [
+        105,
+        -45
+      ],
+      [
+        105,
+        -130
+      ]
+    ],
+    "names": [
+      "Dernier refuge",
+      "Galerie de séparation",
+      "Relais de secours",
+      "Chambre PINK",
+      "Corridor des mémoires",
+      "Salle de veille",
+      "Dernière ligne",
+      "Point de séparation",
+      "Aube nouvelle"
+    ],
+    "rooms": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      7
+    ],
+    "types": [
+      "cover",
+      "rack",
+      "terminal",
+      "pod",
+      "rack",
+      "terminal",
+      "cover",
+      "terminal",
+      "gate"
+    ],
+    "actions": [
+      [
+        "Rejoindre le dernier refuge",
+        "Écouter le signal d’AEGIS"
+      ],
+      [
+        "Entrer dans la galerie",
+        "Rétablir l’alimentation"
+      ],
+      [
+        "Activer le relais de secours",
+        "Protéger le canal"
+      ],
+      [
+        "Rejoindre la chambre PINK",
+        "Synchroniser GAB-1",
+        "Synchroniser CAR-14"
+      ],
+      [
+        "Traverser le corridor",
+        "Sauvegarder les souvenirs"
+      ],
+      [
+        "Rejoindre la salle de veille",
+        "Écouter Gabrielle",
+        "Écouter Carla"
+      ],
+      [
+        "Tenir la dernière ligne",
+        "Repousser les dernières machines",
+        "Ouvrir le passage"
+      ],
+      [
+        "Rejoindre le point de séparation",
+        "Accepter le sacrifice des deux IA",
+        "Maintenir le canal jusqu’à la fermeture"
+      ],
+      [
+        "Quitter le réseau",
+        "Assister à la dernière veille"
+      ]
+    ],
+    "trails": [
+      [
+        [
+          -140,
+          115
+        ],
+        [
+          -180,
+          115
+        ],
+        [
+          -180,
+          35
+        ],
+        [
+          -140,
+          35
+        ]
+      ],
+      [
+        [
+          -60,
+          35
+        ],
+        [
+          -60,
+          90
+        ],
+        [
+          20,
+          90
+        ],
+        [
+          20,
+          45
+        ]
+      ],
+      [
+        [
+          -60,
+          -45
+        ],
+        [
+          -60,
+          -100
+        ],
+        [
+          20,
+          -100
+        ],
+        [
+          20,
+          -45
+        ]
+      ],
+      [
+        [
+          105,
+          45
+        ],
+        [
+          160,
+          45
+        ],
+        [
+          160,
+          -45
+        ],
+        [
+          105,
+          -45
+        ]
+      ]
+    ]
+  }
+]
