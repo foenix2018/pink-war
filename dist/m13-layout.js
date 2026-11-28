@@ -29,7 +29,18 @@ export const TANKS=[...[-13,-6,6,13].map((dx,i)=>solid('bio-pod-'+i,40+dx,25,2.6
 export const RACKS=[-54,-47,-33,-26].flatMap((x,i)=>[-4,3].map((dz,j)=>solid('rack-'+i+'-'+j,x,12+dz,2.1,3,3.8,'rack')));
 export const MACHINES=[solid('core',70,-57,7,7,13,'core'),solid('truth',-5,-51,12,12,12,'truth'),solid('aircraft',135,-56,11,9,3,'aircraft'),...[-16,16].map((dx,i)=>solid('gate-'+i,-100+dx,54,2.8,5,10,'tower'))];
 export const COVER=[solid('crate-1',-108,68,3,2,1.5,'crate'),solid('crate-2',22,48,3,2,1.5,'crate'),solid('crate-3',-58,23,3,2,1.5,'crate'),solid('crate-4',-94,-17,3,2,1.5,'crate'),solid('crate-5',50,-39,3,2,1.5,'crate'),solid('crate-6',116,-38,3,2,1.5,'crate')];
-export const SOLIDS=[...WALLS,...TANKS,...RACKS,...MACHINES,...COVER];
+// Additional playable architecture and machinery. One authoritative footprint per object.
+export const DETAIL_PROPS=[
+ solid('security-desk',-109,61,3.0,1.4,1.25,'desk'),
+ solid('bio-console',29,39,2.4,1.2,1.25,'desk'),solid('bio-console-east',51,39,2.4,1.2,1.25,'desk'),
+ solid('bio-pump',53,29,2.0,2.0,2.7,'pump'),solid('bio-pump-west',27,29,2.0,2.0,2.7,'pump'),
+ solid('archive-console',-46,22,2.7,1.4,1.25,'desk'),solid('archive-ups',-56,18,2.5,1.6,2.4,'cabinet'),
+ solid('stase-console',-90,-30,2.4,1.2,1.25,'desk'),solid('stase-console-east',-68,-30,2.4,1.2,1.25,'desk'),
+ solid('truth-console',-13,-44,2.4,1.2,1.25,'desk'),solid('truth-transformer',13,-58,4,3,3.3,'pump'),
+ solid('core-console',79,-49,2.5,1.2,1.25,'desk'),solid('core-transformer',83,-61,4,3,3.3,'pump'),
+ solid('evac-cabinet',112,-56,2.0,2.0,2.3,'cabinet'),solid('evac-console',117,-44,2.4,1.2,1.25,'desk')
+];
+export const SOLIDS=[...WALLS,...TANKS,...RACKS,...MACHINES,...COVER,...DETAIL_PROPS];
 export const buildCollisions=()=>[...SOLIDS.map(s=>({kind:s.id,x:s.x,z:s.z,y:s.y,hx:s.w/2,hz:s.d/2,height:s.h,navPad:.35})),...RAILS.map(([x,z,a,b])=>({kind:'rail',x:(x+a)/2,z:(z+b)/2,y:Y,hx:Math.max(.12,Math.abs(x-a)/2),hz:Math.max(.12,Math.abs(z-b)/2),height:1.3,navPad:.12}))];
 export function walkSurfaces(x,z){return inside(x,z)?[{id:areaAt(x,z),height:Y}]:[];}
 export function createTraversal(){const height=(x,z,t=0,max=Infinity)=>inside(x,z)&&Y<=max+.011?Y:-65;return{routes:[],lifts:[],bounds:{min:-175,max:175},surfaces:walkSurfaces,height,routeForSurface:()=>null,maxMoveStep:.055,navigation:{edge:-174,size:175,surface:height}};}
