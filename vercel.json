@@ -6,6 +6,18 @@
   "outputDirectory": "dist",
   "headers": [
     {
+      "source": "/niveau11.html",
+      "headers": [{"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}]
+    },
+    {
+      "source": "/niveau11.js",
+      "headers": [{"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}]
+    },
+    {
+      "source": "/m11-:name.js",
+      "headers": [{"key": "Cache-Control", "value": "public, max-age=0, must-revalidate"}]
+    },
+    {
       "source": "/",
       "headers": [
         {
