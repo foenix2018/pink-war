@@ -201,7 +201,7 @@ export function createVesperAltitude(T, parent, { district, low = false, webgpu 
   });
   const basinGeometry = new T.RingGeometry(.1, 2400, 96, 18);
   const colors = [];
-  const base = new T.Color(config.mist), lower = new T.Color(district === 'gardens' ? 0x202c3c : 0x120f1a);
+  const base = new T.Color(config.mist), lower = new T.Color(config.basinEdge ?? (district === 'gardens' ? 0x202c3c : 0x120f1a));
   const position = basinGeometry.attributes.position;
   for (let i = 0; i < position.count; i++) {
     const radius = Math.hypot(position.getX(i), position.getY(i));

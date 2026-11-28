@@ -27,3 +27,19 @@ node tools/verify-m09-preview.mjs
 Les scripts navigateur acceptent `PLAYWRIGHT_MODULE`. Les captures WebGPU utilisent la lecture d’une cible de rendu ; aucune image générée n’est présentée comme une capture du jeu. Les comparaisons utilisent les mêmes caméras et le même instant d’animation. La validation iPhone est une émulation de viewport et des commandes tactiles ; elle ne mesure pas les performances d’un iPhone physique.
 
 Dossier des preuves : `/workspace/livraison/pink-wars-n09-objects-20261122/`. Mesures et résultats finaux : `release.json` dans ce dossier.
+
+## Crépuscule de Vesper
+
+Le chapitre jouable et la vue d’ensemble chargent le même ciel photographique étalonné, la brume basse et les matériaux de béton et de dalles antidérapantes. Les sources CC0 figurent dans [les crédits du chapitre](../dist/assets/m09/CREDITS.md).
+
+Dans le sas d’ORDRE, les vantaux glissent dans un rail avec joints, chariots et voyants. Les cinq postes hydroponiques et les quatre régulateurs de JANUS proviennent d’un fichier Blender dédié. Le nœud de contrôle affiche le plan des terrasses et l’état du réseau sur sept écrans regroupés dans un atlas. Les éclairages roses de proximité partagent une seule lumière dynamique.
+
+Le canal amont rejoint la première cascade au bord du bassin. Le shader WebGPU calcule les remous, l’écume et les hauts-fonds. Le rendu WebGL associe une carte de couleur filtrée aux normales animées sur la même surface. Les matériaux opaques les plus lourds sont découpés en secteurs qui partagent les attributs de sommets. Le profil mobile écarte également les petites tiges de fougères au loin.
+
+```sh
+python3 tools/build-m09-sky.py
+blender --background --factory-startup --python tools/blender/m09_equipment.py
+node --test tests/390-m09-gardens.test.mjs
+```
+
+Le fichier source des équipements est [Jardins_Equipements.blend](../assets/m09/Jardins_Equipements.blend). Le jeu charge son export compressé de 46 ko.

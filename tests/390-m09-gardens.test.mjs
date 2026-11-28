@@ -9,6 +9,8 @@ import {ArenaGame,segmentBox,moveInArena} from '../dist/game-logic.js';
 import {sweepGrapplePlayer} from '../dist/grapple-logic.js';
 import * as L from '../dist/m09-layout.js';
 import {createM09Mission} from '../dist/m09-mission.js';
+import {gardenGeometrySectors} from '../dist/m09-geometry.js';
+import {gardenAqueduct} from '../dist/m09-water.js';
 import {CHAPTER_ROUTES,chapterURL,recordHideoutArrival,readHideoutProfile,historyForHero} from '../dist/hideout-state.js';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url));
 const storage=()=>{const values=new Map();return{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)};};
@@ -91,6 +93,41 @@ test('both metric LODs contain a finite Blender mesh, authored glazing, neon tub
  const source=read('assets/m09/PinkWars_N09_Jardins_Suspendus.blend'),publicCopy=read('dist/assets/m09/PinkWars_N09_Jardins_Suspendus.blend');assert.ok(source.length>1e6);assert.equal(createHash('sha256').update(source).digest('hex'),createHash('sha256').update(publicCopy).digest('hex'));
 });
 function parse(raw){return parsePWM(T,raw.buffer.slice(raw.byteOffset,raw.byteOffset+raw.byteLength));}
+
+test('distant garden mesh sectors share vertex buffers and retain every triangle and its winding',()=>{
+ const source=new T.BufferGeometry();
+ const position=new T.Float32BufferAttribute([-130,0,0,-129,0,0,-130,1,0,125,0,0,126,0,0,125,1,0],3);
+ source.setAttribute('position',position);
+ const indices=new Uint16Array(34002*3);
+ for(let i=0;i<34002;i++)indices.set(i%2?[3,4,5]:[0,1,2],i*3);
+ source.setIndex(new T.BufferAttribute(indices,1));
+ const sectors=gardenGeometrySectors(T,source);
+ assert.equal(sectors.length,2);
+ for(const [i,geometry] of sectors.entries()){
+  assert.equal(geometry.attributes.position,position);
+  assert.equal(geometry.index.count,indices.length/2);
+  for(let j=0;j<geometry.index.count;j+=3)assert.deepEqual([...geometry.index.array.subarray(j,j+3)],[3*i,3*i+1,3*i+2]);
+  assert.ok(geometry.boundingSphere.radius<1.2);
+  geometry.dispose();
+ }
+ assert.equal(source.index,null);
+ source.dispose();
+});
+
+test('the aqueduct starts at the upper basin outline and ends at the lip of the single waterfall sheet',()=>{
+ const lip=L.PLAN.waterfalls[0],basin=L.PLAN.pools.find(p=>p.y===lip.y);
+ for(const low of [false,true]){
+  const geometry=gardenAqueduct(T,basin,lip,low),{position,uv}=geometry.attributes;
+  for(let i=0;i<position.count;i++){
+   const x=position.getX(i)+lip.x,z=position.getZ(i)+lip.z;
+   const radial=((x-basin.x)/basin.rx)**2+((z-basin.z)/basin.rz)**2;
+   assert.ok(radial>=1-1e-6,'feed geometry does not cover the basin');
+   if(uv.getY(i)===1)assert.ok(Math.abs(radial-1)<1e-6);
+   if(uv.getY(i)===0)assert.ok(Math.abs(z-(lip.z+.16*Math.sin(uv.getX(i)*Math.PI)))<1e-6);
+  }
+  geometry.dispose();
+ }
+});
 test('chapter 9 launches from the story menu and its completed record returns to the actual hideout',()=>{
  assert.equal(CHAPTER_ROUTES[9],'niveau9.html');assert.match(chapterURL(9,{characterId:'lylu'}),/niveau9.html\?character=lylu/);assert.match(read('dist/index.html').toString(),/data-chapter="campaign9"/);
  const store=storage();recordHideoutArrival({level:9,characterId:'lylu',completed:true,storage:store});const profile=readHideoutProfile('lylu',store);assert.deepEqual(profile.completed,[9]);assert.equal(historyForHero(profile)[0].title,'Les Jardins suspendus');

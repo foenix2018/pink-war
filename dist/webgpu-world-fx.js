@@ -56,7 +56,7 @@ export function createWorldEffects(T,{webgpu=false,low=false,reflections=false}=
  }
  function water({
   color=0x102a34,shallowColor=0x4e8b89,skyColor=0x738da8,opacity=.88,
-  refraction=true,puddle=false,normalMap=null,flow=.75,foam=null,
+  refraction=true,puddle=false,normalMap=null,flow=.75,foam=null,shore=null,
  }={}){
   if(!native){
    const normal=normalMap||(defaultWaterNormal??=rippleNormalMap(T));
@@ -96,6 +96,11 @@ export function createWorldEffects(T,{webgpu=false,low=false,reflections=false}=
    const behind=S.viewportSharedTexture(shifted);
    base=S.mix(base,S.color(shallowColor),clarity.mul(.34));
    base=S.mix(base,behind.rgb.mul(S.color(0xa2d8d3)),clarity.mul(.48));
+  }
+  if(shore){
+   const radial=p.xz.sub(vec2(shore.x,shore.z)).div(vec2(shore.rx,shore.rz)).length();
+   const bed=S.smoothstep(.51,.98,radial.add(sin(p.x.mul(.104).add(p.z.mul(.123))).mul(.033)));
+   base=S.mix(base,S.color(shallowColor),bed.mul(.65));
   }
   let surface=S.mix(base,S.color(skyColor),fresnel.mul(.74));
   if(mirror){
