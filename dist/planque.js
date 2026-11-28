@@ -191,7 +191,7 @@ function openStation(id){
   }};nanoUI.refresh();
   for(const hero of [characterId,otherHero]){const stage=hero===characterId?armorLevel:otherProfile.equippedSuit,state=nanoChambers.phase(hero);if(!wearing(hero)&&(state?.phase==='idle'||state?.phase==='preview'&&state.tier!==stage))void nanoChambers.preview(hero,stage).catch(error=>message('Aperçu indisponible : '+error.message,6));}
  }else if(id==='mission'){
-  const next=nextHideoutChapter(profile);content.append(element('p',next?'Prépare ton équipement, puis rejoins le chapitre suivant. Tu peux aussi repartir librement dans un chapitre disponible.':'Les chapitres disponibles sont archivés. Tu peux retourner dans Vesper en attendant la suite.'));
+  const next=nextHideoutChapter(profile);content.append(element('p',next?'Prépare ton équipement, puis rejoins le chapitre suivant. Tu peux aussi repartir librement dans un chapitre disponible.':'Les vingt chapitres sont archivés. Tu peux retourner dans Vesper et rejouer les missions.'));
   if(next)content.append(primary('PARTIR · '+HIDEOUT_HISTORY.find(c=>c.level===next).title,()=>depart(next)));
   const list=element('div','','hub-list');for(const c of HIDEOUT_HISTORY){const b=element('button');b.dataset.hubMission=String(c.level);b.append(element('strong',String(c.level).padStart(2,'0')+' · '+c.title),element('small',profile.completed.includes(c.level)?'REJOUER CE CHAPITRE':'REJOINDRE CE CHAPITRE'));b.onclick=()=>depart(c.level);list.append(b);}content.append(list);
  }else{
