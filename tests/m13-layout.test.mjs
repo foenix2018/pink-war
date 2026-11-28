@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';import * as L from '../dist/m13-layout.js';
+const cols=L.buildCollisions(),height=L.createTraversal().height;
+const clear=(x,z)=>{assert.ok(L.inside(x,z));const y=height(x,z);assert.ok(y>-60);assert.equal(cols.filter(c=>Math.abs(x-c.x)<c.hx+.38&&Math.abs(z-c.z)<c.hz+.38&&y>=c.y-.3&&y<c.y+c.height).length,0);};
+test('M13 all 22 objectives, route samples, supplies, enemy and reinforcement spawns are clear',()=>{assert.equal(L.INTERACTIONS.length,22);for(const g of L.GUIDES)for(let i=1;i<g.length;i++){const a=g[i-1],b=g[i];for(let k=0;k<=100;k++)clear(a.x+(b.x-a.x)*k/100,a.z+(b.z-a.z)*k/100);}for(const p of [...L.INTERACTIONS,...L.SUPPLIES,...Object.values(L.ENCOUNTERS).flat(),...Object.values(L.REINFORCEMENTS).flat()])clear(p.x,p.z);});
+test('M13 ramp heights and rail coverage',()=>{for(const r of L.RAMPS){const z=(r.z1+r.z2)/2,x=(r.x1+r.x2)/2;assert.ok(Math.abs(height(x,z)-(r.y0+r.y1)/2)<.01);}assert.equal(cols.filter(c=>c.kind==='rail').length,L.RAILS.length);});
