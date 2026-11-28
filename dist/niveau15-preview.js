@@ -241,7 +241,7 @@ function lookFrom(cp){yaw=cp.yaw||0;pitch=-.04;}
 
 // ---------- Mission presentation (rules in m15-mission.js) ----------
 function startMission(){
- subtitles.length=0;subtitle=null;comms.clear();for(const it of L.INTERACTIONS)art.markDone(it.id,false);
+ subtitles.length=0;subtitle=null;comms.clear();for(const it of [...L.INTERACTIONS,...L.EXPLORATION_LOGS])art.markDone(it.id,false);
  mission.start({resume:params.get('resume')!=='0'});art.partner?.sync?.(game,mission.stage);lookFrom(L.STAGES[mission.stage].checkpoint);missionTime=0;shotsFired=0;hits=0;
 }
 function clearVisuals(){
@@ -258,7 +258,7 @@ function interact(){
 }
 function syncDevices(){
  const done=new Set(mission.done),reads=new Set(mission.reads);
- for(const it of L.INTERACTIONS)art.markDone(it.id,it.log?reads.has(it.log):done.has(it.id));
+ for(const it of [...L.INTERACTIONS,...L.EXPLORATION_LOGS])art.markDone(it.id,it.log?reads.has(it.log):done.has(it.id));
 }
 function finishMission(){
  cityBed?.mute();running=false;ambience?.pause?.();document.exitPointerLock?.();
