@@ -8,4 +8,6 @@ La cour extérieure reprend les modèles procéduraux du projet, `dist/couronne-
 
 Interface tactile : création originale `tools/m09-textures.py`. Cartes de relief et rugosité : ressources originales de la planque. Les textures CC0 partagées employées par le décor sont documentées dans `../cc0/LICENSE.md`.
 
+Le ciel de crépuscule utilise la photographie CC0 [Kloppenheim 06 Pure Sky](https://polyhaven.com/a/kloppenheim_06_puresky) de Greg Zaal et Jarod Guest. Les dalles, leurs joints et leurs cartes de relief et rugosité combinent une composition originale et des échantillons du matériau CC0 [Concrete Floor](https://polyhaven.com/a/concrete_floor). Le script `tools/build-m10-helix-textures.py` régénère ces quatre textures à partir des fichiers CC0 déjà présents dans le projet.
+
 Personnages, sphères, armes, gants et adversaires : modèles et animations canoniques Pink Wars, chargés par le moteur commun.

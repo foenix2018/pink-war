@@ -181,8 +181,8 @@ export function createVesperBuildings(T, parent, layout, config, webgpu) {
   };
 }
 
-export function createVesperAltitude(T, parent, { district, low = false, webgpu = false }) {
-  const config = DISTRICTS[district], layout = vesperTowerLayout(district, low);
+export function createVesperAltitude(T, parent, { district, low = false, webgpu = false, palette }) {
+  const config = {...DISTRICTS[district], ...palette}, layout = vesperTowerLayout(district, low);
   const group = new T.Group();
   group.name = 'Vesper · ville à 360°'; group.userData.keepDynamic = true; parent.add(group);
   const buildings = createVesperBuildings(T, group, layout, config, webgpu);

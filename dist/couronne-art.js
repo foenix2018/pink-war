@@ -5,6 +5,7 @@ import {createElectricPortal,PORTAL_CLOSE_SECONDS} from './electric-portal.js';
 import {createStairHardware} from './stair-hardware.js';
 import {createModernSwitch} from './modern-switch.js';
 import {createLevelNeons} from './level-neons.js';
+import {createHelixAtmosphere} from './m10-atmosphere.js';
 // COURONNE HELIX — dressing of the standalone level (couronne-layout.js holds the playable geometry).
 // Dusk on the heights of Vesper (Tome II §34): a white ceramic HELIX crown (§22 materials: clean ceramic and
 // polymer, grey glass, HELIX red used only on its marks) above a rain-washed neon city, with the phase anchor
@@ -32,7 +33,7 @@ function tiledPlane(T, w, h, tile) {
 }
 
 export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, onPortalClose=()=>{}, camera, chapter=0 } = {}) {
-  const low = quality === 'low', rng = seeded(9091);
+  const low = quality === 'low', helixCampaign = chapter === 10, rng = seeded(9091);
   const root = new T.Group(); root.name = 'COURONNE HELIX'; scene.add(root);
   let fpsChapter=null;
   const animated = [], stats = { instances: 0, meshes: 0 };
@@ -57,12 +58,12 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
     c.fillStyle = '#000'; c.fillRect(0, 0, w, h);
     for (let x = w / 8, k = 0; x < w; x += w / 4, k++) { c.fillStyle = k % 2 ? '#ffb46a' : '#7fe7ff'; c.fillRect(x - 2, h * .1, 4, h * .55); }
   }, { repeat: true });
-  const sky = canvasTexture(T, 4, 512, (c, w, h) => {
+  const sky = helixCampaign ? null : canvasTexture(T, 4, 512, (c, w, h) => {
     const g = c.createLinearGradient(0, 0, 0, h);
     for (const [at, color] of [[0, '#0b1030'], [.28, '#232860'], [.4, '#5a4580'], [.46, '#c46c7c'], [.49, '#f39a5c'], [.505, '#f6c37c'], [.53, '#7a5a72'], [.62, '#3a2f45'], [1, '#120f1a']]) g.addColorStop(at, color);
     c.fillStyle = g; c.fillRect(0, 0, w, h);
   });
-  const cloud = canvasTexture(T, 1024, 256, (c, w, h) => {
+  const cloud = helixCampaign ? null : canvasTexture(T, 1024, 256, (c, w, h) => {
     c.clearRect(0, 0, w, h);
     for (let i = 0; i < 70; i++) {
       const x = rng() * w, y = h * (.3 + rng() * .5), rx = 60 + rng() * 220, ry = 8 + rng() * 22;
@@ -107,6 +108,14 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
     phase: new T.MeshBasicMaterial({ color: 0xff46b9, toneMapped: false }),
     additive: (color, opacity = .6, map = null) => new T.MeshBasicMaterial({ color, map, transparent: true, opacity, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false, side: T.DoubleSide })
   };
+  if (helixCampaign) {
+    M.floor.color.setHex(0xc1c9d7);
+    M.floor.emissiveMap = null;
+    M.floor.emissiveIntensity = 0;
+    M.floor.roughness = .85;
+    M.floor.metalness = .08;
+    M.floor.normalScale.setScalar(.39);
+  }
   const cube = new T.BoxGeometry(1, 1, 1);
 
   // Instanced boxes per material: [x, y(bottom), z, sx, sy, sz, rotY].
@@ -138,23 +147,27 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
   const planting=chapter===10?createHelixPlanting(T,root,{queue,M,low,webgpu,random:rng}):null;
 
   // ---------- Sky, sun, clouds, fog and light ----------
-  const skyDome = new T.Mesh(new T.SphereGeometry(950, 32, 16), new T.MeshBasicMaterial({ map: sky, side: T.BackSide, fog: false, depthWrite: false }));
-  skyDome.renderOrder = -10; add(skyDome, scene);
-  const sunDir = new T.Vector3(-.78, .055, -.62).normalize();
-  const sun = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ map: glowDisc, color: 0xffc58a, transparent: true, blending: T.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false }));
-  sun.scale.setScalar(260); add(sun, scene);
+  const atmosphere = helixCampaign ? createHelixAtmosphere(T, scene, M.floor, {low}) : null;
+  const sunDir = new T.Vector3(-.78, helixCampaign ? .24 : .055, -.62).normalize();
+  let skyDome, sun;
   const clouds = [];
-  for (let i = 0; i < (low ? 2 : 4); i++) {
-    const tex = cloud.clone(); tex.needsUpdate = true; tex.repeat.set(1.5, 1); tex.offset.x = rng();
-    const layer = new T.Mesh(new T.PlaneGeometry(2600, 520), new T.MeshBasicMaterial({ map: tex, color: i % 2 ? 0xe39a8f : 0x9b7fb8, transparent: true, opacity: .55 - i * .08, depthWrite: false, fog: false }));
-    layer.rotation.x = -Math.PI / 2 + .08; layer.position.set(0, 210 + i * 45, -260 - i * 90); layer.userData.speed = .0015 + i * .0008; clouds.push(layer); add(layer, scene);
+  if (!atmosphere) {
+    skyDome = new T.Mesh(new T.SphereGeometry(950, 32, 16), new T.MeshBasicMaterial({ map: sky, side: T.BackSide, fog: false, depthWrite: false }));
+    skyDome.renderOrder = -10; add(skyDome, scene);
+    sun = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ map: glowDisc, color: 0xffc58a, transparent: true, blending: T.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false }));
+    sun.scale.setScalar(260); add(sun, scene);
+    for (let i = 0; i < (low ? 2 : 4); i++) {
+      const tex = cloud.clone(); tex.needsUpdate = true; tex.repeat.set(1.5, 1); tex.offset.x = rng();
+      const layer = new T.Mesh(new T.PlaneGeometry(2600, 520), new T.MeshBasicMaterial({ map: tex, color: i % 2 ? 0xe39a8f : 0x9b7fb8, transparent: true, opacity: .55 - i * .08, depthWrite: false, fog: false }));
+      layer.rotation.x = -Math.PI / 2 + .08; layer.position.set(0, 210 + i * 45, -260 - i * 90); layer.userData.speed = .0015 + i * .0008; clouds.push(layer); add(layer, scene);
+    }
+    scene.fog = new T.Fog(0x5d4a6a, 140, 820);
+    scene.background = new T.Color(0x2a2440);
+    const envTex = canvasTexture(T, 256, 128, (c, w, h) => { c.drawImage(sky.image, 0, 0, w, h); });
+    envTex.mapping = T.EquirectangularReflectionMapping; scene.environment = envTex; scene.environmentIntensity = .8;
   }
-  scene.fog = new T.Fog(0x5d4a6a, 140, 820);
-  scene.background = new T.Color(0x2a2440);
-  const envTex = canvasTexture(T, 256, 128, (c, w, h) => { c.drawImage(sky.image, 0, 0, w, h); });
-  envTex.mapping = T.EquirectangularReflectionMapping; scene.environment = envTex; scene.environmentIntensity = .8;
-  const hemi = new T.HemisphereLight(0xa9b1e6, 0x3b2a36, 1.0); add(hemi, scene);
-  const sunLight = new T.DirectionalLight(0xffc293, 2.6); sunLight.position.copy(sunDir).multiplyScalar(160); sunLight.target.position.set(0, 0, -10);
+  const hemi = new T.HemisphereLight(helixCampaign ? 0xb9c7ed : 0xa9b1e6, 0x3b2a36, helixCampaign ? 1.43 : 1.0); add(hemi, scene);
+  const sunLight = new T.DirectionalLight(helixCampaign ? 0xffc5ad : 0xffc293, helixCampaign ? 2.06 : 2.6); sunLight.position.copy(sunDir).multiplyScalar(160); sunLight.target.position.set(0, 0, -10);
   sunLight.castShadow = !low; sunLight.shadow.mapSize.set(2048, 2048); sunLight.shadow.bias = -.0002; sunLight.shadow.normalBias = .03;
   Object.assign(sunLight.shadow.camera, { left: -95, right: 95, top: 95, bottom: -95, near: 20, far: 380 });
   add(sunLight, scene); add(sunLight.target, scene);
@@ -363,7 +376,7 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
     anchor.userData = { keepDynamic:true,core, heart, heartHalo, rings, beam, seam };
   }
   let anchorPower = 1, anchorTarget = 1;
-  animated.push((t, dt) => {
+  animated.push((t, dt, cam) => {
     anchorPower += (anchorTarget - anchorPower) * Math.min(1, dt * 1.4);
     const { core, heart, heartHalo, rings, beam, seam } = anchor.userData;
     seam.offset.y = -t * .35 * anchorPower;
@@ -371,11 +384,11 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
     core.material.emissiveIntensity = .2 + 1.3 * anchorPower; heart.visible = anchorPower > .05; heart.scale.setScalar(.6 + .4 * anchorPower);
     heartHalo.material.opacity = .55 * anchorPower * (.85 + .15 * Math.sin(t * 3)); beam.material.opacity = .8 * anchorPower * anchorPower;
     anchorLight.intensity = 6 + 54 * anchorPower;
-    if (camera) heartHalo.quaternion.copy(camera.quaternion);
+    if (cam) heartHalo.quaternion.copy(cam.quaternion);
   });
 
   // ---------- Vesper below the terraces ----------
-  const altitude = createVesperAltitude(T, root, { district: 'helix', low, webgpu });
+  const altitude = createVesperAltitude(T, root, { district: 'helix', low, webgpu, palette: atmosphere?.skyline });
   animated.push(t => altitude.update(t));
   // Holographic billboards facing the Crown (fictional brands of Vesper).
   const billboards = [];
@@ -449,20 +462,20 @@ export function createCouronneArt(T, scene, { quality = 'normal', webgpu=false, 
 
   // Build everything queued.
   return {
-    root, M,ready:planting?.ready||Promise.resolve(),
+    root, M, atmosphere, ready:Promise.all([planting?.ready, atmosphere?.ready]),
     build(collisions) { fpsChapter=createFPSChapter(T,root,{chapter:'couronne',obstacles:collisions,areas:[{id:'esplanade',label:'Esplanade HELIX',x1:-40,x2:40,z1:4,z2:60},...FLOORS.map(f=>({...f,floor:f.height,label:f.id}))],low,webgpu});for (const o of collisions) dress(o); flushPosts(); neons.meshes(); neons.build(); flushBoxes();planting?.build(); },
     update(t, dt, cam = camera) {
       planting?.update(t);fpsChapter?.update(t,dt,cam?.position);
-      if (cam) { skyDome.position.copy(cam.position); sun.position.copy(cam.position).addScaledVector(sunDir, 800); sun.lookAt(cam.position); }
+      if (cam && skyDome) { skyDome.position.copy(cam.position); sun.position.copy(cam.position).addScaledVector(sunDir, 800); sun.lookAt(cam.position); }
       for (const c of clouds) c.material.map.offset.x += c.userData.speed * dt;
       for(const c of consoles.values())c.control.setState(c.done,{dt});
-      for (const f of animated) f(t, dt);
+      for (const f of animated) f(t, dt, cam);
     },
     openPortal,
     setGatesOpen(open) { gatesOpen = open; },
     setConsole(id, done) { const c = consoles.get(id); if (c) {c.done=!!done;c.control.setState(c.done);} },
     setAnchorPower(value) { anchorTarget = value; },
-    dispose() { altitude.dispose(); },
+    dispose() { atmosphere?.dispose(); altitude.dispose(); },
     stats() { return { ...stats,skyline:altitude.stats(),foliage:planting?.stats(), fps:fpsChapter?.stats(), neons:neons.stats(), portals: portals.length, anchorPower: +anchorPower.toFixed(2), gatesOpen }; }
   };
 }
