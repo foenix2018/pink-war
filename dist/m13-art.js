@@ -2,14 +2,14 @@ import {createHeroPartnerActor} from './hero-partner-actor.js';
 import * as L from './m13-layout.js';
 // AEGIS nocturnal siege — authored mobile art kit, instanced solids and texture atlases.
 export function createM13Art(T,scene,{quality='normal',webgpu=false,characterId='ghju',mobile=false}={}){
- const low=quality==='low',compact=low||mobile,root=new T.Group();root.name='M13 — ORDRE BIO-LAB';scene.add(root);
+ const low=quality==='low',compact=low||(mobile&&quality!=='high'),root=new T.Group();root.name='M13 — ORDRE BIO-LAB';scene.add(root);
  scene.background=new T.Color(0x080d1b);scene.fog=new T.FogExp2(0x141e32,.0028);
  const sun=new T.DirectionalLight(0x8caef8,1.65);sun.position.set(-80,110,-75);scene.add(sun,new T.HemisphereLight(0xa3c7ff,0x4f3b3c,1.15));
  let seed=213;const rnd=()=>((seed=Math.imul(seed,1664525)+1013904223>>>0)/4294967296);
  const mats={},geo={},batch=new Map(),textures=[],markers=new Map(),gens=new Map(),falls=[],fires=[],beacons=[],civil=[];let shieldDome=null,orbA=null,orbB=null,radio=null;
  // Tileable authored surface maps: independent albedo, roughness and tangent-space normal.
  const surfaceSets={};
- function surface(kind){const N=compact?256:512,H=new Float32Array(N*N),R=new Float32Array(N*N),base=new Float32Array(N*N),pi=Math.PI*2;
+ function surface(kind){const N=compact?512:1024,H=new Float32Array(N*N),R=new Float32Array(N*N),base=new Float32Array(N*N),pi=Math.PI*2;
   const sample=(x,y)=>H[((y+N)%N)*N+(x+N)%N];
   for(let y=0;y<N;y++)for(let x=0;x<N;x++){const i=y*N+x,u=x/N,v=y/N,grain=rnd()-.5,stain=Math.sin(pi*(u*3+v))*Math.cos(pi*(v*2-u)),mottle=Math.sin(pi*(u*9+v*5))*Math.sin(pi*(v*7-u*2)),wet=Math.max(0,stain*.7+mottle*.3-.12);
    let h=grain*.18+mottle*.13+stain*.1,c=150+grain*26+mottle*17+stain*21,rough=.8;
@@ -27,7 +27,7 @@ export function createM13Art(T,scene,{quality='normal',webgpu=false,characterId=
  const concrete=surface('concrete'),steel=surface('steel'),asphalt=surface('road'),rock=surface('rock'),grate=surface('grate');
  function mat(n,c,r=.75,m=.1,t=null){return mats[n]=new T.MeshStandardMaterial({color:c,roughness:t?1:r,metalness:m,...(t||{})});}
  mat('concrete',0xb1b8c4,.83,.04,concrete);mat('rock',0x66717e,.98,.02,rock);mat('steel',0xaab9ca,.42,.67,steel);mat('dark',0x536272,.66,.3,steel);mat('road',0xadb3be,.58,.13,asphalt);mat('grate',0x99a9ba,.65,.65,grate);mat('rust',0x835542,.84,.2,steel);mat('gold',0xc49a4e,.49,.45);mat('white',0xd2d9e1,.64);mat('paint',0xb1c6d2,.62,.05);mat('fabric',0xaaa99c,.9);mat('leaf',0x2c493e,.94);mat('leaf2',0x203e34,.95);mat('rubber',0x191c23,.9);mat('glass',0x33687e,.18,.3);mat('water',0x265575,.22,.32);mat('puddle',0x435365,.18,.35);
- for(const [n,c] of [['pink',0xff278c],['blue',0x50cfff],['red',0xff423e],['warm',0xffb56a],['green',0x74ffb7],['violet',0xb880ff]])mats[n]=new T.MeshBasicMaterial({color:c,toneMapped:false});
+ for(const [n,c] of [['pink',0xff278c],['blue',0x50cfff],['red',0xff423e],['warm',0xffb56a],['green',0x74ffb7],['violet',0xb880ff]])mats[n]=new T.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:2.4,roughness:.24,metalness:0,toneMapped:false});
  geo.box=new T.BoxGeometry(1,1,1);geo.cyl=new T.CylinderGeometry(1,1,1,12);geo.rock=new T.IcosahedronGeometry(1,compact?1:2);{const p=geo.rock.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),f=1+.17*Math.sin(x*12.7+y*8.9+z*5.4)+.09*Math.cos(x*23.2-y*17.1+z*13.7);p.setXYZ(i,x*f,y*f,z*f);}geo.rock.computeVertexNormals();}geo.leaf=new T.IcosahedronGeometry(1,0);geo.needles=new T.ConeGeometry(1,1,7);geo.sphere=new T.SphereGeometry(1,12,8);
  const tmp=new T.Object3D();function push(g,m){const key=g+'|'+m+'|'+Math.floor(tmp.position.x/48)+'|'+Math.floor(tmp.position.z/48);if(!batch.has(key))batch.set(key,[]);tmp.updateMatrix();batch.get(key).push(tmp.matrix.clone());}
  function inst(g,m,x,y,z,w,h,d,rx=0,ry=0,rz=0){tmp.position.set(x,y,z);tmp.rotation.set(rx,ry,rz);tmp.scale.set(w,h,d);push(g,m);}
@@ -81,8 +81,26 @@ export function createM13Art(T,scene,{quality='normal',webgpu=false,characterId=
  box(0,-31,0,360,.3,300,'water');for(let i=0;i<65;i++){const x=(rnd()-.5)*380,z=-125-rnd()*100,h=12+rnd()*43;box(x,-23+h/2,z,5+rnd()*8,h,5+rnd()*8,'dark');for(let j=0;j<h-3;j+=4)box(x,-22+j,z+3.1,2,.3,.1,rnd()<.25?'pink':'warm');}
  for(let i=0;i<65;i++){const x=(rnd()-.5)*380,z=(rnd()-.5)*270;if(L.inside(x,z))continue;inst('rock','rock',x,-21,z,8+rnd()*13,12+rnd()*15,8+rnd()*12);}
  for(const it of L.INTERACTIONS){const o=mesh(new T.TorusGeometry(.65,.07,8,24),new T.MeshBasicMaterial({color:0x384c62,toneMapped:false}),it.x,Y+.12,it.z);o.rotation.x=Math.PI/2;markers.set(it.id,{r:o,active:false,done:false});}
- let total=0;for(const [key,matrices] of batch){const [g,m]=key.split('|'),o=new T.InstancedMesh(geo[g],mats[m],matrices.length);matrices.forEach((matrix,i)=>o.setMatrixAt(i,matrix));o.instanceMatrix.needsUpdate=true;o.castShadow=!compact;o.receiveShadow=true;o.computeBoundingSphere();root.add(o);total+=matrices.length;}const batchCount=batch.size;
+ // Detailed workstations, coolant circuits and cabinets, bounded by shared physics footprints.
+ function detailProp(s){const {x,z,w,d,h}=s;
+ if(s.material==='desk'){box(x,Y+.12,z,w*.88,.24,d*.92,'rubber');for(const q of [-1,1]){box(x+q*w*.35,Y+.49,z,w*.22,.76,d*.83,'dark');for(let k=0;k<3;k++)box(x+q*w*.35,Y+.27+k*.19,z+d*.43,w*.16,.035,.04,'steel');}box(x,Y+.91,z,w,.12,d,'steel');box(x,Y+1.03,z-d*.27,w*.56,.12,d*.35,'dark');box(x,Y+1.12,z-d*.28,w*.48,.035,d*.26,'blue');for(let k=0;k<9;k++)box(x-w*.36+k*w*.08,Y+.99,z+d*.19,w*.048,.025,d*.12,'rubber');for(const q of [-1,1])box(x+q*w*.43,Y+1.04,z-d*.28,.12,.12,.12,'warm');}
+ else if(s.material==='pump'){box(x,Y+.15,z,w,.3,d,'dark');cyl(x,Y+h*.47,z,Math.min(w,d)*.38,h*.76,'steel');cyl(x,Y+h*.84,z,Math.min(w,d)*.40,.18,'dark');cyl(x,Y+h*.22,z,Math.min(w,d)*.40,.18,'dark');for(const q of [-1,1]){pipe([x+q*w*.32,Y+.25,z],[x+q*w*.32,Y+h-.3,z],.12);box(x+q*w*.44,Y+h*.48,z,.16,h*.7,.20,'steel');}for(let k=0;k<7;k++)box(x,Y+.45+k*.19,z+d*.48,w*.60,.06,.04,'rubber');box(x,Y+h*.78,z+d*.48,w*.25,.18,.06,'blue');}
+ else{box(x,Y+h/2,z,w,h,d,'dark');for(const q of [-1,1]){box(x+q*w*.25,Y+h*.55,z+d*.51,w*.43,h*.72,.055,'steel');box(x+q*.13,Y+h*.54,z+d*.55,.06,.25,.06,'rubber');}for(let k=0;k<7;k++)box(x,Y+.15+k*.065,z+d*.54,w*.68,.027,.05,'rubber');box(x,Y+h*.87,z+d*.52,w*.20,.07,.03,'green');}}
+ L.DETAIL_PROPS.forEach(detailProp);
+ // Exposed architectural fixings, rain channels, rooftop service frames and illuminated window bays.
+ for(const r of L.ROOMS){const {x,z,w,d,h}=r;
+ for(const side of [-1,1]){for(let k=-w/2+2;k<w/2-1;k+=3.6){if(Math.abs(k)<4.5)continue;const px=x+k,pz=z+side*(d/2+.39);box(px,Y+h*.62,pz,2.65,2.55,.18,'steel');box(px,Y+h*.62,pz+side*.11,2.38,2.28,.065,'glass');box(px,Y+h*.62,pz+side*.16,.08,2.28,.06,'dark');box(px,Y+h*.62,pz+side*.16,2.38,.08,.06,'dark');box(px,Y+h*.62+.9,pz+side*.19,2.14,.07,.05,'blue');for(const a of [-1,1])for(const b of [-1,1])cyl(px+a*1.24,Y+h*.62+b*1.18,pz+side*.17,.055,.05,'dark');}
+ pipe([x-w/2,Y+h+.9,z+side*(d/2+.15)],[x+w/2,Y+h+.9,z+side*(d/2+.15)],.16);for(const q of [-1,1])pipe([x+q*(w/2-.8),Y+.3,z+side*(d/2+.45)],[x+q*(w/2-.8),Y+h+.9,z+side*(d/2+.45)],.12);}
+ for(const q of [-1,1]){const px=x+q*(w*.29);box(px,Y+h+.93,z,4.6,.48,3.5,'dark');box(px,Y+h+1.45,z,3.9,.56,3.1,'steel');for(let j=0;j<9;j++)box(px,Y+h+1.76,z-1.12+j*.28,3.4,.055,.11,'rubber');pipe([px,Y+h+1.3,z-1.4],[px,Y+h+1.3,z-d*.35],.27);}
+ }
+ // Recessed deck junction strips and drainage gratings; no new collision height.
+ for(const f of L.FLOORS){for(let k=-f.w/2+3;k<f.w/2-2;k+=6){box(f.x+k,Y+.009,f.z+f.d/2-1.2,2.2,.018,.45,'grate');box(f.x+k,Y+.015,f.z-f.d/2+1.2,2.2,.022,.45,'grate');}}
+ // Detailed distant ORDRE tower, silhouettes and magenta orbital halo.
+ const ox=34,oz=-208;box(ox,24,oz,32,90,24,'dark');for(const q of [-1,1]){box(ox+q*18,13,oz,9,67,15,'steel');for(let k=0;k<8;k++)box(ox+q*18,-9+k*7.5,oz+7.6,5,.35,.15,'warm');}box(ox,71,oz,18,6,17,'steel');tube([ox,74,oz],[ox,113,oz],'pink');for(const q of [-1,1])tube([ox+q*13,-5,oz+12.2],[ox+q*13,68,oz+12.2],'pink');sign('ORDRE',ox,55,oz+12.6,22,7,'#ff347f',{faction:'ordre',sub:'DIRECTOIRE / VESPER'});for(let j=0;j<64;j++){const a=j*Math.PI/32,b=(j+1)*Math.PI/32;beam([ox+48*Math.cos(a),76,oz+48*Math.sin(a)],[ox+48*Math.cos(b),76,oz+48*Math.sin(b)],.18,'pink','cyl');}
+ // Conifers rooted below decks and beyond the playable perimeter.
+ for(let i=0;i<85;i++){const x=(rnd()-.5)*360,z=(rnd()-.5)*230;if(L.inside(x,z)||L.FLOORS.some(f=>Math.abs(x-f.x)<f.w/2+6&&Math.abs(z-f.z)<f.d/2+6))continue;const h=4+rnd()*9,y=-30;cyl(x,y+h*.35,z,.19,h*.7,'rust');for(let j=0;j<4;j++)inst('needles',j%2?'leaf':'leaf2',x,y+h*(.40+j*.16),z,h*(.20-j*.032),h*.43,h*(.20-j*.032));}
+ let total=0;for(const [key,matrices] of batch){const [g,m]=key.split('|'),o=new T.InstancedMesh(geo[g],mats[m],matrices.length);matrices.forEach((matrix,i)=>o.setMatrixAt(i,matrix));o.instanceMatrix.needsUpdate=true;o.castShadow=!compact;o.receiveShadow=true;o.computeBoundingSphere();o.name=key;root.add(o);total+=matrices.length;}const batchCount=batch.size;
  const partner=createHeroPartnerActor(T,scene,{characterId,low:compact,showcase:{x:-104,y:Y,z:78}});
  function markDone(id,val=true){const p=markers.get(id);if(p){p.done=val;p.r.material.color.setHex(val?0x74ffb7:p.active?0x50cfff:0x384c62);}if(id==='stase')for(const p of pods.filter(p=>p.id.startsWith('stase')))p.o.visible=!val;if(id==='noyau')coreParts.forEach(o=>o.visible=!val);}
- return {root,sun,partner,ready:partner.ready,build(){},setDoor(){},setLine(){},openPortal(){},adapt(){},markDone,setResonance(){},setAvailable(ids){for(const [id,p] of markers){p.active=ids.includes(id);markDone(id,p.done);}},update(t,dt,camera,player){wt.offset.y=-t*.85;updateLights(t,player);for(const p of markers.values())p.r.scale.setScalar(p.active?1+.10*Math.sin(t*4):1);partner.update(t,dt,camera,{pulse:0});},stats:()=>({revision:'m13-art-v1',batchCount,instances:total,deckCells:cells,rails:L.RAILS.length,colliders:L.buildCollisions().length,waterfalls:water.length,pods:pods.length,localLights:lightPool.length}),dispose(){partner.dispose();root.removeFromParent();sun.removeFromParent();}};
+ return {root,sun,partner,ready:partner.ready,build(){},setDoor(){},setLine(){},openPortal(){},adapt(){},markDone,setResonance(){},setAvailable(ids){for(const [id,p] of markers){p.active=ids.includes(id);markDone(id,p.done);}},update(t,dt,camera,player){wt.offset.y=-t*.85;updateLights(t,player);for(const p of markers.values())p.r.scale.setScalar(p.active?1+.10*Math.sin(t*4):1);partner.update(t,dt,camera,{pulse:0});},stats:()=>({revision:'m13-art-v2',batchCount,instances:total,deckCells:cells,rails:L.RAILS.length,colliders:L.buildCollisions().length,waterfalls:water.length,pods:pods.length,localLights:lightPool.length}),dispose(){partner.dispose();root.removeFromParent();sun.removeFromParent();}};
 }
