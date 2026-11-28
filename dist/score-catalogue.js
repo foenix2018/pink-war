@@ -12,8 +12,8 @@ export const SCORE=Object.freeze({
  corridor:track('locked-corridor','Locked Corridor'),
  blackout:track('blackout-protocol','Blackout Protocol')
 });
-export const CHAPTER_SCORE=Object.freeze({1:SCORE.spire,2:SCORE.corridor,3:SCORE.siege,4:SCORE.piston,5:SCORE.well,6:SCORE.machinery,7:SCORE.well,8:SCORE.blackout,9:SCORE.garden,10:SCORE.sector,11:SCORE.siege,12:SCORE.blackout});
-export const chapterForMode=mode=>({campaign:1,campaign2:2,campaign3:3,campaign4:4,ligne9:5,campaign6:6,foret:7,campaign8:8,campaign9:9,campaign10:10,campaign11:11,campaign12:12}[mode]||1);
+export const CHAPTER_SCORE=Object.freeze({1:SCORE.spire,2:SCORE.corridor,3:SCORE.siege,4:SCORE.piston,5:SCORE.well,6:SCORE.machinery,7:SCORE.well,8:SCORE.blackout,9:SCORE.garden,10:SCORE.sector,11:SCORE.siege,12:SCORE.blackout,13:SCORE.machinery});
+export const chapterForMode=mode=>({campaign:1,campaign2:2,campaign3:3,campaign4:4,ligne9:5,campaign6:6,foret:7,campaign8:8,campaign9:9,campaign10:10,campaign11:11,campaign12:12,campaign13:13}[mode]||1);
 export function scoreFor(level,{mode,finale=false}={}){
  if(mode==='planque'||mode==='training')return SCORE.garden;
  if(mode==='arena'||mode==='breach'||finale)return SCORE.collapse;
