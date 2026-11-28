@@ -39,7 +39,7 @@ import {createGlove} from './hands.js';
 import {mountCombatHud} from './combat-hud.js';
 import {createArmorFeedback,meleeKick,MELEE_POSE} from './armor-feedback.js';
 import * as L from './m14-layout.js';
-import {createM14Art} from './m14-art.js?v=m14-art-v1';
+import {createM14Art} from './m14-art.js?v=m14-art-v2';
 import {createM14Mission} from './m14-mission.js';
 import {linesFor,lineSeconds,logFor,LOGS,ENDING} from './m14-story.js';
 
@@ -634,7 +634,7 @@ for(const name of ['pointerup','pointercancel'])window.addEventListener(name,e=>
 document.addEventListener('pointerlockchange',()=>{if(!document.pointerLockElement)heldFire=false;});
 
 window.__PINK_M14=Object.freeze({
- snapshot:()=>({nano:nanoSnapshot(game),level:L.LEVEL_ID,revision:'m14-preview-v1',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,time:game?.time,missionTime,
+ snapshot:()=>({nano:nanoSnapshot(game),level:L.LEVEL_ID,revision:'m14-preview-v2',running,paused,completed:completed(),stage:mission?.stage,stageId:mission?.stageId,objective:L.STAGES[mission?.stage??0]?.label,characterId,time:game?.time,missionTime,
   area:game&&L.areaAt(game.player.x,game.player.z),health:game?.player.hp,shield:game?.player.shield,charges:game?.charges,
   position:game&&{x:+game.player.x.toFixed(2),z:+game.player.z.toFixed(2),elevation:+game.player.elevation.toFixed(2)},
   weapon:game?.weapon.id,ammo:game?.ammo[game.weaponIndex],enemies:game?.enemies.length,kills:game?.kills,opened:mission?.opened,done:mission?.done,reads:mission?.reads,
