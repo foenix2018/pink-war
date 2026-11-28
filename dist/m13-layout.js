@@ -24,7 +24,7 @@ export const RAILS=perimeter();
 const solid=(id,x,z,w,d,h,material='dark')=>({id,x,z,y:Y,w,d,h,material});
 // Three enclosed labs; the 8m front door is a physical opening, not a painted door.
 export const ROOMS=[{id:'bio',x:40,z:34,w:44,d:30,h:9},{id:'archives',x:-40,z:12,w:40,d:26,h:8},{id:'stase',x:-79,z:-34,w:34,d:32,h:10}];
-export const WALLS=ROOMS.flatMap(r=>{const side=(r.w-8)/2;return [solid(r.id+'-west',r.x-r.w/2,r.z,.55,r.d,r.h),solid(r.id+'-east',r.x+r.w/2,r.z,.55,r.d,r.h),solid(r.id+'-north',r.x,r.z-r.d/2,r.w,.55,r.h),solid(r.id+'-south-l',r.x-(8+side)/2,r.z+r.d/2,side,.55,r.h),solid(r.id+'-south-r',r.x+(8+side)/2,r.z+r.d/2,side,.55,r.h)];});
+export const WALLS=ROOMS.flatMap(r=>{const a=(r.w-8)/2,b=(r.d-8)/2;return [-1,1].flatMap(k=>[-1,1].flatMap(j=>[solid(r.id+'-ew-'+k+'-'+j,r.x+k*r.w/2,r.z+j*(8+b)/2,.55,b,r.h),solid(r.id+'-ns-'+k+'-'+j,r.x+j*(8+a)/2,r.z+k*r.d/2,a,.55,r.h)]));});
 export const TANKS=[...[-13,-6,6,13].map((dx,i)=>solid('bio-pod-'+i,40+dx,25,2.6,2.6,4.8,'pod')),...[-12,-6,0,6,12].map((dx,i)=>solid('stase-pod-'+i,-79+dx,-43,2.7,2.7,5.5,'pod'))];
 export const RACKS=[-54,-47,-33,-26].flatMap((x,i)=>[-4,3].map((dz,j)=>solid('rack-'+i+'-'+j,x,12+dz,2.1,3,3.8,'rack')));
 export const MACHINES=[solid('core',70,-57,7,7,13,'core'),solid('truth',-5,-51,12,12,12,'truth'),solid('aircraft',135,-56,11,9,3,'aircraft'),...[-16,16].map((dx,i)=>solid('gate-'+i,-100+dx,54,2.8,5,10,'tower'))];
