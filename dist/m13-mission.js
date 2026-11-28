@@ -2,10 +2,10 @@ import {WEAPONS,weaponAllowedForCharacter} from './game-logic.js';
 import {configureUnit} from './ligne9-mission.js';
 import * as L from './m13-layout.js';
 const noop=()=>{};
-export function createM13Mission({game,characterId='ghju',hooks={},storage=globalThis.localStorage}={}){
+export function createM13Mission({game,characterId='ghju',hooks={},storage=globalThis.localStorage,campaign=false}={}){
  const h={setObstacles:noop,setDoor:noop,setLine:noop,openPortal:noop,say:noop,stage:noop,cue:noop,notice:noop,finish:noop,clear:noop,resonance:noop,...hooks};
  const done=new Set(),groups=new Map();let stage=0,completed=false,hold=null,serial=13000,resonance=false;
- const key='pink-wars-preview-m13-checkpoint-v3-'+characterId;
+ const key=(campaign?'pink-wars-m13-checkpoint-v3-':'pink-wars-preview-m13-checkpoint-v3-')+characterId;
  const save=()=>{try{storage?.setItem(key,JSON.stringify({version:1,stage,done:[...done]}));}catch{}};
  function world(){const cols=L.buildCollisions();game.replaceObstacles(cols);h.setObstacles(cols);h.setLine(!done.has('shutdown'));}
  function place(p){Object.assign(game.player,{x:p.x,z:p.z,elevation:game.surfaceHeight(p.x,p.z,game.time,p.y+.3),grounded:true,verticalSpeed:0,yaw:p.yaw||0});}
