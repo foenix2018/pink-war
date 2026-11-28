@@ -1,0 +1,7 @@
+import {SPEAKERS as SHARED} from './m04-story.js';
+const speakers={...SHARED,gaby:{name:'GAB-1',color:'#ff79b6'},cara:{name:'CAR-14',color:'#79caff'},ghju:{name:'GHJU',color:'#ff79b6'},lylu:{name:'LYLU',color:'#79caff'},voss:{name:'AEGIS · VOSS',color:'#e7f2dc'}};
+export const LOGS={};
+const script={intro:[['ghju','Les souvenirs de GAB-1 et CAR-14 nous ont conduits ici.'],['voss','Le complexe BIO-LAB héberge les archives du programme PINK.']],access:[['voss','Accès ouvert. Rejoignez le laboratoire.']],bio:[['cara','Ces cuves sont encore alimentées.']],archives:[['lylu','Les fichiers décrivent un transfert de conscience.']],stase:[['ghju','Libérons les sujets. Ils sont vivants.']],verite:[['gaby','Gabrielle. C’est mon nom.'],['cara','Et moi, Carla. ORDRE a enfermé nos consciences dans les sphères.'],['ghju','Vous êtes nos petites sœurs.']],noyau:[['voss','Désactivez le noyau. Empêchez ORDRE de reproduire le programme.']],evacuation:[['lylu','On part tous ensemble.']],fin:[['gaby','Vous nous avez retrouvées.']]};
+export const linesFor=id=>(script[id]||[]).map(([who,text])=>({who,text,speaker:speakers[who]}));
+export const lineSeconds=text=>Math.max(3.5,text.length/17);export const logFor=()=>null;
+export const ENDING={title:'Les vies sous contrôle',text:{ghju:'Le programme PINK est neutralisé. GAB-1 et CAR-14 portent les consciences de Gabrielle et Carla.',lylu:'Le programme PINK est neutralisé. GAB-1 et CAR-14 portent les consciences de Gabrielle et Carla.'},next:'Fin de la préversion'};
