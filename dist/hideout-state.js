@@ -1,7 +1,7 @@
 import {readNanoProfile} from './nano-forge.js';
 // Shared campaign travel and preparation. No renderer, DOM, network or combat imports.
 export const HIDEOUT_KEY='pink-wars-hideout-v1-';
-export const CHAPTER_ROUTES=Object.freeze({1:'vesper-level1-v7.html',2:'level2-test.html',3:'niveau3.html',4:'niveau4.html',5:'ligne9.html',6:'niveau6.html',7:'foret.html',8:'niveau8.html',9:'niveau9.html',10:'niveau10.html',11:'niveau11.html',12:'niveau12.html',13:'niveau13.html',14:'niveau14.html'});
+export const CHAPTER_ROUTES=Object.freeze({1:'vesper-level1-v7.html',2:'level2-test.html',3:'niveau3.html',4:'niveau4.html',5:'ligne9.html',6:'niveau6.html',7:'foret.html',8:'niveau8.html',9:'niveau9.html',10:'niveau10.html',11:'niveau11.html',12:'niveau12.html',13:'niveau13.html',14:'niveau14.html',15:'niveau15.html'});
 export const HIDEOUT_HISTORY=Object.freeze([
  {level:1,title:'Le Dernier Signal',text:'Les Archives végétales ont rendu une transmission VEILLE-4. Les parents ont demandé de suivre les relais indépendants et de ne jamais perdre les deux unités. La piste mène aux Bas-Niveaux.'},
  {level:2,title:'Les Profondeurs',text:'Le module de décryptage des Bas-Niveaux a été récupéré. Le Directoire recherche GAB-1 et CAR-14. Un convoi de prisonniers est parti vers l’Anneau logistique.'},
@@ -19,6 +19,8 @@ export const HIDEOUT_HISTORY=Object.freeze([
  {level:13,title:'Les vies sous contrôle',text:'Les archives PINK ont révélé les consciences de Gabrielle et Carla. Le noyau du BIO-LAB est neutralisé.'}
 ,
  {level:14,title:'La Tour de convergence',text:'AEGIS a reçu les données de CONVERGENCE. GHJU et LYLU ont neutralisé les trois verrous et perturbé le noyau avec le code PINK.'}
+,
+ {level:15,title:'Les quatre enfants',text:'Les preuves de la Phase Enfants ont été récupérées dans le laboratoire oublié. Les registres PINK et la vérité sur GAB-1 et CAR-14 sont en sécurité chez AEGIS.'}
 ].map(x=>Object.freeze(x)));
 const heroOf=id=>id==='lylu'?'lylu':'ghju';
 const chapter=n=>Number.isInteger(Number(n))&&CHAPTER_ROUTES[Number(n)]?Number(n):1;
@@ -26,7 +28,7 @@ const validIndex=i=>Number.isInteger(i)&&i>=0&&i<=10;
 const storageOrNull=()=>{try{return globalThis.localStorage||null;}catch{return null;}};
 export function freshHideoutProfile(){return{version:1,completed:[],lastChapter:1,selectedWeapon:null,owned:[],armorLevel:1,health:100,shield:60,charges:2,rested:false,recharged:false,choice:null,preparedAt:0,pendingLevel:null,fitness:{strength:0,dexterity:0,endurance:0}};}
 export function readHideoutProfile(hero,storage=storageOrNull()){
- try{const s=JSON.parse(storage?.getItem(HIDEOUT_KEY+heroOf(hero))||'null');if(s?.version!==1){const p=freshHideoutProfile(),old=Math.min(14,Math.max(0,Math.floor(Number(storage?.getItem('pink-wars-last-cleared'))||0)));p.completed=Array.from({length:old},(_,i)=>i+1);p.lastChapter=Math.min(14,old+1);return p;}const p=freshHideoutProfile();
+ try{const s=JSON.parse(storage?.getItem(HIDEOUT_KEY+heroOf(hero))||'null');if(s?.version!==1){const p=freshHideoutProfile(),old=Math.min(15,Math.max(0,Math.floor(Number(storage?.getItem('pink-wars-last-cleared'))||0)));p.completed=Array.from({length:old},(_,i)=>i+1);p.lastChapter=Math.min(15,old+1);return p;}const p=freshHideoutProfile();
   p.completed=[...new Set((Array.isArray(s.completed)?s.completed:[]).filter(n=>Number.isInteger(n)&&CHAPTER_ROUTES[n]))].sort((a,b)=>a-b);p.lastChapter=chapter(s.lastChapter);
   p.owned=[...new Set((Array.isArray(s.owned)?s.owned:[]).filter(validIndex))];p.selectedWeapon=validIndex(s.selectedWeapon)?s.selectedWeapon:null;
   p.armorLevel=readNanoProfile(hero,storage).equippedSuit;p.health=Math.max(1,Math.min(100,Number(s.health)||100));p.shield=Math.max(0,Math.min(210,Number(s.shield)||0));p.charges=Math.max(0,Math.min(4,Math.floor(Number(s.charges)||0)));

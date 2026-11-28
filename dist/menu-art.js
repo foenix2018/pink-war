@@ -3,7 +3,7 @@ import {portraitFocusFor} from './mission-briefing.js';
 // Menu illustration selected by mission and existing playable character.
 // The original level-1 GHJU / LYLU art is never overwritten.
 const coverFor = n => 'art/chapters/chapter-' + String(n).padStart(2,'0') + '.webp?v=20261031';
-const MODE_CHAPTER = { campaign:1, campaign2:2, campaign3:3, campaign4:4, ligne9:5, campaign6:6, foret:7,campaign13:13,campaign14:14 };
+const MODE_CHAPTER = { campaign:1, campaign2:2, campaign3:3, campaign4:4, ligne9:5, campaign6:6, foret:7,campaign13:13,campaign14:14,campaign15:15 };
 export function syncMenuArtwork(characterId,mode='campaign',root=document){
   const hero=characterId==='lylu'?'lylu':'ghju';
   const level2=mode==='campaign2',level3=mode==='campaign3';
@@ -28,7 +28,7 @@ export function syncMenuArtwork(characterId,mode='campaign',root=document){
         ?'Vérifiez vos armes avant de retourner dans les rues de Vesper.'
         :'Une transmission porte VEILLE-4, l’indicatif de vos parents avant la Chute.';
   const title=root.getElementById('loading-title');
-  if(title)title.textContent=mission===14?'14 — La Tour de convergence':mission===13?'13 — Les vies sous contrôle':mission===5?'05 — La Ligne Noyée':mission===4?'04 — Le Protocole Interdit':level3?'03 — Le Convoi des Oubliés':level2?'02 — Les Profondeurs':'01 — Le Dernier Signal';
+  if(title)title.textContent=mission===15?'15 — Les quatre enfants':mission===14?'14 — La Tour de convergence':mission===13?'13 — Les vies sous contrôle':mission===5?'05 — La Ligne Noyée':mission===4?'04 — Le Protocole Interdit':level3?'03 — Le Convoi des Oubliés':level2?'02 — Les Profondeurs':'01 — Le Dernier Signal';
   const credit=root.querySelector('.lobby-art-credit');
   if(credit)credit.textContent=level3?'VESPER · LES ANCIENNES ARCHIVES · MISSION 03':level2?'VESPER · LES BAS-NIVEAUX · NIVEAU 02':'VESPER · ILLUSTRATION D’AMBIANCE · V.3.47';
 }
